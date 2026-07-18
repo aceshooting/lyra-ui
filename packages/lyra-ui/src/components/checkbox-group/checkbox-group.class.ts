@@ -9,20 +9,20 @@ import type { LyraCheckbox } from '../checkbox/checkbox.class.js';
 export interface LyraCheckboxGroupEventMap {
   input: CustomEvent<{ value: string[] }>;
   change: CustomEvent<{ value: string[] }>;
-  'lyra-change': CustomEvent<{ value: string[] }>;
+  'lr-change': CustomEvent<{ value: string[] }>;
 }
 
 /**
- * `<lyra-checkbox-group>` — a form-associated group of `<lyra-checkbox>` elements.
+ * `<lr-checkbox-group>` — a form-associated group of `<lr-checkbox>` elements.
  *
- * @customElement lyra-checkbox-group
- * @slot - `<lyra-checkbox>` children.
+ * @customElement lr-checkbox-group
+ * @slot - `<lr-checkbox>` children.
  * @slot label - Visible group label.
  * @slot hint - Supporting text.
  * @slot error - Custom validation message.
  * @event input - User selection changed.
  * @event change - User selection changed.
- * @event lyra-change - User selection changed; detail is `{ value: string[] }`.
+ * @event lr-change - User selection changed; detail is `{ value: string[] }`.
  * @csspart form-control - Group wrapper.
  * @csspart form-control-label - Label.
  * @csspart options - Checkbox collection.
@@ -57,7 +57,7 @@ export class LyraCheckboxGroup extends LyraElement<LyraCheckboxGroupEventMap> {
   // Inherited from an ancestor `<fieldset disabled>` via `formDisabledCallback()`.
   // Tracked separately from the consumer's own `disabled` (see `effectiveDisabled`)
   // so a consumer's explicit `disabled` survives the fieldset re-enabling instead
-  // of being permanently overwritten -- mirrors `<lyra-checkbox>`'s identical
+  // of being permanently overwritten -- mirrors `<lr-checkbox>`'s identical
   // `_fieldsetDisabled`/`effectiveDisabled` pattern.
   private _fieldsetDisabled = false;
   private _name = '';
@@ -66,7 +66,7 @@ export class LyraCheckboxGroup extends LyraElement<LyraCheckboxGroupEventMap> {
 
   /** The form submission key each checked child checkbox's value is grouped under in the group's
    *  own `FormData` entry (see `sync()`). Reflected synchronously for native form APIs; renaming
-   *  rebuilds that `FormData` in the same tick -- mirrors `<lyra-token-input>`'s identical `name` setter. */
+   *  rebuilds that `FormData` in the same tick -- mirrors `<lr-token-input>`'s identical `name` setter. */
   get name(): string { return this._name; }
   set name(next: string) {
     const old = this._name;
@@ -102,7 +102,7 @@ export class LyraCheckboxGroup extends LyraElement<LyraCheckboxGroupEventMap> {
   }
 
   private get boxes(): LyraCheckbox[] {
-    return Array.from(this.querySelectorAll('lyra-checkbox')) as unknown as LyraCheckbox[];
+    return Array.from(this.querySelectorAll('lr-checkbox')) as unknown as LyraCheckbox[];
   }
 
   /** Whether the group is disabled explicitly or by an ancestor fieldset. */
@@ -111,11 +111,11 @@ export class LyraCheckboxGroup extends LyraElement<LyraCheckboxGroupEventMap> {
   }
 
   // Propagates this group's effective (explicit-or-inherited) disabled state
-  // to every child `<lyra-checkbox>` through its internal `setGroupDisabled()`
+  // to every child `<lr-checkbox>` through its internal `setGroupDisabled()`
   // channel -- never the child's own public `disabled` property/attribute,
   // which would permanently corrupt an explicitly-disabled child once the
-  // group (or an ancestor fieldset) re-enables. Mirrors `<lyra-radio-group>`'s
-  // identical `setGroupDisabled()` propagation to `<lyra-radio>`.
+  // group (or an ancestor fieldset) re-enables. Mirrors `<lr-radio-group>`'s
+  // identical `setGroupDisabled()` propagation to `<lr-radio>`.
   private propagateDisabled(): void {
     const effective = this.effectiveDisabled;
     this.boxes.forEach((box) => box.setGroupDisabled?.(effective));
@@ -141,7 +141,7 @@ export class LyraCheckboxGroup extends LyraElement<LyraCheckboxGroupEventMap> {
     this.sync();
     this.emit('input', { value: this.value });
     this.emit('change', { value: this.value });
-    this.emit('lyra-change', { value: this.value });
+    this.emit('lr-change', { value: this.value });
   };
 
   private onSlotChange = (): void => {
@@ -197,4 +197,4 @@ export class LyraCheckboxGroup extends LyraElement<LyraCheckboxGroupEventMap> {
   }
 }
 
-declare global { interface HTMLElementTagNameMap { 'lyra-checkbox-group': LyraCheckboxGroup; } }
+declare global { interface HTMLElementTagNameMap { 'lr-checkbox-group': LyraCheckboxGroup; } }

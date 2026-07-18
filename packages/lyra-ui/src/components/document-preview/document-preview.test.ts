@@ -8,7 +8,7 @@ const IMAGE_DATA_URI =
 
 /** Stubs `window.fetch` for the duration of one test, restoring the original
  *  afterward. `@sinonjs/fake-timers` is unavailable in this test environment
- *  (see `<lyra-stream-status>`'s test file), but this needs no timers at
+ *  (see `<lr-stream-status>`'s test file), but this needs no timers at
  *  all -- a plain function swap is enough to control a real fetch() call. */
 function stubFetch(impl: (url: string, init?: RequestInit) => Promise<Response>): () => void {
   const original = window.fetch;
@@ -29,7 +29,7 @@ function textResponse(body: string, ok = true, status = 200): Response {
 
 describe('defaults', () => {
   it('defaults to status="idle" (reflected) with every optional prop unset', async () => {
-    const el = (await fixture(html`<lyra-document-preview></lyra-document-preview>`)) as LyraDocumentPreview;
+    const el = (await fixture(html`<lr-document-preview></lr-document-preview>`)) as LyraDocumentPreview;
     expect(el.status).to.equal('idle');
     expect(el.getAttribute('status')).to.equal('idle');
     expect(el.src).to.equal('');
@@ -40,14 +40,14 @@ describe('defaults', () => {
   });
 
   it('hides the header entirely when filename is unset', async () => {
-    const el = (await fixture(html`<lyra-document-preview></lyra-document-preview>`)) as LyraDocumentPreview;
+    const el = (await fixture(html`<lr-document-preview></lr-document-preview>`)) as LyraDocumentPreview;
     const header = el.shadowRoot!.querySelector('[part="header"]') as HTMLElement;
     expect(header.hidden).to.be.true;
   });
 
   it('shows the header and filename text when filename is set', async () => {
     const el = (await fixture(
-      html`<lyra-document-preview filename="report.txt"></lyra-document-preview>`,
+      html`<lr-document-preview filename="report.txt"></lr-document-preview>`,
     )) as LyraDocumentPreview;
     const header = el.shadowRoot!.querySelector('[part="header"]') as HTMLElement;
     expect(header.hidden).to.be.false;
@@ -55,7 +55,7 @@ describe('defaults', () => {
   });
 
   it('reflects status changes onto the host attribute', async () => {
-    const el = (await fixture(html`<lyra-document-preview></lyra-document-preview>`)) as LyraDocumentPreview;
+    const el = (await fixture(html`<lr-document-preview></lr-document-preview>`)) as LyraDocumentPreview;
     el.status = 'ready';
     await el.updateComplete;
     expect(el.getAttribute('status')).to.equal('ready');
@@ -67,7 +67,7 @@ describe('text/* and application/json dispatch', () => {
     const unstub = stubFetch(() => Promise.resolve(textResponse('line one\nline two')));
     try {
       const el = (await fixture(html`
-        <lyra-document-preview src="https://example.test/a.txt" mime-type="text/plain"></lyra-document-preview>
+        <lr-document-preview src="https://example.test/a.txt" mime-type="text/plain"></lr-document-preview>
       `)) as LyraDocumentPreview;
       await aTimeout(20);
       await el.updateComplete;
@@ -83,7 +83,7 @@ describe('text/* and application/json dispatch', () => {
     const unstub = stubFetch(() => Promise.resolve(textResponse('{"a":1}')));
     try {
       const el = (await fixture(html`
-        <lyra-document-preview src="https://example.test/a.json" mime-type="application/json"></lyra-document-preview>
+        <lr-document-preview src="https://example.test/a.json" mime-type="application/json"></lr-document-preview>
       `)) as LyraDocumentPreview;
       await aTimeout(20);
       await el.updateComplete;
@@ -103,7 +103,7 @@ describe('text/* and application/json dispatch', () => {
     );
     try {
       const el = (await fixture(html`
-        <lyra-document-preview src="https://example.test/a.txt" mime-type="text/plain"></lyra-document-preview>
+        <lr-document-preview src="https://example.test/a.txt" mime-type="text/plain"></lr-document-preview>
       `)) as LyraDocumentPreview;
       const spinner = el.shadowRoot!.querySelector('[part="spinner"]') as HTMLElement;
       expect(spinner).to.exist;
@@ -118,18 +118,18 @@ describe('text/* and application/json dispatch', () => {
     }
   });
 
-  it('renders [part="error"] and fires lyra-render-error on a non-ok response', async () => {
+  it('renders [part="error"] and fires lr-render-error on a non-ok response', async () => {
     // The element mounts first (with fetch still un-stubbed/inert), then the
     // listener is registered *before* the src assignment that synchronously
     // triggers willUpdate -> fetchText() -- registering oneEvent only after
     // an already-connected-with-src fixture resolves would race the fetch's
     // own microtask chain (a stubbed fetch() can resolve in under a tick).
     const el = (await fixture(
-      html`<lyra-document-preview mime-type="text/plain"></lyra-document-preview>`,
+      html`<lr-document-preview mime-type="text/plain"></lr-document-preview>`,
     )) as LyraDocumentPreview;
     const unstub = stubFetch(() => Promise.resolve(textResponse('', false, 404)));
     try {
-      const eventPromise = oneEvent(el, 'lyra-render-error');
+      const eventPromise = oneEvent(el, 'lr-render-error');
       el.src = 'https://example.test/missing.txt';
       const ev = await eventPromise;
       expect(ev.detail.error).to.exist;
@@ -154,7 +154,7 @@ describe('text/* and application/json dispatch', () => {
     });
     try {
       const el = (await fixture(html`
-        <lyra-document-preview src="https://example.test/a.txt" mime-type="text/plain"></lyra-document-preview>
+        <lr-document-preview src="https://example.test/a.txt" mime-type="text/plain"></lr-document-preview>
       `)) as LyraDocumentPreview;
       await aTimeout(20);
       await el.updateComplete;
@@ -183,7 +183,7 @@ describe('text/* and application/json dispatch', () => {
     });
     try {
       const el = (await fixture(html`
-        <lyra-document-preview src="https://example.test/a.txt" mime-type="text/plain"></lyra-document-preview>
+        <lr-document-preview src="https://example.test/a.txt" mime-type="text/plain"></lr-document-preview>
       `)) as LyraDocumentPreview;
       expect(firstSignal).to.exist;
       expect(firstSignal!.aborted).to.be.false;
@@ -209,7 +209,7 @@ describe('text/* and application/json dispatch', () => {
     });
     try {
       const el = (await fixture(html`
-        <lyra-document-preview src="https://example.test/a.txt" mime-type="text/plain"></lyra-document-preview>
+        <lr-document-preview src="https://example.test/a.txt" mime-type="text/plain"></lr-document-preview>
       `)) as LyraDocumentPreview;
       expect(signal).to.exist;
       expect(signal!.aborted).to.be.false;
@@ -224,7 +224,7 @@ describe('text/* and application/json dispatch', () => {
     const unstub = stubFetch(() => Promise.reject(new Error('should not be called')));
     try {
       const el = (await fixture(
-        html`<lyra-document-preview mime-type="text/plain"></lyra-document-preview>`,
+        html`<lr-document-preview mime-type="text/plain"></lr-document-preview>`,
       )) as LyraDocumentPreview;
       await aTimeout(10);
       expect(el.shadowRoot!.querySelector('[part="spinner"]')).to.not.exist;
@@ -247,11 +247,11 @@ describe('text/* and application/json dispatch', () => {
     });
     try {
       const el = (await fixture(html`
-        <lyra-document-preview
+        <lr-document-preview
           src="https://example.test/a.txt"
           mime-type="text/plain"
           status="converting"
-        ></lyra-document-preview>
+        ></lr-document-preview>
       `)) as LyraDocumentPreview;
       await aTimeout(20);
       expect(callCount).to.equal(0);
@@ -276,11 +276,11 @@ describe('text/* and application/json dispatch', () => {
     });
     try {
       const el = (await fixture(html`
-        <lyra-document-preview
+        <lr-document-preview
           .src=${'java\tscript:alert(1)'}
           mime-type="text/plain"
           filename="payload.txt"
-        ></lyra-document-preview>
+        ></lr-document-preview>
       `)) as LyraDocumentPreview;
       await aTimeout(20);
       await el.updateComplete;
@@ -299,10 +299,10 @@ describe('text/* and application/json dispatch', () => {
     });
     try {
       const el = (await fixture(html`
-        <lyra-document-preview
+        <lr-document-preview
           src="data:text/plain,inline%20data"
           mime-type="text/plain"
-        ></lyra-document-preview>
+        ></lr-document-preview>
       `)) as LyraDocumentPreview;
       await aTimeout(20);
       await el.updateComplete;
@@ -321,11 +321,11 @@ describe('text/* and application/json dispatch', () => {
     });
     try {
       await fixture(html`
-        <lyra-document-preview
+        <lr-document-preview
           src="https://example.test/a.txt"
           mime-type="text/plain"
           status="converting"
-        ></lyra-document-preview>
+        ></lr-document-preview>
       `);
       await aTimeout(20);
       expect(called).to.be.false;
@@ -338,11 +338,11 @@ describe('text/* and application/json dispatch', () => {
 describe('image/* dispatch', () => {
   it('renders a contained <img> with src and a sensible alt', async () => {
     const el = (await fixture(html`
-      <lyra-document-preview
+      <lr-document-preview
         src="https://example.test/photo.png"
         mime-type="image/png"
         filename="photo.png"
-      ></lyra-document-preview>
+      ></lr-document-preview>
     `)) as LyraDocumentPreview;
     const img = el.shadowRoot!.querySelector('[part="body"] img') as HTMLImageElement;
     expect(img).to.exist;
@@ -358,7 +358,7 @@ describe('image/* dispatch', () => {
     });
     try {
       await fixture(html`
-        <lyra-document-preview src="https://example.test/photo.png" mime-type="image/png"></lyra-document-preview>
+        <lr-document-preview src="https://example.test/photo.png" mime-type="image/png"></lr-document-preview>
       `);
       await aTimeout(20);
       expect(called).to.be.false;
@@ -369,11 +369,11 @@ describe('image/* dispatch', () => {
 
   it('never assigns an unsafe normalized URL to an image src', async () => {
     const el = (await fixture(html`
-      <lyra-document-preview
+      <lr-document-preview
         .src=${'java\tscript:alert(1)'}
         mime-type="image/png"
         filename="payload.png"
-      ></lyra-document-preview>
+      ></lr-document-preview>
     `)) as LyraDocumentPreview;
     expect(el.shadowRoot!.querySelector('[part="body"] img') === null).to.be.true;
     expect(el.shadowRoot!.querySelector('[part="download-link"]') === null).to.be.true;
@@ -382,23 +382,23 @@ describe('image/* dispatch', () => {
 
   it('keeps data:image URLs available for inline image previews', async () => {
     const el = (await fixture(html`
-      <lyra-document-preview
+      <lr-document-preview
         .src=${IMAGE_DATA_URI}
         mime-type="image/png"
         filename="pixel.png"
-      ></lyra-document-preview>
+      ></lr-document-preview>
     `)) as LyraDocumentPreview;
     expect(el.shadowRoot!.querySelector('img')?.getAttribute('src')).to.equal(IMAGE_DATA_URI);
   });
 
   it('lets an explicit alt override the filename-derived image description', async () => {
     const el = (await fixture(html`
-      <lyra-document-preview
+      <lr-document-preview
         src="https://example.test/chart.png"
         mime-type="image/png"
         filename="chart.png"
         alt="Revenue increased throughout the quarter"
-      ></lyra-document-preview>
+      ></lr-document-preview>
     `)) as LyraDocumentPreview;
     expect(el.shadowRoot!.querySelector('img')?.getAttribute('alt')).to.equal(
       'Revenue increased throughout the quarter',
@@ -407,12 +407,12 @@ describe('image/* dispatch', () => {
 
   it('preserves an explicit empty alt for a decorative image preview', async () => {
     const el = (await fixture(html`
-      <lyra-document-preview
+      <lr-document-preview
         src="https://example.test/decoration.png"
         mime-type="image/png"
         filename="decoration.png"
         alt=""
-      ></lyra-document-preview>
+      ></lr-document-preview>
     `)) as LyraDocumentPreview;
     expect(el.shadowRoot!.querySelector('img')?.getAttribute('alt')).to.equal('');
   });
@@ -421,11 +421,11 @@ describe('image/* dispatch', () => {
 describe('generic-download fallback', () => {
   it('renders a file glyph, message, and download link for an unrecognized mime-type', async () => {
     const el = (await fixture(html`
-      <lyra-document-preview
+      <lr-document-preview
         src="https://example.test/report.pdf"
         mime-type="application/pdf"
         filename="report.pdf"
-      ></lyra-document-preview>
+      ></lr-document-preview>
     `)) as LyraDocumentPreview;
     const link = el.shadowRoot!.querySelector('[part="download-link"]') as HTMLAnchorElement;
     expect(link).to.exist;
@@ -436,25 +436,25 @@ describe('generic-download fallback', () => {
 
   it('also falls back for an empty/unset mime-type', async () => {
     const el = (await fixture(
-      html`<lyra-document-preview src="https://example.test/x" filename="x"></lyra-document-preview>`,
+      html`<lr-document-preview src="https://example.test/x" filename="x"></lr-document-preview>`,
     )) as LyraDocumentPreview;
     expect(el.shadowRoot!.querySelector('[part="download-link"]')).to.exist;
   });
 
   it('omits the download link entirely when src is unset', async () => {
     const el = (await fixture(
-      html`<lyra-document-preview mime-type="application/pdf" filename="report.pdf"></lyra-document-preview>`,
+      html`<lr-document-preview mime-type="application/pdf" filename="report.pdf"></lr-document-preview>`,
     )) as LyraDocumentPreview;
     expect(el.shadowRoot!.querySelector('[part="download-link"]')).to.not.exist;
   });
 
   it('fails closed when the src attribute is removed at runtime', async () => {
     const el = (await fixture(html`
-      <lyra-document-preview
+      <lr-document-preview
         src="https://example.test/report.pdf"
         mime-type="application/pdf"
         filename="report.pdf"
-      ></lyra-document-preview>
+      ></lr-document-preview>
     `)) as LyraDocumentPreview;
     el.removeAttribute('src');
     await el.updateComplete;
@@ -471,31 +471,31 @@ describe('generic-download fallback', () => {
       'vbscript:msgbox(1)',
     ]) {
       const el = (await fixture(html`
-        <lyra-document-preview
+        <lr-document-preview
           .src=${src}
           mime-type="application/pdf"
           filename="payload.pdf"
-        ></lyra-document-preview>
+        ></lr-document-preview>
       `)) as LyraDocumentPreview;
       expect(el.shadowRoot!.querySelector('[part="download-link"]') === null, src).to.be.true;
       expect(el.shadowRoot!.querySelector('.fallback-text')?.textContent, src).to.contain('payload.pdf');
     }
   });
 
-  it('fires lyra-download with { src, filename } when the link is activated', async () => {
+  it('fires lr-download with { src, filename } when the link is activated', async () => {
     const el = (await fixture(html`
-      <lyra-document-preview
+      <lr-document-preview
         src="https://example.test/report.pdf"
         mime-type="application/pdf"
         filename="report.pdf"
-      ></lyra-document-preview>
+      ></lr-document-preview>
     `)) as LyraDocumentPreview;
     const link = el.shadowRoot!.querySelector('[part="download-link"]') as HTMLAnchorElement;
     // Prevent the actual navigation/download inside the test runner while
     // still exercising the real click -> handler -> emit path.
     link.addEventListener('click', (e) => e.preventDefault());
     setTimeout(() => link.click());
-    const ev = await oneEvent(el, 'lyra-download');
+    const ev = await oneEvent(el, 'lr-download');
     expect(ev.detail).to.deep.equal({ src: 'https://example.test/report.pdf', filename: 'report.pdf' });
     expect(ev.bubbles).to.be.true;
     expect(ev.composed).to.be.true;
@@ -505,9 +505,9 @@ describe('generic-download fallback', () => {
 describe('unsupported slot escape hatch', () => {
   it('renders slotted content instead of the download fallback for an unsupported mime-type', async () => {
     const el = (await fixture(html`
-      <lyra-document-preview src="https://example.test/report.pdf" mime-type="application/pdf">
+      <lr-document-preview src="https://example.test/report.pdf" mime-type="application/pdf">
         <div slot="unsupported" id="custom-viewer">Custom PDF viewer</div>
-      </lyra-document-preview>
+      </lr-document-preview>
     `)) as LyraDocumentPreview;
     await el.updateComplete;
     expect(el.shadowRoot!.querySelector('[part="download-link"]')).to.not.exist;
@@ -519,9 +519,9 @@ describe('unsupported slot escape hatch', () => {
 
   it('falls back to the download link once the unsupported slot is emptied', async () => {
     const el = (await fixture(html`
-      <lyra-document-preview src="https://example.test/report.pdf" mime-type="application/pdf">
+      <lr-document-preview src="https://example.test/report.pdf" mime-type="application/pdf">
         <div slot="unsupported" id="custom-viewer">Custom PDF viewer</div>
-      </lyra-document-preview>
+      </lr-document-preview>
     `)) as LyraDocumentPreview;
     await el.updateComplete;
     el.querySelector('#custom-viewer')!.remove();
@@ -535,11 +535,11 @@ describe('unsupported slot escape hatch', () => {
 describe('status="converting"', () => {
   it('shows the indeterminate spinner regardless of mime-type/src when no progress is given', async () => {
     const el = (await fixture(html`
-      <lyra-document-preview
+      <lr-document-preview
         status="converting"
         src="https://example.test/a.pdf"
         mime-type="application/pdf"
-      ></lyra-document-preview>
+      ></lr-document-preview>
     `)) as LyraDocumentPreview;
     const spinner = el.shadowRoot!.querySelector('[part="spinner"]') as HTMLElement;
     expect(spinner).to.exist;
@@ -550,7 +550,7 @@ describe('status="converting"', () => {
 
   it('shows a determinate role="progressbar" once progress is set', async () => {
     const el = (await fixture(html`
-      <lyra-document-preview status="converting" progress="42"></lyra-document-preview>
+      <lr-document-preview status="converting" progress="42"></lr-document-preview>
     `)) as LyraDocumentPreview;
     const spinner = el.shadowRoot!.querySelector('[part="spinner"]') as HTMLElement;
     expect(spinner.getAttribute('role')).to.equal('progressbar');
@@ -562,7 +562,7 @@ describe('status="converting"', () => {
 
   it('clamps an out-of-range progress value into [0, 100]', async () => {
     const el = (await fixture(html`
-      <lyra-document-preview status="converting" progress="150"></lyra-document-preview>
+      <lr-document-preview status="converting" progress="150"></lr-document-preview>
     `)) as LyraDocumentPreview;
     const spinner = el.shadowRoot!.querySelector('[part="spinner"]') as HTMLElement;
     expect(spinner.getAttribute('aria-valuenow')).to.equal('100');
@@ -570,7 +570,7 @@ describe('status="converting"', () => {
 
   it('clamps a negative progress value into [0, 100]', async () => {
     const el = (await fixture(html`
-      <lyra-document-preview status="converting" progress="-20"></lyra-document-preview>
+      <lr-document-preview status="converting" progress="-20"></lr-document-preview>
     `)) as LyraDocumentPreview;
     const spinner = el.shadowRoot!.querySelector('[part="spinner"]') as HTMLElement;
     expect(spinner.getAttribute('aria-valuenow')).to.equal('0');
@@ -578,7 +578,7 @@ describe('status="converting"', () => {
 
   it('shows the indeterminate spinner (not a crash) when progress is set to an invalid value (NaN)', async () => {
     const el = (await fixture(html`
-      <lyra-document-preview status="converting" progress="not-a-number"></lyra-document-preview>
+      <lr-document-preview status="converting" progress="not-a-number"></lr-document-preview>
     `)) as LyraDocumentPreview;
     expect(Number.isNaN(el.progress)).to.be.true;
     const spinner = el.shadowRoot!.querySelector('[part="spinner"]') as HTMLElement;
@@ -589,12 +589,12 @@ describe('status="converting"', () => {
 describe('status="error"', () => {
   it('renders errorMessage in [part="error"] with role="alert", regardless of mime-type', async () => {
     const el = (await fixture(html`
-      <lyra-document-preview
+      <lr-document-preview
         status="error"
         error-message="Conversion failed: unsupported source encoding."
         mime-type="text/plain"
         src="https://example.test/a.txt"
-      ></lyra-document-preview>
+      ></lr-document-preview>
     `)) as LyraDocumentPreview;
     const error = el.shadowRoot!.querySelector('[part="error"]') as HTMLElement;
     expect(error).to.exist;
@@ -605,21 +605,21 @@ describe('status="error"', () => {
 });
 
 describe('max-height', () => {
-  it('sets the --lyra-document-preview-max-height custom property on [part="base"] when given', async () => {
+  it('sets the --lr-document-preview-max-height custom property on [part="base"] when given', async () => {
     const el = (await fixture(
-      html`<lyra-document-preview max-height="12rem"></lyra-document-preview>`,
+      html`<lr-document-preview max-height="12rem"></lr-document-preview>`,
     )) as LyraDocumentPreview;
     const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
-    expect(base.style.getPropertyValue('--lyra-document-preview-max-height').trim()).to.equal('12rem');
+    expect(base.style.getPropertyValue('--lr-document-preview-max-height').trim()).to.equal('12rem');
   });
 });
 
 describe('motion', () => {
   it('routes spinner timing through a documented custom property and stops it for reduced motion', async () => {
     const css = styles.cssText.replace(/\s+/g, ' ');
-    expect(css).to.include('--lyra-document-preview-spin-duration: 0.8s;');
+    expect(css).to.include('--lr-document-preview-spin-duration: 0.8s;');
     expect(css).to.include(
-      'animation: lyra-document-preview-spin var(--lyra-document-preview-spin-duration) linear infinite;',
+      'animation: lr-document-preview-spin var(--lr-document-preview-spin-duration) linear infinite;',
     );
     expect(css).to.include('@media (prefers-reduced-motion: reduce)');
     expect(css).to.include('.ring { animation: none !important; }');
@@ -628,7 +628,7 @@ describe('motion', () => {
 
 describe('accessibility', () => {
   it('is accessible in the default (idle, empty) state', async () => {
-    const el = await fixture(html`<lyra-document-preview></lyra-document-preview>`);
+    const el = await fixture(html`<lr-document-preview></lr-document-preview>`);
     await expect(el).to.be.accessible();
   });
 
@@ -636,11 +636,11 @@ describe('accessibility', () => {
     const unstub = stubFetch(() => Promise.resolve(textResponse('hello world')));
     try {
       const el = (await fixture(html`
-        <lyra-document-preview
+        <lr-document-preview
           src="https://example.test/a.txt"
           mime-type="text/plain"
           filename="a.txt"
-        ></lyra-document-preview>
+        ></lr-document-preview>
       `)) as LyraDocumentPreview;
       await aTimeout(20);
       await el.updateComplete;
@@ -652,25 +652,25 @@ describe('accessibility', () => {
 
   it('is accessible in the converting state with progress', async () => {
     const el = await fixture(html`
-      <lyra-document-preview status="converting" progress="55" filename="deck.pptx"></lyra-document-preview>
+      <lr-document-preview status="converting" progress="55" filename="deck.pptx"></lr-document-preview>
     `);
     await expect(el).to.be.accessible();
   });
 
   it('is accessible in the error state', async () => {
     const el = await fixture(html`
-      <lyra-document-preview status="error" error-message="Conversion failed." filename="deck.pptx"></lyra-document-preview>
+      <lr-document-preview status="error" error-message="Conversion failed." filename="deck.pptx"></lr-document-preview>
     `);
     await expect(el).to.be.accessible();
   });
 
   it('is accessible in the generic download fallback state', async () => {
     const el = await fixture(html`
-      <lyra-document-preview
+      <lr-document-preview
         src="https://example.test/report.pdf"
         mime-type="application/pdf"
         filename="report.pdf"
-      ></lyra-document-preview>
+      ></lr-document-preview>
     `);
     await expect(el).to.be.accessible();
   });
@@ -679,7 +679,7 @@ describe('accessibility', () => {
 describe('localization', () => {
   it('defaults the image alt to "Document preview" when filename is unset', async () => {
     const el = (await fixture(html`
-      <lyra-document-preview src="https://example.test/photo.png" mime-type="image/png"></lyra-document-preview>
+      <lr-document-preview src="https://example.test/photo.png" mime-type="image/png"></lr-document-preview>
     `)) as LyraDocumentPreview;
     const img = el.shadowRoot!.querySelector('[part="body"] img') as HTMLImageElement;
     expect(img.getAttribute('alt')).to.equal('Document preview');
@@ -687,11 +687,11 @@ describe('localization', () => {
 
   it('localizes the image alt fallback via .strings', async () => {
     const el = (await fixture(html`
-      <lyra-document-preview
+      <lr-document-preview
         src="https://example.test/photo.png"
         mime-type="image/png"
         .strings=${{ documentPreviewAlt: 'Aperçu du document' }}
-      ></lyra-document-preview>
+      ></lr-document-preview>
     `)) as LyraDocumentPreview;
     const img = el.shadowRoot!.querySelector('[part="body"] img') as HTMLImageElement;
     expect(img.getAttribute('alt')).to.equal('Aperçu du document');
@@ -706,7 +706,7 @@ describe('localization', () => {
     );
     try {
       const el = (await fixture(html`
-        <lyra-document-preview src="https://example.test/a.txt" mime-type="text/plain"></lyra-document-preview>
+        <lr-document-preview src="https://example.test/a.txt" mime-type="text/plain"></lr-document-preview>
       `)) as LyraDocumentPreview;
       const spinner = el.shadowRoot!.querySelector('[part="spinner"]') as HTMLElement;
       expect(spinner.querySelector('.sr-only')!.textContent).to.equal('Loading document…');
@@ -724,11 +724,11 @@ describe('localization', () => {
     );
     try {
       const el = (await fixture(html`
-        <lyra-document-preview
+        <lr-document-preview
           src="https://example.test/a.txt"
           mime-type="text/plain"
           .strings=${{ loadingDocument: 'Chargement du document…' }}
-        ></lyra-document-preview>
+        ></lr-document-preview>
       `)) as LyraDocumentPreview;
       const spinner = el.shadowRoot!.querySelector('[part="spinner"]') as HTMLElement;
       expect(spinner.querySelector('.sr-only')!.textContent).to.equal('Chargement du document…');
@@ -739,7 +739,7 @@ describe('localization', () => {
 
   it('defaults to "Document URL is not allowed." for an unsafe text src', async () => {
     const el = (await fixture(html`
-      <lyra-document-preview .src=${'java\tscript:alert(1)'} mime-type="text/plain"></lyra-document-preview>
+      <lr-document-preview .src=${'java\tscript:alert(1)'} mime-type="text/plain"></lr-document-preview>
     `)) as LyraDocumentPreview;
     const error = el.shadowRoot!.querySelector('[part="error"]') as HTMLElement;
     expect(error.textContent).to.equal('Document URL is not allowed.');
@@ -747,11 +747,11 @@ describe('localization', () => {
 
   it('localizes the unsafe-URL error via .strings (documentPreviewUrlNotAllowed)', async () => {
     const el = (await fixture(html`
-      <lyra-document-preview
+      <lr-document-preview
         .src=${'java\tscript:alert(1)'}
         mime-type="text/plain"
         .strings=${{ documentPreviewUrlNotAllowed: "L'URL du document n'est pas autorisée." }}
-      ></lyra-document-preview>
+      ></lr-document-preview>
     `)) as LyraDocumentPreview;
     const error = el.shadowRoot!.querySelector('[part="error"]') as HTMLElement;
     expect(error.textContent).to.equal("L'URL du document n'est pas autorisée.");
@@ -759,11 +759,11 @@ describe('localization', () => {
 
   it('defaults to "Failed to load document." when the fetch rejects with a non-Error value', async () => {
     const el = (await fixture(
-      html`<lyra-document-preview mime-type="text/plain"></lyra-document-preview>`,
+      html`<lr-document-preview mime-type="text/plain"></lr-document-preview>`,
     )) as LyraDocumentPreview;
     const unstub = stubFetch(() => Promise.reject('boom'));
     try {
-      const eventPromise = oneEvent(el, 'lyra-render-error');
+      const eventPromise = oneEvent(el, 'lr-render-error');
       el.src = 'https://example.test/a.txt';
       await eventPromise;
       await el.updateComplete;
@@ -776,14 +776,14 @@ describe('localization', () => {
 
   it('localizes the non-Error fetch-failure message via .strings (documentPreviewFailedToLoad)', async () => {
     const el = (await fixture(html`
-      <lyra-document-preview
+      <lr-document-preview
         mime-type="text/plain"
         .strings=${{ documentPreviewFailedToLoad: 'Échec du chargement du document.' }}
-      ></lyra-document-preview>
+      ></lr-document-preview>
     `)) as LyraDocumentPreview;
     const unstub = stubFetch(() => Promise.reject('boom'));
     try {
-      const eventPromise = oneEvent(el, 'lyra-render-error');
+      const eventPromise = oneEvent(el, 'lr-render-error');
       el.src = 'https://example.test/a.txt';
       await eventPromise;
       await el.updateComplete;
@@ -796,7 +796,7 @@ describe('localization', () => {
 
   it('defaults status="error" with no error-message to "Something went wrong."', async () => {
     const el = (await fixture(
-      html`<lyra-document-preview status="error"></lyra-document-preview>`,
+      html`<lr-document-preview status="error"></lr-document-preview>`,
     )) as LyraDocumentPreview;
     const error = el.shadowRoot!.querySelector('[part="error"]') as HTMLElement;
     expect(error.textContent).to.equal('Something went wrong.');
@@ -804,7 +804,7 @@ describe('localization', () => {
 
   it('localizes the generic error fallback via .strings (documentPreviewGenericError)', async () => {
     const el = (await fixture(html`
-      <lyra-document-preview status="error" .strings=${{ documentPreviewGenericError: "Une erreur s'est produite." }}></lyra-document-preview>
+      <lr-document-preview status="error" .strings=${{ documentPreviewGenericError: "Une erreur s'est produite." }}></lr-document-preview>
     `)) as LyraDocumentPreview;
     const error = el.shadowRoot!.querySelector('[part="error"]') as HTMLElement;
     expect(error.textContent).to.equal("Une erreur s'est produite.");
@@ -812,33 +812,33 @@ describe('localization', () => {
 });
 
 describe('zoomable (image format)', () => {
-  it('does not wrap in lyra-zoomable-frame by default', async () => {
+  it('does not wrap in lr-zoomable-frame by default', async () => {
     const el = (await fixture(
-      html`<lyra-document-preview mime-type="image/png" src="https://example.test/photo.png"></lyra-document-preview>`,
+      html`<lr-document-preview mime-type="image/png" src="https://example.test/photo.png"></lr-document-preview>`,
     )) as LyraDocumentPreview;
     await el.updateComplete;
-    expect(el.shadowRoot!.querySelector('lyra-zoomable-frame')).to.not.exist;
+    expect(el.shadowRoot!.querySelector('lr-zoomable-frame')).to.not.exist;
   });
 
-  it('wraps the image in lyra-zoomable-frame when zoomable is set', async () => {
+  it('wraps the image in lr-zoomable-frame when zoomable is set', async () => {
     const el = (await fixture(
-      html`<lyra-document-preview zoomable mime-type="image/png" src="https://example.test/photo.png"></lyra-document-preview>`,
+      html`<lr-document-preview zoomable mime-type="image/png" src="https://example.test/photo.png"></lr-document-preview>`,
     )) as LyraDocumentPreview;
     await el.updateComplete;
-    const frame = el.shadowRoot!.querySelector('lyra-zoomable-frame');
+    const frame = el.shadowRoot!.querySelector('lr-zoomable-frame');
     expect(frame).to.exist;
     expect(frame!.querySelector('img')).to.exist;
   });
 });
 
 describe('region highlights (image format)', () => {
-  it('renders a focusable region-highlight and emits lyra-highlight-activate', async () => {
+  it('renders a focusable region-highlight and emits lr-highlight-activate', async () => {
     const el = (await fixture(
-      html`<lyra-document-preview mime-type="image/png" src="https://example.test/photo.png"></lyra-document-preview>`,
+      html`<lr-document-preview mime-type="image/png" src="https://example.test/photo.png"></lr-document-preview>`,
     )) as LyraDocumentPreview;
     el.highlights = [{ id: 'h1', anchor: { kind: 'region', rect: { x: 0, y: 0, width: 20, height: 20 } } }];
     await el.updateComplete;
-    const listener = oneEvent(el, 'lyra-highlight-activate');
+    const listener = oneEvent(el, 'lr-highlight-activate');
     (el.shadowRoot!.querySelector('[part="region-highlight"]') as HTMLElement).click();
     const event = (await listener) as CustomEvent<{ id: string }>;
     expect(event.detail).to.deep.equal({ id: 'h1' });
@@ -846,7 +846,7 @@ describe('region highlights (image format)', () => {
 
   it('positions region highlights with physical left/top under dir="rtl" so they stay over the non-mirroring image', async () => {
     const el = (await fixture(
-      html`<lyra-document-preview dir="rtl" mime-type="image/png" src="https://example.test/photo.png"></lyra-document-preview>`,
+      html`<lr-document-preview dir="rtl" mime-type="image/png" src="https://example.test/photo.png"></lr-document-preview>`,
     )) as LyraDocumentPreview;
     el.highlights = [{ id: 'h1', anchor: { kind: 'region', rect: { x: 10, y: 20, width: 30, height: 40 } } }];
     await el.updateComplete;
@@ -858,7 +858,7 @@ describe('region highlights (image format)', () => {
 
   it('scrollToAnchor() by id scrolls the matching region, not just the first one, when several are rendered', async () => {
     const el = (await fixture(
-      html`<lyra-document-preview mime-type="image/png" src="https://example.test/photo.png"></lyra-document-preview>`,
+      html`<lr-document-preview mime-type="image/png" src="https://example.test/photo.png"></lr-document-preview>`,
     )) as LyraDocumentPreview;
     el.highlights = [
       { id: 'h1', anchor: { kind: 'region', rect: { x: 0, y: 0, width: 10, height: 10 } } },
@@ -879,18 +879,18 @@ describe('region highlights (image format)', () => {
 describe('back-compat (image format)', () => {
   it('image rendering is unchanged with zoomable off and highlights empty', async () => {
     const el = (await fixture(
-      html`<lyra-document-preview mime-type="image/png" src="https://example.test/photo.png"></lyra-document-preview>`,
+      html`<lr-document-preview mime-type="image/png" src="https://example.test/photo.png"></lr-document-preview>`,
     )) as LyraDocumentPreview;
     await el.updateComplete;
     expect(el.shadowRoot!.querySelector('img')).to.exist;
-    expect(el.shadowRoot!.querySelector('lyra-zoomable-frame')).to.not.exist;
+    expect(el.shadowRoot!.querySelector('lr-zoomable-frame')).to.not.exist;
   });
 
   it('text and generic format dispatch are untouched', async () => {
     const el = (await fixture(
-      html`<lyra-document-preview mime-type="text/plain" src="https://example.test/notes.txt"></lyra-document-preview>`,
+      html`<lr-document-preview mime-type="text/plain" src="https://example.test/notes.txt"></lr-document-preview>`,
     )) as LyraDocumentPreview;
     await el.updateComplete;
-    expect(el.shadowRoot!.querySelector('lyra-zoomable-frame')).to.not.exist;
+    expect(el.shadowRoot!.querySelector('lr-zoomable-frame')).to.not.exist;
   });
 });

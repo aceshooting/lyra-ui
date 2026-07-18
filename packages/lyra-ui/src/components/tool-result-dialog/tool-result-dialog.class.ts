@@ -16,12 +16,12 @@ import { closeIcon, expandIcon } from '../../internal/icons.js';
 import { finiteRange } from '../../internal/numbers.js';
 import { styles } from './tool-result-dialog.styles.js';
 
-/** Same status vocabulary as `<lyra-tool-call-chip>`. */
+/** Same status vocabulary as `<lr-tool-call-chip>`. */
 export type ToolResultStatus = 'pending' | 'running' | 'success' | 'error' | 'denied';
 
 /**
- * Reason the dialog was dismissed, forwarded as the `lyra-close` event
- * detail -- mirrors `<lyra-dialog>`'s own `DialogCloseReason` shape.
+ * Reason the dialog was dismissed, forwarded as the `lr-close` event
+ * detail -- mirrors `<lr-dialog>`'s own `DialogCloseReason` shape.
  * `'escape'`/`'backdrop'` come from the dialog's own built-in dismiss
  * triggers, `'close-button'` from the built-in header close button, and any
  * other string is whatever a caller passes to `close()` directly (e.g. a
@@ -35,15 +35,15 @@ export type ToolResultDialogCloseReason =
   | (string & Record<never, never>);
 
 export interface LyraToolResultDialogEventMap {
-  'lyra-close': CustomEvent<ToolResultDialogCloseReason>;
-  'lyra-maximize-change': CustomEvent<boolean>;
+  'lr-close': CustomEvent<ToolResultDialogCloseReason>;
+  'lr-maximize-change': CustomEvent<boolean>;
 }
 
 // Mirrors the shared icon set's viewBox/stroke conventions
 // (internal/icons.ts's chevronIcon()/closeIcon()/etc.) without adding
 // tool-result-specific glyphs to that module -- it's off limits here -- so
 // these still read as part of the same visual language as the rest of the
-// library's inline icons. Same approach lyra-checkbox's/lyra-chat-message's
+// library's inline icons. Same approach lr-checkbox's/lr-chat-message's
 // own local glyphs take for the identical reason.
 const ICON_VIEW_BOX = '0 0 24 24';
 const ICON_STROKE_WIDTH = '1.75';
@@ -67,7 +67,7 @@ function icon(paths: SVGTemplateResult): SVGTemplateResult {
 
 /** A "restore from maximized" glyph -- the mirror image of `expandIcon()`,
  *  arrows pointing inward toward the center instead of outward toward the
- *  corners, same as lyra-widget's fullscreen-exit affordance reuses
+ *  corners, same as lr-widget's fullscreen-exit affordance reuses
  *  `closeIcon()` for the analogous "undo the expanded state" action. A
  *  distinct glyph (not `closeIcon()`) is used here because this dialog
  *  already has its own, separate close button right next to it -- two
@@ -182,25 +182,25 @@ function formatDuration(ms: number): {
 }
 
 /**
- * `<lyra-tool-result-dialog>` — a full tool-call detail overlay: a status/
+ * `<lr-tool-result-dialog>` — a full tool-call detail overlay: a status/
  * duration header plus a `body` slot where a consumer typically places a
- * `<lyra-tabs>` with Input/Preview/JSON/Raw panels. This component knows
+ * `<lr-tabs>` with Input/Preview/JSON/Raw panels. This component knows
  * nothing about what's inside that slot — it only supplies the modal chrome
  * around it.
  *
  * This is its own standalone overlay implementation (`role="dialog"`,
  * focus-trapped, Escape/backdrop-dismissible, scroll-locking) rather than
- * nesting a `<lyra-dialog>` in its shadow template — see `<lyra-dialog>`'s
+ * nesting a `<lr-dialog>` in its shadow template — see `<lr-dialog>`'s
  * own header comment for why a new overlay component in this library
  * duplicates that pattern locally instead of composing the previous one:
- * slot-forwarding into a nested `<lyra-dialog>` would put a forwarding
+ * slot-forwarding into a nested `<lr-dialog>` would put a forwarding
  * `<slot>` where a light-DOM-scanning descendant (e.g. a slotted
- * `<lyra-tabs>`'s own `Array.from(this.children)` scan) expects real
+ * `<lr-tabs>`'s own `Array.from(this.children)` scan) expects real
  * projected content.
  *
  * `maximized` toggles between a constrained modal size and a near-fullscreen
  * size within the same open dialog and open/close lifecycle — unlike
- * `<lyra-widget>`'s fullscreen mode, there's no non-modal resting state to
+ * `<lr-widget>`'s fullscreen mode, there's no non-modal resting state to
  * return to, so no separate scroll-lock/focus-trap bookkeeping is needed for
  * the transition itself.
  *
@@ -208,14 +208,14 @@ function formatDuration(ms: number): {
  * Escape and the Tab focus trap only ever act on the topmost open instance,
  * so instances beneath it stay open and untouched until the one on top closes.
  *
- * @customElement lyra-tool-result-dialog
- * @slot body - The dialog's main content — typically a `<lyra-tabs>` with
+ * @customElement lr-tool-result-dialog
+ * @slot body - The dialog's main content — typically a `<lr-tabs>` with
  * Input/Preview/JSON/Raw panels, entirely consumer-assembled.
  * @slot footer - Optional action buttons, rendered in a bottom row.
- * @event lyra-close - `detail: ToolResultDialogCloseReason`. Fired
+ * @event lr-close - `detail: ToolResultDialogCloseReason`. Fired
  * exactly once per dismissal, via Escape, a backdrop click, the built-in
  * close button, or a `close()` call.
- * @event lyra-maximize-change - `detail: boolean` (the new `maximized`
+ * @event lr-maximize-change - `detail: boolean` (the new `maximized`
  * state), fired when the header's maximize/restore toggle is clicked.
  * @csspart backdrop - The full-viewport scrim behind the panel.
  * @csspart panel - The dialog panel itself (`role="dialog"` while open).
@@ -229,9 +229,9 @@ function formatDuration(ms: number): {
  * @csspart close-button - The built-in close button.
  * @csspart body - The wrapper around the `body` slot.
  * @csspart footer - The wrapper around the `footer` slot.
- * @cssprop [--lyra-tool-result-dialog-overlay-color=var(--lyra-color-overlay)] - Backdrop color.
- * @cssprop --lyra-tool-result-dialog-maximized-inset - Insets for the maximized panel.
- * @cssprop [--lyra-tool-result-dialog-spin=1s linear] - Running-status animation duration and timing.
+ * @cssprop [--lr-tool-result-dialog-overlay-color=var(--lr-color-overlay)] - Backdrop color.
+ * @cssprop --lr-tool-result-dialog-maximized-inset - Insets for the maximized panel.
+ * @cssprop [--lr-tool-result-dialog-spin=1s linear] - Running-status animation duration and timing.
  */
 export class LyraToolResultDialog extends LyraElement<LyraToolResultDialogEventMap> {
   static styles = [LyraElement.styles, styles];
@@ -240,7 +240,7 @@ export class LyraToolResultDialog extends LyraElement<LyraToolResultDialogEventM
    * Whether the dialog is open. Set this (or call `close()`) — there is no
    * separate `show()`/`hide()` pair. Both paths restore focus to the trigger
    * element identically; only `close()` additionally fires
-   * `lyra-close`, since a direct assignment carries no reason string
+   * `lr-close`, since a direct assignment carries no reason string
    * to attach to that event.
    */
   @property({ type: Boolean, reflect: true }) open = false;
@@ -323,7 +323,7 @@ export class LyraToolResultDialog extends LyraElement<LyraToolResultDialogEventM
 
   /**
    * Close the dialog and return focus to whatever had it before the dialog
-   * opened. `reason` is forwarded as the `lyra-close` detail --
+   * opened. `reason` is forwarded as the `lr-close` detail --
    * built-in triggers pass `'escape'`/`'backdrop'`/`'close-button'`; a
    * consumer's own close affordance (e.g. a footer action button) should
    * call this directly with its own reason string, so every dismissal path
@@ -333,13 +333,13 @@ export class LyraToolResultDialog extends LyraElement<LyraToolResultDialogEventM
    * Focus restoration follows the `open` lifecycle, so a direct `.open =
    * false` assignment restores focus identically to calling `close()` -- the
    * one thing a direct assignment still can't do is fire
-   * `lyra-close`, since there's no reason string to attach without
+   * `lr-close`, since there's no reason string to attach without
    * going through this method.
    */
   close(reason: ToolResultDialogCloseReason = 'api'): void {
     if (!this.open) return;
     this.open = false;
-    this.emit<ToolResultDialogCloseReason>('lyra-close', reason);
+    this.emit<ToolResultDialogCloseReason>('lr-close', reason);
   }
 
   private onBackdropClick = (): void => {
@@ -352,7 +352,7 @@ export class LyraToolResultDialog extends LyraElement<LyraToolResultDialogEventM
 
   private toggleMaximized = (): void => {
     this.maximized = !this.maximized;
-    this.emit<boolean>('lyra-maximize-change', this.maximized);
+    this.emit<boolean>('lr-maximize-change', this.maximized);
   };
 
   private activateOverlay(): void {
@@ -442,6 +442,6 @@ export class LyraToolResultDialog extends LyraElement<LyraToolResultDialogEventM
 
 declare global {
   interface HTMLElementTagNameMap {
-    'lyra-tool-result-dialog': LyraToolResultDialog;
+    'lr-tool-result-dialog': LyraToolResultDialog;
   }
 }

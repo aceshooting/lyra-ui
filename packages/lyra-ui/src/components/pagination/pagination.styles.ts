@@ -5,82 +5,82 @@ export const styles = css`
     display: block;
     min-inline-size: 0;
     container-type: inline-size;
-    --lyra-pagination-control-size: var(--lyra-size-2-5rem);
-    --lyra-pagination-font-size: var(--lyra-font-size-md-sm);
+    --lr-pagination-control-size: var(--lr-size-2-5rem);
+    --lr-pagination-font-size: var(--lr-font-size-md-sm);
   }
   :host([size='xs']) {
-    --lyra-pagination-control-size: var(--lyra-size-1-75rem);
-    --lyra-pagination-font-size: var(--lyra-font-size-xs);
+    --lr-pagination-control-size: var(--lr-size-1-75rem);
+    --lr-pagination-font-size: var(--lr-font-size-xs);
   }
   :host([size='s']) {
-    --lyra-pagination-control-size: var(--lyra-size-2-25rem);
-    --lyra-pagination-font-size: var(--lyra-font-size-sm);
+    --lr-pagination-control-size: var(--lr-size-2-25rem);
+    --lr-pagination-font-size: var(--lr-font-size-sm);
   }
   :host([size='l']) {
-    --lyra-pagination-control-size: var(--lyra-size-3rem);
-    --lyra-pagination-font-size: var(--lyra-font-size-md);
+    --lr-pagination-control-size: var(--lr-size-3rem);
+    --lr-pagination-font-size: var(--lr-font-size-md);
   }
   :host([size='xl']) {
-    --lyra-pagination-control-size: var(--lyra-size-3-5rem);
-    --lyra-pagination-font-size: var(--lyra-font-size-lg);
+    --lr-pagination-control-size: var(--lr-size-3-5rem);
+    --lr-pagination-font-size: var(--lr-font-size-lg);
   }
   [part='base'] {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: var(--lyra-space-m);
+    gap: var(--lr-space-m);
     min-inline-size: 0;
-    font-size: var(--lyra-pagination-font-size);
+    font-size: var(--lr-pagination-font-size);
   }
   [part='summary'] {
     min-inline-size: 0;
-    color: var(--lyra-color-text-quiet);
+    color: var(--lr-color-text-quiet);
     overflow-wrap: anywhere;
   }
   [part='controls'] {
     display: flex;
     flex: 0 0 auto;
     align-items: center;
-    gap: var(--lyra-space-xs);
+    gap: var(--lr-space-xs);
   }
   [part='previous-button'],
   [part='next-button'] {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    inline-size: var(--lyra-pagination-control-size);
-    min-inline-size: var(--lyra-pagination-control-size);
-    block-size: var(--lyra-pagination-control-size);
-    padding: var(--lyra-space-xs);
-    border: var(--lyra-border-width-thin) solid var(--lyra-color-border);
-    border-radius: var(--lyra-radius);
-    background: var(--lyra-color-surface);
-    color: var(--lyra-color-text);
+    inline-size: var(--lr-pagination-control-size);
+    min-inline-size: var(--lr-pagination-control-size);
+    block-size: var(--lr-pagination-control-size);
+    padding: var(--lr-space-xs);
+    border: var(--lr-border-width-thin) solid var(--lr-color-border);
+    border-radius: var(--lr-radius);
+    background: var(--lr-color-surface);
+    color: var(--lr-color-text);
     font: inherit;
     cursor: pointer;
   }
   [part='previous-button']:hover:not(:disabled),
   [part='next-button']:hover:not(:disabled) {
-    background: var(--lyra-color-brand-quiet);
+    background: var(--lr-color-brand-quiet);
   }
   [part='previous-button']:focus-visible,
   [part='next-button']:focus-visible,
   [part='page-input']:focus-visible {
-    outline: var(--lyra-focus-ring-width) solid var(--lyra-focus-ring-color);
-    outline-offset: var(--lyra-focus-ring-offset);
+    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
+    outline-offset: var(--lr-focus-ring-offset);
   }
   [part='previous-button']:disabled,
   [part='next-button']:disabled,
   [part='page-input']:disabled {
     cursor: not-allowed;
-    opacity: var(--lyra-opacity-disabled);
+    opacity: var(--lr-opacity-disabled);
   }
   [part='previous-icon'],
   [part='next-icon'] {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    line-height: var(--lyra-line-height-none);
+    line-height: var(--lr-line-height-none);
   }
   [part='previous-icon'] {
     transform: rotate(180deg);
@@ -97,31 +97,31 @@ export const styles = css`
   [part='page-field'] {
     display: inline-flex;
     align-items: center;
-    color: var(--lyra-color-text-quiet);
+    color: var(--lr-color-text-quiet);
     white-space: nowrap;
   }
   [part='page-input'] {
     box-sizing: border-box;
-    inline-size: var(--lyra-pagination-control-size);
-    min-inline-size: var(--lyra-pagination-control-size);
-    block-size: var(--lyra-pagination-control-size);
-    padding: var(--lyra-space-xs);
-    border: var(--lyra-border-width-thin) solid var(--lyra-color-border);
-    border-radius: var(--lyra-radius);
-    background: var(--lyra-color-surface);
-    color: var(--lyra-color-text);
+    inline-size: var(--lr-pagination-control-size);
+    min-inline-size: var(--lr-pagination-control-size);
+    block-size: var(--lr-pagination-control-size);
+    padding: var(--lr-space-xs);
+    border: var(--lr-border-width-thin) solid var(--lr-color-border);
+    border-radius: var(--lr-radius);
+    background: var(--lr-color-surface);
+    color: var(--lr-color-text);
     font: inherit;
     text-align: center;
   }
   [part='page-input'][aria-invalid='true'] {
-    border-color: var(--lyra-color-danger);
+    border-color: var(--lr-color-danger);
   }
   [part='live-region'].sr-only {
     position: absolute;
-    inline-size: var(--lyra-size-1px);
-    block-size: var(--lyra-size-1px);
+    inline-size: var(--lr-size-1px);
+    block-size: var(--lr-size-1px);
     padding: 0;
-    margin: var(--lyra-size-neg-1px);
+    margin: var(--lr-size-neg-1px);
     overflow: hidden;
     clip-path: inset(50%);
     white-space: nowrap;
@@ -130,7 +130,7 @@ export const styles = css`
   /* Container-query lengths cannot reference custom properties. This is the
      documented 320px narrow-allocation baseline expressed in root-relative
      units so it still follows the page's type scale. */
-  @container (max-width: 20rem) {
+  @container (max-inline-size: 20rem) {
     [part='base'] {
       flex-direction: column;
       align-items: stretch;

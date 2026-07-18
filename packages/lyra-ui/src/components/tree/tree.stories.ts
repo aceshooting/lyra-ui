@@ -17,19 +17,19 @@ const data: TreeItem[] = [
 
 const meta: Meta = {
   title: 'Tree',
-  component: 'lyra-tree',
+  component: 'lr-tree',
   tags: ['autodocs'],
 };
 export default meta;
 type Story = StoryObj;
 
 export const Default: Story = {
-  render: () => html`<lyra-tree style="max-width: 20rem" label="File explorer" .data=${data}></lyra-tree>`,
+  render: () => html`<lr-tree style="max-width: 20rem" label="File explorer" .data=${data}></lr-tree>`,
 };
 
 export const RichRows: Story = {
   render: () => html`
-    <lyra-tree
+    <lr-tree
       style="max-width: 20rem"
       label="Case hierarchy"
       .data=${[
@@ -53,7 +53,7 @@ export const RichRows: Story = {
           ],
         },
       ] satisfies TreeItem[]}
-    ></lyra-tree>
+    ></lr-tree>
   `,
 };
 
@@ -70,7 +70,7 @@ export const ExpandCollapseAll: Story = {
           <button @click=${() => getTree().expandAll()}>Expand all</button>
           <button @click=${() => getTree().collapseAll()}>Collapse all</button>
         </div>
-        <lyra-tree id="imperative-tree" label="File explorer" .data=${data}></lyra-tree>
+        <lr-tree id="imperative-tree" label="File explorer" .data=${data}></lr-tree>
       </div>
     `;
   },
@@ -87,9 +87,9 @@ const buildDeepData = (depth: number): TreeItem[] => {
 /** A single branch nested well past the 8rem indentation cap, so the capped indent and truncated label are both visible without expanding anything by hand. */
 export const DeeplyNested: Story = {
   render: () =>
-    html`<lyra-tree style="max-width: 20rem" label="Deeply nested example" .data=${buildDeepData(12)}></lyra-tree>`,
+    html`<lr-tree style="max-width: 20rem" label="Deeply nested example" .data=${buildDeepData(12)}></lr-tree>`,
   play: async ({ canvasElement }) => {
-    const tree = canvasElement.querySelector('lyra-tree') as HTMLElement & { expandAll: () => void };
+    const tree = canvasElement.querySelector('lr-tree') as HTMLElement & { expandAll: () => void };
     tree.expandAll();
   },
 };

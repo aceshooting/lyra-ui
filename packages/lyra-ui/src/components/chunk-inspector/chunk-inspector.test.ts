@@ -9,7 +9,7 @@ const chunks: LyraChunk[] = [
 ];
 
 it('defaults to empty chunks, default thresholds, sort="score", virtualizeAt=50, compact=false', async () => {
-  const el = (await fixture(html`<lyra-chunk-inspector></lyra-chunk-inspector>`)) as LyraChunkInspector;
+  const el = (await fixture(html`<lr-chunk-inspector></lr-chunk-inspector>`)) as LyraChunkInspector;
   expect(el.chunks).to.deep.equal([]);
   expect(el.thresholds).to.deep.equal({ high: 0.75, medium: 0.5 });
   expect(el.sort).to.equal('score');
@@ -18,7 +18,7 @@ it('defaults to empty chunks, default thresholds, sort="score", virtualizeAt=50,
 });
 
 it('sorts descending by score by default', async () => {
-  const el = (await fixture(html`<lyra-chunk-inspector></lyra-chunk-inspector>`)) as LyraChunkInspector;
+  const el = (await fixture(html`<lr-chunk-inspector></lr-chunk-inspector>`)) as LyraChunkInspector;
   el.chunks = chunks;
   await el.updateComplete;
   const titles = [...el.shadowRoot!.querySelectorAll('[part="title"]')].map((t) => t.textContent);
@@ -26,7 +26,7 @@ it('sorts descending by score by default', async () => {
 });
 
 it('preserves given order when sort="none"', async () => {
-  const el = (await fixture(html`<lyra-chunk-inspector></lyra-chunk-inspector>`)) as LyraChunkInspector;
+  const el = (await fixture(html`<lr-chunk-inspector></lr-chunk-inspector>`)) as LyraChunkInspector;
   el.chunks = [chunks[2]!, chunks[0]!];
   el.sort = 'none';
   await el.updateComplete;
@@ -36,7 +36,7 @@ it('preserves given order when sort="none"', async () => {
 });
 
 it('renders score as visible percent text and a tone-mapped fill', async () => {
-  const el = (await fixture(html`<lyra-chunk-inspector></lyra-chunk-inspector>`)) as LyraChunkInspector;
+  const el = (await fixture(html`<lr-chunk-inspector></lr-chunk-inspector>`)) as LyraChunkInspector;
   el.chunks = [chunks[0]!];
   await el.updateComplete;
   expect(el.shadowRoot!.querySelector('[part="score"]')!.textContent).to.include('92%');
@@ -46,29 +46,29 @@ it('renders score as visible percent text and a tone-mapped fill', async () => {
 });
 
 it('maps score tiers per thresholds: high >= 0.75 success, medium >= 0.5 warning, else low danger', async () => {
-  const el = (await fixture(html`<lyra-chunk-inspector></lyra-chunk-inspector>`)) as LyraChunkInspector;
+  const el = (await fixture(html`<lr-chunk-inspector></lr-chunk-inspector>`)) as LyraChunkInspector;
   el.chunks = chunks;
   await el.updateComplete;
   const fills = [...el.shadowRoot!.querySelectorAll('[part="score-fill"]')];
   expect(fills.map((f) => f.getAttribute('data-tone'))).to.deep.equal(['success', 'warning', 'danger']);
 });
 
-it('emits lyra-chunk-open with id/sourceId/anchor when a chunk title is activated', async () => {
-  const el = (await fixture(html`<lyra-chunk-inspector></lyra-chunk-inspector>`)) as LyraChunkInspector;
+it('emits lr-chunk-open with id/sourceId/anchor when a chunk title is activated', async () => {
+  const el = (await fixture(html`<lr-chunk-inspector></lr-chunk-inspector>`)) as LyraChunkInspector;
   el.chunks = [{ ...chunks[0]!, anchor: { kind: 'page', page: 3 } }];
   await el.updateComplete;
-  const listener = oneEvent(el, 'lyra-chunk-open');
+  const listener = oneEvent(el, 'lr-chunk-open');
   (el.shadowRoot!.querySelector('[part="open-button"]') as HTMLButtonElement).click();
   const event = await listener;
   expect(event.detail).to.deep.equal({ id: 'c1', sourceId: 's1', anchor: { kind: 'page', page: 3 } });
 });
 
 it('toggles per-chunk text expand state, keyed by id, surviving a chunks reassignment', async () => {
-  const el = (await fixture(html`<lyra-chunk-inspector></lyra-chunk-inspector>`)) as LyraChunkInspector;
+  const el = (await fixture(html`<lr-chunk-inspector></lr-chunk-inspector>`)) as LyraChunkInspector;
   el.chunks = chunks;
   await el.updateComplete;
   const toggle = el.shadowRoot!.querySelector('[part="toggle"]') as HTMLButtonElement;
-  const listener = oneEvent(el, 'lyra-expand');
+  const listener = oneEvent(el, 'lr-expand');
   toggle.click();
   const event = await listener;
   expect(event.detail).to.deep.equal({ id: chunks[0]!.id, expanded: true });
@@ -81,7 +81,7 @@ it('toggles per-chunk text expand state, keyed by id, surviving a chunks reassig
 });
 
 it('compact rows have no text preview and no expand toggle', async () => {
-  const el = (await fixture(html`<lyra-chunk-inspector compact></lyra-chunk-inspector>`)) as LyraChunkInspector;
+  const el = (await fixture(html`<lr-chunk-inspector compact></lr-chunk-inspector>`)) as LyraChunkInspector;
   el.chunks = chunks;
   await el.updateComplete;
   expect(el.shadowRoot!.querySelector('[part="text"]')).to.not.exist;
@@ -90,32 +90,32 @@ it('compact rows have no text preview and no expand toggle', async () => {
 
 it('renders through the internal virtual-list once chunks exceeds virtualizeAt', async () => {
   const many: LyraChunk[] = Array.from({ length: 5 }, (_, i) => ({ id: `c${i}`, text: `chunk ${i}`, score: 0.5, sourceId: 's1' }));
-  const el = (await fixture(html`<lyra-chunk-inspector virtualize-at="3"></lyra-chunk-inspector>`)) as LyraChunkInspector;
+  const el = (await fixture(html`<lr-chunk-inspector virtualize-at="3"></lr-chunk-inspector>`)) as LyraChunkInspector;
   el.chunks = many;
   await el.updateComplete;
-  expect(el.shadowRoot!.querySelector('lyra-virtual-list')).to.exist;
+  expect(el.shadowRoot!.querySelector('lr-virtual-list')).to.exist;
 });
 
 it('normalizes a NaN virtualizeAt to the default (50) instead of silently disabling virtualization', async () => {
   // A small chunk count (3, well below the real default of 50) -- proves the NaN falls back to a
   // real, non-negative default rather than an always-false comparison letting virtualization run
   // at any size: with the guard in place, 3 chunks stay in the plain (non-virtualized) list.
-  const el = (await fixture(html`<lyra-chunk-inspector virtualize-at="not-a-number"></lyra-chunk-inspector>`)) as LyraChunkInspector;
+  const el = (await fixture(html`<lr-chunk-inspector virtualize-at="not-a-number"></lr-chunk-inspector>`)) as LyraChunkInspector;
   expect(Number.isNaN(el.virtualizeAt)).to.be.true;
   el.chunks = chunks;
   await el.updateComplete;
-  expect(el.shadowRoot!.querySelector('lyra-virtual-list')).to.not.exist;
+  expect(el.shadowRoot!.querySelector('lr-virtual-list')).to.not.exist;
   expect(el.shadowRoot!.querySelectorAll('[part="chunk"]').length).to.equal(chunks.length);
 });
 
 it('shows chunkInspectorEmpty when chunks is empty', async () => {
-  const el = (await fixture(html`<lyra-chunk-inspector></lyra-chunk-inspector>`)) as LyraChunkInspector;
+  const el = (await fixture(html`<lr-chunk-inspector></lr-chunk-inspector>`)) as LyraChunkInspector;
   await el.updateComplete;
   expect(el.shadowRoot!.querySelector('[part="empty"]')!.textContent).to.include('No chunks retrieved');
 });
 
 it('is accessible with mixed-tier chunks', async () => {
-  const el = (await fixture(html`<lyra-chunk-inspector></lyra-chunk-inspector>`)) as LyraChunkInspector;
+  const el = (await fixture(html`<lr-chunk-inspector></lr-chunk-inspector>`)) as LyraChunkInspector;
   el.chunks = chunks;
   await el.updateComplete;
   await expect(el).to.be.accessible();

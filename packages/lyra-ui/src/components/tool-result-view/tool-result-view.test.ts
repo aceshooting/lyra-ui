@@ -17,21 +17,21 @@ function base(el: LyraToolResultView): HTMLElement {
   return el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
 }
 
-it('defaults to fallback="json" and falls back to lyra-json-viewer when nothing is registered', async () => {
+it('defaults to fallback="json" and falls back to lr-json-viewer when nothing is registered', async () => {
   const el = (await fixture(
-    html`<lyra-tool-result-view tool-name="unregistered" .result=${{ ok: true }}></lyra-tool-result-view>`,
+    html`<lr-tool-result-view tool-name="unregistered" .result=${{ ok: true }}></lr-tool-result-view>`,
   )) as LyraToolResultView;
   expect(el.fallback).to.equal('json');
   expect(el.getAttribute('fallback')).to.equal('json');
-  expect(base(el).querySelector('lyra-json-viewer')).to.exist;
+  expect(base(el).querySelector('lr-json-viewer')).to.exist;
 });
 
-it('emits lyra-render-error (with the tool name and an Error) before falling back when no renderer matches', async () => {
+it('emits lr-render-error (with the tool name and an Error) before falling back when no renderer matches', async () => {
   const container = (await fixture(html`<div></div>`)) as HTMLDivElement;
-  const el = document.createElement('lyra-tool-result-view') as LyraToolResultView;
+  const el = document.createElement('lr-tool-result-view') as LyraToolResultView;
   el.toolName = 'unregistered_tool';
   el.result = { ok: true };
-  const eventPromise = oneEvent(el, 'lyra-render-error');
+  const eventPromise = oneEvent(el, 'lr-render-error');
   container.appendChild(el);
 
   const event = (await eventPromise) as CustomEvent<{ toolName: string; error: unknown }>;
@@ -39,7 +39,7 @@ it('emits lyra-render-error (with the tool name and an Error) before falling bac
   expect(event.detail.error).to.be.instanceOf(Error);
 
   await el.updateComplete;
-  expect(base(el).querySelector('lyra-json-viewer')).to.exist;
+  expect(base(el).querySelector('lr-json-viewer')).to.exist;
 });
 
 it('renders the exact tool-name match, handing it both result and args', async () => {
@@ -52,15 +52,15 @@ it('renders the exact tool-name match, handing it both result and args', async (
   });
 
   const el = (await fixture(html`
-    <lyra-tool-result-view
+    <lr-tool-result-view
       tool-name="get_weather"
       .result=${{ tempC: 19 }}
       .args=${{ location: 'Brussels' }}
-    ></lyra-tool-result-view>
+    ></lr-tool-result-view>
   `)) as LyraToolResultView;
 
   expect(base(el).querySelector('.weather')).to.exist;
-  expect(base(el).querySelector('lyra-json-viewer')).to.not.exist;
+  expect(base(el).querySelector('lr-json-viewer')).to.not.exist;
   expect(seen).to.deep.equal({ result: { tempC: 19 }, args: { location: 'Brussels' } });
 });
 
@@ -71,7 +71,7 @@ it('falls back to shape-based matches() dispatch when no exact tool-name entry e
   });
 
   const el = (await fixture(html`
-    <lyra-tool-result-view tool-name="web_search" .result=${{ results: ['a', 'b'] }}></lyra-tool-result-view>
+    <lr-tool-result-view tool-name="web_search" .result=${{ results: ['a', 'b'] }}></lr-tool-result-view>
   `)) as LyraToolResultView;
 
   expect(base(el).querySelector('.search-result')).to.exist;
@@ -84,14 +84,14 @@ it('re-resolves (and re-dispatches) when result changes shape under shape-based 
   });
 
   const el = (await fixture(html`
-    <lyra-tool-result-view tool-name="web_search" .result=${{ results: ['a'] }}></lyra-tool-result-view>
+    <lr-tool-result-view tool-name="web_search" .result=${{ results: ['a'] }}></lr-tool-result-view>
   `)) as LyraToolResultView;
   expect(base(el).querySelector('.search-result')).to.exist;
 
   el.result = { somethingElse: true };
   await el.updateComplete;
   expect(base(el).querySelector('.search-result')).to.not.exist;
-  expect(base(el).querySelector('lyra-json-viewer')).to.exist;
+  expect(base(el).querySelector('lr-json-viewer')).to.exist;
 });
 
 it('accepts a custom registry prop instead of dispatching against the module-level default', async () => {
@@ -101,14 +101,14 @@ it('accepts a custom registry prop instead of dispatching against the module-lev
   ]);
 
   const el = (await fixture(html`
-    <lyra-tool-result-view tool-name="get_weather" .result=${{}} .registry=${custom}></lyra-tool-result-view>
+    <lr-tool-result-view tool-name="get_weather" .result=${{}} .registry=${custom}></lr-tool-result-view>
   `)) as LyraToolResultView;
 
   expect(base(el).querySelector('.custom-registry')).to.exist;
   expect(base(el).querySelector('.default-registry')).to.not.exist;
 });
 
-it('emits lyra-render-error and falls back when a matched renderer throws synchronously', async () => {
+it('emits lr-render-error and falls back when a matched renderer throws synchronously', async () => {
   registerToolRenderer('boom_tool', {
     render: () => {
       throw new Error('render exploded');
@@ -116,10 +116,10 @@ it('emits lyra-render-error and falls back when a matched renderer throws synchr
   });
 
   const container = (await fixture(html`<div></div>`)) as HTMLDivElement;
-  const el = document.createElement('lyra-tool-result-view') as LyraToolResultView;
+  const el = document.createElement('lr-tool-result-view') as LyraToolResultView;
   el.toolName = 'boom_tool';
   el.result = { x: 1 };
-  const eventPromise = oneEvent(el, 'lyra-render-error');
+  const eventPromise = oneEvent(el, 'lr-render-error');
   container.appendChild(el);
 
   const event = (await eventPromise) as CustomEvent<{ toolName: string; error: unknown }>;
@@ -127,10 +127,10 @@ it('emits lyra-render-error and falls back when a matched renderer throws synchr
   expect((event.detail.error as Error).message).to.equal('render exploded');
 
   await el.updateComplete;
-  expect(base(el).querySelector('lyra-json-viewer')).to.exist;
+  expect(base(el).querySelector('lr-json-viewer')).to.exist;
 });
 
-it('emits lyra-render-error and falls back when a candidate matches() predicate throws during dispatch', async () => {
+it('emits lr-render-error and falls back when a candidate matches() predicate throws during dispatch', async () => {
   registerToolRenderer('flaky_matcher', {
     render: () => litHtml`<span class="flaky">nope</span>`,
     matches: () => {
@@ -139,10 +139,10 @@ it('emits lyra-render-error and falls back when a candidate matches() predicate 
   });
 
   const container = (await fixture(html`<div></div>`)) as HTMLDivElement;
-  const el = document.createElement('lyra-tool-result-view') as LyraToolResultView;
+  const el = document.createElement('lr-tool-result-view') as LyraToolResultView;
   el.toolName = 'unrelated_tool_name';
   el.result = { anything: true };
-  const eventPromise = oneEvent(el, 'lyra-render-error');
+  const eventPromise = oneEvent(el, 'lr-render-error');
   container.appendChild(el);
 
   const event = (await eventPromise) as CustomEvent<{ toolName: string; error: unknown }>;
@@ -150,11 +150,11 @@ it('emits lyra-render-error and falls back when a candidate matches() predicate 
   expect((event.detail.error as Error).message).to.equal('matches exploded');
 
   await el.updateComplete;
-  expect(base(el).querySelector('lyra-json-viewer')).to.exist;
+  expect(base(el).querySelector('lr-json-viewer')).to.exist;
   expect(base(el).querySelector('.flaky')).to.not.exist;
 });
 
-it('shows a lyra-skeleton while an async load() is pending, then renders its resolved output', async () => {
+it('shows a lr-skeleton while an async load() is pending, then renders its resolved output', async () => {
   let resolveLoad!: (mod: { default: ToolRendererDefinition }) => void;
   const loadPromise = new Promise<{ default: ToolRendererDefinition }>((resolve) => {
     resolveLoad = resolve;
@@ -162,32 +162,32 @@ it('shows a lyra-skeleton while an async load() is pending, then renders its res
   registerToolRenderer('slow_tool', { load: () => loadPromise });
 
   const el = (await fixture(html`
-    <lyra-tool-result-view tool-name="slow_tool" .result=${{ a: 1 }}></lyra-tool-result-view>
+    <lr-tool-result-view tool-name="slow_tool" .result=${{ a: 1 }}></lr-tool-result-view>
   `)) as LyraToolResultView;
 
-  expect(base(el).querySelector('lyra-skeleton')).to.exist;
+  expect(base(el).querySelector('lr-skeleton')).to.exist;
 
   resolveLoad({ default: { render: (result) => litHtml`<span class="loaded">${(result as { a: number }).a}</span>` } });
-  await waitUntil(() => base(el).querySelector('lyra-skeleton') === null);
+  await waitUntil(() => base(el).querySelector('lr-skeleton') === null);
 
   expect(base(el).querySelector('.loaded')!.textContent).to.equal('1');
 });
 
-it('emits lyra-render-error and falls back when load() rejects', async () => {
+it('emits lr-render-error and falls back when load() rejects', async () => {
   const container = (await fixture(html`<div></div>`)) as HTMLDivElement;
   registerToolRenderer('failing_load_tool', { load: () => Promise.reject(new Error('network down')) });
 
-  const el = document.createElement('lyra-tool-result-view') as LyraToolResultView;
+  const el = document.createElement('lr-tool-result-view') as LyraToolResultView;
   el.toolName = 'failing_load_tool';
   el.result = {};
-  const eventPromise = oneEvent(el, 'lyra-render-error');
+  const eventPromise = oneEvent(el, 'lr-render-error');
   container.appendChild(el);
 
   const event = (await eventPromise) as CustomEvent<{ toolName: string; error: unknown }>;
   expect((event.detail.error as Error).message).to.equal('network down');
 
   await el.updateComplete;
-  expect(base(el).querySelector('lyra-json-viewer')).to.exist;
+  expect(base(el).querySelector('lr-json-viewer')).to.exist;
 });
 
 it('ignores a stale load() resolution superseded by a newer tool-name before it settles', async () => {
@@ -199,9 +199,9 @@ it('ignores a stale load() resolution superseded by a newer tool-name before it 
   registerToolRenderer('fast_tool', { render: () => litHtml`<span class="fast">fast</span>` });
 
   const el = (await fixture(html`
-    <lyra-tool-result-view tool-name="slow_tool" .result=${{}}></lyra-tool-result-view>
+    <lr-tool-result-view tool-name="slow_tool" .result=${{}}></lr-tool-result-view>
   `)) as LyraToolResultView;
-  expect(base(el).querySelector('lyra-skeleton')).to.exist;
+  expect(base(el).querySelector('lr-skeleton')).to.exist;
 
   el.toolName = 'fast_tool';
   await el.updateComplete;
@@ -226,7 +226,7 @@ it('does not re-show the loading skeleton for a result-only update once a lazy r
   });
 
   const el = (await fixture(html`
-    <lyra-tool-result-view tool-name="slow_tool" .result=${{ a: 1 }}></lyra-tool-result-view>
+    <lr-tool-result-view tool-name="slow_tool" .result=${{ a: 1 }}></lr-tool-result-view>
   `)) as LyraToolResultView;
 
   await waitUntil(() => base(el).querySelector('.loaded') !== null);
@@ -236,7 +236,7 @@ it('does not re-show the loading skeleton for a result-only update once a lazy r
   el.result = { a: 2 };
   await waitUntil(() => base(el).querySelector('.loaded')?.textContent === '2');
 
-  expect(base(el).querySelector('lyra-skeleton'), 'a cached load() must not re-show the loading skeleton').to.not
+  expect(base(el).querySelector('lr-skeleton'), 'a cached load() must not re-show the loading skeleton').to.not
     .exist;
   expect(
     base(el).querySelector('.loaded'),
@@ -246,7 +246,7 @@ it('does not re-show the loading skeleton for a result-only update once a lazy r
 
 it('is accessible in the default, empty (no renderer registered) state', async () => {
   const el = (await fixture(
-    html`<lyra-tool-result-view tool-name="anything"></lyra-tool-result-view>`,
+    html`<lr-tool-result-view tool-name="anything"></lr-tool-result-view>`,
   )) as LyraToolResultView;
   await expect(el).to.be.accessible();
 });
@@ -256,50 +256,50 @@ it('is accessible once a matched renderer has populated content', async () => {
     render: () => litHtml`<p>It is 19°C in Brussels.</p>`,
   });
   const el = (await fixture(html`
-    <lyra-tool-result-view tool-name="get_weather" .result=${{ tempC: 19 }}></lyra-tool-result-view>
+    <lr-tool-result-view tool-name="get_weather" .result=${{ tempC: 19 }}></lr-tool-result-view>
   `)) as LyraToolResultView;
   await expect(el).to.be.accessible();
 });
 
-it('fallback="text" renders a plain string result as preformatted text, not lyra-json-viewer', async () => {
+it('fallback="text" renders a plain string result as preformatted text, not lr-json-viewer', async () => {
   const el = (await fixture(html`
-    <lyra-tool-result-view tool-name="unregistered" fallback="text" .result=${'line one\nline two'}></lyra-tool-result-view>
+    <lr-tool-result-view tool-name="unregistered" fallback="text" .result=${'line one\nline two'}></lr-tool-result-view>
   `)) as LyraToolResultView;
   const pre = base(el).querySelector('[part="fallback-text"]');
   expect(pre).to.exist;
   expect(pre!.textContent).to.equal('line one\nline two');
-  expect(base(el).querySelector('lyra-json-viewer')).to.not.exist;
+  expect(base(el).querySelector('lr-json-viewer')).to.not.exist;
 });
 
-it('chains the fallback-text font through the shared --lyra-font-mono token, honoring a --lyra-theme-font-family-mono override', async () => {
+it('chains the fallback-text font through the shared --lr-font-mono token, honoring a --lr-theme-font-family-mono override', async () => {
   const el = (await fixture(html`
-    <lyra-tool-result-view tool-name="unregistered" fallback="text" style="--lyra-theme-font-family-mono: 'Custom Mono';" .result=${'line one'}></lyra-tool-result-view>
+    <lr-tool-result-view tool-name="unregistered" fallback="text" style="--lr-theme-font-family-mono: 'Custom Mono';" .result=${'line one'}></lr-tool-result-view>
   `)) as LyraToolResultView;
   const pre = base(el).querySelector('[part="fallback-text"]') as HTMLElement;
   expect(getComputedStyle(pre).fontFamily).to.contain('Custom Mono');
 });
 
-it('fallback="text" still falls back to lyra-json-viewer when the result is not a string', async () => {
+it('fallback="text" still falls back to lr-json-viewer when the result is not a string', async () => {
   const el = (await fixture(html`
-    <lyra-tool-result-view tool-name="unregistered" fallback="text" .result=${{ ok: true }}></lyra-tool-result-view>
+    <lr-tool-result-view tool-name="unregistered" fallback="text" .result=${{ ok: true }}></lr-tool-result-view>
   `)) as LyraToolResultView;
-  expect(base(el).querySelector('lyra-json-viewer')).to.exist;
+  expect(base(el).querySelector('lr-json-viewer')).to.exist;
   expect(base(el).querySelector('[part="fallback-text"]')).to.not.exist;
 });
 
-it('copyable renders a lyra-copy-button alongside the text fallback, wired to the result text', async () => {
+it('copyable renders a lr-copy-button alongside the text fallback, wired to the result text', async () => {
   const el = (await fixture(html`
-    <lyra-tool-result-view tool-name="unregistered" fallback="text" copyable .result=${'copy me'}></lyra-tool-result-view>
+    <lr-tool-result-view tool-name="unregistered" fallback="text" copyable .result=${'copy me'}></lr-tool-result-view>
   `)) as LyraToolResultView;
-  const btn = base(el).querySelector('lyra-copy-button') as (HTMLElement & { value: string }) | null;
+  const btn = base(el).querySelector('lr-copy-button') as (HTMLElement & { value: string }) | null;
   expect(btn).to.exist;
   expect(btn!.value).to.equal('copy me');
 });
 
-it('copyable also forwards to lyra-json-viewer in the default json fallback', async () => {
+it('copyable also forwards to lr-json-viewer in the default json fallback', async () => {
   const el = (await fixture(html`
-    <lyra-tool-result-view tool-name="unregistered" copyable .result=${{ ok: true }}></lyra-tool-result-view>
+    <lr-tool-result-view tool-name="unregistered" copyable .result=${{ ok: true }}></lr-tool-result-view>
   `)) as LyraToolResultView;
-  const viewer = base(el).querySelector('lyra-json-viewer') as HTMLElement & { copyable: boolean };
+  const viewer = base(el).querySelector('lr-json-viewer') as HTMLElement & { copyable: boolean };
   expect(viewer.copyable).to.be.true;
 });

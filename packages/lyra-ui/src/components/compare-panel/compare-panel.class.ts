@@ -8,19 +8,19 @@ import { styles } from './compare-panel.styles.js';
 export type CompareVote = 'a' | 'b' | 'tie' | 'both-bad';
 
 export interface LyraComparePanelEventMap {
-  'lyra-vote': CustomEvent<{ choice: CompareVote; itemId: string }>;
+  'lr-vote': CustomEvent<{ choice: CompareVote; itemId: string }>;
 }
 
 /**
- * `<lyra-compare-panel>` — side-by-side A/B output comparison with a winner
+ * `<lr-compare-panel>` — side-by-side A/B output comparison with a winner
  * vote (LMSYS-arena / LangSmith-pairwise style): two slotted panes, a vote
  * bar, synchronized reading.
  *
- * @customElement lyra-compare-panel
+ * @customElement lr-compare-panel
  * @slot a - The first output (any content — a chat message, markdown, a viewer).
  * @slot b - The second output.
  * @slot prompt - Optional shared-input header above both panes.
- * @event lyra-vote - `detail: { choice, itemId }`.
+ * @event lr-vote - `detail: { choice, itemId }`.
  * @csspart base - The outer wrapper.
  * @csspart prompt - The optional prompt header, hidden when the `prompt` slot is empty.
  * @csspart panes - The row (or, under 640px, column) wrapping both panes.
@@ -49,7 +49,7 @@ export class LyraComparePanel extends LyraElement<LyraComparePanelEventMap> {
 
   @query('[part="pane-a"]') private paneAEl?: HTMLElement;
   @query('[part="pane-b"]') private paneBEl?: HTMLElement;
-  @query('lyra-live-region') private liveRegion?: LyraLiveRegion;
+  @query('lr-live-region') private liveRegion?: LyraLiveRegion;
 
   private _labelA = '';
   private _labelB = '';
@@ -148,7 +148,7 @@ export class LyraComparePanel extends LyraElement<LyraComparePanelEventMap> {
   private castVote(choice: CompareVote): void {
     if (this.disabled) return;
     this.vote = choice;
-    this.emit('lyra-vote', { choice, itemId: this.itemId });
+    this.emit('lr-vote', { choice, itemId: this.itemId });
     const labelAText = this.labelA || this.localize('compareResponseA');
     const labelBText = this.labelB || this.localize('compareResponseB');
     const label =
@@ -253,13 +253,13 @@ export class LyraComparePanel extends LyraElement<LyraComparePanelEventMap> {
             : nothing}
         </div>
       </div>
-      <lyra-live-region part="live-region" mode="polite"></lyra-live-region>
+      <lr-live-region part="live-region" mode="polite"></lr-live-region>
     `;
   }
 }
 
 declare global {
   interface HTMLElementTagNameMap {
-    'lyra-compare-panel': LyraComparePanel;
+    'lr-compare-panel': LyraComparePanel;
   }
 }

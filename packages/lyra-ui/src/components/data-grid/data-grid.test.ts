@@ -4,13 +4,13 @@ import type { LyraDataGrid, DataGridColumn } from './data-grid.js';
 
 it('renders rows and exposes grid semantics', async () => {
   const columns: DataGridColumn[] = [{ key: 'name', label: 'Name', sortable: true }, { key: 'count', label: 'Count' }];
-  const el = (await fixture(html`<lyra-data-grid .columns=${columns} .rows=${[{ name: 'Alpha', count: 2 }]} aria-label="Results"></lyra-data-grid>`)) as LyraDataGrid;
+  const el = (await fixture(html`<lr-data-grid .columns=${columns} .rows=${[{ name: 'Alpha', count: 2 }]} aria-label="Results"></lr-data-grid>`)) as LyraDataGrid;
   expect(el.shadowRoot!.querySelector('[role="grid"]')!.getAttribute('aria-label')).to.equal('Results');
   expect(el.shadowRoot!.querySelectorAll('[role="gridcell"]')).to.have.length(2);
 });
 
 it('is accessible', async () => {
-  const el = await fixture(html`<lyra-data-grid aria-label="Results"></lyra-data-grid>`);
+  const el = await fixture(html`<lr-data-grid aria-label="Results"></lr-data-grid>`);
   await expect(el).to.be.accessible();
 });
 
@@ -27,14 +27,14 @@ it('is accessible with populated rows, a sorted sortable column, and a selected 
     { name: 'Beta', count: 5 },
   ];
   const el = (await fixture(
-    html`<lyra-data-grid
+    html`<lr-data-grid
       .columns=${columns}
       .rows=${rows}
       .sortKey=${'name'}
       .sortDirection=${'descending'}
       .selectedKey=${1}
       aria-label="Results"
-    ></lyra-data-grid>`,
+    ></lr-data-grid>`,
   )) as LyraDataGrid;
   expect(el.shadowRoot!.querySelectorAll('[role="gridcell"]')).to.have.length(4);
   expect(el.shadowRoot!.querySelector('[aria-sort="descending"]')).to.exist;
@@ -46,21 +46,21 @@ it('renders aria-selected="true"/"false" on rows matching the selected-state con
   const columns: DataGridColumn[] = [{ key: 'name', label: 'Name' }];
   const rows = [{ name: 'Alpha' }, { name: 'Beta' }];
   const el = (await fixture(
-    html`<lyra-data-grid .columns=${columns} .rows=${rows} .selectedKey=${1} aria-label="Results"></lyra-data-grid>`,
+    html`<lr-data-grid .columns=${columns} .rows=${rows} .selectedKey=${1} aria-label="Results"></lr-data-grid>`,
   )) as LyraDataGrid;
   const trs = el.shadowRoot!.querySelectorAll('tbody tr');
   expect(trs[0].getAttribute('aria-selected')).to.equal('false');
   expect(trs[1].getAttribute('aria-selected')).to.equal('true');
 });
 
-it('activates a row on a single click, firing lyra-row-click and lyra-selection-change', async () => {
+it('activates a row on a single click, firing lr-row-click and lr-selection-change', async () => {
   const columns: DataGridColumn[] = [{ key: 'name', label: 'Name' }];
   const rows = [{ name: 'Alpha' }, { name: 'Beta' }];
   const el = (await fixture(
-    html`<lyra-data-grid .columns=${columns} .rows=${rows} aria-label="Results"></lyra-data-grid>`,
+    html`<lr-data-grid .columns=${columns} .rows=${rows} aria-label="Results"></lr-data-grid>`,
   )) as LyraDataGrid;
-  const rowClickListener = oneEvent(el, 'lyra-row-click');
-  const selectionListener = oneEvent(el, 'lyra-selection-change');
+  const rowClickListener = oneEvent(el, 'lr-row-click');
+  const selectionListener = oneEvent(el, 'lr-selection-change');
   const row = el.shadowRoot!.querySelectorAll('tbody tr')[1] as HTMLElement;
   row.click();
   const rowClickEvent = await rowClickListener;
@@ -74,7 +74,7 @@ it('moves roving tabindex to a cell that receives focus via a mouse click, not j
   const columns: DataGridColumn[] = [{ key: 'name', label: 'Name' }, { key: 'count', label: 'Count' }];
   const rows = [{ name: 'Alpha', count: 1 }, { name: 'Beta', count: 2 }];
   const el = (await fixture(
-    html`<lyra-data-grid .columns=${columns} .rows=${rows} aria-label="Results"></lyra-data-grid>`,
+    html`<lr-data-grid .columns=${columns} .rows=${rows} aria-label="Results"></lr-data-grid>`,
   )) as LyraDataGrid;
   const targetCell = el.shadowRoot!.querySelector('[data-row="1"][data-column="1"]') as HTMLElement;
   targetCell.focus();
@@ -89,7 +89,7 @@ it('keeps exactly one body-cell tab stop after rows shrink below the focused row
   const columns: DataGridColumn[] = [{ key: 'name', label: 'Name' }, { key: 'count', label: 'Count' }];
   const rows = Array.from({ length: 10 }, (_, i) => ({ name: `Row ${i}`, count: i }));
   const el = (await fixture(
-    html`<lyra-data-grid .columns=${columns} .rows=${rows} aria-label="Results"></lyra-data-grid>`,
+    html`<lr-data-grid .columns=${columns} .rows=${rows} aria-label="Results"></lr-data-grid>`,
   )) as LyraDataGrid;
   const targetCell = el.shadowRoot!.querySelector('[data-row="5"][data-column="1"]') as HTMLElement;
   targetCell.focus();
@@ -107,7 +107,7 @@ it('keeps exactly one body-cell tab stop after columns shrink below the focused 
   const columns: DataGridColumn[] = [{ key: 'name', label: 'Name' }, { key: 'count', label: 'Count' }];
   const rows = [{ name: 'Alpha', count: 1 }, { name: 'Beta', count: 2 }];
   const el = (await fixture(
-    html`<lyra-data-grid .columns=${columns} .rows=${rows} aria-label="Results"></lyra-data-grid>`,
+    html`<lr-data-grid .columns=${columns} .rows=${rows} aria-label="Results"></lr-data-grid>`,
   )) as LyraDataGrid;
   const targetCell = el.shadowRoot!.querySelector('[data-row="1"][data-column="1"]') as HTMLElement;
   targetCell.focus();
@@ -123,7 +123,7 @@ it('keeps exactly one body-cell tab stop after columns shrink below the focused 
 it('leaves header cells without tabindex so the sort button is the only header tab stop', async () => {
   const columns: DataGridColumn[] = [{ key: 'name', label: 'Name', sortable: true }, { key: 'count', label: 'Count' }];
   const el = (await fixture(
-    html`<lyra-data-grid .columns=${columns} .rows=${[{ name: 'Alpha', count: 1 }]} aria-label="Results"></lyra-data-grid>`,
+    html`<lr-data-grid .columns=${columns} .rows=${[{ name: 'Alpha', count: 1 }]} aria-label="Results"></lr-data-grid>`,
   )) as LyraDataGrid;
   const headers = el.shadowRoot!.querySelectorAll('th');
   expect(headers).to.have.length(2);
@@ -134,7 +134,7 @@ it('swaps ArrowLeft/ArrowRight under dir="rtl" for roving cell navigation', asyn
   const columns: DataGridColumn[] = [{ key: 'name', label: 'Name' }, { key: 'count', label: 'Count' }];
   const rows = [{ name: 'Alpha', count: 1 }];
   const el = (await fixture(
-    html`<lyra-data-grid dir="rtl" .columns=${columns} .rows=${rows} aria-label="Results"></lyra-data-grid>`,
+    html`<lr-data-grid dir="rtl" .columns=${columns} .rows=${rows} aria-label="Results"></lr-data-grid>`,
   )) as LyraDataGrid;
   await el.updateComplete;
   const firstCell = el.shadowRoot!.querySelector('[data-row="0"][data-column="0"]') as HTMLElement;
@@ -157,11 +157,11 @@ it('scrolls [part="viewport"] horizontally rather than overflowing a 320px conta
     { key: 'email', label: 'Email', width: '14rem' },
   ];
   const el = (await fixture(
-    html`<lyra-data-grid
+    html`<lr-data-grid
       aria-label="People"
       .columns=${columns}
       .rows=${[{ name: 'Ada Lovelace', role: 'Mathematician', location: 'London', email: 'ada@example.com' }]}
-    ></lyra-data-grid>`,
+    ></lr-data-grid>`,
     { parentNode: container },
   )) as LyraDataGrid;
   await el.updateComplete;

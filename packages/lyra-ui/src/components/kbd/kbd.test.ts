@@ -165,22 +165,22 @@ describe('parseShortcut', () => {
   });
 });
 
-describe('<lyra-kbd> rendering', () => {
+describe('<lr-kbd> rendering', () => {
   it('defaults keys to "" and renders nothing visible', async () => {
-    const el = (await fixture(html`<lyra-kbd></lyra-kbd>`)) as LyraKbd;
+    const el = (await fixture(html`<lr-kbd></lr-kbd>`)) as LyraKbd;
     expect(el.keys).to.equal('');
     expect(el.shadowRoot!.querySelectorAll('[part="key"]').length).to.equal(0);
   });
 
   it('marks an empty (no keys, no slot) chip aria-hidden', async () => {
-    const el = (await fixture(html`<lyra-kbd></lyra-kbd>`)) as LyraKbd;
+    const el = (await fixture(html`<lr-kbd></lr-kbd>`)) as LyraKbd;
     const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
     expect(base.getAttribute('aria-hidden')).to.equal('true');
     expect(base.hasAttribute('role')).to.be.false;
   });
 
   it('renders one [part="key"] per token, in order', async () => {
-    const el = (await fixture(html`<lyra-kbd keys="mod+shift+p"></lyra-kbd>`)) as LyraKbd;
+    const el = (await fixture(html`<lr-kbd keys="mod+shift+p"></lr-kbd>`)) as LyraKbd;
     const keys = Array.from(el.shadowRoot!.querySelectorAll('[part="key"]')).map((k) => k.textContent?.trim());
     // This test environment (Playwright Chromium on Linux) is not macOS, so
     // "mod" resolves to "Ctrl" here — the mac-glyph branch is covered
@@ -190,7 +190,7 @@ describe('<lyra-kbd> rendering', () => {
   });
 
   it('separates key caps with a "+" separator between them, none before the first', async () => {
-    const el = (await fixture(html`<lyra-kbd keys="mod+k"></lyra-kbd>`)) as LyraKbd;
+    const el = (await fixture(html`<lr-kbd keys="mod+k"></lr-kbd>`)) as LyraKbd;
     const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
     const seps = base.querySelectorAll('.sep');
     expect(seps.length).to.equal(1);
@@ -198,7 +198,7 @@ describe('<lyra-kbd> rendering', () => {
   });
 
   it('sets role="img" and an aria-label spelling the shortcut out in words', async () => {
-    const el = (await fixture(html`<lyra-kbd keys="mod+k"></lyra-kbd>`)) as LyraKbd;
+    const el = (await fixture(html`<lr-kbd keys="mod+k"></lr-kbd>`)) as LyraKbd;
     const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
     expect(base.getAttribute('role')).to.equal('img');
     expect(base.getAttribute('aria-label')).to.equal('Control+K');
@@ -206,7 +206,7 @@ describe('<lyra-kbd> rendering', () => {
   });
 
   it('lets an explicit host aria-label override the computed word label', async () => {
-    const el = (await fixture(html`<lyra-kbd keys="mod+k" aria-label="Open palette"></lyra-kbd>`)) as LyraKbd;
+    const el = (await fixture(html`<lr-kbd keys="mod+k" aria-label="Open palette"></lr-kbd>`)) as LyraKbd;
     const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
     expect(base.getAttribute('aria-label')).to.equal('Open palette');
   });
@@ -216,7 +216,7 @@ describe('<lyra-kbd> rendering', () => {
     // ariaLabel value as aria-label itself -- an explicit label asserted on
     // a role-less element (role gated only on tokens.length) is an
     // aria-prohibited-attr violation.
-    const el = (await fixture(html`<lyra-kbd aria-label="Something"></lyra-kbd>`)) as LyraKbd;
+    const el = (await fixture(html`<lr-kbd aria-label="Something"></lr-kbd>`)) as LyraKbd;
     const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
     expect(base.getAttribute('role')).to.equal('img');
     expect(base.getAttribute('aria-label')).to.equal('Something');
@@ -225,7 +225,7 @@ describe('<lyra-kbd> rendering', () => {
   });
 
   it('reacts to the keys property changing after first render', async () => {
-    const el = (await fixture(html`<lyra-kbd keys="mod+k"></lyra-kbd>`)) as LyraKbd;
+    const el = (await fixture(html`<lr-kbd keys="mod+k"></lr-kbd>`)) as LyraKbd;
     el.keys = 'esc';
     await el.updateComplete;
     const keys = Array.from(el.shadowRoot!.querySelectorAll('[part="key"]')).map((k) => k.textContent?.trim());
@@ -238,7 +238,7 @@ describe('<lyra-kbd> rendering', () => {
 
 describe('default slot override', () => {
   it('bypasses keys-driven rendering when populated declaratively', async () => {
-    const el = (await fixture(html`<lyra-kbd keys="mod+k">fn+F5</lyra-kbd>`)) as LyraKbd;
+    const el = (await fixture(html`<lr-kbd keys="mod+k">fn+F5</lr-kbd>`)) as LyraKbd;
     expect(el.shadowRoot!.querySelectorAll('[part="key"]').length).to.equal(0);
     const slot = el.shadowRoot!.querySelector('slot') as HTMLSlotElement;
     const text = slot
@@ -250,20 +250,20 @@ describe('default slot override', () => {
   });
 
   it('does not assert a computed aria-label when using the slot override', async () => {
-    const el = (await fixture(html`<lyra-kbd keys="mod+k">fn+F5</lyra-kbd>`)) as LyraKbd;
+    const el = (await fixture(html`<lr-kbd keys="mod+k">fn+F5</lr-kbd>`)) as LyraKbd;
     const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
     expect(base.hasAttribute('aria-label')).to.be.false;
     expect(base.hasAttribute('role')).to.be.false;
   });
 
   it('still honors an explicit host aria-label alongside the slot override', async () => {
-    const el = (await fixture(html`<lyra-kbd aria-label="Custom shortcut">fn+F5</lyra-kbd>`)) as LyraKbd;
+    const el = (await fixture(html`<lr-kbd aria-label="Custom shortcut">fn+F5</lr-kbd>`)) as LyraKbd;
     const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
     expect(base.getAttribute('aria-label')).to.equal('Custom shortcut');
   });
 
   it('reacts to the slot being populated after first render', async () => {
-    const el = (await fixture(html`<lyra-kbd keys="mod+k"></lyra-kbd>`)) as LyraKbd;
+    const el = (await fixture(html`<lr-kbd keys="mod+k"></lr-kbd>`)) as LyraKbd;
     expect(el.shadowRoot!.querySelectorAll('[part="key"]').length).to.equal(2);
 
     el.textContent = 'fn+F5';
@@ -279,7 +279,7 @@ describe('default slot override', () => {
     // shared hasRealContent predicate, onSlotChange's own check counted any
     // assigned node, including a whitespace-only text node, as content and
     // permanently blanked the chip once that slotchange fired.
-    const el = (await fixture(html`<lyra-kbd keys="mod+k">   </lyra-kbd>`)) as LyraKbd;
+    const el = (await fixture(html`<lr-kbd keys="mod+k">   </lr-kbd>`)) as LyraKbd;
     await new Promise((resolve) => requestAnimationFrame(resolve));
     await el.updateComplete;
     expect(el.shadowRoot!.querySelectorAll('[part="key"]').length).to.equal(2);
@@ -294,7 +294,7 @@ describe('default slot override', () => {
     // catches that flash if it exists: with the shared hasRealContent
     // predicate, the element-node case is already handled on the very first
     // (synchronous) render, so [part="key"] must stay empty throughout.
-    const el = document.createElement('lyra-kbd') as LyraKbd;
+    const el = document.createElement('lr-kbd') as LyraKbd;
     el.setAttribute('keys', 'mod+k');
     el.appendChild(document.createElement('span'));
     document.body.appendChild(el);
@@ -312,7 +312,7 @@ describe('default slot override', () => {
 
 describe('localization', () => {
   it('renders the built-in English key-cap text and aria-label with no override', async () => {
-    const el = (await fixture(html`<lyra-kbd keys="mod+k"></lyra-kbd>`)) as LyraKbd;
+    const el = (await fixture(html`<lr-kbd keys="mod+k"></lr-kbd>`)) as LyraKbd;
     const keys = Array.from(el.shadowRoot!.querySelectorAll('[part="key"]')).map((k) => k.textContent?.trim());
     expect(keys).to.deep.equal(['Ctrl', 'K']);
     expect((el.shadowRoot!.querySelector('[part="base"]') as HTMLElement).getAttribute('aria-label')).to.equal(
@@ -322,7 +322,7 @@ describe('localization', () => {
 
   it('localizes both the key-cap visual text and the aria-label word via .strings', async () => {
     const el = (await fixture(html`
-      <lyra-kbd
+      <lr-kbd
         keys="mod+esc"
         .strings=${{
           kbdControlVisual: 'Strg',
@@ -330,7 +330,7 @@ describe('localization', () => {
           kbdEscapeVisual: 'Esc',
           kbdEscapeWord: 'Escape-Taste',
         }}
-      ></lyra-kbd>
+      ></lr-kbd>
     `)) as LyraKbd;
     const keys = Array.from(el.shadowRoot!.querySelectorAll('[part="key"]')).map((k) => k.textContent?.trim());
     expect(keys).to.deep.equal(['Strg', 'Esc']);
@@ -341,7 +341,7 @@ describe('localization', () => {
 
   it('localizes a glyph-only modifier\'s word (used only in the aria-label, not the key cap) via .strings', async () => {
     const el = (await fixture(html`
-      <lyra-kbd keys="shift" .strings=${{ kbdShiftWord: 'Majuscule' }}></lyra-kbd>
+      <lr-kbd keys="shift" .strings=${{ kbdShiftWord: 'Majuscule' }}></lr-kbd>
     `)) as LyraKbd;
     const keys = Array.from(el.shadowRoot!.querySelectorAll('[part="key"]')).map((k) => k.textContent?.trim());
     expect(keys).to.deep.equal(['⇧']);
@@ -352,11 +352,11 @@ describe('localization', () => {
 });
 
 it('is accessible in the default (empty) state', async () => {
-  const el = (await fixture(html`<lyra-kbd></lyra-kbd>`)) as LyraKbd;
+  const el = (await fixture(html`<lr-kbd></lr-kbd>`)) as LyraKbd;
   await expect(el).to.be.accessible();
 });
 
 it('is accessible in a populated multi-modifier state', async () => {
-  const el = (await fixture(html`<lyra-kbd keys="mod+shift+p"></lyra-kbd>`)) as LyraKbd;
+  const el = (await fixture(html`<lr-kbd keys="mod+shift+p"></lr-kbd>`)) as LyraKbd;
   await expect(el).to.be.accessible();
 });

@@ -14,36 +14,36 @@ const topics: LyraTopic[] = [
 ];
 
 it('defaults to empty topics, empty label, expandDepth=1', async () => {
-  const el = (await fixture(html`<lyra-mind-map></lyra-mind-map>`)) as LyraMindMap;
+  const el = (await fixture(html`<lr-mind-map></lr-mind-map>`)) as LyraMindMap;
   expect(el.topics).to.deep.equal([]);
   expect(el.label).to.equal('');
   expect(el.expandDepth).to.equal(1);
 });
 
 it('renders one [part="node"] per visible topic -- root plus its expandDepth-1 children', async () => {
-  const el = (await fixture(html`<lyra-mind-map></lyra-mind-map>`)) as LyraMindMap;
+  const el = (await fixture(html`<lr-mind-map></lr-mind-map>`)) as LyraMindMap;
   el.topics = topics;
   await el.updateComplete;
   expect(el.shadowRoot!.querySelectorAll('[part="node"]').length).to.equal(3); // root + kg + rag; chunking stays collapsed
 });
 
-it('emits lyra-topic-select when a leaf node is clicked', async () => {
-  const el = (await fixture(html`<lyra-mind-map></lyra-mind-map>`)) as LyraMindMap;
+it('emits lr-topic-select when a leaf node is clicked', async () => {
+  const el = (await fixture(html`<lr-mind-map></lr-mind-map>`)) as LyraMindMap;
   el.topics = topics;
   await el.updateComplete;
   const kgNode = [...el.shadowRoot!.querySelectorAll('[part="node"]')].find((n) => n.textContent?.includes('Knowledge graphs'))!;
-  const listener = oneEvent(el, 'lyra-topic-select');
+  const listener = oneEvent(el, 'lr-topic-select');
   kgNode.dispatchEvent(new MouseEvent('click', { bubbles: true }));
   const event = await listener;
   expect(event.detail).to.deep.equal({ id: 'kg' });
 });
 
-it('emits lyra-topic-toggle when a parent node is clicked, and reveals its children', async () => {
-  const el = (await fixture(html`<lyra-mind-map></lyra-mind-map>`)) as LyraMindMap;
+it('emits lr-topic-toggle when a parent node is clicked, and reveals its children', async () => {
+  const el = (await fixture(html`<lr-mind-map></lr-mind-map>`)) as LyraMindMap;
   el.topics = topics;
   await el.updateComplete;
   const ragNode = [...el.shadowRoot!.querySelectorAll('[part="node"]')].find((n) => n.textContent?.includes('Retrieval'))!;
-  const listener = oneEvent(el, 'lyra-topic-toggle');
+  const listener = oneEvent(el, 'lr-topic-toggle');
   ragNode.dispatchEvent(new MouseEvent('click', { bubbles: true }));
   const event = await listener;
   expect(event.detail).to.deep.equal({ id: 'rag', expanded: true });
@@ -52,7 +52,7 @@ it('emits lyra-topic-toggle when a parent node is clicked, and reveals its child
 });
 
 it('wraps multiple root topics in an implicit hub labeled from the label property', async () => {
-  const el = (await fixture(html`<lyra-mind-map label="My Topics"></lyra-mind-map>`)) as LyraMindMap;
+  const el = (await fixture(html`<lr-mind-map label="My Topics"></lr-mind-map>`)) as LyraMindMap;
   el.topics = [{ id: 'a', label: 'A' }, { id: 'b', label: 'B' }];
   await el.updateComplete;
   const labels = [...el.shadowRoot!.querySelectorAll('[part="node-label"]')].map((n) => n.textContent);
@@ -60,7 +60,7 @@ it('wraps multiple root topics in an implicit hub labeled from the label propert
 });
 
 it('keyboard: ArrowDown descends into children, auto-expanding a collapsed parent', async () => {
-  const el = (await fixture(html`<lyra-mind-map></lyra-mind-map>`)) as LyraMindMap;
+  const el = (await fixture(html`<lr-mind-map></lr-mind-map>`)) as LyraMindMap;
   el.topics = topics;
   await el.updateComplete;
   const svg = el.shadowRoot!.querySelector('[part="svg"]')!;
@@ -72,22 +72,22 @@ it('keyboard: ArrowDown descends into children, auto-expanding a collapsed paren
   svg.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true, cancelable: true })); // move to next sibling (rag)
   await el.updateComplete;
 
-  const listener = oneEvent(el, 'lyra-topic-toggle');
+  const listener = oneEvent(el, 'lr-topic-toggle');
   svg.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, cancelable: true })); // rag is collapsed -- auto-expands
   const event = await listener;
   expect(event.detail).to.deep.equal({ id: 'rag', expanded: true });
 });
 
 it('has a single [part="svg"] tab stop, not per-node tabbing', async () => {
-  const el = (await fixture(html`<lyra-mind-map></lyra-mind-map>`)) as LyraMindMap;
+  const el = (await fixture(html`<lr-mind-map></lr-mind-map>`)) as LyraMindMap;
   el.topics = topics;
   await el.updateComplete;
   expect(el.shadowRoot!.querySelector('[part="svg"]')!.getAttribute('tabindex')).to.equal('0');
   el.shadowRoot!.querySelectorAll('[part="node"]').forEach((n) => expect(n.hasAttribute('tabindex')).to.be.false);
 });
 
-it('reads --lyra-transition-base for node-position transitions (collapses to near-zero under reduced motion globally)', async () => {
-  const el = (await fixture(html`<lyra-mind-map style="--lyra-transition-base: 42ms linear"></lyra-mind-map>`)) as LyraMindMap;
+it('reads --lr-transition-base for node-position transitions (collapses to near-zero under reduced motion globally)', async () => {
+  const el = (await fixture(html`<lr-mind-map style="--lr-transition-base: 42ms linear"></lr-mind-map>`)) as LyraMindMap;
   el.topics = topics;
   await el.updateComplete;
   const g = el.shadowRoot!.querySelector('[part="node"]') as SVGGElement;
@@ -95,13 +95,13 @@ it('reads --lyra-transition-base for node-position transitions (collapses to nea
 });
 
 it('shows the noData empty state when topics is empty', async () => {
-  const el = (await fixture(html`<lyra-mind-map></lyra-mind-map>`)) as LyraMindMap;
+  const el = (await fixture(html`<lr-mind-map></lr-mind-map>`)) as LyraMindMap;
   await el.updateComplete;
   expect(el.shadowRoot!.querySelector('[part="empty"]')!.textContent).to.include('No data');
 });
 
 it('normalizes a NaN expandDepth instead of silently collapsing every ring (falls back to the default of 1)', async () => {
-  const el = (await fixture(html`<lyra-mind-map></lyra-mind-map>`)) as LyraMindMap;
+  const el = (await fixture(html`<lr-mind-map></lr-mind-map>`)) as LyraMindMap;
   el.topics = topics;
   el.expandDepth = NaN;
   await el.updateComplete;
@@ -114,7 +114,7 @@ it('resolves the default svg accessible name through a .strings override for min
   // label stays at its '' default, so the `this.label || this.localize('mindMapLabel')`
   // aria-label must fall through to the .strings/registry path.
   const el = (await fixture(
-    html`<lyra-mind-map .strings=${{ mindMapLabel: 'Carte mentale' }}></lyra-mind-map>`,
+    html`<lr-mind-map .strings=${{ mindMapLabel: 'Carte mentale' }}></lr-mind-map>`,
   )) as LyraMindMap;
   el.topics = topics;
   await el.updateComplete;
@@ -122,7 +122,7 @@ it('resolves the default svg accessible name through a .strings override for min
 });
 
 it('is accessible with an expanded, multi-level tree', async () => {
-  const el = (await fixture(html`<lyra-mind-map expand-depth="2"></lyra-mind-map>`)) as LyraMindMap;
+  const el = (await fixture(html`<lr-mind-map expand-depth="2"></lr-mind-map>`)) as LyraMindMap;
   el.topics = topics;
   await el.updateComplete;
   await expect(el).to.be.accessible();

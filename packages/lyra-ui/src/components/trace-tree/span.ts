@@ -1,7 +1,7 @@
 /**
  * One span in an agent/LLM trace. The same flat `LyraSpan[]` array powers
- * both `<lyra-trace-tree>` (hierarchy projection, via `parentId`) and
- * `<lyra-span-waterfall>` (timeline projection, via `startMs`/`endMs`) — two
+ * both `<lr-trace-tree>` (hierarchy projection, via `parentId`) and
+ * `<lr-span-waterfall>` (timeline projection, via `startMs`/`endMs`) — two
  * views of one trace, never two separate data shapes.
  */
 export interface LyraSpan {

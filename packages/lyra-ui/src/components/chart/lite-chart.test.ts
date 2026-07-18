@@ -20,26 +20,26 @@ const BAR_DATASETS = [
 ];
 
 it('renders one bar per label per dataset (grouped, not stacked)', async () => {
-  const el = await mount(html`<lyra-lite-chart
+  const el = await mount(html`<lr-lite-chart
     type="bar"
     .labels=${BAR_LABELS}
     .datasets=${BAR_DATASETS}
-  ></lyra-lite-chart>`);
+  ></lr-lite-chart>`);
   expect(el.shadowRoot!.querySelectorAll('[part="bar"]').length).to.equal(6);
 });
 
 it('stacked bars still render one rect per (label, dataset) pair, just positioned differently', async () => {
-  const el = await mount(html`<lyra-lite-chart
+  const el = await mount(html`<lr-lite-chart
     type="bar"
     stacked
     .labels=${BAR_LABELS}
     .datasets=${BAR_DATASETS}
-  ></lyra-lite-chart>`);
+  ></lr-lite-chart>`);
   expect(el.shadowRoot!.querySelectorAll('[part="bar"]').length).to.equal(6);
 });
 
 it('stacked bar segments sit end-to-end (second segment starts where the first ends)', async () => {
-  const el = await mount(html`<lyra-lite-chart
+  const el = await mount(html`<lr-lite-chart
     type="bar"
     stacked
     .labels=${['only']}
@@ -47,7 +47,7 @@ it('stacked bar segments sit end-to-end (second segment starts where the first e
       { label: 'A', data: [10] },
       { label: 'B', data: [20] },
     ]}
-  ></lyra-lite-chart>`);
+  ></lr-lite-chart>`);
   const rects = [...el.shadowRoot!.querySelectorAll('[part="bar"]')] as SVGRectElement[];
   expect(rects.length).to.equal(2);
   const [a, b] = rects;
@@ -68,14 +68,14 @@ it('stacked bar segments sit end-to-end (second segment starts where the first e
 });
 
 it('grouped (non-stacked) bars for the same category do not overlap', async () => {
-  const el = await mount(html`<lyra-lite-chart
+  const el = await mount(html`<lr-lite-chart
     type="bar"
     .labels=${['only']}
     .datasets=${[
       { label: 'A', data: [5] },
       { label: 'B', data: [5] },
     ]}
-  ></lyra-lite-chart>`);
+  ></lr-lite-chart>`);
   const rects = [...el.shadowRoot!.querySelectorAll('[part="bar"]')] as SVGRectElement[];
   expect(rects.length).to.equal(2);
   const [a, b] = rects;
@@ -87,32 +87,32 @@ it('grouped (non-stacked) bars for the same category do not overlap', async () =
 });
 
 it('renders a line path plus one point per value for type="line"', async () => {
-  const el = await mount(html`<lyra-lite-chart
+  const el = await mount(html`<lr-lite-chart
     type="line"
     .labels=${BAR_LABELS}
     .datasets=${BAR_DATASETS}
-  ></lyra-lite-chart>`);
+  ></lr-lite-chart>`);
   expect(el.shadowRoot!.querySelectorAll('[part="line"]').length).to.equal(2);
   expect(el.shadowRoot!.querySelectorAll('[part="point"]').length).to.equal(6);
 });
 
 it('skips null values in a line series without throwing, and without a point for them', async () => {
-  const el = await mount(html`<lyra-lite-chart
+  const el = await mount(html`<lr-lite-chart
     type="line"
     .labels=${['a', 'b', 'c']}
     .datasets=${[{ label: 'A', data: [1, null, 3] }]}
-  ></lyra-lite-chart>`);
+  ></lr-lite-chart>`);
   expect(el.shadowRoot!.querySelectorAll('[part="point"]').length).to.equal(2);
 });
 
-it('emits lyra-point-click with the right detail on bar click', async () => {
-  const el = await mount(html`<lyra-lite-chart
+it('emits lr-point-click with the right detail on bar click', async () => {
+  const el = await mount(html`<lr-lite-chart
     type="bar"
     .labels=${BAR_LABELS}
     .datasets=${BAR_DATASETS}
-  ></lyra-lite-chart>`);
+  ></lr-lite-chart>`);
   const detailPromise = new Promise<CustomEvent>((resolve) =>
-    el.addEventListener('lyra-point-click', (e) => resolve(e as CustomEvent), { once: true }),
+    el.addEventListener('lr-point-click', (e) => resolve(e as CustomEvent), { once: true }),
   );
   const rects = [...el.shadowRoot!.querySelectorAll('[part="bar"]')] as SVGRectElement[];
   // Dataset B ('Tue') -> second dataset, index 1.
@@ -121,15 +121,15 @@ it('emits lyra-point-click with the right detail on bar click', async () => {
   expect(detail).to.deep.equal({ datasetIndex: 1, index: 1, label: 'Tue', value: 5 });
 });
 
-it('emits lyra-point-click on Enter and Space while a bar is focused, not on other keys', async () => {
-  const el = await mount(html`<lyra-lite-chart
+it('emits lr-point-click on Enter and Space while a bar is focused, not on other keys', async () => {
+  const el = await mount(html`<lr-lite-chart
     type="bar"
     .labels=${['only']}
     .datasets=${[{ label: 'A', data: [7] }]}
-  ></lyra-lite-chart>`);
+  ></lr-lite-chart>`);
   const bar = el.shadowRoot!.querySelector('[part="bar"]')! as SVGRectElement;
   let count = 0;
-  el.addEventListener('lyra-point-click', () => count++);
+  el.addEventListener('lr-point-click', () => count++);
 
   bar.dispatchEvent(new KeyboardEvent('keydown', { key: 'a', bubbles: true }));
   expect(count).to.equal(0);
@@ -142,11 +142,11 @@ it('emits lyra-point-click on Enter and Space while a bar is focused, not on oth
 });
 
 it('uses one roving tab stop, arrow/Home/End navigation, and a data-list alternative', async () => {
-  const el = await mount(html`<lyra-lite-chart
+  const el = await mount(html`<lr-lite-chart
     type="bar"
     .labels=${BAR_LABELS}
     .datasets=${BAR_DATASETS}
-  ></lyra-lite-chart>`);
+  ></lr-lite-chart>`);
   const marks = () => [...el.shadowRoot!.querySelectorAll('[part="bar"]')] as SVGRectElement[];
   expect(marks().filter((mark) => mark.getAttribute('tabindex') === '0')).to.have.length(1);
   expect(marks().filter((mark) => mark.getAttribute('tabindex') === '-1')).to.have.length(5);
@@ -156,7 +156,7 @@ it('uses one roving tab stop, arrow/Home/End navigation, and a data-list alterna
   expect(marks()[1]!.getAttribute('tabindex')).to.equal('0');
   // `focusMark()` announces immediately, then its own subsequent programmatic
   // `.focus()` re-announces the identical text via the native `focus` event's
-  // `onMarkFocus()` -- `<lyra-live-region>` treats that as a same-text
+  // `onMarkFocus()` -- `<lr-live-region>` treats that as a same-text
   // reannounce (clears, then re-populates on the next animation frame, so a
   // screen reader observes a real content change rather than a silent no-op)
   // -- wait one frame for that reannounce to land before reading the text.
@@ -174,14 +174,14 @@ it('uses one roving tab stop, arrow/Home/End navigation, and a data-list alterna
   expect(el.shadowRoot!.querySelectorAll('[part="data-list"] li')).to.have.length(6);
 });
 
-it('emits lyra-point-click for a line point too, with the same detail shape', async () => {
-  const el = await mount(html`<lyra-lite-chart
+it('emits lr-point-click for a line point too, with the same detail shape', async () => {
+  const el = await mount(html`<lr-lite-chart
     type="line"
     .labels=${['x']}
     .datasets=${[{ label: 'Series', data: [42] }]}
-  ></lyra-lite-chart>`);
+  ></lr-lite-chart>`);
   const detailPromise = new Promise<CustomEvent>((resolve) =>
-    el.addEventListener('lyra-point-click', (e) => resolve(e as CustomEvent), { once: true }),
+    el.addEventListener('lr-point-click', (e) => resolve(e as CustomEvent), { once: true }),
   );
   el.shadowRoot!.querySelector('[part="point"]')!.dispatchEvent(new MouseEvent('click', { bubbles: true }));
   const { detail } = await detailPromise;
@@ -189,10 +189,10 @@ it('emits lyra-point-click for a line point too, with the same detail shape', as
 });
 
 it('renders no legend by default, and one legend-item per dataset when legend is set', async () => {
-  const el = await mount(html`<lyra-lite-chart
+  const el = await mount(html`<lr-lite-chart
     .labels=${BAR_LABELS}
     .datasets=${BAR_DATASETS}
-  ></lyra-lite-chart>`);
+  ></lr-lite-chart>`);
   expect(el.shadowRoot!.querySelector('[part="legend"]')).to.not.exist;
 
   el.legend = true;
@@ -204,41 +204,41 @@ it('renders no legend by default, and one legend-item per dataset when legend is
 });
 
 it('uses a series-provided color for its bar fill, and a default palette color otherwise', async () => {
-  const el = await mount(html`<lyra-lite-chart
+  const el = await mount(html`<lr-lite-chart
     type="bar"
     .labels=${['only']}
     .datasets=${[
       { label: 'Custom', data: [1], color: '#ff0000' },
       { label: 'Default', data: [1] },
     ]}
-  ></lyra-lite-chart>`);
+  ></lr-lite-chart>`);
   const rects = [...el.shadowRoot!.querySelectorAll('[part="bar"]')] as SVGRectElement[];
   expect(rects[0].getAttribute('fill')).to.equal('#ff0000');
   expect(rects[1].getAttribute('fill')).to.be.a('string').and.not.equal('#ff0000');
 });
 
 it('allows the categorical palette to be rethemed through semantic chart color variables', async () => {
-  const el = await mount(html`<lyra-lite-chart
-    style="--lyra-chart-color-2: rgb(1 2 3)"
+  const el = await mount(html`<lr-lite-chart
+    style="--lr-chart-color-2: rgb(1 2 3)"
     type="bar"
     .labels=${['only']}
     .datasets=${[
       { label: 'A', data: [1] },
       { label: 'B', data: [1] },
     ]}
-  ></lyra-lite-chart>`);
+  ></lr-lite-chart>`);
   const rects = [...el.shadowRoot!.querySelectorAll('[part="bar"]')] as SVGRectElement[];
-  expect(styles.cssText).to.match(/--lyra-chart-color-1:\s*var\(--lyra-color-chart-1\)/);
-  expect(rects[1].getAttribute('fill')).to.equal('var(--lyra-chart-color-2)');
+  expect(styles.cssText).to.match(/--lr-chart-color-1:\s*var\(--lr-color-chart-1\)/);
+  expect(rects[1].getAttribute('fill')).to.equal('var(--lr-chart-color-2)');
   expect(getComputedStyle(rects[1]).fill).to.equal('rgb(1, 2, 3)');
 });
 
 it('draws a gridline at the y=0 baseline when beginAtZero is true (the default)', async () => {
-  const el = await mount(html`<lyra-lite-chart
+  const el = await mount(html`<lr-lite-chart
     type="bar"
     .labels=${['only']}
     .datasets=${[{ label: 'A', data: [100] }]}
-  ></lyra-lite-chart>`);
+  ></lr-lite-chart>`);
   // beginAtZero pulls 0 into the domain even though every value is positive
   // and far from 0 — the nice-tick set should therefore include 0.
   const labels = [...el.shadowRoot!.querySelectorAll('[part="axis-label"]')]
@@ -248,80 +248,80 @@ it('draws a gridline at the y=0 baseline when beginAtZero is true (the default)'
 });
 
 it('renders x/y axis titles only when xLabel/yLabel are set', async () => {
-  const bare = await mount(html`<lyra-lite-chart
+  const bare = await mount(html`<lr-lite-chart
     .labels=${BAR_LABELS}
     .datasets=${BAR_DATASETS}
-  ></lyra-lite-chart>`);
+  ></lr-lite-chart>`);
   expect(bare.shadowRoot!.querySelectorAll('[part="axis-title"]').length).to.equal(0);
 
-  const labeled = await mount(html`<lyra-lite-chart
+  const labeled = await mount(html`<lr-lite-chart
     x-label="Day"
     y-label="Count"
     .labels=${BAR_LABELS}
     .datasets=${BAR_DATASETS}
-  ></lyra-lite-chart>`);
+  ></lr-lite-chart>`);
   const titles = [...labeled.shadowRoot!.querySelectorAll('[part="axis-title"]')].map((t) => t.textContent);
   expect(titles).to.include('Day');
   expect(titles).to.include('Count');
 });
 
 it('handles empty labels/datasets without throwing', async () => {
-  const el = await mount(html`<lyra-lite-chart></lyra-lite-chart>`);
+  const el = await mount(html`<lr-lite-chart></lr-lite-chart>`);
   expect(el.shadowRoot!.querySelector('svg')).to.exist;
   expect(el.shadowRoot!.querySelectorAll('[part="bar"]').length).to.equal(0);
 });
 
 it('sets an aria-label on the svg from the dataset labels (role=group, not img, since bars/points inside are independently focusable)', async () => {
-  const el = await mount(html`<lyra-lite-chart
+  const el = await mount(html`<lr-lite-chart
     .labels=${BAR_LABELS}
     .datasets=${BAR_DATASETS}
-  ></lyra-lite-chart>`);
+  ></lr-lite-chart>`);
   const svg = el.shadowRoot!.querySelector('svg')!;
   expect(svg.getAttribute('role')).to.equal('group');
   expect(svg.getAttribute('aria-label')).to.equal('A, B');
 });
 
 it('is accessible', async () => {
-  const el = await mount(html`<lyra-lite-chart
+  const el = await mount(html`<lr-lite-chart
     legend
     x-label="Day"
     y-label="Count"
     .labels=${BAR_LABELS}
     .datasets=${BAR_DATASETS}
-  ></lyra-lite-chart>`);
+  ></lr-lite-chart>`);
   await expect(el).to.be.accessible();
 });
 
 it('renders the legend with just the label when legendText is unset (unchanged default)', async () => {
-  const el = await mount(html`<lyra-lite-chart
+  const el = await mount(html`<lr-lite-chart
     legend
     type="bar"
     .labels=${BAR_LABELS}
     .datasets=${BAR_DATASETS}
-  ></lyra-lite-chart>`);
+  ></lr-lite-chart>`);
   const items = [...el.shadowRoot!.querySelectorAll('[part="legend-item"]')];
   expect(items.map((i) => i.textContent!.trim())).to.deep.equal(['A', 'B']);
   expect(el.shadowRoot!.querySelector('[part="legend-text"]')).to.not.exist;
 });
 
 it('appends legendText output next to each series label when set', async () => {
-  const el = await mount(html`<lyra-lite-chart
+  const el = await mount(html`<lr-lite-chart
     legend
     type="bar"
     .labels=${BAR_LABELS}
     .datasets=${BAR_DATASETS}
     .legendText=${(label: string, datasetIndex: number) => ` (${label}:${datasetIndex})`}
-  ></lyra-lite-chart>`);
+  ></lr-lite-chart>`);
   const texts = [...el.shadowRoot!.querySelectorAll('[part="legend-text"]')].map((n) => n.textContent);
   expect(texts).to.deep.equal([' (A:0)', ' (B:1)']);
 });
 
 it('uses tickFormat for y-axis labels when provided', async () => {
-  const el = (await fixture(html`<lyra-lite-chart
+  const el = (await fixture(html`<lr-lite-chart
     .labels=${['a', 'b']}
     .datasets=${[{ label: 'S', data: [10, 20] }]}
     .tickFormat=${(v: number) => `$${v.toFixed(2)}`}
-  ></lyra-lite-chart>`)) as LyraLiteChart;
+  ></lr-lite-chart>`)) as LyraLiteChart;
   const labels = Array.from(el.shadowRoot!.querySelectorAll('[part="axis-label"]')).map(
     (n) => n.textContent,
   );
@@ -329,10 +329,10 @@ it('uses tickFormat for y-axis labels when provided', async () => {
 });
 
 it('falls back to the default nice-number formatter without tickFormat', async () => {
-  const el = (await fixture(html`<lyra-lite-chart
+  const el = (await fixture(html`<lr-lite-chart
     .labels=${['a', 'b']}
     .datasets=${[{ label: 'S', data: [10, 20] }]}
-  ></lyra-lite-chart>`)) as LyraLiteChart;
+  ></lr-lite-chart>`)) as LyraLiteChart;
   const labels = Array.from(el.shadowRoot!.querySelectorAll('[part="axis-label"]')).map(
     (n) => n.textContent,
   );
@@ -340,10 +340,10 @@ it('falls back to the default nice-number formatter without tickFormat', async (
 });
 
 it('renders the same data again safely when an update has no changed properties', async () => {
-  const el = (await fixture(html`<lyra-lite-chart
+  const el = (await fixture(html`<lr-lite-chart
     .labels=${['a', 'b']}
     .datasets=${[{ label: 'S', data: [10, 20] }]}
-  ></lyra-lite-chart>`)) as LyraLiteChart;
+  ></lr-lite-chart>`)) as LyraLiteChart;
   await el.updateComplete;
   const before = el.shadowRoot!.innerHTML;
   el.requestUpdate();
@@ -354,11 +354,11 @@ it('renders the same data again safely when an update has no changed properties'
 it('re-renders when the tick formatter callback is replaced by reference', async () => {
   const first = (value: number) => `first-${value}`;
   const second = (value: number) => `second-${value}`;
-  const el = await mount(html`<lyra-lite-chart
+  const el = await mount(html`<lr-lite-chart
     .labels=${['a', 'b']}
     .datasets=${[{ label: 'S', data: [10, 20] }]}
     .tickFormat=${first}
-  ></lyra-lite-chart>`);
+  ></lr-lite-chart>`);
 
   expect(el.shadowRoot!.textContent).to.include('first-');
   el.tickFormat = second;
@@ -368,12 +368,12 @@ it('re-renders when the tick formatter callback is replaced by reference', async
 });
 
 it('re-renders when the bar position callback is replaced by reference', async () => {
-  const el = await mount(html`<lyra-lite-chart
+  const el = await mount(html`<lr-lite-chart
     type="bar"
     .labels=${['a']}
     .datasets=${[{ label: 'S', data: [10] }]}
     .barX=${() => 40}
-  ></lyra-lite-chart>`);
+  ></lr-lite-chart>`);
 
   const before = Number(el.shadowRoot!.querySelector('[part="bar"]')!.getAttribute('x'));
   el.barX = () => 140;
@@ -389,9 +389,9 @@ it('draws a bar from the axis lo, not the domain zero, when beginAtZero is false
     // (including the literal string "false") as `true`; only *omitting* the
     // attribute or setting the JS property directly yields `false`. Using
     // `.beginAtZero=${false}` below is what actually disables begin-at-zero.
-    html`<lyra-lite-chart type="bar" .beginAtZero=${false} .labels=${['a']} .datasets=${[{ label: 's', data: [95] }]}></lyra-lite-chart>`,
+    html`<lr-lite-chart type="bar" .beginAtZero=${false} .labels=${['a']} .datasets=${[{ label: 's', data: [95] }]}></lr-lite-chart>`,
   )) as LyraLiteChart;
-  el.style.setProperty('--lyra-chart-height', '200px');
+  el.style.setProperty('--lr-chart-height', '200px');
   (el as unknown as { plotWidth: number; plotHeight: number }).plotWidth = 400;
   (el as unknown as { plotHeight: number }).plotHeight = 200;
   await el.updateComplete;
@@ -406,7 +406,7 @@ it('draws a bar from the axis lo, not the domain zero, when beginAtZero is false
 
 it('draws a bar from the axis hi, not the domain zero, when beginAtZero is false and every value is negative', async () => {
   const el = (await fixture(
-    html`<lyra-lite-chart type="bar" .beginAtZero=${false} .labels=${['a']} .datasets=${[{ label: 's', data: [-95] }]}></lyra-lite-chart>`,
+    html`<lr-lite-chart type="bar" .beginAtZero=${false} .labels=${['a']} .datasets=${[{ label: 's', data: [-95] }]}></lr-lite-chart>`,
   )) as LyraLiteChart;
   (el as unknown as { plotWidth: number; plotHeight: number }).plotWidth = 400;
   (el as unknown as { plotHeight: number }).plotHeight = 200;
@@ -423,7 +423,7 @@ it('draws a bar from the axis hi, not the domain zero, when beginAtZero is false
 
 it('centers each category label on its own bar group instead of a line-endpoint position', async () => {
   const el = (await fixture(
-    html`<lyra-lite-chart type="bar" .labels=${['x', 'y', 'z']} .datasets=${[{ label: 's', data: [1, 2, 3] }]}></lyra-lite-chart>`,
+    html`<lr-lite-chart type="bar" .labels=${['x', 'y', 'z']} .datasets=${[{ label: 's', data: [1, 2, 3] }]}></lr-lite-chart>`,
   )) as LyraLiteChart;
   (el as unknown as { plotWidth: number; plotHeight: number }).plotWidth = 300;
   (el as unknown as { plotHeight: number }).plotHeight = 150;
@@ -439,7 +439,7 @@ it('centers each category label on its own bar group instead of a line-endpoint 
 
 it('breaks the line at a null value instead of bridging across it', async () => {
   const el = (await fixture(
-    html`<lyra-lite-chart type="line" .labels=${['a', 'b', 'c']} .datasets=${[{ label: 's', data: [1, null, 3] }]}></lyra-lite-chart>`,
+    html`<lr-lite-chart type="line" .labels=${['a', 'b', 'c']} .datasets=${[{ label: 's', data: [1, null, 3] }]}></lr-lite-chart>`,
   )) as LyraLiteChart;
   (el as unknown as { plotWidth: number; plotHeight: number }).plotWidth = 300;
   (el as unknown as { plotHeight: number }).plotHeight = 150;
@@ -452,11 +452,11 @@ it('breaks the line at a null value instead of bridging across it', async () => 
 
 it('breaks the line at multiple disjoint null gaps, producing one M per segment', async () => {
   const el = (await fixture(
-    html`<lyra-lite-chart
+    html`<lr-lite-chart
       type="line"
       .labels=${['a', 'b', 'c', 'd', 'e']}
       .datasets=${[{ label: 's', data: [1, null, 3, null, 5] }]}
-    ></lyra-lite-chart>`,
+    ></lr-lite-chart>`,
   )) as LyraLiteChart;
   (el as unknown as { plotWidth: number; plotHeight: number }).plotWidth = 300;
   (el as unknown as { plotHeight: number }).plotHeight = 150;
@@ -471,7 +471,7 @@ it('breaks the line at multiple disjoint null gaps, producing one M per segment'
 
 it('renders no invalid/NaN geometry when every value is non-finite', async () => {
   const el = (await fixture(
-    html`<lyra-lite-chart type="line" .labels=${['a']} .datasets=${[{ label: 's', data: [NaN] }]}></lyra-lite-chart>`,
+    html`<lr-lite-chart type="line" .labels=${['a']} .datasets=${[{ label: 's', data: [NaN] }]}></lr-lite-chart>`,
   )) as LyraLiteChart;
   await el.updateComplete;
   const path = el.shadowRoot!.querySelector('[part="line"]') as SVGPathElement;
@@ -480,11 +480,11 @@ it('renders no invalid/NaN geometry when every value is non-finite', async () =>
 
 it('excludes a non-finite (Infinity/NaN) value from the line path and its points, same as null', async () => {
   const el = (await fixture(
-    html`<lyra-lite-chart
+    html`<lr-lite-chart
       type="line"
       .labels=${['a', 'b', 'c']}
       .datasets=${[{ label: 's', data: [1, Infinity, 3] }]}
-    ></lyra-lite-chart>`,
+    ></lr-lite-chart>`,
   )) as LyraLiteChart;
   (el as unknown as { plotWidth: number; plotHeight: number }).plotWidth = 300;
   (el as unknown as { plotHeight: number }).plotHeight = 150;
@@ -498,11 +498,11 @@ it('excludes a non-finite (Infinity/NaN) value from the line path and its points
 
 it('excludes a non-finite (NaN) bar value, same as null, without throwing', async () => {
   const el = (await fixture(
-    html`<lyra-lite-chart
+    html`<lr-lite-chart
       type="bar"
       .labels=${['a', 'b']}
       .datasets=${[{ label: 's', data: [NaN, 4] }]}
-    ></lyra-lite-chart>`,
+    ></lr-lite-chart>`,
   )) as LyraLiteChart;
   (el as unknown as { plotWidth: number; plotHeight: number }).plotWidth = 300;
   (el as unknown as { plotHeight: number }).plotHeight = 150;
@@ -535,7 +535,7 @@ it('re-arms the ResizeObserver on reconnect after a disconnect, so a resize stil
 
   try {
     const el = (await fixture(
-      html`<lyra-lite-chart type="bar" .labels=${['a']} .datasets=${[{ label: 's', data: [1] }]}></lyra-lite-chart>`,
+      html`<lr-lite-chart type="bar" .labels=${['a']} .datasets=${[{ label: 's', data: [1] }]}></lr-lite-chart>`,
     )) as LyraLiteChart;
     const svgEl = el.shadowRoot!.querySelector('svg')!;
 
@@ -579,13 +579,13 @@ it('re-arms the ResizeObserver on reconnect after a disconnect, so a resize stil
 
 it('layout="scroll" gives every bar a fixed width and lets the plot exceed the host width via horizontal scroll', async () => {
   const labels = Array.from({ length: 30 }, (_, i) => `C${i}`);
-  const el = await mount(html`<lyra-lite-chart
+  const el = await mount(html`<lr-lite-chart
     type="bar"
     layout="scroll"
     style="width: 120px"
     .labels=${labels}
     .datasets=${[{ label: 'S', data: labels.map((_, i) => i + 1) }]}
-  ></lyra-lite-chart>`);
+  ></lr-lite-chart>`);
   const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
   const svgEl = el.shadowRoot!.querySelector('svg')!;
   expect(getComputedStyle(base).overflowX).to.equal('auto');
@@ -603,14 +603,14 @@ it('layout="scroll" gives every bar a fixed width and lets the plot exceed the h
 
 it('barWidth (attribute "bar-width") sets the fixed per-bar width used by layout="scroll"', async () => {
   const labels = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
-  const el = await mount(html`<lyra-lite-chart
+  const el = await mount(html`<lr-lite-chart
     type="bar"
     layout="scroll"
     bar-width="50"
     style="width: 80px"
     .labels=${labels}
     .datasets=${[{ label: 'S', data: labels.map(() => 1) }]}
-  ></lyra-lite-chart>`);
+  ></lr-lite-chart>`);
   const svgEl = el.shadowRoot!.querySelector('svg')!;
   const viewBoxW = Number(svgEl.getAttribute('viewBox')!.split(' ')[2]);
   // w = plotX(36, no yLabel) + n(8)*barWidth(50) + PAD_RIGHT(8) = 444.
@@ -619,14 +619,14 @@ it('barWidth (attribute "bar-width") sets the fixed per-bar width used by layout
 
 it('falls back to the 32px default barWidth when the bar-width attribute is non-finite, instead of a NaN slot width', async () => {
   const labels = ['a', 'b'];
-  const el = await mount(html`<lyra-lite-chart
+  const el = await mount(html`<lr-lite-chart
     type="bar"
     layout="scroll"
     bar-width="not-a-number"
     style="width: 80px"
     .labels=${labels}
     .datasets=${[{ label: 'S', data: labels.map(() => 1) }]}
-  ></lyra-lite-chart>`);
+  ></lr-lite-chart>`);
   const svgEl = el.shadowRoot!.querySelector('svg')!;
   const viewBoxW = Number(svgEl.getAttribute('viewBox')!.split(' ')[2]);
   // w = plotX(36, no yLabel) + n(2)*barWidth(32, the default fallback) + PAD_RIGHT(8) = 108.
@@ -636,13 +636,13 @@ it('falls back to the 32px default barWidth when the bar-width attribute is non-
 
 it('clamps a negative barWidth to 0 instead of a negative slot width, without throwing', async () => {
   const labels = ['a', 'b'];
-  const el = await mount(html`<lyra-lite-chart
+  const el = await mount(html`<lr-lite-chart
     type="bar"
     layout="scroll"
     style="width: 80px"
     .labels=${labels}
     .datasets=${[{ label: 'S', data: labels.map(() => 1) }]}
-  ></lyra-lite-chart>`);
+  ></lr-lite-chart>`);
   el.barWidth = -10;
   await el.updateComplete;
   const svgEl = el.shadowRoot!.querySelector('svg')!;
@@ -658,13 +658,13 @@ it('clamps a negative barWidth to 0 instead of a negative slot width, without th
 
 it('keeps bars and their axis labels aligned in layout="scroll" (no drift between the two width models)', async () => {
   const labels = ['x', 'y', 'z', 'w', 'v'];
-  const el = await mount(html`<lyra-lite-chart
+  const el = await mount(html`<lr-lite-chart
     type="bar"
     layout="scroll"
     style="width: 60px"
     .labels=${labels}
     .datasets=${[{ label: 's', data: [1, 2, 3, 4, 5] }]}
-  ></lyra-lite-chart>`);
+  ></lr-lite-chart>`);
   const bars = [...el.shadowRoot!.querySelectorAll('[part="bar"]')] as SVGRectElement[];
   const axisLabels = [...el.shadowRoot!.querySelectorAll('[part="axis-label"][text-anchor="middle"]')] as SVGTextElement[];
   const firstBarCenter = Number(bars[0].getAttribute('x')) + Number(bars[0].getAttribute('width')) / 2;
@@ -673,11 +673,11 @@ it('keeps bars and their axis labels aligned in layout="scroll" (no drift betwee
 });
 
 it('layout="fit" (the default) leaves the svg without an inline width override and the base container non-scrollable, unchanged from before layout existed', async () => {
-  const el = await mount(html`<lyra-lite-chart
+  const el = await mount(html`<lr-lite-chart
     type="bar"
     .labels=${BAR_LABELS}
     .datasets=${BAR_DATASETS}
-  ></lyra-lite-chart>`);
+  ></lr-lite-chart>`);
   expect(el.layout).to.equal('fit');
   expect(el.getAttribute('layout')).to.equal('fit'); // reflected attribute
   const svgEl = el.shadowRoot!.querySelector('svg')!;
@@ -690,12 +690,12 @@ it('layout="fit" (the default) leaves the svg without an inline width override a
 
 it('maxLabels decimates which axis-label text elements render, always keeping the first and last (bars are never decimated)', async () => {
   const labels = Array.from({ length: 20 }, (_, i) => `L${i}`);
-  const el = await mount(html`<lyra-lite-chart
+  const el = await mount(html`<lr-lite-chart
     type="bar"
     max-labels="5"
     .labels=${labels}
     .datasets=${[{ label: 's', data: labels.map((_, i) => i + 1) }]}
-  ></lyra-lite-chart>`);
+  ></lr-lite-chart>`);
   const axisLabels = [...el.shadowRoot!.querySelectorAll('[part="axis-label"][text-anchor="middle"]')].map(
     (n) => n.textContent,
   );
@@ -707,23 +707,23 @@ it('maxLabels decimates which axis-label text elements render, always keeping th
 
 it('renders every label when maxLabels is unset, even for a long category list (regression)', async () => {
   const labels = Array.from({ length: 20 }, (_, i) => `L${i}`);
-  const el = await mount(html`<lyra-lite-chart
+  const el = await mount(html`<lr-lite-chart
     type="bar"
     .labels=${labels}
     .datasets=${[{ label: 's', data: labels.map((_, i) => i + 1) }]}
-  ></lyra-lite-chart>`);
+  ></lr-lite-chart>`);
   const axisLabels = [...el.shadowRoot!.querySelectorAll('[part="axis-label"][text-anchor="middle"]')];
   expect(axisLabels.length).to.equal(20);
 });
 
 it('renders every label (no cap) when maxLabels is non-finite, instead of crashing or hiding every label', async () => {
   const labels = Array.from({ length: 20 }, (_, i) => `L${i}`);
-  const el = await mount(html`<lyra-lite-chart
+  const el = await mount(html`<lr-lite-chart
     type="bar"
     max-labels="not-a-number"
     .labels=${labels}
     .datasets=${[{ label: 's', data: labels.map((_, i) => i + 1) }]}
-  ></lyra-lite-chart>`);
+  ></lr-lite-chart>`);
   const axisLabels = [...el.shadowRoot!.querySelectorAll('[part="axis-label"][text-anchor="middle"]')];
   expect(axisLabels.length).to.equal(20);
   expect(el.shadowRoot!.querySelectorAll('[part="bar"]').length).to.equal(20);
@@ -731,11 +731,11 @@ it('renders every label (no cap) when maxLabels is non-finite, instead of crashi
 
 it('does not crash and still keeps the first/last label for a negative maxLabels', async () => {
   const labels = Array.from({ length: 20 }, (_, i) => `L${i}`);
-  const el = await mount(html`<lyra-lite-chart
+  const el = await mount(html`<lr-lite-chart
     type="bar"
     .labels=${labels}
     .datasets=${[{ label: 's', data: labels.map((_, i) => i + 1) }]}
-  ></lyra-lite-chart>`);
+  ></lr-lite-chart>`);
   el.maxLabels = -5;
   await el.updateComplete;
   const axisLabels = [...el.shadowRoot!.querySelectorAll('[part="axis-label"][text-anchor="middle"]')].map(
@@ -750,12 +750,12 @@ it('does not crash and still keeps the first/last label for a negative maxLabels
 
 it('barX overrides the internally computed per-category x-origin for both bars and their labels', async () => {
   const el = (await fixture(
-    html`<lyra-lite-chart
+    html`<lr-lite-chart
       type="bar"
       .labels=${['only']}
       .datasets=${[{ label: 's', data: [5] }]}
       .barX=${() => 500}
-    ></lyra-lite-chart>`,
+    ></lr-lite-chart>`,
   )) as LyraLiteChart;
   (el as unknown as { plotWidth: number; plotHeight: number }).plotWidth = 300;
   (el as unknown as { plotHeight: number }).plotHeight = 150;
@@ -775,7 +775,7 @@ it('barX overrides the internally computed per-category x-origin for both bars a
 
 it('leaves bar/label x-position at the internal per-category formula when barX is unset (regression)', async () => {
   const el = (await fixture(
-    html`<lyra-lite-chart type="bar" .labels=${['x', 'y', 'z']} .datasets=${[{ label: 's', data: [1, 2, 3] }]}></lyra-lite-chart>`,
+    html`<lr-lite-chart type="bar" .labels=${['x', 'y', 'z']} .datasets=${[{ label: 's', data: [1, 2, 3] }]}></lr-lite-chart>`,
   )) as LyraLiteChart;
   (el as unknown as { plotWidth: number; plotHeight: number }).plotWidth = 300;
   (el as unknown as { plotHeight: number }).plotHeight = 150;
@@ -791,46 +791,46 @@ it('leaves bar/label x-position at the internal per-category formula when barX i
 // --- pointText tooltip formatter -----------------------------------------------
 
 it('pointText overrides the per-bar tooltip/aria-label text', async () => {
-  const el = await mount(html`<lyra-lite-chart
+  const el = await mount(html`<lr-lite-chart
     type="bar"
     .labels=${['a']}
     .datasets=${[{ label: 'S', data: [42] }]}
     .pointText=${(label: string, value: number, datasetIndex: number) => `custom ${label} ${value} ${datasetIndex}`}
-  ></lyra-lite-chart>`);
+  ></lr-lite-chart>`);
   const rect = el.shadowRoot!.querySelector('[part="bar"]') as SVGRectElement;
   expect(rect.querySelector('title')!.textContent).to.equal('custom a 42 0');
   expect(rect.getAttribute('aria-label')).to.equal('custom a 42 0');
 });
 
 it('pointText overrides the per-point tooltip/aria-label text for type="line" too', async () => {
-  const el = await mount(html`<lyra-lite-chart
+  const el = await mount(html`<lr-lite-chart
     type="line"
     .labels=${['x']}
     .datasets=${[{ label: 'S', data: [7] }]}
     .pointText=${(label: string, value: number, datasetIndex: number) => `pt ${label}:${value}#${datasetIndex}`}
-  ></lyra-lite-chart>`);
+  ></lr-lite-chart>`);
   const point = el.shadowRoot!.querySelector('[part="point"]') as SVGCircleElement;
   expect(point.querySelector('title')!.textContent).to.equal('pt x:7#0');
   expect(point.getAttribute('aria-label')).to.equal('pt x:7#0');
 });
 
 it('falls back to the built-in raw-value tooltip/aria-label text when pointText is unset (regression)', async () => {
-  const el = await mount(html`<lyra-lite-chart
+  const el = await mount(html`<lr-lite-chart
     type="bar"
     .labels=${['a']}
     .datasets=${[{ label: 'S', data: [42] }]}
-  ></lyra-lite-chart>`);
+  ></lr-lite-chart>`);
   const rect = el.shadowRoot!.querySelector('[part="bar"]') as SVGRectElement;
   expect(rect.querySelector('title')!.textContent).to.equal('S, a: 42');
   expect(rect.getAttribute('aria-label')).to.equal('S, a: 42');
 });
 
 it('formats the built-in bar/point label through localize() and Intl instead of a hard-coded template', async () => {
-  const el = await mount(html`<lyra-lite-chart
+  const el = await mount(html`<lr-lite-chart
     type="bar"
     .labels=${['a']}
     .datasets=${[{ label: 'S', data: [1234.5] }]}
-  ></lyra-lite-chart>`);
+  ></lr-lite-chart>`);
   const rect = el.shadowRoot!.querySelector('[part="bar"]') as SVGRectElement;
   const expected = `S, a: ${new Intl.NumberFormat(el.effectiveLocale).format(1234.5)}`;
   expect(rect.getAttribute('aria-label')).to.equal(expected);
@@ -840,12 +840,12 @@ it('formats the built-in bar/point label through localize() and Intl instead of 
 // --- roundedBars ----------------------------------------------------------------
 
 it('roundedBars renders each bar as a rounded-corner path instead of a plain rect', async () => {
-  const el = await mount(html`<lyra-lite-chart
+  const el = await mount(html`<lr-lite-chart
     type="bar"
     rounded-bars
     .labels=${['a']}
     .datasets=${[{ label: 's', data: [42] }]}
-  ></lyra-lite-chart>`);
+  ></lr-lite-chart>`);
   const mark = el.shadowRoot!.querySelector('[part="bar"]')!;
   expect(mark.tagName.toLowerCase()).to.equal('path');
   expect(mark.getAttribute('d')).to.include('Q');
@@ -853,11 +853,11 @@ it('roundedBars renders each bar as a rounded-corner path instead of a plain rec
 });
 
 it('renders square-cornered rects by default (roundedBars unset, regression)', async () => {
-  const el = await mount(html`<lyra-lite-chart
+  const el = await mount(html`<lr-lite-chart
     type="bar"
     .labels=${['a']}
     .datasets=${[{ label: 's', data: [42] }]}
-  ></lyra-lite-chart>`);
+  ></lr-lite-chart>`);
   const mark = el.shadowRoot!.querySelector('[part="bar"]')!;
   expect(mark.tagName.toLowerCase()).to.equal('rect');
 });
@@ -865,21 +865,21 @@ it('renders square-cornered rects by default (roundedBars unset, regression)', a
 // --- skipZero ---------------------------------------------------------------------
 
 it('skipZero omits the mark entirely for an exact-zero value, while still rendering non-zero and skipping null/non-finite as before', async () => {
-  const el = await mount(html`<lyra-lite-chart
+  const el = await mount(html`<lr-lite-chart
     type="bar"
     skip-zero
     .labels=${['a', 'b', 'c', 'd']}
     .datasets=${[{ label: 's', data: [0, 5, null, NaN] }]}
-  ></lyra-lite-chart>`);
+  ></lr-lite-chart>`);
   expect(el.shadowRoot!.querySelectorAll('[part="bar"]').length).to.equal(1);
 });
 
 it('renders a zero-height but focusable/titled bar for a zero value by default (skipZero unset, regression)', async () => {
-  const el = await mount(html`<lyra-lite-chart
+  const el = await mount(html`<lr-lite-chart
     type="bar"
     .labels=${['a']}
     .datasets=${[{ label: 's', data: [0] }]}
-  ></lyra-lite-chart>`);
+  ></lr-lite-chart>`);
   const bars = el.shadowRoot!.querySelectorAll('[part="bar"]');
   expect(bars.length).to.equal(1);
   expect(bars[0].getAttribute('tabindex')).to.equal('0');
@@ -889,7 +889,7 @@ it('renders a zero-height but focusable/titled bar for a zero value by default (
 
 it('padLeft overrides the default 36px left padding, shifting the plot origin', async () => {
   const defaultEl = (await fixture(
-    html`<lyra-lite-chart type="bar" .labels=${['only']} .datasets=${[{ label: 's', data: [5] }]}></lyra-lite-chart>`,
+    html`<lr-lite-chart type="bar" .labels=${['only']} .datasets=${[{ label: 's', data: [5] }]}></lr-lite-chart>`,
   )) as LyraLiteChart;
   (defaultEl as unknown as { plotWidth: number; plotHeight: number }).plotWidth = 300;
   (defaultEl as unknown as { plotHeight: number }).plotHeight = 150;
@@ -897,7 +897,7 @@ it('padLeft overrides the default 36px left padding, shifting the plot origin', 
   const defaultX = Number((defaultEl.shadowRoot!.querySelector('[part="bar"]') as SVGRectElement).getAttribute('x'));
 
   const el = (await fixture(
-    html`<lyra-lite-chart type="bar" pad-left="80" .labels=${['only']} .datasets=${[{ label: 's', data: [5] }]}></lyra-lite-chart>`,
+    html`<lr-lite-chart type="bar" pad-left="80" .labels=${['only']} .datasets=${[{ label: 's', data: [5] }]}></lr-lite-chart>`,
   )) as LyraLiteChart;
   (el as unknown as { plotWidth: number; plotHeight: number }).plotWidth = 300;
   (el as unknown as { plotHeight: number }).plotHeight = 150;
@@ -911,7 +911,7 @@ it('padLeft overrides the default 36px left padding, shifting the plot origin', 
 
 it('falls back to the 36px default axis gutter when pad-left is non-finite, instead of a NaN bar position', async () => {
   const el = (await fixture(
-    html`<lyra-lite-chart type="bar" pad-left="not-a-number" .labels=${['only']} .datasets=${[{ label: 's', data: [5] }]}></lyra-lite-chart>`,
+    html`<lr-lite-chart type="bar" pad-left="not-a-number" .labels=${['only']} .datasets=${[{ label: 's', data: [5] }]}></lr-lite-chart>`,
   )) as LyraLiteChart;
   (el as unknown as { plotWidth: number; plotHeight: number }).plotWidth = 300;
   (el as unknown as { plotHeight: number }).plotHeight = 150;
@@ -925,7 +925,7 @@ it('falls back to the 36px default axis gutter when pad-left is non-finite, inst
 
 it('clamps a negative padLeft to 0 instead of a negative axis gutter, without throwing', async () => {
   const el = (await fixture(
-    html`<lyra-lite-chart type="bar" .labels=${['only']} .datasets=${[{ label: 's', data: [5] }]}></lyra-lite-chart>`,
+    html`<lr-lite-chart type="bar" .labels=${['only']} .datasets=${[{ label: 's', data: [5] }]}></lr-lite-chart>`,
   )) as LyraLiteChart;
   (el as unknown as { plotWidth: number; plotHeight: number }).plotWidth = 300;
   (el as unknown as { plotHeight: number }).plotHeight = 150;
@@ -942,7 +942,7 @@ it('clamps a negative padLeft to 0 instead of a negative axis gutter, without th
 
 it('barGapRatio overrides the default 0.2 gap fraction, changing bar width relative to slot', async () => {
   const el = (await fixture(
-    html`<lyra-lite-chart type="bar" bar-gap-ratio="0.5" .labels=${['only']} .datasets=${[{ label: 's', data: [5] }]}></lyra-lite-chart>`,
+    html`<lr-lite-chart type="bar" bar-gap-ratio="0.5" .labels=${['only']} .datasets=${[{ label: 's', data: [5] }]}></lr-lite-chart>`,
   )) as LyraLiteChart;
   (el as unknown as { plotWidth: number; plotHeight: number }).plotWidth = 300;
   (el as unknown as { plotHeight: number }).plotHeight = 150;
@@ -955,7 +955,7 @@ it('barGapRatio overrides the default 0.2 gap fraction, changing bar width relat
 
 it('uses the default 0.2 gap fraction when barGapRatio is unset (regression)', async () => {
   const el = (await fixture(
-    html`<lyra-lite-chart type="bar" .labels=${['only']} .datasets=${[{ label: 's', data: [5] }]}></lyra-lite-chart>`,
+    html`<lr-lite-chart type="bar" .labels=${['only']} .datasets=${[{ label: 's', data: [5] }]}></lr-lite-chart>`,
   )) as LyraLiteChart;
   (el as unknown as { plotWidth: number; plotHeight: number }).plotWidth = 300;
   (el as unknown as { plotHeight: number }).plotHeight = 150;
@@ -968,7 +968,7 @@ it('uses the default 0.2 gap fraction when barGapRatio is unset (regression)', a
 
 it('clamps an out-of-range bar-gap-ratio into [0, 1] instead of an inverted/oversized bar, without throwing', async () => {
   const el = (await fixture(
-    html`<lyra-lite-chart type="bar" bar-gap-ratio="5" .labels=${['only']} .datasets=${[{ label: 's', data: [5] }]}></lyra-lite-chart>`,
+    html`<lr-lite-chart type="bar" bar-gap-ratio="5" .labels=${['only']} .datasets=${[{ label: 's', data: [5] }]}></lr-lite-chart>`,
   )) as LyraLiteChart;
   (el as unknown as { plotWidth: number; plotHeight: number }).plotWidth = 300;
   (el as unknown as { plotHeight: number }).plotHeight = 150;
@@ -983,7 +983,7 @@ it('clamps an out-of-range bar-gap-ratio into [0, 1] instead of an inverted/over
 
 it('falls back to the default 0.2 gap fraction when barGapRatio is non-finite, instead of NaN bar geometry', async () => {
   const el = (await fixture(
-    html`<lyra-lite-chart type="bar" .labels=${['only']} .datasets=${[{ label: 's', data: [5] }]}></lyra-lite-chart>`,
+    html`<lr-lite-chart type="bar" .labels=${['only']} .datasets=${[{ label: 's', data: [5] }]}></lr-lite-chart>`,
   )) as LyraLiteChart;
   (el as unknown as { plotWidth: number; plotHeight: number }).plotWidth = 300;
   (el as unknown as { plotHeight: number }).plotHeight = 150;
@@ -1002,7 +1002,7 @@ it('scale="sqrt" produces a measurably different bar height than scale="linear" 
   const datasets = [{ label: 's', data: [1, 25, 100] }];
 
   const linearEl = (await fixture(
-    html`<lyra-lite-chart type="bar" scale="linear" .labels=${labels} .datasets=${datasets}></lyra-lite-chart>`,
+    html`<lr-lite-chart type="bar" scale="linear" .labels=${labels} .datasets=${datasets}></lr-lite-chart>`,
   )) as LyraLiteChart;
   (linearEl as unknown as { plotWidth: number; plotHeight: number }).plotWidth = 300;
   (linearEl as unknown as { plotHeight: number }).plotHeight = 150;
@@ -1010,7 +1010,7 @@ it('scale="sqrt" produces a measurably different bar height than scale="linear" 
   const linearBars = [...linearEl.shadowRoot!.querySelectorAll('[part="bar"]')] as SVGRectElement[];
 
   const sqrtEl = (await fixture(
-    html`<lyra-lite-chart type="bar" scale="sqrt" .labels=${labels} .datasets=${datasets}></lyra-lite-chart>`,
+    html`<lr-lite-chart type="bar" scale="sqrt" .labels=${labels} .datasets=${datasets}></lr-lite-chart>`,
   )) as LyraLiteChart;
   (sqrtEl as unknown as { plotWidth: number; plotHeight: number }).plotWidth = 300;
   (sqrtEl as unknown as { plotHeight: number }).plotHeight = 150;
@@ -1039,7 +1039,7 @@ it('scale has no effect on type="line" (regression)', async () => {
   const datasets = [{ label: 's', data: [1, 25, 100] }];
 
   const linearEl = (await fixture(
-    html`<lyra-lite-chart type="line" scale="linear" .labels=${labels} .datasets=${datasets}></lyra-lite-chart>`,
+    html`<lr-lite-chart type="line" scale="linear" .labels=${labels} .datasets=${datasets}></lr-lite-chart>`,
   )) as LyraLiteChart;
   (linearEl as unknown as { plotWidth: number; plotHeight: number }).plotWidth = 300;
   (linearEl as unknown as { plotHeight: number }).plotHeight = 150;
@@ -1047,7 +1047,7 @@ it('scale has no effect on type="line" (regression)', async () => {
   const linearPoints = [...linearEl.shadowRoot!.querySelectorAll('[part="point"]')] as SVGCircleElement[];
 
   const sqrtEl = (await fixture(
-    html`<lyra-lite-chart type="line" scale="sqrt" .labels=${labels} .datasets=${datasets}></lyra-lite-chart>`,
+    html`<lr-lite-chart type="line" scale="sqrt" .labels=${labels} .datasets=${datasets}></lr-lite-chart>`,
   )) as LyraLiteChart;
   (sqrtEl as unknown as { plotWidth: number; plotHeight: number }).plotWidth = 300;
   (sqrtEl as unknown as { plotHeight: number }).plotHeight = 150;
@@ -1062,12 +1062,12 @@ it('scale has no effect on type="line" (regression)', async () => {
 // --- hideAxis ---------------------------------------------------------------------
 
 it('hideAxis suppresses gridlines and y-axis tick labels but leaves x-axis category labels alone', async () => {
-  const el = await mount(html`<lyra-lite-chart
+  const el = await mount(html`<lr-lite-chart
     type="bar"
     hide-axis
     .labels=${BAR_LABELS}
     .datasets=${BAR_DATASETS}
-  ></lyra-lite-chart>`);
+  ></lr-lite-chart>`);
   expect(el.shadowRoot!.querySelectorAll('[part="grid-line"]').length).to.equal(0);
   expect(el.shadowRoot!.querySelectorAll('[part="axis-label"][text-anchor="end"]').length).to.equal(0);
   expect(el.shadowRoot!.querySelectorAll('[part="axis-label"][text-anchor="middle"]').length).to.equal(
@@ -1076,11 +1076,11 @@ it('hideAxis suppresses gridlines and y-axis tick labels but leaves x-axis categ
 });
 
 it('renders gridlines and y-axis tick labels by default (hideAxis unset, regression)', async () => {
-  const el = await mount(html`<lyra-lite-chart
+  const el = await mount(html`<lr-lite-chart
     type="bar"
     .labels=${BAR_LABELS}
     .datasets=${BAR_DATASETS}
-  ></lyra-lite-chart>`);
+  ></lr-lite-chart>`);
   expect(el.shadowRoot!.querySelectorAll('[part="grid-line"]').length).to.be.greaterThan(0);
   expect(el.shadowRoot!.querySelectorAll('[part="axis-label"][text-anchor="end"]').length).to.be.greaterThan(0);
 });
@@ -1090,7 +1090,7 @@ it('renders gridlines and y-axis tick labels by default (hideAxis unset, regress
 describe('minBarHeight', () => {
   it('floors a tiny nonzero stacked segment to at least minBarHeight px', async () => {
     const el = (await fixture(html`
-      <lyra-lite-chart
+      <lr-lite-chart
         type="bar"
         stacked
         min-bar-height="4"
@@ -1099,7 +1099,7 @@ describe('minBarHeight', () => {
           { label: 'big', data: [1000] },
           { label: 'tiny', data: [1] },
         ]}
-      ></lyra-lite-chart>
+      ></lr-lite-chart>
     `)) as LyraLiteChart;
     el.style.height = '300px';
     await el.updateComplete;
@@ -1112,7 +1112,7 @@ describe('minBarHeight', () => {
 
   it('leaves bar height untouched when minBarHeight is unset', async () => {
     const el = (await fixture(html`
-      <lyra-lite-chart
+      <lr-lite-chart
         type="bar"
         stacked
         .labels=${['a']}
@@ -1120,7 +1120,7 @@ describe('minBarHeight', () => {
           { label: 'big', data: [1000] },
           { label: 'tiny', data: [1] },
         ]}
-      ></lyra-lite-chart>
+      ></lr-lite-chart>
     `)) as LyraLiteChart;
     el.style.height = '300px';
     await el.updateComplete;
@@ -1132,7 +1132,7 @@ describe('minBarHeight', () => {
 
   it('treats a non-finite or negative minBarHeight as a no-op floor instead of corrupting bar geometry', async () => {
     const el = (await fixture(html`
-      <lyra-lite-chart
+      <lr-lite-chart
         type="bar"
         stacked
         .labels=${['a']}
@@ -1140,7 +1140,7 @@ describe('minBarHeight', () => {
           { label: 'big', data: [1000] },
           { label: 'tiny', data: [1] },
         ]}
-      ></lyra-lite-chart>
+      ></lr-lite-chart>
     `)) as LyraLiteChart;
     el.style.height = '300px';
     await el.updateComplete;
@@ -1162,7 +1162,7 @@ describe('minBarHeight', () => {
 
   it('does not let a floored tiny segment get overdrawn by the next stacked segment (z-order/gap check)', async () => {
     const el = (await fixture(html`
-      <lyra-lite-chart
+      <lr-lite-chart
         type="bar"
         stacked
         min-bar-height="4"
@@ -1171,7 +1171,7 @@ describe('minBarHeight', () => {
           { label: 'tiny', data: [1] },
           { label: 'big', data: [1000] },
         ]}
-      ></lyra-lite-chart>
+      ></lr-lite-chart>
     `)) as LyraLiteChart;
     el.style.height = '300px';
     await el.updateComplete;
@@ -1201,7 +1201,7 @@ describe('scale="sqrt" stacked proportionality', () => {
     // 10/10/80 (domain max 100) -- segment heights must come out to 10%/10%/80% of the
     // sqrt-compressed bar height, not 31.6%/13.1%/55.3% (today's buggy per-segment-position sqrt).
     const el = (await fixture(html`
-      <lyra-lite-chart
+      <lr-lite-chart
         type="bar"
         stacked
         scale="sqrt"
@@ -1212,7 +1212,7 @@ describe('scale="sqrt" stacked proportionality', () => {
           { label: 'B', data: [10] },
           { label: 'C', data: [80] },
         ]}
-      ></lyra-lite-chart>
+      ></lr-lite-chart>
     `)) as LyraLiteChart;
     el.style.height = '300px';
     await el.updateComplete;
@@ -1240,13 +1240,13 @@ describe('scale="sqrt" stacked proportionality', () => {
       { label: 'B', data: [-20] },
     ];
     const linearEl = (await fixture(html`
-      <lyra-lite-chart type="bar" stacked scale="linear" begin-at-zero .labels=${labels} .datasets=${datasets}></lyra-lite-chart>
+      <lr-lite-chart type="bar" stacked scale="linear" begin-at-zero .labels=${labels} .datasets=${datasets}></lr-lite-chart>
     `)) as LyraLiteChart;
     (linearEl as unknown as { plotWidth: number; plotHeight: number }).plotWidth = 300;
     (linearEl as unknown as { plotHeight: number }).plotHeight = 150;
     await linearEl.updateComplete;
     const sqrtEl = (await fixture(html`
-      <lyra-lite-chart type="bar" stacked scale="sqrt" begin-at-zero .labels=${labels} .datasets=${datasets}></lyra-lite-chart>
+      <lr-lite-chart type="bar" stacked scale="sqrt" begin-at-zero .labels=${labels} .datasets=${datasets}></lr-lite-chart>
     `)) as LyraLiteChart;
     (sqrtEl as unknown as { plotWidth: number; plotHeight: number }).plotWidth = 300;
     (sqrtEl as unknown as { plotHeight: number }).plotHeight = 150;
@@ -1276,13 +1276,13 @@ describe('scale="sqrt" stacked proportionality', () => {
 
   it('non-stacked scale="sqrt" is unaffected (already proportional, single segment per bar)', async () => {
     const el = (await fixture(html`
-      <lyra-lite-chart
+      <lr-lite-chart
         type="bar"
         scale="sqrt"
         begin-at-zero
         .labels=${['a', 'b']}
         .datasets=${[{ label: 'A', data: [10, 90] }]}
-      ></lyra-lite-chart>
+      ></lr-lite-chart>
     `)) as LyraLiteChart;
     el.style.height = '300px';
     await el.updateComplete;
@@ -1300,11 +1300,11 @@ describe('scale="sqrt" stacked proportionality', () => {
 describe('accessibleLabel', () => {
   it('overrides the auto-derived <svg> aria-label when set', async () => {
     const el = (await fixture(html`
-      <lyra-lite-chart
+      <lr-lite-chart
         accessible-label="Custom chart description"
         .labels=${['a']}
         .datasets=${[{ label: 'A', data: [1] }]}
-      ></lyra-lite-chart>
+      ></lr-lite-chart>
     `)) as LyraLiteChart;
     await el.updateComplete;
     expect(el.shadowRoot!.querySelector('svg')!.getAttribute('aria-label')).to.equal('Custom chart description');
@@ -1312,7 +1312,7 @@ describe('accessibleLabel', () => {
 
   it('falls back to the auto-derived label (joined dataset labels, or "Chart") when unset', async () => {
     const el = (await fixture(html`
-      <lyra-lite-chart .labels=${['a']} .datasets=${[{ label: 'A', data: [1] }]}></lyra-lite-chart>
+      <lr-lite-chart .labels=${['a']} .datasets=${[{ label: 'A', data: [1] }]}></lr-lite-chart>
     `)) as LyraLiteChart;
     await el.updateComplete;
     expect(el.shadowRoot!.querySelector('svg')!.getAttribute('aria-label')).to.equal('A');
@@ -1320,12 +1320,12 @@ describe('accessibleLabel', () => {
 
   it('lets a host aria-label win and forwards it to the semantic SVG without duplicating the group role', async () => {
     const el = (await fixture(html`
-      <lyra-lite-chart
+      <lr-lite-chart
         aria-label="Quarterly revenue"
         accessible-label="Legacy chart label"
         .labels=${['a']}
         .datasets=${[{ label: 'A', data: [1] }]}
-      ></lyra-lite-chart>
+      ></lr-lite-chart>
     `)) as LyraLiteChart;
     await el.updateComplete;
 
@@ -1340,14 +1340,14 @@ describe('accessibleLabel', () => {
 describe('localized mark summaries', () => {
   it('uses the complete localized template and effective-locale number formatting', async () => {
     const el = (await fixture(html`
-      <lyra-lite-chart
+      <lr-lite-chart
         locale="de-DE"
         .strings=${{
           liteChartMarkSummary: '{series} – {label}: {value}; Position {index}/{total}',
         }}
         .labels=${['Q1']}
         .datasets=${[{ label: 'Umsatz', data: [1234.5] }]}
-      ></lyra-lite-chart>
+      ></lr-lite-chart>
     `)) as LyraLiteChart;
     await el.updateComplete;
 
@@ -1358,7 +1358,7 @@ describe('localized mark summaries', () => {
 
   it('preserves the built-in English mark summary with no locale override', async () => {
     const el = (await fixture(html`
-      <lyra-lite-chart .labels=${['Q1']} .datasets=${[{ label: 'Revenue', data: [12] }]}></lyra-lite-chart>
+      <lr-lite-chart .labels=${['Q1']} .datasets=${[{ label: 'Revenue', data: [12] }]}></lr-lite-chart>
     `)) as LyraLiteChart;
     await el.updateComplete;
 
@@ -1370,12 +1370,12 @@ describe('localized mark summaries', () => {
 
 it('positions y-axis labels and title at logical start in RTL', async () => {
   const el = await mount(html`
-    <lyra-lite-chart
+    <lr-lite-chart
       style="direction: rtl; inline-size: 320px;"
       y-label="Revenue"
       .labels=${['Q1', 'Q2']}
       .datasets=${[{ label: 'Revenue', data: [12, 20] }]}
-    ></lyra-lite-chart>
+    ></lr-lite-chart>
   `);
 
   const gridLine = el.shadowRoot!.querySelector('[part="grid-line"]')!;
@@ -1397,14 +1397,14 @@ it('positions y-axis labels and title at logical start in RTL', async () => {
 it('can shrink to a 320px allocation with long chart content', async () => {
   const wrapper = await fixture(html`
     <div style="display: flex; inline-size: 320px;">
-      <lyra-lite-chart
+      <lr-lite-chart
         legend
         .labels=${['A category label that is intentionally very long', 'Another translated category label']}
         .datasets=${[{ label: 'A deliberately long translated revenue series label', data: [1, 2] }]}
-      ></lyra-lite-chart>
+      ></lr-lite-chart>
     </div>
   `);
-  const el = wrapper.querySelector('lyra-lite-chart') as LyraLiteChart;
+  const el = wrapper.querySelector('lr-lite-chart') as LyraLiteChart;
   await el.updateComplete;
 
   expect(getComputedStyle(el).minInlineSize).to.equal('0px');
@@ -1416,7 +1416,7 @@ it('can shrink to a 320px allocation with long chart content', async () => {
 describe('selectedIndex', () => {
   it('reflects data-selected onto every bar at the given category index, across datasets', async () => {
     const el = (await fixture(html`
-      <lyra-lite-chart
+      <lr-lite-chart
         type="bar"
         .labels=${['a', 'b']}
         .datasets=${[
@@ -1424,7 +1424,7 @@ describe('selectedIndex', () => {
           { label: 'y', data: [3, 4] },
         ]}
         .selectedIndex=${[1]}
-      ></lyra-lite-chart>
+      ></lr-lite-chart>
     `)) as LyraLiteChart;
     el.style.height = '300px';
     await el.updateComplete;
@@ -1436,7 +1436,7 @@ describe('selectedIndex', () => {
 
   it('reflects nothing when selectedIndex is empty (the default)', async () => {
     const el = (await fixture(html`
-      <lyra-lite-chart type="bar" .labels=${['a']} .datasets=${[{ label: 'x', data: [1] }]}></lyra-lite-chart>
+      <lr-lite-chart type="bar" .labels=${['a']} .datasets=${[{ label: 'x', data: [1] }]}></lr-lite-chart>
     `)) as LyraLiteChart;
     el.style.height = '300px';
     await el.updateComplete;

@@ -7,10 +7,10 @@ async function dockedFixture(attrs = '', edge = 'end'): Promise<LyraDockPanel> {
   const wrapper = (await fixture(
     `<div style="position: relative; height: 20rem; display: flex;">
       <div style="flex: 1;">main</div>
-      <lyra-dock-panel edge="${edge}" ${attrs}>panel body</lyra-dock-panel>
+      <lr-dock-panel edge="${edge}" ${attrs}>panel body</lr-dock-panel>
     </div>`,
   )) as HTMLDivElement;
-  return wrapper.querySelector('lyra-dock-panel') as LyraDockPanel;
+  return wrapper.querySelector('lr-dock-panel') as LyraDockPanel;
 }
 
 describe('parseLengthPx', () => {
@@ -76,7 +76,7 @@ it('applies the size property as the host block-size for a top/bottom edge', asy
 });
 
 it('lets an explicit min-size below the collapsed-rail token width render while expanded', async () => {
-  // --lyra-icon-button-size (the collapsed-rail token) is 2.5rem = 40px --
+  // --lr-icon-button-size (the collapsed-rail token) is 2.5rem = 40px --
   // an unconditional CSS min-inline-size floor at that width used to win
   // over this smaller explicit size/min-size even though nothing here is
   // collapsed.
@@ -85,13 +85,13 @@ it('lets an explicit min-size below the collapsed-rail token width render while 
   expect(el.getBoundingClientRect().width).to.be.closeTo(24, 1);
 });
 
-it('resizes via keyboard and emits lyra-resize with a px size in the detail', async () => {
+it('resizes via keyboard and emits lr-resize with a px size in the detail', async () => {
   const el = await dockedFixture('size="300px" min-size="100px" max-size="500px"');
   await elementUpdated(el);
   const handle = el.shadowRoot!.querySelector('[part="handle"]') as HTMLElement;
 
   let detail: DockPanelResizeDetail | undefined;
-  el.addEventListener('lyra-resize', (e) => (detail = (e as CustomEvent<DockPanelResizeDetail>).detail));
+  el.addEventListener('lr-resize', (e) => (detail = (e as CustomEvent<DockPanelResizeDetail>).detail));
   // edge="end" in LTR: the panel's right edge is pinned, so ArrowLeft (moving
   // the draggable left edge further left) grows it.
   handle.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true }));
@@ -107,10 +107,10 @@ it('resizes via keyboard and emits lyra-resize with a px size in the detail', as
 it('swaps ArrowLeft/ArrowRight for edge="end" under dir="rtl"', async () => {
   const el = await fixture(
     html`<div dir="rtl" style="position: relative; height: 10rem; display: flex;">
-      <lyra-dock-panel edge="end" size="300px" min-size="100px" max-size="500px"></lyra-dock-panel>
+      <lr-dock-panel edge="end" size="300px" min-size="100px" max-size="500px"></lr-dock-panel>
     </div>`,
   );
-  const panel = el.querySelector('lyra-dock-panel') as LyraDockPanel;
+  const panel = el.querySelector('lr-dock-panel') as LyraDockPanel;
   await elementUpdated(panel);
   const handle = panel.shadowRoot!.querySelector('[part="handle"]') as HTMLElement;
 
@@ -124,10 +124,10 @@ it('swaps ArrowLeft/ArrowRight for edge="end" under dir="rtl"', async () => {
 it('does not swap ArrowUp/ArrowDown for a top/bottom edge under dir="rtl"', async () => {
   const el = await fixture(
     html`<div dir="rtl" style="position: relative; height: 10rem; display: flex; flex-direction: column;">
-      <lyra-dock-panel edge="top" size="150px" min-size="80px" max-size="300px"></lyra-dock-panel>
+      <lr-dock-panel edge="top" size="150px" min-size="80px" max-size="300px"></lr-dock-panel>
     </div>`,
   );
-  const panel = el.querySelector('lyra-dock-panel') as LyraDockPanel;
+  const panel = el.querySelector('lr-dock-panel') as LyraDockPanel;
   await elementUpdated(panel);
   const handle = panel.shadowRoot!.querySelector('[part="handle"]') as HTMLElement;
   handle.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }));
@@ -159,7 +159,7 @@ it('resizes via pointer drag and mirrors direction under dir="rtl"', async () =>
   const handle = el.shadowRoot!.querySelector('[part="handle"]') as HTMLElement;
   handle.setPointerCapture = () => {};
 
-  const resized = oneEvent(el, 'lyra-resize');
+  const resized = oneEvent(el, 'lr-resize');
   handle.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, pointerId: 1, clientX: 200 }));
   // edge="end" LTR: dragging left (toward more-negative clientX) grows it.
   window.dispatchEvent(new PointerEvent('pointermove', { pointerId: 1, clientX: 150 }));
@@ -198,7 +198,7 @@ it('does not throw on a stray pointermove/pointerup after disconnect mid-drag', 
   }).to.not.throw();
 });
 
-it('toggles collapsed via the collapse-toggle button and emits lyra-collapse-change', async () => {
+it('toggles collapsed via the collapse-toggle button and emits lr-collapse-change', async () => {
   const el = await dockedFixture('size="280px" collapsible');
   await elementUpdated(el);
   const toggle = el.shadowRoot!.querySelector('[part="collapse-toggle"]') as HTMLElement;
@@ -206,7 +206,7 @@ it('toggles collapsed via the collapse-toggle button and emits lyra-collapse-cha
   expect(toggle.getAttribute('aria-expanded')).to.equal('true');
 
   let detail: DockPanelCollapseChangeDetail | undefined;
-  el.addEventListener('lyra-collapse-change', (e) => (detail = (e as CustomEvent<DockPanelCollapseChangeDetail>).detail));
+  el.addEventListener('lr-collapse-change', (e) => (detail = (e as CustomEvent<DockPanelCollapseChangeDetail>).detail));
   toggle.click();
   await elementUpdated(el);
 
@@ -255,10 +255,10 @@ it('rotates the collapse-toggle chevron toward the pinned edge when expanded, aw
   // it must match the edge="end" LTR case exactly.
   const rtlWrapper = (await fixture(
     html`<div dir="rtl" style="position: relative; height: 10rem; display: flex;">
-      <lyra-dock-panel edge="start" collapsible></lyra-dock-panel>
+      <lr-dock-panel edge="start" collapsible></lr-dock-panel>
     </div>`,
   )) as HTMLDivElement;
-  const startRtl = rtlWrapper.querySelector('lyra-dock-panel') as LyraDockPanel;
+  const startRtl = rtlWrapper.querySelector('lr-dock-panel') as LyraDockPanel;
   await elementUpdated(startRtl);
   expect(chevron(startRtl).style.transform).to.equal('rotate(0deg)');
   startRtl.collapsed = true;
@@ -270,10 +270,10 @@ it('flips the top/bottom collapse-toggle centering translate under dir="rtl"', a
   const toggleTranslateX = async (dirAttr: string): Promise<number> => {
     const wrapper = (await fixture(
       `<div dir="${dirAttr}" style="position: relative; height: 10rem;">
-        <lyra-dock-panel edge="top" collapsible>panel body</lyra-dock-panel>
+        <lr-dock-panel edge="top" collapsible>panel body</lr-dock-panel>
       </div>`,
     )) as HTMLDivElement;
-    const el = wrapper.querySelector('lyra-dock-panel') as LyraDockPanel;
+    const el = wrapper.querySelector('lr-dock-panel') as LyraDockPanel;
     await elementUpdated(el);
     const toggle = el.shadowRoot!.querySelector('[part="collapse-toggle"]') as HTMLElement;
     return new DOMMatrixReadOnly(getComputedStyle(toggle).transform).m41;
@@ -289,10 +289,10 @@ it('keeps aria-valuemax/aria-valuenow live against a passive container resize', 
   const wrapper = (await fixture(
     `<div style="position: relative; width: 400px; height: 20rem; display: flex;">
       <div style="flex: 1;">main</div>
-      <lyra-dock-panel edge="end" size="100px" min-size="50px"></lyra-dock-panel>
+      <lr-dock-panel edge="end" size="100px" min-size="50px"></lr-dock-panel>
     </div>`,
   )) as HTMLDivElement;
-  const el = wrapper.querySelector('lyra-dock-panel') as LyraDockPanel;
+  const el = wrapper.querySelector('lr-dock-panel') as LyraDockPanel;
   await elementUpdated(el);
   const handle = () => el.shadowRoot!.querySelector('[part="handle"]') as HTMLElement;
   const initialMax = handle().getAttribute('aria-valuemax');
@@ -349,17 +349,17 @@ describe('aria-label localization', () => {
   it('honors a strings override for dockPanelResize/dockPanelCollapse/dockPanelExpand', async () => {
     const wrapper = (await fixture(
       html`<div style="position: relative; height: 20rem; display: flex;">
-        <lyra-dock-panel
+        <lr-dock-panel
           collapsible
           .strings=${{
             dockPanelResize: 'Redimensionner le panneau',
             dockPanelCollapse: 'Réduire le panneau',
             dockPanelExpand: 'Agrandir le panneau',
           }}
-        ></lyra-dock-panel>
+        ></lr-dock-panel>
       </div>`,
     )) as HTMLDivElement;
-    const el = wrapper.querySelector('lyra-dock-panel') as LyraDockPanel;
+    const el = wrapper.querySelector('lr-dock-panel') as LyraDockPanel;
     await elementUpdated(el);
     const handle = el.shadowRoot!.querySelector('[part="handle"]')!;
     const toggle = el.shadowRoot!.querySelector('[part="collapse-toggle"]')!;

@@ -22,7 +22,7 @@ describe('loadPdfJsDeps()', () => {
     try {
       expect(await loadPdfJsDeps(() => Promise.reject(importError))).to.equal(null);
       expect(calls.flat()).to.contain(importError);
-      expect(calls.flat().join(' ')).to.contain('lyra-pdf-viewer');
+      expect(calls.flat().join(' ')).to.contain('lr-pdf-viewer');
       expect(calls.flat().join(' ')).to.contain('pnpm add pdfjs-dist');
     } finally {
       console.warn = originalWarn;

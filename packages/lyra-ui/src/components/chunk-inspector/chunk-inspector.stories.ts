@@ -5,7 +5,7 @@ import type { LyraChunk } from './chunk-inspector.class.js';
 
 const meta: Meta = {
   title: 'Chunk Inspector',
-  component: 'lyra-chunk-inspector',
+  component: 'lr-chunk-inspector',
 };
 export default meta;
 type Story = StoryObj;
@@ -25,17 +25,17 @@ const chunks: LyraChunk[] = [
 ];
 
 export const Default: Story = {
-  render: () => html`<lyra-chunk-inspector .chunks=${chunks} @lyra-chunk-open=${(e: CustomEvent) => console.log(e.detail)}></lyra-chunk-inspector>`,
+  render: () => html`<lr-chunk-inspector .chunks=${chunks} @lr-chunk-open=${(e: CustomEvent) => console.log(e.detail)}></lr-chunk-inspector>`,
 };
 
 export const Compact: Story = {
-  render: () => html`<lyra-chunk-inspector .chunks=${chunks} compact></lyra-chunk-inspector>`,
+  render: () => html`<lr-chunk-inspector .chunks=${chunks} compact></lr-chunk-inspector>`,
 };
 
 export const Empty: Story = {
-  render: () => html`<lyra-chunk-inspector></lyra-chunk-inspector>`,
+  render: () => html`<lr-chunk-inspector></lr-chunk-inspector>`,
 };
 
 export const Narrow: Story = {
-  render: () => html`<div style="max-width: 320px;"><lyra-chunk-inspector .chunks=${chunks}></lyra-chunk-inspector></div>`,
+  render: () => html`<div style="max-width: 320px;"><lr-chunk-inspector .chunks=${chunks}></lr-chunk-inspector></div>`,
 };

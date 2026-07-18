@@ -75,12 +75,12 @@ export function computeAppRailMode(
 }
 
 export interface LyraAppRailEventMap {
-  'lyra-mode-change': CustomEvent<AppRailModeChangeDetail>;
-  'lyra-toggle': CustomEvent<AppRailToggleDetail>;
-  'lyra-rail-resize': CustomEvent<AppRailResizeDetail>;
+  'lr-mode-change': CustomEvent<AppRailModeChangeDetail>;
+  'lr-toggle': CustomEvent<AppRailToggleDetail>;
+  'lr-rail-resize': CustomEvent<AppRailResizeDetail>;
 }
 /**
- * `<lyra-app-rail>` — a responsive navigation rail that adapts across three
+ * `<lr-app-rail>` — a responsive navigation rail that adapts across three
  * presentations as the *viewport* narrows (not this element's own inline
  * size — see the `mode` accessor doc for why): `'full'` (nav items show
  * icon + label, inline), `'icon-only'` (a narrower inline rail, icons only),
@@ -95,11 +95,11 @@ export interface LyraAppRailEventMap {
  *
  * The `'mobile'` state participates in the library's shared overlay stack,
  * which supplies focus trapping, Escape/backdrop dismissal, inerting, and
- * focus restoration without nesting a `<lyra-dialog>` in this component's
+ * focus restoration without nesting a `<lr-dialog>` in this component's
  * shadow template. `[part="base"]` (the inline
  * `'full'`/`'icon-only'` presentation) and `[part="panel"]` (the mobile
  * overlay) are the *same* element promoted in place across modes (mirrors
- * `<lyra-widget>`'s fullscreen mode) — never both at once, and never two
+ * `<lr-widget>`'s fullscreen mode) — never both at once, and never two
  * separate copies of the slotted content, which slot projection can't
  * produce anyway (a light-DOM node is only ever assigned to one `<slot>`).
  * It's a plain `<div>` with an explicit `role="navigation"` rather than a
@@ -108,24 +108,24 @@ export interface LyraAppRailEventMap {
  * violation (verified against axe), whereas an explicit `role="navigation"`
  * on a generic element can be swapped for `role="dialog"` freely.
  *
- * @customElement lyra-app-rail
- * @slot - Nav items. Use `<lyra-app-rail-item>` for the explicit icon/label
+ * @customElement lr-app-rail
+ * @slot - Nav items. Use `<lr-app-rail-item>` for the explicit icon/label
  *   contract that automatically hides labels in `'icon-only'` mode. Generic
  *   links and buttons remain supported, but their compact presentation is the
  *   consumer's responsibility. While the mobile overlay is open, clicking
  *   anywhere inside this slot closes it.
  * @slot header - Logo/brand content, shown above the nav items in every mode.
  * @slot footer - A trailing user/settings trigger, shown below the nav items.
- * @event lyra-mode-change - The effective mode changed, whether from a
+ * @event lr-mode-change - The effective mode changed, whether from a
  *   breakpoint crossing or an explicit `mode` assignment. Not fired for a
  *   redundant reassignment to the mode already in effect.
  *   `detail: AppRailModeChangeDetail`.
- * @event lyra-toggle - The mobile overlay opened or closed — via the
+ * @event lr-toggle - The mobile overlay opened or closed — via the
  *   built-in toggle button, Escape, a backdrop click, a nav-item click while
  *   open, or a breakpoint/forced mode change leaving `'mobile'` while open.
- *   Not fired when a consumer sets `open` directly (mirrors `<lyra-dialog>`'s
+ *   Not fired when a consumer sets `open` directly (mirrors `<lr-dialog>`'s
  *   `open`/`close()` split). `detail: AppRailToggleDetail`.
- * @event lyra-rail-resize - The `resizable` rail's width changed via drag or keyboard stepping.
+ * @event lr-rail-resize - The `resizable` rail's width changed via drag or keyboard stepping.
  *   Not fired when a consumer sets `railWidthPx` directly. `detail: AppRailResizeDetail`.
  * @csspart base - The rail root while inline (`'full'`/`'icon-only'` modes).
  * @csspart header - The wrapper around the `header` slot.
@@ -137,22 +137,22 @@ export interface LyraAppRailEventMap {
  * @csspart panel - The mobile overlay's floating panel — see the class doc
  *   for why it's the same element as `base`, never both at once.
  * @csspart resizer - The `resizable` opt-in's drag handle -- its interactive hit target, sized to
- *   the shared minimum tappable size (`--lyra-icon-button-size`), independent of the slimmer
+ *   the shared minimum tappable size (`--lr-icon-button-size`), independent of the slimmer
  *   visible line rendered by its `resizer-track` child. Only rendered while `resizable` and `mode`
  *   is `'full'`.
  * @csspart resizer-track - The resizer's slim visible drag line, centered inside `[part="resizer"]`'s
- *   larger hit target (mirrors `<lyra-swatch-picker>`'s `[part="swatch"]`/`[part="swatch-fill"]`
+ *   larger hit target (mirrors `<lr-swatch-picker>`'s `[part="swatch"]`/`[part="swatch-fill"]`
  *   split). Colors on hover/focus the same way the whole handle previously did.
  *
  * @example
  * Use the item contract so the visible label collapses while its accessible
  * name remains available:
  * ```html
- * <lyra-app-rail>
- *   <lyra-app-rail-item href="/inbox" aria-label="Inbox">
+ * <lr-app-rail>
+ *   <lr-app-rail-item href="/inbox" aria-label="Inbox">
  *     <svg slot="icon" aria-hidden="true">...</svg>Inbox
- *   </lyra-app-rail-item>
- * </lyra-app-rail>
+ *   </lr-app-rail-item>
+ * </lr-app-rail>
  * ```
  */
 export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
@@ -160,7 +160,7 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
 
   // `mode` needs a custom accessor (force/auto semantics below) rather than
   // the usual @property()-generated one -- registered here, alongside the
-  // decorator-declared properties below, the same way lyra-model-select's
+  // decorator-declared properties below, the same way lr-model-select's
   // form-associated `value` accessor is. `reflect: true` still applies:
   // LitElement's update loop reflects any `reflect`-flagged property to its
   // attribute generically by reading `this[name]` after render, regardless
@@ -193,7 +193,7 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
   @property() label = 'Navigation';
 
   /** Accessible name overriding `label` (and its localized default) for the nav landmark / dialog
-   *  role, mirroring `<lyra-date-input>`'s `accessibleLabel` pattern. Reads the host's own
+   *  role, mirroring `<lr-date-input>`'s `accessibleLabel` pattern. Reads the host's own
    *  `aria-label` attribute -- unset (the default, `null`) reproduces today's exact
    *  `label`/localized-default output. */
   @property({ attribute: 'aria-label' }) private accessibleLabel: string | null = null;
@@ -209,20 +209,20 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
   /** Suppresses the built-in mobile `[part='toggle']` hamburger/close button entirely -- for a
    *  consumer that already owns an external mobile-menu toggle wired to this rail's own `open`
    *  property. `false` (the default) reproduces today's exact output; note `open` still has no
-   *  built-in external trigger of its own once this is set, since `lyra-toggle` only fires from the
+   *  built-in external trigger of its own once this is set, since `lr-toggle` only fires from the
    *  toggle button being removed. */
   @property({ type: Boolean, reflect: true, attribute: 'hide-toggle' }) hideToggle = false;
 
   /** Opts a continuously draggable width in for the `'full'` state — exposes a `[part="resizer"]`
    *  handle (pointer-drag and `ArrowLeft`/`ArrowRight` keyboard stepping, RTL-aware) clamped to
    *  `[minRailWidthPx, maxRailWidthPx]`. No built-in persistence — a consumer that wants the
-   *  chosen width to survive a reload should listen for `lyra-rail-resize` and persist `widthPx`
+   *  chosen width to survive a reload should listen for `lr-rail-resize` and persist `widthPx`
    *  itself. `false` (the default) renders no resizer and leaves the fixed-width
-   *  `--lyra-app-rail-width` CSS token exactly as before this property existed. */
+   *  `--lr-app-rail-width` CSS token exactly as before this property existed. */
   @property({ type: Boolean, reflect: true }) resizable = false;
 
   /** The rail's current width in px while `resizable` — settable/gettable. Unset defers to the
-   *  `--lyra-app-rail-width` CSS token's own resolved width. */
+   *  `--lr-app-rail-width` CSS token's own resolved width. */
   @property({ type: Number, attribute: 'rail-width-px' }) railWidthPx?: number;
 
   /** Minimum `railWidthPx` a drag/keyboard resize can reach. */
@@ -358,7 +358,7 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
 
   // Runs after render (not willUpdate) so [part="panel"] and its slotted
   // content have already landed in the DOM before the focus call below can
-  // rely on them -- mirrors lyra-dialog's/lyra-widget's identical ordering
+  // rely on them -- mirrors lr-dialog's/lr-widget's identical ordering
   // rationale.
   protected updated(changed: PropertyValues): void {
     this.syncSlottedItems();
@@ -472,10 +472,10 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
     const old = this._mode;
     this._mode = next;
     this.requestUpdate('mode', old);
-    this.emit<AppRailModeChangeDetail>('lyra-mode-change', { mode: next });
+    this.emit<AppRailModeChangeDetail>('lr-mode-change', { mode: next });
     // 'open' is only meaningful in 'mobile' mode -- leaving it while open
     // closes the overlay as a side effect (through setOpen, so it still
-    // emits lyra-toggle and releases the scroll lock/focus trap normally)
+    // emits lr-toggle and releases the scroll lock/focus trap normally)
     // rather than leaving a now-invisible overlay primed to reappear the
     // next time mode returns to 'mobile'.
     if (next !== 'mobile' && this.open) this.setOpen(false);
@@ -484,7 +484,7 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
   private setOpen(next: boolean): void {
     if (this.open === next) return;
     this.open = next;
-    this.emit<AppRailToggleDetail>('lyra-toggle', { open: next });
+    this.emit<AppRailToggleDetail>('lr-toggle', { open: next });
   }
 
   private onToggleClick = (e: MouseEvent): void => {
@@ -531,7 +531,7 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
     if (isRtl(this)) delta = -delta;
     const next = Math.min(this.safeMaxRailWidthPx, Math.max(this.safeMinRailWidthPx, this.resizeStartWidth + delta));
     this.railWidthPx = next;
-    this.emit<AppRailResizeDetail>('lyra-rail-resize', { widthPx: next });
+    this.emit<AppRailResizeDetail>('lr-rail-resize', { widthPx: next });
   };
 
   private onResizerPointerUp = (e: PointerEvent): void => {
@@ -553,12 +553,12 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
       e.preventDefault();
       const next = Math.min(this.safeMaxRailWidthPx, this.effectiveRailWidthPx + step);
       this.railWidthPx = next;
-      this.emit<AppRailResizeDetail>('lyra-rail-resize', { widthPx: next });
+      this.emit<AppRailResizeDetail>('lr-rail-resize', { widthPx: next });
     } else if (e.key === backwardKey) {
       e.preventDefault();
       const next = Math.max(this.safeMinRailWidthPx, this.effectiveRailWidthPx - step);
       this.railWidthPx = next;
-      this.emit<AppRailResizeDetail>('lyra-rail-resize', { widthPx: next });
+      this.emit<AppRailResizeDetail>('lr-rail-resize', { widthPx: next });
     }
   };
 
@@ -618,6 +618,6 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
 
 declare global {
   interface HTMLElementTagNameMap {
-    'lyra-app-rail': LyraAppRail;
+    'lr-app-rail': LyraAppRail;
   }
 }

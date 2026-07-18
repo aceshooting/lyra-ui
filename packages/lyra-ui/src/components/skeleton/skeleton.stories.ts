@@ -3,7 +3,7 @@ import { html } from 'lit';
 
 const meta: Meta = {
   title: 'Skeleton',
-  component: 'lyra-skeleton',
+  component: 'lr-skeleton',
   tags: ['autodocs'],
 };
 export default meta;
@@ -12,36 +12,36 @@ type Story = StoryObj;
 export const Gallery: Story = {
   render: () => html`
     <div style="display:flex; gap:1rem; align-items:center;">
-      <lyra-skeleton label="Loading profile" width="10rem" height="1rem"></lyra-skeleton>
-      <lyra-skeleton
+      <lr-skeleton label="Loading profile" width="10rem" height="1rem"></lr-skeleton>
+      <lr-skeleton
         .announce=${false}
         variant="circle"
         width="3rem"
         height="3rem"
-      ></lyra-skeleton>
-      <lyra-skeleton
+      ></lr-skeleton>
+      <lr-skeleton
         .announce=${false}
         variant="rect"
         effect="sheen"
         width="6rem"
         height="3rem"
-      ></lyra-skeleton>
+      ></lr-skeleton>
     </div>
   `,
 };
 
 export const CustomLabel: Story = {
   render: () =>
-    html`<lyra-skeleton label="Loading chart" width="10rem" height="1rem"></lyra-skeleton>`,
+    html`<lr-skeleton label="Loading chart" width="10rem" height="1rem"></lr-skeleton>`,
 };
 
 export const RetimedMotion: Story = {
   render: () => html`
-    <lyra-skeleton
+    <lr-skeleton
       effect="sheen"
       width="12rem"
       height="2rem"
-      style="--lyra-transition-ambient: 3s linear"
-    ></lyra-skeleton>
+      style="--lr-transition-ambient: 3s linear"
+    ></lr-skeleton>
   `,
 };

@@ -7,9 +7,9 @@ import { ringStyles } from './progress.styles.js';
 const DEFAULT_MAX = 100;
 
 /**
- * `<lyra-progress-ring>` — a circular determinate or indeterminate progress indicator.
+ * `<lr-progress-ring>` — a circular determinate or indeterminate progress indicator.
  *
- * @customElement lyra-progress-ring
+ * @customElement lr-progress-ring
  * @slot - Optional center label.
  * @csspart base - The progress wrapper.
  * @csspart track - The SVG track.
@@ -55,4 +55,4 @@ export class LyraProgressRing extends LyraElement {
     </div>`;
   }
 }
-declare global { interface HTMLElementTagNameMap { 'lyra-progress-ring': LyraProgressRing; } }
+declare global { interface HTMLElementTagNameMap { 'lr-progress-ring': LyraProgressRing; } }

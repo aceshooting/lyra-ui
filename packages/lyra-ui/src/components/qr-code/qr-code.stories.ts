@@ -3,39 +3,39 @@ import { html } from 'lit';
 
 const meta: Meta = {
   title: 'QR Code',
-  component: 'lyra-qr-code',
+  component: 'lr-qr-code',
   tags: ['autodocs'],
 };
 export default meta;
 type Story = StoryObj;
 
 export const Default: Story = {
-  render: () => html`<lyra-qr-code value="https://example.com"></lyra-qr-code>`,
+  render: () => html`<lr-qr-code value="https://example.com"></lr-qr-code>`,
 };
 
 export const LargerWithRoundedModules: Story = {
   name: 'Larger, rounded modules',
-  render: () => html`<lyra-qr-code value="https://example.com/rounded" size="220" radius="0.35"></lyra-qr-code>`,
+  render: () => html`<lr-qr-code value="https://example.com/rounded" size="220" radius="0.35"></lr-qr-code>`,
 };
 
 export const LowErrorCorrection: Story = {
   name: 'Low error correction (denser symbol for long values)',
   render: () => html`
-    <lyra-qr-code
+    <lr-qr-code
       value="https://example.com/a/very/long/url/that/needs/more/modules/to/encode/at/a/higher/error/correction/level"
       error-correction="L"
       size="180"
-    ></lyra-qr-code>
+    ></lr-qr-code>
   `,
 };
 
 export const CustomColors: Story = {
   name: 'Custom fill/background colors',
   render: () => html`
-    <lyra-qr-code
+    <lr-qr-code
       value="https://example.com/branded"
-      style="--lyra-qr-code-fill: var(--lyra-color-brand); --lyra-qr-code-background: var(--lyra-color-brand-quiet);"
-    ></lyra-qr-code>
+      style="--lr-qr-code-fill: var(--lr-color-brand); --lr-qr-code-background: var(--lr-color-brand-quiet);"
+    ></lr-qr-code>
   `,
 };
 
@@ -51,7 +51,7 @@ export const EmptyLoadingAndError: Story = {
   },
   render: () => html`
     <div style="display: flex; gap: 1rem; align-items: flex-start;">
-      <lyra-qr-code></lyra-qr-code>
+      <lr-qr-code></lr-qr-code>
     </div>
   `,
 };
@@ -60,8 +60,8 @@ export const EmptyLoadingAndError: Story = {
 export const NarrowContainer: Story = {
   name: 'Narrow (320px) container',
   render: () => html`
-    <div style="inline-size: 320px; max-inline-size: 100%; border: 1px dashed var(--lyra-color-border); padding: 1rem;">
-      <lyra-qr-code value="https://example.com"></lyra-qr-code>
+    <div style="inline-size: 320px; max-inline-size: 100%; border: 1px dashed var(--lr-color-border); padding: 1rem;">
+      <lr-qr-code value="https://example.com"></lr-qr-code>
     </div>
   `,
 };

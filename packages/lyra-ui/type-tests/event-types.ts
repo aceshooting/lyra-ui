@@ -344,32 +344,32 @@ const barrelPublicSurfaceTypes: [
 void barrelPublicSurfaceTypes;
 
 declare const appRail: LyraAppRail;
-appRail.addEventListener('lyra-mode-change', (event) => {
+appRail.addEventListener('lr-mode-change', (event) => {
   const mode: 'full' | 'icon-only' | 'mobile' = event.detail.mode;
   void mode;
 });
-appRail.addEventListener('lyra-toggle', (event) => {
+appRail.addEventListener('lr-toggle', (event) => {
   const open: boolean = event.detail.open;
   void open;
 });
-appRail.addEventListener('lyra-rail-resize', (event) => {
+appRail.addEventListener('lr-rail-resize', (event) => {
   const widthPx: number = event.detail.widthPx;
   void widthPx;
 });
 
 declare const attachmentChip: LyraAttachmentChip;
-attachmentChip.addEventListener('lyra-remove', (event) => {
+attachmentChip.addEventListener('lr-remove', (event) => {
   const id: string = event.detail.id;
   void id;
 });
-attachmentChip.addEventListener('lyra-preview', (event) => {
+attachmentChip.addEventListener('lr-preview', (event) => {
   const src: string = event.detail.src;
   void src;
 });
 
 declare const attachmentTrigger: LyraAttachmentTrigger;
-attachmentTrigger.addEventListener('lyra-pick', (event) => {
-  // A real `FileList`, not an array -- see the `lyra-pick` @event doc.
+attachmentTrigger.addEventListener('lr-pick', (event) => {
+  // A real `FileList`, not an array -- see the `lr-pick` @event doc.
   const files: FileList = event.detail.files;
   const capability: 'files' | 'image' = event.detail.capability;
   void files;
@@ -380,71 +380,71 @@ attachmentTrigger.addEventListener('lyra-pick', (event) => {
 // exported, but before its event map existed the union was unreachable
 // through a typed listener -- `event.detail` was a bare `Event`.
 declare const dialog: LyraDialog;
-dialog.addEventListener('lyra-dialog-close', (event) => {
+dialog.addEventListener('lr-dialog-close', (event) => {
   const reason: DialogCloseReason = event.detail;
   void reason;
 });
 
 declare const toolApproval: LyraToolApprovalDialog;
-toolApproval.addEventListener('lyra-close', (event) => {
+toolApproval.addEventListener('lr-close', (event) => {
   const reason: ToolApprovalDialogCloseReason = event.detail;
   void reason;
 });
-toolApproval.addEventListener('lyra-approve', (event) => {
+toolApproval.addEventListener('lr-approve', (event) => {
   const args: unknown = event.detail.args;
   void args;
 });
 
 declare const toolSelect: LyraToolSelectDialog;
-toolSelect.addEventListener('lyra-close', (event) => {
+toolSelect.addEventListener('lr-close', (event) => {
   const reason: ToolSelectDialogCloseReason = event.detail;
   void reason;
 });
-toolSelect.addEventListener('lyra-change', (event) => {
+toolSelect.addEventListener('lr-change', (event) => {
   const selected: string[] = event.detail.selected;
   void selected;
 });
 
 declare const responsivePanel: LyraResponsivePanel;
-responsivePanel.addEventListener('lyra-close', (event) => {
+responsivePanel.addEventListener('lr-close', (event) => {
   const reason: ResponsivePanelCloseReason = event.detail;
   void reason;
 });
-responsivePanel.addEventListener('lyra-mode-change', (event) => {
+responsivePanel.addEventListener('lr-mode-change', (event) => {
   const mode: 'inline' | 'overlay' = event.detail.mode;
   void mode;
 });
 
 declare const dockPanel: LyraDockPanel;
-dockPanel.addEventListener('lyra-resize', (event) => {
+dockPanel.addEventListener('lr-resize', (event) => {
   const size: string = event.detail.size;
   void size;
 });
-dockPanel.addEventListener('lyra-collapse-change', (event) => {
+dockPanel.addEventListener('lr-collapse-change', (event) => {
   const collapsed: boolean = event.detail.collapsed;
   void collapsed;
 });
 
 declare const modelSettings: LyraModelSettingsPanel;
-modelSettings.addEventListener('lyra-change', (event) => {
+modelSettings.addEventListener('lr-change', (event) => {
   const temperature: number = event.detail.temperature;
   void temperature;
 });
 
 declare const sourceList: LyraSourceList;
-sourceList.addEventListener('lyra-toggle', (event) => {
+sourceList.addEventListener('lr-toggle', (event) => {
   const expanded: boolean = event.detail.expanded;
   void expanded;
 });
 
 declare const thinkingPanel: LyraThinkingPanel;
-thinkingPanel.addEventListener('lyra-toggle', (event) => {
+thinkingPanel.addEventListener('lr-toggle', (event) => {
   const expanded: boolean = event.detail.expanded;
   void expanded;
 });
 
 declare const menuItem: LyraMenuItem;
-menuItem.addEventListener('lyra-menu-item-change', (event) => {
+menuItem.addEventListener('lr-menu-item-change', (event) => {
   const checked: boolean = event.detail.checked;
   const value: string = event.detail.value;
   void checked;
@@ -452,35 +452,35 @@ menuItem.addEventListener('lyra-menu-item-change', (event) => {
 });
 
 declare const split: LyraSplit;
-split.addEventListener('lyra-split-collapse-change', (event) => {
+split.addEventListener('lr-split-collapse-change', (event) => {
   const state: 'wide' | 'rail' | 'floating' = event.detail.state;
   void state;
 });
-split.addEventListener('lyra-split-constraints-invalid', (event) => {
+split.addEventListener('lr-split-constraints-invalid', (event) => {
   const panelCount: number = event.detail.panelCount;
   void panelCount;
 });
 
 declare const slider: LyraSlider;
-slider.addEventListener('lyra-change', (event) => {
+slider.addEventListener('lr-change', (event) => {
   const value: number = event.detail.value;
   void value;
 });
 
 declare const toggle: LyraSwitch;
-toggle.addEventListener('lyra-change', (event) => {
+toggle.addEventListener('lr-change', (event) => {
   const checked: boolean = event.detail.checked;
   void checked;
 });
 
 declare const table: LyraTable<{ id: string }>;
-table.addEventListener('lyra-row-click', (event) => {
+table.addEventListener('lr-row-click', (event) => {
   const id: string = event.detail.row.id;
   void id;
 });
 
 declare const form: LyraToolParamForm;
-form.addEventListener('lyra-validity-change', (event) => {
+form.addEventListener('lr-validity-change', (event) => {
   const valid: boolean = event.detail.valid;
   const message: string | undefined = event.detail.errors.prompt;
   void valid;
@@ -488,7 +488,7 @@ form.addEventListener('lyra-validity-change', (event) => {
 });
 
 declare const list: LyraVirtualList;
-list.addEventListener('lyra-visible-range-changed', (event) => {
+list.addEventListener('lr-visible-range-changed', (event) => {
   const start: number = event.detail.start;
   const end: number = event.detail.end;
   void start;

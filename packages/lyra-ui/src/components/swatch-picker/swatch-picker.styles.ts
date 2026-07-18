@@ -9,40 +9,40 @@ export const styles = css`
        flex-wrap below. */
     min-inline-size: 0;
     /* Ring drawn around the selected swatch. A dedicated token (rather than reusing
-       --lyra-focus-ring-color from tokens.styles.ts) so a host can retheme the
+       --lr-focus-ring-color from tokens.styles.ts) so a host can retheme the
        selection indicator independently of the :focus-visible outline and every
        other ring color in the library, while defaulting to the brand color. */
-    --lyra-swatch-picker-selected-color: var(--lyra-color-brand);
+    --lr-swatch-picker-selected-color: var(--lr-color-brand);
     /* Blur radius of that same ring -- 0 by default (a crisp ring, today's look for every
        existing consumer). A host that wants a soft glow instead sets this to a real length
        (e.g. 0.4rem) rather than reaching for ::part(swatch)[aria-checked] from outside, which
        isn't reliably selectable: the CSS Shadow Parts spec only allows a fixed set of
        pseudo-classes after ::part(), not arbitrary attribute selectors, so that combinator can
        silently fail to match depending on the engine. */
-    --lyra-swatch-picker-selected-blur: 0;
+    --lr-swatch-picker-selected-blur: 0;
     /* Pulsing "shine" duration for the selected swatch -- 0s (the default) is a no-op (today's
        static look for every existing consumer, and unaffected by this token at all: a 0-duration
        animation resolves to its end state instantly and imperceptibly). A host sets a real
        duration (e.g. 1.6s) to make the selected swatch rhythmically brighten and settle back. A
        separate filter: brightness() animation (not box-shadow, which
-       --lyra-swatch-picker-selected-blur above already owns) so the two compose freely without
+       --lr-swatch-picker-selected-blur above already owns) so the two compose freely without
        fighting over the same CSS property, and so this reads identically for a plain color circle
        and an icon swatch alike -- filter applies to the whole element including a slotted icon,
        with no icon-specific branching needed (unlike the box-shadow/drop-shadow split below, which
        needs one precisely because box-shadow doesn't reach into a transparent box's own content). */
-    --lyra-swatch-picker-shine-duration: 0s;
+    --lr-swatch-picker-shine-duration: 0s;
   }
   [part='base'] {
     display: inline-flex;
     flex-wrap: wrap;
     min-inline-size: 0;
-    gap: var(--lyra-space-xs);
+    gap: var(--lr-space-xs);
   }
   [part='swatch'] {
     box-sizing: border-box;
     /* The interactive hit target meets the shared minimum tappable size (same
-       --lyra-icon-button-size floor as lyra-code-block's/lyra-json-viewer's [part='toggle']), while
-       the *visible* fill stays a compact --lyra-size-1-5rem circle -- rendered on the separate
+       --lr-icon-button-size floor as lr-code-block's/lr-json-viewer's [part='toggle']), while
+       the *visible* fill stays a compact --lr-size-1-5rem circle -- rendered on the separate
        [part='swatch-fill']/[part='swatch-icon'] child below and centered via flex, not by resizing
        this button itself. A swatch's own fill/icon is what previously doubled as the clickable box;
        splitting them keeps the dense picker grid's visual density unchanged while still growing the
@@ -50,52 +50,52 @@ export const styles = css`
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    min-inline-size: var(--lyra-icon-button-size);
-    min-block-size: var(--lyra-icon-button-size);
+    min-inline-size: var(--lr-icon-button-size);
+    min-block-size: var(--lr-icon-button-size);
     padding: 0;
     border: none;
     border-radius: 50%;
     background: none;
     /* Exposes the option's color to a slotted icon (part='swatch-icon') via currentColor -- inert
        when no icon is present, since [part='swatch-fill'] paints its own background-color instead. */
-    color: var(--lyra-swatch-color);
+    color: var(--lr-swatch-color);
     cursor: pointer;
   }
   [part='swatch-fill'] {
     box-sizing: border-box;
     display: block;
-    inline-size: var(--lyra-size-1-5rem);
-    block-size: var(--lyra-size-1-5rem);
-    border: var(--lyra-border-width-thin) solid var(--lyra-color-border);
+    inline-size: var(--lr-size-1-5rem);
+    block-size: var(--lr-size-1-5rem);
+    border: var(--lr-border-width-thin) solid var(--lr-color-border);
     border-radius: 50%;
     /* Per-swatch fill from the option's color, set inline by swatch-picker.class.ts.
        Read through a var() (rather than an inline background-color declaration) so a
        consumer's ::part(swatch-fill) background rule can still win when overriding it. */
-    background-color: var(--lyra-swatch-color);
-    transition: transform var(--lyra-transition-fast);
+    background-color: var(--lr-swatch-color);
+    transition: transform var(--lr-transition-fast);
   }
   [part='swatch-icon'] {
     display: flex;
     align-items: center;
     justify-content: center;
-    inline-size: var(--lyra-size-1-5rem);
-    block-size: var(--lyra-size-1-5rem);
-    transition: transform var(--lyra-transition-fast);
+    inline-size: var(--lr-size-1-5rem);
+    block-size: var(--lr-size-1-5rem);
+    transition: transform var(--lr-transition-fast);
   }
   [part='swatch']:hover [part='swatch-fill'],
   [part='swatch']:hover [part='swatch-icon'] {
     transform: scale(1.2);
   }
   [part='swatch']:focus-visible {
-    outline: var(--lyra-focus-ring-width) solid var(--lyra-focus-ring-color);
-    outline-offset: var(--lyra-focus-ring-offset);
+    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
+    outline-offset: var(--lr-focus-ring-offset);
   }
   [part='swatch'][aria-checked='true'] [part='swatch-fill'] {
     transform: scale(1.2);
-    box-shadow: 0 0 var(--lyra-swatch-picker-selected-blur) var(--lyra-border-width-thick) var(--lyra-swatch-picker-selected-color);
-    animation: lyra-swatch-picker-shine var(--lyra-swatch-picker-shine-duration) ease-in-out infinite;
+    box-shadow: 0 0 var(--lr-swatch-picker-selected-blur) var(--lr-border-width-thick) var(--lr-swatch-picker-selected-color);
+    animation: lr-swatch-picker-shine var(--lr-swatch-picker-shine-duration) ease-in-out infinite;
   }
-  @keyframes lyra-swatch-picker-shine {
+  @keyframes lr-swatch-picker-shine {
     0%,
     100% {
       filter: brightness(1);
@@ -111,13 +111,13 @@ export const styles = css`
      Swap to a drop-shadow on the icon itself, which follows its real rendered shape. */
   [part='swatch'][aria-checked='true'] [part='swatch-icon'] {
     transform: scale(1.2);
-    filter: drop-shadow(0 0 var(--lyra-swatch-picker-selected-blur) var(--lyra-swatch-picker-selected-color));
+    filter: drop-shadow(0 0 var(--lr-swatch-picker-selected-blur) var(--lr-swatch-picker-selected-color));
   }
   /* The scale is redundant selection feedback (the ring already conveys it), so keep the
      transform but drop its easing under reduced-motion -- the swatch snaps rather than glides.
      The shine animation stops outright (a steady brightness, not a pulsing one) rather than
      merely losing its own easing, matching prefers-reduced-motion's intent for anything that
-     loops -- a host that opted into --lyra-swatch-picker-shine-duration still gets a selected
+     loops -- a host that opted into --lr-swatch-picker-shine-duration still gets a selected
      swatch, just without the rhythmic brightening. */
   @media (prefers-reduced-motion: reduce) {
     [part='swatch-fill'],

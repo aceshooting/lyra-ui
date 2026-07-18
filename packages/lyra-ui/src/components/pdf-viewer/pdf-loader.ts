@@ -14,7 +14,7 @@ export async function loadPdfJsDeps(
     return pdfjsLib;
   } catch (error) {
     console.warn(
-      '<lyra-pdf-viewer> needs the optional peer dependency `pdfjs-dist` to render PDF documents — install it with `pnpm add pdfjs-dist`:',
+      '<lr-pdf-viewer> needs the optional peer dependency `pdfjs-dist` to render PDF documents — install it with `pnpm add pdfjs-dist`:',
       error,
     );
     return null;

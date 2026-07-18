@@ -14,15 +14,15 @@ const suites: TestSuiteResult[] = [
   },
 ];
 
-describe('lyra-test-results', () => {
+describe('lr-test-results', () => {
   it('defaults to autoExpandFailures=true and empty statusFilter (show all)', async () => {
-    const el = (await fixture(html`<lyra-test-results></lyra-test-results>`)) as LyraTestResults;
+    const el = (await fixture(html`<lr-test-results></lr-test-results>`)) as LyraTestResults;
     expect(el.autoExpandFailures).to.be.true;
     expect(el.statusFilter).to.deep.equal([]);
   });
 
   it('renders visible localized counts per status, never color-only', async () => {
-    const el = (await fixture(html`<lyra-test-results .suites=${suites}></lyra-test-results>`)) as LyraTestResults;
+    const el = (await fixture(html`<lr-test-results .suites=${suites}></lr-test-results>`)) as LyraTestResults;
     await el.updateComplete;
     const passed = el.shadowRoot!.querySelector('[part="count"][data-status="passed"]')!;
     expect(passed.textContent).to.include('1');
@@ -30,41 +30,41 @@ describe('lyra-test-results', () => {
     expect(failed.textContent).to.include('1');
   });
 
-  it('emits lyra-test-select when a test row name is activated', async () => {
-    const el = (await fixture(html`<lyra-test-results .suites=${suites}></lyra-test-results>`)) as LyraTestResults;
+  it('emits lr-test-select when a test row name is activated', async () => {
+    const el = (await fixture(html`<lr-test-results .suites=${suites}></lr-test-results>`)) as LyraTestResults;
     await el.updateComplete;
     const row = el.shadowRoot!.querySelector('[part="test"][data-status="passed"] [part="test-name"]') as HTMLElement;
-    const listener = oneEvent(el, 'lyra-test-select');
+    const listener = oneEvent(el, 'lr-test-select');
     row.click();
     const event = (await listener) as CustomEvent<{ suiteId: string; testId: string }>;
     expect(event.detail).to.deep.equal({ suiteId: 's1', testId: 't1' });
   });
 
   it('auto-expands a failed test and shows its message', async () => {
-    const el = (await fixture(html`<lyra-test-results .suites=${suites}></lyra-test-results>`)) as LyraTestResults;
+    const el = (await fixture(html`<lr-test-results .suites=${suites}></lr-test-results>`)) as LyraTestResults;
     await el.updateComplete;
     const failedRow = el.shadowRoot!.querySelector('[part="test"][data-status="failed"]')!;
     expect(failedRow.querySelector('[part="failure-message"]')!.textContent).to.include('expected 2 got 3');
   });
 
-  it('emits lyra-toggle when a failure row is manually collapsed/expanded', async () => {
+  it('emits lr-toggle when a failure row is manually collapsed/expanded', async () => {
     const el = (await fixture(
-      html`<lyra-test-results .suites=${suites} .autoExpandFailures=${false}></lyra-test-results>`,
+      html`<lr-test-results .suites=${suites} .autoExpandFailures=${false}></lr-test-results>`,
     )) as LyraTestResults;
     await el.updateComplete;
     const toggleButton = el.shadowRoot!.querySelector(
       '[part="test"][data-status="failed"] [part="test-expand-toggle"]',
     ) as HTMLButtonElement;
-    const listener = oneEvent(el, 'lyra-toggle');
+    const listener = oneEvent(el, 'lr-toggle');
     toggleButton.click();
     const event = (await listener) as CustomEvent<{ id: string; expanded: boolean }>;
     expect(event.detail).to.deep.equal({ id: 't2', expanded: true });
   });
 
-  it('filter toggles mutate statusFilter and emit lyra-filter-change', async () => {
-    const el = (await fixture(html`<lyra-test-results .suites=${suites}></lyra-test-results>`)) as LyraTestResults;
+  it('filter toggles mutate statusFilter and emit lr-filter-change', async () => {
+    const el = (await fixture(html`<lr-test-results .suites=${suites}></lr-test-results>`)) as LyraTestResults;
     await el.updateComplete;
-    const listener = oneEvent(el, 'lyra-filter-change');
+    const listener = oneEvent(el, 'lr-filter-change');
     const toggle = el.shadowRoot!.querySelector('[part="filter-toggle"][data-status="failed"]') as HTMLButtonElement;
     toggle.click();
     const event = (await listener) as CustomEvent<{ statuses: string[] }>;
@@ -73,17 +73,17 @@ describe('lyra-test-results', () => {
     expect(el.shadowRoot!.querySelectorAll('[part="test"]').length).to.equal(1);
   });
 
-  it('renders lyra-empty when suites is empty', async () => {
-    const el = (await fixture(html`<lyra-test-results></lyra-test-results>`)) as LyraTestResults;
+  it('renders lr-empty when suites is empty', async () => {
+    const el = (await fixture(html`<lr-test-results></lr-test-results>`)) as LyraTestResults;
     await el.updateComplete;
-    expect(el.shadowRoot!.querySelector('lyra-empty')).to.exist;
+    expect(el.shadowRoot!.querySelector('lr-empty')).to.exist;
   });
 
   it('slots detail-{testId} content after the plain message text', async () => {
     const el = (await fixture(html`
-      <lyra-test-results .suites=${suites}>
+      <lr-test-results .suites=${suites}>
         <div slot="detail-t2">rich diff here</div>
-      </lyra-test-results>
+      </lr-test-results>
     `)) as LyraTestResults;
     await el.updateComplete;
     const slot = el.shadowRoot!.querySelector('slot[name="detail-t2"]') as HTMLSlotElement;
@@ -91,7 +91,7 @@ describe('lyra-test-results', () => {
   });
 
   it('is accessible with a mixed-status suite', async () => {
-    const el = (await fixture(html`<lyra-test-results .suites=${suites}></lyra-test-results>`)) as LyraTestResults;
+    const el = (await fixture(html`<lr-test-results .suites=${suites}></lr-test-results>`)) as LyraTestResults;
     await el.updateComplete;
     await expect(el).to.be.accessible();
   });

@@ -26,12 +26,12 @@ export type LyraFileIconVariant = 'icon' | 'label';
 /**
  * Displays a localized, tokenized file-type badge from a MIME type.
  *
- * @customElement lyra-file-icon
+ * @customElement lr-file-icon
  * @csspart base - The outer presentation wrapper.
  * @csspart icon - The format badge.
  * @csspart label - The localized format label in `variant="label"` mode.
  * @csspart size - The formatted `size`, shown alongside `label` in `variant="label"` mode when `size` is known.
- * @cssprop [--lyra-file-icon-size=var(--lyra-size-2rem)] - Inline/block size of the format badge.
+ * @cssprop [--lr-file-icon-size=var(--lr-size-2rem)] - Inline/block size of the format badge.
  */
 export class LyraFileIcon extends LyraElement {
   static styles = [LyraElement.styles, styles];
@@ -40,7 +40,7 @@ export class LyraFileIcon extends LyraElement {
   @property({ attribute: 'mime-type' }) mimeType = '';
   /** Optional filename used for fallback detection with an empty or generic MIME type. */
   @property() name = '';
-  /** File size in bytes, shown alongside the label in `variant="label"` mode. `0` (the default) renders no size — matches `<lyra-attachment-chip>`'s `size` convention. */
+  /** File size in bytes, shown alongside the label in `variant="label"` mode. `0` (the default) renders no size — matches `<lr-attachment-chip>`'s `size` convention. */
   @property({ type: Number }) size = 0;
   /** Whether the badge is decorative and hidden from assistive technology. */
   @property({ type: Boolean, reflect: true }) decorative = false;
@@ -76,5 +76,5 @@ export class LyraFileIcon extends LyraElement {
 }
 
 declare global {
-  interface HTMLElementTagNameMap { 'lyra-file-icon': LyraFileIcon; }
+  interface HTMLElementTagNameMap { 'lr-file-icon': LyraFileIcon; }
 }

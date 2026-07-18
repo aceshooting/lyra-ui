@@ -5,7 +5,7 @@ import type { LyraSourceEntry } from './source-picker.class.js';
 
 const meta: Meta = {
   title: 'Source Picker',
-  component: 'lyra-source-picker',
+  component: 'lr-source-picker',
 };
 export default meta;
 type Story = StoryObj;
@@ -23,21 +23,21 @@ const sources: LyraSourceEntry[] = [
 ];
 
 export const Default: Story = {
-  render: () => html`<lyra-source-picker .sources=${sources} @lyra-sources-change=${(e: CustomEvent) => console.log(e.detail)}></lyra-source-picker>`,
+  render: () => html`<lr-source-picker .sources=${sources} @lr-sources-change=${(e: CustomEvent) => console.log(e.detail)}></lr-source-picker>`,
 };
 
 export const WithSelection: Story = {
-  render: () => html`<lyra-source-picker .sources=${sources} .selectedIds=${['doc1']}></lyra-source-picker>`,
+  render: () => html`<lr-source-picker .sources=${sources} .selectedIds=${['doc1']}></lr-source-picker>`,
 };
 
 export const NoSelectAllNoSearch: Story = {
-  render: () => html`<lyra-source-picker .sources=${sources} ?show-select-all=${false} ?searchable=${false}></lyra-source-picker>`,
+  render: () => html`<lr-source-picker .sources=${sources} ?show-select-all=${false} ?searchable=${false}></lr-source-picker>`,
 };
 
 export const Empty: Story = {
-  render: () => html`<lyra-source-picker></lyra-source-picker>`,
+  render: () => html`<lr-source-picker></lr-source-picker>`,
 };
 
 export const Narrow: Story = {
-  render: () => html`<div style="max-width: 320px;"><lyra-source-picker .sources=${sources}></lyra-source-picker></div>`,
+  render: () => html`<div style="max-width: 320px;"><lr-source-picker .sources=${sources}></lr-source-picker></div>`,
 };

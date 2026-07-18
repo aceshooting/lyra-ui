@@ -30,15 +30,15 @@ const adapter: PhoneNumberAdapter = {
 it('normalizes live user input to an E.164 form value through an injected adapter', async () => {
   const form = (await fixture(html`
     <form>
-      <lyra-phone-input
+      <lr-phone-input
         name="phone"
         label="Phone number"
         default-country="LU"
         .adapter=${adapter}
-      ></lyra-phone-input>
+      ></lr-phone-input>
     </form>
   `)) as HTMLFormElement;
-  const el = form.querySelector('lyra-phone-input') as LyraPhoneInput;
+  const el = form.querySelector('lr-phone-input') as LyraPhoneInput;
   await el.updateComplete;
   const input = el.input!;
   const eventPromise = oneEvent(el, 'input');
@@ -61,15 +61,15 @@ it('normalizes live user input to an E.164 form value through an injected adapte
 it('keeps an incomplete number editable while excluding it from the canonical form value', async () => {
   const form = (await fixture(html`
     <form>
-      <lyra-phone-input
+      <lr-phone-input
         name="phone"
         label="Phone number"
         default-country="LU"
         .adapter=${adapter}
-      ></lyra-phone-input>
+      ></lr-phone-input>
     </form>
   `)) as HTMLFormElement;
-  const el = form.querySelector('lyra-phone-input') as LyraPhoneInput;
+  const el = form.querySelector('lr-phone-input') as LyraPhoneInput;
   await el.updateComplete;
   const input = el.input!;
 
@@ -87,7 +87,7 @@ it('keeps an incomplete number editable while excluding it from the canonical fo
 
 it('distinguishes incomplete and invalid committed numbers in validity state', async () => {
   const el = (await fixture(html`
-    <lyra-phone-input label="Phone number" default-country="LU" .adapter=${adapter}></lyra-phone-input>
+    <lr-phone-input label="Phone number" default-country="LU" .adapter=${adapter}></lr-phone-input>
   `)) as LyraPhoneInput;
   await el.updateComplete;
   const input = el.input!;
@@ -107,7 +107,7 @@ it('distinguishes incomplete and invalid committed numbers in validity state', a
 
 it('gives incomplete and invalid numbers distinct validation messages', async () => {
   const el = (await fixture(html`
-    <lyra-phone-input label="Phone number" default-country="LU" .adapter=${adapter}></lyra-phone-input>
+    <lr-phone-input label="Phone number" default-country="LU" .adapter=${adapter}></lr-phone-input>
   `)) as LyraPhoneInput;
   await el.updateComplete;
   const input = el.input!;
@@ -125,7 +125,7 @@ it('gives incomplete and invalid numbers distinct validation messages', async ()
 
 it('supports international E.164 values without an adapter as a graceful fallback', async () => {
   const el = (await fixture(html`
-    <lyra-phone-input label="Phone number" value="+352 621 123 456"></lyra-phone-input>
+    <lr-phone-input label="Phone number" value="+352 621 123 456"></lr-phone-input>
   `)) as LyraPhoneInput;
   await el.updateComplete;
 
@@ -136,7 +136,7 @@ it('supports international E.164 values without an adapter as a graceful fallbac
 
 it('keeps programmatic value changes silent', async () => {
   const el = (await fixture(html`
-    <lyra-phone-input label="Phone number" default-country="LU" .adapter=${adapter}></lyra-phone-input>
+    <lr-phone-input label="Phone number" default-country="LU" .adapter=${adapter}></lr-phone-input>
   `)) as LyraPhoneInput;
   let inputEvents = 0;
   let changeEvents = 0;
@@ -153,12 +153,12 @@ it('keeps programmatic value changes silent', async () => {
 
 it('renders localized country names and updates the selected country', async () => {
   const el = (await fixture(html`
-    <lyra-phone-input
+    <lr-phone-input
       label="Téléphone"
       locale="fr"
       default-country="LU"
       .adapter=${adapter}
-    ></lyra-phone-input>
+    ></lr-phone-input>
   `)) as LyraPhoneInput;
   await el.updateComplete;
   const select = el.shadowRoot!.querySelector('[part="country-select"]') as HTMLSelectElement;
@@ -175,12 +175,12 @@ it('renders localized country names and updates the selected country', async () 
 
 it('projects label, hint, and error chrome and names the actual native controls', async () => {
   const el = (await fixture(html`
-    <lyra-phone-input
+    <lr-phone-input
       label="Mobile"
       hint="Include the area code"
       error-text="That number cannot be used"
       country-label="Calling country"
-    ></lyra-phone-input>
+    ></lr-phone-input>
   `)) as LyraPhoneInput;
   await el.updateComplete;
   const input = el.input!;
@@ -195,7 +195,7 @@ it('projects label, hint, and error chrome and names the actual native controls'
 
 it('allows a host aria-label to name the internal telephone input', async () => {
   const el = (await fixture(html`
-    <lyra-phone-input aria-label="Account mobile" .adapter=${adapter}></lyra-phone-input>
+    <lr-phone-input aria-label="Account mobile" .adapter=${adapter}></lr-phone-input>
   `)) as LyraPhoneInput;
   await el.updateComplete;
   expect(el.input!.getAttribute('aria-label')).to.equal('Account mobile');
@@ -203,13 +203,13 @@ it('allows a host aria-label to name the internal telephone input', async () => 
 
 it('gives a host aria-label precedence over phone-label, label, and placeholder defaults', async () => {
   const el = (await fixture(html`
-    <lyra-phone-input
+    <lr-phone-input
       aria-label="Account mobile"
       phone-label="Telephone"
       label="Mobile"
       placeholder="621 123 456"
       .adapter=${adapter}
-    ></lyra-phone-input>
+    ></lr-phone-input>
   `)) as LyraPhoneInput;
 
   expect(el.input!.getAttribute('aria-label')).to.equal('Account mobile');
@@ -217,9 +217,9 @@ it('gives a host aria-label precedence over phone-label, label, and placeholder 
 
 it('exposes selection and range-editing APIs while keeping editable and form values synchronized', async () => {
   const form = (await fixture(html`
-    <form><lyra-phone-input name="phone" value="+352621123456"></lyra-phone-input></form>
+    <form><lr-phone-input name="phone" value="+352621123456"></lr-phone-input></form>
   `)) as HTMLFormElement;
-  const el = form.querySelector('lyra-phone-input') as LyraPhoneInput;
+  const el = form.querySelector('lr-phone-input') as LyraPhoneInput;
 
   el.setSelectionRange(4, 7, 'forward');
   expect(el.selectionStart).to.equal(4);
@@ -243,7 +243,7 @@ it('exposes selection and range-editing APIs while keeping editable and form val
 
 it('keeps the caret at the same digit offset across a mid-string edit instead of jumping to the end', async () => {
   const el = (await fixture(html`
-    <lyra-phone-input label="Phone number" default-country="LU" .adapter=${adapter}></lyra-phone-input>
+    <lr-phone-input label="Phone number" default-country="LU" .adapter=${adapter}></lr-phone-input>
   `)) as LyraPhoneInput;
   await el.updateComplete;
   const input = el.input!;
@@ -272,7 +272,7 @@ it('keeps the caret at the same digit offset across a mid-string edit instead of
 
 it('leaves a same-string reformat (the no-adapter fallback path) untouched, including the caret', async () => {
   const el = (await fixture(html`
-    <lyra-phone-input label="Phone number"></lyra-phone-input>
+    <lr-phone-input label="Phone number"></lr-phone-input>
   `)) as LyraPhoneInput;
   await el.updateComplete;
   const input = el.input!;
@@ -288,7 +288,7 @@ it('leaves a same-string reformat (the no-adapter fallback path) untouched, incl
 
 it('bridges focus and blur from the shadow input to host-observable events', async () => {
   const el = (await fixture(html`
-    <lyra-phone-input label="Phone number" .adapter=${adapter}></lyra-phone-input>
+    <lr-phone-input label="Phone number" .adapter=${adapter}></lr-phone-input>
   `)) as LyraPhoneInput;
   await el.updateComplete;
 
@@ -305,19 +305,19 @@ it('participates in required validation, disabled fieldsets, and form reset', as
   const form = (await fixture(html`
     <form>
       <fieldset>
-        <lyra-phone-input
+        <lr-phone-input
           name="phone"
           label="Phone number"
           required
           value="+352621123456"
           default-country="LU"
           .adapter=${adapter}
-        ></lyra-phone-input>
+        ></lr-phone-input>
       </fieldset>
     </form>
   `)) as HTMLFormElement;
   const fieldset = form.querySelector('fieldset')!;
-  const el = form.querySelector('lyra-phone-input') as LyraPhoneInput;
+  const el = form.querySelector('lr-phone-input') as LyraPhoneInput;
   await el.updateComplete;
 
   el.input!.value = '';
@@ -337,17 +337,17 @@ it('anchors native validation feedback on the telephone input rather than the co
   const form = (await fixture(html`
     <form>
       <button type="button">Before</button>
-      <lyra-phone-input
+      <lr-phone-input
         name="phone"
         label="Phone number"
         required
         default-country="LU"
         .adapter=${adapter}
-      ></lyra-phone-input>
+      ></lr-phone-input>
     </form>
   `)) as HTMLFormElement;
   const sentinel = form.querySelector('button')!;
-  const el = form.querySelector('lyra-phone-input') as LyraPhoneInput;
+  const el = form.querySelector('lr-phone-input') as LyraPhoneInput;
   await el.updateComplete;
   sentinel.focus();
 
@@ -396,14 +396,14 @@ it('adapts the real libphonenumber-js package, not just a hand-written fake shap
 });
 
 it('spellcheck defaults to true on the internal telephone input', async () => {
-  const el = (await fixture(html`<lyra-phone-input></lyra-phone-input>`)) as LyraPhoneInput;
+  const el = (await fixture(html`<lr-phone-input></lr-phone-input>`)) as LyraPhoneInput;
   await el.updateComplete;
   expect(el.input!.spellcheck).to.be.true;
 });
 
 it('forwards spellcheck=false, autocapitalize, and autocorrect onto the internal telephone input', async () => {
   const el = (await fixture(html`
-    <lyra-phone-input spellcheck="false" autocapitalize="off" autocorrect="off"></lyra-phone-input>
+    <lr-phone-input spellcheck="false" autocapitalize="off" autocorrect="off"></lr-phone-input>
   `)) as LyraPhoneInput;
   await el.updateComplete;
   const input = el.input!;
@@ -414,7 +414,7 @@ it('forwards spellcheck=false, autocapitalize, and autocorrect onto the internal
 
 it('uses string overrides for the country-select label and both validation messages', async () => {
   const el = (await fixture(html`
-    <lyra-phone-input label="Phone number" default-country="LU" .adapter=${adapter}></lyra-phone-input>
+    <lr-phone-input label="Phone number" default-country="LU" .adapter=${adapter}></lr-phone-input>
   `)) as LyraPhoneInput;
   el.strings = {
     select: 'Choisir',
@@ -442,14 +442,14 @@ it('passes non-default country-label, incomplete-text, and invalid-text attribut
   // A consumer-supplied non-default value must pass through verbatim -- the localize()
   // fallback is only reached while each property still holds its documented default.
   const el = (await fixture(html`
-    <lyra-phone-input
+    <lr-phone-input
       label="Phone number"
       default-country="LU"
       country-label="Calling country"
       incomplete-text="Keep typing"
       invalid-text="Not a number"
       .adapter=${adapter}
-    ></lyra-phone-input>
+    ></lr-phone-input>
   `)) as LyraPhoneInput;
   await el.updateComplete;
   const select = el.shadowRoot!.querySelector('[part="country-select"]') as HTMLSelectElement;
@@ -470,12 +470,12 @@ it('passes non-default country-label, incomplete-text, and invalid-text attribut
 
 it('is accessible', async () => {
   const el = (await fixture(html`
-    <lyra-phone-input
+    <lr-phone-input
       label="Phone number"
       hint="Include the country code"
       default-country="LU"
       .adapter=${adapter}
-    ></lyra-phone-input>
+    ></lr-phone-input>
   `)) as LyraPhoneInput;
   await el.updateComplete;
   await expect(el).to.be.accessible();

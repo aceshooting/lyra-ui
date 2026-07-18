@@ -4,7 +4,7 @@ import { LyraElement } from '../../internal/lyra-element.js';
 import { srOnly } from '../../internal/a11y.js';
 import { styles } from './test-results.styles.js';
 // The registering barrels (not the bare *.class.js modules) -- this side effect is what
-// actually defines <lyra-empty>/<lyra-spinner>/<lyra-live-region> as custom elements by the
+// actually defines <lr-empty>/<lr-spinner>/<lr-live-region> as custom elements by the
 // time this component's render() references them.
 import '../empty/empty.js';
 import '../spinner/spinner.js';
@@ -38,8 +38,8 @@ const STATUS_COUNT_KEY: Record<TestStatus, string> = {
 };
 
 /** localize() key for a single row's visible status word -- reuses the same generic
- *  pending/running/success/error vocabulary `<lyra-task-list>`/`<lyra-trace-tree>`/
- *  `<lyra-tool-call-chip>` already use for their own per-item run status, so a status word
+ *  pending/running/success/error vocabulary `<lr-task-list>`/`<lr-trace-tree>`/
+ *  `<lr-tool-call-chip>` already use for their own per-item run status, so a status word
  *  reads consistently across the library rather than introducing test-specific wording. */
 const STATUS_LABEL_KEY: Record<TestStatus, string> = {
   passed: 'statusSuccess',
@@ -49,20 +49,20 @@ const STATUS_LABEL_KEY: Record<TestStatus, string> = {
 };
 
 export interface LyraTestResultsEventMap {
-  'lyra-test-select': CustomEvent<{ suiteId: string; testId: string }>;
-  'lyra-filter-change': CustomEvent<{ statuses: TestStatus[] }>;
-  'lyra-toggle': CustomEvent<{ id: string; expanded: boolean }>;
+  'lr-test-select': CustomEvent<{ suiteId: string; testId: string }>;
+  'lr-filter-change': CustomEvent<{ statuses: TestStatus[] }>;
+  'lr-toggle': CustomEvent<{ id: string; expanded: boolean }>;
 }
 
 /**
- * `<lyra-test-results>` — a pass/fail suite summary with per-status counts, status filter
+ * `<lr-test-results>` — a pass/fail suite summary with per-status counts, status filter
  * toggles, and per-test rows whose failures auto-expand by default and can host rich slotted
  * detail (e.g. a diff or code block) alongside the plain failure message.
  *
- * @customElement lyra-test-results
- * @event lyra-test-select - `detail: { suiteId, testId }` — a test row's name was activated.
- * @event lyra-filter-change - `detail: { statuses }` — the status-set filter changed.
- * @event lyra-toggle - `detail: { id, expanded }` — a row's failure detail was expanded/collapsed.
+ * @customElement lr-test-results
+ * @event lr-test-select - `detail: { suiteId, testId }` — a test row's name was activated.
+ * @event lr-filter-change - `detail: { statuses }` — the status-set filter changed.
+ * @event lr-toggle - `detail: { id, expanded }` — a row's failure detail was expanded/collapsed.
  * @slot detail-{testId} - Rich failure detail for that test, rendered after its plain message
  *   text once the row is expanded.
  * @csspart base - The root wrapper.
@@ -103,7 +103,7 @@ export class LyraTestResults extends LyraElement<LyraTestResultsEventMap> {
    *  when the test itself didn't fail. */
   @state() private hasDetailSlot = new Set<string>();
 
-  @query('lyra-live-region') private liveRegion?: LyraLiveRegion;
+  @query('lr-live-region') private liveRegion?: LyraLiveRegion;
 
   /** Whether any test across all suites was `running` as of the last `suites` update -- diffed to
    *  detect the running -> not-running transition that triggers the completion announcement. */
@@ -115,7 +115,7 @@ export class LyraTestResults extends LyraElement<LyraTestResultsEventMap> {
 
   protected willUpdate(changed: PropertyValues): void {
     if (!this.hasUpdated || changed.has('suites')) {
-      // Seed from light-DOM children up front, mirroring `<lyra-widget>`'s `hasActionsSlot`
+      // Seed from light-DOM children up front, mirroring `<lr-widget>`'s `hasActionsSlot`
       // bootstrap: a `slotchange` event alone can't discover slotted detail content for a test
       // that isn't expanded yet, since the `<slot>` element itself only exists once expanded --
       // and `canExpand` needs to know about slotted content *before* that first expand.
@@ -164,7 +164,7 @@ export class LyraTestResults extends LyraElement<LyraTestResultsEventMap> {
       ? this.statusFilter.filter((s) => s !== status)
       : [...this.statusFilter, status];
     this.statusFilter = next;
-    this.emit('lyra-filter-change', { statuses: next });
+    this.emit('lr-filter-change', { statuses: next });
   }
 
   private toggleExpanded(test: TestCaseResult): void {
@@ -172,7 +172,7 @@ export class LyraTestResults extends LyraElement<LyraTestResultsEventMap> {
     const next = new Map(this.manualExpanded);
     next.set(test.id, expanded);
     this.manualExpanded = next;
-    this.emit('lyra-toggle', { id: test.id, expanded });
+    this.emit('lr-toggle', { id: test.id, expanded });
   }
 
   private onDetailSlotChange(testId: string, e: Event): void {
@@ -222,7 +222,7 @@ export class LyraTestResults extends LyraElement<LyraTestResultsEventMap> {
       <div part="test" role="listitem" data-status=${test.status}>
         <span part="test-status" id=${statusId} data-status=${test.status}>
           ${test.status === 'running'
-            ? html`<span aria-hidden="true"><lyra-spinner></lyra-spinner></span>`
+            ? html`<span aria-hidden="true"><lr-spinner></lr-spinner></span>`
             : html`<span aria-hidden="true">${test.status[0].toUpperCase()}</span>`}
           ${this.localize(STATUS_LABEL_KEY[test.status])}
         </span>
@@ -230,7 +230,7 @@ export class LyraTestResults extends LyraElement<LyraTestResultsEventMap> {
           part="test-name"
           type="button"
           aria-describedby=${statusId}
-          @click=${() => this.emit('lyra-test-select', { suiteId, testId: test.id })}
+          @click=${() => this.emit('lr-test-select', { suiteId, testId: test.id })}
         >
           ${test.name}
         </button>
@@ -279,19 +279,19 @@ export class LyraTestResults extends LyraElement<LyraTestResultsEventMap> {
   render(): TemplateResult {
     return html`
       ${this.suites.length === 0
-        ? html`<lyra-empty heading=${this.localize('noData')}></lyra-empty>`
+        ? html`<lr-empty heading=${this.localize('noData')}></lr-empty>`
         : html`
             <div part="base" role="group" aria-label=${this.localize('testResultsLabel')}>
               ${this.renderSummary()} ${this.suites.map((suite) => this.renderSuite(suite))}
             </div>
           `}
-      <lyra-live-region mode="polite"></lyra-live-region>
+      <lr-live-region mode="polite"></lr-live-region>
     `;
   }
 }
 
 declare global {
   interface HTMLElementTagNameMap {
-    'lyra-test-results': LyraTestResults;
+    'lr-test-results': LyraTestResults;
   }
 }

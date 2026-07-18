@@ -16,14 +16,14 @@ const entity: LyraEntity = {
 const types = [{ id: 'person', label: 'Person', color: '#7c3aed' }];
 
 it('renders the noData empty state when entity is null (the default)', async () => {
-  const el = (await fixture(html`<lyra-entity-card></lyra-entity-card>`)) as LyraEntityCard;
+  const el = (await fixture(html`<lr-entity-card></lr-entity-card>`)) as LyraEntityCard;
   expect(el.entity).to.equal(null);
-  expect(el.shadowRoot!.querySelector('lyra-empty')).to.exist;
+  expect(el.shadowRoot!.querySelector('lr-empty')).to.exist;
   expect(el.shadowRoot!.querySelector('[part="header"]')).to.not.exist;
 });
 
 it('renders label, description, and property rows for a given entity', async () => {
-  const el = (await fixture(html`<lyra-entity-card></lyra-entity-card>`)) as LyraEntityCard;
+  const el = (await fixture(html`<lr-entity-card></lr-entity-card>`)) as LyraEntityCard;
   el.entity = entity;
   await el.updateComplete;
   expect(el.shadowRoot!.querySelector('[part="title"]')!.textContent).to.include('Marie Curie');
@@ -33,14 +33,14 @@ it('renders label, description, and property rows for a given entity', async () 
 });
 
 it('falls back to untitledEntity when label is missing', async () => {
-  const el = (await fixture(html`<lyra-entity-card></lyra-entity-card>`)) as LyraEntityCard;
+  const el = (await fixture(html`<lr-entity-card></lr-entity-card>`)) as LyraEntityCard;
   el.entity = { id: 'e2', label: '' };
   await el.updateComplete;
   expect(el.shadowRoot!.querySelector('[part="title"]')!.textContent).to.include('Untitled entity');
 });
 
 it('resolves the type badge label/color against types, falling back to the raw type id', async () => {
-  const el = (await fixture(html`<lyra-entity-card></lyra-entity-card>`)) as LyraEntityCard;
+  const el = (await fixture(html`<lr-entity-card></lr-entity-card>`)) as LyraEntityCard;
   el.entity = entity;
   el.types = types;
   await el.updateComplete;
@@ -52,7 +52,7 @@ it('resolves the type badge label/color against types, falling back to the raw t
 });
 
 it('renders degree and community rows with their localized labels', async () => {
-  const el = (await fixture(html`<lyra-entity-card></lyra-entity-card>`)) as LyraEntityCard;
+  const el = (await fixture(html`<lr-entity-card></lr-entity-card>`)) as LyraEntityCard;
   el.entity = entity;
   el.communityLabel = 'Nobel laureates';
   await el.updateComplete;
@@ -66,7 +66,7 @@ it('renders degree and community rows with their localized labels', async () => 
 
 it('localizes the degree row label via this.localize() when .strings overrides entityDegree', async () => {
   const el = (await fixture(html`
-    <lyra-entity-card .strings=${{ entityDegree: 'Connexions' }}></lyra-entity-card>
+    <lr-entity-card .strings=${{ entityDegree: 'Connexions' }}></lr-entity-card>
   `)) as LyraEntityCard;
   el.entity = entity;
   await el.updateComplete;
@@ -75,19 +75,19 @@ it('localizes the degree row label via this.localize() when .strings overrides e
   expect(degree.shadowRoot!.querySelector('[part="label"]')!.textContent).to.include('Connexions');
 });
 
-it('emits lyra-entity-activate from the built-in focus button', async () => {
-  const el = (await fixture(html`<lyra-entity-card></lyra-entity-card>`)) as LyraEntityCard;
+it('emits lr-entity-activate from the built-in focus button', async () => {
+  const el = (await fixture(html`<lr-entity-card></lr-entity-card>`)) as LyraEntityCard;
   el.entity = entity;
   await el.updateComplete;
   const button = el.shadowRoot!.querySelector('[part="focus-button"]') as HTMLElement;
-  const listener = oneEvent(el, 'lyra-entity-activate');
+  const listener = oneEvent(el, 'lr-entity-activate');
   button.click();
   const event = await listener;
   expect(event.detail).to.deep.equal({ id: 'e1' });
 });
 
 it('hides the focus button when showFocusButton is false', async () => {
-  const el = (await fixture(html`<lyra-entity-card></lyra-entity-card>`)) as LyraEntityCard;
+  const el = (await fixture(html`<lr-entity-card></lr-entity-card>`)) as LyraEntityCard;
   el.entity = entity;
   el.showFocusButton = false;
   await el.updateComplete;
@@ -95,7 +95,7 @@ it('hides the focus button when showFocusButton is false', async () => {
 });
 
 it('is accessible with a full entity', async () => {
-  const el = (await fixture(html`<lyra-entity-card></lyra-entity-card>`)) as LyraEntityCard;
+  const el = (await fixture(html`<lr-entity-card></lr-entity-card>`)) as LyraEntityCard;
   el.entity = entity;
   el.types = types;
   el.communityLabel = 'Nobel laureates';

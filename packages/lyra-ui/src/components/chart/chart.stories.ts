@@ -4,7 +4,7 @@ import type { Series } from './chart.js';
 
 const meta: Meta = {
   title: 'Charts/Chart',
-  component: 'lyra-chart',
+  component: 'lr-chart',
   tags: ['autodocs'],
 };
 export default meta;
@@ -14,14 +14,14 @@ export const Default: Story = {
   render: () => {
     const series: Series[] = [{ label: 'Revenue', data: [12, 19, 14, 22] }];
     return html`
-      <lyra-chart
+      <lr-chart
         type="bar"
         height="16rem"
         style="width: 22rem"
         legend
         .labels=${['Q1', 'Q2', 'Q3', 'Q4']}
         .datasets=${series}
-      ></lyra-chart>
+      ></lr-chart>
     `;
   },
 };
@@ -29,30 +29,30 @@ export const Default: Story = {
 export const DoughnutCenterAndAutoLegend: Story = {
   name: 'Doughnut center overlay with auto legend',
   render: () => html`
-    <lyra-doughnut-chart
+    <lr-doughnut-chart
       type="doughnut"
       height="18rem"
       style="inline-size: 24rem; max-inline-size: 100%;"
       legend
       legend-position="auto"
       .labels=${['Completed', 'Remaining']}
-      .datasets=${[{ label: 'Work', data: [72, 28], color: ['var(--lyra-color-success)', 'var(--lyra-color-border)'] }]}
+      .datasets=${[{ label: 'Work', data: [72, 28], color: ['var(--lr-color-success)', 'var(--lr-color-border)'] }]}
     >
       <strong slot="center">72%</strong>
-    </lyra-doughnut-chart>
+    </lr-doughnut-chart>
   `,
 };
 
 export const FormattedValues: Story = {
   render: () => html`
-    <lyra-chart
+    <lr-chart
       type="bar"
       legend
       valueFormatter=${(value: number, context: string) =>
         context === 'tooltip' ? `$${value.toFixed(2)}` : value.toLocaleString()}
       .labels=${['Q1', 'Q2', 'Q3']}
       .datasets=${[{ label: 'Revenue', data: [1200, 1900, 1400] }]}
-    ></lyra-chart>
+    ></lr-chart>
   `,
 };
 
@@ -65,14 +65,14 @@ export const NarrowLongContent: Story = {
     ];
     return html`
       <div style="inline-size: 320px; max-inline-size: 100%;">
-        <lyra-chart
+        <lr-chart
           aria-label="Quarterly revenue from subscriptions and professional services"
           type="bar"
           height="16rem"
           legend
           .labels=${['First quarter', 'Second quarter', 'Third quarter', 'Fourth quarter']}
           .datasets=${series}
-        ></lyra-chart>
+        ></lr-chart>
       </div>
     `;
   },
@@ -88,7 +88,7 @@ export const ConfigPassthrough: Story = {
   render: () => {
     const series: Series[] = [{ label: 'Revenue', data: [12, 19, 14, 22] }];
     return html`
-      <lyra-chart
+      <lr-chart
         type="bar"
         height="16rem"
         style="width: 22rem"
@@ -97,7 +97,7 @@ export const ConfigPassthrough: Story = {
         .config=${{
           options: { plugins: { title: { display: true, text: 'Quarterly revenue' } } },
         }}
-      ></lyra-chart>
+      ></lr-chart>
     `;
   },
 };
@@ -107,14 +107,14 @@ export const Horizontal: Story = {
   render: () => {
     const series: Series[] = [{ label: 'Revenue', data: [12, 19, 14, 22] }];
     return html`
-      <lyra-chart
+      <lr-chart
         type="bar"
         horizontal
         height="16rem"
         style="width: 22rem"
         .labels=${['Q1', 'Q2', 'Q3', 'Q4']}
         .datasets=${series}
-      ></lyra-chart>
+      ></lr-chart>
     `;
   },
 };
@@ -127,7 +127,7 @@ export const Stacked: Story = {
       { label: 'Product B', data: [8, 11, 9, 15] },
     ];
     return html`
-      <lyra-chart
+      <lr-chart
         type="bar"
         stacked
         legend
@@ -135,13 +135,13 @@ export const Stacked: Story = {
         style="width: 22rem"
         .labels=${['Q1', 'Q2', 'Q3', 'Q4']}
         .datasets=${series}
-      ></lyra-chart>
+      ></lr-chart>
     `;
   },
 };
 
 /**
- * The `--lyra-chart-grid-color`/`-tick-color`/`-legend-color`/`-tooltip-bg`/
+ * The `--lr-chart-grid-color`/`-tick-color`/`-legend-color`/`-tooltip-bg`/
  * `-tooltip-text` custom properties retheme Chart.js's canvas-drawn chrome
  * (grid lines, axis ticks/titles, legend labels, tooltip). Chart.js can't
  * consume `var()` directly, so these are resolved via `getComputedStyle`
@@ -151,44 +151,44 @@ export const ThemedTokens: Story = {
   render: () => {
     const series: Series[] = [{ label: 'Revenue', data: [12, 19, 14, 22] }];
     return html`
-      <lyra-chart
+      <lr-chart
         type="bar"
         legend
         height="16rem"
         style="
           width: 22rem;
-          --lyra-chart-grid-color: var(--lyra-color-danger);
-          --lyra-chart-tick-color: var(--lyra-color-danger);
-          --lyra-chart-legend-color: var(--lyra-color-danger);
-          --lyra-chart-tooltip-bg: var(--lyra-color-text);
-          --lyra-chart-tooltip-text: var(--lyra-color-surface);
+          --lr-chart-grid-color: var(--lr-color-danger);
+          --lr-chart-tick-color: var(--lr-color-danger);
+          --lr-chart-legend-color: var(--lr-color-danger);
+          --lr-chart-tooltip-bg: var(--lr-color-text);
+          --lr-chart-tooltip-text: var(--lr-color-surface);
         "
         .labels=${['Q1', 'Q2', 'Q3', 'Q4']}
         .datasets=${series}
-      ></lyra-chart>
+      ></lr-chart>
     `;
   },
 };
 
 /**
- * `lyra-point-click` fires whenever a click lands on (or nearest,
+ * `lr-point-click` fires whenever a click lands on (or nearest,
  * intersect-only) a data point/segment — covers any `type`, not just bars.
  * `refreshTheme()` forces a redraw so an out-of-band theme change (e.g. a
- * host-level dark-mode toggle that doesn't touch any `lyra-chart` property)
+ * host-level dark-mode toggle that doesn't touch any `lr-chart` property)
  * is picked up immediately, rather than waiting for the next reactive update.
  */
 export const PointClickAndRefreshTheme: Story = {
   render: () => {
     const series: Series[] = [{ label: 'Revenue', data: [12, 19, 14, 22] }];
     return html`
-      <lyra-chart
+      <lr-chart
         type="bar"
         height="16rem"
         style="width: 22rem"
         .labels=${['Q1', 'Q2', 'Q3', 'Q4']}
         .datasets=${series}
-        @lyra-point-click=${(e: CustomEvent) => console.log('lyra-point-click', e.detail)}
-      ></lyra-chart>
+        @lr-point-click=${(e: CustomEvent) => console.log('lr-point-click', e.detail)}
+      ></lr-chart>
       <button
         type="button"
         @click=${(e: Event) => {

@@ -20,15 +20,15 @@ function decimate<T>(arr: ReadonlyArray<T>, max: number): T[] {
 }
 
 /**
- * `<lyra-sparkline>` — a zero-dependency inline SVG trend chart.
- * Mirrors the Web Awesome `<wa-sparkline>` API under the `lyra-` prefix.
+ * `<lr-sparkline>` — a zero-dependency inline SVG trend chart.
+ * Mirrors the Web Awesome `<wa-sparkline>` API under the `lr-` prefix.
  *
- * @customElement lyra-sparkline
+ * @customElement lr-sparkline
  * @csspart line - The stroked line path (type="line" and type="area").
  * @csspart area - The filled area under the line (type="area").
  * @csspart bar - Each bar rectangle (type="bar").
- * @cssprop [--lyra-sparkline-stroke-width=1.5] - Stroke width of the line/area path.
- * @cssprop [--lyra-sparkline-area-opacity=0.15] - Fill opacity of the area under the line (type="area").
+ * @cssprop [--lr-sparkline-stroke-width=1.5] - Stroke width of the line/area path.
+ * @cssprop [--lr-sparkline-area-opacity=0.15] - Fill opacity of the area under the line (type="area").
  */
 export class LyraSparkline extends LyraElement {
   static styles = [LyraElement.styles, styles];
@@ -165,6 +165,6 @@ export class LyraSparkline extends LyraElement {
 
 declare global {
   interface HTMLElementTagNameMap {
-    'lyra-sparkline': LyraSparkline;
+    'lr-sparkline': LyraSparkline;
   }
 }

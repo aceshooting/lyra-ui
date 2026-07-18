@@ -3,7 +3,7 @@ import './color-picker.js';
 import type { LyraColorPicker } from './color-picker.js';
 
 it('renders a labeled native color input and forwards the form value', async () => {
-  const el = (await fixture(html`<lyra-color-picker label="Accent" value="#ff0000"></lyra-color-picker>`)) as LyraColorPicker;
+  const el = (await fixture(html`<lr-color-picker label="Accent" value="#ff0000"></lr-color-picker>`)) as LyraColorPicker;
   const input = el.shadowRoot!.querySelector('input') as HTMLInputElement;
   expect(input.type).to.equal('color');
   expect(input.value).to.equal('#ff0000');
@@ -13,7 +13,7 @@ it('renders a labeled native color input and forwards the form value', async () 
 
 it('exposes the label under both the form-control-label and label part tokens', async () => {
   const el = (await fixture(
-    html`<lyra-color-picker label="Accent"></lyra-color-picker>`,
+    html`<lr-color-picker label="Accent"></lr-color-picker>`,
   )) as LyraColorPicker;
   await el.updateComplete;
   const label = el.shadowRoot!.querySelector('[part~="form-control-label"]') as HTMLElement;
@@ -23,7 +23,7 @@ it('exposes the label under both the form-control-label and label part tokens', 
 
 it('renders errorText and an error slot, wiring aria-describedby to the rendered hint/error ids', async () => {
   const el = (await fixture(
-    html`<lyra-color-picker label="Accent" hint="Pick a brand color" error-text="Not a valid color"></lyra-color-picker>`,
+    html`<lr-color-picker label="Accent" hint="Pick a brand color" error-text="Not a valid color"></lr-color-picker>`,
   )) as LyraColorPicker;
   await el.updateComplete;
   const input = el.shadowRoot!.querySelector('input') as HTMLInputElement;
@@ -38,7 +38,7 @@ it('renders errorText and an error slot, wiring aria-describedby to the rendered
 });
 
 it('hides the error part when errorText is unset and no error slot content is assigned', async () => {
-  const el = (await fixture(html`<lyra-color-picker></lyra-color-picker>`)) as LyraColorPicker;
+  const el = (await fixture(html`<lr-color-picker></lr-color-picker>`)) as LyraColorPicker;
   await el.updateComplete;
   const errorPart = el.shadowRoot!.querySelector('[part="error"]') as HTMLElement;
   expect(errorPart.hidden).to.be.true;
@@ -46,7 +46,7 @@ it('hides the error part when errorText is unset and no error slot content is as
 
 it('shows a required-field asterisk after the label', async () => {
   const el = (await fixture(
-    html`<lyra-color-picker label="Accent" required></lyra-color-picker>`,
+    html`<lr-color-picker label="Accent" required></lr-color-picker>`,
   )) as LyraColorPicker;
   await el.updateComplete;
   const label = el.shadowRoot!.querySelector('[part~="form-control-label"]') as HTMLElement;
@@ -54,7 +54,7 @@ it('shows a required-field asterisk after the label', async () => {
 });
 
 it('re-dispatches bubbling, composed focus/blur events from the internal color input', async () => {
-  const el = (await fixture(html`<lyra-color-picker></lyra-color-picker>`)) as LyraColorPicker;
+  const el = (await fixture(html`<lr-color-picker></lr-color-picker>`)) as LyraColorPicker;
   const input = el.shadowRoot!.querySelector('input') as HTMLInputElement;
 
   const focusPromise = oneEvent(el, 'focus');

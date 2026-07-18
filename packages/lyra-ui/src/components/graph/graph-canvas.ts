@@ -1,5 +1,5 @@
 /**
- * Renderer-agnostic, side-effect-free drawing primitives for `lyra-graph`'s `renderer="canvas"`
+ * Renderer-agnostic, side-effect-free drawing primitives for `lr-graph`'s `renderer="canvas"`
  * scale path -- a plain 2D-canvas replacement for the per-node/per-link SVG DOM. Every value here
  * is already resolved (colors, fonts, world-space positions) by the caller; nothing in this module
  * touches `getComputedStyle()`, custom elements, or Lit -- it's a pure function library over a
@@ -71,10 +71,10 @@ export interface CanvasScene {
   font: string;
 }
 
-/** Matches the SVG renderer's community-hull stroke width (`2 * --lyra-size-24px`, i.e. 2x a 24
+/** Matches the SVG renderer's community-hull stroke width (`2 * --lr-size-24px`, i.e. 2x a 24
  *  world-px padding) so a hull reads identically thick in either renderer. */
 const HULL_STROKE_WIDTH = 48;
-/** Matches the SVG renderer's edge/community label halo stroke width (`--lyra-size-3px`). */
+/** Matches the SVG renderer's edge/community label halo stroke width (`--lr-size-3px`). */
 const LABEL_HALO_WIDTH = 3;
 
 function pathForShape(x: number, y: number, r: number, shape: CanvasNode['shape']): Path2D {

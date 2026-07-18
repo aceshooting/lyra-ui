@@ -36,13 +36,13 @@ interface OverlayAdapter {
 
 const adapters: OverlayAdapter[] = [
   {
-    tag: 'lyra-dialog',
+    tag: 'lr-dialog',
     setup: (element) => (element.label = 'Dialog'),
     activate: (element) => (element.open = true),
     deactivate: (element) => (element.open = false),
   },
   {
-    tag: 'lyra-responsive-panel',
+    tag: 'lr-responsive-panel',
     setup: (element) => {
       element.mode = 'overlay';
       element.label = 'Panel';
@@ -51,30 +51,30 @@ const adapters: OverlayAdapter[] = [
     deactivate: (element) => (element.open = false),
   },
   {
-    tag: 'lyra-tool-select-dialog',
+    tag: 'lr-tool-select-dialog',
     activate: (element) => (element.open = true),
     deactivate: (element) => (element.open = false),
   },
   {
-    tag: 'lyra-tool-approval-dialog',
+    tag: 'lr-tool-approval-dialog',
     setup: (element) => (element.toolName = 'run'),
     activate: (element) => (element.open = true),
     deactivate: (element) => (element.open = false),
   },
   {
-    tag: 'lyra-tool-result-dialog',
+    tag: 'lr-tool-result-dialog',
     setup: (element) => (element.toolName = 'run'),
     activate: (element) => (element.open = true),
     deactivate: (element) => (element.open = false),
   },
   {
-    tag: 'lyra-app-rail',
+    tag: 'lr-app-rail',
     setup: (element) => (element.mode = 'mobile'),
     activate: (element) => (element.open = true),
     deactivate: (element) => (element.open = false),
   },
   {
-    tag: 'lyra-widget',
+    tag: 'lr-widget',
     setup: (element) => {
       element.label = 'Widget';
       element.expandable = true;
@@ -83,7 +83,7 @@ const adapters: OverlayAdapter[] = [
     deactivate: (element) => (element.fullscreen = false),
   },
   {
-    tag: 'lyra-lightbox',
+    tag: 'lr-lightbox',
     setup: (element) => (element.images = [lightboxImage]),
     activate: (element) => (element.open = true),
     deactivate: (element) => (element.open = false),
@@ -167,11 +167,11 @@ for (const adapter of adapters) {
 
 const reconnectAdapters = adapters.filter(({ tag }) =>
   [
-    'lyra-dialog',
-    'lyra-tool-select-dialog',
-    'lyra-tool-approval-dialog',
-    'lyra-tool-result-dialog',
-    'lyra-lightbox',
+    'lr-dialog',
+    'lr-tool-select-dialog',
+    'lr-tool-approval-dialog',
+    'lr-tool-result-dialog',
+    'lr-lightbox',
   ].includes(tag),
 );
 
@@ -218,15 +218,15 @@ it('moves outside focus into a responsive panel when an open inline panel become
 });
 
 it('returns focus to the date popup opener after a calendar selection hides the focused day', async () => {
-  const element = document.createElement('lyra-date-input') as ReactiveOverlay;
-  element.dataset.overlayTest = 'lyra-date-input';
+  const element = document.createElement('lr-date-input') as ReactiveOverlay;
+  element.dataset.overlayTest = 'lr-date-input';
   document.body.append(element);
   await element.updateComplete;
   const expand = element.shadowRoot!.querySelector('[part="expand-button"]') as HTMLButtonElement;
   expand.focus();
   expand.click();
   await element.updateComplete;
-  const picker = element.shadowRoot!.querySelector('lyra-date-picker') as ReactiveOverlay;
+  const picker = element.shadowRoot!.querySelector('lr-date-picker') as ReactiveOverlay;
   await picker.updateComplete;
   const day = picker.shadowRoot!.querySelector('[part~="day"][tabindex="0"]') as HTMLButtonElement;
   day.focus();
@@ -239,8 +239,8 @@ it('returns focus to the date popup opener after a calendar selection hides the 
 });
 
 it('returns Escape focus to the text input that opened the date popup with Alt+ArrowDown', async () => {
-  const element = document.createElement('lyra-date-input') as ReactiveOverlay;
-  element.dataset.overlayTest = 'lyra-date-input';
+  const element = document.createElement('lr-date-input') as ReactiveOverlay;
+  element.dataset.overlayTest = 'lr-date-input';
   document.body.append(element);
   await element.updateComplete;
   const input = element.shadowRoot!.querySelector('[part="input"]') as HTMLInputElement;
@@ -249,7 +249,7 @@ it('returns Escape focus to the text input that opened the date popup with Alt+A
     new KeyboardEvent('keydown', { key: 'ArrowDown', altKey: true, bubbles: true, composed: true, cancelable: true }),
   );
   await element.updateComplete;
-  const picker = element.shadowRoot!.querySelector('lyra-date-picker') as ReactiveOverlay;
+  const picker = element.shadowRoot!.querySelector('lr-date-picker') as ReactiveOverlay;
   await picker.updateComplete;
   const day = picker.shadowRoot!.querySelector('[part~="day"][tabindex="0"]') as HTMLButtonElement;
   day.focus();

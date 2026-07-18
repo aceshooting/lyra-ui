@@ -9,37 +9,37 @@ import type { LyraFormatNumber } from './format-number.class.js';
 import type { LyraRelativeTime } from './relative-time.class.js';
 
 it('formats numbers and bytes through Intl', async () => {
-  const el = await fixture(html`<div><lyra-format-number value="1234.5"></lyra-format-number><lyra-format-bytes value="1024"></lyra-format-bytes></div>`);
-  expect(el.querySelector('lyra-format-number')?.shadowRoot?.textContent).to.contain('1,234.5');
-  expect(el.querySelector('lyra-format-bytes')?.shadowRoot?.textContent).to.match(/1\s?kB/i);
+  const el = await fixture(html`<div><lr-format-number value="1234.5"></lr-format-number><lr-format-bytes value="1024"></lr-format-bytes></div>`);
+  expect(el.querySelector('lr-format-number')?.shadowRoot?.textContent).to.contain('1,234.5');
+  expect(el.querySelector('lr-format-bytes')?.shadowRoot?.textContent).to.match(/1\s?kB/i);
 });
 
 it('formats dates and relative time', async () => {
   const el = await fixture(html`<div>
-    <lyra-format-date date="2024-01-01T00:00:00Z" locale="en-US"></lyra-format-date>
-    <lyra-relative-time date="2030-01-01T00:00:00Z" locale="en-US"></lyra-relative-time>
+    <lr-format-date date="2024-01-01T00:00:00Z" locale="en-US"></lr-format-date>
+    <lr-relative-time date="2030-01-01T00:00:00Z" locale="en-US"></lr-relative-time>
   </div>`);
-  expect(el.querySelector('lyra-format-date')?.shadowRoot?.textContent).to.contain('January');
-  expect(el.querySelector('lyra-relative-time')?.shadowRoot?.textContent).to.contain('in');
+  expect(el.querySelector('lr-format-date')?.shadowRoot?.textContent).to.contain('January');
+  expect(el.querySelector('lr-relative-time')?.shadowRoot?.textContent).to.contain('in');
 });
 
 it('supports style-based date formatting without mixing Intl option families', async () => {
-  const el = await fixture(html`<lyra-format-date date="2024-01-01T00:00:00Z" date-style="full"></lyra-format-date>`);
+  const el = await fixture(html`<lr-format-date date="2024-01-01T00:00:00Z" date-style="full"></lr-format-date>`);
   expect(el.shadowRoot?.textContent).to.contain('Monday');
 });
 
 it('inherits locale from an ancestor when no explicit locale is set', async () => {
-  const el = await fixture(html`<div lang="de-DE"><lyra-format-number value="1234.5"></lyra-format-number></div>`);
-  expect(el.querySelector('lyra-format-number')?.shadowRoot?.textContent).to.contain('1.234,5');
+  const el = await fixture(html`<div lang="de-DE"><lr-format-number value="1234.5"></lr-format-number></div>`);
+  expect(el.querySelector('lr-format-number')?.shadowRoot?.textContent).to.contain('1.234,5');
 });
 
 it('is accessible', async () => {
-  const el = await fixture(html`<lyra-format-number value="1234.5"></lyra-format-number>`);
+  const el = await fixture(html`<lr-format-number value="1234.5"></lr-format-number>`);
   await expect(el).to.be.accessible();
 });
 
 it('falls back to slotted content instead of throwing when value is non-finite', async () => {
-  const el = await fixture(html`<lyra-format-bytes value="abc">Unknown size</lyra-format-bytes>`);
+  const el = await fixture(html`<lr-format-bytes value="abc">Unknown size</lr-format-bytes>`);
   expect(el.shadowRoot?.textContent?.trim()).to.equal('');
   const slot = el.shadowRoot!.querySelector('slot') as HTMLSlotElement;
   expect(slot).to.exist;
@@ -47,7 +47,7 @@ it('falls back to slotted content instead of throwing when value is non-finite',
 });
 
 it('falls back gracefully when value is programmatically set to NaN', async () => {
-  const el = (await fixture(html`<lyra-format-bytes></lyra-format-bytes>`)) as LyraFormatBytes;
+  const el = (await fixture(html`<lr-format-bytes></lr-format-bytes>`)) as LyraFormatBytes;
   el.value = NaN;
   await el.updateComplete;
   expect(el.shadowRoot?.textContent?.trim()).to.equal('');
@@ -56,7 +56,7 @@ it('falls back gracefully when value is programmatically set to NaN', async () =
 it('clamps an out-of-range decimals instead of letting Intl.NumberFormat throw a RangeError (crash regression)', async () => {
   // Intl.NumberFormat's maximumFractionDigits only accepts [0, 100] and throws a RangeError
   // outside that (or for a non-finite value) -- decimals reaches it unguarded pre-fix.
-  const el = (await fixture(html`<lyra-format-bytes value="123456"></lyra-format-bytes>`)) as LyraFormatBytes;
+  const el = (await fixture(html`<lr-format-bytes value="123456"></lr-format-bytes>`)) as LyraFormatBytes;
 
   el.decimals = -1;
   await el.updateComplete;
@@ -73,7 +73,7 @@ it('clamps an out-of-range decimals instead of letting Intl.NumberFormat throw a
 });
 
 it('falls back to a safe default unit-step instead of dividing by Math.log(1) === 0 (crash regression)', async () => {
-  const el = (await fixture(html`<lyra-format-bytes value="123456"></lyra-format-bytes>`)) as LyraFormatBytes;
+  const el = (await fixture(html`<lr-format-bytes value="123456"></lr-format-bytes>`)) as LyraFormatBytes;
   el.unitStep = 1;
   await el.updateComplete;
   expect(el.shadowRoot?.textContent?.trim()).to.not.equal('');
@@ -87,7 +87,7 @@ it('falls back to a safe default unit-step instead of dividing by Math.log(1) ==
 it('clamps out-of-range minimum/maximumFractionDigits instead of letting Intl.NumberFormat throw a RangeError (crash regression)', async () => {
   // Both minimumFractionDigits and maximumFractionDigits throw a RangeError outside [0, 100],
   // and throw even when each is individually in range if minimum > maximum -- unguarded pre-fix.
-  const el = (await fixture(html`<lyra-format-number value="1234.5"></lyra-format-number>`)) as LyraFormatNumber;
+  const el = (await fixture(html`<lr-format-number value="1234.5"></lr-format-number>`)) as LyraFormatNumber;
 
   el.maximumFractionDigits = -1;
   await el.updateComplete;
@@ -109,10 +109,10 @@ it('clamps out-of-range minimum/maximumFractionDigits instead of letting Intl.Nu
 });
 
 it('reflects the locale property back to the locale attribute (inherited LyraElement `reflect: true`)', async () => {
-  const numberEl = (await fixture(html`<lyra-format-number value="1234.5"></lyra-format-number>`)) as LyraFormatNumber;
-  const dateEl = (await fixture(html`<lyra-format-date date="2024-01-01T00:00:00Z"></lyra-format-date>`)) as LyraFormatDate;
-  const bytesEl = (await fixture(html`<lyra-format-bytes value="1024"></lyra-format-bytes>`)) as LyraFormatBytes;
-  const relativeEl = (await fixture(html`<lyra-relative-time date="2030-01-01T00:00:00Z"></lyra-relative-time>`)) as LyraRelativeTime;
+  const numberEl = (await fixture(html`<lr-format-number value="1234.5"></lr-format-number>`)) as LyraFormatNumber;
+  const dateEl = (await fixture(html`<lr-format-date date="2024-01-01T00:00:00Z"></lr-format-date>`)) as LyraFormatDate;
+  const bytesEl = (await fixture(html`<lr-format-bytes value="1024"></lr-format-bytes>`)) as LyraFormatBytes;
+  const relativeEl = (await fixture(html`<lr-relative-time date="2030-01-01T00:00:00Z"></lr-relative-time>`)) as LyraRelativeTime;
   numberEl.locale = 'de-DE';
   dateEl.locale = 'de-DE';
   bytesEl.locale = 'de-DE';

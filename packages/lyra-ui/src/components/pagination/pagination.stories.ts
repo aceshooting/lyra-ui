@@ -4,20 +4,20 @@ import type { LyraPagination } from './pagination.js';
 
 const meta: Meta = {
   title: 'Pagination',
-  component: 'lyra-pagination',
+  component: 'lr-pagination',
   tags: ['autodocs'],
 };
 export default meta;
 type Story = StoryObj;
 
 function controlledPagination(totalItems = 237) {
-  return html`<lyra-pagination
+  return html`<lr-pagination
     total-items=${totalItems}
     page-size="20"
-    @lyra-page-change=${(event: CustomEvent<{ page: number }>) => {
+    @lr-page-change=${(event: CustomEvent<{ page: number }>) => {
       (event.currentTarget as LyraPagination).page = event.detail.page;
     }}
-  ></lyra-pagination>`;
+  ></lr-pagination>`;
 }
 
 export const Default: Story = {
@@ -33,7 +33,7 @@ export const ProgrammaticFocus: Story = {
         type="button"
         @click=${(event: Event) => {
           const pagination = (event.currentTarget as HTMLElement).parentElement!.querySelector(
-            'lyra-pagination',
+            'lr-pagination',
           ) as LyraPagination;
           pagination.focus();
         }}
@@ -44,7 +44,7 @@ export const ProgrammaticFocus: Story = {
 
 export const NarrowAllocation: Story = {
   render: () => html`<div style="inline-size: 18rem">
-    <lyra-pagination
+    <lr-pagination
       total-items="237"
       page-size="20"
       previous-label="Zur vorherigen Ergebnisseite wechseln"
@@ -52,19 +52,19 @@ export const NarrowAllocation: Story = {
       .strings=${{
         paginationSummary: '{start}–{end} von insgesamt {total} {itemLabel}',
       }}
-      @lyra-page-change=${(event: CustomEvent<{ page: number }>) => {
+      @lr-page-change=${(event: CustomEvent<{ page: number }>) => {
         (event.currentTarget as LyraPagination).page = event.detail.page;
       }}
-    ></lyra-pagination>
+    ></lr-pagination>
   </div>`,
 };
 
 export const Empty: Story = {
-  render: () => html`<lyra-pagination></lyra-pagination>`,
+  render: () => html`<lr-pagination></lr-pagination>`,
 };
 
 export const Loading: Story = {
   render: () => html`
-    <lyra-pagination total-items="237" page-size="20" page="4" loading></lyra-pagination>
+    <lr-pagination total-items="237" page-size="20" page="4" loading></lr-pagination>
   `,
 };

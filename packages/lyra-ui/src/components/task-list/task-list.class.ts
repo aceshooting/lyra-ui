@@ -16,7 +16,7 @@ import '../live-region/live-region.js';
 import { styles } from './task-list.styles.js';
 
 /** A plan step's lifecycle state — not permission-gated, so there is no `denied` state here
- *  (unlike `<lyra-tool-call-chip>`'s status vocabulary, which does need one). */
+ *  (unlike `<lr-tool-call-chip>`'s status vocabulary, which does need one). */
 export type TaskStatus = 'pending' | 'running' | 'success' | 'error';
 
 export interface TaskItem {
@@ -35,11 +35,11 @@ export interface TaskListToggleDetail {
 }
 
 export interface LyraTaskListEventMap {
-  'lyra-toggle': CustomEvent<TaskListToggleDetail>;
+  'lr-toggle': CustomEvent<TaskListToggleDetail>;
 }
 
 // Mirrors the shared icon set's viewBox/stroke conventions (internal/icons.ts) without adding
-// task-list-specific glyphs there -- duplicated locally, matching lyra-tool-call-chip's own
+// task-list-specific glyphs there -- duplicated locally, matching lr-tool-call-chip's own
 // STATUS_ICON set (same four shapes, minus its 'denied' glyph, which has no TaskStatus
 // counterpart).
 const ICON_VIEW_BOX = '0 0 24 24';
@@ -99,7 +99,7 @@ const STATUS_LABEL_KEY: Record<TaskStatus, string> = {
 /** `true`-defaulting boolean attribute converter -- Lit's default presence-based `type: Boolean`
  *  can never be set back to `false` from a plain-HTML attribute once the property's own default is
  *  `true` (removing an attribute that was never present fires no `attributeChangedCallback`), so
- *  `fromAttribute` checks the literal string instead (mirrors `lyra-generation-status`'s
+ *  `fromAttribute` checks the literal string instead (mirrors `lr-generation-status`'s
  *  `showStopConverter`). Unlike that converter, `toAttribute` here reflects the `true` state as a
  *  present attribute rather than omitting it: `expanded`'s host attribute drives this component's
  *  own `:host([expanded])` styling, so the attribute must actually be present while expanded and
@@ -115,18 +115,18 @@ const trueDefaultBooleanConverter: ComplexAttributeConverter<boolean> = {
 };
 
 /**
- * `<lyra-task-list>` — a live, collapsible tracker for an agent's plan: ordered steps with
+ * `<lr-task-list>` — a live, collapsible tracker for an agent's plan: ordered steps with
  * per-step lifecycle status and one level of nested sub-steps, embedded in the transcript.
- * `items` is controlled and never mutated by this component, mirroring `<lyra-stepper>`'s `steps`
+ * `items` is controlled and never mutated by this component, mirroring `<lr-stepper>`'s `steps`
  * contract -- but unlike stepper's single-`current` navigation control, task-list is a read-only
  * status report: several steps may be `running` at once, there is no selection, and status changes
- * are announced through an internal `<lyra-live-region>`.
+ * are announced through an internal `<lr-live-region>`.
  *
- * @customElement lyra-task-list
+ * @customElement lr-task-list
  * @slot detail-<id> - Dynamic, one per item id (e.g. `slot="detail-step-3"`). Rich detail under
- *   that item's label, after its `detail` text -- typically a `<lyra-tool-call-chip>` or file
- *   `<lyra-chip>`. Plain-HTML friendly, no render props.
- * @event lyra-toggle - The header was activated, expanding or collapsing the panel. `detail: {
+ *   that item's label, after its `detail` text -- typically a `<lr-tool-call-chip>` or file
+ *   `<lr-chip>`. Plain-HTML friendly, no render props.
+ * @event lr-toggle - The header was activated, expanding or collapsing the panel. `detail: {
  *   expanded }`.
  * @csspart base - The outer container.
  * @csspart header - The clickable header (a `<button>` when `collapsible`, a plain heading
@@ -141,7 +141,7 @@ const trueDefaultBooleanConverter: ComplexAttributeConverter<boolean> = {
  * @csspart item-label - The item's `label` text.
  * @csspart item-detail - The item's optional `detail` text.
  * @csspart item-children - The nested `role="list"` wrapper around a top-level item's children.
- * @cssprop [--lyra-task-list-spin=1s linear] - Running-status icon spin animation duration/timing.
+ * @cssprop [--lr-task-list-spin=1s linear] - Running-status icon spin animation duration/timing.
  */
 export class LyraTaskList extends LyraElement<LyraTaskListEventMap> {
   static styles = [LyraElement.styles, styles];
@@ -161,14 +161,14 @@ export class LyraTaskList extends LyraElement<LyraTaskListEventMap> {
    *  `expanded` can still be set programmatically by the host, just not toggled via the UI. */
   @property({ converter: trueDefaultBooleanConverter }) collapsible = true;
 
-  @query('lyra-live-region') private liveRegion?: LyraLiveRegion;
+  @query('lr-live-region') private liveRegion?: LyraLiveRegion;
 
   private readonly headerId = nextId('task-list-header');
   private readonly bodyId = nextId('task-list-body');
 
   /** `true` until the first completed update -- gates the status-change announcements below so a
    *  freshly-mounted list never announces whatever statuses its very first `items` happens to
-   *  carry (mirrors `<lyra-chat-message>`'s identical `isMounting` gate for its own status-change
+   *  carry (mirrors `<lr-chat-message>`'s identical `isMounting` gate for its own status-change
    *  announcement). */
   private isMounting = true;
 
@@ -182,7 +182,7 @@ export class LyraTaskList extends LyraElement<LyraTaskListEventMap> {
         for (const child of item.children ?? []) {
           for (const grandchild of child.children ?? []) {
             console.warn(
-              `<lyra-task-list> item "${grandchild.id}" is nested more than one level deep and will be ignored -- only one level of nesting is supported.`,
+              `<lr-task-list> item "${grandchild.id}" is nested more than one level deep and will be ignored -- only one level of nesting is supported.`,
             );
           }
         }
@@ -242,7 +242,7 @@ export class LyraTaskList extends LyraElement<LyraTaskListEventMap> {
   private toggle = (): void => {
     if (!this.collapsible) return;
     this.expanded = !this.expanded;
-    this.emit<TaskListToggleDetail>('lyra-toggle', { expanded: this.expanded });
+    this.emit<TaskListToggleDetail>('lr-toggle', { expanded: this.expanded });
   };
 
   private renderItem(item: TaskItem, depth: 0 | 1): TemplateResult {
@@ -265,6 +265,7 @@ export class LyraTaskList extends LyraElement<LyraTaskListEventMap> {
 
   render(): TemplateResult {
     const label = this.label === 'Tasks' ? this.localize('taskListLabel') : this.label;
+    const ariaLabel = this.getAttribute('aria-label') || label;
     const total = this.items.length;
     const completed = this.items.filter((item) => item.status === 'success').length;
     const summary = this.localize('taskListCompletedOfTotal', undefined, { completed, total });
@@ -292,10 +293,10 @@ export class LyraTaskList extends LyraElement<LyraTaskListEventMap> {
                 <span part="summary">${summary}</span>
               </div>
             `}
-        <div part="body" id=${this.bodyId} role="list" aria-label=${label} ?hidden=${!this.expanded}>
+        <div part="body" id=${this.bodyId} role="list" aria-label=${ariaLabel} ?hidden=${!this.expanded}>
           ${this.items.map((item) => this.renderItem(item, 0))}
         </div>
-        <lyra-live-region></lyra-live-region>
+        <lr-live-region></lr-live-region>
       </div>
     `;
   }
@@ -303,6 +304,6 @@ export class LyraTaskList extends LyraElement<LyraTaskListEventMap> {
 
 declare global {
   interface HTMLElementTagNameMap {
-    'lyra-task-list': LyraTaskList;
+    'lr-task-list': LyraTaskList;
   }
 }

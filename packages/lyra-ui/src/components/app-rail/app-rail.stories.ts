@@ -4,7 +4,7 @@ import './app-rail.js';
 
 const meta: Meta = {
   title: 'AppRail',
-  component: 'lyra-app-rail',
+  component: 'lr-app-rail',
   tags: ['autodocs'],
   parameters: {
     docs: {
@@ -19,13 +19,13 @@ export default meta;
 type Story = StoryObj;
 
 const navItems = html`
-  <lyra-app-rail-item href="#inbox" aria-label="Inbox" active><span slot="icon">📥</span>Inbox</lyra-app-rail-item>
-  <lyra-app-rail-item href="#chats" aria-label="Chats"><span slot="icon">💬</span>Chats</lyra-app-rail-item>
-  <lyra-app-rail-item href="#settings" aria-label="Settings"><span slot="icon">⚙️</span>Settings</lyra-app-rail-item>
+  <lr-app-rail-item href="#inbox" aria-label="Inbox" active><span slot="icon">📥</span>Inbox</lr-app-rail-item>
+  <lr-app-rail-item href="#chats" aria-label="Chats"><span slot="icon">💬</span>Chats</lr-app-rail-item>
+  <lr-app-rail-item href="#settings" aria-label="Settings"><span slot="icon">⚙️</span>Settings</lr-app-rail-item>
 `;
 
 const page = (rail: ReturnType<typeof html>) => html`
-  <div style="display:flex; block-size: 24rem; border: 1px solid var(--lyra-color-border); border-radius: 0.5rem; overflow: hidden;">
+  <div style="display:flex; block-size: 24rem; border: 1px solid var(--lr-color-border); border-radius: 0.5rem; overflow: hidden;">
     ${rail}
     <div style="flex:1; padding: 1.5rem; overflow: auto;">
       <h2 style="margin-top:0;">Page content</h2>
@@ -37,7 +37,7 @@ const page = (rail: ReturnType<typeof html>) => html`
 export const Default: Story = {
   render: () =>
     page(html`
-      <lyra-app-rail label="Primary" style="block-size:100%;">
+      <lr-app-rail label="Primary" style="block-size:100%;">
         <span slot="header" style="display:flex; align-items:center; gap:0.5rem; padding:0.5rem; font-weight:600;">
           <span aria-hidden="true">🌟</span><span>Acme</span>
         </span>
@@ -45,7 +45,7 @@ export const Default: Story = {
         <span slot="footer" style="display:flex; align-items:center; gap:0.5rem; padding:0.5rem;">
           <span aria-hidden="true">👤</span><span>Jordan Lee</span>
         </span>
-      </lyra-app-rail>
+      </lr-app-rail>
     `),
 };
 
@@ -53,10 +53,10 @@ export const ForcedFull: Story = {
   name: 'Forced: full',
   render: () =>
     page(html`
-      <lyra-app-rail label="Primary" mode="full" style="block-size:100%;">
+      <lr-app-rail label="Primary" mode="full" style="block-size:100%;">
         <span slot="header" style="padding:0.5rem; font-weight:600;">Acme</span>
         ${navItems}
-      </lyra-app-rail>
+      </lr-app-rail>
     `),
 };
 
@@ -64,10 +64,10 @@ export const ForcedIconOnly: Story = {
   name: 'Forced: icon-only',
   render: () =>
     page(html`
-      <lyra-app-rail label="Primary" mode="icon-only" style="block-size:100%;">
+      <lr-app-rail label="Primary" mode="icon-only" style="block-size:100%;">
         <span slot="header" style="padding:0.5rem; font-weight:600;">A</span>
         ${navItems}
-      </lyra-app-rail>
+      </lr-app-rail>
     `),
 };
 
@@ -75,28 +75,28 @@ export const ForcedMobile: Story = {
   name: 'Forced: mobile (click the toggle)',
   render: () =>
     page(html`
-      <lyra-app-rail label="Primary" mode="mobile" style="block-size:100%;">
+      <lr-app-rail label="Primary" mode="mobile" style="block-size:100%;">
         <span slot="header" style="padding:0.5rem; font-weight:600;">Acme</span>
         ${navItems}
         <span slot="footer" style="padding:0.5rem;">Jordan Lee</span>
-      </lyra-app-rail>
+      </lr-app-rail>
     `),
 };
 
 export const MobileOpenInitially: Story = {
   render: () =>
     page(html`
-      <lyra-app-rail label="Primary" mode="mobile" open style="block-size:100%;">
+      <lr-app-rail label="Primary" mode="mobile" open style="block-size:100%;">
         <span slot="header" style="padding:0.5rem; font-weight:600;">Acme</span>
         ${navItems}
-      </lyra-app-rail>
+      </lr-app-rail>
     `),
 };
 
 export const CustomBreakpoints: Story = {
   render: () =>
     page(html`
-      <lyra-app-rail
+      <lr-app-rail
         label="Primary"
         icon-only-breakpoint="1400px"
         mobile-breakpoint="1000px"
@@ -104,6 +104,6 @@ export const CustomBreakpoints: Story = {
       >
         <span slot="header" style="padding:0.5rem; font-weight:600;">Acme</span>
         ${navItems}
-      </lyra-app-rail>
+      </lr-app-rail>
     `),
 };

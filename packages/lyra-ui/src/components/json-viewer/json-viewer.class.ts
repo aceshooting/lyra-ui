@@ -76,11 +76,11 @@ function formatPrimitive(value: unknown, type: JsonValueType): string {
 }
 
 export interface LyraJsonViewerEventMap {
-  'lyra-copy': CustomEvent<{ text: string }>;
-  'lyra-search-change': CustomEvent<{ query: string; matchCount: number; activeIndex: number }>;
+  'lr-copy': CustomEvent<{ text: string }>;
+  'lr-search-change': CustomEvent<{ query: string; matchCount: number; activeIndex: number }>;
 }
 /**
- * `<lyra-json-viewer>` — a collapsible, copyable tree view for an arbitrary
+ * `<lr-json-viewer>` — a collapsible, copyable tree view for an arbitrary
  * JSON-serializable value (object/array/string/number/boolean/null/
  * undefined). Serves as the fallback renderer wherever a raw payload (tool
  * call arguments, a tool result, an API response) needs inspecting without a
@@ -90,9 +90,9 @@ export interface LyraJsonViewerEventMap {
  * so it survives a `data` reassignment that keeps the same shape -- e.g. a
  * streaming tool result being patched in place.
  *
- * @customElement lyra-json-viewer
- * @event lyra-copy - `detail: { text }` -- fired by the top-level copy button or a per-node one. Fires even when `navigator.clipboard` is unavailable, so a consumer can still observe copy *intent*.
- * @event lyra-search-change - Fired whenever the search query, match count, or active-match cursor
+ * @customElement lr-json-viewer
+ * @event lr-copy - `detail: { text }` -- fired by the top-level copy button or a per-node one. Fires even when `navigator.clipboard` is unavailable, so a consumer can still observe copy *intent*.
+ * @event lr-search-change - Fired whenever the search query, match count, or active-match cursor
  *   changes -- from `runSearch()`/`searchNext()`/`searchPrevious()`/`clearSearch()`, or a direct
  *   `search`/`data` property write. `detail: { query, matchCount, activeIndex }`.
  * @csspart base - The root scroll container; respects `max-height`.
@@ -173,7 +173,7 @@ export class LyraJsonViewer extends LyraElement<LyraJsonViewerEventMap> {
     try {
       // navigator.clipboard is absent in insecure contexts / older browsers,
       // and some engines throw synchronously rather than rejecting -- either
-      // way this is best-effort; copy() below always emits lyra-copy
+      // way this is best-effort; copy() below always emits lr-copy
       // regardless of whether the OS clipboard was actually reached.
       void navigator.clipboard?.writeText(text)?.catch(() => {});
     } catch {
@@ -184,7 +184,7 @@ export class LyraJsonViewer extends LyraElement<LyraJsonViewerEventMap> {
   private copy(value: unknown): void {
     const text = value === undefined ? 'undefined' : this.stringifyForClipboard(value);
     this.writeClipboard(text);
-    this.emit('lyra-copy', { text });
+    this.emit('lr-copy', { text });
   }
 
   /**
@@ -310,7 +310,7 @@ export class LyraJsonViewer extends LyraElement<LyraJsonViewerEventMap> {
     const hasEntries = entries.length > 0;
     const expanded = hasEntries && this.isExpanded(pathKey, depth, search.forceExpand);
     const activeMatch = this.searchState.orderedMatches[this.activeSearchIndex];
-    const indentStyle = `padding-inline-start:calc(${depth} * var(--lyra-space-l))`;
+    const indentStyle = `padding-inline-start:calc(${depth} * var(--lr-space-l))`;
     const toggleLabel =
       keyLabel ??
       (type === 'array'
@@ -442,7 +442,7 @@ export class LyraJsonViewer extends LyraElement<LyraJsonViewerEventMap> {
   }
 
   private emitSearchChange(): void {
-    this.emit('lyra-search-change', {
+    this.emit('lr-search-change', {
       query: this.search,
       matchCount: this.searchState.orderedMatches.length,
       activeIndex: this.activeSearchIndex,
@@ -500,7 +500,7 @@ export class LyraJsonViewer extends LyraElement<LyraJsonViewerEventMap> {
 
   render(): TemplateResult {
     return html`
-      <div part="base" style=${this.maxHeight ? `--lyra-json-viewer-max-height:${this.maxHeight}` : nothing}>
+      <div part="base" style=${this.maxHeight ? `--lr-json-viewer-max-height:${this.maxHeight}` : nothing}>
         ${this.copyable
           ? html`<div part="toolbar">
               <button
@@ -522,6 +522,6 @@ export class LyraJsonViewer extends LyraElement<LyraJsonViewerEventMap> {
 
 declare global {
   interface HTMLElementTagNameMap {
-    'lyra-json-viewer': LyraJsonViewer;
+    'lr-json-viewer': LyraJsonViewer;
   }
 }

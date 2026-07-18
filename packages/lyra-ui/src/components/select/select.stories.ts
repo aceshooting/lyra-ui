@@ -4,7 +4,7 @@ import type { LyraSelect, LyraSelectSize } from './select.js';
 
 const meta: Meta = {
   title: 'Select',
-  component: 'lyra-select',
+  component: 'lr-select',
   tags: ['autodocs'],
 };
 export default meta;
@@ -12,12 +12,12 @@ type Story = StoryObj;
 
 export const Default: Story = {
   render: () => html`
-    <lyra-select label="Fruit" placeholder="Pick one…" style="max-width: 20rem">
-      <lyra-option value="a">Apple</lyra-option>
-      <lyra-option value="b">Banana</lyra-option>
-      <lyra-option value="c">Cherry</lyra-option>
-      <lyra-option value="d">Date</lyra-option>
-    </lyra-select>
+    <lr-select label="Fruit" placeholder="Pick one…" style="max-width: 20rem">
+      <lr-option value="a">Apple</lr-option>
+      <lr-option value="b">Banana</lr-option>
+      <lr-option value="c">Cherry</lr-option>
+      <lr-option value="d">Date</lr-option>
+    </lr-select>
   `,
 };
 
@@ -25,16 +25,16 @@ export const Default: Story = {
 export const ProgrammaticFocus: Story = {
   render: () => html`
     <div style="display: grid; gap: 0.75rem; max-width: 20rem;">
-      <lyra-select label="Fruit" placeholder="Pick one…">
-        <lyra-option value="a">Apple</lyra-option>
-        <lyra-option value="b">Banana</lyra-option>
-      </lyra-select>
+      <lr-select label="Fruit" placeholder="Pick one…">
+        <lr-option value="a">Apple</lr-option>
+        <lr-option value="b">Banana</lr-option>
+      </lr-select>
       <button
         type="button"
         style="justify-self: start;"
         @click=${(event: Event) => {
           const select = (event.currentTarget as HTMLElement).parentElement!.querySelector(
-            'lyra-select',
+            'lr-select',
           ) as LyraSelect;
           select.focus();
         }}
@@ -43,40 +43,40 @@ export const ProgrammaticFocus: Story = {
   `,
 };
 
-/** `<lyra-option selected>` seeds the initial value, mirroring `<option selected>`. */
+/** `<lr-option selected>` seeds the initial value, mirroring `<option selected>`. */
 export const PreSelectedValue: Story = {
   render: () => html`
-    <lyra-select label="Fruit" style="max-width: 20rem">
-      <lyra-option value="a">Apple</lyra-option>
-      <lyra-option value="b" selected>Banana</lyra-option>
-      <lyra-option value="c">Cherry</lyra-option>
-      <lyra-option value="d">Date</lyra-option>
-    </lyra-select>
+    <lr-select label="Fruit" style="max-width: 20rem">
+      <lr-option value="a">Apple</lr-option>
+      <lr-option value="b" selected>Banana</lr-option>
+      <lr-option value="c">Cherry</lr-option>
+      <lr-option value="d">Date</lr-option>
+    </lr-select>
   `,
 };
 
 /**
- * Rows come from `<lyra-option>` children plus `group` (section headers),
+ * Rows come from `<lr-option>` children plus `group` (section headers),
  * `sub` (a secondary line), and `dot-color` (a leading status dot) — same
- * rich-row support as `<lyra-combobox>`.
+ * rich-row support as `<lr-combobox>`.
  */
 export const RichRows: Story = {
   render: () => html`
-    <lyra-select label="Inverter" placeholder="Pick one…" style="max-width: 22rem">
-      <lyra-option value="inv-1" group="Building A" sub="Running" dot-color="var(--lyra-color-success)">
+    <lr-select label="Inverter" placeholder="Pick one…" style="max-width: 22rem">
+      <lr-option value="inv-1" group="Building A" sub="Running" dot-color="var(--lr-color-success)">
         Inverter 1
-      </lyra-option>
-      <lyra-option value="inv-2" group="Building A" sub="Idle" dot-color="var(--lyra-color-text-quiet)">
+      </lr-option>
+      <lr-option value="inv-2" group="Building A" sub="Idle" dot-color="var(--lr-color-text-quiet)">
         Inverter 2
-      </lyra-option>
-      <lyra-option value="inv-3" group="Building B" sub="Fault" dot-color="var(--lyra-color-danger)">
+      </lr-option>
+      <lr-option value="inv-3" group="Building B" sub="Fault" dot-color="var(--lr-color-danger)">
         Inverter 3
-      </lyra-option>
-    </lyra-select>
+      </lr-option>
+    </lr-select>
   `,
 };
 
-/** `size` spans the same `xs`–`xl` scale as `lyra-toast-item`, default `m`. */
+/** `size` spans the same `xs`–`xl` scale as `lr-toast-item`, default `m`. */
 export const Sizes: Story = {
   render: () => {
     const sizes: LyraSelectSize[] = ['xs', 's', 'm', 'l', 'xl'];
@@ -84,10 +84,10 @@ export const Sizes: Story = {
       <div style="display: flex; flex-direction: column; gap: 1rem; max-width: 20rem">
         ${sizes.map(
           (size) => html`
-            <lyra-select size=${size} placeholder=${`Size "${size}"`}>
-              <lyra-option value="a">Apple</lyra-option>
-              <lyra-option value="b">Banana</lyra-option>
-            </lyra-select>
+            <lr-select size=${size} placeholder=${`Size "${size}"`}>
+              <lr-option value="a">Apple</lr-option>
+              <lr-option value="b">Banana</lr-option>
+            </lr-select>
           `,
         )}
       </div>
@@ -97,35 +97,35 @@ export const Sizes: Story = {
 
 export const Disabled: Story = {
   render: () => html`
-    <lyra-select label="Disabled" disabled placeholder="Can't touch this" style="max-width: 20rem">
-      <lyra-option value="a">Apple</lyra-option>
-      <lyra-option value="b">Banana</lyra-option>
-    </lyra-select>
+    <lr-select label="Disabled" disabled placeholder="Can't touch this" style="max-width: 20rem">
+      <lr-option value="a">Apple</lr-option>
+      <lr-option value="b">Banana</lr-option>
+    </lr-select>
   `,
 };
 
 /**
- * When exactly one `<lyra-option>` is enabled, the trigger auto-commits that
+ * When exactly one `<lr-option>` is enabled, the trigger auto-commits that
  * option on click or Arrow Up/Down instead of opening a listbox — no chevron,
  * no popup. Useful for "only one choice available" states that would
  * otherwise force an unnecessary extra click.
  */
 export const SingleOption: Story = {
   render: () => html`
-    <lyra-select label="Region" auto-commit-single-option style="max-width: 20rem">
-      <lyra-option value="us-east">US East</lyra-option>
-    </lyra-select>
+    <lr-select label="Region" auto-commit-single-option style="max-width: 20rem">
+      <lr-option value="us-east">US East</lr-option>
+    </lr-select>
   `,
 };
 
 /** The same auto-commit behavior applies when only one *enabled* option remains among disabled ones. */
 export const SingleEnabledAmongDisabled: Story = {
   render: () => html`
-    <lyra-select label="Plan" auto-commit-single-option style="max-width: 20rem">
-      <lyra-option value="free" disabled>Free (unavailable)</lyra-option>
-      <lyra-option value="pro">Pro</lyra-option>
-      <lyra-option value="enterprise" disabled>Enterprise (unavailable)</lyra-option>
-    </lyra-select>
+    <lr-select label="Plan" auto-commit-single-option style="max-width: 20rem">
+      <lr-option value="free" disabled>Free (unavailable)</lr-option>
+      <lr-option value="pro">Pro</lr-option>
+      <lr-option value="enterprise" disabled>Enterprise (unavailable)</lr-option>
+    </lr-select>
   `,
 };
 
@@ -136,14 +136,14 @@ export const SingleEnabledAmongDisabled: Story = {
 export const RequiredWithValidation: Story = {
   render: () => html`
     <form style="display: flex; flex-direction: column; gap: 1.5rem; max-width: 22rem">
-      <lyra-select label="Required" required hint="Pick your favorite">
-        <lyra-option value="a">Apple</lyra-option>
-        <lyra-option value="b">Banana</lyra-option>
-      </lyra-select>
-      <lyra-select label="Invalid" required error-text="Selection required">
-        <lyra-option value="a">Apple</lyra-option>
-        <lyra-option value="b">Banana</lyra-option>
-      </lyra-select>
+      <lr-select label="Required" required hint="Pick your favorite">
+        <lr-option value="a">Apple</lr-option>
+        <lr-option value="b">Banana</lr-option>
+      </lr-select>
+      <lr-select label="Invalid" required error-text="Selection required">
+        <lr-option value="a">Apple</lr-option>
+        <lr-option value="b">Banana</lr-option>
+      </lr-select>
       <button type="submit">Submit</button>
     </form>
   `,

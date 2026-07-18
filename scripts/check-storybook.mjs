@@ -36,26 +36,26 @@ const requiredStories = [
 ];
 
 const storyChecks = new Map([
-  ['checkbox--default', 'lyra-checkbox'],
-  ['dialog--open-initially', 'lyra-dialog'],
-  ['responsivepanel--forced-overlay-bottom-sheet', 'lyra-responsive-panel'],
-  ['apprail--forced-icon-only', 'lyra-app-rail'],
-  ['table--default', 'lyra-table'],
+  ['checkbox--default', 'lr-checkbox'],
+  ['dialog--open-initially', 'lr-dialog'],
+  ['responsivepanel--forced-overlay-bottom-sheet', 'lr-responsive-panel'],
+  ['apprail--forced-icon-only', 'lr-app-rail'],
+  ['table--default', 'lr-table'],
   ['toast--triggers', 'button'],
-  ['codeblock--plain-fallback', 'lyra-code-block'],
-  ['charts-litechart--default', 'lyra-lite-chart'],
-  ['map--default', 'lyra-map'],
-  ['graph--default', 'lyra-graph'],
-  ['emoji-picker--with-supplied-groups', 'lyra-emoji-picker'],
-  ['voice-picker--default', 'lyra-voice-picker'],
-  ['source-picker--default', 'lyra-source-picker'],
-  ['entity-card--default', 'lyra-entity-card'],
-  ['flow-canvas--default', 'lyra-flow-canvas'],
-  ['graph-legend--default', 'lyra-graph-legend'],
-  ['documentviewer-notebookviewer--default', 'lyra-notebook-viewer'],
-  ['archiveviewer--default', 'lyra-archive-viewer'],
-  ['documentviewer-xmlviewer--default', 'lyra-xml-viewer'],
-  ['threadlist--default', 'lyra-thread-list'],
+  ['codeblock--plain-fallback', 'lr-code-block'],
+  ['charts-litechart--default', 'lr-lite-chart'],
+  ['map--default', 'lr-map'],
+  ['graph--default', 'lr-graph'],
+  ['emoji-picker--with-supplied-groups', 'lr-emoji-picker'],
+  ['voice-picker--default', 'lr-voice-picker'],
+  ['source-picker--default', 'lr-source-picker'],
+  ['entity-card--default', 'lr-entity-card'],
+  ['flow-canvas--default', 'lr-flow-canvas'],
+  ['graph-legend--default', 'lr-graph-legend'],
+  ['documentviewer-notebookviewer--default', 'lr-notebook-viewer'],
+  ['archiveviewer--default', 'lr-archive-viewer'],
+  ['documentviewer-xmlviewer--default', 'lr-xml-viewer'],
+  ['threadlist--default', 'lr-thread-list'],
 ]);
 
 const mimeTypes = {
@@ -138,7 +138,7 @@ async function expectSelector(page, id, selector) {
 }
 
 // A few new-family viewers (notebook-viewer, thread-list) delegate row rendering to the internal
-// `lyra-virtual-list`, which needs a ResizeObserver-driven layout pass (beyond `waitForStory`'s own
+// `lr-virtual-list`, which needs a ResizeObserver-driven layout pass (beyond `waitForStory`'s own
 // settle window) before the windowed row count is final. Poll instead of guessing a fixed delay.
 async function waitForLocatorCount(locator, predicate, timeoutMs = 5000) {
   const start = Date.now();
@@ -197,7 +197,7 @@ async function main() {
     await waitForStory(page, baseUrl, 'checkbox--default', { width: 1280, height: 800 }, 'dark');
     const darkTheme = await page.evaluate(() => ({
       scheme: document.documentElement.style.colorScheme,
-      surface: document.documentElement.style.getPropertyValue('--lyra-theme-color-surface-default'),
+      surface: document.documentElement.style.getPropertyValue('--lr-theme-color-surface-default'),
     }));
     if (darkTheme.scheme !== 'dark' || darkTheme.surface !== '#0d1117') {
       throw new Error(`dark Storybook theme did not apply semantic tokens: ${JSON.stringify(darkTheme)}`);
@@ -207,7 +207,7 @@ async function main() {
     await waitForStory(page, baseUrl, 'checkbox--default', { width: 1280, height: 800 }, 'high-contrast');
     const highContrastTheme = await page.evaluate(() => ({
       scheme: document.documentElement.style.colorScheme,
-      surface: document.documentElement.style.getPropertyValue('--lyra-theme-color-surface-default'),
+      surface: document.documentElement.style.getPropertyValue('--lr-theme-color-surface-default'),
     }));
     if (highContrastTheme.scheme !== 'light' || highContrastTheme.surface !== 'Canvas') {
       throw new Error(`high-contrast Storybook theme did not apply semantic tokens: ${JSON.stringify(highContrastTheme)}`);
@@ -217,14 +217,14 @@ async function main() {
     await waitForStory(page, baseUrl, 'dialog--open-initially', { width: 1280, height: 800 });
     await runA11y(page, 'dialog--open-initially');
     await page.keyboard.press('Escape');
-    await page.waitForFunction(() => !document.querySelector('lyra-dialog')?.hasAttribute('open'));
+    await page.waitForFunction(() => !document.querySelector('lr-dialog')?.hasAttribute('open'));
 
     await waitForStory(page, baseUrl, 'toast--triggers', { width: 1280, height: 800 });
     await page.getByRole('button', { name: 'Neutral' }).click();
-    await page.waitForSelector('lyra-toast', { state: 'attached', timeout: 3000 });
+    await page.waitForSelector('lr-toast', { state: 'attached', timeout: 3000 });
 
     await waitForStory(page, baseUrl, 'codeblock--plain-fallback', { width: 1280, height: 800 });
-    const codeFallback = await page.locator('lyra-code-block').evaluate((element) => ({
+    const codeFallback = await page.locator('lr-code-block').evaluate((element) => ({
       pre: Boolean(element.shadowRoot?.querySelector('[part="pre"]')),
       code: element.shadowRoot?.querySelector('[part="code"]')?.textContent ?? '',
     }));
@@ -234,8 +234,8 @@ async function main() {
 
     await waitForStory(page, baseUrl, 'responsivepanel--forced-overlay-bottom-sheet', { width: 390, height: 800 });
     await page.getByRole('button', { name: 'Open panel' }).click();
-    await page.waitForFunction(() => document.querySelector('lyra-responsive-panel')?.hasAttribute('open'));
-    const panelBox = await page.locator('lyra-responsive-panel').locator('[part="panel"]').boundingBox();
+    await page.waitForFunction(() => document.querySelector('lr-responsive-panel')?.hasAttribute('open'));
+    const panelBox = await page.locator('lr-responsive-panel').locator('[part="panel"]').boundingBox();
     if (!panelBox || panelBox.width <= 0 || panelBox.height <= 0) {
       throw new Error('bottom-sheet story has no visible layout box at mobile width');
     }
@@ -254,25 +254,25 @@ async function main() {
 
     await waitForStory(page, baseUrl, 'emoji-picker--with-supplied-groups', { width: 1280, height: 800 });
     await runA11y(page, 'emoji-picker--with-supplied-groups');
-    await page.locator('lyra-emoji-picker').locator('[part="emoji"]').first().click();
-    const pickedEmoji = await page.locator('lyra-emoji-picker').evaluate((element) => element.value);
+    await page.locator('lr-emoji-picker').locator('[part="emoji"]').first().click();
+    const pickedEmoji = await page.locator('lr-emoji-picker').evaluate((element) => element.value);
     if (pickedEmoji !== '😀') {
       throw new Error(`emoji-picker did not commit the clicked emoji: got ${JSON.stringify(pickedEmoji)}`);
     }
 
     await waitForStory(page, baseUrl, 'voice-picker--default', { width: 1280, height: 800 });
     await runA11y(page, 'voice-picker--default');
-    await page.locator('lyra-voice-picker').locator('[part="trigger"]').click();
-    await page.locator('lyra-voice-picker').locator('[part="option"]').first().click();
-    const pickedVoice = await page.locator('lyra-voice-picker').evaluate((element) => element.value);
+    await page.locator('lr-voice-picker').locator('[part="trigger"]').click();
+    await page.locator('lr-voice-picker').locator('[part="option"]').first().click();
+    const pickedVoice = await page.locator('lr-voice-picker').evaluate((element) => element.value);
     if (pickedVoice !== 'aria') {
       throw new Error(`voice-picker did not commit the selected option: got ${JSON.stringify(pickedVoice)}`);
     }
 
     await waitForStory(page, baseUrl, 'source-picker--default', { width: 1280, height: 800 });
     await runA11y(page, 'source-picker--default');
-    await page.locator('lyra-source-picker').locator('[part="item"]').last().click();
-    const selectedIds = await page.locator('lyra-source-picker').evaluate((element) => element.selectedIds);
+    await page.locator('lr-source-picker').locator('[part="item"]').last().click();
+    const selectedIds = await page.locator('lr-source-picker').evaluate((element) => element.selectedIds);
     if (!selectedIds.includes('doc3')) {
       throw new Error(`source-picker did not toggle the clicked leaf into selectedIds: got ${JSON.stringify(selectedIds)}`);
     }
@@ -281,19 +281,19 @@ async function main() {
     await runA11y(page, 'entity-card--default');
     await page.evaluate(() => {
       window.__lyraEntityActivations = [];
-      document.addEventListener('lyra-entity-activate', (event) => {
+      document.addEventListener('lr-entity-activate', (event) => {
         window.__lyraEntityActivations.push(event.detail);
       });
     });
-    await page.locator('lyra-entity-card').locator('[part="focus-button"]').click();
+    await page.locator('lr-entity-card').locator('[part="focus-button"]').click();
     const entityActivations = await page.evaluate(() => window.__lyraEntityActivations);
     if (entityActivations.length !== 1 || entityActivations[0]?.id !== 'e1') {
-      throw new Error(`entity-card focus button did not emit lyra-entity-activate for e1: got ${JSON.stringify(entityActivations)}`);
+      throw new Error(`entity-card focus button did not emit lr-entity-activate for e1: got ${JSON.stringify(entityActivations)}`);
     }
 
     await waitForStory(page, baseUrl, 'flow-canvas--default', { width: 1280, height: 800 });
-    const flowEdgesSurface = await page.locator('lyra-flow-canvas').locator('[part="edges"]').count();
-    const flowNodeCount = await page.locator('lyra-flow-canvas').locator('[part="node"]').count();
+    const flowEdgesSurface = await page.locator('lr-flow-canvas').locator('[part="edges"]').count();
+    const flowNodeCount = await page.locator('lr-flow-canvas').locator('[part="node"]').count();
     if (flowEdgesSurface === 0 || flowNodeCount !== 3) {
       throw new Error(`flow-canvas did not render its SVG surface/nodes as expected: edges=${flowEdgesSurface} nodes=${flowNodeCount}`);
     }
@@ -301,18 +301,18 @@ async function main() {
 
     await waitForStory(page, baseUrl, 'graph-legend--default', { width: 1280, height: 800 });
     await runA11y(page, 'graph-legend--default');
-    await page.locator('lyra-graph-legend').locator('[part="item"]').first().click();
-    const hiddenTypes = await page.locator('lyra-graph-legend').evaluate((element) => element.hiddenTypes);
+    await page.locator('lr-graph-legend').locator('[part="item"]').first().click();
+    const hiddenTypes = await page.locator('lr-graph-legend').evaluate((element) => element.hiddenTypes);
     if (!hiddenTypes.includes('person')) {
       throw new Error(`graph-legend did not toggle the clicked type into hiddenTypes: got ${JSON.stringify(hiddenTypes)}`);
     }
 
     await waitForStory(page, baseUrl, 'documentviewer-notebookviewer--default', { width: 1280, height: 800 });
     const notebookCellCount = await waitForLocatorCount(
-      page.locator('lyra-notebook-viewer').locator('[part="cell"]'),
+      page.locator('lr-notebook-viewer').locator('[part="cell"]'),
       (count) => count === 2,
     );
-    const notebookOutputText = await page.locator('lyra-notebook-viewer').locator('[part="output"]').first().textContent();
+    const notebookOutputText = await page.locator('lr-notebook-viewer').locator('[part="output"]').first().textContent();
     if (notebookCellCount !== 2 || !notebookOutputText?.includes('count')) {
       throw new Error(
         `notebook-viewer did not render its cells/outputs as expected: cells=${notebookCellCount} output=${JSON.stringify(notebookOutputText)}`,
@@ -321,20 +321,20 @@ async function main() {
     await runA11y(page, 'documentviewer-notebookviewer--default');
 
     await waitForStory(page, baseUrl, 'archiveviewer--default', { width: 1280, height: 800 });
-    await page.locator('lyra-archive-viewer').locator('[part="entry-name"], [part="error"]').first().waitFor({ timeout: 10_000 });
-    const archiveErrorCount = await page.locator('lyra-archive-viewer').locator('[part="error"]').count();
+    await page.locator('lr-archive-viewer').locator('[part="entry-name"], [part="error"]').first().waitFor({ timeout: 10_000 });
+    const archiveErrorCount = await page.locator('lr-archive-viewer').locator('[part="error"]').count();
     if (archiveErrorCount > 0) {
-      const archiveErrorText = await page.locator('lyra-archive-viewer').locator('[part="error"]').textContent();
+      const archiveErrorText = await page.locator('lr-archive-viewer').locator('[part="error"]').textContent();
       throw new Error(`archive-viewer failed to load its fixture archive: ${archiveErrorText}`);
     }
-    const archiveEntryNames = await page.locator('lyra-archive-viewer').locator('[part="entry-name"]').allTextContents();
+    const archiveEntryNames = await page.locator('lr-archive-viewer').locator('[part="entry-name"]').allTextContents();
     if (!archiveEntryNames.some((name) => name.includes('README.txt'))) {
       throw new Error(`archive-viewer did not list the archive's entries as expected: ${JSON.stringify(archiveEntryNames)}`);
     }
     await runA11y(page, 'archiveviewer--default');
 
     await waitForStory(page, baseUrl, 'documentviewer-xmlviewer--default', { width: 1280, height: 800 });
-    const xmlRootTag = await page.locator('lyra-xml-viewer').locator('[part="tag"]').first().textContent();
+    const xmlRootTag = await page.locator('lr-xml-viewer').locator('[part="tag"]').first().textContent();
     if (xmlRootTag !== 'rss') {
       throw new Error(`xml-viewer did not render the parsed document's root tag: got ${JSON.stringify(xmlRootTag)}`);
     }
@@ -342,9 +342,9 @@ async function main() {
 
     await waitForStory(page, baseUrl, 'threadlist--default', { width: 1280, height: 800 });
     await runA11y(page, 'threadlist--default');
-    const threadItemsLocator = page.locator('lyra-thread-list').locator('lyra-conversation-item');
+    const threadItemsLocator = page.locator('lr-thread-list').locator('lr-conversation-item');
     const threadCountBeforeSearch = await waitForLocatorCount(threadItemsLocator, (count) => count === 5);
-    await page.locator('lyra-thread-list').locator('[part="search-input"]').fill('Refactor');
+    await page.locator('lr-thread-list').locator('[part="search-input"]').fill('Refactor');
     const threadCountAfterSearch = await waitForLocatorCount(threadItemsLocator, (count) => count === 1);
     const filteredThreadTitle = await threadItemsLocator.first().getAttribute('title');
     if (threadCountBeforeSearch !== 5 || threadCountAfterSearch !== 1 || filteredThreadTitle !== 'Refactor the auth module') {

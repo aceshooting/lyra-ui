@@ -8,7 +8,7 @@ import { styles } from './playback.styles.js';
 const MIN_INTERVAL_MS = 16; // ~one animation frame; prevents a near-zero-delay tick loop
 
 // Deduplicated per distinct bad value (like the analogous one-time warnings
-// in lyra-heatmap/lyra-word-cloud) rather than a single once-ever flag, so a
+// in lr-heatmap/lr-word-cloud) rather than a single once-ever flag, so a
 // later, genuinely different bad value is never silently swallowed by an
 // earlier, unrelated one.
 const warnedInvalidIntervals = new Set<number>();
@@ -24,26 +24,26 @@ function warnInvalidInterval(value: number): void {
       ? `below the ${MIN_INTERVAL_MS}ms floor`
       : `above the ${MAX_TIMEOUT_MS}ms ceiling`;
   console.warn(
-    `<lyra-playback> interval-ms (${value}) is ${reason}; clamping to ${MIN_INTERVAL_MS}ms.`,
+    `<lr-playback> interval-ms (${value}) is ${reason}; clamping to ${MIN_INTERVAL_MS}ms.`,
   );
 }
 
 export interface LyraPlaybackEventMap {
-  'lyra-play': CustomEvent<undefined>;
-  'lyra-pause': CustomEvent<undefined>;
-  'lyra-step': CustomEvent<{ index: number }>;
+  'lr-play': CustomEvent<undefined>;
+  'lr-pause': CustomEvent<undefined>;
+  'lr-step': CustomEvent<{ index: number }>;
   blur: CustomEvent<undefined>;
   focus: CustomEvent<undefined>;
 }
 /**
- * `<lyra-playback>` — steps an index through `[0, length)` on a fixed
+ * `<lr-playback>` — steps an index through `[0, length)` on a fixed
  * interval (play/pause), the common building block behind ad-hoc
  * play-timers in time-series dashboards.
  *
- * @customElement lyra-playback
- * @event lyra-play - Fired when playback starts.
- * @event lyra-pause - Fired when playback stops (including auto-pause).
- * @event lyra-step - `detail: { index }`, fired on every tick and manual step.
+ * @customElement lr-playback
+ * @event lr-play - Fired when playback starts.
+ * @event lr-pause - Fired when playback stops (including auto-pause).
+ * @event lr-step - `detail: { index }`, fired on every tick and manual step.
  * @event blur - Re-dispatched from an internal playback control as a bubbling, composed event.
  * @event focus - Re-dispatched from an internal playback control as a bubbling, composed event.
  * @csspart base - The playback controls wrapper.
@@ -96,12 +96,12 @@ export class LyraPlayback extends LyraElement<LyraPlaybackEventMap> {
         this._playing = false;
         return;
       }
-      this.emit('lyra-play');
+      this.emit('lr-play');
       this.scheduleTick();
     } else {
       window.clearTimeout(this.timer);
       this.timer = undefined;
-      this.emit('lyra-pause');
+      this.emit('lr-pause');
     }
     this.requestUpdate('playing', old);
   }
@@ -170,7 +170,7 @@ export class LyraPlayback extends LyraElement<LyraPlaybackEventMap> {
     const delay = finiteDuration(rawDelay, MIN_INTERVAL_MS, MIN_INTERVAL_MS);
     if (delay !== rawDelay) warnInvalidInterval(rawDelay);
     // Self-identifying: a synchronous pause()+play() (or a synchronous
-    // play() from a 'lyra-pause'/'lyra-step' listener) invoked while this
+    // play() from a 'lr-pause'/'lr-step' listener) invoked while this
     // callback is running schedules its own new timer and overwrites
     // `this.timer` before this callback resumes. Only the timer that is
     // still the current one is allowed to reschedule itself — every other,
@@ -199,7 +199,7 @@ export class LyraPlayback extends LyraElement<LyraPlaybackEventMap> {
 
   private setIndex(i: number): void {
     this.index = finiteCount(i, 0, this.maxIndex);
-    this.emit('lyra-step', { index: this.index });
+    this.emit('lr-step', { index: this.index });
   }
 
   /** Advance one step without starting playback. */
@@ -277,6 +277,6 @@ export class LyraPlayback extends LyraElement<LyraPlaybackEventMap> {
 
 declare global {
   interface HTMLElementTagNameMap {
-    'lyra-playback': LyraPlayback;
+    'lr-playback': LyraPlayback;
   }
 }

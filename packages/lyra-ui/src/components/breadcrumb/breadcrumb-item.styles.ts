@@ -2,19 +2,19 @@ import { css } from 'lit';
 
 export const styles = css`
   [part='base'] {
-    color: var(--lyra-color-text);
+    color: var(--lr-color-text);
     text-decoration: none;
-    border-radius: var(--lyra-radius);
+    border-radius: var(--lr-radius);
   }
   a[part='base']:hover {
     text-decoration: underline;
   }
   [part='base']:focus-visible {
-    outline: var(--lyra-focus-ring-width) solid var(--lyra-focus-ring-color);
-    outline-offset: var(--lyra-focus-ring-offset);
+    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
+    outline-offset: var(--lr-focus-ring-offset);
   }
   [part='base'][aria-current='page'] {
-    color: var(--lyra-color-text-quiet);
-    font-weight: var(--lyra-font-weight-semibold);
+    color: var(--lr-color-text-quiet);
+    font-weight: var(--lr-font-weight-semibold);
   }
 `;

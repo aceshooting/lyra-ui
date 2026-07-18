@@ -6,26 +6,26 @@ import type { LyraCheckbox } from '../checkbox/checkbox.js';
 import { styles } from './checkbox-group.styles.js';
 
 it('collects checked children and emits a group change', async () => {
-  const el = (await fixture(html`<lyra-checkbox-group name="topics"><lyra-checkbox value="a">A</lyra-checkbox><lyra-checkbox value="b">B</lyra-checkbox></lyra-checkbox-group>`)) as LyraCheckboxGroup;
-  const boxes = el.querySelectorAll('lyra-checkbox');
-  const event = oneEvent(el, 'lyra-change');
+  const el = (await fixture(html`<lr-checkbox-group name="topics"><lr-checkbox value="a">A</lr-checkbox><lr-checkbox value="b">B</lr-checkbox></lr-checkbox-group>`)) as LyraCheckboxGroup;
+  const boxes = el.querySelectorAll('lr-checkbox');
+  const event = oneEvent(el, 'lr-change');
   (boxes[0] as HTMLElement).shadowRoot!.querySelector('[part="base"]')!.dispatchEvent(new MouseEvent('click', { bubbles: true }));
   const result = await event;
   expect(result.detail.value).to.deep.equal(['a']);
 });
 
 it('reports required validity when no box is checked', async () => {
-  const el = (await fixture(html`<lyra-checkbox-group required><lyra-checkbox>A</lyra-checkbox></lyra-checkbox-group>`)) as LyraCheckboxGroup;
+  const el = (await fixture(html`<lr-checkbox-group required><lr-checkbox>A</lr-checkbox></lr-checkbox-group>`)) as LyraCheckboxGroup;
   expect(el.checkValidity()).to.be.false;
 });
 
 it('is accessible', async () => {
-  const el = await fixture(html`<lyra-checkbox-group label="Topics"><lyra-checkbox>A</lyra-checkbox></lyra-checkbox-group>`);
+  const el = await fixture(html`<lr-checkbox-group label="Topics"><lr-checkbox>A</lr-checkbox></lr-checkbox-group>`);
   await expect(el).to.be.accessible();
 });
 
 it('uses the semibold font-weight design token for the label instead of a hardcoded value', () => {
-  expect(styles.cssText).to.include('var(--lyra-font-weight-semibold)');
+  expect(styles.cssText).to.include('var(--lr-font-weight-semibold)');
   expect(styles.cssText).to.not.match(/\[part='label'\]\s*\{[^}]*font-weight:\s*600/);
 });
 
@@ -33,16 +33,16 @@ it('cascades fieldset-disabled state to children through an internal channel, ne
   const form = (await fixture(html`
     <form>
       <fieldset>
-        <lyra-checkbox-group>
-          <lyra-checkbox value="a">A</lyra-checkbox>
-          <lyra-checkbox value="b" disabled>B</lyra-checkbox>
-        </lyra-checkbox-group>
+        <lr-checkbox-group>
+          <lr-checkbox value="a">A</lr-checkbox>
+          <lr-checkbox value="b" disabled>B</lr-checkbox>
+        </lr-checkbox-group>
       </fieldset>
     </form>
   `)) as HTMLFormElement;
-  const group = form.querySelector('lyra-checkbox-group') as LyraCheckboxGroup;
+  const group = form.querySelector('lr-checkbox-group') as LyraCheckboxGroup;
   const fieldset = form.querySelector('fieldset') as HTMLFieldSetElement;
-  const [a, b] = [...group.querySelectorAll('lyra-checkbox')] as LyraCheckbox[];
+  const [a, b] = [...group.querySelectorAll('lr-checkbox')] as LyraCheckbox[];
   await group.updateComplete;
 
   expect(group.effectiveDisabled).to.be.false;
@@ -77,9 +77,9 @@ it('cascades fieldset-disabled state to children through an internal channel, ne
 
 it('reflects a programmatically assigned name synchronously and rebuilds the group FormData in the same tick', async () => {
   const form = (await fixture(html`
-    <form><lyra-checkbox-group><lyra-checkbox value="a" checked>A</lyra-checkbox></lyra-checkbox-group></form>
+    <form><lr-checkbox-group><lr-checkbox value="a" checked>A</lr-checkbox></lr-checkbox-group></form>
   `)) as HTMLFormElement;
-  const el = form.querySelector('lyra-checkbox-group') as LyraCheckboxGroup;
+  const el = form.querySelector('lr-checkbox-group') as LyraCheckboxGroup;
   await el.updateComplete;
 
   // No `await` before these assertions: the `name` setter must synchronously reflect the host
@@ -99,7 +99,7 @@ it('reflects a programmatically assigned name synchronously and rebuilds the gro
 });
 
 it('recomputes validity synchronously when required changes, with no await', async () => {
-  const el = (await fixture(html`<lyra-checkbox-group><lyra-checkbox value="a">A</lyra-checkbox></lyra-checkbox-group>`)) as LyraCheckboxGroup;
+  const el = (await fixture(html`<lr-checkbox-group><lr-checkbox value="a">A</lr-checkbox></lr-checkbox-group>`)) as LyraCheckboxGroup;
   await el.updateComplete;
   expect(el.checkValidity()).to.be.true;
 
@@ -113,12 +113,12 @@ it('recomputes validity synchronously when required changes, with no await', asy
 
 it('reflects its own disabled property synchronously and propagates it to children in the same tick', async () => {
   const el = (await fixture(html`
-    <lyra-checkbox-group>
-      <lyra-checkbox value="a">A</lyra-checkbox>
-      <lyra-checkbox value="b" disabled>B</lyra-checkbox>
-    </lyra-checkbox-group>
+    <lr-checkbox-group>
+      <lr-checkbox value="a">A</lr-checkbox>
+      <lr-checkbox value="b" disabled>B</lr-checkbox>
+    </lr-checkbox-group>
   `)) as LyraCheckboxGroup;
-  const [a, b] = [...el.querySelectorAll('lyra-checkbox')] as LyraCheckbox[];
+  const [a, b] = [...el.querySelectorAll('lr-checkbox')] as LyraCheckbox[];
   await el.updateComplete;
   expect(el.effectiveDisabled).to.be.false;
   expect(a.effectiveDisabled).to.be.false;
@@ -142,7 +142,7 @@ it('reflects its own disabled property synchronously and propagates it to childr
 });
 
 it('reacts to hint/error slot content added after the initial render, not just at first paint', async () => {
-  const el = (await fixture(html`<lyra-checkbox-group><lyra-checkbox>A</lyra-checkbox></lyra-checkbox-group>`)) as LyraCheckboxGroup;
+  const el = (await fixture(html`<lr-checkbox-group><lr-checkbox>A</lr-checkbox></lr-checkbox-group>`)) as LyraCheckboxGroup;
   const hintPart = el.shadowRoot!.querySelector('[part="hint"]') as HTMLElement;
   const errorPart = el.shadowRoot!.querySelector('[part="error"]') as HTMLElement;
   expect(hintPart.hasAttribute('hidden')).to.be.true;

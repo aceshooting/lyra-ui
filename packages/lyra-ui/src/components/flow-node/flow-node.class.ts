@@ -10,13 +10,13 @@ const DEFAULT_INPUTS: FlowHandle[] = [{ id: 'in' }];
 const DEFAULT_OUTPUTS: FlowHandle[] = [{ id: 'out' }];
 
 /**
- * `<lyra-flow-node>` — the card a workflow node renders as: header/body/toolbar chrome,
+ * `<lr-flow-node>` — the card a workflow node renders as: header/body/toolbar chrome,
  * tool-lifecycle status tones, and the named connection-handle elements edges anchor to. Used as
- * `lyra-flow-canvas`'s default card and as a slotted override; also renders standalone (palette
+ * `lr-flow-canvas`'s default card and as a slotted override; also renders standalone (palette
  * previews, docs). Purely presentational — activation, selection, movement, and connection are all
- * `lyra-flow-canvas` events; this component owns none of that.
+ * `lr-flow-canvas` events; this component owns none of that.
  *
- * @customElement lyra-flow-node
+ * @customElement lr-flow-node
  * @slot - Body content.
  * @slot icon - Leading header glyph.
  * @slot header - Replaces the built-in heading row entirely.
@@ -32,7 +32,7 @@ const DEFAULT_OUTPUTS: FlowHandle[] = [{ id: 'out' }];
  * @csspart handle - Every handle dot (input or output).
  * @csspart handle-input - An input handle dot (also carries the shared `handle` part).
  * @csspart handle-output - An output handle dot (also carries the shared `handle` part).
- * @cssprop [--lyra-flow-node-min-inline-size=11rem] - Minimum card inline size.
+ * @cssprop [--lr-flow-node-min-inline-size=11rem] - Minimum card inline size.
  */
 export class LyraFlowNode extends LyraElement {
   static styles = [LyraElement.styles, styles];
@@ -159,6 +159,6 @@ export class LyraFlowNode extends LyraElement {
 
 declare global {
   interface HTMLElementTagNameMap {
-    'lyra-flow-node': LyraFlowNode;
+    'lr-flow-node': LyraFlowNode;
   }
 }

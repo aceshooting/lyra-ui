@@ -9,28 +9,28 @@ const columns = [
   { key: 'name', label: 'Name' },
 ];
 
-it('emits lyra-export then lyra-export-complete for a single format', async () => {
-  const el = (await fixture(html`<lyra-export-button></lyra-export-button>`)) as LyraExportButton;
+it('emits lr-export then lr-export-complete for a single format', async () => {
+  const el = (await fixture(html`<lr-export-button></lr-export-button>`)) as LyraExportButton;
   el.rows = rows;
   el.columns = columns;
   await el.updateComplete;
   const btn = el.shadowRoot!.querySelector('button') as HTMLButtonElement;
-  const exportEvent = oneEvent(el, 'lyra-export');
-  const completeEvent = oneEvent(el, 'lyra-export-complete');
+  const exportEvent = oneEvent(el, 'lr-export');
+  const completeEvent = oneEvent(el, 'lr-export-complete');
   btn.click();
   const ev = await exportEvent;
   expect(ev.detail.format).to.equal('csv');
   await completeEvent;
 });
 
-it('suppresses the built-in download when lyra-export is cancelled', async () => {
-  const el = (await fixture(html`<lyra-export-button></lyra-export-button>`)) as LyraExportButton;
+it('suppresses the built-in download when lr-export is cancelled', async () => {
+  const el = (await fixture(html`<lr-export-button></lr-export-button>`)) as LyraExportButton;
   el.rows = rows;
   el.columns = columns;
-  el.addEventListener('lyra-export', (e) => e.preventDefault());
+  el.addEventListener('lr-export', (e) => e.preventDefault());
   await el.updateComplete;
   let completed = false;
-  el.addEventListener('lyra-export-complete', () => (completed = true));
+  el.addEventListener('lr-export-complete', () => (completed = true));
   const btn = el.shadowRoot!.querySelector('button') as HTMLButtonElement;
   btn.click();
   await new Promise((r) => setTimeout(r, 10));
@@ -38,14 +38,14 @@ it('suppresses the built-in download when lyra-export is cancelled', async () =>
 });
 
 it('offers a format menu when multiple formats are configured', async () => {
-  const el = (await fixture(html`<lyra-export-button></lyra-export-button>`)) as LyraExportButton;
+  const el = (await fixture(html`<lr-export-button></lr-export-button>`)) as LyraExportButton;
   el.formats = ['csv', 'json'];
   await el.updateComplete;
   expect(el.shadowRoot!.querySelectorAll('[part="menu-item"]').length).to.equal(2);
 });
 
-it('renders custom format descriptors and carries their id through lyra-export', async () => {
-  const el = (await fixture(html`<lyra-export-button></lyra-export-button>`)) as LyraExportButton;
+it('renders custom format descriptors and carries their id through lr-export', async () => {
+  const el = (await fixture(html`<lr-export-button></lr-export-button>`)) as LyraExportButton;
   el.formats = [
     'csv',
     { id: 'xlsx', label: 'Excel', description: 'Native spreadsheet format', extension: 'xlsx' },
@@ -56,13 +56,13 @@ it('renders custom format descriptors and carries their id through lyra-export',
   expect(items[1]!.querySelector('[part="format-description"]')!.textContent).to.equal(
     'Native spreadsheet format',
   );
-  const exportEvent = oneEvent(el, 'lyra-export');
+  const exportEvent = oneEvent(el, 'lr-export');
   items[1]!.click();
   expect((await exportEvent).detail.format).to.equal('xlsx');
 });
 
 it('disables activation and exposes busy state while loading', async () => {
-  const el = (await fixture(html`<lyra-export-button></lyra-export-button>`)) as LyraExportButton;
+  const el = (await fixture(html`<lr-export-button></lr-export-button>`)) as LyraExportButton;
   el.loading = true;
   await el.updateComplete;
   const trigger = el.shadowRoot!.querySelector('[part="trigger"]') as HTMLButtonElement;
@@ -70,13 +70,13 @@ it('disables activation and exposes busy state while loading', async () => {
   expect(trigger.getAttribute('aria-busy')).to.equal('true');
   expect(el.hasAttribute('loading')).to.be.true;
   let exported = false;
-  el.addEventListener('lyra-export', () => (exported = true));
+  el.addEventListener('lr-export', () => (exported = true));
   trigger.click();
   expect(exported).to.be.false;
 });
 
 it('reflects open as a host attribute so the menu becomes visible', async () => {
-  const el = (await fixture(html`<lyra-export-button></lyra-export-button>`)) as LyraExportButton;
+  const el = (await fixture(html`<lr-export-button></lr-export-button>`)) as LyraExportButton;
   el.formats = ['csv', 'json'];
   await el.updateComplete;
   const trigger = el.shadowRoot!.querySelector('[part="trigger"]') as HTMLButtonElement;
@@ -88,7 +88,7 @@ it('reflects open as a host attribute so the menu becomes visible', async () => 
 });
 
 it('closes the menu on an outside pointerdown', async () => {
-  const el = (await fixture(html`<lyra-export-button></lyra-export-button>`)) as LyraExportButton;
+  const el = (await fixture(html`<lr-export-button></lr-export-button>`)) as LyraExportButton;
   el.formats = ['csv', 'json'];
   await el.updateComplete;
   const trigger = el.shadowRoot!.querySelector('[part="trigger"]') as HTMLButtonElement;
@@ -102,7 +102,7 @@ it('closes the menu on an outside pointerdown', async () => {
 });
 
 it('closes on an outside pointerdown even when opened via the `open` property directly', async () => {
-  const el = (await fixture(html`<lyra-export-button></lyra-export-button>`)) as LyraExportButton;
+  const el = (await fixture(html`<lr-export-button></lr-export-button>`)) as LyraExportButton;
   el.formats = ['csv', 'json'];
   await el.updateComplete;
 
@@ -118,7 +118,7 @@ it('closes on an outside pointerdown even when opened via the `open` property di
 });
 
 it('closes on Escape and returns focus to the trigger', async () => {
-  const el = (await fixture(html`<lyra-export-button></lyra-export-button>`)) as LyraExportButton;
+  const el = (await fixture(html`<lr-export-button></lr-export-button>`)) as LyraExportButton;
   el.formats = ['csv', 'json'];
   await el.updateComplete;
   const trigger = el.shadowRoot!.querySelector('[part="trigger"]') as HTMLButtonElement;
@@ -133,7 +133,7 @@ it('closes on Escape and returns focus to the trigger', async () => {
 });
 
 it('closes the menu and returns focus to the trigger after picking a format', async () => {
-  const el = (await fixture(html`<lyra-export-button></lyra-export-button>`)) as LyraExportButton;
+  const el = (await fixture(html`<lr-export-button></lr-export-button>`)) as LyraExportButton;
   el.rows = rows;
   el.columns = columns;
   el.formats = ['csv', 'json'];
@@ -152,7 +152,7 @@ it('closes the menu and returns focus to the trigger after picking a format', as
 });
 
 it('exports JSON and applies the same columns allow-list CSV uses', async () => {
-  const el = (await fixture(html`<lyra-export-button></lyra-export-button>`)) as LyraExportButton;
+  const el = (await fixture(html`<lr-export-button></lr-export-button>`)) as LyraExportButton;
   el.rows = [{ id: 'a', name: 'Alpha', secret: 'shh' }];
   el.columns = columns;
   el.formats = ['csv', 'json'];
@@ -170,7 +170,7 @@ it('exports JSON and applies the same columns allow-list CSV uses', async () => 
     capturedBlob = blob;
     return originalCreateObjectURL(blob);
   };
-  const completeEvent = oneEvent(el, 'lyra-export-complete');
+  const completeEvent = oneEvent(el, 'lr-export-complete');
   try {
     jsonButton.click();
     await completeEvent;
@@ -184,7 +184,7 @@ it('exports JSON and applies the same columns allow-list CSV uses', async () => 
 });
 
 it('derives CSV columns from the rows own keys when `columns` is left at its default empty array', async () => {
-  const el = (await fixture(html`<lyra-export-button></lyra-export-button>`)) as LyraExportButton;
+  const el = (await fixture(html`<lr-export-button></lr-export-button>`)) as LyraExportButton;
   el.rows = [
     { id: 'a', name: 'Alpha' },
     { id: 'b', name: 'Beta' },
@@ -199,7 +199,7 @@ it('derives CSV columns from the rows own keys when `columns` is left at its def
     capturedBlob = blob;
     return originalCreateObjectURL(blob);
   };
-  const completeEvent = oneEvent(el, 'lyra-export-complete');
+  const completeEvent = oneEvent(el, 'lr-export-complete');
   try {
     trigger.click();
     await completeEvent;
@@ -213,7 +213,7 @@ it('derives CSV columns from the rows own keys when `columns` is left at its def
 });
 
 it('blocks export via an already-open menu item once disabled is set, even without a re-render', async () => {
-  const el = (await fixture(html`<lyra-export-button></lyra-export-button>`)) as LyraExportButton;
+  const el = (await fixture(html`<lr-export-button></lr-export-button>`)) as LyraExportButton;
   el.rows = rows;
   el.columns = columns;
   el.formats = ['csv', 'json'];
@@ -227,7 +227,7 @@ it('blocks export via an already-open menu item once disabled is set, even witho
   await el.updateComplete;
 
   let exported = false;
-  el.addEventListener('lyra-export', () => (exported = true));
+  el.addEventListener('lr-export', () => (exported = true));
   const menuItem = el.shadowRoot!.querySelector('[part="menu-item"]') as HTMLButtonElement;
   menuItem.click();
   await el.updateComplete;
@@ -235,7 +235,7 @@ it('blocks export via an already-open menu item once disabled is set, even witho
 });
 
 it('closes the menu on Tab without preventing default', async () => {
-  const el = (await fixture(html`<lyra-export-button></lyra-export-button>`)) as LyraExportButton;
+  const el = (await fixture(html`<lr-export-button></lr-export-button>`)) as LyraExportButton;
   el.formats = ['csv', 'json'];
   await el.updateComplete;
   const trigger = el.shadowRoot!.querySelector('[part="trigger"]') as HTMLButtonElement;
@@ -258,7 +258,7 @@ it('closes the menu on Tab without preventing default', async () => {
 });
 
 it('does not open the menu or export when disabled', async () => {
-  const el = (await fixture(html`<lyra-export-button></lyra-export-button>`)) as LyraExportButton;
+  const el = (await fixture(html`<lr-export-button></lr-export-button>`)) as LyraExportButton;
   el.rows = rows;
   el.columns = columns;
   el.formats = ['csv', 'json'];
@@ -268,7 +268,7 @@ it('does not open the menu or export when disabled', async () => {
   expect(trigger.disabled).to.be.true;
 
   let exported = false;
-  el.addEventListener('lyra-export', () => (exported = true));
+  el.addEventListener('lr-export', () => (exported = true));
   trigger.click();
   await el.updateComplete;
   expect(el.open).to.be.false;
@@ -276,7 +276,7 @@ it('does not open the menu or export when disabled', async () => {
 });
 
 it('removes the document pointerdown listener on disconnect', async () => {
-  const el = (await fixture(html`<lyra-export-button></lyra-export-button>`)) as LyraExportButton;
+  const el = (await fixture(html`<lr-export-button></lr-export-button>`)) as LyraExportButton;
   el.formats = ['csv', 'json'];
   await el.updateComplete;
   const trigger = el.shadowRoot!.querySelector('[part="trigger"]') as HTMLButtonElement;
@@ -311,7 +311,7 @@ it('removes the document pointerdown listener on disconnect', async () => {
 });
 
 it('exposes aria-haspopup/aria-expanded only when a menu exists', async () => {
-  const el = (await fixture(html`<lyra-export-button></lyra-export-button>`)) as LyraExportButton;
+  const el = (await fixture(html`<lr-export-button></lr-export-button>`)) as LyraExportButton;
   el.formats = ['csv', 'json'];
   await el.updateComplete;
   const trigger = el.shadowRoot!.querySelector('[part="trigger"]') as HTMLButtonElement;
@@ -329,7 +329,7 @@ it('exposes aria-haspopup/aria-expanded only when a menu exists', async () => {
 });
 
 it('animates the menu open/closed with an opacity+transform transition', async () => {
-  const el = (await fixture(html`<lyra-export-button></lyra-export-button>`)) as LyraExportButton;
+  const el = (await fixture(html`<lr-export-button></lr-export-button>`)) as LyraExportButton;
   el.formats = ['csv', 'json'];
   await el.updateComplete;
   const menu = el.shadowRoot!.querySelector('[part="menu"]') as HTMLElement;
@@ -350,7 +350,7 @@ it('animates the menu open/closed with an opacity+transform transition', async (
 });
 
 it('shows a focus ring on the trigger via :focus-visible', async () => {
-  const el = (await fixture(html`<lyra-export-button></lyra-export-button>`)) as LyraExportButton;
+  const el = (await fixture(html`<lr-export-button></lr-export-button>`)) as LyraExportButton;
   await el.updateComplete;
   const trigger = el.shadowRoot!.querySelector('[part="trigger"]') as HTMLButtonElement;
   trigger.focus();
@@ -361,7 +361,7 @@ it('shows a focus ring on the trigger via :focus-visible', async () => {
 });
 
 it('shows a focus ring on menu items via :focus-visible', async () => {
-  const el = (await fixture(html`<lyra-export-button></lyra-export-button>`)) as LyraExportButton;
+  const el = (await fixture(html`<lr-export-button></lr-export-button>`)) as LyraExportButton;
   el.formats = ['csv', 'json'];
   await el.updateComplete;
   const trigger = el.shadowRoot!.querySelector('[part="trigger"]') as HTMLButtonElement;
@@ -376,7 +376,7 @@ it('shows a focus ring on menu items via :focus-visible', async () => {
 });
 
 it('links the trigger to the menu via aria-controls/id only when a menu exists', async () => {
-  const el = (await fixture(html`<lyra-export-button></lyra-export-button>`)) as LyraExportButton;
+  const el = (await fixture(html`<lr-export-button></lr-export-button>`)) as LyraExportButton;
   el.formats = ['csv', 'json'];
   await el.updateComplete;
   const trigger = el.shadowRoot!.querySelector('[part="trigger"]') as HTMLButtonElement;
@@ -391,7 +391,7 @@ it('links the trigger to the menu via aria-controls/id only when a menu exists',
 });
 
 it('opens the menu and focuses the first item on ArrowDown from the trigger', async () => {
-  const el = (await fixture(html`<lyra-export-button></lyra-export-button>`)) as LyraExportButton;
+  const el = (await fixture(html`<lr-export-button></lr-export-button>`)) as LyraExportButton;
   el.formats = ['csv', 'json'];
   await el.updateComplete;
   const trigger = el.shadowRoot!.querySelector('[part="trigger"]') as HTMLButtonElement;
@@ -406,7 +406,7 @@ it('opens the menu and focuses the first item on ArrowDown from the trigger', as
 });
 
 it('opens the menu and focuses the last item on ArrowUp from the trigger', async () => {
-  const el = (await fixture(html`<lyra-export-button></lyra-export-button>`)) as LyraExportButton;
+  const el = (await fixture(html`<lr-export-button></lr-export-button>`)) as LyraExportButton;
   el.formats = ['csv', 'json'];
   await el.updateComplete;
   const trigger = el.shadowRoot!.querySelector('[part="trigger"]') as HTMLButtonElement;
@@ -421,7 +421,7 @@ it('opens the menu and focuses the last item on ArrowUp from the trigger', async
 });
 
 it('moves focus between open menu items with ArrowDown/ArrowUp, and jumps with Home/End', async () => {
-  const el = (await fixture(html`<lyra-export-button></lyra-export-button>`)) as LyraExportButton;
+  const el = (await fixture(html`<lr-export-button></lr-export-button>`)) as LyraExportButton;
   el.formats = ['csv', 'json'];
   await el.updateComplete;
   const trigger = el.shadowRoot!.querySelector('[part="trigger"]') as HTMLButtonElement;
@@ -452,7 +452,7 @@ it('moves focus between open menu items with ArrowDown/ArrowUp, and jumps with H
 
 it('resets to closed on disconnect and re-binds the outside-click listener when reopened after reconnect', async () => {
   const el = (await fixture(
-    html`<lyra-export-button open .formats=${['csv', 'json']}></lyra-export-button>`,
+    html`<lr-export-button open .formats=${['csv', 'json']}></lr-export-button>`,
   )) as LyraExportButton;
   await el.updateComplete;
   const parent = el.parentElement!;
@@ -476,12 +476,12 @@ it('resets to closed on disconnect and re-binds the outside-click listener when 
 });
 
 it('is accessible', async () => {
-  const el = (await fixture(html`<lyra-export-button></lyra-export-button>`)) as LyraExportButton;
+  const el = (await fixture(html`<lr-export-button></lr-export-button>`)) as LyraExportButton;
   await expect(el).to.be.accessible();
 });
 
 it('is accessible with a multi-format menu open, including its accessible name', async () => {
-  const el = (await fixture(html`<lyra-export-button></lyra-export-button>`)) as LyraExportButton;
+  const el = (await fixture(html`<lr-export-button></lr-export-button>`)) as LyraExportButton;
   el.formats = ['csv', 'json'];
   el.open = true;
   await el.updateComplete;
@@ -492,10 +492,10 @@ it('is accessible with a multi-format menu open, including its accessible name',
 
 it('forwards a host aria-label to the trigger and derives the menu name from it', async () => {
   const el = (await fixture(html`
-    <lyra-export-button
+    <lr-export-button
       aria-label="Download metrics"
       .formats=${['csv', 'json']}
-    ></lyra-export-button>
+    ></lr-export-button>
   `)) as LyraExportButton;
   const trigger = el.shadowRoot!.querySelector('[part="trigger"]') as HTMLButtonElement;
   const menu = el.shadowRoot!.querySelector('[part="menu"]') as HTMLElement;
@@ -505,7 +505,7 @@ it('forwards a host aria-label to the trigger and derives the menu name from it'
 });
 
 it('focus() delegates to the native trigger button', async () => {
-  const el = (await fixture(html`<lyra-export-button></lyra-export-button>`)) as LyraExportButton;
+  const el = (await fixture(html`<lr-export-button></lr-export-button>`)) as LyraExportButton;
   el.focus();
   expect(el.shadowRoot!.activeElement?.getAttribute('part')).to.equal('trigger');
 });
@@ -516,7 +516,7 @@ it('bounds and wraps a long format menu within the positioner available inline s
     .replace(/\(\s+/g, '(')
     .replace(/\s+\)/g, ')');
   expect(css).to.include(
-    'max-inline-size: min(92vw, var(--lyra-size-20rem), var(--lyra-positioner-available-inline-size, 100vw));',
+    'max-inline-size: min(92vw, var(--lr-size-20rem), var(--lr-positioner-available-inline-size, 100vw));',
   );
   expect(css).to.include('overflow-wrap: anywhere;');
   expect(css).to.include("[part='menu-item'] { display: flex; flex-direction: column;");
@@ -525,14 +525,14 @@ it('bounds and wraps a long format menu within the positioner available inline s
 
 describe('label localization', () => {
   it('defaults the trigger button text to the built-in English "Export"', async () => {
-    const el = (await fixture(html`<lyra-export-button></lyra-export-button>`)) as LyraExportButton;
+    const el = (await fixture(html`<lr-export-button></lr-export-button>`)) as LyraExportButton;
     const trigger = el.shadowRoot!.querySelector('[part="trigger"]') as HTMLButtonElement;
     expect(trigger.textContent!.trim()).to.equal('Export');
   });
 
   it('localizes the default trigger label via .strings (exportButtonLabel) when label is left unset', async () => {
     const el = (await fixture(html`
-      <lyra-export-button .strings=${{ exportButtonLabel: 'Exporter' }}></lyra-export-button>
+      <lr-export-button .strings=${{ exportButtonLabel: 'Exporter' }}></lr-export-button>
     `)) as LyraExportButton;
     const trigger = el.shadowRoot!.querySelector('[part="trigger"]') as HTMLButtonElement;
     expect(trigger.textContent!.trim()).to.equal('Exporter');
@@ -540,7 +540,7 @@ describe('label localization', () => {
 
   it('still honors an explicit label attribute when no .strings override applies', async () => {
     const el = (await fixture(
-      html`<lyra-export-button label="Télécharger"></lyra-export-button>`,
+      html`<lr-export-button label="Télécharger"></lr-export-button>`,
     )) as LyraExportButton;
     const trigger = el.shadowRoot!.querySelector('[part="trigger"]') as HTMLButtonElement;
     expect(trigger.textContent!.trim()).to.equal('Télécharger');
@@ -548,7 +548,7 @@ describe('label localization', () => {
 
   it('lets a .strings override for exportButtonLabel win over an explicit label attribute (per resolveLyraString precedence)', async () => {
     const el = (await fixture(html`
-      <lyra-export-button label="Télécharger" .strings=${{ exportButtonLabel: 'Exporter' }}></lyra-export-button>
+      <lr-export-button label="Télécharger" .strings=${{ exportButtonLabel: 'Exporter' }}></lr-export-button>
     `)) as LyraExportButton;
     const trigger = el.shadowRoot!.querySelector('[part="trigger"]') as HTMLButtonElement;
     expect(trigger.textContent!.trim()).to.equal('Exporter');

@@ -10,13 +10,13 @@ const provenance: LyraProvenance = {
 };
 
 it('renders the provenanceEmpty state when provenance is null (the default)', async () => {
-  const el = (await fixture(html`<lyra-provenance-panel></lyra-provenance-panel>`)) as LyraProvenancePanel;
+  const el = (await fixture(html`<lr-provenance-panel></lr-provenance-panel>`)) as LyraProvenancePanel;
   expect(el.provenance).to.equal(null);
-  expect(el.shadowRoot!.querySelector('lyra-empty')).to.exist;
+  expect(el.shadowRoot!.querySelector('lr-empty')).to.exist;
 });
 
 it('renders one section per non-empty provenance key, in fixed order, and omits empty ones', async () => {
-  const el = (await fixture(html`<lyra-provenance-panel></lyra-provenance-panel>`)) as LyraProvenancePanel;
+  const el = (await fixture(html`<lr-provenance-panel></lr-provenance-panel>`)) as LyraProvenancePanel;
   el.provenance = { entities: provenance.entities };
   await el.updateComplete;
   const sections = el.shadowRoot!.querySelectorAll('[part="section"]');
@@ -25,7 +25,7 @@ it('renders one section per non-empty provenance key, in fixed order, and omits 
 });
 
 it('renders all four sections with counts when every key is present', async () => {
-  const el = (await fixture(html`<lyra-provenance-panel></lyra-provenance-panel>`)) as LyraProvenancePanel;
+  const el = (await fixture(html`<lr-provenance-panel></lr-provenance-panel>`)) as LyraProvenancePanel;
   el.provenance = provenance;
   await el.updateComplete;
   const headers = [...el.shadowRoot!.querySelectorAll('[part="header"]')].map((h) => h.textContent);
@@ -35,34 +35,34 @@ it('renders all four sections with counts when every key is present', async () =
   expect(headers.some((h) => h!.includes('Text chunks'))).to.be.true;
 });
 
-it('renders entities as lyra-entity-chip with resolved typeLabel from types', async () => {
-  const el = (await fixture(html`<lyra-provenance-panel></lyra-provenance-panel>`)) as LyraProvenancePanel;
+it('renders entities as lr-entity-chip with resolved typeLabel from types', async () => {
+  const el = (await fixture(html`<lr-provenance-panel></lr-provenance-panel>`)) as LyraProvenancePanel;
   el.provenance = { entities: provenance.entities };
   el.types = [{ id: 'person', label: 'Person' }];
   await el.updateComplete;
-  const chip = el.shadowRoot!.querySelector('lyra-entity-chip')!;
+  const chip = el.shadowRoot!.querySelector('lr-entity-chip')!;
   expect(chip.getAttribute('type-label')).to.equal('Person');
 });
 
-it('renders relationships as lyra-path-strip, communities as compact lyra-community-card, chunks as compact lyra-chunk-inspector', async () => {
-  const el = (await fixture(html`<lyra-provenance-panel></lyra-provenance-panel>`)) as LyraProvenancePanel;
+it('renders relationships as lr-path-strip, communities as compact lr-community-card, chunks as compact lr-chunk-inspector', async () => {
+  const el = (await fixture(html`<lr-provenance-panel></lr-provenance-panel>`)) as LyraProvenancePanel;
   el.provenance = provenance;
   await el.updateComplete;
-  expect(el.shadowRoot!.querySelector('lyra-path-strip')).to.exist;
-  const communityCard = el.shadowRoot!.querySelector('lyra-community-card')!;
+  expect(el.shadowRoot!.querySelector('lr-path-strip')).to.exist;
+  const communityCard = el.shadowRoot!.querySelector('lr-community-card')!;
   expect(communityCard.hasAttribute('compact')).to.be.true;
-  const inspector = el.shadowRoot!.querySelector('lyra-chunk-inspector')!;
+  const inspector = el.shadowRoot!.querySelector('lr-chunk-inspector')!;
   expect(inspector.hasAttribute('compact')).to.be.true;
 });
 
-it('all four sections start expanded, and toggling one emits lyra-toggle without collapsing the others', async () => {
-  const el = (await fixture(html`<lyra-provenance-panel></lyra-provenance-panel>`)) as LyraProvenancePanel;
+it('all four sections start expanded, and toggling one emits lr-toggle without collapsing the others', async () => {
+  const el = (await fixture(html`<lr-provenance-panel></lr-provenance-panel>`)) as LyraProvenancePanel;
   el.provenance = provenance;
   await el.updateComplete;
   const headers = el.shadowRoot!.querySelectorAll('[part="header"]');
   expect([...headers].every((h) => h.getAttribute('aria-expanded') === 'true')).to.be.true;
 
-  const listener = oneEvent(el, 'lyra-toggle');
+  const listener = oneEvent(el, 'lr-toggle');
   (headers[0] as HTMLButtonElement).click();
   const event = await listener;
   expect(event.detail.expanded).to.be.false;
@@ -71,18 +71,18 @@ it('all four sections start expanded, and toggling one emits lyra-toggle without
   expect(headers[1]!.getAttribute('aria-expanded')).to.equal('true');
 });
 
-it('re-emits child events unmodified (lyra-chunk-open bubbles through)', async () => {
-  const el = (await fixture(html`<lyra-provenance-panel></lyra-provenance-panel>`)) as LyraProvenancePanel;
+it('re-emits child events unmodified (lr-chunk-open bubbles through)', async () => {
+  const el = (await fixture(html`<lr-provenance-panel></lr-provenance-panel>`)) as LyraProvenancePanel;
   el.provenance = { chunks: provenance.chunks };
   await el.updateComplete;
-  const listener = oneEvent(el, 'lyra-chunk-open');
-  (el.shadowRoot!.querySelector('lyra-chunk-inspector')!.shadowRoot!.querySelector('[part="open-button"]') as HTMLButtonElement).click();
+  const listener = oneEvent(el, 'lr-chunk-open');
+  (el.shadowRoot!.querySelector('lr-chunk-inspector')!.shadowRoot!.querySelector('[part="open-button"]') as HTMLButtonElement).click();
   const event = await listener;
   expect(event.detail).to.deep.equal({ id: 'ch1', sourceId: 's1' });
 });
 
 it('is accessible with full provenance', async () => {
-  const el = (await fixture(html`<lyra-provenance-panel></lyra-provenance-panel>`)) as LyraProvenancePanel;
+  const el = (await fixture(html`<lr-provenance-panel></lr-provenance-panel>`)) as LyraProvenancePanel;
   el.provenance = provenance;
   await el.updateComplete;
   await expect(el).to.be.accessible();

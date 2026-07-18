@@ -19,8 +19,8 @@ export interface DockPanelCollapseChangeDetail {
 }
 
 export interface LyraDockPanelEventMap {
-  'lyra-resize': CustomEvent<DockPanelResizeDetail>;
-  'lyra-collapse-change': CustomEvent<DockPanelCollapseChangeDetail>;
+  'lr-resize': CustomEvent<DockPanelResizeDetail>;
+  'lr-collapse-change': CustomEvent<DockPanelCollapseChangeDetail>;
 }
 
 /** Arrow-key step, in px, per keydown on the resize handle. */
@@ -71,8 +71,8 @@ interface DragState {
 }
 
 /**
- * `<lyra-dock-panel>` — a single panel docked to one edge of whatever
- * contains it, resizable by dragging its inner edge. Unlike `<lyra-split>`
+ * `<lr-dock-panel>` — a single panel docked to one edge of whatever
+ * contains it, resizable by dragging its inner edge. Unlike `<lr-split>`
  * (which owns and lays out N sibling panels, and requires restructuring a
  * layout so every panel becomes its direct child), this is one self-
  * contained element you drop next to your existing content -- typically as
@@ -83,11 +83,11 @@ interface DragState {
  * `block-size` for `top`/`bottom`) and fills 100% of the cross axis, leaving
  * where it sits in the page entirely up to the consumer's own layout.
  *
- * `lyra-split` stays the right primitive for the multi-sibling-panel case;
+ * `lr-split` stays the right primitive for the multi-sibling-panel case;
  * this is the primitive for the single-edge-docked case, kept as a separate
- * component rather than a second mode bolted onto `lyra-split`'s API.
+ * component rather than a second mode bolted onto `lr-split`'s API.
  *
- * Pointer-drag-resize mirrors `lyra-split`'s pointer-capture technique
+ * Pointer-drag-resize mirrors `lr-split`'s pointer-capture technique
  * (pointerdown captures the pointer on the handle, pointermove computes a
  * new size, pointerup/pointercancel/lostpointercapture all release it) but
  * for a single draggable edge instead of N-1 dividers between N panels, and
@@ -101,17 +101,17 @@ interface DragState {
  * re-derivation for no benefit.
  *
  * Collapsing hides the slotted content but keeps the panel itself at a
- * small persistent "rail" width/height (`--lyra-dock-panel-collapsed-size`,
- * default `var(--lyra-icon-button-size)`) rather than collapsing to zero --
+ * small persistent "rail" width/height (`--lr-dock-panel-collapsed-size`,
+ * default `var(--lr-icon-button-size)`) rather than collapsing to zero --
  * a zero-size collapsed panel would have nowhere left to host the toggle
  * button that re-expands it. `size` itself is left untouched while
  * collapsed, so re-expanding restores exactly what it was.
  *
- * @customElement lyra-dock-panel
+ * @customElement lr-dock-panel
  * @slot - The panel's own content.
- * @event lyra-resize - `detail: { size }` (a `px` CSS length string), fired on every drag step,
+ * @event lr-resize - `detail: { size }` (a `px` CSS length string), fired on every drag step,
  *   drag release, and keyboard step.
- * @event lyra-collapse-change - `detail: { collapsed }`, fired whenever the collapse toggle changes
+ * @event lr-collapse-change - `detail: { collapsed }`, fired whenever the collapse toggle changes
  *   `collapsed`.
  * @csspart base - The panel root.
  * @csspart content - The wrapper around the default slot; hidden while `collapsed`.
@@ -142,7 +142,7 @@ export class LyraDockPanel extends LyraElement<LyraDockPanelEventMap> {
   // derived from) live against a *passive* container resize -- window
   // resize, a sibling collapsing, a media query -- none of which touch any
   // reactive property here, so without this they'd otherwise only refresh
-  // on the next unrelated Lit re-render. Mirrors lyra-split's own
+  // on the next unrelated Lit re-render. Mirrors lr-split's own
   // collapseResizeObserver technique, just observing the containing element
   // instead of the component's own base.
   private containerResizeObserver?: ResizeObserver;
@@ -194,7 +194,7 @@ export class LyraDockPanel extends LyraElement<LyraDockPanelEventMap> {
 
   /** +1 or -1: which physical pointer-movement/keyboard direction *grows* the panel, folding in
    *  both which edge is pinned (the opposite edge is what's dragged) and, for the inline axis
-   *  only, the current RTL-ness -- mirrors lyra-split's own horizontal+RTL delta inversion, just
+   *  only, the current RTL-ness -- mirrors lr-split's own horizontal+RTL delta inversion, just
    *  generalized to four possible pinned edges instead of split's always-LTR-authored pair order. */
   private get growSign(): 1 | -1 {
     if (this.edge === 'top') return 1;
@@ -205,7 +205,7 @@ export class LyraDockPanel extends LyraElement<LyraDockPanelEventMap> {
   }
 
   private applyHostSize(): void {
-    const value = this.collapsed ? 'var(--lyra-dock-panel-collapsed-size)' : this.size;
+    const value = this.collapsed ? 'var(--lr-dock-panel-collapsed-size)' : this.size;
     if (this.axis === 'inline') {
       this.style.inlineSize = value;
       this.style.blockSize = '';
@@ -252,7 +252,7 @@ export class LyraDockPanel extends LyraElement<LyraDockPanelEventMap> {
     // or another pointermove before a paint) must each see the size the
     // previous step just committed, not a stale pre-update box.
     this.applyHostSize();
-    this.emit<DockPanelResizeDetail>('lyra-resize', { size: this.size });
+    this.emit<DockPanelResizeDetail>('lr-resize', { size: this.size });
   }
 
   private onPointerDown = (e: PointerEvent): void => {
@@ -309,13 +309,13 @@ export class LyraDockPanel extends LyraElement<LyraDockPanelEventMap> {
 
   private toggleCollapsed = (): void => {
     this.collapsed = !this.collapsed;
-    this.emit<DockPanelCollapseChangeDetail>('lyra-collapse-change', { collapsed: this.collapsed });
+    this.emit<DockPanelCollapseChangeDetail>('lr-collapse-change', { collapsed: this.collapsed });
   };
 
   /** Rotation (deg) for the collapse-toggle's chevron: it points toward the
    *  panel's pinned edge when expanded (that's the direction clicking it
    *  will shrink toward) and away from it when collapsed (the direction
-   *  clicking it will grow toward) -- mirrors lyra-widget's collapse-button
+   *  clicking it will grow toward) -- mirrors lr-widget's collapse-button
    *  rotate-the-wrapping-part technique, generalized across four possible
    *  pinned edges and, for `start`/`end`, RTL. */
   private get toggleChevronDeg(): number {
@@ -330,7 +330,7 @@ export class LyraDockPanel extends LyraElement<LyraDockPanelEventMap> {
     const { minPx, maxPx } = this.resolveBoundsPx();
     // hit-area-exempt: a drag-handle separator (role="separator",
     // mouse-drag/arrow-key resize), not a tap-to-activate icon button --
-    // mirrors lyra-split's own [part="divider"] precedent exactly: the
+    // mirrors lr-split's own [part="divider"] precedent exactly: the
     // visible bar stays a slim 3px while [part='handle']::before (see
     // dock-panel.styles.ts) widens the real pointer-capture hit-slop.
     return html`<div
@@ -378,7 +378,7 @@ export class LyraDockPanel extends LyraElement<LyraDockPanelEventMap> {
 
 declare global {
   interface HTMLElementTagNameMap {
-    'lyra-dock-panel': LyraDockPanel;
+    'lr-dock-panel': LyraDockPanel;
   }
 }
 

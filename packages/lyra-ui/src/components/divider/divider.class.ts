@@ -6,9 +6,9 @@ import { styles } from './divider.styles.js';
 export type DividerOrientation = 'horizontal' | 'vertical';
 
 /**
- * `<lyra-divider>` — a themeable semantic separator.
+ * `<lr-divider>` — a themeable semantic separator.
  *
- * @customElement lyra-divider
+ * @customElement lr-divider
  * @csspart base - The separator element.
  */
 export class LyraDivider extends LyraElement {
@@ -16,4 +16,4 @@ export class LyraDivider extends LyraElement {
   @property({ reflect: true }) orientation: DividerOrientation = 'horizontal';
   render(): TemplateResult { return html`<hr part="base" role="separator" aria-orientation=${this.orientation}>`; }
 }
-declare global { interface HTMLElementTagNameMap { 'lyra-divider': LyraDivider; } }
+declare global { interface HTMLElementTagNameMap { 'lr-divider': LyraDivider; } }

@@ -1,6 +1,6 @@
 /*
  * Utility classes for docs/story authoring only (light DOM in the preview
- * iframe) — lyra-* components stay shadow-DOM + --lyra-* design tokens, per
+ * iframe) — lr-* components stay shadow-DOM + --lr-* design tokens, per
  * AGENTS.md. This is not imported by any component.
  */
 @import 'tailwindcss';
@@ -8,18 +8,18 @@
 html,
 body {
   min-block-size: 100%;
-  background: var(--lyra-theme-color-surface-default, #ffffff);
-  color: var(--lyra-theme-color-text-normal, #1f2328);
+  background: var(--lr-theme-color-surface-default, #ffffff);
+  color: var(--lr-theme-color-text-normal, #1f2328);
   color-scheme: inherit;
 }
 
 body {
   margin: 0;
-  font-family: var(--lyra-theme-font-family-body, system-ui, sans-serif);
+  font-family: var(--lr-theme-font-family-body, system-ui, sans-serif);
   background:
     radial-gradient(circle at 8% 0%, rgb(141 231 255 / 7%), transparent 24rem),
     radial-gradient(circle at 100% 0%, rgb(167 139 250 / 8%), transparent 30rem),
-    var(--lyra-theme-color-surface-default, #ffffff);
+    var(--lr-theme-color-surface-default, #ffffff);
   line-height: 1.5;
 }
 
@@ -30,21 +30,21 @@ body {
 }
 
 /* Shared light-DOM framing for stories. Components themselves remain shadow-DOM and token-driven. */
-.lyra-story-stack { display: flex; flex-direction: column; gap: 1rem; }
-.lyra-story-row { display: flex; flex-wrap: wrap; align-items: center; gap: 1rem; }
-.lyra-story-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr)); gap: 1rem; }
-.lyra-story-frame {
+.lr-story-stack { display: flex; flex-direction: column; gap: 1rem; }
+.lr-story-row { display: flex; flex-wrap: wrap; align-items: center; gap: 1rem; }
+.lr-story-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr)); gap: 1rem; }
+.lr-story-frame {
   box-sizing: border-box;
   max-inline-size: 48rem;
   padding: clamp(1rem, 3vw, 2rem);
-  border: 1px solid var(--lyra-color-border, #d0d7de);
-  border-radius: var(--lyra-radius-l, .875rem);
-  background: color-mix(in srgb, var(--lyra-color-surface, #fff) 88%, transparent);
+  border: 1px solid var(--lr-color-border, #d0d7de);
+  border-radius: var(--lr-radius-l, .875rem);
+  background: color-mix(in srgb, var(--lr-color-surface, #fff) 88%, transparent);
   box-shadow: 0 .75rem 2.5rem rgb(20 30 60 / 7%);
 }
-.lyra-story-caption {
+.lr-story-caption {
   margin: 0 0 .5rem;
-  color: var(--lyra-color-text-quiet, #656d76);
+  color: var(--lr-color-text-quiet, #656d76);
   font-size: .75rem;
   font-weight: 700;
   letter-spacing: .08em;

@@ -127,7 +127,7 @@ function status(el: LyraPushToTalk): string {
 // -- Defaults ----------------------------------------------------------
 
 it('defaults to mode=hold, state=idle, and every capture prop at its documented default', async () => {
-  const el = (await fixture(html`<lyra-push-to-talk></lyra-push-to-talk>`)) as LyraPushToTalk;
+  const el = (await fixture(html`<lr-push-to-talk></lr-push-to-talk>`)) as LyraPushToTalk;
   expect(el.mode).to.equal('hold');
   expect(el.state).to.equal('idle');
   expect(el.getAttribute('data-state')).to.equal('idle');
@@ -148,7 +148,7 @@ it('renders the trigger disabled and shows the unsupported status when MediaReco
   // @ts-expect-error deliberately undefining a browser global for the test
   delete window.MediaRecorder;
   try {
-    const el = (await fixture(html`<lyra-push-to-talk></lyra-push-to-talk>`)) as LyraPushToTalk;
+    const el = (await fixture(html`<lr-push-to-talk></lr-push-to-talk>`)) as LyraPushToTalk;
     expect(trigger(el).disabled).to.be.true;
     expect(status(el)).to.equal('Recording is not supported in this browser');
     expect(await el.start()).to.be.false;
@@ -160,13 +160,13 @@ it('renders the trigger disabled and shows the unsupported status when MediaReco
 // -- Hold mode: full lifecycle --------------------------------------------
 
 describe('hold mode', () => {
-  it('pointerdown starts a take (emitting lyra-record-start with the stream) and pointerup stops it (emitting lyra-record-stop with a blob and durationMs)', async () => {
+  it('pointerdown starts a take (emitting lr-record-start with the stream) and pointerup stops it (emitting lr-record-stop with a blob and durationMs)', async () => {
     const restore = stubSuccessfulCapture();
     try {
-      const el = (await fixture(html`<lyra-push-to-talk></lyra-push-to-talk>`)) as LyraPushToTalk;
+      const el = (await fixture(html`<lr-push-to-talk></lr-push-to-talk>`)) as LyraPushToTalk;
       const btn = trigger(el);
 
-      const startPromise = oneEvent(el, 'lyra-record-start');
+      const startPromise = oneEvent(el, 'lr-record-start');
       btn.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, pointerId: 1 }));
       const startEvent = await startPromise;
       expect(startEvent.detail.stream).to.exist;
@@ -174,7 +174,7 @@ describe('hold mode', () => {
       expect(el.getAttribute('data-state')).to.equal('recording');
       expect(el.stream).to.equal(startEvent.detail.stream);
 
-      const stopPromise = oneEvent(el, 'lyra-record-stop');
+      const stopPromise = oneEvent(el, 'lr-record-stop');
       btn.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, pointerId: 1 }));
       const stopEvent = await stopPromise;
       expect(stopEvent.detail.blob).to.be.instanceOf(Blob);
@@ -187,17 +187,17 @@ describe('hold mode', () => {
   });
 
   it('renders no aria-pressed in hold mode (it is not a toggle button)', async () => {
-    const el = (await fixture(html`<lyra-push-to-talk></lyra-push-to-talk>`)) as LyraPushToTalk;
+    const el = (await fixture(html`<lr-push-to-talk></lr-push-to-talk>`)) as LyraPushToTalk;
     expect(trigger(el).hasAttribute('aria-pressed')).to.be.false;
   });
 
   it('ignores a repeated (auto-repeat) Enter keydown -- only the first keydown starts a take', async () => {
     const restore = stubSuccessfulCapture();
     try {
-      const el = (await fixture(html`<lyra-push-to-talk></lyra-push-to-talk>`)) as LyraPushToTalk;
+      const el = (await fixture(html`<lr-push-to-talk></lr-push-to-talk>`)) as LyraPushToTalk;
       const btn = trigger(el);
       let starts = 0;
-      el.addEventListener('lyra-record-start', () => starts++);
+      el.addEventListener('lr-record-start', () => starts++);
 
       btn.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, repeat: false }));
       await aTimeout(20);
@@ -216,13 +216,13 @@ describe('hold mode', () => {
   it('stops an in-progress take on blur', async () => {
     const restore = stubSuccessfulCapture();
     try {
-      const el = (await fixture(html`<lyra-push-to-talk></lyra-push-to-talk>`)) as LyraPushToTalk;
+      const el = (await fixture(html`<lr-push-to-talk></lr-push-to-talk>`)) as LyraPushToTalk;
       const btn = trigger(el);
-      const startPromise = oneEvent(el, 'lyra-record-start');
+      const startPromise = oneEvent(el, 'lr-record-start');
       btn.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, pointerId: 1 }));
       await startPromise;
 
-      const stopPromise = oneEvent(el, 'lyra-record-stop');
+      const stopPromise = oneEvent(el, 'lr-record-stop');
       btn.dispatchEvent(new FocusEvent('blur', { bubbles: true }));
       await stopPromise;
       expect(el.state).to.equal('idle');
@@ -234,7 +234,7 @@ describe('hold mode', () => {
   it('releasing (pointerup) while a permission request is still pending cancels it instead of letting recording start (regression)', async () => {
     const { restore, resolve } = stubDeferredCapture();
     try {
-      const el = (await fixture(html`<lyra-push-to-talk></lyra-push-to-talk>`)) as LyraPushToTalk;
+      const el = (await fixture(html`<lr-push-to-talk></lr-push-to-talk>`)) as LyraPushToTalk;
       const btn = trigger(el);
       btn.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, pointerId: 1 }));
       await el.updateComplete;
@@ -242,7 +242,7 @@ describe('hold mode', () => {
 
       btn.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, pointerId: 1 }));
 
-      const cancelPromise = oneEvent(el, 'lyra-record-cancel');
+      const cancelPromise = oneEvent(el, 'lr-record-cancel');
       resolve();
       await cancelPromise;
       expect(el.state).to.equal('idle');
@@ -254,7 +254,7 @@ describe('hold mode', () => {
   it('releasing (Enter keyup) while a permission request is still pending cancels it instead of letting recording start (regression)', async () => {
     const { restore, resolve } = stubDeferredCapture();
     try {
-      const el = (await fixture(html`<lyra-push-to-talk></lyra-push-to-talk>`)) as LyraPushToTalk;
+      const el = (await fixture(html`<lr-push-to-talk></lr-push-to-talk>`)) as LyraPushToTalk;
       const btn = trigger(el);
       btn.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
       await el.updateComplete;
@@ -262,7 +262,7 @@ describe('hold mode', () => {
 
       btn.dispatchEvent(new KeyboardEvent('keyup', { key: 'Enter', bubbles: true }));
 
-      const cancelPromise = oneEvent(el, 'lyra-record-cancel');
+      const cancelPromise = oneEvent(el, 'lr-record-cancel');
       resolve();
       await cancelPromise;
       expect(el.state).to.equal('idle');
@@ -278,18 +278,18 @@ describe('toggle mode', () => {
   it('click starts and a second click stops, toggling aria-pressed', async () => {
     const restore = stubSuccessfulCapture();
     try {
-      const el = (await fixture(html`<lyra-push-to-talk mode="toggle"></lyra-push-to-talk>`)) as LyraPushToTalk;
+      const el = (await fixture(html`<lr-push-to-talk mode="toggle"></lr-push-to-talk>`)) as LyraPushToTalk;
       const btn = trigger(el);
       expect(btn.getAttribute('aria-pressed')).to.equal('false');
 
-      const startPromise = oneEvent(el, 'lyra-record-start');
+      const startPromise = oneEvent(el, 'lr-record-start');
       btn.click();
       await startPromise;
       await el.updateComplete;
       expect(btn.getAttribute('aria-pressed')).to.equal('true');
       expect(el.state).to.equal('recording');
 
-      const stopPromise = oneEvent(el, 'lyra-record-stop');
+      const stopPromise = oneEvent(el, 'lr-record-stop');
       btn.click();
       await stopPromise;
       await el.updateComplete;
@@ -303,10 +303,10 @@ describe('toggle mode', () => {
   it('a pointerdown/pointerup pair does nothing in toggle mode', async () => {
     const restore = stubSuccessfulCapture();
     try {
-      const el = (await fixture(html`<lyra-push-to-talk mode="toggle"></lyra-push-to-talk>`)) as LyraPushToTalk;
+      const el = (await fixture(html`<lr-push-to-talk mode="toggle"></lr-push-to-talk>`)) as LyraPushToTalk;
       const btn = trigger(el);
       let fired = false;
-      el.addEventListener('lyra-record-start', () => (fired = true));
+      el.addEventListener('lr-record-start', () => (fired = true));
       btn.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, pointerId: 1 }));
       btn.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, pointerId: 1 }));
       await aTimeout(20);
@@ -319,18 +319,18 @@ describe('toggle mode', () => {
 
 // -- Escape cancels in both modes ------------------------------------------
 
-it('Escape cancels an in-progress take, firing lyra-record-cancel (never lyra-record-stop)', async () => {
+it('Escape cancels an in-progress take, firing lr-record-cancel (never lr-record-stop)', async () => {
   const restore = stubSuccessfulCapture();
   try {
-    const el = (await fixture(html`<lyra-push-to-talk></lyra-push-to-talk>`)) as LyraPushToTalk;
+    const el = (await fixture(html`<lr-push-to-talk></lr-push-to-talk>`)) as LyraPushToTalk;
     const btn = trigger(el);
-    const startPromise = oneEvent(el, 'lyra-record-start');
+    const startPromise = oneEvent(el, 'lr-record-start');
     btn.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, pointerId: 1 }));
     await startPromise;
 
     let stopped = false;
-    el.addEventListener('lyra-record-stop', () => (stopped = true));
-    const cancelPromise = oneEvent(el, 'lyra-record-cancel');
+    el.addEventListener('lr-record-stop', () => (stopped = true));
+    const cancelPromise = oneEvent(el, 'lr-record-cancel');
     btn.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
     await cancelPromise;
     expect(stopped).to.be.false;
@@ -343,10 +343,10 @@ it('Escape cancels an in-progress take, firing lyra-record-cancel (never lyra-re
 it('the public cancel() method works identically to the Escape key', async () => {
   const restore = stubSuccessfulCapture();
   try {
-    const el = (await fixture(html`<lyra-push-to-talk></lyra-push-to-talk>`)) as LyraPushToTalk;
+    const el = (await fixture(html`<lr-push-to-talk></lr-push-to-talk>`)) as LyraPushToTalk;
     await el.start();
     expect(el.state).to.equal('recording');
-    const cancelPromise = oneEvent(el, 'lyra-record-cancel');
+    const cancelPromise = oneEvent(el, 'lr-record-cancel');
     el.cancel();
     await cancelPromise;
     expect(el.state).to.equal('idle');
@@ -357,11 +357,11 @@ it('the public cancel() method works identically to the Escape key', async () =>
 
 // -- Permission / error paths -----------------------------------------------
 
-it('resolves start() false and transitions to denied on NotAllowedError, emitting lyra-record-error', async () => {
+it('resolves start() false and transitions to denied on NotAllowedError, emitting lr-record-error', async () => {
   const restore = stubDeniedCapture();
   try {
-    const el = (await fixture(html`<lyra-push-to-talk></lyra-push-to-talk>`)) as LyraPushToTalk;
-    const errorPromise = oneEvent(el, 'lyra-record-error');
+    const el = (await fixture(html`<lr-push-to-talk></lr-push-to-talk>`)) as LyraPushToTalk;
+    const errorPromise = oneEvent(el, 'lr-record-error');
     const started = await el.start();
     const errorEvent = await errorPromise;
     expect(started).to.be.false;
@@ -377,7 +377,7 @@ it('resolves start() false and transitions to denied on NotAllowedError, emittin
 it('transitions to the generic error state for a non-permission failure', async () => {
   const restore = stubErroringCapture();
   try {
-    const el = (await fixture(html`<lyra-push-to-talk></lyra-push-to-talk>`)) as LyraPushToTalk;
+    const el = (await fixture(html`<lr-push-to-talk></lr-push-to-talk>`)) as LyraPushToTalk;
     await el.start();
     expect(el.state).to.equal('error');
     expect(status(el)).to.equal('Recording failed');
@@ -389,7 +389,7 @@ it('transitions to the generic error state for a non-permission failure', async 
 it('disabled suppresses start() entirely', async () => {
   const restore = stubSuccessfulCapture();
   try {
-    const el = (await fixture(html`<lyra-push-to-talk disabled></lyra-push-to-talk>`)) as LyraPushToTalk;
+    const el = (await fixture(html`<lr-push-to-talk disabled></lr-push-to-talk>`)) as LyraPushToTalk;
     expect(await el.start()).to.be.false;
     expect(el.state).to.equal('idle');
   } finally {
@@ -399,23 +399,23 @@ it('disabled suppresses start() entirely', async () => {
 
 // -- Chunked streaming -------------------------------------------------------
 
-it('emits lyra-record-chunk once per timeslice when timeslice-ms > 0, and never when it is 0', async () => {
+it('emits lr-record-chunk once per timeslice when timeslice-ms > 0, and never when it is 0', async () => {
   const restore = stubSuccessfulCapture();
   try {
     const el = (await fixture(
-      html`<lyra-push-to-talk timeslice-ms="250"></lyra-push-to-talk>`,
+      html`<lr-push-to-talk timeslice-ms="250"></lr-push-to-talk>`,
     )) as LyraPushToTalk;
     const chunks: Blob[] = [];
-    el.addEventListener('lyra-record-chunk', (e) => chunks.push((e as CustomEvent<{ blob: Blob }>).detail.blob));
+    el.addEventListener('lr-record-chunk', (e) => chunks.push((e as CustomEvent<{ blob: Blob }>).detail.blob));
     await el.start();
     const recorder = (el as unknown as { recorder: FakeMediaRecorder }).recorder;
     recorder.ondataavailable!({ data: new Blob(['a']) });
     recorder.ondataavailable!({ data: new Blob(['b']) });
     expect(chunks.length).to.equal(2);
 
-    const noSlice = (await fixture(html`<lyra-push-to-talk></lyra-push-to-talk>`)) as LyraPushToTalk;
+    const noSlice = (await fixture(html`<lr-push-to-talk></lr-push-to-talk>`)) as LyraPushToTalk;
     let fired = false;
-    noSlice.addEventListener('lyra-record-chunk', () => (fired = true));
+    noSlice.addEventListener('lr-record-chunk', () => (fired = true));
     await noSlice.start();
     (noSlice as unknown as { recorder: FakeMediaRecorder }).recorder.ondataavailable!({ data: new Blob(['c']) });
     expect(fired).to.be.false;
@@ -426,11 +426,11 @@ it('emits lyra-record-chunk once per timeslice when timeslice-ms > 0, and never 
 
 // -- Level meter -------------------------------------------------------------
 
-it('emits lyra-level while recording when level-events is set', async () => {
+it('emits lr-level while recording when level-events is set', async () => {
   const restore = stubSuccessfulCapture();
   try {
-    const el = (await fixture(html`<lyra-push-to-talk level-events></lyra-push-to-talk>`)) as LyraPushToTalk;
-    const levelPromise = oneEvent(el, 'lyra-level');
+    const el = (await fixture(html`<lr-push-to-talk level-events></lr-push-to-talk>`)) as LyraPushToTalk;
+    const levelPromise = oneEvent(el, 'lr-level');
     await el.start();
     const levelEvent = await levelPromise;
     expect(levelEvent.detail.level).to.be.within(0, 1);
@@ -440,12 +440,12 @@ it('emits lyra-level while recording when level-events is set', async () => {
   }
 });
 
-it('emits no lyra-level when level-events is unset (the default)', async () => {
+it('emits no lr-level when level-events is unset (the default)', async () => {
   const restore = stubSuccessfulCapture();
   try {
-    const el = (await fixture(html`<lyra-push-to-talk></lyra-push-to-talk>`)) as LyraPushToTalk;
+    const el = (await fixture(html`<lr-push-to-talk></lr-push-to-talk>`)) as LyraPushToTalk;
     let fired = false;
-    el.addEventListener('lyra-level', () => (fired = true));
+    el.addEventListener('lr-level', () => (fired = true));
     await el.start();
     await aTimeout(50);
     expect(fired).to.be.false;
@@ -460,9 +460,9 @@ it('auto-stops at max-duration-ms', async () => {
   const restore = stubSuccessfulCapture();
   try {
     const el = (await fixture(
-      html`<lyra-push-to-talk max-duration-ms="40"></lyra-push-to-talk>`,
+      html`<lr-push-to-talk max-duration-ms="40"></lr-push-to-talk>`,
     )) as LyraPushToTalk;
-    const stopPromise = oneEvent(el, 'lyra-record-stop');
+    const stopPromise = oneEvent(el, 'lr-record-stop');
     await el.start();
     await stopPromise;
     expect(el.state).to.equal('idle');
@@ -482,7 +482,7 @@ it('clamps a NaN/oversized timeslice-ms before it reaches MediaRecorder.start() 
     return originalStart.call(this, timeslice);
   };
   try {
-    const el = (await fixture(html`<lyra-push-to-talk></lyra-push-to-talk>`)) as LyraPushToTalk;
+    const el = (await fixture(html`<lr-push-to-talk></lr-push-to-talk>`)) as LyraPushToTalk;
     el.timesliceMs = Number.MAX_SAFE_INTEGER;
     await el.start();
     expect(startArgs).to.have.lengthOf(1);
@@ -503,7 +503,7 @@ it('clamps an oversized max-duration-ms to the browser timer ceiling instead of 
     return originalSetTimeout(handler, delay, ...args);
   }) as typeof window.setTimeout;
   try {
-    const el = (await fixture(html`<lyra-push-to-talk></lyra-push-to-talk>`)) as LyraPushToTalk;
+    const el = (await fixture(html`<lr-push-to-talk></lr-push-to-talk>`)) as LyraPushToTalk;
     el.maxDurationMs = Number.MAX_SAFE_INTEGER;
     await el.start();
     expect(delays.length).to.be.greaterThan(0);
@@ -518,14 +518,14 @@ it('clamps an oversized max-duration-ms to the browser timer ceiling instead of 
 it('never schedules a max-duration-ms auto-stop for a NaN or negative value (the existing `> 0` guard already excludes them)', async () => {
   const restore = stubSuccessfulCapture();
   try {
-    const nan = (await fixture(html`<lyra-push-to-talk></lyra-push-to-talk>`)) as LyraPushToTalk;
+    const nan = (await fixture(html`<lr-push-to-talk></lr-push-to-talk>`)) as LyraPushToTalk;
     nan.maxDurationMs = NaN;
     await nan.start();
     await aTimeout(30);
     expect(nan.state).to.equal('recording'); // never auto-stopped
     nan.cancel();
 
-    const negative = (await fixture(html`<lyra-push-to-talk></lyra-push-to-talk>`)) as LyraPushToTalk;
+    const negative = (await fixture(html`<lr-push-to-talk></lr-push-to-talk>`)) as LyraPushToTalk;
     negative.maxDurationMs = -100;
     await negative.start();
     await aTimeout(30);
@@ -539,14 +539,14 @@ it('never schedules a max-duration-ms auto-stop for a NaN or negative value (the
 // -- Announcements -----------------------------------------------------------
 
 function liveRegionText(el: LyraPushToTalk): string {
-  const region = el.shadowRoot!.querySelector('lyra-live-region')!;
+  const region = el.shadowRoot!.querySelector('lr-live-region')!;
   return region.shadowRoot!.querySelector('[part="region"]')!.textContent ?? '';
 }
 
 it('announces start/stop/cancel via the internal live region', async () => {
   const restore = stubSuccessfulCapture();
   try {
-    const el = (await fixture(html`<lyra-push-to-talk></lyra-push-to-talk>`)) as LyraPushToTalk;
+    const el = (await fixture(html`<lr-push-to-talk></lr-push-to-talk>`)) as LyraPushToTalk;
     await el.start();
     await aTimeout(20);
     expect(liveRegionText(el)).to.equal('Recording started');
@@ -562,10 +562,10 @@ it('announces start/stop/cancel via the internal live region', async () => {
 
 it('slots override the default icon and recording-icon glyphs', async () => {
   const el = (await fixture(html`
-    <lyra-push-to-talk>
+    <lr-push-to-talk>
       <span slot="icon">mic</span>
       <span slot="recording-icon">rec</span>
-    </lyra-push-to-talk>
+    </lr-push-to-talk>
   `)) as LyraPushToTalk;
   const iconSlot = el.shadowRoot!.querySelector('[part="icon"] slot') as HTMLSlotElement;
   expect(iconSlot.assignedElements()[0].textContent).to.equal('mic');
@@ -574,14 +574,14 @@ it('slots override the default icon and recording-icon glyphs', async () => {
 // -- Accessibility -------------------------------------------------------
 
 it('is accessible in hold mode', async () => {
-  const el = (await fixture(html`<lyra-push-to-talk></lyra-push-to-talk>`)) as LyraPushToTalk;
+  const el = (await fixture(html`<lr-push-to-talk></lr-push-to-talk>`)) as LyraPushToTalk;
   await expect(el).to.be.accessible();
 });
 
 it('is accessible in toggle mode while recording', async () => {
   const restore = stubSuccessfulCapture();
   try {
-    const el = (await fixture(html`<lyra-push-to-talk mode="toggle"></lyra-push-to-talk>`)) as LyraPushToTalk;
+    const el = (await fixture(html`<lr-push-to-talk mode="toggle"></lr-push-to-talk>`)) as LyraPushToTalk;
     await el.start();
     await expect(el).to.be.accessible();
   } finally {
@@ -593,9 +593,9 @@ it('is accessible in toggle mode while recording', async () => {
 
 it('localizes trigger labels and status text via this.localize()', async () => {
   const el = (await fixture(html`
-    <lyra-push-to-talk
+    <lr-push-to-talk
       .strings=${{ pushToTalkHold: 'Maintenir pour parler', pushToTalkDenied: 'Accès micro refusé' }}
-    ></lyra-push-to-talk>
+    ></lr-push-to-talk>
   `)) as LyraPushToTalk;
   expect(trigger(el).getAttribute('aria-label')).to.equal('Maintenir pour parler');
 });
@@ -604,7 +604,7 @@ it('localizes trigger labels and status text via this.localize()', async () => {
 
 it('a host-level aria-label overrides the computed trigger label', async () => {
   const el = (await fixture(
-    html`<lyra-push-to-talk aria-label="Talk to the assistant"></lyra-push-to-talk>`,
+    html`<lr-push-to-talk aria-label="Talk to the assistant"></lr-push-to-talk>`,
   )) as LyraPushToTalk;
   expect(trigger(el).getAttribute('aria-label')).to.equal('Talk to the assistant');
 });

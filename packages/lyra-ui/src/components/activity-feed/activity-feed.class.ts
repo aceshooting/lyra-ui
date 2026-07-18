@@ -17,7 +17,7 @@ export type ActivityEntryTone = 'neutral' | 'brand' | 'success' | 'warning' | 'd
 export interface ActivityEntry {
   id: string;
   text: string;
-  /** Literal icon hint (e.g. an emoji), like `<lyra-tool-call-chip>`'s `icon`. A small tone dot
+  /** Literal icon hint (e.g. an emoji), like `<lr-tool-call-chip>`'s `icon`. A small tone dot
    *  renders in its place when omitted. */
   icon?: string;
   /** Invalid strings are treated as unset. */
@@ -37,15 +37,15 @@ export interface ActivityFeedFollowChangeDetail {
 }
 
 export interface LyraActivityFeedEventMap {
-  'lyra-toggle': CustomEvent<ActivityFeedToggleDetail>;
-  'lyra-follow-change': CustomEvent<ActivityFeedFollowChangeDetail>;
+  'lr-toggle': CustomEvent<ActivityFeedToggleDetail>;
+  'lr-follow-change': CustomEvent<ActivityFeedFollowChangeDetail>;
 }
 
 /** Close enough to the body's own max scroll position to count as anchored there -- identical
- *  value and rationale to `<lyra-thinking-panel>`'s `NEAR_BOTTOM_PX`. */
+ *  value and rationale to `<lr-thinking-panel>`'s `NEAR_BOTTOM_PX`. */
 const NEAR_BOTTOM_PX = 48;
 
-/** `true`-defaulting boolean attribute converter, identical shape to `<lyra-task-list>`'s
+/** `true`-defaulting boolean attribute converter, identical shape to `<lr-task-list>`'s
  *  `trueDefaultBooleanConverter` -- duplicated locally per this library's convention of not
  *  sharing these tiny converters across independently-consumable component files. Lit's default
  *  presence-based `type: Boolean` can never be set back to `false` from a plain-HTML attribute
@@ -64,7 +64,7 @@ const trueDefaultBooleanConverter: ComplexAttributeConverter<boolean> = {
 };
 
 /** `hour:minute` in the component's effective locale -- identical algorithm to
- *  `<lyra-chat-message>`'s own `defaultFormatTimestamp`, duplicated locally. Uses the shared
+ *  `<lr-chat-message>`'s own `defaultFormatTimestamp`, duplicated locally. Uses the shared
  *  per-locale formatter cache: this runs once per entry on every render of a live feed, and
  *  constructing an `Intl.DateTimeFormat` per call is an ICU locale-data lookup that would
  *  otherwise repeat for every visible row on every appended entry. `effectiveLocale` always
@@ -74,23 +74,23 @@ function defaultFormatTimestamp(date: Date, locale: string): string {
 }
 
 /**
- * `<lyra-activity-feed>` — an append-only streaming log of granular agent actions ("Searching the
+ * `<lr-activity-feed>` — an append-only streaming log of granular agent actions ("Searching the
  * web…", "Read src/index.ts"), collapsing to a localized "Completed N steps" summary once the run
  * is over. Entries never change state once added (a step whose status mutates in place belongs to
- * `<lyra-task-list>` instead). Implements the shared follow (stick-to-bottom) contract: `follow`
+ * `<lr-task-list>` instead). Implements the shared follow (stick-to-bottom) contract: `follow`
  * is a component-managed, host-assignable property, released on user scroll-up and re-engaged at
- * the bottom, firing `lyra-follow-change` on every transition (mount excluded). At/above
- * `virtualizeThreshold` entries, the body renders through an internal `<lyra-virtual-list>`
+ * the bottom, firing `lr-follow-change` on every transition (mount excluded). At/above
+ * `virtualizeThreshold` entries, the body renders through an internal `<lr-virtual-list>`
  * instead of a plain keyed list — same list semantics either way, keyed by `id`.
  *
  * Each entry's `text` renders as plain text by default; a host needing richer per-entry content
  * (rendered markdown, a trailing tool-call chip list, etc.) sets `renderText` to fully replace it,
  * identically whether or not the feed is currently virtualized.
  *
- * @customElement lyra-activity-feed
- * @event lyra-toggle - The header was activated, expanding or collapsing the body. `detail: {
+ * @customElement lr-activity-feed
+ * @event lr-toggle - The header was activated, expanding or collapsing the body. `detail: {
  *   expanded }`.
- * @event lyra-follow-change - `follow` released or re-engaged (user scroll, or a host
+ * @event lr-follow-change - `follow` released or re-engaged (user scroll, or a host
  *   assignment). `detail: { following }`. Never fired for the value `follow` happens to mount
  *   with.
  * @csspart base - The outer container.
@@ -106,7 +106,7 @@ function defaultFormatTimestamp(date: Date, locale: string): string {
  *   content replaces this part entirely.
  * @csspart entry-timestamp - The formatted timestamp, only rendered while `showTimestamps` and a
  *   valid `timestamp` is set.
- * @cssprop [--lyra-activity-feed-max-height=16rem] - Cap on how tall the expanded body grows
+ * @cssprop [--lr-activity-feed-max-height=16rem] - Cap on how tall the expanded body grows
  *   before it scrolls internally (non-virtualized mode); also sizes the internal virtual-list.
  */
 export class LyraActivityFeed extends LyraElement<LyraActivityFeedEventMap> {
@@ -138,22 +138,22 @@ export class LyraActivityFeed extends LyraElement<LyraActivityFeedEventMap> {
 
   /** Overrides the default plain-text `[part="entry-text"]` rendering of every entry with an
    *  arbitrary `TemplateResult` (e.g. rendered markdown, or markdown plus a trailing list of
-   *  `<lyra-tool-call-chip>`s) — the returned content fully replaces `[part="entry-text"]` rather
+   *  `<lr-tool-call-chip>`s) — the returned content fully replaces `[part="entry-text"]` rather
    *  than augmenting it, the same way `formatTimestamp` fully replaces the default timestamp
    *  formatting. Applies identically whether or not the feed is currently virtualized, since both
    *  paths render every entry through the same internal template. */
   @property({ attribute: false }) renderText?: (entry: ActivityEntry) => TemplateResult;
 
-  /** At/above this entry count, the body renders through an internal `<lyra-virtual-list>`. */
+  /** At/above this entry count, the body renders through an internal `<lr-virtual-list>`. */
   @property({ type: Number, attribute: 'virtualize-threshold' }) virtualizeThreshold = 200;
 
-  @query('lyra-live-region') private liveRegion?: LyraLiveRegion;
-  @query('lyra-virtual-list') private virtualListEl?: LyraVirtualList;
+  @query('lr-live-region') private liveRegion?: LyraLiveRegion;
+  @query('lr-virtual-list') private virtualListEl?: LyraVirtualList;
 
   private readonly headerId = nextId('activity-feed-header');
   private readonly bodyId = nextId('activity-feed-body');
 
-  /** `true` until the first completed update -- gates `lyra-follow-change` and the mode-transition
+  /** `true` until the first completed update -- gates `lr-follow-change` and the mode-transition
    *  announcement so mounting with a non-default `follow`/`mode` never itself fires either. */
   private isMounting = true;
 
@@ -183,7 +183,7 @@ export class LyraActivityFeed extends LyraElement<LyraActivityFeedEventMap> {
     if ((changed.has('expanded') || changed.has('mode')) && this.expanded && this.mode === 'live') {
       // Resetting to "anchored" on expand/live-transition, in willUpdate (not updated) so this
       // stays part of the SAME update pass rather than scheduling a second one -- identical
-      // willUpdate/updated split rationale to lyra-generation-status's elapsedMs computation.
+      // willUpdate/updated split rationale to lr-generation-status's elapsedMs computation.
       this.follow = true;
     }
   }
@@ -193,7 +193,7 @@ export class LyraActivityFeed extends LyraElement<LyraActivityFeedEventMap> {
     this.isMounting = false;
 
     if (!wasMounting && changed.has('follow')) {
-      this.emit<ActivityFeedFollowChangeDetail>('lyra-follow-change', { following: this.follow });
+      this.emit<ActivityFeedFollowChangeDetail>('lr-follow-change', { following: this.follow });
     }
 
     if (!wasMounting && changed.has('mode')) {
@@ -226,7 +226,7 @@ export class LyraActivityFeed extends LyraElement<LyraActivityFeedEventMap> {
     this.scrollRafId = requestAnimationFrame(() => {
       this.scrollRafId = undefined;
       // Re-check inside the callback -- the reader may have scrolled away in the window between
-      // scheduling and firing (identical rationale/pattern to lyra-thinking-panel's own
+      // scheduling and firing (identical rationale/pattern to lr-thinking-panel's own
       // onContentMutated rAF coalescing).
       if (!(this.expanded && this.mode === 'live' && this.follow)) return;
       const body = this.renderRoot.querySelector('[part="body"]') as HTMLElement | null;
@@ -245,7 +245,7 @@ export class LyraActivityFeed extends LyraElement<LyraActivityFeedEventMap> {
 
   private toggle = (): void => {
     this.expanded = !this.expanded;
-    this.emit<ActivityFeedToggleDetail>('lyra-toggle', { expanded: this.expanded });
+    this.emit<ActivityFeedToggleDetail>('lr-toggle', { expanded: this.expanded });
   };
 
   private onBodyScroll = (e: Event): void => {
@@ -283,6 +283,7 @@ export class LyraActivityFeed extends LyraElement<LyraActivityFeedEventMap> {
 
   render(): TemplateResult {
     const label = this.label === 'Activity' ? this.localize('activityFeedLabel') : this.label;
+    const ariaLabel = this.getAttribute('aria-label') || label;
     const headerText = this.mode === 'live' ? (this.entries[this.entries.length - 1]?.text ?? '') : this.completedStepsSummary();
     const virtualized = this.isVirtualized;
 
@@ -306,21 +307,21 @@ export class LyraActivityFeed extends LyraElement<LyraActivityFeedEventMap> {
           id=${this.bodyId}
           role=${virtualized ? nothing : 'list'}
           tabindex=${virtualized ? nothing : '0'}
-          aria-label=${virtualized ? nothing : label}
+          aria-label=${virtualized ? nothing : ariaLabel}
           ?hidden=${!this.expanded}
           @scroll=${this.onBodyScroll}
         >
           ${virtualized
-            ? html`<lyra-virtual-list
+            ? html`<lr-virtual-list
                 .items=${this.entries}
                 .renderItem=${(item: unknown) => this.entryTemplate(item as ActivityEntry, false)}
                 .keyFunction=${(item: unknown) => (item as ActivityEntry).id}
-                aria-label=${label}
-                @lyra-visible-range-changed=${this.onVirtualListRangeChanged}
-              ></lyra-virtual-list>`
+                aria-label=${ariaLabel}
+                @lr-visible-range-changed=${this.onVirtualListRangeChanged}
+              ></lr-virtual-list>`
             : repeat(this.entries, (entry) => entry.id, (entry) => this.entryTemplate(entry, true))}
         </div>
-        <lyra-live-region></lyra-live-region>
+        <lr-live-region></lr-live-region>
       </div>
     `;
   }
@@ -328,6 +329,6 @@ export class LyraActivityFeed extends LyraElement<LyraActivityFeedEventMap> {
 
 declare global {
   interface HTMLElementTagNameMap {
-    'lyra-activity-feed': LyraActivityFeed;
+    'lr-activity-feed': LyraActivityFeed;
   }
 }

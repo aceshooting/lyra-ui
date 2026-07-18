@@ -18,28 +18,28 @@ export interface SegmentedItem {
 export type LyraSegmentedSize = '2xs' | 'xs' | 's' | 'm' | 'l' | 'xl';
 
 export interface LyraSegmentedEventMap {
-  'lyra-change': CustomEvent<{ value: string }>;
+  'lr-change': CustomEvent<{ value: string }>;
 }
 
 /**
- * `<lyra-segmented>` — a single-select button row with the WAI-ARIA APG `radiogroup` contract
+ * `<lr-segmented>` — a single-select button row with the WAI-ARIA APG `radiogroup` contract
  * built in: `role="radiogroup"`/`role="radio"`, roving tabindex, automatic activation (click or
  * arrow-key move both select immediately, like a native radio group), cyclic Arrow/Home/End
  * navigation among non-disabled items. First-party invention --
  * "choose exactly one of N labeled options, rendered as a button row" is ubiquitous
  * settings/filter-panel UI. Supports the same `2xs`-`xl` compact-form-control `size` scale as
- * `<lyra-select>`/`<lyra-combobox>`/`<lyra-input>`, so it can sit flush beside those controls in a
+ * `<lr-select>`/`<lr-combobox>`/`<lr-input>`, so it can sit flush beside those controls in a
  * toolbar at a matching height.
  *
- * @customElement lyra-segmented
- * @event lyra-change - Fired when the selected value changes via click or keyboard.
+ * @customElement lr-segmented
+ * @event lr-change - Fired when the selected value changes via click or keyboard.
  *   `detail: { value }`.
  * @csspart base - The `role="radiogroup"` root.
  * @csspart segment - A single `role="radio"` button.
  * @csspart segment-icon - Optional leading visual supplied by the item's `icon` field; content
  *   may have a natural aspect ratio and is not restricted to a square icon.
  * @csspart segment-label - The segment's label text.
- * @cssprop [--lyra-scroll-fade-size=2rem] - Width of the static fade at each horizontal scroll edge.
+ * @cssprop [--lr-scroll-fade-size=2rem] - Width of the static fade at each horizontal scroll edge.
  */
 export class LyraSegmented extends LyraElement<LyraSegmentedEventMap> {
   static styles = [LyraElement.styles, styles];
@@ -54,11 +54,11 @@ export class LyraSegmented extends LyraElement<LyraSegmentedEventMap> {
    *  exists around it (e.g. no wrapping `<label>` or adjacent heading). Set
    *  as `aria-label` on the `role="radiogroup"` element. A plain `aria-label`
    *  attribute on the host itself is honored as a fallback when this is left
-   *  unset, matching `<lyra-slider>`. */
+   *  unset, matching `<lr-slider>`. */
   @property() label = '';
 
-  /** Visual size — same `2xs`-`xl` scale as `<lyra-select>`/`<lyra-combobox>` (`s` through `xl`)
-   *  and `<lyra-input>` (`2xs`). Reflects as the `size` attribute. The default `m` tier is
+  /** Visual size — same `2xs`-`xl` scale as `<lr-select>`/`<lr-combobox>` (`s` through `xl`)
+   *  and `<lr-input>` (`2xs`). Reflects as the `size` attribute. The default `m` tier is
    *  identical to this component's pre-`size` rendering, so leaving it unset never changes
    *  output. */
   @property({ reflect: true }) size: LyraSegmentedSize = 'm';
@@ -66,7 +66,7 @@ export class LyraSegmented extends LyraElement<LyraSegmentedEventMap> {
   private select(item: SegmentedItem): void {
     if (item.disabled || item.value === this.value) return;
     this.value = item.value;
-    this.emit<{ value: string }>('lyra-change', { value: item.value });
+    this.emit<{ value: string }>('lr-change', { value: item.value });
   }
 
   private focusItem(value: string): void {
@@ -140,6 +140,6 @@ export class LyraSegmented extends LyraElement<LyraSegmentedEventMap> {
 
 declare global {
   interface HTMLElementTagNameMap {
-    'lyra-segmented': LyraSegmented;
+    'lr-segmented': LyraSegmented;
   }
 }

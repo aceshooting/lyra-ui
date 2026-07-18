@@ -8,31 +8,31 @@ export const styles = css`
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    gap: var(--lyra-space-s);
-    padding: var(--lyra-space-2xs) var(--lyra-space-s);
-    border: var(--lyra-border-width-thin) solid var(--lyra-color-border);
-    border-radius: var(--lyra-radius);
-    background: var(--lyra-color-surface);
-    box-shadow: var(--lyra-shadow);
-    font-size: var(--lyra-font-size-xs);
+    gap: var(--lr-space-s);
+    padding: var(--lr-space-2xs) var(--lr-space-s);
+    border: var(--lr-border-width-thin) solid var(--lr-color-border);
+    border-radius: var(--lr-radius);
+    background: var(--lr-color-surface);
+    box-shadow: var(--lr-shadow);
+    font-size: var(--lr-font-size-xs);
   }
   [part='summary'] {
-    font-weight: var(--lyra-font-weight-medium);
+    font-weight: var(--lr-font-weight-medium);
   }
   [part='count'] {
     display: inline-flex;
     align-items: center;
-    gap: var(--lyra-space-2xs);
-    color: var(--lyra-color-text-muted);
+    gap: var(--lr-space-2xs);
+    color: var(--lr-color-text-muted);
   }
   .tone-dot {
-    inline-size: var(--lyra-size-0-5rem);
-    block-size: var(--lyra-size-0-5rem);
-    border-radius: var(--lyra-radius-pill);
-    background: var(--lyra-color-border-strong);
+    inline-size: var(--lr-size-0-5rem);
+    block-size: var(--lr-size-0-5rem);
+    border-radius: var(--lr-radius-pill);
+    background: var(--lr-color-border-strong);
   }
-  [part='count'][data-status='running'] .tone-dot { background: var(--lyra-color-brand); }
-  [part='count'][data-status='success'] .tone-dot { background: var(--lyra-color-success); }
-  [part='count'][data-status='error'] .tone-dot { background: var(--lyra-color-danger); }
-  [part='count'][data-status='denied'] .tone-dot { background: var(--lyra-color-warning); }
+  [part='count'][data-status='running'] .tone-dot { background: var(--lr-color-brand); }
+  [part='count'][data-status='success'] .tone-dot { background: var(--lr-color-success); }
+  [part='count'][data-status='error'] .tone-dot { background: var(--lr-color-danger); }
+  [part='count'][data-status='denied'] .tone-dot { background: var(--lr-color-warning); }
 `;

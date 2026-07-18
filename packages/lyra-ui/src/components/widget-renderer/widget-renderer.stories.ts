@@ -5,7 +5,7 @@ import type { WidgetNode } from './resolve.js';
 
 const meta: Meta = {
   title: 'Widget Renderer',
-  component: 'lyra-widget-renderer',
+  component: 'lr-widget-renderer',
 };
 export default meta;
 type Story = StoryObj;
@@ -36,17 +36,17 @@ const unsafeTree: WidgetNode = {
 
 export const Default: Story = {
   render: () =>
-    html`<lyra-widget-renderer style="display:block;max-width:32rem" .tree=${dashboard}></lyra-widget-renderer>`,
+    html`<lr-widget-renderer style="display:block;max-width:32rem" .tree=${dashboard}></lr-widget-renderer>`,
 };
 
 export const SecurityAllowlistDemo: Story = {
   render: () =>
-    html`<lyra-widget-renderer style="display:block;max-width:32rem" .tree=${unsafeTree}></lyra-widget-renderer>`,
+    html`<lr-widget-renderer style="display:block;max-width:32rem" .tree=${unsafeTree}></lr-widget-renderer>`,
 };
 
 export const Narrow320: Story = {
   render: () =>
     html`<div style="max-width:320px">
-      <lyra-widget-renderer style="display:block" .tree=${dashboard}></lyra-widget-renderer>
+      <lr-widget-renderer style="display:block" .tree=${dashboard}></lr-widget-renderer>
     </div>`,
 };

@@ -27,13 +27,13 @@ const avRendererDef: DocumentRendererDefinition = {
     file.mimeType.startsWith('video/') ||
     AV_EXTENSIONS.some((ext) => file.name.toLowerCase().endsWith(ext)),
   capabilities: { anchors: ['time-range'], search: true },
-  render: (file: DocumentFile) => html`<lyra-av-player
+  render: (file: DocumentFile) => html`<lr-av-player
     src=${file.src}
     name=${file.name}
     mime-type=${file.mimeType}
     .anchor=${file.anchor ?? null}
     .highlights=${file.highlights ?? []}
-  ></lyra-av-player>`,
+  ></lr-av-player>`,
 };
 
 for (const mime of AV_MIME_TYPES) registerDocumentRenderer(mime, avRendererDef);

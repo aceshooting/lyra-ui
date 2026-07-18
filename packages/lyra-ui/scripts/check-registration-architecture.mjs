@@ -40,9 +40,9 @@ const importedRootTags = [
 ]
   .map((match) => match[1])
   .filter((moduleName) => !moduleName.endsWith('-register'))
-  .map((moduleName) => `lyra-${moduleName}`);
+  .map((moduleName) => `lr-${moduleName}`);
 if (rootBarrel.includes("export { LyraFlag } from './components/flag/flag.js';")) {
-  importedRootTags.push('lyra-flag');
+  importedRootTags.push('lr-flag');
 }
 assert.deepEqual(
   [...new Set(importedRootTags)].sort(),

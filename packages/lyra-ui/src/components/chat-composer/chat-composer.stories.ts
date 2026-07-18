@@ -5,7 +5,7 @@ import type { LyraChatComposer } from './chat-composer.js';
 
 const meta: Meta = {
   title: 'ChatComposer',
-  component: 'lyra-chat-composer',
+  component: 'lr-chat-composer',
   tags: ['autodocs'],
   parameters: {
     docs: {
@@ -21,22 +21,22 @@ type Story = StoryObj;
 
 export const Default: Story = {
   render: () => html`
-    <lyra-chat-composer
+    <lr-chat-composer
       placeholder="Message the assistant…"
       style="max-width: 32rem; display: block;"
-      @lyra-submit=${(e: CustomEvent<{ value: string }>) => alert(`lyra-submit: ${JSON.stringify(e.detail)}`)}
-    ></lyra-chat-composer>
+      @lr-submit=${(e: CustomEvent<{ value: string }>) => alert(`lr-submit: ${JSON.stringify(e.detail)}`)}
+    ></lr-chat-composer>
   `,
 };
 
 export const AutoResize: Story = {
   render: () => html`
-    <lyra-chat-composer
+    <lr-chat-composer
       placeholder="Type a few lines to watch this grow, up to 6 rows…"
       min-rows="1"
       max-rows="6"
       style="max-width: 32rem; display: block;"
-    ></lyra-chat-composer>
+    ></lr-chat-composer>
   `,
 };
 
@@ -44,20 +44,20 @@ export const AutoResize: Story = {
 export const NativeEditingSurface: Story = {
   render: () => html`
     <div style="display: grid; gap: 0.75rem; max-width: 32rem;">
-      <lyra-chat-composer
+      <lr-chat-composer
         aria-label="Compose an assistant message"
         value="Select or edit this draft"
         autocomplete="off"
         inputmode="text"
         enterkeyhint="send"
         wrap="soft"
-      ></lyra-chat-composer>
+      ></lr-chat-composer>
       <button
         type="button"
         style="justify-self: start;"
         @click=${(event: Event) => {
           const composer = (event.currentTarget as HTMLElement).parentElement!.querySelector(
-            'lyra-chat-composer',
+            'lr-chat-composer',
           ) as LyraChatComposer;
           composer.focus();
           composer.select();
@@ -69,47 +69,47 @@ export const NativeEditingSurface: Story = {
 
 export const Sending: Story = {
   render: () => html`
-    <lyra-chat-composer
+    <lr-chat-composer
       status="sending"
       value="Deploying the hotfix now…"
       style="max-width: 32rem; display: block;"
-      @lyra-stop=${() => alert('lyra-stop fired — cancel the in-flight send.')}
-    ></lyra-chat-composer>
+      @lr-stop=${() => alert('lr-stop fired — cancel the in-flight send.')}
+    ></lr-chat-composer>
   `,
 };
 
 export const Streaming: Story = {
   render: () => html`
-    <lyra-chat-composer
+    <lr-chat-composer
       status="streaming"
       placeholder="Keep composing your next message while the reply streams in…"
       style="max-width: 32rem; display: block;"
-      @lyra-stop=${() => alert('lyra-stop fired — cancel the in-flight generation.')}
-    ></lyra-chat-composer>
+      @lr-stop=${() => alert('lr-stop fired — cancel the in-flight generation.')}
+    ></lr-chat-composer>
   `,
 };
 
 export const Disabled: Story = {
   render: () => html`
-    <lyra-chat-composer disabled placeholder="Composer disabled" style="max-width: 32rem; display: block;">
-    </lyra-chat-composer>
+    <lr-chat-composer disabled placeholder="Composer disabled" style="max-width: 32rem; display: block;">
+    </lr-chat-composer>
   `,
 };
 
 export const SubmitOnEnterDisabled: Story = {
   render: () => html`
-    <lyra-chat-composer
+    <lr-chat-composer
       .submitOnEnter=${false}
       placeholder="Enter always inserts a newline here — use the button to send."
       style="max-width: 32rem; display: block;"
-      @lyra-submit=${(e: CustomEvent<{ value: string }>) => alert(`lyra-submit: ${JSON.stringify(e.detail)}`)}
-    ></lyra-chat-composer>
+      @lr-submit=${(e: CustomEvent<{ value: string }>) => alert(`lr-submit: ${JSON.stringify(e.detail)}`)}
+    ></lr-chat-composer>
   `,
 };
 
 export const WithLeadingAndChips: Story = {
   render: () => html`
-    <lyra-chat-composer placeholder="Message the assistant…" style="max-width: 32rem; display: block;">
+    <lr-chat-composer placeholder="Message the assistant…" style="max-width: 32rem; display: block;">
       <button
         slot="leading"
         type="button"
@@ -120,35 +120,35 @@ export const WithLeadingAndChips: Story = {
       </button>
       <span
         slot="chips"
-        style="display:inline-flex;align-items:center;gap:0.25rem;font-size:0.75rem;padding:0.25rem 0.5rem;border:1px solid var(--lyra-color-border);border-radius:999px;"
+        style="display:inline-flex;align-items:center;gap:0.25rem;font-size:0.75rem;padding:0.25rem 0.5rem;border:1px solid var(--lr-color-border);border-radius:999px;"
       >
         report.pdf
       </span>
       <span
         slot="chips"
-        style="display:inline-flex;align-items:center;gap:0.25rem;font-size:0.75rem;padding:0.25rem 0.5rem;border:1px solid var(--lyra-color-border);border-radius:999px;"
+        style="display:inline-flex;align-items:center;gap:0.25rem;font-size:0.75rem;padding:0.25rem 0.5rem;border:1px solid var(--lr-color-border);border-radius:999px;"
       >
         screenshot.png
       </span>
-    </lyra-chat-composer>
+    </lr-chat-composer>
   `,
 };
 
 export const CustomTrailingSlot: Story = {
   render: () => html`
-    <lyra-chat-composer placeholder="Send button fully replaced by trailing slot content…" style="max-width: 32rem; display: block;">
+    <lr-chat-composer placeholder="Send button fully replaced by trailing slot content…" style="max-width: 32rem; display: block;">
       <button
         slot="trailing"
         type="button"
-        style="font:inherit;font-size:0.8125rem;background:var(--lyra-color-brand);color:var(--lyra-color-on-brand);border:none;border-radius:0.375rem;padding:0.5rem 0.75rem;cursor:pointer;"
+        style="font:inherit;font-size:0.8125rem;background:var(--lr-color-brand);color:var(--lr-color-on-brand);border:none;border-radius:0.375rem;padding:0.5rem 0.75rem;cursor:pointer;"
         @click=${(e: Event) => {
-          const composer = (e.currentTarget as HTMLElement).closest('lyra-chat-composer') as LyraChatComposer;
+          const composer = (e.currentTarget as HTMLElement).closest('lr-chat-composer') as LyraChatComposer;
           alert(`custom trailing control — current value: ${JSON.stringify(composer.value)}`);
         }}
       >
         Custom Send
       </button>
-    </lyra-chat-composer>
+    </lr-chat-composer>
   `,
 };
 
@@ -162,7 +162,7 @@ export const InAForm: Story = {
         alert(`form submit — message: ${JSON.stringify(data.get('message'))}`);
       }}
     >
-      <lyra-chat-composer name="message" placeholder="Message the assistant…" required></lyra-chat-composer>
+      <lr-chat-composer name="message" placeholder="Message the assistant…" required></lr-chat-composer>
       <button type="submit" style="align-self: flex-start;">Submit form</button>
     </form>
   `,

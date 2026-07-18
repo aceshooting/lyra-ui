@@ -3,7 +3,7 @@ import { css } from 'lit';
 export const styles = css`
   :host {
     display: block;
-    --lyra-mind-map-ring-gap: var(--lyra-size-6rem);
+    --lr-mind-map-ring-gap: var(--lr-size-6rem);
   }
   [part='base'] {
     display: block;
@@ -17,27 +17,27 @@ export const styles = css`
     outline: none;
   }
   [part='link'] {
-    stroke: var(--lyra-color-border);
+    stroke: var(--lr-color-border);
     stroke-width: 1.5;
   }
   [part='node'] {
     cursor: pointer;
-    transition: transform var(--lyra-transition-base);
+    transition: transform var(--lr-transition-base);
   }
   [part='node'] circle {
-    fill: var(--lyra-color-brand);
+    fill: var(--lr-color-brand);
   }
   [part='node-label'] {
-    fill: var(--lyra-color-text);
-    font-size: var(--lyra-font-size-sm);
+    fill: var(--lr-color-text);
+    font-size: var(--lr-font-size-sm);
   }
   [part='focus-ring'] {
     fill: none;
-    stroke: var(--lyra-focus-ring-color);
-    stroke-width: var(--lyra-focus-ring-width);
+    stroke: var(--lr-focus-ring-color);
+    stroke-width: var(--lr-focus-ring-width);
   }
   [part='empty'] {
-    padding: var(--lyra-space-m);
-    color: var(--lyra-color-text-quiet);
+    padding: var(--lr-space-m);
+    color: var(--lr-color-text-quiet);
   }
 `;

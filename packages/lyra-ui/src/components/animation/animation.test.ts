@@ -4,9 +4,9 @@ import './animation.js';
 
 it('is accessible with a slotted animation target', async () => {
   const el = await fixture(html`
-      <lyra-animation name="none" play iterations="1">
+      <lr-animation name="none" play iterations="1">
       <p>Animated content</p>
-    </lyra-animation>
+    </lr-animation>
   `);
   await expect(el).to.be.accessible();
 });
@@ -17,7 +17,7 @@ it('is accessible with a slotted animation target', async () => {
 // clamping to a sane value.
 it('does not throw and still produces a real, clamped animation when timing properties are non-finite/out-of-range', async () => {
   const el = (await fixture(html`
-    <lyra-animation
+    <lr-animation
       name="fade-in"
       duration="NaN"
       delay="-50"
@@ -27,7 +27,7 @@ it('does not throw and still produces a real, clamped animation when timing prop
       iterations="NaN"
     >
       <p>content</p>
-    </lyra-animation>
+    </lr-animation>
   `)) as LyraAnimation;
   await el.updateComplete;
 
@@ -45,9 +45,9 @@ it('does not throw and still produces a real, clamped animation when timing prop
 
 it('keeps the documented Infinity default for iterations intact (a legitimate WAAPI sentinel)', async () => {
   const el = (await fixture(html`
-    <lyra-animation name="fade-in">
+    <lr-animation name="fade-in">
       <p>content</p>
-    </lyra-animation>
+    </lr-animation>
   `)) as LyraAnimation;
   await el.updateComplete;
 

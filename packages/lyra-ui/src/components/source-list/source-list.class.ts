@@ -10,16 +10,16 @@ export interface SourceListToggleDetail {
 }
 
 export interface LyraSourceListEventMap {
-  'lyra-toggle': CustomEvent<SourceListToggleDetail>;
+  'lr-toggle': CustomEvent<SourceListToggleDetail>;
 }
 
 /**
- * `<lyra-source-list>` — a collapsible "Sources" panel for one chat message,
- * grouping a set of `<lyra-source-card>` children (its default-slot light-DOM
+ * `<lr-source-list>` — a collapsible "Sources" panel for one chat message,
+ * grouping a set of `<lr-source-card>` children (its default-slot light-DOM
  * children, plain composition — no `.items` array prop, the same shape
- * `<lyra-split>`'s panels take) behind a single clickable header.
+ * `<lr-split>`'s panels take) behind a single clickable header.
  *
- * This library has no built-in pluralization (see `<lyra-empty>`'s plain
+ * This library has no built-in pluralization (see `<lr-empty>`'s plain
  * `description` prop for a similar stance), so anything beyond the final
  * fallback is entirely consumer-supplied: `label-plural` (e.g. `"3 sources"`)
  * wins when set, falling back to `label`, falling back to a localized
@@ -33,10 +33,10 @@ export interface LyraSourceListEventMap {
  * `[part="list"]` — a screen reader user tabbing past the header never lands
  * on off-screen source cards they can't currently see.
  *
- * @customElement lyra-source-list
- * @slot - `<lyra-source-card>` elements (or any content, though the card
+ * @customElement lr-source-list
+ * @slot - `<lr-source-card>` elements (or any content, though the card
  * pairing is the intended usage).
- * @event lyra-toggle - The header was activated, expanding or collapsing the
+ * @event lr-toggle - The header was activated, expanding or collapsing the
  * list. `detail: { expanded }`.
  * @csspart base - The outer container.
  * @csspart header - The clickable header (`<button>`) toggling `expanded`.
@@ -59,7 +59,7 @@ export class LyraSourceList extends LyraElement<LyraSourceListEventMap> {
   @property({ attribute: 'label-plural' }) labelPlural = '';
 
   // Tracks the default slot's assigned-element count purely for the
-  // `sourceCount` convenience getter below -- unlike `<lyra-split>`'s
+  // `sourceCount` convenience getter below -- unlike `<lr-split>`'s
   // `panelCount` this never drives layout math, so it's plain @state rather
   // than something read back out of `updated()`.
   @state() private slottedCount = 0;
@@ -83,7 +83,7 @@ export class LyraSourceList extends LyraElement<LyraSourceListEventMap> {
   firstUpdated(): void {
     // Fallback reconciliation for slot-forwarding / engines that don't fire
     // `slotchange` for content present at parse time -- same idiom as
-    // `<lyra-empty>`'s `firstUpdated`.
+    // `<lr-empty>`'s `firstUpdated`.
     const slot = this.shadowRoot!.querySelector('slot') as HTMLSlotElement;
     this.slottedCount = slot.assignedElements({ flatten: true }).length;
   }
@@ -102,7 +102,7 @@ export class LyraSourceList extends LyraElement<LyraSourceListEventMap> {
 
   private toggle = (): void => {
     this.expanded = !this.expanded;
-    this.emit<SourceListToggleDetail>('lyra-toggle', { expanded: this.expanded });
+    this.emit<SourceListToggleDetail>('lr-toggle', { expanded: this.expanded });
   };
 
   render(): TemplateResult {
@@ -132,7 +132,7 @@ export class LyraSourceList extends LyraElement<LyraSourceListEventMap> {
 
 declare global {
   interface HTMLElementTagNameMap {
-    'lyra-source-list': LyraSourceList;
+    'lr-source-list': LyraSourceList;
   }
 }
 

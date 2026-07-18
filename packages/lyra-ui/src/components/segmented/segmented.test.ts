@@ -16,9 +16,9 @@ function segmentButtons(el: LyraSegmented): HTMLButtonElement[] {
   return [...el.shadowRoot!.querySelectorAll('[part="segment"]')] as HTMLButtonElement[];
 }
 
-describe('lyra-segmented', () => {
+describe('lr-segmented', () => {
   it('renders role=radiogroup with one role=radio per item, aria-checked on the selected one', async () => {
-    const el = (await fixture(html`<lyra-segmented .items=${items()} value="week"></lyra-segmented>`)) as LyraSegmented;
+    const el = (await fixture(html`<lr-segmented .items=${items()} value="week"></lr-segmented>`)) as LyraSegmented;
     const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
     expect(base.getAttribute('role')).to.equal('radiogroup');
     const buttons = segmentButtons(el);
@@ -28,13 +28,13 @@ describe('lyra-segmented', () => {
   });
 
   it('uses roving tabindex -- only the selected item is tabbable', async () => {
-    const el = (await fixture(html`<lyra-segmented .items=${items()} value="week"></lyra-segmented>`)) as LyraSegmented;
+    const el = (await fixture(html`<lr-segmented .items=${items()} value="week"></lr-segmented>`)) as LyraSegmented;
     const buttons = segmentButtons(el);
     expect(buttons.map((b) => b.getAttribute('tabindex'))).to.deep.equal(['-1', '0', '-1']);
   });
 
   it('makes the first item tabbable when no item is selected, so the radiogroup stays keyboard-reachable', async () => {
-    const el = (await fixture(html`<lyra-segmented .items=${items()}></lyra-segmented>`)) as LyraSegmented;
+    const el = (await fixture(html`<lr-segmented .items=${items()}></lr-segmented>`)) as LyraSegmented;
     const buttons = segmentButtons(el);
     expect(el.value).to.equal('');
     expect(buttons.map((b) => b.getAttribute('tabindex'))).to.deep.equal(['0', '-1', '-1']);
@@ -42,13 +42,13 @@ describe('lyra-segmented', () => {
 
   it('falls back to the first non-disabled item when nothing is selected', async () => {
     const withDisabled = [{ ...items()[0]!, disabled: true }, items()[1]!, items()[2]!];
-    const el = (await fixture(html`<lyra-segmented .items=${withDisabled}></lyra-segmented>`)) as LyraSegmented;
+    const el = (await fixture(html`<lr-segmented .items=${withDisabled}></lr-segmented>`)) as LyraSegmented;
     const buttons = segmentButtons(el);
     expect(buttons.map((b) => b.getAttribute('tabindex'))).to.deep.equal(['-1', '0', '-1']);
   });
 
   it('ArrowRight from the unselected, first-tabbable state selects the first item', async () => {
-    const el = (await fixture(html`<lyra-segmented .items=${items()}></lyra-segmented>`)) as LyraSegmented;
+    const el = (await fixture(html`<lr-segmented .items=${items()}></lr-segmented>`)) as LyraSegmented;
     const buttons = segmentButtons(el);
     buttons[0]!.focus();
     buttons[0]!.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true, cancelable: true }));
@@ -56,17 +56,17 @@ describe('lyra-segmented', () => {
     expect(el.value).to.equal('day');
   });
 
-  it('selects on click and emits lyra-change', async () => {
-    const el = (await fixture(html`<lyra-segmented .items=${items()} value="day"></lyra-segmented>`)) as LyraSegmented;
+  it('selects on click and emits lr-change', async () => {
+    const el = (await fixture(html`<lr-segmented .items=${items()} value="day"></lr-segmented>`)) as LyraSegmented;
     const buttons = segmentButtons(el);
     setTimeout(() => buttons[2]!.click());
-    const ev = await oneEvent(el, 'lyra-change');
+    const ev = await oneEvent(el, 'lr-change');
     expect(ev.detail).to.deep.equal({ value: 'month' });
     expect(el.value).to.equal('month');
   });
 
   it('selects on ArrowRight (automatic activation) and wraps cyclically at the end', async () => {
-    const el = (await fixture(html`<lyra-segmented .items=${items()} value="month"></lyra-segmented>`)) as LyraSegmented;
+    const el = (await fixture(html`<lr-segmented .items=${items()} value="month"></lr-segmented>`)) as LyraSegmented;
     const buttons = segmentButtons(el);
     buttons[2]!.focus();
     buttons[2]!.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true, cancelable: true }));
@@ -76,7 +76,7 @@ describe('lyra-segmented', () => {
 
   it('skips disabled items during keyboard navigation', async () => {
     const withDisabled = [items()[0]!, { ...items()[1]!, disabled: true }, items()[2]!];
-    const el = (await fixture(html`<lyra-segmented .items=${withDisabled} value="day"></lyra-segmented>`)) as LyraSegmented;
+    const el = (await fixture(html`<lr-segmented .items=${withDisabled} value="day"></lr-segmented>`)) as LyraSegmented;
     const buttons = segmentButtons(el);
     buttons[0]!.focus();
     buttons[0]!.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true, cancelable: true }));
@@ -86,33 +86,33 @@ describe('lyra-segmented', () => {
 
   it('sets aria-label on the radiogroup from the label prop, falling back to a forwarded host aria-label', async () => {
     const labeled = (await fixture(
-      html`<lyra-segmented label="View" .items=${items()}></lyra-segmented>`,
+      html`<lr-segmented label="View" .items=${items()}></lr-segmented>`,
     )) as LyraSegmented;
     const base1 = labeled.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
     expect(base1.getAttribute('aria-label')).to.equal('View');
 
     const forwarded = (await fixture(
-      html`<lyra-segmented aria-label="Forwarded label" .items=${items()}></lyra-segmented>`,
+      html`<lr-segmented aria-label="Forwarded label" .items=${items()}></lr-segmented>`,
     )) as LyraSegmented;
     const base2 = forwarded.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
     expect(base2.getAttribute('aria-label')).to.equal('Forwarded label');
   });
 
   it('is accessible', async () => {
-    const el = (await fixture(html`<lyra-segmented .items=${items()} value="day"></lyra-segmented>`)) as LyraSegmented;
+    const el = (await fixture(html`<lr-segmented .items=${items()} value="day"></lr-segmented>`)) as LyraSegmented;
     await expect(el).to.be.accessible();
   });
 
   it('is accessible when labeled via the label prop', async () => {
     const el = (await fixture(
-      html`<lyra-segmented label="View" .items=${items()} value="day"></lyra-segmented>`,
+      html`<lr-segmented label="View" .items=${items()} value="day"></lr-segmented>`,
     )) as LyraSegmented;
     await expect(el).to.be.accessible();
   });
 
   it('moves focus to the target item when its value contains a double-quote character', async () => {
     const withQuote = [{ value: 'a', label: 'A' }, { value: 'b"c', label: 'B' }, { value: 'd', label: 'D' }];
-    const el = (await fixture(html`<lyra-segmented .items=${withQuote} value="a"></lyra-segmented>`)) as LyraSegmented;
+    const el = (await fixture(html`<lr-segmented .items=${withQuote} value="a"></lr-segmented>`)) as LyraSegmented;
     const buttons = segmentButtons(el);
     buttons[0]!.focus();
     buttons[0]!.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true, cancelable: true }));
@@ -130,7 +130,7 @@ describe('item icon', () => {
       { value: 'a', label: 'A' },
       { value: 'b', label: 'B' },
     ];
-    const el = (await fixture(html`<lyra-segmented .items=${items} value="a"></lyra-segmented>`)) as LyraSegmented;
+    const el = (await fixture(html`<lr-segmented .items=${items} value="a"></lr-segmented>`)) as LyraSegmented;
     expect(el.shadowRoot!.querySelector('[part="segment-icon"]')).to.not.exist;
   });
 
@@ -139,7 +139,7 @@ describe('item icon', () => {
       { value: 'a', label: 'A', icon: litHtml`<span class="dot"></span>` },
       { value: 'b', label: 'B' },
     ];
-    const el = (await fixture(html`<lyra-segmented .items=${items} value="a"></lyra-segmented>`)) as LyraSegmented;
+    const el = (await fixture(html`<lr-segmented .items=${items} value="a"></lr-segmented>`)) as LyraSegmented;
     const button = el.shadowRoot!.querySelector('[part="segment"]')!;
     const icon = button.querySelector('[part="segment-icon"]');
     expect(icon).to.exist;
@@ -160,7 +160,7 @@ describe('item icon', () => {
     const css = styles.cssText.replace(/\s+/g, ' ');
     expect(css).to.include('-webkit-mask-image: linear-gradient');
     expect(css).to.include('mask-image: linear-gradient');
-    expect(css).to.include('var(--lyra-scroll-fade-size)');
+    expect(css).to.include('var(--lr-scroll-fade-size)');
   });
 });
 
@@ -172,7 +172,7 @@ describe('narrow allocation', () => {
     const container = document.createElement('div');
     container.style.inlineSize = '320px';
     const el = (await fixture(
-      html`<lyra-segmented
+      html`<lr-segmented
         .items=${[
           { value: 'all', label: 'Alle Elemente' },
           { value: 'active', label: 'Aktive Elemente' },
@@ -181,7 +181,7 @@ describe('narrow allocation', () => {
           { value: 'deleted', label: 'Gelöschte Elemente' },
         ]}
         value="active"
-      ></lyra-segmented>`,
+      ></lr-segmented>`,
       { parentNode: container },
     )) as LyraSegmented;
     await el.updateComplete;
@@ -197,25 +197,25 @@ describe('narrow allocation', () => {
 
 describe('size', () => {
   it('defaults to size="m" and leaves the default rendering unchanged', async () => {
-    const el = (await fixture(html`<lyra-segmented .items=${items()} value="day"></lyra-segmented>`)) as LyraSegmented;
+    const el = (await fixture(html`<lr-segmented .items=${items()} value="day"></lr-segmented>`)) as LyraSegmented;
     expect(el.size).to.equal('m');
     expect(el.getAttribute('size')).to.equal('m');
     const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
     expect(getComputedStyle(base).minBlockSize).to.equal('auto');
   });
 
-  it('matches <lyra-select size="s">\'s control height at size="s"', async () => {
+  it('matches <lr-select size="s">\'s control height at size="s"', async () => {
     const segmented = (await fixture(
-      html`<lyra-segmented size="s" .items=${items()} value="day"></lyra-segmented>`,
+      html`<lr-segmented size="s" .items=${items()} value="day"></lr-segmented>`,
     )) as LyraSegmented;
-    const select = (await fixture(html`<lyra-select size="s"></lyra-select>`)) as LyraSelect;
+    const select = (await fixture(html`<lr-select size="s"></lr-select>`)) as LyraSelect;
     const segmentedBase = segmented.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
     const selectTrigger = select.shadowRoot!.querySelector('[part="trigger"]') as HTMLElement;
     expect(getComputedStyle(segmentedBase).minBlockSize).to.equal(getComputedStyle(selectTrigger).minBlockSize);
   });
 
   it('reflects size as a host attribute for every tier', async () => {
-    const el = (await fixture(html`<lyra-segmented size="xl" .items=${items()}></lyra-segmented>`)) as LyraSegmented;
+    const el = (await fixture(html`<lr-segmented size="xl" .items=${items()}></lr-segmented>`)) as LyraSegmented;
     expect(el.getAttribute('size')).to.equal('xl');
   });
 });

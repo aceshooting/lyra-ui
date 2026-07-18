@@ -26,7 +26,7 @@ function listbox(el: LyraVoicePicker): HTMLElement {
 }
 
 /** Polls until `read()` satisfies `until`, or throws once `timeoutMs` elapses -- same idiom as
- *  internal/positioner.test.ts's/lyra-menu's identical helper, for waiting out place()'s async
+ *  internal/positioner.test.ts's/lr-menu's identical helper, for waiting out place()'s async
  *  computePosition. */
 async function waitFor<T>(read: () => T, until: (v: T) => boolean, timeoutMs = 2000): Promise<T> {
   const start = performance.now();
@@ -38,27 +38,27 @@ async function waitFor<T>(read: () => T, until: (v: T) => boolean, timeoutMs = 2
   }
 }
 
-// -- Mode selection (mirrors lyra-model-select) ------------------------------
+// -- Mode selection (mirrors lr-model-select) ------------------------------
 
 it('renders a closed dropdown when catalog is non-empty and allow-custom is unset', async () => {
-  const el = (await fixture(html`<lyra-voice-picker .catalog=${CATALOG}></lyra-voice-picker>`)) as LyraVoicePicker;
+  const el = (await fixture(html`<lr-voice-picker .catalog=${CATALOG}></lr-voice-picker>`)) as LyraVoicePicker;
   expect(trigger(el)).to.exist;
   expect(el.shadowRoot!.querySelector('[part="combobox-input"]')).to.be.null;
 });
 
 it('renders a free-text input when catalog is empty/undefined or allow-custom is set', async () => {
-  const el = (await fixture(html`<lyra-voice-picker></lyra-voice-picker>`)) as LyraVoicePicker;
+  const el = (await fixture(html`<lr-voice-picker></lr-voice-picker>`)) as LyraVoicePicker;
   expect(input(el)).to.exist;
 
   const el2 = (await fixture(
-    html`<lyra-voice-picker allow-custom .catalog=${CATALOG}></lyra-voice-picker>`,
+    html`<lr-voice-picker allow-custom .catalog=${CATALOG}></lr-voice-picker>`,
   )) as LyraVoicePicker;
   expect(input(el2)).to.exist;
 });
 
 it('renders object-catalog rows with a language/description second line', async () => {
   const el = (await fixture(
-    html`<lyra-voice-picker .catalog=${OBJECT_CATALOG}></lyra-voice-picker>`,
+    html`<lr-voice-picker .catalog=${OBJECT_CATALOG}></lr-voice-picker>`,
   )) as LyraVoicePicker;
   el.open = true;
   await el.updateComplete;
@@ -68,7 +68,7 @@ it('renders object-catalog rows with a language/description second line', async 
 
 it('a value not present in catalog renders as a synthetic stale row with the not-in-catalog badge', async () => {
   const el = (await fixture(
-    html`<lyra-voice-picker .catalog=${CATALOG} value="retired-voice"></lyra-voice-picker>`,
+    html`<lr-voice-picker .catalog=${CATALOG} value="retired-voice"></lr-voice-picker>`,
   )) as LyraVoicePicker;
   el.open = true;
   await el.updateComplete;
@@ -76,13 +76,13 @@ it('a value not present in catalog renders as a synthetic stale row with the not
   expect(stale.querySelector('[part="option-badge"]')!.textContent).to.equal('not in catalog');
 });
 
-// -- Selection / lyra-change ---------------------------------------------
+// -- Selection / lr-change ---------------------------------------------
 
-it('selecting a closed-dropdown option commits value and emits lyra-change with inCatalog true', async () => {
-  const el = (await fixture(html`<lyra-voice-picker .catalog=${CATALOG}></lyra-voice-picker>`)) as LyraVoicePicker;
+it('selecting a closed-dropdown option commits value and emits lr-change with inCatalog true', async () => {
+  const el = (await fixture(html`<lr-voice-picker .catalog=${CATALOG}></lr-voice-picker>`)) as LyraVoicePicker;
   trigger(el).click();
   await el.updateComplete;
-  const changePromise = oneEvent(el, 'lyra-change');
+  const changePromise = oneEvent(el, 'lr-change');
   (rows(el)[1] as HTMLElement).click();
   const ev = await changePromise;
   expect(ev.detail).to.deep.equal({ value: 'verse', inCatalog: true });
@@ -91,7 +91,7 @@ it('selecting a closed-dropdown option commits value and emits lyra-change with 
 
 it('free-text filtering also matches language and description', async () => {
   const el = (await fixture(
-    html`<lyra-voice-picker allow-custom .catalog=${OBJECT_CATALOG}></lyra-voice-picker>`,
+    html`<lr-voice-picker allow-custom .catalog=${OBJECT_CATALOG}></lr-voice-picker>`,
   )) as LyraVoicePicker;
   const el2 = input(el);
   el2.focus();
@@ -105,7 +105,7 @@ it('free-text filtering also matches language and description', async () => {
 // -- Preview -----------------------------------------------------------
 
 it('the standalone preview-button previews the committed value and is disabled with no candidate', async () => {
-  const el = (await fixture(html`<lyra-voice-picker .catalog=${CATALOG}></lyra-voice-picker>`)) as LyraVoicePicker;
+  const el = (await fixture(html`<lr-voice-picker .catalog=${CATALOG}></lr-voice-picker>`)) as LyraVoicePicker;
   expect(previewButton(el).disabled).to.be.true; // no value yet
 
   el.value = 'alloy';
@@ -115,48 +115,48 @@ it('the standalone preview-button previews the committed value and is disabled w
 });
 
 it('gives the standalone preview-button the shared minimum tappable size', async () => {
-  const el = (await fixture(html`<lyra-voice-picker .catalog=${CATALOG} value="alloy"></lyra-voice-picker>`)) as LyraVoicePicker;
+  const el = (await fixture(html`<lr-voice-picker .catalog=${CATALOG} value="alloy"></lr-voice-picker>`)) as LyraVoicePicker;
   await el.updateComplete;
   const btn = previewButton(el);
   expect(getComputedStyle(btn).minInlineSize).to.equal('40px');
   expect(getComputedStyle(btn).minBlockSize).to.equal('40px');
 });
 
-it('clicking preview fires cancelable lyra-preview-request with the resolved previewUrl', async () => {
+it('clicking preview fires cancelable lr-preview-request with the resolved previewUrl', async () => {
   const el = (await fixture(
-    html`<lyra-voice-picker .catalog=${OBJECT_CATALOG} value="aria"></lyra-voice-picker>`,
+    html`<lr-voice-picker .catalog=${OBJECT_CATALOG} value="aria"></lr-voice-picker>`,
   )) as LyraVoicePicker;
-  const reqPromise = oneEvent(el, 'lyra-preview-request');
+  const reqPromise = oneEvent(el, 'lr-preview-request');
   previewButton(el).click();
   const ev = await reqPromise;
   expect(ev.detail).to.deep.equal({ voiceId: 'aria', previewUrl: 'https://example.test/aria.mp3' });
   expect(ev.cancelable).to.be.true;
 });
 
-it('an unprevented request with a previewUrl plays through an internal <audio>, firing lyra-preview-change, and the same voice toggles it off', async () => {
+it('an unprevented request with a previewUrl plays through an internal <audio>, firing lr-preview-change, and the same voice toggles it off', async () => {
   const el = (await fixture(
-    html`<lyra-voice-picker .catalog=${OBJECT_CATALOG} value="aria"></lyra-voice-picker>`,
+    html`<lr-voice-picker .catalog=${OBJECT_CATALOG} value="aria"></lr-voice-picker>`,
   )) as LyraVoicePicker;
-  const changePromise = oneEvent(el, 'lyra-preview-change');
+  const changePromise = oneEvent(el, 'lr-preview-change');
   previewButton(el).click();
   const ev = await changePromise;
   expect(ev.detail).to.deep.equal({ voiceId: 'aria' });
   expect(previewButton(el).getAttribute('aria-pressed')).to.equal('true');
 
-  const stopPromise = oneEvent(el, 'lyra-preview-change');
-  previewButton(el).click(); // same voice -- toggles off, no new lyra-preview-request
+  const stopPromise = oneEvent(el, 'lr-preview-change');
+  previewButton(el).click(); // same voice -- toggles off, no new lr-preview-request
   const stopEv = await stopPromise;
   expect(stopEv.detail).to.deep.equal({ voiceId: null });
   expect(previewButton(el).getAttribute('aria-pressed')).to.equal('false');
 });
 
-it('preventDefault()ing lyra-preview-request suppresses internal playback entirely', async () => {
+it('preventDefault()ing lr-preview-request suppresses internal playback entirely', async () => {
   const el = (await fixture(
-    html`<lyra-voice-picker .catalog=${OBJECT_CATALOG} value="aria"></lyra-voice-picker>`,
+    html`<lr-voice-picker .catalog=${OBJECT_CATALOG} value="aria"></lr-voice-picker>`,
   )) as LyraVoicePicker;
-  el.addEventListener('lyra-preview-request', (e) => e.preventDefault());
+  el.addEventListener('lr-preview-request', (e) => e.preventDefault());
   let changed = false;
-  el.addEventListener('lyra-preview-change', () => (changed = true));
+  el.addEventListener('lr-preview-change', () => (changed = true));
   previewButton(el).click();
   await el.updateComplete;
   expect(changed).to.be.false;
@@ -165,9 +165,9 @@ it('preventDefault()ing lyra-preview-request suppresses internal playback entire
 
 it('a voice with no previewUrl still fires the request event but never plays internally', async () => {
   const el = (await fixture(
-    html`<lyra-voice-picker .catalog=${OBJECT_CATALOG} value="sage"></lyra-voice-picker>`,
+    html`<lr-voice-picker .catalog=${OBJECT_CATALOG} value="sage"></lr-voice-picker>`,
   )) as LyraVoicePicker;
-  const reqPromise = oneEvent(el, 'lyra-preview-request');
+  const reqPromise = oneEvent(el, 'lr-preview-request');
   previewButton(el).click();
   const ev = await reqPromise;
   expect(ev.detail).to.deep.equal({ voiceId: 'sage', previewUrl: undefined });
@@ -177,7 +177,7 @@ it('a voice with no previewUrl still fires the request event but never plays int
 
 it('preview=false renders no preview affordances at all', async () => {
   const el = (await fixture(
-    html`<lyra-voice-picker .catalog=${OBJECT_CATALOG} value="aria" preview="false"></lyra-voice-picker>`,
+    html`<lr-voice-picker .catalog=${OBJECT_CATALOG} value="aria" preview="false"></lr-voice-picker>`,
   )) as LyraVoicePicker;
   // A `true`-defaulting boolean property can only be set false via a property binding, not a
   // ?attr=${false} template binding (see packages/lyra-ui/AGENTS.md's testing-pitfalls note) --
@@ -192,7 +192,7 @@ it('preview=false renders no preview affordances at all', async () => {
 
 it('per-row option-preview icons are pointer-only (tabindex=-1, aria-hidden) and preview that specific row', async () => {
   const el = (await fixture(
-    html`<lyra-voice-picker .catalog=${OBJECT_CATALOG}></lyra-voice-picker>`,
+    html`<lr-voice-picker .catalog=${OBJECT_CATALOG}></lr-voice-picker>`,
   )) as LyraVoicePicker;
   el.open = true;
   await el.updateComplete;
@@ -200,21 +200,21 @@ it('per-row option-preview icons are pointer-only (tabindex=-1, aria-hidden) and
   expect(icon.getAttribute('tabindex')).to.equal('-1');
   expect(icon.getAttribute('aria-hidden')).to.equal('true');
 
-  const reqPromise = oneEvent(el, 'lyra-preview-request');
+  const reqPromise = oneEvent(el, 'lr-preview-request');
   icon.click();
   const ev = await reqPromise;
   expect(ev.detail.voiceId).to.equal('aria');
 });
 
-// -- Form association (mirrors lyra-model-select) ----------------------------
+// -- Form association (mirrors lr-model-select) ----------------------------
 
 it('is form-associated: participates in FormData and required validity', async () => {
   const form = (await fixture(html`
     <form>
-      <lyra-voice-picker name="voice" required .catalog=${CATALOG}></lyra-voice-picker>
+      <lr-voice-picker name="voice" required .catalog=${CATALOG}></lr-voice-picker>
     </form>
   `)) as HTMLFormElement;
-  const el = form.querySelector('lyra-voice-picker') as LyraVoicePicker;
+  const el = form.querySelector('lr-voice-picker') as LyraVoicePicker;
   expect(el.checkValidity()).to.be.false;
   el.value = 'alloy';
   expect(el.checkValidity()).to.be.true;
@@ -224,12 +224,12 @@ it('is form-associated: participates in FormData and required validity', async (
 // -- Empty / no-match copy -----------------------------------------------
 
 it('shows the localized no-voices message for an empty catalog, and the shared no-matches message for a free-text miss', async () => {
-  const el = (await fixture(html`<lyra-voice-picker .catalog=${[]}></lyra-voice-picker>`)) as LyraVoicePicker;
+  const el = (await fixture(html`<lr-voice-picker .catalog=${[]}></lr-voice-picker>`)) as LyraVoicePicker;
   await el.updateComplete;
   expect(input(el)).to.exist; // empty catalog falls back to free text, same as model-select
 
   const withCatalog = (await fixture(
-    html`<lyra-voice-picker allow-custom .catalog=${CATALOG}></lyra-voice-picker>`,
+    html`<lr-voice-picker allow-custom .catalog=${CATALOG}></lr-voice-picker>`,
   )) as LyraVoicePicker;
   const el2 = input(withCatalog);
   el2.focus();
@@ -243,14 +243,14 @@ it('shows the localized no-voices message for an empty catalog, and the shared n
 
 it('is accessible in closed-dropdown mode with a selected value', async () => {
   const el = (await fixture(
-    html`<lyra-voice-picker .catalog=${OBJECT_CATALOG} value="aria" label="Voice"></lyra-voice-picker>`,
+    html`<lr-voice-picker .catalog=${OBJECT_CATALOG} value="aria" label="Voice"></lr-voice-picker>`,
   )) as LyraVoicePicker;
   await expect(el).to.be.accessible();
 });
 
 it('is accessible in free-text mode', async () => {
   const el = (await fixture(
-    html`<lyra-voice-picker allow-custom label="Voice"></lyra-voice-picker>`,
+    html`<lr-voice-picker allow-custom label="Voice"></lr-voice-picker>`,
   )) as LyraVoicePicker;
   await expect(el).to.be.accessible();
 });
@@ -259,11 +259,11 @@ it('is accessible in free-text mode', async () => {
 
 it('localizes the fallback accessible name and preview labels via this.localize()', async () => {
   const el = (await fixture(html`
-    <lyra-voice-picker
+    <lr-voice-picker
       .catalog=${CATALOG}
       value="alloy"
       .strings=${{ voice: 'Voix', voicePickerPreview: 'Écouter {name}' }}
-    ></lyra-voice-picker>
+    ></lr-voice-picker>
   `)) as LyraVoicePicker;
   expect(trigger(el).getAttribute('aria-label')).to.equal('Voix');
   expect(previewButton(el).getAttribute('aria-label')).to.equal('Écouter alloy');
@@ -271,23 +271,23 @@ it('localizes the fallback accessible name and preview labels via this.localize(
 
 // -- Available-space clamping (internal/positioner.js's place()) ------------
 
-it("declares [part='listbox']'s max-block-size/max-inline-size/min-inline-size against place()'s published --lyra-positioner-available-* custom properties, mirroring lyra-menu's/lyra-combobox's identical clamp", () => {
+it("declares [part='listbox']'s max-block-size/max-inline-size/min-inline-size against place()'s published --lr-positioner-available-* custom properties, mirroring lr-menu's/lr-combobox's identical clamp", () => {
   const css = styles.cssText.replace(/\s+/g, ' ');
   const listboxBlock = /\[part=['"]?listbox['"]?\]\s*\{([^}]+)\}/.exec(css);
   expect(listboxBlock, 'expected a [part="listbox"] rule').to.not.equal(null);
   const body = listboxBlock![1];
-  expect(body).to.match(/max-block-size:\s*min\([^;]*var\(--lyra-positioner-available-block-size/);
-  expect(body).to.match(/max-inline-size:\s*min\([^;]*var\(--lyra-positioner-available-inline-size/);
-  expect(body).to.match(/min-inline-size:\s*min\([^;]*var\(--lyra-positioner-available-inline-size/);
+  expect(body).to.match(/max-block-size:\s*min\([^;]*var\(--lr-positioner-available-block-size/);
+  expect(body).to.match(/max-inline-size:\s*min\([^;]*var\(--lr-positioner-available-inline-size/);
+  expect(body).to.match(/min-inline-size:\s*min\([^;]*var\(--lr-positioner-available-inline-size/);
 });
 
 it("actually applies place()'s available-space custom properties onto the rendered listbox once open, not just declaring them in CSS", async () => {
-  const el = (await fixture(html`<lyra-voice-picker .catalog=${CATALOG}></lyra-voice-picker>`)) as LyraVoicePicker;
+  const el = (await fixture(html`<lr-voice-picker .catalog=${CATALOG}></lr-voice-picker>`)) as LyraVoicePicker;
   trigger(el).click();
   await el.updateComplete;
   await waitFor(
-    () => listbox(el).style.getPropertyValue('--lyra-positioner-available-block-size'),
+    () => listbox(el).style.getPropertyValue('--lr-positioner-available-block-size'),
     (v) => v !== '',
   );
-  expect(listbox(el).style.getPropertyValue('--lyra-positioner-available-inline-size')).to.not.equal('');
+  expect(listbox(el).style.getPropertyValue('--lr-positioner-available-inline-size')).to.not.equal('');
 });

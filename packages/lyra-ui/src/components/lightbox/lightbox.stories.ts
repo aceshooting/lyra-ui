@@ -5,7 +5,7 @@ import type { LyraLightbox } from './lightbox.js';
 
 const meta: Meta = {
   title: 'Lightbox',
-  component: 'lyra-lightbox',
+  component: 'lr-lightbox',
   tags: ['autodocs'],
 };
 export default meta;
@@ -30,10 +30,10 @@ export const Default: Story = {
       const lightbox = (event.currentTarget as HTMLElement).nextElementSibling as LyraLightbox;
       lightbox.open = true;
     }}>Open lightbox</button>
-    <lyra-lightbox .images=${images}></lyra-lightbox>
+    <lr-lightbox .images=${images}></lr-lightbox>
   `,
 };
 
 export const OpenInitially: Story = {
-  render: () => html`<lyra-lightbox .images=${images} open></lyra-lightbox>`,
+  render: () => html`<lr-lightbox .images=${images} open></lr-lightbox>`,
 };

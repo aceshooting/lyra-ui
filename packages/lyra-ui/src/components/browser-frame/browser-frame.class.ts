@@ -42,19 +42,19 @@ const STATUS_KEY = {
 } as const;
 
 export interface LyraBrowserFrameEventMap {
-  'lyra-take-over': CustomEvent<{ controller: 'agent' | 'user' }>;
-  'lyra-stop': CustomEvent<undefined>;
+  'lr-take-over': CustomEvent<{ controller: 'agent' | 'user' }>;
+  'lr-stop': CustomEvent<undefined>;
 }
 
 /**
- * `<lyra-browser-frame>` — presentational "agent computer" viewport: a screenshot/frame stream (or
+ * `<lr-browser-frame>` — presentational "agent computer" viewport: a screenshot/frame stream (or
  * slotted live media), read-only URL display, action-ping overlays, and take-over/stop affordances.
  * No automation transport, no input relay — take-over is an event; the host swaps in its own
  * interactive element.
  *
- * @customElement lyra-browser-frame
- * @event lyra-take-over - `detail: { controller }` — the *requested* controller.
- * @event lyra-stop - Stop the agent's browser session.
+ * @customElement lr-browser-frame
+ * @event lr-take-over - `detail: { controller }` — the *requested* controller.
+ * @event lr-stop - Stop the agent's browser session.
  * @slot - Host-owned live element (e.g. `<video>` or an interactive `<iframe>`), replacing the
  *   `frame-src` image.
  * @slot actions - Extra toolbar controls.
@@ -69,7 +69,7 @@ export interface LyraBrowserFrameEventMap {
  * @csspart viewport - The frame/media container.
  * @csspart frame - The `frame-src` `<img>` (absent once the default slot is populated).
  * @csspart ping - One action-ping marker; carries `data-kind`.
- * @cssprop [--lyra-browser-frame-aspect-ratio=16 / 9] - The viewport's aspect ratio.
+ * @cssprop [--lr-browser-frame-aspect-ratio=16 / 9] - The viewport's aspect ratio.
  */
 export class LyraBrowserFrame extends LyraElement<LyraBrowserFrameEventMap> {
   static styles = [LyraElement.styles, styles, srOnly];
@@ -147,7 +147,7 @@ export class LyraBrowserFrame extends LyraElement<LyraBrowserFrameEventMap> {
 
   private onTakeOver = (): void => {
     const requested = this.controller === 'agent' ? 'user' : 'agent';
-    this.emit('lyra-take-over', { controller: requested });
+    this.emit('lr-take-over', { controller: requested });
   };
 
   render(): TemplateResult {
@@ -167,7 +167,7 @@ export class LyraBrowserFrame extends LyraElement<LyraBrowserFrameEventMap> {
                     ? this.localize('browserFrameHandBack')
                     : this.localize('browserFrameTakeOver')}
                 </button>
-                <button part="stop-button" type="button" @click=${() => this.emit('lyra-stop')}>
+                <button part="stop-button" type="button" @click=${() => this.emit('lr-stop')}>
                   ${this.localize('browserFrameStop')}
                 </button>
               `
@@ -199,6 +199,6 @@ export class LyraBrowserFrame extends LyraElement<LyraBrowserFrameEventMap> {
 
 declare global {
   interface HTMLElementTagNameMap {
-    'lyra-browser-frame': LyraBrowserFrame;
+    'lr-browser-frame': LyraBrowserFrame;
   }
 }

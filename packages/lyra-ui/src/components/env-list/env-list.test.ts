@@ -2,16 +2,16 @@ import { fixture, expect, html, oneEvent } from '@open-wc/testing';
 import './env-list.js';
 import type { LyraEnvList } from './env-list.js';
 
-describe('lyra-env-list', () => {
+describe('lr-env-list', () => {
   it('defaults to revealable=true and copyable=true', async () => {
-    const el = (await fixture(html`<lyra-env-list></lyra-env-list>`)) as LyraEnvList;
+    const el = (await fixture(html`<lr-env-list></lr-env-list>`)) as LyraEnvList;
     expect(el.revealable).to.be.true;
     expect(el.copyable).to.be.true;
   });
 
   it('masks a value with a fixed eight-bullet run regardless of value length', async () => {
     const el = (await fixture(
-      html`<lyra-env-list .entries=${[{ name: 'API_KEY', value: 'x', secret: true }, { name: 'TOKEN', value: 'a-much-longer-secret-value', secret: true }]}></lyra-env-list>`,
+      html`<lr-env-list .entries=${[{ name: 'API_KEY', value: 'x', secret: true }, { name: 'TOKEN', value: 'a-much-longer-secret-value', secret: true }]}></lr-env-list>`,
     )) as LyraEnvList;
     await el.updateComplete;
     const values = [...el.shadowRoot!.querySelectorAll('[part="value"]')] as HTMLElement[];
@@ -22,7 +22,7 @@ describe('lyra-env-list', () => {
 
   it('defaults secret to true when omitted', async () => {
     const el = (await fixture(
-      html`<lyra-env-list .entries=${[{ name: 'X', value: 'plainish' }]}></lyra-env-list>`,
+      html`<lr-env-list .entries=${[{ name: 'X', value: 'plainish' }]}></lr-env-list>`,
     )) as LyraEnvList;
     await el.updateComplete;
     expect((el.shadowRoot!.querySelector('[part="value"]') as HTMLElement).dataset.masked).to.equal('true');
@@ -30,7 +30,7 @@ describe('lyra-env-list', () => {
 
   it('renders a non-secret value in plain text', async () => {
     const el = (await fixture(
-      html`<lyra-env-list .entries=${[{ name: 'NODE_ENV', value: 'production', secret: false }]}></lyra-env-list>`,
+      html`<lr-env-list .entries=${[{ name: 'NODE_ENV', value: 'production', secret: false }]}></lr-env-list>`,
     )) as LyraEnvList;
     await el.updateComplete;
     const value = el.shadowRoot!.querySelector('[part="value"]') as HTMLElement;
@@ -38,13 +38,13 @@ describe('lyra-env-list', () => {
     expect(value.dataset.masked).to.equal('false');
   });
 
-  it('reveal toggle flips masking and emits lyra-reveal-change, keyed by name and surviving value-only updates', async () => {
+  it('reveal toggle flips masking and emits lr-reveal-change, keyed by name and surviving value-only updates', async () => {
     const el = (await fixture(
-      html`<lyra-env-list .entries=${[{ name: 'API_KEY', value: 'secret1', secret: true }]}></lyra-env-list>`,
+      html`<lr-env-list .entries=${[{ name: 'API_KEY', value: 'secret1', secret: true }]}></lr-env-list>`,
     )) as LyraEnvList;
     await el.updateComplete;
     const reveal = el.shadowRoot!.querySelector('[part="reveal-button"]') as HTMLButtonElement;
-    const listener = oneEvent(el, 'lyra-reveal-change');
+    const listener = oneEvent(el, 'lr-reveal-change');
     reveal.click();
     const event = (await listener) as CustomEvent<{ name: string; revealed: boolean }>;
     expect(event.detail).to.deep.equal({ name: 'API_KEY', revealed: true });
@@ -57,18 +57,18 @@ describe('lyra-env-list', () => {
 
   it('revealable=false renders no reveal button', async () => {
     const el = (await fixture(
-      html`<lyra-env-list .entries=${[{ name: 'X', value: 'y' }]} .revealable=${false}></lyra-env-list>`,
+      html`<lr-env-list .entries=${[{ name: 'X', value: 'y' }]} .revealable=${false}></lr-env-list>`,
     )) as LyraEnvList;
     await el.updateComplete;
     expect(el.shadowRoot!.querySelector('[part="reveal-button"]')).to.not.exist;
   });
 
-  it('copy button copies the real value regardless of mask state and emits lyra-copy', async () => {
+  it('copy button copies the real value regardless of mask state and emits lr-copy', async () => {
     const el = (await fixture(
-      html`<lyra-env-list .entries=${[{ name: 'API_KEY', value: 'secretvalue', secret: true }]}></lyra-env-list>`,
+      html`<lr-env-list .entries=${[{ name: 'API_KEY', value: 'secretvalue', secret: true }]}></lr-env-list>`,
     )) as LyraEnvList;
     await el.updateComplete;
-    const listener = oneEvent(el, 'lyra-copy');
+    const listener = oneEvent(el, 'lr-copy');
     (el.shadowRoot!.querySelector('[part="copy-button"]') as HTMLButtonElement).click();
     const event = (await listener) as CustomEvent<{ text: string }>;
     expect(event.detail.text).to.equal('secretvalue');
@@ -76,7 +76,7 @@ describe('lyra-env-list', () => {
 
   it('prunes reveal state for names no longer present', async () => {
     const el = (await fixture(
-      html`<lyra-env-list .entries=${[{ name: 'A', value: '1', secret: true }]}></lyra-env-list>`,
+      html`<lr-env-list .entries=${[{ name: 'A', value: '1', secret: true }]}></lr-env-list>`,
     )) as LyraEnvList;
     await el.updateComplete;
     (el.shadowRoot!.querySelector('[part="reveal-button"]') as HTMLButtonElement).click();
@@ -87,15 +87,15 @@ describe('lyra-env-list', () => {
     expect(values[1].dataset.masked).to.equal('true');
   });
 
-  it('renders lyra-empty when entries is empty', async () => {
-    const el = (await fixture(html`<lyra-env-list></lyra-env-list>`)) as LyraEnvList;
+  it('renders lr-empty when entries is empty', async () => {
+    const el = (await fixture(html`<lr-env-list></lr-env-list>`)) as LyraEnvList;
     await el.updateComplete;
-    expect(el.shadowRoot!.querySelector('lyra-empty')).to.exist;
+    expect(el.shadowRoot!.querySelector('lr-empty')).to.exist;
   });
 
   it('is accessible with masked and revealed entries', async () => {
     const el = (await fixture(
-      html`<lyra-env-list .entries=${[{ name: 'A', value: '1', secret: true }, { name: 'B', value: '2', secret: false }]}></lyra-env-list>`,
+      html`<lr-env-list .entries=${[{ name: 'A', value: '1', secret: true }, { name: 'B', value: '2', secret: false }]}></lr-env-list>`,
     )) as LyraEnvList;
     await el.updateComplete;
     await expect(el).to.be.accessible();

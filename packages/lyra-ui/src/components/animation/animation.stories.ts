@@ -4,7 +4,7 @@ import './animation.js';
 
 const meta: Meta = {
   title: 'Animation',
-  component: 'lyra-animation',
+  component: 'lr-animation',
   tags: ['autodocs'],
 };
 export default meta;
@@ -12,18 +12,18 @@ type Story = StoryObj;
 
 export const Default: Story = {
   render: () => html`
-    <lyra-animation name="fade-in" play iterations="1">
+    <lr-animation name="fade-in" play iterations="1">
       <p>Content animated with a named preset.</p>
-    </lyra-animation>
+    </lr-animation>
   `,
 };
 
 export const Presets: Story = {
   render: () => html`
-    <div style="display: grid; gap: var(--lyra-space-s);">
-      <lyra-animation name="slide-in-start" play iterations="1"><span>Slide in from the start</span></lyra-animation>
-      <lyra-animation name="zoom-in" play iterations="1"><span>Zoom in</span></lyra-animation>
-      <lyra-animation name="bounce" play iterations="1"><span>Bounce</span></lyra-animation>
+    <div style="display: grid; gap: var(--lr-space-s);">
+      <lr-animation name="slide-in-start" play iterations="1"><span>Slide in from the start</span></lr-animation>
+      <lr-animation name="zoom-in" play iterations="1"><span>Zoom in</span></lr-animation>
+      <lr-animation name="bounce" play iterations="1"><span>Bounce</span></lr-animation>
     </div>
   `,
 };

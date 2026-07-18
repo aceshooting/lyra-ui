@@ -31,7 +31,7 @@ const config = {
     { from: './sitemap.xml', to: './sitemap.xml' },
   ],
   // Tailwind styles docs/story markup (light DOM in the preview iframe) only —
-  // lyra-* components themselves stay shadow-DOM + --lyra-* tokens.
+  // lr-* components themselves stay shadow-DOM + --lr-* tokens.
   async viteFinal(viteConfig) {
     viteConfig.plugins = viteConfig.plugins ?? [];
     viteConfig.plugins.push(tailwindcss());
@@ -47,7 +47,7 @@ const config = {
     viteConfig.build.rollupOptions = viteConfig.build.rollupOptions ?? {};
     viteConfig.build.rollupOptions.output = viteConfig.build.rollupOptions.output ?? {};
     // Split each optional-peer-heavy dependency family into its own chunk so
-    // a story that never renders `lyra-map`/`lyra-chart`/`lyra-graph` never
+    // a story that never renders `lr-map`/`lr-chart`/`lr-graph` never
     // has to load MapLibre/Chart.js/d3 as part of whatever shared chunk it
     // does need.
     viteConfig.build.rollupOptions.output.manualChunks = (id) => {

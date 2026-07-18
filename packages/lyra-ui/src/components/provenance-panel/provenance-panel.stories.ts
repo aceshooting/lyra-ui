@@ -5,7 +5,7 @@ import type { LyraProvenance } from './provenance-panel.class.js';
 
 const meta: Meta = {
   title: 'Provenance Panel',
-  component: 'lyra-provenance-panel',
+  component: 'lr-provenance-panel',
 };
 export default meta;
 type Story = StoryObj;
@@ -29,17 +29,17 @@ const provenance: LyraProvenance = {
 };
 
 export const Default: Story = {
-  render: () => html`<lyra-provenance-panel .provenance=${provenance} .types=${[{ id: 'person', label: 'Person' }]}></lyra-provenance-panel>`,
+  render: () => html`<lr-provenance-panel .provenance=${provenance} .types=${[{ id: 'person', label: 'Person' }]}></lr-provenance-panel>`,
 };
 
 export const Empty: Story = {
-  render: () => html`<lyra-provenance-panel></lyra-provenance-panel>`,
+  render: () => html`<lr-provenance-panel></lr-provenance-panel>`,
 };
 
 export const EntitiesOnly: Story = {
-  render: () => html`<lyra-provenance-panel .provenance=${{ entities: provenance.entities }}></lyra-provenance-panel>`,
+  render: () => html`<lr-provenance-panel .provenance=${{ entities: provenance.entities }}></lr-provenance-panel>`,
 };
 
 export const Narrow: Story = {
-  render: () => html`<div style="max-width: 320px;"><lyra-provenance-panel .provenance=${provenance}></lyra-provenance-panel></div>`,
+  render: () => html`<div style="max-width: 320px;"><lr-provenance-panel .provenance=${provenance}></lr-provenance-panel></div>`,
 };

@@ -45,17 +45,17 @@ describe('acquireHighlightHandle', () => {
 
       if (supportsCustomHighlights()) {
         const registry = (globalThis as unknown as { CSS: { highlights: Map<string, { has(r: Range): boolean }> } }).CSS.highlights;
-        expect(registry.get('lyra-highlight-accent')!.has(rangeA)).to.be.true;
-        expect(registry.get('lyra-highlight-warning')!.has(rangeB)).to.be.true;
+        expect(registry.get('lr-highlight-accent')!.has(rangeA)).to.be.true;
+        expect(registry.get('lr-highlight-warning')!.has(rangeB)).to.be.true;
         handleA.release();
-        expect(registry.get('lyra-highlight-accent')!.has(rangeA)).to.be.false;
-        expect(registry.get('lyra-highlight-warning')!.has(rangeB)).to.be.true;
+        expect(registry.get('lr-highlight-accent')!.has(rangeA)).to.be.false;
+        expect(registry.get('lr-highlight-warning')!.has(rangeB)).to.be.true;
       } else {
-        expect(root.querySelectorAll('mark[data-lyra-highlight-tone="accent"]')).to.have.length(1);
-        expect(root.querySelectorAll('mark[data-lyra-highlight-tone="warning"]')).to.have.length(1);
+        expect(root.querySelectorAll('mark[data-lr-highlight-tone="accent"]')).to.have.length(1);
+        expect(root.querySelectorAll('mark[data-lr-highlight-tone="warning"]')).to.have.length(1);
         handleA.release();
-        expect(root.querySelectorAll('mark[data-lyra-highlight-tone="accent"]')).to.have.length(0);
-        expect(root.querySelectorAll('mark[data-lyra-highlight-tone="warning"]')).to.have.length(1);
+        expect(root.querySelectorAll('mark[data-lr-highlight-tone="accent"]')).to.have.length(0);
+        expect(root.querySelectorAll('mark[data-lr-highlight-tone="warning"]')).to.have.length(1);
       }
       handleB.release();
     } finally {
@@ -76,10 +76,10 @@ describe('acquireHighlightHandle', () => {
 
       if (supportsCustomHighlights()) {
         const registry = (globalThis as unknown as { CSS: { highlights: Map<string, { has(r: Range): boolean }> } }).CSS.highlights;
-        expect(registry.get('lyra-highlight-accent')!.has(rangeAlpha)).to.be.false;
-        expect(registry.get('lyra-highlight-accent')!.has(rangeGamma)).to.be.true;
+        expect(registry.get('lr-highlight-accent')!.has(rangeAlpha)).to.be.false;
+        expect(registry.get('lr-highlight-accent')!.has(rangeGamma)).to.be.true;
       } else {
-        const marks = root.querySelectorAll('mark[data-lyra-highlight-tone="accent"]');
+        const marks = root.querySelectorAll('mark[data-lr-highlight-tone="accent"]');
         expect(marks).to.have.length(1);
         expect(marks[0].textContent).to.equal('gamma');
       }
@@ -120,9 +120,9 @@ describe('acquireHighlightHandle', () => {
 
       if (supportsCustomHighlights()) {
         const registry = (globalThis as unknown as { CSS: { highlights: Map<string, { has(r: Range): boolean }> } }).CSS.highlights;
-        expect(registry.get('lyra-highlight-flash')!.has(range)).to.be.true;
+        expect(registry.get('lr-highlight-flash')!.has(range)).to.be.true;
         await new Promise((resolve) => setTimeout(resolve, 60));
-        expect(registry.get('lyra-highlight-flash')!.has(range)).to.be.false;
+        expect(registry.get('lr-highlight-flash')!.has(range)).to.be.false;
       } else {
         expect(root.querySelector('mark')).to.exist;
         await new Promise((resolve) => setTimeout(resolve, 60));
@@ -144,7 +144,7 @@ describe('acquireHighlightHandle', () => {
       handle.setActive(null);
       if (supportsCustomHighlights()) {
         const registry = (globalThis as unknown as { CSS: { highlights: Map<string, { has(r: Range): boolean }> } }).CSS.highlights;
-        expect(registry.get('lyra-highlight-active')!.has(range)).to.be.false;
+        expect(registry.get('lr-highlight-active')!.has(range)).to.be.false;
       } else {
         expect(root.querySelector('mark')).to.not.exist;
       }
@@ -170,15 +170,15 @@ describe('acquireHighlightHandle', () => {
       accentHandle.setRanges('accent', [rangeOverText(root, 'accent')]);
 
       // All three marks share tone="accent" (setActive/flash always paint with tone 'accent'
-      // internally) but must now carry three distinct data-lyra-highlight-name values.
-      expect(root.querySelectorAll('mark[data-lyra-highlight-tone="accent"]')).to.have.length(3);
-      expect(root.querySelectorAll('mark[data-lyra-highlight-name="lyra-highlight-active"]')).to.have.length(1);
-      expect(root.querySelectorAll('mark[data-lyra-highlight-name="lyra-highlight-flash"]')).to.have.length(1);
-      expect(root.querySelectorAll('mark[data-lyra-highlight-name="lyra-highlight-accent"]')).to.have.length(1);
+      // internally) but must now carry three distinct data-lr-highlight-name values.
+      expect(root.querySelectorAll('mark[data-lr-highlight-tone="accent"]')).to.have.length(3);
+      expect(root.querySelectorAll('mark[data-lr-highlight-name="lr-highlight-active"]')).to.have.length(1);
+      expect(root.querySelectorAll('mark[data-lr-highlight-name="lr-highlight-flash"]')).to.have.length(1);
+      expect(root.querySelectorAll('mark[data-lr-highlight-name="lr-highlight-accent"]')).to.have.length(1);
 
-      const activeMark = root.querySelector('mark[data-lyra-highlight-name="lyra-highlight-active"]')!;
-      const flashMark = root.querySelector('mark[data-lyra-highlight-name="lyra-highlight-flash"]')!;
-      const accentMark = root.querySelector('mark[data-lyra-highlight-name="lyra-highlight-accent"]')!;
+      const activeMark = root.querySelector('mark[data-lr-highlight-name="lr-highlight-active"]')!;
+      const flashMark = root.querySelector('mark[data-lr-highlight-name="lr-highlight-flash"]')!;
+      const accentMark = root.querySelector('mark[data-lr-highlight-name="lr-highlight-accent"]')!;
       expect(activeMark.textContent).to.equal('active');
       expect(flashMark.textContent).to.equal('flash');
       expect(accentMark.textContent).to.equal('accent');

@@ -4,7 +4,7 @@ import './segmented.js';
 
 const meta: Meta = {
   title: 'Segmented',
-  component: 'lyra-segmented',
+  component: 'lr-segmented',
   tags: ['autodocs'],
   parameters: {
     docs: {
@@ -20,21 +20,21 @@ type Story = StoryObj;
 
 export const Default: Story = {
   render: () => html`
-    <lyra-segmented
+    <lr-segmented
       .items=${[
         { value: 'day', label: 'Day' },
         { value: 'week', label: 'Week' },
         { value: 'month', label: 'Month' },
       ]}
       value="week"
-    ></lyra-segmented>
+    ></lr-segmented>
   `,
 };
 
 export const FourItems: Story = {
   name: 'Four items',
   render: () => html`
-    <lyra-segmented
+    <lr-segmented
       .items=${[
         { value: 'list', label: 'List' },
         { value: 'board', label: 'Board' },
@@ -42,28 +42,28 @@ export const FourItems: Story = {
         { value: 'timeline', label: 'Timeline' },
       ]}
       value="board"
-    ></lyra-segmented>
+    ></lr-segmented>
   `,
 };
 
 export const WithDisabledItem: Story = {
   name: 'With a disabled item',
   render: () => html`
-    <lyra-segmented
+    <lr-segmented
       .items=${[
         { value: 'day', label: 'Day' },
         { value: 'week', label: 'Week', disabled: true },
         { value: 'month', label: 'Month' },
       ]}
       value="day"
-    ></lyra-segmented>
+    ></lr-segmented>
   `,
 };
 
 export const WithIcons: Story = {
   name: 'With leading icons',
   render: () => html`
-    <lyra-segmented
+    <lr-segmented
       label="Layout"
       .items=${[
         { value: 'list', label: 'List', icon: html`<span aria-hidden="true">☰</span>` },
@@ -71,7 +71,7 @@ export const WithIcons: Story = {
         { value: 'calendar', label: 'Calendar', icon: html`<span aria-hidden="true">▣</span>` },
       ]}
       value="board"
-    ></lyra-segmented>
+    ></lr-segmented>
   `,
 };
 
@@ -86,7 +86,7 @@ export const AccessibleName: Story = {
     },
   },
   render: () => html`
-    <lyra-segmented
+    <lr-segmented
       label="View"
       .items=${[
         { value: 'day', label: 'Day' },
@@ -94,7 +94,7 @@ export const AccessibleName: Story = {
         { value: 'month', label: 'Month' },
       ]}
       value="week"
-    ></lyra-segmented>
+    ></lr-segmented>
   `,
 };
 
@@ -104,7 +104,7 @@ export const NarrowLongContent: Story = {
   name: 'Narrow (320px) with scrollable long content',
   render: () => html`
     <div style="inline-size: 320px; max-inline-size: 100%;">
-      <lyra-segmented
+      <lr-segmented
         label="Filter"
         .items=${[
           { value: 'all', label: 'Alle Elemente' },
@@ -114,7 +114,7 @@ export const NarrowLongContent: Story = {
           { value: 'deleted', label: 'Gelöschte Elemente' },
         ]}
         value="active"
-      ></lyra-segmented>
+      ></lr-segmented>
     </div>
   `,
 };
@@ -123,7 +123,7 @@ export const ScrollableOverflow: Story = {
   name: 'Scrollable overflow with edge fades',
   render: () => html`
     <div style="inline-size: 375px; max-inline-size: 100%;">
-      <lyra-segmented
+      <lr-segmented
         label="Filters"
         .items=${[
           { value: 'all', label: 'All conversations' },
@@ -134,7 +134,7 @@ export const ScrollableOverflow: Story = {
           { value: 'mentions', label: 'Mentions and replies' },
         ]}
         value="active"
-      ></lyra-segmented>
+      ></lr-segmented>
     </div>
   `,
 };
@@ -142,7 +142,7 @@ export const ScrollableOverflow: Story = {
 export const RightToLeft: Story = {
   name: 'Right-to-left',
   render: () => html`
-    <lyra-segmented
+    <lr-segmented
       dir="rtl"
       .items=${[
         { value: 'day', label: 'يوم' },
@@ -150,25 +150,25 @@ export const RightToLeft: Story = {
         { value: 'month', label: 'شهر' },
       ]}
       value="week"
-    ></lyra-segmented>
+    ></lr-segmented>
   `,
 };
 
 export const Events: Story = {
   render: () => html`
     <div>
-      <lyra-segmented
+      <lr-segmented
         .items=${[
           { value: 'day', label: 'Day' },
           { value: 'week', label: 'Week' },
           { value: 'month', label: 'Month' },
         ]}
         value="day"
-        @lyra-change=${(e: CustomEvent<{ value: string }>) => {
+        @lr-change=${(e: CustomEvent<{ value: string }>) => {
           const out = document.getElementById('segmented-log');
-          if (out) out.textContent = `lyra-change: ${JSON.stringify(e.detail)}`;
+          if (out) out.textContent = `lr-change: ${JSON.stringify(e.detail)}`;
         }}
-      ></lyra-segmented>
+      ></lr-segmented>
       <p id="segmented-log" style="font-family: monospace; margin-top: 0.5rem;">No event fired yet.</p>
     </div>
   `,
@@ -178,7 +178,7 @@ export const Sizes: Story = {
   render: () => html`
     <div style="display: flex; flex-direction: column; gap: 8px; align-items: flex-start;">
       ${(['2xs', 'xs', 's', 'm', 'l', 'xl'] as const).map(
-        (size) => html`<lyra-segmented
+        (size) => html`<lr-segmented
           size=${size}
           .items=${[
             { value: 'day', label: 'Day' },
@@ -186,7 +186,7 @@ export const Sizes: Story = {
             { value: 'month', label: 'Month' },
           ]}
           value="week"
-        ></lyra-segmented>`,
+        ></lr-segmented>`,
       )}
     </div>
   `,

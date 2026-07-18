@@ -29,14 +29,14 @@ export interface LyraEmojiPickerEventMap {
   focus: CustomEvent<undefined>;
   /** Fired when an emoji is picked (click, or Enter/Space on the active grid cell). `detail: {
    *  emoji: string }` — the picked glyph, same value `this.value` is set to. */
-  'lyra-change': CustomEvent<{ emoji: string }>;
+  'lr-change': CustomEvent<{ emoji: string }>;
 }
 
 class EmojiPickerBase extends LyraElement<LyraEmojiPickerEventMap> {}
 
 /**
- * `<lyra-emoji-picker>` — a searchable, keyboard-navigable, form-associated emoji picker. In the
- * same "zero/optional-peer dependency" spirit as `<lyra-lite-chart>`/`<lyra-heatmap>`: `groups` is
+ * `<lr-emoji-picker>` — a searchable, keyboard-navigable, form-associated emoji picker. In the
+ * same "zero/optional-peer dependency" spirit as `<lr-lite-chart>`/`<lr-heatmap>`: `groups` is
  * fully consumer-suppliable (this component ships no emoji data of its own), with an *optional*
  * convenience auto-loader for a default set — see `emoji-data-loader.ts` and the class doc there for
  * exactly what that covers.
@@ -48,14 +48,14 @@ class EmojiPickerBase extends LyraElement<LyraEmojiPickerEventMap> {}
  * over the same listbox: the arrow keys and Enter also work there while focus stays in the input,
  * with `aria-activedescendant` tracking the active option.
  *
- * @customElement lyra-emoji-picker
- * @event lyra-change - An emoji was picked. `detail: { emoji: string }`.
+ * @customElement lr-emoji-picker
+ * @event lr-change - An emoji was picked. `detail: { emoji: string }`.
  * @csspart base - The root wrapper.
  * @csspart search - The search/filter `<input>` (`role="combobox"` over the grid).
  * @csspart grid - The keyboard-navigable emoji grid.
  * @csspart group-label - Each group's heading, rendered above its emojis.
  * @csspart emoji - Each emoji's own `<button>`; meets the shared minimum tappable size
- *   (`--lyra-icon-button-size`) without enlarging the rendered emoji glyph itself.
+ *   (`--lr-icon-button-size`) without enlarging the rendered emoji glyph itself.
  * @csspart empty - The empty-state message, shown when the search matches nothing.
  */
 export class LyraEmojiPicker extends FormAssociated(EmojiPickerBase) {
@@ -80,7 +80,7 @@ export class LyraEmojiPicker extends FormAssociated(EmojiPickerBase) {
     // Only auto-loads when the consumer hasn't already supplied groups directly -- an explicit
     // `groups` (even an empty array set intentionally) always wins, matching the "consumer-supplied
     // data takes precedence over any built-in default" convention this library uses elsewhere (e.g.
-    // <lyra-lite-chart>'s pointText falling back to a built-in template only when unset).
+    // <lr-lite-chart>'s pointText falling back to a built-in template only when unset).
     if (this.groups.length > 0) return;
     void this.loadGroups().then((loaded) => {
       if (!this.isConnected || !loaded || this.groups.length > 0) return;
@@ -179,7 +179,7 @@ export class LyraEmojiPicker extends FormAssociated(EmojiPickerBase) {
 
   private pick(item: EmojiPickerItem): void {
     this.value = item.emoji;
-    this.emit('lyra-change', { emoji: item.emoji });
+    this.emit('lr-change', { emoji: item.emoji });
   }
 
   // Shared between the search input (combobox idiom: focus stays in the input while
@@ -294,6 +294,6 @@ export class LyraEmojiPicker extends FormAssociated(EmojiPickerBase) {
 
 declare global {
   interface HTMLElementTagNameMap {
-    'lyra-emoji-picker': LyraEmojiPicker;
+    'lr-emoji-picker': LyraEmojiPicker;
   }
 }

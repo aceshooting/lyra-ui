@@ -3,7 +3,7 @@ import './histogram.js';
 import { binnedBuckets, type LyraHistogram } from './histogram.js';
 
 it('bins its values and renders a bar-chart Chart.js instance', async () => {
-  const el = (await fixture(html`<lyra-histogram bins="5"></lyra-histogram>`)) as LyraHistogram;
+  const el = (await fixture(html`<lr-histogram bins="5"></lr-histogram>`)) as LyraHistogram;
   el.values = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
   await el.updateComplete;
   await waitUntil(() => (el as any).chart != null, 'chart never initialized', { timeout: 2000 });
@@ -12,13 +12,13 @@ it('bins its values and renders a bar-chart Chart.js instance', async () => {
 });
 
 it('locks .type to "bar" — assigning a different value at runtime (e.g. via a `type="line"` attribute) is a no-op', async () => {
-  const el = (await fixture(html`<lyra-histogram></lyra-histogram>`)) as LyraHistogram;
+  const el = (await fixture(html`<lr-histogram></lr-histogram>`)) as LyraHistogram;
   (el as any).type = 'line';
   expect(el.type).to.equal('bar');
 });
 
 it('normalizes unsafe HTML `bins` values before they reach the binning pass', () => {
-  const el = document.createElement('lyra-histogram') as LyraHistogram;
+  const el = document.createElement('lr-histogram') as LyraHistogram;
 
   el.setAttribute('bins', String(Number.MAX_SAFE_INTEGER));
   expect(el.bins).to.equal(1_000);
@@ -35,7 +35,7 @@ it('normalizes unsafe HTML `bins` values before they reach the binning pass', ()
 });
 
 it('memoizes the binning pass, reusing the same bucket array while `values`/`bins` are unchanged', async () => {
-  const el = (await fixture(html`<lyra-histogram bins="5"></lyra-histogram>`)) as LyraHistogram;
+  const el = (await fixture(html`<lr-histogram bins="5"></lr-histogram>`)) as LyraHistogram;
   el.values = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
   await el.updateComplete;
   await waitUntil(() => (el as any).chart != null);
@@ -54,7 +54,7 @@ it('memoizes the binning pass, reusing the same bucket array while `values`/`bin
 });
 
 it('is accessible', async () => {
-  const el = (await fixture(html`<lyra-histogram aria-label="Response-time distribution"></lyra-histogram>`)) as LyraHistogram;
+  const el = (await fixture(html`<lr-histogram aria-label="Response-time distribution"></lr-histogram>`)) as LyraHistogram;
   el.values = [1, 2, 3];
   await el.updateComplete;
   await waitUntil(() => (el as any).chart != null);
@@ -64,7 +64,7 @@ it('is accessible', async () => {
 });
 
 it('redraws its derived labels and counts when values change after initialization', async () => {
-  const el = (await fixture(html`<lyra-histogram bins="2"></lyra-histogram>`)) as LyraHistogram;
+  const el = (await fixture(html`<lr-histogram bins="2"></lr-histogram>`)) as LyraHistogram;
   el.values = [0, 1, 2, 3];
   await el.updateComplete;
   await waitUntil(() => (el as any).chart != null);
@@ -76,7 +76,7 @@ it('redraws its derived labels and counts when values change after initializatio
 });
 
 it('visually hides the fallback data table via the sr-only sheet when show-data-table is off', async () => {
-  const el = (await fixture(html`<lyra-histogram></lyra-histogram>`)) as LyraHistogram;
+  const el = (await fixture(html`<lr-histogram></lr-histogram>`)) as LyraHistogram;
   el.values = [1, 2, 3];
   await el.updateComplete;
   await waitUntil(() => (el as any).chart != null);
@@ -102,10 +102,10 @@ it('visually hides the fallback data table via the sr-only sheet when show-data-
 it('can shrink to a 320px allocation with a long series label', async () => {
   const wrapper = await fixture(html`
     <div style="display: flex; inline-size: 320px;">
-      <lyra-histogram label="A deliberately long translated frequency distribution label"></lyra-histogram>
+      <lr-histogram label="A deliberately long translated frequency distribution label"></lr-histogram>
     </div>
   `);
-  const el = wrapper.querySelector('lyra-histogram') as LyraHistogram;
+  const el = wrapper.querySelector('lr-histogram') as LyraHistogram;
   el.values = [1, 2, 3, 4, 5];
   await el.updateComplete;
   await waitUntil(() => (el as any).chart != null);

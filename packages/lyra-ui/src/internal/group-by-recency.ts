@@ -1,6 +1,6 @@
 /** Per-bucket English defaults, overridable the same "no i18n, but
- *  overridable via an options object" way `<lyra-date-picker>`/
- *  `<lyra-source-list>`'s `label-plural` already establish. */
+ *  overridable via an options object" way `<lr-date-picker>`/
+ *  `<lr-source-list>`'s `label-plural` already establish. */
 export interface RecencyLabels {
   today?: string;
   yesterday?: string;
@@ -53,7 +53,7 @@ function startOfLocalDay(d: Date): number {
  * calendar-day boundaries in the local timezone — "yesterday" means the
  * previous calendar date, not "24-48 hours ago". Mirrors the bucketing a
  * chat sidebar's conversation-history list commonly groups by (this
- * library's own `<lyra-conversation-item>` is the intended consumer, though
+ * library's own `<lr-conversation-item>` is the intended consumer, though
  * this function is deliberately DOM/component-free — plain data in, plain
  * data out).
  *

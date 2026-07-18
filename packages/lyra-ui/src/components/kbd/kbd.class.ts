@@ -147,12 +147,12 @@ function detectIsMac(): boolean {
 
 // Computed once at module scope, not per-instance/per-render — a page's
 // platform never changes mid-session, so there is nothing to gain (and a
-// little cost, however small) from re-detecting it on every <lyra-kbd>
+// little cost, however small) from re-detecting it on every <lr-kbd>
 // instance or every re-render.
 const IS_MAC = detectIsMac();
 
 /**
- * `<lyra-kbd>` — a small chip representing a keyboard shortcut, rendering
+ * `<lr-kbd>` — a small chip representing a keyboard shortcut, rendering
  * the platform-appropriate glyph for cross-platform modifier keys (⌘ on
  * macOS, "Ctrl" elsewhere) from a single platform-neutral `keys` string.
  *
@@ -183,7 +183,7 @@ const IS_MAC = detectIsMac();
  * entirely and stops this component from asserting its own `aria-label`,
  * leaving the slotted content to carry its own accessible name.
  *
- * @customElement lyra-kbd
+ * @customElement lr-kbd
  * @slot - Optional override for fully custom key-cap content, replacing the
  * `keys`-driven rendering. Leave empty to use `keys`.
  * @csspart base - The chip's root element.
@@ -198,7 +198,7 @@ export class LyraKbd extends LyraElement {
 
   // Real (non-whitespace) light-DOM content overrides the keys-driven
   // rendering below — same "seed synchronously, refine on slotchange"
-  // pattern as lyra-checkbox's hasLabelSlot/lyra-citation-badge's
+  // pattern as lr-checkbox's hasLabelSlot/lr-citation-badge's
   // hasPreviewSlot, so a declaratively-slotted override doesn't flash the
   // keys rendering for one frame before the first slotchange event.
   @state() private hasCustomContent = false;
@@ -233,7 +233,7 @@ export class LyraKbd extends LyraElement {
     // is intentional (KbdLocalize callers may ignore trailing params).
     const tokens = parseShortcut(this.keys, IS_MAC, (key) => this.localize(key));
     // role="img" treats the chip as one opaque unit (matching
-    // lyra-context-meter's/lyra-chart's canvas usage of the same pattern):
+    // lr-context-meter's/lr-chart's canvas usage of the same pattern):
     // the individual glyphs and "+" separators aren't real words, so
     // exposing them as separate accessible-tree text would read worse than
     // the single spelled-out aria-label below. An empty `keys` (and no
@@ -269,6 +269,6 @@ export class LyraKbd extends LyraElement {
 
 declare global {
   interface HTMLElementTagNameMap {
-    'lyra-kbd': LyraKbd;
+    'lr-kbd': LyraKbd;
   }
 }

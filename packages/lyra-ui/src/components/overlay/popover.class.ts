@@ -12,22 +12,22 @@ import { styles } from './overlay.styles.js';
 const DEFAULT_DISTANCE = 4;
 
 export interface LyraPopoverEventMap {
-  'lyra-show': CustomEvent<undefined>;
-  'lyra-hide': CustomEvent<undefined>;
+  'lr-show': CustomEvent<undefined>;
+  'lr-hide': CustomEvent<undefined>;
 }
 
 /**
- * `<lyra-popover>` — a click-triggered, light-dismiss floating surface.
+ * `<lr-popover>` — a click-triggered, light-dismiss floating surface.
  *
- * @customElement lyra-popover
+ * @customElement lr-popover
  * @slot trigger - The interactive element that toggles the popover.
  * @slot - Popover content.
- * @event lyra-show - The popover opened.
- * @event lyra-hide - The popover closed.
+ * @event lr-show - The popover opened.
+ * @event lr-hide - The popover closed.
  * @csspart trigger - The trigger wrapper.
  * @csspart popup - The positioned popup.
  * @csspart content - The content wrapper.
- * @cssprop --lyra-overlay-max-inline-size - Maximum inline size of the popup (default `--lyra-size-20rem`).
+ * @cssprop --lr-overlay-max-inline-size - Maximum inline size of the popup (default `--lr-size-20rem`).
  */
 export class LyraPopover extends LyraElement<LyraPopoverEventMap> {
   static styles = [LyraElement.styles, styles];
@@ -51,15 +51,15 @@ export class LyraPopover extends LyraElement<LyraPopoverEventMap> {
       if (this.open) this.position();
       // Scoped to a real open/close transition -- a placement/distance-only
       // change re-runs this whole block to reposition, but must not re-emit
-      // lyra-show/lyra-hide or toggle the document listener when `open`
+      // lr-show/lr-hide or toggle the document listener when `open`
       // itself didn't change.
       if (changed.has('open')) {
         if (this.open) {
           document.addEventListener('pointerdown', this.onDocumentPointer);
-          if (!this.firstUpdate) this.emit('lyra-show');
+          if (!this.firstUpdate) this.emit('lr-show');
         } else {
           document.removeEventListener('pointerdown', this.onDocumentPointer);
-          if (!this.firstUpdate) this.emit('lyra-hide');
+          if (!this.firstUpdate) this.emit('lr-hide');
         }
       }
       this.syncTriggerA11y();
@@ -115,9 +115,9 @@ export class LyraPopover extends LyraElement<LyraPopoverEventMap> {
   };
   render(): TemplateResult {
     // The accessible-name fallback follows the popup's actual semantic role --
-    // a `popupRole="menu"` popup (e.g. <lyra-dropdown>) is announced as a menu,
+    // a `popupRole="menu"` popup (e.g. <lr-dropdown>) is announced as a menu,
     // not as a generic "Popover", so its translation is looked up under the
-    // same key <lyra-menu> uses for its own default name.
+    // same key <lr-menu> uses for its own default name.
     const label =
       this.getAttribute('aria-label') ||
       this.accessibleLabel ||
@@ -132,4 +132,4 @@ export class LyraPopover extends LyraElement<LyraPopoverEventMap> {
     `;
   }
 }
-declare global { interface HTMLElementTagNameMap { 'lyra-popover': LyraPopover; } }
+declare global { interface HTMLElementTagNameMap { 'lr-popover': LyraPopover; } }

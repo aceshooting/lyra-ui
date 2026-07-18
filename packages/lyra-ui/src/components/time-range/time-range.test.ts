@@ -5,35 +5,35 @@ import { styles } from './time-range.styles.js';
 
 it('reflects start/end as the range fill width', async () => {
   const el = (await fixture(
-    html`<lyra-time-range min="0" max="100" start="20" end="80"></lyra-time-range>`,
+    html`<lr-time-range min="0" max="100" start="20" end="80"></lr-time-range>`,
   )) as LyraTimeRange;
   const range = el.shadowRoot!.querySelector('[part="range"]') as HTMLElement;
   expect(range.style.insetInlineStart).to.equal('20%');
   expect(range.style.inlineSize).to.equal('60%');
 });
 
-it('moves the start handle with ArrowRight and emits lyra-input then lyra-change', async () => {
+it('moves the start handle with ArrowRight and emits lr-input then lr-change', async () => {
   const el = (await fixture(
-    html`<lyra-time-range min="0" max="100" start="20" end="80" step="5"></lyra-time-range>`,
+    html`<lr-time-range min="0" max="100" start="20" end="80" step="5"></lr-time-range>`,
   )) as LyraTimeRange;
   const startHandle = el.shadowRoot!.querySelector('[part="handle-start"]') as HTMLElement;
   expect(startHandle.getAttribute('role')).to.equal('slider');
-  // lyra-input/lyra-change are emitted synchronously from the keydown/keyup
+  // lr-input/lr-change are emitted synchronously from the keydown/keyup
   // handlers, so the listener must be attached before dispatch (matches the
-  // convention used by lyra-split's keyboard-step tests).
+  // convention used by lr-split's keyboard-step tests).
   let inputDetail: { start: number; end: number } | undefined;
-  el.addEventListener('lyra-input', (e) => (inputDetail = (e as CustomEvent).detail));
+  el.addEventListener('lr-input', (e) => (inputDetail = (e as CustomEvent).detail));
   startHandle.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
   expect(inputDetail!.start).to.equal(25);
   let changeDetail: { start: number; end: number } | undefined;
-  el.addEventListener('lyra-change', (e) => (changeDetail = (e as CustomEvent).detail));
+  el.addEventListener('lr-change', (e) => (changeDetail = (e as CustomEvent).detail));
   startHandle.dispatchEvent(new KeyboardEvent('keyup', { key: 'ArrowRight', bubbles: true }));
   expect(changeDetail!.start).to.equal(25);
 });
 
 it('never lets the start handle pass the end handle', async () => {
   const el = (await fixture(
-    html`<lyra-time-range min="0" max="100" start="78" end="80" step="5"></lyra-time-range>`,
+    html`<lr-time-range min="0" max="100" start="78" end="80" step="5"></lr-time-range>`,
   )) as LyraTimeRange;
   const startHandle = el.shadowRoot!.querySelector('[part="handle-start"]') as HTMLElement;
   startHandle.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
@@ -43,14 +43,14 @@ it('never lets the start handle pass the end handle', async () => {
 
 it('is accessible', async () => {
   const el = (await fixture(
-    html`<lyra-time-range min="0" max="100" start="20" end="80"></lyra-time-range>`,
+    html`<lr-time-range min="0" max="100" start="20" end="80"></lr-time-range>`,
   )) as LyraTimeRange;
   await expect(el).to.be.accessible();
 });
 
 it('re-clamps when only `end` is set below the current `start` (controlled/two-way binding)', async () => {
   const el = (await fixture(
-    html`<lyra-time-range min="0" max="100" start="50" end="90"></lyra-time-range>`,
+    html`<lr-time-range min="0" max="100" start="50" end="90"></lr-time-range>`,
   )) as LyraTimeRange;
   el.end = 10;
   await el.updateComplete;
@@ -64,7 +64,7 @@ it('re-clamps when only `end` is set below the current `start` (controlled/two-w
 
 it('re-clamps when only `start` is set above the current `end` (controlled/two-way binding)', async () => {
   const el = (await fixture(
-    html`<lyra-time-range min="0" max="100" start="20" end="60"></lyra-time-range>`,
+    html`<lr-time-range min="0" max="100" start="20" end="60"></lr-time-range>`,
   )) as LyraTimeRange;
   el.start = 90;
   await el.updateComplete;
@@ -72,20 +72,20 @@ it('re-clamps when only `start` is set above the current `end` (controlled/two-w
   expect(el.start).to.equal(60);
 });
 
-it('does not emit lyra-change on keyup of a non-arrow key', async () => {
+it('does not emit lr-change on keyup of a non-arrow key', async () => {
   const el = (await fixture(
-    html`<lyra-time-range min="0" max="100" start="20" end="80" step="5"></lyra-time-range>`,
+    html`<lr-time-range min="0" max="100" start="20" end="80" step="5"></lr-time-range>`,
   )) as LyraTimeRange;
   const startHandle = el.shadowRoot!.querySelector('[part="handle-start"]') as HTMLElement;
   let changeFired = false;
-  el.addEventListener('lyra-change', () => (changeFired = true));
+  el.addEventListener('lr-change', () => (changeFired = true));
   startHandle.dispatchEvent(new KeyboardEvent('keyup', { key: 'Tab', bubbles: true }));
   expect(changeFired).to.be.false;
 });
 
 it('removes the window pointermove/pointerup listeners on disconnect so a detached drag cannot leak', async () => {
   const el = (await fixture(
-    html`<lyra-time-range min="0" max="100" start="20" end="80" step="1"></lyra-time-range>`,
+    html`<lr-time-range min="0" max="100" start="20" end="80" step="1"></lr-time-range>`,
   )) as LyraTimeRange;
   const startHandle = el.shadowRoot!.querySelector('[part="handle-start"]') as HTMLElement;
   startHandle.setPointerCapture = () => {};
@@ -100,12 +100,12 @@ it('removes the window pointermove/pointerup listeners on disconnect so a detach
   el.remove();
 
   let inputFired = false;
-  el.addEventListener('lyra-input', () => (inputFired = true));
+  el.addEventListener('lr-input', () => (inputFired = true));
   window.dispatchEvent(new PointerEvent('pointermove', { pointerId: 1, clientX: 100 }));
   window.dispatchEvent(new PointerEvent('pointerup', { pointerId: 1 }));
 
   // If disconnectedCallback hadn't removed the window listeners, the stray
-  // pointermove above would still mutate `start` and emit `lyra-input` on
+  // pointermove above would still mutate `start` and emit `lr-input` on
   // the now-detached instance.
   expect(inputFired).to.be.false;
   expect(el.start).to.equal(startBeforeDetach);
@@ -113,7 +113,7 @@ it('removes the window pointermove/pointerup listeners on disconnect so a detach
 
 it('tears down the drag on pointercancel even though no pointerup ever arrives', async () => {
   const el = (await fixture(
-    html`<lyra-time-range min="0" max="100" start="20" end="80" step="1"></lyra-time-range>`,
+    html`<lr-time-range min="0" max="100" start="20" end="80" step="1"></lr-time-range>`,
   )) as LyraTimeRange;
   const startHandle = el.shadowRoot!.querySelector('[part="handle-start"]') as HTMLElement;
   startHandle.setPointerCapture = () => {};
@@ -129,7 +129,7 @@ it('tears down the drag on pointercancel even though no pointerup ever arrives',
   window.dispatchEvent(new PointerEvent('pointercancel', { pointerId: 1 }));
 
   let inputFired = false;
-  el.addEventListener('lyra-input', () => (inputFired = true));
+  el.addEventListener('lr-input', () => (inputFired = true));
   const startAfterCancel = el.start;
   window.dispatchEvent(new PointerEvent('pointermove', { pointerId: 1, clientX: 180 }));
 
@@ -141,7 +141,7 @@ it('tears down the drag on pointercancel even though no pointerup ever arrives',
 
 it('tears down the drag on lostpointercapture even though no pointerup ever arrives', async () => {
   const el = (await fixture(
-    html`<lyra-time-range min="0" max="100" start="20" end="80" step="1"></lyra-time-range>`,
+    html`<lr-time-range min="0" max="100" start="20" end="80" step="1"></lr-time-range>`,
   )) as LyraTimeRange;
   const startHandle = el.shadowRoot!.querySelector('[part="handle-start"]') as HTMLElement;
   startHandle.setPointerCapture = () => {};
@@ -152,7 +152,7 @@ it('tears down the drag on lostpointercapture even though no pointerup ever arri
   window.dispatchEvent(new PointerEvent('lostpointercapture', { pointerId: 1 }));
 
   let inputFired = false;
-  el.addEventListener('lyra-input', () => (inputFired = true));
+  el.addEventListener('lr-input', () => (inputFired = true));
   const startAfterLostCapture = el.start;
   window.dispatchEvent(new PointerEvent('pointermove', { pointerId: 1, clientX: 180 }));
 
@@ -162,7 +162,7 @@ it('tears down the drag on lostpointercapture even though no pointerup ever arri
 
 it('re-clamps start/end into a narrower domain when min/max change after mount', async () => {
   const el = (await fixture(
-    html`<lyra-time-range min="0" max="100" start="20" end="80"></lyra-time-range>`,
+    html`<lr-time-range min="0" max="100" start="20" end="80"></lr-time-range>`,
   )) as LyraTimeRange;
   // Narrowing `max` (e.g. zooming the time axis) must pull both handles
   // back inside [min, max] instead of leaving `end` (and the range fill)
@@ -183,7 +183,7 @@ it('re-clamps start/end into a narrower domain when min/max change after mount',
 
 it('does not let start/end render outside the track after a domain change', async () => {
   const el = (await fixture(
-    html`<lyra-time-range min="0" max="100" start="20" end="80"></lyra-time-range>`,
+    html`<lr-time-range min="0" max="100" start="20" end="80"></lr-time-range>`,
   )) as LyraTimeRange;
   el.max = 50;
   await el.updateComplete;
@@ -198,7 +198,7 @@ it('does not let start/end render outside the track after a domain change', asyn
 
 it('stops an in-progress drag without mutating start/end once disabled mid-drag', async () => {
   const el = (await fixture(
-    html`<lyra-time-range min="0" max="100" start="20" end="80" step="1"></lyra-time-range>`,
+    html`<lr-time-range min="0" max="100" start="20" end="80" step="1"></lr-time-range>`,
   )) as LyraTimeRange;
   const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
   const startHandle = el.shadowRoot!.querySelector('[part="handle-start"]') as HTMLElement;
@@ -226,8 +226,8 @@ it('stops an in-progress drag without mutating start/end once disabled mid-drag'
 
   let inputFired = false;
   let changeFired = false;
-  el.addEventListener('lyra-input', () => (inputFired = true));
-  el.addEventListener('lyra-change', () => (changeFired = true));
+  el.addEventListener('lr-input', () => (inputFired = true));
+  el.addEventListener('lr-change', () => (changeFired = true));
   const startBeforeMove = el.start;
   window.dispatchEvent(new PointerEvent('pointermove', { pointerId: 1, clientX: 100 }));
 
@@ -245,9 +245,9 @@ it('stops an in-progress drag without mutating start/end once disabled mid-drag'
   expect(changeFired).to.be.false;
 });
 
-it('drags the start handle with pointer events and emits lyra-input then lyra-change on release', async () => {
+it('drags the start handle with pointer events and emits lr-input then lr-change on release', async () => {
   const el = (await fixture(
-    html`<lyra-time-range min="0" max="100" start="20" end="80" step="1"></lyra-time-range>`,
+    html`<lr-time-range min="0" max="100" start="20" end="80" step="1"></lr-time-range>`,
   )) as LyraTimeRange;
   const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
   const startHandle = el.shadowRoot!.querySelector('[part="handle-start"]') as HTMLElement;
@@ -274,7 +274,7 @@ it('drags the start handle with pointer events and emits lyra-input then lyra-ch
     }) as DOMRect;
 
   let inputDetail: { start: number; end: number } | undefined;
-  el.addEventListener('lyra-input', (e) => (inputDetail = (e as CustomEvent).detail));
+  el.addEventListener('lr-input', (e) => (inputDetail = (e as CustomEvent).detail));
   startHandle.dispatchEvent(
     new PointerEvent('pointerdown', { bubbles: true, pointerId: 1, clientX: 40 }),
   );
@@ -284,21 +284,21 @@ it('drags the start handle with pointer events and emits lyra-input then lyra-ch
   expect(inputDetail!.end).to.equal(80);
 
   let changeDetail: { start: number; end: number } | undefined;
-  el.addEventListener('lyra-change', (e) => (changeDetail = (e as CustomEvent).detail));
+  el.addEventListener('lr-change', (e) => (changeDetail = (e as CustomEvent).detail));
   window.dispatchEvent(new PointerEvent('pointerup', { pointerId: 1 }));
   expect(changeDetail!.start).to.equal(50);
 });
 
 it('mirrors the drag ratio under dir="rtl", since the track is positioned with inset-inline-start', async () => {
   const el = (await fixture(
-    html`<lyra-time-range
+    html`<lr-time-range
       dir="rtl"
       min="0"
       max="100"
       start="20"
       end="80"
       step="1"
-    ></lyra-time-range>`,
+    ></lr-time-range>`,
   )) as LyraTimeRange;
   const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
   const startHandle = el.shadowRoot!.querySelector('[part="handle-start"]') as HTMLElement;
@@ -320,7 +320,7 @@ it('mirrors the drag ratio under dir="rtl", since the track is positioned with i
     }) as DOMRect;
 
   let inputDetail: { start: number; end: number } | undefined;
-  el.addEventListener('lyra-input', (e) => (inputDetail = (e as CustomEvent).detail));
+  el.addEventListener('lr-input', (e) => (inputDetail = (e as CustomEvent).detail));
   startHandle.dispatchEvent(
     new PointerEvent('pointerdown', { bubbles: true, pointerId: 1, clientX: 40 }),
   );
@@ -333,7 +333,7 @@ it('mirrors the drag ratio under dir="rtl", since the track is positioned with i
 
 it('mirrors ArrowRight/ArrowLeft under dir="rtl" to keep the physical direction consistent with dragging', async () => {
   const el = (await fixture(
-    html`<lyra-time-range dir="rtl" min="0" max="100" start="20" end="80"></lyra-time-range>`,
+    html`<lr-time-range dir="rtl" min="0" max="100" start="20" end="80"></lr-time-range>`,
   )) as LyraTimeRange;
   const startHandle = el.shadowRoot!.querySelector('[part="handle-start"]') as HTMLElement;
 
@@ -346,7 +346,7 @@ it('mirrors ArrowRight/ArrowLeft under dir="rtl" to keep the physical direction 
 
 it('widens the handle hit/drag area past the visible 14px dot via a transparent ::before', async () => {
   const el = (await fixture(
-    html`<lyra-time-range min="0" max="100" start="20" end="80"></lyra-time-range>`,
+    html`<lr-time-range min="0" max="100" start="20" end="80"></lr-time-range>`,
   )) as LyraTimeRange;
   const startHandle = el.shadowRoot!.querySelector('[part="handle-start"]') as HTMLElement;
   // The visible dot itself must stay 14px (unchanged design).
@@ -359,9 +359,9 @@ it('widens the handle hit/drag area past the visible 14px dot via a transparent 
   expect(before.height).to.equal('28px');
 });
 
-it('uses cursor:not-allowed (not pointer-events:none) when disabled, matching every other lyra-* control', async () => {
+it('uses cursor:not-allowed (not pointer-events:none) when disabled, matching every other lr-* control', async () => {
   const el = (await fixture(
-    html`<lyra-time-range min="0" max="100" start="20" end="80" disabled></lyra-time-range>`,
+    html`<lr-time-range min="0" max="100" start="20" end="80" disabled></lr-time-range>`,
   )) as LyraTimeRange;
   const hostStyle = getComputedStyle(el);
   expect(hostStyle.pointerEvents).to.not.equal('none');
@@ -376,20 +376,20 @@ it('uses cursor:not-allowed (not pointer-events:none) when disabled, matching ev
 
 it('references the shared focus-ring tokens on the handle focus-visible outline instead of hardcoded literals', () => {
   expect(styles.cssText).to.include(
-    'outline: var(--lyra-focus-ring-width) solid var(--lyra-focus-ring-color)',
+    'outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color)',
   );
-  expect(styles.cssText).to.include('outline-offset: var(--lyra-focus-ring-offset)');
+  expect(styles.cssText).to.include('outline-offset: var(--lr-focus-ring-offset)');
 });
 
 it('targets the real preset-button part in the reduced-motion override, not a nonexistent "preset" part', async () => {
   const el = (await fixture(
-    html`<lyra-time-range
+    html`<lr-time-range
       min="0"
       max="100"
       start="20"
       end="80"
       .presets=${[{ label: 'Last hour', start: 0, end: 10 }]}
-    ></lyra-time-range>`,
+    ></lr-time-range>`,
   )) as LyraTimeRange;
   const presetButton = el.shadowRoot!.querySelector('[part="preset-button"]');
   expect(presetButton, 'the rendered preset button must actually carry part="preset-button"').to.exist;
@@ -403,7 +403,7 @@ it('targets the real preset-button part in the reduced-motion override, not a no
 
 it('renders handles/fill in the correct left-to-right order when min > max (inverted domain)', async () => {
   const el = (await fixture(
-    html`<lyra-time-range min="100" max="0" start="20" end="80" step="5"></lyra-time-range>`,
+    html`<lr-time-range min="100" max="0" start="20" end="80" step="5"></lr-time-range>`,
   )) as LyraTimeRange;
   const range = el.shadowRoot!.querySelector('[part="range"]') as HTMLElement;
   const startHandle = el.shadowRoot!.querySelector('[part="handle-start"]') as HTMLElement;
@@ -420,7 +420,7 @@ it('renders handles/fill in the correct left-to-right order when min > max (inve
 
 it('does not lock dragging to a fixed value when min > max', async () => {
   const el = (await fixture(
-    html`<lyra-time-range min="100" max="0" start="20" end="80" step="5"></lyra-time-range>`,
+    html`<lr-time-range min="100" max="0" start="20" end="80" step="5"></lr-time-range>`,
   )) as LyraTimeRange;
   const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
   const startHandle = el.shadowRoot!.querySelector('[part="handle-start"]') as HTMLElement;
@@ -454,7 +454,7 @@ it('does not lock dragging to a fixed value when min > max', async () => {
 
 it('maps RTL pointer positions through the normalized domain when min > max', async () => {
   const el = (await fixture(
-    html`<lyra-time-range dir="rtl" min="100" max="0" start="20" end="80" step="1"></lyra-time-range>`,
+    html`<lr-time-range dir="rtl" min="100" max="0" start="20" end="80" step="1"></lr-time-range>`,
   )) as LyraTimeRange;
   const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
   const startHandle = el.shadowRoot!.querySelector('[part="handle-start"]') as HTMLElement;
@@ -485,7 +485,7 @@ it('maps RTL pointer positions through the normalized domain when min > max', as
 
 it("tracks concurrent drags by pointerId so a second pointer cannot hijack the first drag's handle", async () => {
   const el = (await fixture(
-    html`<lyra-time-range min="0" max="100" start="20" end="80" step="1"></lyra-time-range>`,
+    html`<lr-time-range min="0" max="100" start="20" end="80" step="1"></lr-time-range>`,
   )) as LyraTimeRange;
   const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
   const startHandle = el.shadowRoot!.querySelector('[part="handle-start"]') as HTMLElement;
@@ -537,7 +537,7 @@ it("tracks concurrent drags by pointerId so a second pointer cannot hijack the f
 
 it('does not poison start/end with NaN when step is 0', async () => {
   const el = (await fixture(
-    html`<lyra-time-range min="0" max="100" start="20" end="80" step="0"></lyra-time-range>`,
+    html`<lr-time-range min="0" max="100" start="20" end="80" step="0"></lr-time-range>`,
   )) as LyraTimeRange;
   const startHandle = el.shadowRoot!.querySelector('[part="handle-start"]') as HTMLElement;
   startHandle.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
@@ -551,7 +551,7 @@ it('does not poison start/end with NaN when step is 0', async () => {
 
 it('rounds a non-integer step to its own decimal precision instead of accumulating float drift', async () => {
   const el = (await fixture(
-    html`<lyra-time-range min="0" max="100" start="20" end="80" step="0.1"></lyra-time-range>`,
+    html`<lr-time-range min="0" max="100" start="20" end="80" step="0.1"></lr-time-range>`,
   )) as LyraTimeRange;
   const startHandle = el.shadowRoot!.querySelector('[part="handle-start"]') as HTMLElement;
   startHandle.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
@@ -567,7 +567,7 @@ it('rounds a non-integer step to its own decimal precision instead of accumulati
 
 it('rounds exponent-form steps without collapsing the nudge to zero', async () => {
   const el = (await fixture(
-    html`<lyra-time-range min="0" max="1" start="0" end="1" step="1e-7"></lyra-time-range>`,
+    html`<lr-time-range min="0" max="1" start="0" end="1" step="1e-7"></lr-time-range>`,
   )) as LyraTimeRange;
   const startHandle = el.shadowRoot!.querySelector('[part="handle-start"]') as HTMLElement;
   startHandle.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
@@ -577,7 +577,7 @@ it('rounds exponent-form steps without collapsing the nudge to zero', async () =
 
 it('anchors the step grid at `min` rather than absolute 0, matching native <input type=range>', async () => {
   const el = (await fixture(
-    html`<lyra-time-range min="3" max="100" start="3" step="10"></lyra-time-range>`,
+    html`<lr-time-range min="3" max="100" start="3" step="10"></lr-time-range>`,
   )) as LyraTimeRange;
   const startHandle = el.shadowRoot!.querySelector('[part="handle-start"]') as HTMLElement;
   startHandle.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
@@ -590,7 +590,7 @@ it('anchors the step grid at `min` rather than absolute 0, matching native <inpu
 
 it('does not render invalid CSS or an aria-valuenow="NaN" when start fails Number attribute conversion', async () => {
   const el = (await fixture(
-    html`<lyra-time-range min="0" max="100" start="not-a-number" end="80"></lyra-time-range>`,
+    html`<lr-time-range min="0" max="100" start="not-a-number" end="80"></lr-time-range>`,
   )) as LyraTimeRange;
   expect(Number.isNaN(el.start)).to.be.true;
   const startHandle = el.shadowRoot!.querySelector('[part="handle-start"]') as HTMLElement;
@@ -603,7 +603,7 @@ it('does not render invalid CSS or an aria-valuenow="NaN" when start fails Numbe
 
 it('keeps infinities out of domain geometry and ARIA attributes', async () => {
   const el = (await fixture(
-    html`<lyra-time-range min="Infinity" max="100" start="Infinity" end="-Infinity"></lyra-time-range>`,
+    html`<lr-time-range min="Infinity" max="100" start="Infinity" end="-Infinity"></lr-time-range>`,
   )) as LyraTimeRange;
   const handles = [...el.shadowRoot!.querySelectorAll('[role="slider"]')] as HTMLElement[];
   handles.forEach((handle) => {
@@ -616,7 +616,7 @@ it('keeps infinities out of domain geometry and ARIA attributes', async () => {
 
 it('defaults each handle\'s aria-label and lets startLabel/endLabel override them', async () => {
   const el = (await fixture(
-    html`<lyra-time-range min="0" max="100" start="20" end="80"></lyra-time-range>`,
+    html`<lr-time-range min="0" max="100" start="20" end="80"></lr-time-range>`,
   )) as LyraTimeRange;
   const startHandle = el.shadowRoot!.querySelector('[part="handle-start"]') as HTMLElement;
   const endHandle = el.shadowRoot!.querySelector('[part="handle-end"]') as HTMLElement;
@@ -637,13 +637,13 @@ it('defaults each handle\'s aria-label and lets startLabel/endLabel override the
 
 it('resolves the rangeStart/rangeEnd aria-label keys through a .strings override', async () => {
   const el = (await fixture(
-    html`<lyra-time-range
+    html`<lr-time-range
       min="0"
       max="100"
       start="20"
       end="80"
       .strings=${{ rangeStart: 'Début de plage', rangeEnd: 'Fin de plage' }}
-    ></lyra-time-range>`,
+    ></lr-time-range>`,
   )) as LyraTimeRange;
   const startHandle = el.shadowRoot!.querySelector('[part="handle-start"]') as HTMLElement;
   const endHandle = el.shadowRoot!.querySelector('[part="handle-end"]') as HTMLElement;
@@ -656,14 +656,14 @@ it('resolves the rangeStart/rangeEnd aria-label keys through a .strings override
 
 it('reflects startLabel/endLabel from their start-label/end-label content attributes', async () => {
   const el = (await fixture(
-    html`<lyra-time-range
+    html`<lr-time-range
       min="0"
       max="100"
       start="20"
       end="80"
       start-label="From"
       end-label="To"
-    ></lyra-time-range>`,
+    ></lr-time-range>`,
   )) as LyraTimeRange;
   expect(el.startLabel).to.equal('From');
   expect(el.endLabel).to.equal('To');
@@ -675,7 +675,7 @@ it('reflects startLabel/endLabel from their start-label/end-label content attrib
 
 it('marks handles aria-disabled when disabled, for screen readers browsing by virtual cursor', async () => {
   const el = (await fixture(
-    html`<lyra-time-range min="0" max="100" start="20" end="80" disabled></lyra-time-range>`,
+    html`<lr-time-range min="0" max="100" start="20" end="80" disabled></lr-time-range>`,
   )) as LyraTimeRange;
   const startHandle = el.shadowRoot!.querySelector('[part="handle-start"]') as HTMLElement;
   const endHandle = el.shadowRoot!.querySelector('[part="handle-end"]') as HTMLElement;
@@ -684,13 +684,13 @@ it('marks handles aria-disabled when disabled, for screen readers browsing by vi
 
   el.disabled = false;
   await el.updateComplete;
-  expect(startHandle.hasAttribute('aria-disabled')).to.be.false;
-  expect(endHandle.hasAttribute('aria-disabled')).to.be.false;
+  expect(startHandle.getAttribute('aria-disabled')).to.equal('false');
+  expect(endHandle.getAttribute('aria-disabled')).to.equal('false');
 });
 
 it('ignores arrow-key input on a handle that keeps keyboard focus after disabled is set mid-interaction', async () => {
   const el = (await fixture(
-    html`<lyra-time-range min="0" max="100" start="20" end="80" step="5"></lyra-time-range>`,
+    html`<lr-time-range min="0" max="100" start="20" end="80" step="5"></lr-time-range>`,
   )) as LyraTimeRange;
   const startHandle = el.shadowRoot!.querySelector('[part="handle-start"]') as HTMLElement;
   startHandle.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
@@ -700,8 +700,8 @@ it('ignores arrow-key input on a handle that keeps keyboard focus after disabled
   el.disabled = true;
   let inputFired = false;
   let changeFired = false;
-  el.addEventListener('lyra-input', () => (inputFired = true));
-  el.addEventListener('lyra-change', () => (changeFired = true));
+  el.addEventListener('lr-input', () => (inputFired = true));
+  el.addEventListener('lr-change', () => (changeFired = true));
   startHandle.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
   expect(el.start).to.equal(25);
   expect(inputFired).to.be.false;
@@ -711,7 +711,7 @@ it('ignores arrow-key input on a handle that keeps keyboard focus after disabled
 
 it('toggles tabindex between "0" and "-1" as disabled changes, removing disabled handles from the tab order', async () => {
   const el = (await fixture(
-    html`<lyra-time-range min="0" max="100" start="20" end="80"></lyra-time-range>`,
+    html`<lr-time-range min="0" max="100" start="20" end="80"></lr-time-range>`,
   )) as LyraTimeRange;
   const startHandle = el.shadowRoot!.querySelector('[part="handle-start"]') as HTMLElement;
   const endHandle = el.shadowRoot!.querySelector('[part="handle-end"]') as HTMLElement;
@@ -736,16 +736,16 @@ it('is disabled by an ancestor <fieldset disabled> without mutating the disabled
   const form = (await fixture(html`
     <form>
       <fieldset disabled>
-        <lyra-time-range min="0" max="100" start="20" end="80" step="5"></lyra-time-range>
+        <lr-time-range min="0" max="100" start="20" end="80" step="5"></lr-time-range>
       </fieldset>
     </form>
   `)) as HTMLFormElement;
-  const el = form.querySelector('lyra-time-range') as LyraTimeRange;
+  const el = form.querySelector('lr-time-range') as LyraTimeRange;
   await el.updateComplete;
 
   // `el.disabled` (the consumer-facing IDL property/attribute) is never
   // mutated by fieldset cascading -- only the combined `effectiveDisabled`
-  // reflects it (mirrors lyra-combobox's/lyra-slider's identical
+  // reflects it (mirrors lr-combobox's/lr-slider's identical
   // `_fieldsetDisabled`/`effectiveDisabled` pattern).
   expect((el as unknown as { effectiveDisabled: boolean }).effectiveDisabled).to.be.true;
   expect(el.disabled).to.be.false;
@@ -754,7 +754,7 @@ it('is disabled by an ancestor <fieldset disabled> without mutating the disabled
   expect(startHandle.getAttribute('tabindex')).to.equal('-1');
   expect(startHandle.getAttribute('aria-disabled')).to.equal('true');
 
-  // Before the fix, lyra-time-range never became form-associated at all, so
+  // Before the fix, lr-time-range never became form-associated at all, so
   // an ancestor fieldset had no effect: the handle would stay focusable and
   // arrow keys would still move it.
   startHandle.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
@@ -773,11 +773,11 @@ it('disables preset buttons via an ancestor <fieldset disabled> too', async () =
   const form = (await fixture(html`
     <form>
       <fieldset disabled>
-        <lyra-time-range min="0" max="100" start="20" end="80"></lyra-time-range>
+        <lr-time-range min="0" max="100" start="20" end="80"></lr-time-range>
       </fieldset>
     </form>
   `)) as HTMLFormElement;
-  const el = form.querySelector('lyra-time-range') as LyraTimeRange;
+  const el = form.querySelector('lr-time-range') as LyraTimeRange;
   el.presets = PRESETS;
   await el.updateComplete;
   const button = el.shadowRoot!.querySelector<HTMLButtonElement>('[part="preset-button"]')!;
@@ -790,7 +790,7 @@ it('disables preset buttons via an ancestor <fieldset disabled> too', async () =
 
 it('renders a stable 0%/100% pair instead of dividing by zero when min === max', async () => {
   const el = (await fixture(
-    html`<lyra-time-range min="50" max="50" start="50" end="50"></lyra-time-range>`,
+    html`<lr-time-range min="50" max="50" start="50" end="50"></lr-time-range>`,
   )) as LyraTimeRange;
   const startHandle = el.shadowRoot!.querySelector('[part="handle-start"]') as HTMLElement;
   const endHandle = el.shadowRoot!.querySelector('[part="handle-end"]') as HTMLElement;
@@ -800,7 +800,7 @@ it('renders a stable 0%/100% pair instead of dividing by zero when min === max',
 
 it("binds each handle's aria-valuemin/aria-valuemax to its reachable sub-range bounded by the sibling handle, not the full domain", async () => {
   const el = (await fixture(
-    html`<lyra-time-range min="0" max="100" start="20" end="80"></lyra-time-range>`,
+    html`<lr-time-range min="0" max="100" start="20" end="80"></lr-time-range>`,
   )) as LyraTimeRange;
   const startHandle = el.shadowRoot!.querySelector('[part="handle-start"]') as HTMLElement;
   const endHandle = el.shadowRoot!.querySelector('[part="handle-end"]') as HTMLElement;
@@ -815,7 +815,7 @@ it("binds each handle's aria-valuemin/aria-valuemax to its reachable sub-range b
 
 it('jumps to the reachable min/max with Home/End, capped by the sibling handle', async () => {
   const el = (await fixture(
-    html`<lyra-time-range min="0" max="100" start="20" end="80"></lyra-time-range>`,
+    html`<lr-time-range min="0" max="100" start="20" end="80"></lr-time-range>`,
   )) as LyraTimeRange;
   const startHandle = el.shadowRoot!.querySelector('[part="handle-start"]') as HTMLElement;
   const endHandle = el.shadowRoot!.querySelector('[part="handle-end"]') as HTMLElement;
@@ -833,7 +833,7 @@ it('jumps to the reachable min/max with Home/End, capped by the sibling handle',
 
 it('jumps to the full domain bound with Home/End when unconstrained by the sibling', async () => {
   const el = (await fixture(
-    html`<lyra-time-range min="0" max="100" start="20" end="80"></lyra-time-range>`,
+    html`<lr-time-range min="0" max="100" start="20" end="80"></lr-time-range>`,
   )) as LyraTimeRange;
   const startHandle = el.shadowRoot!.querySelector('[part="handle-start"]') as HTMLElement;
   const endHandle = el.shadowRoot!.querySelector('[part="handle-end"]') as HTMLElement;
@@ -849,7 +849,7 @@ it('jumps to the full domain bound with Home/End when unconstrained by the sibli
 
 it('moves by a larger increment with PageUp/PageDown than a single ArrowUp/ArrowDown step', async () => {
   const el = (await fixture(
-    html`<lyra-time-range min="0" max="100" start="20" end="80" step="2"></lyra-time-range>`,
+    html`<lr-time-range min="0" max="100" start="20" end="80" step="2"></lr-time-range>`,
   )) as LyraTimeRange;
   const startHandle = el.shadowRoot!.querySelector('[part="handle-start"]') as HTMLElement;
 
@@ -862,13 +862,13 @@ it('moves by a larger increment with PageUp/PageDown than a single ArrowUp/Arrow
   expect(el.start).to.equal(20);
 });
 
-it('commits lyra-change on keyup of Home/End/PageUp/PageDown, mirroring arrow-key commit', async () => {
+it('commits lr-change on keyup of Home/End/PageUp/PageDown, mirroring arrow-key commit', async () => {
   const el = (await fixture(
-    html`<lyra-time-range min="0" max="100" start="20" end="80"></lyra-time-range>`,
+    html`<lr-time-range min="0" max="100" start="20" end="80"></lr-time-range>`,
   )) as LyraTimeRange;
   const startHandle = el.shadowRoot!.querySelector('[part="handle-start"]') as HTMLElement;
   let changeDetail: { start: number; end: number } | undefined;
-  el.addEventListener('lyra-change', (e) => (changeDetail = (e as CustomEvent).detail));
+  el.addEventListener('lr-change', (e) => (changeDetail = (e as CustomEvent).detail));
   startHandle.dispatchEvent(new KeyboardEvent('keydown', { key: 'Home', bubbles: true }));
   startHandle.dispatchEvent(new KeyboardEvent('keyup', { key: 'Home', bubbles: true }));
   expect(changeDetail!.start).to.equal(0);
@@ -884,7 +884,7 @@ const PRESETS = [
 
 it('renders no [part="presets"] row at all when presets is empty (the default)', async () => {
   const el = (await fixture(
-    html`<lyra-time-range min="0" max="100" start="20" end="80"></lyra-time-range>`,
+    html`<lr-time-range min="0" max="100" start="20" end="80"></lr-time-range>`,
   )) as LyraTimeRange;
   expect(el.presets).to.deep.equal([]);
   expect(el.shadowRoot!.querySelector('[part="presets"]')).to.equal(null);
@@ -893,7 +893,7 @@ it('renders no [part="presets"] row at all when presets is empty (the default)',
 
 it('renders a [part="presets"] row of [part="preset-button"] buttons when presets is non-empty', async () => {
   const el = (await fixture(
-    html`<lyra-time-range min="0" max="100" start="20" end="80"></lyra-time-range>`,
+    html`<lr-time-range min="0" max="100" start="20" end="80"></lr-time-range>`,
   )) as LyraTimeRange;
   el.presets = PRESETS;
   await el.updateComplete;
@@ -908,16 +908,16 @@ it('renders a [part="presets"] row of [part="preset-button"] buttons when preset
   expect(el.shadowRoot!.querySelector('[part="handle-end"]')).to.not.equal(null);
 });
 
-it('clicking a preset button sets start/end to that preset and fires lyra-change with the right detail', async () => {
+it('clicking a preset button sets start/end to that preset and fires lr-change with the right detail', async () => {
   const el = (await fixture(
-    html`<lyra-time-range min="0" max="100" start="20" end="80"></lyra-time-range>`,
+    html`<lr-time-range min="0" max="100" start="20" end="80"></lr-time-range>`,
   )) as LyraTimeRange;
   el.presets = PRESETS;
   await el.updateComplete;
   const buttons = el.shadowRoot!.querySelectorAll<HTMLButtonElement>('[part="preset-button"]');
 
   let changeDetail: { start: number; end: number } | undefined;
-  el.addEventListener('lyra-change', (e) => (changeDetail = (e as CustomEvent).detail));
+  el.addEventListener('lr-change', (e) => (changeDetail = (e as CustomEvent).detail));
   buttons[1].click(); // 'Last 30 days' -> { start: 0, end: 30 }
   await el.updateComplete;
 
@@ -928,7 +928,7 @@ it('clicking a preset button sets start/end to that preset and fires lyra-change
 
 it('marks only the preset matching the current start/end as active (aria-pressed + data-active)', async () => {
   const el = (await fixture(
-    html`<lyra-time-range min="0" max="100" start="0" end="30"></lyra-time-range>`,
+    html`<lr-time-range min="0" max="100" start="0" end="30"></lr-time-range>`,
   )) as LyraTimeRange;
   el.presets = PRESETS;
   await el.updateComplete;
@@ -952,7 +952,7 @@ it('marks only the preset matching the current start/end as active (aria-pressed
 
 it('handles a preset that shifts the whole range past the previous end (clamp() cross-reference must not clip it)', async () => {
   const el = (await fixture(
-    html`<lyra-time-range min="0" max="100" start="0" end="10"></lyra-time-range>`,
+    html`<lr-time-range min="0" max="100" start="0" end="10"></lr-time-range>`,
   )) as LyraTimeRange;
   el.presets = [{ label: 'Far future', start: 60, end: 90 }];
   await el.updateComplete;
@@ -963,23 +963,23 @@ it('handles a preset that shifts the whole range past the previous end (clamp() 
   expect(el.end).to.equal(90);
 });
 
-it('emits exactly one lyra-input event from a preset click, already holding the final values', async () => {
+it('emits exactly one lr-input event from a preset click, already holding the final values', async () => {
   const el = (await fixture(
-    html`<lyra-time-range min="0" max="100" start="20" end="80"></lyra-time-range>`,
+    html`<lr-time-range min="0" max="100" start="20" end="80"></lr-time-range>`,
   )) as LyraTimeRange;
   el.presets = [{ label: 'Far future', start: 60, end: 90 }];
   await el.updateComplete;
   const button = el.shadowRoot!.querySelector<HTMLButtonElement>('[part="preset-button"]')!;
 
   const inputDetails: Array<{ start: number; end: number }> = [];
-  el.addEventListener('lyra-input', (e) => inputDetails.push((e as CustomEvent).detail));
+  el.addEventListener('lr-input', (e) => inputDetails.push((e as CustomEvent).detail));
   button.click();
 
   // Before the fix, applyPreset() routed both handles through setValue()
   // sequentially, so this fired twice: once with the *stale* pre-preset end
   // (80) while start had already moved but end hadn't yet, and only the
   // second carried the true final values -- a caller reacting to the first
-  // lyra-input would have observed an inconsistent, never-actually-rendered
+  // lr-input would have observed an inconsistent, never-actually-rendered
   // intermediate state.
   expect(inputDetails.length).to.equal(1);
   expect(inputDetails[0]).to.deep.equal({ start: 60, end: 90 });
@@ -987,7 +987,7 @@ it('emits exactly one lyra-input event from a preset click, already holding the 
 
 it('lands exactly on preset values that are not aligned to a coarse step, and still shows data-active', async () => {
   const el = (await fixture(
-    html`<lyra-time-range min="0" max="100" start="20" end="80" step="10"></lyra-time-range>`,
+    html`<lr-time-range min="0" max="100" start="20" end="80" step="10"></lr-time-range>`,
   )) as LyraTimeRange;
   el.presets = [{ label: 'Odd preset', start: 3, end: 47 }];
   await el.updateComplete;
@@ -1007,7 +1007,7 @@ it('lands exactly on preset values that are not aligned to a coarse step, and st
 
 it('still supports brush dragging via handle-start/handle-end while presets is set (both interaction modes coexist)', async () => {
   const el = (await fixture(
-    html`<lyra-time-range min="0" max="100" start="20" end="80" step="1"></lyra-time-range>`,
+    html`<lr-time-range min="0" max="100" start="20" end="80" step="1"></lr-time-range>`,
   )) as LyraTimeRange;
   el.presets = PRESETS;
   await el.updateComplete;
@@ -1030,7 +1030,7 @@ it('still supports brush dragging via handle-start/handle-end while presets is s
     }) as DOMRect;
 
   let inputDetail: { start: number; end: number } | undefined;
-  el.addEventListener('lyra-input', (e) => (inputDetail = (e as CustomEvent).detail));
+  el.addEventListener('lr-input', (e) => (inputDetail = (e as CustomEvent).detail));
   startHandle.dispatchEvent(
     new PointerEvent('pointerdown', { bubbles: true, pointerId: 1, clientX: 40 }),
   );
@@ -1038,7 +1038,7 @@ it('still supports brush dragging via handle-start/handle-end while presets is s
   expect(inputDetail!.start).to.equal(50);
 
   let changeDetail: { start: number; end: number } | undefined;
-  el.addEventListener('lyra-change', (e) => (changeDetail = (e as CustomEvent).detail));
+  el.addEventListener('lr-change', (e) => (changeDetail = (e as CustomEvent).detail));
   window.dispatchEvent(new PointerEvent('pointerup', { pointerId: 1 }));
   expect(changeDetail!.start).to.equal(50);
 
@@ -1051,7 +1051,7 @@ it('still supports brush dragging via handle-start/handle-end while presets is s
 
 it('does not let a disabled preset button be clicked', async () => {
   const el = (await fixture(
-    html`<lyra-time-range min="0" max="100" start="20" end="80" disabled></lyra-time-range>`,
+    html`<lr-time-range min="0" max="100" start="20" end="80" disabled></lr-time-range>`,
   )) as LyraTimeRange;
   el.presets = PRESETS;
   await el.updateComplete;
@@ -1065,7 +1065,7 @@ it('does not let a disabled preset button be clicked', async () => {
 
 it('is accessible with presets set', async () => {
   const el = (await fixture(
-    html`<lyra-time-range min="0" max="100" start="0" end="30"></lyra-time-range>`,
+    html`<lr-time-range min="0" max="100" start="0" end="30"></lr-time-range>`,
   )) as LyraTimeRange;
   el.presets = PRESETS;
   await el.updateComplete;

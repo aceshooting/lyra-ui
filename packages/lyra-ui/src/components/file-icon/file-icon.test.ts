@@ -20,13 +20,13 @@ describe('file type metadata', () => {
   });
 
   it('supports custom MIME mappings', () => {
-    registerFileTypeMetadata('application/x-lyra-demo', {
+    registerFileTypeMetadata('application/x-lr-demo', {
       label: 'Demo',
       icon: 'code',
       category: 'code',
       extensions: ['.lyra'],
     });
-    expect(getFileTypeMetadata('application/x-lyra-demo').label).to.equal('Demo');
+    expect(getFileTypeMetadata('application/x-lr-demo').label).to.equal('Demo');
     expect(getFileTypeMetadata('application/octet-stream', 'example.lyra').label).to.equal('Demo');
   });
 
@@ -37,34 +37,34 @@ describe('file type metadata', () => {
   });
 });
 
-describe('lyra-file-icon', () => {
+describe('lr-file-icon', () => {
   it('renders localized labels and is accessible', async () => {
-    const el = await fixture(html`<lyra-file-icon mime-type="application/pdf" variant="label" .strings=${{ fileTypePdf: 'PDF personnalisé' }}></lyra-file-icon>`);
+    const el = await fixture(html`<lr-file-icon mime-type="application/pdf" variant="label" .strings=${{ fileTypePdf: 'PDF personnalisé' }}></lr-file-icon>`);
     expect(el.shadowRoot!.querySelector('[part="label"]')!.textContent).to.equal('PDF personnalisé');
     await expect(el).to.be.accessible();
   });
 
   it('supports decorative presentation', async () => {
-    const el = await fixture(html`<lyra-file-icon mime-type="image/png" decorative></lyra-file-icon>`);
+    const el = await fixture(html`<lr-file-icon mime-type="image/png" decorative></lr-file-icon>`);
     expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('role')).to.equal('presentation');
     expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.be.null;
   });
 
   it('shows a formatted size and folds it into the accessible name', async () => {
-    const el = await fixture(html`<lyra-file-icon mime-type="application/pdf" variant="label" size="2415919"></lyra-file-icon>`);
+    const el = await fixture(html`<lr-file-icon mime-type="application/pdf" variant="label" size="2415919"></lr-file-icon>`);
     expect(el.shadowRoot!.querySelector('[part="size"]')!.textContent).to.equal('2.3 MB');
     expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('PDF (2.3 MB)');
   });
 
   it('renders no size part when size is unset', async () => {
-    const el = await fixture(html`<lyra-file-icon mime-type="application/pdf" variant="label"></lyra-file-icon>`);
+    const el = await fixture(html`<lr-file-icon mime-type="application/pdf" variant="label"></lr-file-icon>`);
     expect(el.shadowRoot!.querySelector('[part="size"]')).to.not.exist;
     expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('PDF');
   });
 
   it('renders no "NaN B" size part when size is set to an invalid value', async () => {
     const el = (await fixture(
-      html`<lyra-file-icon mime-type="application/pdf" variant="label" size="not-a-number"></lyra-file-icon>`,
+      html`<lr-file-icon mime-type="application/pdf" variant="label" size="not-a-number"></lr-file-icon>`,
     )) as LyraFileIcon;
     expect(Number.isNaN(el.size)).to.be.true;
     expect(el.shadowRoot!.querySelector('[part="size"]')).to.not.exist;
@@ -72,12 +72,12 @@ describe('lyra-file-icon', () => {
   });
 
   it('exposes the raw MIME type as a title tooltip', async () => {
-    const el = await fixture(html`<lyra-file-icon mime-type="application/pdf"></lyra-file-icon>`);
+    const el = await fixture(html`<lr-file-icon mime-type="application/pdf"></lr-file-icon>`);
     expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('title')).to.equal('application/pdf');
   });
 
   it('truncates long badge text instead of overflowing the fixed-size badge', async () => {
-    const el = await fixture(html`<lyra-file-icon mime-type="application/msword"></lyra-file-icon>`);
+    const el = await fixture(html`<lr-file-icon mime-type="application/msword"></lr-file-icon>`);
     const icon = el.shadowRoot!.querySelector('[part="icon"]') as HTMLElement;
     const style = getComputedStyle(icon);
     expect(style.overflow).to.equal('hidden');

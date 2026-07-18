@@ -4,25 +4,25 @@ import type { LiteSeries } from '../../lyra.js';
 
 const meta: Meta = {
   title: 'Charts/LiteChart',
-  component: 'lyra-lite-chart',
+  component: 'lr-lite-chart',
   tags: ['autodocs'],
 };
 export default meta;
 type Story = StoryObj;
 
-/** Zero-dependency alternative to `lyra-chart` — plain SVG/DOM, no `chart.js` peer dep. */
+/** Zero-dependency alternative to `lr-chart` — plain SVG/DOM, no `chart.js` peer dep. */
 export const Default: Story = {
   render: () => {
     const series: LiteSeries[] = [{ label: 'Revenue', data: [12, 19, 14, 22] }];
     return html`
-      <lyra-lite-chart
+      <lr-lite-chart
         type="bar"
         height="16rem"
         style="width: 22rem"
         legend
         .labels=${['Q1', 'Q2', 'Q3', 'Q4']}
         .datasets=${series}
-      ></lyra-lite-chart>
+      ></lr-lite-chart>
     `;
   },
 };
@@ -36,7 +36,7 @@ export const NarrowLongContent: Story = {
     ];
     return html`
       <div style="inline-size: 320px; max-inline-size: 100%;">
-        <lyra-lite-chart
+        <lr-lite-chart
           aria-label="Quarterly revenue from subscriptions and professional services"
           type="bar"
           height="16rem"
@@ -44,7 +44,7 @@ export const NarrowLongContent: Story = {
           max-labels="4"
           .labels=${['First quarter', 'Second quarter', 'Third quarter', 'Fourth quarter']}
           .datasets=${series}
-        ></lyra-lite-chart>
+        ></lr-lite-chart>
       </div>
     `;
   },
@@ -57,14 +57,14 @@ export const GroupedBars: Story = {
       { label: 'Last year', data: [9, 15, 11, 18] },
     ];
     return html`
-      <lyra-lite-chart
+      <lr-lite-chart
         type="bar"
         height="16rem"
         style="width: 24rem"
         legend
         .labels=${['Q1', 'Q2', 'Q3', 'Q4']}
         .datasets=${series}
-      ></lyra-lite-chart>
+      ></lr-lite-chart>
     `;
   },
 };
@@ -78,7 +78,7 @@ export const StackedBars: Story = {
       { label: 'Features', data: [5, 7, 6, 3] },
     ];
     return html`
-      <lyra-lite-chart
+      <lr-lite-chart
         type="bar"
         stacked
         height="16rem"
@@ -88,7 +88,7 @@ export const StackedBars: Story = {
         y-label="Commits"
         .labels=${['W1', 'W2', 'W3', 'W4']}
         .datasets=${series}
-      ></lyra-lite-chart>
+      ></lr-lite-chart>
     `;
   },
 };
@@ -100,31 +100,31 @@ export const Line: Story = {
       { label: 'Memory', data: [40, 38, 45, 60, 58] },
     ];
     return html`
-      <lyra-lite-chart
+      <lr-lite-chart
         type="line"
         height="16rem"
         style="width: 24rem"
         legend
         .labels=${['00:00', '00:05', '00:10', '00:15', '00:20']}
         .datasets=${series}
-      ></lyra-lite-chart>
+      ></lr-lite-chart>
     `;
   },
 };
 
-/** Clicking (or Enter/Space on a focused) bar/point fires `lyra-point-click`, same detail shape as `lyra-chart`'s. */
+/** Clicking (or Enter/Space on a focused) bar/point fires `lr-point-click`, same detail shape as `lr-chart`'s. */
 export const ClickToFilter: Story = {
   render: () => {
     const series: LiteSeries[] = [{ label: 'Runs', data: [12, 19, 14, 22] }];
     return html`
-      <lyra-lite-chart
+      <lr-lite-chart
         type="bar"
         height="16rem"
         style="width: 22rem"
         .labels=${['Q1', 'Q2', 'Q3', 'Q4']}
         .datasets=${series}
-        @lyra-point-click=${(e: CustomEvent) => alert(JSON.stringify(e.detail))}
-      ></lyra-lite-chart>
+        @lr-point-click=${(e: CustomEvent) => alert(JSON.stringify(e.detail))}
+      ></lr-lite-chart>
     `;
   },
 };
@@ -134,14 +134,14 @@ export const CurrencyTickFormat: Story = {
   render: () => {
     const series: LiteSeries[] = [{ label: 'Revenue', data: [1204.37, 1890.5, 1420.1, 2260.75] }];
     return html`
-      <lyra-lite-chart
+      <lr-lite-chart
         type="bar"
         height="16rem"
         style="width: 22rem"
         .labels=${['Q1', 'Q2', 'Q3', 'Q4']}
         .datasets=${series}
         .tickFormat=${(v: number) => `$${v.toFixed(2)}`}
-      ></lyra-lite-chart>
+      ></lr-lite-chart>
     `;
   },
 };
@@ -154,7 +154,7 @@ export const ScrollLayout: Story = {
     const labels = Array.from({ length: 40 }, (_, i) => `Day ${i + 1}`);
     const series: LiteSeries[] = [{ label: 'Signups', data: labels.map((_, i) => 10 + ((i * 7) % 40)) }];
     return html`
-      <lyra-lite-chart
+      <lr-lite-chart
         type="bar"
         layout="scroll"
         bar-width="28"
@@ -164,7 +164,7 @@ export const ScrollLayout: Story = {
         y-label="Signups"
         .labels=${labels}
         .datasets=${series}
-      ></lyra-lite-chart>
+      ></lr-lite-chart>
     `;
   },
 };
@@ -178,7 +178,7 @@ export const LabelDecimation: Story = {
     const labels = Array.from({ length: 24 }, (_, i) => `Week ${i + 1}`);
     const series: LiteSeries[] = [{ label: 'Throughput', data: labels.map((_, i) => 20 + ((i * 11) % 30)) }];
     return html`
-      <lyra-lite-chart
+      <lr-lite-chart
         type="bar"
         max-labels="6"
         height="16rem"
@@ -187,7 +187,7 @@ export const LabelDecimation: Story = {
         y-label="Throughput"
         .labels=${labels}
         .datasets=${series}
-      ></lyra-lite-chart>
+      ></lr-lite-chart>
     `;
   },
 };

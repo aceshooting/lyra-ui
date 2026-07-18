@@ -2,7 +2,7 @@ import { html } from 'lit';
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import './xml-viewer.js';
 
-const meta: Meta = { title: 'DocumentViewer/XmlViewer', component: 'lyra-xml-viewer', tags: ['autodocs'] };
+const meta: Meta = { title: 'DocumentViewer/XmlViewer', component: 'lr-xml-viewer', tags: ['autodocs'] };
 export default meta;
 type Story = StoryObj;
 
@@ -12,13 +12,13 @@ const FEED = `<?xml version="1.0"?>
 </channel></rss>`;
 
 export const Default: Story = {
-  render: () => html`<lyra-xml-viewer name="feed.rss" .xml=${FEED} copyable></lyra-xml-viewer>`,
+  render: () => html`<lr-xml-viewer name="feed.rss" .xml=${FEED} copyable></lr-xml-viewer>`,
 };
 
 export const CollapsedDepth: Story = {
-  render: () => html`<lyra-xml-viewer name="feed.rss" .xml=${FEED} collapsed-depth="2"></lyra-xml-viewer>`,
+  render: () => html`<lr-xml-viewer name="feed.rss" .xml=${FEED} collapsed-depth="2"></lr-xml-viewer>`,
 };
 
 export const Narrow320: Story = {
-  render: () => html`<div style="max-inline-size:320px"><lyra-xml-viewer name="feed.rss" .xml=${FEED}></lyra-xml-viewer></div>`,
+  render: () => html`<div style="max-inline-size:320px"><lr-xml-viewer name="feed.rss" .xml=${FEED}></lr-xml-viewer></div>`,
 };

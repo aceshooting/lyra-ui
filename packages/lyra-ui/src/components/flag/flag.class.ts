@@ -23,7 +23,7 @@ export async function loadFlagUrl(
     return (await importFlags()).flagUrl;
   } catch {
     console.warn(
-      "<lyra-flag> needs the optional peer dependency '@aceshooting/lyra-flags' to render " +
+      "<lr-flag> needs the optional peer dependency '@aceshooting/lyra-flags' to render " +
         'flag images — install it with `pnpm add @aceshooting/lyra-flags`.',
     );
     return null;
@@ -87,7 +87,7 @@ export function __setFlagUrlResolverForTesting(value: Promise<FlagUrlResolver | 
 }
 
 /**
- * `<lyra-flag>` — a country/language flag.
+ * `<lr-flag>` — a country/language flag.
  *
  * Flag images are shipped by the optional peer package `@aceshooting/lyra-flags`,
  * not bundled into lyra-ui itself, so importing the core library pulls zero flag
@@ -113,16 +113,16 @@ export function __setFlagUrlResolverForTesting(value: Promise<FlagUrlResolver | 
  * display). A no-op for every other code — all tiers resolve to the same file. See `variant`'s own
  * doc.
  *
- * @customElement lyra-flag
- * @example <lyra-flag country="fr"></lyra-flag>
- * @example <lyra-flag language="en" label="English"></lyra-flag>
- * @example <lyra-flag src=${frUrl} label="French"></lyra-flag>
- * @example <lyra-flag country="es" variant="compact"></lyra-flag>
- * @example <lyra-flag country="es" variant="detailed"></lyra-flag>
+ * @customElement lr-flag
+ * @example <lr-flag country="fr"></lr-flag>
+ * @example <lr-flag language="en" label="English"></lr-flag>
+ * @example <lr-flag src=${frUrl} label="French"></lr-flag>
+ * @example <lr-flag country="es" variant="compact"></lr-flag>
+ * @example <lr-flag country="es" variant="detailed"></lr-flag>
  * @csspart image - The underlying <img>.
- * @cssprop [--lyra-flag-aspect-ratio=4 / 3] - Rectangular flag aspect ratio.
- * @cssprop [--lyra-flag-object-fit=cover] - How the image fits its flag frame.
- * @cssprop --lyra-flag-radius - Rectangular flag corner radius.
+ * @cssprop [--lr-flag-aspect-ratio=4 / 3] - Rectangular flag aspect ratio.
+ * @cssprop [--lr-flag-object-fit=cover] - How the image fits its flag frame.
+ * @cssprop --lr-flag-radius - Rectangular flag corner radius.
  */
 export class LyraFlag extends LyraElement {
   static styles = [LyraElement.styles, styles];
@@ -214,7 +214,7 @@ export class LyraFlag extends LyraElement {
     // the very first update even when none of `country`/`language`/`src` is
     // ever set: an unset optional property's first "assignment" is
     // undefined -> undefined (no-op to Lit), so none of `changed.has(...)`
-    // would otherwise ever become true for a `<lyra-flag>` that never
+    // would otherwise ever become true for a `<lr-flag>` that never
     // receives one, leaving `loading` stuck at its initial `true` forever.
     if (
       this.hasUpdated &&
@@ -249,7 +249,7 @@ export class LyraFlag extends LyraElement {
       })
       .catch((err) => {
         if (token !== this.resolveToken) return; // superseded by a later country/language/src change
-        console.warn(`<lyra-flag> failed to resolve a flag URL for "${code}":`, err);
+        console.warn(`<lr-flag> failed to resolve a flag URL for "${code}":`, err);
         this.resolvedSrc = undefined;
         this.loading = false;
       });
@@ -261,7 +261,7 @@ export class LyraFlag extends LyraElement {
   }
 
   render(): TemplateResult {
-    if (this.loading) return html`<lyra-skeleton variant="rect"></lyra-skeleton>`;
+    if (this.loading) return html`<lr-skeleton variant="rect"></lr-skeleton>`;
     const url = this.src ?? this.resolvedSrc;
     if (!url) return html``;
     const code = this.code;
@@ -273,6 +273,6 @@ export class LyraFlag extends LyraElement {
 
 declare global {
   interface HTMLElementTagNameMap {
-    'lyra-flag': LyraFlag;
+    'lr-flag': LyraFlag;
   }
 }

@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * Maintenance job: renders each pristine `flags/detailed/<code>.svg` original to a small WebP
- * raster at `flags/compact/<code>.webp` — the `compact` tier `<lyra-flag variant="compact">` and
+ * raster at `flags/compact/<code>.webp` — the `compact` tier `<lr-flag variant="compact">` and
  * `flagUrl(code, { variant: 'compact' })` serve for icon-scale use (menu items, language
  * selectors, dense lists; ~12-28px).
  *
@@ -16,7 +16,7 @@
  * tiny+crisp+scalable vectors, and `flagUrl(..., { variant: 'compact' })` falls back to them.
  *
  * Rendered FROM the pristine `detailed/` original (the best downscale input), at the source's
- * square 1000x1000 framing -> `SIZE`x`SIZE`, so it drops into `<lyra-flag>`'s CSS-driven
+ * square 1000x1000 framing -> `SIZE`x`SIZE`, so it drops into `<lr-flag>`'s CSS-driven
  * `object-fit: cover` box pixel-identically to how the vector renders. `SIZE` = 128 covers icon
  * use up to ~28px at 3x device-pixel-ratio with headroom; `QUALITY` 80 is visually lossless at
  * that scale (verified) while staying ~1-3 KB. Both are constants — bump them if a busy emblem

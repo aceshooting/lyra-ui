@@ -9,13 +9,13 @@ import type { AnchorResultDetail } from './anchors.js';
 
 const meta: Meta = {
   title: 'DocumentViewer',
-  component: 'lyra-document-viewer',
+  component: 'lr-document-viewer',
   tags: ['autodocs'],
   parameters: {
     docs: {
       description: {
         component:
-          'A dialog-hosted, format-dispatching document viewer. Registered MIME types render through the pluggable registry; other formats fall back to lyra-document-preview.',
+          'A dialog-hosted, format-dispatching document viewer. Registered MIME types render through the pluggable registry; other formats fall back to lr-document-preview.',
       },
     },
   },
@@ -30,36 +30,36 @@ const SAMPLE_TEXT = `{
 const textDataUrl = `data:text/plain;charset=utf-8,${encodeURIComponent(SAMPLE_TEXT)}`;
 
 export const FallbackToDocumentPreview: Story = {
-  name: 'No renderer registered — falls back to lyra-document-preview',
+  name: 'No renderer registered — falls back to lr-document-preview',
   render: () => html`
-    <lyra-document-viewer
+    <lr-document-viewer
       open
       name="response.json"
       mime-type="application/json"
       src=${textDataUrl}
-    ></lyra-document-viewer>
+    ></lr-document-viewer>
   `,
 };
 
-registerDocumentRenderer('application/x-lyra-demo', {
+registerDocumentRenderer('application/x-lr-demo', {
   render: (file) => html`<p>Custom registered renderer for <strong>${file.name}</strong></p>`,
 });
 
 export const RegisteredRenderer: Story = {
   name: 'A registerDocumentRenderer() entry',
   render: () => html`
-    <lyra-document-viewer
+    <lr-document-viewer
       open
       name="demo.lyra"
-      mime-type="application/x-lyra-demo"
+      mime-type="application/x-lr-demo"
       src="https://example.com/demo.lyra"
-    ></lyra-document-viewer>
+    ></lr-document-viewer>
   `,
 };
 
 export const ClosedByDefault: Story = {
   name: 'open unset — renders nothing visible',
-  render: () => html`<lyra-document-viewer name="report.pdf" mime-type="application/pdf"></lyra-document-viewer>`,
+  render: () => html`<lr-document-viewer name="report.pdf" mime-type="application/pdf"></lr-document-viewer>`,
 };
 
 const SAMPLE_PDF_URL = '/fixtures/sample.pdf';
@@ -115,13 +115,13 @@ export const CitationToDocument: Story = {
     };
     return html`
       <p>
-        This is a demo document<lyra-citation-badge
+        This is a demo document<lr-citation-badge
           index="1"
           source-id="doc-1"
-          @lyra-citation-activate=${onActivate}
-        ></lyra-citation-badge>.
+          @lr-citation-activate=${onActivate}
+        ></lr-citation-badge>.
       </p>
-      <lyra-document-viewer id="citation-recipe-dv" @lyra-anchor-result=${onAnchorResult}></lyra-document-viewer>
+      <lr-document-viewer id="citation-recipe-dv" @lr-anchor-result=${onAnchorResult}></lr-document-viewer>
     `;
   },
 };

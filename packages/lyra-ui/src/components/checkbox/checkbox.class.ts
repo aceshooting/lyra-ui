@@ -53,37 +53,37 @@ function indeterminateGlyph(): SVGTemplateResult {
 export interface LyraCheckboxEventMap {
   input: CustomEvent<undefined>;
   change: CustomEvent<undefined>;
-  'lyra-change': CustomEvent<{ checked: boolean }>;
+  'lr-change': CustomEvent<{ checked: boolean }>;
   focus: CustomEvent<undefined>;
   blur: CustomEvent<undefined>;
 }
 /**
- * `<lyra-checkbox>` — a boolean form control. Structurally the same idea as
- * `<lyra-switch>` (form-associated via `ElementInternals`, click and
+ * `<lr-checkbox>` — a boolean form control. Structurally the same idea as
+ * `<lr-switch>` (form-associated via `ElementInternals`, click and
  * Space both toggle) but with checkbox semantics: `role="checkbox"` +
  * an `aria-checked` that can also be `"mixed"`, and a visual box/checkmark
  * instead of a track/thumb.
  *
  * `checked` is not a plain string, so this attaches `ElementInternals`
  * directly and implements its own `updateValidity()` rather than using the
- * `FormAssociated` mixin — see `<lyra-combobox>` for the same
+ * `FormAssociated` mixin — see `<lr-combobox>` for the same
  * direct-`ElementInternals` shape with a non-string value.
  *
  * Deliberately no hint/error chrome of its own -- the default slot already carries real, visible
  * label text (see `@slot` below), so a labeled-field frame built around `label`/`hint`/`errorText`
  * props has nothing to add here. A consumer needing hint/error messaging composes it in their own
- * wrapper (e.g. `<lyra-tool-param-form>` folds a boolean field's validation error into adjacent
- * description text / `aria-label` rather than a `<lyra-checkbox>`-owned slot), the same way a
+ * wrapper (e.g. `<lr-tool-param-form>` folds a boolean field's validation error into adjacent
+ * description text / `aria-label` rather than a `<lr-checkbox>`-owned slot), the same way a
  * native `<input type="checkbox">` plus `<label>` pairs with an externally-owned error node.
  *
- * @customElement lyra-checkbox
+ * @customElement lr-checkbox
  * @slot - Label text, rendered next to the box. Clicking it toggles the
  * checkbox, the same as clicking a native checkbox's associated `<label>`.
  * If left empty, set `aria-label` on the host so the control still has an
  * accessible name.
  * @event input - The user toggled the checkbox; bubbling and composed like a native form event.
  * @event change - Fired immediately after `input` for the same user toggle.
- * @event lyra-change - Compatibility alias fired after `input` and `change` (click or Space).
+ * @event lr-change - Compatibility alias fired after `input` and `change` (click or Space).
  * `detail: { checked }`. Not fired for a programmatic `.checked` assignment.
  * @event focus - Re-dispatched from the internal control as a bubbling, composed event.
  * @event blur - Re-dispatched from the internal control as a bubbling, composed event.
@@ -112,13 +112,13 @@ export class LyraCheckbox extends LyraElement<LyraCheckboxEventMap> {
   // Tracks whether the default slot carries any real (non-whitespace)
   // content, so the label wrapper — and the gap next to the box — can
   // collapse to nothing for an icon-only/aria-label-only checkbox instead of
-  // leaving a stray empty gap. See lyra-switch's identical field for why
+  // leaving a stray empty gap. See lr-switch's identical field for why
   // `assignedNodes` (not `assignedElements`) is checked — the common case is
-  // a bare slotted text label, e.g. `<lyra-checkbox>Accept terms</lyra-checkbox>`.
+  // a bare slotted text label, e.g. `<lr-checkbox>Accept terms</lr-checkbox>`.
   @state() private hasLabelSlot = false;
   // Set on the control's first `blur`; gates the `data-invalid`/`aria-invalid`
   // reflection below so validity styling never flashes on first render,
-  // mirroring `<lyra-combobox>`/`<lyra-select>`'s identical `touched` field.
+  // mirroring `<lr-combobox>`/`<lr-select>`'s identical `touched` field.
   @state() private touched = false;
 
   private internals: ElementInternals;
@@ -128,7 +128,7 @@ export class LyraCheckbox extends LyraElement<LyraCheckboxEventMap> {
   // (e.g. a consumer filling in a previously-empty `<span>` label) — so
   // without this, `hasLabelSlot` could stay wrongly `false` forever once a
   // label starts empty and text is added afterward. Mirrors
-  // `<lyra-option>`'s identical `labelObserver`.
+  // `<lr-option>`'s identical `labelObserver`.
   private labelObserver?: MutationObserver;
   // What `form.reset()` restores to — captured once from the declarative
   // `checked` content attribute at first connect. A pre-connect `.checked`
@@ -138,13 +138,13 @@ export class LyraCheckbox extends LyraElement<LyraCheckboxEventMap> {
   // `attributeChangedCallback` alone — that would also fire (and wrongly
   // redefine the default) every time the property setter reflects a later
   // user toggle back into the attribute. Guarding with a one-shot flag
-  // instead mirrors `<lyra-combobox>`'s `_defaultCaptured`/`_defaultSelected`
-  // and `<lyra-switch>`'s identical `_defaultChecked`.
+  // instead mirrors `<lr-combobox>`'s `_defaultCaptured`/`_defaultSelected`
+  // and `<lr-switch>`'s identical `_defaultChecked`.
   private _defaultChecked = false;
   private _defaultCaptured = false;
   private _fieldsetDisabled = false;
   // Tracked separately from `_fieldsetDisabled` -- driven by an owning
-  // `<lyra-checkbox-group>` propagating its own effective (explicit-or-
+  // `<lr-checkbox-group>` propagating its own effective (explicit-or-
   // inherited) disabled state, rather than by this checkbox's own direct
   // `formDisabledCallback()`. Kept as its own private channel (never the
   // public `disabled` property/attribute) for the same reason `_fieldsetDisabled`
@@ -158,7 +158,7 @@ export class LyraCheckbox extends LyraElement<LyraCheckboxEventMap> {
   private _required = false;
   private _value = 'on';
 
-  /** Whether the control is disabled explicitly, by an ancestor fieldset, or by an owning `<lyra-checkbox-group>`. */
+  /** Whether the control is disabled explicitly, by an ancestor fieldset, or by an owning `<lr-checkbox-group>`. */
   get effectiveDisabled(): boolean {
     return this.disabled || this._fieldsetDisabled || this._groupDisabled;
   }
@@ -332,7 +332,7 @@ export class LyraCheckbox extends LyraElement<LyraCheckboxEventMap> {
     this._fieldsetDisabled = disabled;
     this.requestUpdate();
   }
-  /** @internal Driven by an owning `<lyra-checkbox-group>`; released when the checkbox leaves the group's control. */
+  /** @internal Driven by an owning `<lr-checkbox-group>`; released when the checkbox leaves the group's control. */
   setGroupDisabled(value: boolean): void {
     if (this._groupDisabled === value) return;
     this._groupDisabled = value;
@@ -361,7 +361,7 @@ export class LyraCheckbox extends LyraElement<LyraCheckboxEventMap> {
     this.indeterminate = false;
     this.emit('input');
     this.emit('change');
-    this.emit('lyra-change', { checked: this.checked });
+    this.emit('lr-change', { checked: this.checked });
   }
 
   private onClick = (): void => {
@@ -432,6 +432,6 @@ export class LyraCheckbox extends LyraElement<LyraCheckboxEventMap> {
 
 declare global {
   interface HTMLElementTagNameMap {
-    'lyra-checkbox': LyraCheckbox;
+    'lr-checkbox': LyraCheckbox;
   }
 }

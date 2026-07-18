@@ -33,22 +33,22 @@ export interface TreeItem {
 }
 
 /**
- * `<lyra-tree>` — an expand/collapse hierarchy for graph/document navigation.
+ * `<lr-tree>` — an expand/collapse hierarchy for graph/document navigation.
  *
  * Implements the WAI-ARIA treeitem keyboard pattern: a single roving
  * `tabindex` (tracked here as `activeId`, pushed down to every
- * `<lyra-tree-node>` — including nested ones, recursively) and
+ * `<lr-tree-node>` — including nested ones, recursively) and
  * ArrowUp/Down/Right/Left/Home/End/Enter/Space handled by one delegated
  * `keydown` listener. Native `KeyboardEvent`s are `composed: true` and
  * bubble across shadow-DOM boundaries, so a press inside a deeply-nested
- * `<lyra-tree-node>`'s own shadow root still reaches this listener.
+ * `<lr-tree-node>`'s own shadow root still reaches this listener.
  *
- * @customElement lyra-tree
- * @event lyra-node-toggle - `detail: { id, expanded }`, dispatched by a descendant `<lyra-tree-node>` and observed here (bubbling, composed) to keep the roving-tabindex `activeId` in sync.
- * @event lyra-node-select - `detail: { id }`, dispatched by a descendant `<lyra-tree-node>` and observed here (bubbling, composed) to keep the roving-tabindex `activeId` in sync.
+ * @customElement lr-tree
+ * @event lr-node-toggle - `detail: { id, expanded }`, dispatched by a descendant `<lr-tree-node>` and observed here (bubbling, composed) to keep the roving-tabindex `activeId` in sync.
+ * @event lr-node-select - `detail: { id }`, dispatched by a descendant `<lr-tree-node>` and observed here (bubbling, composed) to keep the roving-tabindex `activeId` in sync.
  * @csspart base - The tree's root wrapper (role="tree").
  * @csspart empty - The empty-state message shown when `data` is empty.
- * @slot - `<lyra-tree-node>` elements (top-level tree items).
+ * @slot - `<lr-tree-node>` elements (top-level tree items).
  */
 export class LyraTree extends LyraElement {
   static styles = [LyraElement.styles, styles];
@@ -77,9 +77,9 @@ export class LyraTree extends LyraElement {
    * Every currently *visible* (ancestor-expanded) node, top-to-bottom.
    *
    * Recomputed on every call rather than memoized: `item`/`expanded` are
-   * plain public settable properties on `<lyra-tree-node>` (not just
+   * plain public settable properties on `<lr-tree-node>` (not just
    * reachable through this class's own `data` setter or the bubbling
-   * `lyra-node-toggle` event), so a cache keyed off those two entry points
+   * `lr-node-toggle` event), so a cache keyed off those two entry points
    * alone would go stale the moment a caller mutated a node directly --
    * e.g. `node.item = { ...node.item, children: [...] }` to append a child
    * in place. This walk only runs from user-paced `keydown` handling (never
@@ -136,7 +136,7 @@ export class LyraTree extends LyraElement {
     }
   }
 
-  /** By-id reconciliation of top-level items: reuses/reorders existing `<lyra-tree-node>` elements and removes ones no longer present in `data`. */
+  /** By-id reconciliation of top-level items: reuses/reorders existing `<lr-tree-node>` elements and removes ones no longer present in `data`. */
   private syncNodes(): void {
     const existingById = new Map<string, LyraTreeNode>();
     for (const node of this.nodeElements) {
@@ -312,7 +312,7 @@ export class LyraTree extends LyraElement {
   /**
    * Collapse every node in the tree, recursively. Goes through each node's
    * own `collapse()` (rather than assigning `expanded` directly) so its
-   * `lyra-node-toggle` emit reaches `onNodeActivate` -- that keeps `activeId`
+   * `lr-node-toggle` emit reaches `onNodeActivate` -- that keeps `activeId`
    * re-synced to a node that's still visible after collapsing, even when the
    * roving-tabindex target was a nested descendant whose ancestor's
    * `role="group"` is about to disappear.
@@ -334,11 +334,11 @@ export class LyraTree extends LyraElement {
         role="tree"
         aria-label=${this.label || this.getAttribute('aria-label') || nothing}
         @keydown=${this.onTreeKeyDown}
-        @lyra-node-toggle=${this.onNodeActivate}
-        @lyra-node-select=${this.onNodeActivate}
+        @lr-node-toggle=${this.onNodeActivate}
+        @lr-node-select=${this.onNodeActivate}
       >
         ${this.data.length === 0
-          ? html`<lyra-empty part="empty" heading=${this.localize('noData')}></lyra-empty>`
+          ? html`<lr-empty part="empty" heading=${this.localize('noData')}></lr-empty>`
           : nothing}
         <slot></slot>
       </div>
@@ -349,6 +349,6 @@ export class LyraTree extends LyraElement {
 
 declare global {
   interface HTMLElementTagNameMap {
-    'lyra-tree': LyraTree;
+    'lr-tree': LyraTree;
   }
 }

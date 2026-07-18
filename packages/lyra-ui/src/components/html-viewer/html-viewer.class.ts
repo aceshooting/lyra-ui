@@ -15,14 +15,14 @@ type HtmlFetchState =
   | { kind: 'error'; message: string };
 
 export interface LyraHtmlViewerEventMap {
-  'lyra-render-error': CustomEvent<{ error: unknown }>;
+  'lr-render-error': CustomEvent<{ error: unknown }>;
 }
 
 /**
  * Fetches and safely renders an inline HTML document.
  *
- * @customElement lyra-html-viewer
- * @event lyra-render-error - Fired when fetching or sanitizing the document fails.
+ * @customElement lr-html-viewer
+ * @event lr-render-error - Fired when fetching or sanitizing the document fails.
  * @csspart base - The root container.
  * @csspart body - The wrapper around the fetched-state content.
  * @csspart html - The sanitized HTML document, once loaded.
@@ -63,7 +63,7 @@ export class LyraHtmlViewer extends LyraElement<LyraHtmlViewerEventMap> {
     } catch (error) {
       if (isAbortError(error) || !this.isConnected || generation !== this.generation) return;
       this.fetchState = { kind: 'error', message: error instanceof LyraUserFacingError ? error.message : this.localize(isResourceLimitError(error) ? 'documentPreviewResourceTooLarge' : 'documentPreviewFailedToLoad') };
-      this.emit('lyra-render-error', { error });
+      this.emit('lr-render-error', { error });
     }
   }
 
@@ -78,8 +78,8 @@ export class LyraHtmlViewer extends LyraElement<LyraHtmlViewerEventMap> {
   }
 
   render(): TemplateResult {
-    return html`<div part="base" style=${this.maxHeight ? `--lyra-html-viewer-max-height:${this.maxHeight}` : nothing}><div part="body">${this.renderBody()}</div></div>`;
+    return html`<div part="base" style=${this.maxHeight ? `--lr-html-viewer-max-height:${this.maxHeight}` : nothing}><div part="body">${this.renderBody()}</div></div>`;
   }
 }
 
-declare global { interface HTMLElementTagNameMap { 'lyra-html-viewer': LyraHtmlViewer; } }
+declare global { interface HTMLElementTagNameMap { 'lr-html-viewer': LyraHtmlViewer; } }

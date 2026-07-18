@@ -19,10 +19,10 @@ interface TabDef {
 }
 
 export interface LyraTabsEventMap {
-  'lyra-tabs-change': CustomEvent<{ tabId: string }>;
+  'lr-tabs-change': CustomEvent<{ tabId: string }>;
 }
 /**
- * `<lyra-tabs>` — a tab strip whose panels are direct light-DOM children,
+ * `<lr-tabs>` — a tab strip whose panels are direct light-DOM children,
  * each carrying `slot="<id>"` (the panel's stable id) and `label="<text>"`
  * (the tab button's text). One named `<slot>` is rendered per distinct
  * `slot` name found among the current children — a child with no `label`,
@@ -31,7 +31,7 @@ export interface LyraTabsEventMap {
  * A tab button's *visible* content can carry a leading icon without ever
  * changing its *accessible name* (which always stays exactly `label`'s
  * text, nothing else): give a tab an extra direct-child sibling of
- * `<lyra-tabs>` carrying `slot="<id>-icon"` (that sibling's own content --
+ * `<lr-tabs>` carrying `slot="<id>-icon"` (that sibling's own content --
  * an inline SVG, an emoji span, a custom icon element, anything -- is
  * entirely up to the consumer). It's rendered ahead of the label inside
  * that tab's button, wrapped in an `aria-hidden="true"` part so it's
@@ -49,16 +49,16 @@ export interface LyraTabsEventMap {
  * Home/End jump to the first/last enabled tab, and a roving `tabindex`
  * follows whichever tab is currently selected.
  *
- * @customElement lyra-tabs
+ * @customElement lr-tabs
  * @slot - Direct children with `slot="<id>" label="<text>"` (and optionally `disabled`); one becomes each tab's panel.
  * @slot <id>-icon - Optional sibling direct child supplying a tab's leading icon content; excluded from the tab button's accessible name.
- * @event lyra-tabs-change - `detail: { tabId }`, fired when the active tab changes via click or keyboard.
+ * @event lr-tabs-change - `detail: { tabId }`, fired when the active tab changes via click or keyboard.
  * @csspart base - The root wrapper around the tablist and panels.
  * @csspart tablist - The `role="tablist"` row of tab buttons.
  * @csspart tab - A single tab button.
  * @csspart tab-icon - The optional leading-icon wrapper inside a tab button; only rendered when that tab has a matching `<id>-icon` sibling.
  * @csspart panel - A single `role="tabpanel"` wrapper (one per tab, hidden unless active).
- * @cssprop [--lyra-scroll-fade-size=2rem] - Width of the static fade at each horizontal scroll edge.
+ * @cssprop [--lr-scroll-fade-size=2rem] - Width of the static fade at each horizontal scroll edge.
  */
 export class LyraTabs extends LyraElement<LyraTabsEventMap> {
   static styles = [LyraElement.styles, styles];
@@ -83,7 +83,7 @@ export class LyraTabs extends LyraElement<LyraTabsEventMap> {
     super.connectedCallback();
     this.syncTabs();
     // Each child carries its own individual `slot` attribute (one named slot
-    // per tab, unlike lyra-split's single default-slot-of-many-panels) -- a
+    // per tab, unlike lr-split's single default-slot-of-many-panels) -- a
     // brand-new tab's name has no matching `<slot>` to fire `slotchange` on
     // until *this* component has already rendered one for it, and neither
     // `slotchange` nor any Lit lifecycle hook observes a plain attribute
@@ -137,7 +137,7 @@ export class LyraTabs extends LyraElement<LyraTabsEventMap> {
     this.tabs = next;
   };
 
-  /** Keeps `active` resolved to a real, enabled tab -- covers the initial default, a tab disappearing/becoming disabled underneath the current selection, and a consumer assigning `.active` directly. Silent (no `lyra-tabs-change`): this corrects *invalid* state rather than responding to a user picking a different tab. */
+  /** Keeps `active` resolved to a real, enabled tab -- covers the initial default, a tab disappearing/becoming disabled underneath the current selection, and a consumer assigning `.active` directly. Silent (no `lr-tabs-change`): this corrects *invalid* state rather than responding to a user picking a different tab. */
   protected willUpdate(changed: PropertyValues): void {
     if (!changed.has('tabs') && !changed.has('active')) return;
     const current = this.tabs.find((t) => t.slotName === this.active);
@@ -145,11 +145,11 @@ export class LyraTabs extends LyraElement<LyraTabsEventMap> {
     this.active = this.tabs.find((t) => !t.disabled)?.slotName ?? '';
   }
 
-  /** Activates `tab` (no-op for a disabled tab or one that's already active) and emits `lyra-tabs-change`. */
+  /** Activates `tab` (no-op for a disabled tab or one that's already active) and emits `lr-tabs-change`. */
   private selectTab(tab: TabDef): void {
     if (tab.disabled || tab.slotName === this.active) return;
     this.active = tab.slotName;
-    this.emit('lyra-tabs-change', { tabId: tab.slotName });
+    this.emit('lr-tabs-change', { tabId: tab.slotName });
   }
 
   /** Moves real DOM focus to tab `slotName`'s button. Safe to call immediately (no `updateComplete` wait): every tab button already exists in the DOM regardless of its current `tabindex`, and `tabindex="-1"` elements are still focusable via script. */
@@ -168,7 +168,7 @@ export class LyraTabs extends LyraElement<LyraTabsEventMap> {
     if (navigable.length === 0) return;
     const currentIndex = navigable.findIndex((t) => t.slotName === this.active);
     // Horizontal strip -- Up/Down aren't used. Left/Right swap under RTL,
-    // matching lyra-split/lyra-tree's physical-direction handling.
+    // matching lr-split/lr-tree's physical-direction handling.
     const rtl = isRtl(this);
     const forwardKey = rtl ? 'ArrowLeft' : 'ArrowRight';
     const backwardKey = rtl ? 'ArrowRight' : 'ArrowLeft';
@@ -270,6 +270,6 @@ export class LyraTabs extends LyraElement<LyraTabsEventMap> {
 
 declare global {
   interface HTMLElementTagNameMap {
-    'lyra-tabs': LyraTabs;
+    'lr-tabs': LyraTabs;
   }
 }

@@ -35,7 +35,7 @@ export function registerDocumentRenderer(key: string, def: DocumentRendererDefin
   defaultRegistry.set(key, def);
 }
 
-/** Returns the module-level registry used by default by `<lyra-document-viewer>`. */
+/** Returns the module-level registry used by default by `<lr-document-viewer>`. */
 export function getDefaultDocumentRendererRegistry(): DocumentRendererRegistry {
   return defaultRegistry;
 }

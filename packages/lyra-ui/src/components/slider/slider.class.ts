@@ -8,18 +8,18 @@ import { styles } from './slider.styles.js';
 
 /** PageUp/PageDown move by a larger increment than a single Arrow step,
  *  matching the WAI-ARIA APG slider pattern's expected keyboard interactions
- *  (and native `<input type=range>`). Mirrors lyra-time-range's identical
+ *  (and native `<input type=range>`). Mirrors lr-time-range's identical
  *  constant. */
 const PAGE_STEP_MULTIPLIER = 10;
 
 export interface LyraSliderEventMap {
-  'lyra-input': CustomEvent<{ value: number }>;
-  'lyra-change': CustomEvent<{ value: number }>;
+  'lr-input': CustomEvent<{ value: number }>;
+  'lr-change': CustomEvent<{ value: number }>;
 }
 class LyraSliderBase extends LyraElement<LyraSliderEventMap> {}
 
 /**
- * `<lyra-slider>` — a numeric range control (e.g. an LLM "temperature"
+ * `<lr-slider>` — a numeric range control (e.g. an LLM "temperature"
  * setting), form-associated. Mirrors native `<input type="range">`
  * semantics: `value` is the string form-submitted via `FormAssociated`,
  * `valueAsNumber` is the ergonomic numeric accessor (mirroring the native
@@ -41,13 +41,13 @@ class LyraSliderBase extends LyraElement<LyraSliderEventMap> {}
  * Deliberately no label/hint/error chrome -- `label` here is an accessible-name override, not
  * visible label text; a labeled-field consumer wraps this element in their own layout.
  *
- * @customElement lyra-slider
- * @event lyra-input - Fired continuously during an active drag or a
+ * @customElement lr-slider
+ * @event lr-input - Fired continuously during an active drag or a
  *   keyboard step (including OS key-repeat while a key is held), mirroring
  *   native `<input type=range>`'s own `input` event. `detail: { value: number }`.
- * @event lyra-change - Fired once an interaction commits: on pointerup for a
+ * @event lr-change - Fired once an interaction commits: on pointerup for a
  *   drag, or on keyup for a keyboard step — so a single Arrow/Home/End/
- *   PageUp/PageDown press fires both `lyra-input` and `lyra-change`,
+ *   PageUp/PageDown press fires both `lr-input` and `lr-change`,
  *   mirroring how native `<input type=range>` fires `change` on every
  *   committed step too. `detail: { value: number }`.
  * @csspart base - The row wrapping the track and the optional value readout.
@@ -114,13 +114,13 @@ export class LyraSlider extends FormAssociated(LyraSliderBase) {
    *  exists around it (e.g. no wrapping `<label>` or adjacent heading). Set
    *  as `aria-label` on the interactive `role="slider"` element. A plain
    *  `aria-label` attribute on the host itself is honored as a fallback when
-   *  this is left unset, matching `<lyra-checkbox>`/`<lyra-switch>`; with
+   *  this is left unset, matching `<lr-checkbox>`/`<lr-switch>`; with
    *  neither, the localized generic `sliderLabel` message applies so the
    *  focusable thumb is never nameless (the same pattern as
-   *  `<lyra-input>`/`<lyra-textarea>`'s built-in generic labels). */
+   *  `<lr-input>`/`<lr-textarea>`'s built-in generic labels). */
   @property() label = '';
   /** Whether to render the current numeric value as visible text next to
-   *  the track. Like `<lyra-markdown>`'s `sanitize`/`gfm`, this is a plain
+   *  the track. Like `<lr-markdown>`'s `sanitize`/`gfm`, this is a plain
    *  `type: Boolean` property defaulting `true` — turn it off via the
    *  `.showValue=${false}` property binding (a bare `show-value="false"`
    *  content attribute is still truthy, since presence is all Lit's default
@@ -128,7 +128,7 @@ export class LyraSlider extends FormAssociated(LyraSliderBase) {
   @property({ type: Boolean, attribute: 'show-value' }) showValue = true;
 
   // Keyed by pointerId (a Set, not a single scalar) purely for
-  // multi-touch/robustness parity with lyra-split and lyra-time-range, even
+  // multi-touch/robustness parity with lr-split and lr-time-range, even
   // though a single thumb has no per-pointer state of its own to track.
   private activePointers = new Set<number>();
   private changedPointers = new Set<number>();
@@ -157,7 +157,7 @@ export class LyraSlider extends FormAssociated(LyraSliderBase) {
 
   disconnectedCallback(): void {
     super.disconnectedCallback();
-    // Mirror lyra-split/lyra-time-range's cleanup: if the element is removed
+    // Mirror lr-split/lr-time-range's cleanup: if the element is removed
     // mid-drag (or a pointercancel/alt-tab means pointerup never reaches
     // `window`), these window-level listeners would otherwise leak.
     this.activePointers.clear();
@@ -286,8 +286,8 @@ export class LyraSlider extends FormAssociated(LyraSliderBase) {
     const clamped = this.clampValue(raw);
     if (clamped === previous) return false;
     this.value = String(clamped);
-    this.emit('lyra-input', { value: clamped });
-    if (commit) this.emit('lyra-change', { value: clamped });
+    this.emit('lr-input', { value: clamped });
+    if (commit) this.emit('lr-change', { value: clamped });
     return true;
   }
 
@@ -296,7 +296,7 @@ export class LyraSlider extends FormAssociated(LyraSliderBase) {
     const current = this.valueAsNumber;
     // Under RTL, physical ArrowRight moves toward inset-inline-start, i.e. a
     // lower value — swap which physical key counts as "forward", matching
-    // lyra-split/lyra-time-range's onKeyDown/onPointerMove convention.
+    // lr-split/lr-time-range's onKeyDown/onPointerMove convention.
     // ArrowUp/ArrowDown are never swapped (direction only affects the
     // horizontal inline axis).
     const rtl = isRtl(this);
@@ -328,15 +328,15 @@ export class LyraSlider extends FormAssociated(LyraSliderBase) {
   private onKeyUp = (e: KeyboardEvent): void => {
     // Only commit on release of the keys onKeyDown acts on — releasing an
     // unrelated key (Tab, Shift, ...) while the thumb happens to be focused
-    // must not emit a spurious lyra-change. For a single discrete press this
-    // pairs one onKeyDown (lyra-input) with one onKeyUp (lyra-change); OS
+    // must not emit a spurious lr-change. For a single discrete press this
+    // pairs one onKeyDown (lr-input) with one onKeyUp (lr-change); OS
     // key-repeat while a key is held re-fires onKeyDown (and thus
-    // lyra-input) repeatedly but still commits only once, on the eventual
+    // lr-input) repeatedly but still commits only once, on the eventual
     // keyup — the same drag-like "continuous input, single final change"
     // shape a pointer drag has.
     if (this.effectiveDisabled || !isSliderKey(e.key)) return;
     if (this.keyboardChanged) {
-      this.emit('lyra-change', { value: this.valueAsNumber });
+      this.emit('lr-change', { value: this.valueAsNumber });
       this.keyboardChanged = false;
     }
   };
@@ -373,7 +373,7 @@ export class LyraSlider extends FormAssociated(LyraSliderBase) {
    *  `<input type=range>` click-to-seek. A pointerdown that started on the
    *  thumb bubbles up to this same listener too — already fully handled by
    *  `onPointerDown` above, so it's ignored here via the `e.target === thumb`
-   *  check. Unlike the two-handle `lyra-time-range` (where a track click is
+   *  check. Unlike the two-handle `lr-time-range` (where a track click is
    *  ambiguous about which handle should move), a single thumb has no such
    *  ambiguity. */
   private onBasePointerDown = (e: PointerEvent): void => {
@@ -401,7 +401,7 @@ export class LyraSlider extends FormAssociated(LyraSliderBase) {
       // These are window-level listeners driven by setPointerCapture, so
       // they keep firing for this pointerId regardless of the `disabled`
       // reflection — a drag already in progress would otherwise keep
-      // mutating `value` (and emitting lyra-input) after `disabled` flips
+      // mutating `value` (and emitting lr-input) after `disabled` flips
       // true mid-drag. Abort the drag instead of continuing to process it.
       this.endDrag(e.pointerId, false);
       return;
@@ -421,12 +421,12 @@ export class LyraSlider extends FormAssociated(LyraSliderBase) {
     this.endDrag(e.pointerId, true);
   };
 
-  /** Stop the drag owned by `pointerId`, optionally committing a final lyra-change. */
+  /** Stop the drag owned by `pointerId`, optionally committing a final lr-change. */
   private endDrag(pointerId: number, commit: boolean): void {
     if (!this.activePointers.has(pointerId)) return;
     this.activePointers.delete(pointerId);
     const changed = this.changedPointers.delete(pointerId);
-    if (commit && changed) this.emit('lyra-change', { value: this.valueAsNumber });
+    if (commit && changed) this.emit('lr-change', { value: this.valueAsNumber });
     // Only the last concurrent drag to end tears down the shared window
     // listeners — an overlapping second pointer may still be down.
     if (this.activePointers.size === 0) {
@@ -457,7 +457,7 @@ export class LyraSlider extends FormAssociated(LyraSliderBase) {
           aria-valuenow=${num}
           aria-valuetext=${text}
           aria-label=${ariaLabel}
-          aria-disabled=${this.effectiveDisabled ? 'true' : nothing}
+          aria-disabled=${this.effectiveDisabled ? 'true' : 'false'}
           style=${`inset-inline-start:${pct}%`}
           @pointerdown=${this.onPointerDown}
           @keydown=${this.onKeyDown}
@@ -472,6 +472,6 @@ export class LyraSlider extends FormAssociated(LyraSliderBase) {
 
 declare global {
   interface HTMLElementTagNameMap {
-    'lyra-slider': LyraSlider;
+    'lr-slider': LyraSlider;
   }
 }

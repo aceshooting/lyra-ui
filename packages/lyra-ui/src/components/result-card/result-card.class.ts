@@ -7,19 +7,19 @@ import { styles } from './result-card.styles.js';
 class LyraResultCardBase extends LyraElement {}
 
 /**
- * `<lyra-result-card>` — a small bordered card shell for a custom tool-result
- * renderer's body (see `<lyra-tool-result-view>`'s `registerToolRenderer()`
+ * `<lr-result-card>` — a small bordered card shell for a custom tool-result
+ * renderer's body (see `<lr-tool-result-view>`'s `registerToolRenderer()`
  * in `../tool-result-view/registry.js`). Purely visual, with no state of its
  * own beyond slot-presence tracking: it gives every custom renderer the same
  * "small card" language (border, radius, optional title + header actions)
  * without each one hand-rolling its own box.
  *
- * Pairs with `<lyra-result-field>` for the label/value rows that typically
+ * Pairs with `<lr-result-field>` for the label/value rows that typically
  * make up the body, though the default slot accepts any content — nothing
- * here requires a `<lyra-result-field>` specifically.
+ * here requires a `<lr-result-field>` specifically.
  *
- * @customElement lyra-result-card
- * @slot - The card body — typically one or more `<lyra-result-field>` rows.
+ * @customElement lr-result-card
+ * @slot - The card body — typically one or more `<lr-result-field>` rows.
  * @slot actions - Small header controls (e.g. a copy button), rendered
  * alongside the title.
  * @csspart base - The outer bordered container.
@@ -43,7 +43,7 @@ export class LyraResultCard extends StripHostTitleAttribute(LyraResultCardBase) 
   static styles = [LyraElement.styles, styles];
 
   /** Small heading for the card. Leave unset for an untitled card (e.g. a
-   *  bare block of `<lyra-result-field>` rows with no natural heading).
+   *  bare block of `<lr-result-field>` rows with no natural heading).
    *  Rendered into the truncating `[part="title"]` span, which also carries
    *  this value as its own `title` attribute so the disclosure tooltip is
    *  scoped to that element rather than the whole host -- a bare host-level
@@ -53,7 +53,7 @@ export class LyraResultCard extends StripHostTitleAttribute(LyraResultCardBase) 
    *  `StripHostTitleAttribute` (`internal/strip-host-title.ts`). */
   @property() title = '';
 
-  // See `<lyra-widget>`'s identical `hasActionsSlot` -- a `[part]` wrapper
+  // See `<lr-widget>`'s identical `hasActionsSlot` -- a `[part]` wrapper
   // always contains a literal `<slot>` child regardless of assigned
   // content, so CSS `:empty` never matches; real emptiness is tracked here
   // in JS instead and used to both hide the actions wrapper and decide
@@ -90,7 +90,7 @@ export class LyraResultCard extends StripHostTitleAttribute(LyraResultCardBase) 
 
 declare global {
   interface HTMLElementTagNameMap {
-    'lyra-result-card': LyraResultCard;
+    'lr-result-card': LyraResultCard;
   }
 }
 

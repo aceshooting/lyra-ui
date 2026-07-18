@@ -5,7 +5,7 @@ import type { LyraTranscriptEntry, LyraTranscriptFeed } from './transcript-feed.
 
 const meta: Meta = {
   title: 'Transcript Feed',
-  component: 'lyra-transcript-feed',
+  component: 'lr-transcript-feed',
 };
 export default meta;
 type Story = StoryObj;
@@ -19,7 +19,7 @@ const entries: LyraTranscriptEntry[] = [
 export const Default: Story = {
   render: () => html`
     <div style="block-size: 240px;">
-      <lyra-transcript-feed .entries=${entries}></lyra-transcript-feed>
+      <lr-transcript-feed .entries=${entries}></lr-transcript-feed>
     </div>
   `,
 };
@@ -27,9 +27,9 @@ export const Default: Story = {
 export const WithInterimCaption: Story = {
   render: () => html`
     <div style="block-size: 240px;">
-      <lyra-transcript-feed
+      <lr-transcript-feed
         .entries=${[...entries, { id: '4', speaker: 'You', text: 'And the day after...', interim: true }]}
-      ></lyra-transcript-feed>
+      ></lr-transcript-feed>
     </div>
   `,
 };
@@ -41,7 +41,7 @@ export const LiveInterimTranscription: Story = {
     const words = ['Tomorrow', 'will', 'also', 'bring', 'a', 'light', 'breeze', 'from', 'the', 'northwest.'];
 
     function wire(root: HTMLElement): void {
-      const feed = root.querySelector<LyraTranscriptFeed>('lyra-transcript-feed')!;
+      const feed = root.querySelector<LyraTranscriptFeed>('lr-transcript-feed')!;
       if (feed.hasAttribute('data-wired')) return;
       feed.setAttribute('data-wired', '');
       const maxTurns = 3;
@@ -79,11 +79,11 @@ export const LiveInterimTranscription: Story = {
         @click=${(e: Event) => wire(e.currentTarget as HTMLElement)}
       >
         <div style="block-size: 240px;">
-          <lyra-transcript-feed .entries=${entries}></lyra-transcript-feed>
+          <lr-transcript-feed .entries=${entries}></lr-transcript-feed>
         </div>
         <button
           data-start
-          style="font:inherit; font-size:0.8125rem; padding:0.3rem 0.7rem; border:1px solid var(--lyra-color-border); border-radius:var(--lyra-radius); background:var(--lyra-color-surface); cursor:pointer; align-self:flex-start;"
+          style="font:inherit; font-size:0.8125rem; padding:0.3rem 0.7rem; border:1px solid var(--lr-color-border); border-radius:var(--lr-radius); background:var(--lr-color-surface); cursor:pointer; align-self:flex-start;"
         >
           Start live captions
         </button>
@@ -95,7 +95,7 @@ export const LiveInterimTranscription: Story = {
 export const WithTimestamps: Story = {
   render: () => html`
     <div style="block-size: 240px;">
-      <lyra-transcript-feed .entries=${entries} show-timestamps></lyra-transcript-feed>
+      <lr-transcript-feed .entries=${entries} show-timestamps></lr-transcript-feed>
     </div>
   `,
 };
@@ -103,15 +103,15 @@ export const WithTimestamps: Story = {
 export const Empty: Story = {
   render: () => html`
     <div style="block-size: 160px;">
-      <lyra-transcript-feed></lyra-transcript-feed>
+      <lr-transcript-feed></lr-transcript-feed>
     </div>
   `,
 };
 
 export const Narrow320: Story = {
   render: () => html`
-    <div style="max-inline-size: 320px; block-size: 200px; border: 1px dashed var(--lyra-color-border);">
-      <lyra-transcript-feed .entries=${entries} show-timestamps></lyra-transcript-feed>
+    <div style="max-inline-size: 320px; block-size: 200px; border: 1px dashed var(--lr-color-border);">
+      <lr-transcript-feed .entries=${entries} show-timestamps></lr-transcript-feed>
     </div>
   `,
 };

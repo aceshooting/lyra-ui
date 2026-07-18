@@ -10,7 +10,7 @@ export async function loadHtmlSanitizerDeps(
     return (await importDompurify()).default;
   } catch (error) {
     console.warn(
-      '<lyra-html-viewer> needs the optional peer dependency `dompurify` to sanitize rendered HTML markup — install it with `pnpm add dompurify`:',
+      '<lr-html-viewer> needs the optional peer dependency `dompurify` to sanitize rendered HTML markup — install it with `pnpm add dompurify`:',
       error,
     );
     return null;

@@ -5,7 +5,7 @@ export default {
   litelement: true,
   plugins: [
     {
-      name: 'lyra-define-element-registration',
+      name: 'lr-define-element-registration',
       // `defineElement('name', Class)` is the library's idempotent registration
       // helper. Teach CEM about that small wrapper so class-only modules still
       // receive the tag and registration entry even when their API JSDoc is
@@ -16,7 +16,7 @@ export default {
         const [name, classReference] = node.arguments ?? [];
         if (!name?.text || !classReference) return;
 
-        const tagName = `lyra-${name.text}`;
+        const tagName = `lr-${name.text}`;
         const className = classReference.getText();
         if (moduleDoc.exports.some((entry) => entry.kind === 'custom-element-definition' && entry.name === tagName)) {
           return;
@@ -48,9 +48,9 @@ export default {
       },
     },
     {
-      name: 'lyra-internal-base-class-is-not-a-custom-element',
+      name: 'lr-internal-base-class-is-not-a-custom-element',
       // `src/internal/lyra-element.ts` is analyzed (see `globs` above) purely so
-      // every real `lyra-*` element inherits documentation for its shared
+      // every real `lr-*` element inherits documentation for its shared
       // `emit()` method -- but `LyraElement` is only ever `extend`ed, never
       // registered via `customElements.define()`/`defineElement()`. The
       // analyzer's built-in `--litelement` heuristic (`isCustomElementPlugin`)

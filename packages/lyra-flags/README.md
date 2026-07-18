@@ -1,7 +1,7 @@
 # @aceshooting/lyra-flags
 
 Waving country/territory flag SVGs (249 codes) — the optional companion asset package for
-`<lyra-flag>` in [`lyra-ui`](https://github.com/aceshooting/lyra-ui/tree/main/packages/lyra-ui).
+`<lr-flag>` in [`lyra-ui`](https://github.com/aceshooting/lyra-ui/tree/main/packages/lyra-ui).
 
 ## Install
 
@@ -10,11 +10,11 @@ pnpm add @aceshooting/lyra-flags
 ```
 
 `lyra-ui` declares this as an **optional peer dependency** — installing `lyra-ui` alone never
-pulls this package in. Add it explicitly if your app uses `<lyra-flag>`.
+pulls this package in. Add it explicitly if your app uses `<lr-flag>`.
 
 ## Usage
 
-You normally never call this directly; `<lyra-flag>` resolves it internally. Direct usage:
+You normally never call this directly; `<lr-flag>` resolves it internally. Direct usage:
 
 ```js
 import { flagUrl } from '@aceshooting/lyra-flags';
@@ -44,12 +44,12 @@ A minority of flags (65 of 249) embed a detailed coat of arms, seal, or emblem i
 artwork (e.g. `es`, `pt`, `sv`) — full illustrative vector detail that isn't visually
 distinguishable at icon scale but costs real transfer bytes regardless (the worst case, `sv`, is
 741 KB raw). Those 65 codes ship **three tiers**, each the best representation for a size band; pick
-one with `flagUrl(code, { variant })` or `<lyra-flag variant="...">`:
+one with `flagUrl(code, { variant })` or `<lr-flag variant="...">`:
 
 - **`compact`** — a tiny WebP raster (~1–3 KB) for icon-scale use (menu items, language selectors,
   dense lists; ~12–28px), where the emblem is a sub-pixel smudge anyway. At that size a downscaled
   raster is both crisper *and* far smaller than hundreds of sub-pixel vector paths.
-- **`standard`** (the default — what `flagUrl(code)` / `<lyra-flag country="...">` resolve to) — an
+- **`standard`** (the default — what `flagUrl(code)` / `<lr-flag country="...">` resolve to) — an
   aggressively-but-losslessly SVGO-optimized vector for card/row sizes (~28–96px). Every flag is
   under 80 KB, with no fidelity loss perceptible at that scale.
 - **`detailed`** — the pristine, unmodified original vector, for rendering larger than icon scale

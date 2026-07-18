@@ -5,9 +5,9 @@ import { safeLinkHref } from '../../internal/safe-url.js';
 import { styles } from './breadcrumb-item.styles.js';
 
 /**
- * `<lyra-breadcrumb-item>` — one link or current-page label in a breadcrumb.
+ * `<lr-breadcrumb-item>` — one link or current-page label in a breadcrumb.
  *
- * @customElement lyra-breadcrumb-item
+ * @customElement lr-breadcrumb-item
  * @slot - Item label.
  * @csspart base - The link or current-page label.
  */
@@ -26,4 +26,4 @@ export class LyraBreadcrumbItem extends LyraElement {
       : html`<span part="base" aria-current=${this.current ? 'page' : nothing}><slot></slot></span>`;
   }
 }
-declare global { interface HTMLElementTagNameMap { 'lyra-breadcrumb-item': LyraBreadcrumbItem; } }
+declare global { interface HTMLElementTagNameMap { 'lr-breadcrumb-item': LyraBreadcrumbItem; } }

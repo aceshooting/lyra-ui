@@ -5,7 +5,7 @@ import type { LyraTopic } from './mind-map.class.js';
 
 const meta: Meta = {
   title: 'Mind Map',
-  component: 'lyra-mind-map',
+  component: 'lr-mind-map',
 };
 export default meta;
 type Story = StoryObj;
@@ -23,23 +23,23 @@ const topics: LyraTopic[] = [
 ];
 
 export const Default: Story = {
-  render: () => html`<div style="height: 480px;"><lyra-mind-map .topics=${topics}></lyra-mind-map></div>`,
+  render: () => html`<div style="height: 480px;"><lr-mind-map .topics=${topics}></lr-mind-map></div>`,
 };
 
 export const MultiRoot: Story = {
   render: () => html`<div style="height: 480px;">
-    <lyra-mind-map label="Session topics" .topics=${[{ id: 'a', label: 'Chunking strategies' }, { id: 'b', label: 'Graph layouts' }]}></lyra-mind-map>
+    <lr-mind-map label="Session topics" .topics=${[{ id: 'a', label: 'Chunking strategies' }, { id: 'b', label: 'Graph layouts' }]}></lr-mind-map>
   </div>`,
 };
 
 export const DeeplyExpanded: Story = {
-  render: () => html`<div style="height: 480px;"><lyra-mind-map .topics=${topics} expand-depth="3"></lyra-mind-map></div>`,
+  render: () => html`<div style="height: 480px;"><lr-mind-map .topics=${topics} expand-depth="3"></lr-mind-map></div>`,
 };
 
 export const Empty: Story = {
-  render: () => html`<lyra-mind-map></lyra-mind-map>`,
+  render: () => html`<lr-mind-map></lr-mind-map>`,
 };
 
 export const Narrow: Story = {
-  render: () => html`<div style="max-width: 320px; height: 400px;"><lyra-mind-map .topics=${topics}></lyra-mind-map></div>`,
+  render: () => html`<div style="max-width: 320px; height: 400px;"><lr-mind-map .topics=${topics}></lr-mind-map></div>`,
 };

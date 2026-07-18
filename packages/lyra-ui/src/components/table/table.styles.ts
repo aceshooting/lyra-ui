@@ -4,16 +4,16 @@ export const styles = css`
   :host {
     display: block;
     inline-size: 100%;
-    --lyra-table-heat-tint-lo: var(--lyra-color-brand-quiet);
-    --lyra-table-heat-tint-hi: var(--lyra-color-brand);
-    --lyra-table-resize-min-width: var(--lyra-size-3rem);
-    --lyra-table-resize-handle-opacity: 0.12;
+    --lr-table-heat-tint-lo: var(--lr-color-brand-quiet);
+    --lr-table-heat-tint-hi: var(--lr-color-brand);
+    --lr-table-resize-min-width: var(--lr-size-3rem);
+    --lr-table-resize-handle-opacity: 0.12;
   }
   [part='base'] {
     overflow: auto;
-    max-block-size: var(--lyra-table-max-height, none);
-    border: var(--lyra-border-width-thin) solid var(--lyra-color-border);
-    border-radius: var(--lyra-radius);
+    max-block-size: var(--lr-table-max-height, none);
+    border: var(--lr-border-width-thin) solid var(--lr-color-border);
+    border-radius: var(--lr-radius);
     /* Makes [part='base'] a query container so the @container rules below can
        react to the table's own available width instead of the viewport's. */
     container-type: inline-size;
@@ -21,35 +21,35 @@ export const styles = css`
   [part='filter-label'] {
     display: flex;
     align-items: center;
-    gap: var(--lyra-space-s);
-    padding: var(--lyra-space-s);
-    border-block-end: var(--lyra-border-width-thin) solid var(--lyra-color-border);
-    color: var(--lyra-color-text-quiet);
-    font-size: var(--lyra-font-size-md-sm);
+    gap: var(--lr-space-s);
+    padding: var(--lr-space-s);
+    border-block-end: var(--lr-border-width-thin) solid var(--lr-color-border);
+    color: var(--lr-color-text-quiet);
+    font-size: var(--lr-font-size-md-sm);
   }
   [part='filter'] {
     min-inline-size: 0;
     flex: 1;
-    padding: var(--lyra-space-xs) var(--lyra-space-s);
-    border: var(--lyra-border-width-thin) solid var(--lyra-color-border);
-    border-radius: var(--lyra-radius-xs);
-    background: var(--lyra-color-surface);
-    color: var(--lyra-color-text);
+    padding: var(--lr-space-xs) var(--lr-space-s);
+    border: var(--lr-border-width-thin) solid var(--lr-color-border);
+    border-radius: var(--lr-radius-xs);
+    background: var(--lr-color-surface);
+    color: var(--lr-color-text);
     font: inherit;
   }
   [part='filter']:focus-visible {
-    outline: var(--lyra-focus-ring-width) solid var(--lyra-focus-ring-color);
-    outline-offset: var(--lyra-focus-ring-offset);
+    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
+    outline-offset: var(--lr-focus-ring-offset);
   }
   [part='loading'] {
     display: grid;
     place-items: center;
-    min-block-size: var(--lyra-size-8rem);
-    padding: var(--lyra-space-l);
+    min-block-size: var(--lr-size-8rem);
+    padding: var(--lr-space-l);
   }
   [part='pagination'] {
     display: block;
-    border-block-start: var(--lyra-border-width-thin) solid var(--lyra-color-border);
+    border-block-start: var(--lr-border-width-thin) solid var(--lr-color-border);
   }
   /*
    * Column priority (columns[].priority) hides [data-priority='low']/
@@ -61,12 +61,12 @@ export const styles = css`
    * selector excludes it. Toggling the attribute flips every hidden column
    * back on without a second, state-aware container query.
    */
-  @container (max-width: 899.98px) {
+  @container (max-inline-size: 899.98px) {
     [part='base']:not([data-force-visible]) [data-priority='low'] {
       display: none;
     }
   }
-  @container (max-width: 639.98px) {
+  @container (max-inline-size: 639.98px) {
     [part='base']:not([data-force-visible]) [data-priority='medium'] {
       display: none;
     }
@@ -74,7 +74,7 @@ export const styles = css`
   [part='table'] {
     inline-size: 100%;
     border-collapse: collapse;
-    font-size: var(--lyra-font-size-md-sm);
+    font-size: var(--lr-font-size-md-sm);
   }
   [part='table'][data-has-column-widths] {
     table-layout: fixed;
@@ -82,56 +82,56 @@ export const styles = css`
   [part='header-cell'] {
     position: sticky;
     inset-block-start: 0;
-    background: var(--lyra-color-surface);
+    background: var(--lr-color-surface);
     text-align: start;
-    font-weight: var(--lyra-font-weight-semibold);
-    padding: var(--lyra-space-s);
-    border-block-end: var(--lyra-border-width-thin) solid var(--lyra-color-border);
+    font-weight: var(--lr-font-weight-semibold);
+    padding: var(--lr-space-s);
+    border-block-end: var(--lr-border-width-thin) solid var(--lr-color-border);
     cursor: default;
     white-space: nowrap;
   }
   [part='header-cell'][data-resizable] {
-    padding-inline-end: calc(var(--lyra-space-s) + var(--lyra-size-0-5rem));
+    padding-inline-end: calc(var(--lr-space-s) + var(--lr-size-0-5rem));
   }
   [part='resize-handle'] {
     position: absolute;
     inset-block: 0;
     inset-inline-end: 0;
-    inline-size: var(--lyra-size-0-5rem);
+    inline-size: var(--lr-size-0-5rem);
     cursor: col-resize;
     touch-action: none;
   }
   [part='resize-handle']:hover,
   [part='resize-handle']:focus-visible {
-    background: var(--lyra-color-brand);
-    opacity: var(--lyra-table-resize-handle-opacity);
+    background: var(--lr-color-brand);
+    opacity: var(--lr-table-resize-handle-opacity);
   }
   [part='resize-handle']:focus-visible {
-    outline: var(--lyra-focus-ring-width) solid var(--lyra-focus-ring-color);
-    outline-offset: calc(-1 * var(--lyra-focus-ring-offset));
+    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
+    outline-offset: calc(-1 * var(--lr-focus-ring-offset));
   }
   [part='header-cell'][aria-sort]:not([aria-sort='none']),
   [part='header-cell'][data-sortable] {
     cursor: pointer;
   }
   [part='header-cell'][data-sortable]:hover {
-    background: var(--lyra-color-brand-quiet);
+    background: var(--lr-color-brand-quiet);
   }
   /* Not scoped to [data-sortable] — the roving-tabindex header stop (see
      table.ts's focusedColKey()) can land on any column, sortable or not, so
      every header cell needs its own visible focus indicator. */
   [part='header-cell']:focus-visible {
-    outline: var(--lyra-focus-ring-width) solid var(--lyra-focus-ring-color);
-    outline-offset: var(--lyra-focus-ring-offset);
+    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
+    outline-offset: var(--lr-focus-ring-offset);
   }
   [part='header-cell'][data-align='end'] {
     text-align: end;
   }
   [part='sort-icon'] {
     display: inline-block;
-    margin-inline-start: var(--lyra-space-xs);
+    margin-inline-start: var(--lr-space-xs);
     vertical-align: middle;
-    transition: transform var(--lyra-transition-fast);
+    transition: transform var(--lr-transition-fast);
   }
   [part='sort-icon'] svg {
     display: block;
@@ -152,57 +152,57 @@ export const styles = css`
     }
   }
   [part='row']:hover {
-    background: var(--lyra-color-brand-quiet);
+    background: var(--lr-color-brand-quiet);
   }
   [part='row'][aria-selected='true'] {
-    background: var(--lyra-color-brand-quiet);
+    background: var(--lr-color-brand-quiet);
   }
   [part='group-cell'] {
-    padding: var(--lyra-space-xs) var(--lyra-space-s);
-    border-block-end: var(--lyra-border-width-thin) solid var(--lyra-color-border);
-    background: var(--lyra-color-surface-raised);
-    color: var(--lyra-color-text-quiet);
-    font-weight: var(--lyra-font-weight-semibold);
+    padding: var(--lr-space-xs) var(--lr-space-s);
+    border-block-end: var(--lr-border-width-thin) solid var(--lr-color-border);
+    background: var(--lr-color-surface-raised);
+    color: var(--lr-color-text-quiet);
+    font-weight: var(--lr-font-weight-semibold);
     text-align: start;
   }
   [part='row']:focus-visible {
-    outline: var(--lyra-focus-ring-width) solid var(--lyra-focus-ring-color);
-    outline-offset: var(--lyra-focus-ring-offset);
+    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
+    outline-offset: var(--lr-focus-ring-offset);
   }
   [part='cell'] {
-    padding: var(--lyra-space-s);
-    border-block-end: var(--lyra-border-width-thin) solid var(--lyra-color-border);
+    padding: var(--lr-space-s);
+    border-block-end: var(--lr-border-width-thin) solid var(--lr-color-border);
   }
   [part='cell-editor'] {
     box-sizing: border-box;
     inline-size: 100%;
     min-inline-size: 0;
-    padding: var(--lyra-space-xs) var(--lyra-space-s);
-    border: var(--lyra-border-width-thin) solid var(--lyra-color-brand);
-    border-radius: var(--lyra-radius-xs);
-    background: var(--lyra-color-surface);
-    color: var(--lyra-color-text);
+    padding: var(--lr-space-xs) var(--lr-space-s);
+    border: var(--lr-border-width-thin) solid var(--lr-color-brand);
+    border-radius: var(--lr-radius-xs);
+    background: var(--lr-color-surface);
+    color: var(--lr-color-text);
     font: inherit;
   }
   [part='cell-editor']:focus-visible {
-    outline: var(--lyra-focus-ring-width) solid var(--lyra-focus-ring-color);
-    outline-offset: var(--lyra-focus-ring-offset);
+    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
+    outline-offset: var(--lr-focus-ring-offset);
   }
   [part='cell'][data-align='end'] {
     text-align: end;
   }
   [part='row-total-cell'] {
-    padding: var(--lyra-space-s);
-    border-block-end: var(--lyra-border-width-thin) solid var(--lyra-color-border);
-    font-weight: var(--lyra-font-weight-semibold);
+    padding: var(--lr-space-s);
+    border-block-end: var(--lr-border-width-thin) solid var(--lr-color-border);
+    font-weight: var(--lr-font-weight-semibold);
     text-align: end;
   }
   [part='cell'][data-heat] {
-    background: color-mix(in srgb, var(--lyra-table-heat-tint-hi) var(--lyra-table-heat-t), var(--lyra-table-heat-tint-lo));
+    background: color-mix(in srgb, var(--lr-table-heat-tint-hi) var(--lr-table-heat-t), var(--lr-table-heat-tint-lo));
   }
   [part='expand-toggle-cell'] {
-    padding: var(--lyra-space-s);
-    border-block-end: var(--lyra-border-width-thin) solid var(--lyra-color-border);
+    padding: var(--lr-space-s);
+    border-block-end: var(--lr-border-width-thin) solid var(--lr-color-border);
     text-align: center;
   }
   [part='row-expand-toggle'] {
@@ -211,19 +211,19 @@ export const styles = css`
     justify-content: center;
     border: none;
     background: none;
-    padding: var(--lyra-space-xs);
+    padding: var(--lr-space-xs);
     cursor: pointer;
     color: inherit;
-    min-inline-size: var(--lyra-icon-button-size);
-    min-block-size: var(--lyra-icon-button-size);
+    min-inline-size: var(--lr-icon-button-size);
+    min-block-size: var(--lr-icon-button-size);
   }
   [part='row-expand-toggle']:focus-visible {
-    outline: var(--lyra-focus-ring-width) solid var(--lyra-focus-ring-color);
-    outline-offset: var(--lyra-focus-ring-offset);
+    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
+    outline-offset: var(--lr-focus-ring-offset);
   }
   [part='row-expand-icon'] {
     display: inline-block;
-    transition: transform var(--lyra-transition-fast);
+    transition: transform var(--lr-transition-fast);
   }
   [part='row-expand-icon'] svg {
     display: block;
@@ -243,9 +243,9 @@ export const styles = css`
     }
   }
   [part='expanded-row'] [part='expanded-cell'] {
-    padding: var(--lyra-space-s);
-    border-block-end: var(--lyra-border-width-thin) solid var(--lyra-color-border);
-    background: var(--lyra-color-surface);
+    padding: var(--lr-space-s);
+    border-block-end: var(--lr-border-width-thin) solid var(--lr-color-border);
+    background: var(--lr-color-surface);
   }
   /* columns[].sticky pins a column's header/cells to the inline-start edge
      while the table scrolls horizontally — mirrors [part='header-cell']'s
@@ -260,10 +260,10 @@ export const styles = css`
        stack left-to-right instead of all pinning to the same edge and
        overlapping. Falls back to 0 for the first sticky column (or before
        the first measurement pass has run). */
-    inset-inline-start: var(--lyra-table-sticky-offset, 0);
-    z-index: var(--lyra-layer-content);
-    background: var(--lyra-color-surface);
-    box-shadow: var(--lyra-size-1px) 0 0 0 var(--lyra-color-border);
+    inset-inline-start: var(--lr-table-sticky-offset, 0);
+    z-index: var(--lr-layer-content);
+    background: var(--lr-color-surface);
+    box-shadow: var(--lr-size-1px) 0 0 0 var(--lr-color-border);
   }
   [part='header-cell'][data-sticky='end'],
   [part='cell'][data-sticky='end'] {
@@ -271,29 +271,29 @@ export const styles = css`
        instead, with the seam shadow flipped to the opposite physical side
        since content now scrolls underneath from the other direction. */
     inset-inline-start: auto;
-    inset-inline-end: var(--lyra-table-sticky-offset, 0);
-    box-shadow: calc(-1 * var(--lyra-size-1px)) 0 0 0 var(--lyra-color-border);
+    inset-inline-end: var(--lr-table-sticky-offset, 0);
+    box-shadow: calc(-1 * var(--lr-size-1px)) 0 0 0 var(--lr-color-border);
   }
   /* box-shadow's X offset is a physical (not logical) value, so it must flip explicitly under RTL:
      a 'start'-pinned column sits on the *right* edge in RTL with content scrolling underneath from
      the left, so its seam belongs on the left (negative X) -- the mirror image of each rule above. */
   :host(:dir(rtl)) [part='header-cell'][data-sticky],
   :host(:dir(rtl)) [part='cell'][data-sticky] {
-    box-shadow: calc(-1 * var(--lyra-size-1px)) 0 0 0 var(--lyra-color-border);
+    box-shadow: calc(-1 * var(--lr-size-1px)) 0 0 0 var(--lr-color-border);
   }
   :host(:dir(rtl)) [part='header-cell'][data-sticky='end'],
   :host(:dir(rtl)) [part='cell'][data-sticky='end'] {
-    box-shadow: var(--lyra-size-1px) 0 0 0 var(--lyra-color-border);
+    box-shadow: var(--lr-size-1px) 0 0 0 var(--lr-color-border);
   }
   [part='foot'] {
     position: sticky;
     inset-block-end: 0;
-    background: var(--lyra-color-surface);
+    background: var(--lr-color-surface);
   }
   [part='footer-cell'] {
-    padding: var(--lyra-space-xs) var(--lyra-space-s);
-    border-block-start: var(--lyra-border-width-thin) solid var(--lyra-color-border);
-    font-weight: var(--lyra-font-weight-semibold);
+    padding: var(--lr-space-xs) var(--lr-space-s);
+    border-block-start: var(--lr-border-width-thin) solid var(--lr-color-border);
+    font-weight: var(--lr-font-weight-semibold);
     text-align: start;
   }
   [part='footer-cell'][data-align='end'] {
@@ -303,21 +303,21 @@ export const styles = css`
   [part='reveal-columns-button'] {
     display: block;
     inline-size: 100%;
-    padding: var(--lyra-space-s);
+    padding: var(--lr-space-s);
     border: none;
     background: none;
-    color: var(--lyra-color-brand);
+    color: var(--lr-color-brand);
     font: inherit;
     cursor: pointer;
-    border-block-start: var(--lyra-border-width-thin) solid var(--lyra-color-border);
+    border-block-start: var(--lr-border-width-thin) solid var(--lr-color-border);
   }
   [part='more-button']:hover,
   [part='reveal-columns-button']:hover {
-    background: var(--lyra-color-brand-quiet);
+    background: var(--lr-color-brand-quiet);
   }
   [part='more-button']:focus-visible,
   [part='reveal-columns-button']:focus-visible {
-    outline: var(--lyra-focus-ring-width) solid var(--lyra-focus-ring-color);
-    outline-offset: var(--lyra-focus-ring-offset);
+    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
+    outline-offset: var(--lr-focus-ring-offset);
   }
 `;

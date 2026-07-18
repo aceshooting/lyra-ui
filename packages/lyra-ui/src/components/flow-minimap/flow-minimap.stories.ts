@@ -16,7 +16,7 @@ const edges: FlowEdge[] = [
 
 const meta: Meta = {
   title: 'Flow Minimap',
-  component: 'lyra-flow-minimap',
+  component: 'lr-flow-minimap',
   tags: ['autodocs'],
 };
 export default meta;
@@ -24,17 +24,17 @@ type Story = StoryObj;
 
 export const Default: Story = {
   render: () => html`
-    <lyra-flow-canvas style="width:100%;height:24rem" .nodes=${nodes} .edges=${edges}>
-      <lyra-flow-minimap slot="bottom-end"></lyra-flow-minimap>
-    </lyra-flow-canvas>
+    <lr-flow-canvas style="width:100%;height:24rem" .nodes=${nodes} .edges=${edges}>
+      <lr-flow-minimap slot="bottom-end"></lr-flow-minimap>
+    </lr-flow-canvas>
   `,
 };
 
 export const ExternalPlacement: Story = {
   render: () => html`
     <div style="display:flex;flex-direction:column;gap:0.5rem">
-      <lyra-flow-canvas id="wf-ext" style="width:100%;height:20rem" .nodes=${nodes} .edges=${edges}></lyra-flow-canvas>
-      <lyra-flow-minimap for="wf-ext"></lyra-flow-minimap>
+      <lr-flow-canvas id="wf-ext" style="width:100%;height:20rem" .nodes=${nodes} .edges=${edges}></lr-flow-canvas>
+      <lr-flow-minimap for="wf-ext"></lr-flow-minimap>
     </div>
   `,
 };
@@ -47,10 +47,10 @@ export const NarrowAllocation: Story = {
     },
   },
   render: () => html`
-    <div style="inline-size:320px; max-inline-size:100%; block-size:16rem; border:1px dashed var(--lyra-color-border);">
-      <lyra-flow-canvas style="width:100%;height:100%" .nodes=${nodes} .edges=${edges}>
-        <lyra-flow-minimap slot="bottom-end"></lyra-flow-minimap>
-      </lyra-flow-canvas>
+    <div style="inline-size:320px; max-inline-size:100%; block-size:16rem; border:1px dashed var(--lr-color-border);">
+      <lr-flow-canvas style="width:100%;height:100%" .nodes=${nodes} .edges=${edges}>
+        <lr-flow-minimap slot="bottom-end"></lr-flow-minimap>
+      </lr-flow-canvas>
     </div>
   `,
 };

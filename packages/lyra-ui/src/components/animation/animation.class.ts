@@ -25,41 +25,41 @@ export type LyraAnimationPreset =
   | 'spin'
   | 'shake';
 
-/** Ties `duration`/`easing` to the shared `--lyra-transition-*` tokens instead of
+/** Ties `duration`/`easing` to the shared `--lr-transition-*` tokens instead of
  * the raw numeric properties. `'custom'` (the default) leaves `duration`/`easing`
  * fully consumer-controlled. */
 export type LyraAnimationTimingPreset = 'custom' | 'fast' | 'base' | 'ambient';
 
 export interface LyraAnimationEventMap {
-  'lyra-start': CustomEvent<undefined>;
-  'lyra-finish': CustomEvent<undefined>;
-  'lyra-cancel': CustomEvent<undefined>;
+  'lr-start': CustomEvent<undefined>;
+  'lr-finish': CustomEvent<undefined>;
+  'lr-cancel': CustomEvent<undefined>;
 }
 
 const PRESETS: Partial<Record<LyraAnimationPreset, Keyframe[]>> = {
   'fade-in': [{ opacity: 0 }, { opacity: 1 }],
   'fade-out': [{ opacity: 1 }, { opacity: 0 }],
   'zoom-in': [
-    { opacity: 0, transform: 'scale(var(--lyra-animation-zoom-scale, 0.5))' },
+    { opacity: 0, transform: 'scale(var(--lr-animation-zoom-scale, 0.5))' },
     { opacity: 1, transform: 'scale(1)' },
   ],
   'zoom-out': [
     { opacity: 1, transform: 'scale(1)' },
-    { opacity: 0, transform: 'scale(var(--lyra-animation-zoom-scale, 0.5))' },
+    { opacity: 0, transform: 'scale(var(--lr-animation-zoom-scale, 0.5))' },
   ],
   'slide-in-up': [
-    { transform: 'translateY(var(--lyra-animation-slide-distance, 100%))', opacity: 0 },
+    { transform: 'translateY(var(--lr-animation-slide-distance, 100%))', opacity: 0 },
     { transform: 'translateY(0)', opacity: 1 },
   ],
   'slide-in-down': [
-    { transform: 'translateY(calc(-1 * var(--lyra-animation-slide-distance, 100%)))', opacity: 0 },
+    { transform: 'translateY(calc(-1 * var(--lr-animation-slide-distance, 100%)))', opacity: 0 },
     { transform: 'translateY(0)', opacity: 1 },
   ],
   bounce: [
     { transform: 'translateY(0)', offset: 0 },
-    { transform: 'translateY(calc(-1 * var(--lyra-animation-bounce-height, 25%)))', offset: 0.4 },
+    { transform: 'translateY(calc(-1 * var(--lr-animation-bounce-height, 25%)))', offset: 0.4 },
     { transform: 'translateY(0)', offset: 0.7 },
-    { transform: 'translateY(calc(-0.4 * var(--lyra-animation-bounce-height, 25%)))', offset: 0.85 },
+    { transform: 'translateY(calc(-0.4 * var(--lr-animation-bounce-height, 25%)))', offset: 0.85 },
     { transform: 'translateY(0)', offset: 1 },
   ],
   pulse: [
@@ -70,10 +70,10 @@ const PRESETS: Partial<Record<LyraAnimationPreset, Keyframe[]>> = {
   spin: [{ transform: 'rotate(0deg)' }, { transform: 'rotate(360deg)' }],
   shake: [
     { transform: 'translateX(0)', offset: 0 },
-    { transform: 'translateX(calc(-1 * var(--lyra-animation-shake-distance, 4%)))', offset: 0.2 },
-    { transform: 'translateX(var(--lyra-animation-shake-distance, 4%))', offset: 0.4 },
-    { transform: 'translateX(calc(-1 * var(--lyra-animation-shake-distance, 4%)))', offset: 0.6 },
-    { transform: 'translateX(var(--lyra-animation-shake-distance, 4%))', offset: 0.8 },
+    { transform: 'translateX(calc(-1 * var(--lr-animation-shake-distance, 4%)))', offset: 0.2 },
+    { transform: 'translateX(var(--lr-animation-shake-distance, 4%))', offset: 0.4 },
+    { transform: 'translateX(calc(-1 * var(--lr-animation-shake-distance, 4%)))', offset: 0.6 },
+    { transform: 'translateX(var(--lr-animation-shake-distance, 4%))', offset: 0.8 },
     { transform: 'translateX(0)', offset: 1 },
   ],
 };
@@ -85,7 +85,7 @@ const PRESETS: Partial<Record<LyraAnimationPreset, Keyframe[]>> = {
 function slidePreset(edge: 'start' | 'end', mode: 'in' | 'out', dir: 'ltr' | 'rtl'): Keyframe[] {
   const negative = dir === 'ltr' ? edge === 'start' : edge === 'end';
   const offscreen = `translateX(${
-    negative ? 'calc(-1 * var(--lyra-animation-slide-distance, 100%))' : 'var(--lyra-animation-slide-distance, 100%)'
+    negative ? 'calc(-1 * var(--lr-animation-slide-distance, 100%))' : 'var(--lr-animation-slide-distance, 100%)'
   })`;
   const onscreen = 'translateX(0)';
   return mode === 'in'
@@ -101,13 +101,13 @@ function slidePreset(edge: 'start' | 'end', mode: 'in' | 'out', dir: 'ltr' | 'rt
 
 const DIRECTIONAL_SLIDE_NAMES = new Set<LyraAnimationPreset>(['slide-in-start', 'slide-in-end', 'slide-out-start', 'slide-out-end']);
 
-/** Reads and decomposes a compound `--lyra-transition-*` token (e.g. `"180ms ease-out"`)
+/** Reads and decomposes a compound `--lr-transition-*` token (e.g. `"180ms ease-out"`)
  * into the plain numeric `duration`/string `easing` pair the Web Animations API needs --
  * WAAPI's numeric timing options cannot take a `var()` reference the way a CSS `transform`
  * string can. Resolves against fully computed style, so a theme override that itself uses
  * `var()` internally never leaks unresolved text into `easing`. */
 function resolveTimingToken(el: HTMLElement, preset: 'fast' | 'base' | 'ambient'): { duration: number; easing: string } {
-  const raw = getComputedStyle(el).getPropertyValue(`--lyra-transition-${preset}`).trim();
+  const raw = getComputedStyle(el).getPropertyValue(`--lr-transition-${preset}`).trim();
   const match = /^([\d.]+)(ms|s)\s+(.+)$/.exec(raw);
   if (!match) return { duration: 1000, easing: 'linear' };
   const [, num, unit, easing] = match;
@@ -115,10 +115,10 @@ function resolveTimingToken(el: HTMLElement, preset: 'fast' | 'base' | 'ambient'
 }
 
 /**
- * `<lyra-animation>` declaratively animates its single slotted child through the
+ * `<lr-animation>` declaratively animates its single slotted child through the
  * native Web Animations API: a small curated preset catalog (`name`) or fully
  * custom `keyframes`, explicit WAAPI timing controls, an optional
- * `playOnVisible` trigger, and a `lyra-start`/`lyra-finish`/`lyra-cancel` event
+ * `playOnVisible` trigger, and a `lr-start`/`lr-finish`/`lr-cancel` event
  * contract.
  *
  * `keyframes`, when set, always wins over `name`. The `iterations` default is
@@ -138,7 +138,7 @@ function resolveTimingToken(el: HTMLElement, preset: 'fast' | 'base' | 'ambient'
  * `respectReducedMotion` (default `true`) caps playback to one iteration and
  * calls `finish()` immediately instead of playing, whenever the OS/browser
  * reports `prefers-reduced-motion: reduce` -- the target snaps straight to
- * its resolved end state, and `lyra-start`/`lyra-finish` still fire in order
+ * its resolved end state, and `lr-start`/`lr-finish` still fire in order
  * so a consumer sequencing further UI off those events keeps working even
  * though nothing visibly interpolated. Set `respectReducedMotion="false"`
  * only for genuine user-triggered feedback (e.g. a drag-confirm snap-back)
@@ -146,19 +146,19 @@ function resolveTimingToken(el: HTMLElement, preset: 'fast' | 'base' | 'ambient'
  * ambient/decorative animation should always leave this at its default.
  *
  * `timingPreset` (default `'custom'`) optionally derives `duration`/`easing`
- * from the shared `--lyra-transition-fast`/`-base`/`-ambient` tokens instead
+ * from the shared `--lr-transition-fast`/`-base`/`-ambient` tokens instead
  * of the raw `duration`/`easing` property values, so an app's global motion
  * retiming reaches this component's animations too.
  *
- * @customElement lyra-animation
+ * @customElement lr-animation
  * @slot - The element to animate. A second slotted element is accepted without error but ignored.
- * @event lyra-start - A new animation was created and playback began or restarted.
- * @event lyra-finish - The animation reached its natural end, including the reduced-motion instant-finish path.
- * @event lyra-cancel - The animation was canceled via the public `cancel()` method or external cancellation.
- * @cssprop [--lyra-animation-slide-distance=100%] - Travel distance for the slide-in/slide-out/slide-in-up/slide-in-down presets.
- * @cssprop [--lyra-animation-zoom-scale=0.5] - Starting/ending scale factor for the zoom-in/zoom-out presets.
- * @cssprop [--lyra-animation-bounce-height=25%] - Peak lift height of the bounce preset.
- * @cssprop [--lyra-animation-shake-distance=4%] - Horizontal travel of the shake preset.
+ * @event lr-start - A new animation was created and playback began or restarted.
+ * @event lr-finish - The animation reached its natural end, including the reduced-motion instant-finish path.
+ * @event lr-cancel - The animation was canceled via the public `cancel()` method or external cancellation.
+ * @cssprop [--lr-animation-slide-distance=100%] - Travel distance for the slide-in/slide-out/slide-in-up/slide-in-down presets.
+ * @cssprop [--lr-animation-zoom-scale=0.5] - Starting/ending scale factor for the zoom-in/zoom-out presets.
+ * @cssprop [--lr-animation-bounce-height=25%] - Peak lift height of the bounce preset.
+ * @cssprop [--lr-animation-shake-distance=4%] - Horizontal travel of the shake preset.
  */
 export class LyraAnimation extends LyraElement<LyraAnimationEventMap> {
   static styles = [LyraElement.styles, styles];
@@ -330,11 +330,11 @@ export class LyraAnimation extends LyraElement<LyraAnimationEventMap> {
   // method runs at the top of every createAnimation() rebuild (e.g. the
   // consumer changed `duration` while playing) and in disconnectedCallback.
   // Calling `.cancel()` while the `cancel` listener is still attached would
-  // spuriously fire the public `lyra-cancel` event and reset `play` back to
-  // `false` on every routine property change -- breaking the "lyra-start
+  // spuriously fire the public `lr-cancel` event and reset `play` back to
+  // `false` on every routine property change -- breaking the "lr-start
   // fires again on restart" contract. The public `cancel()` method below is
   // a deliberately separate path that does NOT call this, so the native
-  // `cancel` event is allowed through to `lyra-cancel` on purpose.
+  // `cancel` event is allowed through to `lr-cancel` on purpose.
   private destroyAnimation(): void {
     if (!this.animation) return;
     this.animation.removeEventListener('cancel', this.onAnimationCancel);
@@ -370,14 +370,14 @@ export class LyraAnimation extends LyraElement<LyraAnimationEventMap> {
     this.animation.addEventListener('finish', this.onAnimationFinish);
     if (this.play) {
       this.hasStarted = true;
-      this.emit('lyra-start');
+      this.emit('lr-start');
       if (reduced) this.animation.finish();
     } else {
       this.animation.pause();
     }
   };
 
-  // Guards against double-emitting lyra-start when both a rebuild-triggering
+  // Guards against double-emitting lr-start when both a rebuild-triggering
   // property and `play` change in the same update batch (e.g. the element's
   // very first update, where every property is "changed"): createAnimation()
   // already handles the emit and sets hasStarted in that case, so this path
@@ -388,7 +388,7 @@ export class LyraAnimation extends LyraElement<LyraAnimationEventMap> {
     if (this.play) {
       if (!this.hasStarted) {
         this.hasStarted = true;
-        this.emit('lyra-start');
+        this.emit('lr-start');
       }
       this.animation.play();
     } else {
@@ -399,13 +399,13 @@ export class LyraAnimation extends LyraElement<LyraAnimationEventMap> {
   private onAnimationFinish = (): void => {
     this.play = false;
     this.hasStarted = false;
-    this.emit('lyra-finish');
+    this.emit('lr-finish');
   };
 
   private onAnimationCancel = (): void => {
     this.play = false;
     this.hasStarted = false;
-    this.emit('lyra-cancel');
+    this.emit('lr-cancel');
   };
 
   get currentTime(): number {
@@ -428,7 +428,7 @@ export class LyraAnimation extends LyraElement<LyraAnimationEventMap> {
     this.play = false;
   }
 
-  /** Forwards to the underlying `Animation.cancel()`. Fires `lyra-cancel`. */
+  /** Forwards to the underlying `Animation.cancel()`. Fires `lr-cancel`. */
   cancel(): void {
     this.animation?.cancel();
   }
@@ -445,6 +445,6 @@ export class LyraAnimation extends LyraElement<LyraAnimationEventMap> {
 
 declare global {
   interface HTMLElementTagNameMap {
-    'lyra-animation': LyraAnimation;
+    'lr-animation': LyraAnimation;
   }
 }

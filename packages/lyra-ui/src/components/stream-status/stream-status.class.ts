@@ -15,7 +15,7 @@ export type StreamStatusPhase = 'idle' | 'connecting' | 'streaming' | 'stalled';
 // in the DefaultStalledMessage story) must not count either -- native <slot>
 // fallback content is suppressed by *any* assigned node, whitespace or not,
 // which previously left the message area blank in exactly that common case.
-// Mirrors lyra-citation-badge's identical isRealPreviewNode: a node counts as
+// Mirrors lr-citation-badge's identical isRealPreviewNode: a node counts as
 // real message content if it's an element not assigned to some other named
 // slot (e.g. `actions`), or non-whitespace text.
 function isRealMessageNode(n: Node): boolean {
@@ -25,11 +25,11 @@ function isRealMessageNode(n: Node): boolean {
 }
 
 export interface LyraStreamStatusEventMap {
-  'lyra-stall': CustomEvent<undefined>;
-  'lyra-recover': CustomEvent<undefined>;
+  'lr-stall': CustomEvent<undefined>;
+  'lr-recover': CustomEvent<undefined>;
 }
 /**
- * `<lyra-stream-status>` — a compact status indicator for a single streaming
+ * `<lr-stream-status>` — a compact status indicator for a single streaming
  * connection (SSE, WebSocket, long-poll, …), with built-in heartbeat-aware
  * stall detection.
  *
@@ -47,7 +47,7 @@ export interface LyraStreamStatusEventMap {
  * or via `recordActivity()` recovering from `'stalled'`), on every
  * subsequent `recordActivity()` call while already streaming, whenever
  * `stall-threshold-ms` itself changes while already streaming (the new
- * value takes effect immediately, the same way `<lyra-toast-item>`'s
+ * value takes effect immediately, the same way `<lr-toast-item>`'s
  * `duration` re-applies mid-flight, rather than waiting for the next
  * `recordActivity()`/phase change), and whenever this element (re)connects
  * to the DOM while `phase` is still `'streaming'` (a disconnect always
@@ -57,21 +57,21 @@ export interface LyraStreamStatusEventMap {
  * disarmed the instant `phase` becomes anything else, including a
  * host-driven reassignment away from `'streaming'` — so a stale timer can
  * never fire a stall transition after the host has already moved on. If it
- * ever fires, `phase` becomes `'stalled'` and `lyra-stall` is dispatched.
+ * ever fires, `phase` becomes `'stalled'` and `lr-stall` is dispatched.
  *
  * `phase` remains a fully public, directly settable property at all times —
  * a host can assign `'stalled'` (or any other phase) itself as a manual
- * override, and this component never fights that assignment. `lyra-stall`/
- * `lyra-recover` fire on *any* transition into/out of `'stalled'`
+ * override, and this component never fights that assignment. `lr-stall`/
+ * `lr-recover` fire on *any* transition into/out of `'stalled'`
  * respectively, whether timer-driven or host-driven, and never for a
  * reassignment to the same value (Lit's default `hasChanged` already skips a
  * no-op set, same as every other reflected `@property` in this library).
- * Like `<lyra-chat-message>`'s `status`, whatever phase this element happens
+ * Like `<lr-chat-message>`'s `status`, whatever phase this element happens
  * to *mount* with is never itself treated as an eventful transition — only a
  * later change fires an event or an announcement.
  *
  * Accessibility: phase transitions into/out of `'stalled'` are announced
- * through an internal `<lyra-live-region>` (see that component for the
+ * through an internal `<lr-live-region>` (see that component for the
  * throttled/coalesced-announcement machinery this composes) rather than a
  * hand-rolled `aria-live` region. `recordActivity()` itself never announces
  * anything, no matter how often the host calls it — only the *transition*
@@ -97,11 +97,11 @@ export interface LyraStreamStatusEventMap {
  * `[phase="stalled"]`, or simply stop rendering this component and show its
  * own danger-styled error state instead.
  *
- * @customElement lyra-stream-status
+ * @customElement lr-stream-status
  * @slot - Custom copy shown only while `phase="stalled"` (e.g. "Taking longer than usual…"). A sensible built-in default is used when nothing is slotted.
  * @slot actions - A stop/retry button row. Always present in the template regardless of `phase` — visibility is driven purely by whether anything is slotted, not by `phase`; what to put here, and when, is entirely the host's call.
- * @event lyra-stall - Fired whenever `phase` transitions into `'stalled'` from anything else (timer-driven, or a direct host assignment).
- * @event lyra-recover - Fired whenever `phase` transitions out of `'stalled'` to anything else (via `recordActivity()`, or a direct host assignment) — fired unconditionally regardless of destination phase, even though the accompanying announcement's wording varies (see the class doc's "Accessibility" section).
+ * @event lr-stall - Fired whenever `phase` transitions into `'stalled'` from anything else (timer-driven, or a direct host assignment).
+ * @event lr-recover - Fired whenever `phase` transitions out of `'stalled'` to anything else (via `recordActivity()`, or a direct host assignment) — fired unconditionally regardless of destination phase, even though the accompanying announcement's wording varies (see the class doc's "Accessibility" section).
  * @csspart base - The root layout container.
  * @csspart indicator - The decorative (`aria-hidden`) status dot.
  * @csspart message - Wrapper around the default slot; only rendered while `phase="stalled"`.
@@ -129,7 +129,7 @@ export class LyraStreamStatus extends LyraElement<LyraStreamStatusEventMap> {
   // can't be relied on for the default stalled-message text.
   @state() private hasMessageContent = false;
 
-  @query('lyra-live-region') private liveRegion?: LyraLiveRegion;
+  @query('lr-live-region') private liveRegion?: LyraLiveRegion;
 
   protected willUpdate(): void {
     if (!this.hasUpdated) {
@@ -139,7 +139,7 @@ export class LyraStreamStatus extends LyraElement<LyraStreamStatusEventMap> {
   }
 
   // `changed.get('phase')` is `undefined` on the very first update, for the
-  // same reason documented on lyra-chat-message's identical `updated()`
+  // same reason documented on lr-chat-message's identical `updated()`
   // guard: Lit only records the *first* old value seen since the last
   // completed update, and the constructor's field-initializer assignment is
   // that first change, from the truly-unset internal slot. That naturally
@@ -187,7 +187,7 @@ export class LyraStreamStatus extends LyraElement<LyraStreamStatusEventMap> {
    * - While `phase === 'streaming'`: (re)arms the stall timer, pushing the
    *   stall deadline `stall-threshold-ms` further out.
    * - While `phase === 'stalled'`: recovers — `phase` becomes `'streaming'`
-   *   again, `lyra-recover` fires, and the stall timer is armed fresh (same
+   *   again, `lr-recover` fires, and the stall timer is armed fresh (same
    *   as the bullet above), all via the same `updated()` transition handling
    *   a direct host assignment would also go through.
    * - While `phase` is `'idle'` or `'connecting'`: a no-op. A host may call
@@ -212,16 +212,16 @@ export class LyraStreamStatus extends LyraElement<LyraStreamStatusEventMap> {
     if (previous === undefined) return;
 
     if (this.phase === 'stalled' && previous !== 'stalled') {
-      this.emit('lyra-stall');
+      this.emit('lr-stall');
       this.announceTransition('assertive', this.localize('streamStallAnnounce'));
     } else if (previous === 'stalled' && this.phase !== 'stalled') {
-      // `lyra-recover` fires unconditionally -- a host may still want the
+      // `lr-recover` fires unconditionally -- a host may still want the
       // event for any exit from 'stalled' -- but the *announced text* must
       // not claim the connection was "restored" when the destination is
       // 'idle'/'connecting': that's the host abandoning the stream, not it
       // recovering, and telling a screen-reader user otherwise would be the
       // opposite of what a sighted user sees on screen.
-      this.emit('lyra-recover');
+      this.emit('lr-recover');
       const text =
         this.phase === 'streaming'
           ? this.localize('streamRecoverAnnounce')
@@ -287,7 +287,7 @@ export class LyraStreamStatus extends LyraElement<LyraStreamStatusEventMap> {
         <div part="actions" ?hidden=${!this.hasActionsSlot}>
           <slot name="actions" @slotchange=${this.onActionsSlotChange}></slot>
         </div>
-        <lyra-live-region></lyra-live-region>
+        <lr-live-region></lr-live-region>
       </div>
     `;
   }
@@ -296,6 +296,6 @@ export class LyraStreamStatus extends LyraElement<LyraStreamStatusEventMap> {
 
 declare global {
   interface HTMLElementTagNameMap {
-    'lyra-stream-status': LyraStreamStatus;
+    'lr-stream-status': LyraStreamStatus;
   }
 }

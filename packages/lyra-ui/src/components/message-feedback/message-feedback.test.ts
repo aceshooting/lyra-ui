@@ -8,7 +8,7 @@ const reasons = [
 ];
 
 it('defaults to value null, no reasons, not commentable, detailFor "down"', async () => {
-  const el = (await fixture(html`<lyra-message-feedback></lyra-message-feedback>`)) as LyraMessageFeedback;
+  const el = (await fixture(html`<lr-message-feedback></lr-message-feedback>`)) as LyraMessageFeedback;
   expect(el.value).to.equal(null);
   expect(el.reasons).to.deep.equal([]);
   expect(el.commentable).to.be.false;
@@ -16,7 +16,7 @@ it('defaults to value null, no reasons, not commentable, detailFor "down"', asyn
 });
 
 it('localizes thumb accessible names with the built-in English fallback and via .strings override', async () => {
-  const el = (await fixture(html`<lyra-message-feedback></lyra-message-feedback>`)) as LyraMessageFeedback;
+  const el = (await fixture(html`<lr-message-feedback></lr-message-feedback>`)) as LyraMessageFeedback;
   const up = el.shadowRoot!.querySelector('[part="up-button"]') as HTMLButtonElement;
   const down = el.shadowRoot!.querySelector('[part="down-button"]') as HTMLButtonElement;
   expect(up.getAttribute('aria-label')).to.equal('Good response');
@@ -30,23 +30,23 @@ it('localizes thumb accessible names with the built-in English fallback and via 
 
 describe('thumbs-only (no reasons, not commentable)', () => {
   it('toggles value on click, with no panel ever rendered', async () => {
-    const el = (await fixture(html`<lyra-message-feedback></lyra-message-feedback>`)) as LyraMessageFeedback;
+    const el = (await fixture(html`<lr-message-feedback></lr-message-feedback>`)) as LyraMessageFeedback;
     const up = el.shadowRoot!.querySelector('[part="up-button"]') as HTMLButtonElement;
 
-    const first = oneEvent(el, 'lyra-change');
+    const first = oneEvent(el, 'lr-change');
     up.click();
     expect((await first).detail).to.deep.equal({ value: 'up' });
     expect(el.value).to.equal('up');
     expect(el.shadowRoot!.querySelector('[part="panel"]')).to.not.exist;
 
-    const second = oneEvent(el, 'lyra-change');
+    const second = oneEvent(el, 'lr-change');
     up.click(); // re-activating the pressed thumb clears it
     expect((await second).detail).to.deep.equal({ value: null });
     expect(el.value).to.equal(null);
   });
 
   it('reflects aria-pressed both true and false', async () => {
-    const el = (await fixture(html`<lyra-message-feedback></lyra-message-feedback>`)) as LyraMessageFeedback;
+    const el = (await fixture(html`<lr-message-feedback></lr-message-feedback>`)) as LyraMessageFeedback;
     const down = el.shadowRoot!.querySelector('[part="down-button"]') as HTMLButtonElement;
     expect(down.getAttribute('aria-pressed')).to.equal('false');
     down.click();
@@ -58,7 +58,7 @@ describe('thumbs-only (no reasons, not commentable)', () => {
 describe('detail panel (reasons + commentable, detailFor "down")', () => {
   it('opens the panel only for the thumb detailFor applies to', async () => {
     const el = (await fixture(
-      html`<lyra-message-feedback .reasons=${reasons} commentable></lyra-message-feedback>`,
+      html`<lr-message-feedback .reasons=${reasons} commentable></lr-message-feedback>`,
     )) as LyraMessageFeedback;
     const up = el.shadowRoot!.querySelector('[part="up-button"]') as HTMLButtonElement;
     up.click();
@@ -71,30 +71,30 @@ describe('detail panel (reasons + commentable, detailFor "down")', () => {
     expect(el.shadowRoot!.querySelector('[part="panel"]')!.hasAttribute('data-open')).to.be.true;
   });
 
-  it('toggles reason chips and includes only selected ids in lyra-submit', async () => {
+  it('toggles reason chips and includes only selected ids in lr-submit', async () => {
     const el = (await fixture(
-      html`<lyra-message-feedback .reasons=${reasons}></lyra-message-feedback>`,
+      html`<lr-message-feedback .reasons=${reasons}></lr-message-feedback>`,
     )) as LyraMessageFeedback;
     const down = el.shadowRoot!.querySelector('[part="down-button"]') as HTMLButtonElement;
     down.click();
     await el.updateComplete;
 
-    const chips = el.shadowRoot!.querySelectorAll('[part="reasons"] lyra-chip');
+    const chips = el.shadowRoot!.querySelectorAll('[part="reasons"] lr-chip');
     expect(chips.length).to.equal(2);
     (chips[0] as HTMLElement).dispatchEvent(
-      new CustomEvent('lyra-chip-select', { detail: { selected: true }, bubbles: true, composed: true }),
+      new CustomEvent('lr-chip-select', { detail: { selected: true }, bubbles: true, composed: true }),
     );
     await el.updateComplete;
 
-    const submitPromise = oneEvent(el, 'lyra-submit');
+    const submitPromise = oneEvent(el, 'lr-submit');
     (el.shadowRoot!.querySelector('[part="submit-button"]') as HTMLButtonElement).click();
     const ev = await submitPromise;
     expect(ev.detail).to.deep.equal({ value: 'down', reasonIds: ['wrong'], comment: '' });
   });
 
-  it('includes the trimmed comment in lyra-submit when commentable', async () => {
+  it('includes the trimmed comment in lr-submit when commentable', async () => {
     const el = (await fixture(
-      html`<lyra-message-feedback commentable></lyra-message-feedback>`,
+      html`<lr-message-feedback commentable></lr-message-feedback>`,
     )) as LyraMessageFeedback;
     const down = el.shadowRoot!.querySelector('[part="down-button"]') as HTMLButtonElement;
     down.click();
@@ -105,7 +105,7 @@ describe('detail panel (reasons + commentable, detailFor "down")', () => {
     textarea.dispatchEvent(new Event('input'));
     await el.updateComplete;
 
-    const submitPromise = oneEvent(el, 'lyra-submit');
+    const submitPromise = oneEvent(el, 'lr-submit');
     (el.shadowRoot!.querySelector('[part="submit-button"]') as HTMLButtonElement).click();
     const ev = await submitPromise;
     expect(ev.detail).to.deep.equal({ value: 'down', reasonIds: [], comment: 'too slow' });
@@ -113,7 +113,7 @@ describe('detail panel (reasons + commentable, detailFor "down")', () => {
 
   it('closes the panel and returns focus to the active thumb on submit', async () => {
     const el = (await fixture(
-      html`<lyra-message-feedback commentable></lyra-message-feedback>`,
+      html`<lr-message-feedback commentable></lr-message-feedback>`,
     )) as LyraMessageFeedback;
     const down = el.shadowRoot!.querySelector('[part="down-button"]') as HTMLButtonElement;
     down.click();
@@ -127,7 +127,7 @@ describe('detail panel (reasons + commentable, detailFor "down")', () => {
 
   it('closes the panel on Escape, keeps value, and returns focus to the active thumb', async () => {
     const el = (await fixture(
-      html`<lyra-message-feedback commentable></lyra-message-feedback>`,
+      html`<lr-message-feedback commentable></lr-message-feedback>`,
     )) as LyraMessageFeedback;
     const down = el.shadowRoot!.querySelector('[part="down-button"]') as HTMLButtonElement;
     down.click();
@@ -143,7 +143,7 @@ describe('detail panel (reasons + commentable, detailFor "down")', () => {
 
   it('re-opens the panel with the prior draft intact when the pressed thumb is clicked again after Escape', async () => {
     const el = (await fixture(
-      html`<lyra-message-feedback .reasons=${reasons} commentable></lyra-message-feedback>`,
+      html`<lr-message-feedback .reasons=${reasons} commentable></lr-message-feedback>`,
     )) as LyraMessageFeedback;
     const down = el.shadowRoot!.querySelector('[part="down-button"]') as HTMLButtonElement;
     down.click();
@@ -160,10 +160,10 @@ describe('detail panel (reasons + commentable, detailFor "down")', () => {
     expect(el.shadowRoot!.querySelector('[part="panel"]')!.hasAttribute('data-open')).to.be.false;
 
     let changeFired = false;
-    el.addEventListener('lyra-change', () => (changeFired = true));
+    el.addEventListener('lr-change', () => (changeFired = true));
     down.click(); // re-open, not toggle-off, since the panel was closed
     await el.updateComplete;
-    expect(changeFired, 'value did not change, so lyra-change must not re-fire').to.be.false;
+    expect(changeFired, 'value did not change, so lr-change must not re-fire').to.be.false;
     expect(el.value).to.equal('down');
     expect(el.shadowRoot!.querySelector('[part="panel"]')!.hasAttribute('data-open')).to.be.true;
     expect((el.shadowRoot!.querySelector('[part="comment"]') as HTMLTextAreaElement).value).to.equal(
@@ -173,14 +173,14 @@ describe('detail panel (reasons + commentable, detailFor "down")', () => {
 
   it('clears value when the pressed thumb (with its panel already open) is clicked again', async () => {
     const el = (await fixture(
-      html`<lyra-message-feedback commentable></lyra-message-feedback>`,
+      html`<lr-message-feedback commentable></lr-message-feedback>`,
     )) as LyraMessageFeedback;
     const down = el.shadowRoot!.querySelector('[part="down-button"]') as HTMLButtonElement;
     down.click();
     await el.updateComplete;
     expect(el.shadowRoot!.querySelector('[part="panel"]')!.hasAttribute('data-open')).to.be.true;
 
-    const changePromise = oneEvent(el, 'lyra-change');
+    const changePromise = oneEvent(el, 'lr-change');
     down.click(); // panel is open -- this click is the toggle-off gesture
     expect((await changePromise).detail).to.deep.equal({ value: null });
     expect(el.value).to.equal(null);
@@ -188,7 +188,7 @@ describe('detail panel (reasons + commentable, detailFor "down")', () => {
 
   it('resets drafts when switching from one thumb to the other', async () => {
     const el = (await fixture(
-      html`<lyra-message-feedback .reasons=${reasons} commentable></lyra-message-feedback>`,
+      html`<lr-message-feedback .reasons=${reasons} commentable></lr-message-feedback>`,
     )) as LyraMessageFeedback;
     const down = el.shadowRoot!.querySelector('[part="down-button"]') as HTMLButtonElement;
     down.click();
@@ -209,18 +209,18 @@ describe('detail panel (reasons + commentable, detailFor "down")', () => {
 
 it('respects a host-set disabled value as a read-only display', async () => {
   const el = (await fixture(
-    html`<lyra-message-feedback value="up" disabled></lyra-message-feedback>`,
+    html`<lr-message-feedback value="up" disabled></lr-message-feedback>`,
   )) as LyraMessageFeedback;
   const up = el.shadowRoot!.querySelector('[part="up-button"]') as HTMLButtonElement;
   expect(up.disabled).to.be.true;
   let fired = false;
-  el.addEventListener('lyra-change', () => (fired = true));
+  el.addEventListener('lr-change', () => (fired = true));
   up.click();
   expect(fired).to.be.false;
 });
 
 it('never conveys value by color alone -- aria-pressed is present for both thumbs regardless of state', async () => {
-  const el = (await fixture(html`<lyra-message-feedback value="up"></lyra-message-feedback>`)) as LyraMessageFeedback;
+  const el = (await fixture(html`<lr-message-feedback value="up"></lr-message-feedback>`)) as LyraMessageFeedback;
   const up = el.shadowRoot!.querySelector('[part="up-button"]')!;
   const down = el.shadowRoot!.querySelector('[part="down-button"]')!;
   expect(up.getAttribute('aria-pressed')).to.equal('true');
@@ -228,13 +228,13 @@ it('never conveys value by color alone -- aria-pressed is present for both thumb
 });
 
 it('focus() delegates to the thumb matching the current value', async () => {
-  const el = (await fixture(html`<lyra-message-feedback value="down"></lyra-message-feedback>`)) as LyraMessageFeedback;
+  const el = (await fixture(html`<lr-message-feedback value="down"></lr-message-feedback>`)) as LyraMessageFeedback;
   el.focus();
   expect(el.shadowRoot!.activeElement).to.equal(el.shadowRoot!.querySelector('[part="down-button"]'));
 });
 
 it('gives the up/down thumb buttons the shared minimum hit area', async () => {
-  const el = (await fixture(html`<lyra-message-feedback></lyra-message-feedback>`)) as LyraMessageFeedback;
+  const el = (await fixture(html`<lr-message-feedback></lr-message-feedback>`)) as LyraMessageFeedback;
   const up = el.shadowRoot!.querySelector('[part="up-button"]') as HTMLElement;
   const down = el.shadowRoot!.querySelector('[part="down-button"]') as HTMLElement;
 
@@ -245,11 +245,11 @@ it('gives the up/down thumb buttons the shared minimum hit area', async () => {
 });
 
 it('is accessible in every configuration', async () => {
-  const plain = (await fixture(html`<lyra-message-feedback></lyra-message-feedback>`)) as LyraMessageFeedback;
+  const plain = (await fixture(html`<lr-message-feedback></lr-message-feedback>`)) as LyraMessageFeedback;
   await expect(plain).to.be.accessible();
 
   const withPanel = (await fixture(
-    html`<lyra-message-feedback value="down" .reasons=${reasons} commentable></lyra-message-feedback>`,
+    html`<lr-message-feedback value="down" .reasons=${reasons} commentable></lr-message-feedback>`,
   )) as LyraMessageFeedback;
   await expect(withPanel).to.be.accessible();
 });

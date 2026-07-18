@@ -7,13 +7,13 @@ import type { LyraStreamingText } from './streaming-text.js';
 
 const meta: Meta = {
   title: 'StreamingText',
-  component: 'lyra-streaming-text',
+  component: 'lr-streaming-text',
   tags: ['autodocs'],
   parameters: {
     docs: {
       description: {
         component:
-          'A token-coalescing incremental text renderer for streaming assistant output. The host always assigns the *entire* current text to `content` on every update (never a delta); rapid updates within `coalesce-ms` collapse to a single render of the latest value. `markdown` auto-detects (via a lightweight heuristic) whether to route content through `<lyra-markdown>` or render it as plain text, and can be forced either way. A blinking cursor (reduced-motion-aware) appears while `streaming` is `true`.',
+          'A token-coalescing incremental text renderer for streaming assistant output. The host always assigns the *entire* current text to `content` on every update (never a delta); rapid updates within `coalesce-ms` collapse to a single render of the latest value. `markdown` auto-detects (via a lightweight heuristic) whether to route content through `<lr-markdown>` or render it as plain text, and can be forced either way. A blinking cursor (reduced-motion-aware) appears while `streaming` is `true`.',
       },
     },
   },
@@ -22,29 +22,29 @@ export default meta;
 type Story = StoryObj;
 
 const buttonStyle =
-  'font:inherit; font-size:0.8125rem; padding:0.3rem 0.7rem; border:1px solid var(--lyra-color-border); border-radius:0.375rem; background:var(--lyra-color-surface); cursor:pointer;';
+  'font:inherit; font-size:0.8125rem; padding:0.3rem 0.7rem; border:1px solid var(--lr-color-border); border-radius:0.375rem; background:var(--lr-color-surface); cursor:pointer;';
 
 export const PlainTextStreaming: Story = {
   render: () =>
-    html`<lyra-streaming-text
+    html`<lr-streaming-text
       streaming
       markdown="false"
       .content=${'The quick brown fox jumps over the lazy dog'}
-    ></lyra-streaming-text>`,
+    ></lr-streaming-text>`,
 };
 
 export const FinishedPlainText: Story = {
   name: 'Finished (no cursor)',
   render: () =>
-    html`<lyra-streaming-text
+    html`<lr-streaming-text
       markdown="false"
       .content=${'The quick brown fox jumps over the lazy dog.'}
-    ></lyra-streaming-text>`,
+    ></lr-streaming-text>`,
 };
 
 const markdownSample = `# Release notes
 
-**v1.3.0** adds \`lyra-streaming-text\`.
+**v1.3.0** adds \`lr-streaming-text\`.
 
 - Coalesces rapid updates
 - Auto-detects Markdown
@@ -53,22 +53,22 @@ const markdownSample = `# Release notes
 
 export const MarkdownAutoDetected: Story = {
   name: 'Markdown (auto-detected)',
-  render: () => html`<lyra-streaming-text streaming .content=${markdownSample}></lyra-streaming-text>`,
+  render: () => html`<lr-streaming-text streaming .content=${markdownSample}></lr-streaming-text>`,
 };
 
 export const ForcedPlainText: Story = {
   name: 'markdown="false" forces plain text even for Markdown-looking content',
-  render: () => html`<lyra-streaming-text markdown="false" .content=${markdownSample}></lyra-streaming-text>`,
+  render: () => html`<lr-streaming-text markdown="false" .content=${markdownSample}></lr-streaming-text>`,
 };
 
 export const ForcedMarkdown: Story = {
   name: 'markdown forces Markdown rendering even for plain-looking content',
   render: () =>
-    html`<lyra-streaming-text
+    html`<lr-streaming-text
       markdown
       streaming
       .content=${'no special syntax in this sentence at all'}
-    ></lyra-streaming-text>`,
+    ></lr-streaming-text>`,
 };
 
 export const LiveTokenStream: Story = {
@@ -108,13 +108,13 @@ export const LiveTokenStream: Story = {
 
     return html`
       <div style="display:flex; flex-direction:column; gap:0.75rem; max-width:32rem;">
-        <div style="border:1px solid var(--lyra-color-border); border-radius:0.5rem; padding:0.75rem;">
-          <lyra-streaming-text coalesce-ms="50" ${ref(elRef)}></lyra-streaming-text>
+        <div style="border:1px solid var(--lr-color-border); border-radius:0.5rem; padding:0.75rem;">
+          <lr-streaming-text coalesce-ms="50" ${ref(elRef)}></lr-streaming-text>
         </div>
         <div>
           <button style=${buttonStyle} @click=${start}>Start streaming</button>
         </div>
-        <p style="margin:0; font-size:0.8125rem; color:var(--lyra-color-text-quiet);">
+        <p style="margin:0; font-size:0.8125rem; color:var(--lr-color-text-quiet);">
           Tokens arrive every 20ms — faster than the 50ms <code>coalesce-ms</code> window — so several
           tokens land per rendered frame instead of one DOM update per token.
         </p>
@@ -168,16 +168,16 @@ export const CoalescingComparison: Story = {
     return html`
       <div style="display:flex; flex-direction:column; gap:0.75rem; max-width:32rem;">
         <div>
-          <p style="margin:0 0 0.25rem; font-size:0.8125rem; color:var(--lyra-color-text-quiet);">
+          <p style="margin:0 0 0.25rem; font-size:0.8125rem; color:var(--lr-color-text-quiet);">
             coalesce-ms="0"
           </p>
-          <lyra-streaming-text markdown="false" coalesce-ms="0" ${ref(fastRef)}></lyra-streaming-text>
+          <lr-streaming-text markdown="false" coalesce-ms="0" ${ref(fastRef)}></lr-streaming-text>
         </div>
         <div>
-          <p style="margin:0 0 0.25rem; font-size:0.8125rem; color:var(--lyra-color-text-quiet);">
+          <p style="margin:0 0 0.25rem; font-size:0.8125rem; color:var(--lr-color-text-quiet);">
             coalesce-ms="300"
           </p>
-          <lyra-streaming-text markdown="false" coalesce-ms="300" ${ref(slowRef)}></lyra-streaming-text>
+          <lr-streaming-text markdown="false" coalesce-ms="300" ${ref(slowRef)}></lr-streaming-text>
         </div>
         <div>
           <button style=${buttonStyle} @click=${start}>Start streaming</button>
@@ -197,5 +197,5 @@ export const ReducedMotion: Story = {
       },
     },
   },
-  render: () => html`<lyra-streaming-text streaming .content=${'Still working on it'}></lyra-streaming-text>`,
+  render: () => html`<lr-streaming-text streaming .content=${'Still working on it'}></lr-streaming-text>`,
 };

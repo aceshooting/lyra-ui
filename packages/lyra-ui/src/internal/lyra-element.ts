@@ -20,7 +20,7 @@ export type LyraEventMap = Record<string, Event>;
 
 /**
  * Shared base for every Lyra component. Supplies the design-token layer
- * (`--lyra-theme-*` theme-input properties with hardcoded `--lyra-*` fallbacks).
+ * (`--lr-theme-*` theme-input properties with hardcoded `--lr-*` fallbacks).
  * RTL is handled by components using CSS logical properties rather than a forced `dir`.
  */
 export class LyraElement<Events = LyraEventMap> extends LitElement {

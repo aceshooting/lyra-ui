@@ -69,7 +69,7 @@ function warnInvalidColor(value: string): void {
   if (warnedInvalidColors.has(value)) return;
   warnedInvalidColors.add(value);
   console.warn(
-    `<lyra-qr-code> could not parse "${value}" (set via --lyra-qr-code-fill/-background) as a CSS ` +
+    `<lr-qr-code> could not parse "${value}" (set via --lr-qr-code-fill/-background) as a CSS ` +
       'color; falling back to the default.',
   );
 }
@@ -96,7 +96,7 @@ function resolveQrColor(value: string, fallbackHex: string): string {
 }
 
 /**
- * `<lyra-qr-code>` -- encodes `value` as a QR symbol with the optional
+ * `<lr-qr-code>` -- encodes `value` as a QR symbol with the optional
  * `qrcode` peer dependency (Reed-Solomon error correction and every other
  * algorithmic step of the QR spec is delegated to that library, never
  * hand-rolled) and draws the resulting module matrix onto a canvas itself,
@@ -108,15 +108,15 @@ function resolveQrColor(value: string, fallbackHex: string): string {
  *
  * The canvas -- not the host -- owns `role="img"` and the accessible name,
  * since it is the one meaningful descendant here (mirrors
- * `lyra-file-icon`'s single-image pattern rather than the composite-group
- * pattern used by `lyra-heatmap`/`lyra-word-cloud`). The accessible name
+ * `lr-file-icon`'s single-image pattern rather than the composite-group
+ * pattern used by `lr-heatmap`/`lr-word-cloud`). The accessible name
  * resolves, in order: `label`, then a host `aria-label` attribute (forwarded
  * onto the canvas), then `value` itself. An empty `value` renders
  * `[part="empty"]` instead of an `img`-role element -- there is nothing to
  * encode or name.
  *
- * `--lyra-qr-code-fill`/`--lyra-qr-code-background` (dark/light modules)
- * default to `--lyra-color-text`/`--lyra-color-surface`, which -- like every
+ * `--lr-qr-code-fill`/`--lr-qr-code-background` (dark/light modules)
+ * default to `--lr-color-text`/`--lr-color-surface`, which -- like every
  * semantic token in this library -- flip under a dark theme. That means the
  * *default* rendering under a dark theme is a polarity-inverted QR code
  * (light modules on a dark background) rather than the conventional
@@ -125,7 +125,7 @@ function resolveQrColor(value: string, fallbackHex: string): string {
  * unaffected -- only third-party barcode *scanner* robustness across
  * less-tolerant scanning apps is the residual, consumer-overridable risk. A
  * consumer needing guaranteed cross-scanner compatibility regardless of page
- * theme should pin `--lyra-qr-code-fill: #000` / `--lyra-qr-code-background:
+ * theme should pin `--lr-qr-code-fill: #000` / `--lr-qr-code-background:
  * #fff` explicitly at the point of use.
  *
  * Deliberately out of scope for this component, not oversights: logo/image
@@ -142,14 +142,14 @@ function resolveQrColor(value: string, fallbackHex: string): string {
  * standing in for `value`, structurally like `<img>`, not an interactive
  * grid.
  *
- * @customElement lyra-qr-code
+ * @customElement lr-qr-code
  * @csspart base - The outer wrapper, sized to `size`×`size` CSS px in every state.
  * @csspart canvas - The rendered QR code canvas.
  * @csspart empty - Shown when `value` is empty.
  * @csspart loading - Shown while the optional `qrcode` peer is loading, the first time it's needed.
  * @csspart error - Shown when the peer is missing, or `value` failed to encode.
- * @cssprop [--lyra-qr-code-fill=var(--lyra-color-text)] - Dark/foreground module color.
- * @cssprop [--lyra-qr-code-background=var(--lyra-color-surface)] - Light/background module color, including the quiet zone.
+ * @cssprop [--lr-qr-code-fill=var(--lr-color-text)] - Dark/foreground module color.
+ * @cssprop [--lr-qr-code-background=var(--lr-color-surface)] - Light/background module color, including the quiet zone.
  */
 export class LyraQrCode extends LyraElement {
   static styles = [LyraElement.styles, styles];
@@ -333,12 +333,12 @@ export class LyraQrCode extends LyraElement {
   }
 
   private fillColor(): string {
-    const raw = getComputedStyle(this).getPropertyValue('--lyra-qr-code-fill').trim() || FALLBACK_FILL;
+    const raw = getComputedStyle(this).getPropertyValue('--lr-qr-code-fill').trim() || FALLBACK_FILL;
     return resolveQrColor(raw, FALLBACK_FILL);
   }
 
   private backgroundColor(): string {
-    const raw = getComputedStyle(this).getPropertyValue('--lyra-qr-code-background').trim() || FALLBACK_BACKGROUND;
+    const raw = getComputedStyle(this).getPropertyValue('--lr-qr-code-background').trim() || FALLBACK_BACKGROUND;
     return resolveQrColor(raw, FALLBACK_BACKGROUND);
   }
 
@@ -415,6 +415,6 @@ export class LyraQrCode extends LyraElement {
 
 declare global {
   interface HTMLElementTagNameMap {
-    'lyra-qr-code': LyraQrCode;
+    'lr-qr-code': LyraQrCode;
   }
 }

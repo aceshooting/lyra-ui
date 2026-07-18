@@ -20,7 +20,7 @@ const decorations: FlowRunDecorations = {
 
 const meta: Meta = {
   title: 'Flow Run Overlay',
-  component: 'lyra-flow-run-overlay',
+  component: 'lr-flow-run-overlay',
   tags: ['autodocs'],
 };
 export default meta;
@@ -28,17 +28,17 @@ type Story = StoryObj;
 
 export const Default: Story = {
   render: () => html`
-    <lyra-flow-canvas style="width:100%;height:20rem" .nodes=${nodes} .edges=${edges}>
-      <lyra-flow-run-overlay slot="top-end" .decorations=${decorations}></lyra-flow-run-overlay>
-    </lyra-flow-canvas>
+    <lr-flow-canvas style="width:100%;height:20rem" .nodes=${nodes} .edges=${edges}>
+      <lr-flow-run-overlay slot="top-end" .decorations=${decorations}></lr-flow-run-overlay>
+    </lr-flow-canvas>
   `,
 };
 
 export const HiddenSummary: Story = {
   render: () => html`
-    <lyra-flow-canvas style="width:100%;height:20rem" .nodes=${nodes} .edges=${edges}>
-      <lyra-flow-run-overlay slot="top-end" hide-summary .decorations=${decorations}></lyra-flow-run-overlay>
-    </lyra-flow-canvas>
+    <lr-flow-canvas style="width:100%;height:20rem" .nodes=${nodes} .edges=${edges}>
+      <lr-flow-run-overlay slot="top-end" hide-summary .decorations=${decorations}></lr-flow-run-overlay>
+    </lr-flow-canvas>
   `,
 };
 
@@ -46,10 +46,10 @@ export const NarrowAllocation: Story = {
   name: 'Narrow allocation (320px)',
   parameters: { docs: { description: { story: 'The strip wraps onto one extra row at a 320px allocation.' } } },
   render: () => html`
-    <div style="inline-size:320px; max-inline-size:100%; block-size:16rem; border:1px dashed var(--lyra-color-border);">
-      <lyra-flow-canvas style="width:100%;height:100%" .nodes=${nodes} .edges=${edges}>
-        <lyra-flow-run-overlay slot="top-end" .decorations=${decorations}></lyra-flow-run-overlay>
-      </lyra-flow-canvas>
+    <div style="inline-size:320px; max-inline-size:100%; block-size:16rem; border:1px dashed var(--lr-color-border);">
+      <lr-flow-canvas style="width:100%;height:100%" .nodes=${nodes} .edges=${edges}>
+        <lr-flow-run-overlay slot="top-end" .decorations=${decorations}></lr-flow-run-overlay>
+      </lr-flow-canvas>
     </div>
   `,
 };

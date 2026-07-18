@@ -13,13 +13,13 @@ class Ctl extends StripHostTitleAttribute(LyraElement) {
 customElements.define(tag('demo-strip-host-title'), Ctl);
 
 it('syncs a declarative title attribute into the title property, then strips the host attribute', async () => {
-  const el = (await fixture(html`<lyra-demo-strip-host-title title="hello"></lyra-demo-strip-host-title>`)) as Ctl;
+  const el = (await fixture(html`<lr-demo-strip-host-title title="hello"></lr-demo-strip-host-title>`)) as Ctl;
   expect(el.title).to.equal('hello');
   expect(el.hasAttribute('title')).to.be.false;
 });
 
 it('strips a title attribute set programmatically after connection too', async () => {
-  const el = (await fixture(html`<lyra-demo-strip-host-title></lyra-demo-strip-host-title>`)) as Ctl;
+  const el = (await fixture(html`<lr-demo-strip-host-title></lr-demo-strip-host-title>`)) as Ctl;
   el.setAttribute('title', 'late');
   await el.updateComplete;
   expect(el.title).to.equal('late');
@@ -27,7 +27,7 @@ it('strips a title attribute set programmatically after connection too', async (
 });
 
 it('keeps the title property in sync across repeated re-assignment without the attribute reappearing', async () => {
-  const el = (await fixture(html`<lyra-demo-strip-host-title title="first"></lyra-demo-strip-host-title>`)) as Ctl;
+  const el = (await fixture(html`<lr-demo-strip-host-title title="first"></lr-demo-strip-host-title>`)) as Ctl;
   el.title = 'second';
   await el.updateComplete;
   expect(el.title).to.equal('second');

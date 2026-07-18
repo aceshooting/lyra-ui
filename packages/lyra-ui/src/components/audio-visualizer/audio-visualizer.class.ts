@@ -12,10 +12,10 @@ const WAVEFORM_SAMPLES = 64;
 const AMBIENT_REDUCED_MOTION_INTERVAL_MS = 500; // ~2 Hz snapshot cadence
 
 /**
- * `<lyra-audio-visualizer>` — a presentational, canvas-drawn voice-activity visualization (bars or
+ * `<lr-audio-visualizer>` — a presentational, canvas-drawn voice-activity visualization (bars or
  * waveform), the LiveKit-BarVisualizer counterpart for this library. Driven by a `MediaStream`
  * (lazily wired to a WebAudio `AnalyserNode`), a numeric `level` for hosts that already compute
- * levels (e.g. `lyra-push-to-talk`'s `lyra-level`), or `state` alone for an ambient animation when no
+ * levels (e.g. `lr-push-to-talk`'s `lr-level`), or `state` alone for an ambient animation when no
  * real signal exists. A real signal (`stream` or `level`) always drives amplitude regardless of
  * `prefers-reduced-motion` — that is live, user-controlled feedback, not decorative motion; only the
  * signal-less ambient animation is throttled and simplified under reduced motion.
@@ -26,19 +26,19 @@ const AMBIENT_REDUCED_MOTION_INTERVAL_MS = 500; // ~2 Hz snapshot cadence
  * next frame (properties, stream/`AudioContext` state, size, theme, motion preference) re-enters the
  * loop via `scheduleDraw()`.
  *
- * @customElement lyra-audio-visualizer
+ * @customElement lr-audio-visualizer
  * @csspart base - The root wrapper.
  * @csspart canvas - The drawing surface (`aria-hidden`; the host itself carries `role="img"` and the
  *   accessible name).
- * @cssprop [--lyra-audio-visualizer-color=var(--lyra-color-brand)] - Active bar/waveform color.
- * @cssprop [--lyra-audio-visualizer-quiet-color=var(--lyra-color-brand-quiet)] - Inactive/idle color.
+ * @cssprop [--lr-audio-visualizer-color=var(--lr-color-brand)] - Active bar/waveform color.
+ * @cssprop [--lr-audio-visualizer-quiet-color=var(--lr-color-brand-quiet)] - Inactive/idle color.
  */
 export class LyraAudioVisualizer extends LyraElement {
   static styles = [LyraElement.styles, styles];
 
   @property({ attribute: false }) stream: MediaStream | null = null;
   /** Externally-computed amplitude, `[0, 1]`, for a host that already derives its own level
-   *  (e.g. `lyra-push-to-talk`'s `lyra-level`). `null` (the default) means "no external signal" --
+   *  (e.g. `lr-push-to-talk`'s `lr-level`). `null` (the default) means "no external signal" --
    *  see `effectiveLevel` for how a non-null value is clamped/NaN-guarded before it feeds `draw()`. */
   @property({ type: Number }) level: number | null = null;
   @property({ reflect: true }) state: AudioVisualizerState = 'idle';
@@ -357,8 +357,8 @@ export class LyraAudioVisualizer extends LyraElement {
   private resolveColors(): { active: string; quiet: string } {
     const cs = getComputedStyle(this);
     return {
-      active: cs.getPropertyValue('--lyra-audio-visualizer-color').trim() || '#0969da',
-      quiet: cs.getPropertyValue('--lyra-audio-visualizer-quiet-color').trim() || '#ddf4ff',
+      active: cs.getPropertyValue('--lr-audio-visualizer-color').trim() || '#0969da',
+      quiet: cs.getPropertyValue('--lr-audio-visualizer-quiet-color').trim() || '#ddf4ff',
     };
   }
 
@@ -427,6 +427,6 @@ export class LyraAudioVisualizer extends LyraElement {
 
 declare global {
   interface HTMLElementTagNameMap {
-    'lyra-audio-visualizer': LyraAudioVisualizer;
+    'lr-audio-visualizer': LyraAudioVisualizer;
   }
 }

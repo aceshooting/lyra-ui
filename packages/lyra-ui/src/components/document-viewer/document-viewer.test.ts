@@ -10,7 +10,7 @@ afterEach(() => {
 
 describe('defaults', () => {
   it('defaults to closed with optional file properties unset', async () => {
-    const el = (await fixture(html`<lyra-document-viewer></lyra-document-viewer>`)) as LyraDocumentViewer;
+    const el = (await fixture(html`<lr-document-viewer></lr-document-viewer>`)) as LyraDocumentViewer;
     expect(el.open).to.be.false;
     expect(el.name).to.equal('');
     expect(el.mimeType).to.equal('');
@@ -22,7 +22,7 @@ describe('registry dispatch', () => {
   it('renders the matched renderer output when a MIME type is registered', async () => {
     registerDocumentRenderer('application/pdf', { render: (file) => html`<p id="matched">${file.name}</p>` });
     const el = (await fixture(html`
-      <lyra-document-viewer open name="report.pdf" mime-type="application/pdf" src="https://example.test/report.pdf"></lyra-document-viewer>
+      <lr-document-viewer open name="report.pdf" mime-type="application/pdf" src="https://example.test/report.pdf"></lr-document-viewer>
     `)) as LyraDocumentViewer;
     await el.updateComplete;
     const matched = el.shadowRoot!.querySelector('[part="body"] #matched');
@@ -30,12 +30,12 @@ describe('registry dispatch', () => {
     expect(matched!.textContent).to.equal('report.pdf');
   });
 
-  it('falls back to lyra-document-preview when no renderer matches', async () => {
+  it('falls back to lr-document-preview when no renderer matches', async () => {
     const el = (await fixture(html`
-      <lyra-document-viewer open name="report.pdf" mime-type="application/pdf" src="https://example.test/report.pdf"></lyra-document-viewer>
+      <lr-document-viewer open name="report.pdf" mime-type="application/pdf" src="https://example.test/report.pdf"></lr-document-viewer>
     `)) as LyraDocumentViewer;
     await el.updateComplete;
-    const preview = el.shadowRoot!.querySelector('[part="body"] lyra-document-preview');
+    const preview = el.shadowRoot!.querySelector('[part="body"] lr-document-preview');
     expect(preview).to.exist;
     expect(preview!.getAttribute('filename')).to.equal('report.pdf');
   });
@@ -45,7 +45,7 @@ describe('registry dispatch', () => {
       load: () => Promise.resolve({ render: (file) => html`<p id="lazy">${file.name}</p>` }),
     });
     const el = (await fixture(html`
-      <lyra-document-viewer open name="report.pdf" mime-type="application/pdf" src="https://example.test/report.pdf"></lyra-document-viewer>
+      <lr-document-viewer open name="report.pdf" mime-type="application/pdf" src="https://example.test/report.pdf"></lr-document-viewer>
     `)) as LyraDocumentViewer;
     await aTimeout(20);
     await el.updateComplete;
@@ -58,7 +58,7 @@ describe('registry dispatch', () => {
     registerDocumentRenderer('application/pdf', { render: () => html`<p id="pdf-output"></p>` });
     registerDocumentRenderer('application/json', { render: () => html`<p id="json-output"></p>` });
     const el = (await fixture(html`
-      <lyra-document-viewer open name="f" mime-type="application/pdf" src="https://example.test/f"></lyra-document-viewer>
+      <lr-document-viewer open name="f" mime-type="application/pdf" src="https://example.test/f"></lr-document-viewer>
     `)) as LyraDocumentViewer;
     await el.updateComplete;
     expect(el.shadowRoot!.querySelector('#pdf-output')).to.exist;
@@ -71,7 +71,7 @@ describe('registry dispatch', () => {
   it('renders an alert when a matched definition has no render function', async () => {
     registerDocumentRenderer('application/pdf', { matches: () => true });
     const el = (await fixture(html`
-      <lyra-document-viewer open name="f" mime-type="application/pdf" src="https://example.test/f"></lyra-document-viewer>
+      <lr-document-viewer open name="f" mime-type="application/pdf" src="https://example.test/f"></lr-document-viewer>
     `)) as LyraDocumentViewer;
     await el.updateComplete;
     expect(el.shadowRoot!.querySelector('[part="body"] [role="alert"]')).to.exist;
@@ -80,7 +80,7 @@ describe('registry dispatch', () => {
   it('supports a per-instance registry override', async () => {
     const customRegistry = new Map();
     customRegistry.set('application/pdf', { render: () => html`<p id="custom-registry-output"></p>` });
-    const el = (await fixture(html`<lyra-document-viewer open></lyra-document-viewer>`)) as LyraDocumentViewer;
+    const el = (await fixture(html`<lr-document-viewer open></lr-document-viewer>`)) as LyraDocumentViewer;
     el.registry = customRegistry;
     el.name = 'f';
     el.mimeType = 'application/pdf';
@@ -93,19 +93,19 @@ describe('registry dispatch', () => {
 describe('dialog wiring', () => {
   it('forwards name as the nested dialog heading', async () => {
     const el = (await fixture(html`
-      <lyra-document-viewer open name="report.pdf"></lyra-document-viewer>
+      <lr-document-viewer open name="report.pdf"></lr-document-viewer>
     `)) as LyraDocumentViewer;
     await el.updateComplete;
-    const dialog = el.shadowRoot!.querySelector('lyra-dialog')!;
+    const dialog = el.shadowRoot!.querySelector('lr-dialog')!;
     expect(dialog.getAttribute('heading')).to.equal('report.pdf');
   });
 
-  it('closes and fires lyra-close when the nested dialog closes', async () => {
-    const el = (await fixture(html`<lyra-document-viewer open name="f"></lyra-document-viewer>`)) as LyraDocumentViewer;
-    const dialog = el.shadowRoot!.querySelector('lyra-dialog')!;
-    const eventPromise = oneEvent(el, 'lyra-close');
+  it('closes and fires lr-close when the nested dialog closes', async () => {
+    const el = (await fixture(html`<lr-document-viewer open name="f"></lr-document-viewer>`)) as LyraDocumentViewer;
+    const dialog = el.shadowRoot!.querySelector('lr-dialog')!;
+    const eventPromise = oneEvent(el, 'lr-close');
     dialog.dispatchEvent(
-      new CustomEvent<DialogCloseReason>('lyra-dialog-close', {
+      new CustomEvent<DialogCloseReason>('lr-dialog-close', {
         detail: 'escape',
         bubbles: true,
         composed: true,
@@ -116,9 +116,9 @@ describe('dialog wiring', () => {
     expect(el.open).to.be.false;
   });
 
-  it('renders a download action and emits lyra-download for safe sources', async () => {
+  it('renders a download action and emits lr-download for safe sources', async () => {
     const el = (await fixture(html`
-      <lyra-document-viewer open name="report.pdf" mime-type="application/pdf" src="https://example.test/report.pdf"></lyra-document-viewer>
+      <lr-document-viewer open name="report.pdf" mime-type="application/pdf" src="https://example.test/report.pdf"></lr-document-viewer>
     `)) as LyraDocumentViewer;
     const link = el.shadowRoot!.querySelector('[part="download-link"]') as HTMLAnchorElement;
     expect(link).to.exist;
@@ -126,7 +126,7 @@ describe('dialog wiring', () => {
     expect(link.download).to.equal('report.pdf');
 
     link.addEventListener('click', (event) => event.preventDefault(), { once: true });
-    const eventPromise = oneEvent(el, 'lyra-download');
+    const eventPromise = oneEvent(el, 'lr-download');
     link.click();
     const event = await eventPromise;
     expect(event.detail).to.deep.equal({ src: 'https://example.test/report.pdf', filename: 'report.pdf' });
@@ -134,7 +134,7 @@ describe('dialog wiring', () => {
 
   it('omits the download action for an unsafe source', async () => {
     const el = (await fixture(html`
-      <lyra-document-viewer open name="dangerous.html" src="javascript:alert(1)"></lyra-document-viewer>
+      <lr-document-viewer open name="dangerous.html" src="javascript:alert(1)"></lr-document-viewer>
     `)) as LyraDocumentViewer;
     expect(el.shadowRoot!.querySelector('[part="download-link"]')).to.not.exist;
   });
@@ -143,7 +143,7 @@ describe('dialog wiring', () => {
 describe('accessibility', () => {
   it('is accessible when open with fallback content', async () => {
     const el = await fixture(html`
-      <lyra-document-viewer open name="report.pdf" mime-type="application/pdf" src="https://example.test/report.pdf"></lyra-document-viewer>
+      <lr-document-viewer open name="report.pdf" mime-type="application/pdf" src="https://example.test/report.pdf"></lr-document-viewer>
     `);
     await expect(el).to.be.accessible();
   });
@@ -152,10 +152,10 @@ describe('accessibility', () => {
 describe('localization', () => {
   it('localizes the nested dialog label via strings', async () => {
     const el = (await fixture(html`
-      <lyra-document-viewer open .strings=${{ documentViewerLabel: 'Visionneuse de document' }}></lyra-document-viewer>
+      <lr-document-viewer open .strings=${{ documentViewerLabel: 'Visionneuse de document' }}></lr-document-viewer>
     `)) as LyraDocumentViewer;
     await el.updateComplete;
-    const dialog = el.shadowRoot!.querySelector('lyra-dialog')!;
+    const dialog = el.shadowRoot!.querySelector('lr-dialog')!;
     expect(dialog.getAttribute('label')).to.equal('Visionneuse de document');
   });
 });
@@ -176,14 +176,14 @@ describe('anchor/highlights/alt widening', () => {
     });
     const highlight = { id: 'cite-1', anchor: { kind: 'page' as const, page: 3 } };
     const el = await fixture(html`
-      <lyra-document-viewer
+      <lr-document-viewer
         open
         name="report.pdf"
         mime-type="application/pdf"
         src="https://example.test/report.pdf"
         .highlights=${[highlight]}
         alt="Annual report"
-      ></lyra-document-viewer>
+      ></lr-document-viewer>
     `);
     await el.updateComplete;
     expect(capturedFile?.highlights).to.deep.equal([highlight]);
@@ -202,7 +202,7 @@ describe('anchor/highlights/alt widening', () => {
       },
     });
     const el = (await fixture(html`
-      <lyra-document-viewer open name="report.pdf" mime-type="application/pdf" src="https://example.test/report.pdf"></lyra-document-viewer>
+      <lr-document-viewer open name="report.pdf" mime-type="application/pdf" src="https://example.test/report.pdf"></lr-document-viewer>
     `)) as HTMLElement & { highlights: unknown[] };
     await el.updateComplete;
     const countAfterOpen = renderCount;
@@ -212,34 +212,34 @@ describe('anchor/highlights/alt widening', () => {
     expect(lastFile?.highlights).to.deep.equal([{ id: 'cite-1', anchor: { kind: 'page', page: 1 } }]);
   });
 
-  it('emits lyra-anchor-result { found: false } when the resolved renderer declares no capabilities', async () => {
+  it('emits lr-anchor-result { found: false } when the resolved renderer declares no capabilities', async () => {
     registerDocumentRenderer('application/pdf', { render: () => html`<div>stub</div>` });
-    const el = await fixture(html`<lyra-document-viewer open name="report.pdf" mime-type="application/pdf" src="https://example.test/report.pdf"></lyra-document-viewer>`);
-    const eventPromise = oneEvent(el, 'lyra-anchor-result');
+    const el = await fixture(html`<lr-document-viewer open name="report.pdf" mime-type="application/pdf" src="https://example.test/report.pdf"></lr-document-viewer>`);
+    const eventPromise = oneEvent(el, 'lr-anchor-result');
     (el as unknown as { anchor: unknown }).anchor = { kind: 'page', page: 1 };
     expect((await eventPromise).detail).to.deep.equal({ found: false });
   });
 
-  it('emits lyra-anchor-result { found: false } when the anchor kind is unsupported by the renderer\'s capabilities', async () => {
+  it('emits lr-anchor-result { found: false } when the anchor kind is unsupported by the renderer\'s capabilities', async () => {
     registerDocumentRenderer('application/pdf', { capabilities: { anchors: ['page'] }, render: () => html`<div>stub</div>` });
-    const el = await fixture(html`<lyra-document-viewer open name="report.pdf" mime-type="application/pdf" src="https://example.test/report.pdf"></lyra-document-viewer>`);
-    const eventPromise = oneEvent(el, 'lyra-anchor-result');
+    const el = await fixture(html`<lr-document-viewer open name="report.pdf" mime-type="application/pdf" src="https://example.test/report.pdf"></lr-document-viewer>`);
+    const eventPromise = oneEvent(el, 'lr-anchor-result');
     (el as unknown as { anchor: unknown }).anchor = { kind: 'fragment', id: 'sec-1' };
     expect((await eventPromise).detail).to.deep.equal({ found: false });
   });
 
-  it('emits lyra-anchor-result { found: false } when the file falls back to document-preview', async () => {
-    const el = await fixture(html`<lyra-document-viewer open name="unknown.bin" mime-type="application/octet-stream" src="https://example.test/unknown.bin"></lyra-document-viewer>`);
-    const eventPromise = oneEvent(el, 'lyra-anchor-result');
+  it('emits lr-anchor-result { found: false } when the file falls back to document-preview', async () => {
+    const el = await fixture(html`<lr-document-viewer open name="unknown.bin" mime-type="application/octet-stream" src="https://example.test/unknown.bin"></lr-document-viewer>`);
+    const eventPromise = oneEvent(el, 'lr-anchor-result');
     (el as unknown as { anchor: unknown }).anchor = { kind: 'page', page: 1 };
     expect((await eventPromise).detail).to.deep.equal({ found: false });
   });
 
-  it('does not self-emit lyra-anchor-result when the resolved renderer is capable of the anchor kind', async () => {
+  it('does not self-emit lr-anchor-result when the resolved renderer is capable of the anchor kind', async () => {
     registerDocumentRenderer('application/pdf', { capabilities: { anchors: ['page'] }, render: () => html`<div>stub</div>` });
-    const el = await fixture(html`<lyra-document-viewer open name="report.pdf" mime-type="application/pdf" src="https://example.test/report.pdf"></lyra-document-viewer>`);
+    const el = await fixture(html`<lr-document-viewer open name="report.pdf" mime-type="application/pdf" src="https://example.test/report.pdf"></lr-document-viewer>`);
     let fired = false;
-    el.addEventListener('lyra-anchor-result', () => {
+    el.addEventListener('lr-anchor-result', () => {
       fired = true;
     });
     (el as unknown as { anchor: unknown }).anchor = { kind: 'page', page: 1 };
@@ -250,23 +250,23 @@ describe('anchor/highlights/alt widening', () => {
     expect(fired).to.be.false;
   });
 
-  it('re-assigning anchor on an already-open viewer re-fires lyra-anchor-result', async () => {
+  it('re-assigning anchor on an already-open viewer re-fires lr-anchor-result', async () => {
     registerDocumentRenderer('application/pdf', { render: () => html`<div>stub</div>` });
-    const el = await fixture(html`<lyra-document-viewer open name="report.pdf" mime-type="application/pdf" src="https://example.test/report.pdf"></lyra-document-viewer>`);
+    const el = await fixture(html`<lr-document-viewer open name="report.pdf" mime-type="application/pdf" src="https://example.test/report.pdf"></lr-document-viewer>`);
     (el as unknown as { anchor: unknown }).anchor = { kind: 'page', page: 1 };
-    await oneEvent(el, 'lyra-anchor-result');
-    const secondPromise = oneEvent(el, 'lyra-anchor-result');
+    await oneEvent(el, 'lr-anchor-result');
+    const secondPromise = oneEvent(el, 'lr-anchor-result');
     (el as unknown as { anchor: unknown }).anchor = { kind: 'page', page: 2 };
     await secondPromise;
   });
 
-  it('existing <lyra-document-viewer name= mime-type= src=> usage renders identically with anchor/highlights/alt unset', async () => {
+  it('existing <lr-document-viewer name= mime-type= src=> usage renders identically with anchor/highlights/alt unset', async () => {
     registerDocumentRenderer('application/pdf', { render: (file) => html`<div>${file.name}</div>` });
-    const el = await fixture(html`<lyra-document-viewer open name="report.pdf" mime-type="application/pdf" src="https://example.test/report.pdf"></lyra-document-viewer>`);
+    const el = await fixture(html`<lr-document-viewer open name="report.pdf" mime-type="application/pdf" src="https://example.test/report.pdf"></lr-document-viewer>`);
     await el.updateComplete;
     expect(el.shadowRoot!.querySelector('[part="body"]')!.textContent).to.contain('report.pdf');
     let fired = false;
-    el.addEventListener('lyra-anchor-result', () => {
+    el.addEventListener('lr-anchor-result', () => {
       fired = true;
     });
     await new Promise((resolve) => setTimeout(resolve, 20));

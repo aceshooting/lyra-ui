@@ -12,7 +12,7 @@ import { styles } from './archive-viewer.styles.js';
 
 export interface ArchiveEntry { name: string; dir: boolean; size: number; }
 type ArchiveState = { kind: 'idle' } | { kind: 'loading' } | { kind: 'loaded'; entries: ArchiveEntry[] } | { kind: 'error'; message: string };
-export interface LyraArchiveViewerEventMap { 'lyra-render-error': CustomEvent<{ error: unknown }>; }
+export interface LyraArchiveViewerEventMap { 'lr-render-error': CustomEvent<{ error: unknown }>; }
 
 const MAX_ARCHIVE_ENTRIES = 10_000;
 const MAX_ARCHIVE_UNCOMPRESSED_BYTES = 100 * 1024 * 1024;
@@ -20,8 +20,8 @@ const MAX_ARCHIVE_UNCOMPRESSED_BYTES = 100 * 1024 * 1024;
 /** Lists names and uncompressed sizes in a ZIP archive without rendering entry contents. File sizes
  * are measured through JSZip's public async API, so opening an archive decompresses each file once.
  *
- * @customElement lyra-archive-viewer
- * @event lyra-render-error - Fired when fetching or parsing the archive fails.
+ * @customElement lr-archive-viewer
+ * @event lr-render-error - Fired when fetching or parsing the archive fails.
  * @csspart base - The root container.
  * @csspart entry - An archive entry row.
  * @csspart entry-icon - The decorative folder or file icon.
@@ -80,7 +80,7 @@ export class LyraArchiveViewer extends LyraElement<LyraArchiveViewerEventMap> {
     } catch (error) {
       if (isAbortError(error) || !this.isConnected || generation !== this.generation) return;
       this.fetchState = { kind: 'error', message: this.localize(isResourceLimitError(error) ? 'documentPreviewResourceTooLarge' : 'documentPreviewFailedToLoad') };
-      this.emit('lyra-render-error', { error });
+      this.emit('lr-render-error', { error });
     }
   }
 
@@ -92,7 +92,7 @@ export class LyraArchiveViewer extends LyraElement<LyraArchiveViewerEventMap> {
 
   private renderBody(): TemplateResult {
     switch (this.fetchState.kind) {
-      case 'loaded': return this.fetchState.entries.length ? html`<lyra-virtual-list .items=${this.fetchState.entries} .renderItem=${this.renderEntry} .keyFunction=${(item: unknown) => (item as ArchiveEntry).name}></lyra-virtual-list>` : html`<p class="empty-note">${this.localize('archiveViewerEmpty')}</p>`;
+      case 'loaded': return this.fetchState.entries.length ? html`<lr-virtual-list .items=${this.fetchState.entries} .renderItem=${this.renderEntry} .keyFunction=${(item: unknown) => (item as ArchiveEntry).name}></lr-virtual-list>` : html`<p class="empty-note">${this.localize('archiveViewerEmpty')}</p>`;
       case 'loading': return html`<div part="spinner" role="status"><span class="sr-only">${this.localize('loadingDocument')}</span></div>`;
       case 'error': return html`<div part="error" role="alert">${this.fetchState.message}</div>`;
       case 'idle': default: return html`<p class="empty-note">${this.localize('documentPreviewEmpty', undefined, { type: this.localize('documentPreviewTypeDocument') })}</p>`;
@@ -109,4 +109,4 @@ export class LyraArchiveViewer extends LyraElement<LyraArchiveViewerEventMap> {
   }
 }
 
-declare global { interface HTMLElementTagNameMap { 'lyra-archive-viewer': LyraArchiveViewer; } }
+declare global { interface HTMLElementTagNameMap { 'lr-archive-viewer': LyraArchiveViewer; } }

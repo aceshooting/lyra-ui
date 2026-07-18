@@ -5,7 +5,7 @@ import { storyColor } from '../../../../../.storybook/story-theme.js';
 
 const meta: Meta = {
   title: 'Charts/Doughnut',
-  component: 'lyra-doughnut-chart',
+  component: 'lr-doughnut-chart',
   tags: ['autodocs'],
 };
 export default meta;
@@ -21,12 +21,12 @@ export const Default: Story = {
       },
     ];
     return html`
-      <lyra-doughnut-chart
+      <lr-doughnut-chart
         height="16rem"
         style="width: 16rem"
         .labels=${['Chrome', 'Firefox', 'Safari', 'Other']}
         .datasets=${series}
-      ></lyra-doughnut-chart>
+      ></lr-doughnut-chart>
     `;
   },
 };

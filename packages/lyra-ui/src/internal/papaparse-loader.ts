@@ -4,7 +4,7 @@ export type PapaParseApi = OptionalPeerApi;
 
 let cached: Promise<PapaParseApi | null> | undefined;
 
-/** Uncached worker, shared by `<lyra-csv-viewer>` and `<lyra-dataset-viewer>` (both parse delimited
+/** Uncached worker, shared by `<lr-csv-viewer>` and `<lr-dataset-viewer>` (both parse delimited
  *  text through the optional `papaparse` peer) — `importPapaParse` is injectable for tests. Tolerates
  *  either a `{ default }` ESM interop shape or the module itself already being the API, so it works
  *  regardless of how a given bundler/test harness resolves the CJS `papaparse` package. */

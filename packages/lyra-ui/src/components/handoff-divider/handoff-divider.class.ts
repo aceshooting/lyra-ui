@@ -6,17 +6,17 @@ import '../live-region/live-region.js';
 import { styles } from './handoff-divider.styles.js';
 
 /**
- * `<lyra-handoff-divider>` — a labeled semantic separator marking control transfer between agents
+ * `<lr-handoff-divider>` — a labeled semantic separator marking control transfer between agents
  * in a transcript ("Transferred to Research Agent"), with an optional agent avatar. Purely
  * presentational: no events, no interactivity, no restore semantics.
  *
  * The computed label is announced once, on first connect, through an internal
- * `<lyra-live-region>` — a single mount-time announcement is enough since a handoff lands
+ * `<lr-live-region>` — a single mount-time announcement is enough since a handoff lands
  * mid-stream and there is only ever one thing to say. Later property changes re-render the
  * visible/accessible label but never re-announce.
  *
- * @customElement lyra-handoff-divider
- * @slot avatar - The incoming agent's `<lyra-avatar>` (or icon), at the start of the chip. Hidden
+ * @customElement lr-handoff-divider
+ * @slot avatar - The incoming agent's `<lr-avatar>` (or icon), at the start of the chip. Hidden
  *   entirely while empty.
  * @csspart base - The separator root (`role="separator"`).
  * @csspart line - Each of the two flanking rules.
@@ -40,7 +40,7 @@ export class LyraHandoffDivider extends LyraElement {
 
   @state() private hasAvatarSlot = false;
 
-  @query('lyra-live-region') private liveRegion?: LyraLiveRegion;
+  @query('lr-live-region') private liveRegion?: LyraLiveRegion;
 
   protected willUpdate(): void {
     if (!this.hasUpdated) {
@@ -69,8 +69,9 @@ export class LyraHandoffDivider extends LyraElement {
 
   render(): TemplateResult {
     const label = this.computedLabel;
+    const ariaLabel = this.getAttribute('aria-label') || label;
     return html`
-      <div part="base" role="separator" aria-orientation="horizontal" aria-label=${label}>
+      <div part="base" role="separator" aria-orientation="horizontal" aria-label=${ariaLabel}>
         <span part="line" aria-hidden="true"></span>
         <span part="chip" aria-hidden="true" title=${label}>
           <span part="avatar" ?hidden=${!this.hasAvatarSlot}>
@@ -80,13 +81,13 @@ export class LyraHandoffDivider extends LyraElement {
         </span>
         <span part="line" aria-hidden="true"></span>
       </div>
-      <lyra-live-region></lyra-live-region>
+      <lr-live-region></lr-live-region>
     `;
   }
 }
 
 declare global {
   interface HTMLElementTagNameMap {
-    'lyra-handoff-divider': LyraHandoffDivider;
+    'lr-handoff-divider': LyraHandoffDivider;
   }
 }

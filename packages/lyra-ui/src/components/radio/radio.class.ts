@@ -8,20 +8,20 @@ import { styles } from './radio.styles.js';
 export interface LyraRadioEventMap {
   input: CustomEvent<undefined>;
   change: CustomEvent<undefined>;
-  'lyra-change': CustomEvent<{ checked: boolean; value: string }>;
+  'lr-change': CustomEvent<{ checked: boolean; value: string }>;
   focus: CustomEvent<undefined>;
   blur: CustomEvent<undefined>;
 }
 
 /**
- * `<lyra-radio>` — a form-associated single-choice control. Radios can be used
- * alone or inside `<lyra-radio-group>`.
+ * `<lr-radio>` — a form-associated single-choice control. Radios can be used
+ * alone or inside `<lr-radio-group>`.
  *
- * @customElement lyra-radio
+ * @customElement lr-radio
  * @slot - Label text.
  * @event input - The user selected this radio.
  * @event change - The user selected this radio.
- * @event lyra-change - The selection changed. `detail: { checked, value }`.
+ * @event lr-change - The selection changed. `detail: { checked, value }`.
  * @csspart base - The interactive radio control.
  * @csspart circle - The circular radio indicator.
  * @csspart dot - The selected indicator.
@@ -53,7 +53,7 @@ export class LyraRadio extends LyraElement<LyraRadioEventMap> {
   private _tabbable = true;
   // What `form.reset()` restores to — captured once from the declarative
   // `checked` content attribute at first connect, mirroring
-  // `<lyra-checkbox>`'s identical `_defaultChecked`/`_defaultCaptured` pair.
+  // `<lr-checkbox>`'s identical `_defaultChecked`/`_defaultCaptured` pair.
   private _defaultChecked = false;
   private _defaultCaptured = false;
 
@@ -148,20 +148,20 @@ export class LyraRadio extends LyraElement<LyraRadioEventMap> {
       this.localize('radioRequired'),
     );
   }
-  /** @internal Driven by an owning `<lyra-radio-group>`; released when the radio leaves the group's control. */
+  /** @internal Driven by an owning `<lr-radio-group>`; released when the radio leaves the group's control. */
   setGroupDisabled(value: boolean): void {
     if (this._groupDisabled === value) return;
     this._groupDisabled = value;
     this.requestUpdate();
   }
-  /** @internal Driven by an owning `<lyra-radio-group>`; released when the radio leaves the group's control. */
+  /** @internal Driven by an owning `<lr-radio-group>`; released when the radio leaves the group's control. */
   setGroupRequired(value: boolean): void {
     if (this._groupRequired === value) return;
     this._groupRequired = value;
     this.updateValidity();
     this.requestUpdate();
   }
-  /** @internal Roving-tabindex state driven by an owning `<lyra-radio-group>`. */
+  /** @internal Roving-tabindex state driven by an owning `<lr-radio-group>`. */
   setGroupTabbable(value: boolean): void {
     if (this._tabbable === value) return;
     this._tabbable = value;
@@ -187,7 +187,7 @@ export class LyraRadio extends LyraElement<LyraRadioEventMap> {
     else this.checked = true;
     this.emit('input');
     this.emit('change');
-    this.emit('lyra-change', { checked: true, value: this.value });
+    this.emit('lr-change', { checked: true, value: this.value });
   }
   private onClick = (): void => this.select();
   private onKeyDown = (event: KeyboardEvent): void => {
@@ -219,4 +219,4 @@ export class LyraRadio extends LyraElement<LyraRadioEventMap> {
   }
 }
 
-declare global { interface HTMLElementTagNameMap { 'lyra-radio': LyraRadio; } }
+declare global { interface HTMLElementTagNameMap { 'lr-radio': LyraRadio; } }

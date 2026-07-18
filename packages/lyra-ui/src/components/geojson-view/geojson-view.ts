@@ -11,7 +11,7 @@ defineElement('geojson-view', LyraGeojsonView);
 registerDocumentRenderer('application/geo+json', {
   matches: (file: DocumentFile) => file.name.toLowerCase().endsWith('.geojson'),
   render: (file: DocumentFile) => {
-    const el = document.createElement('lyra-geojson-view') as LyraGeojsonView;
+    const el = document.createElement('lr-geojson-view') as LyraGeojsonView;
     el.src = file.src;
     el.name = file.name;
     return el;

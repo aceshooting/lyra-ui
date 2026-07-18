@@ -4,13 +4,13 @@ import './markdown.js';
 
 const meta: Meta = {
   title: 'Markdown',
-  component: 'lyra-markdown',
+  component: 'lr-markdown',
   tags: ['autodocs'],
   parameters: {
     docs: {
       description: {
         component:
-          'Sanitized Markdown-to-HTML rendering (GFM tables, fenced code blocks, links, blockquotes) built on the optional `marked` + `dompurify` peer dependencies, lazy-loaded on first use. Without those peers installed — or when sanitization is requested but `dompurify` is unavailable — content renders as safe plain text and a `lyra-render-error` event fires instead of shipping broken or unsanitized markup.',
+          'Sanitized Markdown-to-HTML rendering (GFM tables, fenced code blocks, links, blockquotes) built on the optional `marked` + `dompurify` peer dependencies, lazy-loaded on first use. Without those peers installed — or when sanitization is requested but `dompurify` is unavailable — content renders as safe plain text and a `lr-render-error` event fires instead of shipping broken or unsanitized markup.',
       },
     },
   },
@@ -20,7 +20,7 @@ type Story = StoryObj;
 
 const sample = `# Release notes
 
-**v1.2.0** adds \`lyra-markdown\` and fixes a handful of *rendering* bugs.
+**v1.2.0** adds \`lr-markdown\` and fixes a handful of *rendering* bugs.
 
 - Sanitized by default
 - Fenced code blocks
@@ -31,7 +31,7 @@ const sample = `# Release notes
 `;
 
 export const Default: Story = {
-  render: () => html`<lyra-markdown .content=${sample}></lyra-markdown>`,
+  render: () => html`<lr-markdown .content=${sample}></lr-markdown>`,
 };
 
 const gfmSample = `| Feature | Status |
@@ -40,19 +40,19 @@ const gfmSample = `| Feature | Status |
 | Task lists | done |
 | Strikethrough | ~~soon~~ done |
 
-- [x] Ship lyra-markdown
+- [x] Ship lr-markdown
 - [ ] Ship the next component
 `;
 
 export const GithubFlavored: Story = {
-  render: () => html`<lyra-markdown gfm .content=${gfmSample}></lyra-markdown>`,
+  render: () => html`<lr-markdown gfm .content=${gfmSample}></lr-markdown>`,
 };
 
 const codeSample =
   '```ts\nexport function greet(name: string): string {\n  return `Hello, ${name}!`;\n}\n```\n';
 
 export const CodeBlocks: Story = {
-  render: () => html`<lyra-markdown .content=${codeSample}></lyra-markdown>`,
+  render: () => html`<lr-markdown .content=${codeSample}></lr-markdown>`,
 };
 
 export const NarrowAllocation: Story = {
@@ -66,7 +66,7 @@ export const NarrowAllocation: Story = {
     },
   },
   render: () => html`
-    <lyra-markdown
+    <lr-markdown
       style="inline-size:320px; max-inline-size:100%;"
       .content=${`| Scenario | Long translated description |
 | --- | --- |
@@ -77,7 +77,7 @@ export const NarrowAllocation: Story = {
 \`\`\`ts
 const longUnbrokenValue = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
 \`\`\``}
-    ></lyra-markdown>
+    ></lr-markdown>
   `,
 };
 
@@ -91,27 +91,27 @@ export const Streaming: Story = {
     },
   },
   render: () => html`
-    <lyra-markdown
+    <lr-markdown
       streaming
       .content=${'## Generating response\n\nThis partial response is still receiving additional content…'}
-    ></lyra-markdown>
+    ></lr-markdown>
   `,
 };
 
 export const InternalLinks: Story = {
   render: () => html`
     <div style="display:flex; flex-direction:column; gap:0.75rem;">
-      <lyra-markdown
+      <lr-markdown
         internal-link-prefix="/docs/"
         .content=${'See [the setup guide](/docs/setup) or visit [our site](https://example.com).'}
-        @lyra-link-click=${(e: CustomEvent<{ href: string; internal: boolean }>) => {
+        @lr-link-click=${(e: CustomEvent<{ href: string; internal: boolean }>) => {
           const out = (e.currentTarget as HTMLElement).nextElementSibling as HTMLElement;
-          out.textContent = `lyra-link-click: ${JSON.stringify(e.detail)}`;
+          out.textContent = `lr-link-click: ${JSON.stringify(e.detail)}`;
         }}
-      ></lyra-markdown>
-      <p style="margin:0; color:var(--lyra-color-text-quiet); font-size:0.8125rem;">
+      ></lr-markdown>
+      <p style="margin:0; color:var(--lr-color-text-quiet); font-size:0.8125rem;">
         Click "the setup guide" — its href matches <code>internal-link-prefix</code>, so the click is
-        intercepted and reported via <code>lyra-link-click</code> instead of navigating. "our site" is
+        intercepted and reported via <code>lr-link-click</code> instead of navigating. "our site" is
         external and opens normally.
       </p>
     </div>
@@ -120,9 +120,9 @@ export const InternalLinks: Story = {
 
 export const SanitizeOptOut: Story = {
   render: () => html`
-    <lyra-markdown
+    <lr-markdown
       .sanitize=${false}
       .content=${'Raw HTML passthrough when explicitly opted out of sanitization: <mark>highlighted</mark> text.'}
-    ></lyra-markdown>
+    ></lr-markdown>
   `,
 };

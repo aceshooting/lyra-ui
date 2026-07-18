@@ -6,7 +6,7 @@ import { confirm } from './confirm.js';
 
 const meta: Meta = {
   title: 'Dialog',
-  component: 'lyra-dialog',
+  component: 'lr-dialog',
   tags: ['autodocs'],
   parameters: {
     docs: {
@@ -22,7 +22,7 @@ type Story = StoryObj;
 
 function openDialog(e: Event): void {
   const trigger = e.currentTarget as HTMLElement;
-  const dialog = trigger.parentElement!.querySelector('lyra-dialog') as LyraDialog;
+  const dialog = trigger.parentElement!.querySelector('lr-dialog') as LyraDialog;
   dialog.open = true;
 }
 
@@ -30,33 +30,33 @@ export const Default: Story = {
   render: () => html`
     <div>
       <button @click=${openDialog}>Open dialog</button>
-      <lyra-dialog>
+      <lr-dialog>
         <h2 style="margin: 0 0 0.5rem;">Project settings</h2>
         <p style="margin: 0;">Body content -- a form, a summary, anything a consumer slots in.</p>
         <div slot="footer">
-          <button @click=${(e: Event) => ((e.target as HTMLElement).closest('lyra-dialog') as LyraDialog).close('cancel')}>
+          <button @click=${(e: Event) => ((e.target as HTMLElement).closest('lr-dialog') as LyraDialog).close('cancel')}>
             Cancel
           </button>
-          <button @click=${(e: Event) => ((e.target as HTMLElement).closest('lyra-dialog') as LyraDialog).close('save')}>
+          <button @click=${(e: Event) => ((e.target as HTMLElement).closest('lr-dialog') as LyraDialog).close('save')}>
             Save
           </button>
         </div>
-      </lyra-dialog>
+      </lr-dialog>
     </div>
   `,
 };
 
 export const OpenInitially: Story = {
   render: () => html`
-    <lyra-dialog open>
+    <lr-dialog open>
       <h2 style="margin: 0 0 0.5rem;">Rendered already open</h2>
       <p style="margin: 0;">Backdrop, centered panel, and dialog semantics -- no trigger needed for this story.</p>
       <div slot="footer">
-        <button @click=${(e: Event) => ((e.target as HTMLElement).closest('lyra-dialog') as LyraDialog).close('ok')}>
+        <button @click=${(e: Event) => ((e.target as HTMLElement).closest('lr-dialog') as LyraDialog).close('ok')}>
           Got it
         </button>
       </div>
-    </lyra-dialog>
+    </lr-dialog>
   `,
 };
 
@@ -64,18 +64,18 @@ export const LabelPropNoHeading: Story = {
   render: () => html`
     <div>
       <button @click=${openDialog}>Open dialog</button>
-      <lyra-dialog label="Delete this item?">
+      <lr-dialog label="Delete this item?">
         <p style="margin: 0;">
           No visible heading is slotted here -- the <code>label</code> prop instead renders an
           invisible element (the <code>label</code> csspart) that <code>aria-labelledby</code>
           points at, so the dialog still has an accessible name.
         </p>
         <div slot="footer">
-          <button @click=${(e: Event) => ((e.target as HTMLElement).closest('lyra-dialog') as LyraDialog).close('cancel')}>
+          <button @click=${(e: Event) => ((e.target as HTMLElement).closest('lr-dialog') as LyraDialog).close('cancel')}>
             Cancel
           </button>
         </div>
-      </lyra-dialog>
+      </lr-dialog>
     </div>
   `,
 };
@@ -84,7 +84,7 @@ export const NestedDialogs: Story = {
   render: () => html`
     <div>
       <button @click=${openDialog}>Open settings</button>
-      <lyra-dialog>
+      <lr-dialog>
         <h2 style="margin: 0 0 0.5rem;">Settings</h2>
         <p style="margin: 0;">
           Escape and Tab only ever act on the topmost open dialog -- confirming discard below
@@ -94,13 +94,13 @@ export const NestedDialogs: Story = {
           <button
             @click=${async (e: Event) => {
               const ok = await confirm({ title: 'Discard unsaved changes?', tone: 'danger' });
-              if (ok) ((e.target as HTMLElement).closest('lyra-dialog') as LyraDialog).close('discard');
+              if (ok) ((e.target as HTMLElement).closest('lr-dialog') as LyraDialog).close('discard');
             }}
           >
             Close without saving
           </button>
         </div>
-      </lyra-dialog>
+      </lr-dialog>
     </div>
   `,
 };

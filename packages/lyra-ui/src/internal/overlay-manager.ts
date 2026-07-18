@@ -13,7 +13,7 @@ const FOCUSABLE_SELECTOR = [
   '[tabindex]',
 ].join(', ');
 
-const STACK_PROPERTY = '--lyra-overlay-stack-index';
+const STACK_PROPERTY = '--lr-overlay-stack-index';
 const STACK_BASE = 1000;
 const STACK_STEP = 2;
 

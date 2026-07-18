@@ -35,18 +35,18 @@ const spans: LyraSpan[] = [
 
 const meta: Meta = {
   title: 'Observability/Trace Tree',
-  component: 'lyra-trace-tree',
+  component: 'lr-trace-tree',
   tags: ['autodocs'],
 };
 export default meta;
 type Story = StoryObj;
 
 export const Default: Story = {
-  render: () => html`<lyra-trace-tree style="max-width: 40rem" .spans=${spans}></lyra-trace-tree>`,
+  render: () => html`<lr-trace-tree style="max-width: 40rem" .spans=${spans}></lr-trace-tree>`,
 };
 
 export const WithTokensAndCost: Story = {
-  render: () => html`<lyra-trace-tree style="max-width: 46rem" .spans=${spans} show-tokens show-cost></lyra-trace-tree>`,
+  render: () => html`<lr-trace-tree style="max-width: 46rem" .spans=${spans} show-tokens show-cost></lr-trace-tree>`,
 };
 
 export const SyncedWithSelection: Story = {
@@ -54,25 +54,25 @@ export const SyncedWithSelection: Story = {
     let selected = 'llm';
     const getEl = () => document.getElementById('synced-trace-tree') as HTMLElement & { activeSpanId: string | null };
     return html`
-      <lyra-trace-tree
+      <lr-trace-tree
         id="synced-trace-tree"
         style="max-width: 40rem"
         .spans=${spans}
         active-span-id=${selected}
-        @lyra-span-select=${(e: CustomEvent<{ id: string }>) => {
+        @lr-span-select=${(e: CustomEvent<{ id: string }>) => {
           selected = e.detail.id;
           getEl().activeSpanId = selected;
         }}
-      ></lyra-trace-tree>
+      ></lr-trace-tree>
     `;
   },
 };
 
 export const Empty: Story = {
-  render: () => html`<lyra-trace-tree style="max-width: 40rem"></lyra-trace-tree>`,
+  render: () => html`<lr-trace-tree style="max-width: 40rem"></lr-trace-tree>`,
 };
 
 /** 320px container — tokens/cost hide first, then the duration bar. */
 export const Narrow: Story = {
-  render: () => html`<lyra-trace-tree style="max-width: 320px" .spans=${spans} show-tokens show-cost></lyra-trace-tree>`,
+  render: () => html`<lr-trace-tree style="max-width: 320px" .spans=${spans} show-tokens show-cost></lr-trace-tree>`,
 };

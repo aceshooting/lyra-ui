@@ -11,7 +11,7 @@ export interface CheckpointRestoreDetail {
 }
 
 export interface LyraCheckpointEventMap {
-  'lyra-restore': CustomEvent<CheckpointRestoreDetail>;
+  'lr-restore': CustomEvent<CheckpointRestoreDetail>;
 }
 
 // Mirrors the shared icon set's viewBox/stroke conventions (internal/icons.ts) without adding a
@@ -55,14 +55,14 @@ const trueDefaultBooleanConverter: ComplexAttributeConverter<boolean> = {
 };
 
 /**
- * `<lyra-checkpoint>` — an inline conversation restore point: a labeled marker between messages
- * whose Restore affordance confirms inline, then hands the host a `lyra-restore` event. This
+ * `<lr-checkpoint>` — an inline conversation restore point: a labeled marker between messages
+ * whose Restore affordance confirms inline, then hands the host a `lr-restore` event. This
  * component persists and restores nothing itself — host state in, events out.
  *
- * @customElement lyra-checkpoint
+ * @customElement lr-checkpoint
  * @slot - Optional supplemental content under the marker row (e.g. what changed since this
  *   point).
- * @event lyra-restore - Restore was activated (after the inline confirm step, when
+ * @event lr-restore - Restore was activated (after the inline confirm step, when
  *   `confirmRestore` is on). `detail: { checkpointId, label }`. Not cancelable — a request; this
  *   component performs no default action and stores nothing.
  * @csspart base - The marker root (`role="group"`).
@@ -74,15 +74,15 @@ const trueDefaultBooleanConverter: ComplexAttributeConverter<boolean> = {
  * @csspart confirm-group - The inline confirm prompt, swapped in for `restore-button` while
  *   confirming.
  * @csspart confirm-prompt - The confirm prompt text.
- * @csspart confirm-button - Confirms the restore, firing `lyra-restore`.
+ * @csspart confirm-button - Confirms the restore, firing `lr-restore`.
  * @csspart cancel-button - Cancels, reverting to `restore-button`.
- * @cssprop [--lyra-checkpoint-spin-duration=1s] - Duration of one restoring-spinner rotation
+ * @cssprop [--lr-checkpoint-spin-duration=1s] - Duration of one restoring-spinner rotation
  *   (stopped under reduced motion).
  */
 export class LyraCheckpoint extends LyraElement<LyraCheckpointEventMap> {
   static styles = [LyraElement.styles, styles];
 
-  /** Opaque id echoed in the `lyra-restore` event detail. */
+  /** Opaque id echoed in the `lr-restore` event detail. */
   @property({ attribute: 'checkpoint-id' }) checkpointId = '';
 
   /** Checkpoint name. The generic `'Checkpoint'` fallback renders while empty. */
@@ -99,7 +99,7 @@ export class LyraCheckpoint extends LyraElement<LyraCheckpointEventMap> {
    *  restored checkpoint. */
   @property({ converter: trueDefaultBooleanConverter }) restorable = true;
 
-  /** Gates the `lyra-restore` event behind the inline confirm step. */
+  /** Gates the `lr-restore` event behind the inline confirm step. */
   @property({ attribute: 'confirm-restore', converter: trueDefaultBooleanConverter }) confirmRestore = true;
 
   /** Host-set busy state: the Restore button becomes `aria-disabled="true"` with a spinner beside
@@ -119,7 +119,7 @@ export class LyraCheckpoint extends LyraElement<LyraCheckpointEventMap> {
   }
 
   private fireRestore(): void {
-    this.emit<CheckpointRestoreDetail>('lyra-restore', {
+    this.emit<CheckpointRestoreDetail>('lr-restore', {
       checkpointId: this.checkpointId,
       label: this.computedLabel,
     });
@@ -169,11 +169,12 @@ export class LyraCheckpoint extends LyraElement<LyraCheckpointEventMap> {
 
   render(): TemplateResult {
     const label = this.computedLabel;
+    const ariaLabel = this.getAttribute('aria-label') || label;
     const ts = this.normalizedTimestamp;
     const formatter = this.formatTimestamp ?? ((date: Date) => defaultFormatTimestamp(date, this.effectiveLocale));
 
     return html`
-      <div part="base" role="group" aria-label=${label}>
+      <div part="base" role="group" aria-label=${ariaLabel}>
         <span part="line" aria-hidden="true"></span>
         <span part="icon" aria-hidden="true">${bookmarkIcon()}</span>
         <span part="label">${label}</span>
@@ -219,6 +220,6 @@ export class LyraCheckpoint extends LyraElement<LyraCheckpointEventMap> {
 
 declare global {
   interface HTMLElementTagNameMap {
-    'lyra-checkpoint': LyraCheckpoint;
+    'lr-checkpoint': LyraCheckpoint;
   }
 }

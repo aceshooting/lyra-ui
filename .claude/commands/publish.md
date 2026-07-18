@@ -1,5 +1,5 @@
 ---
-description: Release a new version of @aceshooting/lyra-ui and/or @aceshooting/lyra-flags — full CI-equivalent gate, a lightweight regression spot-check, then the interactive release script.
+description: Release a new version of @aceshooting/lyra-ui and/or @aceshooting/lr-flags — full CI-equivalent gate, a lightweight regression spot-check, then the interactive release script.
 ---
 
 Release workflow for this monorepo. `$ARGUMENTS` is optional — a target version like `2.2.2`
@@ -41,7 +41,7 @@ first failure (report it, don't try to auto-fix silently — the user should see
 pnpm install --frozen-lockfile
 pnpm lint
 pnpm build
-pnpm --filter '!@aceshooting/lyra-ui' -r test   # every other workspace package, e.g. lyra-flags's own test script
+pnpm --filter '!@aceshooting/lyra-ui' -r test   # every other workspace package, e.g. lr-flags's own test script
 pnpm --filter @aceshooting/lyra-ui test:coverage   # the one time lyra-ui's own Chromium suite runs -- a separate `pnpm test` step would just re-run the identical file set with coverage instrumentation off
 pnpm manifest
 git diff --exit-code -- packages/lyra-ui/custom-elements.json   # manifest must already be committed/fresh -- this is the freshness check; a standalone `manifest:check` step would be redundant with it
@@ -148,7 +148,7 @@ need to match what you actually intend to do.
   published, verify, and push a follow-up commit:
 
   ```bash
-  # README.md, "## Status": `@aceshooting/lyra-ui` is published at `<new>`; `@aceshooting/lyra-flags` at `<new>`
+  # README.md, "## Status": `@aceshooting/lyra-ui` is published at `<new>`; `@aceshooting/lr-flags` at `<new>`
   pnpm readme:check   # must print "README freshness check passed (<N> tags, v<new>)"
   git commit -am "docs: sync README \"Status\" version with lyra-ui <new>" && git push origin main
   ```
@@ -163,7 +163,7 @@ need to match what you actually intend to do.
   release's tag) and `gh run watch <run-id>` until it completes; if it fails, report the failure
   immediately rather than assuming success because the local script exited cleanly.
 - Once the workflow run succeeds, `npm view @aceshooting/lyra-ui version` (and
-  `@aceshooting/lyra-flags` if it was released too) — confirm it matches what was just published.
+  `@aceshooting/lr-flags` if it was released too) — confirm it matches what was just published.
 - `gh repo view aceshooting/lyra-ui --json description` — the GitHub repo's "About" description is
   **not** covered by `readme:check` or any other automated check (it lives in GitHub's own repo
   settings, not a file in this repo) and has gone stale before (it said "35 elements" while the

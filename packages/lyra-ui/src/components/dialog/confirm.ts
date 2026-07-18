@@ -12,24 +12,24 @@ export interface ConfirmOptions {
   confirmLabel?: string;
   /** Cancel button label. Defaults to the localized `'cancel'` message (`'Cancel'` in English). */
   cancelLabel?: string;
-  /** `'danger'` fills the confirm button with `--lyra-color-danger` instead of `--lyra-color-brand` -- for destructive actions. */
+  /** `'danger'` fills the confirm button with `--lr-color-danger` instead of `--lr-color-brand` -- for destructive actions. */
   tone?: 'neutral' | 'danger';
 }
 
-// Plain inline-styled <button>s, not a shared lyra-button component -- none
-// exists in this library yet. Every value below is still a --lyra-* token
+// Plain inline-styled <button>s, not a shared lr-button component -- none
+// exists in this library yet. Every value below is still a --lr-* token
 // reference, never a raw literal, same requirement as a component's own
 // styles.ts. Each filled tone uses its matching on-color token so standalone
 // light/dark fallbacks and a consumer's Web Awesome theme stay paired.
 const BUTTON_BASE_STYLE =
-  'font: inherit; font-size: var(--lyra-font-size-md-sm); padding: var(--lyra-space-xs) var(--lyra-space-m); ' +
-  'border-radius: var(--lyra-radius); cursor: pointer; border: var(--lyra-border-width-thin) solid var(--lyra-color-border);';
-const CANCEL_STYLE = 'background: var(--lyra-color-surface); color: var(--lyra-color-text);';
+  'font: inherit; font-size: var(--lr-font-size-md-sm); padding: var(--lr-space-xs) var(--lr-space-m); ' +
+  'border-radius: var(--lr-radius); cursor: pointer; border: var(--lr-border-width-thin) solid var(--lr-color-border);';
+const CANCEL_STYLE = 'background: var(--lr-color-surface); color: var(--lr-color-text);';
 const CONFIRM_TONE_STYLE: Record<'neutral' | 'danger', string> = {
   neutral:
-    'background: var(--lyra-color-brand); color: var(--lyra-color-on-brand); border-color: var(--lyra-color-brand);',
+    'background: var(--lr-color-brand); color: var(--lr-color-on-brand); border-color: var(--lr-color-brand);',
   danger:
-    'background: var(--lyra-color-danger); color: var(--lyra-color-on-danger); border-color: var(--lyra-color-danger);',
+    'background: var(--lr-color-danger); color: var(--lr-color-on-danger); border-color: var(--lr-color-danger);',
 };
 
 function createButton(label: string, style: string, onClick: () => void): HTMLButtonElement {
@@ -46,15 +46,15 @@ function createButton(label: string, style: string, onClick: () => void): HTMLBu
  * is pressed -- Escape, a backdrop click, and the cancel button all resolve
  * `false`. A drop-in replacement for `window.confirm()`.
  *
- * Mounts a transient `<lyra-dialog>` for the duration of the call and
+ * Mounts a transient `<lr-dialog>` for the duration of the call and
  * removes it once settled, rather than reusing a persistent page-level
- * region (contrast `lyra-toast`'s `toaster.ts`): a confirmation modal has no
+ * region (contrast `lr-toast`'s `toaster.ts`): a confirmation modal has no
  * stacking/queueing concerns -- only one is ever meant to be open at a time
  * -- so a mount-and-remove per call keeps its lifetime trivially tied to the
  * returned promise, with nothing left mounted between calls.
  *
  * Every dismissal path (confirm button, cancel button, Escape, backdrop
- * click) funnels through `<lyra-dialog>`'s own `close()`/`lyra-dialog-close`
+ * click) funnels through `<lr-dialog>`'s own `close()`/`lr-dialog-close`
  * event, so there is exactly one place that resolves the promise and tears
  * the dialog down.
  *
@@ -76,17 +76,17 @@ export function confirm(options: ConfirmOptions): Promise<boolean> {
     const heading = document.createElement('h2');
     heading.textContent = title;
     heading.style.cssText =
-      'margin: 0 0 var(--lyra-space-s) 0; font-size: var(--lyra-size-1-0625rem); font-weight: var(--lyra-font-weight-semibold);';
+      'margin: 0 0 var(--lr-space-s) 0; font-size: var(--lr-size-1-0625rem); font-weight: var(--lr-font-weight-semibold);';
     dialog.appendChild(heading);
 
     if (description) {
       const desc = document.createElement('p');
       desc.textContent = description;
-      desc.style.cssText = 'margin: var(--lyra-space-xs) 0 0 0; color: var(--lyra-color-text-quiet);';
+      desc.style.cssText = 'margin: var(--lr-space-xs) 0 0 0; color: var(--lr-color-text-quiet);';
       dialog.appendChild(desc);
     }
 
-    dialog.addEventListener('lyra-dialog-close', (e) => {
+    dialog.addEventListener('lr-dialog-close', (e) => {
       const reason = (e as CustomEvent<DialogCloseReason>).detail;
       resolve(reason === 'confirm');
       dialog.remove();

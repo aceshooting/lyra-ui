@@ -21,7 +21,7 @@ export interface AttachmentChipPreviewDetail extends AttachmentChipIdDetail {
 const ICON_VIEW_BOX = '0 0 24 24';
 const ICON_STROKE_WIDTH = '1.75';
 
-// Same shape as `<lyra-chat-message>`'s local `retryIcon()` -- duplicated
+// Same shape as `<lr-chat-message>`'s local `retryIcon()` -- duplicated
 // rather than imported (these are two independent, separately-consumable
 // components) but kept visually identical so a retry affordance reads the
 // same wherever it shows up in the library.
@@ -93,14 +93,14 @@ function statusText(
 }
 
 export interface LyraAttachmentChipEventMap {
-  'lyra-remove': CustomEvent<AttachmentChipIdDetail>;
-  'lyra-retry': CustomEvent<AttachmentChipIdDetail>;
-  'lyra-preview': CustomEvent<AttachmentChipPreviewDetail>;
+  'lr-remove': CustomEvent<AttachmentChipIdDetail>;
+  'lr-retry': CustomEvent<AttachmentChipIdDetail>;
+  'lr-preview': CustomEvent<AttachmentChipPreviewDetail>;
 }
 /**
- * `<lyra-attachment-chip>` — a compact chip representing one file queued for
+ * `<lr-attachment-chip>` — a compact chip representing one file queued for
  * (or already part of) a chat message: a composer's pre-send attachment
- * tray, or a sent message's `attachments` slot (see `<lyra-chat-message>`).
+ * tray, or a sent message's `attachments` slot (see `<lr-chat-message>`).
  *
  * Two independent ways to populate it, matching the two points in a message's
  * lifecycle this is used at:
@@ -117,10 +117,10 @@ export interface LyraAttachmentChipEventMap {
  * changes away from the object it was created for, and on disconnect — this
  * component never leaks a blob URL.
  *
- * Identifying *which* attachment a `lyra-remove`/`lyra-retry` event is about:
+ * Identifying *which* attachment a `lr-remove`/`lr-retry` event is about:
  * this deliberately reuses the platform's own `id`/`id` attribute (every
  * element already has one; there's no need to shadow it with a second,
- * differently-named Lit property, unlike e.g. `<lyra-tool-call-chip>`'s
+ * differently-named Lit property, unlike e.g. `<lr-tool-call-chip>`'s
  * `call-id` which identifies a *call*, a concept distinct from the chip
  * element itself). Set `id="..."` when you have a stable server-side
  * attachment id. When `id` is left unset and `file` is set, a stable id is
@@ -137,29 +137,29 @@ export interface LyraAttachmentChipEventMap {
  * values. These are plain properties, not slots — this component still
  * exposes no slots.
  *
- * @customElement lyra-attachment-chip
- * @event lyra-remove - The user activated the remove (×) button. `detail: { id }`. Only rendered while `removable`.
- * @event lyra-retry - The user activated the retry button. `detail: { id }`. Only rendered while `status="error"`.
- * @event lyra-preview - The user activated the preview button. `detail: { id, name, mimeType, src }`.
+ * @customElement lr-attachment-chip
+ * @event lr-remove - The user activated the remove (×) button. `detail: { id }`. Only rendered while `removable`.
+ * @event lr-retry - The user activated the retry button. `detail: { id }`. Only rendered while `status="error"`.
+ * @event lr-preview - The user activated the preview button. `detail: { id, name, mimeType, src }`.
  * @csspart base - The chip's root container.
  * @csspart thumbnail - The leading image thumbnail / generic file glyph.
  * @csspart meta - Wrapper around `name` and `size`.
  * @csspart name - The filename (ellipsis-truncated via CSS; the untruncated name is always available via the native `title` tooltip).
  * @csspart size - The human-readable formatted file size. Hidden when no size is known.
- * @csspart status-text - The visible text twin of the status accent color — carries the state in text, not just color. Empty/hidden for `pending`/`done`. Gets `role="alert"` for `status="error"` only, so a screen-reader user not already focused on the chip still hears an upload failure; the ticking `'uploading'` readout deliberately stays out of the accessibility tree the same way `<lyra-generation-status>`'s per-second elapsed/token readout does — a live region re-announcing every progress tick would be noise, not information, while a one-shot failure is exactly the kind of infrequent, actionable transition a live region exists for.
+ * @csspart status-text - The visible text twin of the status accent color — carries the state in text, not just color. Empty/hidden for `pending`/`done`. Gets `role="alert"` for `status="error"` only, so a screen-reader user not already focused on the chip still hears an upload failure; the ticking `'uploading'` readout deliberately stays out of the accessibility tree the same way `<lr-generation-status>`'s per-second elapsed/token readout does — a live region re-announcing every progress tick would be noise, not information, while a one-shot failure is exactly the kind of infrequent, actionable transition a live region exists for.
  * @csspart progress - The numeric upload progress bar (`role="progressbar"`), shown only while `status="uploading"` and `progress` is a meaningful (>0) number.
  * @csspart progress-fill - The filled portion of `progress`.
  * @csspart spinner - The indeterminate upload spinner, shown instead of `progress` while `status="uploading"` and `progress` is unset/0.
  * @csspart retry-button - The retry affordance, only rendered while `status="error"`.
  * @csspart preview-button - The preview affordance, rendered when a file or `preview-src` is available.
  * @csspart remove-button - The remove (×) affordance, only rendered while `removable`.
- * @cssprop [--lyra-attachment-chip-spinner-duration=0.8s] - Duration of one indeterminate
+ * @cssprop [--lr-attachment-chip-spinner-duration=0.8s] - Duration of one indeterminate
  * upload-spinner rotation. The ambient loop stops under reduced motion.
  */
 export class LyraAttachmentChip extends LyraElement<LyraAttachmentChipEventMap> {
   static styles = [LyraElement.styles, styles];
 
-  /** A real `File`, e.g. fresh from `<lyra-file-input>`'s `lyra-files` event.
+  /** A real `File`, e.g. fresh from `<lr-file-input>`'s `lr-files` event.
    *  When set, `name`/`size`/`mime-type`/the image thumbnail are all derived
    *  from it, taking precedence over the independent props below. */
   @property({ attribute: false }) file?: File;
@@ -313,17 +313,17 @@ export class LyraAttachmentChip extends LyraElement<LyraAttachmentChipEventMap> 
   }
 
   private onRemoveClick = (): void => {
-    this.emit<AttachmentChipIdDetail>('lyra-remove', { id: this.resolvedId });
+    this.emit<AttachmentChipIdDetail>('lr-remove', { id: this.resolvedId });
   };
 
   private onRetryClick = (): void => {
-    this.emit<AttachmentChipIdDetail>('lyra-retry', { id: this.resolvedId });
+    this.emit<AttachmentChipIdDetail>('lr-retry', { id: this.resolvedId });
   };
 
   private onPreviewClick = (): void => {
     if (!this.effectivePreviewSrc) return;
     this.previewOpen = true;
-    this.emit<AttachmentChipPreviewDetail>('lyra-preview', {
+    this.emit<AttachmentChipPreviewDetail>('lr-preview', {
       id: this.resolvedId,
       name: this.effectiveName,
       mimeType: this.effectiveMimeType,
@@ -446,13 +446,13 @@ export class LyraAttachmentChip extends LyraElement<LyraAttachmentChipEventMap> 
           : nothing}
       </div>
       ${this.previewable && this.effectivePreviewSrc
-        ? html`<lyra-document-viewer
+        ? html`<lr-document-viewer
             .open=${this.previewOpen}
             .name=${displayName}
             .mimeType=${this.effectiveMimeType}
             .src=${this.effectivePreviewSrc}
-            @lyra-close=${this.onViewerClose}
-          ></lyra-document-viewer>`
+            @lr-close=${this.onViewerClose}
+          ></lr-document-viewer>`
         : nothing}
     `;
   }
@@ -461,6 +461,6 @@ export class LyraAttachmentChip extends LyraElement<LyraAttachmentChipEventMap> 
 
 declare global {
   interface HTMLElementTagNameMap {
-    'lyra-attachment-chip': LyraAttachmentChip;
+    'lr-attachment-chip': LyraAttachmentChip;
   }
 }

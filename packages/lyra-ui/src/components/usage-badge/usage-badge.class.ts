@@ -13,7 +13,7 @@ interface FormattedDuration {
 }
 
 /** `820` -> `"820ms"`; `1500` -> `"1.5s"`; `2000` -> `"2s"`. Identical algorithm to
- *  `<lyra-tool-call-chip>`'s own `formatDuration`, duplicated locally -- two independent,
+ *  `<lr-tool-call-chip>`'s own `formatDuration`, duplicated locally -- two independent,
  *  separately-consumable components. */
 function formatDuration(ms: number): FormattedDuration {
   if (!Number.isFinite(ms) || ms < 1000) {
@@ -25,12 +25,12 @@ function formatDuration(ms: number): FormattedDuration {
 }
 
 /**
- * `<lyra-usage-badge>` — a compact, static resource strip for one message or run: tokens in/out,
+ * `<lr-usage-badge>` — a compact, static resource strip for one message or run: tokens in/out,
  * cost, latency, with a hover/focus tooltip breakdown. Purely formatting — this component computes
  * no counts, rates, or prices; every segment is independently optional, and with nothing set,
  * nothing renders at all (not even a focusable/interactive shell).
  *
- * The tooltip reuses `<lyra-tool-call-chip>`'s hover/focus/Escape/`aria-describedby` contract
+ * The tooltip reuses `<lr-tool-call-chip>`'s hover/focus/Escape/`aria-describedby` contract
  * wholesale: hover and focus are tracked as independent "keep it open" reasons, so releasing one
  * modality while the other still holds doesn't close it.
  *
@@ -38,7 +38,7 @@ function formatDuration(ms: number): FormattedDuration {
  * above 1000ms) — a host whose latencies commonly exceed a minute sets `formatLatency` to render
  * its own scale instead, in both the visible strip and the tooltip row.
  *
- * @customElement lyra-usage-badge
+ * @customElement lr-usage-badge
  * @slot - Extra rows appended below the built-in tooltip breakdown (e.g. cache-read tokens). The
  *   visible strip itself is prop-driven only.
  * @csspart base - The root inline strip (a focusable non-button `role="group"`, only while at
@@ -70,7 +70,7 @@ export class LyraUsageBadge extends LyraElement {
 
   /** Overrides the default `formatDuration()` rendering of `latencyMs` (`'{ms}ms'`, or one-decimal
    *  seconds above 1000ms — no minutes/hours tier) in both the visible strip and the tooltip row.
-   *  Mirrors `<lyra-activity-feed>`'s `formatTimestamp` convention. */
+   *  Mirrors `<lr-activity-feed>`'s `formatTimestamp` convention. */
   @property({ attribute: false }) formatLatency?: (ms: number) => string;
 
   /** Token counts render via `Intl.NumberFormat` `notation: 'compact'` (e.g. `12345 -> "12K"`)
@@ -245,6 +245,6 @@ export class LyraUsageBadge extends LyraElement {
 
 declare global {
   interface HTMLElementTagNameMap {
-    'lyra-usage-badge': LyraUsageBadge;
+    'lr-usage-badge': LyraUsageBadge;
   }
 }

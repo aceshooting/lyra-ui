@@ -1,17 +1,17 @@
 import { css } from 'lit';
 
 // Deliberately its own sheet rather than a wholesale re-export of
-// `chart.styles.ts`: unlike `lyra-histogram`, `LyraBoxPlot` doesn't extend
+// `chart.styles.ts`: unlike `lr-histogram`, `LyraBoxPlot` doesn't extend
 // `LyraChart`, has no `zoom` property, and its `render()` never emits a
 // `part="reset-zoom-button"` element — so that rule (and any other
-// `lyra-chart`-only chrome) has no home here.
+// `lr-chart`-only chrome) has no home here.
 export const styles = css`
   :host {
     display: block;
     position: relative;
     inline-size: 100%;
     min-inline-size: 0;
-    block-size: var(--lyra-chart-height, var(--lyra-size-280px));
+    block-size: var(--lr-chart-height, var(--lr-size-280px));
     /* Same theme tokens as chart.styles.ts's :host — Chart.js renders to
        canvas, not the DOM, so it can't consume CSS var() directly;
        box-plot.ts's themeColors() resolves these once per draw() via
@@ -20,20 +20,20 @@ export const styles = css`
        the chart's grid/ticks/legend/tooltip without affecting unrelated
        text/border/surface colors elsewhere in the component, while still
        defaulting to those semantic tokens. */
-    --lyra-chart-grid-color: var(--lyra-color-border);
-    --lyra-chart-tick-color: var(--lyra-color-text-quiet);
-    --lyra-chart-legend-color: var(--lyra-color-text);
-    --lyra-chart-tooltip-bg: var(--lyra-color-surface);
-    --lyra-chart-tooltip-text: var(--lyra-color-text);
+    --lr-chart-grid-color: var(--lr-color-border);
+    --lr-chart-tick-color: var(--lr-color-text-quiet);
+    --lr-chart-legend-color: var(--lr-color-text);
+    --lr-chart-tooltip-bg: var(--lr-color-surface);
+    --lr-chart-tooltip-text: var(--lr-color-text);
   }
   [part='base'] {
     position: relative;
     inline-size: 100%;
     block-size: 100%;
   }
-  lyra-skeleton {
-    --lyra-skeleton-w: 100%;
-    --lyra-skeleton-h: 100%;
+  lr-skeleton {
+    --lr-skeleton-w: 100%;
+    --lr-skeleton-h: 100%;
   }
   canvas {
     inline-size: 100% !important;

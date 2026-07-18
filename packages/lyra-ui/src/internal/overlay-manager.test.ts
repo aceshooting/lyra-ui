@@ -189,8 +189,8 @@ it('preserves the existing stack order when a lower overlay is suspended and res
 
   document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
   expect(dismissed).to.deep.equal(['top']);
-  expect(Number(top.host.style.getPropertyValue('--lyra-overlay-stack-index'))).to.be.greaterThan(
-    Number(bottom.host.style.getPropertyValue('--lyra-overlay-stack-index')),
+  expect(Number(top.host.style.getPropertyValue('--lr-overlay-stack-index'))).to.be.greaterThan(
+    Number(bottom.host.style.getPropertyValue('--lr-overlay-stack-index')),
   );
 
   topHandle.deactivate({ restoreFocus: false });
@@ -376,8 +376,8 @@ it('assigns increasing stack levels and gates backdrop dismissal to the topmost 
     onBackdrop: () => dismissed.push('top'),
   });
 
-  expect(Number(top.host.style.getPropertyValue('--lyra-overlay-stack-index'))).to.be.greaterThan(
-    Number(bottom.host.style.getPropertyValue('--lyra-overlay-stack-index')),
+  expect(Number(top.host.style.getPropertyValue('--lr-overlay-stack-index'))).to.be.greaterThan(
+    Number(bottom.host.style.getPropertyValue('--lr-overlay-stack-index')),
   );
   expect(bottomHandle.dismissBackdrop()).to.be.false;
   expect(topHandle.dismissBackdrop()).to.be.true;

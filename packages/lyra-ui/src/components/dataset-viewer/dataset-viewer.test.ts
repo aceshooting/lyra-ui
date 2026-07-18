@@ -14,13 +14,13 @@ function shrinkAnchorRetry(el: LyraDatasetViewer): void {
   (el as unknown as { anchorRetryIntervalMs: number }).anchorRetryIntervalMs = 5;
 }
 
-describe('lyra-dataset-viewer', () => {
+describe('lr-dataset-viewer', () => {
   it('renders an empty localized state by default', async () => {
-    const el = (await fixture(html`<lyra-dataset-viewer></lyra-dataset-viewer>`)) as LyraDatasetViewer;
+    const el = (await fixture(html`<lr-dataset-viewer></lr-dataset-viewer>`)) as LyraDatasetViewer;
     expect(el.shadowRoot!.querySelector('.empty-note')!.textContent).to.equal('No dataset to display.');
   });
   it('auto-detects tab-separated data and renders an accessible table', async () => {
-    const el = (await fixture(html`<lyra-dataset-viewer name="Data"></lyra-dataset-viewer>`)) as LyraDatasetViewer;
+    const el = (await fixture(html`<lr-dataset-viewer name="Data"></lr-dataset-viewer>`)) as LyraDatasetViewer;
     const restore = fetchText(TAB_DATA);
     try {
       el.src = 'https://example.test/a.tsv';
@@ -32,7 +32,7 @@ describe('lyra-dataset-viewer', () => {
     } finally { restore(); }
   });
   it('falls back to the count-only caption when name is unset', async () => {
-    const el = (await fixture(html`<lyra-dataset-viewer></lyra-dataset-viewer>`)) as LyraDatasetViewer;
+    const el = (await fixture(html`<lr-dataset-viewer></lr-dataset-viewer>`)) as LyraDatasetViewer;
     const restore = fetchText(TAB_DATA);
     try {
       el.src = 'https://example.test/a.tsv';
@@ -41,7 +41,7 @@ describe('lyra-dataset-viewer', () => {
     } finally { restore(); }
   });
   it('surfaces its own localized diagnostic rather than the generic failure', async () => {
-    const el = (await fixture(html`<lyra-dataset-viewer></lyra-dataset-viewer>`)) as LyraDatasetViewer;
+    const el = (await fixture(html`<lr-dataset-viewer></lr-dataset-viewer>`)) as LyraDatasetViewer;
     const restore = fetchText('name\tage\tcity');
     try {
       el.src = 'https://example.test/empty.tsv';
@@ -50,7 +50,7 @@ describe('lyra-dataset-viewer', () => {
     } finally { restore(); }
   });
   it('rejects unsafe URLs', async () => {
-    const el = (await fixture(html`<lyra-dataset-viewer src="javascript:alert(1)"></lyra-dataset-viewer>`)) as LyraDatasetViewer;
+    const el = (await fixture(html`<lr-dataset-viewer src="javascript:alert(1)"></lr-dataset-viewer>`)) as LyraDatasetViewer;
     await el.updateComplete;
     expect(el.shadowRoot!.querySelector('[role="alert"]')!.textContent).to.equal('Document URL is not allowed.');
   });
@@ -58,11 +58,11 @@ describe('lyra-dataset-viewer', () => {
     expect(findDocumentRenderer({ name: 'a.tsv', mimeType: 'application/octet-stream', src: 'x' })).to.exist;
     expect(findDocumentRenderer({ name: 'a.csv', mimeType: 'text/csv', src: 'x' })).to.not.exist;
   });
-  it('is accessible', async () => { const el = await fixture(html`<lyra-dataset-viewer></lyra-dataset-viewer>`); await expect(el).to.be.accessible(); });
+  it('is accessible', async () => { const el = await fixture(html`<lr-dataset-viewer></lr-dataset-viewer>`); await expect(el).to.be.accessible(); });
 
   describe('virtualized table structure', () => {
     it('maps to role=table / role=row / role=rowgroup with correct rowcount/rowindex', async () => {
-      const el = (await fixture(html`<lyra-dataset-viewer></lyra-dataset-viewer>`)) as LyraDatasetViewer;
+      const el = (await fixture(html`<lr-dataset-viewer></lr-dataset-viewer>`)) as LyraDatasetViewer;
       const restore = fetchText(GRID_DATASET);
       try {
         el.src = 'https://example.test/data.tsv';
@@ -73,7 +73,7 @@ describe('lyra-dataset-viewer', () => {
         expect(table.getAttribute('aria-colcount')).to.equal('2');
         expect(el.shadowRoot!.querySelector('[part="header-row"]')!.getAttribute('role')).to.equal('row');
         expect(el.shadowRoot!.querySelector('[part="header-row"]')!.getAttribute('aria-rowindex')).to.equal('1');
-        const list = el.shadowRoot!.querySelector('lyra-virtual-list')!;
+        const list = el.shadowRoot!.querySelector('lr-virtual-list')!;
         expect(list.shadowRoot!.querySelector('[part="base"]')!.getAttribute('role')).to.equal('rowgroup');
         await aTimeout(0);
         const firstRow = list.shadowRoot!.querySelector('[part="row"]')!;
@@ -85,7 +85,7 @@ describe('lyra-dataset-viewer', () => {
     });
 
     it('is accessible on the mapped table/rowgroup/row tree', async () => {
-      const el = (await fixture(html`<lyra-dataset-viewer></lyra-dataset-viewer>`)) as LyraDatasetViewer;
+      const el = (await fixture(html`<lr-dataset-viewer></lr-dataset-viewer>`)) as LyraDatasetViewer;
       const restore = fetchText(GRID_DATASET);
       try {
         el.src = 'https://example.test/data.tsv';
@@ -101,7 +101,7 @@ describe('lyra-dataset-viewer', () => {
       // `cell-highlight-action` buttons only render once `highlights` resolve against a loaded
       // grid — no highlight-free axe run can see them. Assert the highlight actually rendered
       // (inside the nested virtual-list shadow root, which axe also traverses) before running axe.
-      const el = (await fixture(html`<lyra-dataset-viewer></lyra-dataset-viewer>`)) as LyraDatasetViewer;
+      const el = (await fixture(html`<lr-dataset-viewer></lr-dataset-viewer>`)) as LyraDatasetViewer;
       const restore = fetchText(GRID_DATASET);
       try {
         el.highlights = [
@@ -109,7 +109,7 @@ describe('lyra-dataset-viewer', () => {
         ];
         el.src = 'https://example.test/data.tsv';
         await waitUntil(() => el.shadowRoot!.querySelector('[part="table"]') !== null);
-        const list = el.shadowRoot!.querySelector('lyra-virtual-list')!;
+        const list = el.shadowRoot!.querySelector('lr-virtual-list')!;
         await waitUntil(() => list.shadowRoot!.querySelector('[part~="cell-highlight"]') !== null);
         expect(list.shadowRoot!.querySelector('[part="cell-highlight-action"]')).to.exist;
         await expect(el).to.be.accessible();
@@ -120,7 +120,7 @@ describe('lyra-dataset-viewer', () => {
 
     it('renders files above the old 1,000-row cap up to the shared 10k default', async () => {
       const bigRows = Array.from({ length: 5000 }, (_unused, i) => `row${i},value${i}`).join('\n');
-      const el = (await fixture(html`<lyra-dataset-viewer></lyra-dataset-viewer>`)) as LyraDatasetViewer;
+      const el = (await fixture(html`<lr-dataset-viewer></lr-dataset-viewer>`)) as LyraDatasetViewer;
       const restore = fetchText(`name,val\n${bigRows}`);
       try {
         el.src = 'https://example.test/big.tsv';
@@ -134,7 +134,7 @@ describe('lyra-dataset-viewer', () => {
 
     it('still errors above 10,000 rows', async () => {
       const bigRows = Array.from({ length: 10001 }, (_unused, i) => `row${i},value${i}`).join('\n');
-      const el = (await fixture(html`<lyra-dataset-viewer></lyra-dataset-viewer>`)) as LyraDatasetViewer;
+      const el = (await fixture(html`<lr-dataset-viewer></lr-dataset-viewer>`)) as LyraDatasetViewer;
       const restore = fetchText(`name,val\n${bigRows}`);
       try {
         el.src = 'https://example.test/toobig.tsv';
@@ -148,7 +148,7 @@ describe('lyra-dataset-viewer', () => {
 
   describe('cell-range anchor-target and search', () => {
     it('resolves a cell-range anchor addressing the raw grid (header included)', async () => {
-      const el = (await fixture(html`<lyra-dataset-viewer></lyra-dataset-viewer>`)) as LyraDatasetViewer;
+      const el = (await fixture(html`<lr-dataset-viewer></lr-dataset-viewer>`)) as LyraDatasetViewer;
       const restore = fetchText(GRID_DATASET);
       try {
         el.src = 'https://example.test/data.tsv';
@@ -160,7 +160,7 @@ describe('lyra-dataset-viewer', () => {
     });
 
     it('resolves false for an anchor with a sheet set', async () => {
-      const el = (await fixture(html`<lyra-dataset-viewer></lyra-dataset-viewer>`)) as LyraDatasetViewer;
+      const el = (await fixture(html`<lr-dataset-viewer></lr-dataset-viewer>`)) as LyraDatasetViewer;
       shrinkAnchorRetry(el);
       const restore = fetchText(GRID_DATASET);
       try {
@@ -173,7 +173,7 @@ describe('lyra-dataset-viewer', () => {
     });
 
     it('finds search matches ordered row -> column', async () => {
-      const el = (await fixture(html`<lyra-dataset-viewer></lyra-dataset-viewer>`)) as LyraDatasetViewer;
+      const el = (await fixture(html`<lr-dataset-viewer></lr-dataset-viewer>`)) as LyraDatasetViewer;
       const restore = fetchText(GRID_DATASET);
       try {
         el.src = 'https://example.test/data.tsv';
@@ -185,21 +185,21 @@ describe('lyra-dataset-viewer', () => {
     });
 
     it('searchNext/searchPrevious wrap, and clearSearch resets to 0/-1', async () => {
-      const el = (await fixture(html`<lyra-dataset-viewer></lyra-dataset-viewer>`)) as LyraDatasetViewer;
+      const el = (await fixture(html`<lr-dataset-viewer></lr-dataset-viewer>`)) as LyraDatasetViewer;
       const restore = fetchText(GRID_DATASET);
       try {
         el.src = 'https://example.test/data.tsv';
         await waitUntil(() => el.shadowRoot!.querySelector('[part="table"]') !== null);
         await el.search('ada');
         let detail: { matchCount: number; activeIndex: number } | undefined;
-        el.addEventListener('lyra-search-change', (e) => (detail = (e as CustomEvent).detail));
+        el.addEventListener('lr-search-change', (e) => (detail = (e as CustomEvent).detail));
         expect(await el.searchNext()).to.be.true;
         expect(detail!.activeIndex).to.equal(1);
         expect(await el.searchNext()).to.be.true;
         expect(detail!.activeIndex).to.equal(0); // wraps
         expect(await el.searchPrevious()).to.be.true;
         expect(detail!.activeIndex).to.equal(1); // wraps backward
-        const listener = oneEvent(el, 'lyra-search-change');
+        const listener = oneEvent(el, 'lr-search-change');
         el.clearSearch();
         const event = (await listener) as CustomEvent<{ query: string; matchCount: number; activeIndex: number }>;
         expect(event.detail).to.deep.equal({ query: '', matchCount: 0, activeIndex: -1 });
@@ -209,7 +209,7 @@ describe('lyra-dataset-viewer', () => {
     });
 
     it('an empty query behaves like clearSearch and resolves 0', async () => {
-      const el = (await fixture(html`<lyra-dataset-viewer></lyra-dataset-viewer>`)) as LyraDatasetViewer;
+      const el = (await fixture(html`<lr-dataset-viewer></lr-dataset-viewer>`)) as LyraDatasetViewer;
       const restore = fetchText(GRID_DATASET);
       try {
         el.src = 'https://example.test/data.tsv';
@@ -221,15 +221,15 @@ describe('lyra-dataset-viewer', () => {
       }
     });
 
-    it('renders a focusable cell-highlight and emits lyra-highlight-activate', async () => {
-      const el = (await fixture(html`<lyra-dataset-viewer></lyra-dataset-viewer>`)) as LyraDatasetViewer;
+    it('renders a focusable cell-highlight and emits lr-highlight-activate', async () => {
+      const el = (await fixture(html`<lr-dataset-viewer></lr-dataset-viewer>`)) as LyraDatasetViewer;
       const restore = fetchText(GRID_DATASET);
       try {
         el.src = 'https://example.test/data.tsv';
         await waitUntil(() => el.shadowRoot!.querySelector('[part="table"]') !== null);
         el.highlights = [{ id: 'h1', anchor: { kind: 'cell-range', range: 'A2' } }];
         await el.updateComplete;
-        const list = el.shadowRoot!.querySelector('lyra-virtual-list')!;
+        const list = el.shadowRoot!.querySelector('lr-virtual-list')!;
         const highlighted = list.shadowRoot!.querySelector('[part~="cell-highlight"]') as HTMLElement | null;
         expect(highlighted).to.exist;
         // The cell itself stays structural (role="cell", not focusable); the activation
@@ -242,7 +242,7 @@ describe('lyra-dataset-viewer', () => {
         // A real action button (not a plain grid cell) -- gets the shared minimum hit area.
         expect(getComputedStyle(action!).minInlineSize).to.equal('40px');
         expect(getComputedStyle(action!).minBlockSize).to.equal('40px');
-        const listener = oneEvent(el, 'lyra-highlight-activate');
+        const listener = oneEvent(el, 'lr-highlight-activate');
         action!.click();
         const event = (await listener) as CustomEvent<{ id: string }>;
         expect(event.detail).to.deep.equal({ id: 'h1' });
@@ -252,14 +252,14 @@ describe('lyra-dataset-viewer', () => {
     });
 
     it('exposes an activation button only inside a highlighted cell, never a plain cell', async () => {
-      const el = (await fixture(html`<lyra-dataset-viewer></lyra-dataset-viewer>`)) as LyraDatasetViewer;
+      const el = (await fixture(html`<lr-dataset-viewer></lr-dataset-viewer>`)) as LyraDatasetViewer;
       const restore = fetchText(GRID_DATASET);
       try {
         el.src = 'https://example.test/data.tsv';
         await waitUntil(() => el.shadowRoot!.querySelector('[part="table"]') !== null);
         el.highlights = [{ id: 'h1', anchor: { kind: 'cell-range', range: 'A2' }, label: 'First result' }];
         await el.updateComplete;
-        const list = el.shadowRoot!.querySelector('lyra-virtual-list')!;
+        const list = el.shadowRoot!.querySelector('lr-virtual-list')!;
         const plain = list.shadowRoot!.querySelector('[part="cell"]') as HTMLElement;
         expect(plain.hasAttribute('tabindex')).to.be.false;
         expect(plain.querySelector('button')).to.equal(null);
@@ -268,7 +268,7 @@ describe('lyra-dataset-viewer', () => {
         const action = list.shadowRoot!.querySelector('[part="cell-highlight-action"]') as HTMLButtonElement;
         expect(action.tagName).to.equal('BUTTON');
         expect(action.getAttribute('aria-label')).to.equal('First result');
-        const listener = oneEvent(el, 'lyra-highlight-activate');
+        const listener = oneEvent(el, 'lr-highlight-activate');
         action.click();
         const event = (await listener) as CustomEvent<{ id: string }>;
         expect(event.detail).to.deep.equal({ id: 'h1' });
@@ -280,13 +280,13 @@ describe('lyra-dataset-viewer', () => {
 
   describe('back-compat', () => {
     it('::part(table) still matches, and no cell-highlight renders unset', async () => {
-      const el = (await fixture(html`<lyra-dataset-viewer></lyra-dataset-viewer>`)) as LyraDatasetViewer;
+      const el = (await fixture(html`<lr-dataset-viewer></lr-dataset-viewer>`)) as LyraDatasetViewer;
       const restore = fetchText(GRID_DATASET);
       try {
         el.src = 'https://example.test/data.tsv';
         await waitUntil(() => el.shadowRoot!.querySelector('[part="table"]') !== null);
         expect(el.shadowRoot!.querySelector('[part~="table"]')).to.exist;
-        const list = el.shadowRoot!.querySelector('lyra-virtual-list')!;
+        const list = el.shadowRoot!.querySelector('lr-virtual-list')!;
         expect(list.shadowRoot!.querySelectorAll('[part~="cell-highlight"]').length).to.equal(0);
       } finally {
         restore();

@@ -55,6 +55,6 @@ it('still registers each excluded family when imported directly from its own sub
     'graph',
   ];
   for (const t of tags) {
-    expect(customElements.get(`lyra-${t}`), `lyra-${t}`).to.exist;
+    expect(customElements.get(`lr-${t}`), `lr-${t}`).to.exist;
   }
 });

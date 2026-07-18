@@ -10,56 +10,56 @@ export const styles = css`
     display: flex;
     flex-direction: column;
     overflow-x: auto;
-    font-size: var(--lyra-font-size-sm);
-    color: var(--lyra-color-text);
+    font-size: var(--lr-font-size-sm);
+    color: var(--lr-color-text);
   }
 
   [part='header'],
   [part='row'] {
     display: flex;
     align-items: center;
-    gap: var(--lyra-space-xs);
-    padding-block: var(--lyra-space-xs);
-    padding-inline-end: var(--lyra-space-s);
-    border-block-end: var(--lyra-border-width-thin) solid var(--lyra-color-border);
+    gap: var(--lr-space-xs);
+    padding-block: var(--lr-space-xs);
+    padding-inline-end: var(--lr-space-s);
+    border-block-end: var(--lr-border-width-thin) solid var(--lr-color-border);
     box-sizing: border-box;
   }
 
   [part='header'] {
-    color: var(--lyra-color-text-quiet);
-    font-size: var(--lyra-font-size-xs);
+    color: var(--lr-color-text-quiet);
+    font-size: var(--lr-font-size-xs);
   }
 
   [part='row'] {
     cursor: pointer;
   }
   [part='row']:hover {
-    background: var(--lyra-color-surface-raised);
+    background: var(--lr-color-surface-raised);
   }
   [part='row']:focus-visible {
-    outline: var(--lyra-focus-ring-width) solid var(--lyra-focus-ring-color);
-    outline-offset: calc(-1 * var(--lyra-focus-ring-width));
+    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
+    outline-offset: calc(-1 * var(--lr-focus-ring-width));
   }
   [part='row'][data-active] {
-    background: var(--lyra-color-brand-quiet);
+    background: var(--lr-color-brand-quiet);
   }
 
   [part='toggle'] {
     /* Keep the chevron glyph compact while giving the interactive box the shared minimum
-       tappable size -- same "small glyph, padded hit box" pattern as lyra-code-block's/
-       lyra-json-viewer's own [part='toggle']. */
+       tappable size -- same "small glyph, padded hit box" pattern as lr-code-block's/
+       lr-json-viewer's own [part='toggle']. */
     flex: 0 0 auto;
-    inline-size: var(--lyra-size-1-25rem);
-    block-size: var(--lyra-size-1-25rem);
-    min-inline-size: var(--lyra-icon-button-size);
-    min-block-size: var(--lyra-icon-button-size);
+    inline-size: var(--lr-size-1-25rem);
+    block-size: var(--lr-size-1-25rem);
+    min-inline-size: var(--lr-icon-button-size);
+    min-block-size: var(--lr-icon-button-size);
     display: inline-flex;
     align-items: center;
     justify-content: center;
     background: none;
     border: none;
     padding: 0;
-    color: var(--lyra-color-text-quiet);
+    color: var(--lr-color-text-quiet);
     cursor: pointer;
   }
   [part='toggle'][hidden] {
@@ -76,12 +76,12 @@ export const styles = css`
   [part='icon'] {
     flex: 0 0 auto;
     display: inline-flex;
-    color: var(--lyra-color-text-quiet);
+    color: var(--lr-color-text-quiet);
   }
 
   [part='name'] {
     flex: 1 1 auto;
-    min-inline-size: var(--lyra-size-4rem);
+    min-inline-size: var(--lr-size-4rem);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -89,7 +89,7 @@ export const styles = css`
 
   [part='detail'] {
     flex: 0 1 auto;
-    color: var(--lyra-color-text-quiet);
+    color: var(--lr-color-text-quiet);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -97,21 +97,21 @@ export const styles = css`
 
   [part='status-text'] {
     flex: 0 0 auto;
-    font-size: var(--lyra-font-size-xs);
+    font-size: var(--lr-font-size-xs);
   }
-  [part='status-text'][data-status='success'] { color: var(--lyra-color-success); }
-  [part='status-text'][data-status='error'] { color: var(--lyra-color-danger); }
-  [part='status-text'][data-status='denied'] { color: var(--lyra-color-warning); }
-  [part='status-text'][data-status='running'] { color: var(--lyra-color-brand); }
-  [part='status-text'][data-status='pending'] { color: var(--lyra-color-text-quiet); }
+  [part='status-text'][data-status='success'] { color: var(--lr-color-success); }
+  [part='status-text'][data-status='error'] { color: var(--lr-color-danger); }
+  [part='status-text'][data-status='denied'] { color: var(--lr-color-warning); }
+  [part='status-text'][data-status='running'] { color: var(--lr-color-brand); }
+  [part='status-text'][data-status='pending'] { color: var(--lr-color-text-quiet); }
 
   [part='bar-track'] {
     flex: 0 0 auto;
     position: relative;
-    inline-size: var(--lyra-size-6rem);
-    block-size: var(--lyra-size-0-5rem);
-    background: var(--lyra-color-surface-raised);
-    border-radius: var(--lyra-radius-xs);
+    inline-size: var(--lr-size-6rem);
+    block-size: var(--lr-size-0-5rem);
+    background: var(--lr-color-surface-raised);
+    border-radius: var(--lr-radius-xs);
     overflow: hidden;
   }
   [part='bar'] {
@@ -119,24 +119,24 @@ export const styles = css`
     inset-block: 0;
     border-radius: inherit;
   }
-  [part='bar'][data-status='success'] { background: var(--lyra-color-success); }
-  [part='bar'][data-status='error'] { background: var(--lyra-color-danger); }
-  [part='bar'][data-status='denied'] { background: var(--lyra-color-warning); }
-  [part='bar'][data-status='pending'] { background: var(--lyra-color-text-quiet); }
+  [part='bar'][data-status='success'] { background: var(--lr-color-success); }
+  [part='bar'][data-status='error'] { background: var(--lr-color-danger); }
+  [part='bar'][data-status='denied'] { background: var(--lr-color-warning); }
+  [part='bar'][data-status='pending'] { background: var(--lr-color-text-quiet); }
   [part='bar'][data-status='running'] {
     background-image: repeating-linear-gradient(
       45deg,
-      var(--lyra-color-brand) 0 var(--lyra-size-6px),
-      var(--lyra-color-brand-quiet) var(--lyra-size-6px) calc(var(--lyra-size-6px) * 2)
+      var(--lr-color-brand) 0 var(--lr-size-6px),
+      var(--lr-color-brand-quiet) var(--lr-size-6px) calc(var(--lr-size-6px) * 2)
     );
     background-size: 200% 100%;
-    animation: lyra-trace-tree-stripe var(--lyra-transition-ambient) infinite;
+    animation: lr-trace-tree-stripe var(--lr-transition-ambient) infinite;
   }
   /* background-position animates in physical coordinates, so the sweep needs
      an explicit mirrored keyframe track to travel inline-start -> inline-end
      in RTL as well. */
   :host(:dir(rtl)) [part='bar'][data-status='running'] {
-    animation-name: lyra-trace-tree-stripe-rtl;
+    animation-name: lr-trace-tree-stripe-rtl;
   }
   @media (prefers-reduced-motion: reduce) {
     /* the RTL selector outranks the bare one, so it must be silenced here
@@ -147,11 +147,11 @@ export const styles = css`
       background-position: 0 0;
     }
   }
-  @keyframes lyra-trace-tree-stripe {
-    to { background-position: calc(var(--lyra-size-24px) * -1) 0; }
+  @keyframes lr-trace-tree-stripe {
+    to { background-position: calc(var(--lr-size-24px) * -1) 0; }
   }
-  @keyframes lyra-trace-tree-stripe-rtl {
-    to { background-position: var(--lyra-size-24px) 0; }
+  @keyframes lr-trace-tree-stripe-rtl {
+    to { background-position: var(--lr-size-24px) 0; }
   }
 
   [part='duration'],
@@ -159,17 +159,17 @@ export const styles = css`
   [part='tokens-out'],
   [part='cost'] {
     flex: 0 0 auto;
-    inline-size: var(--lyra-size-3-5rem);
+    inline-size: var(--lr-size-3-5rem);
     text-align: end;
     font-variant-numeric: tabular-nums;
-    color: var(--lyra-color-text-quiet);
+    color: var(--lr-color-text-quiet);
   }
 
   [part='empty'] {
-    padding: var(--lyra-space-l);
+    padding: var(--lr-space-l);
   }
 
-  @container (max-width: 479.98px) {
+  @container (max-inline-size: 479.98px) {
     [part='tokens-in'],
     [part='tokens-out'],
     [part='cost'],
@@ -178,7 +178,7 @@ export const styles = css`
       display: none;
     }
   }
-  @container (max-width: 359.98px) {
+  @container (max-inline-size: 359.98px) {
     [part='bar-track'] {
       display: none;
     }

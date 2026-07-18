@@ -13,7 +13,7 @@ import '../switch/switch.class.js';
  * converter is presence-based -- the attribute's mere presence (regardless of its string value)
  * maps to `true`, so a plain-markup consumer writing the literal `spellcheck="false"` would
  * actually get `true` (this property's default), the opposite of what that string reads as -- the
- * same bug class `<lyra-textarea>`'s `spellcheckConverter` and `<lyra-model-select>`'s identical
+ * same bug class `<lr-textarea>`'s `spellcheckConverter` and `<lr-model-select>`'s identical
  * converter document and fix.
  */
 const spellcheckConverter: ComplexAttributeConverter<boolean> = {
@@ -35,7 +35,7 @@ export interface ToolSelectDialogTool {
   description?: string;
   category?: string;
   /** Literal icon hint (e.g. an emoji), rendered next to `name` -- same
-   *  "opaque string, not a registry lookup" convention as `<lyra-tool-call-chip>`'s `icon`. */
+   *  "opaque string, not a registry lookup" convention as `<lr-tool-call-chip>`'s `icon`. */
   icon?: string;
   /** Individually gates this tool regardless of `useDefaults`/`selected` -- e.g. a tool that
    *  requires admin approval before it can ever be enabled. */
@@ -45,7 +45,7 @@ export interface ToolSelectDialogTool {
 }
 
 /** Predicate deciding whether `tool` matches a (already-trimmed, already-lowercased) `query`.
- *  Mirrors `<lyra-combobox>`'s `OptionFilter` convention -- override `filter` to replace the
+ *  Mirrors `<lr-combobox>`'s `OptionFilter` convention -- override `filter` to replace the
  *  built-in case-insensitive name/description substring match entirely. */
 export type ToolSelectFilter = (tool: ToolSelectDialogTool, query: string) => boolean;
 
@@ -55,8 +55,8 @@ export interface ToolSelectionChangeDetail {
 }
 
 /**
- * Reason the dialog was dismissed, forwarded as the `lyra-close` event detail
- * -- mirrors `<lyra-dialog>`'s own `DialogCloseReason` shape. `'escape'`/
+ * Reason the dialog was dismissed, forwarded as the `lr-close` event detail
+ * -- mirrors `<lr-dialog>`'s own `DialogCloseReason` shape. `'escape'`/
  * `'backdrop'` come from the dialog's own built-in dismiss triggers; any
  * other string is whatever a caller passes to `close()` directly (e.g. a
  * consumer's own footer Done button).
@@ -64,8 +64,8 @@ export interface ToolSelectionChangeDetail {
 export type ToolSelectDialogCloseReason = 'escape' | 'backdrop' | 'api' | (string & Record<never, never>);
 
 export interface LyraToolSelectDialogEventMap {
-  'lyra-change': CustomEvent<ToolSelectionChangeDetail>;
-  'lyra-close': CustomEvent<ToolSelectDialogCloseReason>;
+  'lr-change': CustomEvent<ToolSelectionChangeDetail>;
+  'lr-close': CustomEvent<ToolSelectDialogCloseReason>;
   blur: CustomEvent<undefined>;
   focus: CustomEvent<undefined>;
 }
@@ -83,11 +83,11 @@ interface ToolGroup {
 }
 
 /**
- * `<lyra-tool-select-dialog>` — a category-grouped, filterable, searchable
+ * `<lr-tool-select-dialog>` — a category-grouped, filterable, searchable
  * tool-enablement dialog for picking which agent tools are available in a
  * conversation.
  *
- * This renders its own dialog panel rather than nesting a `<lyra-dialog>` in
+ * This renders its own dialog panel rather than nesting a `<lr-dialog>` in
  * its shadow template. Shared overlay infrastructure coordinates stacking,
  * focus trapping, Escape/backdrop dismissal, and focus return with every
  * other overlay in the same document.
@@ -101,18 +101,18 @@ interface ToolGroup {
  * *and* unlocks the per-tool checkboxes for editing, so there's exactly one
  * control for that transition rather than a separate button duplicating it.
  *
- * There is no built-in footer/close button — like `<lyra-dialog>`, dismissal
+ * There is no built-in footer/close button — like `<lr-dialog>`, dismissal
  * happens via Escape, a backdrop click, or a consumer's own `footer`-slotted
  * action calling `close()`. This also means the search input is the very
  * first focusable element in the panel with no special-casing needed, so
  * it's what receives focus on open (see `updated()`).
  *
- * @customElement lyra-tool-select-dialog
+ * @customElement lr-tool-select-dialog
  * @slot footer - Optional action buttons (e.g. a "Done" button), rendered in a bottom row.
- * Changes already apply live via `lyra-change`, so this is optional.
- * @event lyra-change - The enabled-tool selection or the `useDefaults` toggle changed.
+ * Changes already apply live via `lr-change`, so this is optional.
+ * @event lr-change - The enabled-tool selection or the `useDefaults` toggle changed.
  * `detail: { selected: string[], useDefaults: boolean }`.
- * @event lyra-close - `detail: ToolSelectDialogCloseReason`. Fired exactly once per dismissal,
+ * @event lr-close - `detail: ToolSelectDialogCloseReason`. Fired exactly once per dismissal,
  * via Escape, a backdrop click, or a `close()` call.
  * @csspart backdrop - The full-viewport scrim behind the panel.
  * @csspart panel - The dialog panel itself (`role="dialog"` while open).
@@ -122,7 +122,7 @@ interface ToolGroup {
  * @csspart search-row - The wrapper around the search input.
  * @csspart search-input - The filter text input.
  * @csspart defaults-row - The wrapper around the use-defaults switch and its hint.
- * @csspart defaults-toggle - The built-in `<lyra-switch>` bound to `useDefaults`.
+ * @csspart defaults-toggle - The built-in `<lr-switch>` bound to `useDefaults`.
  * @csspart defaults-hint - The "turn off to customize" hint, shown only while `useDefaults` is true.
  * @csspart body - The scrollable wrapper around the grouped tool list.
  * @csspart empty - The "no tools" / "no matches" message.
@@ -132,7 +132,7 @@ interface ToolGroup {
  * (the heading's accessible name gets the full sentence from an sr-only sibling instead).
  * @csspart category-list - The `<ul>` of tool rows within a category.
  * @csspart tool-row - A single tool's `<li>` row.
- * @csspart tool-checkbox - A row's `<lyra-checkbox>`.
+ * @csspart tool-checkbox - A row's `<lr-checkbox>`.
  * @csspart tool-name - A row's name text (plus its `icon`, if set).
  * @csspart tool-icon - A row's leading icon glyph, when `icon` is set.
  * @csspart tool-description - A row's optional description text.
@@ -160,7 +160,7 @@ export class LyraToolSelectDialog extends LyraElement<LyraToolSelectDialogEventM
   @property() label = 'Select tools';
 
   /** Overrides the dialog panel's accessible name, taking precedence over the visible `label`
-   *  heading -- mirrors `<lyra-dialog>`'s/`<lyra-tool-result-dialog>`'s own host-`aria-label`
+   *  heading -- mirrors `<lr-dialog>`'s/`<lr-tool-result-dialog>`'s own host-`aria-label`
    *  override pattern. Fed only by a host `aria-label`. */
   @property({ attribute: 'aria-label' }) accessibleLabel: string | null = null;
 
@@ -210,7 +210,7 @@ export class LyraToolSelectDialog extends LyraElement<LyraToolSelectDialogEventM
 
   // Runs after render (not willUpdate) so [part="panel"] and its contents
   // have already landed in the DOM before the focus call below can rely on
-  // them -- mirrors lyra-dialog's/lyra-tool-result-dialog's identical
+  // them -- mirrors lr-dialog's/lr-tool-result-dialog's identical
   // ordering rationale.
   protected updated(changed: PropertyValues): void {
     if (changed.has('open') && this.open) {
@@ -253,7 +253,7 @@ export class LyraToolSelectDialog extends LyraElement<LyraToolSelectDialogEventM
 
   /**
    * Close the dialog and return focus to whatever had it before the dialog
-   * opened. `reason` is forwarded as the `lyra-close` detail — built-in
+   * opened. `reason` is forwarded as the `lr-close` detail — built-in
    * triggers pass `'escape'`/`'backdrop'`; a consumer's own close affordance
    * (e.g. a footer Done button) should call this directly with its own
    * reason string, so every dismissal path funnels through the same event
@@ -262,7 +262,7 @@ export class LyraToolSelectDialog extends LyraElement<LyraToolSelectDialogEventM
   close(reason: ToolSelectDialogCloseReason = 'api'): void {
     if (!this.open) return;
     this.open = false;
-    this.emit<ToolSelectDialogCloseReason>('lyra-close', reason);
+    this.emit<ToolSelectDialogCloseReason>('lr-close', reason);
   }
 
   private onBackdropClick = (): void => {
@@ -270,7 +270,7 @@ export class LyraToolSelectDialog extends LyraElement<LyraToolSelectDialogEventM
   };
 
   private emitChange(): void {
-    this.emit<ToolSelectionChangeDetail>('lyra-change', {
+    this.emit<ToolSelectionChangeDetail>('lr-change', {
       selected: [...this.selected],
       useDefaults: this.useDefaults,
     });
@@ -333,12 +333,12 @@ export class LyraToolSelectDialog extends LyraElement<LyraToolSelectDialogEventM
     const rowDisabled = Boolean(tool.disabled) || this.useDefaults;
     return html`
       <li part="tool-row" ?data-disabled=${rowDisabled}>
-        <lyra-checkbox
+        <lr-checkbox
           part="tool-checkbox"
           value=${tool.id}
           ?checked=${this.selected.includes(tool.id)}
           ?disabled=${rowDisabled}
-          @lyra-change=${(e: CustomEvent<{ checked: boolean }>) => this.onToolToggle(tool, e)}
+          @lr-change=${(e: CustomEvent<{ checked: boolean }>) => this.onToolToggle(tool, e)}
         >
           <span part="tool-name">
             ${tool.icon ? html`<span part="tool-icon" aria-hidden="true">${tool.icon}</span>` : nothing}${tool.name}
@@ -347,7 +347,7 @@ export class LyraToolSelectDialog extends LyraElement<LyraToolSelectDialogEventM
           ${tool.disabled && tool.disabledReason
             ? html`<span part="tool-disabled-reason">${tool.disabledReason}</span>`
             : nothing}
-        </lyra-checkbox>
+        </lr-checkbox>
       </li>
     `;
   }
@@ -422,13 +422,13 @@ export class LyraToolSelectDialog extends LyraElement<LyraToolSelectDialogEventM
           />
         </div>
         <div part="defaults-row">
-          <lyra-switch
+          <lr-switch
             part="defaults-toggle"
             ?checked=${this.useDefaults}
-            @lyra-change=${this.onDefaultsToggle}
+            @lr-change=${this.onDefaultsToggle}
           >
             ${this.localize('useDefaultTools')}
-          </lyra-switch>
+          </lr-switch>
           ${this.useDefaults
             ? html`<p part="defaults-hint">${this.localize('toolSelectCustomizeHint')}</p>`
             : nothing}
@@ -453,6 +453,6 @@ export class LyraToolSelectDialog extends LyraElement<LyraToolSelectDialogEventM
 
 declare global {
   interface HTMLElementTagNameMap {
-    'lyra-tool-select-dialog': LyraToolSelectDialog;
+    'lr-tool-select-dialog': LyraToolSelectDialog;
   }
 }

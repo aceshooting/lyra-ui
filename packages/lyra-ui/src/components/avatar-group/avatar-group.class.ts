@@ -5,8 +5,8 @@ import { LyraElement } from '../../internal/lyra-element.js';
 import { finiteCount } from '../../internal/numbers.js';
 import { styles } from './avatar-group.styles.js';
 // Type-only import — erased at build. Importing the value module (`avatar.ts`/`avatar.js`) here
-// would side-effect-register `<lyra-avatar>` just from importing `<lyra-avatar-group>`, which this
-// component must not do: consumers register `lyra-avatar` themselves.
+// would side-effect-register `<lr-avatar>` just from importing `<lr-avatar-group>`, which this
+// component must not do: consumers register `lr-avatar` themselves.
 import type { AvatarSize, AvatarShape, AvatarTone, LyraAvatar } from '../avatar/avatar.class.js';
 
 export interface AvatarGroupOverflowClickDetail {
@@ -15,68 +15,68 @@ export interface AvatarGroupOverflowClickDetail {
 }
 
 export interface LyraAvatarGroupEventMap {
-  'lyra-overflow-click': CustomEvent<AvatarGroupOverflowClickDetail>;
+  'lr-overflow-click': CustomEvent<AvatarGroupOverflowClickDetail>;
 }
 
 /**
- * `<lyra-avatar-group>` — stacks a set of slotted `<lyra-avatar>` children into a single
+ * `<lr-avatar-group>` — stacks a set of slotted `<lr-avatar>` children into a single
  * overlapping row (negative-margin overlap, ring border so each circle reads as distinct) and,
  * past a configurable `max` count, collapses the excess into a "+N" overflow badge. First-party
- * invention (no Web Awesome equivalent), composed over `<lyra-avatar>` rather than reimplementing
- * it — plain light-DOM slotted content is the group's items, the same shape `<lyra-split>`'s
- * panels / `<lyra-source-list>`'s cards / `<lyra-chip-group>`'s chips already use, not a
+ * invention (no Web Awesome equivalent), composed over `<lr-avatar>` rather than reimplementing
+ * it — plain light-DOM slotted content is the group's items, the same shape `<lr-split>`'s
+ * panels / `<lr-source-list>`'s cards / `<lr-chip-group>`'s chips already use, not a
  * `.items` array prop.
  *
  * **`size`/`shape`/`tone` do not cascade onto slotted avatars.** They drive only this
  * component's own ring, overlap amount, and the overflow badge's rendering — they cannot resize
- * or reshape the `<lyra-avatar>` children themselves, since each avatar's own `--lyra-avatar-size`
+ * or reshape the `<lr-avatar>` children themselves, since each avatar's own `--lr-avatar-size`
  * lives inside *its own* shadow-scoped `:host` block and unconditionally overrides anything of
  * the same custom-property name inherited from an ancestor. This mirrors every other group
  * component in this library (`button-group`, `checkbox-group`, `radio`): none of them cascade a
  * size/variant prop onto their children either. The consumer is responsible for setting a
- * matching `size`/`shape` on both the group and each `<lyra-avatar>` child for a visually coherent
+ * matching `size`/`shape` on both the group and each `<lr-avatar>` child for a visually coherent
  * stack.
  *
- * **Deliberate divergence from `<lyra-chip-group>`'s overflow pattern.** Chip-group's overflow
+ * **Deliberate divergence from `<lr-chip-group>`'s overflow pattern.** Chip-group's overflow
  * indicator is a disclosure toggle that reveals the excess children in place (`aria-expanded`,
  * a "Show less" relabel). This component's overflow badge does not do that — unstacking N more
  * circles back into the row would defeat the entire point of a compact identity stack. Instead,
- * `lyra-overflow-click` is a pure notification hook: the component keeps rendering the same
+ * `lr-overflow-click` is a pure notification hook: the component keeps rendering the same
  * collapsed stack + badge regardless of whether anyone listens, and a consumer typically wires
  * the event to open their own popover/dialog/tooltip listing the hidden members (out of scope for
  * this component — no popover dependency is introduced here). There is no `expanded` state, no
  * `aria-expanded`, and the badge never changes its own text/label on click.
  *
  * **No roving-tabindex / arrow-key composite-widget behavior applies here, and this is
- * intentional, not an oversight.** Avatars are non-interactive per `<lyra-avatar>`'s own
+ * intentional, not an oversight.** Avatars are non-interactive per `<lr-avatar>`'s own
  * established contract (purely presentational, no built-in interactivity), so this is not a
  * listbox/toolbar/grid needing `ArrowLeft`/`ArrowRight` roving focus — the overflow badge is the
  * only interactive element, and as a native `<button>` it's automatically part of the normal Tab
  * sequence with no custom keyboard handling required.
  *
- * @customElement lyra-avatar-group
- * @slot - `<lyra-avatar>` elements (or any content, though the avatar pairing is the intended
+ * @customElement lr-avatar-group
+ * @slot - `<lr-avatar>` elements (or any content, though the avatar pairing is the intended
  * usage).
- * @event lyra-overflow-click - The overflow badge was activated (click, or Enter/Space while
+ * @event lr-overflow-click - The overflow badge was activated (click, or Enter/Space while
  * focused — native `<button>` behavior). `detail: { hiddenCount, hiddenAvatars }` where
  * `hiddenAvatars` is the current set of children the component has hidden past `max`.
  * Non-cancelable — informational hook, no default action to veto.
  * @csspart base - The outer inline-flex container (holds the slot and the overflow badge).
  * @csspart overflow-badge - The "+N" button. Only rendered while `max` is actively causing an
  * overflow.
- * @cssprop [--lyra-avatar-group-avatar-size=var(--lyra-size-2rem)] - Sizes the overflow badge to
+ * @cssprop [--lr-avatar-group-avatar-size=var(--lr-size-2rem)] - Sizes the overflow badge to
  * match the slotted avatars. Does not resize the avatars themselves (see class doc) — set a
- * matching `size` on each `<lyra-avatar>` child directly for that.
- * @cssprop [--lyra-avatar-group-overlap=var(--lyra-size-neg-6px)] - Horizontal overlap between
+ * matching `size` on each `<lr-avatar>` child directly for that.
+ * @cssprop [--lr-avatar-group-overlap=var(--lr-size-neg-6px)] - Horizontal overlap between
  * consecutive avatars (a logical `margin-inline-start`, so it auto-mirrors under `dir="rtl"`).
  * Setting this to `0` or a positive length is a supported escape hatch that turns the stack into
  * normal, non-overlapping spacing.
- * @cssprop [--lyra-avatar-group-ring-color=var(--lyra-color-surface)] - The cutout-style ring
+ * @cssprop [--lr-avatar-group-ring-color=var(--lr-color-surface)] - The cutout-style ring
  * drawn around every avatar and the overflow badge.
- * @cssprop [--lyra-avatar-group-ring-width=var(--lyra-border-width-medium)] - Ring thickness.
- * @cssprop [--lyra-avatar-group-badge-bg=var(--lyra-color-border)] - Overflow badge background.
+ * @cssprop [--lr-avatar-group-ring-width=var(--lr-border-width-medium)] - Ring thickness.
+ * @cssprop [--lr-avatar-group-badge-bg=var(--lr-color-border)] - Overflow badge background.
  * Tone-driven; see `tone`.
- * @cssprop [--lyra-avatar-group-badge-color=var(--lyra-color-text)] - Overflow badge text color.
+ * @cssprop [--lr-avatar-group-badge-color=var(--lr-color-text)] - Overflow badge text color.
  * Tone-driven; see `tone`.
  */
 export class LyraAvatarGroup extends LyraElement<LyraAvatarGroupEventMap> {
@@ -99,18 +99,18 @@ export class LyraAvatarGroup extends LyraElement<LyraAvatarGroupEventMap> {
     this.requestUpdate('max', old);
   }
 
-  /** Visual size, reused verbatim from `<lyra-avatar>`'s own `AvatarSize` union. Drives the
+  /** Visual size, reused verbatim from `<lr-avatar>`'s own `AvatarSize` union. Drives the
    *  overflow badge's size and the overlap amount — does not resize slotted avatars (see class
    *  doc). */
   @property({ reflect: true }) size: AvatarSize = 'md';
 
-  /** `'circle'` (the default) or `'square'`, reused verbatim from `<lyra-avatar>`'s own
+  /** `'circle'` (the default) or `'square'`, reused verbatim from `<lr-avatar>`'s own
    *  `AvatarShape` union. Drives the overflow badge's shape — does not reshape slotted avatars
    *  (see class doc); each avatar's own ring already adapts to that avatar's own `shape`
    *  attribute independently. */
   @property({ reflect: true }) shape: AvatarShape = 'circle';
 
-  /** Recolors the overflow badge, reused verbatim from `<lyra-avatar>`'s own `AvatarTone` union.
+  /** Recolors the overflow badge, reused verbatim from `<lr-avatar>`'s own `AvatarTone` union.
    *  `'neutral'` (the default) reads as a plain, unaccented badge. */
   @property({ reflect: true }) tone: AvatarTone = 'neutral';
 
@@ -120,7 +120,7 @@ export class LyraAvatarGroup extends LyraElement<LyraAvatarGroupEventMap> {
   @property() label = '';
 
   // Tracks the default slot's assigned-element count, the same connectedCallback/willUpdate +
-  // slotchange convention `<lyra-chip-group>`'s `childCount` already establishes.
+  // slotchange convention `<lr-chip-group>`'s `childCount` already establishes.
   @state() private childCount = 0;
 
   protected willUpdate(): void {
@@ -131,7 +131,7 @@ export class LyraAvatarGroup extends LyraElement<LyraAvatarGroupEventMap> {
 
   firstUpdated(): void {
     // Fallback reconciliation for slot-forwarding / engines that don't fire `slotchange` for
-    // content present at parse time — same idiom as `<lyra-chip-group>`'s identical
+    // content present at parse time — same idiom as `<lr-chip-group>`'s identical
     // `firstUpdated`. `updated()` (below) always runs right after this and recomputes visibility
     // from this same corrected count.
     const slot = this.shadowRoot!.querySelector('slot') as HTMLSlotElement;
@@ -170,7 +170,7 @@ export class LyraAvatarGroup extends LyraElement<LyraAvatarGroupEventMap> {
   private onOverflowClick = (): void => {
     const slot = this.shadowRoot!.querySelector('slot') as HTMLSlotElement;
     const hiddenAvatars = slot.assignedElements({ flatten: true }).slice(this.max as number) as LyraAvatar[];
-    this.emit<AvatarGroupOverflowClickDetail>('lyra-overflow-click', {
+    this.emit<AvatarGroupOverflowClickDetail>('lr-overflow-click', {
       hiddenCount: hiddenAvatars.length,
       hiddenAvatars,
     });
@@ -204,6 +204,6 @@ export class LyraAvatarGroup extends LyraElement<LyraAvatarGroupEventMap> {
 
 declare global {
   interface HTMLElementTagNameMap {
-    'lyra-avatar-group': LyraAvatarGroup;
+    'lr-avatar-group': LyraAvatarGroup;
   }
 }

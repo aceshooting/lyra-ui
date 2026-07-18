@@ -33,9 +33,9 @@ interface EbookSearchMatch {
 }
 
 export interface LyraEbookViewerEventMap extends LyraAnchorTargetEventMap {
-  'lyra-render-error': CustomEvent<{ error: unknown }>;
-  'lyra-location-change': CustomEvent<{ cfi: string; href: string }>;
-  'lyra-search-change': CustomEvent<{ query: string; matchCount: number; activeIndex: number }>;
+  'lr-render-error': CustomEvent<{ error: unknown }>;
+  'lr-location-change': CustomEvent<{ cfi: string; href: string }>;
+  'lr-search-change': CustomEvent<{ query: string; matchCount: number; activeIndex: number }>;
 }
 
 class LyraEbookViewerBase extends LyraElement<LyraEbookViewerEventMap> {}
@@ -61,17 +61,17 @@ class LyraEbookViewerBase extends LyraElement<LyraEbookViewerEventMap> {}
  * via epub.js's own `item.find()`, aborting a superseded scan when a newer search or a `src`
  * change supersedes it.
  *
- * @customElement lyra-ebook-viewer
- * @event lyra-render-error - Fired when fetching, opening, or rendering fails.
- * @event lyra-location-change - The reading location changed (from `rendition`'s own `relocated`
+ * @customElement lr-ebook-viewer
+ * @event lr-render-error - Fired when fetching, opening, or rendering fails.
+ * @event lr-location-change - The reading location changed (from `rendition`'s own `relocated`
  *   event). `detail: { cfi, href }`.
- * @event lyra-search-change - Fired whenever the search query, match count, or active match index
+ * @event lr-search-change - Fired whenever the search query, match count, or active match index
  *   changes, from `search()`/`searchNext()`/`searchPrevious()`/`clearSearch()`. `detail: { query,
  *   matchCount, activeIndex }`.
- * @event lyra-highlight-activate - A painted `cfi` highlight was clicked. `detail: { id }`.
- * @event lyra-text-select - Fired on selection end inside a chapter iframe (mirrors epub.js's own
+ * @event lr-highlight-activate - A painted `cfi` highlight was clicked. `detail: { id }`.
+ * @event lr-text-select - Fired on selection end inside a chapter iframe (mirrors epub.js's own
  *   `selected` event). `detail: { text, anchor, rects }`; `anchor` is a `cfi` `LyraAnchor`.
- * @event lyra-anchor-result - Fired after an `anchor` property assignment or a `scrollToAnchor()`
+ * @event lr-anchor-result - Fired after an `anchor` property assignment or a `scrollToAnchor()`
  *   call is applied. `detail: { found }`.
  * @csspart base - The viewer container.
  * @csspart toolbar - Previous and next chapter controls.
@@ -205,7 +205,7 @@ export class LyraEbookViewer extends DocumentAnchorTarget(LyraEbookViewerBase) {
     } catch (error) {
       if (isAbortError(error) || !this.isConnected || generation !== this.generation) return;
       this.ebookState = { kind: 'error', message: this.localize(isResourceLimitError(error) ? 'documentPreviewResourceTooLarge' : 'ebookViewerLoadError') };
-      this.emit('lyra-render-error', { error });
+      this.emit('lr-render-error', { error });
       return;
     }
     if (!this.isConnected || generation !== this.generation) return;
@@ -229,7 +229,7 @@ export class LyraEbookViewer extends DocumentAnchorTarget(LyraEbookViewerBase) {
         if (!cfi || cfi === this.location) return;
         this.applyingRelocated = true;
         this.location = cfi;
-        this.emit('lyra-location-change', { cfi, href });
+        this.emit('lr-location-change', { cfi, href });
       });
       rendition.on('selected', (cfiRange: string, contents: OptionalPeerApi) => {
         const selection = contents?.window?.getSelection?.();
@@ -237,7 +237,7 @@ export class LyraEbookViewer extends DocumentAnchorTarget(LyraEbookViewerBase) {
         if (!text.trim()) return;
         const rects: DOMRect[] =
           selection && selection.rangeCount > 0 ? (Array.from(selection.getRangeAt(0).getClientRects()) as DOMRect[]) : [];
-        this.emit<TextSelectDetail>('lyra-text-select', { text, anchor: { kind: 'cfi', cfi: cfiRange }, rects });
+        this.emit<TextSelectDetail>('lr-text-select', { text, anchor: { kind: 'cfi', cfi: cfiRange }, rects });
       });
       if (generation !== this.generation) {
         book.destroy();
@@ -250,7 +250,7 @@ export class LyraEbookViewer extends DocumentAnchorTarget(LyraEbookViewerBase) {
     } catch (error) {
       if (isAbortError(error) || !this.isConnected || generation !== this.generation) return;
       this.ebookState = { kind: 'error', message: this.localize('ebookViewerLoadError') };
-      this.emit('lyra-render-error', { error });
+      this.emit('lr-render-error', { error });
     }
   }
 
@@ -335,8 +335,8 @@ export class LyraEbookViewer extends DocumentAnchorTarget(LyraEbookViewerBase) {
       this.rendition.annotations.highlight(
         cfi,
         { id: highlight.id },
-        () => this.emit<HighlightActivateDetail>('lyra-highlight-activate', { id: highlight.id }),
-        `lyra-hl-${tone}`,
+        () => this.emit<HighlightActivateDetail>('lr-highlight-activate', { id: highlight.id }),
+        `lr-hl-${tone}`,
       );
       this.paintedHighlightCfis.push(cfi);
     }
@@ -400,7 +400,7 @@ export class LyraEbookViewer extends DocumentAnchorTarget(LyraEbookViewerBase) {
     return true;
   }
 
-  /** Clears the query, matches, and any painted search annotation, and resets `lyra-search-change`
+  /** Clears the query, matches, and any painted search annotation, and resets `lr-search-change`
    *  to a 0-match/no-active-index state. */
   clearSearch(): void {
     this.searchGeneration++;
@@ -408,7 +408,7 @@ export class LyraEbookViewer extends DocumentAnchorTarget(LyraEbookViewerBase) {
     this.searchMatches = [];
     this.searchActiveIndex = -1;
     this.clearSearchAnnotation();
-    this.emit('lyra-search-change', { query: '', matchCount: 0, activeIndex: -1 });
+    this.emit('lr-search-change', { query: '', matchCount: 0, activeIndex: -1 });
   }
 
   private clearSearchAnnotation(): void {
@@ -421,12 +421,12 @@ export class LyraEbookViewer extends DocumentAnchorTarget(LyraEbookViewerBase) {
     if (!match || !this.rendition) return;
     this.clearSearchAnnotation();
     await this.rendition.display(match.cfi);
-    this.rendition.annotations.highlight(match.cfi, {}, undefined, 'lyra-ebook-search');
+    this.rendition.annotations.highlight(match.cfi, {}, undefined, 'lr-ebook-search');
     this.searchAnnotationCfi = match.cfi;
   }
 
   private emitSearchChange(): void {
-    this.emit('lyra-search-change', {
+    this.emit('lr-search-change', {
       query: this.searchQuery,
       matchCount: this.searchMatches.length,
       activeIndex: this.searchActiveIndex,
@@ -472,5 +472,5 @@ export class LyraEbookViewer extends DocumentAnchorTarget(LyraEbookViewerBase) {
 }
 
 declare global {
-  interface HTMLElementTagNameMap { 'lyra-ebook-viewer': LyraEbookViewer; }
+  interface HTMLElementTagNameMap { 'lr-ebook-viewer': LyraEbookViewer; }
 }

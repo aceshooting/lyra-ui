@@ -10,11 +10,11 @@ registerDocumentRenderer('application/pdf', {
   matches: (file: DocumentFile) => file.name.toLowerCase().endsWith('.pdf'),
   capabilities: { anchors: ['page', 'text-quote', 'region'], textSelect: true, search: true },
   load: async () => ({
-    render: (file: DocumentFile) => html`<lyra-pdf-viewer
+    render: (file: DocumentFile) => html`<lr-pdf-viewer
       src=${file.src}
       name=${file.name}
       .anchor=${file.anchor ?? null}
       .highlights=${file.highlights ?? []}
-    ></lyra-pdf-viewer>`,
+    ></lr-pdf-viewer>`,
   }),
 });

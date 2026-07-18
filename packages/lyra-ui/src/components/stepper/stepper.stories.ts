@@ -36,13 +36,13 @@ const lockedStepsWithTitle: StepItem[] = [
 
 const meta: Meta = {
   title: 'Stepper',
-  component: 'lyra-stepper',
+  component: 'lr-stepper',
   tags: ['autodocs'],
   parameters: {
     docs: {
       description: {
         component:
-          'An ordered multi-step wizard/form navigation strip: label + index per step, current/completed/disabled/error state, click-to-jump. Fully data-driven and controlled -- like `lyra-table`, it never mutates its own `steps`; a click or Enter/Space on a non-disabled step fires a cancelable `lyra-step-select` event and the host decides whether/how `steps` changes in response.',
+          'An ordered multi-step wizard/form navigation strip: label + index per step, current/completed/disabled/error state, click-to-jump. Fully data-driven and controlled -- like `lr-table`, it never mutates its own `steps`; a click or Enter/Space on a non-disabled step fires a cancelable `lr-step-select` event and the host decides whether/how `steps` changes in response.',
       },
     },
   },
@@ -51,19 +51,19 @@ export default meta;
 type Story = StoryObj;
 
 export const Horizontal: Story = {
-  render: () => html`<lyra-stepper .steps=${wizardSteps}></lyra-stepper>`,
+  render: () => html`<lr-stepper .steps=${wizardSteps}></lr-stepper>`,
 };
 
 export const Vertical: Story = {
-  render: () => html`<lyra-stepper orientation="vertical" .steps=${wizardSteps}></lyra-stepper>`,
+  render: () => html`<lr-stepper orientation="vertical" .steps=${wizardSteps}></lr-stepper>`,
 };
 
 export const WithError: Story = {
-  render: () => html`<lyra-stepper .steps=${errorSteps}></lyra-stepper>`,
+  render: () => html`<lr-stepper .steps=${errorSteps}></lr-stepper>`,
 };
 
 export const LockedStepWithTitle: Story = {
-  render: () => html`<lyra-stepper .steps=${lockedStepsWithTitle}></lyra-stepper>`,
+  render: () => html`<lr-stepper .steps=${lockedStepsWithTitle}></lr-stepper>`,
   parameters: {
     docs: {
       description: {
@@ -77,13 +77,13 @@ export const LockedStepWithTitle: Story = {
 export const StepSelectEvent: Story = {
   render: () => html`
     <div>
-      <lyra-stepper
+      <lr-stepper
         .steps=${wizardSteps}
-        @lyra-step-select=${(e: CustomEvent<{ index: number; id: string }>) => {
+        @lr-step-select=${(e: CustomEvent<{ index: number; id: string }>) => {
           const out = document.getElementById('stepper-select-log');
           if (out) out.textContent = `Selected step: ${e.detail.id} (index ${e.detail.index})`;
         }}
-      ></lyra-stepper>
+      ></lr-stepper>
       <p id="stepper-select-log">Selected step: (none yet)</p>
     </div>
   `,

@@ -13,8 +13,8 @@ export interface MessageFeedbackReason {
 }
 
 export interface LyraMessageFeedbackEventMap {
-  'lyra-change': CustomEvent<{ value: 'up' | 'down' | null }>;
-  'lyra-submit': CustomEvent<{ value: 'up' | 'down'; reasonIds: string[]; comment: string }>;
+  'lr-change': CustomEvent<{ value: 'up' | 'down' | null }>;
+  'lr-submit': CustomEvent<{ value: 'up' | 'down'; reasonIds: string[]; comment: string }>;
 }
 
 // A one-off thumb glyph, sharing internal/icons.ts's 24x24 viewBox / 1em sizing / stroke-width
@@ -48,23 +48,23 @@ function thumbIcon(direction: 'up' | 'down', filled: boolean): SVGTemplateResult
 }
 
 /**
- * `<lyra-message-feedback>` — thumbs up/down for one assistant message, with an optional inline
+ * `<lr-message-feedback>` — thumbs up/down for one assistant message, with an optional inline
  * detail step (categorical reason chips + a free-text comment) that opens as a disclosure directly
  * below the thumbs. Emits; never persists — a host reflects a previously-recorded rating back via
  * `value` (+ `disabled` for a read-only display).
  *
- * Activating the pressed thumb again toggles it off to `null` (mirrors `<lyra-rating>`'s
+ * Activating the pressed thumb again toggles it off to `null` (mirrors `<lr-rating>`'s
  * re-activate-to-clear contract) *unless* its own detail panel is currently open, in which case that
  * click re-opens the panel instead (showing whatever reason/comment draft survived a prior Escape or
  * submit). A thumbs-only configuration (`reasons` empty and `commentable` false, e.g.
- * `<lyra-message-actions>`'s embedded built-in) never has a panel to reopen, so its thumbs always
+ * `<lr-message-actions>`'s embedded built-in) never has a panel to reopen, so its thumbs always
  * behave as a plain toggle.
  *
- * @customElement lyra-message-feedback
- * @event lyra-change - `detail: { value }`. Activating a thumb sets it; re-activating the pressed
+ * @customElement lr-message-feedback
+ * @event lr-change - `detail: { value }`. Activating a thumb sets it; re-activating the pressed
  *   thumb (with no panel open) clears it to `null`. The terminal signal when no detail panel is
  *   configured for that thumb.
- * @event lyra-submit - `detail: { value, reasonIds, comment }`, fired by the panel's submit button.
+ * @event lr-submit - `detail: { value, reasonIds, comment }`, fired by the panel's submit button.
  * @csspart base - The root.
  * @csspart thumbs - The wrapper around both thumb buttons.
  * @csspart up-button - The thumbs-up toggle button.
@@ -102,12 +102,12 @@ export class LyraMessageFeedback extends LyraElement<LyraMessageFeedbackEventMap
 
   @query('[part="up-button"]') private upButtonEl?: HTMLButtonElement;
   @query('[part="down-button"]') private downButtonEl?: HTMLButtonElement;
-  @query('lyra-live-region') private liveRegion?: LyraLiveRegion;
+  @query('lr-live-region') private liveRegion?: LyraLiveRegion;
 
   private readonly panelId = nextId('message-feedback-panel');
 
   /** Focuses the thumb matching the current `value` (the up thumb when `value` is `null`) --
-   *  lets a toolbar embedding this component (e.g. `<lyra-message-actions>`) treat it as one
+   *  lets a toolbar embedding this component (e.g. `<lr-message-actions>`) treat it as one
    *  arrow-key stop. */
   override focus(options?: FocusOptions): void {
     (this.value === 'down' ? this.downButtonEl : this.upButtonEl)?.focus(options);
@@ -134,24 +134,24 @@ export class LyraMessageFeedback extends LyraElement<LyraMessageFeedbackEventMap
         this.panelOpen = false;
         this.selectedReasonIds = [];
         this.commentDraft = '';
-        this.emit<{ value: 'up' | 'down' | null }>('lyra-change', { value: null });
+        this.emit<{ value: 'up' | 'down' | null }>('lr-change', { value: null });
         return;
       }
       if (this.detailApplies(next) && this.hasDetailContent) {
         // Panel was closed (Escape, or a prior submit) without clearing `value` -- re-open it
-        // showing whatever draft survived. Nothing about `value` changed, so no lyra-change.
+        // showing whatever draft survived. Nothing about `value` changed, so no lr-change.
         this.panelOpen = true;
         return;
       }
       this.value = null;
-      this.emit<{ value: 'up' | 'down' | null }>('lyra-change', { value: null });
+      this.emit<{ value: 'up' | 'down' | null }>('lr-change', { value: null });
       return;
     }
     this.selectedReasonIds = [];
     this.commentDraft = '';
     this.value = next;
     this.panelOpen = this.detailApplies(next) && this.hasDetailContent;
-    this.emit<{ value: 'up' | 'down' | null }>('lyra-change', { value: next });
+    this.emit<{ value: 'up' | 'down' | null }>('lr-change', { value: next });
   }
 
   private focusActiveThumb(): void {
@@ -182,7 +182,7 @@ export class LyraMessageFeedback extends LyraElement<LyraMessageFeedbackEventMap
 
   private onSubmit = (): void => {
     if (!this.value) return;
-    this.emit<{ value: 'up' | 'down'; reasonIds: string[]; comment: string }>('lyra-submit', {
+    this.emit<{ value: 'up' | 'down'; reasonIds: string[]; comment: string }>('lr-submit', {
       value: this.value,
       reasonIds: [...this.selectedReasonIds],
       comment: this.commentDraft.trim(),
@@ -224,11 +224,11 @@ export class LyraMessageFeedback extends LyraElement<LyraMessageFeedbackEventMap
                         <div part="reasons" role="group" aria-label=${this.localize('feedbackReasonsLabel')}>
                           ${this.reasons.map(
                             (reason) => html`
-                              <lyra-chip
+                              <lr-chip
                                 toggleable
                                 ?selected=${this.selectedReasonIds.includes(reason.id)}
-                                @lyra-chip-select=${() => this.toggleReason(reason.id)}
-                                >${reason.label}</lyra-chip
+                                @lr-chip-select=${() => this.toggleReason(reason.id)}
+                                >${reason.label}</lr-chip
                               >
                             `,
                           )}
@@ -253,7 +253,7 @@ export class LyraMessageFeedback extends LyraElement<LyraMessageFeedbackEventMap
               </div>
             `
           : nothing}
-        <lyra-live-region></lyra-live-region>
+        <lr-live-region></lr-live-region>
       </div>
     `;
   }
@@ -261,6 +261,6 @@ export class LyraMessageFeedback extends LyraElement<LyraMessageFeedbackEventMap
 
 declare global {
   interface HTMLElementTagNameMap {
-    'lyra-message-feedback': LyraMessageFeedback;
+    'lr-message-feedback': LyraMessageFeedback;
   }
 }

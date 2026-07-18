@@ -5,7 +5,7 @@ import { finiteDuration } from '../../internal/numbers.js';
 import { styles } from './copy-button.styles.js';
 
 /** How long the checkmark confirmation state lasts before reverting -- matches
- *  `lyra-code-block`'s own `COPY_CONFIRM_MS`. */
+ *  `lr-code-block`'s own `COPY_CONFIRM_MS`. */
 const DEFAULT_FEEDBACK_DURATION = 1500;
 
 const ICON_VIEW_BOX = '0 0 24 24';
@@ -29,7 +29,7 @@ function copyIcon(): SVGTemplateResult {
   `;
 }
 
-/** Matches `<lyra-checkbox>`'s own checkmark glyph exactly, for visual consistency across the
+/** Matches `<lr-checkbox>`'s own checkmark glyph exactly, for visual consistency across the
  *  library's "confirmation" affordances. */
 function checkIcon(): SVGTemplateResult {
   return svg`
@@ -49,19 +49,19 @@ function checkIcon(): SVGTemplateResult {
 }
 
 export interface LyraCopyButtonEventMap {
-  'lyra-copy': CustomEvent<{ text: string }>;
+  'lr-copy': CustomEvent<{ text: string }>;
 }
 /**
- * `<lyra-copy-button>` — a standalone icon-only copy-to-clipboard affordance for a plain
+ * `<lr-copy-button>` — a standalone icon-only copy-to-clipboard affordance for a plain
  * single/multi-line text value in a layout the consumer controls (e.g. absolutely positioned in
- * the corner of a `wa-textarea` or a read-only output field). Unlike `lyra-code-block`'s or
- * `lyra-json-viewer`'s own built-in copy buttons, this takes no positioning opinion of its own and
+ * the corner of a `wa-textarea` or a read-only output field). Unlike `lr-code-block`'s or
+ * `lr-json-viewer`'s own built-in copy buttons, this takes no positioning opinion of its own and
  * has no code/JSON content model to adopt just to reuse the copy affordance.
  *
- * @customElement lyra-copy-button
- * @event lyra-copy - Fired on activation. `detail: { text }` is always `value`, and always fires
+ * @customElement lr-copy-button
+ * @event lr-copy - Fired on activation. `detail: { text }` is always `value`, and always fires
  *   regardless of whether the actual OS clipboard write succeeded — same convention as
- *   `lyra-code-block`'s/`lyra-json-viewer`'s own copy buttons.
+ *   `lr-code-block`'s/`lr-json-viewer`'s own copy buttons.
  * @csspart base - The button itself.
  */
 export class LyraCopyButton extends LyraElement<LyraCopyButtonEventMap> {
@@ -103,8 +103,8 @@ export class LyraCopyButton extends LyraElement<LyraCopyButtonEventMap> {
     try {
       // navigator.clipboard is absent in insecure contexts / older browsers, and some engines
       // throw synchronously rather than rejecting -- either way this is best-effort; the click
-      // handler below always emits lyra-copy regardless of whether the OS clipboard was actually
-      // reached. Same precedent as <lyra-code-block>'s/<lyra-json-viewer>'s own copy buttons.
+      // handler below always emits lr-copy regardless of whether the OS clipboard was actually
+      // reached. Same precedent as <lr-code-block>'s/<lr-json-viewer>'s own copy buttons.
       void navigator.clipboard?.writeText(text)?.catch(() => {});
     } catch {
       // see above
@@ -114,7 +114,7 @@ export class LyraCopyButton extends LyraElement<LyraCopyButtonEventMap> {
   private onClick = (): void => {
     if (this.disabled) return;
     this.writeClipboard(this.value);
-    this.emit('lyra-copy', { text: this.value });
+    this.emit('lr-copy', { text: this.value });
     this.justCopied = true;
     clearTimeout(this.copyTimeoutId);
     // A NaN/negative feedbackDuration (a bad attribute, or a stray programmatic assignment) must
@@ -142,6 +142,6 @@ export class LyraCopyButton extends LyraElement<LyraCopyButtonEventMap> {
 
 declare global {
   interface HTMLElementTagNameMap {
-    'lyra-copy-button': LyraCopyButton;
+    'lr-copy-button': LyraCopyButton;
   }
 }

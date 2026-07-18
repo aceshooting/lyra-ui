@@ -7,16 +7,16 @@ import { prefersReducedMotion } from '../../internal/motion.js';
 import { styles } from './animated-image.styles.js';
 
 export interface LyraAnimatedImageEventMap {
-  'lyra-load': CustomEvent<undefined>;
-  'lyra-error': CustomEvent<undefined>;
-  'lyra-play': CustomEvent<undefined>;
-  'lyra-pause': CustomEvent<undefined>;
+  'lr-load': CustomEvent<undefined>;
+  'lr-error': CustomEvent<undefined>;
+  'lr-play': CustomEvent<undefined>;
+  'lr-pause': CustomEvent<undefined>;
   blur: CustomEvent<undefined>;
   focus: CustomEvent<undefined>;
 }
 
 /**
- * `<lyra-animated-image>` -- displays an animated GIF/APNG/WebP with a
+ * `<lr-animated-image>` -- displays an animated GIF/APNG/WebP with a
  * play/pause control, defaulting to a frozen first frame both at rest and
  * automatically under `prefers-reduced-motion: reduce` (unless the page
  * author explicitly opts back in via `respect-reduced-motion="false"`), so
@@ -24,7 +24,7 @@ export interface LyraAnimatedImageEventMap {
  *
  * **Freeze-frame mechanism.** The live `<img>`'s `load` event handler
  * synchronously draws the just-loaded image to `[part="canvas"]` (a
- * DPR-aware `drawImage()`, the same pattern `<lyra-heatmap>` uses for its own
+ * DPR-aware `drawImage()`, the same pattern `<lr-heatmap>` uses for its own
  * canvas sizing) before any animation frames have had a chance to advance.
  * That captured frame is what pausing always reverts to -- it is not
  * re-captured on every pause, only once per successful `src` load. Both
@@ -37,32 +37,32 @@ export interface LyraAnimatedImageEventMap {
  * reflects nothing on its own). `playing` is the read-only, reflected effect
  * after reduced-motion arbitration: `play && !(respectReducedMotion &&
  * <OS prefers-reduced-motion: reduce>)`. A page can set `.play = true` while
- * reduced motion still keeps the visual frozen -- `lyra-play`/`lyra-pause`
+ * reduced motion still keeps the visual frozen -- `lr-play`/`lr-pause`
  * only fire on a real transition of the resolved `playing` value, never on a
  * `play` assignment that reduced motion blocks from taking visible effect.
  *
  * **Safety.** `src` is re-validated through `safeMediaSrc()` (the same
- * allowlist `<lyra-media-card>` uses) before it is ever assigned to the real
+ * allowlist `<lr-media-card>` uses) before it is ever assigned to the real
  * `<img src>`. An empty `src` renders no `src` attribute and is not an
  * error; a non-empty `src` that fails the check is treated exactly like a
- * native image decode failure -- `lyra-error` fires and no request is ever
+ * native image decode failure -- `lr-error` fires and no request is ever
  * attempted.
  *
  * **Decorative-only is not supported.** An explicit `alt=""` still falls
  * back to the localized `animatedImageDefaultAlt` string rather than staying
- * empty/presentational -- the same deliberate tradeoff `<lyra-media-card>`'s
+ * empty/presentational -- the same deliberate tradeoff `<lr-media-card>`'s
  * `imgAlt` getter already makes for its own `alt`/`filename` fallback chain.
  *
  * Deliberately no label/hint/error chrome -- this is not a form-associated
  * control (nothing resembling a value the user submits).
  *
- * @customElement lyra-animated-image
+ * @customElement lr-animated-image
  * @slot play-icon - Custom icon shown on `[part="play-button"]` while frozen/paused. Defaults to a play glyph.
  * @slot pause-icon - Custom icon shown on `[part="play-button"]` while playing. Defaults to a pause glyph.
- * @event lyra-load - The live `<img>` finished loading. Fires again on every successful subsequent `src` change.
- * @event lyra-error - The live `<img>` failed to load, or `src` was non-empty but failed the safe-URL check. Never fires for an empty `src`.
- * @event lyra-play - The effective `playing` state transitioned `false` -> `true`.
- * @event lyra-pause - The effective `playing` state transitioned `true` -> `false` (including a reduced-motion change forcing a freeze while `play` stays `true`).
+ * @event lr-load - The live `<img>` finished loading. Fires again on every successful subsequent `src` change.
+ * @event lr-error - The live `<img>` failed to load, or `src` was non-empty but failed the safe-URL check. Never fires for an empty `src`.
+ * @event lr-play - The effective `playing` state transitioned `false` -> `true`.
+ * @event lr-pause - The effective `playing` state transitioned `true` -> `false` (including a reduced-motion change forcing a freeze while `play` stays `true`).
  * @event blur - Re-dispatched from the internal play/pause button as a bubbling, composed event.
  * @event focus - Re-dispatched from the internal play/pause button as a bubbling, composed event.
  * @csspart base - Root wrapper; positioning context for `control-box`.
@@ -70,9 +70,9 @@ export interface LyraAnimatedImageEventMap {
  * @csspart canvas - The frozen-frame `<canvas>`, shown in place of `image` while not playing.
  * @csspart control-box - The container that surrounds and backgrounds the play/pause button. Only rendered once loaded and error-free.
  * @csspart play-button - The `<button type="button">` inside `control-box` that toggles `play`.
- * @cssprop --lyra-animated-image-control-box-size - The size of `control-box`. Defaults to `var(--lyra-icon-button-size)`.
- * @cssprop --lyra-animated-image-icon-size - The size of the play/pause icons. Defaults to `calc(var(--lyra-icon-button-size) * 0.35)`.
- * @cssprop --lyra-animated-image-max-height - Caps the rendered media's block-size. Defaults to `var(--lyra-size-20rem)`.
+ * @cssprop --lr-animated-image-control-box-size - The size of `control-box`. Defaults to `var(--lr-icon-button-size)`.
+ * @cssprop --lr-animated-image-icon-size - The size of the play/pause icons. Defaults to `calc(var(--lr-icon-button-size) * 0.35)`.
+ * @cssprop --lr-animated-image-max-height - Caps the rendered media's block-size. Defaults to `var(--lr-size-20rem)`.
  */
 export class LyraAnimatedImage extends LyraElement<LyraAnimatedImageEventMap> {
   static styles = [LyraElement.styles, styles];
@@ -158,7 +158,7 @@ export class LyraAnimatedImage extends LyraElement<LyraAnimatedImageEventMap> {
       // waiting on a native `error` event that will never fire.
       if (trimmed !== '' && safeMediaSrc(this.src) === null) {
         this.hasError = true;
-        this.emit('lyra-error');
+        this.emit('lr-error');
       }
     }
 
@@ -166,7 +166,7 @@ export class LyraAnimatedImage extends LyraElement<LyraAnimatedImageEventMap> {
     if (nextPlaying !== this._playing) {
       this._playing = nextPlaying;
       this.toggleAttribute('playing', nextPlaying);
-      this.emit(nextPlaying ? 'lyra-play' : 'lyra-pause');
+      this.emit(nextPlaying ? 'lr-play' : 'lr-pause');
     }
     // Private CSS-only hook (see the stylesheet) -- keeps the live <img>
     // visible while still loading or after a decode failure, independent of
@@ -206,13 +206,13 @@ export class LyraAnimatedImage extends LyraElement<LyraAnimatedImageEventMap> {
         ctx.drawImage(img, 0, 0, width, height);
       }
     }
-    this.emit('lyra-load');
+    this.emit('lr-load');
   };
 
   private onImageError = (): void => {
     this.hasLoaded = false;
     this.hasError = true;
-    this.emit('lyra-error');
+    this.emit('lr-error');
   };
 
   private onToggleClick = (): void => {
@@ -295,6 +295,6 @@ export class LyraAnimatedImage extends LyraElement<LyraAnimatedImageEventMap> {
 
 declare global {
   interface HTMLElementTagNameMap {
-    'lyra-animated-image': LyraAnimatedImage;
+    'lr-animated-image': LyraAnimatedImage;
   }
 }

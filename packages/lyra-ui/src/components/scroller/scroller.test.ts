@@ -2,12 +2,12 @@ import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import './scroller.js';
 import type { LyraScroller } from './scroller.class.js';
 
-describe('<lyra-scroller>', () => {
+describe('<lr-scroller>', () => {
   it('reports scroll edges correctly at rest under RTL (CSSOM negative-scrollLeft convention)', async () => {
     const el = await fixture<LyraScroller>(html`
-      <lyra-scroller controls dir="rtl" style="inline-size: 100px;">
+      <lr-scroller controls dir="rtl" style="inline-size: 100px;">
         <div style="inline-size: 400px;">wide content</div>
-      </lyra-scroller>
+      </lr-scroller>
     `);
     const previous = el.shadowRoot!.querySelector('[part~="previous"]') as HTMLButtonElement;
     const next = el.shadowRoot!.querySelector('[part~="next"]') as HTMLButtonElement;
@@ -18,7 +18,7 @@ describe('<lyra-scroller>', () => {
   });
 
   it('re-observes size changes after being moved in the DOM', async () => {
-    const el = await fixture<LyraScroller>(html`<lyra-scroller><span>Content</span></lyra-scroller>`);
+    const el = await fixture<LyraScroller>(html`<lr-scroller><span>Content</span></lr-scroller>`);
     const parent = el.parentElement!;
     expect((el as unknown as { resizeObserver?: ResizeObserver }).resizeObserver).to.exist;
 
@@ -30,10 +30,10 @@ describe('<lyra-scroller>', () => {
   });
 
   it('renders a labeled native scroll viewport', async () => {
-    const el = await fixture<LyraScroller>(html`<lyra-scroller label="Recent items"><span>Content</span></lyra-scroller>`);
+    const el = await fixture<LyraScroller>(html`<lr-scroller label="Recent items"><span>Content</span></lr-scroller>`);
     // The role and accessible name live on [part="viewport"] — the element that
     // actually scrolls and carries tabindex="0" — so the keyboard tab stop is a
-    // named region (same placement as lyra-terminal's scrollable viewport), not
+    // named region (same placement as lr-terminal's scrollable viewport), not
     // an unnamed focusable inside a labeled wrapper.
     const viewport = el.shadowRoot!.querySelector('[part="viewport"]')!;
     expect(viewport.getAttribute('role')).to.equal('region');
@@ -44,13 +44,13 @@ describe('<lyra-scroller>', () => {
   });
 
   it('supports optional navigation controls', async () => {
-    const el = await fixture<LyraScroller>(html`<lyra-scroller controls><span>Content</span></lyra-scroller>`);
+    const el = await fixture<LyraScroller>(html`<lr-scroller controls><span>Content</span></lr-scroller>`);
     expect(el.shadowRoot!.querySelector('[part~="previous"]')).to.exist;
     expect(el.shadowRoot!.querySelector('[part~="next"]')).to.exist;
   });
 
   it('wraps the horizontal chevrons in documented previous-glyph/next-glyph parts', async () => {
-    const el = await fixture<LyraScroller>(html`<lyra-scroller controls><span>Content</span></lyra-scroller>`);
+    const el = await fixture<LyraScroller>(html`<lr-scroller controls><span>Content</span></lr-scroller>`);
     const previousGlyph = el.shadowRoot!.querySelector('[part="previous-glyph"]')!;
     const nextGlyph = el.shadowRoot!.querySelector('[part="next-glyph"]')!;
     expect(previousGlyph).to.exist;
@@ -63,7 +63,7 @@ describe('<lyra-scroller>', () => {
 
   it('wraps the vertical-orientation glyphs in the same previous-glyph/next-glyph parts as horizontal, not bare text', async () => {
     const el = await fixture<LyraScroller>(
-      html`<lyra-scroller controls orientation="vertical"><span>Content</span></lyra-scroller>`,
+      html`<lr-scroller controls orientation="vertical"><span>Content</span></lr-scroller>`,
     );
     const previousGlyph = el.shadowRoot!.querySelector('[part="previous-glyph"]')!;
     const nextGlyph = el.shadowRoot!.querySelector('[part="next-glyph"]')!;
@@ -76,7 +76,7 @@ describe('<lyra-scroller>', () => {
   });
 
   it('gives the previous/next controls the shared minimum hit area', async () => {
-    const el = await fixture<LyraScroller>(html`<lyra-scroller controls><span>Content</span></lyra-scroller>`);
+    const el = await fixture<LyraScroller>(html`<lr-scroller controls><span>Content</span></lr-scroller>`);
     const previous = el.shadowRoot!.querySelector('[part~="previous"]') as HTMLElement;
     const next = el.shadowRoot!.querySelector('[part~="next"]') as HTMLElement;
 
@@ -87,7 +87,7 @@ describe('<lyra-scroller>', () => {
   });
 
   it('is accessible', async () => {
-    const el = await fixture<LyraScroller>(html`<lyra-scroller label="Recent items"><span>Content</span></lyra-scroller>`);
+    const el = await fixture<LyraScroller>(html`<lr-scroller label="Recent items"><span>Content</span></lr-scroller>`);
     await expect(el).to.be.accessible();
   });
 
@@ -95,9 +95,9 @@ describe('<lyra-scroller>', () => {
 
   it('falls back to the viewport-percentage default instead of scrolling by NaN/Infinity when scrollStep is invalid', async () => {
     const el = await fixture<LyraScroller>(html`
-      <lyra-scroller controls style="inline-size: 100px;">
+      <lr-scroller controls style="inline-size: 100px;">
         <div style="inline-size: 400px;">wide content</div>
-      </lyra-scroller>
+      </lr-scroller>
     `);
     const viewport = el.shadowRoot!.querySelector('[part="viewport"]') as HTMLElement;
     const scrollBySpy: number[] = [];
@@ -122,9 +122,9 @@ describe('<lyra-scroller>', () => {
 
   it('honors a valid positive scrollStep as an explicit override amount', async () => {
     const el = await fixture<LyraScroller>(html`
-      <lyra-scroller controls scroll-step="42" style="inline-size: 100px;">
+      <lr-scroller controls scroll-step="42" style="inline-size: 100px;">
         <div style="inline-size: 400px;">wide content</div>
-      </lyra-scroller>
+      </lr-scroller>
     `);
     const viewport = el.shadowRoot!.querySelector('[part="viewport"]') as HTMLElement;
     let capturedLeft: number | undefined;

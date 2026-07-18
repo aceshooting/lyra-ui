@@ -8,6 +8,6 @@ defineElement('email-viewer', LyraEmailViewer);
 
 registerDocumentRenderer('message/rfc822', {
   matches: (file: DocumentFile) => file.name.toLowerCase().endsWith('.eml'),
-  render: (file: DocumentFile) => html`<lyra-email-viewer src=${file.src} name=${file.name}></lyra-email-viewer>`,
+  render: (file: DocumentFile) => html`<lr-email-viewer src=${file.src} name=${file.name}></lr-email-viewer>`,
   capabilities: { textSelect: false },
 });

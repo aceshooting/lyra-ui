@@ -11,7 +11,7 @@ import { styles } from './source-picker.styles.js';
 export interface LyraSourceEntry {
   id: string;
   label: string;
-  /** Drives the `lyra-file-icon` badge. */
+  /** Drives the `lr-file-icon` badge. */
   mimeType?: string;
   /** Filename fallback for icon detection. */
   name?: string;
@@ -20,7 +20,7 @@ export interface LyraSourceEntry {
 }
 
 export interface LyraSourcePickerEventMap {
-  'lyra-sources-change': CustomEvent<{ selectedIds: string[] }>;
+  'lr-sources-change': CustomEvent<{ selectedIds: string[] }>;
 }
 
 interface SourceRow {
@@ -30,22 +30,22 @@ interface SourceRow {
 }
 
 /**
- * `<lyra-source-picker>` — a checkbox tree/list scoping which sources ground the next answer:
+ * `<lr-source-picker>` — a checkbox tree/list scoping which sources ground the next answer:
  * tri-state folders, select-all, type icons, search. **Not `FormAssociated`, deliberately**: this
  * is a scoping panel, not a form control — the selection is immediate app state consumed by the
- * next retrieval call, exactly the stance `lyra-tool-select-dialog` already takes.
+ * next retrieval call, exactly the stance `lr-tool-select-dialog` already takes.
  *
- * @customElement lyra-source-picker
- * @event lyra-sources-change - `detail: { selectedIds }` — the complete updated leaf-id array,
+ * @customElement lr-source-picker
+ * @event lr-sources-change - `detail: { selectedIds }` — the complete updated leaf-id array,
  * fired after every toggle including select-all.
  * @csspart base - The root wrapper.
- * @csspart search - The built-in filter `lyra-input`, only rendered when `searchable`.
+ * @csspart search - The built-in filter `lr-input`, only rendered when `searchable`.
  * @csspart select-all - The header select-all row, only rendered when `showSelectAll`.
  * @csspart summary - The "{selected} of {total} selected" text.
  * @csspart tree - The `role="tree"` container.
  * @csspart item - One `role="treeitem"` row.
  * @csspart checkbox - The tri-state checkbox glyph.
- * @csspart icon - The `lyra-file-icon` type badge.
+ * @csspart icon - The `lr-file-icon` type badge.
  * @csspart label - The entry's label text.
  * @csspart empty - The empty state (`noData` when `sources` is empty, `noMatches` when a filter
  * empties the tree).
@@ -124,7 +124,7 @@ export class LyraSourcePicker extends LyraElement<LyraSourcePickerEventMap> {
 
   private commitSelection(next: string[]): void {
     this.selectedIds = next;
-    this.emit('lyra-sources-change', { selectedIds: next });
+    this.emit('lr-sources-change', { selectedIds: next });
   }
 
   private toggleEntry(entry: LyraSourceEntry): void {
@@ -233,7 +233,7 @@ export class LyraSourcePicker extends LyraElement<LyraSourcePickerEventMap> {
         }}
       >
         <span part="checkbox" aria-hidden="true" data-state=${state}></span>
-        <lyra-file-icon part="icon" decorative mime-type=${row.entry.mimeType ?? ''} name=${row.entry.name ?? row.entry.label}></lyra-file-icon>
+        <lr-file-icon part="icon" decorative mime-type=${row.entry.mimeType ?? ''} name=${row.entry.name ?? row.entry.label}></lr-file-icon>
         <span part="label">${row.entry.label}</span>
       </div>
     `;
@@ -242,7 +242,7 @@ export class LyraSourcePicker extends LyraElement<LyraSourcePickerEventMap> {
   render(): TemplateResult {
     const label = this.accessibleLabel || this.label || this.localize('sourceListDefaultLabel');
     if (this.sources.length === 0) {
-      return html`<div part="base"><lyra-empty part="empty" heading=${this.localize('noData')}></lyra-empty></div>`;
+      return html`<div part="base"><lr-empty part="empty" heading=${this.localize('noData')}></lr-empty></div>`;
     }
     const rows = this.visibleRows();
     const activeId = this.activeId ?? rows[0]?.entry.id ?? null;
@@ -257,14 +257,14 @@ export class LyraSourcePicker extends LyraElement<LyraSourcePickerEventMap> {
     return html`
       <div part="base">
         ${this.searchable
-          ? html`<lyra-input
+          ? html`<lr-input
               part="search"
               placeholder=${this.localize('search')}
               .value=${this.query}
-              @lyra-input=${(e: CustomEvent<{ value: string }>) => {
+              @lr-input=${(e: CustomEvent<{ value: string }>) => {
                 this.query = e.detail.value;
               }}
-            ></lyra-input>`
+            ></lr-input>`
           : nothing}
         ${this.showSelectAll
           ? html`<div part="select-all">
@@ -295,6 +295,6 @@ export class LyraSourcePicker extends LyraElement<LyraSourcePickerEventMap> {
 
 declare global {
   interface HTMLElementTagNameMap {
-    'lyra-source-picker': LyraSourcePicker;
+    'lr-source-picker': LyraSourcePicker;
   }
 }

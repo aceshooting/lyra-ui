@@ -4,7 +4,7 @@ import type { LyraResultField } from './result-field.js';
 
 it('renders the label (with trailing colon) and the plain value prop', async () => {
   const el = (await fixture(
-    html`<lyra-result-field label="Status" value="200 OK"></lyra-result-field>`,
+    html`<lr-result-field label="Status" value="200 OK"></lr-result-field>`,
   )) as LyraResultField;
   const label = el.shadowRoot!.querySelector('[part="label"]') as HTMLElement;
   const value = el.shadowRoot!.querySelector('[part="value"]') as HTMLElement;
@@ -13,19 +13,19 @@ it('renders the label (with trailing colon) and the plain value prop', async () 
 });
 
 it('renders no label part when label is unset', async () => {
-  const el = (await fixture(html`<lyra-result-field value="200 OK"></lyra-result-field>`)) as LyraResultField;
+  const el = (await fixture(html`<lr-result-field value="200 OK"></lr-result-field>`)) as LyraResultField;
   expect(el.shadowRoot!.querySelector('[part="label"]')).to.not.exist;
 });
 
 it('renders nothing in the value part when neither value nor slotted content is present', async () => {
-  const el = (await fixture(html`<lyra-result-field label="Status"></lyra-result-field>`)) as LyraResultField;
+  const el = (await fixture(html`<lr-result-field label="Status"></lr-result-field>`)) as LyraResultField;
   const value = el.shadowRoot!.querySelector('[part="value"]') as HTMLElement;
   expect(value.textContent!.trim()).to.equal('');
 });
 
 it('prefers slotted rich content over the plain value prop when both are present', async () => {
   const el = (await fixture(html`
-    <lyra-result-field label="Status" value="ignored"><span class="badge">Live</span></lyra-result-field>
+    <lr-result-field label="Status" value="ignored"><span class="badge">Live</span></lr-result-field>
   `)) as LyraResultField;
   const value = el.shadowRoot!.querySelector('[part="value"]') as HTMLElement;
   const slot = el.shadowRoot!.querySelector('slot') as HTMLSlotElement;
@@ -41,7 +41,7 @@ it('prefers slotted rich content over the plain value prop when both are present
 
 it('treats a content-less slotted element as real content (badge with no text of its own)', async () => {
   const el = (await fixture(html`
-    <lyra-result-field label="Status" value="fallback text"><span class="dot"></span></lyra-result-field>
+    <lr-result-field label="Status" value="fallback text"><span class="dot"></span></lr-result-field>
   `)) as LyraResultField;
   const value = el.shadowRoot!.querySelector('[part="value"]') as HTMLElement;
   // The plain `value` fallback must not be rendered alongside the slotted
@@ -53,7 +53,7 @@ it('treats a content-less slotted element as real content (badge with no text of
 
 it('treats bare slotted text as an override for the value prop', async () => {
   const el = (await fixture(html`
-    <lyra-result-field label="Status" value="ignored">200 OK (slotted text)</lyra-result-field>
+    <lr-result-field label="Status" value="ignored">200 OK (slotted text)</lr-result-field>
   `)) as LyraResultField;
   const value = el.shadowRoot!.querySelector('[part="value"]') as HTMLElement;
   const slot = el.shadowRoot!.querySelector('slot') as HTMLSlotElement;
@@ -68,7 +68,7 @@ it('treats bare slotted text as an override for the value prop', async () => {
 
 it('falls back to the plain value prop again once slotted content is removed, via slotchange', async () => {
   const el = (await fixture(html`
-    <lyra-result-field label="Status" value="fallback"><span>Live</span></lyra-result-field>
+    <lr-result-field label="Status" value="fallback"><span>Live</span></lr-result-field>
   `)) as LyraResultField;
   const slot = el.shadowRoot!.querySelector('slot') as HTMLSlotElement;
   const value = el.shadowRoot!.querySelector('[part="value"]') as HTMLElement;
@@ -84,7 +84,7 @@ it('falls back to the plain value prop again once slotted content is removed, vi
 });
 
 it('picks up slotted content added after mount, via slotchange', async () => {
-  const el = (await fixture(html`<lyra-result-field label="Status" value="fallback"></lyra-result-field>`)) as LyraResultField;
+  const el = (await fixture(html`<lr-result-field label="Status" value="fallback"></lr-result-field>`)) as LyraResultField;
   const slot = el.shadowRoot!.querySelector('slot') as HTMLSlotElement;
   const value = el.shadowRoot!.querySelector('[part="value"]') as HTMLElement;
   expect(value.textContent!.trim()).to.equal('fallback');
@@ -100,13 +100,13 @@ it('picks up slotted content added after mount, via slotchange', async () => {
 });
 
 it('is accessible with a plain label/value pair', async () => {
-  const el = await fixture(html`<lyra-result-field label="Status" value="200 OK"></lyra-result-field>`);
+  const el = await fixture(html`<lr-result-field label="Status" value="200 OK"></lr-result-field>`);
   await expect(el).to.be.accessible();
 });
 
 it('is accessible with a rich slotted value', async () => {
   const el = await fixture(html`
-    <lyra-result-field label="Status"><span>Live</span></lyra-result-field>
+    <lr-result-field label="Status"><span>Live</span></lr-result-field>
   `);
   await expect(el).to.be.accessible();
 });

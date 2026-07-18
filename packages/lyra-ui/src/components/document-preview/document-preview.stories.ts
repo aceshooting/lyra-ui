@@ -4,7 +4,7 @@ import './document-preview.js';
 
 const meta: Meta = {
   title: 'DocumentPreview',
-  component: 'lyra-document-preview',
+  component: 'lr-document-preview',
   tags: ['autodocs'],
   parameters: {
     docs: {
@@ -19,7 +19,7 @@ export default meta;
 type Story = StoryObj;
 
 // A same-origin data: URL stands in for a real backend endpoint so these
-// stories work with zero server setup; <lyra-document-preview> only cares
+// stories work with zero server setup; <lr-document-preview> only cares
 // that `src` is fetchable, not where it's hosted.
 const SAMPLE_TEXT = `{
   "id": "req_8f21",
@@ -35,50 +35,50 @@ const imageDataUrl = `data:image/png;base64,${PNG_1X1_RED_BASE64}`;
 export const TextPreview: Story = {
   name: 'text/plain — inline <pre>',
   render: () => html`
-    <lyra-document-preview
+    <lr-document-preview
       style="max-width: 28rem;"
       src=${textDataUrl}
       mime-type="application/json"
       filename="response.json"
-    ></lyra-document-preview>
+    ></lr-document-preview>
   `,
 };
 
 export const ImagePreview: Story = {
   name: 'image/* — contained <img>',
   render: () => html`
-    <lyra-document-preview
+    <lr-document-preview
       style="max-width: 20rem;"
       src=${imageDataUrl}
       mime-type="image/png"
       filename="swatch.png"
       alt="A solid red status swatch"
-    ></lyra-document-preview>
+    ></lr-document-preview>
   `,
 };
 
 export const DecorativeImagePreview: Story = {
   name: 'image/* — decorative image',
   render: () => html`
-    <lyra-document-preview
+    <lr-document-preview
       style="max-width: 20rem;"
       src=${imageDataUrl}
       mime-type="image/png"
       filename="decorative-divider.png"
       alt=""
-    ></lyra-document-preview>
+    ></lr-document-preview>
   `,
 };
 
 export const GenericDownloadFallback: Story = {
   name: 'Unsupported format — generic download fallback',
   render: () => html`
-    <lyra-document-preview
+    <lr-document-preview
       style="max-width: 24rem;"
       src="https://example.com/files/quarterly-report.pdf"
       mime-type="application/pdf"
       filename="quarterly-report.pdf"
-    ></lyra-document-preview>
+    ></lr-document-preview>
   `,
 };
 
@@ -88,12 +88,12 @@ export const UnsupportedSlotEscapeHatch: Story = {
     docs: {
       description: {
         story:
-          'When the `unsupported` slot is populated, it renders instead of the generic download fallback — this is how a host plugs in a real PDF.js viewer, an office-doc renderer, or a `<lyra-code-block>` for a format this component doesn\'t natively preview.',
+          'When the `unsupported` slot is populated, it renders instead of the generic download fallback — this is how a host plugs in a real PDF.js viewer, an office-doc renderer, or a `<lr-code-block>` for a format this component doesn\'t natively preview.',
       },
     },
   },
   render: () => html`
-    <lyra-document-preview
+    <lr-document-preview
       style="max-width: 24rem;"
       src="https://example.com/files/quarterly-report.pdf"
       mime-type="application/pdf"
@@ -101,46 +101,46 @@ export const UnsupportedSlotEscapeHatch: Story = {
     >
       <div
         slot="unsupported"
-        style="padding: 2rem; text-align: center; color: var(--lyra-color-text-quiet); border: 1px dashed var(--lyra-color-border); border-radius: 0.375rem; margin: 0.75rem;"
+        style="padding: 2rem; text-align: center; color: var(--lr-color-text-quiet); border: 1px dashed var(--lr-color-border); border-radius: 0.375rem; margin: 0.75rem;"
       >
         (stand-in for a real PDF.js/office-doc renderer)
       </div>
-    </lyra-document-preview>
+    </lr-document-preview>
   `,
 };
 
 export const ConvertingIndeterminate: Story = {
   name: 'status="converting" — indeterminate (no progress yet)',
   render: () => html`
-    <lyra-document-preview
+    <lr-document-preview
       style="max-width: 24rem;"
       status="converting"
       filename="slides.pptx"
-    ></lyra-document-preview>
+    ></lr-document-preview>
   `,
 };
 
 export const ConvertingWithProgress: Story = {
   name: 'status="converting" — determinate progress',
   render: () => html`
-    <lyra-document-preview
+    <lr-document-preview
       style="max-width: 24rem;"
       status="converting"
       progress="63"
       filename="slides.pptx"
-    ></lyra-document-preview>
+    ></lr-document-preview>
   `,
 };
 
 export const ErrorState: Story = {
   name: 'status="error"',
   render: () => html`
-    <lyra-document-preview
+    <lr-document-preview
       style="max-width: 24rem;"
       status="error"
       error-message="Conversion failed: the source file appears to be corrupted."
       filename="slides.pptx"
-    ></lyra-document-preview>
+    ></lr-document-preview>
   `,
 };
 
@@ -155,7 +155,7 @@ export const ConversionLifecycle: Story = {
     },
   },
   render: () => {
-    const el = document.createElement('lyra-document-preview');
+    const el = document.createElement('lr-document-preview');
     el.setAttribute('style', 'max-width: 24rem;');
     el.filename = 'slides.pptx';
     el.status = 'converting';
@@ -182,27 +182,27 @@ export const ConversionLifecycle: Story = {
 export const NoFilename: Story = {
   name: 'No filename set — header hidden',
   render: () => html`
-    <lyra-document-preview
+    <lr-document-preview
       style="max-width: 24rem;"
       src=${textDataUrl}
       mime-type="text/plain"
-    ></lyra-document-preview>
+    ></lr-document-preview>
   `,
 };
 
 export const Events: Story = {
   render: () => html`
     <div>
-      <lyra-document-preview
+      <lr-document-preview
         style="max-width: 24rem;"
         src="https://example.com/files/quarterly-report.pdf"
         mime-type="application/pdf"
         filename="quarterly-report.pdf"
-        @lyra-download=${(e: CustomEvent<{ src: string; filename: string }>) => {
+        @lr-download=${(e: CustomEvent<{ src: string; filename: string }>) => {
           const out = document.getElementById('document-preview-log');
-          if (out) out.textContent = `lyra-download: ${JSON.stringify(e.detail)}`;
+          if (out) out.textContent = `lr-download: ${JSON.stringify(e.detail)}`;
         }}
-      ></lyra-document-preview>
+      ></lr-document-preview>
       <p id="document-preview-log" style="font-family: monospace; margin-top: 0.5rem;">No event fired yet.</p>
     </div>
   `,

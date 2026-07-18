@@ -3,7 +3,7 @@
  * Maintenance job: for every `flags/<code>.svg` whose source art is large enough to warrant it,
  * preserves the pristine vendored original at `flags/detailed/<code>.svg` and (re)derives the
  * `standard`-tier `flags/<code>.svg` from that original with an aggressive-but-geometry-lossless
- * SVGO pass. The `standard` tier is what `<lyra-flag>` renders by default and targets card/row
+ * SVGO pass. The `standard` tier is what `<lr-flag>` renders by default and targets card/row
  * sizes (~28-96px); the pristine `flags/detailed/<code>.svg` backs `variant="detailed"` (hero
  * scale), and a separate WebP raster (`scripts/build-compact.mjs`) backs `variant="compact"`
  * (icon scale).

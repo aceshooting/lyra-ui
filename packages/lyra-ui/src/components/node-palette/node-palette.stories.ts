@@ -14,14 +14,14 @@ const items: PaletteItem[] = [
 
 const meta: Meta = {
   title: 'Node Palette',
-  component: 'lyra-node-palette',
+  component: 'lr-node-palette',
   tags: ['autodocs'],
 };
 export default meta;
 type Story = StoryObj;
 
 export const Default: Story = {
-  render: () => html`<div style="inline-size:16rem"><lyra-node-palette .items=${items}></lyra-node-palette></div>`,
+  render: () => html`<div style="inline-size:16rem"><lr-node-palette .items=${items}></lr-node-palette></div>`,
 };
 
 export const WithCanvas: Story = {
@@ -33,8 +33,8 @@ export const WithCanvas: Story = {
     };
     return html`
       <div style="display:flex;height:20rem;gap:1rem">
-        <div style="inline-size:16rem"><lyra-node-palette .items=${items} @lyra-palette-place=${onPlace}></lyra-node-palette></div>
-        <lyra-flow-canvas droppable style="flex:1" .nodes=${nodes}></lyra-flow-canvas>
+        <div style="inline-size:16rem"><lr-node-palette .items=${items} @lr-palette-place=${onPlace}></lr-node-palette></div>
+        <lr-flow-canvas droppable style="flex:1" .nodes=${nodes}></lr-flow-canvas>
       </div>
     `;
   },
@@ -46,8 +46,8 @@ export const NarrowAllocation: Story = {
     docs: { description: { story: 'Items stack single-column and truncate their description at a 320px allocation.' } },
   },
   render: () => html`
-    <div style="inline-size:320px; max-inline-size:100%; border:1px dashed var(--lyra-color-border); padding:0.5rem;">
-      <lyra-node-palette .items=${items}></lyra-node-palette>
+    <div style="inline-size:320px; max-inline-size:100%; border:1px dashed var(--lr-color-border); padding:0.5rem;">
+      <lr-node-palette .items=${items}></lr-node-palette>
     </div>
   `,
 };

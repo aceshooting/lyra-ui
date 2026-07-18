@@ -26,10 +26,10 @@ interface ResolvedCellHighlight {
 }
 
 export interface LyraSpreadsheetViewerEventMap extends LyraAnchorTargetEventMap {
-  'lyra-render-error': CustomEvent<{ error: unknown }>;
+  'lr-render-error': CustomEvent<{ error: unknown }>;
   /** Fired whenever the search query, match count, or active match index changes, from
    *  `search()`/`searchNext()`/`searchPrevious()`/`clearSearch()`. */
-  'lyra-search-change': CustomEvent<{ query: string; matchCount: number; activeIndex: number }>;
+  'lr-search-change': CustomEvent<{ query: string; matchCount: number; activeIndex: number }>;
 }
 
 class LyraSpreadsheetViewerBase extends LyraElement<LyraSpreadsheetViewerEventMap> {}
@@ -41,7 +41,7 @@ class LyraSpreadsheetViewerBase extends LyraElement<LyraSpreadsheetViewerEventMa
  * its (always-present) header row included -- matching how a spreadsheet app itself labels `A1`.
  * The target sheet resolves from the anchor's own `sheet` field (falling back to a `Sheet!`-prefixed
  * `range`, then the currently active sheet when neither is set); `scrollToAnchor()` switches
- * `<lyra-tabs>`'s `active` tab first when the resolved sheet isn't already active, then scrolls the
+ * `<lr-tabs>`'s `active` tab first when the resolved sheet isn't already active, then scrolls the
  * addressed row into view via the virtualized list's `active-id`, then scrolls the first addressed
  * column horizontally into view. `highlights` paint as a focusable `part="cell-highlight"` on
  * membership, recomputed per row inside `renderRow()` so a row scrolled out and back in reconstructs
@@ -49,24 +49,24 @@ class LyraSpreadsheetViewerBase extends LyraElement<LyraSpreadsheetViewerEventMa
  * substring match over every sheet's stringified cell values (the same stringification `cell()`
  * already renders), ordered sheet then row then column, switching tabs as navigation crosses sheets.
  *
- * @customElement lyra-spreadsheet-viewer
- * @event lyra-render-error - Fired when fetching or parsing fails.
- * @event lyra-highlight-activate - A `highlights` cell was clicked, or activated via Enter/Space
+ * @customElement lr-spreadsheet-viewer
+ * @event lr-render-error - Fired when fetching or parsing fails.
+ * @event lr-highlight-activate - A `highlights` cell was clicked, or activated via Enter/Space
  *   while focused. `detail: { id }`.
- * @event lyra-anchor-result - Fired after an `anchor` property assignment or a `scrollToAnchor()`
+ * @event lr-anchor-result - Fired after an `anchor` property assignment or a `scrollToAnchor()`
  *   call is applied. `detail: { found }`.
- * @event lyra-search-change - Fired whenever the search query, match count, or active match index
+ * @event lr-search-change - Fired whenever the search query, match count, or active match index
  *   changes, from `search()`/`searchNext()`/`searchPrevious()`/`clearSearch()`. `detail: { query,
  *   matchCount, activeIndex }`.
  * @csspart base - The root wrapper.
- * @csspart tabs - The sheet-switching `<lyra-tabs>`, rendered only for a multi-sheet workbook.
+ * @csspart tabs - The sheet-switching `<lr-tabs>`, rendered only for a multi-sheet workbook.
  * @csspart sheet - The wrapper around one sheet's header row and virtualized body.
  * @csspart rows - The virtualized row list.
  * @csspart header-row - A sheet's header row.
  * @csspart data-row - One virtualized data row.
  * @csspart cell - One rendered cell.
  * @csspart cell-highlight - A cell covered by a `highlights` entry -- focusable, emits
- *   `lyra-highlight-activate` on click or Enter/Space.
+ *   `lr-highlight-activate` on click or Enter/Space.
  * @csspart spinner - The loading status region.
  * @csspart error - The error message region.
  */
@@ -81,12 +81,12 @@ export class LyraSpreadsheetViewer extends DocumentAnchorTarget(LyraSpreadsheetV
   readonly anchorKinds: readonly LyraAnchorKind[] = ['cell-range'];
 
   @state() private fetchState: SpreadsheetState = { kind: 'idle' };
-  /** Index into `fetchState.sheets` of the sheet currently shown -- bound to `<lyra-tabs>`'s own
+  /** Index into `fetchState.sheets` of the sheet currently shown -- bound to `<lr-tabs>`'s own
    *  `active` (as `sheet-${index}`), and switched by `scrollToAnchor()`/search navigation whenever
    *  a match lives on a different sheet. */
   @state() private activeSheetIndex = 0;
   /** The virtualized body row currently scrolled into view on the active sheet -- bound to
-   *  `<lyra-virtual-list>`'s own `active-id`. */
+   *  `<lr-virtual-list>`'s own `active-id`. */
   @state() private activeRowKey: number | '' = '';
   @state() private searchMatches: { sheetIndex: number; row: number; col: number }[] = [];
   @state() private searchActiveIndex = -1;
@@ -98,7 +98,7 @@ export class LyraSpreadsheetViewer extends DocumentAnchorTarget(LyraSpreadsheetV
     super.willUpdate(changed); // reaches DocumentAnchorTarget's own willUpdate (declarative `anchor`)
     if (changed.has('src')) {
       // A new document invalidates every previous sheet/row/column coordinate -- reset silently
-      // (no event), mirroring <lyra-pdf-viewer>'s identical src-change reset.
+      // (no event), mirroring <lr-pdf-viewer>'s identical src-change reset.
       this.searchQuery = '';
       this.searchMatches = [];
       this.searchActiveIndex = -1;
@@ -135,7 +135,7 @@ export class LyraSpreadsheetViewer extends DocumentAnchorTarget(LyraSpreadsheetV
     } catch (error) {
       if (isAbortError(error) || !this.isConnected || generation !== this.generation) return;
       this.fetchState = { kind: 'error', message: this.localize(isResourceLimitError(error) ? 'documentPreviewResourceTooLarge' : 'documentPreviewFailedToLoad') };
-      this.emit('lyra-render-error', { error });
+      this.emit('lr-render-error', { error });
     }
   }
 
@@ -160,7 +160,7 @@ export class LyraSpreadsheetViewer extends DocumentAnchorTarget(LyraSpreadsheetV
     if (!colHighlights.length) return html`<div part="cell">${cell(value)}</div>`;
     const active = colHighlights.find((entry) => entry.highlight.id === this.activeHighlightId);
     const primary = active ?? colHighlights[0]!;
-    const activate = (): void => { this.emit('lyra-highlight-activate', { id: primary.highlight.id }); };
+    const activate = (): void => { this.emit('lr-highlight-activate', { id: primary.highlight.id }); };
     // hit-area-exempt: dense data-grid cell, not an icon-only control
     return html`<div
       part="cell cell-highlight"
@@ -179,7 +179,7 @@ export class LyraSpreadsheetViewer extends DocumentAnchorTarget(LyraSpreadsheetV
 
   private renderRow(row: unknown[], count: number, part: 'header-row' | 'data-row', rawRow: number, sheetName: string): TemplateResult {
     const rowHighlights = this.cellHighlightsForRow(rawRow, sheetName);
-    return html`<div part=${part} style=${`grid-template-columns:repeat(${count},minmax(var(--lyra-size-8rem),1fr))`}>${Array.from(
+    return html`<div part=${part} style=${`grid-template-columns:repeat(${count},minmax(var(--lr-size-8rem),1fr))`}>${Array.from(
       { length: count },
       (_unused, index) => this.renderCell(row[index], index, rowHighlights),
     )}</div>`;
@@ -189,20 +189,20 @@ export class LyraSpreadsheetViewer extends DocumentAnchorTarget(LyraSpreadsheetV
     const [header, ...body] = sheet.rows;
     if (!header) return html`<p class="empty-note">${this.localize('noData')}</p>`;
     const count = columns(sheet.rows);
-    return html`<div part="sheet">${this.renderRow(header, count, 'header-row', 1, sheet.name)}<lyra-virtual-list
+    return html`<div part="sheet">${this.renderRow(header, count, 'header-row', 1, sheet.name)}<lr-virtual-list
       part="rows"
       data-sheet-index=${index}
       .items=${body}
       .renderItem=${(row: unknown, bodyIndex: number) => this.renderRow(row as unknown[], count, 'data-row', bodyIndex + 2, sheet.name)}
       .keyFunction=${(_item: unknown, bodyIndex: number) => bodyIndex}
       .activeId=${index === this.activeSheetIndex ? this.activeRowKey : ''}
-    ></lyra-virtual-list></div>`;
+    ></lr-virtual-list></div>`;
   }
 
   private renderLoaded(sheets: SpreadsheetSheet[]): TemplateResult {
     if (!sheets.length) return html`<p class="empty-note">${this.localize('noData')}</p>`;
     if (sheets.length === 1) return this.renderSheet(sheets[0]!, 0);
-    return html`<lyra-tabs part="tabs" .active=${`sheet-${this.activeSheetIndex}`} @lyra-tabs-change=${this.onTabsChange}>${sheets.map((sheet, index) => html`<div slot=${`sheet-${index}`} label=${sheet.name}>${this.renderSheet(sheet, index)}</div>`)}</lyra-tabs>`;
+    return html`<lr-tabs part="tabs" .active=${`sheet-${this.activeSheetIndex}`} @lr-tabs-change=${this.onTabsChange}>${sheets.map((sheet, index) => html`<div slot=${`sheet-${index}`} label=${sheet.name}>${this.renderSheet(sheet, index)}</div>`)}</lr-tabs>`;
   }
 
   private onTabsChange = (e: CustomEvent<{ tabId: string }>): void => {
@@ -240,7 +240,7 @@ export class LyraSpreadsheetViewer extends DocumentAnchorTarget(LyraSpreadsheetV
   }
 
   private async scrollColumnIntoView(sheetIndex: number, col: number): Promise<void> {
-    const list = this.renderRoot.querySelector(`lyra-virtual-list[data-sheet-index="${sheetIndex}"]`) as (HTMLElement & { updateComplete?: Promise<unknown> }) | null;
+    const list = this.renderRoot.querySelector(`lr-virtual-list[data-sheet-index="${sheetIndex}"]`) as (HTMLElement & { updateComplete?: Promise<unknown> }) | null;
     if (list?.updateComplete) await list.updateComplete;
     await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
     const row = list?.shadowRoot?.querySelector('[part="row"][aria-current="true"]');
@@ -299,17 +299,17 @@ export class LyraSpreadsheetViewer extends DocumentAnchorTarget(LyraSpreadsheetV
     return true;
   }
 
-  /** Clears the query, matches, and active index, and resets `lyra-search-change` to a
+  /** Clears the query, matches, and active index, and resets `lr-search-change` to a
    *  0-match/no-active-index state. */
   clearSearch(): void {
     this.searchQuery = '';
     this.searchMatches = [];
     this.searchActiveIndex = -1;
-    this.emit('lyra-search-change', { query: '', matchCount: 0, activeIndex: -1 });
+    this.emit('lr-search-change', { query: '', matchCount: 0, activeIndex: -1 });
   }
 
   private emitSearchChange(): void {
-    this.emit('lyra-search-change', { query: this.searchQuery, matchCount: this.searchMatches.length, activeIndex: this.searchActiveIndex });
+    this.emit('lr-search-change', { query: this.searchQuery, matchCount: this.searchMatches.length, activeIndex: this.searchActiveIndex });
   }
 
   render(): TemplateResult {
@@ -318,4 +318,4 @@ export class LyraSpreadsheetViewer extends DocumentAnchorTarget(LyraSpreadsheetV
   }
 }
 
-declare global { interface HTMLElementTagNameMap { 'lyra-spreadsheet-viewer': LyraSpreadsheetViewer; } }
+declare global { interface HTMLElementTagNameMap { 'lr-spreadsheet-viewer': LyraSpreadsheetViewer; } }

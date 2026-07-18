@@ -13,7 +13,7 @@ const DEFAULT_PRECISION = 1;
  *  comfortably positive and no coarser than the star count itself. */
 const MIN_PRECISION = 0.01;
 
-export interface LyraRatingEventMap { 'lyra-change': CustomEvent<{ value: number }>; }
+export interface LyraRatingEventMap { 'lr-change': CustomEvent<{ value: number }>; }
 
 // A five-point star, sharing internal/icons.ts's 24x24 viewBox / 1em sizing
 // contract so it reads as part of the same visual language, without adding a
@@ -31,18 +31,18 @@ function starSolid(): SVGTemplateResult {
 }
 
 /**
- * `<lyra-rating>` — a keyboard-accessible star rating control.
+ * `<lr-rating>` — a keyboard-accessible star rating control.
  *
- * @customElement lyra-rating
- * @event lyra-change - The rating changed. `detail: { value }`.
+ * @customElement lr-rating
+ * @event lr-change - The rating changed. `detail: { value }`.
  * @csspart base - The slider-like rating control.
  * @csspart star - Each visual star.
  * @csspart star-fill - The filled overlay inside each star, clipped to that
  * star's filled fraction (0%, a partial percentage under a fractional
  * `precision`, or 100%).
- * @cssprop [--lyra-rating-fill=var(--lyra-color-warning)] - Filled-star color.
- * @cssprop [--lyra-rating-empty-color=var(--lyra-color-border)] - Unfilled-star color.
- * @cssprop [--lyra-rating-size=var(--lyra-font-size-xl)] - Star size.
+ * @cssprop [--lr-rating-fill=var(--lr-color-warning)] - Filled-star color.
+ * @cssprop [--lr-rating-empty-color=var(--lr-color-border)] - Unfilled-star color.
+ * @cssprop [--lr-rating-size=var(--lr-font-size-xl)] - Star size.
  */
 export class LyraRating extends LyraElement<LyraRatingEventMap> {
   static styles = [LyraElement.styles, styles];
@@ -77,7 +77,7 @@ export class LyraRating extends LyraElement<LyraRatingEventMap> {
     const clamped = Math.max(0, Math.min(this.safeMax, Math.round(next / precision) * precision));
     if (clamped === this.value) return;
     this.value = clamped;
-    this.emit('lyra-change', { value: this.value });
+    this.emit('lr-change', { value: this.value });
   }
   private onClick = (event: MouseEvent): void => {
     const target = (event.target as HTMLElement).closest('[data-value]') as HTMLElement | null;
@@ -111,4 +111,4 @@ export class LyraRating extends LyraElement<LyraRatingEventMap> {
     </div>`;
   }
 }
-declare global { interface HTMLElementTagNameMap { 'lyra-rating': LyraRating; } }
+declare global { interface HTMLElementTagNameMap { 'lr-rating': LyraRating; } }

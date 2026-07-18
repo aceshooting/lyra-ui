@@ -24,13 +24,13 @@ function useLibrary(el: LyraDocxViewer, deps: unknown): void {
 
 const BUFFER = base64ToArrayBuffer(MINIMAL_DOCX_BASE64);
 
-/** Fixtures a `<lyra-docx-viewer>`, stubs `mammoth.convertToHtml` to resolve `markup` verbatim and
+/** Fixtures a `<lr-docx-viewer>`, stubs `mammoth.convertToHtml` to resolve `markup` verbatim and
  *  `DOMPurify.sanitize` to the identity function, then sets `src` and awaits the loaded
  *  `[part="content"]` region. Mirrors the `useLibrary`/`stubFetch` primitives every other test in
  *  this file already uses -- just packaged as one helper for the anchor/search tests below, which
  *  don't otherwise care about the conversion/sanitization pipeline itself. */
 async function loadWithMarkup(markup: string): Promise<{ el: LyraDocxViewer; restore: () => void }> {
-  const el = await fixture<LyraDocxViewer>(html`<lyra-docx-viewer></lyra-docx-viewer>`);
+  const el = await fixture<LyraDocxViewer>(html`<lr-docx-viewer></lr-docx-viewer>`);
   useLibrary(el, {
     mammoth: { convertToHtml: () => Promise.resolve({ value: markup, messages: [] }) },
     DOMPurify: { sanitize: (value: string) => value },
@@ -44,24 +44,24 @@ async function loadWithMarkup(markup: string): Promise<{ el: LyraDocxViewer; res
 /** Whether a `text-quote` highlight painted with `tone` is currently visible, via whichever paint
  *  path this browser uses -- the CSS Custom Highlight API registers ranges with no DOM element to
  *  query, so this checks the shared `CSS.highlights` registry directly there, and falls back to the
- *  `<mark data-lyra-highlight-tone>` element the fallback path creates otherwise. Mirrors
- *  `<lyra-markdown>`'s own equivalent test helper. */
+ *  `<mark data-lr-highlight-tone>` element the fallback path creates otherwise. Mirrors
+ *  `<lr-markdown>`'s own equivalent test helper. */
 function highlightPainted(el: LyraDocxViewer, tone = 'accent'): boolean {
   if (supportsCustomHighlights()) {
     const registry = (globalThis as unknown as { CSS: { highlights: Map<string, { size: number }> } }).CSS.highlights;
-    return (registry.get(`lyra-highlight-${tone}`)?.size ?? 0) > 0;
+    return (registry.get(`lr-highlight-${tone}`)?.size ?? 0) > 0;
   }
-  return el.shadowRoot!.querySelector(`[part="content"] mark[data-lyra-highlight-tone="${tone}"]`) !== null;
+  return el.shadowRoot!.querySelector(`[part="content"] mark[data-lr-highlight-tone="${tone}"]`) !== null;
 }
 
-describe('lyra-docx-viewer', () => {
+describe('lr-docx-viewer', () => {
   it('renders an empty localized state by default', async () => {
-    const el = await fixture<LyraDocxViewer>(html`<lyra-docx-viewer></lyra-docx-viewer>`);
+    const el = await fixture<LyraDocxViewer>(html`<lr-docx-viewer></lr-docx-viewer>`);
     expect(el.shadowRoot!.querySelector('.empty-note')!.textContent).to.equal('No document to display.');
   });
 
   it('converts and sanitizes DOCX HTML', async () => {
-    const el = await fixture<LyraDocxViewer>(html`<lyra-docx-viewer></lyra-docx-viewer>`);
+    const el = await fixture<LyraDocxViewer>(html`<lr-docx-viewer></lr-docx-viewer>`);
     useLibrary(el, {
       mammoth: { convertToHtml: () => Promise.resolve({ value: '<h1>Report</h1><script>bad()</script>', messages: [] }) },
       DOMPurify: { sanitize: (value: string) => value.replace('<script>bad()</script>', '') },
@@ -78,7 +78,7 @@ describe('lyra-docx-viewer', () => {
   });
 
   it('shows a converter error when mammoth is unavailable', async () => {
-    const el = await fixture<LyraDocxViewer>(html`<lyra-docx-viewer></lyra-docx-viewer>`);
+    const el = await fixture<LyraDocxViewer>(html`<lr-docx-viewer></lr-docx-viewer>`);
     useLibrary(el, { mammoth: undefined, DOMPurify: { sanitize: (value: string) => value } });
     const restore = stubFetch(BUFFER);
     try {
@@ -93,7 +93,7 @@ describe('lyra-docx-viewer', () => {
   });
 
   it('blocks rendering when DOMPurify is unavailable', async () => {
-    const el = await fixture<LyraDocxViewer>(html`<lyra-docx-viewer></lyra-docx-viewer>`);
+    const el = await fixture<LyraDocxViewer>(html`<lr-docx-viewer></lr-docx-viewer>`);
     useLibrary(el, { mammoth: { convertToHtml: () => Promise.resolve({ value: '<h1>Unsafe</h1>', messages: [] }) }, DOMPurify: undefined });
     const restore = stubFetch(BUFFER);
     try {
@@ -109,14 +109,14 @@ describe('lyra-docx-viewer', () => {
   });
 
   it('emits non-fatal Mammoth messages after rendering', async () => {
-    const el = await fixture<LyraDocxViewer>(html`<lyra-docx-viewer></lyra-docx-viewer>`);
+    const el = await fixture<LyraDocxViewer>(html`<lr-docx-viewer></lr-docx-viewer>`);
     useLibrary(el, {
       mammoth: { convertToHtml: () => Promise.resolve({ value: '<p>Ready</p>', messages: [{ type: 'warning', message: 'style' }] }) },
       DOMPurify: { sanitize: (value: string) => value },
     });
     const restore = stubFetch(BUFFER);
     try {
-      const event = new Promise<CustomEvent<{ error: unknown }>>((resolve) => el.addEventListener('lyra-render-error', resolve, { once: true }));
+      const event = new Promise<CustomEvent<{ error: unknown }>>((resolve) => el.addEventListener('lr-render-error', resolve, { once: true }));
       el.src = 'https://example.test/report.docx';
       await waitUntil(() => el.shadowRoot!.querySelector('[part="content"]') !== null);
       expect((await event).detail.error).to.be.an('array');
@@ -126,7 +126,7 @@ describe('lyra-docx-viewer', () => {
   });
 
   it('rejects unsafe URLs without fetching', async () => {
-    const el = await fixture<LyraDocxViewer>(html`<lyra-docx-viewer></lyra-docx-viewer>`);
+    const el = await fixture<LyraDocxViewer>(html`<lr-docx-viewer></lr-docx-viewer>`);
     let called = false;
     const original = window.fetch;
     window.fetch = (() => { called = true; return Promise.reject(new Error('unexpected')); }) as typeof window.fetch;
@@ -141,17 +141,17 @@ describe('lyra-docx-viewer', () => {
   });
 
   it('applies max-height to the base custom property', async () => {
-    const el = await fixture<LyraDocxViewer>(html`<lyra-docx-viewer max-height="32rem"></lyra-docx-viewer>`);
-    expect((el.shadowRoot!.querySelector('[part="base"]') as HTMLElement).style.getPropertyValue('--lyra-docx-viewer-max-height')).to.equal('32rem');
+    const el = await fixture<LyraDocxViewer>(html`<lr-docx-viewer max-height="32rem"></lr-docx-viewer>`);
+    expect((el.shadowRoot!.querySelector('[part="base"]') as HTMLElement).style.getPropertyValue('--lr-docx-viewer-max-height')).to.equal('32rem');
   });
 
   it('is accessible in the empty state', async () => {
-    const el = await fixture<LyraDocxViewer>(html`<lyra-docx-viewer></lyra-docx-viewer>`);
+    const el = await fixture<LyraDocxViewer>(html`<lr-docx-viewer></lr-docx-viewer>`);
     await expect(el).to.be.accessible();
   });
 
   it('uses the localized document name', async () => {
-    const el = await fixture<LyraDocxViewer>(html`<lyra-docx-viewer .strings=${{ docxViewerLabel: 'Word file' }}></lyra-docx-viewer>`);
+    const el = await fixture<LyraDocxViewer>(html`<lr-docx-viewer .strings=${{ docxViewerLabel: 'Word file' }}></lr-docx-viewer>`);
     useLibrary(el, { mammoth: { convertToHtml: () => Promise.resolve({ value: '<p>Text</p>', messages: [] }) }, DOMPurify: { sanitize: (value: string) => value } });
     const restore = stubFetch(BUFFER);
     try {
@@ -164,7 +164,7 @@ describe('lyra-docx-viewer', () => {
   });
 
   it('forwards a host aria-label to the role="document" content region, winning over the localized default', async () => {
-    const el = await fixture<LyraDocxViewer>(html`<lyra-docx-viewer aria-label="Q3 report"></lyra-docx-viewer>`);
+    const el = await fixture<LyraDocxViewer>(html`<lr-docx-viewer aria-label="Q3 report"></lr-docx-viewer>`);
     useLibrary(el, { mammoth: { convertToHtml: () => Promise.resolve({ value: '<p>Text</p>', messages: [] }) }, DOMPurify: { sanitize: (value: string) => value } });
     const restore = stubFetch(BUFFER);
     try {
@@ -177,7 +177,7 @@ describe('lyra-docx-viewer', () => {
   });
 
   it('prefers the name property over a host aria-label, which in turn wins over the localized default', async () => {
-    const el = await fixture<LyraDocxViewer>(html`<lyra-docx-viewer name="Named report" aria-label="Q3 report"></lyra-docx-viewer>`);
+    const el = await fixture<LyraDocxViewer>(html`<lr-docx-viewer name="Named report" aria-label="Q3 report"></lr-docx-viewer>`);
     useLibrary(el, { mammoth: { convertToHtml: () => Promise.resolve({ value: '<p>Text</p>', messages: [] }) }, DOMPurify: { sanitize: (value: string) => value } });
     const restore = stubFetch(BUFFER);
     try {
@@ -221,7 +221,7 @@ describe('getHeadingTree', () => {
   });
 
   it('resolves an empty array before anything has loaded', async () => {
-    const el = await fixture<LyraDocxViewer>(html`<lyra-docx-viewer></lyra-docx-viewer>`);
+    const el = await fixture<LyraDocxViewer>(html`<lr-docx-viewer></lr-docx-viewer>`);
     expect(el.getHeadingTree()).to.deep.equal([]);
   });
 
@@ -283,7 +283,7 @@ describe('scrollToAnchor (fragment)', () => {
   });
 
   it('reports its supported anchor kinds', async () => {
-    const el = await fixture<LyraDocxViewer>(html`<lyra-docx-viewer></lyra-docx-viewer>`);
+    const el = await fixture<LyraDocxViewer>(html`<lr-docx-viewer></lr-docx-viewer>`);
     expect(el.anchorKinds).to.deep.equal(['fragment', 'text-quote']);
   });
 });
@@ -344,7 +344,7 @@ describe('scrollToAnchor / highlights (text-quote)', () => {
     }
   });
 
-  it('emits lyra-highlight-activate when a painted highlight is clicked', async () => {
+  it('emits lr-highlight-activate when a painted highlight is clicked', async () => {
     const { el, restore } = await loadWithMarkup('<p>Hello world</p>');
     try {
       el.highlights = [{ id: 'h1', anchor: { kind: 'text-quote', quote: 'world' } }];
@@ -358,7 +358,7 @@ describe('scrollToAnchor / highlights (text-quote)', () => {
       range.setEnd(textNode, offset + 'world'.length);
       const rect = range.getClientRects()[0];
 
-      const listener = oneEvent(el, 'lyra-highlight-activate');
+      const listener = oneEvent(el, 'lr-highlight-activate');
       paragraph.dispatchEvent(
         new MouseEvent('click', {
           bubbles: true,
@@ -374,7 +374,7 @@ describe('scrollToAnchor / highlights (text-quote)', () => {
     }
   });
 
-  it('emits lyra-text-select with a text-quote anchor on selection', async () => {
+  it('emits lr-text-select with a text-quote anchor on selection', async () => {
     const { el, restore } = await loadWithMarkup('<p>The quick brown fox jumps over the lazy dog.</p>');
     try {
       const paragraph = el.shadowRoot!.querySelector('[part="content"] p')!;
@@ -385,7 +385,7 @@ describe('scrollToAnchor / highlights (text-quote)', () => {
       const selection = window.getSelection()!;
       selection.removeAllRanges();
       selection.addRange(range);
-      const listener = oneEvent(el, 'lyra-text-select');
+      const listener = oneEvent(el, 'lr-text-select');
       (paragraph as HTMLElement).dispatchEvent(new MouseEvent('pointerup', { bubbles: true, composed: true }));
       const event = (await listener) as CustomEvent<{ text: string; anchor: unknown }>;
       expect(event.detail.text).to.equal('brown');
@@ -418,7 +418,7 @@ describe('search', () => {
     try {
       expect(await el.search('cat')).to.equal(3);
       let detail: { activeIndex: number } | undefined;
-      el.addEventListener('lyra-search-change', (e) => (detail = (e as CustomEvent).detail));
+      el.addEventListener('lr-search-change', (e) => (detail = (e as CustomEvent).detail));
       expect(await el.searchPrevious()).to.be.true;
       expect(detail?.activeIndex).to.equal(2);
       expect(await el.searchNext()).to.be.true;
@@ -439,11 +439,11 @@ describe('search', () => {
     }
   });
 
-  it('clearSearch() clears the query, matches, and painted marks, and fires lyra-search-change', async () => {
+  it('clearSearch() clears the query, matches, and painted marks, and fires lr-search-change', async () => {
     const { el, restore } = await loadWithMarkup('<p>The cat sat on the mat.</p>');
     try {
       await el.search('cat');
-      const listener = oneEvent(el, 'lyra-search-change');
+      const listener = oneEvent(el, 'lr-search-change');
       el.clearSearch();
       const event = (await listener) as CustomEvent<{ query: string; matchCount: number; activeIndex: number }>;
       expect(event.detail).to.deep.equal({ query: '', matchCount: 0, activeIndex: -1 });

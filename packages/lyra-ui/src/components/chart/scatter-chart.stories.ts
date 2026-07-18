@@ -4,7 +4,7 @@ import type { Series } from './chart.js';
 
 const meta: Meta = {
   title: 'Charts/Scatter',
-  component: 'lyra-scatter-chart',
+  component: 'lr-scatter-chart',
   tags: ['autodocs'],
 };
 export default meta;
@@ -24,13 +24,13 @@ export const Default: Story = {
       },
     ];
     return html`
-      <lyra-scatter-chart
+      <lr-scatter-chart
         height="16rem"
         style="width: 22rem"
         x-label="X"
         y-label="Y"
         .datasets=${series}
-      ></lyra-scatter-chart>
+      ></lr-scatter-chart>
     `;
   },
 };

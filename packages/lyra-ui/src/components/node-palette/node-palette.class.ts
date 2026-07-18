@@ -21,24 +21,24 @@ export interface PaletteItem {
 }
 
 export interface LyraNodePaletteEventMap {
-  'lyra-palette-place': CustomEvent<{ type: string }>;
-  'lyra-select': CustomEvent<{ item: PaletteItem }>;
+  'lr-palette-place': CustomEvent<{ type: string }>;
+  'lr-select': CustomEvent<{ item: PaletteItem }>;
 }
 
 /**
- * `<lyra-node-palette>` — the searchable, categorized node library for workflow editors: drag an
+ * `<lr-node-palette>` — the searchable, categorized node library for workflow editors: drag an
  * item onto a canvas, or place it by keyboard. Never creates nodes or touches a canvas's data
- * itself — the drop/place handshake ends at `lyra-node-add`/`lyra-palette-place`; the host mutates
- * `nodes`. Fully decoupled from `lyra-flow-canvas` (no `for` resolution, unlike
- * `lyra-flow-minimap`/`lyra-flow-controls`/`lyra-flow-run-overlay`) — it only needs to agree with a
+ * itself — the drop/place handshake ends at `lr-node-add`/`lr-palette-place`; the host mutates
+ * `nodes`. Fully decoupled from `lr-flow-canvas` (no `for` resolution, unlike
+ * `lr-flow-minimap`/`lr-flow-controls`/`lr-flow-run-overlay`) — it only needs to agree with a
  * `droppable` canvas on the `FLOW_PALETTE_MIME_TYPE` drag payload shape.
  *
- * @customElement lyra-node-palette
+ * @customElement lr-node-palette
  * @slot header - Content above the search field (e.g. a heading or tabs).
  * @slot footer - Content below the list.
- * @event lyra-palette-place - An item was placed (pointer click or Enter/Space — the click/keyboard
+ * @event lr-palette-place - An item was placed (pointer click or Enter/Space — the click/keyboard
  *   alternative to dragging). `detail: { type }`.
- * @event lyra-select - Emitted alongside `lyra-palette-place` on both gestures, carrying the full
+ * @event lr-select - Emitted alongside `lr-palette-place` on both gestures, carrying the full
  *   item. `detail: { item }`.
  * @csspart base - The root wrapper.
  * @csspart search - The search input.
@@ -152,8 +152,8 @@ export class LyraNodePalette extends LyraElement<LyraNodePaletteEventMap> {
 
   private place(item: PaletteItem): void {
     if (item.disabled) return;
-    this.emit('lyra-palette-place', { type: item.type });
-    this.emit('lyra-select', { item });
+    this.emit('lr-palette-place', { type: item.type });
+    this.emit('lr-select', { item });
   }
 
   private onItemDragStart(e: DragEvent, item: PaletteItem): void {
@@ -216,6 +216,6 @@ export class LyraNodePalette extends LyraElement<LyraNodePaletteEventMap> {
 
 declare global {
   interface HTMLElementTagNameMap {
-    'lyra-node-palette': LyraNodePalette;
+    'lr-node-palette': LyraNodePalette;
   }
 }

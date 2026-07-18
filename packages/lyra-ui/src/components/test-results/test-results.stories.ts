@@ -5,7 +5,7 @@ import type { TestSuiteResult } from './test-results.class.js';
 
 const meta: Meta = {
   title: 'Test Results',
-  component: 'lyra-test-results',
+  component: 'lr-test-results',
 };
 export default meta;
 type Story = StoryObj;
@@ -28,20 +28,20 @@ const mixedSuites: TestSuiteResult[] = [
 ];
 
 export const Default: Story = {
-  render: () => html`<lyra-test-results style="max-width:32rem" .suites=${mixedSuites}></lyra-test-results>`,
+  render: () => html`<lr-test-results style="max-width:32rem" .suites=${mixedSuites}></lr-test-results>`,
 };
 
 export const MixedStatuses: Story = {
   name: 'Passed / Failed / Skipped / Running',
-  render: () => html`<lyra-test-results style="max-width:32rem" .suites=${mixedSuites}></lyra-test-results>`,
+  render: () => html`<lr-test-results style="max-width:32rem" .suites=${mixedSuites}></lr-test-results>`,
 };
 
 export const Empty: Story = {
-  render: () => html`<lyra-test-results></lyra-test-results>`,
+  render: () => html`<lr-test-results></lr-test-results>`,
 };
 
 export const Narrow320: Story = {
   name: 'Narrow (320px)',
   render: () =>
-    html`<div style="max-width:320px"><lyra-test-results .suites=${mixedSuites}></lyra-test-results></div>`,
+    html`<div style="max-width:320px"><lr-test-results .suites=${mixedSuites}></lr-test-results></div>`,
 };

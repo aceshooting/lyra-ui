@@ -1,6 +1,6 @@
 /**
- * Both `<lyra-tree>` and `<lyra-tree-node>` override `getUpdateComplete()` to
- * additionally await their currently-known child `<lyra-tree-node>`
+ * Both `<lr-tree>` and `<lr-tree-node>` override `getUpdateComplete()` to
+ * additionally await their currently-known child `<lr-tree-node>`
  * elements' own `updateComplete`. A nested node only receives a pushed-down
  * property (like `activeId`, and the `tabIndex` derived from it) once its
  * own render has committed -- one more pending update per depth level -- so

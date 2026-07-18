@@ -11,12 +11,12 @@ registerToolRenderer('get_weather', {
     const r = result as { location: string; tempC: number; conditions: string };
     return html`
       <div
-        style="display:flex;align-items:center;gap:0.75rem;padding:0.75rem 1rem;border:1px solid var(--lyra-color-border);border-radius:0.5rem;max-width:20rem;"
+        style="display:flex;align-items:center;gap:0.75rem;padding:0.75rem 1rem;border:1px solid var(--lr-color-border);border-radius:0.5rem;max-width:20rem;"
       >
         <span style="font-size:1.75rem;">${r.conditions === 'Rain' ? '🌧️' : '☀️'}</span>
         <div>
           <div style="font-weight:600;">${r.location}</div>
-          <div style="color:var(--lyra-color-text-quiet);font-size:0.875rem;">${r.tempC}°C · ${r.conditions}</div>
+          <div style="color:var(--lr-color-text-quiet);font-size:0.875rem;">${r.tempC}°C · ${r.conditions}</div>
         </div>
       </div>
     `;
@@ -47,7 +47,7 @@ registerToolRenderer('slow_dashboard_widget', {
         () =>
           resolve({
             render: (result) =>
-              html`<div style="padding:1rem;border:1px dashed var(--lyra-color-border);border-radius:0.5rem;max-width:20rem;">
+              html`<div style="padding:1rem;border:1px dashed var(--lr-color-border);border-radius:0.5rem;max-width:20rem;">
                 Loaded after a delay — ${JSON.stringify(result)}
               </div>`,
           }),
@@ -64,13 +64,13 @@ registerToolRenderer('broken_renderer', {
 
 const meta: Meta = {
   title: 'ToolResultView',
-  component: 'lyra-tool-result-view',
+  component: 'lr-tool-result-view',
   tags: ['autodocs'],
   parameters: {
     docs: {
       description: {
         component:
-          'Dispatches a tool call\'s result to a custom renderer registered via `registerToolRenderer()` (exact tool-name match, then facade/shape-based `matches()` dispatch), falling back to `<lyra-json-viewer>` whenever no renderer matches, a lazy `load()` rejects, or `render()` throws.',
+          'Dispatches a tool call\'s result to a custom renderer registered via `registerToolRenderer()` (exact tool-name match, then facade/shape-based `matches()` dispatch), falling back to `<lr-json-viewer>` whenever no renderer matches, a lazy `load()` rejects, or `render()` throws.',
       },
     },
   },
@@ -81,27 +81,27 @@ type Story = StoryObj;
 export const NoRendererRegistered: Story = {
   name: 'Fallback: no renderer registered',
   render: () => html`
-    <lyra-tool-result-view
+    <lr-tool-result-view
       tool-name="unregistered_tool"
       .result=${{ status: 'ok', rows: 42 }}
       style="display:block;max-width:24rem;"
-    ></lyra-tool-result-view>
+    ></lr-tool-result-view>
   `,
 };
 
 export const ExactNameMatch: Story = {
   render: () => html`
-    <lyra-tool-result-view
+    <lr-tool-result-view
       tool-name="get_weather"
       .result=${{ location: 'Brussels, BE', tempC: 19, conditions: 'Cloudy' }}
-    ></lyra-tool-result-view>
+    ></lr-tool-result-view>
   `,
 };
 
 export const ShapeBasedDispatch: Story = {
   name: 'Facade/shape-based dispatch (no exact tool-name match)',
   render: () => html`
-    <lyra-tool-result-view
+    <lr-tool-result-view
       tool-name="web_search"
       .result=${{
         results: [
@@ -109,27 +109,27 @@ export const ShapeBasedDispatch: Story = {
           { title: 'Getting started guide', url: 'https://example.com/start' },
         ],
       }}
-    ></lyra-tool-result-view>
+    ></lr-tool-result-view>
   `,
 };
 
 export const LazyLoadedRenderer: Story = {
   render: () => html`
-    <lyra-tool-result-view
+    <lr-tool-result-view
       tool-name="slow_dashboard_widget"
       .result=${{ metric: 'active_users', value: 8213 }}
-    ></lyra-tool-result-view>
+    ></lr-tool-result-view>
   `,
 };
 
 export const RenderErrorFallsBackToJson: Story = {
-  name: 'Renderer throws — falls back to lyra-json-viewer',
+  name: 'Renderer throws — falls back to lr-json-viewer',
   render: () => html`
-    <lyra-tool-result-view
+    <lr-tool-result-view
       tool-name="broken_renderer"
       .result=${{ this: 'still renders, via the fallback' }}
-      @lyra-render-error=${(e: CustomEvent<{ toolName: string; error: unknown }>) =>
-        console.warn('lyra-render-error', e.detail)}
-    ></lyra-tool-result-view>
+      @lr-render-error=${(e: CustomEvent<{ toolName: string; error: unknown }>) =>
+        console.warn('lr-render-error', e.detail)}
+    ></lr-tool-result-view>
   `,
 };

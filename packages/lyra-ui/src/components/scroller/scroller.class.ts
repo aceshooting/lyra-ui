@@ -7,7 +7,7 @@ import { styles } from './scroller.styles.js';
 export type ScrollerOrientation = 'horizontal' | 'vertical';
 
 export interface LyraScrollerEventMap {
-  'lyra-scroll': CustomEvent<{
+  'lr-scroll': CustomEvent<{
     scrollStart: boolean;
     scrollEnd: boolean;
     scrollLeft: number;
@@ -16,13 +16,13 @@ export interface LyraScrollerEventMap {
 }
 
 /**
- * `<lyra-scroller>` — a responsive overflow surface with optional previous
+ * `<lr-scroller>` — a responsive overflow surface with optional previous
  * and next controls. Content remains in the default slot, so cards, tabs, and
  * any consumer-owned interactive elements retain their own semantics.
  *
- * @customElement lyra-scroller
+ * @customElement lr-scroller
  * @slot - Scrollable content.
- * @event lyra-scroll - The scroll position or available edge changed.
+ * @event lr-scroll - The scroll position or available edge changed.
  * @csspart base - The overall scroller layout.
  * @csspart viewport - The native scroll container.
  * @csspart content - The slotted content wrapper.
@@ -31,8 +31,8 @@ export interface LyraScrollerEventMap {
  * @csspart control - Shared part on both `previous` and `next`.
  * @csspart previous-glyph - The chevron glyph inside `previous`, mirrored under RTL.
  * @csspart next-glyph - The chevron glyph inside `next`, mirrored under RTL.
- * @cssprop --lyra-scroller-control-size - Control size.
- * @cssprop --lyra-scroller-min-block-size - Minimum vertical scroller size.
+ * @cssprop --lr-scroller-control-size - Control size.
+ * @cssprop --lr-scroller-min-block-size - Minimum vertical scroller size.
  */
 export class LyraScroller extends LyraElement<LyraScrollerEventMap> {
   static styles = [LyraElement.styles, styles];
@@ -100,7 +100,7 @@ export class LyraScroller extends LyraElement<LyraScrollerEventMap> {
     const changed = detail.scrollStart !== this.canScrollStart || detail.scrollEnd !== this.canScrollEnd;
     this.canScrollStart = detail.scrollStart;
     this.canScrollEnd = detail.scrollEnd;
-    if (changed) this.emit('lyra-scroll', detail);
+    if (changed) this.emit('lr-scroll', detail);
   };
 
   private onScroll = (): void => this.updateEdges();
@@ -152,6 +152,6 @@ export class LyraScroller extends LyraElement<LyraScrollerEventMap> {
 
 declare global {
   interface HTMLElementTagNameMap {
-    'lyra-scroller': LyraScroller;
+    'lr-scroller': LyraScroller;
   }
 }

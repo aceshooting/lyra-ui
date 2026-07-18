@@ -2,8 +2,8 @@ import { expect } from '@open-wc/testing';
 import { tag, LYRA_PREFIX, defineElement } from './prefix.js';
 
 it('builds tag names from the prefix', () => {
-  expect(LYRA_PREFIX).to.equal('lyra');
-  expect(tag('combobox')).to.equal('lyra-combobox');
+  expect(LYRA_PREFIX).to.equal('lr');
+  expect(tag('combobox')).to.equal('lr-combobox');
 });
 
 it('defineElement is idempotent when called twice for the same tag', () => {

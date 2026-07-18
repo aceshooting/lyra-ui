@@ -16,7 +16,7 @@ export const styles = css`
     display: inline-flex;
     flex-wrap: wrap;
     align-items: stretch;
-    gap: var(--lyra-button-group-gap, var(--lyra-space-2xs));
+    gap: var(--lr-button-group-gap, var(--lr-space-2xs));
     max-inline-size: 100%;
   }
 

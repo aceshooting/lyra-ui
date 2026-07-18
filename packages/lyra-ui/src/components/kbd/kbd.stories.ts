@@ -4,7 +4,7 @@ import './kbd.js';
 
 const meta: Meta = {
   title: 'Kbd',
-  component: 'lyra-kbd',
+  component: 'lr-kbd',
   tags: ['autodocs'],
   parameters: {
     docs: {
@@ -23,18 +23,18 @@ type Story = StoryObj;
 
 export const Basic: Story = {
   args: { keys: 'mod+k' },
-  render: (args) => html`<lyra-kbd keys=${args.keys}></lyra-kbd>`,
+  render: (args) => html`<lr-kbd keys=${args.keys}></lr-kbd>`,
 };
 
 export const ModifierCombinations: Story = {
   name: 'Common modifier combinations',
   render: () => html`
     <div style="display:flex; flex-direction:column; gap:0.75rem; align-items:flex-start;">
-      <lyra-kbd keys="mod+k"></lyra-kbd>
-      <lyra-kbd keys="mod+shift+p"></lyra-kbd>
-      <lyra-kbd keys="mod+alt+shift+n"></lyra-kbd>
-      <lyra-kbd keys="ctrl+c"></lyra-kbd>
-      <lyra-kbd keys="alt+enter"></lyra-kbd>
+      <lr-kbd keys="mod+k"></lr-kbd>
+      <lr-kbd keys="mod+shift+p"></lr-kbd>
+      <lr-kbd keys="mod+alt+shift+n"></lr-kbd>
+      <lr-kbd keys="ctrl+c"></lr-kbd>
+      <lr-kbd keys="alt+enter"></lr-kbd>
     </div>
   `,
 };
@@ -43,16 +43,16 @@ export const NamedKeys: Story = {
   name: 'Friendly labels for named keys',
   render: () => html`
     <div style="display:flex; gap:0.75rem; flex-wrap:wrap; align-items:center;">
-      <lyra-kbd keys="enter"></lyra-kbd>
-      <lyra-kbd keys="esc"></lyra-kbd>
-      <lyra-kbd keys="tab"></lyra-kbd>
-      <lyra-kbd keys="space"></lyra-kbd>
-      <lyra-kbd keys="backspace"></lyra-kbd>
-      <lyra-kbd keys="delete"></lyra-kbd>
-      <lyra-kbd keys="arrowup"></lyra-kbd>
-      <lyra-kbd keys="arrowdown"></lyra-kbd>
-      <lyra-kbd keys="arrowleft"></lyra-kbd>
-      <lyra-kbd keys="arrowright"></lyra-kbd>
+      <lr-kbd keys="enter"></lr-kbd>
+      <lr-kbd keys="esc"></lr-kbd>
+      <lr-kbd keys="tab"></lr-kbd>
+      <lr-kbd keys="space"></lr-kbd>
+      <lr-kbd keys="backspace"></lr-kbd>
+      <lr-kbd keys="delete"></lr-kbd>
+      <lr-kbd keys="arrowup"></lr-kbd>
+      <lr-kbd keys="arrowdown"></lr-kbd>
+      <lr-kbd keys="arrowleft"></lr-kbd>
+      <lr-kbd keys="arrowright"></lr-kbd>
     </div>
   `,
 };
@@ -61,9 +61,9 @@ export const UnrecognizedTokensRenderAsTyped: Story = {
   name: 'Unrecognized tokens render as typed (single letters upper-cased)',
   render: () => html`
     <div style="display:flex; gap:0.75rem; flex-wrap:wrap; align-items:center;">
-      <lyra-kbd keys="k"></lyra-kbd>
-      <lyra-kbd keys="f1"></lyra-kbd>
-      <lyra-kbd keys="mod+/"></lyra-kbd>
+      <lr-kbd keys="k"></lr-kbd>
+      <lr-kbd keys="f1"></lr-kbd>
+      <lr-kbd keys="mod+/"></lr-kbd>
     </div>
   `,
 };
@@ -72,8 +72,8 @@ export const InlineWithText: Story = {
   name: 'Inline alongside surrounding text',
   render: () => html`
     <p>
-      Press <lyra-kbd keys="mod+k"></lyra-kbd> to open the command palette, or
-      <lyra-kbd keys="esc"></lyra-kbd> to dismiss it.
+      Press <lr-kbd keys="mod+k"></lr-kbd> to open the command palette, or
+      <lr-kbd keys="esc"></lr-kbd> to dismiss it.
     </p>
   `,
 };
@@ -88,10 +88,10 @@ export const CustomSlotContent: Story = {
       },
     },
   },
-  render: () => html`<lyra-kbd aria-label="Custom shortcut"><em>fn</em>+F5</lyra-kbd>`,
+  render: () => html`<lr-kbd aria-label="Custom shortcut"><em>fn</em>+F5</lr-kbd>`,
 };
 
 export const EmptyState: Story = {
   name: 'No keys set (renders nothing, aria-hidden)',
-  render: () => html`<lyra-kbd></lyra-kbd>`,
+  render: () => html`<lr-kbd></lr-kbd>`,
 };

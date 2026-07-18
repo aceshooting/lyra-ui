@@ -15,7 +15,7 @@ import type {
 } from '../document-viewer/anchors.js';
 import { styles } from './terminal.styles.js';
 // The registering barrel (not virtual-list.class.js) -- this side effect is what makes
-// <lyra-virtual-list> an actually-defined tag by the time this component renders it.
+// <lr-virtual-list> an actually-defined tag by the time this component renders it.
 import '../virtual-list/virtual-list.js';
 import type { VirtualListRange } from '../virtual-list/virtual-list.class.js';
 
@@ -40,18 +40,18 @@ const EMPTY_CELL_STYLES: AnsiStyles = {
 };
 
 /** Throttle window for the `announce-output` live region -- much shorter than
- *  `<lyra-live-region>`'s general-purpose 500ms default. Console/tool output can arrive in rapid,
+ *  `<lr-live-region>`'s general-purpose 500ms default. Console/tool output can arrive in rapid,
  *  irregularly-sized bursts (a build log, a streaming agent trace); a short window still coalesces
  *  same-tick chunks into one announcement while keeping a screen-reader user's sense of the log
  *  close to real time, rather than lagging half a second behind the visible text. */
 const ANNOUNCE_THROTTLE_MS = 10;
 
 const TONE_BACKGROUND_VAR: Record<LyraHighlightTone, string> = {
-  accent: 'var(--lyra-color-brand-quiet)',
-  success: 'var(--lyra-color-success-quiet)',
-  warning: 'var(--lyra-color-warning-quiet)',
-  danger: 'var(--lyra-color-danger-quiet)',
-  neutral: 'var(--lyra-color-surface)',
+  accent: 'var(--lr-color-brand-quiet)',
+  success: 'var(--lr-color-success-quiet)',
+  warning: 'var(--lr-color-warning-quiet)',
+  danger: 'var(--lr-color-danger-quiet)',
+  neutral: 'var(--lr-color-surface)',
 };
 
 function plainTextOfLine(line: TerminalLine): string {
@@ -90,25 +90,25 @@ interface SearchMatch {
 }
 
 export interface LyraTerminalEventMap {
-  'lyra-copy': CustomEvent<{ text: string }>;
-  'lyra-download': CustomEvent<{ filename: string }>;
-  'lyra-follow-change': CustomEvent<{ following: boolean }>;
-  'lyra-search-change': CustomEvent<{ query: string; matchCount: number; activeIndex: number }>;
-  'lyra-highlight-activate': CustomEvent<HighlightActivateDetail>;
-  'lyra-text-select': CustomEvent<TextSelectDetail>;
+  'lr-copy': CustomEvent<{ text: string }>;
+  'lr-download': CustomEvent<{ filename: string }>;
+  'lr-follow-change': CustomEvent<{ following: boolean }>;
+  'lr-search-change': CustomEvent<{ query: string; matchCount: number; activeIndex: number }>;
+  'lr-highlight-activate': CustomEvent<HighlightActivateDetail>;
+  'lr-text-select': CustomEvent<TextSelectDetail>;
 }
 
 /**
- * `<lyra-terminal>` — read-only ANSI console for streamed agent/tool output. Not a PTY: no
+ * `<lr-terminal>` — read-only ANSI console for streamed agent/tool output. Not a PTY: no
  * stdin/keystroke handling, no cursor-addressed full-screen apps.
  *
- * @customElement lyra-terminal
- * @event lyra-copy - `detail: { text }` — the copy button copied the SGR-stripped plain text.
- * @event lyra-download - `detail: { filename }` — the download button triggered a Blob download.
- * @event lyra-follow-change - `detail: { following }` — stick-to-bottom engaged/disengaged.
- * @event lyra-search-change - `detail: { query, matchCount, activeIndex }`.
- * @event lyra-highlight-activate - `detail: { id }` — a highlighted line was clicked/activated.
- * @event lyra-text-select - `detail: { text, anchor, rects }` — fires on pointerup after a text
+ * @customElement lr-terminal
+ * @event lr-copy - `detail: { text }` — the copy button copied the SGR-stripped plain text.
+ * @event lr-download - `detail: { filename }` — the download button triggered a Blob download.
+ * @event lr-follow-change - `detail: { following }` — stick-to-bottom engaged/disengaged.
+ * @event lr-search-change - `detail: { query, matchCount, activeIndex }`.
+ * @event lr-highlight-activate - `detail: { id }` — a highlighted line was clicked/activated.
+ * @event lr-text-select - `detail: { text, anchor, rects }` — fires on pointerup after a text
  *   selection ending inside the viewport. `anchor` is `null` when either selection endpoint isn't
  *   inside a currently-mounted (non-virtualized-out) line.
  * @csspart base - The outer container.
@@ -117,9 +117,9 @@ export interface LyraTerminalEventMap {
  * @csspart download-button - The download button.
  * @csspart viewport - The `role="log"` scrollable region wrapping the virtualized line list.
  * @csspart line - One rendered line; carries `data-line-number`, `data-match`, `data-highlight-tone`.
- *   Rendered through `<lyra-virtual-list>`'s `renderItem`, so it lives inside that element's own
+ *   Rendered through `<lr-virtual-list>`'s `renderItem`, so it lives inside that element's own
  *   shadow root rather than this component's -- this component's own stylesheet reaches it via
- *   `lyra-virtual-list::part(line)`, one hop of the standard CSS Shadow Parts selector.
+ *   `lr-virtual-list::part(line)`, one hop of the standard CSS Shadow Parts selector.
  * @csspart jump-to-latest - The pill shown while `follow` is disengaged and new output has arrived.
  * @csspart announcer - The visually-hidden `role="status"` region used when `announce-output` is set.
  */
@@ -275,7 +275,7 @@ export class LyraTerminal extends LyraElement<LyraTerminalEventMap> {
 
   private jumpToLatest = (): void => {
     this.follow = true;
-    this.emit('lyra-follow-change', { following: true });
+    this.emit('lr-follow-change', { following: true });
     this.scrollToBottom();
   };
 
@@ -301,7 +301,7 @@ export class LyraTerminal extends LyraElement<LyraTerminalEventMap> {
   }
 
   private emitSearchChange(): void {
-    this.emit('lyra-search-change', {
+    this.emit('lr-search-change', {
       query: this.searchQuery,
       matchCount: this.searchMatches.length,
       activeIndex: this.searchActiveIndex,
@@ -313,7 +313,7 @@ export class LyraTerminal extends LyraElement<LyraTerminalEventMap> {
     if (!match) return;
     if (this.follow) {
       this.follow = false;
-      this.emit('lyra-follow-change', { following: false });
+      this.emit('lr-follow-change', { following: false });
     }
     this.scrollTargetLineNumber = match.lineNumber;
   }
@@ -363,7 +363,7 @@ export class LyraTerminal extends LyraElement<LyraTerminalEventMap> {
 
   private activateHighlight(h: LyraHighlight): void {
     this.activeHighlightId = h.id;
-    this.emit('lyra-highlight-activate', { id: h.id });
+    this.emit('lr-highlight-activate', { id: h.id });
   }
 
   private onLineKeyDown = (e: KeyboardEvent, h: LyraHighlight): void => {
@@ -399,7 +399,7 @@ export class LyraTerminal extends LyraElement<LyraTerminalEventMap> {
     } catch {
       // best-effort
     }
-    this.emit('lyra-copy', { text });
+    this.emit('lr-copy', { text });
     this.justCopied = true;
     clearTimeout(this.copyTimeoutId);
     this.copyTimeoutId = setTimeout(() => {
@@ -415,7 +415,7 @@ export class LyraTerminal extends LyraElement<LyraTerminalEventMap> {
     a.download = this.filename || 'terminal.log';
     a.click();
     setTimeout(() => URL.revokeObjectURL(url), 5000);
-    this.emit('lyra-download', { filename: this.filename || 'terminal.log' });
+    this.emit('lr-download', { filename: this.filename || 'terminal.log' });
   };
 
   // --- Follow tracking via virtual-list's visible-range event ---------------
@@ -424,7 +424,7 @@ export class LyraTerminal extends LyraElement<LyraTerminalEventMap> {
     const atBottom = this.lines.length === 0 || e.detail.end >= this.lines.length - 1;
     if (atBottom !== this.follow) {
       this.follow = atBottom;
-      this.emit('lyra-follow-change', { following: atBottom });
+      this.emit('lr-follow-change', { following: atBottom });
     }
   };
 
@@ -432,7 +432,7 @@ export class LyraTerminal extends LyraElement<LyraTerminalEventMap> {
     if (e.key === 'End') this.jumpToLatest();
   };
 
-  /** Best-effort: resolves a user text selection ending inside the viewport into `lyra-text-select`.
+  /** Best-effort: resolves a user text selection ending inside the viewport into `lr-text-select`.
    *  Walks each selection endpoint up to its nearest `[data-line-number]` ancestor to build a
    *  `line-range` anchor; `anchor` is `null` when either endpoint isn't inside a currently-mounted
    *  line (virtualized out, or the selection reaches outside the viewport entirely) -- matching
@@ -441,14 +441,14 @@ export class LyraTerminal extends LyraElement<LyraTerminalEventMap> {
    *  has known browser-support variance; this degrades to no event firing rather than a broken one
    *  when the platform doesn't expose a usable Selection here. */
   private onViewportPointerUp = (): void => {
-    // Selectable text lives inside <lyra-virtual-list>'s own shadow root (renderItem's render
+    // Selectable text lives inside <lr-virtual-list>'s own shadow root (renderItem's render
     // root, not this component's -- see the class doc's `line` csspart note), so a shadow-scoped
     // selection read is anchored there, not on `this.shadowRoot`. `ShadowRoot.getSelection` is a
     // Chromium-only extension absent from the standard DOM lib types (same cast the shared
     // `internal/anchor-target.ts` selection helper uses for its own shadow-scoped read).
     const shadowGetSelection = (root: ShadowRoot | null | undefined) =>
       (root as unknown as { getSelection?: () => Selection | null } | null | undefined)?.getSelection?.();
-    const listShadow = this.renderRoot.querySelector('lyra-virtual-list')?.shadowRoot;
+    const listShadow = this.renderRoot.querySelector('lr-virtual-list')?.shadowRoot;
     const selection = shadowGetSelection(listShadow) ?? shadowGetSelection(this.shadowRoot) ?? document.getSelection();
     const text = selection?.toString() ?? '';
     if (!selection || selection.isCollapsed || text === '') return;
@@ -475,7 +475,7 @@ export class LyraTerminal extends LyraElement<LyraTerminalEventMap> {
     } catch {
       rects = [];
     }
-    this.emit('lyra-text-select', { text, anchor, rects });
+    this.emit('lr-text-select', { text, anchor, rects });
   };
 
   // --- Render ------------------------------------------------------------
@@ -483,7 +483,7 @@ export class LyraTerminal extends LyraElement<LyraTerminalEventMap> {
   /** Per-line state styling (cursor, search-match outline, highlight-tone background). Applied
    *  inline rather than through `data-match`/`data-highlight-tone` stylesheet selectors, since those
    *  attributes live on the same element `part="line"` names -- and a `::part()` selector (needed to
-   *  reach across `<lyra-virtual-list>`'s shadow boundary, see `terminal.styles.ts`) cannot be
+   *  reach across `<lr-virtual-list>`'s shadow boundary, see `terminal.styles.ts`) cannot be
    *  combined with a trailing attribute selector the way a same-shadow-root rule could. */
   private lineStateStyle(
     highlight: LyraHighlight | undefined,
@@ -493,7 +493,7 @@ export class LyraTerminal extends LyraElement<LyraTerminalEventMap> {
     return {
       cursor: highlight ? 'pointer' : '',
       outline: isMatchLine
-        ? `var(--lyra-size-2px) solid ${isActiveMatchLine ? 'var(--lyra-color-brand)' : 'var(--lyra-color-warning)'}`
+        ? `var(--lr-size-2px) solid ${isActiveMatchLine ? 'var(--lr-color-brand)' : 'var(--lr-color-warning)'}`
         : '',
       background: highlight?.tone ? TONE_BACKGROUND_VAR[highlight.tone] : '',
     };
@@ -523,7 +523,7 @@ export class LyraTerminal extends LyraElement<LyraTerminalEventMap> {
   };
 
   private segmentStyle(s: AnsiStyles): Record<string, string> {
-    const fg = s.fg ?? 'var(--lyra-color-text)';
+    const fg = s.fg ?? 'var(--lr-color-text)';
     const bg = s.bg ?? 'transparent';
     return {
       'font-weight': s.bold ? 'bold' : 'normal',
@@ -564,14 +564,14 @@ export class LyraTerminal extends LyraElement<LyraTerminalEventMap> {
           @keydown=${this.onViewportKeyDown}
           @pointerup=${this.onViewportPointerUp}
         >
-          <lyra-virtual-list
+          <lr-virtual-list
             .items=${this.lines}
             .renderItem=${(item: unknown) => this.renderLine(item as TerminalLine)}
             .keyFunction=${(item: unknown) => (item as TerminalLine).number}
             .activeId=${this.scrollTargetLineNumber ?? ''}
             row-height=${this.wrap ? 'auto' : '24'}
-            @lyra-visible-range-changed=${this.onVisibleRangeChanged}
-          ></lyra-virtual-list>
+            @lr-visible-range-changed=${this.onVisibleRangeChanged}
+          ></lr-virtual-list>
           ${!this.follow && this.lines.length > 0
             ? html`<button part="jump-to-latest" type="button" @click=${this.jumpToLatest}>
                 ${this.localize('jumpToLatest')}
@@ -585,6 +585,6 @@ export class LyraTerminal extends LyraElement<LyraTerminalEventMap> {
 
 declare global {
   interface HTMLElementTagNameMap {
-    'lyra-terminal': LyraTerminal;
+    'lr-terminal': LyraTerminal;
   }
 }

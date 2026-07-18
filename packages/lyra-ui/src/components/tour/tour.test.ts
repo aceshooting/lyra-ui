@@ -47,30 +47,30 @@ async function waitFor<T>(read: () => T, until: (v: T) => boolean, timeoutMs = 2
   }
 }
 
-describe('lyra-tour', () => {
+describe('lr-tour', () => {
   it('is closed by default and renders no backdrop/spotlight/popover until open', async () => {
     const el = (await fixture(
       html`<div>
-        <lyra-tour .steps=${makeSteps(2)}></lyra-tour>
+        <lr-tour .steps=${makeSteps(2)}></lr-tour>
         ${targetButtons(2)}
       </div>`,
     )) as HTMLDivElement;
-    const tour = el.querySelector('lyra-tour') as LyraTour;
+    const tour = el.querySelector('lr-tour') as LyraTour;
     expect(tour.open).to.be.false;
     expect(tour.shadowRoot!.querySelector('[part="backdrop"]')).to.not.exist;
     expect(tour.shadowRoot!.querySelector('[part="spotlight"]')).to.not.exist;
     expect(tour.shadowRoot!.querySelector('[part="popover"]')).to.not.exist;
   });
 
-  it('start() opens at the given index (default 0), sets open, and fires lyra-tour-start', async () => {
+  it('start() opens at the given index (default 0), sets open, and fires lr-tour-start', async () => {
     const el = (await fixture(
       html`<div>
-        <lyra-tour .steps=${makeSteps(3)}></lyra-tour>
+        <lr-tour .steps=${makeSteps(3)}></lr-tour>
         ${targetButtons(3)}
       </div>`,
     )) as HTMLDivElement;
-    const tour = el.querySelector('lyra-tour') as LyraTour;
-    const listener = oneEvent(tour, 'lyra-tour-start');
+    const tour = el.querySelector('lr-tour') as LyraTour;
+    const listener = oneEvent(tour, 'lr-tour-start');
     tour.start();
     const event = await listener;
     expect(tour.open).to.be.true;
@@ -79,7 +79,7 @@ describe('lyra-tour', () => {
 
     tour.end('api');
     await tour.updateComplete;
-    const listener2 = oneEvent(tour, 'lyra-tour-start');
+    const listener2 = oneEvent(tour, 'lr-tour-start');
     tour.start(2);
     const event2 = await listener2;
     expect(tour.activeIndex).to.equal(2);
@@ -91,11 +91,11 @@ describe('lyra-tour', () => {
     const snapshot = JSON.parse(JSON.stringify(original));
     const el = (await fixture(
       html`<div>
-        <lyra-tour .steps=${original} open></lyra-tour>
+        <lr-tour .steps=${original} open></lr-tour>
         ${targetButtons(3)}
       </div>`,
     )) as HTMLDivElement;
-    const tour = el.querySelector('lyra-tour') as LyraTour;
+    const tour = el.querySelector('lr-tour') as LyraTour;
     await tour.updateComplete;
 
     tour.next();
@@ -112,11 +112,11 @@ describe('lyra-tour', () => {
   it('reflects activeIndex as an attribute and updates it via next()/back()/goToStep()', async () => {
     const el = (await fixture(
       html`<div>
-        <lyra-tour .steps=${makeSteps(3)} open></lyra-tour>
+        <lr-tour .steps=${makeSteps(3)} open></lr-tour>
         ${targetButtons(3)}
       </div>`,
     )) as HTMLDivElement;
-    const tour = el.querySelector('lyra-tour') as LyraTour;
+    const tour = el.querySelector('lr-tour') as LyraTour;
     await tour.updateComplete;
     expect(tour.getAttribute('active-index')).to.equal('0');
 
@@ -139,11 +139,11 @@ describe('lyra-tour', () => {
   it('normalizes an out-of-range/NaN activeIndex set directly (bypassing goToStep) to [0, steps.length - 1]', async () => {
     const el = (await fixture(
       html`<div>
-        <lyra-tour .steps=${makeSteps(3)}></lyra-tour>
+        <lr-tour .steps=${makeSteps(3)}></lr-tour>
         ${targetButtons(3)}
       </div>`,
     )) as HTMLDivElement;
-    const tour = el.querySelector('lyra-tour') as LyraTour;
+    const tour = el.querySelector('lr-tour') as LyraTour;
 
     tour.activeIndex = 99;
     await tour.updateComplete;
@@ -161,13 +161,13 @@ describe('lyra-tour', () => {
   it('falls back to the default spotlight padding when spotlight-padding is invalid, instead of poisoning the cutout with NaN', async () => {
     const el = (await fixture(
       html`<div>
-        <lyra-tour .steps=${makeSteps(1)} spotlight-padding="not-a-number"></lyra-tour>
+        <lr-tour .steps=${makeSteps(1)} spotlight-padding="not-a-number"></lr-tour>
         <button id="tour-target-0" style="position:fixed; top:100px; left:100px; width:50px; height:30px;">
           target 0
         </button>
       </div>`,
     )) as HTMLDivElement;
-    const tour = el.querySelector('lyra-tour') as LyraTour;
+    const tour = el.querySelector('lr-tour') as LyraTour;
     const targetButton = el.querySelector('#tour-target-0') as HTMLButtonElement;
     tour.start();
     await tour.updateComplete;
@@ -184,13 +184,13 @@ describe('lyra-tour', () => {
   it('does not poison the step popover position with NaN when distance is invalid', async () => {
     const el = (await fixture(
       html`<div>
-        <lyra-tour .steps=${makeSteps(1)} distance="not-a-number"></lyra-tour>
+        <lr-tour .steps=${makeSteps(1)} distance="not-a-number"></lr-tour>
         <button id="tour-target-0" style="position:fixed; top:100px; left:100px; width:50px; height:30px;">
           target 0
         </button>
       </div>`,
     )) as HTMLDivElement;
-    const tour = el.querySelector('lyra-tour') as LyraTour;
+    const tour = el.querySelector('lr-tour') as LyraTour;
     tour.start();
     await tour.updateComplete;
     await new Promise((r) => requestAnimationFrame(() => r(null)));
@@ -200,17 +200,17 @@ describe('lyra-tour', () => {
     expect(popover.style.top).to.not.include('NaN');
   });
 
-  it('next() fires a cancelable lyra-tour-step-change before activeIndex changes; preventDefault() keeps it unchanged', async () => {
+  it('next() fires a cancelable lr-tour-step-change before activeIndex changes; preventDefault() keeps it unchanged', async () => {
     const el = (await fixture(
       html`<div>
-        <lyra-tour .steps=${makeSteps(3)} open></lyra-tour>
+        <lr-tour .steps=${makeSteps(3)} open></lr-tour>
         ${targetButtons(3)}
       </div>`,
     )) as HTMLDivElement;
-    const tour = el.querySelector('lyra-tour') as LyraTour;
+    const tour = el.querySelector('lr-tour') as LyraTour;
     await tour.updateComplete;
 
-    const listener = oneEvent(tour, 'lyra-tour-step-change');
+    const listener = oneEvent(tour, 'lr-tour-step-change');
     tour.next();
     const event = await listener;
     expect((event as CustomEvent).cancelable).to.be.true;
@@ -224,25 +224,25 @@ describe('lyra-tour', () => {
 
     tour.goToStep(0);
     await tour.updateComplete;
-    tour.addEventListener('lyra-tour-step-change', (e) => e.preventDefault());
+    tour.addEventListener('lr-tour-step-change', (e) => e.preventDefault());
     tour.next();
     await tour.updateComplete;
     expect(tour.activeIndex, 'preventDefault() must keep activeIndex unchanged').to.equal(0);
   });
 
-  it('next() on the last step ends the tour with reason "completed" and does not fire lyra-tour-step-change', async () => {
+  it('next() on the last step ends the tour with reason "completed" and does not fire lr-tour-step-change', async () => {
     const el = (await fixture(
       html`<div>
-        <lyra-tour .steps=${makeSteps(2)} open active-index="1"></lyra-tour>
+        <lr-tour .steps=${makeSteps(2)} open active-index="1"></lr-tour>
         ${targetButtons(2)}
       </div>`,
     )) as HTMLDivElement;
-    const tour = el.querySelector('lyra-tour') as LyraTour;
+    const tour = el.querySelector('lr-tour') as LyraTour;
     await tour.updateComplete;
     let stepChangeCount = 0;
-    tour.addEventListener('lyra-tour-step-change', () => stepChangeCount++);
+    tour.addEventListener('lr-tour-step-change', () => stepChangeCount++);
 
-    const listener = oneEvent(tour, 'lyra-tour-end');
+    const listener = oneEvent(tour, 'lr-tour-end');
     tour.next();
     const event = await listener;
     expect((event as CustomEvent).detail).to.equal('completed');
@@ -253,14 +253,14 @@ describe('lyra-tour', () => {
   it('back() decrements activeIndex and no-ops on the first step', async () => {
     const el = (await fixture(
       html`<div>
-        <lyra-tour .steps=${makeSteps(2)} open></lyra-tour>
+        <lr-tour .steps=${makeSteps(2)} open></lr-tour>
         ${targetButtons(2)}
       </div>`,
     )) as HTMLDivElement;
-    const tour = el.querySelector('lyra-tour') as LyraTour;
+    const tour = el.querySelector('lr-tour') as LyraTour;
     await tour.updateComplete;
     let fired = false;
-    tour.addEventListener('lyra-tour-step-change', () => (fired = true));
+    tour.addEventListener('lr-tour-step-change', () => (fired = true));
 
     tour.back();
     await tour.updateComplete;
@@ -271,11 +271,11 @@ describe('lyra-tour', () => {
   it('goToStep() clamps out-of-range indices into [0, steps.length - 1]', async () => {
     const el = (await fixture(
       html`<div>
-        <lyra-tour .steps=${makeSteps(3)} open></lyra-tour>
+        <lr-tour .steps=${makeSteps(3)} open></lr-tour>
         ${targetButtons(3)}
       </div>`,
     )) as HTMLDivElement;
-    const tour = el.querySelector('lyra-tour') as LyraTour;
+    const tour = el.querySelector('lr-tour') as LyraTour;
     await tour.updateComplete;
 
     tour.goToStep(99);
@@ -290,15 +290,15 @@ describe('lyra-tour', () => {
   it('the built-in Skip button calls end("skip"), cancelable via preventDefault()', async () => {
     const el = (await fixture(
       html`<div>
-        <lyra-tour .steps=${makeSteps(2)} open></lyra-tour>
+        <lr-tour .steps=${makeSteps(2)} open></lr-tour>
         ${targetButtons(2)}
       </div>`,
     )) as HTMLDivElement;
-    const tour = el.querySelector('lyra-tour') as LyraTour;
+    const tour = el.querySelector('lr-tour') as LyraTour;
     await tour.updateComplete;
     const skipButton = tour.shadowRoot!.querySelector('[part="skip-button"]') as HTMLButtonElement;
 
-    const listener = oneEvent(tour, 'lyra-tour-end');
+    const listener = oneEvent(tour, 'lr-tour-end');
     skipButton.click();
     const event = await listener;
     expect((event as CustomEvent).detail).to.equal('skip');
@@ -306,29 +306,29 @@ describe('lyra-tour', () => {
 
     const el2 = (await fixture(
       html`<div>
-        <lyra-tour .steps=${makeSteps(2)} open></lyra-tour>
+        <lr-tour .steps=${makeSteps(2)} open></lr-tour>
         ${targetButtons(2)}
       </div>`,
     )) as HTMLDivElement;
-    const tour2 = el2.querySelector('lyra-tour') as LyraTour;
+    const tour2 = el2.querySelector('lr-tour') as LyraTour;
     await tour2.updateComplete;
-    tour2.addEventListener('lyra-tour-end', (e) => e.preventDefault());
+    tour2.addEventListener('lr-tour-end', (e) => e.preventDefault());
     (tour2.shadowRoot!.querySelector('[part="skip-button"]') as HTMLButtonElement).click();
     await tour2.updateComplete;
     expect(tour2.open, 'preventDefault() must keep the tour open').to.be.true;
   });
 
-  it('Escape fires lyra-tour-end with reason "escape"', async () => {
+  it('Escape fires lr-tour-end with reason "escape"', async () => {
     const el = (await fixture(
       html`<div>
-        <lyra-tour .steps=${makeSteps(2)} open></lyra-tour>
+        <lr-tour .steps=${makeSteps(2)} open></lr-tour>
         ${targetButtons(2)}
       </div>`,
     )) as HTMLDivElement;
-    const tour = el.querySelector('lyra-tour') as LyraTour;
+    const tour = el.querySelector('lr-tour') as LyraTour;
     await tour.updateComplete;
 
-    const listener = oneEvent(tour, 'lyra-tour-end');
+    const listener = oneEvent(tour, 'lr-tour-end');
     document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
     const event = await listener;
     expect((event as CustomEvent).detail).to.equal('escape');
@@ -339,11 +339,11 @@ describe('lyra-tour', () => {
     it('a backdrop click does nothing when unset (default)', async () => {
       const el = (await fixture(
         html`<div>
-          <lyra-tour .steps=${makeSteps(2)} open></lyra-tour>
+          <lr-tour .steps=${makeSteps(2)} open></lr-tour>
           ${targetButtons(2)}
         </div>`,
       )) as HTMLDivElement;
-      const tour = el.querySelector('lyra-tour') as LyraTour;
+      const tour = el.querySelector('lr-tour') as LyraTour;
       await tour.updateComplete;
       (tour.shadowRoot!.querySelector('[part="backdrop"]') as SVGElement).dispatchEvent(
         new MouseEvent('click', { bubbles: true }),
@@ -352,16 +352,16 @@ describe('lyra-tour', () => {
       expect(tour.open).to.be.true;
     });
 
-    it('a backdrop click fires lyra-tour-end("skip") once lightDismiss is true', async () => {
+    it('a backdrop click fires lr-tour-end("skip") once lightDismiss is true', async () => {
       const el = (await fixture(
         html`<div>
-          <lyra-tour .steps=${makeSteps(2)} open .lightDismiss=${true}></lyra-tour>
+          <lr-tour .steps=${makeSteps(2)} open .lightDismiss=${true}></lr-tour>
           ${targetButtons(2)}
         </div>`,
       )) as HTMLDivElement;
-      const tour = el.querySelector('lyra-tour') as LyraTour;
+      const tour = el.querySelector('lr-tour') as LyraTour;
       await tour.updateComplete;
-      const listener = oneEvent(tour, 'lyra-tour-end');
+      const listener = oneEvent(tour, 'lr-tour-end');
       (tour.shadowRoot!.querySelector('[part="backdrop"]') as SVGElement).dispatchEvent(
         new MouseEvent('click', { bubbles: true }),
       );
@@ -374,11 +374,11 @@ describe('lyra-tour', () => {
   it('moves focus into [part="popover"] when opened, and again on every step change', async () => {
     const el = (await fixture(
       html`<div>
-        <lyra-tour .steps=${makeSteps(2)} open></lyra-tour>
+        <lr-tour .steps=${makeSteps(2)} open></lr-tour>
         ${targetButtons(2)}
       </div>`,
     )) as HTMLDivElement;
-    const tour = el.querySelector('lyra-tour') as LyraTour;
+    const tour = el.querySelector('lr-tour') as LyraTour;
     await tour.updateComplete;
     expect((tour.shadowRoot!.activeElement as HTMLElement | null)?.getAttribute('part')).to.equal('popover');
 
@@ -390,11 +390,11 @@ describe('lyra-tour', () => {
   it('traps Tab/Shift+Tab within the popover, never reaching a light-DOM target outside it', async () => {
     const el = (await fixture(
       html`<div>
-        <lyra-tour .steps=${makeSteps(1)} open></lyra-tour>
+        <lr-tour .steps=${makeSteps(1)} open></lr-tour>
         ${targetButtons(1)}
       </div>`,
     )) as HTMLDivElement;
-    const tour = el.querySelector('lyra-tour') as LyraTour;
+    const tour = el.querySelector('lr-tour') as LyraTour;
     await tour.updateComplete;
 
     const tab = new KeyboardEvent('keydown', { key: 'Tab', bubbles: true, cancelable: true });
@@ -409,7 +409,7 @@ describe('lyra-tour', () => {
   it('the default non-interactive target absorbs pointer events at its own center via the backdrop', async () => {
     const el = (await fixture(
       html`<div>
-        <lyra-tour .steps=${makeSteps(1)}></lyra-tour>
+        <lr-tour .steps=${makeSteps(1)}></lr-tour>
         <button
           id="tour-target-0"
           style="position:fixed; top:200px; left:200px; width:100px; height:40px;"
@@ -418,7 +418,7 @@ describe('lyra-tour', () => {
         </button>
       </div>`,
     )) as HTMLDivElement;
-    const tour = el.querySelector('lyra-tour') as LyraTour;
+    const tour = el.querySelector('lr-tour') as LyraTour;
     const targetButton = el.querySelector('#tour-target-0') as HTMLButtonElement;
     let clicked = false;
     targetButton.addEventListener('click', () => (clicked = true));
@@ -437,7 +437,7 @@ describe('lyra-tour', () => {
     // document.elementFromPoint() retargets a hit inside an open shadow root to its host --
     // hitting the tour host itself (rather than the light-DOM target button) proves the
     // backdrop, not the button, is what's actually receiving the pointer event.
-    expect(hit, 'the backdrop should absorb the hit, retargeted to the <lyra-tour> host').to.equal(tour);
+    expect(hit, 'the backdrop should absorb the hit, retargeted to the <lr-tour> host').to.equal(tour);
     expect(hit).to.not.equal(targetButton);
 
     targetButton.dispatchEvent(new MouseEvent('click', { bubbles: true }));
@@ -447,7 +447,7 @@ describe('lyra-tour', () => {
   it('step.interactiveTarget restores real pointer/click reachability to the live target', async () => {
     const el = (await fixture(
       html`<div>
-        <lyra-tour .steps=${makeSteps(1, () => ({ interactiveTarget: true }))}></lyra-tour>
+        <lr-tour .steps=${makeSteps(1, () => ({ interactiveTarget: true }))}></lr-tour>
         <button
           id="tour-target-0"
           style="position:fixed; top:200px; left:200px; width:100px; height:40px;"
@@ -456,7 +456,7 @@ describe('lyra-tour', () => {
         </button>
       </div>`,
     )) as HTMLDivElement;
-    const tour = el.querySelector('lyra-tour') as LyraTour;
+    const tour = el.querySelector('lr-tour') as LyraTour;
     const targetButton = el.querySelector('#tour-target-0') as HTMLButtonElement;
     let clicked = false;
     targetButton.addEventListener('click', () => (clicked = true));
@@ -481,7 +481,7 @@ describe('lyra-tour', () => {
   it('tracks the target rect after a resize, updating the mask cutout and spotlight ring geometry', async () => {
     const el = (await fixture(
       html`<div>
-        <lyra-tour .steps=${makeSteps(1)}></lyra-tour>
+        <lr-tour .steps=${makeSteps(1)}></lr-tour>
         <button
           id="tour-target-0"
           style="position:fixed; top:100px; left:100px; width:50px; height:30px;"
@@ -490,7 +490,7 @@ describe('lyra-tour', () => {
         </button>
       </div>`,
     )) as HTMLDivElement;
-    const tour = el.querySelector('lyra-tour') as LyraTour;
+    const tour = el.querySelector('lr-tour') as LyraTour;
     const targetButton = el.querySelector('#tour-target-0') as HTMLButtonElement;
 
     tour.start();
@@ -508,12 +508,12 @@ describe('lyra-tour', () => {
     expect(parseFloat(spotlight().style.width)).to.be.greaterThan(0);
   });
 
-  it('emits lyra-tour-target-missing and renders an unanchored, centered popover for a step whose target does not resolve', async () => {
+  it('emits lr-tour-target-missing and renders an unanchored, centered popover for a step whose target does not resolve', async () => {
     const el = (await fixture(
-      html`<lyra-tour .steps=${makeSteps(1, () => ({ target: '#does-not-exist' }))}></lyra-tour>`,
+      html`<lr-tour .steps=${makeSteps(1, () => ({ target: '#does-not-exist' }))}></lr-tour>`,
     )) as LyraTour;
 
-    const listener = oneEvent(el, 'lyra-tour-target-missing');
+    const listener = oneEvent(el, 'lr-tour-target-missing');
     el.start();
     const event = await listener;
     expect((event as CustomEvent).detail).to.deep.equal({ index: 0, step: el.steps[0] });
@@ -528,11 +528,11 @@ describe('lyra-tour', () => {
   it('showProgress=false hides the progress wrapper; the default renders "Step X of Y" text that tracks activeIndex', async () => {
     const el = (await fixture(
       html`<div>
-        <lyra-tour .steps=${makeSteps(3)} open></lyra-tour>
+        <lr-tour .steps=${makeSteps(3)} open></lr-tour>
         ${targetButtons(3)}
       </div>`,
     )) as HTMLDivElement;
-    const tour = el.querySelector('lyra-tour') as LyraTour;
+    const tour = el.querySelector('lr-tour') as LyraTour;
     await tour.updateComplete;
     expect(tour.shadowRoot!.querySelector('[part="progress-text"]')!.textContent!.trim()).to.equal('Step 1 of 3');
 
@@ -548,14 +548,14 @@ describe('lyra-tour', () => {
   it('the Previous button is disabled (present) on the first step; hidePrevious removes it entirely', async () => {
     const el = (await fixture(
       html`<div>
-        <lyra-tour
+        <lr-tour
           .steps=${makeSteps(3, (index) => (index === 1 ? { hidePrevious: true } : {}))}
           open
-        ></lyra-tour>
+        ></lr-tour>
         ${targetButtons(3)}
       </div>`,
     )) as HTMLDivElement;
-    const tour = el.querySelector('lyra-tour') as LyraTour;
+    const tour = el.querySelector('lr-tour') as LyraTour;
     await tour.updateComplete;
     const firstPrevious = tour.shadowRoot!.querySelector('[part="previous-button"]') as HTMLButtonElement;
     expect(firstPrevious).to.exist;
@@ -575,11 +575,11 @@ describe('lyra-tour', () => {
   it('the last step\'s Next button reads the localized "Done" text instead of "Next"', async () => {
     const el = (await fixture(
       html`<div>
-        <lyra-tour .steps=${makeSteps(2)} open active-index="1"></lyra-tour>
+        <lr-tour .steps=${makeSteps(2)} open active-index="1"></lr-tour>
         ${targetButtons(2)}
       </div>`,
     )) as HTMLDivElement;
-    const tour = el.querySelector('lyra-tour') as LyraTour;
+    const tour = el.querySelector('lr-tour') as LyraTour;
     await tour.updateComplete;
     expect(tour.shadowRoot!.querySelector('[part="next-button"]')!.textContent!.trim()).to.equal('Done');
   });
@@ -587,11 +587,11 @@ describe('lyra-tour', () => {
   it('RTL: ArrowLeft calls next(), ArrowRight calls back() (inverse of the LTR default)', async () => {
     const el = (await fixture(
       html`<div>
-        <lyra-tour .steps=${makeSteps(3)} open active-index="1" dir="rtl"></lyra-tour>
+        <lr-tour .steps=${makeSteps(3)} open active-index="1" dir="rtl"></lr-tour>
         ${targetButtons(3)}
       </div>`,
     )) as HTMLDivElement;
-    const tour = el.querySelector('lyra-tour') as LyraTour;
+    const tour = el.querySelector('lr-tour') as LyraTour;
     await tour.updateComplete;
     const popover = tour.shadowRoot!.querySelector('[part="popover"]') as HTMLElement;
 
@@ -607,11 +607,11 @@ describe('lyra-tour', () => {
   it('LTR: ArrowRight calls next(), ArrowLeft calls back()', async () => {
     const el = (await fixture(
       html`<div>
-        <lyra-tour .steps=${makeSteps(3)} open active-index="1"></lyra-tour>
+        <lr-tour .steps=${makeSteps(3)} open active-index="1"></lr-tour>
         ${targetButtons(3)}
       </div>`,
     )) as HTMLDivElement;
-    const tour = el.querySelector('lyra-tour') as LyraTour;
+    const tour = el.querySelector('lr-tour') as LyraTour;
     await tour.updateComplete;
     const popover = tour.shadowRoot!.querySelector('[part="popover"]') as HTMLElement;
 
@@ -623,11 +623,11 @@ describe('lyra-tour', () => {
   it('ArrowRight/ArrowLeft do nothing when the keydown target is a native text-editing control', async () => {
     const el = (await fixture(
       html`<div>
-        <lyra-tour .steps=${makeSteps(2)} open><input slot="" id="rich-input" /></lyra-tour>
+        <lr-tour .steps=${makeSteps(2)} open><input slot="" id="rich-input" /></lr-tour>
         ${targetButtons(2)}
       </div>`,
     )) as HTMLDivElement;
-    const tour = el.querySelector('lyra-tour') as LyraTour;
+    const tour = el.querySelector('lr-tour') as LyraTour;
     await tour.updateComplete;
     const input = tour.querySelector('#rich-input') as HTMLInputElement;
 
@@ -640,11 +640,11 @@ describe('lyra-tour', () => {
     it('renders the built-in English strings unchanged with no locale registered', async () => {
       const el = (await fixture(
         html`<div>
-          <lyra-tour .steps=${makeSteps(2)} open></lyra-tour>
+          <lr-tour .steps=${makeSteps(2)} open></lr-tour>
           ${targetButtons(2)}
         </div>`,
       )) as HTMLDivElement;
-      const tour = el.querySelector('lyra-tour') as LyraTour;
+      const tour = el.querySelector('lr-tour') as LyraTour;
       await tour.updateComplete;
       expect(tour.shadowRoot!.querySelector('[part="previous-button"]')!.textContent!.trim()).to.equal('Previous');
       expect(tour.shadowRoot!.querySelector('[part="skip-button"]')!.textContent!.trim()).to.equal('Skip');
@@ -655,11 +655,11 @@ describe('lyra-tour', () => {
     it('a .strings override actually reaches the rendered Skip button', async () => {
       const el = (await fixture(
         html`<div>
-          <lyra-tour .steps=${makeSteps(2)} open .strings=${{ tourSkip: 'Passer' }}></lyra-tour>
+          <lr-tour .steps=${makeSteps(2)} open .strings=${{ tourSkip: 'Passer' }}></lr-tour>
           ${targetButtons(2)}
         </div>`,
       )) as HTMLDivElement;
-      const tour = el.querySelector('lyra-tour') as LyraTour;
+      const tour = el.querySelector('lr-tour') as LyraTour;
       await tour.updateComplete;
       expect(tour.shadowRoot!.querySelector('[part="skip-button"]')!.textContent!.trim()).to.equal('Passer');
     });
@@ -668,11 +668,11 @@ describe('lyra-tour', () => {
       registerLyraLocale('fr-test-tour', { tourStepOf: 'Étape {current} sur {total}' });
       const el = (await fixture(
         html`<div>
-          <lyra-tour .steps=${makeSteps(2)} open locale="fr-test-tour"></lyra-tour>
+          <lr-tour .steps=${makeSteps(2)} open locale="fr-test-tour"></lr-tour>
           ${targetButtons(2)}
         </div>`,
       )) as HTMLDivElement;
-      const tour = el.querySelector('lyra-tour') as LyraTour;
+      const tour = el.querySelector('lr-tour') as LyraTour;
       await tour.updateComplete;
       expect(tour.shadowRoot!.querySelector('[part="progress-text"]')!.textContent!.trim()).to.equal('Étape 1 sur 2');
     });
@@ -686,11 +686,11 @@ describe('lyra-tour', () => {
 
     const el = (await fixture(
       html`<div>
-        <lyra-tour .steps=${makeSteps(2)}></lyra-tour>
+        <lr-tour .steps=${makeSteps(2)}></lr-tour>
         ${targetButtons(2)}
       </div>`,
     )) as HTMLDivElement;
-    const tour = el.querySelector('lyra-tour') as LyraTour;
+    const tour = el.querySelector('lr-tour') as LyraTour;
     tour.start();
     await tour.updateComplete;
     expect(document.activeElement).to.not.equal(trigger);
@@ -703,18 +703,18 @@ describe('lyra-tour', () => {
   });
 
   describe('external removal while open', () => {
-    it('fires lyra-tour-end("unmount") exactly once when removed from the DOM without calling end()', async () => {
+    it('fires lr-tour-end("unmount") exactly once when removed from the DOM without calling end()', async () => {
       const el = (await fixture(
         html`<div>
-          <lyra-tour .steps=${makeSteps(2)} open></lyra-tour>
+          <lr-tour .steps=${makeSteps(2)} open></lr-tour>
           ${targetButtons(2)}
         </div>`,
       )) as HTMLDivElement;
-      const tour = el.querySelector('lyra-tour') as LyraTour;
+      const tour = el.querySelector('lr-tour') as LyraTour;
       await tour.updateComplete;
       let count = 0;
       let detail: unknown;
-      tour.addEventListener('lyra-tour-end', (e) => {
+      tour.addEventListener('lr-tour-end', (e) => {
         count++;
         detail = (e as CustomEvent).detail;
       });
@@ -731,15 +731,15 @@ describe('lyra-tour', () => {
     it('a synchronous reparent restores the scroll lock and overlay registration without double-firing unmount', async () => {
       const el = (await fixture(
         html`<div>
-          <lyra-tour .steps=${makeSteps(2)} open></lyra-tour>
+          <lr-tour .steps=${makeSteps(2)} open></lr-tour>
           ${targetButtons(2)}
         </div>`,
       )) as HTMLDivElement;
-      const tour = el.querySelector('lyra-tour') as LyraTour;
+      const tour = el.querySelector('lr-tour') as LyraTour;
       await tour.updateComplete;
       expect(document.documentElement.style.overflow).to.equal('hidden');
       let count = 0;
-      tour.addEventListener('lyra-tour-end', () => count++);
+      tour.addEventListener('lr-tour-end', () => count++);
 
       const otherContainer = document.createElement('div');
       document.body.appendChild(otherContainer);
@@ -761,11 +761,11 @@ describe('lyra-tour', () => {
   it('a host aria-label overrides the per-step heading-derived aria-labelledby name', async () => {
     const el = (await fixture(
       html`<div>
-        <lyra-tour .steps=${makeSteps(2)} open aria-label="Custom tour name"></lyra-tour>
+        <lr-tour .steps=${makeSteps(2)} open aria-label="Custom tour name"></lr-tour>
         ${targetButtons(2)}
       </div>`,
     )) as HTMLDivElement;
-    const tour = el.querySelector('lyra-tour') as LyraTour;
+    const tour = el.querySelector('lr-tour') as LyraTour;
     await tour.updateComplete;
     const popover = tour.shadowRoot!.querySelector('[part="popover"]') as HTMLElement;
     expect(popover.getAttribute('aria-label')).to.equal('Custom tour name');
@@ -775,11 +775,11 @@ describe('lyra-tour', () => {
   it('is accessible with an open, multi-step tour and a resolvable target', async () => {
     const el = (await fixture(
       html`<div>
-        <lyra-tour .steps=${makeSteps(3)} open></lyra-tour>
+        <lr-tour .steps=${makeSteps(3)} open></lr-tour>
         ${targetButtons(3)}
       </div>`,
     )) as HTMLDivElement;
-    const tour = el.querySelector('lyra-tour') as LyraTour;
+    const tour = el.querySelector('lr-tour') as LyraTour;
     await tour.updateComplete;
     await expect(tour).to.be.accessible();
   });
@@ -787,15 +787,15 @@ describe('lyra-tour', () => {
   it('is accessible with showProgress disabled and a hidden Previous control', async () => {
     const el = (await fixture(
       html`<div>
-        <lyra-tour
+        <lr-tour
           .steps=${makeSteps(2, () => ({ hidePrevious: true }))}
           open
           .showProgress=${false}
-        ></lyra-tour>
+        ></lr-tour>
         ${targetButtons(2)}
       </div>`,
     )) as HTMLDivElement;
-    const tour = el.querySelector('lyra-tour') as LyraTour;
+    const tour = el.querySelector('lr-tour') as LyraTour;
     await tour.updateComplete;
     await expect(tour).to.be.accessible();
   });
@@ -803,18 +803,18 @@ describe('lyra-tour', () => {
   it('the popover does not overflow a narrow 320px allocation', async () => {
     const el = (await fixture(
       html`<div style="width: 320px;">
-        <lyra-tour
+        <lr-tour
           .steps=${makeSteps(1, () => ({
             heading: 'A heading long enough to wrap across several lines in a narrow panel',
             content:
               'Body copy that is also long enough to demonstrate wrapping instead of horizontal overflow in a 320px-wide allocation.',
           }))}
           open
-        ></lyra-tour>
+        ></lr-tour>
         <button id="tour-target-0" style="position:fixed; top:10px; left:10px;">target 0</button>
       </div>`,
     )) as HTMLDivElement;
-    const tour = el.querySelector('lyra-tour') as LyraTour;
+    const tour = el.querySelector('lr-tour') as LyraTour;
     await tour.updateComplete;
     const popover = tour.shadowRoot!.querySelector('[part="popover"]') as HTMLElement;
     const viewportWidth = document.documentElement.clientWidth;
@@ -824,7 +824,7 @@ describe('lyra-tour', () => {
   it('collapses the popover enter animation under prefers-reduced-motion', () => {
     expect(styles.cssText).to.match(/@media \(prefers-reduced-motion: reduce\)/);
     expect(styles.cssText).to.match(/@media \(prefers-reduced-motion: reduce\) \{[^]*\[part='popover'\][^{]*\{[^}]*animation:\s*none/);
-    expect(styles.cssText).to.include('var(--lyra-transition-base)');
+    expect(styles.cssText).to.include('var(--lr-transition-base)');
   });
 
   it('does not trigger a Lit "scheduled an update after an update completed" dev warning across start/next/back/goToStep/a missing-target step/end', async () => {
@@ -838,13 +838,13 @@ describe('lyra-tour', () => {
     try {
       const el = (await fixture(
         html`<div>
-          <lyra-tour
+          <lr-tour
             .steps=${makeSteps(3, (index) => (index === 1 ? { target: '#does-not-exist' } : {}))}
-          ></lyra-tour>
+          ></lr-tour>
           ${targetButtons(3)}
         </div>`,
       )) as HTMLDivElement;
-      const tour = el.querySelector('lyra-tour') as LyraTour;
+      const tour = el.querySelector('lr-tour') as LyraTour;
 
       tour.start();
       await tour.updateComplete;

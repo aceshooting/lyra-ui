@@ -32,8 +32,8 @@ it('positions the popup relative to the anchor', async () => {
   expect(p.style.position).to.equal('fixed');
   expect(p.style.left).to.not.be.empty;
   expect(p.style.top).to.not.be.empty;
-  expect(p.style.getPropertyValue('--lyra-positioner-available-inline-size')).to.match(/^\d+(?:\.\d+)?px$/);
-  expect(p.style.getPropertyValue('--lyra-positioner-available-block-size')).to.match(/^\d+(?:\.\d+)?px$/);
+  expect(p.style.getPropertyValue('--lr-positioner-available-inline-size')).to.match(/^\d+(?:\.\d+)?px$/);
+  expect(p.style.getPropertyValue('--lr-positioner-available-block-size')).to.match(/^\d+(?:\.\d+)?px$/);
   stop();
 });
 
@@ -52,7 +52,7 @@ it('refreshes available space when the visual viewport changes', async () => {
 
   const stop = place(a, p);
   await waitFor(
-    () => p.style.getPropertyValue('--lyra-positioner-available-block-size'),
+    () => p.style.getPropertyValue('--lr-positioner-available-block-size'),
     (value) => value !== '',
   );
   const initialTop = p.style.top;
@@ -61,7 +61,7 @@ it('refreshes available space when the visual viewport changes', async () => {
     () => p.style.top,
     (top) => top !== '' && top === initialTop,
   );
-  expect(p.style.getPropertyValue('--lyra-positioner-available-block-size')).to.match(/^\d+(?:\.\d+)?px$/);
+  expect(p.style.getPropertyValue('--lr-positioner-available-block-size')).to.match(/^\d+(?:\.\d+)?px$/);
   stop();
 });
 

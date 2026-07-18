@@ -3,63 +3,63 @@ import { css } from 'lit';
 export const styles = css`
   :host {
     display: block;
-    --lyra-textarea-max-block-size: none;
+    --lr-textarea-max-block-size: none;
   }
   [part='form-control-label'] {
     display: block;
-    margin-block-end: var(--lyra-space-xs);
-    font-size: var(--lyra-font-size-md-sm);
-    font-weight: var(--lyra-font-weight-semibold);
+    margin-block-end: var(--lr-space-xs);
+    font-size: var(--lr-font-size-md-sm);
+    font-weight: var(--lr-font-weight-semibold);
   }
   /* :empty never matches here -- the part always contains a literal slot child element regardless
      of assigned/text content -- so real emptiness is tracked in JS (hasLabelSlot) and reflected
-     via the hidden attribute instead (same fix as lyra-select's identical part). */
+     via the hidden attribute instead (same fix as lr-select's identical part). */
   [part='form-control-label'][hidden] {
     display: none;
   }
   :host([required]) [part='form-control-label']::after {
     content: ' *';
-    color: var(--lyra-color-danger);
+    color: var(--lr-color-danger);
   }
   [part='textarea'] {
     display: block;
     inline-size: 100%;
     box-sizing: border-box;
-    padding: var(--lyra-space-s);
-    border: var(--lyra-border-width-thin) solid var(--lyra-color-border);
-    border-radius: var(--lyra-radius);
-    background: var(--lyra-color-surface);
-    color: var(--lyra-color-text);
+    padding: var(--lr-space-s);
+    border: var(--lr-border-width-thin) solid var(--lr-color-border);
+    border-radius: var(--lr-radius);
+    background: var(--lr-color-surface);
+    color: var(--lr-color-text);
     font: inherit;
-    font-size: var(--lyra-font-size-md-sm);
-    line-height: var(--lyra-line-height-normal);
+    font-size: var(--lr-font-size-md-sm);
+    line-height: var(--lr-line-height-normal);
   }
   [part='textarea'][data-auto-resize] {
-    max-block-size: var(--lyra-textarea-max-block-size);
+    max-block-size: var(--lr-textarea-max-block-size);
   }
   [part='textarea']:focus-visible {
-    outline: var(--lyra-focus-ring-width) solid var(--lyra-focus-ring-color);
-    outline-offset: var(--lyra-focus-ring-offset);
+    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
+    outline-offset: var(--lr-focus-ring-offset);
   }
   [part='textarea']:disabled {
-    opacity: var(--lyra-opacity-disabled);
+    opacity: var(--lr-opacity-disabled);
     cursor: not-allowed;
   }
   [part='textarea']::placeholder {
-    color: var(--lyra-color-text-quiet);
+    color: var(--lr-color-text-quiet);
   }
   [part='hint'] {
-    margin-block-start: var(--lyra-space-xs);
-    font-size: var(--lyra-font-size-sm);
-    color: var(--lyra-color-text-quiet);
+    margin-block-start: var(--lr-space-xs);
+    font-size: var(--lr-font-size-sm);
+    color: var(--lr-color-text-quiet);
   }
   [part='hint'][hidden] {
     display: none;
   }
   [part='error'] {
-    margin-block-start: var(--lyra-space-xs);
-    font-size: var(--lyra-font-size-sm);
-    color: var(--lyra-color-danger);
+    margin-block-start: var(--lr-space-xs);
+    font-size: var(--lr-font-size-sm);
+    color: var(--lr-color-danger);
   }
   [part='error'][hidden] {
     display: none;

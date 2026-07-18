@@ -11,17 +11,17 @@ export const styles = css`
     display: inline-flex;
     align-items: center;
     max-inline-size: 100%;
-    font-size: var(--lyra-font-size-sm);
-    line-height: var(--lyra-line-height-snug);
-    color: var(--lyra-color-text-quiet);
+    font-size: var(--lr-font-size-sm);
+    line-height: var(--lr-line-height-snug);
+    color: var(--lr-color-text-quiet);
   }
 
   [part='elapsed'] {
-    /* Full-strength text, not the quieter --lyra-color-text-quiet the rest
+    /* Full-strength text, not the quieter --lr-color-text-quiet the rest
        of the readout uses -- elapsed time is the one figure this component
        always shows (tokens/throughput are optional), so it gets the higher-
        contrast treatment to read as the primary value at a glance. */
-    color: var(--lyra-color-text);
+    color: var(--lr-color-text);
     font-variant-numeric: tabular-nums;
     white-space: nowrap;
   }
@@ -39,7 +39,7 @@ export const styles = css`
   [part='tokens']::before,
   [part='throughput']::before {
     content: '·';
-    margin-inline: var(--lyra-size-0-4em);
+    margin-inline: var(--lr-size-0-4em);
     opacity: 0.6;
   }
 
@@ -48,33 +48,33 @@ export const styles = css`
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    /* Meets the shared minimum tappable size (--lyra-icon-button-size) --
+    /* Meets the shared minimum tappable size (--lr-icon-button-size) --
        previously shrunk below the floor (min(...) capped at 1.75rem/28px)
        for a compact inline look, but the readout row has no width
        constraint that requires it, so the full 40px floor applies
        directly instead of via invisible hit-slop. */
-    min-inline-size: var(--lyra-icon-button-size);
-    min-block-size: var(--lyra-icon-button-size);
-    margin-inline-start: var(--lyra-space-s);
+    min-inline-size: var(--lr-icon-button-size);
+    min-block-size: var(--lr-icon-button-size);
+    margin-inline-start: var(--lr-space-s);
     padding: 0;
-    border: var(--lyra-border-width-thin) solid var(--lyra-color-border);
+    border: var(--lr-border-width-thin) solid var(--lr-color-border);
     border-radius: 50%;
-    background: var(--lyra-color-surface);
-    color: var(--lyra-color-text);
+    background: var(--lr-color-surface);
+    color: var(--lr-color-text);
     cursor: pointer;
     -webkit-tap-highlight-color: transparent;
     transition:
-      background-color var(--lyra-transition-fast),
-      border-color var(--lyra-transition-fast),
-      color var(--lyra-transition-fast);
+      background-color var(--lr-transition-fast),
+      border-color var(--lr-transition-fast),
+      color var(--lr-transition-fast);
   }
   [part='stop-button']:hover {
-    border-color: var(--lyra-color-brand);
-    color: var(--lyra-color-brand);
+    border-color: var(--lr-color-brand);
+    color: var(--lr-color-brand);
   }
   [part='stop-button']:focus-visible {
-    outline: var(--lyra-focus-ring-width) solid var(--lyra-focus-ring-color);
-    outline-offset: var(--lyra-focus-ring-offset);
+    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
+    outline-offset: var(--lr-focus-ring-offset);
   }
   [part='stop-button'] svg {
     display: block;

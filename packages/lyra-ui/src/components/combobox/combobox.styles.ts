@@ -3,45 +3,45 @@ import { css } from 'lit';
 export const styles = css`
   :host {
     display: block;
-    --lyra-combobox-trigger-padding: var(--lyra-space-xs) var(--lyra-space-s);
-    --lyra-combobox-trigger-min-height: var(--lyra-size-2-5rem);
-    --lyra-combobox-font-size: var(--lyra-font-size-md);
-    --lyra-combobox-tag-padding: var(--lyra-size-0-1rem) var(--lyra-size-0-4rem);
-    --lyra-combobox-tag-font-size: var(--lyra-font-size-sm);
+    --lr-combobox-trigger-padding: var(--lr-space-xs) var(--lr-space-s);
+    --lr-combobox-trigger-min-height: var(--lr-size-2-5rem);
+    --lr-combobox-font-size: var(--lr-font-size-md);
+    --lr-combobox-tag-padding: var(--lr-size-0-1rem) var(--lr-size-0-4rem);
+    --lr-combobox-tag-font-size: var(--lr-font-size-sm);
   }
   :host([size='xs']) {
-    --lyra-combobox-trigger-padding: var(--lyra-size-0-125rem) var(--lyra-space-xs);
-    --lyra-combobox-trigger-min-height: var(--lyra-size-1-5rem);
-    --lyra-combobox-font-size: var(--lyra-font-size-xs);
-    --lyra-combobox-tag-padding: 0 var(--lyra-size-0-25rem);
-    --lyra-combobox-tag-font-size: var(--lyra-font-size-2xs);
+    --lr-combobox-trigger-padding: var(--lr-size-0-125rem) var(--lr-space-xs);
+    --lr-combobox-trigger-min-height: var(--lr-size-1-5rem);
+    --lr-combobox-font-size: var(--lr-font-size-xs);
+    --lr-combobox-tag-padding: 0 var(--lr-size-0-25rem);
+    --lr-combobox-tag-font-size: var(--lr-font-size-2xs);
   }
   :host([size='s']) {
-    --lyra-combobox-trigger-padding: var(--lyra-space-xs) var(--lyra-space-xs);
-    --lyra-combobox-trigger-min-height: var(--lyra-size-1-875rem);
-    --lyra-combobox-font-size: var(--lyra-font-size-sm);
-    --lyra-combobox-tag-padding: var(--lyra-size-0-05rem) var(--lyra-size-0-3125rem);
-    --lyra-combobox-tag-font-size: var(--lyra-font-size-xs);
+    --lr-combobox-trigger-padding: var(--lr-space-xs) var(--lr-space-xs);
+    --lr-combobox-trigger-min-height: var(--lr-size-1-875rem);
+    --lr-combobox-font-size: var(--lr-font-size-sm);
+    --lr-combobox-tag-padding: var(--lr-size-0-05rem) var(--lr-size-0-3125rem);
+    --lr-combobox-tag-font-size: var(--lr-font-size-xs);
   }
   :host([size='l']) {
-    --lyra-combobox-trigger-padding: var(--lyra-space-s) var(--lyra-space-m);
-    --lyra-combobox-trigger-min-height: var(--lyra-size-3rem);
-    --lyra-combobox-font-size: var(--lyra-font-size-lg);
-    --lyra-combobox-tag-padding: var(--lyra-size-0-15rem) var(--lyra-size-0-5rem);
-    --lyra-combobox-tag-font-size: var(--lyra-font-size-md-sm);
+    --lr-combobox-trigger-padding: var(--lr-space-s) var(--lr-space-m);
+    --lr-combobox-trigger-min-height: var(--lr-size-3rem);
+    --lr-combobox-font-size: var(--lr-font-size-lg);
+    --lr-combobox-tag-padding: var(--lr-size-0-15rem) var(--lr-size-0-5rem);
+    --lr-combobox-tag-font-size: var(--lr-font-size-md-sm);
   }
   :host([size='xl']) {
-    --lyra-combobox-trigger-padding: var(--lyra-space-m) var(--lyra-space-l);
-    --lyra-combobox-trigger-min-height: var(--lyra-size-3-5rem);
-    --lyra-combobox-font-size: var(--lyra-font-size-xl);
-    --lyra-combobox-tag-padding: var(--lyra-size-0-25rem) var(--lyra-size-0-625rem);
-    --lyra-combobox-tag-font-size: var(--lyra-font-size-md);
+    --lr-combobox-trigger-padding: var(--lr-space-m) var(--lr-space-l);
+    --lr-combobox-trigger-min-height: var(--lr-size-3-5rem);
+    --lr-combobox-font-size: var(--lr-font-size-xl);
+    --lr-combobox-tag-padding: var(--lr-size-0-25rem) var(--lr-size-0-625rem);
+    --lr-combobox-tag-font-size: var(--lr-font-size-md);
   }
   [part='form-control-label'] {
     display: block;
-    margin-block-end: var(--lyra-space-xs);
-    font-size: var(--lyra-font-size-md-sm);
-    font-weight: var(--lyra-font-weight-semibold);
+    margin-block-end: var(--lr-space-xs);
+    font-size: var(--lr-font-size-md-sm);
+    font-weight: var(--lr-font-weight-semibold);
   }
   /* :empty never matches here -- the part always contains a literal slot
      child element regardless of assigned/text content -- so real emptiness
@@ -54,31 +54,31 @@ export const styles = css`
   }
   :host([required]) [part='form-control-label']::after {
     content: ' *';
-    color: var(--lyra-color-danger);
+    color: var(--lr-color-danger);
   }
 
   [part='combobox'] {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    gap: var(--lyra-space-xs);
+    gap: var(--lr-space-xs);
     inline-size: 100%;
-    min-block-size: var(--lyra-combobox-trigger-min-height);
-    padding: var(--lyra-combobox-trigger-padding);
-    border: var(--lyra-border-width-thin) solid var(--lyra-color-border);
-    border-radius: var(--lyra-radius);
-    background: var(--lyra-color-surface);
-    font-size: var(--lyra-combobox-font-size);
+    min-block-size: var(--lr-combobox-trigger-min-height);
+    padding: var(--lr-combobox-trigger-padding);
+    border: var(--lr-border-width-thin) solid var(--lr-color-border);
+    border-radius: var(--lr-radius);
+    background: var(--lr-color-surface);
+    font-size: var(--lr-combobox-font-size);
     cursor: text;
   }
   [part='combobox']:focus-within {
-    border-color: var(--lyra-color-brand);
-    outline: var(--lyra-border-width-medium) solid transparent;
+    border-color: var(--lr-color-brand);
+    outline: var(--lr-border-width-medium) solid transparent;
   }
   :host(:disabled) [part='combobox'] {
     /* was a literal 0.5; now the shared library-wide disabled-state token
        (still 0.5 by default fallback, so no visual change here). */
-    opacity: var(--lyra-opacity-disabled);
+    opacity: var(--lr-opacity-disabled);
     cursor: not-allowed;
   }
 
@@ -88,17 +88,17 @@ export const styles = css`
   [part='tag'] {
     display: inline-flex;
     align-items: center;
-    gap: var(--lyra-space-xs);
-    padding: var(--lyra-combobox-tag-padding);
-    font-size: var(--lyra-combobox-tag-font-size);
-    background: var(--lyra-color-brand-quiet);
-    color: var(--lyra-color-text);
-    border-radius: var(--lyra-radius);
+    gap: var(--lr-space-xs);
+    padding: var(--lr-combobox-tag-padding);
+    font-size: var(--lr-combobox-tag-font-size);
+    background: var(--lr-color-brand-quiet);
+    color: var(--lr-color-text);
+    border-radius: var(--lr-radius);
   }
-  /* Same compact-chip-remove pattern as lyra-chip's [part='remove-button']: the interactive hit
-     target meets the shared --lyra-icon-button-size floor, while the visible glyph stays a
-     compact 1rem close icon (font-size: var(--lyra-font-size-md), independent of the tag's own
-     --lyra-combobox-tag-font-size, which shrinks well below that at size="xs"/"s") -- a selected
+  /* Same compact-chip-remove pattern as lr-chip's [part='remove-button']: the interactive hit
+     target meets the shared --lr-icon-button-size floor, while the visible glyph stays a
+     compact 1rem close icon (font-size: var(--lr-font-size-md), independent of the tag's own
+     --lr-combobox-tag-font-size, which shrinks well below that at size="xs"/"s") -- a selected
      tag is a small inline pill, so growing its whole box to 40px would visually balloon the tags
      row. The negative margin pulls the enlarged hit area back in so the *visible* tag footprint
      is unchanged; it overlaps into the tag's own padding/background rather than expanding the
@@ -107,21 +107,21 @@ export const styles = css`
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    min-inline-size: var(--lyra-icon-button-size);
-    min-block-size: var(--lyra-icon-button-size);
-    margin: calc((var(--lyra-icon-button-size) - var(--lyra-size-1rem)) / -2);
+    min-inline-size: var(--lr-icon-button-size);
+    min-block-size: var(--lr-icon-button-size);
+    margin: calc((var(--lr-icon-button-size) - var(--lr-size-1rem)) / -2);
     border: none;
     background: none;
     cursor: pointer;
     color: inherit;
     padding: 0;
-    line-height: var(--lyra-line-height-none);
-    font-size: var(--lyra-font-size-md);
+    line-height: var(--lr-line-height-none);
+    font-size: var(--lr-font-size-md);
   }
 
   [part='combobox-input'] {
-    flex: 1 1 var(--lyra-size-6ch);
-    min-inline-size: var(--lyra-size-4ch);
+    flex: 1 1 var(--lr-size-6ch);
+    min-inline-size: var(--lr-size-4ch);
     border: none;
     outline: none;
     background: transparent;
@@ -138,9 +138,9 @@ export const styles = css`
     border: none;
     background: none;
     cursor: pointer;
-    color: var(--lyra-color-text-quiet);
-    padding: var(--lyra-space-xs);
-    line-height: var(--lyra-line-height-none);
+    color: var(--lr-color-text-quiet);
+    padding: var(--lr-space-xs);
+    line-height: var(--lr-line-height-none);
   }
   /* [part='expand-icon'] is a decorative aria-hidden dropdown indicator, not an independently
      clickable target of its own -- the whole [part='combobox'] row opens the listbox via
@@ -148,49 +148,49 @@ export const styles = css`
      below (which would force every size variant's trigger row taller just to fit a glyph nobody
      taps directly). */
   [part='expand-icon'] {
-    min-inline-size: min(var(--lyra-icon-button-size), var(--lyra-size-1-75rem));
-    min-block-size: min(var(--lyra-icon-button-size), var(--lyra-size-1-75rem));
+    min-inline-size: min(var(--lr-icon-button-size), var(--lr-size-1-75rem));
+    min-block-size: min(var(--lr-icon-button-size), var(--lr-size-1-75rem));
   }
   /* Unlike [part='expand-icon'], [part='clear-button'] is a real, independently-focusable
      <button> (see combobox.class.ts's @click) -- it gets the full shared icon-button hit-area
      floor instead of the capped box above. */
   [part='clear-button'] {
-    min-inline-size: var(--lyra-icon-button-size);
-    min-block-size: var(--lyra-icon-button-size);
+    min-inline-size: var(--lr-icon-button-size);
+    min-block-size: var(--lr-icon-button-size);
   }
   [part='expand-icon'] svg {
     transform: rotate(90deg);
   }
   [part='clear-button']:focus-visible,
   [part='tag__remove-button']:focus-visible {
-    outline: var(--lyra-focus-ring-width) solid var(--lyra-focus-ring-color);
-    outline-offset: var(--lyra-focus-ring-offset);
+    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
+    outline-offset: var(--lr-focus-ring-offset);
   }
 
   [part='listbox'] {
     position: fixed;
-    z-index: var(--lyra-layer-dropdown);
+    z-index: var(--lr-layer-dropdown);
     box-sizing: border-box;
-    max-block-size: min(var(--lyra-size-18rem), var(--lyra-positioner-available-block-size, var(--lyra-size-18rem)));
+    max-block-size: min(var(--lr-size-18rem), var(--lr-positioner-available-block-size, var(--lr-size-18rem)));
     overflow-y: auto;
     inline-size: max-content;
-    min-inline-size: min(var(--lyra-size-12rem), var(--lyra-positioner-available-inline-size, var(--lyra-size-12rem)));
-    max-inline-size: min(92vw, var(--lyra-size-28rem), var(--lyra-positioner-available-inline-size, 100vw));
-    padding: var(--lyra-space-xs);
-    background: var(--lyra-color-surface);
-    border: var(--lyra-border-width-thin) solid var(--lyra-color-border);
-    border-radius: var(--lyra-radius);
-    box-shadow: var(--lyra-shadow);
+    min-inline-size: min(var(--lr-size-12rem), var(--lr-positioner-available-inline-size, var(--lr-size-12rem)));
+    max-inline-size: min(92vw, var(--lr-size-28rem), var(--lr-positioner-available-inline-size, 100vw));
+    padding: var(--lr-space-xs);
+    background: var(--lr-color-surface);
+    border: var(--lr-border-width-thin) solid var(--lr-color-border);
+    border-radius: var(--lr-radius);
+    box-shadow: var(--lr-shadow);
     /* Closed state: invisible + slightly raised. visibility (not
        display:none) so opacity/transform can actually transition; hit-testing
        and a11y exposure stay off since this part is already position:fixed. */
     visibility: hidden;
     opacity: 0;
-    transform: translateY(var(--lyra-size-neg-0-25rem));
+    transform: translateY(var(--lr-size-neg-0-25rem));
     transition:
-      opacity var(--lyra-transition-fast),
-      transform var(--lyra-transition-fast),
-      visibility var(--lyra-transition-fast);
+      opacity var(--lr-transition-fast),
+      transform var(--lr-transition-fast),
+      visibility var(--lr-transition-fast);
   }
   :host([open]) [part='listbox'] {
     visibility: visible;
@@ -206,11 +206,11 @@ export const styles = css`
   [part='option'] {
     display: flex;
     align-items: center;
-    gap: var(--lyra-space-xs);
+    gap: var(--lr-space-xs);
     inline-size: 100%;
-    padding: var(--lyra-space-xs) var(--lyra-space-s);
-    border: var(--lyra-border-width-thin) solid transparent;
-    border-radius: var(--lyra-radius);
+    padding: var(--lr-space-xs) var(--lr-space-s);
+    border: var(--lr-border-width-thin) solid transparent;
+    border-radius: var(--lr-radius);
     background: none;
     color: inherit;
     font: inherit;
@@ -219,22 +219,22 @@ export const styles = css`
   }
   [part='option']:hover,
   [part='option'][data-active] {
-    background: var(--lyra-color-brand-quiet);
+    background: var(--lr-color-brand-quiet);
   }
   [part='option'][aria-selected='true'] {
-    border-color: var(--lyra-color-brand);
-    color: var(--lyra-color-brand);
-    font-weight: var(--lyra-font-weight-semibold);
+    border-color: var(--lr-color-brand);
+    color: var(--lr-color-brand);
+    font-weight: var(--lr-font-weight-semibold);
   }
   [part='option'][aria-disabled='true'] {
     /* was a literal 0.4; unified with the rest of the library's single
        disabled-state opacity token (intentionally changes 0.4 -> 0.5). */
-    opacity: var(--lyra-opacity-disabled);
+    opacity: var(--lr-opacity-disabled);
     cursor: not-allowed;
   }
   [part='option-dot'] {
-    inline-size: var(--lyra-size-0-5rem);
-    block-size: var(--lyra-size-0-5rem);
+    inline-size: var(--lr-size-0-5rem);
+    block-size: var(--lr-size-0-5rem);
     border-radius: 50%;
     flex: 0 0 auto;
   }
@@ -243,7 +243,7 @@ export const styles = css`
     align-items: center;
     justify-content: center;
     flex: 0 0 auto;
-    color: var(--lyra-color-text-quiet);
+    color: var(--lr-color-text-quiet);
   }
   [part='option-label'] {
     display: flex;
@@ -252,53 +252,53 @@ export const styles = css`
     min-inline-size: 0;
   }
   [part='option-sub'] {
-    font-size: var(--lyra-font-size-xs);
-    color: var(--lyra-color-text-quiet);
+    font-size: var(--lr-font-size-xs);
+    color: var(--lr-color-text-quiet);
   }
   [part='option-badge'] {
     flex: 0 0 auto;
-    padding: 0 var(--lyra-space-xs);
-    border-radius: var(--lyra-radius-pill);
-    background: var(--lyra-color-brand-quiet);
-    color: var(--lyra-color-text-quiet);
-    font-size: var(--lyra-font-size-xs);
+    padding: 0 var(--lr-space-xs);
+    border-radius: var(--lr-radius-pill);
+    background: var(--lr-color-brand-quiet);
+    color: var(--lr-color-text-quiet);
+    font-size: var(--lr-font-size-xs);
   }
   [part='option-overflow'],
   .loading {
-    padding: var(--lyra-space-s) var(--lyra-space-m);
-    font-size: var(--lyra-font-size-sm);
-    color: var(--lyra-color-text-quiet);
+    padding: var(--lr-space-s) var(--lr-space-m);
+    font-size: var(--lr-font-size-sm);
+    color: var(--lr-color-text-quiet);
   }
 
   .group-label {
-    padding: var(--lyra-space-xs) var(--lyra-space-s) 0;
-    font-size: var(--lyra-size-0-6875rem);
-    font-weight: var(--lyra-font-weight-bold);
+    padding: var(--lr-space-xs) var(--lr-space-s) 0;
+    font-size: var(--lr-size-0-6875rem);
+    font-weight: var(--lr-font-weight-bold);
     text-transform: uppercase;
-    letter-spacing: var(--lyra-size-0-04em);
-    color: var(--lyra-color-text-quiet);
+    letter-spacing: var(--lr-size-0-04em);
+    color: var(--lr-color-text-quiet);
   }
   .empty {
-    padding: var(--lyra-space-m);
-    color: var(--lyra-color-text-quiet);
-    font-size: var(--lyra-font-size-md-sm);
+    padding: var(--lr-space-m);
+    color: var(--lr-color-text-quiet);
+    font-size: var(--lr-font-size-md-sm);
   }
   [part='hint'] {
-    margin-block-start: var(--lyra-space-xs);
-    font-size: var(--lyra-font-size-sm);
-    color: var(--lyra-color-text-quiet);
+    margin-block-start: var(--lr-space-xs);
+    font-size: var(--lr-font-size-sm);
+    color: var(--lr-color-text-quiet);
   }
   /* :empty never matches here -- the part always contains a literal
      slot child element regardless of assigned/text content -- so real
      emptiness is tracked in JS (hasHintSlot/hasErrorSlot) and reflected via
-     the hidden attribute instead (same fix as lyra-stat's icon/caption). */
+     the hidden attribute instead (same fix as lr-stat's icon/caption). */
   [part='hint'][hidden] {
     display: none;
   }
   [part='error'] {
-    margin-block-start: var(--lyra-space-xs);
-    font-size: var(--lyra-font-size-sm);
-    color: var(--lyra-color-danger);
+    margin-block-start: var(--lr-space-xs);
+    font-size: var(--lr-font-size-sm);
+    color: var(--lr-color-danger);
   }
   [part='error'][hidden] {
     display: none;

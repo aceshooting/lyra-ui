@@ -7,71 +7,71 @@ export const styles = css`
   [part='base'] {
     display: flex;
     flex-direction: column;
-    border: var(--lyra-size-1px) solid var(--lyra-color-border);
-    border-radius: var(--lyra-radius);
-    background: var(--lyra-color-surface-raised);
+    border: var(--lr-size-1px) solid var(--lr-color-border);
+    border-radius: var(--lr-radius);
+    background: var(--lr-color-surface-raised);
     overflow: hidden;
   }
   [part='toolbar'] {
     display: flex;
     justify-content: flex-end;
-    gap: var(--lyra-space-xs);
-    padding: var(--lyra-space-xs) var(--lyra-space-s);
-    border-block-end: var(--lyra-size-1px) solid var(--lyra-color-border);
+    gap: var(--lr-space-xs);
+    padding: var(--lr-space-xs) var(--lr-space-s);
+    border-block-end: var(--lr-size-1px) solid var(--lr-color-border);
   }
   [part='copy-button'],
   [part='download-button'] {
     font: inherit;
-    font-size: var(--lyra-font-size-xs);
-    color: var(--lyra-color-text-quiet);
+    font-size: var(--lr-font-size-xs);
+    color: var(--lr-color-text-quiet);
     background: none;
-    border: var(--lyra-size-1px) solid var(--lyra-color-border);
-    border-radius: var(--lyra-radius-xs);
-    padding: var(--lyra-space-2xs) var(--lyra-space-xs);
+    border: var(--lr-size-1px) solid var(--lr-color-border);
+    border-radius: var(--lr-radius-xs);
+    padding: var(--lr-space-2xs) var(--lr-space-xs);
     cursor: pointer;
   }
   [part='viewport'] {
     position: relative;
-    block-size: var(--lyra-terminal-height, var(--lyra-size-20rem));
+    block-size: var(--lr-terminal-height, var(--lr-size-20rem));
   }
-  lyra-virtual-list {
+  lr-virtual-list {
     display: block;
     block-size: 100%;
-    font-family: var(--lyra-font-mono);
-    font-size: var(--lyra-font-size-sm);
-    color: var(--lyra-color-text);
+    font-family: var(--lr-font-mono);
+    font-size: var(--lr-font-size-sm);
+    color: var(--lr-color-text);
   }
-  /* renderItem's returned content is committed inside <lyra-virtual-list>'s own shadow root (Lit
+  /* renderItem's returned content is committed inside <lr-virtual-list>'s own shadow root (Lit
      renders a function-supplied template into whichever root is currently updating, regardless of
      which module the function was defined in), so a plain [part='line'] rule here -- scoped to this
      component's own shadow root -- would never match anything. Reaching one shadow level in through
      a part attribute set by content this component doesn't itself template statically is exactly
-     what ::part() is for; see <lyra-lightbox>'s lyra-zoomable-frame[part='frame']::part(base) rule
+     what ::part() is for; see <lr-lightbox>'s lr-zoomable-frame[part='frame']::part(base) rule
      for the same technique used against a statically-templated child instead of a renderItem one. */
-  lyra-virtual-list::part(line) {
+  lr-virtual-list::part(line) {
     white-space: pre-wrap;
     overflow-wrap: anywhere;
-    padding-inline: var(--lyra-space-s);
-    line-height: var(--lyra-line-height-normal);
+    padding-inline: var(--lr-space-s);
+    line-height: var(--lr-line-height-normal);
   }
-  :host(:not([wrap])) lyra-virtual-list::part(line) {
+  :host(:not([wrap])) lr-virtual-list::part(line) {
     white-space: pre;
     overflow-wrap: normal;
   }
   [part='jump-to-latest'] {
     position: absolute;
-    inset-block-end: var(--lyra-space-s);
-    inset-inline-end: var(--lyra-space-s);
+    inset-block-end: var(--lr-space-s);
+    inset-inline-end: var(--lr-space-s);
     font: inherit;
-    font-size: var(--lyra-font-size-xs);
-    color: var(--lyra-color-surface);
-    background: var(--lyra-color-brand);
+    font-size: var(--lr-font-size-xs);
+    color: var(--lr-color-surface);
+    background: var(--lr-color-brand);
     border: none;
-    border-radius: var(--lyra-radius-pill);
-    padding: var(--lyra-space-2xs) var(--lyra-space-s);
-    box-shadow: var(--lyra-shadow);
+    border-radius: var(--lr-radius-pill);
+    padding: var(--lr-space-2xs) var(--lr-space-s);
+    box-shadow: var(--lr-shadow);
     cursor: pointer;
-    z-index: var(--lyra-layer-content);
-    transition: opacity var(--lyra-transition-fast);
+    z-index: var(--lr-layer-content);
+    transition: opacity var(--lr-transition-fast);
   }
 `;

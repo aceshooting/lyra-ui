@@ -10,7 +10,7 @@ export const styles = css`
   }
   .row {
     display: flex;
-    gap: var(--lyra-space-xs);
+    gap: var(--lr-space-xs);
   }
   :host([wrap]) .row {
     flex-wrap: wrap;
@@ -19,27 +19,27 @@ export const styles = css`
     display: flex;
     flex-direction: column;
     align-items: flex-start;
-    gap: var(--lyra-space-2xs);
+    gap: var(--lr-space-2xs);
     flex: 0 0 auto;
-    max-inline-size: var(--lyra-size-16rem);
-    padding-inline: var(--lyra-space-m);
-    padding-block: var(--lyra-space-xs);
-    border: var(--lyra-border-width-thin) solid var(--lyra-color-border);
-    border-radius: var(--lyra-radius-pill);
-    background: var(--lyra-color-surface);
-    color: var(--lyra-color-text);
+    max-inline-size: var(--lr-size-16rem);
+    padding-inline: var(--lr-space-m);
+    padding-block: var(--lr-space-xs);
+    border: var(--lr-border-width-thin) solid var(--lr-color-border);
+    border-radius: var(--lr-radius-pill);
+    background: var(--lr-color-surface);
+    color: var(--lr-color-text);
     font: inherit;
     text-align: start;
     cursor: pointer;
-    min-block-size: var(--lyra-size-2-5rem);
+    min-block-size: var(--lr-size-2-5rem);
   }
   [part~='chip']:hover {
-    background: var(--lyra-color-brand-quiet);
-    border-color: var(--lyra-color-brand);
+    background: var(--lr-color-brand-quiet);
+    border-color: var(--lr-color-brand);
   }
   [part~='chip']:focus-visible {
-    outline: var(--lyra-focus-ring-width) solid var(--lyra-focus-ring-color);
-    outline-offset: var(--lyra-focus-ring-offset);
+    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
+    outline-offset: var(--lr-focus-ring-offset);
   }
   [part='chip-label'] {
     display: -webkit-box;
@@ -54,7 +54,7 @@ export const styles = css`
     -webkit-box-orient: vertical;
     overflow: hidden;
     inline-size: 100%;
-    color: var(--lyra-color-text-quiet);
-    font-size: var(--lyra-font-size-xs);
+    color: var(--lr-color-text-quiet);
+    font-size: var(--lr-font-size-xs);
   }
 `;

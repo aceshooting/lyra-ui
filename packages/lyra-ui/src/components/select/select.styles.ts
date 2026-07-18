@@ -3,58 +3,58 @@ import { css } from 'lit';
 export const styles = css`
   :host {
     display: block;
-    --lyra-select-trigger-padding: var(--lyra-space-xs) var(--lyra-space-s);
-    --lyra-select-trigger-min-height: var(--lyra-size-2-5rem);
-    --lyra-select-font-size: var(--lyra-font-size-md);
+    --lr-select-trigger-padding: var(--lr-space-xs) var(--lr-space-s);
+    --lr-select-trigger-min-height: var(--lr-size-2-5rem);
+    --lr-select-font-size: var(--lr-font-size-md);
     /* Unset (the default) leaves min-block-size as a floor only, exactly as before this property
        existed. Set it to force an exact trigger height (e.g. to pixel-match a sibling text field in
        the same row) -- this both floors and caps the trigger at that height. */
-    --lyra-select-trigger-height: auto;
+    --lr-select-trigger-height: auto;
   }
   :host([size='xs']) {
-    --lyra-select-trigger-padding: var(--lyra-size-0-125rem) var(--lyra-space-xs);
-    --lyra-select-trigger-min-height: var(--lyra-size-1-5rem);
-    --lyra-select-font-size: var(--lyra-font-size-xs);
+    --lr-select-trigger-padding: var(--lr-size-0-125rem) var(--lr-space-xs);
+    --lr-select-trigger-min-height: var(--lr-size-1-5rem);
+    --lr-select-font-size: var(--lr-font-size-xs);
   }
   :host([size='s']) {
-    --lyra-select-trigger-padding: var(--lyra-space-xs) var(--lyra-space-xs);
-    --lyra-select-trigger-min-height: var(--lyra-size-1-875rem);
-    --lyra-select-font-size: var(--lyra-font-size-sm);
+    --lr-select-trigger-padding: var(--lr-space-xs) var(--lr-space-xs);
+    --lr-select-trigger-min-height: var(--lr-size-1-875rem);
+    --lr-select-font-size: var(--lr-font-size-sm);
   }
   :host([size='l']) {
-    --lyra-select-trigger-padding: var(--lyra-space-s) var(--lyra-space-m);
-    --lyra-select-trigger-min-height: var(--lyra-size-3rem);
-    --lyra-select-font-size: var(--lyra-font-size-lg);
+    --lr-select-trigger-padding: var(--lr-space-s) var(--lr-space-m);
+    --lr-select-trigger-min-height: var(--lr-size-3rem);
+    --lr-select-font-size: var(--lr-font-size-lg);
   }
   :host([size='xl']) {
-    --lyra-select-trigger-padding: var(--lyra-space-m) var(--lyra-space-l);
-    --lyra-select-trigger-min-height: var(--lyra-size-3-5rem);
-    --lyra-select-font-size: var(--lyra-font-size-xl);
+    --lr-select-trigger-padding: var(--lr-space-m) var(--lr-space-l);
+    --lr-select-trigger-min-height: var(--lr-size-3-5rem);
+    --lr-select-font-size: var(--lr-font-size-xl);
   }
-  /* [part='trigger']'s own min-block-size resolves through --lyra-select-trigger-height, which
-     :host always declares as 'auto' -- so its var() fallback to --lyra-select-trigger-min-height
+  /* [part='trigger']'s own min-block-size resolves through --lr-select-trigger-height, which
+     :host always declares as 'auto' -- so its var() fallback to --lr-select-trigger-min-height
      never triggers (a defined 'auto' value isn't "unset" for var() fallback purposes). That's
      intentional for the default/unsized trigger (preserves this component's original,
-     pre-size floor-free height), but it silently made --lyra-select-trigger-min-height dead
+     pre-size floor-free height), but it silently made --lr-select-trigger-min-height dead
      code for every non-default size too. These four rules restore the floor for xs/s/l/xl
      specifically, via selector specificity, without touching the default tier. */
   :host([size='xs']) [part='trigger'],
   :host([size='s']) [part='trigger'],
   :host([size='l']) [part='trigger'],
   :host([size='xl']) [part='trigger'] {
-    min-block-size: var(--lyra-select-trigger-min-height);
+    min-block-size: var(--lr-select-trigger-min-height);
   }
   [part='form-control-label'] {
     display: block;
-    margin-block-end: var(--lyra-space-xs);
-    font-size: var(--lyra-font-size-md-sm);
-    font-weight: var(--lyra-font-weight-semibold);
+    margin-block-end: var(--lr-space-xs);
+    font-size: var(--lr-font-size-md-sm);
+    font-weight: var(--lr-font-weight-semibold);
   }
   /* :empty never matches here -- the part always contains a literal slot
      child element regardless of assigned/text content -- so real emptiness
      is tracked in JS (hasLabelSlot) and reflected via the hidden attribute
      instead (same fix as [part='hint']/[part='error'] below, and as
-     lyra-combobox). Without this, the required-asterisk ::after below
+     lr-combobox). Without this, the required-asterisk ::after below
      (which attaches to this box) renders a stray ' *' with nothing before
      it whenever label is unset. */
   [part='form-control-label'][hidden] {
@@ -62,37 +62,37 @@ export const styles = css`
   }
   :host([required]) [part='form-control-label']::after {
     content: ' *';
-    color: var(--lyra-color-danger);
+    color: var(--lr-color-danger);
   }
 
   [part='trigger'] {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: var(--lyra-space-xs);
+    gap: var(--lr-space-xs);
     inline-size: 100%;
-    min-block-size: var(--lyra-select-trigger-height, var(--lyra-select-trigger-min-height));
-    block-size: var(--lyra-select-trigger-height, auto);
-    padding: var(--lyra-select-trigger-padding);
-    border: var(--lyra-border-width-thin) solid var(--lyra-color-border);
-    border-radius: var(--lyra-radius);
-    background: var(--lyra-color-surface);
+    min-block-size: var(--lr-select-trigger-height, var(--lr-select-trigger-min-height));
+    block-size: var(--lr-select-trigger-height, auto);
+    padding: var(--lr-select-trigger-padding);
+    border: var(--lr-border-width-thin) solid var(--lr-color-border);
+    border-radius: var(--lr-radius);
+    background: var(--lr-color-surface);
     color: inherit;
     font: inherit;
-    font-size: var(--lyra-select-font-size);
+    font-size: var(--lr-select-font-size);
     text-align: start;
     cursor: pointer;
   }
   [part='trigger']:focus-visible {
-    outline: var(--lyra-focus-ring-width) solid var(--lyra-focus-ring-color);
-    outline-offset: var(--lyra-focus-ring-offset);
+    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
+    outline-offset: var(--lr-focus-ring-offset);
   }
   :host([open]) [part='trigger'] {
-    border-color: var(--lyra-color-brand);
+    border-color: var(--lr-color-brand);
   }
   :host(:disabled) [part='trigger'] {
-    /* Shared library-wide disabled-state token -- see lyra-combobox. */
-    opacity: var(--lyra-opacity-disabled);
+    /* Shared library-wide disabled-state token -- see lr-combobox. */
+    opacity: var(--lr-opacity-disabled);
     cursor: not-allowed;
   }
 
@@ -106,7 +106,7 @@ export const styles = css`
   /* Placeholder text (no value selected yet) renders quieter, matching a
      native <select>'s empty-option / combobox's placeholder styling. */
   .trigger-label[data-placeholder] {
-    color: var(--lyra-color-text-quiet);
+    color: var(--lr-color-text-quiet);
   }
 
   [part='expand-icon'] {
@@ -114,11 +114,11 @@ export const styles = css`
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    color: var(--lyra-color-text-quiet);
-    /* Same real-touch-target reasoning as lyra-combobox's expand-icon. */
-    min-inline-size: min(var(--lyra-icon-button-size), var(--lyra-size-1-75rem));
-    min-block-size: min(var(--lyra-icon-button-size), var(--lyra-size-1-75rem));
-    line-height: var(--lyra-line-height-none);
+    color: var(--lr-color-text-quiet);
+    /* Same real-touch-target reasoning as lr-combobox's expand-icon. */
+    min-inline-size: min(var(--lr-icon-button-size), var(--lr-size-1-75rem));
+    min-block-size: min(var(--lr-icon-button-size), var(--lr-size-1-75rem));
+    line-height: var(--lr-line-height-none);
   }
   [part='expand-icon'] svg {
     transform: rotate(90deg);
@@ -126,28 +126,28 @@ export const styles = css`
 
   [part='listbox'] {
     position: fixed;
-    z-index: var(--lyra-layer-dropdown);
+    z-index: var(--lr-layer-dropdown);
     box-sizing: border-box;
-    max-block-size: var(--lyra-size-18rem);
+    max-block-size: var(--lr-size-18rem);
     overflow-y: auto;
     inline-size: max-content;
-    min-inline-size: var(--lyra-size-12rem);
-    max-inline-size: min(92vw, var(--lyra-size-28rem));
-    padding: var(--lyra-space-xs);
-    background: var(--lyra-color-surface);
-    border: var(--lyra-border-width-thin) solid var(--lyra-color-border);
-    border-radius: var(--lyra-radius);
-    box-shadow: var(--lyra-shadow);
+    min-inline-size: var(--lr-size-12rem);
+    max-inline-size: min(92vw, var(--lr-size-28rem));
+    padding: var(--lr-space-xs);
+    background: var(--lr-color-surface);
+    border: var(--lr-border-width-thin) solid var(--lr-color-border);
+    border-radius: var(--lr-radius);
+    box-shadow: var(--lr-shadow);
     /* Closed state: invisible + slightly raised. visibility (not
        display:none) so opacity/transform can actually transition; hit-testing
        and a11y exposure stay off since this part is already position:fixed. */
     visibility: hidden;
     opacity: 0;
-    transform: translateY(var(--lyra-size-neg-0-25rem));
+    transform: translateY(var(--lr-size-neg-0-25rem));
     transition:
-      opacity var(--lyra-transition-fast),
-      transform var(--lyra-transition-fast),
-      visibility var(--lyra-transition-fast);
+      opacity var(--lr-transition-fast),
+      transform var(--lr-transition-fast),
+      visibility var(--lr-transition-fast);
   }
   :host([open]) [part='listbox'] {
     visibility: visible;
@@ -165,9 +165,9 @@ export const styles = css`
     flex-direction: column;
     align-items: start;
     inline-size: 100%;
-    padding: var(--lyra-space-xs) var(--lyra-space-s);
-    border: var(--lyra-border-width-thin) solid transparent;
-    border-radius: var(--lyra-radius);
+    padding: var(--lr-space-xs) var(--lr-space-s);
+    border: var(--lr-border-width-thin) solid transparent;
+    border-radius: var(--lr-radius);
     background: none;
     color: inherit;
     font: inherit;
@@ -176,20 +176,20 @@ export const styles = css`
   }
   [part='option']:hover,
   [part='option'][data-active] {
-    background: var(--lyra-color-brand-quiet);
+    background: var(--lr-color-brand-quiet);
   }
   [part='option'][aria-selected='true'] {
-    border-color: var(--lyra-color-brand);
-    color: var(--lyra-color-brand);
-    font-weight: var(--lyra-font-weight-semibold);
+    border-color: var(--lr-color-brand);
+    color: var(--lr-color-brand);
+    font-weight: var(--lr-font-weight-semibold);
   }
   [part='option'][aria-disabled='true'] {
-    opacity: var(--lyra-opacity-disabled);
+    opacity: var(--lr-opacity-disabled);
     cursor: not-allowed;
   }
   [part='option-dot'] {
-    inline-size: var(--lyra-size-0-5rem);
-    block-size: var(--lyra-size-0-5rem);
+    inline-size: var(--lr-size-0-5rem);
+    block-size: var(--lr-size-0-5rem);
     border-radius: 50%;
     flex: 0 0 auto;
   }
@@ -199,31 +199,31 @@ export const styles = css`
     min-inline-size: 0;
   }
   [part='option-sub'] {
-    font-size: var(--lyra-font-size-xs);
-    color: var(--lyra-color-text-quiet);
+    font-size: var(--lr-font-size-xs);
+    color: var(--lr-color-text-quiet);
   }
 
   .group-label {
-    padding: var(--lyra-space-xs) var(--lyra-space-s) 0;
-    font-size: var(--lyra-size-0-6875rem);
-    font-weight: var(--lyra-font-weight-bold);
+    padding: var(--lr-space-xs) var(--lr-space-s) 0;
+    font-size: var(--lr-size-0-6875rem);
+    font-weight: var(--lr-font-weight-bold);
     text-transform: uppercase;
-    letter-spacing: var(--lyra-size-0-04em);
-    color: var(--lyra-color-text-quiet);
+    letter-spacing: var(--lr-size-0-04em);
+    color: var(--lr-color-text-quiet);
   }
   [part='hint'] {
-    margin-block-start: var(--lyra-space-xs);
-    font-size: var(--lyra-font-size-sm);
-    color: var(--lyra-color-text-quiet);
+    margin-block-start: var(--lr-space-xs);
+    font-size: var(--lr-font-size-sm);
+    color: var(--lr-color-text-quiet);
   }
-  /* :empty never matches here either -- same fix as lyra-combobox's hint/error. */
+  /* :empty never matches here either -- same fix as lr-combobox's hint/error. */
   [part='hint'][hidden] {
     display: none;
   }
   [part='error'] {
-    margin-block-start: var(--lyra-space-xs);
-    font-size: var(--lyra-font-size-sm);
-    color: var(--lyra-color-danger);
+    margin-block-start: var(--lr-space-xs);
+    font-size: var(--lr-font-size-sm);
+    color: var(--lr-color-danger);
   }
   [part='error'][hidden] {
     display: none;

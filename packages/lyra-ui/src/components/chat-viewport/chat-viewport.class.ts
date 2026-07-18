@@ -9,15 +9,15 @@ import { styles } from './chat-viewport.styles.js';
 import { getPluralRules } from '../../internal/intl-cache.js';
 
 export interface LyraChatViewportEventMap {
-  'lyra-follow-change': CustomEvent<{ following: boolean }>;
+  'lr-follow-change': CustomEvent<{ following: boolean }>;
 }
 
 /**
- * `<lyra-chat-viewport>` — the transcript scroll container: owns stick-to-bottom behavior while an
+ * `<lr-chat-viewport>` — the transcript scroll container: owns stick-to-bottom behavior while an
  * answer streams, the "jump to latest" pill, and the unread divider.
  *
  * **Two supported content shapes, auto-detected:** ordinary element children (typically
- * `<lyra-chat-message>`s -- *slotted mode*), or exactly one `<lyra-virtual-list>` (*virtual mode*,
+ * `<lr-chat-message>`s -- *slotted mode*), or exactly one `<lr-virtual-list>` (*virtual mode*,
  * detected via `instanceof` against the imported class so custom prefixes keep working). In virtual
  * mode this component defers all scrolling to the slotted list's own `scrollToIndex()`.
  *
@@ -42,12 +42,12 @@ export interface LyraChatViewportEventMap {
  * reveal, not just changing how precisely it lands).
  *
  * Renders no messages and computes no unread state itself -- the host supplies `unreadStartIndex`;
- * no virtualization of its own (`<lyra-virtual-list>`); not a generic overflow surface
- * (`<lyra-scroller>`); no message semantics (`<lyra-chat-message>`).
+ * no virtualization of its own (`<lr-virtual-list>`); not a generic overflow surface
+ * (`<lr-scroller>`); no message semantics (`<lr-chat-message>`).
  *
- * @customElement lyra-chat-viewport
- * @slot - The transcript: ordinary element children, or exactly one `<lyra-virtual-list>`.
- * @event lyra-follow-change - `detail: { following }` -- fired whenever `follow` flips (user
+ * @customElement lr-chat-viewport
+ * @slot - The transcript: ordinary element children, or exactly one `<lr-virtual-list>`.
+ * @event lr-follow-change - `detail: { following }` -- fired whenever `follow` flips (user
  *   scroll-up release, or reaching the bottom again). Never fired for the initial mount state.
  * @csspart base - The positioning root.
  * @csspart scroll - The scroll container (`role="log"`, `tabindex="0"`). In virtual mode it stops
@@ -164,7 +164,7 @@ export class LyraChatViewport extends LyraElement<LyraChatViewportEventMap> {
         this.performScrollToEnd(behavior);
       }
       if (!wasMounting) {
-        this.emit<{ following: boolean }>('lyra-follow-change', { following: this.follow });
+        this.emit<{ following: boolean }>('lr-follow-change', { following: this.follow });
       }
     }
     // On the very first update, firstUpdated() -> armObservers() already computed this moments
@@ -397,7 +397,7 @@ export class LyraChatViewport extends LyraElement<LyraChatViewportEventMap> {
     this.armedMode = mode;
     if (list) {
       this.listenedVirtualList = list;
-      list.addEventListener('lyra-visible-range-changed', this.onVirtualRangeChanged as EventListener);
+      list.addEventListener('lr-visible-range-changed', this.onVirtualRangeChanged as EventListener);
     } else {
       const content = this.contentEl;
       if (content) {
@@ -468,7 +468,7 @@ export class LyraChatViewport extends LyraElement<LyraChatViewportEventMap> {
     this.contentMutationObserver?.disconnect();
     this.contentMutationObserver = undefined;
     this.listenedVirtualList?.removeEventListener(
-      'lyra-visible-range-changed',
+      'lr-visible-range-changed',
       this.onVirtualRangeChanged as EventListener,
     );
     this.listenedVirtualList = undefined;
@@ -521,6 +521,6 @@ export class LyraChatViewport extends LyraElement<LyraChatViewportEventMap> {
 
 declare global {
   interface HTMLElementTagNameMap {
-    'lyra-chat-viewport': LyraChatViewport;
+    'lr-chat-viewport': LyraChatViewport;
   }
 }

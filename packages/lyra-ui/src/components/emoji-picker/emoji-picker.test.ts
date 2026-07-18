@@ -28,7 +28,7 @@ afterEach(() => {
 });
 
 /**
- * Creates a `<lyra-emoji-picker>` with `loadGroups` overridden to `loadGroups` *before* the element
+ * Creates a `<lr-emoji-picker>` with `loadGroups` overridden to `loadGroups` *before* the element
  * connects to `document.body` -- `connectedCallback()` kicks off the auto-load synchronously the
  * moment the element becomes connected, so `fixture()` can't intercept it: it inserts (and thus
  * connects) the element before handing it back, by which point the real default loader has already
@@ -37,13 +37,13 @@ afterEach(() => {
  * between creation and insertion, is what actually lets the fake intercept the initial auto-load.
  * Defaults to a no-op loader (resolves `null`) for tests that supply their own `groups` afterward.
  * `dir` is applied to the host *before* it connects, so the first direction resolution already
- * sees it (mirrors a consumer writing `<lyra-emoji-picker dir="rtl">` declaratively).
+ * sees it (mirrors a consumer writing `<lr-emoji-picker dir="rtl">` declaratively).
  */
 async function connectEmojiPicker(
   loadGroups: () => Promise<EmojiPickerGroup[] | null> = () => Promise.resolve(null),
   dir?: 'ltr' | 'rtl',
 ): Promise<LyraEmojiPicker> {
-  const el = document.createElement('lyra-emoji-picker') as LyraEmojiPicker;
+  const el = document.createElement('lr-emoji-picker') as LyraEmojiPicker;
   (el as unknown as { loadGroups: () => Promise<EmojiPickerGroup[] | null> }).loadGroups = loadGroups;
   if (dir) el.setAttribute('dir', dir);
   created.push(el);
@@ -69,7 +69,7 @@ it('renders one button per emoji, grouped under a heading per group', async () =
 
 it('is form-associated, participating in an ancestor form.elements', async () => {
   const form = document.createElement('form');
-  const el = document.createElement('lyra-emoji-picker') as LyraEmojiPicker;
+  const el = document.createElement('lr-emoji-picker') as LyraEmojiPicker;
   (el as unknown as { loadGroups: () => Promise<EmojiPickerGroup[] | null> }).loadGroups = () => Promise.resolve(null);
   form.append(el);
   created.push(form);
@@ -78,12 +78,12 @@ it('is form-associated, participating in an ancestor form.elements', async () =>
   expect(Array.from(form.elements)).to.include(el);
 });
 
-it('sets value and fires lyra-change when an emoji is picked', async () => {
+it('sets value and fires lr-change when an emoji is picked', async () => {
   const el = await connectEmojiPicker();
   el.groups = groups;
   await el.updateComplete;
   const button = el.shadowRoot!.querySelector('[part="emoji"]') as HTMLButtonElement;
-  const eventPromise = oneEvent(el, 'lyra-change');
+  const eventPromise = oneEvent(el, 'lr-change');
   button.click();
   const event = await eventPromise;
   expect(el.value).to.equal('😀');
@@ -134,7 +134,7 @@ describe('keyboard navigation', () => {
 
     grid.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
     await el.updateComplete;
-    const eventPromise = oneEvent(el, 'lyra-change');
+    const eventPromise = oneEvent(el, 'lr-change');
     grid.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
     const event = await eventPromise;
     expect(event.detail).to.deep.equal({ emoji: '😂' }); // second emoji, after one ArrowRight from index 0
@@ -163,7 +163,7 @@ describe('keyboard navigation', () => {
     const third = el.shadowRoot!.querySelectorAll<HTMLButtonElement>('[part="emoji"]')[2];
 
     third.focus(); // focusin syncs the active index to the truly focused option
-    const eventPromise = oneEvent(el, 'lyra-change');
+    const eventPromise = oneEvent(el, 'lr-change');
     third.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
     const event = await eventPromise;
     expect(event.detail).to.deep.equal({ emoji: '🐶' });
@@ -184,7 +184,7 @@ describe('keyboard navigation', () => {
     // Combobox idiom: focus stays in the input while the active option moves.
     expect(el.shadowRoot!.activeElement?.getAttribute('part')).to.equal('search');
 
-    const eventPromise = oneEvent(el, 'lyra-change');
+    const eventPromise = oneEvent(el, 'lr-change');
     input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
     const event = await eventPromise;
     expect(event.detail).to.deep.equal({ emoji: '😂' });
@@ -228,7 +228,7 @@ it('forwards a host aria-label to the emoji listbox, falling back to the localiz
 });
 
 it('auto-loads a default emoji set on connect when groups is left unset', async () => {
-  const el = document.createElement('lyra-emoji-picker') as LyraEmojiPicker;
+  const el = document.createElement('lr-emoji-picker') as LyraEmojiPicker;
   (el as unknown as { loadGroups: () => Promise<EmojiPickerGroup[] | null> }).loadGroups = () => Promise.resolve(groups);
   created.push(el);
   document.body.append(el);
@@ -244,7 +244,7 @@ it('auto-loads a default emoji set on connect when groups is left unset', async 
 });
 
 it('does not let a slow auto-load overwrite an explicitly-set groups value', async () => {
-  const el = document.createElement('lyra-emoji-picker') as LyraEmojiPicker;
+  const el = document.createElement('lr-emoji-picker') as LyraEmojiPicker;
   // Resolves asynchronously (a real microtask round-trip) rather than synchronously, so the
   // explicit `el.groups = groups` assignment below genuinely races it, matching what a slow real
   // import would do.

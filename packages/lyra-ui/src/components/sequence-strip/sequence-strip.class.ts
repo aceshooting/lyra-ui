@@ -24,15 +24,15 @@ export interface SequenceStripCategory {
 }
 
 /**
- * `<lyra-sequence-strip>` — a compact, one-thin-cell-per-item strip visualizing a sequence of
+ * `<lr-sequence-strip>` — a compact, one-thin-cell-per-item strip visualizing a sequence of
  * categorical states, with an optional secondary per-cell marker. Pure CSS/flex, no chart.js/SVG/
  * canvas — sized/named consistently with the sparkline/heatmap family, but a glanceable aggregate
  * visualization (`role="img"`, one summarizing `aria-label`), not a `role="list"` of
  * separately-operable items: no per-cell keyboard focus, no per-cell click event, matching
- * `<lyra-sparkline>`'s accessibility model rather than `<lyra-heatmap>`'s heavier canvas +
+ * `<lr-sparkline>`'s accessibility model rather than `<lr-heatmap>`'s heavier canvas +
  * keyboard-roving one.
  *
- * @customElement lyra-sequence-strip
+ * @customElement lr-sequence-strip
  * @csspart base - The root strip wrapper (`role="img"`).
  * @csspart cell - Each item's cell, background-colored by its category.
  * @csspart marker - The small bottom marker on a cell whose item sets `marker: true`.
@@ -51,7 +51,7 @@ export class LyraSequenceStrip extends LyraElement {
   @property({ attribute: 'accessible-label' }) accessibleLabel?: string;
 
   /** The item index currently under the pointer (`null` when not hovering any cell) — drives
-   *  `[part="tooltip"]`, mirroring `<lyra-heatmap>`'s own `hoverCell` pattern. No keyboard/focus
+   *  `[part="tooltip"]`, mirroring `<lr-heatmap>`'s own `hoverCell` pattern. No keyboard/focus
    *  equivalent — see the class doc for why this component has no per-cell focus target at all. */
   @state() private hoverIndex: number | null = null;
 
@@ -109,6 +109,6 @@ export class LyraSequenceStrip extends LyraElement {
 
 declare global {
   interface HTMLElementTagNameMap {
-    'lyra-sequence-strip': LyraSequenceStrip;
+    'lr-sequence-strip': LyraSequenceStrip;
   }
 }

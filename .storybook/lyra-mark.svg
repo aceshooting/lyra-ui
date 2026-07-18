@@ -2,7 +2,7 @@
   <title id="title">Lyra constellation mark</title>
   <desc id="desc">A stylized lyre formed from connected stars.</desc>
   <defs>
-    <linearGradient id="lyra-gradient" x1="72.9" y1="18" x2="23.1" y2="88" gradientUnits="userSpaceOnUse">
+    <linearGradient id="lr-gradient" x1="72.9" y1="18" x2="23.1" y2="88" gradientUnits="userSpaceOnUse">
       <stop stop-color="#8DE7FF"/>
       <stop offset=".5" stop-color="#A78BFA"/>
       <stop offset="1" stop-color="#F0ABFC"/>
@@ -30,7 +30,7 @@
   <path d="M57 11.5L72.9 21.9L55.6 33.9L57 11.5M55.6 33.9L34.6 41.3L23.1 84.5L44 79.6L55.6 33.9"
         stroke="#A78BFA" stroke-opacity=".2" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
   <path d="M57 11.5L72.9 21.9L55.6 33.9L57 11.5M55.6 33.9L34.6 41.3L23.1 84.5L44 79.6L55.6 33.9"
-        stroke="url(#lyra-gradient)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+        stroke="url(#lr-gradient)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
 
   <g filter="url(#star-glow)" opacity=".42">
     <circle cx="72.9" cy="21.9" r="8" fill="#8DE7FF"/>

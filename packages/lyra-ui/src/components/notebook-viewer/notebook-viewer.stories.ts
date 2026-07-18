@@ -2,7 +2,7 @@ import { html } from 'lit';
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import './notebook-viewer.js';
 
-const meta: Meta = { title: 'DocumentViewer/NotebookViewer', component: 'lyra-notebook-viewer', tags: ['autodocs'] };
+const meta: Meta = { title: 'DocumentViewer/NotebookViewer', component: 'lr-notebook-viewer', tags: ['autodocs'] };
 export default meta;
 type Story = StoryObj;
 
@@ -24,9 +24,9 @@ const NOTEBOOK = {
 };
 
 export const Default: Story = {
-  render: () => html`<lyra-notebook-viewer name="analysis.ipynb" .notebook=${NOTEBOOK}></lyra-notebook-viewer>`,
+  render: () => html`<lr-notebook-viewer name="analysis.ipynb" .notebook=${NOTEBOOK}></lr-notebook-viewer>`,
 };
 
 export const Narrow320: Story = {
-  render: () => html`<div style="max-inline-size:320px"><lyra-notebook-viewer name="analysis.ipynb" .notebook=${NOTEBOOK}></lyra-notebook-viewer></div>`,
+  render: () => html`<div style="max-inline-size:320px"><lr-notebook-viewer name="analysis.ipynb" .notebook=${NOTEBOOK}></lr-notebook-viewer></div>`,
 };

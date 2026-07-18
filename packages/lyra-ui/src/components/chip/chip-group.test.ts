@@ -5,30 +5,30 @@ import './chip.js';
 import type { LyraChipGroup } from './chip-group.js';
 
 // A minimal host that re-projects its own light-DOM children into a
-// `<lyra-chip-group>` living in its shadow DOM via a forwarding `<slot>` --
+// `<lr-chip-group>` living in its shadow DOM via a forwarding `<slot>` --
 // this is the "slot forwarding" scenario `firstUpdated()`'s fallback
 // reconciliation exists for: `this.children` (the forwarding `<slot>` itself,
 // one element) under-counts what the group's own default slot actually
-// flattens to (the real projected `<lyra-chip>`s).
+// flattens to (the real projected `<lr-chip>`s).
 class ChipGroupForwarder extends LitElement {
   protected createRenderRoot() {
     return this.attachShadow({ mode: 'open' });
   }
   protected render() {
-    return litHtml`<lyra-chip-group max-visible="2"><slot></slot></lyra-chip-group>`;
+    return litHtml`<lr-chip-group max-visible="2"><slot></slot></lr-chip-group>`;
   }
 }
 customElements.define('chip-group-forwarder-test', ChipGroupForwarder);
 
 function fiveChips() {
   return html`
-    <lyra-chip-group>
-      <lyra-chip>one</lyra-chip>
-      <lyra-chip>two</lyra-chip>
-      <lyra-chip>three</lyra-chip>
-      <lyra-chip>four</lyra-chip>
-      <lyra-chip>five</lyra-chip>
-    </lyra-chip-group>
+    <lr-chip-group>
+      <lr-chip>one</lr-chip>
+      <lr-chip>two</lr-chip>
+      <lr-chip>three</lr-chip>
+      <lr-chip>four</lr-chip>
+      <lr-chip>five</lr-chip>
+    </lr-chip-group>
   `;
 }
 
@@ -36,7 +36,7 @@ it('defaults max-visible to unset, showing every child and no overflow indicator
   const el = (await fixture(fiveChips())) as LyraChipGroup;
   expect(el.maxVisible).to.be.undefined;
   expect(el.shadowRoot!.querySelector('[part="overflow-indicator"]')).to.not.exist;
-  const chips = Array.from(el.querySelectorAll('lyra-chip')) as HTMLElement[];
+  const chips = Array.from(el.querySelectorAll('lr-chip')) as HTMLElement[];
   expect(chips.every((c) => !c.hidden)).to.be.true;
 });
 
@@ -46,7 +46,7 @@ it('sanitizes a NaN/negative maxVisible to a finite non-negative integer instead
   el.maxVisible = NaN;
   expect(el.maxVisible).to.equal(0); // finiteCount's own fallback of 0 for a NaN input
   await el.updateComplete;
-  const chips = Array.from(el.querySelectorAll('lyra-chip')) as HTMLElement[];
+  const chips = Array.from(el.querySelectorAll('lr-chip')) as HTMLElement[];
   expect(chips.every((c) => c.hidden)).to.be.true; // 0 visible, all 5 collapse behind the indicator
   expect(el.shadowRoot!.querySelector('[part="overflow-indicator"]')).to.exist;
 
@@ -59,28 +59,28 @@ it('sanitizes a NaN/negative maxVisible to a finite non-negative integer instead
 
 it('shows every child when max-visible is greater than or equal to the child count', async () => {
   const el = (await fixture(html`
-    <lyra-chip-group max-visible="10">
-      <lyra-chip>one</lyra-chip>
-      <lyra-chip>two</lyra-chip>
-    </lyra-chip-group>
+    <lr-chip-group max-visible="10">
+      <lr-chip>one</lr-chip>
+      <lr-chip>two</lr-chip>
+    </lr-chip-group>
   `)) as LyraChipGroup;
   expect(el.shadowRoot!.querySelector('[part="overflow-indicator"]')).to.not.exist;
-  const chips = Array.from(el.querySelectorAll('lyra-chip')) as HTMLElement[];
+  const chips = Array.from(el.querySelectorAll('lr-chip')) as HTMLElement[];
   expect(chips.every((c) => !c.hidden)).to.be.true;
 });
 
 describe('overflow behavior', () => {
   it('hides children beyond max-visible and renders a "+N" indicator', async () => {
     const el = (await fixture(html`
-      <lyra-chip-group max-visible="3">
-        <lyra-chip>one</lyra-chip>
-        <lyra-chip>two</lyra-chip>
-        <lyra-chip>three</lyra-chip>
-        <lyra-chip>four</lyra-chip>
-        <lyra-chip>five</lyra-chip>
-      </lyra-chip-group>
+      <lr-chip-group max-visible="3">
+        <lr-chip>one</lr-chip>
+        <lr-chip>two</lr-chip>
+        <lr-chip>three</lr-chip>
+        <lr-chip>four</lr-chip>
+        <lr-chip>five</lr-chip>
+      </lr-chip-group>
     `)) as LyraChipGroup;
-    const chips = Array.from(el.querySelectorAll('lyra-chip')) as HTMLElement[];
+    const chips = Array.from(el.querySelectorAll('lr-chip')) as HTMLElement[];
     expect(chips.map((c) => c.hidden)).to.deep.equal([false, false, false, true, true]);
 
     const indicator = el.shadowRoot!.querySelector('[part="overflow-indicator"]') as HTMLElement;
@@ -89,18 +89,18 @@ describe('overflow behavior', () => {
     expect(indicator.getAttribute('aria-expanded')).to.equal('false');
   });
 
-  it('reveals the rest and relabels to "Show less" on click, firing lyra-overflow-toggle', async () => {
+  it('reveals the rest and relabels to "Show less" on click, firing lr-overflow-toggle', async () => {
     const el = (await fixture(fiveChips())) as LyraChipGroup;
     el.maxVisible = 3;
     await el.updateComplete;
 
     const indicator = el.shadowRoot!.querySelector('[part="overflow-indicator"]') as HTMLButtonElement;
     setTimeout(() => indicator.click());
-    const ev = await oneEvent(el, 'lyra-overflow-toggle');
+    const ev = await oneEvent(el, 'lr-overflow-toggle');
     expect(ev.detail).to.deep.equal({ expanded: true });
     await el.updateComplete;
 
-    const chips = Array.from(el.querySelectorAll('lyra-chip')) as HTMLElement[];
+    const chips = Array.from(el.querySelectorAll('lr-chip')) as HTMLElement[];
     expect(chips.every((c) => !c.hidden)).to.be.true;
     const indicatorNow = el.shadowRoot!.querySelector('[part="overflow-indicator"]') as HTMLElement;
     expect(indicatorNow.textContent!.trim()).to.equal('Show less');
@@ -114,22 +114,22 @@ describe('overflow behavior', () => {
 
     const indicator = () => el.shadowRoot!.querySelector('[part="overflow-indicator"]') as HTMLButtonElement;
     setTimeout(() => indicator().click());
-    await oneEvent(el, 'lyra-overflow-toggle');
+    await oneEvent(el, 'lr-overflow-toggle');
     await el.updateComplete;
 
     setTimeout(() => indicator().click());
-    const ev = await oneEvent(el, 'lyra-overflow-toggle');
+    const ev = await oneEvent(el, 'lr-overflow-toggle');
     expect(ev.detail).to.deep.equal({ expanded: false });
     await el.updateComplete;
 
-    const chips = Array.from(el.querySelectorAll('lyra-chip')) as HTMLElement[];
+    const chips = Array.from(el.querySelectorAll('lr-chip')) as HTMLElement[];
     expect(chips.map((c) => c.hidden)).to.deep.equal([false, false, false, true, true]);
   });
 
-  it('never fires lyra-overflow-toggle just from max-visible/children changing on their own', async () => {
+  it('never fires lr-overflow-toggle just from max-visible/children changing on their own', async () => {
     const el = (await fixture(fiveChips())) as LyraChipGroup;
     let fired = false;
-    el.addEventListener('lyra-overflow-toggle', () => {
+    el.addEventListener('lr-overflow-toggle', () => {
       fired = true;
     });
 
@@ -149,11 +149,11 @@ describe('overflow behavior', () => {
     await el.updateComplete;
     const indicator = el.shadowRoot!.querySelector('[part="overflow-indicator"]') as HTMLButtonElement;
     setTimeout(() => indicator.click());
-    await oneEvent(el, 'lyra-overflow-toggle');
+    await oneEvent(el, 'lr-overflow-toggle');
     await el.updateComplete;
 
     let fired = false;
-    el.addEventListener('lyra-overflow-toggle', () => {
+    el.addEventListener('lr-overflow-toggle', () => {
       fired = true;
     });
     el.maxVisible = 10; // no longer overflowing
@@ -161,7 +161,7 @@ describe('overflow behavior', () => {
 
     expect(fired).to.be.false;
     expect(el.shadowRoot!.querySelector('[part="overflow-indicator"]')).to.not.exist;
-    const chips = Array.from(el.querySelectorAll('lyra-chip')) as HTMLElement[];
+    const chips = Array.from(el.querySelectorAll('lr-chip')) as HTMLElement[];
     expect(chips.every((c) => !c.hidden)).to.be.true;
   });
 });
@@ -169,14 +169,14 @@ describe('overflow behavior', () => {
 describe('dynamic children', () => {
   it('recomputes overflow when a chip is appended after first render', async () => {
     const el = (await fixture(html`
-      <lyra-chip-group max-visible="2">
-        <lyra-chip>one</lyra-chip>
-        <lyra-chip>two</lyra-chip>
-      </lyra-chip-group>
+      <lr-chip-group max-visible="2">
+        <lr-chip>one</lr-chip>
+        <lr-chip>two</lr-chip>
+      </lr-chip-group>
     `)) as LyraChipGroup;
     expect(el.shadowRoot!.querySelector('[part="overflow-indicator"]')).to.not.exist;
 
-    const extra = document.createElement('lyra-chip');
+    const extra = document.createElement('lr-chip');
     extra.textContent = 'three';
     el.appendChild(extra);
     await new Promise((resolve) => requestAnimationFrame(resolve));
@@ -192,7 +192,7 @@ describe('dynamic children', () => {
 it('reconciles childCount correctly through a forwarding <slot> (children.length under-counts), without a redundant explicit resync alongside it', async () => {
   // Reset Lit's own dedupe set first so this doesn't silently pass just
   // because an earlier test already tripped (and thus suppressed) the exact
-  // same warning string -- same guard `<lyra-toast-item>`'s equivalent test
+  // same warning string -- same guard `<lr-toast-item>`'s equivalent test
   // uses.
   const globalWarnings = (globalThis as { litIssuedWarnings?: Set<string> }).litIssuedWarnings;
   if (globalWarnings) {
@@ -206,13 +206,13 @@ it('reconciles childCount correctly through a forwarding <slot> (children.length
   try {
     host = (await fixture(html`
       <chip-group-forwarder-test>
-        <lyra-chip>one</lyra-chip>
-        <lyra-chip>two</lyra-chip>
-        <lyra-chip>three</lyra-chip>
+        <lr-chip>one</lr-chip>
+        <lr-chip>two</lr-chip>
+        <lr-chip>three</lr-chip>
       </chip-group-forwarder-test>
     `)) as ChipGroupForwarder;
     await host.updateComplete;
-    const group = host.shadowRoot!.querySelector('lyra-chip-group') as LyraChipGroup;
+    const group = host.shadowRoot!.querySelector('lr-chip-group') as LyraChipGroup;
     // The childCount correction inside firstUpdated() schedules a second,
     // separate update cycle (that's the whole warning this test is about) --
     // a single `await updateComplete` only guarantees the *current* cycle
@@ -232,7 +232,7 @@ it('reconciles childCount correctly through a forwarding <slot> (children.length
     const indicator = group.shadowRoot!.querySelector('[part="overflow-indicator"]') as HTMLElement;
     expect(indicator).to.exist;
     expect(indicator.textContent!.trim()).to.equal('+1');
-    const forwardedChips = Array.from(host.querySelectorAll('lyra-chip')) as HTMLElement[];
+    const forwardedChips = Array.from(host.querySelectorAll('lr-chip')) as HTMLElement[];
     expect(forwardedChips.map((chip) => chip.hidden)).to.deep.equal([false, false, true]);
   } finally {
     console.warn = originalWarn;
@@ -244,11 +244,11 @@ it('reconciles childCount correctly through a forwarding <slot> (children.length
 
 it('localizes the overflow-toggle aria-label and collapsed text via this.localize(), not hardcoded English', async () => {
   const el = (await fixture(html`
-    <lyra-chip-group max-visible="1" .strings=${{ showMoreCount: '{count} de plus', showLess: 'Voir moins' }}>
-      <lyra-chip>A</lyra-chip>
-      <lyra-chip>B</lyra-chip>
-      <lyra-chip>C</lyra-chip>
-    </lyra-chip-group>
+    <lr-chip-group max-visible="1" .strings=${{ showMoreCount: '{count} de plus', showLess: 'Voir moins' }}>
+      <lr-chip>A</lr-chip>
+      <lr-chip>B</lr-chip>
+      <lr-chip>C</lr-chip>
+    </lr-chip-group>
   `)) as LyraChipGroup;
   const toggle = el.shadowRoot!.querySelector('[part="overflow-indicator"]') as HTMLButtonElement;
   expect(toggle.getAttribute('aria-label')).to.equal('2 de plus');
@@ -260,11 +260,11 @@ it('localizes the overflow-toggle aria-label and collapsed text via this.localiz
 
 it('localizes the collapsed overflow-indicator visible text via this.localize(), not a hardcoded "+N"', async () => {
   const el = (await fixture(html`
-    <lyra-chip-group max-visible="1" .strings=${{ showMoreCollapsed: '{count} de plus' }}>
-      <lyra-chip>A</lyra-chip>
-      <lyra-chip>B</lyra-chip>
-      <lyra-chip>C</lyra-chip>
-    </lyra-chip-group>
+    <lr-chip-group max-visible="1" .strings=${{ showMoreCollapsed: '{count} de plus' }}>
+      <lr-chip>A</lr-chip>
+      <lr-chip>B</lr-chip>
+      <lr-chip>C</lr-chip>
+    </lr-chip-group>
   `)) as LyraChipGroup;
   const toggle = el.shadowRoot!.querySelector('[part="overflow-indicator"]') as HTMLButtonElement;
   expect(toggle.textContent!.trim()).to.equal('2 de plus');
@@ -272,11 +272,11 @@ it('localizes the collapsed overflow-indicator visible text via this.localize(),
 
 it('defaults to a plain "+N" when no strings override is set', async () => {
   const el = (await fixture(html`
-    <lyra-chip-group max-visible="1">
-      <lyra-chip>A</lyra-chip>
-      <lyra-chip>B</lyra-chip>
-      <lyra-chip>C</lyra-chip>
-    </lyra-chip-group>
+    <lr-chip-group max-visible="1">
+      <lr-chip>A</lr-chip>
+      <lr-chip>B</lr-chip>
+      <lr-chip>C</lr-chip>
+    </lr-chip-group>
   `)) as LyraChipGroup;
   const toggle = el.shadowRoot!.querySelector('[part="overflow-indicator"]') as HTMLButtonElement;
   expect(toggle.textContent!.trim()).to.equal('+2');
@@ -284,11 +284,11 @@ it('defaults to a plain "+N" when no strings override is set', async () => {
 
 it('defaults to English "Show N more"/"Show less" when no strings override is set', async () => {
   const el = (await fixture(html`
-    <lyra-chip-group max-visible="1">
-      <lyra-chip>A</lyra-chip>
-      <lyra-chip>B</lyra-chip>
-      <lyra-chip>C</lyra-chip>
-    </lyra-chip-group>
+    <lr-chip-group max-visible="1">
+      <lr-chip>A</lr-chip>
+      <lr-chip>B</lr-chip>
+      <lr-chip>C</lr-chip>
+    </lr-chip-group>
   `)) as LyraChipGroup;
   const toggle = el.shadowRoot!.querySelector('[part="overflow-indicator"]') as HTMLButtonElement;
   expect(toggle.getAttribute('aria-label')).to.equal('Show 2 more');
@@ -296,21 +296,21 @@ it('defaults to English "Show N more"/"Show less" when no strings override is se
 
 it('is accessible with no overflow', async () => {
   const el = (await fixture(html`
-    <lyra-chip-group>
-      <lyra-chip>one</lyra-chip>
-      <lyra-chip removable>two</lyra-chip>
-    </lyra-chip-group>
+    <lr-chip-group>
+      <lr-chip>one</lr-chip>
+      <lr-chip removable>two</lr-chip>
+    </lr-chip-group>
   `)) as LyraChipGroup;
   await expect(el).to.be.accessible();
 });
 
 it('is accessible in an overflowing, collapsed state', async () => {
   const el = (await fixture(html`
-    <lyra-chip-group max-visible="2">
-      <lyra-chip>one</lyra-chip>
-      <lyra-chip>two</lyra-chip>
-      <lyra-chip>three</lyra-chip>
-    </lyra-chip-group>
+    <lr-chip-group max-visible="2">
+      <lr-chip>one</lr-chip>
+      <lr-chip>two</lr-chip>
+      <lr-chip>three</lr-chip>
+    </lr-chip-group>
   `)) as LyraChipGroup;
   await expect(el).to.be.accessible();
 });

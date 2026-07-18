@@ -11,11 +11,11 @@ import {
 import { styles } from './histogram.styles.js';
 
 /**
- * `<lyra-histogram>` — bins `values` into `bins` equal-width buckets and
+ * `<lr-histogram>` — bins `values` into `bins` equal-width buckets and
  * renders them as a bar chart. Chart.js has no built-in histogram
  * controller; this composes `binValues()` with the plain `bar` type.
  *
- * @customElement lyra-histogram
+ * @customElement lr-histogram
  */
 export class LyraHistogram extends LyraChart {
   // Explicit rather than relying on `LyraChart`'s inherited `static styles` —
@@ -108,6 +108,6 @@ lockChartType(LyraHistogram, 'bar');
 
 declare global {
   interface HTMLElementTagNameMap {
-    'lyra-histogram': LyraHistogram;
+    'lr-histogram': LyraHistogram;
   }
 }

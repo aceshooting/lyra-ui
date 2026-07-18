@@ -1,4 +1,4 @@
-export const LYRA_PREFIX = 'lyra';
+export const LYRA_PREFIX = 'lr';
 
 export const tag = (name: string): string => `${LYRA_PREFIX}-${name}`;
 
@@ -8,7 +8,7 @@ export function defineElement(name: string, ctor: CustomElementConstructor): voi
   const existing = customElements.get(t);
   if (existing) {
     if (existing !== ctor) {
-      console.warn(`[lyra] tag "${t}" is already registered with a different constructor`);
+      console.warn(`[lr] tag "${t}" is already registered with a different constructor`);
     }
     return;
   }

@@ -19,11 +19,11 @@ const spellcheckConverter = {
 export type ToolApprovalDialogWrap = 'hard' | 'soft' | 'off';
 
 /**
- * Reason the dialog was dismissed, forwarded as the `lyra-close` event detail
- * -- mirrors `<lyra-dialog>`'s own `DialogCloseReason` shape. `'escape'`/
+ * Reason the dialog was dismissed, forwarded as the `lr-close` event detail
+ * -- mirrors `<lr-dialog>`'s own `DialogCloseReason` shape. `'escape'`/
  * `'backdrop'` come from the dialog's own built-in dismiss triggers,
  * `'approve'`/`'deny'` from the built-in action buttons (fired in addition
- * to, and immediately after, their own dedicated `lyra-approve`/`lyra-deny`
+ * to, and immediately after, their own dedicated `lr-approve`/`lr-deny`
  * event -- see the class doc), and any other string is whatever a caller
  * passes to `close()` directly.
  */
@@ -36,19 +36,19 @@ export type ToolApprovalDialogCloseReason =
   | (string & Record<never, never>);
 
 export interface LyraToolApprovalDialogEventMap {
-  'lyra-approve': CustomEvent<{ args: unknown }>;
-  'lyra-deny': CustomEvent<undefined>;
-  'lyra-close': CustomEvent<ToolApprovalDialogCloseReason>;
+  'lr-approve': CustomEvent<{ args: unknown }>;
+  'lr-deny': CustomEvent<undefined>;
+  'lr-close': CustomEvent<ToolApprovalDialogCloseReason>;
   blur: CustomEvent<undefined>;
   focus: CustomEvent<undefined>;
 }
 /**
- * `<lyra-tool-approval-dialog>` — a human-in-the-loop gate: presents one
+ * `<lr-tool-approval-dialog>` — a human-in-the-loop gate: presents one
  * proposed tool/function call (`toolName` + `args`) and blocks an agent from
  * executing it until a person explicitly approves or denies it, with an
  * optional inline "edit the arguments before approving" step.
  *
- * This renders its own dialog panel rather than nesting a `<lyra-dialog>` in
+ * This renders its own dialog panel rather than nesting a `<lr-dialog>` in
  * its shadow template. Shared overlay infrastructure coordinates stacking,
  * focus trapping, Escape/backdrop dismissal, and focus return with every
  * other overlay in the same document.
@@ -62,7 +62,7 @@ export interface LyraToolApprovalDialogEventMap {
  * content renders to the start of the action row, before Deny/Edit/Approve.
  *
  * Editing: while `editable`, an Edit button swaps the read-only
- * `<lyra-json-viewer>` for a plain `<textarea>` pre-filled with
+ * `<lr-json-viewer>` for a plain `<textarea>` pre-filled with
  * `JSON.stringify(args, null, 2)`. Every keystroke is re-validated with
  * `JSON.parse` — the Approve button is `disabled` for as long as the current
  * textarea content fails to parse, so a malformed edit can never be silently
@@ -91,16 +91,16 @@ export interface LyraToolApprovalDialogEventMap {
  * Cancel button — rather than the inert dialog panel, which would need an
  * extra Tab press before *any* action is reachable at all.
  *
- * @customElement lyra-tool-approval-dialog
+ * @customElement lr-tool-approval-dialog
  * @slot footer - Optional supplementary content (e.g. a "remember this
  * choice" checkbox), rendered before the built-in Deny/Edit/Approve buttons.
- * @event lyra-approve - The call was approved. `detail: { args }` — the
+ * @event lr-approve - The call was approved. `detail: { args }` — the
  * current, already-parsed arguments object: the original `args` prop, or (if
  * an edit was in progress) the user's edited-and-validated version. Always
- * followed by `lyra-close` with reason `'approve'`.
- * @event lyra-deny - The call was denied (no detail). Always followed by
- * `lyra-close` with reason `'deny'`.
- * @event lyra-close - `detail: ToolApprovalDialogCloseReason`. Fired exactly
+ * followed by `lr-close` with reason `'approve'`.
+ * @event lr-deny - The call was denied (no detail). Always followed by
+ * `lr-close` with reason `'deny'`.
+ * @event lr-close - `detail: ToolApprovalDialogCloseReason`. Fired exactly
  * once per dismissal — via Escape, a backdrop click, the Approve/Deny
  * buttons, or a `close()` call — so there is one consistent "this dialog is
  * now closed" signal regardless of which path triggered it.
@@ -109,7 +109,7 @@ export interface LyraToolApprovalDialogEventMap {
  * @csspart header - The wrapper around the heading.
  * @csspart tool-name - The `toolName` text within the heading.
  * @csspart body - The wrapper around the args view/editor.
- * @csspart args-view - The read-only `<lyra-json-viewer>` shown while not editing.
+ * @csspart args-view - The read-only `<lr-json-viewer>` shown while not editing.
  * @csspart args-editor - The raw-JSON `<textarea>` shown while editing.
  * @csspart error - The inline "invalid JSON" message, shown only while editing with unparseable content.
  * @csspart footer - The action row wrapping the `footer` slot and the built-in buttons.
@@ -126,7 +126,7 @@ export class LyraToolApprovalDialog extends LyraElement<LyraToolApprovalDialogEv
   /** The proposed tool/function's name, e.g. `web_search`. Drives the heading and the dialog's accessible name. */
   @property({ attribute: 'tool-name' }) toolName = '';
 
-  /** The proposed call's arguments — any JSON-serializable value, rendered via `<lyra-json-viewer>` (or, while editing, stringified into the textarea). */
+  /** The proposed call's arguments — any JSON-serializable value, rendered via `<lr-json-viewer>` (or, while editing, stringified into the textarea). */
   @property({ attribute: false }) args: unknown = {};
 
   /** Whether an "Edit" affordance is offered at all. When `false`, `args` is always shown read-only and can never be changed before approval. */
@@ -183,7 +183,7 @@ export class LyraToolApprovalDialog extends LyraElement<LyraToolApprovalDialogEv
 
   // Runs after render (not willUpdate) so [part="panel"]/[part="deny-button"]
   // have already landed in the DOM before the focus calls below can rely on
-  // them -- mirrors lyra-dialog's identical ordering rationale.
+  // them -- mirrors lr-dialog's identical ordering rationale.
   protected updated(changed: PropertyValues): void {
     if (changed.has('open') && this.open) {
       this.overlay?.focusInitial();
@@ -240,7 +240,7 @@ export class LyraToolApprovalDialog extends LyraElement<LyraToolApprovalDialogEv
 
   /**
    * Close the dialog and return focus to whatever had it before the dialog
-   * opened. `reason` is forwarded as the `lyra-close` detail — built-in
+   * opened. `reason` is forwarded as the `lr-close` detail — built-in
    * triggers pass `'escape'`/`'backdrop'`/`'approve'`/`'deny'`; a consumer's
    * own close affordance (e.g. a footer-slotted button) should call this
    * directly with its own reason string, so every dismissal path funnels
@@ -250,7 +250,7 @@ export class LyraToolApprovalDialog extends LyraElement<LyraToolApprovalDialogEv
   close(reason: ToolApprovalDialogCloseReason = 'api'): void {
     if (!this.open) return;
     this.open = false;
-    this.emit<ToolApprovalDialogCloseReason>('lyra-close', reason);
+    this.emit<ToolApprovalDialogCloseReason>('lr-close', reason);
   }
 
   private onBackdropClick = (): void => {
@@ -305,12 +305,12 @@ export class LyraToolApprovalDialog extends LyraElement<LyraToolApprovalDialogEv
         return;
       }
     }
-    this.emit<{ args: unknown }>('lyra-approve', { args: currentArgs });
+    this.emit<{ args: unknown }>('lr-approve', { args: currentArgs });
     this.close('approve');
   };
 
   private onDeny = (): void => {
-    this.emit('lyra-deny');
+    this.emit('lr-deny');
     this.close('deny');
   };
 
@@ -355,7 +355,7 @@ export class LyraToolApprovalDialog extends LyraElement<LyraToolApprovalDialogEv
                 ></textarea>
                 <p part="error" id=${this.errorId} role="alert" ?hidden=${!hasError}>${this.draftError}</p>
               `
-            : html`<lyra-json-viewer part="args-view" .data=${this.args}></lyra-json-viewer>`}
+            : html`<lr-json-viewer part="args-view" .data=${this.args}></lr-json-viewer>`}
         </div>
         <div part="footer">
           <slot name="footer"></slot>
@@ -377,6 +377,6 @@ export class LyraToolApprovalDialog extends LyraElement<LyraToolApprovalDialogEv
 
 declare global {
   interface HTMLElementTagNameMap {
-    'lyra-tool-approval-dialog': LyraToolApprovalDialog;
+    'lr-tool-approval-dialog': LyraToolApprovalDialog;
   }
 }

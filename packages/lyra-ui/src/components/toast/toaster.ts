@@ -15,7 +15,7 @@ const regions = new Map<ToastPlacement, LyraToast>();
 function getRegion(placement: ToastPlacement = DEFAULT_PLACEMENT): LyraToast {
   let region = regions.get(placement);
   if (!region || !region.isConnected) {
-    region = document.createElement('lyra-toast') as LyraToast;
+    region = document.createElement('lr-toast') as LyraToast;
     region.placement = placement;
     document.body.appendChild(region);
     regions.set(placement, region);
@@ -38,7 +38,7 @@ export interface ToastHandle {
 }
 
 /**
- * Show a toast. Ergonomic convenience over `<lyra-toast>.create()` that mounts
+ * Show a toast. Ergonomic convenience over `<lr-toast>.create()` that mounts
  * and reuses a page-level region per placement — the drop-in for `react-hot-toast`.
  *
  * @example toast('Saved');

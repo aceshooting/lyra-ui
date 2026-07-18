@@ -13,7 +13,7 @@ export interface AnsiStyles {
   italic: boolean;
   underline: boolean;
   inverse: boolean;
-  /** A CSS color value: `var(--lyra-terminal-color-*)` for the 16 named colors (including the
+  /** A CSS color value: `var(--lr-terminal-color-*)` for the 16 named colors (including the
    *  16-named subset of 256-color mode), or a literal `rgb()` for 256-color indices 16-255 and
    *  truecolor. These colors are driven by arbitrary terminal output content, not the design-token
    *  palette, so a literal CSS color value here is intentional rather than a hardcoded default. */
@@ -63,7 +63,7 @@ const ANSI_16_VAR_NAMES = [
 ] as const;
 
 function ansiVar(index: number): string {
-  return `var(--lyra-terminal-color-${ANSI_16_VAR_NAMES[index]})`;
+  return `var(--lr-terminal-color-${ANSI_16_VAR_NAMES[index]})`;
 }
 
 const FG_VARS: Record<number, string> = {};

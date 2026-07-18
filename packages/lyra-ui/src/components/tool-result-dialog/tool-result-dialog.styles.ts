@@ -4,29 +4,29 @@ export const styles = css`
   :host {
     /* Backdrop scrim color -- component-specific so a host can retheme it
        without a raw literal leaking into the public API (no shared
-       --lyra-*-overlay token exists in the design system to resolve through,
-       same rationale as lyra-dialog's --lyra-dialog-overlay-color and
-       lyra-widget's --lyra-widget-overlay-color). */
-    --lyra-tool-result-dialog-overlay-color: var(--lyra-color-overlay);
+       --lr-*-overlay token exists in the design system to resolve through,
+       same rationale as lr-dialog's --lr-dialog-overlay-color and
+       lr-widget's --lr-widget-overlay-color). */
+    --lr-tool-result-dialog-overlay-color: var(--lr-color-overlay);
     /* Inset applied to the panel while [maximized] -- overridable the same
-       way lyra-widget's --lyra-widget-fullscreen-inset is, e.g. to leave a
+       way lr-widget's --lr-widget-fullscreen-inset is, e.g. to leave a
        persistent app rail visible. */
-    --lyra-tool-result-dialog-maximized-inset:
-      max(var(--lyra-space-l), var(--lyra-safe-area-top))
-      max(var(--lyra-space-l), var(--lyra-safe-area-inline-end))
-      max(var(--lyra-space-l), var(--lyra-safe-area-bottom))
-      max(var(--lyra-space-l), var(--lyra-safe-area-inline-start));
-    --lyra-tool-result-dialog-spin: 1s linear;
+    --lr-tool-result-dialog-maximized-inset:
+      max(var(--lr-space-l), var(--lr-safe-area-top))
+      max(var(--lr-space-l), var(--lr-safe-area-inline-end))
+      max(var(--lr-space-l), var(--lr-safe-area-bottom))
+      max(var(--lr-space-l), var(--lr-safe-area-inline-start));
+    --lr-tool-result-dialog-spin: 1s linear;
     display: none;
     position: fixed;
     inset: 0;
-    z-index: var(--lyra-overlay-stack-index, var(--lyra-layer-modal));
+    z-index: var(--lr-overlay-stack-index, var(--lr-layer-modal));
     align-items: center;
     justify-content: center;
-    padding-block-start: max(var(--lyra-space-l), var(--lyra-safe-area-top));
-    padding-block-end: max(var(--lyra-space-l), var(--lyra-safe-area-bottom));
-    padding-inline-start: max(var(--lyra-space-l), var(--lyra-safe-area-inline-start));
-    padding-inline-end: max(var(--lyra-space-l), var(--lyra-safe-area-inline-end));
+    padding-block-start: max(var(--lr-space-l), var(--lr-safe-area-top));
+    padding-block-end: max(var(--lr-space-l), var(--lr-safe-area-bottom));
+    padding-inline-start: max(var(--lr-space-l), var(--lr-safe-area-inline-start));
+    padding-inline-end: max(var(--lr-space-l), var(--lr-safe-area-inline-end));
   }
   :host([open]) {
     display: flex;
@@ -34,26 +34,26 @@ export const styles = css`
   [part='backdrop'] {
     position: absolute;
     inset: 0;
-    background: var(--lyra-tool-result-dialog-overlay-color);
+    background: var(--lr-tool-result-dialog-overlay-color);
   }
   [part='panel'] {
     position: relative;
     display: flex;
     flex-direction: column;
-    inline-size: min(var(--lyra-size-48rem), 100%);
+    inline-size: min(var(--lr-size-48rem), 100%);
     max-block-size: 100%;
-    background: var(--lyra-color-surface);
-    border: var(--lyra-border-width-thin) solid var(--lyra-color-border);
-    border-radius: var(--lyra-radius);
-    box-shadow: var(--lyra-shadow);
+    background: var(--lr-color-surface);
+    border: var(--lr-border-width-thin) solid var(--lr-color-border);
+    border-radius: var(--lr-radius);
+    box-shadow: var(--lr-shadow);
     overflow: hidden;
     transition:
-      inline-size var(--lyra-transition-base),
-      block-size var(--lyra-transition-base);
+      inline-size var(--lr-transition-base),
+      block-size var(--lr-transition-base);
   }
   :host([maximized]) [part='panel'] {
     position: fixed;
-    inset: var(--lyra-tool-result-dialog-maximized-inset);
+    inset: var(--lr-tool-result-dialog-maximized-inset);
     inline-size: auto;
     max-block-size: none;
   }
@@ -61,20 +61,20 @@ export const styles = css`
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    gap: var(--lyra-space-s);
-    padding: var(--lyra-space-m) var(--lyra-space-l);
-    border-block-end: var(--lyra-border-width-thin) solid var(--lyra-color-border);
+    gap: var(--lr-space-s);
+    padding: var(--lr-space-m) var(--lr-space-l);
+    border-block-end: var(--lr-border-width-thin) solid var(--lr-color-border);
   }
   [part='title'] {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    gap: var(--lyra-space-s);
+    gap: var(--lr-space-s);
     flex: 1 1 auto;
     min-inline-size: 0;
   }
   [part='tool-name'] {
-    font-weight: var(--lyra-font-weight-semibold);
+    font-weight: var(--lr-font-weight-semibold);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -82,51 +82,51 @@ export const styles = css`
   [part='status'] {
     display: inline-flex;
     align-items: center;
-    gap: var(--lyra-size-0-25rem);
-    padding: var(--lyra-size-0-125rem) var(--lyra-space-xs);
-    border-radius: var(--lyra-radius);
-    font-size: var(--lyra-font-size-xs);
-    font-weight: var(--lyra-font-weight-semibold);
-    color: var(--lyra-color-text-quiet);
+    gap: var(--lr-size-0-25rem);
+    padding: var(--lr-size-0-125rem) var(--lr-space-xs);
+    border-radius: var(--lr-radius);
+    font-size: var(--lr-font-size-xs);
+    font-weight: var(--lr-font-weight-semibold);
+    color: var(--lr-color-text-quiet);
     background: transparent;
   }
   [part='status'] svg {
-    inline-size: var(--lyra-size-1em);
-    block-size: var(--lyra-size-1em);
+    inline-size: var(--lr-size-1em);
+    block-size: var(--lr-size-1em);
   }
   /* pending stays the neutral/quiet treatment above -- it's the resting
      state before a tool call has done anything worth calling out. */
   :host([status='running']) [part='status'] {
-    color: var(--lyra-color-brand);
-    background: var(--lyra-color-brand-quiet);
+    color: var(--lr-color-brand);
+    background: var(--lr-color-brand-quiet);
   }
   :host([status='success']) [part='status'] {
-    color: var(--lyra-color-success);
-    background: var(--lyra-color-success-quiet);
+    color: var(--lr-color-success);
+    background: var(--lr-color-success-quiet);
   }
   :host([status='error']) [part='status'] {
-    color: var(--lyra-color-danger);
-    background: var(--lyra-color-danger-quiet);
+    color: var(--lr-color-danger);
+    background: var(--lr-color-danger-quiet);
   }
   /* 'denied' is a policy rejection, not a runtime failure -- the warning
      (not danger) tinted-background reads that distinction without relying on
      the status text alone. */
   :host([status='denied']) [part='status'] {
-    color: var(--lyra-color-warning);
-    background: var(--lyra-color-warning-quiet);
+    color: var(--lr-color-warning);
+    background: var(--lr-color-warning-quiet);
   }
   :host([status='running']) [part='status'] svg {
-    animation: lyra-tool-result-dialog-spin var(--lyra-tool-result-dialog-spin) infinite;
+    animation: lr-tool-result-dialog-spin var(--lr-tool-result-dialog-spin) infinite;
   }
   [part='duration'] {
-    font-size: var(--lyra-font-size-xs);
-    color: var(--lyra-color-text-quiet);
+    font-size: var(--lr-font-size-xs);
+    color: var(--lr-color-text-quiet);
     white-space: nowrap;
   }
   [part='header-actions'] {
     display: flex;
     align-items: center;
-    gap: var(--lyra-space-xs);
+    gap: var(--lr-space-xs);
     flex: 0 0 auto;
   }
   [part='maximize-button'],
@@ -134,28 +134,28 @@ export const styles = css`
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    min-inline-size: var(--lyra-icon-button-size);
-    min-block-size: var(--lyra-icon-button-size);
+    min-inline-size: var(--lr-icon-button-size);
+    min-block-size: var(--lr-icon-button-size);
     border: none;
     background: transparent;
-    color: var(--lyra-color-text-quiet);
-    border-radius: var(--lyra-radius);
+    color: var(--lr-color-text-quiet);
+    border-radius: var(--lr-radius);
     cursor: pointer;
   }
   [part='maximize-button']:hover,
   [part='close-button']:hover {
-    background: var(--lyra-color-brand-quiet);
-    color: var(--lyra-color-brand);
+    background: var(--lr-color-brand-quiet);
+    color: var(--lr-color-brand);
   }
   [part='maximize-button']:focus-visible,
   [part='close-button']:focus-visible {
-    outline: var(--lyra-focus-ring-width) solid var(--lyra-focus-ring-color);
-    outline-offset: var(--lyra-focus-ring-offset);
+    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
+    outline-offset: var(--lr-focus-ring-offset);
   }
   [part='body'] {
     flex: 1 1 auto;
     min-block-size: 0;
-    padding: var(--lyra-space-l);
+    padding: var(--lr-space-l);
     overflow: auto;
   }
   [part='footer'] {
@@ -163,14 +163,14 @@ export const styles = css`
     flex-wrap: wrap;
     align-items: center;
     justify-content: flex-end;
-    gap: var(--lyra-space-s);
-    padding: var(--lyra-space-m) var(--lyra-space-l);
-    border-block-start: var(--lyra-border-width-thin) solid var(--lyra-color-border);
+    gap: var(--lr-space-s);
+    padding: var(--lr-space-m) var(--lr-space-l);
+    border-block-start: var(--lr-border-width-thin) solid var(--lr-color-border);
   }
   [part='footer'][hidden] {
     display: none;
   }
-  @keyframes lyra-tool-result-dialog-spin {
+  @keyframes lr-tool-result-dialog-spin {
     to {
       transform: rotate(360deg);
     }

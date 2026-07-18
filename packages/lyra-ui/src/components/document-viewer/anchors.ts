@@ -27,7 +27,7 @@ export interface LyraHighlight {
   anchor: LyraAnchor;
   label?: string;
   /** Host-attached commentary. Carried by every anchor-capable viewer but never rendered by them --
-   *  only a provenance-style surface (e.g. a future `lyra-provenance-panel`) renders `note` text. */
+   *  only a provenance-style surface (e.g. a future `lr-provenance-panel`) renders `note` text. */
   note?: string;
   tone?: LyraHighlightTone;
 }
@@ -44,23 +44,23 @@ export interface AnchorTargetCapabilities {
    *  `clearSearch()` contract implemented per-viewer) -- this flag lets a registry entry declare
    *  it once a given viewer supports it. */
   search?: boolean;
-  /** Whether the viewer emits `lyra-text-select` on selection end. */
+  /** Whether the viewer emits `lr-text-select` on selection end. */
   textSelect?: boolean;
 }
 
-/** `lyra-highlight-activate` event detail. */
+/** `lr-highlight-activate` event detail. */
 export interface HighlightActivateDetail {
   id: string;
 }
 
-/** `lyra-text-select` event detail. `anchor` is `null` when the selection couldn't be anchored. */
+/** `lr-text-select` event detail. `anchor` is `null` when the selection couldn't be anchored. */
 export interface TextSelectDetail {
   text: string;
   anchor: LyraAnchor | null;
   rects: DOMRect[];
 }
 
-/** `lyra-anchor-result` event detail. */
+/** `lr-anchor-result` event detail. */
 export interface AnchorResultDetail {
   found: boolean;
 }

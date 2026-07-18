@@ -4,7 +4,7 @@ import './code-block.js';
 
 const meta: Meta = {
   title: 'CodeBlock',
-  component: 'lyra-code-block',
+  component: 'lr-code-block',
   tags: ['autodocs'],
   parameters: {
     docs: {
@@ -25,17 +25,17 @@ const tsSample = `export function greet(name: string): string {
 `;
 
 export const Default: Story = {
-  render: () => html`<lyra-code-block language="typescript" .code=${tsSample} style="max-width: 32rem;"></lyra-code-block>`,
+  render: () => html`<lr-code-block language="typescript" .code=${tsSample} style="max-width: 32rem;"></lr-code-block>`,
 };
 
 export const WithFilename: Story = {
   render: () => html`
-    <lyra-code-block
+    <lr-code-block
       filename="greet.ts"
       language="typescript"
       .code=${tsSample}
       style="max-width: 32rem;"
-    ></lyra-code-block>
+    ></lr-code-block>
   `,
 };
 
@@ -58,7 +58,7 @@ const languageSamples = {
 
 export const PythonLanguage: Story = {
   render: () => html`
-    <lyra-code-block filename="fib.py" language="python" .code=${pySample} style="max-width: 32rem;"></lyra-code-block>
+    <lr-code-block filename="fib.py" language="python" .code=${pySample} style="max-width: 32rem;"></lr-code-block>
   `,
 };
 
@@ -76,11 +76,11 @@ export const CommonLanguages: Story = {
     <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(18rem,1fr)); gap:0.75rem;">
       ${Object.entries(languageSamples).map(
         ([language, code]) => html`
-          <lyra-code-block
+          <lr-code-block
             filename=${language === 'greycat' ? 'hello.gcl' : `hello.${language}`}
             language=${language}
             .code=${code}
-          ></lyra-code-block>
+          ></lr-code-block>
         `,
       )}
     </div>
@@ -90,62 +90,62 @@ export const CommonLanguages: Story = {
 export const PlainFallback: Story = {
   name: 'No language set (always plain text)',
   render: () => html`
-    <lyra-code-block filename="notes.txt" .code=${'Just plain text, never highlighted.\nline two\nline three'} style="max-width: 32rem;"></lyra-code-block>
+    <lr-code-block filename="notes.txt" .code=${'Just plain text, never highlighted.\nline two\nline three'} style="max-width: 32rem;"></lr-code-block>
   `,
 };
 
 export const WithLineNumbers: Story = {
   name: 'Optional line numbers',
   render: () => html`
-    <lyra-code-block
+    <lr-code-block
       filename="example.ts"
       language="typescript"
       line-numbers
       .code=${'const answer = 42;\nconsole.log(answer);\n'}
-    ></lyra-code-block>
+    ></lr-code-block>
   `,
 };
 
 export const UnrecognizedLanguage: Story = {
   name: 'Unrecognized language id (falls back to plain text)',
   render: () => html`
-    <lyra-code-block language="not-a-real-language" .code=${'plain(); // shiki has no grammar for this id'} style="max-width: 32rem;"></lyra-code-block>
+    <lr-code-block language="not-a-real-language" .code=${'plain(); // shiki has no grammar for this id'} style="max-width: 32rem;"></lr-code-block>
   `,
 };
 
 export const Collapsible: Story = {
   render: () => html`
-    <lyra-code-block
+    <lr-code-block
       collapsible
       collapsed
       filename="long-file.ts"
       language="typescript"
       .code=${Array.from({ length: 20 }, (_, i) => `const line${i} = ${i};`).join('\n')}
       style="max-width: 32rem;"
-    ></lyra-code-block>
+    ></lr-code-block>
   `,
 };
 
 export const MaxHeightScrolling: Story = {
   render: () => html`
-    <lyra-code-block
+    <lr-code-block
       language="typescript"
       max-height="8rem"
       .code=${Array.from({ length: 30 }, (_, i) => `const line${i} = ${i};`).join('\n')}
       style="max-width: 32rem;"
-    ></lyra-code-block>
+    ></lr-code-block>
   `,
 };
 
 export const NotCopyable: Story = {
   render: () => html`
-    <lyra-code-block
+    <lr-code-block
       .copyable=${false}
       language="typescript"
       filename="readonly.ts"
       .code=${tsSample}
       style="max-width: 32rem;"
-    ></lyra-code-block>
+    ></lr-code-block>
   `,
 };
 
@@ -160,26 +160,26 @@ export const AccessibleNameOverride: Story = {
     },
   },
   render: () => html`
-    <lyra-code-block
+    <lr-code-block
       aria-label="TypeScript greeting implementation"
       filename="greet.ts"
       language="typescript"
       .code=${tsSample}
       style="max-inline-size:32rem;"
-    ></lyra-code-block>
+    ></lr-code-block>
   `,
 };
 
 export const CopyEvent: Story = {
   render: () => html`
     <div style="display:flex; flex-direction:column; gap:0.75rem; max-width:32rem;">
-      <lyra-code-block
+      <lr-code-block
         language="typescript"
         .code=${tsSample}
-        @lyra-copy=${(e: CustomEvent<{ text: string }>) => console.log('lyra-copy', e.detail.text)}
-      ></lyra-code-block>
-      <p style="margin:0; color:var(--lyra-color-text-quiet); font-size:0.8125rem;">
-        Open the console — clicking "Copy" logs the raw <code>code</code> text via <code>lyra-copy</code>.
+        @lr-copy=${(e: CustomEvent<{ text: string }>) => console.log('lr-copy', e.detail.text)}
+      ></lr-code-block>
+      <p style="margin:0; color:var(--lr-color-text-quiet); font-size:0.8125rem;">
+        Open the console — clicking "Copy" logs the raw <code>code</code> text via <code>lr-copy</code>.
       </p>
     </div>
   `,

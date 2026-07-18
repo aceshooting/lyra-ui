@@ -6,14 +6,14 @@ let maplibre: Promise<MaplibreModule | null> | undefined;
 /**
  * Lazily loads the optional peer dependency `maplibre-gl` once per page.
  * Resolves to `null` (with a one-time warning) if it isn't installed —
- * mirrors `<lyra-flag>`'s peer-dependency pattern. Consumers must separately
+ * mirrors `<lr-flag>`'s peer-dependency pattern. Consumers must separately
  * import `maplibre-gl/dist/maplibre-gl.css` once they install the peer.
  */
 export function loadMaplibre(): Promise<MaplibreModule | null> {
   if (!maplibre) {
     maplibre = (import('maplibre-gl') as Promise<MaplibreModule>).catch(() => {
       console.warn(
-        '<lyra-map> needs the optional peer dependency `maplibre-gl` — install it with ' +
+        '<lr-map> needs the optional peer dependency `maplibre-gl` — install it with ' +
           '`pnpm add maplibre-gl` and import `maplibre-gl/dist/maplibre-gl.css` once in your app.',
       );
       return null;

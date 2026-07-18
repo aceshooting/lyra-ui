@@ -21,34 +21,34 @@ function typeInto(input: HTMLInputElement, text: string): void {
 
 it('renders three fields in en-GB locale order (day, month, year) by default when lang is inherited', async () => {
   const wrapper = await fixture(html`
-    <div lang="en-GB"><lyra-known-date></lyra-known-date></div>
+    <div lang="en-GB"><lr-known-date></lr-known-date></div>
   `);
-  const el = wrapper.querySelector('lyra-known-date') as LyraKnownDate;
+  const el = wrapper.querySelector('lr-known-date') as LyraKnownDate;
   await el.updateComplete;
   expect(fieldOrder(el)).to.deep.equal(['day', 'month', 'year']);
 });
 
 it('renders month, day, year order for en-US and year, month, day for ja-JP', async () => {
-  const us = (await fixture(html`<lyra-known-date locale="en-US"></lyra-known-date>`)) as LyraKnownDate;
+  const us = (await fixture(html`<lr-known-date locale="en-US"></lr-known-date>`)) as LyraKnownDate;
   await us.updateComplete;
   expect(fieldOrder(us)).to.deep.equal(['month', 'day', 'year']);
 
-  const jp = (await fixture(html`<lyra-known-date locale="ja-JP"></lyra-known-date>`)) as LyraKnownDate;
+  const jp = (await fixture(html`<lr-known-date locale="ja-JP"></lr-known-date>`)) as LyraKnownDate;
   await jp.updateComplete;
   expect(fieldOrder(jp)).to.deep.equal(['year', 'month', 'day']);
 });
 
 it('lets an explicit locale property override an inherited lang ancestor', async () => {
   const wrapper = await fixture(html`
-    <div lang="en-GB"><lyra-known-date locale="en-US"></lyra-known-date></div>
+    <div lang="en-GB"><lr-known-date locale="en-US"></lr-known-date></div>
   `);
-  const el = wrapper.querySelector('lyra-known-date') as LyraKnownDate;
+  const el = wrapper.querySelector('lr-known-date') as LyraKnownDate;
   await el.updateComplete;
   expect(fieldOrder(el)).to.deep.equal(['month', 'day', 'year']);
 });
 
 it('commits a complete, calendar-valid typed date as canonical ISO and fires change', async () => {
-  const el = (await fixture(html`<lyra-known-date locale="en-GB"></lyra-known-date>`)) as LyraKnownDate;
+  const el = (await fixture(html`<lr-known-date locale="en-GB"></lr-known-date>`)) as LyraKnownDate;
   await el.updateComplete;
 
   typeInto(fieldFor(el, 'day'), '27');
@@ -64,7 +64,7 @@ it('commits a complete, calendar-valid typed date as canonical ISO and fires cha
 });
 
 it('fires input on every keystroke with live per-field text, even while incomplete', async () => {
-  const el = (await fixture(html`<lyra-known-date locale="en-GB"></lyra-known-date>`)) as LyraKnownDate;
+  const el = (await fixture(html`<lr-known-date locale="en-GB"></lr-known-date>`)) as LyraKnownDate;
   await el.updateComplete;
 
   const eventPromise = oneEvent(el, 'input');
@@ -80,9 +80,9 @@ it('fires input on every keystroke with live per-field text, even while incomple
 
 it('leaves value empty and out of FormData while any field is blank', async () => {
   const form = (await fixture(html`
-    <form><lyra-known-date name="dob" locale="en-GB"></lyra-known-date></form>
+    <form><lr-known-date name="dob" locale="en-GB"></lr-known-date></form>
   `)) as HTMLFormElement;
-  const el = form.querySelector('lyra-known-date') as LyraKnownDate;
+  const el = form.querySelector('lr-known-date') as LyraKnownDate;
   await el.updateComplete;
 
   typeInto(fieldFor(el, 'day'), '27');
@@ -94,7 +94,7 @@ it('leaves value empty and out of FormData while any field is blank', async () =
 });
 
 it('flags a calendar-invalid combination (Feb 30) as badInput and shows dateInputInvalid once touched', async () => {
-  const el = (await fixture(html`<lyra-known-date locale="en-GB"></lyra-known-date>`)) as LyraKnownDate;
+  const el = (await fixture(html`<lr-known-date locale="en-GB"></lr-known-date>`)) as LyraKnownDate;
   await el.updateComplete;
 
   typeInto(fieldFor(el, 'day'), '30');
@@ -114,7 +114,7 @@ it('flags a calendar-invalid combination (Feb 30) as badInput and shows dateInpu
 
 describe('auto-advance and backspace navigation', () => {
   it('auto-advances focus after the 2nd digit in day or month, but not after the 4th digit in year', async () => {
-    const el = (await fixture(html`<lyra-known-date locale="en-GB"></lyra-known-date>`)) as LyraKnownDate;
+    const el = (await fixture(html`<lr-known-date locale="en-GB"></lr-known-date>`)) as LyraKnownDate;
     await el.updateComplete;
 
     typeInto(fieldFor(el, 'day'), '27');
@@ -133,7 +133,7 @@ describe('auto-advance and backspace navigation', () => {
   });
 
   it('moves focus to the previous field on Backspace in an already-empty field, without altering its content', async () => {
-    const el = (await fixture(html`<lyra-known-date locale="en-GB" value="2007-03-27"></lyra-known-date>`)) as LyraKnownDate;
+    const el = (await fixture(html`<lr-known-date locale="en-GB" value="2007-03-27"></lr-known-date>`)) as LyraKnownDate;
     await el.updateComplete;
 
     const month = fieldFor(el, 'month');
@@ -151,7 +151,7 @@ describe('auto-advance and backspace navigation', () => {
   });
 
   it('is a no-op pressing Backspace on the first field (locale order) when it is already empty', async () => {
-    const el = (await fixture(html`<lyra-known-date locale="en-GB"></lyra-known-date>`)) as LyraKnownDate;
+    const el = (await fixture(html`<lr-known-date locale="en-GB"></lr-known-date>`)) as LyraKnownDate;
     await el.updateComplete;
 
     const day = fieldFor(el, 'day');
@@ -164,7 +164,7 @@ describe('auto-advance and backspace navigation', () => {
 
 describe('arrow-key field-to-field navigation and RTL', () => {
   it('moves to the next field on ArrowRight at the end of the text, and to the previous on ArrowLeft at the start', async () => {
-    const el = (await fixture(html`<lyra-known-date locale="en-GB" value="2007-03-27"></lyra-known-date>`)) as LyraKnownDate;
+    const el = (await fixture(html`<lr-known-date locale="en-GB" value="2007-03-27"></lr-known-date>`)) as LyraKnownDate;
     await el.updateComplete;
 
     const day = fieldFor(el, 'day');
@@ -183,9 +183,9 @@ describe('arrow-key field-to-field navigation and RTL', () => {
 
   it('flips which physical arrow key means "next field" under an inherited RTL ancestor, without changing the field order itself', async () => {
     const wrapper = await fixture(html`
-      <div dir="rtl"><lyra-known-date locale="en-GB" value="2007-03-27"></lyra-known-date></div>
+      <div dir="rtl"><lr-known-date locale="en-GB" value="2007-03-27"></lr-known-date></div>
     `);
-    const el = wrapper.querySelector('lyra-known-date') as LyraKnownDate;
+    const el = wrapper.querySelector('lr-known-date') as LyraKnownDate;
     await el.updateComplete;
 
     // Field order itself is unaffected by direction.
@@ -211,7 +211,7 @@ describe('arrow-key field-to-field navigation and RTL', () => {
 
 describe('required vs. partially-filled validity', () => {
   it('reports valueMissing with fieldRequired only when all three fields are blank', async () => {
-    const el = (await fixture(html`<lyra-known-date locale="en-GB" required></lyra-known-date>`)) as LyraKnownDate;
+    const el = (await fixture(html`<lr-known-date locale="en-GB" required></lr-known-date>`)) as LyraKnownDate;
     await el.updateComplete;
     expect(el.internals.validity.valueMissing).to.be.true;
     expect(el.internals.validity.badInput).to.be.false;
@@ -219,7 +219,7 @@ describe('required vs. partially-filled validity', () => {
   });
 
   it('reports badInput, not valueMissing, once required is partially filled', async () => {
-    const el = (await fixture(html`<lyra-known-date locale="en-GB" required></lyra-known-date>`)) as LyraKnownDate;
+    const el = (await fixture(html`<lr-known-date locale="en-GB" required></lr-known-date>`)) as LyraKnownDate;
     await el.updateComplete;
 
     typeInto(fieldFor(el, 'day'), '27');
@@ -233,7 +233,7 @@ describe('required vs. partially-filled validity', () => {
 describe('min/max bounds', () => {
   it('produces rangeUnderflow/rangeOverflow with interpolated messages', async () => {
     const el = (await fixture(html`
-      <lyra-known-date locale="en-GB" min="2020-01-01" max="2020-12-31"></lyra-known-date>
+      <lr-known-date locale="en-GB" min="2020-01-01" max="2020-12-31"></lr-known-date>
     `)) as LyraKnownDate;
     await el.updateComplete;
 
@@ -249,7 +249,7 @@ describe('min/max bounds', () => {
 
 describe('disabled', () => {
   it('disables all three fields and reflects the attribute', async () => {
-    const el = (await fixture(html`<lyra-known-date disabled></lyra-known-date>`)) as LyraKnownDate;
+    const el = (await fixture(html`<lr-known-date disabled></lr-known-date>`)) as LyraKnownDate;
     await el.updateComplete;
     expect(el.hasAttribute('disabled')).to.be.true;
     for (const input of fields(el)) expect(input.disabled).to.be.true;
@@ -257,9 +257,9 @@ describe('disabled', () => {
 
   it('reflects an ancestor fieldset disabled state without mutating the component own disabled property', async () => {
     const form = (await fixture(html`
-      <form><fieldset disabled><lyra-known-date name="dob"></lyra-known-date></fieldset></form>
+      <form><fieldset disabled><lr-known-date name="dob"></lr-known-date></fieldset></form>
     `)) as HTMLFormElement;
-    const el = form.querySelector('lyra-known-date') as LyraKnownDate;
+    const el = form.querySelector('lr-known-date') as LyraKnownDate;
     await el.updateComplete;
     expect(el.disabled).to.be.false;
     expect(el.effectiveDisabled).to.be.true;
@@ -269,7 +269,7 @@ describe('disabled', () => {
 
 describe('readonly', () => {
   it('bars required validation while active and restores it once cleared', async () => {
-    const el = (await fixture(html`<lyra-known-date required></lyra-known-date>`)) as LyraKnownDate;
+    const el = (await fixture(html`<lr-known-date required></lr-known-date>`)) as LyraKnownDate;
     expect(el.checkValidity()).to.be.false;
 
     el.readonly = true;
@@ -285,9 +285,9 @@ describe('readonly', () => {
 describe('form participation', () => {
   it('includes name/value in FormData only once complete and valid, and restores the constructed default on reset', async () => {
     const form = (await fixture(html`
-      <form><lyra-known-date name="dob" value="2007-03-27"></lyra-known-date></form>
+      <form><lr-known-date name="dob" value="2007-03-27"></lr-known-date></form>
     `)) as HTMLFormElement;
-    const el = form.querySelector('lyra-known-date') as LyraKnownDate;
+    const el = form.querySelector('lr-known-date') as LyraKnownDate;
     await el.updateComplete;
     expect(new FormData(form).get('dob')).to.equal('2007-03-27');
 
@@ -299,7 +299,7 @@ describe('form participation', () => {
   });
 
   it('round-trips a string state via formStateRestoreCallback', async () => {
-    const el = (await fixture(html`<lyra-known-date></lyra-known-date>`)) as LyraKnownDate;
+    const el = (await fixture(html`<lr-known-date></lr-known-date>`)) as LyraKnownDate;
     (el as unknown as { formStateRestoreCallback(state: string): void }).formStateRestoreCallback('2007-03-27');
     expect(el.value).to.equal('2007-03-27');
   });
@@ -307,17 +307,17 @@ describe('form participation', () => {
 
 describe('declarative value sanitization', () => {
   it('sanitizes a non-padded and a calendar-invalid declarative value to empty', async () => {
-    const nonPadded = (await fixture(html`<lyra-known-date value="2007-3-27"></lyra-known-date>`)) as LyraKnownDate;
+    const nonPadded = (await fixture(html`<lr-known-date value="2007-3-27"></lr-known-date>`)) as LyraKnownDate;
     expect(nonPadded.value).to.equal('');
 
-    const invalid = (await fixture(html`<lyra-known-date value="2007-02-30"></lyra-known-date>`)) as LyraKnownDate;
+    const invalid = (await fixture(html`<lr-known-date value="2007-02-30"></lr-known-date>`)) as LyraKnownDate;
     expect(invalid.value).to.equal('');
   });
 });
 
 describe('valueAsDate', () => {
   it('round-trips through the getter/setter, zero-padding single-digit day/month', async () => {
-    const el = (await fixture(html`<lyra-known-date></lyra-known-date>`)) as LyraKnownDate;
+    const el = (await fixture(html`<lr-known-date></lr-known-date>`)) as LyraKnownDate;
     expect(el.valueAsDate).to.equal(null);
 
     el.valueAsDate = new Date(2026, 2, 5); // March 5th
@@ -331,7 +331,7 @@ describe('valueAsDate', () => {
 
 describe(':state(blank)', () => {
   it('toggles present/absent as the composite value goes blank/complete/blank again', async () => {
-    const el = (await fixture(html`<lyra-known-date locale="en-GB"></lyra-known-date>`)) as LyraKnownDate;
+    const el = (await fixture(html`<lr-known-date locale="en-GB"></lr-known-date>`)) as LyraKnownDate;
     await el.updateComplete;
     expect(el.internals.states.has('blank')).to.be.true;
 
@@ -347,7 +347,7 @@ describe(':state(blank)', () => {
 
 describe('focus/blur bridging', () => {
   it('fires a bubbling, composed focus event when any internal field focuses', async () => {
-    const el = (await fixture(html`<lyra-known-date locale="en-GB"></lyra-known-date>`)) as LyraKnownDate;
+    const el = (await fixture(html`<lr-known-date locale="en-GB"></lr-known-date>`)) as LyraKnownDate;
     await el.updateComplete;
     const eventPromise = oneEvent(el, 'focus');
     fieldFor(el, 'day').focus();
@@ -357,7 +357,7 @@ describe('focus/blur bridging', () => {
   });
 
   it('does not fire blur on the host while Tabbing day -> month -> year, only when leaving the whole control', async () => {
-    const el = (await fixture(html`<lyra-known-date locale="en-GB"></lyra-known-date>`)) as LyraKnownDate;
+    const el = (await fixture(html`<lr-known-date locale="en-GB"></lr-known-date>`)) as LyraKnownDate;
     await el.updateComplete;
 
     let blurCount = 0;
@@ -390,11 +390,11 @@ describe('focus/blur bridging', () => {
 describe('per-field labels', () => {
   it('reaches the rendered per-field label text and is wired through localize()', async () => {
     const el = (await fixture(html`
-      <lyra-known-date
+      <lr-known-date
         locale="en-GB"
         day-label="Jour"
         .strings=${{ knownDateMonth: 'Mois' }}
-      ></lyra-known-date>
+      ></lr-known-date>
     `)) as LyraKnownDate;
     await el.updateComplete;
 
@@ -409,7 +409,7 @@ describe('per-field labels', () => {
   });
 
   it('renders the built-in English fallback with no locale registered', async () => {
-    const el = (await fixture(html`<lyra-known-date locale="en-GB"></lyra-known-date>`)) as LyraKnownDate;
+    const el = (await fixture(html`<lr-known-date locale="en-GB"></lr-known-date>`)) as LyraKnownDate;
     await el.updateComplete;
     const labels = Array.from(el.shadowRoot!.querySelectorAll('[part="field-label"]')).map((l) =>
       l.textContent?.trim(),
@@ -420,7 +420,7 @@ describe('per-field labels', () => {
 
 describe('slot vs. attribute precedence and empty-state hiding', () => {
   it('hides the hint and error parts when empty, shows them once populated', async () => {
-    const el = (await fixture(html`<lyra-known-date></lyra-known-date>`)) as LyraKnownDate;
+    const el = (await fixture(html`<lr-known-date></lr-known-date>`)) as LyraKnownDate;
     await el.updateComplete;
 
     const hintPart = el.shadowRoot!.querySelector('[part="hint"]') as HTMLElement;
@@ -442,7 +442,7 @@ describe('slot vs. attribute precedence and empty-state hiding', () => {
     // proves the light-DOM child won the slot, matching how the browser's
     // own slot-projection renders it, rather than asserting on textContent.
     const el = (await fixture(
-      html`<lyra-known-date label="Ignored"><span slot="label">Birth date</span></lyra-known-date>`,
+      html`<lr-known-date label="Ignored"><span slot="label">Birth date</span></lr-known-date>`,
     )) as LyraKnownDate;
     await el.updateComplete;
     const slot = el.shadowRoot!.querySelector('slot[name="label"]') as HTMLSlotElement;
@@ -455,7 +455,7 @@ describe('slot vs. attribute precedence and empty-state hiding', () => {
 describe('required-field asterisk', () => {
   it('appears only when both required and a real label are set', async () => {
     const el = (await fixture(
-      html`<lyra-known-date label="Birth date" required></lyra-known-date>`,
+      html`<lr-known-date label="Birth date" required></lr-known-date>`,
     )) as LyraKnownDate;
     await el.updateComplete;
     const legend = el.shadowRoot!.querySelector('[part="legend"]') as HTMLElement;
@@ -464,7 +464,7 @@ describe('required-field asterisk', () => {
   });
 
   it('does not render an orphaned asterisk when required but no label is provided', async () => {
-    const el = (await fixture(html`<lyra-known-date required></lyra-known-date>`)) as LyraKnownDate;
+    const el = (await fixture(html`<lr-known-date required></lr-known-date>`)) as LyraKnownDate;
     await el.updateComplete;
     const legend = el.shadowRoot!.querySelector('[part="legend"]') as HTMLElement;
     expect(getComputedStyle(legend).display).to.equal('none');
@@ -472,8 +472,8 @@ describe('required-field asterisk', () => {
 });
 
 describe('size', () => {
-  it('reflects the attribute and drives the --lyra-known-date-field-* custom properties', async () => {
-    const el = (await fixture(html`<lyra-known-date size="l"></lyra-known-date>`)) as LyraKnownDate;
+  it('reflects the attribute and drives the --lr-known-date-field-* custom properties', async () => {
+    const el = (await fixture(html`<lr-known-date size="l"></lr-known-date>`)) as LyraKnownDate;
     await el.updateComplete;
     expect(el.getAttribute('size')).to.equal('l');
     const input = fieldFor(el, 'day');
@@ -490,7 +490,7 @@ describe('size', () => {
 describe('accessibility', () => {
   it('is accessible when empty and untouched', async () => {
     const el = (await fixture(
-      html`<lyra-known-date label="Birth date" hint="DD MM YYYY"></lyra-known-date>`,
+      html`<lr-known-date label="Birth date" hint="DD MM YYYY"></lr-known-date>`,
     )) as LyraKnownDate;
     await el.updateComplete;
     await expect(el).to.be.accessible();
@@ -498,7 +498,7 @@ describe('accessibility', () => {
 
   it('is accessible when touched and invalid with a rendered error message', async () => {
     const el = (await fixture(
-      html`<lyra-known-date label="Birth date" required></lyra-known-date>`,
+      html`<lr-known-date label="Birth date" required></lr-known-date>`,
     )) as LyraKnownDate;
     await el.updateComplete;
     fieldFor(el, 'day').focus();
@@ -510,7 +510,7 @@ describe('accessibility', () => {
 
   it('forwards a host aria-label onto the fieldset, winning over the legend', async () => {
     const el = (await fixture(
-      html`<lyra-known-date label="Ignored legend" aria-label="Date of birth"></lyra-known-date>`,
+      html`<lr-known-date label="Ignored legend" aria-label="Date of birth"></lr-known-date>`,
     )) as LyraKnownDate;
     await el.updateComplete;
     const fieldset = el.shadowRoot!.querySelector('[part="fieldset"]') as HTMLElement;
@@ -519,7 +519,7 @@ describe('accessibility', () => {
 
   it('wires aria-describedby, aria-invalid, and aria-required onto every field-input', async () => {
     const el = (await fixture(
-      html`<lyra-known-date hint="DD MM YYYY" required></lyra-known-date>`,
+      html`<lr-known-date hint="DD MM YYYY" required></lr-known-date>`,
     )) as LyraKnownDate;
     await el.updateComplete;
     for (const input of fields(el)) {
@@ -530,7 +530,7 @@ describe('accessibility', () => {
   });
 
   it('marks each field-input aria-readonly when readonly is set', async () => {
-    const el = (await fixture(html`<lyra-known-date readonly></lyra-known-date>`)) as LyraKnownDate;
+    const el = (await fixture(html`<lr-known-date readonly></lr-known-date>`)) as LyraKnownDate;
     await el.updateComplete;
     for (const input of fields(el)) {
       expect(input.readOnly).to.be.true;
@@ -541,7 +541,7 @@ describe('accessibility', () => {
 
 describe('autocomplete forwarding', () => {
   it('expands "bday" into per-field companion tokens', async () => {
-    const el = (await fixture(html`<lyra-known-date autocomplete="bday"></lyra-known-date>`)) as LyraKnownDate;
+    const el = (await fixture(html`<lr-known-date autocomplete="bday"></lr-known-date>`)) as LyraKnownDate;
     await el.updateComplete;
     expect(fieldFor(el, 'day').getAttribute('autocomplete')).to.equal('bday-day');
     expect(fieldFor(el, 'month').getAttribute('autocomplete')).to.equal('bday-month');
@@ -549,14 +549,14 @@ describe('autocomplete forwarding', () => {
   });
 
   it('forwards any other non-empty value verbatim to all three fields', async () => {
-    const el = (await fixture(html`<lyra-known-date autocomplete="off"></lyra-known-date>`)) as LyraKnownDate;
+    const el = (await fixture(html`<lr-known-date autocomplete="off"></lr-known-date>`)) as LyraKnownDate;
     await el.updateComplete;
     for (const input of fields(el)) expect(input.getAttribute('autocomplete')).to.equal('off');
   });
 });
 
 it('rejects non-digit keystrokes before they reach a field state', async () => {
-  const el = (await fixture(html`<lyra-known-date locale="en-GB"></lyra-known-date>`)) as LyraKnownDate;
+  const el = (await fixture(html`<lr-known-date locale="en-GB"></lr-known-date>`)) as LyraKnownDate;
   await el.updateComplete;
   const day = fieldFor(el, 'day');
   typeInto(day, 'ab');

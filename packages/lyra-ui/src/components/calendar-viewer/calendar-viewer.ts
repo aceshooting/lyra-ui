@@ -7,5 +7,5 @@ import { LyraCalendarViewer } from './calendar-viewer.class.js';
 defineElement('calendar-viewer', LyraCalendarViewer);
 registerDocumentRenderer('text/calendar', {
   matches: (file: DocumentFile) => file.name.toLowerCase().endsWith('.ics'),
-  render: (file: DocumentFile) => html`<lyra-calendar-viewer src=${file.src} name=${file.name}></lyra-calendar-viewer>`,
+  render: (file: DocumentFile) => html`<lr-calendar-viewer src=${file.src} name=${file.name}></lr-calendar-viewer>`,
 });

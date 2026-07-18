@@ -11,7 +11,7 @@ export const styles = css`
     display: grid;
     grid-template-columns: auto minmax(0, 1fr) auto;
     align-items: center;
-    gap: var(--lyra-space-xs);
+    gap: var(--lr-space-xs);
     min-inline-size: 0;
   }
 
@@ -33,14 +33,14 @@ export const styles = css`
 
   [part='content'] {
     display: flex;
-    gap: var(--lyra-space-s);
+    gap: var(--lr-space-s);
     min-inline-size: max-content;
   }
 
   :host([orientation='vertical']) [part='base'] {
     grid-template-columns: minmax(0, 1fr);
     grid-template-rows: auto minmax(0, 1fr) auto;
-    min-block-size: var(--lyra-scroller-min-block-size, var(--lyra-size-10rem));
+    min-block-size: var(--lr-scroller-min-block-size, var(--lr-size-10rem));
   }
 
   :host([orientation='vertical']) [part='viewport'],
@@ -55,22 +55,22 @@ export const styles = css`
   }
 
   [part='control'] {
-    /* Keep the glyph-sized control compact by default (--lyra-scroller-control-size
+    /* Keep the glyph-sized control compact by default (--lr-scroller-control-size
        is a consumer-tunable custom property, not this floor) while still giving the
        interactive box the shared minimum target size -- same "small glyph, padded hit
-       box" pattern as lyra-code-block's/lyra-json-viewer's [part='toggle']. Covers
+       box" pattern as lr-code-block's/lr-json-viewer's [part='toggle']. Covers
        both previous and next (the shared part on both, per csspart doc above). */
     display: inline-grid;
     place-items: center;
-    inline-size: var(--lyra-scroller-control-size, var(--lyra-size-2rem));
-    block-size: var(--lyra-scroller-control-size, var(--lyra-size-2rem));
-    min-inline-size: var(--lyra-icon-button-size);
-    min-block-size: var(--lyra-icon-button-size);
+    inline-size: var(--lr-scroller-control-size, var(--lr-size-2rem));
+    block-size: var(--lr-scroller-control-size, var(--lr-size-2rem));
+    min-inline-size: var(--lr-icon-button-size);
+    min-block-size: var(--lr-icon-button-size);
     padding: 0;
-    border: var(--lyra-border-width-thin) solid var(--lyra-color-border);
-    border-radius: var(--lyra-radius-xs);
-    background: var(--lyra-color-surface);
-    color: var(--lyra-color-text);
+    border: var(--lr-border-width-thin) solid var(--lr-color-border);
+    border-radius: var(--lr-radius-xs);
+    background: var(--lr-color-surface);
+    color: var(--lr-color-text);
     cursor: pointer;
   }
 
@@ -81,19 +81,19 @@ export const styles = css`
      since a shadow-part guard lookup is per-name, not per-rendered-element. */
   [part~='previous'],
   [part~='next'] {
-    min-inline-size: var(--lyra-icon-button-size);
-    min-block-size: var(--lyra-icon-button-size);
+    min-inline-size: var(--lr-icon-button-size);
+    min-block-size: var(--lr-icon-button-size);
   }
 
   [part='control']:disabled {
     cursor: default;
-    opacity: var(--lyra-opacity-disabled);
+    opacity: var(--lr-opacity-disabled);
   }
 
   [part='control']:focus-visible,
   [part='viewport']:focus-visible {
-    outline: var(--lyra-focus-ring-width) solid var(--lyra-focus-ring-color);
-    outline-offset: var(--lyra-focus-ring-offset);
+    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
+    outline-offset: var(--lr-focus-ring-offset);
   }
 
   :host(:dir(rtl)) [part='previous-glyph'],

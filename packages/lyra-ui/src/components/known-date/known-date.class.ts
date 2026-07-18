@@ -81,13 +81,13 @@ export interface LyraKnownDateEventMap {
 class LyraKnownDateBase extends LyraElement<LyraKnownDateEventMap> {}
 
 /**
- * `<lyra-known-date>` — a date a user already knows (a birthdate, a passport
+ * `<lr-known-date>` — a date a user already knows (a birthdate, a passport
  * issue/expiry date) collected as three plain, labeled day/month/year number
  * fields in the locale's natural field order, rather than a calendar popup.
  * Form-associated; the submitted form value is always canonical ISO 8601
  * (`YYYY-MM-DD`), or `''` while any field is blank or the combination isn't a
  * real calendar date. Mirrors Web Awesome's `wa-known-date` API surface under
- * `lyra-`, with `appearance`/`pill`/`form` dropped and `size` normalized to
+ * `lr-`, with `appearance`/`pill`/`form` dropped and `size` normalized to
  * this library's own `xs`–`xl` scale, matching every other lyra form control
  * mirrored from a Web Awesome counterpart.
  *
@@ -106,9 +106,9 @@ class LyraKnownDateBase extends LyraElement<LyraKnownDateEventMap> {}
  * No resizable text-editing surface exists (three fixed-width digit fields),
  * so resize forwarding doesn't apply, and `spellcheck`/`autocapitalize`/
  * `autocorrect`/`wrap` don't meaningfully apply to 2–4-digit numeric fields
- * either -- the same carve-out `lyra-input[type="number"]` already documents.
+ * either -- the same carve-out `lr-input[type="number"]` already documents.
  *
- * @customElement lyra-known-date
+ * @customElement lr-known-date
  * @event input - Fires on every keystroke in any field. `detail.value` is the canonical ISO date
  *   only once all three fields resolve to a real calendar date, otherwise `''`; `detail.day`/
  *   `month`/`year` always carry the live raw typed text.
@@ -148,9 +148,9 @@ export class LyraKnownDate extends FormAssociated(LyraKnownDateBase) {
   @property() hint = '';
   @property({ attribute: 'error-text' }) errorText = '';
   /** BCP-47 override for field order and field-label localization sampling. Empty string falls
-   *  back to `this.effectiveLocale` (inherited `lang`/ancestor), exactly like `lyra-date-input`'s
+   *  back to `this.effectiveLocale` (inherited `lang`/ancestor), exactly like `lr-date-input`'s
    *  `locale`. Redeclared (non-reflecting) over `LyraElement`'s own reflecting `locale` for the
-   *  same reason `lyra-date-input` does. */
+   *  same reason `lr-date-input` does. */
   @property() locale = '';
   /** Forwarded to the internal day field as-is when non-empty. The special value `'bday'`
    *  expands into `'bday-day'`/`'bday-month'`/`'bday-year'` split across the three fields; any
@@ -184,7 +184,7 @@ export class LyraKnownDate extends FormAssociated(LyraKnownDateBase) {
   private _max = '';
   private _readonly = false;
   /** The last value a `change` event was fired for (or the constructed initial value) -- lets
-   *  `commitChangeIfNeeded()` fire `change` only on a real transition, matching `lyra-date-input`'s
+   *  `commitChangeIfNeeded()` fire `change` only on a real transition, matching `lr-date-input`'s
    *  own "input fires more often than change" contract. */
   private lastCommittedValue = '';
   private lastEditedField: LyraKnownDateField = 'day';
@@ -242,7 +242,7 @@ export class LyraKnownDate extends FormAssociated(LyraKnownDateBase) {
 
   /** Normalizes an assignment to the canonical ISO date or `''`, and repopulates the three raw
    *  field texts to match -- a declarative `value="2007-3-27"` (non-padded) or a calendar-invalid
-   *  literal (`"2007-02-30"`) sanitizes to `''`, same strict-ISO gate as `lyra-date-input`'s
+   *  literal (`"2007-02-30"`) sanitizes to `''`, same strict-ISO gate as `lr-date-input`'s
    *  `parseStrictISO()`. Programmatic assignment stays silent (no `input`/`change`), matching every
    *  `FormAssociated` sibling's documented contract. */
   set value(next: string) {
@@ -584,6 +584,6 @@ export class LyraKnownDate extends FormAssociated(LyraKnownDateBase) {
 
 declare global {
   interface HTMLElementTagNameMap {
-    'lyra-known-date': LyraKnownDate;
+    'lr-known-date': LyraKnownDate;
   }
 }

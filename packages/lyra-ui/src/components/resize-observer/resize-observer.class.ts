@@ -6,17 +6,17 @@ import { styles } from './resize-observer.styles.js';
 export type ResizeObserverBox = 'content-box' | 'border-box' | 'device-pixel-content-box';
 
 export interface LyraResizeObserverEventMap {
-  'lyra-resize': CustomEvent<{ entries: ResizeObserverEntry[] }>;
+  'lr-resize': CustomEvent<{ entries: ResizeObserverEntry[] }>;
 }
 
 /**
- * `<lyra-resize-observer>` — observes the first-party or consumer-owned
+ * `<lr-resize-observer>` — observes the first-party or consumer-owned
  * elements in its default slot and emits typed resize entries. The wrapper has
  * no visual layout of its own (`display: contents`).
  *
- * @customElement lyra-resize-observer
+ * @customElement lr-resize-observer
  * @slot - Elements to observe.
- * @event lyra-resize - Observed elements changed size.
+ * @event lr-resize - Observed elements changed size.
  * @csspart base - The non-layout wrapper around the observed slot.
  */
 export class LyraResizeObserver extends LyraElement<LyraResizeObserverEventMap> {
@@ -72,7 +72,7 @@ export class LyraResizeObserver extends LyraElement<LyraResizeObserverEventMap> 
     const slot = this.renderRoot.querySelector('slot');
     const targets = slot?.assignedElements({ flatten: true }) ?? [];
     if (targets.length === 0 || typeof ResizeObserver === 'undefined') return;
-    this.observer = new ResizeObserver((entries) => this.emit('lyra-resize', { entries: [...entries] }));
+    this.observer = new ResizeObserver((entries) => this.emit('lr-resize', { entries: [...entries] }));
     for (const target of targets) {
       try {
         this.observer.observe(target, { box: this.box });
@@ -89,6 +89,6 @@ export class LyraResizeObserver extends LyraElement<LyraResizeObserverEventMap> 
 
 declare global {
   interface HTMLElementTagNameMap {
-    'lyra-resize-observer': LyraResizeObserver;
+    'lr-resize-observer': LyraResizeObserver;
   }
 }

@@ -8,7 +8,7 @@ export type TypingIndicatorVariant = 'dots' | 'pulse' | 'cursor';
 export type TypingIndicatorSize = 'sm' | 'md';
 
 /**
- * `<lyra-typing-indicator>` — a purely presentational "assistant is
+ * `<lr-typing-indicator>` — a purely presentational "assistant is
  * responding" presence cue. No events, no interactivity: a consumer mounts
  * it while a response is being generated and removes it (or hides it) once
  * real content has arrived.
@@ -27,7 +27,7 @@ export type TypingIndicatorSize = 'sm' | 'md';
  * Accessibility: this indicator typically mounts and unmounts around a real
  * generation lifecycle (appears when a response starts, disappears once one
  * arrives) rather than emitting a stream of updates of its own, so it does
- * *not* route through `<lyra-live-region>`/`Announcer`
+ * *not* route through `<lr-live-region>`/`Announcer`
  * (`../../internal/announcer.js`) — that machinery exists to coalesce many
  * rapidly-changing announcements into one, and there is only ever a single
  * announcement here: the mount itself. A plain `role="status"` plus an
@@ -41,15 +41,15 @@ export type TypingIndicatorSize = 'sm' | 'md';
  * shape is `aria-hidden="true"` — it's decorative; `label` is the entire
  * accessible content, so nothing narrates individual animation frames.
  *
- * @customElement lyra-typing-indicator
+ * @customElement lr-typing-indicator
  * @csspart base - The decorative (`aria-hidden`) wrapper around the animated shape.
  * @csspart dot - Each of the three dots in the `dots` variant.
  * @csspart pulse - The single pulsing dot in the `pulse` variant.
  * @csspart cursor - The blinking bar in the `cursor` variant.
- * @cssprop [--lyra-transition-ambient=1.8s ease-in-out] - Animation duration and timing function
+ * @cssprop [--lr-transition-ambient=1.8s ease-in-out] - Animation duration and timing function
  * shared by all variants.
- * @cssprop [--lyra-typing-dot-stagger-1=600ms] - Delay for the second dot in the dots variant.
- * @cssprop [--lyra-typing-dot-stagger-2=1200ms] - Delay for the third dot in the dots variant.
+ * @cssprop [--lr-typing-dot-stagger-1=600ms] - Delay for the second dot in the dots variant.
+ * @cssprop [--lr-typing-dot-stagger-2=1200ms] - Delay for the third dot in the dots variant.
  */
 export class LyraTypingIndicator extends LyraElement {
   static styles = [LyraElement.styles, styles, srOnly];
@@ -73,7 +73,7 @@ export class LyraTypingIndicator extends LyraElement {
    *  otherwise both the `aria-label` and the sr-only text node would go
    *  blank, leaving this purely-decorative component with no accessible name
    *  at all. A caller-customized `label` is used verbatim (not a translation
-   *  concern), same convention as `<lyra-date-picker>`'s `previousLabel`. */
+   *  concern), same convention as `<lr-date-picker>`'s `previousLabel`. */
   private get accessibleLabel(): string {
     const trimmed = this.label.trim();
     return this.localize('thinking', trimmed === '' || trimmed === 'Thinking…' ? undefined : trimmed);
@@ -109,6 +109,6 @@ export class LyraTypingIndicator extends LyraElement {
 
 declare global {
   interface HTMLElementTagNameMap {
-    'lyra-typing-indicator': LyraTypingIndicator;
+    'lr-typing-indicator': LyraTypingIndicator;
   }
 }

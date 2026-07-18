@@ -18,20 +18,20 @@ export interface LyraCommunity {
 
 export interface LyraCommunityCardEventMap {
   /** The drill button, header, or overflow chip -- all three mean "show me this whole community". */
-  'lyra-drill': CustomEvent<{ id: string }>;
-  'lyra-entity-activate': CustomEvent<{ id: string }>;
+  'lr-drill': CustomEvent<{ id: string }>;
+  'lr-entity-activate': CustomEvent<{ id: string }>;
 }
 
 /**
- * `<lyra-community-card>` — a cluster/community summary card (GraphRAG community report): label,
+ * `<lr-community-card>` — a cluster/community summary card (GraphRAG community report): label,
  * LLM summary excerpt, member count, member chips with overflow, and a drill-in action. Doesn't
- * own community rendering on the graph or membership fetching -- `lyra-drill` asks the host to
+ * own community rendering on the graph or membership fetching -- `lr-drill` asks the host to
  * load members/subgraph.
  *
- * @customElement lyra-community-card
+ * @customElement lr-community-card
  * @slot actions - Extra header actions alongside the built-in drill button.
- * @event lyra-drill - `detail: { id }`.
- * @event lyra-entity-activate - A member chip was activated. `detail: { id }`.
+ * @event lr-drill - `detail: { id }`.
+ * @event lr-entity-activate - A member chip was activated. `detail: { id }`.
  * @csspart base - The outer bordered container.
  * @csspart header - The header row.
  * @csspart title - The community label, `role="heading" aria-level="3"` wrapping a `<button>`.
@@ -65,12 +65,12 @@ export class LyraCommunityCard extends LyraElement<LyraCommunityCardEventMap> {
   }
 
   private onDrill = (): void => {
-    if (this.community) this.emit('lyra-drill', { id: this.community.id });
+    if (this.community) this.emit('lr-drill', { id: this.community.id });
   };
 
   render(): TemplateResult {
     if (!this.community) {
-      return html`<div part="base"><lyra-empty part="empty" heading=${this.localize('noData')}></lyra-empty></div>`;
+      return html`<div part="base"><lr-empty part="empty" heading=${this.localize('noData')}></lr-empty></div>`;
     }
     const community = this.community;
     const titleText = community.label || this.localize('untitledCommunity');
@@ -85,20 +85,20 @@ export class LyraCommunityCard extends LyraElement<LyraCommunityCardEventMap> {
           <span part="member-count">${this.localize('communityMemberCount', undefined, { count: memberCount })}</span>
           <div part="actions">
             <slot name="actions"></slot>
-            <lyra-button part="drill-button" size="s" @click=${this.onDrill}>${this.localize('communityDrillIn')}</lyra-button>
+            <lr-button part="drill-button" size="s" @click=${this.onDrill}>${this.localize('communityDrillIn')}</lr-button>
           </div>
         </div>
         ${!this.compact && community.summary ? html`<p part="summary">${community.summary}</p>` : nothing}
         ${!this.compact
           ? html`<div part="members">
               ${visibleMembers.map(
-                (m) => html`<button part="member" type="button" @click=${() => this.emit('lyra-entity-activate', { id: m.id })}>
-                  <lyra-chip>${m.label || m.id}</lyra-chip>
+                (m) => html`<button part="member" type="button" @click=${() => this.emit('lr-entity-activate', { id: m.id })}>
+                  <lr-chip>${m.label || m.id}</lr-chip>
                 </button>`,
               )}
               ${overflowCount > 0
                 ? html`<button part="overflow" type="button" @click=${this.onDrill}>
-                    <lyra-chip>${this.localize('showMoreCount', undefined, { count: overflowCount })}</lyra-chip>
+                    <lr-chip>${this.localize('showMoreCount', undefined, { count: overflowCount })}</lr-chip>
                   </button>`
                 : nothing}
             </div>`
@@ -110,6 +110,6 @@ export class LyraCommunityCard extends LyraElement<LyraCommunityCardEventMap> {
 
 declare global {
   interface HTMLElementTagNameMap {
-    'lyra-community-card': LyraCommunityCard;
+    'lr-community-card': LyraCommunityCard;
   }
 }

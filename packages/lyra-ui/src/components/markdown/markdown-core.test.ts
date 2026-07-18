@@ -3,8 +3,8 @@ import './markdown-core.js';
 import type { LyraMarkdownCore, MarkdownHeadingItem } from './markdown-core.js';
 import { __setKatexForTesting } from './markdown-core.class.js';
 
-describe('lyra-markdown-core', () => {
-  it('renders sanitized GFM content (heading/bold/link/blockquote/table) identically to lyra-markdown', async () => {
+describe('lr-markdown-core', () => {
+  it('renders sanitized GFM content (heading/bold/link/blockquote/table) identically to lr-markdown', async () => {
     const content = `# Heading
 
 Some **bold** text with a [link](https://example.com/docs).
@@ -15,7 +15,7 @@ Some **bold** text with a [link](https://example.com/docs).
 | --- | --- |
 | 1 | 2 |
 `;
-    const el = (await fixture(html`<lyra-markdown-core .content=${content}></lyra-markdown-core>`)) as LyraMarkdownCore;
+    const el = (await fixture(html`<lr-markdown-core .content=${content}></lr-markdown-core>`)) as LyraMarkdownCore;
     await el.updateComplete;
     const root = el.shadowRoot!;
     // The very first paint is always the plain-text fallback until the async marked/dompurify
@@ -30,7 +30,7 @@ Some **bold** text with a [link](https://example.com/docs).
 
   it('renders raw marked output when sanitize is false', async () => {
     const el = (await fixture(
-      html`<lyra-markdown-core .sanitize=${false} content=${'<div id="raw">hi</div>'}></lyra-markdown-core>`,
+      html`<lr-markdown-core .sanitize=${false} content=${'<div id="raw">hi</div>'}></lr-markdown-core>`,
     )) as LyraMarkdownCore;
     await el.updateComplete;
     // Same async-load window as above -- wait for the real (unsanitized) output.
@@ -40,7 +40,7 @@ Some **bold** text with a [link](https://example.com/docs).
 
   it('escapes raw HTML when escape-html is set', async () => {
     const el = (await fixture(
-      html`<lyra-markdown-core escape-html content=${'<b>raw</b>'}></lyra-markdown-core>`,
+      html`<lr-markdown-core escape-html content=${'<b>raw</b>'}></lr-markdown-core>`,
     )) as LyraMarkdownCore;
     await el.updateComplete;
     expect(el.shadowRoot!.querySelector('[part="content"]')!.innerHTML).to.include('&lt;b&gt;raw&lt;/b&gt;');
@@ -50,10 +50,10 @@ Some **bold** text with a [link](https://example.com/docs).
     // Includes a link (focusable content) alongside the heading -- axe's scrollable-region-focusable
     // rule flags [part="content"]'s overflow-inline: auto whenever the rendered content has no
     // focusable descendant at all, a pre-existing characteristic this component inherits unchanged
-    // from <lyra-markdown> (its own populated-accessibility test's richSample content always
+    // from <lr-markdown> (its own populated-accessibility test's richSample content always
     // includes a link for the same reason).
     const el = (await fixture(
-      html`<lyra-markdown-core content=${'# Title\n\nSee the [docs](https://example.com/docs).'}></lyra-markdown-core>`,
+      html`<lr-markdown-core content=${'# Title\n\nSee the [docs](https://example.com/docs).'}></lr-markdown-core>`,
     )) as LyraMarkdownCore;
     await el.updateComplete;
     await waitUntil(() => el.shadowRoot!.querySelector('[part="heading"]') !== null);
@@ -63,7 +63,7 @@ Some **bold** text with a [link](https://example.com/docs).
 
 describe('languages (build-lean shiki, no full-bundle fallback)', () => {
   it('defaults languages to an empty object, highlightCode to true', async () => {
-    const el = (await fixture(html`<lyra-markdown-core></lyra-markdown-core>`)) as LyraMarkdownCore;
+    const el = (await fixture(html`<lr-markdown-core></lr-markdown-core>`)) as LyraMarkdownCore;
     expect(el.languages).to.deep.equal({});
     expect(el.highlightCode).to.be.true;
   });
@@ -72,7 +72,7 @@ describe('languages (build-lean shiki, no full-bundle fallback)', () => {
     this.timeout(20_000);
     const tsLang = await import('shiki/langs/typescript.mjs').catch(() => null);
     if (!tsLang) return; // shiki not installed in this environment -- covered elsewhere
-    const el = (await fixture(html`<lyra-markdown-core></lyra-markdown-core>`)) as LyraMarkdownCore;
+    const el = (await fixture(html`<lr-markdown-core></lr-markdown-core>`)) as LyraMarkdownCore;
     el.languages = { typescript: tsLang.default };
     el.content = '```typescript\nconst x = 1;\n```';
     await el.updateComplete;
@@ -85,7 +85,7 @@ describe('languages (build-lean shiki, no full-bundle fallback)', () => {
   });
 
   it('leaves a fenced block plain when its language is absent from languages -- no full-bundle fallback', async () => {
-    const el = (await fixture(html`<lyra-markdown-core></lyra-markdown-core>`)) as LyraMarkdownCore;
+    const el = (await fixture(html`<lr-markdown-core></lr-markdown-core>`)) as LyraMarkdownCore;
     el.languages = {};
     el.content = '```ts\nconst x = 1;\n```';
     await el.updateComplete;
@@ -98,7 +98,7 @@ describe('languages (build-lean shiki, no full-bundle fallback)', () => {
     this.timeout(20_000);
     const tsLang = await import('shiki/langs/typescript.mjs').catch(() => null);
     if (!tsLang) return;
-    const el = (await fixture(html`<lyra-markdown-core streaming></lyra-markdown-core>`)) as LyraMarkdownCore;
+    const el = (await fixture(html`<lr-markdown-core streaming></lr-markdown-core>`)) as LyraMarkdownCore;
     el.languages = { typescript: tsLang.default };
     el.content = '```typescript\nconst x = 1;\n```';
     await el.updateComplete;
@@ -107,7 +107,7 @@ describe('languages (build-lean shiki, no full-bundle fallback)', () => {
   });
 
   it('does not highlight when highlightCode is false', async () => {
-    const el = (await fixture(html`<lyra-markdown-core></lyra-markdown-core>`)) as LyraMarkdownCore;
+    const el = (await fixture(html`<lr-markdown-core></lr-markdown-core>`)) as LyraMarkdownCore;
     el.highlightCode = false;
     el.languages = {};
     el.content = '```ts\nconst x = 1;\n```';
@@ -120,7 +120,7 @@ describe('languages (build-lean shiki, no full-bundle fallback)', () => {
     this.timeout(20_000);
     const tsLang = await import('shiki/langs/typescript.mjs').catch(() => null);
     if (!tsLang) return;
-    const el = (await fixture(html`<lyra-markdown-core></lyra-markdown-core>`)) as LyraMarkdownCore;
+    const el = (await fixture(html`<lr-markdown-core></lr-markdown-core>`)) as LyraMarkdownCore;
     el.languages = { typescript: tsLang.default };
     el.content = '```typescript\nconst x = 1;\n```';
     await el.updateComplete;
@@ -136,7 +136,7 @@ describe('languages (build-lean shiki, no full-bundle fallback)', () => {
 describe('heading anchors / scrollToAnchor (unaffected by the shiki split)', () => {
   it('computes the heading tree and stamps id when heading-anchors is set', async () => {
     const el = (await fixture(
-      html`<lyra-markdown-core heading-anchors content=${'# Getting Started'}></lyra-markdown-core>`,
+      html`<lr-markdown-core heading-anchors content=${'# Getting Started'}></lr-markdown-core>`,
     )) as LyraMarkdownCore;
     await waitUntil(() => el.shadowRoot!.querySelector('[part="heading"]') !== null);
     const expected: MarkdownHeadingItem[] = [{ id: 'getting-started', label: 'Getting Started', level: 1 }];
@@ -146,7 +146,7 @@ describe('heading anchors / scrollToAnchor (unaffected by the shiki split)', () 
 
   it('scrolls to a heading by fragment id', async () => {
     const el = (await fixture(
-      html`<lyra-markdown-core content=${'# Title\n\n## Section One'}></lyra-markdown-core>`,
+      html`<lr-markdown-core content=${'# Title\n\n## Section One'}></lr-markdown-core>`,
     )) as LyraMarkdownCore;
     await waitUntil(() => el.shadowRoot!.querySelector('[part="heading"]') !== null);
     let scrolled = false;
@@ -165,15 +165,15 @@ describe('math (KaTeX, unaffected by the shiki split)', () => {
         `<math><semantics><mrow><mi>${tex}</mi></mrow><annotation encoding="application/x-tex">${tex}</annotation></semantics></math>`,
     };
     __setKatexForTesting(fakeKatex as never);
-    const el = (await fixture(html`<lyra-markdown-core math content=${'$x$'}></lyra-markdown-core>`)) as LyraMarkdownCore;
+    const el = (await fixture(html`<lr-markdown-core math content=${'$x$'}></lr-markdown-core>`)) as LyraMarkdownCore;
     await waitUntil(() => el.shadowRoot!.querySelector('[part="math"]') !== null);
     expect(el.shadowRoot!.querySelector('[part="math"]')!.getAttribute('data-display')).to.equal('inline');
   });
 
-  it('fires lyra-render-error and renders literal source when katex is confirmed missing', async () => {
+  it('fires lr-render-error and renders literal source when katex is confirmed missing', async () => {
     __setKatexForTesting(null);
-    const el = fixtureSync(html`<lyra-markdown-core math content=${'$E=mc^2$'}></lyra-markdown-core>`) as LyraMarkdownCore;
-    const event = (await oneEvent(el, 'lyra-render-error')) as CustomEvent<{ error: unknown }>;
+    const el = fixtureSync(html`<lr-markdown-core math content=${'$E=mc^2$'}></lr-markdown-core>`) as LyraMarkdownCore;
+    const event = (await oneEvent(el, 'lr-render-error')) as CustomEvent<{ error: unknown }>;
     expect(event.detail.error).to.exist;
     await el.updateComplete;
     expect(el.shadowRoot!.querySelector('[part="content"]')!.textContent).to.contain('$E=mc^2$');

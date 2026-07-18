@@ -4,7 +4,7 @@ import './switch.js';
 
 const meta: Meta = {
   title: 'Switch',
-  component: 'lyra-switch',
+  component: 'lr-switch',
   tags: ['autodocs'],
   parameters: {
     docs: {
@@ -19,25 +19,25 @@ export default meta;
 type Story = StoryObj;
 
 export const Default: Story = {
-  render: () => html`<lyra-switch>Enable notifications</lyra-switch>`,
+  render: () => html`<lr-switch>Enable notifications</lr-switch>`,
 };
 
 export const Checked: Story = {
-  render: () => html`<lyra-switch checked>Enable notifications</lyra-switch>`,
+  render: () => html`<lr-switch checked>Enable notifications</lr-switch>`,
 };
 
 export const Disabled: Story = {
   render: () => html`
     <div style="display:flex; flex-direction:column; gap:0.75rem;">
-      <lyra-switch disabled>Off, disabled</lyra-switch>
-      <lyra-switch disabled checked>On, disabled</lyra-switch>
+      <lr-switch disabled>Off, disabled</lr-switch>
+      <lr-switch disabled checked>On, disabled</lr-switch>
     </div>
   `,
 };
 
 export const NoLabelSlot: Story = {
   name: 'No label slot (aria-label only)',
-  render: () => html`<lyra-switch aria-label="Enable notifications"></lyra-switch>`,
+  render: () => html`<lr-switch aria-label="Enable notifications"></lr-switch>`,
 };
 
 export const Required: Story = {
@@ -49,7 +49,7 @@ export const Required: Story = {
       }}
       style="display:flex; flex-direction:column; gap:0.75rem; align-items:flex-start;"
     >
-      <lyra-switch name="terms" required>I agree to the terms</lyra-switch>
+      <lr-switch name="terms" required>I agree to the terms</lr-switch>
       <button type="submit">Submit</button>
     </form>
   `,
@@ -57,12 +57,12 @@ export const Required: Story = {
 
 export const Interactive: Story = {
   render: () => html`
-    <lyra-switch
-      @lyra-change=${(e: CustomEvent<{ checked: boolean }>) => {
+    <lr-switch
+      @lr-change=${(e: CustomEvent<{ checked: boolean }>) => {
         const out = document.getElementById('switch-log');
         if (out) out.textContent = `checked: ${e.detail.checked}`;
       }}
-      >Dark mode</lyra-switch
+      >Dark mode</lr-switch
     >
     <p id="switch-log" style="font-family: monospace; margin-top: 0.5rem;">checked: false</p>
   `,

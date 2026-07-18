@@ -30,7 +30,7 @@ const overscanConverter = {
   },
 };
 
-/** `lyra-visible-range-changed` detail -- the current visible (non-overscanned) item index range. */
+/** `lr-visible-range-changed` detail -- the current visible (non-overscanned) item index range. */
 export interface VirtualListRange {
   start: number;
   end: number;
@@ -56,11 +56,11 @@ function domKeyToken(key: VirtualListKey): string {
 }
 
 export interface LyraVirtualListEventMap {
-  'lyra-visible-range-changed': CustomEvent<VirtualListRange>;
-  'lyra-load-more': CustomEvent<undefined>;
+  'lr-visible-range-changed': CustomEvent<VirtualListRange>;
+  'lr-load-more': CustomEvent<undefined>;
 }
 /**
- * `<lyra-virtual-list>` — a generic windowed/virtualized list host. Renders
+ * `<lr-virtual-list>` — a generic windowed/virtualized list host. Renders
  * only the items within the current viewport (plus `overscan` padding rows
  * on each side) as real DOM, regardless of how large `items` is, so a
  * multi-thousand-row chat history sidebar or long message thread stays cheap
@@ -113,7 +113,7 @@ export interface LyraVirtualListEventMap {
  * `aria-activedescendant` keyboard-interaction contract ARIA requires
  * alongside a real `listbox`. A consumer that wants full single-select
  * listbox semantics on top of this should compose that behavior itself (see
- * `<lyra-select>`'s pattern), the same way this component's `active-id`
+ * `<lr-select>`'s pattern), the same way this component's `active-id`
  * only *scrolls* the matching row into view and marks it `aria-current` —
  * it never claims to be a selection widget. `aria-setsize`/`aria-posinset`
  * are computed from the row's real index in the full `items` array (not its
@@ -130,18 +130,18 @@ export interface LyraVirtualListEventMap {
  * outside the current overscanned range.
  *
  * **Programmatic scrolling.** `scrollToIndex()` is the public counterpart to `active-id`'s automatic
- * scroll-into-view -- used by `<lyra-chat-viewport>`'s virtual mode and any other host that needs to
+ * scroll-into-view -- used by `<lr-chat-viewport>`'s virtual mode and any other host that needs to
  * scroll to a specific row without also changing which row is "active."
  *
  * **`item-role="row"` mode.** Additive to the default `'listitem'` mapping above: `[part="base"]`
  * becomes `role="rowgroup"`, `[part="spacer"]` becomes `role="presentation"`, and each row becomes
  * `role="row"` with `aria-rowindex` (the row's 1-based index plus `row-index-offset`) instead of
  * `aria-setsize`/`aria-posinset`. For a consumer composing its own `role="table"` wrapper and header
- * row around this component (see `<lyra-dataset-viewer>`), where `row-index-offset="1"` accounts for
+ * row around this component (see `<lr-dataset-viewer>`), where `row-index-offset="1"` accounts for
  * that external header row occupying `aria-rowindex="1"`.
  *
- * @customElement lyra-virtual-list
- * @event lyra-load-more - Fired once per approach to the bottom of the list
+ * @customElement lr-virtual-list
+ * @event lr-load-more - Fired once per approach to the bottom of the list
  *   while `has-more` is true and `loading` is false. Deliberately does not
  *   refire on every scroll tick while still near the bottom (`loading`
  *   gates the in-flight case; scrolling back away from the bottom and
@@ -149,13 +149,13 @@ export interface LyraVirtualListEventMap {
  *   end, re-arms it) — a consumer wanting an automatic retry after a failed
  *   fetch should surface its own retry affordance rather than relying on
  *   this firing again unprompted.
- * @event lyra-visible-range-changed - `detail: { start, end }` (see
+ * @event lr-visible-range-changed - `detail: { start, end }` (see
  *   `VirtualListRange`) — the current visible (non-overscanned) item index
  *   range, fired only when it actually changes.
  *
  * A host `aria-label` attribute on this element is forwarded onto the internal `role="list"`
  * container, since `aria-label` set on a custom-element host does not by itself name a role living
- * on an internal shadow element. Used by `<lyra-activity-feed>`'s virtualized mode.
+ * on an internal shadow element. Used by `<lr-activity-feed>`'s virtualized mode.
  * @csspart base - The scrollable container (`role="list"`).
  * @csspart spacer - The full-content-height inner element that gives the
  *   container its true scrollable extent.
@@ -176,7 +176,7 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
    *  in `items` when omitted, which is only a safe identity while `items`
    *  never reorders/inserts/removes — provide this whenever it can, or
    *  scroll position and any per-row DOM state can attach to the wrong row
-   *  across a mutation (same caveat as `<lyra-table>`'s `rowKey`). */
+   *  across a mutation (same caveat as `<lr-table>`'s `rowKey`). */
   @property({ attribute: false }) keyFunction?: (item: unknown, index: number) => string | number;
 
   /** Group labels positioned at their first row's `startIndex`. Invalid or
@@ -190,7 +190,7 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
   /** `'listitem'` (default) preserves today's `role="list"`/`role="listitem"` mapping with
    *  `aria-setsize`/`aria-posinset`. `'row'` maps to `role="rowgroup"`/`role="row"` with
    *  `aria-rowindex` instead -- for a consumer composing a virtualized `role="table"` (see
-   *  `<lyra-dataset-viewer>`). */
+   *  `<lr-dataset-viewer>`). */
   @property({ attribute: 'item-role' }) itemRole: 'listitem' | 'row' = 'listitem';
 
   /** Added to a row's 1-based index to compute `aria-rowindex` in `item-role="row"` mode (e.g. `1`
@@ -211,7 +211,7 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
 
   @property({ type: Boolean, reflect: true }) loading = false;
 
-  /** When true, scrolling near the bottom fires `lyra-load-more`. */
+  /** When true, scrolling near the bottom fires `lr-load-more`. */
   @property({ type: Boolean, attribute: 'has-more', reflect: true }) hasMore = false;
 
   /** `rowIndexOffset` normalized to a finite integer before it's added into `renderRow()`'s
@@ -258,7 +258,7 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
   private visibleEnd = -1;
   private lastEmittedStart = -1;
   private lastEmittedEnd = -1;
-  /** Re-armed whenever the window moves away from the end of `items` -- see the `lyra-load-more` event doc. */
+  /** Re-armed whenever the window moves away from the end of `items` -- see the `lr-load-more` event doc. */
   private loadMoreArmed = true;
   /** Set by `scrollToIndex()` in `row-height="auto"` mode when the target row hasn't been measured
    *  yet -- its offset is still estimate-based, so the scroll can land short of (or past) the real
@@ -635,7 +635,7 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
     if (this.visibleStart === this.lastEmittedStart && this.visibleEnd === this.lastEmittedEnd) return;
     this.lastEmittedStart = this.visibleStart;
     this.lastEmittedEnd = this.visibleEnd;
-    this.emit<VirtualListRange>('lyra-visible-range-changed', {
+    this.emit<VirtualListRange>('lr-visible-range-changed', {
       start: this.visibleStart,
       end: this.visibleEnd,
     });
@@ -650,7 +650,7 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
     }
     if (!this.hasMore || this.loading || !this.loadMoreArmed) return;
     this.loadMoreArmed = false;
-    this.emit('lyra-load-more');
+    this.emit('lr-load-more');
   }
 
   private renderRow(item: unknown, index: number, total: number): TemplateResult {
@@ -730,6 +730,6 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
 
 declare global {
   interface HTMLElementTagNameMap {
-    'lyra-virtual-list': LyraVirtualList;
+    'lr-virtual-list': LyraVirtualList;
   }
 }

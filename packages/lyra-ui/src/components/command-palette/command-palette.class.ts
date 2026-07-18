@@ -7,15 +7,15 @@ import { lockScroll } from '../../internal/scroll-lock.js';
 import { styles } from './command-palette.styles.js';
 
 export interface LyraCommand { id: string; label: string; description?: string; group?: string; shortcut?: string; keywords?: string[]; disabled?: boolean; onSelect?: () => void; }
-export interface LyraCommandPaletteEventMap { 'lyra-select': CustomEvent<{ command: LyraCommand }>; 'lyra-open': CustomEvent<undefined>; 'lyra-close': CustomEvent<undefined>; }
+export interface LyraCommandPaletteEventMap { 'lr-select': CustomEvent<{ command: LyraCommand }>; 'lr-open': CustomEvent<undefined>; 'lr-close': CustomEvent<undefined>; }
 
-/** `<lyra-command-palette>` — searchable application command menu with keyboard navigation.
- * Shared overlay infrastructure (the same one `<lyra-dialog>` uses) coordinates focus-trapping
+/** `<lr-command-palette>` — searchable application command menu with keyboard navigation.
+ * Shared overlay infrastructure (the same one `<lr-dialog>` uses) coordinates focus-trapping
  * Tab, Escape dismissal, and document scroll-locking for as long as the palette is open.
- * @customElement lyra-command-palette
- * @event lyra-select - A command was chosen; detail is `{ command }`.
- * @event lyra-open - The palette opened.
- * @event lyra-close - The palette closed.
+ * @customElement lr-command-palette
+ * @event lr-select - A command was chosen; detail is `{ command }`.
+ * @event lr-open - The palette opened.
+ * @event lr-close - The palette closed.
  * @csspart backdrop - Modal backdrop.
  * @csspart dialog - Palette dialog.
  * @csspart input - Search input.
@@ -68,14 +68,14 @@ export class LyraCommandPalette extends LyraElement<LyraCommandPaletteEventMap> 
   }
 
   // Runs after render so the manager can resolve the rendered [part="dialog"] panel -- mirrors
-  // lyra-dialog's/lyra-tool-select-dialog's identical ordering rationale.
+  // lr-dialog's/lr-tool-select-dialog's identical ordering rationale.
   protected updated(changed: PropertyValues): void {
     if (changed.has('open') && this.open) {
       this.overlay?.focusInitial();
     }
     // The list is a fixed-height, scrollable box -- without this, arrowing past its visible rows
     // moves activeIndex/aria-activedescendant correctly but leaves the highlighted row scrolled
-    // out of view. Mirrors lyra-combobox's identical fix for the same shape of listbox.
+    // out of view. Mirrors lr-combobox's identical fix for the same shape of listbox.
     if (changed.has('activeIndex')) {
       this.renderRoot.querySelector<HTMLElement>('[part="command"][data-active="true"]')?.scrollIntoView({ block: 'nearest' });
     }
@@ -112,8 +112,8 @@ export class LyraCommandPalette extends LyraElement<LyraCommandPaletteEventMap> 
     });
   }
 
-  openPalette(): void { if (this.open) return; this.open = true; this.queryText = ''; this.activeIndex = Math.max(0, this.seekEnabled(this.filtered, 0, 1)); this.emit('lyra-open'); }
-  close(): void { if (!this.open) return; this.open = false; this.emit('lyra-close'); }
+  openPalette(): void { if (this.open) return; this.open = true; this.queryText = ''; this.activeIndex = Math.max(0, this.seekEnabled(this.filtered, 0, 1)); this.emit('lr-open'); }
+  close(): void { if (!this.open) return; this.open = false; this.emit('lr-close'); }
   registerCommand(command: LyraCommand): () => void { this.commands = [...this.commands, command]; return () => { this.commands = this.commands.filter((item) => item !== command); }; }
   private matchesShortcut(event: KeyboardEvent): boolean {
     const parts = this.shortcut.toLowerCase().split('+');
@@ -124,7 +124,7 @@ export class LyraCommandPalette extends LyraElement<LyraCommandPaletteEventMap> 
   }
   private onGlobalKeyDown = (event: KeyboardEvent): void => { if (this.matchesShortcut(event)) { event.preventDefault(); this.open ? this.close() : this.openPalette(); } };
   private get filtered(): LyraCommand[] { const q = this.queryText.trim().toLowerCase(); if (!q) return this.commands; const haystacks = this.searchHaystacks; return this.commands.filter((_, index) => haystacks[index]!.includes(q)); }
-  private select(command: LyraCommand): void { if (command.disabled) return; this.emit('lyra-select', { command }); command.onSelect?.(); this.close(); }
+  private select(command: LyraCommand): void { if (command.disabled) return; this.emit('lr-select', { command }); command.onSelect?.(); this.close(); }
   /** First enabled index at or past `from`, walking in `step` direction; -1 when every row that
    *  way is disabled (callers then keep the current index, preserving clamp-at-the-ends arrow
    *  behavior). Keeps the active option off disabled rows so Enter always has a live target. */
@@ -141,7 +141,7 @@ export class LyraCommandPalette extends LyraElement<LyraCommandPaletteEventMap> 
     let previousGroup = '';
     return html`<div part="backdrop" @click=${(event: Event) => { if (event.target === event.currentTarget) this.overlay?.dismissBackdrop(); }}>
       <section part="dialog" role="dialog" aria-modal="true" aria-label=${this.accessibleLabel || this.localize('commandPaletteLabel')} tabindex="-1" @keydown=${this.onKeyDown}>
-        <div part="search"><lyra-icon name="search" aria-hidden="true"></lyra-icon><input part="input" type="search" .value=${this.queryText} placeholder=${this.localize('commandPalettePlaceholder')} aria-controls=${this.listId} aria-activedescendant=${activeId} @input=${this.onInput} /></div>
+        <div part="search"><lr-icon name="search" aria-hidden="true"></lr-icon><input part="input" type="search" .value=${this.queryText} placeholder=${this.localize('commandPalettePlaceholder')} aria-controls=${this.listId} aria-activedescendant=${activeId} @input=${this.onInput} /></div>
         <div part="list" id=${this.listId} role="listbox" aria-label=${this.localize('commandPaletteResults')}>
           ${rows.length ? rows.map((command, index) => { const group = command.group ?? ''; const heading = group && group !== previousGroup ? (previousGroup = group, html`<div part="group">${group}</div>`) : nothing; return html`${heading}<button id=${`${this.listId}-opt-${index}`} part="command" role="option" data-active=${index === this.activeIndex ? 'true' : 'false'} aria-selected=${index === this.activeIndex ? 'true' : 'false'} aria-disabled=${command.disabled ? 'true' : 'false'} ?disabled=${command.disabled} @mouseenter=${() => { if (!command.disabled) this.activeIndex = index; }} @click=${() => this.select(command)}><span>${command.label}</span><span part="description">${command.description ?? ''}</span>${command.shortcut ? html`<span part="shortcut">${command.shortcut}</span>` : nothing}</button>`; }) : html`<div part="empty">${this.localize('commandPaletteEmpty')}</div>`}
         </div>
@@ -149,4 +149,4 @@ export class LyraCommandPalette extends LyraElement<LyraCommandPaletteEventMap> 
     </div>`;
   }
 }
-declare global { interface HTMLElementTagNameMap { 'lyra-command-palette': LyraCommandPalette; } }
+declare global { interface HTMLElementTagNameMap { 'lr-command-palette': LyraCommandPalette; } }

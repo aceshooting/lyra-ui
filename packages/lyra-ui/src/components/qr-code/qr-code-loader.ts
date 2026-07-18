@@ -19,7 +19,7 @@ export async function loadQrCode(
     return candidate && typeof candidate.create === 'function' ? candidate : (module as QrCodeApi);
   } catch (error) {
     console.warn(
-      '<lyra-qr-code> needs the optional peer dependency `qrcode` to render QR codes — install it with `pnpm add qrcode`:',
+      '<lr-qr-code> needs the optional peer dependency `qrcode` to render QR codes — install it with `pnpm add qrcode`:',
       error,
     );
     return null;

@@ -21,8 +21,8 @@ export const styles = css`
     touch-action: none;
   }
   [part='canvas']:focus-visible {
-    outline: var(--lyra-focus-ring-width) solid var(--lyra-focus-ring-color);
-    outline-offset: var(--lyra-focus-ring-offset);
+    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
+    outline-offset: var(--lr-focus-ring-offset);
   }
   [part='tooltip'] {
     position: absolute;
@@ -34,23 +34,23 @@ export const styles = css`
     left: 0;
     top: 0;
     pointer-events: none;
-    background: var(--lyra-color-surface);
-    color: var(--lyra-color-text);
-    font-size: var(--lyra-font-size-2xs);
-    font-family: var(--lyra-font);
-    padding-block: var(--lyra-size-2px);
-    padding-inline: var(--lyra-size-6px);
-    border-radius: var(--lyra-radius-xs);
-    border: var(--lyra-size-1px) solid var(--lyra-color-border);
-    z-index: var(--lyra-layer-content);
-    transform: translate(var(--lyra-size-6px), calc(-100% - var(--lyra-size-6px)));
+    background: var(--lr-color-surface);
+    color: var(--lr-color-text);
+    font-size: var(--lr-font-size-2xs);
+    font-family: var(--lr-font);
+    padding-block: var(--lr-size-2px);
+    padding-inline: var(--lr-size-6px);
+    border-radius: var(--lr-radius-xs);
+    border: var(--lr-size-1px) solid var(--lr-color-border);
+    z-index: var(--lr-layer-content);
+    transform: translate(var(--lr-size-6px), calc(-100% - var(--lr-size-6px)));
     white-space: nowrap;
   }
   [part='tooltip'][hidden] {
     display: none;
   }
   [part='link'] {
-    stroke: var(--lyra-link-color, var(--lyra-color-border));
+    stroke: var(--lr-link-color, var(--lr-color-border));
     fill: none;
     cursor: pointer;
   }
@@ -58,100 +58,100 @@ export const styles = css`
     fill: context-stroke;
   }
   [part='link']:focus-visible {
-    outline: var(--lyra-focus-ring-width) solid var(--lyra-focus-ring-color);
-    outline-offset: var(--lyra-focus-ring-offset);
+    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
+    outline-offset: var(--lr-focus-ring-offset);
   }
   [part='link'][data-dangling] {
-    stroke-dasharray: var(--lyra-size-2px) var(--lyra-size-2px);
-    opacity: var(--lyra-opacity-disabled);
+    stroke-dasharray: var(--lr-size-2px) var(--lr-size-2px);
+    opacity: var(--lr-opacity-disabled);
   }
   [part='node'] {
-    /* --lyra-node-fill is set inline per-node (see graph.ts) from GraphNode.color;
+    /* --lr-node-fill is set inline per-node (see graph.ts) from GraphNode.color;
        falls back to the brand token when a node doesn't supply one. An inline
        style declaration always wins the cascade over this selector, so setting
        fill directly here (rather than via the presentation attribute) is what
        lets a per-node color actually take effect. */
-    fill: var(--lyra-node-fill, var(--lyra-color-brand));
+    fill: var(--lr-node-fill, var(--lr-color-brand));
     cursor: pointer;
   }
   [part='node']:focus-visible {
-    outline: var(--lyra-focus-ring-width) solid var(--lyra-focus-ring-color);
-    outline-offset: var(--lyra-focus-ring-offset);
+    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
+    outline-offset: var(--lr-focus-ring-offset);
   }
   [part='label'] {
-    font-size: var(--lyra-font-size-2xs);
-    fill: var(--lyra-color-text);
-    font-family: var(--lyra-font);
+    font-size: var(--lr-font-size-2xs);
+    fill: var(--lr-color-text);
+    font-family: var(--lr-font);
     pointer-events: none;
   }
   [part='link-label'] {
-    font-size: var(--lyra-font-size-2xs);
-    fill: var(--lyra-color-text);
-    font-family: var(--lyra-font);
+    font-size: var(--lr-font-size-2xs);
+    fill: var(--lr-color-text);
+    font-family: var(--lr-font);
     pointer-events: none;
     paint-order: stroke;
-    stroke: var(--lyra-graph-edge-label-halo, var(--lyra-color-surface));
-    stroke-width: var(--lyra-size-3px);
+    stroke: var(--lr-graph-edge-label-halo, var(--lr-color-surface));
+    stroke-width: var(--lr-size-3px);
   }
   g[data-edge-labels-hidden] [part='link-label'],
   g[data-edge-labels-hidden] [part='community-label'] {
     display: none;
   }
   [part='empty'] {
-    color: var(--lyra-color-text-quiet);
-    font-size: var(--lyra-font-size-md-sm);
+    color: var(--lr-color-text-quiet);
+    font-size: var(--lr-font-size-md-sm);
   }
   [part='expand-indicator'] circle {
-    fill: var(--lyra-color-surface);
-    stroke: var(--lyra-color-border-strong);
-    stroke-width: var(--lyra-size-1px);
+    fill: var(--lr-color-surface);
+    stroke: var(--lr-color-border-strong);
+    stroke-width: var(--lr-size-1px);
   }
   [part='expand-indicator'] path {
-    stroke: var(--lyra-color-text);
-    stroke-width: var(--lyra-size-1px);
+    stroke: var(--lr-color-text);
+    stroke-width: var(--lr-size-1px);
     fill: none;
   }
   [part='focus-halo'] {
     fill: none;
-    stroke: var(--lyra-graph-focus-halo-color, var(--lyra-color-brand));
-    stroke-width: var(--lyra-size-2px);
+    stroke: var(--lr-graph-focus-halo-color, var(--lr-color-brand));
+    stroke-width: var(--lr-size-2px);
     pointer-events: none;
   }
   [part='node'][data-selected] {
-    stroke: var(--lyra-graph-selected-color, var(--lyra-color-success));
-    stroke-width: var(--lyra-size-2px);
+    stroke: var(--lr-graph-selected-color, var(--lr-color-success));
+    stroke-width: var(--lr-size-2px);
   }
   [part='link'][data-selected] {
-    stroke: var(--lyra-graph-selected-color, var(--lyra-color-success)) !important;
-    stroke-width: var(--lyra-size-3px);
+    stroke: var(--lr-graph-selected-color, var(--lr-color-success)) !important;
+    stroke-width: var(--lr-size-3px);
   }
   [part='node'][data-dimmed] {
-    opacity: var(--lyra-graph-dimmed-opacity, 1);
+    opacity: var(--lr-graph-dimmed-opacity, 1);
   }
   [part='link'][data-dimmed] {
-    opacity: var(--lyra-graph-dimmed-opacity, 1);
+    opacity: var(--lr-graph-dimmed-opacity, 1);
   }
   [part='hull'] {
-    fill: var(--lyra-graph-hull-fill, var(--lyra-color-brand));
-    stroke: var(--lyra-graph-hull-fill, var(--lyra-color-brand));
-    stroke-width: calc(var(--lyra-size-24px) * 2);
+    fill: var(--lr-graph-hull-fill, var(--lr-color-brand));
+    stroke: var(--lr-graph-hull-fill, var(--lr-color-brand));
+    stroke-width: calc(var(--lr-size-24px) * 2);
     stroke-linejoin: round;
     stroke-linecap: round;
-    opacity: var(--lyra-graph-hull-opacity, 0.12);
+    opacity: var(--lr-graph-hull-opacity, 0.12);
     cursor: pointer;
   }
   [part='hull']:focus-visible {
-    outline: var(--lyra-focus-ring-width) solid var(--lyra-focus-ring-color);
-    outline-offset: var(--lyra-focus-ring-offset);
+    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
+    outline-offset: var(--lr-focus-ring-offset);
   }
   [part='community-label'] {
-    font-size: var(--lyra-font-size-2xs);
-    fill: var(--lyra-color-text);
-    font-family: var(--lyra-font);
+    font-size: var(--lr-font-size-2xs);
+    fill: var(--lr-color-text);
+    font-family: var(--lr-font);
     text-anchor: middle;
     pointer-events: none;
     paint-order: stroke;
-    stroke: var(--lyra-graph-edge-label-halo, var(--lyra-color-surface));
-    stroke-width: var(--lyra-size-3px);
+    stroke: var(--lr-graph-edge-label-halo, var(--lr-color-surface));
+    stroke-width: var(--lr-size-3px);
   }
 `;

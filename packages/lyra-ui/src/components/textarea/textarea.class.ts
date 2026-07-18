@@ -20,30 +20,30 @@ const spellcheckConverter = {
 export interface LyraTextareaEventMap {
   input: CustomEvent<undefined>;
   change: CustomEvent<undefined>;
-  'lyra-input': CustomEvent<{ value: string }>;
-  'lyra-change': CustomEvent<{ value: string }>;
+  'lr-input': CustomEvent<{ value: string }>;
+  'lr-change': CustomEvent<{ value: string }>;
   blur: CustomEvent<undefined>;
   focus: CustomEvent<undefined>;
 }
 class LyraTextareaBase extends LyraElement<LyraTextareaEventMap> {}
 
 /**
- * `<lyra-textarea>` — a multiline plain-text input primitive, form-associated via the
- * `FormAssociated` mixin (see `<lyra-chat-composer>`/`<lyra-date-input>` for the same shape), so it
+ * `<lr-textarea>` — a multiline plain-text input primitive, form-associated via the
+ * `FormAssociated` mixin (see `<lr-chat-composer>`/`<lr-date-input>` for the same shape), so it
  * participates in native `<form>` submission/validation/reset like any other text control --
  * `name`/`value`/`disabled`/`required`/`checkValidity()`/`reportValidity()` all come from that mixin.
  *
  * Ships an opt-in `label`/`hint`/`errorText` form-control chrome (props + matching named slots +
- * `form-control-label`/`hint`/`error` parts), mirroring `<lyra-select>`'s exact pattern -- left
+ * `form-control-label`/`hint`/`error` parts), mirroring `<lr-select>`'s exact pattern -- left
  * unset, the chrome remains hidden. A consumer preferring their own form-field layout can still
  * ignore these and wrap the element. A host `aria-label` is forwarded to the internal textbox;
  * external `aria-labelledby`/`aria-describedby` idrefs are not copied across the shadow boundary.
  *
- * @customElement lyra-textarea
+ * @customElement lr-textarea
  * @event input - Native-style composed event fired on every user-driven edit.
  * @event change - Native-style composed event fired at the native `change` timing.
- * @event lyra-input - Compatibility alias for `input`; `detail: { value }`.
- * @event lyra-change - Compatibility alias for `change`; `detail: { value }`.
+ * @event lr-input - Compatibility alias for `input`; `detail: { value }`.
+ * @event lr-change - Compatibility alias for `change`; `detail: { value }`.
  * @event blur - Re-dispatched from the internal native `<textarea>`'s own `blur` -- bubbling and
  *   composed (unlike the native event, which is neither), so a listener above the shadow boundary
  *   can observe it.
@@ -57,7 +57,7 @@ class LyraTextareaBase extends LyraElement<LyraTextareaEventMap> {}
  * @csspart textarea - The native `<textarea>` element.
  * @csspart hint - The hint message.
  * @csspart error - The error message.
- * @cssprop [--lyra-textarea-max-block-size=none] - Maximum auto-grown block size before the textarea scrolls.
+ * @cssprop [--lr-textarea-max-block-size=none] - Maximum auto-grown block size before the textarea scrolls.
  */
 export class LyraTextarea extends FormAssociated(LyraTextareaBase) {
   static styles = [LyraElement.styles, styles];
@@ -76,7 +76,7 @@ export class LyraTextarea extends FormAssociated(LyraTextareaBase) {
   @property() hint = '';
   @property({ attribute: 'error-text' }) errorText = '';
   /** Accessible name overriding the label/placeholder-derived default. Takes precedence over both
-   *  `label` and `placeholder` when set, matching `<lyra-date-input>`'s `accessibleLabel`. */
+   *  `label` and `placeholder` when set, matching `<lr-date-input>`'s `accessibleLabel`. */
   @property({ attribute: 'aria-label' }) accessibleLabel: string | null = null;
   /** Forwarded to the native `<textarea>`'s own `spellcheck`. Defaults to `true`, matching the
    *  native element's own default. */
@@ -113,7 +113,7 @@ export class LyraTextarea extends FormAssociated(LyraTextareaBase) {
   }
 
   /** The internal native `<textarea>` element, for direct DOM access (caret position, selection,
-   *  `setRangeText()`) that has no first-class `lyra-*` equivalent -- mirrors `wa-textarea`'s own
+   *  `setRangeText()`) that has no first-class `lr-*` equivalent -- mirrors `wa-textarea`'s own
    *  `input` getter. */
   get input(): HTMLTextAreaElement | null {
     return this.textareaEl ?? null;
@@ -237,7 +237,7 @@ export class LyraTextarea extends FormAssociated(LyraTextareaBase) {
       const width = entries[0]?.contentRect.width;
       // fitToContent() itself writes a *block*-size (height) change to the observed element,
       // which would otherwise re-trigger this same observer every tick -- only re-fit when the
-      // *inline* size (width) actually changed, mirroring lyra-chat-composer's identical
+      // *inline* size (width) actually changed, mirroring lr-chat-composer's identical
       // armTextareaResizeObserver() guard.
       if (
         width === undefined ||
@@ -276,14 +276,14 @@ export class LyraTextarea extends FormAssociated(LyraTextareaBase) {
     this.value = this.textareaEl.value;
     if (this.resize === 'auto') this.fitToContent();
     this.emit('input');
-    this.emit('lyra-input', { value: this.value });
+    this.emit('lr-input', { value: this.value });
   };
 
   private onChange = (): void => {
     if (!this.textareaEl) return;
     this.value = this.textareaEl.value;
     this.emit('change');
-    this.emit('lyra-change', { value: this.value });
+    this.emit('lr-change', { value: this.value });
   };
 
   private onFocus = (): void => {
@@ -362,6 +362,6 @@ export class LyraTextarea extends FormAssociated(LyraTextareaBase) {
 
 declare global {
   interface HTMLElementTagNameMap {
-    'lyra-textarea': LyraTextarea;
+    'lr-textarea': LyraTextarea;
   }
 }

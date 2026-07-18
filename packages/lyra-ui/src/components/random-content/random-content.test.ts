@@ -5,7 +5,7 @@ import { styles } from './random-content.styles.js';
 
 // A stand-in for a wrapper component that re-projects its own light-DOM
 // children through a nested `<slot>` (e.g. a card wrapper rendering its own
-// shadow tree around whatever's passed to it). From `lyra-random-content`'s
+// shadow tree around whatever's passed to it). From `lr-random-content`'s
 // point of view this wrapper is one opaque direct child -- its own further
 // children must never become eligible on their own, proving
 // `assignedElements()` was read without `{ flatten: true }`.
@@ -44,11 +44,11 @@ function stubRandomSequence(values: number[]): () => void {
 
 it('renders exactly one child by default and marks the rest hidden', async () => {
   const el = (await fixture(html`
-    <lyra-random-content>
+    <lr-random-content>
       <div id="a">A</div>
       <div id="b">B</div>
       <div id="c">C</div>
-    </lyra-random-content>
+    </lr-random-content>
   `)) as LyraRandomContent;
   await el.updateComplete;
 
@@ -65,34 +65,34 @@ it('renders exactly one child by default and marks the rest hidden', async () =>
 
 it('clamps items to the pool size in both directions and coerces invalid values to 1', async () => {
   const under = (await fixture(html`
-    <lyra-random-content items="2">
+    <lr-random-content items="2">
       <div>1</div>
       <div>2</div>
       <div>3</div>
       <div>4</div>
       <div>5</div>
-    </lyra-random-content>
+    </lr-random-content>
   `)) as LyraRandomContent;
   await under.updateComplete;
   expect(shownIds(under).length).to.equal(2);
 
   const over = (await fixture(html`
-    <lyra-random-content items="10">
+    <lr-random-content items="10">
       <div>1</div>
       <div>2</div>
       <div>3</div>
-    </lyra-random-content>
+    </lr-random-content>
   `)) as LyraRandomContent;
   await over.updateComplete;
   expect(([...over.children] as HTMLElement[]).filter((child) => !child.hidden).length).to.equal(3);
 
   for (const invalid of [0, -1, NaN]) {
     const el = (await fixture(html`
-      <lyra-random-content .items=${invalid}>
+      <lr-random-content .items=${invalid}>
         <div>1</div>
         <div>2</div>
         <div>3</div>
-      </lyra-random-content>
+      </lr-random-content>
     `)) as LyraRandomContent;
     await el.updateComplete;
     expect(
@@ -104,12 +104,12 @@ it('clamps items to the pool size in both directions and coerces invalid values 
 
 it('mode="sequence" is deterministic and wraps around the pool', async () => {
   const el = (await fixture(html`
-    <lyra-random-content mode="sequence">
+    <lr-random-content mode="sequence">
       <div id="s0">0</div>
       <div id="s1">1</div>
       <div id="s2">2</div>
       <div id="s3">3</div>
-    </lyra-random-content>
+    </lr-random-content>
   `)) as LyraRandomContent;
   await el.updateComplete;
 
@@ -127,12 +127,12 @@ it('mode="random" may repeat the immediately-previous selection', async () => {
   let el: LyraRandomContent;
   try {
     el = (await fixture(html`
-      <lyra-random-content mode="random">
+      <lr-random-content mode="random">
         <div id="r0">0</div>
         <div id="r1">1</div>
         <div id="r2">2</div>
         <div id="r3">3</div>
-      </lyra-random-content>
+      </lr-random-content>
     `)) as LyraRandomContent;
     await el.updateComplete;
   } finally {
@@ -155,12 +155,12 @@ it('mode="unique" retries to avoid repeating the immediately-previous selection 
   let el: LyraRandomContent;
   try {
     el = (await fixture(html`
-      <lyra-random-content mode="unique">
+      <lr-random-content mode="unique">
         <div id="u0">0</div>
         <div id="u1">1</div>
         <div id="u2">2</div>
         <div id="u3">3</div>
-      </lyra-random-content>
+      </lr-random-content>
     `)) as LyraRandomContent;
     await el.updateComplete;
   } finally {
@@ -182,11 +182,11 @@ it('mode="unique" retries to avoid repeating the immediately-previous selection 
 
 it('mode="unique" accepts a forced repeat when no alternative composition exists (items === pool size)', async () => {
   const el = (await fixture(html`
-    <lyra-random-content mode="unique" items="3">
+    <lr-random-content mode="unique" items="3">
       <div id="p0">0</div>
       <div id="p1">1</div>
       <div id="p2">2</div>
-    </lyra-random-content>
+    </lr-random-content>
   `)) as LyraRandomContent;
   await el.updateComplete;
   expect(shownIds(el).sort()).to.deep.equal(['p0', 'p1', 'p2']);
@@ -196,14 +196,14 @@ it('mode="unique" accepts a forced repeat when no alternative composition exists
   expect(shownIds(el).sort()).to.deep.equal(['p0', 'p1', 'p2']);
 });
 
-it('emits lyra-content-change on the first post-connect selection, with detail.items matching what is shown', async () => {
+it('emits lr-content-change on the first post-connect selection, with detail.items matching what is shown', async () => {
   // The listener must be attached before the element ever connects --
   // `fixture()` itself awaits the first render internally, so attaching
   // afterward would already be too late to observe this event.
   const container = (await fixture(html`<div></div>`)) as HTMLDivElement;
-  const el = document.createElement('lyra-random-content') as LyraRandomContent;
+  const el = document.createElement('lr-random-content') as LyraRandomContent;
   el.innerHTML = '<div id="x">X</div><div id="y">Y</div><div id="z">Z</div>';
-  const eventPromise = oneEvent(el, 'lyra-content-change');
+  const eventPromise = oneEvent(el, 'lr-content-change');
   container.append(el);
   const event = await eventPromise;
   await el.updateComplete;
@@ -213,17 +213,17 @@ it('emits lyra-content-change on the first post-connect selection, with detail.i
   expect(detailIds.length).to.equal(1);
 });
 
-it('emits lyra-content-change on randomize(), and its return value matches detail.items', async () => {
+it('emits lr-content-change on randomize(), and its return value matches detail.items', async () => {
   const el = (await fixture(html`
-    <lyra-random-content mode="sequence">
+    <lr-random-content mode="sequence">
       <div id="m0">0</div>
       <div id="m1">1</div>
       <div id="m2">2</div>
-    </lyra-random-content>
+    </lr-random-content>
   `)) as LyraRandomContent;
   await el.updateComplete;
 
-  const eventPromise = oneEvent(el, 'lyra-content-change');
+  const eventPromise = oneEvent(el, 'lr-content-change');
   const returned = el.randomize();
   const event = await eventPromise;
   expect((event.detail.items as HTMLElement[]).map((item) => item.id)).to.deep.equal(returned.map((item) => item.id));
@@ -231,14 +231,14 @@ it('emits lyra-content-change on randomize(), and its return value matches detai
 
 it('re-runs selection and emits again when the slotted pool changes (slotchange)', async () => {
   const el = (await fixture(html`
-    <lyra-random-content>
+    <lr-random-content>
       <div id="c0">0</div>
       <div id="c1">1</div>
-    </lyra-random-content>
+    </lr-random-content>
   `)) as LyraRandomContent;
   await el.updateComplete;
 
-  const eventPromise = oneEvent(el, 'lyra-content-change');
+  const eventPromise = oneEvent(el, 'lr-content-change');
   const added = document.createElement('div');
   added.id = 'c2';
   el.appendChild(added);
@@ -251,7 +251,7 @@ it('re-runs selection and emits again when the slotted pool changes (slotchange)
 
 it('restarts autoplay after a disconnect/reconnect cycle instead of leaving it permanently stopped', async () => {
   const container = (await fixture(html`<div></div>`)) as HTMLDivElement;
-  const el = document.createElement('lyra-random-content') as LyraRandomContent;
+  const el = document.createElement('lr-random-content') as LyraRandomContent;
   el.autoplay = true;
   el.setAttribute('autoplay-interval', '1000');
   el.setAttribute('mode', 'sequence');
@@ -275,10 +275,10 @@ it('restarts autoplay after a disconnect/reconnect cycle instead of leaving it p
 
 it('autoplay ticks at the clamped 1000ms floor and stops on disconnect', async () => {
   const el = (await fixture(html`
-    <lyra-random-content autoplay autoplay-interval="10" mode="sequence">
+    <lr-random-content autoplay autoplay-interval="10" mode="sequence">
       <div id="a0">0</div>
       <div id="a1">1</div>
-    </lyra-random-content>
+    </lr-random-content>
   `)) as LyraRandomContent;
   await el.updateComplete;
   expect(shownChild(el).id).to.equal('a0');
@@ -288,7 +288,7 @@ it('autoplay ticks at the clamped 1000ms floor and stops on disconnect', async (
   await new Promise((resolve) => setTimeout(resolve, 300));
   expect(shownChild(el).id).to.equal('a0');
 
-  const eventPromise = oneEvent(el, 'lyra-content-change');
+  const eventPromise = oneEvent(el, 'lr-content-change');
   await eventPromise;
   await el.updateComplete;
   expect(shownChild(el).id).to.equal('a1');
@@ -301,9 +301,9 @@ it('autoplay ticks at the clamped 1000ms floor and stops on disconnect', async (
 
 it('does not autoplay-tick when only one eligible child exists', async () => {
   const el = (await fixture(html`
-    <lyra-random-content autoplay autoplay-interval="1000">
+    <lr-random-content autoplay autoplay-interval="1000">
       <div id="only">Only</div>
-    </lyra-random-content>
+    </lr-random-content>
   `)) as LyraRandomContent;
   await el.updateComplete;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -324,10 +324,10 @@ it('disables autoplay ticking entirely under prefers-reduced-motion', async () =
 
   try {
     const el = (await fixture(html`
-      <lyra-random-content autoplay autoplay-interval="1000" mode="sequence">
+      <lr-random-content autoplay autoplay-interval="1000" mode="sequence">
         <div id="r0">0</div>
         <div id="r1">1</div>
-      </lyra-random-content>
+      </lr-random-content>
     `)) as LyraRandomContent;
     await el.updateComplete;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -352,31 +352,31 @@ it('explicitly guards the entrance animation under prefers-reduced-motion for ::
 
 it('reflects the animation attribute and gates the matching keyframe', async () => {
   const el = (await fixture(html`
-    <lyra-random-content animation="fade-up">
+    <lr-random-content animation="fade-up">
       <div>1</div>
       <div>2</div>
-    </lyra-random-content>
+    </lr-random-content>
   `)) as LyraRandomContent;
   await el.updateComplete;
   expect(el.getAttribute('animation')).to.equal('fade-up');
 
   const css = styles.cssText.replace(/\s+/g, ' ');
   expect(css).to.include("[animation='fade-up']");
-  expect(css).to.include('lyra-random-content-fade-in-up');
+  expect(css).to.include('lr-random-content-fade-in-up');
 });
 
 it('exposes the documented animation custom properties with WA-matching defaults', () => {
   const css = styles.cssText;
-  expect(css).to.include('var(--lyra-random-content-animation-duration, 300ms)');
-  expect(css).to.include('var(--lyra-random-content-animation-easing, ease)');
-  expect(css).to.include('var(--lyra-random-content-animation-translate, var(--lyra-size-0-5em))');
+  expect(css).to.include('var(--lr-random-content-animation-duration, 300ms)');
+  expect(css).to.include('var(--lr-random-content-animation-easing, ease)');
+  expect(css).to.include('var(--lr-random-content-animation-translate, var(--lr-size-0-5em))');
 });
 
 it('forwards a host aria-label to the internal role="status" element, and omits it when absent', async () => {
   const withLabel = (await fixture(html`
-    <lyra-random-content aria-label="Homepage hero copy">
+    <lr-random-content aria-label="Homepage hero copy">
       <div>1</div>
-    </lyra-random-content>
+    </lr-random-content>
   `)) as LyraRandomContent;
   await withLabel.updateComplete;
   expect(withLabel.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal(
@@ -384,26 +384,26 @@ it('forwards a host aria-label to the internal role="status" element, and omits 
   );
 
   const withoutLabel = (await fixture(html`
-    <lyra-random-content>
+    <lr-random-content>
       <div>1</div>
-    </lyra-random-content>
+    </lr-random-content>
   `)) as LyraRandomContent;
   await withoutLabel.updateComplete;
   expect(withoutLabel.shadowRoot!.querySelector('[part="base"]')!.hasAttribute('aria-label')).to.be.false;
 });
 
 it('sets aria-live="off" while autoplay is on and "polite" otherwise, always with aria-atomic="true"', async () => {
-  const idle = (await fixture(html`<lyra-random-content><div>1</div></lyra-random-content>`)) as LyraRandomContent;
+  const idle = (await fixture(html`<lr-random-content><div>1</div></lr-random-content>`)) as LyraRandomContent;
   await idle.updateComplete;
   const idleBase = idle.shadowRoot!.querySelector('[part="base"]')!;
   expect(idleBase.getAttribute('aria-live')).to.equal('polite');
   expect(idleBase.getAttribute('aria-atomic')).to.equal('true');
 
   const autoplaying = (await fixture(html`
-    <lyra-random-content autoplay>
+    <lr-random-content autoplay>
       <div>1</div>
       <div>2</div>
-    </lyra-random-content>
+    </lr-random-content>
   `)) as LyraRandomContent;
   await autoplaying.updateComplete;
   const autoBase = autoplaying.shadowRoot!.querySelector('[part="base"]')!;
@@ -413,12 +413,12 @@ it('sets aria-live="off" while autoplay is on and "polite" otherwise, always wit
 
 it('only treats direct children as eligible, not elements re-slotted through a nested wrapper (no flatten)', async () => {
   const el = (await fixture(html`
-    <lyra-random-content items="1" mode="sequence">
+    <lr-random-content items="1" mode="sequence">
       <random-content-nested-wrapper id="wrapper">
         <div id="nested">nested</div>
       </random-content-nested-wrapper>
       <div id="direct">direct</div>
-    </lyra-random-content>
+    </lr-random-content>
   `)) as LyraRandomContent;
   await el.updateComplete;
 
@@ -437,11 +437,11 @@ it('only treats direct children as eligible, not elements re-slotted through a n
 
 it('ignores stray text nodes between slotted elements', async () => {
   const el = (await fixture(html`
-    <lyra-random-content items="5">
+    <lr-random-content items="5">
       <div id="t1">1</div>
       a stray run of text
       <div id="t2">2</div>
-    </lyra-random-content>
+    </lr-random-content>
   `)) as LyraRandomContent;
   await el.updateComplete;
   expect(shownIds(el).sort()).to.deep.equal(['t1', 't2']);
@@ -451,7 +451,7 @@ it('does not overflow a narrow ancestor even with a long intrinsic-width slotted
   const container = (await fixture(
     html`<div style="inline-size: 200px; overflow: hidden;"></div>`,
   )) as HTMLDivElement;
-  const el = document.createElement('lyra-random-content') as LyraRandomContent;
+  const el = document.createElement('lr-random-content') as LyraRandomContent;
   const long = document.createElement('div');
   long.style.whiteSpace = 'pre';
   long.textContent =
@@ -466,9 +466,9 @@ it('does not overflow a narrow ancestor even with a long intrinsic-width slotted
 
 it('renders correctly with no locale registered -- the component has no built-in text to localize', async () => {
   const el = (await fixture(html`
-    <lyra-random-content>
+    <lr-random-content>
       <div id="only">Only child</div>
-    </lyra-random-content>
+    </lr-random-content>
   `)) as LyraRandomContent;
   await el.updateComplete;
   expect(el.shadowRoot!.querySelector('[part="base"]')).to.exist;
@@ -477,11 +477,11 @@ it('renders correctly with no locale registered -- the component has no built-in
 
 it('is accessible', async () => {
   const el = (await fixture(html`
-    <lyra-random-content aria-label="Rotating tips">
+    <lr-random-content aria-label="Rotating tips">
       <div>Tip one</div>
       <div>Tip two</div>
       <div>Tip three</div>
-    </lyra-random-content>
+    </lr-random-content>
   `)) as LyraRandomContent;
   await el.updateComplete;
   await expect(el).to.be.accessible();
@@ -489,10 +489,10 @@ it('is accessible', async () => {
 
 it('is accessible while autoplaying', async () => {
   const el = (await fixture(html`
-    <lyra-random-content autoplay aria-label="Rotating tips">
+    <lr-random-content autoplay aria-label="Rotating tips">
       <div>Tip one</div>
       <div>Tip two</div>
-    </lyra-random-content>
+    </lr-random-content>
   `)) as LyraRandomContent;
   await el.updateComplete;
   await expect(el).to.be.accessible();

@@ -7,8 +7,8 @@ export const styles = css`
     block-size: 100%;
     /* Component-specific -- not a shared design token, so a consumer can
        retheme it without a raw literal leaking into the public API (same
-       rationale as lyra-app-rail's --lyra-app-rail-overlay-color). */
-    --lyra-split-overlay-color: var(--lyra-color-overlay);
+       rationale as lr-app-rail's --lr-app-rail-overlay-color). */
+    --lr-split-overlay-color: var(--lr-color-overlay);
   }
   [part='base'] {
     display: flex;
@@ -24,9 +24,9 @@ export const styles = css`
   [part='divider'] {
     position: relative;
     flex: 0 0 auto;
-    inline-size: var(--lyra-size-3px);
+    inline-size: var(--lr-size-3px);
     block-size: auto;
-    background: var(--lyra-color-border);
+    background: var(--lr-color-border);
     cursor: col-resize;
     touch-action: none;
   }
@@ -38,23 +38,23 @@ export const styles = css`
     content: '';
     position: absolute;
     inset-block: 0;
-    inset-inline: var(--lyra-size-neg-6px);
+    inset-inline: var(--lr-size-neg-6px);
   }
   :host([orientation='vertical']) [part='divider'] {
     inline-size: auto;
-    block-size: var(--lyra-size-3px);
+    block-size: var(--lr-size-3px);
     cursor: row-resize;
   }
   :host([orientation='vertical']) [part='divider']::before {
-    inset-block: var(--lyra-size-neg-6px);
+    inset-block: var(--lr-size-neg-6px);
     inset-inline: 0;
   }
   [part='divider']:hover {
-    background: var(--lyra-color-brand);
+    background: var(--lr-color-brand);
   }
   [part='divider']:focus-visible {
-    outline: var(--lyra-focus-ring-width) solid var(--lyra-focus-ring-color);
-    outline-offset: var(--lyra-focus-ring-offset);
+    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
+    outline-offset: var(--lr-focus-ring-offset);
   }
   /* The divider adjacent to a rail/floating-collapsed pane (see split.ts's
      isDividerDisabled()) — geometry (position/inset/inline-size) for the
@@ -72,22 +72,22 @@ export const styles = css`
      visual/stacking treatment lives here. z-index is above [part="backdrop"]
      (below), so the drawer renders on top of its own scrim. */
   ::slotted([data-collapse-state='floating']) {
-    z-index: var(--lyra-layer-content);
-    background: var(--lyra-color-surface);
-    border-radius: var(--lyra-radius);
-    box-shadow: var(--lyra-shadow);
+    z-index: var(--lr-layer-content);
+    background: var(--lr-color-surface);
+    border-radius: var(--lr-radius);
+    box-shadow: var(--lr-shadow);
   }
   /* The 'floating' drawer's scrim -- only rendered while collapseState is
      'floating' and open (see split.ts's render()). Scoped to [part="base"]
      (position: absolute against its position: relative ancestor) rather than
-     a viewport-fixed overlay like lyra-app-rail's mobile backdrop: the
+     a viewport-fixed overlay like lr-app-rail's mobile backdrop: the
      floating panel itself is only ever positioned relative to this
      component's own box, never the full page. */
   [part='backdrop'] {
     position: absolute;
     inset: 0;
-    z-index: var(--lyra-layer-base);
-    background: var(--lyra-split-overlay-color);
+    z-index: var(--lr-layer-base);
+    background: var(--lr-split-overlay-color);
   }
   /* Rail-clamped content can easily overflow the fixed rail-width — clip it
      rather than letting it blow out the layout; the panel's own content is

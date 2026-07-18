@@ -4,35 +4,35 @@ import './audio-visualizer.js';
 
 const meta: Meta = {
   title: 'Audio Visualizer',
-  component: 'lyra-audio-visualizer',
+  component: 'lr-audio-visualizer',
 };
 export default meta;
 type Story = StoryObj;
 
 export const Idle: Story = {
-  render: () => html`<lyra-audio-visualizer state="idle"></lyra-audio-visualizer>`,
+  render: () => html`<lr-audio-visualizer state="idle"></lr-audio-visualizer>`,
 };
 
 export const Listening: Story = {
-  render: () => html`<lyra-audio-visualizer state="listening"></lyra-audio-visualizer>`,
+  render: () => html`<lr-audio-visualizer state="listening"></lr-audio-visualizer>`,
 };
 
 export const Thinking: Story = {
-  render: () => html`<lyra-audio-visualizer state="thinking"></lyra-audio-visualizer>`,
+  render: () => html`<lr-audio-visualizer state="thinking"></lr-audio-visualizer>`,
 };
 
 export const Speaking: Story = {
-  render: () => html`<lyra-audio-visualizer state="speaking"></lyra-audio-visualizer>`,
+  render: () => html`<lr-audio-visualizer state="speaking"></lr-audio-visualizer>`,
 };
 
 export const WaveformWithLevel: Story = {
-  render: () => html`<lyra-audio-visualizer variant="waveform" level="0.6" state="speaking"></lyra-audio-visualizer>`,
+  render: () => html`<lr-audio-visualizer variant="waveform" level="0.6" state="speaking"></lr-audio-visualizer>`,
 };
 
 export const Narrow320: Story = {
   render: () => html`
-    <div style="max-inline-size: 320px; border: 1px dashed var(--lyra-color-border); padding: 8px;">
-      <lyra-audio-visualizer state="listening" bar-count="8"></lyra-audio-visualizer>
+    <div style="max-inline-size: 320px; border: 1px dashed var(--lr-color-border); padding: 8px;">
+      <lr-audio-visualizer state="listening" bar-count="8"></lr-audio-visualizer>
     </div>
   `,
 };
@@ -49,10 +49,10 @@ export const ReducedMotion: Story = {
   },
   render: () => html`
     <div style="display:flex; gap:2rem; align-items:center;">
-      <lyra-audio-visualizer state="idle"></lyra-audio-visualizer>
-      <lyra-audio-visualizer state="listening"></lyra-audio-visualizer>
-      <lyra-audio-visualizer state="thinking"></lyra-audio-visualizer>
-      <lyra-audio-visualizer state="speaking"></lyra-audio-visualizer>
+      <lr-audio-visualizer state="idle"></lr-audio-visualizer>
+      <lr-audio-visualizer state="listening"></lr-audio-visualizer>
+      <lr-audio-visualizer state="thinking"></lr-audio-visualizer>
+      <lr-audio-visualizer state="speaking"></lr-audio-visualizer>
     </div>
   `,
 };

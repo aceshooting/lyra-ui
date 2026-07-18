@@ -4,7 +4,7 @@ import './stack-trace.js';
 
 const meta: Meta = {
   title: 'StackTrace',
-  component: 'lyra-stack-trace',
+  component: 'lr-stack-trace',
 };
 export default meta;
 type Story = StoryObj;
@@ -34,30 +34,30 @@ const pythonTrace = [
 ].join('\n');
 
 export const JavaScript: Story = {
-  render: () => html`<lyra-stack-trace style="max-width:40rem" .trace=${jsTrace}></lyra-stack-trace>`,
+  render: () => html`<lr-stack-trace style="max-width:40rem" .trace=${jsTrace}></lr-stack-trace>`,
 };
 
 export const ChainedError: Story = {
-  render: () => html`<lyra-stack-trace style="max-width:40rem" .trace=${chainedTrace}></lyra-stack-trace>`,
+  render: () => html`<lr-stack-trace style="max-width:40rem" .trace=${chainedTrace}></lr-stack-trace>`,
 };
 
 export const Python: Story = {
-  render: () => html`<lyra-stack-trace style="max-width:40rem" .trace=${pythonTrace}></lyra-stack-trace>`,
+  render: () => html`<lr-stack-trace style="max-width:40rem" .trace=${pythonTrace}></lr-stack-trace>`,
 };
 
 export const ExpandedFrames: Story = {
-  render: () => html`<lyra-stack-trace style="max-width:40rem" .trace=${jsTrace} .collapseInternal=${false}></lyra-stack-trace>`,
+  render: () => html`<lr-stack-trace style="max-width:40rem" .trace=${jsTrace} .collapseInternal=${false}></lr-stack-trace>`,
 };
 
 export const UnparseableFallback: Story = {
-  render: () => html`<lyra-stack-trace style="max-width:40rem" trace="raw non-trace text from a weird tool"></lyra-stack-trace>`,
+  render: () => html`<lr-stack-trace style="max-width:40rem" trace="raw non-trace text from a weird tool"></lr-stack-trace>`,
 };
 
 export const MaxHeight: Story = {
   render: () =>
-    html`<lyra-stack-trace style="max-width:40rem" .trace=${jsTrace} .collapseInternal=${false} max-height="6rem"></lyra-stack-trace>`,
+    html`<lr-stack-trace style="max-width:40rem" .trace=${jsTrace} .collapseInternal=${false} max-height="6rem"></lr-stack-trace>`,
 };
 
 export const Narrow320: Story = {
-  render: () => html`<div style="max-width:320px"><lyra-stack-trace .trace=${jsTrace}></lyra-stack-trace></div>`,
+  render: () => html`<div style="max-width:320px"><lr-stack-trace .trace=${jsTrace}></lr-stack-trace></div>`,
 };

@@ -5,13 +5,13 @@ import type { LyraLiveRegion } from './live-region.js';
 
 const meta: Meta = {
   title: 'LiveRegion',
-  component: 'lyra-live-region',
+  component: 'lr-live-region',
   tags: ['autodocs'],
   parameters: {
     docs: {
       description: {
         component:
-          '`<lyra-live-region>` is invisible by design (screen-reader only) and throttles/coalesces announcements instead of relaying every `announce()` call verbatim. These stories mirror what actually lands in its shadow DOM into a visible log so the throttling/coalescing behavior is observable without a screen reader running.',
+          '`<lr-live-region>` is invisible by design (screen-reader only) and throttles/coalesces announcements instead of relaying every `announce()` call verbatim. These stories mirror what actually lands in its shadow DOM into a visible log so the throttling/coalescing behavior is observable without a screen reader running.',
       },
     },
   },
@@ -22,7 +22,7 @@ type Story = StoryObj;
 /** Wires a MutationObserver that mirrors a region's real (coalesced) writes into a visible log,
  *  purely for these demos -- a real consumer has no need for this, it just calls `announce()`. */
 function wireLog(root: HTMLElement): void {
-  const region = root.querySelector<LyraLiveRegion>('lyra-live-region');
+  const region = root.querySelector<LyraLiveRegion>('lr-live-region');
   const log = root.querySelector<HTMLElement>('[data-log]');
   if (!region || !log || region.hasAttribute('data-observed')) return;
   region.setAttribute('data-observed', '');
@@ -45,13 +45,13 @@ export const Basic: Story = {
       style="display:flex; flex-direction:column; gap:0.75rem; max-width:28rem;"
       @click=${(e: Event) => wireLog(e.currentTarget as HTMLElement)}
     >
-      <lyra-live-region mode="polite"></lyra-live-region>
+      <lr-live-region mode="polite"></lr-live-region>
       <div style="display:flex; gap:0.5rem; flex-wrap:wrap;">
         <button
           @click=${(e: Event) =>
             (e.currentTarget as HTMLElement)
               .closest('div')!
-              .querySelector<LyraLiveRegion>('lyra-live-region')!
+              .querySelector<LyraLiveRegion>('lr-live-region')!
               .announce('3 new messages')}
         >
           Announce "3 new messages"
@@ -60,13 +60,13 @@ export const Basic: Story = {
           @click=${(e: Event) =>
             (e.currentTarget as HTMLElement)
               .closest('div')!
-              .querySelector<LyraLiveRegion>('lyra-live-region')!
+              .querySelector<LyraLiveRegion>('lr-live-region')!
               .announce('3 new messages')}
         >
           Announce the same text again
         </button>
       </div>
-      <p style="margin:0; font-size:0.8125rem; color:var(--lyra-color-text-quiet);">
+      <p style="margin:0; font-size:0.8125rem; color:var(--lr-color-text-quiet);">
         The region itself is screen-reader-only; this log mirrors its real (post-throttle) text so
         the "same text twice" clear-then-reset trick is visible even without a screen reader.
       </p>
@@ -81,11 +81,11 @@ export const ThrottledStream: Story = {
       style="display:flex; flex-direction:column; gap:0.75rem; max-width:28rem;"
       @click=${(e: Event) => wireLog(e.currentTarget as HTMLElement)}
     >
-      <lyra-live-region mode="polite" throttle-ms="400"></lyra-live-region>
+      <lr-live-region mode="polite" throttle-ms="400"></lr-live-region>
       <button
         @click=${(e: Event) => {
           const wrap = (e.currentTarget as HTMLElement).closest('div')!;
-          const region = wrap.querySelector<LyraLiveRegion>('lyra-live-region')!;
+          const region = wrap.querySelector<LyraLiveRegion>('lr-live-region')!;
           const words = 'Here is a response streaming in one word at a time from the model'.split(' ');
           let text = '';
           words.forEach((word, i) => {
@@ -104,7 +104,7 @@ export const ThrottledStream: Story = {
       >
         Simulate a streaming response (${'Here is a response streaming in one word at a time from the model'.split(' ').length} chunks, 90ms apart)
       </button>
-      <p style="margin:0; font-size:0.8125rem; color:var(--lyra-color-text-quiet);">
+      <p style="margin:0; font-size:0.8125rem; color:var(--lr-color-text-quiet);">
         Every word above calls <code>announce()</code>, but at a 400ms throttle only a handful of
         coalesced flushes actually reach the log — ending with a forced, always-delivered
         "response complete".
@@ -120,12 +120,12 @@ export const AssertiveMode: Story = {
       style="display:flex; flex-direction:column; gap:0.75rem; max-width:28rem;"
       @click=${(e: Event) => wireLog(e.currentTarget as HTMLElement)}
     >
-      <lyra-live-region mode="assertive"></lyra-live-region>
+      <lr-live-region mode="assertive"></lr-live-region>
       <button
         @click=${(e: Event) =>
           (e.currentTarget as HTMLElement)
             .closest('div')!
-            .querySelector<LyraLiveRegion>('lyra-live-region')!
+            .querySelector<LyraLiveRegion>('lr-live-region')!
             .announce('Connection lost — retrying…', { force: true })}
       >
         Announce an urgent error (role="alert")

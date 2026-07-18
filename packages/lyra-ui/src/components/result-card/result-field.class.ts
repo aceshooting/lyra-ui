@@ -5,14 +5,14 @@ import { hasRealContent } from '../../internal/a11y.js';
 import { styles } from './result-field.styles.js';
 
 /**
- * `<lyra-result-field>` — a single label/value row, meant for use inside a
- * `<lyra-result-card>` body (though it works standalone too). Renders as a
+ * `<lr-result-field>` — a single label/value row, meant for use inside a
+ * `<lr-result-card>` body (though it works standalone too). Renders as a
  * dense "label: value" line by default — e.g. "Status: 200 OK" or
  * "Duration: 340ms" — matching the compact, small-card presentation this
  * pair exists for.
  *
- * @customElement lyra-result-field
- * @slot - Rich value content (e.g. a `<lyra-chip>` status badge, or a plain
+ * @customElement lr-result-field
+ * @slot - Rich value content (e.g. a `<lr-chip>` status badge, or a plain
  * text override), taking precedence over the `value` prop whenever it has
  * any assigned content.
  * @csspart base - The row container.
@@ -40,8 +40,8 @@ export class LyraResultField extends LyraElement {
 
   firstUpdated(): void {
     // Fallback reconciliation against the fully-resolved slot assignment,
-    // the same belt-and-suspenders pass lyra-source-card's hasFullSlot and
-    // lyra-empty's hasIcon/hasActions take -- a no-op in the common case
+    // the same belt-and-suspenders pass lr-source-card's hasFullSlot and
+    // lr-empty's hasIcon/hasActions take -- a no-op in the common case
     // since willUpdate already seeded the correct value above.
     const slot = this.shadowRoot!.querySelector('slot') as HTMLSlotElement;
     this.hasValueSlot = hasRealContent(slot.assignedNodes({ flatten: true }));
@@ -67,7 +67,7 @@ export class LyraResultField extends LyraElement {
 
 declare global {
   interface HTMLElementTagNameMap {
-    'lyra-result-field': LyraResultField;
+    'lr-result-field': LyraResultField;
   }
 }
 

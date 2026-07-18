@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Codemod: rewrites `wa-*` (Web Awesome) / `sl-*` (Shoelace) custom-element tag usages and
 // `@shoelace-style/shoelace` / `@awesome.me/webawesome` import specifiers to their documented
-// `lyra-*` / `@aceshooting/lyra-ui` equivalents in a target directory (or glob) of source files.
+// `lr-*` / `@aceshooting/lyra-ui` equivalents in a target directory (or glob) of source files.
 //
 // The rename table is NOT hand-duplicated here -- it is parsed at run time from this package's
 // own README.md ("## Migrating from Web Awesome or Shoelace" section: the Shoelace table, and the
@@ -9,7 +9,7 @@
 // README currently documents as mirrored. A `wa-*`/`sl-*` tag is only ever rewritten when the
 // README's Mirrors column names it explicitly for that row; components marked `-- (extra)` (no
 // Web Awesome equivalent) are never touched, and a row where the Component/Mirrors cell counts
-// don't line up 1:1 by name (e.g. the typed `<lyra-*-chart>` subclasses, which all conceptually
+// don't line up 1:1 by name (e.g. the typed `<lr-*-chart>` subclasses, which all conceptually
 // relate to `wa-chart` but have no individual `wa-*-chart` tag of their own) is left alone rather
 // than guessed at.
 //
@@ -67,7 +67,7 @@ const PACKAGE_SPECIFIER_MAP = new Map([
 ]);
 
 /**
- * Extracts `wa-name`/`sl-name` -> `lyra-name` tag mappings from this package's README.md.
+ * Extracts `wa-name`/`sl-name` -> `lr-name` tag mappings from this package's README.md.
  *
  * Scans line by line, tracking which migration table (if any) is currently open:
  *   - "| Shoelace | Lyra | Migration note |" starts the Shoelace table.
@@ -115,42 +115,42 @@ function setMapping(map, conflicts, from, to) {
   map.set(from, to);
 }
 
-// A "Component" cell lists one or more `<lyra-x>` tags (companion tags joined with ` + `, or
+// A "Component" cell lists one or more `<lr-x>` tags (companion tags joined with ` + `, or
 // interchangeable typed variants joined with `, `) plus, occasionally, a non-tag entry like
-// `toast()` or `confirm()` which the `<lyra-x>` extraction simply ignores. A "Mirrors" cell lists
+// `toast()` or `confirm()` which the `<lr-x>` extraction simply ignores. A "Mirrors" cell lists
 // zero or more backticked `wa-x` tokens (or `-- (extra)` / similar prose, which yields zero
 // tokens), optionally including a `wa-prefix-*` wildcard (see the format-* row).
 //
-// Matching is by NAME, not by position: a component tag `lyra-X` is mapped from `wa-X` only if
+// Matching is by NAME, not by position: a component tag `lr-X` is mapped from `wa-X` only if
 // `wa-X` literally appears in the Mirrors cell (or is covered by a `wa-prefix-*` wildcard whose
 // prefix `X` starts with). This deliberately leaves a component unmapped when the README doesn't
 // literally document a `wa-*` counterpart for it, rather than guessing from row position/order
-// (which breaks down for rows like the typed chart-subclass family or `lyra-option`, where
+// (which breaks down for rows like the typed chart-subclass family or `lr-option`, where
 // per-tag correspondence isn't 1:1 with the Mirrors cell).
 function parseWaTableRow(componentCell, mirrorCell, map, conflicts) {
-  const componentSuffixes = [...componentCell.matchAll(/<lyra-([a-z0-9-]+)>/g)].map((m) => m[1]);
+  const componentSuffixes = [...componentCell.matchAll(/<lr-([a-z0-9-]+)>/g)].map((m) => m[1]);
   const mirrorTokens = [...mirrorCell.matchAll(/`(wa-[a-z0-9-]+\*?)`/g)].map((m) => m[1]);
   if (mirrorTokens.length === 0 || componentSuffixes.length === 0) return;
 
   for (const suffix of componentSuffixes) {
     const expected = `wa-${suffix}`;
     if (mirrorTokens.includes(expected)) {
-      setMapping(map, conflicts, expected, `lyra-${suffix}`);
+      setMapping(map, conflicts, expected, `lr-${suffix}`);
       continue;
     }
     const wildcardMatch = mirrorTokens.find((token) => token.endsWith('*') && expected.startsWith(token.slice(0, -1)));
-    if (wildcardMatch) setMapping(map, conflicts, expected, `lyra-${suffix}`);
+    if (wildcardMatch) setMapping(map, conflicts, expected, `lr-${suffix}`);
   }
 }
 
-// The Shoelace table uses `<sl-x>` / `<lyra-x>` on both sides; every row in it is a clean 1:1
+// The Shoelace table uses `<sl-x>` / `<lr-x>` on both sides; every row in it is a clean 1:1
 // correspondence by suffix (verified against the current README), so this only maps a tag whose
 // suffix is present on both sides of the row.
 function parseSlTableRow(slCell, lyraCell, map, conflicts) {
   const slSuffixes = [...slCell.matchAll(/<sl-([a-z0-9-]+)>/g)].map((m) => m[1]);
-  const lyraSuffixes = new Set([...lyraCell.matchAll(/<lyra-([a-z0-9-]+)>/g)].map((m) => m[1]));
+  const lyraSuffixes = new Set([...lyraCell.matchAll(/<lr-([a-z0-9-]+)>/g)].map((m) => m[1]));
   for (const suffix of slSuffixes) {
-    if (lyraSuffixes.has(suffix)) setMapping(map, conflicts, `sl-${suffix}`, `lyra-${suffix}`);
+    if (lyraSuffixes.has(suffix)) setMapping(map, conflicts, `sl-${suffix}`, `lr-${suffix}`);
   }
 }
 

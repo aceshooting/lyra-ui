@@ -3,8 +3,8 @@ import { css } from 'lit';
 export const styles = css`
   :host {
     display: inline-block;
-    inline-size: var(--lyra-size-6em);
-    block-size: var(--lyra-size-1-5em);
+    inline-size: var(--lr-size-6em);
+    block-size: var(--lr-size-1-5em);
     vertical-align: middle;
   }
   svg {
@@ -15,18 +15,18 @@ export const styles = css`
   }
   [part='line'] {
     fill: none;
-    stroke: var(--lyra-color-brand);
-    stroke-width: var(--lyra-sparkline-stroke-width, 1.5);
+    stroke: var(--lr-color-brand);
+    stroke-width: var(--lr-sparkline-stroke-width, 1.5);
     stroke-linejoin: round;
     stroke-linecap: round;
     vector-effect: non-scaling-stroke;
   }
   [part='area'] {
-    fill: var(--lyra-color-brand);
-    opacity: var(--lyra-sparkline-area-opacity, 0.15);
+    fill: var(--lr-color-brand);
+    opacity: var(--lr-sparkline-area-opacity, 0.15);
     stroke: none;
   }
   [part='bar'] {
-    fill: var(--lyra-color-brand);
+    fill: var(--lr-color-brand);
   }
 `;

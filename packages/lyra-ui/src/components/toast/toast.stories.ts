@@ -4,12 +4,12 @@ import { toast, type ToastSize, type ToastPlacement } from '../../lyra.js';
 
 const meta: Meta = {
   title: 'Toast',
-  component: 'lyra-toast',
+  component: 'lr-toast',
   tags: ['autodocs'],
   parameters: {
     docs: {
       description: {
-        component: 'Click a button to fire a toast via the `toast()` helper — the ergonomic entry point that lazily mounts one `<lyra-toast>` region per placement on `document.body`.',
+        component: 'Click a button to fire a toast via the `toast()` helper — the ergonomic entry point that lazily mounts one `<lr-toast>` region per placement on `document.body`.',
       },
     },
   },

@@ -13,18 +13,18 @@ export type LyraPathElement =
   | { kind: 'edge'; relation: string; directed?: boolean; reverse?: boolean };
 
 export interface LyraPathStripEventMap {
-  'lyra-entity-activate': CustomEvent<{ id: string }>;
-  'lyra-relation-activate': CustomEvent<{ relation: string; sourceId?: string; targetId?: string }>;
+  'lr-entity-activate': CustomEvent<{ id: string }>;
+  'lr-relation-activate': CustomEvent<{ relation: string; sourceId?: string; targetId?: string }>;
 }
 
 /**
- * `<lyra-path-strip>` — a linear node -> relation -> node chain rendering "why A connects to B"
+ * `<lr-path-strip>` — a linear node -> relation -> node chain rendering "why A connects to B"
  * (GraphRAG local-search reasoning paths) as a compact, horizontally scrollable strip.
  * One-dimensional and presentational: no path finding, no branching, no per-element popovers.
  *
- * @customElement lyra-path-strip
- * @event lyra-entity-activate - A node element activated. `detail: { id }`.
- * @event lyra-relation-activate - An edge element activated. `detail: { relation, sourceId?,
+ * @customElement lr-path-strip
+ * @event lr-entity-activate - A node element activated. `detail: { id }`.
+ * @event lr-relation-activate - An edge element activated. `detail: { relation, sourceId?,
  * targetId? }` — source/target resolved from the adjacent node elements, `undefined` when the
  * path is malformed at that position.
  * @csspart base - The root wrapper, hosting the delegated roving-tabindex keydown handler.
@@ -48,12 +48,12 @@ export class LyraPathStrip extends LyraElement<LyraPathStripEventMap> {
     const el = this.path[index];
     if (!el) return;
     if (el.kind === 'node') {
-      this.emit('lyra-entity-activate', { id: el.node.id });
+      this.emit('lr-entity-activate', { id: el.node.id });
       return;
     }
     const source = this.path[index - 1];
     const target = this.path[index + 1];
-    this.emit('lyra-relation-activate', {
+    this.emit('lr-relation-activate', {
       relation: el.relation,
       sourceId: source?.kind === 'node' ? source.node.id : undefined,
       targetId: target?.kind === 'node' ? target.node.id : undefined,
@@ -145,9 +145,9 @@ export class LyraPathStrip extends LyraElement<LyraPathStripEventMap> {
     const label = this.label || this.localize('pathStripLabel');
     return html`
       <div part="base" @keydown=${this.onKeyDown}>
-        <lyra-scroller orientation="horizontal" controls label=${label}>
+        <lr-scroller orientation="horizontal" controls label=${label}>
           ${this.path.map((el, i) => (el.kind === 'node' ? this.renderNode(el.node, i) : this.renderEdge(el, i)))}
-        </lyra-scroller>
+        </lr-scroller>
         <div class="sr-only" role="status" aria-live="polite">${this.liveText}</div>
       </div>
     `;
@@ -156,6 +156,6 @@ export class LyraPathStrip extends LyraElement<LyraPathStripEventMap> {
 
 declare global {
   interface HTMLElementTagNameMap {
-    'lyra-path-strip': LyraPathStrip;
+    'lr-path-strip': LyraPathStrip;
   }
 }

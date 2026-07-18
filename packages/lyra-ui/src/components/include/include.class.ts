@@ -12,7 +12,7 @@ export type LyraIncludeMode = 'cors' | 'no-cors' | 'same-origin';
 const VALID_MODES: ReadonlySet<string> = new Set<LyraIncludeMode>(['cors', 'no-cors', 'same-origin']);
 
 /**
- * Why a `lyra-include-error` fired instead of a successful `lyra-load`:
+ * Why a `lr-include-error` fired instead of a successful `lr-load`:
  * - `'blocked-url'` — `src` failed the shared `safeFetchUrl()` scheme
  *   allowlist; `fetch()` was never called.
  * - `'network'` — `fetch()` itself rejected (DNS/CORS/connection failure).
@@ -25,19 +25,19 @@ const VALID_MODES: ReadonlySet<string> = new Set<LyraIncludeMode>(['cors', 'no-c
 export type LyraIncludeErrorReason = 'blocked-url' | 'network' | 'http' | 'missing-sanitizer' | 'resource-too-large';
 
 export interface LyraIncludeEventMap {
-  'lyra-load': CustomEvent<{ src: string }>;
-  'lyra-include-error': CustomEvent<{ status: number; reason: LyraIncludeErrorReason; error?: unknown }>;
+  'lr-load': CustomEvent<{ src: string }>;
+  'lr-include-error': CustomEvent<{ status: number; reason: LyraIncludeErrorReason; error?: unknown }>;
 }
 
 /**
- * `<lyra-include>` fetches an HTML fragment from `src` and transcludes it into
+ * `<lr-include>` fetches an HTML fragment from `src` and transcludes it into
  * the page as sanitized light-DOM content, so the fragment participates in
  * the surrounding page's CSS cascade exactly like a native server-side
- * include — unlike `<lyra-html-viewer>`, which renders a foreign document
+ * include — unlike `<lr-html-viewer>`, which renders a foreign document
  * inside an isolated preview card.
  *
  * The fetched markup always passes through the shared DOMPurify-backed
- * sanitizer (`loadHtmlSanitizer()`, the same loader `<lyra-html-viewer>`
+ * sanitizer (`loadHtmlSanitizer()`, the same loader `<lr-html-viewer>`
  * uses) before it ever touches `innerHTML` — there is no `allow-scripts`
  * escape hatch here, unlike the Web Awesome/Shoelace components this element
  * otherwise mirrors: their raw, unsanitized injection (with an opt-in to
@@ -56,8 +56,8 @@ export interface LyraIncludeEventMap {
  * This is a deliberately bare transclusion primitive with no label/hint/
  * error chrome — its interaction idiom (silently swapping light-DOM content)
  * is incompatible with a generic label/hint/error frame. Listen for
- * `lyra-include-error` to build your own error UI, and author meaningful
- * fallback content inside `<lyra-include>` for when the fetch never
+ * `lr-include-error` to build your own error UI, and author meaningful
+ * fallback content inside `<lr-include>` for when the fetch never
  * succeeds; that fallback (and any previously successful include) is left
  * untouched on failure. No `aria-live` region wraps the slot either: the
  * fragment can contain its own landmarks and nested content, and forcing the
@@ -70,10 +70,10 @@ export interface LyraIncludeEventMap {
  * is set on the host while a fetch is in flight and removed once it settles,
  * whether it succeeds or fails.
  *
- * @customElement lyra-include
+ * @customElement lr-include
  * @slot - Fallback content shown until (or unless) a fetch succeeds; overwritten with the sanitized fragment once one does.
- * @event lyra-load - The fetched fragment was sanitized and written into the light DOM.
- * @event lyra-include-error - Fetching or sanitizing the fragment failed; see `LyraIncludeErrorReason` for `detail.reason`.
+ * @event lr-load - The fetched fragment was sanitized and written into the light DOM.
+ * @event lr-include-error - Fetching or sanitizing the fragment failed; see `LyraIncludeErrorReason` for `detail.reason`.
  * @csspart base - The non-layout (`display: contents`) wrapper around the default slot.
  */
 export class LyraInclude extends LyraElement<LyraIncludeEventMap> {
@@ -120,7 +120,7 @@ export class LyraInclude extends LyraElement<LyraIncludeEventMap> {
 
     const url = safeFetchUrl(this.src);
     if (!url) {
-      this.emit('lyra-include-error', { status: 0, reason: 'blocked-url' });
+      this.emit('lr-include-error', { status: 0, reason: 'blocked-url' });
       return;
     }
 
@@ -141,7 +141,7 @@ export class LyraInclude extends LyraElement<LyraIncludeEventMap> {
       if (generation !== this.generation || !this.isConnected) return; // superseded/detached — silent
       this.innerHTML = markup;
       this.removeAttribute('aria-busy');
-      this.emit('lyra-load', { src: this.src });
+      this.emit('lr-load', { src: this.src });
     } catch (error) {
       if (isAbortError(error) || !this.isConnected || generation !== this.generation) return; // silent
       this.fail(0, isResourceLimitError(error) ? 'resource-too-large' : 'network', error);
@@ -150,7 +150,7 @@ export class LyraInclude extends LyraElement<LyraIncludeEventMap> {
 
   private fail(status: number, reason: LyraIncludeErrorReason, error?: unknown): void {
     this.removeAttribute('aria-busy');
-    this.emit('lyra-include-error', { status, reason, error });
+    this.emit('lr-include-error', { status, reason, error });
   }
 
   render(): TemplateResult {
@@ -160,6 +160,6 @@ export class LyraInclude extends LyraElement<LyraIncludeEventMap> {
 
 declare global {
   interface HTMLElementTagNameMap {
-    'lyra-include': LyraInclude;
+    'lr-include': LyraInclude;
   }
 }

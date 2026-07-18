@@ -4,7 +4,7 @@ import './message-feedback.js';
 
 const meta: Meta = {
   title: 'MessageFeedback',
-  component: 'lyra-message-feedback',
+  component: 'lr-message-feedback',
   tags: ['autodocs'],
   parameters: {
     docs: {
@@ -19,53 +19,53 @@ export default meta;
 type Story = StoryObj;
 
 export const ThumbsOnly: Story = {
-  render: () => html`<lyra-message-feedback></lyra-message-feedback>`,
+  render: () => html`<lr-message-feedback></lr-message-feedback>`,
 };
 
 export const WithReasonsAndComment: Story = {
   render: () => html`
-    <lyra-message-feedback
+    <lr-message-feedback
       .reasons=${[
         { id: 'wrong', label: 'Factually wrong' },
         { id: 'unhelpful', label: 'Not helpful' },
         { id: 'unsafe', label: 'Unsafe or harmful' },
       ]}
       commentable
-    ></lyra-message-feedback>
+    ></lr-message-feedback>
   `,
 };
 
 /** `detail-for="both"` opens the reason/comment panel for either thumb, not just the down one. */
 export const DetailOnBothThumbs: Story = {
   render: () => html`
-    <lyra-message-feedback
+    <lr-message-feedback
       detail-for="both"
       .reasons=${[
         { id: 'accurate', label: 'Accurate' },
         { id: 'creative', label: 'Creative' },
       ]}
       commentable
-    ></lyra-message-feedback>
+    ></lr-message-feedback>
   `,
 };
 
 /** A host reflecting a previously-recorded rating back read-only: `value` set, `disabled` set. */
 export const RecordedReadOnly: Story = {
-  render: () => html`<lyra-message-feedback value="up" disabled></lyra-message-feedback>`,
+  render: () => html`<lr-message-feedback value="up" disabled></lr-message-feedback>`,
 };
 
 /** 320px container — the panel already stacks in a flex column and the comment field is
  *  full-width by construction, so it fits with no horizontal overflow. */
 export const Narrow320px: Story = {
   render: () => html`
-    <div style="max-width:320px;border:1px dashed var(--lyra-color-border);padding:8px;">
-      <lyra-message-feedback
+    <div style="max-width:320px;border:1px dashed var(--lr-color-border);padding:8px;">
+      <lr-message-feedback
         .reasons=${[
           { id: 'wrong', label: 'Factually wrong' },
           { id: 'unhelpful', label: 'Not helpful' },
         ]}
         commentable
-      ></lyra-message-feedback>
+      ></lr-message-feedback>
     </div>
   `,
 };

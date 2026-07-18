@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite'; import { html } from 'lit'; import './data-grid.js';
-const meta: Meta = { title: 'Data Grid', component: 'lyra-data-grid', tags: ['autodocs'] }; export default meta; type Story = StoryObj;
-export const Default: Story = { render: () => html`<lyra-data-grid aria-label="People" .columns=${[{ key: 'name', label: 'Name', sortable: true }, { key: 'role', label: 'Role' }]} .rows=${[{ name: 'Ada Lovelace', role: 'Mathematician' }, { name: 'Grace Hopper', role: 'Engineer' }]}></lyra-data-grid>` };
+const meta: Meta = { title: 'Data Grid', component: 'lr-data-grid', tags: ['autodocs'] }; export default meta; type Story = StoryObj;
+export const Default: Story = { render: () => html`<lr-data-grid aria-label="People" .columns=${[{ key: 'name', label: 'Name', sortable: true }, { key: 'role', label: 'Role' }]} .rows=${[{ name: 'Ada Lovelace', role: 'Mathematician' }, { name: 'Grace Hopper', role: 'Engineer' }]}></lr-data-grid>` };
 export const NarrowAllocation: Story = {
   name: 'Multi-column grid at a 320px allocation',
   parameters: {
@@ -13,7 +13,7 @@ export const NarrowAllocation: Story = {
   },
   render: () => html`
     <div style="inline-size:320px; max-inline-size:100%;">
-      <lyra-data-grid
+      <lr-data-grid
         aria-label="People"
         .columns=${[
           { key: 'name', label: 'Name', sortable: true, width: '10rem' },
@@ -25,7 +25,7 @@ export const NarrowAllocation: Story = {
           { name: 'Ada Lovelace', role: 'Mathematician', location: 'London', email: 'ada@example.com' },
           { name: 'Grace Hopper', role: 'Engineer', location: 'New York', email: 'grace@example.com' },
         ]}
-      ></lyra-data-grid>
+      ></lr-data-grid>
     </div>
   `,
 };

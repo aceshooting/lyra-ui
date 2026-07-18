@@ -10,7 +10,7 @@ it('keeps scrolling on the editor frame instead of creating a nested textarea sc
 });
 
 it('renders line numbers and inserts spaces for Tab', async () => {
-  const el = (await fixture(html`<lyra-code-editor value="one\ntwo" tab-size="2"></lyra-code-editor>`)) as LyraCodeEditor;
+  const el = (await fixture(html`<lr-code-editor value="one\ntwo" tab-size="2"></lr-code-editor>`)) as LyraCodeEditor;
   expect(el.shadowRoot!.querySelectorAll('[part="gutter"] div')).to.have.length(2);
   const textarea = el.shadowRoot!.querySelector('textarea')!;
   textarea.focus(); textarea.setSelectionRange(0, 0); textarea.dispatchEvent(new KeyboardEvent('keydown', { key: 'Tab', bubbles: true, cancelable: true }));
@@ -25,11 +25,11 @@ it('renders line numbers and inserts spaces for Tab', async () => {
 // this was reachable from plain markup, not just a hand-crafted property write. `tabSize` is now
 // sanitized to a finite integer in `[1, 16]` at assignment time via `finiteInteger`, so neither
 // `Infinity` nor any other non-finite/negative/oversized value ever reaches `repeat()`. Matching
-// `finiteInteger`'s own established contract (see e.g. `<lyra-qr-code>`'s `size`/`radius`), a
+// `finiteInteger`'s own established contract (see e.g. `<lr-qr-code>`'s `size`/`radius`), a
 // non-finite input (Infinity/NaN) resolves to the documented fallback default, while a merely
 // out-of-range *finite* input clamps to the nearest bound instead.
 it('never throws RangeError from an Infinity/NaN/negative tabSize, and clamps it into a safe [1, 16] range', async () => {
-  const el = (await fixture(html`<lyra-code-editor value="one"></lyra-code-editor>`)) as LyraCodeEditor;
+  const el = (await fixture(html`<lr-code-editor value="one"></lr-code-editor>`)) as LyraCodeEditor;
   const textarea = el.shadowRoot!.querySelector('textarea')!;
   const pressTab = () => {
     textarea.focus();
@@ -68,7 +68,7 @@ it('never throws RangeError from an Infinity/NaN/negative tabSize, and clamps it
 // never performs real focus traversal for it — the observable contract is that the component
 // leaves the event un-defaultPrevented (letting a real browser traverse) and inserts nothing.
 it('lets Shift+Tab perform native reverse focus traversal instead of inserting spaces', async () => {
-  const el = (await fixture(html`<lyra-code-editor value="one"></lyra-code-editor>`)) as LyraCodeEditor;
+  const el = (await fixture(html`<lr-code-editor value="one"></lr-code-editor>`)) as LyraCodeEditor;
   const textarea = el.shadowRoot!.querySelector('textarea')!;
   textarea.focus();
   textarea.setSelectionRange(0, 0);
@@ -79,7 +79,7 @@ it('lets Shift+Tab perform native reverse focus traversal instead of inserting s
 });
 
 it('releases the next Tab for native forward focus traversal after Escape', async () => {
-  const el = (await fixture(html`<lyra-code-editor value="one"></lyra-code-editor>`)) as LyraCodeEditor;
+  const el = (await fixture(html`<lr-code-editor value="one"></lr-code-editor>`)) as LyraCodeEditor;
   const textarea = el.shadowRoot!.querySelector('textarea')!;
   textarea.focus();
   textarea.setSelectionRange(0, 0);
@@ -91,7 +91,7 @@ it('releases the next Tab for native forward focus traversal after Escape', asyn
 });
 
 it('re-arms Tab indentation after the Escape bypass is cancelled by typing or by leaving the editor', async () => {
-  const el = (await fixture(html`<lyra-code-editor value="one" tab-size="2"></lyra-code-editor>`)) as LyraCodeEditor;
+  const el = (await fixture(html`<lr-code-editor value="one" tab-size="2"></lr-code-editor>`)) as LyraCodeEditor;
   const textarea = el.shadowRoot!.querySelector('textarea')!;
   const pressTab = () => {
     textarea.setSelectionRange(0, 0);
@@ -116,13 +116,13 @@ it('re-arms Tab indentation after the Escape bypass is cancelled by typing or by
 });
 
 it('is accessible', async () => {
-  const el = await fixture(html`<lyra-code-editor label="Source"></lyra-code-editor>`);
+  const el = await fixture(html`<lr-code-editor label="Source"></lr-code-editor>`);
   await expect(el).to.be.accessible();
 });
 
 it('renders hint/errorText text and wires aria-describedby to the visible parts', async () => {
   const el = (await fixture(
-    html`<lyra-code-editor label="Source" hint="Keep it short" error-text="Required"></lyra-code-editor>`,
+    html`<lr-code-editor label="Source" hint="Keep it short" error-text="Required"></lr-code-editor>`,
   )) as LyraCodeEditor;
   const hint = el.shadowRoot!.querySelector('[part="hint"]') as HTMLElement;
   const error = el.shadowRoot!.querySelector('[part="error"]') as HTMLElement;
@@ -136,11 +136,11 @@ it('renders hint/errorText text and wires aria-describedby to the visible parts'
 
 it('supports label, hint, and error slots with same-shadow description ids', async () => {
   const el = (await fixture(html`
-    <lyra-code-editor>
+    <lr-code-editor>
       <span slot="label">Slotted label</span>
       <span slot="hint">Slotted hint</span>
       <span slot="error">Slotted error</span>
-    </lyra-code-editor>
+    </lr-code-editor>
   `)) as LyraCodeEditor;
   await el.updateComplete;
   const label = el.shadowRoot!.querySelector('[part="label"]') as HTMLElement;
@@ -154,7 +154,7 @@ it('supports label, hint, and error slots with same-shadow description ids', asy
 });
 
 it('hides hint/error parts and omits aria-describedby when unset', async () => {
-  const el = (await fixture(html`<lyra-code-editor></lyra-code-editor>`)) as LyraCodeEditor;
+  const el = (await fixture(html`<lr-code-editor></lr-code-editor>`)) as LyraCodeEditor;
   const hint = el.shadowRoot!.querySelector('[part="hint"]') as HTMLElement;
   const error = el.shadowRoot!.querySelector('[part="error"]') as HTMLElement;
   expect(hint.hidden).to.be.true;
@@ -164,7 +164,7 @@ it('hides hint/error parts and omits aria-describedby when unset', async () => {
 });
 
 it('toggles data-invalid once touched and invalid', async () => {
-  const el = (await fixture(html`<lyra-code-editor required></lyra-code-editor>`)) as LyraCodeEditor;
+  const el = (await fixture(html`<lr-code-editor required></lr-code-editor>`)) as LyraCodeEditor;
   await el.updateComplete;
   expect(el.hasAttribute('data-invalid')).to.be.false;
   const textarea = el.shadowRoot!.querySelector('textarea') as HTMLTextAreaElement;

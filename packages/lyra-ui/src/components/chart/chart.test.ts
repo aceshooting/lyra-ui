@@ -5,20 +5,20 @@ import type { LyraChart } from './chart.js';
 import { styles } from './chart.styles.js';
 
 it('shows a loading skeleton and aria-busy while chart.js loads, then swaps to the canvas', async () => {
-  const el = (await fixture(html`<lyra-chart></lyra-chart>`)) as LyraChart;
+  const el = (await fixture(html`<lr-chart></lr-chart>`)) as LyraChart;
   expect(el.getAttribute('aria-busy')).to.equal('true');
-  expect(el.shadowRoot!.querySelector('lyra-skeleton')).to.exist;
+  expect(el.shadowRoot!.querySelector('lr-skeleton')).to.exist;
   expect(el.shadowRoot!.querySelector('canvas')).to.not.exist;
 
   await waitUntil(() => (el as any).chart != null, 'chart.js never initialized', { timeout: 5000 });
 
   expect(el.hasAttribute('aria-busy')).to.be.false;
-  expect(el.shadowRoot!.querySelector('lyra-skeleton')).to.not.exist;
+  expect(el.shadowRoot!.querySelector('lr-skeleton')).to.not.exist;
   expect(el.shadowRoot!.querySelector('canvas')).to.exist;
 });
 
 it('renders a canvas and builds a Chart.js instance once chart.js loads', async () => {
-  const el = (await fixture(html`<lyra-chart></lyra-chart>`)) as LyraChart;
+  const el = (await fixture(html`<lr-chart></lr-chart>`)) as LyraChart;
   el.type = 'line';
   el.labels = ['Jan', 'Feb', 'Mar'];
   el.datasets = [{ label: 'Revenue', data: [1, 2, 3] }];
@@ -29,7 +29,7 @@ it('renders a canvas and builds a Chart.js instance once chart.js loads', async 
 });
 
 it('normalizes an invalid HTML `type` attribute before it can reach Chart.js', () => {
-  const el = document.createElement('lyra-chart') as LyraChart;
+  const el = document.createElement('lr-chart') as LyraChart;
   el.setAttribute('type', 'unregistered-controller');
 
   expect(el.type).to.equal('line');
@@ -37,14 +37,14 @@ it('normalizes an invalid HTML `type` attribute before it can reach Chart.js', (
 });
 
 it('falls back to line when an untyped runtime write assigns an invalid chart type', () => {
-  const el = document.createElement('lyra-chart') as LyraChart;
+  const el = document.createElement('lr-chart') as LyraChart;
   (el as unknown as { type: string }).type = 'unregistered-controller';
 
   expect((el as any).buildConfig().type).to.equal('line');
 });
 
 it('updates in place (same Chart instance) when only data changes', async () => {
-  const el = (await fixture(html`<lyra-chart></lyra-chart>`)) as LyraChart;
+  const el = (await fixture(html`<lr-chart></lr-chart>`)) as LyraChart;
   el.type = 'bar';
   el.labels = ['A', 'B'];
   el.datasets = [{ label: 'x', data: [1, 2] }];
@@ -57,7 +57,7 @@ it('updates in place (same Chart instance) when only data changes', async () => 
 });
 
 it('preserves a legend-toggled hidden dataset across an in-place datasets-only update', async () => {
-  const el = (await fixture(html`<lyra-chart></lyra-chart>`)) as LyraChart;
+  const el = (await fixture(html`<lr-chart></lr-chart>`)) as LyraChart;
   el.type = 'bar';
   el.labels = ['A', 'B'];
   el.datasets = [
@@ -80,7 +80,7 @@ it('preserves a legend-toggled hidden dataset across an in-place datasets-only u
 });
 
 it('repaints after restoring a legend-toggled hidden dataset, not just updating metadata', async () => {
-  const el = (await fixture(html`<lyra-chart></lyra-chart>`)) as LyraChart;
+  const el = (await fixture(html`<lr-chart></lr-chart>`)) as LyraChart;
   el.type = 'bar';
   el.labels = ['A', 'B'];
   el.datasets = [
@@ -121,7 +121,7 @@ it('repaints after restoring a legend-toggled hidden dataset, not just updating 
 });
 
 it('keeps a newly-added series visible instead of inheriting a stale hidden default', async () => {
-  const el = (await fixture(html`<lyra-chart></lyra-chart>`)) as LyraChart;
+  const el = (await fixture(html`<lr-chart></lr-chart>`)) as LyraChart;
   el.type = 'bar';
   el.labels = ['A', 'B'];
   el.datasets = [{ label: 'x', data: [1, 2] }];
@@ -144,7 +144,7 @@ it('keeps a newly-added series visible instead of inheriting a stale hidden defa
 });
 
 it('does not restore visibility for a dataset index removed by a shrinking update', async () => {
-  const el = (await fixture(html`<lyra-chart></lyra-chart>`)) as LyraChart;
+  const el = (await fixture(html`<lr-chart></lr-chart>`)) as LyraChart;
   el.type = 'bar';
   el.labels = ['A', 'B'];
   el.datasets = [
@@ -178,7 +178,7 @@ it('does not restore visibility for a dataset index removed by a shrinking updat
 });
 
 it('rebuilds (new Chart instance) when type changes', async () => {
-  const el = (await fixture(html`<lyra-chart></lyra-chart>`)) as LyraChart;
+  const el = (await fixture(html`<lr-chart></lr-chart>`)) as LyraChart;
   el.type = 'line';
   el.labels = ['A', 'B'];
   el.datasets = [{ label: 'x', data: [1, 2] }];
@@ -191,7 +191,7 @@ it('rebuilds (new Chart instance) when type changes', async () => {
 });
 
 it('exposes role=img with a dataset-label-derived aria-label', async () => {
-  const el = (await fixture(html`<lyra-chart></lyra-chart>`)) as LyraChart;
+  const el = (await fixture(html`<lr-chart></lr-chart>`)) as LyraChart;
   el.datasets = [{ label: 'Revenue', data: [1] }];
   await el.updateComplete;
   await waitUntil(() => (el as any).chart != null);
@@ -202,7 +202,7 @@ it('exposes role=img with a dataset-label-derived aria-label', async () => {
 
 it('forwards a host aria-label to the canvas and keeps the chart role on that semantic element only', async () => {
   const el = (await fixture(html`
-    <lyra-chart aria-label="Quarterly revenue" accessible-label="Legacy chart label"></lyra-chart>
+    <lr-chart aria-label="Quarterly revenue" accessible-label="Legacy chart label"></lr-chart>
   `)) as LyraChart;
   el.datasets = [{ label: 'Revenue', data: [1] }];
   await el.updateComplete;
@@ -216,7 +216,7 @@ it('forwards a host aria-label to the canvas and keeps the chart role on that se
 });
 
 it('formats generated summary values with the effective locale', async () => {
-  const el = (await fixture(html`<lyra-chart locale="de-DE"></lyra-chart>`)) as LyraChart;
+  const el = (await fixture(html`<lr-chart locale="de-DE"></lr-chart>`)) as LyraChart;
   el.datasets = [{ label: 'Revenue', data: [1234.5, 2345.75] }];
   await el.updateComplete;
   await waitUntil(() => (el as any).chart != null);
@@ -227,7 +227,7 @@ it('formats generated summary values with the effective locale', async () => {
 });
 
 it('localizes the chart-type name in the generated summary instead of the raw Chart.js identifier', async () => {
-  const el = (await fixture(html`<lyra-chart type="polarArea"></lyra-chart>`)) as LyraChart;
+  const el = (await fixture(html`<lr-chart type="polarArea"></lr-chart>`)) as LyraChart;
   el.labels = ['A'];
   el.datasets = [{ label: 'Revenue', data: [1] }];
   await el.updateComplete;
@@ -239,7 +239,7 @@ it('localizes the chart-type name in the generated summary instead of the raw Ch
 });
 
 it('joins per-series summary sentences with the localizable chartSummarySeparator message', async () => {
-  const el = (await fixture(html`<lyra-chart></lyra-chart>`)) as LyraChart;
+  const el = (await fixture(html`<lr-chart></lr-chart>`)) as LyraChart;
   el.strings = { chartSummarySeparator: ' | ' };
   el.labels = ['A'];
   el.datasets = [
@@ -254,7 +254,7 @@ it('joins per-series summary sentences with the localizable chartSummarySeparato
 });
 
 it('exposes a customizable accessible description and a data-table alternative', async () => {
-  const el = (await fixture(html`<lyra-chart></lyra-chart>`)) as LyraChart;
+  const el = (await fixture(html`<lr-chart></lr-chart>`)) as LyraChart;
   el.accessibleLabel = 'Revenue history';
   el.accessibleDescription = 'Revenue rises from January through March.';
   el.showDataTable = true;
@@ -275,7 +275,7 @@ it('exposes a customizable accessible description and a data-table alternative',
 });
 
 it('exposes part="canvas" on the canvas element, matching the documented @csspart surface', async () => {
-  const el = (await fixture(html`<lyra-chart></lyra-chart>`)) as LyraChart;
+  const el = (await fixture(html`<lr-chart></lr-chart>`)) as LyraChart;
   el.datasets = [{ label: 'Revenue', data: [1] }];
   await el.updateComplete;
   await waitUntil(() => (el as any).chart != null);
@@ -284,7 +284,7 @@ it('exposes part="canvas" on the canvas element, matching the documented @csspar
 });
 
 it('is accessible', async () => {
-  const el = (await fixture(html`<lyra-chart></lyra-chart>`)) as LyraChart;
+  const el = (await fixture(html`<lr-chart></lr-chart>`)) as LyraChart;
   el.datasets = [{ label: 'x', data: [1, 2] }];
   await el.updateComplete;
   await waitUntil(() => (el as any).chart != null);
@@ -294,10 +294,10 @@ it('is accessible', async () => {
 it('can shrink to a 320px allocation with long chart content', async () => {
   const wrapper = await fixture(html`
     <div style="display: flex; inline-size: 320px;">
-      <lyra-chart></lyra-chart>
+      <lr-chart></lr-chart>
     </div>
   `);
-  const el = wrapper.querySelector('lyra-chart') as LyraChart;
+  const el = wrapper.querySelector('lr-chart') as LyraChart;
   el.labels = ['A category label that is intentionally very long', 'Another translated category label'];
   el.datasets = [{ label: 'A deliberately long translated revenue series label', data: [1, 2] }];
   await el.updateComplete;
@@ -308,7 +308,7 @@ it('can shrink to a 320px allocation with long chart content', async () => {
 });
 
 it('deep-merges the raw `config` passthrough over the generated options, keeping ungiven generated fields', async () => {
-  const el = (await fixture(html`<lyra-chart></lyra-chart>`)) as LyraChart;
+  const el = (await fixture(html`<lr-chart></lr-chart>`)) as LyraChart;
   el.type = 'line';
   el.labels = ['A', 'B'];
   el.datasets = [{ label: 'x', data: [1, 2] }];
@@ -324,7 +324,7 @@ it('deep-merges the raw `config` passthrough over the generated options, keeping
 });
 
 it('redraws when a config callback is replaced even though its surrounding data is unchanged', async () => {
-  const el = (await fixture(html`<lyra-chart></lyra-chart>`)) as LyraChart;
+  const el = (await fixture(html`<lr-chart></lr-chart>`)) as LyraChart;
   el.labels = ['A'];
   el.datasets = [{ label: 'x', data: [1] }];
   const first = () => 'first';
@@ -342,7 +342,7 @@ it('redraws when a config callback is replaced even though its surrounding data 
 });
 
 it('does not serialize circular or BigInt config values while building the Chart.js config', () => {
-  const el = document.createElement('lyra-chart') as LyraChart;
+  const el = document.createElement('lr-chart') as LyraChart;
   const circular: Record<string, unknown> = { options: {} };
   circular.self = circular;
   circular.count = 1n;
@@ -357,7 +357,7 @@ it('does not serialize circular or BigInt config values while building the Chart
 });
 
 it('deep-merges the same reused override object independently at each config position', () => {
-  const el = document.createElement('lyra-chart') as LyraChart;
+  const el = document.createElement('lr-chart') as LyraChart;
   el.type = 'bar';
   el.labels = ['A'];
   el.datasets = [{ label: 'x', data: [1] }];
@@ -374,7 +374,7 @@ it('deep-merges the same reused override object independently at each config pos
 });
 
 it('rebuilds when `config.type` overrides the effective type even though the `type` prop is unchanged', async () => {
-  const el = (await fixture(html`<lyra-chart></lyra-chart>`)) as LyraChart;
+  const el = (await fixture(html`<lr-chart></lr-chart>`)) as LyraChart;
   el.type = 'line';
   el.labels = ['A', 'B'];
   el.datasets = [{ label: 'x', data: [1, 2] }];
@@ -394,7 +394,7 @@ it('rebuilds when `config.type` overrides the effective type even though the `ty
 });
 
 it('updates in place when neither `type` nor the effective `config.type` changes', async () => {
-  const el = (await fixture(html`<lyra-chart></lyra-chart>`)) as LyraChart;
+  const el = (await fixture(html`<lr-chart></lr-chart>`)) as LyraChart;
   el.type = 'line';
   el.labels = ['A', 'B'];
   el.datasets = [{ label: 'x', data: [1, 2] }];
@@ -408,7 +408,7 @@ it('updates in place when neither `type` nor the effective `config.type` changes
 });
 
 it('lets `config.data` override generated data while the Chart instance picks up the override', async () => {
-  const el = (await fixture(html`<lyra-chart></lyra-chart>`)) as LyraChart;
+  const el = (await fixture(html`<lr-chart></lr-chart>`)) as LyraChart;
   el.type = 'line';
   el.labels = ['A', 'B'];
   el.datasets = [{ label: 'x', data: [1, 2] }];
@@ -421,7 +421,7 @@ it('lets `config.data` override generated data while the Chart instance picks up
 });
 
 it('deep-merges a nested `config.options` key without clobbering the rest of the generated sibling object', async () => {
-  const el = (await fixture(html`<lyra-chart></lyra-chart>`)) as LyraChart;
+  const el = (await fixture(html`<lr-chart></lr-chart>`)) as LyraChart;
   el.type = 'line';
   el.labels = ['A', 'B'];
   el.yLabel = 'Revenue';
@@ -441,7 +441,7 @@ it('deep-merges a nested `config.options` key without clobbering the rest of the
 });
 
 it('gives a scatter chart a linear (not categorical) x scale', async () => {
-  const el = (await fixture(html`<lyra-chart></lyra-chart>`)) as LyraChart;
+  const el = (await fixture(html`<lr-chart></lr-chart>`)) as LyraChart;
   el.type = 'scatter';
   el.datasets = [{ label: 'x', points: [{ x: 10, y: 20 }, { x: 15, y: 10 }, { x: 20, y: 30 }] }];
   await el.updateComplete;
@@ -451,7 +451,7 @@ it('gives a scatter chart a linear (not categorical) x scale', async () => {
 });
 
 it('gives a bubble chart a linear (not categorical) x scale, matching its numeric {x,y,r} points', async () => {
-  const el = (await fixture(html`<lyra-chart></lyra-chart>`)) as LyraChart;
+  const el = (await fixture(html`<lr-chart></lr-chart>`)) as LyraChart;
   el.type = 'bubble';
   el.datasets = [{ label: 'x', points: [{ x: 10, y: 20 }, { x: 15, y: 10 }, { x: 20, y: 30 }] }];
   await el.updateComplete;
@@ -461,7 +461,7 @@ it('gives a bubble chart a linear (not categorical) x scale, matching its numeri
 });
 
 it('omits the scales block for a pie chart (no cartesian or radial axis applies)', async () => {
-  const el = (await fixture(html`<lyra-chart></lyra-chart>`)) as LyraChart;
+  const el = (await fixture(html`<lr-chart></lr-chart>`)) as LyraChart;
   el.type = 'pie';
   el.labels = ['A', 'B'];
   el.datasets = [{ label: 'x', data: [1, 2] }];
@@ -472,7 +472,7 @@ it('omits the scales block for a pie chart (no cartesian or radial axis applies)
 });
 
 it('omits the scales block for a doughnut chart (no cartesian or radial axis applies)', async () => {
-  const el = (await fixture(html`<lyra-chart></lyra-chart>`)) as LyraChart;
+  const el = (await fixture(html`<lr-chart></lr-chart>`)) as LyraChart;
   el.type = 'doughnut';
   el.labels = ['A', 'B'];
   el.datasets = [{ label: 'x', data: [1, 2] }];
@@ -483,7 +483,7 @@ it('omits the scales block for a doughnut chart (no cartesian or radial axis app
 });
 
 it('builds a radial `r` scale (not cartesian x/y) for a radar chart', async () => {
-  const el = (await fixture(html`<lyra-chart></lyra-chart>`)) as LyraChart;
+  const el = (await fixture(html`<lr-chart></lr-chart>`)) as LyraChart;
   el.type = 'radar';
   el.labels = ['A', 'B'];
   el.datasets = [{ label: 'x', data: [1, 2] }];
@@ -496,7 +496,7 @@ it('builds a radial `r` scale (not cartesian x/y) for a radar chart', async () =
 });
 
 it('builds a radial `r` scale (not cartesian x/y) for a polarArea chart', async () => {
-  const el = (await fixture(html`<lyra-chart></lyra-chart>`)) as LyraChart;
+  const el = (await fixture(html`<lr-chart></lr-chart>`)) as LyraChart;
   el.type = 'polarArea';
   el.labels = ['A', 'B'];
   el.datasets = [{ label: 'x', data: [1, 2] }];
@@ -509,7 +509,7 @@ it('builds a radial `r` scale (not cartesian x/y) for a polarArea chart', async 
 });
 
 it('still builds the cartesian x/y scales block for a line chart', async () => {
-  const el = (await fixture(html`<lyra-chart></lyra-chart>`)) as LyraChart;
+  const el = (await fixture(html`<lr-chart></lr-chart>`)) as LyraChart;
   el.type = 'line';
   el.labels = ['A', 'B'];
   el.datasets = [{ label: 'x', data: [1, 2] }];
@@ -522,7 +522,7 @@ it('still builds the cartesian x/y scales block for a line chart', async () => {
 });
 
 it('adds a right-side y2 scale when a dataset uses `axis: "y2"`, labelled by `y2Label`', async () => {
-  const el = (await fixture(html`<lyra-chart></lyra-chart>`)) as LyraChart;
+  const el = (await fixture(html`<lr-chart></lr-chart>`)) as LyraChart;
   el.type = 'line';
   el.labels = ['A', 'B'];
   el.y2Label = 'Secondary';
@@ -544,8 +544,8 @@ it('adds a right-side y2 scale when a dataset uses `axis: "y2"`, labelled by `y2
 });
 
 it('places primary and secondary y axes at logical start/end in RTL', async () => {
-  const wrapper = await fixture(html`<div dir="rtl"><lyra-chart></lyra-chart></div>`);
-  const el = wrapper.querySelector('lyra-chart') as LyraChart;
+  const wrapper = await fixture(html`<div dir="rtl"><lr-chart></lr-chart></div>`);
+  const el = wrapper.querySelector('lr-chart') as LyraChart;
   el.datasets = [
     { label: 'primary', data: [1, 2] },
     { label: 'secondary', data: [10, 20], axis: 'y2' },
@@ -559,7 +559,7 @@ it('places primary and secondary y axes at logical start/end in RTL', async () =
 });
 
 it('omits the y2 scale entirely when no dataset uses `axis: "y2"`', async () => {
-  const el = (await fixture(html`<lyra-chart></lyra-chart>`)) as LyraChart;
+  const el = (await fixture(html`<lr-chart></lr-chart>`)) as LyraChart;
   el.type = 'line';
   el.labels = ['A', 'B'];
   el.datasets = [{ label: 'primary', data: [1, 2] }];
@@ -570,7 +570,7 @@ it('omits the y2 scale entirely when no dataset uses `axis: "y2"`', async () => 
 });
 
 it('configures the zoom plugin only when `zoom` is true', async () => {
-  const el = (await fixture(html`<lyra-chart></lyra-chart>`)) as LyraChart;
+  const el = (await fixture(html`<lr-chart></lr-chart>`)) as LyraChart;
   el.type = 'line';
   el.labels = ['A', 'B'];
   el.datasets = [{ label: 'x', data: [1, 2] }];
@@ -585,8 +585,8 @@ it('configures the zoom plugin only when `zoom` is true', async () => {
   expect(config.options.plugins.zoom.zoom.drag.enabled).to.equal(true);
 });
 
-it('renders the reset-zoom-button part and emits `lyra-zoom` once `onZoomComplete` fires, then again on `resetZoom()`', async () => {
-  const el = (await fixture(html`<lyra-chart zoom></lyra-chart>`)) as LyraChart;
+it('renders the reset-zoom-button part and emits `lr-zoom` once `onZoomComplete` fires, then again on `resetZoom()`', async () => {
+  const el = (await fixture(html`<lr-chart zoom></lr-chart>`)) as LyraChart;
   el.type = 'line';
   el.labels = ['A', 'B'];
   el.datasets = [{ label: 'x', data: [1, 2] }];
@@ -597,14 +597,14 @@ it('renders the reset-zoom-button part and emits `lyra-zoom` once `onZoomComplet
 
   const onZoomComplete = (el as any).buildConfig().options.plugins.zoom.zoom.onZoomComplete;
   let event: CustomEvent | undefined;
-  el.addEventListener('lyra-zoom', (e) => (event = e as CustomEvent), { once: true });
+  el.addEventListener('lr-zoom', (e) => (event = e as CustomEvent), { once: true });
   onZoomComplete();
   await el.updateComplete;
   expect(event!.detail).to.deep.equal({ zoomed: true });
   expect(el.shadowRoot!.querySelector('[part="reset-zoom-button"]')).to.exist;
 
   let resetEvent: CustomEvent | undefined;
-  el.addEventListener('lyra-zoom', (e) => (resetEvent = e as CustomEvent), { once: true });
+  el.addEventListener('lr-zoom', (e) => (resetEvent = e as CustomEvent), { once: true });
   el.resetZoom();
   await el.updateComplete;
   expect(resetEvent!.detail).to.deep.equal({ zoomed: false });
@@ -612,7 +612,7 @@ it('renders the reset-zoom-button part and emits `lyra-zoom` once `onZoomComplet
 });
 
 it('resets the zoomed flag (and hides the reset-zoom-button) when a type change rebuilds the Chart.js instance while zoomed', async () => {
-  const el = (await fixture(html`<lyra-chart zoom></lyra-chart>`)) as LyraChart;
+  const el = (await fixture(html`<lr-chart zoom></lr-chart>`)) as LyraChart;
   el.type = 'line';
   el.labels = ['A', 'B'];
   el.datasets = [{ label: 'x', data: [1, 2] }];
@@ -633,7 +633,7 @@ it('resets the zoomed flag (and hides the reset-zoom-button) when a type change 
 });
 
 it('disables Chart.js animation when the user prefers reduced motion', async () => {
-  const el = (await fixture(html`<lyra-chart></lyra-chart>`)) as LyraChart;
+  const el = (await fixture(html`<lr-chart></lr-chart>`)) as LyraChart;
   el.type = 'line';
   el.labels = ['A', 'B'];
   el.datasets = [{ label: 'x', data: [1, 2] }];
@@ -655,7 +655,7 @@ it('disables Chart.js animation when the user prefers reduced motion', async () 
 });
 
 it('leaves Chart.js animation at its own default when the user has no reduced-motion preference', async () => {
-  const el = (await fixture(html`<lyra-chart></lyra-chart>`)) as LyraChart;
+  const el = (await fixture(html`<lr-chart></lr-chart>`)) as LyraChart;
   el.type = 'line';
   el.labels = ['A', 'B'];
   el.datasets = [{ label: 'x', data: [1, 2] }];
@@ -677,7 +677,7 @@ it('leaves Chart.js animation at its own default when the user has no reduced-mo
 });
 
 it('does not let a `__proto__` key in the raw `config` passthrough pollute Object.prototype', async () => {
-  const el = (await fixture(html`<lyra-chart></lyra-chart>`)) as LyraChart;
+  const el = (await fixture(html`<lr-chart></lr-chart>`)) as LyraChart;
   el.type = 'line';
   el.labels = ['A', 'B'];
   el.datasets = [{ label: 'x', data: [1, 2] }];
@@ -692,15 +692,15 @@ it('does not let a `__proto__` key in the raw `config` passthrough pollute Objec
   expect((config.options as any).polluted).to.equal(undefined);
 });
 
-it('applies `height` as `--lyra-chart-height` on the host, not on the shadow-tree [part=base] div', async () => {
-  const el = (await fixture(html`<lyra-chart height="500px"></lyra-chart>`)) as LyraChart;
+it('applies `height` as `--lr-chart-height` on the host, not on the shadow-tree [part=base] div', async () => {
+  const el = (await fixture(html`<lr-chart height="500px"></lr-chart>`)) as LyraChart;
   await el.updateComplete;
-  expect(el.style.getPropertyValue('--lyra-chart-height').trim()).to.equal('500px');
+  expect(el.style.getPropertyValue('--lr-chart-height').trim()).to.equal('500px');
   expect(getComputedStyle(el).height).to.equal('500px');
 
   el.height = '640px';
   await el.updateComplete;
-  expect(el.style.getPropertyValue('--lyra-chart-height').trim()).to.equal('640px');
+  expect(el.style.getPropertyValue('--lr-chart-height').trim()).to.equal('640px');
   expect(getComputedStyle(el).height).to.equal('640px');
 });
 
@@ -711,23 +711,23 @@ it('gives [part=reset-zoom-button] a token-driven :focus-visible outline, like e
     null,
   );
   const focusBody = focusVisibleBlock![1];
-  expect(focusBody).to.include('var(--lyra-focus-ring-width)');
-  expect(focusBody).to.include('var(--lyra-focus-ring-color)');
-  expect(focusBody).to.include('outline-offset: var(--lyra-focus-ring-offset)');
+  expect(focusBody).to.include('var(--lr-focus-ring-width)');
+  expect(focusBody).to.include('var(--lr-focus-ring-color)');
+  expect(focusBody).to.include('outline-offset: var(--lr-focus-ring-offset)');
 });
 
-it('resolves grid/tick/legend/tooltip colors from custom --lyra-chart-* values set on the host', async () => {
-  const el = (await fixture(html`<lyra-chart></lyra-chart>`)) as LyraChart;
+it('resolves grid/tick/legend/tooltip colors from custom --lr-chart-* values set on the host', async () => {
+  const el = (await fixture(html`<lr-chart></lr-chart>`)) as LyraChart;
   el.type = 'line';
   el.legend = true;
   el.xLabel = 'X';
   el.labels = ['A', 'B'];
   el.datasets = [{ label: 'x', data: [1, 2] }];
-  el.style.setProperty('--lyra-chart-grid-color', 'rgb(1, 2, 3)');
-  el.style.setProperty('--lyra-chart-tick-color', 'rgb(4, 5, 6)');
-  el.style.setProperty('--lyra-chart-legend-color', 'rgb(7, 8, 9)');
-  el.style.setProperty('--lyra-chart-tooltip-bg', 'rgb(10, 11, 12)');
-  el.style.setProperty('--lyra-chart-tooltip-text', 'rgb(13, 14, 15)');
+  el.style.setProperty('--lr-chart-grid-color', 'rgb(1, 2, 3)');
+  el.style.setProperty('--lr-chart-tick-color', 'rgb(4, 5, 6)');
+  el.style.setProperty('--lr-chart-legend-color', 'rgb(7, 8, 9)');
+  el.style.setProperty('--lr-chart-tooltip-bg', 'rgb(10, 11, 12)');
+  el.style.setProperty('--lr-chart-tooltip-text', 'rgb(13, 14, 15)');
   await el.updateComplete;
   await waitUntil(() => (el as any).chart != null);
 
@@ -744,7 +744,7 @@ it('resolves grid/tick/legend/tooltip colors from custom --lyra-chart-* values s
 });
 
 it('configures a fixed or auto-responsive legend position', async () => {
-  const el = (await fixture(html`<lyra-chart></lyra-chart>`)) as LyraChart;
+  const el = (await fixture(html`<lr-chart></lr-chart>`)) as LyraChart;
   el.legend = true;
   el.legendPosition = 'left';
   expect((el as any).buildConfig().options.plugins.legend.position).to.equal('left');
@@ -755,7 +755,7 @@ it('configures a fixed or auto-responsive legend position', async () => {
 });
 
 it('applies one valueFormatter to numeric ticks, tooltips, and legend values', async () => {
-  const el = (await fixture(html`<lyra-chart type="bar"></lyra-chart>`)) as LyraChart;
+  const el = (await fixture(html`<lr-chart type="bar"></lr-chart>`)) as LyraChart;
   el.labels = ['A', 'B'];
   el.datasets = [{ label: 'Revenue', data: [10, 20] }];
   el.legend = true;
@@ -774,7 +774,7 @@ it('applies one valueFormatter to numeric ticks, tooltips, and legend values', a
 
 it('positions the center slot from chart-area geometry', async () => {
   const el = (await fixture(html`
-    <lyra-doughnut-chart><span slot="center">Total</span></lyra-doughnut-chart>
+    <lr-doughnut-chart><span slot="center">Total</span></lr-doughnut-chart>
   `)) as LyraChart;
   (el as any).resolvedChartArea = { left: 20, top: 10, right: 180, bottom: 170, width: 160, height: 160 };
   await el.requestUpdate();
@@ -784,8 +784,8 @@ it('positions the center slot from chart-area geometry', async () => {
   expect(el.chartArea?.width).to.equal(160);
 });
 
-it('refreshTheme() forces a redraw that re-reads the --lyra-chart-* tokens after an out-of-band computed-style change', async () => {
-  const el = (await fixture(html`<lyra-chart></lyra-chart>`)) as LyraChart;
+it('refreshTheme() forces a redraw that re-reads the --lr-chart-* tokens after an out-of-band computed-style change', async () => {
+  const el = (await fixture(html`<lr-chart></lr-chart>`)) as LyraChart;
   el.type = 'line';
   el.labels = ['A', 'B'];
   el.datasets = [{ label: 'x', data: [1, 2] }];
@@ -795,15 +795,15 @@ it('refreshTheme() forces a redraw that re-reads the --lyra-chart-* tokens after
   // Out-of-band: mutates the computed style directly, without touching any
   // reactive property, so Lit's own `updated()` has nothing to redraw on —
   // exactly the case a consumer's theme-toggle handler hits.
-  el.style.setProperty('--lyra-chart-tooltip-bg', 'rgb(9, 9, 9)');
+  el.style.setProperty('--lr-chart-tooltip-bg', 'rgb(9, 9, 9)');
   expect((el as any).chart.options.plugins.tooltip.backgroundColor).to.not.equal('rgb(9, 9, 9)');
 
   el.refreshTheme();
   expect((el as any).chart.options.plugins.tooltip.backgroundColor).to.equal('rgb(9, 9, 9)');
 });
 
-it('emits `lyra-point-click` with the resolved point detail when the wired onClick handler fires', async () => {
-  const el = (await fixture(html`<lyra-chart></lyra-chart>`)) as LyraChart;
+it('emits `lr-point-click` with the resolved point detail when the wired onClick handler fires', async () => {
+  const el = (await fixture(html`<lr-chart></lr-chart>`)) as LyraChart;
   el.type = 'bar';
   el.labels = ['A', 'B'];
   el.datasets = [{ label: 'x', data: [10, 20] }];
@@ -823,7 +823,7 @@ it('emits `lyra-point-click` with the resolved point detail when the wired onCli
   try {
     const onClick = (el as any).buildConfig().options.onClick;
     let event: CustomEvent | undefined;
-    el.addEventListener('lyra-point-click', (e) => (event = e as CustomEvent), { once: true });
+    el.addEventListener('lr-point-click', (e) => (event = e as CustomEvent), { once: true });
     onClick({} as never, [], chart);
     expect(event!.detail).to.deep.equal({ datasetIndex: 0, index: 1, label: 'B', value: 20 });
   } finally {
@@ -831,8 +831,8 @@ it('emits `lyra-point-click` with the resolved point detail when the wired onCli
   }
 });
 
-it('does not emit `lyra-point-click` when the click misses every point/segment', async () => {
-  const el = (await fixture(html`<lyra-chart></lyra-chart>`)) as LyraChart;
+it('does not emit `lr-point-click` when the click misses every point/segment', async () => {
+  const el = (await fixture(html`<lr-chart></lr-chart>`)) as LyraChart;
   el.type = 'bar';
   el.labels = ['A', 'B'];
   el.datasets = [{ label: 'x', data: [10, 20] }];
@@ -845,7 +845,7 @@ it('does not emit `lyra-point-click` when the click misses every point/segment',
   try {
     const onClick = (el as any).buildConfig().options.onClick;
     let fired = false;
-    el.addEventListener('lyra-point-click', () => (fired = true), { once: true });
+    el.addEventListener('lr-point-click', () => (fired = true), { once: true });
     onClick({} as never, [], chart);
     expect(fired).to.equal(false);
   } finally {
@@ -854,7 +854,7 @@ it('does not emit `lyra-point-click` when the click misses every point/segment',
 });
 
 it('sets `options.indexAxis` to "y" only when `horizontal` is true', async () => {
-  const el = (await fixture(html`<lyra-chart></lyra-chart>`)) as LyraChart;
+  const el = (await fixture(html`<lr-chart></lr-chart>`)) as LyraChart;
   el.type = 'bar';
   el.labels = ['A', 'B'];
   el.datasets = [{ label: 'x', data: [1, 2] }];
@@ -868,7 +868,7 @@ it('sets `options.indexAxis` to "y" only when `horizontal` is true', async () =>
 });
 
 it('stacks the x/y (and y2) scale entries for a bar chart when `stacked` is true, and leaves them unstacked by default', async () => {
-  const el = (await fixture(html`<lyra-chart></lyra-chart>`)) as LyraChart;
+  const el = (await fixture(html`<lr-chart></lr-chart>`)) as LyraChart;
   el.type = 'bar';
   el.labels = ['A', 'B'];
   el.datasets = [{ label: 'x', data: [1, 2] }];
@@ -886,7 +886,7 @@ it('stacks the x/y (and y2) scale entries for a bar chart when `stacked` is true
 });
 
 it('also stacks the y2 scale of a dual-axis line chart when `stacked` is true', async () => {
-  const el = (await fixture(html`<lyra-chart stacked></lyra-chart>`)) as LyraChart;
+  const el = (await fixture(html`<lr-chart stacked></lr-chart>`)) as LyraChart;
   el.type = 'line';
   el.labels = ['A', 'B'];
   el.datasets = [
@@ -900,7 +900,7 @@ it('also stacks the y2 scale of a dual-axis line chart when `stacked` is true', 
 });
 
 it('does not stack a scatter chart\'s linear x scale even when `stacked` is true (bar/line types only, per spec)', async () => {
-  const el = (await fixture(html`<lyra-chart stacked></lyra-chart>`)) as LyraChart;
+  const el = (await fixture(html`<lr-chart stacked></lr-chart>`)) as LyraChart;
   el.type = 'scatter';
   el.datasets = [{ label: 'x', points: [{ x: 1, y: 2 }] }];
   await el.updateComplete;
@@ -910,7 +910,7 @@ it('does not stack a scatter chart\'s linear x scale even when `stacked` is true
 });
 
 it('skips redrawing when scrolled off-screen', async () => {
-  const el = (await fixture(html`<lyra-chart></lyra-chart>`)) as LyraChart;
+  const el = (await fixture(html`<lr-chart></lr-chart>`)) as LyraChart;
   el.type = 'bar';
   el.labels = ['A', 'B'];
   el.datasets = [{ label: 'x', data: [1, 2] }];
@@ -923,7 +923,7 @@ it('skips redrawing when scrolled off-screen', async () => {
 });
 
 it('redraws once when it becomes visible again after being off-screen', async () => {
-  const el = (await fixture(html`<lyra-chart></lyra-chart>`)) as LyraChart;
+  const el = (await fixture(html`<lr-chart></lr-chart>`)) as LyraChart;
   el.type = 'bar';
   el.labels = ['A', 'B'];
   el.datasets = [{ label: 'x', data: [1, 2] }];
@@ -939,7 +939,7 @@ it('redraws once when it becomes visible again after being off-screen', async ()
 });
 
 it('skips redrawing when the content signature is unchanged', async () => {
-  const el = (await fixture(html`<lyra-chart></lyra-chart>`)) as LyraChart;
+  const el = (await fixture(html`<lr-chart></lr-chart>`)) as LyraChart;
   el.type = 'bar';
   el.labels = ['A', 'B'];
   el.datasets = [{ label: 'x', data: [1, 2] }];
@@ -952,7 +952,7 @@ it('skips redrawing when the content signature is unchanged', async () => {
 });
 
 it('refreshTheme() always redraws regardless of the signature gate', async () => {
-  const el = (await fixture(html`<lyra-chart></lyra-chart>`)) as LyraChart;
+  const el = (await fixture(html`<lr-chart></lr-chart>`)) as LyraChart;
   el.type = 'bar';
   el.labels = ['A', 'B'];
   el.datasets = [{ label: 'x', data: [1, 2] }];
@@ -965,7 +965,7 @@ it('refreshTheme() always redraws regardless of the signature gate', async () =>
 
 it('builds scales for the config-overridden effective type, not the attribute type', async () => {
   const el = (await fixture(
-    html`<lyra-chart type="line" .datasets=${[{ label: 'a', data: [1, 2] }]} .config=${{ type: 'radar' }}></lyra-chart>`,
+    html`<lr-chart type="line" .datasets=${[{ label: 'a', data: [1, 2] }]} .config=${{ type: 'radar' }}></lr-chart>`,
   )) as LyraChart;
   await aTimeout(50);
   const chart = (el as unknown as { chart?: { options: { scales?: Record<string, unknown> } } }).chart;
@@ -975,7 +975,7 @@ it('builds scales for the config-overridden effective type, not the attribute ty
 
 it('actually suppresses the tooltip for a noTooltip series via plugin-level filtering', async () => {
   const el = (await fixture(
-    html`<lyra-chart type="line" .datasets=${[{ label: 'a', data: [1], noTooltip: true }, { label: 'b', data: [2] }]}></lyra-chart>`,
+    html`<lr-chart type="line" .datasets=${[{ label: 'a', data: [1], noTooltip: true }, { label: 'b', data: [2] }]}></lr-chart>`,
   )) as LyraChart;
   await aTimeout(50);
   const chart = (el as unknown as { chart?: { options: { plugins?: { tooltip?: { filter?: (item: { datasetIndex: number }) => boolean } } } } }).chart;
@@ -985,7 +985,7 @@ it('actually suppresses the tooltip for a noTooltip series via plugin-level filt
 });
 
 it('does not construct a Chart.js instance if disconnected before the lazy chart.js import settles', async () => {
-  const el = document.createElement('lyra-chart') as LyraChart;
+  const el = document.createElement('lr-chart') as LyraChart;
   el.datasets = [{ label: 'a', data: [1] }];
   document.body.appendChild(el);
   el.remove();
@@ -994,7 +994,7 @@ it('does not construct a Chart.js instance if disconnected before the lazy chart
 });
 
 it('does not leak a Chart instance bound to a detached canvas when zoom turns on and the element disconnects before loadChartJsWithZoom() resolves', async () => {
-  const el = (await fixture(html`<lyra-chart></lyra-chart>`)) as LyraChart;
+  const el = (await fixture(html`<lr-chart></lr-chart>`)) as LyraChart;
   el.type = 'line';
   el.labels = ['A', 'B'];
   el.datasets = [{ label: 'x', data: [1, 2] }];
@@ -1021,7 +1021,7 @@ it('does not leak a Chart instance bound to a detached canvas when zoom turns on
 });
 
 it('localizes the data table header and per-row fallback label via this.localize()', async () => {
-  const el = (await fixture(html`<lyra-chart></lyra-chart>`)) as LyraChart;
+  const el = (await fixture(html`<lr-chart></lr-chart>`)) as LyraChart;
   el.type = 'line';
   el.labels = [];
   el.datasets = [{ label: 'Revenue', data: [1, 2] }];
@@ -1035,7 +1035,7 @@ it('localizes the data table header and per-row fallback label via this.localize
 });
 
 it('defaults to English "Category"/"Point N" when no strings override is set', async () => {
-  const el = (await fixture(html`<lyra-chart></lyra-chart>`)) as LyraChart;
+  const el = (await fixture(html`<lr-chart></lr-chart>`)) as LyraChart;
   el.type = 'line';
   el.labels = [];
   el.datasets = [{ label: 'Revenue', data: [1, 2] }];
@@ -1048,7 +1048,7 @@ it('defaults to English "Category"/"Point N" when no strings override is set', a
 });
 
 it('localizes the "Reset zoom" button text via this.localize()', async () => {
-  const el = (await fixture(html`<lyra-chart zoom></lyra-chart>`)) as LyraChart;
+  const el = (await fixture(html`<lr-chart zoom></lr-chart>`)) as LyraChart;
   el.type = 'line';
   el.labels = ['Jan', 'Feb'];
   el.datasets = [{ label: 'Revenue', data: [1, 2] }];

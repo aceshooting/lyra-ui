@@ -7,77 +7,77 @@ export const styles = css`
     vertical-align: middle;
     /* One custom-property trio swapped by the :host([tone]) rules below,
        rather than repeating background/color/border per part per tone —
-       mirrors lyra-tool-call-chip's/lyra-attachment-chip's identical
+       mirrors lr-tool-call-chip's/lr-attachment-chip's identical
        -accent/-bg/-border trio so a chip's tone vocabulary reads the same
        everywhere in the library. 'neutral' has no dedicated token pair (see
        the class doc), so it falls back to plain surface/border/text instead
        of inventing a sixth tint. */
-    --lyra-chip-accent: var(--lyra-color-text);
-    --lyra-chip-bg: var(--lyra-color-surface);
-    --lyra-chip-border: var(--lyra-color-border);
+    --lr-chip-accent: var(--lr-color-text);
+    --lr-chip-bg: var(--lr-color-surface);
+    --lr-chip-border: var(--lr-color-border);
   }
 
   :host([tone='brand']) {
-    --lyra-chip-accent: var(--lyra-color-brand);
-    --lyra-chip-bg: var(--lyra-color-brand-quiet);
-    --lyra-chip-border: transparent;
+    --lr-chip-accent: var(--lr-color-brand);
+    --lr-chip-bg: var(--lr-color-brand-quiet);
+    --lr-chip-border: transparent;
   }
   :host([tone='success']) {
-    --lyra-chip-accent: var(--lyra-color-success);
-    --lyra-chip-bg: var(--lyra-color-success-quiet);
-    --lyra-chip-border: transparent;
+    --lr-chip-accent: var(--lr-color-success);
+    --lr-chip-bg: var(--lr-color-success-quiet);
+    --lr-chip-border: transparent;
   }
   :host([tone='warning']) {
-    --lyra-chip-accent: var(--lyra-color-warning);
-    --lyra-chip-bg: var(--lyra-color-warning-quiet);
-    --lyra-chip-border: transparent;
+    --lr-chip-accent: var(--lr-color-warning);
+    --lr-chip-bg: var(--lr-color-warning-quiet);
+    --lr-chip-border: transparent;
   }
   :host([tone='danger']) {
-    --lyra-chip-accent: var(--lyra-color-danger);
-    --lyra-chip-bg: var(--lyra-color-danger-quiet);
-    --lyra-chip-border: transparent;
+    --lr-chip-accent: var(--lr-color-danger);
+    --lr-chip-bg: var(--lr-color-danger-quiet);
+    --lr-chip-border: transparent;
   }
 
   [part='base'] {
     display: inline-flex;
     align-items: center;
-    gap: var(--lyra-space-xs);
+    gap: var(--lr-space-xs);
     max-inline-size: 100%;
     box-sizing: border-box;
-    padding: var(--lyra-size-0-25rem) var(--lyra-space-s);
-    border: var(--lyra-border-width-thin) solid var(--lyra-chip-border);
-    border-radius: var(--lyra-radius-pill);
-    background: var(--lyra-chip-bg);
-    color: var(--lyra-chip-accent);
+    padding: var(--lr-size-0-25rem) var(--lr-space-s);
+    border: var(--lr-border-width-thin) solid var(--lr-chip-border);
+    border-radius: var(--lr-radius-pill);
+    background: var(--lr-chip-bg);
+    color: var(--lr-chip-accent);
     font: inherit;
-    font-size: var(--lyra-font-size-sm);
-    font-weight: var(--lyra-font-weight-medium);
-    line-height: var(--lyra-line-height-snug);
+    font-size: var(--lr-font-size-sm);
+    font-weight: var(--lr-font-weight-medium);
+    line-height: var(--lr-line-height-snug);
   }
 
   [part='base'][role='button'] {
     cursor: pointer;
     -webkit-tap-highlight-color: transparent;
-    transition: background-color var(--lyra-transition-fast);
+    transition: background-color var(--lr-transition-fast);
   }
   [part='base'][role='button']:hover {
-    background: color-mix(in srgb, var(--lyra-chip-accent) 8%, var(--lyra-chip-bg));
+    background: color-mix(in srgb, var(--lr-chip-accent) 8%, var(--lr-chip-bg));
   }
   [part='base'][role='button']:focus-visible {
-    outline: var(--lyra-focus-ring-width) solid var(--lyra-focus-ring-color);
-    outline-offset: var(--lyra-focus-ring-offset);
+    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
+    outline-offset: var(--lr-focus-ring-offset);
   }
   [part='base'][aria-pressed='true'] {
-    /* Falls back to --lyra-chip-bg (today's exact value) so every existing consumer renders
+    /* Falls back to --lr-chip-bg (today's exact value) so every existing consumer renders
        byte-identical when unset. A consumer wanting a distinct "active" tint independent of the
-       resting background sets --lyra-chip-pressed-bg directly. */
-    background: var(--lyra-chip-pressed-bg, var(--lyra-chip-bg));
-    /* Falls back to --lyra-chip-accent (today's exact value) so every
+       resting background sets --lr-chip-pressed-bg directly. */
+    background: var(--lr-chip-pressed-bg, var(--lr-chip-bg));
+    /* Falls back to --lr-chip-accent (today's exact value) so every
        existing consumer, including all 4 \`tone\` variants, renders
        byte-identical when unset. A consumer with a per-item arbitrary
-       color sets --lyra-chip-pressed-border directly, leaving
-       --lyra-chip-accent (and therefore the label text color) untouched. */
-    border-color: var(--lyra-chip-pressed-border, var(--lyra-chip-accent));
+       color sets --lr-chip-pressed-border directly, leaving
+       --lr-chip-accent (and therefore the label text color) untouched. */
+    border-color: var(--lr-chip-pressed-border, var(--lr-chip-accent));
   }
 
   [part='icon'] {
@@ -91,7 +91,7 @@ export const styles = css`
   }
   /* Defeats [part='icon']'s own 'display: inline-flex' above -- the native
      [hidden] UA rule alone would lose to it at equal specificity. Same fix
-     lyra-stat's identical [part='icon'][hidden] override already applies. */
+     lr-stat's identical [part='icon'][hidden] override already applies. */
   [part='icon'][hidden] {
     display: none;
   }
@@ -104,8 +104,8 @@ export const styles = css`
     white-space: nowrap;
   }
 
-  /* The interactive hit target meets the shared minimum tappable size (same --lyra-icon-button-size
-     floor as lyra-swatch-picker's [part='swatch']/lyra-token-input's [part='remove']), while the
+  /* The interactive hit target meets the shared minimum tappable size (same --lr-icon-button-size
+     floor as lr-swatch-picker's [part='swatch']/lr-token-input's [part='remove']), while the
      *visible* glyph stays a compact 0.75em × close icon -- a chip is a small horizontal pill, and
      growing the whole button box to 40px would visually balloon the row. Since the button sits at
      the pill's trailing edge with nothing after it, the extra hit-target growth is pulled back via
@@ -117,26 +117,26 @@ export const styles = css`
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    min-inline-size: var(--lyra-icon-button-size);
-    min-block-size: var(--lyra-icon-button-size);
-    margin: calc((var(--lyra-icon-button-size) - var(--lyra-size-1-25rem)) / -2);
-    margin-inline-end: calc((var(--lyra-icon-button-size) - var(--lyra-size-1-25rem)) / -2 + var(--lyra-size-neg-0-15rem));
+    min-inline-size: var(--lr-icon-button-size);
+    min-block-size: var(--lr-icon-button-size);
+    margin: calc((var(--lr-icon-button-size) - var(--lr-size-1-25rem)) / -2);
+    margin-inline-end: calc((var(--lr-icon-button-size) - var(--lr-size-1-25rem)) / -2 + var(--lr-size-neg-0-15rem));
     padding: 0;
     border: none;
-    border-radius: var(--lyra-radius-pill);
+    border-radius: var(--lr-radius-pill);
     background: transparent;
     color: inherit;
-    font-size: var(--lyra-size-0-75em);
+    font-size: var(--lr-size-0-75em);
     cursor: pointer;
     -webkit-tap-highlight-color: transparent;
-    transition: background-color var(--lyra-transition-fast);
+    transition: background-color var(--lr-transition-fast);
   }
   [part='remove-button']:hover {
     background: color-mix(in srgb, currentColor 16%, transparent);
   }
   [part='remove-button']:focus-visible {
-    outline: var(--lyra-focus-ring-width) solid var(--lyra-focus-ring-color);
-    outline-offset: var(--lyra-focus-ring-offset);
+    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
+    outline-offset: var(--lr-focus-ring-offset);
   }
   [part='remove-button'] svg {
     display: block;

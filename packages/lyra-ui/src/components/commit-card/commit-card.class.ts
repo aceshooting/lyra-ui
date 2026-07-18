@@ -24,19 +24,19 @@ const GIT_STATUS_LETTER: Partial<Record<GitStatus, string>> = {
 };
 
 export interface LyraCommitCardEventMap {
-  'lyra-file-select': CustomEvent<{ path: string }>;
-  'lyra-toggle': CustomEvent<{ collapsed: boolean }>;
-  'lyra-copy': CustomEvent<{ text: string }>;
+  'lr-file-select': CustomEvent<{ path: string }>;
+  'lr-toggle': CustomEvent<{ collapsed: boolean }>;
+  'lr-copy': CustomEvent<{ text: string }>;
 }
 
 /**
- * `<lyra-commit-card>` — compact commit summary (subject, author/time, diffstat, per-file changes)
+ * `<lr-commit-card>` — compact commit summary (subject, author/time, diffstat, per-file changes)
  * that links file rows out to a diff view.
  *
- * @customElement lyra-commit-card
- * @event lyra-file-select - `detail: { path }` — a file row was activated.
- * @event lyra-toggle - `detail: { collapsed }` — the file-list fold changed.
- * @event lyra-copy - `detail: { text }` — the full hash was copied.
+ * @customElement lr-commit-card
+ * @event lr-file-select - `detail: { path }` — a file row was activated.
+ * @event lr-toggle - `detail: { collapsed }` — the file-list fold changed.
+ * @event lr-copy - `detail: { text }` — the full hash was copied.
  * @slot actions - Trailing header controls (e.g. an "open PR" button).
  * @csspart base - The root wrapper.
  * @csspart subject - The commit message's first line.
@@ -103,13 +103,13 @@ export class LyraCommitCard extends LyraElement<LyraCommitCardEventMap> {
   private onCopy = (): void => {
     try {
       // navigator.clipboard is absent in insecure contexts / older browsers, and some engines
-      // throw synchronously rather than rejecting -- either way this is best-effort; lyra-copy
+      // throw synchronously rather than rejecting -- either way this is best-effort; lr-copy
       // still fires with the intended text regardless.
       void navigator.clipboard?.writeText(this.hash)?.catch(() => {});
     } catch {
       // see above
     }
-    this.emit('lyra-copy', { text: this.hash });
+    this.emit('lr-copy', { text: this.hash });
     this.justCopied = true;
     clearTimeout(this.copyTimeoutId);
     this.copyTimeoutId = setTimeout(() => {
@@ -119,7 +119,7 @@ export class LyraCommitCard extends LyraElement<LyraCommitCardEventMap> {
 
   private toggleFiles = (): void => {
     this.filesCollapsed = !this.filesCollapsed;
-    this.emit('lyra-toggle', { collapsed: this.filesCollapsed });
+    this.emit('lr-toggle', { collapsed: this.filesCollapsed });
   };
 
   render(): TemplateResult {
@@ -185,7 +185,7 @@ export class LyraCommitCard extends LyraElement<LyraCommitCardEventMap> {
                         part="file"
                         type="button"
                         data-status=${f.status ?? nothing}
-                        @click=${() => this.emit('lyra-file-select', { path: f.path })}
+                        @click=${() => this.emit('lr-file-select', { path: f.path })}
                       >
                         <span part="file-path" dir="ltr"
                           >${f.status ? `${GIT_STATUS_LETTER[f.status]} ` : ''}${f.path}</span
@@ -207,6 +207,6 @@ export class LyraCommitCard extends LyraElement<LyraCommitCardEventMap> {
 
 declare global {
   interface HTMLElementTagNameMap {
-    'lyra-commit-card': LyraCommitCard;
+    'lr-commit-card': LyraCommitCard;
   }
 }

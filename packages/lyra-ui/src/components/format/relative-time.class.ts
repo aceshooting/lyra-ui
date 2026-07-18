@@ -7,9 +7,9 @@ import { getRelativeTimeFormat } from '../../internal/intl-cache.js';
 export type RelativeTimeUnit = 'second' | 'minute' | 'hour' | 'day' | 'week' | 'month' | 'quarter' | 'year';
 
 /**
- * `<lyra-relative-time>` — locale-aware relative time that can refresh automatically.
+ * `<lr-relative-time>` — locale-aware relative time that can refresh automatically.
  *
- * @customElement lyra-relative-time
+ * @customElement lr-relative-time
  */
 export class LyraRelativeTime extends LyraElement {
   static styles = [LyraElement.styles, styles];
@@ -39,4 +39,4 @@ export class LyraRelativeTime extends LyraElement {
   }
   render(): TemplateResult { return html`${this.relative()}`; }
 }
-declare global { interface HTMLElementTagNameMap { 'lyra-relative-time': LyraRelativeTime; } }
+declare global { interface HTMLElementTagNameMap { 'lr-relative-time': LyraRelativeTime; } }

@@ -17,24 +17,24 @@ interface FlowCanvasLike extends HTMLElement {
 }
 
 /**
- * `<lyra-flow-minimap>` — a corner overview map of a `lyra-flow-canvas`: scaled node rectangles plus
+ * `<lr-flow-minimap>` — a corner overview map of a `lr-flow-canvas`: scaled node rectangles plus
  * a draggable viewport rectangle, for orientation and fast navigation on canvases larger than the
  * screen. Draws no edges (nodes only, matching the React Flow/n8n minimap convention) and never
  * reads `nodes` itself — geometry always comes from the canvas's `registerCompanion()` snapshots, so
  * the two can never disagree.
  *
- * @customElement lyra-flow-minimap
+ * @customElement lr-flow-minimap
  * @csspart base - The root wrapper.
  * @csspart map - The scaled SVG.
  * @csspart node - One rect per node.
  * @csspart viewport - The draggable, focusable view rectangle.
- * @cssprop [--lyra-flow-minimap-inline-size=12rem] - Map inline size.
- * @cssprop [--lyra-flow-minimap-block-size=8rem] - Map block size.
+ * @cssprop [--lr-flow-minimap-inline-size=12rem] - Map inline size.
+ * @cssprop [--lr-flow-minimap-block-size=8rem] - Map block size.
  */
 export class LyraFlowMinimap extends LyraElement {
   static styles = [LyraElement.styles, styles];
 
-  /** Id of the target `lyra-flow-canvas`. When empty, the nearest ancestor is used (the
+  /** Id of the target `lr-flow-canvas`. When empty, the nearest ancestor is used (the
    *  slotted-into-a-corner-slot case, the primary wiring). */
   @property() for = '';
   /** Accessible name for the map region; falls back to a host `aria-label`, then `flowMinimapLabel`. */
@@ -51,7 +51,7 @@ export class LyraFlowMinimap extends LyraElement {
    *  to `false`) the next time `onMapClick` runs, so a genuine click on the map still centers it. */
   private justDraggedViewport = false;
   /** Watches the root for DOM changes while no canvas has resolved yet, so a `for` target or
-   *  ancestor `lyra-flow-canvas` that mounts after this element does still gets picked up instead
+   *  ancestor `lr-flow-canvas` that mounts after this element does still gets picked up instead
    *  of leaving this element permanently blank. Disconnected once a canvas resolves. */
   private canvasWatcher?: MutationObserver;
 
@@ -297,6 +297,6 @@ export class LyraFlowMinimap extends LyraElement {
 
 declare global {
   interface HTMLElementTagNameMap {
-    'lyra-flow-minimap': LyraFlowMinimap;
+    'lr-flow-minimap': LyraFlowMinimap;
   }
 }

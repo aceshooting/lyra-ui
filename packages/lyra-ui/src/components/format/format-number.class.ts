@@ -12,9 +12,9 @@ import { getNumberFormat } from '../../internal/intl-cache.js';
 const MAX_FRACTION_DIGITS = 100;
 
 /**
- * `<lyra-format-number>` — locale-aware `Intl.NumberFormat` output.
+ * `<lr-format-number>` — locale-aware `Intl.NumberFormat` output.
  *
- * @customElement lyra-format-number
+ * @customElement lr-format-number
  * @slot - Fallback content when the value is not finite.
  */
 export class LyraFormatNumber extends LyraElement {
@@ -59,4 +59,4 @@ export class LyraFormatNumber extends LyraElement {
     return html`${text || html`<slot></slot>`}`;
   }
 }
-declare global { interface HTMLElementTagNameMap { 'lyra-format-number': LyraFormatNumber; } }
+declare global { interface HTMLElementTagNameMap { 'lr-format-number': LyraFormatNumber; } }

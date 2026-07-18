@@ -12,22 +12,22 @@ import {
 import { styles } from './diff-view.styles.js';
 
 /** How long the "Copied!" confirmation state lasts before reverting -- matches
- *  `lyra-copy-button`'s own `COPY_CONFIRM_MS`. */
+ *  `lr-copy-button`'s own `COPY_CONFIRM_MS`. */
 const COPY_CONFIRM_MS = 1500;
 
 export interface LyraDiffViewEventMap {
-  'lyra-copy': CustomEvent<{ text: string }>;
+  'lr-copy': CustomEvent<{ text: string }>;
 }
 
 /**
- * `<lyra-diff-view>` — a real two-string line diff (Myers/LCS-style alignment), rendered as
+ * `<lr-diff-view>` — a real two-string line diff (Myers/LCS-style alignment), rendered as
  * interleaved unified-diff output -- not diff-flavored syntax highlighting over an
- * already-formatted string (`lyra-code-block`'s `language="diff"` only lexically colors a string
+ * already-formatted string (`lr-code-block`'s `language="diff"` only lexically colors a string
  * the consumer already unified-diffed; it has no two-string-compare entry point). First-party
  * invention (no Web Awesome equivalent).
  *
- * @customElement lyra-diff-view
- * @event lyra-copy - Fired on copy-button activation. `detail: { text: string }` (the full
+ * @customElement lr-diff-view
+ * @event lr-copy - Fired on copy-button activation. `detail: { text: string }` (the full
  *   unified-diff text, regardless of whether the clipboard write actually succeeded).
  * @csspart base - The root wrapper.
  * @csspart line - A single line. Carries `data-type="equal"|"add"|"remove"|"empty"` (`"empty"` is
@@ -53,11 +53,11 @@ export class LyraDiffView extends LyraElement<LyraDiffViewEventMap> {
   @property({ reflect: true }) layout: 'unified' | 'split' = 'unified';
 
   /** A shiki-recognized language id. Highlighting activates only when this has a matching entry in
-   *  `languages` -- there is deliberately no default full-table `lyra-code-block`-style fallback, so
+   *  `languages` -- there is deliberately no default full-table `lr-code-block`-style fallback, so
    *  this component never reaches shiki's ~200-language dynamic-import table. */
   @property() language = '';
 
-  /** Grammar definitions this instance can highlight, same shape as `lyra-code-block-core`'s own
+  /** Grammar definitions this instance can highlight, same shape as `lr-code-block-core`'s own
    *  `languages`. */
   @property({ attribute: false }) languages?: Record<string, ShikiLanguageInput>;
 
@@ -141,9 +141,9 @@ export class LyraDiffView extends LyraElement<LyraDiffViewEventMap> {
   private onCopyClick = (): void => {
     const text = this.unifiedText;
     navigator.clipboard?.writeText(text).catch(() => {
-      // best-effort -- lyra-copy still fires with the intended text regardless
+      // best-effort -- lr-copy still fires with the intended text regardless
     });
-    this.emit<{ text: string }>('lyra-copy', { text });
+    this.emit<{ text: string }>('lr-copy', { text });
     this.justCopied = true;
     clearTimeout(this.copyTimeoutId);
     this.copyTimeoutId = setTimeout(() => {
@@ -225,6 +225,6 @@ export class LyraDiffView extends LyraElement<LyraDiffViewEventMap> {
 
 declare global {
   interface HTMLElementTagNameMap {
-    'lyra-diff-view': LyraDiffView;
+    'lr-diff-view': LyraDiffView;
   }
 }

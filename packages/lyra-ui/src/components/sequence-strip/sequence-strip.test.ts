@@ -13,14 +13,14 @@ const items = [
 ];
 
 it('defaults to empty items/categories and orientation horizontal', async () => {
-  const el = (await fixture(html`<lyra-sequence-strip></lyra-sequence-strip>`)) as LyraSequenceStrip;
+  const el = (await fixture(html`<lr-sequence-strip></lr-sequence-strip>`)) as LyraSequenceStrip;
   expect(el.items).to.deep.equal([]);
   expect(el.categories).to.deep.equal([]);
   expect(el.orientation).to.equal('horizontal');
 });
 
 it('renders one cell per item, colored by its category', async () => {
-  const el = (await fixture(html`<lyra-sequence-strip></lyra-sequence-strip>`)) as LyraSequenceStrip;
+  const el = (await fixture(html`<lr-sequence-strip></lr-sequence-strip>`)) as LyraSequenceStrip;
   el.items = items;
   el.categories = categories;
   await el.updateComplete;
@@ -32,7 +32,7 @@ it('renders one cell per item, colored by its category', async () => {
 });
 
 it('renders a marker on cells whose item sets marker: true, and none otherwise', async () => {
-  const el = (await fixture(html`<lyra-sequence-strip></lyra-sequence-strip>`)) as LyraSequenceStrip;
+  const el = (await fixture(html`<lr-sequence-strip></lr-sequence-strip>`)) as LyraSequenceStrip;
   el.items = items;
   el.categories = categories;
   await el.updateComplete;
@@ -43,7 +43,7 @@ it('renders a marker on cells whose item sets marker: true, and none otherwise',
 });
 
 it('is role="img" with an auto-generated aria-label summarizing counts per category', async () => {
-  const el = (await fixture(html`<lyra-sequence-strip></lyra-sequence-strip>`)) as LyraSequenceStrip;
+  const el = (await fixture(html`<lr-sequence-strip></lr-sequence-strip>`)) as LyraSequenceStrip;
   el.items = items;
   el.categories = categories;
   await el.updateComplete;
@@ -58,7 +58,7 @@ it('is role="img" with an auto-generated aria-label summarizing counts per categ
 
 it('uses accessibleLabel verbatim instead of the auto-generated summary when set', async () => {
   const el = (await fixture(
-    html`<lyra-sequence-strip accessible-label="Custom summary"></lyra-sequence-strip>`,
+    html`<lr-sequence-strip accessible-label="Custom summary"></lr-sequence-strip>`,
   )) as LyraSequenceStrip;
   el.items = items;
   el.categories = categories;
@@ -67,7 +67,7 @@ it('uses accessibleLabel verbatim instead of the auto-generated summary when set
 });
 
 it('renders an empty strip (no cells, generic aria-label) when items is empty', async () => {
-  const el = (await fixture(html`<lyra-sequence-strip></lyra-sequence-strip>`)) as LyraSequenceStrip;
+  const el = (await fixture(html`<lr-sequence-strip></lr-sequence-strip>`)) as LyraSequenceStrip;
   await el.updateComplete;
   expect(el.shadowRoot!.querySelectorAll('[part="cell"]').length).to.equal(0);
   expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.be.a('string');
@@ -80,7 +80,7 @@ describe('hover tooltip', () => {
   ];
 
   it('hides the tooltip until a cell is hovered', async () => {
-    const el = (await fixture(html`<lyra-sequence-strip></lyra-sequence-strip>`)) as LyraSequenceStrip;
+    const el = (await fixture(html`<lr-sequence-strip></lr-sequence-strip>`)) as LyraSequenceStrip;
     el.items = labeledItems;
     el.categories = categories;
     await el.updateComplete;
@@ -88,7 +88,7 @@ describe('hover tooltip', () => {
   });
 
   it('shows the item label in the tooltip on pointerenter and hides it on pointerleave', async () => {
-    const el = (await fixture(html`<lyra-sequence-strip></lyra-sequence-strip>`)) as LyraSequenceStrip;
+    const el = (await fixture(html`<lr-sequence-strip></lr-sequence-strip>`)) as LyraSequenceStrip;
     el.items = labeledItems;
     el.categories = categories;
     await el.updateComplete;
@@ -106,7 +106,7 @@ describe('hover tooltip', () => {
   });
 
   it('falls back to the category label when the item has no label of its own', async () => {
-    const el = (await fixture(html`<lyra-sequence-strip></lyra-sequence-strip>`)) as LyraSequenceStrip;
+    const el = (await fixture(html`<lr-sequence-strip></lr-sequence-strip>`)) as LyraSequenceStrip;
     el.items = items; // no per-item label set
     el.categories = categories;
     await el.updateComplete;
@@ -119,7 +119,7 @@ describe('hover tooltip', () => {
   it('flips the tooltip centering translate under dir="rtl"', async () => {
     const tooltipTranslateX = async (dirAttr: string): Promise<number> => {
       const el = (await fixture(
-        html`<lyra-sequence-strip dir=${dirAttr}></lyra-sequence-strip>`,
+        html`<lr-sequence-strip dir=${dirAttr}></lr-sequence-strip>`,
       )) as LyraSequenceStrip;
       el.items = labeledItems;
       el.categories = categories;
@@ -138,7 +138,7 @@ describe('hover tooltip', () => {
   });
 
   it('is accessible with items, categories, and markers set', async () => {
-    const el = (await fixture(html`<lyra-sequence-strip></lyra-sequence-strip>`)) as LyraSequenceStrip;
+    const el = (await fixture(html`<lr-sequence-strip></lr-sequence-strip>`)) as LyraSequenceStrip;
     el.items = items;
     el.categories = categories;
     await el.updateComplete;

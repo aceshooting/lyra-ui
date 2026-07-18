@@ -54,7 +54,7 @@ export interface WordCloudLayoutResult {
   height: number;
 }
 
-/** DOM-node/compute-time safety cap — mirrors lyra-sparkline's `MAX_BARS`. */
+/** DOM-node/compute-time safety cap — mirrors lr-sparkline's `MAX_BARS`. */
 export const MAX_WORDS = 150;
 /** Largest accepted font size in CSS pixels. This keeps measurement and
  *  placement geometry finite enough for an interactive render even when a
@@ -73,7 +73,7 @@ const RADIUS_STEP_PER_RADIAN = 3;
  *  repeated many times) ever exhausts it. */
 const MAX_RADIUS_AREA_FACTOR = 6;
 /** Fallback used by `resolveFontSizeBounds()` for any non-finite/non-positive
- *  `minFontSize`/`maxFontSize` input -- also reused by `<lyra-word-cloud>` itself as the lower
+ *  `minFontSize`/`maxFontSize` input -- also reused by `<lr-word-cloud>` itself as the lower
  *  clamp bound for its own guard on those two properties. */
 export const MIN_SANE_FONT_SIZE = 1;
 

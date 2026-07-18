@@ -2,7 +2,7 @@ import { fixture, expect, html, oneEvent } from '@open-wc/testing';
 import './conversation-item.js';
 import type { LyraConversationItem, LyraConversationItemEventMap } from './conversation-item.js';
 
-type RenameEvent = LyraConversationItemEventMap['lyra-rename'];
+type RenameEvent = LyraConversationItemEventMap['lr-rename'];
 const renameTitle = (event: RenameEvent): string => event.detail.title;
 void renameTitle;
 
@@ -20,7 +20,7 @@ async function fixtureItem(item: import('lit').TemplateResult): Promise<LyraConv
 }
 
 it('defaults to title="", excerpt="", active=false, editable=true', async () => {
-  const el = (await fixture(html`<lyra-conversation-item></lyra-conversation-item>`)) as LyraConversationItem;
+  const el = (await fixture(html`<lr-conversation-item></lr-conversation-item>`)) as LyraConversationItem;
   expect(el.title).to.equal('');
   expect(el.excerpt).to.equal('');
   expect(el.active).to.be.false;
@@ -30,21 +30,21 @@ it('defaults to title="", excerpt="", active=false, editable=true', async () => 
 });
 
 it('renders a standalone role="button" and a tabindex of 0', async () => {
-  const el = (await fixture(html`<lyra-conversation-item title="A"></lyra-conversation-item>`)) as LyraConversationItem;
+  const el = (await fixture(html`<lr-conversation-item title="A"></lr-conversation-item>`)) as LyraConversationItem;
   const b = optionEl(el);
   expect(b.getAttribute('role')).to.equal('button');
   expect(b.getAttribute('tabindex')).to.equal('0');
 });
 
 it('falls back to "Untitled conversation" when title is empty', async () => {
-  const el = (await fixture(html`<lyra-conversation-item></lyra-conversation-item>`)) as LyraConversationItem;
+  const el = (await fixture(html`<lr-conversation-item></lr-conversation-item>`)) as LyraConversationItem;
   expect(el.shadowRoot!.querySelector('[part="title"]')!.textContent).to.equal('Untitled conversation');
   expect(optionEl(el).getAttribute('aria-label')).to.equal('Untitled conversation');
 });
 
 it('localizes the untitled-conversation fallback via this.localize() when .strings overrides untitledConversation', async () => {
   const el = (await fixture(html`
-    <lyra-conversation-item .strings=${{ untitledConversation: 'Conversation sans titre' }}></lyra-conversation-item>
+    <lr-conversation-item .strings=${{ untitledConversation: 'Conversation sans titre' }}></lr-conversation-item>
   `)) as LyraConversationItem;
   expect(el.shadowRoot!.querySelector('[part="title"]')!.textContent).to.equal('Conversation sans titre');
   expect(optionEl(el).getAttribute('aria-label')).to.equal('Conversation sans titre');
@@ -52,7 +52,7 @@ it('localizes the untitled-conversation fallback via this.localize() when .strin
 
 it('renders the given title, with a title tooltip attribute for the full text', async () => {
   const el = (await fixture(
-    html`<lyra-conversation-item title="Migrating the table component"></lyra-conversation-item>`,
+    html`<lr-conversation-item title="Migrating the table component"></lr-conversation-item>`,
   )) as LyraConversationItem;
   const titlePart = el.shadowRoot!.querySelector('[part="title"]') as HTMLElement;
   expect(titlePart.textContent).to.equal('Migrating the table component');
@@ -61,20 +61,20 @@ it('renders the given title, with a title tooltip attribute for the full text', 
 
 it('forwards a host aria-label onto the inner role="button" element instead of the derived title', async () => {
   const el = (await fixture(
-    html`<lyra-conversation-item title="Internal name" aria-label="Custom label"></lyra-conversation-item>`,
+    html`<lr-conversation-item title="Internal name" aria-label="Custom label"></lr-conversation-item>`,
   )) as LyraConversationItem;
   expect(optionEl(el).getAttribute('aria-label')).to.equal('Custom label');
 });
 
 describe('excerpt', () => {
   it('is hidden when unset', async () => {
-    const el = (await fixture(html`<lyra-conversation-item title="A"></lyra-conversation-item>`)) as LyraConversationItem;
+    const el = (await fixture(html`<lr-conversation-item title="A"></lr-conversation-item>`)) as LyraConversationItem;
     expect((el.shadowRoot!.querySelector('[part="excerpt"]') as HTMLElement).hidden).to.be.true;
   });
 
   it('is rendered when set', async () => {
     const el = (await fixture(
-      html`<lyra-conversation-item title="A" excerpt="Sure — I can open a PR for that."></lyra-conversation-item>`,
+      html`<lr-conversation-item title="A" excerpt="Sure — I can open a PR for that."></lr-conversation-item>`,
     )) as LyraConversationItem;
     expect(el.shadowRoot!.querySelector('[part="excerpt"]')!.textContent!.trim()).to.equal(
       'Sure — I can open a PR for that.',
@@ -84,13 +84,13 @@ describe('excerpt', () => {
 
 describe('meta slot', () => {
   it('hides the meta wrapper until something is slotted', async () => {
-    const el = (await fixture(html`<lyra-conversation-item></lyra-conversation-item>`)) as LyraConversationItem;
+    const el = (await fixture(html`<lr-conversation-item></lr-conversation-item>`)) as LyraConversationItem;
     expect((el.shadowRoot!.querySelector('[part="meta"]') as HTMLElement).hasAttribute('hidden')).to.be.true;
   });
 
   it('shows the meta wrapper once content is slotted', async () => {
     const el = (await fixture(
-      html`<lyra-conversation-item><span slot="meta">3 requests</span></lyra-conversation-item>`,
+      html`<lr-conversation-item><span slot="meta">3 requests</span></lr-conversation-item>`,
     )) as LyraConversationItem;
     expect((el.shadowRoot!.querySelector('[part="meta"]') as HTMLElement).hasAttribute('hidden')).to.be.false;
     expect(el.shadowRoot!.querySelector('[part="meta"] slot')!.assignedElements()[0].textContent).to.equal(
@@ -102,7 +102,7 @@ describe('meta slot', () => {
 describe('excerpt slot (wins over the excerpt property)', () => {
   it('renders the excerpt property in [part="excerpt"] when no slot content is present (unchanged default)', async () => {
     const el = (await fixture(
-      html`<lyra-conversation-item excerpt="plain preview text"></lyra-conversation-item>`,
+      html`<lr-conversation-item excerpt="plain preview text"></lr-conversation-item>`,
     )) as LyraConversationItem;
     const excerptPart = el.shadowRoot!.querySelector('[part="excerpt"]') as HTMLElement;
     expect(excerptPart.hasAttribute('hidden')).to.be.false;
@@ -111,8 +111,8 @@ describe('excerpt slot (wins over the excerpt property)', () => {
 
   it('renders slotted content instead of the excerpt property when both are set', async () => {
     const el = (await fixture(
-      html`<lyra-conversation-item excerpt="plain preview text"
-        ><mark slot="excerpt">highlighted</mark> hit</lyra-conversation-item
+      html`<lr-conversation-item excerpt="plain preview text"
+        ><mark slot="excerpt">highlighted</mark> hit</lr-conversation-item
       >`,
     )) as LyraConversationItem;
     const excerptPart = el.shadowRoot!.querySelector('[part="excerpt"]') as HTMLElement;
@@ -126,19 +126,19 @@ describe('excerpt slot (wins over the excerpt property)', () => {
   });
 
   it('hides [part="excerpt"] entirely when neither the property nor the slot has content', async () => {
-    const el = (await fixture(html`<lyra-conversation-item></lyra-conversation-item>`)) as LyraConversationItem;
+    const el = (await fixture(html`<lr-conversation-item></lr-conversation-item>`)) as LyraConversationItem;
     expect((el.shadowRoot!.querySelector('[part="excerpt"]') as HTMLElement).hasAttribute('hidden')).to.be.true;
   });
 });
 
 describe('timestamp', () => {
   it('renders no [part="timestamp"] when unset', async () => {
-    const el = (await fixture(html`<lyra-conversation-item title="A"></lyra-conversation-item>`)) as LyraConversationItem;
+    const el = (await fixture(html`<lr-conversation-item title="A"></lr-conversation-item>`)) as LyraConversationItem;
     expect(el.shadowRoot!.querySelector('[part="timestamp"]')).to.not.exist;
   });
 
   it('normalizes a Date and an ISO string to the same rendered datetime attribute', async () => {
-    const el = (await fixture(html`<lyra-conversation-item title="A"></lyra-conversation-item>`)) as LyraConversationItem;
+    const el = (await fixture(html`<lr-conversation-item title="A"></lr-conversation-item>`)) as LyraConversationItem;
     const date = new Date('2024-03-01T10:30:00Z');
 
     el.timestamp = date;
@@ -154,7 +154,7 @@ describe('timestamp', () => {
 
   it('treats an invalid timestamp string the same as unset', async () => {
     const el = (await fixture(
-      html`<lyra-conversation-item title="A" .timestamp=${'not a date'}></lyra-conversation-item>`,
+      html`<lr-conversation-item title="A" .timestamp=${'not a date'}></lr-conversation-item>`,
     )) as LyraConversationItem;
     expect(el.shadowRoot!.querySelector('[part="timestamp"]')).to.not.exist;
   });
@@ -162,7 +162,7 @@ describe('timestamp', () => {
   it('uses the default absolute-time formatter, overridable via formatTimestamp', async () => {
     const date = new Date('2024-03-01T10:30:00Z');
     const el = (await fixture(
-      html`<lyra-conversation-item title="A" .timestamp=${date}></lyra-conversation-item>`,
+      html`<lr-conversation-item title="A" .timestamp=${date}></lr-conversation-item>`,
     )) as LyraConversationItem;
     const time = el.shadowRoot!.querySelector('[part="timestamp"]') as HTMLElement;
     expect(time.textContent!.trim().length).to.be.greaterThan(0);
@@ -175,7 +175,7 @@ describe('timestamp', () => {
 
 describe('active', () => {
   it('reflects to the active attribute and to aria-current', async () => {
-    const el = (await fixture(html`<lyra-conversation-item title="A"></lyra-conversation-item>`)) as LyraConversationItem;
+    const el = (await fixture(html`<lr-conversation-item title="A"></lr-conversation-item>`)) as LyraConversationItem;
     expect(optionEl(el).hasAttribute('aria-current')).to.be.false;
 
     el.active = true;
@@ -186,44 +186,44 @@ describe('active', () => {
 });
 
 describe('selection', () => {
-  it('fires a bubbling, composed lyra-select on click', async () => {
-    const el = (await fixture(html`<lyra-conversation-item title="A"></lyra-conversation-item>`)) as LyraConversationItem;
+  it('fires a bubbling, composed lr-select on click', async () => {
+    const el = (await fixture(html`<lr-conversation-item title="A"></lr-conversation-item>`)) as LyraConversationItem;
     setTimeout(() => optionEl(el).click());
-    const ev = await oneEvent(el, 'lyra-select');
+    const ev = await oneEvent(el, 'lr-select');
     expect(ev.bubbles).to.be.true;
     expect(ev.composed).to.be.true;
   });
 
-  it('fires lyra-select on Enter and on Space keydown, preventing default on Space', async () => {
-    const el = (await fixture(html`<lyra-conversation-item title="A"></lyra-conversation-item>`)) as LyraConversationItem;
+  it('fires lr-select on Enter and on Space keydown, preventing default on Space', async () => {
+    const el = (await fixture(html`<lr-conversation-item title="A"></lr-conversation-item>`)) as LyraConversationItem;
 
     setTimeout(() =>
       optionEl(el).dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true })),
     );
-    await oneEvent(el, 'lyra-select');
+    await oneEvent(el, 'lr-select');
 
     const spaceEvent = new KeyboardEvent('keydown', { key: ' ', bubbles: true, cancelable: true });
     setTimeout(() => optionEl(el).dispatchEvent(spaceEvent));
-    await oneEvent(el, 'lyra-select');
+    await oneEvent(el, 'lr-select');
     expect(spaceEvent.defaultPrevented).to.be.true;
   });
 
-  it('does not fire lyra-select for an unrelated key', async () => {
-    const el = (await fixture(html`<lyra-conversation-item title="A"></lyra-conversation-item>`)) as LyraConversationItem;
+  it('does not fire lr-select for an unrelated key', async () => {
+    const el = (await fixture(html`<lr-conversation-item title="A"></lr-conversation-item>`)) as LyraConversationItem;
     let fired = false;
-    el.addEventListener('lyra-select', () => (fired = true));
+    el.addEventListener('lr-select', () => (fired = true));
     optionEl(el).dispatchEvent(new KeyboardEvent('keydown', { key: 'a', bubbles: true, cancelable: true }));
     expect(fired).to.be.false;
   });
 
-  it('does not fire lyra-select when the click originated in the actions slot', async () => {
+  it('does not fire lr-select when the click originated in the actions slot', async () => {
     const el = (await fixture(html`
-      <lyra-conversation-item title="A">
+      <lr-conversation-item title="A">
         <button slot="actions" id="del">Delete</button>
-      </lyra-conversation-item>
+      </lr-conversation-item>
     `)) as LyraConversationItem;
     let fired = false;
-    el.addEventListener('lyra-select', () => (fired = true));
+    el.addEventListener('lr-select', () => (fired = true));
     (el.querySelector('#del') as HTMLButtonElement).click();
     expect(fired).to.be.false;
   });
@@ -231,24 +231,24 @@ describe('selection', () => {
 
 describe('inline rename', () => {
   it('renders the rename button only while editable and not already renaming', async () => {
-    const editable = (await fixture(html`<lyra-conversation-item title="A"></lyra-conversation-item>`)) as LyraConversationItem;
+    const editable = (await fixture(html`<lr-conversation-item title="A"></lr-conversation-item>`)) as LyraConversationItem;
     expect(editable.shadowRoot!.querySelector('[part="rename-button"]')).to.exist;
 
     const notEditable = (await fixture(
-      html`<lyra-conversation-item title="A" .editable=${false}></lyra-conversation-item>`,
+      html`<lr-conversation-item title="A" .editable=${false}></lr-conversation-item>`,
     )) as LyraConversationItem;
     expect(notEditable.shadowRoot!.querySelector('[part="rename-button"]')).to.not.exist;
   });
 
   it('gives the rename button the shared minimum hit area', async () => {
-    const el = (await fixture(html`<lyra-conversation-item title="A"></lyra-conversation-item>`)) as LyraConversationItem;
+    const el = (await fixture(html`<lr-conversation-item title="A"></lr-conversation-item>`)) as LyraConversationItem;
     const btn = el.shadowRoot!.querySelector('[part="rename-button"]') as HTMLElement;
     expect(getComputedStyle(btn).minInlineSize).to.equal('40px');
     expect(getComputedStyle(btn).minBlockSize).to.equal('40px');
   });
 
   it('swaps the title for a focused, pre-filled input when the rename button is activated', async () => {
-    const el = (await fixture(html`<lyra-conversation-item title="Old name"></lyra-conversation-item>`)) as LyraConversationItem;
+    const el = (await fixture(html`<lr-conversation-item title="Old name"></lr-conversation-item>`)) as LyraConversationItem;
     const btn = el.shadowRoot!.querySelector('[part="rename-button"]') as HTMLButtonElement;
     btn.click();
     await el.updateComplete;
@@ -262,7 +262,7 @@ describe('inline rename', () => {
 
   it('gives the rename input the same row-specific accessible name as the rename button', async () => {
     const el = (await fixture(
-      html`<lyra-conversation-item title="Migrating the table component"></lyra-conversation-item>`,
+      html`<lr-conversation-item title="Migrating the table component"></lr-conversation-item>`,
     )) as LyraConversationItem;
     const btn = el.shadowRoot!.querySelector('[part="rename-button"]') as HTMLButtonElement;
     expect(btn.getAttribute('aria-label')).to.equal('Rename Migrating the table component');
@@ -275,13 +275,13 @@ describe('inline rename', () => {
 
   it('does not activate rename when editable is false', async () => {
     const el = (await fixture(
-      html`<lyra-conversation-item title="A" .editable=${false}></lyra-conversation-item>`,
+      html`<lr-conversation-item title="A" .editable=${false}></lr-conversation-item>`,
     )) as LyraConversationItem;
     expect(el.shadowRoot!.querySelector('[part="title-input"]')).to.not.exist;
   });
 
   it('cancels an in-progress rename (discarding the draft) when editable flips to false', async () => {
-    const el = (await fixture(html`<lyra-conversation-item title="Old name"></lyra-conversation-item>`)) as LyraConversationItem;
+    const el = (await fixture(html`<lr-conversation-item title="Old name"></lr-conversation-item>`)) as LyraConversationItem;
     (el.shadowRoot!.querySelector('[part="rename-button"]') as HTMLButtonElement).click();
     await el.updateComplete;
     const input = el.shadowRoot!.querySelector('[part="title-input"]') as HTMLInputElement;
@@ -289,7 +289,7 @@ describe('inline rename', () => {
     input.dispatchEvent(new Event('input'));
 
     let renameFired = false;
-    el.addEventListener('lyra-rename', () => (renameFired = true));
+    el.addEventListener('lr-rename', () => (renameFired = true));
 
     el.editable = false;
     await el.updateComplete;
@@ -302,16 +302,16 @@ describe('inline rename', () => {
     expect(el.shadowRoot!.querySelector('[part="rename-button"]')).to.not.exist;
   });
 
-  it('does not fire lyra-select when the rename button is clicked', async () => {
-    const el = (await fixture(html`<lyra-conversation-item title="A"></lyra-conversation-item>`)) as LyraConversationItem;
+  it('does not fire lr-select when the rename button is clicked', async () => {
+    const el = (await fixture(html`<lr-conversation-item title="A"></lr-conversation-item>`)) as LyraConversationItem;
     let fired = false;
-    el.addEventListener('lyra-select', () => (fired = true));
+    el.addEventListener('lr-select', () => (fired = true));
     (el.shadowRoot!.querySelector('[part="rename-button"]') as HTMLButtonElement).click();
     expect(fired).to.be.false;
   });
 
-  it('Enter commits: fires lyra-rename with the trimmed title and leaves title unmutated', async () => {
-    const el = (await fixture(html`<lyra-conversation-item title="Old name"></lyra-conversation-item>`)) as LyraConversationItem;
+  it('Enter commits: fires lr-rename with the trimmed title and leaves title unmutated', async () => {
+    const el = (await fixture(html`<lr-conversation-item title="Old name"></lr-conversation-item>`)) as LyraConversationItem;
     (el.shadowRoot!.querySelector('[part="rename-button"]') as HTMLButtonElement).click();
     await el.updateComplete;
     const input = el.shadowRoot!.querySelector('[part="title-input"]') as HTMLInputElement;
@@ -321,14 +321,14 @@ describe('inline rename', () => {
     setTimeout(() =>
       input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true })),
     );
-    const ev = await oneEvent(el, 'lyra-rename');
+    const ev = await oneEvent(el, 'lr-rename');
     expect(ev.detail).to.deep.equal({ title: 'New name' });
     expect(el.title, 'controlled component -- the title prop itself is never mutated').to.equal('Old name');
     expect(el.shadowRoot!.querySelector('[part="title-input"]'), 'editing ends on commit').to.not.exist;
   });
 
   it('blur while editing commits, same as Enter', async () => {
-    const el = (await fixture(html`<lyra-conversation-item title="Old name"></lyra-conversation-item>`)) as LyraConversationItem;
+    const el = (await fixture(html`<lr-conversation-item title="Old name"></lr-conversation-item>`)) as LyraConversationItem;
     (el.shadowRoot!.querySelector('[part="rename-button"]') as HTMLButtonElement).click();
     await el.updateComplete;
     const input = el.shadowRoot!.querySelector('[part="title-input"]') as HTMLInputElement;
@@ -336,12 +336,12 @@ describe('inline rename', () => {
     input.dispatchEvent(new Event('input'));
 
     setTimeout(() => input.dispatchEvent(new FocusEvent('blur')));
-    const ev = await oneEvent(el, 'lyra-rename');
+    const ev = await oneEvent(el, 'lr-rename');
     expect(ev.detail).to.deep.equal({ title: 'Blurred name' });
   });
 
   it('Escape cancels: reverts to the original title and fires nothing', async () => {
-    const el = (await fixture(html`<lyra-conversation-item title="Old name"></lyra-conversation-item>`)) as LyraConversationItem;
+    const el = (await fixture(html`<lr-conversation-item title="Old name"></lr-conversation-item>`)) as LyraConversationItem;
     (el.shadowRoot!.querySelector('[part="rename-button"]') as HTMLButtonElement).click();
     await el.updateComplete;
     const input = el.shadowRoot!.querySelector('[part="title-input"]') as HTMLInputElement;
@@ -349,7 +349,7 @@ describe('inline rename', () => {
     input.dispatchEvent(new Event('input'));
 
     let renameFired = false;
-    el.addEventListener('lyra-rename', () => (renameFired = true));
+    el.addEventListener('lr-rename', () => (renameFired = true));
     input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
     await el.updateComplete;
 
@@ -364,8 +364,8 @@ describe('inline rename', () => {
     expect((el.shadowRoot!.querySelector('[part="title-input"]') as HTMLInputElement).value).to.equal('Old name');
   });
 
-  it('does not fire lyra-rename for an empty or whitespace-only commit (treated as cancel)', async () => {
-    const el = (await fixture(html`<lyra-conversation-item title="Old name"></lyra-conversation-item>`)) as LyraConversationItem;
+  it('does not fire lr-rename for an empty or whitespace-only commit (treated as cancel)', async () => {
+    const el = (await fixture(html`<lr-conversation-item title="Old name"></lr-conversation-item>`)) as LyraConversationItem;
     (el.shadowRoot!.querySelector('[part="rename-button"]') as HTMLButtonElement).click();
     await el.updateComplete;
     const input = el.shadowRoot!.querySelector('[part="title-input"]') as HTMLInputElement;
@@ -373,28 +373,28 @@ describe('inline rename', () => {
     input.dispatchEvent(new Event('input'));
 
     let fired = false;
-    el.addEventListener('lyra-rename', () => (fired = true));
+    el.addEventListener('lr-rename', () => (fired = true));
     input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
     await el.updateComplete;
     expect(fired).to.be.false;
     expect(el.shadowRoot!.querySelector('[part="title-input"]'), 'still ends the edit').to.not.exist;
   });
 
-  it('does not fire lyra-rename when the committed title is unchanged', async () => {
-    const el = (await fixture(html`<lyra-conversation-item title="Same name"></lyra-conversation-item>`)) as LyraConversationItem;
+  it('does not fire lr-rename when the committed title is unchanged', async () => {
+    const el = (await fixture(html`<lr-conversation-item title="Same name"></lr-conversation-item>`)) as LyraConversationItem;
     (el.shadowRoot!.querySelector('[part="rename-button"]') as HTMLButtonElement).click();
     await el.updateComplete;
     const input = el.shadowRoot!.querySelector('[part="title-input"]') as HTMLInputElement;
 
     let fired = false;
-    el.addEventListener('lyra-rename', () => (fired = true));
+    el.addEventListener('lr-rename', () => (fired = true));
     input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
     await el.updateComplete;
     expect(fired).to.be.false;
   });
 
   it('does not let Escape also trigger a blur-driven commit', async () => {
-    const el = (await fixture(html`<lyra-conversation-item title="Old name"></lyra-conversation-item>`)) as LyraConversationItem;
+    const el = (await fixture(html`<lr-conversation-item title="Old name"></lr-conversation-item>`)) as LyraConversationItem;
     (el.shadowRoot!.querySelector('[part="rename-button"]') as HTMLButtonElement).click();
     await el.updateComplete;
     const input = el.shadowRoot!.querySelector('[part="title-input"]') as HTMLInputElement;
@@ -402,15 +402,15 @@ describe('inline rename', () => {
     input.dispatchEvent(new Event('input'));
 
     let fired = false;
-    el.addEventListener('lyra-rename', () => (fired = true));
+    el.addEventListener('lr-rename', () => (fired = true));
     input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
     input.dispatchEvent(new FocusEvent('blur'));
     await el.updateComplete;
     expect(fired).to.be.false;
   });
 
-  it('keystrokes inside the input do not also fire lyra-select', async () => {
-    const el = (await fixture(html`<lyra-conversation-item title="Old name"></lyra-conversation-item>`)) as LyraConversationItem;
+  it('keystrokes inside the input do not also fire lr-select', async () => {
+    const el = (await fixture(html`<lr-conversation-item title="Old name"></lr-conversation-item>`)) as LyraConversationItem;
     (el.shadowRoot!.querySelector('[part="rename-button"]') as HTMLButtonElement).click();
     await el.updateComplete;
     const input = el.shadowRoot!.querySelector('[part="title-input"]') as HTMLInputElement;
@@ -418,21 +418,21 @@ describe('inline rename', () => {
     input.dispatchEvent(new Event('input'));
 
     let selectFired = false;
-    el.addEventListener('lyra-select', () => (selectFired = true));
+    el.addEventListener('lr-select', () => (selectFired = true));
     setTimeout(() =>
       input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true })),
     );
-    await oneEvent(el, 'lyra-rename');
+    await oneEvent(el, 'lr-rename');
     expect(selectFired).to.be.false;
   });
 
-  it('clicking inside the row while renaming does not fire lyra-select', async () => {
-    const el = (await fixture(html`<lyra-conversation-item title="Old name"></lyra-conversation-item>`)) as LyraConversationItem;
+  it('clicking inside the row while renaming does not fire lr-select', async () => {
+    const el = (await fixture(html`<lr-conversation-item title="Old name"></lr-conversation-item>`)) as LyraConversationItem;
     (el.shadowRoot!.querySelector('[part="rename-button"]') as HTMLButtonElement).click();
     await el.updateComplete;
 
     let fired = false;
-    el.addEventListener('lyra-select', () => (fired = true));
+    el.addEventListener('lr-select', () => (fired = true));
     optionEl(el).click();
     expect(fired).to.be.false;
   });
@@ -440,7 +440,7 @@ describe('inline rename', () => {
 
 describe('spellcheck/autocapitalize/autocorrect passthrough', () => {
   it('spellcheck defaults to true on the rename input', async () => {
-    const el = (await fixture(html`<lyra-conversation-item title="A"></lyra-conversation-item>`)) as LyraConversationItem;
+    const el = (await fixture(html`<lr-conversation-item title="A"></lr-conversation-item>`)) as LyraConversationItem;
     (el.shadowRoot!.querySelector('[part="rename-button"]') as HTMLButtonElement).click();
     await el.updateComplete;
     const input = el.shadowRoot!.querySelector('[part="title-input"]') as HTMLInputElement;
@@ -449,12 +449,12 @@ describe('spellcheck/autocapitalize/autocorrect passthrough', () => {
 
   it('forwards spellcheck=false, autocapitalize, and autocorrect onto the rename input', async () => {
     const el = (await fixture(html`
-      <lyra-conversation-item
+      <lr-conversation-item
         title="A"
         spellcheck="false"
         autocapitalize="off"
         autocorrect="off"
-      ></lyra-conversation-item>
+      ></lr-conversation-item>
     `)) as LyraConversationItem;
     (el.shadowRoot!.querySelector('[part="rename-button"]') as HTMLButtonElement).click();
     await el.updateComplete;
@@ -467,7 +467,7 @@ describe('spellcheck/autocapitalize/autocorrect passthrough', () => {
 
 describe('rename input blur/focus bubbling', () => {
   it('re-dispatches a bubbling, composed blur event when the rename input blurs', async () => {
-    const el = (await fixture(html`<lyra-conversation-item title="Old name"></lyra-conversation-item>`)) as LyraConversationItem;
+    const el = (await fixture(html`<lr-conversation-item title="Old name"></lr-conversation-item>`)) as LyraConversationItem;
     (el.shadowRoot!.querySelector('[part="rename-button"]') as HTMLButtonElement).click();
     await el.updateComplete;
     const input = el.shadowRoot!.querySelector('[part="title-input"]') as HTMLInputElement;
@@ -479,7 +479,7 @@ describe('rename input blur/focus bubbling', () => {
   });
 
   it('re-dispatches a bubbling, composed focus event when the rename input focuses', async () => {
-    const el = (await fixture(html`<lyra-conversation-item title="Old name"></lyra-conversation-item>`)) as LyraConversationItem;
+    const el = (await fixture(html`<lr-conversation-item title="Old name"></lr-conversation-item>`)) as LyraConversationItem;
     (el.shadowRoot!.querySelector('[part="rename-button"]') as HTMLButtonElement).click();
     await el.updateComplete;
     const input = el.shadowRoot!.querySelector('[part="title-input"]') as HTMLInputElement;
@@ -493,39 +493,39 @@ describe('rename input blur/focus bubbling', () => {
 
 describe('actions slot', () => {
   it('hides the actions part when nothing is slotted', async () => {
-    const el = (await fixture(html`<lyra-conversation-item title="A"></lyra-conversation-item>`)) as LyraConversationItem;
+    const el = (await fixture(html`<lr-conversation-item title="A"></lr-conversation-item>`)) as LyraConversationItem;
     expect((el.shadowRoot!.querySelector('[part="actions"]') as HTMLElement).hidden).to.be.true;
   });
 
   it('shows the actions part once content is slotted', async () => {
     const el = (await fixture(html`
-      <lyra-conversation-item title="A"><button slot="actions">Pin</button></lyra-conversation-item>
+      <lr-conversation-item title="A"><button slot="actions">Pin</button></lr-conversation-item>
     `)) as LyraConversationItem;
     expect((el.shadowRoot!.querySelector('[part="actions"]') as HTMLElement).hidden).to.be.false;
   });
 });
 
 it('is accessible in the default (empty) state', async () => {
-  const el = await fixtureItem(html`<lyra-conversation-item></lyra-conversation-item>`);
+  const el = await fixtureItem(html`<lr-conversation-item></lr-conversation-item>`);
   await expect(el).to.be.accessible();
 });
 
 it('is accessible in a populated, active state with an excerpt, timestamp, and actions slot', async () => {
   const el = await fixtureItem(html`
-    <lyra-conversation-item
+    <lr-conversation-item
       title="Migrating the table component"
       excerpt="Sure — I can open a PR for that."
       .timestamp=${new Date()}
       active
     >
       <button slot="actions" aria-label="Delete conversation">✕</button>
-    </lyra-conversation-item>
+    </lr-conversation-item>
   `);
   await expect(el).to.be.accessible();
 });
 
 it('is accessible while renaming', async () => {
-  const el = await fixtureItem(html`<lyra-conversation-item title="Old name"></lyra-conversation-item>`);
+  const el = await fixtureItem(html`<lr-conversation-item title="Old name"></lr-conversation-item>`);
   (el.shadowRoot!.querySelector('[part="rename-button"]') as HTMLButtonElement).click();
   await el.updateComplete;
   await expect(el).to.be.accessible();

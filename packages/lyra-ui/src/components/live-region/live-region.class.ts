@@ -9,7 +9,7 @@ import { styles } from './live-region.styles.js';
 export type LiveRegionMode = 'polite' | 'assertive';
 
 /**
- * `<lyra-live-region>` — a visually-hidden ARIA live region that throttles
+ * `<lr-live-region>` — a visually-hidden ARIA live region that throttles
  * and coalesces announcements instead of relaying every call verbatim.
  *
  * Naive live regions plus token-by-token streaming text (a chat response, a
@@ -21,15 +21,15 @@ export type LiveRegionMode = 'polite' | 'assertive';
  * stream ends) always lands immediately regardless of any window in
  * progress.
  *
- * A consumer typically mounts one `<lyra-live-region>` per page/surface
- * (much like `<lyra-toast>` is one region per placement — see
+ * A consumer typically mounts one `<lr-live-region>` per page/surface
+ * (much like `<lr-toast>` is one region per placement — see
  * `../toast/toaster.ts`) and keeps a reference to call `announce()` from
  * application code or a parent component:
  *
  * @example
  * ```html
  * <!-- once, near the root of a chat surface's shell -->
- * <lyra-live-region id="chat-live" mode="polite"></lyra-live-region>
+ * <lr-live-region id="chat-live" mode="polite"></lr-live-region>
  * ```
  * ```ts
  * const live = document.getElementById('chat-live') as LyraLiveRegion;
@@ -43,14 +43,14 @@ export type LiveRegionMode = 'polite' | 'assertive';
  *
  * A parent Lit component would instead hold the reference via `@query`:
  * ```ts
- * @query('lyra-live-region') private liveRegion!: LyraLiveRegion;
+ * @query('lr-live-region') private liveRegion!: LyraLiveRegion;
  * ```
  * and is exactly what later components in this family (a stream-status
  * indicator, a tool-call chip's status transitions, a chat message's
  * streaming state) are expected to do rather than hand-rolling their own
  * `aria-live` element.
  *
- * @customElement lyra-live-region
+ * @customElement lr-live-region
  * @csspart region - The visually-hidden element carrying `role`/`aria-live`.
  */
 export class LyraLiveRegion extends LyraElement {
@@ -210,7 +210,7 @@ export class LyraLiveRegion extends LyraElement {
 
 declare global {
   interface HTMLElementTagNameMap {
-    'lyra-live-region': LyraLiveRegion;
+    'lr-live-region': LyraLiveRegion;
   }
 }
 

@@ -21,7 +21,7 @@ export async function loadEmojiData(
     return adaptEmojiPickerElementData(raw);
   } catch (error) {
     console.warn(
-      '<lyra-emoji-picker> needs the optional peer dependency `emoji-picker-element-data` to show a ' +
+      '<lr-emoji-picker> needs the optional peer dependency `emoji-picker-element-data` to show a ' +
         'default emoji set — install it with `pnpm add emoji-picker-element-data`, or supply `groups` ' +
         'directly:',
       error,

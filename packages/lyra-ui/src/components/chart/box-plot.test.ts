@@ -5,13 +5,13 @@ import { styles } from './box-plot.styles.js';
 
 // Deliberately the first test in the file: `loadBoxPlotPlugin()`/`loadChartJs()`
 // memoize their resolved promise at module scope, so once any other test in
-// this file has driven a `<lyra-box-plot>` through a full load, later
+// this file has driven a `<lr-box-plot>` through a full load, later
 // `connectedCallback()`s resolve near-instantly and the initial "still
 // loading" render can no longer be observed.
 it('shows a loading skeleton and aria-busy while chart.js/the boxplot plugin loads, then swaps to the canvas', async () => {
-  const el = (await fixture(html`<lyra-box-plot></lyra-box-plot>`)) as LyraBoxPlot;
+  const el = (await fixture(html`<lr-box-plot></lr-box-plot>`)) as LyraBoxPlot;
   expect(el.getAttribute('aria-busy')).to.equal('true');
-  expect(el.shadowRoot!.querySelector('lyra-skeleton')).to.exist;
+  expect(el.shadowRoot!.querySelector('lr-skeleton')).to.exist;
   expect(el.shadowRoot!.querySelector('canvas')).to.not.exist;
 
   // `waitUntil`'s own default timeout (1000ms) is tighter than this codebase's
@@ -21,12 +21,12 @@ it('shows a loading skeleton and aria-busy while chart.js/the boxplot plugin loa
   await waitUntil(() => (el as any).chart != null, undefined, { timeout: 5000 });
 
   expect(el.hasAttribute('aria-busy')).to.be.false;
-  expect(el.shadowRoot!.querySelector('lyra-skeleton')).to.not.exist;
+  expect(el.shadowRoot!.querySelector('lr-skeleton')).to.not.exist;
   expect(el.shadowRoot!.querySelector('canvas')).to.exist;
 });
 
 it('builds a boxplot Chart.js instance once both chart.js and the boxplot plugin load', async () => {
-  const el = (await fixture(html`<lyra-box-plot></lyra-box-plot>`)) as LyraBoxPlot;
+  const el = (await fixture(html`<lr-box-plot></lr-box-plot>`)) as LyraBoxPlot;
   el.labels = ['K=2', 'K=3'];
   el.boxes = [
     {
@@ -43,7 +43,7 @@ it('builds a boxplot Chart.js instance once both chart.js and the boxplot plugin
 });
 
 it('updates in place (same Chart instance) when only boxes/labels change', async () => {
-  const el = (await fixture(html`<lyra-box-plot></lyra-box-plot>`)) as LyraBoxPlot;
+  const el = (await fixture(html`<lr-box-plot></lr-box-plot>`)) as LyraBoxPlot;
   el.labels = ['A'];
   el.boxes = [{ label: 'x', data: [{ min: 1, q1: 2, median: 3, q3: 4, max: 5 }] }];
   await el.updateComplete;
@@ -56,7 +56,7 @@ it('updates in place (same Chart instance) when only boxes/labels change', async
 });
 
 it('updates in place (same Chart instance) across a bare height change, instead of destroying and recreating the chart', async () => {
-  const el = (await fixture(html`<lyra-box-plot></lyra-box-plot>`)) as LyraBoxPlot;
+  const el = (await fixture(html`<lr-box-plot></lr-box-plot>`)) as LyraBoxPlot;
   el.boxes = [{ label: 'x', data: [{ min: 1, q1: 2, median: 3, q3: 4, max: 5 }] }];
   await el.updateComplete;
   await waitUntil(() => (el as any).chart != null);
@@ -68,7 +68,7 @@ it('updates in place (same Chart instance) across a bare height change, instead 
 });
 
 it('is accessible', async () => {
-  const el = (await fixture(html`<lyra-box-plot></lyra-box-plot>`)) as LyraBoxPlot;
+  const el = (await fixture(html`<lr-box-plot></lr-box-plot>`)) as LyraBoxPlot;
   el.boxes = [{ label: 'x', data: [{ min: 1, q1: 2, median: 3, q3: 4, max: 5 }] }];
   await el.updateComplete;
   await waitUntil(() => (el as any).chart != null);
@@ -77,7 +77,7 @@ it('is accessible', async () => {
 
 it('forwards a host aria-label to the canvas and keeps the chart role on that semantic element only', async () => {
   const el = (await fixture(html`
-    <lyra-box-plot aria-label="Latency distributions" accessible-label="Legacy box plot label"></lyra-box-plot>
+    <lr-box-plot aria-label="Latency distributions" accessible-label="Legacy box plot label"></lr-box-plot>
   `)) as LyraBoxPlot;
   el.boxes = [{ label: 'Latency', data: [{ min: 1, q1: 2, median: 3, q3: 4, max: 5 }] }];
   await el.updateComplete;
@@ -91,7 +91,7 @@ it('forwards a host aria-label to the canvas and keeps the chart role on that se
 });
 
 it('formats generated median-summary values with the effective locale', async () => {
-  const el = (await fixture(html`<lyra-box-plot locale="de-DE"></lyra-box-plot>`)) as LyraBoxPlot;
+  const el = (await fixture(html`<lr-box-plot locale="de-DE"></lr-box-plot>`)) as LyraBoxPlot;
   el.boxes = [
     {
       label: 'Latency',
@@ -110,8 +110,8 @@ it('formats generated median-summary values with the effective locale', async ()
 });
 
 it('positions its y axis at logical start in RTL', async () => {
-  const wrapper = await fixture(html`<div dir="rtl"><lyra-box-plot></lyra-box-plot></div>`);
-  const el = wrapper.querySelector('lyra-box-plot') as LyraBoxPlot;
+  const wrapper = await fixture(html`<div dir="rtl"><lr-box-plot></lr-box-plot></div>`);
+  const el = wrapper.querySelector('lr-box-plot') as LyraBoxPlot;
   el.boxes = [{ label: 'Latency', data: [{ min: 1, q1: 2, median: 3, q3: 4, max: 5 }] }];
   await el.updateComplete;
   await waitUntil(() => (el as any).chart != null);
@@ -122,10 +122,10 @@ it('positions its y axis at logical start in RTL', async () => {
 it('can shrink to a 320px allocation with long chart content', async () => {
   const wrapper = await fixture(html`
     <div style="display: flex; inline-size: 320px;">
-      <lyra-box-plot></lyra-box-plot>
+      <lr-box-plot></lr-box-plot>
     </div>
   `);
-  const el = wrapper.querySelector('lyra-box-plot') as LyraBoxPlot;
+  const el = wrapper.querySelector('lr-box-plot') as LyraBoxPlot;
   el.labels = ['A category label that is intentionally very long'];
   el.boxes = [
     {
@@ -141,7 +141,7 @@ it('can shrink to a 320px allocation with long chart content', async () => {
 });
 
 it('exposes a customizable accessible description and box-plot data table', async () => {
-  const el = (await fixture(html`<lyra-box-plot></lyra-box-plot>`)) as LyraBoxPlot;
+  const el = (await fixture(html`<lr-box-plot></lr-box-plot>`)) as LyraBoxPlot;
   el.accessibleLabel = 'Loss distributions';
   el.accessibleDescription = 'Loss medians are stable across the two groups.';
   el.showDataTable = true;
@@ -182,7 +182,7 @@ it('does not wire up chart.js when the boxplot plugin fails to load, even though
   // connected instance's own real callback would race this test's synthetic
   // `null` call for the same instance. Constructing without connecting keeps
   // this a pure test of the async handler `connectedCallback()` wires up.
-  const el = document.createElement('lyra-box-plot') as LyraBoxPlot;
+  const el = document.createElement('lr-box-plot') as LyraBoxPlot;
 
   // Drive the same async handler `connectedCallback()` wires up, but with the
   // `null` resolution `loadBoxPlotPlugin()` produces on a partial failure —
@@ -194,12 +194,12 @@ it('does not wire up chart.js when the boxplot plugin fails to load, even though
   expect((el as any).chart).to.equal(undefined);
 });
 
-it('does not bundle lyra-chart\'s unused reset-zoom-button styles', () => {
+it('does not bundle lr-chart\'s unused reset-zoom-button styles', () => {
   expect(styles.cssText).to.not.contain('reset-zoom-button');
 });
 
 it('does not construct a Chart.js instance if disconnected before the lazy peer import settles', async () => {
-  const el = document.createElement('lyra-box-plot') as LyraBoxPlot;
+  const el = document.createElement('lr-box-plot') as LyraBoxPlot;
   el.boxes = [{ label: 'a', data: [{ min: 0, q1: 1, median: 2, q3: 3, max: 4 }] }];
   document.body.appendChild(el);
   el.remove();
@@ -207,15 +207,15 @@ it('does not construct a Chart.js instance if disconnected before the lazy peer 
   expect((el as unknown as { chart?: unknown }).chart).to.be.undefined;
 });
 
-it('resolves grid/tick/legend colors from custom --lyra-chart-* values set on the host', async () => {
-  const el = (await fixture(html`<lyra-box-plot></lyra-box-plot>`)) as LyraBoxPlot;
+it('resolves grid/tick/legend colors from custom --lr-chart-* values set on the host', async () => {
+  const el = (await fixture(html`<lr-box-plot></lr-box-plot>`)) as LyraBoxPlot;
   el.legend = true;
   el.boxes = [{ label: 'x', data: [{ min: 1, q1: 2, median: 3, q3: 4, max: 5 }] }];
-  el.style.setProperty('--lyra-chart-grid-color', 'rgb(1, 2, 3)');
-  el.style.setProperty('--lyra-chart-tick-color', 'rgb(4, 5, 6)');
-  el.style.setProperty('--lyra-chart-legend-color', 'rgb(7, 8, 9)');
-  el.style.setProperty('--lyra-chart-tooltip-bg', 'rgb(10, 11, 12)');
-  el.style.setProperty('--lyra-chart-tooltip-text', 'rgb(13, 14, 15)');
+  el.style.setProperty('--lr-chart-grid-color', 'rgb(1, 2, 3)');
+  el.style.setProperty('--lr-chart-tick-color', 'rgb(4, 5, 6)');
+  el.style.setProperty('--lr-chart-legend-color', 'rgb(7, 8, 9)');
+  el.style.setProperty('--lr-chart-tooltip-bg', 'rgb(10, 11, 12)');
+  el.style.setProperty('--lr-chart-tooltip-text', 'rgb(13, 14, 15)');
   await el.updateComplete;
   await waitUntil(() => (el as any).chart != null, undefined, { timeout: 5000 });
 
@@ -230,7 +230,7 @@ it('resolves grid/tick/legend colors from custom --lyra-chart-* values set on th
 });
 
 it('disables Chart.js animation when the user prefers reduced motion', async () => {
-  const el = (await fixture(html`<lyra-box-plot></lyra-box-plot>`)) as LyraBoxPlot;
+  const el = (await fixture(html`<lr-box-plot></lr-box-plot>`)) as LyraBoxPlot;
   el.boxes = [{ label: 'x', data: [{ min: 1, q1: 2, median: 3, q3: 4, max: 5 }] }];
   await el.updateComplete;
   await waitUntil(() => (el as any).chart != null, undefined, { timeout: 5000 });
@@ -250,12 +250,12 @@ it('disables Chart.js animation when the user prefers reduced motion', async () 
 });
 
 it('refreshTheme() forces a redraw that re-reads out-of-band theme changes', async () => {
-  const el = (await fixture(html`<lyra-box-plot></lyra-box-plot>`)) as LyraBoxPlot;
+  const el = (await fixture(html`<lr-box-plot></lr-box-plot>`)) as LyraBoxPlot;
   el.boxes = [{ label: 'x', data: [{ min: 1, q1: 2, median: 3, q3: 4, max: 5 }] }];
   await el.updateComplete;
   await waitUntil(() => (el as any).chart != null, undefined, { timeout: 5000 });
 
-  el.style.setProperty('--lyra-chart-tooltip-bg', 'rgb(9, 9, 9)');
+  el.style.setProperty('--lr-chart-tooltip-bg', 'rgb(9, 9, 9)');
   expect((el as any).chart.options.plugins.tooltip?.backgroundColor).to.not.equal('rgb(9, 9, 9)');
 
   expect((el as any).refreshTheme).to.be.a('function');
@@ -264,7 +264,7 @@ it('refreshTheme() forces a redraw that re-reads out-of-band theme changes', asy
 });
 
 it('skips redrawing when scrolled off-screen', async () => {
-  const el = (await fixture(html`<lyra-box-plot></lyra-box-plot>`)) as LyraBoxPlot;
+  const el = (await fixture(html`<lr-box-plot></lr-box-plot>`)) as LyraBoxPlot;
   el.labels = ['A', 'B'];
   el.boxes = [
     {
@@ -284,7 +284,7 @@ it('skips redrawing when scrolled off-screen', async () => {
 });
 
 it('redraws once when it becomes visible again after being off-screen', async () => {
-  const el = (await fixture(html`<lyra-box-plot></lyra-box-plot>`)) as LyraBoxPlot;
+  const el = (await fixture(html`<lr-box-plot></lr-box-plot>`)) as LyraBoxPlot;
   el.labels = ['A', 'B'];
   el.boxes = [
     {
@@ -307,7 +307,7 @@ it('redraws once when it becomes visible again after being off-screen', async ()
 });
 
 it('skips redrawing when the content signature is unchanged', async () => {
-  const el = (await fixture(html`<lyra-box-plot></lyra-box-plot>`)) as LyraBoxPlot;
+  const el = (await fixture(html`<lr-box-plot></lr-box-plot>`)) as LyraBoxPlot;
   el.boxes = [{ label: 'x', data: [{ min: 1, q1: 2, median: 3, q3: 4, max: 5 }] }];
   await el.updateComplete;
   await waitUntil(() => (el as any).chart != null, undefined, { timeout: 5000 });
@@ -322,7 +322,7 @@ it('connectedCallback() routes the resolved boxplot-plugin module into the loade
   // above): a regression back to the old bug — `connectedCallback()`
   // discarding the value `loadBoxPlotPlugin()` resolved to — would leave this
   // handler uncalled, since the old code never referenced it at all.
-  const el = document.createElement('lyra-box-plot') as LyraBoxPlot;
+  const el = document.createElement('lr-box-plot') as LyraBoxPlot;
   let receivedArg: unknown = 'not-yet-called';
   const original = (el as any).onBoxPlotPluginLoaded.bind(el);
   (el as any).onBoxPlotPluginLoaded = (boxMod: unknown) => {

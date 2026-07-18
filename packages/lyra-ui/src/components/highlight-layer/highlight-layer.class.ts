@@ -4,7 +4,7 @@ import { LyraElement } from '../../internal/lyra-element.js';
 import type { LyraHighlightTone, HighlightActivateDetail } from '../document-viewer/anchors.js';
 import { styles } from './highlight-layer.styles.js';
 
-const FLASH_DURATION_MS = 1800; // mirrors --lyra-transition-ambient's default duration
+const FLASH_DURATION_MS = 1800; // mirrors --lr-transition-ambient's default duration
 
 export interface HighlightLayerItem {
   id: string;
@@ -16,17 +16,17 @@ export interface HighlightLayerItem {
 }
 
 export interface LyraHighlightLayerEventMap {
-  'lyra-highlight-activate': CustomEvent<HighlightActivateDetail>;
+  'lr-highlight-activate': CustomEvent<HighlightActivateDetail>;
 }
 
 /**
- * `<lyra-highlight-layer>` — a presentational overlay that paints highlight rectangles
+ * `<lr-highlight-layer>` — a presentational overlay that paints highlight rectangles
  * (percent-of-box coordinates) over positioned content and owns their activation, active/flash
  * styling, and keyboard access. `items` order is the caller's own reading order; the layer does not
  * re-sort geometrically. Fills its nearest positioned ancestor.
  *
- * @customElement lyra-highlight-layer
- * @event lyra-highlight-activate - A rect was activated (click, or Enter/Space while focused).
+ * @customElement lr-highlight-layer
+ * @event lr-highlight-activate - A rect was activated (click, or Enter/Space while focused).
  *   `detail: { id }`.
  * @csspart base - The absolutely-positioned overlay (inset 0).
  * @csspart rect - One highlight rectangle (`data-tone`/`data-active`/`data-flash` state attributes).
@@ -73,7 +73,7 @@ export class LyraHighlightLayer extends LyraElement<LyraHighlightLayerEventMap> 
   }
 
   private onRectClick(id: string): void {
-    this.emit<HighlightActivateDetail>('lyra-highlight-activate', { id });
+    this.emit<HighlightActivateDetail>('lr-highlight-activate', { id });
   }
 
   private onRectFocus(id: string): void {
@@ -114,8 +114,9 @@ export class LyraHighlightLayer extends LyraElement<LyraHighlightLayerEventMap> 
   render(): TemplateResult | typeof nothing {
     if (this.items.length === 0) return nothing;
     const tabStop = this.tabStopId();
+    const ariaLabel = this.getAttribute('aria-label') || this.localize('highlightLayerLabel');
     return html`
-      <div part="base" role="group" aria-label=${this.localize('highlightLayerLabel')}>
+      <div part="base" role="group" aria-label=${ariaLabel}>
         ${this.items.map((item, index) => {
           const isActive = this.activeId === item.id;
           const isFlash = this.flashingId === item.id;
@@ -149,6 +150,6 @@ export class LyraHighlightLayer extends LyraElement<LyraHighlightLayerEventMap> 
 
 declare global {
   interface HTMLElementTagNameMap {
-    'lyra-highlight-layer': LyraHighlightLayer;
+    'lr-highlight-layer': LyraHighlightLayer;
   }
 }

@@ -10,7 +10,7 @@ interface BubblePoint {
 
 const meta: Meta = {
   title: 'Charts/Bubble',
-  component: 'lyra-bubble-chart',
+  component: 'lr-bubble-chart',
   tags: ['autodocs'],
 };
 export default meta;
@@ -27,11 +27,11 @@ export const Default: Story = {
       { label: 'Clusters', points: bubblePoints as unknown as Series['points'] },
     ];
     return html`
-      <lyra-bubble-chart
+      <lr-bubble-chart
         height="16rem"
         style="width: 22rem"
         .datasets=${series}
-      ></lyra-bubble-chart>
+      ></lr-bubble-chart>
     `;
   },
 };

@@ -23,12 +23,12 @@ export interface ChatThread {
 export type ThreadRowAction = 'pin' | 'archive' | 'delete';
 
 export interface LyraThreadListEventMap {
-  'lyra-select': CustomEvent<{ id: string }>;
-  'lyra-thread-pin': CustomEvent<{ id: string; pinned: boolean }>;
-  'lyra-thread-archive': CustomEvent<{ id: string; archived: boolean }>;
-  'lyra-thread-delete': CustomEvent<{ id: string }>;
-  'lyra-thread-rename': CustomEvent<{ id: string; title: string }>;
-  'lyra-filter-change': CustomEvent<{ text: string; matchCount: number }>;
+  'lr-select': CustomEvent<{ id: string }>;
+  'lr-thread-pin': CustomEvent<{ id: string; pinned: boolean }>;
+  'lr-thread-archive': CustomEvent<{ id: string; archived: boolean }>;
+  'lr-thread-delete': CustomEvent<{ id: string }>;
+  'lr-thread-rename': CustomEvent<{ id: string; title: string }>;
+  'lr-filter-change': CustomEvent<{ text: string; matchCount: number }>;
 }
 
 type ThreadBucketKey =
@@ -46,7 +46,7 @@ const ICON_STROKE_WIDTH = '1.75';
 // Mirrors the shared icon set's viewBox/stroke conventions (internal/icons.ts's
 // chevronIcon()/closeIcon()/etc.) without adding pin/archive/trash glyphs to that module -- so
 // these one-off icons still read as part of the same visual language as the rest of the library's
-// inline icons. Same approach lyra-conversation-item's own local pencil glyph takes for the
+// inline icons. Same approach lr-conversation-item's own local pencil glyph takes for the
 // identical reason.
 function pinIcon(): SVGTemplateResult {
   return svg`
@@ -84,35 +84,35 @@ function defaultFilter(thread: ChatThread, query: string): boolean {
 }
 
 /**
- * `<lyra-thread-list>` — the conversation sidebar: a grouped, searchable list of chat sessions with
+ * `<lr-thread-list>` — the conversation sidebar: a grouped, searchable list of chat sessions with
  * pin/archive/delete/rename affordances. *Data mode* (non-empty `threads`, or empty `threads` with
- * nothing slotted) renders every row as a `<lyra-conversation-item>` inside an internal
- * `<lyra-virtual-list>` — virtualized by construction, scroll position and per-row state survive a
+ * nothing slotted) renders every row as a `<lr-conversation-item>` inside an internal
+ * `<lr-virtual-list>` — virtualized by construction, scroll position and per-row state survive a
  * `threads` replacement; zero rows renders the built-in empty state. *Slotted mode* (empty `threads`
- * *and* real slotted content) renders host-supplied `<lyra-conversation-item>`s from the default slot
+ * *and* real slotted content) renders host-supplied `<lr-conversation-item>`s from the default slot
  * as-is: no grouping, virtualization, or row actions in that mode — those are data-mode-only by design
  * (shadow DOM cannot inject group headers between slotted children).
  *
- * No thread CRUD or persistence: every mutation (`lyra-thread-pin`/`-archive`/`-delete`/`-rename`) is
+ * No thread CRUD or persistence: every mutation (`lr-thread-pin`/`-archive`/`-delete`/`-rename`) is
  * a controlled event carrying the *requested* new state — the host mutates `threads`.
  *
- * Data mode: a host needing content with no home in `lyra-conversation-item`'s own
+ * Data mode: a host needing content with no home in `lr-conversation-item`'s own
  * `title`/`excerpt`/`meta`/`actions` surface (e.g. a leading purpose icon — the item has no default
  * slot to receive one) sets `wrapRow` to wrap the already-built row.
  *
- * @customElement lyra-thread-list
- * @slot - Slotted mode only: host-supplied `lyra-conversation-item`s, rendered in order. Each
+ * @customElement lr-thread-list
+ * @slot - Slotted mode only: host-supplied `lr-conversation-item`s, rendered in order. Each
  *   top-level assigned element that doesn't already carry an explicit `role` is given
- *   `role="listitem"`, since `[part="list"]` is `role="list"` in this mode and `lyra-conversation-item`
+ *   `role="listitem"`, since `[part="list"]` is `role="list"` in this mode and `lr-conversation-item`
  *   deliberately doesn't self-apply that role (see its own class doc).
  * @slot empty - Replaces the built-in empty state.
- * @event lyra-select - `detail: { id }` -- a row was activated (data mode).
- * @event lyra-thread-pin - `detail: { id, pinned }` -- the *requested* new state (data mode).
- * @event lyra-thread-archive - `detail: { id, archived }` -- the *requested* new state (data mode).
- * @event lyra-thread-delete - `detail: { id }` -- no built-in confirmation (data mode).
- * @event lyra-thread-rename - `detail: { id, title }`, re-emitted from the row's `lyra-rename` with
+ * @event lr-select - `detail: { id }` -- a row was activated (data mode).
+ * @event lr-thread-pin - `detail: { id, pinned }` -- the *requested* new state (data mode).
+ * @event lr-thread-archive - `detail: { id, archived }` -- the *requested* new state (data mode).
+ * @event lr-thread-delete - `detail: { id }` -- no built-in confirmation (data mode).
+ * @event lr-thread-rename - `detail: { id, title }`, re-emitted from the row's `lr-rename` with
  *   the id attached (data mode).
- * @event lyra-filter-change - `detail: { text, matchCount }` -- fires in both modes.
+ * @event lr-filter-change - `detail: { text, matchCount }` -- fires in both modes.
  * @csspart base - The root.
  * @csspart search - The search field wrapper.
  * @csspart search-input - The `<input type="search">`.
@@ -120,8 +120,8 @@ function defaultFilter(thread: ChatThread, query: string): boolean {
  * @csspart empty - The empty/no-matches state.
  * @csspart row-action - A built-in pin/archive/delete icon button (data mode, when `rowActions` includes it).
  * @csspart pin-glyph - The small pin indicator shown in a pinned row's `meta` slot (data mode).
- * @csspart group-header - Exported from the internal `lyra-virtual-list`'s `group` part (data mode, `grouping="date"`).
- * @csspart row - Exported from the internal `lyra-virtual-list`'s `row` part (data mode).
+ * @csspart group-header - Exported from the internal `lr-virtual-list`'s `group` part (data mode, `grouping="date"`).
+ * @csspart row - Exported from the internal `lr-virtual-list`'s `row` part (data mode).
  */
 export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
   static styles = [LyraElement.styles, styles];
@@ -155,9 +155,9 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
   /** Accessible name for the list region. Defaults to the localized `threadListLabel`. */
   @property() label = '';
 
-  /** Data mode only: wraps each row's built-in `<lyra-conversation-item>` with host-supplied
+  /** Data mode only: wraps each row's built-in `<lr-conversation-item>` with host-supplied
    *  content that has no home in the item's own `title`/`excerpt`/`meta`/`actions` surface — e.g. a
-   *  leading purpose icon (`lyra-conversation-item` has no default slot to receive one) or trailing
+   *  leading purpose icon (`lr-conversation-item` has no default slot to receive one) or trailing
    *  tag chips. Receives the thread and the already-built row `TemplateResult`; returns the final
    *  row content. Unset renders the built-in row unwrapped. */
   @property({ attribute: false }) wrapRow?: (thread: ChatThread, row: TemplateResult) => TemplateResult;
@@ -166,8 +166,8 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
   @state() private hasEmptySlot = false;
   @state() private hasDefaultSlotContent = false;
 
-  @query('lyra-virtual-list') private virtualListEl?: LyraVirtualList;
-  @query('lyra-live-region') private liveRegion?: LyraLiveRegion;
+  @query('lr-virtual-list') private virtualListEl?: LyraVirtualList;
+  @query('lr-live-region') private liveRegion?: LyraLiveRegion;
 
   // Slotted mode is only for a host that's actually relying on it (real slotted content present)
   // and hasn't also supplied `threads` -- empty `threads` with nothing slotted is still data mode,
@@ -185,16 +185,16 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
     }
     if (changed.has('threads') && this.threads.length > 0 && this.hasDefaultSlotContent) {
       console.warn(
-        '[lyra-thread-list] both `threads` and slotted content were supplied -- `threads` (data mode) wins and the default slot is ignored.',
+        '[lr-thread-list] both `threads` and slotted content were supplied -- `threads` (data mode) wins and the default slot is ignored.',
       );
     }
   }
 
   // Slotted mode's `[part="list"]` carries `role="list"`, which ARIA requires to directly own only
-  // `role="listitem"` elements -- `lyra-conversation-item` deliberately does *not* self-apply that
+  // `role="listitem"` elements -- `lr-conversation-item` deliberately does *not* self-apply that
   // role (its own doc explains why: it's a plain activatable row usable standalone, not committed to
   // list/listbox membership), so the container imposes it on whatever lands in the default slot
-  // instead, the same way `lyra-breadcrumb-item` self-applies `role="listitem"` for its own `role="list"`
+  // instead, the same way `lr-breadcrumb-item` self-applies `role="listitem"` for its own `role="list"`
   // parent -- just applied from the outside here since the slotted element doesn't own that choice.
   // Never overrides a role a consumer set explicitly.
   private markAsListItems(elements: Element[]): void {
@@ -289,7 +289,7 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
   private onSearchInput = (e: Event): void => {
     this.searchText = (e.target as HTMLInputElement).value;
     const count = this.visibleThreads.length;
-    this.emit<{ text: string; matchCount: number }>('lyra-filter-change', {
+    this.emit<{ text: string; matchCount: number }>('lr-filter-change', {
       text: this.searchText,
       matchCount: count,
     });
@@ -315,7 +315,7 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
 
   private rowElements(): LyraConversationItem[] {
     const scope: ParentNode = this.dataMode ? (this.virtualListEl?.renderRoot ?? this) : this;
-    return [...scope.querySelectorAll<LyraConversationItem>('lyra-conversation-item')];
+    return [...scope.querySelectorAll<LyraConversationItem>('lr-conversation-item')];
   }
 
   private optionEl(row: LyraConversationItem): HTMLElement | null {
@@ -361,12 +361,12 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
   // be an inline style rather than living solely in thread-list.styles.ts's own [part~='row-action']
   // rule.
   private readonly rowActionButtonStyle = styleMap({
-    minInlineSize: 'var(--lyra-icon-button-size)',
-    minBlockSize: 'var(--lyra-icon-button-size)',
+    minInlineSize: 'var(--lr-icon-button-size)',
+    minBlockSize: 'var(--lr-icon-button-size)',
   });
 
   private renderRowActions(thread: ChatThread): TemplateResult {
-    // Rendered via <lyra-virtual-list>'s `renderItem` callback, this markup mounts inside
+    // Rendered via <lr-virtual-list>'s `renderItem` callback, this markup mounts inside
     // *virtual-list's own* shadow tree, not this element's -- so thread-list.styles.ts's own
     // `[part~='row-action']` rule (a same-tree-scope attribute selector) never actually reaches
     // these buttons at runtime; only an inherited property (a custom property, or an inline style,
@@ -381,7 +381,7 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
               part="row-action"
               style=${this.rowActionButtonStyle}
               aria-label=${this.localize(thread.pinned ? 'unpinConversation' : 'pinConversation')}
-              @click=${() => this.emit('lyra-thread-pin', { id: thread.id, pinned: !thread.pinned })}
+              @click=${() => this.emit('lr-thread-pin', { id: thread.id, pinned: !thread.pinned })}
             >
               ${pinIcon()}
             </button>`
@@ -392,7 +392,7 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
               part="row-action"
               style=${this.rowActionButtonStyle}
               aria-label=${this.localize(thread.archived ? 'unarchiveConversation' : 'archiveConversation')}
-              @click=${() => this.emit('lyra-thread-archive', { id: thread.id, archived: !thread.archived })}
+              @click=${() => this.emit('lr-thread-archive', { id: thread.id, archived: !thread.archived })}
             >
               ${archiveIcon()}
             </button>`
@@ -403,7 +403,7 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
               part="row-action"
               style=${this.rowActionButtonStyle}
               aria-label=${this.localize('deleteConversation')}
-              @click=${() => this.emit('lyra-thread-delete', { id: thread.id })}
+              @click=${() => this.emit('lr-thread-delete', { id: thread.id })}
             >
               ${trashIcon()}
             </button>`
@@ -415,20 +415,20 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
   private renderRow = (item: unknown): unknown => {
     const thread = item as ChatThread;
     const row = html`
-      <lyra-conversation-item
+      <lr-conversation-item
         id=${thread.id}
         title=${thread.title}
         excerpt=${thread.excerpt ?? ''}
         .timestamp=${thread.timestamp}
         ?active=${thread.id === this.activeId}
         .editable=${this.editable}
-        @lyra-select=${() => this.emit('lyra-select', { id: thread.id })}
-        @lyra-rename=${(e: CustomEvent<{ title: string }>) =>
-          this.emit('lyra-thread-rename', { id: thread.id, title: e.detail.title })}
+        @lr-select=${() => this.emit('lr-select', { id: thread.id })}
+        @lr-rename=${(e: CustomEvent<{ title: string }>) =>
+          this.emit('lr-thread-rename', { id: thread.id, title: e.detail.title })}
       >
         ${thread.pinned ? html`<span slot="meta" part="pin-glyph" aria-hidden="true">${pinIcon()}</span>` : nothing}
         ${this.rowActions.length > 0 ? this.renderRowActions(thread) : nothing}
-      </lyra-conversation-item>
+      </lr-conversation-item>
     `;
     return this.wrapRow ? this.wrapRow(thread, row) : row;
   };
@@ -482,7 +482,7 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
             ? html`<div part="empty">${
                 this.searchText.trim() ? this.localize('noMatches') : this.localize('threadListEmpty')
               }</div>`
-            : html`<lyra-virtual-list
+            : html`<lr-virtual-list
                 exportparts="group:group-header, row:row"
                 row-height="auto"
                 .items=${rows}
@@ -490,10 +490,10 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
                 .keyFunction=${(item: unknown) => (item as ChatThread).id}
                 .groups=${groups}
                 .activeId=${this.activeId}
-              ></lyra-virtual-list>`}
+              ></lr-virtual-list>`}
           <slot name="empty" @slotchange=${this.onEmptySlotChange}></slot>
         </div>
-        <lyra-live-region></lyra-live-region>
+        <lr-live-region></lr-live-region>
       </div>
     `;
   }
@@ -501,6 +501,6 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
 
 declare global {
   interface HTMLElementTagNameMap {
-    'lyra-thread-list': LyraThreadList;
+    'lr-thread-list': LyraThreadList;
   }
 }

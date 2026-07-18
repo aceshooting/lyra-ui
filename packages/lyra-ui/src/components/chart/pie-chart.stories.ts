@@ -5,7 +5,7 @@ import { storyColor } from '../../../../../.storybook/story-theme.js';
 
 const meta: Meta = {
   title: 'Charts/Pie',
-  component: 'lyra-pie-chart',
+  component: 'lr-pie-chart',
   tags: ['autodocs'],
 };
 export default meta;
@@ -21,12 +21,12 @@ export const Default: Story = {
       },
     ];
     return html`
-      <lyra-pie-chart
+      <lr-pie-chart
         height="16rem"
         style="width: 16rem"
         .labels=${['Chrome', 'Firefox', 'Safari', 'Other']}
         .datasets=${series}
-      ></lyra-pie-chart>
+      ></lr-pie-chart>
     `;
   },
 };

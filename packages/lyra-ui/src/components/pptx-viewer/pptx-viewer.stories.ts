@@ -4,7 +4,7 @@ import './pptx-viewer.js';
 
 const meta: Meta = {
   title: 'PptxViewer',
-  component: 'lyra-pptx-viewer',
+  component: 'lr-pptx-viewer',
   tags: ['autodocs'],
   parameters: {
     docs: {
@@ -21,15 +21,15 @@ const fixtureUrl = new URL('./fixtures/table-stale-frame.pptx', import.meta.url)
 
 export const RealFixture: Story = {
   name: 'Real PPTX fixture',
-  render: () => html`<lyra-pptx-viewer style="display:block; min-height:24rem;" src=${fixtureUrl} name="Table fixture"></lyra-pptx-viewer>`,
+  render: () => html`<lr-pptx-viewer style="display:block; min-height:24rem;" src=${fixtureUrl} name="Table fixture"></lr-pptx-viewer>`,
 };
 
 export const MissingSource: Story = {
   name: 'No source',
-  render: () => html`<lyra-pptx-viewer></lyra-pptx-viewer>`,
+  render: () => html`<lr-pptx-viewer></lr-pptx-viewer>`,
 };
 
 export const UnsafeSource: Story = {
   name: 'Unsafe source',
-  render: () => html`<lyra-pptx-viewer .src=${'javascript:alert(1)'}></lyra-pptx-viewer>`,
+  render: () => html`<lr-pptx-viewer .src=${'javascript:alert(1)'}></lr-pptx-viewer>`,
 };

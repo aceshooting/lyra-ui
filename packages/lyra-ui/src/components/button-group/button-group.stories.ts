@@ -3,22 +3,22 @@ import type { Meta, StoryObj } from '@storybook/web-components';
 import './button-group.js';
 import '../button/button.js';
 
-const meta: Meta = { title: 'Primitives/Button Group', component: 'lyra-button-group' };
+const meta: Meta = { title: 'Primitives/Button Group', component: 'lr-button-group' };
 export default meta;
 type Story = StoryObj;
 
 export const Default: Story = {
-  render: () => html`<lyra-button-group label="Document actions">
-    <lyra-button variant="brand">Save</lyra-button>
-    <lyra-button>Preview</lyra-button>
-    <lyra-button>Share</lyra-button>
-  </lyra-button-group>`,
+  render: () => html`<lr-button-group label="Document actions">
+    <lr-button variant="brand">Save</lr-button>
+    <lr-button>Preview</lr-button>
+    <lr-button>Share</lr-button>
+  </lr-button-group>`,
 };
 
 export const Vertical: Story = {
-  render: () => html`<lyra-button-group orientation="vertical" label="Account actions">
-    <lyra-button>Profile</lyra-button>
-    <lyra-button>Preferences</lyra-button>
-    <lyra-button>Sign out</lyra-button>
-  </lyra-button-group>`,
+  render: () => html`<lr-button-group orientation="vertical" label="Account actions">
+    <lr-button>Profile</lr-button>
+    <lr-button>Preferences</lr-button>
+    <lr-button>Sign out</lr-button>
+  </lr-button-group>`,
 };

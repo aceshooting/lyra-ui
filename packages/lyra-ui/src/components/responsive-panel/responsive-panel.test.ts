@@ -7,12 +7,12 @@ import { styles } from './responsive-panel.styles.js';
 it('uses a dynamic viewport fallback and safe-area padding for bottom sheets', () => {
   expect(styles.cssText).to.include('max-block-size: 85vh');
   expect(styles.cssText).to.include('max-block-size: 85dvh');
-  expect(styles.cssText).to.include('var(--lyra-safe-area-bottom)');
+  expect(styles.cssText).to.include('var(--lr-safe-area-bottom)');
 });
 
-// A stand-in for a slotted component (e.g. lyra-combobox) whose real
+// A stand-in for a slotted component (e.g. lr-combobox) whose real
 // focusable target lives inside its own shadow root rather than the host
-// tag's light-DOM subtree. Mirrors lyra-dialog's identical test fixture,
+// tag's light-DOM subtree. Mirrors lr-dialog's identical test fixture,
 // under a distinct tag name so both test files can register their own copy
 // in the same browser context.
 class ResponsivePanelTestShadowInput extends HTMLElement {
@@ -46,7 +46,7 @@ describe('resolveEffectiveMode', () => {
 });
 
 it('defaults to mode="auto", variant="fullscreen", closed, mobile-breakpoint="768px"', async () => {
-  const el = (await fixture(html`<lyra-responsive-panel>body</lyra-responsive-panel>`)) as LyraResponsivePanel;
+  const el = (await fixture(html`<lr-responsive-panel>body</lr-responsive-panel>`)) as LyraResponsivePanel;
   expect(el.mode).to.equal('auto');
   expect(el.getAttribute('mode')).to.equal('auto');
   expect(el.variant).to.equal('fullscreen');
@@ -56,7 +56,7 @@ it('defaults to mode="auto", variant="fullscreen", closed, mobile-breakpoint="76
 
 it('resolves to inline in mode="auto" on a viewport wider than the breakpoint (the default jsdom/browser test width)', async () => {
   const el = (await fixture(
-    html`<lyra-responsive-panel open>body</lyra-responsive-panel>`,
+    html`<lr-responsive-panel open>body</lr-responsive-panel>`,
   )) as LyraResponsivePanel;
   const panel = el.shadowRoot!.querySelector('[part="panel"]') as HTMLElement;
   expect(panel.hasAttribute('role')).to.be.false;
@@ -65,7 +65,7 @@ it('resolves to inline in mode="auto" on a viewport wider than the breakpoint (t
 
 it('forces the overlay presentation regardless of viewport width when mode="overlay"', async () => {
   const el = (await fixture(
-    html`<lyra-responsive-panel mode="overlay" open label="Settings">body</lyra-responsive-panel>`,
+    html`<lr-responsive-panel mode="overlay" open label="Settings">body</lr-responsive-panel>`,
   )) as LyraResponsivePanel;
   const panel = el.shadowRoot!.querySelector('[part="panel"]') as HTMLElement;
   expect(panel.getAttribute('role')).to.equal('dialog');
@@ -76,7 +76,7 @@ it('forces the overlay presentation regardless of viewport width when mode="over
 
 it('forces the inline presentation even at a breakpoint that would otherwise resolve to overlay', async () => {
   const el = (await fixture(
-    html`<lyra-responsive-panel mode="inline" mobile-breakpoint="99999px" open>body</lyra-responsive-panel>`,
+    html`<lr-responsive-panel mode="inline" mobile-breakpoint="99999px" open>body</lr-responsive-panel>`,
   )) as LyraResponsivePanel;
   const panel = el.shadowRoot!.querySelector('[part="panel"]') as HTMLElement;
   expect(panel.hasAttribute('role')).to.be.false;
@@ -85,7 +85,7 @@ it('forces the inline presentation even at a breakpoint that would otherwise res
 
 it('uses a real matchMedia query against mobile-breakpoint: an absurdly large breakpoint resolves auto mode to overlay', async () => {
   const el = (await fixture(
-    html`<lyra-responsive-panel mobile-breakpoint="99999px" open>body</lyra-responsive-panel>`,
+    html`<lr-responsive-panel mobile-breakpoint="99999px" open>body</lr-responsive-panel>`,
   )) as LyraResponsivePanel;
   const panel = el.shadowRoot!.querySelector('[part="panel"]') as HTMLElement;
   expect(panel.getAttribute('role')).to.equal('dialog');
@@ -93,7 +93,7 @@ it('uses a real matchMedia query against mobile-breakpoint: an absurdly large br
 
 it('uses a real matchMedia query against mobile-breakpoint: an absurdly small breakpoint resolves auto mode to inline', async () => {
   const el = (await fixture(
-    html`<lyra-responsive-panel mobile-breakpoint="1px" open>body</lyra-responsive-panel>`,
+    html`<lr-responsive-panel mobile-breakpoint="1px" open>body</lr-responsive-panel>`,
   )) as LyraResponsivePanel;
   const panel = el.shadowRoot!.querySelector('[part="panel"]') as HTMLElement;
   expect(panel.hasAttribute('role')).to.be.false;
@@ -101,7 +101,7 @@ it('uses a real matchMedia query against mobile-breakpoint: an absurdly small br
 
 it('re-evaluates against the new mobile-breakpoint when it changes at runtime while connected in mode="auto"', async () => {
   const el = (await fixture(
-    html`<lyra-responsive-panel mobile-breakpoint="1px" open>body</lyra-responsive-panel>`,
+    html`<lr-responsive-panel mobile-breakpoint="1px" open>body</lr-responsive-panel>`,
   )) as LyraResponsivePanel;
   await el.updateComplete;
   let panel = el.shadowRoot!.querySelector('[part="panel"]') as HTMLElement;
@@ -118,14 +118,14 @@ it('re-evaluates against the new mobile-breakpoint when it changes at runtime wh
 });
 
 it('hides [part="base"] entirely while closed, in both presentations', async () => {
-  const inline = (await fixture(html`<lyra-responsive-panel mode="inline">body</lyra-responsive-panel>`)) as LyraResponsivePanel;
-  const overlay = (await fixture(html`<lyra-responsive-panel mode="overlay">body</lyra-responsive-panel>`)) as LyraResponsivePanel;
+  const inline = (await fixture(html`<lr-responsive-panel mode="inline">body</lr-responsive-panel>`)) as LyraResponsivePanel;
+  const overlay = (await fixture(html`<lr-responsive-panel mode="overlay">body</lr-responsive-panel>`)) as LyraResponsivePanel;
   expect(getComputedStyle(inline.shadowRoot!.querySelector('[part="base"]')!).display).to.equal('none');
   expect(getComputedStyle(overlay.shadowRoot!.querySelector('[part="base"]')!).display).to.equal('none');
 });
 
 it('directly invoking the breakpoint-response handler updates the effective presentation without a real resize', async () => {
-  const el = (await fixture(html`<lyra-responsive-panel open>body</lyra-responsive-panel>`)) as LyraResponsivePanel;
+  const el = (await fixture(html`<lr-responsive-panel open>body</lr-responsive-panel>`)) as LyraResponsivePanel;
   await el.updateComplete;
   let panel = el.shadowRoot!.querySelector('[part="panel"]') as HTMLElement;
   expect(panel.hasAttribute('role'), 'starts inline on a wide test viewport').to.be.false;
@@ -141,26 +141,26 @@ it('directly invoking the breakpoint-response handler updates the effective pres
   expect(panel.hasAttribute('role')).to.be.false;
 });
 
-it('emits lyra-mode-change with the new effective mode when the breakpoint is crossed, but not on initial render', async () => {
-  const el = (await fixture(html`<lyra-responsive-panel open>body</lyra-responsive-panel>`)) as LyraResponsivePanel;
+it('emits lr-mode-change with the new effective mode when the breakpoint is crossed, but not on initial render', async () => {
+  const el = (await fixture(html`<lr-responsive-panel open>body</lr-responsive-panel>`)) as LyraResponsivePanel;
   await el.updateComplete;
   let fired = false;
-  el.addEventListener('lyra-mode-change', () => (fired = true));
+  el.addEventListener('lr-mode-change', () => (fired = true));
 
-  const listener = oneEvent(el, 'lyra-mode-change');
+  const listener = oneEvent(el, 'lr-mode-change');
   asAny(el).handleBreakpointChange(true);
   const event = await listener;
   expect(fired).to.be.true;
   expect((event.detail as ResponsivePanelModeChangeDetail).mode).to.equal('overlay');
 });
 
-it('does not emit lyra-mode-change when the breakpoint state is reported without actually changing the effective mode', async () => {
+it('does not emit lr-mode-change when the breakpoint state is reported without actually changing the effective mode', async () => {
   const el = (await fixture(
-    html`<lyra-responsive-panel mode="inline" open>body</lyra-responsive-panel>`,
+    html`<lr-responsive-panel mode="inline" open>body</lr-responsive-panel>`,
   )) as LyraResponsivePanel;
   await el.updateComplete;
   let count = 0;
-  el.addEventListener('lyra-mode-change', () => count++);
+  el.addEventListener('lr-mode-change', () => count++);
 
   asAny(el).handleBreakpointChange(true); // mode is forced inline, so this can't change the effective mode
   await el.updateComplete;
@@ -170,7 +170,7 @@ it('does not emit lyra-mode-change when the breakpoint state is reported without
 
 it('a live breakpoint crossing while already open in overlay mode engages scroll-lock/focus-trap without closing the content', async () => {
   const el = (await fixture(
-    html`<lyra-responsive-panel open><button>inside</button></lyra-responsive-panel>`,
+    html`<lr-responsive-panel open><button>inside</button></lr-responsive-panel>`,
   )) as LyraResponsivePanel;
   await el.updateComplete;
   expect(el.open, 'stays open through the transition').to.be.true;
@@ -197,7 +197,7 @@ it('moves outside focus into the panel when a breakpoint crossing makes it modal
   outside.focus();
 
   const el = (await fixture(
-    html`<lyra-responsive-panel mode="inline" open><button>inside</button></lyra-responsive-panel>`,
+    html`<lr-responsive-panel mode="inline" open><button>inside</button></lr-responsive-panel>`,
   )) as LyraResponsivePanel;
   await el.updateComplete;
 
@@ -216,7 +216,7 @@ it('preserves panel focus when an open overlay becomes inline', async () => {
   outside.focus();
 
   const el = (await fixture(
-    html`<lyra-responsive-panel mode="overlay" open><button>inside</button></lyra-responsive-panel>`,
+    html`<lr-responsive-panel mode="overlay" open><button>inside</button></lr-responsive-panel>`,
   )) as LyraResponsivePanel;
   await el.updateComplete;
   expect(document.activeElement?.textContent).to.equal('inside');
@@ -228,11 +228,11 @@ it('preserves panel focus when an open overlay becomes inline', async () => {
   outside.remove();
 });
 
-it('closes on backdrop click and emits lyra-close with reason "backdrop"', async () => {
+it('closes on backdrop click and emits lr-close with reason "backdrop"', async () => {
   const el = (await fixture(
-    html`<lyra-responsive-panel mode="overlay" open>body</lyra-responsive-panel>`,
+    html`<lr-responsive-panel mode="overlay" open>body</lr-responsive-panel>`,
   )) as LyraResponsivePanel;
-  const listener = oneEvent(el, 'lyra-close');
+  const listener = oneEvent(el, 'lr-close');
   (el.shadowRoot!.querySelector('[part="backdrop"]') as HTMLElement).click();
   const event = await listener;
 
@@ -240,11 +240,11 @@ it('closes on backdrop click and emits lyra-close with reason "backdrop"', async
   expect(event.detail).to.equal('backdrop');
 });
 
-it('closes on Escape and emits lyra-close with reason "escape"', async () => {
+it('closes on Escape and emits lr-close with reason "escape"', async () => {
   const el = (await fixture(
-    html`<lyra-responsive-panel mode="overlay" open>body</lyra-responsive-panel>`,
+    html`<lr-responsive-panel mode="overlay" open>body</lr-responsive-panel>`,
   )) as LyraResponsivePanel;
-  const listener = oneEvent(el, 'lyra-close');
+  const listener = oneEvent(el, 'lr-close');
   document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
   const event = await listener;
 
@@ -254,10 +254,10 @@ it('closes on Escape and emits lyra-close with reason "escape"', async () => {
 
 it('does not respond to Escape while inline (no document keydown trap is wired up)', async () => {
   const el = (await fixture(
-    html`<lyra-responsive-panel mode="inline" open>body</lyra-responsive-panel>`,
+    html`<lr-responsive-panel mode="inline" open>body</lr-responsive-panel>`,
   )) as LyraResponsivePanel;
   let fired = false;
-  el.addEventListener('lyra-close', () => (fired = true));
+  el.addEventListener('lr-close', () => (fired = true));
 
   document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
   await el.updateComplete;
@@ -266,11 +266,11 @@ it('does not respond to Escape while inline (no document keydown trap is wired u
   expect(el.open).to.be.true;
 });
 
-it('close() fires lyra-close with reason "api" in the inline presentation too (documented single-event simplification)', async () => {
+it('close() fires lr-close with reason "api" in the inline presentation too (documented single-event simplification)', async () => {
   const el = (await fixture(
-    html`<lyra-responsive-panel mode="inline" open>body</lyra-responsive-panel>`,
+    html`<lr-responsive-panel mode="inline" open>body</lr-responsive-panel>`,
   )) as LyraResponsivePanel;
-  const listener = oneEvent(el, 'lyra-close');
+  const listener = oneEvent(el, 'lr-close');
   el.close();
   const event = await listener;
 
@@ -279,9 +279,9 @@ it('close() fires lyra-close with reason "api" in the inline presentation too (d
 });
 
 it('close() is a no-op when already closed (no duplicate event, no error)', async () => {
-  const el = (await fixture(html`<lyra-responsive-panel mode="overlay">body</lyra-responsive-panel>`)) as LyraResponsivePanel;
+  const el = (await fixture(html`<lr-responsive-panel mode="overlay">body</lr-responsive-panel>`)) as LyraResponsivePanel;
   let count = 0;
-  el.addEventListener('lyra-close', () => count++);
+  el.addEventListener('lr-close', () => count++);
 
   el.close();
   el.close();
@@ -290,12 +290,12 @@ it('close() is a no-op when already closed (no duplicate event, no error)', asyn
   expect(count).to.equal(0);
 });
 
-it('a plain open = false property write does not fire lyra-close', async () => {
+it('a plain open = false property write does not fire lr-close', async () => {
   const el = (await fixture(
-    html`<lyra-responsive-panel mode="overlay" open>body</lyra-responsive-panel>`,
+    html`<lr-responsive-panel mode="overlay" open>body</lr-responsive-panel>`,
   )) as LyraResponsivePanel;
   let fired = false;
-  el.addEventListener('lyra-close', () => (fired = true));
+  el.addEventListener('lr-close', () => (fired = true));
 
   el.open = false;
   await el.updateComplete;
@@ -304,7 +304,7 @@ it('a plain open = false property write does not fire lyra-close', async () => {
 });
 
 it('locks document scroll while open in the overlay presentation and releases it on close', async () => {
-  const el = (await fixture(html`<lyra-responsive-panel mode="overlay">body</lyra-responsive-panel>`)) as LyraResponsivePanel;
+  const el = (await fixture(html`<lr-responsive-panel mode="overlay">body</lr-responsive-panel>`)) as LyraResponsivePanel;
   el.open = true;
   await el.updateComplete;
   expect(document.documentElement.style.overflow).to.equal('hidden');
@@ -315,14 +315,14 @@ it('locks document scroll while open in the overlay presentation and releases it
 });
 
 it('does not lock document scroll for the inline presentation', async () => {
-  const el = (await fixture(html`<lyra-responsive-panel mode="inline">body</lyra-responsive-panel>`)) as LyraResponsivePanel;
+  const el = (await fixture(html`<lr-responsive-panel mode="inline">body</lr-responsive-panel>`)) as LyraResponsivePanel;
   el.open = true;
   await el.updateComplete;
   expect(document.documentElement.style.overflow).to.equal('');
 });
 
 it('releases the scroll lock on disconnect while open in the overlay presentation', async () => {
-  const el = (await fixture(html`<lyra-responsive-panel mode="overlay" open>body</lyra-responsive-panel>`)) as LyraResponsivePanel;
+  const el = (await fixture(html`<lr-responsive-panel mode="overlay" open>body</lr-responsive-panel>`)) as LyraResponsivePanel;
   await el.updateComplete;
   expect(document.documentElement.style.overflow).to.equal('hidden');
 
@@ -332,7 +332,7 @@ it('releases the scroll lock on disconnect while open in the overlay presentatio
 });
 
 it('restores the scroll lock and keydown trap when reparented while still open in the overlay presentation', async () => {
-  const el = (await fixture(html`<lyra-responsive-panel mode="overlay" open>body</lyra-responsive-panel>`)) as LyraResponsivePanel;
+  const el = (await fixture(html`<lr-responsive-panel mode="overlay" open>body</lr-responsive-panel>`)) as LyraResponsivePanel;
   await el.updateComplete;
   expect(document.documentElement.style.overflow).to.equal('hidden');
 
@@ -353,7 +353,7 @@ it('restores the scroll lock and keydown trap when reparented while still open i
 
 it('moves focus into the panel to the first focusable element when opened in the overlay presentation', async () => {
   const el = (await fixture(
-    html`<lyra-responsive-panel mode="overlay"><button>first</button><button>second</button></lyra-responsive-panel>`,
+    html`<lr-responsive-panel mode="overlay"><button>first</button><button>second</button></lr-responsive-panel>`,
   )) as LyraResponsivePanel;
   const first = el.querySelector('button') as HTMLButtonElement;
 
@@ -370,7 +370,7 @@ it('does not move focus for the inline presentation when opened', async () => {
   outside.focus();
 
   const el = (await fixture(
-    html`<lyra-responsive-panel mode="inline"><button>inside</button></lyra-responsive-panel>`,
+    html`<lr-responsive-panel mode="inline"><button>inside</button></lr-responsive-panel>`,
   )) as LyraResponsivePanel;
   el.open = true;
   await el.updateComplete;
@@ -381,9 +381,9 @@ it('does not move focus for the inline presentation when opened', async () => {
 
 it('traps Tab focus inside the panel while overlay chrome is active, wrapping last->first and first->last', async () => {
   const el = (await fixture(
-    html`<lyra-responsive-panel mode="overlay" open
+    html`<lr-responsive-panel mode="overlay" open
       ><button>first</button
-      ><div slot="footer"><button>last</button></div></lyra-responsive-panel
+      ><div slot="footer"><button>last</button></div></lr-responsive-panel
     >`,
   )) as LyraResponsivePanel;
   await el.updateComplete;
@@ -409,9 +409,9 @@ it('traps Tab focus inside the panel while overlay chrome is active, wrapping la
 
 it('traps Tab/Shift+Tab at a slotted element whose focusable target lives in its own shadow root', async () => {
   const el = (await fixture(
-    html`<lyra-responsive-panel mode="overlay" open
+    html`<lr-responsive-panel mode="overlay" open
       ><responsive-panel-test-shadow-input></responsive-panel-test-shadow-input
-      ><div slot="footer"><button>last</button></div></lyra-responsive-panel
+      ><div slot="footer"><button>last</button></div></lr-responsive-panel
     >`,
   )) as LyraResponsivePanel;
   await el.updateComplete;
@@ -428,7 +428,7 @@ it('traps Tab/Shift+Tab at a slotted element whose focusable target lives in its
 });
 
 it('hides the header/footer wrappers when nothing is slotted into them, shows them once slotted', async () => {
-  const el = (await fixture(html`<lyra-responsive-panel mode="inline" open>body</lyra-responsive-panel>`)) as LyraResponsivePanel;
+  const el = (await fixture(html`<lr-responsive-panel mode="inline" open>body</lr-responsive-panel>`)) as LyraResponsivePanel;
   const header = el.shadowRoot!.querySelector('[part="header"]') as HTMLElement;
   const footer = el.shadowRoot!.querySelector('[part="footer"]') as HTMLElement;
   expect(header.hasAttribute('hidden')).to.be.true;
@@ -450,8 +450,8 @@ it('hides the header/footer wrappers when nothing is slotted into them, shows th
 
 it('renders the header/footer wrappers visible on first paint when content is present before upgrade', async () => {
   const el = (await fixture(
-    html`<lyra-responsive-panel mode="inline" open
-      ><span slot="header">Title</span>body<span slot="footer">OK</span></lyra-responsive-panel
+    html`<lr-responsive-panel mode="inline" open
+      ><span slot="header">Title</span>body<span slot="footer">OK</span></lr-responsive-panel
     >`,
   )) as LyraResponsivePanel;
   const header = el.shadowRoot!.querySelector('[part="header"]') as HTMLElement;
@@ -461,21 +461,21 @@ it('renders the header/footer wrappers visible on first paint when content is pr
 });
 
 it('reflects the variant attribute', async () => {
-  const el = (await fixture(html`<lyra-responsive-panel variant="bottom-sheet">body</lyra-responsive-panel>`)) as LyraResponsivePanel;
+  const el = (await fixture(html`<lr-responsive-panel variant="bottom-sheet">body</lr-responsive-panel>`)) as LyraResponsivePanel;
   expect(el.getAttribute('variant')).to.equal('bottom-sheet');
 });
 
 it('is accessible while closed (empty/default state)', async () => {
-  const el = (await fixture(html`<lyra-responsive-panel></lyra-responsive-panel>`)) as LyraResponsivePanel;
+  const el = (await fixture(html`<lr-responsive-panel></lr-responsive-panel>`)) as LyraResponsivePanel;
   await expect(el).to.be.accessible();
 });
 
 it('is accessible while open in the inline presentation with header/body/footer content', async () => {
   const el = (await fixture(
-    html`<lyra-responsive-panel mode="inline" open
+    html`<lr-responsive-panel mode="inline" open
       ><span slot="header">Filters</span>
       <p>Filter controls go here.</p>
-      <div slot="footer"><button>Apply</button></div></lyra-responsive-panel
+      <div slot="footer"><button>Apply</button></div></lr-responsive-panel
     >`,
   )) as LyraResponsivePanel;
   await el.updateComplete;
@@ -484,9 +484,9 @@ it('is accessible while open in the inline presentation with header/body/footer 
 
 it('is accessible while open in the overlay presentation with a label', async () => {
   const el = (await fixture(
-    html`<lyra-responsive-panel mode="overlay" open label="Conversation history"
+    html`<lr-responsive-panel mode="overlay" open label="Conversation history"
       ><p>History items go here.</p>
-      <div slot="footer"><button>Close</button></div></lyra-responsive-panel
+      <div slot="footer"><button>Close</button></div></lr-responsive-panel
     >`,
   )) as LyraResponsivePanel;
   await el.updateComplete;
@@ -495,9 +495,9 @@ it('is accessible while open in the overlay presentation with a label', async ()
 
 it('falls back to the header slot content as aria-label when label is unset', async () => {
   const el = (await fixture(
-    html`<lyra-responsive-panel mode="overlay" open
+    html`<lr-responsive-panel mode="overlay" open
       ><span slot="header">Filters</span>
-      <p>Filter controls go here.</p></lyra-responsive-panel
+      <p>Filter controls go here.</p></lr-responsive-panel
     >`,
   )) as LyraResponsivePanel;
   await el.updateComplete;
@@ -507,10 +507,10 @@ it('falls back to the header slot content as aria-label when label is unset', as
 
 it('prefers a heading element within the header slot over its full text when both are present', async () => {
   const el = (await fixture(
-    html`<lyra-responsive-panel mode="overlay" open
+    html`<lr-responsive-panel mode="overlay" open
       ><h2 slot="header">Filters</h2
       ><button slot="header">Reset</button>
-      <p>Filter controls go here.</p></lyra-responsive-panel
+      <p>Filter controls go here.</p></lr-responsive-panel
     >`,
   )) as LyraResponsivePanel;
   await el.updateComplete;
@@ -520,8 +520,8 @@ it('prefers a heading element within the header slot over its full text when bot
 
 it('prefers an explicit label over the header slot fallback', async () => {
   const el = (await fixture(
-    html`<lyra-responsive-panel mode="overlay" open label="Explicit label"
-      ><span slot="header">Header text</span></lyra-responsive-panel
+    html`<lr-responsive-panel mode="overlay" open label="Explicit label"
+      ><span slot="header">Header text</span></lr-responsive-panel
     >`,
   )) as LyraResponsivePanel;
   await el.updateComplete;
@@ -531,8 +531,8 @@ it('prefers an explicit label over the header slot fallback', async () => {
 
 it('forwards a host-level aria-label attribute to the panel, winning over label and the header-slot fallback', async () => {
   const el = (await fixture(
-    html`<lyra-responsive-panel mode="overlay" open label="Explicit label" aria-label="Host override"
-      ><span slot="header">Header text</span></lyra-responsive-panel
+    html`<lr-responsive-panel mode="overlay" open label="Explicit label" aria-label="Host override"
+      ><span slot="header">Header text</span></lr-responsive-panel
     >`,
   )) as LyraResponsivePanel;
   await el.updateComplete;
@@ -542,10 +542,10 @@ it('forwards a host-level aria-label attribute to the panel, winning over label 
 
 it('is accessible while open in the overlay presentation with header-slot content but no label', async () => {
   const el = (await fixture(
-    html`<lyra-responsive-panel mode="overlay" open
+    html`<lr-responsive-panel mode="overlay" open
       ><span slot="header">Conversation history</span>
       <p>History items go here.</p>
-      <div slot="footer"><button>Close</button></div></lyra-responsive-panel
+      <div slot="footer"><button>Close</button></div></lr-responsive-panel
     >`,
   )) as LyraResponsivePanel;
   await el.updateComplete;
@@ -559,7 +559,7 @@ it('captures lastTrigger only on a genuine open transition, so it survives a lat
   outsideTrigger.focus();
 
   const el = (await fixture(
-    html`<lyra-responsive-panel mode="inline" open><button id="inside">inside</button></lyra-responsive-panel>`,
+    html`<lr-responsive-panel mode="inline" open><button id="inside">inside</button></lr-responsive-panel>`,
   )) as LyraResponsivePanel;
   await el.updateComplete;
 
@@ -583,8 +583,8 @@ it('captures lastTrigger only on a genuine open transition, so it survives a lat
 
 it('is accessible while open in the bottom-sheet overlay variant', async () => {
   const el = (await fixture(
-    html`<lyra-responsive-panel mode="overlay" variant="bottom-sheet" open label="Actions"
-      ><button>Share</button></lyra-responsive-panel
+    html`<lr-responsive-panel mode="overlay" variant="bottom-sheet" open label="Actions"
+      ><button>Share</button></lr-responsive-panel
     >`,
   )) as LyraResponsivePanel;
   await el.updateComplete;

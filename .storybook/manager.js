@@ -2,7 +2,7 @@ import { addons } from 'storybook/manager-api';
 import { create } from 'storybook/theming';
 import { GLOBALS_UPDATED } from 'storybook/internal/core-events';
 
-// Static color copies from packages/lyra-ui/src/internal/tokens.styles.ts's --lyra-theme-*
+// Static color copies from packages/lyra-ui/src/internal/tokens.styles.ts's --lr-theme-*
 // fallbacks. If those fallbacks change, update this file too — Storybook's manager theme API
 // takes literal values, not CSS custom properties, so this can't read tokens.styles.ts directly.
 const LYRA_MANAGER_THEMES = {

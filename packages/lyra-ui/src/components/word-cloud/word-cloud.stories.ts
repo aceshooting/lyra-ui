@@ -4,7 +4,7 @@ import { storyColor } from '../../../../../.storybook/story-theme.js';
 
 const meta: Meta = {
   title: 'WordCloud',
-  component: 'lyra-word-cloud',
+  component: 'lr-word-cloud',
   tags: ['autodocs'],
 };
 export default meta;
@@ -26,22 +26,22 @@ const WORDS = [
 ];
 
 export const Default: Story = {
-  render: () => html`<lyra-word-cloud .words=${WORDS} style="height: 20rem"></lyra-word-cloud>`,
+  render: () => html`<lr-word-cloud .words=${WORDS} style="height: 20rem"></lr-word-cloud>`,
 };
 
 export const SqrtScale: Story = {
   render: () =>
-    html`<lyra-word-cloud .words=${WORDS} scale="sqrt" style="height: 20rem"></lyra-word-cloud>`,
+    html`<lr-word-cloud .words=${WORDS} scale="sqrt" style="height: 20rem"></lr-word-cloud>`,
 };
 
 export const MixedOrientation: Story = {
   render: () =>
-    html`<lyra-word-cloud .words=${WORDS} orientations="mixed" style="height: 20rem"></lyra-word-cloud>`,
+    html`<lr-word-cloud .words=${WORDS} orientations="mixed" style="height: 20rem"></lr-word-cloud>`,
 };
 
 export const GroupedColors: Story = {
   render: () =>
-    html`<lyra-word-cloud
+    html`<lr-word-cloud
       style="height: 20rem"
       .words=${[
         { text: 'React', weight: 80, group: 'framework' },
@@ -53,12 +53,12 @@ export const GroupedColors: Story = {
         { text: 'Vite', weight: 50, group: 'tooling' },
         { text: 'esbuild', weight: 20, group: 'tooling' },
       ]}
-    ></lyra-word-cloud>`,
+    ></lr-word-cloud>`,
 };
 
 export const CustomPalette: Story = {
   render: () =>
-    html`<lyra-word-cloud
+    html`<lr-word-cloud
       style="height: 20rem"
       .words=${WORDS}
       .palette=${[
@@ -67,9 +67,9 @@ export const CustomPalette: Story = {
         storyColor('success'),
         storyColor('brand'),
       ]}
-    ></lyra-word-cloud>`,
+    ></lr-word-cloud>`,
 };
 
 export const Empty: Story = {
-  render: () => html`<lyra-word-cloud style="height: 10rem"></lyra-word-cloud>`,
+  render: () => html`<lr-word-cloud style="height: 10rem"></lr-word-cloud>`,
 };

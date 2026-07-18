@@ -4,9 +4,9 @@ import type { LyraDrawer } from './drawer.js';
 
 it('renders an open drawer with the requested placement and accessible panel', async () => {
   const el = (await fixture(html`
-    <lyra-drawer open placement="end" heading="Filters">
+    <lr-drawer open placement="end" heading="Filters">
       <p>Filter controls</p>
-    </lyra-drawer>
+    </lr-drawer>
   `)) as LyraDrawer;
   await el.updateComplete;
 
@@ -14,17 +14,17 @@ it('renders an open drawer with the requested placement and accessible panel', a
   expect(el.getAttribute('placement')).to.equal('end');
   expect(panel.getAttribute('role')).to.equal('dialog');
   expect(panel.getAttribute('aria-modal')).to.equal('true');
-  expect(panel.getAttribute('aria-labelledby')).to.match(/^lyra-dialog-heading-/);
+  expect(panel.getAttribute('aria-labelledby')).to.match(/^lr-dialog-heading-/);
 });
 
 it('closes through the inherited cancelable close contract', async () => {
   const el = (await fixture(html`
-    <lyra-drawer open heading="Details" closable></lyra-drawer>
+    <lr-drawer open heading="Details" closable></lr-drawer>
   `)) as LyraDrawer;
   await el.updateComplete;
 
   const button = el.shadowRoot!.querySelector('[part="close-button"]') as HTMLButtonElement;
-  const eventPromise = oneEvent(el, 'lyra-dialog-close');
+  const eventPromise = oneEvent(el, 'lr-dialog-close');
   button.click();
   const event = await eventPromise;
 
@@ -35,7 +35,7 @@ it('closes through the inherited cancelable close contract', async () => {
 
 it('is accessible while open', async () => {
   const el = (await fixture(html`
-    <lyra-drawer open aria-label="Navigation drawer"><p>Navigation</p></lyra-drawer>
+    <lr-drawer open aria-label="Navigation drawer"><p>Navigation</p></lr-drawer>
   `)) as LyraDrawer;
   await el.updateComplete;
   await expect(el).to.be.accessible();
@@ -43,22 +43,22 @@ it('is accessible while open', async () => {
 
 it('flips the enter-animation offset under RTL to match the mirrored resting edge', async () => {
   const rtlStartWrapper = (await fixture(html`
-    <div dir="rtl"><lyra-drawer open heading="Filters"><p>Filter controls</p></lyra-drawer></div>
+    <div dir="rtl"><lr-drawer open heading="Filters"><p>Filter controls</p></lr-drawer></div>
   `)) as HTMLElement;
-  const startDrawer = rtlStartWrapper.querySelector('lyra-drawer') as LyraDrawer;
+  const startDrawer = rtlStartWrapper.querySelector('lr-drawer') as LyraDrawer;
   await startDrawer.updateComplete;
   const startPanel = startDrawer.shadowRoot!.querySelector('[part="panel"]') as HTMLElement;
   // A 'start' drawer rests at the physical right edge under RTL, so it must enter
   // from further right -- the same positive offset an LTR 'end' drawer uses.
-  expect(getComputedStyle(startPanel).getPropertyValue('--lyra-drawer-enter-x').trim()).to.equal('1rem');
+  expect(getComputedStyle(startPanel).getPropertyValue('--lr-drawer-enter-x').trim()).to.equal('1rem');
 
   const rtlEndWrapper = (await fixture(html`
-    <div dir="rtl"><lyra-drawer open placement="end" heading="Filters"><p>Filter controls</p></lyra-drawer></div>
+    <div dir="rtl"><lr-drawer open placement="end" heading="Filters"><p>Filter controls</p></lr-drawer></div>
   `)) as HTMLElement;
-  const endDrawer = rtlEndWrapper.querySelector('lyra-drawer') as LyraDrawer;
+  const endDrawer = rtlEndWrapper.querySelector('lr-drawer') as LyraDrawer;
   await endDrawer.updateComplete;
   const endPanel = endDrawer.shadowRoot!.querySelector('[part="panel"]') as HTMLElement;
   // An 'end' drawer rests at the physical left edge under RTL -- the mirror image,
   // so it must enter from further left, same as an LTR 'start' (default) drawer.
-  expect(getComputedStyle(endPanel).getPropertyValue('--lyra-drawer-enter-x').trim()).to.equal('calc(-1 * 1rem)');
+  expect(getComputedStyle(endPanel).getPropertyValue('--lr-drawer-enter-x').trim()).to.equal('calc(-1 * 1rem)');
 });

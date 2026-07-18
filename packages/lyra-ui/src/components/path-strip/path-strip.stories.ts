@@ -5,7 +5,7 @@ import type { LyraPathElement } from './path-strip.class.js';
 
 const meta: Meta = {
   title: 'Path Strip',
-  component: 'lyra-path-strip',
+  component: 'lr-path-strip',
 };
 export default meta;
 type Story = StoryObj;
@@ -19,13 +19,13 @@ const path: LyraPathElement[] = [
 ];
 
 export const Default: Story = {
-  render: () => html`<lyra-path-strip .path=${path}></lyra-path-strip>`,
+  render: () => html`<lr-path-strip .path=${path}></lr-path-strip>`,
 };
 
 export const Empty: Story = {
-  render: () => html`<lyra-path-strip></lyra-path-strip>`,
+  render: () => html`<lr-path-strip></lr-path-strip>`,
 };
 
 export const Narrow: Story = {
-  render: () => html`<div style="max-width: 320px;"><lyra-path-strip .path=${path}></lyra-path-strip></div>`,
+  render: () => html`<div style="max-width: 320px;"><lr-path-strip .path=${path}></lr-path-strip></div>`,
 };

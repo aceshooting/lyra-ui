@@ -9,9 +9,9 @@ export type ProgressVariant = 'brand' | 'success' | 'warning' | 'danger';
 const DEFAULT_MAX = 100;
 
 /**
- * `<lyra-progress-bar>` — a determinate or indeterminate progress indicator.
+ * `<lr-progress-bar>` — a determinate or indeterminate progress indicator.
  *
- * @customElement lyra-progress-bar
+ * @customElement lr-progress-bar
  * @slot label - Optional label content.
  * @csspart base - The progress wrapper.
  * @csspart track - The track.
@@ -53,4 +53,4 @@ export class LyraProgressBar extends LyraElement {
     </div>`;
   }
 }
-declare global { interface HTMLElementTagNameMap { 'lyra-progress-bar': LyraProgressBar; } }
+declare global { interface HTMLElementTagNameMap { 'lr-progress-bar': LyraProgressBar; } }

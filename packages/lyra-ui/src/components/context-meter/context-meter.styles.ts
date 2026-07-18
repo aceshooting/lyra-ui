@@ -8,14 +8,14 @@ export const styles = css`
   }
   :host([variant='ring']) {
     display: inline-block;
-    inline-size: var(--lyra-size-8em);
-    block-size: var(--lyra-size-8em);
+    inline-size: var(--lr-size-8em);
+    block-size: var(--lr-size-8em);
   }
 
   [part='base'] {
     display: flex;
     flex-direction: column;
-    gap: var(--lyra-space-xs);
+    gap: var(--lr-space-xs);
   }
   :host([variant='ring']) [part='base'] {
     inline-size: 100%;
@@ -25,9 +25,9 @@ export const styles = css`
   [part='label'] {
     min-inline-size: 0;
     overflow-wrap: anywhere;
-    font-size: var(--lyra-font-size-xs);
-    color: var(--lyra-color-text-quiet);
-    font-family: var(--lyra-font);
+    font-size: var(--lr-font-size-xs);
+    color: var(--lr-color-text-quiet);
+    font-family: var(--lr-font);
   }
 
   /* --- bar variant ------------------------------------------------- */
@@ -36,20 +36,20 @@ export const styles = css`
     display: flex;
     align-items: stretch;
     overflow: hidden;
-    block-size: var(--lyra-size-0-5rem);
-    border-radius: calc(var(--lyra-radius) * 0.5);
+    block-size: var(--lr-size-0-5rem);
+    border-radius: calc(var(--lr-radius) * 0.5);
     /* Quiet neutral fill for the unfilled remainder -- deliberately lighter
-       than a 'neutral'-tone segment (var(--lyra-color-border) at full
+       than a 'neutral'-tone segment (var(--lr-color-border) at full
        strength below) so "counted but uncolored" data still reads as
        visually distinct from "not counted at all". */
-    background: color-mix(in srgb, var(--lyra-color-border) 30%, transparent);
+    background: color-mix(in srgb, var(--lr-color-border) 30%, transparent);
   }
   [part='segment'] {
     display: block;
     flex: 0 0 auto;
     block-size: 100%;
-    background: var(--lyra-color-border);
-    transition: flex-basis var(--lyra-transition-base);
+    background: var(--lr-color-border);
+    transition: flex-basis var(--lr-transition-base);
   }
   /* A hairline seam between adjacent segments -- painted in the surface
      color rather than as real gap spacing, so two same-tone segments next
@@ -57,22 +57,22 @@ export const styles = css`
      quantities instead of merging into one block. Logical property keeps it
      RTL-correct without extra math. */
   [part='segment']:not(:first-of-type) {
-    border-inline-start: var(--lyra-border-width-thin) solid var(--lyra-color-surface);
+    border-inline-start: var(--lr-border-width-thin) solid var(--lr-color-surface);
   }
   [part='segment'][data-tone='brand'] {
-    background: var(--lyra-color-brand);
+    background: var(--lr-color-brand);
   }
   [part='segment'][data-tone='success'] {
-    background: var(--lyra-color-success);
+    background: var(--lr-color-success);
   }
   [part='segment'][data-tone='warning'] {
-    background: var(--lyra-color-warning);
+    background: var(--lr-color-warning);
   }
   [part='segment'][data-tone='danger'] {
-    background: var(--lyra-color-danger);
+    background: var(--lr-color-danger);
   }
-  [part='segment'][style*='--lyra-context-meter-segment-color'] {
-    background: var(--lyra-context-meter-segment-color);
+  [part='segment'][style*='--lr-context-meter-segment-color'] {
+    background: var(--lr-context-meter-segment-color);
   }
 
   /* --- ring variant -------------------------------------------------- */
@@ -82,37 +82,37 @@ export const styles = css`
   }
   :host([variant='ring']) [part='track'] {
     fill: none;
-    stroke: color-mix(in srgb, var(--lyra-color-border) 30%, transparent);
+    stroke: color-mix(in srgb, var(--lr-color-border) 30%, transparent);
   }
   :host([variant='ring']) [part='segment'] {
     fill: none;
-    stroke: var(--lyra-color-border);
+    stroke: var(--lr-color-border);
     /* Butt (not round) caps -- round caps on tightly-packed segmented arcs
        bleed past the exact boundary and overlap the next segment's color. */
     stroke-linecap: butt;
     transition:
-      stroke-dasharray var(--lyra-transition-base),
-      stroke-dashoffset var(--lyra-transition-base);
+      stroke-dasharray var(--lr-transition-base),
+      stroke-dashoffset var(--lr-transition-base);
   }
   :host([variant='ring']) [part='segment'][data-tone='brand'] {
-    stroke: var(--lyra-color-brand);
+    stroke: var(--lr-color-brand);
   }
   :host([variant='ring']) [part='segment'][data-tone='success'] {
-    stroke: var(--lyra-color-success);
+    stroke: var(--lr-color-success);
   }
   :host([variant='ring']) [part='segment'][data-tone='warning'] {
-    stroke: var(--lyra-color-warning);
+    stroke: var(--lr-color-warning);
   }
   :host([variant='ring']) [part='segment'][data-tone='danger'] {
-    stroke: var(--lyra-color-danger);
+    stroke: var(--lr-color-danger);
   }
-  :host([variant='ring']) [part='segment'][style*='--lyra-context-meter-segment-color'] {
-    stroke: var(--lyra-context-meter-segment-color);
+  :host([variant='ring']) [part='segment'][style*='--lr-context-meter-segment-color'] {
+    stroke: var(--lr-context-meter-segment-color);
   }
   :host([variant='ring']) [part='label'] {
     text-anchor: middle;
-    fill: var(--lyra-color-text-quiet);
-    font-size: var(--lyra-font-size-2xs);
+    fill: var(--lr-color-text-quiet);
+    font-size: var(--lr-font-size-2xs);
     text-transform: uppercase;
   }
 

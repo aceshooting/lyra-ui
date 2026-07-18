@@ -11,5 +11,5 @@ it('registers EPUB MIME and filename fallback renderers', async () => {
   const definition = await loadDocumentRenderer(findDocumentRenderer(file)!);
   const host = document.createElement('div');
   render(definition.render!(file) as never, host);
-  expect(host.querySelector('lyra-ebook-viewer')).to.exist;
+  expect(host.querySelector('lr-ebook-viewer')).to.exist;
 });

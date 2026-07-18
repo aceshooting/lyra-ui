@@ -9,7 +9,7 @@ const image = {
 };
 
 it('renders the image frame and exposes a dialog when opened', async () => {
-  const el = (await fixture(html`<lyra-lightbox .images=${[image]}></lyra-lightbox>`)) as LyraLightbox;
+  const el = (await fixture(html`<lr-lightbox .images=${[image]}></lr-lightbox>`)) as LyraLightbox;
   expect(el.shadowRoot!.querySelector('[part="frame"]')).to.exist;
   expect(el.shadowRoot!.querySelector('[part="panel"]')!.getAttribute('role')).to.equal(null);
 
@@ -21,15 +21,15 @@ it('renders the image frame and exposes a dialog when opened', async () => {
 });
 
 it('is accessible while open', async () => {
-  const el = (await fixture(html`<lyra-lightbox .images=${[image]} open></lyra-lightbox>`)) as LyraLightbox;
+  const el = (await fixture(html`<lr-lightbox .images=${[image]} open></lr-lightbox>`)) as LyraLightbox;
   await expect(el).to.be.accessible();
   el.open = false;
 });
 
-it('closes on Escape and emits lyra-lightbox-close with reason "escape"', async () => {
-  const el = (await fixture(html`<lyra-lightbox .images=${[image]} open></lyra-lightbox>`)) as LyraLightbox;
+it('closes on Escape and emits lr-lightbox-close with reason "escape"', async () => {
+  const el = (await fixture(html`<lr-lightbox .images=${[image]} open></lr-lightbox>`)) as LyraLightbox;
   let detail: unknown;
-  el.addEventListener('lyra-lightbox-close', (e) => (detail = (e as CustomEvent).detail));
+  el.addEventListener('lr-lightbox-close', (e) => (detail = (e as CustomEvent).detail));
 
   document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
   await el.updateComplete;
@@ -39,9 +39,9 @@ it('closes on Escape and emits lyra-lightbox-close with reason "escape"', async 
 });
 
 it('does not respond to Escape while closed', async () => {
-  const el = (await fixture(html`<lyra-lightbox .images=${[image]}></lyra-lightbox>`)) as LyraLightbox;
+  const el = (await fixture(html`<lr-lightbox .images=${[image]}></lr-lightbox>`)) as LyraLightbox;
   let fired = false;
-  el.addEventListener('lyra-lightbox-close', () => (fired = true));
+  el.addEventListener('lr-lightbox-close', () => (fired = true));
 
   document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
   await el.updateComplete;
@@ -49,10 +49,10 @@ it('does not respond to Escape while closed', async () => {
   expect(fired).to.be.false;
 });
 
-it('closes on backdrop click and emits lyra-lightbox-close with reason "backdrop"', async () => {
-  const el = (await fixture(html`<lyra-lightbox .images=${[image]} open></lyra-lightbox>`)) as LyraLightbox;
+it('closes on backdrop click and emits lr-lightbox-close with reason "backdrop"', async () => {
+  const el = (await fixture(html`<lr-lightbox .images=${[image]} open></lr-lightbox>`)) as LyraLightbox;
   let detail: unknown;
-  el.addEventListener('lyra-lightbox-close', (e) => (detail = (e as CustomEvent).detail));
+  el.addEventListener('lr-lightbox-close', (e) => (detail = (e as CustomEvent).detail));
 
   (el.shadowRoot!.querySelector('[part="backdrop"]') as HTMLElement).click();
   await el.updateComplete;
@@ -63,7 +63,7 @@ it('closes on backdrop click and emits lyra-lightbox-close with reason "backdrop
 
 it('ignores a backdrop click when no-light-dismiss is set', async () => {
   const el = (await fixture(
-    html`<lyra-lightbox .images=${[image]} open no-light-dismiss></lyra-lightbox>`,
+    html`<lr-lightbox .images=${[image]} open no-light-dismiss></lr-lightbox>`,
   )) as LyraLightbox;
 
   (el.shadowRoot!.querySelector('[part="backdrop"]') as HTMLElement).click();
@@ -72,10 +72,10 @@ it('ignores a backdrop click when no-light-dismiss is set', async () => {
   expect(el.open).to.be.true;
 });
 
-it('closes via the close button and emits lyra-lightbox-close with reason "close-button"', async () => {
-  const el = (await fixture(html`<lyra-lightbox .images=${[image]} open></lyra-lightbox>`)) as LyraLightbox;
+it('closes via the close button and emits lr-lightbox-close with reason "close-button"', async () => {
+  const el = (await fixture(html`<lr-lightbox .images=${[image]} open></lr-lightbox>`)) as LyraLightbox;
   let detail: unknown;
-  el.addEventListener('lyra-lightbox-close', (e) => (detail = (e as CustomEvent).detail));
+  el.addEventListener('lr-lightbox-close', (e) => (detail = (e as CustomEvent).detail));
 
   (el.shadowRoot!.querySelector('[part="close-button"]') as HTMLElement).click();
   await el.updateComplete;
@@ -84,9 +84,9 @@ it('closes via the close button and emits lyra-lightbox-close with reason "close
   expect(detail).to.equal('close-button');
 });
 
-it('stays open when a lyra-lightbox-close listener calls preventDefault()', async () => {
-  const el = (await fixture(html`<lyra-lightbox .images=${[image]} open></lyra-lightbox>`)) as LyraLightbox;
-  el.addEventListener('lyra-lightbox-close', (e) => e.preventDefault());
+it('stays open when a lr-lightbox-close listener calls preventDefault()', async () => {
+  const el = (await fixture(html`<lr-lightbox .images=${[image]} open></lr-lightbox>`)) as LyraLightbox;
+  el.addEventListener('lr-lightbox-close', (e) => e.preventDefault());
 
   document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
   await el.updateComplete;
@@ -95,10 +95,10 @@ it('stays open when a lyra-lightbox-close listener calls preventDefault()', asyn
   el.open = false;
 });
 
-it('emits lyra-lightbox-close with reason "unmount" when removed from the DOM while open', async () => {
-  const el = (await fixture(html`<lyra-lightbox .images=${[image]} open></lyra-lightbox>`)) as LyraLightbox;
+it('emits lr-lightbox-close with reason "unmount" when removed from the DOM while open', async () => {
+  const el = (await fixture(html`<lr-lightbox .images=${[image]} open></lr-lightbox>`)) as LyraLightbox;
   let detail: unknown;
-  el.addEventListener('lyra-lightbox-close', (e) => (detail = (e as CustomEvent).detail));
+  el.addEventListener('lr-lightbox-close', (e) => (detail = (e as CustomEvent).detail));
 
   el.remove();
   await Promise.resolve();
@@ -108,9 +108,9 @@ it('emits lyra-lightbox-close with reason "unmount" when removed from the DOM wh
 });
 
 it('does not treat a synchronous reparent as an unmount', async () => {
-  const el = (await fixture(html`<lyra-lightbox .images=${[image]} open></lyra-lightbox>`)) as LyraLightbox;
+  const el = (await fixture(html`<lr-lightbox .images=${[image]} open></lr-lightbox>`)) as LyraLightbox;
   let fired = false;
-  el.addEventListener('lyra-lightbox-close', () => (fired = true));
+  el.addEventListener('lr-lightbox-close', () => (fired = true));
 
   const destination = document.createElement('div');
   document.body.append(destination);
@@ -125,7 +125,7 @@ it('does not treat a synchronous reparent as an unmount', async () => {
 
 it('mirrors next/previous under dir="rtl" so the physical arrow key stays consistent', async () => {
   const images = [image, { ...image, caption: 'Second' }];
-  const el = (await fixture(html`<lyra-lightbox dir="rtl" .images=${images} open></lyra-lightbox>`)) as LyraLightbox;
+  const el = (await fixture(html`<lr-lightbox dir="rtl" .images=${images} open></lr-lightbox>`)) as LyraLightbox;
   const panel = el.shadowRoot!.querySelector('[part="panel"]') as HTMLElement;
 
   panel.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', cancelable: true }));
@@ -142,7 +142,7 @@ it('mirrors next/previous under dir="rtl" so the physical arrow key stays consis
 it('jumps to the first/last image on Home/End', async () => {
   const images = [image, { ...image, caption: 'Second' }, { ...image, caption: 'Third' }];
   const el = (await fixture(
-    html`<lyra-lightbox .images=${images} open index="1"></lyra-lightbox>`,
+    html`<lr-lightbox .images=${images} open index="1"></lr-lightbox>`,
   )) as LyraLightbox;
   const panel = el.shadowRoot!.querySelector('[part="panel"]') as HTMLElement;
 
@@ -163,7 +163,7 @@ it('jumps to the first/last image on Home/End', async () => {
 // valid, in-bounds image instead of throwing or rendering nothing.
 it('clamps a non-finite index to a valid in-range image instead of rendering nothing', async () => {
   const images = [image, { ...image, caption: 'Second' }, { ...image, caption: 'Third' }];
-  const el = (await fixture(html`<lyra-lightbox .images=${images} open></lyra-lightbox>`)) as LyraLightbox;
+  const el = (await fixture(html`<lr-lightbox .images=${images} open></lr-lightbox>`)) as LyraLightbox;
   await el.updateComplete;
 
   el.index = Number.NaN;
@@ -192,7 +192,7 @@ it('clamps a non-finite index to a valid in-range image instead of rendering not
 
 it('announces the current position in part="live-region" and keeps it in sync across navigation', async () => {
   const images = [image, { ...image, caption: 'Second' }, { ...image, caption: 'Third' }];
-  const el = (await fixture(html`<lyra-lightbox .images=${images} open></lyra-lightbox>`)) as LyraLightbox;
+  const el = (await fixture(html`<lr-lightbox .images=${images} open></lr-lightbox>`)) as LyraLightbox;
   await el.updateComplete;
   const liveRegion = el.shadowRoot!.querySelector('[part="live-region"]') as HTMLElement;
   expect(liveRegion.textContent).to.equal('Image 1 of 3');
@@ -214,7 +214,7 @@ it('does not trigger a Lit "scheduled an update after an update completed" dev w
   console.warn = (...args: unknown[]) => calls.push(args);
   try {
     const images = [image, { ...image, caption: 'Second' }, { ...image, caption: 'Third' }];
-    const el = (await fixture(html`<lyra-lightbox .images=${images} open></lyra-lightbox>`)) as LyraLightbox;
+    const el = (await fixture(html`<lr-lightbox .images=${images} open></lr-lightbox>`)) as LyraLightbox;
     await el.updateComplete;
     el.next();
     await el.updateComplete;

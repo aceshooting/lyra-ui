@@ -6,7 +6,7 @@ import { storyColor } from '../../../../../.storybook/story-theme.js';
 
 const meta: Meta = {
   title: 'Entity Card',
-  component: 'lyra-entity-card',
+  component: 'lr-entity-card',
 };
 export default meta;
 type Story = StoryObj;
@@ -24,17 +24,17 @@ const entity: LyraEntity = {
 const types = [{ id: 'person', label: 'Person', color: storyColor('chart1') }];
 
 export const Default: Story = {
-  render: () => html`<lyra-entity-card .entity=${entity} .types=${types} community-label="Nobel laureates"></lyra-entity-card>`,
+  render: () => html`<lr-entity-card .entity=${entity} .types=${types} community-label="Nobel laureates"></lr-entity-card>`,
 };
 
 export const Empty: Story = {
-  render: () => html`<lyra-entity-card></lyra-entity-card>`,
+  render: () => html`<lr-entity-card></lr-entity-card>`,
 };
 
 export const NoFocusButton: Story = {
-  render: () => html`<lyra-entity-card .entity=${entity} .types=${types} ?show-focus-button=${false}></lyra-entity-card>`,
+  render: () => html`<lr-entity-card .entity=${entity} .types=${types} ?show-focus-button=${false}></lr-entity-card>`,
 };
 
 export const Narrow: Story = {
-  render: () => html`<div style="max-width: 320px;"><lyra-entity-card .entity=${entity} .types=${types}></lyra-entity-card></div>`,
+  render: () => html`<div style="max-width: 320px;"><lr-entity-card .entity=${entity} .types=${types}></lr-entity-card></div>`,
 };

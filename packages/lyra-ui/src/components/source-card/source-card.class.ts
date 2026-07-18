@@ -16,40 +16,40 @@ export interface SourceCardOpenDetail {
 }
 
 export interface LyraSourceCardEventMap {
-  'lyra-expand': CustomEvent<SourceCardExpandDetail>;
-  'lyra-open': CustomEvent<SourceCardOpenDetail>;
+  'lr-expand': CustomEvent<SourceCardExpandDetail>;
+  'lr-open': CustomEvent<SourceCardOpenDetail>;
 }
 
 class LyraSourceCardBase extends LyraElement<LyraSourceCardEventMap> {}
 
 /**
- * `<lyra-source-card>` — one citation/source entry, meant to be a direct
- * light-DOM child of `<lyra-source-list>` (though it renders and functions
+ * `<lr-source-card>` — one citation/source entry, meant to be a direct
+ * light-DOM child of `<lr-source-list>` (though it renders and functions
  * fine standalone). Shows a title/page heading, an always-visible `excerpt`
  * slot, and an optional `full` slot revealed behind its own independent
- * "Show more" toggle — unrelated to the parent `<lyra-source-list>`'s own
+ * "Show more" toggle — unrelated to the parent `<lr-source-list>`'s own
  * expand/collapse, which only ever hides/shows the *set* of cards, never a
  * single card's own content.
  *
  * `source-id` is this card's stable identity, meant to match a
- * `<lyra-citation-badge>` (a sibling component) elsewhere on the page. This
+ * `<lr-citation-badge>` (a sibling component) elsewhere on the page. This
  * component doesn't implement any scroll-to/highlight behavior itself — that
  * lives at the app level, wiring a citation badge's activation event to this
  * card's `id`/`source-id`. See the `@example` below.
  *
- * @customElement lyra-source-card
+ * @customElement lr-source-card
  * @slot excerpt - A short preview. When left empty, the `excerpt` part
  * collapses away entirely rather than leaving an empty gap in the card.
  * @slot full - The complete source text/chunk, hidden behind the "Show
  * more"/"Show less" toggle. When left empty, no toggle renders at all — a
  * card with no `full` content simply has no expand affordance. Removing all
  * `full`-slotted content while expanded automatically collapses it back.
- * @event lyra-expand - The per-card "Show more"/"Show less" toggle was
+ * @event lr-expand - The per-card "Show more"/"Show less" toggle was
  * activated. `detail: { sourceId, expanded }`.
- * @event lyra-open - The title was activated. `detail: { sourceId, href }` —
+ * @event lr-open - The title was activated. `detail: { sourceId, href }` —
  * `href` may be `undefined`. This component never navigates on its own
  * (staying a controlled component, the same convention
- * `<lyra-tool-call-chip>`'s `lyra-tool-chip-select` follows); a listener
+ * `<lr-tool-call-chip>`'s `lr-tool-chip-select` follows); a listener
  * decides what "open" means (open `href` in a new tab, open an in-app
  * viewer, etc).
  * @csspart base - The outer container.
@@ -60,19 +60,19 @@ class LyraSourceCardBase extends LyraElement<LyraSourceCardEventMap> {}
  *
  * @example
  * ```html
- * <lyra-source-list label-plural="2 sources">
- *   <lyra-source-card source-id="doc-1" title="annual_report.pdf" page="12">
+ * <lr-source-list label-plural="2 sources">
+ *   <lr-source-card source-id="doc-1" title="annual_report.pdf" page="12">
  *     <span slot="excerpt">Revenue grew 12% year over year...</span>
  *     <span slot="full">Revenue grew 12% year over year, driven primarily by...</span>
- *   </lyra-source-card>
- * </lyra-source-list>
+ *   </lr-source-card>
+ * </lr-source-list>
  * ```
  * ```js
- * // Elsewhere, a <lyra-citation-badge>'s activation handler can scroll to
+ * // Elsewhere, a <lr-citation-badge>'s activation handler can scroll to
  * // and highlight the matching card -- this component needs no extra API
  * // surface for that, only its existing source-id to be targeted by:
- * document.addEventListener('lyra-citation-activate', (e) => {
- *   const card = document.querySelector(`lyra-source-card[source-id="${e.detail.sourceId}"]`);
+ * document.addEventListener('lr-citation-activate', (e) => {
+ *   const card = document.querySelector(`lr-source-card[source-id="${e.detail.sourceId}"]`);
  *   card?.scrollIntoView({ behavior: 'smooth', block: 'center' });
  *   card?.classList.add('is-highlighted'); // consumer-defined CSS, e.g. a brief background flash
  *   setTimeout(() => card?.classList.remove('is-highlighted'), 2000);
@@ -82,7 +82,7 @@ class LyraSourceCardBase extends LyraElement<LyraSourceCardEventMap> {}
 export class LyraSourceCard extends StripHostTitleAttribute(LyraSourceCardBase) {
   static styles = [LyraElement.styles, styles];
 
-  /** Stable identifier matching a `<lyra-citation-badge>` elsewhere on the page. */
+  /** Stable identifier matching a `<lr-citation-badge>` elsewhere on the page. */
   @property({ attribute: 'source-id' }) sourceId = '';
 
   /** The source's display title, e.g. a filename. Rendered only as the
@@ -97,10 +97,10 @@ export class LyraSourceCard extends StripHostTitleAttribute(LyraSourceCardBase) 
    *  parsed/validated as a number), so a non-numeric page label works too. */
   @property() page?: string | number;
 
-  /** Optional URL, echoed back (unopened) in `lyra-open`'s detail. */
+  /** Optional URL, echoed back (unopened) in `lr-open`'s detail. */
   @property() href?: string;
 
-  // See `<lyra-widget>`'s `hasActionsSlot` for the identical
+  // See `<lr-widget>`'s `hasActionsSlot` for the identical
   // presence-tracking convention -- a `[part]` always contains a literal
   // `<slot>` child regardless of assigned content, so CSS `:empty` never
   // matches; real emptiness is tracked in JS instead.
@@ -145,12 +145,12 @@ export class LyraSourceCard extends StripHostTitleAttribute(LyraSourceCardBase) 
   }
 
   private onTitleClick = (): void => {
-    this.emit<SourceCardOpenDetail>('lyra-open', { sourceId: this.sourceId, href: this.href });
+    this.emit<SourceCardOpenDetail>('lr-open', { sourceId: this.sourceId, href: this.href });
   };
 
   private toggleFull = (): void => {
     this.fullExpanded = !this.fullExpanded;
-    this.emit<SourceCardExpandDetail>('lyra-expand', { sourceId: this.sourceId, expanded: this.fullExpanded });
+    this.emit<SourceCardExpandDetail>('lr-expand', { sourceId: this.sourceId, expanded: this.fullExpanded });
   };
 
   render(): TemplateResult {
@@ -182,7 +182,7 @@ export class LyraSourceCard extends StripHostTitleAttribute(LyraSourceCardBase) 
 
 declare global {
   interface HTMLElementTagNameMap {
-    'lyra-source-card': LyraSourceCard;
+    'lr-source-card': LyraSourceCard;
   }
 }
 

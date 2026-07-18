@@ -15,7 +15,7 @@ const sources: LyraSourceEntry[] = [
 ];
 
 it('defaults to empty sources/selectedIds, showSelectAll=true, searchable=true, empty label', async () => {
-  const el = (await fixture(html`<lyra-source-picker></lyra-source-picker>`)) as LyraSourcePicker;
+  const el = (await fixture(html`<lr-source-picker></lr-source-picker>`)) as LyraSourcePicker;
   expect(el.sources).to.deep.equal([]);
   expect(el.selectedIds).to.deep.equal([]);
   expect(el.showSelectAll).to.be.true;
@@ -24,7 +24,7 @@ it('defaults to empty sources/selectedIds, showSelectAll=true, searchable=true, 
 });
 
 it('renders a role="tree" with one treeitem per visible entry (top-level collapsed by default)', async () => {
-  const el = (await fixture(html`<lyra-source-picker></lyra-source-picker>`)) as LyraSourcePicker;
+  const el = (await fixture(html`<lr-source-picker></lr-source-picker>`)) as LyraSourcePicker;
   el.sources = sources;
   await el.updateComplete;
   const items = el.shadowRoot!.querySelectorAll('[role="treeitem"]');
@@ -33,7 +33,7 @@ it('renders a role="tree" with one treeitem per visible entry (top-level collaps
 });
 
 it('reflects tri-state aria-checked: false, true, and mixed', async () => {
-  const el = (await fixture(html`<lyra-source-picker></lyra-source-picker>`)) as LyraSourcePicker;
+  const el = (await fixture(html`<lr-source-picker></lr-source-picker>`)) as LyraSourcePicker;
   el.sources = sources;
   el.selectedIds = ['doc1'];
   await el.updateComplete;
@@ -49,12 +49,12 @@ it('reflects tri-state aria-checked: false, true, and mixed', async () => {
   expect(el.shadowRoot!.querySelector('[role="treeitem"]')!.getAttribute('aria-checked')).to.equal('false');
 });
 
-it('toggling a folder selects/deselects all of its descendant leaves and emits lyra-sources-change', async () => {
-  const el = (await fixture(html`<lyra-source-picker></lyra-source-picker>`)) as LyraSourcePicker;
+it('toggling a folder selects/deselects all of its descendant leaves and emits lr-sources-change', async () => {
+  const el = (await fixture(html`<lr-source-picker></lr-source-picker>`)) as LyraSourcePicker;
   el.sources = sources;
   await el.updateComplete;
   const folderRow = el.shadowRoot!.querySelector('[role="treeitem"]') as HTMLElement;
-  const listener = oneEvent(el, 'lyra-sources-change');
+  const listener = oneEvent(el, 'lr-sources-change');
   folderRow.click();
   const event = await listener;
   expect(event.detail.selectedIds.sort()).to.deep.equal(['doc1', 'doc2']);
@@ -62,11 +62,11 @@ it('toggling a folder selects/deselects all of its descendant leaves and emits l
 });
 
 it('toggling select-all selects/deselects every leaf', async () => {
-  const el = (await fixture(html`<lyra-source-picker></lyra-source-picker>`)) as LyraSourcePicker;
+  const el = (await fixture(html`<lr-source-picker></lr-source-picker>`)) as LyraSourcePicker;
   el.sources = sources;
   await el.updateComplete;
   const selectAll = el.shadowRoot!.querySelector('[part="select-all"] [role="checkbox"]') as HTMLElement;
-  const listener = oneEvent(el, 'lyra-sources-change');
+  const listener = oneEvent(el, 'lr-sources-change');
   selectAll.click();
   const event = await listener;
   expect(event.detail.selectedIds.sort()).to.deep.equal(['doc1', 'doc2', 'doc3']);
@@ -74,11 +74,11 @@ it('toggling select-all selects/deselects every leaf', async () => {
 });
 
 it('search filters by label, auto-expanding and keeping visible any matching descendant', async () => {
-  const el = (await fixture(html`<lyra-source-picker></lyra-source-picker>`)) as LyraSourcePicker;
+  const el = (await fixture(html`<lr-source-picker></lr-source-picker>`)) as LyraSourcePicker;
   el.sources = sources;
   await el.updateComplete;
   const input = el.shadowRoot!.querySelector('[part="search"]')!;
-  input.dispatchEvent(new CustomEvent('lyra-input', { detail: { value: 'curie' }, bubbles: true }));
+  input.dispatchEvent(new CustomEvent('lr-input', { detail: { value: 'curie' }, bubbles: true }));
   await el.updateComplete;
   const labels = [...el.shadowRoot!.querySelectorAll('[part="label"]')].map((l) => l.textContent);
   expect(labels).to.include('curie-bio.pdf');
@@ -88,21 +88,21 @@ it('search filters by label, auto-expanding and keeping visible any matching des
 });
 
 it('shows noMatches when the filter empties the tree, and noData when sources itself is empty', async () => {
-  const el = (await fixture(html`<lyra-source-picker></lyra-source-picker>`)) as LyraSourcePicker;
+  const el = (await fixture(html`<lr-source-picker></lr-source-picker>`)) as LyraSourcePicker;
   el.sources = sources;
   await el.updateComplete;
   const input = el.shadowRoot!.querySelector('[part="search"]')!;
-  input.dispatchEvent(new CustomEvent('lyra-input', { detail: { value: 'zzz-no-match' }, bubbles: true }));
+  input.dispatchEvent(new CustomEvent('lr-input', { detail: { value: 'zzz-no-match' }, bubbles: true }));
   await el.updateComplete;
   expect(el.shadowRoot!.querySelector('[part="empty"]')!.textContent).to.include('No matches');
 
   el.sources = [];
   await el.updateComplete;
-  expect(el.shadowRoot!.querySelector('lyra-empty')).to.exist;
+  expect(el.shadowRoot!.querySelector('lr-empty')).to.exist;
 });
 
 it('keyboard: Space toggles the focused row, ArrowDown moves focus, ArrowRight expands a folder', async () => {
-  const el = (await fixture(html`<lyra-source-picker></lyra-source-picker>`)) as LyraSourcePicker;
+  const el = (await fixture(html`<lr-source-picker></lr-source-picker>`)) as LyraSourcePicker;
   el.sources = sources;
   await el.updateComplete;
   const tree = el.shadowRoot!.querySelector('[part="tree"]')!;
@@ -115,19 +115,19 @@ it('keyboard: Space toggles the focused row, ArrowDown moves focus, ArrowRight e
   // brief's own reference implementation, which does produce 4.)
   expect(el.shadowRoot!.querySelectorAll('[role="treeitem"]').length).to.equal(4);
 
-  const listener = oneEvent(el, 'lyra-sources-change');
+  const listener = oneEvent(el, 'lr-sources-change');
   tree.dispatchEvent(new KeyboardEvent('keydown', { key: ' ', bubbles: true, cancelable: true }));
   const event = await listener;
   expect(event.detail.selectedIds.sort()).to.deep.equal(['doc1', 'doc2']);
 });
 
 it('keyboard: Space and Enter on the select-all checkbox toggle every leaf', async () => {
-  const el = (await fixture(html`<lyra-source-picker></lyra-source-picker>`)) as LyraSourcePicker;
+  const el = (await fixture(html`<lr-source-picker></lr-source-picker>`)) as LyraSourcePicker;
   el.sources = sources;
   await el.updateComplete;
   const selectAll = el.shadowRoot!.querySelector('[part="select-all"] [role="checkbox"]') as HTMLElement;
 
-  const selectListener = oneEvent(el, 'lyra-sources-change');
+  const selectListener = oneEvent(el, 'lr-sources-change');
   const space = new KeyboardEvent('keydown', { key: ' ', bubbles: true, cancelable: true });
   selectAll.dispatchEvent(space);
   const selected = await selectListener;
@@ -136,14 +136,14 @@ it('keyboard: Space and Enter on the select-all checkbox toggle every leaf', asy
 
   el.selectedIds = ['doc1', 'doc2', 'doc3'];
   await el.updateComplete;
-  const deselectListener = oneEvent(el, 'lyra-sources-change');
+  const deselectListener = oneEvent(el, 'lr-sources-change');
   selectAll.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
   const deselected = await deselectListener;
   expect(deselected.detail.selectedIds).to.deep.equal([]);
 });
 
 it('forwards a host aria-label to the role="tree" element, winning over label', async () => {
-  const el = (await fixture(html`<lyra-source-picker aria-label="Grounding sources" label="Sources"></lyra-source-picker>`)) as LyraSourcePicker;
+  const el = (await fixture(html`<lr-source-picker aria-label="Grounding sources" label="Sources"></lr-source-picker>`)) as LyraSourcePicker;
   el.sources = sources;
   await el.updateComplete;
   expect(el.accessibleLabel).to.equal('Grounding sources');
@@ -156,12 +156,12 @@ it('forwards a host aria-label to the role="tree" element, winning over label', 
 });
 
 it('is not FormAssociated -- no internals/checkValidity surface', async () => {
-  const el = (await fixture(html`<lyra-source-picker></lyra-source-picker>`)) as LyraSourcePicker;
+  const el = (await fixture(html`<lr-source-picker></lr-source-picker>`)) as LyraSourcePicker;
   expect((el as unknown as { checkValidity?: unknown }).checkValidity).to.equal(undefined);
 });
 
 it('is accessible with a mixed-selection tree', async () => {
-  const el = (await fixture(html`<lyra-source-picker></lyra-source-picker>`)) as LyraSourcePicker;
+  const el = (await fixture(html`<lr-source-picker></lr-source-picker>`)) as LyraSourcePicker;
   el.sources = sources;
   el.selectedIds = ['doc1'];
   await el.updateComplete;

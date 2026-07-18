@@ -4,7 +4,7 @@ import './diff-view.js';
 
 const meta: Meta = {
   title: 'DiffView',
-  component: 'lyra-diff-view',
+  component: 'lr-diff-view',
   tags: ['autodocs'],
   parameters: {
     docs: {
@@ -30,26 +30,26 @@ const newText = `function greet(name) {
 
 export const Default: Story = {
   name: 'One-line change inside a longer block',
-  render: () => html`<lyra-diff-view .oldText=${oldText} .newText=${newText} style="max-width: 32rem;"></lyra-diff-view>`,
+  render: () => html`<lr-diff-view .oldText=${oldText} .newText=${newText} style="max-width: 32rem;"></lr-diff-view>`,
 };
 
 export const Copyable: Story = {
   render: () => html`
-    <lyra-diff-view copyable .oldText=${oldText} .newText=${newText} style="max-width: 32rem;"></lyra-diff-view>
+    <lr-diff-view copyable .oldText=${oldText} .newText=${newText} style="max-width: 32rem;"></lr-diff-view>
   `,
 };
 
 export const Split: Story = {
-  render: () => html`<lyra-diff-view layout="split" .oldText=${oldText} .newText=${newText} style="max-width: 40rem;"></lyra-diff-view>`,
+  render: () => html`<lr-diff-view layout="split" .oldText=${oldText} .newText=${newText} style="max-width: 40rem;"></lr-diff-view>`,
 };
 
 export const SplitNarrow: Story = {
   render: () =>
     html`<div style="max-width: 320px;">
-      <lyra-diff-view
+      <lr-diff-view
         layout="split"
         .oldText=${'function add(a, b) {\n  return a + b;\n}'}
         .newText=${'function add(a, b, c) {\n  return a + b + c;\n}'}
-      ></lyra-diff-view>
+      ></lr-diff-view>
     </div>`,
 };

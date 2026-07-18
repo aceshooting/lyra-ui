@@ -3,23 +3,23 @@ import { html } from 'lit';
 
 const meta: Meta = {
   title: 'Carousel',
-  component: 'lyra-carousel',
+  component: 'lr-carousel',
   tags: ['autodocs'],
 };
 export default meta;
 type Story = StoryObj;
 
 export const Default: Story = {
-  render: () => html`<lyra-carousel aria-label="Product previews">
-    <div style="padding: var(--lyra-space-2xl); background: var(--lyra-color-brand-quiet);">First panel</div>
-    <div style="padding: var(--lyra-space-2xl); background: var(--lyra-color-success-quiet);">Second panel</div>
-    <div style="padding: var(--lyra-space-2xl); background: var(--lyra-color-warning-quiet);">Third panel</div>
-  </lyra-carousel>`,
+  render: () => html`<lr-carousel aria-label="Product previews">
+    <div style="padding: var(--lr-space-2xl); background: var(--lr-color-brand-quiet);">First panel</div>
+    <div style="padding: var(--lr-space-2xl); background: var(--lr-color-success-quiet);">Second panel</div>
+    <div style="padding: var(--lr-space-2xl); background: var(--lr-color-warning-quiet);">Third panel</div>
+  </lr-carousel>`,
 };
 
 export const LoopingAutoplay: Story = {
-  render: () => html`<lyra-carousel loop autoplay autoplay-interval="3000" aria-label="Announcements">
+  render: () => html`<lr-carousel loop autoplay autoplay-interval="3000" aria-label="Announcements">
     <p>Announcement one</p>
     <p>Announcement two</p>
-  </lyra-carousel>`,
+  </lr-carousel>`,
 };

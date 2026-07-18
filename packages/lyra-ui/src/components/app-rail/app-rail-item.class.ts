@@ -7,12 +7,12 @@ import { rtlAwarePlacement } from '../../internal/rtl.js';
 import { styles } from './app-rail-item.styles.js';
 
 /**
- * `<lyra-app-rail-item>` — an explicit icon/label navigation item for
- * `<lyra-app-rail>`. The rail sets its `icon-only` attribute as the viewport
+ * `<lr-app-rail-item>` — an explicit icon/label navigation item for
+ * `<lr-app-rail>`. The rail sets its `icon-only` attribute as the viewport
  * changes, keeping the label available to assistive technology while removing
  * it from the visual layout.
  *
- * @customElement lyra-app-rail-item
+ * @customElement lr-app-rail-item
  * @slot - The visible navigation label.
  * @slot icon - The leading icon.
  * @csspart base - The link or button receiving focus and activation.
@@ -40,7 +40,7 @@ export class LyraAppRailItem extends LyraElement {
   @property({ type: Boolean, reflect: true }) active = false;
 
   /** Opt-in hover/focus flyout showing this item's label text while `icon-only` (set externally by
-   *  the parent `<lyra-app-rail>` as the viewport narrows) hides it from view -- an explicit,
+   *  the parent `<lr-app-rail>` as the viewport narrows) hides it from view -- an explicit,
    *  documented property instead of an unverified cross-browser `::part()` + `::after` + `attr()`
    *  composition. No effect outside icon-only mode, since the label is already visible there.
    *  `false` (the default) reproduces today's exact output. */
@@ -51,7 +51,7 @@ export class LyraAppRailItem extends LyraElement {
 
   // Only the default slot's own content counts toward the tooltip text --
   // text incidentally living inside the (decorative) `icon` slot shouldn't
-  // leak into the flyout label. Mirrors `lyra-chip`'s `labelText` getter.
+  // leak into the flyout label. Mirrors `lr-chip`'s `labelText` getter.
   private get labelText(): string {
     return Array.from(this.childNodes)
       .filter(
@@ -84,7 +84,7 @@ export class LyraAppRailItem extends LyraElement {
         const anchor = this.renderRoot.querySelector('[part="base"]') as HTMLElement;
         const popup = this.renderRoot.querySelector('[part="tooltip"]') as HTMLElement | null;
         // 'right' is a physical Floating UI placement -- resolve it through the
-        // shared RTL helper (mirrors lyra-menu's identical resolution) so the
+        // shared RTL helper (mirrors lr-menu's identical resolution) so the
         // flyout still anchors to the rail item's trailing edge (away from the
         // rail) rather than staying pinned to the physical right under RTL.
         if (anchor && popup)
@@ -138,6 +138,6 @@ export class LyraAppRailItem extends LyraElement {
 
 declare global {
   interface HTMLElementTagNameMap {
-    'lyra-app-rail-item': LyraAppRailItem;
+    'lr-app-rail-item': LyraAppRailItem;
   }
 }

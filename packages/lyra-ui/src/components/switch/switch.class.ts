@@ -5,12 +5,12 @@ import { AnchoredValidityController, VALIDITY_ANCHOR } from '../../internal/anch
 import { styles } from './switch.styles.js';
 
 export interface LyraSwitchEventMap {
-  'lyra-change': CustomEvent<{ checked: boolean }>;
+  'lr-change': CustomEvent<{ checked: boolean }>;
   focus: CustomEvent<undefined>;
   blur: CustomEvent<undefined>;
 }
 /**
- * `<lyra-switch>` — a boolean toggle-switch form control. Structurally the
+ * `<lr-switch>` — a boolean toggle-switch form control. Structurally the
  * same idea as a checkbox (form-associated via `ElementInternals`, click and
  * Space/Enter both toggle) but with switch semantics: `role="switch"` +
  * `aria-checked` read to assistive tech as an on/off state rather than a
@@ -19,23 +19,23 @@ export interface LyraSwitchEventMap {
  * `checked` is not a plain string, so this attaches `ElementInternals`
  * directly and implements its own `updateValidity()` rather than using the
  * `FormAssociated` mixin (that mixin's `value` accessor assumes a string —
- * see `<lyra-combobox>` for the same direct-`ElementInternals` shape with a
+ * see `<lr-combobox>` for the same direct-`ElementInternals` shape with a
  * non-string value).
  *
  * Ships an opt-in `hint`/`errorText` form-control chrome (props + matching named slots +
- * `hint`/`error` CSS parts), mirroring `<lyra-select>`'s pattern for those two pieces -- left
+ * `hint`/`error` CSS parts), mirroring `<lr-select>`'s pattern for those two pieces -- left
  * unset, neither renders. Deliberately no separate top-of-field `label` prop/slot/part mirroring
- * `<lyra-select>`'s `form-control-label`: the default slot already *is* this control's visible,
- * clickable label (same as `<lyra-checkbox>`), so a second label surface would be redundant.
+ * `<lr-select>`'s `form-control-label`: the default slot already *is* this control's visible,
+ * clickable label (same as `<lr-checkbox>`), so a second label surface would be redundant.
  *
- * @customElement lyra-switch
+ * @customElement lr-switch
  * @slot - Label text, rendered next to the track. Clicking it toggles the
  * switch, the same as clicking a checkbox's associated `<label>`. If left
  * empty, set `aria-label` on the host so the control still has an
  * accessible name.
  * @slot hint - Custom hint content.
  * @slot error - Custom error content.
- * @event lyra-change - The user toggled the switch (click or Space/Enter). `detail: { checked }`.
+ * @event lr-change - The user toggled the switch (click or Space/Enter). `detail: { checked }`.
  * @event focus - The internal switch control received focus. Bridges the internal element's
  * non-bubbling native `focus`, re-dispatched as bubbling and composed.
  * @event blur - The internal switch control lost focus. Bridges the internal element's
@@ -72,18 +72,18 @@ export class LyraSwitch extends LyraElement<LyraSwitchEventMap> {
   // leaving a stray empty gap. See combobox/date-input's `hasHintSlot`-style
   // state fields; this one checks `assignedNodes` rather than
   // `assignedElements` because a plain slotted text label (the expected
-  // common case here, e.g. `<lyra-switch>Enable notifications</lyra-switch>`)
+  // common case here, e.g. `<lr-switch>Enable notifications</lr-switch>`)
   // is a text node, which `assignedElements` would silently ignore.
   @state() private hasLabelSlot = false;
   // `[part]:empty` never matches here -- the parts always contain a literal `<slot>` child element
   // regardless of assigned/text content -- so real emptiness is tracked in JS instead (same fix as
-  // `hasLabelSlot` above, and as `<lyra-select>`'s identical hint/error parts) and reflected via
+  // `hasLabelSlot` above, and as `<lr-select>`'s identical hint/error parts) and reflected via
   // the `hidden` attribute.
   @state() private hasHintSlot = false;
   @state() private hasErrorSlot = false;
   // Set on the control's first `blur`; gates the `aria-invalid` reflection
   // below so validity styling never flashes on first render, mirroring
-  // `<lyra-checkbox>`'s/`<lyra-combobox>`'s identical `touched` field.
+  // `<lr-checkbox>`'s/`<lr-combobox>`'s identical `touched` field.
   @state() private touched = false;
 
   private internals: ElementInternals;
@@ -96,7 +96,7 @@ export class LyraSwitch extends LyraElement<LyraSwitchEventMap> {
   // `attributeChangedCallback` alone — that would also fire (and wrongly
   // redefine the default) every time the property setter itself reflects a
   // later user toggle back into the attribute. Guarding with a one-shot flag
-  // instead mirrors `<lyra-combobox>`'s `_defaultCaptured`/`_defaultSelected`.
+  // instead mirrors `<lr-combobox>`'s `_defaultCaptured`/`_defaultSelected`.
   private _defaultChecked = false;
   private _defaultCaptured = false;
   private _fieldsetDisabled = false;
@@ -222,8 +222,8 @@ export class LyraSwitch extends LyraElement<LyraSwitchEventMap> {
     if (!this.hasUpdated) {
       // Excludes element children explicitly assigned to the named `hint`/`error` slots -- those
       // are real childNodes of the host too, and without this filter their own textContent would
-      // wrongly count as default-slot label content (e.g. a bare `<lyra-switch><span
-      // slot="hint">...</span></lyra-switch>` with no actual label text).
+      // wrongly count as default-slot label content (e.g. a bare `<lr-switch><span
+      // slot="hint">...</span></lr-switch>` with no actual label text).
       this.hasLabelSlot = Array.from(this.childNodes).some(
         (n) => !(n instanceof Element && n.slot) && (n.textContent ?? '').trim().length > 0,
       );
@@ -249,6 +249,7 @@ export class LyraSwitch extends LyraElement<LyraSwitchEventMap> {
   }
 
   formResetCallback(): void {
+    this.touched = false;
     this.checked = this._defaultChecked;
   }
   formStateRestoreCallback(
@@ -271,7 +272,7 @@ export class LyraSwitch extends LyraElement<LyraSwitchEventMap> {
   private toggle(): void {
     if (this.effectiveDisabled) return;
     this.checked = !this.checked;
-    this.emit('lyra-change', { checked: this.checked });
+    this.emit('lr-change', { checked: this.checked });
   }
 
   private onClick = (): void => {
@@ -289,7 +290,7 @@ export class LyraSwitch extends LyraElement<LyraSwitchEventMap> {
 
   private onKeyDown = (e: KeyboardEvent): void => {
     if (this.effectiveDisabled) return;
-    // Space/Enter both activate, matching `<lyra-table>`'s sortable
+    // Space/Enter both activate, matching `<lr-table>`'s sortable
     // header/row convention (`table.ts`'s `onHeaderKeyDown`/`onRowKeyDown`)
     // for role-based clickable elements — bound to `keydown` rather than
     // `keyup`/native `click`-forwarding like the rest of this library.
@@ -325,9 +326,9 @@ export class LyraSwitch extends LyraElement<LyraSwitchEventMap> {
           role="switch"
           tabindex=${this.effectiveDisabled ? '-1' : '0'}
           aria-checked=${this.checked ? 'true' : 'false'}
-          aria-required=${this.required ? 'true' : nothing}
+          aria-required=${this.required ? 'true' : 'false'}
           aria-invalid=${this.touched && !this.internals.validity.valid ? 'true' : 'false'}
-          aria-disabled=${this.effectiveDisabled ? 'true' : nothing}
+          aria-disabled=${this.effectiveDisabled ? 'true' : 'false'}
           aria-label=${this.getAttribute('aria-label') || nothing}
           aria-describedby=${describedBy || nothing}
           @click=${this.onClick}
@@ -356,6 +357,6 @@ export class LyraSwitch extends LyraElement<LyraSwitchEventMap> {
 
 declare global {
   interface HTMLElementTagNameMap {
-    'lyra-switch': LyraSwitch;
+    'lr-switch': LyraSwitch;
   }
 }

@@ -11,7 +11,7 @@ const nodes: FlowNode[] = [
 
 const meta: Meta = {
   title: 'Flow Controls',
-  component: 'lyra-flow-controls',
+  component: 'lr-flow-controls',
   tags: ['autodocs'],
 };
 export default meta;
@@ -19,27 +19,27 @@ type Story = StoryObj;
 
 export const Default: Story = {
   render: () => html`
-    <lyra-flow-canvas style="width:100%;height:20rem" .nodes=${nodes}>
-      <lyra-flow-controls slot="bottom-start"></lyra-flow-controls>
-    </lyra-flow-canvas>
+    <lr-flow-canvas style="width:100%;height:20rem" .nodes=${nodes}>
+      <lr-flow-controls slot="bottom-start"></lr-flow-controls>
+    </lr-flow-canvas>
   `,
 };
 
 export const HorizontalHideLock: Story = {
   render: () => html`
-    <lyra-flow-canvas style="width:100%;height:20rem" .nodes=${nodes}>
-      <lyra-flow-controls slot="bottom-start" orientation="horizontal" hide-lock></lyra-flow-controls>
-    </lyra-flow-canvas>
+    <lr-flow-canvas style="width:100%;height:20rem" .nodes=${nodes}>
+      <lr-flow-controls slot="bottom-start" orientation="horizontal" hide-lock></lr-flow-controls>
+    </lr-flow-canvas>
   `,
 };
 
 export const NarrowAllocation: Story = {
   name: 'Narrow allocation (320px)',
   render: () => html`
-    <div style="inline-size:320px; max-inline-size:100%; block-size:14rem; border:1px dashed var(--lyra-color-border);">
-      <lyra-flow-canvas style="width:100%;height:100%" .nodes=${nodes}>
-        <lyra-flow-controls slot="bottom-start"></lyra-flow-controls>
-      </lyra-flow-canvas>
+    <div style="inline-size:320px; max-inline-size:100%; block-size:14rem; border:1px dashed var(--lr-color-border);">
+      <lr-flow-canvas style="width:100%;height:100%" .nodes=${nodes}>
+        <lr-flow-controls slot="bottom-start"></lr-flow-controls>
+      </lr-flow-canvas>
     </div>
   `,
 };

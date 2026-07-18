@@ -6,25 +6,25 @@ export const styles = css`
     position: relative;
     inline-size: 100%;
     min-inline-size: 0;
-    block-size: var(--lyra-chart-height, var(--lyra-size-280px));
-    /* Same token names/fallback chain as chart.ts's --lyra-chart-* — a host
-       already theming lyra-chart gets lyra-lite-chart themed for free, and
+    block-size: var(--lr-chart-height, var(--lr-size-280px));
+    /* Same token names/fallback chain as chart.ts's --lr-chart-* — a host
+       already theming lr-chart gets lr-lite-chart themed for free, and
        vice versa. Unlike chart.ts (canvas-rendered, can't consume var()
        directly), this component is plain SVG/DOM, so these are read natively
        by the CSS below — no getComputedStyle()/JS-side resolution needed. */
-    --lyra-chart-grid-color: var(--lyra-color-border);
-    --lyra-chart-tick-color: var(--lyra-color-text-quiet);
-    --lyra-chart-legend-color: var(--lyra-color-text);
-    --lyra-chart-tooltip-bg: var(--lyra-color-surface);
-    --lyra-chart-tooltip-text: var(--lyra-color-text);
-    --lyra-chart-color-1: var(--lyra-color-chart-1);
-    --lyra-chart-color-2: var(--lyra-color-chart-2);
-    --lyra-chart-color-3: var(--lyra-color-chart-3);
-    --lyra-chart-color-4: var(--lyra-color-chart-4);
-    --lyra-chart-color-5: var(--lyra-color-chart-5);
-    --lyra-chart-color-6: var(--lyra-color-chart-6);
-    --lyra-chart-color-7: var(--lyra-color-chart-7);
-    --lyra-chart-color-8: var(--lyra-color-chart-8);
+    --lr-chart-grid-color: var(--lr-color-border);
+    --lr-chart-tick-color: var(--lr-color-text-quiet);
+    --lr-chart-legend-color: var(--lr-color-text);
+    --lr-chart-tooltip-bg: var(--lr-color-surface);
+    --lr-chart-tooltip-text: var(--lr-color-text);
+    --lr-chart-color-1: var(--lr-color-chart-1);
+    --lr-chart-color-2: var(--lr-color-chart-2);
+    --lr-chart-color-3: var(--lr-color-chart-3);
+    --lr-chart-color-4: var(--lr-color-chart-4);
+    --lr-chart-color-5: var(--lr-color-chart-5);
+    --lr-chart-color-6: var(--lr-color-chart-6);
+    --lr-chart-color-7: var(--lr-color-chart-7);
+    --lr-chart-color-8: var(--lr-color-chart-8);
   }
   [part='base'] {
     position: relative;
@@ -32,7 +32,7 @@ export const styles = css`
     block-size: 100%;
     display: flex;
     flex-direction: column;
-    gap: var(--lyra-space-xs);
+    gap: var(--lr-space-xs);
   }
   /* layout="scroll": the svg below gets an explicit inline-size (its
      computed content width, set inline per-render since it depends on
@@ -51,35 +51,35 @@ export const styles = css`
     overflow: visible;
   }
   [part='grid-line'] {
-    stroke: var(--lyra-chart-grid-color);
-    stroke-width: var(--lyra-border-width-thin);
+    stroke: var(--lr-chart-grid-color);
+    stroke-width: var(--lr-border-width-thin);
   }
   [part='axis-label'] {
-    fill: var(--lyra-chart-tick-color);
-    font-size: var(--lyra-font-size-2xs);
-    font-family: var(--lyra-font);
+    fill: var(--lr-chart-tick-color);
+    font-size: var(--lr-font-size-2xs);
+    font-family: var(--lr-font);
   }
   [part='axis-title'] {
-    fill: var(--lyra-chart-tick-color);
-    font-size: var(--lyra-font-size-xs);
-    font-weight: var(--lyra-font-weight-semibold);
-    font-family: var(--lyra-font);
+    fill: var(--lr-chart-tick-color);
+    font-size: var(--lr-font-size-xs);
+    font-weight: var(--lr-font-weight-semibold);
+    font-family: var(--lr-font);
   }
   [part='bar'] {
     cursor: pointer;
   }
   [part='bar'][data-selected] {
-    stroke: var(--lyra-lite-chart-selected-outline-color, var(--lyra-color-brand));
-    stroke-width: var(--lyra-size-2px);
+    stroke: var(--lr-lite-chart-selected-outline-color, var(--lr-color-brand));
+    stroke-width: var(--lr-size-2px);
   }
   [part='bar']:focus-visible,
   [part='point']:focus-visible {
-    outline: var(--lyra-focus-ring-width) solid var(--lyra-focus-ring-color);
-    outline-offset: var(--lyra-focus-ring-offset);
+    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
+    outline-offset: var(--lr-focus-ring-offset);
   }
   [part='line'] {
     fill: none;
-    stroke-width: var(--lyra-border-width-medium);
+    stroke-width: var(--lr-border-width-medium);
   }
   [part='point'] {
     cursor: pointer;
@@ -87,7 +87,7 @@ export const styles = css`
   [part='legend'] {
     display: flex;
     flex-wrap: wrap;
-    gap: var(--lyra-space-s);
+    gap: var(--lr-space-s);
     justify-content: center;
     flex: 0 0 auto;
   }
@@ -97,18 +97,18 @@ export const styles = css`
     min-inline-size: 0;
     max-inline-size: 100%;
     overflow-wrap: anywhere;
-    gap: var(--lyra-size-0-35em);
-    font-size: var(--lyra-size-0-8rem);
-    color: var(--lyra-chart-legend-color);
+    gap: var(--lr-size-0-35em);
+    font-size: var(--lr-size-0-8rem);
+    color: var(--lr-chart-legend-color);
   }
   [part='legend-swatch'] {
-    inline-size: var(--lyra-size-0-7em);
-    block-size: var(--lyra-size-0-7em);
-    border-radius: var(--lyra-size-2px);
+    inline-size: var(--lr-size-0-7em);
+    block-size: var(--lr-size-0-7em);
+    border-radius: var(--lr-size-2px);
     flex: 0 0 auto;
   }
   [part='legend-text'] {
-    margin-inline-start: var(--lyra-space-2xs);
-    color: var(--lyra-chart-tick-color);
+    margin-inline-start: var(--lr-space-2xs);
+    color: var(--lr-chart-tick-color);
   }
 `;

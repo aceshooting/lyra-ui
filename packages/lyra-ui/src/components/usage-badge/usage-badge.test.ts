@@ -3,7 +3,7 @@ import './usage-badge.js';
 import type { LyraUsageBadge } from './usage-badge.js';
 
 it('defaults to no tokensIn/tokensOut/costText/latencyMs, compact=false', async () => {
-  const el = (await fixture(html`<lyra-usage-badge></lyra-usage-badge>`)) as LyraUsageBadge;
+  const el = (await fixture(html`<lr-usage-badge></lr-usage-badge>`)) as LyraUsageBadge;
   expect(el.tokensIn).to.be.undefined;
   expect(el.tokensOut).to.be.undefined;
   expect(el.costText).to.equal('');
@@ -12,7 +12,7 @@ it('defaults to no tokensIn/tokensOut/costText/latencyMs, compact=false', async 
 });
 
 it('renders nothing when no segment is set', async () => {
-  const el = (await fixture(html`<lyra-usage-badge></lyra-usage-badge>`)) as LyraUsageBadge;
+  const el = (await fixture(html`<lr-usage-badge></lr-usage-badge>`)) as LyraUsageBadge;
   expect(el.shadowRoot!.querySelector('[part="tokens-in"]')).to.not.exist;
   expect(el.shadowRoot!.querySelector('[part="tokens-out"]')).to.not.exist;
   expect(el.shadowRoot!.querySelector('[part="cost"]')).to.not.exist;
@@ -22,7 +22,7 @@ it('renders nothing when no segment is set', async () => {
 
 it('renders only the segments that are set, each independently optional', async () => {
   const el = (await fixture(
-    html`<lyra-usage-badge tokens-in="1204" cost-text="$0.012"></lyra-usage-badge>`,
+    html`<lr-usage-badge tokens-in="1204" cost-text="$0.012"></lr-usage-badge>`,
   )) as LyraUsageBadge;
   expect(el.shadowRoot!.querySelector('[part="tokens-in"]')!.textContent!.trim()).to.equal('1,204 in');
   expect(el.shadowRoot!.querySelector('[part="tokens-out"]')).to.not.exist;
@@ -31,23 +31,23 @@ it('renders only the segments that are set, each independently optional', async 
 });
 
 it('formats latency-ms with the shared duration algorithm', async () => {
-  const sub = (await fixture(html`<lyra-usage-badge latency-ms="820"></lyra-usage-badge>`)) as LyraUsageBadge;
+  const sub = (await fixture(html`<lr-usage-badge latency-ms="820"></lr-usage-badge>`)) as LyraUsageBadge;
   expect(sub.shadowRoot!.querySelector('[part="latency"]')!.textContent!.trim()).to.equal('820ms');
-  const over = (await fixture(html`<lyra-usage-badge latency-ms="1500"></lyra-usage-badge>`)) as LyraUsageBadge;
+  const over = (await fixture(html`<lr-usage-badge latency-ms="1500"></lr-usage-badge>`)) as LyraUsageBadge;
   expect(over.shadowRoot!.querySelector('[part="latency"]')!.textContent!.trim()).to.equal('1.5s');
 });
 
 it('omits the latency segment for a non-numeric latency-ms, and clamps a negative one to "0ms" instead of a negative reading', async () => {
-  const nonFinite = (await fixture(html`<lyra-usage-badge latency-ms="not-a-number"></lyra-usage-badge>`)) as LyraUsageBadge;
+  const nonFinite = (await fixture(html`<lr-usage-badge latency-ms="not-a-number"></lr-usage-badge>`)) as LyraUsageBadge;
   expect(Number.isNaN(nonFinite.latencyMs)).to.be.true;
   expect(nonFinite.shadowRoot!.querySelector('[part="latency"]')).to.not.exist;
 
-  const negative = (await fixture(html`<lyra-usage-badge latency-ms="-50"></lyra-usage-badge>`)) as LyraUsageBadge;
+  const negative = (await fixture(html`<lr-usage-badge latency-ms="-50"></lr-usage-badge>`)) as LyraUsageBadge;
   expect(negative.shadowRoot!.querySelector('[part="latency"]')!.textContent!.trim()).to.equal('0ms');
 });
 
 it('lets formatLatency override the built-in duration algorithm in both the visible strip and the tooltip row', async () => {
-  const el = (await fixture(html`<lyra-usage-badge latency-ms="312000"></lyra-usage-badge>`)) as LyraUsageBadge;
+  const el = (await fixture(html`<lr-usage-badge latency-ms="312000"></lr-usage-badge>`)) as LyraUsageBadge;
   // Unset: the built-in algorithm has no minutes/hours tier, so a 5m 12s run reads as a bare
   // seconds count -- exactly the gap this hook exists to let a host correct.
   expect(el.shadowRoot!.querySelector('[part="latency"]')!.textContent!.trim()).to.equal('312s');
@@ -68,17 +68,17 @@ it('lets formatLatency override the built-in duration algorithm in both the visi
 });
 
 it('renders compact token notation when compact is set, full grouped figures otherwise', async () => {
-  const full = (await fixture(html`<lyra-usage-badge tokens-in="12345"></lyra-usage-badge>`)) as LyraUsageBadge;
+  const full = (await fixture(html`<lr-usage-badge tokens-in="12345"></lr-usage-badge>`)) as LyraUsageBadge;
   expect(full.shadowRoot!.querySelector('[part="tokens-in"]')!.textContent!.trim()).to.equal('12,345 in');
 
   const compact = (await fixture(
-    html`<lyra-usage-badge tokens-in="12345" compact></lyra-usage-badge>`,
+    html`<lr-usage-badge tokens-in="12345" compact></lr-usage-badge>`,
   )) as LyraUsageBadge;
   expect(compact.shadowRoot!.querySelector('[part="tokens-in"]')!.textContent!.trim()).to.equal('12K in');
 });
 
 it('is a focusable non-button group named "Usage" whenever any segment is set', async () => {
-  const el = (await fixture(html`<lyra-usage-badge tokens-in="10"></lyra-usage-badge>`)) as LyraUsageBadge;
+  const el = (await fixture(html`<lr-usage-badge tokens-in="10"></lr-usage-badge>`)) as LyraUsageBadge;
   const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
   expect(base.tagName).to.not.equal('BUTTON');
   expect(base.getAttribute('role')).to.equal('group');
@@ -89,13 +89,13 @@ it('is a focusable non-button group named "Usage" whenever any segment is set', 
 describe('tooltip breakdown', () => {
   it('is hidden until hover/focus, and shows full-precision labeled rows', async () => {
     const el = (await fixture(
-      html`<lyra-usage-badge
+      html`<lr-usage-badge
         tokens-in="1204"
         tokens-out="386"
         cost-text="$0.012"
         latency-ms="2350"
         compact
-      ></lyra-usage-badge>`,
+      ></lr-usage-badge>`,
     )) as LyraUsageBadge;
     const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
     expect((el.shadowRoot!.querySelector('[part="tooltip"]') as HTMLElement).hidden).to.be.true;
@@ -121,7 +121,7 @@ describe('tooltip breakdown', () => {
   });
 
   it('only shows the Total tokens row when both tokensIn and tokensOut are set', async () => {
-    const el = (await fixture(html`<lyra-usage-badge tokens-in="1204"></lyra-usage-badge>`)) as LyraUsageBadge;
+    const el = (await fixture(html`<lr-usage-badge tokens-in="1204"></lr-usage-badge>`)) as LyraUsageBadge;
     const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
     base.dispatchEvent(new Event('mouseenter'));
     await el.updateComplete;
@@ -129,7 +129,7 @@ describe('tooltip breakdown', () => {
   });
 
   it('keeps the tooltip open while hover releases but focus still holds it, and vice versa', async () => {
-    const el = (await fixture(html`<lyra-usage-badge tokens-in="10"></lyra-usage-badge>`)) as LyraUsageBadge;
+    const el = (await fixture(html`<lr-usage-badge tokens-in="10"></lr-usage-badge>`)) as LyraUsageBadge;
     const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
     base.dispatchEvent(new Event('mouseenter'));
     base.dispatchEvent(new Event('focus'));
@@ -147,7 +147,7 @@ describe('tooltip breakdown', () => {
   });
 
   it('dismisses on Escape', async () => {
-    const el = (await fixture(html`<lyra-usage-badge tokens-in="10"></lyra-usage-badge>`)) as LyraUsageBadge;
+    const el = (await fixture(html`<lr-usage-badge tokens-in="10"></lr-usage-badge>`)) as LyraUsageBadge;
     const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
     base.dispatchEvent(new Event('focus'));
     await el.updateComplete;
@@ -158,7 +158,7 @@ describe('tooltip breakdown', () => {
   });
 
   it('sets aria-describedby on base only while the tooltip is open and has content', async () => {
-    const el = (await fixture(html`<lyra-usage-badge tokens-in="10"></lyra-usage-badge>`)) as LyraUsageBadge;
+    const el = (await fixture(html`<lr-usage-badge tokens-in="10"></lr-usage-badge>`)) as LyraUsageBadge;
     const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
     expect(base.hasAttribute('aria-describedby')).to.be.false;
     base.dispatchEvent(new Event('focus'));
@@ -169,7 +169,7 @@ describe('tooltip breakdown', () => {
 
   it('renders extra slotted rows below the built-in breakdown', async () => {
     const el = (await fixture(
-      html`<lyra-usage-badge tokens-in="10"><div>Cache-read: 500</div></lyra-usage-badge>`,
+      html`<lr-usage-badge tokens-in="10"><div>Cache-read: 500</div></lr-usage-badge>`,
     )) as LyraUsageBadge;
     const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
     base.dispatchEvent(new Event('focus'));
@@ -188,7 +188,7 @@ describe('tooltip breakdown', () => {
 
 it('localizes built-in tooltip row labels via .strings', async () => {
   const el = (await fixture(
-    html`<lyra-usage-badge tokens-in="10" .strings=${{ usageBadgeTokensInLabel: 'Jetons entrée' }}></lyra-usage-badge>`,
+    html`<lr-usage-badge tokens-in="10" .strings=${{ usageBadgeTokensInLabel: 'Jetons entrée' }}></lr-usage-badge>`,
   )) as LyraUsageBadge;
   const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
   base.dispatchEvent(new Event('focus'));
@@ -197,13 +197,13 @@ it('localizes built-in tooltip row labels via .strings', async () => {
 });
 
 it('is accessible with nothing set', async () => {
-  const el = (await fixture(html`<lyra-usage-badge></lyra-usage-badge>`)) as LyraUsageBadge;
+  const el = (await fixture(html`<lr-usage-badge></lr-usage-badge>`)) as LyraUsageBadge;
   await expect(el).to.be.accessible();
 });
 
 it('is accessible with every segment set and the tooltip open', async () => {
   const el = (await fixture(
-    html`<lyra-usage-badge tokens-in="1204" tokens-out="386" cost-text="$0.012" latency-ms="2350"></lyra-usage-badge>`,
+    html`<lr-usage-badge tokens-in="1204" tokens-out="386" cost-text="$0.012" latency-ms="2350"></lr-usage-badge>`,
   )) as LyraUsageBadge;
   const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
   base.dispatchEvent(new Event('focus'));

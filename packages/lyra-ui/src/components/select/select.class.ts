@@ -12,27 +12,27 @@ import '../combobox/option.class.js';
 export type LyraSelectSize = 'xs' | 's' | 'm' | 'l' | 'xl';
 
 export interface LyraSelectEventMap {
-  'lyra-show': CustomEvent<undefined>;
-  'lyra-hide': CustomEvent<undefined>;
+  'lr-show': CustomEvent<undefined>;
+  'lr-hide': CustomEvent<undefined>;
   input: CustomEvent<undefined>;
   change: CustomEvent<undefined>;
   blur: CustomEvent<undefined>;
   focus: CustomEvent<undefined>;
 }
 /**
- * `<lyra-select>` — a plain closed-list dropdown: a direct `<lyra-*>`
+ * `<lr-select>` — a plain closed-list dropdown: a direct `<lr-*>`
  * counterpart to `<wa-select>`/`<wa-option>`. Trigger is a button (not a text
  * input) -- click/Enter/Space/ArrowDown opens it, there's no typing-to-filter.
  * A printable keypress instead jumps (or, while closed, directly selects) the
  * next option whose label starts with what's been typed, like a native
  * `<select>`'s type-ahead.
  *
- * Options are `<lyra-option value>` children, the same element `<lyra-combobox>`
- * uses. Unlike `lyra-combobox` this is single-select only, with no filter/
+ * Options are `<lr-option value>` children, the same element `<lr-combobox>`
+ * uses. Unlike `lr-combobox` this is single-select only, with no filter/
  * source/with-clear/max-options-visible/empty-text/max-render/multiple surface
- * -- see `<lyra-combobox>` for the filterable/multi-select case.
+ * -- see `<lr-combobox>` for the filterable/multi-select case.
  *
- * Reuses `lyra-combobox`'s popup positioning (`internal/positioner.js`) and
+ * Reuses `lr-combobox`'s popup positioning (`internal/positioner.js`) and
  * click-outside/Escape/Home/End/Arrow-key listbox navigation patterns,
  * adapted to a trigger button that keeps DOM focus throughout (the listbox's
  * "active" row is conveyed via `aria-activedescendant`, never actual focus),
@@ -54,21 +54,21 @@ export interface LyraSelectEventMap {
  * behavior — opt in explicitly if a narrowing-to-one option list should
  * auto-commit.
  *
- * @customElement lyra-select
- * @slot - `<lyra-option>` elements.
+ * @customElement lr-select
+ * @slot - `<lr-option>` elements.
  * @slot label - Custom label content.
  * @slot hint - Custom hint content.
  * @slot error - Custom error content.
  * @event change - The selection changed. Deliberately unprefixed, mirroring native `<select>`'s
- *   own event name -- contrast `<lyra-slider>`, which uses `lyra-input`/`lyra-change` for its
+ *   own event name -- contrast `<lr-slider>`, which uses `lr-input`/`lr-change` for its
  *   analogous value-change pair. Which form controls mirror native unprefixed DOM event names
- *   (this one, matching `<select>`) versus which use the `lyra-` prefix (`<lyra-slider>`,
+ *   (this one, matching `<select>`) versus which use the `lr-` prefix (`<lr-slider>`,
  *   matching `<input type="range">` via a custom name) is a deliberate per-control choice, not
  *   an incidental divergence.
  * @event input - Fired alongside `change` on every selection change (native
  *   `<select>` doesn't meaningfully distinguish the two either).
- * @event lyra-show - The listbox opened.
- * @event lyra-hide - The listbox closed.
+ * @event lr-show - The listbox opened.
+ * @event lr-hide - The listbox closed.
  * @event blur - Re-dispatched from the trigger as a bubbling, composed event.
  * @event focus - Re-dispatched from the trigger as a bubbling, composed event.
  * @csspart form-control - The outer wrapper around label, trigger, listbox, error and hint.
@@ -100,10 +100,10 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
   @property() hint = '';
   @property({ attribute: 'error-text' }) errorText = '';
   @property({ type: Boolean, reflect: true }) open = false;
-  /** Visual size — same `xs`–`xl` scale as `lyra-toast-item`'s `size`. */
+  /** Visual size — same `xs`–`xl` scale as `lr-toast-item`'s `size`. */
   @property({ reflect: true }) size: LyraSelectSize = 'm';
   /**
-   * Opt-in: when `true` and exactly one `<lyra-option>` is enabled, the
+   * Opt-in: when `true` and exactly one `<lr-option>` is enabled, the
    * trigger commits that option directly (click/Enter/Space/ArrowDown/
    * ArrowUp) instead of opening the listbox, and renders as a plain
    * `role="button"` with no chevron. Defaults to `false`, which always
@@ -120,7 +120,7 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
   @state() private touched = false;
   // `[part]:empty` never matches -- the part always contains a literal
   // `<slot>` child element regardless of assigned content -- so real
-  // emptiness is tracked in JS instead (same fix as lyra-combobox's
+  // emptiness is tracked in JS instead (same fix as lr-combobox's
   // hasHintSlot/hasErrorSlot/hasLabelSlot) and reflected via `hidden`.
   @state() private hasHintSlot = false;
   @state() private hasErrorSlot = false;
@@ -142,11 +142,11 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
   private _disabled = false;
   private _required = false;
   // What `form.reset()` restores to. Captured exactly once, from whatever
-  // `<lyra-option selected>` markup was present the first time slotted
+  // `<lr-option selected>` markup was present the first time slotted
   // options are collected (mirrors native `<select><option selected>`) --
   // never from the `value` setter, so a user picking an option (even the
   // very first pick on an initially-unselected select) can't itself become
-  // the reset default. See lyra-combobox's identical `_defaultSelected`.
+  // the reset default. See lr-combobox's identical `_defaultSelected`.
   private _defaultSelected = '';
   private _defaultCaptured = false;
   // A restored value must win over declarative selected markup collected by
@@ -294,6 +294,7 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
   }
 
   formResetCallback(): void {
+    this.touched = false;
     this.value = this._defaultSelected;
   }
   formStateRestoreCallback(
@@ -326,7 +327,7 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
     this.cleanup?.();
     this.cleanup = undefined;
     clearTimeout(this.typeAheadTimer);
-    document.removeEventListener('pointerdown', this.onDocPointer);
+    this.ownerDocument.removeEventListener('pointerdown', this.onDocPointer);
     // Reset so a reconnect (e.g. a drag-drop reparent) re-triggers
     // `updated()`'s `open`-driven branch -- without this, `open` stays
     // `true` across the disconnect/reconnect and `changed.has('open')` never
@@ -344,9 +345,9 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
     if (!this._defaultCaptured) {
       this._defaultCaptured = true;
       // Seed the initial selection -- and the reset default -- from
-      // declarative `<lyra-option selected>` markup, mirroring native
+      // declarative `<lr-option selected>` markup, mirroring native
       // `<select><option selected>`. Only the *first* declared-selected
-      // option matters when several declare it, mirroring lyra-combobox's
+      // option matters when several declare it, mirroring lr-combobox's
       // single-mode behavior. This is the only place `_defaultSelected` is
       // set; picking an option later (the `value` setter) never redefines
       // the reset default.
@@ -394,9 +395,9 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
     return navigable.length === 1 ? navigable[0] : undefined;
   }
 
-  // Fired by `option.ts`'s `lyra-option-change` (a MutationObserver on the
+  // Fired by `option.ts`'s `lr-option-change` (a MutationObserver on the
   // option's own light-DOM content/attributes) when an already-slotted
-  // `<lyra-option>` mutates its own data in place -- `collectOptions()` only
+  // `<lr-option>` mutates its own data in place -- `collectOptions()` only
   // re-runs on `slotchange`, which never fires for such a mutation, so
   // without this the rendered listbox row would go stale. Reassigning (not
   // mutating) `options` gives Lit a new array reference to diff against.
@@ -422,22 +423,22 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
       this.cleanup?.();
       this.cleanup = undefined;
       // All `open`-driven side effects (positioning, the click-outside
-      // listener, and the lyra-show/lyra-hide events) live here rather than
+      // listener, and the lr-show/lr-hide events) live here rather than
       // in show()/hide() so they fire however `open` became true -- via
       // show()/hide()'s own user-interaction paths, or a consumer/test
       // setting `el.open` directly, which bypasses both entirely.
       if (this.open) {
-        document.addEventListener('pointerdown', this.onDocPointer);
+        this.ownerDocument.addEventListener('pointerdown', this.onDocPointer);
         // Don't announce a "show" transition for markup that's simply
-        // rendering open for the first time (e.g. `<lyra-select open>`) --
+        // rendering open for the first time (e.g. `<lr-select open>`) --
         // only for an actual closed-to-open transition.
-        if (!this._isFirstUpdate) this.emit('lyra-show');
+        if (!this._isFirstUpdate) this.emit('lr-show');
         const anchor = this.renderRoot.querySelector('[part="trigger"]') as HTMLElement | null;
         const listbox = this.renderRoot.querySelector('[part="listbox"]') as HTMLElement | null;
         if (anchor && listbox) this.cleanup = place(anchor, listbox);
       } else {
-        document.removeEventListener('pointerdown', this.onDocPointer);
-        if (!this._isFirstUpdate) this.emit('lyra-hide');
+        this.ownerDocument.removeEventListener('pointerdown', this.onDocPointer);
+        if (!this._isFirstUpdate) this.emit('lr-hide');
       }
     }
     if (changed.has('touched') || changed.has('required') || changed.has('value')) {
@@ -459,7 +460,7 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
     if (changed) {
       // Deliberately unprefixed -- this control is a direct <select>
       // counterpart, so its value-change events keep <select>'s own naming
-      // instead of the `lyra-` prefix `<lyra-slider>` uses for its analogous
+      // instead of the `lr-` prefix `<lr-slider>` uses for its analogous
       // rename. See the class doc's `change` event entry for the full rule.
       this.emit('input');
       this.emit('change');
@@ -478,7 +479,7 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
     // A mouse click outside the element is already handled by
     // onDocPointer/hide(), but that leaves keyboard users with no way to
     // dismiss the listbox short of Escape -- tabbing focus away from the
-    // trigger should close it too, the same as lyra-combobox's input blur.
+    // trigger should close it too, the same as lr-combobox's input blur.
     this.hide();
     this.emit('blur');
   };
@@ -511,7 +512,7 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
    */
   private typeAhead(char: string): void {
     clearTimeout(this.typeAheadTimer);
-    this.typeAheadBuffer += char.toLowerCase();
+    this.typeAheadBuffer += char.toLocaleLowerCase(this.effectiveLocale);
     this.typeAheadTimer = setTimeout(() => {
       this.typeAheadBuffer = '';
     }, 500);
@@ -524,7 +525,7 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
     for (let step = 1; step <= n; step++) {
       const idx = (currentIndex + step + n) % n;
       const candidate = navigable[idx];
-      if (candidate.label.toLowerCase().startsWith(this.typeAheadBuffer)) {
+      if (candidate.label.toLocaleLowerCase(this.effectiveLocale).startsWith(this.typeAheadBuffer)) {
         if (this.open) {
           this.activeIndex = idx;
         } else {
@@ -593,7 +594,7 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
 
   // Delegated onto [part="listbox"] (see render()) rather than one closure
   // pair allocated per option per render -- resolves the target row via
-  // closest('[part="option"]') + a data-value lookup, mirroring lyra-combobox.
+  // closest('[part="option"]') + a data-value lookup, mirroring lr-combobox.
   private onListboxMouseDown = (e: MouseEvent): void => {
     if ((e.target as HTMLElement).closest('[part="option"]')) e.preventDefault();
   };
@@ -704,7 +705,7 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
           ${this.hint}<slot name="hint" @slotchange=${this.onHintSlotChange}></slot>
         </div>
       </div>
-      <slot @slotchange=${this.collectOptions} @lyra-option-change=${this.onOptionChange} hidden></slot>
+      <slot @slotchange=${this.collectOptions} @lr-option-change=${this.onOptionChange} hidden></slot>
     `;
   }
 }
@@ -712,6 +713,6 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
 
 declare global {
   interface HTMLElementTagNameMap {
-    'lyra-select': LyraSelect;
+    'lr-select': LyraSelect;
   }
 }

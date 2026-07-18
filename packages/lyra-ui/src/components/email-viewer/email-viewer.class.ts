@@ -14,8 +14,8 @@ export interface ParsedEmail { from: string; to: string; subject: string; date: 
 type EmailFetchState = { kind: 'idle' } | { kind: 'loading' } | { kind: 'loaded'; email: ParsedEmail } | { kind: 'error'; message: string };
 
 export interface LyraEmailViewerEventMap {
-  'lyra-render-error': CustomEvent<{ error: unknown }>;
-  'lyra-attachment-open': CustomEvent<{ attachment: { filename: string; mimeType: string; content?: Uint8Array } }>;
+  'lr-render-error': CustomEvent<{ error: unknown }>;
+  'lr-attachment-open': CustomEvent<{ attachment: { filename: string; mimeType: string; content?: Uint8Array } }>;
 }
 
 interface Address { name?: string; address?: string; group?: Address[]; }
@@ -76,15 +76,15 @@ function foldHtmlQuotes(html: string, localize: (key: string) => string): string
  * Parses `.eml` messages with the optional `postal-mime` peer and renders
  * their HTML body only after DOMPurify sanitization. Plain-text messages remain
  * useful without DOMPurify. Attachment rows are real buttons that emit
- * `lyra-attachment-open` with the attachment's decoded bytes -- this component itself never
+ * `lr-attachment-open` with the attachment's decoded bytes -- this component itself never
  * opens, downloads, or object-URLs the content; a host routes the event into e.g.
- * `URL.createObjectURL(new Blob([content], { type: mimeType }))` -> `lyra-document-viewer` ->
- * revoke on `lyra-close`. `fold-quotes` collapses trailing quoted-reply text/HTML behind a
+ * `URL.createObjectURL(new Blob([content], { type: mimeType }))` -> `lr-document-viewer` ->
+ * revoke on `lr-close`. `fold-quotes` collapses trailing quoted-reply text/HTML behind a
  * localized toggle.
  *
- * @customElement lyra-email-viewer
- * @event lyra-render-error - Fired when fetching or parsing the message fails.
- * @event lyra-attachment-open - An attachment button was activated. `detail: { attachment:
+ * @customElement lr-email-viewer
+ * @event lr-render-error - Fired when fetching or parsing the message fails.
+ * @event lr-attachment-open - An attachment button was activated. `detail: { attachment:
  *   { filename, mimeType, content? } }`. This component never opens, downloads, or object-URLs the
  *   content itself — see the class doc's composition recipe.
  * @csspart base - The root container.
@@ -147,7 +147,7 @@ export class LyraEmailViewer extends LyraElement<LyraEmailViewerEventMap> {
     } catch (error) {
       if (isAbortError(error) || !this.isConnected || generation !== this.generation) return;
       this.fetchState = { kind: 'error', message: error instanceof LyraUserFacingError ? error.message : this.localize(isResourceLimitError(error) ? 'documentPreviewResourceTooLarge' : 'documentPreviewFailedToLoad') };
-      this.emit('lyra-render-error', { error });
+      this.emit('lr-render-error', { error });
     }
   }
 
@@ -161,7 +161,7 @@ export class LyraEmailViewer extends LyraElement<LyraEmailViewerEventMap> {
       // `dompurify` peer unavailable would otherwise fall through to an empty
       // body with no diagnostic -- surface the same "install the optional
       // peer" message the other sanitizer-dependent viewers already show
-      // (`<lyra-html-viewer>`, `<lyra-svg-viewer>`) instead of silently
+      // (`<lr-html-viewer>`, `<lr-svg-viewer>`) instead of silently
       // dropping the only content the message has.
       throw new LyraUserFacingError(this.localize('documentViewerMissingSanitizer'));
     }
@@ -198,7 +198,7 @@ export class LyraEmailViewer extends LyraElement<LyraEmailViewerEventMap> {
         type="button"
         part="attachment-button"
         aria-label=${this.localize('emailViewerOpenAttachment', undefined, { filename: attachment.filename })}
-        @click=${() => this.emit('lyra-attachment-open', { attachment: { filename: attachment.filename, mimeType: attachment.mimeType, content: attachment.content } })}
+        @click=${() => this.emit('lr-attachment-open', { attachment: { filename: attachment.filename, mimeType: attachment.mimeType, content: attachment.content } })}
       ><span>${attachment.filename}</span><span>${formatFileSize(attachment.size)}</span></button></li>`)}
     </ul></div>`;
   }
@@ -240,7 +240,7 @@ export class LyraEmailViewer extends LyraElement<LyraEmailViewerEventMap> {
     }
   }
 
-  render(): TemplateResult { return html`<div part="base" style=${this.maxHeight ? `--lyra-email-viewer-max-height:${this.maxHeight}` : nothing} aria-label=${this.name || this.getAttribute('aria-label') || this.localize('emailViewerLabel')}>${this.renderBody()}</div>`; }
+  render(): TemplateResult { return html`<div part="base" style=${this.maxHeight ? `--lr-email-viewer-max-height:${this.maxHeight}` : nothing} aria-label=${this.name || this.getAttribute('aria-label') || this.localize('emailViewerLabel')}>${this.renderBody()}</div>`; }
 }
 
-declare global { interface HTMLElementTagNameMap { 'lyra-email-viewer': LyraEmailViewer; } }
+declare global { interface HTMLElementTagNameMap { 'lr-email-viewer': LyraEmailViewer; } }

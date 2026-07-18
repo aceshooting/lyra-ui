@@ -25,13 +25,13 @@ defineElement('anchor-target-test-stub', StubAnchorTarget);
 
 declare global {
   interface HTMLElementTagNameMap {
-    'lyra-anchor-target-test-stub': StubAnchorTarget;
+    'lr-anchor-target-test-stub': StubAnchorTarget;
   }
 }
 
 describe('DocumentAnchorTarget mixin', () => {
   it('defaults highlights/activeHighlightId/anchor/anchorKinds', async () => {
-    const el = await fixture<StubAnchorTarget>(litHtml`<lyra-anchor-target-test-stub></lyra-anchor-target-test-stub>`);
+    const el = await fixture<StubAnchorTarget>(litHtml`<lr-anchor-target-test-stub></lr-anchor-target-test-stub>`);
     expect(el.highlights).to.deep.equal([]);
     expect(el.activeHighlightId).to.be.null;
     expect(el.anchor).to.be.null;
@@ -39,7 +39,7 @@ describe('DocumentAnchorTarget mixin', () => {
   });
 
   it('scrollToAnchor retries until applyAnchor succeeds, then resolves true', async () => {
-    const el = await fixture<StubAnchorTarget>(litHtml`<lyra-anchor-target-test-stub apply-succeeds-after="2"></lyra-anchor-target-test-stub>`);
+    const el = await fixture<StubAnchorTarget>(litHtml`<lr-anchor-target-test-stub apply-succeeds-after="2"></lr-anchor-target-test-stub>`);
     (el as unknown as { anchorRetryIntervalMs: number }).anchorRetryIntervalMs = 5;
     (el as unknown as { anchorTimeoutMs: number }).anchorTimeoutMs = 500;
     const ok = await el.scrollToAnchor({ kind: 'page', page: 1 });
@@ -48,10 +48,10 @@ describe('DocumentAnchorTarget mixin', () => {
   });
 
   it('scrollToAnchor times out to false and announces anchorNotFound', async () => {
-    const el = await fixture<StubAnchorTarget>(litHtml`<lyra-anchor-target-test-stub apply-succeeds-after="9999"></lyra-anchor-target-test-stub>`);
+    const el = await fixture<StubAnchorTarget>(litHtml`<lr-anchor-target-test-stub apply-succeeds-after="9999"></lr-anchor-target-test-stub>`);
     (el as unknown as { anchorRetryIntervalMs: number }).anchorRetryIntervalMs = 5;
     (el as unknown as { anchorTimeoutMs: number }).anchorTimeoutMs = 30;
-    const eventPromise = oneEvent(el, 'lyra-anchor-result');
+    const eventPromise = oneEvent(el, 'lr-anchor-result');
     const ok = await el.scrollToAnchor({ kind: 'page', page: 1 });
     expect(ok).to.be.false;
     expect((await eventPromise).detail).to.deep.equal({ found: false });
@@ -61,7 +61,7 @@ describe('DocumentAnchorTarget mixin', () => {
   });
 
   it('a second scrollToAnchor call supersedes the first (generation guard)', async () => {
-    const el = await fixture<StubAnchorTarget>(litHtml`<lyra-anchor-target-test-stub apply-succeeds-after="9999"></lyra-anchor-target-test-stub>`);
+    const el = await fixture<StubAnchorTarget>(litHtml`<lr-anchor-target-test-stub apply-succeeds-after="9999"></lr-anchor-target-test-stub>`);
     (el as unknown as { anchorRetryIntervalMs: number }).anchorRetryIntervalMs = 5;
     (el as unknown as { anchorTimeoutMs: number }).anchorTimeoutMs = 5000;
     const firstCall = el.scrollToAnchor({ kind: 'page', page: 1 });
@@ -73,7 +73,7 @@ describe('DocumentAnchorTarget mixin', () => {
   });
 
   it('scrollToAnchor with a highlight id sets activeHighlightId on success', async () => {
-    const el = await fixture<StubAnchorTarget>(litHtml`<lyra-anchor-target-test-stub></lyra-anchor-target-test-stub>`);
+    const el = await fixture<StubAnchorTarget>(litHtml`<lr-anchor-target-test-stub></lr-anchor-target-test-stub>`);
     el.highlights = [{ id: 'cite-1', anchor: { kind: 'page', page: 1 } }];
     await el.updateComplete;
     const ok = await el.scrollToAnchor('cite-1');
@@ -82,30 +82,30 @@ describe('DocumentAnchorTarget mixin', () => {
   });
 
   it('scrollToAnchor with an unknown highlight id resolves false without calling applyAnchor', async () => {
-    const el = await fixture<StubAnchorTarget>(litHtml`<lyra-anchor-target-test-stub></lyra-anchor-target-test-stub>`);
+    const el = await fixture<StubAnchorTarget>(litHtml`<lr-anchor-target-test-stub></lr-anchor-target-test-stub>`);
     const ok = await el.scrollToAnchor('does-not-exist');
     expect(ok).to.be.false;
     expect(el.applyCallCount).to.equal(0);
   });
 
-  it('setting the anchor property auto-runs scrollToAnchor and emits lyra-anchor-result', async () => {
-    const el = await fixture<StubAnchorTarget>(litHtml`<lyra-anchor-target-test-stub></lyra-anchor-target-test-stub>`);
-    const eventPromise = oneEvent(el, 'lyra-anchor-result');
+  it('setting the anchor property auto-runs scrollToAnchor and emits lr-anchor-result', async () => {
+    const el = await fixture<StubAnchorTarget>(litHtml`<lr-anchor-target-test-stub></lr-anchor-target-test-stub>`);
+    const eventPromise = oneEvent(el, 'lr-anchor-result');
     el.anchor = { kind: 'page', page: 1 };
     expect((await eventPromise).detail).to.deep.equal({ found: true });
   });
 
   it('re-assigning anchor to the identical value re-fires (hasChanged always true)', async () => {
-    const el = await fixture<StubAnchorTarget>(litHtml`<lyra-anchor-target-test-stub></lyra-anchor-target-test-stub>`);
+    const el = await fixture<StubAnchorTarget>(litHtml`<lr-anchor-target-test-stub></lr-anchor-target-test-stub>`);
     el.anchor = 'cite-1';
-    await oneEvent(el, 'lyra-anchor-result');
-    const secondPromise = oneEvent(el, 'lyra-anchor-result');
+    await oneEvent(el, 'lr-anchor-result');
+    const secondPromise = oneEvent(el, 'lr-anchor-result');
     el.anchor = 'cite-1'; // identical value
     await secondPromise; // must fire again, not be swallowed by Lit's default reference equality
   });
 
-  it('bindTextSelection emits lyra-text-select once per selection end with a text-quote anchor by default', async () => {
-    const el = await fixture<StubAnchorTarget>(litHtml`<lyra-anchor-target-test-stub></lyra-anchor-target-test-stub>`);
+  it('bindTextSelection emits lr-text-select once per selection end with a text-quote anchor by default', async () => {
+    const el = await fixture<StubAnchorTarget>(litHtml`<lr-anchor-target-test-stub></lr-anchor-target-test-stub>`);
     const content = el.shadowRoot!.querySelector('[part="content"]')!;
     (el as unknown as { bindTextSelection: (root: Element) => void }).bindTextSelection(content);
 
@@ -115,7 +115,7 @@ describe('DocumentAnchorTarget mixin', () => {
     selection.removeAllRanges();
     selection.addRange(range);
 
-    const eventPromise = oneEvent(el, 'lyra-text-select');
+    const eventPromise = oneEvent(el, 'lr-text-select');
     content.dispatchEvent(new PointerEvent('pointerup', { bubbles: true }));
     const detail = (await eventPromise).detail;
     expect(detail.text).to.equal('stub content for selection tests');
@@ -132,7 +132,7 @@ describe('DocumentAnchorTarget mixin', () => {
       }
     }
     defineElement('anchor-target-test-declining', DecliningStub);
-    const el = await fixture<DecliningStub>(litHtml`<lyra-anchor-target-test-declining></lyra-anchor-target-test-declining>`);
+    const el = await fixture<DecliningStub>(litHtml`<lr-anchor-target-test-declining></lr-anchor-target-test-declining>`);
     const content = el.shadowRoot!.querySelector('[part="content"]')!;
     (el as unknown as { bindTextSelection: (root: Element) => void }).bindTextSelection(content);
 
@@ -142,14 +142,14 @@ describe('DocumentAnchorTarget mixin', () => {
     selection.removeAllRanges();
     selection.addRange(range);
 
-    const eventPromise = oneEvent(el, 'lyra-text-select');
+    const eventPromise = oneEvent(el, 'lr-text-select');
     content.dispatchEvent(new PointerEvent('pointerup', { bubbles: true }));
     expect((await eventPromise).detail.anchor).to.be.null;
     selection.removeAllRanges();
   });
 
   it('is accessible', async () => {
-    const el = await fixture<StubAnchorTarget>(litHtml`<lyra-anchor-target-test-stub></lyra-anchor-target-test-stub>`);
+    const el = await fixture<StubAnchorTarget>(litHtml`<lr-anchor-target-test-stub></lr-anchor-target-test-stub>`);
     await expect(el).to.be.accessible();
   });
 });

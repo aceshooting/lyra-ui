@@ -1,8 +1,8 @@
 import { LyraBadge } from './badge.class.js';
 
-/** `<lyra-tag>` — a semantic alias for the compact badge treatment.
+/** `<lr-tag>` — a semantic alias for the compact badge treatment.
  *
- * @customElement lyra-tag
+ * @customElement lr-tag
  */
 export class LyraTag extends LyraBadge {}
-declare global { interface HTMLElementTagNameMap { 'lyra-tag': LyraTag; } }
+declare global { interface HTMLElementTagNameMap { 'lr-tag': LyraTag; } }

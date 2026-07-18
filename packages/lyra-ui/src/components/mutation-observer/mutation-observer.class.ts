@@ -4,17 +4,17 @@ import { LyraElement } from '../../internal/lyra-element.js';
 import { styles } from './mutation-observer.styles.js';
 
 export interface LyraMutationObserverEventMap {
-  'lyra-mutation': CustomEvent<{ records: MutationRecord[] }>;
+  'lr-mutation': CustomEvent<{ records: MutationRecord[] }>;
 }
 
 /**
- * `<lyra-mutation-observer>` — observes element children in the default slot
+ * `<lr-mutation-observer>` — observes element children in the default slot
  * and forwards native mutation records as a composed event. It is useful for
  * integrating third-party renderers while keeping observer cleanup declarative.
  *
- * @customElement lyra-mutation-observer
+ * @customElement lr-mutation-observer
  * @slot - Elements to observe.
- * @event lyra-mutation - Observed DOM mutations.
+ * @event lr-mutation - Observed DOM mutations.
  * @csspart base - The non-layout wrapper around the observed slot.
  */
 export class LyraMutationObserver extends LyraElement<LyraMutationObserverEventMap> {
@@ -75,13 +75,13 @@ export class LyraMutationObserver extends LyraElement<LyraMutationObserverEventM
       subtree: this.subtree,
     };
     if (this.attributeFilter.length > 0) options.attributeFilter = this.attributeFilter;
-    // One shared observer across every slotted target (mirrors <lyra-intersection-observer>'s and
-    // <lyra-resize-observer>'s identical single-instance pattern) rather than one instance per
+    // One shared observer across every slotted target (mirrors <lr-intersection-observer>'s and
+    // <lr-resize-observer>'s identical single-instance pattern) rather than one instance per
     // target -- MutationObserver natively supports observing multiple nodes and batches every
     // mutation queued in the same microtask into a single callback invocation, so two targets
-    // mutated synchronously in the same script produce one coalesced `lyra-mutation` event instead
+    // mutated synchronously in the same script produce one coalesced `lr-mutation` event instead
     // of one per target.
-    this.observer = new MutationObserver((records) => this.emit('lyra-mutation', { records: [...records] }));
+    this.observer = new MutationObserver((records) => this.emit('lr-mutation', { records: [...records] }));
     for (const target of targets) this.observer.observe(target, options);
   };
 
@@ -92,6 +92,6 @@ export class LyraMutationObserver extends LyraElement<LyraMutationObserverEventM
 
 declare global {
   interface HTMLElementTagNameMap {
-    'lyra-mutation-observer': LyraMutationObserver;
+    'lr-mutation-observer': LyraMutationObserver;
   }
 }

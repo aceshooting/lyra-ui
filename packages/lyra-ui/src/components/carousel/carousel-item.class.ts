@@ -3,11 +3,11 @@ import { LyraElement } from '../../internal/lyra-element.js';
 import { styles } from './carousel-item.styles.js';
 
 /**
- * `<lyra-carousel-item>` — an optional semantic wrapper for one child of
- * `<lyra-carousel>`. A carousel also accepts arbitrary slotted elements, so
+ * `<lr-carousel-item>` — an optional semantic wrapper for one child of
+ * `<lr-carousel>`. A carousel also accepts arbitrary slotted elements, so
  * this element is convenience syntax for migrations and for consistent item styling.
  *
- * @customElement lyra-carousel-item
+ * @customElement lr-carousel-item
  * @slot - Slide content.
  * @csspart base - The slide wrapper.
  */
@@ -21,6 +21,6 @@ export class LyraCarouselItem extends LyraElement {
 
 declare global {
   interface HTMLElementTagNameMap {
-    'lyra-carousel-item': LyraCarouselItem;
+    'lr-carousel-item': LyraCarouselItem;
   }
 }

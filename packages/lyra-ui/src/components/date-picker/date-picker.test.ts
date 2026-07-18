@@ -5,7 +5,7 @@ import { styles } from './date-picker.styles.js';
 import { weekdayLabels, monthTitle, resolveFirstDayOfWeek } from './calendar-core.js';
 
 it('selects a day and emits change with an ISO value', async () => {
-  const el = (await fixture(html`<lyra-date-picker value="2026-07-15"></lyra-date-picker>`)) as LyraDatePicker;
+  const el = (await fixture(html`<lr-date-picker value="2026-07-15"></lr-date-picker>`)) as LyraDatePicker;
   await el.updateComplete;
 
   const day = el.shadowRoot!.querySelector('[data-date="2026-07-20"]') as HTMLButtonElement;
@@ -16,14 +16,14 @@ it('selects a day and emits change with an ISO value', async () => {
 });
 
 it('marks the selected day', async () => {
-  const el = (await fixture(html`<lyra-date-picker value="2026-07-15"></lyra-date-picker>`)) as LyraDatePicker;
+  const el = (await fixture(html`<lr-date-picker value="2026-07-15"></lr-date-picker>`)) as LyraDatePicker;
   await el.updateComplete;
   const sel = el.shadowRoot!.querySelector('[part~="day-selected"]') as HTMLButtonElement;
   expect(sel.getAttribute('data-date')).to.equal('2026-07-15');
 });
 
 it('selects a range across two clicks', async () => {
-  const el = (await fixture(html`<lyra-date-picker mode="range"></lyra-date-picker>`)) as LyraDatePicker;
+  const el = (await fixture(html`<lr-date-picker mode="range"></lr-date-picker>`)) as LyraDatePicker;
   el.goToDate('2026-07-01');
   await el.updateComplete;
 
@@ -40,7 +40,7 @@ it('keeps viewing the month the user navigated to after completing a cross-month
   // selection.from's month on every `value` change, including the component's
   // own commit() -- so completing a range in a later month than the range's
   // start snapped the view straight back to the start month.
-  const el = (await fixture(html`<lyra-date-picker mode="range"></lyra-date-picker>`)) as LyraDatePicker;
+  const el = (await fixture(html`<lr-date-picker mode="range"></lr-date-picker>`)) as LyraDatePicker;
   el.goToDate('2026-07-01');
   await el.updateComplete;
 
@@ -66,7 +66,7 @@ it('keeps viewing the month the user navigated to after completing a cross-month
 });
 
 it('still syncs the view to an externally-assigned value (not just to its own commits)', async () => {
-  const el = (await fixture(html`<lyra-date-picker value="2026-01-15"></lyra-date-picker>`)) as LyraDatePicker;
+  const el = (await fixture(html`<lr-date-picker value="2026-01-15"></lr-date-picker>`)) as LyraDatePicker;
   await el.updateComplete;
 
   el.value = '2026-09-10';
@@ -77,7 +77,7 @@ it('still syncs the view to an externally-assigned value (not just to its own co
 
 it('honors min/max by disabling out-of-range days', async () => {
   const el = (await fixture(
-    html`<lyra-date-picker value="2026-07-15" min="2026-07-10" max="2026-07-20"></lyra-date-picker>`,
+    html`<lr-date-picker value="2026-07-15" min="2026-07-10" max="2026-07-20"></lr-date-picker>`,
   )) as LyraDatePicker;
   await el.updateComplete;
   const before = el.shadowRoot!.querySelector('[data-date="2026-07-05"]') as HTMLButtonElement;
@@ -90,7 +90,7 @@ const pad = (n: number) => String(n).padStart(2, '0');
 const iso = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 
 it('disables days before today when disable-past is set', async () => {
-  const el = (await fixture(html`<lyra-date-picker disable-past></lyra-date-picker>`)) as LyraDatePicker;
+  const el = (await fixture(html`<lr-date-picker disable-past></lr-date-picker>`)) as LyraDatePicker;
   await el.updateComplete;
   const today = new Date();
 
@@ -105,7 +105,7 @@ it('disables days before today when disable-past is set', async () => {
 });
 
 it('disables days after today when disable-future is set', async () => {
-  const el = (await fixture(html`<lyra-date-picker disable-future></lyra-date-picker>`)) as LyraDatePicker;
+  const el = (await fixture(html`<lr-date-picker disable-future></lr-date-picker>`)) as LyraDatePicker;
   await el.updateComplete;
   const today = new Date();
 
@@ -121,7 +121,7 @@ it('disables days after today when disable-future is set', async () => {
 });
 
 it('navigates months with the next/previous buttons', async () => {
-  const el = (await fixture(html`<lyra-date-picker value="2026-07-15"></lyra-date-picker>`)) as LyraDatePicker;
+  const el = (await fixture(html`<lr-date-picker value="2026-07-15"></lr-date-picker>`)) as LyraDatePicker;
   await el.updateComplete;
   const title = () => el.shadowRoot!.querySelector('[part="title"]')!.textContent!.trim();
   expect(title()).to.contain('2026');
@@ -131,7 +131,7 @@ it('navigates months with the next/previous buttons', async () => {
 });
 
 it('moves the roving focus into the newly visible month after navigation', async () => {
-  const el = (await fixture(html`<lyra-date-picker value="2026-07-15"></lyra-date-picker>`)) as LyraDatePicker;
+  const el = (await fixture(html`<lr-date-picker value="2026-07-15"></lr-date-picker>`)) as LyraDatePicker;
   await el.updateComplete;
 
   (el.shadowRoot!.querySelector('[part="next"]') as HTMLButtonElement).click();
@@ -150,7 +150,7 @@ it('does not steal DOM focus off the next/previous button when navigating months
   // no longer inside the newly-visible month, that armed focusPending and
   // updated() yanked real DOM focus onto a day cell, off whatever the
   // keyboard user was actually operating (the nav button itself).
-  const el = (await fixture(html`<lyra-date-picker value="2026-07-15"></lyra-date-picker>`)) as LyraDatePicker;
+  const el = (await fixture(html`<lr-date-picker value="2026-07-15"></lr-date-picker>`)) as LyraDatePicker;
   await el.updateComplete;
 
   const next = el.shadowRoot!.querySelector('[part="next"]') as HTMLButtonElement;
@@ -172,14 +172,14 @@ it('does not steal DOM focus off the next/previous button when navigating months
 
 it('renders two months when requested', async () => {
   const el = (await fixture(
-    html`<lyra-date-picker value="2026-07-15" months="2"></lyra-date-picker>`,
+    html`<lr-date-picker value="2026-07-15" months="2"></lr-date-picker>`,
   )) as LyraDatePicker;
   await el.updateComplete;
   expect(el.shadowRoot!.querySelectorAll('[part="month"]').length).to.equal(2);
 });
 
 it('clamps runtime month attributes and direct property writes to at most two calendars', async () => {
-  const el = (await fixture(html`<lyra-date-picker months="3"></lyra-date-picker>`)) as LyraDatePicker;
+  const el = (await fixture(html`<lr-date-picker months="3"></lr-date-picker>`)) as LyraDatePicker;
   expect(el.months).to.equal(2);
   expect(el.shadowRoot!.querySelectorAll('[part="month"]')).to.have.length(2);
 
@@ -194,7 +194,7 @@ it('clamps runtime month attributes and direct property writes to at most two ca
 
 it('normalizes invalid mode and weekday-format attributes without throwing', async () => {
   const el = (await fixture(html`
-    <lyra-date-picker mode="bogus" weekday-format="bogus" locale="not_a_locale"></lyra-date-picker>
+    <lr-date-picker mode="bogus" weekday-format="bogus" locale="not_a_locale"></lr-date-picker>
   `)) as LyraDatePicker;
 
   expect(el.mode).to.equal('single');
@@ -204,7 +204,7 @@ it('normalizes invalid mode and weekday-format attributes without throwing', asy
 });
 
 it('uses safe render fallbacks for direct invalid union and locale property writes', async () => {
-  const el = (await fixture(html`<lyra-date-picker></lyra-date-picker>`)) as LyraDatePicker;
+  const el = (await fixture(html`<lr-date-picker></lr-date-picker>`)) as LyraDatePicker;
   el.mode = 'bogus' as LyraDatePicker['mode'];
   el.weekdayFormat = 'bogus' as LyraDatePicker['weekdayFormat'];
   el.locale = 'not_a_locale';
@@ -216,7 +216,7 @@ it('uses safe render fallbacks for direct invalid union and locale property writ
 });
 
 it('ignores an invalid Date passed to goToDate instead of poisoning the calendar view', async () => {
-  const el = (await fixture(html`<lyra-date-picker value="2026-07-15"></lyra-date-picker>`)) as LyraDatePicker;
+  const el = (await fixture(html`<lr-date-picker value="2026-07-15"></lr-date-picker>`)) as LyraDatePicker;
   const title = el.shadowRoot!.querySelector('[part="title"]')!.textContent;
 
   el.goToDate(new Date(Number.NaN));
@@ -230,7 +230,7 @@ it('leaves the two-month view alone when ArrowRight moves into a date already vi
   // Regression test: onGridKey used to always recenter the view as if the
   // focused cell belonged to the first (offset 0) calendar, so crossing into
   // the already-visible second month discarded the first month from view.
-  const el = (await fixture(html`<lyra-date-picker months="2"></lyra-date-picker>`)) as LyraDatePicker;
+  const el = (await fixture(html`<lr-date-picker months="2"></lr-date-picker>`)) as LyraDatePicker;
   el.goToDate('2026-07-31');
   await el.updateComplete;
 
@@ -251,7 +251,7 @@ it('leaves the two-month view alone when ArrowRight moves into a date already vi
 });
 
 it('slides the two-month view by exactly one month once a keypress moves past the last visible month', async () => {
-  const el = (await fixture(html`<lyra-date-picker months="2"></lyra-date-picker>`)) as LyraDatePicker;
+  const el = (await fixture(html`<lr-date-picker months="2"></lr-date-picker>`)) as LyraDatePicker;
   el.goToDate('2026-07-31');
   await el.updateComplete;
   const grids = () => el.shadowRoot!.querySelectorAll('[part="grid"]');
@@ -277,7 +277,7 @@ it('slides the two-month view by exactly one month once a keypress moves past th
 
 it('disables every day button and dims the host when the picker itself is disabled', async () => {
   const el = (await fixture(
-    html`<lyra-date-picker value="2026-07-15" disabled></lyra-date-picker>`,
+    html`<lr-date-picker value="2026-07-15" disabled></lr-date-picker>`,
   )) as LyraDatePicker;
   await el.updateComplete;
 
@@ -290,7 +290,7 @@ it('disables every day button and dims the host when the picker itself is disabl
 
 it('disables every day button when the picker is readonly', async () => {
   const el = (await fixture(
-    html`<lyra-date-picker value="2026-07-15" readonly></lyra-date-picker>`,
+    html`<lr-date-picker value="2026-07-15" readonly></lr-date-picker>`,
   )) as LyraDatePicker;
   await el.updateComplete;
 
@@ -299,14 +299,14 @@ it('disables every day button when the picker is readonly', async () => {
   for (const day of days) expect(day.disabled).to.be.true;
 });
 
-it('uses the shared --lyra-color-on-brand token instead of a raw #fff for selected/range day text', () => {
+it('uses the shared --lr-color-on-brand token instead of a raw #fff for selected/range day text', () => {
   const css = styles.cssText;
   const selectedBlock =
     /\[part~=['"]?day-selected['"]?],\s*\[part~=['"]?day-range-start['"]?],\s*\[part~=['"]?day-range-end['"]?]\s*{([^}]*)}/.exec(
       css,
     );
   expect(selectedBlock, 'expected a shared day-selected/day-range-start/day-range-end rule').to.not.equal(null);
-  expect(selectedBlock![1]).to.include('var(--lyra-color-on-brand');
+  expect(selectedBlock![1]).to.include('var(--lr-color-on-brand');
   expect(selectedBlock![1]).to.not.match(/color:\s*#fff/);
 });
 
@@ -318,7 +318,7 @@ function dispatchGridKey(el: LyraDatePicker, key: string): void {
 }
 
 it('moves roving focus one day left/right with ArrowLeft/ArrowRight', async () => {
-  const el = (await fixture(html`<lyra-date-picker value="2026-07-15"></lyra-date-picker>`)) as LyraDatePicker;
+  const el = (await fixture(html`<lr-date-picker value="2026-07-15"></lr-date-picker>`)) as LyraDatePicker;
   await el.updateComplete;
 
   dispatchGridKey(el, 'ArrowRight');
@@ -336,7 +336,7 @@ it('moves roving focus one day left/right with ArrowLeft/ArrowRight', async () =
 
 it('swaps ArrowLeft/ArrowRight under dir="rtl", since the day grid mirrors visually (no explicit direction override on [part="grid"])', async () => {
   const el = (await fixture(
-    html`<lyra-date-picker dir="rtl" value="2026-07-15"></lyra-date-picker>`,
+    html`<lr-date-picker dir="rtl" value="2026-07-15"></lr-date-picker>`,
   )) as LyraDatePicker;
   await el.updateComplete;
 
@@ -355,7 +355,7 @@ it('swaps ArrowLeft/ArrowRight under dir="rtl", since the day grid mirrors visua
 
 it('does not swap ArrowUp/ArrowDown under dir="rtl" (direction only affects the horizontal inline axis)', async () => {
   const el = (await fixture(
-    html`<lyra-date-picker dir="rtl" value="2026-07-15"></lyra-date-picker>`,
+    html`<lr-date-picker dir="rtl" value="2026-07-15"></lr-date-picker>`,
   )) as LyraDatePicker;
   await el.updateComplete;
 
@@ -373,7 +373,7 @@ it('does not swap ArrowUp/ArrowDown under dir="rtl" (direction only affects the 
 });
 
 it('moves roving focus one week up/down with ArrowUp/ArrowDown', async () => {
-  const el = (await fixture(html`<lyra-date-picker value="2026-07-15"></lyra-date-picker>`)) as LyraDatePicker;
+  const el = (await fixture(html`<lr-date-picker value="2026-07-15"></lr-date-picker>`)) as LyraDatePicker;
   await el.updateComplete;
 
   dispatchGridKey(el, 'ArrowDown');
@@ -390,7 +390,7 @@ it('moves roving focus one week up/down with ArrowUp/ArrowDown', async () => {
 });
 
 it('jumps a month with PageUp/PageDown, re-rendering the grid for the new month', async () => {
-  const el = (await fixture(html`<lyra-date-picker value="2026-07-15"></lyra-date-picker>`)) as LyraDatePicker;
+  const el = (await fixture(html`<lr-date-picker value="2026-07-15"></lr-date-picker>`)) as LyraDatePicker;
   await el.updateComplete;
   const title = () => el.shadowRoot!.querySelector('[part="title"]')!.textContent!.trim().toLowerCase();
 
@@ -412,7 +412,7 @@ it('clamps the day-of-month on PageDown instead of rolling over into the wrong m
   // current day-of-month doesn't exist there. From Jan 31, adding one month
   // that way lands on Mar 3 (Feb only has 28 days in 2026), skipping
   // February's grid entirely instead of landing inside it.
-  const el = (await fixture(html`<lyra-date-picker value="2026-01-31"></lyra-date-picker>`)) as LyraDatePicker;
+  const el = (await fixture(html`<lr-date-picker value="2026-01-31"></lr-date-picker>`)) as LyraDatePicker;
   await el.updateComplete;
   const title = () => el.shadowRoot!.querySelector('[part="title"]')!.textContent!.trim().toLowerCase();
 
@@ -426,7 +426,7 @@ it('clamps the day-of-month on PageDown instead of rolling over into the wrong m
 });
 
 it('moves focus to the first/last day of the month with Home/End', async () => {
-  const el = (await fixture(html`<lyra-date-picker value="2026-07-15"></lyra-date-picker>`)) as LyraDatePicker;
+  const el = (await fixture(html`<lr-date-picker value="2026-07-15"></lr-date-picker>`)) as LyraDatePicker;
   await el.updateComplete;
 
   dispatchGridKey(el, 'Home');
@@ -443,7 +443,7 @@ it('moves focus to the first/last day of the month with Home/End', async () => {
 });
 
 it('commits the currently-focused day with Enter or Space', async () => {
-  const el = (await fixture(html`<lyra-date-picker value="2026-07-15"></lyra-date-picker>`)) as LyraDatePicker;
+  const el = (await fixture(html`<lr-date-picker value="2026-07-15"></lr-date-picker>`)) as LyraDatePicker;
   await el.updateComplete;
 
   dispatchGridKey(el, 'ArrowRight'); // focus moves to 2026-07-16, nothing committed yet
@@ -462,7 +462,7 @@ it('commits the currently-focused day with Enter or Space', async () => {
 });
 
 it('keeps exactly one grid cell in the roving tab order after moving focus', async () => {
-  const el = (await fixture(html`<lyra-date-picker value="2026-07-15"></lyra-date-picker>`)) as LyraDatePicker;
+  const el = (await fixture(html`<lr-date-picker value="2026-07-15"></lr-date-picker>`)) as LyraDatePicker;
   await el.updateComplete;
 
   dispatchGridKey(el, 'ArrowRight');
@@ -474,7 +474,7 @@ it('keeps exactly one grid cell in the roving tab order after moving focus', asy
 });
 
 it('crosses a month boundary when ArrowRight moves past the last day of the month', async () => {
-  const el = (await fixture(html`<lyra-date-picker value="2026-07-31"></lyra-date-picker>`)) as LyraDatePicker;
+  const el = (await fixture(html`<lr-date-picker value="2026-07-31"></lr-date-picker>`)) as LyraDatePicker;
   await el.updateComplete;
 
   dispatchGridKey(el, 'ArrowRight');
@@ -489,7 +489,7 @@ it('crosses a month boundary when ArrowRight moves past the last day of the mont
 });
 
 it('crosses a month boundary backwards when ArrowLeft moves before the first day of the month', async () => {
-  const el = (await fixture(html`<lyra-date-picker value="2026-07-01"></lyra-date-picker>`)) as LyraDatePicker;
+  const el = (await fixture(html`<lr-date-picker value="2026-07-01"></lr-date-picker>`)) as LyraDatePicker;
   await el.updateComplete;
 
   dispatchGridKey(el, 'ArrowLeft');
@@ -503,13 +503,13 @@ it('crosses a month boundary backwards when ArrowLeft moves before the first day
 });
 
 it('is accessible', async () => {
-  const el = (await fixture(html`<lyra-date-picker value="2026-07-15"></lyra-date-picker>`)) as LyraDatePicker;
+  const el = (await fixture(html`<lr-date-picker value="2026-07-15"></lr-date-picker>`)) as LyraDatePicker;
   await el.updateComplete;
   await expect(el).to.be.accessible();
 });
 
 it('renders chevron icons for month navigation instead of text glyphs', async () => {
-  const el = (await fixture(html`<lyra-date-picker value="2026-07-15"></lyra-date-picker>`)) as LyraDatePicker;
+  const el = (await fixture(html`<lr-date-picker value="2026-07-15"></lr-date-picker>`)) as LyraDatePicker;
   await el.updateComplete;
   const previous = el.shadowRoot!.querySelector('[part="previous"]') as HTMLButtonElement;
   const next = el.shadowRoot!.querySelector('[part="next"]') as HTMLButtonElement;
@@ -520,7 +520,7 @@ it('renders chevron icons for month navigation instead of text glyphs', async ()
 });
 
 it('gives the month-navigation buttons the shared minimum hit area', async () => {
-  const el = (await fixture(html`<lyra-date-picker value="2026-07-15"></lyra-date-picker>`)) as LyraDatePicker;
+  const el = (await fixture(html`<lr-date-picker value="2026-07-15"></lr-date-picker>`)) as LyraDatePicker;
   await el.updateComplete;
   const previous = el.shadowRoot!.querySelector('[part="previous"]') as HTMLElement;
   const next = el.shadowRoot!.querySelector('[part="next"]') as HTMLElement;
@@ -531,7 +531,7 @@ it('gives the month-navigation buttons the shared minimum hit area', async () =>
 });
 
 it('defaults the nav-button labels to English but lets them be overridden for other locales', async () => {
-  const el = (await fixture(html`<lyra-date-picker value="2026-07-15"></lyra-date-picker>`)) as LyraDatePicker;
+  const el = (await fixture(html`<lr-date-picker value="2026-07-15"></lr-date-picker>`)) as LyraDatePicker;
   await el.updateComplete;
   expect(el.shadowRoot!.querySelector('[part="previous"]')!.getAttribute('aria-label')).to.equal(
     'Previous month',
@@ -553,10 +553,10 @@ it('resolves the nav-button labels through a .strings override when the label pr
   // localization registry/.strings path must win -- a customized prop
   // (covered by the test above) would short-circuit it verbatim instead.
   const el = (await fixture(html`
-    <lyra-date-picker
+    <lr-date-picker
       value="2026-07-15"
       .strings=${{ previousMonth: 'Mois précédent', nextMonth: 'Mois suivant' }}
-    ></lyra-date-picker>
+    ></lr-date-picker>
   `)) as LyraDatePicker;
   await el.updateComplete;
   expect(el.shadowRoot!.querySelector('[part="previous"]')!.getAttribute('aria-label')).to.equal(
@@ -567,7 +567,7 @@ it('resolves the nav-button labels through a .strings override when the label pr
 
 it('gives each visible month grid its own accessible name via aria-labelledby, distinguishing them with months=2', async () => {
   const el = (await fixture(
-    html`<lyra-date-picker value="2026-07-15" months="2"></lyra-date-picker>`,
+    html`<lr-date-picker value="2026-07-15" months="2"></lr-date-picker>`,
   )) as LyraDatePicker;
   await el.updateComplete;
 
@@ -590,7 +590,7 @@ it('gives each visible month grid its own accessible name via aria-labelledby, d
 
 it('formats each day cell aria-label with the full localized weekday/month/day/year', async () => {
   const el = (await fixture(
-    html`<lyra-date-picker value="2026-07-15" locale="fr-FR"></lyra-date-picker>`,
+    html`<lr-date-picker value="2026-07-15" locale="fr-FR"></lr-date-picker>`,
   )) as LyraDatePicker;
   await el.updateComplete;
 
@@ -610,9 +610,9 @@ it('derives month/weekday labels and first-day-of-week from an inherited lang an
   // instead of `effectiveLocale`, which also walks lang/locale ancestors --
   // so an inherited <div lang="fr"> was silently ignored.
   const wrapper = await fixture(html`
-    <div lang="fr"><lyra-date-picker value="2026-07-15"></lyra-date-picker></div>
+    <div lang="fr"><lr-date-picker value="2026-07-15"></lr-date-picker></div>
   `);
-  const el = wrapper.querySelector('lyra-date-picker') as LyraDatePicker;
+  const el = wrapper.querySelector('lr-date-picker') as LyraDatePicker;
   await el.updateComplete;
 
   const title = el.shadowRoot!.querySelector('[part="title"]')!.textContent!.trim();
@@ -634,11 +634,11 @@ it('derives month/weekday labels and first-day-of-week from an inherited lang an
 
 it('gives an outside-month day inside a selected range normal text contrast, not the quiet outside color', async () => {
   const el = (await fixture(
-    html`<lyra-date-picker
+    html`<lr-date-picker
       mode="range"
       with-outside-days
       value="2026-06-28/2026-07-05"
-    ></lyra-date-picker>`,
+    ></lr-date-picker>`,
   )) as LyraDatePicker;
   await el.updateComplete;
 
@@ -677,7 +677,7 @@ it('focuses the real (non-outside) copy of a date duplicated between two with-ou
   // date and leaving updated()'s post-navigation `.focus()` query to grab
   // whichever copy came first in DOM order -- the greyed-out outside one.
   const el = (await fixture(html`
-    <lyra-date-picker months="2" with-outside-days first-day-of-week="mon"></lyra-date-picker>
+    <lr-date-picker months="2" with-outside-days first-day-of-week="mon"></lr-date-picker>
   `)) as LyraDatePicker;
   el.goToDate('2026-07-01');
   await el.updateComplete;
@@ -705,7 +705,7 @@ it('focuses the real (non-outside) copy of a date duplicated between two with-ou
 });
 
 it('clear() resets the value and emits input + change', async () => {
-  const el = (await fixture(html`<lyra-date-picker value="2026-07-15"></lyra-date-picker>`)) as LyraDatePicker;
+  const el = (await fixture(html`<lr-date-picker value="2026-07-15"></lr-date-picker>`)) as LyraDatePicker;
   await el.updateComplete;
   setTimeout(() => el.clear());
   await oneEvent(el, 'change');
@@ -713,7 +713,7 @@ it('clear() resets the value and emits input + change', async () => {
 });
 
 it('goToToday() navigates the view to the current month and focuses today', async () => {
-  const el = (await fixture(html`<lyra-date-picker value="2026-01-01"></lyra-date-picker>`)) as LyraDatePicker;
+  const el = (await fixture(html`<lr-date-picker value="2026-01-01"></lr-date-picker>`)) as LyraDatePicker;
   await el.updateComplete;
   el.goToToday();
   await el.updateComplete;
@@ -732,7 +732,7 @@ it('goToToday() focuses today itself, not yesterday, when disable-future is set'
   // against a midnight-normalized `today` -- so any time after midnight
   // made `focusedDate > today` true, misclassifying today itself as a
   // disabled future date and bumping the roving focus back to yesterday.
-  const el = (await fixture(html`<lyra-date-picker disable-future></lyra-date-picker>`)) as LyraDatePicker;
+  const el = (await fixture(html`<lr-date-picker disable-future></lr-date-picker>`)) as LyraDatePicker;
   await el.updateComplete;
   el.goToToday();
   await el.updateComplete;
@@ -746,7 +746,7 @@ it('goToToday() focuses today itself, not yesterday, when disable-future is set'
 });
 
 it('goToDate() normalizes a Date argument carrying a time-of-day to local midnight', async () => {
-  const el = (await fixture(html`<lyra-date-picker disable-future></lyra-date-picker>`)) as LyraDatePicker;
+  const el = (await fixture(html`<lr-date-picker disable-future></lr-date-picker>`)) as LyraDatePicker;
   await el.updateComplete;
   const now = new Date();
   const withTimeOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
@@ -765,22 +765,22 @@ it('wraps the two-month layout instead of overflowing a narrow allocation', () =
   expect(baseBlock![1]).to.include('flex-wrap: wrap;');
 });
 
-it('uses the shared --lyra-opacity-disabled token instead of a literal 0.35 for the disabled day state', () => {
+it('uses the shared --lr-opacity-disabled token instead of a literal 0.35 for the disabled day state', () => {
   const css = styles.cssText.replace(/\s+/g, ' ');
   const dayDisabledBlock = /\[part~=['"]?day['"]?]:disabled\s*{([^}]*)}/.exec(css);
   expect(dayDisabledBlock, 'expected a [part~="day"]:disabled rule').to.not.equal(null);
-  expect(dayDisabledBlock![1]).to.include('opacity: var(--lyra-opacity-disabled);');
+  expect(dayDisabledBlock![1]).to.include('opacity: var(--lr-opacity-disabled);');
   expect(dayDisabledBlock![1]).to.not.include('0.35');
 });
 
 it('wires locale, weekday-format and first-day-of-week through to the rendered weekday headers, month title and grid alignment', async () => {
   const el = (await fixture(
-    html`<lyra-date-picker
+    html`<lr-date-picker
       value="2026-07-15"
       locale="fr-FR"
       first-day-of-week="mon"
       weekday-format="narrow"
-    ></lyra-date-picker>`,
+    ></lr-date-picker>`,
   )) as LyraDatePicker;
   await el.updateComplete;
 
@@ -799,7 +799,7 @@ it('wires locale, weekday-format and first-day-of-week through to the rendered w
 
 it('clamps goToDate() to min/max instead of navigating to an out-of-range date', async () => {
   const el = (await fixture(
-    html`<lyra-date-picker min="2026-07-10" max="2026-07-20"></lyra-date-picker>`,
+    html`<lr-date-picker min="2026-07-10" max="2026-07-20"></lr-date-picker>`,
   )) as LyraDatePicker;
   el.goToDate('2026-08-05');
   await el.updateComplete;
@@ -812,7 +812,7 @@ it('clamps goToDate() to min/max instead of navigating to an out-of-range date',
 });
 
 it('has at least one focusable day cell when nothing is selected yet', async () => {
-  const el = (await fixture(html`<lyra-date-picker></lyra-date-picker>`)) as LyraDatePicker;
+  const el = (await fixture(html`<lr-date-picker></lr-date-picker>`)) as LyraDatePicker;
   await el.updateComplete;
   const focusable = el.shadowRoot!.querySelectorAll('[part~="day"][tabindex="0"]');
   expect(focusable.length).to.be.at.least(1);
@@ -832,7 +832,7 @@ it('does not let the empty-grid fallback focus land on a disabled day 1', async 
   const min = new Date(today.getFullYear(), today.getMonth(), 1);
   min.setDate(min.getDate() + 3);
   const el = (await fixture(
-    html`<lyra-date-picker disable-past min=${iso(min)}></lyra-date-picker>`,
+    html`<lr-date-picker disable-past min=${iso(min)}></lr-date-picker>`,
   )) as LyraDatePicker;
   await el.updateComplete;
 
@@ -844,7 +844,7 @@ it('does not let the empty-grid fallback focus land on a disabled day 1', async 
 
 it('renormalizes the roving date when a dynamic minimum disables the selected day', async () => {
   const el = (await fixture(
-    html`<lyra-date-picker value="2026-07-15" min="2026-07-01"></lyra-date-picker>`,
+    html`<lr-date-picker value="2026-07-15" min="2026-07-01"></lr-date-picker>`,
   )) as LyraDatePicker;
   await el.updateComplete;
 
@@ -860,7 +860,7 @@ it('renormalizes the roving date when a dynamic minimum disables the selected da
 
 it('never lands keyboard focus on a disabled day', async () => {
   const el = (await fixture(
-    html`<lyra-date-picker min="2026-01-15" value="2026-01-15"></lyra-date-picker>`,
+    html`<lr-date-picker min="2026-01-15" value="2026-01-15"></lr-date-picker>`,
   )) as LyraDatePicker;
   await el.updateComplete;
   const grid = el.shadowRoot!.querySelector('[part="grid"]') as HTMLElement;
@@ -872,7 +872,7 @@ it('never lands keyboard focus on a disabled day', async () => {
 
 it('skips over a run of disabled days to find the next enabled one', async () => {
   const el = (await fixture(
-    html`<lyra-date-picker min="2026-01-10" value="2026-01-10"></lyra-date-picker>`,
+    html`<lr-date-picker min="2026-01-10" value="2026-01-10"></lr-date-picker>`,
   )) as LyraDatePicker;
   await el.updateComplete;
   const grid = el.shadowRoot!.querySelector('[part="grid"]') as HTMLElement;
@@ -887,7 +887,7 @@ it('skips over a run of disabled days to find the next enabled one', async () =>
 });
 
 it('disables the prev/next nav buttons when the picker itself is disabled', async () => {
-  const el = (await fixture(html`<lyra-date-picker disabled></lyra-date-picker>`)) as LyraDatePicker;
+  const el = (await fixture(html`<lr-date-picker disabled></lr-date-picker>`)) as LyraDatePicker;
   await el.updateComplete;
   const prev = el.shadowRoot!.querySelector('[part="previous"]') as HTMLButtonElement;
   const next = el.shadowRoot!.querySelector('[part="next"]') as HTMLButtonElement;
@@ -896,7 +896,7 @@ it('disables the prev/next nav buttons when the picker itself is disabled', asyn
 });
 
 it('disables the prev/next nav buttons when the picker is readonly', async () => {
-  const el = (await fixture(html`<lyra-date-picker readonly></lyra-date-picker>`)) as LyraDatePicker;
+  const el = (await fixture(html`<lr-date-picker readonly></lr-date-picker>`)) as LyraDatePicker;
   await el.updateComplete;
   const prev = el.shadowRoot!.querySelector('[part="previous"]') as HTMLButtonElement;
   const next = el.shadowRoot!.querySelector('[part="next"]') as HTMLButtonElement;
@@ -908,7 +908,7 @@ it('hides outside-month placeholders from the accessibility tree only in rows th
   // July 2026 (Sunday-first, the default) has a mixed leading row (June 28-30
   // outside, July 1-4 inside) and a fully-outside trailing row (Aug 2-8) --
   // only the former may have its placeholders aria-hidden.
-  const el = (await fixture(html`<lyra-date-picker value="2026-07-15"></lyra-date-picker>`)) as LyraDatePicker;
+  const el = (await fixture(html`<lr-date-picker value="2026-07-15"></lr-date-picker>`)) as LyraDatePicker;
   await el.updateComplete;
 
   const weeks = el.shadowRoot!.querySelectorAll('[part="week"]');

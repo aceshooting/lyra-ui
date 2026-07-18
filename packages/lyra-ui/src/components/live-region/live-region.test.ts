@@ -7,18 +7,18 @@ function regionEl(el: LyraLiveRegion): HTMLElement {
 }
 
 it('is accessible in its default, empty state', async () => {
-  const el = (await fixture(html`<lyra-live-region></lyra-live-region>`)) as LyraLiveRegion;
+  const el = (await fixture(html`<lr-live-region></lr-live-region>`)) as LyraLiveRegion;
   await expect(el).to.be.accessible();
 });
 
 it('is accessible once it has announced text', async () => {
-  const el = (await fixture(html`<lyra-live-region></lyra-live-region>`)) as LyraLiveRegion;
+  const el = (await fixture(html`<lr-live-region></lr-live-region>`)) as LyraLiveRegion;
   el.announce('Loaded 12 results', { force: true });
   await expect(el).to.be.accessible();
 });
 
 it('defaults to mode="polite" (role="status", aria-live="polite")', async () => {
-  const el = (await fixture(html`<lyra-live-region></lyra-live-region>`)) as LyraLiveRegion;
+  const el = (await fixture(html`<lr-live-region></lr-live-region>`)) as LyraLiveRegion;
   expect(el.mode).to.equal('polite');
   const region = regionEl(el);
   expect(region.getAttribute('role')).to.equal('status');
@@ -26,31 +26,31 @@ it('defaults to mode="polite" (role="status", aria-live="polite")', async () => 
 });
 
 it('mode="assertive" renders role="alert" and aria-live="assertive"', async () => {
-  const el = (await fixture(html`<lyra-live-region mode="assertive"></lyra-live-region>`)) as LyraLiveRegion;
+  const el = (await fixture(html`<lr-live-region mode="assertive"></lr-live-region>`)) as LyraLiveRegion;
   const region = regionEl(el);
   expect(region.getAttribute('role')).to.equal('alert');
   expect(region.getAttribute('aria-live')).to.equal('assertive');
 });
 
 it('reflects mode as a host attribute', async () => {
-  const el = (await fixture(html`<lyra-live-region></lyra-live-region>`)) as LyraLiveRegion;
+  const el = (await fixture(html`<lr-live-region></lr-live-region>`)) as LyraLiveRegion;
   el.mode = 'assertive';
   await el.updateComplete;
   expect(el.getAttribute('mode')).to.equal('assertive');
 });
 
 it('defaults throttleMs to 500, settable via the throttle-ms attribute', async () => {
-  const el = (await fixture(html`<lyra-live-region></lyra-live-region>`)) as LyraLiveRegion;
+  const el = (await fixture(html`<lr-live-region></lr-live-region>`)) as LyraLiveRegion;
   expect(el.throttleMs).to.equal(500);
 
   const withAttr = (await fixture(
-    html`<lyra-live-region throttle-ms="120"></lyra-live-region>`,
+    html`<lr-live-region throttle-ms="120"></lr-live-region>`,
   )) as LyraLiveRegion;
   expect(withAttr.throttleMs).to.equal(120);
 });
 
 it('renders the region visually hidden, but present in the accessibility tree', async () => {
-  const el = (await fixture(html`<lyra-live-region></lyra-live-region>`)) as LyraLiveRegion;
+  const el = (await fixture(html`<lr-live-region></lr-live-region>`)) as LyraLiveRegion;
   const region = regionEl(el);
   const rect = region.getBoundingClientRect();
   expect(rect.width).to.be.at.most(1);
@@ -59,7 +59,7 @@ it('renders the region visually hidden, but present in the accessibility tree', 
 
 it('announce() writes the coalesced text into the region once the throttle window elapses', async () => {
   const el = (await fixture(
-    html`<lyra-live-region throttle-ms="30"></lyra-live-region>`,
+    html`<lr-live-region throttle-ms="30"></lr-live-region>`,
   )) as LyraLiveRegion;
   const region = regionEl(el);
 
@@ -75,7 +75,7 @@ it('announce() writes the coalesced text into the region once the throttle windo
 
 it('announce(text, { force: true }) writes immediately, bypassing the throttle window', async () => {
   const el = (await fixture(
-    html`<lyra-live-region throttle-ms="5000"></lyra-live-region>`,
+    html`<lr-live-region throttle-ms="5000"></lr-live-region>`,
   )) as LyraLiveRegion;
   const region = regionEl(el);
 
@@ -84,7 +84,7 @@ it('announce(text, { force: true }) writes immediately, bypassing the throttle w
 });
 
 it('re-announcing the same text clears then re-sets it so assistive tech sees a change', async () => {
-  const el = (await fixture(html`<lyra-live-region></lyra-live-region>`)) as LyraLiveRegion;
+  const el = (await fixture(html`<lr-live-region></lr-live-region>`)) as LyraLiveRegion;
   const region = regionEl(el);
 
   el.announce('same', { force: true });
@@ -99,7 +99,7 @@ it('re-announcing the same text clears then re-sets it so assistive tech sees a 
 });
 
 it('back-to-back distinct announcements never need the clear step', async () => {
-  const el = (await fixture(html`<lyra-live-region></lyra-live-region>`)) as LyraLiveRegion;
+  const el = (await fixture(html`<lr-live-region></lr-live-region>`)) as LyraLiveRegion;
   const region = regionEl(el);
 
   el.announce('one', { force: true });
@@ -109,7 +109,7 @@ it('back-to-back distinct announcements never need the clear step', async () => 
 });
 
 it('normalizes a NaN/negative throttleMs to the sane 500ms default instead of an ~immediate flush', async () => {
-  const el = (await fixture(html`<lyra-live-region></lyra-live-region>`)) as LyraLiveRegion;
+  const el = (await fixture(html`<lr-live-region></lr-live-region>`)) as LyraLiveRegion;
   const region = regionEl(el);
 
   el.throttleMs = NaN;
@@ -137,7 +137,7 @@ it('normalizes a NaN/negative throttleMs to the sane 500ms default instead of an
 
 it('changing throttle-ms applies to the next burst', async () => {
   const el = (await fixture(
-    html`<lyra-live-region throttle-ms="5000"></lyra-live-region>`,
+    html`<lr-live-region throttle-ms="5000"></lr-live-region>`,
   )) as LyraLiveRegion;
   const region = regionEl(el);
 
@@ -151,7 +151,7 @@ it('changing throttle-ms applies to the next burst', async () => {
 });
 
 it('buffers a flush that lands before the first render and applies it once ready', async () => {
-  const el = document.createElement('lyra-live-region') as LyraLiveRegion;
+  const el = document.createElement('lr-live-region') as LyraLiveRegion;
   document.body.appendChild(el);
   // Synchronously right after mounting -- before firstUpdated() has had a
   // chance to run -- mirrors a consumer that mounts-then-immediately-uses a
@@ -164,7 +164,7 @@ it('buffers a flush that lands before the first render and applies it once ready
 });
 
 it('a mode change followed immediately by a force-announce lands with the new urgency', async () => {
-  const el = (await fixture(html`<lyra-live-region></lyra-live-region>`)) as LyraLiveRegion;
+  const el = (await fixture(html`<lr-live-region></lr-live-region>`)) as LyraLiveRegion;
   const region = regionEl(el);
 
   // Mirrors stream-status's announceTransition(): set `mode` then force an
@@ -184,7 +184,7 @@ it('a mode change followed immediately by a force-announce lands with the new ur
 });
 
 it('a distinct force-announcement is not clobbered by a stale pending reannounce frame', async () => {
-  const el = (await fixture(html`<lyra-live-region></lyra-live-region>`)) as LyraLiveRegion;
+  const el = (await fixture(html`<lr-live-region></lr-live-region>`)) as LyraLiveRegion;
   const region = regionEl(el);
 
   // Same text announced twice schedules a clear-then-reannounce frame for
@@ -206,7 +206,7 @@ it('a distinct force-announcement is not clobbered by a stale pending reannounce
 
 it('cancels a pending announcement on disconnect so it never lands after removal', async () => {
   const el = (await fixture(
-    html`<lyra-live-region throttle-ms="30"></lyra-live-region>`,
+    html`<lr-live-region throttle-ms="30"></lr-live-region>`,
   )) as LyraLiveRegion;
   const region = regionEl(el);
 
@@ -218,7 +218,7 @@ it('cancels a pending announcement on disconnect so it never lands after removal
 });
 
 it('drops a force-flushed write buffered before firstUpdated when disconnected', async () => {
-  const el = document.createElement('lyra-live-region') as LyraLiveRegion;
+  const el = document.createElement('lr-live-region') as LyraLiveRegion;
   document.body.appendChild(el);
 
   el.announce('stale buffered text', { force: true });
@@ -237,7 +237,7 @@ it('drops a force-flushed write buffered before firstUpdated when disconnected',
 });
 
 it('schedules and cancels same-text reannounce frames in the region owner document', async () => {
-  const el = (await fixture(html`<lyra-live-region></lyra-live-region>`)) as LyraLiveRegion;
+  const el = (await fixture(html`<lr-live-region></lr-live-region>`)) as LyraLiveRegion;
   const iframe = (await fixture(html`<iframe></iframe>`)) as HTMLIFrameElement;
   const ownerDocument = iframe.contentDocument!;
   const ownerWindow = iframe.contentWindow!;

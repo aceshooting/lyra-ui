@@ -3,7 +3,7 @@ import { html } from 'lit';
 
 const meta: Meta = {
   title: 'Widget',
-  component: 'lyra-widget',
+  component: 'lr-widget',
   tags: ['autodocs'],
 };
 export default meta;
@@ -11,7 +11,7 @@ type Story = StoryObj;
 
 export const Default: Story = {
   render: () => html`
-    <lyra-widget
+    <lr-widget
       label="Load profile"
       sublabel="Last 7 days"
       collapsible
@@ -21,28 +21,28 @@ export const Default: Story = {
       <span slot="actions"><button>Refresh</button></span>
       <div style="padding: 1rem;">
         <p style="margin: 0 0 0.5rem;">Panel body content — a chart, a table, anything.</p>
-        <p style="margin: 0; color: var(--lyra-color-text-quiet);">Click the chevron to collapse, or the expand icon to go fullscreen.</p>
+        <p style="margin: 0; color: var(--lr-color-text-quiet);">Click the chevron to collapse, or the expand icon to go fullscreen.</p>
       </div>
-    </lyra-widget>
+    </lr-widget>
   `,
 };
 
 export const CollapsedInitially: Story = {
   render: () => html`
-    <lyra-widget label="Alerts" sublabel="3 active" collapsible collapsed style="max-width: 28rem;">
+    <lr-widget label="Alerts" sublabel="3 active" collapsible collapsed style="max-width: 28rem;">
       <div style="padding: 1rem;">This body is hidden until the panel is expanded.</div>
-    </lyra-widget>
+    </lr-widget>
   `,
 };
 
 export const FullscreenInitially: Story = {
   render: () => html`
-    <lyra-widget label="Load profile" sublabel="Last 7 days" expandable fullscreen style="max-width: 28rem;">
+    <lr-widget label="Load profile" sublabel="Last 7 days" expandable fullscreen style="max-width: 28rem;">
       <span slot="actions"><button>Refresh</button></span>
       <div style="padding: 1rem;">
         <p style="margin: 0;">Rendered already fullscreen — backdrop, fixed panel, and dialog semantics.</p>
       </div>
-    </lyra-widget>
+    </lr-widget>
   `,
 };
 
@@ -50,11 +50,11 @@ export const FullscreenWithSidebarInset: Story = {
   render: () => html`
     <div style="position: relative;">
       <div
-        style="position: fixed; inset: 0 auto 0 0; inline-size: 240px; background: var(--lyra-color-text); color: var(--lyra-color-surface); padding: 1rem; z-index: 1001;"
+        style="position: fixed; inset: 0 auto 0 0; inline-size: 240px; background: var(--lr-color-text); color: var(--lr-color-surface); padding: 1rem; z-index: 1001;"
       >
         Persistent sidebar (stays visible above the widget's fullscreen panel)
       </div>
-      <lyra-widget
+      <lr-widget
         label="Load profile"
         sublabel="Last 7 days"
         expandable
@@ -68,16 +68,16 @@ export const FullscreenWithSidebarInset: Story = {
             room for the 240px sidebar instead of covering it.
           </p>
         </div>
-      </lyra-widget>
+      </lr-widget>
     </div>
   `,
 };
 
 export const Compact: Story = {
   render: () => html`
-    <lyra-widget label="Alerts" sublabel="3 active" compact collapsible expandable style="max-width: 28rem;">
+    <lr-widget label="Alerts" sublabel="3 active" compact collapsible expandable style="max-width: 28rem;">
       <div style="padding: 0.5rem;">Tighter header/body padding for constrained spaces.</div>
-    </lyra-widget>
+    </lr-widget>
   `,
 };
 
@@ -86,7 +86,7 @@ const tableIcon = html`<svg width="16" height="16" viewBox="0 0 24 24" fill="non
 
 export const IconOnlyViewToggles: Story = {
   render: () => html`
-    <lyra-widget
+    <lr-widget
       label="Usage"
       sublabel="Last 7 days"
       .views=${[
@@ -97,19 +97,19 @@ export const IconOnlyViewToggles: Story = {
     >
       <div slot="view-chart" style="padding: 1rem;">Chart view body.</div>
       <div slot="view-table" style="padding: 1rem;">Table view body.</div>
-    </lyra-widget>
+    </lr-widget>
   `,
 };
 
 export const CustomCollapseAndFullscreenIcons: Story = {
   render: () => html`
-    <lyra-widget label="Load profile" sublabel="Last 7 days" collapsible expandable style="max-width: 28rem;">
+    <lr-widget label="Load profile" sublabel="Last 7 days" collapsible expandable style="max-width: 28rem;">
       <span slot="collapse-icon">▾</span>
       <span slot="fullscreen-icon">⤢</span>
       <div style="padding: 1rem;">
         The <code>collapse-icon</code> and <code>fullscreen-icon</code> slots override the built-in
         chevron/expand glyphs entirely -- omit either to keep the library default.
       </div>
-    </lyra-widget>
+    </lr-widget>
   `,
 };

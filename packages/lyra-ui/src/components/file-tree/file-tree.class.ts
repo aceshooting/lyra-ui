@@ -4,7 +4,7 @@ import { LyraElement } from '../../internal/lyra-element.js';
 import { tag } from '../../internal/prefix.js';
 import { styles } from './file-tree.styles.js';
 // The registering barrels (not the bare *.class.js modules) -- these side effects are what make
-// <lyra-tree> and <lyra-file-icon> actually-defined tags by the time this component renders them.
+// <lr-tree> and <lr-file-icon> actually-defined tags by the time this component renders them.
 import '../tree/tree.js';
 import '../file-icon/file-icon.js';
 import type { LyraTree, TreeItem, TreeBadge } from '../tree/tree.class.js';
@@ -71,20 +71,20 @@ function isLazyUnloaded(node: FileTreeNode): boolean {
 }
 
 export interface LyraFileTreeEventMap {
-  'lyra-file-select': CustomEvent<{ path: string; node: FileTreeNode }>;
-  'lyra-file-open': CustomEvent<{ path: string; node: FileTreeNode }>;
-  'lyra-load-children': CustomEvent<{ path: string }>;
+  'lr-file-select': CustomEvent<{ path: string; node: FileTreeNode }>;
+  'lr-file-open': CustomEvent<{ path: string; node: FileTreeNode }>;
+  'lr-load-children': CustomEvent<{ path: string }>;
 }
 
 /**
- * `<lyra-file-tree>` — a file-explorer preset over `<lyra-tree>` + `<lyra-file-icon>`: path-keyed
+ * `<lr-file-tree>` — a file-explorer preset over `<lr-tree>` + `<lr-file-icon>`: path-keyed
  * nodes with git-status/diff-count badges, lazy directory loading, and select/open events.
  *
- * @customElement lyra-file-tree
- * @event lyra-file-select - `detail: { path, node }` — a row was activated.
- * @event lyra-file-open - `detail: { path, node }` — Enter/click on an already-selected file row
+ * @customElement lr-file-tree
+ * @event lr-file-select - `detail: { path, node }` — a row was activated.
+ * @event lr-file-open - `detail: { path, node }` — Enter/click on an already-selected file row
  *   (keyboard-open parity: a second activation of the same file opens it).
- * @event lyra-load-children - `detail: { path }` — a lazy (hasChildren, unloaded) directory expanded.
+ * @event lr-load-children - `detail: { path }` — a lazy (hasChildren, unloaded) directory expanded.
  * @csspart base - The root wrapper.
  */
 export class LyraFileTree extends LyraElement<LyraFileTreeEventMap> {
@@ -139,11 +139,11 @@ export class LyraFileTree extends LyraElement<LyraFileTreeEventMap> {
       description,
       icon: isDirectory(node)
         ? undefined
-        : html`<lyra-file-icon
+        : html`<lr-file-icon
             mime-type=${node.mimeType ?? ''}
             name=${node.name ?? baseName(node.path)}
             decorative
-          ></lyra-file-icon>`,
+          ></lr-file-icon>`,
     };
   }
 
@@ -157,9 +157,9 @@ export class LyraFileTree extends LyraElement<LyraFileTreeEventMap> {
     if (!node || id.includes(' loading')) return;
     const wasSelected = this.selectedPath === id;
     this.selectedPath = id;
-    this.emit('lyra-file-select', { path: id, node });
+    this.emit('lr-file-select', { path: id, node });
     if (!isDirectory(node) && wasSelected) {
-      this.emit('lyra-file-open', { path: id, node });
+      this.emit('lr-file-open', { path: id, node });
     }
   };
 
@@ -168,12 +168,12 @@ export class LyraFileTree extends LyraElement<LyraFileTreeEventMap> {
     if (!expanded) return;
     const node = this.nodesByPath.get(id);
     if (node && isLazyUnloaded(node)) {
-      this.emit('lyra-load-children', { path: id });
+      this.emit('lr-load-children', { path: id });
     }
   };
 
-  /** Fulfills a lazy directory's children in place. Expansion state survives because `<lyra-tree>`
-   *  reconciles top-level items by id and each `<lyra-tree-node>` keeps its own `expanded` state. */
+  /** Fulfills a lazy directory's children in place. Expansion state survives because `<lr-tree>`
+   *  reconciles top-level items by id and each `<lr-tree-node>` keeps its own `expanded` state. */
   setChildren(path: string, children: FileTreeNode[]): void {
     const replace = (list: FileTreeNode[]): FileTreeNode[] =>
       list.map((n) => {
@@ -237,12 +237,12 @@ export class LyraFileTree extends LyraElement<LyraFileTreeEventMap> {
   render(): TemplateResult {
     return html`
       <div part="base">
-        <lyra-tree
+        <lr-tree
           .data=${this.treeItems}
           label=${this.label || this.localize('fileTreeLabel')}
-          @lyra-node-select=${this.onNodeSelect}
-          @lyra-node-toggle=${this.onNodeToggle}
-        ></lyra-tree>
+          @lr-node-select=${this.onNodeSelect}
+          @lr-node-toggle=${this.onNodeToggle}
+        ></lr-tree>
       </div>
     `;
   }
@@ -250,6 +250,6 @@ export class LyraFileTree extends LyraElement<LyraFileTreeEventMap> {
 
 declare global {
   interface HTMLElementTagNameMap {
-    'lyra-file-tree': LyraFileTree;
+    'lr-file-tree': LyraFileTree;
   }
 }

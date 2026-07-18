@@ -18,7 +18,7 @@ export const styles = css`
     justify-content: stretch;
   }
   [part='panel'] {
-    inline-size: min(var(--lyra-drawer-width, var(--lyra-size-24rem)), 100%);
+    inline-size: min(var(--lr-drawer-width, var(--lr-size-24rem)), 100%);
     block-size: 100%;
     max-inline-size: 100%;
     max-block-size: 100%;
@@ -27,12 +27,12 @@ export const styles = css`
   :host([placement='top']) [part='panel'],
   :host([placement='bottom']) [part='panel'] {
     inline-size: 100%;
-    block-size: min(var(--lyra-drawer-height, var(--lyra-size-24rem)), 100%);
+    block-size: min(var(--lr-drawer-height, var(--lr-size-24rem)), 100%);
     max-block-size: 100%;
   }
   @media (prefers-reduced-motion: no-preference) {
     [part='panel'] {
-      animation: lyra-drawer-in var(--lyra-transition-base) both;
+      animation: lr-drawer-in var(--lr-transition-base) both;
     }
   }
   @media (prefers-reduced-motion: reduce) {
@@ -40,10 +40,10 @@ export const styles = css`
       animation: none;
     }
   }
-  @keyframes lyra-drawer-in {
+  @keyframes lr-drawer-in {
     from {
       opacity: 0;
-      transform: translateX(var(--lyra-drawer-enter-x, calc(-1 * var(--lyra-size-1rem))));
+      transform: translateX(var(--lr-drawer-enter-x, calc(-1 * var(--lr-size-1rem))));
     }
     to {
       opacity: 1;
@@ -51,7 +51,7 @@ export const styles = css`
     }
   }
   :host([placement='end']) [part='panel'] {
-    --lyra-drawer-enter-x: var(--lyra-size-1rem);
+    --lr-drawer-enter-x: var(--lr-size-1rem);
   }
   /* translateX is a physical transform -- logical properties don't cover it -- so the
      enter-from offset is flipped explicitly under RTL, the same way app-rail's offscreen
@@ -60,19 +60,19 @@ export const styles = css`
      edge and must enter from further left (negative X) -- the mirror image of the LTR rules
      above. */
   :host(:dir(rtl)) [part='panel'] {
-    --lyra-drawer-enter-x: var(--lyra-size-1rem);
+    --lr-drawer-enter-x: var(--lr-size-1rem);
   }
   :host(:dir(rtl)[placement='end']) [part='panel'] {
-    --lyra-drawer-enter-x: calc(-1 * var(--lyra-size-1rem));
+    --lr-drawer-enter-x: calc(-1 * var(--lr-size-1rem));
   }
   :host([placement='top']) [part='panel'],
   :host([placement='bottom']) [part='panel'] {
-    animation-name: lyra-drawer-in-block;
+    animation-name: lr-drawer-in-block;
   }
-  @keyframes lyra-drawer-in-block {
+  @keyframes lr-drawer-in-block {
     from {
       opacity: 0;
-      transform: translateY(var(--lyra-drawer-enter-y, calc(-1 * var(--lyra-size-1rem))));
+      transform: translateY(var(--lr-drawer-enter-y, calc(-1 * var(--lr-size-1rem))));
     }
     to {
       opacity: 1;
@@ -80,6 +80,6 @@ export const styles = css`
     }
   }
   :host([placement='bottom']) [part='panel'] {
-    --lyra-drawer-enter-y: var(--lyra-size-1rem);
+    --lr-drawer-enter-y: var(--lr-size-1rem);
   }
 `;

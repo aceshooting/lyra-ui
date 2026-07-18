@@ -12,18 +12,18 @@ const spans: LyraSpan[] = [
 
 const meta: Meta = {
   title: 'Observability/Span Waterfall',
-  component: 'lyra-span-waterfall',
+  component: 'lr-span-waterfall',
   tags: ['autodocs'],
 };
 export default meta;
 type Story = StoryObj;
 
 export const Default: Story = {
-  render: () => html`<lyra-span-waterfall style="max-width: 40rem" .spans=${spans}></lyra-span-waterfall>`,
+  render: () => html`<lr-span-waterfall style="max-width: 40rem" .spans=${spans}></lr-span-waterfall>`,
 };
 
 export const HiddenAxis: Story = {
-  render: () => html`<lyra-span-waterfall style="max-width: 40rem" .spans=${spans} hide-axis></lyra-span-waterfall>`,
+  render: () => html`<lr-span-waterfall style="max-width: 40rem" .spans=${spans} hide-axis></lr-span-waterfall>`,
 };
 
 export const BrushedWithTimeRange: Story = {
@@ -34,30 +34,30 @@ export const BrushedWithTimeRange: Story = {
       document.getElementById('brushed-waterfall') as HTMLElement & { viewStartMs: number; viewEndMs: number };
     return html`
       <div style="display:flex; flex-direction:column; gap:0.75rem; max-width:40rem">
-        <lyra-time-range
+        <lr-time-range
           min="0"
           max="820"
           .start=${vs}
           .end=${ve}
-          @lyra-input=${(e: CustomEvent<{ start: number; end: number }>) => {
+          @lr-input=${(e: CustomEvent<{ start: number; end: number }>) => {
             vs = e.detail.start;
             ve = e.detail.end;
             const el = getWaterfall();
             el.viewStartMs = vs;
             el.viewEndMs = ve;
           }}
-        ></lyra-time-range>
-        <lyra-span-waterfall id="brushed-waterfall" .spans=${spans} .viewStartMs=${vs} .viewEndMs=${ve}></lyra-span-waterfall>
+        ></lr-time-range>
+        <lr-span-waterfall id="brushed-waterfall" .spans=${spans} .viewStartMs=${vs} .viewEndMs=${ve}></lr-span-waterfall>
       </div>
     `;
   },
 };
 
 export const Empty: Story = {
-  render: () => html`<lyra-span-waterfall style="max-width: 40rem"></lyra-span-waterfall>`,
+  render: () => html`<lr-span-waterfall style="max-width: 40rem"></lr-span-waterfall>`,
 };
 
 /** 320px container — rows stack to two lines (name above bar) below 480px. */
 export const Narrow: Story = {
-  render: () => html`<lyra-span-waterfall style="max-width: 320px" .spans=${spans}></lyra-span-waterfall>`,
+  render: () => html`<lr-span-waterfall style="max-width: 320px" .spans=${spans}></lr-span-waterfall>`,
 };

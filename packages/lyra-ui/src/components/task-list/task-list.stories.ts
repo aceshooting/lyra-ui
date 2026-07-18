@@ -6,7 +6,7 @@ import type { TaskItem } from './task-list.class.js';
 
 const meta: Meta = {
   title: 'TaskList',
-  component: 'lyra-task-list',
+  component: 'lr-task-list',
   tags: ['autodocs'],
   parameters: {
     docs: {
@@ -32,12 +32,12 @@ const items: TaskItem[] = [
 ];
 
 export const Default: Story = {
-  render: () => html`<lyra-task-list style="max-width: 32rem;" .items=${items}></lyra-task-list>`,
+  render: () => html`<lr-task-list style="max-width: 32rem;" .items=${items}></lr-task-list>`,
 };
 
 export const WithNestedSubSteps: Story = {
   render: () => html`
-    <lyra-task-list
+    <lr-task-list
       style="max-width: 32rem;"
       .items=${[
         ...items,
@@ -52,39 +52,39 @@ export const WithNestedSubSteps: Story = {
           ],
         },
       ]}
-    ></lyra-task-list>
+    ></lr-task-list>
   `,
 };
 
 export const WithToolCallChipDetail: Story = {
-  name: 'With a lyra-tool-call-chip in a detail slot',
+  name: 'With a lr-tool-call-chip in a detail slot',
   render: () => html`
-    <lyra-task-list style="max-width: 32rem;" .items=${items}>
-      <lyra-tool-call-chip
+    <lr-task-list style="max-width: 32rem;" .items=${items}>
+      <lr-tool-call-chip
         slot="detail-step-2"
         name="web_search"
         status="running"
         summary="Searching…"
-      ></lyra-tool-call-chip>
-    </lyra-task-list>
+      ></lr-tool-call-chip>
+    </lr-task-list>
   `,
 };
 
 export const Collapsed: Story = {
-  render: () => html`<lyra-task-list style="max-width: 32rem;" .items=${items} expanded="false"></lyra-task-list>`,
+  render: () => html`<lr-task-list style="max-width: 32rem;" .items=${items} expanded="false"></lr-task-list>`,
 };
 
 export const NonCollapsible: Story = {
   name: 'Non-collapsible (static heading)',
   render: () =>
-    html`<lyra-task-list style="max-width: 32rem;" .items=${items} collapsible="false"></lyra-task-list>`,
+    html`<lr-task-list style="max-width: 32rem;" .items=${items} collapsible="false"></lr-task-list>`,
 };
 
 export const Narrow320: Story = {
   name: 'Narrow (320px)',
   render: () => html`
     <div style="inline-size: 320px; max-inline-size: 100%;">
-      <lyra-task-list .items=${items}></lyra-task-list>
+      <lr-task-list .items=${items}></lr-task-list>
     </div>
   `,
 };

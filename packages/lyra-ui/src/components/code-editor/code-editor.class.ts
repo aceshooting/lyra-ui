@@ -8,13 +8,13 @@ import { styles } from './code-editor.styles.js';
 export interface LyraCodeEditorEventMap { input: CustomEvent<{ value: string }>; change: CustomEvent<{ value: string }>; blur: CustomEvent<undefined>; focus: CustomEvent<undefined>; }
 class LyraCodeEditorBase extends LyraElement<LyraCodeEditorEventMap> {}
 
-/** `<lyra-code-editor>` — dependency-free multiline code editing surface with optional line numbers.
+/** `<lr-code-editor>` — dependency-free multiline code editing surface with optional line numbers.
  *
  * Keyboard contract (no keyboard trap, WCAG 2.1.2): Tab inserts `tabSize` spaces at the caret.
  * Shift+Tab is never captured, so it always performs native reverse focus traversal. Pressing
  * Escape releases the next Tab for native forward traversal instead of indenting; typing any other
  * key, or focus leaving the editor, re-arms Tab indentation.
- * @customElement lyra-code-editor
+ * @customElement lr-code-editor
  * @slot label - Visible label content.
  * @slot hint - Supporting text.
  * @slot error - Validation message.
@@ -135,4 +135,4 @@ export class LyraCodeEditor extends FormAssociated(LyraCodeEditorBase) {
     </div>`;
   }
 }
-declare global { interface HTMLElementTagNameMap { 'lyra-code-editor': LyraCodeEditor; } }
+declare global { interface HTMLElementTagNameMap { 'lr-code-editor': LyraCodeEditor; } }

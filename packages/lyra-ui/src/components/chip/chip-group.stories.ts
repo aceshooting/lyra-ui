@@ -3,6 +3,6 @@ import { html } from 'lit';
 import './chip-group.js';
 import './chip.js';
 
-const meta: Meta = { title: 'Data display/Chip group', component: 'lyra-chip-group', tags: ['autodocs'] };
+const meta: Meta = { title: 'Data display/Chip group', component: 'lr-chip-group', tags: ['autodocs'] };
 export default meta;
-export const Default: StoryObj = { render: () => html`<lyra-chip-group><lyra-chip>Lit</lyra-chip><lyra-chip>Web components</lyra-chip></lyra-chip-group>` };
+export const Default: StoryObj = { render: () => html`<lr-chip-group><lr-chip>Lit</lr-chip><lr-chip>Web components</lr-chip></lr-chip-group>` };

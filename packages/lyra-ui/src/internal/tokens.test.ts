@@ -12,7 +12,7 @@ class TokenProbe extends LitElement {
 customElements.define(tag('token-probe'), TokenProbe);
 
 async function probeVar(name: string): Promise<string> {
-  const el = (await fixture(html`<lyra-token-probe></lyra-token-probe>`)) as TokenProbe;
+  const el = (await fixture(html`<lr-token-probe></lr-token-probe>`)) as TokenProbe;
   return getComputedStyle(el).getPropertyValue(name).trim();
 }
 
@@ -43,20 +43,20 @@ function contrastRatio(foreground: string, background: string): number {
 }
 
 function expectPaletteContrast(mode: PaletteMode): void {
-  const surface = fallbackHex('--lyra-color-surface', mode);
+  const surface = fallbackHex('--lr-color-surface', mode);
   const pairs: Array<[label: string, foreground: string, background: string, minimum: number]> = [
-    ['text / surface', fallbackHex('--lyra-color-text', mode), surface, 4.5],
-    ['quiet text / surface', fallbackHex('--lyra-color-text-quiet', mode), surface, 4.5],
-    ['border / surface', fallbackHex('--lyra-color-border', mode), surface, 3],
-    ['text / border', fallbackHex('--lyra-color-text', mode), fallbackHex('--lyra-color-border', mode), 4.5],
+    ['text / surface', fallbackHex('--lr-color-text', mode), surface, 4.5],
+    ['quiet text / surface', fallbackHex('--lr-color-text-quiet', mode), surface, 4.5],
+    ['border / surface', fallbackHex('--lr-color-border', mode), surface, 3],
+    ['text / border', fallbackHex('--lr-color-text', mode), fallbackHex('--lr-color-border', mode), 4.5],
   ];
 
   for (const tone of ['brand', 'success', 'warning', 'danger'] as const) {
-    const loud = fallbackHex(`--lyra-color-${tone}`, mode);
+    const loud = fallbackHex(`--lr-color-${tone}`, mode);
     pairs.push(
       [`${tone} / surface`, loud, surface, 4.5],
-      [`${tone} / ${tone}-quiet`, loud, fallbackHex(`--lyra-color-${tone}-quiet`, mode), 4.5],
-      [`on-${tone} / ${tone}`, fallbackHex(`--lyra-color-on-${tone}`, mode), loud, 4.5],
+      [`${tone} / ${tone}-quiet`, loud, fallbackHex(`--lr-color-${tone}-quiet`, mode), 4.5],
+      [`on-${tone} / ${tone}`, fallbackHex(`--lr-color-on-${tone}`, mode), loud, 4.5],
     );
   }
 
@@ -70,41 +70,41 @@ function expectPaletteContrast(mode: PaletteMode): void {
 }
 
 it('defines the new motion tokens with the documented fallback values', async () => {
-  expect(await probeVar('--lyra-transition-fast')).to.equal('120ms ease-out');
-  expect(await probeVar('--lyra-transition-base')).to.equal('180ms ease-out');
+  expect(await probeVar('--lr-transition-fast')).to.equal('120ms ease-out');
+  expect(await probeVar('--lr-transition-base')).to.equal('180ms ease-out');
 });
 
 it('maps logical safe-area insets to the mirrored physical edges in RTL', () => {
   const cssText = tokens.cssText.replace(/\s+/g, ' ');
   expect(cssText).to.include(
-    ':host(:dir(rtl)) { --lyra-safe-area-inline-start: env(safe-area-inset-right, 0px); ' +
-      '--lyra-safe-area-inline-end: env(safe-area-inset-left, 0px); }',
+    ':host(:dir(rtl)) { --lr-safe-area-inline-start: env(safe-area-inset-right, 0px); ' +
+      '--lr-safe-area-inline-end: env(safe-area-inset-left, 0px); }',
   );
 });
 
 it('defines a single disabled-opacity token', async () => {
-  expect(await probeVar('--lyra-opacity-disabled')).to.equal('0.5');
+  expect(await probeVar('--lr-opacity-disabled')).to.equal('0.5');
 });
 
 it('defines the focus-ring tokens, with color aliasing the existing brand token', async () => {
-  expect(await probeVar('--lyra-focus-ring-width')).to.equal('2px');
-  expect(await probeVar('--lyra-focus-ring-offset')).to.equal('2px');
-  expect(await probeVar('--lyra-focus-ring-color')).to.equal(await probeVar('--lyra-color-brand'));
+  expect(await probeVar('--lr-focus-ring-width')).to.equal('2px');
+  expect(await probeVar('--lr-focus-ring-offset')).to.equal('2px');
+  expect(await probeVar('--lr-focus-ring-color')).to.equal(await probeVar('--lr-color-brand'));
 });
 
 it('defines an icon-button-size token', async () => {
-  expect(await probeVar('--lyra-icon-button-size')).to.equal('2.5rem');
+  expect(await probeVar('--lr-icon-button-size')).to.equal('2.5rem');
 });
 
 it('defines the shared typography, chart, layer, and overlay token surface', async () => {
-  expect(await probeVar('--lyra-font-size-sm')).to.equal('0.8125rem');
-  expect(await probeVar('--lyra-font-weight-semibold')).to.equal('600');
-  expect(await probeVar('--lyra-line-height-normal')).to.equal('1.5');
-  expect(await probeVar('--lyra-border-width-thin')).to.equal('1px');
-  expect(await probeVar('--lyra-radius-pill')).to.equal('999px');
-  expect(await probeVar('--lyra-layer-modal')).to.equal('1000');
-  expect(await probeVar('--lyra-color-overlay')).to.equal('rgb(0 0 0 / 0.5)');
-  expect(await probeVar('--lyra-color-overlay-strong')).to.equal('rgb(0 0 0 / 0.92)');
+  expect(await probeVar('--lr-font-size-sm')).to.equal('0.8125rem');
+  expect(await probeVar('--lr-font-weight-semibold')).to.equal('600');
+  expect(await probeVar('--lr-line-height-normal')).to.equal('1.5');
+  expect(await probeVar('--lr-border-width-thin')).to.equal('1px');
+  expect(await probeVar('--lr-radius-pill')).to.equal('999px');
+  expect(await probeVar('--lr-layer-modal')).to.equal('1000');
+  expect(await probeVar('--lr-color-overlay')).to.equal('rgb(0 0 0 / 0.5)');
+  expect(await probeVar('--lr-color-overlay-strong')).to.equal('rgb(0 0 0 / 0.92)');
 });
 
 it('provides central reduced-motion and forced-colors fallbacks', () => {
@@ -112,56 +112,56 @@ it('provides central reduced-motion and forced-colors fallbacks', () => {
   expect(cssText).to.match(/@media\s*\(prefers-reduced-motion:\s*reduce\)/);
   expect(cssText).to.match(/animation-duration:\s*0\.001ms/);
   expect(cssText).to.match(/@media\s*\(forced-colors:\s*active\)/);
-  expect(cssText).to.include('--lyra-color-surface: Canvas');
-  expect(cssText).to.include('--lyra-color-text: CanvasText');
-  expect(cssText).to.include('--lyra-focus-ring-color: Highlight');
+  expect(cssText).to.include('--lr-color-surface: Canvas');
+  expect(cssText).to.include('--lr-color-text: CanvasText');
+  expect(cssText).to.include('--lr-focus-ring-color: Highlight');
 });
 
 it('darkens the border fallback to clear WCAG 1.4.11 non-text 3:1 contrast against white', async () => {
-  expect(await probeVar('--lyra-color-border')).to.equal('#8a8a90');
+  expect(await probeVar('--lr-color-border')).to.equal('#8a8a90');
 });
 
-it('provides a dark-aware fallback under prefers-color-scheme: dark when no --lyra-theme-* value is set', () => {
+it('provides a dark-aware fallback under prefers-color-scheme: dark when no --lr-theme-* value is set', () => {
   const cssText = tokens.cssText;
   expect(cssText).to.match(/@media\s*\(prefers-color-scheme:\s*dark\)/);
-  // The dark block must still chain through the same --lyra-theme-* token names (a
+  // The dark block must still chain through the same --lr-theme-* token names (a
   // consumer's own theme value must still win over this fallback), only the
   // literal fallback hex changes.
   const darkBlockMatch = /@media\s*\(prefers-color-scheme:\s*dark\)\s*{([\s\S]*?)}\s*}/.exec(cssText);
   expect(darkBlockMatch, 'expected a dark-mode block').to.not.equal(null);
-  expect(darkBlockMatch![1]).to.include('--lyra-theme-color-surface-default');
-  expect(darkBlockMatch![1]).to.include('--lyra-theme-color-text-normal');
+  expect(darkBlockMatch![1]).to.include('--lr-theme-color-surface-default');
+  expect(darkBlockMatch![1]).to.include('--lr-theme-color-text-normal');
 });
 
 it('provides light, dark, and forced-colors categorical chart palette values', () => {
   const cssText = tokens.cssText;
   for (let index = 1; index <= 8; index++) {
-    expect(cssText).to.include(`--lyra-color-chart-${index}:`);
+    expect(cssText).to.include(`--lr-color-chart-${index}:`);
   }
   const darkBlockMatch = /@media\s*\(prefers-color-scheme:\s*dark\)\s*{([\s\S]*?)}\s*}/.exec(cssText);
   expect(darkBlockMatch, 'expected a dark-mode block').to.not.equal(null);
-  expect(darkBlockMatch![1]).to.include('--lyra-color-chart-1:');
+  expect(darkBlockMatch![1]).to.include('--lr-color-chart-1:');
   const forcedBlockMatch = /@media\s*\(forced-colors:\s*active\)\s*{([\s\S]*?)}\s*}/.exec(cssText);
   expect(forcedBlockMatch, 'expected a forced-colors block').to.not.equal(null);
-  expect(forcedBlockMatch![1]).to.include('--lyra-color-chart-1: Highlight');
+  expect(forcedBlockMatch![1]).to.include('--lr-color-chart-1: Highlight');
 });
 
-it('provides light, dark, and forced-colors categorical graph-node-type palette values, independently themeable from --lyra-color-chart-*', async () => {
-  const light = await probeVar('--lyra-graph-cat-1');
+it('provides light, dark, and forced-colors categorical graph-node-type palette values, independently themeable from --lr-color-chart-*', async () => {
+  const light = await probeVar('--lr-graph-cat-1');
   expect(light).to.match(/^#[0-9a-f]{6}$/i);
   const darkBlockMatch = tokens.cssText.match(/@media \(prefers-color-scheme: dark\) \{[\s\S]*?\n {2}\}/);
-  expect(darkBlockMatch![0]).to.include('--lyra-graph-cat-1:');
+  expect(darkBlockMatch![0]).to.include('--lr-graph-cat-1:');
   const forcedBlockMatch = tokens.cssText.match(/@media \(forced-colors: active\) \{[\s\S]*?\n {2}\}/);
-  expect(forcedBlockMatch![0]).to.include('--lyra-graph-cat-1:');
+  expect(forcedBlockMatch![0]).to.include('--lr-graph-cat-1:');
   // Independently themeable: overriding the chart bridge alone must not move the graph palette.
-  expect(tokens.cssText).to.include('--lyra-graph-cat-1: var(--lyra-theme-graph-cat-1,');
-  expect(tokens.cssText).not.to.include('--lyra-graph-cat-1: var(--lyra-theme-color-chart-1,');
+  expect(tokens.cssText).to.include('--lr-graph-cat-1: var(--lr-theme-graph-cat-1,');
+  expect(tokens.cssText).not.to.include('--lr-graph-cat-1: var(--lr-theme-color-chart-1,');
 });
 
 it('keeps every graph-cat-N slot present for both light and dark', () => {
   for (let i = 1; i <= 8; i++) {
-    expect(fallbackHex(`--lyra-graph-cat-${i}`, 'light')).to.match(/^#[0-9a-f]{6,8}$/i);
-    expect(fallbackHex(`--lyra-graph-cat-${i}`, 'dark')).to.match(/^#[0-9a-f]{6,8}$/i);
+    expect(fallbackHex(`--lr-graph-cat-${i}`, 'light')).to.match(/^#[0-9a-f]{6,8}$/i);
+    expect(fallbackHex(`--lr-graph-cat-${i}`, 'dark')).to.match(/^#[0-9a-f]{6,8}$/i);
   }
 });
 
@@ -176,8 +176,8 @@ it('keeps every standalone dark fallback semantic pair at WCAG AA contrast', () 
 it('chains filled-content and border tokens through the matching lyra theme-input roles', () => {
   const cssText = tokens.cssText;
   for (const tone of ['brand', 'success', 'warning', 'danger']) {
-    expect(cssText).to.include(`--lyra-color-on-${tone}: var(--lyra-theme-color-${tone}-on-loud`);
+    expect(cssText).to.include(`--lr-color-on-${tone}: var(--lr-theme-color-${tone}-on-loud`);
   }
-  expect(cssText).to.include('--lyra-color-border: var(--lyra-theme-color-surface-border');
-  expect(cssText).to.include('--lyra-focus-ring-color: var(--lyra-theme-color-focus');
+  expect(cssText).to.include('--lr-color-border: var(--lr-theme-color-surface-border');
+  expect(cssText).to.include('--lr-focus-ring-color: var(--lr-theme-color-focus');
 });

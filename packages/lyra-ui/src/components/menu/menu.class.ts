@@ -14,12 +14,12 @@ export interface MenuSelectDetail {
 }
 
 export interface LyraMenuEventMap {
-  'lyra-show': CustomEvent<undefined>;
-  'lyra-hide': CustomEvent<undefined>;
-  'lyra-menu-select': CustomEvent<MenuSelectDetail>;
+  'lr-show': CustomEvent<undefined>;
+  'lr-hide': CustomEvent<undefined>;
+  'lr-menu-select': CustomEvent<MenuSelectDetail>;
 }
 /**
- * `<lyra-menu>` — an anchored dropdown of `<lyra-menu-item>` actions, opened
+ * `<lr-menu>` — an anchored dropdown of `<lr-menu-item>` actions, opened
  * from a consumer-supplied trigger (typically an icon button). A close, drop-
  * in-shaped replacement for reaching outside this library for a third-party
  * dropdown to build a gear menu, an avatar menu, or a history row's overflow
@@ -29,15 +29,15 @@ export interface LyraMenuEventMap {
  * **ARIA pattern — `role="menu"`/`role="menuitem"` with real roving DOM
  * focus, not a listbox.** Two coherent, mutually-exclusive shapes were
  * available here: (a) `role="listbox"`/`role="option"` with
- * `aria-activedescendant`, the pattern `<lyra-select>`'s trigger-button +
+ * `aria-activedescendant`, the pattern `<lr-select>`'s trigger-button +
  * popup listbox uses, where DOM focus never leaves the trigger; or (b)
  * `role="menu"`/`role="menuitem"` with real focus moving between actual
  * focusable rows, the WAI-ARIA "menu button" pattern. This picks (b):
- * `<lyra-menu-item>` rows are real, independently-focusable elements (see
+ * `<lr-menu-item>` rows are real, independently-focusable elements (see
  * that class's own doc), which is the more natural fit for a menu
  * specifically — unlike a listbox's rows, a menu's rows are conventionally
  * button-/link-shaped, and every well-known native/OS menu (and this
- * family's own `<lyra-tree>`/`<lyra-tree-node>` pair, which this component's
+ * family's own `<lr-tree>`/`<lr-tree-node>` pair, which this component's
  * roving-tabindex plumbing directly mirrors) already moves real focus rather
  * than merely a virtual `aria-activedescendant` pointer. `role`/`tabIndex`
  * are consistently the menu-button shape throughout — never mixed with
@@ -51,21 +51,21 @@ export interface LyraMenuEventMap {
  *   first/last non-disabled item respectively.
  * - Once open, ArrowDown/ArrowUp move the roving focus among non-disabled
  *   items (wrapping past either end — the recommended, and more common,
- *   menu-widget behavior, unlike `<lyra-select>`'s clamped listbox nav).
+ *   menu-widget behavior, unlike `<lr-select>`'s clamped listbox nav).
  *   Home/End jump to the first/last non-disabled item. Enter/Space activate
  *   the focused item. Escape closes and returns focus to the trigger. Tab
  *   closes the menu without trapping focus (the browser's own default Tab
  *   behavior proceeds untouched). A printable keypress runs type-ahead:
  *   roving focus jumps to the next non-disabled item whose text starts with
  *   the accumulated buffer, cycling from just after the active item (mirrors
- *   `<lyra-select>`'s identical listbox type-ahead). All of the above (except
- *   Escape) only respond to keydowns from a real `<lyra-menu-item>` target,
+ *   `<lr-select>`'s identical listbox type-ahead). All of the above (except
+ *   Escape) only respond to keydowns from a real `<lr-menu-item>` target,
  *   so a slotted non-item control (e.g. a date input) keeps its own full
  *   default keyboard behavior. Escape from such a slotted control closes the
  *   menu too, but only when `closeOnEscapeAnywhere` is set — it defaults to
  *   `false`, so existing consumers keep today's behavior unchanged.
  * - A click outside both the trigger and the open popup closes it (mirrors
- *   `<lyra-select>`'s `onDocPointer` exactly) — this does *not* refocus the
+ *   `<lr-select>`'s `onDocPointer` exactly) — this does *not* refocus the
  *   trigger, since the outside click itself already moved focus somewhere
  *   the user chose; Escape and a committed selection *do* refocus the
  *   trigger, since those are dismissals with nowhere else for focus to go.
@@ -74,31 +74,31 @@ export interface LyraMenuEventMap {
  * element (first one, if several are assigned) and enhanced imperatively
  * with `aria-haspopup="menu"`/`aria-expanded`/`aria-controls` — the same
  * "reach into a consumer-owned light-DOM element to complete its a11y
- * wiring" approach `<lyra-dialog>` documents for its own heading detection,
+ * wiring" approach `<lr-dialog>` documents for its own heading detection,
  * necessary here because those attributes belong on the actual interactive
  * trigger, which lives outside this component's own shadow root.
  *
  * The popup is always rendered (never `display:none`) so `.focus()` calls on
  * its content work synchronously the instant it opens — visually hidden via
- * `visibility`/`opacity` instead (identical to `<lyra-select>`'s own
+ * `visibility`/`opacity` instead (identical to `<lr-select>`'s own
  * `[part="listbox"]`). `visibility` is an inherited CSS property that
  * pierces the `<slot>` projection boundary, so every closed-state
- * `<lyra-menu-item>` is automatically excluded from sequential (Tab-key)
+ * `<lr-menu-item>` is automatically excluded from sequential (Tab-key)
  * navigation with no separate JS bookkeeping.
  *
- * @customElement lyra-menu
+ * @customElement lr-menu
  * @slot trigger - The consumer's own trigger element (typically an icon
  * button). Clicking it toggles the menu; it's positioned against via
  * `internal/positioner.js`'s `place()`.
- * @slot - `<lyra-menu-item>` elements, plus optionally plain `<hr>` dividers
+ * @slot - `<lr-menu-item>` elements, plus optionally plain `<hr>` dividers
  * between groups (native `<hr>` already carries an implicit `separator`
  * role, matching what `role="menu"` expects between item groups).
- * @event lyra-show - The menu opened. Not fired for markup that renders
- * `open` true from the start (mirrors `<lyra-select>`'s identical guard).
- * @event lyra-hide - The menu closed. Same first-render guard as `lyra-show`.
- * @event lyra-menu-select - A `<lyra-menu-item>` was activated. `detail: {
+ * @event lr-show - The menu opened. Not fired for markup that renders
+ * `open` true from the start (mirrors `<lr-select>`'s identical guard).
+ * @event lr-hide - The menu closed. Same first-render guard as `lr-show`.
+ * @event lr-menu-select - A `<lr-menu-item>` was activated. `detail: {
  * value }` — the consolidated re-fire of that item's own
- * `lyra-menu-item-select` (see `<lyra-menu-item>`'s doc for why listening
+ * `lr-menu-item-select` (see `<lr-menu-item>`'s doc for why listening
  * here, rather than on every item, is the recommended approach). Always
  * followed by the menu closing and focus returning to the trigger.
  * @csspart trigger - The wrapper around the `trigger` slot (the positioning anchor).
@@ -123,7 +123,7 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
    *  specific (e.g. "Row actions") when a page has more than one menu.
    *  Localized (`menuLabel`) when left at its default. A host-level
    *  `aria-label` attribute takes precedence over both this prop and the
-   *  localized default, matching `lyra-select`/`lyra-model-select`'s
+   *  localized default, matching `lr-select`/`lr-model-select`'s
    *  established `this.getAttribute('aria-label') || <computed default>`
    *  precedence (see `effectiveLabel`). */
   @property() label = 'Menu';
@@ -131,10 +131,10 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
   /** Extends the Escape-closes-and-refocuses-trigger behavior to keydown
    *  events originating from slotted non-item content within `[part="list"]`
    *  (e.g. a date input or a custom section slotted alongside
-   *  `<lyra-menu-item>`s), not just from a real `<lyra-menu-item>`. Default
+   *  `<lr-menu-item>`s), not just from a real `<lr-menu-item>`. Default
    *  `false` leaves Escape from slotted non-item content with full default
    *  keyboard behavior, matching every existing consumer. Arrow/Home/End/
-   *  Enter/Space stay scoped to real `<lyra-menu-item>` targets regardless of
+   *  Enter/Space stay scoped to real `<lr-menu-item>` targets regardless of
    *  this property — only Escape is affected. */
   @property({ type: Boolean, attribute: 'close-on-escape-anywhere' }) closeOnEscapeAnywhere = false;
 
@@ -153,7 +153,7 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
   private _isFirstUpdate = true;
   private pendingFocus: 'first' | 'last' = 'first';
   private readonly listId = nextId('menu-list');
-  // Standard menu type-ahead, mirroring lyra-select's identical listbox
+  // Standard menu type-ahead, mirroring lr-select's identical listbox
   // trio: printable keystrokes accumulate into this buffer and reset ~500ms
   // after the last one, so "d" then "e" narrows to "de" instead of
   // restarting the search on every keystroke.
@@ -169,14 +169,14 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
       this.cleanup?.();
       this.cleanup = undefined;
       // All open-driven side effects (positioning, the click-outside
-      // listener, the lyra-show/lyra-hide events, and moving focus into the
+      // listener, the lr-show/lr-hide events, and moving focus into the
       // menu) live here rather than in show()/hide() so they fire however
       // `open` became true -- via show()/hide()'s own user-interaction
       // paths, or a consumer/test setting `el.open` directly, which bypasses
-      // both. Mirrors lyra-select's identical updated()-centralized approach.
+      // both. Mirrors lr-select's identical updated()-centralized approach.
       if (this.open) {
         document.addEventListener('pointerdown', this.onDocPointer);
-        if (!this._isFirstUpdate) this.emit('lyra-show');
+        if (!this._isFirstUpdate) this.emit('lr-show');
         // Both reposition() and focusRoving() no-op gracefully if triggerEl/
         // items aren't populated yet -- for markup that renders `open` true
         // from the start, the trigger/default slots' *own* slotchange events
@@ -188,7 +188,7 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
         this.focusRoving(this.pendingFocus);
       } else {
         document.removeEventListener('pointerdown', this.onDocPointer);
-        if (!this._isFirstUpdate) this.emit('lyra-hide');
+        if (!this._isFirstUpdate) this.emit('lr-hide');
       }
       this.syncTriggerA11y();
     } else if (this.open && changed.has('placement')) {
@@ -365,12 +365,12 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
   private onItemSelect = (e: Event): void => {
     const item = e.target;
     if (!(item instanceof LyraMenuItem)) return;
-    this.emit<MenuSelectDetail>('lyra-menu-select', { value: item.value });
+    this.emit<MenuSelectDetail>('lr-menu-select', { value: item.value });
     this.hide(true);
   };
 
   /** Flips exactly one non-disabled item's `tabIndex` to `0` (the roving
-   *  target) and every other item's to `-1` -- see `<lyra-menu-item>`'s doc
+   *  target) and every other item's to `-1` -- see `<lr-menu-item>`'s doc
    *  for why this is the sole authority over that property. */
   private applyRovingTabIndex(): void {
     this.items.forEach((item, i) => {
@@ -453,7 +453,7 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
         break;
       case 'Enter':
       case ' ':
-        // Mirrors lyra-tree calling current.select() from its own delegated
+        // Mirrors lr-tree calling current.select() from its own delegated
         // keydown handler, rather than each row wiring its own keydown.
         e.preventDefault();
         current?.select();
@@ -474,7 +474,7 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
   /** Standard WAI-ARIA APG menu-button type-ahead: moves the roving focus to
    *  the next non-disabled item whose text content starts with the
    *  accumulated buffer, cycling from just after the currently active item
-   *  -- mirrors `<lyra-select>`'s identical listbox type-ahead. */
+   *  -- mirrors `<lr-select>`'s identical listbox type-ahead. */
   private typeAhead(char: string): void {
     clearTimeout(this.typeAheadTimer);
     this.typeAheadBuffer += char.toLowerCase();
@@ -518,8 +518,8 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
           aria-label=${this.effectiveLabel}
           @keydown=${this.onListKeyDown}
           @focusin=${this.onListFocusIn}
-          @lyra-menu-item-select=${this.onItemSelect}
-          @lyra-menu-item-state-change=${this.onItemStateChange}
+          @lr-menu-item-select=${this.onItemSelect}
+          @lr-menu-item-state-change=${this.onItemStateChange}
         >
           <slot @slotchange=${this.onItemsSlotChange}></slot>
         </div>
@@ -531,6 +531,6 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
 
 declare global {
   interface HTMLElementTagNameMap {
-    'lyra-menu': LyraMenu;
+    'lr-menu': LyraMenu;
   }
 }

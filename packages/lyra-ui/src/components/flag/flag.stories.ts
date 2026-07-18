@@ -4,7 +4,7 @@ import './flag-peer.js';
 
 const meta: Meta = {
   title: 'Flag',
-  component: 'lyra-flag',
+  component: 'lr-flag',
   tags: ['autodocs'],
 };
 export default meta;
@@ -13,10 +13,10 @@ type Story = StoryObj;
 export const Gallery: Story = {
   render: () => html`
     <div style="display:flex; gap:1rem; align-items:center;">
-      <lyra-flag country="fr" label="France" style="height: 1.5rem"></lyra-flag>
-      <lyra-flag language="en" label="English" style="height: 1.5rem"></lyra-flag>
-      <lyra-flag language="de" label="German" round style="height: 1.5rem"></lyra-flag>
-      <lyra-flag country="jp" label="Japan" round style="height: 1.5rem"></lyra-flag>
+      <lr-flag country="fr" label="France" style="height: 1.5rem"></lr-flag>
+      <lr-flag language="en" label="English" style="height: 1.5rem"></lr-flag>
+      <lr-flag language="de" label="German" round style="height: 1.5rem"></lr-flag>
+      <lr-flag country="jp" label="Japan" round style="height: 1.5rem"></lr-flag>
     </div>
   `,
 };
@@ -24,12 +24,12 @@ export const Gallery: Story = {
 export const ThemeableFraming: Story = {
   render: () => html`
     <div style="display:flex; gap:1rem; align-items:center;">
-      <lyra-flag
+      <lr-flag
         country="fr"
         aria-label="French flag in a wide frame"
-        style="height: 3rem; --lyra-flag-aspect-ratio: 2 / 1; --lyra-flag-object-fit: contain;"
-      ></lyra-flag>
-      <lyra-flag country="jp" aria-label="Japanese flag in a circular frame" round style="height: 3rem;"></lyra-flag>
+        style="height: 3rem; --lr-flag-aspect-ratio: 2 / 1; --lr-flag-object-fit: contain;"
+      ></lr-flag>
+      <lr-flag country="jp" aria-label="Japanese flag in a circular frame" round style="height: 3rem;"></lr-flag>
     </div>
   `,
 };
@@ -39,15 +39,15 @@ export const FidelityTiers: Story = {
   render: () => html`
     <div style="display:flex; gap:2rem; align-items:flex-end;">
       <div style="display:flex; flex-direction:column; align-items:center; gap:0.5rem;">
-        <lyra-flag country="es" variant="compact" label="Spain (compact)" style="height: 6rem"></lyra-flag>
+        <lr-flag country="es" variant="compact" label="Spain (compact)" style="height: 6rem"></lr-flag>
         <span><code>variant="compact"</code><br />~2 KB WebP · for icons</span>
       </div>
       <div style="display:flex; flex-direction:column; align-items:center; gap:0.5rem;">
-        <lyra-flag country="es" label="Spain (standard)" style="height: 6rem"></lyra-flag>
+        <lr-flag country="es" label="Spain (standard)" style="height: 6rem"></lr-flag>
         <span>default (standard)<br />~48 KB vector · for cards</span>
       </div>
       <div style="display:flex; flex-direction:column; align-items:center; gap:0.5rem;">
-        <lyra-flag country="es" variant="detailed" label="Spain (detailed)" style="height: 6rem"></lyra-flag>
+        <lr-flag country="es" variant="detailed" label="Spain (detailed)" style="height: 6rem"></lr-flag>
         <span><code>variant="detailed"</code><br />full vector · for hero display</span>
       </div>
     </div>
@@ -57,7 +57,7 @@ export const FidelityTiers: Story = {
 export const LanguageSelector: Story = {
   name: 'Compact flags as menu icons',
   render: () => html`
-    <ul style="list-style:none; margin:0; padding:0.5rem 0; width:14rem; border:1px solid var(--lyra-color-border); border-radius:0.5rem; font-family:system-ui;">
+    <ul style="list-style:none; margin:0; padding:0.5rem 0; width:14rem; border:1px solid var(--lr-color-border); border-radius:0.5rem; font-family:system-ui;">
       ${[
         ['es', 'Español'],
         ['fr', 'Français'],
@@ -67,7 +67,7 @@ export const LanguageSelector: Story = {
       ].map(
         ([code, label]) => html`
           <li style="display:flex; align-items:center; gap:0.6rem; padding:0.4rem 0.9rem; cursor:pointer;">
-            <lyra-flag country=${code} variant="compact" label=${label} style="height: 1.1rem"></lyra-flag>
+            <lr-flag country=${code} variant="compact" label=${label} style="height: 1.1rem"></lr-flag>
             <span>${label}</span>
           </li>
         `,

@@ -18,14 +18,14 @@ export interface StatRow {
 }
 
 /**
- * `<lyra-stat>` — a KPI/stat card. First-party invention consolidating the
+ * `<lr-stat>` — a KPI/stat card. First-party invention consolidating the
  * "metric row" / "KPI card" pattern common to dashboard UIs.
  *
- * @customElement lyra-stat
+ * @customElement lr-stat
  * @slot - Leading icon.
  * @slot caption - Rich caption content (overrides the `caption` attribute).
- * @slot spark - A sparkline (e.g. `<lyra-sparkline>`) or other compact trend
- *   visual. `lyra-stat` only reserves the slot; it doesn't render one itself.
+ * @slot spark - A sparkline (e.g. `<lr-sparkline>`) or other compact trend
+ *   visual. `lr-stat` only reserves the slot; it doesn't render one itself.
  * @slot sub - Rich sub-line content (overrides the `sub` attribute).
  * @csspart base - The component's root wrapper.
  * @csspart icon - Container for the leading icon slot.
@@ -92,10 +92,10 @@ export class LyraStat extends LyraElement {
   /** Renders `value` as smaller/lighter prose (e.g. a loading/status message) instead of the bold
    *  numeric headline style, and hides `unit`. */
   @property({ type: Boolean, reflect: true }) prose = false;
-  /** Tighter padding for constrained spaces — same convention as `lyra-empty`'s `compact`. */
+  /** Tighter padding for constrained spaces — same convention as `lr-empty`'s `compact`. */
   @property({ type: Boolean, reflect: true }) compact = false;
 
-  // Same fix `lyra-empty` already established: `[part]:empty` never matches
+  // Same fix `lr-empty` already established: `[part]:empty` never matches
   // because the part always contains a literal `<slot>` child. Track real
   // slot assignment in JS instead.
   @state() private hasIcon = false;
@@ -230,7 +230,7 @@ export class LyraStat extends LyraElement {
 
 declare global {
   interface HTMLElementTagNameMap {
-    'lyra-stat': LyraStat;
+    'lr-stat': LyraStat;
   }
 }
 

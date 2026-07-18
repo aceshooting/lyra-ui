@@ -30,28 +30,28 @@ import '../skeleton/skeleton.class.js';
 const COPY_CONFIRM_MS = 1500;
 
 export interface LyraCodeBlockEventMap {
-  'lyra-copy': CustomEvent<{ text: string }>;
-  'lyra-toggle': CustomEvent<{ collapsed: boolean }>;
-  'lyra-line-click': CustomEvent<{ line: number }>;
-  'lyra-highlight-activate': CustomEvent<{ id: string }>;
-  'lyra-text-select': CustomEvent<{ text: string; anchor: LyraAnchor; rects: DOMRect[] }>;
+  'lr-copy': CustomEvent<{ text: string }>;
+  'lr-toggle': CustomEvent<{ collapsed: boolean }>;
+  'lr-line-click': CustomEvent<{ line: number }>;
+  'lr-highlight-activate': CustomEvent<{ id: string }>;
+  'lr-text-select': CustomEvent<{ text: string; anchor: LyraAnchor; rects: DOMRect[] }>;
 }
 /**
- * `<lyra-code-block>` — fenced code display with optional lazy syntax
+ * `<lr-code-block>` — fenced code display with optional lazy syntax
  * highlighting and a copy button. No highlighting grammar ships in this
  * component itself: it lazy-loads the optional peer dependency `shiki` (see
  * `code-loader.ts`) for the actual tokenizing, and degrades to a plain
  * `<pre><code>` when that peer isn't installed or `language` is unset/
- * unrecognized — the exact same optional-peer shape `<lyra-markdown>` and
- * `<lyra-chart>` already establish. That fallback is the *default* rendering
+ * unrecognized — the exact same optional-peer shape `<lr-markdown>` and
+ * `<lr-chart>` already establish. That fallback is the *default* rendering
  * path, not a degraded one: unhighlighted code is perfectly usable, and it's
  * what every instance renders at zero extra bytes until shiki resolves.
  *
- * A `<lyra-skeleton>` placeholder stands in only while shiki itself is
+ * A `<lr-skeleton>` placeholder stands in only while shiki itself is
  * loading for the very first time on the page (cached — see
  * `loadShikiHighlighter()`) and `language` is set. It's deliberately *not*
  * shown again for a subsequent per-language grammar load (e.g. a second
- * `<lyra-code-block>` requesting a language no earlier instance has used
+ * `<lr-code-block>` requesting a language no earlier instance has used
  * yet) — that grammar fetch is typically fast, and the plain-text fallback
  * is already a perfectly readable placeholder for it, so a second
  * loading-chrome state would add complexity for little practical benefit.
@@ -87,23 +87,23 @@ export interface LyraCodeBlockEventMap {
  * emphasis in both the shiki and plain-text-fallback rendering paths identically, and
  * `scrollToAnchor()` resolves a `line-range` anchor. `interactive-lines` is a separate, purely
  * local affordance that turns the (`line-numbers`-gated) gutter into a keyboard-navigable,
- * clickable roving-tabindex group emitting `lyra-line-click` — it doesn't require `highlights` to
+ * clickable roving-tabindex group emitting `lr-line-click` — it doesn't require `highlights` to
  * be set.
  *
- * @customElement lyra-code-block
- * @event lyra-copy - The copy button was activated. `detail: { text }` is
+ * @customElement lr-code-block
+ * @event lr-copy - The copy button was activated. `detail: { text }` is
  *   always the raw `code` value (never the highlighted HTML), and always
  *   fires regardless of whether the actual OS clipboard write succeeded —
- *   same convention as `<lyra-json-viewer>`'s own copy button.
- * @event lyra-toggle - The collapse/expand header button was activated.
+ *   same convention as `<lr-json-viewer>`'s own copy button.
+ * @event lr-toggle - The collapse/expand header button was activated.
  *   `detail: { collapsed }` — same event name and shape convention as
- *   `<lyra-thinking-panel>`'s own `lyra-toggle`.
- * @event lyra-line-click - A gutter line number was activated (click, or Enter/Space while
+ *   `<lr-thinking-panel>`'s own `lr-toggle`.
+ * @event lr-line-click - A gutter line number was activated (click, or Enter/Space while
  *   focused) while `interactive-lines` is set. `detail: { line }`.
- * @event lyra-highlight-activate - Declared for parity with this library's other anchor-target
+ * @event lr-highlight-activate - Declared for parity with this library's other anchor-target
  *   viewers so a consumer can attach a listener without a type error; not currently emitted by
  *   this component. `detail: { id }`.
- * @event lyra-text-select - Fired when a text selection inside the code body ends. `detail: {
+ * @event lr-text-select - Fired when a text selection inside the code body ends. `detail: {
  *   text, anchor, rects }`; `anchor` is a `line-range` anchor covering the selected lines.
  * @csspart base - The outer container.
  * @csspart header - The row above the code (filename/language/copy/toggle),
@@ -168,7 +168,7 @@ export class LyraCodeBlock extends LyraElement<LyraCodeBlockEventMap> {
   @property({ attribute: 'highlight-lines' }) highlightLines = '';
 
   /** Turns the (`line-numbers`-gated) gutter into a roving-tabindex group of buttons emitting
-   *  `lyra-line-click`. Has no effect while `line-numbers` is unset. */
+   *  `lr-line-click`. Has no effect while `line-numbers` is unset. */
   @property({ type: Boolean, attribute: 'interactive-lines' }) interactiveLines = false;
 
   /** Host-supplied highlights to paint over the code. Only `line-range` anchors are meaningful
@@ -208,7 +208,7 @@ export class LyraCodeBlock extends LyraElement<LyraCodeBlockEventMap> {
   // `null` covers every reason the plain-text fallback is showing: shiki
   // isn't installed, `language` is unset, or `language` isn't shiki-
   // recognized -- `render()` doesn't need to (and can't usefully) tell these
-  // apart, same rationale as <lyra-markdown>'s identically-shaped field.
+  // apart, same rationale as <lr-markdown>'s identically-shaped field.
   @state() private highlightedHtml: string | null = null;
 
   // Becomes true once the shared shiki-loading promise has settled, whether
@@ -305,7 +305,7 @@ export class LyraCodeBlock extends LyraElement<LyraCodeBlockEventMap> {
 
   private onLineActivate(line: number): void {
     this.focusedLine = line;
-    this.emit('lyra-line-click', { line });
+    this.emit('lr-line-click', { line });
   }
 
   // Roving-tabindex keyboard navigation across the gutter's line buttons (only rendered by
@@ -334,7 +334,7 @@ export class LyraCodeBlock extends LyraElement<LyraCodeBlockEventMap> {
    *  host can persist or otherwise act on it. Fires nothing when there's no active selection. */
   private onBodyMouseUp = (): void => {
     // `ShadowRoot.getSelection` is a Chromium-only extension absent from the standard DOM lib
-    // types -- same shadow-scoped-selection precedent as <lyra-terminal>'s own onViewportPointerUp.
+    // types -- same shadow-scoped-selection precedent as <lr-terminal>'s own onViewportPointerUp.
     const shadowSelection = (
       this.shadowRoot as unknown as { getSelection?: () => Selection | null } | null
     )?.getSelection?.();
@@ -352,7 +352,7 @@ export class LyraCodeBlock extends LyraElement<LyraCodeBlockEventMap> {
     const start = lineOf(range.startContainer);
     const end = lineOf(range.endContainer);
     if (start === null || end === null) return;
-    this.emit('lyra-text-select', {
+    this.emit('lr-text-select', {
       text,
       anchor: { kind: 'line-range', start: Math.min(start, end), end: Math.max(start, end) },
       rects: Array.from(range.getClientRects()),
@@ -363,7 +363,7 @@ export class LyraCodeBlock extends LyraElement<LyraCodeBlockEventMap> {
   // synchronous case -- language already loaded, see `syncHighlight()` --
   // into this same update cycle instead of scheduling a second one, Lit's
   // documented pattern for deriving one reactive property from a change to
-  // others (same approach <lyra-markdown>'s `willUpdate` takes).
+  // others (same approach <lr-markdown>'s `willUpdate` takes).
   protected willUpdate(changed: PropertyValues): void {
     // highlightLines/highlights/activeHighlightId/lineNumbers all feed codeBlockLineTransformer's
     // options in tokenize() below -- any of them changing (even without code/language/languages
@@ -451,9 +451,9 @@ export class LyraCodeBlock extends LyraElement<LyraCodeBlockEventMap> {
         lang,
         // shiki's generated per-token colors are theme-specific inline
         // styles/CSS variables (from SHIKI_THEMES's github-light/github-dark
-        // theme data), not this library's --lyra-* design tokens -- the one
+        // theme data), not this library's --lr-* design tokens -- the one
         // deliberate exception to every other color in this component being
-        // a --lyra-* token. See the dark-mode override in
+        // a --lr-* token. See the dark-mode override in
         // code-block.styles.ts for how the dark half of this activates.
         themes: SHIKI_THEMES,
         transformers: [
@@ -533,9 +533,9 @@ export class LyraCodeBlock extends LyraElement<LyraCodeBlockEventMap> {
     try {
       // navigator.clipboard is absent in insecure contexts / older browsers,
       // and some engines throw synchronously rather than rejecting -- either
-      // way this is best-effort; copy() below always emits lyra-copy
+      // way this is best-effort; copy() below always emits lr-copy
       // regardless of whether the OS clipboard was actually reached. Same
-      // precedent as <lyra-json-viewer>'s own copy button.
+      // precedent as <lr-json-viewer>'s own copy button.
       void navigator.clipboard?.writeText(text)?.catch(() => {});
     } catch {
       // see above
@@ -544,7 +544,7 @@ export class LyraCodeBlock extends LyraElement<LyraCodeBlockEventMap> {
 
   private copy = (): void => {
     this.writeClipboard(this.code);
-    this.emit('lyra-copy', { text: this.code });
+    this.emit('lr-copy', { text: this.code });
     this.justCopied = true;
     clearTimeout(this.copyTimeoutId);
     this.copyTimeoutId = setTimeout(() => {
@@ -554,7 +554,7 @@ export class LyraCodeBlock extends LyraElement<LyraCodeBlockEventMap> {
 
   private toggleCollapsed = (): void => {
     this.collapsed = !this.collapsed;
-    this.emit<{ collapsed: boolean }>('lyra-toggle', { collapsed: this.collapsed });
+    this.emit<{ collapsed: boolean }>('lr-toggle', { collapsed: this.collapsed });
   };
 
   private renderHeader(): TemplateResult {
@@ -596,7 +596,7 @@ export class LyraCodeBlock extends LyraElement<LyraCodeBlockEventMap> {
   // arbitrarily-wide/tall code (max-height, plus horizontal overflow from
   // long lines) -- a scrollable region with no other focusable content of
   // its own is otherwise unreachable by keyboard, same reasoning
-  // lyra-virtual-list's own `[part="base"]` documents for its identical
+  // lr-virtual-list's own `[part="base"]` documents for its identical
   // tabindex. `role="group"` (rather than e.g. `region`, a page landmark
   // role) plus `aria-label` gives it an accessible name without claiming
   // landmark/navigation significance for what is, structurally, just one
@@ -619,11 +619,11 @@ export class LyraCodeBlock extends LyraElement<LyraCodeBlockEventMap> {
           aria-label=${bodyLabel}
           tabindex="0"
           ?hidden=${bodyHidden}
-          style=${this.maxHeight ? `--lyra-code-block-max-height:${this.maxHeight}` : nothing}
+          style=${this.maxHeight ? `--lr-code-block-max-height:${this.maxHeight}` : nothing}
           @mouseup=${this.onBodyMouseUp}
         >
           ${showSkeleton
-            ? html`<lyra-skeleton variant="rect"></lyra-skeleton>`
+            ? html`<lr-skeleton variant="rect"></lr-skeleton>`
             : this.highlightedHtml !== null
               ? unsafeHTML(this.highlightedHtml)
               : html`<pre part="pre" class=${this.lineNumbers ? 'line-numbers' : nothing}>${this.renderPlainCode()}</pre>`}
@@ -636,6 +636,6 @@ export class LyraCodeBlock extends LyraElement<LyraCodeBlockEventMap> {
 
 declare global {
   interface HTMLElementTagNameMap {
-    'lyra-code-block': LyraCodeBlock;
+    'lr-code-block': LyraCodeBlock;
   }
 }

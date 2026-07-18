@@ -22,14 +22,14 @@ const relationshipNodes: GraphNode[] = [
     label: 'Judgment',
     accessibleLabel: 'Judgment, the source document',
     description: 'The decision whose citations are shown.',
-    color: 'var(--lyra-color-brand)',
+    color: 'var(--lr-color-brand)',
   },
   {
     id: 'opinion',
     label: 'Opinion',
     accessibleLabel: 'Advocate General opinion, cited by the judgment',
     description: 'A related legal opinion.',
-    color: 'var(--lyra-color-success)',
+    color: 'var(--lr-color-success)',
   },
   { id: 'regulation', label: 'Regulation', description: 'The governing regulation.' },
 ];
@@ -43,7 +43,7 @@ const relationshipLinks: GraphLink[] = [
     accessibleLabel: 'Judgment cites the Advocate General opinion',
     description: 'A directed citation relationship.',
     directed: true,
-    color: 'var(--lyra-color-brand)',
+    color: 'var(--lr-color-brand)',
     width: 2.5,
   },
   {
@@ -53,7 +53,7 @@ const relationshipLinks: GraphLink[] = [
     label: 'applies',
     description: 'A dashed directed relationship.',
     directed: true,
-    color: 'var(--lyra-color-success)',
+    color: 'var(--lr-color-success)',
     dash: [7, 4],
     width: 2,
   },
@@ -61,7 +61,7 @@ const relationshipLinks: GraphLink[] = [
 
 const meta: Meta = {
   title: 'Graph',
-  component: 'lyra-graph',
+  component: 'lr-graph',
   tags: ['autodocs'],
 };
 export default meta;
@@ -69,13 +69,13 @@ type Story = StoryObj;
 
 export const Default: Story = {
   render: () => html`
-    <lyra-graph
+    <lr-graph
       width="480"
       height="320"
       style="height: 20rem"
       .nodes=${nodes}
       .links=${links}
-    ></lyra-graph>
+    ></lr-graph>
   `,
 };
 
@@ -86,20 +86,20 @@ export const DimmedNeighborhood: Story = {
       description: {
         story:
           'dimmedNodeIds/dimmedLinkIds are controlled -- the host computes the complement of a ' +
-          'hovered node\'s neighbor set (e.g. from lyra-node-enter) and assigns it back. This story ' +
+          'hovered node\'s neighbor set (e.g. from lr-node-enter) and assigns it back. This story ' +
           'holds a static example: node "a" and its incident links stay at full opacity; everything ' +
-          'else is dimmed via --lyra-graph-dimmed-opacity.',
+          'else is dimmed via --lr-graph-dimmed-opacity.',
       },
     },
   },
   render: () => html`
-    <lyra-graph
+    <lr-graph
       .nodes=${nodes}
       .links=${links}
       .dimmedNodeIds=${['c', 'd']}
       .dimmedLinkIds=${['b->d', 'c->d']}
-      style="--lyra-graph-dimmed-opacity: 0.15; width: 100%; height: 400px;"
-    ></lyra-graph>
+      style="--lr-graph-dimmed-opacity: 0.15; width: 100%; height: 400px;"
+    ></lr-graph>
   `,
 };
 
@@ -111,15 +111,15 @@ export const ClickPosition: Story = {
     };
     return html`
       <div>
-        <lyra-graph
+        <lr-graph
           width="480"
           height="320"
           style="height: 20rem"
           seed="42"
           .nodes=${nodes}
           .links=${links}
-          @lyra-node-click=${report}
-        ></lyra-graph>
+          @lr-node-click=${report}
+        ></lr-graph>
         <output>Click a node to inspect its local position.</output>
       </div>
     `;
@@ -128,7 +128,7 @@ export const ClickPosition: Story = {
 
 export const TunedForces: Story = {
   render: () => html`
-    <lyra-graph
+    <lr-graph
       width="480"
       height="320"
       style="height: 20rem"
@@ -136,13 +136,13 @@ export const TunedForces: Story = {
       link-distance="200"
       .nodes=${nodes}
       .links=${links}
-    ></lyra-graph>
+    ></lr-graph>
   `,
 };
 
 export const BoundedZoom: Story = {
   render: () => html`
-    <lyra-graph
+    <lr-graph
       width="480"
       height="320"
       style="height: 20rem"
@@ -150,7 +150,7 @@ export const BoundedZoom: Story = {
       max-zoom="2"
       .nodes=${nodes}
       .links=${links}
-    ></lyra-graph>
+    ></lr-graph>
   `,
 };
 
@@ -161,8 +161,8 @@ export const SeededLayout: Story = {
       node positions are bit-identical, unlike the non-seeded <code>Default</code> story above.
     </p>
     <div style="display: flex; gap: 1rem; flex-wrap: wrap">
-      <lyra-graph width="320" height="240" style="height: 15rem" seed="42" .nodes=${nodes} .links=${links}></lyra-graph>
-      <lyra-graph width="320" height="240" style="height: 15rem" seed="42" .nodes=${nodes} .links=${links}></lyra-graph>
+      <lr-graph width="320" height="240" style="height: 15rem" seed="42" .nodes=${nodes} .links=${links}></lr-graph>
+      <lr-graph width="320" height="240" style="height: 15rem" seed="42" .nodes=${nodes} .links=${links}></lr-graph>
     </div>
   `,
 };
@@ -178,7 +178,7 @@ export const DirectedRelationships: Story = {
 
     return html`
       <div>
-        <lyra-graph
+        <lr-graph
           aria-label="Legal citation relationships"
           width="520"
           height="320"
@@ -186,8 +186,8 @@ export const DirectedRelationships: Story = {
           style="height: 20rem"
           .nodes=${relationshipNodes}
           .links=${relationshipLinks}
-          @lyra-link-click=${reportLink}
-        ></lyra-graph>
+          @lr-link-click=${reportLink}
+        ></lr-graph>
         <output aria-live="polite">Activate a link to inspect its stable id.</output>
       </div>
     `;

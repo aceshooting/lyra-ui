@@ -75,19 +75,19 @@ const STATUS_LABEL_KEY: Record<LyraSpan['status'], string> = {
 };
 
 export interface LyraTraceTreeEventMap {
-  'lyra-span-select': CustomEvent<{ id: string }>;
-  'lyra-span-toggle': CustomEvent<{ id: string; expanded: boolean }>;
+  'lr-span-select': CustomEvent<{ id: string }>;
+  'lr-span-toggle': CustomEvent<{ id: string; expanded: boolean }>;
 }
 
 /**
- * `<lyra-trace-tree>` — a collapsible span hierarchy for one agent/LLM trace
+ * `<lr-trace-tree>` — a collapsible span hierarchy for one agent/LLM trace
  * (Langfuse/LangSmith run-tree style): kind icon, name, status, an inline
  * duration bar on the shared trace time scale, and optional tokens/cost
- * columns. Consumes the same `LyraSpan[]` as `<lyra-span-waterfall>`.
+ * columns. Consumes the same `LyraSpan[]` as `<lr-span-waterfall>`.
  *
- * @customElement lyra-trace-tree
- * @event lyra-span-select - `detail: { id }` — a row was activated (click, Enter, Space).
- * @event lyra-span-toggle - `detail: { id, expanded }` — a row was expanded or collapsed.
+ * @customElement lr-trace-tree
+ * @event lr-span-select - `detail: { id }` — a row was activated (click, Enter, Space).
+ * @event lr-span-toggle - `detail: { id, expanded }` — a row was expanded or collapsed.
  * @csspart base - The root wrapper (`role="tree"`).
  * @csspart header - The column-header row, rendered only when `showTokens`/`showCost` is on.
  * @csspart row - One span's row (`role="treeitem"`).
@@ -125,7 +125,7 @@ export class LyraTraceTree extends LyraElement<LyraTraceTreeEventMap> {
   @state() private collapsedIds = new Set<string>();
   @state() private focusedId: string | null = null;
 
-  @query('lyra-live-region') private liveRegion?: LyraLiveRegion;
+  @query('lr-live-region') private liveRegion?: LyraLiveRegion;
   private previousStatuses = new Map<string, LyraSpan['status']>();
   private pendingAnnouncements: string[] = [];
 
@@ -186,7 +186,7 @@ export class LyraTraceTree extends LyraElement<LyraTraceTreeEventMap> {
     // roving tabindex here -- otherwise toggling an ancestor other than the currently-focused row
     // can hide that row entirely, leaving no row with tabindex="0" at all.
     this.focusedId = id;
-    this.emit('lyra-span-toggle', { id, expanded: collapsed });
+    this.emit('lr-span-toggle', { id, expanded: collapsed });
   }
 
   /** Expand every collapsible row. Resolves once the update reflecting it has committed. */
@@ -224,7 +224,7 @@ export class LyraTraceTree extends LyraElement<LyraTraceTreeEventMap> {
 
   private selectRow(id: string): void {
     this.focusedId = id;
-    this.emit('lyra-span-select', { id });
+    this.emit('lr-span-select', { id });
   }
 
   private onKeyDown = (e: KeyboardEvent): void => {
@@ -376,7 +376,7 @@ export class LyraTraceTree extends LyraElement<LyraTraceTreeEventMap> {
         aria-current=${isActive ? 'true' : nothing}
         aria-label=${fragments.join(' — ')}
         ?data-active=${isActive}
-        style=${`padding-inline-start:calc(${depth} * var(--lyra-space-l))`}
+        style=${`padding-inline-start:calc(${depth} * var(--lr-space-l))`}
         @click=${() => this.selectRow(span.id)}
         @focus=${() => {
           this.focusedId = span.id;
@@ -425,16 +425,16 @@ export class LyraTraceTree extends LyraElement<LyraTraceTreeEventMap> {
         @keydown=${this.onKeyDown}
       >
         ${rows.length === 0
-          ? html`<lyra-empty part="empty" heading=${this.localize('noData')}></lyra-empty>`
+          ? html`<lr-empty part="empty" heading=${this.localize('noData')}></lr-empty>`
           : html`${this.showTokens || this.showCost ? this.renderHeader() : nothing}${rows.map((row) => this.renderRow(row))}`}
       </div>
-      <lyra-live-region part="live-region" mode="polite"></lyra-live-region>
+      <lr-live-region part="live-region" mode="polite"></lr-live-region>
     `;
   }
 }
 
 declare global {
   interface HTMLElementTagNameMap {
-    'lyra-trace-tree': LyraTraceTree;
+    'lr-trace-tree': LyraTraceTree;
   }
 }

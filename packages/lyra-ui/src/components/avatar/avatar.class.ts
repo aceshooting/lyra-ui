@@ -8,13 +8,13 @@ export type AvatarShape = 'circle' | 'square';
 export type AvatarTone = 'neutral' | 'brand' | 'success' | 'warning' | 'danger';
 
 /**
- * `<lyra-avatar>` — a small, fixed-size identity marker: default-slotted icon/glyph content, an
+ * `<lr-avatar>` — a small, fixed-size identity marker: default-slotted icon/glyph content, an
  * image, or an initials fallback, in that priority order (whichever's set takes over from the
  * next). First-party invention (no Web Awesome equivalent) -- purely presentational, no built-in
- * interactivity; a consumer wraps it in their own `<button>`/`<lyra-menu>` trigger for a
+ * interactivity; a consumer wraps it in their own `<button>`/`<lr-menu>` trigger for a
  * user-menu affordance.
  *
- * @customElement lyra-avatar
+ * @customElement lr-avatar
  * @slot - Icon/glyph content (e.g. an inline SVG) shown in place of the image/initials, e.g. to
  *   mark a chat message avatar as "AI" vs. "user" with a role glyph instead of a photo or
  *   initials. Takes priority over both `src` and `initials`. The glyph itself is treated as
@@ -44,20 +44,20 @@ export class LyraAvatar extends LyraElement {
    *  value while leaving the visible initials/image unchanged. */
   @property() alt = '';
 
-  /** Visual size. `'lg'` matches `--lyra-icon-button-size` (2.5rem); `'md'` (the default) is 2rem. */
+  /** Visual size. `'lg'` matches `--lr-icon-button-size` (2.5rem); `'md'` (the default) is 2rem. */
   @property({ reflect: true }) size: AvatarSize = 'md';
 
   /** `'circle'` (the default) or `'square'`. */
   @property({ reflect: true }) shape: AvatarShape = 'circle';
 
-  /** Recolors the initials-fallback background/text, mirroring `lyra-chip`'s `tone` vocabulary.
+  /** Recolors the initials-fallback background/text, mirroring `lr-chip`'s `tone` vocabulary.
    *  `'neutral'` (the default) reads as a plain, unaccented circle. */
   @property({ reflect: true }) tone: AvatarTone = 'neutral';
 
   @state() private imageFailed = false;
 
   // `[part='icon']:empty` never matches because the part always contains a literal `<slot>`
-  // child -- same fix `lyra-empty`/`lyra-stat` already established. Track real slot assignment
+  // child -- same fix `lr-empty`/`lr-stat` already established. Track real slot assignment
   // in JS instead.
   @state() private hasIcon = false;
 
@@ -115,6 +115,6 @@ export class LyraAvatar extends LyraElement {
 
 declare global {
   interface HTMLElementTagNameMap {
-    'lyra-avatar': LyraAvatar;
+    'lr-avatar': LyraAvatar;
   }
 }

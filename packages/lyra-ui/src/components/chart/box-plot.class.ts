@@ -23,7 +23,7 @@ export interface BoxPlotSeries {
 }
 
 // Defensive JS-side fallbacks for themeColors() below, mirroring the
-// light-mode default of each `--lyra-chart-*` token's own fallback chain
+// light-mode default of each `--lr-chart-*` token's own fallback chain
 // (see box-plot.styles.ts) — only reached if getComputedStyle somehow can't
 // resolve the custom property at all (e.g. host detached from the document).
 // Same values as chart.ts's own fallbacks, since both default to the same
@@ -35,7 +35,7 @@ const FALLBACK_TOOLTIP_BG = '#fff';
 const FALLBACK_TOOLTIP_TEXT = '#1a1a1a';
 
 
-// Mirrors chart.ts's own `ThemeColors` shape (all 5 `--lyra-chart-*` tokens)
+// Mirrors chart.ts's own `ThemeColors` shape (all 5 `--lr-chart-*` tokens)
 // so scales, legends, and tooltips share the same canvas theme contract.
 interface ThemeColors {
   grid: string;
@@ -49,8 +49,8 @@ let boxPlotPlugin: Promise<OptionalPeerApi | null> | undefined;
 
 /**
  * Lazily loads `@sgratzl/chartjs-chart-boxplot` and registers its controller
- * only when a `<lyra-box-plot>` connects — kept separate from the base
- * `chart-loader.ts` so importing `lyra-chart.js` alone never pulls this in.
+ * only when a `<lr-box-plot>` connects — kept separate from the base
+ * `chart-loader.ts` so importing `lr-chart.js` alone never pulls this in.
  */
 function loadBoxPlotPlugin(): Promise<OptionalPeerApi | null> {
   if (!boxPlotPlugin) {
@@ -62,7 +62,7 @@ function loadBoxPlotPlugin(): Promise<OptionalPeerApi | null> {
       })
       .catch(() => {
         console.warn(
-          '<lyra-box-plot> needs the optional peer dependency `@sgratzl/chartjs-chart-boxplot` ' +
+          '<lr-box-plot> needs the optional peer dependency `@sgratzl/chartjs-chart-boxplot` ' +
             '— install it with `pnpm add @sgratzl/chartjs-chart-boxplot`.',
         );
         return null;
@@ -72,11 +72,11 @@ function loadBoxPlotPlugin(): Promise<OptionalPeerApi | null> {
 }
 
 /**
- * `<lyra-box-plot>` — a box-and-whisker chart from precomputed five-number
+ * `<lr-box-plot>` — a box-and-whisker chart from precomputed five-number
  * summaries (no raw sample data is shipped to the browser). Beyond Web
  * Awesome's chart set — useful for summarizing distributions.
  *
- * @customElement lyra-box-plot
+ * @customElement lr-box-plot
  * @csspart base - The chart wrapper.
  * @csspart canvas - The box-plot canvas.
  * @csspart description - The accessible box-plot summary.
@@ -137,7 +137,7 @@ export class LyraBoxPlot extends LyraElement {
   //
   // Also guards against a disconnect while either lazy peer import is still
   // in flight: `this.isConnected` is re-checked after each `await` gap, so a
-  // `<lyra-box-plot>` removed before the load settles never constructs a
+  // `<lr-box-plot>` removed before the load settles never constructs a
   // `Chart` bound to a (possibly detached) canvas.
   private async onBoxPlotPluginLoaded(
     boxMod: OptionalPeerApi | null,
@@ -162,13 +162,13 @@ export class LyraBoxPlot extends LyraElement {
     if (this.loading) this.setAttribute('aria-busy', 'true');
     else this.removeAttribute('aria-busy');
 
-    // `--lyra-chart-height` is read by `:host`'s `block-size` in
-    // `chart.styles.ts` (shared with `lyra-chart`). Custom properties only
+    // `--lr-chart-height` is read by `:host`'s `block-size` in
+    // `chart.styles.ts` (shared with `lr-chart`). Custom properties only
     // cascade downward (host -> shadow tree), so this must be set on the
     // host element itself, not on the `[part="base"]` div inside the shadow
     // root.
     if (changed.has('height')) {
-      this.style.setProperty('--lyra-chart-height', this.height);
+      this.style.setProperty('--lr-chart-height', this.height);
     }
     if (this.loading) return;
     if (!this.visible) return; // becoming visible again triggers its own draw() via the observer above
@@ -180,7 +180,7 @@ export class LyraBoxPlot extends LyraElement {
   }
 
   /**
-   * Resolves the `--lyra-chart-*` theme tokens (declared in
+   * Resolves the `--lr-chart-*` theme tokens (declared in
    * `box-plot.styles.ts`, each layered over an existing semantic token) via
    * `getComputedStyle`. Chart.js renders to canvas, not the DOM, so it can't
    * consume CSS `var()` directly — same constraint `chart.ts`'s
@@ -190,11 +190,11 @@ export class LyraBoxPlot extends LyraElement {
   private themeColors(): ThemeColors {
     const cs = getComputedStyle(this);
     return {
-      grid: cs.getPropertyValue('--lyra-chart-grid-color').trim() || FALLBACK_GRID_COLOR,
-      tick: cs.getPropertyValue('--lyra-chart-tick-color').trim() || FALLBACK_TICK_COLOR,
-      legend: cs.getPropertyValue('--lyra-chart-legend-color').trim() || FALLBACK_LEGEND_COLOR,
-      tooltipBg: cs.getPropertyValue('--lyra-chart-tooltip-bg').trim() || FALLBACK_TOOLTIP_BG,
-      tooltipText: cs.getPropertyValue('--lyra-chart-tooltip-text').trim() || FALLBACK_TOOLTIP_TEXT,
+      grid: cs.getPropertyValue('--lr-chart-grid-color').trim() || FALLBACK_GRID_COLOR,
+      tick: cs.getPropertyValue('--lr-chart-tick-color').trim() || FALLBACK_TICK_COLOR,
+      legend: cs.getPropertyValue('--lr-chart-legend-color').trim() || FALLBACK_LEGEND_COLOR,
+      tooltipBg: cs.getPropertyValue('--lr-chart-tooltip-bg').trim() || FALLBACK_TOOLTIP_BG,
+      tooltipText: cs.getPropertyValue('--lr-chart-tooltip-text').trim() || FALLBACK_TOOLTIP_TEXT,
     };
   }
 
@@ -333,7 +333,7 @@ export class LyraBoxPlot extends LyraElement {
     if (this.loading) {
       return html`
         <div part="base">
-          <lyra-skeleton variant="rect"></lyra-skeleton>
+          <lr-skeleton variant="rect"></lr-skeleton>
         </div>
       `;
     }
@@ -355,6 +355,6 @@ export class LyraBoxPlot extends LyraElement {
 
 declare global {
   interface HTMLElementTagNameMap {
-    'lyra-box-plot': LyraBoxPlot;
+    'lr-box-plot': LyraBoxPlot;
   }
 }

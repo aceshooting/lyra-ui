@@ -13,18 +13,18 @@ export const styles = css`
     display: flex;
     align-items: baseline;
     flex-wrap: wrap;
-    column-gap: var(--lyra-space-xs);
-    font-size: var(--lyra-font-size-sm);
-    line-height: var(--lyra-line-height-1-4);
+    column-gap: var(--lr-space-xs);
+    font-size: var(--lr-font-size-sm);
+    line-height: var(--lr-line-height-1-4);
   }
   [part='label'] {
     flex: 0 0 auto;
-    color: var(--lyra-color-text-quiet);
+    color: var(--lr-color-text-quiet);
   }
   [part='value'] {
     flex: 1 1 auto;
     min-inline-size: 0;
-    color: var(--lyra-color-text);
+    color: var(--lr-color-text);
     overflow-wrap: anywhere;
   }
   [part='value'] ::slotted(*) {

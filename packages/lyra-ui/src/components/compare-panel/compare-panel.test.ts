@@ -2,9 +2,9 @@ import { fixture, expect, html, oneEvent } from '@open-wc/testing';
 import './compare-panel.js';
 import type { LyraComparePanel } from './compare-panel.js';
 
-describe('lyra-compare-panel', () => {
+describe('lr-compare-panel', () => {
   it('renders labelA/labelB, falling back to the localized defaults when unset', async () => {
-    const el = (await fixture(html`<lyra-compare-panel></lyra-compare-panel>`)) as LyraComparePanel;
+    const el = (await fixture(html`<lr-compare-panel></lr-compare-panel>`)) as LyraComparePanel;
     await el.updateComplete;
     expect(el.shadowRoot!.querySelector('[part="pane-a"]')!.getAttribute('aria-label')).to.equal('Response A');
     expect(el.shadowRoot!.querySelector('[part="pane-b"]')!.getAttribute('aria-label')).to.equal('Response B');
@@ -12,11 +12,11 @@ describe('lyra-compare-panel', () => {
 
   it('renders slotted a/b/prompt content', async () => {
     const el = (await fixture(html`
-      <lyra-compare-panel>
+      <lr-compare-panel>
         <span slot="prompt">The prompt</span>
         <span slot="a">Answer A</span>
         <span slot="b">Answer B</span>
-      </lyra-compare-panel>
+      </lr-compare-panel>
     `)) as LyraComparePanel;
     await el.updateComplete;
     expect(el.textContent).to.include('Answer A');
@@ -24,12 +24,12 @@ describe('lyra-compare-panel', () => {
     expect(el.textContent).to.include('The prompt');
   });
 
-  it('emits lyra-vote and reflects vote on the chosen button', async () => {
-    const el = (await fixture(html`<lyra-compare-panel item-id="pair-1"></lyra-compare-panel>`)) as LyraComparePanel;
+  it('emits lr-vote and reflects vote on the chosen button', async () => {
+    const el = (await fixture(html`<lr-compare-panel item-id="pair-1"></lr-compare-panel>`)) as LyraComparePanel;
     await el.updateComplete;
     const buttons = el.shadowRoot!.querySelectorAll('[part="vote-button"]');
     setTimeout(() => (buttons[0] as HTMLElement).click());
-    const ev = await oneEvent(el, 'lyra-vote');
+    const ev = await oneEvent(el, 'lr-vote');
     expect(ev.detail).to.deep.equal({ choice: 'a', itemId: 'pair-1' });
     await el.updateComplete;
     expect(el.vote).to.equal('a');
@@ -37,13 +37,13 @@ describe('lyra-compare-panel', () => {
   });
 
   it('hides the tie/both-bad buttons when hide-tie/hide-both-bad are set', async () => {
-    const el = (await fixture(html`<lyra-compare-panel hide-tie hide-both-bad></lyra-compare-panel>`)) as LyraComparePanel;
+    const el = (await fixture(html`<lr-compare-panel hide-tie hide-both-bad></lr-compare-panel>`)) as LyraComparePanel;
     await el.updateComplete;
     expect(el.shadowRoot!.querySelectorAll('[part="vote-button"]').length).to.equal(2);
   });
 
   it('resets vote to null when itemId changes', async () => {
-    const el = (await fixture(html`<lyra-compare-panel item-id="pair-1" vote="a"></lyra-compare-panel>`)) as LyraComparePanel;
+    const el = (await fixture(html`<lr-compare-panel item-id="pair-1" vote="a"></lr-compare-panel>`)) as LyraComparePanel;
     await el.updateComplete;
     expect(el.vote).to.equal('a');
     el.itemId = 'pair-2';
@@ -52,21 +52,21 @@ describe('lyra-compare-panel', () => {
   });
 
   it('disables the vote bar when disabled is set', async () => {
-    const el = (await fixture(html`<lyra-compare-panel disabled></lyra-compare-panel>`)) as LyraComparePanel;
+    const el = (await fixture(html`<lr-compare-panel disabled></lr-compare-panel>`)) as LyraComparePanel;
     await el.updateComplete;
     const button = el.shadowRoot!.querySelector('[part="vote-button"]') as HTMLButtonElement;
     expect(button.disabled).to.be.true;
   });
 
   it('stacks panes below 640px container width', async () => {
-    const el = (await fixture(html`<lyra-compare-panel></lyra-compare-panel>`)) as LyraComparePanel;
+    const el = (await fixture(html`<lr-compare-panel></lr-compare-panel>`)) as LyraComparePanel;
     await el.updateComplete;
     const css = (await import('./compare-panel.styles.js')).styles.cssText.replace(/\s+/g, ' ');
-    expect(css).to.include('@container (max-width: 639.98px)');
+    expect(css).to.include('@container (max-inline-size: 639.98px)');
   });
 
   it('falls back to the built-in English vote label and honors a strings override', async () => {
-    const el = (await fixture(html`<lyra-compare-panel></lyra-compare-panel>`)) as LyraComparePanel;
+    const el = (await fixture(html`<lr-compare-panel></lr-compare-panel>`)) as LyraComparePanel;
     await el.updateComplete;
     expect(el.shadowRoot!.querySelector('[part="vote-bar"]')!.getAttribute('aria-label')).to.equal('Vote');
     el.strings = { compareVoteLabel: 'Voter' };
@@ -75,12 +75,12 @@ describe('lyra-compare-panel', () => {
   });
 
   it('falls back to the built-in English panel label and lets a host aria-label win', async () => {
-    const el = (await fixture(html`<lyra-compare-panel></lyra-compare-panel>`)) as LyraComparePanel;
+    const el = (await fixture(html`<lr-compare-panel></lr-compare-panel>`)) as LyraComparePanel;
     await el.updateComplete;
     expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('Comparison');
 
     const withHostLabel = (await fixture(
-      html`<lyra-compare-panel aria-label="Eval pair 12"></lyra-compare-panel>`,
+      html`<lr-compare-panel aria-label="Eval pair 12"></lr-compare-panel>`,
     )) as LyraComparePanel;
     await withHostLabel.updateComplete;
     expect(withHostLabel.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal(
@@ -90,10 +90,10 @@ describe('lyra-compare-panel', () => {
 
   it('is accessible', async () => {
     const el = (await fixture(html`
-      <lyra-compare-panel label-a="Model A" label-b="Model B">
+      <lr-compare-panel label-a="Model A" label-b="Model B">
         <span slot="a">Answer A</span>
         <span slot="b">Answer B</span>
-      </lyra-compare-panel>
+      </lr-compare-panel>
     `)) as LyraComparePanel;
     await el.updateComplete;
     await expect(el).to.be.accessible();

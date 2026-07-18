@@ -7,48 +7,48 @@ export const styles = css`
   [part='base'] {
     display: flex;
     flex-direction: column;
-    gap: var(--lyra-space-s);
+    gap: var(--lr-space-s);
     box-sizing: border-box;
     overflow: hidden;
-    border: var(--lyra-border-width-thin) solid var(--lyra-color-border);
-    border-radius: var(--lyra-radius);
-    background: var(--lyra-color-surface);
+    border: var(--lr-border-width-thin) solid var(--lr-color-border);
+    border-radius: var(--lr-radius);
+    background: var(--lr-color-surface);
   }
   [part='toolbar'] {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: var(--lyra-space-s);
-    padding: var(--lyra-space-s) var(--lyra-space-m);
-    border-block-end: var(--lyra-border-width-thin) solid var(--lyra-color-border);
+    gap: var(--lr-space-s);
+    padding: var(--lr-space-s) var(--lr-space-m);
+    border-block-end: var(--lr-border-width-thin) solid var(--lr-color-border);
   }
   [part='previous-button'],
   [part='next-button'] {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    /* Meets the shared minimum tappable size (same --lyra-icon-button-size
-       floor as lyra-code-block's [part='toggle']) -- the toolbar has ample
+    /* Meets the shared minimum tappable size (same --lr-icon-button-size
+       floor as lr-code-block's [part='toggle']) -- the toolbar has ample
        room (flex + justify-content: space-between), so the button box
        itself grows rather than relying on invisible hit-slop. */
-    min-inline-size: var(--lyra-icon-button-size);
-    min-block-size: var(--lyra-icon-button-size);
+    min-inline-size: var(--lr-icon-button-size);
+    min-block-size: var(--lr-icon-button-size);
     padding: 0;
-    border: var(--lyra-border-width-thin) solid var(--lyra-color-border);
-    border-radius: var(--lyra-radius);
-    background: var(--lyra-color-surface);
-    color: var(--lyra-color-text);
+    border: var(--lr-border-width-thin) solid var(--lr-color-border);
+    border-radius: var(--lr-radius);
+    background: var(--lr-color-surface);
+    color: var(--lr-color-text);
     cursor: pointer;
   }
   [part='previous-button']:disabled,
   [part='next-button']:disabled {
     cursor: not-allowed;
-    opacity: var(--lyra-opacity-disabled);
+    opacity: var(--lr-opacity-disabled);
   }
   [part='previous-button']:focus-visible,
   [part='next-button']:focus-visible {
-    outline: var(--lyra-focus-ring-width) solid var(--lyra-focus-ring-color);
-    outline-offset: var(--lyra-focus-ring-offset);
+    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
+    outline-offset: var(--lr-focus-ring-offset);
   }
   [part='previous-icon'],
   [part='next-icon'] {
@@ -59,7 +59,7 @@ export const styles = css`
   :host(:dir(rtl)) [part='next-icon'] { transform: rotate(180deg); }
   [part='mount'] {
     flex: 1 1 auto;
-    min-block-size: var(--lyra-size-10rem);
+    min-block-size: var(--lr-size-10rem);
     overflow: hidden;
   }
   [part='mount'] iframe {
@@ -69,9 +69,9 @@ export const styles = css`
   .status-note,
   [part='error'] {
     margin: 0;
-    padding: var(--lyra-space-l);
+    padding: var(--lr-space-l);
     text-align: center;
   }
-  .status-note { color: var(--lyra-color-text-quiet); }
-  [part='error'] { color: var(--lyra-color-danger); }
+  .status-note { color: var(--lr-color-text-quiet); }
+  [part='error'] { color: var(--lr-color-danger); }
 `;

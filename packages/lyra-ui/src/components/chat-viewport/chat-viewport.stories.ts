@@ -6,7 +6,7 @@ import type { LyraChatViewport } from './chat-viewport.class.js';
 
 const meta: Meta = {
   title: 'ChatViewport',
-  component: 'lyra-chat-viewport',
+  component: 'lr-chat-viewport',
   tags: ['autodocs'],
   parameters: {
     docs: {
@@ -22,7 +22,7 @@ type Story = StoryObj;
 
 function bubble(text: string): ReturnType<typeof html> {
   return html`<div
-    style="padding:8px 12px;border-radius:8px;background:var(--lyra-color-surface-raised);max-width:70%;"
+    style="padding:8px 12px;border-radius:8px;background:var(--lr-color-surface-raised);max-width:70%;"
   >
     ${text}
   </div>`;
@@ -30,22 +30,22 @@ function bubble(text: string): ReturnType<typeof html> {
 
 export const SlottedMode: Story = {
   render: () => html`
-    <div style="block-size:320px;border:1px solid var(--lyra-color-border);">
-      <lyra-chat-viewport>
+    <div style="block-size:320px;border:1px solid var(--lr-color-border);">
+      <lr-chat-viewport>
         ${bubble('Hello!')} ${bubble('How can I help today?')} ${bubble('Can you summarize the last deploy?')}
         ${bubble('Sure — three services restarted cleanly, error rates are back to baseline.')}
-      </lyra-chat-viewport>
+      </lr-chat-viewport>
     </div>
   `,
 };
 
 export const WithUnreadDivider: Story = {
   render: () => html`
-    <div style="block-size:200px;border:1px solid var(--lyra-color-border);">
-      <lyra-chat-viewport unread-start-index="2" .follow=${false}>
+    <div style="block-size:200px;border:1px solid var(--lr-color-border);">
+      <lr-chat-viewport unread-start-index="2" .follow=${false}>
         ${bubble('Earlier message 1')} ${bubble('Earlier message 2')} ${bubble('New message 1')}
         ${bubble('New message 2')}
-      </lyra-chat-viewport>
+      </lr-chat-viewport>
     </div>
   `,
 };
@@ -77,7 +77,7 @@ export const StreamingFollow: Story = {
     ];
 
     function wire(root: HTMLElement): void {
-      const viewport = root.querySelector<LyraChatViewport>('lyra-chat-viewport')!;
+      const viewport = root.querySelector<LyraChatViewport>('lr-chat-viewport')!;
       if (viewport.hasAttribute('data-wired')) return;
       viewport.setAttribute('data-wired', '');
       const status = root.querySelector<HTMLElement>('[data-status]')!;
@@ -97,14 +97,14 @@ export const StreamingFollow: Story = {
       root.querySelector('[data-start]')!.addEventListener('click', () => {
         const next = document.createElement('div');
         next.style.cssText =
-          'padding:8px 12px;border-radius:8px;background:var(--lyra-color-surface-raised);max-width:70%;';
+          'padding:8px 12px;border-radius:8px;background:var(--lr-color-surface-raised);max-width:70%;';
         viewport.appendChild(next);
         streaming = next;
         i = 0;
         status.textContent = 'Streaming… try scrolling up to release follow, then use the pill to jump back down.';
         setTimeout(tick, 120);
       });
-      viewport.addEventListener('lyra-follow-change', (e) => {
+      viewport.addEventListener('lr-follow-change', (e) => {
         const following = (e as CustomEvent<{ following: boolean }>).detail.following;
         if (!following) status.textContent = 'Follow released — new content no longer auto-scrolls.';
         else if (!streaming) status.textContent = 'Following again.';
@@ -115,18 +115,18 @@ export const StreamingFollow: Story = {
         style="display:flex; flex-direction:column; gap:0.75rem; max-width:28rem;"
         @click=${(e: Event) => wire(e.currentTarget as HTMLElement)}
       >
-        <div style="block-size:220px;border:1px solid var(--lyra-color-border);">
-          <lyra-chat-viewport>
+        <div style="block-size:220px;border:1px solid var(--lr-color-border);">
+          <lr-chat-viewport>
             ${bubble('Can you summarize the last deploy?')}
-          </lyra-chat-viewport>
+          </lr-chat-viewport>
         </div>
         <button
           data-start
-          style="font:inherit; font-size:0.8125rem; padding:0.3rem 0.7rem; border:1px solid var(--lyra-color-border); border-radius:var(--lyra-radius); background:var(--lyra-color-surface); cursor:pointer; align-self:flex-start;"
+          style="font:inherit; font-size:0.8125rem; padding:0.3rem 0.7rem; border:1px solid var(--lr-color-border); border-radius:var(--lr-radius); background:var(--lr-color-surface); cursor:pointer; align-self:flex-start;"
         >
           Stream a reply
         </button>
-        <p data-status style="font-size:0.8125rem; color:var(--lyra-color-text-quiet); margin:0;">
+        <p data-status style="font-size:0.8125rem; color:var(--lr-color-text-quiet); margin:0;">
           Click "Stream a reply" to start.
         </p>
       </div>
@@ -136,16 +136,16 @@ export const StreamingFollow: Story = {
 
 export const VirtualMode: Story = {
   render: () => html`
-    <div style="block-size:320px;border:1px solid var(--lyra-color-border);">
-      <lyra-chat-viewport>
-        <lyra-virtual-list
-          style="--lyra-virtual-list-height:320px"
+    <div style="block-size:320px;border:1px solid var(--lr-color-border);">
+      <lr-chat-viewport>
+        <lr-virtual-list
+          style="--lr-virtual-list-height:320px"
           row-height="48"
           .items=${Array.from({ length: 200 }, (_, i) => i)}
           .renderItem=${(item: unknown) => bubble(`Message ${item}`)}
           .keyFunction=${(item: unknown) => item as number}
-        ></lyra-virtual-list>
-      </lyra-chat-viewport>
+        ></lr-virtual-list>
+      </lr-chat-viewport>
     </div>
   `,
 };
@@ -153,10 +153,10 @@ export const VirtualMode: Story = {
 export const Narrow320px: Story = {
   name: 'Narrow (320px)',
   render: () => html`
-    <div style="max-width:320px;block-size:200px;border:1px dashed var(--lyra-color-border);">
-      <lyra-chat-viewport .follow=${false} unread-start-index="1">
+    <div style="max-width:320px;block-size:200px;border:1px dashed var(--lr-color-border);">
+      <lr-chat-viewport .follow=${false} unread-start-index="1">
         ${bubble('First message')} ${bubble('A somewhat longer second message to check wrapping behavior')}
-      </lyra-chat-viewport>
+      </lr-chat-viewport>
     </div>
   `,
 };

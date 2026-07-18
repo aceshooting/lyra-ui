@@ -30,7 +30,7 @@ const DEFAULT_THROTTLE_MS = 500;
  * terminal message (e.g. "response complete") is never swallowed mid-burst.
  *
  * This is pure timing/state logic with no DOM dependency — it knows nothing
- * about ARIA, elements, or Lit. `<lyra-live-region>`
+ * about ARIA, elements, or Lit. `<lr-live-region>`
  * (`../components/live-region/live-region.js`) is the DOM-facing wrapper
  * that composes one of these with an actual live-region element. Other
  * components that need throttled announcements (a stream-status indicator,

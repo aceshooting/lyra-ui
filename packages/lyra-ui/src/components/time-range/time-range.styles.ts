@@ -13,33 +13,33 @@ export const styles = css`
   [part='presets'] {
     display: flex;
     flex-wrap: wrap;
-    gap: var(--lyra-space-xs);
-    margin-block-end: var(--lyra-space-s);
+    gap: var(--lr-space-xs);
+    margin-block-end: var(--lr-space-s);
   }
   [part='preset-button'] {
     display: inline-flex;
     align-items: center;
-    padding: var(--lyra-space-xs) var(--lyra-space-s);
-    border: var(--lyra-border-width-thin) solid var(--lyra-color-border);
-    border-radius: var(--lyra-radius);
-    background: var(--lyra-color-surface);
-    color: var(--lyra-color-text);
+    padding: var(--lr-space-xs) var(--lr-space-s);
+    border: var(--lr-border-width-thin) solid var(--lr-color-border);
+    border-radius: var(--lr-radius);
+    background: var(--lr-color-surface);
+    color: var(--lr-color-text);
     font: inherit;
-    font-size: var(--lyra-font-size-sm);
+    font-size: var(--lr-font-size-sm);
     cursor: pointer;
-    transition: var(--lyra-transition-fast);
+    transition: var(--lr-transition-fast);
   }
   [part='preset-button']:hover:not(:disabled) {
-    border-color: var(--lyra-color-brand);
+    border-color: var(--lr-color-brand);
   }
   [part='preset-button']:focus-visible {
-    outline: var(--lyra-focus-ring-width) solid var(--lyra-focus-ring-color);
-    outline-offset: var(--lyra-focus-ring-offset);
+    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
+    outline-offset: var(--lr-focus-ring-offset);
   }
   [part='preset-button'][data-active] {
-    background: var(--lyra-color-brand);
-    border-color: var(--lyra-color-brand);
-    color: var(--lyra-color-on-brand);
+    background: var(--lr-color-brand);
+    border-color: var(--lr-color-brand);
+    color: var(--lr-color-on-brand);
   }
   [part='preset-button']:disabled {
     /* Dimming already comes from :host([disabled])'s opacity below (applies
@@ -51,31 +51,31 @@ export const styles = css`
   [part='base'] {
     position: relative;
     inline-size: 100%;
-    block-size: var(--lyra-size-1-5rem);
+    block-size: var(--lr-size-1-5rem);
     display: flex;
     align-items: center;
   }
   [part='track'] {
     position: absolute;
     inset-inline: 0;
-    block-size: var(--lyra-size-4px);
-    border-radius: var(--lyra-size-2px);
-    background: var(--lyra-color-border);
+    block-size: var(--lr-size-4px);
+    border-radius: var(--lr-size-2px);
+    background: var(--lr-color-border);
   }
   [part='range'] {
     position: absolute;
-    block-size: var(--lyra-size-4px);
-    border-radius: var(--lyra-size-2px);
-    background: var(--lyra-color-brand);
+    block-size: var(--lr-size-4px);
+    border-radius: var(--lr-size-2px);
+    background: var(--lr-color-brand);
   }
   [part^='handle'] {
     position: absolute;
-    inline-size: var(--lyra-size-14px);
-    block-size: var(--lyra-size-14px);
+    inline-size: var(--lr-size-14px);
+    block-size: var(--lr-size-14px);
     border-radius: 50%;
-    background: var(--lyra-color-brand);
-    border: var(--lyra-border-width-medium) solid var(--lyra-color-surface);
-    box-shadow: var(--lyra-shadow);
+    background: var(--lr-color-brand);
+    border: var(--lr-border-width-medium) solid var(--lr-color-surface);
+    box-shadow: var(--lr-shadow);
     transform: translateX(-50%);
     cursor: grab;
     touch-action: none;
@@ -90,7 +90,7 @@ export const styles = css`
     transform: translateX(50%);
   }
   /*
-   * The visible dot stays var(--lyra-size-14px) by design, but that's well under the ~var(--lyra-size-24px)
+   * The visible dot stays var(--lr-size-14px) by design, but that's well under the ~var(--lr-size-24px)
    * minimum touch target size despite \`touch-action: none\` signalling this
    * is meant to be touch-dragged. Widen the actual hit/drag area with a
    * transparent ::before instead of growing the handle box itself:
@@ -106,8 +106,8 @@ export const styles = css`
     position: absolute;
     inset-block-start: 50%;
     inset-inline-start: 50%;
-    inline-size: var(--lyra-size-28px);
-    block-size: var(--lyra-size-28px);
+    inline-size: var(--lr-size-28px);
+    block-size: var(--lr-size-28px);
     transform: translate(-50%, -50%);
     border-radius: 50%;
   }
@@ -119,11 +119,11 @@ export const styles = css`
     transform: translate(50%, -50%);
   }
   [part^='handle']:focus-visible {
-    outline: var(--lyra-focus-ring-width) solid var(--lyra-focus-ring-color);
-    outline-offset: var(--lyra-focus-ring-offset);
+    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
+    outline-offset: var(--lr-focus-ring-offset);
   }
   :host([disabled]) {
-    opacity: var(--lyra-opacity-disabled);
+    opacity: var(--lr-opacity-disabled);
     cursor: not-allowed;
   }
   :host([disabled]) [part^='handle'] {

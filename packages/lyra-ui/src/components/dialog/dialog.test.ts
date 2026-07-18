@@ -4,15 +4,15 @@ import type { LyraDialog } from './dialog.js';
 import { styles } from './dialog.styles.js';
 
 it('includes safe-area insets in the fixed dialog frame', () => {
-  expect(styles.cssText).to.include('var(--lyra-safe-area-top)');
-  expect(styles.cssText).to.include('var(--lyra-safe-area-bottom)');
-  expect(styles.cssText).to.include('var(--lyra-safe-area-inline-start)');
-  expect(styles.cssText).to.include('var(--lyra-safe-area-inline-end)');
+  expect(styles.cssText).to.include('var(--lr-safe-area-top)');
+  expect(styles.cssText).to.include('var(--lr-safe-area-bottom)');
+  expect(styles.cssText).to.include('var(--lr-safe-area-inline-start)');
+  expect(styles.cssText).to.include('var(--lr-safe-area-inline-end)');
 });
 
-// A stand-in for a slotted component (e.g. lyra-combobox) whose real
+// A stand-in for a slotted component (e.g. lr-combobox) whose real
 // focusable target lives inside its own shadow root rather than the host
-// tag's light-DOM subtree. Mirrors lyra-widget's identical test fixture,
+// tag's light-DOM subtree. Mirrors lr-widget's identical test fixture,
 // under a distinct tag name so both test files can register their own copy
 // in the same browser context.
 class DialogTestShadowInput extends HTMLElement {
@@ -27,7 +27,7 @@ class DialogTestShadowInput extends HTMLElement {
 customElements.define('dialog-test-shadow-input', DialogTestShadowInput);
 
 it('renders closed by default, with no role/aria-modal on the panel', async () => {
-  const el = (await fixture(html`<lyra-dialog label="Untitled">body</lyra-dialog>`)) as LyraDialog;
+  const el = (await fixture(html`<lr-dialog label="Untitled">body</lr-dialog>`)) as LyraDialog;
   const panel = el.shadowRoot!.querySelector('[part="panel"]') as HTMLElement;
   expect(el.open).to.be.false;
   expect(el.hasAttribute('open')).to.be.false;
@@ -36,7 +36,7 @@ it('renders closed by default, with no role/aria-modal on the panel', async () =
 });
 
 it('reflects open as an attribute and sets dialog semantics once open', async () => {
-  const el = (await fixture(html`<lyra-dialog label="Untitled">body</lyra-dialog>`)) as LyraDialog;
+  const el = (await fixture(html`<lr-dialog label="Untitled">body</lr-dialog>`)) as LyraDialog;
   el.open = true;
   await el.updateComplete;
 
@@ -46,10 +46,10 @@ it('reflects open as an attribute and sets dialog semantics once open', async ()
   expect(panel.getAttribute('aria-modal')).to.equal('true');
 });
 
-it('closes on backdrop click and emits lyra-dialog-close with reason "backdrop"', async () => {
-  const el = (await fixture(html`<lyra-dialog label="Untitled" open>body</lyra-dialog>`)) as LyraDialog;
+it('closes on backdrop click and emits lr-dialog-close with reason "backdrop"', async () => {
+  const el = (await fixture(html`<lr-dialog label="Untitled" open>body</lr-dialog>`)) as LyraDialog;
   let detail: unknown;
-  el.addEventListener('lyra-dialog-close', (e) => (detail = (e as CustomEvent).detail));
+  el.addEventListener('lr-dialog-close', (e) => (detail = (e as CustomEvent).detail));
 
   (el.shadowRoot!.querySelector('[part="backdrop"]') as HTMLElement).click();
   await el.updateComplete;
@@ -58,10 +58,10 @@ it('closes on backdrop click and emits lyra-dialog-close with reason "backdrop"'
   expect(detail).to.equal('backdrop');
 });
 
-it('closes on Escape and emits lyra-dialog-close with reason "escape"', async () => {
-  const el = (await fixture(html`<lyra-dialog label="Untitled" open>body</lyra-dialog>`)) as LyraDialog;
+it('closes on Escape and emits lr-dialog-close with reason "escape"', async () => {
+  const el = (await fixture(html`<lr-dialog label="Untitled" open>body</lr-dialog>`)) as LyraDialog;
   let detail: unknown;
-  el.addEventListener('lyra-dialog-close', (e) => (detail = (e as CustomEvent).detail));
+  el.addEventListener('lr-dialog-close', (e) => (detail = (e as CustomEvent).detail));
 
   document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
   await el.updateComplete;
@@ -71,9 +71,9 @@ it('closes on Escape and emits lyra-dialog-close with reason "escape"', async ()
 });
 
 it('does not respond to Escape while closed', async () => {
-  const el = (await fixture(html`<lyra-dialog label="Untitled">body</lyra-dialog>`)) as LyraDialog;
+  const el = (await fixture(html`<lr-dialog label="Untitled">body</lr-dialog>`)) as LyraDialog;
   let fired = false;
-  el.addEventListener('lyra-dialog-close', () => (fired = true));
+  el.addEventListener('lr-dialog-close', () => (fired = true));
 
   document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
   await el.updateComplete;
@@ -82,9 +82,9 @@ it('does not respond to Escape while closed', async () => {
 });
 
 it('close() is a no-op when already closed (no duplicate event, no error)', async () => {
-  const el = (await fixture(html`<lyra-dialog label="Untitled">body</lyra-dialog>`)) as LyraDialog;
+  const el = (await fixture(html`<lr-dialog label="Untitled">body</lr-dialog>`)) as LyraDialog;
   let count = 0;
-  el.addEventListener('lyra-dialog-close', () => count++);
+  el.addEventListener('lr-dialog-close', () => count++);
 
   el.close('api');
   el.close('api');
@@ -94,10 +94,10 @@ it('close() is a no-op when already closed (no duplicate event, no error)', asyn
 });
 
 it('close() sets open false, emits with the given reason, and is idempotent once closed', async () => {
-  const el = (await fixture(html`<lyra-dialog label="Untitled" open>body</lyra-dialog>`)) as LyraDialog;
+  const el = (await fixture(html`<lr-dialog label="Untitled" open>body</lr-dialog>`)) as LyraDialog;
   let count = 0;
   let detail: unknown;
-  el.addEventListener('lyra-dialog-close', (e) => {
+  el.addEventListener('lr-dialog-close', (e) => {
     count++;
     detail = (e as CustomEvent).detail;
   });
@@ -113,7 +113,7 @@ it('close() sets open false, emits with the given reason, and is idempotent once
 
 it('moves focus into the panel to the first focusable element when opened', async () => {
   const el = (await fixture(
-    html`<lyra-dialog label="Untitled"><button>first</button><button>second</button></lyra-dialog>`,
+    html`<lr-dialog label="Untitled"><button>first</button><button>second</button></lr-dialog>`,
   )) as LyraDialog;
   const first = el.querySelector('button') as HTMLButtonElement;
 
@@ -121,13 +121,13 @@ it('moves focus into the panel to the first focusable element when opened', asyn
   await el.updateComplete;
 
   // The focusable elements are light-DOM slot content, so the focused node
-  // reads directly off `document.activeElement` -- unlike lyra-widget's own
+  // reads directly off `document.activeElement` -- unlike lr-widget's own
   // shadow-DOM buttons, there's no shadow-root indirection here.
   expect(document.activeElement).to.equal(first);
 });
 
 it('focuses the panel itself as a fallback when there is nothing focusable', async () => {
-  const el = (await fixture(html`<lyra-dialog label="Untitled"><p>no controls</p></lyra-dialog>`)) as LyraDialog;
+  const el = (await fixture(html`<lr-dialog label="Untitled"><p>no controls</p></lr-dialog>`)) as LyraDialog;
   el.open = true;
   await el.updateComplete;
 
@@ -140,7 +140,7 @@ it('returns focus to the element that was focused before the dialog opened', asy
   document.body.appendChild(trigger);
   trigger.focus();
 
-  const el = (await fixture(html`<lyra-dialog label="Untitled"><button>inside</button></lyra-dialog>`)) as LyraDialog;
+  const el = (await fixture(html`<lr-dialog label="Untitled"><button>inside</button></lr-dialog>`)) as LyraDialog;
   const inside = el.querySelector('button') as HTMLButtonElement;
   el.open = true;
   await el.updateComplete;
@@ -154,7 +154,7 @@ it('returns focus to the element that was focused before the dialog opened', asy
 });
 
 it('locks document scroll while open and releases it on close', async () => {
-  const el = (await fixture(html`<lyra-dialog label="Untitled">body</lyra-dialog>`)) as LyraDialog;
+  const el = (await fixture(html`<lr-dialog label="Untitled">body</lr-dialog>`)) as LyraDialog;
   el.open = true;
   await el.updateComplete;
   expect(document.documentElement.style.overflow).to.equal('hidden');
@@ -165,7 +165,7 @@ it('locks document scroll while open and releases it on close', async () => {
 });
 
 it('releases the scroll lock on disconnect while open', async () => {
-  const el = (await fixture(html`<lyra-dialog label="Untitled" open>body</lyra-dialog>`)) as LyraDialog;
+  const el = (await fixture(html`<lr-dialog label="Untitled" open>body</lr-dialog>`)) as LyraDialog;
   await el.updateComplete;
   expect(document.documentElement.style.overflow).to.equal('hidden');
 
@@ -175,7 +175,7 @@ it('releases the scroll lock on disconnect while open', async () => {
 });
 
 it('restores the scroll lock and keydown trap when reparented while still open', async () => {
-  const el = (await fixture(html`<lyra-dialog label="Untitled" open>body</lyra-dialog>`)) as LyraDialog;
+  const el = (await fixture(html`<lr-dialog label="Untitled" open>body</lr-dialog>`)) as LyraDialog;
   await el.updateComplete;
   expect(document.documentElement.style.overflow).to.equal('hidden');
 
@@ -196,9 +196,9 @@ it('restores the scroll lock and keydown trap when reparented while still open',
 
 it('traps Tab focus inside the panel, wrapping last->first and first->last', async () => {
   const el = (await fixture(
-    html`<lyra-dialog label="Untitled" open
+    html`<lr-dialog label="Untitled" open
       ><button>first</button
-      ><div slot="footer"><button>last</button></div></lyra-dialog
+      ><div slot="footer"><button>last</button></div></lr-dialog
     >`,
   )) as LyraDialog;
   await el.updateComplete;
@@ -223,7 +223,7 @@ it('traps Tab focus inside the panel, wrapping last->first and first->last', asy
 });
 
 it('prevents Tab from doing anything when there is nothing focusable', async () => {
-  const el = (await fixture(html`<lyra-dialog label="Untitled" open><p>no controls</p></lyra-dialog>`)) as LyraDialog;
+  const el = (await fixture(html`<lr-dialog label="Untitled" open><p>no controls</p></lr-dialog>`)) as LyraDialog;
   await el.updateComplete;
 
   const tab = new KeyboardEvent('keydown', { key: 'Tab', bubbles: true, cancelable: true });
@@ -234,7 +234,7 @@ it('prevents Tab from doing anything when there is nothing focusable', async () 
 
 it('does not intercept a forward Tab press that is not leaving the last focusable element', async () => {
   const el = (await fixture(
-    html`<lyra-dialog label="Untitled" open><button>a</button><button>b</button></lyra-dialog>`,
+    html`<lr-dialog label="Untitled" open><button>a</button><button>b</button></lr-dialog>`,
   )) as LyraDialog;
   await el.updateComplete;
   const a = el.querySelectorAll('button')[0];
@@ -248,9 +248,9 @@ it('does not intercept a forward Tab press that is not leaving the last focusabl
 
 it('traps Tab/Shift+Tab at a slotted element whose focusable target lives in its own shadow root', async () => {
   const el = (await fixture(
-    html`<lyra-dialog label="Untitled" open
+    html`<lr-dialog label="Untitled" open
       ><dialog-test-shadow-input></dialog-test-shadow-input
-      ><div slot="footer"><button>last</button></div></lyra-dialog
+      ><div slot="footer"><button>last</button></div></lr-dialog
     >`,
   )) as LyraDialog;
   await el.updateComplete;
@@ -277,7 +277,7 @@ it('traps Tab/Shift+Tab at a slotted element whose focusable target lives in its
 });
 
 it('uses the label prop for aria-labelledby via an invisible element when no heading is slotted', async () => {
-  const el = (await fixture(html`<lyra-dialog label="Delete item?">body</lyra-dialog>`)) as LyraDialog;
+  const el = (await fixture(html`<lr-dialog label="Delete item?">body</lr-dialog>`)) as LyraDialog;
   await el.updateComplete;
   const panel = el.shadowRoot!.querySelector('[part="panel"]') as HTMLElement;
   const labelledby = panel.getAttribute('aria-labelledby');
@@ -289,7 +289,7 @@ it('uses the label prop for aria-labelledby via an invisible element when no hea
 
 it('prefers a slotted heading over the label prop, using aria-label (not aria-labelledby) for it', async () => {
   const el = (await fixture(
-    html`<lyra-dialog label="ignored"><h2>Real heading</h2></lyra-dialog>`,
+    html`<lr-dialog label="ignored"><h2>Real heading</h2></lr-dialog>`,
   )) as LyraDialog;
   await el.updateComplete;
   const panel = el.shadowRoot!.querySelector('[part="panel"]') as HTMLElement;
@@ -304,7 +304,7 @@ it('prefers a slotted heading over the label prop, using aria-label (not aria-la
 });
 
 it('re-detects a heading added after the initial render via slotchange', async () => {
-  const el = (await fixture(html`<lyra-dialog label="fallback">body</lyra-dialog>`)) as LyraDialog;
+  const el = (await fixture(html`<lr-dialog label="fallback">body</lr-dialog>`)) as LyraDialog;
   await el.updateComplete;
   let panel = el.shadowRoot!.querySelector('[part="panel"]') as HTMLElement;
   expect(panel.getAttribute('aria-labelledby')).to.equal(el.shadowRoot!.querySelector('[part="label"]')!.id);
@@ -322,7 +322,7 @@ it('re-detects a heading added after the initial render via slotchange', async (
 });
 
 it('renders a visible header with the heading text and uses it for aria-labelledby when no heading is slotted', async () => {
-  const el = (await fixture(html`<lyra-dialog heading="Title">body</lyra-dialog>`)) as LyraDialog;
+  const el = (await fixture(html`<lr-dialog heading="Title">body</lr-dialog>`)) as LyraDialog;
   await el.updateComplete;
   const panel = el.shadowRoot!.querySelector('[part="panel"]') as HTMLElement;
   const headingEl = el.shadowRoot!.querySelector('[part="heading"]') as HTMLElement;
@@ -340,7 +340,7 @@ it('renders a visible header with the heading text and uses it for aria-labelled
 
 it('a slotted heading still wins over `heading` when both are present', async () => {
   const el = (await fixture(
-    html`<lyra-dialog heading="ignored"><h2>Real heading</h2></lyra-dialog>`,
+    html`<lr-dialog heading="ignored"><h2>Real heading</h2></lr-dialog>`,
   )) as LyraDialog;
   await el.updateComplete;
   const panel = el.shadowRoot!.querySelector('[part="panel"]') as HTMLElement;
@@ -351,7 +351,7 @@ it('a slotted heading still wins over `heading` when both are present', async ()
 });
 
 it('a consumer-slotted heading keeps working completely unchanged when `heading` is left unset', async () => {
-  const el = (await fixture(html`<lyra-dialog><h2>Real heading</h2></lyra-dialog>`)) as LyraDialog;
+  const el = (await fixture(html`<lr-dialog><h2>Real heading</h2></lr-dialog>`)) as LyraDialog;
   await el.updateComplete;
   const panel = el.shadowRoot!.querySelector('[part="panel"]') as HTMLElement;
 
@@ -363,7 +363,7 @@ it('a consumer-slotted heading keeps working completely unchanged when `heading`
 describe('aria-label host attribute (ARIA-name forwarding)', () => {
   it('wins over the label prop -- previously silently ignored', async () => {
     const el = (await fixture(
-      html`<lyra-dialog label="Delete item?" aria-label="Custom name">body</lyra-dialog>`,
+      html`<lr-dialog label="Delete item?" aria-label="Custom name">body</lr-dialog>`,
     )) as LyraDialog;
     await el.updateComplete;
     const panel = el.shadowRoot!.querySelector('[part="panel"]') as HTMLElement;
@@ -376,7 +376,7 @@ describe('aria-label host attribute (ARIA-name forwarding)', () => {
 
   it('wins over the heading prop, including its visible header chrome', async () => {
     const el = (await fixture(
-      html`<lyra-dialog heading="Title" aria-label="Custom name">body</lyra-dialog>`,
+      html`<lr-dialog heading="Title" aria-label="Custom name">body</lr-dialog>`,
     )) as LyraDialog;
     await el.updateComplete;
     const panel = el.shadowRoot!.querySelector('[part="panel"]') as HTMLElement;
@@ -388,7 +388,7 @@ describe('aria-label host attribute (ARIA-name forwarding)', () => {
 
   it('wins even over a slotted heading', async () => {
     const el = (await fixture(
-      html`<lyra-dialog aria-label="Custom name"><h2>Real heading</h2></lyra-dialog>`,
+      html`<lr-dialog aria-label="Custom name"><h2>Real heading</h2></lr-dialog>`,
     )) as LyraDialog;
     await el.updateComplete;
     const panel = el.shadowRoot!.querySelector('[part="panel"]') as HTMLElement;
@@ -398,7 +398,7 @@ describe('aria-label host attribute (ARIA-name forwarding)', () => {
   });
 
   it("leaves today's 3-tier precedence untouched when aria-label is left unset (regression)", async () => {
-    const el = (await fixture(html`<lyra-dialog label="Delete item?">body</lyra-dialog>`)) as LyraDialog;
+    const el = (await fixture(html`<lr-dialog label="Delete item?">body</lr-dialog>`)) as LyraDialog;
     await el.updateComplete;
     const panel = el.shadowRoot!.querySelector('[part="panel"]') as HTMLElement;
     expect(panel.hasAttribute('aria-label')).to.be.false;
@@ -407,7 +407,7 @@ describe('aria-label host attribute (ARIA-name forwarding)', () => {
 
   it('is accessible with only a host aria-label attribute set (no label/heading props)', async () => {
     const el = (await fixture(
-      html`<lyra-dialog aria-label="Delete item?" open>Are you sure?</lyra-dialog>`,
+      html`<lr-dialog aria-label="Delete item?" open>Are you sure?</lr-dialog>`,
     )) as LyraDialog;
     await el.updateComplete;
     await expect(el).to.be.accessible();
@@ -415,16 +415,16 @@ describe('aria-label host attribute (ARIA-name forwarding)', () => {
 });
 
 it('renders no header row at all when both `heading` and `closable` are unset (default)', async () => {
-  const el = (await fixture(html`<lyra-dialog label="Untitled">body</lyra-dialog>`)) as LyraDialog;
+  const el = (await fixture(html`<lr-dialog label="Untitled">body</lr-dialog>`)) as LyraDialog;
   await el.updateComplete;
   expect(el.shadowRoot!.querySelector('[part="header"]')).to.not.exist;
 });
 
 it('renders a close button when closable is set, which closes the dialog via the same close() path as Escape/backdrop', async () => {
-  const el = (await fixture(html`<lyra-dialog label="Untitled" open closable>body</lyra-dialog>`)) as LyraDialog;
+  const el = (await fixture(html`<lr-dialog label="Untitled" open closable>body</lr-dialog>`)) as LyraDialog;
   await el.updateComplete;
   let detail: unknown;
-  el.addEventListener('lyra-dialog-close', (e) => (detail = (e as CustomEvent).detail));
+  el.addEventListener('lr-dialog-close', (e) => (detail = (e as CustomEvent).detail));
 
   const closeButton = el.shadowRoot!.querySelector('[part="close-button"]') as HTMLButtonElement;
   expect(closeButton).to.exist;
@@ -436,7 +436,7 @@ it('renders a close button when closable is set, which closes the dialog via the
 });
 
 it('renders a header row containing just the close button when closable is set but heading is unset', async () => {
-  const el = (await fixture(html`<lyra-dialog label="Untitled" closable>body</lyra-dialog>`)) as LyraDialog;
+  const el = (await fixture(html`<lr-dialog label="Untitled" closable>body</lr-dialog>`)) as LyraDialog;
   await el.updateComplete;
   const header = el.shadowRoot!.querySelector('[part="header"]');
   expect(header).to.exist;
@@ -444,11 +444,11 @@ it('renders a header row containing just the close button when closable is set b
   expect(header!.querySelector('[part="close-button"]')).to.exist;
 });
 
-it('defaults --lyra-dialog-max-width\'s effect to 32rem, overridable via the CSS custom property on the host', async () => {
+it('defaults --lr-dialog-max-width\'s effect to 32rem, overridable via the CSS custom property on the host', async () => {
   // `open` so the panel is actually part of the render tree: WebKit doesn't
   // recompute custom-property-dependent values inside a `display: none`
   // subtree after the property changes, even after forcing layout.
-  const el = (await fixture(html`<lyra-dialog label="Untitled" open>body</lyra-dialog>`)) as LyraDialog;
+  const el = (await fixture(html`<lr-dialog label="Untitled" open>body</lr-dialog>`)) as LyraDialog;
   await el.updateComplete;
   const panel = el.shadowRoot!.querySelector('[part="panel"]') as HTMLElement;
   // getComputedStyle resolves rem to px, so compare against the root font
@@ -456,13 +456,13 @@ it('defaults --lyra-dialog-max-width\'s effect to 32rem, overridable via the CSS
   const remPx = parseFloat(getComputedStyle(document.documentElement).fontSize);
   expect(getComputedStyle(panel).maxInlineSize).to.equal(`min(${32 * remPx}px, 100%)`);
 
-  el.style.setProperty('--lyra-dialog-max-width', '60rem');
+  el.style.setProperty('--lr-dialog-max-width', '60rem');
   await el.updateComplete;
   expect(getComputedStyle(panel).maxInlineSize).to.equal(`min(${60 * remPx}px, 100%)`);
 });
 
 it('hides the footer wrapper when nothing is slotted into it, shows it once slotted', async () => {
-  const el = (await fixture(html`<lyra-dialog label="Untitled">body</lyra-dialog>`)) as LyraDialog;
+  const el = (await fixture(html`<lr-dialog label="Untitled">body</lr-dialog>`)) as LyraDialog;
   const footer = el.shadowRoot!.querySelector('[part="footer"]') as HTMLElement;
   expect(footer.hasAttribute('hidden')).to.be.true;
 
@@ -477,22 +477,22 @@ it('hides the footer wrapper when nothing is slotted into it, shows it once slot
 
 it('renders the footer wrapper visible on first paint when footer content is present before upgrade', async () => {
   const el = (await fixture(
-    html`<lyra-dialog label="Untitled"><button slot="footer">OK</button>body</lyra-dialog>`,
+    html`<lr-dialog label="Untitled"><button slot="footer">OK</button>body</lr-dialog>`,
   )) as LyraDialog;
   const footer = el.shadowRoot!.querySelector('[part="footer"]') as HTMLElement;
   expect(footer.hasAttribute('hidden')).to.be.false;
 });
 
 it('is accessible while closed', async () => {
-  const el = (await fixture(html`<lyra-dialog label="Untitled">body</lyra-dialog>`)) as LyraDialog;
+  const el = (await fixture(html`<lr-dialog label="Untitled">body</lr-dialog>`)) as LyraDialog;
   await expect(el).to.be.accessible();
 });
 
 it('is accessible while open with a label prop and footer actions', async () => {
   const el = (await fixture(
-    html`<lyra-dialog label="Delete item?" open
+    html`<lr-dialog label="Delete item?" open
       >Are you sure?
-      <div slot="footer"><button>Cancel</button><button>Delete</button></div></lyra-dialog
+      <div slot="footer"><button>Cancel</button><button>Delete</button></div></lr-dialog
     >`,
   )) as LyraDialog;
   await el.updateComplete;
@@ -501,7 +501,7 @@ it('is accessible while open with a label prop and footer actions', async () => 
 
 it('is accessible while open with a slotted heading', async () => {
   const el = (await fixture(
-    html`<lyra-dialog open><h2>Delete item?</h2><p>Are you sure?</p></lyra-dialog>`,
+    html`<lr-dialog open><h2>Delete item?</h2><p>Are you sure?</p></lr-dialog>`,
   )) as LyraDialog;
   await el.updateComplete;
   await expect(el).to.be.accessible();
@@ -513,9 +513,9 @@ it('is accessible while open with a heading, closable close button, and footer a
   // populated chrome actually rendered before running axe, so the test can't silently pass
   // against a fixture that never reached the intended state.
   const el = (await fixture(
-    html`<lyra-dialog heading="Delete item?" open closable
+    html`<lr-dialog heading="Delete item?" open closable
       >Are you sure?
-      <div slot="footer"><button>Cancel</button><button>Delete</button></div></lyra-dialog
+      <div slot="footer"><button>Cancel</button><button>Delete</button></div></lr-dialog
     >`,
   )) as LyraDialog;
   await el.updateComplete;
@@ -526,8 +526,8 @@ it('is accessible while open with a heading, closable close button, and footer a
 
 describe('stacked dialogs', () => {
   it('closes only the topmost dialog on Escape, leaving dialogs beneath it open', async () => {
-    const bottom = (await fixture(html`<lyra-dialog label="Bottom" open>bottom body</lyra-dialog>`)) as LyraDialog;
-    const top = (await fixture(html`<lyra-dialog label="Top" open>top body</lyra-dialog>`)) as LyraDialog;
+    const bottom = (await fixture(html`<lr-dialog label="Bottom" open>bottom body</lr-dialog>`)) as LyraDialog;
+    const top = (await fixture(html`<lr-dialog label="Top" open>top body</lr-dialog>`)) as LyraDialog;
 
     document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
     await bottom.updateComplete;
@@ -541,8 +541,8 @@ describe('stacked dialogs', () => {
   });
 
   it('closes the new topmost dialog on a second Escape once the original topmost is gone', async () => {
-    const bottom = (await fixture(html`<lyra-dialog label="Bottom" open>bottom body</lyra-dialog>`)) as LyraDialog;
-    const top = (await fixture(html`<lyra-dialog label="Top" open>top body</lyra-dialog>`)) as LyraDialog;
+    const bottom = (await fixture(html`<lr-dialog label="Bottom" open>bottom body</lr-dialog>`)) as LyraDialog;
+    const top = (await fixture(html`<lr-dialog label="Top" open>top body</lr-dialog>`)) as LyraDialog;
 
     document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
     await bottom.updateComplete;
@@ -556,10 +556,10 @@ describe('stacked dialogs', () => {
   });
 
   it('does not swallow Tab for the topmost dialog when a dialog beneath it has no focusable content', async () => {
-    const bottom = (await fixture(html`<lyra-dialog label="Bottom" open><p>no controls</p></lyra-dialog>`)) as LyraDialog;
+    const bottom = (await fixture(html`<lr-dialog label="Bottom" open><p>no controls</p></lr-dialog>`)) as LyraDialog;
     const top = (await fixture(
-      html`<lyra-dialog label="Top" open
-        ><button>first</button><button>middle</button><button>last</button></lyra-dialog
+      html`<lr-dialog label="Top" open
+        ><button>first</button><button>middle</button><button>last</button></lr-dialog
       >`,
     )) as LyraDialog;
     await top.updateComplete;
@@ -584,7 +584,7 @@ describe('stacked dialogs', () => {
 
 describe('noLightDismiss', () => {
   it('a backdrop click does nothing when true', async () => {
-    const el = (await fixture(html`<lyra-dialog no-light-dismiss open>Body</lyra-dialog>`)) as LyraDialog;
+    const el = (await fixture(html`<lr-dialog no-light-dismiss open>Body</lr-dialog>`)) as LyraDialog;
     await el.updateComplete;
     const backdrop = el.shadowRoot!.querySelector('[part="backdrop"]') as HTMLElement;
     backdrop.click();
@@ -593,7 +593,7 @@ describe('noLightDismiss', () => {
   });
 
   it('a backdrop click still dismisses when false (default, regression)', async () => {
-    const el = (await fixture(html`<lyra-dialog open>Body</lyra-dialog>`)) as LyraDialog;
+    const el = (await fixture(html`<lr-dialog open>Body</lr-dialog>`)) as LyraDialog;
     await el.updateComplete;
     const backdrop = el.shadowRoot!.querySelector('[part="backdrop"]') as HTMLElement;
     backdrop.click();
@@ -603,10 +603,10 @@ describe('noLightDismiss', () => {
 });
 
 describe('close() respects preventDefault()', () => {
-  it('a lyra-dialog-close listener calling preventDefault() stops the dialog from closing, for every close path', async () => {
-    const el = (await fixture(html`<lyra-dialog open closable>Body</lyra-dialog>`)) as LyraDialog;
+  it('a lr-dialog-close listener calling preventDefault() stops the dialog from closing, for every close path', async () => {
+    const el = (await fixture(html`<lr-dialog open closable>Body</lr-dialog>`)) as LyraDialog;
     await el.updateComplete;
-    el.addEventListener('lyra-dialog-close', (e) => e.preventDefault());
+    el.addEventListener('lr-dialog-close', (e) => e.preventDefault());
 
     // Escape.
     document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
@@ -630,16 +630,16 @@ describe('close() respects preventDefault()', () => {
   });
 
   it('close() still closes normally when nothing calls preventDefault() (regression)', async () => {
-    const el = (await fixture(html`<lyra-dialog open>Body</lyra-dialog>`)) as LyraDialog;
+    const el = (await fixture(html`<lr-dialog open>Body</lr-dialog>`)) as LyraDialog;
     await el.updateComplete;
     el.close('api');
     expect(el.open).to.be.false;
   });
 
-  it('lyra-dialog-close is cancelable', async () => {
-    const el = (await fixture(html`<lyra-dialog open>Body</lyra-dialog>`)) as LyraDialog;
+  it('lr-dialog-close is cancelable', async () => {
+    const el = (await fixture(html`<lr-dialog open>Body</lr-dialog>`)) as LyraDialog;
     await el.updateComplete;
-    const listener = oneEvent(el, 'lyra-dialog-close');
+    const listener = oneEvent(el, 'lr-dialog-close');
     el.close('api');
     const event = await listener;
     expect((event as Event).cancelable).to.be.true;
@@ -647,11 +647,11 @@ describe('close() respects preventDefault()', () => {
 });
 
 describe('external removal while open', () => {
-  it('emits lyra-dialog-close with reason "unmount" when removed from the DOM without calling close()', async () => {
-    const el = (await fixture(html`<lyra-dialog label="Untitled" open>body</lyra-dialog>`)) as LyraDialog;
+  it('emits lr-dialog-close with reason "unmount" when removed from the DOM without calling close()', async () => {
+    const el = (await fixture(html`<lr-dialog label="Untitled" open>body</lr-dialog>`)) as LyraDialog;
     let detail: unknown;
     let count = 0;
-    el.addEventListener('lyra-dialog-close', (e) => {
+    el.addEventListener('lr-dialog-close', (e) => {
       count++;
       detail = (e as CustomEvent).detail;
     });
@@ -667,10 +667,10 @@ describe('external removal while open', () => {
     expect(el.open).to.be.false;
   });
 
-  it('does not emit lyra-dialog-close on a synchronous reparent while still open', async () => {
-    const el = (await fixture(html`<lyra-dialog label="Untitled" open>body</lyra-dialog>`)) as LyraDialog;
+  it('does not emit lr-dialog-close on a synchronous reparent while still open', async () => {
+    const el = (await fixture(html`<lr-dialog label="Untitled" open>body</lr-dialog>`)) as LyraDialog;
     let count = 0;
-    el.addEventListener('lyra-dialog-close', () => count++);
+    el.addEventListener('lr-dialog-close', () => count++);
 
     const otherContainer = document.createElement('div');
     document.body.appendChild(otherContainer);
@@ -688,19 +688,19 @@ describe('external removal while open', () => {
   });
 });
 
-it('lets a consumer set an assertive width via --lyra-dialog-width, not just a cap', async () => {
-  const el = (await fixture(html`<lyra-dialog open>short</lyra-dialog>`)) as LyraDialog;
+it('lets a consumer set an assertive width via --lr-dialog-width, not just a cap', async () => {
+  const el = (await fixture(html`<lr-dialog open>short</lr-dialog>`)) as LyraDialog;
   // 600px: comfortably under the test runner's fixed 800px-wide iframe (minus the
   // host's own inline padding) so this exercises the assertive-width path itself,
   // not the separate 100%-viewport safety clamp asserted by the test below.
-  el.style.setProperty('--lyra-dialog-width', '600px');
+  el.style.setProperty('--lr-dialog-width', '600px');
   await el.updateComplete;
   const panel = el.shadowRoot!.querySelector('[part="panel"]') as HTMLElement;
   expect(getComputedStyle(panel).inlineSize).to.equal('600px');
 });
 
-it("leaves today's shrink-to-fit-content behavior unchanged when --lyra-dialog-width is unset", async () => {
-  const el = (await fixture(html`<lyra-dialog open>short</lyra-dialog>`)) as LyraDialog;
+it("leaves today's shrink-to-fit-content behavior unchanged when --lr-dialog-width is unset", async () => {
+  const el = (await fixture(html`<lr-dialog open>short</lr-dialog>`)) as LyraDialog;
   await el.updateComplete;
   const panel = el.shadowRoot!.querySelector('[part="panel"]') as HTMLElement;
   expect(getComputedStyle(panel).inlineSize).to.not.equal('600px');

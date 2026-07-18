@@ -5,7 +5,7 @@ import type { EmojiPickerGroup } from './emoji-picker.class.js';
 
 const meta: Meta = {
   title: 'Emoji Picker',
-  component: 'lyra-emoji-picker',
+  component: 'lr-emoji-picker',
   tags: ['autodocs'],
 };
 export default meta;
@@ -32,12 +32,12 @@ const groups: EmojiPickerGroup[] = [
 ];
 
 export const WithSuppliedGroups: Story = {
-  render: () => html`<lyra-emoji-picker .groups=${groups}></lyra-emoji-picker>`,
+  render: () => html`<lr-emoji-picker .groups=${groups}></lr-emoji-picker>`,
 };
 
 // Leaves `groups` unset, exercising the optional emoji-picker-element-data auto-loader from
 // emoji-data-loader.ts -- renders empty (just the search input) if that peer isn't installed in
 // whatever environment is running Storybook, which is the fully-supported default, not an error.
 export const WithAutoLoadedData: Story = {
-  render: () => html`<lyra-emoji-picker></lyra-emoji-picker>`,
+  render: () => html`<lr-emoji-picker></lr-emoji-picker>`,
 };

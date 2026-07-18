@@ -4,16 +4,16 @@ import { LyraElement } from '../../internal/lyra-element.js';
 import { styles } from './option.styles.js';
 
 /**
- * `<lyra-option>` — a selectable option for `<lyra-combobox>`.
+ * `<lr-option>` — a selectable option for `<lr-combobox>`.
  * Mirrors `<wa-option>`. Acts as the data source; the combobox renders the
  * interactive rows in its own shadow root and filters/caps them.
  *
  * The label is the element's text content (or an explicit `label` attribute).
  *
- * @customElement lyra-option
+ * @customElement lr-option
  */
 export interface LyraOptionEventMap {
-  'lyra-option-change': CustomEvent<undefined>;
+  'lr-option-change': CustomEvent<undefined>;
 }
 export class LyraOption extends LyraElement<LyraOptionEventMap> {
   static styles = [LyraElement.styles, styles];
@@ -53,7 +53,7 @@ export class LyraOption extends LyraElement<LyraOptionEventMap> {
     // neither is a Lit reactive property, so a direct mutation of either
     // (e.g. `option.textContent = 'New label'`) needs its own observer to
     // notify the parent combobox/select that its cached row data is stale.
-    this.labelObserver = new MutationObserver(() => this.emit('lyra-option-change'));
+    this.labelObserver = new MutationObserver(() => this.emit('lr-option-change'));
     this.labelObserver.observe(this, {
       attributes: true,
       attributeFilter: ['label'],
@@ -72,7 +72,7 @@ export class LyraOption extends LyraElement<LyraOptionEventMap> {
   protected updated(changed: PropertyValues): void {
     // `selected` is deliberately excluded -- the parent combobox/select
     // already sets `selected` itself as *part of* rendering the current
-    // selection, so echoing that back as a `lyra-option-change` notification
+    // selection, so echoing that back as a `lr-option-change` notification
     // would trigger a redundant re-render on every selection change, rather
     // than signal a genuine "this option's own data changed externally".
     if (
@@ -83,7 +83,7 @@ export class LyraOption extends LyraElement<LyraOptionEventMap> {
       changed.has('sub') ||
       changed.has('dotColor')
     ) {
-      this.emit('lyra-option-change');
+      this.emit('lr-option-change');
     }
   }
 
@@ -95,6 +95,6 @@ export class LyraOption extends LyraElement<LyraOptionEventMap> {
 
 declare global {
   interface HTMLElementTagNameMap {
-    'lyra-option': LyraOption;
+    'lr-option': LyraOption;
   }
 }

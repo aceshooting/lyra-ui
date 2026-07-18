@@ -4,13 +4,13 @@ import './avatar.js';
 
 const meta: Meta = {
   title: 'Components/Avatar',
-  component: 'lyra-avatar',
+  component: 'lr-avatar',
   tags: ['autodocs'],
   parameters: {
     docs: {
       description: {
         component:
-          'A small, fixed-size identity marker: default-slotted icon/glyph content, an image, or an initials fallback, in that priority order. Purely presentational — a consumer wraps it in their own `<button>`/`<lyra-menu>` trigger for a user-menu affordance.',
+          'A small, fixed-size identity marker: default-slotted icon/glyph content, an image, or an initials fallback, in that priority order. Purely presentational — a consumer wraps it in their own `<button>`/`<lr-menu>` trigger for a user-menu affordance.',
       },
     },
   },
@@ -20,7 +20,7 @@ type Story = StoryObj;
 
 export const InitialsOnly: Story = {
   name: 'Initials only (no image)',
-  render: () => html`<lyra-avatar initials="AB"></lyra-avatar>`,
+  render: () => html`<lr-avatar initials="AB"></lr-avatar>`,
 };
 
 export const IconOnly: Story = {
@@ -35,17 +35,17 @@ export const IconOnly: Story = {
   },
   render: () => html`
     <div style="display:flex; align-items:center; gap:0.75rem;">
-      <lyra-avatar tone="brand" alt="AI assistant">
+      <lr-avatar tone="brand" alt="AI assistant">
         <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
           <path d="M12 2l1.8 5.6L19 9l-5.2 1.4L12 16l-1.8-5.6L5 9l5.2-1.4L12 2z"></path>
         </svg>
-      </lyra-avatar>
-      <lyra-avatar tone="neutral" alt="You">
+      </lr-avatar>
+      <lr-avatar tone="neutral" alt="You">
         <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
           <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
           <circle cx="12" cy="7" r="4"></circle>
         </svg>
-      </lyra-avatar>
+      </lr-avatar>
     </div>
   `,
 };
@@ -53,11 +53,11 @@ export const IconOnly: Story = {
 export const WithImage: Story = {
   name: 'With an image',
   render: () => html`
-    <lyra-avatar
+    <lr-avatar
       src="https://picsum.photos/id/64/128/128"
       alt="A. Bee"
       initials="AB"
-    ></lyra-avatar>
+    ></lr-avatar>
   `,
 };
 
@@ -72,21 +72,21 @@ export const AccessibleNameOverride: Story = {
     },
   },
   render: () => html`
-    <lyra-avatar
+    <lr-avatar
       src="https://picsum.photos/id/64/128/128"
       alt="Profile photo"
       aria-label="Signed in as A. Bee"
       initials="AB"
-    ></lyra-avatar>
+    ></lr-avatar>
   `,
 };
 
 export const Sizes: Story = {
   render: () => html`
     <div style="display:flex; align-items:center; gap:0.75rem;">
-      <lyra-avatar initials="SM" size="sm"></lyra-avatar>
-      <lyra-avatar initials="MD" size="md"></lyra-avatar>
-      <lyra-avatar initials="LG" size="lg"></lyra-avatar>
+      <lr-avatar initials="SM" size="sm"></lr-avatar>
+      <lr-avatar initials="MD" size="md"></lr-avatar>
+      <lr-avatar initials="LG" size="lg"></lr-avatar>
     </div>
   `,
 };
@@ -94,8 +94,8 @@ export const Sizes: Story = {
 export const Shapes: Story = {
   render: () => html`
     <div style="display:flex; align-items:center; gap:0.75rem;">
-      <lyra-avatar initials="AB" shape="circle"></lyra-avatar>
-      <lyra-avatar initials="AB" shape="square"></lyra-avatar>
+      <lr-avatar initials="AB" shape="circle"></lr-avatar>
+      <lr-avatar initials="AB" shape="square"></lr-avatar>
     </div>
   `,
 };
@@ -103,11 +103,11 @@ export const Shapes: Story = {
 export const Tones: Story = {
   render: () => html`
     <div style="display:flex; align-items:center; gap:0.75rem;">
-      <lyra-avatar initials="NE" tone="neutral"></lyra-avatar>
-      <lyra-avatar initials="BR" tone="brand"></lyra-avatar>
-      <lyra-avatar initials="SU" tone="success"></lyra-avatar>
-      <lyra-avatar initials="WA" tone="warning"></lyra-avatar>
-      <lyra-avatar initials="DA" tone="danger"></lyra-avatar>
+      <lr-avatar initials="NE" tone="neutral"></lr-avatar>
+      <lr-avatar initials="BR" tone="brand"></lr-avatar>
+      <lr-avatar initials="SU" tone="success"></lr-avatar>
+      <lr-avatar initials="WA" tone="warning"></lr-avatar>
+      <lr-avatar initials="DA" tone="danger"></lr-avatar>
     </div>
   `,
 };
@@ -123,11 +123,11 @@ export const ImageFallback: Story = {
     },
   },
   render: () => html`
-    <lyra-avatar
+    <lr-avatar
       src="https://example.invalid/nonexistent.png"
       alt="A. Bee"
       initials="AB"
       tone="brand"
-    ></lyra-avatar>
+    ></lr-avatar>
   `,
 };

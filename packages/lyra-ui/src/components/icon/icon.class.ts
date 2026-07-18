@@ -17,8 +17,8 @@ const PATHS: Record<string, string> = {
   trash: 'M4 7h16M10 11v6M14 11v6M6 7l1 14h10l1-14M9 7V4h6v3',
 };
 
-/** `<lyra-icon>` — a tiny dependency-free SVG icon primitive using a named path set.
- * @customElement lyra-icon
+/** `<lr-icon>` — a tiny dependency-free SVG icon primitive using a named path set.
+ * @customElement lr-icon
  * @slot - Optional custom SVG/path content when `name` is not supplied.
  * @csspart svg - The rendered SVG.
  */
@@ -46,14 +46,14 @@ export class LyraIcon extends LyraElement {
   private syncCustomNodes(): void {
     const svgEl = this.svgEl;
     if (!svgEl) return;
-    svgEl.querySelectorAll('[data-lyra-custom-copy]').forEach((node) => node.remove());
+    svgEl.querySelectorAll('[data-lr-custom-copy]').forEach((node) => node.remove());
 
     const slot = this.customSlot;
     if (!slot) return;
     for (const node of slot.assignedNodes({ flatten: true })) {
       const copy = this.cloneSvgNode(node);
       if (!copy) continue;
-      copy.setAttribute('data-lyra-custom-copy', '');
+      copy.setAttribute('data-lr-custom-copy', '');
       svgEl.append(copy);
     }
   }
@@ -77,4 +77,4 @@ export class LyraIcon extends LyraElement {
     return html`<svg part="svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden=${this.label ? 'false' : 'true'} aria-label=${this.label || undefined} focusable="false">${path ? svg`<path d=${path}></path>` : html`<slot @slotchange=${this.onCustomSlotChange}></slot>`}</svg>`;
   }
 }
-declare global { interface HTMLElementTagNameMap { 'lyra-icon': LyraIcon; } }
+declare global { interface HTMLElementTagNameMap { 'lr-icon': LyraIcon; } }

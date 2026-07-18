@@ -8,13 +8,13 @@ import { parseVCards, type VCardAddress, type VCardContact } from './vcard.js';
 import { styles } from './contact-viewer.styles.js';
 
 type ContactFetchState = { kind: 'idle' } | { kind: 'loading' } | { kind: 'loaded'; contacts: VCardContact[] } | { kind: 'error'; message: string };
-export interface LyraContactViewerEventMap { 'lyra-render-error': CustomEvent<{ error: unknown }>; }
+export interface LyraContactViewerEventMap { 'lr-render-error': CustomEvent<{ error: unknown }>; }
 
 /**
  * Fetches a vCard document and renders one accessible card per contact.
  *
- * @customElement lyra-contact-viewer
- * @event lyra-render-error - Fired when fetching or parsing the document fails.
+ * @customElement lr-contact-viewer
+ * @event lr-render-error - Fired when fetching or parsing the document fails.
  * @csspart base - The root container.
  * @csspart body - The wrapper around the fetched-state content.
  * @csspart contact - One rendered contact card.
@@ -25,7 +25,7 @@ export interface LyraContactViewerEventMap { 'lyra-render-error': CustomEvent<{ 
  * @csspart contact-adr - A contact's address list, when present.
  * @csspart spinner - The loading region.
  * @csspart error - The error region.
- * @cssprop [--lyra-contact-viewer-max-height=none] - Maximum block size of the scrollable body before it scrolls internally. Also settable via the `max-height` property.
+ * @cssprop [--lr-contact-viewer-max-height=none] - Maximum block size of the scrollable body before it scrolls internally. Also settable via the `max-height` property.
  */
 export class LyraContactViewer extends LyraElement<LyraContactViewerEventMap> {
   static styles = [LyraElement.styles, styles, srOnly];
@@ -61,7 +61,7 @@ export class LyraContactViewer extends LyraElement<LyraContactViewerEventMap> {
     } catch (error) {
       if (isAbortError(error) || !this.isConnected || generation !== this.generation) return;
       this.fetchState = { kind: 'error', message: error instanceof LyraUserFacingError ? error.message : this.localize(isResourceLimitError(error) ? 'documentPreviewResourceTooLarge' : 'documentPreviewFailedToLoad') };
-      this.emit('lyra-render-error', { error });
+      this.emit('lr-render-error', { error });
     }
   }
 
@@ -87,7 +87,7 @@ export class LyraContactViewer extends LyraElement<LyraContactViewerEventMap> {
     }
   }
 
-  render(): TemplateResult { return html`<div part="base" style=${this.maxHeight ? `--lyra-contact-viewer-max-height:${this.maxHeight}` : nothing} aria-label=${this.name || this.getAttribute('aria-label') || this.localize('contactViewerLabel')}><div part="body">${this.renderBody()}</div></div>`; }
+  render(): TemplateResult { return html`<div part="base" style=${this.maxHeight ? `--lr-contact-viewer-max-height:${this.maxHeight}` : nothing} aria-label=${this.name || this.getAttribute('aria-label') || this.localize('contactViewerLabel')}><div part="body">${this.renderBody()}</div></div>`; }
 }
 
-declare global { interface HTMLElementTagNameMap { 'lyra-contact-viewer': LyraContactViewer; } }
+declare global { interface HTMLElementTagNameMap { 'lr-contact-viewer': LyraContactViewer; } }

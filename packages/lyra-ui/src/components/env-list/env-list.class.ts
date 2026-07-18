@@ -3,7 +3,7 @@ import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../internal/lyra-element.js';
 import { styles } from './env-list.styles.js';
 // The registering barrel, not the bare .class.js module -- this side effect is what
-// registers <lyra-empty> so it's actually defined when this component renders it.
+// registers <lr-empty> so it's actually defined when this component renders it.
 import '../empty/empty.js';
 
 const MASK = '•'.repeat(8);
@@ -15,18 +15,18 @@ export interface EnvEntry {
 }
 
 export interface LyraEnvListEventMap {
-  'lyra-reveal-change': CustomEvent<{ name: string; revealed: boolean }>;
-  'lyra-copy': CustomEvent<{ text: string }>;
+  'lr-reveal-change': CustomEvent<{ name: string; revealed: boolean }>;
+  'lr-copy': CustomEvent<{ text: string }>;
 }
 
 /**
- * `<lyra-env-list>` — masked key/value list for environment variables and secrets, with per-row
+ * `<lr-env-list>` — masked key/value list for environment variables and secrets, with per-row
  * reveal and copy. Masking is presentational, not a security boundary: the real value sits in a DOM
  * property regardless of mask state.
  *
- * @customElement lyra-env-list
- * @event lyra-reveal-change - `detail: { name, revealed }`.
- * @event lyra-copy - `detail: { text }` — the real (unmasked) value.
+ * @customElement lr-env-list
+ * @event lr-reveal-change - `detail: { name, revealed }`.
+ * @event lr-copy - `detail: { text }` — the real (unmasked) value.
  * @csspart base - The `<dl>` root.
  * @csspart name - The `<dt>` name text.
  * @csspart value-cell - The `<dd>` wrapping one entry's value text and its buttons; buttons live
@@ -74,7 +74,7 @@ export class LyraEnvList extends LyraElement<LyraEnvListEventMap> {
     const next = new Map(this.revealed);
     next.set(name, isRevealed);
     this.revealed = next;
-    this.emit('lyra-reveal-change', { name, revealed: isRevealed });
+    this.emit('lr-reveal-change', { name, revealed: isRevealed });
   }
 
   private copy(entry: EnvEntry): void {
@@ -82,15 +82,15 @@ export class LyraEnvList extends LyraElement<LyraEnvListEventMap> {
       void navigator.clipboard?.writeText(entry.value)?.catch(() => {});
     } catch {
       // Clipboard access can throw synchronously (e.g. insecure context or a
-      // permissions-policy block); the `lyra-copy` event still fires below so
+      // permissions-policy block); the `lr-copy` event still fires below so
       // a host can implement its own fallback.
     }
-    this.emit('lyra-copy', { text: entry.value });
+    this.emit('lr-copy', { text: entry.value });
   }
 
   render(): TemplateResult {
     if (this.entries.length === 0) {
-      return html`<lyra-empty heading=${this.localize('noData')}></lyra-empty>`;
+      return html`<lr-empty heading=${this.localize('noData')}></lr-empty>`;
     }
     return html`
       <dl part="base" aria-label=${this.label || this.localize('envListLabel')}>
@@ -138,6 +138,6 @@ export class LyraEnvList extends LyraElement<LyraEnvListEventMap> {
 
 declare global {
   interface HTMLElementTagNameMap {
-    'lyra-env-list': LyraEnvList;
+    'lr-env-list': LyraEnvList;
   }
 }

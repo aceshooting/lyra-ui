@@ -10,7 +10,7 @@ import { getDateTimeFormat } from '../../internal/intl-cache.js';
 
 export interface ParsedCalendarEvent { uid: string; summary: string; start: Date | null; end: Date | null; location: string; description: string; }
 type CalendarFetchState = { kind: 'idle' } | { kind: 'loading' } | { kind: 'loaded'; events: ParsedCalendarEvent[] } | { kind: 'error'; message: string };
-export interface LyraCalendarViewerEventMap { 'lyra-render-error': CustomEvent<{ error: unknown }>; }
+export interface LyraCalendarViewerEventMap { 'lr-render-error': CustomEvent<{ error: unknown }>; }
 
 function formatEventTime(start: Date | null, end: Date | null, locale: string): string {
   if (!start) return '';
@@ -22,8 +22,8 @@ function formatEventTime(start: Date | null, end: Date | null, locale: string): 
  * Parses `.ics` calendars with the optional `ical.js` peer and renders each
  * VEVENT as plain text, preserving summaries, times, locations, and details.
  *
- * @customElement lyra-calendar-viewer
- * @event lyra-render-error - Fired when fetching or parsing the calendar fails.
+ * @customElement lr-calendar-viewer
+ * @event lr-render-error - Fired when fetching or parsing the calendar fails.
  * @csspart base - The root container.
  * @csspart body - The scrollable calendar body.
  * @csspart event-list - The event list.
@@ -65,7 +65,7 @@ export class LyraCalendarViewer extends LyraElement<LyraCalendarViewerEventMap> 
     } catch (error) {
       if (isAbortError(error) || !this.isConnected || generation !== this.generation) return;
       this.fetchState = { kind: 'error', message: error instanceof LyraUserFacingError ? error.message : this.localize(isResourceLimitError(error) ? 'documentPreviewResourceTooLarge' : 'documentPreviewFailedToLoad') };
-      this.emit('lyra-render-error', { error });
+      this.emit('lr-render-error', { error });
     }
   }
 
@@ -99,7 +99,7 @@ export class LyraCalendarViewer extends LyraElement<LyraCalendarViewerEventMap> 
     }
   }
 
-  render(): TemplateResult { return html`<div part="base" style=${this.maxHeight ? `--lyra-calendar-viewer-max-height:${this.maxHeight}` : nothing} aria-label=${this.name || this.getAttribute('aria-label') || this.localize('calendarViewerLabel')}><div part="body">${this.renderBody()}</div></div>`; }
+  render(): TemplateResult { return html`<div part="base" style=${this.maxHeight ? `--lr-calendar-viewer-max-height:${this.maxHeight}` : nothing} aria-label=${this.name || this.getAttribute('aria-label') || this.localize('calendarViewerLabel')}><div part="body">${this.renderBody()}</div></div>`; }
 }
 
-declare global { interface HTMLElementTagNameMap { 'lyra-calendar-viewer': LyraCalendarViewer; } }
+declare global { interface HTMLElementTagNameMap { 'lr-calendar-viewer': LyraCalendarViewer; } }

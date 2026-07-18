@@ -10,22 +10,22 @@ import { getNumberFormat } from '../../internal/intl-cache.js';
 export type LyraPaginationSize = 'xs' | 's' | 'm' | 'l' | 'xl';
 
 export interface LyraPaginationEventMap {
-  'lyra-page-change': CustomEvent<{ page: number }>;
+  'lr-page-change': CustomEvent<{ page: number }>;
   blur: CustomEvent<undefined>;
   focus: CustomEvent<undefined>;
 }
 
 /**
- * `<lyra-pagination>` — controlled, server-friendly page navigation with an
+ * `<lr-pagination>` — controlled, server-friendly page navigation with an
  * editable page jump and optional item-range summary.
  *
  * The component never mutates `page`. Activating a control emits
- * `lyra-page-change`; the consumer applies the requested page after its own
+ * `lr-page-change`; the consumer applies the requested page after its own
  * routing or data-fetch decision. Once the `page` property changes, a polite
  * live region announces the applied page.
  *
- * @customElement lyra-pagination
- * @event lyra-page-change - Fired when a user requests a valid page. `detail: { page }`.
+ * @customElement lr-pagination
+ * @event lr-page-change - Fired when a user requests a valid page. `detail: { page }`.
  * @event blur - Re-dispatched from an internal pagination control as a bubbling, composed event.
  * @event focus - Re-dispatched from an internal pagination control as a bubbling, composed event.
  * @csspart base - The navigation wrapper.
@@ -39,8 +39,8 @@ export interface LyraPaginationEventMap {
  * @csspart next-button - The next-page button.
  * @csspart next-icon - The next-page directional icon.
  * @csspart live-region - The visually hidden applied-page announcement.
- * @cssprop --lyra-pagination-control-size - Control inline/block size; defaults from the `size` variant.
- * @cssprop --lyra-pagination-font-size - Control font size; defaults from the `size` variant.
+ * @cssprop --lr-pagination-control-size - Control inline/block size; defaults from the `size` variant.
+ * @cssprop --lr-pagination-font-size - Control font size; defaults from the `size` variant.
  */
 export class LyraPagination extends LyraElement<LyraPaginationEventMap> {
   static styles = [LyraElement.styles, styles];
@@ -163,7 +163,7 @@ export class LyraPagination extends LyraElement<LyraPaginationEventMap> {
     if (this.controlsDisabled || page === this.currentPage || page < 1 || page > this.pageCount) {
       return;
     }
-    this.emit('lyra-page-change', { page });
+    this.emit('lr-page-change', { page });
     // A controlled input reflects the applied property again after a request.
     this.draftPage = this.pageCount === 0 ? '' : String(this.currentPage);
     this.invalidDraft = false;
@@ -277,6 +277,6 @@ export class LyraPagination extends LyraElement<LyraPaginationEventMap> {
 
 declare global {
   interface HTMLElementTagNameMap {
-    'lyra-pagination': LyraPagination;
+    'lr-pagination': LyraPagination;
   }
 }

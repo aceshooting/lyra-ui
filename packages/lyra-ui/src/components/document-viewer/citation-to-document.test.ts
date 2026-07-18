@@ -47,20 +47,20 @@ describe('citation-badge -> document-viewer end-to-end recipe', () => {
       const container = await fixture(html`
         <div>
           <p>
-            Overall revenue grew 12%<lyra-citation-badge index="1" source-id="doc-1"></lyra-citation-badge>.
+            Overall revenue grew 12%<lr-citation-badge index="1" source-id="doc-1"></lr-citation-badge>.
           </p>
-          <lyra-document-viewer id="dv"></lyra-document-viewer>
+          <lr-document-viewer id="dv"></lr-document-viewer>
         </div>
       `);
-      const badge = container.querySelector('lyra-citation-badge') as LyraCitationBadge;
-      const dv = container.querySelector('lyra-document-viewer') as LyraDocumentViewer;
+      const badge = container.querySelector('lr-citation-badge') as LyraCitationBadge;
+      const dv = container.querySelector('lr-document-viewer') as LyraDocumentViewer;
 
       const highlight = {
         id: 'cite-1',
         tone: 'accent' as const,
         anchor: { kind: 'text-quote' as const, quote: 'Hello, world!' },
       };
-      badge.addEventListener('lyra-citation-activate', (e) => {
+      badge.addEventListener('lr-citation-activate', (e) => {
         const detail = (e as CustomEvent<CitationActivateDetail>).detail;
         if (detail.sourceId !== 'doc-1') return;
         dv.name = 'sample.pdf';
@@ -73,8 +73,8 @@ describe('citation-badge -> document-viewer end-to-end recipe', () => {
 
       badge.shadowRoot!.querySelector('[part="base"]')!.dispatchEvent(new MouseEvent('click', { bubbles: true }));
 
-      await waitUntil(() => dv.shadowRoot!.querySelector('lyra-pdf-viewer') !== null, undefined, { timeout: 2000 });
-      const pdfViewer = dv.shadowRoot!.querySelector('lyra-pdf-viewer') as unknown as LyraPdfViewer & {
+      await waitUntil(() => dv.shadowRoot!.querySelector('lr-pdf-viewer') !== null, undefined, { timeout: 2000 });
+      const pdfViewer = dv.shadowRoot!.querySelector('lr-pdf-viewer') as unknown as LyraPdfViewer & {
         loadLibrary: () => Promise<unknown>;
         load: () => Promise<void>;
         anchorRetryIntervalMs: number;
@@ -100,7 +100,7 @@ describe('citation-badge -> document-viewer end-to-end recipe', () => {
           arrayBuffer: () => Promise.resolve(new ArrayBuffer(8)),
         } as Response)) as typeof window.fetch;
 
-      const anchorResultPromise = oneEvent(dv, 'lyra-anchor-result');
+      const anchorResultPromise = oneEvent(dv, 'lr-anchor-result');
       void pdfViewer.load(); // direct call bypasses property-change detection -- `src` didn't change
       const result = await anchorResultPromise;
       expect(result.detail).to.deep.equal({ found: true });
@@ -110,8 +110,8 @@ describe('citation-badge -> document-viewer end-to-end recipe', () => {
     }
   });
 
-  it('reverse direction: a text selection inside the pdf emits lyra-text-select with a citable anchor', async () => {
-    const el = (await fixture(html`<lyra-pdf-viewer></lyra-pdf-viewer>`)) as LyraPdfViewer & {
+  it('reverse direction: a text selection inside the pdf emits lr-text-select with a citable anchor', async () => {
+    const el = (await fixture(html`<lr-pdf-viewer></lr-pdf-viewer>`)) as LyraPdfViewer & {
       loadLibrary: () => Promise<unknown>;
     };
     el.loadLibrary = () =>
@@ -130,10 +130,10 @@ describe('citation-badge -> document-viewer end-to-end recipe', () => {
       } as Response)) as typeof window.fetch;
     try {
       el.src = 'https://example.test/sample.pdf';
-      // `[part="text-layer"]` renders inside `<lyra-virtual-list>`'s own nested shadow root (it's
+      // `[part="text-layer"]` renders inside `<lr-virtual-list>`'s own nested shadow root (it's
       // part of a virtualized page row), not directly in `el.shadowRoot`.
-      await waitUntil(() => el.shadowRoot!.querySelector('lyra-virtual-list') !== null);
-      const list = el.shadowRoot!.querySelector('lyra-virtual-list') as HTMLElement;
+      await waitUntil(() => el.shadowRoot!.querySelector('lr-virtual-list') !== null);
+      const list = el.shadowRoot!.querySelector('lr-virtual-list') as HTMLElement;
       await waitUntil(() => list.shadowRoot!.querySelector('[part="text-layer"] span') !== null);
       const span = list.shadowRoot!.querySelector('[part="text-layer"] span') as HTMLElement;
       const range = document.createRange();
@@ -141,7 +141,7 @@ describe('citation-badge -> document-viewer end-to-end recipe', () => {
       const selection = window.getSelection()!;
       selection.removeAllRanges();
       selection.addRange(range);
-      const eventPromise = oneEvent(el, 'lyra-text-select');
+      const eventPromise = oneEvent(el, 'lr-text-select');
       el.shadowRoot!.querySelector('[part="base"]')!.dispatchEvent(new PointerEvent('pointerup', { bubbles: true }));
       const detail = (await eventPromise).detail;
       expect(detail.anchor?.kind).to.equal('text-quote');

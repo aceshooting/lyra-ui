@@ -4,40 +4,40 @@ import './flow-node.js';
 
 const meta: Meta = {
   title: 'Flow Node',
-  component: 'lyra-flow-node',
+  component: 'lr-flow-node',
   tags: ['autodocs'],
 };
 export default meta;
 type Story = StoryObj;
 
 export const Default: Story = {
-  render: () => html`<lyra-flow-node heading="Web search"></lyra-flow-node>`,
+  render: () => html`<lr-flow-node heading="Web search"></lr-flow-node>`,
 };
 
 export const RunStates: Story = {
   render: () => html`
     <div style="display:flex;flex-direction:column;gap:1rem;align-items:flex-start">
-      <lyra-flow-node heading="Fetch data" status="pending"></lyra-flow-node>
-      <lyra-flow-node heading="Summarize" status="running" progress="40" duration-ms="1800" status-detail="chunk 2 of 5"></lyra-flow-node>
-      <lyra-flow-node heading="Notify" status="success" duration-ms="812"></lyra-flow-node>
-      <lyra-flow-node heading="Validate" status="error" status-detail="schema mismatch"></lyra-flow-node>
-      <lyra-flow-node heading="Send email" status="denied"></lyra-flow-node>
+      <lr-flow-node heading="Fetch data" status="pending"></lr-flow-node>
+      <lr-flow-node heading="Summarize" status="running" progress="40" duration-ms="1800" status-detail="chunk 2 of 5"></lr-flow-node>
+      <lr-flow-node heading="Notify" status="success" duration-ms="812"></lr-flow-node>
+      <lr-flow-node heading="Validate" status="error" status-detail="schema mismatch"></lr-flow-node>
+      <lr-flow-node heading="Send email" status="denied"></lr-flow-node>
     </div>
   `,
 };
 
 export const WithSlots: Story = {
   render: () => html`
-    <lyra-flow-node heading="Review" status="running">
+    <lr-flow-node heading="Review" status="running">
       <span slot="icon">👁</span>
       Custom body content describing the review step.
       <button slot="toolbar" type="button">Open</button>
-    </lyra-flow-node>
+    </lr-flow-node>
   `,
 };
 
 export const VerticalOrientation: Story = {
-  render: () => html`<lyra-flow-node heading="Fetch data" orientation="vertical"></lyra-flow-node>`,
+  render: () => html`<lr-flow-node heading="Fetch data" orientation="vertical"></lr-flow-node>`,
 };
 
 export const NarrowAllocation: Story = {
@@ -50,12 +50,12 @@ export const NarrowAllocation: Story = {
     },
   },
   render: () => html`
-    <div style="inline-size:320px; max-inline-size:100%; border:1px dashed var(--lyra-color-border); padding:0.5rem;">
-      <lyra-flow-node
+    <div style="inline-size:320px; max-inline-size:100%; border:1px dashed var(--lr-color-border); padding:0.5rem;">
+      <lr-flow-node
         heading="Summarize a long document into a structured report with multiple sections"
         status="running"
         progress="40"
-      ></lyra-flow-node>
+      ></lr-flow-node>
     </div>
   `,
 };

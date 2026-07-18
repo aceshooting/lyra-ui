@@ -1,6 +1,6 @@
 /**
  * Localized label helpers, line-highlighting parsing, and the shared shiki
- * transformer for `<lyra-code-block>` and `<lyra-code-block-core>`. Both
+ * transformer for `<lr-code-block>` and `<lr-code-block-core>`. Both
  * components render an otherwise-identical header/body, and pulling their
  * common `this.localize()` call sites and line-addressing logic out into
  * one place keeps their behavior from silently drifting apart the way it
@@ -70,7 +70,7 @@ export interface CodeBlockLineTransformerOptions {
 }
 
 /**
- * A shiki transformer shared by `<lyra-code-block>` and `<lyra-code-block-core>` — rewrites
+ * A shiki transformer shared by `<lr-code-block>` and `<lr-code-block-core>` — rewrites
  * shiki's generated `<pre>`/`<code>`/per-line hast nodes so the highlighted output carries this
  * library's own `part="pre"`/`part="code"` hooks plus, per line, `data-line`, and (only for a
  * highlighted/active line) `data-highlighted`/`data-active` and `part="line-highlight"`. Also
@@ -79,7 +79,7 @@ export interface CodeBlockLineTransformerOptions {
  */
 export function codeBlockLineTransformer(options: CodeBlockLineTransformerOptions): ShikiTransformer {
   return {
-    name: 'lyra-code-block-parts',
+    name: 'lr-code-block-parts',
     pre(node: OptionalPeerApi) {
       node.properties.part = ['pre'];
       if (options.lineNumbers) {

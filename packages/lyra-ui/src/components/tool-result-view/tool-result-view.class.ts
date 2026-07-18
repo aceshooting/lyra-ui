@@ -22,12 +22,12 @@ type RenderState =
 const FALLBACK_STATE: RenderState = { kind: 'fallback' };
 
 export interface LyraToolResultViewEventMap {
-  'lyra-render-error': CustomEvent<{ toolName: string; error: unknown }>;
+  'lr-render-error': CustomEvent<{ toolName: string; error: unknown }>;
 }
 /**
- * `<lyra-tool-result-view>` — renders a tool call's result via whichever
+ * `<lr-tool-result-view>` — renders a tool call's result via whichever
  * custom renderer a host app has registered for it (see `registerToolRenderer()`
- * in `registry.ts`), falling back to `<lyra-json-viewer>` whenever no
+ * in `registry.ts`), falling back to `<lr-json-viewer>` whenever no
  * renderer matches, a candidate renderer's `matches()` predicate throws during
  * dispatch, a renderer's optional `load()` rejects, or its `render()` throws.
  * This component owns none of the actual visual weight of a
@@ -39,21 +39,21 @@ export interface LyraToolResultViewEventMap {
  * `findToolRenderer()`'s two-step (exact name, then shape-based `matches()`)
  * lookup order for the full rule.
  *
- * `fallback` implements two kinds: `"json"` (the default, an unconditional `<lyra-json-viewer>`)
+ * `fallback` implements two kinds: `"json"` (the default, an unconditional `<lr-json-viewer>`)
  * and `"text"`, which renders a *string* `result` as preformatted text instead — falling back to
  * the `"json"` behavior when `result` isn't a string, so setting `fallback="text"` defensively
  * against an unpredictable result shape never renders broken output. `copyable` adds a
- * copy-to-clipboard affordance to either fallback kind (forwarded to `<lyra-json-viewer>`'s own
- * `copyable` for `"json"`; a `<lyra-copy-button>` alongside the text for `"text"`).
+ * copy-to-clipboard affordance to either fallback kind (forwarded to `<lr-json-viewer>`'s own
+ * `copyable` for `"json"`; a `<lr-copy-button>` alongside the text for `"text"`).
  *
- * @customElement lyra-tool-result-view
- * @event lyra-render-error - `detail: { toolName, error }` — fired immediately
- * before falling back to `<lyra-json-viewer>`, whether because no renderer
+ * @customElement lr-tool-result-view
+ * @event lr-render-error - `detail: { toolName, error }` — fired immediately
+ * before falling back to `<lr-json-viewer>`, whether because no renderer
  * matched, a candidate renderer's `matches()` predicate threw during dispatch,
  * a renderer's `load()` rejected, or its `render()` threw.
  * @csspart base - The root wrapper around the resolved renderer's output (or the loading/fallback view).
  * @csspart fallback-text - The `<pre>` element for the `fallback="text"` kind's preformatted result text (only present in that mode).
- * @csspart fallback-copy - The `<lyra-copy-button>` shown when `copyable` is set alongside the `fallback="text"` kind (only present when both are set).
+ * @csspart fallback-copy - The `<lr-copy-button>` shown when `copyable` is set alongside the `fallback="text"` kind (only present when both are set).
  */
 export class LyraToolResultView extends LyraElement<LyraToolResultViewEventMap> {
   static styles = [LyraElement.styles, styles];
@@ -64,7 +64,7 @@ export class LyraToolResultView extends LyraElement<LyraToolResultViewEventMap> 
   /** The tool's name — the primary dispatch key (see `findToolRenderer()`). */
   @property({ attribute: 'tool-name' }) toolName = '';
 
-  /** The tool call's result payload, handed to the matched renderer's `render()` (and to `matches()` for shape-based dispatch, and to the `<lyra-json-viewer>` fallback). */
+  /** The tool call's result payload, handed to the matched renderer's `render()` (and to `matches()` for shape-based dispatch, and to the `<lr-json-viewer>` fallback). */
   @property({ attribute: false }) result: unknown;
 
   /** The tool call's original arguments, if available — handed to the matched renderer's `render()` alongside `result`. */
@@ -73,7 +73,7 @@ export class LyraToolResultView extends LyraElement<LyraToolResultViewEventMap> 
   /** Fallback-kind selector — see the class doc's `fallback` paragraph for the full "json" vs "text" behavior. */
   @property({ reflect: true }) fallback = 'json';
 
-  /** Shows a copy-to-clipboard affordance alongside the fallback view (both `"json"` and `"text"` kinds) — forwarded to `<lyra-json-viewer>`'s own `copyable`, or renders a `<lyra-copy-button>` next to the text fallback. */
+  /** Shows a copy-to-clipboard affordance alongside the fallback view (both `"json"` and `"text"` kinds) — forwarded to `<lr-json-viewer>`'s own `copyable`, or renders a `<lr-copy-button>` next to the text fallback. */
   @property({ type: Boolean, reflect: true }) copyable = false;
 
   @state() private renderState: RenderState = FALLBACK_STATE;
@@ -116,7 +116,7 @@ export class LyraToolResultView extends LyraElement<LyraToolResultViewEventMap> 
     }
 
     if (!def) {
-      this.fail(new Error(`<lyra-tool-result-view>: no renderer registered for tool "${this.toolName}"`));
+      this.fail(new Error(`<lr-tool-result-view>: no renderer registered for tool "${this.toolName}"`));
       return;
     }
 
@@ -146,7 +146,7 @@ export class LyraToolResultView extends LyraElement<LyraToolResultViewEventMap> 
 
   private renderWith(def: ToolRendererDefinition): void {
     if (!def.render) {
-      this.fail(new Error(`<lyra-tool-result-view>: renderer for tool "${this.toolName}" has no render()`));
+      this.fail(new Error(`<lr-tool-result-view>: renderer for tool "${this.toolName}" has no render()`));
       return;
     }
     try {
@@ -157,7 +157,7 @@ export class LyraToolResultView extends LyraElement<LyraToolResultViewEventMap> 
   }
 
   private fail(error: unknown): void {
-    this.emit('lyra-render-error', { toolName: this.toolName, error });
+    this.emit('lr-render-error', { toolName: this.toolName, error });
     this.renderState = FALLBACK_STATE;
   }
 
@@ -166,7 +166,7 @@ export class LyraToolResultView extends LyraElement<LyraToolResultViewEventMap> 
     return html`
       <div part="base">
         ${state.kind === 'loading'
-          ? html`<lyra-skeleton variant="rect" height="4rem"></lyra-skeleton>`
+          ? html`<lr-skeleton variant="rect" height="4rem"></lr-skeleton>`
           : state.kind === 'rendered'
             ? state.template
             : this.renderFallback()}
@@ -178,16 +178,16 @@ export class LyraToolResultView extends LyraElement<LyraToolResultViewEventMap> 
     if (this.fallback === 'text' && typeof this.result === 'string') {
       return html`
         <pre part="fallback-text">${this.result}</pre>
-        ${this.copyable ? html`<lyra-copy-button part="fallback-copy" .value=${this.result}></lyra-copy-button>` : nothing}
+        ${this.copyable ? html`<lr-copy-button part="fallback-copy" .value=${this.result}></lr-copy-button>` : nothing}
       `;
     }
-    return html`<lyra-json-viewer .data=${this.result} ?copyable=${this.copyable}></lyra-json-viewer>`;
+    return html`<lr-json-viewer .data=${this.result} ?copyable=${this.copyable}></lr-json-viewer>`;
   }
 }
 
 
 declare global {
   interface HTMLElementTagNameMap {
-    'lyra-tool-result-view': LyraToolResultView;
+    'lr-tool-result-view': LyraToolResultView;
   }
 }

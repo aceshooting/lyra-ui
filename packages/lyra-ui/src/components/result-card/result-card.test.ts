@@ -3,13 +3,13 @@ import './result-card.js';
 import type { LyraResultCard } from './result-card.js';
 
 it('hides the header when there is no title and no actions content', async () => {
-  const el = (await fixture(html`<lyra-result-card>body</lyra-result-card>`)) as LyraResultCard;
+  const el = (await fixture(html`<lr-result-card>body</lr-result-card>`)) as LyraResultCard;
   const header = el.shadowRoot!.querySelector('[part="header"]') as HTMLElement;
   expect(header.hasAttribute('hidden')).to.be.true;
 });
 
 it('shows the header and renders the title text when title is set', async () => {
-  const el = (await fixture(html`<lyra-result-card title="HTTP request">body</lyra-result-card>`)) as LyraResultCard;
+  const el = (await fixture(html`<lr-result-card title="HTTP request">body</lr-result-card>`)) as LyraResultCard;
   const header = el.shadowRoot!.querySelector('[part="header"]') as HTMLElement;
   const title = el.shadowRoot!.querySelector('[part="title"]') as HTMLElement;
   expect(header.hasAttribute('hidden')).to.be.false;
@@ -18,7 +18,7 @@ it('shows the header and renders the title text when title is set', async () => 
 
 it('shows the header (with no title rendered) when only actions content is present', async () => {
   const el = (await fixture(
-    html`<lyra-result-card><button slot="actions">Copy</button>body</lyra-result-card>`,
+    html`<lr-result-card><button slot="actions">Copy</button>body</lr-result-card>`,
   )) as LyraResultCard;
   const header = el.shadowRoot!.querySelector('[part="header"]') as HTMLElement;
   expect(header.hasAttribute('hidden')).to.be.false;
@@ -26,7 +26,7 @@ it('shows the header (with no title rendered) when only actions content is prese
 });
 
 it('hides the actions wrapper when empty, shows it once slotted, reacting to slotchange', async () => {
-  const el = (await fixture(html`<lyra-result-card title="x">body</lyra-result-card>`)) as LyraResultCard;
+  const el = (await fixture(html`<lr-result-card title="x">body</lr-result-card>`)) as LyraResultCard;
   const actions = el.shadowRoot!.querySelector('[part="actions"]') as HTMLElement;
   const actionsSlot = el.shadowRoot!.querySelector('slot[name="actions"]') as HTMLSlotElement;
   expect(actions.hasAttribute('hidden')).to.be.true;
@@ -47,7 +47,7 @@ it('hides the actions wrapper when empty, shows it once slotted, reacting to slo
 });
 
 it('keeps the header hidden->visible transition working for actions added after mount, with no title set', async () => {
-  const el = (await fixture(html`<lyra-result-card>body</lyra-result-card>`)) as LyraResultCard;
+  const el = (await fixture(html`<lr-result-card>body</lr-result-card>`)) as LyraResultCard;
   const header = el.shadowRoot!.querySelector('[part="header"]') as HTMLElement;
   const actionsSlot = el.shadowRoot!.querySelector('slot[name="actions"]') as HTMLSlotElement;
   expect(header.hasAttribute('hidden'), 'starts with no header').to.be.true;
@@ -62,7 +62,7 @@ it('keeps the header hidden->visible transition working for actions added after 
 });
 
 it('reacts to a title being set after initial mount, updating both the header visibility and the title text', async () => {
-  const el = (await fixture(html`<lyra-result-card>body</lyra-result-card>`)) as LyraResultCard;
+  const el = (await fixture(html`<lr-result-card>body</lr-result-card>`)) as LyraResultCard;
   const header = el.shadowRoot!.querySelector('[part="header"]') as HTMLElement;
   expect(header.hasAttribute('hidden'), 'starts untitled, so no header').to.be.true;
   expect(el.shadowRoot!.querySelector('[part="title"]'), 'no title span while untitled').to.not.exist;
@@ -90,7 +90,7 @@ it('exposes the full title text on the truncating [part="title"] span via its ow
   const longTitle =
     'A very long tool result title that is guaranteed to overflow a narrow fixed-width card and get ellipsis-truncated';
   const el = (await fixture(
-    html`<lyra-result-card title=${longTitle} style="max-inline-size: 8rem;">body</lyra-result-card>`,
+    html`<lr-result-card title=${longTitle} style="max-inline-size: 8rem;">body</lr-result-card>`,
   )) as LyraResultCard;
   const title = el.shadowRoot!.querySelector('[part="title"]') as HTMLElement;
 
@@ -101,7 +101,7 @@ it('exposes the full title text on the truncating [part="title"] span via its ow
 });
 
 it('strips the redundant host-level title attribute so only the truncating span shows a native tooltip', async () => {
-  const el = (await fixture(html`<lyra-result-card title="HTTP request">body</lyra-result-card>`)) as LyraResultCard;
+  const el = (await fixture(html`<lr-result-card title="HTTP request">body</lr-result-card>`)) as LyraResultCard;
   expect(el.hasAttribute('title')).to.be.false;
   expect(el.title).to.equal('HTTP request');
   const title = el.shadowRoot!.querySelector('[part="title"]') as HTMLElement;
@@ -114,23 +114,23 @@ it('strips the redundant host-level title attribute so only the truncating span 
 });
 
 it('always renders the body wrapper around the default slot', async () => {
-  const el = (await fixture(html`<lyra-result-card>plain body text</lyra-result-card>`)) as LyraResultCard;
+  const el = (await fixture(html`<lr-result-card>plain body text</lr-result-card>`)) as LyraResultCard;
   const body = el.shadowRoot!.querySelector('[part="body"]') as HTMLElement;
   expect(body).to.exist;
   expect(el.textContent).to.equal('plain body text');
 });
 
 it('is accessible with no title/actions and only plain body content', async () => {
-  const el = await fixture(html`<lyra-result-card>Rows affected: 12</lyra-result-card>`);
+  const el = await fixture(html`<lr-result-card>Rows affected: 12</lr-result-card>`);
   await expect(el).to.be.accessible();
 });
 
 it('is accessible with a title, header actions, and populated result-field body', async () => {
   const el = await fixture(html`
-    <lyra-result-card title="HTTP request">
+    <lr-result-card title="HTTP request">
       <button slot="actions" aria-label="Copy result">Copy</button>
       <span>Status: 200 OK</span>
-    </lyra-result-card>
+    </lr-result-card>
   `);
   await expect(el).to.be.accessible();
 });

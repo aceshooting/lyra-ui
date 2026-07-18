@@ -2,7 +2,7 @@ import { fixture, expect, html, oneEvent } from '@open-wc/testing';
 import './icon-button.js';
 
 it('forwards its accessible label and click event', async () => {
-  const el = await fixture(html`<lyra-icon-button icon="close" aria-label="Dismiss"></lyra-icon-button>`);
+  const el = await fixture(html`<lr-icon-button icon="close" aria-label="Dismiss"></lr-icon-button>`);
   expect(el.shadowRoot!.querySelector('button')!.getAttribute('aria-label')).to.equal('Dismiss');
   const event = oneEvent(el, 'click');
   el.shadowRoot!.querySelector('button')!.click();
@@ -10,8 +10,8 @@ it('forwards its accessible label and click event', async () => {
 });
 
 it('keeps the visual glyph independent from the icon button hit target', async () => {
-  const el = await fixture(html`<lyra-icon-button icon="search" aria-label="Search"></lyra-icon-button>`);
-  const icon = el.shadowRoot!.querySelector('lyra-icon')!;
+  const el = await fixture(html`<lr-icon-button icon="search" aria-label="Search"></lr-icon-button>`);
+  const icon = el.shadowRoot!.querySelector('lr-icon')!;
   const button = el.shadowRoot!.querySelector('button')!;
 
   expect(getComputedStyle(button).inlineSize).to.equal('40px');
@@ -19,11 +19,11 @@ it('keeps the visual glyph independent from the icon button hit target', async (
 });
 
 it('is accessible', async () => {
-  const el = await fixture(html`<lyra-icon-button icon="close" aria-label="Dismiss"></lyra-icon-button>`);
+  const el = await fixture(html`<lr-icon-button icon="close" aria-label="Dismiss"></lr-icon-button>`);
   await expect(el).to.be.accessible();
 });
 
 it('is accessible while disabled', async () => {
-  const el = await fixture(html`<lyra-icon-button icon="close" aria-label="Dismiss" disabled></lyra-icon-button>`);
+  const el = await fixture(html`<lr-icon-button icon="close" aria-label="Dismiss" disabled></lr-icon-button>`);
   await expect(el).to.be.accessible();
 });

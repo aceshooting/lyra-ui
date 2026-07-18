@@ -61,7 +61,7 @@ describe('loadMammothAndSanitizer()', () => {
     try {
       await loadMammothAndSanitizer(() => Promise.reject(new Error('boom')), () => Promise.reject(new Error('boom')));
       const message = calls.flat().filter((value): value is string => typeof value === 'string').join(' ');
-      expect(message).to.contain('lyra-docx-viewer');
+      expect(message).to.contain('lr-docx-viewer');
       expect(message).to.contain('pnpm add mammoth');
       expect(message).to.contain('pnpm add dompurify');
     } finally {

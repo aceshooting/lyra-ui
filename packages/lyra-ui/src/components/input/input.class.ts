@@ -17,21 +17,21 @@ const spellcheckConverter = {
 export interface LyraInputEventMap {
   input: CustomEvent<undefined>;
   change: CustomEvent<undefined>;
-  'lyra-input': CustomEvent<{ value: string }>;
-  'lyra-change': CustomEvent<{ value: string }>;
+  'lr-input': CustomEvent<{ value: string }>;
+  'lr-change': CustomEvent<{ value: string }>;
   blur: CustomEvent<undefined>;
   focus: CustomEvent<undefined>;
 }
 class LyraInputBase extends LyraElement<LyraInputEventMap> {}
 
 /**
- * `<lyra-input>` — a single-line plain-text input primitive, the `lyra-*` equivalent of a plain
- * `wa-input`, form-associated via the `FormAssociated` mixin (same shape as `<lyra-textarea>`).
+ * `<lr-input>` — a single-line plain-text input primitive, the `lr-*` equivalent of a plain
+ * `wa-input`, form-associated via the `FormAssociated` mixin (same shape as `<lr-textarea>`).
  *
- * Ships the same opt-in `label`/`hint`/`errorText` form-control chrome as `<lyra-textarea>`/
- * `<lyra-select>` (props + matching named slots + `form-control`/`form-control-label`/`hint`/`error`
+ * Ships the same opt-in `label`/`hint`/`errorText` form-control chrome as `<lr-textarea>`/
+ * `<lr-select>` (props + matching named slots + `form-control`/`form-control-label`/`hint`/`error`
  * parts) — left unset, the chrome stays hidden. `size` uses the same `xs`–`xl` scale as
- * `<lyra-select>`/`<lyra-combobox>`. `type="password"` always renders a
+ * `<lr-select>`/`<lr-combobox>`. `type="password"` always renders a
  * `password-toggle` eye-icon button that flips the internal native input between
  * `type="password"`/`type="text"` and tracks `passwordVisible`. `type="email"`/`type="number"`
  * (with `min`/`max`/`step`) delegate constraint validation to the internal native `<input>`'s own
@@ -42,11 +42,11 @@ class LyraInputBase extends LyraElement<LyraInputEventMap> {}
  * A host `aria-label` is forwarded to the internal textbox via the typed `accessibleLabel` property;
  * external `aria-labelledby`/`aria-describedby` idrefs are not copied across the shadow boundary.
  *
- * @customElement lyra-input
+ * @customElement lr-input
  * @event input - Native-style composed event fired on every user-driven edit.
  * @event change - Native-style composed event fired at the native `change` timing.
- * @event lyra-input - Compatibility alias for `input`; `detail: { value }`.
- * @event lyra-change - Compatibility alias for `change`; `detail: { value }`.
+ * @event lr-input - Compatibility alias for `input`; `detail: { value }`.
+ * @event lr-change - Compatibility alias for `change`; `detail: { value }`.
  * @event blur - Re-dispatched from the internal native `<input>`'s own `blur` — bubbling and
  *   composed (unlike the native event, which is neither).
  * @event focus - Re-dispatched from the internal native `<input>`'s own `focus`, for the same reason as `blur`.
@@ -65,7 +65,7 @@ export class LyraInput extends FormAssociated(LyraInputBase) {
   static styles = [LyraElement.styles, styles];
 
   @property() type: LyraInputType = 'text';
-  /** Visual size — same `2xs`–`xl` scale as `lyra-select`/`lyra-combobox`'s own `size`. `'2xs'` is
+  /** Visual size — same `2xs`–`xl` scale as `lr-select`/`lr-combobox`'s own `size`. `'2xs'` is
    *  the tightest tier, for dense toolbar-embedded controls. */
   @property({ reflect: true }) size: LyraInputSize = 'm';
   @property() placeholder = '';
@@ -73,7 +73,7 @@ export class LyraInput extends FormAssociated(LyraInputBase) {
   @property() hint = '';
   @property({ attribute: 'error-text' }) errorText = '';
   /** Accessible name overriding the label/placeholder-derived default. Takes precedence over both
-   *  `label` and `placeholder` when set, matching `<lyra-textarea>`'s `accessibleLabel`. */
+   *  `label` and `placeholder` when set, matching `<lr-textarea>`'s `accessibleLabel`. */
   @property({ attribute: 'aria-label' }) accessibleLabel: string | null = null;
   @property() autocomplete = '';
   @property({ converter: spellcheckConverter }) spellcheck = true;
@@ -112,7 +112,7 @@ export class LyraInput extends FormAssociated(LyraInputBase) {
     this.touched = false;
   }
 
-  /** The internal native `<input>` element, for direct DOM access — mirrors `<lyra-textarea>`'s own `input` getter. */
+  /** The internal native `<input>` element, for direct DOM access — mirrors `<lr-textarea>`'s own `input` getter. */
   get input(): HTMLInputElement | null {
     return this.inputEl ?? null;
   }
@@ -187,14 +187,14 @@ export class LyraInput extends FormAssociated(LyraInputBase) {
     if (!this.inputEl) return;
     this.value = this.inputEl.value;
     this.emit('input');
-    this.emit('lyra-input', { value: this.value });
+    this.emit('lr-input', { value: this.value });
   };
 
   private onChange = (): void => {
     if (!this.inputEl) return;
     this.value = this.inputEl.value;
     this.emit('change');
-    this.emit('lyra-change', { value: this.value });
+    this.emit('lr-change', { value: this.value });
   };
 
   private onFocus = (): void => {
@@ -288,6 +288,6 @@ export class LyraInput extends FormAssociated(LyraInputBase) {
 
 declare global {
   interface HTMLElementTagNameMap {
-    'lyra-input': LyraInput;
+    'lr-input': LyraInput;
   }
 }

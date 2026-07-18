@@ -3,24 +3,24 @@ import './command-palette.js';
 import type { LyraCommandPalette } from './command-palette.js';
 
 it('opens, filters, and selects a command', async () => {
-  const el = (await fixture(html`<lyra-command-palette .commands=${[{ id: 'save', label: 'Save', group: 'File' }, { id: 'close', label: 'Close' }]}></lyra-command-palette>`)) as LyraCommandPalette;
+  const el = (await fixture(html`<lr-command-palette .commands=${[{ id: 'save', label: 'Save', group: 'File' }, { id: 'close', label: 'Close' }]}></lr-command-palette>`)) as LyraCommandPalette;
   el.openPalette(); await el.updateComplete;
   const input = el.shadowRoot!.querySelector('input') as HTMLInputElement;
   input.value = 'save'; input.dispatchEvent(new Event('input', { bubbles: true })); await el.updateComplete;
-  const selected = oneEvent(el, 'lyra-select');
+  const selected = oneEvent(el, 'lr-select');
   el.shadowRoot!.querySelector('[part="command"]')!.dispatchEvent(new MouseEvent('click', { bubbles: true }));
   expect((await selected).detail.command.id).to.equal('save');
   expect(el.open).to.be.false;
 });
 
 it('is accessible while open', async () => {
-  const el = (await fixture(html`<lyra-command-palette .commands=${[{ id: 'save', label: 'Save' }]}></lyra-command-palette>`)) as LyraCommandPalette;
+  const el = (await fixture(html`<lr-command-palette .commands=${[{ id: 'save', label: 'Save' }]}></lr-command-palette>`)) as LyraCommandPalette;
   el.openPalette(); await el.updateComplete;
   await expect(el).to.be.accessible();
 });
 
 it('wires aria-activedescendant to a stable id on the active command row', async () => {
-  const el = (await fixture(html`<lyra-command-palette .commands=${[{ id: 'save', label: 'Save' }, { id: 'close', label: 'Close' }]}></lyra-command-palette>`)) as LyraCommandPalette;
+  const el = (await fixture(html`<lr-command-palette .commands=${[{ id: 'save', label: 'Save' }, { id: 'close', label: 'Close' }]}></lr-command-palette>`)) as LyraCommandPalette;
   el.openPalette(); await el.updateComplete;
   const input = el.shadowRoot!.querySelector('input')!;
   const rows = el.shadowRoot!.querySelectorAll('[part="command"]');
@@ -32,11 +32,11 @@ it('wires aria-activedescendant to a stable id on the active command row', async
 });
 
 it('skips disabled commands during arrow navigation and marks them aria-disabled', async () => {
-  const el = (await fixture(html`<lyra-command-palette .commands=${[
+  const el = (await fixture(html`<lr-command-palette .commands=${[
     { id: 'a', label: 'Alpha' },
     { id: 'b', label: 'Bravo', disabled: true },
     { id: 'c', label: 'Charlie' },
-  ]}></lyra-command-palette>`)) as LyraCommandPalette;
+  ]}></lr-command-palette>`)) as LyraCommandPalette;
   el.openPalette(); await el.updateComplete;
   const input = el.shadowRoot!.querySelector('input')!;
   const rows = el.shadowRoot!.querySelectorAll('[part="command"]');
@@ -51,10 +51,10 @@ it('skips disabled commands during arrow navigation and marks them aria-disabled
 });
 
 it('never rests the active option on a disabled command when one leads the list', async () => {
-  const el = (await fixture(html`<lyra-command-palette .commands=${[
+  const el = (await fixture(html`<lr-command-palette .commands=${[
     { id: 'a', label: 'Alpha', disabled: true },
     { id: 'b', label: 'Bravo' },
-  ]}></lyra-command-palette>`)) as LyraCommandPalette;
+  ]}></lr-command-palette>`)) as LyraCommandPalette;
   el.openPalette(); await el.updateComplete;
   const input = el.shadowRoot!.querySelector('input')!;
   const rows = el.shadowRoot!.querySelectorAll('[part="command"]');
@@ -66,7 +66,7 @@ it('never rests the active option on a disabled command when one leads the list'
 
 it('scrolls the newly active row into view when navigating with arrow keys', async () => {
   const commands = Array.from({ length: 5 }, (_unused, i) => ({ id: `c${i}`, label: `Command ${i}` }));
-  const el = (await fixture(html`<lyra-command-palette .commands=${commands}></lyra-command-palette>`)) as LyraCommandPalette;
+  const el = (await fixture(html`<lr-command-palette .commands=${commands}></lr-command-palette>`)) as LyraCommandPalette;
   el.openPalette(); await el.updateComplete;
   const input = el.shadowRoot!.querySelector('input')!;
   const secondRow = el.shadowRoot!.querySelectorAll('[part="command"]')[1] as HTMLElement;
@@ -80,9 +80,9 @@ it('scrolls the newly active row into view when navigating with arrow keys', asy
 it('traps focus by inerting sibling content while open, releasing it on close', async () => {
   const wrapper = await fixture(html`<div>
     <button id="outside">Outside</button>
-    <lyra-command-palette .commands=${[{ id: 'save', label: 'Save' }]}></lyra-command-palette>
+    <lr-command-palette .commands=${[{ id: 'save', label: 'Save' }]}></lr-command-palette>
   </div>`);
-  const el = wrapper.querySelector('lyra-command-palette') as LyraCommandPalette;
+  const el = wrapper.querySelector('lr-command-palette') as LyraCommandPalette;
   const outside = wrapper.querySelector('#outside') as HTMLButtonElement & { inert: boolean };
   el.openPalette(); await el.updateComplete;
   expect(outside.inert).to.be.true;
@@ -91,7 +91,7 @@ it('traps focus by inerting sibling content while open, releasing it on close', 
 });
 
 it('closes on a document-level Escape via the shared overlay manager', async () => {
-  const el = (await fixture(html`<lyra-command-palette .commands=${[{ id: 'save', label: 'Save' }]}></lyra-command-palette>`)) as LyraCommandPalette;
+  const el = (await fixture(html`<lr-command-palette .commands=${[{ id: 'save', label: 'Save' }]}></lr-command-palette>`)) as LyraCommandPalette;
   el.openPalette(); await el.updateComplete;
   expect(el.open).to.be.true;
   document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
@@ -100,7 +100,7 @@ it('closes on a document-level Escape via the shared overlay manager', async () 
 });
 
 it('locks document scroll while open and releases it on close', async () => {
-  const el = (await fixture(html`<lyra-command-palette .commands=${[{ id: 'save', label: 'Save' }]}></lyra-command-palette>`)) as LyraCommandPalette;
+  const el = (await fixture(html`<lr-command-palette .commands=${[{ id: 'save', label: 'Save' }]}></lr-command-palette>`)) as LyraCommandPalette;
   el.openPalette(); await el.updateComplete;
   expect(document.documentElement.style.overflow).to.equal('hidden');
   el.close(); await el.updateComplete;
@@ -108,7 +108,7 @@ it('locks document scroll while open and releases it on close', async () => {
 });
 
 it('does not match the default mod+k shortcut when an extra Shift modifier is held', async () => {
-  const el = (await fixture(html`<lyra-command-palette></lyra-command-palette>`)) as LyraCommandPalette;
+  const el = (await fixture(html`<lr-command-palette></lr-command-palette>`)) as LyraCommandPalette;
   const modInit: KeyboardEventInit = { key: 'k', shiftKey: true, bubbles: true, cancelable: true };
   if (navigator.platform.includes('Mac')) modInit.metaKey = true; else modInit.ctrlKey = true;
   window.dispatchEvent(new KeyboardEvent('keydown', modInit));

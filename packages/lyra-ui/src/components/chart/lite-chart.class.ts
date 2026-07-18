@@ -28,14 +28,14 @@ export type LyraLiteChartLayout = 'fit' | 'scroll';
 // The semantic variables are resolved by SVG/CSS at paint time, so changing a
 // theme or color-scheme does not require a second JS-side draw pass.
 const DEFAULT_PALETTE = [
-  'var(--lyra-chart-color-1)',
-  'var(--lyra-chart-color-2)',
-  'var(--lyra-chart-color-3)',
-  'var(--lyra-chart-color-4)',
-  'var(--lyra-chart-color-5)',
-  'var(--lyra-chart-color-6)',
-  'var(--lyra-chart-color-7)',
-  'var(--lyra-chart-color-8)',
+  'var(--lr-chart-color-1)',
+  'var(--lr-chart-color-2)',
+  'var(--lr-chart-color-3)',
+  'var(--lr-chart-color-4)',
+  'var(--lr-chart-color-5)',
+  'var(--lr-chart-color-6)',
+  'var(--lr-chart-color-7)',
+  'var(--lr-chart-color-8)',
 ];
 
 const PAD_LEFT = 36;
@@ -93,7 +93,7 @@ interface InteractiveMark {
 }
 
 export interface LyraLiteChartEventMap {
-  'lyra-point-click': CustomEvent<{
+  'lr-point-click': CustomEvent<{
     datasetIndex: number;
     index: number;
     label: string | undefined;
@@ -101,17 +101,17 @@ export interface LyraLiteChartEventMap {
   }>;
 }
 /**
- * `<lyra-lite-chart>` — a dependency-free bar/line chart, plain SVG/DOM
- * rendering with zero peer dependencies (unlike `lyra-chart`, which wraps
+ * `<lr-lite-chart>` — a dependency-free bar/line chart, plain SVG/DOM
+ * rendering with zero peer dependencies (unlike `lr-chart`, which wraps
  * `chart.js`). For a project whose architecture forbids a charting
  * dependency outright, this covers the common bar/line case: grouped or
  * stacked bars, multi-series lines, per-point click, and hover tooltips
- * (native SVG `<title>`, no positioning JS needed) — not a full `lyra-chart`
+ * (native SVG `<title>`, no positioning JS needed) — not a full `lr-chart`
  * replacement (no zoom/pan, no pie/doughnut/radar/scatter/bubble types, no
  * horizontal/dual-y-axis, no raw-config passthrough).
  *
- * Because this renders real DOM (not canvas), it reuses `lyra-chart`'s
- * `--lyra-chart-*` theme tokens directly via CSS `var()` — no
+ * Because this renders real DOM (not canvas), it reuses `lr-chart`'s
+ * `--lr-chart-*` theme tokens directly via CSS `var()` — no
  * `getComputedStyle()`-based re-theming step is needed the way `chart.ts`
  * needs one for its canvas.
  *
@@ -122,20 +122,20 @@ export interface LyraLiteChartEventMap {
  * squeezing; `maxLabels` decimates which x-axis text labels render (bars
  * always still render) once there are more categories than that; and
  * `barX` lets a consumer hand in its own per-category x-coordinate function
- * — e.g. to pixel-align this chart's bars with a sibling `lyra-heatmap`'s
+ * — e.g. to pixel-align this chart's bars with a sibling `lr-heatmap`'s
  * calendar columns — overriding the internal slot math for both bars and
  * their labels. All three are additive and no-ops when left unset.
  *
  * Seven further additive, opt-in properties: `pointText` overrides the
  * per-bar/per-point `<title>`/`aria-label` tooltip text (mirrors
- * `lyra-heatmap`'s `cellText` hook), falling back to the built-in raw-value
+ * `lr-heatmap`'s `cellText` hook), falling back to the built-in raw-value
  * template when unset; `roundedBars` draws bars as a rounded-top path
  * instead of a square-cornered rect; `skipZero` omits a bar entirely (not
  * just zero-height) for an exactly-`0` value; `padLeft`/`barGapRatio`
  * override the internal `PAD_LEFT`/`BAR_GROUP_GAP` layout constants; `scale`
  * (`type="bar"` only) switches the bar-height mapping from the default
  * linear `niceDomain` fraction to a `Math.sqrt(value / domainMax)`
- * compression (mirroring `lyra-heatmap`'s matrix-mode `sqrt` scale) so a
+ * compression (mirroring `lr-heatmap`'s matrix-mode `sqrt` scale) so a
  * skewed dataset's smaller bars don't get washed out by one dominant value
  * — gridlines/tick labels stay on the linear domain regardless, only the bar
  * marks' own height changes, and `type="line"` ignores `scale` entirely; and
@@ -145,11 +145,11 @@ export interface LyraLiteChartEventMap {
  * built-in legend row (e.g. a value or share) — no-op while `legend` is unset, matching the same
  * fallback-to-unchanged convention as every other hook here;
  *
- * @customElement lyra-lite-chart
- * @event lyra-point-click - Fired when a bar/point is activated (click, or
+ * @customElement lr-lite-chart
+ * @event lr-point-click - Fired when a bar/point is activated (click, or
  *   Enter/Space while focused). `detail: { datasetIndex: number, index:
  *   number, label: string | undefined, value: number | null }` — same shape
- *   as `lyra-chart`'s `lyra-point-click`.
+ *   as `lr-chart`'s `lr-point-click`.
  * @csspart base - The host's flex layout wrapper.
  * @csspart grid-line - Each horizontal gridline.
  * @csspart axis-label - Each axis tick label.
@@ -163,7 +163,7 @@ export interface LyraLiteChartEventMap {
  * @csspart legend-text - Extra per-item text after the series label, rendered only when `legendText` is set.
  * @csspart live-region - The current mark announcement for keyboard users.
  * @csspart data-list - A visually hidden list of all plotted data points.
- * @cssprop [--lyra-lite-chart-selected-outline-color=var(--lyra-color-brand)] - Stroke for a bar/point whose category index is in `selectedIndex`.
+ * @cssprop [--lr-lite-chart-selected-outline-color=var(--lr-color-brand)] - Stroke for a bar/point whose category index is in `selectedIndex`.
  */
 export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
   static styles = [LyraElement.styles, styles, srOnly];
@@ -198,13 +198,13 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
   /** Overrides the x-origin `renderBars()`/the category labels would otherwise compute internally
    *  for a given category index, for `type="bar"` only (bars and their axis labels stay
    *  consistent with each other either way). Lets a consumer pixel-align this chart's bars with,
-   *  e.g., a sibling `lyra-heatmap`'s calendar columns by handing both components the same
+   *  e.g., a sibling `lr-heatmap`'s calendar columns by handing both components the same
    *  coordinate function. Unset (the default) uses the existing internal per-category slot math,
    *  unchanged from before this property existed. */
   @property({ attribute: false }) barX?: (index: number) => number;
   /** Formats the per-bar/per-point `<title>`/`aria-label` tooltip text — receives the category
    *  label, the raw value, and the dataset index. Falls back to the built-in raw-value template
-   *  when unset (mirrors `lyra-heatmap`'s `cellText` hook). */
+   *  when unset (mirrors `lr-heatmap`'s `cellText` hook). */
   @property({ attribute: false }) pointText?: (label: string, value: number, datasetIndex: number) => string;
   /** Formats extra per-item text appended after a series' label in the built-in legend row (e.g. a
    *  value or percentage share) — receives the series label and its dataset index. Falls back to
@@ -226,7 +226,7 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
   @property({ type: Number, attribute: 'bar-gap-ratio' }) barGapRatio?: number;
   /** `type="bar"` only (no effect on `type="line"`): `'linear'` (default) maps a bar's value to
    *  height via the standard `niceDomain`-based fraction, unchanged from before this property
-   *  existed. `'sqrt'` instead maps via `Math.sqrt(value / domainMax)` (mirroring `lyra-heatmap`'s
+   *  existed. `'sqrt'` instead maps via `Math.sqrt(value / domainMax)` (mirroring `lr-heatmap`'s
    *  matrix-mode `sqrt` scale), boosting smaller values relative to one dominant value so a skewed
    *  dataset's smaller bars don't get washed out. Gridlines/tick labels stay on the linear domain
    *  either way — only the bar marks' own height mapping changes. */
@@ -251,7 +251,7 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
   /** Overrides the `<svg>`'s auto-derived `aria-label` (`datasets.map(d => d.label).join(', ') ||
    *  'Chart'`) — for a consumer with a real, localized chart description. A host `aria-label`
    *  takes precedence. Unset (the default) keeps today's auto-derived (English-fallback) label
-   *  exactly. Named `accessible-label` to match the same override on `lyra-chart`/`lyra-box-plot`. */
+   *  exactly. Named `accessible-label` to match the same override on `lr-chart`/`lr-box-plot`. */
   @property({ attribute: 'accessible-label' }) accessibleLabel?: string;
 
   @state() private plotWidth = 0;
@@ -260,7 +260,7 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
   @state() private activeMarkIndex = 0;
 
   @query('svg') private svgEl?: SVGSVGElement;
-  @query('lyra-live-region') private liveRegion?: LyraLiveRegion;
+  @query('lr-live-region') private liveRegion?: LyraLiveRegion;
   private resizeObserver?: ResizeObserver;
 
   connectedCallback(): void {
@@ -308,7 +308,7 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
 
   protected updated(changed: PropertyValues): void {
     if (changed.has('height')) {
-      this.style.setProperty('--lyra-chart-height', this.height);
+      this.style.setProperty('--lr-chart-height', this.height);
     }
   }
 
@@ -317,7 +317,7 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
   }
 
   /** Dispatches to the host-provided `pointText` formatter when set, otherwise `undefined` (the
-   *  caller falls back to its own built-in template) — mirrors `lyra-heatmap`'s `resolveCellText()`. */
+   *  caller falls back to its own built-in template) — mirrors `lr-heatmap`'s `resolveCellText()`. */
   private resolvePointText(label: string, value: number, datasetIndex: number): string | undefined {
     return this.pointText?.(label, value, datasetIndex);
   }
@@ -377,7 +377,7 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
     const marks = this.interactiveMarks();
     if (!marks[index]) return;
     this.activeMarkIndex = index;
-    // `force: true` bypasses `<lyra-live-region>`'s default throttle window --
+    // `force: true` bypasses `<lr-live-region>`'s default throttle window --
     // each roving-tabindex move is its own discrete, user-driven navigation
     // event (not a streaming firehose), so it must land immediately rather
     // than waiting out (or getting coalesced by) the throttle.
@@ -478,7 +478,7 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
   private emitPoint(datasetIndex: number, index: number): void {
     const label = this.labels[index];
     const value = this.datasets[datasetIndex]?.data[index] ?? null;
-    this.emit<PointDetail>('lyra-point-click', { datasetIndex, index, label, value });
+    this.emit<PointDetail>('lr-point-click', { datasetIndex, index, label, value });
   }
 
   private onPointKeyDown(e: KeyboardEvent, datasetIndex: number, index: number, markIndex: number): void {
@@ -909,7 +909,7 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
             ? svg`<text part="axis-title" x=${plotX + plotW / 2} y=${plotY + plotH + padBottom - 2} text-anchor="middle">${this.xLabel}</text>`
             : nothing}
         </svg>
-        <lyra-live-region part="live-region"></lyra-live-region>
+        <lr-live-region part="live-region"></lr-live-region>
         <ul part="data-list" class="sr-only" aria-label=${this.localize('chartData')}>
           ${marksForA11y.map((mark, index) => html`<li>${this.markAnnouncement(index, marksForA11y)}</li>`)}
         </ul>
@@ -941,6 +941,6 @@ function formatTick(v: number): string {
 
 declare global {
   interface HTMLElementTagNameMap {
-    'lyra-lite-chart': LyraLiteChart;
+    'lr-lite-chart': LyraLiteChart;
   }
 }

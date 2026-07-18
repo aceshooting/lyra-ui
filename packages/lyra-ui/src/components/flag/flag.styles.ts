@@ -3,8 +3,8 @@ import { css } from 'lit';
 export const styles = css`
   :host {
     display: inline-block;
-    aspect-ratio: var(--lyra-flag-aspect-ratio, 4 / 3);
-    block-size: var(--lyra-size-1em);
+    aspect-ratio: var(--lr-flag-aspect-ratio, 4 / 3);
+    block-size: var(--lr-size-1em);
     line-height: 0;
     vertical-align: middle;
   }
@@ -12,13 +12,13 @@ export const styles = css`
     display: block;
     block-size: 100%;
     inline-size: 100%;
-    border-radius: var(--lyra-flag-radius, calc(var(--lyra-radius) * 0.33));
-    box-shadow: 0 0 0 var(--lyra-size-1px) var(--lyra-color-border) inset;
-    object-fit: var(--lyra-flag-object-fit, cover);
+    border-radius: var(--lr-flag-radius, calc(var(--lr-radius) * 0.33));
+    box-shadow: 0 0 0 var(--lr-size-1px) var(--lr-color-border) inset;
+    object-fit: var(--lr-flag-object-fit, cover);
   }
   :host([round]) {
-    block-size: var(--lyra-size-1em);
-    inline-size: var(--lyra-size-1em);
+    block-size: var(--lr-size-1em);
+    inline-size: var(--lr-size-1em);
   }
   :host([round]) [part='image'] {
     inline-size: 100%;

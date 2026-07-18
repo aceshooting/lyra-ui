@@ -10,7 +10,7 @@ export async function loadSvgSanitizerDeps(
     return (await importDompurify()).default;
   } catch (error) {
     console.warn(
-      '<lyra-svg-viewer> needs the optional peer dependency `dompurify` to sanitize rendered SVG markup — install it with `pnpm add dompurify`:',
+      '<lr-svg-viewer> needs the optional peer dependency `dompurify` to sanitize rendered SVG markup — install it with `pnpm add dompurify`:',
       error,
     );
     return null;

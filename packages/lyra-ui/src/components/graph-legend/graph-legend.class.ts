@@ -4,9 +4,9 @@ import { LyraElement } from '../../internal/lyra-element.js';
 import { srOnly } from '../../internal/a11y.js';
 import { styles } from './graph-legend.styles.js';
 
-/** The exact `lyra-graph.nodeTypes` entry shape, declared locally (not imported from
- *  `lyra-graph`) so this zero-dependency component never pulls in the graph's own d3 optional-peer
- *  chain and has no build-time coupling to `lyra-graph` itself — TypeScript's structural typing
+/** The exact `lr-graph.nodeTypes` entry shape, declared locally (not imported from
+ *  `lr-graph`) so this zero-dependency component never pulls in the graph's own d3 optional-peer
+ *  chain and has no build-time coupling to `lr-graph` itself — TypeScript's structural typing
  *  makes `legend.types = graph.nodeTypes` interchangeable regardless. */
 export type LyraGraphLegendType = {
   id: string;
@@ -20,25 +20,25 @@ export interface LyraGraphLegendVisibilityDetail {
 }
 
 export interface LyraGraphLegendEventMap {
-  'lyra-visibility-change': CustomEvent<LyraGraphLegendVisibilityDetail>;
+  'lr-visibility-change': CustomEvent<LyraGraphLegendVisibilityDetail>;
 }
 
 const PALETTE_SIZE = 8;
-/** Read from `--lyra-graph-cat-1`..`-8` (defined by `lyra-graph` type-styling) with this
+/** Read from `--lr-graph-cat-1`..`-8` (defined by `lr-graph` type-styling) with this
  *  hardcoded fallback -- the same computed-style-with-a-hardcoded-fallback pattern
- *  `lyra-word-cloud`'s own `--lyra-word-cloud-color-1`..`-8` palette already uses, so this legend
+ *  `lr-word-cloud`'s own `--lr-word-cloud-color-1`..`-8` palette already uses, so this legend
  *  renders sensible colors even when no theme defines those variables. */
 const FALLBACK_PALETTE = ['#0969da', '#1a7f37', '#9a6700', '#cf222e', '#8250df', '#bf3989', '#0a7d91', '#57606a'];
 
 /**
- * `<lyra-graph-legend>` — a node-type legend for a paired `lyra-graph`: one swatch + label + count
- * row per `lyra-graph` node type, doubling as visibility filters. Never reads or writes a graph directly —
+ * `<lr-graph-legend>` — a node-type legend for a paired `lr-graph`: one swatch + label + count
+ * row per `lr-graph` node type, doubling as visibility filters. Never reads or writes a graph directly —
  * the host forwards `types` in from `graph.nodeTypes` and `hiddenTypes` back out to
- * `graph.hiddenTypes` on `lyra-visibility-change`, the same event-decoupled contract every sibling
+ * `graph.hiddenTypes` on `lr-visibility-change`, the same event-decoupled contract every sibling
  * in this family follows.
  *
- * @customElement lyra-graph-legend
- * @event lyra-visibility-change - `detail: { hiddenTypes }` — the complete updated array, fired
+ * @customElement lr-graph-legend
+ * @event lr-visibility-change - `detail: { hiddenTypes }` — the complete updated array, fired
  * after each toggle.
  * @csspart base - The `role="group"` wrapper.
  * @csspart item - One row per type — a `<button>` when `interactive`, a plain `<div>` otherwise.
@@ -50,7 +50,7 @@ const FALLBACK_PALETTE = ['#0969da', '#1a7f37', '#9a6700', '#cf222e', '#8250df',
 export class LyraGraphLegend extends LyraElement<LyraGraphLegendEventMap> {
   static styles = [LyraElement.styles, styles, srOnly];
 
-  /** The `lyra-graph.nodeTypes` array, passed through verbatim. */
+  /** The `lr-graph.nodeTypes` array, passed through verbatim. */
   @property({ attribute: false }) types: LyraGraphLegendType[] = [];
   /** Optional per-type node counts keyed by type id; a type with no entry renders no count. */
   @property({ attribute: false }) counts?: Record<string, number>;
@@ -66,7 +66,7 @@ export class LyraGraphLegend extends LyraElement<LyraGraphLegendEventMap> {
 
   private paletteColor(index: number): string {
     const cs = getComputedStyle(this);
-    const varValue = cs.getPropertyValue(`--lyra-graph-cat-${(index % PALETTE_SIZE) + 1}`).trim();
+    const varValue = cs.getPropertyValue(`--lr-graph-cat-${(index % PALETTE_SIZE) + 1}`).trim();
     return varValue || FALLBACK_PALETTE[index % PALETTE_SIZE]!;
   }
 
@@ -86,7 +86,7 @@ export class LyraGraphLegend extends LyraElement<LyraGraphLegendEventMap> {
     this.liveText = this.localize(wasVisible ? 'legendTypeHidden' : 'legendTypeShown', undefined, {
       label: type.label,
     });
-    this.emit<LyraGraphLegendVisibilityDetail>('lyra-visibility-change', { hiddenTypes: next });
+    this.emit<LyraGraphLegendVisibilityDetail>('lr-visibility-change', { hiddenTypes: next });
   }
 
   private renderSwatchShape(shape: LyraGraphLegendType['shape'], color: string): TemplateResult {
@@ -96,7 +96,7 @@ export class LyraGraphLegend extends LyraElement<LyraGraphLegendEventMap> {
   }
 
   render(): TemplateResult {
-    const groupLabel = this.label || this.localize('graphLegendLabel');
+    const groupLabel = this.getAttribute('aria-label') || this.label || this.localize('graphLegendLabel');
     return html`
       <div part="base" role="group" aria-label=${groupLabel}>
         ${this.types.map((type, index) => {
@@ -133,6 +133,6 @@ export class LyraGraphLegend extends LyraElement<LyraGraphLegendEventMap> {
 
 declare global {
   interface HTMLElementTagNameMap {
-    'lyra-graph-legend': LyraGraphLegend;
+    'lr-graph-legend': LyraGraphLegend;
   }
 }

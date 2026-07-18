@@ -4,7 +4,7 @@ import type { ComboboxSource, LyraCombobox, OptionFilter } from './combobox.js';
 
 const meta: Meta = {
   title: 'Combobox',
-  component: 'lyra-combobox',
+  component: 'lr-combobox',
   tags: ['autodocs'],
 };
 export default meta;
@@ -12,71 +12,71 @@ type Story = StoryObj;
 
 export const Default: Story = {
   render: () => html`
-    <lyra-combobox label="Fruit" placeholder="Pick one…" clearable style="max-width: 20rem">
-      <lyra-option value="a">Apple</lyra-option>
-      <lyra-option value="b">Banana</lyra-option>
-      <lyra-option value="c">Cherry</lyra-option>
-      <lyra-option value="d">Date</lyra-option>
-    </lyra-combobox>
+    <lr-combobox label="Fruit" placeholder="Pick one…" clearable style="max-width: 20rem">
+      <lr-option value="a">Apple</lr-option>
+      <lr-option value="b">Banana</lr-option>
+      <lr-option value="c">Cherry</lr-option>
+      <lr-option value="d">Date</lr-option>
+    </lr-combobox>
   `,
 };
 
 export const Multiple: Story = {
   render: () => html`
-    <lyra-combobox label="Fruit" multiple clearable style="max-width: 20rem">
-      <lyra-option value="a">Apple</lyra-option>
-      <lyra-option value="b">Banana</lyra-option>
-      <lyra-option value="c">Cherry</lyra-option>
-      <lyra-option value="d">Date</lyra-option>
-    </lyra-combobox>
+    <lr-combobox label="Fruit" multiple clearable style="max-width: 20rem">
+      <lr-option value="a">Apple</lr-option>
+      <lr-option value="b">Banana</lr-option>
+      <lr-option value="c">Cherry</lr-option>
+      <lr-option value="d">Date</lr-option>
+    </lr-combobox>
   `,
 };
 
 export const Sizes: Story = {
   render: () => html`
     <div style="display: grid; gap: 1rem; max-width: 24rem">
-      <lyra-combobox size="xs" label="Extra small" placeholder="Choose a value…">
-        <lyra-option value="a">Alpha</lyra-option>
-      </lyra-combobox>
-      <lyra-combobox size="s" label="Small" placeholder="Choose a value…">
-        <lyra-option value="a">Alpha</lyra-option>
-      </lyra-combobox>
-      <lyra-combobox size="m" label="Medium" placeholder="Choose a value…">
-        <lyra-option value="a">Alpha</lyra-option>
-      </lyra-combobox>
-      <lyra-combobox size="l" label="Large" placeholder="Choose a value…">
-        <lyra-option value="a">Alpha</lyra-option>
-      </lyra-combobox>
-      <lyra-combobox size="xl" label="Extra large" placeholder="Choose a value…">
-        <lyra-option value="a">Alpha</lyra-option>
-      </lyra-combobox>
+      <lr-combobox size="xs" label="Extra small" placeholder="Choose a value…">
+        <lr-option value="a">Alpha</lr-option>
+      </lr-combobox>
+      <lr-combobox size="s" label="Small" placeholder="Choose a value…">
+        <lr-option value="a">Alpha</lr-option>
+      </lr-combobox>
+      <lr-combobox size="m" label="Medium" placeholder="Choose a value…">
+        <lr-option value="a">Alpha</lr-option>
+      </lr-combobox>
+      <lr-combobox size="l" label="Large" placeholder="Choose a value…">
+        <lr-option value="a">Alpha</lr-option>
+      </lr-combobox>
+      <lr-combobox size="xl" label="Extra large" placeholder="Choose a value…">
+        <lr-option value="a">Alpha</lr-option>
+      </lr-combobox>
     </div>
   `,
 };
 
 /**
- * Rows come from `<lyra-option>` children plus `group` (section headers),
+ * Rows come from `<lr-option>` children plus `group` (section headers),
  * `sub` (a secondary line), and `dot-color` (a leading status dot) — useful
  * for richer pickers like a device or status list.
  */
 export const RichRows: Story = {
   render: () => html`
-    <lyra-combobox label="Inverter" placeholder="Pick one…" style="max-width: 22rem">
-      <lyra-option value="inv-1" group="Building A" sub="Running" dot-color="var(--lyra-color-success)">
+    <lr-combobox label="Inverter" placeholder="Pick one…" style="max-width: 22rem">
+      <lr-option value="inv-1" group="Building A" sub="Running" dot-color="var(--lr-color-success)">
         Inverter 1
-      </lyra-option>
-      <lyra-option value="inv-2" group="Building A" sub="Idle" dot-color="var(--lyra-color-text-quiet)">
+      </lr-option>
+      <lr-option value="inv-2" group="Building A" sub="Idle" dot-color="var(--lr-color-text-quiet)">
         Inverter 2
-      </lyra-option>
-      <lyra-option value="inv-3" group="Building B" sub="Fault" dot-color="var(--lyra-color-danger)">
+      </lr-option>
+      <lr-option value="inv-3" group="Building B" sub="Fault" dot-color="var(--lr-color-danger)">
         Inverter 3
-      </lyra-option>
-    </lyra-combobox>
+      </lr-option>
+    </lr-combobox>
   `,
 };
 
 /**
- * `source` replaces the light-DOM `<lyra-option>` list with an async
+ * `source` replaces the light-DOM `<lr-option>` list with an async
  * `(query) => Promise<ComboboxSourceRow[]>` lookup, debounced ~200ms after
  * each keystroke. A "Loading…" row is shown while a call is in flight.
  */
@@ -90,9 +90,9 @@ export const AsyncSource: Story = {
         .map((label) => ({ value: label.toLowerCase(), label }));
     };
     return html`
-      <lyra-combobox label="Fruit (async)" placeholder="Type to search…" clearable
+      <lr-combobox label="Fruit (async)" placeholder="Type to search…" clearable
         style="max-width: 22rem" .source=${source}
-      ></lyra-combobox>
+      ></lr-combobox>
     `;
   },
 };
@@ -135,20 +135,20 @@ export const RichAsyncRows: Story = {
       <div>
         <style>
           .rich-results::part(option-icon) {
-            color: var(--lyra-color-brand);
+            color: var(--lr-color-brand);
           }
           .rich-results::part(option-badge) {
-            font-weight: var(--lyra-font-weight-semibold);
+            font-weight: var(--lr-font-weight-semibold);
           }
         </style>
-        <lyra-combobox
+        <lr-combobox
           class="rich-results"
           label="Case"
           placeholder="Search cases…"
           style="max-width: 28rem"
           .source=${source}
           @change=${reportSelection}
-        ></lyra-combobox>
+        ></lr-combobox>
         <output aria-live="polite">Select a result to inspect its retained data payload.</output>
       </div>
     `;
@@ -163,14 +163,14 @@ export const CustomFilter: Story = {
   render: () => {
     const startsWith: OptionFilter = (option, query) => option.label.toLowerCase().startsWith(query.toLowerCase());
     return html`
-      <lyra-combobox label="Fruit (starts with…)" placeholder="Try “an”…" style="max-width: 22rem"
+      <lr-combobox label="Fruit (starts with…)" placeholder="Try “an”…" style="max-width: 22rem"
         .filter=${startsWith}
       >
-        <lyra-option value="a">Apple</lyra-option>
-        <lyra-option value="b">Banana</lyra-option>
-        <lyra-option value="c">Cherry</lyra-option>
-        <lyra-option value="d">Date</lyra-option>
-      </lyra-combobox>
+        <lr-option value="a">Apple</lr-option>
+        <lr-option value="b">Banana</lr-option>
+        <lr-option value="c">Cherry</lr-option>
+        <lr-option value="d">Date</lr-option>
+      </lr-combobox>
     `;
   },
 };
@@ -178,15 +178,15 @@ export const CustomFilter: Story = {
 export const States: Story = {
   render: () => html`
     <div style="display: flex; flex-direction: column; gap: 1.5rem; max-width: 22rem">
-      <lyra-combobox label="Disabled" disabled placeholder="Can't touch this">
-        <lyra-option value="a">Apple</lyra-option>
-      </lyra-combobox>
-      <lyra-combobox label="Required" required hint="Pick your favorite">
-        <lyra-option value="a">Apple</lyra-option>
-      </lyra-combobox>
-      <lyra-combobox label="Invalid" required error-text="Selection required">
-        <lyra-option value="a">Apple</lyra-option>
-      </lyra-combobox>
+      <lr-combobox label="Disabled" disabled placeholder="Can't touch this">
+        <lr-option value="a">Apple</lr-option>
+      </lr-combobox>
+      <lr-combobox label="Required" required hint="Pick your favorite">
+        <lr-option value="a">Apple</lr-option>
+      </lr-combobox>
+      <lr-combobox label="Invalid" required error-text="Selection required">
+        <lr-option value="a">Apple</lr-option>
+      </lr-combobox>
     </div>
   `,
 };

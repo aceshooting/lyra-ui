@@ -9,18 +9,18 @@ import { styles } from './message-actions.styles.js';
 export type MessageActionControl = 'copy' | 'regenerate' | 'edit' | 'feedback';
 
 export interface LyraMessageActionsEventMap {
-  'lyra-regenerate': CustomEvent<undefined>;
-  'lyra-edit': CustomEvent<undefined>;
-  'lyra-copy': CustomEvent<{ text: string }>;
-  'lyra-change': CustomEvent<{ value: 'up' | 'down' | null }>;
-  'lyra-submit': CustomEvent<{ value: 'up' | 'down'; reasonIds: string[]; comment: string }>;
+  'lr-regenerate': CustomEvent<undefined>;
+  'lr-edit': CustomEvent<undefined>;
+  'lr-copy': CustomEvent<{ text: string }>;
+  'lr-change': CustomEvent<{ value: 'up' | 'down' | null }>;
+  'lr-submit': CustomEvent<{ value: 'up' | 'down'; reasonIds: string[]; comment: string }>;
 }
 
 // Mirrors the shared icon set's viewBox/stroke conventions (internal/icons.ts's
 // chevronIcon()/closeIcon()/etc.) without adding regenerate/edit glyphs to that module -- it's off
 // limits here -- so these one-off icons still read as part of the same visual language as the rest of
-// the library's inline icons. Same approach lyra-chat-message's/lyra-chat-composer's/
-// lyra-conversation-item's own local glyphs take for the identical reason.
+// the library's inline icons. Same approach lr-chat-message's/lr-chat-composer's/
+// lr-conversation-item's own local glyphs take for the identical reason.
 function regenerateIcon(): SVGTemplateResult {
   return svg`
     <svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
@@ -41,44 +41,44 @@ function editIcon(): SVGTemplateResult {
 }
 
 /**
- * `<lyra-message-actions>` — the per-message action toolbar for `<lyra-chat-message>`'s `actions`
+ * `<lr-message-actions>` — the per-message action toolbar for `<lr-chat-message>`'s `actions`
  * slot: opt-in built-ins (copy / regenerate / edit / feedback) that emit intent events, plus a
- * default slot for custom controls (e.g. a slotted `<lyra-branch-picker>`). It performs nothing
+ * default slot for custom controls (e.g. a slotted `<lr-branch-picker>`). It performs nothing
  * itself except the copy.
  *
  * `[part="base"]` is `role="toolbar"` with the WAI-ARIA APG roving-tabindex pattern applied to the
  * plain `<button>` elements this component renders itself (`regenerate`/`edit`); ArrowLeft/ArrowRight
  * (swapped under `effectiveDirection === 'rtl'`) plus Home/End move focus across *every* stop --
  * built-ins and slotted controls alike -- via `.focus()`, including composite children
- * (`lyra-copy-button`, the `feedback` built-in, any slotted custom element) that expose their own
+ * (`lr-copy-button`, the `feedback` built-in, any slotted custom element) that expose their own
  * `focus()` delegation. See the class-level "Known limitation" note for why only the plain-button
  * stops get their `tabindex` toggled by this component (composite children's internal focusable
  * elements live in their own shadow root, unreachable from here).
  *
  * **Known limitation.** A byte-perfect APG toolbar keeps exactly one Tab stop for the entire
  * toolbar. This component only achieves that for its own plain-button built-ins; a composite child
- * (the `feedback` built-in, `lyra-copy-button`, any slotted custom element) remains independently
+ * (the `feedback` built-in, `lr-copy-button`, any slotted custom element) remains independently
  * reachable via the page's native Tab order alongside the toolbar's single roving stop, since this
  * component cannot suppress an element living inside another component's shadow root from the
  * document's Tab order. Arrow-key navigation is unaffected by this and reaches every stop.
  *
- * @customElement lyra-message-actions
- * @slot - Additional controls (e.g. `lyra-copy-button`, `lyra-icon-button`, `lyra-branch-picker`)
+ * @customElement lr-message-actions
+ * @slot - Additional controls (e.g. `lr-copy-button`, `lr-icon-button`, `lr-branch-picker`)
  *   appended after the built-ins; they participate in the toolbar's arrow-key navigation.
- * @event lyra-regenerate - The regenerate built-in was activated. No detail.
- * @event lyra-edit - The edit built-in was activated: a *request* to edit; the host swaps the message
+ * @event lr-regenerate - The regenerate built-in was activated. No detail.
+ * @event lr-edit - The edit built-in was activated: a *request* to edit; the host swaps the message
  *   body for its own editor.
- * @event lyra-copy - `detail: { text }`, surfaced by the embedded `lyra-copy-button` (bubbles +
+ * @event lr-copy - `detail: { text }`, surfaced by the embedded `lr-copy-button` (bubbles +
  *   composed already; not re-emitted, so exactly one event reaches a host listener).
- * @event lyra-change - Bubbles unchanged from the embedded, thumbs-only `lyra-message-feedback`.
+ * @event lr-change - Bubbles unchanged from the embedded, thumbs-only `lr-message-feedback`.
  *   `detail: { value }`.
- * @event lyra-submit - Only arises from a slotted, fully-configured `lyra-message-feedback` (the
+ * @event lr-submit - Only arises from a slotted, fully-configured `lr-message-feedback` (the
  *   built-in is thumbs-only and never opens a panel) -- also bubbles unchanged.
  * @csspart base - The toolbar (`role="toolbar"`).
- * @csspart copy-button - The embedded `lyra-copy-button`.
+ * @csspart copy-button - The embedded `lr-copy-button`.
  * @csspart regenerate-button - The built-in regenerate icon button.
  * @csspart edit-button - The built-in edit icon button.
- * @csspart feedback - The embedded `lyra-message-feedback`.
+ * @csspart feedback - The embedded `lr-message-feedback`.
  */
 export class LyraMessageActions extends LyraElement<LyraMessageActionsEventMap> {
   static styles = [LyraElement.styles, styles];
@@ -90,7 +90,7 @@ export class LyraMessageActions extends LyraElement<LyraMessageActionsEventMap> 
    *  interprets the slotted message body itself. */
   @property({ attribute: 'copy-text' }) copyText = '';
 
-  /** Forwarded to the embedded `lyra-message-feedback` when the `feedback` built-in is enabled. The
+  /** Forwarded to the embedded `lr-message-feedback` when the `feedback` built-in is enabled. The
    *  built-in stays thumbs-only: `reasons`/`commentable`/`detailFor` are never forwarded, so its
    *  detail panel never opens. */
   @property({ attribute: 'feedback-value' }) feedbackValue: 'up' | 'down' | null = null;
@@ -108,9 +108,9 @@ export class LyraMessageActions extends LyraElement<LyraMessageActionsEventMap> 
 
   @state() private activeStopIndex = 0;
   /** Drives the `data-revealed` host attribute (toggled imperatively in `updated()`, not via a Lit
-   *  template binding -- `lyra-graph`'s `data-hovered` attribute is the precedent for this exact
+   *  template binding -- `lr-graph`'s `data-hovered` attribute is the precedent for this exact
    *  technique) while `revealOnHover` is active. CSS alone cannot key `:host`'s own opacity off the
-   *  ancestor `lyra-chat-message`'s hover state from inside this component's own shadow DOM, so the
+   *  ancestor `lr-chat-message`'s hover state from inside this component's own shadow DOM, so the
    *  reveal state is tracked in JS instead (see `bindHoverTarget()`). */
   @state() private revealed = false;
 
@@ -144,7 +144,7 @@ export class LyraMessageActions extends LyraElement<LyraMessageActionsEventMap> 
     }
     if (changed.has('revealed')) {
       // Toggled on the host itself (not a shadow-internal part) so the stylesheet's `:host(...)`
-      // rules can key off it directly -- same imperative-attribute-toggle technique lyra-graph's
+      // rules can key off it directly -- same imperative-attribute-toggle technique lr-graph's
       // `data-hovered` attribute already establishes for hover-driven presentation state.
       this.toggleAttribute('data-revealed', this.revealed);
     }
@@ -152,7 +152,7 @@ export class LyraMessageActions extends LyraElement<LyraMessageActionsEventMap> 
 
   private bindHoverTarget(): void {
     this.unbindHoverTarget();
-    const target = (this.closest('lyra-chat-message') as HTMLElement | null) ?? this.parentElement;
+    const target = (this.closest('lr-chat-message') as HTMLElement | null) ?? this.parentElement;
     if (!target) return;
     this.hoverTarget = target;
     target.addEventListener('pointerenter', this.onHoverTargetEnter);
@@ -222,18 +222,18 @@ export class LyraMessageActions extends LyraElement<LyraMessageActionsEventMap> 
   };
 
   private onRegenerateClick = (): void => {
-    this.emit('lyra-regenerate');
+    this.emit('lr-regenerate');
   };
 
   private onEditClick = (): void => {
-    this.emit('lyra-edit');
+    this.emit('lr-edit');
   };
 
   private renderControl(type: MessageActionControl) {
     switch (type) {
       case 'copy':
         return this.copyText
-          ? html`<lyra-copy-button part="copy-button" .value=${this.copyText}></lyra-copy-button>`
+          ? html`<lr-copy-button part="copy-button" .value=${this.copyText}></lr-copy-button>`
           : nothing;
       case 'regenerate':
         return html`<button
@@ -254,7 +254,7 @@ export class LyraMessageActions extends LyraElement<LyraMessageActionsEventMap> 
           ${editIcon()}
         </button>`;
       case 'feedback':
-        return html`<lyra-message-feedback part="feedback" .value=${this.feedbackValue}></lyra-message-feedback>`;
+        return html`<lr-message-feedback part="feedback" .value=${this.feedbackValue}></lr-message-feedback>`;
       default:
         return nothing;
     }
@@ -273,6 +273,6 @@ export class LyraMessageActions extends LyraElement<LyraMessageActionsEventMap> 
 
 declare global {
   interface HTMLElementTagNameMap {
-    'lyra-message-actions': LyraMessageActions;
+    'lr-message-actions': LyraMessageActions;
   }
 }

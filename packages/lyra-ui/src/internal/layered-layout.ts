@@ -40,7 +40,7 @@ function getOrInit<K, V>(map: Map<K, V>, key: K, init: () => V): V {
  * its own canvas -- this function returns raw box centers with layer 0 starting at y=0.
  *
  * A single, shared, dependency-free implementation -- suitable for any future layered-diagram
- * consumer beyond `<lyra-graph>`'s own `layout="layered"` mode, not just this component.
+ * consumer beyond `<lr-graph>`'s own `layout="layered"` mode, not just this component.
  */
 export function layeredLayout(input: {
   nodes: LayeredLayoutNode[];

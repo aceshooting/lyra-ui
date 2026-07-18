@@ -8,7 +8,7 @@ const types = [
 ];
 
 it('defaults to empty types/counts/hiddenTypes, interactive=true, empty label', async () => {
-  const el = (await fixture(html`<lyra-graph-legend></lyra-graph-legend>`)) as LyraGraphLegend;
+  const el = (await fixture(html`<lr-graph-legend></lr-graph-legend>`)) as LyraGraphLegend;
   expect(el.types).to.deep.equal([]);
   expect(el.counts).to.equal(undefined);
   expect(el.hiddenTypes).to.deep.equal([]);
@@ -17,7 +17,7 @@ it('defaults to empty types/counts/hiddenTypes, interactive=true, empty label', 
 });
 
 it('renders one [part="item"] button per type, with visible text = label (+ count when given)', async () => {
-  const el = (await fixture(html`<lyra-graph-legend></lyra-graph-legend>`)) as LyraGraphLegend;
+  const el = (await fixture(html`<lr-graph-legend></lr-graph-legend>`)) as LyraGraphLegend;
   el.types = types;
   el.counts = { person: 3 };
   await el.updateComplete;
@@ -30,7 +30,7 @@ it('renders one [part="item"] button per type, with visible text = label (+ coun
 });
 
 it("uses a type's own color for its swatch when set, and a palette fallback otherwise", async () => {
-  const el = (await fixture(html`<lyra-graph-legend></lyra-graph-legend>`)) as LyraGraphLegend;
+  const el = (await fixture(html`<lr-graph-legend></lr-graph-legend>`)) as LyraGraphLegend;
   el.types = types;
   await el.updateComplete;
   const swatches = el.shadowRoot!.querySelectorAll('[part~="swatch"]');
@@ -38,20 +38,20 @@ it("uses a type's own color for its swatch when set, and a palette fallback othe
     '#7c3aed',
   );
   // 'person' has no explicit color -- falls back to the categorical palette. The design tokens
-  // define `--lyra-graph-cat-1` (tokens.styles.ts), so the computed style resolves to that real
+  // define `--lr-graph-cat-1` (tokens.styles.ts), so the computed style resolves to that real
   // token value rather than this component's own hardcoded FALLBACK_PALETTE[0].
   const personFill = swatches[0]!.getAttribute('fill') ?? swatches[0]!.querySelector('[fill]')?.getAttribute('fill');
   expect(personFill).to.equal('#8250df');
 });
 
-it('toggles hiddenTypes and emits lyra-visibility-change with the full updated array on click', async () => {
-  const el = (await fixture(html`<lyra-graph-legend></lyra-graph-legend>`)) as LyraGraphLegend;
+it('toggles hiddenTypes and emits lr-visibility-change with the full updated array on click', async () => {
+  const el = (await fixture(html`<lr-graph-legend></lr-graph-legend>`)) as LyraGraphLegend;
   el.types = types;
   await el.updateComplete;
   const button = el.shadowRoot!.querySelectorAll('[part~="item"]')[0] as HTMLButtonElement;
   expect(button.getAttribute('aria-pressed')).to.equal('true');
 
-  const listener = oneEvent(el, 'lyra-visibility-change');
+  const listener = oneEvent(el, 'lr-visibility-change');
   button.click();
   const event = await listener;
   expect(event.detail.hiddenTypes).to.deep.equal(['person']);
@@ -59,14 +59,14 @@ it('toggles hiddenTypes and emits lyra-visibility-change with the full updated a
   await el.updateComplete;
   expect(button.getAttribute('aria-pressed')).to.equal('false');
 
-  const listener2 = oneEvent(el, 'lyra-visibility-change');
+  const listener2 = oneEvent(el, 'lr-visibility-change');
   button.click();
   const event2 = await listener2;
   expect(event2.detail.hiddenTypes).to.deep.equal([]);
 });
 
 it('announces the toggle through the internal live region', async () => {
-  const el = (await fixture(html`<lyra-graph-legend></lyra-graph-legend>`)) as LyraGraphLegend;
+  const el = (await fixture(html`<lr-graph-legend></lr-graph-legend>`)) as LyraGraphLegend;
   el.types = types;
   await el.updateComplete;
   const button = el.shadowRoot!.querySelectorAll('[part~="item"]')[0] as HTMLButtonElement;
@@ -77,7 +77,7 @@ it('announces the toggle through the internal live region', async () => {
 });
 
 it('renders plain (non-interactive) items with no button and no toggling when interactive=false', async () => {
-  const el = (await fixture(html`<lyra-graph-legend></lyra-graph-legend>`)) as LyraGraphLegend;
+  const el = (await fixture(html`<lr-graph-legend></lr-graph-legend>`)) as LyraGraphLegend;
   el.types = types;
   el.interactive = false;
   await el.updateComplete;
@@ -86,7 +86,7 @@ it('renders plain (non-interactive) items with no button and no toggling when in
 });
 
 it('names the group from label, falling back to the localized default', async () => {
-  const el = (await fixture(html`<lyra-graph-legend></lyra-graph-legend>`)) as LyraGraphLegend;
+  const el = (await fixture(html`<lr-graph-legend></lr-graph-legend>`)) as LyraGraphLegend;
   await el.updateComplete;
   expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('Graph legend');
   el.label = 'Entity types';
@@ -95,7 +95,7 @@ it('names the group from label, falling back to the localized default', async ()
 });
 
 it('is accessible with types, counts, and a hidden type', async () => {
-  const el = (await fixture(html`<lyra-graph-legend></lyra-graph-legend>`)) as LyraGraphLegend;
+  const el = (await fixture(html`<lr-graph-legend></lr-graph-legend>`)) as LyraGraphLegend;
   el.types = types;
   el.counts = { person: 3 };
   el.hiddenTypes = ['org'];

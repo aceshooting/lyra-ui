@@ -5,30 +5,30 @@ import { styles } from './toast-item.styles.js';
 
 it('emits lifecycle events and uses an assertive role for danger', async () => {
   const el = (await fixture(
-    html`<lyra-toast-item variant="danger" duration="0">boom</lyra-toast-item>`,
+    html`<lr-toast-item variant="danger" duration="0">boom</lr-toast-item>`,
   )) as LyraToastItem;
 
-  await oneEvent(el, 'lyra-show');
+  await oneEvent(el, 'lr-show');
   expect(el.getAttribute('role')).to.equal('alert');
 
   setTimeout(() => void el.hide());
-  await oneEvent(el, 'lyra-after-hide');
+  await oneEvent(el, 'lr-after-hide');
   expect(el.isConnected).to.be.false;
 });
 
 it('uses a polite role for neutral/brand/success', async () => {
   const el = (await fixture(
-    html`<lyra-toast-item variant="success" duration="0">ok</lyra-toast-item>`,
+    html`<lr-toast-item variant="success" duration="0">ok</lr-toast-item>`,
   )) as LyraToastItem;
-  await oneEvent(el, 'lyra-show');
+  await oneEvent(el, 'lr-show');
   expect(el.getAttribute('role')).to.equal('status');
 });
 
 it('auto-dismisses after its duration', async () => {
   const el = (await fixture(
-    html`<lyra-toast-item duration="10">bye</lyra-toast-item>`,
+    html`<lr-toast-item duration="10">bye</lr-toast-item>`,
   )) as LyraToastItem;
-  await oneEvent(el, 'lyra-after-hide');
+  await oneEvent(el, 'lr-after-hide');
   expect(el.isConnected).to.be.false;
 });
 
@@ -37,8 +37,8 @@ it('does not auto-dismiss early after an interleaved pointer+focus pause/resume 
   // orphans its own setTimeout -- that leaked timer keeps running even
   // after a subsequent pauseTimer() call, and can fire hide() while the
   // toast is still meant to be paused (hovering/focused).
-  const el = (await fixture(html`<lyra-toast-item duration="120">hi</lyra-toast-item>`)) as LyraToastItem;
-  await oneEvent(el, 'lyra-show');
+  const el = (await fixture(html`<lr-toast-item duration="120">hi</lr-toast-item>`)) as LyraToastItem;
+  await oneEvent(el, 'lr-show');
   const item = el.shadowRoot!.querySelector('[part="toast-item"]') as HTMLElement;
 
   item.dispatchEvent(new PointerEvent('pointerenter'));
@@ -53,9 +53,9 @@ it('does not auto-dismiss early after an interleaved pointer+focus pause/resume 
 
 it('resyncs the running auto-dismiss timer when `duration` changes after creation', async () => {
   const el = (await fixture(
-    html`<lyra-toast-item duration="60">extend me</lyra-toast-item>`,
+    html`<lr-toast-item duration="60">extend me</lr-toast-item>`,
   )) as LyraToastItem;
-  await oneEvent(el, 'lyra-show');
+  await oneEvent(el, 'lr-show');
 
   el.duration = 400; // extend well past the original 60ms window
   await el.updateComplete;
@@ -63,15 +63,15 @@ it('resyncs the running auto-dismiss timer when `duration` changes after creatio
   await aTimeout(150); // past the original duration, well before the new one
   expect(el.isConnected, 'toast should still be open -- duration was extended').to.be.true;
 
-  await oneEvent(el, 'lyra-after-hide');
+  await oneEvent(el, 'lr-after-hide');
   expect(el.isConnected).to.be.false;
 });
 
 it('hides immediately when called before the show animation frame has run', async () => {
-  const el = document.createElement('lyra-toast-item') as LyraToastItem;
+  const el = document.createElement('lr-toast-item') as LyraToastItem;
   el.textContent = 'msg';
   let sawShow = false;
-  el.addEventListener('lyra-show', () => (sawShow = true));
+  el.addEventListener('lr-show', () => (sawShow = true));
   document.body.appendChild(el);
   const hidden = el.hide(); // runs before firstUpdated()'s rAF has had a chance to fire
   await hidden;
@@ -80,14 +80,14 @@ it('hides immediately when called before the show animation frame has run', asyn
   // already-hiding item -- without the `if (this.hiding) return;` guard, the
   // rAF still fires (it isn't cancelled until disconnectedCallback, which
   // only runs once hide() reaches this.remove()) and re-sets data-visible /
-  // emits lyra-show underneath the in-flight hide().
-  expect(sawShow, 'lyra-show should not fire once hide() ran before the first frame').to.be.false;
+  // emits lr-show underneath the in-flight hide().
+  expect(sawShow, 'lr-show should not fire once hide() ran before the first frame').to.be.false;
   expect(el.hasAttribute('data-visible'), 'data-visible should not be resurrected by a stale rAF callback').to
     .be.false;
 });
 
 it('hides promptly when duration is shortened below the already-elapsed time', async () => {
-  const el = (await fixture(html`<lyra-toast-item duration="5000">msg</lyra-toast-item>`)) as LyraToastItem;
+  const el = (await fixture(html`<lr-toast-item duration="5000">msg</lr-toast-item>`)) as LyraToastItem;
   await aTimeout(50);
   el.duration = 10;
   // resumeTimer() must call hide() synchronously once it sees the shortened
@@ -95,7 +95,7 @@ it('hides promptly when duration is shortened below the already-elapsed time', a
   // ANIM_MS hide animation before this.remove() actually disconnects it, so
   // the wait budget needs to clear that delay too, not just the (already
   // negative) timer remainder.
-  await oneEvent(el, 'lyra-after-hide');
+  await oneEvent(el, 'lr-after-hide');
   expect(el.isConnected).to.be.false;
 });
 
@@ -122,11 +122,11 @@ it('does not schedule a redundant re-render when a shortened duration forces hid
   console.warn = (...args: unknown[]) => calls.push(args);
   try {
     const el = (await fixture(
-      html`<lyra-toast-item duration="5000">msg</lyra-toast-item>`,
+      html`<lr-toast-item duration="5000">msg</lr-toast-item>`,
     )) as LyraToastItem;
     await aTimeout(50);
     el.duration = 10; // already behind elapsedMs -- resumeTimer() calls hide() synchronously
-    await oneEvent(el, 'lyra-after-hide');
+    await oneEvent(el, 'lr-after-hide');
   } finally {
     console.warn = originalWarn;
   }
@@ -136,26 +136,26 @@ it('does not schedule a redundant re-render when a shortened duration forces hid
 });
 
 it('restarts the timer when duration changes from disabled (0) back to a positive value', async () => {
-  const el = (await fixture(html`<lyra-toast-item duration="0">msg</lyra-toast-item>`)) as LyraToastItem;
+  const el = (await fixture(html`<lr-toast-item duration="0">msg</lr-toast-item>`)) as LyraToastItem;
   await aTimeout(20);
   expect(el.isConnected).to.be.true;
   el.duration = 15;
-  await oneEvent(el, 'lyra-after-hide');
+  await oneEvent(el, 'lr-after-hide');
   expect(el.isConnected).to.be.false;
 });
 
 it('keeps an explicit Infinity duration meaning "never auto-dismiss" instead of coercing it into a large finite timeout', async () => {
-  const el = (await fixture(html`<lyra-toast-item duration="Infinity">msg</lyra-toast-item>`)) as LyraToastItem;
+  const el = (await fixture(html`<lr-toast-item duration="Infinity">msg</lr-toast-item>`)) as LyraToastItem;
   expect((el as any).safeDuration).to.equal(Infinity);
   await aTimeout(60);
   expect(el.isConnected, 'Infinity must never schedule a real dismiss timer').to.be.true;
 });
 
 it('self-heals a NaN duration to the constructed default, and a negative duration to the same disabled state as 0', async () => {
-  const nanEl = (await fixture(html`<lyra-toast-item duration="NaN">msg</lyra-toast-item>`)) as LyraToastItem;
+  const nanEl = (await fixture(html`<lr-toast-item duration="NaN">msg</lr-toast-item>`)) as LyraToastItem;
   expect((nanEl as any).safeDuration).to.equal(5000);
 
-  const negativeEl = (await fixture(html`<lyra-toast-item duration="-50">msg</lyra-toast-item>`)) as LyraToastItem;
+  const negativeEl = (await fixture(html`<lr-toast-item duration="-50">msg</lr-toast-item>`)) as LyraToastItem;
   expect((negativeEl as any).safeDuration).to.equal(0);
   await aTimeout(30);
   expect(negativeEl.isConnected, 'a negative duration clamps to 0, which this component already treats as disabled').to.be
@@ -163,7 +163,7 @@ it('self-heals a NaN duration to the constructed default, and a negative duratio
 });
 
 it('resolves hide() even if the element disconnects mid-hide-animation', async () => {
-  const el = (await fixture(html`<lyra-toast-item>msg</lyra-toast-item>`)) as LyraToastItem;
+  const el = (await fixture(html`<lr-toast-item>msg</lr-toast-item>`)) as LyraToastItem;
   const hidden = el.hide();
   el.remove();
   await hidden; // must not hang forever
@@ -171,10 +171,10 @@ it('resolves hide() even if the element disconnects mid-hide-animation', async (
 
 it('applies distinct visual sizing per the `size` property', async () => {
   const xs = (await fixture(
-    html`<lyra-toast-item size="xs" duration="0">a</lyra-toast-item>`,
+    html`<lr-toast-item size="xs" duration="0">a</lr-toast-item>`,
   )) as LyraToastItem;
   const xl = (await fixture(
-    html`<lyra-toast-item size="xl" duration="0">a</lyra-toast-item>`,
+    html`<lr-toast-item size="xl" duration="0">a</lr-toast-item>`,
   )) as LyraToastItem;
 
   const xsBox = xs.shadowRoot!.querySelector('[part="toast-item"]') as HTMLElement;
@@ -190,9 +190,9 @@ it('applies distinct visual sizing per the `size` property', async () => {
 
 it('updates the ARIA role live when `variant` changes after creation', async () => {
   const el = (await fixture(
-    html`<lyra-toast-item variant="neutral" duration="0">progress</lyra-toast-item>`,
+    html`<lr-toast-item variant="neutral" duration="0">progress</lr-toast-item>`,
   )) as LyraToastItem;
-  await oneEvent(el, 'lyra-show');
+  await oneEvent(el, 'lr-show');
   expect(el.getAttribute('role')).to.equal('status');
 
   el.variant = 'danger';
@@ -202,56 +202,56 @@ it('updates the ARIA role live when `variant` changes after creation', async () 
 
 it('renders the icon part/slot only when withIcon is true', async () => {
   const withoutIcon = (await fixture(
-    html`<lyra-toast-item duration="0">no icon</lyra-toast-item>`,
+    html`<lr-toast-item duration="0">no icon</lr-toast-item>`,
   )) as LyraToastItem;
   expect(withoutIcon.shadowRoot!.querySelector('[part="icon"]')).to.be.null;
 
   const withIcon = (await fixture(
-    html`<lyra-toast-item with-icon duration="0">has icon</lyra-toast-item>`,
+    html`<lr-toast-item with-icon duration="0">has icon</lr-toast-item>`,
   )) as LyraToastItem;
   expect(withIcon.shadowRoot!.querySelector('[part="icon"]')).to.exist;
   expect(withIcon.shadowRoot!.querySelector('[part="icon"] slot[name="icon"]')).to.exist;
 });
 
-it('does not fire lyra-hide/lyra-after-hide twice when hide() is called twice concurrently', async () => {
-  const el = (await fixture(html`<lyra-toast-item duration="0">dup</lyra-toast-item>`)) as LyraToastItem;
-  await oneEvent(el, 'lyra-show');
+it('does not fire lr-hide/lr-after-hide twice when hide() is called twice concurrently', async () => {
+  const el = (await fixture(html`<lr-toast-item duration="0">dup</lr-toast-item>`)) as LyraToastItem;
+  await oneEvent(el, 'lr-show');
 
   let hideCount = 0;
   let afterHideCount = 0;
-  el.addEventListener('lyra-hide', () => hideCount++);
-  el.addEventListener('lyra-after-hide', () => afterHideCount++);
+  el.addEventListener('lr-hide', () => hideCount++);
+  el.addEventListener('lr-after-hide', () => afterHideCount++);
 
   void el.hide();
   void el.hide();
 
   await aTimeout(300);
-  expect(hideCount, 'lyra-hide should fire exactly once').to.equal(1);
-  expect(afterHideCount, 'lyra-after-hide should fire exactly once').to.equal(1);
+  expect(hideCount, 'lr-hide should fire exactly once').to.equal(1);
+  expect(afterHideCount, 'lr-after-hide should fire exactly once').to.equal(1);
 });
 
 it('marks the close button aria-disabled once hiding starts and ignores a rapid double-click', async () => {
-  const el = (await fixture(html`<lyra-toast-item duration="0">dup</lyra-toast-item>`)) as LyraToastItem;
-  await oneEvent(el, 'lyra-show');
+  const el = (await fixture(html`<lr-toast-item duration="0">dup</lr-toast-item>`)) as LyraToastItem;
+  await oneEvent(el, 'lr-show');
   const button = el.shadowRoot!.querySelector('[part="close-button"]') as HTMLButtonElement;
 
   let hideCount = 0;
   let afterHideCount = 0;
-  el.addEventListener('lyra-hide', () => hideCount++);
-  el.addEventListener('lyra-after-hide', () => afterHideCount++);
+  el.addEventListener('lr-hide', () => hideCount++);
+  el.addEventListener('lr-after-hide', () => afterHideCount++);
 
   button.click();
   expect(button.getAttribute('aria-disabled')).to.equal('true');
   button.click();
 
   await aTimeout(300);
-  expect(hideCount, 'lyra-hide should fire exactly once').to.equal(1);
-  expect(afterHideCount, 'lyra-after-hide should fire exactly once').to.equal(1);
+  expect(hideCount, 'lr-hide should fire exactly once').to.equal(1);
+  expect(afterHideCount, 'lr-after-hide should fire exactly once').to.equal(1);
 });
 
 it('gives the close button the shared minimum hit area', async () => {
-  const el = (await fixture(html`<lyra-toast-item duration="0">dismiss me</lyra-toast-item>`)) as LyraToastItem;
-  await oneEvent(el, 'lyra-show');
+  const el = (await fixture(html`<lr-toast-item duration="0">dismiss me</lr-toast-item>`)) as LyraToastItem;
+  await oneEvent(el, 'lr-show');
   const button = el.shadowRoot!.querySelector('[part="close-button"]') as HTMLElement;
   expect(getComputedStyle(button).minInlineSize).to.equal('40px');
   expect(getComputedStyle(button).minBlockSize).to.equal('40px');
@@ -263,9 +263,9 @@ it('keeps focus on the close button once hiding starts, instead of dropping it t
   // switch-access user dismisses a toast is by activating this exact button
   // while it's focused, so aria-disabled (which doesn't blur) is used instead.
   const el = (await fixture(
-    html`<lyra-toast-item duration="0">focus me</lyra-toast-item>`,
+    html`<lr-toast-item duration="0">focus me</lr-toast-item>`,
   )) as LyraToastItem;
-  await oneEvent(el, 'lyra-show');
+  await oneEvent(el, 'lr-show');
   const button = el.shadowRoot!.querySelector('[part="close-button"]') as HTMLButtonElement;
 
   button.focus();
@@ -280,8 +280,8 @@ it('keeps focus on the close button once hiding starts, instead of dropping it t
 });
 
 it('stays paused on pointerleave while focus still holds it paused', async () => {
-  const el = (await fixture(html`<lyra-toast-item duration="120">hi</lyra-toast-item>`)) as LyraToastItem;
-  await oneEvent(el, 'lyra-show');
+  const el = (await fixture(html`<lr-toast-item duration="120">hi</lr-toast-item>`)) as LyraToastItem;
+  await oneEvent(el, 'lr-show');
   const item = el.shadowRoot!.querySelector('[part="toast-item"]') as HTMLElement;
 
   item.dispatchEvent(new PointerEvent('pointerenter'));
@@ -293,8 +293,8 @@ it('stays paused on pointerleave while focus still holds it paused', async () =>
 });
 
 it('stays paused on focusout while the pointer is still hovering', async () => {
-  const el = (await fixture(html`<lyra-toast-item duration="120">hi</lyra-toast-item>`)) as LyraToastItem;
-  await oneEvent(el, 'lyra-show');
+  const el = (await fixture(html`<lr-toast-item duration="120">hi</lr-toast-item>`)) as LyraToastItem;
+  await oneEvent(el, 'lr-show');
   const item = el.shadowRoot!.querySelector('[part="toast-item"]') as HTMLElement;
 
   item.dispatchEvent(new FocusEvent('focusin'));
@@ -307,72 +307,72 @@ it('stays paused on focusout while the pointer is still hovering', async () => {
 
 it('cancels the pending first-paint rAF when removed before it fires, so it cannot resurrect a detached toast', async () => {
   const el = (await fixture(
-    html`<lyra-toast-item duration="0">gone before paint</lyra-toast-item>`,
+    html`<lr-toast-item duration="0">gone before paint</lr-toast-item>`,
   )) as LyraToastItem;
   await el.updateComplete; // firstUpdated ran and scheduled its rAF, which hasn't fired yet
 
   let sawShow = false;
-  el.addEventListener('lyra-show', () => (sawShow = true));
+  el.addEventListener('lr-show', () => (sawShow = true));
   el.remove(); // disconnect before the browser's next paint
 
   await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
   await aTimeout(20);
 
-  expect(sawShow, 'lyra-show should not fire for a toast removed before first paint').to.be.false;
+  expect(sawShow, 'lr-show should not fire for a toast removed before first paint').to.be.false;
   expect(el.hasAttribute('data-visible')).to.be.false;
 });
 
 it('cancels the pending show-animation timeout when disconnected out-of-band, so it cannot emit on a detached node', async () => {
   const el = (await fixture(
-    html`<lyra-toast-item duration="0">detach mid-show</lyra-toast-item>`,
+    html`<lr-toast-item duration="0">detach mid-show</lr-toast-item>`,
   )) as LyraToastItem;
-  await oneEvent(el, 'lyra-show'); // the lyra-after-show setTimeout is now pending
+  await oneEvent(el, 'lr-show'); // the lr-after-show setTimeout is now pending
 
   let sawAfterShow = false;
-  el.addEventListener('lyra-after-show', () => (sawAfterShow = true));
+  el.addEventListener('lr-after-show', () => (sawAfterShow = true));
 
   el.remove(); // disconnect out-of-band (e.g. the hosting region itself was torn down)
 
   await aTimeout(220); // past ANIM_MS
-  expect(sawAfterShow, 'lyra-after-show should not fire for a node disconnected mid-show-animation').to.be
+  expect(sawAfterShow, 'lr-after-show should not fire for a node disconnected mid-show-animation').to.be
     .false;
 });
 
 it('cancels the pending hide-animation timeout when disconnected out-of-band, so it cannot emit or re-remove a detached node', async () => {
   const el = (await fixture(
-    html`<lyra-toast-item duration="0">detach mid-hide</lyra-toast-item>`,
+    html`<lr-toast-item duration="0">detach mid-hide</lr-toast-item>`,
   )) as LyraToastItem;
-  await oneEvent(el, 'lyra-show');
+  await oneEvent(el, 'lr-show');
 
   let sawAfterHide = false;
-  el.addEventListener('lyra-after-hide', () => (sawAfterHide = true));
+  el.addEventListener('lr-after-hide', () => (sawAfterHide = true));
 
   void el.hide(); // starts the ANIM_MS hide delay
   el.remove(); // disconnect out-of-band before the hide animation timeout fires
 
   await aTimeout(220); // past ANIM_MS
-  expect(sawAfterHide, 'lyra-after-hide should not fire for a node disconnected mid-hide-animation').to.be
+  expect(sawAfterHide, 'lr-after-hide should not fire for a node disconnected mid-hide-animation').to.be
     .false;
 });
 
 it('is accessible', async () => {
   const el = (await fixture(
-    html`<lyra-toast-item variant="brand" duration="0">hello</lyra-toast-item>`,
+    html`<lr-toast-item variant="brand" duration="0">hello</lr-toast-item>`,
   )) as LyraToastItem;
-  await oneEvent(el, 'lyra-show');
+  await oneEvent(el, 'lr-show');
   await expect(el).to.be.accessible();
 });
 
 it('derives the close button aria-label from the toast message for a11y in multi-toast stacks', async () => {
   const el = (await fixture(
-    html`<lyra-toast-item duration="0">Upload complete</lyra-toast-item>`,
+    html`<lr-toast-item duration="0">Upload complete</lr-toast-item>`,
   )) as LyraToastItem;
   const button = el.shadowRoot!.querySelector('[part="close-button"]') as HTMLElement;
   expect(button.getAttribute('aria-label')).to.equal('Close: Upload complete');
 });
 
 it('falls back to a generic close label when the toast has no text content', async () => {
-  const el = (await fixture(html`<lyra-toast-item duration="0"></lyra-toast-item>`)) as LyraToastItem;
+  const el = (await fixture(html`<lr-toast-item duration="0"></lr-toast-item>`)) as LyraToastItem;
   const button = el.shadowRoot!.querySelector('[part="close-button"]') as HTMLElement;
   expect(button.getAttribute('aria-label')).to.equal('Close');
 });
@@ -381,7 +381,7 @@ it('excludes an appended action button\'s text from the derived close label', as
   // Mirrors toaster.ts, which appends a light-DOM <button> sibling of the
   // message text after the item's first render (the action-button feature).
   const el = (await fixture(
-    html`<lyra-toast-item duration="0">Item deleted</lyra-toast-item>`,
+    html`<lr-toast-item duration="0">Item deleted</lr-toast-item>`,
   )) as LyraToastItem;
   const action = document.createElement('button');
   action.type = 'button';
@@ -403,7 +403,7 @@ it('excludes slot="icon" text from the derived close label', async () => {
   // Mirrors the WithIcon story, which appends a slot="icon" element whose
   // own text content ("✓") must not bleed into the close-button label.
   const el = (await fixture(
-    html`<lyra-toast-item with-icon duration="0">Upload complete</lyra-toast-item>`,
+    html`<lr-toast-item with-icon duration="0">Upload complete</lr-toast-item>`,
   )) as LyraToastItem;
   const icon = document.createElement('span');
   icon.slot = 'icon';
@@ -420,7 +420,7 @@ it('excludes slot="icon" text from the derived close label', async () => {
 
 it('renders the shared close icon svg instead of a literal times-entity glyph', async () => {
   const el = (await fixture(
-    html`<lyra-toast-item duration="0">hi</lyra-toast-item>`,
+    html`<lr-toast-item duration="0">hi</lr-toast-item>`,
   )) as LyraToastItem;
   const button = el.shadowRoot!.querySelector('[part="close-button"]') as HTMLElement;
   expect(button.querySelector('svg')).to.exist;
@@ -429,32 +429,32 @@ it('renders the shared close icon svg instead of a literal times-entity glyph', 
 
 it('uses the configured hide transition duration for lifecycle completion', async () => {
   const el = (await fixture(
-    html`<lyra-toast-item duration="0">bye</lyra-toast-item>`,
+    html`<lr-toast-item duration="0">bye</lr-toast-item>`,
   )) as LyraToastItem;
-  await oneEvent(el, 'lyra-show');
-  el.style.setProperty('--lyra-toast-hide-duration', '20ms linear');
+  await oneEvent(el, 'lr-show');
+  el.style.setProperty('--lr-toast-hide-duration', '20ms linear');
   const start = performance.now();
   void el.hide();
-  await oneEvent(el, 'lyra-after-hide');
+  await oneEvent(el, 'lr-after-hide');
   const elapsed = performance.now() - start;
   expect(elapsed).to.be.lessThan(150);
 });
 
 it('exposes distinct namespaced show and hide transition properties', () => {
-  expect(styles.cssText).to.include('var(--lyra-transition-base');
-  expect(styles.cssText).to.include('--lyra-toast-show-duration');
-  expect(styles.cssText).to.include('--lyra-toast-hide-duration');
+  expect(styles.cssText).to.include('var(--lr-transition-base');
+  expect(styles.cssText).to.include('--lr-toast-show-duration');
+  expect(styles.cssText).to.include('--lr-toast-hide-duration');
   expect(styles.cssText).to.not.include('--show-duration');
   expect(styles.cssText).to.not.include('--hide-duration');
 });
 
 it('completes a hide on transitionend without waiting for the fallback timeout', async () => {
   const el = (await fixture(
-    html`<lyra-toast-item duration="0">transition</lyra-toast-item>`,
+    html`<lr-toast-item duration="0">transition</lr-toast-item>`,
   )) as LyraToastItem;
-  await oneEvent(el, 'lyra-show');
-  el.style.setProperty('--lyra-toast-hide-duration', '2s linear');
-  const afterHide = oneEvent(el, 'lyra-after-hide');
+  await oneEvent(el, 'lr-show');
+  el.style.setProperty('--lr-toast-hide-duration', '2s linear');
+  const afterHide = oneEvent(el, 'lr-after-hide');
   const surface = el.shadowRoot!.querySelector('[part="toast-item"]')!;
   void el.hide();
   surface.dispatchEvent(new Event('transitionend', { bubbles: true }));
@@ -480,15 +480,15 @@ it('skips the JS-side show/hide delay (not just the CSS transition) under prefer
 
   try {
     const el = (await fixture(
-      html`<lyra-toast-item duration="0">reduced motion</lyra-toast-item>`,
+      html`<lr-toast-item duration="0">reduced motion</lr-toast-item>`,
     )) as LyraToastItem;
     const showStart = performance.now();
-    await oneEvent(el, 'lyra-after-show');
+    await oneEvent(el, 'lr-after-show');
     expect(performance.now() - showStart).to.be.lessThan(100);
 
     const hideStart = performance.now();
     void el.hide();
-    await oneEvent(el, 'lyra-after-hide');
+    await oneEvent(el, 'lr-after-hide');
     expect(performance.now() - hideStart).to.be.lessThan(100);
   } finally {
     window.matchMedia = originalMatchMedia;
@@ -498,6 +498,6 @@ it('skips the JS-side show/hide delay (not just the CSS transition) under prefer
 it('defines a focus-visible outline for the close button using the shared focus-ring tokens', () => {
   expect(styles.cssText).to.match(/\[part=['"]close-button['"]\]:focus-visible/);
   expect(styles.cssText).to.match(
-    /outline:\s*var\(--lyra-focus-ring-width\)\s*solid\s*var\(--lyra-focus-ring-color\)/,
+    /outline:\s*var\(--lr-focus-ring-width\)\s*solid\s*var\(--lr-focus-ring-color\)/,
   );
 });

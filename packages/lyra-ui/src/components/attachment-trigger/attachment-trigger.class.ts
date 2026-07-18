@@ -22,8 +22,8 @@ export interface AttachmentPickDetail {
 // (internal/icons.ts's chevronIcon()/closeIcon()/etc.) without adding these
 // one-off glyphs to that module -- it's off limits here -- so they still
 // read as part of the same visual language as the rest of the library's
-// inline icons. Same approach as lyra-attachment-chip's local fileGlyph()/
-// retryIcon() and lyra-checkbox's local checkmarkGlyph().
+// inline icons. Same approach as lr-attachment-chip's local fileGlyph()/
+// retryIcon() and lr-checkbox's local checkmarkGlyph().
 const ICON_VIEW_BOX = '0 0 24 24';
 const ICON_STROKE_WIDTH = '1.75';
 
@@ -100,27 +100,27 @@ const CAPABILITY_META: Record<AttachmentCapability, CapabilityMeta> = {
 };
 
 export interface LyraAttachmentTriggerEventMap {
-  'lyra-camera-request': CustomEvent<undefined>;
-  'lyra-audio-request': CustomEvent<undefined>;
-  'lyra-pick': CustomEvent<AttachmentPickDetail>;
+  'lr-camera-request': CustomEvent<undefined>;
+  'lr-audio-request': CustomEvent<undefined>;
+  'lr-pick': CustomEvent<AttachmentPickDetail>;
   blur: CustomEvent<undefined>;
   focus: CustomEvent<undefined>;
 }
 /**
- * `<lyra-attachment-trigger>` — a compact attach affordance designed for a
- * chat composer's leading slot (see `<lyra-chat-composer>`'s own `leading`
+ * `<lr-attachment-trigger>` — a compact attach affordance designed for a
+ * chat composer's leading slot (see `<lr-chat-composer>`'s own `leading`
  * slot, which this drops straight into, though this component has no code
  * dependency on it). Its shape adapts to how many attachment `capabilities`
  * are configured:
  *  - Exactly one capability: a single plain icon button ([part='trigger']).
  *    Activating it performs that capability's action directly.
  *  - More than one: a small anchored menu ([part='menu'], composed from
- *    `<lyra-menu>`/`<lyra-menu-item>`) listing each capability as a row.
+ *    `<lr-menu>`/`<lr-menu-item>`) listing each capability as a row.
  *
  * Two of the four capabilities (`files`, `image`) are file-picker-backed:
  * activating them opens a hidden native `<input type="file">` via a
  * synthetic `.click()`, and the resulting selection is re-emitted as
- * `lyra-pick`. `accept` is shared across both — `image` defaults it to
+ * `lr-pick`. `accept` is shared across both — `image` defaults it to
  * `'image/*'` unless the `accept` prop overrides it, `files` always uses
  * `accept` as-is (empty means "any file type", matching a bare native
  * `<input type="file">` with no `accept` attribute).
@@ -130,27 +130,27 @@ export interface LyraAttachmentTriggerEventMap {
  * no `<input capture>` — because that's entirely a host/browser concern with
  * no single right answer (a desktop web app, a mobile PWA, and a native
  * wrapper all want different things here). Activating `camera` fires
- * `lyra-camera-request`; activating `audio` fires `lyra-audio-request`. The
+ * `lr-camera-request`; activating `audio` fires `lr-audio-request`. The
  * host owns everything from that point on — typically opening
- * `<lyra-push-to-talk>` in a `<lyra-overlay>`/popover for `audio`, then
- * handing the resulting blob to something like `<lyra-attachment-chip>`.
+ * `<lr-push-to-talk>` in a `<lr-overlay>`/popover for `audio`, then
+ * handing the resulting blob to something like `<lr-attachment-chip>`.
  *
- * @customElement lyra-attachment-trigger
- * @event lyra-pick - A file-backed capability's hidden file input produced a
+ * @customElement lr-attachment-trigger
+ * @event lr-pick - A file-backed capability's hidden file input produced a
  * real selection. `detail: { capability: 'files' | 'image', files }` — a
  * real `FileList` (not a plain array), matching the native input's own
  * `.files` shape, but an independent snapshot rather than that same live
  * object — see `onInputChange`'s own doc for why a live reference would be
  * unsafe to hand out here.
- * @event lyra-camera-request - The `camera` capability was activated. No
+ * @event lr-camera-request - The `camera` capability was activated. No
  * detail payload — see the class doc's scope note; the host implements the
  * actual capture flow.
- * @event lyra-audio-request - The `audio` capability was activated. No
- * detail payload — same request-only scope as `lyra-camera-request`; the
- * host implements the actual recording flow (typically `<lyra-push-to-talk>`).
+ * @event lr-audio-request - The `audio` capability was activated. No
+ * detail payload — same request-only scope as `lr-camera-request`; the
+ * host implements the actual recording flow (typically `<lr-push-to-talk>`).
  * @csspart trigger - The single-capability icon button. Only rendered when `capabilities.length === 1`.
- * @csspart menu - The `<lyra-menu>` wrapper. Only rendered when `capabilities.length > 1`.
- * @csspart menu-trigger - The multi-capability button slotted into `<lyra-menu>`'s own `trigger` slot. Only rendered when `capabilities.length > 1`.
+ * @csspart menu - The `<lr-menu>` wrapper. Only rendered when `capabilities.length > 1`.
+ * @csspart menu-trigger - The multi-capability button slotted into `<lr-menu>`'s own `trigger` slot. Only rendered when `capabilities.length > 1`.
  * @csspart expand-icon - The disclosure chevron inside the multi-capability trigger button. Only rendered when `capabilities.length > 1`.
  * @csspart hidden-input - The internal native `<input type="file">` that actually opens the OS file
  *   picker. Hidden (`display: none`) by default; exposed as a part only so a consumer can override
@@ -211,11 +211,11 @@ export class LyraAttachmentTrigger extends LyraElement<LyraAttachmentTriggerEven
   private activateCapability(capability: AttachmentCapability): void {
     if (this.disabled) return;
     if (capability === 'camera') {
-      this.emit('lyra-camera-request');
+      this.emit('lr-camera-request');
       return;
     }
     if (capability === 'audio') {
-      this.emit('lyra-audio-request');
+      this.emit('lr-audio-request');
       return;
     }
     this.pendingCapability = capability;
@@ -246,18 +246,18 @@ export class LyraAttachmentTrigger extends LyraElement<LyraAttachmentTriggerEven
       // microtask later (an `async` handler, a queued upload) would see an
       // empty list. Rehoming the selected files into a fresh `DataTransfer`
       // produces an independent `FileList` — still the real `FileList` type
-      // the `lyra-pick` contract promises, just no longer tied to this
+      // the `lr-pick` contract promises, just no longer tied to this
       // input's own live state.
       const snapshot = new DataTransfer();
       for (const file of selected) snapshot.items.add(file);
-      this.emit<AttachmentPickDetail>('lyra-pick', {
+      this.emit<AttachmentPickDetail>('lr-pick', {
         capability: this.pendingCapability,
         files: snapshot.files,
       });
     }
     // Clearing `.value` (not just leaving the stale selection in place)
     // means re-picking the exact same file still fires another 'change'
-    // event next time, matching <lyra-file-input>'s identical reset.
+    // event next time, matching <lr-file-input>'s identical reset.
     input.value = '';
   };
   private onNativeFocus = (): void => { this.emit('focus'); };
@@ -299,7 +299,7 @@ export class LyraAttachmentTrigger extends LyraElement<LyraAttachmentTriggerEven
   private renderMenu(): TemplateResult {
     const addLabel = this.localize('attachmentAdd');
     return html`
-      <lyra-menu part="menu" label=${addLabel} @lyra-menu-select=${this.onMenuSelect}>
+      <lr-menu part="menu" label=${addLabel} @lr-menu-select=${this.onMenuSelect}>
         <button
           slot="trigger"
           part="menu-trigger"
@@ -315,13 +315,13 @@ export class LyraAttachmentTrigger extends LyraElement<LyraAttachmentTriggerEven
         ${this.capabilities.map((capability) => {
           const meta = CAPABILITY_META[capability];
           return html`
-            <lyra-menu-item value=${capability}>
+            <lr-menu-item value=${capability}>
               <span slot="icon">${meta.icon()}</span>
               ${this.localize(meta.menuKey)}
-            </lyra-menu-item>
+            </lr-menu-item>
           `;
         })}
-      </lyra-menu>
+      </lr-menu>
     `;
   }
 
@@ -339,6 +339,6 @@ export class LyraAttachmentTrigger extends LyraElement<LyraAttachmentTriggerEven
 
 declare global {
   interface HTMLElementTagNameMap {
-    'lyra-attachment-trigger': LyraAttachmentTrigger;
+    'lr-attachment-trigger': LyraAttachmentTrigger;
   }
 }

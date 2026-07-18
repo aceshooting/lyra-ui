@@ -1,7 +1,7 @@
 /**
- * Pure, DOM-free allowlist resolution for `<lyra-widget-renderer>`'s declarative JSON widget tree.
+ * Pure, DOM-free allowlist resolution for `<lr-widget-renderer>`'s declarative JSON widget tree.
  * This module never imports or calls a raw-HTML-parsing rendering API of any kind -- every value
- * that reaches a rendered `lyra-*` tag has passed an explicit type-key lookup against the type
+ * that reaches a rendered `lr-*` tag has passed an explicit type-key lookup against the type
  * registry plus a per-prop primitive-type check against that type's `WidgetTypeDefinition`. An
  * unregistered `type` is rejected outright (its whole subtree is skipped), and a prop not declared
  * in `props` is silently dropped rather than forwarded.
@@ -59,7 +59,7 @@ const ROW_COL_PROP_ENUMS: Record<string, string[]> = {
 function warnOnce(ctx: ResolveContext, key: string, message: string): void {
   if (ctx.warned.has(key)) return;
   ctx.warned.add(key);
-  (ctx.warn ?? console.warn)(`[lyra-widget-renderer] ${message}`);
+  (ctx.warn ?? console.warn)(`[lr-widget-renderer] ${message}`);
 }
 
 function filterRowColProps(props: Record<string, unknown> | undefined): Record<string, unknown> {

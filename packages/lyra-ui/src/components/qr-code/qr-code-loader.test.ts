@@ -26,7 +26,7 @@ describe('loadQrCode()', () => {
     try {
       expect(await loadQrCode(() => Promise.reject(importError))).to.equal(null);
       expect(calls.flat()).to.contain(importError);
-      expect(calls.flat().join(' ')).to.contain('lyra-qr-code');
+      expect(calls.flat().join(' ')).to.contain('lr-qr-code');
       expect(calls.flat().join(' ')).to.contain('pnpm add qrcode');
     } finally {
       console.warn = originalWarn;

@@ -21,22 +21,22 @@ function maxCssTime(value: string): number {
 }
 
 export interface LyraToastItemEventMap {
-  'lyra-show': CustomEvent<undefined>;
-  'lyra-after-show': CustomEvent<undefined>;
-  'lyra-hide': CustomEvent<undefined>;
-  'lyra-after-hide': CustomEvent<undefined>;
+  'lr-show': CustomEvent<undefined>;
+  'lr-after-show': CustomEvent<undefined>;
+  'lr-hide': CustomEvent<undefined>;
+  'lr-after-hide': CustomEvent<undefined>;
 }
 /**
- * `<lyra-toast-item>` — a single toast notification.
- * Mirrors the Web Awesome `<wa-toast-item>` API under the `lyra-` prefix.
+ * `<lr-toast-item>` — a single toast notification.
+ * Mirrors the Web Awesome `<wa-toast-item>` API under the `lr-` prefix.
  *
- * @customElement lyra-toast-item
+ * @customElement lr-toast-item
  * @slot - The message content.
  * @slot icon - Optional icon shown at the start.
- * @event lyra-show - Fired when the item begins showing.
- * @event lyra-after-show - Fired after the show animation completes.
- * @event lyra-hide - Fired when the item begins hiding.
- * @event lyra-after-hide - Fired after the hide animation completes (item then removes itself).
+ * @event lr-show - Fired when the item begins showing.
+ * @event lr-after-show - Fired after the show animation completes.
+ * @event lr-hide - Fired when the item begins hiding.
+ * @event lr-after-hide - Fired after the hide animation completes (item then removes itself).
  * @csspart toast-item - The outer container.
  * @csspart accent - The colored accent bar.
  * @csspart icon - The icon wrapper.
@@ -121,9 +121,9 @@ export class LyraToastItem extends LyraElement<LyraToastItemEventMap> {
       // don't resurrect the show sequence on top of an already-hiding item.
       if (this.hiding) return;
       this.setAttribute('data-visible', '');
-      this.emit('lyra-show');
+      this.emit('lr-show');
       void this.waitForVisualCompletion('show').then(() => {
-        if (this.isConnected && !this.hiding) this.emit('lyra-after-show');
+        if (this.isConnected && !this.hiding) this.emit('lr-after-show');
       });
       this.startTimer();
     });
@@ -188,7 +188,7 @@ export class LyraToastItem extends LyraElement<LyraToastItemEventMap> {
   /**
    * Wait for the actual CSS transition/animation on the toast surface. The
    * computed duration is intentionally read at runtime so a consumer's
-   * `--lyra-toast-show-duration`/`--lyra-toast-hide-duration` override keeps
+   * `--lr-toast-show-duration`/`--lr-toast-hide-duration` override keeps
    * lifecycle events and removal in sync with the pixels on screen. A small
    * timeout remains as a safety net for zero-duration transitions, disabled
    * animation, and browsers that do not dispatch an end event.
@@ -284,7 +284,7 @@ export class LyraToastItem extends LyraElement<LyraToastItemEventMap> {
     this.cancelShowAnimation?.();
     this.cancelShowAnimation = undefined;
     this.clearTimer();
-    this.emit('lyra-hide');
+    this.emit('lr-hide');
     this.removeAttribute('data-visible');
     this.setAttribute('data-hiding', '');
     await this.waitForVisualCompletion('hide');
@@ -292,7 +292,7 @@ export class LyraToastItem extends LyraElement<LyraToastItemEventMap> {
     // reaching its normal completion -- guard against emitting a finished
     // event or redundantly removing a node already torn down elsewhere.
     if (!this.isConnected) return;
-    this.emit('lyra-after-hide');
+    this.emit('lr-after-hide');
     this.remove();
   }
 
@@ -334,6 +334,6 @@ export class LyraToastItem extends LyraElement<LyraToastItemEventMap> {
 
 declare global {
   interface HTMLElementTagNameMap {
-    'lyra-toast-item': LyraToastItem;
+    'lr-toast-item': LyraToastItem;
   }
 }

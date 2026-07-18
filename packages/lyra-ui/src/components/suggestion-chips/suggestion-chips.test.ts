@@ -9,7 +9,7 @@ const suggestions = [
 ];
 
 it('defaults to empty suggestions, wrap false, and renders nothing when empty', async () => {
-  const el = (await fixture(html`<lyra-suggestion-chips></lyra-suggestion-chips>`)) as LyraSuggestionChips;
+  const el = (await fixture(html`<lr-suggestion-chips></lr-suggestion-chips>`)) as LyraSuggestionChips;
   expect(el.suggestions).to.deep.equal([]);
   expect(el.wrap).to.be.false;
   expect(el.shadowRoot!.querySelector('[part="base"]')).to.not.exist;
@@ -17,24 +17,24 @@ it('defaults to empty suggestions, wrap false, and renders nothing when empty', 
 
 it('renders one chip per suggestion inside a scroller when not wrap', async () => {
   const el = (await fixture(
-    html`<lyra-suggestion-chips .suggestions=${suggestions}></lyra-suggestion-chips>`,
+    html`<lr-suggestion-chips .suggestions=${suggestions}></lr-suggestion-chips>`,
   )) as LyraSuggestionChips;
-  expect(el.shadowRoot!.querySelector('lyra-scroller')).to.exist;
+  expect(el.shadowRoot!.querySelector('lr-scroller')).to.exist;
   const chips = el.shadowRoot!.querySelectorAll('[part~="chip"]');
   expect(chips.length).to.equal(3);
 });
 
 it('renders chips in a plain wrapping row (no scroller) when wrap is set', async () => {
   const el = (await fixture(
-    html`<lyra-suggestion-chips wrap .suggestions=${suggestions}></lyra-suggestion-chips>`,
+    html`<lr-suggestion-chips wrap .suggestions=${suggestions}></lr-suggestion-chips>`,
   )) as LyraSuggestionChips;
-  expect(el.shadowRoot!.querySelector('lyra-scroller')).to.not.exist;
+  expect(el.shadowRoot!.querySelector('lr-scroller')).to.not.exist;
   expect(el.shadowRoot!.querySelectorAll('[part~="chip"]').length).to.equal(3);
 });
 
 it('renders the optional detail line only when set', async () => {
   const el = (await fixture(
-    html`<lyra-suggestion-chips .suggestions=${suggestions}></lyra-suggestion-chips>`,
+    html`<lr-suggestion-chips .suggestions=${suggestions}></lr-suggestion-chips>`,
   )) as LyraSuggestionChips;
   const chips = [...el.shadowRoot!.querySelectorAll('[part~="chip"]')];
   expect(chips[0].querySelector('[part="chip-detail"]')).to.not.exist;
@@ -43,12 +43,12 @@ it('renders the optional detail line only when set', async () => {
   );
 });
 
-it('emits lyra-suggestion-select with id and label on activation', async () => {
+it('emits lr-suggestion-select with id and label on activation', async () => {
   const el = (await fixture(
-    html`<lyra-suggestion-chips .suggestions=${suggestions}></lyra-suggestion-chips>`,
+    html`<lr-suggestion-chips .suggestions=${suggestions}></lr-suggestion-chips>`,
   )) as LyraSuggestionChips;
   const chips = [...el.shadowRoot!.querySelectorAll('[part~="chip"]')] as HTMLButtonElement[];
-  const eventPromise = oneEvent(el, 'lyra-suggestion-select');
+  const eventPromise = oneEvent(el, 'lr-suggestion-select');
   chips[1].click();
   const ev = await eventPromise;
   expect(ev.detail).to.deep.equal({ id: 'b', label: 'Explain the error' });
@@ -56,14 +56,14 @@ it('emits lyra-suggestion-select with id and label on activation', async () => {
 
 it('is a labeled group with a default or custom label', async () => {
   const el = (await fixture(
-    html`<lyra-suggestion-chips .suggestions=${suggestions}></lyra-suggestion-chips>`,
+    html`<lr-suggestion-chips .suggestions=${suggestions}></lr-suggestion-chips>`,
   )) as LyraSuggestionChips;
   const base = el.shadowRoot!.querySelector('[part="base"]')!;
   expect(base.getAttribute('role')).to.equal('group');
   expect(base.getAttribute('aria-label')).to.equal('Suggested prompts');
 
   const labeled = (await fixture(
-    html`<lyra-suggestion-chips .suggestions=${suggestions} label="Try asking"></lyra-suggestion-chips>`,
+    html`<lr-suggestion-chips .suggestions=${suggestions} label="Try asking"></lr-suggestion-chips>`,
   )) as LyraSuggestionChips;
   expect(labeled.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal(
     'Try asking',
@@ -72,10 +72,10 @@ it('is a labeled group with a default or custom label', async () => {
 
 it('localizes the default group label via .strings override', async () => {
   const el = (await fixture(
-    html`<lyra-suggestion-chips
+    html`<lr-suggestion-chips
       .suggestions=${suggestions}
       .strings=${{ suggestionsLabel: 'Essayez de demander' }}
-    ></lyra-suggestion-chips>`,
+    ></lr-suggestion-chips>`,
   )) as LyraSuggestionChips;
   expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal(
     'Essayez de demander',
@@ -84,7 +84,7 @@ it('localizes the default group label via .strings override', async () => {
 
 it('roving tabindex: only one chip is tabbable at a time, and ArrowRight/ArrowLeft move it', async () => {
   const el = (await fixture(
-    html`<lyra-suggestion-chips .suggestions=${suggestions}></lyra-suggestion-chips>`,
+    html`<lr-suggestion-chips .suggestions=${suggestions}></lr-suggestion-chips>`,
   )) as LyraSuggestionChips;
   const chips = [...el.shadowRoot!.querySelectorAll('[part~="chip"]')] as HTMLButtonElement[];
   expect(chips[0].tabIndex).to.equal(0);
@@ -102,7 +102,7 @@ it('roving tabindex: only one chip is tabbable at a time, and ArrowRight/ArrowLe
 
 it('wraps around from the last chip to the first with ArrowRight, and swaps under RTL', async () => {
   const el = (await fixture(
-    html`<lyra-suggestion-chips dir="rtl" .suggestions=${suggestions}></lyra-suggestion-chips>`,
+    html`<lr-suggestion-chips dir="rtl" .suggestions=${suggestions}></lr-suggestion-chips>`,
   )) as LyraSuggestionChips;
   const base = el.shadowRoot!.querySelector('[part="base"]')!;
   base.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true, composed: true }));
@@ -113,7 +113,7 @@ it('wraps around from the last chip to the first with ArrowRight, and swaps unde
 
 it('Home/End jump to the first/last chip', async () => {
   const el = (await fixture(
-    html`<lyra-suggestion-chips .suggestions=${suggestions}></lyra-suggestion-chips>`,
+    html`<lr-suggestion-chips .suggestions=${suggestions}></lr-suggestion-chips>`,
   )) as LyraSuggestionChips;
   const base = el.shadowRoot!.querySelector('[part="base"]')!;
   const chips = [...el.shadowRoot!.querySelectorAll('[part~="chip"]')] as HTMLButtonElement[];
@@ -127,7 +127,7 @@ it('Home/End jump to the first/last chip', async () => {
 
 it('preserves focus on a chip whose id survives a suggestions replacement (keyed repeat)', async () => {
   const el = (await fixture(
-    html`<lyra-suggestion-chips .suggestions=${suggestions}></lyra-suggestion-chips>`,
+    html`<lr-suggestion-chips .suggestions=${suggestions}></lr-suggestion-chips>`,
   )) as LyraSuggestionChips;
   const secondChip = [...el.shadowRoot!.querySelectorAll('[part~="chip"]')][1] as HTMLButtonElement;
   secondChip.focus();
@@ -142,7 +142,7 @@ it('preserves focus on a chip whose id survives a suggestions replacement (keyed
 
 it('is accessible', async () => {
   const el = (await fixture(
-    html`<lyra-suggestion-chips .suggestions=${suggestions}></lyra-suggestion-chips>`,
+    html`<lr-suggestion-chips .suggestions=${suggestions}></lr-suggestion-chips>`,
   )) as LyraSuggestionChips;
   await expect(el).to.be.accessible();
 });

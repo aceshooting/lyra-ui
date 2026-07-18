@@ -6,7 +6,7 @@ import { storyColor } from '../../../../../.storybook/story-theme.js';
 
 const meta: Meta = {
   title: 'Sequence Strip',
-  component: 'lyra-sequence-strip',
+  component: 'lr-sequence-strip',
   tags: ['autodocs'],
 };
 export default meta;
@@ -27,18 +27,18 @@ const items: SequenceStripItem[] = [
 ];
 
 export const Default: Story = {
-  render: () => html`<lyra-sequence-strip .items=${items} .categories=${categories}></lyra-sequence-strip>`,
+  render: () => html`<lr-sequence-strip .items=${items} .categories=${categories}></lr-sequence-strip>`,
 };
 
 export const Empty: Story = {
-  render: () => html`<lyra-sequence-strip></lyra-sequence-strip>`,
+  render: () => html`<lr-sequence-strip></lr-sequence-strip>`,
 };
 
 export const CustomAccessibleLabel: Story = {
   render: () =>
-    html`<lyra-sequence-strip
+    html`<lr-sequence-strip
       .items=${items}
       .categories=${categories}
       accessible-label="Conversation turn history: 2 text, 2 tool, 1 mixed"
-    ></lyra-sequence-strip>`,
+    ></lr-sequence-strip>`,
 };

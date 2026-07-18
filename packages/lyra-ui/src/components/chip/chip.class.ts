@@ -16,41 +16,41 @@ export interface ChipSelectDetail {
 }
 
 export interface LyraChipEventMap {
-  'lyra-remove': CustomEvent<ChipRemoveDetail>;
-  'lyra-chip-select': CustomEvent<ChipSelectDetail>;
+  'lr-remove': CustomEvent<ChipRemoveDetail>;
+  'lr-chip-select': CustomEvent<ChipSelectDetail>;
 }
 
 /**
- * `<lyra-chip>` — a small, content-agnostic pill for a short label: a tag, an
- * active-filter/scope indicator, etc. Distinct from `<lyra-attachment-chip>`
+ * `<lr-chip>` — a small, content-agnostic pill for a short label: a tag, an
+ * active-filter/scope indicator, etc. Distinct from `<lr-attachment-chip>`
  * (specifically file-shaped, with a thumbnail/size/upload-progress) — this
  * one carries no domain assumptions at all, just a label and an optional
  * leading icon/dot.
  *
  * `tone` tints the whole pill using the same loud-color-on-quiet-tint
- * convention `<lyra-tool-call-chip>`/`<lyra-citation-badge>` already
+ * convention `<lr-tool-call-chip>`/`<lr-citation-badge>` already
  * establish for status coloring: background is the tone's `-quiet` tint,
  * text/icon is the tone's loud color. `neutral` (the default) has no
  * dedicated token pair of its own, so it falls back to a plain
  * bordered-surface look — the same "no signal" treatment
- * `<lyra-citation-badge>`'s `default` status and `<lyra-tool-call-chip>`'s
+ * `<lr-citation-badge>`'s `default` status and `<lr-tool-call-chip>`'s
  * `pending` status already use.
  *
  * This is a controlled component: clicking the remove (×) button only fires
- * `lyra-remove` — the chip never removes itself from the DOM on its own
- * interaction, the same contract `<lyra-attachment-chip>`/
- * `<lyra-conversation-item>` already follow. A consumer owns the underlying
+ * `lr-remove` — the chip never removes itself from the DOM on its own
+ * interaction, the same contract `<lr-attachment-chip>`/
+ * `<lr-conversation-item>` already follow. A consumer owns the underlying
  * list and decides whether/how the click actually removes anything.
  *
- * @customElement lyra-chip
+ * @customElement lr-chip
  * @slot - The chip's label content.
  * @slot icon - Optional leading icon or status dot. Nothing is reserved for
  * it (no extra gap) when left empty.
- * @event lyra-remove - The remove (×) button was activated (click, or
+ * @event lr-remove - The remove (×) button was activated (click, or
  * Enter/Space while focused — native `<button>` behavior). `detail: { value }`
  * — `value` is `undefined` when the `value` prop was never set. Only
  * rendered while `removable`.
- * @event lyra-chip-select - Fired on click, or Enter/Space while focused, once the chip has
+ * @event lr-chip-select - Fired on click, or Enter/Space while focused, once the chip has
  * opted into toggle mode (via `selected` or `toggleable`) and `removable` is not set.
  * `detail: { value, selected }` -- the chip has already toggled its own `selected` state by the
  * time this fires.
@@ -58,7 +58,7 @@ export interface LyraChipEventMap {
  * @csspart icon - Wrapper around the `icon` slot. Hidden entirely while empty.
  * @csspart label - Wrapper around the default slot.
  * @csspart remove-button - The remove (×) affordance, only rendered while `removable`.
- * @cssprop [--lyra-chip-pressed-bg=var(--lyra-chip-bg)] - Background while a toggleable chip is
+ * @cssprop [--lr-chip-pressed-bg=var(--lr-chip-bg)] - Background while a toggleable chip is
  * selected, independently themeable from its resting background.
  */
 export class LyraChip extends LyraElement<LyraChipEventMap> {
@@ -72,9 +72,9 @@ export class LyraChip extends LyraElement<LyraChipEventMap> {
 
   /** Opt-in toggle/pressed mode -- the current pressed value. Setting `selected` (to `true`, the
    *  common way to start a chip already pressed) opts the chip into toggle mode automatically, so
-   *  `<lyra-chip selected>` alone is enough: `[part='base']` becomes focusable and
+   *  `<lr-chip selected>` alone is enough: `[part='base']` becomes focusable and
    *  keyboard-activatable (Enter/Space, mirroring native `<button>` behavior), reflects
-   *  `aria-pressed`, and toggles on click/activation, emitting `lyra-chip-select`. That opt-in
+   *  `aria-pressed`, and toggles on click/activation, emitting `lr-chip-select`. That opt-in
    *  (tracked by `toggleable`, see below) persists once made, so toggling `selected` back to
    *  `false` never strips the chip's interactivity -- a chip a user has clicked "off" must stay
    *  clickable to turn it back "on". Has no effect (no interactive semantics added to
@@ -96,13 +96,13 @@ export class LyraChip extends LyraElement<LyraChipEventMap> {
 
   /** Opaque consumer bookkeeping value — never read, validated, or rendered
    *  by this component itself, only ever echoed back verbatim (including
-   *  `undefined` if never set) in `lyra-remove`'s detail. */
+   *  `undefined` if never set) in `lr-remove`'s detail. */
   @property() value?: string;
 
   // A `[part]` always contains a literal `<slot>` child regardless of
   // assigned content, so `:empty` never matches — real emptiness is tracked
-  // in JS instead, the same fix `<lyra-stat>`'s `hasIcon`/
-  // `<lyra-tool-call-chip>`'s `hasDetailSlot` etc. already establish.
+  // in JS instead, the same fix `<lr-stat>`'s `hasIcon`/
+  // `<lr-tool-call-chip>`'s `hasDetailSlot` etc. already establish.
   @state() private hasIconSlot = false;
 
   protected willUpdate(changed: PropertyValues): void {
@@ -126,7 +126,7 @@ export class LyraChip extends LyraElement<LyraChipEventMap> {
   // accessible name — text incidentally living inside the (decorative)
   // `icon` slot shouldn't leak into "Remove {text}". Restricting to Text and
   // Element nodes also excludes Comment nodes: when a consumer interpolates
-  // the label via a lit-html expression (`html\`<lyra-chip>${label}</lyra-chip>\``,
+  // the label via a lit-html expression (`html\`<lr-chip>${label}</lr-chip>\``,
   // the ordinary way a data-driven label gets bound) rather than a static
   // string, lit-html inserts a marker Comment node alongside the Text node in
   // the light DOM. That comment's own (non-empty) data is internal
@@ -149,13 +149,13 @@ export class LyraChip extends LyraElement<LyraChipEventMap> {
   }
 
   private onRemoveClick = (): void => {
-    this.emit<ChipRemoveDetail>('lyra-remove', { value: this.value });
+    this.emit<ChipRemoveDetail>('lr-remove', { value: this.value });
   };
 
   private onBaseClick = (): void => {
     if (this.removable) return;
     this.selected = !this.selected;
-    this.emit<ChipSelectDetail>('lyra-chip-select', { value: this.value, selected: this.selected });
+    this.emit<ChipSelectDetail>('lr-chip-select', { value: this.value, selected: this.selected });
   };
 
   private onBaseKeyDown = (e: KeyboardEvent): void => {
@@ -198,6 +198,6 @@ export class LyraChip extends LyraElement<LyraChipEventMap> {
 
 declare global {
   interface HTMLElementTagNameMap {
-    'lyra-chip': LyraChip;
+    'lr-chip': LyraChip;
   }
 }

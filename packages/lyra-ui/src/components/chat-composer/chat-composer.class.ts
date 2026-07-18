@@ -19,7 +19,7 @@ import { styles } from './chat-composer.styles.js';
  * presence (regardless of its string value) maps to `true`, so a plain-
  * markup consumer writing the literal `spellcheck="false"` would actually get
  * `true` (this component's default), the opposite of what that string reads
- * as -- the same bug class `<lyra-generation-status>`'s `showStopConverter`
+ * as -- the same bug class `<lr-generation-status>`'s `showStopConverter`
  * documents and fixes for `show-stop`. Mirrors that converter's two-state
  * shape: attribute absent (or removed) -> `true` (the default);
  * `spellcheck="false"` -> `false`; anything else present (no value,
@@ -44,8 +44,8 @@ export type ChatComposerSelectionDirection = 'forward' | 'backward' | 'none';
 // (internal/icons.ts's chevronIcon()/closeIcon()/etc.) without adding
 // send/stop glyphs to that module -- it's off limits here -- so these
 // one-off icons still read as part of the same visual language as the rest
-// of the library's inline icons. Same approach lyra-checkbox's and
-// lyra-chat-message's own local glyphs take for the identical reason.
+// of the library's inline icons. Same approach lr-checkbox's and
+// lr-chat-message's own local glyphs take for the identical reason.
 const ICON_VIEW_BOX = '0 0 24 24';
 const ICON_STROKE_WIDTH = '1.75';
 
@@ -82,18 +82,18 @@ function stopIcon(): SVGTemplateResult {
 }
 
 export interface LyraChatComposerEventMap {
-  'lyra-input': CustomEvent<{ value: string }>;
-  'lyra-stop': CustomEvent<undefined>;
-  'lyra-submit': CustomEvent<{ value: string }>;
+  'lr-input': CustomEvent<{ value: string }>;
+  'lr-stop': CustomEvent<undefined>;
+  'lr-submit': CustomEvent<{ value: string }>;
   blur: CustomEvent<undefined>;
   focus: CustomEvent<undefined>;
 }
 class LyraChatComposerBase extends LyraElement<LyraChatComposerEventMap> {}
 
 /**
- * `<lyra-chat-composer>` — the message input for a chat/agent conversation
+ * `<lr-chat-composer>` — the message input for a chat/agent conversation
  * surface: an auto-resizing textarea plus a send/stop button. Form-
- * associated via the `FormAssociated` mixin (see `<lyra-date-input>` for the
+ * associated via the `FormAssociated` mixin (see `<lr-date-input>` for the
  * same shape), so it participates in native `<form>` submission/validation/
  * reset like any other text control — `name`/`value`/`disabled`/`required`/
  * `checkValidity()`/`reportValidity()` all come from that mixin.
@@ -125,20 +125,20 @@ class LyraChatComposerBase extends LyraElement<LyraChatComposerEventMap> {}
  * field; wrap it in your own layout for that context. A host `aria-label` is forwarded to the
  * internal textarea and takes precedence over the placeholder-derived name.
  *
- * `lyra-submit`'s `detail.value` is always the exact, untrimmed current
+ * `lr-submit`'s `detail.value` is always the exact, untrimmed current
  * value (`detail.value === value` at the moment it fires) -- trimming is
  * left to the consumer so it never silently diverges from what `value`
  * itself reports. Submitting does not clear `value`; the consumer clears it
  * once the submission has actually been accepted (so e.g. a failed send can
  * leave the text in place for retry).
  *
- * @customElement lyra-chat-composer
+ * @customElement lr-chat-composer
  * @slot leading - Content rendered before the textarea (e.g. an attach-file trigger button).
  * @slot chips - An attachment tray rendered above the input row (e.g. files queued for this message).
  * @slot trailing - Overrides the built-in send/stop button entirely when it has assigned content.
- * @event lyra-input - Fired on every user-driven edit of the textarea (not a programmatic `.value` assignment). `detail: { value }`.
- * @event lyra-submit - Fired by Enter (per `submit-on-enter`) or the built-in button while `status="idle"`. `detail: { value }`.
- * @event lyra-stop - Fired by the built-in button while `status` is `"sending"` or `"streaming"` and `stoppable` is `true` (the default). No detail.
+ * @event lr-input - Fired on every user-driven edit of the textarea (not a programmatic `.value` assignment). `detail: { value }`.
+ * @event lr-submit - Fired by Enter (per `submit-on-enter`) or the built-in button while `status="idle"`. `detail: { value }`.
+ * @event lr-stop - Fired by the built-in button while `status` is `"sending"` or `"streaming"` and `stoppable` is `true` (the default). No detail.
  * @event blur - Re-dispatched from the internal native textarea as a bubbling, composed event.
  * @event focus - Re-dispatched from the internal native textarea as a bubbling, composed event.
  * @csspart base - The bordered root container.
@@ -200,7 +200,7 @@ export class LyraChatComposer extends FormAssociated(LyraChatComposerBase) {
   private textareaResizeRaf?: number;
 
   // Purely presentational sizing (never form-submitted, unlike `value`/`disabled`/`required`
-  // above), so a read-time getter -- mirroring `<lyra-audio-visualizer>`'s `effectiveBarCount` --
+  // above), so a read-time getter -- mirroring `<lr-audio-visualizer>`'s `effectiveBarCount` --
   // is enough; no write-time accessor is needed to keep some other reactive state in sync.
   private get effectiveMinRows(): number {
     return finiteInteger(this.minRows, 1, 1);
@@ -308,7 +308,7 @@ export class LyraChatComposer extends FormAssociated(LyraChatComposerBase) {
     // permanently dead until some unrelated reactive property happened to
     // change. `hasUpdated` guards the very first connect, where
     // firstUpdated() above already arms it once the textarea actually
-    // exists. Mirrors `<lyra-textarea>`'s identical connectedCallback() guard.
+    // exists. Mirrors `<lr-textarea>`'s identical connectedCallback() guard.
     if (this.hasUpdated) {
       this.armTextareaResizeObserver();
       this.resizeTextarea();
@@ -423,7 +423,7 @@ export class LyraChatComposer extends FormAssociated(LyraChatComposerBase) {
 
   private onTextareaInput = (e: Event): void => {
     this.value = (e.target as HTMLTextAreaElement).value;
-    this.emit('lyra-input', { value: this.value });
+    this.emit('lr-input', { value: this.value });
   };
 
   private onTextareaKeyDown = (e: KeyboardEvent): void => {
@@ -451,7 +451,7 @@ export class LyraChatComposer extends FormAssociated(LyraChatComposerBase) {
     if (this.status === 'idle') {
       this.submit();
     } else if (this.stoppable) {
-      this.emit('lyra-stop');
+      this.emit('lr-stop');
     }
     // Busy and non-stoppable: the button already renders `disabled` above, so
     // this is unreachable via a real click; guarded here too in case a
@@ -459,7 +459,7 @@ export class LyraChatComposer extends FormAssociated(LyraChatComposerBase) {
   };
 
   private submit(): void {
-    this.emit('lyra-submit', { value: this.value });
+    this.emit('lr-submit', { value: this.value });
   }
 
   private onLeadingSlotChange = (e: Event): void => {
@@ -544,6 +544,6 @@ export class LyraChatComposer extends FormAssociated(LyraChatComposerBase) {
 
 declare global {
   interface HTMLElementTagNameMap {
-    'lyra-chat-composer': LyraChatComposer;
+    'lr-chat-composer': LyraChatComposer;
   }
 }

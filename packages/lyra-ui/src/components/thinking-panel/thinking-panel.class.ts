@@ -13,7 +13,7 @@ export interface ThinkingPanelToggleDetail {
 }
 
 export interface LyraThinkingPanelEventMap {
-  'lyra-toggle': CustomEvent<ThinkingPanelToggleDetail>;
+  'lr-toggle': CustomEvent<ThinkingPanelToggleDetail>;
 }
 
 /** "Close enough to the body's own max scroll position to count as anchored
@@ -23,7 +23,7 @@ export interface LyraThinkingPanelEventMap {
 const NEAR_BOTTOM_PX = 48;
 
 /** `820` -> `"820ms"`; `1500` -> `"1.5s"`; `2000` -> `"2s"`. Identical
- *  algorithm to lyra-tool-call-chip's and lyra-tool-result-dialog's own
+ *  algorithm to lr-tool-call-chip's and lr-tool-result-dialog's own
  *  `formatDuration` -- duplicated rather than imported (three independent,
  *  separately-consumable components) but kept in lockstep so the same
  *  elapsed time reads identically everywhere it's shown in this library. */
@@ -37,12 +37,12 @@ function formatDuration(ms: number): string {
 }
 
 /**
- * `<lyra-thinking-panel>` — a collapsible panel for an AI agent's
+ * `<lr-thinking-panel>` — a collapsible panel for an AI agent's
  * intermediate reasoning/"thinking" transcript, kept visually and
  * semantically distinct from its final response. Same collapsible
- * header-button-plus-region shape as `<lyra-source-list>`; the default slot
- * is entirely free-form (a consumer-composed `<lyra-streaming-text>`,
- * `<lyra-markdown>`, or plain text) — this component has no dependency on
+ * header-button-plus-region shape as `<lr-source-list>`; the default slot
+ * is entirely free-form (a consumer-composed `<lr-streaming-text>`,
+ * `<lr-markdown>`, or plain text) — this component has no dependency on
  * either and imposes no structure on what's slotted.
  *
  * `mode` (`'live'` while reasoning is actively streaming in, `'post-hoc'`
@@ -59,7 +59,7 @@ function formatDuration(ms: number): string {
  *   scrolls on its own, since reviewing finished reasoning is expected to
  *   start from the top like reading any other completed document. This
  *   library otherwise defaults to *not* editorializing about a host's data
- *   (see `<lyra-empty>`'s plain-`description` stance), but scroll position
+ *   (see `<lr-empty>`'s plain-`description` stance), but scroll position
  *   is presentation, not data, so this one behavior difference earns its
  *   keep rather than being left as a bare visual/semantic hint the host
  *   would have to reimplement identically itself.
@@ -86,24 +86,24 @@ function formatDuration(ms: number): string {
  * reasoning (a consumer appending chunks to an existing node's `textContent`
  * rather than re-slotting a whole new element per token). The one thing this
  * can't see is a mutation entirely inside a slotted custom element's own
- * shadow root (e.g. a `<lyra-markdown>` re-rendering its shadow tree after a
+ * shadow root (e.g. a `<lr-markdown>` re-rendering its shadow tree after a
  * `content` property change) — Shadow DOM encapsulation blocks that by
  * design, and there is no way for this component to reach across that
  * boundary. A slotted element whose *own* internal updates should drive this
  * panel's auto-scroll needs to append/mutate visible light-DOM text itself
- * (as `<lyra-streaming-text>` is expected to), or the host can call this
+ * (as `<lr-streaming-text>` is expected to), or the host can call this
  * panel's own `scrollToBottom()` directly.
  *
  * `aria-controls` linking the header to the body region uses `nextId()`
  * (`../../internal/a11y.js`) for a collision-safe id, the same convention
- * `<lyra-source-list>` and `<lyra-widget>` already establish for every
+ * `<lr-source-list>` and `<lr-widget>` already establish for every
  * toggle-controls-region pairing in this library.
  *
- * @customElement lyra-thinking-panel
+ * @customElement lr-thinking-panel
  * @slot - The reasoning/thinking content.
- * @event lyra-toggle - The header was activated, expanding or collapsing the
+ * @event lr-toggle - The header was activated, expanding or collapsing the
  * panel. `detail: { expanded }` — same event name and shape as
- * `<lyra-source-list>`'s own `lyra-toggle`.
+ * `<lr-source-list>`'s own `lr-toggle`.
  * @csspart base - The outer container.
  * @csspart header - The clickable header (`<button>`) toggling `expanded`.
  * @csspart label - The `label` text.
@@ -121,7 +121,7 @@ export class LyraThinkingPanel extends LyraElement<LyraThinkingPanelEventMap> {
   @property() label = 'Thinking';
 
   /** Whether the reasoning transcript is currently shown. Starts collapsed,
-   *  matching `<lyra-source-list>`'s default -- a consumer running `'live'`
+   *  matching `<lr-source-list>`'s default -- a consumer running `'live'`
    *  reasoning sets this `true` itself to stream it in view as it arrives. */
   @property({ type: Boolean, reflect: true }) expanded = false;
 
@@ -215,7 +215,7 @@ export class LyraThinkingPanel extends LyraElement<LyraThinkingPanelEventMap> {
 
   private toggle = (): void => {
     this.expanded = !this.expanded;
-    this.emit<ThinkingPanelToggleDetail>('lyra-toggle', { expanded: this.expanded });
+    this.emit<ThinkingPanelToggleDetail>('lr-toggle', { expanded: this.expanded });
   };
 
   /** `durationMs` normalized to a finite, non-negative value, or `null` -- `null`/`undefined`
@@ -240,7 +240,7 @@ export class LyraThinkingPanel extends LyraElement<LyraThinkingPanelEventMap> {
 
   // `[part="body"]` is `tabindex="0"` because it's a capped-height,
   // independently-scrollable region -- with no other focusable content of
-  // its own (e.g. plain text, or a non-interactive `<lyra-streaming-text>`),
+  // its own (e.g. plain text, or a non-interactive `<lr-streaming-text>`),
   // it would otherwise be unreachable by keyboard, same reasoning
   // code-block.ts's and virtual-list.ts's own identical `[part="body"]`/
   // `[part="base"]` tabindex document. `role="group"` (rather than a page
@@ -291,7 +291,7 @@ export class LyraThinkingPanel extends LyraElement<LyraThinkingPanelEventMap> {
 
 declare global {
   interface HTMLElementTagNameMap {
-    'lyra-thinking-panel': LyraThinkingPanel;
+    'lr-thinking-panel': LyraThinkingPanel;
   }
 }
 

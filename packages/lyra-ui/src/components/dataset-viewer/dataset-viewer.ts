@@ -8,10 +8,10 @@ defineElement('dataset-viewer', LyraDatasetViewer);
 registerDocumentRenderer('lyra:dataset', {
   matches: (file: DocumentFile) => /\.(tsv|psv|dat)$/i.test(file.name),
   capabilities: { anchors: ['cell-range'], search: true, textSelect: false },
-  render: (file: DocumentFile) => html`<lyra-dataset-viewer
+  render: (file: DocumentFile) => html`<lr-dataset-viewer
     src=${file.src}
     name=${file.name}
     .anchor=${file.anchor ?? null}
     .highlights=${file.highlights ?? []}
-  ></lyra-dataset-viewer>`,
+  ></lr-dataset-viewer>`,
 });

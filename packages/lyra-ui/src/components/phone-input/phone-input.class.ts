@@ -12,7 +12,7 @@ import { styles } from './phone-input.styles.js';
  * converter is presence-based -- the attribute's mere presence (regardless of its string value)
  * maps to `true`, so a plain-markup consumer writing the literal `spellcheck="false"` would
  * actually get `true` (this component's default), the opposite of what that string reads as --
- * the same bug class `<lyra-date-input>`'s `spellcheckConverter` documents and fixes. Mirrors
+ * the same bug class `<lr-date-input>`'s `spellcheckConverter` documents and fixes. Mirrors
  * that shape: attribute absent (or removed) -> `true` (the default); `spellcheck="false"` ->
  * `false`; anything else present (no value, `="true"`, ...) -> `true`.
  */
@@ -198,7 +198,7 @@ function fallbackParse(input: string): PhoneNumberParseResult {
 }
 
 /**
- * `<lyra-phone-input>` — a country-aware telephone field whose form value is
+ * `<lr-phone-input>` — a country-aware telephone field whose form value is
  * canonical E.164. National formatting and numbering-plan validation are
  * supplied through `adapter`; without one, already-international E.164 input
  * remains useful and national input stays editable with `incomplete` validity.
@@ -210,7 +210,7 @@ function fallbackParse(input: string): PhoneNumberParseResult {
  * `aria-label` names the internal telephone input and wins over every derived
  * or component-specific fallback.
  *
- * @customElement lyra-phone-input
+ * @customElement lr-phone-input
  * @slot label - Custom label content.
  * @slot hint - Custom hint content.
  * @slot error - Custom error content.
@@ -669,6 +669,6 @@ export class LyraPhoneInput extends FormAssociated(LyraPhoneInputBase) {
 
 declare global {
   interface HTMLElementTagNameMap {
-    'lyra-phone-input': LyraPhoneInput;
+    'lr-phone-input': LyraPhoneInput;
   }
 }

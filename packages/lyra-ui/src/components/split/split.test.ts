@@ -46,7 +46,7 @@ function fireCollapseResize(callback: ResizeObserverCallback, width: number): vo
 
 it('splits children evenly by default', async () => {
   const el = (await fixture(
-    html`<lyra-split><div>A</div><div>B</div><div>C</div></lyra-split>`,
+    html`<lr-split><div>A</div><div>B</div><div>C</div></lr-split>`,
   )) as LyraSplit;
   await elementUpdated(el);
   expect(el.sizes.length).to.equal(3);
@@ -55,16 +55,16 @@ it('splits children evenly by default', async () => {
   expect(el.shadowRoot!.querySelectorAll('[part="divider"]').length).to.equal(2);
 });
 
-it('resizes via keyboard on a divider and emits lyra-resize', async () => {
+it('resizes via keyboard on a divider and emits lr-resize', async () => {
   const el = (await fixture(
-    html`<lyra-split><div>A</div><div>B</div></lyra-split>`,
+    html`<lr-split><div>A</div><div>B</div></lr-split>`,
   )) as LyraSplit;
   await elementUpdated(el);
   const divider = el.shadowRoot!.querySelector('[part="divider"]') as HTMLElement;
   expect(divider.getAttribute('role')).to.equal('separator');
   const before = el.sizes[0];
   let detail: { sizes: number[] } | undefined;
-  el.addEventListener('lyra-resize', (e) => (detail = (e as CustomEvent).detail));
+  el.addEventListener('lr-resize', (e) => (detail = (e as CustomEvent).detail));
   divider.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
   await elementUpdated(el);
   expect(el.sizes[0]).to.be.greaterThan(before);
@@ -73,7 +73,7 @@ it('resizes via keyboard on a divider and emits lyra-resize', async () => {
 
 it('mirrors ArrowRight/ArrowLeft under dir="rtl", since panels reorder visually via flex order', async () => {
   const el = (await fixture(
-    html`<lyra-split dir="rtl"><div>A</div><div>B</div></lyra-split>`,
+    html`<lr-split dir="rtl"><div>A</div><div>B</div></lr-split>`,
   )) as LyraSplit;
   await elementUpdated(el);
   const divider = el.shadowRoot!.querySelector('[part="divider"]') as HTMLElement;
@@ -90,7 +90,7 @@ it('mirrors ArrowRight/ArrowLeft under dir="rtl", since panels reorder visually 
 
 it('does not swap ArrowUp/ArrowDown for vertical orientation under dir="rtl" (direction only affects the horizontal inline axis)', async () => {
   const el = (await fixture(
-    html`<lyra-split dir="rtl" orientation="vertical"><div>A</div><div>B</div></lyra-split>`,
+    html`<lr-split dir="rtl" orientation="vertical"><div>A</div><div>B</div></lr-split>`,
   )) as LyraSplit;
   await elementUpdated(el);
   const divider = el.shadowRoot!.querySelector('[part="divider"]') as HTMLElement;
@@ -102,7 +102,7 @@ it('does not swap ArrowUp/ArrowDown for vertical orientation under dir="rtl" (di
 
 it('mirrors pointer-drag direction under dir="rtl" so it grows the panel under the pointer', async () => {
   const el = (await fixture(
-    html`<lyra-split dir="rtl"><div>A</div><div>B</div></lyra-split>`,
+    html`<lr-split dir="rtl"><div>A</div><div>B</div></lr-split>`,
   )) as LyraSplit;
   await elementUpdated(el);
   const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
@@ -123,7 +123,7 @@ it('mirrors pointer-drag direction under dir="rtl" so it grows the panel under t
 
 it('clamps panel sizes to the configured minimum', async () => {
   const el = (await fixture(
-    html`<lyra-split min="20"><div>A</div><div>B</div></lyra-split>`,
+    html`<lr-split min="20"><div>A</div><div>B</div></lr-split>`,
   )) as LyraSplit;
   el.sizes = [20, 80];
   await elementUpdated(el);
@@ -135,9 +135,9 @@ it('clamps panel sizes to the configured minimum', async () => {
 
 it('rejects infeasible aggregate minimums, reports the issue, and keeps resizing usable', async () => {
   const el = (await fixture(
-    html`<lyra-split><div>A</div><div>B</div><div>C</div></lyra-split>`,
+    html`<lr-split><div>A</div><div>B</div><div>C</div></lr-split>`,
   )) as LyraSplit;
-  const invalid = oneEvent(el, 'lyra-split-constraints-invalid');
+  const invalid = oneEvent(el, 'lr-split-constraints-invalid');
   el.min = 40;
   const event = (await invalid) as CustomEvent<{
     reason: string;
@@ -162,7 +162,7 @@ it('rejects infeasible aggregate minimums, reports the issue, and keeps resizing
 
 it('is accessible', async () => {
   const el = (await fixture(
-    html`<lyra-split><div>A</div><div>B</div></lyra-split>`,
+    html`<lr-split><div>A</div><div>B</div></lr-split>`,
   )) as LyraSplit;
   await expect(el).to.be.accessible();
 });
@@ -172,7 +172,7 @@ it('persists sizes to localStorage when storageKey is set', async () => {
   localStorage.clear();
 
   const el = (await fixture(
-    html`<lyra-split storage-key=${storageKey}><div>A</div><div>B</div></lyra-split>`,
+    html`<lr-split storage-key=${storageKey}><div>A</div><div>B</div></lr-split>`,
   )) as LyraSplit;
   await elementUpdated(el);
 
@@ -181,7 +181,7 @@ it('persists sizes to localStorage when storageKey is set', async () => {
   divider.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
   await elementUpdated(el);
 
-  const stored = localStorage.getItem(`lyra-split:${storageKey}:2`);
+  const stored = localStorage.getItem(`lr-split:${storageKey}:2`);
   expect(stored).to.not.be.null;
   const parsed = JSON.parse(stored!);
   expect(parsed).to.be.an('array');
@@ -190,7 +190,7 @@ it('persists sizes to localStorage when storageKey is set', async () => {
 
 it('supports vertical orientation with vertical arrow keys', async () => {
   const el = (await fixture(
-    html`<lyra-split orientation="vertical"><div>A</div><div>B</div></lyra-split>`,
+    html`<lr-split orientation="vertical"><div>A</div><div>B</div></lr-split>`,
   )) as LyraSplit;
   await elementUpdated(el);
   expect(el.orientation).to.equal('vertical');
@@ -204,7 +204,7 @@ it('supports vertical orientation with vertical arrow keys', async () => {
 
 it('applies flex styles and interleaving order to panels', async () => {
   const el = (await fixture(
-    html`<lyra-split><div>A</div><div>B</div><div>C</div></lyra-split>`,
+    html`<lr-split><div>A</div><div>B</div><div>C</div></lr-split>`,
   )) as LyraSplit;
   await elementUpdated(el);
 
@@ -220,7 +220,7 @@ it('applies flex styles and interleaving order to panels', async () => {
 
 it('widens the horizontal divider hit area with a ::before without changing its visible 3px width', async () => {
   const el = (await fixture(
-    html`<lyra-split><div>A</div><div>B</div></lyra-split>`,
+    html`<lr-split><div>A</div><div>B</div></lr-split>`,
   )) as LyraSplit;
   await elementUpdated(el);
   const divider = el.shadowRoot!.querySelector('[part="divider"]') as HTMLElement;
@@ -241,7 +241,7 @@ it('widens the horizontal divider hit area with a ::before without changing its 
 
 it('widens the vertical divider hit area along the block axis instead', async () => {
   const el = (await fixture(
-    html`<lyra-split orientation="vertical"><div>A</div><div>B</div></lyra-split>`,
+    html`<lr-split orientation="vertical"><div>A</div><div>B</div></lr-split>`,
   )) as LyraSplit;
   await elementUpdated(el);
   const divider = el.shadowRoot!.querySelector('[part="divider"]') as HTMLElement;
@@ -258,7 +258,7 @@ it('widens the vertical divider hit area along the block axis instead', async ()
 
 it('reconciles panelCount and sizes when a panel is added after connect (slotchange)', async () => {
   const el = (await fixture(
-    html`<lyra-split><div>A</div><div>B</div></lyra-split>`,
+    html`<lr-split><div>A</div><div>B</div></lr-split>`,
   )) as LyraSplit;
   await elementUpdated(el);
   expect(el.sizes.length).to.equal(2);
@@ -278,7 +278,7 @@ it('reconciles panelCount and sizes when a panel is added after connect (slotcha
 
 it('reconciles panelCount and sizes when a panel is removed after connect (slotchange)', async () => {
   const el = (await fixture(
-    html`<lyra-split><div>A</div><div>B</div><div>C</div></lyra-split>`,
+    html`<lr-split><div>A</div><div>B</div><div>C</div></lr-split>`,
   )) as LyraSplit;
   await elementUpdated(el);
   expect(el.sizes.length).to.equal(3);
@@ -296,7 +296,7 @@ it('reconciles panelCount and sizes when a panel is removed after connect (slotc
 
 it('computes aria-valuemax per divider from its two adjacent panels for 3+ panels', async () => {
   const el = (await fixture(
-    html`<lyra-split min="10"><div>A</div><div>B</div><div>C</div></lyra-split>`,
+    html`<lr-split min="10"><div>A</div><div>B</div><div>C</div></lr-split>`,
   )) as LyraSplit;
   el.sizes = [50, 30, 20];
   await elementUpdated(el);
@@ -319,7 +319,7 @@ it('does not throw when localStorage.getItem/setItem are unavailable (e.g. block
   };
   try {
     const el = (await fixture(
-      html`<lyra-split storage-key="blocked-test"><div>A</div><div>B</div></lyra-split>`,
+      html`<lr-split storage-key="blocked-test"><div>A</div><div>B</div></lr-split>`,
     )) as LyraSplit;
     await elementUpdated(el);
     const divider = el.shadowRoot!.querySelector('[part="divider"]') as HTMLElement;
@@ -333,7 +333,7 @@ it('does not throw when localStorage.getItem/setItem are unavailable (e.g. block
 
 it('lets a keyboard resize climb out of a sub-min starting size instead of getting stuck', async () => {
   const el = (await fixture(
-    html`<lyra-split min="10"><div>A</div><div>B</div></lyra-split>`,
+    html`<lr-split min="10"><div>A</div><div>B</div></lr-split>`,
   )) as LyraSplit;
   // Simulates the equal-split-across-many-panels case (e.g. 20 panels at 5%
   // each with the default min=10): a panel starts below `min`.
@@ -353,10 +353,10 @@ it('lets a keyboard resize climb out of a sub-min starting size instead of getti
 
 it('rejects a stale persisted layout that violates a since-raised min, falling back to an equal split', async () => {
   const storageKey = 'test-split-min-raise-' + Math.random();
-  localStorage.setItem(`lyra-split:${storageKey}:2`, JSON.stringify([5, 95]));
+  localStorage.setItem(`lr-split:${storageKey}:2`, JSON.stringify([5, 95]));
 
   const el = (await fixture(
-    html`<lyra-split storage-key=${storageKey} min="10"><div>A</div><div>B</div></lyra-split>`,
+    html`<lr-split storage-key=${storageKey} min="10"><div>A</div><div>B</div></lr-split>`,
   )) as LyraSplit;
   await elementUpdated(el);
 
@@ -366,7 +366,7 @@ it('rejects a stale persisted layout that violates a since-raised min, falling b
 
 it('preserves and restores custom panel proportions across an appended-then-removed panel', async () => {
   const el = (await fixture(
-    html`<lyra-split><div>A</div><div>B</div><div>C</div><div>D</div></lyra-split>`,
+    html`<lr-split><div>A</div><div>B</div><div>C</div><div>D</div></lr-split>`,
   )) as LyraSplit;
   await elementUpdated(el);
   el.sizes = [10, 40, 30, 20];
@@ -399,7 +399,7 @@ it('preserves and restores custom panel proportions across an appended-then-remo
 
 it('keeps two concurrent pointer drags on different dividers independent (scoped by pointerId)', async () => {
   const el = (await fixture(
-    html`<lyra-split><div>A</div><div>B</div><div>C</div><div>D</div></lyra-split>`,
+    html`<lr-split><div>A</div><div>B</div><div>C</div><div>D</div></lr-split>`,
   )) as LyraSplit;
   await elementUpdated(el);
   const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
@@ -426,7 +426,7 @@ it('keeps two concurrent pointer drags on different dividers independent (scoped
 
 it('keeps sizes summing to 100 when two adjacent dividers are dragged concurrently', async () => {
   const el = (await fixture(
-    html`<lyra-split><div>a</div><div>b</div><div>c</div></lyra-split>`,
+    html`<lr-split><div>a</div><div>b</div><div>c</div></lr-split>`,
   )) as LyraSplit;
   await el.updateComplete;
   const dividers = el.shadowRoot!.querySelectorAll('[part="divider"]') as NodeListOf<HTMLElement>;
@@ -444,7 +444,7 @@ it('keeps sizes summing to 100 when two adjacent dividers are dragged concurrent
 
 it('composes two adjacent concurrent drags correctly when each pointer fires multiple moves (not just one move per pointer)', async () => {
   const el = (await fixture(
-    html`<lyra-split><div>A</div><div>B</div><div>C</div></lyra-split>`,
+    html`<lr-split><div>A</div><div>B</div><div>C</div></lr-split>`,
   )) as LyraSplit;
   el.sizes = [40, 30, 30];
   await elementUpdated(el);
@@ -488,7 +488,7 @@ it('composes two adjacent concurrent drags correctly when each pointer fires mul
 
 it('returns to the exact starting sizes after a drag saturates a bound and then reverses back to the start position (no drift from the clamped-away delta)', async () => {
   const el = (await fixture(
-    html`<lyra-split><div>A</div><div>B</div></lyra-split>`,
+    html`<lr-split><div>A</div><div>B</div></lr-split>`,
   )) as LyraSplit;
   await elementUpdated(el);
   const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
@@ -523,7 +523,7 @@ it('returns to the exact starting sizes after a drag saturates a bound and then 
 
 it('clears inline flex/order styles from a panel removed from the slot', async () => {
   const el = (await fixture(
-    html`<lyra-split><div id="p1">a</div><div id="p2">b</div></lyra-split>`,
+    html`<lr-split><div id="p1">a</div><div id="p2">b</div></lr-split>`,
   )) as LyraSplit;
   await el.updateComplete;
   const p1 = el.querySelector('#p1') as HTMLElement;
@@ -545,7 +545,7 @@ it('clears inline flex/order styles from a panel removed from the slot', async (
 
 it('ignores a stray pointermove/pointerup/pointercancel after the element is disconnected mid-drag', async () => {
   const el = (await fixture(
-    html`<lyra-split><div>A</div><div>B</div></lyra-split>`,
+    html`<lr-split><div>A</div><div>B</div></lr-split>`,
   )) as LyraSplit;
   await elementUpdated(el);
   const divider = el.shadowRoot!.querySelector('[part="divider"]') as HTMLElement;
@@ -570,7 +570,7 @@ it('persists sizes to localStorage on pointerup, not just via keyboard commit', 
   localStorage.clear();
 
   const el = (await fixture(
-    html`<lyra-split storage-key=${storageKey}><div>A</div><div>B</div></lyra-split>`,
+    html`<lr-split storage-key=${storageKey}><div>A</div><div>B</div></lr-split>`,
   )) as LyraSplit;
   await elementUpdated(el);
   const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
@@ -582,18 +582,18 @@ it('persists sizes to localStorage on pointerup, not just via keyboard commit', 
     new PointerEvent('pointerdown', { bubbles: true, pointerId: 1, clientX: 100 }),
   );
   window.dispatchEvent(new PointerEvent('pointermove', { pointerId: 1, clientX: 140 }));
-  expect(localStorage.getItem(`lyra-split:${storageKey}:2`)).to.be.null;
+  expect(localStorage.getItem(`lr-split:${storageKey}:2`)).to.be.null;
 
   window.dispatchEvent(new PointerEvent('pointerup', { pointerId: 1 }));
 
-  const stored = localStorage.getItem(`lyra-split:${storageKey}:2`);
+  const stored = localStorage.getItem(`lr-split:${storageKey}:2`);
   expect(stored).to.not.be.null;
   expect(JSON.parse(stored!)).to.deep.equal(el.sizes);
 });
 
 it('gives each divider a distinguishing accessible name', async () => {
   const el = (await fixture(
-    html`<lyra-split><div>A</div><div>B</div><div>C</div></lyra-split>`,
+    html`<lr-split><div>A</div><div>B</div><div>C</div></lr-split>`,
   )) as LyraSplit;
   await elementUpdated(el);
   const dividers = [...el.shadowRoot!.querySelectorAll('[part="divider"]')] as HTMLElement[];
@@ -604,7 +604,7 @@ it('gives each divider a distinguishing accessible name', async () => {
 
 it('renders a clamp()-based flex-basis for a panel with panelConstraints, leaving unconstrained panels bare-percent', async () => {
   const el = (await fixture(
-    html`<lyra-split><div>A</div><div>B</div></lyra-split>`,
+    html`<lr-split><div>A</div><div>B</div></lr-split>`,
   )) as LyraSplit;
   // Pinned so this test's own 30% share (of a 500px container) stays inside
   // the constraint's [40px, 200px] bounds -- i.e. this panel is not actually
@@ -626,7 +626,7 @@ it('renders a clamp()-based flex-basis for a panel with panelConstraints, leavin
 
 it('redistributes an unconstrained sibling into space freed by a maxPx-clamped panel', async () => {
   const el = (await fixture(
-    html`<lyra-split><div>A</div><div>B</div></lyra-split>`,
+    html`<lr-split><div>A</div><div>B</div></lr-split>`,
   )) as LyraSplit;
   const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
   mockWidth(base, 1920);
@@ -649,7 +649,7 @@ it('redistributes an unconstrained sibling into space freed by a maxPx-clamped p
 
 it('does not redistribute when the container is too narrow to measure (containerSize <= 0)', async () => {
   const el = (await fixture(
-    html`<lyra-split><div>A</div><div>B</div></lyra-split>`,
+    html`<lr-split><div>A</div><div>B</div></lr-split>`,
   )) as LyraSplit;
   // Explicitly pinned to 0 -- an un-mocked fixture in this real-browser test
   // runner still reports a genuine nonzero layout width (the test page's
@@ -669,7 +669,7 @@ it('does not redistribute when the container is too narrow to measure (container
 
 it('falls back to sentinel px bounds when a constraint only specifies one side', async () => {
   const el = (await fixture(
-    html`<lyra-split><div>A</div><div>B</div></lyra-split>`,
+    html`<lr-split><div>A</div><div>B</div></lr-split>`,
   )) as LyraSplit;
   el.sizes = [30, 70];
   el.panelConstraints = [{ minPx: 40 }];
@@ -685,7 +685,7 @@ it('falls back to sentinel px bounds when a constraint only specifies one side',
 
 it('stops a drag at a px-derived min bound instead of the plain percent min', async () => {
   const el = (await fixture(
-    html`<lyra-split><div>A</div><div>B</div></lyra-split>`,
+    html`<lr-split><div>A</div><div>B</div></lr-split>`,
   )) as LyraSplit;
   // min=10 (default) would allow panel[0] down to 10%; the constraint's
   // 60px is 30% of a 200px container, well above that plain floor.
@@ -706,7 +706,7 @@ it('stops a drag at a px-derived min bound instead of the plain percent min', as
 
 it('stops a drag at a px-derived max bound on the dragged panel', async () => {
   const el = (await fixture(
-    html`<lyra-split><div>A</div><div>B</div></lyra-split>`,
+    html`<lr-split><div>A</div><div>B</div></lr-split>`,
   )) as LyraSplit;
   el.panelConstraints = [{ maxPx: 60 }]; // 60px of a 200px container = 30%
   await elementUpdated(el);
@@ -725,7 +725,7 @@ it('stops a drag at a px-derived max bound on the dragged panel', async () => {
 
 it('stops keyboard-driven resizing at a px-derived min bound instead of the plain percent min', async () => {
   const el = (await fixture(
-    html`<lyra-split><div>A</div><div>B</div></lyra-split>`,
+    html`<lr-split><div>A</div><div>B</div></lr-split>`,
   )) as LyraSplit;
   el.panelConstraints = [{ minPx: 60 }];
   await elementUpdated(el);
@@ -742,7 +742,7 @@ it('stops keyboard-driven resizing at a px-derived min bound instead of the plai
 
 it('keeps a constrained panel pinned between its px bounds when the container is resized', async () => {
   const el = (await fixture(
-    html`<lyra-split><div>A</div><div>B</div></lyra-split>`,
+    html`<lr-split><div>A</div><div>B</div></lr-split>`,
   )) as LyraSplit;
   el.panelConstraints = [{ minPx: 60 }];
   await elementUpdated(el);
@@ -766,11 +766,11 @@ it('keeps a constrained panel pinned between its px bounds when the container is
 
 it('does not overflow its container by the dividers\' own width in the default (uncollapsed) state', async () => {
   const el = (await fixture(html`
-    <lyra-split>
+    <lr-split>
       <div>A</div>
       <div>B</div>
       <div>C</div>
-    </lyra-split>
+    </lr-split>
   `)) as LyraSplit;
   const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
   mockWidth(base, 900);
@@ -801,16 +801,16 @@ it('splits :hover and :focus-visible into separate divider rules with a token-dr
   // No more `outline: none` on focus-visible...
   expect(focusBody).to.not.include('outline: none');
   // ...it now uses the exact shared focus-ring tokens, not hardcoded literals.
-  expect(focusBody).to.include('var(--lyra-focus-ring-width)');
-  expect(focusBody).to.include('var(--lyra-focus-ring-color)');
-  expect(focusBody).to.include('outline-offset: var(--lyra-focus-ring-offset)');
+  expect(focusBody).to.include('var(--lr-focus-ring-width)');
+  expect(focusBody).to.include('var(--lr-focus-ring-color)');
+  expect(focusBody).to.include('outline-offset: var(--lr-focus-ring-offset)');
 });
 
 // -- Responsive collapse (collapse="start"/"end") -------------------------
 
 it('defaults collapse to "none", leaving dividers/panels byte-for-byte unaffected (no data-collapse-state, no aria-disabled, tabindex="0")', async () => {
   const el = (await fixture(
-    html`<lyra-split><div>A</div><div>B</div></lyra-split>`,
+    html`<lr-split><div>A</div><div>B</div></lr-split>`,
   )) as LyraSplit;
   await elementUpdated(el);
   expect(el.collapse).to.equal('none');
@@ -833,7 +833,7 @@ it('does not schedule a Lit update from the initial collapse observer setup', as
   console.warn = (...args: unknown[]) => calls.push(args);
   try {
     const el = (await fixture(
-      html`<lyra-split collapse="start"><div>A</div><div>B</div></lyra-split>`,
+      html`<lr-split collapse="start"><div>A</div><div>B</div></lr-split>`,
     )) as LyraSplit;
     await el.updateComplete;
     await new Promise<void>((resolve) => setTimeout(resolve, 0));
@@ -847,7 +847,7 @@ it('clamps the collapse="start" panel (index 0) to rail-width and marks it via d
   const spy = installResizeObserverSpy();
   try {
     const el = (await fixture(
-      html`<lyra-split collapse="start"><div>A</div><div>B</div></lyra-split>`,
+      html`<lr-split collapse="start"><div>A</div><div>B</div></lr-split>`,
     )) as LyraSplit;
     await elementUpdated(el);
     expect(spy.callbacks.length).to.equal(1);
@@ -872,7 +872,7 @@ it("honors a sibling panel's own panelConstraints while its neighbor is rail-col
   const spy = installResizeObserverSpy();
   try {
     const el = (await fixture(
-      html`<lyra-split collapse="start"><div>A</div><div>B</div></lyra-split>`,
+      html`<lr-split collapse="start"><div>A</div><div>B</div></lr-split>`,
     )) as LyraSplit;
     const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
     mockWidth(base, 500);
@@ -898,7 +898,7 @@ it('resolves collapse="end" to the LAST panel, including for 3+ panels', async (
   const spy = installResizeObserverSpy();
   try {
     const el = (await fixture(
-      html`<lyra-split collapse="end"><div>A</div><div>B</div><div>C</div></lyra-split>`,
+      html`<lr-split collapse="end"><div>A</div><div>B</div><div>C</div></lr-split>`,
     )) as LyraSplit;
     await elementUpdated(el);
     fireCollapseResize(spy.callbacks[0], 500);
@@ -918,7 +918,7 @@ it('resolves collapse="start"/"end" to the same physical panel indices (0 / last
   const spy = installResizeObserverSpy();
   try {
     const el = (await fixture(
-      html`<lyra-split dir="rtl" collapse="start"><div>A</div><div>B</div><div>C</div></lyra-split>`,
+      html`<lr-split dir="rtl" collapse="start"><div>A</div><div>B</div><div>C</div></lr-split>`,
     )) as LyraSplit;
     await elementUpdated(el);
     fireCollapseResize(spy.callbacks[0], 500);
@@ -933,7 +933,7 @@ it('resolves collapse="start"/"end" to the same physical panel indices (0 / last
   const spyEnd = installResizeObserverSpy();
   try {
     const el = (await fixture(
-      html`<lyra-split dir="rtl" collapse="end"><div>A</div><div>B</div><div>C</div></lyra-split>`,
+      html`<lr-split dir="rtl" collapse="end"><div>A</div><div>B</div><div>C</div></lr-split>`,
     )) as LyraSplit;
     await elementUpdated(el);
     fireCollapseResize(spyEnd.callbacks[0], 500);
@@ -953,7 +953,7 @@ it('transitions collapseState across both breakpoints (wide -> rail -> floating)
     // host's own measured box, which would otherwise let a REAL (unmocked)
     // ResizeObserver notification race the synthetic ones driving this test.
     const el = (await fixture(
-      html`<lyra-split collapse="start" style="inline-size: 300px; block-size: 200px"><div>A</div><div>B</div></lyra-split>`,
+      html`<lr-split collapse="start" style="inline-size: 300px; block-size: 200px"><div>A</div><div>B</div></lr-split>`,
     )) as LyraSplit;
     await elementUpdated(el);
 
@@ -997,11 +997,11 @@ it('transitions collapseState across both breakpoints (wide -> rail -> floating)
   }
 });
 
-it('fires lyra-split-collapse-change only on an actual collapseState transition, not on every resize callback', async () => {
+it('fires lr-split-collapse-change only on an actual collapseState transition, not on every resize callback', async () => {
   const spy = installResizeObserverSpy();
   try {
     const el = (await fixture(
-      html`<lyra-split collapse="start"><div>A</div><div>B</div></lyra-split>`,
+      html`<lr-split collapse="start"><div>A</div><div>B</div></lr-split>`,
     )) as LyraSplit;
     await elementUpdated(el);
     // Establish a known baseline before attaching the listener, so this
@@ -1011,7 +1011,7 @@ it('fires lyra-split-collapse-change only on an actual collapseState transition,
     await elementUpdated(el);
 
     const events: string[] = [];
-    el.addEventListener('lyra-split-collapse-change', (e) =>
+    el.addEventListener('lr-split-collapse-change', (e) =>
       events.push((e as CustomEvent<{ state: string }>).detail.state),
     );
 
@@ -1034,7 +1034,7 @@ it('disables dragging (pointer and keyboard) on the divider adjacent to the coll
   const spy = installResizeObserverSpy();
   try {
     const el = (await fixture(
-      html`<lyra-split collapse="start"><div>A</div><div>B</div></lyra-split>`,
+      html`<lr-split collapse="start"><div>A</div><div>B</div></lr-split>`,
     )) as LyraSplit;
     await elementUpdated(el);
     fireCollapseResize(spy.callbacks[0], 300); // floating
@@ -1065,7 +1065,7 @@ it('leaves a non-adjacent divider fully draggable while a different pane is coll
   const spy = installResizeObserverSpy();
   try {
     const el = (await fixture(
-      html`<lyra-split collapse="start"><div>A</div><div>B</div><div>C</div></lyra-split>`,
+      html`<lr-split collapse="start"><div>A</div><div>B</div><div>C</div></lr-split>`,
     )) as LyraSplit;
     await elementUpdated(el);
     fireCollapseResize(spy.callbacks[0], 300); // floating; panel 0 ("start") collapses
@@ -1090,7 +1090,7 @@ it('reverts to plain wide/percent styling and clears data-collapse-state when co
   const spy = installResizeObserverSpy();
   try {
     const el = (await fixture(
-      html`<lyra-split collapse="start"><div>A</div><div>B</div></lyra-split>`,
+      html`<lr-split collapse="start"><div>A</div><div>B</div></lr-split>`,
     )) as LyraSplit;
     await elementUpdated(el);
     fireCollapseResize(spy.callbacks[0], 300); // floating
@@ -1117,7 +1117,7 @@ it('resets collapseState to "wide" from willUpdate(), not updated(), so switchin
   const spy = installResizeObserverSpy();
   try {
     const el = (await fixture(
-      html`<lyra-split collapse="start"><div>A</div><div>B</div></lyra-split>`,
+      html`<lr-split collapse="start"><div>A</div><div>B</div></lr-split>`,
     )) as LyraSplit;
     await elementUpdated(el);
     fireCollapseResize(spy.callbacks[0], 300); // floating
@@ -1144,7 +1144,7 @@ it('resets collapseState to "wide" from willUpdate(), not updated(), so switchin
 
 it('reconciles a directly-assigned sizes array of the wrong length from willUpdate(), not updated(), avoiding the same redundant-render pattern', async () => {
   const el = (await fixture(
-    html`<lyra-split><div>A</div><div>B</div></lyra-split>`,
+    html`<lr-split><div>A</div><div>B</div></lr-split>`,
   )) as LyraSplit;
   await elementUpdated(el);
 
@@ -1169,7 +1169,7 @@ it('anchors the floating overlay to inset-inline-end for collapse="end" (vs. ins
   try {
     // See the fixed-size comment on the "wide -> rail -> floating" test above.
     const el = (await fixture(
-      html`<lyra-split collapse="end" style="inline-size: 300px; block-size: 200px"><div>A</div><div>B</div></lyra-split>`,
+      html`<lr-split collapse="end" style="inline-size: 300px; block-size: 200px"><div>A</div><div>B</div></lr-split>`,
     )) as LyraSplit;
     await elementUpdated(el);
     fireCollapseResize(spy.callbacks[0], 300); // floating
@@ -1192,7 +1192,7 @@ it('honors a custom rail-width for the rail state', async () => {
   const spy = installResizeObserverSpy();
   try {
     const el = (await fixture(
-      html`<lyra-split collapse="start" rail-width="4rem"><div>A</div><div>B</div></lyra-split>`,
+      html`<lr-split collapse="start" rail-width="4rem"><div>A</div><div>B</div></lr-split>`,
     )) as LyraSplit;
     await elementUpdated(el);
     fireCollapseResize(spy.callbacks[0], 500);
@@ -1208,11 +1208,11 @@ it('honors custom rail-breakpoint/float-breakpoint attributes', async () => {
   const spy = installResizeObserverSpy();
   try {
     const el = (await fixture(
-      html`<lyra-split
+      html`<lr-split
         collapse="start"
         rail-breakpoint="900"
         float-breakpoint="600"
-      ><div>A</div><div>B</div></lyra-split>`,
+      ><div>A</div><div>B</div></lr-split>`,
     )) as LyraSplit;
     await elementUpdated(el);
     expect(el.railBreakpoint).to.equal(900);
@@ -1230,7 +1230,7 @@ it('honors custom rail-breakpoint/float-breakpoint attributes', async () => {
 
 it('sanitizes a NaN min to its own declared default instead of letting NaN reach the percent-bounds clamp', async () => {
   const el = (await fixture(
-    html`<lyra-split min="NaN"><div>A</div><div>B</div></lyra-split>`,
+    html`<lr-split min="NaN"><div>A</div><div>B</div></lr-split>`,
   )) as LyraSplit;
   await elementUpdated(el);
   el.sizes = [50, 50];
@@ -1243,7 +1243,7 @@ it('sanitizes a NaN min to its own declared default instead of letting NaN reach
 
 it('clamps a negative min to 0 rather than a nonsensical negative floor', async () => {
   const el = (await fixture(
-    html`<lyra-split><div>A</div><div>B</div></lyra-split>`,
+    html`<lr-split><div>A</div><div>B</div></lr-split>`,
   )) as LyraSplit;
   await elementUpdated(el);
   el.sizes = [1, 99];
@@ -1262,11 +1262,11 @@ it('honors custom rail-breakpoint/float-breakpoint attributes with an invalid/in
   const spy = installResizeObserverSpy();
   try {
     const el = (await fixture(
-      html`<lyra-split
+      html`<lr-split
         collapse="start"
         rail-breakpoint="NaN"
         float-breakpoint="600"
-      ><div>A</div><div>B</div></lyra-split>`,
+      ><div>A</div><div>B</div></lr-split>`,
     )) as LyraSplit;
     await elementUpdated(el);
 
@@ -1287,11 +1287,11 @@ it('never gets permanently stuck in floating for an inverted rail/float pair -- 
   const spy = installResizeObserverSpy();
   try {
     const el = (await fixture(
-      html`<lyra-split
+      html`<lr-split
         collapse="start"
         rail-breakpoint="100"
         float-breakpoint="600"
-      ><div>A</div><div>B</div></lyra-split>`,
+      ><div>A</div><div>B</div></lr-split>`,
     )) as LyraSplit;
     await elementUpdated(el);
 
@@ -1308,13 +1308,13 @@ it('never gets permanently stuck in floating for an inverted rail/float pair -- 
   }
 });
 
-// -- collapseState: forceable accessor (mirrors lyra-app-rail's `mode`) ----
+// -- collapseState: forceable accessor (mirrors lr-app-rail's `mode`) ----
 
 it('pins a forced collapseState across a subsequent resize, ignoring measurement until released', async () => {
   const spy = installResizeObserverSpy();
   try {
     const el = (await fixture(
-      html`<lyra-split collapse="start"><div>A</div><div>B</div></lyra-split>`,
+      html`<lr-split collapse="start"><div>A</div><div>B</div></lr-split>`,
     )) as LyraSplit;
     await elementUpdated(el);
     fireCollapseResize(spy.callbacks[0], 500); // rail baseline
@@ -1337,7 +1337,7 @@ it('releases a forced collapseState back to measurement-derived state via the "a
   const spy = installResizeObserverSpy();
   try {
     const el = (await fixture(
-      html`<lyra-split collapse="start"><div>A</div><div>B</div></lyra-split>`,
+      html`<lr-split collapse="start"><div>A</div><div>B</div></lr-split>`,
     )) as LyraSplit;
     await elementUpdated(el);
     fireCollapseResize(spy.callbacks[0], 800); // wide baseline
@@ -1362,18 +1362,18 @@ it('releases a forced collapseState back to measurement-derived state via the "a
   }
 });
 
-it('fires lyra-split-collapse-change on a forced assignment and on release-to-auto, only when the effective state actually changes', async () => {
+it('fires lr-split-collapse-change on a forced assignment and on release-to-auto, only when the effective state actually changes', async () => {
   const spy = installResizeObserverSpy();
   try {
     const el = (await fixture(
-      html`<lyra-split collapse="start"><div>A</div><div>B</div></lyra-split>`,
+      html`<lr-split collapse="start"><div>A</div><div>B</div></lr-split>`,
     )) as LyraSplit;
     await elementUpdated(el);
     fireCollapseResize(spy.callbacks[0], 800); // wide baseline
     await elementUpdated(el);
 
     const events: string[] = [];
-    el.addEventListener('lyra-split-collapse-change', (e) =>
+    el.addEventListener('lr-split-collapse-change', (e) =>
       events.push((e as CustomEvent<{ state: string }>).detail.state),
     );
 
@@ -1399,7 +1399,7 @@ it('reflects collapseState to a collapse-state attribute', async () => {
   const spy = installResizeObserverSpy();
   try {
     const el = (await fixture(
-      html`<lyra-split collapse="start"><div>A</div><div>B</div></lyra-split>`,
+      html`<lr-split collapse="start"><div>A</div><div>B</div></lr-split>`,
     )) as LyraSplit;
     await elementUpdated(el);
     fireCollapseResize(spy.callbacks[0], 500); // rail
@@ -1420,7 +1420,7 @@ it('defaults open to false: the floating pane renders nothing (hidden, out of th
   const spy = installResizeObserverSpy();
   try {
     const el = (await fixture(
-      html`<lyra-split collapse="start"><div>A</div><div>B</div></lyra-split>`,
+      html`<lr-split collapse="start"><div>A</div><div>B</div></lr-split>`,
     )) as LyraSplit;
     await elementUpdated(el);
     expect(el.open).to.be.false;
@@ -1443,7 +1443,7 @@ it('reveals the floating pane and renders a backdrop once open is set to true', 
     // perturb the host's own measured box, which would otherwise let a REAL
     // (unmocked) ResizeObserver notification race the synthetic one below.
     const el = (await fixture(
-      html`<lyra-split collapse="start" style="inline-size: 300px; block-size: 200px"><div>A</div><div>B</div></lyra-split>`,
+      html`<lr-split collapse="start" style="inline-size: 300px; block-size: 200px"><div>A</div><div>B</div></lr-split>`,
     )) as LyraSplit;
     await elementUpdated(el);
     fireCollapseResize(spy.callbacks[0], 300); // floating
@@ -1466,7 +1466,7 @@ it('moves focus into the floating pane when opened', async () => {
   try {
     // See the fixed-size comment on the previous test.
     const el = (await fixture(
-      html`<lyra-split collapse="start" style="inline-size: 300px; block-size: 200px"><div><button>first</button><button>second</button></div><div>B</div></lyra-split>`,
+      html`<lr-split collapse="start" style="inline-size: 300px; block-size: 200px"><div><button>first</button><button>second</button></div><div>B</div></lr-split>`,
     )) as LyraSplit;
     await elementUpdated(el);
     fireCollapseResize(spy.callbacks[0], 300); // floating
@@ -1487,7 +1487,7 @@ it('traps Tab focus within the floating pane while open, wrapping last->first an
   try {
     // See the fixed-size comment above.
     const el = (await fixture(
-      html`<lyra-split collapse="start" style="inline-size: 300px; block-size: 200px"><div><button>first</button><button>last</button></div><div>B</div></lyra-split>`,
+      html`<lr-split collapse="start" style="inline-size: 300px; block-size: 200px"><div><button>first</button><button>last</button></div><div>B</div></lr-split>`,
     )) as LyraSplit;
     await elementUpdated(el);
     fireCollapseResize(spy.callbacks[0], 300); // floating
@@ -1520,7 +1520,7 @@ it('closes the floating drawer on Escape', async () => {
   try {
     // See the fixed-size comment above.
     const el = (await fixture(
-      html`<lyra-split collapse="start" style="inline-size: 300px; block-size: 200px"><div>A</div><div>B</div></lyra-split>`,
+      html`<lr-split collapse="start" style="inline-size: 300px; block-size: 200px"><div>A</div><div>B</div></lr-split>`,
     )) as LyraSplit;
     await elementUpdated(el);
     fireCollapseResize(spy.callbacks[0], 300); // floating
@@ -1540,7 +1540,7 @@ it('closes the floating drawer on backdrop click', async () => {
   try {
     // See the fixed-size comment above.
     const el = (await fixture(
-      html`<lyra-split collapse="start" style="inline-size: 300px; block-size: 200px"><div>A</div><div>B</div></lyra-split>`,
+      html`<lr-split collapse="start" style="inline-size: 300px; block-size: 200px"><div>A</div><div>B</div></lr-split>`,
     )) as LyraSplit;
     await elementUpdated(el);
     fireCollapseResize(spy.callbacks[0], 300); // floating
@@ -1558,10 +1558,10 @@ it('closes the floating drawer on backdrop click', async () => {
 describe('dividerLabel', () => {
   it('overrides the divider aria-label template when set', async () => {
     const el = (await fixture(html`
-      <lyra-split>
+      <lr-split>
         <div>a</div>
         <div>b</div>
-      </lyra-split>
+      </lr-split>
     `)) as LyraSplit;
     el.dividerLabel = (index: number, panelCount: number) => `Diviseur ${index + 1} sur ${panelCount - 1}`;
     await el.updateComplete;
@@ -1571,10 +1571,10 @@ describe('dividerLabel', () => {
 
   it('falls back to the built-in English template when unset (regression)', async () => {
     const el = (await fixture(html`
-      <lyra-split>
+      <lr-split>
         <div>a</div>
         <div>b</div>
-      </lyra-split>
+      </lr-split>
     `)) as LyraSplit;
     await el.updateComplete;
     const divider = el.shadowRoot!.querySelector('[part="divider"]')!;

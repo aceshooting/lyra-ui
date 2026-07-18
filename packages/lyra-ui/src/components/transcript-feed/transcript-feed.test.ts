@@ -7,7 +7,7 @@ function entryEls(el: LyraTranscriptFeed): HTMLElement[] {
 }
 
 it('defaults to entries=[], follow=true, show-timestamps=false, max-rendered-entries=0', async () => {
-  const el = (await fixture(html`<lyra-transcript-feed></lyra-transcript-feed>`)) as LyraTranscriptFeed;
+  const el = (await fixture(html`<lr-transcript-feed></lr-transcript-feed>`)) as LyraTranscriptFeed;
   expect(el.entries).to.deep.equal([]);
   expect(el.follow).to.be.true;
   expect(el.hasAttribute('follow')).to.be.true;
@@ -16,11 +16,11 @@ it('defaults to entries=[], follow=true, show-timestamps=false, max-rendered-ent
 });
 
 it('shows the localized empty state (or a slotted override) when entries is empty', async () => {
-  const el = (await fixture(html`<lyra-transcript-feed></lyra-transcript-feed>`)) as LyraTranscriptFeed;
+  const el = (await fixture(html`<lr-transcript-feed></lr-transcript-feed>`)) as LyraTranscriptFeed;
   expect(el.shadowRoot!.querySelector('[part="empty"]')!.textContent!.trim()).to.equal('No transcript yet');
 
   const withSlot = (await fixture(html`
-    <lyra-transcript-feed><span slot="empty">Nothing said yet</span></lyra-transcript-feed>
+    <lr-transcript-feed><span slot="empty">Nothing said yet</span></lr-transcript-feed>
   `)) as LyraTranscriptFeed;
   expect(withSlot.shadowRoot!.querySelector('[part="empty"] slot')!.assignedElements()[0].textContent).to.equal(
     'Nothing said yet',
@@ -33,7 +33,7 @@ it('renders final entries inside a role="log" container labeled Transcript, grou
     { id: '2', speaker: 'You', text: 'there' },
     { id: '3', speaker: 'Agent', text: 'Hi!' },
   ];
-  const el = (await fixture(html`<lyra-transcript-feed></lyra-transcript-feed>`)) as LyraTranscriptFeed;
+  const el = (await fixture(html`<lr-transcript-feed></lr-transcript-feed>`)) as LyraTranscriptFeed;
   el.entries = entries;
   await el.updateComplete;
 
@@ -47,7 +47,7 @@ it('renders final entries inside a role="log" container labeled Transcript, grou
 });
 
 it('renders interim entries outside the log, marked data-interim with a visually-hidden Transcribing marker', async () => {
-  const el = (await fixture(html`<lyra-transcript-feed></lyra-transcript-feed>`)) as LyraTranscriptFeed;
+  const el = (await fixture(html`<lr-transcript-feed></lr-transcript-feed>`)) as LyraTranscriptFeed;
   el.entries = [
     { id: '1', speaker: 'You', text: 'final line' },
     { id: '2', speaker: 'You', text: 'partial...', interim: true },
@@ -63,7 +63,7 @@ it('renders interim entries outside the log, marked data-interim with a visually
 });
 
 it('finalizing an entry (same id, interim flips to unset) moves it from the interim area into the log', async () => {
-  const el = (await fixture(html`<lyra-transcript-feed></lyra-transcript-feed>`)) as LyraTranscriptFeed;
+  const el = (await fixture(html`<lr-transcript-feed></lr-transcript-feed>`)) as LyraTranscriptFeed;
   el.entries = [{ id: 'turn-1', speaker: 'You', text: 'partial', interim: true }];
   await el.updateComplete;
   expect(el.shadowRoot!.querySelector('[part="log"]')!.querySelectorAll('[part~="entry"]').length).to.equal(0);
@@ -78,7 +78,7 @@ it('finalizing an entry (same id, interim flips to unset) moves it from the inte
 });
 
 it('a same-id text update replaces the row in place rather than duplicating it', async () => {
-  const el = (await fixture(html`<lyra-transcript-feed></lyra-transcript-feed>`)) as LyraTranscriptFeed;
+  const el = (await fixture(html`<lr-transcript-feed></lr-transcript-feed>`)) as LyraTranscriptFeed;
   el.entries = [{ id: '1', speaker: 'You', text: 'a' }];
   await el.updateComplete;
   el.entries = [{ id: '1', speaker: 'You', text: 'ab' }];
@@ -88,7 +88,7 @@ it('a same-id text update replaces the row in place rather than duplicating it',
 });
 
 it('names the log via label, with a host aria-label winning over both label and the localized default', async () => {
-  const el = (await fixture(html`<lyra-transcript-feed label="Call captions"></lyra-transcript-feed>`)) as LyraTranscriptFeed;
+  const el = (await fixture(html`<lr-transcript-feed label="Call captions"></lr-transcript-feed>`)) as LyraTranscriptFeed;
   el.entries = [{ id: '1', text: 'hi' }];
   await el.updateComplete;
   expect(el.shadowRoot!.querySelector('[part="log"]')!.getAttribute('aria-label')).to.equal('Call captions');
@@ -101,7 +101,7 @@ it('names the log via label, with a host aria-label winning over both label and 
 
 describe('timestamps', () => {
   it('renders the built-in short-time format when no formatTimestamp is supplied', async () => {
-    const el = (await fixture(html`<lyra-transcript-feed show-timestamps locale="en"></lyra-transcript-feed>`)) as LyraTranscriptFeed;
+    const el = (await fixture(html`<lr-transcript-feed show-timestamps locale="en"></lr-transcript-feed>`)) as LyraTranscriptFeed;
     el.entries = [{ id: '1', text: 'hi', timestamp: Date.UTC(2026, 0, 1, 12, 34) }];
     await el.updateComplete;
     const rendered = el.shadowRoot!.querySelector('[part="timestamp"]')!.textContent!;
@@ -111,7 +111,7 @@ describe('timestamps', () => {
   });
 
   it('hides timestamps by default and shows them (via formatTimestamp when supplied) when show-timestamps is set', async () => {
-    const el = (await fixture(html`<lyra-transcript-feed></lyra-transcript-feed>`)) as LyraTranscriptFeed;
+    const el = (await fixture(html`<lr-transcript-feed></lr-transcript-feed>`)) as LyraTranscriptFeed;
     el.entries = [{ id: '1', text: 'hi', timestamp: 1700000000000 }];
     await el.updateComplete;
     expect(el.shadowRoot!.querySelector('[part="timestamp"]')).to.be.null;
@@ -124,7 +124,7 @@ describe('timestamps', () => {
 });
 
 it('max-rendered-entries caps the DOM row count to the newest N without mutating host data', async () => {
-  const el = (await fixture(html`<lyra-transcript-feed max-rendered-entries="2"></lyra-transcript-feed>`)) as LyraTranscriptFeed;
+  const el = (await fixture(html`<lr-transcript-feed max-rendered-entries="2"></lr-transcript-feed>`)) as LyraTranscriptFeed;
   el.entries = [
     { id: '1', text: 'one' },
     { id: '2', text: 'two' },
@@ -138,7 +138,7 @@ it('max-rendered-entries caps the DOM row count to the newest N without mutating
 
 it('normalizes a NaN max-rendered-entries to 0 ("render all") instead of leaving it unclamped', async () => {
   const el = (await fixture(
-    html`<lyra-transcript-feed max-rendered-entries="not-a-number"></lyra-transcript-feed>`,
+    html`<lr-transcript-feed max-rendered-entries="not-a-number"></lr-transcript-feed>`,
   )) as LyraTranscriptFeed;
   expect(Number.isNaN(el.maxRenderedEntries)).to.be.true;
   el.entries = [
@@ -151,9 +151,9 @@ it('normalizes a NaN max-rendered-entries to 0 ("render all") instead of leaving
 });
 
 describe('follow / stick-to-bottom contract', () => {
-  it('releases follow on scroll-up past the near-bottom threshold, emits lyra-follow-change, and shows the jump button', async () => {
+  it('releases follow on scroll-up past the near-bottom threshold, emits lr-follow-change, and shows the jump button', async () => {
     const el = (await fixture(
-      html`<lyra-transcript-feed style="block-size: 120px"></lyra-transcript-feed>`,
+      html`<lr-transcript-feed style="block-size: 120px"></lr-transcript-feed>`,
     )) as LyraTranscriptFeed;
     el.entries = Array.from({ length: 30 }, (_, i) => ({ id: String(i), speaker: 'You', text: `line ${i}` }));
     await el.updateComplete;
@@ -161,7 +161,7 @@ describe('follow / stick-to-bottom contract', () => {
     expect(base.scrollHeight).to.be.greaterThan(base.clientHeight);
 
     const followChanges: boolean[] = [];
-    el.addEventListener('lyra-follow-change', (e) => followChanges.push((e as CustomEvent<{ following: boolean }>).detail.following));
+    el.addEventListener('lr-follow-change', (e) => followChanges.push((e as CustomEvent<{ following: boolean }>).detail.following));
 
     base.scrollTop = 0;
     base.dispatchEvent(new Event('scroll'));
@@ -179,7 +179,7 @@ describe('follow / stick-to-bottom contract', () => {
 
   it('auto-scrolls to the bottom on new entries while follow is true', async () => {
     const el = (await fixture(
-      html`<lyra-transcript-feed style="block-size: 80px"></lyra-transcript-feed>`,
+      html`<lr-transcript-feed style="block-size: 80px"></lr-transcript-feed>`,
     )) as LyraTranscriptFeed;
     el.entries = Array.from({ length: 20 }, (_, i) => ({ id: String(i), text: `line ${i}` }));
     await el.updateComplete;
@@ -187,16 +187,16 @@ describe('follow / stick-to-bottom contract', () => {
     expect(base.scrollHeight - base.scrollTop - base.clientHeight).to.be.lessThan(2);
   });
 
-  it('emits lyra-follow-change for a direct programmatic assignment too, but never for the value already in effect on first render', async () => {
-    const el = document.createElement('lyra-transcript-feed') as LyraTranscriptFeed;
+  it('emits lr-follow-change for a direct programmatic assignment too, but never for the value already in effect on first render', async () => {
+    const el = document.createElement('lr-transcript-feed') as LyraTranscriptFeed;
     let fired = false;
-    el.addEventListener('lyra-follow-change', () => (fired = true));
+    el.addEventListener('lr-follow-change', () => (fired = true));
     document.body.appendChild(el);
     await el.updateComplete;
     expect(fired).to.be.false; // first render, no transition yet
 
     let count = 0;
-    el.addEventListener('lyra-follow-change', () => count++);
+    el.addEventListener('lr-follow-change', () => count++);
     el.follow = false;
     await el.updateComplete;
     expect(count).to.equal(1);
@@ -208,14 +208,14 @@ describe('follow / stick-to-bottom contract', () => {
 });
 
 it('gives [part="text"] dir="auto" for mixed-language captions', async () => {
-  const el = (await fixture(html`<lyra-transcript-feed></lyra-transcript-feed>`)) as LyraTranscriptFeed;
+  const el = (await fixture(html`<lr-transcript-feed></lr-transcript-feed>`)) as LyraTranscriptFeed;
   el.entries = [{ id: '1', text: 'hello' }];
   await el.updateComplete;
   expect(el.shadowRoot!.querySelector('[part="text"]')!.getAttribute('dir')).to.equal('auto');
 });
 
 it('is accessible with a mix of final and interim entries', async () => {
-  const el = (await fixture(html`<lyra-transcript-feed></lyra-transcript-feed>`)) as LyraTranscriptFeed;
+  const el = (await fixture(html`<lr-transcript-feed></lr-transcript-feed>`)) as LyraTranscriptFeed;
   el.entries = [
     { id: '1', speaker: 'You', text: 'final' },
     { id: '2', speaker: 'You', text: 'partial', interim: true },
@@ -226,9 +226,9 @@ it('is accessible with a mix of final and interim entries', async () => {
 
 it('localizes the log label and empty state via this.localize()', async () => {
   const el = (await fixture(html`
-    <lyra-transcript-feed
+    <lr-transcript-feed
       .strings=${{ transcriptFeedLabel: 'Transcription', transcriptFeedEmpty: 'Rien pour le moment' }}
-    ></lyra-transcript-feed>
+    ></lr-transcript-feed>
   `)) as LyraTranscriptFeed;
   expect(el.shadowRoot!.querySelector('[part="empty"]')!.textContent!.trim()).to.equal('Rien pour le moment');
   el.entries = [{ id: '1', text: 'hi' }];

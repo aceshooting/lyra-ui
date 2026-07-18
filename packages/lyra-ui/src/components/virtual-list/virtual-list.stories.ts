@@ -25,7 +25,7 @@ const messages = buildMessages(2000);
 const renderMessage = (item: unknown, index: number) => {
   const m = item as DemoMessage;
   return html`
-    <div style="display:flex; gap:0.5rem; padding:0.5rem 0.75rem; border-block-end:1px solid var(--lyra-color-border);">
+    <div style="display:flex; gap:0.5rem; padding:0.5rem 0.75rem; border-block-end:1px solid var(--lr-color-border);">
       <strong style="flex:0 0 auto; min-inline-size:5rem;">${m.author}</strong>
       <span>#${index} — ${m.text}</span>
     </div>
@@ -36,7 +36,7 @@ const keyFunction = (item: unknown) => (item as DemoMessage).id;
 
 const meta: Meta = {
   title: 'VirtualList',
-  component: 'lyra-virtual-list',
+  component: 'lr-virtual-list',
   tags: ['autodocs'],
   parameters: {
     docs: {
@@ -52,47 +52,47 @@ type Story = StoryObj;
 
 export const Default: Story = {
   render: () => html`
-    <lyra-virtual-list
-      style="max-width: 32rem; --lyra-virtual-list-height: 20rem;"
+    <lr-virtual-list
+      style="max-width: 32rem; --lr-virtual-list-height: 20rem;"
       .items=${messages}
       .renderItem=${renderMessage}
       .keyFunction=${keyFunction}
-    ></lyra-virtual-list>
+    ></lr-virtual-list>
   `,
 };
 
 export const FixedRowHeight: Story = {
   render: () => html`
-    <lyra-virtual-list
-      style="max-width: 32rem; --lyra-virtual-list-height: 20rem;"
+    <lr-virtual-list
+      style="max-width: 32rem; --lr-virtual-list-height: 20rem;"
       row-height="56"
       .items=${messages}
       .renderItem=${renderMessage}
       .keyFunction=${keyFunction}
-    ></lyra-virtual-list>
+    ></lr-virtual-list>
   `,
 };
 
 export const WideOverscan: Story = {
   render: () => html`
-    <lyra-virtual-list
-      style="max-width: 32rem; --lyra-virtual-list-height: 20rem;"
+    <lr-virtual-list
+      style="max-width: 32rem; --lr-virtual-list-height: 20rem;"
       overscan="20"
       .items=${messages}
       .renderItem=${renderMessage}
       .keyFunction=${keyFunction}
-    ></lyra-virtual-list>
+    ></lr-virtual-list>
   `,
 };
 
 export const Empty: Story = {
   render: () => html`
-    <lyra-virtual-list
-      style="max-width: 32rem; --lyra-virtual-list-height: 20rem;"
+    <lr-virtual-list
+      style="max-width: 32rem; --lr-virtual-list-height: 20rem;"
       .items=${[]}
       .renderItem=${renderMessage}
       .keyFunction=${keyFunction}
-    ></lyra-virtual-list>
+    ></lr-virtual-list>
   `,
 };
 
@@ -110,19 +110,19 @@ export const ScrollToActive: Story = {
           <button @click=${() => setActive('msg-950')}>Jump to #950</button>
           <button @click=${() => setActive('msg-1999')}>Jump to #1999</button>
         </div>
-        <lyra-virtual-list
+        <lr-virtual-list
           id="active-demo-list"
-          style="--lyra-virtual-list-height: 20rem;"
+          style="--lr-virtual-list-height: 20rem;"
           .items=${messages}
           .renderItem=${renderMessage}
           .keyFunction=${keyFunction}
-        ></lyra-virtual-list>
+        ></lr-virtual-list>
       </div>
     `;
   },
 };
 
-/** Demonstrates `has-more`/`loading` gating `lyra-load-more` -- scroll near the bottom to trigger a simulated fetch. */
+/** Demonstrates `has-more`/`loading` gating `lr-load-more` -- scroll near the bottom to trigger a simulated fetch. */
 export const LoadMore: Story = {
   render: () => {
     let page = buildMessages(40);
@@ -141,14 +141,14 @@ export const LoadMore: Story = {
       }, 600);
     };
     return html`
-      <lyra-virtual-list
-        style="max-width: 32rem; --lyra-virtual-list-height: 20rem;"
+      <lr-virtual-list
+        style="max-width: 32rem; --lr-virtual-list-height: 20rem;"
         .items=${page}
         .renderItem=${renderMessage}
         .keyFunction=${keyFunction}
         has-more
-        @lyra-load-more=${onLoadMore}
-      ></lyra-virtual-list>
+        @lr-load-more=${onLoadMore}
+      ></lr-virtual-list>
     `;
   },
 };

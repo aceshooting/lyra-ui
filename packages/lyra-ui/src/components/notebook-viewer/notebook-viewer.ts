@@ -13,10 +13,10 @@ defineElement('notebook-viewer', LyraNotebookViewer);
 registerDocumentRenderer('application/x-ipynb+json', {
   matches: (file: DocumentFile) => file.name.toLowerCase().endsWith('.ipynb'),
   capabilities: { anchors: ['node-path', 'fragment'], search: true },
-  render: (file: DocumentFile) => html`<lyra-notebook-viewer
+  render: (file: DocumentFile) => html`<lr-notebook-viewer
     src=${file.src}
     name=${file.name}
     .anchor=${file.anchor ?? null}
     .highlights=${file.highlights ?? []}
-  ></lyra-notebook-viewer>`,
+  ></lr-notebook-viewer>`,
 });

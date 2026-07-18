@@ -18,7 +18,7 @@ export async function loadEmailAndSanitizer(
     PostalMime = module.default ?? module;
   } catch (error) {
     console.warn(
-      '<lyra-email-viewer> needs the optional peer dependency `postal-mime` to parse .eml messages — install it with `pnpm add postal-mime`:',
+      '<lr-email-viewer> needs the optional peer dependency `postal-mime` to parse .eml messages — install it with `pnpm add postal-mime`:',
       error,
     );
   }
@@ -29,7 +29,7 @@ export async function loadEmailAndSanitizer(
     DOMPurify = module.default ?? module;
   } catch (error) {
     console.warn(
-      '<lyra-email-viewer> needs the optional peer dependency `dompurify` to sanitize HTML message bodies — install it with `pnpm add dompurify`:',
+      '<lr-email-viewer> needs the optional peer dependency `dompurify` to sanitize HTML message bodies — install it with `pnpm add dompurify`:',
       error,
     );
   }

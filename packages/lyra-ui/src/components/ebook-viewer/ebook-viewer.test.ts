@@ -92,16 +92,16 @@ function fakeBookWithFeatures(spineTexts: Record<string, string>) {
 
 afterEach(() => __setEpubJsForTesting(undefined));
 
-describe('lyra-ebook-viewer', () => {
+describe('lr-ebook-viewer', () => {
   it('keeps a stable mount and renders an idle state by default', async () => {
-    const el = (await fixture(html`<lyra-ebook-viewer></lyra-ebook-viewer>`)) as LyraEbookViewer;
+    const el = (await fixture(html`<lr-ebook-viewer></lr-ebook-viewer>`)) as LyraEbookViewer;
     expect(el.shadowRoot!.querySelector('[part="mount"]')).to.exist;
     expect(el.shadowRoot!.querySelector('[part="error"]')).to.not.exist;
     expect((el.shadowRoot!.querySelector('[part="next-button"]') as HTMLButtonElement).disabled).to.be.true;
   });
 
   it('gives the page-turn buttons the shared minimum hit area', async () => {
-    const el = (await fixture(html`<lyra-ebook-viewer></lyra-ebook-viewer>`)) as LyraEbookViewer;
+    const el = (await fixture(html`<lr-ebook-viewer></lr-ebook-viewer>`)) as LyraEbookViewer;
     const previous = el.shadowRoot!.querySelector('[part="previous-button"]') as HTMLElement;
     const next = el.shadowRoot!.querySelector('[part="next-button"]') as HTMLElement;
 
@@ -116,7 +116,7 @@ describe('lyra-ebook-viewer', () => {
     __setEpubJsForTesting(fake.factory as never);
     const restore = stubFetch();
     try {
-      const el = (await fixture(html`<lyra-ebook-viewer src="https://example.test/book.epub"></lyra-ebook-viewer>`)) as LyraEbookViewer;
+      const el = (await fixture(html`<lr-ebook-viewer src="https://example.test/book.epub"></lr-ebook-viewer>`)) as LyraEbookViewer;
       await aTimeout(20);
       const next = el.shadowRoot!.querySelector('[part="next-button"]') as HTMLButtonElement;
       const previous = el.shadowRoot!.querySelector('[part="previous-button"]') as HTMLButtonElement;
@@ -137,7 +137,7 @@ describe('lyra-ebook-viewer', () => {
     __setEpubJsForTesting(fake.factory as never);
     const restore = stubFetch();
     try {
-      const el = (await fixture(html`<lyra-ebook-viewer src="https://example.test/book.epub"></lyra-ebook-viewer>`)) as LyraEbookViewer;
+      const el = (await fixture(html`<lr-ebook-viewer src="https://example.test/book.epub"></lr-ebook-viewer>`)) as LyraEbookViewer;
       await aTimeout(20);
       const next = el.shadowRoot!.querySelector('[part="next-button"]') as HTMLButtonElement;
       expect(next.disabled).to.be.false;
@@ -166,11 +166,11 @@ describe('lyra-ebook-viewer', () => {
   it('renders safe-url, fetch, and missing-peer errors', async () => {
     const restore = stubFetch();
     try {
-      const unsafe = (await fixture(html`<lyra-ebook-viewer .src=${'javascript:alert(1)'}></lyra-ebook-viewer>`)) as LyraEbookViewer;
+      const unsafe = (await fixture(html`<lr-ebook-viewer .src=${'javascript:alert(1)'}></lr-ebook-viewer>`)) as LyraEbookViewer;
       await aTimeout(10);
       expect(unsafe.shadowRoot!.querySelector('[part="error"]')!.textContent).to.contain('Document URL is not allowed');
       __setEpubJsForTesting(null);
-      const missing = (await fixture(html`<lyra-ebook-viewer src="https://example.test/book.epub"></lyra-ebook-viewer>`)) as LyraEbookViewer;
+      const missing = (await fixture(html`<lr-ebook-viewer src="https://example.test/book.epub"></lr-ebook-viewer>`)) as LyraEbookViewer;
       await aTimeout(20);
       expect(missing.shadowRoot!.querySelector('[part="error"]')!.textContent).to.contain('Failed to load the ebook');
     } finally {
@@ -179,7 +179,7 @@ describe('lyra-ebook-viewer', () => {
   });
 
   it('is accessible and supports localized navigation labels', async () => {
-    const el = await fixture(html`<lyra-ebook-viewer .strings=${{ previous: 'Précédent', next: 'Suivant' }}></lyra-ebook-viewer>`);
+    const el = await fixture(html`<lr-ebook-viewer .strings=${{ previous: 'Précédent', next: 'Suivant' }}></lr-ebook-viewer>`);
     expect(el.shadowRoot!.querySelector('[part="previous-button"]')!.getAttribute('aria-label')).to.equal('Précédent');
     await expect(el).to.be.accessible();
   });
@@ -191,7 +191,7 @@ describe('getToc', () => {
     __setEpubJsForTesting(fake.factory as never);
     const restore = stubFetch();
     try {
-      const el = (await fixture(html`<lyra-ebook-viewer src="https://example.test/book.epub"></lyra-ebook-viewer>`)) as LyraEbookViewer;
+      const el = (await fixture(html`<lr-ebook-viewer src="https://example.test/book.epub"></lr-ebook-viewer>`)) as LyraEbookViewer;
       await aTimeout(20);
       expect(await el.getToc()).to.deep.equal([
         { id: 'ch1', label: 'Chapter 1', href: 'ch1.xhtml', level: 1 },
@@ -204,7 +204,7 @@ describe('getToc', () => {
   });
 
   it('resolves [] before the book is ready', async () => {
-    const el = (await fixture(html`<lyra-ebook-viewer></lyra-ebook-viewer>`)) as LyraEbookViewer;
+    const el = (await fixture(html`<lr-ebook-viewer></lr-ebook-viewer>`)) as LyraEbookViewer;
     expect(await el.getToc()).to.deep.equal([]);
   });
 });
@@ -216,7 +216,7 @@ describe('location', () => {
     const restore = stubFetch();
     try {
       const el = (await fixture(
-        html`<lyra-ebook-viewer src="https://example.test/book.epub" location="epubcfi(/6/4!)"></lyra-ebook-viewer>`,
+        html`<lr-ebook-viewer src="https://example.test/book.epub" location="epubcfi(/6/4!)"></lr-ebook-viewer>`,
       )) as LyraEbookViewer;
       await aTimeout(20);
       expect(fake.displayedCfis).to.include('epubcfi(/6/4!)');
@@ -230,7 +230,7 @@ describe('location', () => {
     __setEpubJsForTesting(fake.factory as never);
     const restore = stubFetch();
     try {
-      const el = (await fixture(html`<lyra-ebook-viewer src="https://example.test/book.epub"></lyra-ebook-viewer>`)) as LyraEbookViewer;
+      const el = (await fixture(html`<lr-ebook-viewer src="https://example.test/book.epub"></lr-ebook-viewer>`)) as LyraEbookViewer;
       await aTimeout(20);
       const before = fake.displayedCfis.length;
       fake.relocate({ start: { cfi: 'epubcfi(/6/2!)', href: 'ch1.xhtml' } });
@@ -243,14 +243,14 @@ describe('location', () => {
     }
   });
 
-  it('emits lyra-location-change on relocated', async () => {
+  it('emits lr-location-change on relocated', async () => {
     const fake = fakeBookWithFeatures({ 'ch1.xhtml': 'hello' });
     __setEpubJsForTesting(fake.factory as never);
     const restore = stubFetch();
     try {
-      const el = (await fixture(html`<lyra-ebook-viewer src="https://example.test/book.epub"></lyra-ebook-viewer>`)) as LyraEbookViewer;
+      const el = (await fixture(html`<lr-ebook-viewer src="https://example.test/book.epub"></lr-ebook-viewer>`)) as LyraEbookViewer;
       await aTimeout(20);
-      const listener = oneEvent(el, 'lyra-location-change');
+      const listener = oneEvent(el, 'lr-location-change');
       fake.relocate({ start: { cfi: 'epubcfi(/6/2!)', href: 'ch1.xhtml' } });
       const event = (await listener) as CustomEvent<{ cfi: string; href: string }>;
       expect(event.detail).to.deep.equal({ cfi: 'epubcfi(/6/2!)', href: 'ch1.xhtml' });
@@ -264,7 +264,7 @@ describe('location', () => {
     __setEpubJsForTesting(fake.factory as never);
     const restore = stubFetch();
     try {
-      const el = (await fixture(html`<lyra-ebook-viewer src="https://example.test/book.epub"></lyra-ebook-viewer>`)) as LyraEbookViewer;
+      const el = (await fixture(html`<lr-ebook-viewer src="https://example.test/book.epub"></lr-ebook-viewer>`)) as LyraEbookViewer;
       await aTimeout(20);
       el.location = 'epubcfi(/6/10!)';
       await aTimeout(20);
@@ -275,13 +275,13 @@ describe('location', () => {
   });
 });
 
-describe('lyra-ebook-viewer search', () => {
+describe('lr-ebook-viewer search', () => {
   it('finds matches across spine sections in order and navigates', async () => {
     const fake = fakeBookWithFeatures({ 'ch1.xhtml': 'no match', 'ch2.xhtml': 'the treasure map' });
     __setEpubJsForTesting(fake.factory as never);
     const restore = stubFetch();
     try {
-      const el = (await fixture(html`<lyra-ebook-viewer src="https://example.test/book.epub"></lyra-ebook-viewer>`)) as LyraEbookViewer;
+      const el = (await fixture(html`<lr-ebook-viewer src="https://example.test/book.epub"></lr-ebook-viewer>`)) as LyraEbookViewer;
       await aTimeout(20);
       const count = await el.search('treasure');
       expect(count).to.equal(1);
@@ -297,7 +297,7 @@ describe('lyra-ebook-viewer search', () => {
     __setEpubJsForTesting(fake.factory as never);
     const restore = stubFetch();
     try {
-      const el = (await fixture(html`<lyra-ebook-viewer src="https://example.test/book.epub"></lyra-ebook-viewer>`)) as LyraEbookViewer;
+      const el = (await fixture(html`<lr-ebook-viewer src="https://example.test/book.epub"></lr-ebook-viewer>`)) as LyraEbookViewer;
       await aTimeout(20);
       const stale = el.search('apple');
       const fresh = await el.search('banana');
@@ -308,32 +308,32 @@ describe('lyra-ebook-viewer search', () => {
     }
   });
 
-  it('emits lyra-search-change with the query, match count, and active index', async () => {
+  it('emits lr-search-change with the query, match count, and active index', async () => {
     const fake = fakeBookWithFeatures({ 'ch1.xhtml': 'no match', 'ch2.xhtml': 'the treasure map' });
     __setEpubJsForTesting(fake.factory as never);
     const restore = stubFetch();
     try {
-      const el = (await fixture(html`<lyra-ebook-viewer src="https://example.test/book.epub"></lyra-ebook-viewer>`)) as LyraEbookViewer;
+      const el = (await fixture(html`<lr-ebook-viewer src="https://example.test/book.epub"></lr-ebook-viewer>`)) as LyraEbookViewer;
       await aTimeout(20);
-      const listener = oneEvent(el, 'lyra-search-change');
+      const listener = oneEvent(el, 'lr-search-change');
       await el.search('treasure');
       const event = (await listener) as CustomEvent<{ query: string; matchCount: number; activeIndex: number }>;
       expect(event.detail).to.deep.equal({ query: 'treasure', matchCount: 1, activeIndex: 0 });
-      expect(fake.highlightCalls.some((call) => call.className === 'lyra-ebook-search')).to.be.true;
+      expect(fake.highlightCalls.some((call) => call.className === 'lr-ebook-search')).to.be.true;
     } finally {
       restore();
     }
   });
 
-  it('clearSearch() resets to a 0-match state and emits lyra-search-change', async () => {
+  it('clearSearch() resets to a 0-match state and emits lr-search-change', async () => {
     const fake = fakeBookWithFeatures({ 'ch1.xhtml': 'no match', 'ch2.xhtml': 'the treasure map' });
     __setEpubJsForTesting(fake.factory as never);
     const restore = stubFetch();
     try {
-      const el = (await fixture(html`<lyra-ebook-viewer src="https://example.test/book.epub"></lyra-ebook-viewer>`)) as LyraEbookViewer;
+      const el = (await fixture(html`<lr-ebook-viewer src="https://example.test/book.epub"></lr-ebook-viewer>`)) as LyraEbookViewer;
       await aTimeout(20);
       await el.search('treasure');
-      const listener = oneEvent(el, 'lyra-search-change');
+      const listener = oneEvent(el, 'lr-search-change');
       el.clearSearch();
       const event = (await listener) as CustomEvent<{ query: string; matchCount: number; activeIndex: number }>;
       expect(event.detail).to.deep.equal({ query: '', matchCount: 0, activeIndex: -1 });
@@ -347,7 +347,7 @@ describe('lyra-ebook-viewer search', () => {
     __setEpubJsForTesting(fake.factory as never);
     const restore = stubFetch();
     try {
-      const el = (await fixture(html`<lyra-ebook-viewer src="https://example.test/book.epub"></lyra-ebook-viewer>`)) as LyraEbookViewer;
+      const el = (await fixture(html`<lr-ebook-viewer src="https://example.test/book.epub"></lr-ebook-viewer>`)) as LyraEbookViewer;
       await aTimeout(20);
       await el.search('treasure');
       await aTimeout(600); // the shared Announcer's default throttle window
@@ -360,7 +360,7 @@ describe('lyra-ebook-viewer search', () => {
 
 describe('scrollToAnchor (ebook)', () => {
   it('reports its supported anchor kinds', async () => {
-    const el = (await fixture(html`<lyra-ebook-viewer></lyra-ebook-viewer>`)) as LyraEbookViewer;
+    const el = (await fixture(html`<lr-ebook-viewer></lr-ebook-viewer>`)) as LyraEbookViewer;
     expect(el.anchorKinds).to.deep.equal(['cfi', 'text-quote']);
   });
 
@@ -369,7 +369,7 @@ describe('scrollToAnchor (ebook)', () => {
     __setEpubJsForTesting(fake.factory as never);
     const restore = stubFetch();
     try {
-      const el = (await fixture(html`<lyra-ebook-viewer src="https://example.test/book.epub"></lyra-ebook-viewer>`)) as LyraEbookViewer;
+      const el = (await fixture(html`<lr-ebook-viewer src="https://example.test/book.epub"></lr-ebook-viewer>`)) as LyraEbookViewer;
       await aTimeout(20);
       expect(await el.scrollToAnchor({ kind: 'cfi', cfi: 'epubcfi(/6/8!)' })).to.be.true;
       expect(fake.displayedCfis).to.include('epubcfi(/6/8!)');
@@ -383,7 +383,7 @@ describe('scrollToAnchor (ebook)', () => {
     __setEpubJsForTesting(fake.factory as never);
     const restore = stubFetch();
     try {
-      const el = (await fixture(html`<lyra-ebook-viewer src="https://example.test/book.epub"></lyra-ebook-viewer>`)) as LyraEbookViewer;
+      const el = (await fixture(html`<lr-ebook-viewer src="https://example.test/book.epub"></lr-ebook-viewer>`)) as LyraEbookViewer;
       await aTimeout(20);
       (el as unknown as { anchorTimeoutMs: number }).anchorTimeoutMs = 30;
       (el as unknown as { anchorRetryIntervalMs: number }).anchorRetryIntervalMs = 5;
@@ -398,7 +398,7 @@ describe('scrollToAnchor (ebook)', () => {
     __setEpubJsForTesting(fake.factory as never);
     const restore = stubFetch();
     try {
-      const el = (await fixture(html`<lyra-ebook-viewer src="https://example.test/book.epub"></lyra-ebook-viewer>`)) as LyraEbookViewer;
+      const el = (await fixture(html`<lr-ebook-viewer src="https://example.test/book.epub"></lr-ebook-viewer>`)) as LyraEbookViewer;
       await aTimeout(20);
       el.highlights = [{ id: 'h1', anchor: { kind: 'cfi', cfi: 'epubcfi(/6/6!)' } }];
       await el.updateComplete;
@@ -423,7 +423,7 @@ describe('back-compat', () => {
     __setEpubJsForTesting(fake.factory as never);
     const restore = stubFetch();
     try {
-      const el = (await fixture(html`<lyra-ebook-viewer src="https://example.test/book.epub"></lyra-ebook-viewer>`)) as LyraEbookViewer;
+      const el = (await fixture(html`<lr-ebook-viewer src="https://example.test/book.epub"></lr-ebook-viewer>`)) as LyraEbookViewer;
       await aTimeout(20);
       const next = el.shadowRoot!.querySelector('[part="next-button"]') as HTMLButtonElement;
       next.click();

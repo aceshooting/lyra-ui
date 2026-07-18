@@ -5,9 +5,9 @@ import { styles } from './format.styles.js';
 import { getDateTimeFormat } from '../../internal/intl-cache.js';
 
 /**
- * `<lyra-format-date>` — locale-aware `Intl.DateTimeFormat` output.
+ * `<lr-format-date>` — locale-aware `Intl.DateTimeFormat` output.
  *
- * @customElement lyra-format-date
+ * @customElement lr-format-date
  * @slot - Fallback content for an invalid date.
  */
 export class LyraFormatDate extends LyraElement {
@@ -27,4 +27,4 @@ export class LyraFormatDate extends LyraElement {
     return html`${text || html`<slot></slot>`}`;
   }
 }
-declare global { interface HTMLElementTagNameMap { 'lyra-format-date': LyraFormatDate; } }
+declare global { interface HTMLElementTagNameMap { 'lr-format-date': LyraFormatDate; } }

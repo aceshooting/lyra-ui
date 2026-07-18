@@ -3,7 +3,7 @@ import { html } from 'lit';
 
 const meta: Meta = {
   title: 'Stat',
-  component: 'lyra-stat',
+  component: 'lr-stat',
   tags: ['autodocs'],
 };
 export default meta;
@@ -12,18 +12,18 @@ type Story = StoryObj;
 export const Gallery: Story = {
   render: () => html`
     <div class="flex flex-wrap gap-4">
-      <lyra-stat label="Revenue" value="12.4" unit="k€" trend="3.2" variant="success"></lyra-stat>
-      <lyra-stat label="Errors" value="128" trend="-5.1" variant="danger"></lyra-stat>
-      <lyra-stat label="Pending Reviews" value="42" trend="8.6" variant="warning"></lyra-stat>
-      <lyra-stat label="Sessions" value="9,204"></lyra-stat>
-      <lyra-stat label="Uptime" value="99.98" unit="%" caption="Last 30 days">
+      <lr-stat label="Revenue" value="12.4" unit="k€" trend="3.2" variant="success"></lr-stat>
+      <lr-stat label="Errors" value="128" trend="-5.1" variant="danger"></lr-stat>
+      <lr-stat label="Pending Reviews" value="42" trend="8.6" variant="warning"></lr-stat>
+      <lr-stat label="Sessions" value="9,204"></lr-stat>
+      <lr-stat label="Uptime" value="99.98" unit="%" caption="Last 30 days">
         <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
           <circle cx="12" cy="12" r="9"></circle>
         </svg>
-      </lyra-stat>
-      <lyra-stat label="Latency" value="182" unit="ms" trend="14" good-direction="down">
+      </lr-stat>
+      <lr-stat label="Latency" value="182" unit="ms" trend="14" good-direction="down">
         <span slot="caption">Median over <strong>1,000</strong> requests</span>
-      </lyra-stat>
+      </lr-stat>
     </div>
   `,
 };
@@ -31,16 +31,16 @@ export const Gallery: Story = {
 export const SparkAndBreakdown: Story = {
   render: () => html`
     <div class="flex flex-wrap gap-4">
-      <lyra-stat label="Revenue" value="12.4" unit="k€" trend="3.2" variant="success" caption="Last 30 days">
-        <lyra-sparkline
+      <lr-stat label="Revenue" value="12.4" unit="k€" trend="3.2" variant="success" caption="Last 30 days">
+        <lr-sparkline
           slot="spark"
           type="line"
           .values=${[4, 6, 5, 8, 7, 9, 12, 10, 13, 12.4]}
-        ></lyra-sparkline>
-      </lyra-stat>
-      <lyra-stat label="Sessions" value="9,204" caption="By channel">
-        <lyra-sparkline slot="spark" type="bar" .values=${[3, 5, 4, 6, 8, 7, 9]}></lyra-sparkline>
-      </lyra-stat>
+        ></lr-sparkline>
+      </lr-stat>
+      <lr-stat label="Sessions" value="9,204" caption="By channel">
+        <lr-sparkline slot="spark" type="bar" .values=${[3, 5, 4, 6, 8, 7, 9]}></lr-sparkline>
+      </lr-stat>
     </div>
   `,
 };
@@ -48,11 +48,11 @@ export const SparkAndBreakdown: Story = {
 export const BreakdownRows: Story = {
   render: () => html`
     <div class="flex flex-wrap gap-4">
-      <lyra-stat label="Sessions" value="9,204" caption="By channel"></lyra-stat>
+      <lr-stat label="Sessions" value="9,204" caption="By channel"></lr-stat>
     </div>
   `,
   play: async ({ canvasElement }) => {
-    const el = canvasElement.querySelector('lyra-stat') as HTMLElement & {
+    const el = canvasElement.querySelector('lr-stat') as HTMLElement & {
       rows: { label: string; value: string }[];
     };
     el.rows = [
@@ -66,11 +66,11 @@ export const BreakdownRows: Story = {
 export const BreakdownRowsWithExactValue: Story = {
   render: () => html`
     <div class="flex flex-wrap gap-4">
-      <lyra-stat label="Usage" value="12,480" caption="By model, this billing cycle"></lyra-stat>
+      <lr-stat label="Usage" value="12,480" caption="By model, this billing cycle"></lr-stat>
     </div>
   `,
   play: async ({ canvasElement }) => {
-    const el = canvasElement.querySelector('lyra-stat') as HTMLElement & {
+    const el = canvasElement.querySelector('lr-stat') as HTMLElement & {
       rows: { label: string; value: string; exactValue?: string }[];
     };
     el.rows = [
@@ -84,8 +84,8 @@ export const BreakdownRowsWithExactValue: Story = {
 export const Emphasis: Story = {
   render: () => html`
     <div class="flex flex-wrap gap-4">
-      <lyra-stat label="Revenue" value="12.4" unit="k€" trend="3.2" emphasis></lyra-stat>
-      <lyra-stat label="Errors" value="128" trend="-5.1" variant="danger" emphasis></lyra-stat>
+      <lr-stat label="Revenue" value="12.4" unit="k€" trend="3.2" emphasis></lr-stat>
+      <lr-stat label="Errors" value="128" trend="-5.1" variant="danger" emphasis></lr-stat>
     </div>
   `,
 };
@@ -93,7 +93,7 @@ export const Emphasis: Story = {
 export const ExactValueSubProseCompact: Story = {
   render: () => html`
     <div class="flex flex-wrap gap-4">
-      <lyra-stat
+      <lr-stat
         label="Revenue"
         value="$1.2K"
         exact-value="$1,204.37"
@@ -101,9 +101,9 @@ export const ExactValueSubProseCompact: Story = {
         caption="Updated 2h ago"
         trend="3.2"
         variant="success"
-      ></lyra-stat>
-      <lyra-stat label="Status" prose value="Waiting for the next sync…"></lyra-stat>
-      <lyra-stat label="Sessions" value="9,204" sub="+312 today" compact></lyra-stat>
+      ></lr-stat>
+      <lr-stat label="Status" prose value="Waiting for the next sync…"></lr-stat>
+      <lr-stat label="Sessions" value="9,204" sub="+312 today" compact></lr-stat>
     </div>
   `,
 };

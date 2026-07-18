@@ -4,7 +4,7 @@ import type { LyraSpinner } from './spinner.js';
 import { styles } from './spinner.styles.js';
 
 it('renders a localized busy status', async () => {
-  const el = (await fixture(html`<lyra-spinner></lyra-spinner>`)) as LyraSpinner;
+  const el = (await fixture(html`<lr-spinner></lr-spinner>`)) as LyraSpinner;
   const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
   expect(base.getAttribute('role')).to.equal('status');
   expect(base.getAttribute('aria-label')).to.equal('Loading…');
@@ -12,19 +12,19 @@ it('renders a localized busy status', async () => {
 });
 
 it('lets a host aria-label override the localized default', async () => {
-  const el = (await fixture(html`<lyra-spinner aria-label="Loading users"></lyra-spinner>`)) as LyraSpinner;
+  const el = (await fixture(html`<lr-spinner aria-label="Loading users"></lr-spinner>`)) as LyraSpinner;
   const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
   expect(base.getAttribute('aria-label')).to.equal('Loading users');
 });
 
 it('keeps the slotted label sr-only when label-placement is "none" (default)', async () => {
-  const el = (await fixture(html`<lyra-spinner>Loading data</lyra-spinner>`)) as LyraSpinner;
+  const el = (await fixture(html`<lr-spinner>Loading data</lr-spinner>`)) as LyraSpinner;
   const label = el.shadowRoot!.querySelector('[part="label"]') as HTMLElement;
   expect(label.hidden).to.be.true;
 });
 
 it('shows the slotted label in flow when label-placement is "after"', async () => {
-  const el = (await fixture(html`<lyra-spinner label-placement="after">Loading data</lyra-spinner>`)) as LyraSpinner;
+  const el = (await fixture(html`<lr-spinner label-placement="after">Loading data</lr-spinner>`)) as LyraSpinner;
   const label = el.shadowRoot!.querySelector('[part="label"]') as HTMLElement;
   expect(label.hidden).to.be.false;
   const computed = getComputedStyle(label);

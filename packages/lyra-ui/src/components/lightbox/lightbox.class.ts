@@ -10,11 +10,11 @@ import { styles } from './lightbox.styles.js';
 import '../zoomable-frame/zoomable-frame.class.js';
 import type { LyraZoomableFrame } from '../zoomable-frame/zoomable-frame.class.js';
 
-/** One image in the set `<lyra-lightbox>` browses. `alt`/`caption` are caller-supplied data
+/** One image in the set `<lr-lightbox>` browses. `alt`/`caption` are caller-supplied data
  *  (like a filename), not routed through `localize()` -- only the component's own chrome
  *  strings are. */
 export interface LyraLightboxImage {
-  /** Full-resolution URL. Passed straight through to the embedded `<lyra-zoomable-frame>`'s own
+  /** Full-resolution URL. Passed straight through to the embedded `<lr-zoomable-frame>`'s own
    *  `src`, which already runs it through `safeMediaSrc()` -- no separate validation needed here. */
   src: string;
   /** Accessible alt text. Defaults to `''` (decorative) when omitted; consumers should supply
@@ -25,8 +25,8 @@ export interface LyraLightboxImage {
 }
 
 /**
- * Reason a lightbox was dismissed, forwarded as the `lyra-lightbox-close` event detail --
- * 1:1 copy of `<lyra-dialog>`'s own `DialogCloseReason` contract. `'escape'` and `'backdrop'`
+ * Reason a lightbox was dismissed, forwarded as the `lr-lightbox-close` event detail --
+ * 1:1 copy of `<lr-dialog>`'s own `DialogCloseReason` contract. `'escape'` and `'backdrop'`
  * are emitted by the lightbox's own built-in dismiss triggers; `'close-button'` by the built-in
  * close button; `'unmount'` is emitted when the lightbox is removed from the DOM while still
  * open by something other than its own `close()`; any other string is whatever a caller passes
@@ -41,17 +41,17 @@ export type LyraLightboxCloseReason =
   | (string & Record<never, never>);
 
 export interface LyraLightboxEventMap {
-  'lyra-lightbox-close': CustomEvent<LyraLightboxCloseReason>;
-  'lyra-index-change': CustomEvent<{ index: number }>;
-  /** Not emitted by `LyraLightbox` itself -- the embedded `<lyra-zoomable-frame>` already
+  'lr-lightbox-close': CustomEvent<LyraLightboxCloseReason>;
+  'lr-index-change': CustomEvent<{ index: number }>;
+  /** Not emitted by `LyraLightbox` itself -- the embedded `<lr-zoomable-frame>` already
    *  dispatches this via a composed, bubbling `emit()` call, which continues through this
    *  element's own shadow boundary with no re-dispatch needed. Listed here purely for
    *  discoverability. */
-  'lyra-zoom-change': CustomEvent<{ zoom: number }>;
+  'lr-zoom-change': CustomEvent<{ zoom: number }>;
 }
 
 /**
- * `<lyra-lightbox>` — a full-screen, modal, click-to-enlarge image viewer with prev/next
+ * `<lr-lightbox>` — a full-screen, modal, click-to-enlarge image viewer with prev/next
  * navigation across an ordered set of images. It has no Web Awesome/Shoelace counterpart, so
  * its API follows this library's own conventions.
  *
@@ -60,15 +60,15 @@ export interface LyraLightboxEventMap {
  * editing-assistance-passthrough guarantees don't apply either (no internal `<input>`/
  * `<textarea>`).
  *
- * This renders its own dialog panel rather than nesting a `<lyra-dialog>` in its shadow
+ * This renders its own dialog panel rather than nesting a `<lr-dialog>` in its shadow
  * template -- shared overlay infrastructure (`src/internal/overlay-manager.ts`) coordinates
  * stacking, focus trapping, Escape/backdrop dismissal, scroll lock, and focus return with every
- * other overlay in the same document, the same way `<lyra-dialog>`/`<lyra-command-palette>`/
- * `<lyra-widget>` (fullscreen mode)/`<lyra-app-rail>` (mobile mode)/`<lyra-responsive-panel>`
- * already do. Per-image pan/zoom is delegated to one stable embedded `<lyra-zoomable-frame>`
+ * other overlay in the same document, the same way `<lr-dialog>`/`<lr-command-palette>`/
+ * `<lr-widget>` (fullscreen mode)/`<lr-app-rail>` (mobile mode)/`<lr-responsive-panel>`
+ * already do. Per-image pan/zoom is delegated to one stable embedded `<lr-zoomable-frame>`
  * instance (its `src`/`alt` swapped per navigation) rather than reimplementing pan/zoom --
  * composing a small sibling leaf component directly in the render template, the same way
- * `<lyra-tool-select-dialog>` composes `<lyra-checkbox>`/`<lyra-switch>`.
+ * `<lr-tool-select-dialog>` composes `<lr-checkbox>`/`<lr-switch>`.
  *
  * Zoom/pan reset on navigation is imperative (`LyraZoomableFrame.resetView()`, called from
  * `updated()`) rather than a Lit property binding -- a binding whose value never changes across
@@ -80,28 +80,28 @@ export interface LyraLightboxEventMap {
  *
  * **Scope for v1 (deliberate, not oversights):** no default slot / no arbitrary slotted content
  * per image (data-driven via `images` only); no dot-style indicators (a textual counter scales
- * better to photo-set sizes); no open/close transition or animation (matches `<lyra-dialog>`'s
+ * better to photo-set sizes); no open/close transition or animation (matches `<lr-dialog>`'s
  * own precedent of having none -- `prefers-reduced-motion` has nothing to branch on here); no
  * click-on-image-to-navigate (the image is already meaningfully interactive -- it focuses the
  * zoomable frame's viewport and drives its native scroll-to-pan); no touch-swipe-to-navigate.
  *
- * @customElement lyra-lightbox
+ * @customElement lr-lightbox
  * @slot actions - Optional extra toolbar buttons (e.g. download/share/delete), rendered in
  *   `part="toolbar"` between the counter and the close button.
- * @event lyra-lightbox-close - `detail: LyraLightboxCloseReason`. Cancelable -- a listener
+ * @event lr-lightbox-close - `detail: LyraLightboxCloseReason`. Cancelable -- a listener
  *   calling `preventDefault()` stops the lightbox from closing, for every dismissal path
  *   (Escape, backdrop, the built-in close button, or a consumer's own `close()` call). Fired
  *   whenever the lightbox is dismissed via Escape, a backdrop click, the built-in close button,
  *   a `close()` call, or (with reason `'unmount'`, not cancelable in practice since the element
  *   is already being removed) removal from the DOM by anything else while still open.
- * @event lyra-index-change - Fired only for internally-driven navigation (`next()`/
+ * @event lr-index-change - Fired only for internally-driven navigation (`next()`/
  *   `previous()`/`goTo()` invoked via a button click or a keyboard shortcut). Not fired when a
  *   consumer sets `index`/`images` directly. `detail: { index }`.
- * @event lyra-zoom-change - Not emitted by `LyraLightbox` itself -- see the interface doc above.
+ * @event lr-zoom-change - Not emitted by `LyraLightbox` itself -- see the interface doc above.
  *   `detail: { zoom }`.
  * @csspart backdrop - The full-viewport scrim, positioned behind `panel`.
  * @csspart panel - `role="dialog"` while open, `aria-modal="true"`, `tabindex="-1"`. Fills the
- *   padded safe area -- unlike `<lyra-dialog>`, it does not shrink-wrap to content, since
+ *   padded safe area -- unlike `<lr-dialog>`, it does not shrink-wrap to content, since
  *   maximizing image real estate is the point.
  * @csspart toolbar - Top row: `counter` (start), the `actions` slot wrapper, `close-button` (end).
  * @csspart counter - Visible, localized "Image N of Total" text. Omitted entirely when
@@ -111,11 +111,11 @@ export interface LyraLightboxEventMap {
  *   (button, keyboard, or a consumer setting `index`/`images` directly), decoupled from the
  *   visible `counter` so an unrelated re-render never causes a spurious re-announcement.
  * @csspart actions - Wrapper around the `actions` slot; `hidden` when nothing is slotted.
- * @csspart close-button - The close button. Always rendered -- unlike `<lyra-dialog>`'s opt-in
+ * @csspart close-button - The close button. Always rendered -- unlike `<lr-dialog>`'s opt-in
  *   `closable`, a full-screen lightbox has no other built-in chrome, so this is not optional.
- * @csspart stage - Houses the embedded `<lyra-zoomable-frame>` plus the floating
+ * @csspart stage - Houses the embedded `<lr-zoomable-frame>` plus the floating
  *   `previous-button`/`next-button`.
- * @csspart frame - The embedded `<lyra-zoomable-frame>` element itself. Its own internal parts
+ * @csspart frame - The embedded `<lr-zoomable-frame>` element itself. Its own internal parts
  *   are not re-exported via `exportparts` -- there is no precedent for `exportparts` anywhere in
  *   this codebase.
  * @csspart previous-button - Floating, absolutely positioned inside `stage`. Rendered only when
@@ -125,15 +125,15 @@ export interface LyraLightboxEventMap {
  * @csspart next-glyph - Symmetric to `previous-glyph`.
  * @csspart caption - The current image's caption text. Only rendered when the current image's
  *   `caption` is non-empty. Its `id` is the `aria-describedby` target on `panel`.
- * @cssprop --lyra-lightbox-overlay-color - The backdrop scrim color.
- * @cssprop --lyra-lightbox-control-bg - Background for every floating/toolbar icon button.
- * @cssprop --lyra-lightbox-control-color - Icon/text color paired with `--lyra-lightbox-control-bg`.
+ * @cssprop --lr-lightbox-overlay-color - The backdrop scrim color.
+ * @cssprop --lr-lightbox-control-bg - Background for every floating/toolbar icon button.
+ * @cssprop --lr-lightbox-control-color - Icon/text color paired with `--lr-lightbox-control-bg`.
  */
 export class LyraLightbox extends LyraElement<LyraLightboxEventMap> {
   static styles = [LyraElement.styles, srOnly, styles];
 
   /** Whether the lightbox is open. Set this (or call `close()`) -- there is no separate
-   *  `show()`/`hide()` pair, exactly mirrors `<lyra-dialog>`. */
+   *  `show()`/`hide()` pair, exactly mirrors `<lr-dialog>`. */
   @property({ type: Boolean, reflect: true }) open = false;
 
   /** The ordered set of images being browsed. */
@@ -141,42 +141,42 @@ export class LyraLightbox extends LyraElement<LyraLightboxEventMap> {
 
   /** The currently displayed image. Clamped defensively for rendering (out-of-range/negative/
    *  non-integer never throws) and silently re-synced onto this property (no event) when
-   *  `images` shrinks -- mirrors `<lyra-carousel>`'s `normalizedIndex()`/`syncSlides()` split. */
+   *  `images` shrinks -- mirrors `<lr-carousel>`'s `normalizedIndex()`/`syncSlides()` split. */
   @property({ type: Number, reflect: true }) index = 0;
 
-  /** Wraps prev/next past the ends. Mirrors `<lyra-carousel>`'s `loop` 1:1. */
+  /** Wraps prev/next past the ends. Mirrors `<lr-carousel>`'s `loop` 1:1. */
   @property({ type: Boolean, reflect: true }) loop = false;
 
-  /** Opts out of dismissing the lightbox on a backdrop click -- mirrors `<lyra-dialog>`'s
+  /** Opts out of dismissing the lightbox on a backdrop click -- mirrors `<lr-dialog>`'s
    *  `noLightDismiss` exactly (name, default, no reflect). */
   @property({ type: Boolean, attribute: 'no-light-dismiss' }) noLightDismiss = false;
 
   /** Shows/hides `part="counter"` (and its `part="live-region"` announcement). Mirrors
-   *  `<lyra-carousel>`'s `showIndicators` (name shape, no reflect). */
+   *  `<lr-carousel>`'s `showIndicators` (name shape, no reflect). */
   @property({ type: Boolean, attribute: 'show-counter' }) showCounter = true;
 
-  /** Passed through to the embedded `<lyra-zoomable-frame>` as `.minZoom`. Same default as
-   *  `<lyra-zoomable-frame>` itself. */
-  // numeric-guard-exempt: pure pass-through to <lyra-zoomable-frame>, which already normalizes it via its own safeMinZoom
+  /** Passed through to the embedded `<lr-zoomable-frame>` as `.minZoom`. Same default as
+   *  `<lr-zoomable-frame>` itself. */
+  // numeric-guard-exempt: pure pass-through to <lr-zoomable-frame>, which already normalizes it via its own safeMinZoom
   @property({ type: Number, attribute: 'min-zoom' }) minZoom = 0.5;
 
-  /** Passed through to the embedded `<lyra-zoomable-frame>` as `.maxZoom`. */
-  // numeric-guard-exempt: pure pass-through to <lyra-zoomable-frame>, which already normalizes it via its own safeMaxZoom
+  /** Passed through to the embedded `<lr-zoomable-frame>` as `.maxZoom`. */
+  // numeric-guard-exempt: pure pass-through to <lr-zoomable-frame>, which already normalizes it via its own safeMaxZoom
   @property({ type: Number, attribute: 'max-zoom' }) maxZoom = 4;
 
-  /** Passed through to the embedded `<lyra-zoomable-frame>` as `.zoomStep`. */
-  // numeric-guard-exempt: pure pass-through to <lyra-zoomable-frame>, which already normalizes it via its own safeZoomStep
+  /** Passed through to the embedded `<lr-zoomable-frame>` as `.zoomStep`. */
+  // numeric-guard-exempt: pure pass-through to <lr-zoomable-frame>, which already normalizes it via its own safeZoomStep
   @property({ type: Number, attribute: 'zoom-step' }) zoomStep = 0.25;
 
   /** Host-level `aria-label` override for the panel's accessible name -- wins over the
-   *  localized `lightboxLabel` default. Exactly `<lyra-zoomable-frame>`'s own `accessibleLabel`
+   *  localized `lightboxLabel` default. Exactly `<lr-zoomable-frame>`'s own `accessibleLabel`
    *  pattern (no other label source to arbitrate against here). */
   @property({ attribute: 'aria-label' }) accessibleLabel: string | null = null;
 
   @state() private hasActionsSlot = false;
   @state() private liveText = '';
 
-  @query('lyra-zoomable-frame') private frameEl?: LyraZoomableFrame;
+  @query('lr-zoomable-frame') private frameEl?: LyraZoomableFrame;
 
   private releaseScrollLock?: () => void;
   private overlay?: OverlayHandle;
@@ -191,7 +191,7 @@ export class LyraLightbox extends LyraElement<LyraLightboxEventMap> {
   }
 
   // Silently re-syncs `index` onto the clamped value with no event -- mirrors
-  // <lyra-carousel>'s syncSlides() clamp-without-event behavior, e.g. when `images` shrinks out
+  // <lr-carousel>'s syncSlides() clamp-without-event behavior, e.g. when `images` shrinks out
   // from under the current index.
   private syncImages(): void {
     const current = this.currentIndex();
@@ -204,7 +204,7 @@ export class LyraLightbox extends LyraElement<LyraLightboxEventMap> {
     const next = this.loop ? ((index % count) + count) % count : Math.min(count - 1, Math.max(0, index));
     if (next === this.currentIndex()) return;
     this.index = next;
-    this.emit('lyra-index-change', { index: next });
+    this.emit('lr-index-change', { index: next });
   }
 
   next = (): void => this.changeTo(this.currentIndex() + 1);
@@ -213,13 +213,13 @@ export class LyraLightbox extends LyraElement<LyraLightboxEventMap> {
 
   /**
    * Close the lightbox and return focus to whatever had it before the lightbox opened. `reason`
-   * is forwarded as the `lyra-lightbox-close` detail -- built-in triggers pass `'escape'`/
+   * is forwarded as the `lr-lightbox-close` detail -- built-in triggers pass `'escape'`/
    * `'backdrop'`/`'close-button'`; a consumer's own close affordance (e.g. an `actions`-slotted
    * button) should call this directly with its own reason string.
    */
   close(reason: LyraLightboxCloseReason = 'api'): void {
     if (!this.open) return;
-    const event = this.emit<LyraLightboxCloseReason>('lyra-lightbox-close', reason, { cancelable: true });
+    const event = this.emit<LyraLightboxCloseReason>('lr-lightbox-close', reason, { cancelable: true });
     if (event.defaultPrevented) return;
     this.open = false;
   }
@@ -243,7 +243,7 @@ export class LyraLightbox extends LyraElement<LyraLightboxEventMap> {
     // with no DOM measurement involved, so this belongs here, not in updated(): setting `liveText`
     // (a reactive property) from updated()/firstUpdated() schedules a *second* update on top of
     // the one that just finished, which Lit's dev-mode console flags ("scheduled an update ...
-    // after an update completed") -- mirrors lyra-split's/lyra-virtual-list's identical
+    // after an update completed") -- mirrors lr-split's/lr-virtual-list's identical
     // willUpdate()-not-updated() fix for their own derived-property writes.
     if (changed.has('index') || changed.has('images') || changed.has('strings') || changed.has('locale')) {
       this.updateLiveRegion();
@@ -293,12 +293,12 @@ export class LyraLightbox extends LyraElement<LyraLightboxEventMap> {
     this.overlay?.suspend();
     if (this.open) {
       // Deferred one microtask so a synchronous reparent (disconnect immediately followed by
-      // reconnect) isn't mistaken for a real removal -- mirrors <lyra-dialog>'s identical
+      // reconnect) isn't mistaken for a real removal -- mirrors <lr-dialog>'s identical
       // disconnectedCallback rationale.
       queueMicrotask(() => {
         if (!this.isConnected && this.open) {
           this.open = false;
-          this.emit<LyraLightboxCloseReason>('lyra-lightbox-close', 'unmount');
+          this.emit<LyraLightboxCloseReason>('lr-lightbox-close', 'unmount');
         }
       });
     }
@@ -340,9 +340,9 @@ export class LyraLightbox extends LyraElement<LyraLightboxEventMap> {
     this.hasActionsSlot = (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length > 0;
   };
 
-  // RTL-aware, exactly mirroring <lyra-carousel>'s onViewportKeyDown. Attached on part="panel"
+  // RTL-aware, exactly mirroring <lr-carousel>'s onViewportKeyDown. Attached on part="panel"
   // itself so it sees keydowns bubbling from anywhere inside, including from within the embedded
-  // <lyra-zoomable-frame>'s own shadow tree. Never conflicts with the frame's own +/-/0/=/_ zoom
+  // <lr-zoomable-frame>'s own shadow tree. Never conflicts with the frame's own +/-/0/=/_ zoom
   // shortcuts, which don't intercept Arrow/Home/End.
   private onPanelKeyDown = (event: KeyboardEvent): void => {
     const rtl = this.effectiveDirection === 'rtl';
@@ -406,7 +406,7 @@ export class LyraLightbox extends LyraElement<LyraLightboxEventMap> {
                 </button>
               `
             : nothing}
-          <lyra-zoomable-frame
+          <lr-zoomable-frame
             part="frame"
             src=${image?.src ?? ''}
             alt=${image?.alt ?? ''}
@@ -414,7 +414,7 @@ export class LyraLightbox extends LyraElement<LyraLightboxEventMap> {
             .maxZoom=${this.maxZoom}
             .zoomStep=${this.zoomStep}
             .accessibleLabel=${positionText || null}
-          ></lyra-zoomable-frame>
+          ></lr-zoomable-frame>
           ${count > 1
             ? html`
                 <button
@@ -440,6 +440,6 @@ export class LyraLightbox extends LyraElement<LyraLightboxEventMap> {
 
 declare global {
   interface HTMLElementTagNameMap {
-    'lyra-lightbox': LyraLightbox;
+    'lr-lightbox': LyraLightbox;
   }
 }

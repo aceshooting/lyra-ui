@@ -11,39 +11,39 @@ import { styles } from './page-rail.styles.js';
 
 const DIGIT_BUFFER_MS = 500;
 
-/** What `<lyra-page-rail>` needs from a wired viewer -- a page-addressed viewer satisfies this
+/** What `<lr-page-rail>` needs from a wired viewer -- a page-addressed viewer satisfies this
  *  structurally: a live `page` property plus `renderPageThumbnail()`, and the
- *  `lyra-load`/`lyra-page-change` events every anchor-target page-shaped viewer already emits. */
+ *  `lr-load`/`lr-page-change` events every anchor-target page-shaped viewer already emits. */
 export interface PageThumbnailSource extends EventTarget {
   page: number;
   renderPageThumbnail(page: number, canvas: HTMLCanvasElement, options?: { width?: number }): Promise<boolean>;
 }
 
 export interface LyraPageRailEventMap {
-  'lyra-page-select': CustomEvent<{ page: number }>;
+  'lr-page-select': CustomEvent<{ page: number }>;
 }
 
 type ThumbnailState = 'pending' | 'ready' | 'unavailable';
 
 /**
- * `<lyra-page-rail>` — a virtualized vertical thumbnail rail for page-addressed documents, with
+ * `<lr-page-rail>` — a virtualized vertical thumbnail rail for page-addressed documents, with
  * per-page highlight heat markers. Two modes: **wired** (`viewer`/`for` supply a live
- * `PageThumbnailSource`, e.g. `lyra-pdf-viewer` -- thumbnails render lazily as rows materialize, and
+ * `PageThumbnailSource`, e.g. `lr-pdf-viewer` -- thumbnails render lazily as rows materialize, and
  * the rail tracks page/count from the viewer's own events) and **mediated** (`page-count`/`page` are
  * host-bound directly, rows render a placeholder glyph -- still a fully functional pager). In wired
  * mode the viewer's `page` is the single source of truth.
  *
- * @customElement lyra-page-rail
- * @event lyra-page-select - A page row was activated (click, or Enter/Space on a focused row).
+ * @customElement lr-page-rail
+ * @event lr-page-select - A page row was activated (click, or Enter/Space on a focused row).
  *   `detail: { page }`. In wired mode the rail also sets `viewer.page` itself.
  * @csspart base - The rail.
- * @csspart pages - The embedded `lyra-virtual-list`.
+ * @csspart pages - The embedded `lr-virtual-list`.
  * @csspart page - One page button.
  * @csspart thumbnail - The thumbnail canvas wrapper.
  * @csspart page-number - The visible page number.
  * @csspart heat - The heat-marker cluster.
  * @csspart heat-dot - One tone-colored heat marker (or the `+n` overflow marker).
- * @cssprop [--lyra-page-rail-height=var(--lyra-size-24rem)] - Block size of the virtualized rail.
+ * @cssprop [--lr-page-rail-height=var(--lr-size-24rem)] - Block size of the virtualized rail.
  */
 export class LyraPageRail extends LyraElement<LyraPageRailEventMap> {
   static styles = [LyraElement.styles, styles];
@@ -105,13 +105,13 @@ export class LyraPageRail extends LyraElement<LyraPageRailEventMap> {
     this.boundViewer = next;
     if (!next) return;
     this.page = next.page || this.page;
-    next.addEventListener('lyra-load', this.onViewerLoad);
-    next.addEventListener('lyra-page-change', this.onViewerPageChange);
+    next.addEventListener('lr-load', this.onViewerLoad);
+    next.addEventListener('lr-page-change', this.onViewerPageChange);
   }
 
   private unbindViewer(): void {
-    this.boundViewer?.removeEventListener('lyra-load', this.onViewerLoad);
-    this.boundViewer?.removeEventListener('lyra-page-change', this.onViewerPageChange);
+    this.boundViewer?.removeEventListener('lr-load', this.onViewerLoad);
+    this.boundViewer?.removeEventListener('lr-page-change', this.onViewerPageChange);
     this.boundViewer = null;
   }
 
@@ -131,7 +131,7 @@ export class LyraPageRail extends LyraElement<LyraPageRailEventMap> {
 
   /** `page` normalized to a finite integer clamped into `[1, effectivePageCount()]` (or held at the
    *  `1` default while no page count is known yet) -- guards `renderPageItem()`'s `aria-current`
-   *  comparison and the `lyra-virtual-list` `active-id` binding from an out-of-range/NaN value, e.g.
+   *  comparison and the `lr-virtual-list` `active-id` binding from an out-of-range/NaN value, e.g.
    *  a consumer setting a stale mediated-mode `page` before also updating `page-count`. */
   private get safePage(): number {
     const count = this.effectivePageCount();
@@ -198,7 +198,7 @@ export class LyraPageRail extends LyraElement<LyraPageRailEventMap> {
 
   private onPageActivate(pageNumber: number): void {
     if (this.boundViewer) this.boundViewer.page = pageNumber;
-    this.emit<{ page: number }>('lyra-page-select', { page: pageNumber });
+    this.emit<{ page: number }>('lr-page-select', { page: pageNumber });
   }
 
   private onKeyDown = (e: KeyboardEvent): void => {
@@ -237,11 +237,11 @@ export class LyraPageRail extends LyraElement<LyraPageRailEventMap> {
         <span part="thumbnail">
           ${this.boundViewer
             ? thumbState === 'unavailable'
-              ? html`<lyra-file-icon decorative></lyra-file-icon>`
+              ? html`<lr-file-icon decorative></lr-file-icon>`
               : html`<canvas aria-hidden="true" ${ref(this.canvasRef(number))}></canvas>${thumbState !== 'ready'
-                  ? html`<lyra-skeleton variant="rect" aria-hidden="true"></lyra-skeleton>`
+                  ? html`<lr-skeleton variant="rect" aria-hidden="true"></lr-skeleton>`
                   : nothing}`
-            : html`<lyra-file-icon decorative></lyra-file-icon>`}
+            : html`<lr-file-icon decorative></lr-file-icon>`}
         </span>
         <span part="page-number" aria-hidden="true">${number}</span>
         ${count > 0
@@ -259,13 +259,13 @@ export class LyraPageRail extends LyraElement<LyraPageRailEventMap> {
     const items = Array.from({ length: count }, (_unused, i) => i + 1);
     return html`
       <div part="base" @keydown=${this.onKeyDown} aria-label=${this.label || this.localize('pageRailLabel')}>
-        <lyra-virtual-list
+        <lr-virtual-list
           part="pages"
           .items=${items}
           .renderItem=${this.renderPageItem}
           .keyFunction=${(item: unknown) => item as number}
           .activeId=${this.safePage}
-        ></lyra-virtual-list>
+        ></lr-virtual-list>
       </div>
     `;
   }
@@ -273,6 +273,6 @@ export class LyraPageRail extends LyraElement<LyraPageRailEventMap> {
 
 declare global {
   interface HTMLElementTagNameMap {
-    'lyra-page-rail': LyraPageRail;
+    'lr-page-rail': LyraPageRail;
   }
 }

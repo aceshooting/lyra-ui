@@ -10,9 +10,9 @@ import { css } from 'lit';
 export const styles = css`
   :host {
     display: contents;
-    --lyra-animation-slide-distance: 100%;
-    --lyra-animation-zoom-scale: 0.5;
-    --lyra-animation-bounce-height: 25%;
-    --lyra-animation-shake-distance: 4%;
+    --lr-animation-slide-distance: 100%;
+    --lr-animation-zoom-scale: 0.5;
+    --lr-animation-bounce-height: 25%;
+    --lr-animation-shake-distance: 4%;
   }
 `;

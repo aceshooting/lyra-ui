@@ -6,9 +6,9 @@ import { styles } from './spinner.styles.js';
 export type SpinnerLabelPlacement = 'none' | 'after';
 
 /**
- * `<lyra-spinner>` — an indeterminate busy indicator.
+ * `<lr-spinner>` — an indeterminate busy indicator.
  *
- * @customElement lyra-spinner
+ * @customElement lr-spinner
  * @slot - Optional visible label.
  * @csspart base - The wrapper.
  * @csspart spinner - The animated indicator.
@@ -28,4 +28,4 @@ export class LyraSpinner extends LyraElement {
     </span>`;
   }
 }
-declare global { interface HTMLElementTagNameMap { 'lyra-spinner': LyraSpinner; } }
+declare global { interface HTMLElementTagNameMap { 'lr-spinner': LyraSpinner; } }

@@ -7,8 +7,8 @@ export const styles = css`
   [part='base'] {
     display: flex;
     flex-direction: column;
-    border: var(--lyra-size-1px) solid var(--lyra-color-border);
-    border-radius: var(--lyra-radius);
+    border: var(--lr-size-1px) solid var(--lr-color-border);
+    border-radius: var(--lr-radius);
     overflow: hidden;
     block-size: 100%;
   }
@@ -16,41 +16,41 @@ export const styles = css`
     display: flex;
     align-items: center;
     flex-wrap: wrap;
-    gap: var(--lyra-space-s);
-    padding: var(--lyra-space-xs) var(--lyra-space-s);
-    border-block-end: var(--lyra-size-1px) solid var(--lyra-color-border);
+    gap: var(--lr-space-s);
+    padding: var(--lr-space-xs) var(--lr-space-s);
+    border-block-end: var(--lr-size-1px) solid var(--lr-color-border);
   }
   [part='label'] {
-    font-weight: var(--lyra-font-weight-semibold);
+    font-weight: var(--lr-font-weight-semibold);
   }
   [part='kind'] {
-    font-size: var(--lyra-font-size-xs);
-    color: var(--lyra-color-text-quiet);
-    border: var(--lyra-size-1px) solid var(--lyra-color-border);
-    border-radius: var(--lyra-radius-pill);
-    padding: 0 var(--lyra-space-xs);
+    font-size: var(--lr-font-size-xs);
+    color: var(--lr-color-text-quiet);
+    border: var(--lr-size-1px) solid var(--lr-color-border);
+    border-radius: var(--lr-radius-pill);
+    padding: 0 var(--lr-space-xs);
   }
   [part='view-toggle'] {
     display: flex;
-    gap: var(--lyra-size-1px);
+    gap: var(--lr-size-1px);
   }
   [part='view-button'] {
     font: inherit;
-    font-size: var(--lyra-font-size-xs);
-    background: var(--lyra-color-surface);
-    border: var(--lyra-size-1px) solid var(--lyra-color-border);
-    padding: var(--lyra-space-2xs) var(--lyra-space-s);
+    font-size: var(--lr-font-size-xs);
+    background: var(--lr-color-surface);
+    border: var(--lr-size-1px) solid var(--lr-color-border);
+    padding: var(--lr-space-2xs) var(--lr-space-s);
     cursor: pointer;
   }
   [part='view-button'][aria-pressed='true'] {
-    background: var(--lyra-color-brand-quiet);
-    color: var(--lyra-color-brand);
+    background: var(--lr-color-brand-quiet);
+    color: var(--lr-color-brand);
   }
   [part='version-nav'] {
     display: flex;
     align-items: center;
-    gap: var(--lyra-space-xs);
-    font-size: var(--lyra-font-size-xs);
+    gap: var(--lr-space-xs);
+    font-size: var(--lr-font-size-xs);
     margin-inline-start: auto;
   }
   [part='version-previous'],
@@ -58,40 +58,40 @@ export const styles = css`
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    min-inline-size: var(--lyra-icon-button-size);
-    min-block-size: var(--lyra-icon-button-size);
+    min-inline-size: var(--lr-icon-button-size);
+    min-block-size: var(--lr-icon-button-size);
     border: none;
     background: none;
-    color: var(--lyra-color-text);
-    font-size: var(--lyra-font-size-md);
+    color: var(--lr-color-text);
+    font-size: var(--lr-font-size-md);
     cursor: pointer;
-    border-radius: var(--lyra-radius);
+    border-radius: var(--lr-radius);
   }
   [part='version-previous']:hover,
   [part='version-next']:hover {
-    background: var(--lyra-color-brand-quiet);
-    color: var(--lyra-color-brand);
+    background: var(--lr-color-brand-quiet);
+    color: var(--lr-color-brand);
   }
   [part='version-previous']:focus-visible,
   [part='version-next']:focus-visible {
-    outline: var(--lyra-focus-ring-width) solid var(--lyra-focus-ring-color);
-    outline-offset: var(--lyra-focus-ring-offset);
+    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
+    outline-offset: var(--lr-focus-ring-offset);
   }
   [part='version-previous']:disabled,
   [part='version-next']:disabled {
     cursor: not-allowed;
-    opacity: var(--lyra-opacity-disabled);
+    opacity: var(--lr-opacity-disabled);
   }
   [part='body'] {
     flex: 1 1 auto;
-    padding: var(--lyra-space-m);
+    padding: var(--lr-space-m);
     overflow: auto;
   }
   [part='body'][aria-busy='true'] {
     position: relative;
   }
   [part='streaming-indicator'] {
-    font-size: var(--lyra-font-size-xs);
-    color: var(--lyra-color-text-quiet);
+    font-size: var(--lr-font-size-xs);
+    color: var(--lr-color-text-quiet);
   }
 `;

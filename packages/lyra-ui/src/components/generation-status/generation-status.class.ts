@@ -17,7 +17,7 @@ import { getNumberFormat, getPluralRules } from '../../internal/intl-cache.js';
 // (internal/icons.ts's chevronIcon()/closeIcon()/etc.) without adding a
 // stop glyph to that module -- it's off limits here -- so this one-off icon
 // still reads as part of the same visual language as the rest of the
-// library's inline icons. Identical shape to `<lyra-chat-composer>`'s own
+// library's inline icons. Identical shape to `<lr-chat-composer>`'s own
 // local `stopIcon()` (the conventional filled-square "stop generating"
 // glyph), duplicated rather than imported since these are two independently
 // consumable components with no dependency between them.
@@ -78,7 +78,7 @@ function formatTokenCount(count: number, locale: string): { rounded: number; for
 }
 
 /** `27.4` -> `"27"`; `3.2` -> `"3.2"`. Same shape as this file's
- *  `formatElapsed`/`<lyra-tool-call-chip>`'s `formatDuration`: the low end of
+ *  `formatElapsed`/`<lr-tool-call-chip>`'s `formatDuration`: the low end of
  *  the range (where a whole-number rounding would flatten every early
  *  reading to the same "0" or "1") gets one decimal place, while anything at
  *  or above 10 tok/s rounds to a whole number, which is plenty precise for a
@@ -96,9 +96,9 @@ function formatThroughput(value: number, locale: string): string {
  * presence (regardless of its string value) maps to `true`, so a plain-
  * markup consumer writing the literal `show-stop="false"` would actually get
  * the button *shown*, the opposite of what that string reads as (the same
- * bug class `<lyra-streaming-text>`'s `optionalBooleanConverter` and
- * `<lyra-line-chart>`'s `WithoutBeginAtZero` story both document). Unlike
- * `<lyra-streaming-text>`'s tri-state converter, this property's default is
+ * bug class `<lr-streaming-text>`'s `optionalBooleanConverter` and
+ * `<lr-line-chart>`'s `WithoutBeginAtZero` story both document). Unlike
+ * `<lr-streaming-text>`'s tri-state converter, this property's default is
  * `true`, not "unset" -- so this one only needs two states: attribute absent
  * (or removed) -> `true` (the default); `show-stop="false"` -> `false`;
  * anything else present (no value, `="true"`, ...) -> `true`.
@@ -115,16 +115,16 @@ const showStopConverter: ComplexAttributeConverter<boolean> = {
 };
 
 export interface LyraGenerationStatusEventMap {
-  'lyra-stop': CustomEvent<undefined>;
+  'lr-stop': CustomEvent<undefined>;
 }
 /**
- * `<lyra-generation-status>` — a compact, ticking status readout shown
+ * `<lr-generation-status>` — a compact, ticking status readout shown
  * alongside an in-progress AI response: elapsed time, token count, and
  * token-throughput, plus a built-in Stop button. Renders as e.g.
  * `12.3s · 340 tokens · 27 tok/s [Stop]`.
  *
  * This is deliberately a *different* concern than the already-landed
- * `<lyra-stream-status>`: that component is about transport/connection
+ * `<lr-stream-status>`: that component is about transport/connection
  * health (idle/connecting/streaming/stalled, heartbeat-aware stall
  * detection), while this one is a user-facing metrics readout for a
  * generation that both components' hosts typically already know is
@@ -134,7 +134,7 @@ export interface LyraGenerationStatusEventMap {
  *
  * `active` drives an internal ~1s `setInterval` ticker that recomputes the
  * elapsed-time display (a plain interval is sufficient here -- unlike
- * `<lyra-stream-status>`'s stall timer, this never needs to be armed with a
+ * `<lr-stream-status>`'s stall timer, this never needs to be armed with a
  * precise deadline, only to refresh a display roughly once a second). The
  * elapsed clock's start instant is `started-at` when set (an epoch-ms
  * timestamp -- lets a host that already knows exactly when generation began,
@@ -162,7 +162,7 @@ export interface LyraGenerationStatusEventMap {
  *
  * Accessibility: this readout ticks roughly once per second while active,
  * which is exactly the kind of high-frequency update
- * `<lyra-live-region>`/`Announcer` (`../../internal/announcer.js`) exists to
+ * `<lr-live-region>`/`Announcer` (`../../internal/announcer.js`) exists to
  * *prevent* from being read aloud verbatim -- routing a per-second numeric
  * tick through even a throttled announcer would still narrate a new number
  * to a screen-reader user roughly once every throttle window for as long as
@@ -170,13 +170,13 @@ export interface LyraGenerationStatusEventMap {
  * therefore carries no `role="status"`/`aria-live` of its own and never
  * announces anything; a host that wants generation-start/-end announced
  * should pair this with something that announces state *transitions* (e.g.
- * `<lyra-typing-indicator>`'s mount-time announcement), not this ticking
+ * `<lr-typing-indicator>`'s mount-time announcement), not this ticking
  * readout. The one genuinely actionable, infrequent control here -- the Stop
  * button -- gets a normal, always-present `aria-label`, no different from
  * any other icon-only button in this library.
  *
- * @customElement lyra-generation-status
- * @event lyra-stop - The built-in Stop button was clicked. No detail payload.
+ * @customElement lr-generation-status
+ * @event lr-stop - The built-in Stop button was clicked. No detail payload.
  * @csspart base - The root inline layout container.
  * @csspart elapsed - The elapsed-time segment, e.g. `"12.3s"`. Always rendered (reads `"0.0s"` before the component has ever been active).
  * @csspart tokens - The token-count segment, e.g. `"340 tokens"`. Only rendered when `token-count` is set.
@@ -257,7 +257,7 @@ export class LyraGenerationStatus extends LyraElement<LyraGenerationStatusEventM
   // `changed.has('active')` fires on the very first update too when the
   // element mounts already `active` (the parsed-attribute/property value
   // differs from the `false` field-initializer default that was seen first)
-  // -- same mechanism `<lyra-stream-status>`'s `onPhaseChanged` relies on to
+  // -- same mechanism `<lr-stream-status>`'s `onPhaseChanged` relies on to
   // arm its stall timer on a `phase="streaming"` mount, so mounting this
   // component already active correctly seeds `elapsedMs` with no separate
   // first-update special case needed.
@@ -347,7 +347,7 @@ export class LyraGenerationStatus extends LyraElement<LyraGenerationStatusEventM
   }
 
   private onStopClick = (): void => {
-    this.emit('lyra-stop');
+    this.emit('lr-stop');
   };
 
   render(): TemplateResult {
@@ -398,6 +398,6 @@ export class LyraGenerationStatus extends LyraElement<LyraGenerationStatusEventM
 
 declare global {
   interface HTMLElementTagNameMap {
-    'lyra-generation-status': LyraGenerationStatus;
+    'lr-generation-status': LyraGenerationStatus;
   }
 }

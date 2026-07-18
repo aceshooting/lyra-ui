@@ -7,49 +7,49 @@ export const styles = css`
   [part='base'] {
     display: inline-flex;
     align-items: center;
-    gap: var(--lyra-space-s);
+    gap: var(--lr-space-s);
     cursor: pointer;
     -webkit-tap-highlight-color: transparent;
   }
   [part='base']:focus-visible {
-    outline: var(--lyra-focus-ring-width) solid var(--lyra-focus-ring-color);
-    outline-offset: var(--lyra-focus-ring-offset);
+    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
+    outline-offset: var(--lr-focus-ring-offset);
   }
   :host([disabled]) [part='base'] {
     cursor: not-allowed;
-    opacity: var(--lyra-opacity-disabled);
+    opacity: var(--lr-opacity-disabled);
   }
   [part='circle'] {
     display: inline-flex;
     align-items: center;
     justify-content: center;
     flex: 0 0 auto;
-    inline-size: min(var(--lyra-icon-button-size), var(--lyra-size-1-75rem));
-    block-size: min(var(--lyra-icon-button-size), var(--lyra-size-1-75rem));
+    inline-size: min(var(--lr-icon-button-size), var(--lr-size-1-75rem));
+    block-size: min(var(--lr-icon-button-size), var(--lr-size-1-75rem));
     box-sizing: border-box;
-    border: var(--lyra-border-width-thin) solid var(--lyra-color-border);
-    border-radius: var(--lyra-radius-pill);
-    background: var(--lyra-color-surface);
-    transition: border-color var(--lyra-transition-fast), background-color var(--lyra-transition-fast);
+    border: var(--lr-border-width-thin) solid var(--lr-color-border);
+    border-radius: var(--lr-radius-pill);
+    background: var(--lr-color-surface);
+    transition: border-color var(--lr-transition-fast), background-color var(--lr-transition-fast);
   }
   :host(:not([disabled])) [part='base']:hover [part='circle'] {
-    border-color: var(--lyra-color-brand);
+    border-color: var(--lr-color-brand);
   }
   :host([checked]) [part='circle'] {
-    border-color: var(--lyra-color-brand);
+    border-color: var(--lr-color-brand);
   }
   [part='dot'] {
-    inline-size: var(--lyra-size-0-75rem);
-    block-size: var(--lyra-size-0-75rem);
-    border-radius: var(--lyra-radius-pill);
-    background: var(--lyra-color-brand);
+    inline-size: var(--lr-size-0-75rem);
+    block-size: var(--lr-size-0-75rem);
+    border-radius: var(--lr-radius-pill);
+    background: var(--lr-color-brand);
   }
   [part='label'][hidden] {
     display: none;
   }
   [part='label'] {
-    color: var(--lyra-color-text);
-    font-size: var(--lyra-font-size-md-sm);
+    color: var(--lr-color-text);
+    font-size: var(--lr-font-size-md-sm);
   }
   @media (prefers-reduced-motion: reduce) {
     [part='circle'] { transition: none !important; }

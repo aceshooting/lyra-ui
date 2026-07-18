@@ -4,7 +4,7 @@ import './animated-image.js';
 
 const meta: Meta = {
   title: 'AnimatedImage',
-  component: 'lyra-animated-image',
+  component: 'lr-animated-image',
   tags: ['autodocs'],
   parameters: {
     docs: {
@@ -19,27 +19,27 @@ export default meta;
 type Story = StoryObj;
 
 const SAMPLE_GIF = 'https://upload.wikimedia.org/wikipedia/commons/d/d3/Newtons_cradle_animation_book_2.gif';
-const BROKEN_SRC = './does-not-exist-lyra-animated-image.gif';
+const BROKEN_SRC = './does-not-exist-lr-animated-image.gif';
 
 export const Default: Story = {
   render: () => html`
-    <lyra-animated-image
+    <lr-animated-image
       src=${SAMPLE_GIF}
       alt="A Newton's cradle swinging"
       style="max-inline-size: 20rem;"
-    ></lyra-animated-image>
+    ></lr-animated-image>
   `,
 };
 
 export const AutoPlaying: Story = {
   name: 'play attribute set initially',
   render: () => html`
-    <lyra-animated-image
+    <lr-animated-image
       play
       src=${SAMPLE_GIF}
       alt="A Newton's cradle swinging"
       style="max-inline-size: 20rem;"
-    ></lyra-animated-image>
+    ></lr-animated-image>
   `,
 };
 
@@ -54,41 +54,41 @@ export const RespectReducedMotionOverride: Story = {
     },
   },
   render: () => html`
-    <lyra-animated-image
+    <lr-animated-image
       play
       respect-reduced-motion="false"
       src=${SAMPLE_GIF}
       alt="A Newton's cradle swinging"
       style="max-inline-size: 20rem;"
-    ></lyra-animated-image>
+    ></lr-animated-image>
   `,
 };
 
 export const AccessibleLabelOverride: Story = {
   name: 'Accessible action-name override',
   render: () => html`
-    <lyra-animated-image
+    <lr-animated-image
       aria-label="Toggle the hero animation"
       src=${SAMPLE_GIF}
       alt="A Newton's cradle swinging"
       style="max-inline-size: 20rem;"
-    ></lyra-animated-image>
+    ></lr-animated-image>
   `,
 };
 
 export const CustomIcons: Story = {
   name: 'Custom play/pause icons via slots',
   render: () => html`
-    <lyra-animated-image src=${SAMPLE_GIF} alt="A Newton's cradle swinging" style="max-inline-size: 20rem;">
+    <lr-animated-image src=${SAMPLE_GIF} alt="A Newton's cradle swinging" style="max-inline-size: 20rem;">
       <span slot="play-icon">▶</span>
       <span slot="pause-icon">⏸</span>
-    </lyra-animated-image>
+    </lr-animated-image>
   `,
 };
 
 export const LoadFailure: Story = {
-  name: 'lyra-error -- broken src',
-  render: () => html`<lyra-animated-image src=${BROKEN_SRC} alt="A missing animation"></lyra-animated-image>`,
+  name: 'lr-error -- broken src',
+  render: () => html`<lr-animated-image src=${BROKEN_SRC} alt="A missing animation"></lr-animated-image>`,
 };
 
 export const RightToLeft: Story = {
@@ -102,12 +102,12 @@ export const RightToLeft: Story = {
     },
   },
   render: () => html`
-    <lyra-animated-image
+    <lr-animated-image
       dir="rtl"
       src=${SAMPLE_GIF}
       alt="صورة متحركة"
       style="max-inline-size: 20rem;"
-    ></lyra-animated-image>
+    ></lr-animated-image>
   `,
 };
 
@@ -121,10 +121,10 @@ export const NarrowAllocation: Story = {
     },
   },
   render: () => html`
-    <lyra-animated-image
+    <lr-animated-image
       src=${SAMPLE_GIF}
       alt="A Newton's cradle swinging"
       style="inline-size: 320px; max-inline-size: 100%;"
-    ></lyra-animated-image>
+    ></lr-animated-image>
   `,
 };

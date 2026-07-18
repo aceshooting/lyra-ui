@@ -3,7 +3,7 @@ description: Implement pending feature requests from docs/superpowers/feature_re
 ---
 
 Feature-request implementation workflow for this monorepo. `$ARGUMENTS` is optional — a filename or
-substring (e.g. `file-type` or `2026-07-15-lyra-file-type-metadata.md`) to process just one request
+substring (e.g. `file-type` or `2026-07-15-lr-file-type-metadata.md`) to process just one request
 out of `docs/superpowers/feature_requests/`. With no arguments, process every `*.md` file currently
 sitting in that directory.
 
@@ -61,7 +61,7 @@ Read every selected feature request in full before touching any code.
 Use **superpowers:writing-plans** to turn each request (or combined group) into
 `docs/superpowers/plans/<today>-<slug>-plan.md` (today's date as `YYYY-MM-DD`; slug from the
 request's own filename/title). Read a recent completed plan first (e.g.
-`docs/superpowers/done/2026-07-15-lyra-table-row-expansion.md`, or the larger remediation plan
+`docs/superpowers/done/2026-07-15-lr-table-row-expansion.md`, or the larger remediation plan
 referenced above) and match its shape:
 
 - Numbered tasks, each with **Files**, **Interfaces**, and checkbox (`- [ ]`) steps.

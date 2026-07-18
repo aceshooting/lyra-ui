@@ -3,7 +3,7 @@ import './widget.js';
 import type { LyraWidget } from './widget.js';
 import { styles } from './widget.styles.js';
 
-// A stand-in for a slotted component (e.g. lyra-combobox) whose real
+// A stand-in for a slotted component (e.g. lr-combobox) whose real
 // focusable target lives inside its own shadow root rather than the host
 // tag's light-DOM subtree.
 class WidgetTestShadowInput extends HTMLElement {
@@ -19,7 +19,7 @@ customElements.define('widget-test-shadow-input', WidgetTestShadowInput);
 
 it('renders label and sublabel in the header', async () => {
   const el = (await fixture(
-    html`<lyra-widget label="Load profile" sublabel="Last 7 days">content</lyra-widget>`,
+    html`<lr-widget label="Load profile" sublabel="Last 7 days">content</lr-widget>`,
   )) as LyraWidget;
   expect(el.shadowRoot!.querySelector('[part="label"]')!.textContent).to.equal('Load profile');
   expect(el.shadowRoot!.querySelector('[part="sublabel"]')!.textContent).to.equal('Last 7 days');
@@ -28,7 +28,7 @@ it('renders label and sublabel in the header', async () => {
 describe('icon slot', () => {
   it('renders a leading icon from the icon slot', async () => {
     const el = (await fixture(
-      html`<lyra-widget label="Load"><svg slot="icon" width="16" height="16"></svg>content</lyra-widget>`,
+      html`<lr-widget label="Load"><svg slot="icon" width="16" height="16"></svg>content</lr-widget>`,
     )) as LyraWidget;
     const iconSlot = el.shadowRoot!.querySelector('slot[name="icon"]') as HTMLSlotElement;
     expect(iconSlot.assignedElements().length).to.equal(1);
@@ -37,7 +37,7 @@ describe('icon slot', () => {
 
 describe('collapse-icon slot override', () => {
   it('renders the default chevron icon when nothing is slotted (unchanged)', async () => {
-    const el = (await fixture(html`<lyra-widget label="x" collapsible>content</lyra-widget>`)) as LyraWidget;
+    const el = (await fixture(html`<lr-widget label="x" collapsible>content</lr-widget>`)) as LyraWidget;
     const btn = el.shadowRoot!.querySelector('[part="collapse-button"]') as HTMLButtonElement;
     const slot = btn.querySelector('slot[name="collapse-icon"]') as HTMLSlotElement;
     expect(slot.assignedElements().length).to.equal(0);
@@ -46,10 +46,10 @@ describe('collapse-icon slot override', () => {
 
   it('renders a custom icon slotted into collapse-icon instead of the default chevron', async () => {
     const el = (await fixture(html`
-      <lyra-widget label="x" collapsible>
+      <lr-widget label="x" collapsible>
         <svg slot="collapse-icon" class="my-collapse-icon"></svg>
         content
-      </lyra-widget>
+      </lr-widget>
     `)) as LyraWidget;
     const btn = el.shadowRoot!.querySelector('[part="collapse-button"]') as HTMLButtonElement;
     const slot = btn.querySelector('slot[name="collapse-icon"]') as HTMLSlotElement;
@@ -61,7 +61,7 @@ describe('collapse-icon slot override', () => {
 
 describe('fullscreen-icon slot override', () => {
   it('renders the default expand/close icon when nothing is slotted (unchanged)', async () => {
-    const el = (await fixture(html`<lyra-widget label="x" expandable>content</lyra-widget>`)) as LyraWidget;
+    const el = (await fixture(html`<lr-widget label="x" expandable>content</lr-widget>`)) as LyraWidget;
     const btn = el.shadowRoot!.querySelector('[part="fullscreen-button"]') as HTMLButtonElement;
     const slot = btn.querySelector('slot[name="fullscreen-icon"]') as HTMLSlotElement;
     expect(slot.assignedElements().length).to.equal(0);
@@ -70,10 +70,10 @@ describe('fullscreen-icon slot override', () => {
 
   it('renders a custom icon slotted into fullscreen-icon instead of the default expand/close glyph', async () => {
     const el = (await fixture(html`
-      <lyra-widget label="x" expandable>
+      <lr-widget label="x" expandable>
         <svg slot="fullscreen-icon" class="my-fullscreen-icon"></svg>
         content
-      </lyra-widget>
+      </lr-widget>
     `)) as LyraWidget;
     const btn = el.shadowRoot!.querySelector('[part="fullscreen-button"]') as HTMLButtonElement;
     const slot = btn.querySelector('slot[name="fullscreen-icon"]') as HTMLSlotElement;
@@ -93,7 +93,7 @@ describe('fullscreen-icon slot override', () => {
 describe('rich label/sublabel', () => {
   it('lets the label slot override the label attribute instead of concatenating both', async () => {
     const el = (await fixture(
-      html`<lyra-widget label="attr"><span slot="label">rich</span>content</lyra-widget>`,
+      html`<lr-widget label="attr"><span slot="label">rich</span>content</lr-widget>`,
     )) as LyraWidget;
     const slot = el.shadowRoot!.querySelector('slot[name="label"]') as HTMLSlotElement;
     const assigned = slot.assignedElements({ flatten: true });
@@ -102,7 +102,7 @@ describe('rich label/sublabel', () => {
   });
 
   it('renders label/sublabel as plain strings when no slot content is provided (unchanged default)', async () => {
-    const el = (await fixture(html`<lyra-widget label="Load" sublabel="Last 7 days">content</lyra-widget>`)) as LyraWidget;
+    const el = (await fixture(html`<lr-widget label="Load" sublabel="Last 7 days">content</lr-widget>`)) as LyraWidget;
     expect(el.shadowRoot!.querySelector('[part="label"]')!.textContent).to.equal('Load');
     expect(el.shadowRoot!.querySelector('[part="sublabel"]')!.textContent).to.equal('Last 7 days');
   });
@@ -113,7 +113,7 @@ describe('rich label/sublabel', () => {
     // a later-appended slotted child can still be observed -- when the wrapper
     // itself was conditionally omitted from the template, no <slot> ever
     // existed in the shadow DOM for a runtime-added child to trigger.
-    const el = (await fixture(html`<lyra-widget>content</lyra-widget>`)) as LyraWidget;
+    const el = (await fixture(html`<lr-widget>content</lr-widget>`)) as LyraWidget;
     const labelPart = el.shadowRoot!.querySelector('[part="label"]') as HTMLElement;
     const sublabelPart = el.shadowRoot!.querySelector('[part="sublabel"]') as HTMLElement;
     expect(labelPart.hasAttribute('hidden')).to.be.true;
@@ -136,7 +136,7 @@ describe('rich label/sublabel', () => {
 
 describe('views', () => {
   it('defaults to a single unnamed body slot when views is unset (unchanged today)', async () => {
-    const el = (await fixture(html`<lyra-widget label="x">content</lyra-widget>`)) as LyraWidget;
+    const el = (await fixture(html`<lr-widget label="x">content</lr-widget>`)) as LyraWidget;
     const bodySlot = el.shadowRoot!.querySelector('[part="body"] slot:not([name])') as HTMLSlotElement;
     expect(bodySlot).to.exist;
     expect(bodySlot.assignedNodes({ flatten: true }).map((n) => n.textContent).join('')).to.include('content');
@@ -144,10 +144,10 @@ describe('views', () => {
 
   it('renders a header toggle per view and a named slot per view when views is set', async () => {
     const el = (await fixture(html`
-      <lyra-widget label="Usage" .views=${[{ id: 'chart', label: 'Chart' }, { id: 'table', label: 'Table' }]}>
+      <lr-widget label="Usage" .views=${[{ id: 'chart', label: 'Chart' }, { id: 'table', label: 'Table' }]}>
         <div slot="view-chart">chart content</div>
         <div slot="view-table">table content</div>
-      </lyra-widget>
+      </lr-widget>
     `)) as LyraWidget;
     const toggles = [...el.shadowRoot!.querySelectorAll('[part="view-toggle"]')];
     expect(toggles).to.have.length(2);
@@ -155,27 +155,27 @@ describe('views', () => {
     expect(el.shadowRoot!.querySelector('slot[name="view-table"]')).to.exist;
   });
 
-  it('switches the active view on click and emits lyra-view-change', async () => {
+  it('switches the active view on click and emits lr-view-change', async () => {
     const el = (await fixture(html`
-      <lyra-widget label="Usage" .views=${[{ id: 'chart', label: 'Chart' }, { id: 'table', label: 'Table' }]}>
+      <lr-widget label="Usage" .views=${[{ id: 'chart', label: 'Chart' }, { id: 'table', label: 'Table' }]}>
         <div slot="view-chart">chart content</div>
         <div slot="view-table">table content</div>
-      </lyra-widget>
+      </lr-widget>
     `)) as LyraWidget;
     await el.updateComplete;
     expect(el.activeView).to.equal('chart');
     const toggles = [...el.shadowRoot!.querySelectorAll('[part="view-toggle"]')] as HTMLButtonElement[];
     setTimeout(() => toggles[1]!.click());
-    const ev = await oneEvent(el, 'lyra-view-change');
+    const ev = await oneEvent(el, 'lr-view-change');
     expect(ev.detail).to.deep.equal({ viewId: 'table' });
     expect(el.activeView).to.equal('table');
   });
 
   it('keeps rendering a label-only view toggle with no aria-label (unchanged today)', async () => {
     const el = (await fixture(html`
-      <lyra-widget label="Usage" .views=${[{ id: 'chart', label: 'Chart' }]}>
+      <lr-widget label="Usage" .views=${[{ id: 'chart', label: 'Chart' }]}>
         <div slot="view-chart">chart content</div>
-      </lyra-widget>
+      </lr-widget>
     `)) as LyraWidget;
     const toggle = el.shadowRoot!.querySelector('[part="view-toggle"]') as HTMLButtonElement;
     expect(toggle.textContent?.trim()).to.equal('Chart');
@@ -185,12 +185,12 @@ describe('views', () => {
   it('renders an icon-only view toggle (no label) using ariaLabel as its accessible name', async () => {
     const chartIcon = html`<svg class="chart-icon"></svg>`;
     const el = (await fixture(html`
-      <lyra-widget
+      <lr-widget
         label="Usage"
         .views=${[{ id: 'chart', icon: chartIcon, ariaLabel: 'Chart view' }]}
       >
         <div slot="view-chart">chart content</div>
-      </lyra-widget>
+      </lr-widget>
     `)) as LyraWidget;
     const toggle = el.shadowRoot!.querySelector('[part="view-toggle"]') as HTMLButtonElement;
     expect(toggle.textContent?.trim()).to.equal('');
@@ -201,21 +201,21 @@ describe('views', () => {
   it('is accessible with an icon-only view toggle (ariaLabel supplies the accessible name)', async () => {
     const chartIcon = html`<svg class="chart-icon"></svg>`;
     const el = (await fixture(html`
-      <lyra-widget
+      <lr-widget
         label="Usage"
         .views=${[{ id: 'chart', icon: chartIcon, ariaLabel: 'Chart view' }]}
       >
         <div slot="view-chart">chart content</div>
-      </lyra-widget>
+      </lr-widget>
     `)) as LyraWidget;
     await expect(el).to.be.accessible();
   });
 
   it('falls back to the view id as a last-resort accessible name when both label and ariaLabel are omitted', async () => {
     const el = (await fixture(html`
-      <lyra-widget label="Usage" .views=${[{ id: 'chart' }]}>
+      <lr-widget label="Usage" .views=${[{ id: 'chart' }]}>
         <div slot="view-chart">chart content</div>
-      </lyra-widget>
+      </lr-widget>
     `)) as LyraWidget;
     const toggle = el.shadowRoot!.querySelector('[part="view-toggle"]') as HTMLButtonElement;
     expect(toggle.getAttribute('aria-label')).to.equal('chart');
@@ -226,7 +226,7 @@ it('truncates long label/sublabel text instead of wrapping and growing the heade
   const longText =
     'A very long widget title that is guaranteed to overflow a narrow fixed-width panel and get ellipsis-truncated';
   const el = (await fixture(
-    html`<lyra-widget label=${longText} sublabel=${longText} style="max-inline-size: 8rem;">content</lyra-widget>`,
+    html`<lr-widget label=${longText} sublabel=${longText} style="max-inline-size: 8rem;">content</lr-widget>`,
   )) as LyraWidget;
   const label = el.shadowRoot!.querySelector('[part="label"]') as HTMLElement;
   const sublabel = el.shadowRoot!.querySelector('[part="sublabel"]') as HTMLElement;
@@ -256,7 +256,7 @@ it('truncates long label/sublabel text instead of wrapping and growing the heade
 });
 
 it('hides the actions wrapper when no actions content is slotted, shows it once slotted', async () => {
-  const el = (await fixture(html`<lyra-widget label="x">content</lyra-widget>`)) as LyraWidget;
+  const el = (await fixture(html`<lr-widget label="x">content</lr-widget>`)) as LyraWidget;
   const actions = el.shadowRoot!.querySelector('[part="actions"]') as HTMLElement;
   const actionsSlot = el.shadowRoot!.querySelector('slot[name="actions"]') as HTMLSlotElement;
   expect(actions.hasAttribute('hidden')).to.be.true;
@@ -280,22 +280,22 @@ it('hides the actions wrapper when no actions content is slotted, shows it once 
 
 it('renders the actions wrapper visible on first paint when actions content is present before upgrade', async () => {
   const el = (await fixture(
-    html`<lyra-widget label="x"><button slot="actions">Refresh</button>content</lyra-widget>`,
+    html`<lr-widget label="x"><button slot="actions">Refresh</button>content</lr-widget>`,
   )) as LyraWidget;
   const actions = el.shadowRoot!.querySelector('[part="actions"]') as HTMLElement;
   expect(actions.hasAttribute('hidden')).to.be.false;
 });
 
 it('does not render the collapse or fullscreen buttons unless opted in', async () => {
-  const el = (await fixture(html`<lyra-widget label="x">content</lyra-widget>`)) as LyraWidget;
+  const el = (await fixture(html`<lr-widget label="x">content</lr-widget>`)) as LyraWidget;
   expect(el.shadowRoot!.querySelector('[part="collapse-button"]')).to.not.exist;
   expect(el.shadowRoot!.querySelector('[part="fullscreen-button"]')).to.not.exist;
 });
 
-it('toggles collapsed on collapse-button click and emits lyra-collapse-change', async () => {
-  const el = (await fixture(html`<lyra-widget label="x" collapsible>content</lyra-widget>`)) as LyraWidget;
+it('toggles collapsed on collapse-button click and emits lr-collapse-change', async () => {
+  const el = (await fixture(html`<lr-widget label="x" collapsible>content</lr-widget>`)) as LyraWidget;
   let detail: unknown;
-  el.addEventListener('lyra-collapse-change', (e) => (detail = (e as CustomEvent).detail));
+  el.addEventListener('lr-collapse-change', (e) => (detail = (e as CustomEvent).detail));
 
   (el.shadowRoot!.querySelector('[part="collapse-button"]') as HTMLButtonElement).click();
   await el.updateComplete;
@@ -306,7 +306,7 @@ it('toggles collapsed on collapse-button click and emits lyra-collapse-change', 
 });
 
 it('reflects the collapse-button aria-expanded and aria-label with the collapsed state', async () => {
-  const el = (await fixture(html`<lyra-widget label="x" collapsible>content</lyra-widget>`)) as LyraWidget;
+  const el = (await fixture(html`<lr-widget label="x" collapsible>content</lr-widget>`)) as LyraWidget;
   const btn = el.shadowRoot!.querySelector('[part="collapse-button"]') as HTMLButtonElement;
   expect(btn.getAttribute('aria-expanded')).to.equal('true');
   expect(btn.getAttribute('aria-label')).to.equal('Collapse panel');
@@ -321,7 +321,7 @@ it('reflects the collapse-button aria-expanded and aria-label with the collapsed
 it('rotates the wrapping [part="collapse-button"] itself, not the inner svg, per the icons.ts rotation contract', async () => {
   // internal/icons.ts documents: "callers needing 'up'/'left'/'open' etc.
   // rotate the wrapping part element via CSS transform: rotate(...), not the svg."
-  const el = (await fixture(html`<lyra-widget label="x" collapsible>content</lyra-widget>`)) as LyraWidget;
+  const el = (await fixture(html`<lr-widget label="x" collapsible>content</lr-widget>`)) as LyraWidget;
   const btn = el.shadowRoot!.querySelector('[part="collapse-button"]') as HTMLElement;
   const svgEl = btn.querySelector('svg') as unknown as HTMLElement;
 
@@ -330,14 +330,14 @@ it('rotates the wrapping [part="collapse-button"] itself, not the inner svg, per
 });
 
 it('animates the collapse-button rotation via the CSS transition, not an instant snap', async () => {
-  const el = (await fixture(html`<lyra-widget label="x" collapsible>content</lyra-widget>`)) as LyraWidget;
+  const el = (await fixture(html`<lr-widget label="x" collapsible>content</lr-widget>`)) as LyraWidget;
   const btn = el.shadowRoot!.querySelector('[part="collapse-button"]') as HTMLElement;
 
   expect(getComputedStyle(btn).transitionProperty).to.include('transform');
 });
 
 it('toggles fullscreen on fullscreen-button click, locking scroll and adding a backdrop', async () => {
-  const el = (await fixture(html`<lyra-widget label="x" expandable>content</lyra-widget>`)) as LyraWidget;
+  const el = (await fixture(html`<lr-widget label="x" expandable>content</lr-widget>`)) as LyraWidget;
 
   (el.shadowRoot!.querySelector('[part="fullscreen-button"]') as HTMLButtonElement).click();
   await el.updateComplete;
@@ -356,7 +356,7 @@ it('toggles fullscreen on fullscreen-button click, locking scroll and adding a b
 });
 
 it('reflects the fullscreen-button aria-pressed and aria-label with the fullscreen state', async () => {
-  const el = (await fixture(html`<lyra-widget label="x" expandable>content</lyra-widget>`)) as LyraWidget;
+  const el = (await fixture(html`<lr-widget label="x" expandable>content</lr-widget>`)) as LyraWidget;
   const btn = el.shadowRoot!.querySelector('[part="fullscreen-button"]') as HTMLButtonElement;
   expect(btn.getAttribute('aria-pressed')).to.equal('false');
   expect(btn.getAttribute('aria-label')).to.equal('Expand to fullscreen');
@@ -370,7 +370,7 @@ it('reflects the fullscreen-button aria-pressed and aria-label with the fullscre
 
 it('localizes the collapse/fullscreen/view-group aria-labels and the fullscreen dialog fallback via .strings', async () => {
   const el = (await fixture(html`
-    <lyra-widget
+    <lr-widget
       collapsible
       expandable
       .views=${[{ id: 'chart', ariaLabel: 'Chart view' }]}
@@ -384,7 +384,7 @@ it('localizes the collapse/fullscreen/view-group aria-labels and the fullscreen 
       }}
     >
       <div slot="view-chart">chart content</div>
-    </lyra-widget>
+    </lr-widget>
   `)) as LyraWidget;
 
   expect(el.shadowRoot!.querySelector('[part="view-toggles"]')!.getAttribute('aria-label')).to.equal('Vue du panneau');
@@ -404,7 +404,7 @@ it('localizes the collapse/fullscreen/view-group aria-labels and the fullscreen 
 });
 
 it('exits fullscreen on Escape and returns focus to the trigger button', async () => {
-  const el = (await fixture(html`<lyra-widget label="x" expandable>content</lyra-widget>`)) as LyraWidget;
+  const el = (await fixture(html`<lr-widget label="x" expandable>content</lr-widget>`)) as LyraWidget;
   const btn = el.shadowRoot!.querySelector('[part="fullscreen-button"]') as HTMLButtonElement;
   btn.click();
   await el.updateComplete;
@@ -418,7 +418,7 @@ it('exits fullscreen on Escape and returns focus to the trigger button', async (
 });
 
 it('exits fullscreen on Escape even when entered by setting the fullscreen property directly (not via the button click)', async () => {
-  const el = (await fixture(html`<lyra-widget label="x" expandable>content</lyra-widget>`)) as LyraWidget;
+  const el = (await fixture(html`<lr-widget label="x" expandable>content</lr-widget>`)) as LyraWidget;
   el.fullscreen = true;
   await el.updateComplete;
   expect(el.fullscreen).to.be.true;
@@ -430,7 +430,7 @@ it('exits fullscreen on Escape even when entered by setting the fullscreen prope
 });
 
 it('exits fullscreen on backdrop click', async () => {
-  const el = (await fixture(html`<lyra-widget label="x" expandable>content</lyra-widget>`)) as LyraWidget;
+  const el = (await fixture(html`<lr-widget label="x" expandable>content</lr-widget>`)) as LyraWidget;
   (el.shadowRoot!.querySelector('[part="fullscreen-button"]') as HTMLButtonElement).click();
   await el.updateComplete;
 
@@ -441,7 +441,7 @@ it('exits fullscreen on backdrop click', async () => {
 });
 
 it('releases the scroll lock on disconnect while fullscreen', async () => {
-  const el = (await fixture(html`<lyra-widget label="x" expandable>content</lyra-widget>`)) as LyraWidget;
+  const el = (await fixture(html`<lr-widget label="x" expandable>content</lr-widget>`)) as LyraWidget;
   (el.shadowRoot!.querySelector('[part="fullscreen-button"]') as HTMLButtonElement).click();
   await el.updateComplete;
   expect(document.documentElement.style.overflow).to.equal('hidden');
@@ -452,7 +452,7 @@ it('releases the scroll lock on disconnect while fullscreen', async () => {
 });
 
 it('restores the scroll lock and keydown trap when reparented while still fullscreen', async () => {
-  const el = (await fixture(html`<lyra-widget label="x" expandable>content</lyra-widget>`)) as LyraWidget;
+  const el = (await fixture(html`<lr-widget label="x" expandable>content</lr-widget>`)) as LyraWidget;
   (el.shadowRoot!.querySelector('[part="fullscreen-button"]') as HTMLButtonElement).click();
   await el.updateComplete;
   expect(document.documentElement.style.overflow).to.equal('hidden');
@@ -474,7 +474,7 @@ it('restores the scroll lock and keydown trap when reparented while still fullsc
 
 it('is accessible in both default and fullscreen-expandable states', async () => {
   const el = (await fixture(
-    html`<lyra-widget label="Load profile" collapsible expandable>content</lyra-widget>`,
+    html`<lr-widget label="Load profile" collapsible expandable>content</lr-widget>`,
   )) as LyraWidget;
   await expect(el).to.be.accessible();
 
@@ -487,7 +487,7 @@ it('is accessible in both default and fullscreen-expandable states', async () =>
 
 it('marks the fullscreen panel with dialog semantics and clears them on exit', async () => {
   const el = (await fixture(
-    html`<lyra-widget label="Load profile" expandable>content</lyra-widget>`,
+    html`<lr-widget label="Load profile" expandable>content</lr-widget>`,
   )) as LyraWidget;
   const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
   expect(base.hasAttribute('role')).to.be.false;
@@ -508,7 +508,7 @@ it('marks the fullscreen panel with dialog semantics and clears them on exit', a
 });
 
 it('falls back to a generic aria-label for the fullscreen dialog when no label is set', async () => {
-  const el = (await fixture(html`<lyra-widget expandable>content</lyra-widget>`)) as LyraWidget;
+  const el = (await fixture(html`<lr-widget expandable>content</lr-widget>`)) as LyraWidget;
   const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
 
   (el.shadowRoot!.querySelector('[part="fullscreen-button"]') as HTMLButtonElement).click();
@@ -519,7 +519,7 @@ it('falls back to a generic aria-label for the fullscreen dialog when no label i
 
 it('names the fullscreen dialog from a slotted label, not just the label attribute', async () => {
   const el = (await fixture(html`
-    <lyra-widget expandable><span slot="label">Energy production</span>content</lyra-widget>
+    <lr-widget expandable><span slot="label">Energy production</span>content</lr-widget>
   `)) as LyraWidget;
   const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
 
@@ -531,7 +531,7 @@ it('names the fullscreen dialog from a slotted label, not just the label attribu
 
 it('lets a host aria-label override both label and a slotted label for the fullscreen dialog name', async () => {
   const el = (await fixture(html`
-    <lyra-widget expandable aria-label="Override" label="attr"><span slot="label">rich</span>content</lyra-widget>
+    <lr-widget expandable aria-label="Override" label="attr"><span slot="label">rich</span>content</lr-widget>
   `)) as LyraWidget;
   const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
 
@@ -543,7 +543,7 @@ it('lets a host aria-label override both label and a slotted label for the fulls
 
 it('mirrors the collapsed collapse-button chevron under RTL', async () => {
   const el = (await fixture(html`
-    <lyra-widget dir="rtl" collapsible collapsed>content</lyra-widget>
+    <lr-widget dir="rtl" collapsible collapsed>content</lr-widget>
   `)) as LyraWidget;
   const button = el.shadowRoot!.querySelector('[part="collapse-button"]') as HTMLElement;
   expect(getComputedStyle(button).transform).to.contain('matrix(-1');
@@ -551,7 +551,7 @@ it('mirrors the collapsed collapse-button chevron under RTL', async () => {
 
 it('traps Tab focus inside the fullscreen panel, wrapping last->first and first->last', async () => {
   const el = (await fixture(
-    html`<lyra-widget label="x" collapsible expandable>content</lyra-widget>`,
+    html`<lr-widget label="x" collapsible expandable>content</lr-widget>`,
   )) as LyraWidget;
   const collapseBtn = el.shadowRoot!.querySelector('[part="collapse-button"]') as HTMLButtonElement;
   const fullscreenBtn = el.shadowRoot!.querySelector('[part="fullscreen-button"]') as HTMLButtonElement;
@@ -584,10 +584,10 @@ it('traps Tab focus inside the fullscreen panel, wrapping last->first and first-
 
 it('traps Tab/Shift+Tab at a slotted element whose focusable target lives in its own shadow root', async () => {
   const el = (await fixture(
-    html`<lyra-widget label="x" expandable>
+    html`<lr-widget label="x" expandable>
       <widget-test-shadow-input slot="actions"></widget-test-shadow-input>
       content
-    </lyra-widget>`,
+    </lr-widget>`,
   )) as LyraWidget;
   const fullscreenBtn = el.shadowRoot!.querySelector('[part="fullscreen-button"]') as HTMLButtonElement;
   fullscreenBtn.click();
@@ -616,7 +616,7 @@ it('traps Tab/Shift+Tab at a slotted element whose focusable target lives in its
 });
 
 it('prevents Tab from doing anything when fullscreen has no focusable elements at all', async () => {
-  const el = (await fixture(html`<lyra-widget label="x">content</lyra-widget>`)) as LyraWidget;
+  const el = (await fixture(html`<lr-widget label="x">content</lr-widget>`)) as LyraWidget;
   el.fullscreen = true;
   await el.updateComplete;
 
@@ -628,7 +628,7 @@ it('prevents Tab from doing anything when fullscreen has no focusable elements a
 
 it('does not intercept a forward Tab press that is not leaving the last focusable element', async () => {
   const el = (await fixture(
-    html`<lyra-widget label="x" collapsible expandable>content</lyra-widget>`,
+    html`<lr-widget label="x" collapsible expandable>content</lr-widget>`,
   )) as LyraWidget;
   (el.shadowRoot!.querySelector('[part="fullscreen-button"]') as HTMLButtonElement).click();
   await el.updateComplete;
@@ -643,7 +643,7 @@ it('does not intercept a forward Tab press that is not leaving the last focusabl
 
 it("excludes a collapsed body's slotted focusable content from the fullscreen tab trap", async () => {
   const el = (await fixture(
-    html`<lyra-widget label="x" collapsible collapsed expandable><button>inner</button></lyra-widget>`,
+    html`<lr-widget label="x" collapsible collapsed expandable><button>inner</button></lr-widget>`,
   )) as LyraWidget;
   const collapseBtn = el.shadowRoot!.querySelector('[part="collapse-button"]') as HTMLButtonElement;
   const fullscreenBtn = el.shadowRoot!.querySelector('[part="fullscreen-button"]') as HTMLButtonElement;
@@ -665,7 +665,7 @@ it("excludes a collapsed body's slotted focusable content from the fullscreen ta
 
 it('reclaims focus inside the fullscreen panel when collapsing hides the currently focused body content', async () => {
   const el = (await fixture(
-    html`<lyra-widget label="x" collapsible expandable><button id="inner">inner</button></lyra-widget>`,
+    html`<lr-widget label="x" collapsible expandable><button id="inner">inner</button></lr-widget>`,
   )) as LyraWidget;
   const fullscreenBtn = el.shadowRoot!.querySelector('[part="fullscreen-button"]') as HTMLButtonElement;
   const collapseBtn = el.shadowRoot!.querySelector('[part="collapse-button"]') as HTMLButtonElement;
@@ -693,7 +693,7 @@ it('reclaims focus inside the fullscreen panel when collapsing hides the current
 
 it('moves focus into the panel when fullscreen is entered', async () => {
   const el = (await fixture(
-    html`<lyra-widget label="x" collapsible expandable>content</lyra-widget>`,
+    html`<lr-widget label="x" collapsible expandable>content</lr-widget>`,
   )) as LyraWidget;
   const collapseBtn = el.shadowRoot!.querySelector('[part="collapse-button"]') as HTMLButtonElement;
 
@@ -707,7 +707,7 @@ it('moves focus into the panel when fullscreen is entered', async () => {
 });
 
 it('focuses the panel base as a fallback when fullscreen has no focusable elements', async () => {
-  const el = (await fixture(html`<lyra-widget label="x">content</lyra-widget>`)) as LyraWidget;
+  const el = (await fixture(html`<lr-widget label="x">content</lr-widget>`)) as LyraWidget;
 
   el.fullscreen = true;
   await el.updateComplete;
@@ -716,7 +716,7 @@ it('focuses the panel base as a fallback when fullscreen has no focusable elemen
 });
 
 it('links the collapse-button to the body region it controls via aria-controls', async () => {
-  const el = (await fixture(html`<lyra-widget label="x" collapsible>content</lyra-widget>`)) as LyraWidget;
+  const el = (await fixture(html`<lr-widget label="x" collapsible>content</lr-widget>`)) as LyraWidget;
   const btn = el.shadowRoot!.querySelector('[part="collapse-button"]') as HTMLButtonElement;
   const body = el.shadowRoot!.querySelector('[part="body"]') as HTMLElement;
 
@@ -725,7 +725,7 @@ it('links the collapse-button to the body region it controls via aria-controls',
 });
 
 it('does not intercept Tab when not fullscreen', async () => {
-  const el = (await fixture(html`<lyra-widget label="x" collapsible>content</lyra-widget>`)) as LyraWidget;
+  const el = (await fixture(html`<lr-widget label="x" collapsible>content</lr-widget>`)) as LyraWidget;
   const collapseBtn = el.shadowRoot!.querySelector('[part="collapse-button"]') as HTMLButtonElement;
   collapseBtn.focus();
 
@@ -737,13 +737,13 @@ it('does not intercept Tab when not fullscreen', async () => {
 
 it('exposes the fullscreen scrim color as a retheme-able custom property', () => {
   const css = styles.cssText.replace(/\s+/g, ' ');
-  expect(css).to.include('--lyra-widget-overlay-color: var(--lyra-color-overlay)');
-  expect(css).to.include('background: var(--lyra-widget-overlay-color)');
+  expect(css).to.include('--lr-widget-overlay-color: var(--lr-color-overlay)');
+  expect(css).to.include('background: var(--lr-widget-overlay-color)');
 });
 
 it('disables the collapse/fullscreen icon rotate transition under reduced motion', () => {
   const css = styles.cssText.replace(/\s+/g, ' ');
-  expect(css).to.include('transition: transform var(--lyra-transition-fast);');
+  expect(css).to.include('transition: transform var(--lr-transition-fast);');
   expect(css).to.include(
     "@media (prefers-reduced-motion: reduce) { [part='collapse-button'], [part='fullscreen-button'] { transition: none !important; } }",
   );
@@ -751,31 +751,31 @@ it('disables the collapse/fullscreen icon rotate transition under reduced motion
 
 it('applies a custom fullscreen-inset while fullscreen', async () => {
   const el = (await fixture(
-    html`<lyra-widget expandable fullscreen fullscreen-inset="0 0 0 240px"><p>Body</p></lyra-widget>`,
+    html`<lr-widget expandable fullscreen fullscreen-inset="0 0 0 240px"><p>Body</p></lr-widget>`,
   )) as LyraWidget;
   const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
-  expect(base.style.getPropertyValue('--lyra-widget-fullscreen-inset')).to.equal('0 0 0 240px');
+  expect(base.style.getPropertyValue('--lr-widget-fullscreen-inset')).to.equal('0 0 0 240px');
 });
 
 it('falls back to the default inset when fullscreen-inset is unset', async () => {
   const el = (await fixture(
-    html`<lyra-widget expandable fullscreen><p>Body</p></lyra-widget>`,
+    html`<lr-widget expandable fullscreen><p>Body</p></lr-widget>`,
   )) as LyraWidget;
   const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
-  expect(base.style.getPropertyValue('--lyra-widget-fullscreen-inset')).to.equal('');
+  expect(base.style.getPropertyValue('--lr-widget-fullscreen-inset')).to.equal('');
 });
 
 it('reflects the compact attribute', async () => {
-  const el = (await fixture(html`<lyra-widget compact><p>Body</p></lyra-widget>`)) as LyraWidget;
+  const el = (await fixture(html`<lr-widget compact><p>Body</p></lr-widget>`)) as LyraWidget;
   expect(el.hasAttribute('compact')).to.be.true;
 });
 
 it('applies tighter header/body padding when compact', async () => {
   const normal = (await fixture(
-    html`<lyra-widget label="x"><p>Body</p></lyra-widget>`,
+    html`<lr-widget label="x"><p>Body</p></lr-widget>`,
   )) as LyraWidget;
   const compact = (await fixture(
-    html`<lyra-widget label="x" compact><p>Body</p></lyra-widget>`,
+    html`<lr-widget label="x" compact><p>Body</p></lr-widget>`,
   )) as LyraWidget;
 
   expect(compact.hasAttribute('compact')).to.be.true;
@@ -790,8 +790,8 @@ it('applies tighter header/body padding when compact', async () => {
   const normalBodyStyle = getComputedStyle(normalBody);
   const compactBodyStyle = getComputedStyle(compactBody);
 
-  // The compact `--lyra-space-xs`/`--lyra-space-s` padding renders strictly
-  // smaller than the default `--lyra-space-s`/`--lyra-space-m` padding.
+  // The compact `--lr-space-xs`/`--lr-space-s` padding renders strictly
+  // smaller than the default `--lr-space-s`/`--lr-space-m` padding.
   expect(
     parseFloat(compactHeaderStyle.paddingBlockStart),
     'compact header padding should render smaller than the default',
@@ -813,7 +813,7 @@ it('applies tighter header/body padding when compact', async () => {
 describe('backdrop-inset', () => {
   it('backdrop inset falls back to fullscreen-inset when unset', async () => {
     const el = (await fixture(
-      html`<lyra-widget expandable fullscreen-inset="0px 0px 0px 240px" fullscreen></lyra-widget>`,
+      html`<lr-widget expandable fullscreen-inset="0px 0px 0px 240px" fullscreen></lr-widget>`,
     )) as LyraWidget;
     await el.updateComplete;
     const backdrop = el.shadowRoot!.querySelector('[part="backdrop"]') as HTMLElement;
@@ -823,12 +823,12 @@ describe('backdrop-inset', () => {
 
   it('decouples backdrop inset from fullscreen-inset when backdrop-inset is set', async () => {
     const el = (await fixture(
-      html`<lyra-widget
+      html`<lr-widget
         expandable
         fullscreen-inset="0px 0px 0px 240px"
         backdrop-inset="0px"
         fullscreen
-      ></lyra-widget>`,
+      ></lr-widget>`,
     )) as LyraWidget;
     await el.updateComplete;
     const backdrop = el.shadowRoot!.querySelector('[part="backdrop"]') as HTMLElement;

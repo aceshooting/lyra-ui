@@ -9,13 +9,13 @@ const SEGMENTS: ContextMeterSegment[] = [
 ];
 
 it('renders a fully-unfilled track with no segment parts when segments is empty', async () => {
-  const el = (await fixture(html`<lyra-context-meter total="100"></lyra-context-meter>`)) as LyraContextMeter;
+  const el = (await fixture(html`<lr-context-meter total="100"></lr-context-meter>`)) as LyraContextMeter;
   expect(el.shadowRoot!.querySelectorAll('[part="segment"]').length).to.equal(0);
   expect(el.shadowRoot!.querySelector('[part="track"]')).to.exist;
 });
 
 it('renders a fully-unfilled track with no segment parts when total is 0', async () => {
-  const el = (await fixture(html`<lyra-context-meter></lyra-context-meter>`)) as LyraContextMeter;
+  const el = (await fixture(html`<lr-context-meter></lr-context-meter>`)) as LyraContextMeter;
   el.segments = SEGMENTS;
   await el.updateComplete;
   expect(el.total).to.equal(0);
@@ -23,7 +23,7 @@ it('renders a fully-unfilled track with no segment parts when total is 0', async
 });
 
 it('renders one segment part per entry, each sized proportionally to value/total', async () => {
-  const el = (await fixture(html`<lyra-context-meter total="10000"></lyra-context-meter>`)) as LyraContextMeter;
+  const el = (await fixture(html`<lr-context-meter total="10000"></lr-context-meter>`)) as LyraContextMeter;
   el.segments = SEGMENTS;
   await el.updateComplete;
 
@@ -37,7 +37,7 @@ it('renders one segment part per entry, each sized proportionally to value/total
 });
 
 it('defaults an unspecified segment tone to neutral and carries the given tone through as data-tone', async () => {
-  const el = (await fixture(html`<lyra-context-meter total="100"></lyra-context-meter>`)) as LyraContextMeter;
+  const el = (await fixture(html`<lr-context-meter total="100"></lr-context-meter>`)) as LyraContextMeter;
   el.segments = [
     { label: 'a', value: 10 },
     { label: 'b', value: 10, tone: 'danger' },
@@ -50,7 +50,7 @@ it('defaults an unspecified segment tone to neutral and carries the given tone t
 });
 
 it('accepts an arbitrary safe color per segment without changing semantic tone behavior', async () => {
-  const el = (await fixture(html`<lyra-context-meter total="100"></lyra-context-meter>`)) as LyraContextMeter;
+  const el = (await fixture(html`<lr-context-meter total="100"></lr-context-meter>`)) as LyraContextMeter;
   el.segments = [
     { label: 'features', value: 25, tone: 'brand', color: '#123456' },
     { label: 'bugs', value: 25, tone: 'danger', color: 'oklch(60% 0.2 30)' },
@@ -58,21 +58,21 @@ it('accepts an arbitrary safe color per segment without changing semantic tone b
   await el.updateComplete;
 
   const segments = el.shadowRoot!.querySelectorAll('[part="segment"]');
-  expect((segments[0] as HTMLElement).style.getPropertyValue('--lyra-context-meter-segment-color')).to.equal('#123456');
-  expect((segments[1] as HTMLElement).style.getPropertyValue('--lyra-context-meter-segment-color')).to.equal('oklch(60% 0.2 30)');
+  expect((segments[0] as HTMLElement).style.getPropertyValue('--lr-context-meter-segment-color')).to.equal('#123456');
+  expect((segments[1] as HTMLElement).style.getPropertyValue('--lr-context-meter-segment-color')).to.equal('oklch(60% 0.2 30)');
   expect(segments[0].getAttribute('data-tone')).to.equal('brand');
 });
 
 it('rejects unsafe arbitrary segment colors', async () => {
-  const el = (await fixture(html`<lyra-context-meter total="100"></lyra-context-meter>`)) as LyraContextMeter;
+  const el = (await fixture(html`<lr-context-meter total="100"></lr-context-meter>`)) as LyraContextMeter;
   el.segments = [{ label: 'bad', value: 10, color: 'url(https://example.test/x)' }];
   await el.updateComplete;
 
-  expect((el.shadowRoot!.querySelector('[part="segment"]') as HTMLElement).style.getPropertyValue('--lyra-context-meter-segment-color')).to.equal('');
+  expect((el.shadowRoot!.querySelector('[part="segment"]') as HTMLElement).style.getPropertyValue('--lr-context-meter-segment-color')).to.equal('');
 });
 
 it('clamps a segments array that sums to more than total instead of overflowing past 100%', async () => {
-  const el = (await fixture(html`<lyra-context-meter total="100"></lyra-context-meter>`)) as LyraContextMeter;
+  const el = (await fixture(html`<lr-context-meter total="100"></lr-context-meter>`)) as LyraContextMeter;
   el.segments = [
     { label: 'a', value: 80 },
     { label: 'b', value: 80 },
@@ -90,7 +90,7 @@ it('clamps a segments array that sums to more than total instead of overflowing 
 });
 
 it('clamps the aria-label summary to total, not the raw segment sum, when segments overflow past capacity', async () => {
-  const el = (await fixture(html`<lyra-context-meter total="100"></lyra-context-meter>`)) as LyraContextMeter;
+  const el = (await fixture(html`<lr-context-meter total="100"></lr-context-meter>`)) as LyraContextMeter;
   el.segments = [
     { label: 'a', value: 80 },
     { label: 'b', value: 80 },
@@ -103,7 +103,7 @@ it('clamps the aria-label summary to total, not the raw segment sum, when segmen
 });
 
 it('treats a negative or NaN segment value as 0 instead of producing a negative width', async () => {
-  const el = (await fixture(html`<lyra-context-meter total="100"></lyra-context-meter>`)) as LyraContextMeter;
+  const el = (await fixture(html`<lr-context-meter total="100"></lr-context-meter>`)) as LyraContextMeter;
   el.segments = [
     { label: 'a', value: -10 },
     { label: 'b', value: NaN },
@@ -118,7 +118,7 @@ it('treats a negative or NaN segment value as 0 instead of producing a negative 
 });
 
 it('computes a "used of total" aria-label summary from the segment sum, ignoring negative entries', async () => {
-  const el = (await fixture(html`<lyra-context-meter total="10000"></lyra-context-meter>`)) as LyraContextMeter;
+  const el = (await fixture(html`<lr-context-meter total="10000"></lr-context-meter>`)) as LyraContextMeter;
   el.segments = SEGMENTS;
   await el.updateComplete;
 
@@ -131,7 +131,7 @@ it('computes a "used of total" aria-label summary from the segment sum, ignoring
 
 it('prefixes the aria-label summary with the label when provided', async () => {
   const el = (await fixture(
-    html`<lyra-context-meter total="10000" label="128K context window"></lyra-context-meter>`,
+    html`<lr-context-meter total="10000" label="128K context window"></lr-context-meter>`,
   )) as LyraContextMeter;
   el.segments = SEGMENTS;
   await el.updateComplete;
@@ -141,7 +141,7 @@ it('prefixes the aria-label summary with the label when provided', async () => {
 
 it('preserves an explicit host aria-label instead of replacing it with the generated summary', async () => {
   const el = (await fixture(html`
-    <lyra-context-meter aria-label="Context window occupancy" total="10000"></lyra-context-meter>
+    <lr-context-meter aria-label="Context window occupancy" total="10000"></lr-context-meter>
   `)) as LyraContextMeter;
   el.segments = SEGMENTS;
   await el.updateComplete;
@@ -152,7 +152,7 @@ it('preserves an explicit host aria-label instead of replacing it with the gener
 
 it('formats its generated summary with the effective locale', async () => {
   const el = (await fixture(html`
-    <lyra-context-meter locale="de-DE" total="10000"></lyra-context-meter>
+    <lr-context-meter locale="de-DE" total="10000"></lr-context-meter>
   `)) as LyraContextMeter;
   el.segments = SEGMENTS;
   await el.updateComplete;
@@ -161,7 +161,7 @@ it('formats its generated summary with the effective locale', async () => {
 });
 
 it('falls back to a used-only summary when total is 0 or unset', async () => {
-  const el = (await fixture(html`<lyra-context-meter></lyra-context-meter>`)) as LyraContextMeter;
+  const el = (await fixture(html`<lr-context-meter></lr-context-meter>`)) as LyraContextMeter;
   el.segments = [{ label: 'a', value: 5 }];
   await el.updateComplete;
   expect(el.getAttribute('aria-label')).to.equal('5 used');
@@ -170,8 +170,8 @@ it('falls back to a used-only summary when total is 0 or unset', async () => {
 describe('summary localization', () => {
   it('localizes the "used of total" summary via this.localize() when .strings overrides contextMeterUsedOfTotal', async () => {
     const el = (await fixture(html`
-      <lyra-context-meter total="10000" .strings=${{ contextMeterUsedOfTotal: '{used} sur {total} utilisés' }}
-      ></lyra-context-meter>
+      <lr-context-meter total="10000" .strings=${{ contextMeterUsedOfTotal: '{used} sur {total} utilisés' }}
+      ></lr-context-meter>
     `)) as LyraContextMeter;
     el.segments = SEGMENTS;
     await el.updateComplete;
@@ -180,7 +180,7 @@ describe('summary localization', () => {
 
   it('localizes the used-only summary via this.localize() when .strings overrides contextMeterUsed', async () => {
     const el = (await fixture(html`
-      <lyra-context-meter .strings=${{ contextMeterUsed: '{used} utilisés' }}></lyra-context-meter>
+      <lr-context-meter .strings=${{ contextMeterUsed: '{used} utilisés' }}></lr-context-meter>
     `)) as LyraContextMeter;
     el.segments = [{ label: 'a', value: 5 }];
     await el.updateComplete;
@@ -188,7 +188,7 @@ describe('summary localization', () => {
   });
 
   it('builds segment titles from the contextMeterSegmentLabel template, so a locale controls label/count order', async () => {
-    const el = (await fixture(html`<lyra-context-meter total="10000"></lyra-context-meter>`)) as LyraContextMeter;
+    const el = (await fixture(html`<lr-context-meter total="10000"></lr-context-meter>`)) as LyraContextMeter;
     el.segments = SEGMENTS;
     await el.updateComplete;
     const segments = el.shadowRoot!.querySelectorAll('[part="segment"]');
@@ -205,7 +205,7 @@ describe('summary localization', () => {
 
 it('renders the label part visibly, hidden from the accessibility tree since the host aria-label already carries it', async () => {
   const el = (await fixture(
-    html`<lyra-context-meter total="100" label="Token budget"></lyra-context-meter>`,
+    html`<lr-context-meter total="100" label="Token budget"></lr-context-meter>`,
   )) as LyraContextMeter;
   const label = el.shadowRoot!.querySelector('[part="label"]')!;
   expect(label.textContent).to.equal('Token budget');
@@ -213,12 +213,12 @@ it('renders the label part visibly, hidden from the accessibility tree since the
 });
 
 it('omits the label part entirely when label is unset', async () => {
-  const el = (await fixture(html`<lyra-context-meter total="100"></lyra-context-meter>`)) as LyraContextMeter;
+  const el = (await fixture(html`<lr-context-meter total="100"></lr-context-meter>`)) as LyraContextMeter;
   expect(el.shadowRoot!.querySelector('[part="label"]')).to.not.exist;
 });
 
 it('defaults to and reflects the bar variant, rendering a div base', async () => {
-  const el = (await fixture(html`<lyra-context-meter total="100"></lyra-context-meter>`)) as LyraContextMeter;
+  const el = (await fixture(html`<lr-context-meter total="100"></lr-context-meter>`)) as LyraContextMeter;
   expect(el.variant).to.equal('bar');
   expect(el.getAttribute('variant')).to.equal('bar');
   expect(el.shadowRoot!.querySelector('div[part="base"]')).to.exist;
@@ -226,7 +226,7 @@ it('defaults to and reflects the bar variant, rendering a div base', async () =>
 
 it('renders an svg base with circle segments in ring mode, using stroke-dasharray/-dashoffset geometry', async () => {
   const el = (await fixture(
-    html`<lyra-context-meter variant="ring" total="100"></lyra-context-meter>`,
+    html`<lr-context-meter variant="ring" total="100"></lr-context-meter>`,
   )) as LyraContextMeter;
   el.segments = [
     { label: 'a', value: 25 },
@@ -249,13 +249,13 @@ it('renders an svg base with circle segments in ring mode, using stroke-dasharra
 });
 
 it('is accessible with an empty/default meter', async () => {
-  const el = (await fixture(html`<lyra-context-meter total="100"></lyra-context-meter>`)) as LyraContextMeter;
+  const el = (await fixture(html`<lr-context-meter total="100"></lr-context-meter>`)) as LyraContextMeter;
   await expect(el).to.be.accessible();
 });
 
 it('is accessible with a populated bar meter', async () => {
   const el = (await fixture(
-    html`<lyra-context-meter total="10000" label="128K context window"></lyra-context-meter>`,
+    html`<lr-context-meter total="10000" label="128K context window"></lr-context-meter>`,
   )) as LyraContextMeter;
   el.segments = SEGMENTS;
   await el.updateComplete;
@@ -264,7 +264,7 @@ it('is accessible with a populated bar meter', async () => {
 
 it('is accessible with a populated ring meter', async () => {
   const el = (await fixture(
-    html`<lyra-context-meter variant="ring" total="10000" label="Context"></lyra-context-meter>`,
+    html`<lr-context-meter variant="ring" total="10000" label="Context"></lr-context-meter>`,
   )) as LyraContextMeter;
   el.segments = SEGMENTS;
   await el.updateComplete;
@@ -274,13 +274,13 @@ it('is accessible with a populated ring meter', async () => {
 it('can shrink to a 320px allocation with a long visible label', async () => {
   const wrapper = await fixture(html`
     <div style="display: flex; inline-size: 320px;">
-      <lyra-context-meter
+      <lr-context-meter
         total="100"
         label="A deliberately long translated context-window occupancy label"
-      ></lyra-context-meter>
+      ></lr-context-meter>
     </div>
   `);
-  const el = wrapper.querySelector('lyra-context-meter') as LyraContextMeter;
+  const el = wrapper.querySelector('lr-context-meter') as LyraContextMeter;
 
   expect(getComputedStyle(el).minInlineSize).to.equal('0px');
   expect(el.getBoundingClientRect().width).to.be.at.most(320);

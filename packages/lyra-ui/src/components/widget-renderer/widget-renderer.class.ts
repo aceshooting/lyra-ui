@@ -8,9 +8,9 @@ import { resolveTree, type ResolvedNode, type ResolvedElement, type WidgetNode }
 import { getDefaultWidgetTypeRegistry, type WidgetTypeRegistry } from './registry.js';
 
 const GAP_TOKEN: Record<string, string> = {
-  s: 'var(--lyra-space-s)',
-  m: 'var(--lyra-space-m)',
-  l: 'var(--lyra-space-l)',
+  s: 'var(--lr-space-s)',
+  m: 'var(--lr-space-m)',
+  l: 'var(--lr-space-l)',
 };
 const JUSTIFY_VALUE: Record<string, string> = {
   start: 'flex-start',
@@ -25,12 +25,12 @@ interface ActionHandlerState {
 }
 
 export interface LyraWidgetRendererEventMap {
-  'lyra-widget-action': CustomEvent<{ actionId: string; payload: unknown }>;
-  'lyra-render-error': CustomEvent<{ error: unknown }>;
+  'lr-widget-action': CustomEvent<{ actionId: string; payload: unknown }>;
+  'lr-render-error': CustomEvent<{ error: unknown }>;
 }
 
 /**
- * `<lyra-widget-renderer>` — renders an agent-streamed declarative JSON widget tree through an
+ * `<lr-widget-renderer>` — renders an agent-streamed declarative JSON widget tree through an
  * allowlisted `type -> lyra tag` registry (see `registry.ts`/`resolve.ts` for the allowlist
  * enforcement itself; this class only turns an already-resolved tree into DOM). A mapped node's
  * real element is created via `document.createElement()` with every prop assigned as a plain JS
@@ -39,9 +39,9 @@ export interface LyraWidgetRendererEventMap {
  * streamed `tree` update. Built-in `row`/`col`/`text` structural nodes render through ordinary
  * nested `html` templates instead.
  *
- * @customElement lyra-widget-renderer
- * @event lyra-widget-action - `detail: { actionId, payload }` — the single bubbling action channel.
- * @event lyra-render-error - `detail: { error }` — the root value was structurally unusable.
+ * @customElement lr-widget-renderer
+ * @event lr-widget-action - `detail: { actionId, payload }` — the single bubbling action channel.
+ * @event lr-render-error - `detail: { error }` — the root value was structurally unusable.
  * @csspart base - The root wrapper (`display: contents` — adds no layout box of its own).
  * @csspart row - A built-in `row` node.
  * @csspart col - A built-in `col` node.
@@ -68,8 +68,8 @@ export class LyraWidgetRenderer extends LyraElement<LyraWidgetRendererEventMap> 
       const registry = this.registry ?? getDefaultWidgetTypeRegistry();
       const next = resolveTree(this.tree, { registry, warned: this.warned });
       if (this.tree != null && next === null) {
-        this.emit('lyra-render-error', {
-          error: new Error('lyra-widget-renderer: tree resolved to nothing renderable'),
+        this.emit('lr-render-error', {
+          error: new Error('lr-widget-renderer: tree resolved to nothing renderable'),
         });
       }
       this.resolved = next;
@@ -124,7 +124,7 @@ export class LyraWidgetRenderer extends LyraElement<LyraWidgetRendererEventMap> 
       const handler: EventListener = (e) => {
         e.stopPropagation();
         if (node.actionId !== undefined) {
-          this.emit('lyra-widget-action', { actionId: node.actionId, payload: node.payload });
+          this.emit('lr-widget-action', { actionId: node.actionId, payload: node.payload });
         }
       };
       el.addEventListener(node.actionEvent, handler);
@@ -176,6 +176,6 @@ export class LyraWidgetRenderer extends LyraElement<LyraWidgetRendererEventMap> 
 
 declare global {
   interface HTMLElementTagNameMap {
-    'lyra-widget-renderer': LyraWidgetRenderer;
+    'lr-widget-renderer': LyraWidgetRenderer;
   }
 }

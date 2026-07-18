@@ -3,7 +3,7 @@ import './citation-badge.js';
 import type { LyraCitationBadge } from './citation-badge.js';
 
 it('defaults to index=1, status="default", empty source-id/href/label', async () => {
-  const el = (await fixture(html`<lyra-citation-badge></lyra-citation-badge>`)) as LyraCitationBadge;
+  const el = (await fixture(html`<lr-citation-badge></lr-citation-badge>`)) as LyraCitationBadge;
   expect(el.index).to.equal(1);
   expect(el.status).to.equal('default');
   expect(el.getAttribute('status')).to.equal('default');
@@ -13,7 +13,7 @@ it('defaults to index=1, status="default", empty source-id/href/label', async ()
 });
 
 it('sanitizes a NaN/non-integer/non-positive index to a finite, 1-indexed integer instead of rendering "[NaN]"', async () => {
-  const el = (await fixture(html`<lyra-citation-badge></lyra-citation-badge>`)) as LyraCitationBadge;
+  const el = (await fixture(html`<lr-citation-badge></lr-citation-badge>`)) as LyraCitationBadge;
 
   el.index = NaN;
   expect(el.index).to.equal(1); // falls back to the documented default, not NaN
@@ -30,14 +30,14 @@ it('sanitizes a NaN/non-integer/non-positive index to a finite, 1-indexed intege
 });
 
 it('renders [index] as its visible content', async () => {
-  const el = (await fixture(html`<lyra-citation-badge index="3"></lyra-citation-badge>`)) as LyraCitationBadge;
+  const el = (await fixture(html`<lr-citation-badge index="3"></lr-citation-badge>`)) as LyraCitationBadge;
   const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
   expect(base.textContent?.replace(/\s+/g, '')).to.equal('[3]');
   expect(el.shadowRoot!.querySelector('[part="index"]')!.textContent).to.equal('3');
 });
 
 it('is a real <button type="button"> — Enter activation is native, no custom keydown handler needed', async () => {
-  const el = (await fixture(html`<lyra-citation-badge index="3"></lyra-citation-badge>`)) as LyraCitationBadge;
+  const el = (await fixture(html`<lr-citation-badge index="3"></lr-citation-badge>`)) as LyraCitationBadge;
   const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLButtonElement;
   expect(base.tagName).to.equal('BUTTON');
   expect(base.type).to.equal('button');
@@ -45,13 +45,13 @@ it('is a real <button type="button"> — Enter activation is native, no custom k
 
 it('maps the source-id attribute onto the sourceId property', async () => {
   const el = (await fixture(
-    html`<lyra-citation-badge index="1" source-id="doc-42"></lyra-citation-badge>`,
+    html`<lr-citation-badge index="1" source-id="doc-42"></lr-citation-badge>`,
   )) as LyraCitationBadge;
   expect(el.sourceId).to.equal('doc-42');
 });
 
 it('reflects status changes onto the host attribute', async () => {
-  const el = (await fixture(html`<lyra-citation-badge></lyra-citation-badge>`)) as LyraCitationBadge;
+  const el = (await fixture(html`<lr-citation-badge></lr-citation-badge>`)) as LyraCitationBadge;
   el.status = 'verified';
   await el.updateComplete;
   expect(el.getAttribute('status')).to.equal('verified');
@@ -60,14 +60,14 @@ it('reflects status changes onto the host attribute', async () => {
 describe('accessible name', () => {
   it('combines index and status when both are present', async () => {
     const el = (await fixture(
-      html`<lyra-citation-badge index="3" status="verified"></lyra-citation-badge>`,
+      html`<lr-citation-badge index="3" status="verified"></lr-citation-badge>`,
     )) as LyraCitationBadge;
     const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
     expect(base.getAttribute('aria-label')).to.equal('Citation 3, Verified');
   });
 
   it('omits the status clause for status="default"', async () => {
-    const el = (await fixture(html`<lyra-citation-badge index="5"></lyra-citation-badge>`)) as LyraCitationBadge;
+    const el = (await fixture(html`<lr-citation-badge index="5"></lr-citation-badge>`)) as LyraCitationBadge;
     const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
     expect(base.getAttribute('aria-label')).to.equal('Citation 5');
   });
@@ -77,7 +77,7 @@ describe('accessible name', () => {
     const labels = ['High confidence', 'Medium confidence', 'Low confidence', 'Verified', 'Unverified'];
     for (let i = 0; i < statuses.length; i++) {
       const el = (await fixture(
-        html`<lyra-citation-badge index="1" status=${statuses[i]}></lyra-citation-badge>`,
+        html`<lr-citation-badge index="1" status=${statuses[i]}></lr-citation-badge>`,
       )) as LyraCitationBadge;
       const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
       expect(base.getAttribute('aria-label')).to.equal(`Citation 1, ${labels[i]}`);
@@ -86,11 +86,11 @@ describe('accessible name', () => {
 
   it('localizes each status word via this.localize() when .strings overrides the citation* keys', async () => {
     const el = (await fixture(html`
-      <lyra-citation-badge
+      <lr-citation-badge
         index="1"
         status="verified"
         .strings=${{ citationVerified: 'Vérifié', citationUnverified: 'Non vérifié' }}
-      ></lyra-citation-badge>
+      ></lr-citation-badge>
     `)) as LyraCitationBadge;
     const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
     expect(base.getAttribute('aria-label')).to.equal('Citation 1, Vérifié');
@@ -102,14 +102,14 @@ describe('accessible name', () => {
 
   it('localizes the complete citation-with-status message so translators control its order and punctuation', async () => {
     const el = (await fixture(html`
-      <lyra-citation-badge
+      <lr-citation-badge
         index="3"
         status="verified"
         .strings=${{
           citationVerified: 'Vérifiée',
           citationWithStatus: '{status} — référence {index}',
         }}
-      ></lyra-citation-badge>
+      ></lr-citation-badge>
     `)) as LyraCitationBadge;
     const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
     expect(base.getAttribute('aria-label')).to.equal('Vérifiée — référence 3');
@@ -117,7 +117,7 @@ describe('accessible name', () => {
 
   it('localizes the "Citation {index}" clause itself via this.localize() when .strings overrides the citation key', async () => {
     const el = (await fixture(html`
-      <lyra-citation-badge index="3" .strings=${{ citation: 'Référence {index}' }}></lyra-citation-badge>
+      <lr-citation-badge index="3" .strings=${{ citation: 'Référence {index}' }}></lr-citation-badge>
     `)) as LyraCitationBadge;
     const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
     expect(base.getAttribute('aria-label')).to.equal('Référence 3');
@@ -125,7 +125,7 @@ describe('accessible name', () => {
 
   it('lets the label prop fully override the computed accessible name', async () => {
     const el = (await fixture(
-      html`<lyra-citation-badge index="3" status="verified" label="Source: report.pdf, page 4"></lyra-citation-badge>`,
+      html`<lr-citation-badge index="3" status="verified" label="Source: report.pdf, page 4"></lr-citation-badge>`,
     )) as LyraCitationBadge;
     const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
     expect(base.getAttribute('aria-label')).to.equal('Source: report.pdf, page 4');
@@ -133,73 +133,73 @@ describe('accessible name', () => {
 
   it('lets an explicit host aria-label override both the label prop and the computed name', async () => {
     const el = (await fixture(
-      html`<lyra-citation-badge index="3" label="ignored" aria-label="Custom"></lyra-citation-badge>`,
+      html`<lr-citation-badge index="3" label="ignored" aria-label="Custom"></lr-citation-badge>`,
     )) as LyraCitationBadge;
     const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
     expect(base.getAttribute('aria-label')).to.equal('Custom');
   });
 });
 
-describe('lyra-citation-activate', () => {
+describe('lr-citation-activate', () => {
   it('fires on click with { sourceId, index }', async () => {
     const el = (await fixture(
-      html`<lyra-citation-badge index="4" source-id="doc-9"></lyra-citation-badge>`,
+      html`<lr-citation-badge index="4" source-id="doc-9"></lr-citation-badge>`,
     )) as LyraCitationBadge;
     const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLButtonElement;
 
     setTimeout(() => base.click());
-    const ev = await oneEvent(el, 'lyra-citation-activate');
+    const ev = await oneEvent(el, 'lr-citation-activate');
     expect(ev.detail).to.deep.equal({ sourceId: 'doc-9', index: 4 });
     expect(ev.bubbles).to.be.true;
     expect(ev.composed).to.be.true;
   });
 });
 
-describe('lyra-citation-open', () => {
+describe('lr-citation-open', () => {
   it('fires on dblclick with { sourceId, index, href }', async () => {
     const el = (await fixture(
-      html`<lyra-citation-badge index="4" source-id="doc-9" href="https://example.com/doc.pdf"></lyra-citation-badge>`,
+      html`<lr-citation-badge index="4" source-id="doc-9" href="https://example.com/doc.pdf"></lr-citation-badge>`,
     )) as LyraCitationBadge;
     const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLButtonElement;
 
     setTimeout(() => base.dispatchEvent(new MouseEvent('dblclick', { bubbles: true })));
-    const ev = await oneEvent(el, 'lyra-citation-open');
+    const ev = await oneEvent(el, 'lr-citation-open');
     expect(ev.detail).to.deep.equal({ sourceId: 'doc-9', index: 4, href: 'https://example.com/doc.pdf' });
   });
 
   it('carries href: undefined when the href prop is unset', async () => {
     const el = (await fixture(
-      html`<lyra-citation-badge index="4" source-id="doc-9"></lyra-citation-badge>`,
+      html`<lr-citation-badge index="4" source-id="doc-9"></lr-citation-badge>`,
     )) as LyraCitationBadge;
     const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLButtonElement;
 
     setTimeout(() => base.dispatchEvent(new MouseEvent('dblclick', { bubbles: true })));
-    const ev = await oneEvent(el, 'lyra-citation-open');
+    const ev = await oneEvent(el, 'lr-citation-open');
     expect(ev.detail.sourceId).to.equal('doc-9');
     expect(ev.detail.index).to.equal(4);
     expect(ev.detail.href).to.be.undefined;
   });
 
-  it('fires on Space while focused, pre-empting the native click that would otherwise fire lyra-citation-activate instead', async () => {
+  it('fires on Space while focused, pre-empting the native click that would otherwise fire lr-citation-activate instead', async () => {
     const el = (await fixture(
-      html`<lyra-citation-badge index="2" source-id="doc-1"></lyra-citation-badge>`,
+      html`<lr-citation-badge index="2" source-id="doc-1"></lr-citation-badge>`,
     )) as LyraCitationBadge;
     const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLButtonElement;
     base.focus();
 
     let activateCount = 0;
-    el.addEventListener('lyra-citation-activate', () => activateCount++);
+    el.addEventListener('lr-citation-activate', () => activateCount++);
 
     setTimeout(() =>
       base.dispatchEvent(new KeyboardEvent('keydown', { key: ' ', bubbles: true, cancelable: true })),
     );
-    const ev = await oneEvent(el, 'lyra-citation-open');
+    const ev = await oneEvent(el, 'lr-citation-open');
     expect(ev.detail).to.deep.equal({ sourceId: 'doc-1', index: 2, href: undefined });
-    expect(activateCount, 'Space should not also fire lyra-citation-activate').to.equal(0);
+    expect(activateCount, 'Space should not also fire lr-citation-activate').to.equal(0);
   });
 
   it('preventDefaults the Space keydown so no native click is synthesized', async () => {
-    const el = (await fixture(html`<lyra-citation-badge index="2"></lyra-citation-badge>`)) as LyraCitationBadge;
+    const el = (await fixture(html`<lr-citation-badge index="2"></lr-citation-badge>`)) as LyraCitationBadge;
     const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLButtonElement;
     base.focus();
 
@@ -211,7 +211,7 @@ describe('lyra-citation-open', () => {
 
 describe('hover/focus preview popover', () => {
   it('never shows when the default slot is empty', async () => {
-    const el = (await fixture(html`<lyra-citation-badge index="1"></lyra-citation-badge>`)) as LyraCitationBadge;
+    const el = (await fixture(html`<lr-citation-badge index="1"></lr-citation-badge>`)) as LyraCitationBadge;
     const wrapper = el.shadowRoot!.querySelector('.wrapper') as HTMLElement;
     const popover = el.shadowRoot!.querySelector('[part="popover"]') as HTMLElement;
     expect(popover.hidden).to.be.true;
@@ -223,7 +223,7 @@ describe('hover/focus preview popover', () => {
 
   it('shows on pointerenter and hides (after the grace period) on pointerleave when preview content is slotted', async () => {
     const el = (await fixture(
-      html`<lyra-citation-badge index="1"><p>report.pdf, page 4</p></lyra-citation-badge>`,
+      html`<lr-citation-badge index="1"><p>report.pdf, page 4</p></lr-citation-badge>`,
     )) as LyraCitationBadge;
     const wrapper = el.shadowRoot!.querySelector('.wrapper') as HTMLElement;
     const popover = el.shadowRoot!.querySelector('[part="popover"]') as HTMLElement;
@@ -243,7 +243,7 @@ describe('hover/focus preview popover', () => {
 
   it('cancels a pending hide when hover returns before the grace period elapses', async () => {
     const el = (await fixture(
-      html`<lyra-citation-badge index="1"><p>preview</p></lyra-citation-badge>`,
+      html`<lr-citation-badge index="1"><p>preview</p></lr-citation-badge>`,
     )) as LyraCitationBadge;
     const wrapper = el.shadowRoot!.querySelector('.wrapper') as HTMLElement;
     const popover = el.shadowRoot!.querySelector('[part="popover"]') as HTMLElement;
@@ -271,7 +271,7 @@ describe('hover/focus preview popover', () => {
 
   it('shows on focusin and hides immediately (no grace period) on focusout when preview content is slotted', async () => {
     const el = (await fixture(
-      html`<lyra-citation-badge index="1"><p>report.pdf, page 4</p></lyra-citation-badge>`,
+      html`<lr-citation-badge index="1"><p>report.pdf, page 4</p></lr-citation-badge>`,
     )) as LyraCitationBadge;
     const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLButtonElement;
     const popover = el.shadowRoot!.querySelector('[part="popover"]') as HTMLElement;
@@ -287,7 +287,7 @@ describe('hover/focus preview popover', () => {
 
   it('stays open on pointerleave while focus still holds it open', async () => {
     const el = (await fixture(
-      html`<lyra-citation-badge index="1"><p>preview</p></lyra-citation-badge>`,
+      html`<lr-citation-badge index="1"><p>preview</p></lr-citation-badge>`,
     )) as LyraCitationBadge;
     const wrapper = el.shadowRoot!.querySelector('.wrapper') as HTMLElement;
     const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLButtonElement;
@@ -305,7 +305,7 @@ describe('hover/focus preview popover', () => {
 
   it('keeps the tooltip associated via aria-describedby whenever preview content exists', async () => {
     const el = (await fixture(
-      html`<lyra-citation-badge index="1"><p>preview</p></lyra-citation-badge>`,
+      html`<lr-citation-badge index="1"><p>preview</p></lr-citation-badge>`,
     )) as LyraCitationBadge;
     const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLButtonElement;
     const popover = el.shadowRoot!.querySelector('[part="popover"]') as HTMLElement;
@@ -322,7 +322,7 @@ describe('hover/focus preview popover', () => {
 
   it('closes immediately on Escape while focus is within the badge', async () => {
     const el = (await fixture(
-      html`<lyra-citation-badge index="1"><p>preview</p></lyra-citation-badge>`,
+      html`<lr-citation-badge index="1"><p>preview</p></lr-citation-badge>`,
     )) as LyraCitationBadge;
     const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLButtonElement;
     const popover = el.shadowRoot!.querySelector('[part="popover"]') as HTMLElement;
@@ -338,7 +338,7 @@ describe('hover/focus preview popover', () => {
 
   it('does not trap Tab focus — no tabindex/focus-trap wiring on the popover itself', async () => {
     const el = (await fixture(
-      html`<lyra-citation-badge index="1"><p>preview</p></lyra-citation-badge>`,
+      html`<lr-citation-badge index="1"><p>preview</p></lr-citation-badge>`,
     )) as LyraCitationBadge;
     const popover = el.shadowRoot!.querySelector('[part="popover"]') as HTMLElement;
     expect(popover.hasAttribute('tabindex')).to.be.false;
@@ -346,7 +346,7 @@ describe('hover/focus preview popover', () => {
 
   it('shows the popover for preview content that is plain text with no wrapping element', async () => {
     const el = (await fixture(
-      html`<lyra-citation-badge index="5">No source has confirmed this yet.</lyra-citation-badge>`,
+      html`<lr-citation-badge index="5">No source has confirmed this yet.</lr-citation-badge>`,
     )) as LyraCitationBadge;
     const wrapper = el.shadowRoot!.querySelector('.wrapper') as HTMLElement;
     const popover = el.shadowRoot!.querySelector('[part="popover"]') as HTMLElement;
@@ -359,7 +359,7 @@ describe('hover/focus preview popover', () => {
 
   it('force-closes an already-open popover when its preview content is removed from the slot', async () => {
     const el = (await fixture(
-      html`<lyra-citation-badge index="1"><p>preview</p></lyra-citation-badge>`,
+      html`<lr-citation-badge index="1"><p>preview</p></lr-citation-badge>`,
     )) as LyraCitationBadge;
     const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLButtonElement;
     const popover = el.shadowRoot!.querySelector('[part="popover"]') as HTMLElement;
@@ -378,15 +378,15 @@ describe('hover/focus preview popover', () => {
 });
 
 it('is accessible in the default (empty, no preview) state', async () => {
-  const el = (await fixture(html`<lyra-citation-badge index="1"></lyra-citation-badge>`)) as LyraCitationBadge;
+  const el = (await fixture(html`<lr-citation-badge index="1"></lr-citation-badge>`)) as LyraCitationBadge;
   await expect(el).to.be.accessible();
 });
 
 it('is accessible in a populated state with status, href, and an open preview popover', async () => {
   const el = (await fixture(html`
-    <lyra-citation-badge index="3" status="verified" source-id="doc-1" href="https://example.com/doc.pdf">
+    <lr-citation-badge index="3" status="verified" source-id="doc-1" href="https://example.com/doc.pdf">
       <strong>report.pdf</strong>, p. 4 — "annual generation increased 12%"
-    </lyra-citation-badge>
+    </lr-citation-badge>
   `)) as LyraCitationBadge;
   const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLButtonElement;
   base.focus();

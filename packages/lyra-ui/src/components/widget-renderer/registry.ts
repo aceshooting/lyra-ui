@@ -1,5 +1,5 @@
 /**
- * `<lyra-widget-renderer>`'s type registry -- a type-keyed `Map` of allowlisted widget types plus
+ * `<lr-widget-renderer>`'s type registry -- a type-keyed `Map` of allowlisted widget types plus
  * `register*()`/`getDefault*Registry()` accessors, mirroring `tool-result-view/registry.ts`'s shape.
  * No `load()`/lazy-loading here: unlike a tool renderer, a widget type definition is pure
  * configuration data (a tag name, a prop allowlist, forced props, a slot allowlist) rather than a
@@ -7,7 +7,7 @@
  */
 
 export interface WidgetTypeDefinition {
-  /** The `lyra-` tag to render (resolved through `tag()`, prefix-aware). Absent only for the three
+  /** The `lr-` tag to render (resolved through `tag()`, prefix-aware). Absent only for the three
    *  built-in structural types (`text`/`row`/`col`), which are never looked up in this registry. */
   tag?: string;
   /** Prop allowlist: name -> required primitive type. A prop absent here, or whose runtime `typeof`
@@ -18,14 +18,14 @@ export interface WidgetTypeDefinition {
   /** Allowlisted child `slot` names. A child's `slot` not in this list renders unslotted (default
    *  slot), never dropped as a node. Defaults to no named slots allowed. */
   slots?: string[];
-  /** The native/custom DOM event on the rendered tag that arms `lyra-widget-action` when the node
+  /** The native/custom DOM event on the rendered tag that arms `lr-widget-action` when the node
    *  also sets `actionId`. */
   action?: { event: string };
 }
 
 export type WidgetTypeRegistry = Map<string, WidgetTypeDefinition>;
 
-/** The module-level registry `<lyra-widget-renderer>` dispatches against by default. */
+/** The module-level registry `<lr-widget-renderer>` dispatches against by default. */
 const defaultRegistry: WidgetTypeRegistry = new Map();
 
 /** Registers (or overwrites) the type definition for `type` in the default registry. */

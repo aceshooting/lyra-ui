@@ -5,13 +5,13 @@ import type { LyraCheckbox } from './checkbox.js';
 
 const meta: Meta = {
   title: 'Checkbox',
-  component: 'lyra-checkbox',
+  component: 'lr-checkbox',
   tags: ['autodocs'],
   parameters: {
     docs: {
       description: {
         component:
-          'A boolean form control — the checkbox-semantics counterpart to `<lyra-switch>` (`role="checkbox"` + a tri-state `aria-checked`, including `"mixed"` for the visual-only `indeterminate` state). Form-associated via `ElementInternals`; participates in native `<form>` submission, validation, and reset.',
+          'A boolean form control — the checkbox-semantics counterpart to `<lr-switch>` (`role="checkbox"` + a tri-state `aria-checked`, including `"mixed"` for the visual-only `indeterminate` state). Form-associated via `ElementInternals`; participates in native `<form>` submission, validation, and reset.',
       },
     },
   },
@@ -20,30 +20,30 @@ export default meta;
 type Story = StoryObj;
 
 export const Default: Story = {
-  render: () => html`<lyra-checkbox>Subscribe to updates</lyra-checkbox>`,
+  render: () => html`<lr-checkbox>Subscribe to updates</lr-checkbox>`,
 };
 
 export const Checked: Story = {
-  render: () => html`<lyra-checkbox checked>Subscribe to updates</lyra-checkbox>`,
+  render: () => html`<lr-checkbox checked>Subscribe to updates</lr-checkbox>`,
 };
 
 export const Indeterminate: Story = {
-  render: () => html`<lyra-checkbox indeterminate>Select all</lyra-checkbox>`,
+  render: () => html`<lr-checkbox indeterminate>Select all</lr-checkbox>`,
 };
 
 export const Disabled: Story = {
   render: () => html`
     <div style="display:flex; flex-direction:column; gap:0.75rem;">
-      <lyra-checkbox disabled>Unchecked, disabled</lyra-checkbox>
-      <lyra-checkbox disabled checked>Checked, disabled</lyra-checkbox>
-      <lyra-checkbox disabled indeterminate>Indeterminate, disabled</lyra-checkbox>
+      <lr-checkbox disabled>Unchecked, disabled</lr-checkbox>
+      <lr-checkbox disabled checked>Checked, disabled</lr-checkbox>
+      <lr-checkbox disabled indeterminate>Indeterminate, disabled</lr-checkbox>
     </div>
   `,
 };
 
 export const NoLabelSlot: Story = {
   name: 'No label slot (aria-label only)',
-  render: () => html`<lyra-checkbox aria-label="Subscribe to updates"></lyra-checkbox>`,
+  render: () => html`<lr-checkbox aria-label="Subscribe to updates"></lr-checkbox>`,
 };
 
 export const Required: Story = {
@@ -55,7 +55,7 @@ export const Required: Story = {
       }}
       style="display:flex; flex-direction:column; gap:0.75rem; align-items:flex-start;"
     >
-      <lyra-checkbox name="terms" required>I agree to the terms</lyra-checkbox>
+      <lr-checkbox name="terms" required>I agree to the terms</lr-checkbox>
       <button type="submit">Submit</button>
     </form>
   `,
@@ -81,11 +81,11 @@ export const IndeterminateParent: Story = {
     };
     return html`
       <div data-group style="display:flex; flex-direction:column; gap:0.5rem;">
-        <lyra-checkbox id="parent" @lyra-change=${onParentChange}>Select all</lyra-checkbox>
+        <lr-checkbox id="parent" @lr-change=${onParentChange}>Select all</lr-checkbox>
         <div style="display:flex; flex-direction:column; gap:0.5rem; padding-inline-start:1.5rem;">
-          <lyra-checkbox class="child" @lyra-change=${onChildChange}>Option A</lyra-checkbox>
-          <lyra-checkbox class="child" @lyra-change=${onChildChange}>Option B</lyra-checkbox>
-          <lyra-checkbox class="child" @lyra-change=${onChildChange}>Option C</lyra-checkbox>
+          <lr-checkbox class="child" @lr-change=${onChildChange}>Option A</lr-checkbox>
+          <lr-checkbox class="child" @lr-change=${onChildChange}>Option B</lr-checkbox>
+          <lr-checkbox class="child" @lr-change=${onChildChange}>Option C</lr-checkbox>
         </div>
       </div>
     `;
@@ -94,12 +94,12 @@ export const IndeterminateParent: Story = {
 
 export const Interactive: Story = {
   render: () => html`
-    <lyra-checkbox
-      @lyra-change=${(e: CustomEvent<{ checked: boolean }>) => {
+    <lr-checkbox
+      @lr-change=${(e: CustomEvent<{ checked: boolean }>) => {
         const out = document.getElementById('checkbox-log');
         if (out) out.textContent = `checked: ${e.detail.checked}`;
       }}
-      >Send me email updates</lyra-checkbox
+      >Send me email updates</lr-checkbox
     >
     <p id="checkbox-log" style="font-family: monospace; margin-top: 0.5rem;">checked: false</p>
   `,
@@ -113,11 +113,11 @@ export const NativeEventContract: Story = {
       if (output) output.textContent = `${output.textContent ?? ''}${event.type} `;
     };
     return html`
-      <lyra-checkbox
+      <lr-checkbox
         @input=${record}
         @change=${record}
-        @lyra-change=${record}
-        >Toggle with a click or the Space key</lyra-checkbox
+        @lr-change=${record}
+        >Toggle with a click or the Space key</lr-checkbox
       >
       <p id="checkbox-native-events" aria-live="polite">Events: </p>
     `;

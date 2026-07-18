@@ -14,9 +14,9 @@ const DEFAULT_DECIMALS = 1;
 const MAX_DECIMALS = 10;
 
 /**
- * `<lyra-format-bytes>` — locale-aware byte-size formatting.
+ * `<lr-format-bytes>` — locale-aware byte-size formatting.
  *
- * @customElement lyra-format-bytes
+ * @customElement lr-format-bytes
  * @slot - Fallback content when the value is not finite.
  */
 export class LyraFormatBytes extends LyraElement {
@@ -62,4 +62,4 @@ export class LyraFormatBytes extends LyraElement {
     return html`${text || html`<slot></slot>`}`;
   }
 }
-declare global { interface HTMLElementTagNameMap { 'lyra-format-bytes': LyraFormatBytes; } }
+declare global { interface HTMLElementTagNameMap { 'lr-format-bytes': LyraFormatBytes; } }

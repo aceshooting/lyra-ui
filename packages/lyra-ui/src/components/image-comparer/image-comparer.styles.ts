@@ -10,7 +10,7 @@ export const styles = css`
     isolation: isolate;
     min-inline-size: 0;
     overflow: hidden;
-    background: var(--lyra-color-surface-raised);
+    background: var(--lr-color-surface-raised);
   }
   [part='before'],
   [part='after'] {
@@ -20,11 +20,11 @@ export const styles = css`
   [part='before'] {
     position: absolute;
     inset: 0;
-    z-index: var(--lyra-layer-content);
-    clip-path: inset(0 calc(100% - var(--lyra-comparer-position, 50%)) 0 0);
+    z-index: var(--lr-layer-content);
+    clip-path: inset(0 calc(100% - var(--lr-comparer-position, 50%)) 0 0);
   }
   [part='base'][data-orientation='vertical'] [part='before'] {
-    clip-path: inset(0 0 calc(100% - var(--lyra-comparer-position, 50%)) 0);
+    clip-path: inset(0 0 calc(100% - var(--lr-comparer-position, 50%)) 0);
   }
   /* clip-path's inset() only accepts physical top/right/bottom/left offsets -- no logical
      equivalent exists -- while [part='divider'] below is positioned with the logical
@@ -34,10 +34,10 @@ export const styles = css`
      visibly desyncing the boundary from the line the user is dragging. Vertical orientation is a
      block-axis split, unaffected by inline direction, so it's excluded and keeps its own rule above. */
   :host(:dir(rtl)) [part='before'] {
-    clip-path: inset(0 0 0 calc(100% - var(--lyra-comparer-position, 50%)));
+    clip-path: inset(0 0 0 calc(100% - var(--lr-comparer-position, 50%)));
   }
   :host(:dir(rtl)) [part='base'][data-orientation='vertical'] [part='before'] {
-    clip-path: inset(0 0 calc(100% - var(--lyra-comparer-position, 50%)) 0);
+    clip-path: inset(0 0 calc(100% - var(--lr-comparer-position, 50%)) 0);
   }
   [part='before'] ::slotted(*),
   [part='after'] ::slotted(*) {
@@ -47,28 +47,28 @@ export const styles = css`
   }
   [part='divider'] {
     position: absolute;
-    z-index: var(--lyra-layer-popover);
+    z-index: var(--lr-layer-popover);
     inset-block: 0;
-    inset-inline-start: var(--lyra-comparer-position, 50%);
-    inline-size: var(--lyra-size-1px);
-    background: var(--lyra-color-surface);
-    box-shadow: var(--lyra-shadow);
+    inset-inline-start: var(--lr-comparer-position, 50%);
+    inline-size: var(--lr-size-1px);
+    background: var(--lr-color-surface);
+    box-shadow: var(--lr-shadow);
     pointer-events: none;
   }
   [part='base'][data-orientation='vertical'] [part='divider'] {
     inset-block: auto;
     inset-inline: 0;
-    inset-block-start: var(--lyra-comparer-position, 50%);
+    inset-block-start: var(--lr-comparer-position, 50%);
     inline-size: auto;
-    block-size: var(--lyra-size-1px);
+    block-size: var(--lr-size-1px);
   }
   [part='handle'] {
     position: absolute;
-    /* --lyra-layer-tooltip does not exist (no fallback -> z-index: auto, stacking the handle BELOW
+    /* --lr-layer-tooltip does not exist (no fallback -> z-index: auto, stacking the handle BELOW
        [part='before']'s clipped pointer-events-enabled region and intercepting its own drag/click
-       input). Matching [part='divider']'s own --lyra-layer-popover is sufficient: the handle renders
+       input). Matching [part='divider']'s own --lr-layer-popover is sufficient: the handle renders
        after the divider in the template, so an equal z-index still wins the paint-order stacking tie. */
-    z-index: var(--lyra-layer-popover);
+    z-index: var(--lr-layer-popover);
     inset: 0;
     inline-size: 100%;
     block-size: 100%;
@@ -93,7 +93,7 @@ export const styles = css`
   }
   [part='handle']:focus-visible {
     opacity: 0.01;
-    outline: var(--lyra-focus-ring-width) solid var(--lyra-focus-ring-color);
-    outline-offset: var(--lyra-focus-ring-offset);
+    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
+    outline-offset: var(--lr-focus-ring-offset);
   }
 `;

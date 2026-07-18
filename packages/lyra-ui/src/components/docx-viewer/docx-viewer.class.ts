@@ -20,7 +20,7 @@ type FetchState =
   | { kind: 'loaded'; markup: string }
   | { kind: 'error'; message: string };
 
-/** One entry of `getHeadingTree()`'s document-ordered outline. Same shape as `<lyra-markdown>`'s
+/** One entry of `getHeadingTree()`'s document-ordered outline. Same shape as `<lr-markdown>`'s
  *  own `MarkdownHeadingItem` -- kept as a separate, structurally identical type rather than
  *  importing across component families, matching this library's per-component-family type
  *  boundary. */
@@ -122,8 +122,8 @@ function unwrapSearchMark(mark: HTMLElement): void {
 }
 
 export interface LyraDocxViewerEventMap extends LyraAnchorTargetEventMap {
-  'lyra-render-error': CustomEvent<{ error: unknown }>;
-  'lyra-search-change': CustomEvent<{ query: string; matchCount: number; activeIndex: number }>;
+  'lr-render-error': CustomEvent<{ error: unknown }>;
+  'lr-search-change': CustomEvent<{ query: string; matchCount: number; activeIndex: number }>;
 }
 
 class LyraDocxViewerBase extends LyraElement<LyraDocxViewerEventMap> {}
@@ -134,9 +134,9 @@ class LyraDocxViewerBase extends LyraElement<LyraDocxViewerEventMap> {}
  * sanitized; there is no unsanitized rendering mode for uploaded documents.
  *
  * Every rendered heading's slug (computed via the shared GitHub-slugger-style `Slugger` -- the same
- * algorithm and shared class `<lyra-markdown>` uses, so identical heading text slugs identically
+ * algorithm and shared class `<lr-markdown>` uses, so identical heading text slugs identically
  * across both viewers) is stamped as its `id` and cached into `getHeadingTree()`'s document-ordered
- * outline -- unconditional, unlike `<lyra-markdown>`'s opt-in `heading-anchors`, since this
+ * outline -- unconditional, unlike `<lr-markdown>`'s opt-in `heading-anchors`, since this
  * component's rendered HTML is always internal (mammoth's own conversion output), never a raw string
  * a consumer might serialize verbatim. Adopts `DocumentAnchorTarget`: `fragment` anchors resolve
  * against that outline, `text-quote` anchors via `internal/text-quote.ts`'s shared scope/resolve
@@ -150,16 +150,16 @@ class LyraDocxViewerBase extends LyraElement<LyraDocxViewerEventMap> {}
  * always-real-DOM-element mechanism from the tone-based highlight painting above, since search needs
  * many simultaneously-visible matches rather than one set of themed spans.
  *
- * @customElement lyra-docx-viewer
- * @event lyra-render-error - Fired when loading, conversion, sanitization, or a non-fatal Mammoth message occurs.
- * @event lyra-search-change - Fired whenever the search query, match count, or active match index
+ * @customElement lr-docx-viewer
+ * @event lr-render-error - Fired when loading, conversion, sanitization, or a non-fatal Mammoth message occurs.
+ * @event lr-search-change - Fired whenever the search query, match count, or active match index
  *   changes, from `search()`/`searchNext()`/`searchPrevious()`/`clearSearch()`. `detail: { query,
  *   matchCount, activeIndex }`.
- * @event lyra-highlight-activate - A painted `text-quote` highlight was clicked. `detail: { id }`.
- * @event lyra-text-select - Fired on selection end inside the rendered content. `detail: { text,
+ * @event lr-highlight-activate - A painted `text-quote` highlight was clicked. `detail: { id }`.
+ * @event lr-text-select - Fired on selection end inside the rendered content. `detail: { text,
  *   anchor, rects }`; `anchor` is a `text-quote` `LyraAnchor` scoped to the rendered content, or
  *   `null` if the selection couldn't be anchored.
- * @event lyra-anchor-result - Fired after an `anchor` property assignment or a `scrollToAnchor()`
+ * @event lr-anchor-result - Fired after an `anchor` property assignment or a `scrollToAnchor()`
  *   call is applied. `detail: { found }`.
  * @csspart base - The root container.
  * @csspart body - The scrollable document body.
@@ -169,7 +169,7 @@ class LyraDocxViewerBase extends LyraElement<LyraDocxViewerEventMap> {}
  * @csspart highlight - A painted `text-quote` highlight (`<mark>`, `<mark>`-wrap fallback path only).
  * @csspart search-match - A painted in-document search match.
  * @csspart search-match-active - The currently active search match (also carries `search-match`).
- * @cssprop [--lyra-docx-viewer-max-height=none] - Maximum block size of the scrollable document body before it scrolls internally. Also settable via the `max-height` property.
+ * @cssprop [--lr-docx-viewer-max-height=none] - Maximum block size of the scrollable document body before it scrolls internally. Also settable via the `max-height` property.
  */
 export class LyraDocxViewer extends DocumentAnchorTarget(LyraDocxViewerBase) {
   static styles = [LyraElement.styles, styles, srOnly];
@@ -218,7 +218,7 @@ export class LyraDocxViewer extends DocumentAnchorTarget(LyraDocxViewerBase) {
     super.willUpdate(changed); // reaches DocumentAnchorTarget's own willUpdate (declarative `anchor`)
     if (changed.has('src')) {
       // Search match offsets are only meaningful for the document they were found in -- reset
-      // silently (no lyra-search-change) rather than emit, mirroring <lyra-pdf-viewer>'s identical
+      // silently (no lr-search-change) rather than emit, mirroring <lr-pdf-viewer>'s identical
       // src-change behavior. Folded into this same update cycle (not updated()) so re-assigning
       // these @state() fields doesn't schedule a follow-up one.
       this.searchQuery = '';
@@ -282,20 +282,20 @@ export class LyraDocxViewer extends DocumentAnchorTarget(LyraDocxViewerBase) {
       const converted = (await mammoth.convertToHtml({ arrayBuffer })) as { value: string; messages: unknown[] };
       if (!this.isConnected || generation !== this.generation) return;
       this.fetchState = { kind: 'loaded', markup: this.stampHeadings(DOMPurify.sanitize(converted.value)) };
-      if (converted.messages.length > 0) this.emit('lyra-render-error', { error: converted.messages });
+      if (converted.messages.length > 0) this.emit('lr-render-error', { error: converted.messages });
     } catch (error) {
       if (isAbortError(error) || !this.isConnected || generation !== this.generation) return;
       this.fetchState = {
         kind: 'error',
         message: this.localize(isResourceLimitError(error) ? 'documentPreviewResourceTooLarge' : 'documentPreviewFailedToLoad'),
       };
-      this.emit('lyra-render-error', { error });
+      this.emit('lr-render-error', { error });
     }
   }
 
   /** Parses the already-sanitized markup once (`DOMParser`), stamps a `Slugger`-computed `id` on
    *  every `h1`-`h6`, and caches the resulting document-ordered outline into `headingTree`. A fresh
-   *  `Slugger` per call, matching `<lyra-markdown>`'s own per-parse instance, so re-loading a new
+   *  `Slugger` per call, matching `<lr-markdown>`'s own per-parse instance, so re-loading a new
    *  document never carries duplicate-slug state from a previous one. */
   private stampHeadings(sanitizedHtml: string): string {
     const doc = new DOMParser().parseFromString(sanitizedHtml, 'text/html');
@@ -410,7 +410,7 @@ export class LyraDocxViewer extends DocumentAnchorTarget(LyraDocxViewerBase) {
       // module is shared by every adopting viewer, so it can't know this component's part naming)
       // -- stamped here so a consumer can still target `::part(highlight)` in browsers lacking the
       // CSS Custom Highlight API.
-      for (const mark of root.querySelectorAll('mark[data-lyra-highlight-tone]')) {
+      for (const mark of root.querySelectorAll('mark[data-lr-highlight-tone]')) {
         if (!mark.hasAttribute('part')) mark.setAttribute('part', 'highlight');
       }
     }
@@ -434,7 +434,7 @@ export class LyraDocxViewer extends DocumentAnchorTarget(LyraDocxViewerBase) {
   // every render anyway.
   private onContentClick = (e: MouseEvent): void => {
     const highlightId = this.hitTestHighlightAt(e.clientX, e.clientY);
-    if (highlightId) this.emit<HighlightActivateDetail>('lyra-highlight-activate', { id: highlightId });
+    if (highlightId) this.emit<HighlightActivateDetail>('lr-highlight-activate', { id: highlightId });
   };
 
   // -- search ----------------------------------------------------------------------------------------
@@ -494,18 +494,18 @@ export class LyraDocxViewer extends DocumentAnchorTarget(LyraDocxViewerBase) {
     return true;
   }
 
-  /** Clears the query, matches, and any painted marks, and resets `lyra-search-change` to a
+  /** Clears the query, matches, and any painted marks, and resets `lr-search-change` to a
    *  0-match/no-active-index state. */
   clearSearch(): void {
     this.searchQuery = '';
     this.searchMatches = [];
     this.searchActiveIndex = -1;
     this.clearSearchPaint();
-    this.emit('lyra-search-change', { query: '', matchCount: 0, activeIndex: -1 });
+    this.emit('lr-search-change', { query: '', matchCount: 0, activeIndex: -1 });
   }
 
   private emitSearchChange(): void {
-    this.emit('lyra-search-change', {
+    this.emit('lr-search-change', {
       query: this.searchQuery,
       matchCount: this.searchMatches.length,
       activeIndex: this.searchActiveIndex,
@@ -576,7 +576,7 @@ export class LyraDocxViewer extends DocumentAnchorTarget(LyraDocxViewerBase) {
     return html`
       <div
         part="base"
-        style=${this.maxHeight ? `--lyra-docx-viewer-max-height:${this.maxHeight}` : nothing}
+        style=${this.maxHeight ? `--lr-docx-viewer-max-height:${this.maxHeight}` : nothing}
       >
         <div part="body">${this.renderBody()}</div>
         ${this.renderAnchorLiveRegion()}
@@ -587,6 +587,6 @@ export class LyraDocxViewer extends DocumentAnchorTarget(LyraDocxViewerBase) {
 
 declare global {
   interface HTMLElementTagNameMap {
-    'lyra-docx-viewer': LyraDocxViewer;
+    'lr-docx-viewer': LyraDocxViewer;
   }
 }

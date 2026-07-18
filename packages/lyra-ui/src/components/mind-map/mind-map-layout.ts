@@ -108,7 +108,7 @@ function place(
  * visible leaf counts (a collapsed subtree counts as one leaf), sibling order running clockwise
  * from 12 o'clock in LTR (counter-clockwise in RTL, via `rtl`). Multiple roots hang off an
  * implicit `'__hub__'`-id center node labeled `hubLabel`. Pure function, no DOM access -- see
- * `<lyra-mind-map>` for the component wrapping this.
+ * `<lr-mind-map>` for the component wrapping this.
  */
 export function layoutMindMap(topics: LyraTopic[], hubLabel: string, opts: MindMapLayoutOptions): MindMapLayoutResult {
   if (topics.length === 0) return { placed: [], links: [], width: 0, height: 0, centerX: 0, centerY: 0 };

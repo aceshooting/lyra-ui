@@ -1,6 +1,6 @@
 {
   "name": "@aceshooting/lyra-ui",
-  "version": "3.9.0",
+  "version": "4.0.0",
   "description": "Free, independent Lit web components: an open-source alternative to Shoelace and Web Awesome with accessible forms, dashboards, charts, and agent UI.",
   "keywords": [
     "web-components",
@@ -98,6 +98,7 @@
     "./dist/components/combobox/combobox.js",
     "./dist/components/combobox/option.js",
     "./dist/components/context-meter/context-meter.js",
+    "./dist/components/control-group/control-group.js",
     "./dist/components/conversation-item/conversation-item.js",
     "./dist/components/copy-button/copy-button.js",
     "./dist/components/date-picker/date-input.js",
@@ -324,6 +325,7 @@
     "./src/components/combobox/combobox.ts",
     "./src/components/combobox/option.ts",
     "./src/components/context-meter/context-meter.ts",
+    "./src/components/control-group/control-group.ts",
     "./src/components/conversation-item/conversation-item.ts",
     "./src/components/copy-button/copy-button.ts",
     "./src/components/date-picker/date-input.ts",

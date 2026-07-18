@@ -16,7 +16,7 @@ export type DocumentPreviewStatus = 'idle' | 'converting' | 'ready' | 'error';
 /** What this component can render inline. Anything not `'text'`/`'image'`
  *  dispatches to `'generic'` — the download-or-`unsupported`-slot fallback —
  *  per this component's explicit scope: a minimal built-in dispatch, not a
- *  format registry. `lyra-code-block` (syntax-highlighted text) and any
+ *  format registry. `lr-code-block` (syntax-highlighted text) and any
  *  PDF/office-doc/video/audio renderer are deliberately out of scope; a
  *  consumer wanting one composes it via the `unsupported` slot instead. */
 type PreviewFormat = 'text' | 'image' | 'generic';
@@ -69,18 +69,18 @@ function icon(paths: SVGTemplateResult): SVGTemplateResult {
 }
 
 export interface LyraDocumentPreviewEventMap {
-  'lyra-render-error': CustomEvent<{ error: unknown }>;
-  'lyra-download': CustomEvent<{ src: string; filename: string }>;
-  'lyra-highlight-activate': CustomEvent<{ id: string }>;
+  'lr-render-error': CustomEvent<{ error: unknown }>;
+  'lr-download': CustomEvent<{ src: string; filename: string }>;
+  'lr-highlight-activate': CustomEvent<{ id: string }>;
 }
 /**
- * `<lyra-document-preview>` — a format-dispatching viewer for one document/
+ * `<lr-document-preview>` — a format-dispatching viewer for one document/
  * attachment, plus the visual state machine for an async server-side
  * conversion a host app runs in front of it.
  *
  * Format dispatch is intentionally minimal (see this family's scope
  * guidance): only `text/*`/`application/json` (plain, scrollable `<pre>` —
- * no syntax highlighting; compose `<lyra-code-block>` yourself via the
+ * no syntax highlighting; compose `<lr-code-block>` yourself via the
  * `unsupported` slot for that) and `image/*` (a contained `<img>`) render
  * inline. Everything else — PDF, office documents, video, audio, or any
  * unrecognized MIME type — falls back to a generic "can't preview this"
@@ -89,7 +89,7 @@ export interface LyraDocumentPreviewEventMap {
  * component ships a dispatch *shell*, not a format registry. The
  * `unsupported` slot is the escape hatch for every format left out of the
  * built-in three — plug in a PDF.js viewer, an office-doc renderer, a
- * `<lyra-code-block>`, or anything else keyed off `mime-type` yourself.
+ * `<lr-code-block>`, or anything else keyed off `mime-type` yourself.
  *
  * `status="converting"` is a second, independent axis from format dispatch.
  * This component does not know your backend's conversion API shape and
@@ -104,12 +104,12 @@ export interface LyraDocumentPreviewEventMap {
  * The one piece of async work this component *does* own is fetching a
  * `text/*`/`application/json` `src` itself (there's no other way to get a
  * `<pre>`'s text content from a URL) — gated behind the same generation-
- * counter guard `<lyra-tool-result-view>`'s `resolve()` uses, plus an
+ * counter guard `<lr-tool-result-view>`'s `resolve()` uses, plus an
  * `AbortController`, so a `src` reassigned mid-fetch cancels the obsolete
  * request and can't have a stale response clobber a newer one. A
  * failure here (network error, non-2xx response) renders inline via
- * `[part="error"]` and fires `lyra-render-error`, independently of the
- * host-owned `status` prop — mirrors `<lyra-markdown>`'s identical stance
+ * `[part="error"]` and fires `lr-render-error`, independently of the
+ * host-owned `status` prop — mirrors `<lr-markdown>`'s identical stance
  * that a *rendering* failure and a host's own state machine are different
  * concerns.
  *
@@ -123,7 +123,7 @@ export interface LyraDocumentPreviewEventMap {
  * Accessibility: the `"converting"` state (no numeric `progress`) is a
  * `role="status"` region wrapping a visually-hidden "Converting document…"
  * string. This is a *plain* static region, not routed through
- * `<lyra-live-region>`/`Announcer` — like `<lyra-typing-indicator>`'s
+ * `<lr-live-region>`/`Announcer` — like `<lr-typing-indicator>`'s
  * identical judgement call (see that component's class doc), this only ever
  * has one thing to announce (entering the state), not a rapidly-repeating
  * stream of updates, so the coalescing machinery a high-frequency component
@@ -132,24 +132,24 @@ export interface LyraDocumentPreviewEventMap {
  * self-describing via `aria-valuenow` with no extra live-region wiring
  * needed. `status="error"` renders `[part="error"]` as `role="alert"` — an
  * assertive, one-shot failure notice, the same native-role shortcut
- * `<lyra-live-region>`'s own `mode="assertive"` maps to, without requiring
+ * `<lr-live-region>`'s own `mode="assertive"` maps to, without requiring
  * the announcer machinery here either.
  *
- * @customElement lyra-document-preview
+ * @customElement lr-document-preview
  * @slot unsupported - Escape hatch: when populated, its content renders
  *   *instead of* the generic download fallback for any `mime-type` this
  *   component doesn't natively support (i.e. whenever format dispatch would
  *   otherwise fall through to "generic"). Ignored while `mime-type` resolves
  *   to `text`/`image` dispatch, or while `status` is `"converting"`/`"error"`.
- * @event lyra-download - `detail: { src, filename }` — fired when the safe
+ * @event lr-download - `detail: { src, filename }` — fired when the safe
  *   generic-download fallback link is activated. The browser download itself
  *   needs no JS (a plain `<a download>` handles it); this is purely for a host
  *   that wants to observe/log the download.
- * @event lyra-render-error - `detail: { error }` — fired when this
+ * @event lr-render-error - `detail: { error }` — fired when this
  *   component's own `text/*`/`application/json` `fetch(src)` fails. Distinct
  *   from `status="error"`, which is entirely host-driven (see the class
  *   doc).
- * @event lyra-highlight-activate - A region highlight was activated (image format only). `detail: { id }`.
+ * @event lr-highlight-activate - A region highlight was activated (image format only). `detail: { id }`.
  * @csspart base - The root container.
  * @csspart header - The row above the body, holding `filename`. Hidden entirely when `filename` is unset.
  * @csspart filename - The filename text.
@@ -157,17 +157,17 @@ export interface LyraDocumentPreviewEventMap {
  * @csspart spinner - The converting/loading indicator — indeterminate (`role="status"`) or, once numeric progress is known, a determinate `role="progressbar"`. Used both for `status="converting"` and for this component's own in-flight text fetch.
  * @csspart error - The error message region (`role="alert"`) — used both for `status="error"` and for a failed text fetch.
  * @csspart download-link - The `<a download>` affordance in the generic fallback. Only rendered when `src` is set and safe for link navigation.
- * @csspart frame-viewport - Forwarded from the internal `<lyra-zoomable-frame>` when `zoomable` (image format only).
- * @csspart frame-content - Forwarded from the internal `<lyra-zoomable-frame>` when `zoomable` (image format only).
- * @csspart frame-controls - Forwarded from the internal `<lyra-zoomable-frame>` when `zoomable` (image format only).
- * @csspart frame-zoom-in - Forwarded from the internal `<lyra-zoomable-frame>` when `zoomable` (image format only).
- * @csspart frame-zoom-out - Forwarded from the internal `<lyra-zoomable-frame>` when `zoomable` (image format only).
- * @csspart frame-reset - Forwarded from the internal `<lyra-zoomable-frame>` when `zoomable` (image format only).
+ * @csspart frame-viewport - Forwarded from the internal `<lr-zoomable-frame>` when `zoomable` (image format only).
+ * @csspart frame-content - Forwarded from the internal `<lr-zoomable-frame>` when `zoomable` (image format only).
+ * @csspart frame-controls - Forwarded from the internal `<lr-zoomable-frame>` when `zoomable` (image format only).
+ * @csspart frame-zoom-in - Forwarded from the internal `<lr-zoomable-frame>` when `zoomable` (image format only).
+ * @csspart frame-zoom-out - Forwarded from the internal `<lr-zoomable-frame>` when `zoomable` (image format only).
+ * @csspart frame-reset - Forwarded from the internal `<lr-zoomable-frame>` when `zoomable` (image format only).
  * @csspart highlight-layer - The wrapper around every rendered region highlight (image format only).
  * @csspart region-highlight - One region highlight (`data-tone`, `data-active`) (image format only).
- * @cssprop [--lyra-document-preview-max-height=none] - Maximum body block size before the preview scrolls internally.
- * @cssprop [--lyra-document-preview-font=var(--lyra-font-mono)] - Font used for plain-text previews.
- * @cssprop [--lyra-document-preview-spin-duration=0.8s] - Duration of one indeterminate loading-indicator rotation.
+ * @cssprop [--lr-document-preview-max-height=none] - Maximum body block size before the preview scrolls internally.
+ * @cssprop [--lr-document-preview-font=var(--lr-font-mono)] - Font used for plain-text previews.
+ * @cssprop [--lr-document-preview-spin-duration=0.8s] - Duration of one indeterminate loading-indicator rotation.
  */
 export class LyraDocumentPreview extends LyraElement<LyraDocumentPreviewEventMap> {
   static styles = [LyraElement.styles, styles, srOnly];
@@ -205,10 +205,10 @@ export class LyraDocumentPreview extends LyraElement<LyraDocumentPreviewEventMap
 
   /** A CSS length (e.g. `"24rem"`); once set, `[part="body"]` scrolls
    *  internally past this height instead of growing the page — same
-   *  contract as `<lyra-json-viewer>`'s identically-named prop. */
+   *  contract as `<lr-json-viewer>`'s identically-named prop. */
   @property({ attribute: 'max-height' }) maxHeight = '';
 
-  /** Wraps the rendered image (image format only) in an internal `<lyra-zoomable-frame>`. `false`
+  /** Wraps the rendered image (image format only) in an internal `<lr-zoomable-frame>`. `false`
    *  (the default) preserves today's exact DOM -- an inline thumbnail (e.g. in a chat stream) must
    *  not unexpectedly grow a focusable zoom-chrome viewport; an inspection surface opts in. */
   @property({ type: Boolean, reflect: true }) zoomable = false;
@@ -225,7 +225,7 @@ export class LyraDocumentPreview extends LyraElement<LyraDocumentPreviewEventMap
   // Bumped on every fetchText() call so a stale in-flight fetch (superseded
   // by a newer src/mime-type/status before it settles) can detect it's no
   // longer current and skip writing its result over a more recent one --
-  // same guard <lyra-tool-result-view>'s resolve() uses.
+  // same guard <lr-tool-result-view>'s resolve() uses.
   private generation = 0;
 
   protected willUpdate(): void {
@@ -281,7 +281,7 @@ export class LyraDocumentPreview extends LyraElement<LyraDocumentPreviewEventMap
       if (isAbortError(error) || !this.isConnected || generation !== this.generation) return;
       const message = this.localize(isResourceLimitError(error) ? 'documentPreviewResourceTooLarge' : 'documentPreviewFailedToLoad');
       this.textFetch = { kind: 'error', message };
-      this.emit('lyra-render-error', { error });
+      this.emit('lr-render-error', { error });
     }
   }
 
@@ -290,7 +290,7 @@ export class LyraDocumentPreview extends LyraElement<LyraDocumentPreviewEventMap
   };
 
   private onDownloadClick = (): void => {
-    this.emit('lyra-download', { src: this.src, filename: this.filename });
+    this.emit('lr-download', { src: this.src, filename: this.filename });
   };
 
   /** Renders `[part="spinner"]` -- indeterminate (`role="status"` + a
@@ -317,7 +317,7 @@ export class LyraDocumentPreview extends LyraElement<LyraDocumentPreviewEventMap
           aria-valuemax="100"
           aria-label=${label}
         >
-          <span class="ring determinate" style=${`--lyra-document-preview-progress:${clamped}`}></span>
+          <span class="ring determinate" style=${`--lr-document-preview-progress:${clamped}`}></span>
           <span class="spinner-text">${rounded}%</span>
         </div>
       `;
@@ -360,16 +360,16 @@ export class LyraDocumentPreview extends LyraElement<LyraDocumentPreviewEventMap
     );
   }
 
-  /** Wraps `content` in the internal `<lyra-zoomable-frame>` when `zoomable`; otherwise renders it
+  /** Wraps `content` in the internal `<lr-zoomable-frame>` when `zoomable`; otherwise renders it
    *  (plus the highlight layer, which needs the same relatively-positioned sibling context either
-   *  way) unwrapped, preserving pre-`zoomable` DOM exactly. Mirrors `<lyra-svg-viewer>`'s identical
+   *  way) unwrapped, preserving pre-`zoomable` DOM exactly. Mirrors `<lr-svg-viewer>`'s identical
    *  helper. */
   private renderZoomableWrapper(content: TemplateResult): TemplateResult {
     const inner = html`<div class="zoom-content">${content}${this.renderHighlightLayer()}</div>`;
     if (!this.zoomable) return inner;
-    return html`<lyra-zoomable-frame
+    return html`<lr-zoomable-frame
       exportparts="viewport:frame-viewport, content:frame-content, controls:frame-controls, zoom-in:frame-zoom-in, zoom-out:frame-zoom-out, reset:frame-reset"
-    >${inner}</lyra-zoomable-frame>`;
+    >${inner}</lr-zoomable-frame>`;
   }
 
   private renderHighlightLayer(): TemplateResult | typeof nothing {
@@ -392,11 +392,11 @@ export class LyraDocumentPreview extends LyraElement<LyraDocumentPreviewEventMap
           tabindex="0"
           role="button"
           aria-label=${h.label || this.localize('viewerHighlightLabel')}
-          @click=${() => this.emit('lyra-highlight-activate', { id: h.id })}
+          @click=${() => this.emit('lr-highlight-activate', { id: h.id })}
           @keydown=${(e: KeyboardEvent) => {
             if (e.key === 'Enter' || e.key === ' ') {
               e.preventDefault();
-              this.emit('lyra-highlight-activate', { id: h.id });
+              this.emit('lr-highlight-activate', { id: h.id });
             }
           }}
         ></div>`,
@@ -404,7 +404,7 @@ export class LyraDocumentPreview extends LyraElement<LyraDocumentPreviewEventMap
     </div>`;
   }
 
-  /** Scrolls a `region` highlight into view (image format only). See `<lyra-svg-viewer>`'s
+  /** Scrolls a `region` highlight into view (image format only). See `<lr-svg-viewer>`'s
    *  identical method for the id/anchor-reference resolution and no-retry-loop rationale. */
   async scrollToAnchor(target: LyraAnchor | string): Promise<boolean> {
     const highlight =
@@ -448,7 +448,7 @@ export class LyraDocumentPreview extends LyraElement<LyraDocumentPreviewEventMap
 
   /** The `<slot>` element renders unconditionally (not just while
    *  `hasUnsupportedSlot`) so a slot-assignment change is always observable
-   *  via `slotchange` -- same reasoning as `<lyra-chat-message>`'s
+   *  via `slotchange` -- same reasoning as `<lr-chat-message>`'s
    *  always-rendered optional slots. */
   private renderGenericFallback(): TemplateResult {
     return html`
@@ -474,7 +474,7 @@ export class LyraDocumentPreview extends LyraElement<LyraDocumentPreviewEventMap
 
   render(): TemplateResult {
     return html`
-      <div part="base" style=${this.maxHeight ? `--lyra-document-preview-max-height:${this.maxHeight}` : nothing}>
+      <div part="base" style=${this.maxHeight ? `--lr-document-preview-max-height:${this.maxHeight}` : nothing}>
         <div part="header" ?hidden=${!this.filename}>
           <span part="filename" title=${this.filename}>${this.filename}</span>
         </div>
@@ -487,6 +487,6 @@ export class LyraDocumentPreview extends LyraElement<LyraDocumentPreviewEventMap
 
 declare global {
   interface HTMLElementTagNameMap {
-    'lyra-document-preview': LyraDocumentPreview;
+    'lr-document-preview': LyraDocumentPreview;
   }
 }

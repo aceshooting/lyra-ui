@@ -43,16 +43,16 @@ const RADIAL_ARC_LENGTH = (SWEEP_DEG / 360) * 2 * Math.PI * RADIUS;
 const RING_CIRCUMFERENCE = 2 * Math.PI * RADIUS;
 
 /**
- * `<lyra-gauge>` — a radial, full-circle ring, or linear meter. First-party invention; no
+ * `<lr-gauge>` — a radial, full-circle ring, or linear meter. First-party invention; no
  * generic gauge widget exists in Web Awesome.
  *
- * @customElement lyra-gauge
+ * @customElement lr-gauge
  * @csspart base - The root `<svg>`.
  * @csspart track - The background track arc/line.
  * @csspart fill - The animated fill arc/line.
  * @csspart value - The value text.
  * @csspart label - The label text.
- * @cssprop [--lyra-gauge-fill=var(--lyra-color-brand)] - Fill stroke for radial, ring, and linear gauges.
+ * @cssprop [--lr-gauge-fill=var(--lr-color-brand)] - Fill stroke for radial, ring, and linear gauges.
  */
 export class LyraGauge extends LyraElement {
   static styles = [LyraElement.styles, styles];
@@ -152,7 +152,7 @@ export class LyraGauge extends LyraElement {
     // Under RTL the meter must still visually fill and read in the same
     // start-to-end order as the surrounding text, so the physical x=0/x=100
     // endpoints swap roles -- the same physical-vs-logical horizontal concern
-    // `<lyra-slider>` resolves via `effectiveDirection`/`isRtl()` for its own
+    // `<lr-slider>` resolves via `effectiveDirection`/`isRtl()` for its own
     // track. (The radial variant's arc-sweep math is exempt geometry.)
     const rtl = this.effectiveDirection === 'rtl';
     const startX = rtl ? LINEAR_LENGTH : 0;
@@ -206,6 +206,6 @@ export class LyraGauge extends LyraElement {
 
 declare global {
   interface HTMLElementTagNameMap {
-    'lyra-gauge': LyraGauge;
+    'lr-gauge': LyraGauge;
   }
 }

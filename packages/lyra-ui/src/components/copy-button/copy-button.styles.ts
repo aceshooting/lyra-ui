@@ -9,34 +9,34 @@ export const styles = css`
     align-items: center;
     justify-content: center;
     box-sizing: border-box;
-    min-inline-size: var(--lyra-icon-button-size);
-    min-block-size: var(--lyra-icon-button-size);
+    min-inline-size: var(--lr-icon-button-size);
+    min-block-size: var(--lr-icon-button-size);
     padding: 0;
     border: none;
-    border-radius: calc(var(--lyra-radius) * 0.6);
+    border-radius: calc(var(--lr-radius) * 0.6);
     background: transparent;
-    color: var(--lyra-color-text-quiet);
+    color: var(--lr-color-text-quiet);
     font: inherit;
     cursor: pointer;
     -webkit-tap-highlight-color: transparent;
     transition:
-      background-color var(--lyra-transition-fast),
-      color var(--lyra-transition-fast);
+      background-color var(--lr-transition-fast),
+      color var(--lr-transition-fast);
   }
   /* :where() keeps this rule's specificity low ((0,1,0)) so a consumer's own
      ::part(base):hover override ((0,1,1)) wins without needing !important --
-     see lyra-attachment-trigger's identical fix for the same reasoning. */
+     see lr-attachment-trigger's identical fix for the same reasoning. */
   :where([part='base']:not(:disabled)):hover {
-    background: color-mix(in srgb, var(--lyra-color-text) 8%, transparent);
-    color: var(--lyra-color-text);
+    background: color-mix(in srgb, var(--lr-color-text) 8%, transparent);
+    color: var(--lr-color-text);
   }
   [part='base']:disabled {
     cursor: not-allowed;
-    opacity: var(--lyra-opacity-disabled);
+    opacity: var(--lr-opacity-disabled);
   }
   [part='base']:focus-visible {
-    outline: var(--lyra-focus-ring-width) solid var(--lyra-focus-ring-color);
-    outline-offset: var(--lyra-focus-ring-offset);
+    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
+    outline-offset: var(--lr-focus-ring-offset);
   }
   [part='base'] svg {
     display: block;

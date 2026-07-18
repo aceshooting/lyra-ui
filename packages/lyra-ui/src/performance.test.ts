@@ -141,11 +141,11 @@ async function benchmark(
 }
 
 function report(name: string, result: BenchmarkResult): void {
-  console.info(`[lyra-performance] ${name} ${JSON.stringify(result)}`);
+  console.info(`[lr-performance] ${name} ${JSON.stringify(result)}`);
 }
 
 it('keeps virtual-list updates within the large-list budget', async () => {
-  const host = (await fixture(html`<lyra-virtual-list style="height: 320px; width: 640px"></lyra-virtual-list>`)) as LyraVirtualList;
+  const host = (await fixture(html`<lr-virtual-list style="height: 320px; width: 640px"></lr-virtual-list>`)) as LyraVirtualList;
   host.rowHeight = '32';
   host.overscan = 4;
   host.renderItem = (item) => html`<span>${item}</span>`;
@@ -162,7 +162,7 @@ it('keeps virtual-list updates within the large-list budget', async () => {
 });
 
 it('keeps lite-chart dataset churn within the large-series budget', async () => {
-  const host = (await fixture(html`<lyra-lite-chart type="line"></lyra-lite-chart>`)) as LyraLiteChart;
+  const host = (await fixture(html`<lr-lite-chart type="line"></lr-lite-chart>`)) as LyraLiteChart;
   const labels = Array.from({ length: 1_000 }, (_, index) => `${index}`);
   const data = labels.map((_, index) => Math.sin(index / 24) * 50 + 50);
   const series: LiteSeries[] = [{ label: 'Series', data }];
@@ -178,7 +178,7 @@ it('keeps lite-chart dataset churn within the large-series budget', async () => 
 });
 
 it('keeps heatmap data churn within the matrix budget', async () => {
-  const host = (await fixture(html`<lyra-heatmap></lyra-heatmap>`)) as LyraHeatmap;
+  const host = (await fixture(html`<lr-heatmap></lr-heatmap>`)) as LyraHeatmap;
   const values = Array.from({ length: 50 }, (_, row) =>
     Array.from({ length: 50 }, (_, column) => row * 50 + column),
   );
@@ -197,7 +197,7 @@ it('keeps heatmap data churn within the matrix budget', async () => {
 });
 
 it('keeps table row churn within the large-table budget', async () => {
-  const host = (await fixture(html`<lyra-table></lyra-table>`)) as LyraTable<Record<string, string>>;
+  const host = (await fixture(html`<lr-table></lr-table>`)) as LyraTable<Record<string, string>>;
   const columns: TableColumn<Record<string, string>>[] = [
     { key: 'id', label: 'ID', sticky: true, cell: (row) => row.id },
     { key: 'name', label: 'Name', cell: (row) => row.name },
@@ -234,14 +234,14 @@ it('keeps canvas-mode graph selection churn within the large-graph budget', asyn
   const GRAPH_NODE_COUNT = 5_000;
   const GRAPH_LINK_COUNT = 10_000;
   const host = (await fixture(
-    html`<lyra-graph
+    html`<lr-graph
       renderer="canvas"
       seed="1"
       selection-mode="multiple"
       width="960"
       height="640"
       style="width:960px;height:640px"
-    ></lyra-graph>`,
+    ></lr-graph>`,
   )) as LyraGraph;
   const nodes: GraphNode[] = Array.from({ length: GRAPH_NODE_COUNT }, (_, index) => ({
     id: `n${index}`,
@@ -284,7 +284,7 @@ it('keeps flow-canvas decoration churn within the large-flow budget', async func
   const FLOW_NODE_COUNT = 1_000;
   const COLUMNS = 20;
   const host = (await fixture(
-    html`<lyra-flow-canvas style="width: 960px; height: 640px"></lyra-flow-canvas>`,
+    html`<lr-flow-canvas style="width: 960px; height: 640px"></lr-flow-canvas>`,
   )) as LyraFlowCanvas;
   // Explicit `position` on every node so willUpdate()'s auto-layout pass is a documented no-op --
   // this benchmark targets the component's own decoration-push/render cost, not the (separately
@@ -302,7 +302,7 @@ it('keeps flow-canvas decoration churn within the large-flow budget', async func
   host.nodes = nodes;
   host.edges = edges;
   await host.updateComplete;
-  await waitUntil(() => host.querySelectorAll('lyra-flow-node').length === FLOW_NODE_COUNT);
+  await waitUntil(() => host.querySelectorAll('lr-flow-node').length === FLOW_NODE_COUNT);
   const result = await benchmark(
     host,
     (iteration) => {
@@ -334,7 +334,7 @@ function buildMindMapTopics(count: number, branching: number): LyraTopic[] {
 
 it('keeps mind-map topic churn within the large-map budget', async () => {
   const TOPIC_COUNT = 1_000;
-  const host = (await fixture(html`<lyra-mind-map expand-depth="99"></lyra-mind-map>`)) as LyraMindMap;
+  const host = (await fixture(html`<lr-mind-map expand-depth="99"></lr-mind-map>`)) as LyraMindMap;
   const topics = buildMindMapTopics(TOPIC_COUNT, 5);
   host.topics = topics;
   await host.updateComplete;
@@ -375,16 +375,16 @@ function buildNotebook(cellCount: number, revision = 0): { nbformat: number; nbf
   };
 }
 
-/** `<lyra-virtual-list>`'s rendered cells live in its own nested shadow root, composed from
+/** `<lr-virtual-list>`'s rendered cells live in its own nested shadow root, composed from
  *  `renderCell()`'s TemplateResult -- mirrors notebook-viewer.test.ts's identical `rowRoot()` helper. */
 function notebookRowRoot(el: LyraNotebookViewer): ShadowRoot {
-  return el.shadowRoot!.querySelector('lyra-virtual-list')!.shadowRoot!;
+  return el.shadowRoot!.querySelector('lr-virtual-list')!.shadowRoot!;
 }
 
 it('keeps notebook-viewer cell churn within the notebook-scale budget', async () => {
   const CELL_COUNT = 80;
   const host = (await fixture(
-    html`<lyra-notebook-viewer max-height="480px" style="width: 720px"></lyra-notebook-viewer>`,
+    html`<lr-notebook-viewer max-height="480px" style="width: 720px"></lr-notebook-viewer>`,
   )) as LyraNotebookViewer;
   host.notebook = buildNotebook(CELL_COUNT, 0);
   await host.updateComplete;
@@ -404,7 +404,7 @@ it('keeps notebook-viewer cell churn within the notebook-scale budget', async ()
 
 // -- fetch-based grid viewers (dataset-viewer / csv-viewer / spreadsheet-viewer) ------------------
 //
-// These three compose <lyra-virtual-list> for their body rows (per an earlier audit finding), so
+// These three compose <lr-virtual-list> for their body rows (per an earlier audit finding), so
 // the budget below targets each viewer's OWN per-row work -- resolving `highlights` against the
 // parsed grid inside `renderRow()` -- layered on top of virtual-list's already-covered cost, not
 // virtual-list's own virtualization (see the `virtual-list/10000` benchmark above for that).
@@ -428,7 +428,7 @@ function mockFetchText(body: string): () => void {
 
 /** `count` highlights spread evenly across `rowCount` data rows, one A1-notation single-row range
  *  each -- large enough that `cellHighlightsForRow()`'s per-visible-row `this.highlights.flatMap()`
- *  scan (run for every row `<lyra-virtual-list>` currently renders) is doing genuine work, not a
+ *  scan (run for every row `<lr-virtual-list>` currently renders) is doing genuine work, not a
  *  1-entry no-op. `revision` only changes each entry's `label`, matching the other benchmarks'
  *  "reassign the whole structure, one field changed" churn convention. */
 function buildGridHighlights(count: number, rowCount: number, revision: number): LyraHighlight[] {
@@ -444,7 +444,7 @@ it('keeps dataset-viewer highlight churn within the large-dataset budget', async
   const restore = mockFetchText([header, ...rows].join('\n'));
   let host!: LyraDatasetViewer;
   try {
-    host = (await fixture(html`<lyra-dataset-viewer style="width: 720px"></lyra-dataset-viewer>`)) as LyraDatasetViewer;
+    host = (await fixture(html`<lr-dataset-viewer style="width: 720px"></lr-dataset-viewer>`)) as LyraDatasetViewer;
     host.src = 'https://example.test/perf.tsv';
     await waitUntil(() => host.shadowRoot!.querySelector('[part="table"]') !== null, undefined, { timeout: 5000 });
     const result = await benchmark(
@@ -471,7 +471,7 @@ it('keeps csv-viewer highlight churn within the large-csv budget', async () => {
   const restore = mockFetchText(rows.join('\n'));
   let host!: LyraCsvViewer;
   try {
-    host = (await fixture(html`<lyra-csv-viewer style="width: 720px"></lyra-csv-viewer>`)) as LyraCsvViewer;
+    host = (await fixture(html`<lr-csv-viewer style="width: 720px"></lr-csv-viewer>`)) as LyraCsvViewer;
     host.src = 'https://example.test/perf.csv';
     await waitUntil(() => host.shadowRoot!.querySelector('[part="sheet"]') !== null, undefined, { timeout: 5000 });
     const result = await benchmark(
@@ -521,7 +521,7 @@ it('keeps spreadsheet-viewer highlight churn within the large-workbook budget', 
   const restore = mockFetchArrayBuffer(buildXlsxBuffer(rows));
   let host!: LyraSpreadsheetViewer;
   try {
-    host = (await fixture(html`<lyra-spreadsheet-viewer style="width: 720px"></lyra-spreadsheet-viewer>`)) as LyraSpreadsheetViewer;
+    host = (await fixture(html`<lr-spreadsheet-viewer style="width: 720px"></lr-spreadsheet-viewer>`)) as LyraSpreadsheetViewer;
     host.src = 'https://example.test/perf.xlsx';
     await waitUntil(() => host.shadowRoot!.querySelector('[part="sheet"]') !== null, undefined, { timeout: 10000 });
     const result = await benchmark(

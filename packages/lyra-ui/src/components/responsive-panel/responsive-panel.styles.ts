@@ -4,10 +4,10 @@ export const styles = css`
   :host {
     /* Overlay scrim color -- component-specific so a host can retheme it
        without a raw literal leaking into the public API (no shared
-       --lyra-*-overlay token exists in the design system to resolve through,
-       same rationale as lyra-dialog's own --lyra-dialog-overlay-color and
-       lyra-widget's --lyra-widget-overlay-color). */
-    --lyra-responsive-panel-overlay-color: var(--lyra-color-overlay);
+       --lr-*-overlay token exists in the design system to resolve through,
+       same rationale as lr-dialog's own --lr-dialog-overlay-color and
+       lr-widget's --lr-widget-overlay-color). */
+    --lr-responsive-panel-overlay-color: var(--lr-color-overlay);
     display: block;
   }
 
@@ -25,7 +25,7 @@ export const styles = css`
     display: flex;
     position: fixed;
     inset: 0;
-    z-index: var(--lyra-overlay-stack-index, var(--lyra-layer-modal));
+    z-index: var(--lr-overlay-stack-index, var(--lr-layer-modal));
   }
   /* Bottom-sheet anchors its panel to the block-end edge instead of
      stretching it full-height like fullscreen does. */
@@ -36,7 +36,7 @@ export const styles = css`
   [part='backdrop'] {
     position: absolute;
     inset: 0;
-    background: var(--lyra-responsive-panel-overlay-color);
+    background: var(--lr-responsive-panel-overlay-color);
   }
 
   [part='panel'] {
@@ -44,14 +44,14 @@ export const styles = css`
     display: flex;
     flex-direction: column;
     min-block-size: 0;
-    background: var(--lyra-color-surface);
+    background: var(--lr-color-surface);
   }
 
   /* Inline (docked) presentation: a normal panel in the page's layout flow,
      bordered like a card so it reads as a distinct region. */
   [part='base']:not(.overlay) [part='panel'] {
-    border: var(--lyra-border-width-thin) solid var(--lyra-color-border);
-    border-radius: var(--lyra-radius);
+    border: var(--lr-border-width-thin) solid var(--lr-color-border);
+    border-radius: var(--lr-radius);
     overflow: auto;
   }
 
@@ -62,7 +62,7 @@ export const styles = css`
   [part='base'].overlay [part='panel'] {
     inline-size: 100%;
     block-size: 100%;
-    box-shadow: var(--lyra-shadow);
+    box-shadow: var(--lr-shadow);
     overflow: auto;
   }
 
@@ -73,14 +73,14 @@ export const styles = css`
     block-size: auto;
     max-block-size: 85vh;
     max-block-size: 85dvh;
-    padding-block-end: var(--lyra-safe-area-bottom);
-    border-start-start-radius: var(--lyra-radius);
-    border-start-end-radius: var(--lyra-radius);
+    padding-block-end: var(--lr-safe-area-bottom);
+    border-start-start-radius: var(--lr-radius);
+    border-start-end-radius: var(--lr-radius);
   }
 
   [part='header'] {
-    padding: var(--lyra-space-m) var(--lyra-space-l);
-    border-block-end: var(--lyra-border-width-thin) solid var(--lyra-color-border);
+    padding: var(--lr-space-m) var(--lr-space-l);
+    border-block-end: var(--lr-border-width-thin) solid var(--lr-color-border);
   }
   [part='header'][hidden] {
     display: none;
@@ -88,7 +88,7 @@ export const styles = css`
 
   [part='body'] {
     flex: 1;
-    padding: var(--lyra-space-l);
+    padding: var(--lr-space-l);
     overflow: auto;
   }
 
@@ -96,9 +96,9 @@ export const styles = css`
     display: flex;
     align-items: center;
     justify-content: flex-end;
-    gap: var(--lyra-space-s);
-    padding: var(--lyra-space-m) var(--lyra-space-l);
-    border-block-start: var(--lyra-border-width-thin) solid var(--lyra-color-border);
+    gap: var(--lr-space-s);
+    padding: var(--lr-space-m) var(--lr-space-l);
+    border-block-start: var(--lr-border-width-thin) solid var(--lr-color-border);
   }
   [part='footer'][hidden] {
     display: none;

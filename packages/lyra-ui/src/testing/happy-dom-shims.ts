@@ -2,9 +2,9 @@
  * Opt-in shim for a downstream consumer's own Vitest+happy-dom test suite -- NOT used by this
  * package's own tests (which run against real browsers via `@web/test-runner`, where
  * `ElementInternals` already exists natively). happy-dom has no `ElementInternals`
- * implementation at all, and every form-associated `lyra-*` component (`lyra-switch`,
- * `lyra-combobox`, `lyra-select`, `lyra-checkbox`, `lyra-model-select`, `lyra-time-range`,
- * `lyra-tool-param-form`, plus anything built on the shared `FormAssociated` mixin) calls
+ * implementation at all, and every form-associated `lr-*` component (`lr-switch`,
+ * `lr-combobox`, `lr-select`, `lr-checkbox`, `lr-model-select`, `lr-time-range`,
+ * `lr-tool-param-form`, plus anything built on the shared `FormAssociated` mixin) calls
  * `this.attachInternals()` unconditionally in its constructor, so instantiating any of them
  * under happy-dom throws immediately without this. The stub also implements `setValidity()`
  * as a no-op -- `AnchoredValidityController` (the shared validity-refresh controller every
@@ -12,7 +12,7 @@
  * otherwise throw the moment any of those components' `value` changes, not just at construction.
  *
  * `attachInternals()` is specified on the `HTMLElement` interface (not `Element`), and every
- * `lyra-*` component is an `HTMLElement` subclass (via `LitElement`), so this patches
+ * `lr-*` component is an `HTMLElement` subclass (via `LitElement`), so this patches
  * `HTMLElement.prototype.attachInternals` -- the exact lookup `this.attachInternals()` resolves
  * through.
  *

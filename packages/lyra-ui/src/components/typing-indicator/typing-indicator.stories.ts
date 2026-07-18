@@ -4,7 +4,7 @@ import './typing-indicator.js';
 
 const meta: Meta = {
   title: 'TypingIndicator',
-  component: 'lyra-typing-indicator',
+  component: 'lr-typing-indicator',
   tags: ['autodocs'],
   parameters: {
     docs: {
@@ -21,9 +21,9 @@ type Story = StoryObj;
 export const Variants: Story = {
   render: () => html`
     <div style="display:flex; gap:2rem; align-items:center;">
-      <lyra-typing-indicator variant="dots"></lyra-typing-indicator>
-      <lyra-typing-indicator variant="pulse"></lyra-typing-indicator>
-      <lyra-typing-indicator variant="cursor"></lyra-typing-indicator>
+      <lr-typing-indicator variant="dots"></lr-typing-indicator>
+      <lr-typing-indicator variant="pulse"></lr-typing-indicator>
+      <lr-typing-indicator variant="cursor"></lr-typing-indicator>
     </div>
   `,
 };
@@ -31,14 +31,14 @@ export const Variants: Story = {
 export const Sizes: Story = {
   render: () => html`
     <div style="display:flex; gap:2rem; align-items:center;">
-      <lyra-typing-indicator size="sm"></lyra-typing-indicator>
-      <lyra-typing-indicator size="md"></lyra-typing-indicator>
+      <lr-typing-indicator size="sm"></lr-typing-indicator>
+      <lr-typing-indicator size="md"></lr-typing-indicator>
     </div>
   `,
 };
 
 export const CustomLabel: Story = {
-  render: () => html`<lyra-typing-indicator label="Generating response…"></lyra-typing-indicator>`,
+  render: () => html`<lr-typing-indicator label="Generating response…"></lr-typing-indicator>`,
 };
 
 export const RetimedDots: Story = {
@@ -47,15 +47,15 @@ export const RetimedDots: Story = {
     docs: {
       description: {
         story:
-          'When retiming the compound `--lyra-transition-ambient` animation token, set the two stagger delays alongside it to preserve the intended one-third/two-thirds phasing.',
+          'When retiming the compound `--lr-transition-ambient` animation token, set the two stagger delays alongside it to preserve the intended one-third/two-thirds phasing.',
       },
     },
   },
   render: () => html`
-    <lyra-typing-indicator
+    <lr-typing-indicator
       label="Generating quickly…"
-      style="--lyra-transition-ambient: 900ms ease-in-out; --lyra-typing-dot-stagger-1: 300ms; --lyra-typing-dot-stagger-2: 600ms;"
-    ></lyra-typing-indicator>
+      style="--lr-transition-ambient: 900ms ease-in-out; --lr-typing-dot-stagger-1: 300ms; --lr-typing-dot-stagger-2: 600ms;"
+    ></lr-typing-indicator>
   `,
 };
 
@@ -64,7 +64,7 @@ export const InlineWithStreamedText: Story = {
   render: () => html`
     <p style="font-family: system-ui, sans-serif; max-width: 32rem;">
       The quick brown fox jumps over the lazy dog, and then keeps going
-      <lyra-typing-indicator variant="cursor" label="Response is still streaming"></lyra-typing-indicator>
+      <lr-typing-indicator variant="cursor" label="Response is still streaming"></lr-typing-indicator>
     </p>
   `,
 };
@@ -81,9 +81,9 @@ export const ReducedMotion: Story = {
   },
   render: () => html`
     <div style="display:flex; gap:2rem; align-items:center;">
-      <lyra-typing-indicator variant="dots"></lyra-typing-indicator>
-      <lyra-typing-indicator variant="pulse"></lyra-typing-indicator>
-      <lyra-typing-indicator variant="cursor"></lyra-typing-indicator>
+      <lr-typing-indicator variant="dots"></lr-typing-indicator>
+      <lr-typing-indicator variant="pulse"></lr-typing-indicator>
+      <lr-typing-indicator variant="cursor"></lr-typing-indicator>
     </div>
   `,
 };

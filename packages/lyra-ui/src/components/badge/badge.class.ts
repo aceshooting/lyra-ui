@@ -6,9 +6,9 @@ import { styles } from './badge.styles.js';
 export type BadgeVariant = 'neutral' | 'brand' | 'success' | 'warning' | 'danger';
 
 /**
- * `<lyra-badge>` — a compact status label.
+ * `<lr-badge>` — a compact status label.
  *
- * @customElement lyra-badge
+ * @customElement lr-badge
  * @slot - Badge content.
  * @csspart base - The badge surface.
  */
@@ -17,4 +17,4 @@ export class LyraBadge extends LyraElement {
   @property({ reflect: true }) variant: BadgeVariant = 'neutral';
   render(): TemplateResult { return html`<span part="base"><slot></slot></span>`; }
 }
-declare global { interface HTMLElementTagNameMap { 'lyra-badge': LyraBadge; } }
+declare global { interface HTMLElementTagNameMap { 'lr-badge': LyraBadge; } }

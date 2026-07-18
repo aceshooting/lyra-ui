@@ -2,15 +2,15 @@ import { fixture, expect, html, oneEvent } from '@open-wc/testing';
 import './copy-button.js';
 import type { LyraCopyButton } from './copy-button.js';
 
-describe('lyra-copy-button', () => {
+describe('lr-copy-button', () => {
   it('defaults to an empty value and the resting "Copy" label', async () => {
-    const el = (await fixture(html`<lyra-copy-button></lyra-copy-button>`)) as LyraCopyButton;
+    const el = (await fixture(html`<lr-copy-button></lr-copy-button>`)) as LyraCopyButton;
     expect(el.value).to.equal('');
     const button = el.shadowRoot!.querySelector('[part="base"]') as HTMLButtonElement;
     expect(button.getAttribute('aria-label')).to.equal('Copy');
   });
 
-  it('fires lyra-copy with the current value and writes it to the clipboard on click', async () => {
+  it('fires lr-copy with the current value and writes it to the clipboard on click', async () => {
     const writes: string[] = [];
     const original = Object.getOwnPropertyDescriptor(navigator, 'clipboard');
     Object.defineProperty(navigator, 'clipboard', {
@@ -18,9 +18,9 @@ describe('lyra-copy-button', () => {
       configurable: true,
     });
     try {
-      const el = (await fixture(html`<lyra-copy-button value="hello"></lyra-copy-button>`)) as LyraCopyButton;
+      const el = (await fixture(html`<lr-copy-button value="hello"></lr-copy-button>`)) as LyraCopyButton;
       const button = el.shadowRoot!.querySelector('[part="base"]') as HTMLButtonElement;
-      const listener = oneEvent(el, 'lyra-copy');
+      const listener = oneEvent(el, 'lr-copy');
       button.click();
       const { detail } = await listener;
       expect(detail).to.deep.equal({ text: 'hello' });
@@ -30,13 +30,13 @@ describe('lyra-copy-button', () => {
     }
   });
 
-  it('fires lyra-copy even when navigator.clipboard is unavailable', async () => {
+  it('fires lr-copy even when navigator.clipboard is unavailable', async () => {
     const original = Object.getOwnPropertyDescriptor(navigator, 'clipboard');
     Object.defineProperty(navigator, 'clipboard', { value: undefined, configurable: true });
     try {
-      const el = (await fixture(html`<lyra-copy-button value="hello"></lyra-copy-button>`)) as LyraCopyButton;
+      const el = (await fixture(html`<lr-copy-button value="hello"></lr-copy-button>`)) as LyraCopyButton;
       const button = el.shadowRoot!.querySelector('[part="base"]') as HTMLButtonElement;
-      const listener = oneEvent(el, 'lyra-copy');
+      const listener = oneEvent(el, 'lr-copy');
       button.click();
       const { detail } = await listener;
       expect(detail).to.deep.equal({ text: 'hello' });
@@ -46,7 +46,7 @@ describe('lyra-copy-button', () => {
   });
 
   it('swaps the aria-label to the copied confirmation immediately after activation, then reverts after ~1.5s', async () => {
-    const el = (await fixture(html`<lyra-copy-button value="hello"></lyra-copy-button>`)) as LyraCopyButton;
+    const el = (await fixture(html`<lr-copy-button value="hello"></lr-copy-button>`)) as LyraCopyButton;
     const button = el.shadowRoot!.querySelector('[part="base"]') as HTMLButtonElement;
     button.click();
     await el.updateComplete;
@@ -58,7 +58,7 @@ describe('lyra-copy-button', () => {
 
   it('forwards a host aria-label to the internal semantic button', async () => {
     const el = (await fixture(html`
-      <lyra-copy-button aria-label="Copy API key" value="secret"></lyra-copy-button>
+      <lr-copy-button aria-label="Copy API key" value="secret"></lr-copy-button>
     `)) as LyraCopyButton;
     const button = el.shadowRoot!.querySelector('[part="base"]') as HTMLButtonElement;
     expect(button.getAttribute('aria-label')).to.equal('Copy API key');
@@ -70,11 +70,11 @@ describe('lyra-copy-button', () => {
 
   it('disables the internal button and suppresses activation', async () => {
     const el = (await fixture(html`
-      <lyra-copy-button disabled value="secret"></lyra-copy-button>
+      <lr-copy-button disabled value="secret"></lr-copy-button>
     `)) as LyraCopyButton;
     const button = el.shadowRoot!.querySelector('[part="base"]') as HTMLButtonElement;
     let copies = 0;
-    el.addEventListener('lyra-copy', () => copies++);
+    el.addEventListener('lr-copy', () => copies++);
 
     button.click();
     expect(el.disabled).to.be.true;
@@ -83,7 +83,7 @@ describe('lyra-copy-button', () => {
   });
 
   it('forwards focus() and blur() to the internal button', async () => {
-    const el = (await fixture(html`<lyra-copy-button></lyra-copy-button>`)) as LyraCopyButton;
+    const el = (await fixture(html`<lr-copy-button></lr-copy-button>`)) as LyraCopyButton;
     const button = el.shadowRoot!.querySelector('[part="base"]') as HTMLButtonElement;
 
     el.focus();
@@ -93,7 +93,7 @@ describe('lyra-copy-button', () => {
   });
 
   it('uses string overrides for both resting and confirmation labels', async () => {
-    const el = (await fixture(html`<lyra-copy-button></lyra-copy-button>`)) as LyraCopyButton;
+    const el = (await fixture(html`<lr-copy-button></lr-copy-button>`)) as LyraCopyButton;
     el.strings = { copy: 'Copier', copied: 'Copié' };
     await el.updateComplete;
     const button = el.shadowRoot!.querySelector('[part="base"]') as HTMLButtonElement;
@@ -106,7 +106,7 @@ describe('lyra-copy-button', () => {
 
   it('supports a configurable feedback duration', async () => {
     const el = (await fixture(html`
-      <lyra-copy-button value="hello" feedback-duration="20"></lyra-copy-button>
+      <lr-copy-button value="hello" feedback-duration="20"></lr-copy-button>
     `)) as LyraCopyButton;
     const button = el.shadowRoot!.querySelector('[part="base"]') as HTMLButtonElement;
     expect(el.feedbackDuration).to.equal(20);
@@ -121,7 +121,7 @@ describe('lyra-copy-button', () => {
 
   it('falls back to the default feedback duration for a non-finite/negative value instead of leaving the confirmation state stuck', async () => {
     const el = (await fixture(html`
-      <lyra-copy-button value="hello" feedback-duration="NaN"></lyra-copy-button>
+      <lr-copy-button value="hello" feedback-duration="NaN"></lr-copy-button>
     `)) as LyraCopyButton;
     const button = el.shadowRoot!.querySelector('[part="base"]') as HTMLButtonElement;
     button.click();
@@ -144,15 +144,15 @@ describe('lyra-copy-button', () => {
   });
 
   it('is accessible', async () => {
-    const el = await fixture(html`<lyra-copy-button value="hello"></lyra-copy-button>`);
+    const el = await fixture(html`<lr-copy-button value="hello"></lr-copy-button>`);
     await expect(el).to.be.accessible();
   });
 
-  it('dims the disabled button via the shared --lyra-opacity-disabled token', async () => {
-    const el = (await fixture(html`<lyra-copy-button disabled value="hello"></lyra-copy-button>`)) as LyraCopyButton;
+  it('dims the disabled button via the shared --lr-opacity-disabled token', async () => {
+    const el = (await fixture(html`<lr-copy-button disabled value="hello"></lr-copy-button>`)) as LyraCopyButton;
     const button = el.shadowRoot!.querySelector('[part="base"]') as HTMLButtonElement;
     // Regression: the rule previously referenced the non-existent
-    // --lyra-disabled-opacity (reversed word order), which left the
+    // --lr-disabled-opacity (reversed word order), which left the
     // invalid opacity declaration at its initial value (1) instead of the
     // shared 0.5 dimming used by every other disabled control.
     expect(getComputedStyle(button).opacity).to.equal('0.5');

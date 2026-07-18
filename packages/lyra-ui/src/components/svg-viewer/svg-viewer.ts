@@ -8,7 +8,7 @@ defineElement('svg-viewer', LyraSvgViewer);
 registerDocumentRenderer('image/svg+xml', {
   matches: (file: DocumentFile) => file.name.toLowerCase().endsWith('.svg'),
   render: (file) => {
-    const element = document.createElement('lyra-svg-viewer');
+    const element = document.createElement('lr-svg-viewer');
     element.src = file.src;
     element.name = file.name;
     return element;

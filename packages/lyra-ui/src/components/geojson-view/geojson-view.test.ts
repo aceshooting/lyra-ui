@@ -20,7 +20,7 @@ function stubFetch(body: unknown, ok = true): void {
 describe('fetching and parsing', () => {
   it('fetches, parses, and computes a feature count for a FeatureCollection', async () => {
     stubFetch(FEATURE_COLLECTION);
-    const el = (await fixture(html`<lyra-geojson-view src=${GEOJSON_URL}></lyra-geojson-view>`)) as LyraGeojsonView;
+    const el = (await fixture(html`<lr-geojson-view src=${GEOJSON_URL}></lr-geojson-view>`)) as LyraGeojsonView;
     // `loadMaplibre()`'s real dynamic import of maplibre-gl takes well over a single
     // macrotask tick to settle in this test environment (measured ~300ms) -- poll for
     // the loaded-state marker rather than assuming one `setTimeout(0)` is enough, same
@@ -35,10 +35,10 @@ describe('fetching and parsing', () => {
     expect(status!.textContent).to.include('2');
   });
 
-  it('fires lyra-render-error and shows an error state for a non-GeoJSON shape', async () => {
+  it('fires lr-render-error and shows an error state for a non-GeoJSON shape', async () => {
     stubFetch({ not: 'geojson' });
-    const el = (await fixture(html`<lyra-geojson-view src=${GEOJSON_URL}></lyra-geojson-view>`)) as LyraGeojsonView;
-    const eventPromise = oneEvent(el, 'lyra-render-error');
+    const el = (await fixture(html`<lr-geojson-view src=${GEOJSON_URL}></lr-geojson-view>`)) as LyraGeojsonView;
+    const eventPromise = oneEvent(el, 'lr-render-error');
     await eventPromise;
     await el.updateComplete;
     expect(el.shadowRoot!.querySelector('[role="alert"]')).to.exist;
@@ -49,12 +49,12 @@ describe('fetching and parsing', () => {
     // exercises the .strings resolution without the optional peer.
     stubFetch({ not: 'geojson' });
     const el = (await fixture(
-      html`<lyra-geojson-view
+      html`<lr-geojson-view
         src=${GEOJSON_URL}
         .strings=${{ geojsonViewInvalid: 'Fichier GeoJSON invalide.' }}
-      ></lyra-geojson-view>`,
+      ></lr-geojson-view>`,
     )) as LyraGeojsonView;
-    const eventPromise = oneEvent(el, 'lyra-render-error');
+    const eventPromise = oneEvent(el, 'lr-render-error');
     await eventPromise;
     await el.updateComplete;
     expect(el.shadowRoot!.querySelector('[role="alert"]')!.textContent).to.equal('Fichier GeoJSON invalide.');
@@ -62,14 +62,14 @@ describe('fetching and parsing', () => {
 });
 
 describe('missing maplibre-gl peer', () => {
-  it('falls back to lyra-json-viewer with a missing-library callout when loadMaplibre resolves null', async () => {
+  it('falls back to lr-json-viewer with a missing-library callout when loadMaplibre resolves null', async () => {
     stubFetch(FEATURE_COLLECTION);
-    const el = (await fixture(html`<lyra-geojson-view src=${GEOJSON_URL}></lyra-geojson-view>`)) as LyraGeojsonView;
+    const el = (await fixture(html`<lr-geojson-view src=${GEOJSON_URL}></lr-geojson-view>`)) as LyraGeojsonView;
     (el as unknown as { forceMissingMaplibreForTesting: boolean }).forceMissingMaplibreForTesting = true;
     await el.updateComplete;
     await new Promise((resolve) => setTimeout(resolve, 0));
     await el.updateComplete;
-    expect(el.shadowRoot!.querySelector('lyra-json-viewer')).to.exist;
+    expect(el.shadowRoot!.querySelector('lr-json-viewer')).to.exist;
     expect(el.shadowRoot!.querySelector('[part="missing-library"]')).to.exist;
   });
 });
@@ -78,7 +78,7 @@ describe('accessibility', () => {
   it('is accessible once loaded', async () => {
     stubFetch(FEATURE_COLLECTION);
     const el = (await fixture(
-      html`<lyra-geojson-view src=${GEOJSON_URL} name="zones.geojson"></lyra-geojson-view>`,
+      html`<lr-geojson-view src=${GEOJSON_URL} name="zones.geojson"></lr-geojson-view>`,
     )) as LyraGeojsonView;
     await waitUntil(
       () => el.shadowRoot!.querySelector('[part="status"]') != null,

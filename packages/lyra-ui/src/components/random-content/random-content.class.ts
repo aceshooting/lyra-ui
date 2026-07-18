@@ -8,11 +8,11 @@ export type LyraRandomContentAnimation = 'none' | 'fade' | 'fade-up' | 'fade-dow
 export type LyraRandomContentMode = 'unique' | 'random' | 'sequence';
 
 export interface LyraRandomContentEventMap {
-  'lyra-content-change': CustomEvent<{ items: HTMLElement[] }>;
+  'lr-content-change': CustomEvent<{ items: HTMLElement[] }>;
 }
 
 /**
- * `<lyra-random-content>` — displays a randomly (or sequentially) chosen
+ * `<lr-random-content>` — displays a randomly (or sequentially) chosen
  * subset of its slotted children and hides the rest, for A/B copy testing,
  * testimonial/quote rotation, or varying marketing copy on each render or
  * interval without any custom JS beyond slotting the candidates.
@@ -23,7 +23,7 @@ export interface LyraRandomContentEventMap {
  *
  * The host renders `display: block` by default, like the rest of this
  * family. A consumer needing an inline text-fragment swap inside a sentence
- * can override `lyra-random-content { display: inline; }` from outside —
+ * can override `lr-random-content { display: inline; }` from outside —
  * that isn't baked in here, since `display: contents` on the host risks
  * accessibility-tree inconsistencies across engines.
  *
@@ -39,15 +39,15 @@ export interface LyraRandomContentEventMap {
  * semantics like a carousel chevron, so they are deliberately **not**
  * mirrored under `:host(:dir(rtl))`.
  *
- * @customElement lyra-random-content
+ * @customElement lr-random-content
  * @slot - The pool of candidate children. Only direct element children are eligible.
- * @event lyra-content-change - The displayed selection changed (first render, `randomize()`,
+ * @event lr-content-change - The displayed selection changed (first render, `randomize()`,
  * a slot-change-triggered reselection, or an autoplay tick). `detail: { items }` is the exact
  * array of elements now shown, in display order. Not emitted when the eligible pool is empty.
  * @csspart base - The wrapping element around the default slot.
- * @cssprop [--lyra-random-content-animation-duration=300ms] - Duration of the entrance animation.
- * @cssprop [--lyra-random-content-animation-easing=ease] - Easing function for the entrance animation.
- * @cssprop [--lyra-random-content-animation-translate=var(--lyra-size-0-5em)] - Translation distance for directional animations.
+ * @cssprop [--lr-random-content-animation-duration=300ms] - Duration of the entrance animation.
+ * @cssprop [--lr-random-content-animation-easing=ease] - Easing function for the entrance animation.
+ * @cssprop [--lr-random-content-animation-translate=var(--lr-size-0-5em)] - Translation distance for directional animations.
  */
 export class LyraRandomContent extends LyraElement<LyraRandomContentEventMap> {
   static styles = [LyraElement.styles, styles];
@@ -81,7 +81,7 @@ export class LyraRandomContent extends LyraElement<LyraRandomContentEventMap> {
   // Lit reports every declared reactive property as "changed" on the first
   // update (including `items`, which otherwise would make `updated()` run a
   // redundant second selection right after `firstUpdated()` already ran one
-  // -- doubling the emitted `lyra-content-change` event and, for
+  // -- doubling the emitted `lr-content-change` event and, for
   // mode="sequence", double-advancing the cursor).
   private hasUpdatedOnce = false;
 
@@ -223,7 +223,7 @@ export class LyraRandomContent extends LyraElement<LyraRandomContentEventMap> {
     const selected = this.computeSelectionForMode(pool, count);
     this.applySelection(pool, selected);
     this.previousSelection = selected;
-    this.emit('lyra-content-change', { items: selected });
+    this.emit('lr-content-change', { items: selected });
     return selected;
   }
 
@@ -233,7 +233,7 @@ export class LyraRandomContent extends LyraElement<LyraRandomContentEventMap> {
     // itself dispatch an async `slotchange` shortly after `firstUpdated()`
     // already handled that same content synchronously above -- skip when
     // nothing about the pool actually changed to avoid double-emitting
-    // `lyra-content-change` (and, for mode="sequence", double-advancing the
+    // `lr-content-change` (and, for mode="sequence", double-advancing the
     // cursor) for a single real content change.
     if (this.poolsEqual(pool, this.lastPool)) return;
     this.reselect({ resetPrevious: true });
@@ -242,7 +242,7 @@ export class LyraRandomContent extends LyraElement<LyraRandomContentEventMap> {
 
   /**
    * Selects a new set of children using the current mode. Applies
-   * `hidden`/`aria-hidden`, emits `lyra-content-change`, and returns the
+   * `hidden`/`aria-hidden`, emits `lr-content-change`, and returns the
    * elements now shown. Does not reset or restart the autoplay timer.
    */
   randomize = (): HTMLElement[] => this.reselect();
@@ -277,6 +277,6 @@ export class LyraRandomContent extends LyraElement<LyraRandomContentEventMap> {
 
 declare global {
   interface HTMLElementTagNameMap {
-    'lyra-random-content': LyraRandomContent;
+    'lr-random-content': LyraRandomContent;
   }
 }

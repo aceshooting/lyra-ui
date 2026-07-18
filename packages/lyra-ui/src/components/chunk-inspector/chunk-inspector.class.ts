@@ -7,7 +7,7 @@ import '../virtual-list/virtual-list.class.js';
 import '../empty/empty.class.js';
 import { styles } from './chunk-inspector.styles.js';
 
-/** A local, non-exported structural copy of the `lyra-document-viewer` `LyraAnchor` discriminated
+/** A local, non-exported structural copy of the `lr-document-viewer` `LyraAnchor` discriminated
  *  union, declared here (rather than imported) so this component has no build-time coupling to the
  *  viewer stack. Structurally identical to the real thing, so `chunk.anchor` interops with a
  *  `document-viewer.anchor` assignment with no mapping needed. */
@@ -32,27 +32,27 @@ export interface LyraChunk {
   title?: string;
   /** Rendered as-is via the existing `sourcePageSuffix` key. */
   page?: string | number;
-  /** Carried through `lyra-chunk-open` verbatim. */
+  /** Carried through `lr-chunk-open` verbatim. */
   anchor?: LyraChunkAnchor;
 }
 
 export interface LyraChunkInspectorEventMap {
-  'lyra-chunk-open': CustomEvent<{ id: string; sourceId: string; anchor?: LyraChunkAnchor }>;
-  'lyra-expand': CustomEvent<{ id: string; expanded: boolean }>;
+  'lr-chunk-open': CustomEvent<{ id: string; sourceId: string; anchor?: LyraChunkAnchor }>;
+  'lr-expand': CustomEvent<{ id: string; expanded: boolean }>;
 }
 
 type Tier = 'high' | 'medium' | 'low';
 
 /**
- * `<lyra-chunk-inspector>` — a ranked retrieved-chunks list: relevance score bars with tier tones,
- * expandable chunk text, and the deep-link event that lands a chunk in `lyra-document-viewer`.
+ * `<lr-chunk-inspector>` — a ranked retrieved-chunks list: relevance score bars with tier tones,
+ * expandable chunk text, and the deep-link event that lands a chunk in `lr-document-viewer`.
  * Never fetches, ranks, or dedupes; never opens documents itself.
  *
- * @customElement lyra-chunk-inspector
- * @event lyra-chunk-open - A chunk's title/open button was activated -- the event a host routes
- * into `lyra-document-viewer` (set `src` from `sourceId`, set `anchor`). `detail: { id, sourceId,
+ * @customElement lr-chunk-inspector
+ * @event lr-chunk-open - A chunk's title/open button was activated -- the event a host routes
+ * into `lr-document-viewer` (set `src` from `sourceId`, set `anchor`). `detail: { id, sourceId,
  * anchor? }`.
- * @event lyra-expand - A chunk's text toggle was activated. `detail: { id, expanded }`.
+ * @event lr-expand - A chunk's text toggle was activated. `detail: { id, expanded }`.
  * @csspart base - The `role="group"` wrapper.
  * @csspart chunk - One chunk row (`role="listitem"`).
  * @csspart score - The visible percent-score text.
@@ -114,7 +114,7 @@ export class LyraChunkInspector extends LyraElement<LyraChunkInspectorEventMap> 
     if (expanded) next.add(id);
     else next.delete(id);
     this.expandedIds = next;
-    this.emit('lyra-expand', { id, expanded });
+    this.emit('lr-expand', { id, expanded });
   }
 
   private renderChunk = (item: unknown): TemplateResult => {
@@ -138,7 +138,7 @@ export class LyraChunkInspector extends LyraElement<LyraChunkInspectorEventMap> 
           part="open-button"
           type="button"
           aria-label=${`${titleWithPage}, ${this.tierLabel(tier)}`}
-          @click=${() => this.emit('lyra-chunk-open', { id: chunk.id, sourceId: chunk.sourceId, ...(chunk.anchor ? { anchor: chunk.anchor } : {}) })}
+          @click=${() => this.emit('lr-chunk-open', { id: chunk.id, sourceId: chunk.sourceId, ...(chunk.anchor ? { anchor: chunk.anchor } : {}) })}
         >
           <span part="title">${titleWithPage}</span>
         </button>
@@ -158,21 +158,21 @@ export class LyraChunkInspector extends LyraElement<LyraChunkInspectorEventMap> 
     if (sorted.length === 0) {
       // `heading` is passed as slotted light-DOM content (rather than the `heading` attribute
       // most other components use) so `[part="empty"]`'s `.textContent` -- a plain DOM accessor,
-      // which never pierces `lyra-empty`'s own shadow root -- actually includes the message; see
+      // which never pierces `lr-empty`'s own shadow root -- actually includes the message; see
       // this component's notes for why the attribute-only form other components use wouldn't.
       return html`<div part="base">
-        <lyra-empty part="empty"><span slot="heading">${this.localize('chunkInspectorEmpty')}</span></lyra-empty>
+        <lr-empty part="empty"><span slot="heading">${this.localize('chunkInspectorEmpty')}</span></lr-empty>
       </div>`;
     }
     return html`
       <div part="base" role="group" aria-label=${label}>
         ${sorted.length > this.effectiveVirtualizeAt
-          ? html`<lyra-virtual-list
+          ? html`<lr-virtual-list
               .items=${sorted}
               .renderItem=${this.renderChunk}
               .keyFunction=${(item: unknown) => (item as LyraChunk).id}
               .activeId=${this.activeId || ''}
-            ></lyra-virtual-list>`
+            ></lr-virtual-list>`
           : html`<div role="list">${sorted.map((c) => this.renderChunk(c))}</div>`}
       </div>
     `;
@@ -181,6 +181,6 @@ export class LyraChunkInspector extends LyraElement<LyraChunkInspectorEventMap> 
 
 declare global {
   interface HTMLElementTagNameMap {
-    'lyra-chunk-inspector': LyraChunkInspector;
+    'lr-chunk-inspector': LyraChunkInspector;
   }
 }

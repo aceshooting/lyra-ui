@@ -11,20 +11,20 @@ import { tooltipStyles } from './overlay.styles.js';
 /** Default show/hide timer delay (ms). */
 const DEFAULT_DELAY = 150;
 /** Default anchor-offset distance (px), passed to Floating UI's `offset()` middleware -- same
- *  semantics as `<lyra-popover>.distance` (both wrap the same `place()`/`offset()` middleware). */
+ *  semantics as `<lr-popover>.distance` (both wrap the same `place()`/`offset()` middleware). */
 const DEFAULT_DISTANCE = 6;
 
 /**
- * `<lyra-tooltip>` — a localized, hover/focus tooltip for a consumer-owned trigger.
+ * `<lr-tooltip>` — a localized, hover/focus tooltip for a consumer-owned trigger.
  *
- * @customElement lyra-tooltip
+ * @customElement lr-tooltip
  * @slot trigger - The element that receives hover/focus listeners.
  * @slot - Tooltip content.
  * @csspart trigger - The trigger wrapper.
  * @csspart popup - The tooltip popup.
- * @cssprop --lyra-tooltip-max-inline-size - Maximum inline size of the tooltip (default `--lyra-size-20rem`).
- * @cssprop --lyra-tooltip-background - Tooltip background color (default `--lyra-color-neutral`).
- * @cssprop --lyra-tooltip-color - Tooltip text color (default `--lyra-color-on-neutral`).
+ * @cssprop --lr-tooltip-max-inline-size - Maximum inline size of the tooltip (default `--lr-size-20rem`).
+ * @cssprop --lr-tooltip-background - Tooltip background color (default `--lr-color-neutral`).
+ * @cssprop --lr-tooltip-color - Tooltip text color (default `--lr-color-on-neutral`).
  */
 export class LyraTooltip extends LyraElement {
   static styles = [LyraElement.styles, tooltipStyles];
@@ -35,7 +35,7 @@ export class LyraTooltip extends LyraElement {
   @property({ type: Number }) delay = DEFAULT_DELAY;
   @property({ reflect: true }) placement: Placement = 'top';
   /** Anchor-offset distance (px) passed to Floating UI's `offset()` middleware -- identical
-   *  semantics to `<lyra-popover>.distance` (can legitimately be negative for overlap). */
+   *  semantics to `<lr-popover>.distance` (can legitimately be negative for overlap). */
   @property({ type: Number }) distance = DEFAULT_DISTANCE;
   @property() content = '';
   @property({ attribute: 'aria-label' }) accessibleLabel = '';
@@ -139,4 +139,4 @@ export class LyraTooltip extends LyraElement {
     `;
   }
 }
-declare global { interface HTMLElementTagNameMap { 'lyra-tooltip': LyraTooltip; } }
+declare global { interface HTMLElementTagNameMap { 'lr-tooltip': LyraTooltip; } }

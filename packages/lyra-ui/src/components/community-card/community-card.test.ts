@@ -11,20 +11,20 @@ const members: LyraEntity[] = [
 ];
 
 it('renders the noData empty state when community is null (the default)', async () => {
-  const el = (await fixture(html`<lyra-community-card></lyra-community-card>`)) as LyraCommunityCard;
+  const el = (await fixture(html`<lr-community-card></lr-community-card>`)) as LyraCommunityCard;
   expect(el.community).to.equal(null);
-  expect(el.shadowRoot!.querySelector('lyra-empty')).to.exist;
+  expect(el.shadowRoot!.querySelector('lr-empty')).to.exist;
 });
 
 it('falls back to untitledCommunity when label is missing', async () => {
-  const el = (await fixture(html`<lyra-community-card></lyra-community-card>`)) as LyraCommunityCard;
+  const el = (await fixture(html`<lr-community-card></lr-community-card>`)) as LyraCommunityCard;
   el.community = { id: 'c2', label: '' };
   await el.updateComplete;
   expect(el.shadowRoot!.querySelector('[part="title"]')!.textContent).to.include('Untitled community');
 });
 
 it('renders the member count from memberCount (authoritative over members.length)', async () => {
-  const el = (await fixture(html`<lyra-community-card></lyra-community-card>`)) as LyraCommunityCard;
+  const el = (await fixture(html`<lr-community-card></lr-community-card>`)) as LyraCommunityCard;
   el.community = community;
   el.members = members.slice(0, 2);
   await el.updateComplete;
@@ -32,7 +32,7 @@ it('renders the member count from memberCount (authoritative over members.length
 });
 
 it('renders up to maxMembers chips and a +N overflow chip', async () => {
-  const el = (await fixture(html`<lyra-community-card max-members="2"></lyra-community-card>`)) as LyraCommunityCard;
+  const el = (await fixture(html`<lr-community-card max-members="2"></lr-community-card>`)) as LyraCommunityCard;
   el.community = community;
   el.members = members;
   await el.updateComplete;
@@ -41,7 +41,7 @@ it('renders up to maxMembers chips and a +N overflow chip', async () => {
 });
 
 it('clamps a negative max-members to showing zero members, not slice(0, -1)\'s "all but the last" behavior', async () => {
-  const el = (await fixture(html`<lyra-community-card max-members="-1"></lyra-community-card>`)) as LyraCommunityCard;
+  const el = (await fixture(html`<lr-community-card max-members="-1"></lr-community-card>`)) as LyraCommunityCard;
   el.community = community;
   el.members = members;
   await el.updateComplete;
@@ -51,7 +51,7 @@ it('clamps a negative max-members to showing zero members, not slice(0, -1)\'s "
 
 it('falls back to the documented default of 8 for a non-numeric max-members', async () => {
   const el = (await fixture(
-    html`<lyra-community-card max-members="not-a-number"></lyra-community-card>`,
+    html`<lr-community-card max-members="not-a-number"></lr-community-card>`,
   )) as LyraCommunityCard;
   el.community = community;
   el.members = members;
@@ -62,41 +62,41 @@ it('falls back to the documented default of 8 for a non-numeric max-members', as
   expect(el.shadowRoot!.querySelector('[part="overflow"]')).to.not.exist;
 });
 
-it('emits lyra-entity-activate when a member chip is activated', async () => {
-  const el = (await fixture(html`<lyra-community-card></lyra-community-card>`)) as LyraCommunityCard;
+it('emits lr-entity-activate when a member chip is activated', async () => {
+  const el = (await fixture(html`<lr-community-card></lr-community-card>`)) as LyraCommunityCard;
   el.community = community;
   el.members = members;
   await el.updateComplete;
-  const listener = oneEvent(el, 'lyra-entity-activate');
+  const listener = oneEvent(el, 'lr-entity-activate');
   (el.shadowRoot!.querySelectorAll('[part="member"]')[0] as HTMLButtonElement).click();
   const event = await listener;
   expect(event.detail).to.deep.equal({ id: 'e1' });
 });
 
-it('emits lyra-drill from the drill button, the header, and the overflow chip', async () => {
-  const el = (await fixture(html`<lyra-community-card max-members="1"></lyra-community-card>`)) as LyraCommunityCard;
+it('emits lr-drill from the drill button, the header, and the overflow chip', async () => {
+  const el = (await fixture(html`<lr-community-card max-members="1"></lr-community-card>`)) as LyraCommunityCard;
   el.community = community;
   el.members = members;
   await el.updateComplete;
 
   const drillButton = el.shadowRoot!.querySelector('[part="drill-button"]') as HTMLElement;
-  let listener = oneEvent(el, 'lyra-drill');
+  let listener = oneEvent(el, 'lr-drill');
   drillButton.click();
   expect((await listener).detail).to.deep.equal({ id: 'c1' });
 
   const header = el.shadowRoot!.querySelector('[part="title"] button') as HTMLButtonElement;
-  listener = oneEvent(el, 'lyra-drill');
+  listener = oneEvent(el, 'lr-drill');
   header.click();
   expect((await listener).detail).to.deep.equal({ id: 'c1' });
 
   const overflow = el.shadowRoot!.querySelector('[part="overflow"]') as HTMLButtonElement;
-  listener = oneEvent(el, 'lyra-drill');
+  listener = oneEvent(el, 'lr-drill');
   overflow.click();
   expect((await listener).detail).to.deep.equal({ id: 'c1' });
 });
 
 it('renders only title + member count + drill button in compact mode -- no summary, no chips', async () => {
-  const el = (await fixture(html`<lyra-community-card compact></lyra-community-card>`)) as LyraCommunityCard;
+  const el = (await fixture(html`<lr-community-card compact></lr-community-card>`)) as LyraCommunityCard;
   el.community = community;
   el.members = members;
   await el.updateComplete;
@@ -108,7 +108,7 @@ it('renders only title + member count + drill button in compact mode -- no summa
 });
 
 it('is accessible with members and an overflow chip', async () => {
-  const el = (await fixture(html`<lyra-community-card max-members="2"></lyra-community-card>`)) as LyraCommunityCard;
+  const el = (await fixture(html`<lr-community-card max-members="2"></lr-community-card>`)) as LyraCommunityCard;
   el.community = community;
   el.members = members;
   await el.updateComplete;

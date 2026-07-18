@@ -17,7 +17,7 @@ interface DragState {
    *  from this component's own updates mid-drag (the drag only moves the
    *  handles/fill, never the base's box). Re-measured at every gesture
    *  start, so any between-gesture layout change is always picked up.
-   *  Mirrors lyra-slider's identical snapshot. */
+   *  Mirrors lr-slider's identical snapshot. */
   rect: DOMRect;
   rtl: boolean;
 }
@@ -35,11 +35,11 @@ export interface TimeRangePreset {
 }
 
 export interface LyraTimeRangeEventMap {
-  'lyra-input': CustomEvent<{ start: number; end: number }>;
-  'lyra-change': CustomEvent<{ start: number; end: number }>;
+  'lr-input': CustomEvent<{ start: number; end: number }>;
+  'lr-change': CustomEvent<{ start: number; end: number }>;
 }
 /**
- * `<lyra-time-range>` — a two-handle brush/scrubber over a numeric domain.
+ * `<lr-time-range>` — a two-handle brush/scrubber over a numeric domain.
  * Callers map their own time axis to `[min, max]`; no date logic lives here
  * (matches the no-date-library constraint used elsewhere in this library).
  *
@@ -49,24 +49,24 @@ export interface LyraTimeRangeEventMap {
  * is unaffected and both interaction modes coexist.
  *
  * Form-associated only for the `<fieldset disabled>` cascade, not for a
- * submitted value: it attaches `ElementInternals` (like `<lyra-combobox>`'s
+ * submitted value: it attaches `ElementInternals` (like `<lr-combobox>`'s
  * minimal pattern, rather than the single-string-value `FormAssociated`
  * mixin, which doesn't fit a two-handle range) purely so an ancestor
  * `<fieldset disabled>` disables both handles and every preset button
  * through `effectiveDisabled`, the same way it would a native `<input>`,
  * without touching the consumer-facing `disabled` property/attribute itself.
- * Unlike `<lyra-combobox>`, it never calls `internals.setFormValue()` and
+ * Unlike `<lr-combobox>`, it never calls `internals.setFormValue()` and
  * has no `name` — the selected range is not included in the owning form's
- * `FormData` on submit; read `start`/`end` directly (e.g. from `lyra-change`)
+ * `FormData` on submit; read `start`/`end` directly (e.g. from `lr-change`)
  * instead of relying on native form submission.
  *
  * Deliberately no label/hint/error chrome -- `startLabel`/`endLabel` here are per-handle
- * accessible-name overrides, not visible label text, the same carve-out `<lyra-slider>` states for
+ * accessible-name overrides, not visible label text, the same carve-out `<lr-slider>` states for
  * its own single-handle `label`; a labeled-field consumer wraps this element in their own layout.
  *
- * @customElement lyra-time-range
- * @event lyra-input - Fired continuously while dragging or on each arrow-key press. `detail: { start, end }`.
- * @event lyra-change - Fired on release / keyup-commit, or when a preset button is clicked. `detail: { start, end }`.
+ * @customElement lr-time-range
+ * @event lr-input - Fired continuously while dragging or on each arrow-key press. `detail: { start, end }`.
+ * @event lr-change - Fired on release / keyup-commit, or when a preset button is clicked. `detail: { start, end }`.
  * @csspart base - The time-range wrapper.
  * @csspart track - The complete range track.
  * @csspart range - The selected range.
@@ -91,7 +91,7 @@ export class LyraTimeRange extends LyraElement<LyraTimeRangeEventMap> {
     // `requestUpdate()` it triggers (to pick up `_fieldsetDisabled`) then
     // races Lit's own scheduling and can resolve `updateComplete` before the
     // corrected value actually renders. Reflecting the attribute
-    // synchronously, right in the setter (mirrors `<lyra-combobox>`'s and
+    // synchronously, right in the setter (mirrors `<lr-combobox>`'s and
     // `FormAssociated`'s identical `disabled` accessor), makes the browser
     // invoke that callback *before* any Lit update even starts, so it never
     // interleaves with one.
@@ -168,7 +168,7 @@ export class LyraTimeRange extends LyraElement<LyraTimeRangeEventMap> {
 
   disconnectedCallback(): void {
     super.disconnectedCallback();
-    // Mirror lyra-split's cleanup: if the element is removed mid-drag (or a
+    // Mirror lr-split's cleanup: if the element is removed mid-drag (or a
     // pointercancel/alt-tab means `pointerup` never reaches `window`), these
     // window-level listeners — and the closure keeping this instance alive —
     // would otherwise leak indefinitely.
@@ -188,7 +188,7 @@ export class LyraTimeRange extends LyraElement<LyraTimeRangeEventMap> {
     // A caller-supplied min/max that fails Number attribute conversion (e.g.
     // `min="not-a-number"`) arrives here as NaN; Math.min/Math.max would
     // otherwise propagate that NaN into `lo`/`hi` and poison every
-    // percentOf()/clamp() caller. Mirror lyra-gauge's `ratio` getter, which
+    // percentOf()/clamp() caller. Mirror lr-gauge's `ratio` getter, which
     // short-circuits on isNaN(...) instead, by falling back to this
     // property's own default.
     const min = finiteNumber(this.min, 0);
@@ -253,13 +253,13 @@ export class LyraTimeRange extends LyraElement<LyraTimeRangeEventMap> {
     const clamped = this.clamp(handle, value);
     if (handle === 'start') this.start = clamped;
     else this.end = clamped;
-    this.emit('lyra-input', { start: this.start, end: this.end });
-    if (commit) this.emit('lyra-change', { start: this.start, end: this.end });
+    this.emit('lr-input', { start: this.start, end: this.end });
+    if (commit) this.emit('lr-change', { start: this.start, end: this.end });
   }
 
   /**
    * Apply a discrete preset: sets both handles and emits the same
-   * lyra-input/lyra-change pair a committed drag or keyboard step would.
+   * lr-input/lr-change pair a committed drag or keyboard step would.
    *
    * Deliberately bypasses `setValue()`/`clamp()` — a preset is an explicit
    * discrete jump to the caller's own exact numbers, not a stepped nudge, so
@@ -269,7 +269,7 @@ export class LyraTimeRange extends LyraElement<LyraTimeRangeEventMap> {
    * numbers). Only the domain bounds and the start<=end invariant apply
    * here, not `step`. Both handles are also assigned before either event
    * fires — routing them through two sequential `setValue()` calls instead
-   * would emit an extra lyra-input whose detail still held the stale
+   * would emit an extra lr-input whose detail still held the stale
    * pre-preset value for whichever handle hadn't been assigned yet.
    */
   private applyPreset(preset: TimeRangePreset): void {
@@ -279,8 +279,8 @@ export class LyraTimeRange extends LyraElement<LyraTimeRangeEventMap> {
     const end = finiteRange(preset.end, hi, lo, hi);
     this.start = Math.min(start, end);
     this.end = Math.max(start, end);
-    this.emit('lyra-input', { start: this.start, end: this.end });
-    this.emit('lyra-change', { start: this.start, end: this.end });
+    this.emit('lr-input', { start: this.start, end: this.end });
+    this.emit('lr-change', { start: this.start, end: this.end });
   }
 
   private onKeyDown = (handle: Handle, e: KeyboardEvent): void => {
@@ -323,9 +323,9 @@ export class LyraTimeRange extends LyraElement<LyraTimeRangeEventMap> {
   private onKeyUp = (e: KeyboardEvent): void => {
     // Only commit on release of the keys that onKeyDown acts on — releasing
     // an unrelated key (Tab, Shift, ...) while a handle happens to be
-    // focused must not emit a spurious lyra-change.
+    // focused must not emit a spurious lr-change.
     if (this.effectiveDisabled || !isSliderKey(e.key)) return;
-    this.emit('lyra-change', { start: this.start, end: this.end });
+    this.emit('lr-change', { start: this.start, end: this.end });
   };
 
   private onPointerDown = (handle: Handle, e: PointerEvent): void => {
@@ -340,7 +340,7 @@ export class LyraTimeRange extends LyraElement<LyraTimeRangeEventMap> {
     // fires `lostpointercapture` — both need the same teardown as pointerup
     // or `this.drags` keeps a permanently-stale entry and these window
     // listeners (and the closure keeping this instance alive) never get
-    // removed. Mirrors lyra-split's identical fix.
+    // removed. Mirrors lr-split's identical fix.
     window.addEventListener('pointercancel', this.onPointerUp);
     window.addEventListener('lostpointercapture', this.onPointerUp);
   };
@@ -354,7 +354,7 @@ export class LyraTimeRange extends LyraElement<LyraTimeRangeEventMap> {
       // host (this was already true even back when the host used
       // `pointer-events: none`, since that never governed an
       // already-captured window listener) — a drag already in progress
-      // would otherwise keep mutating start/end (and emitting lyra-input)
+      // would otherwise keep mutating start/end (and emitting lr-input)
       // after `disabled` (or an ancestor fieldset) flips true mid-drag.
       // Abort the drag instead of continuing to process it.
       this.endDrag(e.pointerId, false);
@@ -375,11 +375,11 @@ export class LyraTimeRange extends LyraElement<LyraTimeRangeEventMap> {
     this.endDrag(e.pointerId, true);
   };
 
-  /** Stop the drag owned by `pointerId`, optionally committing a final lyra-change. */
+  /** Stop the drag owned by `pointerId`, optionally committing a final lr-change. */
   private endDrag(pointerId: number, commit: boolean): void {
     if (!this.drags.has(pointerId)) return;
     this.drags.delete(pointerId);
-    if (commit) this.emit('lyra-change', { start: this.start, end: this.end });
+    if (commit) this.emit('lr-change', { start: this.start, end: this.end });
     // Only the last concurrent drag to end tears down the shared window
     // listeners — another pointer (e.g. the other finger of a two-finger
     // drag) may still be down.
@@ -466,7 +466,7 @@ export class LyraTimeRange extends LyraElement<LyraTimeRangeEventMap> {
             'rangeStart',
             this.startLabel === 'Range start' ? undefined : this.startLabel,
           )}
-          aria-disabled=${this.effectiveDisabled ? 'true' : nothing}
+          aria-disabled=${this.effectiveDisabled ? 'true' : 'false'}
           aria-valuemin=${startBounds.min}
           aria-valuemax=${startBounds.max}
           aria-valuenow=${Number.isFinite(this.start)
@@ -485,7 +485,7 @@ export class LyraTimeRange extends LyraElement<LyraTimeRangeEventMap> {
             'rangeEnd',
             this.endLabel === 'Range end' ? undefined : this.endLabel,
           )}
-          aria-disabled=${this.effectiveDisabled ? 'true' : nothing}
+          aria-disabled=${this.effectiveDisabled ? 'true' : 'false'}
           aria-valuemin=${endBounds.min}
           aria-valuemax=${endBounds.max}
           aria-valuenow=${Number.isFinite(this.end)
@@ -504,6 +504,6 @@ export class LyraTimeRange extends LyraElement<LyraTimeRangeEventMap> {
 
 declare global {
   interface HTMLElementTagNameMap {
-    'lyra-time-range': LyraTimeRange;
+    'lr-time-range': LyraTimeRange;
   }
 }

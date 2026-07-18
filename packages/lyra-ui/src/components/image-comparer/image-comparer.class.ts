@@ -7,19 +7,19 @@ import { styles } from './image-comparer.styles.js';
 export type LyraImageComparerOrientation = 'horizontal' | 'vertical';
 
 export interface LyraImageComparerEventMap {
-  'lyra-position-change': CustomEvent<{ position: number }>;
+  'lr-position-change': CustomEvent<{ position: number }>;
   blur: CustomEvent<undefined>;
   focus: CustomEvent<undefined>;
 }
 
 /**
- * `<lyra-image-comparer>` — compares two slotted surfaces with a keyboard-
+ * `<lr-image-comparer>` — compares two slotted surfaces with a keyboard-
  * accessible range divider.
  *
- * @customElement lyra-image-comparer
+ * @customElement lr-image-comparer
  * @slot before - The before-state image or content.
  * @slot after - The after-state image or content.
- * @event lyra-position-change - Divider moved. `detail: { position }`, where position is 0–100.
+ * @event lr-position-change - Divider moved. `detail: { position }`, where position is 0–100.
  * @csspart base - The comparison viewport.
  * @csspart before - The clipped before-state layer.
  * @csspart after - The after-state layer.
@@ -42,7 +42,7 @@ export class LyraImageComparer extends LyraElement<LyraImageComparerEventMap> {
   private onInput = (event: Event): void => {
     const input = event.currentTarget as HTMLInputElement;
     this.position = Number(input.value);
-    this.emit('lyra-position-change', { position: this.normalizedPosition });
+    this.emit('lr-position-change', { position: this.normalizedPosition });
   };
 
   private onFocus = (): void => {
@@ -59,7 +59,7 @@ export class LyraImageComparer extends LyraElement<LyraImageComparerEventMap> {
     return html`<div
       part="base"
       data-orientation=${this.orientation}
-      style="--lyra-comparer-position: ${position}"
+      style="--lr-comparer-position: ${position}"
       role="group"
       aria-label=${label}
     >
@@ -84,6 +84,6 @@ export class LyraImageComparer extends LyraElement<LyraImageComparerEventMap> {
 
 declare global {
   interface HTMLElementTagNameMap {
-    'lyra-image-comparer': LyraImageComparer;
+    'lr-image-comparer': LyraImageComparer;
   }
 }

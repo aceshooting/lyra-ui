@@ -1,7 +1,7 @@
 import type { OptionalPeerApi } from '../../internal/optional-peer-types.js';
 
 /**
- * The two optional peers `<lyra-markdown>` needs, loaded independently (see
+ * The two optional peers `<lr-markdown>` needs, loaded independently (see
  * `loadMarkdownAndSanitizer()`). Either half can be `undefined` on its own —
  * a consumer who only installs `marked` (having explicitly opted out of
  * sanitization via `sanitize="false"`) is a valid, supported combination.
@@ -40,7 +40,7 @@ export async function loadMarkdownAndSanitizer(
     marked = await importMarked();
   } catch (err) {
     console.warn(
-      '<lyra-markdown> needs the optional peer dependency `marked` to parse Markdown — install it with `pnpm add marked`:',
+      '<lr-markdown> needs the optional peer dependency `marked` to parse Markdown — install it with `pnpm add marked`:',
       err,
     );
   }
@@ -50,7 +50,7 @@ export async function loadMarkdownAndSanitizer(
     DOMPurify = (await importDompurify()).default;
   } catch (err) {
     console.warn(
-      '<lyra-markdown> needs the optional peer dependency `dompurify` to sanitize rendered HTML — install it ' +
+      '<lr-markdown> needs the optional peer dependency `dompurify` to sanitize rendered HTML — install it ' +
         'with `pnpm add dompurify`. Until then, content only renders when `sanitize="false"` is explicitly set:',
       err,
     );
@@ -63,17 +63,17 @@ export async function loadMarkdownAndSanitizer(
  * Lazily loads `marked` + `dompurify` once per page (see
  * `loadMarkdownAndSanitizer()` for why each is loaded and caught
  * independently). Cached the same way `chart-loader.ts`/`map-loader.ts`
- * cache their promise, so every `<lyra-markdown>` instance on a page shares
+ * cache their promise, so every `<lr-markdown>` instance on a page shares
  * one load.
  *
  * The dynamic `import()` inside `loadMarkdownAndSanitizer()` is always
  * asynchronous — even when both peers are already installed and resolve
- * without error — so every `<lyra-markdown>` that calls this from
+ * without error — so every `<lr-markdown>` that calls this from
  * `connectedCallback()` paints its plain-text fallback (`data-fallback` on
  * the `content` part) for at least one microtask before the real rendered
  * output replaces it. That window is unconditional, not just a failure
  * path: it ends only once this promise settles. A consumer that wants to
- * skip it can set `eager-load` on `<lyra-markdown>`, which calls
+ * skip it can set `eager-load` on `<lr-markdown>`, which calls
  * `getMarkdownDepsIfLoaded()` below instead of awaiting this function —
  * see that property's doc for what "already warm" means in practice.
  */
@@ -90,13 +90,13 @@ export function loadMarkdownDeps(): Promise<MarkdownDeps> {
 /**
  * Synchronous companion to `loadMarkdownDeps()`: returns the same
  * module-level cached `MarkdownDeps` if some earlier call to
- * `loadMarkdownDeps()` — from any `<lyra-markdown>` instance on the page, or
+ * `loadMarkdownDeps()` — from any `<lr-markdown>` instance on the page, or
  * a consumer priming it directly at startup — has already settled by the
  * time this is called, or `undefined` if the cache isn't warm yet (nothing
  * has called `loadMarkdownDeps()` before, or it's still in flight). Used by
  * `eager-load` to skip the dynamic `import()`'s async hop in the common case
  * where the peers are already loaded; it cannot make the *very first*
- * `<lyra-markdown>` on a page synchronous, since that first call is what
+ * `<lr-markdown>` on a page synchronous, since that first call is what
  * populates the cache in the first place.
  */
 export function getMarkdownDepsIfLoaded(): MarkdownDeps | undefined {

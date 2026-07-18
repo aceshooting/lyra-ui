@@ -10,20 +10,20 @@ export interface LyraColorPickerEventMap {
   change: CustomEvent<undefined>;
   blur: CustomEvent<undefined>;
   focus: CustomEvent<undefined>;
-  'lyra-change': CustomEvent<{ value: string }>;
+  'lr-change': CustomEvent<{ value: string }>;
 }
 class ColorPickerBase extends LyraElement<LyraColorPickerEventMap> {}
 
 /**
- * `<lyra-color-picker>` — a form-associated native color picker with label, hint and error chrome.
+ * `<lr-color-picker>` — a form-associated native color picker with label, hint and error chrome.
  *
- * @customElement lyra-color-picker
+ * @customElement lr-color-picker
  * @slot label - Custom label content.
  * @slot hint - Supporting text.
  * @slot error - Custom validation-error content.
  * @event input - Native-style composed color input event.
  * @event change - Native-style composed color change event.
- * @event lyra-change - Change detail with the selected hex value.
+ * @event lr-change - Change detail with the selected hex value.
  * @event focus - Re-dispatched from the internal `<input>`'s own `focus`, bubbling and composed
  *   unlike the native event.
  * @event blur - Re-dispatched from the internal `<input>`'s own `blur`, for the same reason as `focus`.
@@ -51,7 +51,7 @@ export class LyraColorPicker extends FormAssociated(ColorPickerBase) {
     if (!this.inputEl) return;
     this.value = this.inputEl.value;
     this.emit('input');
-    this.emit('lyra-change', { value: this.value });
+    this.emit('lr-change', { value: this.value });
   };
   private onChange = (): void => { this.emit('change'); };
   private onNativeFocus = (): void => { this.emit('focus'); };
@@ -94,4 +94,4 @@ export class LyraColorPicker extends FormAssociated(ColorPickerBase) {
     </div>`;
   }
 }
-declare global { interface HTMLElementTagNameMap { 'lyra-color-picker': LyraColorPicker; } }
+declare global { interface HTMLElementTagNameMap { 'lr-color-picker': LyraColorPicker; } }

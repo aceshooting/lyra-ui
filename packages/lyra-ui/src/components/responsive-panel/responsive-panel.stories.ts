@@ -5,7 +5,7 @@ import type { LyraResponsivePanel } from './responsive-panel.js';
 
 const meta: Meta = {
   title: 'ResponsivePanel',
-  component: 'lyra-responsive-panel',
+  component: 'lr-responsive-panel',
   tags: ['autodocs'],
   parameters: {
     docs: {
@@ -21,14 +21,14 @@ type Story = StoryObj;
 
 function openPanel(e: Event): void {
   const trigger = e.currentTarget as HTMLElement;
-  const panel = trigger.parentElement!.querySelector('lyra-responsive-panel') as LyraResponsivePanel;
+  const panel = trigger.parentElement!.querySelector('lr-responsive-panel') as LyraResponsivePanel;
   panel.open = true;
 }
 
 export const DockedInline: Story = {
   name: 'mode="inline" (docked)',
   render: () => html`
-    <lyra-responsive-panel mode="inline" open style="max-width: 20rem;">
+    <lr-responsive-panel mode="inline" open style="max-width: 20rem;">
       <span slot="header" style="font-weight: 600;">Filters</span>
       <div style="display: flex; flex-direction: column; gap: 0.5rem;">
         <label><input type="checkbox" checked /> Show archived</label>
@@ -37,7 +37,7 @@ export const DockedInline: Story = {
       <div slot="footer">
         <button>Apply</button>
       </div>
-    </lyra-responsive-panel>
+    </lr-responsive-panel>
   `,
 };
 
@@ -46,18 +46,18 @@ export const ForcedOverlayFullscreen: Story = {
   render: () => html`
     <div>
       <button @click=${openPanel}>Open panel</button>
-      <lyra-responsive-panel mode="overlay" variant="fullscreen" label="Settings">
+      <lr-responsive-panel mode="overlay" variant="fullscreen" label="Settings">
         <span slot="header" style="font-weight: 600;">Settings</span>
         <p style="margin: 0;">Fullscreen covers the entire viewport -- no docked layout, no visible backdrop.</p>
         <div slot="footer">
           <button
             @click=${(e: Event) =>
-              ((e.target as HTMLElement).closest('lyra-responsive-panel') as LyraResponsivePanel).close('cancel')}
+              ((e.target as HTMLElement).closest('lr-responsive-panel') as LyraResponsivePanel).close('cancel')}
           >
             Close
           </button>
         </div>
-      </lyra-responsive-panel>
+      </lr-responsive-panel>
     </div>
   `,
 };
@@ -67,13 +67,13 @@ export const ForcedOverlayBottomSheet: Story = {
   render: () => html`
     <div>
       <button @click=${openPanel}>Open panel</button>
-      <lyra-responsive-panel mode="overlay" variant="bottom-sheet" label="Share">
+      <lr-responsive-panel mode="overlay" variant="bottom-sheet" label="Share">
         <span slot="header" style="font-weight: 600;">Share</span>
         <div style="display: flex; flex-direction: column; gap: 0.5rem;">
           <button>Copy link</button>
           <button>Share to...</button>
         </div>
-      </lyra-responsive-panel>
+      </lr-responsive-panel>
     </div>
   `,
 };
@@ -91,7 +91,7 @@ export const AutoModeResolvesToOverlayHere: Story = {
   render: () => html`
     <div>
       <button @click=${openPanel}>Open panel</button>
-      <lyra-responsive-panel mode="auto" mobile-breakpoint="1400px" label="Conversation history">
+      <lr-responsive-panel mode="auto" mobile-breakpoint="1400px" label="Conversation history">
         <span slot="header" style="font-weight: 600;">History</span>
         <p style="margin: 0;">
           Resize the browser window (or this canvas) past 1400px wide and this same panel switches to a
@@ -100,12 +100,12 @@ export const AutoModeResolvesToOverlayHere: Story = {
         <div slot="footer">
           <button
             @click=${(e: Event) =>
-              ((e.target as HTMLElement).closest('lyra-responsive-panel') as LyraResponsivePanel).close('cancel')}
+              ((e.target as HTMLElement).closest('lr-responsive-panel') as LyraResponsivePanel).close('cancel')}
           >
             Close
           </button>
         </div>
-      </lyra-responsive-panel>
+      </lr-responsive-panel>
     </div>
   `,
 };
@@ -122,11 +122,11 @@ export const SettingsSidebarPattern: Story = {
   },
   render: () => html`
     <div style="display: flex; gap: 1rem; align-items: flex-start;">
-      <div style="flex: 1; min-inline-size: 12rem; padding: 1rem; border: 1px dashed var(--lyra-color-border); border-radius: 0.375rem;">
+      <div style="flex: 1; min-inline-size: 12rem; padding: 1rem; border: 1px dashed var(--lr-color-border); border-radius: 0.375rem;">
         Main content area
       </div>
       <button @click=${openPanel}>Open settings (below 900px)</button>
-      <lyra-responsive-panel
+      <lr-responsive-panel
         mode="auto"
         mobile-breakpoint="900px"
         variant="bottom-sheet"
@@ -138,7 +138,7 @@ export const SettingsSidebarPattern: Story = {
           <label><input type="checkbox" checked /> Notifications</label>
           <label><input type="checkbox" /> Dark mode</label>
         </div>
-      </lyra-responsive-panel>
+      </lr-responsive-panel>
     </div>
   `,
 };

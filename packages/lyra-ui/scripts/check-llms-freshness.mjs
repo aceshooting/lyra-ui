@@ -16,12 +16,12 @@ const llmsFull = readFileSync(llmsFullPath, 'utf8');
  * Two passes:
  *  1. Top-level `## ` headings define section boundaries (start = that line, end = the next
  *     `## ` heading or EOF). A heading may name more than one tag at once (e.g.
- *     `` ## `lyra-menu` / `lyra-menu-item` ``, or `` ## `lyra-chart` (core) `` alongside a
- *     separate "Typed subclasses: `lyra-line-chart`, ..." heading) — every `lyra-*` substring
+ *     `` ## `lr-menu` / `lr-menu-item` ``, or `` ## `lr-chart` (core) `` alongside a
+ *     separate "Typed subclasses: `lr-line-chart`, ..." heading) — every `lr-*` substring
  *     found on the heading line maps to that heading's whole section span.
  *  2. Every heading line at any depth (`## `, `### `, ...) can also name tags — this picks up a
- *     tag documented as a nested subheading (e.g. `### \`lyra-app-rail-item\`` inside
- *     `## \`lyra-app-rail\``'s span) and maps it to whichever top-level span (from pass 1)
+ *     tag documented as a nested subheading (e.g. `### \`lr-app-rail-item\`` inside
+ *     `## \`lr-app-rail\``'s span) and maps it to whichever top-level span (from pass 1)
  *     contains that heading line, rather than requiring it to have its own top-level heading.
  *
  * Headings inside fenced code blocks are ignored throughout (a code sample could otherwise
@@ -56,7 +56,7 @@ function extractSections(text) {
   for (const heading of allHeadings) {
     const sectionText = spanTextAt(heading.index);
     if (!sectionText) continue;
-    const tagsInHeading = heading[0].match(/lyra-[a-z0-9-]+/g) ?? [];
+    const tagsInHeading = heading[0].match(/lr-[a-z0-9-]+/g) ?? [];
     for (const tag of tagsInHeading) {
       sections.set(tag, sectionText);
     }

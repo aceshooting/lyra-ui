@@ -10,28 +10,28 @@ const presets: TimeRangePreset[] = [
 
 const meta: Meta = {
   title: 'TimeRange',
-  component: 'lyra-time-range',
+  component: 'lr-time-range',
   tags: ['autodocs'],
 };
 export default meta;
 type Story = StoryObj;
 
 export const Default: Story = {
-  render: () => html`<lyra-time-range min="0" max="100" start="20" end="80"></lyra-time-range>`,
+  render: () => html`<lr-time-range min="0" max="100" start="20" end="80"></lr-time-range>`,
 };
 
 export const Disabled: Story = {
   render: () =>
-    html`<lyra-time-range min="0" max="100" start="20" end="80" disabled></lyra-time-range>`,
+    html`<lr-time-range min="0" max="100" start="20" end="80" disabled></lr-time-range>`,
 };
 
 export const CoarseStep: Story = {
   render: () =>
-    html`<lyra-time-range min="0" max="100" start="20" end="80" step="10"></lyra-time-range>`,
+    html`<lr-time-range min="0" max="100" start="20" end="80" step="10"></lr-time-range>`,
 };
 
 export const DiscretePresets: Story = {
   render: () => html`
-    <lyra-time-range min="0" max="90" start="0" end="30" .presets=${presets}></lyra-time-range>
+    <lr-time-range min="0" max="90" start="0" end="30" .presets=${presets}></lr-time-range>
   `,
 };

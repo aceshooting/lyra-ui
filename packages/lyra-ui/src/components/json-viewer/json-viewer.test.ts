@@ -12,7 +12,7 @@ const sample = {
 };
 
 async function withData(data: unknown): Promise<LyraJsonViewer> {
-  const el = (await fixture(html`<lyra-json-viewer></lyra-json-viewer>`)) as LyraJsonViewer;
+  const el = (await fixture(html`<lr-json-viewer></lr-json-viewer>`)) as LyraJsonViewer;
   el.data = data;
   await el.updateComplete;
   return el;
@@ -145,7 +145,7 @@ it('gives tree toggles and copy controls the shared minimum hit area', async () 
   expect(getComputedStyle(copy).minBlockSize).to.equal('40px');
 });
 
-it('renders a top-level copy button when copyable, and emits lyra-copy with the full JSON on click', async () => {
+it('renders a top-level copy button when copyable, and emits lr-copy with the full JSON on click', async () => {
   const el = await withData(sample);
   el.copyable = true;
   await el.updateComplete;
@@ -154,7 +154,7 @@ it('renders a top-level copy button when copyable, and emits lyra-copy with the 
   expect(toolbarButton).to.exist;
 
   setTimeout(() => toolbarButton.click());
-  const event = await oneEvent(el, 'lyra-copy');
+  const event = await oneEvent(el, 'lr-copy');
   expect(event.detail.text).to.equal(JSON.stringify(sample, null, 2));
 });
 
@@ -173,11 +173,11 @@ it('renders per-node copy buttons when copyable, and copies just that node on cl
   const copyBtn = ageRow.querySelector('[part="copy-button"]') as HTMLButtonElement;
 
   setTimeout(() => copyBtn.click());
-  const event = await oneEvent(el, 'lyra-copy');
+  const event = await oneEvent(el, 'lr-copy');
   expect(event.detail.text).to.equal('36');
 });
 
-it('fires lyra-copy even when navigator.clipboard is unavailable', async () => {
+it('fires lr-copy even when navigator.clipboard is unavailable', async () => {
   const original = Object.getOwnPropertyDescriptor(navigator, 'clipboard');
   Object.defineProperty(navigator, 'clipboard', { value: undefined, configurable: true });
 
@@ -188,7 +188,7 @@ it('fires lyra-copy even when navigator.clipboard is unavailable', async () => {
     const toolbarButton = el.shadowRoot!.querySelector('[part="copy-button"]') as HTMLButtonElement;
 
     setTimeout(() => toolbarButton.click());
-    const event = await oneEvent(el, 'lyra-copy');
+    const event = await oneEvent(el, 'lr-copy');
     expect(event.detail.text).to.equal(JSON.stringify(sample, null, 2));
   } finally {
     if (original) Object.defineProperty(navigator, 'clipboard', original);
@@ -202,7 +202,7 @@ it('copies the literal string "undefined" when the root data is undefined', asyn
 
   const toolbarButton = el.shadowRoot!.querySelector('[part="copy-button"]') as HTMLButtonElement;
   setTimeout(() => toolbarButton.click());
-  const event = await oneEvent(el, 'lyra-copy');
+  const event = await oneEvent(el, 'lr-copy');
   expect(event.detail.text).to.equal('undefined');
 });
 
@@ -305,7 +305,7 @@ it('copies a bigint value without throwing, downgrading it to a plain string', a
 
   const toolbarButton = el.shadowRoot!.querySelector('[part="toolbar"] [part="copy-button"]') as HTMLButtonElement;
   setTimeout(() => toolbarButton.click());
-  const event = await oneEvent(el, 'lyra-copy');
+  const event = await oneEvent(el, 'lr-copy');
   expect(event.detail.text).to.equal(JSON.stringify({ count: '10' }, null, 2));
 });
 
@@ -318,7 +318,7 @@ it('copies a self-referencing value without throwing, substituting the localized
 
   const toolbarButton = el.shadowRoot!.querySelector('[part="toolbar"] [part="copy-button"]') as HTMLButtonElement;
   setTimeout(() => toolbarButton.click());
-  const event = await oneEvent(el, 'lyra-copy');
+  const event = await oneEvent(el, 'lr-copy');
   expect(event.detail.text).to.equal(JSON.stringify({ name: 'root', self: 'Circular reference' }, null, 2));
 });
 
@@ -330,7 +330,7 @@ it('copies a value with the same object reachable via two non-cyclic paths witho
 
   const toolbarButton = el.shadowRoot!.querySelector('[part="toolbar"] [part="copy-button"]') as HTMLButtonElement;
   setTimeout(() => toolbarButton.click());
-  const event = await oneEvent(el, 'lyra-copy');
+  const event = await oneEvent(el, 'lr-copy');
   expect(event.detail.text).to.equal(JSON.stringify({ a: { id: 1 }, b: { id: 1 } }, null, 2));
 });
 
@@ -357,7 +357,7 @@ it('does not re-walk the data tree to recompute search state on a toggle-only re
       },
     },
   );
-  const el = (await fixture(html`<lyra-json-viewer></lyra-json-viewer>`)) as LyraJsonViewer;
+  const el = (await fixture(html`<lr-json-viewer></lr-json-viewer>`)) as LyraJsonViewer;
   // "hidden" (depth 1) starts collapsed from this very first render (data,
   // collapsed-depth, and search are all assigned before the first await, so
   // Lit batches them into one update) -- normal rendering never descends
@@ -457,20 +457,20 @@ it('respects max-height by setting the scoped custom property on the base part',
   el.maxHeight = '10rem';
   await el.updateComplete;
   const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
-  expect(base.style.getPropertyValue('--lyra-json-viewer-max-height')).to.equal('10rem');
+  expect(base.style.getPropertyValue('--lr-json-viewer-max-height')).to.equal('10rem');
 });
 
 it('mirrors a collapsed directional chevron in RTL while expanded still points down', async () => {
   const wrapper = await fixture(html`
     <div dir="rtl">
-      <lyra-json-viewer
+      <lr-json-viewer
         .data=${{ nested: true }}
         collapsed-depth="0"
-        style="--lyra-transition-fast: 0s"
-      ></lyra-json-viewer>
+        style="--lr-transition-fast: 0s"
+      ></lr-json-viewer>
     </div>
   `);
-  const el = wrapper.querySelector('lyra-json-viewer') as LyraJsonViewer;
+  const el = wrapper.querySelector('lr-json-viewer') as LyraJsonViewer;
   await el.updateComplete;
   const toggle = el.shadowRoot!.querySelector('[part="toggle"]') as HTMLButtonElement;
   const chevron = toggle.querySelector('.chevron') as HTMLElement;
@@ -503,7 +503,7 @@ it('is accessible with copyable buttons and a collapsed root', async () => {
 });
 
 it('is accessible with an empty/default (undefined) value', async () => {
-  const el = (await fixture(html`<lyra-json-viewer></lyra-json-viewer>`)) as LyraJsonViewer;
+  const el = (await fixture(html`<lr-json-viewer></lr-json-viewer>`)) as LyraJsonViewer;
   await expect(el).to.be.accessible();
 });
 
@@ -536,7 +536,7 @@ describe('imperative search API', () => {
   // json-viewer.class.ts for the full rationale.
 
   it('runSearch() resolves the count equal to the rendered data-match span count', async () => {
-    const el = (await fixture(html`<lyra-json-viewer .data=${SAMPLE}></lyra-json-viewer>`)) as LyraJsonViewer;
+    const el = (await fixture(html`<lr-json-viewer .data=${SAMPLE}></lr-json-viewer>`)) as LyraJsonViewer;
     const count = await el.runSearch('name');
     await el.updateComplete;
     expect(count).to.equal(el.shadowRoot!.querySelectorAll('[data-match]').length);
@@ -544,10 +544,10 @@ describe('imperative search API', () => {
   });
 
   it('searchNext/searchPrevious move the cursor in document walk order (key before value at one path)', async () => {
-    const el = (await fixture(html`<lyra-json-viewer .data=${{ ada: 'ada' }}></lyra-json-viewer>`)) as LyraJsonViewer;
+    const el = (await fixture(html`<lr-json-viewer .data=${{ ada: 'ada' }}></lr-json-viewer>`)) as LyraJsonViewer;
     await el.runSearch('ada'); // matches the key "ada" AND its own value "ada" at the same path
     let detail: { activeIndex: number } | undefined;
-    el.addEventListener('lyra-search-change', (e) => (detail = (e as CustomEvent).detail));
+    el.addEventListener('lr-search-change', (e) => (detail = (e as CustomEvent).detail));
     expect(await el.searchNext()).to.be.true;
     expect(detail!.activeIndex).to.equal(0);
     expect(await el.searchNext()).to.be.true;
@@ -557,15 +557,15 @@ describe('imperative search API', () => {
   });
 
   it('activeIndex starts at -1 before any navigation', async () => {
-    const el = (await fixture(html`<lyra-json-viewer .data=${SAMPLE}></lyra-json-viewer>`)) as LyraJsonViewer;
+    const el = (await fixture(html`<lr-json-viewer .data=${SAMPLE}></lr-json-viewer>`)) as LyraJsonViewer;
     let detail: { activeIndex: number } | undefined;
-    el.addEventListener('lyra-search-change', (e) => (detail = (e as CustomEvent).detail));
+    el.addEventListener('lr-search-change', (e) => (detail = (e as CustomEvent).detail));
     await el.runSearch('name');
     expect(detail!.activeIndex).to.equal(-1);
   });
 
   it('a user-collapsed ancestor keeps its override while the cursor still advances', async () => {
-    const el = (await fixture(html`<lyra-json-viewer .data=${SAMPLE} collapsed-depth=${99}></lyra-json-viewer>`)) as LyraJsonViewer;
+    const el = (await fixture(html`<lr-json-viewer .data=${SAMPLE} collapsed-depth=${99}></lr-json-viewer>`)) as LyraJsonViewer;
     await el.runSearch('name');
     // The "team" toggle button, force-expanded by the match -- user collapses it explicitly.
     const toggles = [...el.shadowRoot!.querySelectorAll('[part="toggle"]')] as HTMLButtonElement[];
@@ -576,13 +576,13 @@ describe('imperative search API', () => {
     expect(await el.searchNext()).to.be.true; // still advances even though a match may now be hidden
   });
 
-  it('emits exactly one lyra-search-change when data reshapes, resetting activeIndex to -1', async () => {
-    const el = (await fixture(html`<lyra-json-viewer .data=${SAMPLE}></lyra-json-viewer>`)) as LyraJsonViewer;
+  it('emits exactly one lr-search-change when data reshapes, resetting activeIndex to -1', async () => {
+    const el = (await fixture(html`<lr-json-viewer .data=${SAMPLE}></lr-json-viewer>`)) as LyraJsonViewer;
     await el.runSearch('name');
     await el.searchNext();
     let callCount = 0;
     let lastDetail: { activeIndex: number } | undefined;
-    el.addEventListener('lyra-search-change', (e) => {
+    el.addEventListener('lr-search-change', (e) => {
       callCount++;
       lastDetail = (e as CustomEvent).detail;
     });
@@ -593,9 +593,9 @@ describe('imperative search API', () => {
   });
 
   it('clearSearch() resets query/matchCount/activeIndex', async () => {
-    const el = (await fixture(html`<lyra-json-viewer .data=${SAMPLE}></lyra-json-viewer>`)) as LyraJsonViewer;
+    const el = (await fixture(html`<lr-json-viewer .data=${SAMPLE}></lr-json-viewer>`)) as LyraJsonViewer;
     await el.runSearch('name');
-    const listener = oneEvent(el, 'lyra-search-change');
+    const listener = oneEvent(el, 'lr-search-change');
     el.clearSearch();
     const event = (await listener) as CustomEvent<{ query: string; matchCount: number; activeIndex: number }>;
     expect(event.detail).to.deep.equal({ query: '', matchCount: 0, activeIndex: -1 });
@@ -603,10 +603,10 @@ describe('imperative search API', () => {
   });
 
   it('back-compat: rendered DOM is unchanged until a cursor exists', async () => {
-    const before = (await fixture(html`<lyra-json-viewer .data=${SAMPLE} search="name"></lyra-json-viewer>`)) as LyraJsonViewer;
+    const before = (await fixture(html`<lr-json-viewer .data=${SAMPLE} search="name"></lr-json-viewer>`)) as LyraJsonViewer;
     await before.updateComplete;
     const beforeHtml = before.shadowRoot!.querySelector('[part="tree"]')!.innerHTML;
-    const after = (await fixture(html`<lyra-json-viewer .data=${SAMPLE}></lyra-json-viewer>`)) as LyraJsonViewer;
+    const after = (await fixture(html`<lr-json-viewer .data=${SAMPLE}></lr-json-viewer>`)) as LyraJsonViewer;
     await after.runSearch('name');
     await after.updateComplete;
     expect(after.shadowRoot!.querySelector('[part="tree"]')!.innerHTML).to.equal(beforeHtml);

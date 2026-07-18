@@ -1,9 +1,9 @@
 import { css } from 'lit';
 
 export const styles = css`
-  /* Fully transparent to layout, matching lyra-menu's own :host — the
+  /* Fully transparent to layout, matching lr-menu's own :host — the
      visible/clickable surface is entirely the rendered button (or, in the
-     multi-capability case, lyra-menu's own display:contents trigger wrapper
+     multi-capability case, lr-menu's own display:contents trigger wrapper
      around that same button), so this host never contributes a stray box a
      composer's leading slot would otherwise have to fight with margin/
      inline-block quirks to line up against the textarea. */
@@ -23,7 +23,7 @@ export const styles = css`
 
   /* Shared visual treatment for both the single-capability button
      ([part='trigger']) and the multi-capability button ([part='menu-trigger'])
-     slotted into lyra-menu's own trigger slot -- the latter can't reuse
+     slotted into lr-menu's own trigger slot -- the latter can't reuse
      part='trigger' itself (that name is reserved for the single-capability
      case, so a consumer's ::part(trigger) selector unambiguously targets
      exactly one button), so both buttons share this plain class for the
@@ -36,73 +36,73 @@ export const styles = css`
     justify-content: center;
     box-sizing: border-box;
     /* Compact per the class doc -- capped well below the library's general
-       --lyra-icon-button-size (meant for a standalone icon-only button) so
+       --lr-icon-button-size (meant for a standalone icon-only button) so
        this sits comfortably inside a composer's leading slot alongside a
-       textarea, matching lyra-combobox's clear-button / lyra-select's
+       textarea, matching lr-combobox's clear-button / lr-select's
        toggle sizing convention. */
-    min-inline-size: min(var(--lyra-icon-button-size), var(--lyra-size-1-75rem));
-    min-block-size: min(var(--lyra-icon-button-size), var(--lyra-size-1-75rem));
+    min-inline-size: min(var(--lr-icon-button-size), var(--lr-size-1-75rem));
+    min-block-size: min(var(--lr-icon-button-size), var(--lr-size-1-75rem));
     padding: 0;
     border: none;
-    border-radius: calc(var(--lyra-radius) * 0.6);
+    border-radius: calc(var(--lr-radius) * 0.6);
     background: transparent;
-    color: var(--lyra-color-text-quiet);
+    color: var(--lr-color-text-quiet);
     font: inherit;
-    font-size: var(--lyra-font-size-lg);
-    line-height: var(--lyra-line-height-none);
+    font-size: var(--lr-font-size-lg);
+    line-height: var(--lr-line-height-none);
     cursor: pointer;
     -webkit-tap-highlight-color: transparent;
     transition:
-      background-color var(--lyra-transition-fast),
-      color var(--lyra-transition-fast);
+      background-color var(--lr-transition-fast),
+      color var(--lr-transition-fast);
   }
   /* :where() zeroes the wrapped selectors' specificity contribution, leaving only :hover itself
      -- (0,1,0) total, functionally identical selection to \`.trigger-button:hover:not(:disabled)\`
      ((0,3,0)) but now losing (on the pseudo-element tiebreak) to a consumer's own
      \`::part(trigger):hover\` override ((0,1,1)) without that consumer needing !important. */
   :where(.trigger-button):hover:where(:not(:disabled)) {
-    background: color-mix(in srgb, var(--lyra-color-text) 8%, transparent);
-    color: var(--lyra-color-text);
+    background: color-mix(in srgb, var(--lr-color-text) 8%, transparent);
+    color: var(--lr-color-text);
   }
   .trigger-button:focus-visible {
-    outline: var(--lyra-focus-ring-width) solid var(--lyra-focus-ring-color);
-    outline-offset: var(--lyra-focus-ring-offset);
+    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
+    outline-offset: var(--lr-focus-ring-offset);
   }
   .trigger-button:disabled {
     cursor: not-allowed;
-    opacity: var(--lyra-opacity-disabled);
+    opacity: var(--lr-opacity-disabled);
   }
   .trigger-button svg {
     display: block;
   }
 
   /* Both trigger buttons must independently meet the shared minimum tappable size
-     (--lyra-icon-button-size), overriding .trigger-button's own more compact
+     (--lr-icon-button-size), overriding .trigger-button's own more compact
      min-inline-size/min-block-size above -- same tie-break-by-source-order specificity as every
      other single-attribute-selector override in this file (equal (0,1,0) specificity to
      .trigger-button's own (0,1,0), so this later rule wins). */
   [part='trigger'],
   [part='menu-trigger'] {
-    min-inline-size: var(--lyra-icon-button-size);
-    min-block-size: var(--lyra-icon-button-size);
+    min-inline-size: var(--lr-icon-button-size);
+    min-block-size: var(--lr-icon-button-size);
   }
 
   /* [part='menu-trigger'] carries a second glyph (the paperclip plus this
      disclosure chevron) alongside the single-capability [part='trigger']'s
      one, so it alone needs a gap between them. */
   [part='menu-trigger'] {
-    gap: var(--lyra-space-xs);
+    gap: var(--lr-space-xs);
   }
 
   /* Disclosure cue for the multi-capability trigger, matching
-     lyra-combobox/lyra-select's own [part='expand-icon'] convention (same
+     lr-combobox/lr-select's own [part='expand-icon'] convention (same
      chevronIcon() rotated to point down) -- but sized down from their
      dedicated-touch-target treatment since here it's a second glyph inside
      one already-compact icon button, not its own separate control. */
   [part='expand-icon'] {
     display: inline-flex;
     flex: 0 0 auto;
-    font-size: var(--lyra-size-0-75em);
+    font-size: var(--lr-size-0-75em);
   }
   [part='expand-icon'] svg {
     transform: rotate(90deg);

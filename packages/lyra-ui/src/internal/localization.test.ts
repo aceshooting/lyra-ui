@@ -11,7 +11,7 @@ it('resolves registered locale messages and per-instance overrides', async () =>
   setLyraLocale('x-test');
 
   try {
-    const el = (await fixture(html`<lyra-sparkline .values=${[]}></lyra-sparkline>`)) as LyraSparkline;
+    const el = (await fixture(html`<lr-sparkline .values=${[]}></lr-sparkline>`)) as LyraSparkline;
     expect(el.shadowRoot!.querySelector('svg')!.getAttribute('aria-label')).to.equal('Keine Daten');
 
     el.strings = { noData: 'Aucune donnée' };
@@ -25,7 +25,7 @@ it('resolves registered locale messages and per-instance overrides', async () =>
 it('updates connected components when the active locale changes', async () => {
   registerLyraLocale('x-first', { noData: 'First' });
   registerLyraLocale('x-second', { noData: 'Second' });
-  const el = (await fixture(html`<lyra-sparkline .values=${[]}></lyra-sparkline>`)) as LyraSparkline;
+  const el = (await fixture(html`<lr-sparkline .values=${[]}></lr-sparkline>`)) as LyraSparkline;
 
   setLyraLocale('x-first');
   await el.updateComplete;
@@ -40,9 +40,9 @@ it('inherits an ancestor lang and picks up an ancestor lang change on the follow
   registerLyraLocale('x-aa', { noData: 'AA leer' });
   registerLyraLocale('x-bb', { noData: 'BB leer' });
   const wrapper = await fixture<HTMLDivElement>(
-    html`<div lang="x-aa"><lyra-sparkline .values=${[]}></lyra-sparkline></div>`,
+    html`<div lang="x-aa"><lr-sparkline .values=${[]}></lr-sparkline></div>`,
   );
-  const el = wrapper.querySelector('lyra-sparkline') as LyraSparkline;
+  const el = wrapper.querySelector('lr-sparkline') as LyraSparkline;
   await el.updateComplete;
   expect(el.shadowRoot!.querySelector('svg')!.getAttribute('aria-label')).to.equal('AA leer');
 

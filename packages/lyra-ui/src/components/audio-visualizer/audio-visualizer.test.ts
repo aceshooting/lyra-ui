@@ -9,7 +9,7 @@ function ambientAmplitudes(el: LyraAudioVisualizer, nowMs: number, reduced: bool
 }
 
 it('defaults to state=idle, variant=bars, bar-count=5, gain=1, level=null, stream=null', async () => {
-  const el = (await fixture(html`<lyra-audio-visualizer></lyra-audio-visualizer>`)) as LyraAudioVisualizer;
+  const el = (await fixture(html`<lr-audio-visualizer></lr-audio-visualizer>`)) as LyraAudioVisualizer;
   expect(el.state).to.equal('idle');
   expect(el.variant).to.equal('bars');
   expect(el.barCount).to.equal(5);
@@ -19,7 +19,7 @@ it('defaults to state=idle, variant=bars, bar-count=5, gain=1, level=null, strea
 });
 
 it('renders an aria-hidden canvas inside a role="img" host with an auto-generated aria-label', async () => {
-  const el = (await fixture(html`<lyra-audio-visualizer state="listening"></lyra-audio-visualizer>`)) as LyraAudioVisualizer;
+  const el = (await fixture(html`<lr-audio-visualizer state="listening"></lr-audio-visualizer>`)) as LyraAudioVisualizer;
   expect(el.getAttribute('role')).to.equal('img');
   expect(el.getAttribute('aria-label')).to.equal('Voice activity: Listening');
   const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
@@ -28,7 +28,7 @@ it('renders an aria-hidden canvas inside a role="img" host with an auto-generate
 });
 
 it('updates the auto-generated aria-label as state changes', async () => {
-  const el = (await fixture(html`<lyra-audio-visualizer></lyra-audio-visualizer>`)) as LyraAudioVisualizer;
+  const el = (await fixture(html`<lr-audio-visualizer></lr-audio-visualizer>`)) as LyraAudioVisualizer;
   expect(el.getAttribute('aria-label')).to.equal('Voice activity: Idle');
   el.state = 'thinking';
   await el.updateComplete;
@@ -40,37 +40,37 @@ it('updates the auto-generated aria-label as state changes', async () => {
 
 it('lets an author-supplied role/aria-label win, and lets the label prop override the auto-generated one', async () => {
   const el = (await fixture(
-    html`<lyra-audio-visualizer role="presentation" aria-label="Custom"></lyra-audio-visualizer>`,
+    html`<lr-audio-visualizer role="presentation" aria-label="Custom"></lr-audio-visualizer>`,
   )) as LyraAudioVisualizer;
   expect(el.getAttribute('role')).to.equal('presentation');
   expect(el.getAttribute('aria-label')).to.equal('Custom');
 
   const withLabelProp = (await fixture(
-    html`<lyra-audio-visualizer label="On air"></lyra-audio-visualizer>`,
+    html`<lr-audio-visualizer label="On air"></lr-audio-visualizer>`,
   )) as LyraAudioVisualizer;
   expect(withLabelProp.getAttribute('aria-label')).to.equal('On air');
 });
 
 it('clamps bar-count to [1, 64]', async () => {
-  const tooLow = (await fixture(html`<lyra-audio-visualizer bar-count="0"></lyra-audio-visualizer>`)) as LyraAudioVisualizer;
+  const tooLow = (await fixture(html`<lr-audio-visualizer bar-count="0"></lr-audio-visualizer>`)) as LyraAudioVisualizer;
   expect((tooLow as unknown as { effectiveBarCount: number }).effectiveBarCount).to.equal(1);
   const tooHigh = (await fixture(
-    html`<lyra-audio-visualizer bar-count="500"></lyra-audio-visualizer>`,
+    html`<lr-audio-visualizer bar-count="500"></lr-audio-visualizer>`,
   )) as LyraAudioVisualizer;
   expect((tooHigh as unknown as { effectiveBarCount: number }).effectiveBarCount).to.equal(64);
-  const fine = (await fixture(html`<lyra-audio-visualizer bar-count="12"></lyra-audio-visualizer>`)) as LyraAudioVisualizer;
+  const fine = (await fixture(html`<lr-audio-visualizer bar-count="12"></lr-audio-visualizer>`)) as LyraAudioVisualizer;
   expect((fine as unknown as { effectiveBarCount: number }).effectiveBarCount).to.equal(12);
 });
 
 describe('ambient (no stream, no level) amplitude patterns', () => {
   it('idle is a flat, quiet pattern', async () => {
-    const el = (await fixture(html`<lyra-audio-visualizer state="idle"></lyra-audio-visualizer>`)) as LyraAudioVisualizer;
+    const el = (await fixture(html`<lr-audio-visualizer state="idle"></lr-audio-visualizer>`)) as LyraAudioVisualizer;
     const amps = ambientAmplitudes(el, 0, false);
     expect(amps.every((a) => a > 0 && a < 0.2)).to.be.true;
   });
 
   it('thinking sweeps over time when motion is not reduced, but is a static mid-height pattern under prefers-reduced-motion', async () => {
-    const el = (await fixture(html`<lyra-audio-visualizer state="thinking"></lyra-audio-visualizer>`)) as LyraAudioVisualizer;
+    const el = (await fixture(html`<lr-audio-visualizer state="thinking"></lr-audio-visualizer>`)) as LyraAudioVisualizer;
     const a1 = ambientAmplitudes(el, 0, false);
     const a2 = ambientAmplitudes(el, 400, false);
     expect(a1).to.not.deep.equal(a2); // the sweep moved
@@ -85,20 +85,20 @@ describe('ambient (no stream, no level) amplitude patterns', () => {
 describe('level-driven amplitude', () => {
   it('a numeric level produces a uniform amplitude array scaled by gain, independent of state', async () => {
     const el = (await fixture(
-      html`<lyra-audio-visualizer level="0.5" gain="2" state="idle"></lyra-audio-visualizer>`,
+      html`<lr-audio-visualizer level="0.5" gain="2" state="idle"></lr-audio-visualizer>`,
     )) as LyraAudioVisualizer;
     const amps = (el as unknown as { currentAmplitudes: (nowMs: number) => number[] }).currentAmplitudes(0);
     expect(amps.every((a) => a === 0.5)).to.be.true; // gain is applied at draw time, not baked into the amplitude array
   });
 
   it('clamps an out-of-range level into [0, 1], and a NaN level still counts as level-driven but clamps to 0', async () => {
-    const tooHigh = (await fixture(html`<lyra-audio-visualizer level="5"></lyra-audio-visualizer>`)) as LyraAudioVisualizer;
+    const tooHigh = (await fixture(html`<lr-audio-visualizer level="5"></lr-audio-visualizer>`)) as LyraAudioVisualizer;
     expect((tooHigh as unknown as { effectiveLevel: number | null }).effectiveLevel).to.equal(1);
 
-    const negative = (await fixture(html`<lyra-audio-visualizer level="-5"></lyra-audio-visualizer>`)) as LyraAudioVisualizer;
+    const negative = (await fixture(html`<lr-audio-visualizer level="-5"></lr-audio-visualizer>`)) as LyraAudioVisualizer;
     expect((negative as unknown as { effectiveLevel: number | null }).effectiveLevel).to.equal(0);
 
-    const nan = (await fixture(html`<lyra-audio-visualizer .level=${NaN}></lyra-audio-visualizer>`)) as LyraAudioVisualizer;
+    const nan = (await fixture(html`<lr-audio-visualizer .level=${NaN}></lr-audio-visualizer>`)) as LyraAudioVisualizer;
     // A non-null-but-NaN level (e.g. an unparsable attribute) still means "an external level is
     // set" -- not the ambient/no-signal case -- so it should keep driving amplitude, just safely
     // clamped to 0 rather than poisoning the draw with NaN.
@@ -109,7 +109,7 @@ describe('level-driven amplitude', () => {
 
   it('falls back to gain=1 for a NaN gain instead of poisoning the drawn amplitude with NaN', async () => {
     const el = (await fixture(
-      html`<lyra-audio-visualizer level="0.5" .gain=${NaN}></lyra-audio-visualizer>`,
+      html`<lr-audio-visualizer level="0.5" .gain=${NaN}></lr-audio-visualizer>`,
     )) as LyraAudioVisualizer;
     expect((el as unknown as { effectiveGain: number }).effectiveGain).to.equal(1);
   });
@@ -118,11 +118,11 @@ describe('level-driven amplitude', () => {
 describe('reduced motion behaves at 320px', () => {
   it('renders without throwing in a 320px-wide container', async () => {
     const el = (await fixture(
-      html`<lyra-audio-visualizer
+      html`<lr-audio-visualizer
         state="speaking"
         variant="waveform"
         style="inline-size: 320px"
-      ></lyra-audio-visualizer>`,
+      ></lr-audio-visualizer>`,
     )) as LyraAudioVisualizer;
     expect(el.shadowRoot!.querySelector('canvas')).to.exist;
   });
@@ -145,7 +145,7 @@ describe('draw-loop scheduling', () => {
   };
 
   it('parks the animation loop after drawing the static idle pattern', async () => {
-    const el = (await fixture(html`<lyra-audio-visualizer state="idle"></lyra-audio-visualizer>`)) as LyraAudioVisualizer;
+    const el = (await fixture(html`<lr-audio-visualizer state="idle"></lr-audio-visualizer>`)) as LyraAudioVisualizer;
     await settle(el);
     expect(rafId(el)).to.be.undefined;
     // The single settled draw still sized the backing store.
@@ -155,14 +155,14 @@ describe('draw-loop scheduling', () => {
 
   it('parks the animation loop after drawing a constant level', async () => {
     const el = (await fixture(
-      html`<lyra-audio-visualizer level="0.4" state="idle"></lyra-audio-visualizer>`,
+      html`<lr-audio-visualizer level="0.4" state="idle"></lr-audio-visualizer>`,
     )) as LyraAudioVisualizer;
     await settle(el);
     expect(rafId(el)).to.be.undefined;
   });
 
   it('resumes scheduling on a property change and keeps animating time-driven ambient states', async () => {
-    const el = (await fixture(html`<lyra-audio-visualizer state="idle"></lyra-audio-visualizer>`)) as LyraAudioVisualizer;
+    const el = (await fixture(html`<lr-audio-visualizer state="idle"></lr-audio-visualizer>`)) as LyraAudioVisualizer;
     await settle(el);
     expect(rafId(el)).to.be.undefined;
 
@@ -212,7 +212,7 @@ describe('AudioContext resume on stream attach', () => {
     const original = window.AudioContext;
     (window as unknown as { AudioContext: unknown }).AudioContext = FakeAudioContext;
     try {
-      const el = (await fixture(html`<lyra-audio-visualizer></lyra-audio-visualizer>`)) as LyraAudioVisualizer;
+      const el = (await fixture(html`<lr-audio-visualizer></lr-audio-visualizer>`)) as LyraAudioVisualizer;
       el.stream = {} as unknown as MediaStream;
       await el.updateComplete;
       const ctx = (el as unknown as { audioCtx?: FakeAudioContext }).audioCtx;
@@ -227,16 +227,16 @@ describe('AudioContext resume on stream attach', () => {
 });
 
 it('is accessible', async () => {
-  const el = (await fixture(html`<lyra-audio-visualizer state="listening"></lyra-audio-visualizer>`)) as LyraAudioVisualizer;
+  const el = (await fixture(html`<lr-audio-visualizer state="listening"></lr-audio-visualizer>`)) as LyraAudioVisualizer;
   await expect(el).to.be.accessible();
 });
 
 it('localizes the auto-generated aria-label via this.localize()', async () => {
   const el = (await fixture(html`
-    <lyra-audio-visualizer
+    <lr-audio-visualizer
       state="speaking"
       .strings=${{ audioVisualizerLabel: 'Activité vocale : {state}', audioVisualizerSpeaking: 'Parle' }}
-    ></lyra-audio-visualizer>
+    ></lr-audio-visualizer>
   `)) as LyraAudioVisualizer;
   expect(el.getAttribute('aria-label')).to.equal('Activité vocale : Parle');
 });

@@ -18,7 +18,7 @@ function rows(el: LyraMentionPopover): NodeListOf<HTMLElement> {
 }
 
 async function openWithItems(items: MentionItem[] = ITEMS): Promise<LyraMentionPopover> {
-  const el = (await fixture(html`<lyra-mention-popover></lyra-mention-popover>`)) as LyraMentionPopover;
+  const el = (await fixture(html`<lr-mention-popover></lr-mention-popover>`)) as LyraMentionPopover;
   const anchor = document.createElement('div');
   document.body.appendChild(anchor);
   el.anchor = anchor;
@@ -90,7 +90,7 @@ it('resets the active row to the top match whenever query changes', async () => 
 });
 
 it('returns false from handleKeyDown while closed', async () => {
-  const el = (await fixture(html`<lyra-mention-popover></lyra-mention-popover>`)) as LyraMentionPopover;
+  const el = (await fixture(html`<lr-mention-popover></lr-mention-popover>`)) as LyraMentionPopover;
   const consumed = el.handleKeyDown(new KeyboardEvent('keydown', { key: 'ArrowDown', cancelable: true }));
   expect(consumed).to.be.false;
 });
@@ -158,12 +158,12 @@ it('leaves ArrowDown/ArrowUp unconsumed when there is nothing to navigate (no ma
   expect(upEvt.defaultPrevented).to.be.false;
 });
 
-it('commits the active item on Enter: fires lyra-mention-select, closes, and does not fire lyra-mention-close', async () => {
+it('commits the active item on Enter: fires lr-mention-select, closes, and does not fire lr-mention-close', async () => {
   const el = await openWithItems();
   let closeFired = false;
-  el.addEventListener('lyra-mention-close', () => (closeFired = true));
+  el.addEventListener('lr-mention-close', () => (closeFired = true));
 
-  const listener = oneEvent(el, 'lyra-mention-select');
+  const listener = oneEvent(el, 'lr-mention-select');
   const evt = new KeyboardEvent('keydown', { key: 'Enter', cancelable: true });
   const consumed = el.handleKeyDown(evt);
   const { detail } = (await listener) as CustomEvent<MentionSelectDetail>;
@@ -181,7 +181,7 @@ it('commits the active item on Tab, same as Enter', async () => {
   el.handleKeyDown(new KeyboardEvent('keydown', { key: 'ArrowDown', cancelable: true }));
   await el.updateComplete;
 
-  const listener = oneEvent(el, 'lyra-mention-select');
+  const listener = oneEvent(el, 'lr-mention-select');
   const consumed = el.handleKeyDown(new KeyboardEvent('keydown', { key: 'Tab', cancelable: true }));
   const { detail } = (await listener) as CustomEvent<MentionSelectDetail>;
   expect(consumed).to.be.true;
@@ -204,12 +204,12 @@ it('leaves Enter/Tab unconsumed when there is no active row to commit (no matche
   expect(el.open).to.be.true;
 });
 
-it('closes and fires lyra-mention-close on Escape, without a select event', async () => {
+it('closes and fires lr-mention-close on Escape, without a select event', async () => {
   const el = await openWithItems();
   let selectFired = false;
-  el.addEventListener('lyra-mention-select', () => (selectFired = true));
+  el.addEventListener('lr-mention-select', () => (selectFired = true));
 
-  const listener = oneEvent(el, 'lyra-mention-close');
+  const listener = oneEvent(el, 'lr-mention-close');
   const evt = new KeyboardEvent('keydown', { key: 'Escape', cancelable: true });
   const consumed = el.handleKeyDown(evt);
   await listener;
@@ -220,9 +220,9 @@ it('closes and fires lyra-mention-close on Escape, without a select event', asyn
   expect(selectFired).to.be.false;
 });
 
-it('fires lyra-mention-close when a host directly sets open = false (no Escape involved)', async () => {
+it('fires lr-mention-close when a host directly sets open = false (no Escape involved)', async () => {
   const el = await openWithItems();
-  const listener = oneEvent(el, 'lyra-mention-close');
+  const listener = oneEvent(el, 'lr-mention-close');
   el.open = false;
   await listener;
   expect(el.open).to.be.false;
@@ -234,7 +234,7 @@ it('resets `open` to false on disconnect so a reconnect never resumes half-open 
   // reconnect while still "open" never re-triggers updated()'s open-driven
   // reposition() branch (nothing else changes `open`/`anchor`/`query` on
   // reconnect), leaving the popup positioned incorrectly with no live
-  // scroll/resize tracking. Mirrors lyra-combobox's identical regression test.
+  // scroll/resize tracking. Mirrors lr-combobox's identical regression test.
   const el = await openWithItems();
   expect(el.open).to.be.true;
 
@@ -245,10 +245,10 @@ it('resets `open` to false on disconnect so a reconnect never resumes half-open 
   expect(el.open).to.be.false;
 });
 
-it('does not fire lyra-mention-close for markup that mounts already open="false"', async () => {
-  const el = (await fixture(html`<lyra-mention-popover></lyra-mention-popover>`)) as LyraMentionPopover;
+it('does not fire lr-mention-close for markup that mounts already open="false"', async () => {
+  const el = (await fixture(html`<lr-mention-popover></lr-mention-popover>`)) as LyraMentionPopover;
   let closeFired = false;
-  el.addEventListener('lyra-mention-close', () => (closeFired = true));
+  el.addEventListener('lr-mention-close', () => (closeFired = true));
   await el.updateComplete;
   await new Promise((r) => setTimeout(r, 20));
   expect(closeFired).to.be.false;
@@ -257,7 +257,7 @@ it('does not fire lyra-mention-close for markup that mounts already open="false"
 it('commits a row on click, and preventDefaults its own mousedown so focus never leaves the host input', async () => {
   const el = await openWithItems();
 
-  const listener = oneEvent(el, 'lyra-mention-select');
+  const listener = oneEvent(el, 'lr-mention-select');
   const row = rows(el)[2];
   const down = new MouseEvent('mousedown', { bubbles: true, cancelable: true });
   row.dispatchEvent(down);
@@ -269,7 +269,7 @@ it('commits a row on click, and preventDefaults its own mousedown so focus never
 });
 
 it('exposes activeDescendantId as null while closed', async () => {
-  const el = (await fixture(html`<lyra-mention-popover></lyra-mention-popover>`)) as LyraMentionPopover;
+  const el = (await fixture(html`<lr-mention-popover></lr-mention-popover>`)) as LyraMentionPopover;
   el.items = ITEMS;
   await el.updateComplete;
   expect(el.activeDescendantId).to.be.null;
@@ -279,11 +279,11 @@ it('positions the popup (position: fixed) against a plain non-text-control ancho
   const wrap = await fixture(html`
     <div>
       <button id="trigger" style="position:absolute; top:120px; left:80px; width:40px; height:20px;">@</button>
-      <lyra-mention-popover></lyra-mention-popover>
+      <lr-mention-popover></lr-mention-popover>
     </div>
   `);
   const trigger = wrap.querySelector('#trigger') as HTMLElement;
-  const el = wrap.querySelector('lyra-mention-popover') as LyraMentionPopover;
+  const el = wrap.querySelector('lr-mention-popover') as LyraMentionPopover;
   el.anchor = trigger;
   el.items = ITEMS;
   el.open = true;
@@ -303,11 +303,11 @@ it('anchors caret-precisely against a real <textarea>, tracking selectionStart a
         id="ta"
         style="position:absolute; top:50px; left:50px; width:300px; height:80px; font: 16px monospace;"
       ></textarea>
-      <lyra-mention-popover></lyra-mention-popover>
+      <lr-mention-popover></lr-mention-popover>
     </div>
   `);
   const textarea = wrap.querySelector('#ta') as HTMLTextAreaElement;
-  const el = wrap.querySelector('lyra-mention-popover') as LyraMentionPopover;
+  const el = wrap.querySelector('lr-mention-popover') as LyraMentionPopover;
 
   textarea.value = 'hello @world';
   textarea.setSelectionRange(7, 7);
@@ -344,7 +344,7 @@ it('defaults the listbox accessible name to "Suggestions", overridable via label
 
 it('a host aria-label attribute overrides the label property and the localized default', async () => {
   const el = (await fixture(
-    html`<lyra-mention-popover label="Mention someone" aria-label="Custom name"></lyra-mention-popover>`,
+    html`<lr-mention-popover label="Mention someone" aria-label="Custom name"></lr-mention-popover>`,
   )) as LyraMentionPopover;
   const anchor = document.createElement('div');
   document.body.appendChild(anchor);
@@ -365,7 +365,7 @@ it('honors a strings override for mentionSuggestions/noMatches while label/empty
 });
 
 it('is accessible (empty/closed default state)', async () => {
-  const el = (await fixture(html`<lyra-mention-popover></lyra-mention-popover>`)) as LyraMentionPopover;
+  const el = (await fixture(html`<lr-mention-popover></lr-mention-popover>`)) as LyraMentionPopover;
   await expect(el).to.be.accessible();
 });
 
@@ -374,28 +374,28 @@ it('is accessible (populated, open state)', async () => {
   await expect(el).to.be.accessible();
 });
 
-it('gives an option a :hover treatment, matching lyra-select/lyra-combobox/lyra-model-select', () => {
+it('gives an option a :hover treatment, matching lr-select/lr-combobox/lr-model-select', () => {
   const css = styles.cssText.replace(/\s+/g, ' ');
   expect(css).to.match(/\[part='option'\]:hover,\s*\[part='option'\]\[data-active\]\s*\{[^}]+\}/);
 });
 
 // -- Available-space clamping (internal/positioner.js's place()) ------------
 
-it("declares [part='listbox']'s max-block-size/max-inline-size/min-inline-size against place()'s published --lyra-positioner-available-* custom properties, mirroring lyra-menu's/lyra-combobox's identical clamp", () => {
+it("declares [part='listbox']'s max-block-size/max-inline-size/min-inline-size against place()'s published --lr-positioner-available-* custom properties, mirroring lr-menu's/lr-combobox's identical clamp", () => {
   const css = styles.cssText.replace(/\s+/g, ' ');
   const listboxBlock = /\[part=['"]?listbox['"]?\]\s*\{([^}]+)\}/.exec(css);
   expect(listboxBlock, 'expected a [part="listbox"] rule').to.not.equal(null);
   const body = listboxBlock![1];
-  expect(body).to.match(/max-block-size:\s*min\([^;]*var\(--lyra-positioner-available-block-size/);
-  expect(body).to.match(/max-inline-size:\s*min\([^;]*var\(--lyra-positioner-available-inline-size/);
-  expect(body).to.match(/min-inline-size:\s*min\([^;]*var\(--lyra-positioner-available-inline-size/);
+  expect(body).to.match(/max-block-size:\s*min\([^;]*var\(--lr-positioner-available-block-size/);
+  expect(body).to.match(/max-inline-size:\s*min\([^;]*var\(--lr-positioner-available-inline-size/);
+  expect(body).to.match(/min-inline-size:\s*min\([^;]*var\(--lr-positioner-available-inline-size/);
 });
 
 it("actually applies place()'s available-space custom properties onto the rendered listbox once open, not just declaring them in CSS", async () => {
   const el = await openWithItems();
   await waitFor(
-    () => listbox(el).style.getPropertyValue('--lyra-positioner-available-block-size'),
+    () => listbox(el).style.getPropertyValue('--lr-positioner-available-block-size'),
     (v) => v !== '',
   );
-  expect(listbox(el).style.getPropertyValue('--lyra-positioner-available-inline-size')).to.not.equal('');
+  expect(listbox(el).style.getPropertyValue('--lr-positioner-available-inline-size')).to.not.equal('');
 });

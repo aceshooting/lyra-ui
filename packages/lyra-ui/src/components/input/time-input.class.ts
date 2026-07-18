@@ -1,9 +1,9 @@
 import { LyraInput } from './input.class.js';
 
 /**
- * `<lyra-time-input>` — a native time-input alias with Lyra form chrome and events.
+ * `<lr-time-input>` — a native time-input alias with Lyra form chrome and events.
  *
- * @customElement lyra-time-input
+ * @customElement lr-time-input
  */
 export class LyraTimeInput extends LyraInput {
   constructor() {
@@ -15,4 +15,4 @@ export class LyraTimeInput extends LyraInput {
     this.type = 'time';
   }
 }
-declare global { interface HTMLElementTagNameMap { 'lyra-time-input': LyraTimeInput; } }
+declare global { interface HTMLElementTagNameMap { 'lr-time-input': LyraTimeInput; } }

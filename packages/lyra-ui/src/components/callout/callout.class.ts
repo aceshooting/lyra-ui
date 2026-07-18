@@ -4,18 +4,18 @@ import { LyraElement } from '../../internal/lyra-element.js';
 import { styles } from './callout.styles.js';
 
 export type CalloutVariant = 'neutral' | 'brand' | 'success' | 'warning' | 'danger';
-export interface LyraCalloutEventMap { 'lyra-close': CustomEvent<undefined>; }
+export interface LyraCalloutEventMap { 'lr-close': CustomEvent<undefined>; }
 
 /**
- * `<lyra-callout>` — an inline message surface for status, warning, and error content.
+ * `<lr-callout>` — an inline message surface for status, warning, and error content.
  * Set `inline` for lightweight reactive status/error text: it removes the panel chrome while
  * preserving the semantic role, optional leading icon, and close action.
  *
- * @customElement lyra-callout
+ * @customElement lr-callout
  * @slot - Message content.
  * @slot heading - Optional heading.
  * @slot icon - Optional icon.
- * @event lyra-close - The close action was accepted. Cancelable before the callout hides.
+ * @event lr-close - The close action was accepted. Cancelable before the callout hides.
  * @attr inline - Uses the lightweight inline treatment without border, background, or panel padding.
  * @csspart base - The callout surface.
  * @csspart icon - The icon wrapper.
@@ -23,7 +23,7 @@ export interface LyraCalloutEventMap { 'lyra-close': CustomEvent<undefined>; }
  * @csspart heading - The heading wrapper.
  * @csspart message - The message content wrapper.
  * @csspart close-button - The close button's interactive hit target, sized to the shared minimum
- *   tappable size (`--lyra-icon-button-size`) in both the default panel and the compact `inline`
+ *   tappable size (`--lr-icon-button-size`) in both the default panel and the compact `inline`
  *   variant.
  * @csspart close-icon - The close button's visible "×" glyph, independent of `close-button`'s hit
  *   target size -- shrinks in the `inline` variant while the hit target stays full-size.
@@ -39,7 +39,7 @@ export class LyraCallout extends LyraElement<LyraCalloutEventMap> {
   @state() private hasIcon = false;
   @state() private hasHeading = false;
   private close = (): void => {
-    const event = this.emit('lyra-close', undefined, { cancelable: true });
+    const event = this.emit('lr-close', undefined, { cancelable: true });
     if (!event.defaultPrevented) this.open = false;
   };
   private onSlotChange = (event: Event): void => {
@@ -61,4 +61,4 @@ export class LyraCallout extends LyraElement<LyraCalloutEventMap> {
     </div>`;
   }
 }
-declare global { interface HTMLElementTagNameMap { 'lyra-callout': LyraCallout; } }
+declare global { interface HTMLElementTagNameMap { 'lr-callout': LyraCallout; } }

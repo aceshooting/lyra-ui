@@ -14,18 +14,18 @@ class StubViewer extends EventTarget implements PageThumbnailSource {
   }
 
   emitLoad(pageCount: number): void {
-    this.dispatchEvent(new CustomEvent('lyra-load', { detail: { pageCount } }));
+    this.dispatchEvent(new CustomEvent('lr-load', { detail: { pageCount } }));
   }
 
   emitPageChange(page: number): void {
     this.page = page;
-    this.dispatchEvent(new CustomEvent('lyra-page-change', { detail: { page } }));
+    this.dispatchEvent(new CustomEvent('lr-page-change', { detail: { page } }));
   }
 }
 
-describe('lyra-page-rail', () => {
+describe('lr-page-rail', () => {
   it('defaults to page-count 0, page 1, thumb-width 96', async () => {
-    const el = await fixture<LyraPageRail>(html`<lyra-page-rail></lyra-page-rail>`);
+    const el = await fixture<LyraPageRail>(html`<lr-page-rail></lr-page-rail>`);
     expect(el.pageCount).to.equal(0);
     expect(el.page).to.equal(1);
     expect(el.thumbWidth).to.equal(96);
@@ -33,24 +33,24 @@ describe('lyra-page-rail', () => {
   });
 
   it('mediated mode: page-count host attribute drives the number of rows without a viewer', async () => {
-    const el = await fixture<LyraPageRail>(html`<lyra-page-rail page-count="5"></lyra-page-rail>`);
-    await waitUntil(() => el.shadowRoot!.querySelector('lyra-virtual-list') !== null);
-    const list = el.shadowRoot!.querySelector('lyra-virtual-list') as HTMLElement & { items: unknown[] };
+    const el = await fixture<LyraPageRail>(html`<lr-page-rail page-count="5"></lr-page-rail>`);
+    await waitUntil(() => el.shadowRoot!.querySelector('lr-virtual-list') !== null);
+    const list = el.shadowRoot!.querySelector('lr-virtual-list') as HTMLElement & { items: unknown[] };
     expect(list.items).to.deep.equal([1, 2, 3, 4, 5]);
   });
 
-  it('wired mode: tracks pageCount from the viewer\'s lyra-load event', async () => {
+  it('wired mode: tracks pageCount from the viewer\'s lr-load event', async () => {
     const viewer = new StubViewer();
-    const el = await fixture<LyraPageRail>(html`<lyra-page-rail .viewer=${viewer}></lyra-page-rail>`);
+    const el = await fixture<LyraPageRail>(html`<lr-page-rail .viewer=${viewer}></lr-page-rail>`);
     viewer.emitLoad(4);
     await el.updateComplete;
-    const list = el.shadowRoot!.querySelector('lyra-virtual-list') as HTMLElement & { items: unknown[] };
+    const list = el.shadowRoot!.querySelector('lr-virtual-list') as HTMLElement & { items: unknown[] };
     expect(list.items).to.deep.equal([1, 2, 3, 4]);
   });
 
-  it('wired mode: tracks the current page from the viewer\'s lyra-page-change event', async () => {
+  it('wired mode: tracks the current page from the viewer\'s lr-page-change event', async () => {
     const viewer = new StubViewer();
-    const el = await fixture<LyraPageRail>(html`<lyra-page-rail .viewer=${viewer}></lyra-page-rail>`);
+    const el = await fixture<LyraPageRail>(html`<lr-page-rail .viewer=${viewer}></lr-page-rail>`);
     viewer.emitLoad(3);
     viewer.emitPageChange(2);
     await el.updateComplete;
@@ -59,7 +59,7 @@ describe('lyra-page-rail', () => {
 
   it('wired mode: keeps tracking the viewer after a bare reconnect with no property change (e.g. a reparent)', async () => {
     const viewer = new StubViewer();
-    const el = await fixture<LyraPageRail>(html`<lyra-page-rail .viewer=${viewer}></lyra-page-rail>`);
+    const el = await fixture<LyraPageRail>(html`<lr-page-rail .viewer=${viewer}></lr-page-rail>`);
     viewer.emitLoad(3);
     await el.updateComplete;
 
@@ -76,7 +76,7 @@ describe('lyra-page-rail', () => {
 
     viewer.emitLoad(5);
     await el.updateComplete;
-    const list = el.shadowRoot!.querySelector('lyra-virtual-list') as HTMLElement & { items: unknown[] };
+    const list = el.shadowRoot!.querySelector('lr-virtual-list') as HTMLElement & { items: unknown[] };
     expect(list.items, 'page-count tracking should survive a reparent').to.deep.equal([1, 2, 3, 4, 5]);
   });
 
@@ -85,25 +85,25 @@ describe('lyra-page-rail', () => {
     viewer.id = 'doc-source';
     document.body.appendChild(viewer);
     try {
-      const el = await fixture<LyraPageRail>(html`<lyra-page-rail for="doc-source" page-count="2"></lyra-page-rail>`);
+      const el = await fixture<LyraPageRail>(html`<lr-page-rail for="doc-source" page-count="2"></lr-page-rail>`);
       await el.updateComplete;
-      expect(el.shadowRoot!.querySelector('lyra-virtual-list')).to.exist;
+      expect(el.shadowRoot!.querySelector('lr-virtual-list')).to.exist;
     } finally {
       viewer.remove();
     }
   });
 
-  it('clicking a page row emits lyra-page-select and (wired mode) sets viewer.page', async () => {
+  it('clicking a page row emits lr-page-select and (wired mode) sets viewer.page', async () => {
     const viewer = new StubViewer();
-    const el = await fixture<LyraPageRail>(html`<lyra-page-rail .viewer=${viewer}></lyra-page-rail>`);
+    const el = await fixture<LyraPageRail>(html`<lr-page-rail .viewer=${viewer}></lr-page-rail>`);
     viewer.emitLoad(3);
     await el.updateComplete;
-    // [part="page"] renders inside <lyra-virtual-list>'s own nested shadow root, one level deeper
+    // [part="page"] renders inside <lr-virtual-list>'s own nested shadow root, one level deeper
     // than el.shadowRoot -- a plain descendant selector from el.shadowRoot can't pierce that second
     // shadow boundary, so the wait (and the lookup below) must walk both shadow roots explicitly.
-    await waitUntil(() => el.shadowRoot!.querySelector('lyra-virtual-list')?.shadowRoot?.querySelector('[part="page"]') != null);
-    const button = el.shadowRoot!.querySelector('lyra-virtual-list')!.shadowRoot!.querySelector('[part="page"]') as HTMLElement;
-    const eventPromise = oneEvent(el, 'lyra-page-select');
+    await waitUntil(() => el.shadowRoot!.querySelector('lr-virtual-list')?.shadowRoot?.querySelector('[part="page"]') != null);
+    const button = el.shadowRoot!.querySelector('lr-virtual-list')!.shadowRoot!.querySelector('[part="page"]') as HTMLElement;
+    const eventPromise = oneEvent(el, 'lr-page-select');
     button.click();
     expect((await eventPromise).detail).to.deep.equal({ page: 1 });
     expect(viewer.page).to.equal(1);
@@ -114,9 +114,9 @@ describe('lyra-page-rail', () => {
       { id: 'h1', anchor: { kind: 'page', page: 2 }, tone: 'warning' },
       { id: 'h2', anchor: { kind: 'text-quote', quote: 'x', page: 2 }, tone: 'accent' },
     ];
-    const el = await fixture<LyraPageRail>(html`<lyra-page-rail page-count="3" .highlights=${highlights}></lyra-page-rail>`);
-    await waitUntil(() => el.shadowRoot!.querySelector('lyra-virtual-list')?.shadowRoot?.querySelector('[part="page"]') != null);
-    const list = el.shadowRoot!.querySelector('lyra-virtual-list')!;
+    const el = await fixture<LyraPageRail>(html`<lr-page-rail page-count="3" .highlights=${highlights}></lr-page-rail>`);
+    await waitUntil(() => el.shadowRoot!.querySelector('lr-virtual-list')?.shadowRoot?.querySelector('[part="page"]') != null);
+    const list = el.shadowRoot!.querySelector('lr-virtual-list')!;
     const buttons = list.shadowRoot!.querySelectorAll('[part="page"]');
     expect(buttons[1].getAttribute('aria-label')).to.equal('Page 2, 2 highlighted passages');
     expect(buttons[0].getAttribute('aria-label')).to.equal('Page 1');
@@ -124,14 +124,14 @@ describe('lyra-page-rail', () => {
 
   it('calls viewer.renderPageThumbnail(page, canvas, { width: thumbWidth }) as rows materialize', async () => {
     const viewer = new StubViewer();
-    const el = await fixture<LyraPageRail>(html`<lyra-page-rail .viewer=${viewer} thumb-width="64"></lyra-page-rail>`);
+    const el = await fixture<LyraPageRail>(html`<lr-page-rail .viewer=${viewer} thumb-width="64"></lr-page-rail>`);
     viewer.emitLoad(2);
     await el.updateComplete;
     await waitUntil(() => viewer.renderCalls.length > 0);
     expect(viewer.renderCalls[0].width).to.equal(64);
   });
 
-  it('falls back to lyra-file-icon when renderPageThumbnail() rejects, same as resolving false (regression)', async () => {
+  it('falls back to lr-file-icon when renderPageThumbnail() rejects, same as resolving false (regression)', async () => {
     class RejectingViewer extends StubViewer {
       renderPageThumbnail(page: number, canvas: HTMLCanvasElement, options?: { width?: number }): Promise<boolean> {
         this.renderCalls.push({ page, width: options?.width });
@@ -139,21 +139,21 @@ describe('lyra-page-rail', () => {
       }
     }
     const viewer = new RejectingViewer();
-    const el = await fixture<LyraPageRail>(html`<lyra-page-rail .viewer=${viewer}></lyra-page-rail>`);
+    const el = await fixture<LyraPageRail>(html`<lr-page-rail .viewer=${viewer}></lr-page-rail>`);
     viewer.emitLoad(1);
     await el.updateComplete;
     await waitUntil(() => viewer.renderCalls.length > 0);
     await waitUntil(() => {
-      const list = el.shadowRoot!.querySelector('lyra-virtual-list');
-      return list?.shadowRoot?.querySelector('lyra-file-icon') != null;
+      const list = el.shadowRoot!.querySelector('lr-virtual-list');
+      return list?.shadowRoot?.querySelector('lr-file-icon') != null;
     });
-    const list = el.shadowRoot!.querySelector('lyra-virtual-list')!;
-    expect(list.shadowRoot!.querySelector('lyra-file-icon')).to.exist;
+    const list = el.shadowRoot!.querySelector('lr-virtual-list')!;
+    expect(list.shadowRoot!.querySelector('lr-file-icon')).to.exist;
     expect(list.shadowRoot!.querySelector('canvas')).to.not.exist;
   });
 
   it('typing a digit jumps to that page in mediated mode', async () => {
-    const el = await fixture<LyraPageRail>(html`<lyra-page-rail page-count="12"></lyra-page-rail>`);
+    const el = await fixture<LyraPageRail>(html`<lr-page-rail page-count="12"></lr-page-rail>`);
     await el.updateComplete;
     const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
     base.dispatchEvent(new KeyboardEvent('keydown', { key: '7', bubbles: true, composed: true }));
@@ -162,7 +162,7 @@ describe('lyra-page-rail', () => {
   });
 
   it('ignores a typed digit that is out of range', async () => {
-    const el = await fixture<LyraPageRail>(html`<lyra-page-rail page-count="5"></lyra-page-rail>`);
+    const el = await fixture<LyraPageRail>(html`<lr-page-rail page-count="5"></lr-page-rail>`);
     await el.updateComplete;
     const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
     base.dispatchEvent(new KeyboardEvent('keydown', { key: '9', bubbles: true, composed: true }));
@@ -170,17 +170,17 @@ describe('lyra-page-rail', () => {
     expect(el.page).to.equal(1);
   });
 
-  it('registers lyra-virtual-list, lyra-skeleton, and lyra-file-icon as a side effect of importing page-rail.js (regression)', async () => {
+  it('registers lr-virtual-list, lr-skeleton, and lr-file-icon as a side effect of importing page-rail.js (regression)', async () => {
     // Importing a composed sub-component's *.class.js module alone never calls defineElement --
     // only its real barrel (*.js) does. Rendering an un-registered dependency silently produces a
     // plain, un-upgraded HTMLElement instead of the real component.
-    expect(customElements.get('lyra-virtual-list')).to.exist;
-    expect(customElements.get('lyra-skeleton')).to.exist;
-    expect(customElements.get('lyra-file-icon')).to.exist;
+    expect(customElements.get('lr-virtual-list')).to.exist;
+    expect(customElements.get('lr-skeleton')).to.exist;
+    expect(customElements.get('lr-file-icon')).to.exist;
   });
 
   it('falls back to the built-in English label and honors a strings override', async () => {
-    const el = await fixture<LyraPageRail>(html`<lyra-page-rail></lyra-page-rail>`);
+    const el = await fixture<LyraPageRail>(html`<lr-page-rail></lr-page-rail>`);
     await el.updateComplete;
     expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('Page thumbnails');
     el.strings = { pageRailLabel: 'Vignettes de page' };
@@ -190,7 +190,7 @@ describe('lyra-page-rail', () => {
 
   it('is accessible in mediated mode with highlights present', async () => {
     const highlights: LyraHighlight[] = [{ id: 'h1', anchor: { kind: 'page', page: 1 } }];
-    const el = await fixture<LyraPageRail>(html`<lyra-page-rail page-count="3" .highlights=${highlights}></lyra-page-rail>`);
+    const el = await fixture<LyraPageRail>(html`<lr-page-rail page-count="3" .highlights=${highlights}></lr-page-rail>`);
     await el.updateComplete;
     await expect(el).to.be.accessible();
   });
@@ -199,9 +199,9 @@ describe('lyra-page-rail', () => {
 
   it('sanitizes a negative or NaN page-count instead of a negative/NaN-length Array.from crash', async () => {
     for (const raw of ['-5', 'NaN']) {
-      const el = await fixture<LyraPageRail>(html`<lyra-page-rail page-count=${raw}></lyra-page-rail>`);
-      await waitUntil(() => el.shadowRoot!.querySelector('lyra-virtual-list') !== null);
-      const list = el.shadowRoot!.querySelector('lyra-virtual-list') as HTMLElement & { items: unknown[] };
+      const el = await fixture<LyraPageRail>(html`<lr-page-rail page-count=${raw}></lr-page-rail>`);
+      await waitUntil(() => el.shadowRoot!.querySelector('lr-virtual-list') !== null);
+      const list = el.shadowRoot!.querySelector('lr-virtual-list') as HTMLElement & { items: unknown[] };
       expect(list.items, raw).to.deep.equal([]);
     }
   });
@@ -209,7 +209,7 @@ describe('lyra-page-rail', () => {
   it('sanitizes a negative or NaN thumb-width before it reaches renderPageThumbnail', async () => {
     const viewer = new StubViewer();
     const el = await fixture<LyraPageRail>(
-      html`<lyra-page-rail .viewer=${viewer} thumb-width="-40"></lyra-page-rail>`,
+      html`<lr-page-rail .viewer=${viewer} thumb-width="-40"></lr-page-rail>`,
     );
     viewer.emitLoad(1);
     await el.updateComplete;
@@ -218,9 +218,9 @@ describe('lyra-page-rail', () => {
   });
 
   it('clamps an out-of-range or NaN page into [1, pageCount] for the virtual-list active-id binding', async () => {
-    const el = await fixture<LyraPageRail>(html`<lyra-page-rail page-count="5"></lyra-page-rail>`);
-    await waitUntil(() => el.shadowRoot!.querySelector('lyra-virtual-list') !== null);
-    const list = el.shadowRoot!.querySelector('lyra-virtual-list') as HTMLElement & { activeId: unknown };
+    const el = await fixture<LyraPageRail>(html`<lr-page-rail page-count="5"></lr-page-rail>`);
+    await waitUntil(() => el.shadowRoot!.querySelector('lr-virtual-list') !== null);
+    const list = el.shadowRoot!.querySelector('lr-virtual-list') as HTMLElement & { activeId: unknown };
 
     el.page = 999;
     await el.updateComplete;

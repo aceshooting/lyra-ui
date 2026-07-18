@@ -5,7 +5,7 @@ import type { HighlightLayerItem } from './highlight-layer.class.js';
 
 const meta: Meta = {
   title: 'DocumentViewer/HighlightLayer',
-  component: 'lyra-highlight-layer',
+  component: 'lr-highlight-layer',
   tags: ['autodocs'],
   parameters: {
     docs: {
@@ -26,8 +26,8 @@ const ITEMS: HighlightLayerItem[] = [
 export const OverImage: Story = {
   render: () => html`
     <figure style="position:relative; width:320px; margin:0;">
-      <div style="width:320px; height:200px; background:var(--lyra-color-surface-raised);"></div>
-      <lyra-highlight-layer .items=${ITEMS}></lyra-highlight-layer>
+      <div style="width:320px; height:200px; background:var(--lr-color-surface-raised);"></div>
+      <lr-highlight-layer .items=${ITEMS}></lr-highlight-layer>
     </figure>
   `,
 };
@@ -35,8 +35,8 @@ export const OverImage: Story = {
 export const NonInteractive: Story = {
   render: () => html`
     <figure style="position:relative; width:320px; margin:0;">
-      <div style="width:320px; height:200px; background:var(--lyra-color-surface-raised);"></div>
-      <lyra-highlight-layer .items=${ITEMS} .interactive=${false}></lyra-highlight-layer>
+      <div style="width:320px; height:200px; background:var(--lr-color-surface-raised);"></div>
+      <lr-highlight-layer .items=${ITEMS} .interactive=${false}></lr-highlight-layer>
     </figure>
   `,
 };
@@ -44,8 +44,8 @@ export const NonInteractive: Story = {
 export const Narrow320: Story = {
   render: () => html`
     <figure style="position:relative; width:320px; margin:0;">
-      <div style="width:320px; height:160px; background:var(--lyra-color-surface-raised);"></div>
-      <lyra-highlight-layer .items=${ITEMS}></lyra-highlight-layer>
+      <div style="width:320px; height:160px; background:var(--lr-color-surface-raised);"></div>
+      <lr-highlight-layer .items=${ITEMS}></lr-highlight-layer>
     </figure>
   `,
 };

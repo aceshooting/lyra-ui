@@ -4,10 +4,10 @@ import type { LyraDiffView } from './diff-view.js';
 import type { DiffOp } from './diff-line-diff.js';
 import { styles } from './diff-view.styles.js';
 
-describe('lyra-diff-view', () => {
+describe('lr-diff-view', () => {
   it('renders interleaved add/remove/equal lines, not all-removed-then-all-added', async () => {
     const el = (await fixture(html`
-      <lyra-diff-view .oldText=${'a\nb\nc\nd\ne'} .newText=${'a\nb\nX\nd\ne'}></lyra-diff-view>
+      <lr-diff-view .oldText=${'a\nb\nc\nd\ne'} .newText=${'a\nb\nX\nd\ne'}></lr-diff-view>
     `)) as LyraDiffView;
     const lines = [...el.shadowRoot!.querySelectorAll('[part="line"]')];
     const types = lines.map((l) => l.getAttribute('data-type'));
@@ -15,20 +15,20 @@ describe('lyra-diff-view', () => {
   });
 
   it('renders no copy button by default, one when copyable is set', async () => {
-    const plain = (await fixture(html`<lyra-diff-view .oldText=${'a'} .newText=${'b'}></lyra-diff-view>`)) as LyraDiffView;
+    const plain = (await fixture(html`<lr-diff-view .oldText=${'a'} .newText=${'b'}></lr-diff-view>`)) as LyraDiffView;
     expect(plain.shadowRoot!.querySelector('[part="copy-button"]')).to.not.exist;
-    const withCopy = (await fixture(html`<lyra-diff-view copyable .oldText=${'a'} .newText=${'b'}></lyra-diff-view>`)) as LyraDiffView;
+    const withCopy = (await fixture(html`<lr-diff-view copyable .oldText=${'a'} .newText=${'b'}></lr-diff-view>`)) as LyraDiffView;
     expect(withCopy.shadowRoot!.querySelector('[part="copy-button"]')).to.exist;
   });
 
   it('is accessible', async () => {
-    const el = (await fixture(html`<lyra-diff-view .oldText=${'a'} .newText=${'b'}></lyra-diff-view>`)) as LyraDiffView;
+    const el = (await fixture(html`<lr-diff-view .oldText=${'a'} .newText=${'b'}></lr-diff-view>`)) as LyraDiffView;
     await expect(el).to.be.accessible();
   });
 
   it('localizes the copy-button aria-label via this.localize(), not a hardcoded "diff" suffix', async () => {
     const el = (await fixture(
-      html`<lyra-diff-view copyable .oldText=${'a'} .newText=${'b'} .strings=${{ copyDiff: 'Copier la diff' }}></lyra-diff-view>`,
+      html`<lr-diff-view copyable .oldText=${'a'} .newText=${'b'} .strings=${{ copyDiff: 'Copier la diff' }}></lr-diff-view>`,
     )) as LyraDiffView;
     const button = el.shadowRoot!.querySelector('[part="copy-button"]') as HTMLButtonElement;
     expect(button.getAttribute('aria-label')).to.equal('Copier la diff');
@@ -36,7 +36,7 @@ describe('lyra-diff-view', () => {
 
   it('defaults to English "Copy diff" when no strings override is set', async () => {
     const el = (await fixture(
-      html`<lyra-diff-view copyable .oldText=${'a'} .newText=${'b'}></lyra-diff-view>`,
+      html`<lr-diff-view copyable .oldText=${'a'} .newText=${'b'}></lr-diff-view>`,
     )) as LyraDiffView;
     const button = el.shadowRoot!.querySelector('[part="copy-button"]') as HTMLButtonElement;
     expect(button.getAttribute('aria-label')).to.equal('Copy diff');
@@ -49,7 +49,7 @@ describe('lyra-diff-view', () => {
 
   it('does not recompute the diff when only the copy-confirmation state toggles, only when oldText/newText change', async () => {
     const el = (await fixture(html`
-      <lyra-diff-view copyable .oldText=${'a\nb'} .newText=${'a\nX'}></lyra-diff-view>
+      <lr-diff-view copyable .oldText=${'a\nb'} .newText=${'a\nX'}></lr-diff-view>
     `)) as LyraDiffView;
     await el.updateComplete;
     const opsBefore = (el as unknown as { diffOps: DiffOp[] }).diffOps;
@@ -69,14 +69,14 @@ describe('lyra-diff-view', () => {
 
 describe('layout', () => {
   it('defaults to unified and renders the existing single <pre>', async () => {
-    const el = (await fixture(html`<lyra-diff-view .oldText=${'a\nb'} .newText=${'a\nc'}></lyra-diff-view>`)) as LyraDiffView;
+    const el = (await fixture(html`<lr-diff-view .oldText=${'a\nb'} .newText=${'a\nc'}></lr-diff-view>`)) as LyraDiffView;
     expect(el.layout).to.equal('unified');
     expect(el.shadowRoot!.querySelectorAll('[part="side"]').length).to.equal(0);
   });
 
   it('renders two [part="side"] columns in split layout with localized labels', async () => {
     const el = (await fixture(
-      html`<lyra-diff-view layout="split" .oldText=${'a\nb'} .newText=${'a\nc'}></lyra-diff-view>`,
+      html`<lr-diff-view layout="split" .oldText=${'a\nb'} .newText=${'a\nc'}></lr-diff-view>`,
     )) as LyraDiffView;
     const sides = [...el.shadowRoot!.querySelectorAll('[part="side"]')];
     expect(sides).to.have.lengthOf(2);
@@ -91,7 +91,7 @@ describe('layout', () => {
     // `oldText='a'` against a two-line `newText` genuinely produces a pure-add hunk after the
     // shared `'a'` line, giving the old side a real placeholder to assert against.
     const el = (await fixture(
-      html`<lyra-diff-view layout="split" .oldText=${'a'} .newText=${'a\nnew line'}></lyra-diff-view>`,
+      html`<lr-diff-view layout="split" .oldText=${'a'} .newText=${'a\nnew line'}></lr-diff-view>`,
     )) as LyraDiffView;
     const oldSide = el.shadowRoot!.querySelector('[part="side"][data-side="old"]')!;
     const placeholder = oldSide.querySelector('[data-type="empty"]')!;
@@ -100,15 +100,15 @@ describe('layout', () => {
 
   it('copies the same unified text regardless of layout', async () => {
     const unified = (await fixture(
-      html`<lyra-diff-view copyable .oldText=${'a'} .newText=${'b'}></lyra-diff-view>`,
+      html`<lr-diff-view copyable .oldText=${'a'} .newText=${'b'}></lr-diff-view>`,
     )) as LyraDiffView;
     const split = (await fixture(
-      html`<lyra-diff-view copyable layout="split" .oldText=${'a'} .newText=${'b'}></lyra-diff-view>`,
+      html`<lr-diff-view copyable layout="split" .oldText=${'a'} .newText=${'b'}></lr-diff-view>`,
     )) as LyraDiffView;
     let unifiedText = '';
     let splitText = '';
-    unified.addEventListener('lyra-copy', (e) => (unifiedText = (e as CustomEvent).detail.text));
-    split.addEventListener('lyra-copy', (e) => (splitText = (e as CustomEvent).detail.text));
+    unified.addEventListener('lr-copy', (e) => (unifiedText = (e as CustomEvent).detail.text));
+    split.addEventListener('lr-copy', (e) => (splitText = (e as CustomEvent).detail.text));
     (unified.shadowRoot!.querySelector('[part="copy-button"]') as HTMLButtonElement).click();
     (split.shadowRoot!.querySelector('[part="copy-button"]') as HTMLButtonElement).click();
     expect(unifiedText).to.equal(splitText);
@@ -117,7 +117,7 @@ describe('layout', () => {
 
 describe('syntax highlighting', () => {
   it('does not load shiki when language/languages are unset', async () => {
-    const el = (await fixture(html`<lyra-diff-view .oldText=${'a'} .newText=${'b'}></lyra-diff-view>`)) as LyraDiffView;
+    const el = (await fixture(html`<lr-diff-view .oldText=${'a'} .newText=${'b'}></lr-diff-view>`)) as LyraDiffView;
     await el.updateComplete;
     // No direct way to assert "no dynamic import happened" without a bundler-level check; this
     // test instead asserts the plain-text rendering path is used (no shiki-generated span classes).
@@ -125,7 +125,7 @@ describe('syntax highlighting', () => {
   });
 
   it('tokenized line count equals the plain split("\\n") line count, including a trailing newline', async () => {
-    // Uses a fake ShikiHighlighterCore-shaped object (matching lyra-code-block's own test pattern
+    // Uses a fake ShikiHighlighterCore-shaped object (matching lr-code-block's own test pattern
     // for injecting a fake highlighter) rather than the real optional peer.
     const fakeHighlighter = {
       codeToHtml: (text: string) =>
@@ -135,7 +135,7 @@ describe('syntax highlighting', () => {
           .join('\n')}</code></pre>`,
     };
     const el = (await fixture(
-      html`<lyra-diff-view .oldText=${'a\nb\n'} .newText=${'a\nb\n'} language="text"></lyra-diff-view>`,
+      html`<lr-diff-view .oldText=${'a\nb\n'} .newText=${'a\nb\n'} language="text"></lr-diff-view>`,
     )) as LyraDiffView;
     (el as unknown as { languages: unknown }).languages = { text: {} };
     (el as unknown as { loadHighlighterCore: () => Promise<unknown> }).loadHighlighterCore = () =>
@@ -162,7 +162,7 @@ describe('syntax highlighting', () => {
           .join('\n')}</code></pre>`,
     };
     const el = (await fixture(
-      html`<lyra-diff-view .oldText=${'a\nb'} .newText=${'a\nx\nb'} language="text"></lyra-diff-view>`,
+      html`<lr-diff-view .oldText=${'a\nb'} .newText=${'a\nx\nb'} language="text"></lr-diff-view>`,
     )) as LyraDiffView;
     (el as unknown as { languages: unknown }).languages = { text: {} };
     (el as unknown as { loadHighlighterCore: () => Promise<unknown> }).loadHighlighterCore = () =>
@@ -176,7 +176,7 @@ describe('syntax highlighting', () => {
 
 describe('back-compat', () => {
   it('default (unified, no language) output is byte-identical to today', async () => {
-    const el = (await fixture(html`<lyra-diff-view .oldText=${'a\nb'} .newText=${'a\nc'}></lyra-diff-view>`)) as LyraDiffView;
+    const el = (await fixture(html`<lr-diff-view .oldText=${'a\nb'} .newText=${'a\nc'}></lr-diff-view>`)) as LyraDiffView;
     const lines = [...el.shadowRoot!.querySelectorAll('[part="line"]')].map((l) => l.textContent);
     // Today's actual (pre-existing, unchanged) template literally concatenates `${marker} ${text}`
     // -- for an `equal` op the marker itself is already a space, so the rendered prefix is two

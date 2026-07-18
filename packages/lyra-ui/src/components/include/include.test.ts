@@ -29,7 +29,7 @@ function abortError(): Error {
   return error;
 }
 
-describe('lyra-include', () => {
+describe('lr-include', () => {
   afterEach(() => __setHtmlSanitizerForTesting(undefined));
 
   it('is a no-op when src is unset: no fetch, no aria-busy', async () => {
@@ -37,7 +37,7 @@ describe('lyra-include', () => {
     const original = window.fetch;
     window.fetch = (() => { called = true; return Promise.reject(new Error('fetch should not be called')); }) as typeof window.fetch;
     try {
-      const el = await fixture<LyraInclude>(html`<lyra-include></lyra-include>`);
+      const el = await fixture<LyraInclude>(html`<lr-include></lr-include>`);
       await el.updateComplete;
       await aTimeout(10);
       expect(called).to.equal(false);
@@ -50,7 +50,7 @@ describe('lyra-include', () => {
     let resolveFetch!: (value: Response) => void;
     window.fetch = (() => new Promise<Response>((resolve) => { resolveFetch = resolve; })) as typeof window.fetch;
     try {
-      const el = await fixture<LyraInclude>(html`<lyra-include src="https://example.test/pending.html">Loading…</lyra-include>`);
+      const el = await fixture<LyraInclude>(html`<lr-include src="https://example.test/pending.html">Loading…</lr-include>`);
       await waitUntil(() => el.hasAttribute('aria-busy'));
       expect(el.getAttribute('aria-busy')).to.equal('true');
       expect(el.textContent).to.equal('Loading…');
@@ -59,12 +59,12 @@ describe('lyra-include', () => {
     } finally { window.fetch = original; }
   });
 
-  it('fetches, sanitizes, and emits lyra-load with the resolved src', async () => {
+  it('fetches, sanitizes, and emits lr-load with the resolved src', async () => {
     const original = window.fetch;
     window.fetch = (() => Promise.resolve(response('<h1>Safe</h1><script>alert(1)</script>'))) as typeof window.fetch;
     try {
-      const el = await fixture<LyraInclude>(html`<lyra-include></lyra-include>`);
-      const loadPromise = oneEvent(el, 'lyra-load');
+      const el = await fixture<LyraInclude>(html`<lr-include></lr-include>`);
+      const loadPromise = oneEvent(el, 'lr-load');
       el.src = 'https://example.test/a.html';
       const event = await loadPromise;
       expect(event.detail.src).to.equal('https://example.test/a.html');
@@ -81,7 +81,7 @@ describe('lyra-include', () => {
     const calls: (RequestInit | undefined)[] = [];
     window.fetch = ((_url: string, init?: RequestInit) => { calls.push(init); return Promise.resolve(response('<p>ok</p>')); }) as typeof window.fetch;
     try {
-      const el = await fixture<LyraInclude>(html`<lyra-include src="https://example.test/default-mode.html"></lyra-include>`);
+      const el = await fixture<LyraInclude>(html`<lr-include src="https://example.test/default-mode.html"></lr-include>`);
       await waitUntil(() => calls.length > 0);
       await el.updateComplete;
       expect(calls[0]?.mode).to.equal('same-origin');
@@ -93,7 +93,7 @@ describe('lyra-include', () => {
     const calls: (RequestInit | undefined)[] = [];
     window.fetch = ((_url: string, init?: RequestInit) => { calls.push(init); return Promise.resolve(response('<p>ok</p>')); }) as typeof window.fetch;
     try {
-      const el = await fixture<LyraInclude>(html`<lyra-include src="https://example.test/cors-mode.html" mode="cors"></lyra-include>`);
+      const el = await fixture<LyraInclude>(html`<lr-include src="https://example.test/cors-mode.html" mode="cors"></lr-include>`);
       await waitUntil(() => calls.length > 0);
       expect(calls[0]?.mode).to.equal('cors');
     } finally { window.fetch = original; }
@@ -104,7 +104,7 @@ describe('lyra-include', () => {
     const original = window.fetch;
     window.fetch = (() => { called = true; return Promise.reject(new Error('fetch should not be called')); }) as typeof window.fetch;
     try {
-      const el = await fixture<LyraInclude>(html`<lyra-include src="javascript:alert(1)">Fallback</lyra-include>`);
+      const el = await fixture<LyraInclude>(html`<lr-include src="javascript:alert(1)">Fallback</lr-include>`);
       await el.updateComplete;
       await aTimeout(10);
       expect(called).to.equal(false);
@@ -112,21 +112,21 @@ describe('lyra-include', () => {
     } finally { window.fetch = original; }
   });
 
-  it('emits lyra-include-error with reason blocked-url for a disallowed scheme', async () => {
-    const el = await fixture<LyraInclude>(html`<lyra-include></lyra-include>`);
-    const errorPromise = oneEvent(el, 'lyra-include-error');
+  it('emits lr-include-error with reason blocked-url for a disallowed scheme', async () => {
+    const el = await fixture<LyraInclude>(html`<lr-include></lr-include>`);
+    const errorPromise = oneEvent(el, 'lr-include-error');
     el.src = 'javascript:alert(1)';
     const event = await errorPromise;
     expect(event.detail.status).to.equal(0);
     expect(event.detail.reason).to.equal('blocked-url');
   });
 
-  it('emits lyra-include-error with reason http for a failed fetch, without an unhandled rejection', async () => {
+  it('emits lr-include-error with reason http for a failed fetch, without an unhandled rejection', async () => {
     const original = window.fetch;
     window.fetch = (() => Promise.resolve(response('', { ok: false, status: 404 }))) as typeof window.fetch;
     try {
-      const el = await fixture<LyraInclude>(html`<lyra-include>Fallback</lyra-include>`);
-      const errorPromise = oneEvent(el, 'lyra-include-error');
+      const el = await fixture<LyraInclude>(html`<lr-include>Fallback</lr-include>`);
+      const errorPromise = oneEvent(el, 'lr-include-error');
       el.src = 'https://example.test/missing.html';
       const event = await errorPromise;
       expect(event.detail.status).to.equal(404);
@@ -136,12 +136,12 @@ describe('lyra-include', () => {
     } finally { window.fetch = original; }
   });
 
-  it('emits lyra-include-error with reason network for a rejected fetch', async () => {
+  it('emits lr-include-error with reason network for a rejected fetch', async () => {
     const original = window.fetch;
     window.fetch = (() => Promise.reject(new Error('network down'))) as typeof window.fetch;
     try {
-      const el = await fixture<LyraInclude>(html`<lyra-include></lyra-include>`);
-      const errorPromise = oneEvent(el, 'lyra-include-error');
+      const el = await fixture<LyraInclude>(html`<lr-include></lr-include>`);
+      const errorPromise = oneEvent(el, 'lr-include-error');
       el.src = 'https://example.test/unreachable.html';
       const event = await errorPromise;
       expect(event.detail.status).to.equal(0);
@@ -150,12 +150,12 @@ describe('lyra-include', () => {
     } finally { window.fetch = original; }
   });
 
-  it('emits lyra-include-error with reason resource-too-large for an oversized response', async () => {
+  it('emits lr-include-error with reason resource-too-large for an oversized response', async () => {
     const original = window.fetch;
     window.fetch = (() => Promise.resolve(response('<p>Too big</p>', { contentLength: DEFAULT_MAX_RESOURCE_BYTES + 1 }))) as typeof window.fetch;
     try {
-      const el = await fixture<LyraInclude>(html`<lyra-include></lyra-include>`);
-      const errorPromise = oneEvent(el, 'lyra-include-error');
+      const el = await fixture<LyraInclude>(html`<lr-include></lr-include>`);
+      const errorPromise = oneEvent(el, 'lr-include-error');
       el.src = 'https://example.test/huge.html';
       const event = await errorPromise;
       expect(event.detail.status).to.equal(0);
@@ -163,13 +163,13 @@ describe('lyra-include', () => {
     } finally { window.fetch = original; }
   });
 
-  it('emits lyra-include-error with reason missing-sanitizer and writes nothing when the optional dompurify peer is unavailable', async () => {
+  it('emits lr-include-error with reason missing-sanitizer and writes nothing when the optional dompurify peer is unavailable', async () => {
     __setHtmlSanitizerForTesting(null);
     const original = window.fetch;
     window.fetch = (() => Promise.resolve(response('<p>Safe</p>'))) as typeof window.fetch;
     try {
-      const el = await fixture<LyraInclude>(html`<lyra-include>Fallback</lyra-include>`);
-      const errorPromise = oneEvent(el, 'lyra-include-error');
+      const el = await fixture<LyraInclude>(html`<lr-include>Fallback</lr-include>`);
+      const errorPromise = oneEvent(el, 'lr-include-error');
       el.src = 'https://example.test/needs-sanitizer.html';
       const event = await errorPromise;
       expect(event.detail.status).to.equal(0);
@@ -193,7 +193,7 @@ describe('lyra-include', () => {
       return new Promise<Response>((resolve) => { resolveSecond = resolve; });
     }) as typeof window.fetch;
     try {
-      const el = await fixture<LyraInclude>(html`<lyra-include src="https://example.test/first.html"></lyra-include>`);
+      const el = await fixture<LyraInclude>(html`<lr-include src="https://example.test/first.html"></lr-include>`);
       await waitUntil(() => signals.length > 0);
       el.src = 'https://example.test/second.html';
       await waitUntil(() => signals.length > 1);
@@ -210,7 +210,7 @@ describe('lyra-include', () => {
     const original = window.fetch;
     window.fetch = (() => new Promise<Response>(() => { /* never resolves */ })) as typeof window.fetch;
     try {
-      const el = await fixture<LyraInclude>(html`<lyra-include src="https://example.test/pending.html"></lyra-include>`);
+      const el = await fixture<LyraInclude>(html`<lr-include src="https://example.test/pending.html"></lr-include>`);
       await waitUntil(() => el.hasAttribute('aria-busy'));
       el.src = '';
       await waitUntil(() => !el.hasAttribute('aria-busy'));
@@ -222,9 +222,9 @@ describe('lyra-include', () => {
     const original = window.fetch;
     window.fetch = (() => new Promise<Response>(() => { /* never resolves */ })) as typeof window.fetch;
     try {
-      const el = await fixture<LyraInclude>(html`<lyra-include src="https://example.test/pending.html"></lyra-include>`);
+      const el = await fixture<LyraInclude>(html`<lr-include src="https://example.test/pending.html"></lr-include>`);
       await waitUntil(() => el.hasAttribute('aria-busy'));
-      const errorPromise = oneEvent(el, 'lyra-include-error');
+      const errorPromise = oneEvent(el, 'lr-include-error');
       el.src = 'javascript:alert(1)';
       const event = await errorPromise;
       expect(event.detail.reason).to.equal('blocked-url');
@@ -237,7 +237,7 @@ describe('lyra-include', () => {
     let callCount = 0;
     window.fetch = (() => { callCount++; return Promise.resolve(response('<p>content</p>')); }) as typeof window.fetch;
     try {
-      const el = await fixture<LyraInclude>(html`<lyra-include src="https://example.test/a.html">Fallback</lyra-include>`);
+      const el = await fixture<LyraInclude>(html`<lr-include src="https://example.test/a.html">Fallback</lr-include>`);
       await waitUntil(() => el.querySelector('p') !== null);
       expect(callCount).to.equal(1);
       el.src = '';
@@ -252,7 +252,7 @@ describe('lyra-include', () => {
     let resolveFetch!: (value: Response) => void;
     window.fetch = (() => new Promise<Response>((resolve) => { resolveFetch = resolve; })) as typeof window.fetch;
     try {
-      const el = await fixture<LyraInclude>(html`<lyra-include src="https://example.test/slow.html">Fallback</lyra-include>`);
+      const el = await fixture<LyraInclude>(html`<lr-include src="https://example.test/slow.html">Fallback</lr-include>`);
       await waitUntil(() => el.hasAttribute('aria-busy'));
       el.remove();
       resolveFetch(response('<h1>Late</h1>'));
@@ -266,7 +266,7 @@ describe('lyra-include', () => {
     const original = window.fetch;
     window.fetch = (() => Promise.resolve(response('<h1>Reconnected</h1>'))) as typeof window.fetch;
     try {
-      const el = document.createElement('lyra-include') as LyraInclude;
+      const el = document.createElement('lr-include') as LyraInclude;
       el.src = 'https://example.test/detached.html';
       await aTimeout(10);
       expect(el.querySelector('h1'), 'nothing should load while detached').to.not.exist;
@@ -281,14 +281,14 @@ describe('lyra-include', () => {
     const original = window.fetch;
     window.fetch = (() => Promise.resolve(response('<p>content</p>'))) as typeof window.fetch;
     try {
-      const el = await fixture<LyraInclude>(html`<lyra-include src="https://example.test/dir-check.html"></lyra-include>`);
+      const el = await fixture<LyraInclude>(html`<lr-include src="https://example.test/dir-check.html"></lr-include>`);
       await waitUntil(() => el.querySelector('p') !== null);
       expect(el.hasAttribute('dir')).to.equal(false);
     } finally { window.fetch = original; }
   });
 
   it('renders default slotted content unchanged (the component introduces no built-in English copy)', async () => {
-    const el = await fixture<LyraInclude>(html`<lyra-include>Fallback text</lyra-include>`);
+    const el = await fixture<LyraInclude>(html`<lr-include>Fallback text</lr-include>`);
     expect(el.textContent).to.equal('Fallback text');
   });
 
@@ -298,13 +298,13 @@ describe('lyra-include', () => {
   // text.
 
   it('exposes a part="base" non-layout wrapper', async () => {
-    const el = await fixture<LyraInclude>(html`<lyra-include></lyra-include>`);
+    const el = await fixture<LyraInclude>(html`<lr-include></lr-include>`);
     expect(el.shadowRoot!.querySelector('[part="base"]')).to.exist;
     expect(getComputedStyle(el).display).to.equal('contents');
   });
 
   it('is accessible when idle', async () => {
-    const el = await fixture(html`<lyra-include></lyra-include>`);
+    const el = await fixture(html`<lr-include></lr-include>`);
     await expect(el).to.be.accessible();
   });
 
@@ -312,7 +312,7 @@ describe('lyra-include', () => {
     const original = window.fetch;
     window.fetch = (() => Promise.resolve(response('<nav><a href="#">Link</a></nav>'))) as typeof window.fetch;
     try {
-      const el = await fixture<LyraInclude>(html`<lyra-include src="https://example.test/nav.html"></lyra-include>`);
+      const el = await fixture<LyraInclude>(html`<lr-include src="https://example.test/nav.html"></lr-include>`);
       await waitUntil(() => el.querySelector('nav') !== null);
       await expect(el).to.be.accessible();
     } finally { window.fetch = original; }

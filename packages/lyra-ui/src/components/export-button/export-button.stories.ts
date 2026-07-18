@@ -17,7 +17,7 @@ const columns: CsvColumn[] = [
 
 const meta: Meta = {
   title: 'ExportButton',
-  component: 'lyra-export-button',
+  component: 'lr-export-button',
   tags: ['autodocs'],
 };
 export default meta;
@@ -25,24 +25,24 @@ type Story = StoryObj;
 
 export const SingleFormat: Story = {
   render: () => html`
-    <lyra-export-button filename="demo" .rows=${rows} .columns=${columns}></lyra-export-button>
+    <lr-export-button filename="demo" .rows=${rows} .columns=${columns}></lr-export-button>
   `,
 };
 
 export const MultiFormatMenu: Story = {
   render: () => html`
-    <lyra-export-button
+    <lr-export-button
       filename="demo"
       .rows=${rows}
       .columns=${columns}
       .formats=${['csv', 'json']}
-    ></lyra-export-button>
+    ></lr-export-button>
   `,
 };
 
 export const Disabled: Story = {
   render: () => html`
-    <lyra-export-button filename="demo" .rows=${rows} .columns=${columns} disabled></lyra-export-button>
+    <lr-export-button filename="demo" .rows=${rows} .columns=${columns} disabled></lr-export-button>
   `,
 };
 
@@ -77,12 +77,12 @@ export const CustomFormats: Story = {
 
     return html`
       <div>
-        <lyra-export-button
+        <lr-export-button
           open
           label="Download report"
           .formats=${formats}
-          @lyra-export=${handleCustomExport}
-        ></lyra-export-button>
+          @lr-export=${handleCustomExport}
+        ></lr-export-button>
         <output aria-live="polite">Custom formats emit an event for the application to handle.</output>
       </div>
     `;
@@ -91,20 +91,20 @@ export const CustomFormats: Story = {
 
 export const Loading: Story = {
   render: () => html`
-    <lyra-export-button
+    <lr-export-button
       loading
       label="Preparing export"
       .rows=${rows}
       .columns=${columns}
       .formats=${['csv', 'json']}
-    ></lyra-export-button>
+    ></lr-export-button>
   `,
 };
 
 export const NarrowLongContent: Story = {
   render: () => html`
     <div style="inline-size: 20rem; max-inline-size: 100%;">
-      <lyra-export-button
+      <lr-export-button
         open
         aria-label="Download the complete quarterly performance report"
         .formats=${[
@@ -115,7 +115,7 @@ export const NarrowLongContent: Story = {
           },
           { id: 'json', label: 'Machine-readable JSON data' },
         ]}
-      ></lyra-export-button>
+      ></lr-export-button>
     </div>
   `,
 };

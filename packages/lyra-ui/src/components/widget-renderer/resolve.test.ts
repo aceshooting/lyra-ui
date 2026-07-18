@@ -27,7 +27,7 @@ describe('resolveTree (security-critical allowlist enforcement)', () => {
 
   it('skips a prop not in the allowlist (never assigned), keeping allowlisted props', () => {
     const registry: WidgetTypeRegistry = new Map([
-      ['button', { tag: 'lyra-button', props: { variant: 'string' }, action: { event: 'click' } }],
+      ['button', { tag: 'lr-button', props: { variant: 'string' }, action: { event: 'click' } }],
     ]);
     const node: WidgetNode = { type: 'button', props: { variant: 'brand', onclick: 'alert(1)' as never } };
     const resolved = resolveTree(node, ctx(registry));
@@ -36,7 +36,7 @@ describe('resolveTree (security-critical allowlist enforcement)', () => {
   });
 
   it('skips a prop whose runtime type does not match the allowlisted primitive type', () => {
-    const registry: WidgetTypeRegistry = new Map([['stat', { tag: 'lyra-stat', props: { value: 'string' } }]]);
+    const registry: WidgetTypeRegistry = new Map([['stat', { tag: 'lr-stat', props: { value: 'string' } }]]);
     const node: WidgetNode = { type: 'stat', props: { value: 42 } }; // number, allowlist says string
     const resolved = resolveTree(node, ctx(registry));
     expect(resolved!.kind === 'mapped' && resolved!.props).to.deep.equal({});
@@ -44,7 +44,7 @@ describe('resolveTree (security-critical allowlist enforcement)', () => {
 
   it('forcedProps always win over an allowlisted prop value from the node', () => {
     const registry: WidgetTypeRegistry = new Map([
-      ['markdown', { tag: 'lyra-markdown', props: { content: 'string' }, forcedProps: { sanitize: true } }],
+      ['markdown', { tag: 'lr-markdown', props: { content: 'string' }, forcedProps: { sanitize: true } }],
     ]);
     const node: WidgetNode = { type: 'markdown', props: { content: 'hi', sanitize: false as never } };
     const resolved = resolveTree(node, ctx(registry));
@@ -53,7 +53,7 @@ describe('resolveTree (security-critical allowlist enforcement)', () => {
 
   it('drops a child slot not in the parent type\'s allowlist -- child renders unslotted, not dropped', () => {
     const registry: WidgetTypeRegistry = new Map([
-      ['card', { tag: 'lyra-card', slots: ['header'] }],
+      ['card', { tag: 'lr-card', slots: ['header'] }],
       ['text', undefined as never], // never looked up -- built-in
     ]);
     const node: WidgetNode = {
@@ -128,7 +128,7 @@ describe('resolveTree (security-critical allowlist enforcement)', () => {
   });
 
   it('wires actionId/payload only when the resolved type has a registered action', () => {
-    const registry: WidgetTypeRegistry = new Map([['button', { tag: 'lyra-button', action: { event: 'click' } }]]);
+    const registry: WidgetTypeRegistry = new Map([['button', { tag: 'lr-button', action: { event: 'click' } }]]);
     const node: WidgetNode = { type: 'button', actionId: 'submit', payload: { formId: 'f1' } };
     const resolved = resolveTree(node, ctx(registry));
     expect(resolved!.actionEvent).to.equal('click');

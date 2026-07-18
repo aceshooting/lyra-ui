@@ -21,64 +21,64 @@ const columns: TableColumn<DemoRow>[] = [
 
 const meta: Meta = {
   title: 'Table',
-  component: 'lyra-table',
+  component: 'lr-table',
   tags: ['autodocs'],
 };
 export default meta;
 type Story = StoryObj;
 
 export const Default: Story = {
-  render: () => html`<lyra-table .columns=${columns} .rows=${rows}></lyra-table>`,
+  render: () => html`<lr-table .columns=${columns} .rows=${rows}></lr-table>`,
 };
 
 export const ResizableColumns: Story = {
   render: () => html`
-    <lyra-table
+    <lr-table
       .columns=${[
         { ...columns[0]!, width: '12rem', minWidth: '8rem', resizable: true },
         { ...columns[1]!, resizable: true },
       ]}
       .rows=${rows}
-      @lyra-column-resize=${(event: CustomEvent) => console.log(event.detail)}
-    ></lyra-table>
+      @lr-column-resize=${(event: CustomEvent) => console.log(event.detail)}
+    ></lr-table>
   `,
 };
 
 export const Empty: Story = {
-  render: () => html`<lyra-table .columns=${columns} .rows=${[]}></lyra-table>`,
+  render: () => html`<lr-table .columns=${columns} .rows=${[]}></lr-table>`,
 };
 
 export const NoColumnsConfigured: Story = {
-  render: () => html`<lyra-table .columns=${[]} .rows=${rows}></lyra-table>`,
+  render: () => html`<lr-table .columns=${[]} .rows=${rows}></lr-table>`,
 };
 
 export const ActiveSort: Story = {
   render: () =>
-    html`<lyra-table .columns=${columns} .rows=${rows} sort-key="score" sort-dir="desc"></lyra-table>`,
+    html`<lr-table .columns=${columns} .rows=${rows} sort-key="score" sort-dir="desc"></lr-table>`,
 };
 
 export const SelectedRow: Story = {
-  render: () => html`<lyra-table .columns=${columns} .rows=${rows} .selectedKey=${'b'}></lyra-table>`,
+  render: () => html`<lr-table .columns=${columns} .rows=${rows} .selectedKey=${'b'}></lr-table>`,
 };
 
 export const LoadMore: Story = {
   render: () =>
-    html`<lyra-table .columns=${columns} .rows=${rows} has-more more-label="Load more rows"></lyra-table>`,
+    html`<lr-table .columns=${columns} .rows=${rows} has-more more-label="Load more rows"></lr-table>`,
 };
 
 export const Filterable: Story = {
   render: () =>
-    html`<lyra-table
+    html`<lr-table
       filterable
       .columns=${columns}
       .rows=${rows}
       .rowKey=${(r: DemoRow) => r.id}
-    ></lyra-table>`,
+    ></lr-table>`,
 };
 
 export const Paginated: Story = {
   render: () =>
-    html`<lyra-table
+    html`<lr-table
       page-size="2"
       .columns=${columns}
       .rows=${[
@@ -87,11 +87,11 @@ export const Paginated: Story = {
         { id: 'e', name: 'Epsilon', score: 64 },
       ]}
       .rowKey=${(r: DemoRow) => r.id}
-    ></lyra-table>`,
+    ></lr-table>`,
 };
 
 export const Loading: Story = {
-  render: () => html`<lyra-table loading .columns=${columns} .rows=${rows}></lyra-table>`,
+  render: () => html`<lr-table loading .columns=${columns} .rows=${rows}></lr-table>`,
 };
 
 const editableStoryColumns: TableColumn<DemoRow>[] = [
@@ -101,22 +101,22 @@ const editableStoryColumns: TableColumn<DemoRow>[] = [
 
 export const EditableCells: Story = {
   render: () =>
-    html`<lyra-table
+    html`<lr-table
       .columns=${editableStoryColumns}
       .rows=${rows}
       .rowKey=${(r: DemoRow) => r.id}
-      @lyra-cell-edit=${(event: CustomEvent) => console.log(event.detail)}
-    ></lyra-table>`,
+      @lr-cell-edit=${(event: CustomEvent) => console.log(event.detail)}
+    ></lr-table>`,
 };
 
 export const GroupedRows: Story = {
   render: () =>
-    html`<lyra-table
+    html`<lr-table
       .columns=${columns}
       .rows=${rows}
       .groupBy=${(r: DemoRow) => (r.score > 80 ? 'Passing' : 'Needs review')}
       .groupLabel=${(key: string | number, grouped: DemoRow[]) => html`<strong>${key}</strong> (${grouped.length})`}
-    ></lyra-table>`,
+    ></lr-table>`,
 };
 
 interface DetailRow extends DemoRow {
@@ -142,7 +142,7 @@ const priorityColumns: TableColumn<DetailRow>[] = [
 export const PriorityAndSticky: Story = {
   render: () =>
     html`<div style="max-width: 420px;">
-      <lyra-table .columns=${priorityColumns} .rows=${detailRows}></lyra-table>
+      <lr-table .columns=${priorityColumns} .rows=${detailRows}></lr-table>
     </div>`,
 };
 
@@ -153,7 +153,7 @@ export const PriorityAndSticky: Story = {
 export const PriorityWideContainerNoButton: Story = {
   render: () =>
     html`<div style="max-width: 960px;">
-      <lyra-table .columns=${priorityColumns} .rows=${detailRows}></lyra-table>
+      <lr-table .columns=${priorityColumns} .rows=${detailRows}></lr-table>
     </div>`,
 };
 
@@ -162,7 +162,7 @@ export const PriorityWideContainerNoButton: Story = {
 export const PriorityColumnsRevealed: Story = {
   render: () =>
     html`<div style="max-width: 420px;">
-      <lyra-table .columns=${priorityColumns} .rows=${detailRows} show-all-columns></lyra-table>
+      <lr-table .columns=${priorityColumns} .rows=${detailRows} show-all-columns></lr-table>
     </div>`,
 };
 
@@ -181,7 +181,7 @@ const actionColumns: TableColumn<DemoRow>[] = [
 ];
 
 export const RowActions: Story = {
-  render: () => html`<lyra-table .columns=${actionColumns} .rows=${rows}></lyra-table>`,
+  render: () => html`<lr-table .columns=${actionColumns} .rows=${rows}></lr-table>`,
 };
 
 // expandedKeys is consumer-owned (mirrors selectedKey/sortKey) -- this story
@@ -190,7 +190,7 @@ export const RowActions: Story = {
 const expandableExpandedKeys = new Set<string | number>();
 
 function renderExpandableRows(): unknown {
-  return html`<lyra-table
+  return html`<lr-table
     .columns=${detailColumns}
     .rows=${detailRows}
     .rowKey=${(r: DetailRow) => r.id}
@@ -199,7 +199,7 @@ function renderExpandableRows(): unknown {
         <strong>${r.name}</strong> — region ${r.region}, updated ${r.updated}
       </div>`}
     .expandedKeys=${expandableExpandedKeys}
-    @lyra-row-expand-toggle=${(e: CustomEvent<{ key: string | number }>) => {
+    @lr-row-expand-toggle=${(e: CustomEvent<{ key: string | number }>) => {
       const key = e.detail.key;
       if (expandableExpandedKeys.has(key)) expandableExpandedKeys.delete(key);
       else expandableExpandedKeys.add(key);
@@ -209,7 +209,7 @@ function renderExpandableRows(): unknown {
       const root = (e.currentTarget as HTMLElement).parentElement;
       if (root) render(renderExpandableRows(), root);
     }}
-  ></lyra-table>`;
+  ></lr-table>`;
 }
 
 const detailColumns: TableColumn<DetailRow>[] = [
@@ -227,14 +227,14 @@ export const ExpandableRows: Story = {
 // here) would still not render a panel for it.
 export const ExpandableRowsWithOptOut: Story = {
   render: () =>
-    html`<lyra-table
+    html`<lr-table
       .columns=${detailColumns}
       .rows=${detailRows}
       .rowKey=${(r: DetailRow) => r.id}
       .expandedContent=${(r: DetailRow) => html`<div style="padding: 4px 8px;">${r.name} details</div>`}
       .canExpand=${(r: DetailRow) => r.id !== 'c'}
       .expandedKeys=${new Set(['a'])}
-    ></lyra-table>`,
+    ></lr-table>`,
 };
 
 interface PivotRow {
@@ -283,11 +283,11 @@ const pivotRows: PivotRow[] = [
 // together on a small entity x day-of-week pivot grid, mirroring cv-timesheet.ts's motivating shape.
 export const PivotWithTotalsAndHeatTint: Story = {
   render: () =>
-    html`<lyra-table
+    html`<lr-table
       .columns=${pivotColumns}
       .rows=${pivotRows}
       .rowKey=${(r: PivotRow) => r.id}
       .rowTotal=${(r: PivotRow) => r.mon + r.tue + r.wed}
       .grandTotal=${(rs: PivotRow[]) => rs.reduce((sum, r) => sum + r.mon + r.tue + r.wed, 0)}
-    ></lyra-table>`,
+    ></lr-table>`,
 };

@@ -1,10 +1,10 @@
 // Static check for the shared minimum icon-button hit-area convention (see
-// src/internal/tokens.styles.ts's `--lyra-icon-button-size`, 2.5rem/40px):
+// src/internal/tokens.styles.ts's `--lr-icon-button-size`, 2.5rem/40px):
 // every independently-interactive, icon-sized control (a literal `<button>`,
 // or an element wearing `role="button"`/`tabindex="0"`) must resolve to at
 // least that floor via `min-inline-size`/`min-block-size`, either directly or
-// through the shared token. <lyra-swatch-picker>'s `[part="swatch"]` (24px)
-// and <lyra-emoji-picker>'s `[part="emoji"]` (32px) shipped without that
+// through the shared token. <lr-swatch-picker>'s `[part="swatch"]` (24px)
+// and <lr-emoji-picker>'s `[part="emoji"]` (32px) shipped without that
 // floor -- this script catches that class of gap in future components.
 //
 // This is a heuristic, text-based check (like check-manifest.mjs's own
@@ -21,9 +21,9 @@ import { fileURLToPath } from 'node:url';
 const packageDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const sourceDir = path.join(packageDir, 'src', 'components');
 
-const FLOOR_PX = 40; // --lyra-icon-button-size == 2.5rem == 40px at the default 16px root.
+const FLOOR_PX = 40; // --lr-icon-button-size == 2.5rem == 40px at the default 16px root.
 const REM_PX = 16;
-const ICON_BUTTON_TOKEN = '--lyra-icon-button-size';
+const ICON_BUTTON_TOKEN = '--lr-icon-button-size';
 const ESCAPE_HATCH = 'hit-area-exempt';
 
 function walk(directory) {
@@ -288,7 +288,7 @@ function resolvePartNames(attrText, wholeSource) {
 // translated label, not a compact glyph" signals. Everything else bare
 // (`${item.emoji}`, `${option.icon}`, a plain property/variable reference)
 // is deliberately left ambiguous and treated as NOT meaningful text -- see
-// the false-positive-rate notes below for why: <lyra-emoji-picker>'s own
+// the false-positive-rate notes below for why: <lr-emoji-picker>'s own
 // `${item.emoji}` is exactly this shape, and it's the shape this check
 // exists to catch.
 const ICON_CALL_RE = /\$\{[^{}]*\b\w*Icon\([^)]*\)[^{}]*\}/g;
@@ -300,7 +300,7 @@ const TEXT_CALL_RE = /\.localize\(/;
 // toggle. `wholeSource` lets a bare `${identifier}` content expression (no
 // markup of its own at the call site) follow that reference back to a
 // `const identifier = html\`...\`` declared elsewhere in the same file --
-// e.g. <lyra-app-rail-item>'s `[part="base"]`, whose actual composite icon
+// e.g. <lr-app-rail-item>'s `[part="base"]`, whose actual composite icon
 // + label + tooltip markup lives in a `content` variable built once and
 // reused across its `<a>`/`<button>` branches, not inlined at either call
 // site.
@@ -338,9 +338,9 @@ function contentLooksLikeText(content, wholeSource, depth = 0) {
 
   // Any element still standing after decorative stripping means this button
   // wraps a sibling/nested region beyond a single glyph -- a composite row
-  // (e.g. <lyra-activity-feed>'s `[part="header"]`, which also carries its
+  // (e.g. <lr-activity-feed>'s `[part="header"]`, which also carries its
   // own `[part="label"]`/`[part="summary"]` text spans) or a genuinely
-  // nested real control (<lyra-data-grid>'s sortable `<th>` wrapping its own
+  // nested real control (<lr-data-grid>'s sortable `<th>` wrapping its own
   // `<button>`). Both are "regular-sized", not a bare icon toggle, no matter
   // what text each nested part actually renders.
   for (const _tag of openTags(working)) {
@@ -349,14 +349,14 @@ function contentLooksLikeText(content, wholeSource, depth = 0) {
 
   // No nested markup left -- content is now plain text and/or bare
   // interpolations. Strip icon-helper calls that were used directly (no
-  // wrapping span at all, e.g. <lyra-date-picker>'s `[part="previous"]`).
+  // wrapping span at all, e.g. <lr-date-picker>'s `[part="previous"]`).
   working = working.replace(ICON_CALL_RE, '');
   if (TEXT_CALL_RE.test(working)) return { excluded: true, reason: 'renders a this.localize(...) label' };
   // A bare interpolation whose expression reads an obviously text/label-
   // shaped property (`${this.titleText}`, `${test.name}`, ...) is the last
   // static signal available for the genuinely ambiguous "bare interpolation,
   // no wrapping tag" case (see ICON_CALL_RE's doc comment) -- e.g.
-  // <lyra-source-card>'s `[part="title"]` button, an auto-width hyperlink-
+  // <lr-source-card>'s `[part="title"]` button, an auto-width hyperlink-
   // styled heading with neither a flex-grow nor a 100%-width tell. This is
   // a narrower, lower-confidence heuristic than the two calls above, so it
   // only runs after both of them have already come up empty.
@@ -364,7 +364,7 @@ function contentLooksLikeText(content, wholeSource, depth = 0) {
     return { excluded: true, reason: 'renders a title/label/name-shaped bare interpolation' };
   }
   // A literal text node (not inside any `${...}`) is always meaningful
-  // (e.g. <lyra-callout>'s `[part="close-button"]`'s literal "×"). A bare
+  // (e.g. <lr-callout>'s `[part="close-button"]`'s literal "×"). A bare
   // expression body left over after all of the above (`${item.emoji}`,
   // `${line}`, ...) is deliberately left ambiguous -- see the doc comment
   // above ICON_CALL_RE for why it stays a candidate instead.
@@ -458,7 +458,7 @@ function resolveLength(raw, localVars, depth = 0) {
     const varName = commaIdx[0].trim();
     const fallback = commaIdx.length > 1 ? commaIdx.slice(1).join(',').trim() : null;
     if (varName === ICON_BUTTON_TOKEN) return { kind: 'token', px: FLOOR_PX };
-    const sizeToken = varName.match(/^--lyra-size-(neg-)?([0-9]+(?:-[0-9]+)?)(rem|px|em|ch)$/);
+    const sizeToken = varName.match(/^--lr-size-(neg-)?([0-9]+(?:-[0-9]+)?)(rem|px|em|ch)$/);
     if (sizeToken) {
       const [, neg, digits, unit] = sizeToken;
       if (neg) return { kind: 'literal', px: -1 };
@@ -502,7 +502,7 @@ function collectLocalVars(css) {
 
 // A rule that sets `flex-grow`/shorthand `flex` to a positive value
 // deliberately grows the element to consume its row's remaining space (e.g.
-// <lyra-test-results>'s `[part="test-name"]`, `flex: 1 1 auto` with
+// <lr-test-results>'s `[part="test-name"]`, `flex: 1 1 auto` with
 // `min-inline-size: 6ch` only as an anti-collapse floor, not its real
 // rendered width). That's the opposite of "compact icon toggle" -- every
 // actual icon-button reference shape in this codebase (code-block/
@@ -587,7 +587,7 @@ function resolveClassNames(attrText) {
 
 // A narrow, principled escape from the part-based guard search: an element
 // whose CLASS (not part) selector explicitly sets `inline-size`/`width:
-// 100%` is a deliberately full-width control (e.g. <lyra-code-block>'s
+// 100%` is a deliberately full-width control (e.g. <lr-code-block>'s
 // `button.line` -- an interactive source-code line, sized via its `.line`
 // class rather than its `part="line-button"` shadow-part, which exists
 // purely for external consumer styling). That is definitionally not the
@@ -628,7 +628,7 @@ const INLINE_SIZE_STYLE_RE = /(?:^|[;{,\s'"])(?:inline-size|inlineSize|block-siz
 // regardless (the box size isn't in the stylesheet this check reads at
 // all), so it's excluded rather than misreported as either compliant or a
 // violation. A swatch/color custom-property assignment (e.g.
-// <lyra-swatch-picker>'s `style=${styleMap({'--lyra-swatch-color': ...})}`)
+// <lr-swatch-picker>'s `style=${styleMap({'--lr-swatch-color': ...})}`)
 // does NOT match, since that sets no sizing property at all.
 function hasInlineSizeStyle(attrText) {
   const style = getAttr(attrText, 'style');

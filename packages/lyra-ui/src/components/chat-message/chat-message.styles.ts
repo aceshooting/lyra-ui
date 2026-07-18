@@ -3,22 +3,22 @@ import { css } from 'lit';
 export const styles = css`
   :host {
     display: block;
-    /* Component-specific -- no shared --lyra-* "conversation bubble
+    /* Component-specific -- no shared --lr-* "conversation bubble
        width" token exists to resolve through, same rationale as
-       --lyra-json-viewer-max-height in json-viewer.styles.ts. */
-    --lyra-chat-message-max-width: 80%;
-    font-size: var(--lyra-font-size-md-sm);
-    line-height: var(--lyra-line-height-normal);
+       --lr-json-viewer-max-height in json-viewer.styles.ts. */
+    --lr-chat-message-max-width: 80%;
+    font-size: var(--lr-font-size-md-sm);
+    line-height: var(--lr-line-height-normal);
   }
   [part='bubble'] {
     display: flex;
     flex-direction: column;
-    gap: var(--lyra-space-xs);
-    max-inline-size: var(--lyra-chat-message-max-width);
-    padding: var(--lyra-space-m);
-    border: var(--lyra-border-width-thin) solid var(--lyra-color-border);
-    border-radius: var(--lyra-radius);
-    background: var(--lyra-color-surface);
+    gap: var(--lr-space-xs);
+    max-inline-size: var(--lr-chat-message-max-width);
+    padding: var(--lr-space-m);
+    border: var(--lr-border-width-thin) solid var(--lr-color-border);
+    border-radius: var(--lr-radius);
+    background: var(--lr-color-surface);
     overflow-wrap: anywhere;
   }
 
@@ -28,7 +28,7 @@ export const styles = css`
      'data-role'. */
   :host([data-role='user']) [part='bubble'] {
     margin-inline-start: auto;
-    background: var(--lyra-color-brand-quiet);
+    background: var(--lr-color-brand-quiet);
     border-color: transparent;
   }
   :host([data-role='assistant']) [part='bubble'] {
@@ -36,7 +36,7 @@ export const styles = css`
   }
   :host([data-role='system']) [part='bubble'] {
     margin-inline-end: auto;
-    color: var(--lyra-color-text-quiet);
+    color: var(--lr-color-text-quiet);
     font-style: italic;
     border-style: dashed;
   }
@@ -46,17 +46,17 @@ export const styles = css`
      alone (see [part='status-text']); 'streaming' is a quieter accent plus
      the pulsing dot below. */
   :host([status='failed']) [part='bubble'] {
-    border-color: var(--lyra-color-danger);
-    background: var(--lyra-color-danger-quiet);
+    border-color: var(--lr-color-danger);
+    background: var(--lr-color-danger-quiet);
   }
   :host([status='streaming']) [part='bubble'] {
-    border-color: var(--lyra-color-brand);
+    border-color: var(--lr-color-brand);
   }
 
   [part='header'] {
     display: flex;
     align-items: center;
-    gap: var(--lyra-space-xs);
+    gap: var(--lr-space-xs);
   }
   [part='header'][hidden],
   [part='avatar'][hidden],
@@ -76,7 +76,7 @@ export const styles = css`
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    gap: var(--lyra-space-xs);
+    gap: var(--lr-space-xs);
     min-inline-size: 0;
   }
   [part='collapse-button'] {
@@ -84,37 +84,37 @@ export const styles = css`
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    min-inline-size: var(--lyra-icon-button-size);
-    min-block-size: var(--lyra-icon-button-size);
+    min-inline-size: var(--lr-icon-button-size);
+    min-block-size: var(--lr-icon-button-size);
     margin-inline-start: auto;
     border: none;
     background: transparent;
-    color: var(--lyra-color-text-quiet);
-    border-radius: var(--lyra-radius);
+    color: var(--lr-color-text-quiet);
+    border-radius: var(--lr-radius);
     cursor: pointer;
   }
   [part='collapse-button']:hover {
-    background: var(--lyra-color-brand-quiet);
-    color: var(--lyra-color-brand);
+    background: var(--lr-color-brand-quiet);
+    color: var(--lr-color-brand);
   }
   [part='collapse-button']:focus-visible,
   [part='retry-button']:focus-visible {
-    outline: var(--lyra-focus-ring-width) solid var(--lyra-focus-ring-color);
-    outline-offset: var(--lyra-focus-ring-offset);
+    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
+    outline-offset: var(--lr-focus-ring-offset);
   }
   [part='collapse-button'] .chevron {
     display: inline-flex;
-    transition: transform var(--lyra-transition-fast);
+    transition: transform var(--lr-transition-fast);
   }
   /* Chevron points at the content: rotated (pointing down) while expanded,
      resting (pointing right) while collapsed -- same rotation direction as
-     lyra-code-block's/lyra-thinking-panel's own toggles. */
+     lr-code-block's/lr-thinking-panel's own toggles. */
   :host(:not([collapsed])) [part='collapse-button'] .chevron {
     transform: rotate(90deg);
   }
   /* RTL: the resting (collapsed) chevron mirrors to point left, the
      conventional mirrored disclosure-triangle direction for RTL. Scoped to
-     [collapsed] specifically -- like lyra-code-block's identical rule --
+     [collapsed] specifically -- like lr-code-block's identical rule --
      so it never competes with the expanded-state rule above, which needs
      no mirroring: rotating this left-right-asymmetric glyph 90deg already
      produces a left-right-symmetric down chevron. */
@@ -125,25 +125,25 @@ export const styles = css`
   [part='attachments'] {
     display: flex;
     flex-wrap: wrap;
-    gap: var(--lyra-space-xs);
+    gap: var(--lr-space-xs);
   }
 
   [part='footer'] {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    gap: var(--lyra-space-xs);
-    font-size: var(--lyra-font-size-xs);
-    color: var(--lyra-color-text-quiet);
+    gap: var(--lr-space-xs);
+    font-size: var(--lr-font-size-xs);
+    color: var(--lr-color-text-quiet);
   }
   [part='actions'] {
     display: flex;
     align-items: center;
-    gap: var(--lyra-space-xs);
+    gap: var(--lr-space-xs);
     margin-inline-start: auto;
   }
   :host([actions-outside-bubble]) [part='actions'] {
-    margin-block-start: var(--lyra-space-2xs);
+    margin-block-start: var(--lr-space-2xs);
   }
   [part='timestamp'] {
     white-space: nowrap;
@@ -157,37 +157,37 @@ export const styles = css`
      rule so an equal-specificity failed user message still gets the danger
      footer that matches its danger-quiet background. */
   :host([data-role='user']) [part='footer'] {
-    color: var(--lyra-color-text);
+    color: var(--lr-color-text);
   }
   /* Same contrast reasoning against the danger-quiet bubble background a
      'failed' message gets underneath it, so the whole footer switches to
-     the same --lyra-color-danger already used for [part='status-text']. */
+     the same --lr-color-danger already used for [part='status-text']. */
   :host([status='failed']) [part='footer'] {
-    color: var(--lyra-color-danger);
+    color: var(--lr-color-danger);
   }
 
   [part='status-indicator'] {
     flex: 0 0 auto;
-    inline-size: var(--lyra-size-0-5rem);
-    block-size: var(--lyra-size-0-5rem);
+    inline-size: var(--lr-size-0-5rem);
+    block-size: var(--lr-size-0-5rem);
     border-radius: 50%;
-    background: var(--lyra-color-text-quiet);
+    background: var(--lr-color-text-quiet);
   }
   :host([status='streaming']) [part='status-indicator'] {
-    background: var(--lyra-color-brand);
-    animation: lyra-chat-message-pulse var(--lyra-transition-ambient) infinite;
+    background: var(--lr-color-brand);
+    animation: lr-chat-message-pulse var(--lr-transition-ambient) infinite;
   }
   :host([status='failed']) [part='status-indicator'] {
-    background: var(--lyra-color-danger);
+    background: var(--lr-color-danger);
   }
   [part='status-text'] {
     white-space: nowrap;
   }
   :host([status='failed']) [part='status-text'] {
-    color: var(--lyra-color-danger);
-    font-weight: var(--lyra-font-weight-semibold);
+    color: var(--lr-color-danger);
+    font-weight: var(--lr-font-weight-semibold);
   }
-  @keyframes lyra-chat-message-pulse {
+  @keyframes lr-chat-message-pulse {
     0%,
     100% {
       opacity: 1;
@@ -201,22 +201,22 @@ export const styles = css`
     flex: 0 0 auto;
     display: inline-flex;
     align-items: center;
-    gap: var(--lyra-space-xs);
-    padding: var(--lyra-size-0-125rem) var(--lyra-space-xs);
-    border: var(--lyra-border-width-thin) solid var(--lyra-color-danger);
-    border-radius: var(--lyra-radius);
+    gap: var(--lr-space-xs);
+    padding: var(--lr-size-0-125rem) var(--lr-space-xs);
+    border: var(--lr-border-width-thin) solid var(--lr-color-danger);
+    border-radius: var(--lr-radius);
     background: transparent;
-    color: var(--lyra-color-danger);
+    color: var(--lr-color-danger);
     font: inherit;
-    font-size: var(--lyra-font-size-xs);
+    font-size: var(--lr-font-size-xs);
     cursor: pointer;
   }
   [part='retry-button']:hover {
-    background: var(--lyra-color-danger-quiet);
+    background: var(--lr-color-danger-quiet);
   }
   [part='retry-button'] svg {
-    inline-size: var(--lyra-size-0-875em);
-    block-size: var(--lyra-size-0-875em);
+    inline-size: var(--lr-size-0-875em);
+    block-size: var(--lr-size-0-875em);
   }
 
   @media (prefers-reduced-motion: reduce) {

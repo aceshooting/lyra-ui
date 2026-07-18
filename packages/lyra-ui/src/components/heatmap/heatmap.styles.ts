@@ -8,49 +8,49 @@ export const styles = css`
        getComputedStyle and interpolates between them). Component-specific
        business color — exposed so hosts can retheme
        the ramp without raw hex leaking into the public API. */
-    --lyra-heatmap-scale-lo: var(--lyra-color-brand-quiet);
-    --lyra-heatmap-scale-hi: var(--lyra-color-brand);
+    --lr-heatmap-scale-lo: var(--lr-color-brand-quiet);
+    --lr-heatmap-scale-hi: var(--lr-color-brand);
     /* No-data cell fill (the -1 sentinel / NaN case) — same resolve-via-
        getComputedStyle pattern as the ramp endpoints above, so hosts can
        retheme it instead of it being a hardcoded literal in heatmap.ts. */
-    --lyra-heatmap-no-data-fill: var(--lyra-color-no-data);
+    --lr-heatmap-no-data-fill: var(--lr-color-no-data);
     /* Canvas-drawn axis/month/weekday label font — same resolve-via-
        getComputedStyle pattern as the ramp endpoints above (canvas can't
        consume var() directly). */
-    --lyra-heatmap-label-font: var(--lyra-size-10px) var(--lyra-font);
+    --lr-heatmap-label-font: var(--lr-size-10px) var(--lr-font);
     /* [part="tooltip"] is a real DOM element (not canvas-drawn), so unlike
        the tokens above it consumes these var()s directly — no getComputedStyle
-       resolution needed. Own tokens (not the bare --lyra-color-surface/-text)
+       resolution needed. Own tokens (not the bare --lr-color-surface/-text)
        so a host can retheme just the heatmap tooltip, same rationale as
-       chart.ts's --lyra-chart-tooltip-bg/-text. */
-    --lyra-heatmap-tooltip-bg: var(--lyra-color-surface);
-    --lyra-heatmap-tooltip-text: var(--lyra-color-text);
+       chart.ts's --lr-chart-tooltip-bg/-text. */
+    --lr-heatmap-tooltip-bg: var(--lr-color-surface);
+    --lr-heatmap-tooltip-text: var(--lr-color-text);
     /* Canvas-drawn focus-ring stroke around the keyboard-focused cell — same
        resolve-via-getComputedStyle pattern as the ramp endpoints (canvas
        can't consume var() directly). A dedicated token (rather than reusing
-       --lyra-focus-ring-color straight from tokens.styles.ts) so a host can
+       --lr-focus-ring-color straight from tokens.styles.ts) so a host can
        retheme the in-canvas ring independently of every other :focus-visible
        outline in the library, while defaulting to that same brand color —
        also reused by the [part="canvas"]:focus-visible outline below so the
        two stay visually in sync. */
-    --lyra-heatmap-focus-ring-color: var(--lyra-focus-ring-color);
+    --lr-heatmap-focus-ring-color: var(--lr-focus-ring-color);
     /* Canvas-drawn ring around annotated cells — same resolve-via-
-       getComputedStyle pattern. Defaults to --lyra-color-danger (a loud,
+       getComputedStyle pattern. Defaults to --lr-color-danger (a loud,
        attention-grabbing color distinct from the sequential data ramp) so an
        annotation reads clearly against any point on that ramp. */
-    --lyra-heatmap-annotation-color: var(--lyra-color-danger);
+    --lr-heatmap-annotation-color: var(--lr-color-danger);
     /* Canvas-drawn ring around the persistently selectedCell — same
        resolve-via-getComputedStyle pattern. A dedicated token so a host can
        retheme it independently of the focus ring
-       (--lyra-heatmap-focus-ring-color) and the annotation ring
-       (--lyra-heatmap-annotation-color) it's drawn between. */
-    --lyra-heatmap-selected-color: var(--lyra-color-success);
+       (--lr-heatmap-focus-ring-color) and the annotation ring
+       (--lr-heatmap-annotation-color) it's drawn between. */
+    --lr-heatmap-selected-color: var(--lr-color-success);
   }
   [part='base'] {
     position: relative;
     display: flex;
     flex-direction: column;
-    gap: var(--lyra-space-xs);
+    gap: var(--lr-space-xs);
   }
   canvas {
     display: block;
@@ -77,26 +77,26 @@ export const styles = css`
     pointer-events: auto;
   }
   [part='cell']:focus-visible {
-    outline: var(--lyra-focus-ring-width) solid var(--lyra-heatmap-focus-ring-color);
-    outline-offset: var(--lyra-focus-ring-offset);
+    outline: var(--lr-focus-ring-width) solid var(--lr-heatmap-focus-ring-color);
+    outline-offset: var(--lr-focus-ring-offset);
   }
   [part='canvas']:focus-visible {
-    outline: var(--lyra-focus-ring-width) solid var(--lyra-heatmap-focus-ring-color);
-    outline-offset: var(--lyra-focus-ring-offset);
+    outline: var(--lr-focus-ring-width) solid var(--lr-heatmap-focus-ring-color);
+    outline-offset: var(--lr-focus-ring-offset);
   }
   [part='tooltip'] {
     position: absolute;
     transform: translate(-50%, -100%);
-    margin-block-start: var(--lyra-size-neg-6px);
-    padding: var(--lyra-size-2px) var(--lyra-size-6px);
-    border-radius: var(--lyra-radius);
-    background: var(--lyra-heatmap-tooltip-bg);
-    color: var(--lyra-heatmap-tooltip-text);
-    font-size: var(--lyra-font-size-xs);
+    margin-block-start: var(--lr-size-neg-6px);
+    padding: var(--lr-size-2px) var(--lr-size-6px);
+    border-radius: var(--lr-radius);
+    background: var(--lr-heatmap-tooltip-bg);
+    color: var(--lr-heatmap-tooltip-text);
+    font-size: var(--lr-font-size-xs);
     white-space: nowrap;
-    box-shadow: var(--lyra-shadow);
+    box-shadow: var(--lr-shadow);
     pointer-events: none;
-    z-index: var(--lyra-layer-content);
+    z-index: var(--lr-layer-content);
   }
   [part='tooltip'][hidden] {
     display: none;
@@ -104,17 +104,17 @@ export const styles = css`
   [part='legend'] {
     display: flex;
     align-items: center;
-    gap: var(--lyra-space-xs);
-    font-size: var(--lyra-font-size-xs);
-    color: var(--lyra-color-text-quiet);
+    gap: var(--lr-space-xs);
+    font-size: var(--lr-font-size-xs);
+    color: var(--lr-color-text-quiet);
   }
   [part='legend'] .bar {
-    inline-size: var(--lyra-size-6rem);
-    block-size: var(--lyra-size-0-5rem);
-    border-radius: var(--lyra-size-2px);
+    inline-size: var(--lr-size-6rem);
+    block-size: var(--lr-size-0-5rem);
+    border-radius: var(--lr-size-2px);
     background: var(
-      --lyra-heatmap-color-steps-gradient,
-      linear-gradient(to right, var(--lyra-heatmap-scale-lo), var(--lyra-heatmap-scale-hi))
+      --lr-heatmap-color-steps-gradient,
+      linear-gradient(to right, var(--lr-heatmap-scale-lo), var(--lr-heatmap-scale-hi))
     );
   }
   /* Flex row order already follows inherited direction, placing the low
@@ -126,12 +126,12 @@ export const styles = css`
   [part='legend-annotation'] {
     display: inline-flex;
     align-items: center;
-    gap: var(--lyra-size-3px);
+    gap: var(--lr-size-3px);
   }
   [part='legend-annotation'] .ring-swatch {
-    inline-size: var(--lyra-size-0-6rem);
-    block-size: var(--lyra-size-0-6rem);
+    inline-size: var(--lr-size-0-6rem);
+    block-size: var(--lr-size-0-6rem);
     border-radius: 50%;
-    border: var(--lyra-border-width-medium) solid var(--lyra-heatmap-annotation-color);
+    border: var(--lr-border-width-medium) solid var(--lr-heatmap-annotation-color);
   }
 `;

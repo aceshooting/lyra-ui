@@ -4,7 +4,7 @@ import './button.js';
 
 const meta: Meta = {
   title: 'Button',
-  component: 'lyra-button',
+  component: 'lr-button',
   tags: ['autodocs'],
   parameters: {
     docs: {
@@ -18,17 +18,17 @@ export default meta;
 type Story = StoryObj;
 
 export const Default: Story = {
-  render: () => html`<lyra-button>Save</lyra-button>`,
+  render: () => html`<lr-button>Save</lr-button>`,
 };
 
 export const Variants: Story = {
   render: () => html`
     <div style="display: flex; gap: 0.5rem;">
-      <lyra-button variant="neutral">Neutral</lyra-button>
-      <lyra-button variant="brand">Brand</lyra-button>
-      <lyra-button variant="success">Success</lyra-button>
-      <lyra-button variant="warning">Warning</lyra-button>
-      <lyra-button variant="danger">Danger</lyra-button>
+      <lr-button variant="neutral">Neutral</lr-button>
+      <lr-button variant="brand">Brand</lr-button>
+      <lr-button variant="success">Success</lr-button>
+      <lr-button variant="warning">Warning</lr-button>
+      <lr-button variant="danger">Danger</lr-button>
     </div>
   `,
 };
@@ -36,11 +36,11 @@ export const Variants: Story = {
 export const Appearances: Story = {
   render: () => html`
     <div style="display: flex; align-items: center; gap: 0.5rem;">
-      <lyra-button variant="brand" appearance="accent">Accent</lyra-button>
-      <lyra-button variant="brand" appearance="filled">Filled</lyra-button>
-      <lyra-button variant="brand" appearance="outlined">Outlined</lyra-button>
-      <lyra-button variant="brand" appearance="plain">Plain</lyra-button>
-      <lyra-button variant="brand" appearance="link">Link</lyra-button>
+      <lr-button variant="brand" appearance="accent">Accent</lr-button>
+      <lr-button variant="brand" appearance="filled">Filled</lr-button>
+      <lr-button variant="brand" appearance="outlined">Outlined</lr-button>
+      <lr-button variant="brand" appearance="plain">Plain</lr-button>
+      <lr-button variant="brand" appearance="link">Link</lr-button>
     </div>
   `,
 };
@@ -60,9 +60,9 @@ export const Link: Story = {
   render: () => html`
     <p style="max-inline-size: 32rem;">
       The message failed to send.
-      <lyra-button appearance="link" variant="brand">Retry</lyra-button>
+      <lr-button appearance="link" variant="brand">Retry</lr-button>
       or
-      <lyra-button appearance="link" variant="danger">cancel</lyra-button>
+      <lr-button appearance="link" variant="danger">cancel</lr-button>
       the request — both flow inline with this paragraph's font.
     </p>
   `,
@@ -72,8 +72,8 @@ export const NeutralAccentVsFilled: Story = {
   name: 'Neutral: accent vs. filled',
   render: () => html`
     <div style="display: flex; gap: 0.5rem;">
-      <lyra-button variant="neutral" appearance="accent">Accent (loud fill)</lyra-button>
-      <lyra-button variant="neutral" appearance="filled">Filled (ambient surface)</lyra-button>
+      <lr-button variant="neutral" appearance="accent">Accent (loud fill)</lr-button>
+      <lr-button variant="neutral" appearance="filled">Filled (ambient surface)</lr-button>
     </div>
   `,
 };
@@ -81,27 +81,27 @@ export const NeutralAccentVsFilled: Story = {
 export const Sizes: Story = {
   render: () => html`
     <div style="display: flex; align-items: center; gap: 0.5rem;">
-      <lyra-button size="xs">XS</lyra-button>
-      <lyra-button size="s">S</lyra-button>
-      <lyra-button size="m">M</lyra-button>
-      <lyra-button size="l">L</lyra-button>
-      <lyra-button size="xl">XL</lyra-button>
+      <lr-button size="xs">XS</lr-button>
+      <lr-button size="s">S</lr-button>
+      <lr-button size="m">M</lr-button>
+      <lr-button size="l">L</lr-button>
+      <lr-button size="xl">XL</lr-button>
     </div>
   `,
 };
 
 export const Loading: Story = {
-  render: () => html`<lyra-button variant="brand" .loading=${true}>Saving…</lyra-button>`,
+  render: () => html`<lr-button variant="brand" .loading=${true}>Saving…</lr-button>`,
 };
 
 export const Disabled: Story = {
-  render: () => html`<lyra-button disabled>Save</lyra-button>`,
+  render: () => html`<lr-button disabled>Save</lr-button>`,
 };
 
 export const IconOnly: Story = {
   name: 'Icon-only (aria-label)',
   render: () => html`
-    <lyra-button appearance="plain" aria-label="Close dialog">
+    <lr-button appearance="plain" aria-label="Close dialog">
       <svg
         slot="start"
         width="16"
@@ -114,7 +114,7 @@ export const IconOnly: Story = {
         <line x1="18" y1="6" x2="6" y2="18"></line>
         <line x1="6" y1="6" x2="18" y2="18"></line>
       </svg>
-    </lyra-button>
+    </lr-button>
   `,
 };
 
@@ -127,7 +127,7 @@ export const SubmitInAForm: Story = {
         alert('submitted');
       }}
     >
-      <lyra-button type="submit" variant="brand">Save</lyra-button>
+      <lr-button type="submit" variant="brand">Save</lr-button>
     </form>
   `,
 };

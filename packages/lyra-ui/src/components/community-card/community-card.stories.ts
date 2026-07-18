@@ -6,7 +6,7 @@ import type { LyraEntity } from '../entity-card/entity-card.class.js';
 
 const meta: Meta = {
   title: 'Community Card',
-  component: 'lyra-community-card',
+  component: 'lr-community-card',
 };
 export default meta;
 type Story = StoryObj;
@@ -24,21 +24,21 @@ const members: LyraEntity[] = [
 ];
 
 export const Default: Story = {
-  render: () => html`<lyra-community-card .community=${community} .members=${members}></lyra-community-card>`,
+  render: () => html`<lr-community-card .community=${community} .members=${members}></lr-community-card>`,
 };
 
 export const WithOverflow: Story = {
-  render: () => html`<lyra-community-card .community=${community} .members=${members} max-members="2"></lyra-community-card>`,
+  render: () => html`<lr-community-card .community=${community} .members=${members} max-members="2"></lr-community-card>`,
 };
 
 export const Compact: Story = {
-  render: () => html`<lyra-community-card .community=${community} .members=${members} compact></lyra-community-card>`,
+  render: () => html`<lr-community-card .community=${community} .members=${members} compact></lr-community-card>`,
 };
 
 export const Empty: Story = {
-  render: () => html`<lyra-community-card></lyra-community-card>`,
+  render: () => html`<lr-community-card></lr-community-card>`,
 };
 
 export const Narrow: Story = {
-  render: () => html`<div style="max-width: 320px;"><lyra-community-card .community=${community} .members=${members}></lyra-community-card></div>`,
+  render: () => html`<div style="max-width: 320px;"><lr-community-card .community=${community} .members=${members}></lr-community-card></div>`,
 };

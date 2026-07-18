@@ -12,12 +12,12 @@ export interface MentionItem {
   description?: string;
   /** Literal icon hint (e.g. an emoji), rendered next to `label` -- same
    *  "opaque string, not a registry lookup" convention as
-   *  `<lyra-tool-call-chip>`'s/`<lyra-tool-select-dialog>`'s own `icon`. */
+   *  `<lr-tool-call-chip>`'s/`<lr-tool-select-dialog>`'s own `icon`. */
   icon?: string;
 }
 
 /** Predicate deciding whether `item` matches a (already-trimmed, already-lowercased) `query`.
- *  Mirrors `<lyra-combobox>`'s `OptionFilter` convention -- override `filter` to replace the
+ *  Mirrors `<lr-combobox>`'s `OptionFilter` convention -- override `filter` to replace the
  *  built-in case-insensitive label/description substring match entirely. */
 export type MentionFilter = (item: MentionItem, query: string) => boolean;
 
@@ -126,17 +126,17 @@ function caretClientRect(el: TextControl): DOMRect | null {
 }
 
 export interface LyraMentionPopoverEventMap {
-  'lyra-mention-select': CustomEvent<MentionSelectDetail>;
-  'lyra-mention-close': CustomEvent<undefined>;
+  'lr-mention-select': CustomEvent<MentionSelectDetail>;
+  'lr-mention-close': CustomEvent<undefined>;
 }
 /**
- * `<lyra-mention-popover>` — a caret-anchored, keyboard-navigable popover for
+ * `<lr-mention-popover>` — a caret-anchored, keyboard-navigable popover for
  * `@`-mention and `/`-slash-command autocomplete inside a plain-text
- * `<textarea>`/`<input>` the host owns (e.g. `<lyra-chat-composer>`'s own
+ * `<textarea>`/`<input>` the host owns (e.g. `<lr-chat-composer>`'s own
  * textarea, though this component has no dependency on that or any other
  * specific input). It never takes DOM focus itself — the same "focus stays
  * put, `aria-activedescendant` conveys the active row" pattern
- * `<lyra-select>`/`<lyra-combobox>` use for their own listbox — so a host
+ * `<lr-select>`/`<lr-combobox>` use for their own listbox — so a host
  * must apply `aria-activedescendant` to its *own* input element, pointing at
  * whatever `activeDescendantId` currently returns.
  *
@@ -154,7 +154,7 @@ export interface LyraMentionPopoverEventMap {
  *    Enter that actually picked a mention) and `false` otherwise.
  * 4. Set `open = false` whenever the query stops looking like an active
  *    mention context (a space typed, the trigger character deleted, the
- *    input blurred, …) — `lyra-mention-close` fires automatically from that
+ *    input blurred, …) — `lr-mention-close` fires automatically from that
  *    (see below), there is no separate "tell it to close" call needed.
  * 5. Keep the host's own input's `aria-activedescendant` (and, optionally,
  *    `aria-controls`, via `listboxId`) in sync with `activeDescendantId` —
@@ -168,15 +168,15 @@ export interface LyraMentionPopoverEventMap {
  * rather than sitting under the whole textarea. Any other `anchor` element
  * (or a text control this component fails to measure, e.g. one with
  * `display: none`) falls back to `place(anchor, popup)` against the whole
- * element — the same whole-element anchoring `<lyra-combobox>`/
- * `<lyra-select>` use for their own popups. Re-measures on every `anchor`/
+ * element — the same whole-element anchoring `<lr-combobox>`/
+ * `<lr-select>` use for their own popups. Re-measures on every `anchor`/
  * `query` change while open (a keystroke moves the caret, so a fresh `query`
  * is the proxy for "the caret may have moved"); a caret that moves for a
  * reason other than typing (e.g. a mouse click elsewhere in the text while
  * the popover happens to still be open) is not separately tracked — the
  * host can force a re-measure by toggling `open` or reassigning `anchor`.
  *
- * Filtering happens internally against `items` (mirroring `<lyra-combobox>`'s
+ * Filtering happens internally against `items` (mirroring `<lr-combobox>`'s
  * filter-predicate convention via `filter`, rather than requiring the host to
  * pre-filter): the default predicate is a case-insensitive substring match
  * against `label`/`description`, overridable via `filter`.
@@ -186,13 +186,13 @@ export interface LyraMentionPopoverEventMap {
  * dismissed with nothing chosen — so `aria-selected="true"` marks whichever
  * row is currently *active* (what Enter/Tab would commit right now), per the
  * WAI-ARIA combobox-with-list-autocomplete pattern, rather than tracking a
- * separate persisted value the way `<lyra-combobox>`'s own `aria-selected`
+ * separate persisted value the way `<lr-combobox>`'s own `aria-selected`
  * does.
  *
  * @example
  * ```html
  * <textarea id="composer"></textarea>
- * <lyra-mention-popover id="mentions"></lyra-mention-popover>
+ * <lr-mention-popover id="mentions"></lr-mention-popover>
  * <script>
  *   const textarea = document.getElementById('composer');
  *   const popover = document.getElementById('mentions');
@@ -210,10 +210,10 @@ export interface LyraMentionPopoverEventMap {
  *   });
  *   textarea.addEventListener('blur', () => (popover.open = false));
  *
- *   popover.addEventListener('lyra-mention-select', (e) => {
+ *   popover.addEventListener('lr-mention-select', (e) => {
  *     // splice `${e.detail.label}` into the textarea at the trigger offset
  *   });
- *   popover.addEventListener('lyra-mention-close', () => {
+ *   popover.addEventListener('lr-mention-close', () => {
  *     textarea.removeAttribute('aria-activedescendant');
  *   });
  *
@@ -230,11 +230,11 @@ export interface LyraMentionPopoverEventMap {
  * </script>
  * ```
  *
- * @customElement lyra-mention-popover
- * @event lyra-mention-select - An item was committed (Enter/Tab/click). `detail: { id, label }`.
- * @event lyra-mention-close - The popover was dismissed with no selection — Escape, or `open`
+ * @customElement lr-mention-popover
+ * @event lr-mention-select - An item was committed (Enter/Tab/click). `detail: { id, label }`.
+ * @event lr-mention-close - The popover was dismissed with no selection — Escape, or `open`
  * transitioning to `false` by any other means (a direct host assignment included). Never fires
- * for a close that followed a `lyra-mention-select` commit.
+ * for a close that followed a `lr-mention-select` commit.
  * @csspart listbox - The popover's root element (`role="listbox"`).
  * @csspart option - A candidate row (`role="option"`).
  * @csspart option-icon - A row's leading icon glyph, when `icon` is set.
@@ -248,7 +248,7 @@ export class LyraMentionPopover extends LyraElement<LyraMentionPopoverEventMap> 
   /** The element to position the popup relative to. When this is a plain
    *  `<textarea>`/single-line text `<input>`, positioning is caret-precise
    *  (see the class doc); any other element anchors the whole popup under
-   *  that element's own box, the same as `<lyra-combobox>`'s trigger. */
+   *  that element's own box, the same as `<lr-combobox>`'s trigger. */
   @property({ attribute: false }) anchor?: HTMLElement;
 
   /** The full candidate set, pre-`query`-filtering. */
@@ -268,14 +268,14 @@ export class LyraMentionPopover extends LyraElement<LyraMentionPopoverEventMap> 
   @property({ attribute: 'empty-text' }) emptyText = 'No matches';
 
   /** Accessible name for the `role="listbox"` popup. Also settable as a plain `aria-label`
-   *  attribute on `<lyra-mention-popover>` itself, which takes precedence over this property when
-   *  present -- matches `<lyra-combobox>`'s/`<lyra-table>`'s identical host `aria-label` fallback. */
+   *  attribute on `<lr-mention-popover>` itself, which takes precedence over this property when
+   *  present -- matches `<lr-combobox>`'s/`<lr-table>`'s identical host `aria-label` fallback. */
   @property() label = 'Suggestions';
 
   // Highlighted row, opens pre-highlighted on the top match (index 0) so a
   // bare Enter right after opening commits immediately -- the same "first
   // result is pre-selected" UX every mainstream @-mention/slash-command
-  // picker (Slack, GitHub, Notion, …) uses, unlike lyra-combobox's own
+  // picker (Slack, GitHub, Notion, …) uses, unlike lr-combobox's own
   // listbox which opens with nothing highlighted (-1) since a combobox's
   // typed text can itself already equal a full, deliberately-typed value.
   @state() private activeIndex = 0;
@@ -289,9 +289,9 @@ export class LyraMentionPopover extends LyraElement<LyraMentionPopoverEventMap> 
   private virtualAnchor: HTMLDivElement | null = null;
   private _isFirstUpdate = true;
   // Set by commit() immediately before it flips `open` false, so updated()'s
-  // open-transition handling below (which otherwise fires lyra-mention-close
-  // on every true->false transition, matching lyra-combobox's/lyra-select's
-  // identical lyra-hide handling) can tell a successful-selection close
+  // open-transition handling below (which otherwise fires lr-mention-close
+  // on every true->false transition, matching lr-combobox's/lr-select's
+  // identical lr-hide handling) can tell a successful-selection close
   // apart from every other close and skip the event for that one case.
   private _suppressCloseEvent = false;
 
@@ -316,7 +316,7 @@ export class LyraMentionPopover extends LyraElement<LyraMentionPopoverEventMap> 
         // first time, and don't fire for the commit() path (see
         // _suppressCloseEvent's own doc above) -- every other true->false
         // transition (Escape, or a direct host assignment) does fire.
-        if (!this._isFirstUpdate && !this._suppressCloseEvent) this.emit('lyra-mention-close');
+        if (!this._isFirstUpdate && !this._suppressCloseEvent) this.emit('lr-mention-close');
         this._suppressCloseEvent = false;
       }
     } else if (this.open && (changed.has('anchor') || changed.has('query'))) {
@@ -345,7 +345,7 @@ export class LyraMentionPopover extends LyraElement<LyraMentionPopoverEventMap> 
     // across the disconnect/reconnect and changed.has('open') never fires
     // again, leaving the popup rendered open with no positioning and no live
     // scroll/resize tracking until the host happens to change `query`/
-    // `anchor` on the next keystroke. Mirrors lyra-select's/lyra-combobox's
+    // `anchor` on the next keystroke. Mirrors lr-select's/lr-combobox's
     // identical fix.
     this.open = false;
   }
@@ -432,7 +432,7 @@ export class LyraMentionPopover extends LyraElement<LyraMentionPopoverEventMap> 
   }
 
   private commit(item: MentionItem): void {
-    this.emit<MentionSelectDetail>('lyra-mention-select', { id: item.id, label: item.label });
+    this.emit<MentionSelectDetail>('lr-mention-select', { id: item.id, label: item.label });
     this._suppressCloseEvent = true;
     this.open = false;
   }
@@ -469,7 +469,7 @@ export class LyraMentionPopover extends LyraElement<LyraMentionPopoverEventMap> 
   }
 
   // Delegated onto [part="listbox"] rather than one closure pair allocated
-  // per row per render -- same pattern as lyra-combobox's/lyra-select's
+  // per row per render -- same pattern as lr-combobox's/lr-select's
   // identical onListboxMouseDown/onListboxClick.
   private onListboxMouseDown = (e: MouseEvent): void => {
     // Focus must never leave the host's own text control -- preventing the
@@ -494,8 +494,8 @@ export class LyraMentionPopover extends LyraElement<LyraMentionPopoverEventMap> 
   }
 
   /** Resolves `label`'s effective text: a host-level plain `aria-label` attribute on
-   *  `<lyra-mention-popover>` itself wins first (checked via a plain `getAttribute()` read, not a
-   *  reactive property, matching `<lyra-combobox>`'s/`<lyra-table>`'s identical fallback); failing
+   *  `<lr-mention-popover>` itself wins first (checked via a plain `getAttribute()` read, not a
+   *  reactive property, matching `<lr-combobox>`'s/`<lr-table>`'s identical fallback); failing
    *  that, an explicit `label` override wins verbatim; left at the built-in default it instead
    *  routes through `this.localize()` so a locale/`.strings` override applies without requiring
    *  `label` itself to be set. */
@@ -545,6 +545,6 @@ export class LyraMentionPopover extends LyraElement<LyraMentionPopoverEventMap> 
 
 declare global {
   interface HTMLElementTagNameMap {
-    'lyra-mention-popover': LyraMentionPopover;
+    'lr-mention-popover': LyraMentionPopover;
   }
 }

@@ -19,37 +19,37 @@ interface NativeLikeFormSurface extends HTMLElement {
 const cases: Array<{ name: string; tagName: string; render(): TemplateResult }> = [
   {
     name: 'checkbox',
-    tagName: 'lyra-checkbox',
-    render: () => html`<lyra-checkbox id="control" name="value" required>Accept</lyra-checkbox>`,
+    tagName: 'lr-checkbox',
+    render: () => html`<lr-checkbox id="control" name="value" required>Accept</lr-checkbox>`,
   },
   {
     name: 'switch',
-    tagName: 'lyra-switch',
-    render: () => html`<lyra-switch id="control" name="value" required>Enable</lyra-switch>`,
+    tagName: 'lr-switch',
+    render: () => html`<lr-switch id="control" name="value" required>Enable</lr-switch>`,
   },
   {
     name: 'combobox',
-    tagName: 'lyra-combobox',
-    render: () => html`<lyra-combobox id="control" name="value" required></lyra-combobox>`,
+    tagName: 'lr-combobox',
+    render: () => html`<lr-combobox id="control" name="value" required></lr-combobox>`,
   },
   {
     name: 'select',
-    tagName: 'lyra-select',
-    render: () => html`<lyra-select id="control" name="value" required></lyra-select>`,
+    tagName: 'lr-select',
+    render: () => html`<lr-select id="control" name="value" required></lr-select>`,
   },
   {
     name: 'model-select',
-    tagName: 'lyra-model-select',
-    render: () => html`<lyra-model-select id="control" name="value" required></lyra-model-select>`,
+    tagName: 'lr-model-select',
+    render: () => html`<lr-model-select id="control" name="value" required></lr-model-select>`,
   },
   {
     name: 'tool-param-form',
-    tagName: 'lyra-tool-param-form',
-    render: () => html`<lyra-tool-param-form
+    tagName: 'lr-tool-param-form',
+    render: () => html`<lr-tool-param-form
       id="control"
       name="value"
       .schema=${{ type: 'object', properties: { title: { type: 'string' } }, required: ['title'] }}
-    ></lyra-tool-param-form>`,
+    ></lr-tool-param-form>`,
   },
 ];
 
@@ -75,13 +75,13 @@ for (const testCase of cases) {
   });
 }
 
-for (const tagName of ['lyra-checkbox', 'lyra-switch'] as const) {
+for (const tagName of ['lr-checkbox', 'lr-switch'] as const) {
   it(`${tagName} restores checked state independently of its submitted value`, async () => {
     const form = await fixture<HTMLFormElement>(html`
       <form>
-        ${tagName === 'lyra-checkbox'
-          ? html`<lyra-checkbox name="toggle" value="yes" required>Toggle</lyra-checkbox>`
-          : html`<lyra-switch name="toggle" value="yes" required>Toggle</lyra-switch>`}
+        ${tagName === 'lr-checkbox'
+          ? html`<lr-checkbox name="toggle" value="yes" required>Toggle</lr-checkbox>`
+          : html`<lr-switch name="toggle" value="yes" required>Toggle</lr-switch>`}
       </form>
     `);
     const control = form.querySelector(tagName) as HTMLElement & {
@@ -90,7 +90,7 @@ for (const tagName of ['lyra-checkbox', 'lyra-switch'] as const) {
       formStateRestoreCallback(state: string | File | FormData | null, mode?: 'restore' | 'autocomplete'): void;
     };
     let changes = 0;
-    control.addEventListener('lyra-change', () => changes++);
+    control.addEventListener('lr-change', () => changes++);
 
     control.formStateRestoreCallback('checked', 'restore');
     expect(control.checked).to.be.true;
@@ -107,9 +107,9 @@ for (const tagName of ['lyra-checkbox', 'lyra-switch'] as const) {
 
 it('checkbox restores all checked/indeterminate combinations', async () => {
   const form = await fixture<HTMLFormElement>(html`
-    <form><lyra-checkbox name="toggle" value="yes">Toggle</lyra-checkbox></form>
+    <form><lr-checkbox name="toggle" value="yes">Toggle</lr-checkbox></form>
   `);
-  const control = form.querySelector('lyra-checkbox') as HTMLElement & {
+  const control = form.querySelector('lr-checkbox') as HTMLElement & {
     checked: boolean;
     indeterminate: boolean;
     formStateRestoreCallback(state: string | File | FormData | null, mode?: 'restore' | 'autocomplete'): void;
@@ -130,13 +130,13 @@ it('checkbox restores all checked/indeterminate combinations', async () => {
   expect(control.indeterminate).to.be.false;
 });
 
-for (const tagName of ['lyra-select', 'lyra-model-select'] as const) {
+for (const tagName of ['lr-select', 'lr-model-select'] as const) {
   it(`${tagName} restores its string value and form entry without a user event`, async () => {
     const form = await fixture<HTMLFormElement>(html`
       <form>
-        ${tagName === 'lyra-select'
-          ? html`<lyra-select name="choice"></lyra-select>`
-          : html`<lyra-model-select name="choice"></lyra-model-select>`}
+        ${tagName === 'lr-select'
+          ? html`<lr-select name="choice"></lr-select>`
+          : html`<lr-model-select name="choice"></lr-model-select>`}
       </form>
     `);
     const control = form.querySelector(tagName) as HTMLElement & {
@@ -145,7 +145,7 @@ for (const tagName of ['lyra-select', 'lyra-model-select'] as const) {
     };
     let changes = 0;
     control.addEventListener('change', () => changes++);
-    control.addEventListener('lyra-change', () => changes++);
+    control.addEventListener('lr-change', () => changes++);
 
     control.value = 'changed';
     control.formStateRestoreCallback('restored', 'restore');
@@ -159,8 +159,8 @@ for (const tagName of ['lyra-select', 'lyra-model-select'] as const) {
 it('combobox restores single and multiple selections from name-independent JSON state', async () => {
   const form = await fixture<HTMLFormElement>(html`
     <form>
-      <lyra-combobox id="single" name="single"></lyra-combobox>
-      <lyra-combobox id="multiple" name="multiple" multiple></lyra-combobox>
+      <lr-combobox id="single" name="single"></lr-combobox>
+      <lr-combobox id="multiple" name="multiple" multiple></lr-combobox>
     </form>
   `);
   type RestorableCombobox = HTMLElement & {
@@ -193,7 +193,7 @@ it('combobox restores single and multiple selections from name-independent JSON 
   }
 });
 
-for (const tagName of ['lyra-select', 'lyra-combobox'] as const) {
+for (const tagName of ['lr-select', 'lr-combobox'] as const) {
   it(`${tagName} does not let initial selected-option collection overwrite restored state`, async () => {
     const form = document.createElement('form');
     const control = document.createElement(tagName) as HTMLElement & {
@@ -203,7 +203,7 @@ for (const tagName of ['lyra-select', 'lyra-combobox'] as const) {
       formStateRestoreCallback(state: string | File | FormData | null, mode?: 'restore' | 'autocomplete'): void;
     };
     control.name = 'choice';
-    const option = document.createElement('lyra-option') as HTMLElement & { value: string; selected: boolean };
+    const option = document.createElement('lr-option') as HTMLElement & { value: string; selected: boolean };
     option.value = 'declared';
     option.selected = true;
     option.textContent = 'Declared default';
@@ -211,7 +211,7 @@ for (const tagName of ['lyra-select', 'lyra-combobox'] as const) {
     form.append(control);
     document.body.append(form);
 
-    control.formStateRestoreCallback(tagName === 'lyra-select' ? 'restored' : '["restored"]', 'restore');
+    control.formStateRestoreCallback(tagName === 'lr-select' ? 'restored' : '["restored"]', 'restore');
     await control.updateComplete;
     await new Promise((resolve) => setTimeout(resolve, 0));
     await control.updateComplete;
@@ -228,18 +228,18 @@ for (const tagName of ['lyra-select', 'lyra-combobox'] as const) {
 it('tool-param-form restores a safe object snapshot and rejects malformed state without throwing', async () => {
   const form = await fixture<HTMLFormElement>(html`
     <form>
-      <lyra-tool-param-form
+      <lr-tool-param-form
         name="args"
         .schema=${{ type: 'object', properties: { title: { type: 'string' } } }}
-      ></lyra-tool-param-form>
+      ></lr-tool-param-form>
     </form>
   `);
-  const control = form.querySelector('lyra-tool-param-form') as HTMLElement & {
+  const control = form.querySelector('lr-tool-param-form') as HTMLElement & {
     value: Record<string, unknown>;
     formStateRestoreCallback(state: string | File | FormData | null, mode?: 'restore' | 'autocomplete'): void;
   };
   let inputs = 0;
-  control.addEventListener('lyra-input', () => inputs++);
+  control.addEventListener('lr-input', () => inputs++);
 
   control.formStateRestoreCallback('{"title":"Restored"}', 'restore');
   expect(control.value).to.deep.equal({ title: 'Restored' });

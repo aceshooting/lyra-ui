@@ -12,8 +12,8 @@ export type ConfirmBarDecision = 'approved' | 'denied' | null;
 export type ConfirmBarTone = 'neutral' | 'danger';
 
 export interface LyraConfirmBarEventMap {
-  'lyra-approve': CustomEvent<{ args: unknown }>;
-  'lyra-deny': CustomEvent<undefined>;
+  'lr-approve': CustomEvent<{ args: unknown }>;
+  'lr-deny': CustomEvent<undefined>;
 }
 
 const ICON_VIEW_BOX = '0 0 24 24';
@@ -42,9 +42,9 @@ function deniedIcon(): SVGTemplateResult {
 }
 
 /**
- * `<lyra-confirm-bar>` — an inline, non-modal approve/deny block for one proposed action: the
- * in-flow sibling of `<lyra-tool-approval-dialog>` for confirmations that should sit in the
- * transcript instead of hijacking focus. Same `lyra-approve`/`lyra-deny` event shapes as the dialog,
+ * `<lr-confirm-bar>` — an inline, non-modal approve/deny block for one proposed action: the
+ * in-flow sibling of `<lr-tool-approval-dialog>` for confirmations that should sit in the
+ * transcript instead of hijacking focus. Same `lr-approve`/`lr-deny` event shapes as the dialog,
  * and the same `toolApprovalHeading`/`toolApprovalArgsLabel`/`deny`/`approve` localization keys, so
  * the two always translate in lockstep.
  *
@@ -54,23 +54,23 @@ function deniedIcon(): SVGTemplateResult {
  * (an always-rendered, `tabindex="-1"` element) *before* the Deny/Approve buttons unmount, so focus
  * never has a gap where it would otherwise fall back to `<body>`.
  *
- * No argument editing (escalate to `<lyra-tool-approval-dialog>`'s `editable` when edit-before-approve
+ * No argument editing (escalate to `<lr-tool-approval-dialog>`'s `editable` when edit-before-approve
  * matters); no blocking/modality guarantee (a user can scroll past); no decision persistence or
  * "remember choice" logic (the `footer` slot + host own that).
  *
- * @customElement lyra-confirm-bar
- * @slot - Supplementary body content between the heading and the actions (e.g. a `lyra-diff-view` of
+ * @customElement lr-confirm-bar
+ * @slot - Supplementary body content between the heading and the actions (e.g. a `lr-diff-view` of
  *   the proposed change).
  * @slot footer - Extra content at the start of the action row (e.g. a "remember this choice"
- *   checkbox), mirroring `lyra-tool-approval-dialog`'s own `footer` slot.
- * @event lyra-approve - `detail: { args }` (the `args` prop as-is; no editing in the bar) — identical
- *   shape to `lyra-tool-approval-dialog`.
- * @event lyra-deny - No detail, identical to the dialog.
+ *   checkbox), mirroring `lr-tool-approval-dialog`'s own `footer` slot.
+ * @event lr-approve - `detail: { args }` (the `args` prop as-is; no editing in the bar) — identical
+ *   shape to `lr-tool-approval-dialog`.
+ * @event lr-deny - No detail, identical to the dialog.
  * @csspart base - The root (`role="group"`).
  * @csspart heading - The heading.
  * @csspart tool-name - The tool-name span within the heading. Only rendered when `heading` is unset.
  * @csspart body - The default-slot wrapper.
- * @csspart args - The `lyra-details` + `lyra-json-viewer` wrapper. Only rendered when `args` is
+ * @csspart args - The `lr-details` + `lr-json-viewer` wrapper. Only rendered when `args` is
  *   defined.
  * @csspart footer - The action row.
  * @csspart deny-button - Named identically to the dialog's part.
@@ -87,7 +87,7 @@ export class LyraConfirmBar extends LyraElement<LyraConfirmBarEventMap> {
   /** Free-form heading override for non-tool proposals. Wins over `toolName` when set. */
   @property() heading = '';
 
-  /** Shown read-only inside a collapsed `lyra-details` + `lyra-json-viewer` when defined. */
+  /** Shown read-only inside a collapsed `lr-details` + `lr-json-viewer` when defined. */
   @property({ attribute: false }) args: unknown = undefined;
 
   /** Decided state. Set by the component on activation *and* host-writable (an externally-resolved
@@ -98,11 +98,11 @@ export class LyraConfirmBar extends LyraElement<LyraConfirmBarEventMap> {
   @property({ reflect: true }) tone: ConfirmBarTone = 'neutral';
 
   @query('[part="status"]') private statusEl?: HTMLElement;
-  @query('lyra-live-region') private liveRegion?: LyraLiveRegion;
+  @query('lr-live-region') private liveRegion?: LyraLiveRegion;
 
   // `[part='body']:empty` never matches because the part always contains a literal `<slot>`
-  // child (CSS `:empty` only ignores text/comment nodes) -- same fix `lyra-details`/`lyra-empty`/
-  // `lyra-avatar`/`lyra-stat` already established. Track real slot assignment in JS instead.
+  // child (CSS `:empty` only ignores text/comment nodes) -- same fix `lr-details`/`lr-empty`/
+  // `lr-avatar`/`lr-stat` already established. Track real slot assignment in JS instead.
   @state() private hasBodySlot = false;
 
   private readonly headingId = nextId('confirm-bar-heading');
@@ -125,9 +125,9 @@ export class LyraConfirmBar extends LyraElement<LyraConfirmBarEventMap> {
     // gap where focus would otherwise fall back to <body>.
     this.statusEl?.focus();
     if (next === 'approved') {
-      this.emit<{ args: unknown }>('lyra-approve', { args: this.args });
+      this.emit<{ args: unknown }>('lr-approve', { args: this.args });
     } else {
-      this.emit('lyra-deny');
+      this.emit('lr-deny');
     }
     this.decision = next;
   }
@@ -157,9 +157,9 @@ export class LyraConfirmBar extends LyraElement<LyraConfirmBarEventMap> {
         <div part="heading" id=${this.headingId}>${this.renderHeading()}</div>
         <div part="body" ?hidden=${!this.hasBodySlot}><slot @slotchange=${this.onBodySlotChange}></slot></div>
         ${this.args !== undefined
-          ? html`<lyra-details part="args" summary=${this.localize('toolApprovalArgsLabel')}>
-              <lyra-json-viewer .data=${this.args}></lyra-json-viewer>
-            </lyra-details>`
+          ? html`<lr-details part="args" summary=${this.localize('toolApprovalArgsLabel')}>
+              <lr-json-viewer .data=${this.args}></lr-json-viewer>
+            </lr-details>`
           : nothing}
         <div part="footer">
           <slot name="footer"></slot>
@@ -179,7 +179,7 @@ export class LyraConfirmBar extends LyraElement<LyraConfirmBarEventMap> {
             ? html`${this.decision === 'approved' ? approvedIcon() : deniedIcon()}<span>${this.statusText()}</span>`
             : nothing}
         </div>
-        <lyra-live-region mode="polite"></lyra-live-region>
+        <lr-live-region mode="polite"></lr-live-region>
       </div>
     `;
   }
@@ -187,6 +187,6 @@ export class LyraConfirmBar extends LyraElement<LyraConfirmBarEventMap> {
 
 declare global {
   interface HTMLElementTagNameMap {
-    'lyra-confirm-bar': LyraConfirmBar;
+    'lr-confirm-bar': LyraConfirmBar;
   }
 }

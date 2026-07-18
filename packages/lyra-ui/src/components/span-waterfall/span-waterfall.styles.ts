@@ -4,46 +4,46 @@ export const styles = css`
   :host {
     display: block;
     container-type: inline-size;
-    --lyra-span-waterfall-name-width: var(--lyra-size-8rem);
+    --lr-span-waterfall-name-width: var(--lr-size-8rem);
   }
 
   [part='base'] {
     display: flex;
     flex-direction: column;
-    font-size: var(--lyra-font-size-sm);
-    color: var(--lyra-color-text);
+    font-size: var(--lr-font-size-sm);
+    color: var(--lr-color-text);
   }
 
   [part='axis'] {
     position: relative;
-    block-size: var(--lyra-size-1-25rem);
-    margin-inline-start: var(--lyra-span-waterfall-name-width);
-    border-block-end: var(--lyra-border-width-thin) solid var(--lyra-color-border);
+    block-size: var(--lr-size-1-25rem);
+    margin-inline-start: var(--lr-span-waterfall-name-width);
+    border-block-end: var(--lr-border-width-thin) solid var(--lr-color-border);
   }
   [part='tick'] {
     position: absolute;
     inset-block-start: 0;
     inset-block-end: 0;
-    border-inline-start: var(--lyra-border-width-thin) solid var(--lyra-color-border);
+    border-inline-start: var(--lr-border-width-thin) solid var(--lr-color-border);
   }
   [part='tick-label'] {
     position: absolute;
-    inset-inline-start: var(--lyra-space-xs);
-    font-size: var(--lyra-font-size-2xs);
-    color: var(--lyra-color-text-quiet);
+    inset-inline-start: var(--lr-space-xs);
+    font-size: var(--lr-font-size-2xs);
+    color: var(--lr-color-text-quiet);
     white-space: nowrap;
   }
 
   [part='row'] {
     display: grid;
-    grid-template-columns: var(--lyra-span-waterfall-name-width) 1fr;
+    grid-template-columns: var(--lr-span-waterfall-name-width) 1fr;
     align-items: center;
-    gap: var(--lyra-space-xs);
-    padding-block: var(--lyra-space-2xs);
-    min-block-size: var(--lyra-size-1-75rem);
+    gap: var(--lr-space-xs);
+    padding-block: var(--lr-space-2xs);
+    min-block-size: var(--lr-size-1-75rem);
   }
   [part='row'][data-active] {
-    background: var(--lyra-color-brand-quiet);
+    background: var(--lr-color-brand-quiet);
   }
 
   [part='name'] {
@@ -54,36 +54,36 @@ export const styles = css`
 
   [part='bar-track'] {
     position: relative;
-    block-size: var(--lyra-size-0-9375rem);
+    block-size: var(--lr-size-0-9375rem);
   }
   [part='bar'] {
     position: absolute;
     inset-block: 0;
     min-inline-size: 1.5%;
     border: none;
-    border-radius: var(--lyra-radius-xs);
+    border-radius: var(--lr-radius-xs);
     padding: 0;
     cursor: pointer;
   }
   [part='bar']:focus-visible {
-    outline: var(--lyra-focus-ring-width) solid var(--lyra-focus-ring-color);
-    outline-offset: var(--lyra-focus-ring-offset);
+    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
+    outline-offset: var(--lr-focus-ring-offset);
   }
-  [part='bar'][data-tone='success'] { background: var(--lyra-color-success); }
-  [part='bar'][data-tone='danger'] { background: var(--lyra-color-danger); }
-  [part='bar'][data-tone='warning'] { background: var(--lyra-color-warning); }
+  [part='bar'][data-tone='success'] { background: var(--lr-color-success); }
+  [part='bar'][data-tone='danger'] { background: var(--lr-color-danger); }
+  [part='bar'][data-tone='warning'] { background: var(--lr-color-warning); }
   [part='bar'][data-tone='accent'] {
     background-image: repeating-linear-gradient(
       45deg,
-      var(--lyra-color-brand) 0 var(--lyra-size-6px),
-      var(--lyra-color-brand-quiet) var(--lyra-size-6px) calc(var(--lyra-size-6px) * 2)
+      var(--lr-color-brand) 0 var(--lr-size-6px),
+      var(--lr-color-brand-quiet) var(--lr-size-6px) calc(var(--lr-size-6px) * 2)
     );
     background-size: 200% 100%;
-    animation: lyra-span-waterfall-stripe var(--lyra-span-waterfall-stripe-speed, var(--lyra-transition-ambient)) linear infinite;
+    animation: lr-span-waterfall-stripe var(--lr-span-waterfall-stripe-speed, var(--lr-transition-ambient)) linear infinite;
   }
   [part='bar'][data-tone='neutral'] {
     background: transparent;
-    border: var(--lyra-border-width-thin) dashed var(--lyra-color-border-strong);
+    border: var(--lr-border-width-thin) dashed var(--lr-color-border-strong);
   }
   /* background-position is physical, so the stripe crawl direction does not mirror on its own
      under RTL; play the same keyframes backwards there. animation-direction (not a second
@@ -97,8 +97,8 @@ export const styles = css`
       animation: none;
     }
   }
-  @keyframes lyra-span-waterfall-stripe {
-    to { background-position: calc(var(--lyra-size-24px) * -1) 0; }
+  @keyframes lr-span-waterfall-stripe {
+    to { background-position: calc(var(--lr-size-24px) * -1) 0; }
   }
 
   [part='meta'] {
@@ -106,25 +106,25 @@ export const styles = css`
   }
 
   [part='status-text'] {
-    font-size: var(--lyra-font-size-xs);
-    color: var(--lyra-color-text-quiet);
+    font-size: var(--lr-font-size-xs);
+    color: var(--lr-color-text-quiet);
   }
   [part='duration'] {
-    font-size: var(--lyra-font-size-xs);
-    color: var(--lyra-color-text-quiet);
+    font-size: var(--lr-font-size-xs);
+    color: var(--lr-color-text-quiet);
   }
 
   [part='empty'] {
-    padding: var(--lyra-space-l);
+    padding: var(--lr-space-l);
   }
 
-  @container (max-width: 479.98px) {
+  @container (max-inline-size: 479.98px) {
     [part='row'] {
       grid-template-columns: 1fr;
     }
     [part='meta'] {
       display: flex;
-      gap: var(--lyra-space-s);
+      gap: var(--lr-space-s);
     }
   }
 `;

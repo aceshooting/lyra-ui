@@ -73,16 +73,16 @@ type GeojsonViewState =
   | { kind: 'error'; message: string };
 
 export interface LyraGeojsonViewEventMap {
-  'lyra-render-error': CustomEvent<{ error: unknown }>;
+  'lr-render-error': CustomEvent<{ error: unknown }>;
 }
 
 /**
- * `<lyra-geojson-view>` — internal document-registry bridge rendering a fetched GeoJSON file through
- * `<lyra-map>`'s `dataLayers`. Not a documented public tag: excluded from README/llms family tables,
+ * `<lr-geojson-view>` — internal document-registry bridge rendering a fetched GeoJSON file through
+ * `<lr-map>`'s `dataLayers`. Not a documented public tag: excluded from README/llms family tables,
  * present in the generated manifest since a defined custom element is technically reachable.
  *
- * @customElement lyra-geojson-view
- * @event lyra-render-error - Fetch, parse, or shape-validation failure. `detail: { error }`.
+ * @customElement lr-geojson-view
+ * @event lr-render-error - Fetch, parse, or shape-validation failure. `detail: { error }`.
  * @csspart base - The root container.
  * @csspart status - The feature-count status line.
  * @csspart missing-library - The missing-maplibre-gl callout shown alongside the json-viewer fallback.
@@ -128,7 +128,7 @@ export class LyraGeojsonView extends LyraElement<LyraGeojsonViewEventMap> {
     } catch (error) {
       if (isAbortError(error) || !this.isConnected || generation !== this.generation) return;
       this.loadState = { kind: 'error', message: this.localize(isResourceLimitError(error) ? 'documentPreviewResourceTooLarge' : 'geojsonViewInvalid') };
-      this.emit('lyra-render-error', { error });
+      this.emit('lr-render-error', { error });
     }
   }
 
@@ -141,17 +141,17 @@ export class LyraGeojsonView extends LyraElement<LyraGeojsonViewEventMap> {
         if (!peerAvailable) {
           return html`
             <p part="missing-library">${this.localize('geojsonViewMissingMapLibrary')}</p>
-            <lyra-json-viewer .data=${value} collapsed-depth="2"></lyra-json-viewer>
+            <lr-json-viewer .data=${value} collapsed-depth="2"></lr-json-viewer>
           `;
         }
-        const dataLayers: GeoJsonDataLayer[] = [{ sourceId: 'lyra-geojson', geojson: value as never }];
+        const dataLayers: GeoJsonDataLayer[] = [{ sourceId: 'lr-geojson', geojson: value as never }];
         return html`
           <div part="status" role="status">${statusText}</div>
-          <lyra-map .center=${center} .zoom=${zoom} .dataLayers=${dataLayers} label=${this.name || this.localize('geojsonViewLabel')}></lyra-map>
+          <lr-map .center=${center} .zoom=${zoom} .dataLayers=${dataLayers} label=${this.name || this.localize('geojsonViewLabel')}></lr-map>
         `;
       }
       case 'loading':
-        return html`<div part="spinner" role="status"><lyra-skeleton variant="rect" label=${this.localize('loadingDocument')}></lyra-skeleton></div>`;
+        return html`<div part="spinner" role="status"><lr-skeleton variant="rect" label=${this.localize('loadingDocument')}></lr-skeleton></div>`;
       case 'error':
         return html`<div part="error" role="alert">${this.loadState.message}</div>`;
       case 'idle':
@@ -167,6 +167,6 @@ export class LyraGeojsonView extends LyraElement<LyraGeojsonViewEventMap> {
 
 declare global {
   interface HTMLElementTagNameMap {
-    'lyra-geojson-view': LyraGeojsonView;
+    'lr-geojson-view': LyraGeojsonView;
   }
 }

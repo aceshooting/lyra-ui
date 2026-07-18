@@ -31,7 +31,7 @@ up-to-date step list — read it directly rather than trusting a restated summar
 ## Making a change
 
 1. Follow the coding conventions in [`AGENTS.md`](./AGENTS.md#coding-conventions-every-component-follows-these--deviating-needs-a-strong-reason) — every
-   component extends `LyraElement`, uses `--lyra-*` design tokens (no raw hex/px values), and
+   component extends `LyraElement`, uses `--lr-*` design tokens (no raw hex/px values), and
    registers its tag through `src/internal/prefix.ts`.
 2. Add or update tests alongside the component you're changing (`@web/test-runner`, colocated
    `*.test.ts` files). Test the actual semantic element inside shadow DOM, not only the host; native

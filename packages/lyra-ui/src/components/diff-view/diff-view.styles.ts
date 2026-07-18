@@ -3,25 +3,25 @@ import { css } from 'lit';
 export const styles = css`
   :host {
     display: block;
-    --lyra-diff-view-font: var(--lyra-font-mono);
+    --lr-diff-view-font: var(--lr-font-mono);
   }
   [part='base'] {
     position: relative;
-    border: var(--lyra-border-width-thin) solid var(--lyra-color-border);
-    border-radius: var(--lyra-radius);
-    background: var(--lyra-color-surface);
+    border: var(--lr-border-width-thin) solid var(--lr-color-border);
+    border-radius: var(--lr-radius);
+    background: var(--lr-color-surface);
     overflow: auto;
   }
   pre {
     margin: 0;
-    padding: var(--lyra-space-s);
+    padding: var(--lr-space-s);
   }
   .split-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: var(--lyra-space-s);
+    gap: var(--lr-space-s);
     align-items: start;
-    padding: var(--lyra-space-s);
+    padding: var(--lr-space-s);
   }
   [part='side'] {
     overflow-x: auto;
@@ -33,36 +33,36 @@ export const styles = css`
        unified pre. font-family/font-size/line-height are all inheritable, so moving them here
        from pre is visually identical for the unified layout (same computed values, just set
        directly instead of inherited). */
-    font-family: var(--lyra-diff-view-font);
-    font-size: var(--lyra-font-size-sm);
-    line-height: var(--lyra-line-height-snug);
+    font-family: var(--lr-diff-view-font);
+    font-size: var(--lr-font-size-sm);
+    line-height: var(--lr-line-height-snug);
     white-space: pre-wrap;
   }
   [part='line'][data-type='add'] {
-    background: var(--lyra-color-success-quiet);
-    color: var(--lyra-color-success);
+    background: var(--lr-color-success-quiet);
+    color: var(--lr-color-success);
   }
   [part='line'][data-type='remove'] {
-    background: var(--lyra-color-danger-quiet);
-    color: var(--lyra-color-danger);
+    background: var(--lr-color-danger-quiet);
+    color: var(--lr-color-danger);
   }
   [part='copy-button'] {
     position: absolute;
-    inset-block-start: var(--lyra-space-xs);
-    inset-inline-end: var(--lyra-space-xs);
-    border: var(--lyra-border-width-thin) solid var(--lyra-color-border);
-    border-radius: var(--lyra-radius);
-    background: var(--lyra-color-surface);
-    color: var(--lyra-color-text);
-    font-size: var(--lyra-font-size-xs);
-    padding: var(--lyra-size-0-125rem) var(--lyra-space-s);
+    inset-block-start: var(--lr-space-xs);
+    inset-inline-end: var(--lr-space-xs);
+    border: var(--lr-border-width-thin) solid var(--lr-color-border);
+    border-radius: var(--lr-radius);
+    background: var(--lr-color-surface);
+    color: var(--lr-color-text);
+    font-size: var(--lr-font-size-xs);
+    padding: var(--lr-size-0-125rem) var(--lr-space-s);
     cursor: pointer;
   }
   [part='copy-button']:hover {
-    border-color: var(--lyra-color-brand);
+    border-color: var(--lr-color-brand);
   }
   [part='copy-button']:focus-visible {
-    outline: var(--lyra-focus-ring-width) solid var(--lyra-focus-ring-color);
-    outline-offset: var(--lyra-focus-ring-offset);
+    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
+    outline-offset: var(--lr-focus-ring-offset);
   }
 `;

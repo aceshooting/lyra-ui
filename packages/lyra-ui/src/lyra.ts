@@ -71,6 +71,7 @@ import './components/chip/chip.js';
 import './components/chip/chip-group.js';
 import './components/model-settings-panel/model-settings-panel.js';
 import './components/context-meter/context-meter.js';
+import './components/control-group/control-group.js';
 import './components/dock-panel/dock-panel.js';
 import './components/document-preview/document-preview.js';
 import './components/document-viewer/document-viewer.js';
@@ -575,6 +576,7 @@ export type {
   ContextMeterVariant,
   ContextMeterSegment,
 } from './components/context-meter/context-meter.js';
+export { LyraControlGroup } from './components/control-group/control-group.js';
 export { LyraDockPanel, parseLengthPx } from './components/dock-panel/dock-panel.js';
 export type {
   DockPanelEdge,

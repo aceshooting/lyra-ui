@@ -7,7 +7,7 @@ import './dropdown.js';
 
 it('opens a popover from its slotted trigger and wires dialog semantics', async () => {
   const el = await fixture(html`
-    <lyra-popover><button slot="trigger">Open</button><p>Details</p></lyra-popover>
+    <lr-popover><button slot="trigger">Open</button><p>Details</p></lr-popover>
   `);
   const trigger = el.querySelector('button') as HTMLButtonElement;
   trigger.click();
@@ -21,7 +21,7 @@ it('opens a popover from its slotted trigger and wires dialog semantics', async 
 });
 
 it('uses menu semantics for dropdowns', async () => {
-  const el = await fixture(html`<lyra-dropdown><button slot="trigger">Actions</button><div>Item</div></lyra-dropdown>`);
+  const el = await fixture(html`<lr-dropdown><button slot="trigger">Actions</button><div>Item</div></lr-dropdown>`);
   const trigger = el.querySelector('button') as HTMLButtonElement;
   expect(trigger.getAttribute('aria-haspopup')).to.equal('menu');
   trigger.click();
@@ -31,7 +31,7 @@ it('uses menu semantics for dropdowns', async () => {
 
 it('does not let a closed popup/dropdown occupy a layout box in its host', async () => {
   const el = await fixture(
-    html`<lyra-dropdown><button slot="trigger">Actions</button><div style="width:400px;height:400px;">Item</div></lyra-dropdown>`,
+    html`<lr-dropdown><button slot="trigger">Actions</button><div style="width:400px;height:400px;">Item</div></lr-dropdown>`,
   );
   // Regression: [part='popup'] must be position:fixed even while closed -- if it were
   // position:static (the default), its content-sized box would inflate the host's own
@@ -42,7 +42,7 @@ it('does not let a closed popup/dropdown occupy a layout box in its host', async
 });
 
 it('shows a tooltip after focus and describes the trigger', async () => {
-  const el = await fixture(html`<lyra-tooltip delay="0">Helpful text<button slot="trigger">Help</button></lyra-tooltip>`);
+  const el = await fixture(html`<lr-tooltip delay="0">Helpful text<button slot="trigger">Help</button></lr-tooltip>`);
   const trigger = el.querySelector('button') as HTMLButtonElement;
   trigger.focus();
   await (el as HTMLElement & { updateComplete: Promise<unknown> }).updateComplete;
@@ -52,20 +52,20 @@ it('shows a tooltip after focus and describes the trigger', async () => {
 });
 
 it('names a dropdown popup "Menu", not "Popover", since it inherits LyraPopover with popupRole=menu', async () => {
-  const el = await fixture(html`<lyra-dropdown><button slot="trigger">Actions</button><div>Item</div></lyra-dropdown>`);
+  const el = await fixture(html`<lr-dropdown><button slot="trigger">Actions</button><div>Item</div></lr-dropdown>`);
   const popup = el.shadowRoot!.querySelector('[part="popup"]') as HTMLElement;
   expect(popup.getAttribute('aria-label')).to.equal('Menu');
 });
 
 it('keeps a plain popover (popupRole=dialog) named "Popover"', async () => {
-  const el = await fixture(html`<lyra-popover><button slot="trigger">Open</button><p>Details</p></lyra-popover>`);
+  const el = await fixture(html`<lr-popover><button slot="trigger">Open</button><p>Details</p></lr-popover>`);
   const popup = el.shadowRoot!.querySelector('[part="popup"]') as HTMLElement;
   expect(popup.getAttribute('aria-label')).to.equal('Popover');
 });
 
 it('dismisses an open tooltip on Escape while the trigger keeps focus', async () => {
   const el = (await fixture(
-    html`<lyra-tooltip delay="0">Helpful text<button slot="trigger">Help</button></lyra-tooltip>`,
+    html`<lr-tooltip delay="0">Helpful text<button slot="trigger">Help</button></lr-tooltip>`,
   )) as LyraTooltip;
   const trigger = el.querySelector('button') as HTMLButtonElement;
   trigger.focus();
@@ -79,45 +79,45 @@ it('dismisses an open tooltip on Escape while the trigger keeps focus', async ()
   expect(document.activeElement, 'Escape must not move focus off the trigger').to.equal(trigger);
 });
 
-it('does not re-emit lyra-show/lyra-hide when only placement or distance changes on an already-open popover', async () => {
+it('does not re-emit lr-show/lr-hide when only placement or distance changes on an already-open popover', async () => {
   const el = (await fixture(
-    html`<lyra-popover open><button slot="trigger">Open</button><p>Details</p></lyra-popover>`,
+    html`<lr-popover open><button slot="trigger">Open</button><p>Details</p></lr-popover>`,
   )) as LyraPopover;
   await el.updateComplete;
   let showCount = 0;
   let hideCount = 0;
-  el.addEventListener('lyra-show', () => showCount++);
-  el.addEventListener('lyra-hide', () => hideCount++);
+  el.addEventListener('lr-show', () => showCount++);
+  el.addEventListener('lr-hide', () => hideCount++);
 
   el.distance = 12;
   await el.updateComplete;
   el.placement = 'top-start';
   await el.updateComplete;
 
-  expect(showCount, 'a placement/distance-only change must not re-emit lyra-show').to.equal(0);
+  expect(showCount, 'a placement/distance-only change must not re-emit lr-show').to.equal(0);
   expect(hideCount).to.equal(0);
 
   el.open = false;
   await el.updateComplete;
-  expect(hideCount, 'a real close must still emit lyra-hide').to.equal(1);
+  expect(hideCount, 'a real close must still emit lr-hide').to.equal(1);
 });
 
-it('still emits lyra-show/lyra-hide on a real open/close transition', async () => {
+it('still emits lr-show/lr-hide on a real open/close transition', async () => {
   const el = (await fixture(
-    html`<lyra-popover><button slot="trigger">Open</button><p>Details</p></lyra-popover>`,
+    html`<lr-popover><button slot="trigger">Open</button><p>Details</p></lr-popover>`,
   )) as LyraPopover;
-  const opened = oneEvent(el, 'lyra-show');
+  const opened = oneEvent(el, 'lr-show');
   el.open = true;
   await opened;
 
-  const closed = oneEvent(el, 'lyra-hide');
+  const closed = oneEvent(el, 'lr-hide');
   el.open = false;
   await closed;
 });
 
 it('restores the light-dismiss listener after a synchronous reconnect while open', async () => {
   const el = (await fixture(
-    html`<lyra-popover open><button slot="trigger">Open</button><p>Details</p></lyra-popover>`,
+    html`<lr-popover open><button slot="trigger">Open</button><p>Details</p></lr-popover>`,
   )) as LyraPopover;
   await el.updateComplete;
   expect(el.open).to.be.true;
@@ -135,7 +135,7 @@ it('restores the light-dismiss listener after a synchronous reconnect while open
 });
 
 it('unbinds hover/focus listeners and stale aria-describedby from a trigger swapped out of the slot', async () => {
-  const el = (await fixture(html`<lyra-tooltip delay="0">Info<button slot="trigger">A</button></lyra-tooltip>`)) as LyraTooltip;
+  const el = (await fixture(html`<lr-tooltip delay="0">Info<button slot="trigger">A</button></lr-tooltip>`)) as LyraTooltip;
   const oldTrigger = el.querySelector('button') as HTMLButtonElement;
   oldTrigger.focus();
   await el.updateComplete;
@@ -162,23 +162,23 @@ it('unbinds hover/focus listeners and stale aria-describedby from a trigger swap
   expect(el.open, 'the newly slotted trigger must drive the tooltip').to.be.true;
 });
 
-it('lets a consumer retheme the popover popup width via --lyra-overlay-max-inline-size', async () => {
+it('lets a consumer retheme the popover popup width via --lr-overlay-max-inline-size', async () => {
   const el = (await fixture(
-    html`<lyra-popover><button slot="trigger">Open</button><p>Details</p></lyra-popover>`,
+    html`<lr-popover><button slot="trigger">Open</button><p>Details</p></lr-popover>`,
   )) as LyraPopover;
   await el.updateComplete;
   const popup = el.shadowRoot!.querySelector('[part="popup"]') as HTMLElement;
   const remPx = parseFloat(getComputedStyle(document.documentElement).fontSize);
   expect(getComputedStyle(popup).maxInlineSize).to.include(`${20 * remPx}px`);
 
-  el.style.setProperty('--lyra-overlay-max-inline-size', '5rem');
+  el.style.setProperty('--lr-overlay-max-inline-size', '5rem');
   await el.updateComplete;
   expect(getComputedStyle(popup).maxInlineSize).to.include(`${5 * remPx}px`);
 });
 
 it('does not poison popover/tooltip positioning with NaN when distance is invalid', async () => {
   const popover = (await fixture(
-    html`<lyra-popover open distance="not-a-number"><button slot="trigger">Open</button><p>Details</p></lyra-popover>`,
+    html`<lr-popover open distance="not-a-number"><button slot="trigger">Open</button><p>Details</p></lr-popover>`,
   )) as LyraPopover;
   await popover.updateComplete;
   // autoUpdate schedules an async computePosition; wait a frame for it to land.
@@ -189,7 +189,7 @@ it('does not poison popover/tooltip positioning with NaN when distance is invali
   expect(popoverPopup.style.top).to.not.include('NaN');
 
   const tooltip = (await fixture(
-    html`<lyra-tooltip delay="0" distance="not-a-number">Info<button slot="trigger">Help</button></lyra-tooltip>`,
+    html`<lr-tooltip delay="0" distance="not-a-number">Info<button slot="trigger">Help</button></lr-tooltip>`,
   )) as LyraTooltip;
   const trigger = tooltip.querySelector('button') as HTMLButtonElement;
   trigger.focus();
@@ -202,7 +202,7 @@ it('does not poison popover/tooltip positioning with NaN when distance is invali
 });
 
 it('falls back to the default 150ms delay when delay is NaN, instead of opening instantly', async () => {
-  const el = (await fixture(html`<lyra-tooltip>Info<button slot="trigger">Help</button></lyra-tooltip>`)) as LyraTooltip;
+  const el = (await fixture(html`<lr-tooltip>Info<button slot="trigger">Help</button></lr-tooltip>`)) as LyraTooltip;
   el.delay = NaN;
   await el.updateComplete;
   const trigger = el.querySelector('button') as HTMLButtonElement;
@@ -212,16 +212,16 @@ it('falls back to the default 150ms delay when delay is NaN, instead of opening 
   expect(el.open, 'must still open, via the normalized default delay').to.be.true;
 });
 
-it('lets a consumer retheme the tooltip via --lyra-tooltip-max-inline-size/-background/-color', async () => {
-  const el = (await fixture(html`<lyra-tooltip delay="0">Info<button slot="trigger">Help</button></lyra-tooltip>`)) as LyraTooltip;
+it('lets a consumer retheme the tooltip via --lr-tooltip-max-inline-size/-background/-color', async () => {
+  const el = (await fixture(html`<lr-tooltip delay="0">Info<button slot="trigger">Help</button></lr-tooltip>`)) as LyraTooltip;
   await el.updateComplete;
   const popup = el.shadowRoot!.querySelector('[part="popup"]') as HTMLElement;
   const remPx = parseFloat(getComputedStyle(document.documentElement).fontSize);
   expect(getComputedStyle(popup).maxInlineSize).to.equal(`${20 * remPx}px`);
 
-  el.style.setProperty('--lyra-tooltip-max-inline-size', '10rem');
-  el.style.setProperty('--lyra-tooltip-background', 'rgb(1, 2, 3)');
-  el.style.setProperty('--lyra-tooltip-color', 'rgb(4, 5, 6)');
+  el.style.setProperty('--lr-tooltip-max-inline-size', '10rem');
+  el.style.setProperty('--lr-tooltip-background', 'rgb(1, 2, 3)');
+  el.style.setProperty('--lr-tooltip-color', 'rgb(4, 5, 6)');
   await el.updateComplete;
 
   expect(getComputedStyle(popup).maxInlineSize).to.equal(`${10 * remPx}px`);

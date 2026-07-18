@@ -7,13 +7,13 @@ import '../attachment-chip/attachment-chip.js';
 
 const meta: Meta = {
   title: 'AttachmentTrigger',
-  component: 'lyra-attachment-trigger',
+  component: 'lr-attachment-trigger',
   tags: ['autodocs'],
   parameters: {
     docs: {
       description: {
         component:
-          'A compact attach affordance for a chat composer\'s leading slot. Renders a single plain icon button when only one `capabilities` entry is configured, or a small anchored menu when more than one. `files`/`image` open a hidden native file input and re-emit the selection as `lyra-pick`; `camera` only fires `lyra-camera-request` — this component never implements capture UI itself, that\'s entirely a host concern.',
+          'A compact attach affordance for a chat composer\'s leading slot. Renders a single plain icon button when only one `capabilities` entry is configured, or a small anchored menu when more than one. `files`/`image` open a hidden native file input and re-emit the selection as `lr-pick`; `camera` only fires `lr-camera-request` — this component never implements capture UI itself, that\'s entirely a host concern.',
       },
     },
   },
@@ -28,14 +28,14 @@ function logPick(logId: string) {
     const names = Array.from(e.detail.files)
       .map((f) => f.name)
       .join(', ');
-    out.textContent = `lyra-pick: capability="${e.detail.capability}", files=[${names}]`;
+    out.textContent = `lr-pick: capability="${e.detail.capability}", files=[${names}]`;
   };
 }
 
 function logCameraRequest(logId: string) {
   return () => {
     const out = document.getElementById(logId);
-    if (out) out.textContent = 'lyra-camera-request fired — the host now owns capture UI.';
+    if (out) out.textContent = 'lr-camera-request fired — the host now owns capture UI.';
   };
 }
 
@@ -44,9 +44,9 @@ function logCameraRequest(logId: string) {
 export const SingleCapability: Story = {
   render: () => html`
     <div>
-      <lyra-attachment-trigger @lyra-pick=${logPick('single-log')}></lyra-attachment-trigger>
+      <lr-attachment-trigger @lr-pick=${logPick('single-log')}></lr-attachment-trigger>
       <p id="single-log" style="margin-top:0.5rem; font: 0.8125rem monospace;">
-        lyra-pick: (none yet)
+        lr-pick: (none yet)
       </p>
     </div>
   `,
@@ -56,94 +56,94 @@ export const SingleCapability: Story = {
  *  input's `accept` to `'image/*'` — no explicit `accept` prop needed. */
 export const SingleImageCapability: Story = {
   render: () => html`
-    <lyra-attachment-trigger
+    <lr-attachment-trigger
       .capabilities=${['image']}
-      @lyra-pick=${logPick('image-log')}
-    ></lyra-attachment-trigger>
-    <p id="image-log" style="margin-top:0.5rem; font: 0.8125rem monospace;">lyra-pick: (none yet)</p>
+      @lr-pick=${logPick('image-log')}
+    ></lr-attachment-trigger>
+    <p id="image-log" style="margin-top:0.5rem; font: 0.8125rem monospace;">lr-pick: (none yet)</p>
   `,
 };
 
-/** More than one capability renders `<lyra-menu>`/`<lyra-menu-item>` instead
+/** More than one capability renders `<lr-menu>`/`<lr-menu-item>` instead
  *  of a plain button — click the paperclip to see the menu. */
 export const MultiCapabilityMenu: Story = {
   render: () => html`
     <div>
-      <lyra-attachment-trigger
+      <lr-attachment-trigger
         .capabilities=${['files', 'image', 'camera']}
-        @lyra-pick=${logPick('multi-log')}
-        @lyra-camera-request=${logCameraRequest('multi-log')}
-      ></lyra-attachment-trigger>
+        @lr-pick=${logPick('multi-log')}
+        @lr-camera-request=${logCameraRequest('multi-log')}
+      ></lr-attachment-trigger>
       <p id="multi-log" style="margin-top:0.5rem; font: 0.8125rem monospace;">(no event yet)</p>
     </div>
   `,
 };
 
 /** `camera` never implements capture UI itself — activating it only fires
- *  `lyra-camera-request`, which the host handles however it wants
+ *  `lr-camera-request`, which the host handles however it wants
  *  (`getUserMedia`, a mobile `<input capture>`, a native bridge, etc.). */
 export const CameraOnly: Story = {
   render: () => html`
     <div>
-      <lyra-attachment-trigger
+      <lr-attachment-trigger
         .capabilities=${['camera']}
-        @lyra-camera-request=${logCameraRequest('camera-log')}
-      ></lyra-attachment-trigger>
+        @lr-camera-request=${logCameraRequest('camera-log')}
+      ></lr-attachment-trigger>
       <p id="camera-log" style="margin-top:0.5rem; font: 0.8125rem monospace;">(no event yet)</p>
     </div>
   `,
 };
 
 /** `audio` follows the exact same request-only pattern as `camera` —
- *  activating it only fires `lyra-audio-request`, which the host handles
- *  however it wants (typically opening `<lyra-push-to-talk>` in a popover). */
+ *  activating it only fires `lr-audio-request`, which the host handles
+ *  however it wants (typically opening `<lr-push-to-talk>` in a popover). */
 export const AudioCapability: Story = {
-  render: () => html`<lyra-attachment-trigger .capabilities=${['audio']}></lyra-attachment-trigger>`,
+  render: () => html`<lr-attachment-trigger .capabilities=${['audio']}></lr-attachment-trigger>`,
 };
 
 export const AllCapabilities: Story = {
   render: () =>
-    html`<lyra-attachment-trigger .capabilities=${['files', 'image', 'camera', 'audio']}></lyra-attachment-trigger>`,
+    html`<lr-attachment-trigger .capabilities=${['files', 'image', 'camera', 'audio']}></lr-attachment-trigger>`,
 };
 
 export const Disabled: Story = {
   render: () => html`
     <div style="display:flex; gap:1rem; align-items:center;">
-      <lyra-attachment-trigger disabled></lyra-attachment-trigger>
-      <lyra-attachment-trigger disabled .capabilities=${['files', 'image', 'camera']}></lyra-attachment-trigger>
+      <lr-attachment-trigger disabled></lr-attachment-trigger>
+      <lr-attachment-trigger disabled .capabilities=${['files', 'image', 'camera']}></lr-attachment-trigger>
     </div>
   `,
 };
 
-/** The intended real-world placement: dropped into `<lyra-chat-composer>`'s
+/** The intended real-world placement: dropped into `<lr-chat-composer>`'s
  *  `leading` slot, feeding picked files straight into an attachment tray of
- *  `<lyra-attachment-chip>` rows in the composer's `chips` slot. */
+ *  `<lr-attachment-chip>` rows in the composer's `chips` slot. */
 export const InChatComposer: Story = {
   render: () => {
     const onPick = (e: CustomEvent<AttachmentPickDetail>) => {
       const composer = document.getElementById('composer-demo');
       if (!composer) return;
       for (const file of Array.from(e.detail.files)) {
-        const chip = document.createElement('lyra-attachment-chip');
+        const chip = document.createElement('lr-attachment-chip');
         chip.setAttribute('slot', 'chips');
         chip.file = file;
-        chip.addEventListener('lyra-remove', () => chip.remove());
+        chip.addEventListener('lr-remove', () => chip.remove());
         composer.appendChild(chip);
       }
     };
     return html`
-      <lyra-chat-composer
+      <lr-chat-composer
         id="composer-demo"
         placeholder="Message the assistant…"
         style="max-width: 32rem; display: block;"
       >
-        <lyra-attachment-trigger
+        <lr-attachment-trigger
           slot="leading"
           .capabilities=${['files', 'image', 'camera']}
-          @lyra-pick=${onPick}
-          @lyra-camera-request=${logCameraRequest('composer-log')}
-        ></lyra-attachment-trigger>
-      </lyra-chat-composer>
+          @lr-pick=${onPick}
+          @lr-camera-request=${logCameraRequest('composer-log')}
+        ></lr-attachment-trigger>
+      </lr-chat-composer>
       <p id="composer-log" style="margin-top:0.5rem; font: 0.8125rem monospace;"></p>
     `;
   },

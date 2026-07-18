@@ -101,20 +101,20 @@ function normalizeForSearch(raw: string): { text: string; rawOffsets: number[] }
 }
 
 export interface LyraPdfViewerEventMap extends LyraAnchorTargetEventMap {
-  'lyra-render-error': CustomEvent<{ error: unknown }>;
-  'lyra-page-change': CustomEvent<{ page: number; pageCount: number }>;
-  'lyra-zoom-change': CustomEvent<{ zoom: number }>;
-  'lyra-load': CustomEvent<{ pageCount: number }>;
-  'lyra-search-change': CustomEvent<{ query: string; matchCount: number; activeIndex: number }>;
+  'lr-render-error': CustomEvent<{ error: unknown }>;
+  'lr-page-change': CustomEvent<{ page: number; pageCount: number }>;
+  'lr-zoom-change': CustomEvent<{ zoom: number }>;
+  'lr-load': CustomEvent<{ pageCount: number }>;
+  'lr-search-change': CustomEvent<{ query: string; matchCount: number; activeIndex: number }>;
 }
 
 class LyraPdfViewerBase extends LyraElement<LyraPdfViewerEventMap> {}
 
 /**
  * Fetches PDF bytes and renders their pages with the optional `pdfjs-dist` peer. Pages are composed
- * through `lyra-virtual-list`, while a PDF.js text layer keeps rendered text selectable and copyable.
+ * through `lr-virtual-list`, while a PDF.js text layer keeps rendered text selectable and copyable.
  * Adopts `DocumentAnchorTarget`: `page`, `text-quote`, and `region` anchors resolve; highlights paint
- * via one `<lyra-highlight-layer>` per page, stacked beneath the text layer (canvas -> highlights ->
+ * via one `<lr-highlight-layer>` per page, stacked beneath the text layer (canvas -> highlights ->
  * text layer) so starting a text selection over a cited passage keeps working. Pointer activation of
  * a highlight is hit-tested at the page-wrapper level (`onPageClick`) since the text layer sitting on
  * top intercepts most direct pointer events; keyboard activation reaches the highlight layer's own
@@ -123,17 +123,17 @@ class LyraPdfViewerBase extends LyraElement<LyraPdfViewerEventMap> {}
  * selection-in-progress check in `onPageClick` exists precisely to distinguish that case from a
  * genuine activation click).
  *
- * @customElement lyra-pdf-viewer
- * @event lyra-render-error - Fired when fetching, parsing, or rendering fails.
- * @event lyra-page-change - Fired when the current page changes.
- * @event lyra-zoom-change - Fired when the zoom multiplier changes.
- * @event lyra-load - Fired once the document reaches `ready`. `detail: { pageCount }`.
- * @event lyra-highlight-activate - A highlight was activated. `detail: { id }`.
- * @event lyra-text-select - A text selection ended inside a page's text layer. `detail: { text,
+ * @customElement lr-pdf-viewer
+ * @event lr-render-error - Fired when fetching, parsing, or rendering fails.
+ * @event lr-page-change - Fired when the current page changes.
+ * @event lr-zoom-change - Fired when the zoom multiplier changes.
+ * @event lr-load - Fired once the document reaches `ready`. `detail: { pageCount }`.
+ * @event lr-highlight-activate - A highlight was activated. `detail: { id }`.
+ * @event lr-text-select - A text selection ended inside a page's text layer. `detail: { text,
  *   anchor, rects }`.
- * @event lyra-anchor-result - Fired after an `anchor` (or `scrollToAnchor()` call) is applied.
+ * @event lr-anchor-result - Fired after an `anchor` (or `scrollToAnchor()` call) is applied.
  *   `detail: { found }`.
- * @event lyra-search-change - Fired whenever the search query, match count, or active match index
+ * @event lr-search-change - Fired whenever the search query, match count, or active match index
  *   changes, from `search()`/`searchNext()`/`searchPrevious()`/`clearSearch()`. `detail: { query,
  *   matchCount, activeIndex }`.
  * @csspart base - The root viewer container.
@@ -147,7 +147,7 @@ class LyraPdfViewerBase extends LyraElement<LyraPdfViewerEventMap> {}
  * @csspart search-match-active - The currently active search match (also carries `search-match`).
  * @csspart error - The error message region.
  * @csspart spinner - The loading status region.
- * @cssprop [--lyra-pdf-viewer-height=var(--lyra-size-24rem)] - Block size of the virtualized page list.
+ * @cssprop [--lr-pdf-viewer-height=var(--lr-size-24rem)] - Block size of the virtualized page list.
  */
 export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
   static styles = [LyraElement.styles, styles, srOnly];
@@ -167,7 +167,7 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
   @state() private loadState: PdfLoadState = { kind: 'idle' };
   /** True while `page` was last set by the user scrolling the page list rather than by
    *  `nextPage()`/`previousPage()`/an explicit `page` assignment. `renderBody()` withholds
-   *  `activeId` in that case so `<lyra-virtual-list>` doesn't `scrollActiveIntoView()` back to a
+   *  `activeId` in that case so `<lr-virtual-list>` doesn't `scrollActiveIntoView()` back to a
    *  page boundary on every scroll-driven page crossing, fighting the user's own scroll. */
   @state() private scrollDrivenPage = false;
   private loadLibrary: () => Promise<PdfJsApi | null> = loadPdfJs;
@@ -203,7 +203,7 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
       // Search match page/offset coordinates are only meaningful for the document they were found
       // in -- silently reset (no event) rather than emit, mirroring how pageHighlightItems/
       // pageTextCache reset without notifying either (see updated() below); the painted marks
-      // themselves are torn down for free along with the old page DOM as lyra-virtual-list
+      // themselves are torn down for free along with the old page DOM as lr-virtual-list
       // re-renders with the new document. Reset here (not updated()) so re-assigning these @state()
       // fields folds into this same update cycle instead of scheduling a follow-up one.
       this.searchGeneration++;
@@ -226,9 +226,9 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
       this.pageTextCache.clear();
     }
     if (changed.has('page') && this.loadState.kind === 'ready') {
-      this.emit('lyra-page-change', { page: this.page, pageCount: this.loadState.pageCount });
+      this.emit('lr-page-change', { page: this.page, pageCount: this.loadState.pageCount });
     }
-    if (changed.has('zoom') && changed.get('zoom') !== undefined) this.emit('lyra-zoom-change', { zoom: this.zoom });
+    if (changed.has('zoom') && changed.get('zoom') !== undefined) this.emit('lr-zoom-change', { zoom: this.zoom });
     if (changed.has('highlights')) {
       for (const pageNumber of this.pageCanvases.keys()) void this.resolvePageHighlights(pageNumber);
     }
@@ -303,11 +303,11 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
       if (!this.isConnected || generation !== this.generation) return;
       this.page = 1;
       this.loadState = { kind: 'ready', doc, pageCount: doc.numPages };
-      this.emit('lyra-load', { pageCount: doc.numPages });
+      this.emit('lr-load', { pageCount: doc.numPages });
     } catch (error) {
       if (isAbortError(error) || !this.isConnected || generation !== this.generation) return;
       this.loadState = { kind: 'error', message: this.localize(isResourceLimitError(error) ? 'documentPreviewResourceTooLarge' : 'documentPreviewFailedToLoad') };
-      this.emit('lyra-render-error', { error });
+      this.emit('lr-render-error', { error });
     }
   }
 
@@ -332,19 +332,19 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
 
   private waitForPageMount(page: number): Promise<void> {
     if (this.pageCanvases.has(page)) return Promise.resolve();
-    const list = this.shadowRoot?.querySelector('lyra-virtual-list');
+    const list = this.shadowRoot?.querySelector('lr-virtual-list');
     if (!list) return Promise.resolve();
     return new Promise((resolve) => {
       const onRange = (): void => {
         if (this.pageCanvases.has(page)) {
-          list.removeEventListener('lyra-visible-range-changed', onRange as EventListener);
+          list.removeEventListener('lr-visible-range-changed', onRange as EventListener);
           clearTimeout(timeoutId);
           resolve();
         }
       };
-      list.addEventListener('lyra-visible-range-changed', onRange as EventListener);
+      list.addEventListener('lr-visible-range-changed', onRange as EventListener);
       const timeoutId = setTimeout(() => {
-        list.removeEventListener('lyra-visible-range-changed', onRange as EventListener);
+        list.removeEventListener('lr-visible-range-changed', onRange as EventListener);
         resolve();
       }, 500);
     });
@@ -450,7 +450,7 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
 
   private virtualListScrollContainer(): HTMLElement | null {
     return (
-      (this.shadowRoot?.querySelector('lyra-virtual-list')?.shadowRoot?.querySelector('[part="base"]') as HTMLElement | null) ?? null
+      (this.shadowRoot?.querySelector('lr-virtual-list')?.shadowRoot?.querySelector('[part="base"]') as HTMLElement | null) ?? null
     );
   }
 
@@ -497,10 +497,10 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
   }
 
   /** Overrides `DocumentAnchorTarget`'s default selection binding. Page content renders inside
-   *  `<lyra-virtual-list>`'s own nested shadow root (virtualization adds a second shadow boundary
+   *  `<lr-virtual-list>`'s own nested shadow root (virtualization adds a second shadow boundary
    *  below this viewer's own render root), one level deeper than the mixin's default composed-range
    *  lookup resolves. Left unresolved, a selection ending inside a page's text layer retargets to the
-   *  boundary of `<lyra-virtual-list>` itself, which has no light-DOM text of its own -- the resulting
+   *  boundary of `<lr-virtual-list>` itself, which has no light-DOM text of its own -- the resulting
    *  range stringifies to nothing and the selection is silently dropped. This override adds the
    *  virtual list's own shadow root to the lookup so the resolved range still reaches the actual
    *  selected text, then follows the same selection-end/rAF-debounced-`selectionchange` shape the
@@ -513,7 +513,7 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
 
     const resolveSelectionRange = (): Range | null => {
       const hostShadowRoot = this.shadowRoot;
-      const listShadowRoot = this.shadowRoot?.querySelector('lyra-virtual-list')?.shadowRoot ?? null;
+      const listShadowRoot = this.shadowRoot?.querySelector('lr-virtual-list')?.shadowRoot ?? null;
       const globalSelection = window.getSelection() as
         | (Selection & { getComposedRanges?: (options: { shadowRoots: ShadowRoot[] }) => StaticRange[] })
         | null;
@@ -543,7 +543,7 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
       if (!text) return;
       const anchor = this.computeSelectionAnchor(range);
       const rects = Array.from(range.getClientRects());
-      this.emit<TextSelectDetail>('lyra-text-select', { text, anchor, rects });
+      this.emit<TextSelectDetail>('lr-text-select', { text, anchor, rects });
     };
 
     let debounceHandle: ReturnType<typeof requestAnimationFrame> | undefined;
@@ -748,7 +748,7 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
     return true;
   }
 
-  /** Clears the query, matches, and any painted marks, and resets `lyra-search-change` to a
+  /** Clears the query, matches, and any painted marks, and resets `lr-search-change` to a
    *  0-match/no-active-index state. */
   clearSearch(): void {
     this.searchGeneration++;
@@ -756,11 +756,11 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
     this.searchMatches = [];
     this.searchActiveIndex = -1;
     this.clearSearchPaint();
-    this.emit('lyra-search-change', { query: '', matchCount: 0, activeIndex: -1 });
+    this.emit('lr-search-change', { query: '', matchCount: 0, activeIndex: -1 });
   }
 
   private emitSearchChange(): void {
-    this.emit('lyra-search-change', {
+    this.emit('lr-search-change', {
       query: this.searchQuery,
       matchCount: this.searchMatches.length,
       activeIndex: this.searchActiveIndex,
@@ -920,7 +920,7 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
         (rect) => xPct >= rect.x && xPct <= rect.x + rect.width && yPct >= rect.y && yPct <= rect.y + rect.height,
       );
       if (hit) {
-        this.emit<HighlightActivateDetail>('lyra-highlight-activate', { id: items[i].id });
+        this.emit<HighlightActivateDetail>('lr-highlight-activate', { id: items[i].id });
         return;
       }
     }
@@ -975,7 +975,7 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
     try {
       await renderTask.promise;
     } catch (error) {
-      if (!isAbortError(error) && this.isConnected && this.pageRenderTasks.get(pageNumber) === renderTask) this.emit('lyra-render-error', { error });
+      if (!isAbortError(error) && this.isConnected && this.pageRenderTasks.get(pageNumber) === renderTask) this.emit('lr-render-error', { error });
     } finally {
       if (this.pageRenderTasks.get(pageNumber) === renderTask) this.pageRenderTasks.delete(pageNumber);
     }
@@ -992,7 +992,7 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
     const renderPromise = textLayer.render().then(
       () => undefined,
       (error: unknown) => {
-        if (!isAbortError(error) && this.isConnected && this.textLayers.get(pageNumber) === textLayer) this.emit('lyra-render-error', { error });
+        if (!isAbortError(error) && this.isConnected && this.textLayers.get(pageNumber) === textLayer) this.emit('lr-render-error', { error });
       },
     );
     this.textLayerReadyPromises.set(pageNumber, renderPromise);
@@ -1047,10 +1047,10 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
     const highlightTransform = this.effectiveDirection === 'rtl' ? '50%' : '-50%';
     return html`<div part="page" @click=${(e: MouseEvent) => this.onPageClick(number, e)}>
       <canvas ${ref(this.pageCanvasRef(number))}></canvas>
-      <lyra-highlight-layer
+      <lr-highlight-layer
         ${ref(this.highlightLayerRef(number))}
-        style="position:absolute; inset-block-start:var(--lyra-space-m); inset-inline-start:50%; transform:translateX(${highlightTransform});"
-      ></lyra-highlight-layer>
+        style="position:absolute; inset-block-start:var(--lr-space-m); inset-inline-start:50%; transform:translateX(${highlightTransform});"
+      ></lr-highlight-layer>
       <div part="text-layer" ${ref(this.textLayerContainerRef(number))}></div>
     </div>`;
   };
@@ -1067,9 +1067,9 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
     switch (this.loadState.kind) {
       case 'ready': {
         const items = Array.from({ length: this.loadState.pageCount }, (_unused, index) => index + 1);
-        return html`${this.renderToolbar()}<lyra-virtual-list part="pages" .items=${items} .renderItem=${this.renderPageItem} .keyFunction=${(item: unknown) => item as number} .activeId=${this.scrollDrivenPage ? '' : this.page} @lyra-visible-range-changed=${this.onVisibleRangeChanged}></lyra-virtual-list>`;
+        return html`${this.renderToolbar()}<lr-virtual-list part="pages" .items=${items} .renderItem=${this.renderPageItem} .keyFunction=${(item: unknown) => item as number} .activeId=${this.scrollDrivenPage ? '' : this.page} @lr-visible-range-changed=${this.onVisibleRangeChanged}></lr-virtual-list>`;
       }
-      case 'loading': return html`<div part="spinner"><lyra-skeleton variant="rect" label=${this.localize('loadingDocument')}></lyra-skeleton></div>`;
+      case 'loading': return html`<div part="spinner"><lr-skeleton variant="rect" label=${this.localize('loadingDocument')}></lr-skeleton></div>`;
       case 'error': return html`<div part="error" role="alert">${this.loadState.message}</div>`;
       case 'idle': default: return html`<p class="empty-note">${this.localize('documentPreviewEmpty', undefined, { type: this.localize('documentPreviewTypeDocument') })}</p>`;
     }
@@ -1080,4 +1080,4 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
   }
 }
 
-declare global { interface HTMLElementTagNameMap { 'lyra-pdf-viewer': LyraPdfViewer; } }
+declare global { interface HTMLElementTagNameMap { 'lr-pdf-viewer': LyraPdfViewer; } }

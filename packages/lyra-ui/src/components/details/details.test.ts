@@ -7,7 +7,7 @@ import { styles as detailsStyles } from './details.styles.js';
 import { styles as accordionStyles } from './accordion.styles.js';
 
 it('renders a disclosure panel and reports its state', async () => {
-  const el = (await fixture(html`<lyra-details summary="More">Content</lyra-details>`)) as LyraDetails;
+  const el = (await fixture(html`<lr-details summary="More">Content</lr-details>`)) as LyraDetails;
   const summary = el.shadowRoot!.querySelector('[part="summary"]') as HTMLElement;
   expect(summary.getAttribute('aria-expanded')).to.equal('false');
   el.open = true;
@@ -18,20 +18,20 @@ it('renders a disclosure panel and reports its state', async () => {
 });
 
 it('closes sibling panels when multiple is false', async () => {
-  const el = await fixture(html`<lyra-accordion>
-    <lyra-accordion-item open summary="One">A</lyra-accordion-item>
-    <lyra-accordion-item summary="Two">B</lyra-accordion-item>
-  </lyra-accordion>`);
-  const panels = [...el.querySelectorAll('lyra-accordion-item')] as LyraDetails[];
+  const el = await fixture(html`<lr-accordion>
+    <lr-accordion-item open summary="One">A</lr-accordion-item>
+    <lr-accordion-item summary="Two">B</lr-accordion-item>
+  </lr-accordion>`);
+  const panels = [...el.querySelectorAll('lr-accordion-item')] as LyraDetails[];
   panels[1].open = true;
-  panels[1].dispatchEvent(new CustomEvent('lyra-toggle', { detail: { open: true }, bubbles: true, composed: true }));
+  panels[1].dispatchEvent(new CustomEvent('lr-toggle', { detail: { open: true }, bubbles: true, composed: true }));
   await Promise.all(panels.map((panel) => panel.updateComplete));
   expect(panels[0].open).to.be.false;
 });
 
 it('suppresses the localized "Details" fallback once rich content is slotted into summary', async () => {
   const el = (await fixture(
-    html`<lyra-details><span slot="summary">Custom Label</span>Content</lyra-details>`,
+    html`<lr-details><span slot="summary">Custom Label</span>Content</lr-details>`,
   )) as LyraDetails;
   const summary = el.shadowRoot!.querySelector('[part="summary"]') as HTMLElement;
   // Slotted light-DOM content isn't reparented into the shadow tree, so `textContent` on the
@@ -42,7 +42,7 @@ it('suppresses the localized "Details" fallback once rich content is slotted int
 });
 
 it('exposes disabled to assistive tech via aria-disabled on the summary, rendered in both states', async () => {
-  const el = (await fixture(html`<lyra-details summary="More" disabled>Content</lyra-details>`)) as LyraDetails;
+  const el = (await fixture(html`<lr-details summary="More" disabled>Content</lr-details>`)) as LyraDetails;
   const summary = el.shadowRoot!.querySelector('[part="summary"]') as HTMLElement;
   expect(summary.getAttribute('aria-disabled')).to.equal('true');
 
@@ -52,7 +52,7 @@ it('exposes disabled to assistive tech via aria-disabled on the summary, rendere
 });
 
 it('blocks both pointer and synthesized keyboard activation while disabled', async () => {
-  const el = (await fixture(html`<lyra-details summary="More" disabled>Content</lyra-details>`)) as LyraDetails;
+  const el = (await fixture(html`<lr-details summary="More" disabled>Content</lr-details>`)) as LyraDetails;
   const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLDetailsElement;
   const summary = el.shadowRoot!.querySelector('[part="summary"]') as HTMLElement;
 
@@ -70,9 +70,9 @@ it('mirrors the disclosure marker rotation under RTL so it still points down/up 
   expect(css).to.include(":host([open]:dir(rtl)) [part='summary']::after { transform: rotate(-225deg); }");
 });
 
-it('gives lyra-accordion its own stylesheet instead of reusing details.styles.ts wholesale', () => {
+it('gives lr-accordion its own stylesheet instead of reusing details.styles.ts wholesale', () => {
   const css = accordionStyles.cssText.replace(/\s+/g, ' ');
-  // details.styles.ts's [part='base'] rule paints a border-block-end meant for <lyra-details>'s
+  // details.styles.ts's [part='base'] rule paints a border-block-end meant for <lr-details>'s
   // own root; the accordion's [part='base'] is a plain wrapper div, so inheriting that rule
   // doubled up with the last panel's own border. None of details.styles.ts's <details>-shaped
   // selectors (summary/content/disabled/reduced-motion) apply to the accordion's shadow root.

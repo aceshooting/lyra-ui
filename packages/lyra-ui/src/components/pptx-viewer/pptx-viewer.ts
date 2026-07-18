@@ -7,5 +7,5 @@ import { registerDocumentRenderer, type DocumentFile } from '../document-viewer/
 defineElement('pptx-viewer', LyraPptxViewer);
 registerDocumentRenderer('application/vnd.openxmlformats-officedocument.presentationml.presentation', {
   matches: (file: DocumentFile) => file.name.toLowerCase().endsWith('.pptx'),
-  render: (file: DocumentFile) => html`<lyra-pptx-viewer src=${file.src} name=${file.name}></lyra-pptx-viewer>`,
+  render: (file: DocumentFile) => html`<lr-pptx-viewer src=${file.src} name=${file.name}></lr-pptx-viewer>`,
 });

@@ -3,10 +3,10 @@ import { css } from 'lit';
 export const styles = css`
   :host {
     display: inline-block;
-    --lyra-cell-size: var(--lyra-size-2-25rem);
+    --lr-cell-size: var(--lr-size-2-25rem);
   }
   :host([disabled]) {
-    opacity: var(--lyra-opacity-disabled);
+    opacity: var(--lr-opacity-disabled);
     pointer-events: none;
   }
   [part='base'] {
@@ -16,42 +16,42 @@ export const styles = css`
        second month onto its own line keeps every day cell reachable instead
        of the row overflowing its allocation. */
     flex-wrap: wrap;
-    gap: var(--lyra-space-l);
-    padding: var(--lyra-space-s);
-    background: var(--lyra-color-surface);
-    border: var(--lyra-border-width-thin) solid var(--lyra-color-border);
-    border-radius: var(--lyra-radius);
+    gap: var(--lr-space-l);
+    padding: var(--lr-space-s);
+    background: var(--lr-color-surface);
+    border: var(--lr-border-width-thin) solid var(--lr-color-border);
+    border-radius: var(--lr-radius);
   }
   [part='header'] {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: var(--lyra-space-s);
-    margin-block-end: var(--lyra-space-xs);
+    gap: var(--lr-space-s);
+    margin-block-end: var(--lr-space-xs);
   }
   [part='title'] {
-    font-weight: var(--lyra-font-weight-semibold);
-    font-size: var(--lyra-size-0-9375rem);
+    font-weight: var(--lr-font-weight-semibold);
+    font-size: var(--lr-size-0-9375rem);
   }
   [part='previous'],
   [part='next'] {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    min-inline-size: var(--lyra-icon-button-size);
-    min-block-size: var(--lyra-icon-button-size);
+    min-inline-size: var(--lr-icon-button-size);
+    min-block-size: var(--lr-icon-button-size);
     border: none;
     background: none;
     cursor: pointer;
-    color: var(--lyra-color-text);
-    font-size: var(--lyra-size-1-1rem);
-    line-height: var(--lyra-line-height-none);
-    padding: var(--lyra-space-xs);
-    border-radius: var(--lyra-radius);
+    color: var(--lr-color-text);
+    font-size: var(--lr-size-1-1rem);
+    line-height: var(--lr-line-height-none);
+    padding: var(--lr-space-xs);
+    border-radius: var(--lr-radius);
   }
   [part='previous']:hover,
   [part='next']:hover {
-    background: var(--lyra-color-brand-quiet);
+    background: var(--lr-color-brand-quiet);
   }
   /* Rotate the wrapping part element, not the svg -- internal/icons.ts's
      documented contract ("callers ... rotate the wrapping part element via
@@ -73,66 +73,66 @@ export const styles = css`
   }
   [part='weekdays'] {
     display: grid;
-    grid-template-columns: repeat(7, var(--lyra-cell-size));
+    grid-template-columns: repeat(7, var(--lr-cell-size));
   }
   [part='weekday'] {
     text-align: center;
-    font-size: var(--lyra-font-size-xs);
-    color: var(--lyra-color-text-quiet);
-    padding-block: var(--lyra-space-xs);
+    font-size: var(--lr-font-size-xs);
+    color: var(--lr-color-text-quiet);
+    padding-block: var(--lr-space-xs);
   }
   [part='grid'] {
     display: grid;
-    grid-template-columns: repeat(7, var(--lyra-cell-size));
+    grid-template-columns: repeat(7, var(--lr-cell-size));
   }
   [part='week'] {
     display: contents;
   }
   [part~='day'] {
-    inline-size: var(--lyra-cell-size);
-    block-size: var(--lyra-cell-size);
+    inline-size: var(--lr-cell-size);
+    block-size: var(--lr-cell-size);
     border: none;
     background: none;
     cursor: pointer;
-    color: var(--lyra-color-text);
+    color: var(--lr-color-text);
     font: inherit;
-    border-radius: var(--lyra-radius);
+    border-radius: var(--lr-radius);
   }
   [part~='day']:hover {
-    background: var(--lyra-color-brand-quiet);
+    background: var(--lr-color-brand-quiet);
   }
   [part~='day-outside'] {
-    color: var(--lyra-color-text-quiet);
+    color: var(--lr-color-text-quiet);
   }
   [part~='day-outside'][part~='day-range-inner'],
   [part~='day-outside'][part~='day-range-inner']:hover {
-    color: var(--lyra-color-text);
+    color: var(--lr-color-text);
   }
   [part='day-placeholder'] {
-    inline-size: var(--lyra-cell-size);
-    block-size: var(--lyra-cell-size);
+    inline-size: var(--lr-cell-size);
+    block-size: var(--lr-cell-size);
   }
   [part~='day-today'] {
-    outline: var(--lyra-border-width-thin) solid var(--lyra-color-brand);
-    outline-offset: var(--lyra-size-neg-1px);
+    outline: var(--lr-border-width-thin) solid var(--lr-color-brand);
+    outline-offset: var(--lr-size-neg-1px);
   }
   [part~='day-range-inner'] {
-    background: var(--lyra-color-brand-quiet);
+    background: var(--lr-color-brand-quiet);
     border-radius: 0;
   }
   [part~='day-selected'],
   [part~='day-range-start'],
   [part~='day-range-end'] {
-    background: var(--lyra-color-brand);
-    color: var(--lyra-color-on-brand);
+    background: var(--lr-color-brand);
+    color: var(--lr-color-on-brand);
   }
   [part~='day']:disabled {
-    color: var(--lyra-color-text-quiet);
-    opacity: var(--lyra-opacity-disabled);
+    color: var(--lr-color-text-quiet);
+    opacity: var(--lr-opacity-disabled);
     cursor: not-allowed;
   }
   [part~='day']:focus-visible {
-    outline: var(--lyra-focus-ring-width) solid var(--lyra-focus-ring-color);
-    outline-offset: var(--lyra-focus-ring-offset);
+    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
+    outline-offset: var(--lr-focus-ring-offset);
   }
 `;

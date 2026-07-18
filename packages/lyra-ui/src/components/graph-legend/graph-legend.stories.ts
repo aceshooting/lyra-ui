@@ -6,7 +6,7 @@ import { storyColor } from '../../../../../.storybook/story-theme.js';
 
 const meta: Meta = {
   title: 'Graph Legend',
-  component: 'lyra-graph-legend',
+  component: 'lr-graph-legend',
 };
 export default meta;
 type Story = StoryObj;
@@ -19,24 +19,24 @@ const types: LyraGraphLegendType[] = [
 
 export const Default: Story = {
   render: () => html`
-    <lyra-graph-legend
+    <lr-graph-legend
       .types=${types}
       .counts=${{ person: 12, org: 4, place: 7 }}
-      @lyra-visibility-change=${(e: CustomEvent<{ hiddenTypes: string[] }>) => console.log(e.detail)}
-    ></lyra-graph-legend>
+      @lr-visibility-change=${(e: CustomEvent<{ hiddenTypes: string[] }>) => console.log(e.detail)}
+    ></lr-graph-legend>
   `,
 };
 
 export const WithHiddenType: Story = {
-  render: () => html`<lyra-graph-legend .types=${types} .hiddenTypes=${['org']}></lyra-graph-legend>`,
+  render: () => html`<lr-graph-legend .types=${types} .hiddenTypes=${['org']}></lr-graph-legend>`,
 };
 
 export const ReadOnly: Story = {
-  render: () => html`<lyra-graph-legend .types=${types} .counts=${{ person: 12 }} ?interactive=${false}></lyra-graph-legend>`,
+  render: () => html`<lr-graph-legend .types=${types} .counts=${{ person: 12 }} ?interactive=${false}></lr-graph-legend>`,
 };
 
 export const Narrow: Story = {
-  render: () => html`<div style="max-width: 320px; border: 1px dashed var(--lyra-color-border); padding: 8px;">
-    <lyra-graph-legend .types=${types} .counts=${{ person: 12, org: 4, place: 7 }}></lyra-graph-legend>
+  render: () => html`<div style="max-width: 320px; border: 1px dashed var(--lr-color-border); padding: 8px;">
+    <lr-graph-legend .types=${types} .counts=${{ person: 12, org: 4, place: 7 }}></lr-graph-legend>
   </div>`,
 };

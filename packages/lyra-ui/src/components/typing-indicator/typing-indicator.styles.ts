@@ -1,7 +1,7 @@
 import { css } from 'lit';
 
-// `--lyra-transition-ambient` is used (rather than `--lyra-transition-fast`
-// or `--lyra-transition-base`) as the animation-cycle length for every
+// `--lr-transition-ambient` is used (rather than `--lr-transition-fast`
+// or `--lr-transition-base`) as the animation-cycle length for every
 // variant below: it's the token the library reserves for infinite looping
 // "still alive" motion, whereas `-fast`/`-base` are reserved for snappy
 // discrete state flips (checkbox check, switch thumb). A continuous ambient
@@ -18,47 +18,47 @@ export const styles = css`
     display: inline-flex;
     align-items: center;
     vertical-align: middle;
-    line-height: var(--lyra-line-height-none);
-    --lyra-typing-dot-size: var(--lyra-space-s);
-    --lyra-typing-gap: var(--lyra-space-xs);
-    --lyra-typing-cursor-width: var(--lyra-size-0-125rem);
-    --lyra-typing-cursor-height: var(--lyra-size-1em);
-    /* Themeable, not auto-derived from --lyra-transition-ambient: that token is a *compound*
+    line-height: var(--lr-line-height-none);
+    --lr-typing-dot-size: var(--lr-space-s);
+    --lr-typing-gap: var(--lr-space-xs);
+    --lr-typing-cursor-width: var(--lr-size-0-125rem);
+    --lr-typing-cursor-height: var(--lr-size-1em);
+    /* Themeable, not auto-derived from --lr-transition-ambient: that token is a *compound*
        value (duration + timing-function, e.g. "1.8s ease-in-out") baked into the animation:
        shorthand above, so it can't be decomposed via calc() into a fraction of just its duration.
-       A consumer retiming --lyra-transition-ambient keeps the stagger proportional by also
+       A consumer retiming --lr-transition-ambient keeps the stagger proportional by also
        setting these two explicitly. */
-    --lyra-typing-dot-stagger-1: 600ms;
-    --lyra-typing-dot-stagger-2: 1200ms;
+    --lr-typing-dot-stagger-1: 600ms;
+    --lr-typing-dot-stagger-2: 1200ms;
   }
   :host([size='sm']) {
-    --lyra-typing-dot-size: var(--lyra-size-0-375rem);
-    --lyra-typing-gap: var(--lyra-size-0-1875rem);
-    --lyra-typing-cursor-width: var(--lyra-size-0-09375rem);
+    --lr-typing-dot-size: var(--lr-size-0-375rem);
+    --lr-typing-gap: var(--lr-size-0-1875rem);
+    --lr-typing-cursor-width: var(--lr-size-0-09375rem);
   }
 
   [part='base'] {
     display: inline-flex;
     align-items: center;
-    gap: var(--lyra-typing-gap);
+    gap: var(--lr-typing-gap);
   }
 
   /* -- dots -------------------------------------------------------------- */
   [part='dot'] {
-    inline-size: var(--lyra-typing-dot-size);
-    block-size: var(--lyra-typing-dot-size);
+    inline-size: var(--lr-typing-dot-size);
+    block-size: var(--lr-typing-dot-size);
     border-radius: 50%;
     background: currentColor;
     opacity: 0.5;
-    animation: lyra-typing-dot-bounce var(--lyra-transition-ambient) infinite;
+    animation: lr-typing-dot-bounce var(--lr-transition-ambient) infinite;
   }
   [part='dot']:nth-child(2) {
-    animation-delay: var(--lyra-typing-dot-stagger-1);
+    animation-delay: var(--lr-typing-dot-stagger-1);
   }
   [part='dot']:nth-child(3) {
-    animation-delay: var(--lyra-typing-dot-stagger-2);
+    animation-delay: var(--lr-typing-dot-stagger-2);
   }
-  @keyframes lyra-typing-dot-bounce {
+  @keyframes lr-typing-dot-bounce {
     0%,
     80%,
     100% {
@@ -74,15 +74,15 @@ export const styles = css`
   /* -- pulse --------------------------------------------------------------
      A single breathing dot, meant for tighter spaces than three dots allow. */
   [part='pulse'] {
-    inline-size: var(--lyra-typing-dot-size);
-    block-size: var(--lyra-typing-dot-size);
+    inline-size: var(--lr-typing-dot-size);
+    block-size: var(--lr-typing-dot-size);
     border-radius: 50%;
     background: currentColor;
     opacity: 1;
     transform: scale(1);
-    animation: lyra-typing-pulse var(--lyra-transition-ambient) infinite;
+    animation: lr-typing-pulse var(--lr-transition-ambient) infinite;
   }
-  @keyframes lyra-typing-pulse {
+  @keyframes lr-typing-pulse {
     0%,
     100% {
       transform: scale(0.85);
@@ -101,14 +101,14 @@ export const styles = css`
      on/off even though the token's ease-out timing-function is in effect
      across the whole animation. */
   [part='cursor'] {
-    inline-size: var(--lyra-typing-cursor-width);
-    block-size: var(--lyra-typing-cursor-height);
+    inline-size: var(--lr-typing-cursor-width);
+    block-size: var(--lr-typing-cursor-height);
     background: currentColor;
-    border-radius: var(--lyra-typing-cursor-width);
+    border-radius: var(--lr-typing-cursor-width);
     opacity: 1;
-    animation: lyra-typing-cursor-blink var(--lyra-transition-ambient) infinite;
+    animation: lr-typing-cursor-blink var(--lr-transition-ambient) infinite;
   }
-  @keyframes lyra-typing-cursor-blink {
+  @keyframes lr-typing-cursor-blink {
     0%,
     49% {
       opacity: 1;

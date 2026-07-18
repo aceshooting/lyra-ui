@@ -10,7 +10,7 @@ import { styles } from './dialog.styles.js';
 const HEADING_SELECTOR = 'h1, h2, h3, h4, h5, h6, [role="heading"]';
 
 /**
- * Reason a dialog was dismissed, forwarded as the `lyra-dialog-close` event
+ * Reason a dialog was dismissed, forwarded as the `lr-dialog-close` event
  * detail. `'escape'` and `'backdrop'` are emitted by the dialog's own built-in
  * dismiss triggers; `'close-button'` by the built-in header close button
  * (rendered when `closable` is set); `'unmount'` is emitted when the dialog is
@@ -28,10 +28,10 @@ export type DialogCloseReason =
   | (string & Record<never, never>);
 
 export interface LyraDialogEventMap {
-  'lyra-dialog-close': CustomEvent<DialogCloseReason>;
+  'lr-dialog-close': CustomEvent<DialogCloseReason>;
 }
 /**
- * `<lyra-dialog>` — a general-purpose modal/overlay. `role="dialog"`,
+ * `<lr-dialog>` — a general-purpose modal/overlay. `role="dialog"`,
  * focus-trapped while open, dismissible via Escape or a backdrop click, and
  * scroll-locks the document for as long as it's open. Chrome stays minimal by
  * default — no built-in title bar or close button; a consumer supplies a
@@ -76,15 +76,15 @@ export interface LyraDialogEventMap {
  * no heading text, if `heading` is unset) that closes the dialog via the same
  * `close()` path as Escape/backdrop-dismiss, with reason `'close-button'`.
  *
- * Stacking: opening one `<lyra-dialog>` while another is already open (e.g. a
+ * Stacking: opening one `<lr-dialog>` while another is already open (e.g. a
  * `confirm()` launched from within an already-open dialog) is supported --
  * Escape and the Tab focus trap only ever act on the topmost open dialog, so
  * dialogs beneath it stay open and untouched until the one on top closes.
  *
- * @customElement lyra-dialog
+ * @customElement lr-dialog
  * @slot - The dialog body.
  * @slot footer - Action buttons, rendered in a bottom row.
- * @event lyra-dialog-close - `detail: DialogCloseReason`. Cancelable — a listener calling
+ * @event lr-dialog-close - `detail: DialogCloseReason`. Cancelable — a listener calling
  *   `preventDefault()` stops the dialog from closing, for every dismissal path (Escape, backdrop,
  *   the built-in close button, or a consumer's own `close()` call). Fired whenever the dialog is
  *   dismissed via Escape, a backdrop click, the built-in close button (`closable`), a `close()`
@@ -92,8 +92,8 @@ export interface LyraDialogEventMap {
  *   being removed) removal from the DOM by anything else while still open.
  * @csspart backdrop - The full-viewport scrim behind the panel.
  * @csspart panel - The dialog panel itself (`role="dialog"` while open). Shrink-wraps to its
- *   content by default, capped at `--lyra-dialog-max-width` (default `32rem`); set
- *   `--lyra-dialog-width` for an assertive width instead of only a cap.
+ *   content by default, capped at `--lr-dialog-max-width` (default `32rem`); set
+ *   `--lr-dialog-width` for an assertive width instead of only a cap.
  * @csspart header - The header row, rendered when `heading` is set (and no
  *   heading is slotted) and/or `closable` is `true`.
  * @csspart heading - The visible `heading`-text element inside `header`,
@@ -127,9 +127,9 @@ export class LyraDialog extends LyraElement<LyraDialogEventMap> {
   @property({ type: Boolean, attribute: 'closable' }) closable = false;
 
   /** Host-level `aria-label` override for the panel's accessible name — wins over every other
-   *  source (a slotted heading, `heading`, `label`), matching `<lyra-date-input>`'s
+   *  source (a slotted heading, `heading`, `label`), matching `<lr-date-input>`'s
    *  `accessibleLabel` pattern. See the class doc for the full precedence order. Set as a plain
-   *  `aria-label` attribute on `<lyra-dialog>` itself, not a public JS property. */
+   *  `aria-label` attribute on `<lr-dialog>` itself, not a public JS property. */
   @property({ attribute: 'aria-label' }) private accessibleLabel: string | null = null;
 
   /** Opts out of dismissing the dialog on a backdrop click — mirrors `wa-dialog`'s
@@ -200,11 +200,11 @@ export class LyraDialog extends LyraElement<LyraDialogEventMap> {
       // reaches the assignment below. Without this, removing an open dialog
       // any way other than its own close() (a consumer's own DOM cleanup, a
       // parent re-render that drops it, etc.) never fires
-      // `lyra-dialog-close`, so e.g. confirm()'s returned promise hangs forever.
+      // `lr-dialog-close`, so e.g. confirm()'s returned promise hangs forever.
       queueMicrotask(() => {
         if (!this.isConnected && this.open) {
           this.open = false;
-          this.emit<DialogCloseReason>('lyra-dialog-close', 'unmount');
+          this.emit<DialogCloseReason>('lr-dialog-close', 'unmount');
         }
       });
     }
@@ -221,7 +221,7 @@ export class LyraDialog extends LyraElement<LyraDialogEventMap> {
   // Only direct children are scanned -- a heading nested several layers deep
   // (or inside a slotted custom element's own shadow root) is left to the
   // consumer to label explicitly via `label` instead. Same depth limit
-  // lyra-widget applies to its own actions-slot presence check. Recomputed
+  // lr-widget applies to its own actions-slot presence check. Recomputed
   // only on slot assignment changes, not on every render -- a consumer that
   // mutates an already-slotted heading's textContent in place (rather than
   // replacing the node) won't retroactively update aria-label; set `label`
@@ -235,7 +235,7 @@ export class LyraDialog extends LyraElement<LyraDialogEventMap> {
 
   /**
    * Close the dialog and return focus to whatever had it before the dialog
-   * opened. `reason` is forwarded as the `lyra-dialog-close` detail --
+   * opened. `reason` is forwarded as the `lr-dialog-close` detail --
    * built-in triggers pass `'escape'`/`'backdrop'`/`'close-button'`; a
    * consumer's own close affordance (e.g. a footer Cancel button) should
    * call this directly with its own reason string, so every dismissal path
@@ -244,7 +244,7 @@ export class LyraDialog extends LyraElement<LyraDialogEventMap> {
    */
   close(reason: DialogCloseReason = 'api'): void {
     if (!this.open) return;
-    const event = this.emit<DialogCloseReason>('lyra-dialog-close', reason, { cancelable: true });
+    const event = this.emit<DialogCloseReason>('lr-dialog-close', reason, { cancelable: true });
     if (event.defaultPrevented) return;
     this.open = false;
   }
@@ -333,6 +333,6 @@ export class LyraDialog extends LyraElement<LyraDialogEventMap> {
 
 declare global {
   interface HTMLElementTagNameMap {
-    'lyra-dialog': LyraDialog;
+    'lr-dialog': LyraDialog;
   }
 }

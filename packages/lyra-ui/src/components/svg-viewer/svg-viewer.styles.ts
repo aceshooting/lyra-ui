@@ -9,26 +9,26 @@ export const styles = css`
        then takes over scrolling within whatever allocation it actually gets. */
     min-inline-size: 0;
     max-inline-size: 100%;
-    --lyra-svg-viewer-max-height: none;
+    --lr-svg-viewer-max-height: none;
   }
   [part='base'] {
     display: flex;
     flex-direction: column;
     box-sizing: border-box;
-    border: var(--lyra-border-width-thin) solid var(--lyra-color-border);
-    border-radius: var(--lyra-radius);
-    background: var(--lyra-color-surface);
+    border: var(--lr-border-width-thin) solid var(--lr-color-border);
+    border-radius: var(--lr-radius);
+    background: var(--lr-color-surface);
     overflow: hidden;
   }
   [part='body'] {
     display: flex;
     align-items: center;
     justify-content: center;
-    min-block-size: var(--lyra-size-10rem);
-    max-block-size: var(--lyra-svg-viewer-max-height);
+    min-block-size: var(--lr-size-10rem);
+    max-block-size: var(--lr-svg-viewer-max-height);
     box-sizing: border-box;
     overflow: auto;
-    padding: var(--lyra-space-m);
+    padding: var(--lr-space-m);
   }
   [part='svg'],
   [part='svg'] svg {
@@ -42,12 +42,12 @@ export const styles = css`
   .empty-note,
   [part='error'] {
     margin: 0;
-    color: var(--lyra-color-text-quiet);
-    font-size: var(--lyra-font-size-md-sm);
+    color: var(--lr-color-text-quiet);
+    font-size: var(--lr-font-size-md-sm);
     text-align: center;
   }
   [part='error'] {
-    color: var(--lyra-color-danger);
+    color: var(--lr-color-danger);
   }
   [part='spinner'] {
     display: flex;
@@ -64,11 +64,11 @@ export const styles = css`
   [part='region-highlight'] {
     position: absolute;
     pointer-events: auto;
-    border: var(--lyra-border-width-thick) solid var(--lyra-color-brand);
-    border-radius: var(--lyra-radius-xs);
+    border: var(--lr-border-width-thick) solid var(--lr-color-brand);
+    border-radius: var(--lr-radius-xs);
     cursor: pointer;
   }
   [part='region-highlight'][data-active] {
-    border-color: var(--lyra-color-warning, var(--lyra-color-brand));
+    border-color: var(--lr-color-warning, var(--lr-color-brand));
   }
 `;

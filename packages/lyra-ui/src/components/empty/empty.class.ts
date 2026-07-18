@@ -4,10 +4,10 @@ import { LyraElement } from '../../internal/lyra-element.js';
 import { styles } from './empty.styles.js';
 
 /**
- * `<lyra-empty>` — a generic empty/no-data state. First-party invention (no
+ * `<lr-empty>` — a generic empty/no-data state. First-party invention (no
  * Web Awesome equivalent); fills a gap common to dashboard-style apps.
  *
- * @customElement lyra-empty
+ * @customElement lr-empty
  * @slot - Custom icon or illustration (defaults to none).
  * @slot heading - Rich heading content (overrides the `heading` attribute).
  * @slot description - Rich description content (overrides the `description` attribute).
@@ -17,9 +17,9 @@ import { styles } from './empty.styles.js';
  * @csspart heading - The heading paragraph.
  * @csspart description - The description paragraph.
  * @csspart actions - The wrapper around the `actions`-slotted content.
- * @cssprop --lyra-empty-compact-align - Cross-axis and text alignment used in compact mode;
+ * @cssprop --lr-empty-compact-align - Cross-axis and text alignment used in compact mode;
  * set to `center` for dense but centered empty states.
- * @cssprop [--lyra-empty-compact-padding=var(--lyra-space-xs)] - Padding used in compact mode;
+ * @cssprop [--lr-empty-compact-padding=var(--lr-space-xs)] - Padding used in compact mode;
  * accepts any padding shorthand (e.g. `8px 2px`).
  */
 export class LyraEmpty extends LyraElement {
@@ -148,6 +148,6 @@ export class LyraEmpty extends LyraElement {
 
 declare global {
   interface HTMLElementTagNameMap {
-    'lyra-empty': LyraEmpty;
+    'lr-empty': LyraEmpty;
   }
 }

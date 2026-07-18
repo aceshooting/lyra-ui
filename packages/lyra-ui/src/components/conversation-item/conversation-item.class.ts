@@ -9,7 +9,7 @@ export interface ConversationItemRenameDetail {
 }
 
 /** String-aware parsing for the native enumerated `spellcheck` attribute -- mirrors
- *  `<lyra-textarea>`'s identical converter, since Lit's default boolean converter would otherwise
+ *  `<lr-textarea>`'s identical converter, since Lit's default boolean converter would otherwise
  *  treat the mere presence of `spellcheck="false"` as `true`. */
 const spellcheckConverter = {
   fromAttribute: (value: string | null): boolean => value !== 'false',
@@ -20,8 +20,8 @@ const spellcheckConverter = {
 // (internal/icons.ts's chevronIcon()/closeIcon()/etc.) without adding a
 // pencil/edit glyph to that module -- it's off limits here -- so this
 // one-off icon still reads as part of the same visual language as the rest
-// of the library's inline icons. Same approach lyra-checkbox's own local
-// checkmark/indeterminate glyphs and lyra-chat-message's local retryIcon()
+// of the library's inline icons. Same approach lr-checkbox's own local
+// checkmark/indeterminate glyphs and lr-chat-message's local retryIcon()
 // take for the identical reason.
 const ICON_VIEW_BOX = '0 0 24 24';
 const ICON_STROKE_WIDTH = '1.75';
@@ -50,7 +50,7 @@ function pencilIcon(): SVGTemplateResult {
  *  relative time (grouping a whole history list into "Today"/"Yesterday"/
  *  "Last 7 days" sections) belongs to the list level, not this single row's
  *  job. `formatTimestamp` overrides this
- *  entirely, mirroring `<lyra-chat-message>`'s identical override hook. */
+ *  entirely, mirroring `<lr-chat-message>`'s identical override hook. */
 function defaultFormatTimestamp(date: Date, locale: string, now: Date = new Date()): string {
   // Shared per-locale+options formatter cache: this runs per row per render in a history
   // sidebar list, and constructing an `Intl.DateTimeFormat` per call is an ICU locale-data
@@ -68,30 +68,30 @@ function defaultFormatTimestamp(date: Date, locale: string, now: Date = new Date
 }
 
 export interface LyraConversationItemEventMap {
-  'lyra-select': CustomEvent<undefined>;
-  'lyra-rename': CustomEvent<ConversationItemRenameDetail>;
+  'lr-select': CustomEvent<undefined>;
+  'lr-rename': CustomEvent<ConversationItemRenameDetail>;
   blur: CustomEvent<undefined>;
   focus: CustomEvent<undefined>;
 }
 /**
- * `<lyra-conversation-item>` — a selectable row representing one chat
+ * `<lr-conversation-item>` — a selectable row representing one chat
  * session in a history sidebar list. Usable standalone or as the
  * `renderItem()` payload of a sibling virtualized-list component; this
  * module has no dependency on that (or any) other component.
  *
  * Takes `title`/`excerpt`/`timestamp` as individual primitive props rather
  * than one opaque bound object, deliberately consistent with how
- * `<lyra-chat-message>` takes individual props instead of a single
+ * `<lr-chat-message>` takes individual props instead of a single
  * `.message` blob -- every other component in this family follows that
  * shape, so this one does too even though a single bound `.session` object
  * would also have been a reasonable design.
  *
- * Identifying *which* session a `lyra-select` click/keypress was about: this
+ * Identifying *which* session a `lr-select` click/keypress was about: this
  * reuses the platform's own `id` attribute (every element already has one)
  * rather than inventing a second, differently-named id-carrying prop --
  * consumers already have the event's `target`/`currentTarget` (and thus
- * `.id`), the same reasoning `<lyra-attachment-chip>` documents for its own
- * identically-shaped choice. `lyra-select` therefore carries no detail
+ * `.id`), the same reasoning `<lr-attachment-chip>` documents for its own
+ * identically-shaped choice. `lr-select` therefore carries no detail
  * payload at all.
  *
  * `role="button"` on `[part="option"]` so the item has valid semantics both
@@ -114,13 +114,13 @@ export interface LyraConversationItemEventMap {
  *
  * Inline rename is a dedicated pencil/edit icon button (not a double-click
  * on the title) -- double-click has no keyboard/screen-reader equivalent
- * and would silently swallow the row's own single-click `lyra-select`,
+ * and would silently swallow the row's own single-click `lr-select`,
  * whereas a button is independently focusable, has its own accessible name,
  * and composes cleanly with click-to-select.
  *
- * @customElement lyra-conversation-item
+ * @customElement lr-conversation-item
  * @slot actions - Overflow/icon-button controls (for example a pin/delete
- * button or a `lyra-menu` trigger) rendered at the trailing edge of the row.
+ * button or a `lr-menu` trigger) rendered at the trailing edge of the row.
  * @slot excerpt - Full override of the excerpt presentation (e.g. a search-hit snippet with `<mark>`
  *   highlighting). Wins over the `excerpt` property whenever it has assigned content, even if
  *   `excerpt` is also set. Only non-focusable content should be slotted here — see the `excerpt`
@@ -129,14 +129,14 @@ export interface LyraConversationItemEventMap {
  *   count) rendered below the title/excerpt. Entirely app-supplied; this component computes none of
  *   it. Only non-focusable content should be slotted here, for the same `nested-interactive` reason
  *   as `excerpt`.
- * @event lyra-select - The row was activated: a click on `[part="option"]`
+ * @event lr-select - The row was activated: a click on `[part="option"]`
  * (i.e. outside the rename button and the `actions` slot), or Enter/Space
  * while it's focused -- in both cases only while not currently renaming. No
  * detail payload -- see the class doc's "Identifying which session" note.
- * @event lyra-rename - An in-place rename was committed (Enter, or blur
+ * @event lr-rename - An in-place rename was committed (Enter, or blur
  * while editing). `detail: { title }`. Does not mutate `title` itself --
  * this is a controlled component, the same convention
- * `<lyra-chat-message>` follows by not clearing its own state on retry; the
+ * `<lr-chat-message>` follows by not clearing its own state on retry; the
  * consumer applies the new title once it's actually persisted. Not fired
  * when the trimmed draft is empty or unchanged from the original `title`
  * (that's treated as an implicit cancel).
@@ -168,11 +168,11 @@ export class LyraConversationItem extends LyraElement<LyraConversationItemEventM
   /** When the session was last active. Accepts a `Date` or anything
    *  `new Date()` can parse (e.g. an ISO 8601 string); invalid input is
    *  treated the same as unset (no timestamp rendered) -- mirrors
-   *  `<lyra-chat-message>`'s identical `timestamp` prop. */
+   *  `<lr-chat-message>`'s identical `timestamp` prop. */
   @property({ attribute: false }) timestamp?: Date | string;
 
   /** Overrides the default absolute-time rendering of `timestamp` when an application
-   *  needs a different timestamp style (mirrors `<lyra-chat-message>`'s identical hook). */
+   *  needs a different timestamp style (mirrors `<lr-chat-message>`'s identical hook). */
   @property({ attribute: false }) formatTimestamp?: (date: Date) => string;
 
   /** Whether this is the currently-selected/open session. Drives the
@@ -195,7 +195,7 @@ export class LyraConversationItem extends LyraElement<LyraConversationItemEventM
 
   /** Forwarded to the in-place rename `<input>`'s own `autocorrect` (Safari/WebKit-specific).
    *  Empty string omits the attribute (browser default). Named `autoCorrect` to avoid
-   *  `HTMLElement.autocorrect`'s incompatible DOM typing -- mirrors `<lyra-textarea>`'s identical
+   *  `HTMLElement.autocorrect`'s incompatible DOM typing -- mirrors `<lr-textarea>`'s identical
    *  choice. */
   @property({ attribute: 'autocorrect' }) autoCorrect = '';
 
@@ -237,7 +237,7 @@ export class LyraConversationItem extends LyraElement<LyraConversationItemEventM
   }
 
   private select(): void {
-    this.emit('lyra-select');
+    this.emit('lr-select');
   }
 
   private startRename(): void {
@@ -253,7 +253,7 @@ export class LyraConversationItem extends LyraElement<LyraConversationItemEventM
     // it the same as Escape rather than firing a no-op (or blanking) rename
     // for the consumer to deal with.
     if (!next || next === this.title) return;
-    this.emit<ConversationItemRenameDetail>('lyra-rename', { title: next });
+    this.emit<ConversationItemRenameDetail>('lr-rename', { title: next });
   }
 
   private cancelRename(): void {
@@ -271,7 +271,7 @@ export class LyraConversationItem extends LyraElement<LyraConversationItemEventM
   private onOptionKeyDown = (e: KeyboardEvent): void => {
     if (this.renaming) return;
     if (e.key === 'Enter' || e.key === ' ' || e.key === 'Spacebar') {
-      // Space would otherwise scroll the page, same as lyra-checkbox/lyra-switch.
+      // Space would otherwise scroll the page, same as lr-checkbox/lr-switch.
       e.preventDefault();
       this.select();
     }
@@ -295,7 +295,7 @@ export class LyraConversationItem extends LyraElement<LyraConversationItemEventM
     // race where commitRename() (called below) has already flipped
     // `renaming` back to `false` by the time that bubbled event reaches
     // onOptionKeyDown's own `if (this.renaming) return;` guard, which would
-    // otherwise wrongly let the same Enter keystroke also fire lyra-select.
+    // otherwise wrongly let the same Enter keystroke also fire lr-select.
     e.stopPropagation();
     if (e.key === 'Enter') {
       e.preventDefault();
@@ -404,6 +404,6 @@ export class LyraConversationItem extends LyraElement<LyraConversationItemEventM
 
 declare global {
   interface HTMLElementTagNameMap {
-    'lyra-conversation-item': LyraConversationItem;
+    'lr-conversation-item': LyraConversationItem;
   }
 }

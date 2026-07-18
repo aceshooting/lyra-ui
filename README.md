@@ -32,7 +32,7 @@ a live example, source code, and API reference.
   <a href="https://aceshooting.github.io/lyra-ui/"><img src=".github/readme/preview-table.png" width="32%" alt="Lyra UI sortable table example" /></a>
   <a href="https://aceshooting.github.io/lyra-ui/"><img src=".github/readme/preview-chart.png" width="32%" alt="Lyra UI line chart example" /></a>
 </p>
-<p align="center"><sub>A few of 186 components (222 custom elements) — <a href="https://aceshooting.github.io/lyra-ui/">browse them all live →</a></sub></p>
+<p align="center"><sub>A few of 186 components (224 custom elements) — <a href="https://aceshooting.github.io/lyra-ui/">browse them all live →</a></sub></p>
 
 ## Table of Contents
 
@@ -57,9 +57,9 @@ on Shoelace or Web Awesome, and ships with its own design tokens, localization r
 reduced-motion behavior, and form-associated controls.
 
 Lyra also makes migration practical. Selected components expose a documented Web Awesome-compatible
-surface under the `lyra-` prefix, so many `wa-*` integrations can move through a mechanical tag-name
+surface under the `lr-` prefix, so many `wa-*` integrations can move through a mechanical tag-name
 and import change, with intentional differences documented per component. Shoelace users get a
-clear `sl-*` → `lyra-*` component map and migration notes; Lyra is an independent implementation,
+clear `sl-*` → `lr-*` component map and migration notes; Lyra is an independent implementation,
 not a fork, rebrand, official product, or affiliated project. No Web Awesome Pro source code was
 available to or used by the maintainers.
 
@@ -70,7 +70,7 @@ for data-heavy and streaming applications.
 | Package | Description | Version | Size |
 |---|---|---|---|
 | [`packages/lyra-ui`](./packages/lyra-ui) | Free, independent Lit web components — an alternative to Shoelace and Web Awesome. | [![npm](https://img.shields.io/npm/v/%40aceshooting%2Flyra-ui)](https://www.npmjs.com/package/@aceshooting/lyra-ui) | [![size](https://img.shields.io/bundlephobia/minzip/%40aceshooting%2Flyra-ui)](https://bundlephobia.com/package/@aceshooting/lyra-ui) |
-| [`packages/lyra-flags`](./packages/lyra-flags) | Optional waving flag SVGs for `<lyra-flag>`, kept out of `lyra-ui`'s install by default. | [![npm](https://img.shields.io/npm/v/%40aceshooting%2Flyra-flags)](https://www.npmjs.com/package/@aceshooting/lyra-flags) | *n/a — SVG assets, not a JS bundle* |
+| [`packages/lyra-flags`](./packages/lyra-flags) | Optional waving flag SVGs for `<lr-flag>`, kept out of `lyra-ui`'s install by default. | [![npm](https://img.shields.io/npm/v/%40aceshooting%2Flyra-flags)](https://www.npmjs.com/package/@aceshooting/lyra-flags) | *n/a — SVG assets, not a JS bundle* |
 
 See each package's own README for full install/usage details.
 
@@ -86,10 +86,10 @@ import '@aceshooting/lyra-ui/components/combobox/option.js';
 ```
 
 ```html
-<lyra-combobox label="Fruit" with-clear>
-  <lyra-option value="a">Apple</lyra-option>
-  <lyra-option value="b">Banana</lyra-option>
-</lyra-combobox>
+<lr-combobox label="Fruit" with-clear>
+  <lr-option value="a">Apple</lr-option>
+  <lr-option value="b">Banana</lr-option>
+</lr-combobox>
 ```
 
 Per-component optional peers and the tree-shakeable import patterns:
@@ -118,7 +118,7 @@ Contributors and AI coding agents working on this repo: see [AGENTS.md](./AGENTS
 | ⚡ Performance-First | Native custom elements, no virtual DOM, minimal deps |
 | 🤖 AI & Agentic-AI Ready | Machine-readable docs and manifests AI agents use correctly |
 | 🧩 Consistent Architecture | One shared base — learn one component, know them all |
-| 🎨 Design Tokens Only | Every value is a `--lyra-*` token — restyle from one place |
+| 🎨 Design Tokens Only | Every value is a `--lr-*` token — restyle from one place |
 | 🌍 i18n & RTL by Default | Every string translatable, every layout mirrors RTL |
 | ♿ Accessibility First | Correct ARIA in shadow DOM, automated a11y checks |
 | 📐 Responsive by Allocation | Adapts to its container, not just the viewport |
@@ -128,7 +128,7 @@ Contributors and AI coding agents working on this repo: see [AGENTS.md](./AGENTS
 
 ## Components
 
-223 custom elements across five component families. Every tag has a live, interactive example on the
+224 custom elements across five component families. Every tag has a live, interactive example on the
 [docs site](https://aceshooting.github.io/lyra-ui/); for the full per-tag reference (Web Awesome
 mirror, props, events, slots, parts) see
 [`packages/lyra-ui/README.md#components`](./packages/lyra-ui/README.md#components).
@@ -143,9 +143,9 @@ mirror, props, events, slots, parts) see
 
 ## Theming, internationalization & RTL
 
-Every one of the 223 tags is built on the same three guarantees — not opt-in per component:
+Every one of the 224 tags is built on the same three guarantees — not opt-in per component:
 
-- **Theming** through `--lyra-*` design tokens — retheme by overriding a custom property,
+- **Theming** through `--lr-*` design tokens — retheme by overriding a custom property,
   no per-component theming API to learn.
 - **Internationalization** via a small runtime (`registerLyraLocale`/`setLyraLocale`, or a
   per-instance `.strings` override) — every built-in string (labels, announcements, aria-labels)
@@ -164,24 +164,24 @@ Lyra ships plain custom elements — no framework-specific wrapper package neede
 // React 19+
 import '@aceshooting/lyra-ui/components/combobox/combobox.js';
 
-<lyra-combobox label="Fruit" with-clear>
-  <lyra-option value="a">Apple</lyra-option>
-</lyra-combobox>
+<lr-combobox label="Fruit" with-clear>
+  <lr-option value="a">Apple</lr-option>
+</lr-combobox>
 ```
 
 ```vue
 <!-- Vue -->
-<lyra-combobox label="Fruit" @lyra-change="onChange" />
+<lr-combobox label="Fruit" @lr-change="onChange" />
 ```
 
 ```html
 <!-- Angular — module/component needs schemas: [CUSTOM_ELEMENTS_SCHEMA] -->
-<lyra-combobox label="Fruit" (lyra-change)="onChange($event)"></lyra-combobox>
+<lr-combobox label="Fruit" (lr-change)="onChange($event)"></lr-combobox>
 ```
 
 ```svelte
 <!-- Svelte -->
-<lyra-combobox label="Fruit" on:lyra-change={onChange} />
+<lr-combobox label="Fruit" on:lr-change={onChange} />
 ```
 
 Property-vs-attribute binding, Angular's `CUSTOM_ELEMENTS_SCHEMA`, and event-name casing notes:
@@ -190,7 +190,7 @@ Property-vs-attribute binding, Angular's `CUSTOM_ELEMENTS_SCHEMA`, and event-nam
 ## SSR & Declarative Shadow DOM
 
 Lyra components are standard Lit 3 custom elements: they render through `@lit-labs/ssr` into
-Declarative Shadow DOM in principle, and a spot check of `<lyra-button>` confirms basic
+Declarative Shadow DOM in principle, and a spot check of `<lr-button>` confirms basic
 server-rendering works — but the library has not been systematically tested or tuned for SSR at
 scale. See
 [`packages/lyra-ui/README.md#ssr--declarative-shadow-dom`](./packages/lyra-ui/README.md#ssr--declarative-shadow-dom)
@@ -209,7 +209,7 @@ for details.
 
 - [Lit 3](https://lit.dev) — the web-component base every Lyra element extends
 - [Floating UI](https://floating-ui.com) — positioning engine for popovers, tooltips, dropdowns, and the combobox menu
-- [Chart.js](https://www.chartjs.org) & [D3](https://d3js.org) — optional peers powering the Chart.js chart family and `<lyra-graph>`
+- [Chart.js](https://www.chartjs.org) & [D3](https://d3js.org) — optional peers powering the Chart.js chart family and `<lr-graph>`
 - [Storybook](https://storybook.js.org) — the live docs site and component workshop
 - [Noto Emoji](https://github.com/googlefonts/noto-emoji) flag artwork — vendored into `@aceshooting/lyra-flags` (Public Domain)
 
@@ -243,7 +243,7 @@ without Claude Code.
 
 ## Status
 
-`@aceshooting/lyra-ui` is published at `3.9.0`; `@aceshooting/lyra-flags` at `1.4.0` — see each
+`@aceshooting/lyra-ui` is published at `4.0.0`; `@aceshooting/lyra-flags` at `1.4.0` — see each
 package's own `CHANGELOG.md` for release history. The two are versioned independently (not always
 lockstep) with [Changesets](https://github.com/changesets/changesets) and follow semver: a major
 bump signals a breaking change, everything else is additive or a fix. Every release passes the same

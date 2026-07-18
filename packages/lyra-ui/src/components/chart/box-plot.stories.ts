@@ -4,7 +4,7 @@ import type { BoxPlotSeries } from './box-plot.js';
 
 const meta: Meta = {
   title: 'Charts/BoxPlot',
-  component: 'lyra-box-plot',
+  component: 'lr-box-plot',
   tags: ['autodocs'],
 };
 export default meta;
@@ -23,12 +23,12 @@ export const Default: Story = {
       },
     ];
     return html`
-      <lyra-box-plot
+      <lr-box-plot
         height="16rem"
         style="width: 22rem"
         .labels=${['K=2', 'K=3', 'K=4']}
         .boxes=${boxes}
-      ></lyra-box-plot>
+      ></lr-box-plot>
     `;
   },
 };
@@ -48,13 +48,13 @@ export const NarrowLongContent: Story = {
     ];
     return html`
       <div style="inline-size: 320px; max-inline-size: 100%;">
-        <lyra-box-plot
+        <lr-box-plot
           aria-label="Request latency distributions by deployment cohort"
           height="16rem"
           legend
           .labels=${['Current production cohort', 'Candidate deployment cohort']}
           .boxes=${boxes}
-        ></lyra-box-plot>
+        ></lr-box-plot>
       </div>
     `;
   },
@@ -68,12 +68,12 @@ export const ThemedTokensAndRefresh: Story = {
     ];
     return html`
       <div>
-        <lyra-box-plot
+        <lr-box-plot
           height="16rem"
-          style="inline-size: 22rem; --lyra-chart-grid-color: var(--lyra-color-danger);"
+          style="inline-size: 22rem; --lr-chart-grid-color: var(--lr-color-danger);"
           .labels=${['Production']}
           .boxes=${boxes}
-        ></lyra-box-plot>
+        ></lr-box-plot>
         <button
           type="button"
           @click=${(event: Event) => {

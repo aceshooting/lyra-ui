@@ -15,7 +15,7 @@ type DragState = 'default' | 'accept' | 'reject';
  *  that constant is themed around a remote-fetch byte cap, a different concern from this
  *  component's user-facing upload-size guard, and this library's convention is to duplicate a
  *  small constant like this locally rather than add a cross-component import for it (see e.g.
- *  `<lyra-activity-feed>`'s own `trueDefaultBooleanConverter` doc comment). */
+ *  `<lr-activity-feed>`'s own `trueDefaultBooleanConverter` doc comment). */
 export const DEFAULT_MAX_FILE_SIZE_BYTES = 25 * 1024 * 1024;
 
 export interface RejectedFile {
@@ -26,18 +26,18 @@ export interface RejectedFile {
 export interface LyraFileInputEventMap {
   blur: CustomEvent<undefined>;
   focus: CustomEvent<undefined>;
-  'lyra-files': CustomEvent<{ files: File[]; rejected: RejectedFile[] }>;
+  'lr-files': CustomEvent<{ files: File[]; rejected: RejectedFile[] }>;
 }
 /**
- * `<lyra-file-input>` — a drag-drop + click-to-browse file dropzone. Emits
+ * `<lr-file-input>` — a drag-drop + click-to-browse file dropzone. Emits
  * raw `File[]`; parsing (CSV/XLSX/etc.) is left to the host, since that's
  * where files ultimately get uploaded and processed anyway.
  *
- * @customElement lyra-file-input
+ * @customElement lr-file-input
  * @slot - Custom drop-zone content, overrides the visible `label` text. The
  * accessible name comes from a host `aria-label` when present, then falls
  * back to `label`, so icon-only slot content remains announced correctly.
- * @event lyra-files - `detail: { files, rejected }`, fired on drop and manual selection.
+ * @event lr-files - `detail: { files, rejected }`, fired on drop and manual selection.
  * @event focus - Fired when the semantic dropzone receives focus.
  * @event blur - Fired when the semantic dropzone loses focus.
  * @csspart base - The dropzone's root, clickable/focusable container.
@@ -145,7 +145,7 @@ export class LyraFileInput extends LyraElement<LyraFileInputEventMap> {
       );
     }
     this.resultStatus = messages.join(' ');
-    this.emit('lyra-files', { files, rejected });
+    this.emit('lr-files', { files, rejected });
   }
 
   /** Programmatically open the native file picker. */
@@ -291,6 +291,6 @@ export class LyraFileInput extends LyraElement<LyraFileInputEventMap> {
 
 declare global {
   interface HTMLElementTagNameMap {
-    'lyra-file-input': LyraFileInput;
+    'lr-file-input': LyraFileInput;
   }
 }

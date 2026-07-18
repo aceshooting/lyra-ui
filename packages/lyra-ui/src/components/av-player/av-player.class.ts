@@ -38,7 +38,7 @@ export interface LyraAvTrack {
   default?: boolean;
 }
 
-/** Throttle window for `lyra-time-change` while playing -- at most 4/s, plus one extra emission per
+/** Throttle window for `lr-time-change` while playing -- at most 4/s, plus one extra emission per
  *  discrete `seek()` regardless of the window. */
 const TIME_CHANGE_THROTTLE_MS = 250;
 
@@ -60,51 +60,51 @@ function formatTime(seconds: number): string {
 }
 
 export interface LyraAvPlayerEventMap {
-  'lyra-play': CustomEvent<undefined>;
-  'lyra-pause': CustomEvent<undefined>;
-  'lyra-load': CustomEvent<{ duration: number; kind: AvKind }>;
-  'lyra-time-change': CustomEvent<{ currentTime: number }>;
-  'lyra-rate-change': CustomEvent<{ rate: number }>;
-  'lyra-cue-change': CustomEvent<{ id: string | null }>;
-  'lyra-highlight-activate': CustomEvent<HighlightActivateDetail>;
-  'lyra-anchor-result': CustomEvent<AnchorResultDetail>;
-  'lyra-search-change': CustomEvent<{ query: string; matchCount: number; activeIndex: number }>;
-  'lyra-render-error': CustomEvent<{ error: unknown }>;
+  'lr-play': CustomEvent<undefined>;
+  'lr-pause': CustomEvent<undefined>;
+  'lr-load': CustomEvent<{ duration: number; kind: AvKind }>;
+  'lr-time-change': CustomEvent<{ currentTime: number }>;
+  'lr-rate-change': CustomEvent<{ rate: number }>;
+  'lr-cue-change': CustomEvent<{ id: string | null }>;
+  'lr-highlight-activate': CustomEvent<HighlightActivateDetail>;
+  'lr-anchor-result': CustomEvent<AnchorResultDetail>;
+  'lr-search-change': CustomEvent<{ query: string; matchCount: number; activeIndex: number }>;
+  'lr-render-error': CustomEvent<{ error: unknown }>;
 }
 
 class LyraAvPlayerBase extends LyraElement<LyraAvPlayerEventMap> {}
 
 /**
- * `<lyra-av-player>` — audio/video player built on a native `<audio>`/`<video>` element, plus a cue
+ * `<lr-av-player>` — audio/video player built on a native `<audio>`/`<video>` element, plus a cue
  * transcript synced to `currentTime`, `time-range` anchor/highlight support, an optional
  * dependency-free waveform (peaks in, no in-component decoding), and playback-rate control. Owns
- * recorded-media transcript sync; distinct from `<lyra-transcript-feed>` (live captions for an
- * in-progress voice session) and `<lyra-playback>` (an index stepper over `[0, length)` for
+ * recorded-media transcript sync; distinct from `<lr-transcript-feed>` (live captions for an
+ * in-progress voice session) and `<lr-playback>` (an index stepper over `[0, length)` for
  * time-series dashboards — no media involved in either).
  *
  * Adopts `DocumentAnchorTarget` with `anchorKinds: ['time-range']` only. No text selection is bound:
- * transcript rows render inside `<lyra-virtual-list>`'s own nested shadow root, one boundary deeper
+ * transcript rows render inside `<lr-virtual-list>`'s own nested shadow root, one boundary deeper
  * than the mixin's default selection lookup resolves.
  *
- * The transcript virtualizes through `<lyra-virtual-list>` the same way `pdf-viewer.class.ts`
+ * The transcript virtualizes through `<lr-virtual-list>` the same way `pdf-viewer.class.ts`
  * virtualizes pages: `items`/`renderItem`/`keyFunction`/`activeId` props, and the active cue's
  * scroll-into-view comes for free from `activeId` rather than any custom follow logic.
  *
- * @customElement lyra-av-player
- * @event lyra-play - Playback started.
- * @event lyra-pause - Playback paused.
- * @event lyra-load - Media metadata finished loading. `detail: { duration, kind }`.
- * @event lyra-time-change - `detail: { currentTime }`, throttled to at most 4/s while playing, plus
+ * @customElement lr-av-player
+ * @event lr-play - Playback started.
+ * @event lr-pause - Playback paused.
+ * @event lr-load - Media metadata finished loading. `detail: { duration, kind }`.
+ * @event lr-time-change - `detail: { currentTime }`, throttled to at most 4/s while playing, plus
  *   one extra emission per `seek()` regardless of the throttle window.
- * @event lyra-rate-change - `detail: { rate }`.
- * @event lyra-cue-change - The active transcript cue changed. `detail: { id }` (`null` when none is
+ * @event lr-rate-change - `detail: { rate }`.
+ * @event lr-cue-change - The active transcript cue changed. `detail: { id }` (`null` when none is
  *   active).
- * @event lyra-highlight-activate - A `time-range` highlight marker was activated. `detail: { id }`.
- * @event lyra-anchor-result - Fired after `anchor` (or a `scrollToAnchor()` call) is applied.
+ * @event lr-highlight-activate - A `time-range` highlight marker was activated. `detail: { id }`.
+ * @event lr-anchor-result - Fired after `anchor` (or a `scrollToAnchor()` call) is applied.
  *   `detail: { found }`.
- * @event lyra-search-change - Fired from `search()`/`searchNext()`/`searchPrevious()`/
+ * @event lr-search-change - Fired from `search()`/`searchNext()`/`searchPrevious()`/
  *   `clearSearch()`. `detail: { query, matchCount, activeIndex }`.
- * @event lyra-render-error - The native media element reported an `error` event. `detail: { error }`.
+ * @event lr-render-error - The native media element reported an `error` event. `detail: { error }`.
  * @csspart base - The root wrapper.
  * @csspart media - The native `<audio>`/`<video>` element.
  * @csspart toolbar - The playback-rate control row.
@@ -112,20 +112,20 @@ class LyraAvPlayerBase extends LyraElement<LyraAvPlayerEventMap> {}
  * @csspart timeline - The waveform canvas or plain seek rail; click-to-seek and arrow-key seeking.
  * @csspart timeline-marker - One clickable marker per `time-range` highlight (`data-tone`,
  *   `data-active`).
- * @csspart transcript - The virtualized cue list (`<lyra-virtual-list>` itself).
+ * @csspart transcript - The virtualized cue list (`<lr-virtual-list>` itself).
  * @csspart cue - One transcript row (`aria-current`, `data-match`, `data-active-match`).
  * @csspart cue-time - A cue's timestamp label.
  * @csspart cue-speaker - A cue's speaker label.
  * @csspart cue-text - A cue's text.
  * @csspart error - The error region.
- * @cssprop [--lyra-av-player-transcript-height=var(--lyra-size-16rem)] - Block size of the
+ * @cssprop [--lr-av-player-transcript-height=var(--lr-size-16rem)] - Block size of the
  *   virtualized transcript list.
  */
 export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
   static styles = [LyraElement.styles, styles, srOnly];
 
   // `playbackRate` is declared here (rather than via a plain `@property()` decorator, like the rest
-  // of this class) with a hand-written accessor below -- mirrors lyra-slider's identical
+  // of this class) with a hand-written accessor below -- mirrors lr-slider's identical
   // min/max/step pattern -- so an out-of-range/non-finite assignment self-heals synchronously
   // through `finiteRange` instead of leaving the native media element unsanitized until the next
   // `updated()` flush.
@@ -216,7 +216,7 @@ export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
     super.updated(changed);
     if (changed.has('playbackRate')) {
       if (this.mediaEl) this.mediaEl.playbackRate = this.playbackRate;
-      if (changed.get('playbackRate') !== undefined) this.emit('lyra-rate-change', { rate: this.playbackRate });
+      if (changed.get('playbackRate') !== undefined) this.emit('lr-rate-change', { rate: this.playbackRate });
     }
     if (changed.has('peaks')) this.drawWaveform();
   }
@@ -255,7 +255,7 @@ export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
     if (this.mediaEl?.paused) this.play();
     else this.pause();
   }
-  /** Sets `currentTime` and forces an immediate `lyra-time-change`, bypassing the playing-time throttle. */
+  /** Sets `currentTime` and forces an immediate `lr-time-change`, bypassing the playing-time throttle. */
   seek(seconds: number): void {
     this.currentTime = seconds;
     this.emitTimeChange(true);
@@ -274,18 +274,18 @@ export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
       this.mediaEl.currentTime = this.pendingSeek;
       this.pendingSeek = null;
     }
-    this.emit('lyra-load', { duration: this.duration, kind: this.detectedKind() });
+    this.emit('lr-load', { duration: this.duration, kind: this.detectedKind() });
   };
 
   private onPlay = (): void => {
-    this.emit('lyra-play');
+    this.emit('lr-play');
   };
   private onPause = (): void => {
-    this.emit('lyra-pause');
+    this.emit('lr-pause');
   };
   private onMediaError = (error: unknown): void => {
     this.renderError = true;
-    this.emit('lyra-render-error', { error });
+    this.emit('lr-render-error', { error });
   };
 
   private emitTimeChange(force: boolean): void {
@@ -293,7 +293,7 @@ export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
     if (!force && now - this.lastTimeChangeAt < TIME_CHANGE_THROTTLE_MS) return;
     this.lastTimeChangeAt = now;
     this.currentTimeState = this.currentTime;
-    this.emit('lyra-time-change', { currentTime: this.currentTimeState });
+    this.emit('lr-time-change', { currentTime: this.currentTimeState });
   }
 
   private onTimeUpdate = (): void => {
@@ -308,7 +308,7 @@ export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
     const nextId = active?.id ?? null;
     if (nextId !== this.activeCueId) {
       this.activeCueId = nextId;
-      this.emit('lyra-cue-change', { id: nextId });
+      this.emit('lr-cue-change', { id: nextId });
     }
   };
 
@@ -343,7 +343,7 @@ export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
     this.emitSearchChange();
   }
 
-  /** Clears the query, matches, and active index, and emits a zero-match `lyra-search-change`. */
+  /** Clears the query, matches, and active index, and emits a zero-match `lr-search-change`. */
   clearSearch(): void {
     this.searchQuery = '';
     this.searchMatches = [];
@@ -352,7 +352,7 @@ export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
   }
 
   private emitSearchChange(): void {
-    this.emit('lyra-search-change', {
+    this.emit('lr-search-change', {
       query: this.searchQuery,
       matchCount: this.searchMatches.length,
       activeIndex: this.activeSearchIndex,
@@ -371,7 +371,7 @@ export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
     if (!ctx) return;
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.clearRect(0, 0, width, height);
-    const color = getComputedStyle(this).getPropertyValue('--lyra-color-brand').trim() || '#0969da';
+    const color = getComputedStyle(this).getPropertyValue('--lr-color-brand').trim() || '#0969da';
     ctx.fillStyle = color;
     const barWidth = width / this.peaks.length;
     this.peaks.forEach((peak, i) => {
@@ -383,7 +383,7 @@ export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
   private onHighlightActivate = (id: string, start: number): void => {
     this.activeHighlightId = id;
     this.seek(start);
-    this.emit<HighlightActivateDetail>('lyra-highlight-activate', { id });
+    this.emit<HighlightActivateDetail>('lr-highlight-activate', { id });
   };
 
   private renderMarkers(): TemplateResult | typeof nothing {
@@ -563,14 +563,14 @@ export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
         ${this.renderMarkers()}
       </div>
       ${this.cues.length
-        ? html`<lyra-virtual-list
+        ? html`<lr-virtual-list
             part="transcript"
             aria-label=${this.localize('avPlayerTranscript')}
             .items=${this.cues}
             .renderItem=${this.renderCue}
             .keyFunction=${(item: unknown) => (item as LyraAvCue).id}
             .activeId=${this.activeCueId ?? ''}
-          ></lyra-virtual-list>`
+          ></lr-virtual-list>`
         : nothing}
       ${this.renderAnchorLiveRegion()}
     </div>`;
@@ -579,6 +579,6 @@ export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
 
 declare global {
   interface HTMLElementTagNameMap {
-    'lyra-av-player': LyraAvPlayer;
+    'lr-av-player': LyraAvPlayer;
   }
 }

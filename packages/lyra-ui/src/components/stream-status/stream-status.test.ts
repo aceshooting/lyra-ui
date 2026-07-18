@@ -12,32 +12,32 @@ import type { LyraLiveRegion } from '../live-region/live-region.js';
 // runs, since nothing in this project's web-test-runner.config.js shims CJS
 // interop for it the way the hammerjs/maplibre-gl plugins do for those two
 // packages. Falling back to real timers with short, generously-margined
-// thresholds instead, the same way lyra-toast-item's own duration/pause
+// thresholds instead, the same way lr-toast-item's own duration/pause
 // timer tests already do.
 
 function liveRegionText(el: LyraStreamStatus): string {
-  const region = el.shadowRoot!.querySelector('lyra-live-region') as LyraLiveRegion;
+  const region = el.shadowRoot!.querySelector('lr-live-region') as LyraLiveRegion;
   return region.shadowRoot!.querySelector('[part="region"]')!.textContent ?? '';
 }
 
 it('defaults to phase="idle" and stallThresholdMs=10000, overridable via stall-threshold-ms', async () => {
-  const el = (await fixture(html`<lyra-stream-status></lyra-stream-status>`)) as LyraStreamStatus;
+  const el = (await fixture(html`<lr-stream-status></lr-stream-status>`)) as LyraStreamStatus;
   expect(el.phase).to.equal('idle');
   expect(el.stallThresholdMs).to.equal(10000);
   expect(el.getAttribute('phase')).to.equal('idle');
 
   const withAttr = (await fixture(
-    html`<lyra-stream-status stall-threshold-ms="250"></lyra-stream-status>`,
+    html`<lr-stream-status stall-threshold-ms="250"></lr-stream-status>`,
   )) as LyraStreamStatus;
   expect(withAttr.stallThresholdMs).to.equal(250);
 });
 
 it('treats recordActivity() as a no-op while idle or connecting -- never throws, never arms a timer', async () => {
   const el = (await fixture(
-    html`<lyra-stream-status stall-threshold-ms="40"></lyra-stream-status>`,
+    html`<lr-stream-status stall-threshold-ms="40"></lr-stream-status>`,
   )) as LyraStreamStatus;
   let stalled = false;
-  el.addEventListener('lyra-stall', () => (stalled = true));
+  el.addEventListener('lr-stall', () => (stalled = true));
 
   expect(() => el.recordActivity()).to.not.throw();
   el.phase = 'connecting';
@@ -49,20 +49,20 @@ it('treats recordActivity() as a no-op while idle or connecting -- never throws,
   expect(stalled).to.be.false;
 });
 
-it('arms the stall timer on mount when phase starts "streaming", firing lyra-stall after stall-threshold-ms of silence', async () => {
+it('arms the stall timer on mount when phase starts "streaming", firing lr-stall after stall-threshold-ms of silence', async () => {
   const el = (await fixture(
-    html`<lyra-stream-status phase="streaming" stall-threshold-ms="40"></lyra-stream-status>`,
+    html`<lr-stream-status phase="streaming" stall-threshold-ms="40"></lr-stream-status>`,
   )) as LyraStreamStatus;
-  await oneEvent(el, 'lyra-stall');
+  await oneEvent(el, 'lr-stall');
   expect(el.phase).to.equal('stalled');
 });
 
 it('recordActivity() while streaming resets the stall deadline instead of just reading a counter', async () => {
   const el = (await fixture(
-    html`<lyra-stream-status phase="streaming" stall-threshold-ms="120"></lyra-stream-status>`,
+    html`<lr-stream-status phase="streaming" stall-threshold-ms="120"></lr-stream-status>`,
   )) as LyraStreamStatus;
   let stalled = false;
-  el.addEventListener('lyra-stall', () => (stalled = true));
+  el.addEventListener('lr-stall', () => (stalled = true));
 
   await aTimeout(70);
   el.recordActivity(); // pushes the 120ms deadline out from here
@@ -80,10 +80,10 @@ it('recordActivity() while streaming resets the stall deadline instead of just r
 
 it('re-arms the stall timer with the new deadline the moment stallThresholdMs changes mid-stream', async () => {
   const el = (await fixture(
-    html`<lyra-stream-status phase="streaming" stall-threshold-ms="500"></lyra-stream-status>`,
+    html`<lr-stream-status phase="streaming" stall-threshold-ms="500"></lr-stream-status>`,
   )) as LyraStreamStatus;
   let stalled = false;
-  el.addEventListener('lyra-stall', () => (stalled = true));
+  el.addEventListener('lr-stall', () => (stalled = true));
 
   // Shortening the threshold well below the already-armed 500ms deadline
   // must take effect immediately -- if the already-running timer were left
@@ -99,28 +99,28 @@ it('re-arms the stall timer with the new deadline the moment stallThresholdMs ch
   expect(el.phase).to.equal('stalled');
 });
 
-it('recordActivity() recovers from stalled, firing lyra-recover, and can stall again later', async () => {
+it('recordActivity() recovers from stalled, firing lr-recover, and can stall again later', async () => {
   const el = (await fixture(
-    html`<lyra-stream-status phase="streaming" stall-threshold-ms="40"></lyra-stream-status>`,
+    html`<lr-stream-status phase="streaming" stall-threshold-ms="40"></lr-stream-status>`,
   )) as LyraStreamStatus;
-  await oneEvent(el, 'lyra-stall');
+  await oneEvent(el, 'lr-stall');
   expect(el.phase).to.equal('stalled');
 
-  const recovered = oneEvent(el, 'lyra-recover');
+  const recovered = oneEvent(el, 'lr-recover');
   el.recordActivity();
   await recovered;
   expect(el.phase).to.equal('streaming');
 
-  await oneEvent(el, 'lyra-stall');
+  await oneEvent(el, 'lr-stall');
   expect(el.phase, 'the recovered timer must have been armed fresh, not left disarmed').to.equal('stalled');
 });
 
 it('clears the stall timer when the host directly reassigns phase away from "streaming"', async () => {
   const el = (await fixture(
-    html`<lyra-stream-status phase="streaming" stall-threshold-ms="40"></lyra-stream-status>`,
+    html`<lr-stream-status phase="streaming" stall-threshold-ms="40"></lr-stream-status>`,
   )) as LyraStreamStatus;
   let stalled = false;
-  el.addEventListener('lyra-stall', () => (stalled = true));
+  el.addEventListener('lr-stall', () => (stalled = true));
 
   el.phase = 'idle';
   await el.updateComplete;
@@ -130,16 +130,16 @@ it('clears the stall timer when the host directly reassigns phase away from "str
   expect(el.phase).to.equal('idle');
 });
 
-it('fires lyra-stall for a direct host assignment to phase="stalled", not just the internal timer', async () => {
-  const el = (await fixture(html`<lyra-stream-status phase="streaming"></lyra-stream-status>`)) as LyraStreamStatus;
-  const ev = oneEvent(el, 'lyra-stall');
+it('fires lr-stall for a direct host assignment to phase="stalled", not just the internal timer', async () => {
+  const el = (await fixture(html`<lr-stream-status phase="streaming"></lr-stream-status>`)) as LyraStreamStatus;
+  const ev = oneEvent(el, 'lr-stall');
   el.phase = 'stalled';
   await ev;
 });
 
-it('fires lyra-recover for any direct assignment out of "stalled", even to a phase other than "streaming"', async () => {
-  const el = (await fixture(html`<lyra-stream-status phase="stalled"></lyra-stream-status>`)) as LyraStreamStatus;
-  const ev = oneEvent(el, 'lyra-recover');
+it('fires lr-recover for any direct assignment out of "stalled", even to a phase other than "streaming"', async () => {
+  const el = (await fixture(html`<lr-stream-status phase="stalled"></lr-stream-status>`)) as LyraStreamStatus;
+  const ev = oneEvent(el, 'lr-recover');
   el.phase = 'connecting';
   await ev;
   expect(el.phase).to.equal('connecting');
@@ -150,20 +150,20 @@ it('fires lyra-recover for any direct assignment out of "stalled", even to a pha
 });
 
 it('announces a neutral message, never "restored", when a stall is abandoned to idle', async () => {
-  const el = (await fixture(html`<lyra-stream-status phase="stalled"></lyra-stream-status>`)) as LyraStreamStatus;
-  const ev = oneEvent(el, 'lyra-recover');
+  const el = (await fixture(html`<lr-stream-status phase="stalled"></lr-stream-status>`)) as LyraStreamStatus;
+  const ev = oneEvent(el, 'lr-recover');
   el.phase = 'idle';
   await ev;
   expect(el.phase).to.equal('idle');
   expect(liveRegionText(el)).to.equal('No longer stalled.');
 });
 
-it('does not fire lyra-stall/lyra-recover again for a no-op reassignment to the same phase', async () => {
-  const el = (await fixture(html`<lyra-stream-status phase="stalled"></lyra-stream-status>`)) as LyraStreamStatus;
+it('does not fire lr-stall/lr-recover again for a no-op reassignment to the same phase', async () => {
+  const el = (await fixture(html`<lr-stream-status phase="stalled"></lr-stream-status>`)) as LyraStreamStatus;
   let stallCount = 0;
   let recoverCount = 0;
-  el.addEventListener('lyra-stall', () => stallCount++);
-  el.addEventListener('lyra-recover', () => recoverCount++);
+  el.addEventListener('lr-stall', () => stallCount++);
+  el.addEventListener('lr-recover', () => recoverCount++);
 
   el.phase = 'stalled';
   await el.updateComplete;
@@ -172,10 +172,10 @@ it('does not fire lyra-stall/lyra-recover again for a no-op reassignment to the 
   expect(recoverCount).to.equal(0);
 });
 
-it('never fires lyra-stall nor announces for the phase the element mounts with, even "stalled"', async () => {
-  const el = (await fixture(html`<lyra-stream-status phase="stalled"></lyra-stream-status>`)) as LyraStreamStatus;
+it('never fires lr-stall nor announces for the phase the element mounts with, even "stalled"', async () => {
+  const el = (await fixture(html`<lr-stream-status phase="stalled"></lr-stream-status>`)) as LyraStreamStatus;
   let stalled = false;
-  el.addEventListener('lyra-stall', () => (stalled = true));
+  el.addEventListener('lr-stall', () => (stalled = true));
   await el.updateComplete;
   expect(stalled).to.be.false;
   expect(liveRegionText(el)).to.equal('');
@@ -183,15 +183,15 @@ it('never fires lyra-stall nor announces for the phase the element mounts with, 
 
 it('announces entering stalled assertively and recovering politely via the internal live region', async () => {
   const el = (await fixture(
-    html`<lyra-stream-status phase="streaming" stall-threshold-ms="40"></lyra-stream-status>`,
+    html`<lr-stream-status phase="streaming" stall-threshold-ms="40"></lr-stream-status>`,
   )) as LyraStreamStatus;
-  const region = el.shadowRoot!.querySelector('lyra-live-region') as LyraLiveRegion;
+  const region = el.shadowRoot!.querySelector('lr-live-region') as LyraLiveRegion;
 
-  await oneEvent(el, 'lyra-stall');
+  await oneEvent(el, 'lr-stall');
   expect(liveRegionText(el)).to.equal('Connection stalled.');
   expect(region.mode).to.equal('assertive');
 
-  const recovered = oneEvent(el, 'lyra-recover');
+  const recovered = oneEvent(el, 'lr-recover');
   el.recordActivity();
   await recovered;
   expect(liveRegionText(el)).to.equal('Connection restored.');
@@ -200,7 +200,7 @@ it('announces entering stalled assertively and recovering politely via the inter
 
 it('never announces from recordActivity() itself while streaming -- only an actual transition announces', async () => {
   const el = (await fixture(
-    html`<lyra-stream-status phase="streaming" stall-threshold-ms="500"></lyra-stream-status>`,
+    html`<lr-stream-status phase="streaming" stall-threshold-ms="500"></lr-stream-status>`,
   )) as LyraStreamStatus;
   el.recordActivity();
   el.recordActivity();
@@ -212,17 +212,17 @@ it('never announces from recordActivity() itself while streaming -- only an actu
 describe('announcement/message localization', () => {
   it('localizes the stall/recover live-region announcements via this.localize()', async () => {
     const el = (await fixture(
-      html`<lyra-stream-status
+      html`<lr-stream-status
         phase="streaming"
         stall-threshold-ms="40"
         .strings=${{ streamStallAnnounce: 'Connexion interrompue.', streamRecoverAnnounce: 'Connexion rétablie.' }}
-      ></lyra-stream-status>`,
+      ></lr-stream-status>`,
     )) as LyraStreamStatus;
 
-    await oneEvent(el, 'lyra-stall');
+    await oneEvent(el, 'lr-stall');
     expect(liveRegionText(el)).to.equal('Connexion interrompue.');
 
-    const recovered = oneEvent(el, 'lyra-recover');
+    const recovered = oneEvent(el, 'lr-recover');
     el.recordActivity();
     await recovered;
     expect(liveRegionText(el)).to.equal('Connexion rétablie.');
@@ -230,12 +230,12 @@ describe('announcement/message localization', () => {
 
   it('localizes the neutral "no longer stalled" announcement via this.localize() when a stall is abandoned to idle', async () => {
     const el = (await fixture(
-      html`<lyra-stream-status
+      html`<lr-stream-status
         phase="stalled"
         .strings=${{ streamStallClearedAnnounce: 'Plus interrompu.' }}
-      ></lyra-stream-status>`,
+      ></lr-stream-status>`,
     )) as LyraStreamStatus;
-    const ev = oneEvent(el, 'lyra-recover');
+    const ev = oneEvent(el, 'lr-recover');
     el.phase = 'idle';
     await ev;
     expect(liveRegionText(el)).to.equal('Plus interrompu.');
@@ -243,10 +243,10 @@ describe('announcement/message localization', () => {
 
   it('localizes the default stalled message via this.localize() when .strings overrides streamStalled', async () => {
     const el = (await fixture(
-      html`<lyra-stream-status
+      html`<lr-stream-status
         phase="stalled"
         .strings=${{ streamStalled: 'Cela prend plus de temps que d’habitude…' }}
-      ></lyra-stream-status>`,
+      ></lr-stream-status>`,
     )) as LyraStreamStatus;
     const message = el.shadowRoot!.querySelector('[part="message"]') as HTMLElement;
     expect(message.textContent!.trim()).to.equal('Cela prend plus de temps que d’habitude…');
@@ -254,7 +254,7 @@ describe('announcement/message localization', () => {
 });
 
 it('renders the message part (default slot) only while phase="stalled", with a built-in default when nothing is slotted', async () => {
-  const el = (await fixture(html`<lyra-stream-status phase="streaming"></lyra-stream-status>`)) as LyraStreamStatus;
+  const el = (await fixture(html`<lr-stream-status phase="streaming"></lr-stream-status>`)) as LyraStreamStatus;
   expect(el.shadowRoot!.querySelector('[part="message"]')).to.not.exist;
 
   el.phase = 'stalled';
@@ -276,9 +276,9 @@ it('shows the built-in default message even when the only assigned node is white
   // suppressed by any assigned node, whitespace or not, which previously
   // left this message area blank in exactly this common, unremarkable case.
   const el = (await fixture(html`
-    <lyra-stream-status phase="stalled">
+    <lr-stream-status phase="stalled">
       <button slot="actions">Retry</button>
-    </lyra-stream-status>
+    </lr-stream-status>
   `)) as LyraStreamStatus;
   const message = el.shadowRoot!.querySelector('[part="message"]') as HTMLElement;
   expect(message.textContent!.trim()).to.equal('Taking longer than usual…');
@@ -286,13 +286,13 @@ it('shows the built-in default message even when the only assigned node is white
 
 it('slotted default-slot content overrides the built-in stalled message', async () => {
   const el = (await fixture(
-    html`<lyra-stream-status phase="stalled">Custom stall copy</lyra-stream-status>`,
+    html`<lr-stream-status phase="stalled">Custom stall copy</lr-stream-status>`,
   )) as LyraStreamStatus;
   const message = el.shadowRoot!.querySelector('[part="message"]') as HTMLElement;
   // `message.textContent` never reflects real assigned/distributed content
   // (that lives in the light DOM, a different tree from the shadow tree
   // `textContent` walks) -- only `assignedNodes({flatten: true})` shows what
-  // the <slot> actually renders, mirroring lyra-tool-call-chip's identical
+  // the <slot> actually renders, mirroring lr-tool-call-chip's identical
   // check.
   const slot = message.querySelector('slot') as HTMLSlotElement;
   const text = slot
@@ -311,7 +311,7 @@ it('slotted default-slot content overrides the built-in stalled message', async 
 });
 
 it('always renders the actions slot wrapper regardless of phase, hidden only while nothing is slotted', async () => {
-  const el = (await fixture(html`<lyra-stream-status phase="idle"></lyra-stream-status>`)) as LyraStreamStatus;
+  const el = (await fixture(html`<lr-stream-status phase="idle"></lr-stream-status>`)) as LyraStreamStatus;
   const actions = el.shadowRoot!.querySelector('[part="actions"]') as HTMLElement;
   expect(actions).to.exist;
   expect(actions.hasAttribute('hidden')).to.be.true;
@@ -323,14 +323,14 @@ it('always renders the actions slot wrapper regardless of phase, hidden only whi
 
 it('shows the actions slot once something is slotted, detected on first paint and via slotchange', async () => {
   const el = (await fixture(
-    html`<lyra-stream-status phase="stalled"><button slot="actions">Retry</button></lyra-stream-status>`,
+    html`<lr-stream-status phase="stalled"><button slot="actions">Retry</button></lr-stream-status>`,
   )) as LyraStreamStatus;
   const actions = el.shadowRoot!.querySelector('[part="actions"]') as HTMLElement;
   expect(actions.hasAttribute('hidden')).to.be.false;
 
   const button = document.createElement('button');
   button.slot = 'actions';
-  const other = (await fixture(html`<lyra-stream-status phase="idle"></lyra-stream-status>`)) as LyraStreamStatus;
+  const other = (await fixture(html`<lr-stream-status phase="idle"></lr-stream-status>`)) as LyraStreamStatus;
   const otherActions = other.shadowRoot!.querySelector('[part="actions"]') as HTMLElement;
   const otherSlot = other.shadowRoot!.querySelector('slot[name="actions"]') as HTMLSlotElement;
   expect(otherActions.hasAttribute('hidden')).to.be.true;
@@ -343,10 +343,10 @@ it('shows the actions slot once something is slotted, detected on first paint an
 
 it('clears the stall timer on disconnect so it cannot fire on a detached element', async () => {
   const el = (await fixture(
-    html`<lyra-stream-status phase="streaming" stall-threshold-ms="40"></lyra-stream-status>`,
+    html`<lr-stream-status phase="streaming" stall-threshold-ms="40"></lr-stream-status>`,
   )) as LyraStreamStatus;
   let stalled = false;
-  el.addEventListener('lyra-stall', () => (stalled = true));
+  el.addEventListener('lr-stall', () => (stalled = true));
 
   el.remove();
   await aTimeout(150);
@@ -355,10 +355,10 @@ it('clears the stall timer on disconnect so it cannot fire on a detached element
 
 it('re-arms the stall timer on reconnect while still "streaming", e.g. after being moved elsewhere in the page', async () => {
   const el = (await fixture(
-    html`<lyra-stream-status phase="streaming" stall-threshold-ms="60"></lyra-stream-status>`,
+    html`<lr-stream-status phase="streaming" stall-threshold-ms="60"></lr-stream-status>`,
   )) as LyraStreamStatus;
   let stalled = false;
-  el.addEventListener('lyra-stall', () => (stalled = true));
+  el.addEventListener('lr-stall', () => (stalled = true));
 
   // Reparenting fires disconnectedCallback (which disarms the timer) then
   // connectedCallback, with `phase` never changing -- no `updated()` cycle
@@ -374,9 +374,9 @@ it('re-arms the stall timer on reconnect while still "streaming", e.g. after bei
 });
 
 it('does not arm a stall timer on connect while phase is not "streaming"', async () => {
-  const el = (await fixture(html`<lyra-stream-status stall-threshold-ms="40"></lyra-stream-status>`)) as LyraStreamStatus;
+  const el = (await fixture(html`<lr-stream-status stall-threshold-ms="40"></lr-stream-status>`)) as LyraStreamStatus;
   let stalled = false;
-  el.addEventListener('lyra-stall', () => (stalled = true));
+  el.addEventListener('lr-stall', () => (stalled = true));
 
   const parent = el.parentNode!;
   parent.removeChild(el);
@@ -389,10 +389,10 @@ it('does not arm a stall timer on connect while phase is not "streaming"', async
 
 it('never arms a timer for a non-positive stall-threshold-ms', async () => {
   const el = (await fixture(
-    html`<lyra-stream-status phase="streaming" stall-threshold-ms="0"></lyra-stream-status>`,
+    html`<lr-stream-status phase="streaming" stall-threshold-ms="0"></lr-stream-status>`,
   )) as LyraStreamStatus;
   let stalled = false;
-  el.addEventListener('lyra-stall', () => (stalled = true));
+  el.addEventListener('lr-stall', () => (stalled = true));
   await aTimeout(80);
   expect(stalled).to.be.false;
   expect(el.phase).to.equal('streaming');
@@ -401,41 +401,41 @@ it('never arms a timer for a non-positive stall-threshold-ms', async () => {
 it('caps an absurdly large stall-threshold-ms at the browser timer ceiling instead of overflowing into an near-immediate stall', async () => {
   // `setTimeout` takes a 32-bit signed-int delay under the hood -- a raw value above
   // MAX_TIMEOUT_MS (2_147_483_647) overflows and gets silently coerced down to ~1ms in every
-  // engine this library targets, which would fire `lyra-stall` almost instantly instead of after
+  // engine this library targets, which would fire `lr-stall` almost instantly instead of after
   // the (much longer) delay the host actually asked for. finiteDuration's cap prevents that.
   const el = (await fixture(
-    html`<lyra-stream-status phase="streaming" stall-threshold-ms="9007199254740991"></lyra-stream-status>`,
+    html`<lr-stream-status phase="streaming" stall-threshold-ms="9007199254740991"></lr-stream-status>`,
   )) as LyraStreamStatus;
   let stalled = false;
-  el.addEventListener('lyra-stall', () => (stalled = true));
+  el.addEventListener('lr-stall', () => (stalled = true));
   await aTimeout(80);
   expect(stalled, 'an uncapped delay would have overflowed and fired within a few ms').to.be.false;
   expect(el.phase).to.equal('streaming');
 });
 
 it('is accessible in the default idle state', async () => {
-  const el = (await fixture(html`<lyra-stream-status></lyra-stream-status>`)) as LyraStreamStatus;
+  const el = (await fixture(html`<lr-stream-status></lr-stream-status>`)) as LyraStreamStatus;
   await expect(el).to.be.accessible();
 });
 
 it('is accessible while stalled with slotted message and actions', async () => {
   const el = (await fixture(html`
-    <lyra-stream-status phase="stalled">
+    <lr-stream-status phase="stalled">
       Taking a while…
       <button slot="actions">Retry</button>
-    </lyra-stream-status>
+    </lr-stream-status>
   `)) as LyraStreamStatus;
   await expect(el).to.be.accessible();
 });
 
 it('uses the ambient transition token for its streaming-phase pulse animation', async () => {
-  const el = (await fixture(html`<lyra-stream-status phase="streaming"></lyra-stream-status>`)) as LyraStreamStatus;
+  const el = (await fixture(html`<lr-stream-status phase="streaming"></lr-stream-status>`)) as LyraStreamStatus;
   const indicator = el.shadowRoot!.querySelector('[part="indicator"]') as HTMLElement;
   expect(getComputedStyle(indicator).animationDuration).to.equal('1.8s');
 });
 
 it('does not slow down the base/border-color state transitions (only the loop uses the ambient token)', async () => {
-  const el = (await fixture(html`<lyra-stream-status phase="streaming"></lyra-stream-status>`)) as LyraStreamStatus;
+  const el = (await fixture(html`<lr-stream-status phase="streaming"></lr-stream-status>`)) as LyraStreamStatus;
   const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
   // [part='base'] has two comma-separated transition entries (background-color,
   // border-color), so the computed transitionDuration list has one 0.18s per

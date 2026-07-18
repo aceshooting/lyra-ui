@@ -55,7 +55,7 @@ it('computeAppRailMode prefers mobile when both breakpoints match at once', () =
 // -- default state / reflection -----------------------------------------
 
 it('defaults to full mode, reflected as an attribute, with the overlay closed', async () => {
-  const el = (await fixture(html`<lyra-app-rail><a href="/a">A</a></lyra-app-rail>`)) as LyraAppRail;
+  const el = (await fixture(html`<lr-app-rail><a href="/a">A</a></lr-app-rail>`)) as LyraAppRail;
   expect(el.mode).to.equal('full');
   expect(el.getAttribute('mode')).to.equal('full');
   expect(el.open).to.be.false;
@@ -63,19 +63,19 @@ it('defaults to full mode, reflected as an attribute, with the overlay closed', 
 });
 
 it('uses the label prop as the nav landmark accessible name', async () => {
-  const el = (await fixture(html`<lyra-app-rail label="Main"><a href="/a">A</a></lyra-app-rail>`)) as LyraAppRail;
+  const el = (await fixture(html`<lr-app-rail label="Main"><a href="/a">A</a></lr-app-rail>`)) as LyraAppRail;
   expect(el.shadowRoot!.querySelector('[part="base"], [part="panel"]')!.getAttribute('aria-label')).to.equal('Main');
 });
 
 it('hides app-rail-item labels visually in icon-only mode while retaining their accessible names', async () => {
   const el = (await fixture(html`
-    <lyra-app-rail mode="icon-only">
-      <lyra-app-rail-item href="/inbox" aria-label="Inbox">
+    <lr-app-rail mode="icon-only">
+      <lr-app-rail-item href="/inbox" aria-label="Inbox">
         <span slot="icon" aria-hidden="true">📥</span>Inbox with a long localized label
-      </lyra-app-rail-item>
-    </lyra-app-rail>
+      </lr-app-rail-item>
+    </lr-app-rail>
   `)) as LyraAppRail;
-  const item = el.querySelector('lyra-app-rail-item')! as HTMLElement & { updateComplete: Promise<unknown> };
+  const item = el.querySelector('lr-app-rail-item')! as HTMLElement & { updateComplete: Promise<unknown> };
   await item.updateComplete;
 
   expect(item.hasAttribute('icon-only')).to.be.true;
@@ -92,9 +92,9 @@ it('hides app-rail-item labels visually in icon-only mode while retaining their 
 
 // -- breakpoint-driven mode wiring ---------------------------------------
 
-it('switches to icon-only and emits lyra-mode-change when the icon-only query starts matching', async () => {
-  const el = (await fixture(html`<lyra-app-rail><a href="/a">A</a></lyra-app-rail>`)) as LyraAppRail;
-  const promise = oneEvent(el, 'lyra-mode-change');
+it('switches to icon-only and emits lr-mode-change when the icon-only query starts matching', async () => {
+  const el = (await fixture(html`<lr-app-rail><a href="/a">A</a></lr-app-rail>`)) as LyraAppRail;
+  const promise = oneEvent(el, 'lr-mode-change');
   fireIconOnlyChange(el, true);
   const ev = await promise;
 
@@ -110,7 +110,7 @@ it('switches to icon-only and emits lyra-mode-change when the icon-only query st
 });
 
 it('switches to mobile when the mobile query matches, overriding a matching icon-only query', async () => {
-  const el = (await fixture(html`<lyra-app-rail><a href="/a">A</a></lyra-app-rail>`)) as LyraAppRail;
+  const el = (await fixture(html`<lr-app-rail><a href="/a">A</a></lr-app-rail>`)) as LyraAppRail;
   fireIconOnlyChange(el, true);
   await el.updateComplete;
   fireMobileChange(el, true);
@@ -119,10 +119,10 @@ it('switches to mobile when the mobile query matches, overriding a matching icon
   expect(el.mode).to.equal('mobile');
 });
 
-it('does not emit lyra-mode-change for a redundant reassignment to the current mode', async () => {
-  const el = (await fixture(html`<lyra-app-rail><a href="/a">A</a></lyra-app-rail>`)) as LyraAppRail;
+it('does not emit lr-mode-change for a redundant reassignment to the current mode', async () => {
+  const el = (await fixture(html`<lr-app-rail><a href="/a">A</a></lr-app-rail>`)) as LyraAppRail;
   let count = 0;
-  el.addEventListener('lyra-mode-change', () => count++);
+  el.addEventListener('lr-mode-change', () => count++);
 
   el.mode = 'full';
   await el.updateComplete;
@@ -143,7 +143,7 @@ it('detaches the old MediaQueryList listener and attaches a new one when icon-on
     } as unknown as MediaQueryList;
   }) as typeof window.matchMedia;
 
-  const el = (await fixture(html`<lyra-app-rail><a href="/a">A</a></lyra-app-rail>`)) as LyraAppRail;
+  const el = (await fixture(html`<lr-app-rail><a href="/a">A</a></lr-app-rail>`)) as LyraAppRail;
   // One MediaQueryList per breakpoint on initial connect.
   expect(created.length).to.equal(2);
   expect(created[0]!.addCalls).to.equal(1);
@@ -162,7 +162,7 @@ it('detaches the old MediaQueryList listener and attaches a new one when icon-on
 // -- forcing / auto sentinel ----------------------------------------------
 
 it('forcing mode stops it from responding to further matchMedia changes', async () => {
-  const el = (await fixture(html`<lyra-app-rail><a href="/a">A</a></lyra-app-rail>`)) as LyraAppRail;
+  const el = (await fixture(html`<lr-app-rail><a href="/a">A</a></lr-app-rail>`)) as LyraAppRail;
   el.mode = 'full';
   await el.updateComplete;
 
@@ -173,7 +173,7 @@ it('forcing mode stops it from responding to further matchMedia changes', async 
 });
 
 it('assigning "auto" releases a forced mode and re-syncs to the live breakpoint state', async () => {
-  const el = (await fixture(html`<lyra-app-rail><a href="/a">A</a></lyra-app-rail>`)) as LyraAppRail;
+  const el = (await fixture(html`<lr-app-rail><a href="/a">A</a></lr-app-rail>`)) as LyraAppRail;
   fireMobileChange(el, true);
   await el.updateComplete;
   expect(el.mode).to.equal('mobile');
@@ -188,18 +188,18 @@ it('assigning "auto" releases a forced mode and re-syncs to the live breakpoint 
 });
 
 it('ignores an invalid mode assignment', async () => {
-  const el = (await fixture(html`<lyra-app-rail><a href="/a">A</a></lyra-app-rail>`)) as LyraAppRail;
+  const el = (await fixture(html`<lr-app-rail><a href="/a">A</a></lr-app-rail>`)) as LyraAppRail;
   (el as unknown as { mode: string }).mode = 'bogus';
   await el.updateComplete;
   expect(el.mode).to.equal('full');
 });
 
-it('force-closes an open overlay and emits lyra-toggle when mode leaves mobile', async () => {
-  const el = (await fixture(html`<lyra-app-rail mode="mobile"><a href="/a">A</a></lyra-app-rail>`)) as LyraAppRail;
+it('force-closes an open overlay and emits lr-toggle when mode leaves mobile', async () => {
+  const el = (await fixture(html`<lr-app-rail mode="mobile"><a href="/a">A</a></lr-app-rail>`)) as LyraAppRail;
   el.open = true;
   await el.updateComplete;
 
-  const promise = oneEvent(el, 'lyra-toggle');
+  const promise = oneEvent(el, 'lr-toggle');
   el.mode = 'full';
   const ev = await promise;
 
@@ -210,7 +210,7 @@ it('force-closes an open overlay and emits lyra-toggle when mode leaves mobile',
 // -- mobile overlay: toggle button ----------------------------------------
 
 it('the toggle button opens and closes the overlay, updating aria-expanded/aria-label', async () => {
-  const el = (await fixture(html`<lyra-app-rail mode="mobile"><a href="/a">A</a></lyra-app-rail>`)) as LyraAppRail;
+  const el = (await fixture(html`<lr-app-rail mode="mobile"><a href="/a">A</a></lr-app-rail>`)) as LyraAppRail;
   const toggle = el.shadowRoot!.querySelector('[part="toggle"]') as HTMLButtonElement;
   expect(toggle.getAttribute('aria-expanded')).to.equal('false');
   expect(toggle.getAttribute('aria-label')).to.equal('Open navigation');
@@ -226,21 +226,21 @@ it('the toggle button opens and closes the overlay, updating aria-expanded/aria-
   expect(el.open).to.be.false;
 });
 
-it('toggling emits lyra-toggle with the new open state', async () => {
-  const el = (await fixture(html`<lyra-app-rail mode="mobile"><a href="/a">A</a></lyra-app-rail>`)) as LyraAppRail;
+it('toggling emits lr-toggle with the new open state', async () => {
+  const el = (await fixture(html`<lr-app-rail mode="mobile"><a href="/a">A</a></lr-app-rail>`)) as LyraAppRail;
   const toggle = el.shadowRoot!.querySelector('[part="toggle"]') as HTMLButtonElement;
 
-  const promise = oneEvent(el, 'lyra-toggle');
+  const promise = oneEvent(el, 'lr-toggle');
   toggle.click();
   const ev = await promise;
 
   expect((ev.detail as AppRailToggleDetail).open).to.be.true;
 });
 
-it('setting open directly does not emit lyra-toggle (mirrors lyra-dialog open/close split)', async () => {
-  const el = (await fixture(html`<lyra-app-rail mode="mobile"><a href="/a">A</a></lyra-app-rail>`)) as LyraAppRail;
+it('setting open directly does not emit lr-toggle (mirrors lr-dialog open/close split)', async () => {
+  const el = (await fixture(html`<lr-app-rail mode="mobile"><a href="/a">A</a></lr-app-rail>`)) as LyraAppRail;
   let fired = false;
-  el.addEventListener('lyra-toggle', () => (fired = true));
+  el.addEventListener('lr-toggle', () => (fired = true));
 
   el.open = true;
   await el.updateComplete;
@@ -252,7 +252,7 @@ it('setting open directly does not emit lyra-toggle (mirrors lyra-dialog open/cl
 
 it('flips the mobile panel\'s offscreen transform under dir="rtl", mirroring the LTR closed-state transform', async () => {
   const ltrEl = (await fixture(
-    html`<lyra-app-rail mode="mobile"><button>a</button></lyra-app-rail>`,
+    html`<lr-app-rail mode="mobile"><button>a</button></lr-app-rail>`,
   )) as LyraAppRail;
   await ltrEl.updateComplete;
   const ltrPanel = ltrEl.shadowRoot!.querySelector('[part="panel"]') as HTMLElement;
@@ -265,7 +265,7 @@ it('flips the mobile panel\'s offscreen transform under dir="rtl", mirroring the
   // an immediate getComputedStyle() read a mid-transition value rather than
   // the final one.
   const rtlEl = (await fixture(
-    html`<lyra-app-rail mode="mobile" dir="rtl"><button>a</button></lyra-app-rail>`,
+    html`<lr-app-rail mode="mobile" dir="rtl"><button>a</button></lr-app-rail>`,
   )) as LyraAppRail;
   await rtlEl.updateComplete;
   const rtlPanel = rtlEl.shadowRoot!.querySelector('[part="panel"]') as HTMLElement;
@@ -289,7 +289,7 @@ it('flips the mobile panel\'s offscreen transform under dir="rtl", mirroring the
 
 it('closes on backdrop click', async () => {
   const el = (await fixture(
-    html`<lyra-app-rail mode="mobile" open><a href="/a">A</a></lyra-app-rail>`,
+    html`<lr-app-rail mode="mobile" open><a href="/a">A</a></lr-app-rail>`,
   )) as LyraAppRail;
   await el.updateComplete;
   (el.shadowRoot!.querySelector('[part="backdrop"]') as HTMLElement).click();
@@ -299,7 +299,7 @@ it('closes on backdrop click', async () => {
 
 it('closes on Escape while open, ignores Escape while closed', async () => {
   const el = (await fixture(
-    html`<lyra-app-rail mode="mobile" open><a href="/a">A</a></lyra-app-rail>`,
+    html`<lr-app-rail mode="mobile" open><a href="/a">A</a></lr-app-rail>`,
   )) as LyraAppRail;
   await el.updateComplete;
   document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
@@ -307,7 +307,7 @@ it('closes on Escape while open, ignores Escape while closed', async () => {
   expect(el.open).to.be.false;
 
   let fired = false;
-  el.addEventListener('lyra-toggle', () => (fired = true));
+  el.addEventListener('lr-toggle', () => (fired = true));
   document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
   await el.updateComplete;
   expect(fired).to.be.false;
@@ -315,7 +315,7 @@ it('closes on Escape while open, ignores Escape while closed', async () => {
 
 it('closes when a nav item is clicked while open, but not while closed', async () => {
   const el = (await fixture(
-    html`<lyra-app-rail mode="mobile"><button>Item</button></lyra-app-rail>`,
+    html`<lr-app-rail mode="mobile"><button>Item</button></lr-app-rail>`,
   )) as LyraAppRail;
   const item = el.querySelector('button') as HTMLButtonElement;
 
@@ -332,11 +332,11 @@ it('closes when a nav item is clicked while open, but not while closed', async (
 
 it('does not close on a click inside the header or footer slot while open', async () => {
   const el = (await fixture(
-    html`<lyra-app-rail mode="mobile" open>
+    html`<lr-app-rail mode="mobile" open>
       <span slot="header"><button>header-btn</button></span>
       <button>nav-btn</button>
       <span slot="footer"><button>footer-btn</button></span>
-    </lyra-app-rail>`,
+    </lr-app-rail>`,
   )) as LyraAppRail;
   await el.updateComplete;
   (el.querySelector('[slot="header"] button') as HTMLButtonElement).click();
@@ -348,7 +348,7 @@ it('does not close on a click inside the header or footer slot while open', asyn
 
 it('moves focus to the first focusable nav item when the overlay opens', async () => {
   const el = (await fixture(
-    html`<lyra-app-rail mode="mobile"><button>first</button><button>second</button></lyra-app-rail>`,
+    html`<lr-app-rail mode="mobile"><button>first</button><button>second</button></lr-app-rail>`,
   )) as LyraAppRail;
   const first = el.querySelector('button') as HTMLButtonElement;
 
@@ -359,7 +359,7 @@ it('moves focus to the first focusable nav item when the overlay opens', async (
 });
 
 it('focuses the panel itself as a fallback when there is nothing focusable', async () => {
-  const el = (await fixture(html`<lyra-app-rail mode="mobile"><p>no controls</p></lyra-app-rail>`)) as LyraAppRail;
+  const el = (await fixture(html`<lr-app-rail mode="mobile"><p>no controls</p></lr-app-rail>`)) as LyraAppRail;
   el.open = true;
   await el.updateComplete;
   expect(el.shadowRoot!.activeElement).to.equal(el.shadowRoot!.querySelector('[part="panel"]'));
@@ -367,11 +367,11 @@ it('focuses the panel itself as a fallback when there is nothing focusable', asy
 
 it('traps Tab focus across header, nav, and footer slots, wrapping last->first and first->last', async () => {
   const el = (await fixture(
-    html`<lyra-app-rail mode="mobile" open>
+    html`<lr-app-rail mode="mobile" open>
       <span slot="header"><button>header-btn</button></span>
       <button>nav-btn</button>
       <span slot="footer"><button>footer-btn</button></span>
-    </lyra-app-rail>`,
+    </lr-app-rail>`,
   )) as LyraAppRail;
   await el.updateComplete;
   const first = el.querySelector('[slot="header"] button') as HTMLButtonElement;
@@ -395,7 +395,7 @@ it('traps Tab focus across header, nav, and footer slots, wrapping last->first a
 });
 
 it('returns focus to the toggle button after closing', async () => {
-  const el = (await fixture(html`<lyra-app-rail mode="mobile"><button>a</button></lyra-app-rail>`)) as LyraAppRail;
+  const el = (await fixture(html`<lr-app-rail mode="mobile"><button>a</button></lr-app-rail>`)) as LyraAppRail;
   const toggle = el.shadowRoot!.querySelector('[part="toggle"]') as HTMLButtonElement;
 
   toggle.click();
@@ -411,7 +411,7 @@ it('returns focus to the toggle button after closing', async () => {
 });
 
 it('returns focus to whatever triggered it (via Escape) even when opened by setting `open` directly rather than clicking the built-in toggle', async () => {
-  const el = (await fixture(html`<lyra-app-rail mode="mobile"><button>a</button></lyra-app-rail>`)) as LyraAppRail;
+  const el = (await fixture(html`<lr-app-rail mode="mobile"><button>a</button></lr-app-rail>`)) as LyraAppRail;
   const outsideTrigger = document.createElement('button');
   document.body.appendChild(outsideTrigger);
   outsideTrigger.focus();
@@ -429,7 +429,7 @@ it('returns focus to whatever triggered it (via Escape) even when opened by sett
 // -- scroll lock --------------------------------------------------------
 
 it('locks document scroll while the overlay is open and releases it on close', async () => {
-  const el = (await fixture(html`<lyra-app-rail mode="mobile"><button>a</button></lyra-app-rail>`)) as LyraAppRail;
+  const el = (await fixture(html`<lr-app-rail mode="mobile"><button>a</button></lr-app-rail>`)) as LyraAppRail;
   el.open = true;
   await el.updateComplete;
   expect(document.documentElement.style.overflow).to.equal('hidden');
@@ -441,7 +441,7 @@ it('locks document scroll while the overlay is open and releases it on close', a
 
 it('releases the scroll lock on disconnect while the overlay is open', async () => {
   const el = (await fixture(
-    html`<lyra-app-rail mode="mobile" open><button>a</button></lyra-app-rail>`,
+    html`<lr-app-rail mode="mobile" open><button>a</button></lr-app-rail>`,
   )) as LyraAppRail;
   await el.updateComplete;
   expect(document.documentElement.style.overflow).to.equal('hidden');
@@ -453,7 +453,7 @@ it('releases the scroll lock on disconnect while the overlay is open', async () 
 
 it('restores the scroll lock and keydown trap when reparented while the overlay is still open', async () => {
   const el = (await fixture(
-    html`<lyra-app-rail mode="mobile" open><button>a</button></lyra-app-rail>`,
+    html`<lr-app-rail mode="mobile" open><button>a</button></lr-app-rail>`,
   )) as LyraAppRail;
   await el.updateComplete;
   expect(document.documentElement.style.overflow).to.equal('hidden');
@@ -475,7 +475,7 @@ it('restores the scroll lock and keydown trap when reparented while the overlay 
 // -- part swap / inert / aria semantics ------------------------------------
 
 it('uses part="base" while inline and part="panel" while mobile -- never both', async () => {
-  const el = (await fixture(html`<lyra-app-rail><button>a</button></lyra-app-rail>`)) as LyraAppRail;
+  const el = (await fixture(html`<lr-app-rail><button>a</button></lr-app-rail>`)) as LyraAppRail;
   expect(el.shadowRoot!.querySelector('[part="base"], [part="panel"]')!.getAttribute('part')).to.equal('base');
 
   el.mode = 'mobile';
@@ -484,7 +484,7 @@ it('uses part="base" while inline and part="panel" while mobile -- never both', 
 });
 
 it('marks the panel inert while mobile and closed, interactive once open', async () => {
-  const el = (await fixture(html`<lyra-app-rail mode="mobile"><button>a</button></lyra-app-rail>`)) as LyraAppRail;
+  const el = (await fixture(html`<lr-app-rail mode="mobile"><button>a</button></lr-app-rail>`)) as LyraAppRail;
   const nav = el.shadowRoot!.querySelector('[part="base"], [part="panel"]') as HTMLElement;
   expect(nav.inert).to.be.true;
 
@@ -494,12 +494,12 @@ it('marks the panel inert while mobile and closed, interactive once open', async
 });
 
 it('is never inert outside mobile mode', async () => {
-  const el = (await fixture(html`<lyra-app-rail><button>a</button></lyra-app-rail>`)) as LyraAppRail;
+  const el = (await fixture(html`<lr-app-rail><button>a</button></lr-app-rail>`)) as LyraAppRail;
   expect((el.shadowRoot!.querySelector('[part="base"], [part="panel"]') as HTMLElement).inert).to.be.false;
 });
 
 it('only sets dialog role/aria-modal while the mobile overlay is actually open', async () => {
-  const el = (await fixture(html`<lyra-app-rail mode="mobile"><button>a</button></lyra-app-rail>`)) as LyraAppRail;
+  const el = (await fixture(html`<lr-app-rail mode="mobile"><button>a</button></lr-app-rail>`)) as LyraAppRail;
   const nav = el.shadowRoot!.querySelector('[part="base"], [part="panel"]') as HTMLElement;
   // A plain landmark role (not "dialog") while closed -- a literal <nav> tag
   // can't have its implicit role swapped for "dialog" without an
@@ -516,7 +516,7 @@ it('only sets dialog role/aria-modal while the mobile overlay is actually open',
 // -- header/footer slot presence --------------------------------------------
 
 it('hides the header/footer wrappers when nothing is slotted, shows them once slotted', async () => {
-  const el = (await fixture(html`<lyra-app-rail><button>a</button></lyra-app-rail>`)) as LyraAppRail;
+  const el = (await fixture(html`<lr-app-rail><button>a</button></lr-app-rail>`)) as LyraAppRail;
   const header = el.shadowRoot!.querySelector('[part="header"]') as HTMLElement;
   const footer = el.shadowRoot!.querySelector('[part="footer"]') as HTMLElement;
   expect(header.hasAttribute('hidden')).to.be.true;
@@ -533,7 +533,7 @@ it('hides the header/footer wrappers when nothing is slotted, shows them once sl
 
 it('renders the header wrapper visible on first paint when header content is present before upgrade', async () => {
   const el = (await fixture(
-    html`<lyra-app-rail><span slot="header">Brand</span><button>a</button></lyra-app-rail>`,
+    html`<lr-app-rail><span slot="header">Brand</span><button>a</button></lr-app-rail>`,
   )) as LyraAppRail;
   const header = el.shadowRoot!.querySelector('[part="header"]') as HTMLElement;
   expect(header.hasAttribute('hidden')).to.be.false;
@@ -542,18 +542,18 @@ it('renders the header wrapper visible on first paint when header content is pre
 // -- accessibility ------------------------------------------------------
 
 it('is accessible in full mode, empty', async () => {
-  const el = (await fixture(html`<lyra-app-rail></lyra-app-rail>`)) as LyraAppRail;
+  const el = (await fixture(html`<lr-app-rail></lr-app-rail>`)) as LyraAppRail;
   await expect(el).to.be.accessible();
 });
 
 it('is accessible in full mode with header/nav/footer content', async () => {
   const el = (await fixture(html`
-    <lyra-app-rail>
+    <lr-app-rail>
       <span slot="header">Brand</span>
       <a href="/inbox" aria-label="Inbox">Inbox</a>
       <a href="/settings" aria-label="Settings">Settings</a>
       <span slot="footer">Account</span>
-    </lyra-app-rail>
+    </lr-app-rail>
   `)) as LyraAppRail;
   await el.updateComplete;
   await expect(el).to.be.accessible();
@@ -561,11 +561,11 @@ it('is accessible in full mode with header/nav/footer content', async () => {
 
 it('is accessible with the mobile overlay open', async () => {
   const el = (await fixture(html`
-    <lyra-app-rail mode="mobile" open>
+    <lr-app-rail mode="mobile" open>
       <span slot="header">Brand</span>
       <a href="/inbox" aria-label="Inbox">Inbox</a>
       <span slot="footer">Account</span>
-    </lyra-app-rail>
+    </lr-app-rail>
   `)) as LyraAppRail;
   await el.updateComplete;
   await expect(el).to.be.accessible();
@@ -575,7 +575,7 @@ it('is accessible with the mobile overlay open', async () => {
 
 describe('toggle button i18n', () => {
   it('uses the openNavigation message key (not a hardcoded "Open" + " navigation" concatenation) when closed', async () => {
-    const el = (await fixture(html`<lyra-app-rail mode="mobile"></lyra-app-rail>`)) as LyraAppRail;
+    const el = (await fixture(html`<lr-app-rail mode="mobile"></lr-app-rail>`)) as LyraAppRail;
     await el.updateComplete;
     const toggle = el.shadowRoot!.querySelector('[part="toggle"]')!;
     expect(toggle.getAttribute('aria-label')).to.equal('Open navigation');
@@ -583,7 +583,7 @@ describe('toggle button i18n', () => {
 
   it('honors a strings override for openNavigation', async () => {
     const el = (await fixture(
-      html`<lyra-app-rail mode="mobile" .strings=${{ openNavigation: 'Ouvrir la navigation' }}></lyra-app-rail>`,
+      html`<lr-app-rail mode="mobile" .strings=${{ openNavigation: 'Ouvrir la navigation' }}></lr-app-rail>`,
     )) as LyraAppRail;
     await el.updateComplete;
     const toggle = el.shadowRoot!.querySelector('[part="toggle"]')!;
@@ -603,13 +603,13 @@ describe('preferredMode', () => {
   });
 
   it('applies preferredMode on the live element while unforced, and yields to the mobile breakpoint', async () => {
-    const el = (await fixture(html`<lyra-app-rail preferred-mode="icon-only"></lyra-app-rail>`)) as LyraAppRail;
+    const el = (await fixture(html`<lr-app-rail preferred-mode="icon-only"></lr-app-rail>`)) as LyraAppRail;
     await el.updateComplete;
     expect(el.mode).to.equal('icon-only');
   });
 
   it('does not override an explicitly forced mode', async () => {
-    const el = (await fixture(html`<lyra-app-rail preferred-mode="icon-only"></lyra-app-rail>`)) as LyraAppRail;
+    const el = (await fixture(html`<lr-app-rail preferred-mode="icon-only"></lr-app-rail>`)) as LyraAppRail;
     el.mode = 'full';
     await el.updateComplete;
     expect(el.mode).to.equal('full');
@@ -620,14 +620,14 @@ describe('preferredMode', () => {
 
 describe('resizable', () => {
   it('renders no resizer when resizable is false (default)', async () => {
-    const el = (await fixture(html`<lyra-app-rail></lyra-app-rail>`)) as LyraAppRail;
+    const el = (await fixture(html`<lr-app-rail></lr-app-rail>`)) as LyraAppRail;
     await el.updateComplete;
     expect(el.shadowRoot!.querySelector('[part="resizer"]')).to.not.exist;
   });
 
   it('renders a resizer with role="separator" and correct aria bounds only in \'full\' mode', async () => {
     const el = (await fixture(
-      html`<lyra-app-rail resizable rail-width-px="240" min-rail-width-px="190" max-rail-width-px="440"></lyra-app-rail>`,
+      html`<lr-app-rail resizable rail-width-px="240" min-rail-width-px="190" max-rail-width-px="440"></lr-app-rail>`,
     )) as LyraAppRail;
     await el.updateComplete;
     const resizer = el.shadowRoot!.querySelector('[part="resizer"]')!;
@@ -639,7 +639,7 @@ describe('resizable', () => {
   });
 
   it('gives the resizer hit target the shared minimum tappable size without inflating the visible drag line', async () => {
-    const el = (await fixture(html`<lyra-app-rail resizable></lyra-app-rail>`)) as LyraAppRail;
+    const el = (await fixture(html`<lr-app-rail resizable></lr-app-rail>`)) as LyraAppRail;
     await el.updateComplete;
     const resizer = el.shadowRoot!.querySelector('[part="resizer"]') as HTMLElement;
     const track = resizer.querySelector('[part="resizer-track"]') as HTMLElement;
@@ -651,19 +651,19 @@ describe('resizable', () => {
   });
 
   it('does not render a resizer in icon-only or mobile mode even when resizable', async () => {
-    const el = (await fixture(html`<lyra-app-rail resizable mode="icon-only"></lyra-app-rail>`)) as LyraAppRail;
+    const el = (await fixture(html`<lr-app-rail resizable mode="icon-only"></lr-app-rail>`)) as LyraAppRail;
     await el.updateComplete;
     expect(el.shadowRoot!.querySelector('[part="resizer"]')).to.not.exist;
   });
 
-  it('ArrowRight/ArrowLeft on the resizer steps railWidthPx and emits lyra-rail-resize, clamped to bounds', async () => {
+  it('ArrowRight/ArrowLeft on the resizer steps railWidthPx and emits lr-rail-resize, clamped to bounds', async () => {
     const el = (await fixture(
-      html`<lyra-app-rail resizable rail-width-px="240" min-rail-width-px="190" max-rail-width-px="440"></lyra-app-rail>`,
+      html`<lr-app-rail resizable rail-width-px="240" min-rail-width-px="190" max-rail-width-px="440"></lr-app-rail>`,
     )) as LyraAppRail;
     await el.updateComplete;
     const resizer = el.shadowRoot!.querySelector('[part="resizer"]') as HTMLElement;
     let detail: { widthPx: number } | undefined;
-    el.addEventListener('lyra-rail-resize', (e) => (detail = (e as CustomEvent).detail));
+    el.addEventListener('lr-rail-resize', (e) => (detail = (e as CustomEvent).detail));
 
     resizer.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
     expect(el.railWidthPx).to.equal(248);
@@ -679,7 +679,7 @@ describe('resizable', () => {
   });
 
   it('sets [part=base]\'s inline-size from railWidthPx only while resizable and in \'full\' mode', async () => {
-    const el = (await fixture(html`<lyra-app-rail resizable rail-width-px="300"></lyra-app-rail>`)) as LyraAppRail;
+    const el = (await fixture(html`<lr-app-rail resizable rail-width-px="300"></lr-app-rail>`)) as LyraAppRail;
     await el.updateComplete;
     const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
     expect(base.style.getPropertyValue('inline-size')).to.equal('300px');
@@ -690,7 +690,7 @@ describe('resizable', () => {
 
   it('reflects dragging=true only for the duration of a pointer-driven resize, and suppresses the base transition while true', async () => {
     const el = (await fixture(
-      html`<lyra-app-rail resizable rail-width-px="240" min-rail-width-px="190" max-rail-width-px="440"></lyra-app-rail>`,
+      html`<lr-app-rail resizable rail-width-px="240" min-rail-width-px="190" max-rail-width-px="440"></lr-app-rail>`,
     )) as LyraAppRail;
     await el.updateComplete;
     const resizer = el.shadowRoot!.querySelector('[part="resizer"]') as HTMLElement;
@@ -712,7 +712,7 @@ describe('resizable', () => {
 
   it('does not toggle dragging for keyboard-driven resize steps', async () => {
     const el = (await fixture(
-      html`<lyra-app-rail resizable rail-width-px="240" min-rail-width-px="190" max-rail-width-px="440"></lyra-app-rail>`,
+      html`<lr-app-rail resizable rail-width-px="240" min-rail-width-px="190" max-rail-width-px="440"></lr-app-rail>`,
     )) as LyraAppRail;
     await el.updateComplete;
     const resizer = el.shadowRoot!.querySelector('[part="resizer"]') as HTMLElement;
@@ -725,7 +725,7 @@ describe('resizable', () => {
 
   it('clamps a NaN or negative railWidthPx to a sane in-bounds width instead of leaking through to layout', async () => {
     const el = (await fixture(
-      html`<lyra-app-rail resizable min-rail-width-px="190" max-rail-width-px="440"></lyra-app-rail>`,
+      html`<lr-app-rail resizable min-rail-width-px="190" max-rail-width-px="440"></lr-app-rail>`,
     )) as LyraAppRail;
     await el.updateComplete;
     const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
@@ -744,7 +744,7 @@ describe('resizable', () => {
 
   it('sanitizes a NaN minRailWidthPx/maxRailWidthPx instead of letting it poison every clamp', async () => {
     const el = (await fixture(
-      html`<lyra-app-rail resizable rail-width-px="9999" min-rail-width-px="NaN" max-rail-width-px="NaN"></lyra-app-rail>`,
+      html`<lr-app-rail resizable rail-width-px="9999" min-rail-width-px="NaN" max-rail-width-px="NaN"></lr-app-rail>`,
     )) as LyraAppRail;
     await el.updateComplete;
     const resizer = el.shadowRoot!.querySelector('[part="resizer"]') as HTMLElement;
@@ -755,7 +755,7 @@ describe('resizable', () => {
 
   it('keeps maxRailWidthPx from resolving below minRailWidthPx for an inverted pair', async () => {
     const el = (await fixture(
-      html`<lyra-app-rail resizable rail-width-px="240" min-rail-width-px="500" max-rail-width-px="100"></lyra-app-rail>`,
+      html`<lr-app-rail resizable rail-width-px="240" min-rail-width-px="500" max-rail-width-px="100"></lr-app-rail>`,
     )) as LyraAppRail;
     await el.updateComplete;
     const resizer = el.shadowRoot!.querySelector('[part="resizer"]') as HTMLElement;
@@ -769,14 +769,14 @@ describe('resizable', () => {
 
 describe('hideToggle', () => {
   it('hides [part=toggle] when set, in mobile mode', async () => {
-    const el = (await fixture(html`<lyra-app-rail hide-toggle mode="mobile"></lyra-app-rail>`)) as LyraAppRail;
+    const el = (await fixture(html`<lr-app-rail hide-toggle mode="mobile"></lr-app-rail>`)) as LyraAppRail;
     await el.updateComplete;
     const toggle = el.shadowRoot!.querySelector('[part="toggle"]') as HTMLElement;
     expect(getComputedStyle(toggle).display).to.equal('none');
   });
 
   it('defaults to false, unchanged output', async () => {
-    const el = (await fixture(html`<lyra-app-rail mode="mobile"></lyra-app-rail>`)) as LyraAppRail;
+    const el = (await fixture(html`<lr-app-rail mode="mobile"></lr-app-rail>`)) as LyraAppRail;
     await el.updateComplete;
     expect(el.hideToggle).to.be.false;
     const toggle = el.shadowRoot!.querySelector('[part="toggle"]') as HTMLElement;
@@ -786,12 +786,12 @@ describe('hideToggle', () => {
 
 describe('aria-label forwarding', () => {
   it('unset host aria-label reproduces today\'s exact localized-default/label-prop output', async () => {
-    const withDefault = (await fixture(html`<lyra-app-rail><a href="/a">A</a></lyra-app-rail>`)) as LyraAppRail;
+    const withDefault = (await fixture(html`<lr-app-rail><a href="/a">A</a></lr-app-rail>`)) as LyraAppRail;
     expect(withDefault.shadowRoot!.querySelector('[part="base"], [part="panel"]')!.getAttribute('aria-label')).to.equal(
       'Navigation',
     );
 
-    const withLabel = (await fixture(html`<lyra-app-rail label="Main"><a href="/a">A</a></lyra-app-rail>`)) as LyraAppRail;
+    const withLabel = (await fixture(html`<lr-app-rail label="Main"><a href="/a">A</a></lr-app-rail>`)) as LyraAppRail;
     expect(withLabel.shadowRoot!.querySelector('[part="base"], [part="panel"]')!.getAttribute('aria-label')).to.equal(
       'Main',
     );
@@ -799,7 +799,7 @@ describe('aria-label forwarding', () => {
 
   it('a host-level aria-label attribute overrides the label prop / localized default on the nav landmark', async () => {
     const el = (await fixture(
-      html`<lyra-app-rail label="Main" aria-label="Custom nav name"><a href="/a">A</a></lyra-app-rail>`,
+      html`<lr-app-rail label="Main" aria-label="Custom nav name"><a href="/a">A</a></lr-app-rail>`,
     )) as LyraAppRail;
     expect(el.shadowRoot!.querySelector('[part="base"], [part="panel"]')!.getAttribute('aria-label')).to.equal(
       'Custom nav name',
@@ -808,7 +808,7 @@ describe('aria-label forwarding', () => {
 
   it('the host-level aria-label override also applies to the dialog role while the mobile overlay is open', async () => {
     const el = (await fixture(
-      html`<lyra-app-rail mode="mobile" open aria-label="Custom nav name"><a href="/a">A</a></lyra-app-rail>`,
+      html`<lr-app-rail mode="mobile" open aria-label="Custom nav name"><a href="/a">A</a></lr-app-rail>`,
     )) as LyraAppRail;
     await el.updateComplete;
     const panel = el.shadowRoot!.querySelector('[part="panel"]') as HTMLElement;

@@ -4,7 +4,7 @@ import './attachment-chip.js';
 
 const meta: Meta = {
   title: 'AttachmentChip',
-  component: 'lyra-attachment-chip',
+  component: 'lr-attachment-chip',
   tags: ['autodocs'],
   parameters: {
     docs: {
@@ -38,37 +38,37 @@ export const Statuses: Story = {
   render: () => {
     return html`
       <div style="display:flex; gap:0.5rem; flex-wrap:wrap; max-width:40rem;">
-        <lyra-attachment-chip
+        <lr-attachment-chip
           name="quarterly-report.pdf"
           size="248300"
           mime-type="application/pdf"
           status="pending"
-        ></lyra-attachment-chip>
-        <lyra-attachment-chip
+        ></lr-attachment-chip>
+        <lr-attachment-chip
           name="roof-photo.jpg"
           size="2415919"
           mime-type="image/jpeg"
           status="uploading"
           progress="42"
-        ></lyra-attachment-chip>
-        <lyra-attachment-chip
+        ></lr-attachment-chip>
+        <lr-attachment-chip
           name="dataset.csv"
           size="9830400"
           mime-type="text/csv"
           status="uploading"
-        ></lyra-attachment-chip>
-        <lyra-attachment-chip
+        ></lr-attachment-chip>
+        <lr-attachment-chip
           name="invoice.pdf"
           size="102400"
           mime-type="application/pdf"
           status="error"
-        ></lyra-attachment-chip>
-        <lyra-attachment-chip
+        ></lr-attachment-chip>
+        <lr-attachment-chip
           name="notes.txt"
           size="512"
           mime-type="text/plain"
           status="done"
-        ></lyra-attachment-chip>
+        ></lr-attachment-chip>
       </div>
     `;
   },
@@ -80,14 +80,14 @@ export const FromRealFile: Story = {
     docs: {
       description: {
         story:
-          'Setting `.file` (an actual `File`, e.g. from `<lyra-file-input>`’s `lyra-files` event) auto-derives the filename, size, MIME type and — for images — a lazily-created object-URL thumbnail. No `name`/`size`/`mime-type`/`thumbnail-src` attributes are set on either chip below; everything shown comes from the `File` itself.',
+          'Setting `.file` (an actual `File`, e.g. from `<lr-file-input>`’s `lr-files` event) auto-derives the filename, size, MIME type and — for images — a lazily-created object-URL thumbnail. No `name`/`size`/`mime-type`/`thumbnail-src` attributes are set on either chip below; everything shown comes from the `File` itself.',
       },
     },
   },
   render: () => html`
     <div style="display:flex; gap:0.5rem; flex-wrap:wrap; max-width:40rem;">
-      <lyra-attachment-chip .file=${samplePngFile('site-photo.png')} status="done"></lyra-attachment-chip>
-      <lyra-attachment-chip .file=${sampleTextFile('export.csv', 15360)} status="pending"></lyra-attachment-chip>
+      <lr-attachment-chip .file=${samplePngFile('site-photo.png')} status="done"></lr-attachment-chip>
+      <lr-attachment-chip .file=${sampleTextFile('export.csv', 15360)} status="pending"></lr-attachment-chip>
     </div>
   `,
 };
@@ -98,15 +98,15 @@ export const ClickToPreview: Story = {
     docs: {
       description: {
         story:
-          'A real `File` supplies its existing MIME type to `lyra-document-viewer`; activating the preview action opens the dialog and the dialog footer provides the native download action. No second format field or MIME-detection function is needed.',
+          'A real `File` supplies its existing MIME type to `lr-document-viewer`; activating the preview action opens the dialog and the dialog footer provides the native download action. No second format field or MIME-detection function is needed.',
       },
     },
   },
   render: () => html`
-    <lyra-attachment-chip
+    <lr-attachment-chip
       .file=${sampleTextFile('uploaded-notes.txt', 128)}
       status="done"
-    ></lyra-attachment-chip>
+    ></lr-attachment-chip>
   `,
 };
 
@@ -121,63 +121,63 @@ export const FromServerMetadata: Story = {
     },
   },
   render: () => html`
-    <lyra-attachment-chip
+    <lr-attachment-chip
       name="site-photo.png"
       size="184320"
       mime-type="image/png"
       thumbnail-src="data:image/png;base64,${PNG_1X1_RED_BASE64}"
       status="done"
-    ></lyra-attachment-chip>
+    ></lr-attachment-chip>
   `,
 };
 
 export const UploadingNumericProgress: Story = {
   name: 'Uploading — numeric progress bar',
   render: () => html`
-    <lyra-attachment-chip
+    <lr-attachment-chip
       name="large-export.zip"
       size="52428800"
       mime-type="application/zip"
       status="uploading"
       progress="67"
-    ></lyra-attachment-chip>
+    ></lr-attachment-chip>
   `,
 };
 
 export const UploadingIndeterminate: Story = {
   name: 'Uploading — indeterminate spinner (no progress yet)',
   render: () => html`
-    <lyra-attachment-chip
+    <lr-attachment-chip
       name="large-export.zip"
       size="52428800"
       mime-type="application/zip"
       status="uploading"
-    ></lyra-attachment-chip>
+    ></lr-attachment-chip>
   `,
 };
 
 export const ErrorWithRetry: Story = {
   name: 'Error state with retry affordance',
   render: () => html`
-    <lyra-attachment-chip
+    <lr-attachment-chip
       name="invoice.pdf"
       size="102400"
       mime-type="application/pdf"
       status="error"
-    ></lyra-attachment-chip>
+    ></lr-attachment-chip>
   `,
 };
 
 export const NotRemovable: Story = {
   name: 'removable=false (already-sent message attachment)',
   render: () => html`
-    <lyra-attachment-chip
+    <lr-attachment-chip
       name="roof-photo.jpg"
       size="2415919"
       mime-type="image/jpeg"
       status="done"
       .removable=${false}
-    ></lyra-attachment-chip>
+    ></lr-attachment-chip>
   `,
 };
 
@@ -193,8 +193,8 @@ export const Compact: Story = {
   },
   render: () => html`
     <div style="display:flex; gap:0.5rem; flex-wrap:wrap; max-width:32rem;">
-      <lyra-attachment-chip compact .file=${samplePngFile('site-photo.png')} status="done"></lyra-attachment-chip>
-      <lyra-attachment-chip compact .file=${sampleTextFile('notes.txt', 2048)} status="pending"></lyra-attachment-chip>
+      <lr-attachment-chip compact .file=${samplePngFile('site-photo.png')} status="done"></lr-attachment-chip>
+      <lr-attachment-chip compact .file=${sampleTextFile('notes.txt', 2048)} status="pending"></lr-attachment-chip>
     </div>
   `,
 };
@@ -211,18 +211,18 @@ export const ThumbnailOnly: Story = {
   },
   render: () => html`
     <div style="display:flex; gap:0.5rem; flex-wrap:wrap; align-items:center;">
-      <lyra-attachment-chip
+      <lr-attachment-chip
         compact
         thumbnail-only
         .file=${samplePngFile('site-photo.png')}
         status="done"
-      ></lyra-attachment-chip>
-      <lyra-attachment-chip
+      ></lr-attachment-chip>
+      <lr-attachment-chip
         compact
         thumbnail-only
         .file=${sampleTextFile('notes.txt', 2048)}
         status="pending"
-      ></lyra-attachment-chip>
+      ></lr-attachment-chip>
     </div>
   `,
 };
@@ -231,12 +231,12 @@ export const LongFilenameTruncates: Story = {
   name: 'Long filename truncates inside a constrained width',
   render: () => html`
     <div style="max-width:14rem;">
-      <lyra-attachment-chip
+      <lr-attachment-chip
         name="quarterly-financial-summary-2026-region-emea.pdf"
         size="1048576"
         mime-type="application/pdf"
         status="pending"
-      ></lyra-attachment-chip>
+      ></lr-attachment-chip>
     </div>
   `,
 };
@@ -247,16 +247,16 @@ export const ComposerTray: Story = {
     docs: {
       description: {
         story:
-          'A typical composer tray: several chips at different stages, wrapping onto multiple lines as needed. Each fires `lyra-remove`/`lyra-retry` independently.',
+          'A typical composer tray: several chips at different stages, wrapping onto multiple lines as needed. Each fires `lr-remove`/`lr-retry` independently.',
       },
     },
   },
   render: () => html`
-    <div style="display:flex; gap:0.5rem; flex-wrap:wrap; max-width:32rem; padding:0.5rem; border:1px dashed var(--lyra-color-border); border-radius:0.5rem;">
-      <lyra-attachment-chip name="roof-photo.jpg" size="2415919" mime-type="image/jpeg" status="done"></lyra-attachment-chip>
-      <lyra-attachment-chip name="dataset.csv" size="9830400" mime-type="text/csv" status="uploading" progress="58"></lyra-attachment-chip>
-      <lyra-attachment-chip name="invoice.pdf" size="102400" mime-type="application/pdf" status="error"></lyra-attachment-chip>
-      <lyra-attachment-chip name="notes.txt" size="512" mime-type="text/plain" status="pending"></lyra-attachment-chip>
+    <div style="display:flex; gap:0.5rem; flex-wrap:wrap; max-width:32rem; padding:0.5rem; border:1px dashed var(--lr-color-border); border-radius:0.5rem;">
+      <lr-attachment-chip name="roof-photo.jpg" size="2415919" mime-type="image/jpeg" status="done"></lr-attachment-chip>
+      <lr-attachment-chip name="dataset.csv" size="9830400" mime-type="text/csv" status="uploading" progress="58"></lr-attachment-chip>
+      <lr-attachment-chip name="invoice.pdf" size="102400" mime-type="application/pdf" status="error"></lr-attachment-chip>
+      <lr-attachment-chip name="notes.txt" size="512" mime-type="text/plain" status="pending"></lr-attachment-chip>
     </div>
   `,
 };
@@ -264,21 +264,21 @@ export const ComposerTray: Story = {
 export const Events: Story = {
   render: () => html`
     <div>
-      <lyra-attachment-chip
+      <lr-attachment-chip
         id="att-9"
         name="invoice.pdf"
         size="102400"
         mime-type="application/pdf"
         status="error"
-        @lyra-remove=${(e: CustomEvent<{ id: string }>) => {
+        @lr-remove=${(e: CustomEvent<{ id: string }>) => {
           const out = document.getElementById('attachment-chip-log');
-          if (out) out.textContent = `lyra-remove: ${JSON.stringify(e.detail)}`;
+          if (out) out.textContent = `lr-remove: ${JSON.stringify(e.detail)}`;
         }}
-        @lyra-retry=${(e: CustomEvent<{ id: string }>) => {
+        @lr-retry=${(e: CustomEvent<{ id: string }>) => {
           const out = document.getElementById('attachment-chip-log');
-          if (out) out.textContent = `lyra-retry: ${JSON.stringify(e.detail)}`;
+          if (out) out.textContent = `lr-retry: ${JSON.stringify(e.detail)}`;
         }}
-      ></lyra-attachment-chip>
+      ></lr-attachment-chip>
       <p id="attachment-chip-log" style="font-family: monospace; margin-top: 0.5rem;">No event fired yet.</p>
     </div>
   `,

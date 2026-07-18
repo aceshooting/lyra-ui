@@ -17,7 +17,7 @@ export interface StepItem {
 }
 
 export interface LyraStepperEventMap {
-  'lyra-step-select': CustomEvent<{ index: number; id: string }>;
+  'lr-step-select': CustomEvent<{ index: number; id: string }>;
 }
 
 const GLYPH_VIEW_BOX = '0 0 24 24';
@@ -40,15 +40,15 @@ function checkmarkGlyph() {
 }
 
 /**
- * `<lyra-stepper>` — ordered multi-step wizard/form navigation: label + index per step,
+ * `<lr-stepper>` — ordered multi-step wizard/form navigation: label + index per step,
  * current/completed/locked/error state, click-to-jump. First-party invention (no Web Awesome
- * equivalent). Fully data-driven and controlled, like `lyra-table`'s `columns`/`rows` -- it never
+ * equivalent). Fully data-driven and controlled, like `lr-table`'s `columns`/`rows` -- it never
  * mutates `steps` itself; a click or Enter/Space on a non-disabled step fires a cancelable
- * `lyra-step-select`, and the host decides whether/how `steps` changes in response (mirroring
- * `lyra-dialog-close`'s cancelable-event convention).
+ * `lr-step-select`, and the host decides whether/how `steps` changes in response (mirroring
+ * `lr-dialog-close`'s cancelable-event convention).
  *
- * @customElement lyra-stepper
- * @event lyra-step-select - Fired on click, or Enter/Space while focused, on a non-`disabled`
+ * @customElement lr-stepper
+ * @event lr-step-select - Fired on click, or Enter/Space while focused, on a non-`disabled`
  *   step. `detail: { index, id }`. Cancelable, though this component takes no default action of
  *   its own to prevent (it never mutates `steps`) -- `preventDefault()` is available for a host
  *   that wants a single place to short-circuit its own listener's follow-up work.
@@ -79,7 +79,7 @@ export class LyraStepper extends LyraElement<LyraStepperEventMap> {
 
   private selectStep(step: StepItem, index: number): void {
     if (step.state === 'disabled') return;
-    this.emit<{ index: number; id: string }>('lyra-step-select', { index, id: step.id }, { cancelable: true });
+    this.emit<{ index: number; id: string }>('lr-step-select', { index, id: step.id }, { cancelable: true });
   }
 
   private focusStep(id: string): void {
@@ -167,6 +167,6 @@ export class LyraStepper extends LyraElement<LyraStepperEventMap> {
 
 declare global {
   interface HTMLElementTagNameMap {
-    'lyra-stepper': LyraStepper;
+    'lr-stepper': LyraStepper;
   }
 }

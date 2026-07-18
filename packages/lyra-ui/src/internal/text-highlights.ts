@@ -1,7 +1,7 @@
 import type { LyraHighlightTone } from '../components/document-viewer/anchors.js';
 
 const TONE_NAMES: LyraHighlightTone[] = ['accent', 'success', 'warning', 'danger', 'neutral'];
-const DEFAULT_FLASH_MS = 1800; // mirrors --lyra-transition-ambient's default duration (see tokens.styles.ts)
+const DEFAULT_FLASH_MS = 1800; // mirrors --lr-transition-ambient's default duration (see tokens.styles.ts)
 
 /** Minimal shape of the CSS Custom Highlight API's `Highlight` this module needs -- declared locally
  *  (not as a global augmentation) since this toolchain's DOM lib typings don't yet include it; every
@@ -29,7 +29,7 @@ export function supportsCustomHighlights(): boolean {
 }
 
 function highlightName(tone: LyraHighlightTone): string {
-  return `lyra-highlight-${tone}`;
+  return `lr-highlight-${tone}`;
 }
 
 let registered = false;
@@ -37,8 +37,8 @@ const highlightObjects = new Map<string, CustomHighlightLike>();
 const ownersByName = new Map<string, Map<object, Set<Range>>>();
 
 /** Creates and registers every document-global `Highlight` object this module owns
- *  (`lyra-highlight-accent|success|warning|danger|neutral`, `lyra-highlight-active`,
- *  `lyra-highlight-flash`) exactly once, lazily inside the first `acquireHighlightHandle()` call --
+ *  (`lr-highlight-accent|success|warning|danger|neutral`, `lr-highlight-active`,
+ *  `lr-highlight-flash`) exactly once, lazily inside the first `acquireHighlightHandle()` call --
  *  never at module evaluation, so importing an adopting viewer's class module stays SSR/node-safe. */
 function ensureRegistered(): void {
   if (registered || !supportsCustomHighlights()) return;
@@ -47,8 +47,8 @@ function ensureRegistered(): void {
   const registry = getHighlightRegistry()!;
   const entries: [string, number][] = [
     ...TONE_NAMES.map((tone): [string, number] => [highlightName(tone), 0]),
-    ['lyra-highlight-active', 1],
-    ['lyra-highlight-flash', 2],
+    ['lr-highlight-active', 1],
+    ['lr-highlight-flash', 2],
   ];
   for (const [name, priority] of entries) {
     const highlight = new Ctor();
@@ -79,7 +79,7 @@ export interface HighlightHandle {
   /** Marks (or clears, with `null`) this owner's single active-state range. */
   setActive(range: Range | null): void;
   /** Applies a one-shot emphasis flash to `range` for `durationMs` (default 1800, matching
-   *  `--lyra-transition-ambient`'s default), then clears it automatically. */
+   *  `--lr-transition-ambient`'s default), then clears it automatically. */
   flash(range: Range, durationMs?: number): void;
   /** Removes every range this owner painted, across every tone/active/flash state. */
   release(): void;
@@ -97,11 +97,11 @@ function splitTextNodeAtRange(range: Range, textNode: Text): Text {
 }
 
 /** Wraps the text covered by `range` in one or more `<mark>` elements. `name` is the highlight's
- *  identity (`lyra-highlight-accent|success|...`, `lyra-highlight-active`, or `lyra-highlight-flash`)
- *  and is written to `data-lyra-highlight-name` -- the fallback-path equivalent of the CSS Custom
+ *  identity (`lr-highlight-accent|success|...`, `lr-highlight-active`, or `lr-highlight-flash`)
+ *  and is written to `data-lr-highlight-name` -- the fallback-path equivalent of the CSS Custom
  *  Highlight API path's separately-registered `Highlight` objects, letting a stylesheet distinguish
  *  an active/flash mark from a genuine `setRanges`-painted one even when they share the same `tone`.
- *  `data-lyra-highlight-tone` is kept alongside it so tone-based selection still works. */
+ *  `data-lr-highlight-tone` is kept alongside it so tone-based selection still works. */
 function wrapRangeInMarks(range: Range, name: string, tone: LyraHighlightTone, doc: Document): HTMLElement[] {
   const ancestor = range.commonAncestorContainer;
   const walkRoot = ancestor.nodeType === Node.TEXT_NODE ? ancestor.parentNode! : ancestor;
@@ -116,8 +116,8 @@ function wrapRangeInMarks(range: Range, name: string, tone: LyraHighlightTone, d
     const inRange = splitTextNodeAtRange(range, textNode);
     if (!inRange.data) continue;
     const mark = doc.createElement('mark');
-    mark.setAttribute('data-lyra-highlight-tone', tone);
-    mark.setAttribute('data-lyra-highlight-name', name);
+    mark.setAttribute('data-lr-highlight-tone', tone);
+    mark.setAttribute('data-lr-highlight-name', name);
     mark.setAttribute('role', 'mark');
     inRange.parentNode?.insertBefore(mark, inRange);
     mark.appendChild(inRange);
@@ -156,12 +156,12 @@ function acquireFallbackHandle(_owner: object, doc: Document): HighlightHandle {
       paint(highlightName(tone), tone, ranges);
     },
     setActive(range) {
-      paint('lyra-highlight-active', 'accent', range ? [range] : []);
+      paint('lr-highlight-active', 'accent', range ? [range] : []);
     },
     flash(range, durationMs = DEFAULT_FLASH_MS) {
       clearTimeout(flashTimer);
-      paint('lyra-highlight-flash', 'accent', [range]);
-      flashTimer = setTimeout(() => clear('lyra-highlight-flash'), durationMs);
+      paint('lr-highlight-flash', 'accent', [range]);
+      flashTimer = setTimeout(() => clear('lr-highlight-flash'), durationMs);
     },
     release() {
       clearTimeout(flashTimer);
@@ -178,12 +178,12 @@ function acquireCssHandle(owner: object): HighlightHandle {
       replaceCssOwned(highlightName(tone), owner, ranges);
     },
     setActive(range) {
-      replaceCssOwned('lyra-highlight-active', owner, range ? [range] : []);
+      replaceCssOwned('lr-highlight-active', owner, range ? [range] : []);
     },
     flash(range, durationMs = DEFAULT_FLASH_MS) {
       clearTimeout(flashTimer);
-      replaceCssOwned('lyra-highlight-flash', owner, [range]);
-      flashTimer = setTimeout(() => replaceCssOwned('lyra-highlight-flash', owner, []), durationMs);
+      replaceCssOwned('lr-highlight-flash', owner, [range]);
+      flashTimer = setTimeout(() => replaceCssOwned('lr-highlight-flash', owner, []), durationMs);
     },
     release() {
       clearTimeout(flashTimer);

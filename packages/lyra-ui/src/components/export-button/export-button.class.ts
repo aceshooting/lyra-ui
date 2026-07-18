@@ -9,7 +9,7 @@ import { styles } from './export-button.styles.js';
 export type ExportFormat = 'csv' | 'json';
 
 export interface ExportFormatDescriptor {
-  /** Stable id carried through `lyra-export`. */
+  /** Stable id carried through `lr-export`. */
   id: string;
   /** Consumer-supplied, already-localized menu label. */
   label: string;
@@ -22,23 +22,23 @@ export interface ExportFormatDescriptor {
 export type ExportFormatOption = ExportFormat | ExportFormatDescriptor;
 
 export interface LyraExportButtonEventMap {
-  'lyra-export': CustomEvent<{ format: string }>;
-  'lyra-export-complete': CustomEvent<{ format: ExportFormat }>;
-  'lyra-show': CustomEvent<undefined>;
-  'lyra-hide': CustomEvent<undefined>;
+  'lr-export': CustomEvent<{ format: string }>;
+  'lr-export-complete': CustomEvent<{ format: ExportFormat }>;
+  'lr-show': CustomEvent<undefined>;
+  'lr-hide': CustomEvent<undefined>;
 }
 /**
- * `<lyra-export-button>` — a CSV/JSON download button, single-format or a
+ * `<lr-export-button>` — a CSV/JSON download button, single-format or a
  * format-choice menu. First-party invention; consolidates the ad-hoc
  * "export CSV" button pattern common across dashboard UIs.
  *
- * @customElement lyra-export-button
- * @event lyra-export - `detail: { format }`, cancelable — call `preventDefault()`
+ * @customElement lr-export-button
+ * @event lr-export - `detail: { format }`, cancelable — call `preventDefault()`
  *   to substitute the built-in client-side download with a server-generated one.
- * @event lyra-export-complete - Fired after a non-cancelled download completes.
- * @event lyra-show - The format menu opened. Not fired for markup that renders
+ * @event lr-export-complete - Fired after a non-cancelled download completes.
+ * @event lr-show - The format menu opened. Not fired for markup that renders
  *   open from the start.
- * @event lyra-hide - The format menu closed. Same first-render guard as `lyra-show`.
+ * @event lr-hide - The format menu closed. Same first-render guard as `lr-show`.
  * @csspart trigger - The button that triggers the export (or opens the format menu).
  * @csspart menu - The format-choice menu, shown when more than one format is configured.
  * @csspart menu-item - A single format option inside the menu.
@@ -64,7 +64,7 @@ export class LyraExportButton extends LyraElement<LyraExportButtonEventMap> {
    *  Left at its default English `'Export'`, the rendered text instead
    *  comes from `this.localize('exportButtonLabel', ...)` -- override-able
    *  via `.strings`/`registerLyraLocale()` -- same convention as
-   *  `lyra-attachment-chip`'s `removeLabel`/`retryLabel`. Set this
+   *  `lr-attachment-chip`'s `removeLabel`/`retryLabel`. Set this
    *  attribute explicitly for a one-off override that always wins. */
   @property() label = 'Export';
   /** Accessible name forwarded from the host to the native trigger button.
@@ -162,7 +162,7 @@ export class LyraExportButton extends LyraElement<LyraExportButtonEventMap> {
         break;
       case 'Tab':
         // No preventDefault -- native Tab navigation proceeds untouched, only
-        // the now-stale open menu closes (mirrors lyra-menu's identical
+        // the now-stale open menu closes (mirrors lr-menu's identical
         // Tab handling).
         this.closeMenu();
         break;
@@ -188,20 +188,20 @@ export class LyraExportButton extends LyraElement<LyraExportButtonEventMap> {
       // openMenu()) means this fires however `open` became true -- via
       // openMenu()'s own click path, or a consumer/test setting
       // `el.open = true` directly (valid API on a `reflect: true`
-      // property), which bypasses openMenu() entirely. Mirrors lyra-menu/
-      // lyra-select/lyra-combobox's identical updated()-centralized
-      // lyra-show/lyra-hide emission.
+      // property), which bypasses openMenu() entirely. Mirrors lr-menu/
+      // lr-select/lr-combobox's identical updated()-centralized
+      // lr-show/lr-hide emission.
       document.removeEventListener('pointerdown', this.onDocPointer);
       if (this.open) {
         const anchor = this.triggerEl;
         const menu = this.menuEl;
         if (anchor && menu) this.cleanup = place(anchor, menu);
         document.addEventListener('pointerdown', this.onDocPointer);
-        if (!this._isFirstUpdate) this.emit('lyra-show');
+        if (!this._isFirstUpdate) this.emit('lr-show');
         this.focusMenuItem(this.pendingMenuFocusIndex);
         this.pendingMenuFocusIndex = 0;
       } else {
-        if (!this._isFirstUpdate) this.emit('lyra-hide');
+        if (!this._isFirstUpdate) this.emit('lr-hide');
       }
     }
   }
@@ -243,7 +243,7 @@ export class LyraExportButton extends LyraElement<LyraExportButtonEventMap> {
     this.closeMenu();
     this.triggerEl?.focus();
     const format = this.formatId(formatOption);
-    const ev = this.emit('lyra-export', { format }, { cancelable: true });
+    const ev = this.emit('lr-export', { format }, { cancelable: true });
     if (ev.defaultPrevented) return;
 
     if (format === 'csv') {
@@ -259,7 +259,7 @@ export class LyraExportButton extends LyraElement<LyraExportButtonEventMap> {
       // event contract but does not pull format-specific encoders into the base bundle.
       return;
     }
-    this.emit('lyra-export-complete', { format });
+    this.emit('lr-export-complete', { format });
   }
 
   private onTriggerClick(): void {
@@ -335,6 +335,6 @@ export class LyraExportButton extends LyraElement<LyraExportButtonEventMap> {
 
 declare global {
   interface HTMLElementTagNameMap {
-    'lyra-export-button': LyraExportButton;
+    'lr-export-button': LyraExportButton;
   }
 }

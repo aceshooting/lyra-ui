@@ -3,6 +3,6 @@ import { html } from 'lit';
 import './accordion.js';
 import './accordion-item.js';
 
-const meta: Meta = { title: 'Disclosure/Accordion', component: 'lyra-accordion', tags: ['autodocs'] };
+const meta: Meta = { title: 'Disclosure/Accordion', component: 'lr-accordion', tags: ['autodocs'] };
 export default meta;
-export const Default: StoryObj = { render: () => html`<lyra-accordion><lyra-accordion-item summary="First">First panel</lyra-accordion-item><lyra-accordion-item summary="Second">Second panel</lyra-accordion-item></lyra-accordion>` };
+export const Default: StoryObj = { render: () => html`<lr-accordion><lr-accordion-item summary="First">First panel</lr-accordion-item><lr-accordion-item summary="Second">Second panel</lr-accordion-item></lr-accordion>` };

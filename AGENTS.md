@@ -17,7 +17,7 @@ components plus original extras. Positioning, non-negotiable:
   components.
 - **API-mirroring method.** For components that *do* have a Web Awesome counterpart, the
   public surface (attributes, slots, events, parts, CSS custom properties) is mirrored 1:1
-  under the `lyra-` prefix — migration is a mechanical `wa-` → `lyra-` rename. Components
+  under the `lr-` prefix — migration is a mechanical `wa-` → `lr-` rename. Components
   with no WA equivalent (most of Tier 1–3 and the "bigger own tracks") instead follow this
   library's own established conventions (see below) — there is no docs page to mirror.
 - **Non-goals:** not a WA fork, no `wa-` prefix or WA trademark/branding, no React wrappers
@@ -38,7 +38,7 @@ lyra-ui/                          (repo root — this file lives here)
         components/<name>/        one dir per component family (see README's component table)
         lyra.ts                   barrel: side-effect imports (registers every tag) + re-exports
       llms.txt / llms-full.txt    CONSUMER-facing API reference (not this file's audience)
-    lyra-flags/                   optional companion pkg — waving flag SVGs for <lyra-flag>,
+    lyra-flags/                   optional companion pkg — waving flag SVGs for <lr-flag>,
                                    kept out of lyra-ui's default install (vendored from Noto
                                    Emoji, Public Domain — see its THIRD_PARTY_NOTICES.md)
   .storybook/                     Storybook config — the docs site (this pkg + lyra-flags)
@@ -84,24 +84,24 @@ build and fails on gzip-size regressions against `scripts/bundle-budgets.json`; 
 
 - **Extend `LyraElement`** (`src/internal/lyra-element.ts`), not `LitElement` directly. It
   supplies the token CSS layer (`static styles = [tokens]`) and `this.emit()`.
-- **Never hard-code `"lyra-"`.** Tag names go through `tag(name)` / register via
+- **Never hard-code `"lr-"`.** Tag names go through `tag(name)` / register via
   `defineElement(name, ctor)` from `src/internal/prefix.ts` (idempotent — safe to import
   twice). The prefix is a single constant (`LYRA_PREFIX`) so a rename stays cheap.
 - **Design tokens only.** Every color/space/font/radius value in a component's styles must
-  reference a `--lyra-*` custom property already defined in `src/internal/tokens.styles.ts`,
-  which itself falls back through `var(--lyra-theme-*-token, <hardcoded-default>)` — e.g.
-  `--lyra-color-brand: var(--lyra-theme-color-brand-fill-loud, #0969da);`. This is what lets a
-  consumer retheme the whole library by overriding one `--lyra-theme-*` property per token at
+  reference a `--lr-*` custom property already defined in `src/internal/tokens.styles.ts`,
+  which itself falls back through `var(--lr-theme-*-token, <hardcoded-default>)` — e.g.
+  `--lr-color-brand: var(--lr-theme-color-brand-fill-loud, #0969da);`. This is what lets a
+  consumer retheme the whole library by overriding one `--lr-theme-*` property per token at
   any ancestor, while every component still renders sensibly with zero configuration.
   No raw hex/px design values in component styles, except where an algorithm genuinely
   requires a literal (e.g. gauge sweep-angle math) — and even then, expose the literal as a
-  retheme-able `--lyra-*` custom property if it's data-driven (e.g. a color-ramp endpoint).
+  retheme-able `--lr-*` custom property if it's data-driven (e.g. a color-ramp endpoint).
 - **Events:** dispatch custom events through `this.emit(name, detail, options)` (from
   `LyraElement`) — never `dispatchEvent(new CustomEvent(...))` directly. `emit()` guarantees
   `bubbles: true` and `composed: true`; notifications are deliberately non-cancelable unless the
   operation is a real veto point and passes `{ cancelable: true }`. The helper does **not** rename
   the event: use native-style `input`/`change` only when mirroring a native/form-control contract,
-  and name library-specific events explicitly with the `lyra-` prefix. Direct dispatch is reserved
+  and name library-specific events explicitly with the `lr-` prefix. Direct dispatch is reserved
   for the rare wrapper that must preserve a native `Event`/`InputEvent` instance rather than turn it
   into a `CustomEvent`. Keep the component event-map type, class JSDoc, tests, stories, and consumer
   reference aligned with the exact names and details.
@@ -121,16 +121,16 @@ build and fails on gzip-size regressions against `scripts/bundle-budgets.json`; 
   Storybook's production build (`pnpm docs:build`, i.e. the live docs site) imports `src/*.ts`
   directly rather than `dist/`; without them Rollup treats those source files as side-effect-free
   and tree-shakes away every side-effect-only component import, so no
-  `<lyra-*>` element ever registers on the deployed site. Keep new components' plain class
+  `<lr-*>` element ever registers on the deployed site. Keep new components' plain class
   modules free of top-level side effects or tree-shaking breaks for every consumer.
 - **Form-associated controls** use the `FormAssociated` mixin (`src/internal/form-associated.ts`,
-  built on `ElementInternals`) where the value fits a plain string (`lyra-date-input`); it calls
+  built on `ElementInternals`) where the value fits a plain string (`lr-date-input`); it calls
   `internals.setValidity()` so `required` participates in native constraint validation
   (`checkValidity()`/`reportValidity()`/`:invalid`). Components whose value isn't a single string
-  (e.g. `lyra-combobox`'s multi-select array) attach `ElementInternals` directly instead of using
+  (e.g. `lr-combobox`'s multi-select array) attach `ElementInternals` directly instead of using
   the mixin, but must still call `setValidity()` themselves — see `combobox.ts`'s
   `updateValidity()` for the pattern.
-- **JSDoc header** on the component class: `@customElement lyra-x`, `@slot`, `@csspart` tags
+- **JSDoc header** on the component class: `@customElement lr-x`, `@slot`, `@csspart` tags
   (see any existing component, e.g. `components/empty/empty.ts`) — this feeds the generated
   manifest and the consumer-facing docs.
 - **Never reference internal process in code comments or shipped docs.** Comments, JSDoc, and
@@ -216,8 +216,8 @@ opt-in per component — so treat a gap in any of them as a bug, not a missing f
   rather than baking a fixed rotation into the icon itself.
 
 **Theming — design tokens only:** see "Design tokens only" under Coding conventions above — every
-color/space/font/radius value must reference a `--lyra-*` custom property from
-`internal/tokens.styles.ts`, which bridges to lyra's own `--lyra-theme-*` custom properties with a
+color/space/font/radius value must reference a `--lr-*` custom property from
+`internal/tokens.styles.ts`, which bridges to lyra's own `--lr-theme-*` custom properties with a
 hardcoded fallback. This is what makes both i18n and RTL "just work" visually too: token-driven spacing and
 sizing don't hardcode a text direction or a font's natural width, so translated strings (which run
 longer or shorter than English) and mirrored RTL layouts both reflow correctly without a component-
@@ -230,9 +230,9 @@ surface in question — a gap in an applicable component is a bug, not a missing
 item applies to every component; each is scoped to the component shapes described below.
 
 - **Label/hint/error chrome.** Any form-associated control (the `FormAssociated` mixin, or a
-  hand-rolled `ElementInternals` attachment like `lyra-select`/`lyra-combobox`) ships `label`/
+  hand-rolled `ElementInternals` attachment like `lr-select`/`lr-combobox`) ships `label`/
   `hint`/`errorText` props, matching `label`/`hint`/`error` named slots, and `form-control`/
-  `form-control-label`/`hint`/`error` CSS parts — mirroring `lyra-select`'s template structure
+  `form-control-label`/`hint`/`error` CSS parts — mirroring `lr-select`'s template structure
   (required-asterisk `::after`, `hasLabelSlot`/`hasHintSlot`/`hasErrorSlot` tracked in JS since
   `[part]:empty` never matches a slot-containing part, `aria-describedby` wired to the rendered
   hint/error ids). The one exception is a control whose own doc comment explicitly states it's a
@@ -244,10 +244,10 @@ item applies to every component; each is scoped to the component shapes describe
 - **ARIA-name forwarding.** Any component that computes its own internal accessible name must let
   a host-level `aria-label` win over that computed default. Two established patterns, pick
   whichever fits the component's own label sources: an `accessibleLabel` property
-  (`@property({ attribute: 'aria-label' })`, `lyra-date-input`'s pattern) when the component
+  (`@property({ attribute: 'aria-label' })`, `lr-date-input`'s pattern) when the component
   already has other label sources (a `label` prop, a placeholder) to arbitrate against in a
   specific precedence order, or a plain `this.getAttribute('aria-label')` fallback
-  (`lyra-slider`'s pattern) when there's nothing else to arbitrate against.
+  (`lr-slider`'s pattern) when there's nothing else to arbitrate against.
 - **Resize forwarding.** Any component wrapping a native resizable text-editing surface exposes
   the same resize vocabulary the native element supports, including auto-grow-to-content — or its
   doc comment explicitly states the omission (e.g. a fixed-size-by-design surface).

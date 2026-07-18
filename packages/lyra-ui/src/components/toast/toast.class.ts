@@ -21,11 +21,11 @@ export interface ToastCreateOptions {
 }
 
 /**
- * `<lyra-toast>` — the stacking toast region. One per page is recommended.
- * Mirrors the Web Awesome `<wa-toast>` API under the `lyra-` prefix.
+ * `<lr-toast>` — the stacking toast region. One per page is recommended.
+ * Mirrors the Web Awesome `<wa-toast>` API under the `lr-` prefix.
  *
- * @customElement lyra-toast
- * @slot - `<lyra-toast-item>` elements.
+ * @customElement lr-toast
+ * @slot - `<lr-toast-item>` elements.
  * @csspart stack - The fl-column container holding the items.
  */
 export class LyraToast extends LyraElement {
@@ -36,9 +36,9 @@ export class LyraToast extends LyraElement {
 
   /** Create and append a toast item programmatically; resolves to the item. */
   async create(message: string, options: ToastCreateOptions = {}): Promise<LyraToastItem> {
-    const item = document.createElement('lyra-toast-item') as LyraToastItem;
+    const item = document.createElement('lr-toast-item') as LyraToastItem;
     // Only assign what the caller actually specified -- a freshly-created
-    // <lyra-toast-item> already carries its own property defaults, so
+    // <lr-toast-item> already carries its own property defaults, so
     // falling back to a literal here (e.g. `?? 5000`) would duplicate those
     // defaults in a second place that has no way of staying in sync if the
     // property declaration in toast-item.ts ever changes.
@@ -63,7 +63,7 @@ export class LyraToast extends LyraElement {
 
 declare global {
   interface HTMLElementTagNameMap {
-    'lyra-toast': LyraToast;
+    'lr-toast': LyraToast;
   }
 }
 

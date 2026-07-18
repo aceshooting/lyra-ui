@@ -55,7 +55,7 @@ export async function loadD3Modules(
     };
   } catch (err) {
     console.warn(
-      '<lyra-graph> needs the optional peer dependencies `d3-force`, `d3-drag`, ' +
+      '<lr-graph> needs the optional peer dependencies `d3-force`, `d3-drag`, ' +
         '`d3-zoom`, and `d3-selection` — install them with `pnpm add d3-force d3-drag d3-zoom d3-selection`:',
       err,
     );
@@ -68,7 +68,7 @@ let d3Modules: Promise<D3Modules | null> | undefined;
 /**
  * Lazily loads the d3 peer dependencies (see `loadD3Modules()`) once per
  * page. Resolves to `null` if they aren't installed — mirrors
- * `<lyra-flag>`'s peer-dependency pattern.
+ * `<lr-flag>`'s peer-dependency pattern.
  */
 export function loadD3(): Promise<D3Modules | null> {
   if (!d3Modules) {

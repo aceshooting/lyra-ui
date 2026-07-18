@@ -5,7 +5,7 @@ import type { LyraToolParamForm, ToolParamFormSchema } from './tool-param-form.j
 
 const meta: Meta = {
   title: 'ToolParamForm',
-  component: 'lyra-tool-param-form',
+  component: 'lr-tool-param-form',
   tags: ['autodocs'],
 };
 export default meta;
@@ -47,18 +47,18 @@ const weatherSchema: ToolParamFormSchema = {
  */
 export const Default: Story = {
   render: () => html`
-    <lyra-tool-param-form style="max-width: 24rem" .schema=${weatherSchema}></lyra-tool-param-form>
+    <lr-tool-param-form style="max-width: 24rem" .schema=${weatherSchema}></lr-tool-param-form>
   `,
 };
 
 /** A field with no entry in `value` still displays (and gets emitted with) its schema `default`. */
 export const PrefilledValue: Story = {
   render: () => html`
-    <lyra-tool-param-form
+    <lr-tool-param-form
       style="max-width: 24rem"
       .schema=${weatherSchema}
       .value=${{ city: 'Lisbon', units: 'fahrenheit', includeHourly: true }}
-    ></lyra-tool-param-form>
+    ></lr-tool-param-form>
   `,
 };
 
@@ -70,14 +70,14 @@ export const PrefilledValue: Story = {
 export const ReportValidity: Story = {
   render: () => {
     const onRun = (e: Event) => {
-      const form = (e.target as HTMLElement).closest('.demo')!.querySelector('lyra-tool-param-form') as LyraToolParamForm;
+      const form = (e.target as HTMLElement).closest('.demo')!.querySelector('lr-tool-param-form') as LyraToolParamForm;
       const status = (e.target as HTMLElement).closest('.demo')!.querySelector('.status') as HTMLElement;
       const valid = form.reportValidity();
       status.textContent = valid ? `Valid — would call with ${JSON.stringify(form.effectiveValue)}` : 'Invalid — see errors above';
     };
     return html`
       <div class="demo" style="max-width: 24rem; display: flex; flex-direction: column; gap: 1rem">
-        <lyra-tool-param-form .schema=${weatherSchema}></lyra-tool-param-form>
+        <lr-tool-param-form .schema=${weatherSchema}></lr-tool-param-form>
         <button type="button" @click=${onRun}>Run tool</button>
         <p class="status" style="font-size: 0.875rem"></p>
       </div>
@@ -85,7 +85,7 @@ export const ReportValidity: Story = {
   },
 };
 
-/** Live `lyra-input`/`lyra-validity-change` events, mirroring what a consumer's dialog would listen for. */
+/** Live `lr-input`/`lr-validity-change` events, mirroring what a consumer's dialog would listen for. */
 export const LiveEvents: Story = {
   render: () => {
     const onEvent = (e: Event) => {
@@ -95,11 +95,11 @@ export const LiveEvents: Story = {
     };
     return html`
       <div class="demo" style="max-width: 26rem; display: flex; flex-direction: column; gap: 1rem">
-        <lyra-tool-param-form
+        <lr-tool-param-form
           .schema=${weatherSchema}
-          @lyra-input=${onEvent}
-          @lyra-validity-change=${onEvent}
-        ></lyra-tool-param-form>
+          @lr-input=${onEvent}
+          @lr-validity-change=${onEvent}
+        ></lr-tool-param-form>
         <pre class="log" style="font-size: 0.75rem; white-space: pre-wrap; word-break: break-all"></pre>
       </div>
     `;
@@ -109,7 +109,7 @@ export const LiveEvents: Story = {
 /** A schema with no properties renders an empty (but still valid) form. */
 export const EmptySchema: Story = {
   render: () => html`
-    <lyra-tool-param-form style="max-width: 24rem" .schema=${{ type: 'object', properties: {} }}></lyra-tool-param-form>
+    <lr-tool-param-form style="max-width: 24rem" .schema=${{ type: 'object', properties: {} }}></lr-tool-param-form>
   `,
 };
 
@@ -127,6 +127,6 @@ const enumHeavySchema: ToolParamFormSchema = {
 /** All four supported field kinds together, including a `number` (non-integer) field and a required boolean. */
 export const AllFieldKinds: Story = {
   render: () => html`
-    <lyra-tool-param-form style="max-width: 24rem" .schema=${enumHeavySchema}></lyra-tool-param-form>
+    <lr-tool-param-form style="max-width: 24rem" .schema=${enumHeavySchema}></lr-tool-param-form>
   `,
 };

@@ -6,35 +6,35 @@ import { nextId } from '../../internal/a11y.js';
 import { styles } from './entity-chip.styles.js';
 
 export interface LyraEntityChipEventMap {
-  'lyra-entity-activate': CustomEvent<{ id: string }>;
-  'lyra-entity-open': CustomEvent<{ id: string }>;
+  'lr-entity-activate': CustomEvent<{ id: string }>;
+  'lr-entity-open': CustomEvent<{ id: string }>;
 }
 
 const HIDE_DELAY_MS = 200;
 
 /** A node counts as real preview content if it's an element not assigned to some other named
- *  slot, or non-whitespace text -- mirrors `lyra-citation-badge`'s identical `isRealPreviewNode`. */
+ *  slot, or non-whitespace text -- mirrors `lr-citation-badge`'s identical `isRealPreviewNode`. */
 function isRealPreviewNode(n: Node): boolean {
   return n.nodeType === Node.ELEMENT_NODE ? !(n as Element).hasAttribute('slot') : (n.textContent ?? '').trim().length > 0;
 }
 
 /**
- * `<lyra-entity-chip>` — an inline `@entity` mention for agent prose: flow content,
+ * `<lr-entity-chip>` — an inline `@entity` mention for agent prose: flow content,
  * keyboard-focusable, with a hover/focus preview popover. The knowledge-graph sibling of
- * `lyra-citation-badge`, reusing its interaction contract wholesale. Carries ids through events
+ * `lr-citation-badge`, reusing its interaction contract wholesale. Carries ids through events
  * only -- no entity data resolution, no navigation.
  *
- * @customElement lyra-entity-chip
- * @slot - Rich preview content (typically a compact `lyra-entity-card`), shown in a floating
+ * @customElement lr-entity-chip
+ * @slot - Rich preview content (typically a compact `lr-entity-card`), shown in a floating
  * popover on hover/focus. No content -> no popover and no hover affordance at all.
- * @event lyra-entity-activate - Click, or Enter while focused. `detail: { id }`.
- * @event lyra-entity-open - Dblclick, or Space while focused. `detail: { id }`.
+ * @event lr-entity-activate - Click, or Enter while focused. `detail: { id }`.
+ * @event lr-entity-open - Dblclick, or Space while focused. `detail: { id }`.
  * @csspart base - The clickable chip (`<button>`).
  * @csspart label - The chip's visible label text.
  * @csspart popover - The floating preview panel.
- * @cssprop [--lyra-entity-chip-color=var(--lyra-color-brand)] - Text/accent color. Reflected `type`
- * lets a host theme per type from CSS, e.g. `lyra-entity-chip[type='person'] { --lyra-entity-chip-color: ... }`.
- * @cssprop [--lyra-entity-chip-bg=var(--lyra-color-brand-quiet)] - Background color.
+ * @cssprop [--lr-entity-chip-color=var(--lr-color-brand)] - Text/accent color. Reflected `type`
+ * lets a host theme per type from CSS, e.g. `lr-entity-chip[type='person'] { --lr-entity-chip-color: ... }`.
+ * @cssprop [--lr-entity-chip-bg=var(--lr-color-brand-quiet)] - Background color.
  */
 export class LyraEntityChip extends LyraElement<LyraEntityChipEventMap> {
   static styles = [LyraElement.styles, styles];
@@ -43,7 +43,7 @@ export class LyraEntityChip extends LyraElement<LyraEntityChipEventMap> {
   @property({ attribute: 'entity-id' }) entityId = '';
   /** The visible chip text (unlike citation-badge, the chip renders its label, not `[n]`). */
   @property() label = '';
-  /** The entity's `lyra-graph` `nodeTypes` id; reflected so hosts theme per type from CSS. */
+  /** The entity's `lr-graph` `nodeTypes` id; reflected so hosts theme per type from CSS. */
   @property({ reflect: true }) type = '';
   /** Resolved display label for `type`; when set, the accessible name speaks it instead of the raw
    *  type id. */
@@ -148,7 +148,7 @@ export class LyraEntityChip extends LyraElement<LyraEntityChipEventMap> {
   };
 
   private onClick = (): void => {
-    this.emit('lyra-entity-activate', { id: this.entityId });
+    this.emit('lr-entity-activate', { id: this.entityId });
   };
 
   private onDblClick = (): void => {
@@ -156,7 +156,7 @@ export class LyraEntityChip extends LyraElement<LyraEntityChipEventMap> {
   };
 
   private emitOpen(): void {
-    this.emit('lyra-entity-open', { id: this.entityId });
+    this.emit('lr-entity-open', { id: this.entityId });
   }
 
   render(): TemplateResult {
@@ -175,7 +175,7 @@ export class LyraEntityChip extends LyraElement<LyraEntityChipEventMap> {
           aria-label=${this.getAttribute('aria-label') ||
           this.accessibleLabel ||
           /* `label` unset: never leave the button nameless — same degenerate-state
-             fallback `lyra-entity-card` uses for its title. */
+             fallback `lr-entity-card` uses for its title. */
           this.localize('untitledEntity')}
           aria-describedby=${this.hasPreviewSlot ? this.popoverId : nothing}
           @click=${this.onClick}
@@ -193,6 +193,6 @@ export class LyraEntityChip extends LyraElement<LyraEntityChipEventMap> {
 
 declare global {
   interface HTMLElementTagNameMap {
-    'lyra-entity-chip': LyraEntityChip;
+    'lr-entity-chip': LyraEntityChip;
   }
 }

@@ -1,10 +1,10 @@
 import type { ReactiveController, ReactiveControllerHost } from 'lit';
 
 /** @internal */
-export const VALIDITY_ANCHOR = Symbol('lyra-validity-anchor');
+export const VALIDITY_ANCHOR = Symbol('lr-validity-anchor');
 
 /** @internal */
-export const SET_ANCHORED_VALIDITY = Symbol('lyra-set-anchored-validity');
+export const SET_ANCHORED_VALIDITY = Symbol('lr-set-anchored-validity');
 
 /** @internal */
 export interface ValidityAnchorProvider {

@@ -8,64 +8,64 @@ export const styles = css`
        rules below rather than repeating background/color per part per status.
        Defaults to the 'pending' tone so an unset/unknown status still reads
        as neutral instead of unstyled. */
-    --lyra-tool-call-chip-accent: var(--lyra-color-text-quiet);
-    --lyra-tool-call-chip-bg: var(--lyra-color-surface);
-    --lyra-tool-call-chip-border: var(--lyra-color-border);
-    --lyra-tool-call-chip-spin: 1s linear;
+    --lr-tool-call-chip-accent: var(--lr-color-text-quiet);
+    --lr-tool-call-chip-bg: var(--lr-color-surface);
+    --lr-tool-call-chip-border: var(--lr-color-border);
+    --lr-tool-call-chip-spin: 1s linear;
   }
 
   :host([status='running']) {
-    --lyra-tool-call-chip-accent: var(--lyra-color-brand);
-    --lyra-tool-call-chip-bg: var(--lyra-color-brand-quiet);
-    --lyra-tool-call-chip-border: transparent;
+    --lr-tool-call-chip-accent: var(--lr-color-brand);
+    --lr-tool-call-chip-bg: var(--lr-color-brand-quiet);
+    --lr-tool-call-chip-border: transparent;
   }
   :host([status='success']) {
-    --lyra-tool-call-chip-accent: var(--lyra-color-success);
-    --lyra-tool-call-chip-bg: var(--lyra-color-success-quiet);
-    --lyra-tool-call-chip-border: transparent;
+    --lr-tool-call-chip-accent: var(--lr-color-success);
+    --lr-tool-call-chip-bg: var(--lr-color-success-quiet);
+    --lr-tool-call-chip-border: transparent;
   }
   :host([status='error']) {
-    --lyra-tool-call-chip-accent: var(--lyra-color-danger);
-    --lyra-tool-call-chip-bg: var(--lyra-color-danger-quiet);
-    --lyra-tool-call-chip-border: transparent;
+    --lr-tool-call-chip-accent: var(--lr-color-danger);
+    --lr-tool-call-chip-bg: var(--lr-color-danger-quiet);
+    --lr-tool-call-chip-border: transparent;
   }
   /* 'denied' reads as a policy rejection, not a runtime failure -- the
      warning (not danger) tint keeps it visually distinct from 'error',
-     matching lyra-tool-result-dialog's identical status vocabulary/tone so
+     matching lr-tool-result-dialog's identical status vocabulary/tone so
      the two components agree on what "denied" looks like. */
   :host([status='denied']) {
-    --lyra-tool-call-chip-accent: var(--lyra-color-warning);
-    --lyra-tool-call-chip-bg: var(--lyra-color-warning-quiet);
-    --lyra-tool-call-chip-border: transparent;
+    --lr-tool-call-chip-accent: var(--lr-color-warning);
+    --lr-tool-call-chip-bg: var(--lr-color-warning-quiet);
+    --lr-tool-call-chip-border: transparent;
   }
 
   [part='base'] {
     display: inline-flex;
     align-items: center;
-    gap: var(--lyra-space-xs);
+    gap: var(--lr-space-xs);
     max-inline-size: 100%;
     box-sizing: border-box;
-    padding: var(--lyra-size-0-25rem) var(--lyra-space-s);
-    border: var(--lyra-border-width-thin) solid var(--lyra-tool-call-chip-border);
-    border-radius: var(--lyra-radius-pill);
-    background: var(--lyra-tool-call-chip-bg);
-    color: var(--lyra-color-text);
+    padding: var(--lr-size-0-25rem) var(--lr-space-s);
+    border: var(--lr-border-width-thin) solid var(--lr-tool-call-chip-border);
+    border-radius: var(--lr-radius-pill);
+    background: var(--lr-tool-call-chip-bg);
+    color: var(--lr-color-text);
     font: inherit;
-    font-size: var(--lyra-font-size-sm);
-    line-height: var(--lyra-line-height-snug);
+    font-size: var(--lr-font-size-sm);
+    line-height: var(--lr-line-height-snug);
     text-align: start;
     cursor: pointer;
     -webkit-tap-highlight-color: transparent;
     transition:
-      background-color var(--lyra-transition-fast),
-      border-color var(--lyra-transition-fast);
+      background-color var(--lr-transition-fast),
+      border-color var(--lr-transition-fast);
   }
   [part='base']:hover {
-    border-color: var(--lyra-color-brand);
+    border-color: var(--lr-color-brand);
   }
   [part='base']:focus-visible {
-    outline: var(--lyra-focus-ring-width) solid var(--lyra-focus-ring-color);
-    outline-offset: var(--lyra-focus-ring-offset);
+    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
+    outline-offset: var(--lr-focus-ring-offset);
   }
 
   [part='icon'] {
@@ -73,7 +73,7 @@ export const styles = css`
     flex: 0 0 auto;
     align-items: center;
     justify-content: center;
-    color: var(--lyra-tool-call-chip-accent);
+    color: var(--lr-tool-call-chip-accent);
   }
   [part='icon'] svg {
     display: block;
@@ -82,39 +82,39 @@ export const styles = css`
      spinning once rotated -- a full circle looks identical at every
      rotation frame. */
   :host([status='running']) [part='icon'] svg {
-    animation: lyra-tool-call-chip-spin var(--lyra-tool-call-chip-spin) infinite;
+    animation: lr-tool-call-chip-spin var(--lr-tool-call-chip-spin) infinite;
   }
   /* Subtler than the spin -- a slow opacity breathe, so a list of several
      still-queued chips doesn't compete visually with any 'running' ones
      next to it. */
   :host([status='pending']) [part='icon'] svg {
-    animation: lyra-tool-call-chip-pulse var(--lyra-transition-ambient) infinite;
+    animation: lr-tool-call-chip-pulse var(--lr-transition-ambient) infinite;
   }
 
   [part='label'] {
     display: inline-flex;
     align-items: baseline;
-    gap: var(--lyra-size-0-3em);
+    gap: var(--lr-size-0-3em);
     flex: 1 1 auto;
     min-inline-size: 0;
     overflow: hidden;
   }
   [part='category'] {
     flex: 0 0 auto;
-    /* Full-strength text, not --lyra-color-text-quiet -- this sits on top of
+    /* Full-strength text, not --lr-color-text-quiet -- this sits on top of
        the per-status *-quiet tint backgrounds above (e.g. success-quiet),
        and text-quiet's gray fails WCAG AA contrast against several of those
        tints even though it comfortably passes against the plain surface
        background used by the resting/denied states. */
-    color: var(--lyra-color-text);
-    font-size: var(--lyra-size-0-6875rem);
-    font-weight: var(--lyra-font-weight-semibold);
+    color: var(--lr-color-text);
+    font-size: var(--lr-size-0-6875rem);
+    font-weight: var(--lr-font-weight-semibold);
     text-transform: uppercase;
-    letter-spacing: var(--lyra-size-0-04em);
+    letter-spacing: var(--lr-size-0-04em);
   }
   [part='category']::after {
     content: '·';
-    margin-inline-start: var(--lyra-size-0-3em);
+    margin-inline-start: var(--lr-size-0-3em);
   }
   [part='name'] {
     flex: 0 1 auto;
@@ -122,16 +122,16 @@ export const styles = css`
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-    font-weight: var(--lyra-font-weight-semibold);
+    font-weight: var(--lr-font-weight-semibold);
   }
   [part='summary'] {
     flex: 1 1 auto;
-    min-inline-size: var(--lyra-size-3ch);
+    min-inline-size: var(--lr-size-3ch);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
     /* See [part='category']'s comment above -- same contrast rationale. */
-    color: var(--lyra-color-text);
+    color: var(--lr-color-text);
   }
   [part='summary']::before {
     content: ': ';
@@ -141,20 +141,20 @@ export const styles = css`
     display: inline-flex;
     flex: 0 0 auto;
     align-items: baseline;
-    gap: var(--lyra-size-0-4em);
+    gap: var(--lr-size-0-4em);
     margin-inline-start: auto;
-    font-size: var(--lyra-size-0-6875rem);
+    font-size: var(--lr-size-0-6875rem);
   }
   [part='status-text'] {
-    color: var(--lyra-tool-call-chip-accent);
-    font-weight: var(--lyra-font-weight-semibold);
+    color: var(--lr-tool-call-chip-accent);
+    font-weight: var(--lr-font-weight-semibold);
     text-transform: uppercase;
-    letter-spacing: var(--lyra-size-0-03em);
+    letter-spacing: var(--lr-size-0-03em);
     white-space: nowrap;
   }
   [part='duration'] {
     /* See [part='category']'s comment above -- same contrast rationale. */
-    color: var(--lyra-color-text);
+    color: var(--lr-color-text);
     font-variant-numeric: tabular-nums;
     white-space: nowrap;
   }
@@ -166,25 +166,25 @@ export const styles = css`
      chasing a fade. */
   [part='tooltip'] {
     position: fixed;
-    z-index: var(--lyra-layer-dropdown);
+    z-index: var(--lr-layer-dropdown);
     box-sizing: border-box;
-    max-inline-size: min(90vw, var(--lyra-size-24rem));
-    padding: var(--lyra-space-s) var(--lyra-space-m);
-    background: var(--lyra-color-surface);
-    border: var(--lyra-border-width-thin) solid var(--lyra-color-border);
-    border-radius: var(--lyra-radius);
-    box-shadow: var(--lyra-shadow);
-    font-size: var(--lyra-font-size-sm);
-    line-height: var(--lyra-line-height-1-4);
-    color: var(--lyra-color-text);
+    max-inline-size: min(90vw, var(--lr-size-24rem));
+    padding: var(--lr-space-s) var(--lr-space-m);
+    background: var(--lr-color-surface);
+    border: var(--lr-border-width-thin) solid var(--lr-color-border);
+    border-radius: var(--lr-radius);
+    box-shadow: var(--lr-shadow);
+    font-size: var(--lr-font-size-sm);
+    line-height: var(--lr-line-height-1-4);
+    color: var(--lr-color-text);
   }
 
-  @keyframes lyra-tool-call-chip-spin {
+  @keyframes lr-tool-call-chip-spin {
     to {
       transform: rotate(360deg);
     }
   }
-  @keyframes lyra-tool-call-chip-pulse {
+  @keyframes lr-tool-call-chip-pulse {
     0%,
     100% {
       opacity: 1;

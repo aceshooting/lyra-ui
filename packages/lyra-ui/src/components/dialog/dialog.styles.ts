@@ -4,19 +4,19 @@ export const styles = css`
   :host {
     /* Backdrop scrim color -- component-specific so a host can retheme it
        without a raw literal leaking into the public API (no shared
-       --lyra-*-overlay token exists in the design system to resolve through,
-       same rationale as lyra-widget's --lyra-widget-overlay-color). */
-    --lyra-dialog-overlay-color: var(--lyra-color-overlay);
+       --lr-*-overlay token exists in the design system to resolve through,
+       same rationale as lr-widget's --lr-widget-overlay-color). */
+    --lr-dialog-overlay-color: var(--lr-color-overlay);
     display: none;
     position: fixed;
     inset: 0;
-    z-index: var(--lyra-overlay-stack-index, var(--lyra-layer-modal));
+    z-index: var(--lr-overlay-stack-index, var(--lr-layer-modal));
     align-items: center;
     justify-content: center;
-    padding-block-start: max(var(--lyra-space-l), var(--lyra-safe-area-top));
-    padding-block-end: max(var(--lyra-space-l), var(--lyra-safe-area-bottom));
-    padding-inline-start: max(var(--lyra-space-l), var(--lyra-safe-area-inline-start));
-    padding-inline-end: max(var(--lyra-space-l), var(--lyra-safe-area-inline-end));
+    padding-block-start: max(var(--lr-space-l), var(--lr-safe-area-top));
+    padding-block-end: max(var(--lr-space-l), var(--lr-safe-area-bottom));
+    padding-inline-start: max(var(--lr-space-l), var(--lr-safe-area-inline-start));
+    padding-inline-end: max(var(--lr-space-l), var(--lr-safe-area-inline-end));
   }
   :host([open]) {
     display: flex;
@@ -24,42 +24,42 @@ export const styles = css`
   [part='backdrop'] {
     position: absolute;
     inset: 0;
-    background: var(--lyra-dialog-overlay-color);
+    background: var(--lr-dialog-overlay-color);
   }
   [part='panel'] {
     position: relative;
     display: flex;
     flex-direction: column;
-    /* --lyra-dialog-width is an assertive width (unset/auto by default -- the panel shrink-wraps to
+    /* --lr-dialog-width is an assertive width (unset/auto by default -- the panel shrink-wraps to
        content, unchanged) capped by the same max-inline-size below and by the viewport. */
-    inline-size: var(--lyra-dialog-width, auto);
-    /* --lyra-dialog-max-width lets a consumer widen/narrow the panel per
+    inline-size: var(--lr-dialog-width, auto);
+    /* --lr-dialog-max-width lets a consumer widen/narrow the panel per
        instance (e.g. inline on the host) without overriding the whole rule --
-       same convention as lyra-media-card's --lyra-media-card-max-height. When
-       --lyra-dialog-width is set but --lyra-dialog-max-width is left at its
+       same convention as lr-media-card's --lr-media-card-max-height. When
+       --lr-dialog-width is set but --lr-dialog-max-width is left at its
        default, the cap falls back to the requested width itself (not the
        32rem default) so an assertive width isn't silently clipped by the
        old shrink-to-fit cap -- the viewport (100%) is still a hard limit. */
-    max-inline-size: min(var(--lyra-dialog-max-width, var(--lyra-dialog-width, var(--lyra-size-32rem))), 100%);
+    max-inline-size: min(var(--lr-dialog-max-width, var(--lr-dialog-width, var(--lr-size-32rem))), 100%);
     max-block-size: 100%;
-    background: var(--lyra-color-surface);
-    border: var(--lyra-border-width-thin) solid var(--lyra-color-border);
-    border-radius: var(--lyra-radius);
-    box-shadow: var(--lyra-shadow);
+    background: var(--lr-color-surface);
+    border: var(--lr-border-width-thin) solid var(--lr-color-border);
+    border-radius: var(--lr-radius);
+    box-shadow: var(--lr-shadow);
     overflow: auto;
   }
   [part='header'] {
     display: flex;
     align-items: center;
-    gap: var(--lyra-space-s);
-    padding: var(--lyra-space-m) var(--lyra-space-l);
-    border-block-end: var(--lyra-border-width-thin) solid var(--lyra-color-border);
+    gap: var(--lr-space-s);
+    padding: var(--lr-space-m) var(--lr-space-l);
+    border-block-end: var(--lr-border-width-thin) solid var(--lr-color-border);
   }
   [part='heading'] {
     flex: 1 1 auto;
     min-inline-size: 0;
     margin: 0;
-    font-weight: var(--lyra-font-weight-semibold);
+    font-weight: var(--lr-font-weight-semibold);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -70,36 +70,36 @@ export const styles = css`
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    min-inline-size: var(--lyra-icon-button-size);
-    min-block-size: var(--lyra-icon-button-size);
+    min-inline-size: var(--lr-icon-button-size);
+    min-block-size: var(--lr-icon-button-size);
     border: none;
     background: transparent;
-    color: var(--lyra-color-text-quiet);
-    border-radius: var(--lyra-radius);
+    color: var(--lr-color-text-quiet);
+    border-radius: var(--lr-radius);
     cursor: pointer;
   }
   [part='close-button']:hover {
-    background: var(--lyra-color-brand-quiet);
-    color: var(--lyra-color-brand);
+    background: var(--lr-color-brand-quiet);
+    color: var(--lr-color-brand);
   }
   [part='close-button']:focus-visible {
-    outline: var(--lyra-focus-ring-width) solid var(--lyra-focus-ring-color);
-    outline-offset: var(--lyra-focus-ring-offset);
+    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
+    outline-offset: var(--lr-focus-ring-offset);
   }
   [part='close-button'] svg {
     display: block;
   }
   [part='body'] {
-    padding: var(--lyra-space-l);
+    padding: var(--lr-space-l);
     overflow: auto;
   }
   [part='footer'] {
     display: flex;
     align-items: center;
     justify-content: flex-end;
-    gap: var(--lyra-space-s);
-    padding: var(--lyra-space-m) var(--lyra-space-l);
-    border-block-start: var(--lyra-border-width-thin) solid var(--lyra-color-border);
+    gap: var(--lr-space-s);
+    padding: var(--lr-space-m) var(--lr-space-l);
+    border-block-start: var(--lr-border-width-thin) solid var(--lr-color-border);
   }
   [part='footer'][hidden] {
     display: none;

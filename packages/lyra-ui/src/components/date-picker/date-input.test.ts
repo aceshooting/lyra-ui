@@ -5,7 +5,7 @@ import type { LyraDatePicker } from './date-picker.js';
 import { styles } from './date-input.styles.js';
 
 it('parses typed input into an ISO value and emits change', async () => {
-  const el = (await fixture(html`<lyra-date-input></lyra-date-input>`)) as LyraDateInput;
+  const el = (await fixture(html`<lr-date-input></lr-date-input>`)) as LyraDateInput;
   const input = el.shadowRoot!.querySelector('[part="input"]') as HTMLInputElement;
   input.value = '2026-07-15';
   setTimeout(() => input.dispatchEvent(new Event('change')));
@@ -14,7 +14,7 @@ it('parses typed input into an ISO value and emits change', async () => {
 });
 
 it('reverts an unparseable typed date to the last committed display text and flags badInput', async () => {
-  const el = (await fixture(html`<lyra-date-input value="2026-07-15"></lyra-date-input>`)) as LyraDateInput;
+  const el = (await fixture(html`<lr-date-input value="2026-07-15"></lr-date-input>`)) as LyraDateInput;
   await el.updateComplete;
   const input = el.shadowRoot!.querySelector('[part="input"]') as HTMLInputElement;
   const committedDisplay = input.value;
@@ -34,7 +34,7 @@ it('flags an ISO-shaped but calendar-invalid typed date (e.g. Feb 30) as badInpu
   // auto-rollover (returning March 2) instead of null, and Date.parse() has
   // the same rollover behavior for an ISO-shaped string -- so a mistyped day
   // used to silently commit a different date with no feedback at all.
-  const el = (await fixture(html`<lyra-date-input value="2026-07-15"></lyra-date-input>`)) as LyraDateInput;
+  const el = (await fixture(html`<lr-date-input value="2026-07-15"></lr-date-input>`)) as LyraDateInput;
   await el.updateComplete;
   const input = el.shadowRoot!.querySelector('[part="input"]') as HTMLInputElement;
   const committedDisplay = input.value;
@@ -50,12 +50,12 @@ it('flags an ISO-shaped but calendar-invalid typed date (e.g. Feb 30) as badInpu
 });
 
 it('opens the calendar and commits a picked date', async () => {
-  const el = (await fixture(html`<lyra-date-input value="2026-07-15"></lyra-date-input>`)) as LyraDateInput;
+  const el = (await fixture(html`<lr-date-input value="2026-07-15"></lr-date-input>`)) as LyraDateInput;
   el.show();
   await el.updateComplete;
   expect(el.open).to.be.true;
 
-  const picker = el.shadowRoot!.querySelector('lyra-date-picker')!;
+  const picker = el.shadowRoot!.querySelector('lr-date-picker')!;
   await (picker as unknown as LyraDateInput).updateComplete;
   const day = picker.shadowRoot!.querySelector('[data-date="2026-07-22"]') as HTMLButtonElement;
   setTimeout(() => day.click());
@@ -65,15 +65,15 @@ it('opens the calendar and commits a picked date', async () => {
 });
 
 it('fires exactly one input event per day pick, not two', async () => {
-  // Regression test: the nested <lyra-date-picker>'s own 'input' event
+  // Regression test: the nested <lr-date-picker>'s own 'input' event
   // (LyraElement.emit always dispatches bubbles:true, composed:true) had no
   // listener wired on it in date-input's render(), so it bubbled straight
   // through the shadow boundary and fired a second, uncounted 'input' on
   // this host on top of onPickerChange's own explicit emit.
-  const el = (await fixture(html`<lyra-date-input value="2026-07-15"></lyra-date-input>`)) as LyraDateInput;
+  const el = (await fixture(html`<lr-date-input value="2026-07-15"></lr-date-input>`)) as LyraDateInput;
   el.show();
   await el.updateComplete;
-  const picker = el.shadowRoot!.querySelector('lyra-date-picker')!;
+  const picker = el.shadowRoot!.querySelector('lr-date-picker')!;
   await (picker as unknown as LyraDateInput).updateComplete;
 
   let inputCount = 0;
@@ -86,10 +86,10 @@ it('fires exactly one input event per day pick, not two', async () => {
 });
 
 it('fires exactly one input event per range click, and one change once the range completes', async () => {
-  const el = (await fixture(html`<lyra-date-input mode="range"></lyra-date-input>`)) as LyraDateInput;
+  const el = (await fixture(html`<lr-date-input mode="range"></lr-date-input>`)) as LyraDateInput;
   el.show();
   await el.updateComplete;
-  const picker = el.shadowRoot!.querySelector('lyra-date-picker') as LyraDatePicker;
+  const picker = el.shadowRoot!.querySelector('lr-date-picker') as LyraDatePicker;
   await picker.updateComplete;
   picker.goToDate('2026-07-01');
   await picker.updateComplete;
@@ -115,10 +115,10 @@ it('does not flag badInput for the half-completed range value produced by the fi
   // so the single-part value the picker commits after only the first click
   // of a range (a completely normal, transient state) tripped badInput
   // until the second click completed the pair.
-  const el = (await fixture(html`<lyra-date-input mode="range"></lyra-date-input>`)) as LyraDateInput;
+  const el = (await fixture(html`<lr-date-input mode="range"></lr-date-input>`)) as LyraDateInput;
   el.show();
   await el.updateComplete;
-  const picker = el.shadowRoot!.querySelector('lyra-date-picker') as LyraDatePicker;
+  const picker = el.shadowRoot!.querySelector('lr-date-picker') as LyraDatePicker;
   await picker.updateComplete;
   picker.goToDate('2026-07-01');
   await picker.updateComplete;
@@ -133,7 +133,7 @@ it('does not flag badInput for the half-completed range value produced by the fi
 
 it('flags a required half-completed range value as valueMissing, not badInput', async () => {
   const el = (await fixture(
-    html`<lyra-date-input mode="range" required></lyra-date-input>`,
+    html`<lr-date-input mode="range" required></lr-date-input>`,
   )) as LyraDateInput;
   el.value = '2026-07-05';
 
@@ -147,10 +147,10 @@ it('flags a required half-completed range value as valueMissing, not badInput', 
 });
 
 it('auto-closes the popover once a range selection is completed, not just in single mode', async () => {
-  const el = (await fixture(html`<lyra-date-input mode="range"></lyra-date-input>`)) as LyraDateInput;
+  const el = (await fixture(html`<lr-date-input mode="range"></lr-date-input>`)) as LyraDateInput;
   el.show();
   await el.updateComplete;
-  const picker = el.shadowRoot!.querySelector('lyra-date-picker') as LyraDatePicker;
+  const picker = el.shadowRoot!.querySelector('lr-date-picker') as LyraDatePicker;
   await picker.updateComplete;
   picker.goToDate('2026-07-01');
   await picker.updateComplete;
@@ -165,7 +165,7 @@ it('auto-closes the popover once a range selection is completed, not just in sin
 });
 
 it('closes the popover on Escape from anywhere inside the form control', async () => {
-  const el = (await fixture(html`<lyra-date-input value="2026-07-15"></lyra-date-input>`)) as LyraDateInput;
+  const el = (await fixture(html`<lr-date-input value="2026-07-15"></lr-date-input>`)) as LyraDateInput;
   el.show();
   await el.updateComplete;
   expect(el.open).to.be.true;
@@ -176,12 +176,12 @@ it('closes the popover on Escape from anywhere inside the form control', async (
   expect(el.open).to.be.false;
 });
 
-it('propagates disable-past/disable-future/with-outside-days to the nested lyra-date-picker', async () => {
+it('propagates disable-past/disable-future/with-outside-days to the nested lr-date-picker', async () => {
   const el = (await fixture(
-    html`<lyra-date-input disable-past disable-future with-outside-days></lyra-date-input>`,
+    html`<lr-date-input disable-past disable-future with-outside-days></lr-date-input>`,
   )) as LyraDateInput;
   await el.updateComplete;
-  const picker = el.shadowRoot!.querySelector('lyra-date-picker') as LyraDatePicker;
+  const picker = el.shadowRoot!.querySelector('lr-date-picker') as LyraDatePicker;
   await picker.updateComplete;
   expect(picker.disablePast).to.be.true;
   expect(picker.disableFuture).to.be.true;
@@ -189,7 +189,7 @@ it('propagates disable-past/disable-future/with-outside-days to the nested lyra-
 });
 
 it('links the expand-button to the popup via aria-controls', async () => {
-  const el = (await fixture(html`<lyra-date-input></lyra-date-input>`)) as LyraDateInput;
+  const el = (await fixture(html`<lr-date-input></lr-date-input>`)) as LyraDateInput;
   await el.updateComplete;
   const expandBtn = el.shadowRoot!.querySelector('[part="expand-button"]') as HTMLElement;
   const popup = el.shadowRoot!.querySelector('[part="popup"]') as HTMLElement;
@@ -198,7 +198,7 @@ it('links the expand-button to the popup via aria-controls', async () => {
 });
 
 it('shows a formatted display value', async () => {
-  const el = (await fixture(html`<lyra-date-input value="2026-07-15"></lyra-date-input>`)) as LyraDateInput;
+  const el = (await fixture(html`<lr-date-input value="2026-07-15"></lr-date-input>`)) as LyraDateInput;
   await el.updateComplete;
   const input = el.shadowRoot!.querySelector('[part="input"]') as HTMLInputElement;
   expect(input.value).to.not.be.empty;
@@ -206,11 +206,11 @@ it('shows a formatted display value', async () => {
 });
 
 it('clears via the clear button', async () => {
-  const el = (await fixture(html`<lyra-date-input value="2026-07-15" with-clear></lyra-date-input>`)) as LyraDateInput;
+  const el = (await fixture(html`<lr-date-input value="2026-07-15" with-clear></lr-date-input>`)) as LyraDateInput;
   await el.updateComplete;
   const clear = el.shadowRoot!.querySelector('[part="clear-button"]') as HTMLButtonElement;
   setTimeout(() => clear.click());
-  await oneEvent(el, 'lyra-clear');
+  await oneEvent(el, 'lr-clear');
   expect(el.value).to.equal('');
 });
 
@@ -220,7 +220,7 @@ it('touches a required field on clear() so the resulting invalid state is surfac
   // until some later, unrelated blur -- even though the field was just
   // emptied by an explicit, user-initiated action.
   const el = (await fixture(
-    html`<lyra-date-input with-clear required value="2026-07-15"></lyra-date-input>`,
+    html`<lr-date-input with-clear required value="2026-07-15"></lr-date-input>`,
   )) as LyraDateInput;
   await el.updateComplete;
   expect(el.hasAttribute('data-invalid')).to.be.false;
@@ -232,14 +232,14 @@ it('touches a required field on clear() so the resulting invalid state is surfac
 
 it('participates in a form', async () => {
   const form = (await fixture(html`
-    <form><lyra-date-input name="d" value="2026-07-15"></lyra-date-input></form>
+    <form><lr-date-input name="d" value="2026-07-15"></lr-date-input></form>
   `)) as HTMLFormElement;
   expect(new FormData(form).get('d')).to.equal('2026-07-15');
 });
 
 it('is accessible', async () => {
   const el = (await fixture(
-    html`<lyra-date-input label="Start date" value="2026-07-15"></lyra-date-input>`,
+    html`<lr-date-input label="Start date" value="2026-07-15"></lr-date-input>`,
   )) as LyraDateInput;
   await el.updateComplete;
   await expect(el).to.be.accessible();
@@ -247,7 +247,7 @@ it('is accessible', async () => {
 
 it('blocks a required, empty date input from submitting the form', async () => {
   const form = (await fixture(
-    html`<form><lyra-date-input name="d" required></lyra-date-input></form>`,
+    html`<form><lr-date-input name="d" required></lr-date-input></form>`,
   )) as HTMLFormElement;
   expect(form.reportValidity()).to.be.false;
 });
@@ -256,11 +256,11 @@ it('focuses its input when typed bad-input validation fails directly or during f
   const form = (await fixture(html`
     <form>
       <button type="button" id="sentinel">Before</button>
-      <lyra-date-input name="d" value="2026-07-15"></lyra-date-input>
+      <lr-date-input name="d" value="2026-07-15"></lr-date-input>
       <button type="submit">Submit</button>
     </form>
   `)) as HTMLFormElement;
-  const el = form.querySelector('lyra-date-input') as LyraDateInput;
+  const el = form.querySelector('lr-date-input') as LyraDateInput;
   const sentinel = form.querySelector('#sentinel') as HTMLButtonElement;
   await el.updateComplete;
 
@@ -273,7 +273,7 @@ it('focuses its input when typed bad-input validation fails directly or during f
   sentinel.focus();
   expect(document.activeElement?.id).to.equal('sentinel');
   expect(el.reportValidity()).to.be.false;
-  expect(document.activeElement?.localName).to.equal('lyra-date-input');
+  expect(document.activeElement?.localName).to.equal('lr-date-input');
   expect(el.shadowRoot!.activeElement?.getAttribute('part')).to.equal('input');
 
   let submits = 0;
@@ -285,15 +285,15 @@ it('focuses its input when typed bad-input validation fails directly or during f
   expect(document.activeElement?.id).to.equal('sentinel');
   form.requestSubmit();
   expect(submits).to.equal(0);
-  expect(document.activeElement?.localName).to.equal('lyra-date-input');
+  expect(document.activeElement?.localName).to.equal('lr-date-input');
   expect(el.shadowRoot!.activeElement?.getAttribute('part')).to.equal('input');
 });
 
 it('re-syncs ElementInternals validity when required is toggled after connection', async () => {
   const form = (await fixture(
-    html`<form><lyra-date-input name="d"></lyra-date-input></form>`,
+    html`<form><lr-date-input name="d"></lr-date-input></form>`,
   )) as HTMLFormElement;
-  const el = form.querySelector('lyra-date-input') as LyraDateInput;
+  const el = form.querySelector('lr-date-input') as LyraDateInput;
   expect(form.reportValidity()).to.be.true;
 
   el.required = true;
@@ -309,10 +309,10 @@ describe('complete programmatic validity', () => {
   it('retains an out-of-range declarative value and reports its precise bound failure', async () => {
     const form = (await fixture(html`
       <form>
-        <lyra-date-input name="d" min="2026-01-01" max="2026-12-31" value="2027-01-01"></lyra-date-input>
+        <lr-date-input name="d" min="2026-01-01" max="2026-12-31" value="2027-01-01"></lr-date-input>
       </form>
     `)) as HTMLFormElement;
-    const el = form.querySelector('lyra-date-input') as LyraDateInput;
+    const el = form.querySelector('lr-date-input') as LyraDateInput;
 
     expect(el.value).to.equal('2027-01-01');
     expect(new FormData(form).get('d')).to.equal('2027-01-01');
@@ -322,7 +322,7 @@ describe('complete programmatic validity', () => {
 
   it('recomputes min and max validity synchronously for property and attribute changes', async () => {
     const el = (await fixture(
-      html`<lyra-date-input value="2026-07-15"></lyra-date-input>`,
+      html`<lr-date-input value="2026-07-15"></lr-date-input>`,
     )) as LyraDateInput;
 
     el.min = '2026-08-01';
@@ -344,7 +344,7 @@ describe('complete programmatic validity', () => {
 
   it('recomputes disable-past and disable-future validity synchronously', async () => {
     const el = (await fixture(
-      html`<lyra-date-input value="2000-01-01"></lyra-date-input>`,
+      html`<lr-date-input value="2000-01-01"></lr-date-input>`,
     )) as LyraDateInput;
 
     el.setAttribute('disable-past', '');
@@ -361,7 +361,7 @@ describe('complete programmatic validity', () => {
 
   it('refreshes temporal validity when checkValidity crosses local midnight', async () => {
     const el = (await fixture(
-      html`<lyra-date-input value="2026-07-14" disable-past></lyra-date-input>`,
+      html`<lr-date-input value="2026-07-14" disable-past></lr-date-input>`,
     )) as LyraDateInput;
     const clock = el as unknown as { now: () => Date };
 
@@ -375,7 +375,7 @@ describe('complete programmatic validity', () => {
 
   it('refreshes temporal validity when the document becomes visible again', async () => {
     const el = (await fixture(
-      html`<lyra-date-input value="2026-07-14" disable-past></lyra-date-input>`,
+      html`<lr-date-input value="2026-07-14" disable-past></lr-date-input>`,
     )) as LyraDateInput;
     const clock = el as unknown as { now: () => Date };
 
@@ -390,12 +390,12 @@ describe('complete programmatic validity', () => {
 
   it('checks every range endpoint and can report underflow and overflow together', async () => {
     const el = (await fixture(html`
-      <lyra-date-input
+      <lr-date-input
         mode="range"
         value="2025-12-31/2027-01-01"
         min="2026-01-01"
         max="2026-12-31"
-      ></lyra-date-input>
+      ></lr-date-input>
     `)) as LyraDateInput;
 
     expect(el.internals.validity.rangeUnderflow).to.be.true;
@@ -408,7 +408,7 @@ describe('complete programmatic validity', () => {
     const futureValue = `${year + 1}-01-01`;
     const futureMin = `${year + 2}-01-01`;
     const underflow = (await fixture(html`
-      <lyra-date-input disable-past value=${futureValue} min=${futureMin}></lyra-date-input>
+      <lr-date-input disable-past value=${futureValue} min=${futureMin}></lr-date-input>
     `)) as LyraDateInput;
     expect(underflow.internals.validity.rangeUnderflow).to.be.true;
     expect(underflow.internals.validationMessage).to.contain(futureMin);
@@ -416,7 +416,7 @@ describe('complete programmatic validity', () => {
     const pastValue = `${year - 1}-01-01`;
     const pastMax = `${year - 2}-01-01`;
     const overflow = (await fixture(html`
-      <lyra-date-input disable-future value=${pastValue} max=${pastMax}></lyra-date-input>
+      <lr-date-input disable-future value=${pastValue} max=${pastMax}></lr-date-input>
     `)) as LyraDateInput;
     expect(overflow.internals.validity.rangeOverflow).to.be.true;
     expect(overflow.internals.validationMessage).to.contain(pastMax);
@@ -424,9 +424,9 @@ describe('complete programmatic validity', () => {
 
   it('sanitizes calendar-invalid declarative, IDL, and restored values to empty', async () => {
     const form = (await fixture(html`
-      <form><lyra-date-input name="d" value="2026-02-30"></lyra-date-input></form>
+      <form><lr-date-input name="d" value="2026-02-30"></lr-date-input></form>
     `)) as HTMLFormElement;
-    const el = form.querySelector('lyra-date-input') as LyraDateInput;
+    const el = form.querySelector('lr-date-input') as LyraDateInput;
 
     expect(el.value).to.equal('');
     expect(new FormData(form).get('d')).to.equal('');
@@ -446,9 +446,9 @@ describe('complete programmatic validity', () => {
 
   it('revalidates restored and reset values against the current constraints', async () => {
     const form = (await fixture(html`
-      <form><lyra-date-input name="d" value="2026-07-15" max="2026-12-31"></lyra-date-input></form>
+      <form><lr-date-input name="d" value="2026-07-15" max="2026-12-31"></lr-date-input></form>
     `)) as HTMLFormElement;
-    const el = form.querySelector('lyra-date-input') as LyraDateInput;
+    const el = form.querySelector('lr-date-input') as LyraDateInput;
 
     (el as unknown as { formStateRestoreCallback(state: string): void }).formStateRestoreCallback('2027-01-01');
     expect(el.value).to.equal('2027-01-01');
@@ -462,7 +462,7 @@ describe('complete programmatic validity', () => {
 
   it('bars required and bound validation while readonly, then restores it synchronously', async () => {
     const empty = (await fixture(
-      html`<lyra-date-input required></lyra-date-input>`,
+      html`<lr-date-input required></lr-date-input>`,
     )) as LyraDateInput;
     expect(empty.checkValidity()).to.be.false;
 
@@ -475,7 +475,7 @@ describe('complete programmatic validity', () => {
     expect(empty.internals.validity.valueMissing).to.be.true;
 
     const bounded = (await fixture(
-      html`<lyra-date-input value="2027-01-01" max="2026-12-31"></lyra-date-input>`,
+      html`<lr-date-input value="2027-01-01" max="2026-12-31"></lr-date-input>`,
     )) as LyraDateInput;
     expect(bounded.internals.validity.rangeOverflow).to.be.true;
     bounded.readonly = true;
@@ -484,7 +484,7 @@ describe('complete programmatic validity', () => {
 
   it('revalidates the committed ISO shape when mode changes', async () => {
     const el = (await fixture(
-      html`<lyra-date-input value="2026-07-15"></lyra-date-input>`,
+      html`<lr-date-input value="2026-07-15"></lr-date-input>`,
     )) as LyraDateInput;
 
     // A single-part value is a valid, incomplete range selection once in
@@ -506,7 +506,7 @@ describe('complete programmatic validity', () => {
 
   it('normalizes a reversed programmatic range into canonical order', async () => {
     const el = (await fixture(
-      html`<lyra-date-input mode="range"></lyra-date-input>`,
+      html`<lr-date-input mode="range"></lr-date-input>`,
     )) as LyraDateInput;
 
     el.value = '2026-07-20/2026-07-10';
@@ -516,7 +516,7 @@ describe('complete programmatic validity', () => {
 
   it('preserves typed badInput across constraint changes and clears it on a committed value', async () => {
     const el = (await fixture(
-      html`<lyra-date-input value="2026-07-15"></lyra-date-input>`,
+      html`<lr-date-input value="2026-07-15"></lr-date-input>`,
     )) as LyraDateInput;
     const input = el.shadowRoot!.querySelector('[part="input"]') as HTMLInputElement;
 
@@ -534,7 +534,7 @@ describe('complete programmatic validity', () => {
 
   it('refreshes touched invalid styling after a constraint-only change', async () => {
     const el = (await fixture(
-      html`<lyra-date-input value="2026-07-15"></lyra-date-input>`,
+      html`<lr-date-input value="2026-07-15"></lr-date-input>`,
     )) as LyraDateInput;
     const input = el.shadowRoot!.querySelector('[part="input"]') as HTMLInputElement;
     input.dispatchEvent(new FocusEvent('blur'));
@@ -552,7 +552,7 @@ describe('complete programmatic validity', () => {
 
   it('refreshes touched invalid styling after a typed parse failure', async () => {
     const el = (await fixture(
-      html`<lyra-date-input value="2026-07-15"></lyra-date-input>`,
+      html`<lr-date-input value="2026-07-15"></lr-date-input>`,
     )) as LyraDateInput;
     const input = el.shadowRoot!.querySelector('[part="input"]') as HTMLInputElement;
     input.dispatchEvent(new FocusEvent('blur'));
@@ -568,9 +568,9 @@ describe('complete programmatic validity', () => {
 
 it('restores the constructed value (not blank) on form.reset()', async () => {
   const form = (await fixture(html`
-    <form><lyra-date-input name="d" value="2026-07-15"></lyra-date-input></form>
+    <form><lr-date-input name="d" value="2026-07-15"></lr-date-input></form>
   `)) as HTMLFormElement;
-  const el = form.querySelector('lyra-date-input') as LyraDateInput;
+  const el = form.querySelector('lr-date-input') as LyraDateInput;
   el.value = '2026-08-01';
   form.reset();
   expect(el.value).to.equal('2026-07-15');
@@ -581,9 +581,9 @@ it('does not let a typed-in value become the reset default when there is no `val
   // construction — even a user's own first edit of a blank required field —
   // silently became the permanent reset default.
   const form = (await fixture(
-    html`<form><lyra-date-input name="d"></lyra-date-input></form>`,
+    html`<form><lr-date-input name="d"></lr-date-input></form>`,
   )) as HTMLFormElement;
-  const el = form.querySelector('lyra-date-input') as LyraDateInput;
+  const el = form.querySelector('lr-date-input') as LyraDateInput;
   el.value = 'first-user-edit';
   el.value = 'second-user-edit';
   form.reset();
@@ -592,7 +592,7 @@ it('does not let a typed-in value become the reset default when there is no `val
 
 it('uses shared svg icons instead of literal glyphs for clear and calendar toggle', async () => {
   const el = (await fixture(
-    html`<lyra-date-input value="2026-07-15" with-clear></lyra-date-input>`,
+    html`<lr-date-input value="2026-07-15" with-clear></lr-date-input>`,
   )) as LyraDateInput;
   await el.updateComplete;
 
@@ -609,7 +609,7 @@ it('transitions the popup with the shared fast-transition token and respects red
   const css = styles.cssText;
   const popupBlock = /\[part=['"]?popup['"]?]\s*{([^}]*)}/.exec(css);
   expect(popupBlock, 'expected a base [part="popup"] rule').to.not.equal(null);
-  expect(popupBlock![1]).to.include('var(--lyra-transition-fast)');
+  expect(popupBlock![1]).to.include('var(--lr-transition-fast)');
   expect(css).to.match(/@media\s*\(prefers-reduced-motion:\s*reduce\)/);
 });
 
@@ -617,10 +617,10 @@ it('gives the clear/expand buttons a real touch target instead of collapsing to 
   const css = styles.cssText;
   const btnBlock = /\[part=['"]?clear-button['"]?],\s*\[part=['"]?expand-button['"]?]\s*{([^}]*)}/.exec(css);
   expect(btnBlock, 'expected a shared [part="clear-button"], [part="expand-button"] rule').to.not.equal(null);
-  expect(btnBlock![1]).to.include('var(--lyra-icon-button-size)');
+  expect(btnBlock![1]).to.include('var(--lr-icon-button-size)');
 
   const el = (await fixture(
-    html`<lyra-date-input value="2026-07-15" with-clear></lyra-date-input>`,
+    html`<lr-date-input value="2026-07-15" with-clear></lr-date-input>`,
   )) as LyraDateInput;
   await el.updateComplete;
   const expandBtn = el.shadowRoot!.querySelector('[part="expand-button"]') as HTMLElement;
@@ -634,14 +634,14 @@ it('gives the clear/expand buttons a real touch target instead of collapsing to 
 });
 
 it('hides the error and hint parts when empty, shows them once populated', async () => {
-  const el = (await fixture(html`<lyra-date-input></lyra-date-input>`)) as LyraDateInput;
+  const el = (await fixture(html`<lr-date-input></lr-date-input>`)) as LyraDateInput;
   await el.updateComplete;
 
   const errorPart = el.shadowRoot!.querySelector('[part="error"]') as HTMLElement;
   const hintPart = el.shadowRoot!.querySelector('[part="hint"]') as HTMLElement;
   // Neither part can rely on `:empty` — each always contains a literal
   // `<slot>` child element, so `:empty` never matches regardless of
-  // assigned/text content (same bug class fixed for lyra-stat).
+  // assigned/text content (same bug class fixed for lr-stat).
   expect(getComputedStyle(errorPart).display).to.equal('none');
   expect(getComputedStyle(hintPart).display).to.equal('none');
 
@@ -652,8 +652,8 @@ it('hides the error and hint parts when empty, shows them once populated', async
   expect(getComputedStyle(hintPart).display).to.not.equal('none');
 });
 
-it('renders errorText in var(--lyra-color-danger), distinct from and alongside the hint', async () => {
-  const el = (await fixture(html`<lyra-date-input></lyra-date-input>`)) as LyraDateInput;
+it('renders errorText in var(--lr-color-danger), distinct from and alongside the hint', async () => {
+  const el = (await fixture(html`<lr-date-input></lr-date-input>`)) as LyraDateInput;
   el.hint = 'Use ISO format';
   el.errorText = 'Invalid date';
   await el.updateComplete;
@@ -667,7 +667,7 @@ it('renders errorText in var(--lyra-color-danger), distinct from and alongside t
 });
 
 it('reflects an invalid state only after the field has been interacted with once', async () => {
-  const el = (await fixture(html`<lyra-date-input required></lyra-date-input>`)) as LyraDateInput;
+  const el = (await fixture(html`<lr-date-input required></lr-date-input>`)) as LyraDateInput;
   await el.updateComplete;
   expect(el.hasAttribute('data-invalid')).to.be.false;
 
@@ -680,7 +680,7 @@ it('reflects an invalid state only after the field has been interacted with once
 
 it('shows a required-field asterisk after the label', async () => {
   const el = (await fixture(
-    html`<lyra-date-input label="Start date" required></lyra-date-input>`,
+    html`<lr-date-input label="Start date" required></lr-date-input>`,
   )) as LyraDateInput;
   await el.updateComplete;
   const label = el.shadowRoot!.querySelector('[part="form-control-label"]') as HTMLElement;
@@ -689,7 +689,7 @@ it('shows a required-field asterisk after the label', async () => {
 });
 
 it('does not render an orphaned asterisk when required but no label is provided', async () => {
-  const el = (await fixture(html`<lyra-date-input required></lyra-date-input>`)) as LyraDateInput;
+  const el = (await fixture(html`<lr-date-input required></lr-date-input>`)) as LyraDateInput;
   await el.updateComplete;
 
   // The label box always contains a literal `<slot name="label">` child,
@@ -702,15 +702,15 @@ it('does not render an orphaned asterisk when required but no label is provided'
 });
 
 it('clamps the popup to the viewport width like the combobox listbox', () => {
-  expect(styles.cssText).to.include('max-inline-size: min(92vw, var(--lyra-size-28rem))');
+  expect(styles.cssText).to.include('max-inline-size: min(92vw, var(--lr-size-28rem))');
 });
 
-it('propagates disabled/readonly to the nested lyra-date-picker so its days actually stop being interactive', async () => {
+it('propagates disabled/readonly to the nested lr-date-picker so its days actually stop being interactive', async () => {
   const el = (await fixture(
-    html`<lyra-date-input value="2026-07-15" disabled></lyra-date-input>`,
+    html`<lr-date-input value="2026-07-15" disabled></lr-date-input>`,
   )) as LyraDateInput;
   await el.updateComplete;
-  const picker = el.shadowRoot!.querySelector('lyra-date-picker') as LyraDatePicker;
+  const picker = el.shadowRoot!.querySelector('lr-date-picker') as LyraDatePicker;
   await picker.updateComplete;
   expect(picker.disabled).to.be.true;
 
@@ -722,7 +722,7 @@ it('propagates disabled/readonly to the nested lyra-date-picker so its days actu
 });
 
 it('shows a not-allowed cursor on the disabled input wrapper', async () => {
-  const el = (await fixture(html`<lyra-date-input disabled></lyra-date-input>`)) as LyraDateInput;
+  const el = (await fixture(html`<lr-date-input disabled></lr-date-input>`)) as LyraDateInput;
   await el.updateComplete;
   const wrapper = el.shadowRoot!.querySelector('[part="input-wrapper"]') as HTMLElement;
   expect(getComputedStyle(wrapper).cursor).to.equal('not-allowed');
@@ -730,7 +730,7 @@ it('shows a not-allowed cursor on the disabled input wrapper', async () => {
 
 it('pairs the form-control label with the date input via for/id so clicking the label focuses it', async () => {
   const el = (await fixture(
-    html`<lyra-date-input label="Start date" value="2026-07-15"></lyra-date-input>`,
+    html`<lr-date-input label="Start date" value="2026-07-15"></lr-date-input>`,
   )) as LyraDateInput;
   await el.updateComplete;
   const label = el.shadowRoot!.querySelector('[part="form-control-label"]') as HTMLLabelElement;
@@ -739,12 +739,12 @@ it('pairs the form-control label with the date input via for/id so clicking the 
   expect(label.htmlFor).to.equal(input.id);
 });
 
-it('propagates locale, first-day-of-week and weekday-format to the nested lyra-date-picker', async () => {
+it('propagates locale, first-day-of-week and weekday-format to the nested lr-date-picker', async () => {
   const el = (await fixture(
-    html`<lyra-date-input locale="fr-FR" first-day-of-week="mon" weekday-format="narrow"></lyra-date-input>`,
+    html`<lr-date-input locale="fr-FR" first-day-of-week="mon" weekday-format="narrow"></lr-date-input>`,
   )) as LyraDateInput;
   await el.updateComplete;
-  const picker = el.shadowRoot!.querySelector('lyra-date-picker') as LyraDatePicker;
+  const picker = el.shadowRoot!.querySelector('lr-date-picker') as LyraDatePicker;
   await picker.updateComplete;
   expect(picker.locale).to.equal('fr-FR');
   expect(picker.firstDayOfWeek).to.equal('mon');
@@ -753,10 +753,10 @@ it('propagates locale, first-day-of-week and weekday-format to the nested lyra-d
 
 it('normalizes invalid calendar count and weekday format attributes before propagation', async () => {
   const el = (await fixture(
-    html`<lyra-date-input months="999" weekday-format="bogus"></lyra-date-input>`,
+    html`<lr-date-input months="999" weekday-format="bogus"></lr-date-input>`,
   )) as LyraDateInput;
   await el.updateComplete;
-  const picker = el.shadowRoot!.querySelector('lyra-date-picker') as LyraDatePicker;
+  const picker = el.shadowRoot!.querySelector('lr-date-picker') as LyraDatePicker;
   await picker.updateComplete;
 
   expect(el.months).to.equal(2);
@@ -768,10 +768,10 @@ it('normalizes invalid calendar count and weekday format attributes before propa
 
 it('falls back to the default locale when a malformed locale is supplied', async () => {
   const el = (await fixture(
-    html`<lyra-date-input value="2026-07-15" locale="not_a_locale"></lyra-date-input>`,
+    html`<lr-date-input value="2026-07-15" locale="not_a_locale"></lr-date-input>`,
   )) as LyraDateInput;
   const input = el.shadowRoot!.querySelector('[part="input"]') as HTMLInputElement;
-  const picker = el.shadowRoot!.querySelector('lyra-date-picker') as LyraDatePicker;
+  const picker = el.shadowRoot!.querySelector('lr-date-picker') as LyraDatePicker;
   await picker.updateComplete;
 
   expect(input.value).to.equal(new Date(2026, 6, 15).toLocaleDateString());
@@ -780,7 +780,7 @@ it('falls back to the default locale when a malformed locale is supplied', async
 
 it('formats the displayed value using the locale property', async () => {
   const el = (await fixture(
-    html`<lyra-date-input value="2026-07-15" locale="fr-FR"></lyra-date-input>`,
+    html`<lr-date-input value="2026-07-15" locale="fr-FR"></lr-date-input>`,
   )) as LyraDateInput;
   await el.updateComplete;
   const input = el.shadowRoot!.querySelector('[part="input"]') as HTMLInputElement;
@@ -790,21 +790,21 @@ it('formats the displayed value using the locale property', async () => {
 it('derives the displayed value, the day/month/year parse order, and the nested picker locale from an inherited lang ancestor with no locale attribute set', async () => {
   // Regression test: displayText's formatter, localeDateOrder() (which
   // decides how an ambiguous typed date like "03/04/2026" is parsed), and the
-  // `.locale=` binding forwarded to the nested <lyra-date-picker> all used to
+  // `.locale=` binding forwarded to the nested <lr-date-picker> all used to
   // read the raw `locale` prop (default '') directly instead of
   // `effectiveLocale`, which also walks lang/locale ancestors -- so an
   // inherited <div lang="en-GB"> was silently ignored, both for display and
   // for day-first vs month-first parsing.
   const wrapper = await fixture(html`
-    <div lang="en-GB"><lyra-date-input value="2026-07-15"></lyra-date-input></div>
+    <div lang="en-GB"><lr-date-input value="2026-07-15"></lr-date-input></div>
   `);
-  const el = wrapper.querySelector('lyra-date-input') as LyraDateInput;
+  const el = wrapper.querySelector('lr-date-input') as LyraDateInput;
   await el.updateComplete;
 
   const input = el.shadowRoot!.querySelector('[part="input"]') as HTMLInputElement;
   expect(input.value).to.equal(new Date(2026, 6, 15).toLocaleDateString('en-GB'));
 
-  const picker = el.shadowRoot!.querySelector('lyra-date-picker') as LyraDatePicker;
+  const picker = el.shadowRoot!.querySelector('lr-date-picker') as LyraDatePicker;
   await picker.updateComplete;
   expect(picker.locale).to.equal('en-GB');
 
@@ -819,13 +819,13 @@ it('applies the shared focus-ring tokens to the clear and expand buttons', () =>
   const css = styles.cssText;
   const focusBlock = /\[part=['"]?clear-button['"]?]:focus-visible,\s*\[part=['"]?expand-button['"]?]:focus-visible\s*{([^}]*)}/.exec(css);
   expect(focusBlock, 'expected a shared clear/expand :focus-visible rule').to.not.equal(null);
-  expect(focusBlock![1]).to.include('var(--lyra-focus-ring-width)');
-  expect(focusBlock![1]).to.include('var(--lyra-focus-ring-color)');
+  expect(focusBlock![1]).to.include('var(--lr-focus-ring-width)');
+  expect(focusBlock![1]).to.include('var(--lr-focus-ring-color)');
 });
 
 it('round-trips a rendered range string typed back into the field', async () => {
   const el = (await fixture(
-    html`<lyra-date-input mode="range" value="2026-05-01/2026-05-15"></lyra-date-input>`,
+    html`<lr-date-input mode="range" value="2026-05-01/2026-05-15"></lr-date-input>`,
   )) as LyraDateInput;
   await el.updateComplete;
   const input = el.shadowRoot!.querySelector('input') as HTMLInputElement;
@@ -845,7 +845,7 @@ it('round-trips a rendered range string typed back into the field', async () => 
 });
 
 it('also accepts a raw ISO range typed directly, as a convenience', async () => {
-  const el = (await fixture(html`<lyra-date-input mode="range"></lyra-date-input>`)) as LyraDateInput;
+  const el = (await fixture(html`<lr-date-input mode="range"></lr-date-input>`)) as LyraDateInput;
   const input = el.shadowRoot!.querySelector('input') as HTMLInputElement;
   input.value = '2026-05-01/2026-05-15';
   input.dispatchEvent(new Event('change'));
@@ -854,7 +854,7 @@ it('also accepts a raw ISO range typed directly, as a convenience', async () => 
 
 it('retains a typed date outside min/max and reports rangeOverflow rather than badInput', async () => {
   const el = (await fixture(
-    html`<lyra-date-input min="2026-01-01" max="2026-12-31"></lyra-date-input>`,
+    html`<lr-date-input min="2026-01-01" max="2026-12-31"></lr-date-input>`,
   )) as LyraDateInput;
   const input = el.shadowRoot!.querySelector('input') as HTMLInputElement;
   input.value = '2027-01-01';
@@ -866,7 +866,7 @@ it('retains a typed date outside min/max and reports rangeOverflow rather than b
 });
 
 it('retains a typed date before disable-past\'s today floor and reports rangeUnderflow', async () => {
-  const el = (await fixture(html`<lyra-date-input disable-past></lyra-date-input>`)) as LyraDateInput;
+  const el = (await fixture(html`<lr-date-input disable-past></lr-date-input>`)) as LyraDateInput;
   const input = el.shadowRoot!.querySelector('input') as HTMLInputElement;
   input.value = '2000-01-01';
   input.dispatchEvent(new Event('change'));
@@ -878,7 +878,7 @@ it('retains a typed date before disable-past\'s today floor and reports rangeUnd
 
 it('keeps the clear button disabled while the control is disabled', async () => {
   const el = (await fixture(
-    html`<lyra-date-input disabled with-clear value="2026-01-01"></lyra-date-input>`,
+    html`<lr-date-input disabled with-clear value="2026-01-01"></lr-date-input>`,
   )) as LyraDateInput;
   await el.updateComplete;
   const clearBtn = el.shadowRoot!.querySelector('[part="clear-button"]') as HTMLButtonElement | null;
@@ -887,7 +887,7 @@ it('keeps the clear button disabled while the control is disabled', async () => 
 
 it('keeps the clear button disabled while the control is readonly', async () => {
   const el = (await fixture(
-    html`<lyra-date-input readonly with-clear value="2026-01-01"></lyra-date-input>`,
+    html`<lr-date-input readonly with-clear value="2026-01-01"></lr-date-input>`,
   )) as LyraDateInput;
   await el.updateComplete;
   const clearBtn = el.shadowRoot!.querySelector('[part="clear-button"]') as HTMLButtonElement | null;
@@ -895,7 +895,7 @@ it('keeps the clear button disabled while the control is readonly', async () => 
 });
 
 it('re-binds positioning after a disconnect+reconnect while open', async () => {
-  const el = (await fixture(html`<lyra-date-input open></lyra-date-input>`)) as LyraDateInput;
+  const el = (await fixture(html`<lr-date-input open></lr-date-input>`)) as LyraDateInput;
   await el.updateComplete;
   const parent = el.parentElement!;
   el.remove();
@@ -912,7 +912,7 @@ it('resets `open` on disconnect so a later reconnect starts from a clean, re-bin
   // disconnect, and because `updated()` only rebinds positioning when
   // `open` *changes*, a reconnect while still nominally "open" would never
   // re-run `place()`.
-  const el = (await fixture(html`<lyra-date-input open></lyra-date-input>`)) as LyraDateInput;
+  const el = (await fixture(html`<lr-date-input open></lr-date-input>`)) as LyraDateInput;
   await el.updateComplete;
   const parent = el.parentElement!;
   el.remove();
@@ -922,7 +922,7 @@ it('resets `open` on disconnect so a later reconnect starts from a clean, re-bin
 
 it('does not override an explicit `label` slot with the fallback aria-label', async () => {
   const el = (await fixture(
-    html`<lyra-date-input><span slot="label">Start date</span></lyra-date-input>`,
+    html`<lr-date-input><span slot="label">Start date</span></lr-date-input>`,
   )) as LyraDateInput;
   await el.updateComplete;
   const input = el.shadowRoot!.querySelector('input') as HTMLInputElement;
@@ -931,7 +931,7 @@ it('does not override an explicit `label` slot with the fallback aria-label', as
 
 it('wires aria-describedby to the visible hint/error text', async () => {
   const el = (await fixture(
-    html`<lyra-date-input hint="Pick a date" error-text="Required"></lyra-date-input>`,
+    html`<lr-date-input hint="Pick a date" error-text="Required"></lr-date-input>`,
   )) as LyraDateInput;
   await el.updateComplete;
   const input = el.shadowRoot!.querySelector('input') as HTMLInputElement;
@@ -942,7 +942,7 @@ it('wires aria-describedby to the visible hint/error text', async () => {
 
 it('forwards its accessible name and required validity state to the inner input', async () => {
   const el = (await fixture(
-    html`<lyra-date-input aria-label="Departure date" label="Ignored label" required></lyra-date-input>`,
+    html`<lr-date-input aria-label="Departure date" label="Ignored label" required></lr-date-input>`,
   )) as LyraDateInput;
   const input = el.shadowRoot!.querySelector('input') as HTMLInputElement;
 
@@ -975,9 +975,9 @@ it('forwards its accessible name and required validity state to the inner input'
 
 it('reveals invalid state after validation and clears touched presentation on form reset', async () => {
   const form = (await fixture(html`
-    <form><lyra-date-input name="date" required></lyra-date-input></form>
+    <form><lr-date-input name="date" required></lr-date-input></form>
   `)) as HTMLFormElement;
-  const el = form.querySelector('lyra-date-input') as LyraDateInput;
+  const el = form.querySelector('lr-date-input') as LyraDateInput;
   const input = el.shadowRoot!.querySelector('input') as HTMLInputElement;
 
   expect(input.getAttribute('aria-invalid')).to.equal('false');
@@ -991,7 +991,7 @@ it('reveals invalid state after validation and clears touched presentation on fo
 });
 
 it('forwards custom bad-input validity to the inner input after it is touched', async () => {
-  const el = (await fixture(html`<lyra-date-input></lyra-date-input>`)) as LyraDateInput;
+  const el = (await fixture(html`<lr-date-input></lr-date-input>`)) as LyraDateInput;
   const input = el.shadowRoot!.querySelector('input') as HTMLInputElement;
 
   input.value = 'not a date';
@@ -1004,7 +1004,7 @@ it('forwards custom bad-input validity to the inner input after it is touched', 
 });
 
 it("parses an ambiguous dd/mm/yyyy-style date according to the locale, not Date.parse()'s bias", async () => {
-  const el = (await fixture(html`<lyra-date-input locale="en-GB"></lyra-date-input>`)) as LyraDateInput;
+  const el = (await fixture(html`<lr-date-input locale="en-GB"></lr-date-input>`)) as LyraDateInput;
   const input = el.shadowRoot!.querySelector('input') as HTMLInputElement;
   input.value = '15/07/2026'; // en-GB: 15 July 2026 -- Date.parse() would read this as invalid or mm/dd (month 15 -> invalid, or misparsed)
   input.dispatchEvent(new Event('change'));
@@ -1012,7 +1012,7 @@ it("parses an ambiguous dd/mm/yyyy-style date according to the locale, not Date.
 });
 
 it('parses an ambiguous mm/dd/yyyy-style date according to an en-US locale', async () => {
-  const el = (await fixture(html`<lyra-date-input locale="en-US"></lyra-date-input>`)) as LyraDateInput;
+  const el = (await fixture(html`<lr-date-input locale="en-US"></lr-date-input>`)) as LyraDateInput;
   const input = el.shadowRoot!.querySelector('input') as HTMLInputElement;
   input.value = '07/15/2026'; // en-US: July 15, 2026
   input.dispatchEvent(new Event('change'));
@@ -1020,7 +1020,7 @@ it('parses an ambiguous mm/dd/yyyy-style date according to an en-US locale', asy
 });
 
 it('normalizes a typed reversed range into from-before-to order', async () => {
-  const el = (await fixture(html`<lyra-date-input mode="range"></lyra-date-input>`)) as LyraDateInput;
+  const el = (await fixture(html`<lr-date-input mode="range"></lr-date-input>`)) as LyraDateInput;
   const input = el.shadowRoot!.querySelector('input') as HTMLInputElement;
   input.value = '2026-05-15/2026-05-01';
   input.dispatchEvent(new Event('change'));
@@ -1039,7 +1039,7 @@ it('still parses a non-zero-padded, year-first ISO-ish date -- a 4-digit first g
   // unambiguously a year (this is exactly ISO 8601's own year-first
   // convention, just without zero-padding) regardless of locale/separator,
   // so it must be routed straight through parseISO() instead.
-  const el = (await fixture(html`<lyra-date-input></lyra-date-input>`)) as LyraDateInput;
+  const el = (await fixture(html`<lr-date-input></lr-date-input>`)) as LyraDateInput;
   const input = el.shadowRoot!.querySelector('input') as HTMLInputElement;
   input.value = '2026-7-15';
   input.dispatchEvent(new Event('change'));
@@ -1048,7 +1048,7 @@ it('still parses a non-zero-padded, year-first ISO-ish date -- a 4-digit first g
 
 it('defaults the clear/expand/dialog labels to English but lets them be overridden for other locales', async () => {
   const el = (await fixture(
-    html`<lyra-date-input with-clear value="2026-07-15"></lyra-date-input>`,
+    html`<lr-date-input with-clear value="2026-07-15"></lr-date-input>`,
   )) as LyraDateInput;
   await el.updateComplete;
 
@@ -1072,14 +1072,14 @@ it('defaults the clear/expand/dialog labels to English but lets them be overridd
 
 describe('spellcheck/autocapitalize/autocorrect passthrough', () => {
   it('spellcheck defaults to true', async () => {
-    const el = (await fixture(html`<lyra-date-input></lyra-date-input>`)) as LyraDateInput;
+    const el = (await fixture(html`<lr-date-input></lr-date-input>`)) as LyraDateInput;
     const input = el.shadowRoot!.querySelector('[part="input"]') as HTMLInputElement;
     expect(input.spellcheck).to.be.true;
   });
 
   it('forwards spellcheck=false, autocapitalize, and autocorrect onto the native input', async () => {
     const el = (await fixture(html`
-      <lyra-date-input spellcheck="false" autocapitalize="off" autocorrect="off"></lyra-date-input>
+      <lr-date-input spellcheck="false" autocapitalize="off" autocorrect="off"></lr-date-input>
     `)) as LyraDateInput;
     const input = el.shadowRoot!.querySelector('[part="input"]') as HTMLInputElement;
     expect(input.spellcheck).to.be.false;
@@ -1089,7 +1089,7 @@ describe('spellcheck/autocapitalize/autocorrect passthrough', () => {
 
   it('forwards autocomplete, inputmode, and enterkeyhint onto the native input', async () => {
     const el = (await fixture(
-      html`<lyra-date-input autocomplete="bday" inputmode="numeric" enterkeyhint="next"></lyra-date-input>`,
+      html`<lr-date-input autocomplete="bday" inputmode="numeric" enterkeyhint="next"></lr-date-input>`,
     )) as LyraDateInput;
     const input = el.shadowRoot!.querySelector('[part="input"]') as HTMLInputElement;
     expect(input.getAttribute('autocomplete')).to.equal('bday');
@@ -1100,7 +1100,7 @@ describe('spellcheck/autocapitalize/autocorrect passthrough', () => {
 
 describe('blur/focus bubbling', () => {
   it('re-dispatches a bubbling, composed blur event when the native input blurs', async () => {
-    const el = (await fixture(html`<lyra-date-input></lyra-date-input>`)) as LyraDateInput;
+    const el = (await fixture(html`<lr-date-input></lr-date-input>`)) as LyraDateInput;
     const input = el.shadowRoot!.querySelector('[part="input"]') as HTMLInputElement;
     input.focus();
     const eventPromise = oneEvent(el, 'blur');
@@ -1111,7 +1111,7 @@ describe('blur/focus bubbling', () => {
   });
 
   it('re-dispatches a bubbling, composed focus event when the native input focuses', async () => {
-    const el = (await fixture(html`<lyra-date-input></lyra-date-input>`)) as LyraDateInput;
+    const el = (await fixture(html`<lr-date-input></lr-date-input>`)) as LyraDateInput;
     const input = el.shadowRoot!.querySelector('[part="input"]') as HTMLInputElement;
     const eventPromise = oneEvent(el, 'focus');
     input.focus();
@@ -1128,13 +1128,13 @@ describe('blur/focus bubbling', () => {
 
 describe('native-wrapper focus/selection/editing surface', () => {
   it('exposes the internal date text input via a public getter', async () => {
-    const el = (await fixture(html`<lyra-date-input></lyra-date-input>`)) as LyraDateInput;
+    const el = (await fixture(html`<lr-date-input></lr-date-input>`)) as LyraDateInput;
     await el.updateComplete;
     expect(el.input).to.equal(el.shadowRoot!.querySelector('[part="input"]'));
   });
 
   it('focus()/blur() delegate to the internal input instead of the host', async () => {
-    const el = (await fixture(html`<lyra-date-input></lyra-date-input>`)) as LyraDateInput;
+    const el = (await fixture(html`<lr-date-input></lr-date-input>`)) as LyraDateInput;
     await el.updateComplete;
     el.focus();
     expect(el.shadowRoot!.activeElement).to.equal(el.input);
@@ -1143,7 +1143,7 @@ describe('native-wrapper focus/selection/editing surface', () => {
   });
 
   it('select() and the selectionStart/selectionEnd accessors operate on the internal input', async () => {
-    const el = (await fixture(html`<lyra-date-input value="2026-07-15"></lyra-date-input>`)) as LyraDateInput;
+    const el = (await fixture(html`<lr-date-input value="2026-07-15"></lr-date-input>`)) as LyraDateInput;
     await el.updateComplete;
     el.focus();
     el.select();
@@ -1156,7 +1156,7 @@ describe('native-wrapper focus/selection/editing surface', () => {
   });
 
   it('setRangeText() edits the field and re-parses it into a new value, keeping value/validity in sync', async () => {
-    const el = (await fixture(html`<lyra-date-input value="2026-07-15"></lyra-date-input>`)) as LyraDateInput;
+    const el = (await fixture(html`<lr-date-input value="2026-07-15"></lr-date-input>`)) as LyraDateInput;
     await el.updateComplete;
     const displayed = el.input!.value; // e.g. "7/15/2026" under en-US
     const isoOfNext = new Date(2026, 6, 20);
@@ -1168,7 +1168,7 @@ describe('native-wrapper focus/selection/editing surface', () => {
   });
 
   it('setRangeText() reverts to the last committed display text and flags badInput for an unparseable edit', async () => {
-    const el = (await fixture(html`<lyra-date-input value="2026-07-15"></lyra-date-input>`)) as LyraDateInput;
+    const el = (await fixture(html`<lr-date-input value="2026-07-15"></lr-date-input>`)) as LyraDateInput;
     await el.updateComplete;
     const committedDisplay = el.input!.value;
 
@@ -1182,7 +1182,7 @@ describe('native-wrapper focus/selection/editing surface', () => {
 });
 
 it('exposes accessibleLabel as a public property, not just the aria-label attribute', async () => {
-  const el = (await fixture(html`<lyra-date-input></lyra-date-input>`)) as LyraDateInput;
+  const el = (await fixture(html`<lr-date-input></lr-date-input>`)) as LyraDateInput;
   await el.updateComplete;
   expect(el.accessibleLabel).to.equal(null);
 

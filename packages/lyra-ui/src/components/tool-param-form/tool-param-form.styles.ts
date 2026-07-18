@@ -7,75 +7,75 @@ export const styles = css`
   [part='base'] {
     display: flex;
     flex-direction: column;
-    gap: var(--lyra-space-l);
+    gap: var(--lr-space-l);
   }
   [part='field'] {
     display: flex;
     flex-direction: column;
     align-items: flex-start;
-    gap: var(--lyra-space-xs);
+    gap: var(--lr-space-xs);
   }
   [part='label'] {
     display: block;
-    font-size: var(--lyra-font-size-md-sm);
-    font-weight: var(--lyra-font-weight-semibold);
+    font-size: var(--lr-font-size-md-sm);
+    font-weight: var(--lr-font-weight-semibold);
   }
   /* Applies to a boolean field's slotted <span part="label"> (inside
-     <lyra-checkbox>) too -- see tool-param-form.ts's class doc for why that
+     <lr-checkbox>) too -- see tool-param-form.ts's class doc for why that
      span still belongs to *this* component's shadow tree for CSS purposes
      even though it's visually projected into a child element's template. */
   [part='field'][data-required] [part='label']::after {
     content: ' *';
-    color: var(--lyra-color-danger);
+    color: var(--lr-color-danger);
   }
 
-  [part='field'] > lyra-select,
+  [part='field'] > lr-select,
   [part='field'] > input.control {
     inline-size: 100%;
   }
 
   input.control {
     box-sizing: border-box;
-    min-block-size: var(--lyra-size-2-5rem);
-    padding: var(--lyra-space-xs) var(--lyra-space-s);
-    border: var(--lyra-border-width-thin) solid var(--lyra-color-border);
-    border-radius: var(--lyra-radius);
-    background: var(--lyra-color-surface);
+    min-block-size: var(--lr-size-2-5rem);
+    padding: var(--lr-space-xs) var(--lr-space-s);
+    border: var(--lr-border-width-thin) solid var(--lr-color-border);
+    border-radius: var(--lr-radius);
+    background: var(--lr-color-surface);
     color: inherit;
     font: inherit;
-    font-size: var(--lyra-font-size-md);
+    font-size: var(--lr-font-size-md);
   }
   input.control:focus-visible {
-    outline: var(--lyra-focus-ring-width) solid var(--lyra-focus-ring-color);
-    outline-offset: var(--lyra-focus-ring-offset);
+    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
+    outline-offset: var(--lr-focus-ring-offset);
   }
   input.control[aria-invalid='true'] {
-    border-color: var(--lyra-color-danger);
+    border-color: var(--lr-color-danger);
   }
   input.control:disabled {
-    opacity: var(--lyra-opacity-disabled);
+    opacity: var(--lr-opacity-disabled);
     cursor: not-allowed;
   }
 
   [part='description'] {
     margin: 0;
-    font-size: var(--lyra-font-size-sm);
-    color: var(--lyra-color-text-quiet);
+    font-size: var(--lr-font-size-sm);
+    color: var(--lr-color-text-quiet);
   }
   [part='error'] {
     margin: 0;
-    font-size: var(--lyra-font-size-sm);
-    color: var(--lyra-color-danger);
+    font-size: var(--lr-font-size-sm);
+    color: var(--lr-color-danger);
   }
   .unsupported {
     margin: 0;
-    font-size: var(--lyra-font-size-sm);
+    font-size: var(--lr-font-size-sm);
     font-style: italic;
-    color: var(--lyra-color-text-quiet);
+    color: var(--lr-color-text-quiet);
   }
   [part='empty'] {
     margin: 0;
-    font-size: var(--lyra-font-size-md-sm);
-    color: var(--lyra-color-text-quiet);
+    font-size: var(--lr-font-size-md-sm);
+    color: var(--lr-color-text-quiet);
   }
 `;

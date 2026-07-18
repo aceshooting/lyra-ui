@@ -10,20 +10,20 @@ import { styles } from './branch-picker.styles.js';
 import { getNumberFormat } from '../../internal/intl-cache.js';
 
 export interface LyraBranchPickerEventMap {
-  'lyra-branch-change': CustomEvent<{ index: number }>;
+  'lr-branch-change': CustomEvent<{ index: number }>;
 }
 
 /**
- * `<lyra-branch-picker>` — the "‹ 2 / 5 ›" navigator across regenerated/edited variants of one
- * message. Pure controlled: it never mutates its own `index` — the same contract `<lyra-pagination>`
- * already establishes for `page`. The host listens for `lyra-branch-change`, swaps the displayed
+ * `<lr-branch-picker>` — the "‹ 2 / 5 ›" navigator across regenerated/edited variants of one
+ * message. Pure controlled: it never mutates its own `index` — the same contract `<lr-pagination>`
+ * already establishes for `page`. The host listens for `lr-branch-change`, swaps the displayed
  * branch content, and applies the new `index` back.
  *
  * Renders nothing at all while `count < 2`, so a host can bind it unconditionally on every message
  * regardless of whether that message actually has multiple branches yet.
  *
- * @customElement lyra-branch-picker
- * @event lyra-branch-change - A branch navigation was requested. `detail: { index }` — always a
+ * @customElement lr-branch-picker
+ * @event lr-branch-change - A branch navigation was requested. `detail: { index }` — always a
  *   valid target (never past either bound); the consumer applies `index` after switching the
  *   displayed branch content.
  * @csspart base - The group wrapper (`role="group"`).
@@ -46,11 +46,11 @@ export class LyraBranchPicker extends LyraElement<LyraBranchPickerEventMap> {
 
   @query('[part="previous-button"]') private previousButtonEl?: HTMLButtonElement;
   @query('[part="next-button"]') private nextButtonEl?: HTMLButtonElement;
-  @query('lyra-live-region') private liveRegion?: LyraLiveRegion;
+  @query('lr-live-region') private liveRegion?: LyraLiveRegion;
 
   private readonly groupId = nextId('branch-picker');
   /** Gates the position announcement so a freshly-mounted picker never announces its own initial
-   *  position -- mirrors `<lyra-chat-message>`'s identical `isMounting` gate for status-change
+   *  position -- mirrors `<lr-chat-message>`'s identical `isMounting` gate for status-change
    *  announcements. */
   private isMounting = true;
 
@@ -66,14 +66,14 @@ export class LyraBranchPicker extends LyraElement<LyraBranchPickerEventMap> {
 
   /** Read-time-safe view of the controlled `index` property, clamped to `[0, normalizedCount - 1]`
    *  -- never mutates `index` itself, matching this component's fully controlled contract (mirrors
-   *  `<lyra-pagination>`'s identical `currentPage` pattern). */
+   *  `<lr-pagination>`'s identical `currentPage` pattern). */
   private get normalizedIndex(): number {
     const count = this.normalizedCount;
     if (count === 0) return 0;
     return finiteInteger(this.index, 0, 0, count - 1);
   }
 
-  /** Focuses whichever chevron button isn't currently `disabled` -- mirrors `<lyra-copy-button>`'s
+  /** Focuses whichever chevron button isn't currently `disabled` -- mirrors `<lr-copy-button>`'s
    *  own `focus()`-delegation-to-the-internal-control pattern, so this component composes cleanly
    *  as one stop inside a parent toolbar. */
   override focus(options?: FocusOptions): void {
@@ -93,7 +93,7 @@ export class LyraBranchPicker extends LyraElement<LyraBranchPickerEventMap> {
       // `force: true` bypasses the live region's default 500ms coalescing window -- a discrete
       // navigation like this one is a single, deliberate event, not a burst of streaming updates
       // to throttle, and a delayed/dropped announcement here would read as the control silently
-      // failing. Same reasoning as `<lyra-chat-message>`'s own forced status-change announcements.
+      // failing. Same reasoning as `<lr-chat-message>`'s own forced status-change announcements.
       this.liveRegion?.announce(
         this.localize('branchPosition', undefined, { index: this.normalizedIndex + 1, total: this.normalizedCount }),
         { force: true },
@@ -103,7 +103,7 @@ export class LyraBranchPicker extends LyraElement<LyraBranchPickerEventMap> {
 
   private requestIndex(next: number): void {
     if (next < 0 || next > this.normalizedCount - 1 || next === this.normalizedIndex) return;
-    this.emit<{ index: number }>('lyra-branch-change', { index: next });
+    this.emit<{ index: number }>('lr-branch-change', { index: next });
   }
 
   // `previous-glyph`/`next-glyph` render as plain wrapping `<span>`s around the shared
@@ -115,9 +115,10 @@ export class LyraBranchPicker extends LyraElement<LyraBranchPickerEventMap> {
     if (count < 2) return html``;
     const index = this.normalizedIndex;
     const label = this.label || this.localize('branchPickerLabel');
+    const ariaLabel = this.getAttribute('aria-label') || label;
     const formatter = getNumberFormat(this.effectiveLocale);
     return html`
-      <div part="base" id=${this.groupId} role="group" aria-label=${label}>
+      <div part="base" id=${this.groupId} role="group" aria-label=${ariaLabel}>
         <button
           part="previous-button"
           type="button"
@@ -137,7 +138,7 @@ export class LyraBranchPicker extends LyraElement<LyraBranchPickerEventMap> {
         >
           <span part="next-glyph">${chevronIcon()}</span>
         </button>
-        <lyra-live-region></lyra-live-region>
+        <lr-live-region></lr-live-region>
       </div>
     `;
   }
@@ -145,6 +146,6 @@ export class LyraBranchPicker extends LyraElement<LyraBranchPickerEventMap> {
 
 declare global {
   interface HTMLElementTagNameMap {
-    'lyra-branch-picker': LyraBranchPicker;
+    'lr-branch-picker': LyraBranchPicker;
   }
 }

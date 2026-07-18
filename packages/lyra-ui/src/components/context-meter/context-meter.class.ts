@@ -25,7 +25,7 @@ interface RatioSegment {
   ratio: number;
 }
 
-// Ring geometry: RADIUS/CENTER match lyra-gauge's radial numbers, so both
+// Ring geometry: RADIUS/CENTER match lr-gauge's radial numbers, so both
 // components' rings sit on the same circle within their viewBox. STROKE is
 // intentionally heavier than the gauge's (12 vs. 10) -- tightly-packed
 // multi-tone arcs need more width to stay visually distinct than a gauge's
@@ -40,7 +40,7 @@ function formatCount(n: number, locale: string): string {
 }
 
 /**
- * `<lyra-context-meter>` — a segmented occupancy meter (bar or ring) for
+ * `<lr-context-meter>` — a segmented occupancy meter (bar or ring) for
  * showing how a fixed capacity (a model's context window, a token budget,
  * any consumable quota) is divided across labeled categories. First-party
  * invention; no equivalent exists in Web Awesome.
@@ -50,11 +50,11 @@ function formatCount(n: number, locale: string): string {
  * itself — the one exception is the plain arithmetic sum of the segment
  * values used to build the accessible "X of Y used" summary below.
  *
- * @customElement lyra-context-meter
+ * @customElement lr-context-meter
  * @csspart base - The component's root wrapper (a `<div>` for `bar`, an `<svg>` for `ring`).
  * @csspart track - The unfilled/empty capacity track.
  * @csspart segment - One occupied segment. Carries `data-tone` for styling and
- *   `--lyra-context-meter-segment-color` when `color` is set.
+ *   `--lr-context-meter-segment-color` when `color` is set.
  * @csspart label - The visible caption, when `label` is set.
  */
 export class LyraContextMeter extends LyraElement {
@@ -125,7 +125,7 @@ export class LyraContextMeter extends LyraElement {
   protected willUpdate(): void {
     // role="meter" + a real aria-valuenow/aria-valuemin/aria-valuemax trio
     // (rather than exposing the SVG/bar internals to the accessibility
-    // tree) genuinely mirrors lyra-gauge's "meter" role convention: the
+    // tree) genuinely mirrors lr-gauge's "meter" role convention: the
     // occupancy is exposed as a queryable numeric value, not just baked
     // into a single static string. aria-label still carries the full
     // human-readable summary (used/total, optionally prefixed by `label`)
@@ -173,7 +173,7 @@ export class LyraContextMeter extends LyraElement {
                 style=${styleMap({
                   flexBasis: `${(ratio * 100).toFixed(4)}%`,
                   ...(this.segmentColor(segment)
-                    ? { '--lyra-context-meter-segment-color': this.segmentColor(segment)! }
+                    ? { '--lr-context-meter-segment-color': this.segmentColor(segment)! }
                     : {}),
                 })}
               ></span>
@@ -197,7 +197,7 @@ export class LyraContextMeter extends LyraElement {
           data-tone=${segment.tone ?? 'neutral'}
           style=${styleMap(
             this.segmentColor(segment)
-              ? { '--lyra-context-meter-segment-color': this.segmentColor(segment)! }
+              ? { '--lr-context-meter-segment-color': this.segmentColor(segment)! }
               : {},
           )}
           cx=${CENTER}
@@ -227,6 +227,6 @@ export class LyraContextMeter extends LyraElement {
 
 declare global {
   interface HTMLElementTagNameMap {
-    'lyra-context-meter': LyraContextMeter;
+    'lr-context-meter': LyraContextMeter;
   }
 }

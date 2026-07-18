@@ -1,6 +1,6 @@
 /**
- * GitHub-slugger-style heading-id generation, shared by `<lyra-markdown>` and
- * `<lyra-docx-viewer>` so their heading ids/outline trees can never drift apart. Algorithm: lower-
+ * GitHub-slugger-style heading-id generation, shared by `<lr-markdown>` and
+ * `<lr-docx-viewer>` so their heading ids/outline trees can never drift apart. Algorithm: lower-
  * case the plain heading text, strip every character that is not a Unicode letter (`\p{L}`), mark
  * (`\p{M}`), number (`\p{N}`), space, hyphen, or underscore, trim, then collapse whitespace runs to
  * a single hyphen. An emoji/punctuation-only heading yields an empty string -- the caller decides

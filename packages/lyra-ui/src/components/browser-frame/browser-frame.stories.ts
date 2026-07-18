@@ -5,7 +5,7 @@ import type { BrowserPing } from './browser-frame.class.js';
 
 const meta: Meta = {
   title: 'Browser Frame',
-  component: 'lyra-browser-frame',
+  component: 'lr-browser-frame',
 };
 export default meta;
 type Story = StoryObj;
@@ -17,61 +17,61 @@ const pings: BrowserPing[] = [
 
 export const Streaming: Story = {
   render: () => html`
-    <lyra-browser-frame
+    <lr-browser-frame
       style="max-width:36rem"
       url="https://example.com/dashboard"
       status="streaming"
       frame-src="https://placehold.co/800x450"
       .pings=${pings}
-    ></lyra-browser-frame>
+    ></lr-browser-frame>
   `,
 };
 
 export const Connecting: Story = {
-  render: () => html`<lyra-browser-frame style="max-width:36rem" status="connecting"></lyra-browser-frame>`,
+  render: () => html`<lr-browser-frame style="max-width:36rem" status="connecting"></lr-browser-frame>`,
 };
 
 export const Stalled: Story = {
   render: () => html`
-    <lyra-browser-frame
+    <lr-browser-frame
       style="max-width:36rem"
       url="https://example.com/dashboard"
       status="stalled"
-    ></lyra-browser-frame>
+    ></lr-browser-frame>
   `,
 };
 
 export const UserControlled: Story = {
   render: () => html`
-    <lyra-browser-frame
+    <lr-browser-frame
       style="max-width:36rem"
       url="https://example.com"
       status="streaming"
       controller="user"
-    ></lyra-browser-frame>
+    ></lr-browser-frame>
   `,
 };
 
 export const NoControls: Story = {
   render: () => html`
-    <lyra-browser-frame
+    <lr-browser-frame
       style="max-width:36rem"
       url="https://example.com"
       status="streaming"
       .controls=${false}
-    ></lyra-browser-frame>
+    ></lr-browser-frame>
   `,
 };
 
 export const Narrow320: Story = {
   render: () => html`
     <div style="max-width:320px">
-      <lyra-browser-frame
+      <lr-browser-frame
         url="https://example.com/dashboard"
         status="streaming"
         frame-src="https://placehold.co/800x450"
         .pings=${pings}
-      ></lyra-browser-frame>
+      ></lr-browser-frame>
     </div>
   `,
 };

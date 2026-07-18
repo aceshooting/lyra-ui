@@ -7,15 +7,15 @@ import { styles } from './card.styles.js';
 export type CardAppearance = 'accent' | 'filled' | 'outlined' | 'filled-outlined' | 'plain';
 
 /**
- * `<lyra-card>` — a generic, styled bordered content container: the "small bordered surface with
+ * `<lr-card>` — a generic, styled bordered content container: the "small bordered surface with
  * padding" idiom common to hero highlights, clickable grid tiles, and management-list items. A
- * direct `<lyra-*>` counterpart to `<wa-card>`'s contract, staying slot-compatible with
- * `lyra-result-card` where they overlap.
+ * direct `<lr-*>` counterpart to `<wa-card>`'s contract, staying slot-compatible with
+ * `lr-result-card` where they overlap.
  *
  * The header is allocation-responsive: long or translated header content can shrink and wrap,
  * and the actions group moves onto another line when both no longer fit side by side.
  *
- * @customElement lyra-card
+ * @customElement lr-card
  * @slot - The card body.
  * @slot header - Header row content, rendered above the body.
  * @slot media - Media content (e.g. an image), rendered above the header.
@@ -99,6 +99,6 @@ export class LyraCard extends LyraElement {
 
 declare global {
   interface HTMLElementTagNameMap {
-    'lyra-card': LyraCard;
+    'lr-card': LyraCard;
   }
 }

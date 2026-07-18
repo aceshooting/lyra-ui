@@ -10,7 +10,7 @@ export async function loadNotebookSanitizerDeps(
     return (await importDompurify()).default;
   } catch (error) {
     console.warn(
-      '<lyra-notebook-viewer> needs the optional peer dependency `dompurify` to render raw HTML/SVG cell outputs — install it with `pnpm add dompurify`:',
+      '<lr-notebook-viewer> needs the optional peer dependency `dompurify` to render raw HTML/SVG cell outputs — install it with `pnpm add dompurify`:',
       error,
     );
     return null;

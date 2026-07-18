@@ -9,7 +9,7 @@ import '../slider/slider.class.js';
 
 export type ModelSettingsPanelLayout = 'vertical' | 'compact';
 
-/** The full current settings shape, re-emitted on every `lyra-change`
+/** The full current settings shape, re-emitted on every `lr-change`
  *  regardless of which child control actually triggered it. */
 export interface ModelSettingsChangeDetail {
   modelValue: string;
@@ -18,7 +18,7 @@ export interface ModelSettingsChangeDetail {
 }
 
 export interface LyraModelSettingsPanelEventMap {
-  'lyra-change': CustomEvent<ModelSettingsChangeDetail>;
+  'lr-change': CustomEvent<ModelSettingsChangeDetail>;
 }
 
 const DEFAULT_TEMPERATURE_MIN = 0;
@@ -30,11 +30,11 @@ const DEFAULT_TEMPERATURE_STEP = 0.1;
 const DEFAULT_TEMPERATURE = 1;
 
 /**
- * `<lyra-model-settings-panel>` — a fixed composition of `<lyra-model-select>`
- * and `<lyra-slider>` into one agent-configuration card: pick a provider's
+ * `<lr-model-settings-panel>` — a fixed composition of `<lr-model-select>`
+ * and `<lr-slider>` into one agent-configuration card: pick a provider's
  * model, then tune its sampling temperature. Not a generic layout shell (no
  * slots) — it exists so a consumer doesn't have to re-wire the same two
- * child `lyra-change` events into one combined settings object by hand every
+ * child `lr-change` events into one combined settings object by hand every
  * time this pairing comes up.
  *
  * Every prop here is a plain pass-through to (or mirror of) the matching
@@ -43,15 +43,15 @@ const DEFAULT_TEMPERATURE = 1;
  * and `temperatureMin`/`temperatureMax`/`temperatureStep`.
  *
  * The panel's own `temperature` readout mirrors the slider's *live* value —
- * updated on every `lyra-input` (drag/key-repeat), not just the committed
- * `lyra-change` — and is re-clamped into `[temperatureMin, temperatureMax]`
+ * updated on every `lr-input` (drag/key-repeat), not just the committed
+ * `lr-change` — and is re-clamped into `[temperatureMin, temperatureMax]`
  * (snapped to `temperatureStep`) whenever those three properties change, so
- * it can never drift from what the nested `lyra-slider` itself shows.
+ * it can never drift from what the nested `lr-slider` itself shows.
  *
- * @customElement lyra-model-settings-panel
- * @event lyra-change - Either child control changed. `detail: { modelValue: string; inCatalog: boolean; temperature: number }` — always the full current settings, not just whatever changed.
+ * @customElement lr-model-settings-panel
+ * @event lr-change - Either child control changed. `detail: { modelValue: string; inCatalog: boolean; temperature: number }` — always the full current settings, not just whatever changed.
  * @csspart base - The outermost wrapping container.
- * @csspart model-row - The row wrapping the internal `lyra-model-select`.
+ * @csspart model-row - The row wrapping the internal `lr-model-select`.
  * @csspart temperature-row - The row wrapping the temperature label/slider/value.
  * @csspart temperature-label - The visible "Temperature" caption.
  * @csspart temperature-value - The visible current temperature readout.
@@ -59,9 +59,9 @@ const DEFAULT_TEMPERATURE = 1;
 export class LyraModelSettingsPanel extends LyraElement<LyraModelSettingsPanelEventMap> {
   static styles = [LyraElement.styles, styles];
 
-  /** Informational provider badge, passed straight through to the internal `lyra-model-select`. */
+  /** Informational provider badge, passed straight through to the internal `lr-model-select`. */
   @property() provider = '';
-  /** The model list, passed straight through to the internal `lyra-model-select`. */
+  /** The model list, passed straight through to the internal `lr-model-select`. */
   @property({ attribute: false }) catalog?: LyraModelCatalog;
   /** The current model id. */
   @property({ attribute: 'model-value' }) modelValue = '';
@@ -77,16 +77,16 @@ export class LyraModelSettingsPanel extends LyraElement<LyraModelSettingsPanelEv
    *  toolbars/sidebars where the vertical layout's height doesn't fit. */
   @property({ reflect: true }) layout: ModelSettingsPanelLayout = 'vertical';
   /** Disables the panel as a unit by forwarding to both the internal
-   *  `lyra-model-select` and `lyra-slider` — a wrapping `<fieldset disabled>`
+   *  `lr-model-select` and `lr-slider` — a wrapping `<fieldset disabled>`
    *  alone would not reach either, since a form-associated control's own
    *  `disabled` IDL property/attribute is never mutated by fieldset cascading. */
   @property({ type: Boolean, reflect: true }) disabled = false;
 
   /** Whether `modelValue` is present in `catalog` — recomputed fresh from
-   *  scratch (like `lyra-model-select`'s own `effectiveEntries`) rather than
+   *  scratch (like `lr-model-select`'s own `effectiveEntries`) rather than
    *  cached from the last child event, so it's still correct when
    *  `modelValue` was assigned directly instead of via the child's own
-   *  `lyra-change`. */
+   *  `lr-change`. */
   private get inCatalog(): boolean {
     const catalog = this.catalog;
     if (!catalog || catalog.length === 0) return false;
@@ -95,7 +95,7 @@ export class LyraModelSettingsPanel extends LyraElement<LyraModelSettingsPanelEv
 
   /** Clamps `raw` into `[temperatureMin, temperatureMax]`, snapped to
    *  `temperatureStep`'s grid anchored at the low end -- exactly mirroring
-   *  `lyra-slider`'s own private `clampValue`/`domain` math -- so the
+   *  `lr-slider`'s own private `clampValue`/`domain` math -- so the
    *  mirrored `temperature` readout can never disagree with what the nested
    *  slider itself would clamp the same raw number to. */
   private clampTemperature(raw: number): number {
@@ -117,7 +117,7 @@ export class LyraModelSettingsPanel extends LyraElement<LyraModelSettingsPanelEv
   }
 
   private emitChange(): void {
-    this.emit<ModelSettingsChangeDetail>('lyra-change', {
+    this.emit<ModelSettingsChangeDetail>('lr-change', {
       modelValue: this.modelValue,
       inCatalog: this.inCatalog,
       temperature: this.temperature,
@@ -155,19 +155,19 @@ export class LyraModelSettingsPanel extends LyraElement<LyraModelSettingsPanelEv
     return html`
       <div part="base">
         <div part="model-row">
-          <lyra-model-select
+          <lr-model-select
             .provider=${this.provider}
             .catalog=${this.catalog}
             .value=${this.modelValue}
             .allowCustom=${this.allowCustom}
             .disabled=${this.disabled}
             placeholder=${this.localize('selectModel')}
-            @lyra-change=${this.onModelChange}
-          ></lyra-model-select>
+            @lr-change=${this.onModelChange}
+          ></lr-model-select>
         </div>
         <div part="temperature-row">
           <span part="temperature-label">${temperatureLabel}</span>
-          <lyra-slider
+          <lr-slider
             .label=${temperatureLabel}
             .min=${this.temperatureMin}
             .max=${this.temperatureMax}
@@ -175,9 +175,9 @@ export class LyraModelSettingsPanel extends LyraElement<LyraModelSettingsPanelEv
             .valueAsNumber=${this.temperature}
             .showValue=${false}
             .disabled=${this.disabled}
-            @lyra-input=${this.onTemperatureInput}
-            @lyra-change=${this.onTemperatureChange}
-          ></lyra-slider>
+            @lr-input=${this.onTemperatureInput}
+            @lr-change=${this.onTemperatureChange}
+          ></lr-slider>
           <span part="temperature-value" aria-hidden="true">${this.temperature}</span>
         </div>
       </div>
@@ -188,7 +188,7 @@ export class LyraModelSettingsPanel extends LyraElement<LyraModelSettingsPanelEv
 
 declare global {
   interface HTMLElementTagNameMap {
-    'lyra-model-settings-panel': LyraModelSettingsPanel;
+    'lr-model-settings-panel': LyraModelSettingsPanel;
   }
 }
 

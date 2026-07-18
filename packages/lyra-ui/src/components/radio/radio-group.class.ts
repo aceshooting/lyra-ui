@@ -7,18 +7,18 @@ import { groupStyles } from './radio-group.styles.js';
 import type { LyraRadio } from './radio.class.js';
 
 export interface LyraRadioGroupEventMap {
-  'lyra-change': CustomEvent<{ value: string; radio: LyraRadio }>;
+  'lr-change': CustomEvent<{ value: string; radio: LyraRadio }>;
 }
 
 /**
- * `<lyra-radio-group>` — a labeled, keyboard-navigable group of radios.
+ * `<lr-radio-group>` — a labeled, keyboard-navigable group of radios.
  *
- * @customElement lyra-radio-group
+ * @customElement lr-radio-group
  * @slot - Radio controls.
  * @slot label - Visible group label.
  * @slot hint - Supporting text.
  * @slot error - Validation text.
- * @event lyra-change - A radio was selected. `detail: { value, radio }`.
+ * @event lr-change - A radio was selected. `detail: { value, radio }`.
  * @csspart base - The radiogroup wrapper.
  * @csspart label - The group label.
  * @csspart hint - Supporting text.
@@ -63,7 +63,7 @@ export class LyraRadioGroup extends LyraElement<LyraRadioGroupEventMap> {
   selectRadio(radio: LyraRadio): void {
     for (const candidate of this.radios()) candidate.checked = candidate === radio;
     this.syncRadios();
-    this.emit('lyra-change', { value: radio.value, radio });
+    this.emit('lr-change', { value: radio.value, radio });
   }
   private onKeyDown = (event: KeyboardEvent): void => {
     if (!['ArrowDown', 'ArrowUp', 'ArrowRight', 'ArrowLeft', 'Home', 'End'].includes(event.key)) return;
@@ -108,4 +108,4 @@ export class LyraRadioGroup extends LyraElement<LyraRadioGroupEventMap> {
   }
 }
 
-declare global { interface HTMLElementTagNameMap { 'lyra-radio-group': LyraRadioGroup; } }
+declare global { interface HTMLElementTagNameMap { 'lr-radio-group': LyraRadioGroup; } }

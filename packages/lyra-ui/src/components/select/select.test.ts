@@ -4,11 +4,11 @@ import '../combobox/option.js';
 import type { LyraSelect } from './select.js';
 
 const basic = () => html`
-  <lyra-select>
-    <lyra-option value="a">Apple</lyra-option>
-    <lyra-option value="b">Banana</lyra-option>
-    <lyra-option value="c">Cherry</lyra-option>
-  </lyra-select>
+  <lr-select>
+    <lr-option value="a">Apple</lr-option>
+    <lr-option value="b">Banana</lr-option>
+    <lr-option value="c">Cherry</lr-option>
+  </lr-select>
 `;
 
 function trigger(el: LyraSelect): HTMLButtonElement {
@@ -19,7 +19,7 @@ function rows(el: LyraSelect): NodeListOf<HTMLElement> {
   return el.shadowRoot!.querySelectorAll('[part="option"]');
 }
 
-it('renders lyra-option children as listbox rows with the placeholder shown as the trigger label', async () => {
+it('renders lr-option children as listbox rows with the placeholder shown as the trigger label', async () => {
   const el = (await fixture(basic())) as LyraSelect;
   el.placeholder = 'Pick a fruit…';
   await el.updateComplete;
@@ -197,13 +197,13 @@ it('resets the type-ahead buffer after ~500ms of inactivity', async () => {
 it('participates in a form: value reflects in FormData on submit', async () => {
   const form = (await fixture(html`
     <form>
-      <lyra-select name="fruit">
-        <lyra-option value="a">Apple</lyra-option>
-        <lyra-option value="b">Banana</lyra-option>
-      </lyra-select>
+      <lr-select name="fruit">
+        <lr-option value="a">Apple</lr-option>
+        <lr-option value="b">Banana</lr-option>
+      </lr-select>
     </form>
   `)) as HTMLFormElement;
-  const el = form.querySelector('lyra-select') as LyraSelect;
+  const el = form.querySelector('lr-select') as LyraSelect;
   el.value = 'b';
   await el.updateComplete;
   expect(new FormData(form).get('fruit')).to.equal('b');
@@ -212,9 +212,9 @@ it('participates in a form: value reflects in FormData on submit', async () => {
 it('submits an untouched empty value instead of omitting the named control', async () => {
   const form = (await fixture(html`
     <form>
-      <lyra-select name="fruit">
-        <lyra-option value="a">Apple</lyra-option>
-      </lyra-select>
+      <lr-select name="fruit">
+        <lr-option value="a">Apple</lr-option>
+      </lr-select>
     </form>
   `)) as HTMLFormElement;
 
@@ -226,9 +226,9 @@ it('submits an untouched empty value instead of omitting the named control', asy
 it('blocks a required, empty select from submitting the form', async () => {
   const form = (await fixture(html`
     <form>
-      <lyra-select name="fruit" required>
-        <lyra-option value="a">Apple</lyra-option>
-      </lyra-select>
+      <lr-select name="fruit" required>
+        <lr-option value="a">Apple</lr-option>
+      </lr-select>
     </form>
   `)) as HTMLFormElement;
   expect(form.reportValidity()).to.be.false;
@@ -237,12 +237,12 @@ it('blocks a required, empty select from submitting the form', async () => {
 it('allows a required select to submit once a value is selected', async () => {
   const form = (await fixture(html`
     <form>
-      <lyra-select name="fruit" required>
-        <lyra-option value="a">Apple</lyra-option>
-      </lyra-select>
+      <lr-select name="fruit" required>
+        <lr-option value="a">Apple</lr-option>
+      </lr-select>
     </form>
   `)) as HTMLFormElement;
-  const el = form.querySelector('lyra-select') as LyraSelect;
+  const el = form.querySelector('lr-select') as LyraSelect;
   el.value = 'a';
   await el.updateComplete;
   expect(form.reportValidity()).to.be.true;
@@ -252,13 +252,13 @@ it('focuses the inner trigger after direct and submit-driven validity reporting'
   const form = (await fixture(html`
     <form>
       <button type="button">Before select</button>
-      <lyra-select name="fruit" required>
-        <lyra-option value="a">Apple</lyra-option>
-      </lyra-select>
+      <lr-select name="fruit" required>
+        <lr-option value="a">Apple</lr-option>
+      </lr-select>
     </form>
   `)) as HTMLFormElement;
   const sentinel = form.querySelector('button') as HTMLButtonElement;
-  const el = form.querySelector('lyra-select') as LyraSelect;
+  const el = form.querySelector('lr-select') as LyraSelect;
   let submitCount = 0;
   form.addEventListener('submit', (event) => {
     submitCount += 1;
@@ -267,21 +267,21 @@ it('focuses the inner trigger after direct and submit-driven validity reporting'
 
   sentinel.focus();
   expect(el.reportValidity()).to.be.false;
-  expect(document.activeElement?.localName).to.equal('lyra-select');
+  expect(document.activeElement?.localName).to.equal('lr-select');
   expect(el.shadowRoot!.activeElement?.getAttribute('part')).to.equal('trigger');
 
   sentinel.focus();
   form.requestSubmit();
   expect(submitCount).to.equal(0);
-  expect(document.activeElement?.localName).to.equal('lyra-select');
+  expect(document.activeElement?.localName).to.equal('lr-select');
   expect(el.shadowRoot!.activeElement?.getAttribute('part')).to.equal('trigger');
 });
 
 it('updates dynamic required validity synchronously without awaiting a Lit update', async () => {
   const el = (await fixture(html`
-    <lyra-select>
-      <lyra-option value="a">Apple</lyra-option>
-    </lyra-select>
+    <lr-select>
+      <lr-option value="a">Apple</lr-option>
+    </lr-select>
   `)) as LyraSelect;
 
   el.required = true;
@@ -296,12 +296,12 @@ it('updates dynamic required validity synchronously without awaiting a Lit updat
 it('updates disabled form participation synchronously without awaiting a Lit update', async () => {
   const form = (await fixture(html`
     <form>
-      <lyra-select name="fruit">
-        <lyra-option value="a">Apple</lyra-option>
-      </lyra-select>
+      <lr-select name="fruit">
+        <lr-option value="a">Apple</lr-option>
+      </lr-select>
     </form>
   `)) as HTMLFormElement;
-  const el = form.querySelector('lyra-select') as LyraSelect;
+  const el = form.querySelector('lr-select') as LyraSelect;
   el.value = 'a';
   expect(new FormData(form).get('fruit')).to.equal('a');
 
@@ -314,12 +314,12 @@ it('updates disabled form participation synchronously without awaiting a Lit upd
   expect(new FormData(form).get('fruit')).to.equal('a');
 });
 
-it('seeds the initial selection from a declaratively-selected <lyra-option>', async () => {
+it('seeds the initial selection from a declaratively-selected <lr-option>', async () => {
   const el = (await fixture(html`
-    <lyra-select>
-      <lyra-option value="a">Apple</lyra-option>
-      <lyra-option value="b" selected>Banana</lyra-option>
-    </lyra-select>
+    <lr-select>
+      <lr-option value="a">Apple</lr-option>
+      <lr-option value="b" selected>Banana</lr-option>
+    </lr-select>
   `)) as LyraSelect;
   await el.updateComplete;
   expect(el.value).to.equal('b');
@@ -328,13 +328,13 @@ it('seeds the initial selection from a declaratively-selected <lyra-option>', as
 it('restores the declared default selection on form.reset()', async () => {
   const form = (await fixture(html`
     <form>
-      <lyra-select name="fruit">
-        <lyra-option value="a">Apple</lyra-option>
-        <lyra-option value="b" selected>Banana</lyra-option>
-      </lyra-select>
+      <lr-select name="fruit">
+        <lr-option value="a">Apple</lr-option>
+        <lr-option value="b" selected>Banana</lr-option>
+      </lr-select>
     </form>
   `)) as HTMLFormElement;
-  const el = form.querySelector('lyra-select') as LyraSelect;
+  const el = form.querySelector('lr-select') as LyraSelect;
   await el.updateComplete;
   el.value = 'a';
   form.reset();
@@ -344,13 +344,13 @@ it('restores the declared default selection on form.reset()', async () => {
 it('resets to empty via form.reset() when no option was declared selected', async () => {
   const form = (await fixture(html`
     <form>
-      <lyra-select name="fruit">
-        <lyra-option value="a">Apple</lyra-option>
-        <lyra-option value="b">Banana</lyra-option>
-      </lyra-select>
+      <lr-select name="fruit">
+        <lr-option value="a">Apple</lr-option>
+        <lr-option value="b">Banana</lr-option>
+      </lr-select>
     </form>
   `)) as HTMLFormElement;
-  const el = form.querySelector('lyra-select') as LyraSelect;
+  const el = form.querySelector('lr-select') as LyraSelect;
   await el.updateComplete;
   el.value = 'a';
   el.value = 'b';
@@ -360,9 +360,9 @@ it('resets to empty via form.reset() when no option was declared selected', asyn
 
 it('does not open or select when disabled', async () => {
   const el = (await fixture(html`
-    <lyra-select disabled>
-      <lyra-option value="a">Apple</lyra-option>
-    </lyra-select>
+    <lr-select disabled>
+      <lr-option value="a">Apple</lr-option>
+    </lr-select>
   `)) as LyraSelect;
   await el.updateComplete;
 
@@ -376,13 +376,13 @@ it('disables the select when its containing fieldset is disabled', async () => {
   const form = (await fixture(html`
     <form>
       <fieldset>
-        <lyra-select name="fruit">
-          <lyra-option value="a">Apple</lyra-option>
-        </lyra-select>
+        <lr-select name="fruit">
+          <lr-option value="a">Apple</lr-option>
+        </lr-select>
       </fieldset>
     </form>
   `)) as HTMLFormElement;
-  const el = form.querySelector('lyra-select') as LyraSelect;
+  const el = form.querySelector('lr-select') as LyraSelect;
   const fieldset = form.querySelector('fieldset') as HTMLFieldSetElement;
   await el.updateComplete;
   expect((el as unknown as { effectiveDisabled: boolean }).effectiveDisabled).to.be.false;
@@ -391,7 +391,7 @@ it('disables the select when its containing fieldset is disabled', async () => {
   await el.updateComplete;
   // `el.disabled` (the consumer-facing IDL property/attribute) is never
   // mutated by fieldset cascading -- only the combined `effectiveDisabled`
-  // reflects it (mirrors lyra-combobox's identical `_fieldsetDisabled`/
+  // reflects it (mirrors lr-combobox's identical `_fieldsetDisabled`/
   // `effectiveDisabled` pattern).
   expect((el as unknown as { effectiveDisabled: boolean }).effectiveDisabled).to.be.true;
   expect(el.disabled).to.be.false;
@@ -401,7 +401,7 @@ it('disables the select when its containing fieldset is disabled', async () => {
 });
 
 it('restores its own explicit `disabled` after an ancestor fieldset re-enables', async () => {
-  const el = (await fixture(html`<lyra-select disabled></lyra-select>`)) as LyraSelect;
+  const el = (await fixture(html`<lr-select disabled></lr-select>`)) as LyraSelect;
   (el as unknown as { formDisabledCallback(d: boolean): void }).formDisabledCallback(true);
   (el as unknown as { formDisabledCallback(d: boolean): void }).formDisabledCallback(false);
   await el.updateComplete;
@@ -409,7 +409,7 @@ it('restores its own explicit `disabled` after an ancestor fieldset re-enables',
 });
 
 it('re-binds positioning after a disconnect+reconnect while open, ending up closed rather than half-open with no listeners', async () => {
-  const el = (await fixture(html`<lyra-select open><lyra-option value="x"></lyra-option></lyra-select>`)) as LyraSelect;
+  const el = (await fixture(html`<lr-select open><lr-option value="x"></lr-option></lr-select>`)) as LyraSelect;
   await el.updateComplete;
   const parent = el.parentElement!;
   el.remove();
@@ -423,22 +423,22 @@ it('re-binds positioning after a disconnect+reconnect while open, ending up clos
 });
 
 it('does not override an explicit `label` slot with the fallback aria-label', async () => {
-  const el = (await fixture(html`<lyra-select><span slot="label">Region</span></lyra-select>`)) as LyraSelect;
+  const el = (await fixture(html`<lr-select><span slot="label">Region</span></lr-select>`)) as LyraSelect;
   await el.updateComplete;
   const triggerEl = el.shadowRoot!.querySelector('[part="trigger"]') as HTMLButtonElement;
   expect(triggerEl.getAttribute('aria-label')).to.not.equal('Select');
 });
 
 it('re-renders when an already-slotted option mutates its own label', async () => {
-  const el = (await fixture(html`<lyra-select><lyra-option value="x">Old label</lyra-option></lyra-select>`)) as LyraSelect;
+  const el = (await fixture(html`<lr-select><lr-option value="x">Old label</lr-option></lr-select>`)) as LyraSelect;
   // Open BEFORE mutating, with no further `open` toggle afterward — this is
   // what makes the test discriminating: opening AFTER the mutation would
   // force an ordinary re-render that reads the option's live (already-new)
-  // textContent regardless of whether the lyra-option-change/MutationObserver
+  // textContent regardless of whether the lr-option-change/MutationObserver
   // mechanism fired at all.
   el.open = true;
   await el.updateComplete;
-  const option = el.querySelector('lyra-option')!;
+  const option = el.querySelector('lr-option')!;
   option.textContent = 'New label';
   await new Promise((r) => setTimeout(r, 0)); // let the MutationObserver's microtask + onOptionChange's re-render land
   await el.updateComplete;
@@ -447,7 +447,7 @@ it('re-renders when an already-slotted option mutates its own label', async () =
 });
 
 it('reflects a property-assigned `name` synchronously, with no await, so same-tick FormData submission sees it', async () => {
-  const el = (await fixture(html`<lyra-select></lyra-select>`)) as LyraSelect;
+  const el = (await fixture(html`<lr-select></lr-select>`)) as LyraSelect;
   el.name = 'region';
   expect(el.getAttribute('name')).to.equal('region');
 });
@@ -463,21 +463,21 @@ it('closes the listbox on a pointerdown outside the element', async () => {
   expect(el.open).to.be.false;
 });
 
-it('fires lyra-show/lyra-hide when `open` is set directly, bypassing click/keyboard', async () => {
+it('fires lr-show/lr-hide when `open` is set directly, bypassing click/keyboard', async () => {
   const el = (await fixture(basic())) as LyraSelect;
   await el.updateComplete;
 
   setTimeout(() => {
     el.open = true;
   });
-  await oneEvent(el, 'lyra-show');
+  await oneEvent(el, 'lr-show');
   await el.updateComplete;
   expect(el.open).to.be.true;
 
   setTimeout(() => {
     el.open = false;
   });
-  await oneEvent(el, 'lyra-hide');
+  await oneEvent(el, 'lr-hide');
   expect(el.open).to.be.false;
 });
 
@@ -519,9 +519,9 @@ it('bridges trigger focus and blur as bubbling, composed host events', async () 
 
 it('reflects an invalid state only after the field has been interacted with once', async () => {
   const el = (await fixture(html`
-    <lyra-select required>
-      <lyra-option value="a">Apple</lyra-option>
-    </lyra-select>
+    <lr-select required>
+      <lr-option value="a">Apple</lr-option>
+    </lr-select>
   `)) as LyraSelect;
   await el.updateComplete;
   expect(el.hasAttribute('data-invalid')).to.be.false;
@@ -533,9 +533,9 @@ it('reflects an invalid state only after the field has been interacted with once
 
 it('renders sub and dot-color from light-DOM options', async () => {
   const el = (await fixture(html`
-    <lyra-select>
-      <lyra-option value="a" sub="Running" dot-color="green">Meter A</lyra-option>
-    </lyra-select>
+    <lr-select>
+      <lr-option value="a" sub="Running" dot-color="green">Meter A</lr-option>
+    </lr-select>
   `)) as LyraSelect;
   el.open = true;
   await el.updateComplete;
@@ -548,11 +548,11 @@ it('renders sub and dot-color from light-DOM options', async () => {
 
 it('renders a group-label header when option rows are grouped', async () => {
   const el = (await fixture(html`
-    <lyra-select>
-      <lyra-option value="a" group="Fruits">Apple</lyra-option>
-      <lyra-option value="b" group="Fruits">Banana</lyra-option>
-      <lyra-option value="c" group="Vegetables">Carrot</lyra-option>
-    </lyra-select>
+    <lr-select>
+      <lr-option value="a" group="Fruits">Apple</lr-option>
+      <lr-option value="b" group="Fruits">Banana</lr-option>
+      <lr-option value="c" group="Vegetables">Carrot</lr-option>
+    </lr-select>
   `)) as LyraSelect;
   el.open = true;
   await el.updateComplete;
@@ -563,11 +563,11 @@ it('renders a group-label header when option rows are grouped', async () => {
 
 it('skips a disabled option during click selection and keyboard navigation', async () => {
   const el = (await fixture(html`
-    <lyra-select>
-      <lyra-option value="a">Apple</lyra-option>
-      <lyra-option value="b" disabled>Banana</lyra-option>
-      <lyra-option value="c">Cherry</lyra-option>
-    </lyra-select>
+    <lr-select>
+      <lr-option value="a">Apple</lr-option>
+      <lr-option value="b" disabled>Banana</lr-option>
+      <lr-option value="c">Cherry</lr-option>
+    </lr-select>
   `)) as LyraSelect;
   const btn = trigger(el);
   el.open = true;
@@ -611,7 +611,7 @@ it('hides the error and hint parts when empty, shows them once populated', async
   expect(getComputedStyle(hintPart).display).to.not.equal('none');
 });
 
-it('associates the trigger with the hint/error text via aria-describedby, like lyra-combobox', async () => {
+it('associates the trigger with the hint/error text via aria-describedby, like lr-combobox', async () => {
   const el = (await fixture(basic())) as LyraSelect;
   await el.updateComplete;
   const btn = trigger(el);
@@ -642,39 +642,39 @@ it('is accessible while open', async () => {
 });
 
 it('applies a size attribute that reflects to the host', async () => {
-  const el = (await fixture(html`<lyra-select size="s"></lyra-select>`)) as LyraSelect;
+  const el = (await fixture(html`<lr-select size="s"></lr-select>`)) as LyraSelect;
   expect(el.getAttribute('size')).to.equal('s');
   expect(el.size).to.equal('s');
 });
 
 it('defaults to size "m"', async () => {
-  const el = (await fixture(html`<lyra-select></lyra-select>`)) as LyraSelect;
+  const el = (await fixture(html`<lr-select></lr-select>`)) as LyraSelect;
   expect(el.size).to.equal('m');
 });
 
 it('prefers a host-level aria-label over label/placeholder for the trigger', async () => {
   const el = (await fixture(
-    html`<lyra-select aria-label="Sort order" placeholder="Choose…"></lyra-select>`,
+    html`<lr-select aria-label="Sort order" placeholder="Choose…"></lr-select>`,
   )) as LyraSelect;
   const trigger = el.shadowRoot!.querySelector('[part="trigger"]') as HTMLElement;
   expect(trigger.getAttribute('aria-label')).to.equal('Sort order');
 });
 
 it('falls back to placeholder when no host aria-label or label is set', async () => {
-  const el = (await fixture(html`<lyra-select placeholder="Choose…"></lyra-select>`)) as LyraSelect;
+  const el = (await fixture(html`<lr-select placeholder="Choose…"></lr-select>`)) as LyraSelect;
   const trigger = el.shadowRoot!.querySelector('[part="trigger"]') as HTMLElement;
   expect(trigger.getAttribute('aria-label')).to.equal('Choose…');
 });
 
 describe('trigger aria-label localization', () => {
   it('falls back to the localized "Select" when no aria-label, label, or placeholder is set', async () => {
-    const el = (await fixture(html`<lyra-select></lyra-select>`)) as LyraSelect;
+    const el = (await fixture(html`<lr-select></lr-select>`)) as LyraSelect;
     expect(trigger(el).getAttribute('aria-label')).to.equal('Select');
   });
 
   it('localizes the fallback trigger aria-label via this.localize() when .strings overrides select', async () => {
     const el = (await fixture(
-      html`<lyra-select .strings=${{ select: 'Sélectionner' }}></lyra-select>`,
+      html`<lr-select .strings=${{ select: 'Sélectionner' }}></lr-select>`,
     )) as LyraSelect;
     expect(trigger(el).getAttribute('aria-label')).to.equal('Sélectionner');
   });
@@ -683,18 +683,18 @@ describe('trigger aria-label localization', () => {
 describe('validationMessage localization', () => {
   it('defaults to the built-in English validationMessage for a required, unselected control', async () => {
     const el = (await fixture(html`
-      <lyra-select required>
-        <lyra-option value="a">Apple</lyra-option>
-      </lyra-select>
+      <lr-select required>
+        <lr-option value="a">Apple</lr-option>
+      </lr-select>
     `)) as LyraSelect;
     expect(el.validationMessage).to.equal('Please select an option.');
   });
 
   it('localizes the validationMessage via this.localize() when .strings overrides selectValueMissing', async () => {
     const el = (await fixture(html`
-      <lyra-select required .strings=${{ selectValueMissing: 'Veuillez sélectionner une option.' }}>
-        <lyra-option value="a">Apple</lyra-option>
-      </lyra-select>
+      <lr-select required .strings=${{ selectValueMissing: 'Veuillez sélectionner une option.' }}>
+        <lr-option value="a">Apple</lr-option>
+      </lr-select>
     `)) as LyraSelect;
     expect(el.validationMessage).to.equal('Veuillez sélectionner une option.');
 
@@ -705,9 +705,9 @@ describe('validationMessage localization', () => {
 
 describe('single-option combobox default (autoCommitSingleOption unset)', () => {
   const single = () => html`
-    <lyra-select>
-      <lyra-option value="a">Apple</lyra-option>
-    </lyra-select>
+    <lr-select>
+      <lr-option value="a">Apple</lr-option>
+    </lr-select>
   `;
 
   it('keeps the normal combobox/listbox/chevron trigger when only one option is enabled', async () => {
@@ -740,9 +740,9 @@ describe('single-option combobox default (autoCommitSingleOption unset)', () => 
 
 describe('single-option auto-commit (autoCommitSingleOption)', () => {
   const single = () => html`
-    <lyra-select auto-commit-single-option>
-      <lyra-option value="a">Apple</lyra-option>
-    </lyra-select>
+    <lr-select auto-commit-single-option>
+      <lr-option value="a">Apple</lr-option>
+    </lr-select>
   `;
 
   it('renders the trigger as a plain button with no chevron/combobox ARIA when only one option is enabled', async () => {
@@ -793,10 +793,10 @@ describe('single-option auto-commit (autoCommitSingleOption)', () => {
 
   it('still opens normally (three-row combobox chrome, no auto-commit) once a second option is enabled', async () => {
     const el = (await fixture(html`
-      <lyra-select>
-        <lyra-option value="a">Apple</lyra-option>
-        <lyra-option value="b">Banana</lyra-option>
-      </lyra-select>
+      <lr-select>
+        <lr-option value="a">Apple</lr-option>
+        <lr-option value="b">Banana</lr-option>
+      </lr-select>
     `)) as LyraSelect;
     const btn = trigger(el);
     expect(btn.getAttribute('role')).to.equal('combobox');
@@ -810,11 +810,11 @@ describe('single-option auto-commit (autoCommitSingleOption)', () => {
 
   it('treats a single ENABLED option among several disabled ones as single-option too', async () => {
     const el = (await fixture(html`
-      <lyra-select auto-commit-single-option>
-        <lyra-option value="a" disabled>Apple</lyra-option>
-        <lyra-option value="b">Banana</lyra-option>
-        <lyra-option value="c" disabled>Cherry</lyra-option>
-      </lyra-select>
+      <lr-select auto-commit-single-option>
+        <lr-option value="a" disabled>Apple</lr-option>
+        <lr-option value="b">Banana</lr-option>
+        <lr-option value="c" disabled>Cherry</lr-option>
+      </lr-select>
     `)) as LyraSelect;
     const btn = trigger(el);
     expect(btn.getAttribute('role')).to.equal('button');
@@ -827,12 +827,12 @@ describe('single-option auto-commit (autoCommitSingleOption)', () => {
   it('does not auto-select on mount -- a required, unselected single-option select stays invalid', async () => {
     const form = (await fixture(html`
       <form>
-        <lyra-select name="fruit" required>
-          <lyra-option value="a">Apple</lyra-option>
-        </lyra-select>
+        <lr-select name="fruit" required>
+          <lr-option value="a">Apple</lr-option>
+        </lr-select>
       </form>
     `)) as HTMLFormElement;
-    const el = form.querySelector('lyra-select') as LyraSelect;
+    const el = form.querySelector('lr-select') as LyraSelect;
     await el.updateComplete;
     expect(el.value).to.equal('');
     expect(form.reportValidity()).to.be.false;
@@ -840,9 +840,9 @@ describe('single-option auto-commit (autoCommitSingleOption)', () => {
 
   it('does not intercept click/keyboard when disabled, even with a single option', async () => {
     const el = (await fixture(html`
-      <lyra-select disabled auto-commit-single-option>
-        <lyra-option value="a">Apple</lyra-option>
-      </lyra-select>
+      <lr-select disabled auto-commit-single-option>
+        <lr-option value="a">Apple</lr-option>
+      </lr-select>
     `)) as LyraSelect;
     trigger(el).click();
     await el.updateComplete;
@@ -877,32 +877,32 @@ describe('SingleOption / SingleEnabledAmongDisabled stories actually set auto-co
   });
 });
 
-it('lets a consumer pin an exact trigger height via --lyra-select-trigger-height, bypassing the min-height floor', async () => {
-  const el = (await fixture(html`<lyra-select label="Role"><lyra-option value="a">A</lyra-option></lyra-select>`)) as LyraSelect;
-  el.style.setProperty('--lyra-select-trigger-height', '43px');
+it('lets a consumer pin an exact trigger height via --lr-select-trigger-height, bypassing the min-height floor', async () => {
+  const el = (await fixture(html`<lr-select label="Role"><lr-option value="a">A</lr-option></lr-select>`)) as LyraSelect;
+  el.style.setProperty('--lr-select-trigger-height', '43px');
   await el.updateComplete;
   const trigger = el.shadowRoot!.querySelector('[part="trigger"]') as HTMLElement;
   expect(getComputedStyle(trigger).blockSize).to.equal('43px');
 });
 
 it('leaves today\'s min-height-floor-only behavior unchanged when the override is unset', async () => {
-  const el = (await fixture(html`<lyra-select label="Role"><lyra-option value="a">A</lyra-option></lyra-select>`)) as LyraSelect;
+  const el = (await fixture(html`<lr-select label="Role"><lr-option value="a">A</lr-option></lr-select>`)) as LyraSelect;
   await el.updateComplete;
   const trigger = el.shadowRoot!.querySelector('[part="trigger"]') as HTMLElement;
   expect(getComputedStyle(trigger).blockSize).to.not.equal('0px');
   // No forced block-size -- the trigger's rendered height still comes from its own
-  // padding/line-height/border, only floored by --lyra-select-trigger-min-height as before.
+  // padding/line-height/border, only floored by --lr-select-trigger-min-height as before.
 });
 
 describe('per-size min-height floor', () => {
-  it('actually enforces --lyra-select-trigger-min-height at each non-default size', async () => {
-    // --lyra-select-trigger-min-height is declared per size tier (xs=1.5rem, s=1.875rem,
+  it('actually enforces --lr-select-trigger-min-height at each non-default size', async () => {
+    // --lr-select-trigger-min-height is declared per size tier (xs=1.5rem, s=1.875rem,
     // l=3rem, xl=3.5rem) but was never wired to min-block-size for those tiers -- this is the
     // regression test for that fix.
     const expected: Record<string, string> = { xs: '24px', s: '30px', l: '48px', xl: '56px' };
     for (const [size, px] of Object.entries(expected)) {
       const el = (await fixture(
-        html`<lyra-select size=${size} label="Role"><lyra-option value="a">A</lyra-option></lyra-select>`,
+        html`<lr-select size=${size} label="Role"><lr-option value="a">A</lr-option></lr-select>`,
       )) as LyraSelect;
       const t = el.shadowRoot!.querySelector('[part="trigger"]') as HTMLElement;
       expect(getComputedStyle(t).minBlockSize, `size=${size}`).to.equal(px);
@@ -910,16 +910,16 @@ describe('per-size min-height floor', () => {
   });
 
   it('leaves the default (m) tier unaffected by the fix -- no enforced floor, matching pre-fix behavior', async () => {
-    const el = (await fixture(html`<lyra-select label="Role"><lyra-option value="a">A</lyra-option></lyra-select>`)) as LyraSelect;
+    const el = (await fixture(html`<lr-select label="Role"><lr-option value="a">A</lr-option></lr-select>`)) as LyraSelect;
     const t = el.shadowRoot!.querySelector('[part="trigger"]') as HTMLElement;
     expect(getComputedStyle(t).minBlockSize).to.equal('0px');
   });
 
-  it('a consumer-pinned --lyra-select-trigger-height still overrides the per-size floor', async () => {
+  it('a consumer-pinned --lr-select-trigger-height still overrides the per-size floor', async () => {
     const el = (await fixture(
-      html`<lyra-select size="s" label="Role"><lyra-option value="a">A</lyra-option></lyra-select>`,
+      html`<lr-select size="s" label="Role"><lr-option value="a">A</lr-option></lr-select>`,
     )) as LyraSelect;
-    el.style.setProperty('--lyra-select-trigger-height', '43px');
+    el.style.setProperty('--lr-select-trigger-height', '43px');
     await el.updateComplete;
     const t = el.shadowRoot!.querySelector('[part="trigger"]') as HTMLElement;
     expect(getComputedStyle(t).blockSize).to.equal('43px');

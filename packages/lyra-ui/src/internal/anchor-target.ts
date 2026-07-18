@@ -17,9 +17,9 @@ export const ANCHOR_RETRY_INTERVAL_MS = 250;
 export const ANCHOR_TIMEOUT_MS = 5000;
 
 export interface LyraAnchorTargetEventMap {
-  'lyra-highlight-activate': CustomEvent<HighlightActivateDetail>;
-  'lyra-text-select': CustomEvent<TextSelectDetail>;
-  'lyra-anchor-result': CustomEvent<AnchorResultDetail>;
+  'lr-highlight-activate': CustomEvent<HighlightActivateDetail>;
+  'lr-text-select': CustomEvent<TextSelectDetail>;
+  'lr-anchor-result': CustomEvent<AnchorResultDetail>;
 }
 
 /** Public surface a `DocumentAnchorTarget`-mixed viewer exposes -- what hosts type against.
@@ -58,7 +58,7 @@ function selectionRange(root: LyraElement): Range | null {
 /**
  * Mixin that turns a `LyraElement` subclass into an anchor-target viewer: adds
  * `highlights`/`activeHighlightId`/`anchor`/`anchorKinds`, `scrollToAnchor()` with a generation-
- * guarded retry-until-loaded loop, `lyra-highlight-activate`/`lyra-text-select`/`lyra-anchor-result`
+ * guarded retry-until-loaded loop, `lr-highlight-activate`/`lr-text-select`/`lr-anchor-result`
  * event plumbing, and `bindTextSelection()` for selection->anchor emission. Same `Constructor<T>`
  * mixin shape as `internal/strip-host-title.ts`; bound to `LyraElement` (not plain `LitElement`)
  * because this mixin needs `this.emit()`/`this.localize()`/`this.scheduleAfterUpdate()`.
@@ -171,9 +171,9 @@ export function DocumentAnchorTarget<T extends Constructor<LyraElement<any>>>(
 
       if (!anchor) {
         // An unresolvable highlight id still reports a definite (negative) result instead of
-        // leaving a caller's `lyra-anchor-result` listener waiting indefinitely.
+        // leaving a caller's `lr-anchor-result` listener waiting indefinitely.
         this.announceAnchorResult(undefined, false);
-        this.emit<AnchorResultDetail>('lyra-anchor-result', { found: false });
+        this.emit<AnchorResultDetail>('lr-anchor-result', { found: false });
         return false;
       }
 
@@ -181,7 +181,7 @@ export function DocumentAnchorTarget<T extends Constructor<LyraElement<any>>>(
       if (generation !== this.anchorGeneration) return false;
       if (ok && highlightId) this.activeHighlightId = highlightId;
       this.announceAnchorResult(anchor, ok);
-      this.emit<AnchorResultDetail>('lyra-anchor-result', { found: ok });
+      this.emit<AnchorResultDetail>('lr-anchor-result', { found: ok });
       return ok;
     }
 
@@ -238,7 +238,7 @@ export function DocumentAnchorTarget<T extends Constructor<LyraElement<any>>>(
       >${this.anchorAnnouncementText}</div>`;
     }
 
-    /** Attaches selection-end listeners to `contentRoot` and emits `lyra-text-select` on a
+    /** Attaches selection-end listeners to `contentRoot` and emits `lr-text-select` on a
      *  non-collapsed selection ending inside it. Reads the selection shadow-aware: composed ranges
      *  where `Selection.getComposedRanges()` exists, `ShadowRoot.getSelection()` next, else
      *  `document.getSelection()`. Collapsed selections never fire. */
@@ -253,7 +253,7 @@ export function DocumentAnchorTarget<T extends Constructor<LyraElement<any>>>(
         if (!text) return;
         const anchor = this.computeSelectionAnchor(range, text);
         const rects = Array.from(range.getClientRects());
-        this.emit<TextSelectDetail>('lyra-text-select', { text, anchor, rects });
+        this.emit<TextSelectDetail>('lr-text-select', { text, anchor, rects });
       };
 
       let debounceHandle: ReturnType<typeof requestAnimationFrame> | undefined;

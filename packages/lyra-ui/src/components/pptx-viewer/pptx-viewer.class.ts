@@ -12,9 +12,9 @@ import '../skeleton/skeleton.js';
 type PptxPhase = 'idle' | 'loading' | 'mounted' | 'error';
 
 export interface LyraPptxViewerEventMap {
-  'lyra-load': CustomEvent<{ slideCount: number }>;
-  'lyra-slide-change': CustomEvent<{ index: number; count: number }>;
-  'lyra-render-error': CustomEvent<{ error: unknown }>;
+  'lr-load': CustomEvent<{ slideCount: number }>;
+  'lr-slide-change': CustomEvent<{ index: number; count: number }>;
+  'lr-render-error': CustomEvent<{ error: unknown }>;
 }
 
 /**
@@ -23,10 +23,10 @@ export interface LyraPptxViewerEventMap {
  * equations, embedded OLE objects, notes, and several advanced effects are
  * not represented by the renderer.
  *
- * @customElement lyra-pptx-viewer
- * @event lyra-load - Fired after a presentation opens. `detail: { slideCount }`.
- * @event lyra-slide-change - Fired when the active slide changes.
- * @event lyra-render-error - Fired when fetching or rendering fails.
+ * @customElement lr-pptx-viewer
+ * @event lr-load - Fired after a presentation opens. `detail: { slideCount }`.
+ * @event lr-slide-change - Fired when the active slide changes.
+ * @event lr-render-error - Fired when fetching or rendering fails.
  * @csspart base - The named viewer region.
  * @csspart header - The optional presentation-name row.
  * @csspart name - The presentation name.
@@ -63,7 +63,7 @@ export class LyraPptxViewer extends LyraElement<LyraPptxViewerEventMap> {
 
   private onSlideChange = (event: OptionalPeerApi): void => {
     this.currentSlideIndex = event.detail.index;
-    this.emit('lyra-slide-change', { index: event.detail.index, count: this.slideCount });
+    this.emit('lr-slide-change', { index: event.detail.index, count: this.slideCount });
   };
 
   protected updated(changed: PropertyValues): void {
@@ -128,7 +128,7 @@ export class LyraPptxViewer extends LyraElement<LyraPptxViewerEventMap> {
       if (isAbortError(error) || !this.isConnected || generation !== this.generation) return;
       this.phase = 'error';
       this.errorMessage = this.localize(isResourceLimitError(error) ? 'documentPreviewResourceTooLarge' : 'documentPreviewFailedToLoad');
-      this.emit('lyra-render-error', { error });
+      this.emit('lr-render-error', { error });
       return;
     }
     if (!this.isConnected || generation !== this.generation) return;
@@ -143,7 +143,7 @@ export class LyraPptxViewer extends LyraElement<LyraPptxViewerEventMap> {
       if (isAbortError(error) || !this.isConnected || generation !== this.generation) return;
       this.phase = 'error';
       this.errorMessage = this.localize(isResourceLimitError(error) ? 'documentPreviewResourceTooLarge' : 'documentPreviewFailedToLoad');
-      this.emit('lyra-render-error', { error });
+      this.emit('lr-render-error', { error });
       return;
     }
     if (!this.isConnected || generation !== this.generation) return;
@@ -160,17 +160,17 @@ export class LyraPptxViewer extends LyraElement<LyraPptxViewerEventMap> {
       viewer.addEventListener('slidechange', this.onSlideChange);
       this.slideCount = viewer.slideCount;
       this.currentSlideIndex = viewer.currentSlideIndex;
-      this.emit('lyra-load', { slideCount: viewer.slideCount });
+      this.emit('lr-load', { slideCount: viewer.slideCount });
     } catch (error) {
       if (isAbortError(error) || !this.isConnected || generation !== this.generation) return;
       this.phase = 'error';
       this.errorMessage = this.localize('pptxViewerRenderError');
-      this.emit('lyra-render-error', { error });
+      this.emit('lr-render-error', { error });
     }
   }
 
   private renderBody(): TemplateResult | typeof nothing {
-    if (this.phase === 'loading') return html`<lyra-skeleton variant="rect"></lyra-skeleton>`;
+    if (this.phase === 'loading') return html`<lr-skeleton variant="rect"></lr-skeleton>`;
     if (this.phase === 'error') return html`<div part="error" role="alert">${this.errorMessage}</div>`;
     if (this.phase !== 'mounted') return nothing;
     return html`
@@ -200,5 +200,5 @@ export class LyraPptxViewer extends LyraElement<LyraPptxViewerEventMap> {
 }
 
 declare global {
-  interface HTMLElementTagNameMap { 'lyra-pptx-viewer': LyraPptxViewer; }
+  interface HTMLElementTagNameMap { 'lr-pptx-viewer': LyraPptxViewer; }
 }

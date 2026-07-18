@@ -5,13 +5,13 @@ import type { ChatThread } from './thread-list.class.js';
 
 const meta: Meta = {
   title: 'ThreadList',
-  component: 'lyra-thread-list',
+  component: 'lr-thread-list',
   tags: ['autodocs'],
   parameters: {
     docs: {
       description: {
         component:
-          'The conversation sidebar: a grouped, searchable list of chat sessions with pin/archive/delete/rename affordances, built on lyra-conversation-item and virtualized via lyra-virtual-list.',
+          'The conversation sidebar: a grouped, searchable list of chat sessions with pin/archive/delete/rename affordances, built on lr-conversation-item and virtualized via lr-virtual-list.',
       },
     },
   },
@@ -34,51 +34,51 @@ const threads: ChatThread[] = [
 
 export const Default: Story = {
   render: () =>
-    html`<div style="block-size:400px;inline-size:320px;border:1px solid var(--lyra-color-border);">
-      <lyra-thread-list
+    html`<div style="block-size:400px;inline-size:320px;border:1px solid var(--lr-color-border);">
+      <lr-thread-list
         searchable
         active-id="2"
         .threads=${threads}
         .rowActions=${['pin', 'archive', 'delete']}
-      ></lyra-thread-list>
+      ></lr-thread-list>
     </div>`,
 };
 
 export const WithArchivedShown: Story = {
   render: () =>
-    html`<div style="block-size:400px;inline-size:320px;border:1px solid var(--lyra-color-border);">
-      <lyra-thread-list show-archived .threads=${threads}></lyra-thread-list>
+    html`<div style="block-size:400px;inline-size:320px;border:1px solid var(--lr-color-border);">
+      <lr-thread-list show-archived .threads=${threads}></lr-thread-list>
     </div>`,
 };
 
 export const FlatUngrouped: Story = {
   render: () =>
-    html`<div style="block-size:400px;inline-size:320px;border:1px solid var(--lyra-color-border);">
-      <lyra-thread-list grouping="none" .threads=${threads}></lyra-thread-list>
+    html`<div style="block-size:400px;inline-size:320px;border:1px solid var(--lr-color-border);">
+      <lr-thread-list grouping="none" .threads=${threads}></lr-thread-list>
     </div>`,
 };
 
 export const SlottedMode: Story = {
   render: () => html`
-    <div style="block-size:200px;inline-size:320px;border:1px solid var(--lyra-color-border);">
-      <lyra-thread-list>
-        <lyra-conversation-item title="Manually composed row 1"></lyra-conversation-item>
-        <lyra-conversation-item title="Manually composed row 2"></lyra-conversation-item>
-      </lyra-thread-list>
+    <div style="block-size:200px;inline-size:320px;border:1px solid var(--lr-color-border);">
+      <lr-thread-list>
+        <lr-conversation-item title="Manually composed row 1"></lr-conversation-item>
+        <lr-conversation-item title="Manually composed row 2"></lr-conversation-item>
+      </lr-thread-list>
     </div>
   `,
 };
 
 export const Empty: Story = {
   render: () =>
-    html`<div style="block-size:200px;inline-size:320px;border:1px solid var(--lyra-color-border);">
-      <lyra-thread-list searchable .threads=${[]}></lyra-thread-list>
+    html`<div style="block-size:200px;inline-size:320px;border:1px solid var(--lr-color-border);">
+      <lr-thread-list searchable .threads=${[]}></lr-thread-list>
     </div>`,
 };
 
 export const Narrow320px: Story = {
   render: () =>
-    html`<div style="max-width:320px;block-size:300px;border:1px dashed var(--lyra-color-border);">
-      <lyra-thread-list searchable .threads=${threads} .rowActions=${['pin', 'archive', 'delete']}></lyra-thread-list>
+    html`<div style="max-width:320px;block-size:300px;border:1px dashed var(--lr-color-border);">
+      <lr-thread-list searchable .threads=${threads} .rowActions=${['pin', 'archive', 'delete']}></lr-thread-list>
     </div>`,
 };

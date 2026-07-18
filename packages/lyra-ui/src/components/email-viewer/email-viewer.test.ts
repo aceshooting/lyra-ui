@@ -75,16 +75,16 @@ function stubFetch(body: string, ok = true): () => void {
 
 async function loaded(body: string): Promise<{ el: LyraEmailViewer; restore: () => void }> {
   const restore = stubFetch(body);
-  const el = await fixture<LyraEmailViewer>(html`<lyra-email-viewer src="https://example.test/message.eml"></lyra-email-viewer>`);
+  const el = await fixture<LyraEmailViewer>(html`<lr-email-viewer src="https://example.test/message.eml"></lr-email-viewer>`);
   await waitUntil(() => el.shadowRoot!.querySelector('[part="body"]') !== null);
   return { el, restore };
 }
 
-describe('lyra-email-viewer', () => {
+describe('lr-email-viewer', () => {
   afterEach(() => __setEmailDepsForTesting(undefined));
 
   it('renders a localized empty state by default', async () => {
-    const el = await fixture<LyraEmailViewer>(html`<lyra-email-viewer></lyra-email-viewer>`);
+    const el = await fixture<LyraEmailViewer>(html`<lr-email-viewer></lr-email-viewer>`);
     expect(el.shadowRoot!.querySelector('.empty-note')!.textContent).to.equal('No email to display.');
   });
 
@@ -121,7 +121,7 @@ describe('lyra-email-viewer', () => {
     });
     const restore = stubFetch(SAMPLE_EML);
     try {
-      const el = await fixture<LyraEmailViewer>(html`<lyra-email-viewer src="https://example.test/message.eml"></lyra-email-viewer>`);
+      const el = await fixture<LyraEmailViewer>(html`<lr-email-viewer src="https://example.test/message.eml"></lr-email-viewer>`);
       await waitUntil(() => el.shadowRoot!.querySelector('[part="error"]') !== null);
       expect(el.shadowRoot!.querySelector('[part="error"]')!.textContent).to.equal(
         'This viewer needs the optional "dompurify" package installed to render safely.',
@@ -138,7 +138,7 @@ describe('lyra-email-viewer', () => {
     });
     const restore = stubFetch(SAMPLE_EML);
     try {
-      const el = await fixture<LyraEmailViewer>(html`<lyra-email-viewer src="https://example.test/message.eml"></lyra-email-viewer>`);
+      const el = await fixture<LyraEmailViewer>(html`<lr-email-viewer src="https://example.test/message.eml"></lr-email-viewer>`);
       await waitUntil(() => el.shadowRoot!.querySelector('[part="body"]') !== null);
       expect(el.shadowRoot!.querySelector('[part="body-text"]')!.textContent).to.contain('See you at noon.');
       expect(el.shadowRoot!.querySelector('[part="error"]')).to.not.exist;
@@ -150,7 +150,7 @@ describe('lyra-email-viewer', () => {
     const original = window.fetch;
     window.fetch = (() => { called = true; return Promise.reject(new Error('unexpected')); }) as typeof window.fetch;
     try {
-      const el = await fixture<LyraEmailViewer>(html`<lyra-email-viewer .src=${'java\tscript:alert(1)'}></lyra-email-viewer>`);
+      const el = await fixture<LyraEmailViewer>(html`<lr-email-viewer .src=${'java\tscript:alert(1)'}></lr-email-viewer>`);
       await el.updateComplete;
       expect(called).to.be.false;
       expect(el.shadowRoot!.querySelector('[part="error"]')).to.exist;
@@ -158,28 +158,28 @@ describe('lyra-email-viewer', () => {
   });
 
   it('supports max-height and localization overrides', async () => {
-    const el = await fixture<LyraEmailViewer>(html`<lyra-email-viewer max-height="20rem" .strings=${{ emailViewerFrom: 'De' }}></lyra-email-viewer>`);
-    expect((el.shadowRoot!.querySelector('[part="base"]') as HTMLElement).style.getPropertyValue('--lyra-email-viewer-max-height')).to.equal('20rem');
+    const el = await fixture<LyraEmailViewer>(html`<lr-email-viewer max-height="20rem" .strings=${{ emailViewerFrom: 'De' }}></lr-email-viewer>`);
+    expect((el.shadowRoot!.querySelector('[part="base"]') as HTMLElement).style.getPropertyValue('--lr-email-viewer-max-height')).to.equal('20rem');
     const { el: rendered, restore } = await loaded(SAMPLE_EML);
     try { rendered.strings = { emailViewerFrom: 'De' }; rendered.requestUpdate(); await rendered.updateComplete; expect(rendered.shadowRoot!.querySelector('[part="from-label"]')!.textContent).to.equal('De'); } finally { restore(); }
   });
 
   it('is accessible in the empty state', async () => {
-    const el = await fixture<LyraEmailViewer>(html`<lyra-email-viewer></lyra-email-viewer>`);
+    const el = await fixture<LyraEmailViewer>(html`<lr-email-viewer></lr-email-viewer>`);
     await expect(el).to.be.accessible();
   });
 
   it('uses name as the accessible name, falling back to a host aria-label and then a localized default', async () => {
-    const named = await fixture<LyraEmailViewer>(html`<lyra-email-viewer name="message.eml"></lyra-email-viewer>`);
+    const named = await fixture<LyraEmailViewer>(html`<lr-email-viewer name="message.eml"></lr-email-viewer>`);
     expect(named.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('message.eml');
-    const labeled = await fixture<LyraEmailViewer>(html`<lyra-email-viewer aria-label="Inbox message"></lyra-email-viewer>`);
+    const labeled = await fixture<LyraEmailViewer>(html`<lr-email-viewer aria-label="Inbox message"></lr-email-viewer>`);
     expect(labeled.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('Inbox message');
-    const unnamed = await fixture<LyraEmailViewer>(html`<lyra-email-viewer></lyra-email-viewer>`);
+    const unnamed = await fixture<LyraEmailViewer>(html`<lr-email-viewer></lr-email-viewer>`);
     expect(unnamed.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('Email viewer');
   });
 
   it('supports a .strings override for the emailViewerLabel fallback', async () => {
-    const el = await fixture<LyraEmailViewer>(html`<lyra-email-viewer .strings=${{ emailViewerLabel: 'Visionneuse de courriels' }}></lyra-email-viewer>`);
+    const el = await fixture<LyraEmailViewer>(html`<lr-email-viewer .strings=${{ emailViewerLabel: 'Visionneuse de courriels' }}></lr-email-viewer>`);
     expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('Visionneuse de courriels');
   });
 
@@ -194,7 +194,7 @@ describe('lyra-email-viewer', () => {
       try {
         const { el, restore } = await loaded(ATTACHMENT_EML);
         try {
-          const listener = oneEvent(el, 'lyra-attachment-open');
+          const listener = oneEvent(el, 'lr-attachment-open');
           (el.shadowRoot!.querySelector('[part="attachment-button"]') as HTMLButtonElement).click();
           const event = (await listener) as CustomEvent<{ attachment: { filename: string; content?: Uint8Array } }>;
           expect(event.detail.attachment.filename).to.equal('notes.txt');
@@ -209,10 +209,10 @@ describe('lyra-email-viewer', () => {
       }
     });
 
-    it('emits lyra-attachment-open on keyboard activation (Enter)', async () => {
+    it('emits lr-attachment-open on keyboard activation (Enter)', async () => {
       const { el, restore } = await loaded(ATTACHMENT_EML);
       try {
-        const listener = oneEvent(el, 'lyra-attachment-open');
+        const listener = oneEvent(el, 'lr-attachment-open');
         const button = el.shadowRoot!.querySelector('[part="attachment-button"]') as HTMLButtonElement;
         button.focus();
         button.click(); // jsdom-free Chromium test environment: Enter on a focused <button> triggers click natively
@@ -226,7 +226,7 @@ describe('lyra-email-viewer', () => {
   describe('fold-quotes (text body)', () => {
     it('folds a >= 3 line trailing quote run behind a toggle', async () => {
       const restore = stubFetch(QUOTED_TEXT_EML);
-      const el = await fixture<LyraEmailViewer>(html`<lyra-email-viewer fold-quotes src="https://example.test/message.eml"></lyra-email-viewer>`);
+      const el = await fixture<LyraEmailViewer>(html`<lr-email-viewer fold-quotes src="https://example.test/message.eml"></lr-email-viewer>`);
       try {
         await waitUntil(() => el.shadowRoot!.querySelector('[part="quote-toggle"]') !== null);
         const quoted = el.shadowRoot!.querySelector('[part="quoted"]') as HTMLElement;
@@ -244,7 +244,7 @@ describe('lyra-email-viewer', () => {
 
     it('does not fold a short (< 3 line) quote-looking tail', async () => {
       const restore = stubFetch(SHORT_QUOTE_EML);
-      const el = await fixture<LyraEmailViewer>(html`<lyra-email-viewer fold-quotes src="https://example.test/message.eml"></lyra-email-viewer>`);
+      const el = await fixture<LyraEmailViewer>(html`<lr-email-viewer fold-quotes src="https://example.test/message.eml"></lr-email-viewer>`);
       try {
         await waitUntil(() => el.shadowRoot!.querySelector('[part="body-text"]') !== null);
         expect(el.shadowRoot!.querySelector('[part="quote-toggle"]')).to.not.exist;
@@ -257,7 +257,7 @@ describe('lyra-email-viewer', () => {
   describe('fold-quotes (html body)', () => {
     it('folds a gmail_quote block behind a toggle', async () => {
       const restore = stubFetch(GMAIL_QUOTE_EML);
-      const el = await fixture<LyraEmailViewer>(html`<lyra-email-viewer fold-quotes src="https://example.test/message.eml"></lyra-email-viewer>`);
+      const el = await fixture<LyraEmailViewer>(html`<lr-email-viewer fold-quotes src="https://example.test/message.eml"></lr-email-viewer>`);
       try {
         await waitUntil(() => el.shadowRoot!.querySelector('[part="quote-toggle"]') !== null);
         const quoted = el.shadowRoot!.querySelector('[part="quoted"]') as HTMLElement;

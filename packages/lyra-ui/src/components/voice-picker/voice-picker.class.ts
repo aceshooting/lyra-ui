@@ -13,7 +13,7 @@ import { styles } from './voice-picker.styles.js';
  * converter is presence-based -- the attribute's mere presence (regardless of its string value)
  * maps to `true`, so a plain-markup consumer writing the literal `spellcheck="false"` would
  * actually get `true` (this property's default), the opposite of what that string reads as -- the
- * same bug class `<lyra-model-select>`'s/`<lyra-textarea>`'s/`<lyra-date-input>`'s identical
+ * same bug class `<lr-model-select>`'s/`<lr-textarea>`'s/`<lr-date-input>`'s identical
  * converters document and fix.
  */
 const spellcheckConverter: ComplexAttributeConverter<boolean> = {
@@ -48,9 +48,9 @@ interface DisplayEntry extends LyraVoiceCatalogEntry {
 }
 
 export interface LyraVoicePickerEventMap {
-  'lyra-change': CustomEvent<{ value: string; inCatalog: boolean }>;
-  'lyra-preview-request': CustomEvent<{ voiceId: string; previewUrl?: string }>;
-  'lyra-preview-change': CustomEvent<{ voiceId: string | null }>;
+  'lr-change': CustomEvent<{ value: string; inCatalog: boolean }>;
+  'lr-preview-request': CustomEvent<{ voiceId: string; previewUrl?: string }>;
+  'lr-preview-change': CustomEvent<{ voiceId: string | null }>;
   input: CustomEvent<undefined>;
   change: CustomEvent<undefined>;
   blur: CustomEvent<undefined>;
@@ -58,8 +58,8 @@ export interface LyraVoicePickerEventMap {
 }
 
 /**
- * `<lyra-voice-picker>` — a TTS voice selector over a host-supplied `catalog`, mirroring
- * `lyra-model-select`'s closed-dropdown/free-text-combobox dual mode, stale-value handling, and
+ * `<lr-voice-picker>` — a TTS voice selector over a host-supplied `catalog`, mirroring
+ * `lr-model-select`'s closed-dropdown/free-text-combobox dual mode, stale-value handling, and
  * form-association verbatim (see that class's own doc for the full mode-switching contract this one
  * shares), extended with a TTS-agnostic preview affordance: a standalone, always-tab-reachable
  * `[part="preview-button"]` beside the trigger previews the active option while open, else the
@@ -67,24 +67,24 @@ export interface LyraVoicePickerEventMap {
  * (`tabindex="-1"`, `aria-hidden="true"`) since a listbox option must not contain a focusable
  * descendant.
  *
- * Preview is event-first: `lyra-preview-request` always fires first and is cancelable. Left
+ * Preview is event-first: `lr-preview-request` always fires first and is cancelable. Left
  * un-prevented, a `previewUrl` plays through one internal native `<audio>` (the URL passes
  * `safeMediaSrc()` first); `preventDefault()` or no URL leaves playback entirely to the host's own
  * TTS. Requesting the same voice while it is already playing internally stops it instead of
- * re-requesting; requesting a different voice switches. `lyra-preview-change` reports internal
+ * re-requesting; requesting a different voice switches. `lr-preview-change` reports internal
  * playback start/stop (`voiceId: null` on stop/end/error).
  *
- * @customElement lyra-voice-picker
+ * @customElement lr-voice-picker
  * @slot hint - Custom hint content.
  * @slot error - Custom error content.
- * @event lyra-change - `detail: { value: string; inCatalog: boolean }`.
- * @event {Event} change - Fired alongside `lyra-change`, mirroring `lyra-model-select`'s native-style pair.
- * @event {Event} input - Fired alongside `change`/`lyra-change`.
+ * @event lr-change - `detail: { value: string; inCatalog: boolean }`.
+ * @event {Event} change - Fired alongside `lr-change`, mirroring `lr-model-select`'s native-style pair.
+ * @event {Event} input - Fired alongside `change`/`lr-change`.
  * @event blur - Re-dispatched from the free-text mode's internal `<input>`'s own `blur` (bubbling,
  *   composed, unlike the native event).
  * @event focus - Re-dispatched from the free-text mode's internal `<input>`'s own `focus`.
- * @event lyra-preview-request - `detail: { voiceId: string; previewUrl?: string }`. Cancelable.
- * @event lyra-preview-change - `detail: { voiceId: string | null }` — internal playback started
+ * @event lr-preview-request - `detail: { voiceId: string; previewUrl?: string }`. Cancelable.
+ * @event lr-preview-change - `detail: { voiceId: string | null }` — internal playback started
  *   (`voiceId`) or stopped (`null`).
  * @csspart form-control-label - The `<label>` element.
  * @csspart trigger - The trigger button (closed-dropdown mode).
@@ -199,7 +199,7 @@ export class LyraVoicePicker extends LyraElement<LyraVoicePickerEventMap> {
     super.disconnectedCallback();
     this.cleanup?.();
     this.cleanup = undefined;
-    document.removeEventListener('pointerdown', this.onDocPointer);
+    this.ownerDocument.removeEventListener('pointerdown', this.onDocPointer);
     this.stopInternalPreview();
     this.open = false;
   }
@@ -268,6 +268,7 @@ export class LyraVoicePicker extends LyraElement<LyraVoicePickerEventMap> {
   }
 
   formResetCallback(): void {
+    this.touched = false;
     this.value = this._defaultValue;
   }
   formStateRestoreCallback(state: string | File | FormData | null, _mode?: 'restore' | 'autocomplete'): void {
@@ -314,14 +315,14 @@ export class LyraVoicePicker extends LyraElement<LyraVoicePickerEventMap> {
   /** `effectiveEntries` filtered by the typed `query` (free-text mode only; id, label, language, or
    *  description substring, case-insensitive). */
   private get filteredEntries(): DisplayEntry[] {
-    const q = this.query.trim().toLowerCase();
+    const q = this.query.trim().toLocaleLowerCase(this.effectiveLocale);
     if (!q) return this.effectiveEntries;
     return this.effectiveEntries.filter(
       (e) =>
-        e.id.toLowerCase().includes(q) ||
-        e.label.toLowerCase().includes(q) ||
-        (e.language ?? '').toLowerCase().includes(q) ||
-        (e.description ?? '').toLowerCase().includes(q),
+        e.id.toLocaleLowerCase(this.effectiveLocale).includes(q) ||
+        e.label.toLocaleLowerCase(this.effectiveLocale).includes(q) ||
+        (e.language ?? '').toLocaleLowerCase(this.effectiveLocale).includes(q) ||
+        (e.description ?? '').toLocaleLowerCase(this.effectiveLocale).includes(q),
     );
   }
 
@@ -349,14 +350,14 @@ export class LyraVoicePicker extends LyraElement<LyraVoicePickerEventMap> {
       this.cleanup?.();
       this.cleanup = undefined;
       if (this.open) {
-        document.addEventListener('pointerdown', this.onDocPointer);
+        this.ownerDocument.addEventListener('pointerdown', this.onDocPointer);
         const anchor = this.renderRoot.querySelector(
           this.closedMode ? '[part="trigger"]' : '[part="combobox"]',
         ) as HTMLElement | null;
         const listbox = this.renderRoot.querySelector('[part="listbox"]') as HTMLElement | null;
         if (anchor && listbox) this.cleanup = place(anchor, listbox);
       } else {
-        document.removeEventListener('pointerdown', this.onDocPointer);
+        this.ownerDocument.removeEventListener('pointerdown', this.onDocPointer);
       }
     }
     if (changed.has('required') || changed.has('touched') || changed.has('value')) {
@@ -368,12 +369,12 @@ export class LyraVoicePicker extends LyraElement<LyraVoicePickerEventMap> {
     const inCatalog = this.normalizedCatalog.some((e) => e.id === next);
     this.value = next;
     this.hide();
-    this.emit('lyra-change', { value: next, inCatalog });
+    this.emit('lr-change', { value: next, inCatalog });
     this.emitValueEvents();
   }
 
-  /** Dispatches the platform-style value-event pair alongside `lyra-change`, mirroring
-   *  `lyra-model-select` so native form bindings and framework `v-model` handlers behave
+  /** Dispatches the platform-style value-event pair alongside `lr-change`, mirroring
+   *  `lr-model-select` so native form bindings and framework `v-model` handlers behave
    *  consistently across the picker family. */
   private emitValueEvents(): void {
     const EventConstructor = this.ownerDocument.defaultView?.Event ?? Event;
@@ -413,7 +414,7 @@ export class LyraVoicePicker extends LyraElement<LyraVoicePickerEventMap> {
     const entry = this.effectiveEntries.find((e) => e.id === voiceId);
     const previewUrl = entry?.previewUrl;
     const event = this.emit<{ voiceId: string; previewUrl?: string }>(
-      'lyra-preview-request',
+      'lr-preview-request',
       { voiceId, previewUrl },
       { cancelable: true },
     );
@@ -431,7 +432,7 @@ export class LyraVoicePicker extends LyraElement<LyraVoicePickerEventMap> {
     this.audioEl = audio;
     this.previewingId = voiceId;
     void audio.play().catch(() => this.onAudioLoadFailure());
-    this.emit<{ voiceId: string | null }>('lyra-preview-change', { voiceId });
+    this.emit<{ voiceId: string | null }>('lr-preview-change', { voiceId });
   }
 
   private onAudioEnded = (): void => {
@@ -464,7 +465,7 @@ export class LyraVoicePicker extends LyraElement<LyraVoicePickerEventMap> {
     }
     if (this.previewingId !== null) {
       this.previewingId = null;
-      this.emit<{ voiceId: string | null }>('lyra-preview-change', { voiceId: null });
+      this.emit<{ voiceId: string | null }>('lr-preview-change', { voiceId: null });
     }
   }
 
@@ -805,6 +806,6 @@ export class LyraVoicePicker extends LyraElement<LyraVoicePickerEventMap> {
 
 declare global {
   interface HTMLElementTagNameMap {
-    'lyra-voice-picker': LyraVoicePicker;
+    'lr-voice-picker': LyraVoicePicker;
   }
 }

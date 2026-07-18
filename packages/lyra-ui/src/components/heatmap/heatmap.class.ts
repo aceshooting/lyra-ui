@@ -126,7 +126,7 @@ function warnInvalidColor(color: string): void {
   if (warnedInvalidColors.has(color)) return;
   warnedInvalidColors.add(color);
   console.warn(
-    `<lyra-heatmap> could not parse "${color}" (set via --lyra-heatmap-scale-lo/-hi) as a CSS ` +
+    `<lr-heatmap> could not parse "${color}" (set via --lr-heatmap-scale-lo/-hi) as a CSS ` +
       'color; falling back to the default ramp endpoint.',
   );
 }
@@ -204,10 +204,10 @@ export type LyraHeatmapCellClickDetail =
   | { row: number; col: number; value: number };
 
 export interface LyraHeatmapEventMap {
-  'lyra-cell-click': CustomEvent<LyraHeatmapCellClickDetail>;
+  'lr-cell-click': CustomEvent<LyraHeatmapCellClickDetail>;
 }
 /**
- * `<lyra-heatmap>` — a Canvas heatmap with a DPR-aware, resize-aware redraw
+ * `<lr-heatmap>` — a Canvas heatmap with a DPR-aware, resize-aware redraw
  * loop, in one of two `mode`s:
  *
  * - `"matrix"` (default): a `rowLabels` x `colLabels` grid of `values`. `-1`
@@ -225,7 +225,7 @@ export interface LyraHeatmapEventMap {
  *   at all (a gap in a sparse calendar).
  *
  * The sequential color ramp's endpoints are read from the
- * `--lyra-heatmap-scale-lo`/`-hi` custom properties (declared in
+ * `--lr-heatmap-scale-lo`/`-hi` custom properties (declared in
  * `heatmap.styles.ts`) so hosts can retheme it — canvas can't consume
  * `var()` directly, so they're resolved once per draw via
  * `getComputedStyle`, then normalized to RGB by `resolveRgb()` (any valid
@@ -238,7 +238,7 @@ export interface LyraHeatmapEventMap {
  * visually-hidden `aria-live="polite"` status announcement — avoids a
  * DOM-node-per-cell overlay, which would be hundreds of nodes for a year
  * calendar); and a click, or Enter/Space on the focused cell, fires
- * `lyra-cell-click`. `annotations` additionally strokes a ring around
+ * `lr-cell-click`. `annotations` additionally strokes a ring around
  * specific cells (e.g. to call out an anomaly), each one optionally
  * surfaced in the legend too via `[part="legend-annotation"]`.
  * Set `accessibleCells` when each cell needs a persistent DOM control for
@@ -267,8 +267,8 @@ export interface LyraHeatmapEventMap {
  * `fitToWidth`, the same host-width-derived size matrix mode already
  * supports) governs calendar mode's grid too.
  *
- * @customElement lyra-heatmap
- * @event lyra-cell-click - Fired on click, or Enter/Space on the
+ * @customElement lr-heatmap
+ * @event lr-cell-click - Fired on click, or Enter/Space on the
  * focused/hovered cell. `detail: { row, col, value }` in matrix mode,
  * `detail: { date, value }` in calendar mode. `cellText` overrides the
  * built-in English "Row X, Col Y: value" / "Mon DD: value" template used for
@@ -284,15 +284,15 @@ export interface LyraHeatmapEventMap {
  * @csspart legend-lo - The low legend endpoint.
  * @csspart legend-hi - The high legend endpoint.
  * @csspart legend-annotation - An annotation label.
- * @cssprop [--lyra-heatmap-scale-lo=var(--lyra-color-brand-quiet)] - Low endpoint of the sequential color ramp.
- * @cssprop [--lyra-heatmap-scale-hi=var(--lyra-color-brand)] - High endpoint of the sequential color ramp.
- * @cssprop [--lyra-heatmap-no-data-fill=var(--lyra-color-no-data)] - Fill for cells with no value.
- * @cssprop [--lyra-heatmap-label-font] - Font for axis/legend labels drawn on the canvas.
- * @cssprop [--lyra-heatmap-tooltip-bg=var(--lyra-color-surface)] - Hover tooltip background.
- * @cssprop [--lyra-heatmap-tooltip-text=var(--lyra-color-text)] - Hover tooltip text color.
- * @cssprop [--lyra-heatmap-focus-ring-color=var(--lyra-focus-ring-color)] - Focus ring around a focused cell.
- * @cssprop [--lyra-heatmap-annotation-color=var(--lyra-color-danger)] - Border color for an annotated cell.
- * @cssprop [--lyra-heatmap-selected-color=var(--lyra-color-success)] - Border color for the selected cell.
+ * @cssprop [--lr-heatmap-scale-lo=var(--lr-color-brand-quiet)] - Low endpoint of the sequential color ramp.
+ * @cssprop [--lr-heatmap-scale-hi=var(--lr-color-brand)] - High endpoint of the sequential color ramp.
+ * @cssprop [--lr-heatmap-no-data-fill=var(--lr-color-no-data)] - Fill for cells with no value.
+ * @cssprop [--lr-heatmap-label-font] - Font for axis/legend labels drawn on the canvas.
+ * @cssprop [--lr-heatmap-tooltip-bg=var(--lr-color-surface)] - Hover tooltip background.
+ * @cssprop [--lr-heatmap-tooltip-text=var(--lr-color-text)] - Hover tooltip text color.
+ * @cssprop [--lr-heatmap-focus-ring-color=var(--lr-focus-ring-color)] - Focus ring around a focused cell.
+ * @cssprop [--lr-heatmap-annotation-color=var(--lr-color-danger)] - Border color for an annotated cell.
+ * @cssprop [--lr-heatmap-selected-color=var(--lr-color-success)] - Border color for the selected cell.
  */
 export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
   static styles = [LyraElement.styles, styles, srOnly];
@@ -391,8 +391,8 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
   /**
    * The single cell to mark as persistently selected -- `row`/`col` in matrix mode, `date` in
    * calendar mode. Purely a controlled, consumer-owned visual/accessibility marker, mirroring
-   * `<lyra-lite-chart>`'s `selectedIndex` -- this component never mutates it itself; a consumer
-   * wires it up from `lyra-cell-click` (or any other source) to build a toggle-select
+   * `<lr-lite-chart>`'s `selectedIndex` -- this component never mutates it itself; a consumer
+   * wires it up from `lr-cell-click` (or any other source) to build a toggle-select
    * interaction. Unset (the default, `null`) draws no selection ring, adds no selected-cell text
    * to the host's `aria-label`, and adds no "(selected)" suffix to the live-region announcement,
    * reproducing today's exact output.
@@ -403,7 +403,7 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
    * button has a localized accessible name, explicit `aria-pressed="true"` or
    * `"false"` from `selectedCell`, and participates in a roving tabindex so a
    * dense calendar does not create hundreds of tab stops. The selection is
-   * controlled: clicking a cell still emits `lyra-cell-click`, and the
+   * controlled: clicking a cell still emits `lr-cell-click`, and the
    * consumer updates `selectedCell` when it wants `aria-pressed` to change.
    */
   @property({ type: Boolean, attribute: 'accessible-cells' }) accessibleCells = false;
@@ -444,7 +444,7 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
    *  `toLocaleString(undefined, ...)`-derived output. */
   @property({ attribute: false }) monthLabelText?: (jsMonth: number, year: number) => string | undefined;
   /** A discrete array (≥2) of CSS colors used as exact ramp steps instead of linearly
-   *  interpolating between the two `--lyra-heatmap-scale-lo`/`-hi` endpoints — lets a consumer
+   *  interpolating between the two `--lr-heatmap-scale-lo`/`-hi` endpoints — lets a consumer
    *  bring a validated, non-linear (or simply non-2-endpoint) sequential palette. Governs both
    *  `mode`s and both `scale` values, discretizing whichever scale would otherwise interpolate
    *  continuously into `colorSteps.length` buckets instead. Unset (the default, or fewer than 2
@@ -650,9 +650,9 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
     }
     if (changed.has('colorSteps') || !this.hasUpdated) {
       if (this.colorSteps && this.colorSteps.length >= 2) {
-        this.style.setProperty('--lyra-heatmap-color-steps-gradient', `linear-gradient(to right, ${this.colorSteps.join(', ')})`);
+        this.style.setProperty('--lr-heatmap-color-steps-gradient', `linear-gradient(to right, ${this.colorSteps.join(', ')})`);
       } else {
-        this.style.removeProperty('--lyra-heatmap-color-steps-gradient');
+        this.style.removeProperty('--lr-heatmap-color-steps-gradient');
       }
     }
     // A hover/keyboard-focus @state() change (hoverCell/focusedCell/liveText)
@@ -785,39 +785,39 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
 
   /** Reads the customizable ramp endpoints off the host's computed style. */
   private scaleEndpoints(cs: CSSStyleDeclaration): [string, string] {
-    const lo = cs.getPropertyValue('--lyra-heatmap-scale-lo').trim() || FALLBACK_SCALE_LO;
-    const hi = cs.getPropertyValue('--lyra-heatmap-scale-hi').trim() || FALLBACK_SCALE_HI;
+    const lo = cs.getPropertyValue('--lr-heatmap-scale-lo').trim() || FALLBACK_SCALE_LO;
+    const hi = cs.getPropertyValue('--lr-heatmap-scale-hi').trim() || FALLBACK_SCALE_HI;
     return [lo, hi];
   }
 
-  /** Resolves the `--lyra-color-text-quiet` chrome token for axis labels. */
+  /** Resolves the `--lr-color-text-quiet` chrome token for axis labels. */
   private labelColor(cs: CSSStyleDeclaration): string {
-    return cs.getPropertyValue('--lyra-color-text-quiet').trim() || '#6b7280';
+    return cs.getPropertyValue('--lr-color-text-quiet').trim() || '#6b7280';
   }
 
   /** Reads the customizable canvas axis/label font off the host's computed style. */
   private labelFont(cs: CSSStyleDeclaration): string {
-    return cs.getPropertyValue('--lyra-heatmap-label-font').trim() || FALLBACK_LABEL_FONT;
+    return cs.getPropertyValue('--lr-heatmap-label-font').trim() || FALLBACK_LABEL_FONT;
   }
 
   /** Reads the customizable no-data cell fill off the host's computed style. */
   private noDataFill(cs: CSSStyleDeclaration): string {
-    return cs.getPropertyValue('--lyra-heatmap-no-data-fill').trim() || FALLBACK_NO_DATA_FILL;
+    return cs.getPropertyValue('--lr-heatmap-no-data-fill').trim() || FALLBACK_NO_DATA_FILL;
   }
 
   /** Reads the customizable canvas-drawn keyboard-focus-ring stroke color off the host's computed style. */
   private focusRingColor(cs: CSSStyleDeclaration): string {
-    return cs.getPropertyValue('--lyra-heatmap-focus-ring-color').trim() || FALLBACK_FOCUS_RING_COLOR;
+    return cs.getPropertyValue('--lr-heatmap-focus-ring-color').trim() || FALLBACK_FOCUS_RING_COLOR;
   }
 
   /** Reads the customizable canvas-drawn annotation-ring stroke color off the host's computed style. */
   private annotationColor(cs: CSSStyleDeclaration): string {
-    return cs.getPropertyValue('--lyra-heatmap-annotation-color').trim() || FALLBACK_ANNOTATION_COLOR;
+    return cs.getPropertyValue('--lr-heatmap-annotation-color').trim() || FALLBACK_ANNOTATION_COLOR;
   }
 
   /** Reads the customizable canvas-drawn selected-cell-ring stroke color off the host's computed style. */
   private selectedColor(cs: CSSStyleDeclaration): string {
-    return cs.getPropertyValue('--lyra-heatmap-selected-color').trim() || FALLBACK_SELECTED_COLOR;
+    return cs.getPropertyValue('--lr-heatmap-selected-color').trim() || FALLBACK_SELECTED_COLOR;
   }
 
   /** Whether `selectedCell` refers to the given grid position, in whichever mode is active --
@@ -1191,7 +1191,7 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
           // linearAlpha() returns a 0.1-1.0 ramp position; reused here as a
           // mix ratio between the two ramp-endpoint colors (rather than as a
           // literal canvas alpha channel) so the 'linear' scale also respects
-          // --lyra-heatmap-scale-lo/-hi.
+          // --lr-heatmap-scale-lo/-hi.
           const t = linearAlpha(v, lo, hi);
           ctx.fillStyle = mixRgb(loRgb, hiRgb, t);
         }
@@ -1201,7 +1201,7 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
 
     // Annotation ring overlay, stroked after the fill pass so it reads
     // clearly over the data-driven cell color. Uses a dedicated
-    // --lyra-heatmap-annotation-color token (defaults to --lyra-color-danger)
+    // --lr-heatmap-annotation-color token (defaults to --lr-color-danger)
     // rather than any of the sequential ramp colors, since it needs to stay
     // visible regardless of which point on that ramp it's drawn over.
     if (this.annotations.length) {
@@ -1460,10 +1460,10 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
   private emitCellClick(pos: CellPos): void {
     if ('week' in pos) {
       const { date, value } = this.calendarCellAt(pos);
-      this.emit('lyra-cell-click', { date, value });
+      this.emit('lr-cell-click', { date, value });
     } else {
       const value = this.values[pos.row]?.[pos.col] ?? -1;
-      this.emit('lyra-cell-click', { row: pos.row, col: pos.col, value });
+      this.emit('lr-cell-click', { row: pos.row, col: pos.col, value });
     }
   }
 
@@ -1755,6 +1755,6 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
 
 declare global {
   interface HTMLElementTagNameMap {
-    'lyra-heatmap': LyraHeatmap;
+    'lr-heatmap': LyraHeatmap;
   }
 }

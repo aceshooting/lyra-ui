@@ -29,10 +29,10 @@ interface ResolvedCellHighlight {
 }
 
 export interface LyraCsvViewerEventMap extends LyraAnchorTargetEventMap {
-  'lyra-render-error': CustomEvent<{ error: unknown }>;
+  'lr-render-error': CustomEvent<{ error: unknown }>;
   /** Fired whenever the search query, match count, or active match index changes, from
    *  `search()`/`searchNext()`/`searchPrevious()`/`clearSearch()`. */
-  'lyra-search-change': CustomEvent<{ query: string; matchCount: number; activeIndex: number }>;
+  'lr-search-change': CustomEvent<{ query: string; matchCount: number; activeIndex: number }>;
 }
 
 class LyraCsvViewerBase extends LyraElement<LyraCsvViewerEventMap> {}
@@ -50,13 +50,13 @@ class LyraCsvViewerBase extends LyraElement<LyraCsvViewerEventMap> {}
  * `search()` is a case-insensitive substring match over the same stringified cell values `cell()`
  * already renders, ordered row then column.
  *
- * @customElement lyra-csv-viewer
- * @event lyra-render-error - Fired when a parsed row exceeds the resource-size guard.
- * @event lyra-highlight-activate - A `highlights` cell was clicked, or activated via Enter/Space
+ * @customElement lr-csv-viewer
+ * @event lr-render-error - Fired when a parsed row exceeds the resource-size guard.
+ * @event lr-highlight-activate - A `highlights` cell was clicked, or activated via Enter/Space
  *   while focused. `detail: { id }`.
- * @event lyra-anchor-result - Fired after an `anchor` property assignment or a `scrollToAnchor()`
+ * @event lr-anchor-result - Fired after an `anchor` property assignment or a `scrollToAnchor()`
  *   call is applied. `detail: { found }`.
- * @event lyra-search-change - Fired whenever the search query, match count, or active match index
+ * @event lr-search-change - Fired whenever the search query, match count, or active match index
  *   changes, from `search()`/`searchNext()`/`searchPrevious()`/`clearSearch()`. `detail: { query,
  *   matchCount, activeIndex }`.
  * @csspart base - The root wrapper.
@@ -66,7 +66,7 @@ class LyraCsvViewerBase extends LyraElement<LyraCsvViewerEventMap> {}
  * @csspart data-row - One virtualized data row.
  * @csspart cell - One rendered cell.
  * @csspart cell-highlight - A cell covered by a `highlights` entry -- focusable, emits
- *   `lyra-highlight-activate` on click or Enter/Space.
+ *   `lr-highlight-activate` on click or Enter/Space.
  * @csspart spinner - The loading status region.
  * @csspart error - The error message region.
  */
@@ -84,7 +84,7 @@ export class LyraCsvViewer extends DocumentAnchorTarget(LyraCsvViewerBase) {
 
   @state() private fetchState: CsvState = { kind: 'idle' };
   /** The virtualized body row currently scrolled into view via `scrollToAnchor()` or search
-   *  navigation -- bound to `<lyra-virtual-list>`'s own `active-id`. */
+   *  navigation -- bound to `<lr-virtual-list>`'s own `active-id`. */
   @state() private activeRowKey: number | '' = '';
   @state() private searchMatches: { row: number; col: number }[] = [];
   @state() private searchActiveIndex = -1;
@@ -96,7 +96,7 @@ export class LyraCsvViewer extends DocumentAnchorTarget(LyraCsvViewerBase) {
     super.willUpdate(changed); // reaches DocumentAnchorTarget's own willUpdate (declarative `anchor`)
     if (changed.has('src')) {
       // A new document invalidates every previous row/column coordinate -- reset silently (no
-      // event), mirroring <lyra-pdf-viewer>'s identical src-change reset.
+      // event), mirroring <lr-pdf-viewer>'s identical src-change reset.
       this.searchQuery = '';
       this.searchMatches = [];
       this.searchActiveIndex = -1;
@@ -126,11 +126,11 @@ export class LyraCsvViewer extends DocumentAnchorTarget(LyraCsvViewerBase) {
       assertTableSize(result.data);
       if (!this.isConnected || generation !== this.generation) return;
       this.fetchState = { kind: 'loaded', rows: result.data };
-      if (result.errors.length) this.emit('lyra-render-error', { error: result.errors });
+      if (result.errors.length) this.emit('lr-render-error', { error: result.errors });
     } catch (error) {
       if (isAbortError(error) || !this.isConnected || generation !== this.generation) return;
       this.fetchState = { kind: 'error', message: this.localize(isResourceLimitError(error) ? 'documentPreviewResourceTooLarge' : 'documentPreviewFailedToLoad') };
-      this.emit('lyra-render-error', { error });
+      this.emit('lr-render-error', { error });
     }
   }
 
@@ -152,7 +152,7 @@ export class LyraCsvViewer extends DocumentAnchorTarget(LyraCsvViewerBase) {
     if (!colHighlights.length) return html`<div part="cell">${cell(value)}</div>`;
     const active = colHighlights.find((entry) => entry.highlight.id === this.activeHighlightId);
     const primary = active ?? colHighlights[0]!;
-    const activate = (): void => { this.emit('lyra-highlight-activate', { id: primary.highlight.id }); };
+    const activate = (): void => { this.emit('lr-highlight-activate', { id: primary.highlight.id }); };
     // hit-area-exempt: dense data-grid cell, not an icon-only control
     return html`<div
       part="cell cell-highlight"
@@ -171,7 +171,7 @@ export class LyraCsvViewer extends DocumentAnchorTarget(LyraCsvViewerBase) {
 
   private renderRow(row: unknown[], count: number, part: 'header-row' | 'data-row', rawRow: number): TemplateResult {
     const rowHighlights = this.cellHighlightsForRow(rawRow);
-    return html`<div part=${part} style=${`grid-template-columns:repeat(${count},minmax(var(--lyra-size-8rem),1fr))`}>${Array.from(
+    return html`<div part=${part} style=${`grid-template-columns:repeat(${count},minmax(var(--lr-size-8rem),1fr))`}>${Array.from(
       { length: count },
       (_unused, index) => this.renderCell(row[index], index, rowHighlights),
     )}</div>`;
@@ -199,7 +199,7 @@ export class LyraCsvViewer extends DocumentAnchorTarget(LyraCsvViewerBase) {
   }
 
   private async scrollColumnIntoView(col: number): Promise<void> {
-    const list = this.renderRoot.querySelector('lyra-virtual-list') as (HTMLElement & { updateComplete?: Promise<unknown> }) | null;
+    const list = this.renderRoot.querySelector('lr-virtual-list') as (HTMLElement & { updateComplete?: Promise<unknown> }) | null;
     if (list?.updateComplete) await list.updateComplete;
     await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
     const row = list?.shadowRoot?.querySelector('[part="row"][aria-current="true"]');
@@ -255,17 +255,17 @@ export class LyraCsvViewer extends DocumentAnchorTarget(LyraCsvViewerBase) {
     return true;
   }
 
-  /** Clears the query, matches, and active index, and resets `lyra-search-change` to a
+  /** Clears the query, matches, and active index, and resets `lr-search-change` to a
    *  0-match/no-active-index state. */
   clearSearch(): void {
     this.searchQuery = '';
     this.searchMatches = [];
     this.searchActiveIndex = -1;
-    this.emit('lyra-search-change', { query: '', matchCount: 0, activeIndex: -1 });
+    this.emit('lr-search-change', { query: '', matchCount: 0, activeIndex: -1 });
   }
 
   private emitSearchChange(): void {
-    this.emit('lyra-search-change', { query: this.searchQuery, matchCount: this.searchMatches.length, activeIndex: this.searchActiveIndex });
+    this.emit('lr-search-change', { query: this.searchQuery, matchCount: this.searchMatches.length, activeIndex: this.searchActiveIndex });
   }
 
   render(): TemplateResult {
@@ -277,7 +277,7 @@ export class LyraCsvViewer extends DocumentAnchorTarget(LyraCsvViewerBase) {
         const header = this.hasHeaderRow ? rows[0] : undefined;
         const body = this.hasHeaderRow ? rows.slice(1) : rows;
         const count = columns(rows);
-        content = html`<div part="sheet">${header ? this.renderRow(header, count, 'header-row', 1) : nothing}<lyra-virtual-list part="rows" .items=${body} .renderItem=${(row: unknown, index: number) => this.renderRow(row as unknown[], count, 'data-row', index + 1 + headerOffset(this.hasHeaderRow))} .keyFunction=${(_item: unknown, index: number) => index} .activeId=${this.activeRowKey}></lyra-virtual-list></div>`;
+        content = html`<div part="sheet">${header ? this.renderRow(header, count, 'header-row', 1) : nothing}<lr-virtual-list part="rows" .items=${body} .renderItem=${(row: unknown, index: number) => this.renderRow(row as unknown[], count, 'data-row', index + 1 + headerOffset(this.hasHeaderRow))} .keyFunction=${(_item: unknown, index: number) => index} .activeId=${this.activeRowKey}></lr-virtual-list></div>`;
       }
     } else if (this.fetchState.kind === 'loading') content = html`<div part="spinner" role="status"><span class="sr-only">${this.localize('loadingDocument')}</span></div>`;
     else if (this.fetchState.kind === 'error') content = html`<div part="error" role="alert">${this.fetchState.message}</div>`;
@@ -286,4 +286,4 @@ export class LyraCsvViewer extends DocumentAnchorTarget(LyraCsvViewerBase) {
   }
 }
 
-declare global { interface HTMLElementTagNameMap { 'lyra-csv-viewer': LyraCsvViewer; } }
+declare global { interface HTMLElementTagNameMap { 'lr-csv-viewer': LyraCsvViewer; } }

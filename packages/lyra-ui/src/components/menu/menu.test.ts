@@ -5,13 +5,13 @@ import type { LyraMenu } from './menu.js';
 import type { LyraMenuItem } from './menu-item.js';
 
 const basic = () => html`
-  <lyra-menu label="Row actions">
+  <lr-menu label="Row actions">
     <button slot="trigger" aria-label="Row actions">⋮</button>
-    <lyra-menu-item value="rename">Rename</lyra-menu-item>
-    <lyra-menu-item value="duplicate">Duplicate</lyra-menu-item>
+    <lr-menu-item value="rename">Rename</lr-menu-item>
+    <lr-menu-item value="duplicate">Duplicate</lr-menu-item>
     <hr />
-    <lyra-menu-item value="delete" destructive>Delete</lyra-menu-item>
-  </lyra-menu>
+    <lr-menu-item value="delete" destructive>Delete</lr-menu-item>
+  </lr-menu>
 `;
 
 function trigger(el: LyraMenu): HTMLButtonElement {
@@ -19,7 +19,7 @@ function trigger(el: LyraMenu): HTMLButtonElement {
 }
 
 function items(el: LyraMenu): LyraMenuItem[] {
-  return [...el.querySelectorAll('lyra-menu-item')] as LyraMenuItem[];
+  return [...el.querySelectorAll('lr-menu-item')] as LyraMenuItem[];
 }
 
 function list(el: LyraMenu): HTMLElement {
@@ -142,7 +142,7 @@ it('selects the active item with Enter and closes, refocusing the trigger', asyn
   setTimeout(() =>
     (document.activeElement as HTMLElement).dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true })),
   );
-  const ev = await oneEvent(el, 'lyra-menu-select');
+  const ev = await oneEvent(el, 'lr-menu-select');
   expect(ev.detail).to.deep.equal({ value: 'rename' });
   expect(el.open).to.be.false;
   expect(document.activeElement).to.equal(btn);
@@ -156,29 +156,29 @@ it('selects the active item with Space, same as Enter', async () => {
   setTimeout(() =>
     (document.activeElement as HTMLElement).dispatchEvent(new KeyboardEvent('keydown', { key: ' ', bubbles: true, cancelable: true })),
   );
-  const ev = await oneEvent(el, 'lyra-menu-select');
+  const ev = await oneEvent(el, 'lr-menu-select');
   expect(ev.detail).to.deep.equal({ value: 'rename' });
 });
 
-it('clicking an item fires the consolidated lyra-menu-select and closes the menu', async () => {
+it('clicking an item fires the consolidated lr-menu-select and closes the menu', async () => {
   const el = (await fixture(basic())) as LyraMenu;
   trigger(el).click();
   await el.updateComplete;
 
   setTimeout(() => items(el)[1].shadowRoot!.querySelector('[part="base"]')!.dispatchEvent(new MouseEvent('click', { bubbles: true, composed: true })));
-  const ev = await oneEvent(el, 'lyra-menu-select');
+  const ev = await oneEvent(el, 'lr-menu-select');
   expect(ev.detail).to.deep.equal({ value: 'duplicate' });
   expect(el.open).to.be.false;
 });
 
 it('skips a disabled item during ArrowDown navigation', async () => {
   const el = (await fixture(html`
-    <lyra-menu>
+    <lr-menu>
       <button slot="trigger" aria-label="Actions">⋮</button>
-      <lyra-menu-item value="a">A</lyra-menu-item>
-      <lyra-menu-item value="b" disabled>B</lyra-menu-item>
-      <lyra-menu-item value="c">C</lyra-menu-item>
-    </lyra-menu>
+      <lr-menu-item value="a">A</lr-menu-item>
+      <lr-menu-item value="b" disabled>B</lr-menu-item>
+      <lr-menu-item value="c">C</lr-menu-item>
+    </lr-menu>
   `)) as LyraMenu;
   trigger(el).click();
   await el.updateComplete;
@@ -192,12 +192,12 @@ it('skips a disabled item during ArrowDown navigation', async () => {
 
 it('moves roving focus when the active item becomes disabled or hidden', async () => {
   const el = (await fixture(html`
-    <lyra-menu>
+    <lr-menu>
       <button slot="trigger" aria-label="Actions">⋮</button>
-      <lyra-menu-item value="a">A</lyra-menu-item>
-      <lyra-menu-item value="b">B</lyra-menu-item>
-      <lyra-menu-item value="c">C</lyra-menu-item>
-    </lyra-menu>
+      <lr-menu-item value="a">A</lr-menu-item>
+      <lr-menu-item value="b">B</lr-menu-item>
+      <lr-menu-item value="c">C</lr-menu-item>
+    </lr-menu>
   `)) as LyraMenu;
   trigger(el).click();
   await el.updateComplete;
@@ -224,12 +224,12 @@ it('moves roving focus when the active item becomes disabled or hidden', async (
 // re-resolved by *identity* -- a bounds check alone silently repoints it at a
 // different item (or drops it entirely) whenever the list shifts underneath.
 const abc = () => html`
-  <lyra-menu>
+  <lr-menu>
     <button slot="trigger" aria-label="Actions">⋮</button>
-    <lyra-menu-item value="a">A</lyra-menu-item>
-    <lyra-menu-item value="b">B</lyra-menu-item>
-    <lyra-menu-item value="c">C</lyra-menu-item>
-  </lyra-menu>
+    <lr-menu-item value="a">A</lr-menu-item>
+    <lr-menu-item value="b">B</lr-menu-item>
+    <lr-menu-item value="c">C</lr-menu-item>
+  </lr-menu>
 `;
 
 // slotchange is queued as a microtask, so it lands after `updateComplete`'s
@@ -252,7 +252,7 @@ async function afterSlotChange(el: LyraMenu): Promise<void> {
 function activeItemValue(): string {
   const active = document.activeElement as (HTMLElement & { value?: string }) | null;
   if (!active) return 'none';
-  return active.tagName === 'LYRA-MENU-ITEM' ? `item:${active.value}` : active.tagName.toLowerCase();
+  return active.tagName === 'LR-MENU-ITEM' ? `item:${active.value}` : active.tagName.toLowerCase();
 }
 
 it('keeps the roving focus on the active item when it is reordered while the menu is open', async () => {
@@ -288,7 +288,7 @@ it('keeps the roving tabindex and Arrow nav aligned when an item is prepended ab
   const [a] = items(el);
   expect(activeItemValue()).to.equal('item:a');
 
-  const fresh = document.createElement('lyra-menu-item');
+  const fresh = document.createElement('lr-menu-item');
   fresh.value = 'fresh';
   fresh.textContent = 'Fresh';
   el.insertBefore(fresh, a);
@@ -372,43 +372,43 @@ it('closes on a pointerdown outside the trigger and popup, without refocusing th
   expect(el.open).to.be.false;
 });
 
-it('fires lyra-show/lyra-hide when `open` is set directly, bypassing click/keyboard', async () => {
+it('fires lr-show/lr-hide when `open` is set directly, bypassing click/keyboard', async () => {
   const el = (await fixture(basic())) as LyraMenu;
   await el.updateComplete;
 
   setTimeout(() => {
     el.open = true;
   });
-  await oneEvent(el, 'lyra-show');
+  await oneEvent(el, 'lr-show');
   expect(el.open).to.be.true;
 
   setTimeout(() => {
     el.open = false;
   });
-  await oneEvent(el, 'lyra-hide');
+  await oneEvent(el, 'lr-hide');
   expect(el.open).to.be.false;
 });
 
-it('does not fire lyra-show/lyra-hide for markup that renders open from the start', async () => {
+it('does not fire lr-show/lr-hide for markup that renders open from the start', async () => {
   const el = (await fixture(html`
-    <lyra-menu open>
+    <lr-menu open>
       <button slot="trigger">⋮</button>
-      <lyra-menu-item value="a">A</lyra-menu-item>
-    </lyra-menu>
+      <lr-menu-item value="a">A</lr-menu-item>
+    </lr-menu>
   `)) as LyraMenu;
   let fired = false;
-  el.addEventListener('lyra-show', () => (fired = true));
+  el.addEventListener('lr-show', () => (fired = true));
   await el.updateComplete;
   expect(fired).to.be.false;
 });
 
 it('positions the popup and moves focus even when declared open from the start (trigger/item slotchange races Lit\'s first update)', async () => {
   const el = (await fixture(html`
-    <lyra-menu open>
+    <lr-menu open>
       <button slot="trigger">⋮</button>
-      <lyra-menu-item value="a">A</lyra-menu-item>
-      <lyra-menu-item value="b">B</lyra-menu-item>
-    </lyra-menu>
+      <lr-menu-item value="a">A</lr-menu-item>
+      <lr-menu-item value="b">B</lr-menu-item>
+    </lr-menu>
   `)) as LyraMenu;
   const popup = el.shadowRoot!.querySelector('[part="popup"]') as HTMLElement;
   expect(popup.style.position).to.equal('fixed');
@@ -436,13 +436,13 @@ async function waitFor<T>(read: () => T, until: (v: T) => boolean, timeoutMs = 2
 it('resolves an explicit left/right placement through rtlAwarePlacement, mirroring under dir="rtl"', async () => {
   const rtlWrap = await fixture(html`
     <div dir="rtl" style="position: relative;">
-      <lyra-menu placement="left-start">
+      <lr-menu placement="left-start">
         <button slot="trigger" style="position:absolute; top:100px; left:100px;">⋮</button>
-        <lyra-menu-item value="a">A</lyra-menu-item>
-      </lyra-menu>
+        <lr-menu-item value="a">A</lr-menu-item>
+      </lr-menu>
     </div>
   `);
-  const rtlEl = rtlWrap.querySelector('lyra-menu') as LyraMenu;
+  const rtlEl = rtlWrap.querySelector('lr-menu') as LyraMenu;
   trigger(rtlEl).click();
   await rtlEl.updateComplete;
   const rtlPopup = rtlEl.shadowRoot!.querySelector('[part="popup"]') as HTMLElement;
@@ -453,13 +453,13 @@ it('resolves an explicit left/right placement through rtlAwarePlacement, mirrori
 
   const ltrWrap = await fixture(html`
     <div style="position: relative;">
-      <lyra-menu placement="right-start">
+      <lr-menu placement="right-start">
         <button slot="trigger" style="position:absolute; top:100px; left:100px;">⋮</button>
-        <lyra-menu-item value="a">A</lyra-menu-item>
-      </lyra-menu>
+        <lr-menu-item value="a">A</lr-menu-item>
+      </lr-menu>
     </div>
   `);
-  const ltrEl = ltrWrap.querySelector('lyra-menu') as LyraMenu;
+  const ltrEl = ltrWrap.querySelector('lr-menu') as LyraMenu;
   trigger(ltrEl).click();
   await ltrEl.updateComplete;
   const ltrPopup = ltrEl.shadowRoot!.querySelector('[part="popup"]') as HTMLElement;
@@ -475,13 +475,13 @@ it('resolves an explicit left/right placement through rtlAwarePlacement, mirrori
 it('repositions the popup when placement changes while already open, instead of keeping the stale computePosition subscription', async () => {
   const wrap = await fixture(html`
     <div style="position: relative;">
-      <lyra-menu placement="bottom-start">
+      <lr-menu placement="bottom-start">
         <button slot="trigger" style="position:absolute; top:100px; left:100px;">⋮</button>
-        <lyra-menu-item value="a">A</lyra-menu-item>
-      </lyra-menu>
+        <lr-menu-item value="a">A</lr-menu-item>
+      </lr-menu>
     </div>
   `);
-  const el = wrap.querySelector('lyra-menu') as LyraMenu;
+  const el = wrap.querySelector('lr-menu') as LyraMenu;
   trigger(el).click();
   await el.updateComplete;
   const popup = el.shadowRoot!.querySelector('[part="popup"]') as HTMLElement;
@@ -524,12 +524,12 @@ it('resets `open` to false on disconnect, so a reconnect (drag-drop reparent) st
 
 it('resyncs the roving activeIndex when focus lands on an item outside setActiveItem (e.g. a disabled item via mousedown)', async () => {
   const el = (await fixture(html`
-    <lyra-menu>
+    <lr-menu>
       <button slot="trigger" aria-label="Actions">⋮</button>
-      <lyra-menu-item value="a">A</lyra-menu-item>
-      <lyra-menu-item value="b" disabled>B</lyra-menu-item>
-      <lyra-menu-item value="c">C</lyra-menu-item>
-    </lyra-menu>
+      <lr-menu-item value="a">A</lr-menu-item>
+      <lr-menu-item value="b" disabled>B</lr-menu-item>
+      <lr-menu-item value="c">C</lr-menu-item>
+    </lr-menu>
   `)) as LyraMenu;
   trigger(el).click();
   await el.updateComplete;
@@ -591,12 +591,12 @@ it('accumulates the type-ahead buffer across quick keystrokes to narrow the matc
 
 it('skips a disabled item during type-ahead even when its text would otherwise match', async () => {
   const el = (await fixture(html`
-    <lyra-menu>
+    <lr-menu>
       <button slot="trigger" aria-label="Actions">⋮</button>
-      <lyra-menu-item value="a">Apple</lyra-menu-item>
-      <lyra-menu-item value="b" disabled>Banana</lyra-menu-item>
-      <lyra-menu-item value="c">Blueberry</lyra-menu-item>
-    </lyra-menu>
+      <lr-menu-item value="a">Apple</lr-menu-item>
+      <lr-menu-item value="b" disabled>Banana</lr-menu-item>
+      <lr-menu-item value="c">Blueberry</lr-menu-item>
+    </lr-menu>
   `)) as LyraMenu;
   trigger(el).click();
   await el.updateComplete;
@@ -609,13 +609,13 @@ it('skips a disabled item during type-ahead even when its text would otherwise m
 
 it('skips a hidden or aria-hidden item during type-ahead even when its text would otherwise match', async () => {
   const el = (await fixture(html`
-    <lyra-menu>
+    <lr-menu>
       <button slot="trigger" aria-label="Actions">⋮</button>
-      <lyra-menu-item value="a">Apple</lyra-menu-item>
-      <lyra-menu-item value="b" hidden>Banana</lyra-menu-item>
-      <lyra-menu-item value="c" aria-hidden="true">Berry</lyra-menu-item>
-      <lyra-menu-item value="d">Blueberry</lyra-menu-item>
-    </lyra-menu>
+      <lr-menu-item value="a">Apple</lr-menu-item>
+      <lr-menu-item value="b" hidden>Banana</lr-menu-item>
+      <lr-menu-item value="c" aria-hidden="true">Berry</lr-menu-item>
+      <lr-menu-item value="d">Blueberry</lr-menu-item>
+    </lr-menu>
   `)) as LyraMenu;
   trigger(el).click();
   await el.updateComplete;
@@ -628,12 +628,12 @@ it('skips a hidden or aria-hidden item during type-ahead even when its text woul
 
 it('does not intercept Arrow/Home/End/Escape from a non-LyraMenuItem child slotted into the default slot', async () => {
   const el = (await fixture(html`
-    <lyra-menu label="Row actions">
+    <lr-menu label="Row actions">
       <button slot="trigger" aria-label="Row actions">⋮</button>
-      <lyra-menu-item value="rename">Rename</lyra-menu-item>
-      <lyra-menu-item value="duplicate">Duplicate</lyra-menu-item>
+      <lr-menu-item value="rename">Rename</lr-menu-item>
+      <lr-menu-item value="duplicate">Duplicate</lr-menu-item>
       <input type="text" />
-    </lyra-menu>
+    </lr-menu>
   `)) as LyraMenu;
   const input = el.querySelector('input') as HTMLInputElement;
   el.show();
@@ -648,11 +648,11 @@ it('does not intercept Arrow/Home/End/Escape from a non-LyraMenuItem child slott
 
 it('still intercepts Arrow/Home/End/Escape from a real LyraMenuItem target (unchanged)', async () => {
   const el = (await fixture(html`
-    <lyra-menu label="Row actions">
+    <lr-menu label="Row actions">
       <button slot="trigger" aria-label="Row actions">⋮</button>
-      <lyra-menu-item value="rename">Rename</lyra-menu-item>
-      <lyra-menu-item value="duplicate">Duplicate</lyra-menu-item>
-    </lyra-menu>
+      <lr-menu-item value="rename">Rename</lr-menu-item>
+      <lr-menu-item value="duplicate">Duplicate</lr-menu-item>
+    </lr-menu>
   `)) as LyraMenu;
   el.show();
   await el.updateComplete;
@@ -665,11 +665,11 @@ it('still intercepts Arrow/Home/End/Escape from a real LyraMenuItem target (unch
 
 it('does not close on Escape from slotted non-item content when closeOnEscapeAnywhere is unset (default)', async () => {
   const el = (await fixture(html`
-    <lyra-menu label="Row actions">
+    <lr-menu label="Row actions">
       <button slot="trigger" aria-label="Row actions">⋮</button>
-      <lyra-menu-item value="rename">Rename</lyra-menu-item>
+      <lr-menu-item value="rename">Rename</lr-menu-item>
       <input type="text" />
-    </lyra-menu>
+    </lr-menu>
   `)) as LyraMenu;
   const input = el.querySelector('input') as HTMLInputElement;
   el.open = true;
@@ -683,11 +683,11 @@ it('does not close on Escape from slotted non-item content when closeOnEscapeAny
 
 it('closes and refocuses the trigger on Escape from slotted non-item content when closeOnEscapeAnywhere is true', async () => {
   const el = (await fixture(html`
-    <lyra-menu label="Row actions" close-on-escape-anywhere>
+    <lr-menu label="Row actions" close-on-escape-anywhere>
       <button slot="trigger" aria-label="Row actions">⋮</button>
-      <lyra-menu-item value="rename">Rename</lyra-menu-item>
+      <lr-menu-item value="rename">Rename</lr-menu-item>
       <input type="text" />
-    </lyra-menu>
+    </lr-menu>
   `)) as LyraMenu;
   const btn = trigger(el);
   const input = el.querySelector('input') as HTMLInputElement;
@@ -703,12 +703,12 @@ it('closes and refocuses the trigger on Escape from slotted non-item content whe
 
 it('still gives Arrow/Home/End/Enter/Space full default behavior from slotted non-item content even when closeOnEscapeAnywhere is true', async () => {
   const el = (await fixture(html`
-    <lyra-menu label="Row actions" close-on-escape-anywhere>
+    <lr-menu label="Row actions" close-on-escape-anywhere>
       <button slot="trigger" aria-label="Row actions">⋮</button>
-      <lyra-menu-item value="rename">Rename</lyra-menu-item>
-      <lyra-menu-item value="duplicate">Duplicate</lyra-menu-item>
+      <lr-menu-item value="rename">Rename</lr-menu-item>
+      <lr-menu-item value="duplicate">Duplicate</lr-menu-item>
       <input type="text" />
-    </lyra-menu>
+    </lr-menu>
   `)) as LyraMenu;
   const input = el.querySelector('input') as HTMLInputElement;
   el.open = true;
@@ -730,10 +730,10 @@ it('still gives Arrow/Home/End/Enter/Space full default behavior from slotted no
 
 it('defaults the list accessible name to "Menu", overridable via label', async () => {
   const withoutLabel = (await fixture(html`
-    <lyra-menu>
+    <lr-menu>
       <button slot="trigger" aria-label="Actions">⋮</button>
-      <lyra-menu-item value="rename">Rename</lyra-menu-item>
-    </lyra-menu>
+      <lr-menu-item value="rename">Rename</lr-menu-item>
+    </lr-menu>
   `)) as LyraMenu;
   expect(list(withoutLabel).getAttribute('aria-label')).to.equal('Menu');
 
@@ -743,28 +743,28 @@ it('defaults the list accessible name to "Menu", overridable via label', async (
 
 it('honors a strings override for menuLabel while label is left at its default', async () => {
   const el = (await fixture(html`
-    <lyra-menu .strings=${{ menuLabel: 'Menú' }}>
+    <lr-menu .strings=${{ menuLabel: 'Menú' }}>
       <button slot="trigger" aria-label="Actions">⋮</button>
-      <lyra-menu-item value="rename">Rename</lyra-menu-item>
-    </lyra-menu>
+      <lr-menu-item value="rename">Rename</lr-menu-item>
+    </lr-menu>
   `)) as LyraMenu;
   expect(list(el).getAttribute('aria-label')).to.equal('Menú');
 });
 
 it('honors a host-level aria-label attribute over both the default and an explicit label prop', async () => {
   const withDefaultLabel = (await fixture(html`
-    <lyra-menu aria-label="Context menu">
+    <lr-menu aria-label="Context menu">
       <button slot="trigger" aria-label="Actions">⋮</button>
-      <lyra-menu-item value="rename">Rename</lyra-menu-item>
-    </lyra-menu>
+      <lr-menu-item value="rename">Rename</lr-menu-item>
+    </lr-menu>
   `)) as LyraMenu;
   expect(list(withDefaultLabel).getAttribute('aria-label')).to.equal('Context menu');
 
   const withExplicitLabel = (await fixture(html`
-    <lyra-menu label="Row actions" aria-label="Context menu">
+    <lr-menu label="Row actions" aria-label="Context menu">
       <button slot="trigger" aria-label="Actions">⋮</button>
-      <lyra-menu-item value="rename">Rename</lyra-menu-item>
-    </lyra-menu>
+      <lr-menu-item value="rename">Rename</lr-menu-item>
+    </lr-menu>
   `)) as LyraMenu;
   expect(list(withExplicitLabel).getAttribute('aria-label')).to.equal('Context menu');
 });

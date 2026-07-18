@@ -3,7 +3,7 @@ import './pagination.js';
 import type { LyraPagination } from './pagination.js';
 
 async function pagination(
-  template = html`<lyra-pagination total-items="95" page-size="10"></lyra-pagination>`,
+  template = html`<lr-pagination total-items="95" page-size="10"></lr-pagination>`,
 ): Promise<LyraPagination> {
   const el = (await fixture(template)) as LyraPagination;
   await el.updateComplete;
@@ -21,7 +21,7 @@ it('derives pageCount and a localized item-range summary', async () => {
 
 it('forwards a host aria-label to the internal navigation landmark', async () => {
   const el = await pagination(html`
-    <lyra-pagination aria-label="Search result pages" total-items="95"></lyra-pagination>
+    <lr-pagination aria-label="Search result pages" total-items="95"></lr-pagination>
   `);
 
   expect(el.shadowRoot!.querySelector('nav')!.getAttribute('aria-label')).to.equal(
@@ -32,7 +32,7 @@ it('forwards a host aria-label to the internal navigation landmark', async () =>
 it('is controlled and emits the requested page without mutating page itself', async () => {
   const el = await pagination();
   const next = el.shadowRoot!.querySelector('[part="next-button"]') as HTMLButtonElement;
-  const eventPromise = oneEvent(el, 'lyra-page-change');
+  const eventPromise = oneEvent(el, 'lr-page-change');
 
   next.click();
   const event = await eventPromise;
@@ -55,7 +55,7 @@ it('commits a valid numeric page jump on Enter', async () => {
   const input = el.shadowRoot!.querySelector('[part="page-input"]') as HTMLInputElement;
   input.value = '7';
   input.dispatchEvent(new Event('input', { bubbles: true, composed: true }));
-  const eventPromise = oneEvent(el, 'lyra-page-change');
+  const eventPromise = oneEvent(el, 'lr-page-change');
 
   input.dispatchEvent(
     new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, composed: true }),
@@ -97,7 +97,7 @@ it('rejects out-of-range and fractional page jumps', async () => {
   const el = await pagination();
   const input = el.shadowRoot!.querySelector('[part="page-input"]') as HTMLInputElement;
   let calls = 0;
-  el.addEventListener('lyra-page-change', () => calls++);
+  el.addEventListener('lr-page-change', () => calls++);
 
   for (const value of ['0', '11', '2.5']) {
     input.value = value;
@@ -111,7 +111,7 @@ it('rejects out-of-range and fractional page jumps', async () => {
 });
 
 it('disables every control for empty data, disabled, and loading states', async () => {
-  const el = await pagination(html`<lyra-pagination></lyra-pagination>`);
+  const el = await pagination(html`<lr-pagination></lr-pagination>`);
   const controls = () => [
     ...el.shadowRoot!.querySelectorAll<HTMLButtonElement | HTMLInputElement>('button, input'),
   ];
@@ -135,7 +135,7 @@ it('disables every control for empty data, disabled, and loading states', async 
 
 it('uses singular item text and accepts localized label overrides', async () => {
   const el = await pagination(html`
-    <lyra-pagination
+    <lr-pagination
       total-items="1"
       .strings=${{
         item: 'entry',
@@ -144,7 +144,7 @@ it('uses singular item text and accepts localized label overrides', async () => 
         paginationPage: 'Result page',
         paginationSummary: '{start}–{end} / {total} {itemLabel}',
       }}
-    ></lyra-pagination>
+    ></lr-pagination>
   `);
 
   expect(el.shadowRoot!.querySelector('[part="summary"]')!.textContent!.trim()).to.equal(
@@ -163,10 +163,10 @@ it('uses singular item text and accepts localized label overrides', async () => 
 
 it('localizes the empty summary as one interpolated message', async () => {
   const el = await pagination(html`
-    <lyra-pagination
+    <lr-pagination
       item-label="résultats"
       .strings=${{ paginationEmptySummary: 'Aucun contenu ({total} {itemLabel})' }}
-    ></lyra-pagination>
+    ></lr-pagination>
   `);
 
   expect(el.shadowRoot!.querySelector('[part="summary"]')!.textContent!.trim()).to.equal(
@@ -176,7 +176,7 @@ it('localizes the empty summary as one interpolated message', async () => {
 
 it('hides the built-in summary without removing the controls', async () => {
   const el = await pagination(html`
-    <lyra-pagination total-items="30" hide-summary></lyra-pagination>
+    <lr-pagination total-items="30" hide-summary></lr-pagination>
   `);
 
   expect(el.shadowRoot!.querySelector('[part="summary"]')).to.not.exist;
@@ -186,7 +186,7 @@ it('hides the built-in summary without removing the controls', async () => {
 it('mirrors the directional icons under RTL', async () => {
   const ltr = await pagination();
   const rtl = await pagination(html`
-    <lyra-pagination dir="rtl" total-items="95" page-size="10"></lyra-pagination>
+    <lr-pagination dir="rtl" total-items="95" page-size="10"></lr-pagination>
   `);
   const ltrPrevious = ltr.shadowRoot!.querySelector('[part="previous-icon"]') as HTMLElement;
   const rtlPrevious = rtl.shadowRoot!.querySelector('[part="previous-icon"]') as HTMLElement;
@@ -198,11 +198,11 @@ it('mirrors the directional icons under RTL', async () => {
 
 it('stacks its summary and controls in a narrow allocation', async () => {
   const el = await pagination(html`
-    <lyra-pagination
+    <lr-pagination
       style="inline-size: 18rem"
       total-items="95"
       page-size="10"
-    ></lyra-pagination>
+    ></lr-pagination>
   `);
   await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
 
@@ -213,7 +213,7 @@ it('stacks its summary and controls in a narrow allocation', async () => {
 
 it('contains long translated labels in a narrow allocation', async () => {
   const el = await pagination(html`
-    <lyra-pagination
+    <lr-pagination
       style="inline-size: 18rem"
       total-items="95"
       page-size="10"
@@ -222,7 +222,7 @@ it('contains long translated labels in a narrow allocation', async () => {
       .strings=${{
         paginationSummary: '{start}–{end} von insgesamt {total} {itemLabel}',
       }}
-    ></lyra-pagination>
+    ></lr-pagination>
   `);
   await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
 
@@ -239,7 +239,7 @@ it('is accessible', async () => {
 
 it('normalizes NaN/negative pageSize and totalItems to an empty, zero-page state instead of NaN', async () => {
   const el = await pagination(html`
-    <lyra-pagination total-items="95" page-size="10"></lyra-pagination>
+    <lr-pagination total-items="95" page-size="10"></lr-pagination>
   `);
 
   el.pageSize = NaN;
@@ -251,7 +251,7 @@ it('normalizes NaN/negative pageSize and totalItems to an empty, zero-page state
 
 it('clamps an oversized or negative page to the last/first valid page instead of NaN/out-of-range', async () => {
   const el = await pagination(html`
-    <lyra-pagination total-items="95" page-size="10"></lyra-pagination>
+    <lr-pagination total-items="95" page-size="10"></lr-pagination>
   `);
   const input = el.shadowRoot!.querySelector('[part="page-input"]') as HTMLInputElement;
 

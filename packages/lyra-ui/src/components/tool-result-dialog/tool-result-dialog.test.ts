@@ -3,9 +3,9 @@ import './tool-result-dialog.js';
 import type { LyraToolResultDialog } from './tool-result-dialog.js';
 import { styles } from './tool-result-dialog.styles.js';
 
-// A stand-in for a slotted component (e.g. lyra-tabs) whose real focusable
+// A stand-in for a slotted component (e.g. lr-tabs) whose real focusable
 // target lives inside its own shadow root rather than the host tag's
-// light-DOM subtree. Mirrors lyra-dialog's/lyra-widget's identical test
+// light-DOM subtree. Mirrors lr-dialog's/lr-widget's identical test
 // fixture, under a distinct tag name so every test file can register its
 // own copy in the same browser context.
 class ToolResultDialogTestShadowInput extends HTMLElement {
@@ -21,7 +21,7 @@ customElements.define('tool-result-dialog-test-shadow-input', ToolResultDialogTe
 
 it('renders closed by default, with no role/aria-modal on the panel', async () => {
   const el = (await fixture(
-    html`<lyra-tool-result-dialog tool-name="run_python"></lyra-tool-result-dialog>`,
+    html`<lr-tool-result-dialog tool-name="run_python"></lr-tool-result-dialog>`,
   )) as LyraToolResultDialog;
   const panel = el.shadowRoot!.querySelector('[part="panel"]') as HTMLElement;
   expect(el.open).to.be.false;
@@ -32,7 +32,7 @@ it('renders closed by default, with no role/aria-modal on the panel', async () =
 
 it('reflects open as an attribute and sets dialog semantics once open', async () => {
   const el = (await fixture(
-    html`<lyra-tool-result-dialog tool-name="run_python"></lyra-tool-result-dialog>`,
+    html`<lr-tool-result-dialog tool-name="run_python"></lr-tool-result-dialog>`,
   )) as LyraToolResultDialog;
   el.open = true;
   await el.updateComplete;
@@ -46,11 +46,11 @@ it('reflects open as an attribute and sets dialog semantics once open', async ()
 
 it('forwards a host aria-label to the internal dialog and lets it win over the generated title', async () => {
   const el = (await fixture(
-    html`<lyra-tool-result-dialog
+    html`<lr-tool-result-dialog
       open
       tool-name="run_python"
       aria-label="Python execution details"
-    ></lyra-tool-result-dialog>`,
+    ></lr-tool-result-dialog>`,
   )) as LyraToolResultDialog;
   const panel = el.shadowRoot!.querySelector('[part="panel"]')!;
 
@@ -60,7 +60,7 @@ it('forwards a host aria-label to the internal dialog and lets it win over the g
 
 it('defaults to pending status and reflects status changes onto the host attribute', async () => {
   const el = (await fixture(
-    html`<lyra-tool-result-dialog tool-name="run_python"></lyra-tool-result-dialog>`,
+    html`<lr-tool-result-dialog tool-name="run_python"></lr-tool-result-dialog>`,
   )) as LyraToolResultDialog;
   expect(el.status).to.equal('pending');
   expect(el.getAttribute('status')).to.equal('pending');
@@ -72,24 +72,24 @@ it('defaults to pending status and reflects status changes onto the host attribu
 
 it('renders the tool name, falling back to "Tool call" when unset', async () => {
   const withName = (await fixture(
-    html`<lyra-tool-result-dialog tool-name="run_python"></lyra-tool-result-dialog>`,
+    html`<lr-tool-result-dialog tool-name="run_python"></lr-tool-result-dialog>`,
   )) as LyraToolResultDialog;
   expect(withName.shadowRoot!.querySelector('[part="tool-name"]')!.textContent).to.equal('run_python');
 
-  const withoutName = (await fixture(html`<lyra-tool-result-dialog></lyra-tool-result-dialog>`)) as LyraToolResultDialog;
+  const withoutName = (await fixture(html`<lr-tool-result-dialog></lr-tool-result-dialog>`)) as LyraToolResultDialog;
   expect(withoutName.shadowRoot!.querySelector('[part="tool-name"]')!.textContent).to.equal('Tool call');
 });
 
 it('shows a visible status label for every status value, not just a color', async () => {
   const el = (await fixture(
-    html`<lyra-tool-result-dialog tool-name="run_python" status="denied"></lyra-tool-result-dialog>`,
+    html`<lr-tool-result-dialog tool-name="run_python" status="denied"></lr-tool-result-dialog>`,
   )) as LyraToolResultDialog;
   expect(el.shadowRoot!.querySelector('[part="status"]')!.textContent).to.include('Denied');
 });
 
 it('falls back to a pending badge instead of throwing for an out-of-union status attribute', async () => {
   const el = (await fixture(
-    html`<lyra-tool-result-dialog tool-name="run_python" status="bogus"></lyra-tool-result-dialog>`,
+    html`<lr-tool-result-dialog tool-name="run_python" status="bogus"></lr-tool-result-dialog>`,
   )) as LyraToolResultDialog;
   expect(el.status).to.equal('pending');
   expect(el.shadowRoot!.querySelector('[part="status"]')!.textContent).to.include('Pending');
@@ -97,7 +97,7 @@ it('falls back to a pending badge instead of throwing for an out-of-union status
 
 it('falls back to a pending badge instead of throwing when status is assigned an out-of-union value directly', async () => {
   const el = (await fixture(
-    html`<lyra-tool-result-dialog tool-name="run_python"></lyra-tool-result-dialog>`,
+    html`<lr-tool-result-dialog tool-name="run_python"></lr-tool-result-dialog>`,
   )) as LyraToolResultDialog;
   el.status = 'bogus' as LyraToolResultDialog['status'];
   await el.updateComplete;
@@ -106,14 +106,14 @@ it('falls back to a pending badge instead of throwing when status is assigned an
 
 it('omits the duration part entirely when duration-ms is unset', async () => {
   const el = (await fixture(
-    html`<lyra-tool-result-dialog tool-name="run_python"></lyra-tool-result-dialog>`,
+    html`<lr-tool-result-dialog tool-name="run_python"></lr-tool-result-dialog>`,
   )) as LyraToolResultDialog;
   expect(el.shadowRoot!.querySelector('[part="duration"]')).to.not.exist;
 });
 
 it('formats sub-second durations in milliseconds and second-plus durations in seconds', async () => {
   const el = (await fixture(
-    html`<lyra-tool-result-dialog tool-name="run_python" duration-ms="820"></lyra-tool-result-dialog>`,
+    html`<lr-tool-result-dialog tool-name="run_python" duration-ms="820"></lr-tool-result-dialog>`,
   )) as LyraToolResultDialog;
   expect(el.shadowRoot!.querySelector('[part="duration"]')!.textContent).to.equal('820ms');
 
@@ -128,13 +128,13 @@ it('formats sub-second durations in milliseconds and second-plus durations in se
 
 it('interpolates duration values through localized message templates', async () => {
   const el = (await fixture(html`
-    <lyra-tool-result-dialog
+    <lr-tool-result-dialog
       duration-ms="1500"
       .strings=${{
         durationMilliseconds: '{value} millisecondes',
         durationSeconds: '{value} secondes',
       }}
-    ></lyra-tool-result-dialog>
+    ></lr-tool-result-dialog>
   `)) as LyraToolResultDialog;
 
   expect(el.shadowRoot!.querySelector('[part="duration"]')!.textContent).to.equal('1.5 secondes');
@@ -142,7 +142,7 @@ it('interpolates duration values through localized message templates', async () 
 
 it('omits non-finite durations', async () => {
   const el = (await fixture(
-    html`<lyra-tool-result-dialog tool-name="run_python"></lyra-tool-result-dialog>`,
+    html`<lr-tool-result-dialog tool-name="run_python"></lr-tool-result-dialog>`,
   )) as LyraToolResultDialog;
   el.durationMs = Number.NaN;
   await el.updateComplete;
@@ -152,7 +152,7 @@ it('omits non-finite durations', async () => {
 
 it('clamps a negative duration to 0 instead of rendering a nonsensical negative duration', async () => {
   const el = (await fixture(
-    html`<lyra-tool-result-dialog tool-name="run_python"></lyra-tool-result-dialog>`,
+    html`<lr-tool-result-dialog tool-name="run_python"></lr-tool-result-dialog>`,
   )) as LyraToolResultDialog;
   el.durationMs = -20;
   await el.updateComplete;
@@ -163,28 +163,28 @@ it('clamps a negative duration to 0 instead of rendering a nonsensical negative 
 it('uses themeable running motion and lets footer actions wrap', async () => {
   const css = styles.cssText.replace(/\s+/g, ' ');
   expect(css).to.include(
-    'animation: lyra-tool-result-dialog-spin var(--lyra-tool-result-dialog-spin) infinite;',
+    'animation: lr-tool-result-dialog-spin var(--lr-tool-result-dialog-spin) infinite;',
   );
   expect(css).to.match(/\[part='footer'\]\s*\{[^}]*flex-wrap:\s*wrap;/);
 
   const el = (await fixture(html`
-    <lyra-tool-result-dialog
+    <lr-tool-result-dialog
       status="running"
-      style="--lyra-tool-result-dialog-spin: 2.5s linear"
-    ></lyra-tool-result-dialog>
+      style="--lr-tool-result-dialog-spin: 2.5s linear"
+    ></lr-tool-result-dialog>
   `)) as LyraToolResultDialog;
   const glyph = el.shadowRoot!.querySelector('[part="status"] svg')!;
   expect(getComputedStyle(glyph).animationDuration).to.equal('2.5s');
 });
 
-it('toggles maximized and emits lyra-maximize-change when the maximize button is clicked', async () => {
+it('toggles maximized and emits lr-maximize-change when the maximize button is clicked', async () => {
   const el = (await fixture(
-    html`<lyra-tool-result-dialog tool-name="run_python" open></lyra-tool-result-dialog>`,
+    html`<lr-tool-result-dialog tool-name="run_python" open></lr-tool-result-dialog>`,
   )) as LyraToolResultDialog;
   await el.updateComplete;
   expect(el.maximized).to.be.false;
 
-  const listener = oneEvent(el, 'lyra-maximize-change');
+  const listener = oneEvent(el, 'lr-maximize-change');
   (el.shadowRoot!.querySelector('[part="maximize-button"]') as HTMLElement).click();
   const { detail } = await listener;
 
@@ -193,11 +193,11 @@ it('toggles maximized and emits lyra-maximize-change when the maximize button is
   expect(el.hasAttribute('maximized')).to.be.true;
 });
 
-it('closes on backdrop click and emits lyra-close with reason "backdrop"', async () => {
+it('closes on backdrop click and emits lr-close with reason "backdrop"', async () => {
   const el = (await fixture(
-    html`<lyra-tool-result-dialog tool-name="run_python" open></lyra-tool-result-dialog>`,
+    html`<lr-tool-result-dialog tool-name="run_python" open></lr-tool-result-dialog>`,
   )) as LyraToolResultDialog;
-  const listener = oneEvent(el, 'lyra-close');
+  const listener = oneEvent(el, 'lr-close');
   (el.shadowRoot!.querySelector('[part="backdrop"]') as HTMLElement).click();
   const { detail } = await listener;
 
@@ -205,11 +205,11 @@ it('closes on backdrop click and emits lyra-close with reason "backdrop"', async
   expect(detail).to.equal('backdrop');
 });
 
-it('closes on the built-in close button and emits lyra-close with reason "close-button"', async () => {
+it('closes on the built-in close button and emits lr-close with reason "close-button"', async () => {
   const el = (await fixture(
-    html`<lyra-tool-result-dialog tool-name="run_python" open></lyra-tool-result-dialog>`,
+    html`<lr-tool-result-dialog tool-name="run_python" open></lr-tool-result-dialog>`,
   )) as LyraToolResultDialog;
-  const listener = oneEvent(el, 'lyra-close');
+  const listener = oneEvent(el, 'lr-close');
   (el.shadowRoot!.querySelector('[part="close-button"]') as HTMLElement).click();
   const { detail } = await listener;
 
@@ -217,11 +217,11 @@ it('closes on the built-in close button and emits lyra-close with reason "close-
   expect(detail).to.equal('close-button');
 });
 
-it('closes on Escape and emits lyra-close with reason "escape"', async () => {
+it('closes on Escape and emits lr-close with reason "escape"', async () => {
   const el = (await fixture(
-    html`<lyra-tool-result-dialog tool-name="run_python" open></lyra-tool-result-dialog>`,
+    html`<lr-tool-result-dialog tool-name="run_python" open></lr-tool-result-dialog>`,
   )) as LyraToolResultDialog;
-  const listener = oneEvent(el, 'lyra-close');
+  const listener = oneEvent(el, 'lr-close');
   document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
   const { detail } = await listener;
 
@@ -231,10 +231,10 @@ it('closes on Escape and emits lyra-close with reason "escape"', async () => {
 
 it('does not respond to Escape while closed', async () => {
   const el = (await fixture(
-    html`<lyra-tool-result-dialog tool-name="run_python"></lyra-tool-result-dialog>`,
+    html`<lr-tool-result-dialog tool-name="run_python"></lr-tool-result-dialog>`,
   )) as LyraToolResultDialog;
   let fired = false;
-  el.addEventListener('lyra-close', () => (fired = true));
+  el.addEventListener('lr-close', () => (fired = true));
 
   document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
   await el.updateComplete;
@@ -244,10 +244,10 @@ it('does not respond to Escape while closed', async () => {
 
 it('close() is a no-op when already closed (no duplicate event, no error)', async () => {
   const el = (await fixture(
-    html`<lyra-tool-result-dialog tool-name="run_python"></lyra-tool-result-dialog>`,
+    html`<lr-tool-result-dialog tool-name="run_python"></lr-tool-result-dialog>`,
   )) as LyraToolResultDialog;
   let count = 0;
-  el.addEventListener('lyra-close', () => count++);
+  el.addEventListener('lr-close', () => count++);
 
   el.close('api');
   el.close('api');
@@ -258,11 +258,11 @@ it('close() is a no-op when already closed (no duplicate event, no error)', asyn
 
 it('close() sets open false, emits with the given reason, and is idempotent once closed', async () => {
   const el = (await fixture(
-    html`<lyra-tool-result-dialog tool-name="run_python" open></lyra-tool-result-dialog>`,
+    html`<lr-tool-result-dialog tool-name="run_python" open></lr-tool-result-dialog>`,
   )) as LyraToolResultDialog;
   let count = 0;
   let detail: unknown;
-  el.addEventListener('lyra-close', (e) => {
+  el.addEventListener('lr-close', (e) => {
     count++;
     detail = (e as CustomEvent).detail;
   });
@@ -278,7 +278,7 @@ it('close() sets open false, emits with the given reason, and is idempotent once
 
 it('moves focus to the first focusable element (the maximize button) when opened with no slotted content', async () => {
   const el = (await fixture(
-    html`<lyra-tool-result-dialog tool-name="run_python"></lyra-tool-result-dialog>`,
+    html`<lr-tool-result-dialog tool-name="run_python"></lr-tool-result-dialog>`,
   )) as LyraToolResultDialog;
   el.open = true;
   await el.updateComplete;
@@ -293,7 +293,7 @@ it('returns focus to the element that was focused before the dialog opened', asy
   trigger.focus();
 
   const el = (await fixture(
-    html`<lyra-tool-result-dialog tool-name="run_python"><button slot="body">inside</button></lyra-tool-result-dialog>`,
+    html`<lr-tool-result-dialog tool-name="run_python"><button slot="body">inside</button></lr-tool-result-dialog>`,
   )) as LyraToolResultDialog;
   el.open = true;
   await el.updateComplete;
@@ -313,7 +313,7 @@ it('restores focus to the trigger when open is set to false directly, not just v
   trigger.focus();
 
   const el = (await fixture(
-    html`<lyra-tool-result-dialog tool-name="run_python"></lyra-tool-result-dialog>`,
+    html`<lr-tool-result-dialog tool-name="run_python"></lr-tool-result-dialog>`,
   )) as LyraToolResultDialog;
   el.open = true;
   await el.updateComplete;
@@ -328,7 +328,7 @@ it('restores focus to the trigger when open is set to false directly, not just v
 
 it('locks document scroll while open and releases it on close', async () => {
   const el = (await fixture(
-    html`<lyra-tool-result-dialog tool-name="run_python"></lyra-tool-result-dialog>`,
+    html`<lr-tool-result-dialog tool-name="run_python"></lr-tool-result-dialog>`,
   )) as LyraToolResultDialog;
   el.open = true;
   await el.updateComplete;
@@ -341,7 +341,7 @@ it('locks document scroll while open and releases it on close', async () => {
 
 it('releases the scroll lock on disconnect while open', async () => {
   const el = (await fixture(
-    html`<lyra-tool-result-dialog tool-name="run_python" open></lyra-tool-result-dialog>`,
+    html`<lr-tool-result-dialog tool-name="run_python" open></lr-tool-result-dialog>`,
   )) as LyraToolResultDialog;
   await el.updateComplete;
   expect(document.documentElement.style.overflow).to.equal('hidden');
@@ -353,7 +353,7 @@ it('releases the scroll lock on disconnect while open', async () => {
 
 it('restores the scroll lock and keydown trap when reparented while still open', async () => {
   const el = (await fixture(
-    html`<lyra-tool-result-dialog tool-name="run_python" open></lyra-tool-result-dialog>`,
+    html`<lr-tool-result-dialog tool-name="run_python" open></lr-tool-result-dialog>`,
   )) as LyraToolResultDialog;
   await el.updateComplete;
   expect(document.documentElement.style.overflow).to.equal('hidden');
@@ -375,16 +375,16 @@ it('restores the scroll lock and keydown trap when reparented while still open',
 
 it('closes only the topmost dialog on Escape when two instances are open at once', async () => {
   const back = (await fixture(
-    html`<lyra-tool-result-dialog tool-name="first" open></lyra-tool-result-dialog>`,
+    html`<lr-tool-result-dialog tool-name="first" open></lr-tool-result-dialog>`,
   )) as LyraToolResultDialog;
   await back.updateComplete;
 
   const front = (await fixture(
-    html`<lyra-tool-result-dialog tool-name="second" open></lyra-tool-result-dialog>`,
+    html`<lr-tool-result-dialog tool-name="second" open></lr-tool-result-dialog>`,
   )) as LyraToolResultDialog;
   await front.updateComplete;
 
-  const listener = oneEvent(front, 'lyra-close');
+  const listener = oneEvent(front, 'lr-close');
   document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
   const { detail } = await listener;
 
@@ -398,9 +398,9 @@ it('closes only the topmost dialog on Escape when two instances are open at once
 
 it('traps Tab focus inside the panel, wrapping last->first and first->last', async () => {
   const el = (await fixture(
-    html`<lyra-tool-result-dialog tool-name="run_python" open
+    html`<lr-tool-result-dialog tool-name="run_python" open
       ><button slot="body">body-button</button
-      ><div slot="footer"><button>last</button></div></lyra-tool-result-dialog
+      ><div slot="footer"><button>last</button></div></lr-tool-result-dialog
     >`,
   )) as LyraToolResultDialog;
   await el.updateComplete;
@@ -428,13 +428,13 @@ it('traps Tab/Shift+Tab at a slotted element whose focusable target lives in its
   // The shadow-input stand-in is slotted into `footer` (not `body`) so it
   // lands *last* in tab order -- this component's own header buttons always
   // precede the body slot (see getFocusableElements' ordering comment), so
-  // unlike lyra-dialog's equivalent test a slotted body element here is
+  // unlike lr-dialog's equivalent test a slotted body element here is
   // never the *first* focusable.
   const el = (await fixture(
-    html`<lyra-tool-result-dialog tool-name="run_python" open
+    html`<lr-tool-result-dialog tool-name="run_python" open
       ><p slot="body">body content</p
       ><tool-result-dialog-test-shadow-input slot="footer"></tool-result-dialog-test-shadow-input
-    ></lyra-tool-result-dialog>`,
+    ></lr-tool-result-dialog>`,
   )) as LyraToolResultDialog;
   await el.updateComplete;
   const shadowHost = el.querySelector('tool-result-dialog-test-shadow-input') as ToolResultDialogTestShadowInput;
@@ -455,7 +455,7 @@ it('traps Tab/Shift+Tab at a slotted element whose focusable target lives in its
 
 it('hides the footer wrapper when nothing is slotted into it, shows it once slotted', async () => {
   const el = (await fixture(
-    html`<lyra-tool-result-dialog tool-name="run_python"></lyra-tool-result-dialog>`,
+    html`<lr-tool-result-dialog tool-name="run_python"></lr-tool-result-dialog>`,
   )) as LyraToolResultDialog;
   const footer = el.shadowRoot!.querySelector('[part="footer"]') as HTMLElement;
   expect(footer.hasAttribute('hidden')).to.be.true;
@@ -471,28 +471,28 @@ it('hides the footer wrapper when nothing is slotted into it, shows it once slot
 
 it('renders the footer wrapper visible on first paint when footer content is present before upgrade', async () => {
   const el = (await fixture(
-    html`<lyra-tool-result-dialog tool-name="run_python"
-      ><button slot="footer">OK</button></lyra-tool-result-dialog
+    html`<lr-tool-result-dialog tool-name="run_python"
+      ><button slot="footer">OK</button></lr-tool-result-dialog
     >`,
   )) as LyraToolResultDialog;
   const footer = el.shadowRoot!.querySelector('[part="footer"]') as HTMLElement;
   expect(footer.hasAttribute('hidden')).to.be.false;
 });
 
-it('does not intercept lyra-tabs-change bubbling up from a slotted lyra-tabs', async () => {
+it('does not intercept lr-tabs-change bubbling up from a slotted lr-tabs', async () => {
   // This component listens for none of its own tab-related events -- a
-  // slotted <lyra-tabs>'s lyra-tabs-change simply composes/bubbles through
+  // slotted <lr-tabs>'s lr-tabs-change simply composes/bubbles through
   // the light DOM on its own, with no interception or re-firing needed.
   const el = (await fixture(
-    html`<lyra-tool-result-dialog tool-name="run_python" open
-      ><div slot="body"><button id="inner-emitter"></button></div></lyra-tool-result-dialog
+    html`<lr-tool-result-dialog tool-name="run_python" open
+      ><div slot="body"><button id="inner-emitter"></button></div></lr-tool-result-dialog
     >`,
   )) as LyraToolResultDialog;
   await el.updateComplete;
 
-  const listener = oneEvent(el, 'lyra-tabs-change');
+  const listener = oneEvent(el, 'lr-tabs-change');
   el.querySelector('#inner-emitter')!.dispatchEvent(
-    new CustomEvent('lyra-tabs-change', { bubbles: true, composed: true, detail: { tabId: 'json' } }),
+    new CustomEvent('lr-tabs-change', { bubbles: true, composed: true, detail: { tabId: 'json' } }),
   );
   const { detail } = await listener;
   expect(detail).to.deep.equal({ tabId: 'json' });
@@ -500,16 +500,16 @@ it('does not intercept lyra-tabs-change bubbling up from a slotted lyra-tabs', a
 
 it('is accessible while closed', async () => {
   const el = (await fixture(
-    html`<lyra-tool-result-dialog tool-name="run_python"></lyra-tool-result-dialog>`,
+    html`<lr-tool-result-dialog tool-name="run_python"></lr-tool-result-dialog>`,
   )) as LyraToolResultDialog;
   await expect(el).to.be.accessible();
 });
 
 it('is accessible while open with body and footer content', async () => {
   const el = (await fixture(
-    html`<lyra-tool-result-dialog tool-name="run_python" status="success" duration-ms="820" open
+    html`<lr-tool-result-dialog tool-name="run_python" status="success" duration-ms="820" open
       ><p slot="body">Ran successfully.</p>
-      <div slot="footer"><button>Close</button></div></lyra-tool-result-dialog
+      <div slot="footer"><button>Close</button></div></lr-tool-result-dialog
     >`,
   )) as LyraToolResultDialog;
   await el.updateComplete;
@@ -518,7 +518,7 @@ it('is accessible while open with body and footer content', async () => {
 
 it('localizes the tool-name fallback, status label, and maximize/restore button via this.localize()', async () => {
   const el = (await fixture(
-    html`<lyra-tool-result-dialog
+    html`<lr-tool-result-dialog
       status="running"
       .strings=${{
         toolCall: "Appel d'outil",
@@ -526,7 +526,7 @@ it('localizes the tool-name fallback, status label, and maximize/restore button 
         maximize: 'Agrandir',
         restore: 'Restaurer',
       }}
-    ></lyra-tool-result-dialog>`,
+    ></lr-tool-result-dialog>`,
   )) as LyraToolResultDialog;
   expect(el.shadowRoot!.querySelector('[part="tool-name"]')!.textContent).to.equal("Appel d'outil");
   expect(el.shadowRoot!.querySelector('[part="status"] span')!.textContent).to.equal('En cours');
@@ -539,7 +539,7 @@ it('localizes the tool-name fallback, status label, and maximize/restore button 
 
 it('defaults to English "Tool call"/"Running"/"Maximize" when no strings override is set', async () => {
   const el = (await fixture(
-    html`<lyra-tool-result-dialog status="running"></lyra-tool-result-dialog>`,
+    html`<lr-tool-result-dialog status="running"></lr-tool-result-dialog>`,
   )) as LyraToolResultDialog;
   expect(el.shadowRoot!.querySelector('[part="tool-name"]')!.textContent).to.equal('Tool call');
   expect(el.shadowRoot!.querySelector('[part="status"] span')!.textContent).to.equal('Running');

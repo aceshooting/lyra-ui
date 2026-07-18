@@ -1,12 +1,12 @@
 ---
-description: Rename Web Awesome (wa-*) usage in a consumer project to lyra-ui (lyra-*) equivalents
+description: Rename Web Awesome (wa-*) usage in a consumer project to lyra-ui (lr-*) equivalents
 argument-hint: [path]
 allowed-tools: Read, Edit, Grep, Glob, Bash(grep:*), Bash(git:*)
 ---
 
 Migrate the project at `$1` (default to the current working directory if `$1` is empty) off Web
 Awesome (`<wa-*>` custom elements, `@awesome.me/webawesome` imports) onto
-`@aceshooting/lyra-ui`'s `lyra-*` equivalents. `@aceshooting/lyra-ui`'s own docs guarantee this is
+`@aceshooting/lyra-ui`'s `lr-*` equivalents. `@aceshooting/lyra-ui`'s own docs guarantee this is
 a **mechanical rename** for any component that has a documented Web Awesome counterpart — see
 `${CLAUDE_PLUGIN_ROOT}/skills/lyra-ui/references/llms-full.txt`, where each component's section
 states whether it mirrors a `wa-*` component 1:1.
@@ -21,8 +21,8 @@ Steps:
    mirror" or equivalent note in that component's section). Do not guess from memory — the mirror
    status and any documented intentional differences are only accurate in that file.
 3. Split the list into two buckets:
-   - **Mirrored** (lyra-ui documents a `lyra-*` equivalent): for every occurrence, rename the tag
-     (`wa-button` -> `lyra-button`, etc.), update the import specifier to
+   - **Mirrored** (lyra-ui documents a `lr-*` equivalent): for every occurrence, rename the tag
+     (`wa-button` -> `lr-button`, etc.), update the import specifier to
      `@aceshooting/lyra-ui/components/<name>/<name>.js`, and carry over any attribute/slot/event
      names that differ between the two per that component's documented differences (do not assume
      every attribute name is identical — check the reference).

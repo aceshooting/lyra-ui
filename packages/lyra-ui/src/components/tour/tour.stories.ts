@@ -5,7 +5,7 @@ import type { LyraTour, TourStep } from './tour.js';
 
 const meta: Meta = {
   title: 'Tour',
-  component: 'lyra-tour',
+  component: 'lr-tour',
   tags: ['autodocs'],
   parameters: {
     docs: {
@@ -43,7 +43,7 @@ const productTourSteps: TourStep[] = [
 
 function startDemoTour(e: Event): void {
   const trigger = e.currentTarget as HTMLElement;
-  const tour = trigger.closest('.tour-demo')!.querySelector('lyra-tour') as LyraTour;
+  const tour = trigger.closest('.tour-demo')!.querySelector('lr-tour') as LyraTour;
   tour.start();
 }
 
@@ -56,7 +56,7 @@ export const Default: Story = {
         <button id="tour-demo-filters">Filters</button>
         <button id="tour-demo-create">Create</button>
       </div>
-      <lyra-tour .steps=${productTourSteps}></lyra-tour>
+      <lr-tour .steps=${productTourSteps}></lr-tour>
     </div>
   `,
 };
@@ -70,7 +70,7 @@ export const InteractiveTarget: Story = {
         <button id="tour-demo-filters">Filters</button>
         <button id="tour-demo-create">Create</button>
       </div>
-      <lyra-tour
+      <lr-tour
         .steps=${[
           {
             id: 'clickable',
@@ -81,7 +81,7 @@ export const InteractiveTarget: Story = {
           },
           ...productTourSteps.slice(1),
         ]}
-      ></lyra-tour>
+      ></lr-tour>
     </div>
   `,
   parameters: {
@@ -103,7 +103,7 @@ export const NoProgressAndLightDismiss: Story = {
         <button id="tour-demo-filters">Filters</button>
         <button id="tour-demo-create">Create</button>
       </div>
-      <lyra-tour .steps=${productTourSteps} .showProgress=${false} light-dismiss></lyra-tour>
+      <lr-tour .steps=${productTourSteps} .showProgress=${false} light-dismiss></lr-tour>
     </div>
   `,
 };

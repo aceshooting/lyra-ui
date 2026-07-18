@@ -27,17 +27,17 @@ export interface WidgetView {
 }
 
 export interface LyraWidgetEventMap {
-  'lyra-collapse-change': CustomEvent<{ collapsed: boolean }>;
-  'lyra-fullscreen-change': CustomEvent<{ fullscreen: boolean }>;
-  'lyra-view-change': CustomEvent<{ viewId: string }>;
+  'lr-collapse-change': CustomEvent<{ collapsed: boolean }>;
+  'lr-fullscreen-change': CustomEvent<{ fullscreen: boolean }>;
+  'lr-view-change': CustomEvent<{ viewId: string }>;
 }
 /**
- * `<lyra-widget>` — a titled panel shell with an optional collapse toggle and
+ * `<lr-widget>` — a titled panel shell with an optional collapse toggle and
  * an optional fullscreen-expand toggle. Fullscreen promotes the same host
  * element in place (a CSS state, not a clone/portal), so slotted content
  * (a chart, a running simulation, scroll position) survives the transition.
  *
- * @customElement lyra-widget
+ * @customElement lr-widget
  * @slot - The panel body.
  * @slot icon - Optional leading icon in the title row.
  * @slot label - Rich label content (overrides the `label` attribute).
@@ -45,7 +45,7 @@ export interface LyraWidgetEventMap {
  * @slot actions - Header action controls, rendered before the collapse/expand buttons.
  * @slot collapse-icon - Overrides the built-in chevron glyph inside the collapse/expand toggle
  *   button entirely, via the platform's own slot-fallback-content mechanism (same convention as
- *   `<lyra-tool-call-chip>`'s `icon` slot): whatever is assigned wins, otherwise the default chevron
+ *   `<lr-tool-call-chip>`'s `icon` slot): whatever is assigned wins, otherwise the default chevron
  *   renders. Only meaningful while `collapsible`.
  * @slot fullscreen-icon - Overrides the built-in expand/close glyph inside the fullscreen toggle
  *   button entirely, using the same mechanism -- the override replaces *both* the "expand" and
@@ -54,9 +54,9 @@ export interface LyraWidgetEventMap {
  *   `expandable`.
  * @slot view-{id} - Content for the view whose `WidgetView.id` matches `{id}`, rendered when
  *   `views` is non-empty.
- * @event lyra-collapse-change - `detail: { collapsed }` (the new `collapsed` state).
- * @event lyra-fullscreen-change - `detail: { fullscreen }` (the new `fullscreen` state).
- * @event lyra-view-change - Fired when the active view changes via a header toggle click.
+ * @event lr-collapse-change - `detail: { collapsed }` (the new `collapsed` state).
+ * @event lr-fullscreen-change - `detail: { fullscreen }` (the new `fullscreen` state).
+ * @event lr-view-change - Fired when the active view changes via a header toggle click.
  *   `detail: { viewId }` (the new view's `id`).
  * @csspart base - The panel root (dialog role + backdrop when fullscreen).
  * @csspart header - The header row containing the title, actions, and toggle buttons.
@@ -73,16 +73,16 @@ export interface LyraWidgetEventMap {
  * @csspart body - The wrapper around the default slot (the panel body).
  * @csspart backdrop - The fullscreen scrim behind the panel.
  *
- * `fullscreen-inset` overrides the default `var(--lyra-space-l)` inset applied to `[part="base"]`
+ * `fullscreen-inset` overrides the default `var(--lr-space-l)` inset applied to `[part="base"]`
  * and `[part="backdrop"]` while fullscreen (e.g. `"0 0 0 240px"` to leave a persistent sidebar
- * visible). `compact` tightens header/body padding — same convention as `lyra-empty`'s `compact`.
+ * visible). `compact` tightens header/body padding — same convention as `lr-empty`'s `compact`.
  */
 export class LyraWidget extends LyraElement<LyraWidgetEventMap> {
   static styles = [LyraElement.styles, styles];
 
   @property() label = '';
   /** Overrides the fullscreen dialog's accessible name, taking precedence over both `label` and a
-   *  slotted `label`. Fed only by a host `aria-label`, matching `lyra-scroller`'s/`lyra-carousel`'s
+   *  slotted `label`. Fed only by a host `aria-label`, matching `lr-scroller`'s/`lr-carousel`'s
    *  own host-override pattern. */
   @property({ attribute: 'aria-label' }) accessibleLabel: string | null = null;
   @property() sublabel = '';
@@ -91,7 +91,7 @@ export class LyraWidget extends LyraElement<LyraWidgetEventMap> {
   @property({ type: Boolean, reflect: true }) expandable = false;
   @property({ type: Boolean, reflect: true }) fullscreen = false;
   /** Raw CSS `inset` shorthand applied to the fullscreen panel and backdrop instead of the default
-   *  `var(--lyra-space-l)` on every side — e.g. `"0 0 0 240px"` to leave a 240px persistent sidebar
+   *  `var(--lr-space-l)` on every side — e.g. `"0 0 0 240px"` to leave a 240px persistent sidebar
    *  visible while fullscreen. */
   @property({ attribute: 'fullscreen-inset' }) fullscreenInset = '';
   /** Overrides the fullscreen *backdrop*'s own inset independent of `fullscreen-inset` -- e.g.
@@ -237,24 +237,24 @@ export class LyraWidget extends LyraElement<LyraWidgetEventMap> {
   private setActiveView = (id: string): void => {
     if (id === this.activeView) return;
     this.activeView = id;
-    this.emit('lyra-view-change', { viewId: id });
+    this.emit('lr-view-change', { viewId: id });
   };
 
   private toggleCollapsed = (): void => {
     this.collapsed = !this.collapsed;
-    this.emit('lyra-collapse-change', { collapsed: this.collapsed });
+    this.emit('lr-collapse-change', { collapsed: this.collapsed });
   };
 
   private toggleFullscreen = (e: MouseEvent): void => {
     if (!this.fullscreen) this.explicitTrigger = e.currentTarget as HTMLElement;
     this.fullscreen = !this.fullscreen;
-    this.emit('lyra-fullscreen-change', { fullscreen: this.fullscreen });
+    this.emit('lr-fullscreen-change', { fullscreen: this.fullscreen });
   };
 
   private dismissFullscreen = (): void => {
     if (!this.fullscreen) return;
     this.fullscreen = false;
-    this.emit('lyra-fullscreen-change', { fullscreen: false });
+    this.emit('lr-fullscreen-change', { fullscreen: false });
   };
 
   private onBackdropClick = (): void => {
@@ -270,14 +270,14 @@ export class LyraWidget extends LyraElement<LyraWidgetEventMap> {
             part="backdrop"
             style=${(() => {
               const decls: string[] = [];
-              if (this.fullscreenInset) decls.push(`--lyra-widget-fullscreen-inset:${this.fullscreenInset}`);
+              if (this.fullscreenInset) decls.push(`--lr-widget-fullscreen-inset:${this.fullscreenInset}`);
               // A custom property's var() fallback resolves per-element using that element's own
-              // cascade, but `:host`'s `--lyra-widget-backdrop-inset: var(--lyra-widget-fullscreen-inset)`
+              // cascade, but `:host`'s `--lr-widget-backdrop-inset: var(--lr-widget-fullscreen-inset)`
               // is always *set* (never invalid), so its inherited (already-resolved-at-:host) value
-              // wins over this div's own local `--lyra-widget-fullscreen-inset` override -- the CSS
+              // wins over this div's own local `--lr-widget-fullscreen-inset` override -- the CSS
               // fallback chain alone can't see it. Resolve the fallback here in JS instead.
               const backdropInset = this.backdropInset || this.fullscreenInset;
-              if (backdropInset) decls.push(`--lyra-widget-backdrop-inset:${backdropInset}`);
+              if (backdropInset) decls.push(`--lr-widget-backdrop-inset:${backdropInset}`);
               return decls.length ? decls.join(';') : nothing;
             })()}
             @click=${this.onBackdropClick}
@@ -291,7 +291,7 @@ export class LyraWidget extends LyraElement<LyraWidgetEventMap> {
           ? this.accessibleLabel || this.label || this.labelSlotText || this.localize('widgetFullscreenPanel')
           : nothing}
         tabindex=${this.fullscreen ? '-1' : nothing}
-        style=${this.fullscreenInset ? `--lyra-widget-fullscreen-inset:${this.fullscreenInset}` : nothing}
+        style=${this.fullscreenInset ? `--lr-widget-fullscreen-inset:${this.fullscreenInset}` : nothing}
       >
         <div part="header">
           <div part="title">
@@ -363,6 +363,6 @@ export class LyraWidget extends LyraElement<LyraWidgetEventMap> {
 
 declare global {
   interface HTMLElementTagNameMap {
-    'lyra-widget': LyraWidget;
+    'lr-widget': LyraWidget;
   }
 }

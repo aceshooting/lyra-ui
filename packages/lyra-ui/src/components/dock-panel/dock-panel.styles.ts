@@ -2,7 +2,7 @@ import { css } from 'lit';
 
 export const styles = css`
   /* No :host position/inset is imposed here -- unlike an overlay component,
-     lyra-dock-panel deliberately stays layout-agnostic (see the class doc):
+     lr-dock-panel deliberately stays layout-agnostic (see the class doc):
      drop it as an absolutely-positioned child of a position:relative parent,
      or as a flex item alongside your existing content, and it only manages
      its own size along the resize axis plus filling the cross axis. */
@@ -14,7 +14,7 @@ export const styles = css`
        the class doc for why collapse hides content rather than zeroing the
        box). Reuses the shared icon-button tap-target token so the collapse
        toggle sitting on the rail stays comfortably tappable by default. */
-    --lyra-dock-panel-collapsed-size: var(--lyra-icon-button-size);
+    --lr-dock-panel-collapsed-size: var(--lr-icon-button-size);
     position: relative;
   }
   :host([edge='start']),
@@ -35,19 +35,19 @@ export const styles = css`
      aria-valuenow. */
   :host([edge='start'][collapsed]),
   :host([edge='end'][collapsed]) {
-    min-inline-size: var(--lyra-dock-panel-collapsed-size);
+    min-inline-size: var(--lr-dock-panel-collapsed-size);
   }
   :host([edge='top'][collapsed]),
   :host([edge='bottom'][collapsed]) {
-    min-block-size: var(--lyra-dock-panel-collapsed-size);
+    min-block-size: var(--lr-dock-panel-collapsed-size);
   }
 
   [part='base'] {
     position: relative;
     inline-size: 100%;
     block-size: 100%;
-    background: var(--lyra-color-surface);
-    border: var(--lyra-border-width-thin) solid var(--lyra-color-border);
+    background: var(--lr-color-surface);
+    border: var(--lr-border-width-thin) solid var(--lr-color-border);
     overflow: hidden;
   }
 
@@ -65,48 +65,48 @@ export const styles = css`
      automatically under RTL for the start/end edges. */
   [part='handle'] {
     position: absolute;
-    background: var(--lyra-color-border);
+    background: var(--lr-color-border);
     touch-action: none;
   }
   [part='handle']:hover,
   [part='handle']:focus-visible {
-    background: var(--lyra-color-brand);
+    background: var(--lr-color-brand);
   }
   [part='handle']:focus-visible {
-    outline: var(--lyra-focus-ring-width) solid var(--lyra-focus-ring-color);
-    outline-offset: calc(-1 * var(--lyra-focus-ring-width));
+    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
+    outline-offset: calc(-1 * var(--lr-focus-ring-width));
   }
   /* Transparent hit-slop, widening the draggable/tappable box along the
      resize axis only, without changing the handle's visible 3px thickness --
-     same technique as lyra-split's divider. */
+     same technique as lr-split's divider. */
   [part='handle']::before {
     content: '';
     position: absolute;
-    inset: var(--lyra-size-neg-6px);
+    inset: var(--lr-size-neg-6px);
   }
 
   :host([edge='start']) [part='handle'] {
     inset-block: 0;
     inset-inline-end: 0;
-    inline-size: var(--lyra-size-3px);
+    inline-size: var(--lr-size-3px);
     cursor: col-resize;
   }
   :host([edge='end']) [part='handle'] {
     inset-block: 0;
     inset-inline-start: 0;
-    inline-size: var(--lyra-size-3px);
+    inline-size: var(--lr-size-3px);
     cursor: col-resize;
   }
   :host([edge='top']) [part='handle'] {
     inset-inline: 0;
     inset-block-end: 0;
-    block-size: var(--lyra-size-3px);
+    block-size: var(--lr-size-3px);
     cursor: row-resize;
   }
   :host([edge='bottom']) [part='handle'] {
     inset-inline: 0;
     inset-block-start: 0;
-    block-size: var(--lyra-size-3px);
+    block-size: var(--lr-size-3px);
     cursor: row-resize;
   }
 
@@ -115,45 +115,45 @@ export const styles = css`
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    inline-size: var(--lyra-size-1-5rem);
-    block-size: var(--lyra-size-1-5rem);
+    inline-size: var(--lr-size-1-5rem);
+    block-size: var(--lr-size-1-5rem);
     padding: 0;
-    border: var(--lyra-border-width-thin) solid var(--lyra-color-border);
-    border-radius: var(--lyra-radius);
-    background: var(--lyra-color-surface);
-    color: var(--lyra-color-text);
+    border: var(--lr-border-width-thin) solid var(--lr-color-border);
+    border-radius: var(--lr-radius);
+    background: var(--lr-color-surface);
+    color: var(--lr-color-text);
     cursor: pointer;
-    font-size: var(--lyra-font-size-xs);
-    line-height: var(--lyra-line-height-none);
-    transition: background var(--lyra-transition-fast), color var(--lyra-transition-fast);
-    z-index: var(--lyra-layer-content);
+    font-size: var(--lr-font-size-xs);
+    line-height: var(--lr-line-height-none);
+    transition: background var(--lr-transition-fast), color var(--lr-transition-fast);
+    z-index: var(--lr-layer-content);
   }
   [part='collapse-toggle']:hover {
-    background: var(--lyra-color-brand-quiet);
-    color: var(--lyra-color-brand);
+    background: var(--lr-color-brand-quiet);
+    color: var(--lr-color-brand);
   }
   [part='collapse-toggle']:focus-visible {
-    outline: var(--lyra-focus-ring-width) solid var(--lyra-focus-ring-color);
-    outline-offset: var(--lyra-focus-ring-offset);
+    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
+    outline-offset: var(--lr-focus-ring-offset);
   }
 
   :host([edge='start']) [part='collapse-toggle'] {
-    inset-inline-end: var(--lyra-space-xs);
+    inset-inline-end: var(--lr-space-xs);
     inset-block-start: 50%;
     transform: translateY(-50%);
   }
   :host([edge='end']) [part='collapse-toggle'] {
-    inset-inline-start: var(--lyra-space-xs);
+    inset-inline-start: var(--lr-space-xs);
     inset-block-start: 50%;
     transform: translateY(-50%);
   }
   :host([edge='top']) [part='collapse-toggle'] {
-    inset-block-end: var(--lyra-space-xs);
+    inset-block-end: var(--lr-space-xs);
     inset-inline-start: 50%;
     transform: translateX(-50%);
   }
   :host([edge='bottom']) [part='collapse-toggle'] {
-    inset-block-start: var(--lyra-space-xs);
+    inset-block-start: var(--lr-space-xs);
     inset-inline-start: 50%;
     transform: translateX(-50%);
   }

@@ -16,7 +16,7 @@ export interface MediaCardOpenDetail {
 }
 
 export interface LyraMediaCardEventMap {
-  'lyra-open': CustomEvent<MediaCardOpenDetail>;
+  'lr-open': CustomEvent<MediaCardOpenDetail>;
 }
 
 /** Validates `url` for an `<img>`/`<video>` source. Kept as a public wrapper
@@ -40,13 +40,13 @@ function detectKind(mimeType: string): MediaCardKind {
 
 
 /**
- * `<lyra-media-card>` — a lightweight inline preview for one already-sent,
+ * `<lr-media-card>` — a lightweight inline preview for one already-sent,
  * already-available attachment inside a rendered chat message body (e.g.
- * plugged into `<lyra-chat-message>`'s `attachments` slot, or embedded
+ * plugged into `<lr-chat-message>`'s `attachments` slot, or embedded
  * directly by a markdown/message renderer). Distinct from two other,
- * similarly-named components in this family: `<lyra-document-preview>` is a
+ * similarly-named components in this family: `<lr-document-preview>` is a
  * fuller viewer with header chrome and an async server-side-conversion
- * state machine (`status="converting"`), and `<lyra-attachment-chip>` is a
+ * state machine (`status="converting"`), and `<lr-attachment-chip>` is a
  * pre-send queued-file chip with upload progress. This component has
  * neither concern — it only ever shows a `src` that's already final.
  *
@@ -81,18 +81,18 @@ function detectKind(mimeType: string): MediaCardKind {
  * itself interactive content (its own play/seek/volume controls), and HTML
  * forbids nesting interactive content inside a `<button>`/`<a>` — doing so
  * anyway would also make every click on the video's own controls bubble up
- * and spuriously fire `lyra-open`. So for `kind="video"`, `base` is a plain,
+ * and spuriously fire `lr-open`. So for `kind="video"`, `base` is a plain,
  * non-interactive wrapper around `[part="media"]`, and a small separate
  * `[part="open-button"]` (not one of this component's originally-scoped
  * parts, added as the "explicit view/open affordance" the class is free to
- * provide) is the thing that actually fires `lyra-open`.
+ * provide) is the thing that actually fires `lr-open`.
  *
  * **Navigation.** This component never navigates on its own for `image`/
- * `video` — activating the card only fires `lyra-open`; a host decides what
+ * `video` — activating the card only fires `lr-open`; a host decides what
  * "open" means (a lightbox, a new tab, whatever). The `file`-chip case is
  * the one exception: when `src` passes the (stricter) href safety check, the
  * chip is a real `<a href download>` so a bare drop-in still does something
- * useful — but `lyra-open` fires first and is `cancelable`; a host that
+ * useful — but `lr-open` fires first and is `cancelable`; a host that
  * calls `preventDefault()` on it suppresses that default download/open so it
  * can substitute its own handling instead.
  *
@@ -103,8 +103,8 @@ function detectKind(mimeType: string): MediaCardKind {
  * boundary; it does not replace the image alt text or the video control's
  * own label.
  *
- * @customElement lyra-media-card
- * @event lyra-open - The card (or, for `kind="video"`, its `open-button`)
+ * @customElement lr-media-card
+ * @event lr-open - The card (or, for `kind="video"`, its `open-button`)
  * was activated. `detail: { src, filename }`. Cancelable — see the class
  * doc's "Navigation" section for what calling `preventDefault()` on it does
  * in the `file`-chip case.
@@ -145,8 +145,8 @@ export class LyraMediaCard extends LyraElement<LyraMediaCardEventMap> {
   @property({ attribute: 'aria-label' }) accessibleLabel = '';
 
   /** A CSS length (e.g. `"16rem"`); once set, overrides the
-   *  `--lyra-media-card-max-height` custom property for this instance only —
-   *  same contract as `<lyra-document-preview>`'s identically-named prop. */
+   *  `--lr-media-card-max-height` custom property for this instance only —
+   *  same contract as `<lr-document-preview>`'s identically-named prop. */
   @property({ attribute: 'max-height' }) maxHeight = '';
 
   /** Effective kind used for rendering — `kind` if explicitly set,
@@ -178,11 +178,11 @@ export class LyraMediaCard extends LyraElement<LyraMediaCardEventMap> {
     return this.alt || this.filename || this.localize('mediaCardVideoAttachment');
   }
 
-  /** Per-instance override for `--lyra-media-card-max-height`, applied
+  /** Per-instance override for `--lr-media-card-max-height`, applied
    *  inline on `[part="base"]` -- the only mechanism that reliably wins
    *  over the `:host{}`-declared default from outside the shadow root. */
   private get baseStyle(): string | typeof nothing {
-    return this.maxHeight ? `--lyra-media-card-max-height:${this.maxHeight}` : nothing;
+    return this.maxHeight ? `--lr-media-card-max-height:${this.maxHeight}` : nothing;
   }
 
   private emitOpen(): CustomEvent<MediaCardOpenDetail> {
@@ -190,7 +190,7 @@ export class LyraMediaCard extends LyraElement<LyraMediaCardEventMap> {
     // falls back to a trimmed raw src so a whitespace-padded, otherwise-unsafe
     // src still reports the same value the DOM would show if it were safe.
     const src = safeMediaSrc(this.src) ?? safeLinkHref(this.src) ?? this.src.trim();
-    return this.emit<MediaCardOpenDetail>('lyra-open', { src, filename: this.filename }, { cancelable: true });
+    return this.emit<MediaCardOpenDetail>('lr-open', { src, filename: this.filename }, { cancelable: true });
   }
 
   private onActivate = (): void => {
@@ -198,7 +198,7 @@ export class LyraMediaCard extends LyraElement<LyraMediaCardEventMap> {
   };
 
   // The file-chip's `<a>` provides a real default action (download/open the
-  // resource) so a bare drop-in works with no host wiring, but `lyra-open`
+  // resource) so a bare drop-in works with no host wiring, but `lr-open`
   // fires first and is cancelable -- a host that preventDefault()s it is
   // suppressing exactly that default, so the native click also needs
   // stopping or the download/navigation would proceed anyway.
@@ -272,6 +272,6 @@ export class LyraMediaCard extends LyraElement<LyraMediaCardEventMap> {
 
 declare global {
   interface HTMLElementTagNameMap {
-    'lyra-media-card': LyraMediaCard;
+    'lr-media-card': LyraMediaCard;
   }
 }

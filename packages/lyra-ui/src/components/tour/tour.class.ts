@@ -38,7 +38,7 @@ export interface TourStep {
   /** The element this step spotlights and anchors its popover to. */
   target: TourTarget;
   /** Visible step heading -- becomes the popover panel's accessible name via `aria-labelledby`.
-   *  Required: every step always has a name, so `<lyra-tour>` never needs a generic fallback
+   *  Required: every step always has a name, so `<lr-tour>` never needs a generic fallback
    *  label of its own. Plain text; not localized by this component (caller-supplied data, per
    *  the library's i18n exception for app content). */
   heading: string;
@@ -48,7 +48,7 @@ export interface TourStep {
   content?: string;
   /** Per-step Floating UI placement override. Falls back to the tour-level `placement` prop
    *  (`'bottom'`) when omitted. Resolved through `rtlAwarePlacement()` before being passed to
-   *  `place()`, same as `lyra-menu`/`lyra-popover`. */
+   *  `place()`, same as `lr-menu`/`lr-popover`. */
   placement?: Placement;
   /** Per-step override of the tour-level `spotlightPadding` prop (`4`). Extra px between the
    *  target's own box and the spotlight cutout/ring. `distance` (the offset between the target
@@ -65,10 +65,10 @@ export interface TourStep {
 }
 
 /**
- * Reason a tour ended, forwarded as the `lyra-tour-end` event detail.
+ * Reason a tour ended, forwarded as the `lr-tour-end` event detail.
  * `'completed'`/`'skip'`/`'escape'` are emitted by the tour's own built-in dismiss triggers;
  * `'unmount'` is emitted when the tour is removed from the DOM while still open by something
- * other than its own `end()` (mirrors `lyra-dialog`'s identical `'unmount'` case); any other
+ * other than its own `end()` (mirrors `lr-dialog`'s identical `'unmount'` case); any other
  * string is whatever a caller passes to `end()` directly.
  */
 export type TourEndReason =
@@ -80,15 +80,15 @@ export type TourEndReason =
   | (string & Record<never, never>);
 
 export interface LyraTourEventMap {
-  'lyra-tour-start': CustomEvent<{ index: number }>;
-  'lyra-tour-step-change': CustomEvent<{
+  'lr-tour-start': CustomEvent<{ index: number }>;
+  'lr-tour-step-change': CustomEvent<{
     index: number;
     previousIndex: number;
     step: TourStep;
     via: 'next' | 'back' | 'goto';
   }>;
-  'lyra-tour-end': CustomEvent<TourEndReason>;
-  'lyra-tour-target-missing': CustomEvent<{ index: number; step: TourStep }>;
+  'lr-tour-end': CustomEvent<TourEndReason>;
+  'lr-tour-target-missing': CustomEvent<{ index: number; step: TourStep }>;
 }
 
 // Punches a rectangular hole (viewport minus the padded target rect) into the backdrop's own
@@ -109,20 +109,20 @@ function keyholeClipPath(x: number, y: number, width: number, height: number): s
 }
 
 /**
- * `<lyra-tour>` -- a spotlight-and-step guided walkthrough for first-run onboarding. A sequence
+ * `<lr-tour>` -- a spotlight-and-step guided walkthrough for first-run onboarding. A sequence
  * of steps, each anchored to a target element elsewhere in the page via the shared Floating UI
  * positioner, shown against a dimmed full-viewport backdrop with a cutout/ring highlighting the
  * current target, with Next/Previous/Skip controls and a step-progress indicator. First-party
- * invention (no Web Awesome equivalent) -- nearest precedent in shape is `lyra-dialog` (overlay
- * lifecycle/focus trap) + `lyra-carousel` (index-based navigation) + `lyra-stepper`
+ * invention (no Web Awesome equivalent) -- nearest precedent in shape is `lr-dialog` (overlay
+ * lifecycle/focus trap) + `lr-carousel` (index-based navigation) + `lr-stepper`
  * (progress/RTL arrow-key nav).
  *
  * **Not a form-associated control.** A tour is a walkthrough, not a field -- it deliberately has
  * no `label`/`hint`/`error` chrome and no `FormAssociated` mixin.
  *
  * **Controlled component.** `steps` is never mutated by this component (mirrors
- * `lyra-stepper`'s `steps`); only `activeIndex` and `open` are self-managed, mirroring
- * `lyra-carousel`'s `index`.
+ * `lr-stepper`'s `steps`); only `activeIndex` and `open` are self-managed, mirroring
+ * `lr-carousel`'s `index`.
  *
  * **Target interactivity.** By default, the step's spotlighted target is non-interactive while
  * its step is active: it stays visually revealed and perceivable/announceable by assistive tech
@@ -140,7 +140,7 @@ function keyholeClipPath(x: number, y: number, width: number, height: number): s
  *
  * **Focus management.** Uses the shared overlay manager with `modal: false` -- a deliberate
  * choice, not an oversight. The default `modal: true` would mark the entire rest of the page
- * (including the spotlighted target itself, since it lives outside `<lyra-tour>`'s own ancestor
+ * (including the spotlighted target itself, since it lives outside `<lr-tour>`'s own ancestor
  * chain) `inert`, stripping it from the accessibility tree entirely -- stronger than the
  * "non-interactive but still perceivable" default described above. `modal: false` skips that
  * DOM-wide `inert` marking; the shared Tab-trap still confines keyboard Tab to the popover panel
@@ -156,29 +156,29 @@ function keyholeClipPath(x: number, y: number, width: number, height: number): s
  * triggered the transition lives inside that same persistent-looking region.
  *
  * No `Home`/`End` jump-to-first/last-step shortcut and no click-to-jump progress dots, unlike
- * `lyra-stepper` -- a tour's steps are tied to live DOM targets that may not exist until an
+ * `lr-stepper` -- a tour's steps are tied to live DOM targets that may not exist until an
  * earlier step's side effect (opening a menu, navigating a route) has run, so free jumping is
  * unsafe by default. `goToStep()` remains available for a host that knows what it's doing (e.g.
  * a "restart tour" affordance elsewhere).
  *
- * @customElement lyra-tour
+ * @customElement lr-tour
  * @slot - Rich content overriding the currently active step's plain-text `content` for that step
  *   only. When real content is assigned, it's shown instead of `step.content`; when empty,
  *   `step.content` renders as plain text. Not scoped per step by this component itself -- a
  *   consumer that needs different rich content per step swaps the slotted children (or listens
- *   for `lyra-tour-step-change` and re-renders them) itself, the same "consumer owns slotted
- *   content" pattern `lyra-dialog`'s default slot already uses.
- * @event lyra-tour-start - Fired by `start()`. `detail: { index }`. Not cancelable.
- * @event lyra-tour-step-change - Fired by `next()`/`back()`/`goToStep()` before `activeIndex`
+ *   for `lr-tour-step-change` and re-renders them) itself, the same "consumer owns slotted
+ *   content" pattern `lr-dialog`'s default slot already uses.
+ * @event lr-tour-start - Fired by `start()`. `detail: { index }`. Not cancelable.
+ * @event lr-tour-step-change - Fired by `next()`/`back()`/`goToStep()` before `activeIndex`
  *   changes. `detail: { index, previousIndex, step, via }`. Cancelable -- a listener calling
  *   `preventDefault()` leaves `activeIndex` unchanged, letting a tour gate advancement on a real
  *   action (e.g. an onboarding step demonstrating "click this button" shouldn't let Next silently
- *   skip past it). This is a deliberate departure from `lyra-carousel`'s non-cancelable
- *   `lyra-slide-change`.
- * @event lyra-tour-end - Fired by `end()` (and by `next()` on the last step, with reason
+ *   skip past it). This is a deliberate departure from `lr-carousel`'s non-cancelable
+ *   `lr-slide-change`.
+ * @event lr-tour-end - Fired by `end()` (and by `next()` on the last step, with reason
  *   `'completed'`). `detail: TourEndReason`. Cancelable, except in practice for `'unmount'` since
- *   the element is already being removed -- mirrors `lyra-dialog-close` exactly.
- * @event lyra-tour-target-missing - The active step's `target` did not resolve to a connected
+ *   the element is already being removed -- mirrors `lr-dialog-close` exactly.
+ * @event lr-tour-target-missing - The active step's `target` did not resolve to a connected
  *   element. `detail: { index, step }`. Not cancelable -- informational. The tour does not
  *   auto-end; it renders that step's popover unanchored (viewport-centered, no spotlight cutout)
  *   instead of throwing. A host can listen and decide to `skip()`/`goToStep()` in response.
@@ -197,13 +197,13 @@ function keyholeClipPath(x: number, y: number, width: number, height: number): s
  * @csspart skip-button - The Skip control.
  * @csspart previous-button - The Previous control.
  * @csspart next-button - The Next/Done control (label switches on the last step).
- * @cssprop --lyra-tour-backdrop-color - Backdrop scrim fill. Defaults to `--lyra-color-overlay`.
- * @cssprop --lyra-tour-spotlight-radius - Corner radius shared by the cutout and the ring.
- *   Defaults to `--lyra-radius`.
- * @cssprop --lyra-tour-spotlight-ring-color - Spotlight ring color. Defaults to `--lyra-color-brand`.
- * @cssprop --lyra-tour-spotlight-ring-width - Spotlight ring thickness. Defaults to
- *   `--lyra-border-width-medium`.
- * @cssprop --lyra-tour-popover-max-width - Maximum popover inline size. Defaults to `--lyra-size-22rem`.
+ * @cssprop --lr-tour-backdrop-color - Backdrop scrim fill. Defaults to `--lr-color-overlay`.
+ * @cssprop --lr-tour-spotlight-radius - Corner radius shared by the cutout and the ring.
+ *   Defaults to `--lr-radius`.
+ * @cssprop --lr-tour-spotlight-ring-color - Spotlight ring color. Defaults to `--lr-color-brand`.
+ * @cssprop --lr-tour-spotlight-ring-width - Spotlight ring thickness. Defaults to
+ *   `--lr-border-width-medium`.
+ * @cssprop --lr-tour-popover-max-width - Maximum popover inline size. Defaults to `--lr-size-22rem`.
  */
 export class LyraTour extends LyraElement<LyraTourEventMap> {
   static styles = [LyraElement.styles, styles];
@@ -226,7 +226,7 @@ export class LyraTour extends LyraElement<LyraTourEventMap> {
   @property({ reflect: true }) placement: Placement = 'bottom';
 
   /** Distance (px) between the target and the popover, passed straight to Floating UI's
-   *  `offset()` middleware -- a tour-level-only setting, mirroring `lyra-popover`'s `distance`
+   *  `offset()` middleware -- a tour-level-only setting, mirroring `lr-popover`'s `distance`
    *  prop exactly (can legitimately be negative for overlap). */
   @property({ type: Number }) distance = DEFAULT_DISTANCE;
 
@@ -235,7 +235,7 @@ export class LyraTour extends LyraElement<LyraTourEventMap> {
   @property({ type: Number, attribute: 'spotlight-padding' }) spotlightPadding = DEFAULT_SPOTLIGHT_PADDING;
 
   /** Whether a backdrop click dismisses the tour (`end('skip')`). Defaults to `false` -- a
-   *  deliberate inversion of `lyra-dialog`'s `noLightDismiss` (opt-out, default
+   *  deliberate inversion of `lr-dialog`'s `noLightDismiss` (opt-out, default
    *  dismiss-on-backdrop-click): a guided tour's backdrop click doing nothing by default avoids
    *  losing onboarding progress to a stray click. Set this to restore dismiss-on-backdrop-click. */
   @property({ type: Boolean, attribute: 'light-dismiss' }) lightDismiss = false;
@@ -244,10 +244,10 @@ export class LyraTour extends LyraElement<LyraTourEventMap> {
   @property({ type: Boolean, attribute: 'show-progress' }) showProgress = true;
 
   /** Host-level `aria-label` override for every step popover's accessible name -- wins over each
-   *  step's own `heading`, matching `lyra-dialog`'s `accessibleLabel` pattern. Most consumers
+   *  step's own `heading`, matching `lr-dialog`'s `accessibleLabel` pattern. Most consumers
    *  won't need this since each step already has a meaningful name via `heading`; setting it
    *  makes the *same* string name every step's panel. Set as a plain `aria-label` attribute on
-   *  `<lyra-tour>` itself, not a public JS property. */
+   *  `<lr-tour>` itself, not a public JS property. */
   @property({ attribute: 'aria-label' }) private accessibleLabel: string | null = null;
 
   @state() private unanchored = false;
@@ -294,8 +294,8 @@ export class LyraTour extends LyraElement<LyraTourEventMap> {
     // which need the freshly rendered popover and so still run from updated(), via
     // activateStep()). Setting a reactive property from updated()/firstUpdated() instead schedules
     // a *second* update on top of the one that just finished, which Lit's dev-mode console flags
-    // ("scheduled an update ... after an update completed") -- mirrors lyra-split's/
-    // lyra-virtual-list's identical willUpdate()-not-updated() fix for their own derived-property
+    // ("scheduled an update ... after an update completed") -- mirrors lr-split's/
+    // lr-virtual-list's identical willUpdate()-not-updated() fix for their own derived-property
     // writes.
     if ((changed.has('open') && this.open) || changed.has('activeIndex')) {
       const step = this.steps[this.activeIndex];
@@ -317,7 +317,7 @@ export class LyraTour extends LyraElement<LyraTourEventMap> {
     // A reconnect (e.g. a drag-and-drop reparent keeping this same element instance) fires
     // disconnectedCallback then connectedCallback synchronously with no update in between, so
     // willUpdate never reruns to notice `open` is still true -- restore the scroll lock/trap and
-    // positioning it dropped. Mirrors lyra-dialog's identical reconnect-safety pattern.
+    // positioning it dropped. Mirrors lr-dialog's identical reconnect-safety pattern.
     if (this.hasUpdated && this.open) {
       if (this.overlay?.isActive()) {
         this.overlay.resume();
@@ -346,28 +346,28 @@ export class LyraTour extends LyraElement<LyraTourEventMap> {
     this.overlay?.suspend();
     if (this.open) {
       // Deferred a microtask so a synchronous reparent (disconnect immediately followed by
-      // reconnect) isn't mistaken for a real removal -- mirrors lyra-dialog's identical case.
+      // reconnect) isn't mistaken for a real removal -- mirrors lr-dialog's identical case.
       queueMicrotask(() => {
         if (!this.isConnected && this.open) {
           this.open = false;
-          this.emit<TourEndReason>('lyra-tour-end', 'unmount');
+          this.emit<TourEndReason>('lr-tour-end', 'unmount');
         }
       });
     }
   }
 
   /** Opens the tour at `index` (default `0`), clamped to `[0, steps.length - 1]`. Equivalent to
-   *  `this.activeIndex = index; this.open = true;` plus the `lyra-tour-start` event. */
+   *  `this.activeIndex = index; this.open = true;` plus the `lr-tour-start` event. */
   start(index = 0): void {
     this.activeIndex = this.clampIndex(index);
     this.open = true;
-    this.emit<{ index: number }>('lyra-tour-start', { index: this.activeIndex });
+    this.emit<{ index: number }>('lr-tour-start', { index: this.activeIndex });
   }
 
   /** Advances to the next step. On the last step, ends the tour instead (`end('completed')`) --
    *  the built-in Next/Done button calls this same method, so a custom control wired to `next()`
-   *  behaves identically to the built-in one. Cancelable via `lyra-tour-step-change` (or
-   *  `lyra-tour-end` when it triggers completion). */
+   *  behaves identically to the built-in one. Cancelable via `lr-tour-step-change` (or
+   *  `lr-tour-end` when it triggers completion). */
   next(): void {
     const total = this.steps.length;
     if (total === 0) return;
@@ -397,11 +397,11 @@ export class LyraTour extends LyraElement<LyraTourEventMap> {
     this.end('skip');
   }
 
-  /** Ends the tour. `reason` is forwarded as the `lyra-tour-end` detail. Cancelable (except in
+  /** Ends the tour. `reason` is forwarded as the `lr-tour-end` detail. Cancelable (except in
    *  practice for `'unmount'`) -- mirrors `LyraDialog.close(reason)` exactly. */
   end(reason: TourEndReason = 'api'): void {
     if (!this.open) return;
-    const event = this.emit<TourEndReason>('lyra-tour-end', reason, { cancelable: true });
+    const event = this.emit<TourEndReason>('lr-tour-end', reason, { cancelable: true });
     if (event.defaultPrevented) return;
     this.open = false;
   }
@@ -417,7 +417,7 @@ export class LyraTour extends LyraElement<LyraTourEventMap> {
     const step = this.steps[index];
     if (!step) return;
     const event = this.emit<{ index: number; previousIndex: number; step: TourStep; via: typeof via }>(
-      'lyra-tour-step-change',
+      'lr-tour-step-change',
       { index, previousIndex, step, via },
       { cancelable: true },
     );
@@ -449,7 +449,7 @@ export class LyraTour extends LyraElement<LyraTourEventMap> {
     const target = this.resolveTarget(step);
 
     if (!target) {
-      this.emit<{ index: number; step: TourStep }>('lyra-tour-target-missing', { index: this.activeIndex, step });
+      this.emit<{ index: number; step: TourStep }>('lr-tour-target-missing', { index: this.activeIndex, step });
       return;
     }
 
@@ -534,7 +534,7 @@ export class LyraTour extends LyraElement<LyraTourEventMap> {
     this.hasSlotContent = hasRealContent((e.target as HTMLSlotElement).assignedNodes({ flatten: true }));
   };
 
-  // ArrowRight/ArrowLeft swap "forward"/"backward" meaning under RTL, mirroring lyra-stepper's
+  // ArrowRight/ArrowLeft swap "forward"/"backward" meaning under RTL, mirroring lr-stepper's
   // forwardKey/backwardKey. Skipped for a native text-editing control (a step's slotted rich
   // content might legitimately contain one) or when the keydown was already handled.
   private onPopoverKeyDown = (event: KeyboardEvent): void => {
@@ -640,6 +640,6 @@ export class LyraTour extends LyraElement<LyraTourEventMap> {
 
 declare global {
   interface HTMLElementTagNameMap {
-    'lyra-tour': LyraTour;
+    'lr-tour': LyraTour;
   }
 }

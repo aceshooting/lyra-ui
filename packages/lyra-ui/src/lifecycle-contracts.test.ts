@@ -31,7 +31,7 @@ type ContractName = 'reconnect-smoke' | 'leak-contract' | 'focusable-name-contra
  */
 const OPT_OUTS: ReadonlyMap<string, Partial<Record<ContractName, string>>> = new Map([
   [
-    'lyra-heatmap',
+    'lr-heatmap',
     {
       'focusable-name-contract':
         'KNOWN-ISSUE: with accessible-cells off (the default), the keyboard tab stop is the bare ' +
@@ -43,7 +43,7 @@ const OPT_OUTS: ReadonlyMap<string, Partial<Record<ContractName, string>>> = new
     },
   ],
   [
-    'lyra-virtual-list',
+    'lr-virtual-list',
     {
       'focusable-name-contract':
         'The scrollable role="list" container carries tabindex="0" so caller-rendered rows with no ' +

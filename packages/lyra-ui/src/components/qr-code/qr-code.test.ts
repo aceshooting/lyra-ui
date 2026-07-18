@@ -31,9 +31,9 @@ async function waitForPart(el: LyraQrCode, part: string): Promise<void> {
   await el.updateComplete;
 }
 
-describe('lyra-qr-code', () => {
+describe('lr-qr-code', () => {
   it('defaults value/label/size/radius/errorCorrection to their documented values', async () => {
-    const el = (await fixture(html`<lyra-qr-code></lyra-qr-code>`)) as LyraQrCode;
+    const el = (await fixture(html`<lr-qr-code></lr-qr-code>`)) as LyraQrCode;
     expect(el.value).to.equal('');
     expect(el.label).to.equal('');
     expect(el.size).to.equal(128);
@@ -42,7 +42,7 @@ describe('lyra-qr-code', () => {
   });
 
   it('renders the empty state and never loads the optional peer when value is empty', async () => {
-    const el = (await fixture(html`<lyra-qr-code></lyra-qr-code>`)) as LyraQrCode;
+    const el = (await fixture(html`<lr-qr-code></lr-qr-code>`)) as LyraQrCode;
     let calls = 0;
     (el as unknown as { loadLibrary: () => Promise<FakeQrCodeApi | null> }).loadLibrary = () => {
       calls++;
@@ -59,7 +59,7 @@ describe('lyra-qr-code', () => {
   });
 
   it('shows the loading state while the optional peer is first loading', async () => {
-    const el = (await fixture(html`<lyra-qr-code></lyra-qr-code>`)) as LyraQrCode;
+    const el = (await fixture(html`<lr-qr-code></lr-qr-code>`)) as LyraQrCode;
     (el as unknown as { loadLibrary: () => Promise<FakeQrCodeApi | null> }).loadLibrary = () => new Promise(() => {});
     el.value = 'hello';
     await waitForPart(el, 'loading');
@@ -67,7 +67,7 @@ describe('lyra-qr-code', () => {
   });
 
   it('shows the missing-library error when the optional peer fails to load', async () => {
-    const el = (await fixture(html`<lyra-qr-code></lyra-qr-code>`)) as LyraQrCode;
+    const el = (await fixture(html`<lr-qr-code></lr-qr-code>`)) as LyraQrCode;
     installFakeLoader(el, null);
     el.value = 'hello';
     await waitForPart(el, 'error');
@@ -77,7 +77,7 @@ describe('lyra-qr-code', () => {
   });
 
   it('shows the generation-failed error when encoding throws', async () => {
-    const el = (await fixture(html`<lyra-qr-code></lyra-qr-code>`)) as LyraQrCode;
+    const el = (await fixture(html`<lr-qr-code></lr-qr-code>`)) as LyraQrCode;
     installFakeLoader(
       el,
       fakeApi(() => {
@@ -93,10 +93,10 @@ describe('lyra-qr-code', () => {
 
   it('renders a canvas sized to `size` CSS px with a DPR-scaled backing store', async () => {
     const el = (await fixture(html`
-      <lyra-qr-code
+      <lr-qr-code
         size="90"
-        style="--lyra-qr-code-fill: #000; --lyra-qr-code-background: #fff;"
-      ></lyra-qr-code>
+        style="--lr-qr-code-fill: #000; --lr-qr-code-background: #fff;"
+      ></lr-qr-code>
     `)) as LyraQrCode;
     installFakeLoader(
       el,
@@ -113,10 +113,10 @@ describe('lyra-qr-code', () => {
   });
 
   it('normalizes error-correction: lowercase valid letters upper-case, invalid values fall back to H', async () => {
-    const lower = (await fixture(html`<lyra-qr-code error-correction="l"></lyra-qr-code>`)) as LyraQrCode;
+    const lower = (await fixture(html`<lr-qr-code error-correction="l"></lr-qr-code>`)) as LyraQrCode;
     expect(lower.errorCorrection).to.equal('L');
 
-    const bogus = (await fixture(html`<lyra-qr-code error-correction="bogus"></lyra-qr-code>`)) as LyraQrCode;
+    const bogus = (await fixture(html`<lr-qr-code error-correction="bogus"></lr-qr-code>`)) as LyraQrCode;
     expect(bogus.errorCorrection).to.equal('H');
 
     lower.errorCorrection = 'q' as LyraQrCodeErrorCorrection;
@@ -124,7 +124,7 @@ describe('lyra-qr-code', () => {
   });
 
   it('clamps radius and size to their documented ranges', async () => {
-    const el = (await fixture(html`<lyra-qr-code radius="-1" size="0"></lyra-qr-code>`)) as LyraQrCode;
+    const el = (await fixture(html`<lr-qr-code radius="-1" size="0"></lr-qr-code>`)) as LyraQrCode;
     expect(el.radius).to.equal(0);
     expect(el.size).to.equal(1);
 
@@ -137,7 +137,7 @@ describe('lyra-qr-code', () => {
   });
 
   it('resolves the accessible name from `value` by default', async () => {
-    const el = (await fixture(html`<lyra-qr-code></lyra-qr-code>`)) as LyraQrCode;
+    const el = (await fixture(html`<lr-qr-code></lr-qr-code>`)) as LyraQrCode;
     installFakeLoader(
       el,
       fakeApi(() => ({ modules: fakeModules(true) })),
@@ -150,7 +150,7 @@ describe('lyra-qr-code', () => {
   });
 
   it('`label` overrides `value` for the accessible name', async () => {
-    const el = (await fixture(html`<lyra-qr-code label="My QR code"></lyra-qr-code>`)) as LyraQrCode;
+    const el = (await fixture(html`<lr-qr-code label="My QR code"></lr-qr-code>`)) as LyraQrCode;
     installFakeLoader(
       el,
       fakeApi(() => ({ modules: fakeModules(true) })),
@@ -161,7 +161,7 @@ describe('lyra-qr-code', () => {
   });
 
   it('forwards a host `aria-label` onto the canvas when `label` is unset', async () => {
-    const el = (await fixture(html`<lyra-qr-code aria-label="Host label"></lyra-qr-code>`)) as LyraQrCode;
+    const el = (await fixture(html`<lr-qr-code aria-label="Host label"></lr-qr-code>`)) as LyraQrCode;
     installFakeLoader(
       el,
       fakeApi(() => ({ modules: fakeModules(true) })),
@@ -173,7 +173,7 @@ describe('lyra-qr-code', () => {
 
   it('`label` wins over a host `aria-label` when both are set', async () => {
     const el = (await fixture(
-      html`<lyra-qr-code label="Label wins" aria-label="Host label"></lyra-qr-code>`,
+      html`<lr-qr-code label="Label wins" aria-label="Host label"></lr-qr-code>`,
     )) as LyraQrCode;
     installFakeLoader(
       el,
@@ -185,7 +185,7 @@ describe('lyra-qr-code', () => {
   });
 
   it('refreshTheme() redraws from the cached matrix without recalling loadLibrary/create', async () => {
-    const el = (await fixture(html`<lyra-qr-code></lyra-qr-code>`)) as LyraQrCode;
+    const el = (await fixture(html`<lr-qr-code></lr-qr-code>`)) as LyraQrCode;
     let loadCalls = 0;
     let createCalls = 0;
     (el as unknown as { loadLibrary: () => Promise<FakeQrCodeApi | null> }).loadLibrary = () => {
@@ -208,9 +208,9 @@ describe('lyra-qr-code', () => {
     expect(createCalls).to.equal(1);
   });
 
-  it('warns once and falls back to #000000 for an invalid --lyra-qr-code-fill override', async () => {
+  it('warns once and falls back to #000000 for an invalid --lr-qr-code-fill override', async () => {
     const el = (await fixture(
-      html`<lyra-qr-code style="--lyra-qr-code-fill: not-a-color"></lyra-qr-code>`,
+      html`<lr-qr-code style="--lr-qr-code-fill: not-a-color"></lr-qr-code>`,
     )) as LyraQrCode;
     installFakeLoader(
       el,
@@ -243,10 +243,10 @@ describe('lyra-qr-code', () => {
 
   it('paints the resolved fill/background colors correctly when both are valid', async () => {
     const el = (await fixture(html`
-      <lyra-qr-code
+      <lr-qr-code
         size="90"
-        style="--lyra-qr-code-fill: #000; --lyra-qr-code-background: #fff;"
-      ></lyra-qr-code>
+        style="--lr-qr-code-fill: #000; --lr-qr-code-background: #fff;"
+      ></lr-qr-code>
     `)) as LyraQrCode;
     installFakeLoader(
       el,
@@ -266,7 +266,7 @@ describe('lyra-qr-code', () => {
   });
 
   it('is accessible in the ready state', async () => {
-    const el = (await fixture(html`<lyra-qr-code></lyra-qr-code>`)) as LyraQrCode;
+    const el = (await fixture(html`<lr-qr-code></lr-qr-code>`)) as LyraQrCode;
     installFakeLoader(
       el,
       fakeApi(() => ({ modules: fakeModules(true) })),
@@ -277,7 +277,7 @@ describe('lyra-qr-code', () => {
   });
 
   it('is accessible in the error state', async () => {
-    const el = (await fixture(html`<lyra-qr-code></lyra-qr-code>`)) as LyraQrCode;
+    const el = (await fixture(html`<lr-qr-code></lr-qr-code>`)) as LyraQrCode;
     installFakeLoader(el, null);
     el.value = 'hello';
     await waitForPart(el, 'error');
@@ -285,11 +285,11 @@ describe('lyra-qr-code', () => {
   });
 
   it('renders the built-in English fallback strings with no locale registered', async () => {
-    const empty = (await fixture(html`<lyra-qr-code></lyra-qr-code>`)) as LyraQrCode;
+    const empty = (await fixture(html`<lr-qr-code></lr-qr-code>`)) as LyraQrCode;
     await empty.updateComplete;
     expect(empty.shadowRoot!.querySelector('[part="empty"]')!.textContent).to.equal('No data');
 
-    const missing = (await fixture(html`<lyra-qr-code></lyra-qr-code>`)) as LyraQrCode;
+    const missing = (await fixture(html`<lr-qr-code></lr-qr-code>`)) as LyraQrCode;
     installFakeLoader(missing, null);
     missing.value = 'hello';
     await waitForPart(missing, 'error');
@@ -300,7 +300,7 @@ describe('lyra-qr-code', () => {
 
   it('reaches the rendered error text through a `.strings` override', async () => {
     const el = (await fixture(
-      html`<lyra-qr-code .strings=${{ qrCodeMissingLibrary: 'Bibliothèque manquante.' }}></lyra-qr-code>`,
+      html`<lr-qr-code .strings=${{ qrCodeMissingLibrary: 'Bibliothèque manquante.' }}></lr-qr-code>`,
     )) as LyraQrCode;
     installFakeLoader(el, null);
     el.value = 'hello';
@@ -309,8 +309,8 @@ describe('lyra-qr-code', () => {
   });
 
   it('fits comfortably inside a 320px-narrow container at the default size', async () => {
-    const wrapper = await fixture(html`<div style="inline-size: 320px"><lyra-qr-code></lyra-qr-code></div>`);
-    const el = wrapper.querySelector('lyra-qr-code') as LyraQrCode;
+    const wrapper = await fixture(html`<div style="inline-size: 320px"><lr-qr-code></lr-qr-code></div>`);
+    const el = wrapper.querySelector('lr-qr-code') as LyraQrCode;
     await el.updateComplete;
     installFakeLoader(
       el,

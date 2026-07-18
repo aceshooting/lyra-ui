@@ -22,9 +22,9 @@ function stubFetch(ok = true): () => void {
   return () => { window.fetch = original; };
 }
 
-describe('lyra-pptx-viewer', () => {
+describe('lr-pptx-viewer', () => {
   it('shows its persistent fidelity notice and idle state', async () => {
-    const el = await fixture(html`<lyra-pptx-viewer></lyra-pptx-viewer>`);
+    const el = await fixture(html`<lr-pptx-viewer></lr-pptx-viewer>`);
     expect(el.shadowRoot!.querySelector('[part="notice"]')).to.exist;
     expect(el.shadowRoot!.querySelector('[part="container"]')).to.not.exist;
     await expect(el).to.be.accessible();
@@ -34,7 +34,7 @@ describe('lyra-pptx-viewer', () => {
     const fake = fakeModule();
     const restore = stubFetch();
     try {
-      const el = (await fixture(html`<lyra-pptx-viewer aria-label="Deck"></lyra-pptx-viewer>`)) as LyraPptxViewer;
+      const el = (await fixture(html`<lr-pptx-viewer aria-label="Deck"></lr-pptx-viewer>`)) as LyraPptxViewer;
       el.loadRenderer = async () => fake.module;
       el.src = 'https://example.test/deck.pptx';
       await aTimeout(30);
@@ -59,7 +59,7 @@ describe('lyra-pptx-viewer', () => {
     const fake = fakeModule();
     const restore = stubFetch();
     try {
-      const el = (await fixture(html`<lyra-pptx-viewer></lyra-pptx-viewer>`)) as LyraPptxViewer;
+      const el = (await fixture(html`<lr-pptx-viewer></lr-pptx-viewer>`)) as LyraPptxViewer;
       el.loadRenderer = async () => fake.module;
       el.src = 'https://example.test/deck.pptx';
       await aTimeout(30);
@@ -95,7 +95,7 @@ describe('lyra-pptx-viewer', () => {
     const fake = fakeModule();
     const restore = stubFetch();
     try {
-      const el = (await fixture(html`<lyra-pptx-viewer></lyra-pptx-viewer>`)) as LyraPptxViewer;
+      const el = (await fixture(html`<lr-pptx-viewer></lr-pptx-viewer>`)) as LyraPptxViewer;
       el.loadRenderer = async () => fake.module;
       el.src = 'https://example.test/deck.pptx';
       await aTimeout(30);
@@ -112,12 +112,12 @@ describe('lyra-pptx-viewer', () => {
   });
 
   it('renders unsafe-url and missing-renderer errors', async () => {
-    const unsafe = (await fixture(html`<lyra-pptx-viewer .src=${'javascript:alert(1)'}></lyra-pptx-viewer>`)) as LyraPptxViewer;
+    const unsafe = (await fixture(html`<lr-pptx-viewer .src=${'javascript:alert(1)'}></lr-pptx-viewer>`)) as LyraPptxViewer;
     await aTimeout(10);
     expect(unsafe.shadowRoot!.querySelector('[part="error"]')!.textContent).to.contain('Document URL is not allowed');
     const restore = stubFetch();
     try {
-      const el = (await fixture(html`<lyra-pptx-viewer></lyra-pptx-viewer>`)) as LyraPptxViewer;
+      const el = (await fixture(html`<lr-pptx-viewer></lr-pptx-viewer>`)) as LyraPptxViewer;
       el.loadRenderer = async () => null;
       el.src = 'https://example.test/deck.pptx';
       await aTimeout(20);

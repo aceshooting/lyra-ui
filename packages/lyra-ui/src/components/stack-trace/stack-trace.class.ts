@@ -5,25 +5,25 @@ import { styles } from './stack-trace.styles.js';
 import { parseStackTrace, DEFAULT_INTERNAL_PATTERNS, type StackFrame, type StackGroup } from './stack-trace-parse.js';
 
 /** How long the "Copied!" confirmation state lasts before reverting -- matches
- *  `lyra-copy-button`'s own confirmation duration. */
+ *  `lr-copy-button`'s own confirmation duration. */
 const COPY_CONFIRM_MS = 1500;
 
 export interface LyraStackTraceEventMap {
-  'lyra-frame-select': CustomEvent<{ file?: string; line?: number; column?: number; raw: string }>;
-  'lyra-copy': CustomEvent<{ text: string }>;
+  'lr-frame-select': CustomEvent<{ file?: string; line?: number; column?: number; raw: string }>;
+  'lr-copy': CustomEvent<{ text: string }>;
 }
 
 /**
- * `<lyra-stack-trace>` — parses common V8/JS-TS, Firefox/Safari, and Python stack traces into a
+ * `<lr-stack-trace>` — parses common V8/JS-TS, Firefox/Safari, and Python stack traces into a
  * leading message plus activatable frames, splitting chained/caused-by errors into separate
  * groups. Frames matching `internalPatterns` (`node_modules/`, `node:internal`,
  * `site-packages/`, ... by default) fold behind a count-labeled toggle. Falls back to verbatim
  * raw text when nothing parses. First-party invention (no Web Awesome equivalent).
  *
- * @customElement lyra-stack-trace
- * @event lyra-frame-select - `detail: { file?, line?, column?, raw }` — a frame was activated
+ * @customElement lr-stack-trace
+ * @event lr-frame-select - `detail: { file?, line?, column?, raw }` — a frame was activated
  *   (`column` is always undefined for Python frames, which carry no column information).
- * @event lyra-copy - `detail: { text }` — the raw, unparsed trace text, fired regardless of
+ * @event lr-copy - `detail: { text }` — the raw, unparsed trace text, fired regardless of
  *   whether the OS clipboard write actually succeeded.
  * @csspart base - The root wrapper; respects `max-height`.
  * @csspart message - The leading error message text for a group.
@@ -77,9 +77,9 @@ export class LyraStackTrace extends LyraElement<LyraStackTraceEventMap> {
     try {
       void navigator.clipboard?.writeText(this.trace)?.catch(() => {});
     } catch {
-      // best-effort -- lyra-copy still fires with the intended text regardless
+      // best-effort -- lr-copy still fires with the intended text regardless
     }
-    this.emit('lyra-copy', { text: this.trace });
+    this.emit('lr-copy', { text: this.trace });
     this.justCopied = true;
     clearTimeout(this.copyTimeoutId);
     this.copyTimeoutId = setTimeout(() => {
@@ -88,7 +88,7 @@ export class LyraStackTrace extends LyraElement<LyraStackTraceEventMap> {
   };
 
   private onFrameClick(frame: StackFrame): void {
-    this.emit('lyra-frame-select', { file: frame.file, line: frame.line, column: frame.column, raw: frame.raw });
+    this.emit('lr-frame-select', { file: frame.file, line: frame.line, column: frame.column, raw: frame.raw });
   }
 
   private toggleGroupInternal(groupIndex: number): void {
@@ -157,7 +157,7 @@ export class LyraStackTrace extends LyraElement<LyraStackTraceEventMap> {
         part="base"
         role="group"
         aria-label=${this.localize('stackTraceLabel')}
-        style=${this.maxHeight ? `--lyra-stack-trace-max-height:${this.maxHeight}` : nothing}
+        style=${this.maxHeight ? `--lr-stack-trace-max-height:${this.maxHeight}` : nothing}
       >
         ${this.copyable
           ? html`<button part="copy-button" type="button" @click=${this.onCopy}>
@@ -179,6 +179,6 @@ export class LyraStackTrace extends LyraElement<LyraStackTraceEventMap> {
 
 declare global {
   interface HTMLElementTagNameMap {
-    'lyra-stack-trace': LyraStackTrace;
+    'lr-stack-trace': LyraStackTrace;
   }
 }

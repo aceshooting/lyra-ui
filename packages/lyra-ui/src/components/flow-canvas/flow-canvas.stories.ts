@@ -16,7 +16,7 @@ const edges: FlowEdge[] = [
 
 const meta: Meta = {
   title: 'Flow Canvas',
-  component: 'lyra-flow-canvas',
+  component: 'lr-flow-canvas',
   tags: ['autodocs'],
 };
 export default meta;
@@ -24,24 +24,24 @@ type Story = StoryObj;
 
 export const Default: Story = {
   render: () => html`
-    <lyra-flow-canvas style="width:100%;height:24rem" .nodes=${nodes} .edges=${edges}></lyra-flow-canvas>
+    <lr-flow-canvas style="width:100%;height:24rem" .nodes=${nodes} .edges=${edges}></lr-flow-canvas>
   `,
 };
 
 export const Editable: Story = {
   render: () => html`
-    <lyra-flow-canvas
+    <lr-flow-canvas
       style="width:100%;height:24rem"
       nodes-draggable
       connectable
       .nodes=${nodes}
       .edges=${edges}
-    ></lyra-flow-canvas>
+    ></lr-flow-canvas>
   `,
 };
 
 export const Empty: Story = {
-  render: () => html`<lyra-flow-canvas style="width:100%;height:16rem"></lyra-flow-canvas>`,
+  render: () => html`<lr-flow-canvas style="width:100%;height:16rem"></lr-flow-canvas>`,
 };
 
 export const NarrowAllocation: Story = {
@@ -54,8 +54,8 @@ export const NarrowAllocation: Story = {
     },
   },
   render: () => html`
-    <div style="inline-size:320px; max-inline-size:100%; block-size:16rem; border:1px dashed var(--lyra-color-border);">
-      <lyra-flow-canvas style="width:100%;height:100%" .nodes=${nodes} .edges=${edges}></lyra-flow-canvas>
+    <div style="inline-size:320px; max-inline-size:100%; block-size:16rem; border:1px dashed var(--lr-color-border);">
+      <lr-flow-canvas style="width:100%;height:100%" .nodes=${nodes} .edges=${edges}></lr-flow-canvas>
     </div>
   `,
 };

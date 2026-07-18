@@ -6,73 +6,73 @@ export const styles = css`
     max-inline-size: 100%;
     /* Per-status accent -- one custom property swapped by the :host([status])
        rules below rather than repeating background/border per part per
-       status. Mirrors lyra-tool-call-chip's identical
-       --lyra-tool-call-chip-accent/-bg/-border trio, so a chip's tone
+       status. Mirrors lr-tool-call-chip's identical
+       --lr-tool-call-chip-accent/-bg/-border trio, so a chip's tone
        vocabulary reads the same everywhere in the library. Defaults to the
        'pending' tone so an unset/unknown status still reads as neutral
        instead of unstyled. */
-    --lyra-attachment-chip-accent: var(--lyra-color-text-quiet);
-    --lyra-attachment-chip-bg: var(--lyra-color-surface);
-    --lyra-attachment-chip-border: var(--lyra-color-border);
+    --lr-attachment-chip-accent: var(--lr-color-text-quiet);
+    --lr-attachment-chip-bg: var(--lr-color-surface);
+    --lr-attachment-chip-border: var(--lr-color-border);
     /* Compact-mode thumbnail size -- a dedicated token rather than reusing
-       --lyra-icon-button-size (the one token in this library with no
-       --lyra-theme-* fallback chain), so a consumer can retheme just the compact thumbnail
+       --lr-icon-button-size (the one token in this library with no
+       --lr-theme-* fallback chain), so a consumer can retheme just the compact thumbnail
        independent of every other icon-button-sized control. */
-    --lyra-attachment-chip-compact-thumbnail-size: var(--lyra-size-1-75rem);
-    --lyra-attachment-chip-compact-font-size: var(--lyra-font-size-xs);
-    --lyra-attachment-chip-compact-gap: var(--lyra-size-0-25rem);
-    --lyra-attachment-chip-spinner-duration: 0.8s;
+    --lr-attachment-chip-compact-thumbnail-size: var(--lr-size-1-75rem);
+    --lr-attachment-chip-compact-font-size: var(--lr-font-size-xs);
+    --lr-attachment-chip-compact-gap: var(--lr-size-0-25rem);
+    --lr-attachment-chip-spinner-duration: 0.8s;
   }
 
   :host([compact]) [part='base'] {
     border: none;
-    border-radius: var(--lyra-radius-pill);
-    padding: var(--lyra-size-0-125rem) var(--lyra-space-xs);
-    font-size: var(--lyra-attachment-chip-compact-font-size);
-    gap: var(--lyra-attachment-chip-compact-gap);
+    border-radius: var(--lr-radius-pill);
+    padding: var(--lr-size-0-125rem) var(--lr-space-xs);
+    font-size: var(--lr-attachment-chip-compact-font-size);
+    gap: var(--lr-attachment-chip-compact-gap);
   }
   :host([compact]) [part='thumbnail'] {
-    inline-size: var(--lyra-attachment-chip-compact-thumbnail-size);
-    block-size: var(--lyra-attachment-chip-compact-thumbnail-size);
+    inline-size: var(--lr-attachment-chip-compact-thumbnail-size);
+    block-size: var(--lr-attachment-chip-compact-thumbnail-size);
   }
   [part='meta'][hidden] {
     display: none;
   }
 
   :host([status='uploading']) {
-    --lyra-attachment-chip-accent: var(--lyra-color-brand);
-    --lyra-attachment-chip-bg: var(--lyra-color-brand-quiet);
-    --lyra-attachment-chip-border: transparent;
+    --lr-attachment-chip-accent: var(--lr-color-brand);
+    --lr-attachment-chip-bg: var(--lr-color-brand-quiet);
+    --lr-attachment-chip-border: transparent;
   }
   :host([status='error']) {
-    --lyra-attachment-chip-accent: var(--lyra-color-danger);
-    --lyra-attachment-chip-bg: var(--lyra-color-danger-quiet);
-    --lyra-attachment-chip-border: transparent;
+    --lr-attachment-chip-accent: var(--lr-color-danger);
+    --lr-attachment-chip-bg: var(--lr-color-danger-quiet);
+    --lr-attachment-chip-border: transparent;
   }
   /* Optional neutral-positive tint for a finished upload -- subtler than
      'uploading'/'error' since there's nothing left for the user to act on. */
   :host([status='done']) {
-    --lyra-attachment-chip-accent: var(--lyra-color-success);
-    --lyra-attachment-chip-bg: var(--lyra-color-success-quiet);
-    --lyra-attachment-chip-border: transparent;
+    --lr-attachment-chip-accent: var(--lr-color-success);
+    --lr-attachment-chip-bg: var(--lr-color-success-quiet);
+    --lr-attachment-chip-border: transparent;
   }
 
   [part='base'] {
     display: flex;
     align-items: center;
-    gap: var(--lyra-space-s);
+    gap: var(--lr-space-s);
     max-inline-size: 100%;
     box-sizing: border-box;
-    padding: var(--lyra-space-xs) var(--lyra-space-s);
-    border: var(--lyra-border-width-thin) solid var(--lyra-attachment-chip-border);
-    border-radius: var(--lyra-radius);
-    background: var(--lyra-attachment-chip-bg);
-    color: var(--lyra-color-text);
-    font-size: var(--lyra-font-size-sm);
-    line-height: var(--lyra-line-height-snug);
+    padding: var(--lr-space-xs) var(--lr-space-s);
+    border: var(--lr-border-width-thin) solid var(--lr-attachment-chip-border);
+    border-radius: var(--lr-radius);
+    background: var(--lr-attachment-chip-bg);
+    color: var(--lr-color-text);
+    font-size: var(--lr-font-size-sm);
+    line-height: var(--lr-line-height-snug);
     transition:
-      background-color var(--lyra-transition-fast),
-      border-color var(--lyra-transition-fast);
+      background-color var(--lr-transition-fast),
+      border-color var(--lr-transition-fast);
   }
 
   [part='thumbnail'] {
@@ -82,12 +82,12 @@ export const styles = css`
     justify-content: center;
     /* Reuses the shared icon-button box size as a ready-made "small square
        glyph/image slot" token rather than inventing a new one-off dimension. */
-    inline-size: var(--lyra-icon-button-size);
-    block-size: var(--lyra-icon-button-size);
+    inline-size: var(--lr-icon-button-size);
+    block-size: var(--lr-icon-button-size);
     overflow: hidden;
-    border-radius: calc(var(--lyra-radius) * 0.6);
-    background: var(--lyra-color-surface);
-    color: var(--lyra-attachment-chip-accent);
+    border-radius: calc(var(--lr-radius) * 0.6);
+    background: var(--lr-color-surface);
+    color: var(--lr-attachment-chip-accent);
   }
   [part='thumbnail'] img {
     inline-size: 100%;
@@ -104,54 +104,54 @@ export const styles = css`
     flex-direction: column;
     flex: 1 1 auto;
     min-inline-size: 0;
-    gap: var(--lyra-size-0-125rem);
+    gap: var(--lr-size-0-125rem);
   }
   [part='name'] {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-    font-weight: var(--lyra-font-weight-semibold);
-    color: var(--lyra-color-text);
+    font-weight: var(--lr-font-weight-semibold);
+    color: var(--lr-color-text);
   }
   [part='size'] {
-    /* Full-strength text, not --lyra-color-text-quiet -- this sits on top of
+    /* Full-strength text, not --lr-color-text-quiet -- this sits on top of
        the per-status *-quiet tint backgrounds above (e.g. danger-quiet), and
        text-quiet's gray fails WCAG AA contrast against several of those
        tints even though it comfortably passes against the plain surface
        background used by the resting state. Same fix, same rationale, as
-       lyra-tool-call-chip's identical [part='duration']/[part='category']. */
-    color: var(--lyra-color-text);
+       lr-tool-call-chip's identical [part='duration']/[part='category']. */
+    color: var(--lr-color-text);
     font-variant-numeric: tabular-nums;
   }
   [part='status-text'] {
-    color: var(--lyra-attachment-chip-accent);
-    font-weight: var(--lyra-font-weight-semibold);
+    color: var(--lr-attachment-chip-accent);
+    font-weight: var(--lr-font-weight-semibold);
   }
 
   [part='progress'] {
     flex: 0 0 auto;
-    inline-size: var(--lyra-size-3-5rem);
-    block-size: var(--lyra-space-xs);
-    border-radius: var(--lyra-radius-pill);
-    background: var(--lyra-color-border);
+    inline-size: var(--lr-size-3-5rem);
+    block-size: var(--lr-space-xs);
+    border-radius: var(--lr-radius-pill);
+    background: var(--lr-color-border);
     overflow: hidden;
   }
   [part='progress-fill'] {
     block-size: 100%;
     border-radius: inherit;
-    background: var(--lyra-attachment-chip-accent);
-    transition: inline-size var(--lyra-transition-base);
+    background: var(--lr-attachment-chip-accent);
+    transition: inline-size var(--lr-transition-base);
   }
 
   [part='spinner'] {
     flex: 0 0 auto;
     display: inline-block;
-    inline-size: var(--lyra-size-1rem);
-    block-size: var(--lyra-size-1rem);
+    inline-size: var(--lr-size-1rem);
+    block-size: var(--lr-size-1rem);
     border-radius: 50%;
-    border: var(--lyra-border-width-medium) solid var(--lyra-color-border);
-    border-block-start-color: var(--lyra-attachment-chip-accent);
-    animation: lyra-attachment-chip-spin var(--lyra-attachment-chip-spinner-duration) linear infinite;
+    border: var(--lr-border-width-medium) solid var(--lr-color-border);
+    border-block-start-color: var(--lr-attachment-chip-accent);
+    animation: lr-attachment-chip-spin var(--lr-attachment-chip-spinner-duration) linear infinite;
   }
 
   [part='retry-button'],
@@ -161,40 +161,40 @@ export const styles = css`
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    /* Full --lyra-icon-button-size floor (not the min()-capped --lyra-size-1-75rem
+    /* Full --lr-icon-button-size floor (not the min()-capped --lr-size-1-75rem
        compromise some inline/dense controls use elsewhere) -- an attachment chip is
        wide enough for its action buttons to meet the same tappable-size floor as a
        standalone icon button, matching [part='thumbnail'] above, which already sizes
        to this same token. */
-    min-inline-size: var(--lyra-icon-button-size);
-    min-block-size: var(--lyra-icon-button-size);
+    min-inline-size: var(--lr-icon-button-size);
+    min-block-size: var(--lr-icon-button-size);
     padding: 0;
     border: none;
-    border-radius: calc(var(--lyra-radius) * 0.6);
+    border-radius: calc(var(--lr-radius) * 0.6);
     background: transparent;
-    color: var(--lyra-color-text-quiet);
+    color: var(--lr-color-text-quiet);
     font: inherit;
     cursor: pointer;
     -webkit-tap-highlight-color: transparent;
-    transition: background-color var(--lyra-transition-fast);
+    transition: background-color var(--lr-transition-fast);
   }
   [part='retry-button'] {
-    color: var(--lyra-color-danger);
+    color: var(--lr-color-danger);
   }
   [part='preview-button'] {
-    color: var(--lyra-color-brand);
-    font-size: var(--lyra-font-size-md-sm);
+    color: var(--lr-color-brand);
+    font-size: var(--lr-font-size-md-sm);
   }
   [part='retry-button']:hover,
   [part='preview-button']:hover,
   [part='remove-button']:hover {
-    background: color-mix(in srgb, var(--lyra-color-text) 8%, transparent);
+    background: color-mix(in srgb, var(--lr-color-text) 8%, transparent);
   }
   [part='retry-button']:focus-visible,
   [part='preview-button']:focus-visible,
   [part='remove-button']:focus-visible {
-    outline: var(--lyra-focus-ring-width) solid var(--lyra-focus-ring-color);
-    outline-offset: var(--lyra-focus-ring-offset);
+    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
+    outline-offset: var(--lr-focus-ring-offset);
   }
   [part='retry-button'] svg,
   [part='preview-button'] svg,
@@ -202,7 +202,7 @@ export const styles = css`
     display: block;
   }
 
-  @keyframes lyra-attachment-chip-spin {
+  @keyframes lr-attachment-chip-spin {
     to {
       transform: rotate(360deg);
     }

@@ -17,9 +17,9 @@ function fetchSvg(markup: string): () => void {
   };
 }
 
-describe('lyra-svg-viewer', () => {
+describe('lr-svg-viewer', () => {
   it('renders an empty localized state by default', async () => {
-    const el = (await fixture(html`<lyra-svg-viewer></lyra-svg-viewer>`)) as LyraSvgViewer;
+    const el = (await fixture(html`<lr-svg-viewer></lr-svg-viewer>`)) as LyraSvgViewer;
     expect(el.shadowRoot!.querySelector('.empty-note')!.textContent).to.equal('No image to display.');
   });
 
@@ -27,7 +27,7 @@ describe('lyra-svg-viewer', () => {
     const original = window.fetch;
     window.fetch = (() => Promise.resolve(response('<svg><script>alert(1)</script><circle r="2" /></svg>'))) as typeof window.fetch;
     try {
-      const el = (await fixture(html`<lyra-svg-viewer src="https://example.test/a.svg" name="Chart"></lyra-svg-viewer>`)) as LyraSvgViewer;
+      const el = (await fixture(html`<lr-svg-viewer src="https://example.test/a.svg" name="Chart"></lr-svg-viewer>`)) as LyraSvgViewer;
       await aTimeout(20);
       await waitUntil(() => el.shadowRoot!.querySelector('[part="svg"]') !== null);
       await el.updateComplete;
@@ -40,14 +40,14 @@ describe('lyra-svg-viewer', () => {
   });
 
   it('rejects unsafe URLs and emits render errors for failed fetches', async () => {
-    const el = (await fixture(html`<lyra-svg-viewer src="javascript:alert(1)"></lyra-svg-viewer>`)) as LyraSvgViewer;
+    const el = (await fixture(html`<lr-svg-viewer src="javascript:alert(1)"></lr-svg-viewer>`)) as LyraSvgViewer;
     await el.updateComplete;
     expect(el.shadowRoot!.querySelector('[role="alert"]')!.textContent).to.equal('Document URL is not allowed.');
     const original = window.fetch;
     window.fetch = (() => Promise.resolve(response('', false))) as typeof window.fetch;
     try {
       el.src = 'https://example.test/b.svg';
-      const eventPromise = oneEvent(el, 'lyra-render-error');
+      const eventPromise = oneEvent(el, 'lr-render-error');
       const event = await eventPromise;
       expect(event.detail.error).to.exist;
     } finally {
@@ -56,7 +56,7 @@ describe('lyra-svg-viewer', () => {
   });
 
   it('is accessible', async () => {
-    const el = await fixture(html`<lyra-svg-viewer></lyra-svg-viewer>`);
+    const el = await fixture(html`<lr-svg-viewer></lr-svg-viewer>`);
     await expect(el).to.be.accessible();
   });
 
@@ -70,25 +70,25 @@ describe('lyra-svg-viewer', () => {
 });
 
 describe('zoomable', () => {
-  it('does not wrap in lyra-zoomable-frame by default', async () => {
-    const el = (await fixture(html`<lyra-svg-viewer></lyra-svg-viewer>`)) as LyraSvgViewer;
+  it('does not wrap in lr-zoomable-frame by default', async () => {
+    const el = (await fixture(html`<lr-svg-viewer></lr-svg-viewer>`)) as LyraSvgViewer;
     const restore = fetchSvg('<svg xmlns="http://www.w3.org/2000/svg"><circle r="5"/></svg>');
     try {
       el.src = 'https://example.test/icon.svg';
       await waitUntil(() => el.shadowRoot!.querySelector('[part="svg"]') !== null);
-      expect(el.shadowRoot!.querySelector('lyra-zoomable-frame')).to.not.exist;
+      expect(el.shadowRoot!.querySelector('lr-zoomable-frame')).to.not.exist;
     } finally {
       restore();
     }
   });
 
-  it('wraps the sanitized svg in lyra-zoomable-frame when zoomable is set', async () => {
-    const el = (await fixture(html`<lyra-svg-viewer zoomable></lyra-svg-viewer>`)) as LyraSvgViewer;
+  it('wraps the sanitized svg in lr-zoomable-frame when zoomable is set', async () => {
+    const el = (await fixture(html`<lr-svg-viewer zoomable></lr-svg-viewer>`)) as LyraSvgViewer;
     const restore = fetchSvg('<svg xmlns="http://www.w3.org/2000/svg"><circle r="5"/></svg>');
     try {
       el.src = 'https://example.test/icon.svg';
       await waitUntil(() => el.shadowRoot!.querySelector('[part="svg"]') !== null);
-      const frame = el.shadowRoot!.querySelector('lyra-zoomable-frame');
+      const frame = el.shadowRoot!.querySelector('lr-zoomable-frame');
       expect(frame).to.exist;
       expect(frame!.querySelector('[part="svg"] circle')).to.exist;
     } finally {
@@ -99,7 +99,7 @@ describe('zoomable', () => {
 
 describe('region highlights', () => {
   it('renders a focusable region-highlight positioned by percent-unit rect', async () => {
-    const el = (await fixture(html`<lyra-svg-viewer></lyra-svg-viewer>`)) as LyraSvgViewer;
+    const el = (await fixture(html`<lr-svg-viewer></lr-svg-viewer>`)) as LyraSvgViewer;
     const restore = fetchSvg('<svg xmlns="http://www.w3.org/2000/svg"><circle r="5"/></svg>');
     try {
       el.src = 'https://example.test/icon.svg';
@@ -116,7 +116,7 @@ describe('region highlights', () => {
   });
 
   it('positions region highlights with physical left/top under dir="rtl" so they stay over the non-mirroring render', async () => {
-    const el = (await fixture(html`<lyra-svg-viewer dir="rtl"></lyra-svg-viewer>`)) as LyraSvgViewer;
+    const el = (await fixture(html`<lr-svg-viewer dir="rtl"></lr-svg-viewer>`)) as LyraSvgViewer;
     const restore = fetchSvg('<svg xmlns="http://www.w3.org/2000/svg"><circle r="5"/></svg>');
     try {
       el.src = 'https://example.test/icon.svg';
@@ -132,15 +132,15 @@ describe('region highlights', () => {
     }
   });
 
-  it('emits lyra-highlight-activate on click and Enter', async () => {
-    const el = (await fixture(html`<lyra-svg-viewer></lyra-svg-viewer>`)) as LyraSvgViewer;
+  it('emits lr-highlight-activate on click and Enter', async () => {
+    const el = (await fixture(html`<lr-svg-viewer></lr-svg-viewer>`)) as LyraSvgViewer;
     const restore = fetchSvg('<svg xmlns="http://www.w3.org/2000/svg"><circle r="5"/></svg>');
     try {
       el.src = 'https://example.test/icon.svg';
       await waitUntil(() => el.shadowRoot!.querySelector('[part="svg"]') !== null);
       el.highlights = [{ id: 'h1', anchor: { kind: 'region', rect: { x: 0, y: 0, width: 10, height: 10 } } }];
       await el.updateComplete;
-      const listener = oneEvent(el, 'lyra-highlight-activate');
+      const listener = oneEvent(el, 'lr-highlight-activate');
       (el.shadowRoot!.querySelector('[part="region-highlight"]') as HTMLElement).click();
       const event = (await listener) as CustomEvent<{ id: string }>;
       expect(event.detail).to.deep.equal({ id: 'h1' });
@@ -150,7 +150,7 @@ describe('region highlights', () => {
   });
 
   it('is accessible with zoomable off and a region highlight active', async () => {
-    const el = (await fixture(html`<lyra-svg-viewer></lyra-svg-viewer>`)) as LyraSvgViewer;
+    const el = (await fixture(html`<lr-svg-viewer></lr-svg-viewer>`)) as LyraSvgViewer;
     const restore = fetchSvg('<svg xmlns="http://www.w3.org/2000/svg"><circle r="5"/></svg>');
     try {
       el.src = 'https://example.test/icon.svg';
@@ -164,7 +164,7 @@ describe('region highlights', () => {
   });
 
   it('scrollToAnchor() by id scrolls the matching region, not just the first one, when several are rendered', async () => {
-    const el = (await fixture(html`<lyra-svg-viewer></lyra-svg-viewer>`)) as LyraSvgViewer;
+    const el = (await fixture(html`<lr-svg-viewer></lr-svg-viewer>`)) as LyraSvgViewer;
     const restore = fetchSvg('<svg xmlns="http://www.w3.org/2000/svg"><circle r="5"/></svg>');
     try {
       el.src = 'https://example.test/icon.svg';
@@ -190,12 +190,12 @@ describe('region highlights', () => {
 
 describe('back-compat', () => {
   it('DOM is byte-identical with zoomable off and highlights empty', async () => {
-    const el = (await fixture(html`<lyra-svg-viewer></lyra-svg-viewer>`)) as LyraSvgViewer;
+    const el = (await fixture(html`<lr-svg-viewer></lr-svg-viewer>`)) as LyraSvgViewer;
     const restore = fetchSvg('<svg xmlns="http://www.w3.org/2000/svg"><circle r="5"/></svg>');
     try {
       el.src = 'https://example.test/icon.svg';
       await waitUntil(() => el.shadowRoot!.querySelector('[part="svg"]') !== null);
-      expect(el.shadowRoot!.querySelector('lyra-zoomable-frame')).to.not.exist;
+      expect(el.shadowRoot!.querySelector('lr-zoomable-frame')).to.not.exist;
       expect(el.shadowRoot!.querySelector('[part="highlight-layer"]')).to.not.exist;
     } finally {
       restore();

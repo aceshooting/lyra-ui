@@ -9,37 +9,37 @@ export const styles = css`
     display: inline-flex;
     flex-wrap: wrap;
     align-items: baseline;
-    gap: var(--lyra-space-xs);
+    gap: var(--lr-space-xs);
     max-inline-size: 100%;
-    color: var(--lyra-color-text-quiet);
-    font-size: var(--lyra-font-size-sm);
+    color: var(--lr-color-text-quiet);
+    font-size: var(--lr-font-size-sm);
     font-variant-numeric: tabular-nums;
   }
   [part='base'][tabindex]:focus-visible {
-    outline: var(--lyra-focus-ring-width) solid var(--lyra-focus-ring-color);
-    outline-offset: var(--lyra-focus-ring-offset);
+    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
+    outline-offset: var(--lr-focus-ring-offset);
   }
   [part='base'] > *:not(:first-child)::before {
     content: '·';
-    margin-inline-end: var(--lyra-size-0-4em);
+    margin-inline-end: var(--lr-size-0-4em);
     opacity: 0.6;
   }
   [part='cost'] {
-    color: var(--lyra-color-text);
+    color: var(--lr-color-text);
   }
   [part='tooltip'] {
     position: fixed;
-    z-index: var(--lyra-layer-dropdown);
+    z-index: var(--lr-layer-dropdown);
     box-sizing: border-box;
-    max-inline-size: min(90vw, var(--lyra-size-24rem));
-    padding: var(--lyra-space-s) var(--lyra-space-m);
-    background: var(--lyra-color-surface);
-    border: var(--lyra-border-width-thin) solid var(--lyra-color-border);
-    border-radius: var(--lyra-radius);
-    box-shadow: var(--lyra-shadow);
-    font-size: var(--lyra-font-size-sm);
-    line-height: var(--lyra-line-height-1-4);
-    color: var(--lyra-color-text);
+    max-inline-size: min(90vw, var(--lr-size-24rem));
+    padding: var(--lr-space-s) var(--lr-space-m);
+    background: var(--lr-color-surface);
+    border: var(--lr-border-width-thin) solid var(--lr-color-border);
+    border-radius: var(--lr-radius);
+    box-shadow: var(--lr-shadow);
+    font-size: var(--lr-font-size-sm);
+    line-height: var(--lr-line-height-1-4);
+    color: var(--lr-color-text);
   }
   [part='tooltip'][hidden] {
     display: none;
@@ -47,16 +47,16 @@ export const styles = css`
   .row {
     display: flex;
     justify-content: space-between;
-    gap: var(--lyra-space-m);
+    gap: var(--lr-space-m);
   }
   .row:not(:last-child) {
-    margin-block-end: var(--lyra-space-2xs);
+    margin-block-end: var(--lr-space-2xs);
   }
   .row > span:first-child {
-    color: var(--lyra-color-text-quiet);
+    color: var(--lr-color-text-quiet);
   }
   .row > span:last-child {
     font-variant-numeric: tabular-nums;
-    font-weight: var(--lyra-font-weight-semibold);
+    font-weight: var(--lr-font-weight-semibold);
   }
 `;

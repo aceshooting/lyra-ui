@@ -10,27 +10,27 @@ import { styles } from './mind-map.styles.js';
 export type { LyraTopic };
 
 export interface LyraMindMapEventMap {
-  'lyra-topic-select': CustomEvent<{ id: string }>;
-  'lyra-topic-toggle': CustomEvent<{ id: string; expanded: boolean }>;
+  'lr-topic-select': CustomEvent<{ id: string }>;
+  'lr-topic-toggle': CustomEvent<{ id: string; expanded: boolean }>;
 }
 
 const DEFAULT_RING_GAP_PX = 96; // 6rem at the default 16px root font size
 const NAV_KEYS = new Set(['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Home', 'End', 'Enter', ' ']);
 
 /**
- * `<lyra-mind-map>` — a radial expandable topic tree (NotebookLM Mind Maps): a spatial overview of
+ * `<lr-mind-map>` — a radial expandable topic tree (NotebookLM Mind Maps): a spatial overview of
  * a topic hierarchy where activating a topic drills in or hands the topic to the chat. Hierarchy,
  * not network — no cross-links, no force simulation, no communities, no edge labels (that's
- * `lyra-graph`). Zero-dependency SVG; the radial layout is closed-form arithmetic, in its own
- * `mind-map-layout.ts` module, mirroring `lyra-word-cloud`'s dependency-free precedent.
+ * `lr-graph`). Zero-dependency SVG; the radial layout is closed-form arithmetic, in its own
+ * `mind-map-layout.ts` module, mirroring `lr-word-cloud`'s dependency-free precedent.
  *
- * Node-position transitions use `--lyra-transition-base`, which already collapses to near-zero
+ * Node-position transitions use `--lr-transition-base`, which already collapses to near-zero
  * under `prefers-reduced-motion: reduce` globally (`tokens.styles.ts`), so expansion snaps rather
  * than tweening for a reduced-motion user with no extra branching in this component.
  *
- * @customElement lyra-mind-map
- * @event lyra-topic-select - A *leaf* topic was activated. `detail: { id }`.
- * @event lyra-topic-toggle - A parent topic was activated (or auto-expanded by keyboard descent).
+ * @customElement lr-mind-map
+ * @event lr-topic-select - A *leaf* topic was activated. `detail: { id }`.
+ * @event lr-topic-toggle - A parent topic was activated (or auto-expanded by keyboard descent).
  * `detail: { id, expanded }`.
  * @csspart base - The wrapper.
  * @csspart svg - The single-tab-stop SVG focus target.
@@ -40,7 +40,7 @@ const NAV_KEYS = new Set(['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Ho
  * @csspart focus-ring - The keyboard focus ring.
  * @csspart live-region - The visually hidden announcement region.
  * @csspart empty - The empty-state message, shown when `topics` is empty.
- * @cssprop [--lyra-mind-map-ring-gap=6rem] - Radius step per depth ring.
+ * @cssprop [--lr-mind-map-ring-gap=6rem] - Radius step per depth ring.
  */
 export class LyraMindMap extends LyraElement<LyraMindMapEventMap> {
   static styles = [LyraElement.styles, styles, srOnly];
@@ -79,7 +79,7 @@ export class LyraMindMap extends LyraElement<LyraMindMapEventMap> {
   }
 
   private ringGapPx(): number {
-    const raw = getComputedStyle(this).getPropertyValue('--lyra-mind-map-ring-gap').trim();
+    const raw = getComputedStyle(this).getPropertyValue('--lr-mind-map-ring-gap').trim();
     if (!raw) return DEFAULT_RING_GAP_PX;
     const value = parseFloat(raw);
     if (!Number.isFinite(value)) return DEFAULT_RING_GAP_PX;
@@ -87,7 +87,7 @@ export class LyraMindMap extends LyraElement<LyraMindMapEventMap> {
   }
 
   private relayout(): void {
-    const hubLabel = this.label || this.localize('mindMapLabel');
+    const hubLabel = this.getAttribute('aria-label') || this.label || this.localize('mindMapLabel');
     this.cachedLayout = layoutMindMap(this.topics, hubLabel, {
       ringGap: this.ringGapPx(),
       rtl: isRtl(this),
@@ -106,13 +106,13 @@ export class LyraMindMap extends LyraElement<LyraMindMapEventMap> {
     const next = new Map(this.expandedOverrides);
     next.set(node.id, expanded);
     this.expandedOverrides = next;
-    this.emit('lyra-topic-toggle', { id: node.id, expanded });
+    this.emit('lr-topic-toggle', { id: node.id, expanded });
     this.liveText = this.localize(expanded ? 'mindMapExpanded' : 'mindMapCollapsed', undefined, { label: node.label });
   }
 
   private activate(node: PlacedTopic): void {
     if (node.hasChildren) this.toggle(node);
-    else this.emit('lyra-topic-select', { id: node.id });
+    else this.emit('lr-topic-select', { id: node.id });
   }
 
   private siblingsOf(node: PlacedTopic): PlacedTopic[] {
@@ -199,6 +199,7 @@ export class LyraMindMap extends LyraElement<LyraMindMapEventMap> {
     if (layout.placed.length === 0) {
       return html`<div part="base"><div part="empty">${this.localize('noData')}</div></div>`;
     }
+    const ariaLabel = this.getAttribute('aria-label') || this.label || this.localize('mindMapLabel');
     const byId = new Map(layout.placed.map((p) => [p.id, p]));
     const focused = this.focusedId ? byId.get(this.focusedId) : undefined;
     return html`
@@ -206,7 +207,7 @@ export class LyraMindMap extends LyraElement<LyraMindMapEventMap> {
         <svg
           part="svg"
           role="group"
-          aria-label=${this.label || this.localize('mindMapLabel')}
+          aria-label=${ariaLabel}
           aria-describedby="mind-map-live"
           tabindex="0"
           viewBox="0 0 ${layout.width} ${layout.height}"
@@ -237,6 +238,6 @@ export class LyraMindMap extends LyraElement<LyraMindMapEventMap> {
 
 declare global {
   interface HTMLElementTagNameMap {
-    'lyra-mind-map': LyraMindMap;
+    'lr-mind-map': LyraMindMap;
   }
 }

@@ -23,7 +23,7 @@ const hammerEsmInteropPlugin = {
 };
 
 /**
- * `maplibre-gl` (an optional peer dep of `lyra-map`) declares `"type":
+ * `maplibre-gl` (an optional peer dep of `lr-map`) declares `"type":
  * "module"` in its package.json but its `main` (`dist/maplibre-gl.js`)
  * is actually a UMD bundle with no `export` statement — it just assigns
  * `globalThis.maplibregl` when it detects no CJS/AMD loader. Same root cause
@@ -32,7 +32,7 @@ const hammerEsmInteropPlugin = {
  * serves unbundled ESM, so this tiny plugin appends synthetic named exports
  * once maplibre-gl.js has run and populated `globalThis.maplibregl`.
  *
- * `Map`/`Marker`/`Popup` (lyra-map's `LyraMap`/marker/popup support all need
+ * `Map`/`Marker`/`Popup` (lr-map's `LyraMap`/marker/popup support all need
  * these) are exported via renamed local bindings rather than directly — an ES
  * module's top-level `const Map = ...` would lexically shadow the native
  * `Map` collection class for the *entire* module (this file's own minified
@@ -134,6 +134,11 @@ export default {
   files: 'src/**/*.test.ts',
   nodeResolve: true,
   browsers: [playwrightLauncher({ product: browserProduct })],
+  // The full suite includes 291 files and several optional-peer integration
+  // fixtures. Keep the suite-level watchdog above the normal two-minute
+  // budget so a slow CI worker reports the actual test result instead of
+  // turning a completed browser run into an infrastructure timeout.
+  testsFinishTimeout: 180000,
   plugins: [
     esbuildPlugin({ ts: true, target: 'es2022', tsconfig: 'tsconfig.json' }),
     hammerEsmInteropPlugin,
@@ -145,7 +150,7 @@ export default {
   ],
   testFramework: {
     // Mocha's default 2000ms per-test timeout is shorter than the wait
-    // budgets some tests already declare on purpose (e.g. lyra-graph's
+    // budgets some tests already declare on purpose (e.g. lr-graph's
     // NODE_COUNT_TIMEOUT = 5000ms, for d3-force's rAF-driven tick under
     // Chromium's background-tab throttling when many test files run
     // concurrently). Raise the default so those budgets can actually work.

@@ -33,7 +33,7 @@ export interface ChoroplethLayer {
 }
 
 /** One GeoJSON source rendered as three layers (`${sourceId}-fill` for polygons, `${sourceId}-line`
- *  for lines/outlines, `${sourceId}-circle` for points). Colors resolve from `--lyra-*` tokens at
+ *  for lines/outlines, `${sourceId}-circle` for points). Colors resolve from `--lr-*` tokens at
  *  apply time, defaulting to `accent`. */
 export interface GeoJsonDataLayer {
   sourceId: string;
@@ -72,44 +72,44 @@ export interface MapMarker {
 const DEFAULT_STYLE: OptionalPeerApi = {
   version: 8,
   sources: {
-    'lyra-osm': {
+    'lr-osm': {
       type: 'raster',
       tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],
       tileSize: 256,
       attribution: '© OpenStreetMap contributors',
     },
   },
-  layers: [{ id: 'lyra-osm', type: 'raster', source: 'lyra-osm' }],
+  layers: [{ id: 'lr-osm', type: 'raster', source: 'lr-osm' }],
 };
 
 // Defensive JS-side fallback for choroplethFillOpacity() below, mirroring
-// --lyra-map-choropleth-fill-opacity's own default (see map.styles.ts) --
+// --lr-map-choropleth-fill-opacity's own default (see map.styles.ts) --
 // only reached if getComputedStyle somehow can't resolve the custom
 // property at all (e.g. host detached from the document).
 const FALLBACK_FILL_OPACITY = 0.75;
 
 /**
- * Reads the current `--lyra-map-choropleth-fill-opacity` custom property so
+ * Reads the current `--lr-map-choropleth-fill-opacity` custom property so
  * the choropleth fill layer's opacity is retheme-able instead of a literal
  * hardcoded into the maplibre-gl paint expression.
  */
 function choroplethFillOpacity(host: Element): number {
-  const raw = getComputedStyle(host).getPropertyValue('--lyra-map-choropleth-fill-opacity').trim();
+  const raw = getComputedStyle(host).getPropertyValue('--lr-map-choropleth-fill-opacity').trim();
   const parsed = Number.parseFloat(raw);
   return Number.isFinite(parsed) ? parsed : FALLBACK_FILL_OPACITY;
 }
 
 const TONE_TOKEN: Record<NonNullable<GeoJsonDataLayer['tone']>, string> = {
-  accent: '--lyra-color-brand',
-  success: '--lyra-color-success',
-  warning: '--lyra-color-warning',
-  danger: '--lyra-color-danger',
-  neutral: '--lyra-color-text-quiet',
+  accent: '--lr-color-brand',
+  success: '--lr-color-success',
+  warning: '--lr-color-warning',
+  danger: '--lr-color-danger',
+  neutral: '--lr-color-text-quiet',
 };
 
 /**
  * Resolves a `GeoJsonDataLayer.tone` to a real color via the matching
- * `--lyra-color-*` token, read at apply time (not property-set time) so a
+ * `--lr-color-*` token, read at apply time (not property-set time) so a
  * later retheme is picked up the next time `dataLayers` is (re)applied --
  * same rationale as `choroplethFillOpacity()` above.
  */
@@ -120,14 +120,14 @@ function dataLayerColor(host: Element, tone: GeoJsonDataLayer['tone']): string {
 }
 
 export interface LyraMapEventMap {
-  'lyra-map-load': CustomEvent<undefined>;
-  'lyra-map-click': CustomEvent<{
+  'lr-map-load': CustomEvent<undefined>;
+  'lr-map-click': CustomEvent<{
     lngLat: [number, number];
     feature: Feature | undefined;
   }>;
 }
 /**
- * `<lyra-map>` — a maplibre-gl wrapper with a declarative legend, choropleth
+ * `<lr-map>` — a maplibre-gl wrapper with a declarative legend, choropleth
  * GeoJSON layer, markers, and additive `dataLayers` GeoJSON overlays
  * (arbitrary shapes rendered as a source plus fill/line/circle layers,
  * independent of `choropleth`'s field/stops color-interpolation), plus a raw
@@ -138,14 +138,14 @@ export interface LyraMapEventMap {
  * constructed until this element is first visible in the viewport (tracked
  * via `IntersectionObserver`), even once the `maplibre-gl` peer dependency
  * has finished loading. Browsers hard-cap concurrent WebGL contexts per
- * page, so a grid/dashboard of many `<lyra-map>` instances only constructs
+ * page, so a grid/dashboard of many `<lr-map>` instances only constructs
  * the ones actually on-screen instead of racing to exhaust that budget the
- * instant each one mounts. `map` stays `undefined` (and `lyra-map-load`
+ * instant each one mounts. `map` stays `undefined` (and `lr-map-load`
  * doesn't fire) until construction actually happens.
  *
- * @customElement lyra-map
- * @event lyra-map-load - Fired once the underlying maplibregl.Map loads.
- * @event lyra-map-click - `detail: { lngLat, feature? }`.
+ * @customElement lr-map
+ * @event lr-map-load - Fired once the underlying maplibregl.Map loads.
+ * @event lr-map-click - `detail: { lngLat, feature? }`.
  * @csspart base - The map wrapper.
  * @csspart container - The maplibre container.
  * @csspart legend - The map legend.
@@ -178,11 +178,11 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
   @state() private loading = true;
 
   // Gates the actual `new mod.Map(...)` construction (see `tryConstructMap()`)
-  // -- starts `false` so a `<lyra-map>` mounted off-screen doesn't open a
+  // -- starts `false` so a `<lr-map>` mounted off-screen doesn't open a
   // WebGL context before it's ever seen, and only flips `true` once the
   // IntersectionObserver below reports this element actually intersecting
   // the viewport. Defaults `true` outright when `IntersectionObserver` isn't
-  // available at all (fail open, matching `lyra-chart`'s own fallback)
+  // available at all (fail open, matching `lr-chart`'s own fallback)
   // rather than gating construction on an observer that will never fire.
   @state() private visible = typeof IntersectionObserver === 'undefined';
   private intersectionObserver?: IntersectionObserver;
@@ -323,14 +323,14 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     // catchable error. Log it instead so callers can see it without the
     // whole page treating it as an uncaught exception.
     this._map.on('error', (e: OptionalPeerApi) => {
-      console.error('lyra-map:', e?.error ?? e);
+      console.error('lr-map:', e?.error ?? e);
     });
     this._map.on('load', () => {
       this._styleLoaded = true;
       this.applyChoropleth();
       this.applyMarkers();
       this.applyDataLayers();
-      this.emit('lyra-map-load');
+      this.emit('lr-map-load');
     });
     this._map.on('click', (e: OptionalPeerApi) => {
       const fillLayerId = this._appliedFillLayerId;
@@ -338,7 +338,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
         fillLayerId && this._map!.getLayer(fillLayerId)
           ? this._map!.queryRenderedFeatures(e.point, { layers: [fillLayerId] })
           : [];
-      this.emit('lyra-map-click', {
+      this.emit('lr-map-click', {
         lngLat: [e.lngLat.lng, e.lngLat.lat],
         feature: features[0],
       });
@@ -409,7 +409,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
       // present). A hardcoded `promoteId: 'id'` here would instead require
       // every feature to *also* duplicate its id inside `properties.id`,
       // silently discarding the real top-level `id` otherwise and breaking
-      // `feature.id` on `lyra-map-click` for the common case. Nothing in this
+      // `feature.id` on `lr-map-click` for the common case. Nothing in this
       // component actually needs feature-state promotion today; if that's
       // added later it should be driven by an explicit, documented
       // `ChoroplethLayer` option (e.g. `idField`), not a silent default.
@@ -618,7 +618,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
         aria-label=${this.getAttribute('aria-label') || this.label || this.localize('map')}
       >
         ${this.loading
-          ? html`<lyra-skeleton variant="rect"></lyra-skeleton>`
+          ? html`<lr-skeleton variant="rect"></lr-skeleton>`
           : html`<div part="container"></div>`}
         ${this.legend.length
           ? html`<div part="legend">
@@ -639,6 +639,6 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
 
 declare global {
   interface HTMLElementTagNameMap {
-    'lyra-map': LyraMap;
+    'lr-map': LyraMap;
   }
 }

@@ -2,9 +2,9 @@ import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import './browser-frame.js';
 import type { LyraBrowserFrame } from './browser-frame.js';
 
-describe('lyra-browser-frame', () => {
+describe('lr-browser-frame', () => {
   it('defaults to status=idle, controller=agent, controls=true', async () => {
-    const el = (await fixture(html`<lyra-browser-frame></lyra-browser-frame>`)) as LyraBrowserFrame;
+    const el = (await fixture(html`<lr-browser-frame></lr-browser-frame>`)) as LyraBrowserFrame;
     expect(el.status).to.equal('idle');
     expect(el.controller).to.equal('agent');
     expect(el.controls).to.be.true;
@@ -12,7 +12,7 @@ describe('lyra-browser-frame', () => {
 
   it('renders the url read-only with a bidi-isolated dir="ltr" and a title fallback', async () => {
     const el = (await fixture(
-      html`<lyra-browser-frame url="https://example.com/path"></lyra-browser-frame>`,
+      html`<lr-browser-frame url="https://example.com/path"></lr-browser-frame>`,
     )) as LyraBrowserFrame;
     await el.updateComplete;
     const urlEl = el.shadowRoot!.querySelector('[part="url"]')!;
@@ -23,7 +23,7 @@ describe('lyra-browser-frame', () => {
 
   it('renders visible localized status text, never color-only', async () => {
     const el = (await fixture(
-      html`<lyra-browser-frame status="stalled"></lyra-browser-frame>`,
+      html`<lr-browser-frame status="stalled"></lr-browser-frame>`,
     )) as LyraBrowserFrame;
     await el.updateComplete;
     const status = el.shadowRoot!.querySelector('[part="status"]')!;
@@ -33,7 +33,7 @@ describe('lyra-browser-frame', () => {
 
   it('rejects an unsafe frameSrc scheme via the shared safe-URL gate', async () => {
     const el = (await fixture(
-      html`<lyra-browser-frame frame-src="javascript:alert(1)"></lyra-browser-frame>`,
+      html`<lr-browser-frame frame-src="javascript:alert(1)"></lr-browser-frame>`,
     )) as LyraBrowserFrame;
     await el.updateComplete;
     expect(el.shadowRoot!.querySelector('[part="frame"]')).to.not.exist;
@@ -41,43 +41,43 @@ describe('lyra-browser-frame', () => {
 
   it('renders an <img> for a safe frameSrc, ignored once the default slot is populated', async () => {
     const el = (await fixture(
-      html`<lyra-browser-frame frame-src="https://example.com/shot.png"
+      html`<lr-browser-frame frame-src="https://example.com/shot.png"
         ><video slot=""></video
-      ></lyra-browser-frame>`,
+      ></lr-browser-frame>`,
     )) as LyraBrowserFrame;
     await el.updateComplete;
     expect(el.shadowRoot!.querySelector('[part="frame"]')).to.not.exist;
   });
 
-  it('take-over button emits lyra-take-over with controller "user", and hand-back with "agent"', async () => {
-    const el = (await fixture(html`<lyra-browser-frame></lyra-browser-frame>`)) as LyraBrowserFrame;
+  it('take-over button emits lr-take-over with controller "user", and hand-back with "agent"', async () => {
+    const el = (await fixture(html`<lr-browser-frame></lr-browser-frame>`)) as LyraBrowserFrame;
     await el.updateComplete;
-    const listener = oneEvent(el, 'lyra-take-over');
+    const listener = oneEvent(el, 'lr-take-over');
     (el.shadowRoot!.querySelector('[part="take-over-button"]') as HTMLButtonElement).click();
     const event = (await listener) as CustomEvent<{ controller: string }>;
     expect(event.detail.controller).to.equal('user');
 
     const userEl = (await fixture(
-      html`<lyra-browser-frame controller="user"></lyra-browser-frame>`,
+      html`<lr-browser-frame controller="user"></lr-browser-frame>`,
     )) as LyraBrowserFrame;
     await userEl.updateComplete;
-    const handBackListener = oneEvent(userEl, 'lyra-take-over');
+    const handBackListener = oneEvent(userEl, 'lr-take-over');
     (userEl.shadowRoot!.querySelector('[part="take-over-button"]') as HTMLButtonElement).click();
     const handBackEvent = (await handBackListener) as CustomEvent<{ controller: string }>;
     expect(handBackEvent.detail.controller).to.equal('agent');
   });
 
-  it('stop button emits lyra-stop', async () => {
-    const el = (await fixture(html`<lyra-browser-frame></lyra-browser-frame>`)) as LyraBrowserFrame;
+  it('stop button emits lr-stop', async () => {
+    const el = (await fixture(html`<lr-browser-frame></lr-browser-frame>`)) as LyraBrowserFrame;
     await el.updateComplete;
-    const listener = oneEvent(el, 'lyra-stop');
+    const listener = oneEvent(el, 'lr-stop');
     (el.shadowRoot!.querySelector('[part="stop-button"]') as HTMLButtonElement).click();
     await listener;
   });
 
   it('controls=false renders no take-over/stop buttons', async () => {
     const el = (await fixture(
-      html`<lyra-browser-frame .controls=${false}></lyra-browser-frame>`,
+      html`<lr-browser-frame .controls=${false}></lr-browser-frame>`,
     )) as LyraBrowserFrame;
     await el.updateComplete;
     expect(el.shadowRoot!.querySelector('[part="take-over-button"]')).to.not.exist;
@@ -86,12 +86,12 @@ describe('lyra-browser-frame', () => {
 
   it('renders one aria-hidden ping marker per pings entry, kind-distinct', async () => {
     const el = (await fixture(html`
-      <lyra-browser-frame
+      <lr-browser-frame
         .pings=${[
           { id: 'p1', x: 10, y: 20, kind: 'click' },
           { id: 'p2', x: 50, y: 50, kind: 'type' },
         ]}
-      ></lyra-browser-frame>
+      ></lr-browser-frame>
     `)) as LyraBrowserFrame;
     await el.updateComplete;
     const pings = [...el.shadowRoot!.querySelectorAll('[part="ping"]')] as HTMLElement[];
@@ -103,7 +103,7 @@ describe('lyra-browser-frame', () => {
 
   it('positions pings with physical left/top under dir="rtl" so they stay over the non-mirroring screenshot', async () => {
     const el = (await fixture(html`
-      <lyra-browser-frame dir="rtl" .pings=${[{ id: 'p1', x: 10, y: 20, kind: 'click' }]}></lyra-browser-frame>
+      <lr-browser-frame dir="rtl" .pings=${[{ id: 'p1', x: 10, y: 20, kind: 'click' }]}></lr-browser-frame>
     `)) as LyraBrowserFrame;
     await el.updateComplete;
     const ping = el.shadowRoot!.querySelector('[part="ping"]') as HTMLElement;
@@ -115,13 +115,13 @@ describe('lyra-browser-frame', () => {
   it('keeps the ping content rect tracking viewport resizes after a disconnect/reconnect', async () => {
     const wrapper = (await fixture(html`
       <div style="inline-size: 400px">
-        <lyra-browser-frame
+        <lr-browser-frame
           frame-src="https://example.com/shot.png"
           .pings=${[{ id: 'p1', x: 50, y: 50, kind: 'click' }]}
-        ></lyra-browser-frame>
+        ></lr-browser-frame>
       </div>
     `)) as HTMLDivElement;
-    const el = wrapper.querySelector('lyra-browser-frame') as LyraBrowserFrame;
+    const el = wrapper.querySelector('lr-browser-frame') as LyraBrowserFrame;
     await el.updateComplete;
     const img = el.shadowRoot!.querySelector('[part="frame"]') as HTMLImageElement;
     Object.defineProperty(img, 'naturalWidth', { value: 800, configurable: true });
@@ -142,7 +142,7 @@ describe('lyra-browser-frame', () => {
   });
 
   it('never captures or forwards pointer/keyboard input to any transport (no such listener exists)', async () => {
-    const el = (await fixture(html`<lyra-browser-frame></lyra-browser-frame>`)) as LyraBrowserFrame;
+    const el = (await fixture(html`<lr-browser-frame></lr-browser-frame>`)) as LyraBrowserFrame;
     // Structural guarantee, not a runtime assertion: this component has no pointerdown/keydown
     // forwarding code path at all -- covered by this suite never registering such a listener, and
     // by the take-over/stop tests above being the component's *only* interactive affordances.
@@ -151,11 +151,11 @@ describe('lyra-browser-frame', () => {
 
   it('is accessible with a live status, pings, and take-over controls', async () => {
     const el = (await fixture(html`
-      <lyra-browser-frame
+      <lr-browser-frame
         url="https://example.com"
         status="streaming"
         .pings=${[{ id: 'p1', x: 10, y: 10, kind: 'click' }]}
-      ></lyra-browser-frame>
+      ></lr-browser-frame>
     `)) as LyraBrowserFrame;
     await el.updateComplete;
     await expect(el).to.be.accessible();

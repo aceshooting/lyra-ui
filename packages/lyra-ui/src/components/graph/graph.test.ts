@@ -23,9 +23,9 @@ const NODE_COUNT_TIMEOUT = 5000;
 const ALPHA_SETTLE_TIMEOUT = 15_000;
 
 it('shows a loading skeleton and aria-busy while d3 loads, then swaps to the svg', async () => {
-  const el = (await fixture(html`<lyra-graph></lyra-graph>`)) as LyraGraph;
+  const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
   expect(el.getAttribute('aria-busy')).to.equal('true');
-  expect(el.shadowRoot!.querySelector('lyra-skeleton')).to.exist;
+  expect(el.shadowRoot!.querySelector('lr-skeleton')).to.exist;
   expect(el.shadowRoot!.querySelector('svg')).to.not.exist;
 
   el.nodes = nodes;
@@ -36,12 +36,12 @@ it('shows a loading skeleton and aria-busy while d3 loads, then swaps to the svg
   });
 
   expect(el.hasAttribute('aria-busy')).to.be.false;
-  expect(el.shadowRoot!.querySelector('lyra-skeleton')).to.not.exist;
+  expect(el.shadowRoot!.querySelector('lr-skeleton')).to.not.exist;
   expect(el.shadowRoot!.querySelector('svg')).to.exist;
 });
 
 it('renders an svg with a circle per node once d3 loads', async () => {
-  const el = (await fixture(html`<lyra-graph></lyra-graph>`)) as LyraGraph;
+  const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
   el.nodes = nodes;
   el.links = links;
   await el.updateComplete;
@@ -53,7 +53,7 @@ it('renders an svg with a circle per node once d3 loads', async () => {
 
 it('forwards a host aria-label to the semantic graph svg', async () => {
   const el = (await fixture(html`
-    <lyra-graph aria-label="Citation relationships"></lyra-graph>
+    <lr-graph aria-label="Citation relationships"></lr-graph>
   `)) as LyraGraph;
   el.nodes = nodes;
   el.links = links;
@@ -67,8 +67,8 @@ it('forwards a host aria-label to the semantic graph svg', async () => {
   );
 });
 
-it('emits lyra-node-click when a node is activated', async () => {
-  const el = (await fixture(html`<lyra-graph></lyra-graph>`)) as LyraGraph;
+it('emits lr-node-click when a node is activated', async () => {
+  const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
   el.nodes = nodes;
   el.links = links;
   await el.updateComplete;
@@ -76,7 +76,7 @@ it('emits lyra-node-click when a node is activated', async () => {
     timeout: NODE_COUNT_TIMEOUT,
   });
   let detail: { id: string; x: number; y: number } | undefined;
-  el.addEventListener('lyra-node-click', (e) => (detail = (e as CustomEvent).detail));
+  el.addEventListener('lr-node-click', (e) => (detail = (e as CustomEvent).detail));
   (el.shadowRoot!.querySelector('[part="node"]') as HTMLElement).dispatchEvent(
     new MouseEvent('click', { bubbles: true }),
   );
@@ -86,8 +86,8 @@ it('emits lyra-node-click when a node is activated', async () => {
   expect(detail!.y).to.be.a('number');
 });
 
-it('emits lyra-link-click with the source/target ids when a link is activated', async () => {
-  const el = (await fixture(html`<lyra-graph></lyra-graph>`)) as LyraGraph;
+it('emits lr-link-click with the source/target ids when a link is activated', async () => {
+  const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
   el.nodes = nodes;
   el.links = links;
   await el.updateComplete;
@@ -95,7 +95,7 @@ it('emits lyra-link-click with the source/target ids when a link is activated', 
     timeout: NODE_COUNT_TIMEOUT,
   });
   let detail: { source: string; target: string } | undefined;
-  el.addEventListener('lyra-link-click', (e) => (detail = (e as CustomEvent).detail));
+  el.addEventListener('lr-link-click', (e) => (detail = (e as CustomEvent).detail));
   (el.shadowRoot!.querySelector('[part="link"]') as HTMLElement).dispatchEvent(
     new MouseEvent('click', { bubbles: true }),
   );
@@ -103,7 +103,7 @@ it('emits lyra-link-click with the source/target ids when a link is activated', 
 });
 
 it('exposes resolved node coordinates for click-anchored overlays', async () => {
-  const el = (await fixture(html`<lyra-graph seed="7"></lyra-graph>`)) as LyraGraph;
+  const el = (await fixture(html`<lr-graph seed="7"></lr-graph>`)) as LyraGraph;
   el.nodes = nodes;
   el.links = links;
   await el.updateComplete;
@@ -119,8 +119,8 @@ it('exposes resolved node coordinates for click-anchored overlays', async () => 
 });
 
 describe('hover events', () => {
-  it('emits lyra-node-enter/lyra-node-leave and toggles data-hovered on the node element', async () => {
-    const el = (await fixture(html`<lyra-graph></lyra-graph>`)) as LyraGraph;
+  it('emits lr-node-enter/lr-node-leave and toggles data-hovered on the node element', async () => {
+    const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
     el.nodes = nodes;
     el.links = links;
     await el.updateComplete;
@@ -131,8 +131,8 @@ describe('hover events', () => {
 
     let enterDetail: { id: string } | undefined;
     let leaveDetail: { id: string } | undefined;
-    el.addEventListener('lyra-node-enter', (e) => (enterDetail = (e as CustomEvent).detail));
-    el.addEventListener('lyra-node-leave', (e) => (leaveDetail = (e as CustomEvent).detail));
+    el.addEventListener('lr-node-enter', (e) => (enterDetail = (e as CustomEvent).detail));
+    el.addEventListener('lr-node-leave', (e) => (leaveDetail = (e as CustomEvent).detail));
 
     nodeEl.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true }));
     expect(enterDetail).to.deep.equal({ id: 'a' });
@@ -143,8 +143,8 @@ describe('hover events', () => {
     expect(nodeEl.hasAttribute('data-hovered')).to.be.false;
   });
 
-  it('emits lyra-link-enter/lyra-link-leave with source/target ids and toggles data-hovered on the link element', async () => {
-    const el = (await fixture(html`<lyra-graph></lyra-graph>`)) as LyraGraph;
+  it('emits lr-link-enter/lr-link-leave with source/target ids and toggles data-hovered on the link element', async () => {
+    const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
     el.nodes = nodes;
     el.links = links;
     await el.updateComplete;
@@ -154,7 +154,7 @@ describe('hover events', () => {
     const linkEl = el.shadowRoot!.querySelector('[part="link"]') as SVGElement;
 
     let enterDetail: { source: string; target: string } | undefined;
-    el.addEventListener('lyra-link-enter', (e) => (enterDetail = (e as CustomEvent).detail));
+    el.addEventListener('lr-link-enter', (e) => (enterDetail = (e as CustomEvent).detail));
 
     linkEl.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true }));
     expect(enterDetail).to.deep.equal({ source: 'a', target: 'b' });
@@ -165,7 +165,7 @@ describe('hover events', () => {
   });
 
   it('suppresses hover events and the data-hovered attribute while a drag is in progress', async () => {
-    const el = (await fixture(html`<lyra-graph></lyra-graph>`)) as LyraGraph;
+    const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
     el.nodes = nodes;
     el.links = links;
     await el.updateComplete;
@@ -176,14 +176,14 @@ describe('hover events', () => {
 
     (el as unknown as { isDragging: boolean }).isDragging = true;
     let fired = false;
-    el.addEventListener('lyra-node-enter', () => (fired = true));
+    el.addEventListener('lr-node-enter', () => (fired = true));
     nodeEl.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true }));
     expect(fired).to.be.false;
     expect(nodeEl.hasAttribute('data-hovered')).to.be.false;
   });
 
   it('suppresses hover events while panning', async () => {
-    const el = (await fixture(html`<lyra-graph></lyra-graph>`)) as LyraGraph;
+    const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
     el.nodes = nodes;
     el.links = links;
     await el.updateComplete;
@@ -194,13 +194,13 @@ describe('hover events', () => {
 
     (el as unknown as { isPanning: boolean }).isPanning = true;
     let fired = false;
-    el.addEventListener('lyra-node-enter', () => (fired = true));
+    el.addEventListener('lr-node-enter', () => (fired = true));
     nodeEl.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true }));
     expect(fired).to.be.false;
   });
 
   it('suppresses hover events during a programmatic camera tween (regression)', async () => {
-    const el = (await fixture(html`<lyra-graph></lyra-graph>`)) as LyraGraph;
+    const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
     el.nodes = nodes;
     el.links = links;
     await el.updateComplete;
@@ -211,17 +211,17 @@ describe('hover events', () => {
 
     (el as unknown as { isCameraTweening: boolean }).isCameraTweening = true;
     let fired = false;
-    el.addEventListener('lyra-node-enter', () => (fired = true));
+    el.addEventListener('lr-node-enter', () => (fired = true));
     nodeEl.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true }));
     expect(fired).to.be.false;
   });
 
-  it('does not fire lyra-link-enter/lyra-link-leave or set data-hovered for a dangling-stub link', async () => {
+  it('does not fire lr-link-enter/lr-link-leave or set data-hovered for a dangling-stub link', async () => {
     // A dangling stub's `target` is a synthetic stand-in that never resolves to a real node (see
     // SimLink.dangling) -- emitting a link-identity hover event for it would hand a consumer an id
     // guaranteed to never match anything in `nodes`, so the stub is deliberately excluded from
     // hover wiring the same way it's excluded from click/focus/keydown/tooltip/accessible-list.
-    const el = (await fixture(html`<lyra-graph></lyra-graph>`)) as LyraGraph;
+    const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
     el.nodes = nodes; // ids: a, b
     el.links = [...links, { source: 'a', target: 'does-not-exist' }];
     await el.updateComplete;
@@ -232,8 +232,8 @@ describe('hover events', () => {
     expect(stub).to.exist;
 
     let fired = false;
-    el.addEventListener('lyra-link-enter', () => (fired = true));
-    el.addEventListener('lyra-link-leave', () => (fired = true));
+    el.addEventListener('lr-link-enter', () => (fired = true));
+    el.addEventListener('lr-link-leave', () => (fired = true));
 
     stub.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true }));
     expect(fired).to.be.false;
@@ -246,7 +246,7 @@ describe('hover events', () => {
 });
 
 it('renders directed links with arrowheads shortened to the target radius', async () => {
-  const el = (await fixture(html`<lyra-graph seed="42"></lyra-graph>`)) as LyraGraph;
+  const el = (await fixture(html`<lr-graph seed="42"></lr-graph>`)) as LyraGraph;
   el.nodes = nodes;
   el.links = [{ source: 'a', target: 'b', directed: true }];
   await el.updateComplete;
@@ -255,13 +255,13 @@ it('renders directed links with arrowheads shortened to the target radius', asyn
   });
   const link = el.shadowRoot!.querySelector('[part="link"]') as SVGLineElement;
   const target = el.shadowRoot!.querySelectorAll('[part="node"]')[1] as SVGCircleElement;
-  expect(link.getAttribute('marker-end')).to.match(/^url\(#lyra-graph-arrow-/);
+  expect(link.getAttribute('marker-end')).to.match(/^url\(#lr-graph-arrow-/);
   expect(link.getAttribute('x2')).to.not.equal(target.getAttribute('cx'));
   expect(el.shadowRoot!.querySelector('[part="arrowhead"]')).to.exist;
 });
 
 it('uses rich accessible labels/descriptions and carries a stable link id through activation', async () => {
-  const el = (await fixture(html`<lyra-graph seed="42"></lyra-graph>`)) as LyraGraph;
+  const el = (await fixture(html`<lr-graph seed="42"></lr-graph>`)) as LyraGraph;
   el.nodes = [
     { id: 'a', label: 'A', accessibleLabel: 'Document A, 12 citations', description: 'Primary authority' },
     { id: 'b', label: 'B' },
@@ -287,13 +287,13 @@ it('uses rich accessible labels/descriptions and carries a stable link id throug
   expect(link.getAttribute('aria-label')).to.equal('Document A cites document B seven times');
   expect(link.querySelector('title')?.textContent).to.equal('Seven citations');
   let detail: { source: string; target: string; id?: string } | undefined;
-  el.addEventListener('lyra-link-click', (e) => (detail = (e as CustomEvent).detail));
+  el.addEventListener('lr-link-click', (e) => (detail = (e as CustomEvent).detail));
   link.dispatchEvent(new MouseEvent('click', { bubbles: true }));
   expect(detail).to.deep.equal({ source: 'a', target: 'b', id: 'citation-7' });
 });
 
 it('applies sanitized per-link color and numeric dash styling', async () => {
-  const el = (await fixture(html`<lyra-graph seed="42"></lyra-graph>`)) as LyraGraph;
+  const el = (await fixture(html`<lr-graph seed="42"></lr-graph>`)) as LyraGraph;
   el.nodes = nodes;
   el.links = [{ source: 'a', target: 'b', color: '#ff0000', dash: [4, 2] }];
   await el.updateComplete;
@@ -310,8 +310,8 @@ it('applies sanitized per-link color and numeric dash styling', async () => {
   expect((el.shadowRoot!.querySelector('[part="link"]') as SVGLineElement).hasAttribute('stroke-dasharray')).to.be.false;
 });
 
-it('emits lyra-node-click when a node is activated via keyboard (Enter/Space)', async () => {
-  const el = (await fixture(html`<lyra-graph></lyra-graph>`)) as LyraGraph;
+it('emits lr-node-click when a node is activated via keyboard (Enter/Space)', async () => {
+  const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
   el.nodes = nodes;
   el.links = links;
   await el.updateComplete;
@@ -319,7 +319,7 @@ it('emits lyra-node-click when a node is activated via keyboard (Enter/Space)', 
     timeout: NODE_COUNT_TIMEOUT,
   });
   let detail: { id: string; x: number; y: number } | undefined;
-  el.addEventListener('lyra-node-click', (e) => (detail = (e as CustomEvent).detail));
+  el.addEventListener('lr-node-click', (e) => (detail = (e as CustomEvent).detail));
   (el.shadowRoot!.querySelector('[part="node"]') as HTMLElement).dispatchEvent(
     new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }),
   );
@@ -328,8 +328,8 @@ it('emits lyra-node-click when a node is activated via keyboard (Enter/Space)', 
   expect(detail?.y).to.be.a('number');
 });
 
-it('emits lyra-link-click when a link is activated via keyboard (Enter/Space)', async () => {
-  const el = (await fixture(html`<lyra-graph></lyra-graph>`)) as LyraGraph;
+it('emits lr-link-click when a link is activated via keyboard (Enter/Space)', async () => {
+  const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
   el.nodes = nodes;
   el.links = links;
   await el.updateComplete;
@@ -337,7 +337,7 @@ it('emits lyra-link-click when a link is activated via keyboard (Enter/Space)', 
     timeout: NODE_COUNT_TIMEOUT,
   });
   let detail: { source: string; target: string } | undefined;
-  el.addEventListener('lyra-link-click', (e) => (detail = (e as CustomEvent).detail));
+  el.addEventListener('lr-link-click', (e) => (detail = (e as CustomEvent).detail));
   (el.shadowRoot!.querySelector('[part="link"]') as HTMLElement).dispatchEvent(
     new KeyboardEvent('keydown', { key: ' ', bubbles: true }),
   );
@@ -345,7 +345,7 @@ it('emits lyra-link-click when a link is activated via keyboard (Enter/Space)', 
 });
 
 it('gives the svg an accessible name summarizing the diagram, and hides duplicate node labels from assistive tech', async () => {
-  const el = (await fixture(html`<lyra-graph></lyra-graph>`)) as LyraGraph;
+  const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
   el.nodes = nodes;
   el.links = links;
   await el.updateComplete;
@@ -359,7 +359,7 @@ it('gives the svg an accessible name summarizing the diagram, and hides duplicat
 });
 
 it('uses one roving tab stop with arrow/Home/End navigation and a data-list alternative', async () => {
-  const el = (await fixture(html`<lyra-graph></lyra-graph>`)) as LyraGraph;
+  const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
   el.strings = { graphItemAnnouncement: '{item}, position {index} sur {total}' };
   el.nodes = nodes;
   el.links = links;
@@ -392,7 +392,7 @@ it('uses one roving tab stop with arrow/Home/End navigation and a data-list alte
 });
 
 it('preserves existing node positions across an incremental nodes/links update instead of restarting the whole layout', async () => {
-  const el = (await fixture(html`<lyra-graph></lyra-graph>`)) as LyraGraph;
+  const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
   el.nodes = nodes;
   el.links = links;
   await el.updateComplete;
@@ -414,7 +414,7 @@ it('preserves existing node positions across an incremental nodes/links update i
 });
 
 it('applies a per-node GraphNode.color as the actual rendered fill', async () => {
-  const el = (await fixture(html`<lyra-graph></lyra-graph>`)) as LyraGraph;
+  const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
   el.nodes = [
     { id: 'a', label: 'A', color: '#ff0000' },
     { id: 'b', label: 'B' },
@@ -448,7 +448,7 @@ describe('node typing (J1)', () => {
   const typedLinks = [{ source: 'a', target: 'b' }];
 
   async function mountTyped(): Promise<LyraGraph> {
-    const el = (await fixture(html`<lyra-graph></lyra-graph>`)) as LyraGraph;
+    const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
     el.nodeTypes = nodeTypes;
     el.nodes = typedNodes;
     el.links = typedLinks;
@@ -472,14 +472,14 @@ describe('node typing (J1)', () => {
   it('resolves fill precedence: node.color > type.color > categorical palette by nodeTypes index > default token', async () => {
     const el = await mountTyped();
     const items = [...el.shadowRoot!.querySelectorAll('[part="node"]')] as SVGElement[];
-    expect(items[1]!.getAttribute('style')).to.include('--lyra-node-fill:#112233'); // b: doc.color
-    expect(items[2]!.getAttribute('style') ?? '').to.include('--lyra-graph-cat-3'); // c: concept is nodeTypes[2]
+    expect(items[1]!.getAttribute('style')).to.include('--lr-node-fill:#112233'); // b: doc.color
+    expect(items[2]!.getAttribute('style') ?? '').to.include('--lr-graph-cat-3'); // c: concept is nodeTypes[2]
     expect(items[3]!.hasAttribute('style')).to.be.false; // d: unknown type -> no inline fill override
-    expect(items[4]!.getAttribute('style')).to.include('--lyra-node-fill:#ff0000'); // e: node.color wins over type
+    expect(items[4]!.getAttribute('style')).to.include('--lr-node-fill:#ff0000'); // e: node.color wins over type
   });
 
   it('wraps the categorical index at the 9th nodeTypes entry (typeIndex % 8)', async () => {
-    const el = (await fixture(html`<lyra-graph></lyra-graph>`)) as LyraGraph;
+    const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
     el.nodeTypes = Array.from({ length: 9 }, (_, i) => ({ id: `t${i}`, label: `T${i}` }));
     el.nodes = [
       { id: 'first', type: 't0' },
@@ -491,8 +491,8 @@ describe('node typing (J1)', () => {
       timeout: NODE_COUNT_TIMEOUT,
     });
     const items = [...el.shadowRoot!.querySelectorAll('[part="node"]')] as SVGElement[];
-    expect(items[0]!.getAttribute('style')).to.include('--lyra-graph-cat-1'); // index 0 % 8 -> slot 1
-    expect(items[1]!.getAttribute('style')).to.include('--lyra-graph-cat-1'); // index 8 % 8 -> slot 1 again
+    expect(items[0]!.getAttribute('style')).to.include('--lr-graph-cat-1'); // index 0 % 8 -> slot 1
+    expect(items[1]!.getAttribute('style')).to.include('--lr-graph-cat-1'); // index 8 % 8 -> slot 1 again
   });
 
   it('positions square/diamond shapes via a per-tick transform, not cx/cy', async () => {
@@ -517,7 +517,7 @@ describe('node typing (J1)', () => {
   });
 
   it('existing graph usage unaffected: no type/nodeTypes set renders identical circles and unwrapped labels', async () => {
-    const el = (await fixture(html`<lyra-graph></lyra-graph>`)) as LyraGraph;
+    const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
     el.nodes = nodes;
     el.links = links;
     await el.updateComplete;
@@ -538,7 +538,7 @@ describe('node typing (J1)', () => {
     // template diffing. applyInteractions()'s node/link/label DOM cache must
     // be refreshed in that case too, or it keeps pointing at the stale,
     // now-detached element -- see this file's guard in applyInteractions().
-    const el = (await fixture(html`<lyra-graph></lyra-graph>`)) as LyraGraph;
+    const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
     el.nodeTypes = [{ id: 'concept', label: 'Concept' }]; // no shape -> defaults to circle
     el.nodes = [{ id: 'a', label: 'A', type: 'concept' }];
     el.links = [];
@@ -569,7 +569,7 @@ describe('drawn edge labels (J2)', () => {
   const labeledLinks = [{ source: 'a', target: 'b', label: 'cites' }];
 
   async function mountLabeled(showEdgeLabels = true): Promise<LyraGraph> {
-    const el = (await fixture(html`<lyra-graph></lyra-graph>`)) as LyraGraph;
+    const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
     el.showEdgeLabels = showEdgeLabels;
     el.nodes = nodes;
     el.links = labeledLinks;
@@ -595,7 +595,7 @@ describe('drawn edge labels (J2)', () => {
   });
 
   it('does not draw a link-label for a link with no label text', async () => {
-    const el = (await fixture(html`<lyra-graph show-edge-labels></lyra-graph>`)) as LyraGraph;
+    const el = (await fixture(html`<lr-graph show-edge-labels></lr-graph>`)) as LyraGraph;
     el.nodes = nodes;
     el.links = links; // no .label set
     await el.updateComplete;
@@ -619,7 +619,7 @@ describe('drawn edge labels (J2)', () => {
     // edgeLabelMinZoom set above the initial identity transform's k=1 -- the gate must already be
     // applied by the time the graph first paints, not only reactively after the user's first
     // pan/zoom gesture (see updateEdgeLabelZoomGate()'s own doc comment).
-    const el = (await fixture(html`<lyra-graph></lyra-graph>`)) as LyraGraph;
+    const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
     el.showEdgeLabels = true;
     el.edgeLabelMinZoom = 2;
     el.nodes = nodes;
@@ -647,7 +647,7 @@ describe('drawn edge labels (J2)', () => {
   });
 
   it('existing graph usage unaffected: showEdgeLabels unset draws nothing and every existing link/node assertion still holds', async () => {
-    const el = (await fixture(html`<lyra-graph></lyra-graph>`)) as LyraGraph;
+    const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
     el.nodes = nodes;
     el.links = links;
     await el.updateComplete;
@@ -662,7 +662,7 @@ describe('drawn edge labels (J2)', () => {
     // The link must remain a direct child of the outer zoomed <g transform=""> (the only <g> in
     // this part of the template that carries a transform attribute) -- not nested inside a
     // per-link <g> introduced for the (here, unused) drawn-edge-label <text> sibling.
-    const el = (await fixture(html`<lyra-graph></lyra-graph>`)) as LyraGraph;
+    const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
     el.nodes = nodes;
     el.links = links;
     await el.updateComplete;
@@ -701,8 +701,8 @@ describe('drawn edge labels (J2)', () => {
 });
 
 describe('expand affordance (J3)', () => {
-  it('dblclick on a node emits exactly one lyra-node-expand after two lyra-node-click events, and stops propagation', async () => {
-    const el = (await fixture(html`<lyra-graph></lyra-graph>`)) as LyraGraph;
+  it('dblclick on a node emits exactly one lr-node-expand after two lr-node-click events, and stops propagation', async () => {
+    const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
     el.nodes = nodes;
     el.links = links;
     await el.updateComplete;
@@ -713,8 +713,8 @@ describe('expand affordance (J3)', () => {
     let clickCount = 0;
     let expandDetail: { id: string } | undefined;
     let expandCount = 0;
-    el.addEventListener('lyra-node-click', () => clickCount++);
-    el.addEventListener('lyra-node-expand', (e) => {
+    el.addEventListener('lr-node-click', () => clickCount++);
+    el.addEventListener('lr-node-expand', (e) => {
       expandCount++;
       expandDetail = (e as CustomEvent).detail;
     });
@@ -727,7 +727,7 @@ describe('expand affordance (J3)', () => {
   });
 
   it('background dblclick (not on a node) still reaches the svg for d3-zoom default zoom-in (event not stopped)', async () => {
-    const el = (await fixture(html`<lyra-graph></lyra-graph>`)) as LyraGraph;
+    const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
     el.nodes = nodes;
     el.links = links;
     await el.updateComplete;
@@ -751,8 +751,8 @@ describe('expand affordance (J3)', () => {
     expect(g.getAttribute('transform')).to.match(/scale\(/);
   });
 
-  it('double-Enter within 500ms on the same focused node emits lyra-node-expand; outside the window it does not', async () => {
-    const el = (await fixture(html`<lyra-graph></lyra-graph>`)) as LyraGraph;
+  it('double-Enter within 500ms on the same focused node emits lr-node-expand; outside the window it does not', async () => {
+    const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
     el.nodes = nodes;
     el.links = links;
     await el.updateComplete;
@@ -761,7 +761,7 @@ describe('expand affordance (J3)', () => {
     });
     const nodeEl = el.shadowRoot!.querySelector('[part="node"]') as SVGElement;
     let expandCount = 0;
-    el.addEventListener('lyra-node-expand', () => expandCount++);
+    el.addEventListener('lr-node-expand', () => expandCount++);
     nodeEl.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
     nodeEl.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
     expect(expandCount).to.equal(1);
@@ -773,7 +773,7 @@ describe('expand affordance (J3)', () => {
   });
 
   it('renders a "+" expand-indicator only for nodes with expandable: true, tracked per tick', async () => {
-    const el = (await fixture(html`<lyra-graph></lyra-graph>`)) as LyraGraph;
+    const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
     el.nodes = [
       { id: 'a', label: 'A', expandable: true },
       { id: 'b', label: 'B' },
@@ -791,7 +791,7 @@ describe('expand affordance (J3)', () => {
   });
 
   it('wraps expandable node spoken text via graphExpandableItem, composing with the J1 typed wrap', async () => {
-    const el = (await fixture(html`<lyra-graph></lyra-graph>`)) as LyraGraph;
+    const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
     el.nodeTypes = [{ id: 'doc', label: 'Document' }];
     el.nodes = [{ id: 'a', label: 'A', type: 'doc', expandable: true }];
     el.links = [];
@@ -804,7 +804,7 @@ describe('expand affordance (J3)', () => {
   });
 
   it('a new node linked to an already-settled node spawns near that neighbor instead of a random position', async () => {
-    const el = (await fixture(html`<lyra-graph seed="7" link-distance="100"></lyra-graph>`)) as LyraGraph;
+    const el = (await fixture(html`<lr-graph seed="7" link-distance="100"></lr-graph>`)) as LyraGraph;
     el.nodes = [{ id: 'a', label: 'A' }];
     el.links = [];
     await el.updateComplete;
@@ -834,7 +834,7 @@ describe('expand affordance (J3)', () => {
   });
 
   it('is accessible with an expandable node', async () => {
-    const el = (await fixture(html`<lyra-graph></lyra-graph>`)) as LyraGraph;
+    const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
     el.nodes = [{ id: 'a', label: 'A', expandable: true }];
     el.links = [];
     await el.updateComplete;
@@ -844,8 +844,8 @@ describe('expand affordance (J3)', () => {
     await expect(el).to.be.accessible();
   });
 
-  it('existing graph usage unaffected: no expandable set never emits lyra-node-expand and renders no indicator', async () => {
-    const el = (await fixture(html`<lyra-graph></lyra-graph>`)) as LyraGraph;
+  it('existing graph usage unaffected: no expandable set never emits lr-node-expand and renders no indicator', async () => {
+    const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
     el.nodes = nodes;
     el.links = links;
     await el.updateComplete;
@@ -854,7 +854,7 @@ describe('expand affordance (J3)', () => {
     });
     expect(el.shadowRoot!.querySelectorAll('[part="expand-indicator"]').length).to.equal(0);
     let fired = false;
-    el.addEventListener('lyra-node-expand', () => (fired = true));
+    el.addEventListener('lr-node-expand', () => (fired = true));
     (el.shadowRoot!.querySelector('[part="node"]') as SVGElement).dispatchEvent(
       new MouseEvent('dblclick', { bubbles: true }),
     );
@@ -865,7 +865,7 @@ describe('expand affordance (J3)', () => {
 describe('focus & fit (J4 camera)', () => {
   async function mountWide(): Promise<LyraGraph> {
     const el = (await fixture(
-      html`<lyra-graph width="800" height="600" min-zoom="0.1" max-zoom="8"></lyra-graph>`,
+      html`<lr-graph width="800" height="600" min-zoom="0.1" max-zoom="8"></lr-graph>`,
     )) as LyraGraph;
     el.nodes = [
       { id: 'a', label: 'A' },
@@ -991,7 +991,7 @@ describe('focus & fit (J4 camera)', () => {
 
   it('focusId declaratively centers once when it first resolves, and does not fight later panning', async () => {
     const el = (await fixture(
-      html`<lyra-graph width="800" height="600" focus-id="b"></lyra-graph>`,
+      html`<lr-graph width="800" height="600" focus-id="b"></lr-graph>`,
     )) as LyraGraph;
     el.nodes = [
       { id: 'a', label: 'A' },
@@ -1016,7 +1016,7 @@ describe('focus & fit (J4 camera)', () => {
   });
 
   it('is accessible with focusId set', async () => {
-    const el = (await fixture(html`<lyra-graph focus-id="a"></lyra-graph>`)) as LyraGraph;
+    const el = (await fixture(html`<lr-graph focus-id="a"></lr-graph>`)) as LyraGraph;
     el.nodes = [{ id: 'a', label: 'A' }];
     el.links = [];
     await el.updateComplete;
@@ -1035,7 +1035,7 @@ describe('focus & fit (J4 camera)', () => {
 
 describe('selection (J4)', () => {
   async function mountSelectable(mode: 'single' | 'multiple'): Promise<LyraGraph> {
-    const el = (await fixture(html`<lyra-graph></lyra-graph>`)) as LyraGraph;
+    const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
     el.selectionMode = mode;
     el.nodes = nodes;
     el.links = links;
@@ -1046,8 +1046,8 @@ describe('selection (J4)', () => {
     return el;
   }
 
-  it('defaults selectionMode to none: no aria-pressed/data-selected, no lyra-selection-change on click', async () => {
-    const el = (await fixture(html`<lyra-graph></lyra-graph>`)) as LyraGraph;
+  it('defaults selectionMode to none: no aria-pressed/data-selected, no lr-selection-change on click', async () => {
+    const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
     el.nodes = nodes;
     el.links = links;
     await el.updateComplete;
@@ -1057,7 +1057,7 @@ describe('selection (J4)', () => {
     const nodeEl = el.shadowRoot!.querySelector('[part="node"]') as SVGElement;
     expect(nodeEl.hasAttribute('aria-pressed')).to.be.false;
     let fired = false;
-    el.addEventListener('lyra-selection-change', () => (fired = true));
+    el.addEventListener('lr-selection-change', () => (fired = true));
     nodeEl.dispatchEvent(new MouseEvent('click', { bubbles: true }));
     expect(fired).to.be.false;
   });
@@ -1066,7 +1066,7 @@ describe('selection (J4)', () => {
     const el = await mountSelectable('single');
     const nodeEl = el.shadowRoot!.querySelector('[part="node"]') as SVGElement;
     let detail: { nodeIds: string[]; linkIds: string[] } | undefined;
-    el.addEventListener('lyra-selection-change', (e) => (detail = (e as CustomEvent).detail));
+    el.addEventListener('lr-selection-change', (e) => (detail = (e as CustomEvent).detail));
     nodeEl.dispatchEvent(new MouseEvent('click', { bubbles: true }));
     expect(detail).to.deep.equal({ nodeIds: ['a'], linkIds: [] });
 
@@ -1080,7 +1080,7 @@ describe('selection (J4)', () => {
     const el = await mountSelectable('multiple');
     const [nodeA, nodeB] = [...el.shadowRoot!.querySelectorAll('[part="node"]')] as SVGElement[];
     let detail: { nodeIds: string[]; linkIds: string[] } | undefined;
-    el.addEventListener('lyra-selection-change', (e) => (detail = (e as CustomEvent).detail));
+    el.addEventListener('lr-selection-change', (e) => (detail = (e as CustomEvent).detail));
 
     nodeA!.dispatchEvent(new MouseEvent('click', { bubbles: true }));
     expect(detail).to.deep.equal({ nodeIds: ['a'], linkIds: [] });
@@ -1100,7 +1100,7 @@ describe('selection (J4)', () => {
     const el = await mountSelectable('multiple');
     const nodeEl = el.shadowRoot!.querySelector('[part="node"]') as SVGElement;
     let detail: { nodeIds: string[]; linkIds: string[] } | undefined;
-    el.addEventListener('lyra-selection-change', (e) => (detail = (e as CustomEvent).detail));
+    el.addEventListener('lr-selection-change', (e) => (detail = (e as CustomEvent).detail));
     nodeEl.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, ctrlKey: true }));
     expect(detail).to.deep.equal({ nodeIds: ['a'], linkIds: [] });
   });
@@ -1110,7 +1110,7 @@ describe('selection (J4)', () => {
     el.selectedNodeIds = ['a'];
     await el.updateComplete;
     let detail: { nodeIds: string[]; linkIds: string[] } | undefined;
-    el.addEventListener('lyra-selection-change', (e) => (detail = (e as CustomEvent).detail));
+    el.addEventListener('lr-selection-change', (e) => (detail = (e as CustomEvent).detail));
     const svgEl = el.shadowRoot!.querySelector('svg') as SVGSVGElement;
     svgEl.dispatchEvent(new MouseEvent('click', { bubbles: true }));
     expect(detail).to.deep.equal({ nodeIds: [], linkIds: [] });
@@ -1147,11 +1147,11 @@ describe('selection (J4)', () => {
     await expect(el).to.be.accessible();
   });
 
-  it('existing graph usage unaffected: lyra-node-click/lyra-link-click still fire unchanged alongside selection', async () => {
+  it('existing graph usage unaffected: lr-node-click/lr-link-click still fire unchanged alongside selection', async () => {
     const el = await mountSelectable('single');
     const nodeEl = el.shadowRoot!.querySelector('[part="node"]') as SVGElement;
     let clickDetail: { id: string; x: number; y: number } | undefined;
-    el.addEventListener('lyra-node-click', (e) => (clickDetail = (e as CustomEvent).detail));
+    el.addEventListener('lr-node-click', (e) => (clickDetail = (e as CustomEvent).detail));
     nodeEl.dispatchEvent(new MouseEvent('click', { bubbles: true }));
     expect(clickDetail?.id).to.equal('a');
     expect(clickDetail?.x).to.be.a('number');
@@ -1171,7 +1171,7 @@ describe('type filtering (J5)', () => {
   ];
 
   async function mountFiltered(hiddenTypes: string[] = []): Promise<LyraGraph> {
-    const el = (await fixture(html`<lyra-graph></lyra-graph>`)) as LyraGraph;
+    const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
     el.hiddenTypes = hiddenTypes;
     el.nodes = typedFilterNodes;
     el.links = typedFilterLinks;
@@ -1278,7 +1278,7 @@ describe('type filtering (J5)', () => {
   });
 
   it('hides the persistent focus-halo when the focused node\'s type is hidden, and restores it when shown again', async () => {
-    const el = (await fixture(html`<lyra-graph focus-id="a"></lyra-graph>`)) as LyraGraph;
+    const el = (await fixture(html`<lr-graph focus-id="a"></lr-graph>`)) as LyraGraph;
     el.nodes = typedFilterNodes;
     el.links = typedFilterLinks;
     await el.updateComplete;
@@ -1328,7 +1328,7 @@ describe('type filtering (J5)', () => {
   });
 
   it('existing graph usage unaffected: no hiddenTypes set renders every node/link exactly as before', async () => {
-    const el = (await fixture(html`<lyra-graph></lyra-graph>`)) as LyraGraph;
+    const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
     el.nodes = nodes;
     el.links = links;
     await el.updateComplete;
@@ -1348,7 +1348,7 @@ describe('community hulls (J6)', () => {
   const communities = [{ id: 'team-1', label: 'Team One', memberIds: [] }];
 
   async function mountHulls(): Promise<LyraGraph> {
-    const el = (await fixture(html`<lyra-graph></lyra-graph>`)) as LyraGraph;
+    const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
     el.communities = communities;
     el.nodes = communityNodes;
     el.links = [];
@@ -1360,7 +1360,7 @@ describe('community hulls (J6)', () => {
   }
 
   it('renders no hull when communities is empty', async () => {
-    const el = (await fixture(html`<lyra-graph></lyra-graph>`)) as LyraGraph;
+    const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
     el.nodes = nodes;
     el.links = links;
     await el.updateComplete;
@@ -1378,7 +1378,7 @@ describe('community hulls (J6)', () => {
   });
 
   it('renders no hull for a community whose members are all hidden', async () => {
-    const el = (await fixture(html`<lyra-graph></lyra-graph>`)) as LyraGraph;
+    const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
     el.nodeTypes = [{ id: 'x', label: 'X' }];
     el.hiddenTypes = ['x'];
     el.communities = [{ id: 'team-1', label: 'Team', memberIds: ['a', 'b'] }];
@@ -1395,7 +1395,7 @@ describe('community hulls (J6)', () => {
   });
 
   it('a 1-member community draws a degenerate (zero-length) hull path', async () => {
-    const el = (await fixture(html`<lyra-graph></lyra-graph>`)) as LyraGraph;
+    const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
     el.communities = [{ id: 'solo', memberIds: ['a'] }];
     el.nodes = [{ id: 'a', label: 'A' }];
     el.links = [];
@@ -1416,11 +1416,11 @@ describe('community hulls (J6)', () => {
     expect(hullIndex).to.be.lessThan(nodeIndex);
   });
 
-  it('click and Enter/Space on a hull emit lyra-community-click', async () => {
+  it('click and Enter/Space on a hull emit lr-community-click', async () => {
     const el = await mountHulls();
     const hull = el.shadowRoot!.querySelector('[part="hull"]') as SVGPathElement;
     let detail: { id: string; x: number; y: number } | undefined;
-    el.addEventListener('lyra-community-click', (e) => (detail = (e as CustomEvent).detail));
+    el.addEventListener('lr-community-click', (e) => (detail = (e as CustomEvent).detail));
     hull.dispatchEvent(new MouseEvent('click', { bubbles: true }));
     expect(detail).to.deep.equal({ id: 'team-1' });
     detail = undefined;
@@ -1454,7 +1454,7 @@ describe('community hulls (J6)', () => {
   });
 
   it('existing graph usage unaffected: no communities set renders no hulls and an unchanged roving ring', async () => {
-    const el = (await fixture(html`<lyra-graph></lyra-graph>`)) as LyraGraph;
+    const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
     el.nodes = nodes;
     el.links = links;
     await el.updateComplete;
@@ -1498,12 +1498,12 @@ describe('layered layout (J7)', () => {
   ];
 
   it('defaults layout to force (unchanged today behavior)', async () => {
-    const el = (await fixture(html`<lyra-graph></lyra-graph>`)) as LyraGraph;
+    const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
     expect(el.layout).to.equal('force');
   });
 
   it('layout="layered" positions nodes deterministically, top-to-bottom by longest path, without a settle animation', async () => {
-    const el = (await fixture(html`<lyra-graph layout="layered" width="800" height="600"></lyra-graph>`)) as LyraGraph;
+    const el = (await fixture(html`<lr-graph layout="layered" width="800" height="600"></lr-graph>`)) as LyraGraph;
     el.nodes = [
       { id: 'a', label: 'A' },
       { id: 'b', label: 'B' },
@@ -1522,7 +1522,7 @@ describe('layered layout (J7)', () => {
   });
 
   it('node drag is disabled in layered mode (no d3-drag bound)', async () => {
-    const el = (await fixture(html`<lyra-graph layout="layered"></lyra-graph>`)) as LyraGraph;
+    const el = (await fixture(html`<lr-graph layout="layered"></lr-graph>`)) as LyraGraph;
     el.nodes = [{ id: 'a', label: 'A' }];
     el.links = [];
     await el.updateComplete;
@@ -1545,7 +1545,7 @@ describe('layered layout (J7)', () => {
 
   it('linkDistance retunes the layer gap in layered mode', async () => {
     const tight = (await fixture(
-      html`<lyra-graph layout="layered" link-distance="20" width="800" height="600"></lyra-graph>`,
+      html`<lr-graph layout="layered" link-distance="20" width="800" height="600"></lr-graph>`,
     )) as LyraGraph;
     tight.nodes = [
       { id: 'a', label: 'A' },
@@ -1569,7 +1569,7 @@ describe('layered layout (J7)', () => {
   });
 
   it('keyboard roving/announcements are identical in layered mode', async () => {
-    const el = (await fixture(html`<lyra-graph layout="layered"></lyra-graph>`)) as LyraGraph;
+    const el = (await fixture(html`<lr-graph layout="layered"></lr-graph>`)) as LyraGraph;
     el.nodes = [
       { id: 'a', label: 'A' },
       { id: 'b', label: 'B' },
@@ -1585,8 +1585,8 @@ describe('layered layout (J7)', () => {
     expect(items()[1]!.getAttribute('tabindex')).to.equal('0');
   });
 
-  it('both lyra-graph and the shared util produce the same node ordering (no forked algorithm)', async () => {
-    const el = (await fixture(html`<lyra-graph layout="layered" width="800" height="600"></lyra-graph>`)) as LyraGraph;
+  it('both lr-graph and the shared util produce the same node ordering (no forked algorithm)', async () => {
+    const el = (await fixture(html`<lr-graph layout="layered" width="800" height="600"></lr-graph>`)) as LyraGraph;
     el.nodes = [
       { id: 'a', label: 'A' },
       { id: 'b', label: 'B' },
@@ -1611,7 +1611,7 @@ describe('layered layout (J7)', () => {
   });
 
   it('is accessible in layered mode', async () => {
-    const el = (await fixture(html`<lyra-graph layout="layered"></lyra-graph>`)) as LyraGraph;
+    const el = (await fixture(html`<lr-graph layout="layered"></lr-graph>`)) as LyraGraph;
     el.nodes = [{ id: 'a', label: 'A' }];
     el.links = [];
     await el.updateComplete;
@@ -1622,7 +1622,7 @@ describe('layered layout (J7)', () => {
   });
 
   it('hiddenTypes filtering announces graphNodesHidden in layered mode too, same as force mode', async () => {
-    const el = (await fixture(html`<lyra-graph layout="layered"></lyra-graph>`)) as LyraGraph;
+    const el = (await fixture(html`<lr-graph layout="layered"></lr-graph>`)) as LyraGraph;
     el.hiddenTypes = ['person'];
     el.nodes = [
       { id: 'a', label: 'A', type: 'person' },
@@ -1637,7 +1637,7 @@ describe('layered layout (J7)', () => {
   });
 
   it('existing graph usage unaffected: layout unset uses the untouched force-directed path', async () => {
-    const el = (await fixture(html`<lyra-graph></lyra-graph>`)) as LyraGraph;
+    const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
     el.nodes = nodes;
     el.links = links;
     await el.updateComplete;
@@ -1651,7 +1651,7 @@ describe('layered layout (J7)', () => {
 describe('canvas renderer — static draw', () => {
   async function mountCanvas(): Promise<LyraGraph> {
     const el = (await fixture(
-      html`<lyra-graph renderer="canvas" width="400" height="300" style="width:400px;height:300px"></lyra-graph>`,
+      html`<lr-graph renderer="canvas" width="400" height="300" style="width:400px;height:300px"></lr-graph>`,
     )) as LyraGraph;
     el.nodes = nodes;
     el.links = links;
@@ -1662,7 +1662,7 @@ describe('canvas renderer — static draw', () => {
   }
 
   it('defaults renderer to svg', async () => {
-    const el = (await fixture(html`<lyra-graph></lyra-graph>`)) as LyraGraph;
+    const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
     expect(el.renderer).to.equal('svg');
     expect(el.shadowRoot!.querySelector('canvas')).to.not.exist;
   });
@@ -1684,7 +1684,7 @@ describe('canvas renderer — static draw', () => {
 
   it('every event/method/prop still works identically in canvas mode (selectionMode, hiddenTypes, showEdgeLabels)', async () => {
     const el = (await fixture(
-      html`<lyra-graph renderer="canvas" show-edge-labels selection-mode="single" width="400" height="300" style="width:400px;height:300px"></lyra-graph>`,
+      html`<lr-graph renderer="canvas" show-edge-labels selection-mode="single" width="400" height="300" style="width:400px;height:300px"></lr-graph>`,
     )) as LyraGraph;
     el.nodes = nodes;
     el.links = [{ source: 'a', target: 'b', label: 'cites' }];
@@ -1711,7 +1711,7 @@ describe('canvas renderer — static draw', () => {
   });
 
   it('existing graph usage unaffected: renderer unset renders the untouched svg path', async () => {
-    const el = (await fixture(html`<lyra-graph></lyra-graph>`)) as LyraGraph;
+    const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
     el.nodes = nodes;
     el.links = links;
     await el.updateComplete;
@@ -1723,7 +1723,7 @@ describe('canvas renderer — static draw', () => {
 
   it('feeds dimmedNodeIds/dimmedLinkIds into the drawn canvas scene', async () => {
     const el = (await fixture(
-      html`<lyra-graph renderer="canvas" width="400" height="300" style="width:400px;height:300px"></lyra-graph>`,
+      html`<lr-graph renderer="canvas" width="400" height="300" style="width:400px;height:300px"></lr-graph>`,
     )) as LyraGraph;
     el.nodes = nodes;
     el.links = links;
@@ -1744,7 +1744,7 @@ describe('canvas renderer — static draw', () => {
 describe('canvas renderer — interaction and a11y', () => {
   async function mountCanvas(): Promise<LyraGraph> {
     const el = (await fixture(
-      html`<lyra-graph renderer="canvas" width="400" height="300" style="width:400px;height:300px"></lyra-graph>`,
+      html`<lr-graph renderer="canvas" width="400" height="300" style="width:400px;height:300px"></lr-graph>`,
     )) as LyraGraph;
     el.nodes = nodes;
     el.links = links;
@@ -1754,7 +1754,7 @@ describe('canvas renderer — interaction and a11y', () => {
     return el;
   }
 
-  it('clicking a node (via pointer hit-test) emits lyra-node-click, same detail shape as svg mode', async () => {
+  it('clicking a node (via pointer hit-test) emits lr-node-click, same detail shape as svg mode', async () => {
     const el = await mountCanvas();
     const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
     const target = el.simNodes[0]!;
@@ -1762,7 +1762,7 @@ describe('canvas renderer — interaction and a11y', () => {
     const clientX = rect.left + target.x!;
     const clientY = rect.top + target.y!;
     let detail: { id: string; x: number; y: number } | undefined;
-    el.addEventListener('lyra-node-click', (e) => (detail = (e as CustomEvent).detail));
+    el.addEventListener('lr-node-click', (e) => (detail = (e as CustomEvent).detail));
     canvas.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, clientX, clientY, pointerId: 1 }));
     canvas.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, clientX, clientY, pointerId: 1 }));
     expect(detail?.id).to.equal(target.id);
@@ -1772,7 +1772,7 @@ describe('canvas renderer — interaction and a11y', () => {
 
   it('clicking empty canvas space with no hit clears the selection when selectionMode is set', async () => {
     const el = (await fixture(
-      html`<lyra-graph renderer="canvas" selection-mode="single" width="400" height="300" style="width:400px;height:300px"></lyra-graph>`,
+      html`<lr-graph renderer="canvas" selection-mode="single" width="400" height="300" style="width:400px;height:300px"></lr-graph>`,
     )) as LyraGraph;
     el.nodes = nodes;
     el.links = links;
@@ -1783,7 +1783,7 @@ describe('canvas renderer — interaction and a11y', () => {
     const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
     const rect = canvas.getBoundingClientRect();
     let detail: { nodeIds: string[]; linkIds: string[] } | undefined;
-    el.addEventListener('lyra-selection-change', (e) => (detail = (e as CustomEvent).detail));
+    el.addEventListener('lr-selection-change', (e) => (detail = (e as CustomEvent).detail));
     canvas.dispatchEvent(
       new PointerEvent('pointerdown', { bubbles: true, clientX: rect.left + 399, clientY: rect.top + 299, pointerId: 2 }),
     );
@@ -1793,13 +1793,13 @@ describe('canvas renderer — interaction and a11y', () => {
     expect(detail).to.deep.equal({ nodeIds: [], linkIds: [] });
   });
 
-  it('dblclick on a node emits lyra-node-expand in canvas mode too', async () => {
+  it('dblclick on a node emits lr-node-expand in canvas mode too', async () => {
     const el = await mountCanvas();
     const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
     const target = el.simNodes[0]!;
     const rect = canvas.getBoundingClientRect();
     let detail: { id: string } | undefined;
-    el.addEventListener('lyra-node-expand', (e) => (detail = (e as CustomEvent).detail));
+    el.addEventListener('lr-node-expand', (e) => (detail = (e as CustomEvent).detail));
     canvas.dispatchEvent(
       new MouseEvent('dblclick', { bubbles: true, clientX: rect.left + target.x!, clientY: rect.top + target.y! }),
     );
@@ -1812,7 +1812,7 @@ describe('canvas renderer — interaction and a11y', () => {
   // would never resolve a hover at all.
   async function mountSettledCanvas(): Promise<LyraGraph> {
     const el = (await fixture(
-      html`<lyra-graph renderer="canvas" seed="7" width="400" height="300" style="width:400px;height:300px"></lyra-graph>`,
+      html`<lr-graph renderer="canvas" seed="7" width="400" height="300" style="width:400px;height:300px"></lr-graph>`,
     )) as LyraGraph;
     el.nodes = nodes;
     el.links = links;
@@ -1853,10 +1853,10 @@ describe('canvas renderer — interaction and a11y', () => {
   it('positions the hover tooltip from the physical left edge so it tracks the cursor under dir="rtl" (regression)', async () => {
     const container = (await fixture(html`
       <div dir="rtl">
-        <lyra-graph renderer="canvas" seed="7" width="400" height="300" style="width:400px;height:300px"></lyra-graph>
+        <lr-graph renderer="canvas" seed="7" width="400" height="300" style="width:400px;height:300px"></lr-graph>
       </div>
     `)) as HTMLElement;
-    const el = container.querySelector('lyra-graph') as LyraGraph;
+    const el = container.querySelector('lr-graph') as LyraGraph;
     el.nodes = nodes;
     el.links = links;
     await el.updateComplete;
@@ -1898,7 +1898,7 @@ describe('canvas renderer — interaction and a11y', () => {
     const el = await mountCanvas();
     const items = [...el.shadowRoot!.querySelectorAll('[part="cursor-item"]')] as HTMLButtonElement[];
     let detail: { id: string; x: number; y: number } | undefined;
-    el.addEventListener('lyra-node-click', (e) => (detail = (e as CustomEvent).detail));
+    el.addEventListener('lr-node-click', (e) => (detail = (e as CustomEvent).detail));
     items[0]!.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
     expect(detail?.id).to.equal(el.simNodes[0]!.id);
     expect(detail?.x).to.be.a('number');
@@ -1907,7 +1907,7 @@ describe('canvas renderer — interaction and a11y', () => {
 
   it('is accessible with interactions and a selection applied in canvas mode', async () => {
     const el = (await fixture(
-      html`<lyra-graph renderer="canvas" selection-mode="multiple" width="400" height="300" style="width:400px;height:300px"></lyra-graph>`,
+      html`<lr-graph renderer="canvas" selection-mode="multiple" width="400" height="300" style="width:400px;height:300px"></lr-graph>`,
     )) as LyraGraph;
     el.nodes = nodes;
     el.links = links;
@@ -1926,14 +1926,14 @@ describe('canvas renderer — interaction and a11y', () => {
     // resolved the module-level lazy d3 loader for earlier tests -- a fresh element's loadD3()
     // .then() callback could plausibly settle before a later assertion runs, making "still loading
     // right after mount" an unreliable thing to assert on here specifically.
-    const el = document.createElement('lyra-graph') as LyraGraph;
+    const el = document.createElement('lr-graph') as LyraGraph;
     el.renderer = 'canvas';
     expect((el as unknown as { loading: boolean }).loading).to.be.true;
   });
 });
 
 it('does not let a GraphNode.color value inject extra CSS declarations via the node style attribute', async () => {
-  const el = (await fixture(html`<lyra-graph></lyra-graph>`)) as LyraGraph;
+  const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
   el.nodes = [
     { id: 'a', label: 'A', color: 'red; position: fixed; top: 0px' },
     { id: 'b', label: 'B' },
@@ -1953,7 +1953,7 @@ it('does not let a GraphNode.color value inject extra CSS declarations via the n
 });
 
 it('wires up d3-drag on each node (draggable, per the Interfaces spec)', async () => {
-  const el = (await fixture(html`<lyra-graph></lyra-graph>`)) as LyraGraph;
+  const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
   el.nodes = nodes;
   el.links = links;
   await el.updateComplete;
@@ -1965,7 +1965,7 @@ it('wires up d3-drag on each node (draggable, per the Interfaces spec)', async (
 });
 
 it('wires up d3-zoom pan/zoom on the svg (per the Interfaces spec)', async () => {
-  const el = (await fixture(html`<lyra-graph></lyra-graph>`)) as LyraGraph;
+  const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
   el.nodes = nodes;
   el.links = links;
   await el.updateComplete;
@@ -1985,7 +1985,7 @@ it('wires up d3-zoom pan/zoom on the svg (per the Interfaces spec)', async () =>
 });
 
 it('bounds zoom to a sane scaleExtent instead of zooming in unbounded', async () => {
-  const el = (await fixture(html`<lyra-graph></lyra-graph>`)) as LyraGraph;
+  const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
   el.nodes = nodes;
   el.links = links;
   await el.updateComplete;
@@ -2007,7 +2007,7 @@ it('bounds zoom to a sane scaleExtent instead of zooming in unbounded', async ()
 });
 
 it('retunes the live zoom scaleExtent when minZoom/maxZoom change after the svg has already been bound', async () => {
-  const el = (await fixture(html`<lyra-graph></lyra-graph>`)) as LyraGraph;
+  const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
   el.nodes = nodes;
   el.links = links;
   await el.updateComplete;
@@ -2036,7 +2036,7 @@ it('retunes the live zoom scaleExtent when minZoom/maxZoom change after the svg 
 });
 
 it('updates the charge/link forces in place when chargeStrength/linkDistance change after mount', async () => {
-  const el = (await fixture(html`<lyra-graph></lyra-graph>`)) as LyraGraph;
+  const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
   el.nodes = nodes;
   el.links = links;
   await el.updateComplete;
@@ -2055,7 +2055,7 @@ it('updates the charge/link forces in place when chargeStrength/linkDistance cha
 });
 
 it('still retunes chargeStrength/linkDistance when width/height change in the same update batch', async () => {
-  const el = (await fixture(html`<lyra-graph></lyra-graph>`)) as LyraGraph;
+  const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
   el.nodes = nodes;
   el.links = links;
   await el.updateComplete;
@@ -2081,7 +2081,7 @@ it('recenters the simulation and bumps alpha when width/height change post-mount
   // test) so that wait isn't cut off by the runner before it gets the
   // chance to finish.
   this.timeout(20_000);
-  const el = (await fixture(html`<lyra-graph></lyra-graph>`)) as LyraGraph;
+  const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
   el.nodes = nodes;
   el.links = links;
   await el.updateComplete;
@@ -2115,7 +2115,7 @@ it('recenters the simulation and bumps alpha when width/height change post-mount
 // distance()/scaleExtent() and the SVG viewBox, poisoning the simulation and rendered geometry
 // with NaN instead of being clamped like every other numeric property in this library.
 it('normalizes non-finite/non-positive width or height so the viewBox and force-center stay finite', async () => {
-  const el = (await fixture(html`<lyra-graph width="NaN" height="-100"></lyra-graph>`)) as LyraGraph;
+  const el = (await fixture(html`<lr-graph width="NaN" height="-100"></lr-graph>`)) as LyraGraph;
   el.nodes = nodes;
   el.links = links;
   await el.updateComplete;
@@ -2133,7 +2133,7 @@ it('normalizes non-finite/non-positive width or height so the viewBox and force-
 });
 
 it('normalizes non-finite/negative min-zoom or max-zoom so the live scaleExtent and zoomed scale stay finite', async () => {
-  const el = (await fixture(html`<lyra-graph></lyra-graph>`)) as LyraGraph;
+  const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
   el.nodes = nodes;
   el.links = links;
   await el.updateComplete;
@@ -2170,7 +2170,7 @@ it('normalizes non-finite/negative min-zoom or max-zoom so the live scaleExtent 
 });
 
 it('normalizes non-finite charge-strength and non-finite/negative link-distance so the live d3-force objects never receive NaN', async () => {
-  const el = (await fixture(html`<lyra-graph></lyra-graph>`)) as LyraGraph;
+  const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
   el.nodes = nodes;
   el.links = links;
   await el.updateComplete;
@@ -2195,7 +2195,7 @@ it('normalizes non-finite charge-strength and non-finite/negative link-distance 
 });
 
 it('normalizes a non-finite seed to a finite integer instead of poisoning the deterministic spawn hash', async () => {
-  const el = (await fixture(html`<lyra-graph></lyra-graph>`)) as LyraGraph;
+  const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
   el.seed = Number.NaN;
   el.nodes = nodes;
   el.links = links;
@@ -2226,13 +2226,13 @@ it('normalizes a non-finite seed to a finite integer instead of poisoning the de
 });
 
 it('leaves seed undefined (unseeded/random) alone -- only a defined-but-non-finite seed is normalized', async () => {
-  const el = (await fixture(html`<lyra-graph></lyra-graph>`)) as LyraGraph;
+  const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
   expect(el.seed).to.be.undefined;
   expect((el as any).safeSeed).to.be.undefined;
 });
 
 it('normalizes a non-finite edge-label-min-zoom so the live edge-label visibility gate keeps working instead of never hiding', async () => {
-  const el = (await fixture(html`<lyra-graph show-edge-labels></lyra-graph>`)) as LyraGraph;
+  const el = (await fixture(html`<lr-graph show-edge-labels></lr-graph>`)) as LyraGraph;
   el.nodes = nodes;
   el.links = [{ source: 'a', target: 'b', label: 'A to B' }];
   await el.updateComplete;
@@ -2257,7 +2257,7 @@ it('normalizes a non-finite edge-label-min-zoom so the live edge-label visibilit
 });
 
 it('does not reassign simNodes/simLinks references on tick, only positions (avoids a full Lit re-render every animation frame)', async () => {
-  const el = (await fixture(html`<lyra-graph></lyra-graph>`)) as LyraGraph;
+  const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
   el.nodes = nodes;
   el.links = links;
   await el.updateComplete;
@@ -2295,7 +2295,7 @@ it('skips the settle animation under prefers-reduced-motion (jumps straight to a
   })) as typeof window.matchMedia;
 
   try {
-    const el = (await fixture(html`<lyra-graph></lyra-graph>`)) as LyraGraph;
+    const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
     el.nodes = nodes;
     el.links = links;
     await el.updateComplete;
@@ -2327,7 +2327,7 @@ it('seeded layout: two separate instances with the same nodes/links/seed converg
       cy: n.getAttribute('cy'),
     }));
 
-  const elA = (await fixture(html`<lyra-graph seed="42"></lyra-graph>`)) as LyraGraph;
+  const elA = (await fixture(html`<lr-graph seed="42"></lr-graph>`)) as LyraGraph;
   elA.nodes = seededNodes;
   elA.links = seededLinks;
   await elA.updateComplete;
@@ -2335,7 +2335,7 @@ it('seeded layout: two separate instances with the same nodes/links/seed converg
     timeout: NODE_COUNT_TIMEOUT,
   });
 
-  const elB = (await fixture(html`<lyra-graph seed="42"></lyra-graph>`)) as LyraGraph;
+  const elB = (await fixture(html`<lr-graph seed="42"></lr-graph>`)) as LyraGraph;
   // Deliberately reorder the nodes array between the two instances — a
   // reproducible seeded layout must be keyed by node id, not array index.
   elB.nodes = [seededNodes[2], seededNodes[0], seededNodes[1]];
@@ -2378,7 +2378,7 @@ it('seeded layout: different seeds produce different final positions', async () 
     { source: 'b', target: 'c' },
   ];
 
-  const elA = (await fixture(html`<lyra-graph seed="1"></lyra-graph>`)) as LyraGraph;
+  const elA = (await fixture(html`<lr-graph seed="1"></lr-graph>`)) as LyraGraph;
   elA.nodes = seededNodes;
   elA.links = seededLinks;
   await elA.updateComplete;
@@ -2386,7 +2386,7 @@ it('seeded layout: different seeds produce different final positions', async () 
     timeout: NODE_COUNT_TIMEOUT,
   });
 
-  const elB = (await fixture(html`<lyra-graph seed="2"></lyra-graph>`)) as LyraGraph;
+  const elB = (await fixture(html`<lr-graph seed="2"></lr-graph>`)) as LyraGraph;
   elB.nodes = seededNodes;
   elB.links = seededLinks;
   await elB.updateComplete;
@@ -2406,7 +2406,7 @@ it('seeded layout: different seeds produce different final positions', async () 
 });
 
 it('seeded layout: settles synchronously (like prefers-reduced-motion) so the layout is reproducible without waiting on animation frames', async () => {
-  const el = (await fixture(html`<lyra-graph seed="7"></lyra-graph>`)) as LyraGraph;
+  const el = (await fixture(html`<lr-graph seed="7"></lr-graph>`)) as LyraGraph;
   el.nodes = nodes;
   el.links = links;
   await el.updateComplete;
@@ -2419,7 +2419,7 @@ it('seeded layout: settles synchronously (like prefers-reduced-motion) so the la
 });
 
 it('seed unset: layout is unaffected (still uses forceSimulation()s own random initial start, not the deterministic PRNG)', async () => {
-  const el = (await fixture(html`<lyra-graph></lyra-graph>`)) as LyraGraph;
+  const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
   el.nodes = nodes;
   el.links = links;
   await el.updateComplete;
@@ -2434,7 +2434,7 @@ it('seed unset: layout is unaffected (still uses forceSimulation()s own random i
 });
 
 it('user-initiated drag still works normally after a seeded synchronous settle', async () => {
-  const el = (await fixture(html`<lyra-graph seed="7"></lyra-graph>`)) as LyraGraph;
+  const el = (await fixture(html`<lr-graph seed="7"></lr-graph>`)) as LyraGraph;
   el.nodes = nodes;
   el.links = links;
   await el.updateComplete;
@@ -2453,7 +2453,7 @@ it('changing seed after nodes/links already have positions is a documented no-op
   ];
   const seededLinks = [{ source: 'a', target: 'b' }];
 
-  const el = (await fixture(html`<lyra-graph seed="1"></lyra-graph>`)) as LyraGraph;
+  const el = (await fixture(html`<lr-graph seed="1"></lr-graph>`)) as LyraGraph;
   el.nodes = seededNodes;
   el.links = seededLinks;
   await el.updateComplete;
@@ -2479,7 +2479,7 @@ it('changing seed after nodes/links already have positions is a documented no-op
 });
 
 it('clamps an out-of-range GraphNode.radius so the node still renders visibly-sized and focusable', async () => {
-  const el = (await fixture(html`<lyra-graph></lyra-graph>`)) as LyraGraph;
+  const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
   el.nodes = [
     { id: 'a', label: 'A', radius: 0 },
     { id: 'b', label: 'B', radius: -50 },
@@ -2502,7 +2502,7 @@ it('clamps an out-of-range GraphNode.radius so the node still renders visibly-si
 });
 
 it('stops the force simulation on disconnect so a detached instance stops ticking', async () => {
-  const el = (await fixture(html`<lyra-graph></lyra-graph>`)) as LyraGraph;
+  const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
   el.nodes = nodes;
   el.links = links;
   await el.updateComplete;
@@ -2531,7 +2531,7 @@ it('stops the force simulation on disconnect so a detached instance stops tickin
 });
 
 it('does not restart the simulation from scratch on a reconnect (e.g. a drag-and-drop reparent)', async () => {
-  const el = (await fixture(html`<lyra-graph></lyra-graph>`)) as LyraGraph;
+  const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
   el.nodes = nodes;
   el.links = links;
   await el.updateComplete;
@@ -2566,7 +2566,7 @@ it('does not restart the simulation from scratch on a reconnect (e.g. a drag-and
 });
 
 it('renders a dangling-target link as a stub off the source instead of dropping it', async () => {
-  const el = (await fixture(html`<lyra-graph></lyra-graph>`)) as LyraGraph;
+  const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
   el.nodes = nodes; // ids: a, b
   el.links = [...links, { source: 'a', target: 'does-not-exist' }];
   await el.updateComplete;
@@ -2583,7 +2583,7 @@ it('renders a dangling-target link as a stub off the source instead of dropping 
 });
 
 it('keeps a dangling stub synced to its source node across ticks, instead of freezing at its initial position', async () => {
-  const el = (await fixture(html`<lyra-graph></lyra-graph>`)) as LyraGraph;
+  const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
   el.nodes = nodes; // ids: a, b
   el.links = [...links, { source: 'a', target: 'does-not-exist' }];
   await el.updateComplete;
@@ -2614,7 +2614,7 @@ it('keeps a dangling stub synced to its source node across ticks, instead of fre
 });
 
 it('silently drops a link whose source id has no matching node, without throwing, and still renders the valid links', async () => {
-  const el = (await fixture(html`<lyra-graph></lyra-graph>`)) as LyraGraph;
+  const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
   el.nodes = nodes; // ids: a, b
   el.links = [...links, { source: 'does-not-exist', target: 'b' }];
   await el.updateComplete;
@@ -2629,7 +2629,7 @@ it('silently drops a link whose source id has no matching node, without throwing
 });
 
 it('is accessible', async () => {
-  const el = (await fixture(html`<lyra-graph></lyra-graph>`)) as LyraGraph;
+  const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
   el.nodes = nodes;
   el.links = links;
   await el.updateComplete;
@@ -2641,7 +2641,7 @@ it('is accessible', async () => {
 
 describe('data-list aria-label localization', () => {
   it('defaults the data-list aria-label to the built-in English "Graph data"', async () => {
-    const el = (await fixture(html`<lyra-graph></lyra-graph>`)) as LyraGraph;
+    const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
     el.nodes = nodes;
     el.links = links;
     await el.updateComplete;
@@ -2654,7 +2654,7 @@ describe('data-list aria-label localization', () => {
 
   it('localizes the data-list aria-label via .strings (graphDataList)', async () => {
     const el = (await fixture(
-      html`<lyra-graph .strings=${{ graphDataList: 'Données du graphe' }}></lyra-graph>`,
+      html`<lr-graph .strings=${{ graphDataList: 'Données du graphe' }}></lr-graph>`,
     )) as LyraGraph;
     el.nodes = nodes;
     el.links = links;
@@ -2670,13 +2670,13 @@ describe('data-list aria-label localization', () => {
 describe('RTL keyboard navigation', () => {
   // Matches the `forwardKey`/`backwardKey` swap this library's other
   // "physical arrow key drives sequential previous/next" components
-  // (lyra-tabs, lyra-slider, lyra-segmented) apply under dir="rtl": the
+  // (lr-tabs, lr-slider, lr-segmented) apply under dir="rtl": the
   // physical ArrowLeft becomes "next" and ArrowRight becomes "previous".
   it('swaps ArrowLeft/ArrowRight roving-tabindex navigation under dir="rtl"', async () => {
     const wrapper = (await fixture(
-      html`<div dir="rtl"><lyra-graph></lyra-graph></div>`,
+      html`<div dir="rtl"><lr-graph></lr-graph></div>`,
     )) as HTMLDivElement;
-    const el = wrapper.querySelector('lyra-graph') as LyraGraph;
+    const el = wrapper.querySelector('lr-graph') as LyraGraph;
     el.nodes = nodes;
     el.links = links;
     await el.updateComplete;
@@ -2710,7 +2710,7 @@ describe('RTL keyboard navigation', () => {
 
 describe('dimming (adjacency highlight)', () => {
   async function mountDimmable(): Promise<LyraGraph> {
-    const el = (await fixture(html`<lyra-graph></lyra-graph>`)) as LyraGraph;
+    const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
     el.nodes = nodes;
     el.links = links;
     await el.updateComplete;

@@ -3,13 +3,13 @@ import './button-group.js';
 import '../button/button.js';
 import type { LyraButtonGroup } from './button-group.class.js';
 
-describe('<lyra-button-group>', () => {
+describe('<lr-button-group>', () => {
   it('groups slotted actions and forwards its accessible name', async () => {
     const el = await fixture<LyraButtonGroup>(html`
-      <lyra-button-group aria-label="View actions">
-        <lyra-button>Open</lyra-button>
-        <lyra-button>Save</lyra-button>
-      </lyra-button-group>
+      <lr-button-group aria-label="View actions">
+        <lr-button>Open</lr-button>
+        <lr-button>Save</lr-button>
+      </lr-button-group>
     `);
     const base = el.shadowRoot!.querySelector('[part="base"]')!;
     expect(base.getAttribute('role')).to.equal('group');
@@ -17,16 +17,16 @@ describe('<lyra-button-group>', () => {
   });
 
   it('is accessible', async () => {
-    const el = await fixture<LyraButtonGroup>(html`<lyra-button-group label="Actions"><lyra-button>Open</lyra-button></lyra-button-group>`);
+    const el = await fixture<LyraButtonGroup>(html`<lr-button-group label="Actions"><lr-button>Open</lr-button></lr-button-group>`);
     await expect(el).to.be.accessible();
   });
 
-  it('honors an overridden --lyra-button-group-gap custom property', async () => {
+  it('honors an overridden --lr-button-group-gap custom property', async () => {
     const el = await fixture<LyraButtonGroup>(html`
-      <lyra-button-group style="--lyra-button-group-gap: 24px;">
-        <lyra-button>Open</lyra-button>
-        <lyra-button>Save</lyra-button>
-      </lyra-button-group>
+      <lr-button-group style="--lr-button-group-gap: 24px;">
+        <lr-button>Open</lr-button>
+        <lr-button>Save</lr-button>
+      </lr-button-group>
     `);
     const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
     expect(getComputedStyle(base).gap).to.equal('24px');
@@ -34,10 +34,10 @@ describe('<lyra-button-group>', () => {
 
   it('goes full-width when its own allocation is narrow, via a container query rather than a viewport media query', async () => {
     const narrow = await fixture<LyraButtonGroup>(html`
-      <lyra-button-group style="inline-size: 120px;">
-        <lyra-button>Open</lyra-button>
-        <lyra-button>Save</lyra-button>
-      </lyra-button-group>
+      <lr-button-group style="inline-size: 120px;">
+        <lr-button>Open</lr-button>
+        <lr-button>Save</lr-button>
+      </lr-button-group>
     `);
     const narrowBase = narrow.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
     const narrowHostWidth = narrow.getBoundingClientRect().width;
@@ -45,10 +45,10 @@ describe('<lyra-button-group>', () => {
     expect(narrowBaseWidth).to.be.closeTo(narrowHostWidth, 2);
 
     const wide = await fixture<LyraButtonGroup>(html`
-      <lyra-button-group style="inline-size: 500px;">
-        <lyra-button>Open</lyra-button>
-        <lyra-button>Save</lyra-button>
-      </lyra-button-group>
+      <lr-button-group style="inline-size: 500px;">
+        <lr-button>Open</lr-button>
+        <lr-button>Save</lr-button>
+      </lr-button-group>
     `);
     const wideBase = wide.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
     const wideHostWidth = wide.getBoundingClientRect().width;

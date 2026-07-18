@@ -4,9 +4,9 @@ import type { LyraCalendar } from './calendar.js';
 import { formatISO } from '../date-picker/calendar-core.js';
 
 it('renders a month and emits date selections', async () => {
-  const el = (await fixture(html`<lyra-calendar view-date="2026-07-01"></lyra-calendar>`)) as LyraCalendar;
+  const el = (await fixture(html`<lr-calendar view-date="2026-07-01"></lr-calendar>`)) as LyraCalendar;
   expect(el.shadowRoot!.querySelectorAll('[part="day"]')).to.have.length(42);
-  const selected = oneEvent(el, 'lyra-date-select');
+  const selected = oneEvent(el, 'lr-date-select');
   (el.shadowRoot!.querySelector('[data-date="2026-07-15"]') as HTMLElement).click();
   expect((await selected).detail.date).to.equal('2026-07-15');
 });
@@ -17,7 +17,7 @@ it('keeps exactly one focusable day after navigating the view away from any anch
   // (e.g. three months forward from a fresh calendar with no selection and
   // no prior keyboard focus) left zero cells with tabindex="0", making the
   // whole grid keyboard-unreachable.
-  const el = (await fixture(html`<lyra-calendar></lyra-calendar>`)) as LyraCalendar;
+  const el = (await fixture(html`<lr-calendar></lr-calendar>`)) as LyraCalendar;
   await el.updateComplete;
   const next = el.shadowRoot!.querySelector('[part="nav"] button') as HTMLButtonElement;
   for (let i = 0; i < 3; i++) {
@@ -37,7 +37,7 @@ it('rolls the view to the next month when ArrowDown moves focus past the bottom 
   // trailing edge of the July grid: Jun 29 - Aug 9) left focusedDate
   // pointing at a date with no matching cell anywhere on screen, a
   // keyboard dead end.
-  const el = (await fixture(html`<lyra-calendar view-date="2026-07-01"></lyra-calendar>`)) as LyraCalendar;
+  const el = (await fixture(html`<lr-calendar view-date="2026-07-01"></lr-calendar>`)) as LyraCalendar;
   await el.updateComplete;
   const aug7 = el.shadowRoot!.querySelector('[data-date="2026-08-07"]') as HTMLElement;
   aug7.focus();
@@ -54,7 +54,7 @@ it('rolls the view to the next month when ArrowDown moves focus past the bottom 
 });
 
 it('gives the previous/next month nav buttons the shared minimum hit area', async () => {
-  const el = (await fixture(html`<lyra-calendar view-date="2026-07-01"></lyra-calendar>`)) as LyraCalendar;
+  const el = (await fixture(html`<lr-calendar view-date="2026-07-01"></lr-calendar>`)) as LyraCalendar;
   // The 'previous' button itself carries part="nav"; the 'next' button is nested inside a
   // wrapping <span part="nav"> instead (see calendar.class.ts's render()) -- both selector shapes
   // are needed to reach both buttons.
@@ -67,13 +67,13 @@ it('gives the previous/next month nav buttons the shared minimum hit area', asyn
 });
 
 it('is accessible', async () => {
-  const el = await fixture(html`<lyra-calendar aria-label="Schedule"></lyra-calendar>`);
+  const el = await fixture(html`<lr-calendar aria-label="Schedule"></lr-calendar>`);
   await expect(el).to.be.accessible();
 });
 
 it('exposes month-grid day cells as gridcells with per-day selection state and a full-date accessible name', async () => {
   const el = (await fixture(
-    html`<lyra-calendar view-date="2026-07-01" value="2026-07-15" locale="en-US"></lyra-calendar>`,
+    html`<lr-calendar view-date="2026-07-01" value="2026-07-15" locale="en-US"></lr-calendar>`,
   )) as LyraCalendar;
   expect(el.shadowRoot!.querySelector('[part="grid"]')?.getAttribute('role')).to.equal('grid');
   expect(el.shadowRoot!.querySelector('[part="week"]')?.getAttribute('role')).to.equal('row');
@@ -88,13 +88,13 @@ it('exposes month-grid day cells as gridcells with per-day selection state and a
 });
 
 it('mirrors the previous/next chevron glyphs under RTL', async () => {
-  const el = await fixture(html`<lyra-calendar dir="rtl" view-date="2026-07-01"></lyra-calendar>`);
+  const el = await fixture(html`<lr-calendar dir="rtl" view-date="2026-07-01"></lr-calendar>`);
   const glyph = el.shadowRoot!.querySelector('[part="nav-glyph"]') as HTMLElement;
   expect(getComputedStyle(glyph).transform).to.contain('matrix(-1');
 });
 
 it('applies a valid CalendarEvent.color as the event marker background', async () => {
-  const el = (await fixture(html`<lyra-calendar view-date="2026-07-01"></lyra-calendar>`)) as LyraCalendar;
+  const el = (await fixture(html`<lr-calendar view-date="2026-07-01"></lr-calendar>`)) as LyraCalendar;
   el.events = [{ date: '2026-07-15', title: 'Safe', color: '#ff0000' }];
   await el.updateComplete;
   const marker = el.shadowRoot!.querySelector('[data-date="2026-07-15"] [part="event"]') as HTMLElement;
@@ -102,7 +102,7 @@ it('applies a valid CalendarEvent.color as the event marker background', async (
 });
 
 it('does not let CalendarEvent.color inject extra CSS declarations via the event marker style attribute', async () => {
-  const el = (await fixture(html`<lyra-calendar view-date="2026-07-01"></lyra-calendar>`)) as LyraCalendar;
+  const el = (await fixture(html`<lr-calendar view-date="2026-07-01"></lr-calendar>`)) as LyraCalendar;
   el.events = [{ date: '2026-07-15', title: 'Bad', color: 'red; position: fixed; top: 0px' }];
   await el.updateComplete;
   const marker = el.shadowRoot!.querySelector('[data-date="2026-07-15"] [part="event"]') as HTMLElement;
@@ -111,7 +111,7 @@ it('does not let CalendarEvent.color inject extra CSS declarations via the event
 });
 
 it('does not accept a non-color CSS value (e.g. url()) as an event marker background', async () => {
-  const el = (await fixture(html`<lyra-calendar view-date="2026-07-01"></lyra-calendar>`)) as LyraCalendar;
+  const el = (await fixture(html`<lr-calendar view-date="2026-07-01"></lr-calendar>`)) as LyraCalendar;
   el.events = [{ date: '2026-07-15', title: 'Bad', color: 'url(https://attacker.example/beacon.gif)' }];
   await el.updateComplete;
   const marker = el.shadowRoot!.querySelector('[data-date="2026-07-15"] [part="event"]') as HTMLElement;
@@ -119,7 +119,7 @@ it('does not accept a non-color CSS value (e.g. url()) as an event marker backgr
 });
 
 it('renders every event for a day in its cell, in order, and none in event-free cells', async () => {
-  const el = (await fixture(html`<lyra-calendar view-date="2026-07-01"></lyra-calendar>`)) as LyraCalendar;
+  const el = (await fixture(html`<lr-calendar view-date="2026-07-01"></lr-calendar>`)) as LyraCalendar;
   el.events = [
     { date: '2026-07-15', title: 'A' },
     { date: '2026-07-20', title: 'C' },
@@ -134,7 +134,7 @@ it('renders every event for a day in its cell, in order, and none in event-free 
 
 it('themes the title and date weights through the shared semibold token', async () => {
   const el = (await fixture(
-    html`<lyra-calendar view-date="2026-07-01" style="--lyra-font-weight-semibold: 700"></lyra-calendar>`,
+    html`<lr-calendar view-date="2026-07-01" style="--lr-font-weight-semibold: 700"></lr-calendar>`,
   )) as LyraCalendar;
   const title = el.shadowRoot!.querySelector('[part="title"]') as HTMLElement;
   const date = el.shadowRoot!.querySelector('[part="date"]') as HTMLElement;
@@ -147,7 +147,7 @@ it('normalizes an out-of-range first-day-of-week instead of dropping leading day
   // Feb 3rd instead of wrapping to the prior month -- silently dropping Feb
   // 1-2 from the rendered 42-day window.
   const el = (await fixture(
-    html`<lyra-calendar view-date="2026-02-01" first-day-of-week="9"></lyra-calendar>`,
+    html`<lr-calendar view-date="2026-02-01" first-day-of-week="9"></lr-calendar>`,
   )) as LyraCalendar;
   const days = [...el.shadowRoot!.querySelectorAll('[part="day"]')] as HTMLElement[];
   expect(days).to.have.length(42);
@@ -158,7 +158,7 @@ it('normalizes an out-of-range first-day-of-week instead of dropping leading day
 
 it('falls back to a sane first-day-of-week instead of producing Invalid Date for a non-numeric attribute', async () => {
   const el = (await fixture(
-    html`<lyra-calendar view-date="2026-07-01" first-day-of-week="not-a-number"></lyra-calendar>`,
+    html`<lr-calendar view-date="2026-07-01" first-day-of-week="not-a-number"></lr-calendar>`,
   )) as LyraCalendar;
   const days = [...el.shadowRoot!.querySelectorAll('[part="day"]')] as HTMLElement[];
   expect(days).to.have.length(42);
@@ -166,7 +166,7 @@ it('falls back to a sane first-day-of-week instead of producing Invalid Date for
 });
 
 it('wraps a negative firstDayOfWeek property (not just an out-of-range attribute) into [0, 6] instead of leaving Invalid Date/NaN', async () => {
-  const el = (await fixture(html`<lyra-calendar view-date="2026-02-01"></lyra-calendar>`)) as LyraCalendar;
+  const el = (await fixture(html`<lr-calendar view-date="2026-02-01"></lr-calendar>`)) as LyraCalendar;
 
   el.firstDayOfWeek = -2; // ((-2 % 7) + 7) % 7 === 5 (Friday)
   await el.updateComplete;

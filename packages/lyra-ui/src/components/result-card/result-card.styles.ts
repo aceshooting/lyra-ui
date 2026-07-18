@@ -7,18 +7,18 @@ export const styles = css`
   [part='base'] {
     display: flex;
     flex-direction: column;
-    border: var(--lyra-border-width-thin) solid var(--lyra-color-border);
-    border-radius: var(--lyra-radius);
-    background: var(--lyra-color-surface);
+    border: var(--lr-border-width-thin) solid var(--lr-color-border);
+    border-radius: var(--lr-radius);
+    background: var(--lr-color-surface);
     overflow: hidden;
-    font-size: var(--lyra-font-size-sm);
+    font-size: var(--lr-font-size-sm);
   }
   [part='header'] {
     display: flex;
     align-items: center;
-    gap: var(--lyra-space-s);
-    padding: var(--lyra-space-xs) var(--lyra-space-s);
-    border-block-end: var(--lyra-border-width-thin) solid var(--lyra-color-border);
+    gap: var(--lr-space-s);
+    padding: var(--lr-space-xs) var(--lr-space-s);
+    border-block-end: var(--lr-border-width-thin) solid var(--lr-color-border);
   }
   [part='header'][hidden] {
     display: none;
@@ -26,8 +26,8 @@ export const styles = css`
   [part='title'] {
     flex: 1 1 auto;
     min-inline-size: 0;
-    color: var(--lyra-color-text);
-    font-weight: var(--lyra-font-weight-semibold);
+    color: var(--lr-color-text);
+    font-weight: var(--lr-font-weight-semibold);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -35,7 +35,7 @@ export const styles = css`
   [part='actions'] {
     display: flex;
     align-items: center;
-    gap: var(--lyra-space-xs);
+    gap: var(--lr-space-xs);
     flex: 0 0 auto;
   }
   [part='actions'][hidden] {
@@ -44,7 +44,7 @@ export const styles = css`
   [part='body'] {
     display: flex;
     flex-direction: column;
-    gap: var(--lyra-space-xs);
-    padding: var(--lyra-space-s);
+    gap: var(--lr-space-xs);
+    padding: var(--lr-space-s);
   }
 `;

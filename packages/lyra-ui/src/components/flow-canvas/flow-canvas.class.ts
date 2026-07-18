@@ -18,7 +18,7 @@ export interface FlowHandle {
 
 export interface FlowNode {
   id: string;
-  /** Palette/host taxonomy; echoed in `lyra-node-add`, styleable via a `[data-type]` selector on
+  /** Palette/host taxonomy; echoed in `lr-node-add`, styleable via a `[data-type]` selector on
    *  the adopted card's wrapper. */
   type?: string;
   /** Content coordinates. Absent means "let auto-layout place it" — see `runAutoLayoutIfNeeded()`. */
@@ -37,7 +37,7 @@ export interface FlowEdge {
   target: string;
   sourceHandle?: string;
   targetHandle?: string;
-  /** Drawn at the edge midpoint (unlike `lyra-graph`'s `GraphLink.label`, which is spoken-only). */
+  /** Drawn at the edge midpoint (unlike `lr-graph`'s `GraphLink.label`, which is spoken-only). */
   label?: string;
   tone?: 'accent' | 'success' | 'warning' | 'danger' | 'neutral';
 }
@@ -60,10 +60,10 @@ export interface FlowStructureSnapshot {
   viewport: { x: number; y: number; zoom: number; width: number; height: number };
 }
 
-/** The `dragstart`/`dragover`/`drop` MIME type shared between `lyra-node-palette` and this
+/** The `dragstart`/`dragover`/`drop` MIME type shared between `lr-node-palette` and this
  *  canvas's `droppable` handling — a single exported constant so the two files can never
  *  disagree on the literal string. */
-export const FLOW_PALETTE_MIME_TYPE = 'application/lyra-flow-node';
+export const FLOW_PALETTE_MIME_TYPE = 'application/lr-flow-node';
 
 const CONNECT_OFFSET_MIN = 24;
 const CONNECT_OFFSET_MAX = 120;
@@ -86,22 +86,22 @@ interface DragEdgeRef {
 }
 
 export interface LyraFlowCanvasEventMap {
-  'lyra-node-click': CustomEvent<{ id: string }>;
-  'lyra-edge-click': CustomEvent<{ id: string; source: string; target: string }>;
-  'lyra-selection-change': CustomEvent<{ nodeIds: string[]; edgeIds: string[] }>;
-  'lyra-node-move': CustomEvent<{
+  'lr-node-click': CustomEvent<{ id: string }>;
+  'lr-edge-click': CustomEvent<{ id: string; source: string; target: string }>;
+  'lr-selection-change': CustomEvent<{ nodeIds: string[]; edgeIds: string[] }>;
+  'lr-node-move': CustomEvent<{
     id: string;
     position: { x: number; y: number };
     previous: { x: number; y: number };
   }>;
-  'lyra-connect': CustomEvent<{ source: string; target: string; sourceHandle: string; targetHandle: string }>;
-  'lyra-node-add': CustomEvent<{ type: string; position: { x: number; y: number } }>;
-  'lyra-selection-delete': CustomEvent<{ nodeIds: string[]; edgeIds: string[] }>;
-  'lyra-viewport-change': CustomEvent<{ x: number; y: number; zoom: number }>;
-  'lyra-layout-change': CustomEvent<{ positions: Record<string, { x: number; y: number }> }>;
+  'lr-connect': CustomEvent<{ source: string; target: string; sourceHandle: string; targetHandle: string }>;
+  'lr-node-add': CustomEvent<{ type: string; position: { x: number; y: number } }>;
+  'lr-selection-delete': CustomEvent<{ nodeIds: string[]; edgeIds: string[] }>;
+  'lr-viewport-change': CustomEvent<{ x: number; y: number; zoom: number }>;
+  'lr-layout-change': CustomEvent<{ positions: Record<string, { x: number; y: number }> }>;
 }
 
-/** A light-DOM-adopted card element (the default `lyra-flow-node`, or an arbitrary consumer-authored
+/** A light-DOM-adopted card element (the default `lr-flow-node`, or an arbitrary consumer-authored
  *  custom element) — a structural type, not an import of `LyraFlowNode`, so this module never
  *  depends on the `flow-node` component module load order. */
 interface FlowNodeCardEl extends HTMLElement {
@@ -117,29 +117,29 @@ interface FlowNodeCardEl extends HTMLElement {
 }
 
 /**
- * `<lyra-flow-canvas>` — a pannable/zoomable DAG workflow canvas: positions HTML node cards, draws
+ * `<lr-flow-canvas>` — a pannable/zoomable DAG workflow canvas: positions HTML node cards, draws
  * SVG edges between their handles, runs a shared layered auto-layout for unpositioned nodes, and owns
  * all selection/drag/connect interaction as controlled events. Readonly (viewer) by default; opt into
  * editor gestures individually via `nodes-draggable`, `connectable`, `droppable`. Never mutates `nodes`
- * or `edges` itself — every edit intent is an event the host applies, mirroring `lyra-stepper`/
- * `lyra-table`'s controlled-component contract.
+ * or `edges` itself — every edit intent is an event the host applies, mirroring `lr-stepper`/
+ * `lr-table`'s controlled-component contract.
  *
- * @customElement lyra-flow-canvas
- * @slot - `lyra-flow-node` children to adopt by `node-id`; non-matching children are ignored with a
+ * @customElement lr-flow-canvas
+ * @slot - `lr-flow-node` children to adopt by `node-id`; non-matching children are ignored with a
  *   console warning.
- * @slot top-start - Floating corner overlay (e.g. `lyra-flow-run-overlay`).
+ * @slot top-start - Floating corner overlay (e.g. `lr-flow-run-overlay`).
  * @slot top-end - Floating corner overlay.
- * @slot bottom-start - Floating corner overlay (e.g. `lyra-flow-controls`).
- * @slot bottom-end - Floating corner overlay (e.g. `lyra-flow-minimap`).
- * @event lyra-node-click - `detail: { id }`.
- * @event lyra-edge-click - `detail: { id, source, target }`.
- * @event lyra-selection-change - `detail: { nodeIds, edgeIds }`.
- * @event lyra-node-move - `detail: { id, position, previous }`.
- * @event lyra-connect - `detail: { source, target, sourceHandle, targetHandle }`.
- * @event lyra-node-add - `detail: { type, position }`.
- * @event lyra-selection-delete - `detail: { nodeIds, edgeIds }`.
- * @event lyra-viewport-change - `detail: { x, y, zoom }`.
- * @event lyra-layout-change - `detail: { positions }`.
+ * @slot bottom-start - Floating corner overlay (e.g. `lr-flow-controls`).
+ * @slot bottom-end - Floating corner overlay (e.g. `lr-flow-minimap`).
+ * @event lr-node-click - `detail: { id }`.
+ * @event lr-edge-click - `detail: { id, source, target }`.
+ * @event lr-selection-change - `detail: { nodeIds, edgeIds }`.
+ * @event lr-node-move - `detail: { id, position, previous }`.
+ * @event lr-connect - `detail: { source, target, sourceHandle, targetHandle }`.
+ * @event lr-node-add - `detail: { type, position }`.
+ * @event lr-selection-delete - `detail: { nodeIds, edgeIds }`.
+ * @event lr-viewport-change - `detail: { x, y, zoom }`.
+ * @event lr-layout-change - `detail: { positions }`.
  * @csspart base - The root wrapper.
  * @csspart viewport - The focusable pan/zoom surface.
  * @csspart background - The dotted background grid.
@@ -150,11 +150,11 @@ interface FlowNodeCardEl extends HTMLElement {
  * @csspart stub - A dangling-edge stub line.
  * @csspart connection-line - The in-progress connect-gesture path.
  * @csspart node - A node's positioned wrapper.
- * @csspart empty - The `lyra-empty` shown when `nodes` is empty.
+ * @csspart empty - The `lr-empty` shown when `nodes` is empty.
  * @csspart live-region - The current item/gesture announcement.
  * @csspart edge-list - A visually hidden list of every edge.
- * @cssprop [--lyra-flow-canvas-grid-size=8px] - Dotted background spacing.
- * @cssprop [--lyra-flow-canvas-march-duration=var(--lyra-transition-ambient)] - Running-edge march animation duration.
+ * @cssprop [--lr-flow-canvas-grid-size=8px] - Dotted background spacing.
+ * @cssprop [--lr-flow-canvas-march-duration=var(--lr-transition-ambient)] - Running-edge march animation duration.
  */
 export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
   static styles = [LyraElement.styles, styles, srOnly];
@@ -191,7 +191,7 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
 
   /** `grid` normalized to a finite, non-negative snap increment — `0` still means "no snapping"
    *  (see `snap()`), but a negative/non-finite value can no longer reach the `value / this.grid`
-   *  division in `snap()`/`nudgeNode()`, nor the `--lyra-flow-canvas-grid-size` custom property. */
+   *  division in `snap()`/`nudgeNode()`, nor the `--lr-flow-canvas-grid-size` custom property. */
   private get safeGrid(): number {
     return finiteRange(this.grid, 8, 0);
   }
@@ -390,9 +390,9 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
   // ---------------------------------------------------------------------
 
   /** By-`node-id` reconciliation of light-DOM children: a user-authored child gets `slot="node-{id}"`
-   *  set on it; a data node with no matching light-DOM child gets a default `<lyra-flow-node>`
+   *  set on it; a data node with no matching light-DOM child gets a default `<lr-flow-node>`
    *  created and appended (marked `data-flow-canvas-default-card` so it — and only it — is removed
-   *  again once its node id disappears). Mirrors `lyra-tree`'s `syncNodes()` by-id reconciliation. A
+   *  again once its node id disappears). Mirrors `lr-tree`'s `syncNodes()` by-id reconciliation. A
    *  light-DOM child whose `node-id` matches no current node is left in place with no `slot` (renders
    *  nowhere) and a console warning, exactly like an unrecognized top-level child of any other
    *  slot-adopting component in this library. */
@@ -408,7 +408,7 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
       } else {
         child.removeAttribute('slot');
         console.warn(
-          `<lyra-flow-canvas> a child with node-id="${nodeId}" matches no entry in \`nodes\`; it will not render.`,
+          `<lr-flow-canvas> a child with node-id="${nodeId}" matches no entry in \`nodes\`; it will not render.`,
         );
       }
     }
@@ -498,7 +498,7 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
   }
 
   /** Evenly distributes `count` handles along a `span`-px edge (index 0-based) — matches
-   *  `justify-content: space-around` so `lyra-flow-node`'s handle-column CSS lines up with this
+   *  `justify-content: space-around` so `lr-flow-node`'s handle-column CSS lines up with this
    *  exactly. */
   private handleOffset(count: number, index: number, span: number): number {
     return count <= 1 ? span / 2 : (span * (index + 0.5)) / count;
@@ -638,7 +638,7 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
       this.autoPositions.set(n.id, resolved);
       positions[n.id] = resolved;
     }
-    if (Object.keys(positions).length > 0) this.emit('lyra-layout-change', { positions });
+    if (Object.keys(positions).length > 0) this.emit('lr-layout-change', { positions });
   }
 
   // ---------------------------------------------------------------------
@@ -654,7 +654,7 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
     this.panY = next.y;
     this.zoomLevel = this.clampZoom(next.zoom);
     this.applyWorldTransform();
-    this.emit('lyra-viewport-change', { x: this.panX, y: this.panY, zoom: this.zoomLevel });
+    this.emit('lr-viewport-change', { x: this.panX, y: this.panY, zoom: this.zoomLevel });
   }
 
   zoomIn = (): void => {
@@ -773,7 +773,7 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
     if (this.viewportChangeRaf != null) return;
     this.viewportChangeRaf = requestAnimationFrame(() => {
       this.viewportChangeRaf = null;
-      this.emit('lyra-viewport-change', { x: this.panX, y: this.panY, zoom: this.zoomLevel });
+      this.emit('lr-viewport-change', { x: this.panX, y: this.panY, zoom: this.zoomLevel });
     });
   }
 
@@ -930,7 +930,7 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
     }
     if (!payload.type) return;
     const contentPoint = this.toContentPoint(e.clientX, e.clientY);
-    this.emit('lyra-node-add', {
+    this.emit('lr-node-add', {
       type: payload.type,
       position: { x: this.snap(contentPoint.x), y: this.snap(contentPoint.y) },
     });
@@ -1038,7 +1038,7 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
       this.selectedEdgeIds = additive ? toggledSelection(this.selectedEdgeIds, id) : [id];
       if (!additive) this.selectedNodeIds = [];
     }
-    this.emit('lyra-selection-change', { nodeIds: this.selectedNodeIds, edgeIds: this.selectedEdgeIds });
+    this.emit('lr-selection-change', { nodeIds: this.selectedNodeIds, edgeIds: this.selectedEdgeIds });
     const selected = kind === 'node' ? this.selectedNodeIds.includes(id) : this.selectedEdgeIds.includes(id);
     const label = this.itemAccessibleText({ kind, id });
     this.announcer.announce(this.localize(selected ? 'flowNodeSelected' : 'flowNodeDeselected', undefined, { label }));
@@ -1048,23 +1048,23 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
     if (this.selectedNodeIds.length === 0 && this.selectedEdgeIds.length === 0) return;
     this.selectedNodeIds = [];
     this.selectedEdgeIds = [];
-    this.emit('lyra-selection-change', { nodeIds: [], edgeIds: [] });
+    this.emit('lr-selection-change', { nodeIds: [], edgeIds: [] });
     this.announcer.announce(this.localize('flowSelectionCleared'));
   }
 
   private deleteSelection(): void {
     if (!this.nodesDraggable && !this.connectable && !this.droppable) return;
     if (this.selectedNodeIds.length === 0 && this.selectedEdgeIds.length === 0) return;
-    this.emit('lyra-selection-delete', { nodeIds: this.selectedNodeIds, edgeIds: this.selectedEdgeIds });
+    this.emit('lr-selection-delete', { nodeIds: this.selectedNodeIds, edgeIds: this.selectedEdgeIds });
   }
 
   private onNodeActivate(node: FlowNode, additive: boolean): void {
-    this.emit('lyra-node-click', { id: node.id });
+    this.emit('lr-node-click', { id: node.id });
     this.applySelection('node', node.id, additive);
   }
 
   private onEdgeActivate(edge: FlowEdge, additive: boolean): void {
-    this.emit('lyra-edge-click', { id: edge.id, source: edge.source, target: edge.target });
+    this.emit('lr-edge-click', { id: edge.id, source: edge.source, target: edge.target });
     this.applySelection('edge', edge.id, additive);
   }
 
@@ -1277,7 +1277,7 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
     const previous = { x: drag.startX, y: drag.startY };
     const position = { x: drag.currentX ?? drag.startX, y: drag.currentY ?? drag.startY };
     if (position.x !== previous.x || position.y !== previous.y) {
-      this.emit('lyra-node-move', { id: drag.nodeId, position, previous });
+      this.emit('lr-node-move', { id: drag.nodeId, position, previous });
     }
     // `requestUpdate()` alone cannot snap the wrapper back when the host doesn't apply the move
     // (or applies the identical position) -- Lit's AttributePart dirty-checks the *interpolated
@@ -1306,7 +1306,7 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
     else if (key === 'ArrowDown') dy = step;
     else if (key === 'ArrowUp') dy = -step;
     const position = { x: current.x + dx, y: current.y + dy };
-    this.emit('lyra-node-move', { id: nodeId, position, previous: current });
+    this.emit('lr-node-move', { id: nodeId, position, previous: current });
     this.announcer.announce(
       this.localize('flowNodeMoved', undefined, { label: this.nodeAccessibleText(node), x: position.x, y: position.y }),
     );
@@ -1417,7 +1417,7 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
       | HTMLElement
       | undefined;
     const targetHandle = handleEl?.dataset.handleId ?? 'in';
-    this.emit('lyra-connect', { source: state.sourceId, target: targetNodeId, sourceHandle: state.sourceHandle, targetHandle });
+    this.emit('lr-connect', { source: state.sourceId, target: targetNodeId, sourceHandle: state.sourceHandle, targetHandle });
     this.announcer.announce(this.localize('flowConnectCommitted', undefined, { source: state.sourceId, target: targetNodeId }));
   };
 
@@ -1484,7 +1484,7 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
     if (!target) return;
     const sourceOutputs = this.nodes.find((n) => n.id === sourceId)?.outputs ?? [{ id: 'out' }];
     const targetInputs = target.inputs ?? [{ id: 'in' }];
-    this.emit('lyra-connect', {
+    this.emit('lr-connect', {
       source: sourceId,
       target: target.id,
       sourceHandle: sourceOutputs[0]?.id ?? 'out',
@@ -1607,7 +1607,7 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
   render(): TemplateResult {
     if (this.nodes.length === 0) {
       return html`<div part="base" role="region" aria-label=${this.localize('flowCanvasLabel')}>
-        <lyra-empty part="empty" heading=${this.localize('noData')}></lyra-empty>
+        <lr-empty part="empty" heading=${this.localize('noData')}></lr-empty>
       </div>`;
     }
     const { nodeIndex, edgeIndex } = this.itemIndexMaps();
@@ -1625,7 +1625,7 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
         <div class="world" @pointerdown=${this.onWorldPointerDown}>
           <div
             part="background"
-            style="--lyra-flow-canvas-grid-size:${this.safeGrid > 0 ? this.safeGrid : 8}px"
+            style="--lr-flow-canvas-grid-size:${this.safeGrid > 0 ? this.safeGrid : 8}px"
             @pointerdown=${this.onBackgroundPointerDown}
           ></div>
           <svg part="edges">
@@ -1666,6 +1666,6 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
 
 declare global {
   interface HTMLElementTagNameMap {
-    'lyra-flow-canvas': LyraFlowCanvas;
+    'lr-flow-canvas': LyraFlowCanvas;
   }
 }

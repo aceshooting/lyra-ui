@@ -7,46 +7,46 @@ export const styles = css`
        content, matching every other block-level component in this library
        until a caller opts into an internal scrollbar via the max-height
        attribute. */
-    --lyra-json-viewer-max-height: none;
+    --lr-json-viewer-max-height: none;
     /* Contained here (rather than left as a bare font-family literal) so a
-       host page can retheme it, same rationale as --lyra-widget-overlay-color
-       in widget.styles.ts -- no shared --lyra-* monospace token exists
+       host page can retheme it, same rationale as --lr-widget-overlay-color
+       in widget.styles.ts -- no shared --lr-* monospace token exists
        to resolve through. */
-    --lyra-json-viewer-font: var(--lyra-font-mono);
-    font-family: var(--lyra-json-viewer-font);
-    font-size: var(--lyra-font-size-sm);
-    line-height: var(--lyra-line-height-loose);
+    --lr-json-viewer-font: var(--lr-font-mono);
+    font-family: var(--lr-json-viewer-font);
+    font-size: var(--lr-font-size-sm);
+    line-height: var(--lr-line-height-loose);
   }
   [part='base'] {
     display: block;
-    max-block-size: var(--lyra-json-viewer-max-height);
+    max-block-size: var(--lr-json-viewer-max-height);
     overflow: auto;
-    border: var(--lyra-border-width-thin) solid var(--lyra-color-border);
-    border-radius: var(--lyra-radius);
-    background: var(--lyra-color-surface);
+    border: var(--lr-border-width-thin) solid var(--lr-color-border);
+    border-radius: var(--lr-radius);
+    background: var(--lr-color-surface);
   }
   [part='toolbar'] {
     position: sticky;
     inset-block-start: 0;
-    z-index: var(--lyra-layer-content);
+    z-index: var(--lr-layer-content);
     display: flex;
     justify-content: flex-end;
-    padding: var(--lyra-space-xs) var(--lyra-space-s);
-    border-block-end: var(--lyra-border-width-thin) solid var(--lyra-color-border);
-    background: var(--lyra-color-surface);
+    padding: var(--lr-space-xs) var(--lr-space-s);
+    border-block-end: var(--lr-border-width-thin) solid var(--lr-color-border);
+    background: var(--lr-color-surface);
   }
   [part='tree'] {
-    padding: var(--lyra-space-s);
+    padding: var(--lr-space-s);
   }
   .row {
     display: flex;
     align-items: flex-start;
-    gap: var(--lyra-space-xs);
+    gap: var(--lr-space-xs);
     min-inline-size: 0;
-    border-radius: var(--lyra-radius);
+    border-radius: var(--lr-radius);
   }
   .row:hover {
-    background: var(--lyra-color-brand-quiet);
+    background: var(--lr-color-brand-quiet);
   }
   .row:hover [part='copy-button'],
   .row:focus-within [part='copy-button'] {
@@ -55,11 +55,11 @@ export const styles = css`
   [part='toggle'] {
     /* Keep the glyph compact while giving the interactive box the shared
        minimum target size, even for deeply nested rows. */
-    inline-size: var(--lyra-size-1-25rem);
-    block-size: var(--lyra-size-1-25rem);
-    min-inline-size: var(--lyra-icon-button-size);
-    min-block-size: var(--lyra-icon-button-size);
-    margin-block-start: var(--lyra-size-0-1875rem);
+    inline-size: var(--lr-size-1-25rem);
+    block-size: var(--lr-size-1-25rem);
+    min-inline-size: var(--lr-icon-button-size);
+    min-block-size: var(--lr-icon-button-size);
+    margin-block-start: var(--lr-size-0-1875rem);
     flex: 0 0 auto;
     display: inline-flex;
     align-items: center;
@@ -67,8 +67,8 @@ export const styles = css`
     padding: 0;
     border: none;
     background: none;
-    color: var(--lyra-color-text-quiet);
-    border-radius: var(--lyra-radius);
+    color: var(--lr-color-text-quiet);
+    border-radius: var(--lr-radius);
     cursor: pointer;
   }
   /* The UA '[hidden] { display: none }' rule is author-overridable by any
@@ -83,7 +83,7 @@ export const styles = css`
   [part='toggle'] .chevron {
     display: inline-flex;
     transform: rotate(0deg);
-    transition: transform var(--lyra-transition-fast);
+    transition: transform var(--lr-transition-fast);
   }
   [part='toggle'][aria-expanded='true'] .chevron {
     transform: rotate(90deg);
@@ -92,40 +92,40 @@ export const styles = css`
     transform: rotate(180deg);
   }
   [part='toggle']:not([hidden]):hover {
-    background: var(--lyra-color-brand-quiet);
-    color: var(--lyra-color-brand);
+    background: var(--lr-color-brand-quiet);
+    color: var(--lr-color-brand);
   }
   [part='toggle']:focus-visible,
   [part='copy-button']:focus-visible {
-    outline: var(--lyra-focus-ring-width) solid var(--lyra-focus-ring-color);
-    outline-offset: var(--lyra-focus-ring-offset);
+    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
+    outline-offset: var(--lr-focus-ring-offset);
   }
   /* Stands in for [part='toggle'] on the closing-bracket row, so it must match the toggle's
      actual used inline-size -- min-inline-size wins over the toggle's own smaller inline-size,
-     so the real box is --lyra-icon-button-size, not --lyra-size-1-25rem. */
+     so the real box is --lr-icon-button-size, not --lr-size-1-25rem. */
   .toggle-space {
-    inline-size: var(--lyra-icon-button-size);
+    inline-size: var(--lr-icon-button-size);
     flex: 0 0 auto;
   }
   [part='key'] {
     flex: 0 0 auto;
-    font-weight: var(--lyra-font-weight-semibold);
-    color: var(--lyra-color-text);
+    font-weight: var(--lr-font-weight-semibold);
+    color: var(--lr-color-text);
   }
   .colon {
     flex: 0 0 auto;
-    color: var(--lyra-color-text-quiet);
-    margin-inline-end: var(--lyra-space-xs);
+    color: var(--lr-color-text-quiet);
+    margin-inline-end: var(--lr-space-xs);
   }
   [part='bracket'] {
     flex: 0 0 auto;
-    color: var(--lyra-color-text-quiet);
+    color: var(--lr-color-text-quiet);
   }
   [part='key'][data-match],
   [part='value'][data-match] {
-    background: var(--lyra-color-warning-quiet);
-    border-radius: var(--lyra-size-0-1875rem);
-    box-shadow: 0 0 0 var(--lyra-size-0-125rem) var(--lyra-color-warning-quiet);
+    background: var(--lr-color-warning-quiet);
+    border-radius: var(--lr-size-0-1875rem);
+    box-shadow: 0 0 0 var(--lr-size-0-125rem) var(--lr-color-warning-quiet);
   }
   [part='value'] {
     min-inline-size: 0;
@@ -134,44 +134,44 @@ export const styles = css`
     white-space: pre-wrap;
   }
   [part='value'][data-type='string'] {
-    color: var(--lyra-color-success);
+    color: var(--lr-color-success);
   }
   [part='value'][data-type='number'] {
-    color: var(--lyra-color-brand);
+    color: var(--lr-color-brand);
   }
   [part='value'][data-type='boolean'] {
-    color: var(--lyra-color-warning);
+    color: var(--lr-color-warning);
   }
   [part='value'][data-type='null'],
   [part='value'][data-type='undefined'],
   [part='value'][data-type='circular'] {
-    color: var(--lyra-color-text-quiet);
+    color: var(--lr-color-text-quiet);
     font-style: italic;
   }
   .preview {
     flex: 0 0 auto;
-    color: var(--lyra-color-text-quiet);
+    color: var(--lr-color-text-quiet);
     font-style: italic;
-    margin-inline: var(--lyra-space-xs);
+    margin-inline: var(--lr-space-xs);
   }
   [part='copy-button'] {
     flex: 0 0 auto;
     margin-inline-start: auto;
     border: none;
     background: none;
-    color: var(--lyra-color-text-quiet);
+    color: var(--lr-color-text-quiet);
     font: inherit;
-    font-size: var(--lyra-font-size-xs);
-    line-height: var(--lyra-line-height-none);
-    min-inline-size: var(--lyra-icon-button-size);
-    min-block-size: var(--lyra-icon-button-size);
-    padding: var(--lyra-size-0-125rem) var(--lyra-space-xs);
-    border-radius: var(--lyra-radius);
+    font-size: var(--lr-font-size-xs);
+    line-height: var(--lr-line-height-none);
+    min-inline-size: var(--lr-icon-button-size);
+    min-block-size: var(--lr-icon-button-size);
+    padding: var(--lr-size-0-125rem) var(--lr-space-xs);
+    border-radius: var(--lr-radius);
     cursor: pointer;
   }
   [part='copy-button']:hover {
-    background: var(--lyra-color-brand-quiet);
-    color: var(--lyra-color-brand);
+    background: var(--lr-color-brand-quiet);
+    color: var(--lr-color-brand);
   }
   /* Per-node copy buttons stay out of the way until the row is actually
      being interacted with -- the toolbar's own top-level copy button is

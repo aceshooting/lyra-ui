@@ -47,7 +47,7 @@ import { FLAG_LOADERS_COMPACT } from './flags/generated-compact.js';
  * @param {{ variant?: 'compact' | 'standard' | 'detailed' }} [options]
  * @returns {Promise<string | undefined>} The flag's URL. For a `code` with no matching shipped
  *   flag, resolves `undefined` (same non-crashing "no image" outcome as the old code's
- *   now-404ing URL, for `<lyra-flag>`'s `<img src>` use).
+ *   now-404ing URL, for `<lr-flag>`'s `<img src>` use).
  */
 export function flagUrl(code, options) {
   if (options?.variant === 'detailed' && FLAG_LOADERS_DETAILED[code]) {

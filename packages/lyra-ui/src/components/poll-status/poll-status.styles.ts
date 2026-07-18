@@ -7,26 +7,26 @@ export const styles = css`
   [part='base'] {
     display: inline-flex;
     align-items: center;
-    gap: var(--lyra-space-xs);
-    font-size: var(--lyra-font-size-sm);
-    color: var(--lyra-color-text-quiet);
+    gap: var(--lr-space-xs);
+    font-size: var(--lr-font-size-sm);
+    color: var(--lr-color-text-quiet);
   }
   [part='indicator'] {
     display: inline-block;
-    inline-size: var(--lyra-size-0-375rem);
-    block-size: var(--lyra-size-0-375rem);
-    border-radius: var(--lyra-radius-pill);
-    background: var(--lyra-color-brand);
-    /* Same token/rationale as lyra-stream-status's and lyra-typing-indicator's
-       own looping pulse: --lyra-transition-ambient is the length the library
+    inline-size: var(--lr-size-0-375rem);
+    block-size: var(--lr-size-0-375rem);
+    border-radius: var(--lr-radius-pill);
+    background: var(--lr-color-brand);
+    /* Same token/rationale as lr-stream-status's and lr-typing-indicator's
+       own looping pulse: --lr-transition-ambient is the length the library
        reserves for ambient "still alive" motion, so every looping indicator
        shares one calm rhythm instead of hand-rolling its own duration. */
-    animation: lyra-poll-status-pulse var(--lyra-transition-ambient) infinite;
+    animation: lr-poll-status-pulse var(--lr-transition-ambient) infinite;
   }
   [part='indicator'][data-due] {
-    background: var(--lyra-color-success);
+    background: var(--lr-color-success);
   }
-  @keyframes lyra-poll-status-pulse {
+  @keyframes lr-poll-status-pulse {
     0%, 100% {
       opacity: 1;
     }
@@ -43,21 +43,21 @@ export const styles = css`
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    min-inline-size: var(--lyra-icon-button-size);
-    min-block-size: var(--lyra-icon-button-size);
+    min-inline-size: var(--lr-icon-button-size);
+    min-block-size: var(--lr-icon-button-size);
     border: none;
     background: transparent;
     color: inherit;
     cursor: pointer;
-    padding: var(--lyra-size-0-125rem);
-    border-radius: var(--lyra-radius);
+    padding: var(--lr-size-0-125rem);
+    border-radius: var(--lr-radius);
   }
   [part='pause-button']:hover {
-    background: var(--lyra-color-brand-quiet);
-    color: var(--lyra-color-brand);
+    background: var(--lr-color-brand-quiet);
+    color: var(--lr-color-brand);
   }
   [part='pause-button']:focus-visible {
-    outline: var(--lyra-focus-ring-width) solid var(--lyra-focus-ring-color);
-    outline-offset: var(--lyra-focus-ring-offset);
+    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
+    outline-offset: var(--lr-focus-ring-offset);
   }
 `;

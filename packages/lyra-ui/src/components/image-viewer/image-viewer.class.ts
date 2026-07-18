@@ -56,46 +56,46 @@ function screenPercentToImagePercent(px: number, py: number, rotation: ImageRota
 }
 
 export interface LyraImageViewerEventMap {
-  'lyra-load': CustomEvent<{ naturalWidth: number; naturalHeight: number }>;
-  'lyra-zoom-change': CustomEvent<{ zoom: number }>;
-  'lyra-rotation-change': CustomEvent<{ rotation: ImageRotation }>;
-  'lyra-fit-change': CustomEvent<{ fit: ImageFit }>;
-  'lyra-highlight-activate': CustomEvent<HighlightActivateDetail>;
-  'lyra-annotation-create': CustomEvent<{ anchor: LyraAnchor }>;
-  'lyra-anchor-result': CustomEvent<AnchorResultDetail>;
-  'lyra-render-error': CustomEvent<{ error: unknown }>;
+  'lr-load': CustomEvent<{ naturalWidth: number; naturalHeight: number }>;
+  'lr-zoom-change': CustomEvent<{ zoom: number }>;
+  'lr-rotation-change': CustomEvent<{ rotation: ImageRotation }>;
+  'lr-fit-change': CustomEvent<{ fit: ImageFit }>;
+  'lr-highlight-activate': CustomEvent<HighlightActivateDetail>;
+  'lr-annotation-create': CustomEvent<{ anchor: LyraAnchor }>;
+  'lr-anchor-result': CustomEvent<AnchorResultDetail>;
+  'lr-render-error': CustomEvent<{ error: unknown }>;
 }
 
 class LyraImageViewerBase extends LyraElement<LyraImageViewerEventMap> {}
 
 /**
- * `<lyra-image-viewer>` — full pan/zoom raster-image viewer with labeled region highlights and
+ * `<lr-image-viewer>` — full pan/zoom raster-image viewer with labeled region highlights and
  * opt-in region annotation, the landing surface for `region`-anchored citations. Distinct from
- * `<lyra-svg-viewer>` (rendered SVG documents) and `<lyra-image-comparer>` (before/after slotted
+ * `<lr-svg-viewer>` (rendered SVG documents) and `<lr-image-comparer>` (before/after slotted
  * surfaces) — this component owns raster grounding/citation display, not comparison or vector
  * rendering.
  *
  * Adopts `DocumentAnchorTarget` with `anchorKinds: ['region']` only — no text selection is bound
- * (a raster image has no selectable text), so `lyra-text-select` is never emitted by this viewer.
+ * (a raster image has no selectable text), so `lr-text-select` is never emitted by this viewer.
  *
- * @customElement lyra-image-viewer
+ * @customElement lr-image-viewer
  * @slot - None.
- * @event lyra-load - Image finished loading. `detail: { naturalWidth, naturalHeight }`.
- * @event lyra-zoom-change - `detail: { zoom }`, bubbles from the embedded zoomable-frame.
- * @event lyra-rotation-change - `detail: { rotation }`.
- * @event lyra-fit-change - `detail: { fit }`.
- * @event lyra-highlight-activate - A highlight box was clicked/keyboard-activated. `detail: { id }`.
- * @event lyra-annotation-create - A drawn/keyed region was committed. `detail: { anchor }` (kind
+ * @event lr-load - Image finished loading. `detail: { naturalWidth, naturalHeight }`.
+ * @event lr-zoom-change - `detail: { zoom }`, bubbles from the embedded zoomable-frame.
+ * @event lr-rotation-change - `detail: { rotation }`.
+ * @event lr-fit-change - `detail: { fit }`.
+ * @event lr-highlight-activate - A highlight box was clicked/keyboard-activated. `detail: { id }`.
+ * @event lr-annotation-create - A drawn/keyed region was committed. `detail: { anchor }` (kind
  *   `'region'`). Never stored by the component — the host appends a `LyraHighlight`.
- * @event lyra-anchor-result - Fired after `anchor` (or a `scrollToAnchor()` call) is applied.
+ * @event lr-anchor-result - Fired after `anchor` (or a `scrollToAnchor()` call) is applied.
  *   `detail: { found }`.
- * @event lyra-render-error - The image failed to load. `detail: { error }`.
+ * @event lr-render-error - The image failed to load. `detail: { error }`.
  * @csspart base - The root wrapper.
  * @csspart toolbar - The fit/rotate/annotate controls row.
  * @csspart fit-control - The fit-mode select.
  * @csspart rotate-button - The rotate-90-clockwise button.
  * @csspart annotate-toggle - The annotation-mode toggle button.
- * @csspart frame - The embedded `lyra-zoomable-frame`.
+ * @csspart frame - The embedded `lr-zoomable-frame`.
  * @csspart image-wrapper - The rotated wrapper around the image and its overlays.
  * @csspart image - The `<img>` element.
  * @csspart highlight-layer - The overlay hosting highlight boxes.
@@ -118,7 +118,7 @@ export class LyraImageViewer extends DocumentAnchorTarget(LyraImageViewerBase) {
    *  frame's inline size, `actual` shows the image at its natural pixel dimensions. */
   @property({ reflect: true }) fit: ImageFit = 'contain';
   /** Multiplier over the fit-derived base scale, delegated to the embedded zoomable-frame. */
-  // numeric-guard-exempt: pure pass-through to <lyra-zoomable-frame>, which already normalizes it via its own safeZoom
+  // numeric-guard-exempt: pure pass-through to <lr-zoomable-frame>, which already normalizes it via its own safeZoom
   @property({ type: Number, reflect: true }) zoom = 1;
   /** Clockwise rotation in 90-degree steps. */
   @property({ type: Number, reflect: true }) rotation: ImageRotation = 0;
@@ -131,8 +131,8 @@ export class LyraImageViewer extends DocumentAnchorTarget(LyraImageViewerBase) {
   @state() private loadState: ImageLoadState = { kind: 'idle' };
   @state() private draft: AnnotationDraft | null = null;
 
-  @query('lyra-zoomable-frame') private frameEl?: LyraZoomableFrame;
-  @query('lyra-live-region') private liveRegion?: LyraLiveRegion;
+  @query('lr-zoomable-frame') private frameEl?: LyraZoomableFrame;
+  @query('lr-live-region') private liveRegion?: LyraLiveRegion;
   @query('[part="image-wrapper"]') private wrapperEl?: HTMLElement;
 
   /** `rotation` normalized to one of the four right-angle steps this component actually supports
@@ -158,8 +158,8 @@ export class LyraImageViewer extends DocumentAnchorTarget(LyraImageViewerBase) {
 
   protected updated(changed: PropertyValues): void {
     super.updated(changed);
-    if (changed.has('rotation') && changed.get('rotation') !== undefined) this.emit('lyra-rotation-change', { rotation: this.safeRotation });
-    if (changed.has('fit') && changed.get('fit') !== undefined) this.emit('lyra-fit-change', { fit: this.fit });
+    if (changed.has('rotation') && changed.get('rotation') !== undefined) this.emit('lr-rotation-change', { rotation: this.safeRotation });
+    if (changed.has('fit') && changed.get('fit') !== undefined) this.emit('lr-fit-change', { fit: this.fit });
     if (changed.has('annotatable') && this.annotatable && changed.get('annotatable') !== undefined) {
       this.liveRegion?.announce(this.localize('imageViewerAnnotationHint'), { force: true });
     }
@@ -184,12 +184,12 @@ export class LyraImageViewer extends DocumentAnchorTarget(LyraImageViewerBase) {
   private onImgLoad = (event: Event): void => {
     const img = event.target as HTMLImageElement;
     this.loadState = { kind: 'loaded' };
-    this.emit('lyra-load', { naturalWidth: img.naturalWidth, naturalHeight: img.naturalHeight });
+    this.emit('lr-load', { naturalWidth: img.naturalWidth, naturalHeight: img.naturalHeight });
   };
 
   private onImgError = (): void => {
     this.loadState = { kind: 'error' };
-    this.emit('lyra-render-error', { error: new Error('The image failed to load.') });
+    this.emit('lr-render-error', { error: new Error('The image failed to load.') });
   };
 
   private onFrameZoomChange = (event: CustomEvent<{ zoom: number }>): void => {
@@ -198,7 +198,7 @@ export class LyraImageViewer extends DocumentAnchorTarget(LyraImageViewerBase) {
 
   private onHighlightActivate(id: string): void {
     this.activeHighlightId = id;
-    this.emit('lyra-highlight-activate', { id });
+    this.emit('lr-highlight-activate', { id });
   }
 
   private toggleAnnotatable = (): void => {
@@ -275,7 +275,7 @@ export class LyraImageViewer extends DocumentAnchorTarget(LyraImageViewerBase) {
     if (!this.draft) return;
     const rect: ImageRegionRect = { x: this.draft.x, y: this.draft.y, width: this.draft.width, height: this.draft.height };
     this.draft = null;
-    this.emit<{ anchor: LyraAnchor }>('lyra-annotation-create', { anchor: { kind: 'region', rect } });
+    this.emit<{ anchor: LyraAnchor }>('lr-annotation-create', { anchor: { kind: 'region', rect } });
     this.liveRegion?.announce(this.localize('imageViewerAnnotationAdded'), { force: true });
   }
 
@@ -360,7 +360,7 @@ export class LyraImageViewer extends DocumentAnchorTarget(LyraImageViewerBase) {
       return html`<p class="empty-note">${this.localize('documentPreviewEmpty', undefined, { type: this.localize('documentPreviewTypeImage') })}</p>`;
     }
     const safeSrc = safeMediaSrc(this.src);
-    return html`<lyra-zoomable-frame part="frame" exportparts="viewport,content,controls" .zoom=${this.zoom} @lyra-zoom-change=${this.onFrameZoomChange}>
+    return html`<lr-zoomable-frame part="frame" exportparts="viewport,content,controls" .zoom=${this.zoom} @lr-zoom-change=${this.onFrameZoomChange}>
       <div
         part="image-wrapper"
         tabindex=${this.annotatable ? '0' : '-1'}
@@ -376,7 +376,7 @@ export class LyraImageViewer extends DocumentAnchorTarget(LyraImageViewerBase) {
         ${this.renderHighlights()}
         ${this.renderDraft()}
       </div>
-    </lyra-zoomable-frame>`;
+    </lr-zoomable-frame>`;
   }
 
   render(): TemplateResult {
@@ -392,7 +392,7 @@ export class LyraImageViewer extends DocumentAnchorTarget(LyraImageViewerBase) {
         <button part="annotate-toggle" type="button" aria-pressed=${this.annotatable ? 'true' : 'false'} aria-label=${this.localize('imageViewerAnnotate')} @click=${this.toggleAnnotatable}>&#9633;</button>
       </div>
       ${this.renderBody()}
-      <lyra-live-region></lyra-live-region>
+      <lr-live-region></lr-live-region>
       ${this.renderAnchorLiveRegion()}
     </div>`;
   }
@@ -400,6 +400,6 @@ export class LyraImageViewer extends DocumentAnchorTarget(LyraImageViewerBase) {
 
 declare global {
   interface HTMLElementTagNameMap {
-    'lyra-image-viewer': LyraImageViewer;
+    'lr-image-viewer': LyraImageViewer;
   }
 }

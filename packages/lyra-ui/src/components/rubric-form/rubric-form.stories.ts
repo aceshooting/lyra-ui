@@ -30,18 +30,18 @@ const keys: RubricKey[] = [
 
 const meta: Meta = {
   title: 'Observability/Rubric Form',
-  component: 'lyra-rubric-form',
+  component: 'lr-rubric-form',
   tags: ['autodocs'],
 };
 export default meta;
 type Story = StoryObj;
 
 export const Default: Story = {
-  render: () => html`<lyra-rubric-form style="max-width: 28rem" .keys=${keys}></lyra-rubric-form>`,
+  render: () => html`<lr-rubric-form style="max-width: 28rem" .keys=${keys}></lr-rubric-form>`,
 };
 
 /** A submit-and-next flow for working through a queue of items: `has-next` and `skippable` are
- *  set, and each `lyra-submit`/`lyra-skip` advances to the next item by resetting `value` and
+ *  set, and each `lr-submit`/`lr-skip` advances to the next item by resetting `value` and
  *  changing `item-id` (which also resets which fields have been visited/error-revealed). */
 export const QueueFlow: Story = {
   render: () => {
@@ -49,7 +49,7 @@ export const QueueFlow: Story = {
     let itemId = 'item-1';
     const getEl = () => document.getElementById('queue-rubric') as HTMLElement & { value: RubricValue; itemId: string };
     return html`
-      <lyra-rubric-form
+      <lr-rubric-form
         id="queue-rubric"
         style="max-width: 28rem"
         .keys=${keys}
@@ -57,7 +57,7 @@ export const QueueFlow: Story = {
         item-id=${itemId}
         has-next
         skippable
-        @lyra-submit=${(e: CustomEvent<{ value: RubricValue; itemId: string }>) => {
+        @lr-submit=${(e: CustomEvent<{ value: RubricValue; itemId: string }>) => {
           console.log('submitted', e.detail);
           value = {};
           itemId = itemId === 'item-1' ? 'item-2' : 'item-1';
@@ -65,23 +65,23 @@ export const QueueFlow: Story = {
           el.value = value;
           el.itemId = itemId;
         }}
-        @lyra-skip=${() => {
+        @lr-skip=${() => {
           value = {};
           itemId = itemId === 'item-1' ? 'item-2' : 'item-1';
           const el = getEl();
           el.value = value;
           el.itemId = itemId;
         }}
-      ></lyra-rubric-form>
+      ></lr-rubric-form>
     `;
   },
 };
 
 export const Empty: Story = {
-  render: () => html`<lyra-rubric-form style="max-width: 28rem"></lyra-rubric-form>`,
+  render: () => html`<lr-rubric-form style="max-width: 28rem"></lr-rubric-form>`,
 };
 
 /** 320px container — the single-column field stack needs no special narrow handling. */
 export const Narrow: Story = {
-  render: () => html`<lyra-rubric-form style="max-width: 320px" .keys=${keys}></lyra-rubric-form>`,
+  render: () => html`<lr-rubric-form style="max-width: 320px" .keys=${keys}></lr-rubric-form>`,
 };

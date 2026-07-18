@@ -5,18 +5,18 @@ import { finiteDuration, finiteInteger } from '../../internal/numbers.js';
 import { styles } from './carousel.styles.js';
 
 export interface LyraCarouselEventMap {
-  'lyra-slide-change': CustomEvent<{ index: number }>;
+  'lr-slide-change': CustomEvent<{ index: number }>;
 }
 
 /**
- * `<lyra-carousel>` — an accessible single-slide carousel for arbitrary
+ * `<lr-carousel>` — an accessible single-slide carousel for arbitrary
  * slotted content. The index is reflected and self-managed by navigation;
- * every change emits `lyra-slide-change` so applications can persist or
+ * every change emits `lr-slide-change` so applications can persist or
  * coordinate the active slide.
  *
- * @customElement lyra-carousel
+ * @customElement lr-carousel
  * @slot - Slide elements. Each assigned element becomes one slide.
- * @event lyra-slide-change - Active slide changed. `detail: { index }`.
+ * @event lr-slide-change - Active slide changed. `detail: { index }`.
  * @csspart base - The carousel landmark.
  * @csspart viewport - The keyboard-focusable slide viewport.
  * @csspart track - The slotted slide wrapper.
@@ -27,8 +27,8 @@ export interface LyraCarouselEventMap {
  * @csspart next-glyph - The chevron glyph inside `next-button`, mirrored under RTL.
  * @csspart indicators - Indicator button group.
  * @csspart indicator - An individual slide indicator's interactive hit target, sized to the
- *   shared minimum tappable size (`--lyra-icon-button-size`), independent of the smaller visible
- *   dot rendered inside it (mirrors `<lyra-swatch-picker>`'s `[part="swatch"]`/`[part="swatch-fill"]`
+ *   shared minimum tappable size (`--lr-icon-button-size`), independent of the smaller visible
+ *   dot rendered inside it (mirrors `<lr-swatch-picker>`'s `[part="swatch"]`/`[part="swatch-fill"]`
  *   split).
  * @csspart indicator-dot - The individual indicator's compact visible dot.
  */
@@ -124,7 +124,7 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
     else next = Math.min(count - 1, Math.max(0, index));
     if (next === this.index) return;
     this.index = next;
-    this.emit('lyra-slide-change', { index: next });
+    this.emit('lr-slide-change', { index: next });
   }
 
   next = (): void => this.changeTo(this.index + 1);
@@ -226,6 +226,6 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
 
 declare global {
   interface HTMLElementTagNameMap {
-    'lyra-carousel': LyraCarousel;
+    'lr-carousel': LyraCarousel;
   }
 }

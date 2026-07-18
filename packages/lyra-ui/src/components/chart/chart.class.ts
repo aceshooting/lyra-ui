@@ -91,7 +91,7 @@ const UNSAFE_KEYS = new Set(['__proto__', 'constructor', 'prototype']);
 
 
 // Defensive JS-side fallbacks for themeColors() below, mirroring the
-// light-mode default of each `--lyra-chart-*` token's own fallback chain
+// light-mode default of each `--lr-chart-*` token's own fallback chain
 // (see chart.styles.ts) — only reached if getComputedStyle somehow can't
 // resolve the custom property at all (e.g. host detached from the document).
 const FALLBACK_GRID_COLOR = '#8a8a90';
@@ -146,16 +146,16 @@ function deepMerge<T>(base: T, override: unknown, seen = new WeakMap<object, unk
 }
 
 export interface LyraChartEventMap {
-  'lyra-point-click': CustomEvent<{
+  'lr-point-click': CustomEvent<{
     datasetIndex: number;
     index: number;
     label: string | undefined;
     value: unknown;
   }>;
-  'lyra-zoom': CustomEvent<{ zoomed: boolean }>;
+  'lr-zoom': CustomEvent<{ zoomed: boolean }>;
 }
 /**
- * `<lyra-chart>` — the core Chart.js wrapper every other `lyra-*-chart` tag
+ * `<lr-chart>` — the core Chart.js wrapper every other `lr-*-chart` tag
  * subclasses. Requires the optional peer deps `chart.js` + `chartjs-plugin-zoom`.
  *
  * **API mirror note:** the real `wa-chart` docs page
@@ -163,7 +163,7 @@ export interface LyraChartEventMap {
  * ChartJS['config']` property alongside its simplified attributes — "a
  * flexible wrapper around Chart.js" supporting *both* simplified attributes
  * and full Chart.js configuration passthrough, not a `data`/`options` prop
- * pair. `lyra-chart` mirrors that dual surface: the `Series`-based
+ * pair. `lr-chart` mirrors that dual surface: the `Series`-based
  * `datasets`/`labels`/`type`/`legend`/`xLabel`/`yLabel`/`zoom` attributes
  * below are the simplified surface (compatible with WA's `type`, `xLabel`,
  * `yLabel`, `withoutLegend`-equivalent `legend`, etc.), and the additional
@@ -173,9 +173,9 @@ export interface LyraChartEventMap {
  * `Series` shape the rest of this component family (subclasses, box-plot,
  * histogram) is built on.
  *
- * @customElement lyra-chart
- * @event lyra-zoom - `detail: { zoomed }`.
- * @event lyra-point-click - Fired when a click lands on (or nearest,
+ * @customElement lr-chart
+ * @event lr-zoom - `detail: { zoomed }`.
+ * @event lr-point-click - Fired when a click lands on (or nearest,
  *   intersect-only — see `handlePointClick()`) a data point/segment.
  *   `detail: { datasetIndex: number, index: number, label: string |
  *   undefined, value: unknown }`.
@@ -331,13 +331,13 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
     if (this.loading) this.setAttribute('aria-busy', 'true');
     else this.removeAttribute('aria-busy');
 
-    // `--lyra-chart-height` is read by `:host`'s `block-size` in
+    // `--lr-chart-height` is read by `:host`'s `block-size` in
     // `chart.styles.ts`. Custom properties only cascade downward (host ->
     // shadow tree), never upward from a shadow-tree descendant back to the
     // host, so this must be set on the host element itself, not on the
     // `[part="base"]` div inside the shadow root.
     if (changed.has('height')) {
-      this.style.setProperty('--lyra-chart-height', this.height);
+      this.style.setProperty('--lr-chart-height', this.height);
     }
     // While `chart.js` is still loading, `draw()` would no-op anyway (no
     // `chartJsModule`/`canvasEl` yet) — bail before touching `lastSignature`
@@ -419,7 +419,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
   }
 
   /**
-   * Resolves the `--lyra-chart-*` theme tokens (declared in
+   * Resolves the `--lr-chart-*` theme tokens (declared in
    * `chart.styles.ts`, each layered over an existing semantic token) via
    * `getComputedStyle`. Chart.js renders to canvas, not the DOM, so it can't
    * consume CSS `var()` directly — same constraint documented on
@@ -429,11 +429,11 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
   private themeColors(): ThemeColors {
     const cs = getComputedStyle(this);
     return {
-      grid: cs.getPropertyValue('--lyra-chart-grid-color').trim() || FALLBACK_GRID_COLOR,
-      tick: cs.getPropertyValue('--lyra-chart-tick-color').trim() || FALLBACK_TICK_COLOR,
-      legend: cs.getPropertyValue('--lyra-chart-legend-color').trim() || FALLBACK_LEGEND_COLOR,
-      tooltipBg: cs.getPropertyValue('--lyra-chart-tooltip-bg').trim() || FALLBACK_TOOLTIP_BG,
-      tooltipText: cs.getPropertyValue('--lyra-chart-tooltip-text').trim() || FALLBACK_TOOLTIP_TEXT,
+      grid: cs.getPropertyValue('--lr-chart-grid-color').trim() || FALLBACK_GRID_COLOR,
+      tick: cs.getPropertyValue('--lr-chart-tick-color').trim() || FALLBACK_TICK_COLOR,
+      legend: cs.getPropertyValue('--lr-chart-legend-color').trim() || FALLBACK_LEGEND_COLOR,
+      tooltipBg: cs.getPropertyValue('--lr-chart-tooltip-bg').trim() || FALLBACK_TOOLTIP_BG,
+      tooltipText: cs.getPropertyValue('--lr-chart-tooltip-text').trim() || FALLBACK_TOOLTIP_TEXT,
     };
   }
 
@@ -540,7 +540,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
     const { datasetIndex, index } = hit;
     const label = chart.data.labels?.[index] as string | undefined;
     const value = chart.data.datasets[datasetIndex]?.data?.[index] ?? null;
-    this.emit('lyra-point-click', { datasetIndex, index, label, value });
+    this.emit('lr-point-click', { datasetIndex, index, label, value });
   }
 
   /**
@@ -710,7 +710,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
                   onZoomComplete: () => {
                     if (this.suppressZoomComplete) return;
                     this.zoomed = true;
-                    this.emit('lyra-zoom', { zoomed: true });
+                    this.emit('lr-zoom', { zoomed: true });
                   },
                 },
                 limits: { x: { min: 'original', max: 'original' } },
@@ -786,16 +786,16 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
       this.suppressZoomComplete = false;
     }
     this.zoomed = false;
-    this.emit('lyra-zoom', { zoomed: false });
+    this.emit('lr-zoom', { zoomed: false });
   }
 
   /**
-   * Forces a redraw so `themeColors()` re-reads the `--lyra-chart-*` custom
+   * Forces a redraw so `themeColors()` re-reads the `--lr-chart-*` custom
    * properties from the current computed style. No global theme-broadcast
    * event exists anywhere in lyra-ui (nothing to subscribe to here) — this
    * is the escape hatch for a consumer's own theme-toggle handler to call
    * directly when it flips e.g. a `data-theme` attribute upstream that
-   * doesn't otherwise change any `lyra-chart` property, so Lit's reactive
+   * doesn't otherwise change any `lr-chart` property, so Lit's reactive
    * update loop has nothing of its own to trigger `draw()` on.
    */
   refreshTheme(): void {
@@ -886,7 +886,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
     if (this.loading) {
       return html`
         <div part="base">
-          <lyra-skeleton variant="rect"></lyra-skeleton>
+          <lr-skeleton variant="rect"></lr-skeleton>
         </div>
       `;
     }
@@ -926,7 +926,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
 
 declare global {
   interface HTMLElementTagNameMap {
-    'lyra-chart': LyraChart;
+    'lr-chart': LyraChart;
   }
 }
 
@@ -939,8 +939,8 @@ declare global {
  * syntax (TS2611), so the accessor pair is installed directly on the
  * prototype instead, which is runtime-equivalent (same shadowing semantics
  * as a class-syntax override) without tripping that check. Shared by every
- * `lyra-*-chart` subclass (bar/line/pie/doughnut/scatter/bubble/radar/
- * polarArea) plus `lyra-histogram`, replacing what used to be an identical
+ * `lr-*-chart` subclass (bar/line/pie/doughnut/scatter/bubble/radar/
+ * polarArea) plus `lr-histogram`, replacing what used to be an identical
  * ~16-line `Object.defineProperty` block copy-pasted into each file.
  */
 export function lockChartType(ctor: Function, value: string): void {

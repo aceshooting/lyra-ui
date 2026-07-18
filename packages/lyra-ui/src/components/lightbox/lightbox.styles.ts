@@ -2,23 +2,23 @@ import { css } from 'lit';
 
 export const styles = css`
   :host {
-    --lyra-lightbox-overlay-color: var(--lyra-color-overlay-strong);
+    --lr-lightbox-overlay-color: var(--lr-color-overlay-strong);
     /* Background for every floating/toolbar icon button (close-button, previous-button,
        next-button). These buttons float directly over arbitrary image content, not the app's
        normal surface, so they reuse the "solid, high-contrast neutral fill" token rather than
-       --lyra-color-surface for guaranteed contrast independent of both the page theme and
+       --lr-color-surface for guaranteed contrast independent of both the page theme and
        whatever's in the photo. */
-    --lyra-lightbox-control-bg: var(--lyra-color-neutral);
-    --lyra-lightbox-control-color: var(--lyra-color-on-neutral);
+    --lr-lightbox-control-bg: var(--lr-color-neutral);
+    --lr-lightbox-control-color: var(--lr-color-on-neutral);
     display: none;
     position: fixed;
     inset: 0;
-    z-index: var(--lyra-overlay-stack-index, var(--lyra-layer-modal));
+    z-index: var(--lr-overlay-stack-index, var(--lr-layer-modal));
     container-type: inline-size;
-    padding-block-start: max(var(--lyra-space-l), var(--lyra-safe-area-top));
-    padding-block-end: max(var(--lyra-space-l), var(--lyra-safe-area-bottom));
-    padding-inline-start: max(var(--lyra-space-l), var(--lyra-safe-area-inline-start));
-    padding-inline-end: max(var(--lyra-space-l), var(--lyra-safe-area-inline-end));
+    padding-block-start: max(var(--lr-space-l), var(--lr-safe-area-top));
+    padding-block-end: max(var(--lr-space-l), var(--lr-safe-area-bottom));
+    padding-inline-start: max(var(--lr-space-l), var(--lr-safe-area-inline-start));
+    padding-inline-end: max(var(--lr-space-l), var(--lr-safe-area-inline-end));
   }
   :host([open]) {
     display: flex;
@@ -26,13 +26,13 @@ export const styles = css`
   [part='backdrop'] {
     position: absolute;
     inset: 0;
-    background: var(--lyra-lightbox-overlay-color);
+    background: var(--lr-lightbox-overlay-color);
   }
   [part='panel'] {
     position: relative;
     display: flex;
     flex-direction: column;
-    gap: var(--lyra-space-s);
+    gap: var(--lr-space-s);
     inline-size: 100%;
     block-size: 100%;
     min-inline-size: 0;
@@ -44,7 +44,7 @@ export const styles = css`
     align-items: center;
     flex: 0 0 auto;
     flex-wrap: wrap;
-    gap: var(--lyra-space-s);
+    gap: var(--lr-space-s);
   }
   [part='counter'] {
     display: inline-block;
@@ -53,16 +53,16 @@ export const styles = css`
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-    padding: var(--lyra-space-xs) var(--lyra-space-s);
-    border-radius: var(--lyra-radius);
-    background: var(--lyra-lightbox-control-bg);
-    color: var(--lyra-lightbox-control-color);
-    font-size: var(--lyra-font-size-sm);
+    padding: var(--lr-space-xs) var(--lr-space-s);
+    border-radius: var(--lr-radius);
+    background: var(--lr-lightbox-control-bg);
+    color: var(--lr-lightbox-control-color);
+    font-size: var(--lr-font-size-sm);
   }
   [part='actions'] {
     display: flex;
     align-items: center;
-    gap: var(--lyra-space-xs);
+    gap: var(--lr-space-xs);
     margin-inline-start: auto;
   }
   [part='actions'][hidden] {
@@ -75,32 +75,32 @@ export const styles = css`
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    min-inline-size: var(--lyra-icon-button-size);
-    min-block-size: var(--lyra-icon-button-size);
+    min-inline-size: var(--lr-icon-button-size);
+    min-block-size: var(--lr-icon-button-size);
     border: none;
-    border-radius: var(--lyra-radius-pill);
-    background: var(--lyra-lightbox-control-bg);
-    color: var(--lyra-lightbox-control-color);
+    border-radius: var(--lr-radius-pill);
+    background: var(--lr-lightbox-control-bg);
+    color: var(--lr-lightbox-control-color);
     cursor: pointer;
   }
   [part='close-button'] {
-    margin-inline-start: var(--lyra-space-xs);
+    margin-inline-start: var(--lr-space-xs);
   }
   [part='close-button']:hover,
   [part='previous-button']:hover:not(:disabled),
   [part='next-button']:hover:not(:disabled) {
-    background: var(--lyra-color-brand-quiet);
-    color: var(--lyra-color-brand);
+    background: var(--lr-color-brand-quiet);
+    color: var(--lr-color-brand);
   }
   [part='close-button']:focus-visible,
   [part='previous-button']:focus-visible,
   [part='next-button']:focus-visible {
-    outline: var(--lyra-focus-ring-width) solid var(--lyra-focus-ring-color);
-    outline-offset: var(--lyra-focus-ring-offset);
+    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
+    outline-offset: var(--lr-focus-ring-offset);
   }
   [part='previous-button']:disabled,
   [part='next-button']:disabled {
-    opacity: var(--lyra-opacity-disabled);
+    opacity: var(--lr-opacity-disabled);
     cursor: not-allowed;
   }
   [part='close-button'] svg,
@@ -116,15 +116,15 @@ export const styles = css`
   }
   /* Plain ::part() styling one level in, unrelated to exportparts -- stretches the embedded
      frame to fill the stage, overriding zoomable-frame's own min-block-size default. */
-  lyra-zoomable-frame[part='frame'] {
+  lr-zoomable-frame[part='frame'] {
     display: block;
     inline-size: 100%;
     block-size: 100%;
   }
-  lyra-zoomable-frame[part='frame']::part(base) {
+  lr-zoomable-frame[part='frame']::part(base) {
     block-size: 100%;
   }
-  lyra-zoomable-frame[part='frame']::part(viewport) {
+  lr-zoomable-frame[part='frame']::part(viewport) {
     block-size: 100%;
   }
   [part='previous-button'],
@@ -132,13 +132,13 @@ export const styles = css`
     position: absolute;
     inset-block-start: 50%;
     transform: translateY(-50%);
-    z-index: var(--lyra-layer-content);
+    z-index: var(--lr-layer-content);
   }
   [part='previous-button'] {
-    inset-inline-start: var(--lyra-space-s);
+    inset-inline-start: var(--lr-space-s);
   }
   [part='next-button'] {
-    inset-inline-end: var(--lyra-space-s);
+    inset-inline-end: var(--lr-space-s);
   }
   /* Rotate the wrapping part element, not the icon itself -- rotate(180deg) matches
      pagination.styles.ts's existing previous-icon/next-icon recipe for a chevronIcon()-based
@@ -161,17 +161,17 @@ export const styles = css`
     margin: 0;
     max-inline-size: 100%;
     align-self: center;
-    padding: var(--lyra-space-xs) var(--lyra-space-s);
-    border-radius: var(--lyra-radius);
-    background: var(--lyra-lightbox-control-bg);
-    color: var(--lyra-lightbox-control-color);
+    padding: var(--lr-space-xs) var(--lr-space-s);
+    border-radius: var(--lr-radius);
+    background: var(--lr-lightbox-control-bg);
+    color: var(--lr-lightbox-control-color);
     text-align: center;
     overflow-wrap: anywhere;
   }
   /* Container-query lengths cannot reference custom properties. This is the documented 320px
      narrow-allocation baseline expressed in root-relative units so it still follows the page's
      type scale -- mirrors pagination.styles.ts's identical container query. */
-  @container (max-width: 20rem) {
+  @container (max-inline-size: 20rem) {
     [part='counter'] {
       max-inline-size: 45%;
     }

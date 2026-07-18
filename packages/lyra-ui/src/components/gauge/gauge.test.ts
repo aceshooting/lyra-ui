@@ -5,7 +5,7 @@ import { styles } from './gauge.styles.js';
 
 it('reflects value/min/max as ARIA meter attributes', async () => {
   const el = (await fixture(
-    html`<lyra-gauge value="30" min="0" max="50" label="CPU"></lyra-gauge>`,
+    html`<lr-gauge value="30" min="0" max="50" label="CPU"></lr-gauge>`,
   )) as LyraGauge;
   expect(el.getAttribute('role')).to.equal('meter');
   expect(el.getAttribute('aria-valuenow')).to.equal('30');
@@ -16,7 +16,7 @@ it('reflects value/min/max as ARIA meter attributes', async () => {
 
 it('preserves an explicit host accessible name instead of replacing it with the visible label', async () => {
   const el = (await fixture(html`
-    <lyra-gauge aria-label="Overall quality score" label="Score" value="82"></lyra-gauge>
+    <lr-gauge aria-label="Overall quality score" label="Score" value="82"></lr-gauge>
   `)) as LyraGauge;
 
   expect(el.getAttribute('aria-label')).to.equal('Overall quality score');
@@ -24,14 +24,14 @@ it('preserves an explicit host accessible name instead of replacing it with the 
 
 it('normalizes a reversed min > max domain in aria-value* so it agrees with the visual fill instead of pinning aria-valuenow', async () => {
   const lowValue = (await fixture(
-    html`<lyra-gauge value="5" min="100" max="0"></lyra-gauge>`,
+    html`<lr-gauge value="5" min="100" max="0"></lr-gauge>`,
   )) as LyraGauge;
   expect(lowValue.getAttribute('aria-valuemin')).to.equal('0');
   expect(lowValue.getAttribute('aria-valuemax')).to.equal('100');
   expect(lowValue.getAttribute('aria-valuenow')).to.equal('5');
 
   const highValue = (await fixture(
-    html`<lyra-gauge value="70" min="100" max="0"></lyra-gauge>`,
+    html`<lr-gauge value="70" min="100" max="0"></lr-gauge>`,
   )) as LyraGauge;
   // Previously pinned to `max` (0) regardless of `value` -- now tracks the
   // normalized domain, matching `ratio`'s own normalization.
@@ -39,7 +39,7 @@ it('normalizes a reversed min > max domain in aria-value* so it agrees with the 
 });
 
 it('clamps the visual fill to [0,1] of the range and stops the arc at the sweep end', async () => {
-  const el = (await fixture(html`<lyra-gauge value="200" max="100"></lyra-gauge>`)) as LyraGauge;
+  const el = (await fixture(html`<lr-gauge value="200" max="100"></lr-gauge>`)) as LyraGauge;
   const fill = el.shadowRoot!.querySelector('[part="fill"]') as SVGPathElement | HTMLElement;
   expect(fill).to.exist;
   // ratio clamps to 1, so the dash pattern must be fully revealed (offset 0) —
@@ -51,7 +51,7 @@ it('clamps the visual fill to [0,1] of the range and stops the arc at the sweep 
 });
 
 it('accounts for a nonzero min when computing the fill ratio', async () => {
-  const el = (await fixture(html`<lyra-gauge value="30" min="20" max="40"></lyra-gauge>`)) as LyraGauge;
+  const el = (await fixture(html`<lr-gauge value="30" min="20" max="40"></lr-gauge>`)) as LyraGauge;
   const fill = el.shadowRoot!.querySelector('[part="fill"]') as SVGPathElement;
   const arcLength = (270 / 360) * 2 * Math.PI * 40;
 
@@ -64,7 +64,7 @@ it('accounts for a nonzero min when computing the fill ratio', async () => {
 });
 
 it('guards against a degenerate min===max range instead of a NaN/Infinity dashoffset', async () => {
-  const el = (await fixture(html`<lyra-gauge value="50" min="50" max="50"></lyra-gauge>`)) as LyraGauge;
+  const el = (await fixture(html`<lr-gauge value="50" min="50" max="50"></lr-gauge>`)) as LyraGauge;
   const fill = el.shadowRoot!.querySelector('[part="fill"]') as SVGPathElement;
 
   const dashoffset = Number(fill.getAttribute('stroke-dashoffset'));
@@ -73,7 +73,7 @@ it('guards against a degenerate min===max range instead of a NaN/Infinity dashof
 });
 
 it('guards against a NaN/undefined value instead of leaking "NaN" into aria-valuenow and stroke-dashoffset', async () => {
-  const el = (await fixture(html`<lyra-gauge value="30" max="100"></lyra-gauge>`)) as LyraGauge;
+  const el = (await fixture(html`<lr-gauge value="30" max="100"></lr-gauge>`)) as LyraGauge;
   el.value = undefined as unknown as number;
   await el.updateComplete;
 
@@ -84,28 +84,28 @@ it('guards against a NaN/undefined value instead of leaking "NaN" into aria-valu
 });
 
 it('renders a finite dashoffset instead of NaN when max is Infinity', async () => {
-  const el = (await fixture(html`<lyra-gauge value="5" max="Infinity"></lyra-gauge>`)) as LyraGauge;
+  const el = (await fixture(html`<lr-gauge value="5" max="Infinity"></lr-gauge>`)) as LyraGauge;
   const fill = el.shadowRoot!.querySelector('[part="fill"]')!;
   expect(fill.getAttribute('stroke-dashoffset')).to.not.include('NaN');
 });
 
 it('blanks the value part instead of printing the literal word when value is Infinity or -Infinity', async () => {
-  const positive = (await fixture(html`<lyra-gauge value="Infinity" max="100"></lyra-gauge>`)) as LyraGauge;
+  const positive = (await fixture(html`<lr-gauge value="Infinity" max="100"></lr-gauge>`)) as LyraGauge;
   const positiveValue = positive.shadowRoot!.querySelector('[part="value"]')!;
   expect(positiveValue.textContent).to.equal('');
 
-  const negative = (await fixture(html`<lyra-gauge value="-Infinity" max="100"></lyra-gauge>`)) as LyraGauge;
+  const negative = (await fixture(html`<lr-gauge value="-Infinity" max="100"></lr-gauge>`)) as LyraGauge;
   const negativeValue = negative.shadowRoot!.querySelector('[part="value"]')!;
   expect(negativeValue.textContent).to.equal('');
 });
 
 it('does not emit an Infinity aria-valuemax', async () => {
-  const el = (await fixture(html`<lyra-gauge value="5" max="Infinity"></lyra-gauge>`)) as LyraGauge;
+  const el = (await fixture(html`<lr-gauge value="5" max="Infinity"></lr-gauge>`)) as LyraGauge;
   expect(el.getAttribute('aria-valuemax')).to.not.equal('Infinity');
 });
 
 it('treats a reversed min > max as an empty/zero ratio instead of a negative one', async () => {
-  const el = (await fixture(html`<lyra-gauge value="5" min="100" max="0"></lyra-gauge>`)) as LyraGauge;
+  const el = (await fixture(html`<lr-gauge value="5" min="100" max="0"></lr-gauge>`)) as LyraGauge;
   const fill = el.shadowRoot!.querySelector('[part="fill"]')!;
   const dashoffset = Number(fill.getAttribute('stroke-dashoffset'));
   expect(dashoffset).to.be.at.least(0);
@@ -113,7 +113,7 @@ it('treats a reversed min > max as an empty/zero ratio instead of a negative one
 
 it('drives the radial fill via a fixed-length dasharray with dashoffset derived from ratio', async () => {
   const el = (await fixture(
-    html`<lyra-gauge value="0" min="0" max="100"></lyra-gauge>`,
+    html`<lr-gauge value="0" min="0" max="100"></lr-gauge>`,
   )) as LyraGauge;
   const fill = el.shadowRoot!.querySelector('[part="fill"]') as SVGPathElement;
   const arcLength = (270 / 360) * 2 * Math.PI * 40;
@@ -137,7 +137,7 @@ it('drives the radial fill via a fixed-length dasharray with dashoffset derived 
 
 it('drives the linear fill via a fixed-length dasharray with dashoffset derived from ratio', async () => {
   const el = (await fixture(
-    html`<lyra-gauge type="linear" value="0" min="0" max="100"></lyra-gauge>`,
+    html`<lr-gauge type="linear" value="0" min="0" max="100"></lr-gauge>`,
   )) as LyraGauge;
   const fill = el.shadowRoot!.querySelector('[part="fill"]') as SVGLineElement;
 
@@ -158,7 +158,7 @@ it('drives the linear fill via a fixed-length dasharray with dashoffset derived 
 
 it('transitions the fill stroke-dashoffset using the shared transition token, disabled under reduced motion', () => {
   const css = styles.cssText.replace(/\s+/g, ' ');
-  expect(css).to.include('transition: stroke-dashoffset var(--lyra-transition-base);');
+  expect(css).to.include('transition: stroke-dashoffset var(--lr-transition-base);');
   expect(css).to.include(
     "@media (prefers-reduced-motion: reduce) { [part='fill'] { transition: none !important; } }",
   );
@@ -166,7 +166,7 @@ it('transitions the fill stroke-dashoffset using the shared transition token, di
 
 it('renders a linear track when type is linear', async () => {
   const el = (await fixture(
-    html`<lyra-gauge type="linear" value="10" max="100" label="Battery"></lyra-gauge>`,
+    html`<lr-gauge type="linear" value="10" max="100" label="Battery"></lr-gauge>`,
   )) as LyraGauge;
   expect(el.shadowRoot!.querySelector('[part="track"]')).to.exist;
   const valueEl = el.shadowRoot!.querySelector('[part="value"]');
@@ -179,7 +179,7 @@ it('renders a linear track when type is linear', async () => {
 
 it('renders a full-circle ring with circumference-based progress when type is ring', async () => {
   const el = (await fixture(
-    html`<lyra-gauge type="ring" value="25" max="100" label="Score"></lyra-gauge>`,
+    html`<lr-gauge type="ring" value="25" max="100" label="Score"></lr-gauge>`,
   )) as LyraGauge;
   const track = el.shadowRoot!.querySelector('[part="track"]') as SVGCircleElement;
   const fill = el.shadowRoot!.querySelector('[part="fill"]') as SVGCircleElement;
@@ -191,26 +191,26 @@ it('renders a full-circle ring with circumference-based progress when type is ri
 });
 
 it('exposes a per-instance gauge fill token for radial, ring, and linear variants', () => {
-  expect(styles.cssText).to.include('stroke: var(--lyra-gauge-fill, var(--lyra-color-brand))');
+  expect(styles.cssText).to.include('stroke: var(--lr-gauge-fill, var(--lr-color-brand))');
 });
 
 it('omits the label part in linear mode when label is empty', async () => {
   const el = (await fixture(
-    html`<lyra-gauge type="linear" value="5" max="100"></lyra-gauge>`,
+    html`<lr-gauge type="linear" value="5" max="100"></lr-gauge>`,
   )) as LyraGauge;
   expect(el.shadowRoot!.querySelector('[part="label"]')).to.not.exist;
 });
 
 it('exposes a base part on the render root for both radial and linear', async () => {
-  const radial = (await fixture(html`<lyra-gauge></lyra-gauge>`)) as LyraGauge;
+  const radial = (await fixture(html`<lr-gauge></lr-gauge>`)) as LyraGauge;
   expect(radial.shadowRoot!.querySelector('[part="base"]')).to.exist;
 
-  const linear = (await fixture(html`<lyra-gauge type="linear"></lyra-gauge>`)) as LyraGauge;
+  const linear = (await fixture(html`<lr-gauge type="linear"></lr-gauge>`)) as LyraGauge;
   expect(linear.shadowRoot!.querySelector('[part="base"]')).to.exist;
 });
 
 it('sets aria-valuetext from valueLabel and clears it when unset', async () => {
-  const el = (await fixture(html`<lyra-gauge value="72" max="100"></lyra-gauge>`)) as LyraGauge;
+  const el = (await fixture(html`<lr-gauge value="72" max="100"></lr-gauge>`)) as LyraGauge;
   expect(el.hasAttribute('aria-valuetext')).to.be.false;
 
   el.valueLabel = '72°F';
@@ -223,7 +223,7 @@ it('sets aria-valuetext from valueLabel and clears it when unset', async () => {
 });
 
 it('falls back to the numeric value when valueLabel is cleared to an empty string', async () => {
-  const el = (await fixture(html`<lyra-gauge value="72" max="100"></lyra-gauge>`)) as LyraGauge;
+  const el = (await fixture(html`<lr-gauge value="72" max="100"></lr-gauge>`)) as LyraGauge;
   el.valueLabel = '72°F';
   await el.updateComplete;
 
@@ -236,7 +236,7 @@ it('falls back to the numeric value when valueLabel is cleared to an empty strin
 
 it('hides the SVG value/label text from the accessibility tree in both radial and linear modes', async () => {
   const radial = (await fixture(
-    html`<lyra-gauge value="30" max="100" label="CPU"></lyra-gauge>`,
+    html`<lr-gauge value="30" max="100" label="CPU"></lr-gauge>`,
   )) as LyraGauge;
   const radialValue = radial.shadowRoot!.querySelector('[part="value"]')!;
   const radialLabel = radial.shadowRoot!.querySelector('[part="label"]')!;
@@ -244,7 +244,7 @@ it('hides the SVG value/label text from the accessibility tree in both radial an
   expect(radialLabel.getAttribute('aria-hidden')).to.equal('true');
 
   const linear = (await fixture(
-    html`<lyra-gauge type="linear" value="30" max="100" label="CPU"></lyra-gauge>`,
+    html`<lr-gauge type="linear" value="30" max="100" label="CPU"></lr-gauge>`,
   )) as LyraGauge;
   const linearValue = linear.shadowRoot!.querySelector('[part="value"]')!;
   const linearLabel = linear.shadowRoot!.querySelector('[part="label"]')!;
@@ -254,23 +254,23 @@ it('hides the SVG value/label text from the accessibility tree in both radial an
 
 it('is accessible', async () => {
   const el = (await fixture(
-    html`<lyra-gauge value="30" max="100" label="CPU"></lyra-gauge>`,
+    html`<lr-gauge value="30" max="100" label="CPU"></lr-gauge>`,
   )) as LyraGauge;
   await expect(el).to.be.accessible();
 });
 
 it('is accessible in linear mode', async () => {
   const el = (await fixture(
-    html`<lyra-gauge type="linear" value="30" max="100" label="CPU"></lyra-gauge>`,
+    html`<lr-gauge type="linear" value="30" max="100" label="CPU"></lr-gauge>`,
   )) as LyraGauge;
   await expect(el).to.be.accessible();
 });
 
 it('keeps the linear label/value text inside the 0..100 x range under RTL instead of double-flipping text-anchor', async () => {
   const wrapper = (await fixture(html`
-    <div dir="rtl"><lyra-gauge type="linear" label="Battery" value="50" max="100"></lyra-gauge></div>
+    <div dir="rtl"><lr-gauge type="linear" label="Battery" value="50" max="100"></lr-gauge></div>
   `)) as HTMLElement;
-  const el = wrapper.querySelector('lyra-gauge') as LyraGauge;
+  const el = wrapper.querySelector('lr-gauge') as LyraGauge;
   await el.updateComplete;
   const labelEl = el.shadowRoot!.querySelector('[part="label"]') as unknown as SVGTextElement;
   const valueEl = el.shadowRoot!.querySelector('[part="value"]') as unknown as SVGTextElement;

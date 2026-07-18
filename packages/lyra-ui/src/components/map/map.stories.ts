@@ -23,7 +23,7 @@ const RASTER_STYLE = {
 
 const meta: Meta = {
   title: 'Map',
-  component: 'lyra-map',
+  component: 'lr-map',
   tags: ['autodocs'],
   parameters: {
     docs: {
@@ -39,13 +39,13 @@ type Story = StoryObj;
 
 export const Default: Story = {
   render: () => html`
-    <lyra-map
+    <lr-map
       style="height: 20rem"
       center="[2.3522, 48.8566]"
       zoom="4"
       .legend=${legend()}
       .mapStyle=${RASTER_STYLE}
-    ></lyra-map>
+    ></lr-map>
   `,
 };
 
@@ -102,7 +102,7 @@ export const Choropleth: Story = {
       },
     };
     return html`
-      <lyra-map
+      <lr-map
         style="height: 20rem"
         center="[2.3522, 48.8566]"
         zoom="10"
@@ -113,7 +113,7 @@ export const Choropleth: Story = {
         ]}
         .choropleth=${choropleth}
         .mapStyle=${RASTER_STYLE}
-      ></lyra-map>
+      ></lr-map>
     `;
   },
 };
@@ -154,13 +154,13 @@ export const DataLayers: Story = {
       },
     ];
     return html`
-      <lyra-map
+      <lr-map
         style="height: 20rem"
         center="[2.3522, 48.8566]"
         zoom="12"
         .dataLayers=${dataLayers}
         .mapStyle=${RASTER_STYLE}
-      ></lyra-map>
+      ></lr-map>
     `;
   },
 };
@@ -182,13 +182,13 @@ export const Markers: Story = {
       },
     ];
     return html`
-      <lyra-map
+      <lr-map
         style="height: 20rem"
         center="[2.3522, 48.8566]"
         zoom="12"
         .markers=${markers}
         .mapStyle=${RASTER_STYLE}
-      ></lyra-map>
+      ></lr-map>
     `;
   },
 };

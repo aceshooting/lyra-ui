@@ -11,12 +11,12 @@ const XML_EXTENSIONS = ['.xml', '.xsd', '.xsl', '.xslt', '.rss', '.atom'];
 const xmlRendererDef: DocumentRendererDefinition = {
   matches: (file: DocumentFile) => file.mimeType.toLowerCase().endsWith('+xml') || XML_EXTENSIONS.some((ext) => file.name.toLowerCase().endsWith(ext)),
   capabilities: { anchors: ['node-path'], search: true },
-  render: (file: DocumentFile) => html`<lyra-xml-viewer
+  render: (file: DocumentFile) => html`<lr-xml-viewer
     src=${file.src}
     name=${file.name}
     .anchor=${file.anchor ?? null}
     .highlights=${file.highlights ?? []}
-  ></lyra-xml-viewer>`,
+  ></lr-xml-viewer>`,
 };
 
 registerDocumentRenderer('application/xml', xmlRendererDef);

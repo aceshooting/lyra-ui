@@ -1,18 +1,18 @@
 ---
-description: Rename Shoelace (sl-*) usage in a consumer project to lyra-ui (lyra-*) equivalents (best-effort)
+description: Rename Shoelace (sl-*) usage in a consumer project to lyra-ui (lr-*) equivalents (best-effort)
 argument-hint: [path]
 allowed-tools: Read, Edit, Grep, Glob, Bash(grep:*), Bash(git:*)
 ---
 
 Migrate the project at `$1` (default to the current working directory if `$1` is empty) off
 Shoelace (`<sl-*>` custom elements, `@shoelace-style/shoelace` imports) onto
-`@aceshooting/lyra-ui`'s `lyra-*` equivalents.
+`@aceshooting/lyra-ui`'s `lr-*` equivalents.
 
 **This is best-effort, not guaranteed mechanical.** `@aceshooting/lyra-ui` only documents a
 guaranteed 1:1 API mirror for Web Awesome (`wa-*`); Web Awesome is Shoelace's spiritual successor
 by the same author, and the two prefixes usually but not always agree on attribute/slot/event
 names. Verify every mapping against the actual component reference rather than assuming
-`sl-button` and `wa-button`/`lyra-button` are identical.
+`sl-button` and `wa-button`/`lr-button` are identical.
 
 Steps:
 

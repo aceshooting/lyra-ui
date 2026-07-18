@@ -8,10 +8,10 @@ defineElement('csv-viewer', LyraCsvViewer);
 registerDocumentRenderer('text/csv', {
   matches: (file: DocumentFile) => file.name.toLowerCase().endsWith('.csv'),
   capabilities: { anchors: ['cell-range'], search: true, textSelect: false },
-  render: (file: DocumentFile) => html`<lyra-csv-viewer
+  render: (file: DocumentFile) => html`<lr-csv-viewer
     src=${file.src}
     name=${file.name}
     .anchor=${file.anchor ?? null}
     .highlights=${file.highlights ?? []}
-  ></lyra-csv-viewer>`,
+  ></lr-csv-viewer>`,
 });

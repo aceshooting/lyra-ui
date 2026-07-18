@@ -6,7 +6,7 @@ import { registerDocumentRenderer, type DocumentFile } from '../document-viewer/
 
 defineElement('contact-viewer', LyraContactViewer);
 registerDocumentRenderer('text/vcard', { matches: (file: DocumentFile) => /\.vcf$/i.test(file.name), render: (file) => {
-  const element = document.createElement('lyra-contact-viewer');
+  const element = document.createElement('lr-contact-viewer');
   element.src = file.src;
   element.name = file.name;
   return element;

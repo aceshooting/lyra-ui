@@ -6,7 +6,7 @@ import '../markdown/markdown.js';
 
 const meta: Meta = {
   title: 'UsageBadge',
-  component: 'lyra-usage-badge',
+  component: 'lr-usage-badge',
   tags: ['autodocs'],
   parameters: {
     docs: {
@@ -22,39 +22,39 @@ type Story = StoryObj;
 
 export const Default: Story = {
   render: () =>
-    html`<lyra-usage-badge tokens-in="1204" tokens-out="386" cost-text="$0.012" latency-ms="2350"></lyra-usage-badge>`,
+    html`<lr-usage-badge tokens-in="1204" tokens-out="386" cost-text="$0.012" latency-ms="2350"></lr-usage-badge>`,
 };
 
 export const Compact: Story = {
   render: () =>
-    html`<lyra-usage-badge compact tokens-in="12345" tokens-out="4210" cost-text="$0.31" latency-ms="61500"></lyra-usage-badge>`,
+    html`<lr-usage-badge compact tokens-in="12345" tokens-out="4210" cost-text="$0.31" latency-ms="61500"></lr-usage-badge>`,
 };
 
 export const CostOnly: Story = {
-  render: () => html`<lyra-usage-badge cost-text="$0.004"></lyra-usage-badge>`,
+  render: () => html`<lr-usage-badge cost-text="$0.004"></lr-usage-badge>`,
 };
 
 export const WithExtraSlottedRow: Story = {
   render: () => html`
-    <lyra-usage-badge tokens-in="1204" tokens-out="386">
+    <lr-usage-badge tokens-in="1204" tokens-out="386">
       <div>Cache-read tokens: 900</div>
-    </lyra-usage-badge>
+    </lr-usage-badge>
   `,
 };
 
 export const InChatMessage: Story = {
-  name: 'Composed in a lyra-chat-message',
+  name: 'Composed in a lr-chat-message',
   render: () => html`
-    <lyra-chat-message data-role="assistant" status="sent" style="max-width: 32rem;">
-      <lyra-usage-badge
+    <lr-chat-message data-role="assistant" status="sent" style="max-width: 32rem;">
+      <lr-usage-badge
         slot="badges"
         tokens-in="1204"
         tokens-out="386"
         cost-text="$0.012"
         latency-ms="2350"
-      ></lyra-usage-badge>
-      <lyra-markdown content="Here is the summary you asked for."></lyra-markdown>
-    </lyra-chat-message>
+      ></lr-usage-badge>
+      <lr-markdown content="Here is the summary you asked for."></lr-markdown>
+    </lr-chat-message>
   `,
 };
 
@@ -62,7 +62,7 @@ export const Narrow320: Story = {
   name: 'Narrow (320px)',
   render: () => html`
     <div style="inline-size: 320px; max-inline-size: 100%;">
-      <lyra-usage-badge tokens-in="1204" tokens-out="386" cost-text="$0.012" latency-ms="2350"></lyra-usage-badge>
+      <lr-usage-badge tokens-in="1204" tokens-out="386" cost-text="$0.012" latency-ms="2350"></lr-usage-badge>
     </div>
   `,
 };

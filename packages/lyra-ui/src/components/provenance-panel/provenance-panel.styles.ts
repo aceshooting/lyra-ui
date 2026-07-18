@@ -7,32 +7,32 @@ export const styles = css`
   [part='base'] {
     display: flex;
     flex-direction: column;
-    gap: var(--lyra-space-s);
+    gap: var(--lr-space-s);
   }
   [part='header'] {
     display: flex;
     align-items: center;
-    gap: var(--lyra-space-xs);
+    gap: var(--lr-space-xs);
     inline-size: 100%;
-    padding: var(--lyra-space-xs) 0;
+    padding: var(--lr-space-xs) 0;
     border: none;
-    border-block-end: var(--lyra-border-width-thin) solid var(--lyra-color-border);
+    border-block-end: var(--lr-border-width-thin) solid var(--lr-color-border);
     background: transparent;
-    color: var(--lyra-color-text);
+    color: var(--lr-color-text);
     font: inherit;
-    font-weight: var(--lyra-font-weight-semibold);
+    font-weight: var(--lr-font-weight-semibold);
     text-align: start;
     cursor: pointer;
   }
   [part='count'] {
-    color: var(--lyra-color-text-quiet);
-    font-weight: var(--lyra-font-weight-medium);
+    color: var(--lr-color-text-quiet);
+    font-weight: var(--lr-font-weight-medium);
   }
   [part='body'] {
     display: flex;
     flex-direction: column;
-    gap: var(--lyra-space-s);
-    padding-block-start: var(--lyra-space-xs);
+    gap: var(--lr-space-s);
+    padding-block-start: var(--lr-space-xs);
   }
   [part='body'][hidden] {
     display: none;
@@ -40,6 +40,6 @@ export const styles = css`
   .entity-row {
     display: flex;
     flex-wrap: wrap;
-    gap: var(--lyra-space-xs);
+    gap: var(--lr-space-xs);
   }
 `;

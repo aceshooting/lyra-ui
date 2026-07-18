@@ -8,24 +8,24 @@ import '../live-region/live-region.class.js';
 import { styles } from './poll-status.styles.js';
 
 export interface LyraPollStatusEventMap {
-  'lyra-poll-due': CustomEvent<undefined>;
-  'lyra-pause-change': CustomEvent<boolean>;
+  'lr-poll-due': CustomEvent<undefined>;
+  'lr-pause-change': CustomEvent<boolean>;
 }
 
 const TICK_MS = 1000;
 
 /**
- * `<lyra-poll-status>` — a "next scheduled refresh" countdown with a built-in pause control: a
+ * `<lr-poll-status>` — a "next scheduled refresh" countdown with a built-in pause control: a
  * ticking `M:SS` display counting down to the next scheduled action, a "Refreshing…" state at
  * zero, a "Paused" state while `paused` (instead of freezing on a stale value), and a
  * pause/resume toggle. First-party invention (no Web Awesome equivalent); the
- * closest existing component, `lyra-stream-status`, is scoped to transport/connection-health
+ * closest existing component, `lr-stream-status`, is scoped to transport/connection-health
  * phases, a different concern from a scheduled-interval countdown -- this mirrors its internal
- * `<lyra-live-region>` composition for accessible phase-transition announcements.
+ * `<lr-live-region>` composition for accessible phase-transition announcements.
  *
- * @customElement lyra-poll-status
- * @event lyra-poll-due - Fired once when the countdown reaches zero (not fired while `paused`).
- * @event lyra-pause-change - Fired when `paused` changes via the built-in button. `detail: boolean`.
+ * @customElement lr-poll-status
+ * @event lr-poll-due - Fired once when the countdown reaches zero (not fired while `paused`).
+ * @event lr-pause-change - Fired when `paused` changes via the built-in button. `detail: boolean`.
  * @csspart base - The root wrapper.
  * @csspart indicator - The pulsing status dot.
  * @csspart countdown - The `M:SS` text (or "Refreshing…" once due, or "Paused" while `paused`).
@@ -41,7 +41,7 @@ export class LyraPollStatus extends LyraElement<LyraPollStatusEventMap> {
   /** Whether the poll cycle is running at all. `true` (the default). */
   @property({ type: Boolean, reflect: true }) active = true;
 
-  /** User-toggled pause -- while `true`, the countdown display freezes and `lyra-poll-due` never
+  /** User-toggled pause -- while `true`, the countdown display freezes and `lr-poll-due` never
    *  fires. `false` (the default). */
   @property({ type: Boolean, reflect: true }) paused = false;
 
@@ -50,14 +50,14 @@ export class LyraPollStatus extends LyraElement<LyraPollStatusEventMap> {
   private tickTimer?: ReturnType<typeof setInterval>;
   private targetAt = 0;
 
-  @query('lyra-live-region') private liveRegion?: LyraLiveRegion;
+  @query('lr-live-region') private liveRegion?: LyraLiveRegion;
 
   connectedCallback(): void {
     super.connectedCallback();
     // A mount/reconnect with no scheduled deadline yet (nextInMs never set,
     // so targetAt is still its 0 default) must not start a ticker -- it
     // would immediately see targetAt - Date.now() <= 0 on its very first
-    // tick and fire a spurious lyra-poll-due for a countdown that never ran.
+    // tick and fire a spurious lr-poll-due for a countdown that never ran.
     if (this.active && !this.paused && this.nextInMs != null) this.armTicker();
   }
 
@@ -73,7 +73,7 @@ export class LyraPollStatus extends LyraElement<LyraPollStatusEventMap> {
         // reach `Date.now() + nextInMs` unsanitized -- that would poison `targetAt` with NaN,
         // which every subsequent tick's `Math.max(0, targetAt - Date.now())` also evaluates to
         // NaN (Math.max never recovers from a NaN operand), permanently bricking the countdown:
-        // `remainingMs === 0` never becomes true, so the ticker runs forever and `lyra-poll-due`
+        // `remainingMs === 0` never becomes true, so the ticker runs forever and `lr-poll-due`
         // never fires. Clamping to a non-negative, finite value up front (0 means "due
         // immediately," consistent with a countdown that's already reached zero) keeps the
         // ticker's own `Math.max(0, ...)` clamp meaningful instead of masking a NaN that already
@@ -97,7 +97,7 @@ export class LyraPollStatus extends LyraElement<LyraPollStatusEventMap> {
         // Clearing next-in-ms (e.g. between poll cycles) must stop the
         // ticker armed for the previous deadline -- otherwise it keeps
         // running against a now-stale targetAt and eventually fires a
-        // lyra-poll-due for a countdown the host no longer considers active,
+        // lr-poll-due for a countdown the host no longer considers active,
         // while [part='countdown'] already renders nothing.
         this.disarmTicker();
       }
@@ -124,7 +124,7 @@ export class LyraPollStatus extends LyraElement<LyraPollStatusEventMap> {
       if (this.remainingMs === 0 && !this.due) {
         this.due = true;
         this.disarmTicker();
-        this.emit('lyra-poll-due');
+        this.emit('lr-poll-due');
         this.announce(this.localize('pollRefreshingAnnounce'));
       }
     }, TICK_MS);
@@ -146,7 +146,7 @@ export class LyraPollStatus extends LyraElement<LyraPollStatusEventMap> {
 
   private togglePause = (): void => {
     this.paused = !this.paused;
-    this.emit<boolean>('lyra-pause-change', this.paused);
+    this.emit<boolean>('lr-pause-change', this.paused);
   };
 
   private formatCountdown(): string {
@@ -170,7 +170,7 @@ export class LyraPollStatus extends LyraElement<LyraPollStatusEventMap> {
           aria-label=${this.localize(this.paused ? 'pollResume' : 'pollPause')}
           @click=${this.togglePause}
         >${this.paused ? playIcon() : pauseIcon()}</button>
-        <lyra-live-region></lyra-live-region>
+        <lr-live-region></lr-live-region>
       </div>
     `;
   }
@@ -178,6 +178,6 @@ export class LyraPollStatus extends LyraElement<LyraPollStatusEventMap> {
 
 declare global {
   interface HTMLElementTagNameMap {
-    'lyra-poll-status': LyraPollStatus;
+    'lr-poll-status': LyraPollStatus;
   }
 }

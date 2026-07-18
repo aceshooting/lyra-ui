@@ -18,8 +18,8 @@ export type ResponsivePanelEffectiveMode = 'inline' | 'overlay';
 
 export type ResponsivePanelVariant = 'fullscreen' | 'bottom-sheet';
 
-/** Reason the panel was closed, forwarded as the `lyra-close` event detail --
- *  mirrors lyra-dialog's own `DialogCloseReason` shape. `'escape'` and
+/** Reason the panel was closed, forwarded as the `lr-close` event detail --
+ *  mirrors lr-dialog's own `DialogCloseReason` shape. `'escape'` and
  *  `'backdrop'` are emitted by the overlay presentation's own built-in
  *  dismiss triggers (they can't occur while inline, since there's no
  *  backdrop/document-keydown trap wired up then); any other string is
@@ -31,8 +31,8 @@ export interface ResponsivePanelModeChangeDetail {
 }
 
 export interface LyraResponsivePanelEventMap {
-  'lyra-close': CustomEvent<ResponsivePanelCloseReason>;
-  'lyra-mode-change': CustomEvent<ResponsivePanelModeChangeDetail>;
+  'lr-close': CustomEvent<ResponsivePanelCloseReason>;
+  'lr-mode-change': CustomEvent<ResponsivePanelModeChangeDetail>;
 }
 
 /**
@@ -49,7 +49,7 @@ export function resolveEffectiveMode(mode: ResponsivePanelMode, belowBreakpoint:
 }
 
 /**
- * `<lyra-responsive-panel>` — the same slotted content either docked inline
+ * `<lr-responsive-panel>` — the same slotted content either docked inline
  * in the page's normal layout flow (desktop) or presented as a full-screen/
  * bottom-sheet overlay (mobile), depending on viewport width. Typical uses:
  * a settings panel or a conversation-history sidebar that's a permanent
@@ -76,12 +76,12 @@ export function resolveEffectiveMode(mode: ResponsivePanelMode, belowBreakpoint:
  * no dialog semantics to name), in priority order: if the host element itself
  * has an `aria-label` attribute set, its value wins outright, overriding
  * every source below -- the standard ARIA convention for a consumer that
- * wants full control over the announced name, matching lyra-dialog's
+ * wants full control over the announced name, matching lr-dialog's
  * `accessibleLabel` pattern. Otherwise `label`, when set, is used verbatim.
  * When both are empty, this falls back to the `header` slot's content -- a
  * heading element (`h1`–`h6` or `[role="heading"]`) among the slotted header
  * content wins if present, otherwise the header slot's full text content is
- * used, mirroring lyra-dialog's `detectHeading()`/`headingText` fallback (see
+ * used, mirroring lr-dialog's `detectHeading()`/`headingText` fallback (see
  * dialog.ts's module doc for why this uses `aria-label`, a copied string,
  * rather than `aria-labelledby`: the header content is light DOM while
  * `[part="panel"]` lives in this element's shadow tree, and an ID-reference
@@ -89,18 +89,18 @@ export function resolveEffectiveMode(mode: ResponsivePanelMode, belowBreakpoint:
  * host `aria-label`, `label`, or header content still renders `role="dialog"`
  * with no accessible name -- set one of those to avoid that.
  *
- * @customElement lyra-responsive-panel
+ * @customElement lr-responsive-panel
  * @slot - The panel body.
  * @slot header - Optional header content, rendered above the body.
  * @slot footer - Optional footer content (e.g. action buttons), rendered below the body.
- * @event lyra-close - `detail: ResponsivePanelCloseReason`. Fired by the overlay presentation's
+ * @event lr-close - `detail: ResponsivePanelCloseReason`. Fired by the overlay presentation's
  *   built-in dismiss triggers (Escape, backdrop click) and by any `close()` call, in either
  *   presentation -- a plain `open = false` property write does not fire it (matching
- *   lyra-dialog's own precedent: only going through `close()` counts as a dismissal), and this
+ *   lr-dialog's own precedent: only going through `close()` counts as a dismissal), and this
  *   is deliberately the same event/semantics in both presentations, rather than only being
  *   meaningful for the overlay case, so a consumer only has to wire up one listener regardless
  *   of which presentation is currently active.
- * @event lyra-mode-change - `detail: ResponsivePanelModeChangeDetail`. Fired whenever the
+ * @event lr-mode-change - `detail: ResponsivePanelModeChangeDetail`. Fired whenever the
  *   *effective* mode (not the `mode` prop's literal value, which may be `'auto'`) changes between
  *   `'inline'` and `'overlay'` -- crossing the breakpoint while `mode="auto"`, or the host
  *   reassigning `mode` to a value that changes the effective presentation. Never fired for the
@@ -142,9 +142,9 @@ export class LyraResponsivePanel extends LyraElement<LyraResponsivePanelEventMap
   @property({ attribute: 'mobile-breakpoint' }) mobileBreakpoint = '768px';
 
   /** Host-level `aria-label` override for the overlay presentation's accessible name -- wins over
-   *  every other source (`label`, the header-slot fallback), matching `<lyra-dialog>`'s
+   *  every other source (`label`, the header-slot fallback), matching `<lr-dialog>`'s
    *  `accessibleLabel` pattern. See the class doc for the full precedence order. Set as a plain
-   *  `aria-label` attribute on `<lyra-responsive-panel>` itself, not a public JS property. */
+   *  `aria-label` attribute on `<lr-responsive-panel>` itself, not a public JS property. */
   @property({ attribute: 'aria-label' }) private accessibleLabel: string | null = null;
 
   @state() private belowBreakpoint = false;
@@ -227,10 +227,10 @@ export class LyraResponsivePanel extends LyraElement<LyraResponsivePanelEventMap
 
   // Runs after render (not willUpdate) so [part="panel"] has already landed
   // in the DOM before the fallback .focus() call below can rely on it --
-  // mirrors lyra-dialog's identical ordering rationale.
+  // mirrors lr-dialog's identical ordering rationale.
   protected updated(changed: PropertyValues): void {
     if (!this.isFirstUpdate && changed.has('effectiveMode')) {
-      this.emit<ResponsivePanelModeChangeDetail>('lyra-mode-change', { mode: this.effectiveMode });
+      this.emit<ResponsivePanelModeChangeDetail>('lr-mode-change', { mode: this.effectiveMode });
     }
     if (this.focusOverlayAfterUpdate) {
       this.focusOverlayAfterUpdate = false;
@@ -317,14 +317,14 @@ export class LyraResponsivePanel extends LyraElement<LyraResponsivePanelEventMap
   };
 
   // Only direct children slotted into `header` are scanned -- same depth
-  // limit lyra-dialog's own detectHeading() applies to its direct children.
+  // limit lr-dialog's own detectHeading() applies to its direct children.
   // A heading tag among them wins (its own text only, so a header slot mixing
   // a heading with e.g. a trailing icon button doesn't pull the button's
   // label into the accessible name); otherwise the header slot's combined
-  // text stands in for it, since this component (unlike lyra-dialog) has a
+  // text stands in for it, since this component (unlike lr-dialog) has a
   // dedicated header slot that's already the conventional place a heading
   // would go. Recomputed only on slot assignment changes, not on every
-  // render -- same rationale as lyra-dialog's detectHeading().
+  // render -- same rationale as lr-dialog's detectHeading().
   private detectHeadingText(): string | undefined {
     const headerChildren = Array.from(this.children).filter((el) => el.getAttribute('slot') === 'header');
     if (headerChildren.length === 0) return undefined;
@@ -339,11 +339,11 @@ export class LyraResponsivePanel extends LyraElement<LyraResponsivePanelEventMap
   }
 
   /**
-   * Close the panel. `reason` is forwarded as the `lyra-close` detail --
+   * Close the panel. `reason` is forwarded as the `lr-close` detail --
    * built-in overlay triggers pass `'escape'`/`'backdrop'`; a consumer's own
    * close affordance (e.g. a footer button, or a docked panel's own toggle)
    * should call this directly with its own reason string. Fires in both
-   * presentations (see the class doc's `lyra-close` note) but only returns
+   * presentations (see the class doc's `lr-close` note) but only returns
    * focus to the trigger that opened it when the overlay presentation is
    * active, since the inline presentation never took focus away from
    * anything to begin with.
@@ -351,7 +351,7 @@ export class LyraResponsivePanel extends LyraElement<LyraResponsivePanelEventMap
   close(reason: ResponsivePanelCloseReason = 'api'): void {
     if (!this.open) return;
     this.open = false;
-    this.emit<ResponsivePanelCloseReason>('lyra-close', reason);
+    this.emit<ResponsivePanelCloseReason>('lr-close', reason);
   }
 
   private onBackdropClick = (): void => {
@@ -389,6 +389,6 @@ export class LyraResponsivePanel extends LyraElement<LyraResponsivePanelEventMap
 
 declare global {
   interface HTMLElementTagNameMap {
-    'lyra-responsive-panel': LyraResponsivePanel;
+    'lr-responsive-panel': LyraResponsivePanel;
   }
 }

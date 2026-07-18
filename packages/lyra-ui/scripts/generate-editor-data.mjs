@@ -1,6 +1,6 @@
 // Regenerates the editor-autocomplete data files from custom-elements.json:
 //   - vscode-html-data.json  (VS Code's `html.customData` format -- tag names, attributes, slots)
-//   - vscode-css-data.json   (VS Code's `css.customData` format -- every `--lyra-*` custom property)
+//   - vscode-css-data.json   (VS Code's `css.customData` format -- every `--lr-*` custom property)
 //   - web-types.json         (JetBrains' web-types format -- same coverage, for WebStorm/IntelliJ)
 //
 // TypeScript consumers already get tag/attribute completion via the generated
@@ -164,9 +164,9 @@ const htmlData = {
 writeFileSync(htmlDataPath, `${JSON.stringify(htmlData, null, 2)}\n`);
 
 // --- css.customData ------------------------------------------------------------------------------
-// custom-elements.json scopes each `--lyra-*` custom property to the component(s) that document
+// custom-elements.json scopes each `--lr-*` custom property to the component(s) that document
 // it via `@cssprop`; css.customData has no per-tag scoping, so properties documented identically
-// by multiple components (e.g. `--lyra-transition-ambient`) are merged into one entry that lists
+// by multiple components (e.g. `--lr-transition-ambient`) are merged into one entry that lists
 // every consuming tag, and properties documented differently per component keep each component's
 // own wording as a separate line.
 

@@ -63,17 +63,17 @@ interface ViewWindow {
 }
 
 export interface LyraSpanWaterfallEventMap {
-  'lyra-span-select': CustomEvent<{ id: string }>;
+  'lr-span-select': CustomEvent<{ id: string }>;
 }
 
 /**
- * `<lyra-span-waterfall>` — the horizontal-timeline projection of the same
- * `LyraSpan[]` `<lyra-trace-tree>` consumes: a time axis, one row per span
+ * `<lr-span-waterfall>` — the horizontal-timeline projection of the same
+ * `LyraSpan[]` `<lr-trace-tree>` consumes: a time axis, one row per span
  * in start order, status-toned bars (Langfuse timeline / Temporal
  * event-history style).
  *
- * @customElement lyra-span-waterfall
- * @event lyra-span-select - `detail: { id }` — a bar/row was activated (click, Enter, Space).
+ * @customElement lr-span-waterfall
+ * @event lr-span-select - `detail: { id }` — a bar/row was activated (click, Enter, Space).
  * @csspart base - The root wrapper.
  * @csspart axis - The time-ruler row, hidden when `hideAxis`.
  * @csspart tick - One axis tick mark.
@@ -87,13 +87,13 @@ export interface LyraSpanWaterfallEventMap {
  * @csspart duration - The formatted duration text.
  * @csspart empty - The empty-state message shown when `spans` is empty.
  * @csspart live-region - The internal focus/status-announcement live region.
- * @cssprop [--lyra-span-waterfall-name-width=8rem] - Width of the name gutter column.
- * @cssprop [--lyra-span-waterfall-stripe-speed] - Animation duration for a `running` span's striped bar; defaults to `--lyra-transition-ambient`.
+ * @cssprop [--lr-span-waterfall-name-width=8rem] - Width of the name gutter column.
+ * @cssprop [--lr-span-waterfall-stripe-speed] - Animation duration for a `running` span's striped bar; defaults to `--lr-transition-ambient`.
  */
 export class LyraSpanWaterfall extends LyraElement<LyraSpanWaterfallEventMap> {
   static styles = [LyraElement.styles, styles];
 
-  /** Identical contract to `<lyra-trace-tree>.spans`; rows sort by `startMs` (ties keep array order). */
+  /** Identical contract to `<lr-trace-tree>.spans`; rows sort by `startMs` (ties keep array order). */
   @property({ attribute: false }) spans: LyraSpan[] = [];
   @property({ attribute: 'active-span-id' }) activeSpanId: string | null = null;
   /** Visible time window in trace-relative ms (same non-negative, trace-relative vocabulary as
@@ -107,7 +107,7 @@ export class LyraSpanWaterfall extends LyraElement<LyraSpanWaterfallEventMap> {
 
   @state() private focusedId: string | null = null;
 
-  @query('lyra-live-region') private liveRegion?: LyraLiveRegion;
+  @query('lr-live-region') private liveRegion?: LyraLiveRegion;
 
   private sortedSpans(): LyraSpan[] {
     return this.spans
@@ -126,7 +126,7 @@ export class LyraSpanWaterfall extends LyraElement<LyraSpanWaterfallEventMap> {
     const end = this.viewEndMs == null ? fallbackEnd : finiteRange(this.viewEndMs, fallbackEnd, 0);
     // A caller-supplied window with end <= start (inverted or degenerate) still needs *some*
     // positive width to render/position bars sanely -- widen to a minimal 1ms window rather than
-    // swapping start/end (unlike `<lyra-time-range>`'s handle-drag case, swapping here would
+    // swapping start/end (unlike `<lr-time-range>`'s handle-drag case, swapping here would
     // silently reverse which side of the timeline is being viewed).
     return { start, end: end > start ? end : start + 1 };
   }
@@ -170,7 +170,7 @@ export class LyraSpanWaterfall extends LyraElement<LyraSpanWaterfallEventMap> {
 
   private selectRow(id: string): void {
     this.focusedId = id;
-    this.emit('lyra-span-select', { id });
+    this.emit('lr-span-select', { id });
   }
 
   private onKeyDown = (e: KeyboardEvent): void => {
@@ -290,16 +290,16 @@ export class LyraSpanWaterfall extends LyraElement<LyraSpanWaterfallEventMap> {
       >
         ${!this.hideAxis && rows.length > 0 ? this.renderAxis(view) : nothing}
         ${rows.length === 0
-          ? html`<lyra-empty part="empty" heading=${this.localize('noData')}></lyra-empty>`
+          ? html`<lr-empty part="empty" heading=${this.localize('noData')}></lr-empty>`
           : rows.map((span, index) => this.renderRow(span, view, index + 1, rows.length))}
       </div>
-      <lyra-live-region part="live-region" mode="polite"></lyra-live-region>
+      <lr-live-region part="live-region" mode="polite"></lr-live-region>
     `;
   }
 }
 
 declare global {
   interface HTMLElementTagNameMap {
-    'lyra-span-waterfall': LyraSpanWaterfall;
+    'lr-span-waterfall': LyraSpanWaterfall;
   }
 }

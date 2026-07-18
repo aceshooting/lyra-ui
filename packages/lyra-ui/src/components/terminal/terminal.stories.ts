@@ -6,7 +6,7 @@ import type { LyraTerminal } from './terminal.class.js';
 
 const meta: Meta = {
   title: 'Terminal',
-  component: 'lyra-terminal',
+  component: 'lr-terminal',
 };
 export default meta;
 type Story = StoryObj;
@@ -20,12 +20,12 @@ const SAMPLE = [
 
 export const Default: Story = {
   render: () =>
-    html`<lyra-terminal
+    html`<lr-terminal
       style="max-width:40rem"
       .content=${SAMPLE}
       copyable
       downloadable
-    ></lyra-terminal>`,
+    ></lr-terminal>`,
 };
 
 export const StreamingProgressBar: Story = {
@@ -42,10 +42,10 @@ export const StreamingProgressBar: Story = {
         }
       }, 200);
     }, 0);
-    return html`<lyra-terminal style="max-width:40rem" ${ref(termRef)}></lyra-terminal>`;
+    return html`<lr-terminal style="max-width:40rem" ${ref(termRef)}></lr-terminal>`;
   },
 };
 
 export const Narrow320: Story = {
-  render: () => html`<div style="max-width:320px"><lyra-terminal .content=${SAMPLE}></lyra-terminal></div>`,
+  render: () => html`<div style="max-width:320px"><lr-terminal .content=${SAMPLE}></lr-terminal></div>`,
 };

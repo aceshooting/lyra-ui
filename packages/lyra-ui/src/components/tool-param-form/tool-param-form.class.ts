@@ -23,7 +23,7 @@ export type ToolParamFormPrimitive = string | number | boolean;
  */
 export interface ToolParamFormProperty {
   type: ToolParamFormPropertyType;
-  /** A closed set of string choices, rendered as a `<lyra-select>`. Only meaningful when `type` is `'string'`. */
+  /** A closed set of string choices, rendered as a `<lr-select>`. Only meaningful when `type` is `'string'`. */
   enum?: string[];
   /** Helper text rendered under the field. */
   description?: string;
@@ -49,11 +49,11 @@ export interface ToolParamFormSchema {
 const EMPTY_SCHEMA: ToolParamFormSchema = { type: 'object', properties: {} };
 
 export interface LyraToolParamFormEventMap {
-  'lyra-validity-change': CustomEvent<{ valid: boolean; errors: Record<string, string> }>;
-  'lyra-input': CustomEvent<{ value: Record<string, unknown> }>;
+  'lr-validity-change': CustomEvent<{ valid: boolean; errors: Record<string, string> }>;
+  'lr-input': CustomEvent<{ value: Record<string, unknown> }>;
 }
 /**
- * `<lyra-tool-param-form>` — renders one form control per top-level property
+ * `<lr-tool-param-form>` — renders one form control per top-level property
  * of a JSON Schema object, for ad hoc tool invocation or approval-editing UIs
  * (e.g. "the agent wants to call `create_event(title, attendees, allDay)` —
  * let the user tweak the arguments before running it").
@@ -84,10 +84,10 @@ export interface LyraToolParamFormEventMap {
  *
  * `value` is exactly what the consumer last set it to — a field with no
  * entry in `value` but a schema `default` displays (and is *emitted*, via
- * `lyra-input`) as that default, but the `value` *property* itself is left
+ * `lr-input`) as that default, but the `value` *property* itself is left
  * alone until the user actually edits that field. This mirrors an
  * uncontrolled `<input placeholder>` not writing to `.value`, and means the
- * very first `lyra-input` a consumer receives already carries every default
+ * very first `lr-input` a consumer receives already carries every default
  * resolved, so round-tripping `e.detail.value` back into `.value` converges
  * after one edit. JSON Schema defines `default` as an annotation; this form
  * renderer deliberately materializes it before validation and submission,
@@ -96,16 +96,16 @@ export interface LyraToolParamFormEventMap {
  * Optional native `<form>` participation is implemented via `ElementInternals`
  * attached directly (this component's value is a whole object, not a plain
  * string, so the `FormAssociated` string-value mixin doesn't fit — same
- * shape as `<lyra-combobox>`'s array-valued case). This is a nice-to-have
+ * shape as `<lr-combobox>`'s array-valued case). This is a nice-to-have
  * layered on top of the primary integration contract (`value` +
- * `lyra-input`/`lyra-validity-change`), not a requirement: a consumer that
+ * `lr-input`/`lr-validity-change`), not a requirement: a consumer that
  * never puts this inside a `<form>` loses nothing.
  *
- * @customElement lyra-tool-param-form
- * @event lyra-input - A field's value changed. `detail: { value }` — the
+ * @customElement lr-tool-param-form
+ * @event lr-input - A field's value changed. `detail: { value }` — the
  * full current value object (every property, defaults resolved), not just
  * the field that changed.
- * @event lyra-validity-change - Overall validity or field errors changed.
+ * @event lr-validity-change - Overall validity or field errors changed.
  * `detail: { valid: boolean; errors: Record<string, string> }`.
  * @csspart base - The outer wrapper around all fields.
  * @csspart field - One property's wrapper (label + control + description + error).
@@ -137,7 +137,7 @@ export class LyraToolParamForm extends LyraElement<LyraToolParamFormEventMap> {
   @state() private showFormError = false;
   // Which fields have been visited (focusout'd) at least once — gates only
   // the *visual* error/aria-invalid presentation, matching every other
-  // form control in this library (lyra-select/lyra-combobox/lyra-model-select
+  // form control in this library (lr-select/lr-combobox/lr-model-select
   // all avoid flashing red before the user has touched anything).
   @state() private touchedFields = new Set<string>();
 
@@ -151,7 +151,7 @@ export class LyraToolParamForm extends LyraElement<LyraToolParamFormEventMap> {
   private _effectiveValue: Record<string, unknown> = {};
   private _validityFlags: ValidityStateFlags = {};
   private _disabled = false;
-  // Guards lyra-validity-change so it only fires on an actual change, not on
+  // Guards lr-validity-change so it only fires on an actual change, not on
   // every render — `undefined` guarantees the first computed state always
   // "changes" from it, so mounting with an unmet required field still
   // announces `valid:false` once up front.
@@ -206,7 +206,7 @@ export class LyraToolParamForm extends LyraElement<LyraToolParamFormEventMap> {
     // Seed `errors`/`internals` validity synchronously at connect time —
     // `checkValidity()`/a wrapping `<form>`'s own `reportValidity()` must
     // see the correct answer even if called before Lit's first (async)
-    // update has run, mirroring lyra-select's/lyra-checkbox's identical
+    // update has run, mirroring lr-select's/lr-checkbox's identical
     // connectedCallback -> updateValidity() call.
     this.syncFormState();
   }
@@ -304,7 +304,7 @@ export class LyraToolParamForm extends LyraElement<LyraToolParamFormEventMap> {
   /**
    * The current per-field validation errors (`{ [propertyKey]: message }`) —
    * required presence, primitive type, integer, enum, const, or unsupported
-   * type — mirrors the last `lyra-validity-change` event's `errors`.
+   * type — mirrors the last `lr-validity-change` event's `errors`.
    * Independent of which fields have been visited; a consumer wanting the
    * visited-only, screen-reader-announced subset should read the rendered
    * `[part="error"]` elements instead.
@@ -524,7 +524,7 @@ export class LyraToolParamForm extends LyraElement<LyraToolParamFormEventMap> {
       const key = JSON.stringify({ valid, errors: this._errors, formError: this._formError });
       if (key !== this.lastValidityKey) {
         this.lastValidityKey = key;
-        this.emit('lyra-validity-change', { valid, errors: { ...this._errors } });
+        this.emit('lr-validity-change', { valid, errors: { ...this._errors } });
       }
       const nestedUpdates = Array.from(this.firstInvalidField()?.children ?? [])
         .filter((element) => typeof (element as unknown as Record<PropertyKey, unknown>)[VALIDITY_ANCHOR] === 'function')
@@ -539,7 +539,7 @@ export class LyraToolParamForm extends LyraElement<LyraToolParamFormEventMap> {
   private setFieldValue(key: string, val: unknown): void {
     if (this.effectiveDisabled) return;
     this.value = { ...this.value, [key]: val };
-    this.emit('lyra-input', { value: this.effectiveValue });
+    this.emit('lr-input', { value: this.effectiveValue });
   }
 
   private markTouched(key: string): void {
@@ -576,7 +576,7 @@ export class LyraToolParamForm extends LyraElement<LyraToolParamFormEventMap> {
     effective: unknown,
   ): TemplateResult {
     if (prop.type === 'string' && prop.enum && prop.enum.length > 0) {
-      // <lyra-select>/<lyra-checkbox> don't forward a host-level
+      // <lr-select>/<lr-checkbox> don't forward a host-level
       // aria-describedby to their internal focusable element (neither
       // reads it — and this component doesn't own either file to add that),
       // so a plain aria-describedby here would silently do nothing for
@@ -585,7 +585,7 @@ export class LyraToolParamForm extends LyraElement<LyraToolParamFormEventMap> {
       // through -- the description text still reads fine from its adjacent,
       // DOM-order-following <p part="description"> even without a formal
       // aria-describedby association.
-      return html`<lyra-select
+      return html`<lr-select
         id=${fieldId}
         aria-label=${errorMessage ? `${label}. ${errorMessage}` : label}
         aria-required=${required ? 'true' : nothing}
@@ -593,8 +593,8 @@ export class LyraToolParamForm extends LyraElement<LyraToolParamFormEventMap> {
         ?disabled=${this.effectiveDisabled}
         @change=${(e: Event) => this.onSelectChange(key, e)}
       >
-        ${prop.enum.map((v) => html`<lyra-option value=${v}>${v}</lyra-option>`)}
-      </lyra-select>`;
+        ${prop.enum.map((v) => html`<lr-option value=${v}>${v}</lr-option>`)}
+      </lr-select>`;
     }
     if (prop.type === 'string') {
       return html`<input
@@ -626,23 +626,23 @@ export class LyraToolParamForm extends LyraElement<LyraToolParamFormEventMap> {
     }
     if (prop.type === 'boolean') {
       // The label lives inside the slot rather than as a sibling <label> --
-      // that slot *is* lyra-checkbox's documented way to give it an
+      // that slot *is* lr-checkbox's documented way to give it an
       // accessible name (see checkbox.ts's own @slot doc), and unlike
       // aria-describedby, this genuinely works since it's real slotted
       // content, not an inert host attribute. Once there's an error, fold it
       // into aria-label the same way the enum/select branch above does --
       // an explicit aria-label overrides the slotted accessible name, so the
       // normal (no error) case is left alone to keep deriving its name from
-      // the slot per lyra-checkbox's own documented contract.
-      return html`<lyra-checkbox
+      // the slot per lr-checkbox's own documented contract.
+      return html`<lr-checkbox
         id=${fieldId}
         aria-label=${errorMessage ? `${label}. ${errorMessage}` : nothing}
         ?checked=${effective === true}
         ?disabled=${this.effectiveDisabled}
-        @lyra-change=${(e: CustomEvent<{ checked: boolean }>) => this.onCheckboxChange(key, e)}
+        @lr-change=${(e: CustomEvent<{ checked: boolean }>) => this.onCheckboxChange(key, e)}
       >
         <span part="label">${label}</span>
-      </lyra-checkbox>`;
+      </lr-checkbox>`;
     }
     // Defensive fallback for a schema property outside this renderer's scope
     // (see the class doc) — render a visible note instead of silently
@@ -697,6 +697,6 @@ export class LyraToolParamForm extends LyraElement<LyraToolParamFormEventMap> {
 
 declare global {
   interface HTMLElementTagNameMap {
-    'lyra-tool-param-form': LyraToolParamForm;
+    'lr-tool-param-form': LyraToolParamForm;
   }
 }

@@ -40,7 +40,7 @@ const bundleEntries = {
   // eager import graph (e.g. a `*-loader.ts`'s dynamic `import()` accidentally hoisted to a
   // top-level static import, pulling an optional peer like chart.js/maplibre-gl/shiki/d3-* in
   // eagerly) that the `core` budget above is too loose to notice -- `core` legitimately grows every
-  // time a component is added, so it carries deliberate headroom, while `<lyra-button>` alone
+  // time a component is added, so it carries deliberate headroom, while `<lr-button>` alone
   // should only ever pull in Lit, LyraElement's token layer, and its own small class/styles, so its
   // footprint should stay essentially flat release over release. Gated on gzip rather than raw
   // bytes because that's what a consumer's browser actually pays for over the wire, and gzip is
@@ -134,7 +134,7 @@ async function writeFixture(fixtureDir, packageTarball, flagsTarball, withOption
     join(fixtureDir, 'package.json'),
     `${JSON.stringify(
       {
-        name: withOptionalPeers ? 'lyra-packed-consumer-with-peers' : 'lyra-packed-consumer-core',
+        name: withOptionalPeers ? 'lr-packed-consumer-with-peers' : 'lr-packed-consumer-core',
         private: true,
         type: 'module',
         dependencies,
@@ -164,7 +164,7 @@ const prefix = await import('@aceshooting/lyra-ui/internal/prefix.js');
 if (typeof root.LyraEmpty !== 'function' || typeof granularClass.LyraEmpty !== 'function') {
   throw new Error('root and granular class imports did not expose LyraEmpty');
 }
-if (prefix.tag('empty') !== 'lyra-empty' || customElements.get('lyra-empty') !== root.LyraEmpty) {
+if (prefix.tag('empty') !== 'lr-empty' || customElements.get('lr-empty') !== root.LyraEmpty) {
   throw new Error('registration and prefix helper imports did not expose the expected contract');
 }
 console.log('Node ESM package imports passed.');
@@ -340,7 +340,7 @@ async function runBundle(fixtureDir, entry, config, noOptionalPeers) {
 }
 
 async function main() {
-  const workspace = await mkdtemp(join(tmpdir(), 'lyra-packed-consumer-'));
+  const workspace = await mkdtemp(join(tmpdir(), 'lr-packed-consumer-'));
   try {
     const tarballDir = join(workspace, 'packages');
     const coreFixture = join(workspace, 'core');

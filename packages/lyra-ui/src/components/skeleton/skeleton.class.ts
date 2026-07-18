@@ -8,12 +8,12 @@ export type SkeletonVariant = 'text' | 'circle' | 'rect';
 export type SkeletonEffect = 'pulse' | 'sheen';
 
 /**
- * `<lyra-skeleton>` — a loading placeholder. First-party invention, standing
+ * `<lr-skeleton>` — a loading placeholder. First-party invention, standing
  * in for the bespoke `animate-pulse` div most dashboards hand-roll.
  *
- * @customElement lyra-skeleton
+ * @customElement lr-skeleton
  * @csspart base - The placeholder shape.
- * @cssprop [--lyra-transition-ambient=1.8s ease-in-out] - Animation duration and timing function
+ * @cssprop [--lr-transition-ambient=1.8s ease-in-out] - Animation duration and timing function
  *   shared by the pulse and sheen effects.
  */
 export class LyraSkeleton extends LyraElement {
@@ -43,14 +43,14 @@ export class LyraSkeleton extends LyraElement {
   protected updated(changed: PropertyValues): void {
     if (changed.has('width') || changed.has('height')) {
       if (this.width) {
-        this.style.setProperty('--lyra-skeleton-w', this.width);
+        this.style.setProperty('--lr-skeleton-w', this.width);
       } else {
-        this.style.removeProperty('--lyra-skeleton-w');
+        this.style.removeProperty('--lr-skeleton-w');
       }
       if (this.height) {
-        this.style.setProperty('--lyra-skeleton-h', this.height);
+        this.style.setProperty('--lr-skeleton-h', this.height);
       } else {
-        this.style.removeProperty('--lyra-skeleton-h');
+        this.style.removeProperty('--lr-skeleton-h');
       }
     }
   }
@@ -66,6 +66,6 @@ export class LyraSkeleton extends LyraElement {
 
 declare global {
   interface HTMLElementTagNameMap {
-    'lyra-skeleton': LyraSkeleton;
+    'lr-skeleton': LyraSkeleton;
   }
 }

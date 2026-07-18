@@ -21,9 +21,9 @@ export const styles = css`
     min-block-size: 0;
     overflow-y: auto;
     overflow-anchor: none;
-    padding: var(--lyra-space-m);
+    padding: var(--lr-space-m);
   }
-  :host(:has(> lyra-virtual-list)) [part='scroll'] {
+  :host(:has(> lr-virtual-list)) [part='scroll'] {
     overflow: visible;
     block-size: auto;
     padding: 0;
@@ -39,7 +39,7 @@ export const styles = css`
     position: relative;
     min-block-size: 100%;
   }
-  :host(:has(> lyra-virtual-list)) [part='content'] {
+  :host(:has(> lr-virtual-list)) [part='content'] {
     block-size: 100%;
     min-block-size: 0;
   }
@@ -48,10 +48,10 @@ export const styles = css`
     inset-inline: 0;
     display: flex;
     align-items: center;
-    gap: var(--lyra-space-s);
+    gap: var(--lr-space-s);
     transform: translateY(-50%);
-    color: var(--lyra-color-text-quiet);
-    font-size: var(--lyra-font-size-xs);
+    color: var(--lr-color-text-quiet);
+    font-size: var(--lr-font-size-xs);
     text-align: center;
     pointer-events: none;
   }
@@ -59,27 +59,27 @@ export const styles = css`
   [part='unread-divider']::after {
     content: '';
     flex: 1 1 auto;
-    block-size: var(--lyra-border-width-thin);
-    background: var(--lyra-color-border);
+    block-size: var(--lr-border-width-thin);
+    background: var(--lr-color-border);
   }
   [part='jump-pill'] {
     position: absolute;
-    inset-block-end: var(--lyra-space-m);
+    inset-block-end: var(--lr-space-m);
     inset-inline-start: 50%;
     transform: translateX(-50%);
-    max-inline-size: calc(100% - 2 * var(--lyra-space-m));
-    padding-inline: var(--lyra-space-m);
-    padding-block: var(--lyra-space-xs);
-    border: var(--lyra-border-width-thin) solid var(--lyra-color-border);
-    border-radius: var(--lyra-radius-pill);
-    background: var(--lyra-color-surface);
-    color: var(--lyra-color-text);
-    box-shadow: var(--lyra-shadow);
+    max-inline-size: calc(100% - 2 * var(--lr-space-m));
+    padding-inline: var(--lr-space-m);
+    padding-block: var(--lr-space-xs);
+    border: var(--lr-border-width-thin) solid var(--lr-color-border);
+    border-radius: var(--lr-radius-pill);
+    background: var(--lr-color-surface);
+    color: var(--lr-color-text);
+    box-shadow: var(--lr-shadow);
     cursor: pointer;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    transition: opacity var(--lyra-transition-fast);
+    transition: opacity var(--lr-transition-fast);
   }
   /* inset-inline-start: 50% anchors the pill's *start* edge -- the physical right edge under RTL
    * -- to the horizontal center, so the fixed translateX(-50%) above would push the whole pill
@@ -94,12 +94,12 @@ export const styles = css`
     }
   }
   [part='jump-pill']:focus-visible {
-    outline: var(--lyra-focus-ring-width) solid var(--lyra-focus-ring-color);
-    outline-offset: var(--lyra-focus-ring-offset);
+    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
+    outline-offset: var(--lr-focus-ring-offset);
   }
-  @container (max-width: 20rem) {
+  @container (max-inline-size: 20rem) {
     [part='jump-pill'] {
-      max-inline-size: calc(100% - 2 * var(--lyra-space-s));
+      max-inline-size: calc(100% - 2 * var(--lr-space-s));
     }
   }
 `;

@@ -13,11 +13,11 @@ export interface ChatSuggestion {
 }
 
 export interface LyraSuggestionChipsEventMap {
-  'lyra-suggestion-select': CustomEvent<{ id: string; label: string }>;
+  'lr-suggestion-select': CustomEvent<{ id: string; label: string }>;
 }
 
 /**
- * `<lyra-suggestion-chips>` — starter prompts (empty thread) and follow-up suggestions (after a
+ * `<lr-suggestion-chips>` — starter prompts (empty thread) and follow-up suggestions (after a
  * response) as a horizontally scrollable chip row; activation hands the prompt to the host, which
  * decides whether to compose it into an input or send it directly. Never writes into a composer or
  * sends anything itself.
@@ -25,8 +25,8 @@ export interface LyraSuggestionChipsEventMap {
  * Streaming-friendly: chips render through a keyed `repeat()` on `id`, so replacing follow-ups
  * mid-conversation preserves focus on any chip whose `id` survives.
  *
- * @customElement lyra-suggestion-chips
- * @event lyra-suggestion-select - `detail: { id, label }`.
+ * @customElement lr-suggestion-chips
+ * @event lr-suggestion-select - `detail: { id, label }`.
  * @csspart base - The labeled group.
  * @csspart chip - Each suggestion button.
  * @csspart chip-label - The primary text.
@@ -53,7 +53,7 @@ export class LyraSuggestionChips extends LyraElement<LyraSuggestionChipsEventMap
   }
 
   private select(suggestion: ChatSuggestion): void {
-    this.emit<{ id: string; label: string }>('lyra-suggestion-select', {
+    this.emit<{ id: string; label: string }>('lr-suggestion-select', {
       id: suggestion.id,
       label: suggestion.label,
     });
@@ -102,16 +102,17 @@ export class LyraSuggestionChips extends LyraElement<LyraSuggestionChipsEventMap
   render(): TemplateResult {
     if (this.suggestions.length === 0) return html``;
     const label = this.label || this.localize('suggestionsLabel');
+    const ariaLabel = this.getAttribute('aria-label') || label;
     const chips = repeat(
       this.suggestions,
       (s) => s.id,
       (s, i) => this.renderChip(s, i),
     );
     return html`
-      <div part="base" role="group" aria-label=${label} @keydown=${this.onKeyDown}>
+      <div part="base" role="group" aria-label=${ariaLabel} @keydown=${this.onKeyDown}>
         ${this.wrap
           ? html`<div class="row">${chips}</div>`
-          : html`<lyra-scroller orientation="horizontal" hide-scrollbar><div class="row">${chips}</div></lyra-scroller>`}
+          : html`<lr-scroller orientation="horizontal" hide-scrollbar><div class="row">${chips}</div></lr-scroller>`}
       </div>
     `;
   }
@@ -119,6 +120,6 @@ export class LyraSuggestionChips extends LyraElement<LyraSuggestionChipsEventMap
 
 declare global {
   interface HTMLElementTagNameMap {
-    'lyra-suggestion-chips': LyraSuggestionChips;
+    'lr-suggestion-chips': LyraSuggestionChips;
   }
 }

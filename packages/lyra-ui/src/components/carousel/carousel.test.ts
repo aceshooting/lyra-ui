@@ -3,11 +3,11 @@ import './carousel.js';
 import type { LyraCarousel } from './carousel.js';
 
 async function carousel(template = html`
-  <lyra-carousel>
+  <lr-carousel>
     <div>One</div>
     <div>Two</div>
     <div>Three</div>
-  </lyra-carousel>
+  </lr-carousel>
 `): Promise<LyraCarousel> {
   const el = (await fixture(template)) as LyraCarousel;
   await el.updateComplete;
@@ -35,7 +35,7 @@ it('gives each indicator the shared minimum hit area without inflating the visib
   const dot = indicator.querySelector('[part="indicator-dot"]') as HTMLElement;
   expect(getComputedStyle(indicator).minInlineSize).to.equal('40px');
   expect(getComputedStyle(indicator).minBlockSize).to.equal('40px');
-  // The visible dot itself stays compact (--lyra-size-0-5rem = 8px), not blown up to 40px -- the
+  // The visible dot itself stays compact (--lr-size-0-5rem = 8px), not blown up to 40px -- the
   // button's own box grows around it via flex centering instead.
   expect(getComputedStyle(dot).inlineSize).to.equal('8px');
   expect(getComputedStyle(dot).blockSize).to.equal('8px');
@@ -43,10 +43,10 @@ it('gives each indicator the shared minimum hit area without inflating the visib
 
 it('omits the indicator group entirely when showIndicators is false', async () => {
   const el = await carousel(html`
-    <lyra-carousel .showIndicators=${false}>
+    <lr-carousel .showIndicators=${false}>
       <div>One</div>
       <div>Two</div>
-    </lyra-carousel>
+    </lr-carousel>
   `);
   expect(el.shadowRoot!.querySelector('[part="indicators"]')).to.be.null;
 });
@@ -54,7 +54,7 @@ it('omits the indicator group entirely when showIndicators is false', async () =
 it('emits slide changes and supports keyboard navigation', async () => {
   const el = await carousel();
   const next = el.shadowRoot!.querySelector('[part="next-button"]') as HTMLButtonElement;
-  const eventPromise = oneEvent(el, 'lyra-slide-change');
+  const eventPromise = oneEvent(el, 'lr-slide-change');
   next.click();
   const event = await eventPromise;
 
@@ -69,11 +69,11 @@ it('emits slide changes and supports keyboard navigation', async () => {
 
 it('swaps ArrowLeft/ArrowRight under RTL so a key still moves toward the visually adjacent slide', async () => {
   const el = await carousel(html`
-    <lyra-carousel dir="rtl">
+    <lr-carousel dir="rtl">
       <div>One</div>
       <div>Two</div>
       <div>Three</div>
-    </lyra-carousel>
+    </lr-carousel>
   `);
   const viewport = el.shadowRoot!.querySelector('[part="viewport"]') as HTMLElement;
 
@@ -132,10 +132,10 @@ it('clamps invalid indices in the current update without scheduling a follow-up 
 
 it('treats a non-finite autoplayInterval as its 5s default instead of NaN math', async () => {
   const el = await carousel(html`
-    <lyra-carousel autoplay autoplay-interval="NaN">
+    <lr-carousel autoplay autoplay-interval="NaN">
       <div>One</div>
       <div>Two</div>
-    </lyra-carousel>
+    </lr-carousel>
   `);
   // A non-finite interval falling through to `setInterval` unguarded would either throw or fire
   // immediately/never; asserting a timer actually got scheduled is the observable proxy for "the
@@ -145,10 +145,10 @@ it('treats a non-finite autoplayInterval as its 5s default instead of NaN math',
 
 it('mirrors the previous/next chevron glyphs under RTL', async () => {
   const el = await carousel(html`
-    <lyra-carousel dir="rtl">
+    <lr-carousel dir="rtl">
       <div>One</div>
       <div>Two</div>
-    </lyra-carousel>
+    </lr-carousel>
   `);
   const glyph = el.shadowRoot!.querySelector('[part="previous-glyph"]') as HTMLElement;
   expect(getComputedStyle(glyph).transform).to.contain('matrix(-1');
@@ -165,11 +165,11 @@ it('disables autoplay under prefers-reduced-motion', async () => {
 
   try {
     const el = await carousel(html`
-      <lyra-carousel autoplay autoplay-interval="1000">
+      <lr-carousel autoplay autoplay-interval="1000">
         <div>One</div>
         <div>Two</div>
         <div>Three</div>
-      </lyra-carousel>
+      </lr-carousel>
     `);
     // The reduced-motion branch must gate autoplay before any timer is ever
     // scheduled, not just shorten it -- so no interval should exist at all.
@@ -184,10 +184,10 @@ it('disables autoplay under prefers-reduced-motion', async () => {
 
 it('is accessible and supports a consumer supplied accessible label', async () => {
   const el = await carousel(html`
-    <lyra-carousel aria-label="Product screenshots">
+    <lr-carousel aria-label="Product screenshots">
       <img alt="First screenshot" src="data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=" />
       <img alt="Second screenshot" src="data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=" />
-    </lyra-carousel>
+    </lr-carousel>
   `);
   expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal(
     'Product screenshots',
@@ -197,10 +197,10 @@ it('is accessible and supports a consumer supplied accessible label', async () =
 
 it('names the focusable viewport with role="group", following the same label arbitration as the region', async () => {
   const el = await carousel(html`
-    <lyra-carousel>
+    <lr-carousel>
       <div>Slide one</div>
       <div>Slide two</div>
-    </lyra-carousel>
+    </lr-carousel>
   `);
   const viewport = el.shadowRoot!.querySelector('[part="viewport"]') as HTMLElement;
   expect(viewport.getAttribute('tabindex')).to.equal('0');

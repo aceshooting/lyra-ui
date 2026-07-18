@@ -4,12 +4,12 @@ import './input.js';
 
 const meta: Meta = {
   title: 'Input',
-  component: 'lyra-input',
+  component: 'lr-input',
   tags: ['autodocs'],
   parameters: {
     docs: {
       description: {
-        component: 'A single-line plain-text input primitive -- the `lyra-*` equivalent of a plain `wa-input`.',
+        component: 'A single-line plain-text input primitive -- the `lr-*` equivalent of a plain `wa-input`.',
       },
     },
   },
@@ -18,31 +18,31 @@ export default meta;
 type Story = StoryObj;
 
 export const Default: Story = {
-  render: () => html`<lyra-input label="Name" placeholder="Ada Lovelace"></lyra-input>`,
+  render: () => html`<lr-input label="Name" placeholder="Ada Lovelace"></lr-input>`,
 };
 
 export const Password: Story = {
-  render: () => html`<lyra-input type="password" label="Password"></lyra-input>`,
+  render: () => html`<lr-input type="password" label="Password"></lr-input>`,
 };
 
 export const Email: Story = {
-  render: () => html`<lyra-input type="email" label="Email" required></lyra-input>`,
+  render: () => html`<lr-input type="email" label="Email" required></lr-input>`,
 };
 
 export const NumericType: Story = {
   name: 'type="number"',
-  render: () => html`<lyra-input type="number" label="Quantity" min="1" max="10" step="1" value="1"></lyra-input>`,
+  render: () => html`<lr-input type="number" label="Quantity" min="1" max="10" step="1" value="1"></lr-input>`,
 };
 
 export const ValidationMessage: Story = {
-  render: () => html`<lyra-input type="email" label="Email" hint="We'll never share it." required></lyra-input>`,
+  render: () => html`<lr-input type="email" label="Email" hint="We'll never share it." required></lr-input>`,
 };
 
 export const CompactGridRow: Story = {
   name: 'Compact grid row (aria-label only)',
-  render: () => html`<lyra-input aria-label="Search" placeholder="Search..."></lyra-input>`,
+  render: () => html`<lr-input aria-label="Search" placeholder="Search..."></lr-input>`,
 };
 
 export const Disabled: Story = {
-  render: () => html`<lyra-input label="Name" value="Ada Lovelace" disabled></lyra-input>`,
+  render: () => html`<lr-input label="Name" value="Ada Lovelace" disabled></lr-input>`,
 };

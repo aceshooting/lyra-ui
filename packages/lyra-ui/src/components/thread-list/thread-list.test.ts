@@ -9,14 +9,14 @@ async function nextFrame(): Promise<void> {
   await new Promise<void>((r) => requestAnimationFrame(() => requestAnimationFrame(() => r())));
 }
 
-// In data mode, rendered rows live inside `lyra-virtual-list`'s own shadow root (a separate shadow
-// tree nested one level below `lyra-thread-list`'s), since `renderItem`'s returned content is
-// rendered by `lyra-virtual-list` into its own render root -- `querySelector(All)` never crosses a
-// shadow boundary, so reaching a row requires walking through `lyra-virtual-list`'s shadow root
+// In data mode, rendered rows live inside `lr-virtual-list`'s own shadow root (a separate shadow
+// tree nested one level below `lr-thread-list`'s), since `renderItem`'s returned content is
+// rendered by `lr-virtual-list` into its own render root -- `querySelector(All)` never crosses a
+// shadow boundary, so reaching a row requires walking through `lr-virtual-list`'s shadow root
 // explicitly rather than querying straight from the host's own `shadowRoot`.
 function dataRows(el: LyraThreadList): LyraConversationItem[] {
-  const list = el.shadowRoot!.querySelector('lyra-virtual-list')!;
-  return [...list.shadowRoot!.querySelectorAll<LyraConversationItem>('lyra-conversation-item')];
+  const list = el.shadowRoot!.querySelector('lr-virtual-list')!;
+  return [...list.shadowRoot!.querySelectorAll<LyraConversationItem>('lr-conversation-item')];
 }
 
 function dataRow(el: LyraThreadList, id: string): LyraConversationItem {
@@ -36,25 +36,25 @@ const threads = [
   { id: 'a1', title: 'Archived thread', archived: true, timestamp: new Date(now.getTime() - 200 * DAY_MS) },
 ];
 
-it('defaults to slotted mode (empty threads) and only fires lyra-filter-change in that mode', async () => {
+it('defaults to slotted mode (empty threads) and only fires lr-filter-change in that mode', async () => {
   const el = (await fixture(
-    html`<lyra-thread-list searchable
-      ><lyra-conversation-item title="Manual row"></lyra-conversation-item
-    ></lyra-thread-list>`,
+    html`<lr-thread-list searchable
+      ><lr-conversation-item title="Manual row"></lr-conversation-item
+    ></lr-thread-list>`,
   )) as LyraThreadList;
   expect(el.threads).to.deep.equal([]);
   expect(el.shadowRoot!.querySelector('[part="list"]')!.getAttribute('role')).to.equal('list');
-  expect(el.querySelector('lyra-conversation-item')).to.exist;
+  expect(el.querySelector('lr-conversation-item')).to.exist;
 });
 
 describe('data mode', () => {
-  it('renders one lyra-conversation-item per non-archived thread by default, grouped by date', async () => {
+  it('renders one lr-conversation-item per non-archived thread by default, grouped by date', async () => {
     const el = (await fixture(
-      html`<lyra-thread-list style="block-size:400px" .threads=${threads}></lyra-thread-list>`,
+      html`<lr-thread-list style="block-size:400px" .threads=${threads}></lr-thread-list>`,
     )) as LyraThreadList;
     await el.updateComplete;
     await nextFrame();
-    const list = el.shadowRoot!.querySelector('lyra-virtual-list')!;
+    const list = el.shadowRoot!.querySelector('lr-virtual-list')!;
     const items = (list as unknown as { items: unknown[] }).items;
     expect(items.length).to.equal(3); // archived excluded by default
     const groups = (list as unknown as { groups: { label?: string }[] }).groups;
@@ -63,20 +63,20 @@ describe('data mode', () => {
 
   it('includes archived threads in a trailing Archived group when showArchived is set', async () => {
     const el = (await fixture(
-      html`<lyra-thread-list style="block-size:400px" .threads=${threads} show-archived></lyra-thread-list>`,
+      html`<lr-thread-list style="block-size:400px" .threads=${threads} show-archived></lr-thread-list>`,
     )) as LyraThreadList;
     await el.updateComplete;
-    const list = el.shadowRoot!.querySelector('lyra-virtual-list')!;
+    const list = el.shadowRoot!.querySelector('lr-virtual-list')!;
     const groups = (list as unknown as { groups: { label?: string }[] }).groups;
     expect(groups.map((g) => g.label)).to.deep.equal(['Pinned', 'Today', 'Yesterday', 'Archived']);
   });
 
   it('grouping="none" renders every visible thread in host order with no group headers', async () => {
     const el = (await fixture(
-      html`<lyra-thread-list style="block-size:400px" .threads=${threads} grouping="none" show-archived></lyra-thread-list>`,
+      html`<lr-thread-list style="block-size:400px" .threads=${threads} grouping="none" show-archived></lr-thread-list>`,
     )) as LyraThreadList;
     await el.updateComplete;
-    const list = el.shadowRoot!.querySelector('lyra-virtual-list')!;
+    const list = el.shadowRoot!.querySelector('lr-virtual-list')!;
     const items = (list as unknown as { items: ChatThreadLike[] }).items;
     const groups = (list as unknown as { groups: unknown[] }).groups;
     expect(groups).to.deep.equal([]);
@@ -85,7 +85,7 @@ describe('data mode', () => {
 
   it('marks the row matching activeId as active', async () => {
     const el = (await fixture(
-      html`<lyra-thread-list style="block-size:400px" .threads=${threads} active-id="t1"></lyra-thread-list>`,
+      html`<lr-thread-list style="block-size:400px" .threads=${threads} active-id="t1"></lr-thread-list>`,
     )) as LyraThreadList;
     await el.updateComplete;
     await nextFrame();
@@ -93,28 +93,28 @@ describe('data mode', () => {
     expect(activeRow.active).to.be.true;
   });
 
-  it('re-emits lyra-select/lyra-thread-rename with the thread id attached', async () => {
+  it('re-emits lr-select/lr-thread-rename with the thread id attached', async () => {
     const el = (await fixture(
-      html`<lyra-thread-list style="block-size:400px" .threads=${threads}></lyra-thread-list>`,
+      html`<lr-thread-list style="block-size:400px" .threads=${threads}></lr-thread-list>`,
     )) as LyraThreadList;
     await el.updateComplete;
     await nextFrame();
     const row = dataRow(el, 't1');
 
-    const selectPromise = oneEvent(el, 'lyra-select');
-    row.dispatchEvent(new CustomEvent('lyra-select', { bubbles: true, composed: true }));
+    const selectPromise = oneEvent(el, 'lr-select');
+    row.dispatchEvent(new CustomEvent('lr-select', { bubbles: true, composed: true }));
     expect((await selectPromise).detail).to.deep.equal({ id: 't1' });
 
-    const renamePromise = oneEvent(el, 'lyra-thread-rename');
+    const renamePromise = oneEvent(el, 'lr-thread-rename');
     row.dispatchEvent(
-      new CustomEvent('lyra-rename', { detail: { title: 'New title' }, bubbles: true, composed: true }),
+      new CustomEvent('lr-rename', { detail: { title: 'New title' }, bubbles: true, composed: true }),
     );
     expect((await renamePromise).detail).to.deep.equal({ id: 't1', title: 'New title' });
   });
 
   it('forwards editable via a property binding so editable=false actually disables row rename', async () => {
     const el = (await fixture(
-      html`<lyra-thread-list style="block-size:400px" .threads=${threads} editable></lyra-thread-list>`,
+      html`<lr-thread-list style="block-size:400px" .threads=${threads} editable></lr-thread-list>`,
     )) as LyraThreadList;
     await el.updateComplete;
     await nextFrame();
@@ -130,7 +130,7 @@ describe('data mode', () => {
 
   it('renders row actions with controlled pin/archive/delete events carrying the requested state', async () => {
     const el = (await fixture(
-      html`<lyra-thread-list style="block-size:400px" .threads=${threads} .rowActions=${['pin', 'archive', 'delete']}></lyra-thread-list>`,
+      html`<lr-thread-list style="block-size:400px" .threads=${threads} .rowActions=${['pin', 'archive', 'delete']}></lr-thread-list>`,
     )) as LyraThreadList;
     await el.updateComplete;
     await nextFrame();
@@ -139,22 +139,22 @@ describe('data mode', () => {
     const buttons = [...actionsSlot.querySelectorAll('button')];
     expect(buttons.length).to.equal(3);
 
-    const pinPromise = oneEvent(el, 'lyra-thread-pin');
+    const pinPromise = oneEvent(el, 'lr-thread-pin');
     buttons[0].click();
     expect((await pinPromise).detail).to.deep.equal({ id: 't1', pinned: true });
 
-    const archivePromise = oneEvent(el, 'lyra-thread-archive');
+    const archivePromise = oneEvent(el, 'lr-thread-archive');
     buttons[1].click();
     expect((await archivePromise).detail).to.deep.equal({ id: 't1', archived: true });
 
-    const deletePromise = oneEvent(el, 'lyra-thread-delete');
+    const deletePromise = oneEvent(el, 'lr-thread-delete');
     buttons[2].click();
     expect((await deletePromise).detail).to.deep.equal({ id: 't1' });
   });
 
   it('gives every row-action button the shared minimum hit area', async () => {
     const el = (await fixture(
-      html`<lyra-thread-list style="block-size:400px" .threads=${threads} .rowActions=${['pin', 'archive', 'delete']}></lyra-thread-list>`,
+      html`<lr-thread-list style="block-size:400px" .threads=${threads} .rowActions=${['pin', 'archive', 'delete']}></lr-thread-list>`,
     )) as LyraThreadList;
     await el.updateComplete;
     await nextFrame();
@@ -170,7 +170,7 @@ describe('data mode', () => {
 
   it('shows a small pin glyph in the meta slot for a pinned row', async () => {
     const el = (await fixture(
-      html`<lyra-thread-list style="block-size:400px" .threads=${threads}></lyra-thread-list>`,
+      html`<lr-thread-list style="block-size:400px" .threads=${threads}></lr-thread-list>`,
     )) as LyraThreadList;
     await el.updateComplete;
     await nextFrame();
@@ -183,11 +183,11 @@ describe('data mode', () => {
   describe('wrapRow', () => {
     it('renders the built-in row unwrapped when unset (default)', async () => {
       const el = (await fixture(
-        html`<lyra-thread-list style="block-size:400px" .threads=${threads}></lyra-thread-list>`,
+        html`<lr-thread-list style="block-size:400px" .threads=${threads}></lr-thread-list>`,
       )) as LyraThreadList;
       await el.updateComplete;
       await nextFrame();
-      const list = el.shadowRoot!.querySelector('lyra-virtual-list')!;
+      const list = el.shadowRoot!.querySelector('lr-virtual-list')!;
       // Boolean comparison, not a direct DOM-element assertion -- see this repo's own documented
       // chai/loupe DOM-node-serialization hang pitfall in AGENTS.md's testing conventions.
       expect(list.shadowRoot!.querySelector('.row-wrapper') === null).to.be.true;
@@ -196,44 +196,44 @@ describe('data mode', () => {
 
     it('lets wrapRow wrap the built-in row with host-supplied content that has no home in its own slots (e.g. a leading purpose icon)', async () => {
       const el = (await fixture(
-        html`<lyra-thread-list style="block-size:400px" .threads=${threads}></lyra-thread-list>`,
+        html`<lr-thread-list style="block-size:400px" .threads=${threads}></lr-thread-list>`,
       )) as LyraThreadList;
       el.wrapRow = (thread, row) =>
         html`<div class="row-wrapper" data-thread-id=${thread.id}><span class="purpose-icon">*</span>${row}</div>`;
       await el.updateComplete;
       await nextFrame();
-      const list = el.shadowRoot!.querySelector('lyra-virtual-list')!;
+      const list = el.shadowRoot!.querySelector('lr-virtual-list')!;
       const wrapper = list.shadowRoot!.querySelector('.row-wrapper[data-thread-id="t1"]');
       expect(wrapper !== null).to.be.true;
       expect(wrapper!.querySelector('.purpose-icon')!.textContent).to.equal('*');
-      // The wrapped lyra-conversation-item is still the real, functional row -- not a static copy.
-      const wrappedRow = wrapper!.querySelector('lyra-conversation-item') as LyraConversationItem;
+      // The wrapped lr-conversation-item is still the real, functional row -- not a static copy.
+      const wrappedRow = wrapper!.querySelector('lr-conversation-item') as LyraConversationItem;
       expect(wrappedRow.title).to.equal('Today thread');
     });
 
-    it('still fires lyra-select from a wrapped row', async () => {
+    it('still fires lr-select from a wrapped row', async () => {
       const el = (await fixture(
-        html`<lyra-thread-list style="block-size:400px" .threads=${threads}></lyra-thread-list>`,
+        html`<lr-thread-list style="block-size:400px" .threads=${threads}></lr-thread-list>`,
       )) as LyraThreadList;
       el.wrapRow = (_thread, row) => html`<div class="row-wrapper">${row}</div>`;
       await el.updateComplete;
       await nextFrame();
       const row = dataRow(el, 't1');
-      const selectPromise = oneEvent(el, 'lyra-select');
-      row.dispatchEvent(new CustomEvent('lyra-select', { bubbles: true, composed: true }));
+      const selectPromise = oneEvent(el, 'lr-select');
+      row.dispatchEvent(new CustomEvent('lr-select', { bubbles: true, composed: true }));
       expect((await selectPromise).detail).to.deep.equal({ id: 't1' });
     });
   });
 
   describe('search', () => {
-    it('filters synchronously and fires lyra-filter-change with the match count', async () => {
+    it('filters synchronously and fires lr-filter-change with the match count', async () => {
       const el = (await fixture(
-        html`<lyra-thread-list style="block-size:400px" searchable .threads=${threads}></lyra-thread-list>`,
+        html`<lr-thread-list style="block-size:400px" searchable .threads=${threads}></lr-thread-list>`,
       )) as LyraThreadList;
       await el.updateComplete;
       const input = el.shadowRoot!.querySelector('[part="search-input"]') as HTMLInputElement;
 
-      const eventPromise = oneEvent(el, 'lyra-filter-change');
+      const eventPromise = oneEvent(el, 'lr-filter-change');
       input.value = 'today';
       input.dispatchEvent(new Event('input'));
       const ev = await eventPromise;
@@ -242,46 +242,46 @@ describe('data mode', () => {
 
     it('matches against excerpt too, case-insensitively', async () => {
       const el = (await fixture(
-        html`<lyra-thread-list style="block-size:400px" searchable .threads=${threads}></lyra-thread-list>`,
+        html`<lr-thread-list style="block-size:400px" searchable .threads=${threads}></lr-thread-list>`,
       )) as LyraThreadList;
       await el.updateComplete;
       const input = el.shadowRoot!.querySelector('[part="search-input"]') as HTMLInputElement;
       input.value = 'HELLO';
       input.dispatchEvent(new Event('input'));
       await el.updateComplete;
-      const list = el.shadowRoot!.querySelector('lyra-virtual-list')!;
+      const list = el.shadowRoot!.querySelector('lr-virtual-list')!;
       const items = (list as unknown as { items: { id: string }[] }).items;
       expect(items.map((t) => t.id)).to.deep.equal(['t1']);
     });
 
     it('supports a custom filter override', async () => {
       const el = (await fixture(
-        html`<lyra-thread-list
+        html`<lr-thread-list
           style="block-size:400px"
           searchable
           .threads=${threads}
           .filter=${(t: { id: string }, q: string) => t.id.includes(q)}
-        ></lyra-thread-list>`,
+        ></lr-thread-list>`,
       )) as LyraThreadList;
       await el.updateComplete;
       const input = el.shadowRoot!.querySelector('[part="search-input"]') as HTMLInputElement;
       input.value = 'p1';
       input.dispatchEvent(new Event('input'));
       await el.updateComplete;
-      const list = el.shadowRoot!.querySelector('lyra-virtual-list')!;
+      const list = el.shadowRoot!.querySelector('lr-virtual-list')!;
       const items = (list as unknown as { items: { id: string }[] }).items;
       expect(items.map((t) => t.id)).to.deep.equal(['p1']);
     });
 
     it('shows threadListEmpty with no query and noMatches once a query has zero results', async () => {
       const el = (await fixture(
-        html`<lyra-thread-list searchable .threads=${[]}></lyra-thread-list>`,
+        html`<lr-thread-list searchable .threads=${[]}></lr-thread-list>`,
       )) as LyraThreadList;
       await el.updateComplete;
       expect(el.shadowRoot!.querySelector('[part="empty"]')!.textContent).to.equal('No conversations yet');
 
       const withThreads = (await fixture(
-        html`<lyra-thread-list style="block-size:400px" searchable .threads=${threads}></lyra-thread-list>`,
+        html`<lr-thread-list style="block-size:400px" searchable .threads=${threads}></lr-thread-list>`,
       )) as LyraThreadList;
       await withThreads.updateComplete;
       const input = withThreads.shadowRoot!.querySelector('[part="search-input"]') as HTMLInputElement;
@@ -293,7 +293,7 @@ describe('data mode', () => {
 
     it('ArrowDown from the search field moves focus into the first row', async () => {
       const el = (await fixture(
-        html`<lyra-thread-list style="block-size:400px" searchable .threads=${threads}></lyra-thread-list>`,
+        html`<lr-thread-list style="block-size:400px" searchable .threads=${threads}></lr-thread-list>`,
       )) as LyraThreadList;
       await el.updateComplete;
       await nextFrame();
@@ -307,7 +307,7 @@ describe('data mode', () => {
 
   it('ArrowDown/ArrowUp rove focus across rendered rows', async () => {
     const el = (await fixture(
-      html`<lyra-thread-list style="block-size:400px" .threads=${threads} grouping="none"></lyra-thread-list>`,
+      html`<lr-thread-list style="block-size:400px" .threads=${threads} grouping="none"></lr-thread-list>`,
     )) as LyraThreadList;
     await el.updateComplete;
     await nextFrame();
@@ -330,12 +330,12 @@ describe('data mode', () => {
     console.warn = (...args: unknown[]) => calls.push(args);
     try {
       const el = (await fixture(
-        html`<lyra-thread-list style="block-size:400px" .threads=${threads}><lyra-conversation-item title="ignored"></lyra-conversation-item
-        ></lyra-thread-list>`,
+        html`<lr-thread-list style="block-size:400px" .threads=${threads}><lr-conversation-item title="ignored"></lr-conversation-item
+        ></lr-thread-list>`,
       )) as LyraThreadList;
       await el.updateComplete;
-      expect(el.shadowRoot!.querySelector('lyra-virtual-list')).to.exist;
-      expect(calls.some((args) => String(args[0]).includes('lyra-thread-list'))).to.be.true;
+      expect(el.shadowRoot!.querySelector('lr-virtual-list')).to.exist;
+      expect(calls.some((args) => String(args[0]).includes('lr-thread-list'))).to.be.true;
     } finally {
       console.warn = originalWarn;
     }
@@ -344,13 +344,13 @@ describe('data mode', () => {
 
 it('is accessible in both modes', async () => {
   const dataMode = (await fixture(
-    html`<lyra-thread-list style="block-size:400px" searchable .threads=${threads} .rowActions=${['pin', 'archive', 'delete']}></lyra-thread-list>`,
+    html`<lr-thread-list style="block-size:400px" searchable .threads=${threads} .rowActions=${['pin', 'archive', 'delete']}></lr-thread-list>`,
   )) as LyraThreadList;
   await dataMode.updateComplete;
   await expect(dataMode).to.be.accessible();
 
   const slottedMode = (await fixture(
-    html`<lyra-thread-list><lyra-conversation-item title="Row"></lyra-conversation-item></lyra-thread-list>`,
+    html`<lr-thread-list><lr-conversation-item title="Row"></lr-conversation-item></lr-thread-list>`,
   )) as LyraThreadList;
   await expect(slottedMode).to.be.accessible();
 });

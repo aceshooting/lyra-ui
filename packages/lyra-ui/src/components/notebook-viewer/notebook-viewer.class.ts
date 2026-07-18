@@ -64,37 +64,37 @@ type NotebookState =
   | { kind: 'error'; message: string };
 
 export interface LyraNotebookViewerEventMap {
-  'lyra-load': CustomEvent<{ cellCount: number; language: string }>;
-  'lyra-highlight-activate': CustomEvent<{ id: string }>;
-  'lyra-search-change': CustomEvent<{ query: string; matchCount: number; activeIndex: number }>;
-  'lyra-render-error': CustomEvent<{ error: unknown }>;
+  'lr-load': CustomEvent<{ cellCount: number; language: string }>;
+  'lr-highlight-activate': CustomEvent<{ id: string }>;
+  'lr-search-change': CustomEvent<{ query: string; matchCount: number; activeIndex: number }>;
+  'lr-render-error': CustomEvent<{ error: unknown }>;
 }
 
 /**
- * `<lyra-notebook-viewer>` — read-only Jupyter notebook (nbformat 4.x) renderer, composing existing
+ * `<lr-notebook-viewer>` — read-only Jupyter notebook (nbformat 4.x) renderer, composing existing
  * components per cell. Execution is a hard non-goal.
  *
- * Markdown cells render through `<lyra-markdown>`, code cells through `<lyra-code-block>` (using the
+ * Markdown cells render through `<lr-markdown>`, code cells through `<lr-code-block>` (using the
  * notebook's kernel language for syntax highlighting), and raw cells as plain preformatted text. A
  * code cell's `execute_result`/`display_data` outputs prefer, in order, `image/png`, `image/jpeg`,
- * `image/svg+xml` (sanitized), `text/html` (sanitized), `application/json` (via `<lyra-json-viewer>`),
+ * `image/svg+xml` (sanitized), `text/html` (sanitized), `application/json` (via `<lr-json-viewer>`),
  * then `text/plain`. Stream/error outputs render as plain preformatted text this round (tinted
  * `danger` for stderr/tracebacks) rather than interpreting ANSI escapes. Sanitizing raw HTML/SVG
  * output markup lazy-loads the optional peer dependency `dompurify` via `dompurify-loader.ts`; when
  * that peer isn't installed, the output renders a localized notice instead of raw markup.
  *
- * Cells are virtualized through `<lyra-virtual-list>` so a notebook with many cells stays cheap to
+ * Cells are virtualized through `<lr-virtual-list>` so a notebook with many cells stays cheap to
  * scroll. `node-path` anchors resolve `path[0]` as a cell index; `fragment` anchors resolve a cell's
  * own `id`.
  *
- * @customElement lyra-notebook-viewer
- * @event lyra-load - Fired once a notebook has been parsed and validated. `detail: { cellCount,
+ * @customElement lr-notebook-viewer
+ * @event lr-load - Fired once a notebook has been parsed and validated. `detail: { cellCount,
  *   language }`.
- * @event lyra-highlight-activate - `detail: { id }`.
- * @event lyra-search-change - Fired whenever the search query, match count, or active match index
+ * @event lr-highlight-activate - `detail: { id }`.
+ * @event lr-search-change - Fired whenever the search query, match count, or active match index
  *   changes, from `search()`/`searchNext()`/`searchPrevious()`/`clearSearch()`. `detail: { query,
  *   matchCount, activeIndex }`.
- * @event lyra-render-error - Fired when fetching, parsing, or validating the notebook fails.
+ * @event lr-render-error - Fired when fetching, parsing, or validating the notebook fails.
  *   `detail: { error }`.
  * @csspart base - The root scroll container.
  * @csspart cell - One cell row (`data-cell-type`, `data-active`).
@@ -105,7 +105,7 @@ export interface LyraNotebookViewerEventMap {
  * @csspart output-toggle - Expands/collapses a long text output.
  * @csspart error - The error region.
  * @csspart spinner - The loading status region.
- * @cssprop [--lyra-notebook-viewer-max-height=none] - Maximum block size of the scrollable body
+ * @cssprop [--lr-notebook-viewer-max-height=none] - Maximum block size of the scrollable body
  *   before it scrolls internally. Also settable via the `max-height` property.
  */
 export class LyraNotebookViewer extends DocumentAnchorTarget(LyraElement) {
@@ -173,7 +173,7 @@ export class LyraNotebookViewer extends DocumentAnchorTarget(LyraElement) {
       this.setDoc(raw, generation);
     } catch (error) {
       this.loadState = { kind: 'error', message: this.localize('notebookViewerInvalid') };
-      this.emit('lyra-render-error', { error });
+      this.emit('lr-render-error', { error });
     }
   }
 
@@ -209,7 +209,7 @@ export class LyraNotebookViewer extends DocumentAnchorTarget(LyraElement) {
           ? error.message
           : this.localize(isResourceLimitError(error) ? 'documentPreviewResourceTooLarge' : 'documentPreviewFailedToLoad'),
       };
-      this.emit('lyra-render-error', { error });
+      this.emit('lr-render-error', { error });
     }
   }
 
@@ -217,7 +217,7 @@ export class LyraNotebookViewer extends DocumentAnchorTarget(LyraElement) {
     if (generation !== this.generation) return;
     if (!isNotebookShape(raw)) {
       this.loadState = { kind: 'error', message: this.localize('notebookViewerInvalid') };
-      this.emit('lyra-render-error', { error: new Error('invalid notebook shape') });
+      this.emit('lr-render-error', { error: new Error('invalid notebook shape') });
       return;
     }
     if (raw.nbformat !== SUPPORTED_MAJOR || !SUPPORTED_MINORS.includes(raw.nbformat_minor)) {
@@ -225,17 +225,17 @@ export class LyraNotebookViewer extends DocumentAnchorTarget(LyraElement) {
         kind: 'error',
         message: this.localize('notebookViewerUnsupportedVersion', undefined, { version: `${raw.nbformat}.${raw.nbformat_minor}` }),
       };
-      this.emit('lyra-render-error', { error: new Error('unsupported nbformat version') });
+      this.emit('lr-render-error', { error: new Error('unsupported nbformat version') });
       return;
     }
     if (raw.cells.length > MAX_CELLS) {
       this.loadState = { kind: 'error', message: this.localize('notebookViewerTooManyCells') };
-      this.emit('lyra-render-error', { error: new Error('too many cells') });
+      this.emit('lr-render-error', { error: new Error('too many cells') });
       return;
     }
     this.loadState = { kind: 'loaded', doc: raw };
     const language = raw.metadata?.language_info?.name ?? raw.metadata?.kernelspec?.language ?? '';
-    this.emit('lyra-load', { cellCount: raw.cells.length, language });
+    this.emit('lr-load', { cellCount: raw.cells.length, language });
   }
 
   protected async applyAnchor(anchor: LyraAnchor): Promise<boolean> {
@@ -252,7 +252,7 @@ export class LyraNotebookViewer extends DocumentAnchorTarget(LyraElement) {
 
   /** Case-insensitive substring search over every cell's joined source text and text-bearing
    *  outputs -- at most one match per cell. Resolves the match count and fires
-   *  `lyra-search-change`. */
+   *  `lr-search-change`. */
   async search(query: string): Promise<number> {
     const q = query.trim().toLowerCase();
     this.searchQuery = query;
@@ -294,7 +294,7 @@ export class LyraNotebookViewer extends DocumentAnchorTarget(LyraElement) {
   }
 
   private emitSearchChange(): void {
-    this.emit('lyra-search-change', { query: this.searchQuery, matchCount: this.searchMatches.length, activeIndex: this.activeSearchIndex });
+    this.emit('lr-search-change', { query: this.searchQuery, matchCount: this.searchMatches.length, activeIndex: this.activeSearchIndex });
   }
 
   private toggleOutput(index: number): void {
@@ -351,7 +351,7 @@ export class LyraNotebookViewer extends DocumentAnchorTarget(LyraElement) {
     }
     if (data['application/json']) {
       const parsed = typeof data['application/json'] === 'string' ? JSON.parse(joinText(data['application/json'])) : data['application/json'];
-      return html`<div part="output" data-output-type=${output.output_type}><lyra-json-viewer .data=${parsed} collapsed-depth="1"></lyra-json-viewer></div>`;
+      return html`<div part="output" data-output-type=${output.output_type}><lr-json-viewer .data=${parsed} collapsed-depth="1"></lr-json-viewer></div>`;
     }
     if (data['text/plain']) return this.renderTextOutput(key, joinText(data['text/plain']));
     return html`<div part="output" data-output-type=${output.output_type}>${this.localize('notebookViewerUnrenderedOutput')}</div>`;
@@ -403,9 +403,9 @@ export class LyraNotebookViewer extends DocumentAnchorTarget(LyraElement) {
       <div part="cell-gutter">${c.cell_type === 'code' ? inCount : ''}</div>
       <div part="cell-source">
         ${c.cell_type === 'markdown'
-          ? html`<lyra-markdown .content=${joinSource(c.source)} escape-html sanitize></lyra-markdown>`
+          ? html`<lr-markdown .content=${joinSource(c.source)} escape-html sanitize></lr-markdown>`
           : c.cell_type === 'code'
-            ? html`<lyra-code-block .code=${joinSource(c.source)} language=${this.notebookLanguage()} line-numbers></lyra-code-block>`
+            ? html`<lr-code-block .code=${joinSource(c.source)} language=${this.notebookLanguage()} line-numbers></lr-code-block>`
             : html`<pre>${joinSource(c.source)}</pre>`}
         ${c.cell_type === 'code' && c.outputs?.length
           ? html`<div part="outputs">${c.outputs.map((o, i) => this.renderOutput(index, o, i))}</div>`
@@ -424,17 +424,17 @@ export class LyraNotebookViewer extends DocumentAnchorTarget(LyraElement) {
     const label = this.getAttribute('aria-label') || this.name || this.localize('notebookViewerLabel');
     return html`<div
       part="base"
-      style=${this.maxHeight ? `--lyra-notebook-viewer-max-height:${this.maxHeight}` : nothing}
+      style=${this.maxHeight ? `--lr-notebook-viewer-max-height:${this.maxHeight}` : nothing}
       aria-label=${label}
       aria-busy=${this.loadState.kind === 'loading' ? 'true' : 'false'}
     >
       ${this.loadState.kind === 'loaded'
-        ? html`<lyra-virtual-list
+        ? html`<lr-virtual-list
             .items=${this.loadState.doc.cells}
             .renderItem=${this.renderCell}
             .keyFunction=${(item: unknown, i: number) => (item as NotebookCell).id ?? i}
             .activeId=${this.activeCellIndex ?? ''}
-          ></lyra-virtual-list>`
+          ></lr-virtual-list>`
         : this.loadState.kind === 'loading'
           ? html`<div part="spinner" role="status"><span class="sr-only">${this.localize('loadingDocument')}</span></div>`
           : this.loadState.kind === 'error'
@@ -447,6 +447,6 @@ export class LyraNotebookViewer extends DocumentAnchorTarget(LyraElement) {
 
 declare global {
   interface HTMLElementTagNameMap {
-    'lyra-notebook-viewer': LyraNotebookViewer;
+    'lr-notebook-viewer': LyraNotebookViewer;
   }
 }

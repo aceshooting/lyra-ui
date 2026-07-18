@@ -6,13 +6,13 @@ import type { MenuSelectDetail } from './menu.js';
 
 const meta: Meta = {
   title: 'Menu',
-  component: 'lyra-menu',
+  component: 'lr-menu',
   tags: ['autodocs'],
   parameters: {
     docs: {
       description: {
         component:
-          'An anchored dropdown of `<lyra-menu-item>` actions, opened from a `trigger`-slotted element (typically an icon button). `role="menu"`/`role="menuitem"` with real roving DOM focus, not a listbox — see the class doc for why.',
+          'An anchored dropdown of `<lr-menu-item>` actions, opened from a `trigger`-slotted element (typically an icon button). `role="menu"`/`role="menuitem"` with real roving DOM focus, not a listbox — see the class doc for why.',
       },
     },
   },
@@ -25,19 +25,19 @@ type Story = StoryObj;
  *  destructive item set apart with `destructive`. */
 export const GearMenu: Story = {
   render: () => html`
-    <lyra-menu label="Settings">
+    <lr-menu label="Settings">
       <button
         slot="trigger"
         aria-label="Settings"
-        style="display:inline-flex;align-items:center;justify-content:center;inline-size:2.5rem;block-size:2.5rem;border:1px solid var(--lyra-color-border);border-radius:var(--lyra-radius);background:var(--lyra-color-surface);cursor:pointer;font-size:1.1rem;"
+        style="display:inline-flex;align-items:center;justify-content:center;inline-size:2.5rem;block-size:2.5rem;border:1px solid var(--lr-color-border);border-radius:var(--lr-radius);background:var(--lr-color-surface);cursor:pointer;font-size:1.1rem;"
       >
         ⚙️
       </button>
-      <lyra-menu-item value="profile"><span slot="icon">👤</span>Edit profile</lyra-menu-item>
-      <lyra-menu-item value="preferences"><span slot="icon">🎛️</span>Preferences</lyra-menu-item>
+      <lr-menu-item value="profile"><span slot="icon">👤</span>Edit profile</lr-menu-item>
+      <lr-menu-item value="preferences"><span slot="icon">🎛️</span>Preferences</lr-menu-item>
       <hr />
-      <lyra-menu-item value="signout" destructive><span slot="icon">🚪</span>Sign out</lyra-menu-item>
-    </lyra-menu>
+      <lr-menu-item value="signout" destructive><span slot="icon">🚪</span>Sign out</lr-menu-item>
+    </lr-menu>
   `,
 };
 
@@ -46,12 +46,12 @@ export const GearMenu: Story = {
 export const RowOverflowMenu: Story = {
   render: () => html`
     <div
-      style="display:flex;align-items:center;gap:0.75rem;max-inline-size:24rem;padding:0.5rem 0.75rem;border:1px solid var(--lyra-color-border);border-radius:var(--lyra-radius);"
+      style="display:flex;align-items:center;gap:0.75rem;max-inline-size:24rem;padding:0.5rem 0.75rem;border:1px solid var(--lr-color-border);border-radius:var(--lr-radius);"
     >
       <span style="flex:1 1 auto;min-inline-size:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
         Migrating the table component to lyra-ui
       </span>
-      <lyra-menu label="Conversation actions" placement="bottom-end">
+      <lr-menu label="Conversation actions" placement="bottom-end">
         <button
           slot="trigger"
           aria-label="Conversation actions"
@@ -59,12 +59,12 @@ export const RowOverflowMenu: Story = {
         >
           ⋮
         </button>
-        <lyra-menu-item value="rename">Rename</lyra-menu-item>
-        <lyra-menu-item value="pin">Pin to top</lyra-menu-item>
-        <lyra-menu-item value="archive">Archive</lyra-menu-item>
+        <lr-menu-item value="rename">Rename</lr-menu-item>
+        <lr-menu-item value="pin">Pin to top</lr-menu-item>
+        <lr-menu-item value="archive">Archive</lr-menu-item>
         <hr />
-        <lyra-menu-item value="delete" destructive>Delete</lyra-menu-item>
-      </lyra-menu>
+        <lr-menu-item value="delete" destructive>Delete</lr-menu-item>
+      </lr-menu>
     </div>
   `,
 };
@@ -73,22 +73,22 @@ export const RowOverflowMenu: Story = {
  *  but still renders (dimmed) so its existence stays visible. */
 export const WithDisabledItem: Story = {
   render: () => html`
-    <lyra-menu label="Document actions">
+    <lr-menu label="Document actions">
       <button
         slot="trigger"
         aria-label="Document actions"
-        style="border:1px solid var(--lyra-color-border);border-radius:var(--lyra-radius);background:var(--lyra-color-surface);cursor:pointer;padding:0.4rem 0.75rem;"
+        style="border:1px solid var(--lr-color-border);border-radius:var(--lr-radius);background:var(--lr-color-surface);cursor:pointer;padding:0.4rem 0.75rem;"
       >
         Actions ▾
       </button>
-      <lyra-menu-item value="download">Download</lyra-menu-item>
-      <lyra-menu-item value="share" disabled>Share (requires admin)</lyra-menu-item>
-      <lyra-menu-item value="delete" destructive>Delete</lyra-menu-item>
-    </lyra-menu>
+      <lr-menu-item value="download">Download</lr-menu-item>
+      <lr-menu-item value="share" disabled>Share (requires admin)</lr-menu-item>
+      <lr-menu-item value="delete" destructive>Delete</lr-menu-item>
+    </lr-menu>
   `,
 };
 
-/** A non-`<lyra-menu-item>` control (here, a text filter input) slotted
+/** A non-`<lr-menu-item>` control (here, a text filter input) slotted
  *  alongside the items keeps its own full default keyboard behavior —
  *  Arrow/Home/End/Enter/Space never get hijacked from it. With
  *  `close-on-escape-anywhere` set, Escape from that input still closes the
@@ -96,11 +96,11 @@ export const WithDisabledItem: Story = {
  *  real item; without it (the default), Escape from the input is left alone. */
 export const SlottedControlWithEscapeAnywhere: Story = {
   render: () => html`
-    <lyra-menu label="Filtered actions" close-on-escape-anywhere>
+    <lr-menu label="Filtered actions" close-on-escape-anywhere>
       <button
         slot="trigger"
         aria-label="Filtered actions"
-        style="border:1px solid var(--lyra-color-border);border-radius:var(--lyra-radius);background:var(--lyra-color-surface);cursor:pointer;padding:0.4rem 0.75rem;"
+        style="border:1px solid var(--lr-color-border);border-radius:var(--lr-radius);background:var(--lr-color-surface);cursor:pointer;padding:0.4rem 0.75rem;"
       >
         Actions ▾
       </button>
@@ -108,34 +108,34 @@ export const SlottedControlWithEscapeAnywhere: Story = {
         <input
           type="text"
           placeholder="Filter…"
-          style="inline-size:100%;box-sizing:border-box;padding:0.3rem 0.5rem;border:1px solid var(--lyra-color-border);border-radius:var(--lyra-radius);"
+          style="inline-size:100%;box-sizing:border-box;padding:0.3rem 0.5rem;border:1px solid var(--lr-color-border);border-radius:var(--lr-radius);"
         />
       </div>
       <hr />
-      <lyra-menu-item value="rename">Rename</lyra-menu-item>
-      <lyra-menu-item value="duplicate">Duplicate</lyra-menu-item>
-      <lyra-menu-item value="delete" destructive>Delete</lyra-menu-item>
-    </lyra-menu>
+      <lr-menu-item value="rename">Rename</lr-menu-item>
+      <lr-menu-item value="duplicate">Duplicate</lr-menu-item>
+      <lr-menu-item value="delete" destructive>Delete</lr-menu-item>
+    </lr-menu>
   `,
 };
 
-/** `lyra-menu-select` is the recommended single event to listen to on
- *  `<lyra-menu>` itself, rather than every individual `<lyra-menu-item>`. */
+/** `lr-menu-select` is the recommended single event to listen to on
+ *  `<lr-menu>` itself, rather than every individual `<lr-menu-item>`. */
 export const SelectEvent: Story = {
   render: () => html`
     <div>
-      <lyra-menu
+      <lr-menu
         label="Row actions"
-        @lyra-menu-select=${(e: CustomEvent<MenuSelectDetail>) => {
+        @lr-menu-select=${(e: CustomEvent<MenuSelectDetail>) => {
           const out = document.getElementById('menu-select-log');
           if (out) out.textContent = `Selected: ${e.detail.value}`;
         }}
       >
         <button slot="trigger" aria-label="Row actions" style="cursor:pointer;">⋮</button>
-        <lyra-menu-item value="rename">Rename</lyra-menu-item>
-        <lyra-menu-item value="duplicate">Duplicate</lyra-menu-item>
-        <lyra-menu-item value="delete" destructive>Delete</lyra-menu-item>
-      </lyra-menu>
+        <lr-menu-item value="rename">Rename</lr-menu-item>
+        <lr-menu-item value="duplicate">Duplicate</lr-menu-item>
+        <lr-menu-item value="delete" destructive>Delete</lr-menu-item>
+      </lr-menu>
       <p id="menu-select-log">Selected: (none yet)</p>
     </div>
   `,

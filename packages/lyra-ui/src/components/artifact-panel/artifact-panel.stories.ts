@@ -5,7 +5,7 @@ import type { ArtifactVersion } from './artifact-panel.class.js';
 
 const meta: Meta = {
   title: 'Artifact Panel',
-  component: 'lyra-artifact-panel',
+  component: 'lr-artifact-panel',
 };
 export default meta;
 type Story = StoryObj;
@@ -20,7 +20,7 @@ const REPORT_MARKDOWN = '# Report\n\nHello';
 
 export const Default: Story = {
   render: () => html`
-    <lyra-artifact-panel
+    <lr-artifact-panel
       style="max-width:36rem;height:16rem"
       label="report.md"
       kind="document"
@@ -29,25 +29,25 @@ export const Default: Story = {
     >
       <div style="padding:1rem">Rendered report preview</div>
       <pre slot="code">${REPORT_MARKDOWN}</pre>
-    </lyra-artifact-panel>
+    </lr-artifact-panel>
   `,
 };
 
 export const Streaming: Story = {
   render: () => html`
-    <lyra-artifact-panel style="max-width:36rem;height:16rem" label="report.md" kind="document" streaming>
+    <lr-artifact-panel style="max-width:36rem;height:16rem" label="report.md" kind="document" streaming>
       <div style="padding:1rem">Partial content…</div>
-    </lyra-artifact-panel>
+    </lr-artifact-panel>
   `,
 };
 
 export const Narrow320: Story = {
   render: () => html`
     <div style="max-width:320px">
-      <lyra-artifact-panel label="report.md" kind="document" .versions=${versions}>
+      <lr-artifact-panel label="report.md" kind="document" .versions=${versions}>
         <div>Preview</div>
         <pre slot="code">code</pre>
-      </lyra-artifact-panel>
+      </lr-artifact-panel>
     </div>
   `,
 };

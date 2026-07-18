@@ -55,12 +55,12 @@ export interface LyraDatePickerEventMap {
   change: CustomEvent<undefined>;
 }
 /**
- * `<lyra-date-picker>` — an inline month-grid calendar for picking a single date
- * or a date range. Mirrors the core `<wa-date-picker>` API under `lyra-`.
+ * `<lr-date-picker>` — an inline month-grid calendar for picking a single date
+ * or a date range. Mirrors the core `<wa-date-picker>` API under `lr-`.
  *
  * Value is ISO 8601: `YYYY-MM-DD` (single) or `YYYY-MM-DD/YYYY-MM-DD` (range).
  *
- * @customElement lyra-date-picker
+ * @customElement lr-date-picker
  * @event change - The user committed a value.
  * @event input - The value changed during interaction (range: after the first click).
  * @csspart base - The date-picker wrapper.
@@ -346,7 +346,7 @@ export class LyraDatePicker extends LyraElement<LyraDatePickerEventMap> {
     // explicit `direction` override, so under `dir="rtl"` the browser mirrors
     // the column order itself (day 1 of the week renders at the inline-start
     // edge, which `direction` puts on the right) -- the same auto-mirroring
-    // `<lyra-tabs>`/`<lyra-split>`/`<lyra-tree>` rely on for their own
+    // `<lr-tabs>`/`<lr-split>`/`<lr-tree>` rely on for their own
     // row/track layouts. So ArrowLeft/ArrowRight must swap which physical key
     // advances a day, or keyboard nav would point the opposite way from what
     // the mirrored grid shows. ArrowUp/ArrowDown move by week (the block
@@ -606,6 +606,6 @@ export class LyraDatePicker extends LyraElement<LyraDatePickerEventMap> {
 
 declare global {
   interface HTMLElementTagNameMap {
-    'lyra-date-picker': LyraDatePicker;
+    'lr-date-picker': LyraDatePicker;
   }
 }

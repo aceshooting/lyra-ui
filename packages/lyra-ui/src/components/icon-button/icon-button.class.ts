@@ -3,8 +3,8 @@ import { property, query } from 'lit/decorators.js';
 import { LyraElement } from '../../internal/lyra-element.js';
 import { styles } from './icon-button.styles.js';
 
-/** `<lyra-icon-button>` — an accessible icon-only action button.
- * @customElement lyra-icon-button
+/** `<lr-icon-button>` — an accessible icon-only action button.
+ * @customElement lr-icon-button
  * @slot - Optional custom icon content.
  * @csspart button - Native button.
  */
@@ -20,7 +20,7 @@ export class LyraIconButton extends LyraElement {
   override blur(): void { this.buttonEl?.blur(); }
   render(): TemplateResult {
     const label = this.accessibleLabel || this.label || this.localize('iconButtonLabel');
-    return html`<button part="button" type=${this.type} ?disabled=${this.disabled} aria-label=${label}><lyra-icon name=${this.icon}><slot></slot></lyra-icon></button>`;
+    return html`<button part="button" type=${this.type} ?disabled=${this.disabled} aria-label=${label}><lr-icon name=${this.icon}><slot></slot></lr-icon></button>`;
   }
 }
-declare global { interface HTMLElementTagNameMap { 'lyra-icon-button': LyraIconButton; } }
+declare global { interface HTMLElementTagNameMap { 'lr-icon-button': LyraIconButton; } }

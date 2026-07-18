@@ -10,7 +10,7 @@ export async function loadIcalDeps(
     return module.default ?? module;
   } catch (error) {
     console.warn(
-      '<lyra-calendar-viewer> needs the optional peer dependency `ical.js` to parse .ics calendars — install it with `pnpm add ical.js`:',
+      '<lr-calendar-viewer> needs the optional peer dependency `ical.js` to parse .ics calendars — install it with `pnpm add ical.js`:',
       error,
     );
     return null;

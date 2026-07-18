@@ -4,11 +4,11 @@ import type { LyraTreeNode } from './tree-node.js';
 
 const item = { id: '1', label: 'Root' };
 
-// `item` is assigned by `<lyra-tree>` in normal use, but the tag is registered publicly, so a bare
-// `document.createElement('lyra-tree-node')` must complete its first update cycle (and later ones)
+// `item` is assigned by `<lr-tree>` in normal use, but the tag is registered publicly, so a bare
+// `document.createElement('lr-tree-node')` must complete its first update cycle (and later ones)
 // without dereferencing the missing item -- it renders as an empty leaf until `item` arrives.
 it('completes its lifecycle without an item, then renders once one is assigned', async () => {
-  const el = document.createElement('lyra-tree-node') as LyraTreeNode;
+  const el = document.createElement('lr-tree-node') as LyraTreeNode;
   document.body.appendChild(el);
   try {
     await el.updateComplete;
@@ -30,7 +30,7 @@ it('completes its lifecycle without an item, then renders once one is assigned',
 // here would produce invalid ARIA output. All three are now sanitized via `finiteInteger` at
 // assignment time, so the rendered attributes are always sane regardless of what's assigned.
 it('clamps a NaN/negative depth to a finite integer >= 0, keeping aria-level a positive integer', async () => {
-  const el = (await fixture(html`<lyra-tree-node .item=${item}></lyra-tree-node>`)) as LyraTreeNode;
+  const el = (await fixture(html`<lr-tree-node .item=${item}></lr-tree-node>`)) as LyraTreeNode;
 
   el.depth = NaN;
   expect(el.depth).to.equal(0);
@@ -49,7 +49,7 @@ it('clamps a NaN/negative depth to a finite integer >= 0, keeping aria-level a p
 });
 
 it('clamps a NaN/negative setSize to a finite integer >= 1, but preserves the -1 "unknown" ARIA sentinel', async () => {
-  const el = (await fixture(html`<lyra-tree-node .item=${item}></lyra-tree-node>`)) as LyraTreeNode;
+  const el = (await fixture(html`<lr-tree-node .item=${item}></lr-tree-node>`)) as LyraTreeNode;
 
   el.setSize = NaN;
   expect(el.setSize).to.equal(1);
@@ -66,7 +66,7 @@ it('clamps a NaN/negative setSize to a finite integer >= 1, but preserves the -1
 });
 
 it('clamps a NaN/negative posInSet to a finite integer >= 1', async () => {
-  const el = (await fixture(html`<lyra-tree-node .item=${item}></lyra-tree-node>`)) as LyraTreeNode;
+  const el = (await fixture(html`<lr-tree-node .item=${item}></lr-tree-node>`)) as LyraTreeNode;
 
   el.posInSet = NaN;
   expect(el.posInSet).to.equal(1);
@@ -81,7 +81,7 @@ it('clamps a NaN/negative posInSet to a finite integer >= 1', async () => {
 
 it('gives the expand/collapse toggle the shared minimum tappable size', async () => {
   const withChildren = { ...item, children: [{ id: '1.1', label: 'Child' }] };
-  const el = (await fixture(html`<lyra-tree-node .item=${withChildren}></lyra-tree-node>`)) as LyraTreeNode;
+  const el = (await fixture(html`<lr-tree-node .item=${withChildren}></lr-tree-node>`)) as LyraTreeNode;
   await el.updateComplete;
   const toggle = el.shadowRoot!.querySelector('[part="toggle"]') as HTMLElement;
   expect(getComputedStyle(toggle).minInlineSize).to.equal('40px');

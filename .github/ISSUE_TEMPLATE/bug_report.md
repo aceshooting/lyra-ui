@@ -5,7 +5,7 @@ title: ''
 labels: bug
 ---
 
-**Component(s) affected** (e.g. `lyra-combobox`):
+**Component(s) affected** (e.g. `lr-combobox`):
 
 **@aceshooting/lyra-ui version:**
 

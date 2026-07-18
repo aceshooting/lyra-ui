@@ -4,7 +4,7 @@ import type { Series } from './chart.js';
 
 const meta: Meta = {
   title: 'Charts/Radar',
-  component: 'lyra-radar-chart',
+  component: 'lr-radar-chart',
   tags: ['autodocs'],
 };
 export default meta;
@@ -14,12 +14,12 @@ export const Default: Story = {
   render: () => {
     const series: Series[] = [{ label: 'Model A', data: [80, 90, 70, 85, 75] }];
     return html`
-      <lyra-radar-chart
+      <lr-radar-chart
         height="16rem"
         style="width: 22rem"
         .labels=${['Speed', 'Reliability', 'Comfort', 'Safety', 'Efficiency']}
         .datasets=${series}
-      ></lyra-radar-chart>
+      ></lr-radar-chart>
     `;
   },
 };

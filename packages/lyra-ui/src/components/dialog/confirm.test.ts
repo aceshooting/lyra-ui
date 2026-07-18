@@ -4,7 +4,7 @@ import './dialog.js';
 import type { LyraDialog } from './dialog.js';
 
 function getMountedDialog(): LyraDialog {
-  return document.querySelector('lyra-dialog') as LyraDialog;
+  return document.querySelector('lr-dialog') as LyraDialog;
 }
 
 function footerButtons(dialog: LyraDialog): HTMLButtonElement[] {
@@ -22,7 +22,7 @@ it('resolves true and removes the dialog when the confirm button is clicked', as
   footerButtons(dialog)[1].click(); // [cancel, confirm]
 
   expect(await promise).to.be.true;
-  expect(document.querySelector('lyra-dialog')).to.not.exist;
+  expect(document.querySelector('lr-dialog')).to.not.exist;
 });
 
 it('resolves false and removes the dialog when the cancel button is clicked', async () => {
@@ -32,7 +32,7 @@ it('resolves false and removes the dialog when the cancel button is clicked', as
   footerButtons(dialog)[0].click();
 
   expect(await promise).to.be.false;
-  expect(document.querySelector('lyra-dialog')).to.not.exist;
+  expect(document.querySelector('lr-dialog')).to.not.exist;
 });
 
 it('resolves false and removes the dialog on Escape', async () => {
@@ -42,7 +42,7 @@ it('resolves false and removes the dialog on Escape', async () => {
   document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
 
   expect(await promise).to.be.false;
-  expect(document.querySelector('lyra-dialog')).to.not.exist;
+  expect(document.querySelector('lr-dialog')).to.not.exist;
 });
 
 it('resolves false and removes the dialog on a backdrop click', async () => {
@@ -53,7 +53,7 @@ it('resolves false and removes the dialog on a backdrop click', async () => {
   (dialog.shadowRoot!.querySelector('[part="backdrop"]') as HTMLElement).click();
 
   expect(await promise).to.be.false;
-  expect(document.querySelector('lyra-dialog')).to.not.exist;
+  expect(document.querySelector('lr-dialog')).to.not.exist;
 });
 
 it('defaults cancelLabel to "Cancel" and confirmLabel to "Confirm"', async () => {
@@ -92,7 +92,7 @@ it('renders the description as body text when provided, omits it when not', asyn
   await withoutDesc;
 });
 
-it('fills the confirm button with --lyra-color-brand by default, --lyra-color-danger when tone is "danger"', async () => {
+it('fills the confirm button with --lr-color-brand by default, --lr-color-danger when tone is "danger"', async () => {
   const neutral = confirm({ title: 'Proceed?' });
   const neutralDialog = getMountedDialog();
   const neutralConfirm = footerButtons(neutralDialog)[1];
@@ -100,8 +100,8 @@ it('fills the confirm button with --lyra-color-brand by default, --lyra-color-da
   const neutralColor = neutralConfirm.style.color;
   footerButtons(neutralDialog)[0].click();
   await neutral;
-  expect(neutralBackground).to.include('--lyra-color-brand');
-  expect(neutralColor).to.include('--lyra-color-on-brand');
+  expect(neutralBackground).to.include('--lr-color-brand');
+  expect(neutralColor).to.include('--lr-color-on-brand');
 
   const danger = confirm({ title: 'Delete?', tone: 'danger' });
   const dangerDialog = getMountedDialog();
@@ -110,8 +110,8 @@ it('fills the confirm button with --lyra-color-brand by default, --lyra-color-da
   const dangerColor = dangerConfirm.style.color;
   footerButtons(dangerDialog)[0].click();
   await danger;
-  expect(dangerBackground).to.include('--lyra-color-danger');
-  expect(dangerColor).to.include('--lyra-color-on-danger');
+  expect(dangerBackground).to.include('--lr-color-danger');
+  expect(dangerColor).to.include('--lr-color-on-danger');
 });
 
 it('uses the title as the dialog heading, which drives aria-label', async () => {
@@ -130,12 +130,12 @@ it('uses the title as the dialog heading, which drives aria-label', async () => 
 
 it('mounts exactly one dialog per call and fully cleans it up after resolving', async () => {
   const promise = confirm({ title: 'Proceed?' });
-  expect(document.querySelectorAll('lyra-dialog').length).to.equal(1);
+  expect(document.querySelectorAll('lr-dialog').length).to.equal(1);
 
   footerButtons(getMountedDialog())[1].click();
   await promise;
 
-  expect(document.querySelectorAll('lyra-dialog').length).to.equal(0);
+  expect(document.querySelectorAll('lr-dialog').length).to.equal(0);
 });
 
 it('does not resolve a second time when both buttons are somehow activated', async () => {

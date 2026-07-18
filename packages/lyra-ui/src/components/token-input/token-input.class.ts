@@ -9,17 +9,17 @@ import { styles } from './token-input.styles.js';
 export interface LyraTokenInputEventMap {
   input: CustomEvent<{ value: string[] }>;
   change: CustomEvent<{ value: string[] }>;
-  'lyra-add': CustomEvent<{ value: string }>;
-  'lyra-remove': CustomEvent<{ value: string; index: number }>;
+  'lr-add': CustomEvent<{ value: string }>;
+  'lr-remove': CustomEvent<{ value: string; index: number }>;
 }
 
-/** `<lyra-token-input>` — an editable, form-associated list of removable tokens.
- * @customElement lyra-token-input
+/** `<lr-token-input>` — an editable, form-associated list of removable tokens.
+ * @customElement lr-token-input
  * @slot label - Visible label content.
  * @slot hint - Supporting text.
  * @slot error - Validation message.
- * @event lyra-add - A token was added; detail is `{ value }`.
- * @event lyra-remove - A token was removed; detail is `{ value, index }`.
+ * @event lr-add - A token was added; detail is `{ value }`.
+ * @event lr-remove - A token was removed; detail is `{ value, index }`.
  * @csspart form-control - Outer control wrapper.
  * @csspart form-control-label - Label.
  * @csspart input-wrapper - Token and input row.
@@ -50,7 +50,7 @@ export class LyraTokenInput extends LyraElement<LyraTokenInputEventMap> {
   @state() private touched = false;
   // `[part]:empty` never matches -- the part always contains a literal
   // `<slot>` child element regardless of assigned content -- so real
-  // emptiness is tracked in JS instead (mirrors lyra-select's identical
+  // emptiness is tracked in JS instead (mirrors lr-select's identical
   // hasLabelSlot/hasHintSlot/hasErrorSlot) and reflected via `hidden`.
   @state() private hasLabelSlot = false;
   @state() private hasHintSlot = false;
@@ -64,7 +64,7 @@ export class LyraTokenInput extends LyraElement<LyraTokenInputEventMap> {
   private _value: string[] = [];
   // Tracked separately from the consumer's own `disabled` -- a fieldset
   // cascade must never mutate that IDL property/attribute itself (mirrors
-  // lyra-select's/lyra-combobox's identical `_fieldsetDisabled`/
+  // lr-select's/lr-combobox's identical `_fieldsetDisabled`/
   // `effectiveDisabled` pattern), only the combined getter below.
   private _fieldsetDisabled = false;
   private _name = '';
@@ -78,7 +78,7 @@ export class LyraTokenInput extends LyraElement<LyraTokenInputEventMap> {
   /** The form submission key, reflected synchronously for native form APIs.
    *  This control keys its `FormData` entries directly off `name` (see
    *  `syncValidity()`), so a rename must rebuild that `FormData` in the same
-   *  tick -- mirrors `<lyra-combobox>`'s identical `name` setter. */
+   *  tick -- mirrors `<lr-combobox>`'s identical `name` setter. */
   get name(): string { return this._name; }
   set name(next: string) {
     const old = this._name;
@@ -153,7 +153,7 @@ export class LyraTokenInput extends LyraElement<LyraTokenInputEventMap> {
     this.syncValidity();
     this.emit('input', { value: this.value });
     this.emit('change', { value: this.value });
-    if (event === 'add') this.emit('lyra-add', { value: next[next.length - 1] });
+    if (event === 'add') this.emit('lr-add', { value: next[next.length - 1] });
   }
   private addDraft(): void {
     if (this.effectiveDisabled) return;
@@ -167,7 +167,7 @@ export class LyraTokenInput extends LyraElement<LyraTokenInputEventMap> {
   private removeToken(index: number): void {
     const removed = this.value[index];
     this.updateValue(this.value.filter((_token, i) => i !== index));
-    this.emit('lyra-remove', { value: removed, index });
+    this.emit('lr-remove', { value: removed, index });
   }
   private onInput = (event: Event): void => { this.draft = (event.target as HTMLInputElement).value; };
   private onKeyDown = (event: KeyboardEvent): void => {
@@ -198,4 +198,4 @@ export class LyraTokenInput extends LyraElement<LyraTokenInputEventMap> {
     </div>`;
   }
 }
-declare global { interface HTMLElementTagNameMap { 'lyra-token-input': LyraTokenInput; } }
+declare global { interface HTMLElementTagNameMap { 'lr-token-input': LyraTokenInput; } }

@@ -2,7 +2,7 @@ import { html } from 'lit';
 import type { Meta, StoryObj } from '@storybook/web-components';
 import './include.js';
 
-const meta: Meta = { title: 'Utilities/Include', component: 'lyra-include' };
+const meta: Meta = { title: 'Utilities/Include', component: 'lr-include' };
 export default meta;
 type Story = StoryObj;
 
@@ -12,11 +12,11 @@ const fragment = '<article><h2>Included fragment</h2><p>This markup was fetched 
 const src = `data:text/html,${encodeURIComponent(fragment)}`;
 
 export const Default: Story = {
-  render: () => html`<lyra-include src=${src} @lyra-load=${(event: CustomEvent) => console.log('lyra-load', event.detail)}></lyra-include>`,
+  render: () => html`<lr-include src=${src} @lr-load=${(event: CustomEvent) => console.log('lr-load', event.detail)}></lr-include>`,
 };
 
-export const Empty: Story = { render: () => html`<lyra-include></lyra-include>` };
+export const Empty: Story = { render: () => html`<lr-include></lr-include>` };
 
 export const WithFallbackContent: Story = {
-  render: () => html`<lyra-include>Loading…</lyra-include>`,
+  render: () => html`<lr-include>Loading…</lr-include>`,
 };

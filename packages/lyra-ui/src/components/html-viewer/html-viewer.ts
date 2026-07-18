@@ -7,7 +7,7 @@ defineElement('html-viewer', LyraHtmlViewer);
 registerDocumentRenderer('text/html', {
   matches: (file: DocumentFile) => /\.html?$/i.test(file.name),
   render: (file) => {
-    const element = document.createElement('lyra-html-viewer');
+    const element = document.createElement('lr-html-viewer');
     element.src = file.src;
     element.name = file.name;
     return element;

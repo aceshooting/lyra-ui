@@ -39,21 +39,21 @@ const spellcheckConverter = {
 };
 
 export interface LyraComboboxEventMap {
-  'lyra-show': CustomEvent<undefined>;
-  'lyra-hide': CustomEvent<undefined>;
-  'lyra-clear': CustomEvent<undefined>;
+  'lr-show': CustomEvent<undefined>;
+  'lr-hide': CustomEvent<undefined>;
+  'lr-clear': CustomEvent<undefined>;
   blur: CustomEvent<undefined>;
   focus: CustomEvent<undefined>;
 }
 /**
- * `<lyra-combobox>` — a filterable single/multi select that combines a text
- * input with a listbox. Mirrors the core `<wa-combobox>` API under `lyra-`.
+ * `<lr-combobox>` — a filterable single/multi select that combines a text
+ * input with a listbox. Mirrors the core `<wa-combobox>` API under `lr-`.
  *
- * Options are `<lyra-option value>` children. Emits native-style `change`/`input`
- * (like Web Awesome) plus `lyra-show`/`lyra-hide`/`lyra-clear`.
+ * Options are `<lr-option value>` children. Emits native-style `change`/`input`
+ * (like Web Awesome) plus `lr-show`/`lr-hide`/`lr-clear`.
  *
- * @customElement lyra-combobox
- * @slot - `<lyra-option>` elements.
+ * @customElement lr-combobox
+ * @slot - `<lr-option>` elements.
  * @slot label - Custom label content.
  * @slot hint - Custom hint content.
  * @slot error - Custom error content.
@@ -62,9 +62,9 @@ export interface LyraComboboxEventMap {
  * @event {InputEvent | Event} input - The user typed in the filter or changed the selection. Text
  * edits expose the original InputEvent; selection changes emit a bubbling,
  * composed, non-cancelable Event.
- * @event lyra-show - The listbox opened.
- * @event lyra-hide - The listbox closed.
- * @event lyra-clear - The value was cleared.
+ * @event lr-show - The listbox opened.
+ * @event lr-hide - The listbox closed.
+ * @event lr-clear - The value was cleared.
  * @event blur - Re-dispatched from the internal native input as a bubbling, composed event.
  * @event focus - Re-dispatched from the internal native input as a bubbling, composed event.
  * @csspart form-control - The outer wrapper around label, combobox, listbox, error and hint.
@@ -86,11 +86,11 @@ export interface LyraComboboxEventMap {
  * @csspart expand-icon - The dropdown indicator.
  * @csspart error - The error message.
  * @csspart hint - The hint message.
- * @cssprop --lyra-combobox-trigger-padding - Padding inside the input container.
- * @cssprop --lyra-combobox-trigger-min-height - Minimum input-container block size.
- * @cssprop --lyra-combobox-font-size - Input text size.
- * @cssprop --lyra-combobox-tag-padding - Selected-tag padding.
- * @cssprop --lyra-combobox-tag-font-size - Selected-tag text size.
+ * @cssprop --lr-combobox-trigger-padding - Padding inside the input container.
+ * @cssprop --lr-combobox-trigger-min-height - Minimum input-container block size.
+ * @cssprop --lr-combobox-font-size - Input text size.
+ * @cssprop --lr-combobox-tag-padding - Selected-tag padding.
+ * @cssprop --lr-combobox-tag-font-size - Selected-tag text size.
  */
 export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
   static formAssociated = true;
@@ -111,7 +111,7 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
   @property() hint = '';
   @property({ attribute: 'error-text' }) errorText = '';
   @property({ type: Boolean, reflect: true }) open = false;
-  /** Visual size — same `xs`–`xl` scale as `lyra-select`'s `size`. */
+  /** Visual size — same `xs`–`xl` scale as `lr-select`'s `size`. */
   @property({ reflect: true }) size: LyraComboboxSize = 'm';
   /** Show a clear button while the combobox has a value. Mirrors `wa-combobox`'s public name. */
   @property({ type: Boolean, reflect: true }) clearable = false;
@@ -141,7 +141,7 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
   @state() private touched = false;
   // `[part]:empty` never matches — the part always contains a literal
   // `<slot>` child element regardless of assigned content — so real
-  // emptiness is tracked in JS instead (same fix as lyra-stat's
+  // emptiness is tracked in JS instead (same fix as lr-stat's
   // icon/caption) and reflected via `hidden`. Applies to
   // `form-control-label` too: the required-asterisk `::after` attaches to
   // that box, so leaving it always-visible orphans a stray ' *' when no
@@ -183,7 +183,7 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
   private _disabled = false;
   private _required = false;
   // What `form.reset()` restores to. Captured exactly once, from whatever
-  // `<lyra-option selected>` markup was present the first time slotted
+  // `<lr-option selected>` markup was present the first time slotted
   // options are collected (mirrors native `<select><option selected>`) —
   // never from the `value` setter, so a user picking an option (even the
   // very first pick on an initially-unselected combobox) can't itself
@@ -482,6 +482,7 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
   }
 
   formResetCallback(): void {
+    this.touched = false;
     this.value = [...this._defaultSelected];
     this.query = '';
   }
@@ -542,7 +543,7 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
     if (!this._defaultCaptured) {
       this._defaultCaptured = true;
       // Seed the initial selection — and the reset default — from
-      // declarative `<lyra-option selected>` markup — mirrors native
+      // declarative `<lr-option selected>` markup — mirrors native
       // `<select><option selected>`, which was previously silently ignored.
       // This is the only place `_defaultSelected` is set; picking an option
       // later (the `value` setter) never redefines the reset default, so an
@@ -587,7 +588,7 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
 
   private labelFor(value: string): string {
     // Checked in order: an explicit pick's own label (works even after the
-    // source rows backing it have since changed), a slotted `<lyra-option>`
+    // source rows backing it have since changed), a slotted `<lr-option>`
     // (local mode), then the last-fetched async row set (source mode) -- a
     // value set programmatically (e.g. `el.value = 'b'` before the listbox
     // has ever been opened) has no chance to have populated the first two,
@@ -645,7 +646,7 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
   private get filtered(): LyraOption[] {
     // `toLocaleLowerCase()` (not the invariant-Unicode `toLowerCase()`) so a
     // `tr`/`az` locale's dotted/dotless I case-folds the way that locale
-    // actually expects -- matches `<lyra-table>`'s identical filter fold.
+    // actually expects -- matches `<lr-table>`'s identical filter fold.
     const locale = this.effectiveLocale;
     const q = this.query.trim().toLocaleLowerCase(locale);
     const selectedLabel = !this.multiple ? (this.labelFor(this._selected[0] ?? '') ?? '') : '';
@@ -689,23 +690,23 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
       this.cleanup?.();
       this.cleanup = undefined;
       // All `open`-driven side effects (positioning, the click-outside
-      // listener, and the lyra-show/lyra-hide events) live here rather than
+      // listener, and the lr-show/lr-hide events) live here rather than
       // in show()/hide() so they fire however `open` became true -- via
       // show()/hide()'s own user-interaction paths, or a consumer/test
       // setting `el.open` directly, which bypasses both entirely.
       if (this.open) {
         this.ownerDocument.addEventListener('pointerdown', this.onDocPointer);
         // Don't announce a "show" transition for markup that's simply
-        // rendering open for the first time (e.g. `<lyra-combobox open>`) --
+        // rendering open for the first time (e.g. `<lr-combobox open>`) --
         // only for an actual closed-to-open transition.
-        if (!this._isFirstUpdate) this.emit('lyra-show');
+        if (!this._isFirstUpdate) this.emit('lr-show');
         const anchor = this.renderRoot.querySelector('[part="combobox"]') as HTMLElement | null;
         const listbox = this.renderRoot.querySelector('[part="listbox"]') as HTMLElement | null;
         if (anchor && listbox) this.cleanup = place(anchor, listbox);
         if (this.source && this.asyncRows.length === 0) this.runSource(this.query);
       } else {
         this.ownerDocument.removeEventListener('pointerdown', this.onDocPointer);
-        if (!this._isFirstUpdate) this.emit('lyra-hide');
+        if (!this._isFirstUpdate) this.emit('lr-hide');
       }
     }
     if (changed.has('name')) this.syncFormValue();
@@ -717,7 +718,7 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
     // its visible rows moves `activeIndex` and `aria-activedescendant`
     // correctly but leaves the highlighted row scrolled out of view for a
     // sighted keyboard user. `block: 'nearest'` is a no-op whenever the
-    // active row is already fully visible. Mirrors lyra-mention-popover's
+    // active row is already fully visible. Mirrors lr-mention-popover's
     // identical fix for the same shape of listbox.
     if (changed.has('activeIndex')) {
       this.renderRoot.querySelector<HTMLElement>('[part="option"][data-active]')?.scrollIntoView({ block: 'nearest' });
@@ -778,7 +779,7 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
     this.query = '';
     if (this.source) this.runSource(this.query);
     this.emitValueEvents();
-    this.emit('lyra-clear');
+    this.emit('lr-clear');
   }
 
   private onInput = (e: Event): void => {
@@ -811,7 +812,7 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
         })
         .catch((err) => {
           if (token !== this.sourceToken || !this.isConnected) return;
-          console.warn('<lyra-combobox> source() rejected:', err);
+          console.warn('<lr-combobox> source() rejected:', err);
         })
         .finally(() => {
           if (token === this.sourceToken) this.loading = false;
@@ -1065,7 +1066,7 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
           ${this.hint}<slot name="hint" @slotchange=${this.onHintSlotChange}></slot>
         </div>
       </div>
-      <slot @slotchange=${this.collectOptions} @lyra-option-change=${this.onOptionChange} hidden></slot>
+      <slot @slotchange=${this.collectOptions} @lr-option-change=${this.onOptionChange} hidden></slot>
     `;
   }
 }
@@ -1073,6 +1074,6 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
 
 declare global {
   interface HTMLElementTagNameMap {
-    'lyra-combobox': LyraCombobox;
+    'lr-combobox': LyraCombobox;
   }
 }

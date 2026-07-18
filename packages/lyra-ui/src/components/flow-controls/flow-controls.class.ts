@@ -58,11 +58,11 @@ const lockOpenGlyph = () =>
   glyphSvg(svg`<rect x="4" y="11" width="16" height="9" rx="2"></rect><path d="M8 11V7a4 4 0 0 1 7.4-2"></path>`);
 
 /**
- * `<lyra-flow-controls>` — the canvas's button cluster: zoom in/out, fit, and interaction lock, so
+ * `<lr-flow-controls>` — the canvas's button cluster: zoom in/out, fit, and interaction lock, so
  * every flow surface ships the same affordances without hosts rebuilding them. Manipulates only
  * view state, never `nodes`/`edges` — no editing commands live here.
  *
- * @customElement lyra-flow-controls
+ * @customElement lr-flow-controls
  * @slot - Extra host buttons appended to the cluster, styled by the same group.
  * @csspart base - The `role="group"` wrapper.
  * @csspart zoom-in - Zoom-in button.
@@ -83,7 +83,7 @@ export class LyraFlowControls extends LyraElement {
   private unsubscribe?: () => void;
   private lockObserver?: MutationObserver;
   /** Watches the root for DOM changes while no canvas has resolved yet, so a `for` target or
-   *  ancestor `lyra-flow-canvas` that mounts after this element does still gets picked up instead
+   *  ancestor `lr-flow-canvas` that mounts after this element does still gets picked up instead
    *  of leaving every button permanently disabled. Disconnected once a canvas resolves. */
   private canvasWatcher?: MutationObserver;
 
@@ -212,6 +212,6 @@ export class LyraFlowControls extends LyraElement {
 
 declare global {
   interface HTMLElementTagNameMap {
-    'lyra-flow-controls': LyraFlowControls;
+    'lr-flow-controls': LyraFlowControls;
   }
 }

@@ -1,6 +1,6 @@
 import type { Announcer } from './announcer.js';
 
-/** The `lyra-search-change` event detail shape, uniform across every search-capable viewer. */
+/** The `lr-search-change` event detail shape, uniform across every search-capable viewer. */
 export interface ViewerSearchChangeDetail {
   query: string;
   matchCount: number;

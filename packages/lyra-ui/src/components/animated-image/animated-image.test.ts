@@ -8,11 +8,11 @@ import type { LyraAnimatedImage } from './animated-image.js';
 const DATA_URI =
   'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=';
 
-/** Sets `el.src` and awaits the resulting real `lyra-load`, registering the
+/** Sets `el.src` and awaits the resulting real `lr-load`, registering the
  *  listener before the assignment per this repo's `oneEvent`-races-dispatch
  *  convention. */
 async function loaded(el: LyraAnimatedImage, src = DATA_URI): Promise<void> {
-  const ev = oneEvent(el, 'lyra-load');
+  const ev = oneEvent(el, 'lr-load');
   el.src = src;
   await ev;
   await el.updateComplete;
@@ -52,7 +52,7 @@ function stubReducedMotion(initialMatches: boolean) {
 
 describe('default render / freeze-frame state', () => {
   it('defaults to not playing; once loaded, canvas is exposed and image is aria-hidden', async () => {
-    const el = (await fixture(html`<lyra-animated-image alt="Pixel"></lyra-animated-image>`)) as LyraAnimatedImage;
+    const el = (await fixture(html`<lr-animated-image alt="Pixel"></lr-animated-image>`)) as LyraAnimatedImage;
     expect(el.playing).to.be.false;
     expect(el.shadowRoot!.querySelector('[part="control-box"]')).to.be.null;
 
@@ -65,10 +65,10 @@ describe('default render / freeze-frame state', () => {
     expect(el.shadowRoot!.querySelector('[part="control-box"]')).to.not.be.null;
   });
 
-  it('does not render an img src attribute for an empty src, and never fires lyra-error for it', async () => {
-    const el = (await fixture(html`<lyra-animated-image alt="Pixel"></lyra-animated-image>`)) as LyraAnimatedImage;
+  it('does not render an img src attribute for an empty src, and never fires lr-error for it', async () => {
+    const el = (await fixture(html`<lr-animated-image alt="Pixel"></lr-animated-image>`)) as LyraAnimatedImage;
     let errorFired = false;
-    el.addEventListener('lyra-error', () => {
+    el.addEventListener('lr-error', () => {
       errorFired = true;
     });
     el.src = '';
@@ -80,7 +80,7 @@ describe('default render / freeze-frame state', () => {
   });
 
   it('resets and re-arms capture on every src change (independent load cycles)', async () => {
-    const el = (await fixture(html`<lyra-animated-image alt="Pixel"></lyra-animated-image>`)) as LyraAnimatedImage;
+    const el = (await fixture(html`<lr-animated-image alt="Pixel"></lr-animated-image>`)) as LyraAnimatedImage;
     await loaded(el);
     expect(el.shadowRoot!.querySelector('[part="control-box"]')).to.not.be.null;
 
@@ -93,9 +93,9 @@ describe('default render / freeze-frame state', () => {
   });
 });
 
-describe('lyra-load / DPR-aware frame capture', () => {
-  it('fires lyra-load and captures a DPR-aware frozen frame matching the loaded image', async () => {
-    const el = (await fixture(html`<lyra-animated-image alt="Pixel"></lyra-animated-image>`)) as LyraAnimatedImage;
+describe('lr-load / DPR-aware frame capture', () => {
+  it('fires lr-load and captures a DPR-aware frozen frame matching the loaded image', async () => {
+    const el = (await fixture(html`<lr-animated-image alt="Pixel"></lr-animated-image>`)) as LyraAnimatedImage;
     await loaded(el);
 
     const img = el.shadowRoot!.querySelector('[part="image"]') as HTMLImageElement;
@@ -107,19 +107,19 @@ describe('lyra-load / DPR-aware frame capture', () => {
   });
 });
 
-describe('lyra-error', () => {
+describe('lr-error', () => {
   it('fires for a real broken/404 resource and does not render control-box', async () => {
-    const el = (await fixture(html`<lyra-animated-image alt="Pixel"></lyra-animated-image>`)) as LyraAnimatedImage;
-    const errorEvent = oneEvent(el, 'lyra-error');
-    el.src = '/__does-not-exist-lyra-animated-image-fixture__.png';
+    const el = (await fixture(html`<lr-animated-image alt="Pixel"></lr-animated-image>`)) as LyraAnimatedImage;
+    const errorEvent = oneEvent(el, 'lr-error');
+    el.src = '/__does-not-exist-lr-animated-image-fixture__.png';
     await errorEvent;
     await el.updateComplete;
     expect(el.shadowRoot!.querySelector('[part="control-box"]')).to.be.null;
   });
 
   it('fires for a src that fails safeMediaSrc(), with no request ever attempted', async () => {
-    const el = (await fixture(html`<lyra-animated-image alt="Pixel"></lyra-animated-image>`)) as LyraAnimatedImage;
-    const errorEvent = oneEvent(el, 'lyra-error');
+    const el = (await fixture(html`<lr-animated-image alt="Pixel"></lr-animated-image>`)) as LyraAnimatedImage;
+    const errorEvent = oneEvent(el, 'lr-error');
     el.src = 'javascript:alert(1)';
     await errorEvent;
     await el.updateComplete;
@@ -134,7 +134,7 @@ describe('play / playing / reduced-motion arbitration', () => {
     const stub = stubReducedMotion(false);
     try {
       const el = (await fixture(
-        html`<lyra-animated-image play alt="Pixel"></lyra-animated-image>`,
+        html`<lr-animated-image play alt="Pixel"></lr-animated-image>`,
       )) as LyraAnimatedImage;
       expect(el.playing).to.be.true;
       await loaded(el);
@@ -147,20 +147,20 @@ describe('play / playing / reduced-motion arbitration', () => {
     }
   });
 
-  it('toggles .play when the rendered play-button is clicked, firing lyra-play/lyra-pause', async () => {
+  it('toggles .play when the rendered play-button is clicked, firing lr-play/lr-pause', async () => {
     const stub = stubReducedMotion(false);
     try {
-      const el = (await fixture(html`<lyra-animated-image alt="Pixel"></lyra-animated-image>`)) as LyraAnimatedImage;
+      const el = (await fixture(html`<lr-animated-image alt="Pixel"></lr-animated-image>`)) as LyraAnimatedImage;
       await loaded(el);
       const button = el.shadowRoot!.querySelector('[part="play-button"]') as HTMLButtonElement;
 
-      const playEvent = oneEvent(el, 'lyra-play');
+      const playEvent = oneEvent(el, 'lr-play');
       button.click();
       await playEvent;
       expect(el.play).to.be.true;
       expect(el.playing).to.be.true;
 
-      const pauseEvent = oneEvent(el, 'lyra-pause');
+      const pauseEvent = oneEvent(el, 'lr-pause');
       button.click();
       await pauseEvent;
       expect(el.play).to.be.false;
@@ -173,13 +173,13 @@ describe('play / playing / reduced-motion arbitration', () => {
   it('stays frozen and disables the play button under OS reduced motion (respectReducedMotion defaults to true)', async () => {
     const stub = stubReducedMotion(true);
     try {
-      const el = (await fixture(html`<lyra-animated-image alt="Pixel"></lyra-animated-image>`)) as LyraAnimatedImage;
+      const el = (await fixture(html`<lr-animated-image alt="Pixel"></lr-animated-image>`)) as LyraAnimatedImage;
       await loaded(el);
       const button = el.shadowRoot!.querySelector('[part="play-button"]') as HTMLButtonElement;
       expect(button.disabled).to.be.true;
 
       let playFired = false;
-      el.addEventListener('lyra-play', () => {
+      el.addEventListener('lr-play', () => {
         playFired = true;
       });
       el.play = true;
@@ -198,7 +198,7 @@ describe('play / playing / reduced-motion arbitration', () => {
       // `?respect-reduced-motion=${false}` can never drive this true-defaulting
       // boolean property back to false -- a property binding is required.
       const el = (await fixture(
-        html`<lyra-animated-image alt="Pixel" .respectReducedMotion=${false}></lyra-animated-image>`,
+        html`<lr-animated-image alt="Pixel" .respectReducedMotion=${false}></lr-animated-image>`,
       )) as LyraAnimatedImage;
       await loaded(el);
       el.play = true;
@@ -216,12 +216,12 @@ describe('play / playing / reduced-motion arbitration', () => {
     const stub = stubReducedMotion(false);
     try {
       const el = (await fixture(
-        html`<lyra-animated-image play alt="Pixel"></lyra-animated-image>`,
+        html`<lr-animated-image play alt="Pixel"></lr-animated-image>`,
       )) as LyraAnimatedImage;
       await el.updateComplete;
       expect(el.playing).to.be.true;
 
-      const pauseEvent = oneEvent(el, 'lyra-pause');
+      const pauseEvent = oneEvent(el, 'lr-pause');
       stub.fire(true);
       await pauseEvent;
       expect(el.playing).to.be.false;
@@ -231,7 +231,7 @@ describe('play / playing / reduced-motion arbitration', () => {
   });
 
   it('el.playing = x has no defined effect -- read-only, control playback via .play', async () => {
-    const el = (await fixture(html`<lyra-animated-image alt="Pixel"></lyra-animated-image>`)) as LyraAnimatedImage;
+    const el = (await fixture(html`<lr-animated-image alt="Pixel"></lr-animated-image>`)) as LyraAnimatedImage;
     expect(() => {
       (el as unknown as { playing: boolean }).playing = true;
     }).to.not.throw();
@@ -244,7 +244,7 @@ describe('accessible name on the play button', () => {
     const stub = stubReducedMotion(false);
     try {
       const el = (await fixture(
-        html`<lyra-animated-image alt="Site tour"></lyra-animated-image>`,
+        html`<lr-animated-image alt="Site tour"></lr-animated-image>`,
       )) as LyraAnimatedImage;
       await loaded(el);
       const button = () => el.shadowRoot!.querySelector('[part="play-button"]') as HTMLButtonElement;
@@ -262,7 +262,7 @@ describe('accessible name on the play button', () => {
     const stub = stubReducedMotion(false);
     try {
       const el = (await fixture(html`
-        <lyra-animated-image alt="Site tour" aria-label="Toggle hero animation"></lyra-animated-image>
+        <lr-animated-image alt="Site tour" aria-label="Toggle hero animation"></lr-animated-image>
       `)) as LyraAnimatedImage;
       await loaded(el);
       const button = () => el.shadowRoot!.querySelector('[part="play-button"]') as HTMLButtonElement;
@@ -279,7 +279,7 @@ describe('accessible name on the play button', () => {
   it('keeps a non-empty accessible name on the play button while disabled by reduced motion', async () => {
     const stub = stubReducedMotion(true);
     try {
-      const el = (await fixture(html`<lyra-animated-image alt="Pixel"></lyra-animated-image>`)) as LyraAnimatedImage;
+      const el = (await fixture(html`<lr-animated-image alt="Pixel"></lr-animated-image>`)) as LyraAnimatedImage;
       await loaded(el);
       const button = el.shadowRoot!.querySelector('[part="play-button"]') as HTMLButtonElement;
       expect(button.disabled).to.be.true;
@@ -293,7 +293,7 @@ describe('accessible name on the play button', () => {
 describe('alt forwarding + fallback', () => {
   it('forwards alt to the image alt and canvas aria-label, falling back to the localized default when empty', async () => {
     const el = (await fixture(
-      html`<lyra-animated-image alt="Custom alt text"></lyra-animated-image>`,
+      html`<lr-animated-image alt="Custom alt text"></lr-animated-image>`,
     )) as LyraAnimatedImage;
     await loaded(el);
     let img = el.shadowRoot!.querySelector('[part="image"]') as HTMLImageElement;
@@ -312,7 +312,7 @@ describe('alt forwarding + fallback', () => {
 
 describe('string localization', () => {
   it('defaults playWithContext/pauseWithContext/animatedImageDefaultAlt to English with no locale registered', async () => {
-    const el = (await fixture(html`<lyra-animated-image></lyra-animated-image>`)) as LyraAnimatedImage;
+    const el = (await fixture(html`<lr-animated-image></lr-animated-image>`)) as LyraAnimatedImage;
     await loaded(el);
     const button = el.shadowRoot!.querySelector('[part="play-button"]') as HTMLButtonElement;
     const img = el.shadowRoot!.querySelector('[part="image"]') as HTMLImageElement;
@@ -327,7 +327,7 @@ describe('string localization', () => {
       animatedImageDefaultAlt: 'Image animée',
     };
     const el = (await fixture(
-      html`<lyra-animated-image .strings=${overrides}></lyra-animated-image>`,
+      html`<lr-animated-image .strings=${overrides}></lr-animated-image>`,
     )) as LyraAnimatedImage;
     await loaded(el);
     const button = el.shadowRoot!.querySelector('[part="play-button"]') as HTMLButtonElement;
@@ -344,7 +344,7 @@ describe('RTL', () => {
     // run), so mirroring is asserted by comparing which physical side sits
     // near the edge (the pinned side) rather than checking for "auto".
     const ltrEl = (await fixture(html`
-      <lyra-animated-image dir="ltr" alt="Pixel" style="inline-size: 12rem;"></lyra-animated-image>
+      <lr-animated-image dir="ltr" alt="Pixel" style="inline-size: 12rem;"></lr-animated-image>
     `)) as LyraAnimatedImage;
     await loaded(ltrEl);
     const ltrBox = ltrEl.shadowRoot!.querySelector('[part="control-box"]') as HTMLElement;
@@ -354,7 +354,7 @@ describe('RTL', () => {
     expect(parseFloat(ltrStyle.right)).to.be.lessThan(parseFloat(ltrStyle.left));
 
     const rtlEl = (await fixture(html`
-      <lyra-animated-image dir="rtl" alt="Pixel" style="inline-size: 12rem;"></lyra-animated-image>
+      <lr-animated-image dir="rtl" alt="Pixel" style="inline-size: 12rem;"></lr-animated-image>
     `)) as LyraAnimatedImage;
     await loaded(rtlEl);
     const rtlBox = rtlEl.shadowRoot!.querySelector('[part="control-box"]') as HTMLElement;
@@ -366,7 +366,7 @@ describe('RTL', () => {
 
 describe('focus / blur', () => {
   it('forwards public focus()/blur() to the play button', async () => {
-    const el = (await fixture(html`<lyra-animated-image alt="Pixel"></lyra-animated-image>`)) as LyraAnimatedImage;
+    const el = (await fixture(html`<lr-animated-image alt="Pixel"></lr-animated-image>`)) as LyraAnimatedImage;
     await loaded(el);
     el.focus();
     expect(el.shadowRoot!.activeElement?.getAttribute('part')).to.equal('play-button');
@@ -375,7 +375,7 @@ describe('focus / blur', () => {
   });
 
   it('bridges internal play-button focus/blur as bubbling, composed host events', async () => {
-    const el = (await fixture(html`<lyra-animated-image alt="Pixel"></lyra-animated-image>`)) as LyraAnimatedImage;
+    const el = (await fixture(html`<lr-animated-image alt="Pixel"></lr-animated-image>`)) as LyraAnimatedImage;
     await loaded(el);
     const button = el.shadowRoot!.querySelector('[part="play-button"]') as HTMLButtonElement;
 
@@ -395,7 +395,7 @@ describe('focus / blur', () => {
 
 describe('accessibility', () => {
   it('is accessible (default frozen state)', async () => {
-    const el = (await fixture(html`<lyra-animated-image alt="Pixel"></lyra-animated-image>`)) as LyraAnimatedImage;
+    const el = (await fixture(html`<lr-animated-image alt="Pixel"></lr-animated-image>`)) as LyraAnimatedImage;
     await loaded(el);
     await expect(el).to.be.accessible();
   });
@@ -404,7 +404,7 @@ describe('accessibility', () => {
     const stub = stubReducedMotion(false);
     try {
       const el = (await fixture(
-        html`<lyra-animated-image alt="Pixel" play></lyra-animated-image>`,
+        html`<lr-animated-image alt="Pixel" play></lr-animated-image>`,
       )) as LyraAnimatedImage;
       await loaded(el);
       expect(el.playing).to.be.true;

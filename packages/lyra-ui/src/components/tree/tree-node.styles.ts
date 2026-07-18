@@ -6,46 +6,46 @@ export const styles = css`
     outline: none; /* the host is the focusable treeitem; the visible ring lives on [part=row] */
   }
   :host(:focus-visible) [part='row'] {
-    outline: var(--lyra-focus-ring-width) solid var(--lyra-focus-ring-color);
-    outline-offset: var(--lyra-focus-ring-offset);
+    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
+    outline-offset: var(--lr-focus-ring-offset);
   }
   [part='row'] {
     display: flex;
     align-items: center;
-    gap: var(--lyra-space-xs);
-    padding: var(--lyra-space-xs) var(--lyra-space-s);
-    /* Depth-based indent is capped at --lyra-size-8rem (8rem) so a deeply-nested
+    gap: var(--lr-space-xs);
+    padding: var(--lr-space-xs) var(--lr-space-s);
+    /* Depth-based indent is capped at --lr-size-8rem (8rem) so a deeply-nested
        item can't push its content off-screen with no way back; [part=label]
        below truncates the remaining overflow and tree.styles.ts's [part=base]
        adds an overflow-x:auto fallback for whatever's left. */
     padding-inline-start: calc(
-      var(--lyra-space-s) + min(var(--lyra-tree-depth, 0) * var(--lyra-space-l), var(--lyra-size-8rem))
+      var(--lr-space-s) + min(var(--lr-tree-depth, 0) * var(--lr-space-l), var(--lr-size-8rem))
     );
     cursor: pointer;
-    border-radius: var(--lyra-radius);
+    border-radius: var(--lr-radius);
   }
   [part='row']:hover {
-    background: var(--lyra-color-brand-quiet);
+    background: var(--lr-color-brand-quiet);
   }
   [part='toggle'] {
-    /* Keep the chevron glyph compact (the row itself stays a --lyra-size-1-75rem-ish
+    /* Keep the chevron glyph compact (the row itself stays a --lr-size-1-75rem-ish
        visual rhythm) while giving the interactive box the shared minimum tappable
-       size -- same "small glyph, padded hit box" pattern as lyra-code-block's/
-       lyra-json-viewer's/lyra-trace-tree's own [part='toggle']. min-inline-size/
+       size -- same "small glyph, padded hit box" pattern as lr-code-block's/
+       lr-json-viewer's/lr-trace-tree's own [part='toggle']. min-inline-size/
        min-block-size always win over a smaller explicit size, so the *visible*
        icon stays put via its own 1em SVG sizing while the clickable box floors
        out at 40px. */
-    inline-size: var(--lyra-size-1-75rem);
-    block-size: var(--lyra-size-1-75rem);
-    min-inline-size: var(--lyra-icon-button-size);
-    min-block-size: var(--lyra-icon-button-size);
-    padding: var(--lyra-space-xs);
+    inline-size: var(--lr-size-1-75rem);
+    block-size: var(--lr-size-1-75rem);
+    min-inline-size: var(--lr-icon-button-size);
+    min-block-size: var(--lr-icon-button-size);
+    padding: var(--lr-space-xs);
     display: inline-flex;
     align-items: center;
     justify-content: center;
     border: none;
     background: none;
-    color: var(--lyra-color-text-quiet);
+    color: var(--lr-color-text-quiet);
     cursor: pointer;
     flex: 0 0 auto;
   }
@@ -74,7 +74,7 @@ export const styles = css`
     flex: 0 0 auto;
     align-items: center;
     justify-content: center;
-    color: var(--lyra-color-text-quiet);
+    color: var(--lr-color-text-quiet);
   }
   [part='content'] {
     display: flex;
@@ -84,40 +84,40 @@ export const styles = css`
   }
   [part='description'] {
     min-inline-size: 0;
-    color: var(--lyra-color-text-quiet);
-    font-size: var(--lyra-font-size-xs);
-    line-height: var(--lyra-line-height-compact);
+    color: var(--lr-color-text-quiet);
+    font-size: var(--lr-font-size-xs);
+    line-height: var(--lr-line-height-compact);
     overflow-wrap: anywhere;
   }
   [part='badge'] {
     flex: 0 0 auto;
-    font-size: var(--lyra-font-size-xs);
-    color: var(--lyra-color-text);
-    background: var(--lyra-color-border);
-    border-radius: var(--lyra-radius);
-    padding: 0 var(--lyra-space-xs);
+    font-size: var(--lr-font-size-xs);
+    color: var(--lr-color-text);
+    background: var(--lr-color-border);
+    border-radius: var(--lr-radius);
+    padding: 0 var(--lr-space-xs);
   }
   [part='badge'] + [part='badge'] {
-    margin-inline-start: var(--lyra-space-xs);
+    margin-inline-start: var(--lr-space-xs);
   }
   [part='badge'][data-tone='neutral'] {
-    color: var(--lyra-color-text-quiet);
-    background: var(--lyra-color-surface);
+    color: var(--lr-color-text-quiet);
+    background: var(--lr-color-surface);
   }
   [part='badge'][data-tone='brand'] {
-    color: var(--lyra-color-brand);
-    background: var(--lyra-color-brand-quiet);
+    color: var(--lr-color-brand);
+    background: var(--lr-color-brand-quiet);
   }
   [part='badge'][data-tone='success'] {
-    color: var(--lyra-color-success);
-    background: var(--lyra-color-success-quiet);
+    color: var(--lr-color-success);
+    background: var(--lr-color-success-quiet);
   }
   [part='badge'][data-tone='warning'] {
-    color: var(--lyra-color-warning);
-    background: var(--lyra-color-warning-quiet);
+    color: var(--lr-color-warning);
+    background: var(--lr-color-warning-quiet);
   }
   [part='badge'][data-tone='danger'] {
-    color: var(--lyra-color-danger);
-    background: var(--lyra-color-danger-quiet);
+    color: var(--lr-color-danger);
+    background: var(--lr-color-danger-quiet);
   }
 `;

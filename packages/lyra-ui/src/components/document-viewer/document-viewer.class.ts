@@ -17,29 +17,29 @@ import { styles } from './document-viewer.styles.js';
 export type DocumentViewerCloseReason = DialogCloseReason;
 
 export interface LyraDocumentViewerEventMap {
-  'lyra-close': CustomEvent<DocumentViewerCloseReason>;
-  'lyra-download': CustomEvent<{ src: string; filename: string }>;
-  'lyra-anchor-result': CustomEvent<AnchorResultDetail>;
+  'lr-close': CustomEvent<DocumentViewerCloseReason>;
+  'lr-download': CustomEvent<{ src: string; filename: string }>;
+  'lr-anchor-result': CustomEvent<AnchorResultDetail>;
 }
 
 /**
  * A dialog-hosted document viewer with a pluggable MIME-type renderer registry.
  * A registered renderer receives the current file; files without a matching
- * renderer use `<lyra-document-preview>` as a safe built-in fallback.
+ * renderer use `<lr-document-preview>` as a safe built-in fallback.
  *
- * @customElement lyra-document-viewer
- * @event lyra-close - Fired when the nested dialog dismisses the viewer. The
+ * @customElement lr-document-viewer
+ * @event lr-close - Fired when the nested dialog dismisses the viewer. The
  *   detail is the dialog close reason.
- * @event lyra-download - Fired when the viewer's safe download action is
+ * @event lr-download - Fired when the viewer's safe download action is
  *   activated. The browser download itself is handled by the native link.
- * @event lyra-anchor-result - Fired with `{ found: false }` once per applied `anchor` when the
+ * @event lr-anchor-result - Fired with `{ found: false }` once per applied `anchor` when the
  *   resolved renderer can't honor it (no `capabilities`, or an unsupported anchor kind) or the
- *   file fell back to `<lyra-document-preview>`. An anchor-capable renderer instead reports its
+ *   file fell back to `<lr-document-preview>`. An anchor-capable renderer instead reports its
  *   own jump result through its embedded `DocumentAnchorTarget` mixin, which composes up through
  *   this element unchanged.
  * @csspart body - Wrapper around the active renderer or fallback preview.
  * @csspart download-link - The native download action shown when `src` is safe.
- * @cssprop [--lyra-document-viewer-max-height=70vh] - Maximum block size of the dialog body before it scrolls internally.
+ * @cssprop [--lr-document-viewer-max-height=70vh] - Maximum block size of the dialog body before it scrolls internally.
  */
 export class LyraDocumentViewer extends LyraElement<LyraDocumentViewerEventMap> {
   static styles = [LyraElement.styles, styles];
@@ -150,10 +150,10 @@ export class LyraDocumentViewer extends LyraElement<LyraDocumentViewerEventMap> 
     this.finishAnchorResult(resolved, file, generation);
   }
 
-  /** Emits `lyra-anchor-result { found: false }` from the shell itself when the resolved renderer
+  /** Emits `lr-anchor-result { found: false }` from the shell itself when the resolved renderer
    *  isn't capable of `file.anchor`'s kind (or, for a highlight-id anchor, declares no anchor
    *  capability at all). When it IS capable, the embedded viewer's own `DocumentAnchorTarget`
-   *  mixin emits `lyra-anchor-result` after its own scroll attempt, and that composed event
+   *  mixin emits `lr-anchor-result` after its own scroll attempt, and that composed event
    *  surfaces through this element unchanged -- so the shell must not also emit in that case. */
   private finishAnchorResult(def: DocumentRendererDefinition | undefined, file: DocumentFile, generation: number): void {
     if (file.anchor == null) return;
@@ -161,7 +161,7 @@ export class LyraDocumentViewer extends LyraElement<LyraDocumentViewerEventMap> 
     if (this.isAnchorCapable(def, file.anchor)) return;
     this.scheduleAfterUpdate(() => {
       if (generation !== this.generation) return;
-      this.emit<AnchorResultDetail>('lyra-anchor-result', { found: false });
+      this.emit<AnchorResultDetail>('lr-anchor-result', { found: false });
     });
   }
 
@@ -182,11 +182,11 @@ export class LyraDocumentViewer extends LyraElement<LyraDocumentViewerEventMap> 
 
   private onDialogClose = (event: CustomEvent<DialogCloseReason>): void => {
     this.open = false;
-    this.emit<DocumentViewerCloseReason>('lyra-close', event.detail);
+    this.emit<DocumentViewerCloseReason>('lr-close', event.detail);
   };
 
   private onDownload = (): void => {
-    this.emit('lyra-download', { src: this.src, filename: this.name });
+    this.emit('lr-download', { src: this.src, filename: this.name });
   };
 
   private renderBody(): unknown {
@@ -200,11 +200,11 @@ export class LyraDocumentViewer extends LyraElement<LyraDocumentViewerEventMap> 
       case 'fallback':
       default:
         return html`
-          <lyra-document-preview
+          <lr-document-preview
             src=${this.src}
             mime-type=${this.mimeType}
             filename=${this.name}
-          ></lyra-document-preview>
+          ></lr-document-preview>
         `;
     }
   }
@@ -212,12 +212,12 @@ export class LyraDocumentViewer extends LyraElement<LyraDocumentViewerEventMap> 
   render(): TemplateResult {
     const downloadHref = safeLinkHref(this.src);
     return html`
-      <lyra-dialog
+      <lr-dialog
         ?open=${this.open}
         heading=${this.name || nothing}
         label=${this.localize('documentViewerLabel')}
         closable
-        @lyra-dialog-close=${this.onDialogClose}
+        @lr-dialog-close=${this.onDialogClose}
       >
         <div part="body">${this.renderBody()}</div>
         ${downloadHref
@@ -231,13 +231,13 @@ export class LyraDocumentViewer extends LyraElement<LyraDocumentViewerEventMap> 
               >${this.localize('download')}</a>
             `
           : nothing}
-      </lyra-dialog>
+      </lr-dialog>
     `;
   }
 }
 
 declare global {
   interface HTMLElementTagNameMap {
-    'lyra-document-viewer': LyraDocumentViewer;
+    'lr-document-viewer': LyraDocumentViewer;
   }
 }

@@ -10,12 +10,12 @@ const matches = (file: DocumentFile): boolean => /\.xlsx?$/i.test(file.name);
 const renderer: DocumentRendererDefinition = {
   matches,
   capabilities: { anchors: ['cell-range'], search: true, textSelect: false },
-  render: (file: DocumentFile) => html`<lyra-spreadsheet-viewer
+  render: (file: DocumentFile) => html`<lr-spreadsheet-viewer
     src=${file.src}
     name=${file.name}
     .anchor=${file.anchor ?? null}
     .highlights=${file.highlights ?? []}
-  ></lyra-spreadsheet-viewer>`,
+  ></lr-spreadsheet-viewer>`,
 };
 registerDocumentRenderer('application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', renderer);
 registerDocumentRenderer('application/vnd.ms-excel', renderer);

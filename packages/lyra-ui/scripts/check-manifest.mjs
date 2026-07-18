@@ -29,7 +29,7 @@ function namesFromTemplates(source) {
   // A part built up dynamically (e.g. `const parts = ['day']; if (x) parts.push('day-today'); ...
   // part=${parts.join(' ')}`) never appears as a static part="..." literal above -- pick up both
   // its initial array-literal names and its pushed string-literal names, so this check doesn't
-  // false-positive on that pattern (see <lyra-date-picker>'s calendar-day parts).
+  // false-positive on that pattern (see <lr-date-picker>'s calendar-day parts).
   for (const match of source.matchAll(/\bparts\s*=\s*\[([^\]]*)\]/g)) {
     for (const literal of match[1].matchAll(/["']([^"']+)["']/g)) names.add(literal[1]);
   }
@@ -37,7 +37,7 @@ function namesFromTemplates(source) {
     names.add(match[1]);
   }
   // `exportparts="inner:outer, inner2:outer2"` re-exposes a shadow-nested child's own part under
-  // this component's own part namespace (e.g. <lyra-svg-viewer>'s internal <lyra-zoomable-frame>
+  // this component's own part namespace (e.g. <lr-svg-viewer>'s internal <lr-zoomable-frame>
   // forwarding `viewport` as `frame-viewport`) -- the exposed (right-hand, or bare when there's no
   // `:`) name is what a consumer's `::part(frame-viewport)` selector actually targets, so it counts
   // as rendered even though no literal `part="frame-viewport"` attribute exists on this component's
@@ -50,9 +50,9 @@ function namesFromTemplates(source) {
   }
   // A single dynamic part name resolved by a ternary chain into a local `part` variable (e.g.
   // `const part = interactive ? (isHighlighted ? 'line-button line-highlight' : 'line-button') :
-  // ...;` in <lyra-code-block-core>, or a `part: 'header-row' | 'data-row'` function parameter in
-  // <lyra-csv-viewer>) then gets applied via `part=${part}` in a template or, for the imperative
-  // <mark>-highlight path in <lyra-docx-viewer>/<lyra-markdown>, `mark.setAttribute('part', part)`
+  // ...;` in <lr-code-block-core>, or a `part: 'header-row' | 'data-row'` function parameter in
+  // <lr-csv-viewer>) then gets applied via `part=${part}` in a template or, for the imperative
+  // <mark>-highlight path in <lr-docx-viewer>/<lr-markdown>, `mark.setAttribute('part', part)`
   // -- neither shape is a literal `part="..."` attribute nor the `parts`/`parts.push` array pattern
   // above, so pick up every quoted string literal (space-separated multi-part values included)
   // from any declaration or parameter type named exactly `part`, matching this codebase's own
@@ -68,7 +68,7 @@ function namesFromTemplates(source) {
     for (const literal of match[1].matchAll(/["']([^"']+)["']/g)) names.add(literal[1]);
   }
   // A static `part="prefix ...${identifier}"` attribute (a literal string with one interpolated
-  // segment, not a fully dynamic binding) -- e.g. <lyra-flow-node>'s
+  // segment, not a fully dynamic binding) -- e.g. <lr-flow-node>'s
   // `part="handle handle-${kind}"` where `kind: 'input' | 'output'` is a typed function parameter.
   // Resolve every possible rendered value by cross-multiplying the literal prefix/suffix text
   // around the interpolation with that parameter's own string-literal union type (declared
@@ -123,7 +123,7 @@ for (const module of manifest.modules ?? []) {
   }
   for (const declaration of module.declarations ?? []) {
     if (declaration.tagName) {
-      if (!/^lyra-[a-z][a-z0-9-]*$/.test(declaration.tagName)) {
+      if (!/^lr-[a-z][a-z0-9-]*$/.test(declaration.tagName)) {
         errors.push(`${module.path}: invalid custom-element tag ${JSON.stringify(declaration.tagName)}`);
       }
       if (tags.has(declaration.tagName)) {

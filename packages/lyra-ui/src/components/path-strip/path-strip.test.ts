@@ -9,13 +9,13 @@ const path: LyraPathElement[] = [
 ];
 
 it('defaults to an empty path and empty label', async () => {
-  const el = (await fixture(html`<lyra-path-strip></lyra-path-strip>`)) as LyraPathStrip;
+  const el = (await fixture(html`<lr-path-strip></lr-path-strip>`)) as LyraPathStrip;
   expect(el.path).to.deep.equal([]);
   expect(el.label).to.equal('');
 });
 
 it('renders one control per path element, in order', async () => {
-  const el = (await fixture(html`<lyra-path-strip></lyra-path-strip>`)) as LyraPathStrip;
+  const el = (await fixture(html`<lr-path-strip></lr-path-strip>`)) as LyraPathStrip;
   el.path = path;
   await el.updateComplete;
   const nodes = el.shadowRoot!.querySelectorAll('[part="node"]');
@@ -27,28 +27,28 @@ it('renders one control per path element, in order', async () => {
   expect(nodes[1]!.textContent).to.include('Polonium');
 });
 
-it('emits lyra-entity-activate when a node element is activated', async () => {
-  const el = (await fixture(html`<lyra-path-strip></lyra-path-strip>`)) as LyraPathStrip;
+it('emits lr-entity-activate when a node element is activated', async () => {
+  const el = (await fixture(html`<lr-path-strip></lr-path-strip>`)) as LyraPathStrip;
   el.path = path;
   await el.updateComplete;
-  const listener = oneEvent(el, 'lyra-entity-activate');
+  const listener = oneEvent(el, 'lr-entity-activate');
   (el.shadowRoot!.querySelectorAll('[part="node"]')[0] as HTMLButtonElement).click();
   const event = await listener;
   expect(event.detail).to.deep.equal({ id: 'e1' });
 });
 
-it('emits lyra-relation-activate with source/target resolved from adjacent node elements', async () => {
-  const el = (await fixture(html`<lyra-path-strip></lyra-path-strip>`)) as LyraPathStrip;
+it('emits lr-relation-activate with source/target resolved from adjacent node elements', async () => {
+  const el = (await fixture(html`<lr-path-strip></lr-path-strip>`)) as LyraPathStrip;
   el.path = path;
   await el.updateComplete;
-  const listener = oneEvent(el, 'lyra-relation-activate');
+  const listener = oneEvent(el, 'lr-relation-activate');
   (el.shadowRoot!.querySelectorAll('[part="relation"]')[0] as HTMLButtonElement).click();
   const event = await listener;
   expect(event.detail).to.deep.equal({ relation: 'discovered', sourceId: 'e1', targetId: 'e2' });
 });
 
 it('has one roving tab stop across every element, moving forward with ArrowRight in LTR', async () => {
-  const el = (await fixture(html`<lyra-path-strip></lyra-path-strip>`)) as LyraPathStrip;
+  const el = (await fixture(html`<lr-path-strip></lr-path-strip>`)) as LyraPathStrip;
   el.path = path;
   await el.updateComplete;
   const controls = () => [...el.shadowRoot!.querySelectorAll('[part="node"], [part="relation"]')] as HTMLElement[];
@@ -61,7 +61,7 @@ it('has one roving tab stop across every element, moving forward with ArrowRight
 });
 
 it('draws directed-edge arrows as aria-hidden, logical (inline-end unless reverse)', async () => {
-  const el = (await fixture(html`<lyra-path-strip></lyra-path-strip>`)) as LyraPathStrip;
+  const el = (await fixture(html`<lr-path-strip></lr-path-strip>`)) as LyraPathStrip;
   el.path = path;
   await el.updateComplete;
   const arrow = el.shadowRoot!.querySelector('[part="arrow"]')!;
@@ -70,14 +70,14 @@ it('draws directed-edge arrows as aria-hidden, logical (inline-end unless revers
 });
 
 it('shows an empty message when path is empty', async () => {
-  const el = (await fixture(html`<lyra-path-strip></lyra-path-strip>`)) as LyraPathStrip;
+  const el = (await fixture(html`<lr-path-strip></lr-path-strip>`)) as LyraPathStrip;
   await el.updateComplete;
   expect(el.shadowRoot!.querySelector('[part="empty"]')).to.exist;
 });
 
 it('announces node focus through a .strings override for pathNodeStatus, interpolating its placeholders', async () => {
   const el = (await fixture(
-    html`<lyra-path-strip .strings=${{ pathNodeStatus: '{label}, nœud {position} sur {total}' }}></lyra-path-strip>`,
+    html`<lr-path-strip .strings=${{ pathNodeStatus: '{label}, nœud {position} sur {total}' }}></lr-path-strip>`,
   )) as LyraPathStrip;
   el.path = path;
   await el.updateComplete;
@@ -89,7 +89,7 @@ it('announces node focus through a .strings override for pathNodeStatus, interpo
 });
 
 it('gives both node and relation pills the shared minimum hit area', async () => {
-  const el = (await fixture(html`<lyra-path-strip></lyra-path-strip>`)) as LyraPathStrip;
+  const el = (await fixture(html`<lr-path-strip></lr-path-strip>`)) as LyraPathStrip;
   el.path = path;
   await el.updateComplete;
   const node = el.shadowRoot!.querySelector('[part="node"]') as HTMLElement;
@@ -102,7 +102,7 @@ it('gives both node and relation pills the shared minimum hit area', async () =>
 });
 
 it('is accessible with a full path', async () => {
-  const el = (await fixture(html`<lyra-path-strip></lyra-path-strip>`)) as LyraPathStrip;
+  const el = (await fixture(html`<lr-path-strip></lr-path-strip>`)) as LyraPathStrip;
   el.path = path;
   await el.updateComplete;
   await expect(el).to.be.accessible();

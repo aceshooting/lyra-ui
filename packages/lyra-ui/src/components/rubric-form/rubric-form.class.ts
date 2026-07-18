@@ -40,41 +40,41 @@ const EMPTY_KEYS: RubricKey[] = [];
 const EMPTY_VALUE: RubricValue = {};
 
 export interface LyraRubricFormEventMap {
-  'lyra-input': CustomEvent<{ value: RubricValue }>;
-  'lyra-validity-change': CustomEvent<{ valid: boolean; errors: Record<string, string> }>;
-  'lyra-submit': CustomEvent<{ value: RubricValue; itemId: string }>;
-  'lyra-skip': CustomEvent<{ itemId: string }>;
+  'lr-input': CustomEvent<{ value: RubricValue }>;
+  'lr-validity-change': CustomEvent<{ valid: boolean; errors: Record<string, string> }>;
+  'lr-submit': CustomEvent<{ value: RubricValue; itemId: string }>;
+  'lr-skip': CustomEvent<{ itemId: string }>;
 }
 
 /**
- * `<lyra-rubric-form>` — a configurable annotation rubric (LangSmith
+ * `<lr-rubric-form>` — a configurable annotation rubric (LangSmith
  * annotation-queue style): score, category, and freeform-comment keys with
  * a submit-and-next flow for working through an eval queue.
  *
  * Each `RubricKey.type` routes to an existing sibling control: `score`
- * renders `<lyra-segmented>` when its `[min, max]`/`step` domain has 10 or
- * fewer integer steps, or `<lyra-slider>` otherwise; `category` renders
- * `<lyra-select>` (single) or `<lyra-checkbox-group>` (`multiple`); `comment`
- * renders `<lyra-textarea>`. A key whose `type` is none of the three renders
+ * renders `<lr-segmented>` when its `[min, max]`/`step` domain has 10 or
+ * fewer integer steps, or `<lr-slider>` otherwise; `category` renders
+ * `<lr-select>` (single) or `<lr-checkbox-group>` (`multiple`); `comment`
+ * renders `<lr-textarea>`. A key whose `type` is none of the three renders
  * a visible "Unsupported field type" note instead of silently dropping it,
  * and marks the form invalid — the same defensive shape as
- * `<lyra-tool-param-form>`'s own unsupported-property fallback.
+ * `<lr-tool-param-form>`'s own unsupported-property fallback.
  *
  * Optional native `<form>` participation is implemented via `ElementInternals`
  * attached directly (this component's value is a whole object, not a plain
  * string, so the `FormAssociated` string-value mixin doesn't fit) — the same
- * shape `<lyra-tool-param-form>` uses. This is a nice-to-have layered on top
+ * shape `<lr-tool-param-form>` uses. This is a nice-to-have layered on top
  * of the primary integration contract (`value` +
- * `lyra-input`/`lyra-validity-change`/`lyra-submit`/`lyra-skip`), not a
+ * `lr-input`/`lr-validity-change`/`lr-submit`/`lr-skip`), not a
  * requirement: a consumer that never puts this inside a `<form>` loses
  * nothing.
  *
- * @customElement lyra-rubric-form
+ * @customElement lr-rubric-form
  * @slot actions - Extra host controls rendered in the footer beside Submit/Skip.
- * @event lyra-input - `detail: { value }` — any control changed; the full current value object.
- * @event lyra-validity-change - `detail: { valid, errors }` — fired only on an actual change.
- * @event lyra-submit - `detail: { value, itemId }` — Submit clicked or Ctrl/Cmd+Enter, after validity passes.
- * @event lyra-skip - `detail: { itemId }` — Skip activated (`skippable` only); no validation.
+ * @event lr-input - `detail: { value }` — any control changed; the full current value object.
+ * @event lr-validity-change - `detail: { valid, errors }` — fired only on an actual change.
+ * @event lr-submit - `detail: { value, itemId }` — Submit clicked or Ctrl/Cmd+Enter, after validity passes.
+ * @event lr-skip - `detail: { itemId }` — Skip activated (`skippable` only); no validation.
  * @csspart base - The outer wrapper around all fields.
  * @csspart field - One key's wrapper (label + control + description + error).
  * @csspart label - A field's label.
@@ -116,7 +116,7 @@ export class LyraRubricForm extends LyraElement<LyraRubricFormEventMap> {
   private _skippable = false;
   private _disabled = false;
   private _validityFlags: ValidityStateFlags = {};
-  // Guards lyra-validity-change so it only fires on an actual change, not on
+  // Guards lr-validity-change so it only fires on an actual change, not on
   // every render -- `undefined` guarantees the first computed state always
   // "changes" from it, so mounting with an unmet required field still
   // announces `valid:false` once up front.
@@ -235,7 +235,7 @@ export class LyraRubricForm extends LyraElement<LyraRubricFormEventMap> {
   }
 
   /** The current per-key validation errors (`{ [key]: message }`), mirroring the last
-   *  `lyra-validity-change` event's `errors`. Independent of which fields have been visited. */
+   *  `lr-validity-change` event's `errors`. Independent of which fields have been visited. */
   get errors(): Record<string, string> {
     return { ...this._errors };
   }
@@ -349,7 +349,7 @@ export class LyraRubricForm extends LyraElement<LyraRubricFormEventMap> {
   private setFieldValue(key: string, val: number | string | string[]): void {
     if (this.effectiveDisabled) return;
     this.value = { ...this._value, [key]: val };
-    this.emit('lyra-input', { value: { ...this._value } });
+    this.emit('lr-input', { value: { ...this._value } });
   }
 
   private markTouched(key: string): void {
@@ -360,12 +360,12 @@ export class LyraRubricForm extends LyraElement<LyraRubricFormEventMap> {
   private submit(): void {
     if (this.effectiveDisabled) return;
     if (!this.reportValidity()) return;
-    this.emit('lyra-submit', { value: { ...this._value }, itemId: this.itemId });
+    this.emit('lr-submit', { value: { ...this._value }, itemId: this.itemId });
   }
 
   private skip(): void {
     if (this.effectiveDisabled) return;
-    this.emit('lyra-skip', { itemId: this.itemId });
+    this.emit('lr-skip', { itemId: this.itemId });
   }
 
   private focusFirstControl(): void {
@@ -379,7 +379,7 @@ export class LyraRubricForm extends LyraElement<LyraRubricFormEventMap> {
     } else if (firstKey.type === 'score') {
       (control.shadowRoot?.querySelector('[part="thumb"]') as HTMLElement | null)?.focus();
     } else if (firstKey.type === 'category' && firstKey.multiple) {
-      (control.querySelector('lyra-checkbox') as HTMLElement | null)?.focus();
+      (control.querySelector('lr-checkbox') as HTMLElement | null)?.focus();
     } else {
       control.focus();
     }
@@ -391,7 +391,7 @@ export class LyraRubricForm extends LyraElement<LyraRubricFormEventMap> {
       const key = JSON.stringify({ valid, errors: this._errors });
       if (key !== this.lastValidityKey) {
         this.lastValidityKey = key;
-        this.emit('lyra-validity-change', { valid, errors: { ...this._errors } });
+        this.emit('lr-validity-change', { valid, errors: { ...this._errors } });
       }
     }
     if (this.pendingFocusFirst) {
@@ -409,18 +409,18 @@ export class LyraRubricForm extends LyraElement<LyraRubricFormEventMap> {
       const items: SegmentedItem[] = [];
       for (let v = min; v <= max; v += step) items.push({ value: String(v), label: String(v), disabled });
       const value = typeof current === 'number' ? String(current) : '';
-      return html`<lyra-segmented
+      return html`<lr-segmented
         id=${fieldId}
         class="control"
         part="scale"
         .items=${items}
         .value=${value}
         label=${k.label ?? k.key}
-        @lyra-change=${(e: CustomEvent<{ value: string }>) => this.setFieldValue(k.key, Number(e.detail.value))}
-      ></lyra-segmented>`;
+        @lr-change=${(e: CustomEvent<{ value: string }>) => this.setFieldValue(k.key, Number(e.detail.value))}
+      ></lr-segmented>`;
     }
     const numeric = typeof current === 'number' ? current : min + (max - min) / 2;
-    return html`<lyra-slider
+    return html`<lr-slider
       id=${fieldId}
       class="control"
       part="scale"
@@ -431,8 +431,8 @@ export class LyraRubricForm extends LyraElement<LyraRubricFormEventMap> {
       label=${k.label ?? k.key}
       .value=${String(numeric)}
       ?disabled=${disabled}
-      @lyra-change=${(e: CustomEvent<{ value: number }>) => this.setFieldValue(k.key, e.detail.value)}
-    ></lyra-slider>`;
+      @lr-change=${(e: CustomEvent<{ value: number }>) => this.setFieldValue(k.key, e.detail.value)}
+    ></lr-slider>`;
   }
 
   private renderCategoryControl(k: RubricKey, fieldId: string, current: unknown): TemplateResult {
@@ -440,24 +440,24 @@ export class LyraRubricForm extends LyraElement<LyraRubricFormEventMap> {
     const disabled = this.effectiveDisabled;
     if (k.multiple) {
       const selected = Array.isArray(current) ? current : [];
-      return html`<lyra-checkbox-group
+      return html`<lr-checkbox-group
         id=${fieldId}
         class="control"
         part="scale"
         ?disabled=${disabled}
         ?required=${Boolean(k.required)}
-        @lyra-change=${(e: CustomEvent<{ value: string[] }>) => this.setFieldValue(k.key, e.detail.value)}
+        @lr-change=${(e: CustomEvent<{ value: string[] }>) => this.setFieldValue(k.key, e.detail.value)}
       >
         ${options.map(
           (opt) =>
-            html`<lyra-checkbox value=${opt.value} ?checked=${selected.includes(opt.value)} ?disabled=${disabled}
-              >${opt.label ?? opt.value}</lyra-checkbox
+            html`<lr-checkbox value=${opt.value} ?checked=${selected.includes(opt.value)} ?disabled=${disabled}
+              >${opt.label ?? opt.value}</lr-checkbox
             >`,
         )}
-      </lyra-checkbox-group>`;
+      </lr-checkbox-group>`;
     }
     const value = typeof current === 'string' ? current : '';
-    return html`<lyra-select
+    return html`<lr-select
       id=${fieldId}
       class="control"
       part="scale"
@@ -466,13 +466,13 @@ export class LyraRubricForm extends LyraElement<LyraRubricFormEventMap> {
       ?required=${Boolean(k.required)}
       @change=${(e: Event) => this.setFieldValue(k.key, (e.target as LyraSelect).value)}
     >
-      ${options.map((opt) => html`<lyra-option value=${opt.value}>${opt.label ?? opt.value}</lyra-option>`)}
-    </lyra-select>`;
+      ${options.map((opt) => html`<lr-option value=${opt.value}>${opt.label ?? opt.value}</lr-option>`)}
+    </lr-select>`;
   }
 
   private renderCommentControl(k: RubricKey, fieldId: string, current: unknown): TemplateResult {
     const value = typeof current === 'string' ? current : '';
-    return html`<lyra-textarea
+    return html`<lr-textarea
       id=${fieldId}
       class="control"
       part="scale"
@@ -480,8 +480,8 @@ export class LyraRubricForm extends LyraElement<LyraRubricFormEventMap> {
       .value=${value}
       ?disabled=${this.effectiveDisabled}
       ?required=${Boolean(k.required)}
-      @lyra-input=${(e: CustomEvent<{ value: string }>) => this.setFieldValue(k.key, e.detail.value)}
-    ></lyra-textarea>`;
+      @lr-input=${(e: CustomEvent<{ value: string }>) => this.setFieldValue(k.key, e.detail.value)}
+    ></lr-textarea>`;
   }
 
   private renderField(k: RubricKey, index: number): TemplateResult {
@@ -535,6 +535,6 @@ export class LyraRubricForm extends LyraElement<LyraRubricFormEventMap> {
 
 declare global {
   interface HTMLElementTagNameMap {
-    'lyra-rubric-form': LyraRubricForm;
+    'lr-rubric-form': LyraRubricForm;
   }
 }

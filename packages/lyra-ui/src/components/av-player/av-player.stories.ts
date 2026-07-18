@@ -5,7 +5,7 @@ import type { LyraAvCue } from './av-player.class.js';
 
 const meta: Meta = {
   title: 'DocumentViewer/AvPlayer',
-  component: 'lyra-av-player',
+  component: 'lr-av-player',
   tags: ['autodocs'],
   parameters: {
     docs: {
@@ -27,26 +27,26 @@ const CUES: LyraAvCue[] = [
 const PEAKS = Array.from({ length: 120 }, (_v, i) => Math.abs(Math.sin(i / 6)) * 0.9 + 0.05);
 
 export const AudioWithTranscript: Story = {
-  render: () => html`<lyra-av-player
+  render: () => html`<lr-av-player
     src="https://example.test/podcast.mp3"
     mime-type="audio/mpeg"
     name="Episode 1"
     .cues=${CUES}
     .peaks=${PEAKS}
     .highlights=${[{ id: 'h1', anchor: { kind: 'time-range', start: 8, end: 22 }, label: 'Agentic UI segment' }]}
-  ></lyra-av-player>`,
+  ></lr-av-player>`,
 };
 
 export const Video: Story = {
-  render: () => html`<lyra-av-player src="https://example.test/clip.mp4" mime-type="video/mp4" name="Demo clip"></lyra-av-player>`,
+  render: () => html`<lr-av-player src="https://example.test/clip.mp4" mime-type="video/mp4" name="Demo clip"></lr-av-player>`,
 };
 
 export const NoSrc: Story = {
-  render: () => html`<lyra-av-player></lyra-av-player>`,
+  render: () => html`<lr-av-player></lr-av-player>`,
 };
 
 export const Narrow320: Story = {
   render: () => html`<div style="max-inline-size:320px">
-    <lyra-av-player src="https://example.test/podcast.mp3" mime-type="audio/mpeg" name="Episode 1" .cues=${CUES} .peaks=${PEAKS}></lyra-av-player>
+    <lr-av-player src="https://example.test/podcast.mp3" mime-type="audio/mpeg" name="Episode 1" .cues=${CUES} .peaks=${PEAKS}></lr-av-player>
   </div>`,
 };

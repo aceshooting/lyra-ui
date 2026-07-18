@@ -4,9 +4,9 @@ import type { LyraZoomableFrame } from './zoomable-frame.js';
 
 it('renders a zoomable frame with bounded controls', async () => {
   const el = (await fixture(html`
-    <lyra-zoomable-frame zoom="2" aria-label="Map preview">
+    <lr-zoomable-frame zoom="2" aria-label="Map preview">
       <div style="inline-size: 20rem; block-size: 10rem;">Map</div>
-    </lyra-zoomable-frame>
+    </lr-zoomable-frame>
   `)) as LyraZoomableFrame;
   await el.updateComplete;
 
@@ -16,10 +16,10 @@ it('renders a zoomable frame with bounded controls', async () => {
 });
 
 it('emits a zoom change and keeps the public value controlled by the component', async () => {
-  const el = (await fixture(html`<lyra-zoomable-frame></lyra-zoomable-frame>`)) as LyraZoomableFrame;
+  const el = (await fixture(html`<lr-zoomable-frame></lr-zoomable-frame>`)) as LyraZoomableFrame;
   await el.updateComplete;
   const button = el.shadowRoot!.querySelector('[part="zoom-in"]') as HTMLButtonElement;
-  const eventPromise = oneEvent(el, 'lyra-zoom-change');
+  const eventPromise = oneEvent(el, 'lr-zoom-change');
   button.click();
   const event = await eventPromise;
 
@@ -28,7 +28,7 @@ it('emits a zoom change and keeps the public value controlled by the component',
 });
 
 it('is accessible and resets with the keyboard shortcut', async () => {
-  const el = (await fixture(html`<lyra-zoomable-frame zoom="2" aria-label="Preview"></lyra-zoomable-frame>`)) as LyraZoomableFrame;
+  const el = (await fixture(html`<lr-zoomable-frame zoom="2" aria-label="Preview"></lr-zoomable-frame>`)) as LyraZoomableFrame;
   await el.updateComplete;
   const viewport = el.shadowRoot!.querySelector('[part="viewport"]') as HTMLElement;
   viewport.dispatchEvent(new KeyboardEvent('keydown', { key: '0', bubbles: true }));
@@ -39,7 +39,7 @@ it('is accessible and resets with the keyboard shortcut', async () => {
 
 it('renders a safe image src as-is', async () => {
   const el = (await fixture(
-    html`<lyra-zoomable-frame src="https://example.test/a.png" alt="A map"></lyra-zoomable-frame>`,
+    html`<lr-zoomable-frame src="https://example.test/a.png" alt="A map"></lr-zoomable-frame>`,
   )) as LyraZoomableFrame;
   await el.updateComplete;
   const img = el.shadowRoot!.querySelector('[part="content"] img') as HTMLImageElement;
@@ -48,7 +48,7 @@ it('renders a safe image src as-is', async () => {
 
 it('rejects an unsafe image src instead of passing it straight to the DOM', async () => {
   const el = (await fixture(
-    html`<lyra-zoomable-frame src="javascript:alert(1)" alt="A map"></lyra-zoomable-frame>`,
+    html`<lr-zoomable-frame src="javascript:alert(1)" alt="A map"></lr-zoomable-frame>`,
   )) as LyraZoomableFrame;
   await el.updateComplete;
   const img = el.shadowRoot!.querySelector('[part="content"] img') as HTMLImageElement;
@@ -56,7 +56,7 @@ it('rejects an unsafe image src instead of passing it straight to the DOM', asyn
 });
 
 it('renders the reset button\'s visible zoom percentage through localize (unchanged English default)', async () => {
-  const el = (await fixture(html`<lyra-zoomable-frame></lyra-zoomable-frame>`)) as LyraZoomableFrame;
+  const el = (await fixture(html`<lr-zoomable-frame></lr-zoomable-frame>`)) as LyraZoomableFrame;
   await el.updateComplete;
   const reset = el.shadowRoot!.querySelector('[part="reset"]') as HTMLButtonElement;
   expect(reset.textContent?.trim()).to.equal('100%');
@@ -64,7 +64,7 @@ it('renders the reset button\'s visible zoom percentage through localize (unchan
 
 it('localizes the reset button\'s visible zoom percentage via .strings', async () => {
   const el = (await fixture(
-    html`<lyra-zoomable-frame .strings=${{ pdfViewerCurrentZoom: '{percent} pourcent' }}></lyra-zoomable-frame>`,
+    html`<lr-zoomable-frame .strings=${{ pdfViewerCurrentZoom: '{percent} pourcent' }}></lr-zoomable-frame>`,
   )) as LyraZoomableFrame;
   await el.updateComplete;
   const reset = el.shadowRoot!.querySelector('[part="reset"]') as HTMLButtonElement;
@@ -72,7 +72,7 @@ it('localizes the reset button\'s visible zoom percentage via .strings', async (
 });
 
 it('names the focusable viewport with role="group", forwarding a host aria-label', async () => {
-  const el = (await fixture(html`<lyra-zoomable-frame></lyra-zoomable-frame>`)) as LyraZoomableFrame;
+  const el = (await fixture(html`<lr-zoomable-frame></lr-zoomable-frame>`)) as LyraZoomableFrame;
   await el.updateComplete;
   const viewport = el.shadowRoot!.querySelector('[part="viewport"]') as HTMLElement;
   expect(viewport.getAttribute('tabindex')).to.equal('0');
@@ -89,7 +89,7 @@ it('names the focusable viewport with role="group", forwarding a host aria-label
 // a non-finite/negative min-zoom, max-zoom, zoom-step, or zoom used to be able to flow straight
 // into the stepped-zoom clamp and produce NaN geometry/CSS instead of a sane default.
 it('normalizes a non-finite zoom to a clamped, finite value instead of NaN', async () => {
-  const el = (await fixture(html`<lyra-zoomable-frame zoom="NaN"></lyra-zoomable-frame>`)) as LyraZoomableFrame;
+  const el = (await fixture(html`<lr-zoomable-frame zoom="NaN"></lr-zoomable-frame>`)) as LyraZoomableFrame;
   await el.updateComplete;
   const content = el.shadowRoot!.querySelector('[part="content"]') as HTMLElement;
   expect(content.getAttribute('data-zoom')).to.not.match(/NaN/);
@@ -98,7 +98,7 @@ it('normalizes a non-finite zoom to a clamped, finite value instead of NaN', asy
 
 it('normalizes non-finite min-zoom/max-zoom to finite fallback bounds so controls stay usable', async () => {
   const el = (await fixture(
-    html`<lyra-zoomable-frame min-zoom="NaN" max-zoom="Infinity"></lyra-zoomable-frame>`,
+    html`<lr-zoomable-frame min-zoom="NaN" max-zoom="Infinity"></lr-zoomable-frame>`,
   )) as LyraZoomableFrame;
   await el.updateComplete;
   const zoomOut = el.shadowRoot!.querySelector('[part="zoom-out"]') as HTMLButtonElement;
@@ -110,7 +110,7 @@ it('normalizes non-finite min-zoom/max-zoom to finite fallback bounds so control
 });
 
 it('clamps max-zoom below min-zoom to a collapsed-but-finite range instead of NaN', async () => {
-  const el = (await fixture(html`<lyra-zoomable-frame max-zoom="0.1"></lyra-zoomable-frame>`)) as LyraZoomableFrame;
+  const el = (await fixture(html`<lr-zoomable-frame max-zoom="0.1"></lr-zoomable-frame>`)) as LyraZoomableFrame;
   await el.updateComplete;
   // max-zoom (0.1) is below the default min-zoom (0.5) -- the range collapses to a single point
   // at min-zoom instead of inverting or producing NaN, so the default zoom (1) clamps down to it.
@@ -123,7 +123,7 @@ it('clamps max-zoom below min-zoom to a collapsed-but-finite range instead of Na
 });
 
 it('clamps a non-finite/negative zoom-step to a positive floor so zoomIn/zoomOut keep making progress', async () => {
-  const el = (await fixture(html`<lyra-zoomable-frame zoom-step="-1"></lyra-zoomable-frame>`)) as LyraZoomableFrame;
+  const el = (await fixture(html`<lr-zoomable-frame zoom-step="-1"></lr-zoomable-frame>`)) as LyraZoomableFrame;
   const before = el.zoom;
   el.zoomIn();
   await el.updateComplete;

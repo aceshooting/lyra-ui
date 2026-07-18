@@ -60,8 +60,8 @@ const monthsConverter: ComplexAttributeConverter<1 | 2> = {
  * presence (regardless of its string value) maps to `true`, so a plain-
  * markup consumer writing the literal `spellcheck="false"` would actually get
  * `true` (this component's default), the opposite of what that string reads
- * as -- the same bug class `<lyra-textarea>`'s `spellcheckConverter` and
- * `<lyra-generation-status>`'s `showStopConverter` document and fix. Mirrors
+ * as -- the same bug class `<lr-textarea>`'s `spellcheckConverter` and
+ * `<lr-generation-status>`'s `showStopConverter` document and fix. Mirrors
  * that shape: attribute absent (or removed) -> `true` (the default);
  * `spellcheck="false"` -> `false`; anything else present (no value,
  * `="true"`, ...) -> `true`.
@@ -85,9 +85,9 @@ const weekdayFormatConverter: ComplexAttributeConverter<WeekdayFormat> = {
 export type LyraDateInputSelectionDirection = 'forward' | 'backward' | 'none';
 
 export interface LyraDateInputEventMap {
-  'lyra-show': CustomEvent<undefined>;
-  'lyra-hide': CustomEvent<undefined>;
-  'lyra-clear': CustomEvent<undefined>;
+  'lr-show': CustomEvent<undefined>;
+  'lr-hide': CustomEvent<undefined>;
+  'lr-clear': CustomEvent<undefined>;
   input: CustomEvent<undefined>;
   change: CustomEvent<undefined>;
   blur: CustomEvent<undefined>;
@@ -96,18 +96,18 @@ export interface LyraDateInputEventMap {
 class LyraDateInputBase extends LyraElement<LyraDateInputEventMap> {}
 
 /**
- * `<lyra-date-input>` — a date field with an attached calendar popover.
- * Mirrors the core `<wa-date-input>` API under `lyra-`. Value is ISO 8601
+ * `<lr-date-input>` — a date field with an attached calendar popover.
+ * Mirrors the core `<wa-date-input>` API under `lr-`. Value is ISO 8601
  * (`YYYY-MM-DD`, or `YYYY-MM-DD/YYYY-MM-DD` in range mode). Form-associated.
  *
  * This component uses a single text field; typing accepts ISO or a
  * locale-parseable date.
  *
- * @customElement lyra-date-input
+ * @customElement lr-date-input
  * @event input - Fired on edits.
  * @event change - Fired on committed date transitions.
- * @event lyra-show / lyra-hide - Calendar popover lifecycle.
- * @event lyra-clear - The clear button was used.
+ * @event lr-show / lr-hide - Calendar popover lifecycle.
+ * @event lr-clear - The clear button was used.
  * @event blur - Re-dispatched from the internal `<input>`'s own `blur`, bubbling and composed
  *   unlike the native event.
  * @event focus - Re-dispatched from the internal `<input>`'s own `focus`, for the same reason as
@@ -206,7 +206,7 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
   }
   // `[part]:empty` never matches — the part always contains a literal
   // `<slot>` child element regardless of assigned content — so real
-  // emptiness is tracked in JS instead (same fix as lyra-stat's
+  // emptiness is tracked in JS instead (same fix as lr-stat's
   // icon/caption) and reflected via `hidden`. Applies to
   // `form-control-label` too: the required-asterisk `::after` attaches to
   // that box, so leaving it always-visible orphans a stray ' *' when no
@@ -474,14 +474,14 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
   show(): void {
     if (this.open || this.effectiveDisabled || this.readonly) return;
     this.open = true;
-    this.emit('lyra-show');
+    this.emit('lr-show');
   }
   /** Close the calendar popover. */
   hide(restoreFocus = false): void {
     if (!this.open) return;
     this.restorePopupFocusOnClose ||= restoreFocus;
     this.open = false;
-    this.emit('lyra-hide');
+    this.emit('lr-hide');
   }
   private onDocPointer = (e: PointerEvent): void => {
     if (!e.composedPath().includes(this)) this.hide();
@@ -502,7 +502,7 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
     this.value = '';
     this.emit('input');
     this.emit('change');
-    this.emit('lyra-clear');
+    this.emit('lr-clear');
   }
 
   disconnectedCallback(): void {
@@ -843,7 +843,7 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
             this.dialogLabel === 'Choose date' ? undefined : this.dialogLabel,
           )}
         >
-          <lyra-date-picker
+          <lr-date-picker
             part="date-picker"
             .value=${this.value}
             .mode=${this.mode}
@@ -860,7 +860,7 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
             .weekdayFormat=${normalizeWeekdayFormat(this.weekdayFormat)}
             @input=${this.onPickerInput}
             @change=${this.onPickerChange}
-          ></lyra-date-picker>
+          ></lr-date-picker>
         </div>
         <div id="date-input-error" part="error" ?hidden=${!hasError}>
           ${this.errorText}<slot name="error" @slotchange=${this.onErrorSlotChange}></slot>
@@ -876,6 +876,6 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
 
 declare global {
   interface HTMLElementTagNameMap {
-    'lyra-date-input': LyraDateInput;
+    'lr-date-input': LyraDateInput;
   }
 }

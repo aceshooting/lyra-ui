@@ -3,7 +3,7 @@ import './token-input.js';
 import type { LyraTokenInput } from './token-input.js';
 
 it('adds and removes tokens with the keyboard', async () => {
-  const el = (await fixture(html`<lyra-token-input></lyra-token-input>`)) as LyraTokenInput;
+  const el = (await fixture(html`<lr-token-input></lr-token-input>`)) as LyraTokenInput;
   const input = el.shadowRoot!.querySelector('input') as HTMLInputElement;
   input.value = 'alpha'; input.dispatchEvent(new Event('input', { bubbles: true }));
   input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
@@ -14,7 +14,7 @@ it('adds and removes tokens with the keyboard', async () => {
 });
 
 it('is form-associated and validates required values', async () => {
-  const el = (await fixture(html`<lyra-token-input required></lyra-token-input>`)) as LyraTokenInput;
+  const el = (await fixture(html`<lr-token-input required></lr-token-input>`)) as LyraTokenInput;
   expect(el.checkValidity()).to.be.false;
   el.value = ['ready'];
   await el.updateComplete;
@@ -22,26 +22,26 @@ it('is form-associated and validates required values', async () => {
 });
 
 it('is accessible', async () => {
-  const el = await fixture(html`<lyra-token-input label="Recipients"></lyra-token-input>`);
+  const el = await fixture(html`<lr-token-input label="Recipients"></lr-token-input>`);
   await expect(el).to.be.accessible();
 });
 
 it('interpolates the remove button accessible name with the token label', async () => {
-  const el = (await fixture(html`<lyra-token-input .value=${['alpha']}></lyra-token-input>`)) as LyraTokenInput;
+  const el = (await fixture(html`<lr-token-input .value=${['alpha']}></lr-token-input>`)) as LyraTokenInput;
   const removeBtn = el.shadowRoot!.querySelector('[part="remove"]') as HTMLButtonElement;
   expect(removeBtn.getAttribute('aria-label')).to.equal('Remove alpha');
 });
 
 it('localizes the remove button accessible name via .strings', async () => {
   const el = (await fixture(
-    html`<lyra-token-input .value=${['alpha']} .strings=${{ removeWithContext: 'Retirer {label}' }}></lyra-token-input>`,
+    html`<lr-token-input .value=${['alpha']} .strings=${{ removeWithContext: 'Retirer {label}' }}></lr-token-input>`,
   )) as LyraTokenInput;
   const removeBtn = el.shadowRoot!.querySelector('[part="remove"]') as HTMLButtonElement;
   expect(removeBtn.getAttribute('aria-label')).to.equal('Retirer alpha');
 });
 
 it('gives the per-token remove button the shared minimum hit area', async () => {
-  const el = (await fixture(html`<lyra-token-input .value=${['alpha']}></lyra-token-input>`)) as LyraTokenInput;
+  const el = (await fixture(html`<lr-token-input .value=${['alpha']}></lr-token-input>`)) as LyraTokenInput;
   const removeBtn = el.shadowRoot!.querySelector('[part="remove"]') as HTMLElement;
   expect(getComputedStyle(removeBtn).minInlineSize).to.equal('40px');
   expect(getComputedStyle(removeBtn).minBlockSize).to.equal('40px');
@@ -49,11 +49,11 @@ it('gives the per-token remove button the shared minimum hit area', async () => 
 
 it('renders label/hint/error content passed through named slots', async () => {
   const el = (await fixture(html`
-    <lyra-token-input>
+    <lr-token-input>
       <span slot="label">Recipients</span>
       <span slot="hint">Press enter to add</span>
       <span slot="error">Required</span>
-    </lyra-token-input>
+    </lr-token-input>
   `)) as LyraTokenInput;
   const labelPart = el.shadowRoot!.querySelector('[part="form-control-label"]') as HTMLElement;
   const hintPart = el.shadowRoot!.querySelector('[part="hint"]') as HTMLElement;
@@ -70,7 +70,7 @@ it('renders label/hint/error content passed through named slots', async () => {
 });
 
 it('applies the label styling to the actual rendered form-control-label part', async () => {
-  const el = (await fixture(html`<lyra-token-input label="Recipients"></lyra-token-input>`)) as LyraTokenInput;
+  const el = (await fixture(html`<lr-token-input label="Recipients"></lr-token-input>`)) as LyraTokenInput;
   const label = el.shadowRoot!.querySelector('[part="form-control-label"]') as HTMLElement;
   expect(getComputedStyle(label).fontWeight).to.equal('600');
 });
@@ -79,11 +79,11 @@ it('cascades disabled state from an ancestor fieldset without mutating the disab
   const form = (await fixture(html`
     <form>
       <fieldset>
-        <lyra-token-input></lyra-token-input>
+        <lr-token-input></lr-token-input>
       </fieldset>
     </form>
   `)) as HTMLFormElement;
-  const el = form.querySelector('lyra-token-input') as LyraTokenInput;
+  const el = form.querySelector('lr-token-input') as LyraTokenInput;
   const fieldset = form.querySelector('fieldset') as HTMLFieldSetElement;
   await el.updateComplete;
   expect(el.effectiveDisabled).to.be.false;
@@ -103,9 +103,9 @@ it('cascades disabled state from an ancestor fieldset without mutating the disab
 
 it('submits under a programmatically assigned name in the same tick', async () => {
   const form = (await fixture(html`
-    <form><lyra-token-input .value=${['alpha', 'beta']}></lyra-token-input></form>
+    <form><lr-token-input .value=${['alpha', 'beta']}></lr-token-input></form>
   `)) as HTMLFormElement;
-  const el = form.querySelector('lyra-token-input') as LyraTokenInput;
+  const el = form.querySelector('lr-token-input') as LyraTokenInput;
 
   el.name = 'tags';
   expect(el.getAttribute('name')).to.equal('tags');
@@ -130,7 +130,7 @@ it('submits under a programmatically assigned name in the same tick', async () =
 });
 
 it('updates validity synchronously when required changes, with no await', async () => {
-  const el = (await fixture(html`<lyra-token-input></lyra-token-input>`)) as LyraTokenInput;
+  const el = (await fixture(html`<lr-token-input></lr-token-input>`)) as LyraTokenInput;
   expect(el.checkValidity()).to.be.true;
 
   el.required = true;
@@ -147,9 +147,9 @@ it('updates validity synchronously when required changes, with no await', async 
 
 it('applies and removes explicit disabled form state synchronously, with no await', async () => {
   const form = (await fixture(html`
-    <form><lyra-token-input name="tags" .value=${['alpha']}></lyra-token-input></form>
+    <form><lr-token-input name="tags" .value=${['alpha']}></lr-token-input></form>
   `)) as HTMLFormElement;
-  const el = form.querySelector('lyra-token-input') as LyraTokenInput;
+  const el = form.querySelector('lr-token-input') as LyraTokenInput;
   expect(new FormData(form).getAll('tags')).to.deep.equal(['alpha']);
 
   el.disabled = true;
@@ -164,7 +164,7 @@ it('applies and removes explicit disabled form state synchronously, with no awai
 });
 
 it('commits the draft on Tab without trapping focus for an extra keystroke', async () => {
-  const el = (await fixture(html`<lyra-token-input></lyra-token-input>`)) as LyraTokenInput;
+  const el = (await fixture(html`<lr-token-input></lr-token-input>`)) as LyraTokenInput;
   const input = el.shadowRoot!.querySelector('input') as HTMLInputElement;
   input.value = 'alpha';
   input.dispatchEvent(new Event('input', { bubbles: true }));

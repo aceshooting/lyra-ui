@@ -11,13 +11,13 @@ const items: PaletteItem[] = [
 ];
 
 it('defaults to empty items and label', async () => {
-  const el = (await fixture(html`<lyra-node-palette></lyra-node-palette>`)) as LyraNodePalette;
+  const el = (await fixture(html`<lr-node-palette></lr-node-palette>`)) as LyraNodePalette;
   expect(el.items).to.deep.equal([]);
   expect(el.label).to.equal('');
 });
 
 it('names the listbox via label, with a host aria-label winning over both label and the localized default', async () => {
-  const el = (await fixture(html`<lyra-node-palette .items=${items}></lyra-node-palette>`)) as LyraNodePalette;
+  const el = (await fixture(html`<lr-node-palette .items=${items}></lr-node-palette>`)) as LyraNodePalette;
   await el.updateComplete;
   const listbox = el.shadowRoot!.querySelector('[role="listbox"]')!;
   expect(listbox.getAttribute('aria-label')).to.equal('Node palette');
@@ -33,7 +33,7 @@ it('names the listbox via label, with a host aria-label winning over both label 
 });
 
 it('renders one item per entry, grouped by category in first-appearance order', async () => {
-  const el = (await fixture(html`<lyra-node-palette .items=${items}></lyra-node-palette>`)) as LyraNodePalette;
+  const el = (await fixture(html`<lr-node-palette .items=${items}></lr-node-palette>`)) as LyraNodePalette;
   await el.updateComplete;
   const headers = el.shadowRoot!.querySelectorAll('[part="group-header"]');
   expect(Array.from(headers).map((h) => h.textContent)).to.deep.equal(['Data', 'Actions']);
@@ -41,7 +41,7 @@ it('renders one item per entry, grouped by category in first-appearance order', 
 });
 
 it('filters on label, keywords, and category, case-folded', async () => {
-  const el = (await fixture(html`<lyra-node-palette .items=${items}></lyra-node-palette>`)) as LyraNodePalette;
+  const el = (await fixture(html`<lr-node-palette .items=${items}></lr-node-palette>`)) as LyraNodePalette;
   await el.updateComplete;
   const input = el.shadowRoot!.querySelector('input') as HTMLInputElement;
   input.value = 'API';
@@ -52,7 +52,7 @@ it('filters on label, keywords, and category, case-folded', async () => {
 });
 
 it('renders nodePaletteEmpty when the filter matches nothing', async () => {
-  const el = (await fixture(html`<lyra-node-palette .items=${items}></lyra-node-palette>`)) as LyraNodePalette;
+  const el = (await fixture(html`<lr-node-palette .items=${items}></lr-node-palette>`)) as LyraNodePalette;
   await el.updateComplete;
   const input = el.shadowRoot!.querySelector('input') as HTMLInputElement;
   input.value = 'nonexistent';
@@ -62,7 +62,7 @@ it('renders nodePaletteEmpty when the filter matches nothing', async () => {
 });
 
 it('ArrowDown from the search field moves real DOM focus to the first enabled item', async () => {
-  const el = (await fixture(html`<lyra-node-palette .items=${items}></lyra-node-palette>`)) as LyraNodePalette;
+  const el = (await fixture(html`<lr-node-palette .items=${items}></lr-node-palette>`)) as LyraNodePalette;
   await el.updateComplete;
   const input = el.shadowRoot!.querySelector('input') as HTMLInputElement;
   input.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, cancelable: true }));
@@ -71,7 +71,7 @@ it('ArrowDown from the search field moves real DOM focus to the first enabled it
 });
 
 it('ArrowUp from the first item returns focus to the search field', async () => {
-  const el = (await fixture(html`<lyra-node-palette .items=${items}></lyra-node-palette>`)) as LyraNodePalette;
+  const el = (await fixture(html`<lr-node-palette .items=${items}></lr-node-palette>`)) as LyraNodePalette;
   await el.updateComplete;
   const firstItem = el.shadowRoot!.querySelector('[part="item"]') as HTMLElement;
   firstItem.focus();
@@ -79,13 +79,13 @@ it('ArrowUp from the first item returns focus to the search field', async () => 
   expect(el.shadowRoot!.activeElement).to.equal(el.shadowRoot!.querySelector('input'));
 });
 
-it('Enter on an item emits lyra-palette-place and lyra-select with the same type/item', async () => {
-  const el = (await fixture(html`<lyra-node-palette .items=${items}></lyra-node-palette>`)) as LyraNodePalette;
+it('Enter on an item emits lr-palette-place and lr-select with the same type/item', async () => {
+  const el = (await fixture(html`<lr-node-palette .items=${items}></lr-node-palette>`)) as LyraNodePalette;
   await el.updateComplete;
   let placeDetail: { type: string } | undefined;
   let selectDetail: { item: PaletteItem } | undefined;
-  el.addEventListener('lyra-palette-place', (e) => (placeDetail = (e as CustomEvent).detail));
-  el.addEventListener('lyra-select', (e) => (selectDetail = (e as CustomEvent).detail));
+  el.addEventListener('lr-palette-place', (e) => (placeDetail = (e as CustomEvent).detail));
+  el.addEventListener('lr-select', (e) => (selectDetail = (e as CustomEvent).detail));
   (el.shadowRoot!.querySelector('[part="item"]') as HTMLElement).dispatchEvent(
     new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }),
   );
@@ -94,28 +94,28 @@ it('Enter on an item emits lyra-palette-place and lyra-select with the same type
 });
 
 it('click on an item emits the same pair of events', async () => {
-  const el = (await fixture(html`<lyra-node-palette .items=${items}></lyra-node-palette>`)) as LyraNodePalette;
+  const el = (await fixture(html`<lr-node-palette .items=${items}></lr-node-palette>`)) as LyraNodePalette;
   await el.updateComplete;
   let fired = false;
-  el.addEventListener('lyra-palette-place', () => (fired = true));
+  el.addEventListener('lr-palette-place', () => (fired = true));
   (el.shadowRoot!.querySelector('[part="item"]') as HTMLElement).click();
   expect(fired).to.be.true;
 });
 
 it('a disabled item is not draggable, not roving-focusable, and does not place on click', async () => {
-  const el = (await fixture(html`<lyra-node-palette .items=${items}></lyra-node-palette>`)) as LyraNodePalette;
+  const el = (await fixture(html`<lr-node-palette .items=${items}></lr-node-palette>`)) as LyraNodePalette;
   await el.updateComplete;
   const disabledItem = el.shadowRoot!.querySelectorAll('[part="item"]')[2] as HTMLElement; // "Send Email"
   expect(disabledItem.getAttribute('draggable')).to.equal('false');
   expect(disabledItem.getAttribute('tabindex')).to.equal('-1');
   let fired = false;
-  el.addEventListener('lyra-palette-place', () => (fired = true));
+  el.addEventListener('lr-palette-place', () => (fired = true));
   disabledItem.click();
   expect(fired).to.be.false;
 });
 
 it('dragstart on an enabled item writes the FLOW_PALETTE_MIME_TYPE payload plus a text/plain fallback', async () => {
-  const el = (await fixture(html`<lyra-node-palette .items=${items}></lyra-node-palette>`)) as LyraNodePalette;
+  const el = (await fixture(html`<lr-node-palette .items=${items}></lr-node-palette>`)) as LyraNodePalette;
   await el.updateComplete;
   const item = el.shadowRoot!.querySelector('[part="item"]') as HTMLElement;
   const dataTransfer = new DataTransfer();
@@ -128,7 +128,7 @@ it('dragstart on an enabled item writes the FLOW_PALETTE_MIME_TYPE payload plus 
 });
 
 it('every item carries the sr-only drag hint via aria-describedby', async () => {
-  const el = (await fixture(html`<lyra-node-palette .items=${items}></lyra-node-palette>`)) as LyraNodePalette;
+  const el = (await fixture(html`<lr-node-palette .items=${items}></lr-node-palette>`)) as LyraNodePalette;
   await el.updateComplete;
   const item = el.shadowRoot!.querySelector('[part="item"]') as HTMLElement;
   const hintId = item.getAttribute('aria-describedby')!;
@@ -136,7 +136,7 @@ it('every item carries the sr-only drag hint via aria-describedby', async () => 
 });
 
 it('is accessible with items, groups, and a disabled item', async () => {
-  const el = (await fixture(html`<lyra-node-palette .items=${items}></lyra-node-palette>`)) as LyraNodePalette;
+  const el = (await fixture(html`<lr-node-palette .items=${items}></lr-node-palette>`)) as LyraNodePalette;
   await el.updateComplete;
   await expect(el).to.be.accessible();
 });

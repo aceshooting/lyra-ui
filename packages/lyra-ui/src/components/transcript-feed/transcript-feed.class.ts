@@ -18,13 +18,13 @@ export interface LyraTranscriptEntry {
 const NEAR_BOTTOM_PX = 48;
 
 export interface LyraTranscriptFeedEventMap {
-  'lyra-follow-change': CustomEvent<{ following: boolean }>;
+  'lr-follow-change': CustomEvent<{ following: boolean }>;
 }
 
 /**
- * `<lyra-transcript-feed>` — live captions for an in-progress voice session: speaker-grouped
+ * `<lr-transcript-feed>` — live captions for an in-progress voice session: speaker-grouped
  * entries, interim-vs-final styling with in-place upgrades keyed by `id`, and a stick-to-bottom
- * auto-scroll with release, the same `follow`/`lyra-follow-change` contract `lyra-terminal` uses.
+ * auto-scroll with release, the same `follow`/`lr-follow-change` contract `lr-terminal` uses.
  *
  * Rendering reconciles `entries` keyed by `id` via Lit's `repeat()`: a same-`id` entry with new
  * `text` replaces in place; a same-`id` entry whose `interim` flips from `true` to unset/`false`
@@ -35,9 +35,9 @@ export interface LyraTranscriptFeedEventMap {
  * Live captions only: recorded-media transcript sync — clickable cues, seek-on-select — is a
  * separate concern from this component.
  *
- * @customElement lyra-transcript-feed
+ * @customElement lr-transcript-feed
  * @slot empty - Custom empty state. Default: the localized "No transcript yet".
- * @event lyra-follow-change - `detail: { following: boolean }` — fires on every `follow` transition,
+ * @event lr-follow-change - `detail: { following: boolean }` — fires on every `follow` transition,
  *   whether user-driven (scroll away/jump button) or a direct host assignment. Never fires for the
  *   value already in effect on the very first render.
  * @csspart base - The scroll container.
@@ -100,12 +100,12 @@ export class LyraTranscriptFeed extends LyraElement<LyraTranscriptFeedEventMap> 
     if (changed.has('entries') && this.follow) this.scrollToBottom();
     if (changed.has('follow')) {
       if (this.follow) this.scrollToBottom();
-      if (!this._isFirstUpdate) this.emit<{ following: boolean }>('lyra-follow-change', { following: this.follow });
+      if (!this._isFirstUpdate) this.emit<{ following: boolean }>('lr-follow-change', { following: this.follow });
     }
   }
 
-  /** Scrolls the feed to its current bottom, instantly -- matching `lyra-thinking-panel`'s and
-   *  `lyra-virtual-list`'s own stick-to-bottom mechanics. New entries can arrive in rapid
+  /** Scrolls the feed to its current bottom, instantly -- matching `lr-thinking-panel`'s and
+   *  `lr-virtual-list`'s own stick-to-bottom mechanics. New entries can arrive in rapid
    *  succession while streaming; an animated scroll on every single one would fight itself rather
    *  than settle cleanly, so this is a plain jump rather than a CSS-smoothed transition. */
   scrollToBottom(): void {
@@ -191,6 +191,6 @@ export class LyraTranscriptFeed extends LyraElement<LyraTranscriptFeedEventMap> 
 
 declare global {
   interface HTMLElementTagNameMap {
-    'lyra-transcript-feed': LyraTranscriptFeed;
+    'lr-transcript-feed': LyraTranscriptFeed;
   }
 }

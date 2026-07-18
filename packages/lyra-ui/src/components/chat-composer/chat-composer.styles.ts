@@ -7,16 +7,16 @@ export const styles = css`
   [part='base'] {
     display: flex;
     flex-direction: column;
-    gap: var(--lyra-space-xs);
+    gap: var(--lr-space-xs);
     box-sizing: border-box;
-    border: var(--lyra-border-width-thin) solid var(--lyra-color-border);
-    border-radius: var(--lyra-radius);
-    background: var(--lyra-color-surface);
-    padding: var(--lyra-space-s);
-    transition: border-color var(--lyra-transition-fast);
+    border: var(--lr-border-width-thin) solid var(--lr-color-border);
+    border-radius: var(--lr-radius);
+    background: var(--lr-color-surface);
+    padding: var(--lr-space-s);
+    transition: border-color var(--lr-transition-fast);
   }
   [part='base']:focus-within {
-    border-color: var(--lyra-color-brand);
+    border-color: var(--lr-color-brand);
   }
   /* :host(:disabled), not :host([disabled]) -- this is a form-associated
      custom element (FormAssociated mixin -> static formAssociated = true),
@@ -29,21 +29,21 @@ export const styles = css`
      the card around them still rendered at full opacity with a normal
      cursor. */
   :host(:disabled) [part='base'] {
-    opacity: var(--lyra-opacity-disabled);
+    opacity: var(--lr-opacity-disabled);
     cursor: not-allowed;
   }
 
   /* :empty never matches [part='chips'] -- it always contains a literal
      <slot> child regardless of assigned content -- so real emptiness is
      tracked in JS (hasChipsSlot) and reflected via [hidden] instead (same
-     fix as lyra-date-input's hint/error parts). Author-level display rules
+     fix as lr-date-input's hint/error parts). Author-level display rules
      always beat the UA stylesheet's [hidden] rule regardless of source
      order/specificity (different cascade origins), so the override below is
      required, not redundant. */
   [part='chips'] {
     display: flex;
     flex-wrap: wrap;
-    gap: var(--lyra-space-xs);
+    gap: var(--lr-space-xs);
   }
   [part='chips'][hidden] {
     display: none;
@@ -52,7 +52,7 @@ export const styles = css`
   [part='row'] {
     display: flex;
     align-items: flex-end;
-    gap: var(--lyra-space-s);
+    gap: var(--lr-space-s);
   }
 
   [part='leading'] {
@@ -62,7 +62,7 @@ export const styles = css`
     /* Matches the textarea's own first-line box so a leading icon button
        sits level with placeholder/typed text at min-rows, not glued to the
        row's cross-axis edge. */
-    padding-block-end: var(--lyra-space-xs);
+    padding-block-end: var(--lr-space-xs);
   }
   [part='leading'][hidden] {
     display: none;
@@ -82,12 +82,12 @@ export const styles = css`
        (chat-composer.ts's resizeTextarea()) can read a real pixel value
        back out of getComputedStyle() -- the UA default of "normal" has no
        single resolved px figure to measure rows against. */
-    line-height: var(--lyra-line-height-normal);
-    padding-block: var(--lyra-space-xs);
+    line-height: var(--lr-line-height-normal);
+    padding-block: var(--lr-space-xs);
     overflow-y: hidden;
   }
   [part='textarea']::placeholder {
-    color: var(--lyra-color-text-quiet);
+    color: var(--lr-color-text-quiet);
   }
   [part='textarea']:disabled {
     cursor: not-allowed;
@@ -97,7 +97,7 @@ export const styles = css`
     display: flex;
     flex: 0 0 auto;
     align-items: center;
-    gap: var(--lyra-space-xs);
+    gap: var(--lr-space-xs);
   }
 
   [part='action-button'] {
@@ -106,35 +106,35 @@ export const styles = css`
     justify-content: center;
     flex: 0 0 auto;
     box-sizing: border-box;
-    min-inline-size: var(--lyra-icon-button-size);
-    min-block-size: var(--lyra-icon-button-size);
+    min-inline-size: var(--lr-icon-button-size);
+    min-block-size: var(--lr-icon-button-size);
     border: none;
-    border-radius: var(--lyra-radius);
-    background: var(--lyra-color-brand);
-    color: var(--lyra-color-on-brand);
-    font-size: var(--lyra-font-size-lg);
-    line-height: var(--lyra-line-height-none);
+    border-radius: var(--lr-radius);
+    background: var(--lr-color-brand);
+    color: var(--lr-color-on-brand);
+    font-size: var(--lr-font-size-lg);
+    line-height: var(--lr-line-height-none);
     cursor: pointer;
-    transition: background-color var(--lyra-transition-fast);
+    transition: background-color var(--lr-transition-fast);
   }
   [part='action-button']:hover {
-    background: var(--lyra-color-brand);
+    background: var(--lr-color-brand);
     filter: brightness(1.1);
   }
   [part='action-button']:focus-visible {
-    outline: var(--lyra-focus-ring-width) solid var(--lyra-focus-ring-color);
-    outline-offset: var(--lyra-focus-ring-offset);
+    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
+    outline-offset: var(--lr-focus-ring-offset);
   }
   [part='action-button']:disabled {
     cursor: not-allowed;
-    opacity: var(--lyra-opacity-disabled);
+    opacity: var(--lr-opacity-disabled);
   }
   /* Stop affordance while generating -- a neutral/quiet treatment rather
      than the resting brand fill, so it doesn't read as "send is still
      available" while a response is in flight. */
   :host([status='sending']) [part='action-button'],
   :host([status='streaming']) [part='action-button'] {
-    background: var(--lyra-color-text-quiet);
+    background: var(--lr-color-text-quiet);
   }
 
   @media (prefers-reduced-motion: reduce) {

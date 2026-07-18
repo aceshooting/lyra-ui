@@ -3,12 +3,12 @@ import { css } from 'lit';
 export const styles = css`
   :host {
     display: inline-block;
-    inline-size: var(--lyra-size-8em);
-    block-size: var(--lyra-size-8em);
+    inline-size: var(--lr-size-8em);
+    block-size: var(--lr-size-8em);
   }
   :host([type='linear']) {
-    inline-size: var(--lyra-size-12em);
-    block-size: var(--lyra-size-1-5em);
+    inline-size: var(--lr-size-12em);
+    block-size: var(--lr-size-1-5em);
   }
   svg {
     display: block;
@@ -18,26 +18,26 @@ export const styles = css`
   }
   [part='track'] {
     fill: none;
-    stroke: var(--lyra-color-border);
+    stroke: var(--lr-color-border);
   }
   [part='fill'] {
     fill: none;
-    stroke: var(--lyra-gauge-fill, var(--lyra-color-brand));
+    stroke: var(--lr-gauge-fill, var(--lr-color-brand));
     stroke-linecap: round;
-    transition: stroke-dashoffset var(--lyra-transition-base);
+    transition: stroke-dashoffset var(--lr-transition-base);
   }
   [part='value'] {
-    font-size: var(--lyra-font-size-md);
-    font-weight: var(--lyra-font-weight-bold);
+    font-size: var(--lr-font-size-md);
+    font-weight: var(--lr-font-weight-bold);
     text-anchor: middle;
-    fill: var(--lyra-color-text);
-    font-family: var(--lyra-font);
+    fill: var(--lr-color-text);
+    font-family: var(--lr-font);
   }
   [part='label'] {
-    font-size: var(--lyra-font-size-2xs);
+    font-size: var(--lr-font-size-2xs);
     text-anchor: middle;
-    fill: var(--lyra-color-text-quiet);
-    font-family: var(--lyra-font);
+    fill: var(--lr-color-text-quiet);
+    font-family: var(--lr-font);
     text-transform: uppercase;
   }
   :host([type='linear']) [part='fill'] {
@@ -45,7 +45,7 @@ export const styles = css`
   }
   :host([type='linear']) [part='value'],
   :host([type='linear']) [part='label'] {
-    font-size: var(--lyra-size-0-5rem);
+    font-size: var(--lr-size-0-5rem);
   }
   :host([type='linear']) [part='value'] {
     text-anchor: end;

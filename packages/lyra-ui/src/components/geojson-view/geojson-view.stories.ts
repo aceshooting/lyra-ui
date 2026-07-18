@@ -2,7 +2,7 @@ import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
 import './geojson-view.js';
 
-const meta: Meta = { title: 'DocumentViewer/GeojsonView', component: 'lyra-geojson-view', tags: ['autodocs'] };
+const meta: Meta = { title: 'DocumentViewer/GeojsonView', component: 'lr-geojson-view', tags: ['autodocs'] };
 export default meta;
 type Story = StoryObj;
 
@@ -16,7 +16,7 @@ const sample = {
 const src = `data:application/geo+json,${encodeURIComponent(JSON.stringify(sample))}`;
 
 export const Default: Story = {
-  render: () => html`<lyra-geojson-view src=${src} name="zones.geojson"></lyra-geojson-view>`,
+  render: () => html`<lr-geojson-view src=${src} name="zones.geojson"></lr-geojson-view>`,
 };
 
-export const Empty: Story = { render: () => html`<lyra-geojson-view></lyra-geojson-view>` };
+export const Empty: Story = { render: () => html`<lr-geojson-view></lr-geojson-view>` };

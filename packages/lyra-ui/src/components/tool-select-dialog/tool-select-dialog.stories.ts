@@ -5,7 +5,7 @@ import type { LyraToolSelectDialog, ToolSelectDialogTool } from './tool-select-d
 
 const meta: Meta = {
   title: 'ToolSelectDialog',
-  component: 'lyra-tool-select-dialog',
+  component: 'lr-tool-select-dialog',
   tags: ['autodocs'],
   parameters: {
     docs: {
@@ -81,7 +81,7 @@ const TOOLS: ToolSelectDialogTool[] = [
 
 function openDialog(e: Event): void {
   const trigger = e.currentTarget as HTMLElement;
-  const dialog = trigger.parentElement!.querySelector('lyra-tool-select-dialog') as LyraToolSelectDialog;
+  const dialog = trigger.parentElement!.querySelector('lr-tool-select-dialog') as LyraToolSelectDialog;
   dialog.open = true;
 }
 
@@ -89,67 +89,67 @@ export const Default: Story = {
   render: () => html`
     <div>
       <button @click=${openDialog}>Select tools</button>
-      <lyra-tool-select-dialog
+      <lr-tool-select-dialog
         .tools=${TOOLS}
         .selected=${['web_search', 'fetch_url', 'run_python']}
-      ></lyra-tool-select-dialog>
+      ></lr-tool-select-dialog>
     </div>
   `,
 };
 
 export const OpenInitially: Story = {
   render: () => html`
-    <lyra-tool-select-dialog
+    <lr-tool-select-dialog
       open
       .tools=${TOOLS}
       .selected=${['web_search', 'fetch_url', 'run_python', 'read_file']}
-    ></lyra-tool-select-dialog>
+    ></lr-tool-select-dialog>
   `,
 };
 
 export const UsingDefaults: Story = {
   name: 'Using default tools (locked)',
   render: () => html`
-    <lyra-tool-select-dialog
+    <lr-tool-select-dialog
       open
       use-defaults
       .tools=${TOOLS}
       .selected=${['web_search', 'fetch_url', 'run_python', 'read_file', 'write_file']}
-    ></lyra-tool-select-dialog>
+    ></lr-tool-select-dialog>
   `,
 };
 
 export const NoCategories: Story = {
   render: () => html`
-    <lyra-tool-select-dialog
+    <lr-tool-select-dialog
       open
       .tools=${[
         { id: 'a', name: 'Tool A', description: 'An uncategorized tool.' },
         { id: 'b', name: 'Tool B', description: 'Another uncategorized tool.' },
       ]}
       .selected=${['a']}
-    ></lyra-tool-select-dialog>
+    ></lr-tool-select-dialog>
   `,
 };
 
 export const Empty: Story = {
-  render: () => html`<lyra-tool-select-dialog open .tools=${[]} .selected=${[]}></lyra-tool-select-dialog>`,
+  render: () => html`<lr-tool-select-dialog open .tools=${[]} .selected=${[]}></lr-tool-select-dialog>`,
 };
 
 export const WithFooterActions: Story = {
   render: () => html`
     <div>
       <button @click=${openDialog}>Select tools</button>
-      <lyra-tool-select-dialog .tools=${TOOLS} .selected=${['web_search', 'run_python']}>
+      <lr-tool-select-dialog .tools=${TOOLS} .selected=${['web_search', 'run_python']}>
         <div slot="footer">
           <button
             @click=${(e: Event) =>
-              ((e.target as HTMLElement).closest('lyra-tool-select-dialog') as LyraToolSelectDialog).close('done')}
+              ((e.target as HTMLElement).closest('lr-tool-select-dialog') as LyraToolSelectDialog).close('done')}
           >
             Done
           </button>
         </div>
-      </lyra-tool-select-dialog>
+      </lr-tool-select-dialog>
     </div>
   `,
 };
@@ -158,20 +158,20 @@ export const Events: Story = {
   render: () => html`
     <div>
       <button @click=${openDialog}>Select tools</button>
-      <lyra-tool-select-dialog
+      <lr-tool-select-dialog
         .tools=${TOOLS}
         .selected=${['web_search']}
-        @lyra-change=${(e: CustomEvent<{ selected: string[]; useDefaults: boolean }>) => {
+        @lr-change=${(e: CustomEvent<{ selected: string[]; useDefaults: boolean }>) => {
           const out = document.getElementById('tool-select-dialog-log');
           if (out) {
-            out.textContent = `lyra-change: selected=[${e.detail.selected.join(', ')}] useDefaults=${e.detail.useDefaults}`;
+            out.textContent = `lr-change: selected=[${e.detail.selected.join(', ')}] useDefaults=${e.detail.useDefaults}`;
           }
         }}
-        @lyra-close=${(e: CustomEvent<string>) => {
+        @lr-close=${(e: CustomEvent<string>) => {
           const out = document.getElementById('tool-select-dialog-close-log');
-          if (out) out.textContent = `lyra-close: ${e.detail}`;
+          if (out) out.textContent = `lr-close: ${e.detail}`;
         }}
-      ></lyra-tool-select-dialog>
+      ></lr-tool-select-dialog>
       <p id="tool-select-dialog-log">No change yet.</p>
       <p id="tool-select-dialog-close-log">No close yet.</p>
     </div>

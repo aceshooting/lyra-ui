@@ -27,7 +27,7 @@
   `standard` tier was also re-derived from the pristine originals so every flag is now under 80 KB
   (no fidelity loss perceptible at card/row scale).
 
-  `@aceshooting/lyra-ui`: `<lyra-flag>` gains a `variant="compact" | "standard" | "detailed"`
+  `@aceshooting/lyra-ui`: `<lr-flag>` gains a `variant="compact" | "standard" | "detailed"`
   property — a tiny raster for icon-scale use (menu items, language selectors), the default
   icon-optimized vector for card/row sizes, or the pristine full-detail vector for hero display.
   The `detailed` boolean is deprecated but kept working as an alias for `variant="detailed"`.
@@ -41,12 +41,12 @@
   complexity — up to 1,533 `<path>` elements for a 24px icon). Each of those 65 codes now ships two
   variants:
 
-  - **Default** (unchanged call sites — `flagUrl(code)`, `<lyra-flag country="...">`): an SVGO-optimized
+  - **Default** (unchanged call sites — `flagUrl(code)`, `<lr-flag country="...">`): an SVGO-optimized
     version tuned for icon-scale rendering, ~65% smaller on average for the 65 affected codes (the worst
     case, `sv`, goes from 759 KB to 194 KB), with no visible fidelity loss at icon scale — verified by
     rendering compact vs. detailed side-by-side at both 24px and 160px.
   - **Detailed** (opt-in, new): the pristine, unmodified original — `flagUrl(code, { variant: 'detailed'
-})`, or `detailed` on `<lyra-flag>` (see the `@aceshooting/lyra-ui` changeset). A safe no-op for the
+})`, or `detailed` on `<lr-flag>` (see the `@aceshooting/lyra-ui` changeset). A safe no-op for the
     other 184 codes, which were never large enough to need optimizing.
 
   Also exports `FLAG_LOADERS_DETAILED` (same lazy, code-split shape as `FLAG_LOADERS`, scoped to the 65
@@ -61,8 +61,8 @@
 ### Minor Changes
 
 - c033ec0: `@aceshooting/lyra-flags`: `flagUrl(code)` is now genuinely code-split per flag — each code is
-  its own dynamically-`import()`ed chunk, so using it (directly, or via `<lyra-flag
-country=...>`/`<lyra-flag language=...>`) only ever fetches the flags actually requested at
+  its own dynamically-`import()`ed chunk, so using it (directly, or via `<lr-flag
+country=...>`/`<lr-flag language=...>`) only ever fetches the flags actually requested at
   runtime, not all 249. This makes `flagUrl()` `async` (**breaking**: `Promise<string | undefined>`
   instead of `string`). `FLAG_URLS` (the old synchronous, eager, all-249-at-once map) is no longer
   exported from the package root — the equivalent for a consumer that genuinely wants every flag up
@@ -70,7 +70,7 @@ country=...>`/`<lyra-flag language=...>`) only ever fetches the flags actually r
   full map). `FLAG_LOADERS` (the new lazy per-code map `flagUrl()` is built on) is exported directly
   for consumers that want the per-code laziness without going through `flagUrl()`.
 
-  `@aceshooting/lyra-ui`: `<lyra-flag>` transparently picks up the lazy-loading fix — no changes
+  `@aceshooting/lyra-ui`: `<lr-flag>` transparently picks up the lazy-loading fix — no changes
   needed at call sites using `country`/`language`. Also adds a new `src` property: a pre-resolved
   flag image URL that takes precedence over `country`/`language` and skips the peer-package lookup
   (and its loading-skeleton round trip) entirely, for consumers who already have a flag's URL at

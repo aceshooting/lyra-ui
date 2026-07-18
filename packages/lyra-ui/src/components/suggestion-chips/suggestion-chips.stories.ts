@@ -4,13 +4,13 @@ import './suggestion-chips.js';
 
 const meta: Meta = {
   title: 'SuggestionChips',
-  component: 'lyra-suggestion-chips',
+  component: 'lr-suggestion-chips',
   tags: ['autodocs'],
   parameters: {
     docs: {
       description: {
         component:
-          'Starter prompts and follow-up suggestions as a chip row. Never writes into a composer or sends anything — the host listens for lyra-suggestion-select.',
+          'Starter prompts and follow-up suggestions as a chip row. Never writes into a composer or sends anything — the host listens for lr-suggestion-select.',
       },
     },
   },
@@ -25,12 +25,12 @@ const followUps = [
 ];
 
 export const ScrollableRow: Story = {
-  render: () => html`<lyra-suggestion-chips .suggestions=${followUps}></lyra-suggestion-chips>`,
+  render: () => html`<lr-suggestion-chips .suggestions=${followUps}></lr-suggestion-chips>`,
 };
 
 export const WrappedStarterGrid: Story = {
   render: () => html`
-    <lyra-suggestion-chips
+    <lr-suggestion-chips
       wrap
       .suggestions=${[
         { id: '1', label: 'Summarize this document' },
@@ -38,19 +38,19 @@ export const WrappedStarterGrid: Story = {
         { id: '3', label: 'Translate to French' },
         { id: '4', label: 'Explain like I am five' },
       ]}
-    ></lyra-suggestion-chips>
+    ></lr-suggestion-chips>
   `,
 };
 
 export const Empty: Story = {
   render: () => html`<p>Nothing renders below when suggestions is empty:</p>
-    <lyra-suggestion-chips .suggestions=${[]}></lyra-suggestion-chips>`,
+    <lr-suggestion-chips .suggestions=${[]}></lr-suggestion-chips>`,
 };
 
 export const Narrow320px: Story = {
   render: () => html`
-    <div style="max-width:320px;border:1px dashed var(--lyra-color-border);padding:8px;">
-      <lyra-suggestion-chips .suggestions=${followUps}></lyra-suggestion-chips>
+    <div style="max-width:320px;border:1px dashed var(--lr-color-border);padding:8px;">
+      <lr-suggestion-chips .suggestions=${followUps}></lr-suggestion-chips>
     </div>
   `,
 };

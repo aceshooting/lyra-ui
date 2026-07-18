@@ -25,7 +25,7 @@ function setTextareaValue(el: LyraToolApprovalDialog, value: string): void {
 
 it('renders closed by default, with no role/aria-modal on the panel', async () => {
   const el = (await fixture(
-    html`<lyra-tool-approval-dialog tool-name="web_search"></lyra-tool-approval-dialog>`,
+    html`<lr-tool-approval-dialog tool-name="web_search"></lr-tool-approval-dialog>`,
   )) as LyraToolApprovalDialog;
   const panel = el.shadowRoot!.querySelector('[part="panel"]') as HTMLElement;
   expect(el.open).to.be.false;
@@ -36,7 +36,7 @@ it('renders closed by default, with no role/aria-modal on the panel', async () =
 
 it('reflects open as an attribute and sets dialog semantics once open', async () => {
   const el = (await fixture(
-    html`<lyra-tool-approval-dialog tool-name="web_search"></lyra-tool-approval-dialog>`,
+    html`<lr-tool-approval-dialog tool-name="web_search"></lr-tool-approval-dialog>`,
   )) as LyraToolApprovalDialog;
   el.open = true;
   await el.updateComplete;
@@ -50,20 +50,20 @@ it('reflects open as an attribute and sets dialog semantics once open', async ()
 
 it('renders the tool name in the heading, defaulting to a generic "tool" when unset', async () => {
   const withName = (await fixture(
-    html`<lyra-tool-approval-dialog tool-name="web_search"></lyra-tool-approval-dialog>`,
+    html`<lr-tool-approval-dialog tool-name="web_search"></lr-tool-approval-dialog>`,
   )) as LyraToolApprovalDialog;
   expect(withName.shadowRoot!.querySelector('[part="tool-name"]')!.textContent).to.equal('web_search');
   expect(withName.shadowRoot!.querySelector('h2')!.textContent).to.equal('Approve web_search call?');
 
   const withoutName = (await fixture(
-    html`<lyra-tool-approval-dialog></lyra-tool-approval-dialog>`,
+    html`<lr-tool-approval-dialog></lr-tool-approval-dialog>`,
   )) as LyraToolApprovalDialog;
   expect(withoutName.shadowRoot!.querySelector('[part="tool-name"]')!.textContent).to.equal('tool');
 });
 
-it('renders args read-only via lyra-json-viewer by default', async () => {
+it('renders args read-only via lr-json-viewer by default', async () => {
   const el = (await fixture(
-    html`<lyra-tool-approval-dialog tool-name="web_search" .args=${ARGS}></lyra-tool-approval-dialog>`,
+    html`<lr-tool-approval-dialog tool-name="web_search" .args=${ARGS}></lr-tool-approval-dialog>`,
   )) as LyraToolApprovalDialog;
   const viewer = el.shadowRoot!.querySelector('[part="args-view"]') as LyraJsonViewer;
   expect(viewer).to.exist;
@@ -73,7 +73,7 @@ it('renders args read-only via lyra-json-viewer by default', async () => {
 
 it('renders slotted footer content alongside the built-in action buttons', async () => {
   const el = (await fixture(
-    html`<lyra-tool-approval-dialog><button slot="footer">Remember</button></lyra-tool-approval-dialog>`,
+    html`<lr-tool-approval-dialog><button slot="footer">Remember</button></lr-tool-approval-dialog>`,
   )) as LyraToolApprovalDialog;
   const slot = el.shadowRoot!.querySelector('slot[name="footer"]') as HTMLSlotElement;
   expect(slot.assignedElements().map((n) => n.textContent)).to.deep.equal(['Remember']);
@@ -82,14 +82,14 @@ it('renders slotted footer content alongside the built-in action buttons', async
 describe('editing', () => {
   it('does not render an edit button when editable is false', async () => {
     const el = (await fixture(
-      html`<lyra-tool-approval-dialog tool-name="delete_file" .editable=${false}></lyra-tool-approval-dialog>`,
+      html`<lr-tool-approval-dialog tool-name="delete_file" .editable=${false}></lr-tool-approval-dialog>`,
     )) as LyraToolApprovalDialog;
     expect(editButton(el)).to.not.exist;
   });
 
   it('swaps to a textarea pre-filled with pretty-printed JSON when Edit is clicked', async () => {
     const el = (await fixture(
-      html`<lyra-tool-approval-dialog tool-name="web_search" .args=${ARGS}></lyra-tool-approval-dialog>`,
+      html`<lr-tool-approval-dialog tool-name="web_search" .args=${ARGS}></lr-tool-approval-dialog>`,
     )) as LyraToolApprovalDialog;
     editButton(el).click();
     await el.updateComplete;
@@ -101,7 +101,7 @@ describe('editing', () => {
 
   it('shows an inline error and disables Approve when the textarea content is invalid JSON', async () => {
     const el = (await fixture(
-      html`<lyra-tool-approval-dialog tool-name="web_search" .args=${ARGS}></lyra-tool-approval-dialog>`,
+      html`<lr-tool-approval-dialog tool-name="web_search" .args=${ARGS}></lr-tool-approval-dialog>`,
     )) as LyraToolApprovalDialog;
     editButton(el).click();
     await el.updateComplete;
@@ -118,7 +118,7 @@ describe('editing', () => {
 
   it('clears the error and re-enables Approve once the textarea content becomes valid JSON again', async () => {
     const el = (await fixture(
-      html`<lyra-tool-approval-dialog tool-name="web_search" .args=${ARGS}></lyra-tool-approval-dialog>`,
+      html`<lr-tool-approval-dialog tool-name="web_search" .args=${ARGS}></lr-tool-approval-dialog>`,
     )) as LyraToolApprovalDialog;
     editButton(el).click();
     await el.updateComplete;
@@ -136,7 +136,7 @@ describe('editing', () => {
 
   it('reverts to the original args and the read-only view when Cancel is clicked', async () => {
     const el = (await fixture(
-      html`<lyra-tool-approval-dialog tool-name="web_search" .args=${ARGS}></lyra-tool-approval-dialog>`,
+      html`<lr-tool-approval-dialog tool-name="web_search" .args=${ARGS}></lr-tool-approval-dialog>`,
     )) as LyraToolApprovalDialog;
     editButton(el).click();
     await el.updateComplete;
@@ -154,7 +154,7 @@ describe('editing', () => {
 
   it('disables spellcheck, autocapitalize, and autocorrect on the raw-JSON textarea (JSON is never prose)', async () => {
     const el = (await fixture(
-      html`<lyra-tool-approval-dialog tool-name="web_search" .args=${ARGS} open></lyra-tool-approval-dialog>`,
+      html`<lr-tool-approval-dialog tool-name="web_search" .args=${ARGS} open></lr-tool-approval-dialog>`,
     )) as LyraToolApprovalDialog;
     editButton(el).click();
     await el.updateComplete;
@@ -167,7 +167,7 @@ describe('editing', () => {
 
   it('forwards configurable native editing properties to the raw-JSON textarea', async () => {
     const el = (await fixture(
-      html`<lyra-tool-approval-dialog
+      html`<lr-tool-approval-dialog
         .args=${ARGS}
         .spellcheck=${true}
         autocapitalize="sentences"
@@ -176,7 +176,7 @@ describe('editing', () => {
         wrap="hard"
         inputmode="text"
         enterkeyhint="done"
-      ></lyra-tool-approval-dialog>`,
+      ></lr-tool-approval-dialog>`,
     )) as LyraToolApprovalDialog;
     editButton(el).click();
     await el.updateComplete;
@@ -193,7 +193,7 @@ describe('editing', () => {
 
   it('resets an in-progress edit back to the read-only view every time the dialog re-opens', async () => {
     const el = (await fixture(
-      html`<lyra-tool-approval-dialog tool-name="web_search" .args=${ARGS} open></lyra-tool-approval-dialog>`,
+      html`<lr-tool-approval-dialog tool-name="web_search" .args=${ARGS} open></lr-tool-approval-dialog>`,
     )) as LyraToolApprovalDialog;
     editButton(el).click();
     await el.updateComplete;
@@ -212,12 +212,12 @@ describe('editing', () => {
 });
 
 describe('approve/deny', () => {
-  it('emits lyra-approve with the original args, then lyra-close with reason "approve", when not editing', async () => {
+  it('emits lr-approve with the original args, then lr-close with reason "approve", when not editing', async () => {
     const el = (await fixture(
-      html`<lyra-tool-approval-dialog tool-name="web_search" .args=${ARGS} open></lyra-tool-approval-dialog>`,
+      html`<lr-tool-approval-dialog tool-name="web_search" .args=${ARGS} open></lr-tool-approval-dialog>`,
     )) as LyraToolApprovalDialog;
-    const approveListener = oneEvent(el, 'lyra-approve');
-    const closeListener = oneEvent(el, 'lyra-close');
+    const approveListener = oneEvent(el, 'lr-approve');
+    const closeListener = oneEvent(el, 'lr-close');
     approveButton(el).click();
 
     const approveEvent = await approveListener;
@@ -228,35 +228,35 @@ describe('approve/deny', () => {
     expect(el.open).to.be.false;
   });
 
-  it('emits lyra-approve with the parsed, edited args when approved mid-edit', async () => {
+  it('emits lr-approve with the parsed, edited args when approved mid-edit', async () => {
     const el = (await fixture(
-      html`<lyra-tool-approval-dialog tool-name="web_search" .args=${ARGS} open></lyra-tool-approval-dialog>`,
+      html`<lr-tool-approval-dialog tool-name="web_search" .args=${ARGS} open></lr-tool-approval-dialog>`,
     )) as LyraToolApprovalDialog;
     editButton(el).click();
     await el.updateComplete;
     setTextareaValue(el, '{"query": "edited", "max_results": 1}');
     await el.updateComplete;
 
-    const listener = oneEvent(el, 'lyra-approve');
+    const listener = oneEvent(el, 'lr-approve');
     approveButton(el).click();
     const { detail } = await listener;
 
     expect(detail).to.deep.equal({ args: { query: 'edited', max_results: 1 } });
   });
 
-  it('emits lyra-deny, then lyra-close with reason "deny"', async () => {
+  it('emits lr-deny, then lr-close with reason "deny"', async () => {
     const el = (await fixture(
-      html`<lyra-tool-approval-dialog tool-name="web_search" .args=${ARGS} open></lyra-tool-approval-dialog>`,
+      html`<lr-tool-approval-dialog tool-name="web_search" .args=${ARGS} open></lr-tool-approval-dialog>`,
     )) as LyraToolApprovalDialog;
-    const denyListener = oneEvent(el, 'lyra-deny');
-    const closeListener = oneEvent(el, 'lyra-close');
+    const denyListener = oneEvent(el, 'lr-deny');
+    const closeListener = oneEvent(el, 'lr-close');
     denyButton(el).click();
 
     const denyEvent = await denyListener;
     const closeEvent = await closeListener;
 
     // CustomEventInit's `detail` member defaults to `null`, not `undefined`,
-    // per the DOM spec -- this.emit('lyra-deny') passes no second argument,
+    // per the DOM spec -- this.emit('lr-deny') passes no second argument,
     // which is equivalent to an absent `detail` option.
     expect(denyEvent.detail).to.be.null;
     expect(closeEvent.detail).to.equal('deny');
@@ -265,11 +265,11 @@ describe('approve/deny', () => {
 });
 
 describe('dismissal', () => {
-  it('closes on backdrop click and emits lyra-close with reason "backdrop"', async () => {
+  it('closes on backdrop click and emits lr-close with reason "backdrop"', async () => {
     const el = (await fixture(
-      html`<lyra-tool-approval-dialog open></lyra-tool-approval-dialog>`,
+      html`<lr-tool-approval-dialog open></lr-tool-approval-dialog>`,
     )) as LyraToolApprovalDialog;
-    const listener = oneEvent(el, 'lyra-close');
+    const listener = oneEvent(el, 'lr-close');
     (el.shadowRoot!.querySelector('[part="backdrop"]') as HTMLElement).click();
     const { detail } = await listener;
 
@@ -277,11 +277,11 @@ describe('dismissal', () => {
     expect(detail).to.equal('backdrop');
   });
 
-  it('closes on Escape and emits lyra-close with reason "escape"', async () => {
+  it('closes on Escape and emits lr-close with reason "escape"', async () => {
     const el = (await fixture(
-      html`<lyra-tool-approval-dialog open></lyra-tool-approval-dialog>`,
+      html`<lr-tool-approval-dialog open></lr-tool-approval-dialog>`,
     )) as LyraToolApprovalDialog;
-    const listener = oneEvent(el, 'lyra-close');
+    const listener = oneEvent(el, 'lr-close');
     document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
     const { detail } = await listener;
 
@@ -291,10 +291,10 @@ describe('dismissal', () => {
 
   it('does not respond to Escape while closed', async () => {
     const el = (await fixture(
-      html`<lyra-tool-approval-dialog></lyra-tool-approval-dialog>`,
+      html`<lr-tool-approval-dialog></lr-tool-approval-dialog>`,
     )) as LyraToolApprovalDialog;
     let fired = false;
-    el.addEventListener('lyra-close', () => (fired = true));
+    el.addEventListener('lr-close', () => (fired = true));
 
     document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
     await el.updateComplete;
@@ -304,10 +304,10 @@ describe('dismissal', () => {
 
   it('close() is a no-op when already closed (no duplicate event, no error)', async () => {
     const el = (await fixture(
-      html`<lyra-tool-approval-dialog></lyra-tool-approval-dialog>`,
+      html`<lr-tool-approval-dialog></lr-tool-approval-dialog>`,
     )) as LyraToolApprovalDialog;
     let count = 0;
-    el.addEventListener('lyra-close', () => count++);
+    el.addEventListener('lr-close', () => count++);
 
     el.close('api');
     el.close('api');
@@ -320,7 +320,7 @@ describe('dismissal', () => {
 describe('focus management', () => {
   it('moves focus to the Deny button (not Approve) when opened', async () => {
     const el = (await fixture(
-      html`<lyra-tool-approval-dialog tool-name="web_search" .args=${ARGS}></lyra-tool-approval-dialog>`,
+      html`<lr-tool-approval-dialog tool-name="web_search" .args=${ARGS}></lr-tool-approval-dialog>`,
     )) as LyraToolApprovalDialog;
     el.open = true;
     await el.updateComplete;
@@ -330,7 +330,7 @@ describe('focus management', () => {
 
   it('moves focus into the textarea when Edit is clicked', async () => {
     const el = (await fixture(
-      html`<lyra-tool-approval-dialog tool-name="web_search" .args=${ARGS} open></lyra-tool-approval-dialog>`,
+      html`<lr-tool-approval-dialog tool-name="web_search" .args=${ARGS} open></lr-tool-approval-dialog>`,
     )) as LyraToolApprovalDialog;
     editButton(el).click();
     await el.updateComplete;
@@ -340,7 +340,7 @@ describe('focus management', () => {
 
   it('refocuses the Deny button (keeping the trap engaged) when editable is turned off while the textarea has focus', async () => {
     const el = (await fixture(
-      html`<lyra-tool-approval-dialog tool-name="web_search" .args=${ARGS} open></lyra-tool-approval-dialog>`,
+      html`<lr-tool-approval-dialog tool-name="web_search" .args=${ARGS} open></lr-tool-approval-dialog>`,
     )) as LyraToolApprovalDialog;
     editButton(el).click();
     await el.updateComplete;
@@ -372,7 +372,7 @@ describe('focus management', () => {
     trigger.focus();
 
     const el = (await fixture(
-      html`<lyra-tool-approval-dialog tool-name="web_search" .args=${ARGS}></lyra-tool-approval-dialog>`,
+      html`<lr-tool-approval-dialog tool-name="web_search" .args=${ARGS}></lr-tool-approval-dialog>`,
     )) as LyraToolApprovalDialog;
     el.open = true;
     await el.updateComplete;
@@ -387,7 +387,7 @@ describe('focus management', () => {
 
   it('traps Tab focus inside the panel, wrapping last->first and first->last, excluding a disabled Approve', async () => {
     const el = (await fixture(
-      html`<lyra-tool-approval-dialog tool-name="web_search" .args=${ARGS} open></lyra-tool-approval-dialog>`,
+      html`<lr-tool-approval-dialog tool-name="web_search" .args=${ARGS} open></lr-tool-approval-dialog>`,
     )) as LyraToolApprovalDialog;
     editButton(el).click();
     await el.updateComplete;
@@ -415,7 +415,7 @@ describe('focus management', () => {
 
   it('includes the Approve button in the trap once its content is valid JSON again', async () => {
     const el = (await fixture(
-      html`<lyra-tool-approval-dialog tool-name="web_search" .args=${ARGS} open></lyra-tool-approval-dialog>`,
+      html`<lr-tool-approval-dialog tool-name="web_search" .args=${ARGS} open></lr-tool-approval-dialog>`,
     )) as LyraToolApprovalDialog;
     editButton(el).click();
     await el.updateComplete;
@@ -432,7 +432,7 @@ describe('focus management', () => {
 
   it('traps Tab/Shift+Tab at the json-viewer body content, whose real focusable target lives in its own shadow root', async () => {
     const el = (await fixture(
-      html`<lyra-tool-approval-dialog tool-name="web_search" .args=${ARGS} open></lyra-tool-approval-dialog>`,
+      html`<lr-tool-approval-dialog tool-name="web_search" .args=${ARGS} open></lr-tool-approval-dialog>`,
     )) as LyraToolApprovalDialog;
     const viewer = el.shadowRoot!.querySelector('[part="args-view"]') as HTMLElement;
     const rootToggle = viewer.shadowRoot!.querySelector('[part="toggle"]') as HTMLElement;
@@ -459,7 +459,7 @@ describe('focus management', () => {
 describe('scroll lock', () => {
   it('locks document scroll while open and releases it on close', async () => {
     const el = (await fixture(
-      html`<lyra-tool-approval-dialog></lyra-tool-approval-dialog>`,
+      html`<lr-tool-approval-dialog></lr-tool-approval-dialog>`,
     )) as LyraToolApprovalDialog;
     el.open = true;
     await el.updateComplete;
@@ -472,7 +472,7 @@ describe('scroll lock', () => {
 
   it('releases the scroll lock on disconnect while open', async () => {
     const el = (await fixture(
-      html`<lyra-tool-approval-dialog open></lyra-tool-approval-dialog>`,
+      html`<lr-tool-approval-dialog open></lr-tool-approval-dialog>`,
     )) as LyraToolApprovalDialog;
     await el.updateComplete;
     expect(document.documentElement.style.overflow).to.equal('hidden');
@@ -484,7 +484,7 @@ describe('scroll lock', () => {
 
   it('restores the scroll lock and keydown trap when reparented while still open', async () => {
     const el = (await fixture(
-      html`<lyra-tool-approval-dialog open></lyra-tool-approval-dialog>`,
+      html`<lr-tool-approval-dialog open></lr-tool-approval-dialog>`,
     )) as LyraToolApprovalDialog;
     await el.updateComplete;
     expect(document.documentElement.style.overflow).to.equal('hidden');
@@ -508,7 +508,7 @@ describe('scroll lock', () => {
 describe('localization', () => {
   it('defaults the heading, generic tool-name fallback, and args-editor label to English', async () => {
     const el = (await fixture(
-      html`<lyra-tool-approval-dialog .args=${ARGS} open></lyra-tool-approval-dialog>`,
+      html`<lr-tool-approval-dialog .args=${ARGS} open></lr-tool-approval-dialog>`,
     )) as LyraToolApprovalDialog;
     expect(el.shadowRoot!.querySelector('h2')!.textContent!.trim()).to.equal('Approve tool call?');
 
@@ -519,11 +519,11 @@ describe('localization', () => {
 
   it('localizes the heading and generic tool-name fallback via this.localize()', async () => {
     const el = (await fixture(
-      html`<lyra-tool-approval-dialog
+      html`<lr-tool-approval-dialog
         .args=${ARGS}
         open
         .strings=${{ toolApprovalHeading: 'Approuver l’appel {tool} ?', toolApprovalGenericTool: 'outil' }}
-      ></lyra-tool-approval-dialog>`,
+      ></lr-tool-approval-dialog>`,
     )) as LyraToolApprovalDialog;
     const heading = el.shadowRoot!.querySelector('h2')!;
     expect(heading.textContent!.trim()).to.equal('Approuver l’appel outil ?');
@@ -532,23 +532,23 @@ describe('localization', () => {
 
   it('does not use the generic tool-name fallback once tool-name is set', async () => {
     const el = (await fixture(
-      html`<lyra-tool-approval-dialog
+      html`<lr-tool-approval-dialog
         tool-name="web_search"
         .args=${ARGS}
         open
         .strings=${{ toolApprovalGenericTool: 'outil' }}
-      ></lyra-tool-approval-dialog>`,
+      ></lr-tool-approval-dialog>`,
     )) as LyraToolApprovalDialog;
     expect(el.shadowRoot!.querySelector('[part="tool-name"]')!.textContent).to.equal('web_search');
   });
 
   it('localizes the args-editor aria-label via this.localize()', async () => {
     const el = (await fixture(
-      html`<lyra-tool-approval-dialog
+      html`<lr-tool-approval-dialog
         .args=${ARGS}
         open
         .strings=${{ toolApprovalArgsLabel: 'Arguments de l’appel (JSON)' }}
-      ></lyra-tool-approval-dialog>`,
+      ></lr-tool-approval-dialog>`,
     )) as LyraToolApprovalDialog;
     editButton(el).click();
     await el.updateComplete;
@@ -557,7 +557,7 @@ describe('localization', () => {
 
   it('defaults the Deny/Edit/Approve button labels to English', async () => {
     const el = (await fixture(
-      html`<lyra-tool-approval-dialog .args=${ARGS} open></lyra-tool-approval-dialog>`,
+      html`<lr-tool-approval-dialog .args=${ARGS} open></lr-tool-approval-dialog>`,
     )) as LyraToolApprovalDialog;
     expect(denyButton(el).textContent!.trim()).to.equal('Deny');
     expect(editButton(el).textContent!.trim()).to.equal('Edit');
@@ -566,11 +566,11 @@ describe('localization', () => {
 
   it('localizes the Deny/Approve button labels via this.localize()', async () => {
     const el = (await fixture(
-      html`<lyra-tool-approval-dialog
+      html`<lr-tool-approval-dialog
         .args=${ARGS}
         open
         .strings=${{ deny: 'Refuser', approve: 'Approuver' }}
-      ></lyra-tool-approval-dialog>`,
+      ></lr-tool-approval-dialog>`,
     )) as LyraToolApprovalDialog;
     expect(denyButton(el).textContent!.trim()).to.equal('Refuser');
     expect(approveButton(el).textContent!.trim()).to.equal('Approuver');
@@ -578,11 +578,11 @@ describe('localization', () => {
 
   it('localizes the Edit/Cancel toggle button label via this.localize(), reusing the shared "cancel" key while editing', async () => {
     const el = (await fixture(
-      html`<lyra-tool-approval-dialog
+      html`<lr-tool-approval-dialog
         .args=${ARGS}
         open
         .strings=${{ edit: 'Modifier', cancel: 'Annuler' }}
-      ></lyra-tool-approval-dialog>`,
+      ></lr-tool-approval-dialog>`,
     )) as LyraToolApprovalDialog;
     expect(editButton(el).textContent!.trim()).to.equal('Modifier');
 
@@ -593,11 +593,11 @@ describe('localization', () => {
 
   it('localizes the invalid-JSON fallback error message via this.localize() when the caught error has no message', async () => {
     const el = (await fixture(
-      html`<lyra-tool-approval-dialog
+      html`<lr-tool-approval-dialog
         .args=${ARGS}
         open
         .strings=${{ invalidJson: 'JSON invalide.' }}
-      ></lyra-tool-approval-dialog>`,
+      ></lr-tool-approval-dialog>`,
     )) as LyraToolApprovalDialog;
     editButton(el).click();
     await el.updateComplete;
@@ -625,14 +625,14 @@ describe('localization', () => {
 
 it('is accessible while closed', async () => {
   const el = (await fixture(
-    html`<lyra-tool-approval-dialog tool-name="web_search" .args=${ARGS}></lyra-tool-approval-dialog>`,
+    html`<lr-tool-approval-dialog tool-name="web_search" .args=${ARGS}></lr-tool-approval-dialog>`,
   )) as LyraToolApprovalDialog;
   await expect(el).to.be.accessible();
 });
 
 it('is accessible while open in the read-only view', async () => {
   const el = (await fixture(
-    html`<lyra-tool-approval-dialog tool-name="web_search" .args=${ARGS} open></lyra-tool-approval-dialog>`,
+    html`<lr-tool-approval-dialog tool-name="web_search" .args=${ARGS} open></lr-tool-approval-dialog>`,
   )) as LyraToolApprovalDialog;
   await el.updateComplete;
   await expect(el).to.be.accessible();
@@ -640,7 +640,7 @@ it('is accessible while open in the read-only view', async () => {
 
 it('is accessible while open and editing, including with an invalid-JSON error shown', async () => {
   const el = (await fixture(
-    html`<lyra-tool-approval-dialog tool-name="web_search" .args=${ARGS} open></lyra-tool-approval-dialog>`,
+    html`<lr-tool-approval-dialog tool-name="web_search" .args=${ARGS} open></lr-tool-approval-dialog>`,
   )) as LyraToolApprovalDialog;
   editButton(el).click();
   await el.updateComplete;

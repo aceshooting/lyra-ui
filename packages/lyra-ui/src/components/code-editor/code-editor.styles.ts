@@ -1,17 +1,17 @@
 import { css } from 'lit';
 export const styles = css`
-  :host { display: block; --lyra-code-editor-min-block-size: var(--lyra-size-8rem); --lyra-code-editor-line-height: 1.5; --lyra-code-editor-tab-size: 2; }
-  [part='form-control'] { display: grid; gap: var(--lyra-space-xs); }
-  [part='label'] { color: var(--lyra-color-text); font-weight: var(--lyra-font-weight-semibold); }
+  :host { display: block; --lr-code-editor-min-block-size: var(--lr-size-8rem); --lr-code-editor-line-height: 1.5; --lr-code-editor-tab-size: 2; }
+  [part='form-control'] { display: grid; gap: var(--lr-space-xs); }
+  [part='label'] { color: var(--lr-color-text); font-weight: var(--lr-font-weight-semibold); }
   /* Keep the editor frame as the single scroll viewport. The textarea must not create a second
      native horizontal scrollbar when wrap="off"; its max-content track lets the frame own both
      axes instead. */
-  [part='editor'] { display: grid; grid-template-columns: auto max-content; overflow: auto; min-block-size: var(--lyra-code-editor-min-block-size); border: var(--lyra-border-width-thin) solid var(--lyra-color-border); border-radius: var(--lyra-radius); background: var(--lyra-color-surface); }
-  [part='gutter'] { padding: var(--lyra-space-s) var(--lyra-space-xs); border-inline-end: var(--lyra-border-width-thin) solid var(--lyra-color-border); color: var(--lyra-color-text-quiet); text-align: end; user-select: none; font: inherit; line-height: var(--lyra-code-editor-line-height); }
-  [part='textarea'] { display: block; box-sizing: border-box; inline-size: max-content; min-inline-size: 100%; min-block-size: var(--lyra-code-editor-min-block-size); overflow: visible; padding: var(--lyra-space-s); resize: both; border: 0; outline: 0; background: transparent; color: var(--lyra-color-text); font: var(--lyra-font-mono); line-height: var(--lyra-code-editor-line-height); tab-size: var(--lyra-code-editor-tab-size); }
-  [part='textarea']:focus-visible { outline: var(--lyra-focus-ring-width) solid var(--lyra-focus-ring-color); outline-offset: calc(var(--lyra-focus-ring-offset) * -1); }
-  [part='hint'], [part='error'] { color: var(--lyra-color-text-quiet); font-size: var(--lyra-font-size-sm); }
-  [part='error'] { color: var(--lyra-color-danger); }
-  :host([data-invalid]) [part='editor'] { border-color: var(--lyra-color-danger); }
-  :host([disabled]) { opacity: var(--lyra-opacity-disabled); }
+  [part='editor'] { display: grid; grid-template-columns: auto max-content; overflow: auto; min-block-size: var(--lr-code-editor-min-block-size); border: var(--lr-border-width-thin) solid var(--lr-color-border); border-radius: var(--lr-radius); background: var(--lr-color-surface); }
+  [part='gutter'] { padding: var(--lr-space-s) var(--lr-space-xs); border-inline-end: var(--lr-border-width-thin) solid var(--lr-color-border); color: var(--lr-color-text-quiet); text-align: end; user-select: none; font: inherit; line-height: var(--lr-code-editor-line-height); }
+  [part='textarea'] { display: block; box-sizing: border-box; inline-size: max-content; min-inline-size: 100%; min-block-size: var(--lr-code-editor-min-block-size); overflow: visible; padding: var(--lr-space-s); resize: both; border: 0; outline: 0; background: transparent; color: var(--lr-color-text); font: var(--lr-font-mono); line-height: var(--lr-code-editor-line-height); tab-size: var(--lr-code-editor-tab-size); }
+  [part='textarea']:focus-visible { outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color); outline-offset: calc(var(--lr-focus-ring-offset) * -1); }
+  [part='hint'], [part='error'] { color: var(--lr-color-text-quiet); font-size: var(--lr-font-size-sm); }
+  [part='error'] { color: var(--lr-color-danger); }
+  :host([data-invalid]) [part='editor'] { border-color: var(--lr-color-danger); }
+  :host([disabled]) { opacity: var(--lr-opacity-disabled); }
 `;

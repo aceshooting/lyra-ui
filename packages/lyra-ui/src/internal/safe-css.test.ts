@@ -14,7 +14,7 @@ describe('sanitizeSwatchColor', () => {
       'rgba(1, 2, 3, 0.5)',
       'hsl(120, 50%, 50%)',
       'oklch(0.7 0.1 200)',
-      'var(--lyra-color-brand)',
+      'var(--lr-color-brand)',
     ]) {
       expect(sanitizeSwatchColor(color), color).to.equal(color);
     }

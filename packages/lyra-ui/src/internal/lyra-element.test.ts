@@ -23,15 +23,15 @@ class DemoLocale extends LyraElement {
 customElements.define(tag('demo-locale'), DemoLocale);
 
 it('applies the token font-family from the base', async () => {
-  const el = await fixture<Demo>(`<lyra-demo-base></lyra-demo-base>`);
+  const el = await fixture<Demo>(`<lr-demo-base></lr-demo-base>`);
   expect(getComputedStyle(el).fontFamily).to.not.be.empty;
 });
 
 it('emit() dispatches a composed, bubbling lyra event', async () => {
-  const el = await fixture<Demo>(`<lyra-demo-base></lyra-demo-base>`);
+  const el = await fixture<Demo>(`<lr-demo-base></lr-demo-base>`);
   let caught: CustomEvent | undefined;
-  el.addEventListener('lyra-ping', (e) => (caught = e as CustomEvent));
-  (el as unknown as { emit: (n: string, d?: unknown) => void }).emit('lyra-ping', { ok: true });
+  el.addEventListener('lr-ping', (e) => (caught = e as CustomEvent));
+  (el as unknown as { emit: (n: string, d?: unknown) => void }).emit('lr-ping', { ok: true });
   expect(caught).to.exist;
   expect(caught!.bubbles).to.be.true;
   expect(caught!.composed).to.be.true;
@@ -40,9 +40,9 @@ it('emit() dispatches a composed, bubbling lyra event', async () => {
 
 it('resolves the inherited locale at most once per update cycle', async () => {
   const wrapper = await fixture<HTMLDivElement>(
-    html`<div lang="x-memo"><lyra-demo-locale></lyra-demo-locale></div>`,
+    html`<div lang="x-memo"><lr-demo-locale></lr-demo-locale></div>`,
   );
-  const el = wrapper.querySelector('lyra-demo-locale') as DemoLocale;
+  const el = wrapper.querySelector('lr-demo-locale') as DemoLocale;
   await el.updateComplete;
 
   let ancestorReads = 0;
@@ -76,7 +76,7 @@ it('re-resolves locale and direction when reconnected under a different ancestor
     </div>`,
   );
   const sections = host.querySelectorAll('section');
-  const el = document.createElement('lyra-demo-locale') as DemoLocale;
+  const el = document.createElement('lr-demo-locale') as DemoLocale;
   sections[0]!.append(el);
   await el.updateComplete;
   expect(el.exposedLocale).to.equal('x-one');
@@ -90,14 +90,14 @@ it('re-resolves locale and direction when reconnected under a different ancestor
 });
 
 it('makes notifications non-cancelable unless a caller opts into veto semantics', async () => {
-  const el = await fixture<Demo>(`<lyra-demo-base></lyra-demo-base>`);
+  const el = await fixture<Demo>(`<lr-demo-base></lr-demo-base>`);
   const events: CustomEvent[] = [];
-  el.addEventListener('lyra-notification', (e) => events.push(e as CustomEvent));
+  el.addEventListener('lr-notification', (e) => events.push(e as CustomEvent));
   (el as unknown as { emit: (n: string, d?: unknown, o?: { cancelable?: boolean }) => void }).emit(
-    'lyra-notification',
+    'lr-notification',
   );
   (el as unknown as { emit: (n: string, d?: unknown, o?: { cancelable?: boolean }) => void }).emit(
-    'lyra-notification',
+    'lr-notification',
     undefined,
     { cancelable: true },
   );

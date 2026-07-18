@@ -40,11 +40,11 @@ export function place(
           padding: 8,
           apply({ availableWidth, availableHeight, elements }) {
             elements.floating.style.setProperty(
-              '--lyra-positioner-available-inline-size',
+              '--lr-positioner-available-inline-size',
               `${Math.max(0, availableWidth)}px`,
             );
             elements.floating.style.setProperty(
-              '--lyra-positioner-available-block-size',
+              '--lr-positioner-available-block-size',
               `${Math.max(0, availableHeight)}px`,
             );
           },

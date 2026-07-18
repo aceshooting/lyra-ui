@@ -4,7 +4,7 @@ import { LyraElement } from '../../internal/lyra-element.js';
 import { safeMediaSrc } from '../../internal/safe-url.js';
 import { styles } from './artifact-panel.styles.js';
 // Import the registering barrel (not the bare `.class.js` module) so
-// `<lyra-live-region>` is actually defined by the time this component renders it.
+// `<lr-live-region>` is actually defined by the time this component renders it.
 import '../live-region/live-region.js';
 import type { LyraLiveRegion } from '../live-region/live-region.class.js';
 
@@ -14,29 +14,29 @@ export interface ArtifactVersion {
 }
 
 export interface LyraArtifactPanelEventMap {
-  'lyra-view-change': CustomEvent<{ view: 'preview' | 'code' }>;
-  'lyra-version-change': CustomEvent<{ versionId: string }>;
-  'lyra-restore': CustomEvent<{ versionId: string }>;
-  'lyra-copy': CustomEvent<{ text: string }>;
-  'lyra-download': CustomEvent<{ filename: string; src?: string }>;
+  'lr-view-change': CustomEvent<{ view: 'preview' | 'code' }>;
+  'lr-version-change': CustomEvent<{ versionId: string }>;
+  'lr-restore': CustomEvent<{ versionId: string }>;
+  'lr-copy': CustomEvent<{ text: string }>;
+  'lr-download': CustomEvent<{ filename: string; src?: string }>;
 }
 
 /**
- * `<lyra-artifact-panel>` — shell around one agent-generated artifact: a
+ * `<lr-artifact-panel>` — shell around one agent-generated artifact: a
  * title/kind header, a preview<->code toggle, version navigation with
  * restore, a streaming indicator, and built-in copy/download actions.
  * Renders none of the artifact itself — content is slotted.
  *
- * @customElement lyra-artifact-panel
- * @event lyra-view-change - `detail: { view }`. Fired when the preview/code toggle changes.
- * @event lyra-version-change - `detail: { versionId }`. Fired when the previous/next
+ * @customElement lr-artifact-panel
+ * @event lr-view-change - `detail: { view }`. Fired when the preview/code toggle changes.
+ * @event lr-version-change - `detail: { versionId }`. Fired when the previous/next
  *   navigation moves to a different version.
- * @event lyra-restore - `detail: { versionId }`. Fired by the restore-this-version button;
+ * @event lr-restore - `detail: { versionId }`. Fired by the restore-this-version button;
  *   mutates nothing itself — `versions` and the resulting content stay host-owned state.
- * @event lyra-copy - `detail: { text }`. Fired after a best-effort clipboard write.
- * @event lyra-download - `detail: { filename, src? }`. Fired with the sanitized download URL.
+ * @event lr-copy - `detail: { text }`. Fired after a best-effort clipboard write.
+ * @event lr-download - `detail: { filename, src? }`. Fired with the sanitized download URL.
  * @slot - Preview-view content.
- * @slot code - Code-view content (typically a `<lyra-code-block>`). The preview/code toggle
+ * @slot code - Code-view content (typically a `<lr-code-block>`). The preview/code toggle
  *   only renders once this slot has assigned content.
  * @slot actions - Extra header controls, rendered between the version navigation and the
  *   built-in copy/download buttons.
@@ -87,7 +87,7 @@ export class LyraArtifactPanel extends LyraElement<LyraArtifactPanelEventMap> {
   /** The download URL, sanitized through `safeMediaSrc()` before use. Empty hides the button. */
   @property({ attribute: 'download-src' }) downloadSrc = '';
 
-  /** The suggested filename reported in the `lyra-download` event detail. */
+  /** The suggested filename reported in the `lr-download` event detail. */
   @property({ attribute: 'download-name' }) downloadName = '';
 
   @state() private hasCodeSlot = false;
@@ -104,7 +104,7 @@ export class LyraArtifactPanel extends LyraElement<LyraArtifactPanelEventMap> {
 
   private setView(view: 'preview' | 'code'): void {
     this.view = view;
-    this.emit('lyra-view-change', { view });
+    this.emit('lr-view-change', { view });
   }
 
   private get currentIndex(): number {
@@ -118,8 +118,8 @@ export class LyraArtifactPanel extends LyraElement<LyraArtifactPanelEventMap> {
     if (!version) return;
     const isLatest = index === this.versions.length - 1;
     this.activeVersionId = isLatest ? null : version.id;
-    this.emit('lyra-version-change', { versionId: version.id });
-    (this.renderRoot.querySelector('lyra-live-region') as LyraLiveRegion | null)?.announce(
+    this.emit('lr-version-change', { versionId: version.id });
+    (this.renderRoot.querySelector('lr-live-region') as LyraLiveRegion | null)?.announce(
       this.localize('artifactPanelVersionPosition', undefined, {
         index: index + 1,
         count: this.versions.length,
@@ -130,19 +130,19 @@ export class LyraArtifactPanel extends LyraElement<LyraArtifactPanelEventMap> {
   private onCopy = (): void => {
     try {
       // navigator.clipboard is absent in insecure contexts / older browsers, and some engines
-      // throw synchronously rather than rejecting -- either way this is best-effort; lyra-copy
+      // throw synchronously rather than rejecting -- either way this is best-effort; lr-copy
       // fires regardless of whether the OS clipboard was actually reached.
       void navigator.clipboard?.writeText(this.copyText)?.catch(() => {});
     } catch {
       // see above
     }
-    this.emit('lyra-copy', { text: this.copyText });
+    this.emit('lr-copy', { text: this.copyText });
   };
 
   private onDownload = (): void => {
     const safeSrc = safeMediaSrc(this.downloadSrc);
     if (!safeSrc) return;
-    this.emit('lyra-download', { filename: this.downloadName, src: safeSrc });
+    this.emit('lr-download', { filename: this.downloadName, src: safeSrc });
   };
 
   render(): TemplateResult {
@@ -151,7 +151,7 @@ export class LyraArtifactPanel extends LyraElement<LyraArtifactPanelEventMap> {
     const isLatest = this.activeVersionId === null || index === this.versions.length - 1;
     return html`
       <div part="base">
-        <lyra-live-region mode="polite"></lyra-live-region>
+        <lr-live-region mode="polite"></lr-live-region>
         <div part="header">
           ${this.label ? html`<span part="label">${this.label}</span>` : nothing}
           ${this.kind ? html`<span part="kind">${this.kind}</span>` : nothing}
@@ -210,7 +210,7 @@ export class LyraArtifactPanel extends LyraElement<LyraArtifactPanelEventMap> {
                     ? html`<button
                         part="restore-button"
                         type="button"
-                        @click=${() => this.emit('lyra-restore', { versionId: this.versions[index].id })}
+                        @click=${() => this.emit('lr-restore', { versionId: this.versions[index].id })}
                       >
                         ${this.localize('artifactPanelRestore')}
                       </button>`
@@ -246,6 +246,6 @@ export class LyraArtifactPanel extends LyraElement<LyraArtifactPanelEventMap> {
 
 declare global {
   interface HTMLElementTagNameMap {
-    'lyra-artifact-panel': LyraArtifactPanel;
+    'lr-artifact-panel': LyraArtifactPanel;
   }
 }

@@ -16,12 +16,12 @@ interface FlowCanvasLike extends HTMLElement {
 }
 
 /**
- * `<lyra-flow-run-overlay>` — execution-state presentation for a `lyra-flow-canvas`: pushes a
+ * `<lr-flow-run-overlay>` — execution-state presentation for a `lr-flow-canvas`: pushes a
  * `FlowRunDecorations` map into the resolved canvas (the canvas itself renders the node/edge paint)
  * and renders a compact run-summary strip. Does not execute, poll, or time anything — pure pushed
  * state; `durationMs` is host-computed.
  *
- * @customElement lyra-flow-run-overlay
+ * @customElement lr-flow-run-overlay
  * @slot - Extra host chrome appended to the strip (e.g. a cancel button or a usage badge).
  * @csspart base - The root wrapper.
  * @csspart summary - The "{done} of {total} steps complete" line.
@@ -97,7 +97,7 @@ export class LyraFlowRunOverlay extends LyraElement {
     const current = this.canvasEl.decorations;
     if (this.lastWrittenDecorations !== null && current !== null && current !== this.lastWrittenDecorations) {
       console.warn(
-        '<lyra-flow-run-overlay> is overwriting <lyra-flow-canvas>.decorations set by something else; mixing this element with direct decorations writes is unsupported.',
+        '<lr-flow-run-overlay> is overwriting <lr-flow-canvas>.decorations set by something else; mixing this element with direct decorations writes is unsupported.',
       );
     }
     this.canvasEl.decorations = this.decorations;
@@ -137,8 +137,8 @@ export class LyraFlowRunOverlay extends LyraElement {
   // the class's "pure pushed state" contract) rather than filtering to node ids read fresh off
   // `this.canvasEl.nodes` at render time. Nothing re-renders *this* element when only the
   // *canvas's* `nodes` array changes (unlike a `registerCompanion()`-based sibling such as
-  // `lyra-flow-minimap`, which trades an extra rAF of latency for exactly that reactivity), and
-  // `<lyra-flow-run-overlay>`/`<lyra-flow-canvas>` are independent custom elements with no
+  // `lr-flow-minimap`, which trades an extra rAF of latency for exactly that reactivity), and
+  // `<lr-flow-run-overlay>`/`<lr-flow-canvas>` are independent custom elements with no
   // upgrade-ordering guarantee -- a canvas-membership filter would leave the summary permanently
   // stuck at whatever `nodes` happened to resolve to at this element's own first render (typically
   // `[]`, i.e. "0 of 0"), never updating again. `announceTransitions()` above still reads
@@ -159,8 +159,9 @@ export class LyraFlowRunOverlay extends LyraElement {
 
   render(): TemplateResult {
     const label = this.label || this.localize('flowRunOverlayLabel');
+    const ariaLabel = this.getAttribute('aria-label') || label;
     const { done, total, counts } = this.summary();
-    return html`<div part="base" role="group" aria-label=${label}>
+    return html`<div part="base" role="group" aria-label=${ariaLabel}>
       ${this.hideSummary
         ? ''
         : html`
@@ -177,6 +178,6 @@ export class LyraFlowRunOverlay extends LyraElement {
 
 declare global {
   interface HTMLElementTagNameMap {
-    'lyra-flow-run-overlay': LyraFlowRunOverlay;
+    'lr-flow-run-overlay': LyraFlowRunOverlay;
   }
 }

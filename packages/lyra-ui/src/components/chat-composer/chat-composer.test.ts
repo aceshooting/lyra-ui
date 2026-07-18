@@ -21,7 +21,7 @@ function enterKeydown(init: KeyboardEventInit = {}): KeyboardEvent {
 }
 
 it('defaults to status="idle", min-rows=1, max-rows=8, submit-on-enter=true', async () => {
-  const el = (await fixture(html`<lyra-chat-composer></lyra-chat-composer>`)) as LyraChatComposer;
+  const el = (await fixture(html`<lr-chat-composer></lr-chat-composer>`)) as LyraChatComposer;
   expect(el.status).to.equal('idle');
   expect(el.minRows).to.equal(1);
   expect(el.maxRows).to.equal(8);
@@ -30,11 +30,11 @@ it('defaults to status="idle", min-rows=1, max-rows=8, submit-on-enter=true', as
 });
 
 it('uses placeholder as the textarea accessible name, falling back to "Message"', async () => {
-  const noPlaceholder = (await fixture(html`<lyra-chat-composer></lyra-chat-composer>`)) as LyraChatComposer;
+  const noPlaceholder = (await fixture(html`<lr-chat-composer></lr-chat-composer>`)) as LyraChatComposer;
   expect(textareaOf(noPlaceholder).getAttribute('aria-label')).to.equal('Message');
 
   const withPlaceholder = (await fixture(
-    html`<lyra-chat-composer placeholder="Ask anything…"></lyra-chat-composer>`,
+    html`<lr-chat-composer placeholder="Ask anything…"></lr-chat-composer>`,
   )) as LyraChatComposer;
   expect(textareaOf(withPlaceholder).getAttribute('aria-label')).to.equal('Ask anything…');
   expect(textareaOf(withPlaceholder).getAttribute('placeholder')).to.equal('Ask anything…');
@@ -42,14 +42,14 @@ it('uses placeholder as the textarea accessible name, falling back to "Message"'
 
 it('forwards a host aria-label to the textarea ahead of the placeholder-derived name', async () => {
   const el = (await fixture(html`
-    <lyra-chat-composer aria-label="Compose support request" placeholder="Ask anything…"></lyra-chat-composer>
+    <lr-chat-composer aria-label="Compose support request" placeholder="Ask anything…"></lr-chat-composer>
   `)) as LyraChatComposer;
 
   expect(textareaOf(el).getAttribute('aria-label')).to.equal('Compose support request');
 });
 
 it('keeps the internal textarea value in sync with the value property in both directions', async () => {
-  const el = (await fixture(html`<lyra-chat-composer></lyra-chat-composer>`)) as LyraChatComposer;
+  const el = (await fixture(html`<lr-chat-composer></lr-chat-composer>`)) as LyraChatComposer;
   el.value = 'set programmatically';
   await el.updateComplete;
   expect(textareaOf(el).value).to.equal('set programmatically');
@@ -59,26 +59,26 @@ it('keeps the internal textarea value in sync with the value property in both di
   expect(el.value).to.equal('typed by the user');
 });
 
-it('fires lyra-input with detail.value on user typing, but not on a programmatic .value assignment', async () => {
-  const el = (await fixture(html`<lyra-chat-composer></lyra-chat-composer>`)) as LyraChatComposer;
+it('fires lr-input with detail.value on user typing, but not on a programmatic .value assignment', async () => {
+  const el = (await fixture(html`<lr-chat-composer></lr-chat-composer>`)) as LyraChatComposer;
 
   let fired = false;
-  el.addEventListener('lyra-input', () => (fired = true));
+  el.addEventListener('lr-input', () => (fired = true));
   el.value = 'programmatic';
   await el.updateComplete;
-  expect(fired, 'lyra-input must not fire for a programmatic .value assignment').to.be.false;
+  expect(fired, 'lr-input must not fire for a programmatic .value assignment').to.be.false;
 
-  const listening = oneEvent(el, 'lyra-input');
+  const listening = oneEvent(el, 'lr-input');
   typeInto(el, 'hello');
   const ev = await listening;
   expect(ev.detail.value).to.equal('hello');
 });
 
 it('plain Enter submits and prevents the default newline insertion', async () => {
-  const el = (await fixture(html`<lyra-chat-composer value="hello"></lyra-chat-composer>`)) as LyraChatComposer;
+  const el = (await fixture(html`<lr-chat-composer value="hello"></lr-chat-composer>`)) as LyraChatComposer;
   const ta = textareaOf(el);
 
-  const listening = oneEvent(el, 'lyra-submit');
+  const listening = oneEvent(el, 'lr-submit');
   const ev = enterKeydown();
   ta.dispatchEvent(ev);
   const submitEvent = await listening;
@@ -87,19 +87,19 @@ it('plain Enter submits and prevents the default newline insertion', async () =>
 });
 
 it('does not clear the value when submitting', async () => {
-  const el = (await fixture(html`<lyra-chat-composer value="hello"></lyra-chat-composer>`)) as LyraChatComposer;
-  const listening = oneEvent(el, 'lyra-submit');
+  const el = (await fixture(html`<lr-chat-composer value="hello"></lr-chat-composer>`)) as LyraChatComposer;
+  const listening = oneEvent(el, 'lr-submit');
   textareaOf(el).dispatchEvent(enterKeydown());
   await listening;
   expect(el.value).to.equal('hello');
 });
 
 it('Shift+Enter always inserts a newline and never submits, even with submit-on-enter true', async () => {
-  const el = (await fixture(html`<lyra-chat-composer></lyra-chat-composer>`)) as LyraChatComposer;
+  const el = (await fixture(html`<lr-chat-composer></lr-chat-composer>`)) as LyraChatComposer;
   const ta = textareaOf(el);
 
   let submitted = false;
-  el.addEventListener('lyra-submit', () => (submitted = true));
+  el.addEventListener('lr-submit', () => (submitted = true));
   const ev = enterKeydown({ shiftKey: true });
   ta.dispatchEvent(ev);
   await el.updateComplete;
@@ -115,13 +115,13 @@ it('never submits on Enter while submit-on-enter is false, leaving the default n
   // attribute, which leaves the property at its true default. Setting the
   // property directly is the correct way to get `false` from a template.
   const el = (await fixture(
-    html`<lyra-chat-composer .submitOnEnter=${false}></lyra-chat-composer>`,
+    html`<lr-chat-composer .submitOnEnter=${false}></lr-chat-composer>`,
   )) as LyraChatComposer;
   expect(el.submitOnEnter, 'sanity-check the property actually ended up false').to.be.false;
   const ta = textareaOf(el);
 
   let submitted = false;
-  el.addEventListener('lyra-submit', () => (submitted = true));
+  el.addEventListener('lr-submit', () => (submitted = true));
   const ev = enterKeydown();
   ta.dispatchEvent(ev);
   await el.updateComplete;
@@ -130,11 +130,11 @@ it('never submits on Enter while submit-on-enter is false, leaving the default n
 });
 
 it('never treats an IME composition Enter as a submit trigger (isComposing)', async () => {
-  const el = (await fixture(html`<lyra-chat-composer></lyra-chat-composer>`)) as LyraChatComposer;
+  const el = (await fixture(html`<lr-chat-composer></lr-chat-composer>`)) as LyraChatComposer;
   const ta = textareaOf(el);
 
   let submitted = false;
-  el.addEventListener('lyra-submit', () => (submitted = true));
+  el.addEventListener('lr-submit', () => (submitted = true));
   const ev = enterKeydown({ isComposing: true });
   ta.dispatchEvent(ev);
   await el.updateComplete;
@@ -148,11 +148,11 @@ it('never treats an IME composition Enter as a submit trigger (keyCode 229 fallb
   // adjacent keydown, so keyCode 229 is checked too. `keyCode` isn't a
   // constructible KeyboardEventInit member, so it's forced as an own
   // property on the synthetic event instance (shadows the inherited getter).
-  const el = (await fixture(html`<lyra-chat-composer></lyra-chat-composer>`)) as LyraChatComposer;
+  const el = (await fixture(html`<lr-chat-composer></lr-chat-composer>`)) as LyraChatComposer;
   const ta = textareaOf(el);
 
   let submitted = false;
-  el.addEventListener('lyra-submit', () => (submitted = true));
+  el.addEventListener('lr-submit', () => (submitted = true));
   const ev = enterKeydown();
   Object.defineProperty(ev, 'keyCode', { value: 229 });
   ta.dispatchEvent(ev);
@@ -164,12 +164,12 @@ it('never treats an IME composition Enter as a submit trigger (keyCode 229 fallb
 it('does not submit again on Enter while status is sending/streaming, leaving the newline default alone', async () => {
   for (const status of ['sending', 'streaming'] as const) {
     const el = (await fixture(
-      html`<lyra-chat-composer status=${status}></lyra-chat-composer>`,
+      html`<lr-chat-composer status=${status}></lr-chat-composer>`,
     )) as LyraChatComposer;
     const ta = textareaOf(el);
 
     let submitted = false;
-    el.addEventListener('lyra-submit', () => (submitted = true));
+    el.addEventListener('lr-submit', () => (submitted = true));
     const ev = enterKeydown();
     ta.dispatchEvent(ev);
     await el.updateComplete;
@@ -179,45 +179,45 @@ it('does not submit again on Enter while status is sending/streaming, leaving th
 });
 
 it('does not disable the textarea while sending/streaming, only changes what Enter/the button do', async () => {
-  const el = (await fixture(html`<lyra-chat-composer status="streaming"></lyra-chat-composer>`)) as LyraChatComposer;
+  const el = (await fixture(html`<lr-chat-composer status="streaming"></lr-chat-composer>`)) as LyraChatComposer;
   expect(textareaOf(el).disabled).to.be.false;
 });
 
-it('clicking the built-in button while idle fires lyra-submit and does not clear the value', async () => {
-  const el = (await fixture(html`<lyra-chat-composer value="hi there"></lyra-chat-composer>`)) as LyraChatComposer;
+it('clicking the built-in button while idle fires lr-submit and does not clear the value', async () => {
+  const el = (await fixture(html`<lr-chat-composer value="hi there"></lr-chat-composer>`)) as LyraChatComposer;
   const button = actionButtonOf(el)!;
   expect(button.getAttribute('aria-label')).to.equal('Send message');
 
-  const listening = oneEvent(el, 'lyra-submit');
+  const listening = oneEvent(el, 'lr-submit');
   button.click();
   const ev = await listening;
   expect(ev.detail.value).to.equal('hi there');
   expect(el.value).to.equal('hi there');
 });
 
-it('clicking the built-in button while sending/streaming fires lyra-stop instead of lyra-submit', async () => {
-  const el = (await fixture(html`<lyra-chat-composer status="streaming"></lyra-chat-composer>`)) as LyraChatComposer;
+it('clicking the built-in button while sending/streaming fires lr-stop instead of lr-submit', async () => {
+  const el = (await fixture(html`<lr-chat-composer status="streaming"></lr-chat-composer>`)) as LyraChatComposer;
   const button = actionButtonOf(el)!;
   expect(button.getAttribute('aria-label')).to.equal('Stop generating');
 
   let submitted = false;
-  el.addEventListener('lyra-submit', () => (submitted = true));
-  const listening = oneEvent(el, 'lyra-stop');
+  el.addEventListener('lr-submit', () => (submitted = true));
+  const listening = oneEvent(el, 'lr-stop');
   button.click();
   const ev = await listening;
   // CustomEventInit's `detail` member defaults to `null` (not `undefined`)
   // per the WebIDL dictionary-conversion algorithm, the same as every other
-  // no-detail `emit()` call in this library (e.g. lyra-chat-message's
-  // `lyra-retry`).
+  // no-detail `emit()` call in this library (e.g. lr-chat-message's
+  // `lr-retry`).
   expect(ev.detail).to.equal(null);
   expect(submitted).to.be.false;
 });
 
 it('localizes the action button labels via this.localize(), not hardcoded English', async () => {
   const el = (await fixture(
-    html`<lyra-chat-composer
+    html`<lr-chat-composer
       .strings=${{ sendMessage: 'Envoyer', stopGenerating: 'Arrêter' }}
-    ></lyra-chat-composer>`,
+    ></lr-chat-composer>`,
   )) as LyraChatComposer;
   expect(actionButtonOf(el)!.getAttribute('aria-label')).to.equal('Envoyer');
   el.status = 'streaming';
@@ -226,7 +226,7 @@ it('localizes the action button labels via this.localize(), not hardcoded Englis
 });
 
 it('defaults to English "Send message"/"Stop generating" when no strings override is set', async () => {
-  const el = (await fixture(html`<lyra-chat-composer></lyra-chat-composer>`)) as LyraChatComposer;
+  const el = (await fixture(html`<lr-chat-composer></lr-chat-composer>`)) as LyraChatComposer;
   expect(actionButtonOf(el)!.getAttribute('aria-label')).to.equal('Send message');
   el.status = 'streaming';
   await el.updateComplete;
@@ -234,29 +234,29 @@ it('defaults to English "Send message"/"Stop generating" when no strings overrid
 });
 
 it('stoppable defaults to true, preserving the existing Stop-button behavior', async () => {
-  const el = (await fixture(html`<lyra-chat-composer status="streaming"></lyra-chat-composer>`)) as LyraChatComposer;
+  const el = (await fixture(html`<lr-chat-composer status="streaming"></lr-chat-composer>`)) as LyraChatComposer;
   expect(el.stoppable).to.be.true;
   expect(actionButtonOf(el)!.disabled).to.be.false;
   expect(actionButtonOf(el)!.getAttribute('aria-label')).to.equal('Stop generating');
 });
 
-it('stoppable=false renders a disabled Send button instead of Stop while busy, and does not fire lyra-stop', async () => {
+it('stoppable=false renders a disabled Send button instead of Stop while busy, and does not fire lr-stop', async () => {
   const el = (await fixture(
-    html`<lyra-chat-composer status="streaming" .stoppable=${false}></lyra-chat-composer>`,
+    html`<lr-chat-composer status="streaming" .stoppable=${false}></lr-chat-composer>`,
   )) as LyraChatComposer;
   const button = actionButtonOf(el)!;
   expect(button.getAttribute('aria-label')).to.equal('Send message');
   expect(button.disabled).to.be.true;
 
   let stopped = false;
-  el.addEventListener('lyra-stop', () => (stopped = true));
+  el.addEventListener('lr-stop', () => (stopped = true));
   button.click();
   await el.updateComplete;
   expect(stopped).to.be.false;
 });
 
 it('hides the chips wrapper when the chips slot is empty, shows it once populated', async () => {
-  const el = (await fixture(html`<lyra-chat-composer></lyra-chat-composer>`)) as LyraChatComposer;
+  const el = (await fixture(html`<lr-chat-composer></lr-chat-composer>`)) as LyraChatComposer;
   const chips = el.shadowRoot!.querySelector('[part="chips"]') as HTMLElement;
   const slot = el.shadowRoot!.querySelector('slot[name="chips"]') as HTMLSlotElement;
   expect(chips.hidden).to.be.true;
@@ -277,7 +277,7 @@ it('re-hides the chips wrapper once its slot becomes empty again', async () => {
   // `.length > 0` check that never re-runs, or one that only ever flips
   // true) would go uncaught without this round trip -- mirrors the
   // trailing slot's own append-then-remove round trip below.
-  const el = (await fixture(html`<lyra-chat-composer></lyra-chat-composer>`)) as LyraChatComposer;
+  const el = (await fixture(html`<lr-chat-composer></lr-chat-composer>`)) as LyraChatComposer;
   const chips = el.shadowRoot!.querySelector('[part="chips"]') as HTMLElement;
   const slot = el.shadowRoot!.querySelector('slot[name="chips"]') as HTMLSlotElement;
 
@@ -298,7 +298,7 @@ it('re-hides the chips wrapper once its slot becomes empty again', async () => {
 });
 
 it('hides the leading wrapper when the leading slot is empty, shows it once populated', async () => {
-  const el = (await fixture(html`<lyra-chat-composer></lyra-chat-composer>`)) as LyraChatComposer;
+  const el = (await fixture(html`<lr-chat-composer></lr-chat-composer>`)) as LyraChatComposer;
   const leading = el.shadowRoot!.querySelector('[part="leading"]') as HTMLElement;
   const slot = el.shadowRoot!.querySelector('slot[name="leading"]') as HTMLSlotElement;
   expect(leading.hidden).to.be.true;
@@ -315,7 +315,7 @@ it('hides the leading wrapper when the leading slot is empty, shows it once popu
 it('re-hides the leading wrapper once its slot becomes empty again', async () => {
   // Same round-trip gap as the chips slot above: only the empty-to-populated
   // direction was previously covered.
-  const el = (await fixture(html`<lyra-chat-composer></lyra-chat-composer>`)) as LyraChatComposer;
+  const el = (await fixture(html`<lr-chat-composer></lr-chat-composer>`)) as LyraChatComposer;
   const leading = el.shadowRoot!.querySelector('[part="leading"]') as HTMLElement;
   const slot = el.shadowRoot!.querySelector('slot[name="leading"]') as HTMLSlotElement;
 
@@ -336,10 +336,10 @@ it('re-hides the leading wrapper once its slot becomes empty again', async () =>
 
 it('renders declaratively-slotted leading/chips content without waiting on the first slotchange', async () => {
   const el = (await fixture(html`
-    <lyra-chat-composer>
+    <lr-chat-composer>
       <button slot="leading">Attach</button>
       <span slot="chips">file.pdf</span>
-    </lyra-chat-composer>
+    </lr-chat-composer>
   `)) as LyraChatComposer;
   const leading = el.shadowRoot!.querySelector('[part="leading"]') as HTMLElement;
   const chips = el.shadowRoot!.querySelector('[part="chips"]') as HTMLElement;
@@ -349,15 +349,15 @@ it('renders declaratively-slotted leading/chips content without waiting on the f
 
 it('hides the built-in button entirely once the trailing slot has assigned content', async () => {
   const el = (await fixture(html`
-    <lyra-chat-composer>
+    <lr-chat-composer>
       <button slot="trailing">Custom send</button>
-    </lyra-chat-composer>
+    </lr-chat-composer>
   `)) as LyraChatComposer;
   expect(actionButtonOf(el)).to.equal(null);
 });
 
 it('shows the built-in button again if the trailing slot becomes empty', async () => {
-  const el = (await fixture(html`<lyra-chat-composer></lyra-chat-composer>`)) as LyraChatComposer;
+  const el = (await fixture(html`<lr-chat-composer></lr-chat-composer>`)) as LyraChatComposer;
   const slot = el.shadowRoot!.querySelector('slot[name="trailing"]') as HTMLSlotElement;
   expect(actionButtonOf(el)).to.not.equal(null);
 
@@ -377,41 +377,41 @@ it('shows the built-in button again if the trailing slot becomes empty', async (
 });
 
 it('disables both the textarea and the built-in button when disabled', async () => {
-  const el = (await fixture(html`<lyra-chat-composer disabled></lyra-chat-composer>`)) as LyraChatComposer;
+  const el = (await fixture(html`<lr-chat-composer disabled></lr-chat-composer>`)) as LyraChatComposer;
   expect(textareaOf(el).disabled).to.be.true;
   expect(actionButtonOf(el)!.disabled).to.be.true;
 });
 
 it('reflects rows="min-rows" onto the native textarea attribute', async () => {
-  const el = (await fixture(html`<lyra-chat-composer min-rows="3"></lyra-chat-composer>`)) as LyraChatComposer;
+  const el = (await fixture(html`<lr-chat-composer min-rows="3"></lr-chat-composer>`)) as LyraChatComposer;
   await el.updateComplete;
   expect(textareaOf(el).getAttribute('rows')).to.equal('3');
 });
 
 it('normalizes a non-finite or non-positive min-rows to 1 rather than rendering rows="NaN"/0/negative', async () => {
-  const nan = (await fixture(html`<lyra-chat-composer min-rows="not-a-number"></lyra-chat-composer>`)) as LyraChatComposer;
+  const nan = (await fixture(html`<lr-chat-composer min-rows="not-a-number"></lr-chat-composer>`)) as LyraChatComposer;
   await nan.updateComplete;
   expect(textareaOf(nan).getAttribute('rows')).to.equal('1');
 
-  const zero = (await fixture(html`<lyra-chat-composer min-rows="0"></lyra-chat-composer>`)) as LyraChatComposer;
+  const zero = (await fixture(html`<lr-chat-composer min-rows="0"></lr-chat-composer>`)) as LyraChatComposer;
   await zero.updateComplete;
   expect(textareaOf(zero).getAttribute('rows')).to.equal('1');
 
-  const negative = (await fixture(html`<lyra-chat-composer min-rows="-5"></lyra-chat-composer>`)) as LyraChatComposer;
+  const negative = (await fixture(html`<lr-chat-composer min-rows="-5"></lr-chat-composer>`)) as LyraChatComposer;
   await negative.updateComplete;
   expect(textareaOf(negative).getAttribute('rows')).to.equal('1');
 });
 
 it('clamps max-rows up to min-rows when an inverted (or non-finite) pair is authored, instead of collapsing the growable range', async () => {
   const inverted = (await fixture(
-    html`<lyra-chat-composer min-rows="5" max-rows="2"></lyra-chat-composer>`,
+    html`<lr-chat-composer min-rows="5" max-rows="2"></lr-chat-composer>`,
   )) as LyraChatComposer;
   const el = inverted as unknown as { effectiveMinRows: number; effectiveMaxRows: number };
   expect(el.effectiveMinRows).to.equal(5);
   expect(el.effectiveMaxRows, 'max-rows must never end up below min-rows').to.equal(5);
 
   const nonFiniteMax = (await fixture(
-    html`<lyra-chat-composer min-rows="4" max-rows="not-a-number"></lyra-chat-composer>`,
+    html`<lr-chat-composer min-rows="4" max-rows="not-a-number"></lr-chat-composer>`,
   )) as LyraChatComposer;
   const elNonFinite = nonFiniteMax as unknown as { effectiveMinRows: number; effectiveMaxRows: number };
   expect(elNonFinite.effectiveMinRows).to.equal(4);
@@ -420,7 +420,7 @@ it('clamps max-rows up to min-rows when an inverted (or non-finite) pair is auth
 
 it('grows the textarea height as multi-line content is typed, then switches to internal scrolling past max-rows', async () => {
   const el = (await fixture(
-    html`<lyra-chat-composer min-rows="1" max-rows="3"></lyra-chat-composer>`,
+    html`<lr-chat-composer min-rows="1" max-rows="3"></lr-chat-composer>`,
   )) as LyraChatComposer;
   const ta = textareaOf(el);
   const singleLineHeight = parseFloat(ta.style.height);
@@ -448,7 +448,7 @@ it('grows the textarea height as multi-line content is typed, then switches to i
 
 it('re-fits the textarea height when the host narrows, with no value/min-rows/max-rows change', async () => {
   const el = (await fixture(
-    html`<lyra-chat-composer style="display: block; width: 600px" min-rows="1" max-rows="10"></lyra-chat-composer>`,
+    html`<lr-chat-composer style="display: block; width: 600px" min-rows="1" max-rows="10"></lr-chat-composer>`,
   )) as LyraChatComposer;
   const ta = textareaOf(el);
 
@@ -473,7 +473,7 @@ it('re-fits the textarea height when the host narrows, with no value/min-rows/ma
 
 it('re-arms the width-triggered auto-resize after a disconnect/reconnect (e.g. a drag-drop reparent)', async () => {
   const el = (await fixture(
-    html`<lyra-chat-composer style="display: block; width: 600px" min-rows="1" max-rows="10"></lyra-chat-composer>`,
+    html`<lr-chat-composer style="display: block; width: 600px" min-rows="1" max-rows="10"></lr-chat-composer>`,
   )) as LyraChatComposer;
   const ta = textareaOf(el);
   const longValue =
@@ -502,25 +502,25 @@ it('re-arms the width-triggered auto-resize after a disconnect/reconnect (e.g. a
 
 it('participates in a form: submits its value under name', async () => {
   const form = (await fixture(html`
-    <form><lyra-chat-composer name="message" value="hello world"></lyra-chat-composer></form>
+    <form><lr-chat-composer name="message" value="hello world"></lr-chat-composer></form>
   `)) as HTMLFormElement;
   expect(new FormData(form).get('message')).to.equal('hello world');
 });
 
 it('blocks a required, empty composer from submitting the form', async () => {
   const form = (await fixture(
-    html`<form><lyra-chat-composer name="message" required></lyra-chat-composer></form>`,
+    html`<form><lr-chat-composer name="message" required></lr-chat-composer></form>`,
   )) as HTMLFormElement;
   expect(form.reportValidity()).to.be.false;
 
-  const el = form.querySelector('lyra-chat-composer') as LyraChatComposer;
+  const el = form.querySelector('lr-chat-composer') as LyraChatComposer;
   el.value = 'not empty';
   await el.updateComplete;
   expect(form.reportValidity()).to.be.true;
 });
 
 it('forwards required and touched validity state to the textarea', async () => {
-  const el = (await fixture(html`<lyra-chat-composer required></lyra-chat-composer>`)) as LyraChatComposer;
+  const el = (await fixture(html`<lr-chat-composer required></lr-chat-composer>`)) as LyraChatComposer;
   const textarea = textareaOf(el);
 
   expect(textarea.required).to.be.true;
@@ -543,9 +543,9 @@ it('forwards required and touched validity state to the textarea', async () => {
 
 it('reveals invalid state after validation and clears touched presentation on form reset', async () => {
   const form = (await fixture(html`
-    <form><lyra-chat-composer name="message" required></lyra-chat-composer></form>
+    <form><lr-chat-composer name="message" required></lr-chat-composer></form>
   `)) as HTMLFormElement;
-  const el = form.querySelector('lyra-chat-composer') as LyraChatComposer;
+  const el = form.querySelector('lr-chat-composer') as LyraChatComposer;
   const textarea = textareaOf(el);
 
   expect(textarea.getAttribute('aria-invalid')).to.equal('false');
@@ -562,17 +562,17 @@ it('focuses its textarea when direct or form submission validation fails', async
   const form = (await fixture(html`
     <form>
       <button type="button" id="sentinel">Before</button>
-      <lyra-chat-composer name="message" required></lyra-chat-composer>
+      <lr-chat-composer name="message" required></lr-chat-composer>
       <button type="submit">Submit</button>
     </form>
   `)) as HTMLFormElement;
-  const el = form.querySelector('lyra-chat-composer') as LyraChatComposer;
+  const el = form.querySelector('lr-chat-composer') as LyraChatComposer;
   const sentinel = form.querySelector('#sentinel') as HTMLButtonElement;
 
   sentinel.focus();
   expect(document.activeElement?.id).to.equal('sentinel');
   expect(el.reportValidity()).to.be.false;
-  expect(document.activeElement?.localName).to.equal('lyra-chat-composer');
+  expect(document.activeElement?.localName).to.equal('lr-chat-composer');
   expect(el.shadowRoot!.activeElement?.getAttribute('part')).to.equal('textarea');
 
   let submits = 0;
@@ -584,15 +584,15 @@ it('focuses its textarea when direct or form submission validation fails', async
   expect(document.activeElement?.id).to.equal('sentinel');
   form.requestSubmit();
   expect(submits).to.equal(0);
-  expect(document.activeElement?.localName).to.equal('lyra-chat-composer');
+  expect(document.activeElement?.localName).to.equal('lr-chat-composer');
   expect(el.shadowRoot!.activeElement?.getAttribute('part')).to.equal('textarea');
 });
 
 it('restores the declared default value on form.reset()', async () => {
   const form = (await fixture(html`
-    <form><lyra-chat-composer name="message" value="draft"></lyra-chat-composer></form>
+    <form><lr-chat-composer name="message" value="draft"></lr-chat-composer></form>
   `)) as HTMLFormElement;
-  const el = form.querySelector('lyra-chat-composer') as LyraChatComposer;
+  const el = form.querySelector('lr-chat-composer') as LyraChatComposer;
   el.value = 'edited';
   await el.updateComplete;
 
@@ -605,14 +605,14 @@ it('formDisabledCallback disables the control via a fieldset', async () => {
   const form = (await fixture(html`
     <form>
       <fieldset disabled>
-        <lyra-chat-composer name="message"></lyra-chat-composer>
+        <lr-chat-composer name="message"></lr-chat-composer>
       </fieldset>
     </form>
   `)) as HTMLFormElement;
-  const el = form.querySelector('lyra-chat-composer') as LyraChatComposer;
+  const el = form.querySelector('lr-chat-composer') as LyraChatComposer;
   // `el.disabled` (the consumer-facing IDL property/attribute) is never
   // mutated by fieldset cascading -- only the combined `effectiveDisabled`
-  // reflects it (mirrors lyra-combobox/lyra-select's identical
+  // reflects it (mirrors lr-combobox/lr-select's identical
   // `_fieldsetDisabled`/`effectiveDisabled` pattern).
   expect((el as unknown as { effectiveDisabled: boolean }).effectiveDisabled).to.be.true;
   expect(el.disabled).to.be.false;
@@ -624,16 +624,16 @@ it('dims the base part via the :disabled pseudo-class when disabled only through
   // that alone doesn't prove the *visual* treatment follows -- the base
   // part's opacity/cursor styling is keyed off a CSS selector
   // (:host(:disabled)), not effectiveDisabled, so it needs its own
-  // assertion. Mirrors lyra-checkbox's identical fieldset/computed-style
+  // assertion. Mirrors lr-checkbox's identical fieldset/computed-style
   // coverage.
   const form = (await fixture(html`
     <form>
       <fieldset disabled>
-        <lyra-chat-composer name="message"></lyra-chat-composer>
+        <lr-chat-composer name="message"></lr-chat-composer>
       </fieldset>
     </form>
   `)) as HTMLFormElement;
-  const el = form.querySelector('lyra-chat-composer') as LyraChatComposer;
+  const el = form.querySelector('lr-chat-composer') as LyraChatComposer;
   const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
 
   expect(el.disabled).to.be.false;
@@ -644,16 +644,16 @@ it('dims the base part via the :disabled pseudo-class when disabled only through
 
 it('is accessible in the default, empty state', async () => {
   const el = (await fixture(
-    html`<lyra-chat-composer placeholder="Message the assistant…"></lyra-chat-composer>`,
+    html`<lr-chat-composer placeholder="Message the assistant…"></lr-chat-composer>`,
   )) as LyraChatComposer;
   await expect(el).to.be.accessible();
 });
 
 it('is accessible in a populated, busy, chip-laden state', async () => {
   const el = (await fixture(html`
-    <lyra-chat-composer status="streaming" value="Looking into the last three commits…">
+    <lr-chat-composer status="streaming" value="Looking into the last three commits…">
       <span slot="chips">diff.patch</span>
-    </lyra-chat-composer>
+    </lr-chat-composer>
   `)) as LyraChatComposer;
   await el.updateComplete;
   await expect(el).to.be.accessible();
@@ -661,13 +661,13 @@ it('is accessible in a populated, busy, chip-laden state', async () => {
 
 describe('native textarea surface', () => {
   it('spellcheck defaults to true', async () => {
-    const el = (await fixture(html`<lyra-chat-composer></lyra-chat-composer>`)) as LyraChatComposer;
+    const el = (await fixture(html`<lr-chat-composer></lr-chat-composer>`)) as LyraChatComposer;
     expect(textareaOf(el).spellcheck).to.be.true;
   });
 
   it('forwards native editing-assistance attributes onto the textarea', async () => {
     const el = (await fixture(html`
-      <lyra-chat-composer
+      <lr-chat-composer
         spellcheck="false"
         autocapitalize="off"
         autocorrect="off"
@@ -675,7 +675,7 @@ describe('native textarea surface', () => {
         autocomplete="one-time-code"
         inputmode="numeric"
         enterkeyhint="send"
-      ></lyra-chat-composer>
+      ></lr-chat-composer>
     `)) as LyraChatComposer;
     const ta = textareaOf(el);
     expect(ta.spellcheck).to.be.false;
@@ -689,9 +689,9 @@ describe('native textarea surface', () => {
 
   it('exposes focus, blur, selection, and range editing while keeping the form value synchronized', async () => {
     const form = (await fixture(html`
-      <form><lyra-chat-composer name="message" value="hello world"></lyra-chat-composer></form>
+      <form><lr-chat-composer name="message" value="hello world"></lr-chat-composer></form>
     `)) as HTMLFormElement;
-    const el = form.querySelector('lyra-chat-composer') as LyraChatComposer;
+    const el = form.querySelector('lr-chat-composer') as LyraChatComposer;
     const ta = textareaOf(el);
 
     expect(el.input?.getAttribute('part')).to.equal('textarea');
@@ -717,7 +717,7 @@ describe('native textarea surface', () => {
 
 describe('blur/focus bubbling', () => {
   it('re-dispatches a bubbling, composed blur event when the native textarea blurs', async () => {
-    const el = (await fixture(html`<lyra-chat-composer></lyra-chat-composer>`)) as LyraChatComposer;
+    const el = (await fixture(html`<lr-chat-composer></lr-chat-composer>`)) as LyraChatComposer;
     const ta = textareaOf(el);
     ta.focus();
     const eventPromise = oneEvent(el, 'blur');
@@ -728,7 +728,7 @@ describe('blur/focus bubbling', () => {
   });
 
   it('re-dispatches a bubbling, composed focus event when the native textarea focuses', async () => {
-    const el = (await fixture(html`<lyra-chat-composer></lyra-chat-composer>`)) as LyraChatComposer;
+    const el = (await fixture(html`<lr-chat-composer></lr-chat-composer>`)) as LyraChatComposer;
     const eventPromise = oneEvent(el, 'focus');
     textareaOf(el).focus();
     const ev = await eventPromise;

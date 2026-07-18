@@ -23,17 +23,17 @@ describe('.msg (Outlook) registry decision', () => {
     expect(findDocumentRenderer(MSG_FILE)).to.be.undefined;
   });
 
-  it('lyra-document-viewer falls back to the generic lyra-document-preview download affordance for .msg', async () => {
+  it('lr-document-viewer falls back to the generic lr-document-preview download affordance for .msg', async () => {
     const el = (await fixture(html`
-      <lyra-document-viewer
+      <lr-document-viewer
         open
         name="quarterly-update.msg"
         mime-type="application/vnd.ms-outlook"
         src="https://example.test/quarterly-update.msg"
-      ></lyra-document-viewer>
+      ></lr-document-viewer>
     `)) as LyraDocumentViewer;
     await el.updateComplete;
-    const preview = el.shadowRoot!.querySelector('[part="body"] lyra-document-preview');
+    const preview = el.shadowRoot!.querySelector('[part="body"] lr-document-preview');
     expect(preview).to.exist;
     expect(preview!.getAttribute('filename')).to.equal('quarterly-update.msg');
     const downloadLink = el.shadowRoot!.querySelector('[part="download-link"]') as HTMLAnchorElement;

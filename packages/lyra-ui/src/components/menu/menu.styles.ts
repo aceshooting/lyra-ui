@@ -16,28 +16,28 @@ export const styles = css`
   }
   [part='popup'] {
     position: fixed;
-    z-index: var(--lyra-layer-dropdown);
+    z-index: var(--lr-layer-dropdown);
     box-sizing: border-box;
-    min-inline-size: var(--lyra-size-10rem);
-    max-inline-size: min(92vw, var(--lyra-size-20rem), var(--lyra-positioner-available-inline-size, 100vw));
-    max-block-size: min(var(--lyra-size-20rem), var(--lyra-positioner-available-block-size, var(--lyra-size-20rem)));
-    background: var(--lyra-color-surface);
-    border: var(--lyra-border-width-thin) solid var(--lyra-color-border);
-    border-radius: var(--lyra-radius);
-    box-shadow: var(--lyra-shadow);
+    min-inline-size: var(--lr-size-10rem);
+    max-inline-size: min(92vw, var(--lr-size-20rem), var(--lr-positioner-available-inline-size, 100vw));
+    max-block-size: min(var(--lr-size-20rem), var(--lr-positioner-available-block-size, var(--lr-size-20rem)));
+    background: var(--lr-color-surface);
+    border: var(--lr-border-width-thin) solid var(--lr-color-border);
+    border-radius: var(--lr-radius);
+    box-shadow: var(--lr-shadow);
     /* Closed state: invisible + slightly raised -- visibility (not
        display:none) so opacity/transform can actually transition, and so a
-       light-DOM <lyra-menu-item>'s inherited visibility (see
+       light-DOM <lr-menu-item>'s inherited visibility (see
        menu.ts's class doc on tab-order safety) excludes it from sequential
        focus navigation while closed with no separate tabindex bookkeeping
-       needed. Mirrors lyra-select's identical [part='listbox'] treatment. */
+       needed. Mirrors lr-select's identical [part='listbox'] treatment. */
     visibility: hidden;
     opacity: 0;
-    transform: translateY(var(--lyra-size-neg-0-25rem));
+    transform: translateY(var(--lr-size-neg-0-25rem));
     transition:
-      opacity var(--lyra-transition-fast),
-      transform var(--lyra-transition-fast),
-      visibility var(--lyra-transition-fast);
+      opacity var(--lr-transition-fast),
+      transform var(--lr-transition-fast),
+      visibility var(--lr-transition-fast);
   }
   :host([open]) [part='popup'] {
     visibility: visible;
@@ -52,9 +52,9 @@ export const styles = css`
   [part='list'] {
     display: flex;
     flex-direction: column;
-    max-block-size: min(var(--lyra-size-20rem), var(--lyra-positioner-available-block-size, var(--lyra-size-20rem)));
+    max-block-size: min(var(--lr-size-20rem), var(--lr-positioner-available-block-size, var(--lr-size-20rem)));
     overflow-y: auto;
-    padding: var(--lyra-space-xs);
+    padding: var(--lr-space-xs);
     outline: none;
   }
   /* A plain <hr> divider between item groups -- native <hr> already carries
@@ -62,7 +62,7 @@ export const styles = css`
      between groups of menuitem children, so no role attribute needs adding. */
   ::slotted(hr) {
     border: none;
-    border-block-start: var(--lyra-border-width-thin) solid var(--lyra-color-border);
-    margin: var(--lyra-space-xs) var(--lyra-space-xs);
+    border-block-start: var(--lr-border-width-thin) solid var(--lr-color-border);
+    margin: var(--lr-space-xs) var(--lr-space-xs);
   }
 `;

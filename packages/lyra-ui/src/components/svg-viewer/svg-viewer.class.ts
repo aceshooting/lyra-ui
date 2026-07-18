@@ -18,30 +18,30 @@ type SvgFetchState =
   | { kind: 'error'; message: string };
 
 export interface LyraSvgViewerEventMap {
-  'lyra-render-error': CustomEvent<{ error: unknown }>;
-  'lyra-highlight-activate': CustomEvent<{ id: string }>;
+  'lr-render-error': CustomEvent<{ error: unknown }>;
+  'lr-highlight-activate': CustomEvent<{ id: string }>;
 }
 
 /**
  * Fetches and safely renders an inline SVG document.
  *
- * @customElement lyra-svg-viewer
- * @event lyra-render-error - Fired when fetching or sanitizing the document fails.
- * @event lyra-highlight-activate - A region highlight was activated. `detail: { id }`.
+ * @customElement lr-svg-viewer
+ * @event lr-render-error - Fired when fetching or sanitizing the document fails.
+ * @event lr-highlight-activate - A region highlight was activated. `detail: { id }`.
  * @csspart base - The root container.
  * @csspart body - The wrapper around the fetched-state content.
  * @csspart svg - The sanitized SVG document, once loaded.
  * @csspart spinner - The loading region.
  * @csspart error - The error region.
- * @csspart frame-viewport - Forwarded from the internal `<lyra-zoomable-frame>` when `zoomable`.
- * @csspart frame-content - Forwarded from the internal `<lyra-zoomable-frame>` when `zoomable`.
- * @csspart frame-controls - Forwarded from the internal `<lyra-zoomable-frame>` when `zoomable`.
- * @csspart frame-zoom-in - Forwarded from the internal `<lyra-zoomable-frame>` when `zoomable`.
- * @csspart frame-zoom-out - Forwarded from the internal `<lyra-zoomable-frame>` when `zoomable`.
- * @csspart frame-reset - Forwarded from the internal `<lyra-zoomable-frame>` when `zoomable`.
+ * @csspart frame-viewport - Forwarded from the internal `<lr-zoomable-frame>` when `zoomable`.
+ * @csspart frame-content - Forwarded from the internal `<lr-zoomable-frame>` when `zoomable`.
+ * @csspart frame-controls - Forwarded from the internal `<lr-zoomable-frame>` when `zoomable`.
+ * @csspart frame-zoom-in - Forwarded from the internal `<lr-zoomable-frame>` when `zoomable`.
+ * @csspart frame-zoom-out - Forwarded from the internal `<lr-zoomable-frame>` when `zoomable`.
+ * @csspart frame-reset - Forwarded from the internal `<lr-zoomable-frame>` when `zoomable`.
  * @csspart highlight-layer - The wrapper around every rendered region highlight.
  * @csspart region-highlight - One region highlight (`data-tone`, `data-active`).
- * @cssprop [--lyra-svg-viewer-max-height=none] - Maximum block size of the scrollable body before it scrolls internally. Also settable via the `max-height` property.
+ * @cssprop [--lr-svg-viewer-max-height=none] - Maximum block size of the scrollable body before it scrolls internally. Also settable via the `max-height` property.
  */
 export class LyraSvgViewer extends LyraElement<LyraSvgViewerEventMap> {
   static styles = [LyraElement.styles, styles, srOnly];
@@ -55,7 +55,7 @@ export class LyraSvgViewer extends LyraElement<LyraSvgViewerEventMap> {
   /** CSS length that caps the scrollable body. */
   @property({ attribute: 'max-height' }) maxHeight = '';
 
-  /** Wraps the rendered content in an internal `<lyra-zoomable-frame>`. `false` (the default)
+  /** Wraps the rendered content in an internal `<lr-zoomable-frame>`. `false` (the default)
    *  preserves today's exact DOM -- an inline thumbnail (e.g. in a chat stream) must not
    *  unexpectedly grow a focusable zoom-chrome viewport; an inspection surface opts in. */
   @property({ type: Boolean, reflect: true }) zoomable = false;
@@ -98,7 +98,7 @@ export class LyraSvgViewer extends LyraElement<LyraSvgViewerEventMap> {
         ? error.message
         : this.localize(isResourceLimitError(error) ? 'documentPreviewResourceTooLarge' : 'documentPreviewFailedToLoad');
       this.fetchState = { kind: 'error', message };
-      this.emit('lyra-render-error', { error });
+      this.emit('lr-render-error', { error });
     }
   }
 
@@ -118,15 +118,15 @@ export class LyraSvgViewer extends LyraElement<LyraSvgViewerEventMap> {
     }
   }
 
-  /** Wraps `content` in the internal `<lyra-zoomable-frame>` when `zoomable`; otherwise renders it
+  /** Wraps `content` in the internal `<lr-zoomable-frame>` when `zoomable`; otherwise renders it
    *  (plus the highlight layer, which needs the same relatively-positioned sibling context either
    *  way) unwrapped, preserving pre-`zoomable` DOM exactly. */
   private renderZoomableWrapper(content: TemplateResult): TemplateResult {
     const inner = html`<div class="zoom-content">${content}${this.renderHighlightLayer()}</div>`;
     if (!this.zoomable) return inner;
-    return html`<lyra-zoomable-frame
+    return html`<lr-zoomable-frame
       exportparts="viewport:frame-viewport, content:frame-content, controls:frame-controls, zoom-in:frame-zoom-in, zoom-out:frame-zoom-out, reset:frame-reset"
-    >${inner}</lyra-zoomable-frame>`;
+    >${inner}</lr-zoomable-frame>`;
   }
 
   private renderHighlightLayer(): TemplateResult | typeof nothing {
@@ -149,11 +149,11 @@ export class LyraSvgViewer extends LyraElement<LyraSvgViewerEventMap> {
           tabindex="0"
           role="button"
           aria-label=${h.label || this.localize('viewerHighlightLabel')}
-          @click=${() => this.emit('lyra-highlight-activate', { id: h.id })}
+          @click=${() => this.emit('lr-highlight-activate', { id: h.id })}
           @keydown=${(e: KeyboardEvent) => {
             if (e.key === 'Enter' || e.key === ' ') {
               e.preventDefault();
-              this.emit('lyra-highlight-activate', { id: h.id });
+              this.emit('lr-highlight-activate', { id: h.id });
             }
           }}
         ></div>`,
@@ -184,7 +184,7 @@ export class LyraSvgViewer extends LyraElement<LyraSvgViewerEventMap> {
   }
 
   render(): TemplateResult {
-    return html`<div part="base" style=${this.maxHeight ? `--lyra-svg-viewer-max-height:${this.maxHeight}` : nothing}>
+    return html`<div part="base" style=${this.maxHeight ? `--lr-svg-viewer-max-height:${this.maxHeight}` : nothing}>
       <div part="body">${this.renderBody()}</div>
     </div>`;
   }
@@ -192,6 +192,6 @@ export class LyraSvgViewer extends LyraElement<LyraSvgViewerEventMap> {
 
 declare global {
   interface HTMLElementTagNameMap {
-    'lyra-svg-viewer': LyraSvgViewer;
+    'lr-svg-viewer': LyraSvgViewer;
   }
 }

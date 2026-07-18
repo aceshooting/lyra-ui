@@ -5,7 +5,7 @@ import type { LyraMentionPopover, MentionItem } from './mention-popover.js';
 
 const meta: Meta = {
   title: 'MentionPopover',
-  component: 'lyra-mention-popover',
+  component: 'lr-mention-popover',
   tags: ['autodocs'],
 };
 export default meta;
@@ -44,7 +44,7 @@ function staticDemo(id: string, items: MentionItem[], props: Partial<LyraMention
   return html`
     <div id=${id} style="max-width: 28rem;">
       <span class="demo-anchor" style="display: inline-block;">@</span>
-      <lyra-mention-popover class="demo-popover"></lyra-mention-popover>
+      <lr-mention-popover class="demo-popover"></lr-mention-popover>
     </div>
   `;
 }
@@ -53,7 +53,7 @@ export const Default: Story = {
   render: () => staticDemo('mention-demo-default', PEOPLE),
 };
 
-/** `icon` is an opaque literal string (an emoji here) — same convention as `<lyra-tool-select-dialog>`'s own `icon`. */
+/** `icon` is an opaque literal string (an emoji here) — same convention as `<lr-tool-select-dialog>`'s own `icon`. */
 export const WithIcons: Story = {
   render: () => staticDemo('mention-demo-icons', PEOPLE),
 };
@@ -93,7 +93,7 @@ export const LiveComposerIntegration: Story = {
           style="width: 100%; box-sizing: border-box; padding: 0.5rem; font: inherit;"
           placeholder="Try: Hey @a"
         ></textarea>
-        <lyra-mention-popover class="demo-popover" .items=${PEOPLE} empty-text="No teammates found"></lyra-mention-popover>
+        <lr-mention-popover class="demo-popover" .items=${PEOPLE} empty-text="No teammates found"></lr-mention-popover>
       </div>
     `;
   },
@@ -144,7 +144,7 @@ function wireDemo(containerId: string): void {
 
   textarea.addEventListener('blur', closeMention);
 
-  popover.addEventListener('lyra-mention-select', ((e: CustomEvent<{ id: string; label: string }>) => {
+  popover.addEventListener('lr-mention-select', ((e: CustomEvent<{ id: string; label: string }>) => {
     const caret = textarea.selectionStart ?? 0;
     const before = textarea.value.slice(0, triggerIndex);
     const after = textarea.value.slice(caret);
@@ -156,7 +156,7 @@ function wireDemo(containerId: string): void {
     closeMention();
   }) as EventListener);
 
-  popover.addEventListener('lyra-mention-close', () => {
+  popover.addEventListener('lr-mention-close', () => {
     textarea.removeAttribute('aria-activedescendant');
   });
 }

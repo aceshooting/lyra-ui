@@ -1,6 +1,6 @@
 /**
  * A type-keyed dispatch registry for tool-result renderers -- a tiny plugin
- * system so a host app can teach `<lyra-tool-result-view>` how to draw the
+ * system so a host app can teach `<lr-tool-result-view>` how to draw the
  * result of e.g. a `get_weather` or `run_query` tool call without this
  * library knowing anything about either. Dispatch is a two-step lookup: an
  * exact match on the tool's name first, falling back to a facade/shape-based
@@ -48,7 +48,7 @@ export interface ToolRendererDefinition {
 /** A tool-name -> renderer-definition registry, as consulted by `findToolRenderer()`. */
 export type ToolRendererRegistry = Map<string, ToolRendererDefinition>;
 
-/** The module-level registry every `<lyra-tool-result-view>` dispatches against by default (see its `registry` prop to opt a given instance into a different one instead). */
+/** The module-level registry every `<lr-tool-result-view>` dispatches against by default (see its `registry` prop to opt a given instance into a different one instead). */
 const defaultRegistry: ToolRendererRegistry = new Map();
 
 /**
@@ -67,7 +67,7 @@ export function registerToolRenderer(name: string, def: ToolRendererDefinition):
   defaultRegistry.set(name, def);
 }
 
-/** The module-level default registry `registerToolRenderer()` writes to and `<lyra-tool-result-view>` reads from when no `registry` prop is set. */
+/** The module-level default registry `registerToolRenderer()` writes to and `<lr-tool-result-view>` reads from when no `registry` prop is set. */
 export function getDefaultToolRendererRegistry(): ToolRendererRegistry {
   return defaultRegistry;
 }
@@ -78,7 +78,7 @@ export function getDefaultToolRendererRegistry(): ToolRendererRegistry {
  *   1. An exact `toolName` key match.
  *   2. Failing that, the first entry (in registration order -- a `Map`
  *      already iterates that way) whose `matches(payload)` returns `true`.
- *   3. `undefined` -- the caller falls back to `<lyra-json-viewer>`.
+ *   3. `undefined` -- the caller falls back to `<lr-json-viewer>`.
  */
 export function findToolRenderer(
   toolName: string,

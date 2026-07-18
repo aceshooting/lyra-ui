@@ -5,37 +5,37 @@ export const styles = css`
     display: block;
     /* Consumer-tunable scroll cap on [part='body'] -- 'none' means the
        preview grows with its content until a caller opts into an internal
-       scrollbar, same contract as lyra-json-viewer's identical
-       --lyra-json-viewer-max-height. */
-    --lyra-document-preview-max-height: none;
+       scrollbar, same contract as lr-json-viewer's identical
+       --lr-json-viewer-max-height. */
+    --lr-document-preview-max-height: none;
     /* No shared Web Awesome/Lyra monospace token exists to resolve through
-       (same gap lyra-json-viewer's own --lyra-json-viewer-font documents) --
+       (same gap lr-json-viewer's own --lr-json-viewer-font documents) --
        contained here so a host page can retheme it. */
-    --lyra-document-preview-font: var(--lyra-font-mono);
+    --lr-document-preview-font: var(--lr-font-mono);
     /* Spinner rotation timing -- deliberately slower than the shared
-       --lyra-transition-fast/--lyra-transition-base tokens (those are tuned
+       --lr-transition-fast/--lr-transition-base tokens (those are tuned
        for one-shot UI transitions, not a continuous loading indicator), but
        still a retheme-able custom property rather than a bare literal. */
-    --lyra-document-preview-spin-duration: 0.8s;
+    --lr-document-preview-spin-duration: 0.8s;
   }
 
   [part='base'] {
     display: flex;
     flex-direction: column;
     box-sizing: border-box;
-    border: var(--lyra-border-width-thin) solid var(--lyra-color-border);
-    border-radius: var(--lyra-radius);
-    background: var(--lyra-color-surface);
+    border: var(--lr-border-width-thin) solid var(--lr-color-border);
+    border-radius: var(--lr-radius);
+    background: var(--lr-color-surface);
     overflow: hidden;
   }
 
   [part='header'] {
     display: flex;
     align-items: center;
-    gap: var(--lyra-space-s);
-    padding: var(--lyra-space-s) var(--lyra-space-m);
-    border-block-end: var(--lyra-border-width-thin) solid var(--lyra-color-border);
-    background: var(--lyra-color-surface);
+    gap: var(--lr-space-s);
+    padding: var(--lr-space-s) var(--lr-space-m);
+    border-block-end: var(--lr-border-width-thin) solid var(--lr-color-border);
+    background: var(--lr-color-surface);
   }
   [part='header'][hidden] {
     display: none;
@@ -44,9 +44,9 @@ export const styles = css`
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-    font-weight: var(--lyra-font-weight-semibold);
-    font-size: var(--lyra-font-size-md-sm);
-    color: var(--lyra-color-text);
+    font-weight: var(--lr-font-weight-semibold);
+    font-size: var(--lr-font-size-md-sm);
+    color: var(--lr-color-text);
   }
 
   [part='body'] {
@@ -54,8 +54,8 @@ export const styles = css`
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    min-block-size: var(--lyra-size-10rem);
-    max-block-size: var(--lyra-document-preview-max-height);
+    min-block-size: var(--lr-size-10rem);
+    max-block-size: var(--lr-document-preview-max-height);
     box-sizing: border-box;
     overflow: auto;
     flex: 1 1 auto;
@@ -68,13 +68,13 @@ export const styles = css`
     align-self: stretch;
     box-sizing: border-box;
     margin: 0;
-    padding: var(--lyra-space-m);
-    font-family: var(--lyra-document-preview-font);
-    font-size: var(--lyra-font-size-sm);
-    line-height: var(--lyra-line-height-loose);
+    padding: var(--lr-space-m);
+    font-family: var(--lr-document-preview-font);
+    font-size: var(--lr-font-size-sm);
+    line-height: var(--lr-line-height-loose);
     white-space: pre;
     overflow: auto;
-    color: var(--lyra-color-text);
+    color: var(--lr-color-text);
   }
 
   /* -- image/* -------------------------------------------------------- */
@@ -95,19 +95,19 @@ export const styles = css`
   [part='region-highlight'] {
     position: absolute;
     pointer-events: auto;
-    border: var(--lyra-border-width-thick) solid var(--lyra-color-brand);
-    border-radius: var(--lyra-radius-xs);
+    border: var(--lr-border-width-thick) solid var(--lr-color-brand);
+    border-radius: var(--lr-radius-xs);
     cursor: pointer;
   }
   [part='region-highlight'][data-active] {
-    border-color: var(--lyra-color-warning, var(--lyra-color-brand));
+    border-color: var(--lr-color-warning, var(--lr-color-brand));
   }
 
   .empty-note {
     margin: 0;
-    padding: var(--lyra-space-m);
-    color: var(--lyra-color-text-quiet);
-    font-size: var(--lyra-font-size-md-sm);
+    padding: var(--lr-space-m);
+    color: var(--lr-color-text-quiet);
+    font-size: var(--lr-font-size-md-sm);
   }
 
   /* -- generic download fallback ------------------------------------- */
@@ -115,44 +115,44 @@ export const styles = css`
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: var(--lyra-space-s);
-    padding: var(--lyra-space-l);
+    gap: var(--lr-space-s);
+    padding: var(--lr-space-l);
     text-align: center;
   }
   .fallback-icon {
     display: inline-flex;
-    font-size: var(--lyra-font-size-3xl);
-    color: var(--lyra-color-text-quiet);
+    font-size: var(--lr-font-size-3xl);
+    color: var(--lr-color-text-quiet);
   }
   .fallback-icon svg {
     display: block;
   }
   .fallback-text {
     margin: 0;
-    color: var(--lyra-color-text-quiet);
-    font-size: var(--lyra-font-size-md-sm);
+    color: var(--lr-color-text-quiet);
+    font-size: var(--lr-font-size-md-sm);
   }
   [part='download-link'] {
     display: inline-flex;
     align-items: center;
-    gap: var(--lyra-space-xs);
-    padding: var(--lyra-space-xs) var(--lyra-space-m);
-    border-radius: var(--lyra-radius);
-    background: var(--lyra-color-brand);
-    color: var(--lyra-color-on-brand);
+    gap: var(--lr-space-xs);
+    padding: var(--lr-space-xs) var(--lr-space-m);
+    border-radius: var(--lr-radius);
+    background: var(--lr-color-brand);
+    color: var(--lr-color-on-brand);
     font: inherit;
-    font-weight: var(--lyra-font-weight-semibold);
-    font-size: var(--lyra-font-size-sm);
+    font-weight: var(--lr-font-weight-semibold);
+    font-size: var(--lr-font-size-sm);
     text-decoration: none;
     cursor: pointer;
-    transition: background-color var(--lyra-transition-fast);
+    transition: background-color var(--lr-transition-fast);
   }
   [part='download-link']:hover {
-    background: color-mix(in srgb, var(--lyra-color-brand) 85%, var(--lyra-color-shadow));
+    background: color-mix(in srgb, var(--lr-color-brand) 85%, var(--lr-color-shadow));
   }
   [part='download-link']:focus-visible {
-    outline: var(--lyra-focus-ring-width) solid var(--lyra-focus-ring-color);
-    outline-offset: var(--lyra-focus-ring-offset);
+    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
+    outline-offset: var(--lr-focus-ring-offset);
   }
   [part='download-link'] svg {
     display: block;
@@ -163,17 +163,17 @@ export const styles = css`
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: var(--lyra-space-s);
-    padding: var(--lyra-space-l);
+    gap: var(--lr-space-s);
+    padding: var(--lr-space-l);
   }
   .ring {
     display: inline-block;
-    inline-size: var(--lyra-size-2rem);
-    block-size: var(--lyra-size-2rem);
+    inline-size: var(--lr-size-2rem);
+    block-size: var(--lr-size-2rem);
     border-radius: 50%;
-    border: var(--lyra-border-width-thick) solid var(--lyra-color-border);
-    border-block-start-color: var(--lyra-color-brand);
-    animation: lyra-document-preview-spin var(--lyra-document-preview-spin-duration) linear infinite;
+    border: var(--lr-border-width-thick) solid var(--lr-color-border);
+    border-block-start-color: var(--lr-color-brand);
+    animation: lr-document-preview-spin var(--lr-document-preview-spin-duration) linear infinite;
   }
   /* Determinate progress reuses the same ring shape but holds a fixed
      rotation instead of spinning -- conic-gradient renders the actual fill,
@@ -182,18 +182,18 @@ export const styles = css`
     animation: none;
     border-color: transparent;
     background: conic-gradient(
-      var(--lyra-color-brand) calc(var(--lyra-document-preview-progress, 0) * 1%),
-      var(--lyra-color-border) 0
+      var(--lr-color-brand) calc(var(--lr-document-preview-progress, 0) * 1%),
+      var(--lr-color-border) 0
     );
-    -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - var(--lyra-size-3px)), var(--lyra-color-shadow) calc(100% - var(--lyra-size-3px)));
-    mask: radial-gradient(farthest-side, transparent calc(100% - var(--lyra-size-3px)), var(--lyra-color-shadow) calc(100% - var(--lyra-size-3px)));
+    -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - var(--lr-size-3px)), var(--lr-color-shadow) calc(100% - var(--lr-size-3px)));
+    mask: radial-gradient(farthest-side, transparent calc(100% - var(--lr-size-3px)), var(--lr-color-shadow) calc(100% - var(--lr-size-3px)));
   }
   .spinner-text {
-    color: var(--lyra-color-text-quiet);
-    font-size: var(--lyra-font-size-sm);
+    color: var(--lr-color-text-quiet);
+    font-size: var(--lr-font-size-sm);
     font-variant-numeric: tabular-nums;
   }
-  @keyframes lyra-document-preview-spin {
+  @keyframes lr-document-preview-spin {
     to {
       transform: rotate(360deg);
     }
@@ -207,9 +207,9 @@ export const styles = css`
   /* -- error ------------------------------------------------------------ */
   [part='error'] {
     margin: 0;
-    padding: var(--lyra-space-l);
-    color: var(--lyra-color-danger);
-    font-size: var(--lyra-font-size-md-sm);
+    padding: var(--lr-space-l);
+    color: var(--lr-color-danger);
+    font-size: var(--lr-font-size-md-sm);
     text-align: center;
   }
 `;

@@ -87,7 +87,7 @@ const HIGHLIGHT_CACHE_MAX = 100;
 
 // -- math (KaTeX) -----------------------------------------------------------------------------
 
-/** Resolved once per page and reused by every `<lyra-markdown>` instance, mirroring
+/** Resolved once per page and reused by every `<lr-markdown>` instance, mirroring
  *  `markdown-loader.ts`'s own "warm cache" shape: `undefined` means no load has been kicked off
  *  yet, `null` a load finished but the peer isn't installed, and it's set to `null` synchronously
  *  the instant a load starts as an in-flight marker so a second concurrent instance never kicks off
@@ -117,7 +117,7 @@ function getKatexIfLoaded(): KatexApi | null {
 /** Whether the `katex` load has definitively finished with no peer available -- distinct from
  *  `getKatexIfLoaded()` returning falsy, which also covers a load that's merely still in flight
  *  (the state a math token's render-time literal fallback uses regardless of which case it is).
- *  Used only to decide whether a literal fallback should also report `lyra-render-error`. */
+ *  Used only to decide whether a literal fallback should also report `lr-render-error`. */
 function isKatexConfirmedMissing(): boolean {
   return (katexOverride !== undefined ? katexOverride : resolvedKatex) === null;
 }
@@ -163,16 +163,16 @@ function mathExtension(renderMath: (token: MathToken) => string) {
 
 /**
  * Rewrites shiki's generated `<pre>`/`<code>` hast nodes so the highlighted output keeps
- * `<lyra-markdown>`'s own `part="code-block"` hook and a `language-${lang}` class on `<code>` --
+ * `<lr-markdown>`'s own `part="code-block"` hook and a `language-${lang}` class on `<code>` --
  * matching today's plain-render output shape exactly, so existing consumer CSS targeting either
  * keeps working whether or not a given block ended up highlighted. A separate, purpose-built
  * function from `code-block.class.ts`'s own (private, non-exported) `partTransformer` -- that one
- * targets `<lyra-code-block>`'s own `part="pre"`/`part="code"`/line-numbers contract, which doesn't
+ * targets `<lr-code-block>`'s own `part="pre"`/`part="code"`/line-numbers contract, which doesn't
  * apply here.
  */
 function markdownCodeTransformer(lang: string) {
   return {
-    name: 'lyra-markdown-code-block',
+    name: 'lr-markdown-code-block',
     pre(node: OptionalPeerApi) {
       node.properties.part = ['code-block'];
       delete node.properties.tabindex;
@@ -189,25 +189,25 @@ function markdownCodeTransformer(lang: string) {
 }
 
 export interface LyraMarkdownCoreEventMap extends LyraAnchorTargetEventMap {
-  'lyra-render-error': CustomEvent<{ error: unknown }>;
-  'lyra-link-click': CustomEvent<{ href: string; internal: boolean }>;
+  'lr-render-error': CustomEvent<{ error: unknown }>;
+  'lr-link-click': CustomEvent<{ href: string; internal: boolean }>;
 }
 
 class LyraMarkdownCoreBase extends LyraElement<LyraMarkdownCoreEventMap> {}
 
 /**
- * `<lyra-markdown-core>` — a build-lean variant of `<lyra-markdown>` for a consumer whose
+ * `<lr-markdown-core>` — a build-lean variant of `<lr-markdown>` for a consumer whose
  * `languages` map already covers every language it will ever render. Every other capability (GFM
  * tables, fenced code blocks, links, blockquotes, heading anchors, text-quote highlights, math) is
- * identical to `<lyra-markdown>` -- only fenced-code-block highlighting differs: this component's
+ * identical to `<lr-markdown>` -- only fenced-code-block highlighting differs: this component's
  * own module never textually contains a call to (or import of) `loadShikiHighlighter` (the
- * ~200-language default dynamic-import table `<lyra-markdown>` calls unconditionally unless its
+ * ~200-language default dynamic-import table `<lr-markdown>` calls unconditionally unless its
  * *runtime* `languagesOnly` flag is `true` -- a flag on that same module a bundler can't prove
  * always-true, so the unconditional call stays in the build output regardless). A consumer
  * importing this entry point instead of `markdown.js` gets a genuinely shiki-full-table-free
  * build. A fenced block whose language isn't a key in `languages` always renders the plain-text
  * fallback -- there is no default/full-table highlighter here to fall back to, mirroring
- * `<lyra-code-block-core>`'s identical contract for the sibling component.
+ * `<lr-code-block-core>`'s identical contract for the sibling component.
  *
  * Built on the optional peer dependencies `marked` (parsing) and `dompurify` (sanitizing), both
  * lazy-loaded via `markdown-loader.ts` on first connect.
@@ -215,9 +215,9 @@ class LyraMarkdownCoreBase extends LyraElement<LyraMarkdownCoreEventMap> {}
  * Rendering never ships unsanitized or broken markup silently:
  * - If `marked` fails to load, or throws while parsing malformed input, the
  *   component falls back to plain text (`white-space: pre-wrap`, no HTML
- *   parsing at all) and fires `lyra-render-error`.
+ *   parsing at all) and fires `lr-render-error`.
  * - If `sanitize` is `true` (the default) and `dompurify` fails to load, the
- *   component *also* falls back to plain text + `lyra-render-error` — it
+ *   component *also* falls back to plain text + `lr-render-error` — it
  *   never renders marked's raw HTML output when sanitization was requested
  *   (or defaulted to) but is unavailable, even though `marked` itself loaded
  *   fine.
@@ -229,7 +229,7 @@ class LyraMarkdownCoreBase extends LyraElement<LyraMarkdownCoreEventMap> {}
  * part) is also, unconditionally and by default, a brief *transient* state on
  * every connect, not just a failure path: `connectedCallback()`'s dynamic
  * `import()` of `marked`/`dompurify` (see `markdown-loader.ts`) is
- * asynchronous, so the very first paint of any `<lyra-markdown>` on a page
+ * asynchronous, so the very first paint of any `<lr-markdown>` on a page
  * shows plain text for at least one microtask — even when both peers are
  * already installed and load without error — until that import resolves and
  * a second render replaces it with the real Markdown output. Set
@@ -242,10 +242,10 @@ class LyraMarkdownCoreBase extends LyraElement<LyraMarkdownCoreEventMap> {}
  * after insertion.
  *
  * Fenced code blocks are syntax-highlighted via the same fine-grained `shiki/core` recipe
- * `<lyra-code-block-core>` uses (`highlightCode`, default `true` — gated by whether a fenced
+ * `<lr-code-block-core>` uses (`highlightCode`, default `true` — gated by whether a fenced
  * block's language is a key in `languages`, since there is no default highlighter here to gate on
  * "is shiki installed at all"). The very first render of any content is always plain (identical to
- * `<lyra-markdown>`'s own output); highlighting arrives as an asynchronous upgrade one render
+ * `<lr-markdown>`'s own output); highlighting arrives as an asynchronous upgrade one render
  * later, once the fine-grained highlighter resolves. No highlighting is attempted while
  * `streaming` is `true` — it applies once a stream settles, so there is no added per-chunk cost
  * while content is still arriving.
@@ -265,20 +265,20 @@ class LyraMarkdownCoreBase extends LyraElement<LyraMarkdownCoreEventMap> {}
  * `renderToString(tex, { output: 'mathml' })` -- MathML Core renders natively and accessibly in
  * evergreen browsers with no extra stylesheet or webfont needing to cross the shadow boundary. A
  * missing `katex` peer renders the literal, unparsed TeX source (delimiters included) and fires one
- * `lyra-render-error`.
+ * `lr-render-error`.
  *
- * @customElement lyra-markdown-core
- * @event lyra-link-click - Fired (and the click prevented) when a rendered
+ * @customElement lr-markdown-core
+ * @event lr-link-click - Fired (and the click prevented) when a rendered
  *   link's `href` starts with `internal-link-prefix`. `detail: { href:
  *   string, internal: true }`. Ordinary external links navigate normally
  *   (in `link-target`) and never fire this event.
- * @event lyra-render-error - Fired whenever rendering falls back to plain
+ * @event lr-render-error - Fired whenever rendering falls back to plain
  *   text, or `math` is set but the `katex` peer isn't installed. `detail: { error: unknown }`.
- * @event lyra-highlight-activate - A painted `text-quote` highlight was clicked. `detail: { id }`.
- * @event lyra-text-select - Fired on selection end inside the rendered content. `detail: { text,
+ * @event lr-highlight-activate - A painted `text-quote` highlight was clicked. `detail: { id }`.
+ * @event lr-text-select - Fired on selection end inside the rendered content. `detail: { text,
  *   anchor, rects }`; `anchor` is a `text-quote` `LyraAnchor` scoped to the rendered content, or
  *   `null` if the selection couldn't be anchored.
- * @event lyra-anchor-result - Fired after an `anchor` property assignment or a `scrollToAnchor()`
+ * @event lr-anchor-result - Fired after an `anchor` property assignment or a `scrollToAnchor()`
  *   call is applied. `detail: { found }`.
  * @csspart content - The wrapper around the rendered (or plain-text
  *   fallback) output.
@@ -326,7 +326,7 @@ export class LyraMarkdownCore extends DocumentAnchorTarget(LyraMarkdownCoreBase)
 
   /** When set, a rendered link whose `href` starts with this prefix is
    *  treated as internal — its click is intercepted and reported via
-   *  `lyra-link-click` instead of navigating. Empty (the default) means
+   *  `lr-link-click` instead of navigating. Empty (the default) means
    *  every link is treated as external. */
   @property({ attribute: 'internal-link-prefix' }) internalLinkPrefix = '';
 
@@ -342,11 +342,11 @@ export class LyraMarkdownCore extends DocumentAnchorTarget(LyraMarkdownCoreBase)
   /** When `true`, `connectedCallback()` skips awaiting `loadMarkdownDeps()`'s
    *  dynamic `import()` if the shared `marked`/`dompurify` module cache (see
    *  `markdown-loader.ts`'s `getMarkdownDepsIfLoaded()`) has *already*
-   *  resolved — e.g. because an earlier `<lyra-markdown>` instance on the
+   *  resolved — e.g. because an earlier `<lr-markdown>` instance on the
    *  page already finished loading, or the consumer primed the cache
    *  directly by calling `loadMarkdownDeps()` themselves at startup — and
    *  renders synchronously instead. When the cache isn't warm yet (most
-   *  notably: the very first `<lyra-markdown>` ever connected on a page,
+   *  notably: the very first `<lr-markdown>` ever connected on a page,
    *  since nothing has called `loadMarkdownDeps()` before it), this still
    *  falls back to the normal async path — a dynamic `import()` can't be
    *  made synchronous, so this is a fast path for the common "already warm"
@@ -358,10 +358,10 @@ export class LyraMarkdownCore extends DocumentAnchorTarget(LyraMarkdownCoreBase)
    *  continue to render immediately; while this is `true`, the host remains
    *  `aria-busy="true"` so assistive technology knows the rendered document
    *  is not final. Set it back to `false` with the final content update.
-   *  Reflects so a consumer can also target `lyra-markdown[streaming]`. */
+   *  Reflects so a consumer can also target `lr-markdown[streaming]`. */
   @property({ type: Boolean, reflect: true }) streaming = false;
 
-  /** Syntax-highlights fenced code blocks via the same optional `shiki` peer `<lyra-code-block>`
+  /** Syntax-highlights fenced code blocks via the same optional `shiki` peer `<lr-code-block>`
    *  uses. `true` (the default) upgrades every fenced block from plain `<pre><code>` once the peer
    *  is available -- a pure upgrade, not a behavior change gated on opt-in, since it's itself gated
    *  transparently by whether `shiki` is installed at all (an app that never installs it sees
@@ -371,7 +371,7 @@ export class LyraMarkdownCore extends DocumentAnchorTarget(LyraMarkdownCoreBase)
 
   /** Grammar definitions this instance can highlight, e.g. `{ json: jsonGrammar }` (import from
    *  `shiki/langs/<name>.mjs`), forwarded verbatim to `loadShikiHighlighterCore()` -- same shape as
-   *  `<lyra-code-block-core>`'s own `languages`. This component has no default/full-table
+   *  `<lr-code-block-core>`'s own `languages`. This component has no default/full-table
    *  highlighter to fall back to -- a fenced block whose language isn't a key here always renders
    *  the plain-text fallback. Empty (the default) never highlights anything. */
   @property({ attribute: false }) languages: Record<string, ShikiLanguageInput> = {};
@@ -398,7 +398,7 @@ export class LyraMarkdownCore extends DocumentAnchorTarget(LyraMarkdownCoreBase)
   // `null` covers both "the optional peers are still loading" and "a render
   // attempt just fell back after a failure" — the two states intentionally
   // look identical (plain text, see render()) since a consumer distinguishes
-  // them via `lyra-render-error`, not a visual difference.
+  // them via `lr-render-error`, not a visual difference.
   @state() private renderedHtml: string | null = null;
 
   private deps?: MarkdownDeps;
@@ -416,7 +416,7 @@ export class LyraMarkdownCore extends DocumentAnchorTarget(LyraMarkdownCoreBase)
    *  against each range's own `getClientRects()` instead, uniformly across both paint paths. */
   private resolvedHighlightRanges: { id: string; range: Range }[] = [];
 
-  /** Guards `lyra-render-error` so a permanently-missing `katex` peer reports once per instance,
+  /** Guards `lr-render-error` so a permanently-missing `katex` peer reports once per instance,
    *  not on every subsequent re-render while `math` stays on. Reset whenever `math` toggles. */
   private mathFailureReported = false;
 
@@ -451,7 +451,7 @@ export class LyraMarkdownCore extends DocumentAnchorTarget(LyraMarkdownCoreBase)
 
   /** Bumped on every `highlightPending()` call, including ones that end up not actually loading
    *  anything -- guards against a newer `content`/`streaming` change superseding an older in-flight
-   *  highlight, exactly mirroring `<lyra-code-block>`'s own `highlightToken` field for the identical
+   *  highlight, exactly mirroring `<lr-code-block>`'s own `highlightToken` field for the identical
    *  race (an async grammar load resolving after a newer call already produced correct output). */
   private highlightToken = 0;
 
@@ -462,7 +462,7 @@ export class LyraMarkdownCore extends DocumentAnchorTarget(LyraMarkdownCoreBase)
    *  `highlightPending()` itself triggers on completion -- would rediscover it as pending and retry
    *  it again, forever. Mirrors `code-loader.ts`'s own `unsupportedLanguages` Set, which exists for
    *  the identical reason one level down (a single unrecognized `language` value on
-   *  `<lyra-code-block>`). */
+   *  `<lr-code-block>`). */
   private failedHighlightKeys = new Set<string>();
 
   connectedCallback(): void {
@@ -482,7 +482,7 @@ export class LyraMarkdownCore extends DocumentAnchorTarget(LyraMarkdownCoreBase)
     void loadMarkdownDeps().then((resolved) => {
       // The (module-cached, page-lifetime) loadMarkdownDeps() promise can
       // resolve after this instance was removed from the DOM -- e.g. an
-      // <lyra-markdown> inside a conditionally-rendered chat message or a
+      // <lr-markdown> inside a conditionally-rendered chat message or a
       // virtualized list. Without this guard, a detached instance would
       // still have its `deps` set and renderMarkdown() called, mutating the
       // @state() renderedHtml property and scheduling a Lit update no one
@@ -500,7 +500,7 @@ export class LyraMarkdownCore extends DocumentAnchorTarget(LyraMarkdownCoreBase)
     this.highlightHandle = undefined;
   }
 
-  /** Binds selection -> `lyra-text-select` once, on the stable `[part="content"]` wrapper --
+  /** Binds selection -> `lr-text-select` once, on the stable `[part="content"]` wrapper --
    *  re-renders only replace that wrapper's children via `unsafeHTML`, never the wrapper itself.
    *  `bindTextSelection` is `protected` on the mixin's own narrowed return type (deliberately not
    *  part of `LyraAnchorTarget`'s public surface -- see `anchor-target.ts`'s class doc), so it's
@@ -559,7 +559,7 @@ export class LyraMarkdownCore extends DocumentAnchorTarget(LyraMarkdownCoreBase)
     if (!deps.marked) {
       // markdown-loader.ts already logged the specific import failure.
       this.applyFallback(
-        new Error('<lyra-markdown> could not render: the "marked" peer dependency failed to load.'),
+        new Error('<lr-markdown> could not render: the "marked" peer dependency failed to load.'),
       );
       return;
     }
@@ -595,7 +595,7 @@ export class LyraMarkdownCore extends DocumentAnchorTarget(LyraMarkdownCoreBase)
 
     if (!deps.DOMPurify) {
       const error = new Error(
-        '<lyra-markdown> could not render: sanitize is enabled (the default) but the "dompurify" peer ' +
+        '<lr-markdown> could not render: sanitize is enabled (the default) but the "dompurify" peer ' +
           'dependency failed to load — refusing to render unsanitized HTML. Install it with `pnpm add ' +
           'dompurify`, or set sanitize="false" to explicitly opt out of sanitization.',
       );
@@ -625,11 +625,11 @@ export class LyraMarkdownCore extends DocumentAnchorTarget(LyraMarkdownCoreBase)
 
   private applyFallback(error: unknown): void {
     this.renderedHtml = null;
-    this.emit('lyra-render-error', { error });
+    this.emit('lr-render-error', { error });
   }
 
   /** Kicks off the shared `katex` load the first time `math` needs it and no attempt is already
-   *  in flight (module-scoped, so every `<lyra-markdown>` instance on the page shares one load --
+   *  in flight (module-scoped, so every `<lr-markdown>` instance on the page shares one load --
    *  mirrors `markdown-loader.ts`'s own warm-cache shape). Skipped entirely under
    *  `__setKatexForTesting()` -- that seam controls math-rendering behavior directly and must never
    *  race a real, unmocked `import('katex')` settling underneath it. */
@@ -643,7 +643,7 @@ export class LyraMarkdownCore extends DocumentAnchorTarget(LyraMarkdownCoreBase)
     });
   }
 
-  /** Fires `lyra-render-error` once per instance for a permanently-missing `katex` peer. Called
+  /** Fires `lr-render-error` once per instance for a permanently-missing `katex` peer. Called
    *  only once `renderMarkdown()` has confirmed the peer is actually missing (`katexOverride` or
    *  the resolved module is `null`) -- a math token rendering its literal fallback while the load
    *  is merely still in flight (the same one-microtask transient window every other optional peer
@@ -651,9 +651,9 @@ export class LyraMarkdownCore extends DocumentAnchorTarget(LyraMarkdownCoreBase)
   private reportMathFailure(): void {
     if (this.mathFailureReported) return;
     this.mathFailureReported = true;
-    this.emit('lyra-render-error', {
+    this.emit('lr-render-error', {
       error: new Error(
-        '<lyra-markdown> needs the optional peer dependency `katex` to render math (the `math` property is set) — install it with `pnpm add katex`.',
+        '<lr-markdown> needs the optional peer dependency `katex` to render math (the `math` property is set) — install it with `pnpm add katex`.',
       ),
     });
   }
@@ -684,7 +684,7 @@ export class LyraMarkdownCore extends DocumentAnchorTarget(LyraMarkdownCoreBase)
       const normalizedLang = normalizeShikiLanguage(pending.lang);
       if (!languages[normalizedLang] && !languages[pending.lang]) {
         // Not in the supplied languages map -- there is no default/full-table highlighter to fall
-        // back to in this variant (mirrors <lyra-code-block-core>). Permanent for this key:
+        // back to in this variant (mirrors <lr-code-block-core>). Permanent for this key:
         // failedHighlightKeys is never cleared, and languages isn't in willUpdate()'s trigger list,
         // so changing it doesn't retry this key on its own.
         this.failedHighlightKeys.add(pending.key);
@@ -974,7 +974,7 @@ export class LyraMarkdownCore extends DocumentAnchorTarget(LyraMarkdownCoreBase)
       // module is shared by every adopting viewer, so it can't know this component's part naming)
       // -- stamped here so a consumer can still target `::part(highlight)` in browsers lacking the
       // CSS Custom Highlight API. Nothing to stamp on the API path: no DOM element is created there.
-      for (const mark of root.querySelectorAll('mark[data-lyra-highlight-tone]')) {
+      for (const mark of root.querySelectorAll('mark[data-lr-highlight-tone]')) {
         if (!mark.hasAttribute('part')) mark.setAttribute('part', 'highlight');
       }
     }
@@ -983,7 +983,7 @@ export class LyraMarkdownCore extends DocumentAnchorTarget(LyraMarkdownCoreBase)
   /** Hit-tests a click point against every currently-resolved highlight's `getClientRects()`,
    *  topmost (last-resolved) first. The CSS Custom Highlight API paints ranges without creating any
    *  DOM element to attach a click listener to, so this is the only activation path that works
-   *  identically on both paint paths -- mirrors `<lyra-pdf-viewer>`'s own coordinate-based
+   *  identically on both paint paths -- mirrors `<lr-pdf-viewer>`'s own coordinate-based
    *  `onPageClick()` hit-test for the same reason (its own painted highlights sit under a text
    *  layer that intercepts most pointer events). */
   private hitTestHighlightAt(x: number, y: number): string | null {
@@ -1002,7 +1002,7 @@ export class LyraMarkdownCore extends DocumentAnchorTarget(LyraMarkdownCoreBase)
   private onContentClick = (e: MouseEvent): void => {
     const highlightId = this.hitTestHighlightAt(e.clientX, e.clientY);
     if (highlightId) {
-      this.emit<HighlightActivateDetail>('lyra-highlight-activate', { id: highlightId });
+      this.emit<HighlightActivateDetail>('lr-highlight-activate', { id: highlightId });
       return;
     }
     const prefix = this.internalLinkPrefix;
@@ -1016,7 +1016,7 @@ export class LyraMarkdownCore extends DocumentAnchorTarget(LyraMarkdownCoreBase)
     const href = anchor.getAttribute('href') ?? '';
     if (!href.startsWith(prefix)) return;
     e.preventDefault();
-    this.emit('lyra-link-click', { href, internal: true });
+    this.emit('lr-link-click', { href, internal: true });
   };
 
   render(): TemplateResult {
@@ -1033,6 +1033,6 @@ export class LyraMarkdownCore extends DocumentAnchorTarget(LyraMarkdownCoreBase)
 
 declare global {
   interface HTMLElementTagNameMap {
-    'lyra-markdown-core': LyraMarkdownCore;
+    'lr-markdown-core': LyraMarkdownCore;
   }
 }

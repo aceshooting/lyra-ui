@@ -8,13 +8,13 @@ import '../chat-message/chat-message.js';
 
 const meta: Meta = {
   title: 'MediaCard',
-  component: 'lyra-media-card',
+  component: 'lr-media-card',
   tags: ['autodocs'],
   parameters: {
     docs: {
       description: {
         component:
-          'A lightweight inline preview for one already-sent, already-available attachment inside a rendered chat message — plugs into `<lyra-chat-message>`\'s `attachments` slot or a markdown/message renderer. `kind` dispatches to an `<img>`, a `<video controls>`, or a generic file chip; leave it unset to auto-detect from `mime-type`. `src` is always re-validated against a safe-scheme allowlist before it reaches an `<img>`/`<video>` `src` or an `<a href>` — see the component\'s own class doc for the full `data:` judgement call.',
+          'A lightweight inline preview for one already-sent, already-available attachment inside a rendered chat message — plugs into `<lr-chat-message>`\'s `attachments` slot or a markdown/message renderer. `kind` dispatches to an `<img>`, a `<video controls>`, or a generic file chip; leave it unset to auto-detect from `mime-type`. `src` is always re-validated against a safe-scheme allowlist before it reaches an `<img>`/`<video>` `src` or an `<a href>` — see the component\'s own class doc for the full `data:` judgement call.',
       },
     },
   },
@@ -22,17 +22,17 @@ const meta: Meta = {
 export default meta;
 type Story = StoryObj;
 
-const SAMPLE_IMAGE = 'https://picsum.photos/seed/lyra-media-card/640/400';
+const SAMPLE_IMAGE = 'https://picsum.photos/seed/lr-media-card/640/400';
 const SAMPLE_VIDEO = 'https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4';
 
 export const Image: Story = {
   render: () => html`
-    <lyra-media-card
+    <lr-media-card
       src=${SAMPLE_IMAGE}
       kind="image"
       filename="roof-photo.jpg"
       alt="Aerial photo of a rooftop solar installation"
-    ></lyra-media-card>
+    ></lr-media-card>
   `,
 };
 
@@ -47,31 +47,31 @@ export const AccessibleActionLabel: Story = {
     },
   },
   render: () => html`
-    <lyra-media-card
+    <lr-media-card
       aria-label="Open rooftop photo in the project lightbox"
       src=${SAMPLE_IMAGE}
       kind="image"
       filename="roof-photo.jpg"
       alt="Aerial photo of a rooftop solar installation"
-    ></lyra-media-card>
+    ></lr-media-card>
   `,
 };
 
 export const Video: Story = {
   render: () => html`
-    <lyra-media-card src=${SAMPLE_VIDEO} kind="video" filename="walkthrough.mp4"></lyra-media-card>
+    <lr-media-card src=${SAMPLE_VIDEO} kind="video" filename="walkthrough.mp4"></lr-media-card>
   `,
 };
 
 export const FileChip: Story = {
   name: 'File (with a safe download link)',
   render: () => html`
-    <lyra-media-card
+    <lr-media-card
       src="https://example.com/reports/quarterly-summary.pdf"
       kind="file"
       filename="quarterly-summary.pdf"
       mime-type="application/pdf"
-    ></lyra-media-card>
+    ></lr-media-card>
   `,
 };
 
@@ -87,12 +87,12 @@ export const AutoDetectFromMimeType: Story = {
   },
   render: () => html`
     <div style="display:flex; gap:1rem; flex-wrap:wrap; align-items:flex-start;">
-      <lyra-media-card src=${SAMPLE_IMAGE} mime-type="image/jpeg" filename="roof-photo.jpg"></lyra-media-card>
-      <lyra-media-card
+      <lr-media-card src=${SAMPLE_IMAGE} mime-type="image/jpeg" filename="roof-photo.jpg"></lr-media-card>
+      <lr-media-card
         src="https://example.com/exports/dataset.zip"
         mime-type="application/zip"
         filename="dataset.zip"
-      ></lyra-media-card>
+      ></lr-media-card>
     </div>
   `,
 };
@@ -108,11 +108,11 @@ export const UnsafeUrlFallback: Story = {
     },
   },
   render: () => html`
-    <lyra-media-card
+    <lr-media-card
       src="javascript:alert(1)"
       kind="image"
       filename="suspicious-payload.jpg"
-    ></lyra-media-card>
+    ></lr-media-card>
   `,
 };
 
@@ -131,8 +131,8 @@ export const DataUriImage: Story = {
       'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=';
     return html`
       <div style="display:flex; gap:1rem; flex-wrap:wrap; align-items:flex-start;">
-        <lyra-media-card src=${dataUri} kind="image" filename="pixel.png"></lyra-media-card>
-        <lyra-media-card src=${dataUri} kind="file" filename="pixel.png"></lyra-media-card>
+        <lr-media-card src=${dataUri} kind="image" filename="pixel.png"></lr-media-card>
+        <lr-media-card src=${dataUri} kind="file" filename="pixel.png"></lr-media-card>
       </div>
     `;
   },
@@ -141,39 +141,39 @@ export const DataUriImage: Story = {
 export const InsideAChatMessage: Story = {
   name: 'Inside a rendered chat message',
   render: () => html`
-    <lyra-chat-message data-role="assistant" style="max-width: 32rem;">
+    <lr-chat-message data-role="assistant" style="max-width: 32rem;">
       Here's the site photo and the summary report you asked for.
-      <lyra-media-card
+      <lr-media-card
         slot="attachments"
         src=${SAMPLE_IMAGE}
         kind="image"
         filename="site-photo.jpg"
         alt="Photo of the installation site"
-      ></lyra-media-card>
-      <lyra-media-card
+      ></lr-media-card>
+      <lr-media-card
         slot="attachments"
         src="https://example.com/reports/summary.pdf"
         kind="file"
         filename="summary.pdf"
         mime-type="application/pdf"
-      ></lyra-media-card>
-    </lyra-chat-message>
+      ></lr-media-card>
+    </lr-chat-message>
   `,
 };
 
 export const OpenEvent: Story = {
-  name: 'lyra-open event',
+  name: 'lr-open event',
   render: () => html`
     <div>
-      <lyra-media-card
+      <lr-media-card
         src=${SAMPLE_IMAGE}
         kind="image"
         filename="roof-photo.jpg"
-        @lyra-open=${(e: CustomEvent<{ src: string; filename: string }>) => {
+        @lr-open=${(e: CustomEvent<{ src: string; filename: string }>) => {
           const out = document.getElementById('media-card-log');
-          if (out) out.textContent = `lyra-open: ${JSON.stringify(e.detail)}`;
+          if (out) out.textContent = `lr-open: ${JSON.stringify(e.detail)}`;
         }}
-      ></lyra-media-card>
+      ></lr-media-card>
       <p id="media-card-log" style="font-family: monospace; margin-top: 0.5rem;">No event fired yet.</p>
     </div>
   `,

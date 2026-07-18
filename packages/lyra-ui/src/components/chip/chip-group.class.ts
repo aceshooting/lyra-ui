@@ -9,13 +9,13 @@ export interface ChipGroupOverflowToggleDetail {
 }
 
 export interface LyraChipGroupEventMap {
-  'lyra-overflow-toggle': CustomEvent<ChipGroupOverflowToggleDetail>;
+  'lr-overflow-toggle': CustomEvent<ChipGroupOverflowToggleDetail>;
 }
 
 /**
- * `<lyra-chip-group>` — a flex-wrap container for a set of `<lyra-chip>`
+ * `<lr-chip-group>` — a flex-wrap container for a set of `<lr-chip>`
  * children (plain light-DOM composition — direct children are the chips,
- * the same shape `<lyra-split>`'s panels / `<lyra-source-list>`'s cards
+ * the same shape `<lr-split>`'s panels / `<lr-source-list>`'s cards
  * take — no `.items` array prop).
  *
  * `max-visible` is entirely optional. When unset, every child is always
@@ -23,18 +23,18 @@ export interface LyraChipGroupEventMap {
  * and the group has more chip children than that, the excess children are
  * hidden (via their own `hidden` property — CSS alone can't parameterize
  * `:nth-child` on a runtime prop, so this reaches into the light DOM the
- * same way `<lyra-split>` sets each panel's inline `flex`/`order`) and a
+ * same way `<lr-split>` sets each panel's inline `flex`/`order`) and a
  * "+N" overflow-indicator pill takes their place. Clicking it is a toggle:
  * it reveals the rest (and relabels itself "Show less"); clicking again
- * re-collapses back to `max-visible`. `lyra-overflow-toggle` fires only from
+ * re-collapses back to `max-visible`. `lr-overflow-toggle` fires only from
  * that click — i.e. only when `max-visible` is actually causing an overflow
  * state — never as a side effect of `max-visible`/children changing on
  * their own.
  *
- * @customElement lyra-chip-group
- * @slot - `<lyra-chip>` elements (or any content, though the chip pairing is
+ * @customElement lr-chip-group
+ * @slot - `<lr-chip>` elements (or any content, though the chip pairing is
  * the intended usage).
- * @event lyra-overflow-toggle - The overflow indicator was activated,
+ * @event lr-overflow-toggle - The overflow indicator was activated,
  * revealing or re-collapsing the excess children. `detail: { expanded }`.
  * @csspart base - The flex-wrap container (holds both the slot and the overflow indicator).
  * @csspart overflow-indicator - The "+N" / "Show less" toggle button. Only rendered while `max-visible` is actively causing an overflow.
@@ -60,8 +60,8 @@ export class LyraChipGroup extends LyraElement<LyraChipGroupEventMap> {
   }
 
   // Tracks the default slot's assigned-element count, the same
-  // connectedCallback/willUpdate + slotchange convention `<lyra-split>`'s
-  // `panelCount`/`<lyra-source-list>`'s `slottedCount` already establish.
+  // connectedCallback/willUpdate + slotchange convention `<lr-split>`'s
+  // `panelCount`/`<lr-source-list>`'s `slottedCount` already establish.
   @state() private childCount = 0;
 
   /** Whether the excess (beyond `max-visible`) children are currently
@@ -85,7 +85,7 @@ export class LyraChipGroup extends LyraElement<LyraChipGroupEventMap> {
   firstUpdated(): void {
     // Fallback reconciliation for slot-forwarding / engines that don't fire
     // `slotchange` for content present at parse time — same idiom as
-    // `<lyra-source-list>`'s identical `firstUpdated`. This can't move to
+    // `<lr-source-list>`'s identical `firstUpdated`. This can't move to
     // `willUpdate` (the `<slot>` doesn't exist in the shadow DOM until after
     // the first render), so when it actually corrects `childCount` (the
     // slot-forwarding case, where `this.children.length` under-counts) it
@@ -124,7 +124,7 @@ export class LyraChipGroup extends LyraElement<LyraChipGroupEventMap> {
 
   private onToggleOverflow = (): void => {
     this.expanded = !this.expanded;
-    this.emit<ChipGroupOverflowToggleDetail>('lyra-overflow-toggle', { expanded: this.expanded });
+    this.emit<ChipGroupOverflowToggleDetail>('lr-overflow-toggle', { expanded: this.expanded });
   };
 
   render(): TemplateResult {
@@ -155,6 +155,6 @@ export class LyraChipGroup extends LyraElement<LyraChipGroupEventMap> {
 
 declare global {
   interface HTMLElementTagNameMap {
-    'lyra-chip-group': LyraChipGroup;
+    'lr-chip-group': LyraChipGroup;
   }
 }

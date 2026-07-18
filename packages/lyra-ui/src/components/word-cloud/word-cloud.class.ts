@@ -22,7 +22,7 @@ const DEFAULT_MIN_FONT_SIZE = 12;
 const DEFAULT_MAX_FONT_SIZE = 48;
 const PALETTE_SIZE = 8;
 const FALLBACK_PALETTE = ['#0969da', '#1a7f37', '#9a6700', '#cf222e', '#8250df', '#bf3989', '#0a7d91', '#57606a'];
-/** Fallback for `fontWeight()` below when `--lyra-font-weight-semibold`
+/** Fallback for `fontWeight()` below when `--lr-font-weight-semibold`
  *  can't be read (e.g. no computed style available). Must match `[part='word']`'s
  *  default `font-weight` in word-cloud.styles.ts. */
 const DEFAULT_WORD_FONT_WEIGHT = '600';
@@ -37,34 +37,34 @@ function warnSkippedWords(count: number): void {
   if (warnedSkipCounts.has(count)) return;
   warnedSkipCounts.add(count);
   console.warn(
-    `<lyra-word-cloud> could not place ${count} word(s) (blank text, over the ${MAX_WORDS}-word cap, or ` +
+    `<lr-word-cloud> could not place ${count} word(s) (blank text, over the ${MAX_WORDS}-word cap, or ` +
       'the layout search was exhausted) -- they were dropped, not rendered.',
   );
 }
 
 export interface LyraWordCloudEventMap {
-  'lyra-word-click': CustomEvent<{ text: string; weight: number; group?: string }>;
+  'lr-word-click': CustomEvent<{ text: string; weight: number; group?: string }>;
 }
 /**
- * `<lyra-word-cloud>` — a zero-dependency SVG word/tag cloud. First-party
+ * `<lr-word-cloud>` — a zero-dependency SVG word/tag cloud. First-party
  * invention (no Web Awesome equivalent). Each word's rendered size is scaled
  * from its `weight` and placed via an outward Archimedean-spiral search (the
  * standard word-cloud heuristic: heaviest words placed first, each one
  * spiraling out from the center until it clears every word already placed).
  *
- * Unlike sibling `lyra-sparkline`/`lyra-heatmap` (one `role="img"` glyph
+ * Unlike sibling `lr-sparkline`/`lr-heatmap` (one `role="img"` glyph
  * standing in for an aggregate value), the individual words here are the
  * meaningful interactive content — but with up to `MAX_WORDS` of them, making
  * every single one its own tab stop would be a poor keyboard experience.
- * Instead, like `lyra-heatmap`'s cells, the whole `[part="svg"]` is one tab
+ * Instead, like `lr-heatmap`'s cells, the whole `[part="svg"]` is one tab
  * stop with roving arrow-key focus (Home/End jump to the first/last word,
  * Enter/Space activates the focused one), a drawn `[part="focus-ring"]`, and
  * a visually-hidden `aria-live="polite"` status announcement. The SVG focus
  * target carries the group role and accessible name so the semantics follow
  * the element a keyboard user actually focuses.
  *
- * @customElement lyra-word-cloud
- * @event lyra-word-click - Fired on click, or Enter/Space on the focused word.
+ * @customElement lr-word-cloud
+ * @event lr-word-click - Fired on click, or Enter/Space on the focused word.
  * `detail: { text, weight, group }`.
  * @csspart base - The word-cloud wrapper.
  * @csspart svg - The word-cloud SVG.
@@ -72,14 +72,14 @@ export interface LyraWordCloudEventMap {
  * @csspart focus-ring - The keyboard focus ring.
  * @csspart live-region - The visually hidden announcement region.
  * @csspart empty - The empty-state message.
- * @cssprop [--lyra-word-cloud-color-1=var(--lyra-color-brand)] - First entry of the default categorical palette.
- * @cssprop [--lyra-word-cloud-color-2=var(--lyra-color-success)] - Second entry of the default categorical palette.
- * @cssprop [--lyra-word-cloud-color-3=var(--lyra-color-warning)] - Third entry of the default categorical palette.
- * @cssprop [--lyra-word-cloud-color-4=var(--lyra-color-danger)] - Fourth entry of the default categorical palette.
- * @cssprop [--lyra-word-cloud-color-5=var(--lyra-color-chart-1)] - Fifth entry of the default categorical palette.
- * @cssprop [--lyra-word-cloud-color-6=var(--lyra-color-chart-2)] - Sixth entry of the default categorical palette.
- * @cssprop [--lyra-word-cloud-color-7=var(--lyra-color-chart-3)] - Seventh entry of the default categorical palette.
- * @cssprop [--lyra-word-cloud-color-8=var(--lyra-color-chart-4)] - Eighth entry of the default categorical palette.
+ * @cssprop [--lr-word-cloud-color-1=var(--lr-color-brand)] - First entry of the default categorical palette.
+ * @cssprop [--lr-word-cloud-color-2=var(--lr-color-success)] - Second entry of the default categorical palette.
+ * @cssprop [--lr-word-cloud-color-3=var(--lr-color-warning)] - Third entry of the default categorical palette.
+ * @cssprop [--lr-word-cloud-color-4=var(--lr-color-danger)] - Fourth entry of the default categorical palette.
+ * @cssprop [--lr-word-cloud-color-5=var(--lr-color-chart-1)] - Fifth entry of the default categorical palette.
+ * @cssprop [--lr-word-cloud-color-6=var(--lr-color-chart-2)] - Sixth entry of the default categorical palette.
+ * @cssprop [--lr-word-cloud-color-7=var(--lr-color-chart-3)] - Seventh entry of the default categorical palette.
+ * @cssprop [--lr-word-cloud-color-8=var(--lr-color-chart-4)] - Eighth entry of the default categorical palette.
  */
 export class LyraWordCloud extends LyraElement<LyraWordCloudEventMap> {
   static styles = [LyraElement.styles, styles, srOnly];
@@ -99,7 +99,7 @@ export class LyraWordCloud extends LyraElement<LyraWordCloudEventMap> {
   /** `mixed` lets some words render rotated 90° for denser packing. */
   @property() orientations: 'horizontal' | 'mixed' = 'horizontal';
 
-  /** Custom categorical palette, cycled by word index (or by `group`, see `words`). Defaults to the `--lyra-word-cloud-color-*` tokens. */
+  /** Custom categorical palette, cycled by word index (or by `group`, see `words`). Defaults to the `--lr-word-cloud-color-*` tokens. */
   @property({ attribute: false }) palette?: string[];
 
   @query('[part="svg"]') private svgEl?: SVGSVGElement;
@@ -126,16 +126,16 @@ export class LyraWordCloud extends LyraElement<LyraWordCloudEventMap> {
   private authorSuppliedAriaLabel = false;
 
   private fontFamily(): string {
-    return getComputedStyle(this).getPropertyValue('--lyra-font').trim() || 'sans-serif';
+    return getComputedStyle(this).getPropertyValue('--lr-font').trim() || 'sans-serif';
   }
 
-  /** Reads the actual `--lyra-font-weight-semibold` value the same way
-   *  `fontFamily()` reads `--lyra-font` -- must match `[part='word']`'s
+  /** Reads the actual `--lr-font-weight-semibold` value the same way
+   *  `fontFamily()` reads `--lr-font` -- must match `[part='word']`'s
    *  `font-weight` in word-cloud.styles.ts, so a theme/consumer override of
    *  that token can't silently desync canvas text measurement (used for the
    *  spiral layout's collision boxes) from the actually rendered glyph width. */
   private fontWeight(): string {
-    return getComputedStyle(this).getPropertyValue('--lyra-font-weight-semibold').trim() || DEFAULT_WORD_FONT_WEIGHT;
+    return getComputedStyle(this).getPropertyValue('--lr-font-weight-semibold').trim() || DEFAULT_WORD_FONT_WEIGHT;
   }
 
   private paletteColors(): string[] {
@@ -143,7 +143,7 @@ export class LyraWordCloud extends LyraElement<LyraWordCloudEventMap> {
     const cs = getComputedStyle(this);
     const colors: string[] = [];
     for (let i = 0; i < PALETTE_SIZE; i++) {
-      colors.push(cs.getPropertyValue(`--lyra-word-cloud-color-${i + 1}`).trim() || FALLBACK_PALETTE[i]!);
+      colors.push(cs.getPropertyValue(`--lr-word-cloud-color-${i + 1}`).trim() || FALLBACK_PALETTE[i]!);
     }
     return colors;
   }
@@ -220,8 +220,8 @@ export class LyraWordCloud extends LyraElement<LyraWordCloudEventMap> {
     this.liveText = '';
   }
 
-  /** Forces a relayout so the font-family theme token (`--lyra-font`) is
-   *  re-read from computed style — mirrors `lyra-chart`'s `refreshTheme()`.
+  /** Forces a relayout so the font-family theme token (`--lr-font`) is
+   *  re-read from computed style — mirrors `lr-chart`'s `refreshTheme()`.
    *  No global theme-broadcast event exists in lyra-ui to subscribe to
    *  automatically; call this from a consumer's own theme-toggle handler. */
   refreshTheme(): void {
@@ -230,7 +230,7 @@ export class LyraWordCloud extends LyraElement<LyraWordCloudEventMap> {
   }
 
   private activate(word: PlacedWord): void {
-    this.emit('lyra-word-click', { text: word.text, weight: word.weight, group: word.group });
+    this.emit('lr-word-click', { text: word.text, weight: word.weight, group: word.group });
   }
 
   private announce(word: PlacedWord): void {
@@ -263,7 +263,7 @@ export class LyraWordCloud extends LyraElement<LyraWordCloudEventMap> {
       this.announce(order[0]!);
       return;
     }
-    // Left/Right swap under RTL, matching lyra-tabs's/lyra-tree's identical
+    // Left/Right swap under RTL, matching lr-tabs's/lr-tree's identical
     // physical-direction handling; Up/Down are direction-agnostic and always
     // mean next/previous through the same stable nav order.
     const rtl = isRtl(this);
@@ -347,6 +347,6 @@ export class LyraWordCloud extends LyraElement<LyraWordCloudEventMap> {
 
 declare global {
   interface HTMLElementTagNameMap {
-    'lyra-word-cloud': LyraWordCloud;
+    'lr-word-cloud': LyraWordCloud;
   }
 }

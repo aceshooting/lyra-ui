@@ -15,7 +15,7 @@ export type ShikiHighlighterCore = OptionalPeerApi;
 
 /** Re-exported under a component-scoped name — the shape of one pre-imported
  *  shiki grammar module's default export (e.g. `import bash from
- *  'shiki/langs/bash.mjs'`), and what `<lyra-code-block>`'s `languages`
+ *  'shiki/langs/bash.mjs'`), and what `<lr-code-block>`'s `languages`
  *  property maps language ids to. See `loadShikiHighlighterCore()` below. */
 export type ShikiLanguageInput = OptionalPeerApi;
 
@@ -42,7 +42,7 @@ let highlighter: Promise<ShikiHighlighter | null> | undefined;
 
 /** Language ids that have already failed `loadLanguage()` once — avoids
  *  retrying (and re-throwing on) the same unrecognized `language` value on
- *  every re-render of every `<lyra-code-block>` that requests it. Shared
+ *  every re-render of every `<lr-code-block>` that requests it. Shared
  *  across every highlighter instance the page ever creates (there's only
  *  ever one, see `loadShikiHighlighter()` below), so this never needs
  *  resetting alongside it. */
@@ -67,7 +67,7 @@ export function normalizeShikiLanguage(lang: string): string {
  * than just the resolved module (one level deeper than `map-loader.ts`'s
  * single-dependency cached-promise shape, which this otherwise mirrors).
  * Resolves to `null` (with a one-time `console.warn`) if shiki isn't
- * installed — `<lyra-code-block>` falls back to plain unhighlighted text in
+ * installed — `<lr-code-block>` falls back to plain unhighlighted text in
  * that case, which is a fully supported default, not a degraded mode. No
  * language grammar is loaded up front; `loadShikiLanguage()` below loads each
  * one incrementally the first time a `language` value actually requests it.
@@ -78,7 +78,7 @@ export function loadShikiHighlighter(): Promise<ShikiHighlighter | null> {
       .then((mod) => mod.createHighlighter({ themes: [SHIKI_LIGHT_THEME, SHIKI_DARK_THEME], langs: [] }))
       .catch((err) => {
         console.warn(
-          '<lyra-code-block> needs the optional peer dependency `shiki` for syntax highlighting — install it ' +
+          '<lr-code-block> needs the optional peer dependency `shiki` for syntax highlighting — install it ' +
             'with `pnpm add shiki`. Code still renders, just unhighlighted, without it:',
           err,
         );
@@ -107,7 +107,7 @@ export async function loadShikiLanguage(hl: ShikiHighlighter, lang: string): Pro
     return true;
   } catch {
     // Not a shiki-recognized grammar id/alias, or the grammar failed to
-    // load for some other reason — either way, <lyra-code-block> treats an
+    // load for some other reason — either way, <lr-code-block> treats an
     // unrecognized language the same as an unset one (plain text), and
     // there's nothing more specific a caller could do with the reason.
     unsupportedLanguages.add(normalizedLanguage);
@@ -149,7 +149,7 @@ const highlighterCores = new WeakMap<Record<string, ShikiLanguageInput>, Promise
  * shiki's full bundled set.
  *
  * This is *only* ever consulted for languages present in `languages` — see
- * `<lyra-code-block>`'s `syncHighlight()`. A language absent from it still
+ * `<lr-code-block>`'s `syncHighlight()`. A language absent from it still
  * falls back to the ordinary `loadShikiHighlighter()` + `loadShikiLanguage()`
  * dynamic-import path entirely unchanged, so a caller can pin its own known
  * set while still letting an unexpected language through. Resolves to `null`
@@ -176,7 +176,7 @@ export function loadShikiHighlighterCore(
       )
       .catch((err) => {
         console.warn(
-          "<lyra-code-block>'s `languages` property failed to build a fine-grained shiki highlighter — " +
+          "<lr-code-block>'s `languages` property failed to build a fine-grained shiki highlighter — " +
             'falling back to plain unhighlighted text for the languages it covers:',
           err,
         );

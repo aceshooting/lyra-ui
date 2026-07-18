@@ -39,41 +39,41 @@ function test(name, fn) {
 test('buildMirrorMap finds direct 1:1 mirrored tags', () => {
   const { map, conflicts } = buildMirrorMap(readmeText);
   assert.equal(conflicts.length, 0, `unexpected conflicts: ${conflicts.join('; ')}`);
-  assert.equal(map.get('wa-button'), 'lyra-button');
-  assert.equal(map.get('wa-combobox'), 'lyra-combobox');
-  assert.equal(map.get('wa-date-input'), 'lyra-date-input');
-  assert.equal(map.get('wa-progress-bar'), 'lyra-progress-bar');
-  assert.equal(map.get('wa-progress-ring'), 'lyra-progress-ring');
+  assert.equal(map.get('wa-button'), 'lr-button');
+  assert.equal(map.get('wa-combobox'), 'lr-combobox');
+  assert.equal(map.get('wa-date-input'), 'lr-date-input');
+  assert.equal(map.get('wa-progress-bar'), 'lr-progress-bar');
+  assert.equal(map.get('wa-progress-ring'), 'lr-progress-ring');
 });
 
 test('buildMirrorMap resolves the wa-format-* wildcard row per-tag', () => {
   const { map } = buildMirrorMap(readmeText);
-  assert.equal(map.get('wa-format-number'), 'lyra-format-number');
-  assert.equal(map.get('wa-format-date'), 'lyra-format-date');
-  assert.equal(map.get('wa-format-bytes'), 'lyra-format-bytes');
-  assert.equal(map.get('wa-relative-time'), 'lyra-relative-time');
+  assert.equal(map.get('wa-format-number'), 'lr-format-number');
+  assert.equal(map.get('wa-format-date'), 'lr-format-date');
+  assert.equal(map.get('wa-format-bytes'), 'lr-format-bytes');
+  assert.equal(map.get('wa-relative-time'), 'lr-relative-time');
 });
 
 test('buildMirrorMap does not invent a mapping for a mismatched-count row', () => {
   const { map } = buildMirrorMap(readmeText);
-  // The typed chart subclasses (<lyra-bar-chart> etc.) all list `wa-chart` in their Mirrors cell,
+  // The typed chart subclasses (<lr-bar-chart> etc.) all list `wa-chart` in their Mirrors cell,
   // but none of them has its own literal `wa-bar-chart` tag documented -- only the base
-  // `<lyra-chart>` row does.
-  assert.equal(map.get('wa-chart'), 'lyra-chart');
+  // `<lr-chart>` row does.
+  assert.equal(map.get('wa-chart'), 'lr-chart');
   assert.equal(map.has('wa-bar-chart'), false);
   assert.equal(map.has('wa-line-chart'), false);
-  // <lyra-option> shares no documented `wa-option` mirror anywhere in the table (only
+  // <lr-option> shares no documented `wa-option` mirror anywhere in the table (only
   // `wa-combobox`/`wa-select` are listed for the rows it appears in).
   assert.equal(map.has('wa-option'), false);
-  // <lyra-accordion-item> has no documented `wa-accordion-item` mirror.
+  // <lr-accordion-item> has no documented `wa-accordion-item` mirror.
   assert.equal(map.has('wa-accordion-item'), false);
 });
 
 test('buildMirrorMap parses the Shoelace table by suffix', () => {
   const { map } = buildMirrorMap(readmeText);
-  assert.equal(map.get('sl-button'), 'lyra-button');
-  assert.equal(map.get('sl-progress-bar'), 'lyra-progress-bar');
-  assert.equal(map.get('sl-option'), 'lyra-option');
+  assert.equal(map.get('sl-button'), 'lr-button');
+  assert.equal(map.get('sl-progress-bar'), 'lr-progress-bar');
+  assert.equal(map.get('sl-option'), 'lr-option');
 });
 
 // --- 2. rewriteFile() text rewriting ----------------------------------------------------------
@@ -102,9 +102,9 @@ const { map: sampleMap } = buildMirrorMap(readmeText);
 
 test('rewriteFile rewrites open/close tags for a mapped wa- tag', () => {
   const { content, tagCounts } = rewriteFile(SAMPLE, sampleMap);
-  assert.match(content, /<lyra-combobox value="x" multiple with-clear>/);
-  assert.match(content, /<\/lyra-combobox>/);
-  assert.match(content, /<lyra-button variant="brand">Save<\/lyra-button>/);
+  assert.match(content, /<lr-combobox value="x" multiple with-clear>/);
+  assert.match(content, /<\/lr-combobox>/);
+  assert.match(content, /<lr-button variant="brand">Save<\/lr-button>/);
   const combobox = tagCounts.get('wa-combobox');
   assert.ok(combobox && combobox.count === 2, 'expected wa-combobox open+close = 2 replacements');
 });
@@ -126,8 +126,8 @@ test('rewriteFile leaves prose containing "wa-button" (not an exact-quoted tag) 
 
 test('rewriteFile rewrites an exact quoted registration-style string', () => {
   const { content } = rewriteFile(SAMPLE, sampleMap);
-  assert.match(content, /customElements\.get\('lyra-button'\)/);
-  assert.match(content, /const knownTags = \['lyra-button', 'lyra-input'\]/);
+  assert.match(content, /customElements\.get\('lr-button'\)/);
+  assert.match(content, /const knownTags = \['lr-button', 'lr-input'\]/);
 });
 
 test('rewriteFile rewrites a quoted string that is exactly a mapped tag name, even mid-sentence-looking', () => {
@@ -166,7 +166,7 @@ try {
 
   test('CLI --dry-run reports the change without writing', () => {
     const out = execFileSync('node', [migratePath, '--dry-run', scratchDir], { encoding: 'utf8' });
-    assert.match(out, /<wa-button> -> <lyra-button>/);
+    assert.match(out, /<wa-button> -> <lr-button>/);
     assert.equal(fs.readFileSync(fixtureFile, 'utf8'), fixtureContent, 'dry-run must not write the file');
   });
 
@@ -174,7 +174,7 @@ try {
     const out = execFileSync('node', [migratePath, scratchDir], { encoding: 'utf8' });
     assert.match(out, /1 changed/);
     const written = fs.readFileSync(fixtureFile, 'utf8');
-    assert.match(written, /<lyra-button variant="brand">Go<\/lyra-button>/);
+    assert.match(written, /<lr-button variant="brand">Go<\/lr-button>/);
     // The unrelated class name is not a real tag usage (not anchored on `<`/`</`, and not an
     // exact-quoted match either -- it's inside a double-quoted attribute value alongside other
     // content... actually it IS the entire attribute value here, so confirm it is intentionally

@@ -31,7 +31,7 @@ export async function loadChartAndZoom(
     mod = await importChart();
   } catch (err) {
     console.warn(
-      '<lyra-chart> needs the optional peer dependency `chart.js` — install it with `pnpm add chart.js`:',
+      '<lr-chart> needs the optional peer dependency `chart.js` — install it with `pnpm add chart.js`:',
       err,
     );
     return null;
@@ -44,7 +44,7 @@ export async function loadChartAndZoom(
     zoomPlugin = (await importZoom()).default;
   } catch (err) {
     console.warn(
-      '<lyra-chart> zoom support needs the optional peer dependency `chartjs-plugin-zoom` — ' +
+      '<lr-chart> zoom support needs the optional peer dependency `chartjs-plugin-zoom` — ' +
         'charts still render without it, but the `zoom` attribute has no effect until it is ' +
         'installed with `pnpm add chartjs-plugin-zoom`:',
       err,
@@ -109,7 +109,7 @@ export function loadChartJs(): Promise<ChartJsModule | null> {
  * `chartJs` memoization above. A plain boolean "already registered" guard
  * checked before an `await` and only set after would leave a check-then-act
  * race across that `await` boundary: two callers racing to turn `zoom` on
- * close together (e.g. two `<lyra-chart zoom>` elements connecting around
+ * close together (e.g. two `<lr-chart zoom>` elements connecting around
  * the same time) could both pass the check before either sets the flag,
  * each independently re-importing the plugin and calling
  * `mod.Chart.register()`. A single promise assigned up front closes that

@@ -28,7 +28,7 @@ const demoAdapter: PhoneNumberAdapter = {
 
 const meta: Meta = {
   title: 'Forms/PhoneInput',
-  component: 'lyra-phone-input',
+  component: 'lr-phone-input',
   tags: ['autodocs'],
 };
 
@@ -37,14 +37,14 @@ type Story = StoryObj;
 
 export const Default: Story = {
   render: () => html`
-    <lyra-phone-input
+    <lr-phone-input
       label="Mobile number"
       hint="Used only for account security"
       placeholder="621 123 456"
       default-country="LU"
       .adapter=${demoAdapter}
       style="max-width: 24rem"
-    ></lyra-phone-input>
+    ></lr-phone-input>
   `,
 };
 
@@ -52,18 +52,18 @@ export const Default: Story = {
 export const AccessibleEditingSurface: Story = {
   render: () => html`
     <div style="display: grid; gap: 0.75rem; max-width: 24rem;">
-      <lyra-phone-input
+      <lr-phone-input
         aria-label="Account mobile number"
         value="+352621123456"
         default-country="LU"
         .adapter=${demoAdapter}
-      ></lyra-phone-input>
+      ></lr-phone-input>
       <button
         type="button"
         style="justify-self: start;"
         @click=${(event: Event) => {
           const phoneInput = (event.currentTarget as HTMLElement).parentElement!.querySelector(
-            'lyra-phone-input',
+            'lr-phone-input',
           ) as LyraPhoneInput;
           phoneInput.focus();
           phoneInput.select();
@@ -75,49 +75,49 @@ export const AccessibleEditingSurface: Story = {
 
 export const Required: Story = {
   render: () => html`
-    <lyra-phone-input
+    <lr-phone-input
       label="Contact number"
       required
       default-country="FR"
       .adapter=${demoAdapter}
       style="max-width: 24rem"
-    ></lyra-phone-input>
+    ></lr-phone-input>
   `,
 };
 
 export const OptionalCountryAdornment: Story = {
   render: () => html`
-    <lyra-phone-input
+    <lr-phone-input
       label="Mobile number"
       default-country="LU"
       .adapter=${demoAdapter}
       style="max-width: 24rem"
     >
       <span slot="country-prefix" aria-hidden="true">🌍</span>
-    </lyra-phone-input>
+    </lr-phone-input>
   `,
 };
 
 export const E164WithoutMetadata: Story = {
   render: () => html`
-    <lyra-phone-input
+    <lr-phone-input
       label="International number"
       hint="Already-international E.164 input works without a numbering-plan adapter."
       value="+352621123456"
       style="max-width: 24rem"
-    ></lyra-phone-input>
+    ></lr-phone-input>
   `,
 };
 
 export const Narrow: Story = {
   render: () => html`
     <div style="inline-size: 20rem; max-inline-size: 100%">
-      <lyra-phone-input
+      <lr-phone-input
         label="A deliberately long translated telephone-field label"
         hint="Long supporting text wraps within the component's own narrow allocation."
         default-country="DE"
         .adapter=${demoAdapter}
-      ></lyra-phone-input>
+      ></lr-phone-input>
     </div>
   `,
 };
@@ -125,12 +125,12 @@ export const Narrow: Story = {
 export const RightToLeft: Story = {
   render: () => html`
     <div dir="rtl" lang="ar" style="max-width: 24rem">
-      <lyra-phone-input
+      <lr-phone-input
         label="رقم الهاتف"
         country-label="البلد"
         default-country="LU"
         .adapter=${demoAdapter}
-      ></lyra-phone-input>
+      ></lr-phone-input>
     </div>
   `,
 };

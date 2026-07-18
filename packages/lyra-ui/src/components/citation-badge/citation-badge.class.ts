@@ -20,8 +20,8 @@ export interface CitationOpenDetail {
 }
 
 export interface LyraCitationBadgeEventMap {
-  'lyra-citation-activate': CustomEvent<CitationActivateDetail>;
-  'lyra-citation-open': CustomEvent<CitationOpenDetail>;
+  'lr-citation-activate': CustomEvent<CitationActivateDetail>;
+  'lr-citation-open': CustomEvent<CitationOpenDetail>;
 }
 
 /** Localization key for the visible (not just color-coded) status word,
@@ -58,10 +58,10 @@ function isRealPreviewNode(n: Node): boolean {
 }
 
 /**
- * `<lyra-citation-badge>` — an inline `[n]` citation marker with a hover/
+ * `<lr-citation-badge>` — an inline `[n]` citation marker with a hover/
  * focus preview popover and confidence/verification-status coloring. Used
  * for an agent response's inline citations, each carrying a `source-id`
- * that matches a corresponding `<lyra-source-card>` shown elsewhere on the
+ * that matches a corresponding `<lr-source-card>` shown elsewhere on the
  * page (a sibling component in this same family — this component doesn't
  * import or know anything about it, only carries the id through its
  * events).
@@ -70,7 +70,7 @@ function isRealPreviewNode(n: Node): boolean {
  * renders `[index]` — it's reserved for optional rich preview content (e.g.
  * a filename + short excerpt) shown in a floating popover on hover/focus,
  * positioned with `internal/positioner.js`'s `place()` the same way
- * `<lyra-tool-call-chip>` positions its own detail tooltip. No popover shows
+ * `<lr-tool-call-chip>` positions its own detail tooltip. No popover shows
  * at all when the slot carries no content, and the popover never traps
  * focus — it's supplementary preview content, not a modal, so Tab continues
  * past the badge normally even while it happens to be visible from a mouse
@@ -79,16 +79,16 @@ function isRealPreviewNode(n: Node): boolean {
  * both hidden and visible, so assistive technology can resolve the preview
  * as soon as focus causes it to open.
  *
- * Two distinct signals fire from the same badge: `lyra-citation-activate`
+ * Two distinct signals fire from the same badge: `lr-citation-activate`
  * (click, or Enter while focused — native `<button>` behavior, no listener
  * needed for the Enter case) is the lightweight "jump to this source"
  * signal a host wires to scrolling/highlighting the matching
- * `<lyra-source-card>`. `lyra-citation-open` (dblclick, or Space while
+ * `<lr-source-card>`. `lr-citation-open` (dblclick, or Space while
  * focused) is a distinct "full preview" signal — `href` in its detail is
  * `undefined` when the `href` prop isn't set; the consumer decides what
  * "open" means (a new tab, a dialog, etc). A double-click still fires two
- * `lyra-citation-activate` events (one per constituent click — standard
- * browser `dblclick` behavior) in addition to the one `lyra-citation-open`;
+ * `lr-citation-activate` events (one per constituent click — standard
+ * browser `dblclick` behavior) in addition to the one `lr-citation-open`;
  * a consumer that only cares about the richer signal on a double-click
  * should ignore the paired activate events in that case.
  *
@@ -100,13 +100,13 @@ function isRealPreviewNode(n: Node): boolean {
  * uncertain". `default` renders as plain neutral text with no background
  * tint, for citations that carry no confidence/verification signal at all.
  *
- * @customElement lyra-citation-badge
+ * @customElement lr-citation-badge
  * @slot - Rich preview/tooltip content (e.g. a filename + excerpt), shown in
  * a floating popover on hover/focus. Nothing renders (no hover affordance at
  * all) when this slot is empty.
- * @event lyra-citation-activate - The badge was activated (click, or Enter
+ * @event lr-citation-activate - The badge was activated (click, or Enter
  * while focused). `detail: { sourceId, index }`.
- * @event lyra-citation-open - The badge's "full preview" affordance was
+ * @event lr-citation-open - The badge's "full preview" affordance was
  * triggered (dblclick, or Space while focused).
  * `detail: { sourceId, index, href }`.
  * @csspart base - The clickable badge (`<button>`).
@@ -119,7 +119,7 @@ export class LyraCitationBadge extends LyraElement<LyraCitationBadgeEventMap> {
 
   private _index = 1;
   /** The citation number shown, e.g. `3` renders as `[3]`. Renders directly as visible text (and
-   *  feeds `lyra-citation-activate`/`lyra-citation-open`'s `detail.index`), so a NaN/non-integer
+   *  feeds `lr-citation-activate`/`lr-citation-open`'s `detail.index`), so a NaN/non-integer
    *  value would be a real user-facing rendering bug — clamped to a finite, 1-indexed integer
    *  (citation numbers are conventionally 1-indexed, matching this property's own default). */
   @property({ type: Number })
@@ -136,12 +136,12 @@ export class LyraCitationBadge extends LyraElement<LyraCitationBadgeEventMap> {
    *  `label` is set) part of its accessible name. */
   @property({ reflect: true }) status: CitationBadgeStatus = 'default';
 
-  /** Id of a corresponding `<lyra-source-card>` elsewhere on the page —
+  /** Id of a corresponding `<lr-source-card>` elsewhere on the page —
    *  echoed back verbatim in both events, never read or validated here. */
   @property({ attribute: 'source-id' }) sourceId = '';
 
   /** Optional direct link target for the citation's source. Carried into
-   *  `lyra-citation-open`'s detail as-is; this component never navigates. */
+   *  `lr-citation-open`'s detail as-is; this component never navigates. */
   @property() href = '';
 
   /** Overrides the computed accessible name (`"Citation {index}[, {status}]"`). */
@@ -149,7 +149,7 @@ export class LyraCitationBadge extends LyraElement<LyraCitationBadgeEventMap> {
 
   // A `[part]` always contains a literal `<slot>` child regardless of
   // assigned content, so `:empty` never matches — real emptiness is tracked
-  // in JS instead, same fix lyra-tool-call-chip's hasDetailSlot/lyra-stat's
+  // in JS instead, same fix lr-tool-call-chip's hasDetailSlot/lr-stat's
   // hasIcon etc. already establish.
   @state() private hasPreviewSlot = false;
   @state() private popoverOpen = false;
@@ -161,7 +161,7 @@ export class LyraCitationBadge extends LyraElement<LyraCitationBadgeEventMap> {
   private cleanupPositioner?: () => void;
   private hideTimer?: ReturnType<typeof setTimeout>;
   // Hover and focus are tracked as independent "keep it open" reasons —
-  // mirrors lyra-toast-item's identical hovering/focused pair — so releasing
+  // mirrors lr-toast-item's identical hovering/focused pair — so releasing
   // one (e.g. the pointer leaving while the badge still has keyboard focus)
   // doesn't schedule a hide the other modality is still holding open.
   private hovering = false;
@@ -278,7 +278,7 @@ export class LyraCitationBadge extends LyraElement<LyraCitationBadgeEventMap> {
   private onKeyDown = (e: KeyboardEvent): void => {
     if (e.key === 'Escape' && this.popoverOpen) {
       // Swallow it here rather than letting it bubble to e.g. a containing
-      // lyra-dialog's own Escape-to-close handler — dismissing this
+      // lr-dialog's own Escape-to-close handler — dismissing this
       // lightweight preview shouldn't also close a surrounding modal.
       e.stopPropagation();
       this.hidePreviewNow();
@@ -297,7 +297,7 @@ export class LyraCitationBadge extends LyraElement<LyraCitationBadgeEventMap> {
   };
 
   private onClick = (): void => {
-    this.emit<CitationActivateDetail>('lyra-citation-activate', { sourceId: this.sourceId, index: this.index });
+    this.emit<CitationActivateDetail>('lr-citation-activate', { sourceId: this.sourceId, index: this.index });
   };
 
   private onDblClick = (): void => {
@@ -305,7 +305,7 @@ export class LyraCitationBadge extends LyraElement<LyraCitationBadgeEventMap> {
   };
 
   private emitOpen(): void {
-    this.emit<CitationOpenDetail>('lyra-citation-open', {
+    this.emit<CitationOpenDetail>('lr-citation-open', {
       sourceId: this.sourceId,
       index: this.index,
       href: this.href || undefined,
@@ -344,6 +344,6 @@ export class LyraCitationBadge extends LyraElement<LyraCitationBadgeEventMap> {
 
 declare global {
   interface HTMLElementTagNameMap {
-    'lyra-citation-badge': LyraCitationBadge;
+    'lr-citation-badge': LyraCitationBadge;
   }
 }

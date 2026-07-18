@@ -8,25 +8,25 @@ export const styles = css`
   [part='trigger'] {
     display: inline-flex;
     align-items: center;
-    gap: var(--lyra-space-xs);
-    padding: var(--lyra-space-xs) var(--lyra-space-m);
-    border: var(--lyra-border-width-thin) solid var(--lyra-color-border);
-    border-radius: var(--lyra-radius);
-    background: var(--lyra-color-surface);
-    color: var(--lyra-color-text);
+    gap: var(--lr-space-xs);
+    padding: var(--lr-space-xs) var(--lr-space-m);
+    border: var(--lr-border-width-thin) solid var(--lr-color-border);
+    border-radius: var(--lr-radius);
+    background: var(--lr-color-surface);
+    color: var(--lr-color-text);
     font: inherit;
     cursor: pointer;
   }
   [part='trigger']:hover:not(:disabled) {
-    border-color: var(--lyra-color-brand);
+    border-color: var(--lr-color-brand);
   }
   [part='trigger']:disabled {
-    opacity: var(--lyra-opacity-disabled);
+    opacity: var(--lr-opacity-disabled);
     cursor: not-allowed;
   }
   [part='trigger']:focus-visible {
-    outline: var(--lyra-focus-ring-width) solid var(--lyra-focus-ring-color);
-    outline-offset: var(--lyra-focus-ring-offset);
+    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
+    outline-offset: var(--lr-focus-ring-offset);
   }
   [part='menu'] {
     /* Closed state: invisible + slightly raised. visibility (not
@@ -43,30 +43,30 @@ export const styles = css`
        synchronous style pass as the open attribute write. */
     visibility: hidden;
     position: fixed;
-    z-index: var(--lyra-layer-dropdown);
+    z-index: var(--lr-layer-dropdown);
     box-sizing: border-box;
     inline-size: max-content;
     min-inline-size: min(
-      var(--lyra-size-8rem),
-      var(--lyra-positioner-available-inline-size, 100vw)
+      var(--lr-size-8rem),
+      var(--lr-positioner-available-inline-size, 100vw)
     );
     max-inline-size: min(
       92vw,
-      var(--lyra-size-20rem),
-      var(--lyra-positioner-available-inline-size, 100vw)
+      var(--lr-size-20rem),
+      var(--lr-positioner-available-inline-size, 100vw)
     );
-    max-block-size: var(--lyra-positioner-available-block-size, 100vh);
+    max-block-size: var(--lr-positioner-available-block-size, 100vh);
     overflow: auto;
-    padding: var(--lyra-space-xs);
-    background: var(--lyra-color-surface);
-    border: var(--lyra-border-width-thin) solid var(--lyra-color-border);
-    border-radius: var(--lyra-radius);
-    box-shadow: var(--lyra-shadow);
+    padding: var(--lr-space-xs);
+    background: var(--lr-color-surface);
+    border: var(--lr-border-width-thin) solid var(--lr-color-border);
+    border-radius: var(--lr-radius);
+    box-shadow: var(--lr-shadow);
     opacity: 0;
-    transform: translateY(var(--lyra-size-neg-4px));
+    transform: translateY(var(--lr-size-neg-4px));
     transition:
-      opacity var(--lyra-transition-fast),
-      transform var(--lyra-transition-fast);
+      opacity var(--lr-transition-fast),
+      transform var(--lr-transition-fast);
   }
   :host([open]) [part='menu'] {
     visibility: visible;
@@ -82,33 +82,33 @@ export const styles = css`
     display: flex;
     flex-direction: column;
     align-items: start;
-    gap: var(--lyra-size-1px);
+    gap: var(--lr-size-1px);
     box-sizing: border-box;
     min-inline-size: 0;
     inline-size: 100%;
     text-align: start;
-    padding: var(--lyra-space-xs) var(--lyra-space-s);
+    padding: var(--lr-space-xs) var(--lr-space-s);
     border: none;
     background: none;
     color: inherit;
     font: inherit;
     cursor: pointer;
-    border-radius: var(--lyra-radius);
+    border-radius: var(--lr-radius);
   }
   [part='menu-item']:hover:not(:disabled) {
-    background: var(--lyra-color-brand-quiet);
+    background: var(--lr-color-brand-quiet);
   }
   [part='menu-item']:focus-visible {
-    outline: var(--lyra-focus-ring-width) solid var(--lyra-focus-ring-color);
-    outline-offset: var(--lyra-focus-ring-offset);
+    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
+    outline-offset: var(--lr-focus-ring-offset);
   }
   [part='menu-item']:disabled {
-    opacity: var(--lyra-opacity-disabled);
+    opacity: var(--lr-opacity-disabled);
     cursor: not-allowed;
   }
   [part='format-description'] {
-    color: var(--lyra-color-text-quiet);
-    font-size: var(--lyra-font-size-sm);
+    color: var(--lr-color-text-quiet);
+    font-size: var(--lr-font-size-sm);
   }
   [part='format-label'],
   [part='format-description'] {

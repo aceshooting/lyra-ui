@@ -5,7 +5,7 @@ import type { ActivityEntry, LyraActivityFeed } from './activity-feed.class.js';
 
 const meta: Meta = {
   title: 'ActivityFeed',
-  component: 'lyra-activity-feed',
+  component: 'lr-activity-feed',
   tags: ['autodocs'],
   parameters: {
     docs: {
@@ -28,12 +28,12 @@ const entries: ActivityEntry[] = [
 
 export const LiveExpanded: Story = {
   name: 'Live, expanded',
-  render: () => html`<lyra-activity-feed style="max-width: 32rem;" mode="live" expanded .entries=${entries}></lyra-activity-feed>`,
+  render: () => html`<lr-activity-feed style="max-width: 32rem;" mode="live" expanded .entries=${entries}></lr-activity-feed>`,
 };
 
 export const PostHocCollapsed: Story = {
   name: 'Post-hoc, collapsed (finished run)',
-  render: () => html`<lyra-activity-feed style="max-width: 32rem;" mode="post-hoc" .entries=${entries}></lyra-activity-feed>`,
+  render: () => html`<lr-activity-feed style="max-width: 32rem;" mode="post-hoc" .entries=${entries}></lr-activity-feed>`,
 };
 
 export const WithTimestamps: Story = {
@@ -43,13 +43,13 @@ export const WithTimestamps: Story = {
       ...entry,
       timestamp: new Date(now - (entries.length - i) * 60000),
     }));
-    return html`<lyra-activity-feed
+    return html`<lr-activity-feed
       style="max-width: 32rem;"
       mode="live"
       expanded
       show-timestamps
       .entries=${withTimes}
-    ></lyra-activity-feed>`;
+    ></lr-activity-feed>`;
   },
 };
 
@@ -61,7 +61,7 @@ export const VirtualizedLongRun: Story = {
       text: `Step ${i + 1} of the run`,
       tone: i % 25 === 0 ? 'brand' : 'neutral',
     }));
-    return html`<lyra-activity-feed style="max-width: 32rem;" mode="live" expanded .entries=${many}></lyra-activity-feed>`;
+    return html`<lr-activity-feed style="max-width: 32rem;" mode="live" expanded .entries=${many}></lr-activity-feed>`;
   },
 };
 
@@ -77,7 +77,7 @@ export const LiveStreamingDemo: Story = {
       'Summarizing findings…',
     ];
     function wire(root: HTMLElement): void {
-      const feed = root.querySelector<LyraActivityFeed>('lyra-activity-feed')!;
+      const feed = root.querySelector<LyraActivityFeed>('lr-activity-feed')!;
       if (feed.hasAttribute('data-wired')) return;
       feed.setAttribute('data-wired', '');
       let i = 0;
@@ -103,10 +103,10 @@ export const LiveStreamingDemo: Story = {
         style="display:flex; flex-direction:column; gap:0.75rem; max-width:32rem;"
         @click=${(e: Event) => wire(e.currentTarget as HTMLElement)}
       >
-        <lyra-activity-feed mode="live"></lyra-activity-feed>
+        <lr-activity-feed mode="live"></lr-activity-feed>
         <button
           data-start
-          style="font:inherit; font-size:0.8125rem; padding:0.3rem 0.7rem; border:1px solid var(--lyra-color-border); border-radius:var(--lyra-radius); background:var(--lyra-color-surface); cursor:pointer; align-self:flex-start;"
+          style="font:inherit; font-size:0.8125rem; padding:0.3rem 0.7rem; border:1px solid var(--lr-color-border); border-radius:var(--lr-radius); background:var(--lr-color-surface); cursor:pointer; align-self:flex-start;"
         >
           Start run
         </button>
@@ -119,7 +119,7 @@ export const Narrow320: Story = {
   name: 'Narrow (320px)',
   render: () => html`
     <div style="inline-size: 320px; max-inline-size: 100%;">
-      <lyra-activity-feed mode="live" expanded show-timestamps .entries=${entries}></lyra-activity-feed>
+      <lr-activity-feed mode="live" expanded show-timestamps .entries=${entries}></lr-activity-feed>
     </div>
   `,
 };

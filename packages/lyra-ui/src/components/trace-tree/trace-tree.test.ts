@@ -21,9 +21,9 @@ const SPANS: LyraSpan[] = [
   { id: 'llm', parentId: 'root', name: 'gpt-turbo', kind: 'llm', startMs: 130, endMs: 390, status: 'running' },
 ];
 
-describe('lyra-trace-tree', () => {
+describe('lr-trace-tree', () => {
   it('renders spans as a flattened tree with computed aria-level/posinset/setsize', async () => {
-    const el = (await fixture(html`<lyra-trace-tree .spans=${SPANS}></lyra-trace-tree>`)) as LyraTraceTree;
+    const el = (await fixture(html`<lr-trace-tree .spans=${SPANS}></lr-trace-tree>`)) as LyraTraceTree;
     await el.updateComplete;
     const rows = el.shadowRoot!.querySelectorAll('[part="row"]');
     expect(rows.length).to.equal(3);
@@ -39,34 +39,34 @@ describe('lyra-trace-tree', () => {
 
   it('treats a span with an unresolvable parentId as a root instead of dropping it', async () => {
     const orphan: LyraSpan[] = [{ id: 'x', parentId: 'missing', name: 'orphan', kind: 'other', startMs: 0, status: 'pending' }];
-    const el = (await fixture(html`<lyra-trace-tree .spans=${orphan}></lyra-trace-tree>`)) as LyraTraceTree;
+    const el = (await fixture(html`<lr-trace-tree .spans=${orphan}></lr-trace-tree>`)) as LyraTraceTree;
     await el.updateComplete;
     expect(el.shadowRoot!.querySelectorAll('[part="row"]').length).to.equal(1);
   });
 
-  it('emits lyra-span-toggle and hides children when a parent row is collapsed', async () => {
-    const el = (await fixture(html`<lyra-trace-tree .spans=${SPANS}></lyra-trace-tree>`)) as LyraTraceTree;
+  it('emits lr-span-toggle and hides children when a parent row is collapsed', async () => {
+    const el = (await fixture(html`<lr-trace-tree .spans=${SPANS}></lr-trace-tree>`)) as LyraTraceTree;
     await el.updateComplete;
     expect(el.shadowRoot!.querySelectorAll('[part="row"]').length).to.equal(3);
     const toggle = el.shadowRoot!.querySelector('[data-id="root"] [part="toggle"]') as HTMLElement;
     setTimeout(() => toggle.click());
-    const ev = await oneEvent(el, 'lyra-span-toggle');
+    const ev = await oneEvent(el, 'lr-span-toggle');
     expect(ev.detail).to.deep.equal({ id: 'root', expanded: false });
     await el.updateComplete;
     expect(el.shadowRoot!.querySelectorAll('[part="row"]').length).to.equal(1);
   });
 
-  it('emits lyra-span-select on row click and on Enter', async () => {
-    const el = (await fixture(html`<lyra-trace-tree .spans=${SPANS}></lyra-trace-tree>`)) as LyraTraceTree;
+  it('emits lr-span-select on row click and on Enter', async () => {
+    const el = (await fixture(html`<lr-trace-tree .spans=${SPANS}></lr-trace-tree>`)) as LyraTraceTree;
     await el.updateComplete;
     const row = el.shadowRoot!.querySelector('[data-id="search"]') as HTMLElement;
     setTimeout(() => row.click());
-    const ev = await oneEvent(el, 'lyra-span-select');
+    const ev = await oneEvent(el, 'lr-span-select');
     expect(ev.detail).to.deep.equal({ id: 'search' });
   });
 
   it('moves roving tabindex with ArrowDown/ArrowUp', async () => {
-    const el = (await fixture(html`<lyra-trace-tree .spans=${SPANS}></lyra-trace-tree>`)) as LyraTraceTree;
+    const el = (await fixture(html`<lr-trace-tree .spans=${SPANS}></lr-trace-tree>`)) as LyraTraceTree;
     await el.updateComplete;
     const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
     const root = el.shadowRoot!.querySelector('[data-id="root"]') as HTMLElement;
@@ -80,7 +80,7 @@ describe('lyra-trace-tree', () => {
 
   it('marks the row matching activeSpanId with aria-current and data-active', async () => {
     const el = (await fixture(
-      html`<lyra-trace-tree .spans=${SPANS} active-span-id="llm"></lyra-trace-tree>`,
+      html`<lr-trace-tree .spans=${SPANS} active-span-id="llm"></lr-trace-tree>`,
     )) as LyraTraceTree;
     await el.updateComplete;
     const llmRow = el.shadowRoot!.querySelector('[data-id="llm"]') as HTMLElement;
@@ -89,7 +89,7 @@ describe('lyra-trace-tree', () => {
   });
 
   it('shows tokens/cost columns only when show-tokens/show-cost are set', async () => {
-    const el = (await fixture(html`<lyra-trace-tree .spans=${SPANS}></lyra-trace-tree>`)) as LyraTraceTree;
+    const el = (await fixture(html`<lr-trace-tree .spans=${SPANS}></lr-trace-tree>`)) as LyraTraceTree;
     await el.updateComplete;
     expect(el.shadowRoot!.querySelector('[part="tokens-in"]')).to.not.exist;
     el.showTokens = true;
@@ -100,7 +100,7 @@ describe('lyra-trace-tree', () => {
   });
 
   it('expandAll() and collapseAll() control every collapsible row', async () => {
-    const el = (await fixture(html`<lyra-trace-tree .spans=${SPANS}></lyra-trace-tree>`)) as LyraTraceTree;
+    const el = (await fixture(html`<lr-trace-tree .spans=${SPANS}></lr-trace-tree>`)) as LyraTraceTree;
     await el.updateComplete;
     el.collapseAll();
     await el.updateComplete;
@@ -111,14 +111,14 @@ describe('lyra-trace-tree', () => {
   });
 
   it('keeps a roving tabindex when a different row is toggled than the focused one (regression)', async () => {
-    const el = (await fixture(html`<lyra-trace-tree .spans=${SPANS}></lyra-trace-tree>`)) as LyraTraceTree;
+    const el = (await fixture(html`<lr-trace-tree .spans=${SPANS}></lr-trace-tree>`)) as LyraTraceTree;
     await el.updateComplete;
     const search = el.shadowRoot!.querySelector('[data-id="search"]') as HTMLElement;
     search.click();
     await el.updateComplete;
     const toggle = el.shadowRoot!.querySelector('[data-id="root"] [part="toggle"]') as HTMLElement;
     setTimeout(() => toggle.click());
-    await oneEvent(el, 'lyra-span-toggle');
+    await oneEvent(el, 'lr-span-toggle');
     await el.updateComplete;
     const rows = [...el.shadowRoot!.querySelectorAll('[part="row"]')];
     expect(rows).to.have.length(1);
@@ -128,7 +128,7 @@ describe('lyra-trace-tree', () => {
   });
 
   it('keeps a roving tabindex after collapseAll() hides the focused row (regression)', async () => {
-    const el = (await fixture(html`<lyra-trace-tree .spans=${SPANS}></lyra-trace-tree>`)) as LyraTraceTree;
+    const el = (await fixture(html`<lr-trace-tree .spans=${SPANS}></lr-trace-tree>`)) as LyraTraceTree;
     await el.updateComplete;
     const search = el.shadowRoot!.querySelector('[data-id="search"]') as HTMLElement;
     search.click();
@@ -142,23 +142,23 @@ describe('lyra-trace-tree', () => {
     expect(zeroTab[0].getAttribute('data-id')).to.equal('root');
   });
 
-  it('renders lyra-empty when spans is empty', async () => {
-    const el = (await fixture(html`<lyra-trace-tree></lyra-trace-tree>`)) as LyraTraceTree;
+  it('renders lr-empty when spans is empty', async () => {
+    const el = (await fixture(html`<lr-trace-tree></lr-trace-tree>`)) as LyraTraceTree;
     await el.updateComplete;
-    expect(el.shadowRoot!.querySelector('lyra-empty')).to.exist;
+    expect(el.shadowRoot!.querySelector('lr-empty')).to.exist;
   });
 
-  it('registers lyra-live-region and lyra-empty as a side effect of importing trace-tree.js (regression)', async () => {
+  it('registers lr-live-region and lr-empty as a side effect of importing trace-tree.js (regression)', async () => {
     // Importing the *.class.js module alone never calls defineElement -- only the barrel (*.js)
     // does. A component that imports its dependencies via the .class.js path renders an
     // un-upgraded, plain HTMLElement for them, silently breaking anything that calls a method on
     // that dependency (e.g. announce()).
-    expect(customElements.get('lyra-live-region')).to.exist;
-    expect(customElements.get('lyra-empty')).to.exist;
+    expect(customElements.get('lr-live-region')).to.exist;
+    expect(customElements.get('lr-empty')).to.exist;
   });
 
   it('falls back to the built-in English label and honors a strings override', async () => {
-    const el = (await fixture(html`<lyra-trace-tree></lyra-trace-tree>`)) as LyraTraceTree;
+    const el = (await fixture(html`<lr-trace-tree></lr-trace-tree>`)) as LyraTraceTree;
     await el.updateComplete;
     expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('Trace tree');
     el.strings = { traceTree: 'Arbre de trace' };
@@ -167,12 +167,12 @@ describe('lyra-trace-tree', () => {
   });
 
   it('builds status-change announcements from the traceTreeSpanStatus template, so a locale controls name/status order', async () => {
-    const el = (await fixture(html`<lyra-trace-tree .spans=${SPANS}></lyra-trace-tree>`)) as LyraTraceTree;
+    const el = (await fixture(html`<lr-trace-tree .spans=${SPANS}></lr-trace-tree>`)) as LyraTraceTree;
     await el.updateComplete;
     // reorder the placeholders to prove the announcement is interpolated,
     // not the span name concatenated with the localized status
     el.strings = { traceTreeSpanStatus: 'Status {status} for {name}' };
-    const live = el.shadowRoot!.querySelector('lyra-live-region')!;
+    const live = el.shadowRoot!.querySelector('lr-live-region')!;
     live.throttleMs = 0;
     await el.updateComplete;
     await live.updateComplete;
@@ -185,13 +185,13 @@ describe('lyra-trace-tree', () => {
   });
 
   it('is accessible', async () => {
-    const el = (await fixture(html`<lyra-trace-tree .spans=${SPANS} show-tokens show-cost></lyra-trace-tree>`)) as LyraTraceTree;
+    const el = (await fixture(html`<lr-trace-tree .spans=${SPANS} show-tokens show-cost></lr-trace-tree>`)) as LyraTraceTree;
     await el.updateComplete;
     await expect(el).to.be.accessible();
   });
 
   it('gives the expand/collapse toggle the shared minimum tappable size without inflating the chevron glyph', async () => {
-    const el = (await fixture(html`<lyra-trace-tree .spans=${SPANS}></lyra-trace-tree>`)) as LyraTraceTree;
+    const el = (await fixture(html`<lr-trace-tree .spans=${SPANS}></lr-trace-tree>`)) as LyraTraceTree;
     await el.updateComplete;
     const toggle = el.shadowRoot!.querySelector('[data-id="root"] [part="toggle"]') as HTMLElement;
     expect(getComputedStyle(toggle).minInlineSize).to.equal('40px');

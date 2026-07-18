@@ -3,17 +3,17 @@ import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../internal/lyra-element.js';
 import { styles } from './details.styles.js';
 
-export interface LyraDetailsEventMap { 'lyra-toggle': CustomEvent<{ open: boolean }>; }
+export interface LyraDetailsEventMap { 'lr-toggle': CustomEvent<{ open: boolean }>; }
 
 /**
- * `<lyra-details>` — an accessible disclosure panel.
+ * `<lr-details>` — an accessible disclosure panel.
  *
- * @customElement lyra-details
+ * @customElement lr-details
  * @slot summary - Summary content. Takes priority over `summary` when any light-DOM child
  *   carries `slot="summary"` — the fallback localized "Details" text only appears when neither
  *   is set.
  * @slot - Panel content.
- * @event lyra-toggle - The disclosure state changed. `detail: { open }`.
+ * @event lr-toggle - The disclosure state changed. `detail: { open }`.
  * @csspart base - The native details element.
  * @csspart summary - The summary control.
  * @csspart content - The panel content.
@@ -25,7 +25,7 @@ export class LyraDetails extends LyraElement<LyraDetailsEventMap> {
   @property() summary = '';
 
   // `[part='summary']:empty` never matches because the part always contains a literal `<slot>`
-  // child -- same fix `lyra-avatar`/`lyra-empty`/`lyra-stat` already established. Track real
+  // child -- same fix `lr-avatar`/`lr-empty`/`lr-stat` already established. Track real
   // slot assignment in JS so the `summary` fallback text doesn't render alongside rich slotted
   // content (it previously always rendered whenever the plain-string `summary` prop was unset,
   // even with a `slot="summary"` child present).
@@ -42,7 +42,7 @@ export class LyraDetails extends LyraElement<LyraDetailsEventMap> {
     const details = event.currentTarget as HTMLDetailsElement;
     if (this.disabled && details.open) { details.open = false; return; }
     this.open = details.open;
-    this.emit('lyra-toggle', { open: this.open });
+    this.emit('lr-toggle', { open: this.open });
   };
   private onClick = (event: Event): void => {
     if (this.disabled) { event.preventDefault(); event.stopPropagation(); }
@@ -64,4 +64,4 @@ export class LyraDetails extends LyraElement<LyraDetailsEventMap> {
     </details>`;
   }
 }
-declare global { interface HTMLElementTagNameMap { 'lyra-details': LyraDetails; } }
+declare global { interface HTMLElementTagNameMap { 'lr-details': LyraDetails; } }

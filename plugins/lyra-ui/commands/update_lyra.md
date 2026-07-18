@@ -62,7 +62,7 @@ anything it finds that isn't covered yet.
      <one paragraph of audit-batch context: what triggered this sweep, what version range was
      checked, anything already known to be filed elsewhere>
 
-     ## 1. `<lyra-component-or-native-tag>`: <short description>
+     ## 1. `<lr-component-or-native-tag>`: <short description>
 
      **Motivating consumer code:** <file path> — <what it does, in enough detail that someone
      without this project checked out understands the use case>.

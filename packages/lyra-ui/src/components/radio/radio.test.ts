@@ -5,7 +5,7 @@ import type { LyraRadio } from './radio.js';
 import type { LyraRadioGroup } from './radio-group.js';
 
 it('renders radio semantics and explicit false states', async () => {
-  const el = (await fixture(html`<lyra-radio>One</lyra-radio>`)) as LyraRadio;
+  const el = (await fixture(html`<lr-radio>One</lr-radio>`)) as LyraRadio;
   const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
   expect(base.getAttribute('role')).to.equal('radio');
   expect(base.getAttribute('aria-checked')).to.equal('false');
@@ -15,28 +15,28 @@ it('renders radio semantics and explicit false states', async () => {
 });
 
 it('selects and emits native-style events', async () => {
-  const el = (await fixture(html`<lyra-radio value="a">A</lyra-radio>`)) as LyraRadio;
+  const el = (await fixture(html`<lr-radio value="a">A</lr-radio>`)) as LyraRadio;
   const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
   const events: string[] = [];
-  for (const name of ['input', 'change', 'lyra-change']) el.addEventListener(name, () => events.push(name));
+  for (const name of ['input', 'change', 'lr-change']) el.addEventListener(name, () => events.push(name));
   base.click();
   expect(el.checked).to.be.true;
-  expect(events).to.deep.equal(['input', 'change', 'lyra-change']);
+  expect(events).to.deep.equal(['input', 'change', 'lr-change']);
 });
 
 it('moves selection and DOM focus when arrow navigation is used', async () => {
   const group = (await fixture(html`
-    <lyra-radio-group label="Choice">
-      <lyra-radio value="a">A</lyra-radio>
-      <lyra-radio value="b">B</lyra-radio>
-    </lyra-radio-group>
+    <lr-radio-group label="Choice">
+      <lr-radio value="a">A</lr-radio>
+      <lr-radio value="b">B</lr-radio>
+    </lr-radio-group>
   `)) as LyraRadioGroup;
-  const radios = [...group.querySelectorAll('lyra-radio')] as LyraRadio[];
+  const radios = [...group.querySelectorAll('lr-radio')] as LyraRadio[];
   const firstBase = radios[0].shadowRoot!.querySelector('[part="base"]') as HTMLElement;
   const secondBase = radios[1].shadowRoot!.querySelector('[part="base"]') as HTMLElement;
   radios[0].checked = true;
   firstBase.focus();
-  const eventPromise = oneEvent(group, 'lyra-change');
+  const eventPromise = oneEvent(group, 'lr-change');
   firstBase.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true, composed: true, cancelable: true }));
   const event = await eventPromise;
   expect(event.detail.value).to.equal('b');
@@ -47,13 +47,13 @@ it('moves selection and DOM focus when arrow navigation is used', async () => {
 
 it('uses roving tabindex: only the checked (or first enabled) radio is a Tab stop', async () => {
   const group = (await fixture(html`
-    <lyra-radio-group label="Choice">
-      <lyra-radio value="a">A</lyra-radio>
-      <lyra-radio value="b">B</lyra-radio>
-    </lyra-radio-group>
+    <lr-radio-group label="Choice">
+      <lr-radio value="a">A</lr-radio>
+      <lr-radio value="b">B</lr-radio>
+    </lr-radio-group>
   `)) as LyraRadioGroup;
   await group.updateComplete;
-  const radios = [...group.querySelectorAll('lyra-radio')] as LyraRadio[];
+  const radios = [...group.querySelectorAll('lr-radio')] as LyraRadio[];
   const base = (r: LyraRadio) => r.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
   expect(base(radios[0]).tabIndex).to.equal(0);
   expect(base(radios[1]).tabIndex).to.equal(-1);
@@ -66,9 +66,9 @@ it('uses roving tabindex: only the checked (or first enabled) radio is a Tab sto
 
 it('exposes an accessible name for the radiogroup from its visible label', async () => {
   const group = (await fixture(html`
-    <lyra-radio-group label="Choice">
-      <lyra-radio value="a">A</lyra-radio>
-    </lyra-radio-group>
+    <lr-radio-group label="Choice">
+      <lr-radio value="a">A</lr-radio>
+    </lr-radio-group>
   `)) as LyraRadioGroup;
   const base = group.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
   const labelId = base.getAttribute('aria-labelledby');
@@ -79,11 +79,11 @@ it('exposes an accessible name for the radiogroup from its visible label', async
 it('restores the declarative default-checked state on form reset', async () => {
   const form = (await fixture(html`
     <form>
-      <lyra-radio name="choice" value="a" checked>A</lyra-radio>
-      <lyra-radio name="choice" value="b">B</lyra-radio>
+      <lr-radio name="choice" value="a" checked>A</lr-radio>
+      <lr-radio name="choice" value="b">B</lr-radio>
     </form>
   `)) as HTMLFormElement;
-  const [a, b] = [...form.querySelectorAll('lyra-radio')] as LyraRadio[];
+  const [a, b] = [...form.querySelectorAll('lr-radio')] as LyraRadio[];
   expect(a.checked).to.be.true;
 
   b.checked = true;
@@ -100,12 +100,12 @@ it('temporarily disables a bare radio through an ancestor fieldset without overw
   const form = (await fixture(html`
     <form>
       <fieldset>
-        <lyra-radio value="a">A</lyra-radio>
-        <lyra-radio value="b" disabled>B</lyra-radio>
+        <lr-radio value="a">A</lr-radio>
+        <lr-radio value="b" disabled>B</lr-radio>
       </fieldset>
     </form>
   `)) as HTMLFormElement;
-  const [a, b] = [...form.querySelectorAll('lyra-radio')] as LyraRadio[];
+  const [a, b] = [...form.querySelectorAll('lr-radio')] as LyraRadio[];
   const fieldset = form.querySelector('fieldset') as HTMLFieldSetElement;
 
   expect(a.effectiveDisabled).to.be.false;
@@ -114,7 +114,7 @@ it('temporarily disables a bare radio through an ancestor fieldset without overw
   // No `await` before these assertions: `formDisabledCallback` fires
   // synchronously when the fieldset's `disabled` property is set.
   fieldset.disabled = true;
-  expect(a.effectiveDisabled, 'an ancestor fieldset must reach a bare lyra-radio').to.be.true;
+  expect(a.effectiveDisabled, 'an ancestor fieldset must reach a bare lr-radio').to.be.true;
   expect(a.disabled, 'fieldset state must never mutate the public disabled property').to.be.false;
   expect(a.hasAttribute('disabled'), 'the host attribute must not be mutated either').to.be.false;
   expect(b.disabled, 'an already-explicitly-disabled radio is unaffected').to.be.true;
@@ -132,19 +132,19 @@ it('temporarily disables a bare radio through an ancestor fieldset without overw
   expect(aBase.getAttribute('tabindex')).to.equal('0');
 });
 
-it('cascades fieldset-disabled state down to radios nested inside a lyra-radio-group', async () => {
+it('cascades fieldset-disabled state down to radios nested inside a lr-radio-group', async () => {
   const form = (await fixture(html`
     <form>
       <fieldset>
-        <lyra-radio-group label="Choice">
-          <lyra-radio value="a">A</lyra-radio>
-          <lyra-radio value="b">B</lyra-radio>
-        </lyra-radio-group>
+        <lr-radio-group label="Choice">
+          <lr-radio value="a">A</lr-radio>
+          <lr-radio value="b">B</lr-radio>
+        </lr-radio-group>
       </fieldset>
     </form>
   `)) as HTMLFormElement;
-  const group = form.querySelector('lyra-radio-group') as LyraRadioGroup;
-  const [a, b] = [...group.querySelectorAll('lyra-radio')] as LyraRadio[];
+  const group = form.querySelector('lr-radio-group') as LyraRadioGroup;
+  const [a, b] = [...group.querySelectorAll('lr-radio')] as LyraRadio[];
   const fieldset = form.querySelector('fieldset') as HTMLFieldSetElement;
   await group.updateComplete;
 
@@ -163,9 +163,9 @@ it('cascades fieldset-disabled state down to radios nested inside a lyra-radio-g
 
 it('wires hint/error text to aria-describedby on the radiogroup', async () => {
   const group = (await fixture(html`
-    <lyra-radio-group label="Choice">
-      <lyra-radio value="a">A</lyra-radio>
-    </lyra-radio-group>
+    <lr-radio-group label="Choice">
+      <lr-radio value="a">A</lr-radio>
+    </lr-radio-group>
   `)) as LyraRadioGroup;
   const base = group.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
   expect(base.hasAttribute('aria-describedby')).to.be.false;
@@ -185,9 +185,9 @@ it('wires hint/error text to aria-describedby on the radiogroup', async () => {
 
 it('renders a required-asterisk on the radiogroup label', async () => {
   const group = (await fixture(html`
-    <lyra-radio-group label="Choice" required>
-      <lyra-radio value="a">A</lyra-radio>
-    </lyra-radio-group>
+    <lr-radio-group label="Choice" required>
+      <lr-radio value="a">A</lr-radio>
+    </lr-radio-group>
   `)) as LyraRadioGroup;
   const label = group.shadowRoot!.querySelector('[part="label"]') as HTMLElement;
   const after = getComputedStyle(label, '::after');
@@ -196,12 +196,12 @@ it('renders a required-asterisk on the radiogroup label', async () => {
 
 it('clears group-imposed disabled/required on every radio when turned back off', async () => {
   const group = (await fixture(html`
-    <lyra-radio-group label="Choice" disabled required>
-      <lyra-radio value="a">A</lyra-radio>
-      <lyra-radio value="b">B</lyra-radio>
-    </lyra-radio-group>
+    <lr-radio-group label="Choice" disabled required>
+      <lr-radio value="a">A</lr-radio>
+      <lr-radio value="b">B</lr-radio>
+    </lr-radio-group>
   `)) as LyraRadioGroup;
-  const radios = [...group.querySelectorAll('lyra-radio')] as LyraRadio[];
+  const radios = [...group.querySelectorAll('lr-radio')] as LyraRadio[];
   expect(radios[0].effectiveDisabled).to.be.true;
   expect(radios[0].effectiveRequired).to.be.true;
 

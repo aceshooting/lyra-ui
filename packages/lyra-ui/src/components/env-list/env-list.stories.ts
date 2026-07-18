@@ -5,7 +5,7 @@ import type { EnvEntry } from './env-list.class.js';
 
 const meta: Meta = {
   title: 'Env List',
-  component: 'lyra-env-list',
+  component: 'lr-env-list',
   tags: ['autodocs'],
 };
 export default meta;
@@ -18,7 +18,7 @@ const entries: EnvEntry[] = [
 ];
 
 export const Default: Story = {
-  render: () => html`<lyra-env-list style="max-width:32rem" .entries=${entries}></lyra-env-list>`,
+  render: () => html`<lr-env-list style="max-width:32rem" .entries=${entries}></lr-env-list>`,
 };
 
 export const ScreenShareSafe: Story = {
@@ -33,7 +33,7 @@ export const ScreenShareSafe: Story = {
     },
   },
   render: () =>
-    html`<lyra-env-list style="max-width:32rem" .entries=${entries} .revealable=${false}></lyra-env-list>`,
+    html`<lr-env-list style="max-width:32rem" .entries=${entries} .revealable=${false}></lr-env-list>`,
 };
 
 export const AllSecretsMasked: Story = {
@@ -49,21 +49,21 @@ export const AllSecretsMasked: Story = {
     },
   },
   render: () =>
-    html`<lyra-env-list
+    html`<lr-env-list
       style="max-width:32rem"
       .entries=${[
         { name: 'API_KEY', value: 'sk-live-1234567890abcdef' },
         { name: 'DATABASE_URL', value: 'postgres://user:pass@host:5432/db' },
         { name: 'JWT_SECRET', value: 'x' },
       ]}
-    ></lyra-env-list>`,
+    ></lr-env-list>`,
 };
 
 export const Empty: Story = {
-  render: () => html`<lyra-env-list></lyra-env-list>`,
+  render: () => html`<lr-env-list></lr-env-list>`,
 };
 
 export const Narrow320: Story = {
   name: 'Narrow (320px)',
-  render: () => html`<div style="max-width:320px"><lyra-env-list .entries=${entries}></lyra-env-list></div>`,
+  render: () => html`<div style="max-width:320px"><lr-env-list .entries=${entries}></lr-env-list></div>`,
 };

@@ -4,12 +4,12 @@ import type { LyraHeatmap } from './heatmap.js';
 
 it('localizes the built-in value label in the legend and generated accessible name', async () => {
   const el = (await fixture(html`
-    <lyra-heatmap
+    <lr-heatmap
       .values=${[[1, 2]]}
       .rowLabels=${['A']}
       .colLabels=${['B', 'C']}
       .strings=${{ heatmapValueLabel: 'valeur' }}
-    ></lyra-heatmap>
+    ></lr-heatmap>
   `)) as LyraHeatmap;
   const legendLabel = el.shadowRoot!.querySelector('[part="legend"] > span:last-of-type')!;
 
@@ -19,12 +19,12 @@ it('localizes the built-in value label in the legend and generated accessible na
 
 it('keeps an explicitly customized value-label verbatim', async () => {
   const el = (await fixture(html`
-    <lyra-heatmap
+    <lr-heatmap
       value-label="requests"
       .values=${[[1, 2]]}
       .rowLabels=${['A']}
       .colLabels=${['B', 'C']}
-    ></lyra-heatmap>
+    ></lr-heatmap>
   `)) as LyraHeatmap;
   const legendLabel = el.shadowRoot!.querySelector('[part="legend"] > span:last-of-type')!;
 
@@ -34,12 +34,12 @@ it('keeps an explicitly customized value-label verbatim', async () => {
 
 it('formats legend ranges with the effective locale', async () => {
   const el = (await fixture(html`
-    <lyra-heatmap
+    <lr-heatmap
       locale="de-DE"
       .values=${[[1234.5, 2345.6]]}
       .rowLabels=${['A']}
       .colLabels=${['B', 'C']}
-    ></lyra-heatmap>
+    ></lr-heatmap>
   `)) as LyraHeatmap;
 
   expect(el.shadowRoot!.querySelector('[part="legend-lo"]')!.textContent).to.equal('1.234,5');
@@ -49,7 +49,7 @@ it('formats legend ranges with the effective locale', async () => {
 
 it('derives calendar-mode month labels from the same `locale` as weekday labels, so the two never disagree on language', async () => {
   const el = (await fixture(html`
-    <lyra-heatmap mode="calendar" locale="fr-FR" .days=${[{ date: '2026-03-01', value: 5 }]}></lyra-heatmap>
+    <lr-heatmap mode="calendar" locale="fr-FR" .days=${[{ date: '2026-03-01', value: 5 }]}></lr-heatmap>
   `)) as LyraHeatmap;
   await el.updateComplete;
 
@@ -72,7 +72,7 @@ it('derives calendar-mode month labels from the same `locale` as weekday labels,
 
 it('re-derives the default calendar month label once `locale` changes on an already-built grid', async () => {
   const el = (await fixture(html`
-    <lyra-heatmap mode="calendar" .days=${[{ date: '2026-03-01', value: 5 }]}></lyra-heatmap>
+    <lr-heatmap mode="calendar" .days=${[{ date: '2026-03-01', value: 5 }]}></lr-heatmap>
   `)) as LyraHeatmap;
   await el.updateComplete;
   type CachedGrid = { cachedCalendarGrid: { monthLabels: { label: string }[] } };

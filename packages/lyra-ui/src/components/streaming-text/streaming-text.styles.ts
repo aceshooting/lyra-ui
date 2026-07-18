@@ -4,17 +4,17 @@ export const styles = css`
   :host {
     display: block;
     overflow-wrap: break-word;
-    /* Not derived from any --lyra-* token in tokens.styles.ts -- there's no
+    /* Not derived from any --lr-* token in tokens.styles.ts -- there's no
        shared "inline cursor bar" token to resolve through, so this component
        defines its own scoped custom properties, exactly the way
-       lyra-typing-indicator's --lyra-typing-cursor-width/-height do for its
+       lr-typing-indicator's --lr-typing-cursor-width/-height do for its
        own (near-identical) blinking cursor. */
-    --lyra-streaming-text-cursor-width: var(--lyra-size-0-125rem);
-    --lyra-streaming-text-cursor-height: var(--lyra-size-1em);
+    --lr-streaming-text-cursor-width: var(--lr-size-0-125rem);
+    --lr-streaming-text-cursor-height: var(--lr-size-1em);
   }
 
   [part='base'] {
-    line-height: var(--lyra-line-height-loose);
+    line-height: var(--lr-line-height-loose);
   }
 
   /* Plain-text path only (Markdown mode never renders this element) -- see
@@ -31,21 +31,21 @@ export const styles = css`
   [part='cursor'] {
     display: inline-block;
     vertical-align: text-bottom;
-    inline-size: var(--lyra-streaming-text-cursor-width);
-    block-size: var(--lyra-streaming-text-cursor-height);
-    margin-inline-start: var(--lyra-space-xs);
+    inline-size: var(--lr-streaming-text-cursor-width);
+    block-size: var(--lr-streaming-text-cursor-height);
+    margin-inline-start: var(--lr-space-xs);
     background: currentColor;
-    border-radius: var(--lyra-streaming-text-cursor-width);
+    border-radius: var(--lr-streaming-text-cursor-width);
     /* Ambient, infinite "still alive" indicator, not a discrete state flip --
-       same reasoning as lyra-typing-indicator's own cursor variant, which
+       same reasoning as lr-typing-indicator's own cursor variant, which
        uses this same token for the identical blink pattern. */
-    animation: lyra-streaming-text-cursor-blink var(--lyra-transition-ambient) infinite;
+    animation: lr-streaming-text-cursor-blink var(--lr-transition-ambient) infinite;
   }
 
   /* Two adjacent keyframe stops (49% / 50%) either side of an instant flip,
-     same shape as lyra-typing-indicator's cursor variant, so the blink still
+     same shape as lr-typing-indicator's cursor variant, so the blink still
      reads as a sharp on/off even under the token's own ease-out timing. */
-  @keyframes lyra-streaming-text-cursor-blink {
+  @keyframes lr-streaming-text-cursor-blink {
     0%,
     49% {
       opacity: 1;

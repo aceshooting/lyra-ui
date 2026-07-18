@@ -9,7 +9,7 @@ const rows: LyraNeighborRow[] = [
 ];
 
 it('defaults to empty rows, groupByRelation=false, expandable=false, virtualizeAt=100', async () => {
-  const el = (await fixture(html`<lyra-neighbor-list></lyra-neighbor-list>`)) as LyraNeighborList;
+  const el = (await fixture(html`<lr-neighbor-list></lr-neighbor-list>`)) as LyraNeighborList;
   expect(el.rows).to.deep.equal([]);
   expect(el.groupByRelation).to.be.false;
   expect(el.expandable).to.be.false;
@@ -17,7 +17,7 @@ it('defaults to empty rows, groupByRelation=false, expandable=false, virtualizeA
 });
 
 it('renders one row per entry, each with the node label and relation text', async () => {
-  const el = (await fixture(html`<lyra-neighbor-list></lyra-neighbor-list>`)) as LyraNeighborList;
+  const el = (await fixture(html`<lr-neighbor-list></lr-neighbor-list>`)) as LyraNeighborList;
   el.rows = rows;
   await el.updateComplete;
   const rendered = el.shadowRoot!.querySelectorAll('[part="row"]');
@@ -26,19 +26,19 @@ it('renders one row per entry, each with the node label and relation text', asyn
   expect(rendered[0]!.textContent).to.include('works_for');
 });
 
-it('emits lyra-entity-activate with the node id when a row is activated', async () => {
-  const el = (await fixture(html`<lyra-neighbor-list></lyra-neighbor-list>`)) as LyraNeighborList;
+it('emits lr-entity-activate with the node id when a row is activated', async () => {
+  const el = (await fixture(html`<lr-neighbor-list></lr-neighbor-list>`)) as LyraNeighborList;
   el.rows = rows;
   await el.updateComplete;
   const button = el.shadowRoot!.querySelector('[part="node-label"]') as HTMLButtonElement;
-  const listener = oneEvent(el, 'lyra-entity-activate');
+  const listener = oneEvent(el, 'lr-entity-activate');
   button.click();
   const event = await listener;
   expect(event.detail).to.deep.equal({ id: 'org1' });
 });
 
-it('shows a per-row expand button emitting lyra-node-expand only when expandable', async () => {
-  const el = (await fixture(html`<lyra-neighbor-list></lyra-neighbor-list>`)) as LyraNeighborList;
+it('shows a per-row expand button emitting lr-node-expand only when expandable', async () => {
+  const el = (await fixture(html`<lr-neighbor-list></lr-neighbor-list>`)) as LyraNeighborList;
   el.rows = rows;
   await el.updateComplete;
   expect(el.shadowRoot!.querySelectorAll('[part="expand-button"]').length).to.equal(0);
@@ -47,14 +47,14 @@ it('shows a per-row expand button emitting lyra-node-expand only when expandable
   await el.updateComplete;
   const buttons = el.shadowRoot!.querySelectorAll('[part="expand-button"]');
   expect(buttons.length).to.equal(3);
-  const listener = oneEvent(el, 'lyra-node-expand');
+  const listener = oneEvent(el, 'lr-node-expand');
   (buttons[0] as HTMLButtonElement).click();
   const event = await listener;
   expect(event.detail).to.deep.equal({ id: 'org1' });
 });
 
 it('groups rows by relation with a labeled, counted header when groupByRelation is set', async () => {
-  const el = (await fixture(html`<lyra-neighbor-list></lyra-neighbor-list>`)) as LyraNeighborList;
+  const el = (await fixture(html`<lr-neighbor-list></lr-neighbor-list>`)) as LyraNeighborList;
   el.rows = [
     ...rows,
     { relation: 'works_for', direction: 'out', node: { id: 'org2', label: 'Sorbonne' } },
@@ -73,26 +73,26 @@ it('renders through the internal virtual-list once rows exceeds virtualizeAt', a
     direction: 'out' as const,
     node: { id: `n${i}`, label: `Node ${i}` },
   }));
-  const el = (await fixture(html`<lyra-neighbor-list virtualize-at="3"></lyra-neighbor-list>`)) as LyraNeighborList;
+  const el = (await fixture(html`<lr-neighbor-list virtualize-at="3"></lr-neighbor-list>`)) as LyraNeighborList;
   el.rows = many;
   await el.updateComplete;
-  expect(el.shadowRoot!.querySelector('lyra-virtual-list')).to.exist;
+  expect(el.shadowRoot!.querySelector('lr-virtual-list')).to.exist;
 });
 
 it('normalizes a NaN virtualizeAt to the default (100) instead of silently disabling virtualization', async () => {
   // A small row count (3, well below the real default of 100) -- proves the NaN falls back to a
   // real, non-negative default rather than an always-false comparison letting virtualization run
   // at any size: with the guard in place, 3 rows stay in the plain (non-virtualized) list.
-  const el = (await fixture(html`<lyra-neighbor-list virtualize-at="not-a-number"></lyra-neighbor-list>`)) as LyraNeighborList;
+  const el = (await fixture(html`<lr-neighbor-list virtualize-at="not-a-number"></lr-neighbor-list>`)) as LyraNeighborList;
   expect(Number.isNaN(el.virtualizeAt)).to.be.true;
   el.rows = rows;
   await el.updateComplete;
-  expect(el.shadowRoot!.querySelector('lyra-virtual-list')).to.not.exist;
+  expect(el.shadowRoot!.querySelector('lr-virtual-list')).to.not.exist;
   expect(el.shadowRoot!.querySelectorAll('[part="row"]').length).to.equal(rows.length);
 });
 
 it('gives the per-row expand button the shared minimum hit area', async () => {
-  const el = (await fixture(html`<lyra-neighbor-list></lyra-neighbor-list>`)) as LyraNeighborList;
+  const el = (await fixture(html`<lr-neighbor-list></lr-neighbor-list>`)) as LyraNeighborList;
   el.rows = rows;
   el.expandable = true;
   await el.updateComplete;
@@ -102,7 +102,7 @@ it('gives the per-row expand button the shared minimum hit area', async () => {
 });
 
 it('renders the direction as an aria-hidden glyph plus localized text folded into the row name', async () => {
-  const el = (await fixture(html`<lyra-neighbor-list></lyra-neighbor-list>`)) as LyraNeighborList;
+  const el = (await fixture(html`<lr-neighbor-list></lr-neighbor-list>`)) as LyraNeighborList;
   el.rows = rows;
   await el.updateComplete;
   const glyph = el.shadowRoot!.querySelector('[part="direction"]')!;
@@ -112,13 +112,13 @@ it('renders the direction as an aria-hidden glyph plus localized text folded int
 });
 
 it('shows neighborListEmpty when rows is empty', async () => {
-  const el = (await fixture(html`<lyra-neighbor-list></lyra-neighbor-list>`)) as LyraNeighborList;
+  const el = (await fixture(html`<lr-neighbor-list></lr-neighbor-list>`)) as LyraNeighborList;
   await el.updateComplete;
   expect(el.shadowRoot!.querySelector('[part="empty"]')!.textContent).to.include('No relationships');
 });
 
 it('is accessible with grouped, expandable rows', async () => {
-  const el = (await fixture(html`<lyra-neighbor-list></lyra-neighbor-list>`)) as LyraNeighborList;
+  const el = (await fixture(html`<lr-neighbor-list></lr-neighbor-list>`)) as LyraNeighborList;
   el.rows = rows;
   el.groupByRelation = true;
   el.expandable = true;

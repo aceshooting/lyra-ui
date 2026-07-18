@@ -9,14 +9,14 @@ import './radar-chart.js';
 import './polar-area-chart.js';
 
 const TAGS_WITH_TYPE: [string, string][] = [
-  ['lyra-bar-chart', 'bar'],
-  ['lyra-line-chart', 'line'],
-  ['lyra-pie-chart', 'pie'],
-  ['lyra-doughnut-chart', 'doughnut'],
-  ['lyra-scatter-chart', 'scatter'],
-  ['lyra-bubble-chart', 'bubble'],
-  ['lyra-radar-chart', 'radar'],
-  ['lyra-polar-area-chart', 'polarArea'],
+  ['lr-bar-chart', 'bar'],
+  ['lr-line-chart', 'line'],
+  ['lr-pie-chart', 'pie'],
+  ['lr-doughnut-chart', 'doughnut'],
+  ['lr-scatter-chart', 'scatter'],
+  ['lr-bubble-chart', 'bubble'],
+  ['lr-radar-chart', 'radar'],
+  ['lr-polar-area-chart', 'polarArea'],
 ];
 
 for (const [tag, expectedType] of TAGS_WITH_TYPE) {

@@ -25,7 +25,7 @@ export async function loadMammothAndSanitizer(
     mammoth = unwrapDefault(await importMammoth());
   } catch (error) {
     console.warn(
-      '<lyra-docx-viewer> needs the optional peer dependency `mammoth` to convert DOCX documents — install it with `pnpm add mammoth`:',
+      '<lr-docx-viewer> needs the optional peer dependency `mammoth` to convert DOCX documents — install it with `pnpm add mammoth`:',
       error,
     );
   }
@@ -35,7 +35,7 @@ export async function loadMammothAndSanitizer(
     DOMPurify = unwrapDefault(await importDompurify());
   } catch (error) {
     console.warn(
-      '<lyra-docx-viewer> needs the optional peer dependency `dompurify` to sanitize converted HTML — install it with `pnpm add dompurify`:',
+      '<lr-docx-viewer> needs the optional peer dependency `dompurify` to sanitize converted HTML — install it with `pnpm add dompurify`:',
       error,
     );
   }
