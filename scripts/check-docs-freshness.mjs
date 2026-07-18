@@ -37,6 +37,10 @@ const missingFromShortLlms = tags.filter((tag) => !shortLlms.includes(`\`${tag}\
 if (missingFromShortLlms.length) {
   errors.push(`packages/lyra-ui/llms.txt is missing ${missingFromShortLlms.length} manifest tag(s): ${missingFromShortLlms.join(', ')}`);
 }
+const pluginLlms = read('plugins/lyra-ui/skills/lyra-ui/references/llms.txt');
+if (pluginLlms !== shortLlms) {
+  errors.push('plugins/lyra-ui/skills/lyra-ui/references/llms.txt is out of sync; run `./package.sh`');
+}
 
 const indexPath = join(root, 'storybook-static/index.json');
 if (!existsSync(indexPath)) {

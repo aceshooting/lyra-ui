@@ -51,3 +51,12 @@ else
   echo "Error: failed to create ${OUTPUT_PATH}" >&2
   exit 1
 fi
+
+echo "Verifying packaged skill contents..."
+for relative_file in SKILL.md references/llms.txt references/llms-full.txt; do
+  if ! unzip -p "${OUTPUT_PATH}" "${relative_file}" | cmp -s - "${SKILL_DIR}/${relative_file}"; then
+    echo "Error: ${OUTPUT_PATH} contains stale or incorrect ${relative_file}" >&2
+    exit 1
+  fi
+done
+echo "Packaged skill contents are synchronized."
