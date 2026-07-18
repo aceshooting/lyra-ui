@@ -63,6 +63,12 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
     super.disconnectedCallback();
   }
 
+  protected willUpdate(changed: PropertyValues): void {
+    if (changed.has('index') && this.slideSlot) {
+      this.index = this.normalizedIndex();
+    }
+  }
+
   protected updated(changed: PropertyValues): void {
     if (changed.has('index') || changed.has('loop') || changed.has('showIndicators')) this.syncSlides();
     if (changed.has('autoplay') || changed.has('autoplayInterval')) this.restartAutoplay();

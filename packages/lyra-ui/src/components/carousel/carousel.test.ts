@@ -94,16 +94,40 @@ it('clamps a NaN, negative, or oversized index to a valid slide instead of NaN/o
 
   el.index = NaN;
   await el.updateComplete;
+  expect(el.index).to.equal(0);
   expect(([...el.children] as HTMLElement[])[0].hidden).to.be.false;
 
   el.index = -5;
   await el.updateComplete;
+  expect(el.index).to.equal(0);
   expect((el.shadowRoot!.querySelectorAll('[part="indicator"]')[0] as HTMLElement).getAttribute('aria-current')).to.equal('true');
 
   el.index = 999;
   await el.updateComplete;
+  expect(el.index).to.equal(2);
   const indicators = el.shadowRoot!.querySelectorAll('[part="indicator"]');
   expect(indicators[indicators.length - 1].getAttribute('aria-current')).to.equal('true');
+});
+
+it('clamps invalid indices in the current update without scheduling a follow-up update', async () => {
+  const globalWarnings = (globalThis as { litIssuedWarnings?: Set<string> }).litIssuedWarnings;
+  globalWarnings?.forEach((warning) => {
+    if (warning.includes('scheduled an update')) globalWarnings.delete(warning);
+  });
+  const originalWarn = console.warn;
+  const calls: unknown[][] = [];
+  console.warn = (...args: unknown[]) => calls.push(args);
+  try {
+    const el = await carousel();
+    await new Promise<void>((resolve) => setTimeout(resolve, 0));
+    el.index = NaN;
+    expect(await el.updateComplete).to.be.true;
+    el.index = 999;
+    expect(await el.updateComplete).to.be.true;
+  } finally {
+    console.warn = originalWarn;
+  }
+  expect(calls.flat().map(String).some((message) => message.includes('scheduled an update'))).to.be.false;
 });
 
 it('treats a non-finite autoplayInterval as its 5s default instead of NaN math', async () => {

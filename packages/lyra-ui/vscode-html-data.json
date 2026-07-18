@@ -302,7 +302,7 @@
       "name": "lyra-app-rail",
       "description": {
         "kind": "markdown",
-        "value": "`<lyra-app-rail>` — a responsive navigation rail that adapts across three\npresentations as the *viewport* narrows (not this element's own inline\nsize — see the `mode` accessor doc for why): `'full'` (nav items show\nicon + label, inline), `'icon-only'` (a narrower inline rail, icons only),\nand `'mobile'` (hidden behind a toggle button; opening it shows a\nfocus-trapped floating overlay over the page).\n\nBreakpoints are viewport-width `matchMedia()` queries against\n`icon-only-breakpoint`/`mobile-breakpoint`, not a `ResizeObserver` on this\nelement — a nav rail's presentation should track the actual device/window\nwidth the way a native OS shell's navigation does, not however much\nhorizontal space a particular layout happens to give it.\n\nThe `'mobile'` state participates in the library's shared overlay stack,\nwhich supplies focus trapping, Escape/backdrop dismissal, inerting, and\nfocus restoration without nesting a `<lyra-dialog>` in this component's\nshadow template. `[part=\"base\"]` (the inline\n`'full'`/`'icon-only'` presentation) and `[part=\"panel\"]` (the mobile\noverlay) are the *same* element promoted in place across modes (mirrors\n`<lyra-widget>`'s fullscreen mode) — never both at once, and never two\nseparate copies of the slotted content, which slot projection can't\nproduce anyway (a light-DOM node is only ever assigned to one `<slot>`).\nIt's a plain `<div>` with an explicit `role=\"navigation\"` rather than a\nliteral `<nav>` tag: a `<nav>`'s implicit role can't be overridden to\n`role=\"dialog\"` while the overlay is modal without an `aria-allowed-role`\nviolation (verified against axe), whereas an explicit `role=\"navigation\"`\non a generic element can be swapped for `role=\"dialog\"` freely.\n\n---\n\n**Slots**\n\n| Name | Description |\n| --- | --- |\n| (default) | Nav items. Use `<lyra-app-rail-item>` for the explicit icon/label contract that automatically hides labels in `'icon-only'` mode. Generic links and buttons remain supported, but their compact presentation is the consumer's responsibility. While the mobile overlay is open, clicking anywhere inside this slot closes it. |\n| `footer` | A trailing user/settings trigger, shown below the nav items. |\n| `header` | Logo/brand content, shown above the nav items in every mode. |\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `backdrop` | The mobile overlay's scrim. Only rendered while open. |\n| `base` | The rail root while inline (`'full'`/`'icon-only'` modes). |\n| `footer` | The wrapper around the `footer` slot. |\n| `header` | The wrapper around the `header` slot. |\n| `nav` | The wrapper around the default (nav items) slot. |\n| `panel` | The mobile overlay's floating panel — see the class doc for why it's the same element as `base`, never both at once. |\n| `resizer` | The `resizable` opt-in's drag handle. Only rendered while `resizable` and `mode` is `'full'`. |\n| `toggle` | The mobile hamburger/close toggle button. Hidden via CSS outside `'mobile'` mode, or entirely via `hideToggle`. |"
+        "value": "`<lyra-app-rail>` — a responsive navigation rail that adapts across three\npresentations as the *viewport* narrows (not this element's own inline\nsize — see the `mode` accessor doc for why): `'full'` (nav items show\nicon + label, inline), `'icon-only'` (a narrower inline rail, icons only),\nand `'mobile'` (hidden behind a toggle button; opening it shows a\nfocus-trapped floating overlay over the page).\n\nBreakpoints are viewport-width `matchMedia()` queries against\n`icon-only-breakpoint`/`mobile-breakpoint`, not a `ResizeObserver` on this\nelement — a nav rail's presentation should track the actual device/window\nwidth the way a native OS shell's navigation does, not however much\nhorizontal space a particular layout happens to give it.\n\nThe `'mobile'` state participates in the library's shared overlay stack,\nwhich supplies focus trapping, Escape/backdrop dismissal, inerting, and\nfocus restoration without nesting a `<lyra-dialog>` in this component's\nshadow template. `[part=\"base\"]` (the inline\n`'full'`/`'icon-only'` presentation) and `[part=\"panel\"]` (the mobile\noverlay) are the *same* element promoted in place across modes (mirrors\n`<lyra-widget>`'s fullscreen mode) — never both at once, and never two\nseparate copies of the slotted content, which slot projection can't\nproduce anyway (a light-DOM node is only ever assigned to one `<slot>`).\nIt's a plain `<div>` with an explicit `role=\"navigation\"` rather than a\nliteral `<nav>` tag: a `<nav>`'s implicit role can't be overridden to\n`role=\"dialog\"` while the overlay is modal without an `aria-allowed-role`\nviolation (verified against axe), whereas an explicit `role=\"navigation\"`\non a generic element can be swapped for `role=\"dialog\"` freely.\n\n---\n\n**Slots**\n\n| Name | Description |\n| --- | --- |\n| (default) | Nav items. Use `<lyra-app-rail-item>` for the explicit icon/label contract that automatically hides labels in `'icon-only'` mode. Generic links and buttons remain supported, but their compact presentation is the consumer's responsibility. While the mobile overlay is open, clicking anywhere inside this slot closes it. |\n| `footer` | A trailing user/settings trigger, shown below the nav items. |\n| `header` | Logo/brand content, shown above the nav items in every mode. |\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `backdrop` | The mobile overlay's scrim. Only rendered while open. |\n| `base` | The rail root while inline (`'full'`/`'icon-only'` modes). |\n| `footer` | The wrapper around the `footer` slot. |\n| `header` | The wrapper around the `header` slot. |\n| `nav` | The wrapper around the default (nav items) slot. |\n| `panel` | The mobile overlay's floating panel — see the class doc for why it's the same element as `base`, never both at once. |\n| `resizer` | The `resizable` opt-in's drag handle -- its interactive hit target, sized to the shared minimum tappable size (`--lyra-icon-button-size`), independent of the slimmer visible line rendered by its `resizer-track` child. Only rendered while `resizable` and `mode` is `'full'`. |\n| `resizer-track` | The resizer's slim visible drag line, centered inside `[part=\"resizer\"]`'s larger hit target (mirrors `<lyra-swatch-picker>`'s `[part=\"swatch\"]`/`[part=\"swatch-fill\"]` split). Colors on hover/focus the same way the whole handle previously did. |\n| `toggle` | The mobile hamburger/close toggle button. Hidden via CSS outside `'mobile'` mode, or entirely via `hideToggle`. |"
       },
       "attributes": [
         {
@@ -627,7 +627,7 @@
           "name": "progress",
           "description": {
             "kind": "markdown",
-            "value": "Upload completion, 0-100. Only meaningful while `status=\"uploading\"`;\na value of 0 (the default) or `NaN` falls back to the indeterminate spinner.\n\nType: `number`  \nDefault: `0`"
+            "value": "Upload completion, 0-100. Only meaningful while `status=\"uploading\"`;\na value of 0 (the default), `NaN`, or negative falls back to the indeterminate spinner\n(see `hasNumericProgress`); an oversized value clamps to 100 (see `clampedProgress`).\n\nType: `number`  \nDefault: `0`"
           }
         },
         {
@@ -655,7 +655,7 @@
           "name": "size",
           "description": {
             "kind": "markdown",
-            "value": "File size in bytes, used only while `file` is unset.\n\nType: `number`  \nDefault: `0`"
+            "value": "File size in bytes, used only while `file` is unset. NaN/negative normalize to `0` (renders\nas \"unknown size\", same as an unset size) via `effectiveSize` -- see that getter.\n\nType: `number`  \nDefault: `0`"
           }
         },
         {
@@ -757,7 +757,7 @@
       "name": "lyra-audio-visualizer",
       "description": {
         "kind": "markdown",
-        "value": "`<lyra-audio-visualizer>` — a presentational, canvas-drawn voice-activity visualization (bars or\nwaveform), the LiveKit-BarVisualizer counterpart for this library. Driven by a `MediaStream`\n(lazily wired to a WebAudio `AnalyserNode`), a numeric `level` for hosts that already compute\nlevels (e.g. `lyra-push-to-talk`'s `lyra-level`), or `state` alone for an ambient animation when no\nreal signal exists. A real signal (`stream` or `level`) always drives amplitude regardless of\n`prefers-reduced-motion` — that is live, user-controlled feedback, not decorative motion; only the\nsignal-less ambient animation is throttled and simplified under reduced motion.\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `base` | The root wrapper. |\n| `canvas` | The drawing surface (`aria-hidden`; the host itself carries `role=\"img\"` and the accessible name). |\n\n---\n\n**CSS Custom Properties**\n\n- `--lyra-audio-visualizer-color` (default: `var(--lyra-color-brand)`) — Active bar/waveform color.\n- `--lyra-audio-visualizer-quiet-color` (default: `var(--lyra-color-brand-quiet)`) — Inactive/idle color."
+        "value": "`<lyra-audio-visualizer>` — a presentational, canvas-drawn voice-activity visualization (bars or\nwaveform), the LiveKit-BarVisualizer counterpart for this library. Driven by a `MediaStream`\n(lazily wired to a WebAudio `AnalyserNode`), a numeric `level` for hosts that already compute\nlevels (e.g. `lyra-push-to-talk`'s `lyra-level`), or `state` alone for an ambient animation when no\nreal signal exists. A real signal (`stream` or `level`) always drives amplitude regardless of\n`prefers-reduced-motion` — that is live, user-controlled feedback, not decorative motion; only the\nsignal-less ambient animation is throttled and simplified under reduced motion.\n\nAnimation frames are only scheduled while the drawn output is actually time-varying (live analyser\ndata, or a non-reduced ambient pulse/sweep). Static output — a constant `level`, idle bars, or the\nflattened reduced-motion ambient patterns — draws once and stops; any change that could alter the\nnext frame (properties, stream/`AudioContext` state, size, theme, motion preference) re-enters the\nloop via `scheduleDraw()`.\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `base` | The root wrapper. |\n| `canvas` | The drawing surface (`aria-hidden`; the host itself carries `role=\"img\"` and the accessible name). |\n\n---\n\n**CSS Custom Properties**\n\n- `--lyra-audio-visualizer-color` (default: `var(--lyra-color-brand)`) — Active bar/waveform color.\n- `--lyra-audio-visualizer-quiet-color` (default: `var(--lyra-color-brand-quiet)`) — Inactive/idle color."
       },
       "attributes": [
         {
@@ -771,7 +771,7 @@
           "name": "gain",
           "description": {
             "kind": "markdown",
-            "value": "Type: `number`  \nDefault: `1`"
+            "value": "Amplitude multiplier applied in `draw()`. NaN/non-finite falls back to `1` via `effectiveGain`.\n\nType: `number`  \nDefault: `1`"
           }
         },
         {
@@ -785,7 +785,7 @@
           "name": "level",
           "description": {
             "kind": "markdown",
-            "value": "Type: `number | null`  \nDefault: `null`"
+            "value": "Externally-computed amplitude, `[0, 1]`, for a host that already derives its own level\n(e.g. `lyra-push-to-talk`'s `lyra-level`). `null` (the default) means \"no external signal\" --\nsee `effectiveLevel` for how a non-null value is clamped/NaN-guarded before it feeds `draw()`.\n\nType: `number | null`  \nDefault: `null`"
           }
         },
         {
@@ -857,14 +857,14 @@
           "name": "name",
           "description": {
             "kind": "markdown",
-            "value": "Accessible name of `[part=\"base\"]`; a host `aria-label` wins, then the localized\n`avPlayerLabel` fallback.\n\nType: `string`  \nDefault: `''`"
+            "value": "Accessible name of `[part=\"base\"]` and of the native `[part=\"media\"]` element (the actual\nkeyboard tab stop, which would otherwise be nameless); a host `aria-label` wins, then the\nlocalized `avPlayerLabel` fallback.\n\nType: `string`  \nDefault: `''`"
           }
         },
         {
           "name": "playback-rate",
           "description": {
             "kind": "markdown",
-            "value": "Playback-rate multiplier, reflected to the native media element.\n\nType: `number`  \nDefault: `1`"
+            "value": "Playback-rate multiplier, reflected to the native media element. Clamped to\n`[MIN_PLAYBACK_RATE, MAX_PLAYBACK_RATE]` -- a non-finite or wildly out-of-range assignment\n(e.g. a bad computed value) self-heals rather than reaching `HTMLMediaElement.playbackRate`\nunsanitized.\n\nType: `number`"
           }
         },
         {
@@ -984,7 +984,7 @@
           "name": "max",
           "description": {
             "kind": "markdown",
-            "value": "Maximum number of assigned children shown before the rest collapse behind a \"+N\" badge.\nFlattened slot-forwarded children count the same as direct light-DOM children. Unset (the\ndefault) means no limit — every child is always shown.\n\nType: `number | undefined`"
+            "value": "Maximum number of assigned children shown before the rest collapse behind a \"+N\" badge.\nFlattened slot-forwarded children count the same as direct light-DOM children. Unset (the\ndefault) means no limit — every child is always shown. Any explicitly assigned value is\nsanitized to a finite, non-negative integer via `finiteCount` — this feeds the\n`hasOverflow`/`syncChildVisibility`/`onOverflowClick` index math below directly, so a\nNaN/negative value must never reach it.\n\nType: `number | undefined`"
           }
         },
         {
@@ -1507,7 +1507,7 @@
           "name": "disabled",
           "description": {
             "kind": "markdown",
-            "value": "Type: `boolean`  \nDefault: `false`"
+            "value": "Type: `boolean`"
           }
         },
         {
@@ -1673,7 +1673,7 @@
       "name": "lyra-callout",
       "description": {
         "kind": "markdown",
-        "value": "`<lyra-callout>` — an inline message surface for status, warning, and error content.\nSet `inline` for lightweight reactive status/error text: it removes the panel chrome while\npreserving the semantic role, optional leading icon, and close action.\n\n---\n\n**Slots**\n\n| Name | Description |\n| --- | --- |\n| (default) | Message content. |\n| `heading` | Optional heading. |\n| `icon` | Optional icon. |\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `base` | The callout surface. |\n| `close-button` | The close button. |\n| `content` | The message content. |\n| `heading` | The heading wrapper. |\n| `icon` | The icon wrapper. |\n| `message` | The message content wrapper. |"
+        "value": "`<lyra-callout>` — an inline message surface for status, warning, and error content.\nSet `inline` for lightweight reactive status/error text: it removes the panel chrome while\npreserving the semantic role, optional leading icon, and close action.\n\n---\n\n**Slots**\n\n| Name | Description |\n| --- | --- |\n| (default) | Message content. |\n| `heading` | Optional heading. |\n| `icon` | Optional icon. |\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `base` | The callout surface. |\n| `close-button` | The close button's interactive hit target, sized to the shared minimum tappable size (`--lyra-icon-button-size`) in both the default panel and the compact `inline` variant. |\n| `close-icon` | The close button's visible \"×\" glyph, independent of `close-button`'s hit target size -- shrinks in the `inline` variant while the hit target stays full-size. |\n| `content` | The message content. |\n| `heading` | The heading wrapper. |\n| `icon` | The icon wrapper. |\n| `message` | The message content wrapper. |"
       },
       "attributes": [
         {
@@ -1768,7 +1768,7 @@
       "name": "lyra-carousel",
       "description": {
         "kind": "markdown",
-        "value": "`<lyra-carousel>` — an accessible single-slide carousel for arbitrary\nslotted content. The index is reflected and self-managed by navigation;\nevery change emits `lyra-slide-change` so applications can persist or\ncoordinate the active slide.\n\n---\n\n**Slots**\n\n| Name | Description |\n| --- | --- |\n| (default) | Slide elements. Each assigned element becomes one slide. |\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `base` | The carousel landmark. |\n| `controls` | Previous/next control row. |\n| `indicator` | An individual slide indicator. |\n| `indicators` | Indicator button group. |\n| `next-button` | Next slide button. |\n| `next-glyph` | The chevron glyph inside `next-button`, mirrored under RTL. |\n| `previous-button` | Previous slide button. |\n| `previous-glyph` | The chevron glyph inside `previous-button`, mirrored under RTL. |\n| `track` | The slotted slide wrapper. |\n| `viewport` | The keyboard-focusable slide viewport. |"
+        "value": "`<lyra-carousel>` — an accessible single-slide carousel for arbitrary\nslotted content. The index is reflected and self-managed by navigation;\nevery change emits `lyra-slide-change` so applications can persist or\ncoordinate the active slide.\n\n---\n\n**Slots**\n\n| Name | Description |\n| --- | --- |\n| (default) | Slide elements. Each assigned element becomes one slide. |\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `base` | The carousel landmark. |\n| `controls` | Previous/next control row. |\n| `indicator` | An individual slide indicator's interactive hit target, sized to the shared minimum tappable size (`--lyra-icon-button-size`), independent of the smaller visible dot rendered inside it (mirrors `<lyra-swatch-picker>`'s `[part=\"swatch\"]`/`[part=\"swatch-fill\"]` split). |\n| `indicator-dot` | The individual indicator's compact visible dot. |\n| `indicators` | Indicator button group. |\n| `next-button` | Next slide button. |\n| `next-glyph` | The chevron glyph inside `next-button`, mirrored under RTL. |\n| `previous-button` | Previous slide button. |\n| `previous-glyph` | The chevron glyph inside `previous-button`, mirrored under RTL. |\n| `track` | The slotted slide wrapper. |\n| `viewport` | The keyboard-focusable slide viewport. |"
       },
       "attributes": [
         {
@@ -2147,6 +2147,13 @@
       },
       "attributes": [
         {
+          "name": "aria-label",
+          "description": {
+            "kind": "markdown",
+            "value": "Host `aria-label`, forwarded to the internal `role=\"log\"` element -- an `aria-label` left\non the custom-element host itself names nothing, because the log role lives inside the\nshadow root. Wins over `label` and the localized default.\n\nType: `string | null`  \nDefault: `null`"
+          }
+        },
+        {
           "name": "bottom-threshold",
           "description": {
             "kind": "markdown",
@@ -2164,7 +2171,7 @@
           "name": "label",
           "description": {
             "kind": "markdown",
-            "value": "Accessible name for the log region. Defaults to the localized `chatViewportLabel`.\n\nType: `string`  \nDefault: `''`"
+            "value": "Accessible name for the log region. Defaults to the localized `chatViewportLabel`;\na host `aria-label` (see `accessibleLabel`) wins over both.\n\nType: `string`  \nDefault: `''`"
           }
         },
         {
@@ -2259,7 +2266,7 @@
           "name": "disabled",
           "description": {
             "kind": "markdown",
-            "value": "Type: `boolean`  \nDefault: `false`"
+            "value": "Type: `boolean`"
           }
         },
         {
@@ -2294,14 +2301,14 @@
           "name": "name",
           "description": {
             "kind": "markdown",
-            "value": "Type: `string`  \nDefault: `''`"
+            "value": "The form submission key each checked child checkbox's value is grouped under in the group's\nown `FormData` entry (see `sync()`). Reflected synchronously for native form APIs; renaming\nrebuilds that `FormData` in the same tick -- mirrors `<lyra-token-input>`'s identical `name` setter.\n\nType: `string`"
           }
         },
         {
           "name": "required",
           "description": {
             "kind": "markdown",
-            "value": "Type: `boolean`  \nDefault: `false`"
+            "value": "Type: `boolean`"
           }
         }
       ]
@@ -2310,7 +2317,7 @@
       "name": "lyra-checkpoint",
       "description": {
         "kind": "markdown",
-        "value": "`<lyra-checkpoint>` — an inline conversation restore point: a labeled marker between messages\nwhose Restore affordance confirms inline, then hands the host a `lyra-restore` event. This\ncomponent persists and restores nothing itself — host state in, events out.\n\n---\n\n**Slots**\n\n| Name | Description |\n| --- | --- |\n| (default) | Optional supplemental content under the marker row (e.g. what changed since this point). |\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `base` | The marker root (`role=\"group\"`). |\n| `cancel-button` | Cancels, reverting to `restore-button`. |\n| `confirm-button` | Confirms the restore, firing `lyra-restore`. |\n| `confirm-group` | The inline confirm prompt, swapped in for `restore-button` while confirming. |\n| `confirm-prompt` | The confirm prompt text. |\n| `icon` | The bookmark glyph. |\n| `label` | The computed label text. |\n| `line` | Each of the two flanking rules. |\n| `restore-button` | The Restore button. Only rendered while `restorable`. |\n| `timestamp` | The formatted `timestamp`, when set. |"
+        "value": "`<lyra-checkpoint>` — an inline conversation restore point: a labeled marker between messages\nwhose Restore affordance confirms inline, then hands the host a `lyra-restore` event. This\ncomponent persists and restores nothing itself — host state in, events out.\n\n---\n\n**Slots**\n\n| Name | Description |\n| --- | --- |\n| (default) | Optional supplemental content under the marker row (e.g. what changed since this point). |\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `base` | The marker root (`role=\"group\"`). |\n| `cancel-button` | Cancels, reverting to `restore-button`. |\n| `confirm-button` | Confirms the restore, firing `lyra-restore`. |\n| `confirm-group` | The inline confirm prompt, swapped in for `restore-button` while confirming. |\n| `confirm-prompt` | The confirm prompt text. |\n| `icon` | The bookmark glyph. |\n| `label` | The computed label text. |\n| `line` | Each of the two flanking rules. |\n| `restore-button` | The Restore button. Only rendered while `restorable`. |\n| `timestamp` | The formatted `timestamp`, when set. |\n\n---\n\n**CSS Custom Properties**\n\n- `--lyra-checkpoint-spin-duration` (default: `1s`) — Duration of one restoring-spinner rotation (stopped under reduced motion)."
       },
       "attributes": [
         {
@@ -2426,7 +2433,7 @@
           "name": "max-visible",
           "description": {
             "kind": "markdown",
-            "value": "Maximum number of assigned children shown before the rest collapse behind a \"+N\"\nindicator. Flattened slot-forwarded children count the same as direct light-DOM children.\nUnset (the default) means no limit — every child is always shown.\n\nType: `number | undefined`"
+            "value": "Maximum number of assigned children shown before the rest collapse behind a \"+N\"\nindicator. Flattened slot-forwarded children count the same as direct light-DOM children.\nUnset (the default) means no limit — every child is always shown. Any explicitly assigned\nvalue is sanitized to a finite, non-negative integer via `finiteCount` — this feeds the\n`hasOverflow`/`syncChildVisibility` index comparisons below directly, so a NaN/negative value\nmust never reach them.\n\nType: `number | undefined`"
           }
         }
       ]
@@ -2435,7 +2442,7 @@
       "name": "lyra-chunk-inspector",
       "description": {
         "kind": "markdown",
-        "value": "`<lyra-chunk-inspector>` — a ranked retrieved-chunks list: relevance score bars with tier tones,\nexpandable chunk text, and the deep-link event that lands a chunk in `lyra-document-viewer`.\nNever fetches, ranks, or dedupes; never opens documents itself.\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `base` | The `role=\"group\"` wrapper. |\n| `chunk` | One chunk row (`role=\"listitem\"`). |\n| `empty` | The empty-state message, shown when `chunks` is empty. |\n| `open-button` | The chunk's title/open `<button>`. |\n| `score` | The visible percent-score text. |\n| `score-bar` | The `aria-hidden` score bar track. |\n| `score-fill` | The score bar's tone-mapped fill. |\n| `text` | The chunk's text preview, line-clamped unless expanded. Omitted when `compact`. |\n| `title` | The `<span>` inside `open-button` carrying the visible title text. Split from `open-button` (rather than a dual part name on one element, as originally sketched) because an exact-match `[part=\"...\"]` CSS attribute selector -- as used by this component's own tests -- cannot match a multi-token `part` attribute value. |\n| `toggle` | The \"Show more\"/\"Show less\" button. Omitted when `compact`. |"
+        "value": "`<lyra-chunk-inspector>` — a ranked retrieved-chunks list: relevance score bars with tier tones,\nexpandable chunk text, and the deep-link event that lands a chunk in `lyra-document-viewer`.\nNever fetches, ranks, or dedupes; never opens documents itself.\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `base` | The `role=\"group\"` wrapper. |\n| `chunk` | One chunk row (`role=\"listitem\"`). |\n| `empty` | The empty-state message, shown when `chunks` is empty. |\n| `open-button` | The chunk's title/open `<button>`. |\n| `score` | The visible percent-score text. |\n| `score-bar` | The `aria-hidden` score bar track. |\n| `score-fill` | The score bar's tone-mapped fill. |\n| `text` | The chunk's text preview, line-clamped unless expanded. Omitted when `compact`. |\n| `title` | The `<span>` inside `open-button` carrying the visible title text. Split from `open-button` (rather than a dual part name on one element) because an exact-match `[part=\"...\"]` CSS attribute selector -- as used by this component's own tests -- cannot match a multi-token `part` attribute value. |\n| `toggle` | The \"Show more\"/\"Show less\" button. Omitted when `compact`. |"
       },
       "attributes": [
         {
@@ -2508,7 +2515,7 @@
           "name": "index",
           "description": {
             "kind": "markdown",
-            "value": "The citation number shown, e.g. `3` renders as `[3]`.\n\nType: `number`  \nDefault: `1`"
+            "value": "The citation number shown, e.g. `3` renders as `[3]`. Renders directly as visible text (and\nfeeds `lyra-citation-activate`/`lyra-citation-open`'s `detail.index`), so a NaN/non-integer\nvalue would be a real user-facing rendering bug — clamped to a finite, 1-indexed integer\n(citation numbers are conventionally 1-indexed, matching this property's own default).\n\nType: `number`"
           }
         },
         {
@@ -2752,7 +2759,7 @@
       "name": "lyra-code-editor",
       "description": {
         "kind": "markdown",
-        "value": "`<lyra-code-editor>` — dependency-free multiline code editing surface with optional line numbers.\n\n---\n\n**Slots**\n\n| Name | Description |\n| --- | --- |\n| `error` | Validation message. |\n| `hint` | Supporting text. |\n| `label` | Visible label content. |\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `editor` | Editor frame. |\n| `error` | Validation message. |\n| `form-control` | Outer wrapper. |\n| `gutter` | Line-number gutter. |\n| `hint` | Supporting text. |\n| `label` | Label. |\n| `textarea` | Native textarea. |"
+        "value": "`<lyra-code-editor>` — dependency-free multiline code editing surface with optional line numbers.\n\nKeyboard contract (no keyboard trap, WCAG 2.1.2): Tab inserts `tabSize` spaces at the caret.\nShift+Tab is never captured, so it always performs native reverse focus traversal. Pressing\nEscape releases the next Tab for native forward traversal instead of indenting; typing any other\nkey, or focus leaving the editor, re-arms Tab indentation.\n\n---\n\n**Slots**\n\n| Name | Description |\n| --- | --- |\n| `error` | Validation message. |\n| `hint` | Supporting text. |\n| `label` | Visible label content. |\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `editor` | Editor frame. |\n| `error` | Validation message. |\n| `form-control` | Outer wrapper. |\n| `gutter` | Line-number gutter. |\n| `hint` | Supporting text. |\n| `label` | Label. |\n| `textarea` | Native textarea. |"
       },
       "attributes": [
         {
@@ -2864,7 +2871,7 @@
           "name": "tab-size",
           "description": {
             "kind": "markdown",
-            "value": "Type: `number`  \nDefault: `2`"
+            "value": "Spaces inserted per Tab keypress, and the native `tab-size` CSS value. Confirmed-crash\nhistory: this used to feed `' '.repeat(Math.max(1, this.tabSize))` directly in `onKeyDown`\nbelow -- `String.prototype.repeat()` throws a `RangeError` for a count of `+Infinity`\nspecifically (e.g. a literal `tab-size=\"Infinity\"` attribute, which `Number(\"Infinity\")`\nhappily converts to), and `Math.max(1, NaN)` is itself `NaN`, silently producing an empty,\nnon-indenting insert for a NaN `tabSize`. Sanitized to a finite integer in `[1, 16]` at\nassignment time instead, so both the `repeat()` call and the inline `tab-size` style always\nsee a safe value.\n\nType: `number`"
           }
         },
         {
@@ -3033,14 +3040,14 @@
           "name": "max-options-visible",
           "description": {
             "kind": "markdown",
-            "value": "Type: `number`  \nDefault: `3`"
+            "value": "Maximum number of selected-value tags shown before the rest collapse behind a \"+N\" tag\n(multi-select only). Sanitized to a finite, non-negative integer.\n\nType: `number`"
           }
         },
         {
           "name": "max-render",
           "description": {
             "kind": "markdown",
-            "value": "Type: `number`  \nDefault: `200`"
+            "value": "Maximum number of rows rendered before the rest collapse behind the overflow indicator\n(the current selection is always kept visible regardless). Sanitized to a finite,\nnon-negative integer.\n\nType: `number`"
           }
         },
         {
@@ -3610,7 +3617,7 @@
       "name": "lyra-dataset-viewer",
       "description": {
         "kind": "markdown",
-        "value": "Fetches delimited text and renders a virtualized, accessible data table: a `role=\"table\"`\ncontainer with a sticky `role=\"row\"` header, composed with `<lyra-virtual-list item-role=\"row\">`\nfor the body so files far larger than a real synchronous `<table>` can render without locking the\nmain thread.\n\nAdopts `DocumentAnchorTarget`: a `cell-range` anchor addresses the raw file grid, 1-based, with\nthe header row always occupying row 1 (this component always parses with PapaParse's `header:\ntrue`, so the first row is never part of the virtualized body) -- `scrollToAnchor()` scrolls the\naddressed row into view via the virtualized list's `active-id`. A `sheet`-qualified anchor never\nresolves here -- this viewer has no sheets. `highlights` paint as a focusable `part=\"cell-\nhighlight\"` on membership, recomputed per row inside `renderRow()` so a row scrolled out and back\nin reconstructs its highlight for free, with no persistent DOM to keep in sync. `search()` is a\ncase-insensitive substring match over every body cell's raw string value, ordered row then column.\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `base` | The root wrapper. |\n| `body` | The scrollable body wrapper. |\n| `cell` | One rendered cell (`role=\"cell\"`). |\n| `cell-highlight` | A cell covered by a `highlights` entry -- focusable, emits `lyra-highlight-activate` on click or Enter/Space. |\n| `data-row` | One virtualized data row. |\n| `error` | The error message region. |\n| `header-cell` | A header cell (`role=\"columnheader\"`). |\n| `header-row` | The sticky header row (`role=\"row\"`). |\n| `spinner` | The loading status region. |\n| `table` | The `role=\"table\"` container (accessible name via `aria-label`). |"
+        "value": "Fetches delimited text and renders a virtualized, accessible data table: a `role=\"table\"`\ncontainer with a sticky `role=\"row\"` header, composed with `<lyra-virtual-list item-role=\"row\">`\nfor the body so files far larger than a real synchronous `<table>` can render without locking the\nmain thread.\n\nAdopts `DocumentAnchorTarget`: a `cell-range` anchor addresses the raw file grid, 1-based, with\nthe header row always occupying row 1 (this component always parses with PapaParse's `header:\ntrue`, so the first row is never part of the virtualized body) -- `scrollToAnchor()` scrolls the\naddressed row into view via the virtualized list's `active-id`. A `sheet`-qualified anchor never\nresolves here -- this viewer has no sheets. `highlights` paint as a `part=\"cell-highlight\"` cell\nwrapping a focusable `part=\"cell-highlight-action\"` native button (keeping the ARIA table tree\nintact) on membership, recomputed per row inside `renderRow()` so a row scrolled out and back\nin reconstructs its highlight for free, with no persistent DOM to keep in sync. `search()` is a\ncase-insensitive substring match over every body cell's raw string value, ordered row then column.\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `base` | The root wrapper. |\n| `body` | The scrollable body wrapper. |\n| `cell` | One rendered cell (`role=\"cell\"`). |\n| `cell-highlight` | A cell (`role=\"cell\"`) covered by a `highlights` entry; wraps the `cell-highlight-action` button. |\n| `cell-highlight-action` | The native button filling a highlighted cell -- focusable, emits `lyra-highlight-activate` on click or Enter/Space. |\n| `data-row` | One virtualized data row. |\n| `error` | The error message region. |\n| `header-cell` | A header cell (`role=\"columnheader\"`). |\n| `header-row` | The sticky header row (`role=\"row\"`). |\n| `spinner` | The loading status region. |\n| `table` | The `role=\"table\"` container (accessible name via `aria-label`). |"
       },
       "attributes": [
         {
@@ -4578,7 +4585,7 @@
           "name": "distance",
           "description": {
             "kind": "markdown",
-            "value": "Type: `number`  \nDefault: `4`"
+            "value": "Anchor-offset distance (px) passed to Floating UI's `offset()` middleware. Can legitimately\nbe negative (overlaps the popup with the trigger); NaN/non-finite falls back to the default.\n\nDefault: `DEFAULT_DISTANCE`"
           }
         },
         {
@@ -4762,9 +4769,16 @@
       "name": "lyra-emoji-picker",
       "description": {
         "kind": "markdown",
-        "value": "`<lyra-emoji-picker>` — a searchable, keyboard-navigable, form-associated emoji picker. In the\nsame \"zero/optional-peer dependency\" spirit as `<lyra-lite-chart>`/`<lyra-heatmap>`: `groups` is\nfully consumer-suppliable (this component ships no emoji data of its own), with an *optional*\nconvenience auto-loader for a default set — see `emoji-data-loader.ts` and the class doc there for\nexactly what that covers.\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `base` | The root wrapper. |\n| `emoji` | Each emoji's own `<button>`. |\n| `empty` | The empty-state message, shown when the search matches nothing. |\n| `grid` | The keyboard-navigable emoji grid. |\n| `group-label` | Each group's heading, rendered above its emojis. |\n| `search` | The search/filter `<input>`. |"
+        "value": "`<lyra-emoji-picker>` — a searchable, keyboard-navigable, form-associated emoji picker. In the\nsame \"zero/optional-peer dependency\" spirit as `<lyra-lite-chart>`/`<lyra-heatmap>`: `groups` is\nfully consumer-suppliable (this component ships no emoji data of its own), with an *optional*\nconvenience auto-loader for a default set — see `emoji-data-loader.ts` and the class doc there for\nexactly what that covers.\n\nKeyboard model: the grid is a roving-tabindex listbox (a single Tab stop — only the active emoji\nis tabbable). Arrow keys move the active option (Left/Right follow reading direction and swap\nunder RTL; Up/Down move by one visual row, measured from the live wrap layout), Home/End jump to\nthe first/last option, and Enter/Space picks. The search input doubles as a `role=\"combobox\"`\nover the same listbox: the arrow keys and Enter also work there while focus stays in the input,\nwith `aria-activedescendant` tracking the active option.\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `base` | The root wrapper. |\n| `emoji` | Each emoji's own `<button>`; meets the shared minimum tappable size (`--lyra-icon-button-size`) without enlarging the rendered emoji glyph itself. |\n| `empty` | The empty-state message, shown when the search matches nothing. |\n| `grid` | The keyboard-navigable emoji grid. |\n| `group-label` | Each group's heading, rendered above its emojis. |\n| `search` | The search/filter `<input>` (`role=\"combobox\"` over the grid). |"
       },
       "attributes": [
+        {
+          "name": "aria-label",
+          "description": {
+            "kind": "markdown",
+            "value": "Accessible name forwarded from the host to the internal emoji listbox. Empty falls back to\nthe localized default grid label.\n\nType: `string`  \nDefault: `''`"
+          }
+        },
         {
           "name": "locale",
           "description": {
@@ -4815,7 +4829,7 @@
       "name": "lyra-entity-card",
       "description": {
         "kind": "markdown",
-        "value": "`<lyra-entity-card>` — a dossier card for one `LyraEntity`: type badge, description, key/value\nproperty rows, degree, community chip, plus a built-in \"focus in graph\" action. Never fetches or\nfocuses a graph itself — `lyra-entity-activate` is a request a host routes into §3.4's\n`graph.focusNode(id, { zoom? })`.\n\n---\n\n**Slots**\n\n| Name | Description |\n| --- | --- |\n| (default) | Extra body content below the property rows (e.g. a `lyra-neighbor-list`). |\n| `actions` | Extra header actions alongside the built-in focus button. |\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `actions` | The wrapper around the `actions` slot and the built-in focus button. |\n| `base` | The outer bordered container. |\n| `community` | The community-chip row. |\n| `degree` | The relationship-count row. |\n| `description` | The entity's description text. |\n| `empty` | The empty state shown when `entity` is `null`. |\n| `focus-button` | The built-in \"Focus in graph\" button. |\n| `header` | The header row wrapping the type badge, title, and actions. |\n| `properties` | The wrapper around every property/degree/community row. |\n| `property` | One key/value dossier row. |\n| `title` | The entity's label, `role=\"heading\" aria-level=\"3\"` by default. |\n| `type-badge` | The resolved entity-type badge. |"
+        "value": "`<lyra-entity-card>` — a dossier card for one `LyraEntity`: type badge, description, key/value\nproperty rows, degree, community chip, plus a built-in \"focus in graph\" action. Never fetches or\nfocuses a graph itself — `lyra-entity-activate` is a request a host routes into `lyra-graph`'s\n`focusNode(id, { zoom? })`.\n\n---\n\n**Slots**\n\n| Name | Description |\n| --- | --- |\n| (default) | Extra body content below the property rows (e.g. a `lyra-neighbor-list`). |\n| `actions` | Extra header actions alongside the built-in focus button. |\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `actions` | The wrapper around the `actions` slot and the built-in focus button. |\n| `base` | The outer bordered container. |\n| `community` | The community-chip row. |\n| `degree` | The relationship-count row. |\n| `description` | The entity's description text. |\n| `empty` | The empty state shown when `entity` is `null`. |\n| `focus-button` | The built-in \"Focus in graph\" button. |\n| `header` | The header row wrapping the type badge, title, and actions. |\n| `properties` | The wrapper around every property/degree/community row. |\n| `property` | One key/value dossier row. |\n| `title` | The entity's label, `role=\"heading\" aria-level=\"3\"` by default. |\n| `type-badge` | The resolved entity-type badge. |"
       },
       "attributes": [
         {
@@ -4873,7 +4887,7 @@
           "name": "type",
           "description": {
             "kind": "markdown",
-            "value": "The entity's §3.4 type id; reflected so hosts theme per type from CSS.\n\nType: `string`  \nDefault: `''`"
+            "value": "The entity's `lyra-graph` `nodeTypes` id; reflected so hosts theme per type from CSS.\n\nType: `string`  \nDefault: `''`"
           }
         },
         {
@@ -5098,7 +5112,7 @@
           "name": "max-file-size",
           "description": {
             "kind": "markdown",
-            "value": "Type: `number`  \nDefault: `0`"
+            "value": "Largest accepted file size in bytes. `0` (the default) disables the size check entirely --\nsee `effectiveMaxFileSize` for how an invalid override is handled.\n\nType: `number`  \nDefault: `0`"
           }
         },
         {
@@ -5406,7 +5420,7 @@
       "name": "lyra-flow-node",
       "description": {
         "kind": "markdown",
-        "value": "`<lyra-flow-node>` — the card a workflow node renders as: header/body/toolbar chrome,\ntool-lifecycle status tones, and the named connection-handle elements edges anchor to. Used as\n`lyra-flow-canvas`'s default card and as a slotted override; also renders standalone (palette\npreviews, docs). Purely presentational — activation, selection, movement, and connection are all\n`lyra-flow-canvas` events; this component owns none of that.\n\n---\n\n**Slots**\n\n| Name | Description |\n| --- | --- |\n| (default) | Body content. |\n| `header` | Replaces the built-in heading row entirely. |\n| `icon` | Leading header glyph. |\n| `toolbar` | Action row at the block-end edge. |\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `base` | The card root. |\n| `body` | The default-slot body wrapper. |\n| `handle` | Every handle dot (input or output). |\n| `handle-input` | An input handle dot (also carries the shared `handle` part). |\n| `handle-output` | An output handle dot (also carries the shared `handle` part). |\n| `header` | The built-in header row (hidden when the `header` slot has content). |\n| `heading` | The heading text. |\n| `icon` | The wrapper around the `icon` slot. |\n| `progress` | The determinate progress bar. |\n| `status` | The visible status chip (status is never color-only). |\n| `toolbar` | The toolbar row wrapper. |\n\n---\n\n**CSS Custom Properties**\n\n- `--lyra-flow-node-min-inline-size` (default: `11rem`) — Minimum card inline size."
+        "value": "`<lyra-flow-node>` — the card a workflow node renders as: header/body/toolbar chrome,\ntool-lifecycle status tones, and the named connection-handle elements edges anchor to. Used as\n`lyra-flow-canvas`'s default card and as a slotted override; also renders standalone (palette\npreviews, docs). Purely presentational — activation, selection, movement, and connection are all\n`lyra-flow-canvas` events; this component owns none of that.\n\n---\n\n**Slots**\n\n| Name | Description |\n| --- | --- |\n| (default) | Body content. |\n| `header` | Replaces the built-in heading row entirely. |\n| `icon` | Leading header glyph. |\n| `toolbar` | Action row at the block-end edge. |\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `base` | The card root. |\n| `body` | The default-slot body wrapper. |\n| `handle` | Every handle dot (input or output). |\n| `handle-input` | An input handle dot (also carries the shared `handle` part). |\n| `handle-output` | An output handle dot (also carries the shared `handle` part). |\n| `header` | The built-in header row (omitted when the `header` slot has content). |\n| `heading` | The heading text. |\n| `icon` | The wrapper around the `icon` slot. |\n| `progress` | The determinate progress bar. |\n| `status` | The visible status chip (status is never color-only). |\n| `toolbar` | The toolbar row wrapper. |\n\n---\n\n**CSS Custom Properties**\n\n- `--lyra-flow-node-min-inline-size` (default: `11rem`) — Minimum card inline size."
       },
       "attributes": [
         {
@@ -5530,7 +5544,7 @@
           "name": "decimals",
           "description": {
             "kind": "markdown",
-            "value": "Type: `number`  \nDefault: `1`"
+            "value": "Default: `DEFAULT_DECIMALS`"
           }
         },
         {
@@ -5544,7 +5558,7 @@
           "name": "unit-step",
           "description": {
             "kind": "markdown",
-            "value": "Type: `number`  \nDefault: `1024`"
+            "value": "Default: `DEFAULT_UNIT_STEP`"
           }
         },
         {
@@ -5956,7 +5970,7 @@
       "name": "lyra-graph-legend",
       "description": {
         "kind": "markdown",
-        "value": "`<lyra-graph-legend>` — a node-type legend for a paired `lyra-graph`: one swatch + label + count\nrow per §3.4 node type, doubling as visibility filters. Never reads or writes a graph directly —\nthe host forwards `types` in from `graph.nodeTypes` and `hiddenTypes` back out to\n`graph.hiddenTypes` on `lyra-visibility-change`, the same event-decoupled contract every sibling\nin this family follows.\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `base` | The `role=\"group\"` wrapper. |\n| `count` | The optional per-type count. |\n| `item` | One row per type — a `<button>` when `interactive`, a plain `<div>` otherwise. |\n| `label` | The type's label text. |\n| `swatch` | The type's shape glyph. |"
+        "value": "`<lyra-graph-legend>` — a node-type legend for a paired `lyra-graph`: one swatch + label + count\nrow per `lyra-graph` node type, doubling as visibility filters. Never reads or writes a graph directly —\nthe host forwards `types` in from `graph.nodeTypes` and `hiddenTypes` back out to\n`graph.hiddenTypes` on `lyra-visibility-change`, the same event-decoupled contract every sibling\nin this family follows.\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `base` | The `role=\"group\"` wrapper. |\n| `count` | The optional per-type count. |\n| `item` | One row per type — a `<button>` when `interactive`, a plain `<div>` otherwise. |\n| `label` | The type's label text. |\n| `live-region` | The visually hidden filter-toggle announcement. |\n| `swatch` | The type's shape glyph. |"
       },
       "attributes": [
         {
@@ -6051,7 +6065,7 @@
           "name": "first-day-of-week",
           "description": {
             "kind": "markdown",
-            "value": "Calendar mode only (no-op in matrix mode): anchors the calendar grid at\na different weekday instead of always Sunday — `0`-`6`, same numbering\nas `CalendarCellPos.weekday` (`0` Sunday .. `6` Saturday, matching\n`CalendarCell.weekday`'s existing convention). Threaded into\n`buildCalendarGrid()`. Defaults to `0` (Sunday), unchanged from before\nthis property existed.\n\nType: `number`  \nDefault: `0`"
+            "value": "Calendar mode only (no-op in matrix mode): anchors the calendar grid at\na different weekday instead of always Sunday — `0`-`6`, same numbering\nas `CalendarCellPos.weekday` (`0` Sunday .. `6` Saturday, matching\n`CalendarCell.weekday`'s existing convention). Threaded into\n`buildCalendarGrid()`. Defaults to `0` (Sunday), unchanged from before\nthis property existed. Normalized into `[0, 6]` via modulo wrap (not\nclamp) -- mirrors `buildCalendarGrid()`'s own `(x + 7) % 7` weekday-wrapping\nconvention (already used elsewhere in this file), so e.g. `7` wraps to `0`\n(Sunday) and `-1` wraps to `6` (Saturday) rather than being clamped to the\nnearest in-range end. A non-finite input falls back to `0`.\n\nType: `number`"
           }
         },
         {
@@ -7608,6 +7622,13 @@
       },
       "attributes": [
         {
+          "name": "aria-label",
+          "description": {
+            "kind": "markdown",
+            "value": "Overrides the toolbar's computed accessible name. Wins over `label` and the localized\ndefault. Attribute-reflects from a host-level `aria-label` so a plain-markup consumer gets\nARIA-name forwarding without setting a JS property.\n\nType: `string | null`  \nDefault: `null`"
+          }
+        },
+        {
           "name": "copy-text",
           "description": {
             "kind": "markdown",
@@ -8058,6 +8079,13 @@
         "value": "`<lyra-node-palette>` — the searchable, categorized node library for workflow editors: drag an\nitem onto a canvas, or place it by keyboard. Never creates nodes or touches a canvas's data\nitself — the drop/place handshake ends at `lyra-node-add`/`lyra-palette-place`; the host mutates\n`nodes`. Fully decoupled from `lyra-flow-canvas` (no `for` resolution, unlike\n`lyra-flow-minimap`/`lyra-flow-controls`/`lyra-flow-run-overlay`) — it only needs to agree with a\n`droppable` canvas on the `FLOW_PALETTE_MIME_TYPE` drag payload shape.\n\n---\n\n**Slots**\n\n| Name | Description |\n| --- | --- |\n| `footer` | Content below the list. |\n| `header` | Content above the search field (e.g. a heading or tabs). |\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `base` | The root wrapper. |\n| `empty` | The no-results message. |\n| `group-header` | A category heading (`role=\"presentation\"`). |\n| `item` | A single option row. |\n| `item-description` | An item's description text. |\n| `item-icon` | An item's icon wrapper. |\n| `item-label` | An item's label text. |\n| `list` | The listbox. |\n| `live-region` | The result-count announcement. |\n| `search` | The search input. |"
       },
       "attributes": [
+        {
+          "name": "aria-label",
+          "description": {
+            "kind": "markdown",
+            "value": "Overrides the listbox's computed accessible name. Wins over `label` and the localized\ndefault. Attribute-reflects from a host-level `aria-label` so a plain-markup consumer gets\nARIA-name forwarding without setting a JS property.\n\nType: `string | null`  \nDefault: `null`"
+          }
+        },
         {
           "name": "label",
           "description": {
@@ -9030,7 +9058,7 @@
           "name": "distance",
           "description": {
             "kind": "markdown",
-            "value": "Type: `number`  \nDefault: `4`"
+            "value": "Anchor-offset distance (px) passed to Floating UI's `offset()` middleware. Can legitimately\nbe negative (overlaps the popup with the trigger); NaN/non-finite falls back to the default.\n\nDefault: `DEFAULT_DISTANCE`"
           }
         },
         {
@@ -9272,7 +9300,7 @@
           "name": "max-duration-ms",
           "description": {
             "kind": "markdown",
-            "value": "`> 0` auto-stops the take at this many milliseconds (a stuck-key guard); `0` (the default)\nnever auto-stops.\n\nType: `number`  \nDefault: `0`"
+            "value": "`> 0` auto-stops the take at this many milliseconds (a stuck-key guard); `0` (the default)\nnever auto-stops. Clamped to `[1, MAX_TIMEOUT_MS]` at the point it's handed to `setTimeout()`\n-- see `start()` -- the browser timer ceiling, matching `lyra-playback`'s `interval-ms`\nhandling of its own duration-like property.\n\nType: `number`  \nDefault: `0`"
           }
         },
         {
@@ -9300,7 +9328,7 @@
           "name": "timeslice-ms",
           "description": {
             "kind": "markdown",
-            "value": "Type: `number`  \nDefault: `0`"
+            "value": "`> 0` requests periodic `lyra-record-chunk` slices from `MediaRecorder` every this-many\nmilliseconds; `0` (the default) requests one slice at stop. Clamped to\n`[1, MAX_TIMEOUT_MS]` at the point it's handed to `MediaRecorder.start()` -- see `start()` --\nso a non-finite/oversized value can't reach that native API unsanitized.\n\nType: `number`  \nDefault: `0`"
           }
         }
       ]
@@ -9618,7 +9646,7 @@
           "name": "items",
           "description": {
             "kind": "markdown",
-            "value": "How many children are shown simultaneously. Clamped to at least 1 and at most the pool size.\n\nType: `number`  \nDefault: `1`"
+            "value": "How many children are shown simultaneously -- a count, not the pool itself. NaN/negative/\nfractional/oversized all normalize through `finiteInteger`, clamped to at least 1 and at\nmost the pool size -- see `clampedCount()`.\n\nType: `number`  \nDefault: `1`"
           }
         },
         {
@@ -10331,7 +10359,7 @@
           "name": "label",
           "description": {
             "kind": "markdown",
-            "value": "Accessible name for the slider, used when no visible label context\nexists around it (e.g. no wrapping `<label>` or adjacent heading). Set\nas `aria-label` on the interactive `role=\"slider\"` element. A plain\n`aria-label` attribute on the host itself is honored as a fallback when\nthis is left unset, matching `<lyra-checkbox>`/`<lyra-switch>`.\n\nType: `string`  \nDefault: `''`"
+            "value": "Accessible name for the slider, used when no visible label context\nexists around it (e.g. no wrapping `<label>` or adjacent heading). Set\nas `aria-label` on the interactive `role=\"slider\"` element. A plain\n`aria-label` attribute on the host itself is honored as a fallback when\nthis is left unset, matching `<lyra-checkbox>`/`<lyra-switch>`; with\nneither, the localized generic `sliderLabel` message applies so the\nfocusable thumb is never nameless (the same pattern as\n`<lyra-input>`/`<lyra-textarea>`'s built-in generic labels).\n\nType: `string`  \nDefault: `''`"
           }
         },
         {
@@ -10460,6 +10488,13 @@
       },
       "attributes": [
         {
+          "name": "aria-label",
+          "description": {
+            "kind": "markdown",
+            "value": "Overrides the tree's computed accessible name. Wins over `label` and the localized\ndefault. Attribute-reflects from a host-level `aria-label` so a plain-markup consumer\ngets ARIA-name forwarding without setting a JS property.\n\nType: `string | null`  \nDefault: `null`"
+          }
+        },
+        {
           "name": "label",
           "description": {
             "kind": "markdown",
@@ -10535,7 +10570,7 @@
           "name": "view-start-ms",
           "description": {
             "kind": "markdown",
-            "value": "Visible time window in trace-relative ms. Both `null` (the default) fits the whole trace.\n\nType: `number | null`  \nDefault: `null`"
+            "value": "Visible time window in trace-relative ms (same non-negative, trace-relative vocabulary as\n`LyraSpan.startMs`/`endMs` -- never a wall-clock timestamp). Both `null` (the default) fits\nthe whole trace; a non-null NaN (e.g. an unparsable attribute) is normalized the same way as\n`null` by `viewWindow()` rather than poisoning the axis/bar math with NaN.\n\nType: `number | null`  \nDefault: `null`"
           }
         }
       ]
@@ -10867,7 +10902,7 @@
           "name": "trend",
           "description": {
             "kind": "markdown",
-            "value": "Default: `NaN`"
+            "value": "Percentage/delta value for the trend pill (e.g. `-12.5` renders a down arrow at \"12.5%\").\n`NaN` (the default, and what a removed `trend` attribute resolves to — Lit's `type: Number`\nconverter maps a missing attribute to `null`, treated the same as `NaN` here) is a\ndeliberate sentinel meaning \"no trend\": it hides the pill entirely and is preserved as-is,\nnever coerced away. Any other non-finite input (e.g. a literal `trend=\"Infinity\"` attribute)\nis normalized via `finiteNumber` to a flat `0` instead of rendering a bogus\n\"Infinity%\"/\"-Infinity%\" pill; genuine finite numbers pass through unclamped.\n\nType: `number`"
           }
         },
         {
@@ -10900,6 +10935,13 @@
         "value": "`<lyra-stepper>` — ordered multi-step wizard/form navigation: label + index per step,\ncurrent/completed/locked/error state, click-to-jump. First-party invention (no Web Awesome\nequivalent). Fully data-driven and controlled, like `lyra-table`'s `columns`/`rows` -- it never\nmutates `steps` itself; a click or Enter/Space on a non-disabled step fires a cancelable\n`lyra-step-select`, and the host decides whether/how `steps` changes in response (mirroring\n`lyra-dialog-close`'s cancelable-event convention).\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `base` | The root wrapper. |\n| `step` | A single step button. |\n| `step-check` | The completed-checkmark glyph, shown for `completed` steps instead of `step-index`. |\n| `step-index` | The numbered index chip, shown for `pending`/`current`/`error` steps. |\n| `step-label` | The step's label text. |"
       },
       "attributes": [
+        {
+          "name": "aria-label",
+          "description": {
+            "kind": "markdown",
+            "value": "Accessible name for the `role=\"tablist\"` step strip. Attribute-reflects from a host-level\n`aria-label` so a plain-markup consumer gets ARIA-name forwarding without setting a JS\nproperty. Unset, the tablist renders without an `aria-label` (the role carries no localized\ndefault name).\n\nType: `string | null`  \nDefault: `null`"
+          }
+        },
         {
           "name": "locale",
           "description": {
@@ -11083,7 +11125,7 @@
       "name": "lyra-swatch-picker",
       "description": {
         "kind": "markdown",
-        "value": "`<lyra-swatch-picker>` -- a single-select picker over a small, fixed set of color swatches with\nthe WAI-ARIA APG `radiogroup` contract built in: `role=\"radiogroup\"`/`role=\"radio\"`, roving\ntabindex, automatic activation (click or arrow-key move both select immediately, like a native\nradio group), cyclic Arrow/Home/End navigation. Distinct from `<lyra-color-picker>`'s freeform\nnative color input -- this picks exactly one of N designer-chosen named colors, the shape apps\notherwise hand-roll as a row of round accent-color buttons.\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `base` | The `role=\"radiogroup\"` root. |\n| `swatch` | A single `role=\"radio\"` color swatch; the selected one is `[part='swatch'][aria-checked='true']`. |\n| `swatch-icon` | Optional custom shape supplied by the option's `icon` field; when present it replaces the plain filled circle and the swatch renders unfilled/unbordered behind it. |\n\n---\n\n**CSS Custom Properties**\n\n- `--lyra-swatch-picker-selected-color` (default: `var(--lyra-color-brand)`) — Ring color drawn around the selected swatch, themeable independently of the focus ring and every other ring color.\n- `--lyra-swatch-picker-selected-blur` (default: `0px`) — Blur radius of that same ring. 0 by default (a crisp ring); set a real length (e.g. 0.4rem) for a soft glow instead.\n- `--lyra-swatch-picker-shine-duration` (default: `0s`) — Duration of a rhythmic brighten-and-settle \"shine\" on the selected swatch. `0s` (the default) is a no-op -- today's static look for every existing consumer. Set a real duration (e.g. 1.6s) for a pulsing shine; disabled outright under `prefers-reduced-motion: reduce`. Independent of `--lyra-swatch-picker-selected-blur` (a separate `filter: brightness()` animation, not `box-shadow`), so the two compose freely, and works identically for a plain color circle and an icon swatch alike."
+        "value": "`<lyra-swatch-picker>` -- a single-select picker over a small, fixed set of color swatches with\nthe WAI-ARIA APG `radiogroup` contract built in: `role=\"radiogroup\"`/`role=\"radio\"`, roving\ntabindex, automatic activation (click or arrow-key move both select immediately, like a native\nradio group), cyclic Arrow/Home/End navigation. Distinct from `<lyra-color-picker>`'s freeform\nnative color input -- this picks exactly one of N designer-chosen named colors, the shape apps\notherwise hand-roll as a row of round accent-color buttons.\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `base` | The `role=\"radiogroup\"` root. |\n| `swatch` | A single `role=\"radio\"` color swatch's interactive hit target; sized to the shared minimum tappable size (`--lyra-icon-button-size`), independent of the smaller visible fill/icon rendered inside it. The selected one is `[part='swatch'][aria-checked='true']`. |\n| `swatch-fill` | The compact filled circle rendered when the option has no custom `icon`. |\n| `swatch-icon` | Optional custom shape supplied by the option's `icon` field; when present it replaces `swatch-fill` and the swatch renders unfilled/unbordered behind it. |\n\n---\n\n**CSS Custom Properties**\n\n- `--lyra-swatch-picker-selected-color` (default: `var(--lyra-color-brand)`) — Ring color drawn around the selected swatch, themeable independently of the focus ring and every other ring color.\n- `--lyra-swatch-picker-selected-blur` (default: `0px`) — Blur radius of that same ring. 0 by default (a crisp ring); set a real length (e.g. 0.4rem) for a soft glow instead.\n- `--lyra-swatch-picker-shine-duration` (default: `0s`) — Duration of a rhythmic brighten-and-settle \"shine\" on the selected swatch. `0s` (the default) is a no-op -- today's static look for every existing consumer. Set a real duration (e.g. 1.6s) for a pulsing shine; disabled outright under `prefers-reduced-motion: reduce`. Independent of `--lyra-swatch-picker-selected-blur` (a separate `filter: brightness()` animation, not `box-shadow`), so the two compose freely, and works identically for a plain color circle and an icon swatch alike."
       },
       "attributes": [
         {
@@ -11414,6 +11456,13 @@
           }
         },
         {
+          "name": "aria-label",
+          "description": {
+            "kind": "markdown",
+            "value": "Accessible name for the `role=\"tablist\"` strip. Attribute-reflects from a host-level\n`aria-label` so a plain-markup consumer gets ARIA-name forwarding without setting a JS\nproperty. Unset, the tablist renders without an `aria-label` (the role carries no localized\ndefault name).\n\nType: `string | null`  \nDefault: `null`"
+          }
+        },
+        {
           "name": "locale",
           "description": {
             "kind": "markdown",
@@ -11549,7 +11598,7 @@
           "name": "max-scrollback",
           "description": {
             "kind": "markdown",
-            "value": "Type: `number`  \nDefault: `5000`"
+            "value": "Line-count scrollback buffer limit. NaN/negative/oversized (e.g. `Infinity`) all normalize\nthrough `finiteCount`, with a floor of 1 -- see `appendLine()`.\n\nType: `number`  \nDefault: `5000`"
           }
         },
         {
@@ -12181,7 +12230,7 @@
           "name": "disabled",
           "description": {
             "kind": "markdown",
-            "value": "Type: `boolean`  \nDefault: `false`"
+            "value": "Type: `boolean`"
           }
         },
         {
@@ -12216,7 +12265,7 @@
           "name": "name",
           "description": {
             "kind": "markdown",
-            "value": "Type: `string`  \nDefault: `''`"
+            "value": "The form submission key, reflected synchronously for native form APIs.\nThis control keys its `FormData` entries directly off `name` (see\n`syncValidity()`), so a rename must rebuild that `FormData` in the same\ntick -- mirrors `<lyra-combobox>`'s identical `name` setter.\n\nType: `string`"
           }
         },
         {
@@ -12230,7 +12279,7 @@
           "name": "required",
           "description": {
             "kind": "markdown",
-            "value": "Type: `boolean`  \nDefault: `false`"
+            "value": "Type: `boolean`"
           }
         }
       ]
@@ -12629,14 +12678,14 @@
           "name": "delay",
           "description": {
             "kind": "markdown",
-            "value": "Type: `number`  \nDefault: `150`"
+            "value": "Show/hide timer delay (ms) -- see `setOpen()`. NaN/negative/oversized all normalize through\n`finiteDuration`.\n\nDefault: `DEFAULT_DELAY`"
           }
         },
         {
           "name": "distance",
           "description": {
             "kind": "markdown",
-            "value": "Type: `number`  \nDefault: `6`"
+            "value": "Anchor-offset distance (px) passed to Floating UI's `offset()` middleware -- identical\nsemantics to `<lyra-popover>.distance` (can legitimately be negative for overlap).\n\nDefault: `DEFAULT_DISTANCE`"
           }
         },
         {
@@ -12680,7 +12729,7 @@
           "name": "active-index",
           "description": {
             "kind": "markdown",
-            "value": "Index of the currently active step, clamped to `[0, steps.length - 1]` by `goToStep()`.\n\nType: `number`  \nDefault: `0`"
+            "value": "Index of the currently active step, clamped to `[0, steps.length - 1]` by `goToStep()` --\nand, for a direct property/attribute assignment that bypasses that method (e.g. two-way\nbinding an external store, or a bad `active-index` attribute), normalized the same way in\n`willUpdate()` below.\n\nType: `number`  \nDefault: `0`"
           }
         },
         {
@@ -12694,7 +12743,7 @@
           "name": "distance",
           "description": {
             "kind": "markdown",
-            "value": "Distance (px) between the target and the popover, passed straight to Floating UI's\n`offset()` middleware -- a tour-level-only setting, mirroring `lyra-popover`'s `distance`\nprop exactly.\n\nType: `number`  \nDefault: `12`"
+            "value": "Distance (px) between the target and the popover, passed straight to Floating UI's\n`offset()` middleware -- a tour-level-only setting, mirroring `lyra-popover`'s `distance`\nprop exactly (can legitimately be negative for overlap).\n\nDefault: `DEFAULT_DISTANCE`"
           }
         },
         {
@@ -12736,7 +12785,7 @@
           "name": "spotlight-padding",
           "description": {
             "kind": "markdown",
-            "value": "Tour-level default extra px between a target's own box and the spotlight cutout/ring,\noverridable per step via `TourStep.spotlightPadding`.\n\nType: `number`  \nDefault: `4`"
+            "value": "Tour-level default extra px between a target's own box and the spotlight cutout/ring,\noverridable per step via `TourStep.spotlightPadding`. Non-negative.\n\nDefault: `DEFAULT_SPOTLIGHT_PADDING`"
           }
         }
       ]
@@ -12800,10 +12849,24 @@
       },
       "attributes": [
         {
+          "name": "aria-label",
+          "description": {
+            "kind": "markdown",
+            "value": "Overrides the log region's computed accessible name. Wins over `label` and the localized\ndefault. Attribute-reflects from a host-level `aria-label` so a plain-markup consumer gets\nARIA-name forwarding without setting a JS property.\n\nType: `string | null`  \nDefault: `null`"
+          }
+        },
+        {
           "name": "follow",
           "description": {
             "kind": "markdown",
             "value": "Type: `boolean`  \nDefault: `true`"
+          }
+        },
+        {
+          "name": "label",
+          "description": {
+            "kind": "markdown",
+            "value": "Accessible name for the `role=\"log\"` region. Defaults to the localized `transcriptFeedLabel`.\n\nType: `string`  \nDefault: `''`"
           }
         },
         {
@@ -12863,7 +12926,7 @@
           "name": "depth",
           "description": {
             "kind": "markdown",
-            "value": "Type: `number`  \nDefault: `0`"
+            "value": "Nesting depth, 0 = top-level. Feeds `aria-level` (`depth + 1`) in `willUpdate()` below and the\n`--lyra-tree-depth` custom property, and is passed down `+ 1` to each rendered child --\nper the ARIA spec `aria-level` must be a positive integer, so a NaN/negative `depth` would\nproduce invalid ARIA output (and, recursively, poison every descendant's own depth too).\nClamped to a finite integer `>= 0` (never negative -- `0` is the legitimate top-level value,\nmatching `aria-level=\"1\"`).\n\nType: `number`"
           }
         },
         {

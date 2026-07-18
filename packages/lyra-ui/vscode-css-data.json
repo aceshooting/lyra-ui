@@ -177,6 +177,13 @@
       }
     },
     {
+      "name": "--lyra-checkpoint-spin-duration",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lyra-checkpoint>`** (default: `1s`) — Duration of one restoring-spinner rotation (stopped under reduced motion)."
+      }
+    },
+    {
       "name": "--lyra-chip-pressed-bg",
       "description": {
         "kind": "markdown",
