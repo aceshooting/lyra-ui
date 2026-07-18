@@ -11,8 +11,19 @@ describe('loadKatex', () => {
   });
 
   it('resolves null and warns when the optional peer fails to load', async () => {
-    const result = await loadKatex(() => Promise.reject(new Error('not installed')));
+    const error = new Error('not installed');
+    const originalWarn = console.warn;
+    const calls: unknown[][] = [];
+    console.warn = (...args: unknown[]) => calls.push(args);
+    let result: Awaited<ReturnType<typeof loadKatex>>;
+    try {
+      result = await loadKatex(() => Promise.reject(error));
+    } finally {
+      console.warn = originalWarn;
+    }
     expect(result).to.equal(null);
+    expect(calls).to.have.lengthOf(1);
+    expect(calls.flat()).to.contain(error);
   });
 
   it('caches the resolved module across calls', async () => {
