@@ -108,30 +108,27 @@ if (!['chromium', 'firefox', 'webkit'].includes(browserProduct)) {
 
 const strictConsole = process.env.WTR_STRICT_CONSOLE === '1';
 const collectCoverage = process.env.WTR_COVERAGE === '1';
-const strictConsoleTestRunnerHtml = strictConsole
-  ? (testRunnerImport) => `
+const testRunnerHtml = (testRunnerImport) => `
 <!doctype html>
 <html>
   <head></head>
   <body>
     <script>
-      const allowedWarnings = [/Lit is in dev mode/, /source\\(\\) rejected/];
+      globalThis.litIssuedWarnings = new Set(['dev-mode']);
+      ${strictConsole ? `
       const originalWarn = console.warn;
-      const originalError = console.error;
       console.warn = (...args) => {
-        if (!allowedWarnings.some((pattern) => pattern.test(args.map(String).join(' ')))) {
-          throw new Error('Unexpected browser console.warn: ' + args.map(String).join(' '));
-        }
         originalWarn(...args);
+        throw new Error('Unexpected browser console.warn: ' + args.map(String).join(' '));
       };
       console.error = (...args) => {
         throw new Error('Unexpected browser console.error: ' + args.map(String).join(' '));
       };
+      ` : ''}
     </script>
     <script type="module" src=${JSON.stringify(testRunnerImport)}></script>
   </body>
-</html>`
-  : undefined;
+</html>`;
 
 export default {
   files: 'src/**/*.test.ts',
@@ -160,7 +157,7 @@ export default {
       retries: 1,
     },
   },
-  testRunnerHtml: strictConsoleTestRunnerHtml,
+  testRunnerHtml,
   coverage: collectCoverage,
   coverageConfig: {
     include: [
