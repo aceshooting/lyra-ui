@@ -440,7 +440,7 @@ describe('virtual mode', () => {
     expect(ev.detail).to.deep.equal({ following: true });
   });
 
-  it('does not misattribute a later append as user-caused after a wheel gesture that changed no visible range', async () => {
+  it('does not misattribute a later append as user-caused after a wheel gesture that changed no visible range settles', async () => {
     const el = (await fixture(virtualFixtureMarkup(20))) as LyraChatViewport;
     await el.updateComplete;
     await nextFrame();
@@ -448,16 +448,42 @@ describe('virtual mode', () => {
     const base = list.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
 
     // A wheel-down gesture at the bottom that moves nothing: no scroll event follows, so nothing
-    // ever consumes the pending user-intent flag it set -- until it goes stale.
+    // ever consumes the pending user-intent flag it set -- it must expire on its own instead.
     base.dispatchEvent(new WheelEvent('wheel', { bubbles: true, composed: true }));
-    await new Promise<void>((r) => setTimeout(r, 600));
+    // Longer than the frame-based expiry markUserIntent() schedules, well under any realistic gap
+    // to an unrelated later event.
+    await nextFrame();
+    await nextFrame();
 
     let fired = false;
     el.addEventListener('lyra-follow-change', () => (fired = true));
     // Simulates the range event a later, unrelated append produces while not at the bottom --
     // never actually user-caused.
     list.dispatchEvent(new CustomEvent('lyra-visible-range-changed', { detail: { start: 10, end: 18 } }));
-    expect(fired, 'a stale pendingUserIntent would misattribute this as a user release').to.be.false;
+    expect(fired, 'a stuck pendingUserIntent would misattribute this as a user release').to.be.false;
+    expect(el.follow).to.be.true;
+  });
+
+  it('does not misattribute a same-burst streamed append as user-caused after a wheel gesture that changed nothing', async () => {
+    const el = (await fixture(virtualFixtureMarkup(20))) as LyraChatViewport;
+    await el.updateComplete;
+    await nextFrame();
+    const list = el.querySelector('lyra-virtual-list') as LyraVirtualList;
+    const base = list.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+
+    // A wheel-down gesture at the bottom that moves nothing.
+    base.dispatchEvent(new WheelEvent('wheel', { bubbles: true, composed: true }));
+    // A realistic streamed-token append cadence: far sooner than a wall-clock timeout could ever
+    // safely expire on (active token streaming fires range-changed events much more often than
+    // once every few hundred milliseconds), but well after the gesture's own settle window, so a
+    // fix that proactively clears a no-op gesture's intent (rather than waiting out a generous
+    // fixed timeout) must not misattribute this.
+    await new Promise<void>((r) => setTimeout(r, 50));
+
+    let fired = false;
+    el.addEventListener('lyra-follow-change', () => (fired = true));
+    list.dispatchEvent(new CustomEvent('lyra-visible-range-changed', { detail: { start: 10, end: 18 } }));
+    expect(fired, 'a same-burst append must not be misattributed as a user release').to.be.false;
     expect(el.follow).to.be.true;
   });
 });

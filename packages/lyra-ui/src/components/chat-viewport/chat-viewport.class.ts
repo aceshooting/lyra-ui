@@ -12,17 +12,6 @@ export interface LyraChatViewportEventMap {
   'lyra-follow-change': CustomEvent<{ following: boolean }>;
 }
 
-/** Longest gap between a wheel/touchmove/keyboard "user is scrolling" gesture and the resulting
- *  scroll (slotted mode) or `lyra-visible-range-changed` (virtual mode) event before the pending
- *  intent flag it set is treated as stale rather than real. A gesture that actually moved
- *  anything settles well within this window -- virtual mode's longest chain is one
- *  `requestAnimationFrame` plus a Lit microtask update, on the order of a couple dozen
- *  milliseconds. A gesture that changed nothing (e.g. wheel-down while already at the bottom, in
- *  virtual mode) produces no such event to consume the flag itself, so without this expiry it
- *  would sit stuck `true` until some later, unrelated event -- e.g. the next streamed append --
- *  misattributes itself as user-caused and releases `follow`. */
-const USER_INTENT_MAX_AGE_MS = 500;
-
 /**
  * `<lyra-chat-viewport>` — the transcript scroll container: owns stick-to-bottom behavior while an
  * answer streams, the "jump to latest" pill, and the unread divider.
@@ -96,9 +85,9 @@ export class LyraChatViewport extends LyraElement<LyraChatViewportEventMap> {
   @query('[part="content"]') private contentEl?: HTMLElement;
 
   private pendingUserIntent = false;
-  /** `performance.now()` timestamp of the last `markUserIntent()` call -- see
-   *  `USER_INTENT_MAX_AGE_MS` and `consumeUserIntent()`. */
-  private pendingUserIntentAt = 0;
+  /** `requestAnimationFrame` id of the in-flight proactive expiry scheduled by `markUserIntent()`
+   *  -- see that method and `cancelPendingUserIntentExpiry()`. */
+  private pendingUserIntentExpiryId?: number;
   private scrollbarDragActive = false;
   private isMounting = true;
   private pendingScrollBehavior?: 'auto' | 'smooth';
@@ -143,10 +132,14 @@ export class LyraChatViewport extends LyraElement<LyraChatViewportEventMap> {
   disconnectedCallback(): void {
     super.disconnectedCallback();
     this.teardownObservers();
-    // Safety net for a drag still in progress (pointerdown fired, no matching pointerup yet) when
-    // this element is disconnected -- without this the window listener `onPointerDown` added would
-    // leak for the lifetime of the page.
+    // Safety net for a drag still in progress (pointerdown fired, no matching pointerup/
+    // pointercancel/lostpointercapture yet) when this element is disconnected -- without this the
+    // window listeners `onPointerDown` added would leak for the lifetime of the page.
     window.removeEventListener('pointerup', this.onPointerUp);
+    window.removeEventListener('pointercancel', this.onPointerUp);
+    window.removeEventListener('lostpointercapture', this.onPointerUp);
+    // Safety net for a still-scheduled proactive user-intent expiry (see markUserIntent()).
+    this.cancelPendingUserIntentExpiry();
   }
 
   firstUpdated(): void {
@@ -270,15 +263,46 @@ export class LyraChatViewport extends LyraElement<LyraChatViewportEventMap> {
 
   private markUserIntent = (): void => {
     this.pendingUserIntent = true;
-    this.pendingUserIntentAt = performance.now();
+    this.cancelPendingUserIntentExpiry();
+    // A gesture that actually produced a scroll is consumed by onScroll()/onVirtualRangeChanged()
+    // well within two animation frames -- slotted mode's own [part="scroll"] fires 'scroll'
+    // directly off the native scroll; virtual mode's longest chain is one requestAnimationFrame
+    // (the slotted list's own scroll-coalescing) plus a Lit microtask update, both of which land
+    // inside the *first* of these two frames with room to spare. A gesture that changed nothing
+    // (e.g. wheel-down while already at the bottom, in virtual mode) never fires either handler,
+    // so nothing else would ever clear the flag -- proactively dropping it here, rather than
+    // waiting out a generous wall-clock timeout, closes the window during which an unrelated
+    // event arriving soon after (e.g. the next streamed-token append, which can land far sooner
+    // than any timeout long enough to be safe for a genuine gesture) would misattribute itself as
+    // user-caused and release `follow`.
+    this.pendingUserIntentExpiryId = requestAnimationFrame(() => {
+      this.pendingUserIntentExpiryId = requestAnimationFrame(() => {
+        this.pendingUserIntentExpiryId = undefined;
+        this.pendingUserIntent = false;
+      });
+    });
   };
 
-  /** Consumes the pending user-intent flag, treating it as real only if it's still fresh -- see
-   *  `USER_INTENT_MAX_AGE_MS`. Always clears the flag, whether fresh or stale. */
-  private consumeUserIntent(): boolean {
-    const fresh = this.pendingUserIntent && performance.now() - this.pendingUserIntentAt <= USER_INTENT_MAX_AGE_MS;
+  private cancelPendingUserIntentExpiry(): void {
+    if (this.pendingUserIntentExpiryId !== undefined) {
+      cancelAnimationFrame(this.pendingUserIntentExpiryId);
+      this.pendingUserIntentExpiryId = undefined;
+    }
+  }
+
+  /** Clears the pending user-intent flag and cancels its proactive expiry, if one is still
+   *  scheduled. */
+  private clearUserIntent(): void {
     this.pendingUserIntent = false;
-    return fresh;
+    this.cancelPendingUserIntentExpiry();
+  }
+
+  /** Consumes the pending user-intent flag, returning whatever it held. Always clears it (and its
+   *  proactive expiry, if still pending). */
+  private consumeUserIntent(): boolean {
+    const wasPending = this.pendingUserIntent;
+    this.clearUserIntent();
+    return wasPending;
   }
 
   private onPointerDown = (): void => {
@@ -289,11 +313,19 @@ export class LyraChatViewport extends LyraElement<LyraChatViewportEventMap> {
     // only here would never see that pointerup, leaving this flag stuck `true` and letting a
     // later, unrelated layout-shift scroll spuriously release `follow`.
     window.addEventListener('pointerup', this.onPointerUp);
+    // A drag can also end without a pointerup ever firing: a system gesture / palm rejection can
+    // fire `pointercancel` instead, and losing implicit pointer capture (e.g. the dragged element
+    // is removed) fires `lostpointercapture` -- both need the same teardown as pointerup, or this
+    // flag is stuck true just as surely as the pointerup-outside-the-element case above.
+    window.addEventListener('pointercancel', this.onPointerUp);
+    window.addEventListener('lostpointercapture', this.onPointerUp);
   };
 
   private onPointerUp = (): void => {
     this.scrollbarDragActive = false;
     window.removeEventListener('pointerup', this.onPointerUp);
+    window.removeEventListener('pointercancel', this.onPointerUp);
+    window.removeEventListener('lostpointercapture', this.onPointerUp);
   };
 
   private onKeyDown = (e: KeyboardEvent): void => {
@@ -306,7 +338,7 @@ export class LyraChatViewport extends LyraElement<LyraChatViewportEventMap> {
     const distanceFromEnd = el.scrollHeight - el.scrollTop - el.clientHeight;
     const atBottom = distanceFromEnd <= this.effectiveBottomThreshold;
     if (atBottom) {
-      this.pendingUserIntent = false;
+      this.clearUserIntent();
       if (!this.follow) this.follow = true;
       return;
     }
@@ -320,7 +352,7 @@ export class LyraChatViewport extends LyraElement<LyraChatViewportEventMap> {
     const detail = (e as CustomEvent<VirtualListRange>).detail;
     const atBottom = list.items.length > 0 && detail.end >= list.items.length - 1;
     if (atBottom) {
-      this.pendingUserIntent = false;
+      this.clearUserIntent();
       if (!this.follow) this.follow = true;
       return;
     }
