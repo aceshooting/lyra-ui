@@ -192,7 +192,15 @@ stops you here, same as every gate above.
   component manifest, diffs for new/removed/renamed tags, authors catalog entries + all 8 locale
   translations for anything new, validates every existing entry against the now-fresh
   `custom-elements.json`, then rebuilds derived stats (`pnpm sync-counts`, `pnpm sync-bundle-size`,
-  `pnpm check-i18n`, `pnpm build`). Stop and report on the first failure — don't work around it,
+  `pnpm check-i18n`, `pnpm build`). `sync-bundle-size` stamps the hero's size stat from
+  Bundlephobia's minified+gzipped figure for the version just published (e.g. `268.0 KB` for
+  `lyra-ui@3.7.0`) — not the raw npm tarball size, which used to be the stat here and included
+  every file in the package rather than what a consumer's bundler actually ships. Bundlephobia
+  computes that number by bundling the package itself, so on a cold cache (a version published
+  moments earlier) the request can take ~30-60s; if it's unreachable or still building, the script
+  warns and leaves the previously-stamped value rather than failing the sync — don't treat that as
+  a step-6 failure, just note in the final report that the stat may be one release behind. Stop and
+  report on the first *hard* failure (a real error, not this soft-skip) — don't work around it,
   same rule as step 2 above. Note `update.md`'s own "Out of scope" section says "don't commit or
   push in this repo" — that's true when running `update.md` on its own, but this step deliberately
   overrides it: the commit + push below is this file's job, not `update.md`'s.
