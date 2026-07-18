@@ -34,6 +34,10 @@ function formatDuration(ms: number): FormattedDuration {
  * wholesale: hover and focus are tracked as independent "keep it open" reasons, so releasing one
  * modality while the other still holds doesn't close it.
  *
+ * The built-in latency formatting has no minutes/hours tier (`'{ms}ms'`, or one-decimal seconds
+ * above 1000ms) — a host whose latencies commonly exceed a minute sets `formatLatency` to render
+ * its own scale instead, in both the visible strip and the tooltip row.
+ *
  * @customElement lyra-usage-badge
  * @slot - Extra rows appended below the built-in tooltip breakdown (e.g. cache-read tokens). The
  *   visible strip itself is prop-driven only.
@@ -60,8 +64,14 @@ export class LyraUsageBadge extends LyraElement {
   /** Pre-formatted cost (e.g. `"$0.012"`), rendered verbatim. Currency formatting is host domain. */
   @property({ attribute: 'cost-text' }) costText = '';
 
-  /** Latency in milliseconds, formatted with the shared duration algorithm. */
+  /** Latency in milliseconds, formatted with the shared duration algorithm (or `formatLatency`,
+   *  when set). */
   @property({ type: Number, attribute: 'latency-ms' }) latencyMs?: number;
+
+  /** Overrides the default `formatDuration()` rendering of `latencyMs` (`'{ms}ms'`, or one-decimal
+   *  seconds above 1000ms — no minutes/hours tier) in both the visible strip and the tooltip row.
+   *  Mirrors `<lyra-activity-feed>`'s `formatTimestamp` convention. */
+  @property({ attribute: false }) formatLatency?: (ms: number) => string;
 
   /** Token counts render via `Intl.NumberFormat` `notation: 'compact'` (e.g. `12345 -> "12K"`)
    *  when set; the tooltip always shows full grouped figures regardless. */
@@ -138,6 +148,7 @@ export class LyraUsageBadge extends LyraElement {
     return getNumberFormat(this.effectiveLocale).format(n);
   }
   private localizedDuration(ms: number): string {
+    if (this.formatLatency) return this.formatLatency(ms);
     const d = formatDuration(ms);
     return this.localize(d.key, undefined, { value: d.value });
   }

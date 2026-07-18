@@ -46,6 +46,27 @@ it('omits the latency segment for a non-numeric latency-ms, and clamps a negativ
   expect(negative.shadowRoot!.querySelector('[part="latency"]')!.textContent!.trim()).to.equal('0ms');
 });
 
+it('lets formatLatency override the built-in duration algorithm in both the visible strip and the tooltip row', async () => {
+  const el = (await fixture(html`<lyra-usage-badge latency-ms="312000"></lyra-usage-badge>`)) as LyraUsageBadge;
+  // Unset: the built-in algorithm has no minutes/hours tier, so a 5m 12s run reads as a bare
+  // seconds count -- exactly the gap this hook exists to let a host correct.
+  expect(el.shadowRoot!.querySelector('[part="latency"]')!.textContent!.trim()).to.equal('312s');
+
+  el.formatLatency = (ms) => {
+    const totalSeconds = Math.round(ms / 1000);
+    const minutes = Math.floor(totalSeconds / 60);
+    const seconds = totalSeconds % 60;
+    return `${minutes}m ${seconds}s`;
+  };
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelector('[part="latency"]')!.textContent!.trim()).to.equal('5m 12s');
+
+  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  base.dispatchEvent(new Event('mouseenter'));
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelector('[part="tooltip"]')!.textContent).to.include('5m 12s');
+});
+
 it('renders compact token notation when compact is set, full grouped figures otherwise', async () => {
   const full = (await fixture(html`<lyra-usage-badge tokens-in="12345"></lyra-usage-badge>`)) as LyraUsageBadge;
   expect(full.shadowRoot!.querySelector('[part="tokens-in"]')!.textContent!.trim()).to.equal('12,345 in');
