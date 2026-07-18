@@ -49,6 +49,11 @@ it('resizes a resizable column through its native pointer handle and emits live 
 
   const handle = el.shadowRoot!.querySelector('[part="resize-handle"]') as HTMLElement;
   expect(handle.getAttribute('aria-label')).to.equal('Resize Name column');
+  // Synthetic PointerEvents do not carry a browser-owned pointer, so Firefox
+  // rejects native pointer capture for this fixture. The gesture behavior is
+  // exercised through the dispatched move/up events below.
+  handle.setPointerCapture = () => {};
+  handle.releasePointerCapture = () => {};
   let detail: { key: string; width: number } | undefined;
   el.addEventListener('lyra-column-resize', (event) => (detail = (event as CustomEvent).detail));
 
