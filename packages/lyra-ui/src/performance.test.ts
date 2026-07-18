@@ -253,7 +253,14 @@ it('keeps canvas-mode graph selection churn within the large-graph budget', asyn
   }));
   host.nodes = nodes;
   host.links = links;
-  await waitUntil(() => !!host.shadowRoot!.querySelector('canvas'), undefined, { timeout: 20000 });
+  // A seeded layout settles synchronously inside the pending Lit update. Under full-suite CPU
+  // contention that update can occupy the main thread for just over waitUntil()'s deadline; its
+  // first timer callback then rejects on elapsed wall time even though the canvas has rendered.
+  // Follow Lit's actual update boundary instead, with this test's 60s timeout as the outer guard.
+  while (!host.shadowRoot!.querySelector('canvas')) {
+    await host.updateComplete;
+    await new Promise<void>((resolve) => setTimeout(resolve, 0));
+  }
   const result = await benchmark(
     host,
     (iteration) => {
