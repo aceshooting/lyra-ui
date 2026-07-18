@@ -1720,6 +1720,25 @@ describe('canvas renderer — static draw', () => {
     });
     expect(el.shadowRoot!.querySelector('canvas')).to.not.exist;
   });
+
+  it('feeds dimmedNodeIds/dimmedLinkIds into the drawn canvas scene', async () => {
+    const el = (await fixture(
+      html`<lyra-graph renderer="canvas" width="400" height="300" style="width:400px;height:300px"></lyra-graph>`,
+    )) as LyraGraph;
+    el.nodes = nodes;
+    el.links = links;
+    el.dimmedNodeIds = ['a'];
+    await el.updateComplete;
+    await waitUntil(() => !!el.shadowRoot!.querySelector('canvas'), undefined, { timeout: NODE_COUNT_TIMEOUT });
+    await aTimeout(50); // let the draw rAF fire
+    await waitUntil(() => (el as unknown as { canvasScene?: { nodes: unknown[] } }).canvasScene?.nodes.length === 2, undefined, {
+      timeout: NODE_COUNT_TIMEOUT,
+    });
+    type Internals = { canvasScene?: { nodes: { dimmed?: boolean }[] } };
+    const scene = (el as unknown as Internals).canvasScene!;
+    expect(scene.nodes.some((n) => n.dimmed)).to.be.true;
+    expect(scene.nodes.some((n) => !n.dimmed)).to.be.true;
+  });
 });
 
 describe('canvas renderer — interaction and a11y', () => {
@@ -2686,5 +2705,79 @@ describe('RTL keyboard navigation', () => {
     items()[1]!.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
     await el.updateComplete;
     expect(items()[0]!.getAttribute('tabindex')).to.equal('0');
+  });
+});
+
+describe('dimming (adjacency highlight)', () => {
+  async function mountDimmable(): Promise<LyraGraph> {
+    const el = (await fixture(html`<lyra-graph></lyra-graph>`)) as LyraGraph;
+    el.nodes = nodes;
+    el.links = links;
+    await el.updateComplete;
+    await waitUntil(() => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2, undefined, {
+      timeout: NODE_COUNT_TIMEOUT,
+    });
+    return el;
+  }
+
+  it('defaults dimmedNodeIds/dimmedLinkIds to empty arrays: no data-dimmed anywhere', async () => {
+    const el = await mountDimmable();
+    expect(el.dimmedNodeIds).to.deep.equal([]);
+    expect(el.dimmedLinkIds).to.deep.equal([]);
+    expect(el.shadowRoot!.querySelector('[data-dimmed]')).to.be.null;
+  });
+
+  it('applies data-dimmed to a matching node, not to an unmatched one', async () => {
+    const el = await mountDimmable();
+    el.dimmedNodeIds = ['b'];
+    await el.updateComplete;
+    const [nodeA, nodeB] = [...el.shadowRoot!.querySelectorAll('[part="node"]')] as SVGElement[];
+    expect(nodeA!.hasAttribute('data-dimmed')).to.be.false;
+    expect(nodeB!.hasAttribute('data-dimmed')).to.be.true;
+  });
+
+  it('applies data-dimmed to a matching link via its linkKey (id, else source->target)', async () => {
+    const el = await mountDimmable();
+    el.dimmedLinkIds = ['a->b'];
+    await el.updateComplete;
+    const linkEl = el.shadowRoot!.querySelector('[part="link"]:not([data-dangling])') as SVGElement;
+    expect(linkEl.hasAttribute('data-dimmed')).to.be.true;
+  });
+
+  it('never self-mutates dimmedNodeIds/dimmedLinkIds -- purely controlled, like selectedNodeIds', async () => {
+    const el = await mountDimmable();
+    el.dimmedNodeIds = ['a'];
+    el.dimmedLinkIds = ['a->b'];
+    await el.updateComplete;
+    const nodeEl = el.shadowRoot!.querySelector('[part="node"]') as SVGElement;
+    nodeEl.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    expect(el.dimmedNodeIds).to.deep.equal(['a']);
+    expect(el.dimmedLinkIds).to.deep.equal(['a->b']);
+  });
+
+  it('data-dimmed and data-selected can coexist on the same element independently', async () => {
+    const el = await mountDimmable();
+    el.selectionMode = 'multiple';
+    el.selectedNodeIds = ['a'];
+    el.dimmedNodeIds = ['a'];
+    await el.updateComplete;
+    const nodeEl = el.shadowRoot!.querySelector('[part="node"]') as SVGElement;
+    expect(nodeEl.hasAttribute('data-selected')).to.be.true;
+    expect(nodeEl.hasAttribute('data-dimmed')).to.be.true;
+  });
+
+  it('existing rendering is byte-identical when dimmedNodeIds/dimmedLinkIds are left unset', async () => {
+    const el = await mountDimmable();
+    const nodeEl = el.shadowRoot!.querySelector('[part="node"]') as SVGElement;
+    expect(nodeEl.hasAttribute('data-dimmed')).to.be.false;
+    expect(nodeEl.getAttribute('style') || '').to.not.include('dimmed');
+  });
+
+  it('is accessible with dimming applied', async () => {
+    const el = await mountDimmable();
+    el.dimmedNodeIds = ['a'];
+    el.dimmedLinkIds = ['a->b'];
+    await el.updateComplete;
+    await expect(el).to.be.accessible();
   });
 });

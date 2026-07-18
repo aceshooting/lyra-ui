@@ -125,6 +125,12 @@ export const styles = css`
     stroke: var(--lyra-graph-selected-color, var(--lyra-color-success)) !important;
     stroke-width: var(--lyra-size-3px);
   }
+  [part='node'][data-dimmed] {
+    opacity: var(--lyra-graph-dimmed-opacity, 1);
+  }
+  [part='link'][data-dimmed] {
+    opacity: var(--lyra-graph-dimmed-opacity, 1);
+  }
   [part='hull'] {
     fill: var(--lyra-graph-hull-fill, var(--lyra-color-brand));
     stroke: var(--lyra-graph-hull-fill, var(--lyra-color-brand));

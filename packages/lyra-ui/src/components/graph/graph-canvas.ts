@@ -27,6 +27,7 @@ export interface CanvasLink {
   dash?: number[];
   directed?: boolean;
   selected?: boolean;
+  dimmed?: boolean;
 }
 export interface CanvasEdgeLabel {
   x: number;
@@ -40,6 +41,7 @@ export interface CanvasNode {
   shape: 'circle' | 'square' | 'diamond';
   fill: string;
   selected?: boolean;
+  dimmed?: boolean;
 }
 export interface CanvasNodeLabel {
   x: number;
@@ -63,6 +65,7 @@ export interface CanvasScene {
   showNodeLabels: boolean;
   haloColor: string;
   selectedColor: string;
+  dimmedOpacity?: number;
   labelColor: string;
   labelHaloColor: string;
   font: string;
@@ -149,16 +152,19 @@ export function drawGraphScene(ctx: CanvasRenderingContext2D, camera: CanvasCame
     ctx.globalAlpha = 1;
   }
 
+  const dimmedOpacity = scene.dimmedOpacity ?? 1;
   for (const link of scene.links) {
     ctx.strokeStyle = link.selected ? scene.selectedColor : link.color;
     ctx.lineWidth = link.width;
     ctx.setLineDash(link.dash ?? []);
+    ctx.globalAlpha = link.dimmed ? dimmedOpacity : 1;
     ctx.beginPath();
     ctx.moveTo(link.x1, link.y1);
     ctx.lineTo(link.x2, link.y2);
     ctx.stroke();
     if (link.directed) drawArrowhead(ctx, link);
   }
+  ctx.globalAlpha = 1;
   ctx.setLineDash([]);
 
   if (scene.edgeLabels.length) {
@@ -176,6 +182,7 @@ export function drawGraphScene(ctx: CanvasRenderingContext2D, camera: CanvasCame
 
   for (const node of scene.nodes) {
     const path = pathForShape(node.x, node.y, node.r, node.shape);
+    ctx.globalAlpha = node.dimmed ? dimmedOpacity : 1;
     ctx.fillStyle = node.fill;
     ctx.fill(path);
     if (node.selected) {
@@ -184,6 +191,7 @@ export function drawGraphScene(ctx: CanvasRenderingContext2D, camera: CanvasCame
       ctx.stroke(path);
     }
   }
+  ctx.globalAlpha = 1;
 
   if (scene.showNodeLabels && scene.nodeLabels.length) {
     ctx.font = scene.font;

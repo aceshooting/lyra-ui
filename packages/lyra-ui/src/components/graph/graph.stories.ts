@@ -79,6 +79,30 @@ export const Default: Story = {
   `,
 };
 
+export const DimmedNeighborhood: Story = {
+  name: 'Dimmed non-neighbors (controlled)',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'dimmedNodeIds/dimmedLinkIds are controlled -- the host computes the complement of a ' +
+          'hovered node\'s neighbor set (e.g. from lyra-node-enter) and assigns it back. This story ' +
+          'holds a static example: node "a" and its incident links stay at full opacity; everything ' +
+          'else is dimmed via --lyra-graph-dimmed-opacity.',
+      },
+    },
+  },
+  render: () => html`
+    <lyra-graph
+      .nodes=${nodes}
+      .links=${links}
+      .dimmedNodeIds=${['c', 'd']}
+      .dimmedLinkIds=${['b->d', 'c->d']}
+      style="--lyra-graph-dimmed-opacity: 0.15; width: 100%; height: 400px;"
+    ></lyra-graph>
+  `,
+};
+
 export const ClickPosition: Story = {
   render: () => {
     const report = (event: CustomEvent<{ id: string; x: number; y: number }>) => {

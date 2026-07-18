@@ -290,6 +290,9 @@ export interface LyraGraphEventMap {
  *   behind a drawn edge label, painted under the fill via `paint-order: stroke`.
  * @cssprop [--lyra-graph-focus-halo-color=var(--lyra-color-brand)] - `focus-halo` stroke color.
  * @cssprop [--lyra-graph-selected-color=var(--lyra-color-success)] - Selected node/link stroke.
+ * @cssprop [--lyra-graph-dimmed-opacity=1] - Opacity applied to a node/link when
+ *   `dimmedNodeIds`/`dimmedLinkIds` includes its id (both SVG and canvas renderers). `1` (the
+ *   default) is a no-op -- an unset host sees no visual change.
  * @cssprop [--lyra-graph-hull-fill=var(--lyra-color-brand)] - Hull fill/stroke color.
  * @cssprop [--lyra-graph-hull-opacity=0.12] - Hull element opacity (composites fill+stroke as one
  *   group, avoiding a double-opacity seam at the fill/stroke boundary).
@@ -364,6 +367,16 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
   @property({ attribute: 'selection-mode' }) selectionMode: 'none' | 'single' | 'multiple' = 'none';
   @property({ attribute: false }) selectedNodeIds: string[] = [];
   @property({ attribute: false }) selectedLinkIds: string[] = [];
+  /** Node ids to render dimmed (`data-dimmed` on the matching `[part="node"]`, themeable via
+   *  `--lyra-graph-dimmed-opacity`). Controlled, mirroring `selectedNodeIds`/`selectedLinkIds`: the
+   *  component never assigns this itself, only renders it -- a host typically computes it from a
+   *  `lyra-node-enter`/`lyra-link-enter` hover (the complement of the hovered id's neighbor set,
+   *  computed from the host's own `links` array) and assigns the result back. Empty (the default)
+   *  renders every node at full opacity, unchanged from today. */
+  @property({ attribute: false }) dimmedNodeIds: string[] = [];
+  /** Same contract as `dimmedNodeIds`, for links. A link's dimming key is the same `linkKey()`
+   *  value (`GraphLink.id`, else `` `${source}->${target}` ``) `selectedLinkIds` already uses. */
+  @property({ attribute: false }) dimmedLinkIds: string[] = [];
 
   private readonly arrowMarkerId = nextId('graph-arrow');
 
@@ -958,6 +971,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
         dash: l.dash,
         directed: l.directed,
         selected: this.isSelected('link', this.linkKey(l)),
+        dimmed: this.isDimmed('link', this.linkKey(l)),
       };
     });
     const edgeLabels =
@@ -985,6 +999,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
         shape: this.nodeShape(n),
         fill: fill ? this.resolveCssColorValue(fill, cs) : nodeFillDefault,
         selected: this.isSelected('node', n.id),
+        dimmed: this.isDimmed('node', n.id),
       };
     });
     const nodeLabels = this.simNodes
@@ -1012,6 +1027,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
         cs.getPropertyValue('--lyra-graph-focus-halo-color').trim() || cs.getPropertyValue('--lyra-color-brand').trim(),
       selectedColor:
         cs.getPropertyValue('--lyra-graph-selected-color').trim() || cs.getPropertyValue('--lyra-color-success').trim(),
+      dimmedOpacity: Number(cs.getPropertyValue('--lyra-graph-dimmed-opacity').trim()) || 1,
       labelColor: cs.getPropertyValue('--lyra-color-text').trim(),
       labelHaloColor:
         cs.getPropertyValue('--lyra-graph-edge-label-halo').trim() || cs.getPropertyValue('--lyra-color-surface').trim(),
@@ -1289,6 +1305,10 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
 
   private isSelected(kind: 'node' | 'link', id: string): boolean {
     return kind === 'node' ? this.selectedNodeIds.includes(id) : this.selectedLinkIds.includes(id);
+  }
+
+  private isDimmed(kind: 'node' | 'link', id: string): boolean {
+    return kind === 'node' ? this.dimmedNodeIds.includes(id) : this.dimmedLinkIds.includes(id);
   }
 
   private linkKey(link: SimLink): string {
@@ -2335,6 +2355,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
                   aria-label=${this.linkAccessibleText(l)}
                   aria-pressed=${this.selectionMode !== 'none' ? String(this.isSelected('link', this.linkKey(l))) : nothing}
                   ?data-selected=${this.isSelected('link', this.linkKey(l))}
+                  ?data-dimmed=${this.isDimmed('link', this.linkKey(l))}
                   stroke-width=${l.width ?? 1.5}
                   stroke-dasharray=${dash ?? nothing}
                   marker-end=${l.directed ? `url(#${this.arrowMarkerId})` : nothing}
@@ -2391,6 +2412,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
                       aria-label=${label}
                       aria-pressed=${this.selectionMode !== 'none' ? String(this.isSelected('node', n.id)) : nothing}
                       ?data-selected=${this.isSelected('node', n.id)}
+                      ?data-dimmed=${this.isDimmed('node', n.id)}
                       r=${this.nodeRadius(n)}
                       cx=${n.x ?? 0}
                       cy=${n.y ?? 0}
@@ -2409,6 +2431,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
                       aria-label=${label}
                       aria-pressed=${this.selectionMode !== 'none' ? String(this.isSelected('node', n.id)) : nothing}
                       ?data-selected=${this.isSelected('node', n.id)}
+                      ?data-dimmed=${this.isDimmed('node', n.id)}
                       d=${shape === 'square' ? squarePath(this.nodeRadius(n)) : diamondPath(this.nodeRadius(n))}
                       transform="translate(${n.x ?? 0},${n.y ?? 0})"
                       style=${style}

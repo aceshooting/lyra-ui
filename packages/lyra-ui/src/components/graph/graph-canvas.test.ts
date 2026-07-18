@@ -60,6 +60,60 @@ describe('drawGraphScene', () => {
     const pixel = ctx.getImageData(50, 50, 1, 1).data;
     expect(pixel[3]).to.be.greaterThan(0); // alpha channel -- something was painted
   });
+
+  it('does not throw when dimmed nodes/links are drawn, and dimmedOpacity defaults to 1 when unset', () => {
+    const ctx = make2dContext();
+    expect(() =>
+      drawGraphScene(ctx, { k: 1, x: 0, y: 0 }, {
+        hulls: [],
+        links: [{ x1: 0, y1: 0, x2: 100, y2: 100, color: '#000', width: 1, dimmed: true }],
+        edgeLabels: [],
+        nodes: [{ x: 50, y: 50, r: 15, shape: 'circle', fill: '#ff0000', dimmed: true }],
+        nodeLabels: [],
+        showNodeLabels: true,
+        haloColor: '#000',
+        selectedColor: '#000',
+        labelColor: '#000',
+        labelHaloColor: '#fff',
+        font: '10px sans-serif',
+      }),
+    ).to.not.throw();
+  });
+
+  it('paints a dimmed node with reduced alpha relative to an undimmed one at the same fill', () => {
+    const dimmedCtx = make2dContext();
+    drawGraphScene(dimmedCtx, { k: 1, x: 0, y: 0 }, {
+      hulls: [],
+      links: [],
+      edgeLabels: [],
+      nodes: [{ x: 50, y: 50, r: 15, shape: 'circle', fill: '#ff0000', dimmed: true }],
+      nodeLabels: [],
+      showNodeLabels: true,
+      haloColor: '#000',
+      selectedColor: '#000',
+      labelColor: '#000',
+      labelHaloColor: '#fff',
+      font: '10px sans-serif',
+      dimmedOpacity: 0.15,
+    });
+    const brightCtx = make2dContext();
+    drawGraphScene(brightCtx, { k: 1, x: 0, y: 0 }, {
+      hulls: [],
+      links: [],
+      edgeLabels: [],
+      nodes: [{ x: 50, y: 50, r: 15, shape: 'circle', fill: '#ff0000' }],
+      nodeLabels: [],
+      showNodeLabels: true,
+      haloColor: '#000',
+      selectedColor: '#000',
+      labelColor: '#000',
+      labelHaloColor: '#fff',
+      font: '10px sans-serif',
+    });
+    const dimmedAlpha = dimmedCtx.getImageData(50, 50, 1, 1).data[3];
+    const brightAlpha = brightCtx.getImageData(50, 50, 1, 1).data[3];
+    expect(dimmedAlpha).to.be.lessThan(brightAlpha);
+  });
 });
 
 describe('drawPickingScene', () => {
