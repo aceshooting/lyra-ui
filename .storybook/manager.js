@@ -9,7 +9,7 @@ const LYRA_MANAGER_THEMES = {
   light: create({
     base: 'light',
     brandTitle: 'Lyra UI',
-    brandImage: '/lyra-mark.svg',
+    brandImage: './lyra-mark.svg',
     brandUrl: 'https://github.com/aceshooting/lyra-ui',
     brandTarget: '_blank',
     colorPrimary: '#0969da',
@@ -32,7 +32,7 @@ const LYRA_MANAGER_THEMES = {
   dark: create({
     base: 'dark',
     brandTitle: 'Lyra UI',
-    brandImage: '/lyra-mark.svg',
+    brandImage: './lyra-mark.svg',
     brandUrl: 'https://github.com/aceshooting/lyra-ui',
     brandTarget: '_blank',
     colorPrimary: '#4493f8',
@@ -55,7 +55,7 @@ const LYRA_MANAGER_THEMES = {
   'high-contrast': create({
     base: 'light',
     brandTitle: 'Lyra UI',
-    brandImage: '/lyra-mark.svg',
+    brandImage: './lyra-mark.svg',
     brandUrl: 'https://github.com/aceshooting/lyra-ui',
     brandTarget: '_blank',
     colorPrimary: '#0000ee',
