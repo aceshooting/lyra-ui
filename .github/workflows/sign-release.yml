@@ -49,4 +49,4 @@ jobs:
         run: |
           provenance="$TARBALL.sigstore.json"
           cp "$BUNDLE" "$provenance"
-          gh release upload "$TAG" "$provenance" --clobber
+          gh release upload "$TAG" "$provenance" --repo "$GITHUB_REPOSITORY" --clobber
