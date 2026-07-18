@@ -83,8 +83,24 @@ export class LyraCodeEditor extends FormAssociated(LyraCodeEditorBase) {
   private onInput = (event: Event): void => { this.value = (event.target as HTMLTextAreaElement).value; this.emit('input', { value: this.value }); };
   private onChange = (): void => { this.emit('change', { value: this.value }); };
   private onFocus = (): void => { this.emit('focus'); };
-  private onBlur = (): void => { this.touched = true; this.emit('blur'); };
-  private onKeyDown = (event: KeyboardEvent): void => { if (event.key === 'Tab' && !this.readonly) { event.preventDefault(); const target = event.target as HTMLTextAreaElement; const start = target.selectionStart; target.setRangeText(' '.repeat(this.tabSize), start, target.selectionEnd, 'end'); this.value = target.value; this.emit('input', { value: this.value }); } };
+  private onBlur = (): void => { this.touched = true; this.tabBypassArmed = false; this.emit('blur'); };
+  private tabBypassArmed = false;
+  private onKeyDown = (event: KeyboardEvent): void => {
+    if (event.key === 'Escape') { this.tabBypassArmed = true; return; }
+    if (event.key === 'Tab') {
+      if (event.shiftKey) return;
+      if (this.tabBypassArmed) { this.tabBypassArmed = false; return; }
+      if (this.readonly) return;
+      event.preventDefault();
+      const target = event.target as HTMLTextAreaElement;
+      const start = target.selectionStart;
+      target.setRangeText(' '.repeat(this.tabSize), start, target.selectionEnd, 'end');
+      this.value = target.value;
+      this.emit('input', { value: this.value });
+      return;
+    }
+    this.tabBypassArmed = false;
+  };
   private onLabelSlotChange = (e: Event): void => { this.hasLabelSlot = (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length > 0; };
   private onHintSlotChange = (e: Event): void => { this.hasHintSlot = (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length > 0; };
   private onErrorSlotChange = (e: Event): void => { this.hasErrorSlot = (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length > 0; };
