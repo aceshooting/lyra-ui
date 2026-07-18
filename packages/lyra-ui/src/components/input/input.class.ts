@@ -6,7 +6,7 @@ import { SET_ANCHORED_VALIDITY } from '../../internal/anchored-validity.js';
 import { eyeIcon, eyeOffIcon } from '../../internal/icons.js';
 import { styles } from './input.styles.js';
 
-export type LyraInputType = 'text' | 'password' | 'email' | 'number' | 'time';
+export type LyraInputType = 'text' | 'password' | 'email' | 'number' | 'time' | 'search';
 export type LyraInputSize = '2xs' | 'xs' | 's' | 'm' | 'l' | 'xl';
 
 const spellcheckConverter = {
@@ -36,6 +36,8 @@ class LyraInputBase extends LyraElement<LyraInputEventMap> {}
  * `type="password"`/`type="text"` and tracks `passwordVisible`. `type="email"`/`type="number"`
  * (with `min`/`max`/`step`) delegate constraint validation to the internal native `<input>`'s own
  * browser-computed `validity`, bridged into this element's `ElementInternals` by `updateValidity()`.
+ * `type="search"`/`type="time"` forward straight through to the native input with no additional
+ * chrome or validation, the same as `type="text"`.
  *
  * A host `aria-label` is forwarded to the internal textbox via the typed `accessibleLabel` property;
  * external `aria-labelledby`/`aria-describedby` idrefs are not copied across the shadow boundary.

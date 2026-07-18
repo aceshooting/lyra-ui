@@ -124,6 +124,30 @@ describe('lyra-input', () => {
     });
   });
 
+  describe('type="search"', () => {
+    it('is a valid LyraInputType and forwards straight through to a native type="search" input, unlike password/number/email it has no special-cased behavior', async () => {
+      const el = (await fixture(html`<lyra-input></lyra-input>`)) as LyraInput;
+      // A real, typed property assignment (not a template attribute string), so this line only
+      // compiles once 'search' is a member of the exported `LyraInputType` union.
+      el.type = 'search';
+      await el.updateComplete;
+      expect(el.type).to.equal('search');
+      const input = el.shadowRoot!.querySelector('input') as HTMLInputElement;
+      expect(input.type).to.equal('search');
+      expect(el.shadowRoot!.querySelector('[part="password-toggle"]')).to.be.null;
+    });
+
+    it('supports typing and emits lyra-input like every other plain-text type', async () => {
+      const el = (await fixture(html`<lyra-input type="search"></lyra-input>`)) as LyraInput;
+      const input = el.shadowRoot!.querySelector('input') as HTMLInputElement;
+      input.value = 'workflows';
+      setTimeout(() => input.dispatchEvent(new Event('input', { bubbles: true })));
+      const ev = await oneEvent(el, 'lyra-input');
+      expect(ev.detail).to.deep.equal({ value: 'workflows' });
+      expect(el.value).to.equal('workflows');
+    });
+  });
+
   describe('validity', () => {
     it('type="email" rejects a malformed address via native constraint validation', async () => {
       const el = (await fixture(html`<lyra-input type="email"></lyra-input>`)) as LyraInput;

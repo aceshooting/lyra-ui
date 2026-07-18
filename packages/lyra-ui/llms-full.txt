@@ -805,8 +805,8 @@ form-associated via the same `FormAssociated` mixin as `lyra-textarea`. Ships th
 `size` scale as `lyra-select`/`lyra-combobox`.
 
 **Properties:**
-- `type: 'text' | 'password' | 'email' | 'number' | 'time' = 'text'`
-- `size: 'xs' | 's' | 'm' | 'l' | 'xl' = 'm'` (reflected)
+- `type: 'text' | 'password' | 'email' | 'number' | 'time' | 'search' = 'text'`
+- `size: '2xs' | 'xs' | 's' | 'm' | 'l' | 'xl' = 'm'` (reflected)
 - `value: string = ''` (from `FormAssociated`)
 - `placeholder: string = ''`
 - `label: string = ''`
