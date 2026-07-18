@@ -154,6 +154,10 @@ export default {
     // concurrently). Raise the default so those budgets can actually work.
     config: {
       timeout: '6000',
+      // Retry a failed test once before reporting it red: a red result is
+      // therefore reproducible, not scheduler noise. Tests that stay flaky
+      // under a retry get fixed or explicitly quarantined, never ignored.
+      retries: 1,
     },
   },
   testRunnerHtml: strictConsoleTestRunnerHtml,

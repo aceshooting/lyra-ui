@@ -27,6 +27,10 @@ jobs:
       # the package's published entry points (./dist/lyra.js etc., per
       # package.json's "exports"), which only exist after a build.
       - run: pnpm build
+      # Needs dist/ from the build step above: measures the library's own
+      # esbuild-bundled gzip weight (optional peers externalized) against the
+      # budgets in packages/lyra-ui/scripts/bundle-budgets.json.
+      - run: pnpm --filter @aceshooting/lyra-ui check:bundle-size
       # lyra-ui's own Chromium suite runs once, below, via test:coverage
       # (identical file set, same browser, just with coverage instrumentation
       # on) -- this step only needs to cover the other workspace package(s),
