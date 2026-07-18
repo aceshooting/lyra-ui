@@ -345,6 +345,16 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
     }
   }
 
+  protected shouldUpdate(changed: PropertyValues): boolean {
+    if (this.hasUpdated && changed.size === 1 && changed.has('decorations')) {
+      this.pushCardPropsAll(changed);
+      this.pushEdgeDecorationPropsAll();
+      this.scheduleCompanionNotify();
+      return false;
+    }
+    return true;
+  }
+
   protected willUpdate(changed: PropertyValues): void {
     if (changed.has('nodes')) {
       this.syncDefaultCards();
@@ -451,6 +461,21 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
         el.statusDetail = decoration?.detail ?? '';
         el.durationMs = decoration?.durationMs ?? null;
       }
+    }
+  }
+
+  /** Updates decoration-derived edge attributes without rebuilding the full edge/node template. */
+  private pushEdgeDecorationPropsAll(): void {
+    const edgesById = new Map(this.edges.map((edge) => [edge.id, edge]));
+    const reducedMotion = prefersReducedMotion();
+    for (const group of Array.from(this.renderRoot.querySelectorAll<SVGGElement>('[data-edge-id]'))) {
+      const edge = edgesById.get(group.dataset.edgeId ?? '');
+      const path = group.querySelector<SVGPathElement>('[part="edge"]');
+      if (!edge || !path) continue;
+      const running = this.edgeIsRunning(edge);
+      path.setAttribute('data-tone', this.edgeTone(edge));
+      path.toggleAttribute('data-running', running && !reducedMotion);
+      path.toggleAttribute('data-running-static', running && reducedMotion);
     }
   }
 

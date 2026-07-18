@@ -141,7 +141,7 @@ async function benchmark(
 }
 
 function report(name: string, result: BenchmarkResult): void {
-  console.info(`[lyra-performance] ${name}`, result);
+  console.info(`[lyra-performance] ${name} ${JSON.stringify(result)}`);
 }
 
 it('keeps virtual-list updates within the large-list budget', async () => {
