@@ -58,7 +58,7 @@ pnpm readme:check
 
 step "plugin reference sync"
 ./package.sh
-git diff --exit-code -- plugins/lyra-ui/skills/lyra-ui/references/
+git diff --exit-code -- plugins/lyra-ui/skills/lyra-ui/references/ skills/lyra-ui.skill
 
 step "skill:check"
 pnpm skill:check

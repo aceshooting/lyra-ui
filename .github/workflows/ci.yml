@@ -41,7 +41,7 @@ jobs:
       - run: git diff --exit-code -- packages/lyra-ui/custom-elements.json
       - run: pnpm readme:check
       - run: ./package.sh
-      - run: git diff --exit-code -- plugins/lyra-ui/skills/lyra-ui/references/
+      - run: git diff --exit-code -- plugins/lyra-ui/skills/lyra-ui/references/ skills/lyra-ui.skill
       - run: pnpm skill:check
       - run: pnpm docs:build
       - run: git diff --exit-code -- .storybook/sitemap.xml
