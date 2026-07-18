@@ -96,6 +96,10 @@ function defaultFilter(thread: ChatThread, query: string): boolean {
  * No thread CRUD or persistence: every mutation (`lyra-thread-pin`/`-archive`/`-delete`/`-rename`) is
  * a controlled event carrying the *requested* new state — the host mutates `threads`.
  *
+ * Data mode: a host needing content with no home in `lyra-conversation-item`'s own
+ * `title`/`excerpt`/`meta`/`actions` surface (e.g. a leading purpose icon — the item has no default
+ * slot to receive one) sets `wrapRow` to wrap the already-built row.
+ *
  * @customElement lyra-thread-list
  * @slot - Slotted mode only: host-supplied `lyra-conversation-item`s, rendered in order. Each
  *   top-level assigned element that doesn't already carry an explicit `role` is given
@@ -150,6 +154,13 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
 
   /** Accessible name for the list region. Defaults to the localized `threadListLabel`. */
   @property() label = '';
+
+  /** Data mode only: wraps each row's built-in `<lyra-conversation-item>` with host-supplied
+   *  content that has no home in the item's own `title`/`excerpt`/`meta`/`actions` surface — e.g. a
+   *  leading purpose icon (`lyra-conversation-item` has no default slot to receive one) or trailing
+   *  tag chips. Receives the thread and the already-built row `TemplateResult`; returns the final
+   *  row content. Unset renders the built-in row unwrapped. */
+  @property({ attribute: false }) wrapRow?: (thread: ChatThread, row: TemplateResult) => TemplateResult;
 
   @state() private searchText = '';
   @state() private hasEmptySlot = false;
@@ -403,7 +414,7 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
 
   private renderRow = (item: unknown): unknown => {
     const thread = item as ChatThread;
-    return html`
+    const row = html`
       <lyra-conversation-item
         id=${thread.id}
         title=${thread.title}
@@ -419,6 +430,7 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
         ${this.rowActions.length > 0 ? this.renderRowActions(thread) : nothing}
       </lyra-conversation-item>
     `;
+    return this.wrapRow ? this.wrapRow(thread, row) : row;
   };
 
   private onDefaultSlotChange = (e: Event): void => {

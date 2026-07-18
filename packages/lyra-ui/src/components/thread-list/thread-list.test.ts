@@ -180,6 +180,51 @@ describe('data mode', () => {
     expect(unpinnedRow.querySelector('[slot="meta"]')).to.not.exist;
   });
 
+  describe('wrapRow', () => {
+    it('renders the built-in row unwrapped when unset (default)', async () => {
+      const el = (await fixture(
+        html`<lyra-thread-list style="block-size:400px" .threads=${threads}></lyra-thread-list>`,
+      )) as LyraThreadList;
+      await el.updateComplete;
+      await nextFrame();
+      const list = el.shadowRoot!.querySelector('lyra-virtual-list')!;
+      // Boolean comparison, not a direct DOM-element assertion -- see this repo's own documented
+      // chai/loupe DOM-node-serialization hang pitfall in AGENTS.md's testing conventions.
+      expect(list.shadowRoot!.querySelector('.row-wrapper') === null).to.be.true;
+      expect(dataRow(el, 't1').title).to.equal('Today thread');
+    });
+
+    it('lets wrapRow wrap the built-in row with host-supplied content that has no home in its own slots (e.g. a leading purpose icon)', async () => {
+      const el = (await fixture(
+        html`<lyra-thread-list style="block-size:400px" .threads=${threads}></lyra-thread-list>`,
+      )) as LyraThreadList;
+      el.wrapRow = (thread, row) =>
+        html`<div class="row-wrapper" data-thread-id=${thread.id}><span class="purpose-icon">*</span>${row}</div>`;
+      await el.updateComplete;
+      await nextFrame();
+      const list = el.shadowRoot!.querySelector('lyra-virtual-list')!;
+      const wrapper = list.shadowRoot!.querySelector('.row-wrapper[data-thread-id="t1"]');
+      expect(wrapper !== null).to.be.true;
+      expect(wrapper!.querySelector('.purpose-icon')!.textContent).to.equal('*');
+      // The wrapped lyra-conversation-item is still the real, functional row -- not a static copy.
+      const wrappedRow = wrapper!.querySelector('lyra-conversation-item') as LyraConversationItem;
+      expect(wrappedRow.title).to.equal('Today thread');
+    });
+
+    it('still fires lyra-select from a wrapped row', async () => {
+      const el = (await fixture(
+        html`<lyra-thread-list style="block-size:400px" .threads=${threads}></lyra-thread-list>`,
+      )) as LyraThreadList;
+      el.wrapRow = (_thread, row) => html`<div class="row-wrapper">${row}</div>`;
+      await el.updateComplete;
+      await nextFrame();
+      const row = dataRow(el, 't1');
+      const selectPromise = oneEvent(el, 'lyra-select');
+      row.dispatchEvent(new CustomEvent('lyra-select', { bubbles: true, composed: true }));
+      expect((await selectPromise).detail).to.deep.equal({ id: 't1' });
+    });
+  });
+
   describe('search', () => {
     it('filters synchronously and fires lyra-filter-change with the match count', async () => {
       const el = (await fixture(
