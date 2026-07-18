@@ -101,6 +101,11 @@ export class LyraMessageActions extends LyraElement<LyraMessageActionsEventMap> 
   /** Accessible name for the toolbar. Defaults to the localized `messageActionsLabel`. */
   @property() label = '';
 
+  /** Overrides the toolbar's computed accessible name. Wins over `label` and the localized
+   *  default. Attribute-reflects from a host-level `aria-label` so a plain-markup consumer gets
+   *  ARIA-name forwarding without setting a JS property. */
+  @property({ attribute: 'aria-label' }) accessibleLabel: string | null = null;
+
   @state() private activeStopIndex = 0;
   /** Drives the `data-revealed` host attribute (toggled imperatively in `updated()`, not via a Lit
    *  template binding -- `lyra-graph`'s `data-hovered` attribute is the precedent for this exact
@@ -256,7 +261,7 @@ export class LyraMessageActions extends LyraElement<LyraMessageActionsEventMap> 
   }
 
   render(): TemplateResult {
-    const label = this.label || this.localize('messageActionsLabel');
+    const label = this.accessibleLabel || this.label || this.localize('messageActionsLabel');
     return html`
       <div part="base" role="toolbar" aria-label=${label} @keydown=${this.onToolbarKeyDown}>
         ${this.controls.map((type) => this.renderControl(type))}

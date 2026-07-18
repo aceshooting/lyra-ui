@@ -567,6 +567,23 @@ describe('status="converting"', () => {
     const spinner = el.shadowRoot!.querySelector('[part="spinner"]') as HTMLElement;
     expect(spinner.getAttribute('aria-valuenow')).to.equal('100');
   });
+
+  it('clamps a negative progress value into [0, 100]', async () => {
+    const el = (await fixture(html`
+      <lyra-document-preview status="converting" progress="-20"></lyra-document-preview>
+    `)) as LyraDocumentPreview;
+    const spinner = el.shadowRoot!.querySelector('[part="spinner"]') as HTMLElement;
+    expect(spinner.getAttribute('aria-valuenow')).to.equal('0');
+  });
+
+  it('shows the indeterminate spinner (not a crash) when progress is set to an invalid value (NaN)', async () => {
+    const el = (await fixture(html`
+      <lyra-document-preview status="converting" progress="not-a-number"></lyra-document-preview>
+    `)) as LyraDocumentPreview;
+    expect(Number.isNaN(el.progress)).to.be.true;
+    const spinner = el.shadowRoot!.querySelector('[part="spinner"]') as HTMLElement;
+    expect(spinner.getAttribute('role')).to.equal('status');
+  });
 });
 
 describe('status="error"', () => {
@@ -825,6 +842,18 @@ describe('region highlights (image format)', () => {
     (el.shadowRoot!.querySelector('[part="region-highlight"]') as HTMLElement).click();
     const event = (await listener) as CustomEvent<{ id: string }>;
     expect(event.detail).to.deep.equal({ id: 'h1' });
+  });
+
+  it('positions region highlights with physical left/top under dir="rtl" so they stay over the non-mirroring image', async () => {
+    const el = (await fixture(
+      html`<lyra-document-preview dir="rtl" mime-type="image/png" src="https://example.test/photo.png"></lyra-document-preview>`,
+    )) as LyraDocumentPreview;
+    el.highlights = [{ id: 'h1', anchor: { kind: 'region', rect: { x: 10, y: 20, width: 30, height: 40 } } }];
+    await el.updateComplete;
+    const region = el.shadowRoot!.querySelector('[part="region-highlight"]') as HTMLElement;
+    expect(region.style.left).to.equal('10%');
+    expect(region.style.top).to.equal('20%');
+    expect(region.style.getPropertyValue('inset-inline-start')).to.equal('');
   });
 
   it('scrollToAnchor() by id scrolls the matching region, not just the first one, when several are rendered', async () => {

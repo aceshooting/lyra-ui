@@ -120,6 +120,21 @@ it('omits the duration part entirely when duration-ms is unset, formats it once 
   expect(duration.textContent).to.equal('2s');
 });
 
+it('omits a non-finite duration instead of rendering "NaN ms", and clamps a negative duration to 0', async () => {
+  const el = (await fixture(html`<lyra-tool-call-chip></lyra-tool-call-chip>`)) as LyraToolCallChip;
+  const duration = el.shadowRoot!.querySelector('[part="duration"]') as HTMLElement;
+
+  el.durationMs = Number.NaN;
+  await el.updateComplete;
+  expect(duration.hidden).to.be.true;
+  expect(duration.textContent).to.equal('');
+
+  el.durationMs = -20;
+  await el.updateComplete;
+  expect(duration.hidden).to.be.false;
+  expect(duration.textContent).to.equal('0ms');
+});
+
 it('interpolates duration values through localized message templates', async () => {
   const el = (await fixture(html`
     <lyra-tool-call-chip

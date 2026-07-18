@@ -46,6 +46,18 @@ it('falls back to the default accessible name when label is empty or whitespace-
   expect(whitespace.shadowRoot!.querySelector('.sr-only')!.textContent).to.equal('Thinking…');
 });
 
+it('resolves the accessible name through a .strings override for thinking when label is left at its default', async () => {
+  // label stays at its untouched 'Thinking…' default, so localize() must fall
+  // through to the .strings/registry path rather than the prop-derived
+  // fallback -- both name surfaces (host aria-label and sr-only text) carry
+  // the translation.
+  const el = (await fixture(
+    html`<lyra-typing-indicator .strings=${{ thinking: 'Réflexion…' }}></lyra-typing-indicator>`,
+  )) as LyraTypingIndicator;
+  expect(el.getAttribute('aria-label')).to.equal('Réflexion…');
+  expect(el.shadowRoot!.querySelector('.sr-only')!.textContent).to.equal('Réflexion…');
+});
+
 it('renders a visually-hidden text node carrying the label, independent of aria-label', async () => {
   const el = (await fixture(
     html`<lyra-typing-indicator label="Working on it…"></lyra-typing-indicator>`,

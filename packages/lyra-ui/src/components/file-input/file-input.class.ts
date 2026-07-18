@@ -2,10 +2,21 @@ import { html, type TemplateResult } from 'lit';
 import { property, state, query } from 'lit/decorators.js';
 import { LyraElement } from '../../internal/lyra-element.js';
 import { srOnly } from '../../internal/a11y.js';
+import { finiteRange } from '../../internal/numbers.js';
 import { styles } from './file-input.styles.js';
 import { matchesAccept } from './accept.js';
 
 type DragState = 'default' | 'accept' | 'reject';
+
+/** Fallback cap applied in place of an invalid `maxFileSize` (NaN or negative -- e.g. an
+ *  unparsable `max-file-size` attribute, or a host computing the value from a config that hasn't
+ *  loaded yet). Deliberately duplicated rather than imported from `internal/resource-loader.ts`'s
+ *  own `DEFAULT_MAX_RESOURCE_BYTES` (same value, same "no better number available" rationale) --
+ *  that constant is themed around a remote-fetch byte cap, a different concern from this
+ *  component's user-facing upload-size guard, and this library's convention is to duplicate a
+ *  small constant like this locally rather than add a cross-component import for it (see e.g.
+ *  `<lyra-activity-feed>`'s own `trueDefaultBooleanConverter` doc comment). */
+export const DEFAULT_MAX_FILE_SIZE_BYTES = 25 * 1024 * 1024;
 
 export interface RejectedFile {
   file: File;
@@ -41,6 +52,8 @@ export class LyraFileInput extends LyraElement<LyraFileInputEventMap> {
   @property() accept = '';
   @property({ attribute: false }) allowedMimeTypes: string[] = [];
   @property({ attribute: false }) forbiddenMimeTypes: string[] = [];
+  /** Largest accepted file size in bytes. `0` (the default) disables the size check entirely --
+   *  see `effectiveMaxFileSize` for how an invalid override is handled. */
   @property({ type: Number, attribute: 'max-file-size' }) maxFileSize = 0;
   /** Enables directory selection through the browser's native picker. */
   @property({ type: Boolean, reflect: true }) directory = false;
@@ -64,6 +77,19 @@ export class LyraFileInput extends LyraElement<LyraFileInputEventMap> {
 
   private dragCounter = 0;
 
+  /** `maxFileSize` normalized: `0` (explicitly set, or left at the default) or `Infinity`
+   *  (explicitly set) both mean "no limit" verbatim -- `null` here signals that. Anything else
+   *  that isn't a positive, finite override -- a `NaN` from an invalid `max-file-size` attribute,
+   *  or a negative value -- falls back to a sane cap instead. This matters because the size check
+   *  below used to gate directly on `this.maxFileSize > 0`: `NaN > 0` and `-1 > 0` are both
+   *  `false`, so an invalid override silently disabled the entire size limit (accepting files of
+   *  any size) rather than failing safe. */
+  private get effectiveMaxFileSize(): number | null {
+    const maxFileSize = this.maxFileSize;
+    if (maxFileSize === 0 || maxFileSize === Infinity) return null;
+    return finiteRange(maxFileSize > 0 ? maxFileSize : NaN, DEFAULT_MAX_FILE_SIZE_BYTES, 1);
+  }
+
   private isAllowed(file: File, isPreview = false): 'ok' | 'type' | 'size' {
     if (this.forbiddenMimeTypes.includes(file.type)) return 'type';
     if (this.allowedMimeTypes.length > 0 && !this.allowedMimeTypes.includes(file.type)) return 'type';
@@ -74,7 +100,8 @@ export class LyraFileInput extends LyraElement<LyraFileInputEventMap> {
     // `file.size` is `undefined` on the synthetic `DataTransferItem`-cast objects
     // used during dragenter preview (real sizes aren't available until drop),
     // so this naturally only takes effect for the real `classify()` call at drop time.
-    if (this.maxFileSize > 0 && file.size > this.maxFileSize) return 'size';
+    const maxFileSize = this.effectiveMaxFileSize;
+    if (maxFileSize !== null && file.size > maxFileSize) return 'size';
     return 'ok';
   }
 

@@ -116,6 +116,27 @@ describe('hover tooltip', () => {
     expect(el.shadowRoot!.querySelector('[part="tooltip"]')!.textContent!.trim()).to.equal('Text');
   });
 
+  it('flips the tooltip centering translate under dir="rtl"', async () => {
+    const tooltipTranslateX = async (dirAttr: string): Promise<number> => {
+      const el = (await fixture(
+        html`<lyra-sequence-strip dir=${dirAttr}></lyra-sequence-strip>`,
+      )) as LyraSequenceStrip;
+      el.items = labeledItems;
+      el.categories = categories;
+      await el.updateComplete;
+      const cell = el.shadowRoot!.querySelectorAll('[part="cell"]')[0] as HTMLElement;
+      cell.dispatchEvent(new PointerEvent('pointerenter', { bubbles: true }));
+      await el.updateComplete;
+      const tooltip = el.shadowRoot!.querySelector('[part="tooltip"]') as HTMLElement;
+      return new DOMMatrixReadOnly(getComputedStyle(tooltip).transform).m41;
+    };
+    // The tooltip centers on inset-inline-start: 50%, which anchors to the physical right edge
+    // under RTL -- its centering translateX must resolve leftward (negative) in LTR and
+    // rightward (positive) in RTL to stay over the strip's horizontal center.
+    expect(await tooltipTranslateX('ltr')).to.be.lessThan(0);
+    expect(await tooltipTranslateX('rtl')).to.be.greaterThan(0);
+  });
+
   it('is accessible with items, categories, and markers set', async () => {
     const el = (await fixture(html`<lyra-sequence-strip></lyra-sequence-strip>`)) as LyraSequenceStrip;
     el.items = items;

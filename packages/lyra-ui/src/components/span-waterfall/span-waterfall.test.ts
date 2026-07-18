@@ -34,6 +34,49 @@ describe('lyra-span-waterfall', () => {
     expect(bar.style.insetInlineStart).to.equal('0%');
   });
 
+  it('normalizes a NaN viewStartMs/viewEndMs the same as unset (fits the whole trace)', async () => {
+    const baseline = (await fixture(
+      html`<lyra-span-waterfall .spans=${SPANS} .viewStartMs=${0} .viewEndMs=${400}></lyra-span-waterfall>`,
+    )) as LyraSpanWaterfall;
+    await baseline.updateComplete;
+    const expectedStart = (baseline.shadowRoot!.querySelector('[data-id="search"]') as HTMLElement).style
+      .insetInlineStart;
+
+    const el = (await fixture(
+      html`<lyra-span-waterfall .spans=${SPANS} .viewStartMs=${NaN} .viewEndMs=${NaN}></lyra-span-waterfall>`,
+    )) as LyraSpanWaterfall;
+    await el.updateComplete;
+    const bar = el.shadowRoot!.querySelector('[data-id="search"]') as HTMLElement;
+    expect(bar.style.insetInlineStart).to.not.include('NaN');
+    expect(bar.style.insetInlineStart).to.equal(expectedStart);
+  });
+
+  it('clamps a negative viewStartMs to 0 (trace-relative ms is never negative)', async () => {
+    const el = (await fixture(
+      html`<lyra-span-waterfall .spans=${SPANS} .viewStartMs=${-50} .viewEndMs=${400}></lyra-span-waterfall>`,
+    )) as LyraSpanWaterfall;
+    await el.updateComplete;
+    // root spans startMs=0..endMs=400 -- the same as the clamped [0, 400] view window, so it
+    // should fill the bar track completely.
+    const bar = el.shadowRoot!.querySelector('[data-id="root"]') as HTMLElement;
+    expect(bar.style.insetInlineStart).to.equal('0%');
+    expect(bar.style.inlineSize).to.equal('100%');
+  });
+
+  it('widens an inverted/degenerate view window (viewEndMs <= viewStartMs) to a minimal span instead of a negative-width window', async () => {
+    const el = (await fixture(
+      html`<lyra-span-waterfall .spans=${SPANS} .viewStartMs=${300} .viewEndMs=${100}></lyra-span-waterfall>`,
+    )) as LyraSpanWaterfall;
+    await el.updateComplete;
+    const bars = [...el.shadowRoot!.querySelectorAll('[part="bar"]')] as HTMLElement[];
+    expect(bars.length).to.be.greaterThan(0);
+    for (const bar of bars) {
+      expect(bar.style.inlineSize).to.not.include('NaN');
+      expect(bar.style.inlineSize).to.not.include('-');
+      expect(bar.style.insetInlineStart).to.not.include('NaN');
+    }
+  });
+
   it('emits lyra-span-select on bar click and on Enter', async () => {
     const el = (await fixture(html`<lyra-span-waterfall .spans=${SPANS}></lyra-span-waterfall>`)) as LyraSpanWaterfall;
     await el.updateComplete;
@@ -92,6 +135,22 @@ describe('lyra-span-waterfall', () => {
     el.strings = { spanWaterfall: 'Ligne du temps' };
     await el.updateComplete;
     expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('Ligne du temps');
+  });
+
+  it('reverses the running-bar stripe crawl under dir="rtl"', async () => {
+    const ltr = (await fixture(html`<lyra-span-waterfall .spans=${SPANS}></lyra-span-waterfall>`)) as LyraSpanWaterfall;
+    await ltr.updateComplete;
+    const ltrBar = ltr.shadowRoot!.querySelector('[data-id="llm"]') as HTMLElement; // running -> accent
+    expect(getComputedStyle(ltrBar).animationDirection).to.equal('normal');
+
+    // background-position keyframes are physical, so the RTL variant plays the same stripe
+    // animation backwards instead of always crawling in the LTR direction.
+    const rtl = (await fixture(
+      html`<lyra-span-waterfall dir="rtl" .spans=${SPANS}></lyra-span-waterfall>`,
+    )) as LyraSpanWaterfall;
+    await rtl.updateComplete;
+    const rtlBar = rtl.shadowRoot!.querySelector('[data-id="llm"]') as HTMLElement;
+    expect(getComputedStyle(rtlBar).animationDirection).to.equal('reverse');
   });
 
   it('is accessible', async () => {

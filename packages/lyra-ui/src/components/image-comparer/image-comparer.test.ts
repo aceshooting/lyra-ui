@@ -16,6 +16,25 @@ it('renders before and after slots with a positioned divider', async () => {
   expect((el.shadowRoot!.querySelector('[part="base"]') as HTMLElement).style.getPropertyValue('--lyra-comparer-position')).to.equal('35%');
 });
 
+it('clamps a NaN/out-of-range position into [0, 100] for rendering, without mutating the raw property', async () => {
+  const el = (await fixture(html`<lyra-image-comparer></lyra-image-comparer>`)) as LyraImageComparer;
+  await el.updateComplete;
+  const base = () => el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+
+  el.position = NaN;
+  await el.updateComplete;
+  expect(base().style.getPropertyValue('--lyra-comparer-position')).to.equal('50%'); // documented fallback
+
+  el.position = -20;
+  await el.updateComplete;
+  expect(base().style.getPropertyValue('--lyra-comparer-position')).to.equal('0%');
+
+  el.position = 150;
+  await el.updateComplete;
+  expect(base().style.getPropertyValue('--lyra-comparer-position')).to.equal('100%');
+  expect(el.position).to.equal(150); // the raw property itself is left untouched, matching native <input type=range>
+});
+
 it('emits position changes from the native range handle', async () => {
   const el = (await fixture(html`<lyra-image-comparer></lyra-image-comparer>`)) as LyraImageComparer;
   await el.updateComplete;

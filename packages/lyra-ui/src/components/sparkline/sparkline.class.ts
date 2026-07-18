@@ -1,6 +1,7 @@
 import { html, svg, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { LyraElement } from '../../internal/lyra-element.js';
+import { finiteNumber } from '../../internal/numbers.js';
 import { styles } from './sparkline.styles.js';
 
 const VIEW = 100;
@@ -57,18 +58,26 @@ export class LyraSparkline extends LyraElement {
     // this after decimating would silently narrow the scale to whatever the
     // sampled subset happens to contain, which can clip or misproportion a
     // real extreme value that decimation happened to drop. Skip the scan
-    // entirely when both bounds are already given explicitly -- its result
-    // would just be discarded.
-    let autoLo = raw[0];
-    let autoHi = raw[0];
-    if (this.min === undefined || this.max === undefined) {
+    // entirely when both bounds are already validly set -- its result would
+    // just be discarded. `Number.isFinite` (not just `=== undefined`) gates
+    // this so a non-finite explicit bound (an unparsable `min`/`max`
+    // attribute, or a caller-assigned NaN/Infinity) also triggers the scan,
+    // since `finiteNumber()` below needs a real scanned fallback to recover
+    // into instead of propagating NaN into every plotted point's y-coordinate.
+    let autoLo = raw[0] ?? 0;
+    let autoHi = raw[0] ?? 0;
+    if (!Number.isFinite(this.min) || !Number.isFinite(this.max)) {
       for (const n of raw) {
         if (n < autoLo) autoLo = n;
         if (n > autoHi) autoHi = n;
       }
     }
-    const lo = this.min ?? autoLo;
-    const hi = this.max ?? autoHi;
+    let lo = finiteNumber(this.min ?? autoLo, autoLo);
+    let hi = finiteNumber(this.max ?? autoHi, autoHi);
+    // A reversed explicit pair (min > max) has no correct per-bound fallback -- swap instead,
+    // mirroring the standard nice-domain convention (lite-chart's niceDomain() does the same) so
+    // the plot still reads as a valid lo <= hi span instead of an inverted one.
+    if (lo > hi) [lo, hi] = [hi, lo];
     const v = raw.length > MAX_POINTS ? decimate(raw, MAX_POINTS) : raw;
     const span = hi - lo;
     return v.map((n, i) => {

@@ -20,6 +20,19 @@ const requiredStories = [
   'charts-litechart--default',
   'map--default',
   'graph--default',
+  // Representative coverage for the new component families (flow canvas, KG-RAG/graph-explorer,
+  // chat pickers/cards, and new document viewers) added since this list was last extended -- see
+  // the dedicated checks below for what each one actually asserts.
+  'emoji-picker--with-supplied-groups',
+  'voice-picker--default',
+  'source-picker--default',
+  'entity-card--default',
+  'flow-canvas--default',
+  'graph-legend--default',
+  'documentviewer-notebookviewer--default',
+  'archiveviewer--default',
+  'documentviewer-xmlviewer--default',
+  'threadlist--default',
 ];
 
 const storyChecks = new Map([
@@ -33,6 +46,16 @@ const storyChecks = new Map([
   ['charts-litechart--default', 'lyra-lite-chart'],
   ['map--default', 'lyra-map'],
   ['graph--default', 'lyra-graph'],
+  ['emoji-picker--with-supplied-groups', 'lyra-emoji-picker'],
+  ['voice-picker--default', 'lyra-voice-picker'],
+  ['source-picker--default', 'lyra-source-picker'],
+  ['entity-card--default', 'lyra-entity-card'],
+  ['flow-canvas--default', 'lyra-flow-canvas'],
+  ['graph-legend--default', 'lyra-graph-legend'],
+  ['documentviewer-notebookviewer--default', 'lyra-notebook-viewer'],
+  ['archiveviewer--default', 'lyra-archive-viewer'],
+  ['documentviewer-xmlviewer--default', 'lyra-xml-viewer'],
+  ['threadlist--default', 'lyra-thread-list'],
 ]);
 
 const mimeTypes = {
@@ -112,6 +135,20 @@ async function runA11y(page, id) {
 async function expectSelector(page, id, selector) {
   const count = await page.locator(selector).count();
   if (count === 0) throw new Error(`${id} did not render ${selector}`);
+}
+
+// A few new-family viewers (notebook-viewer, thread-list) delegate row rendering to the internal
+// `lyra-virtual-list`, which needs a ResizeObserver-driven layout pass (beyond `waitForStory`'s own
+// settle window) before the windowed row count is final. Poll instead of guessing a fixed delay.
+async function waitForLocatorCount(locator, predicate, timeoutMs = 5000) {
+  const start = Date.now();
+  let last = -1;
+  while (Date.now() - start < timeoutMs) {
+    last = await locator.count();
+    if (predicate(last)) return last;
+    await new Promise((resolve) => setTimeout(resolve, 50));
+  }
+  throw new Error(`timed out waiting for locator count (last seen: ${last})`);
 }
 
 async function main() {
@@ -206,6 +243,114 @@ async function main() {
     for (const id of ['apprail--forced-icon-only', 'table--default', 'charts-litechart--default', 'map--default', 'graph--default']) {
       await waitForStory(page, baseUrl, id, { width: 1280, height: 800 });
       await runA11y(page, id);
+    }
+
+    // -- New component families ------------------------------------------------------------
+    // Each check below exercises a real interaction/rendering contract for its component (not just
+    // "did it render without throwing"), mirroring the depth of the checks above: pickers/cards
+    // commit a selection through a click and a11y-check the interactive surface; flow-canvas asserts
+    // its SVG surface renders (like graph--default/map--default); the document viewers assert their
+    // actually-rendered content.
+
+    await waitForStory(page, baseUrl, 'emoji-picker--with-supplied-groups', { width: 1280, height: 800 });
+    await runA11y(page, 'emoji-picker--with-supplied-groups');
+    await page.locator('lyra-emoji-picker').locator('[part="emoji"]').first().click();
+    const pickedEmoji = await page.locator('lyra-emoji-picker').evaluate((element) => element.value);
+    if (pickedEmoji !== '😀') {
+      throw new Error(`emoji-picker did not commit the clicked emoji: got ${JSON.stringify(pickedEmoji)}`);
+    }
+
+    await waitForStory(page, baseUrl, 'voice-picker--default', { width: 1280, height: 800 });
+    await runA11y(page, 'voice-picker--default');
+    await page.locator('lyra-voice-picker').locator('[part="trigger"]').click();
+    await page.locator('lyra-voice-picker').locator('[part="option"]').first().click();
+    const pickedVoice = await page.locator('lyra-voice-picker').evaluate((element) => element.value);
+    if (pickedVoice !== 'aria') {
+      throw new Error(`voice-picker did not commit the selected option: got ${JSON.stringify(pickedVoice)}`);
+    }
+
+    await waitForStory(page, baseUrl, 'source-picker--default', { width: 1280, height: 800 });
+    await runA11y(page, 'source-picker--default');
+    await page.locator('lyra-source-picker').locator('[part="item"]').last().click();
+    const selectedIds = await page.locator('lyra-source-picker').evaluate((element) => element.selectedIds);
+    if (!selectedIds.includes('doc3')) {
+      throw new Error(`source-picker did not toggle the clicked leaf into selectedIds: got ${JSON.stringify(selectedIds)}`);
+    }
+
+    await waitForStory(page, baseUrl, 'entity-card--default', { width: 1280, height: 800 });
+    await runA11y(page, 'entity-card--default');
+    await page.evaluate(() => {
+      window.__lyraEntityActivations = [];
+      document.addEventListener('lyra-entity-activate', (event) => {
+        window.__lyraEntityActivations.push(event.detail);
+      });
+    });
+    await page.locator('lyra-entity-card').locator('[part="focus-button"]').click();
+    const entityActivations = await page.evaluate(() => window.__lyraEntityActivations);
+    if (entityActivations.length !== 1 || entityActivations[0]?.id !== 'e1') {
+      throw new Error(`entity-card focus button did not emit lyra-entity-activate for e1: got ${JSON.stringify(entityActivations)}`);
+    }
+
+    await waitForStory(page, baseUrl, 'flow-canvas--default', { width: 1280, height: 800 });
+    const flowEdgesSurface = await page.locator('lyra-flow-canvas').locator('[part="edges"]').count();
+    const flowNodeCount = await page.locator('lyra-flow-canvas').locator('[part="node"]').count();
+    if (flowEdgesSurface === 0 || flowNodeCount !== 3) {
+      throw new Error(`flow-canvas did not render its SVG surface/nodes as expected: edges=${flowEdgesSurface} nodes=${flowNodeCount}`);
+    }
+    await runA11y(page, 'flow-canvas--default');
+
+    await waitForStory(page, baseUrl, 'graph-legend--default', { width: 1280, height: 800 });
+    await runA11y(page, 'graph-legend--default');
+    await page.locator('lyra-graph-legend').locator('[part="item"]').first().click();
+    const hiddenTypes = await page.locator('lyra-graph-legend').evaluate((element) => element.hiddenTypes);
+    if (!hiddenTypes.includes('person')) {
+      throw new Error(`graph-legend did not toggle the clicked type into hiddenTypes: got ${JSON.stringify(hiddenTypes)}`);
+    }
+
+    await waitForStory(page, baseUrl, 'documentviewer-notebookviewer--default', { width: 1280, height: 800 });
+    const notebookCellCount = await waitForLocatorCount(
+      page.locator('lyra-notebook-viewer').locator('[part="cell"]'),
+      (count) => count === 2,
+    );
+    const notebookOutputText = await page.locator('lyra-notebook-viewer').locator('[part="output"]').first().textContent();
+    if (notebookCellCount !== 2 || !notebookOutputText?.includes('count')) {
+      throw new Error(
+        `notebook-viewer did not render its cells/outputs as expected: cells=${notebookCellCount} output=${JSON.stringify(notebookOutputText)}`,
+      );
+    }
+    await runA11y(page, 'documentviewer-notebookviewer--default');
+
+    await waitForStory(page, baseUrl, 'archiveviewer--default', { width: 1280, height: 800 });
+    await page.locator('lyra-archive-viewer').locator('[part="entry-name"], [part="error"]').first().waitFor({ timeout: 10_000 });
+    const archiveErrorCount = await page.locator('lyra-archive-viewer').locator('[part="error"]').count();
+    if (archiveErrorCount > 0) {
+      const archiveErrorText = await page.locator('lyra-archive-viewer').locator('[part="error"]').textContent();
+      throw new Error(`archive-viewer failed to load its fixture archive: ${archiveErrorText}`);
+    }
+    const archiveEntryNames = await page.locator('lyra-archive-viewer').locator('[part="entry-name"]').allTextContents();
+    if (!archiveEntryNames.some((name) => name.includes('README.txt'))) {
+      throw new Error(`archive-viewer did not list the archive's entries as expected: ${JSON.stringify(archiveEntryNames)}`);
+    }
+    await runA11y(page, 'archiveviewer--default');
+
+    await waitForStory(page, baseUrl, 'documentviewer-xmlviewer--default', { width: 1280, height: 800 });
+    const xmlRootTag = await page.locator('lyra-xml-viewer').locator('[part="tag"]').first().textContent();
+    if (xmlRootTag !== 'rss') {
+      throw new Error(`xml-viewer did not render the parsed document's root tag: got ${JSON.stringify(xmlRootTag)}`);
+    }
+    await runA11y(page, 'documentviewer-xmlviewer--default');
+
+    await waitForStory(page, baseUrl, 'threadlist--default', { width: 1280, height: 800 });
+    await runA11y(page, 'threadlist--default');
+    const threadItemsLocator = page.locator('lyra-thread-list').locator('lyra-conversation-item');
+    const threadCountBeforeSearch = await waitForLocatorCount(threadItemsLocator, (count) => count === 5);
+    await page.locator('lyra-thread-list').locator('[part="search-input"]').fill('Refactor');
+    const threadCountAfterSearch = await waitForLocatorCount(threadItemsLocator, (count) => count === 1);
+    const filteredThreadTitle = await threadItemsLocator.first().getAttribute('title');
+    if (threadCountBeforeSearch !== 5 || threadCountAfterSearch !== 1 || filteredThreadTitle !== 'Refactor the auth module') {
+      throw new Error(
+        `thread-list search did not filter to the matching thread: before=${threadCountBeforeSearch} after=${threadCountAfterSearch} title=${JSON.stringify(filteredThreadTitle)}`,
+      );
     }
 
     if (browserErrors.length) throw new Error(`Storybook browser errors:\n${browserErrors.join('\n')}`);

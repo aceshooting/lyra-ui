@@ -91,3 +91,19 @@ it('auto-fits width/height to the laid-out extent, and every placed point stays 
     expect(p.y).to.be.within(0, result.height);
   }
 });
+
+it('does not throw a call-stack RangeError laying out a very large flat topic list (regression: bounding box must not spread `placed` into Math.min/Math.max)', () => {
+  const topics: LyraTopic[] = [
+    {
+      id: 'root',
+      label: 'Root',
+      children: Array.from({ length: 150_000 }, (_, i) => ({ id: `t${i}`, label: `Topic ${i}` })),
+    },
+  ];
+  const result = layoutMindMap(topics, 'Hub', { ringGap: 96, rtl: false, isExpanded: alwaysExpanded });
+  expect(result.placed.length).to.equal(150_001); // root + 150,000 children
+  expect(result.width).to.be.a('number').greaterThan(0);
+  expect(result.height).to.be.a('number').greaterThan(0);
+  expect(Number.isFinite(result.width)).to.be.true;
+  expect(Number.isFinite(result.height)).to.be.true;
+});

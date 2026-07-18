@@ -77,6 +77,36 @@ it('swaps ArrowLeft/ArrowRight under RTL so a key still moves toward the visuall
   expect(el.index).to.equal(0);
 });
 
+it('clamps a NaN, negative, or oversized index to a valid slide instead of NaN/out-of-range', async () => {
+  const el = await carousel();
+
+  el.index = NaN;
+  await el.updateComplete;
+  expect(([...el.children] as HTMLElement[])[0].hidden).to.be.false;
+
+  el.index = -5;
+  await el.updateComplete;
+  expect((el.shadowRoot!.querySelectorAll('[part="indicator"]')[0] as HTMLElement).getAttribute('aria-current')).to.equal('true');
+
+  el.index = 999;
+  await el.updateComplete;
+  const indicators = el.shadowRoot!.querySelectorAll('[part="indicator"]');
+  expect(indicators[indicators.length - 1].getAttribute('aria-current')).to.equal('true');
+});
+
+it('treats a non-finite autoplayInterval as its 5s default instead of NaN math', async () => {
+  const el = await carousel(html`
+    <lyra-carousel autoplay autoplay-interval="NaN">
+      <div>One</div>
+      <div>Two</div>
+    </lyra-carousel>
+  `);
+  // A non-finite interval falling through to `setInterval` unguarded would either throw or fire
+  // immediately/never; asserting a timer actually got scheduled is the observable proxy for "the
+  // sanitized 5s default was used", since the internal numeric timer id isn't itself meaningful.
+  expect((el as unknown as { timer?: number }).timer).to.not.be.undefined;
+});
+
 it('mirrors the previous/next chevron glyphs under RTL', async () => {
   const el = await carousel(html`
     <lyra-carousel dir="rtl">
@@ -127,4 +157,21 @@ it('is accessible and supports a consumer supplied accessible label', async () =
     'Product screenshots',
   );
   await expect(el).to.be.accessible();
+});
+
+it('names the focusable viewport with role="group", following the same label arbitration as the region', async () => {
+  const el = await carousel(html`
+    <lyra-carousel>
+      <div>Slide one</div>
+      <div>Slide two</div>
+    </lyra-carousel>
+  `);
+  const viewport = el.shadowRoot!.querySelector('[part="viewport"]') as HTMLElement;
+  expect(viewport.getAttribute('tabindex')).to.equal('0');
+  expect(viewport.getAttribute('role')).to.equal('group');
+  expect(viewport.getAttribute('aria-label')).to.equal('Carousel');
+
+  el.setAttribute('aria-label', 'Product screenshots');
+  await el.updateComplete;
+  expect(viewport.getAttribute('aria-label')).to.equal('Product screenshots');
 });

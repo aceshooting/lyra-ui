@@ -109,7 +109,24 @@ describe('region highlights', () => {
       const region = el.shadowRoot!.querySelector('[part="region-highlight"]') as HTMLElement;
       expect(region).to.exist;
       expect(region.getAttribute('role')).to.equal('button');
-      expect(region.style.insetInlineStart).to.equal('10%');
+      expect(region.style.left).to.equal('10%');
+    } finally {
+      restore();
+    }
+  });
+
+  it('positions region highlights with physical left/top under dir="rtl" so they stay over the non-mirroring render', async () => {
+    const el = (await fixture(html`<lyra-svg-viewer dir="rtl"></lyra-svg-viewer>`)) as LyraSvgViewer;
+    const restore = fetchSvg('<svg xmlns="http://www.w3.org/2000/svg"><circle r="5"/></svg>');
+    try {
+      el.src = 'https://example.test/icon.svg';
+      await waitUntil(() => el.shadowRoot!.querySelector('[part="svg"]') !== null);
+      el.highlights = [{ id: 'h1', anchor: { kind: 'region', rect: { x: 10, y: 20, width: 30, height: 40 } } }];
+      await el.updateComplete;
+      const region = el.shadowRoot!.querySelector('[part="region-highlight"]') as HTMLElement;
+      expect(region.style.left).to.equal('10%');
+      expect(region.style.top).to.equal('20%');
+      expect(region.style.getPropertyValue('inset-inline-start')).to.equal('');
     } finally {
       restore();
     }

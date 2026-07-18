@@ -81,6 +81,13 @@ export const styles = css`
     text-overflow: ellipsis;
     transition: opacity var(--lyra-transition-fast);
   }
+  /* inset-inline-start: 50% anchors the pill's *start* edge -- the physical right edge under RTL
+   * -- to the horizontal center, so the fixed translateX(-50%) above would push the whole pill
+   * start-of-center there. Flip the sign to keep it centered (translateX is physical; logical
+   * properties don't cover transforms). */
+  :host(:dir(rtl)) [part='jump-pill'] {
+    transform: translateX(50%);
+  }
   @media (prefers-reduced-motion: reduce) {
     [part='jump-pill'] {
       transition: none;

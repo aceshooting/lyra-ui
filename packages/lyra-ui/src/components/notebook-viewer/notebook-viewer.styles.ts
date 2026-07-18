@@ -48,6 +48,12 @@ export const styles = css`
   [part='output'][data-output-type='error'] {
     color: var(--lyra-color-danger);
   }
+  /* block display gives the label its own line ahead of the traceback text
+     without baking a joiner character into the translated string */
+  [part='output'] .error-output-label {
+    display: block;
+    font-weight: var(--lyra-font-weight-semibold);
+  }
   [part='output-toggle'] {
     align-self: flex-start;
     border: none;

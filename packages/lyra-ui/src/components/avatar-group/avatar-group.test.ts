@@ -32,6 +32,23 @@ function fiveAvatars() {
   `;
 }
 
+it('sanitizes a NaN/negative max to a finite non-negative integer instead of poisoning overflow math with NaN', async () => {
+  const el = (await fixture(fiveAvatars())) as LyraAvatarGroup;
+
+  el.max = NaN;
+  expect(el.max).to.equal(0); // finiteCount's own fallback of 0 for a NaN input
+  await el.updateComplete;
+  const avatars = Array.from(el.querySelectorAll('lyra-avatar')) as HTMLElement[];
+  expect(avatars.every((a) => a.hidden)).to.be.true; // 0 visible, all 5 collapse behind the badge
+  expect(el.shadowRoot!.querySelector('[part="overflow-badge"]')).to.exist;
+
+  el.max = -5;
+  expect(el.max).to.equal(0); // clamped to the non-negative floor
+
+  el.max = undefined;
+  expect(el.max).to.be.undefined; // explicitly unsetting still means "no limit"
+});
+
 it('defaults max to undefined, size to md, shape to circle, tone to neutral -- no overflow badge, every avatar visible', async () => {
   const el = (await fixture(html`
     <lyra-avatar-group>

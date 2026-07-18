@@ -3,6 +3,7 @@ import { property, query, state } from 'lit/decorators.js';
 import { nextId } from '../../internal/a11y.js';
 import { SET_ANCHORED_VALIDITY, VALIDITY_ANCHOR } from '../../internal/anchored-validity.js';
 import { FormAssociated } from '../../internal/form-associated.js';
+import { getDisplayNames } from '../../internal/intl-cache.js';
 import { LyraElement } from '../../internal/lyra-element.js';
 import { styles } from './phone-input.styles.js';
 
@@ -440,7 +441,10 @@ export class LyraPhoneInput extends FormAssociated(LyraPhoneInputBase) {
   private countryName(row: PhoneCountry): string {
     if (row.label) return row.label;
     try {
-      return new Intl.DisplayNames([this.effectiveLocale], { type: 'region' }).of(row.code) ?? row.code;
+      // Shared per-locale instance: this runs once per country row on every render of the
+      // select, and constructing an `Intl.DisplayNames` is an ICU locale-data lookup that
+      // would otherwise repeat for every row (a full libphonenumber country list is ~250).
+      return getDisplayNames(this.effectiveLocale, { type: 'region' }).of(row.code) ?? row.code;
     } catch {
       return row.code;
     }

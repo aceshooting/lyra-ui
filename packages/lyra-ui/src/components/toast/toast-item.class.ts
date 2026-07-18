@@ -3,6 +3,7 @@ import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../internal/lyra-element.js';
 import { closeIcon } from '../../internal/icons.js';
 import { prefersReducedMotion } from '../../internal/motion.js';
+import { finiteDuration } from '../../internal/numbers.js';
 import { styles } from './toast-item.styles.js';
 
 export type ToastVariant = 'brand' | 'success' | 'warning' | 'danger' | 'neutral';
@@ -67,6 +68,17 @@ export class LyraToastItem extends LyraElement<LyraToastItemEventMap> {
   private hovering = false;
   private focused = false;
   @state() private hiding = false;
+
+  /** `duration` normalized to a finite, non-negative delay -- *or* `Infinity` verbatim.
+   *  `Infinity` is this property's own documented "never auto-dismiss" sentinel (see its doc
+   *  comment above), so it must not be coerced into a large-but-finite fallback by
+   *  `finiteDuration`'s clamp; only a genuinely invalid raw value (`NaN`, `-Infinity`) falls back
+   *  to the constructed default. A finite negative value clamps to `0`, which already means
+   *  "disable" per this property's own contract (see `resumeTimer()` below), so that's not a
+   *  behavior change either. */
+  private get safeDuration(): number {
+    return this.duration === Infinity ? Infinity : finiteDuration(this.duration, 5000, 0);
+  }
 
   protected willUpdate(changed: PropertyValues): void {
     // `elapsedMs`/`duration` are re-read fresh every time the timer is
@@ -147,8 +159,9 @@ export class LyraToastItem extends LyraElement<LyraToastItemEventMap> {
       clearTimeout(this.timer);
       this.timer = undefined;
     }
-    if (!isFinite(this.duration) || this.duration <= 0) return;
-    const remaining = this.duration - this.elapsedMs;
+    const duration = this.safeDuration;
+    if (!isFinite(duration) || duration <= 0) return;
+    const remaining = duration - this.elapsedMs;
     // A duration shortened below the already-elapsed time must hide promptly,
     // not silently never schedule anything.
     if (remaining <= 0) {

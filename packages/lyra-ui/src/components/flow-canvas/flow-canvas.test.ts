@@ -669,6 +669,38 @@ describe('connect gesture', () => {
     expect(detail).to.deep.equal({ source: 'a', target: 'b', sourceHandle: 'out', targetHandle: 'in' });
   });
 
+  it('pointercancel ends the connect gesture without committing', async () => {
+    const el = (await fixture(html`<lyra-flow-canvas connectable></lyra-flow-canvas>`)) as LyraFlowCanvas;
+    el.nodes = [
+      { id: 'a', position: { x: 0, y: 0 } },
+      { id: 'b', position: { x: 200, y: 0 } },
+    ];
+    await el.updateComplete;
+    const wrapperA = el.shadowRoot!.querySelector('[data-node-id="a"]') as HTMLElement;
+    const wrapperB = el.shadowRoot!.querySelector('[data-node-id="b"]') as HTMLElement;
+    const outputHandle = makeHandle('output', 'out');
+    wrapperA.appendChild(outputHandle);
+    const inputHandle = makeHandle('input', 'in');
+    wrapperB.appendChild(inputHandle);
+    let fired = false;
+    el.addEventListener('lyra-connect', () => (fired = true));
+
+    outputHandle.dispatchEvent(new PointerEvent('pointerdown', { pointerId: 1, clientX: 0, clientY: 0, bubbles: true, composed: true }));
+    window.dispatchEvent(new PointerEvent('pointermove', { pointerId: 1, clientX: 150, clientY: 0 }));
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('[part="connection-line"]')).to.exist;
+
+    // A touch scroll takeover / the browser reclaiming the pointer fires pointercancel, never
+    // pointerup: the ghost connection line must go away and the gesture must not stay armed.
+    window.dispatchEvent(new PointerEvent('pointercancel', { pointerId: 1 }));
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('[part="connection-line"]')).to.not.exist;
+
+    // A later unrelated pointerup over a valid input handle must not commit against stale state.
+    inputHandle.dispatchEvent(new PointerEvent('pointerup', { pointerId: 1, clientX: 200, clientY: 0, bubbles: true, composed: true }));
+    expect(fired).to.be.false;
+  });
+
   it('keyboard: Escape cancels connect mode without emitting', async () => {
     const el = (await fixture(html`<lyra-flow-canvas connectable></lyra-flow-canvas>`)) as LyraFlowCanvas;
     el.nodes = [
@@ -864,5 +896,109 @@ describe('locked (consolidated)', () => {
     el.addEventListener('lyra-node-click', () => (clicked = true));
     wrapperA.click();
     expect(clicked).to.be.true;
+  });
+});
+
+describe('disconnect/reconnect', () => {
+  it('re-observes node wrappers after a reconnect so later size changes still reach the snapshot geometry', async () => {
+    const container = (await fixture(html`
+      <div>
+        <lyra-flow-canvas style="width:400px;height:300px">
+          <div node-id="a" style="width:100px;height:50px">Card</div>
+        </lyra-flow-canvas>
+      </div>
+    `)) as HTMLElement;
+    const el = container.querySelector('lyra-flow-canvas') as LyraFlowCanvas;
+    el.nodes = [{ id: 'a', position: { x: 0, y: 0 } }];
+    await el.updateComplete;
+    await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+
+    // A reparenting move disconnects and reconnects the same element instance; the ResizeObserver
+    // torn down on disconnect must pick the already-rendered wrappers back up on reconnect.
+    el.remove();
+    container.appendChild(el);
+    await el.updateComplete;
+
+    const card = el.querySelector('[node-id="a"]') as HTMLElement;
+    card.style.width = '320px';
+    await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+
+    const snapshots: FlowStructureSnapshot[] = [];
+    const unsubscribe = el.registerCompanion((s) => snapshots.push(s));
+    await new Promise((r) => requestAnimationFrame(r));
+    unsubscribe();
+    expect(snapshots.length).to.be.greaterThan(0);
+    expect(snapshots[0].nodes[0].width).to.be.closeTo(320, 2);
+  });
+});
+
+// Regression coverage for the shared finite-number normalization layer
+// (`src/internal/numbers.ts`) not previously wired up for min-zoom/max-zoom/grid/layer-gap/
+// node-gap -- an invalid attribute value used to flow straight into clampZoom()'s Math.min/max,
+// the grid-snap division, and the auto-layout gapX/gapY, poisoning viewport.zoom, snapped
+// positions, and auto-laid-out node positions with NaN.
+describe('finite-number normalization', () => {
+  it('clamps a non-finite/negative min-zoom or max-zoom so viewport.zoom never becomes NaN', async () => {
+    const el = (await fixture(html`<lyra-flow-canvas></lyra-flow-canvas>`)) as LyraFlowCanvas;
+    el.nodes = nodes;
+    await el.updateComplete;
+
+    el.minZoom = NaN;
+    el.maxZoom = Infinity;
+    el.setViewport({ x: 0, y: 0, zoom: 50 });
+    expect(Number.isFinite(el.viewport.zoom)).to.be.true;
+
+    el.minZoom = -Infinity;
+    el.maxZoom = -5; // a negative upper zoom bound is meaningless
+    el.setViewport({ x: 0, y: 0, zoom: 50 });
+    expect(Number.isFinite(el.viewport.zoom)).to.be.true;
+    expect(el.viewport.zoom).to.be.greaterThan(0);
+  });
+
+  it('normalizes a non-finite/negative grid so drop positions and the CSS grid-size stay finite', async () => {
+    const el = (await fixture(
+      html`<lyra-flow-canvas droppable style="width:400px;height:300px"></lyra-flow-canvas>`,
+    )) as LyraFlowCanvas;
+    el.nodes = [{ id: 'seed', position: { x: 0, y: 0 } }];
+    el.grid = NaN;
+    await el.updateComplete;
+    const background = el.shadowRoot!.querySelector('[part="background"]') as HTMLElement;
+    expect(background.getAttribute('style')).to.not.match(/NaN|Infinity/);
+
+    const viewportEl = el.shadowRoot!.querySelector('[part="viewport"]') as HTMLElement;
+    const rect = viewportEl.getBoundingClientRect();
+    let detail: { type: string; position: { x: number; y: number } } | undefined;
+    el.addEventListener('lyra-node-add', (e) => (detail = (e as CustomEvent).detail));
+    viewportEl.dispatchEvent(makeDropEvent('http-request', rect.left + 21, rect.top + 5));
+    expect(Number.isFinite(detail!.position.x)).to.be.true;
+    expect(Number.isFinite(detail!.position.y)).to.be.true;
+    // A non-finite grid falls back to the declared default (8px) instead of silently poisoning
+    // the snap with NaN.
+    expect(detail!.position.x % 8).to.equal(0);
+    expect(detail!.position.y % 8).to.equal(0);
+
+    el.grid = -100; // a negative snap increment is meaningless and must not reach the CSS var either
+    await el.updateComplete;
+    expect(background.getAttribute('style')).to.not.match(/NaN|Infinity|-100/);
+  });
+
+  it('normalizes non-finite/negative layer-gap/node-gap so auto-layout never assigns a NaN position', async () => {
+    const el = (await fixture(
+      html`<lyra-flow-canvas layer-gap="Infinity" node-gap="-40"></lyra-flow-canvas>`,
+    )) as LyraFlowCanvas;
+    let detail: { positions: Record<string, { x: number; y: number }> } | undefined;
+    el.addEventListener('lyra-layout-change', (e) => (detail = (e as CustomEvent).detail));
+    el.nodes = [{ id: 'a' }, { id: 'b' }];
+    el.edges = [{ id: 'a-b', source: 'a', target: 'b' }];
+    await el.updateComplete;
+    await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+
+    expect(detail).to.exist;
+    for (const pos of Object.values(detail!.positions)) {
+      expect(Number.isFinite(pos.x)).to.be.true;
+      expect(Number.isFinite(pos.y)).to.be.true;
+    }
+    const wrapperB = el.shadowRoot!.querySelector('[data-node-id="b"]') as HTMLElement;
+    expect(wrapperB.style.transform).to.not.match(/NaN|Infinity/);
   });
 });

@@ -280,6 +280,17 @@ it('shifts every rendered heading by heading-offset, clamped at h6', async () =>
   expect(headings[2].tagName, 'a source h6 clamps at h6 rather than overflowing').to.equal('H6');
 });
 
+it('normalizes a NaN heading-offset to 0 instead of producing an invalid <hNaN> tag', async () => {
+  const el = (await fixture(html`<lyra-markdown heading-offset="not-a-number"></lyra-markdown>`)) as LyraMarkdown;
+  expect(Number.isNaN(el.headingOffset)).to.be.true;
+  el.content = '# one\n\n## two\n';
+  await el.updateComplete;
+  await waitUntil(() => el.shadowRoot!.querySelector('[part="heading"]') !== null);
+  const headings = el.shadowRoot!.querySelectorAll('[part="heading"]');
+  expect(headings[0].tagName).to.equal('H1');
+  expect(headings[1].tagName).to.equal('H2');
+});
+
 it('omits target/rel on rendered links when link-target is explicitly disabled', async () => {
   const el = (await fixture(html`<lyra-markdown link-target=""></lyra-markdown>`)) as LyraMarkdown;
   el.content = '[docs](https://example.com/docs)';

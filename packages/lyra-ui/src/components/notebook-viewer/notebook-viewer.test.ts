@@ -72,6 +72,26 @@ describe('parsing and rendering', () => {
     expect(output.textContent).to.include('hi');
   });
 
+  it('renders an error output with the localized label as its own element, not string-joined onto the traceback', async () => {
+    const notebook = {
+      nbformat: 4, nbformat_minor: 5,
+      cells: [{
+        cell_type: 'code', id: 'c1', source: 'x', execution_count: 1, metadata: {},
+        outputs: [{ output_type: 'error', ename: 'NameError', evalue: "name 'x' is not defined", traceback: ['Traceback line 1'] }],
+      }],
+    };
+    const el = (await fixture(html`<lyra-notebook-viewer .notebook=${notebook}></lyra-notebook-viewer>`)) as LyraNotebookViewer;
+    await waitUntil(() => rowRoot(el).querySelector('[part="output"][data-output-type="error"]') !== null);
+    const output = rowRoot(el).querySelector('[part="output"][data-output-type="error"]')!;
+    const label = output.querySelector('.error-output-label')!;
+    expect(label).to.exist;
+    expect(label.textContent).to.equal('Error');
+    expect(output.textContent).to.include("NameError: name 'x' is not defined");
+    expect(output.textContent).to.include('Traceback line 1');
+    // no hardcoded "<label>: " joiner between the label and the data
+    expect(output.textContent).to.not.include('Error: NameError');
+  });
+
   it('rejects an unsupported nbformat major version with the localized error', async () => {
     const el = (await fixture(html`<lyra-notebook-viewer></lyra-notebook-viewer>`)) as LyraNotebookViewer;
     const eventPromise = oneEvent(el, 'lyra-render-error');
@@ -111,6 +131,20 @@ describe('output collapsing', () => {
     toggle.click();
     await el.updateComplete;
     expect(rowRoot(el).querySelector('[part="output"]')!.textContent).to.include('line 59');
+  });
+
+  it('normalizes a NaN outputCollapseLines to the default (40) instead of silently disabling collapsing', async () => {
+    const longText = Array.from({ length: 60 }, (_v, i) => `line ${i}`).join('\n');
+    const notebook = {
+      nbformat: 4, nbformat_minor: 5,
+      cells: [{ cell_type: 'code', id: 'c1', source: 'x', execution_count: 1, metadata: {}, outputs: [{ output_type: 'execute_result', data: { 'text/plain': longText } }] }],
+    };
+    const el = (await fixture(
+      html`<lyra-notebook-viewer .notebook=${notebook} output-collapse-lines="not-a-number"></lyra-notebook-viewer>`,
+    )) as LyraNotebookViewer;
+    expect(Number.isNaN(el.outputCollapseLines)).to.be.true;
+    await waitUntil(() => rowRoot(el).querySelector('[part="output-toggle"]') !== null);
+    expect(rowRoot(el).querySelector('[part="output-toggle"]')).to.exist;
   });
 
   it('re-collapses the output on a second toggle click and reflects aria-expanded both ways', async () => {

@@ -58,21 +58,18 @@ export class LyraFlowRunOverlay extends LyraElement {
     this.canvasEl = undefined;
   }
 
-  // Deviation from the plan brief (documented per this task's execution instructions): the brief's
-  // literal code calls `announceTransitions()` from `updated()` (i.e. after this same cycle's
-  // `render()` has already committed). `announceTransitions()` force-flushes into the reactive
-  // `liveText` state, so a property set there is a *second* `requestUpdate()` -- by that point
-  // `isUpdatePending` has already been reset to `false` (Lit's own `update()` clears it before
-  // `updated()`/`firstUpdated()` run), so the state write starts a brand-new, independently-promised
-  // update cycle rather than folding into the one in flight. A test that only does
-  // `el.prop = x; await el.updateComplete;` captures *that* getter's promise synchronously (before
+  // `announceTransitions()` runs from `willUpdate()`, not `updated()`: it force-flushes into the
+  // reactive `liveText` state, and a state write from `updated()` (after this cycle's `render()`
+  // has committed and `isUpdatePending` has been reset -- Lit's own `update()` clears it before
+  // `updated()`/`firstUpdated()` run) starts a brand-new, independently-promised update cycle
+  // rather than folding into the one in flight. A caller that does
+  // `el.prop = x; await el.updateComplete;` captures that getter's promise synchronously (before
   // the nested cycle even exists) and so resolves before the nested cycle's `render()` commits,
-  // leaving `[part="live-region"]` still showing the pre-transition text -- reproduced by this
-  // component's own "announces a step status transition" test failing with `''` instead of the
-  // announced string. Calling it from `willUpdate()` instead computes the derived `liveText` state
-  // *before* `render()` for the *same* cycle -- Lit's own documented use for `willUpdate()` -- so the
-  // announcement is visible in the exact `render()` pass `updateComplete` is already waiting on, with
-  // no extra cycle and no dev-mode "scheduled an update after an update completed" warning.
+  // observing `[part="live-region"]` still showing the pre-transition text. Computing the derived
+  // `liveText` state *before* `render()` of the *same* cycle -- Lit's own documented use for
+  // `willUpdate()` -- makes the announcement visible in the exact `render()` pass `updateComplete`
+  // is already waiting on, with no extra cycle and no dev-mode "scheduled an update after an
+  // update completed" warning.
   protected willUpdate(changed: PropertyValues): void {
     if (changed.has('decorations')) {
       this.announceTransitions(changed.get('decorations') as FlowRunDecorations | undefined);
@@ -115,17 +112,14 @@ export class LyraFlowRunOverlay extends LyraElement {
     return this.localize('statusDenied');
   }
 
-  // Deviation from the plan brief (documented per this task's execution instructions): the brief's
-  // literal code interpolates `this.statusLabel(decoration.status)` (the *localized, capitalized*
-  // caption, e.g. "Success") into `flowRunStepStatus`. This component's own test asserts the raw
-  // lower-case status literal instead (`'Fetch data: success'`), and `statusLabel()`'s capitalized
-  // caption can never produce that string for any locale whose `statusSuccess` default is `'Success'`
-  // -- reproduced by this component's own "announces a step status transition" test failing with
-  // "Fetch data: Success" (capital S) instead. Passing `decoration.status` directly here (as opposed
-  // to also trying `localize('statusSuccess', decoration.status, ...)`, which would use the raw
-  // status as a *fallback* and silently defeat any `registerLyraLocale()` override per this repo's
-  // own localize() convention) matches the test and keeps the visible per-status count spans in
-  // `render()` -- which still go through `statusLabel()` -- as the only localized/capitalized surface.
+  // The announcement interpolates `decoration.status` -- the raw lower-case status literal -- into
+  // `flowRunStepStatus` rather than `statusLabel()`'s localized, capitalized caption: the
+  // announcement's whole sentence is owned by the `flowRunStepStatus` template (a locale override
+  // replaces the sentence, status wording included). Routing the status through
+  // `localize('statusSuccess', decoration.status, ...)` would pass the raw status as a *fallback*
+  // and silently defeat any `registerLyraLocale()` override per this repo's localize() convention,
+  // so it is interpolated as a plain value instead; the visible per-status count spans in
+  // `render()` -- which still go through `statusLabel()` -- remain the localized/capitalized surface.
   private announceTransitions(previous: FlowRunDecorations | undefined): void {
     if (!previous) return; // first assignment -- nothing to compare against, no spam on mount
     for (const [id, decoration] of Object.entries(this.decorations)) {
@@ -139,25 +133,18 @@ export class LyraFlowRunOverlay extends LyraElement {
     }
   }
 
-  // Deviation from the plan brief (documented per this task's execution instructions): the brief's
-  // literal code filters to `nodeIds` read fresh off `this.canvasEl.nodes` at render time, to exclude
-  // stale decoration entries for node ids no longer on the canvas. But nothing re-renders *this*
-  // element when only the *canvas's* `nodes` array changes (unlike a `registerCompanion()`-based
-  // sibling such as `lyra-flow-minimap`, which trades an extra rAF of latency for exactly that
-  // reactivity -- see its own tests' explicit `await new Promise((r) => requestAnimationFrame(r))`
-  // after setting canvas `nodes`, which this component's own test file has no equivalent of). A host
-  // that sets `.decorations` before -- or in the same tick as -- the canvas's `nodes` (the common
-  // "mount fully wired" case exercised by this component's own tests) would therefore see the
-  // filtered summary permanently stuck at whatever `nodes` happened to resolve to at this element's
-  // own first render (typically `[]`, since `<lyra-flow-run-overlay>` and `<lyra-flow-canvas>` are
-  // independent custom elements with no ordering guarantee), never updating again -- reproduced by
-  // this component's own "renders the ... summary" test failing with "0 of 0" instead of "1 of 2".
-  // Tallying directly over `this.decorations` (this element's own pushed-in state, matching the
-  // class's own "pure pushed state" contract) instead of cross-element `canvasEl.nodes` membership
-  // sidesteps the whole timing dependency; `announceTransitions()` below still reads `canvasEl.nodes`
-  // for its node-label lookup, which is safe because that one is read live at the moment of an actual
-  // `decorations` change on *this* element (this element's own update cycle), not cached from a
-  // possibly-long-past render.
+  // The tally runs directly over `this.decorations` (this element's own pushed-in state, matching
+  // the class's "pure pushed state" contract) rather than filtering to node ids read fresh off
+  // `this.canvasEl.nodes` at render time. Nothing re-renders *this* element when only the
+  // *canvas's* `nodes` array changes (unlike a `registerCompanion()`-based sibling such as
+  // `lyra-flow-minimap`, which trades an extra rAF of latency for exactly that reactivity), and
+  // `<lyra-flow-run-overlay>`/`<lyra-flow-canvas>` are independent custom elements with no
+  // upgrade-ordering guarantee -- a canvas-membership filter would leave the summary permanently
+  // stuck at whatever `nodes` happened to resolve to at this element's own first render (typically
+  // `[]`, i.e. "0 of 0"), never updating again. `announceTransitions()` above still reads
+  // `canvasEl.nodes` for its node-label lookup, which is safe because that one is read live at the
+  // moment of an actual `decorations` change on *this* element (this element's own update cycle),
+  // not cached from a possibly-long-past render.
   private summary(): { done: number; total: number; counts: Record<FlowRunStatus, number> } {
     const counts: Record<FlowRunStatus, number> = { pending: 0, running: 0, success: 0, error: 0, denied: 0 };
     let total = 0;

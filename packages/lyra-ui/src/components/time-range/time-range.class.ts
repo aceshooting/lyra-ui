@@ -9,10 +9,17 @@ type Handle = 'start' | 'end';
 
 interface DragState {
   handle: Handle;
-  /** `[part="base"]`, looked up once in onPointerDown rather than re-queried
-   *  on every pointermove of the same gesture (mirrors lyra-split's
-   *  DragState.base). */
-  base: HTMLElement;
+  /** `[part="base"]`'s rect and the resolved direction, snapshotted once in
+   *  onPointerDown rather than re-read on every pointermove of the same
+   *  gesture: getBoundingClientRect()/getComputedStyle() in a window-level
+   *  pointermove handler force a synchronous layout/style flush interleaved
+   *  with the previous move's own style writes, and neither value changes
+   *  from this component's own updates mid-drag (the drag only moves the
+   *  handles/fill, never the base's box). Re-measured at every gesture
+   *  start, so any between-gesture layout change is always picked up.
+   *  Mirrors lyra-slider's identical snapshot. */
+  rect: DOMRect;
+  rtl: boolean;
 }
 
 /** PageUp/PageDown move by a larger increment than a single ArrowUp/Down
@@ -324,7 +331,7 @@ export class LyraTimeRange extends LyraElement<LyraTimeRangeEventMap> {
   private onPointerDown = (handle: Handle, e: PointerEvent): void => {
     if (this.effectiveDisabled) return;
     const base = this.renderRoot.querySelector('[part="base"]') as HTMLElement;
-    this.drags.set(e.pointerId, { handle, base });
+    this.drags.set(e.pointerId, { handle, rect: base.getBoundingClientRect(), rtl: isRtl(this) });
     (e.target as HTMLElement).setPointerCapture(e.pointerId);
     window.addEventListener('pointermove', this.onPointerMove);
     window.addEventListener('pointerup', this.onPointerUp);
@@ -353,12 +360,12 @@ export class LyraTimeRange extends LyraElement<LyraTimeRangeEventMap> {
       this.endDrag(e.pointerId, false);
       return;
     }
-    const rect = drag.base.getBoundingClientRect();
+    const rect = drag.rect;
     const raw = (e.clientX - rect.left) / rect.width;
     // The track is positioned with inset-inline-start (0% at the visual
     // right edge under RTL), so the pointer ratio has to mirror that or a
     // rightward drag would move the handle the wrong way.
-    const ratio = Math.min(1, Math.max(0, isRtl(this) ? 1 - raw : raw));
+    const ratio = Math.min(1, Math.max(0, drag.rtl ? 1 - raw : raw));
     const { lo, hi } = this.domain();
     const value = lo + ratio * (hi - lo);
     this.setValue(drag.handle, value, false);

@@ -8,6 +8,7 @@ import type { LyraAnchor, LyraAnchorKind } from '../document-viewer/anchors.js';
 import { safeFetchUrl } from '../../internal/safe-url.js';
 import { isAbortError, isResourceLimitError, LyraUserFacingError, readResponseText } from '../../internal/resource-loader.js';
 import { srOnly } from '../../internal/a11y.js';
+import { finiteCount } from '../../internal/numbers.js';
 import { loadNotebookSanitizer } from './dompurify-loader.js';
 import '../virtual-list/virtual-list.js';
 import '../markdown/markdown.js';
@@ -150,6 +151,14 @@ export class LyraNotebookViewer extends DocumentAnchorTarget(LyraElement) {
   @state() private activeSearchIndex = -1;
 
   private generation = 0;
+
+  /** `outputCollapseLines`, normalized to a finite non-negative integer (falling back to the
+   *  property's own default of `40`) -- a raw `NaN` (e.g. an invalid `output-collapse-lines`
+   *  attribute) would otherwise make `lines.length > outputCollapseLines` always false, silently
+   *  disabling collapsing instead of falling back to the default threshold. */
+  private get effectiveOutputCollapseLines(): number {
+    return finiteCount(this.outputCollapseLines, 40);
+  }
 
   protected updated(changed: PropertyValues): void {
     super.updated(changed);
@@ -297,9 +306,10 @@ export class LyraNotebookViewer extends DocumentAnchorTarget(LyraElement) {
 
   private renderTextOutput(index: number, text: string, tone?: 'danger'): TemplateResult {
     const lines = text.split('\n');
-    const collapsible = this.outputCollapseLines > 0 && lines.length > this.outputCollapseLines;
+    const outputCollapseLines = this.effectiveOutputCollapseLines;
+    const collapsible = outputCollapseLines > 0 && lines.length > outputCollapseLines;
     const expanded = this.expandedOutputs.has(index) || !collapsible;
-    const shown = expanded ? text : lines.slice(0, this.outputCollapseLines).join('\n');
+    const shown = expanded ? text : lines.slice(0, outputCollapseLines).join('\n');
     return html`<div part="output" data-output-type="stream" data-stream=${tone === 'danger' ? 'stderr' : 'stdout'}
       >${shown}${collapsible
         ? html`<button
@@ -319,7 +329,12 @@ export class LyraNotebookViewer extends DocumentAnchorTarget(LyraElement) {
     }
     if (output.output_type === 'error') {
       const text = [`${output.ename ?? ''}: ${output.evalue ?? ''}`, ...(output.traceback ?? [])].join('\n');
-      return html`<div part="output" data-output-type="error">${this.localize('notebookViewerErrorOutput')}: ${text}</div>`;
+      // The localized label sits in its own block element rather than being
+      // string-joined onto the traceback, so the label's position relative to
+      // the data never depends on the sentence order of any one language.
+      return html`<div part="output" data-output-type="error"
+        ><span class="error-output-label">${this.localize('notebookViewerErrorOutput')}</span>${text}</div
+      >`;
     }
     const data = output.data ?? {};
     if (data['image/png']) {

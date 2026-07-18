@@ -157,6 +157,14 @@ export const styles = css`
     inset-inline-start: 50%;
     transform: translateX(-50%);
   }
+  /* For the top/bottom edges the toggle centers on inset-inline-start: 50%, which anchors to
+     the physical right edge under RTL -- the fixed translateX(-50%) must flip sign there or
+     the toggle sits a full box-width off center. The start/end edges center along the block
+     axis (translateY), which no text direction affects. */
+  :host(:dir(rtl)[edge='top']) [part='collapse-toggle'],
+  :host(:dir(rtl)[edge='bottom']) [part='collapse-toggle'] {
+    transform: translateX(50%);
+  }
   @media (prefers-reduced-motion: reduce) {
     [part='collapse-toggle'],
     [part='handle'] {

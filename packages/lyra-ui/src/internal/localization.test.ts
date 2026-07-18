@@ -36,6 +36,26 @@ it('updates connected components when the active locale changes', async () => {
   setLyraLocale('en');
 });
 
+it('inherits an ancestor lang and picks up an ancestor lang change on the following render', async () => {
+  registerLyraLocale('x-aa', { noData: 'AA leer' });
+  registerLyraLocale('x-bb', { noData: 'BB leer' });
+  const wrapper = await fixture<HTMLDivElement>(
+    html`<div lang="x-aa"><lyra-sparkline .values=${[]}></lyra-sparkline></div>`,
+  );
+  const el = wrapper.querySelector('lyra-sparkline') as LyraSparkline;
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelector('svg')!.getAttribute('aria-label')).to.equal('AA leer');
+
+  wrapper.setAttribute('lang', 'x-bb');
+  el.requestUpdate();
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelector('svg')!.getAttribute('aria-label')).to.equal('BB leer');
+});
+
+it('defines the copy-to-clipboard confirmation label', () => {
+  expect(LYRA_DEFAULT_STRINGS.copiedToClipboard).to.equal('Copied to clipboard');
+});
+
 it('includes openNavigation and resizeNavigation in the default English strings', () => {
   expect(LYRA_DEFAULT_STRINGS.openNavigation).to.equal('Open navigation');
   expect(LYRA_DEFAULT_STRINGS.resizeNavigation).to.equal('Resize navigation');

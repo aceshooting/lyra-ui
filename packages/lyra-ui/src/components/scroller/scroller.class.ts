@@ -1,6 +1,7 @@
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
 import { LyraElement } from '../../internal/lyra-element.js';
+import { finiteRange } from '../../internal/numbers.js';
 import { styles } from './scroller.styles.js';
 
 export type ScrollerOrientation = 'horizontal' | 'vertical';
@@ -104,12 +105,22 @@ export class LyraScroller extends LyraElement<LyraScrollerEventMap> {
 
   private onScroll = (): void => this.updateEdges();
 
+  /** `scrollStep` normalized to a finite, non-negative override amount before
+   *  `scrollByDirection()`'s `> 0` gate below -- only a positive value overrides the
+   *  viewport-percentage-based default there; zero, negative, or non-finite already falls through
+   *  to that default via the comparison, so this just makes the normalization explicit instead of
+   *  relying on incidental NaN/negative comparison semantics. */
+  private get safeScrollStep(): number {
+    return finiteRange(this.scrollStep, 0, 0);
+  }
+
   private scrollByDirection(direction: -1 | 1): void {
     const viewport = this.viewport;
     if (!viewport) return;
     const horizontal = this.orientation === 'horizontal';
-    const amount = this.scrollStep > 0
-      ? this.scrollStep
+    const step = this.safeScrollStep;
+    const amount = step > 0
+      ? step
       : horizontal ? Math.max(1, viewport.clientWidth * 0.8) : Math.max(1, viewport.clientHeight * 0.8);
     const physicalDirection = horizontal && this.effectiveDirection === 'rtl' ? -direction : direction;
     viewport.scrollBy(horizontal ? { left: amount * physicalDirection } : { top: amount * direction });

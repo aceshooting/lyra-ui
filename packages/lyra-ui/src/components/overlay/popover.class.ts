@@ -5,7 +5,11 @@ import { LyraElement } from '../../internal/lyra-element.js';
 import { nextId } from '../../internal/a11y.js';
 import { place } from '../../internal/positioner.js';
 import { rtlAwarePlacement } from '../../internal/rtl.js';
+import { finiteNumber } from '../../internal/numbers.js';
 import { styles } from './overlay.styles.js';
+
+/** Default anchor-offset distance (px), passed to Floating UI's `offset()` middleware. */
+const DEFAULT_DISTANCE = 4;
 
 export interface LyraPopoverEventMap {
   'lyra-show': CustomEvent<undefined>;
@@ -29,7 +33,9 @@ export class LyraPopover extends LyraElement<LyraPopoverEventMap> {
   static styles = [LyraElement.styles, styles];
   @property({ type: Boolean, reflect: true }) open = false;
   @property({ reflect: true }) placement: Placement = 'bottom-start';
-  @property({ type: Number }) distance = 4;
+  /** Anchor-offset distance (px) passed to Floating UI's `offset()` middleware. Can legitimately
+   *  be negative (overlaps the popup with the trigger); NaN/non-finite falls back to the default. */
+  @property({ type: Number }) distance = DEFAULT_DISTANCE;
   @property({ attribute: 'aria-label' }) accessibleLabel = '';
   /** Semantic role used by the popup. Dropdown subclasses set this to `menu`. */
   @property({ attribute: 'popup-role' }) popupRole: 'dialog' | 'menu' = 'dialog';
@@ -81,7 +87,10 @@ export class LyraPopover extends LyraElement<LyraPopoverEventMap> {
   private position(): void {
     const popup = this.renderRoot.querySelector('[part="popup"]') as HTMLElement | null;
     if (!this.open || !this.trigger || !popup) return;
-    this.cleanup = place(this.trigger, popup, { placement: rtlAwarePlacement(this.placement, this), offset: this.distance });
+    this.cleanup = place(this.trigger, popup, {
+      placement: rtlAwarePlacement(this.placement, this),
+      offset: finiteNumber(this.distance, DEFAULT_DISTANCE),
+    });
   }
   private syncTriggerA11y(): void {
     if (!this.trigger) return;

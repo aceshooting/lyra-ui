@@ -141,6 +141,15 @@ export class LyraContextMeter extends LyraElement {
     else this.removeAttribute('aria-valuemax');
   }
 
+  /** Hover/`<title>` text for one segment. Templated so a locale controls
+   *  where the count sits relative to the label, not just the words. */
+  private segmentTitle(segment: ContextMeterSegment): string {
+    return this.localize('contextMeterSegmentLabel', undefined, {
+      label: segment.label,
+      count: formatCount(segment.value, this.effectiveLocale),
+    });
+  }
+
   private renderBar(): TemplateResult {
     const ratios = this.ratios();
     return html`
@@ -152,7 +161,7 @@ export class LyraContextMeter extends LyraElement {
               <span
                 part="segment"
                 data-tone=${segment.tone ?? 'neutral'}
-                title=${`${segment.label}: ${formatCount(segment.value, this.effectiveLocale)}`}
+                title=${this.segmentTitle(segment)}
                 style=${styleMap({ flexBasis: `${(ratio * 100).toFixed(4)}%` })}
               ></span>
             `,
@@ -180,7 +189,7 @@ export class LyraContextMeter extends LyraElement {
           stroke-dasharray=${`${segLen} ${CIRCUMFERENCE - segLen}`}
           stroke-dashoffset=${dashoffset}
           transform="rotate(-90 ${CENTER} ${CENTER})"
-        ><title>${`${segment.label}: ${formatCount(segment.value, this.effectiveLocale)}`}</title></circle>
+        ><title>${this.segmentTitle(segment)}</title></circle>
       `;
     });
     return html`

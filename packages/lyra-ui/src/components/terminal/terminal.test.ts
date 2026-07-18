@@ -59,6 +59,27 @@ describe('lyra-terminal', () => {
     expect(stillThere).to.be.true;
   });
 
+  it('normalizes an invalid max-scrollback (negative, NaN, or fractional) instead of trusting it directly', async () => {
+    const negative = (await fixture(html`<lyra-terminal max-scrollback="-5"></lyra-terminal>`)) as LyraTerminal;
+    negative.write('l1\nl2\nl3');
+    await negative.updateComplete;
+    // A negative limit still keeps at least the most-recently-appended line (the same 1-line
+    // floor the pre-existing ad hoc guard already enforced) rather than trimming everything away.
+    expect(negative.getPlainText()).to.equal('l3');
+
+    const fractional = (await fixture(html`<lyra-terminal max-scrollback="3.9"></lyra-terminal>`)) as LyraTerminal;
+    fractional.write('l1\nl2\nl3\nl4\nl5');
+    await fractional.updateComplete;
+    expect(fractional.getPlainText()).to.equal('l3\nl4\nl5');
+
+    const nan = (await fixture(html`<lyra-terminal></lyra-terminal>`)) as LyraTerminal;
+    nan.maxScrollback = NaN;
+    nan.write('l1\nl2\nl3\nl4\nl5\nl6');
+    await nan.updateComplete;
+    // NaN falls back to the 5000-line default, not to a 1-line floor.
+    expect(nan.getPlainText()).to.equal('l1\nl2\nl3\nl4\nl5\nl6');
+  });
+
   it('clear() resets scrollback and parser state', async () => {
     const el = (await fixture(html`<lyra-terminal></lyra-terminal>`)) as LyraTerminal;
     el.write('\x1b[31msome text');

@@ -112,6 +112,13 @@ export const styles = css`
     border-color: var(--lyra-color-brand);
     box-shadow: 0 0 0 var(--lyra-size-2px) var(--lyra-color-brand-quiet);
   }
+  /* The JS gate only evaluates the preference at render time; this CSS branch also covers a
+     preference change while an already-rendered card is still pulsing. */
+  @media (prefers-reduced-motion: reduce) {
+    .card[data-pulse] {
+      animation: none;
+    }
+  }
   @keyframes lyra-flow-node-pulse {
     50% {
       box-shadow: 0 0 0 var(--lyra-size-4px) var(--lyra-color-brand-quiet);

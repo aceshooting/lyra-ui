@@ -3,7 +3,7 @@ import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../internal/lyra-element.js';
 import { nextId } from '../../internal/a11y.js';
 import { place } from '../../internal/positioner.js';
-import { finiteCount } from '../../internal/numbers.js';
+import { finiteCount, finiteRange } from '../../internal/numbers.js';
 import { styles } from './usage-badge.styles.js';
 
 interface FormattedDuration {
@@ -111,8 +111,17 @@ export class LyraUsageBadge extends LyraElement {
   private get hasCost(): boolean {
     return this.costText.length > 0;
   }
+  /** `latencyMs` normalized to a finite, non-negative duration -- `undefined` while unset or
+   *  non-finite (the `latency` segment/tooltip row is omitted entirely). `formatDuration()`
+   *  already tolerates a non-finite/negative input defensively, but this is the single source of
+   *  truth that decides whether the segment renders at all. */
+  private get validLatencyMs(): number | undefined {
+    if (this.latencyMs == null || !Number.isFinite(this.latencyMs)) return undefined;
+    return finiteRange(this.latencyMs, this.latencyMs, 0);
+  }
+
   private get hasLatency(): boolean {
-    return this.latencyMs != null && Number.isFinite(this.latencyMs);
+    return this.validLatencyMs !== undefined;
   }
   private get hasVisibleContent(): boolean {
     return this.hasTokensIn || this.hasTokensOut || this.hasCost || this.hasLatency;
@@ -198,7 +207,7 @@ export class LyraUsageBadge extends LyraElement {
           ? html`<span part="tokens-out">${this.localize('usageBadgeTokensOut', undefined, { count: this.formatTokenCount(tokensOut) })}</span>`
           : nothing}
         ${this.hasCost ? html`<span part="cost">${this.costText}</span>` : nothing}
-        ${this.hasLatency ? html`<span part="latency">${this.localizedDuration(this.latencyMs!)}</span>` : nothing}
+        ${this.hasLatency ? html`<span part="latency">${this.localizedDuration(this.validLatencyMs!)}</span>` : nothing}
         <div part="tooltip" id=${this.tooltipId} role="tooltip" ?hidden=${!this.tooltipOpen}>
           ${tokensIn !== undefined
             ? html`<div class="row"><span>${this.localize('usageBadgeTokensInLabel')}</span><span>${this.formatTokenCountFull(tokensIn)}</span></div>`
@@ -213,7 +222,7 @@ export class LyraUsageBadge extends LyraElement {
             ? html`<div class="row"><span>${this.localize('usageBadgeCostLabel')}</span><span>${this.costText}</span></div>`
             : nothing}
           ${this.hasLatency
-            ? html`<div class="row"><span>${this.localize('usageBadgeLatencyLabel')}</span><span>${this.localizedDuration(this.latencyMs!)}</span></div>`
+            ? html`<div class="row"><span>${this.localize('usageBadgeLatencyLabel')}</span><span>${this.localizedDuration(this.validLatencyMs!)}</span></div>`
             : nothing}
           <slot @slotchange=${this.onDefaultSlotChange}></slot>
         </div>

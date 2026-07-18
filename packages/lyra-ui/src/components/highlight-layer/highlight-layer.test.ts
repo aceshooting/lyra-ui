@@ -24,8 +24,18 @@ describe('lyra-highlight-layer', () => {
     const el = await fixture<LyraHighlightLayer>(html`<lyra-highlight-layer .items=${ITEMS}></lyra-highlight-layer>`);
     const rects = el.shadowRoot!.querySelectorAll('[part="rect"]');
     expect(rects).to.have.length(2);
-    expect((rects[0] as HTMLElement).style.insetInlineStart).to.equal('10%');
+    expect((rects[0] as HTMLElement).style.left).to.equal('10%');
     expect((rects[0] as HTMLElement).getAttribute('data-tone')).to.equal('accent');
+  });
+
+  it('positions rects with physical left/top under dir="rtl" so they stay over non-mirroring content', async () => {
+    const el = await fixture<LyraHighlightLayer>(
+      html`<lyra-highlight-layer dir="rtl" .items=${ITEMS}></lyra-highlight-layer>`,
+    );
+    const rect = el.shadowRoot!.querySelector('[part="rect"]') as HTMLElement;
+    expect(rect.style.left).to.equal('10%');
+    expect(rect.style.top).to.equal('10%');
+    expect(rect.style.getPropertyValue('inset-inline-start')).to.equal('');
   });
 
   it('marks the matching item aria-current="true" when active-id is set', async () => {

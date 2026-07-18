@@ -90,3 +90,12 @@ it('is accessible with a resolved canvas', async () => {
   await controls.updateComplete;
   await expect(controls).to.be.accessible();
 });
+
+it('renders per-element .strings overrides in the control button labels', async () => {
+  const el = (await fixture(html`<lyra-flow-controls></lyra-flow-controls>`)) as LyraFlowControls;
+  el.strings = { zoomIn: 'Zoomer', zoomToFit: 'Ajuster', flowControlsLabel: 'Commandes du canevas' };
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelector('[part="zoom-in"]')!.getAttribute('aria-label')).to.equal('Zoomer');
+  expect(el.shadowRoot!.querySelector('[part="fit"]')!.getAttribute('aria-label')).to.equal('Ajuster');
+  expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('Commandes du canevas');
+});

@@ -486,6 +486,16 @@ describe('accessibility', () => {
 });
 
 describe('localization', () => {
+  it('renders the built-in English copy-button aria-labels with no locale registered and no overrides', async () => {
+    const el = (await fixture(html`<lyra-code-block .code=${jsSample}></lyra-code-block>`)) as LyraCodeBlock;
+    const copyButton = el.shadowRoot!.querySelector('[part="copy-button"]') as HTMLButtonElement;
+    expect(copyButton.getAttribute('aria-label')).to.equal('Copy code');
+
+    copyButton.click();
+    await el.updateComplete;
+    expect(copyButton.getAttribute('aria-label')).to.equal('Copied to clipboard');
+  });
+
   it('localizes the collapse-toggle and copy-button aria-labels via this.localize()', async () => {
     const el = (await fixture(
       html`<lyra-code-block

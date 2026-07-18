@@ -3,6 +3,7 @@ import { property } from 'lit/decorators.js';
 import { LyraElement } from '../../internal/lyra-element.js';
 import type { LyraMessageKey } from '../../internal/localization.js';
 import { formatFileSize, FILE_SIZE_UNIT_KEYS } from '../attachment-chip/attachment-chip.js';
+import { finiteRange } from '../../internal/numbers.js';
 import { getFileTypeMetadata, type LyraFileTypeIcon } from './file-type-metadata.js';
 import { styles } from './file-icon.styles.js';
 
@@ -51,7 +52,11 @@ export class LyraFileIcon extends LyraElement {
   render(): TemplateResult {
     const metadata = getFileTypeMetadata(this.mimeType, this.name);
     const localizedLabel = this.label || this.localize(ICON_LABELS[metadata.icon]);
-    const sizeText = this.size > 0 ? formatFileSize(this.size, (unit) => this.localize(FILE_SIZE_UNIT_KEYS[unit])) : '';
+    // A NaN/negative `size` (e.g. an invalid `size` attribute) would otherwise make `size > 0`
+    // false anyway (so no crash), but normalizing here keeps it explicit and consistent with
+    // this library's other numeric guards, rather than relying on that comparison quirk.
+    const size = finiteRange(this.size, 0, 0);
+    const sizeText = size > 0 ? formatFileSize(size, (unit) => this.localize(FILE_SIZE_UNIT_KEYS[unit])) : '';
     const accessibleLabel = sizeText
       ? this.localize('fileTypeWithSize', undefined, { label: localizedLabel, size: sizeText })
       : localizedLabel;

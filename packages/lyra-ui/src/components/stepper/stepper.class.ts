@@ -71,6 +71,12 @@ export class LyraStepper extends LyraElement<LyraStepperEventMap> {
    *  `'vertical'` stacks them (Up/Down navigate instead, no RTL swap needed). */
   @property({ reflect: true }) orientation: 'horizontal' | 'vertical' = 'horizontal';
 
+  /** Accessible name for the `role="tablist"` step strip. Attribute-reflects from a host-level
+   *  `aria-label` so a plain-markup consumer gets ARIA-name forwarding without setting a JS
+   *  property. Unset, the tablist renders without an `aria-label` (the role carries no localized
+   *  default name). */
+  @property({ attribute: 'aria-label' }) accessibleLabel: string | null = null;
+
   private selectStep(step: StepItem, index: number): void {
     if (step.state === 'disabled') return;
     this.emit<{ index: number; id: string }>('lyra-step-select', { index, id: step.id }, { cancelable: true });
@@ -131,7 +137,7 @@ export class LyraStepper extends LyraElement<LyraStepperEventMap> {
     // button at tabindex="-1" and drop the whole stepper out of the tab order.
     const rovingId = this.steps.find((s) => s.state === 'current')?.id ?? this.steps.find((s) => s.state !== 'disabled')?.id;
     return html`
-      <div part="base" role="tablist" aria-orientation=${this.orientation} @keydown=${this.onKeyDown}>
+      <div part="base" role="tablist" aria-label=${this.accessibleLabel || nothing} aria-orientation=${this.orientation} @keydown=${this.onKeyDown}>
         ${repeat(
           this.steps,
           (step) => step.id,

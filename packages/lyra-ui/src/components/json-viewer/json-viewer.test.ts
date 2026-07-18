@@ -64,6 +64,15 @@ it('collapsed-depth="0" collapses the top-level node immediately', async () => {
   expect(el.shadowRoot!.querySelector('.preview')).to.exist;
 });
 
+it('normalizes a NaN collapsedDepth to 0 (fully collapsed) instead of silently disabling auto-collapse', async () => {
+  const el = await withData(sample);
+  el.collapsedDepth = NaN;
+  await el.updateComplete;
+
+  expect(el.shadowRoot!.querySelector('[part="key"]')).to.not.exist;
+  expect(el.shadowRoot!.querySelector('.preview')).to.exist;
+});
+
 it('collapsed-depth collapses nodes at or beyond that depth but leaves shallower ones expanded', async () => {
   const el = await withData(sample);
   el.collapsedDepth = 1;

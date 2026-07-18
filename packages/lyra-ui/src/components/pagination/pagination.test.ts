@@ -236,3 +236,34 @@ it('is accessible', async () => {
   const el = await pagination();
   await expect(el).to.be.accessible();
 });
+
+it('normalizes NaN/negative pageSize and totalItems to an empty, zero-page state instead of NaN', async () => {
+  const el = await pagination(html`
+    <lyra-pagination total-items="95" page-size="10"></lyra-pagination>
+  `);
+
+  el.pageSize = NaN;
+  el.totalItems = -50;
+  await el.updateComplete;
+  expect(el.pageCount).to.equal(0);
+  expect(el.shadowRoot!.querySelector('[part="summary"]')!.textContent!.trim()).to.equal('0 items');
+});
+
+it('clamps an oversized or negative page to the last/first valid page instead of NaN/out-of-range', async () => {
+  const el = await pagination(html`
+    <lyra-pagination total-items="95" page-size="10"></lyra-pagination>
+  `);
+  const input = el.shadowRoot!.querySelector('[part="page-input"]') as HTMLInputElement;
+
+  el.page = 9999;
+  await el.updateComplete;
+  expect(input.value).to.equal('10'); // clamped to the last valid page
+
+  el.page = -7;
+  await el.updateComplete;
+  expect(input.value).to.equal('1'); // clamped to the first valid page
+
+  el.page = NaN;
+  await el.updateComplete;
+  expect(input.value).to.equal('1'); // non-finite falls back to the first valid page
+});

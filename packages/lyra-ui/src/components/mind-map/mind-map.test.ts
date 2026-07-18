@@ -100,6 +100,27 @@ it('shows the noData empty state when topics is empty', async () => {
   expect(el.shadowRoot!.querySelector('[part="empty"]')!.textContent).to.include('No data');
 });
 
+it('normalizes a NaN expandDepth instead of silently collapsing every ring (falls back to the default of 1)', async () => {
+  const el = (await fixture(html`<lyra-mind-map></lyra-mind-map>`)) as LyraMindMap;
+  el.topics = topics;
+  el.expandDepth = NaN;
+  await el.updateComplete;
+  // A raw NaN would make every `depth < expandDepth` comparison false, collapsing even the root's
+  // own children -- guarded, it must render the same as the default expandDepth=1 (root + 2 children).
+  expect(el.shadowRoot!.querySelectorAll('[part="node"]').length).to.equal(3);
+});
+
+it('resolves the default svg accessible name through a .strings override for mindMapLabel when label is unset', async () => {
+  // label stays at its '' default, so the `this.label || this.localize('mindMapLabel')`
+  // aria-label must fall through to the .strings/registry path.
+  const el = (await fixture(
+    html`<lyra-mind-map .strings=${{ mindMapLabel: 'Carte mentale' }}></lyra-mind-map>`,
+  )) as LyraMindMap;
+  el.topics = topics;
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelector('[part="svg"]')!.getAttribute('aria-label')).to.equal('Carte mentale');
+});
+
 it('is accessible with an expanded, multi-level tree', async () => {
   const el = (await fixture(html`<lyra-mind-map expand-depth="2"></lyra-mind-map>`)) as LyraMindMap;
   el.topics = topics;

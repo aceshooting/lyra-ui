@@ -37,6 +37,15 @@ it('formats latency-ms with the shared duration algorithm', async () => {
   expect(over.shadowRoot!.querySelector('[part="latency"]')!.textContent!.trim()).to.equal('1.5s');
 });
 
+it('omits the latency segment for a non-numeric latency-ms, and clamps a negative one to "0ms" instead of a negative reading', async () => {
+  const nonFinite = (await fixture(html`<lyra-usage-badge latency-ms="not-a-number"></lyra-usage-badge>`)) as LyraUsageBadge;
+  expect(Number.isNaN(nonFinite.latencyMs)).to.be.true;
+  expect(nonFinite.shadowRoot!.querySelector('[part="latency"]')).to.not.exist;
+
+  const negative = (await fixture(html`<lyra-usage-badge latency-ms="-50"></lyra-usage-badge>`)) as LyraUsageBadge;
+  expect(negative.shadowRoot!.querySelector('[part="latency"]')!.textContent!.trim()).to.equal('0ms');
+});
+
 it('renders compact token notation when compact is set, full grouped figures otherwise', async () => {
   const full = (await fixture(html`<lyra-usage-badge tokens-in="12345"></lyra-usage-badge>`)) as LyraUsageBadge;
   expect(full.shadowRoot!.querySelector('[part="tokens-in"]')!.textContent!.trim()).to.equal('12,345 in');

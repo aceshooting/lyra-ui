@@ -635,6 +635,25 @@ it('defaults each handle\'s aria-label and lets startLabel/endLabel override the
   expect(endHandle.getAttribute('aria-label')).to.equal('To');
 });
 
+it('resolves the rangeStart/rangeEnd aria-label keys through a .strings override', async () => {
+  const el = (await fixture(
+    html`<lyra-time-range
+      min="0"
+      max="100"
+      start="20"
+      end="80"
+      .strings=${{ rangeStart: 'Début de plage', rangeEnd: 'Fin de plage' }}
+    ></lyra-time-range>`,
+  )) as LyraTimeRange;
+  const startHandle = el.shadowRoot!.querySelector('[part="handle-start"]') as HTMLElement;
+  const endHandle = el.shadowRoot!.querySelector('[part="handle-end"]') as HTMLElement;
+  // With startLabel/endLabel left at their defaults, the aria-labels must resolve through the
+  // localization registry -- a strings override reaching the DOM proves the call sites pass no
+  // unconditional fallback that would short-circuit it.
+  expect(startHandle.getAttribute('aria-label')).to.equal('Début de plage');
+  expect(endHandle.getAttribute('aria-label')).to.equal('Fin de plage');
+});
+
 it('reflects startLabel/endLabel from their start-label/end-label content attributes', async () => {
   const el = (await fixture(
     html`<lyra-time-range

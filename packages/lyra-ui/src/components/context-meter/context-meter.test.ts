@@ -164,6 +164,21 @@ describe('summary localization', () => {
     await el.updateComplete;
     expect(el.getAttribute('aria-label')).to.equal('5 utilisés');
   });
+
+  it('builds segment titles from the contextMeterSegmentLabel template, so a locale controls label/count order', async () => {
+    const el = (await fixture(html`<lyra-context-meter total="10000"></lyra-context-meter>`)) as LyraContextMeter;
+    el.segments = SEGMENTS;
+    await el.updateComplete;
+    const segments = el.shadowRoot!.querySelectorAll('[part="segment"]');
+    expect(segments[0].getAttribute('title')).to.equal('System prompt: 2,000');
+
+    // reorder the placeholders to prove the title is interpolated, not the
+    // label concatenated with the formatted count
+    el.strings = { contextMeterSegmentLabel: '{count} — {label}' };
+    await el.updateComplete;
+    const reordered = el.shadowRoot!.querySelectorAll('[part="segment"]');
+    expect(reordered[0].getAttribute('title')).to.equal('2,000 — System prompt');
+  });
 });
 
 it('renders the label part visibly, hidden from the accessibility tree since the host aria-label already carries it', async () => {

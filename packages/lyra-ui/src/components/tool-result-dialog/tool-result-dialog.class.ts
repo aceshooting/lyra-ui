@@ -13,6 +13,7 @@ import { lockScroll } from '../../internal/scroll-lock.js';
 import { activateOverlay, type OverlayHandle } from '../../internal/overlay-manager.js';
 import { nextId } from '../../internal/a11y.js';
 import { closeIcon, expandIcon } from '../../internal/icons.js';
+import { finiteRange } from '../../internal/numbers.js';
 import { styles } from './tool-result-dialog.styles.js';
 
 /** Same status vocabulary as `<lyra-tool-call-chip>`. */
@@ -377,8 +378,17 @@ export class LyraToolResultDialog extends LyraElement<LyraToolResultDialogEventM
     return this.localize(duration.key, undefined, { value: duration.value });
   }
 
+  /** `durationMs` normalized to a finite, non-negative value, or `null` -- `null`/`undefined`
+   *  and a non-finite raw value (e.g. a stray `NaN` assignment) both mean "no duration to show,"
+   *  matching this property's own "omitted from the header entirely when unset" contract, rather
+   *  than rendering a literal "NaN ms". A finite negative value clamps to `0` instead of
+   *  rendering a nonsensical negative duration. */
+  private get safeDurationMs(): number | null {
+    return this.durationMs != null && Number.isFinite(this.durationMs) ? finiteRange(this.durationMs, 0, 0) : null;
+  }
+
   render(): TemplateResult {
-    const hasDuration = this.durationMs != null && Number.isFinite(this.durationMs);
+    const durationMs = this.safeDurationMs;
     return html`
       <div part="backdrop" @click=${this.onBackdropClick}></div>
       <div
@@ -397,9 +407,9 @@ export class LyraToolResultDialog extends LyraElement<LyraToolResultDialogEventM
                 >${this.localize(STATUS_LABEL_KEY[this.status] ?? STATUS_LABEL_KEY.pending)}</span
               ></span
             >
-            ${hasDuration
+            ${durationMs != null
               ? html`<span part="duration"
-                  >${this.localizedDuration(this.durationMs!)}</span
+                  >${this.localizedDuration(durationMs)}</span
                 >`
               : nothing}
           </div>

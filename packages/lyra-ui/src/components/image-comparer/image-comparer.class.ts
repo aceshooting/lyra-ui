@@ -1,6 +1,7 @@
 import { html, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { LyraElement } from '../../internal/lyra-element.js';
+import { finiteRange } from '../../internal/numbers.js';
 import { styles } from './image-comparer.styles.js';
 
 export type LyraImageComparerOrientation = 'horizontal' | 'vertical';
@@ -35,7 +36,7 @@ export class LyraImageComparer extends LyraElement<LyraImageComparerEventMap> {
   @property({ attribute: 'aria-label' }) accessibleLabel: string | null = null;
 
   private get normalizedPosition(): number {
-    return Math.min(100, Math.max(0, Number.isFinite(this.position) ? this.position : 50));
+    return finiteRange(this.position, 50, 0, 100);
   }
 
   private onInput = (event: Event): void => {

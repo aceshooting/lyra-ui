@@ -1,5 +1,6 @@
 import { expect, fixture, html } from '@open-wc/testing';
 import './file-icon.js';
+import type { LyraFileIcon } from './file-icon.js';
 import { getFileTypeMetadata, registerFileTypeMetadata } from './file-type-metadata.js';
 
 describe('file type metadata', () => {
@@ -57,6 +58,15 @@ describe('lyra-file-icon', () => {
 
   it('renders no size part when size is unset', async () => {
     const el = await fixture(html`<lyra-file-icon mime-type="application/pdf" variant="label"></lyra-file-icon>`);
+    expect(el.shadowRoot!.querySelector('[part="size"]')).to.not.exist;
+    expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('PDF');
+  });
+
+  it('renders no "NaN B" size part when size is set to an invalid value', async () => {
+    const el = (await fixture(
+      html`<lyra-file-icon mime-type="application/pdf" variant="label" size="not-a-number"></lyra-file-icon>`,
+    )) as LyraFileIcon;
+    expect(Number.isNaN(el.size)).to.be.true;
     expect(el.shadowRoot!.querySelector('[part="size"]')).to.not.exist;
     expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('PDF');
   });

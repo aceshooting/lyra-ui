@@ -81,7 +81,11 @@ export class LyraInput extends FormAssociated(LyraInputBase) {
   @property({ attribute: 'enterkeyhint' }) enterKeyHint = '';
   /** `type="number"` only — forwarded to the internal native `<input>`'s own `min`/`max`/`step`
    *  and consulted by that same native input's constraint validation (see `updateValidity()`). */
+  // numeric-guard-exempt: passed straight through to the native <input min> and its own
+  // ValidityState.rangeUnderflow check, both of which already tolerate a non-finite value
+  // without throwing; never used in arithmetic in this file.
   @property({ type: Number }) min?: number;
+  // numeric-guard-exempt: same rationale as `min` above, for the native <input max> attribute.
   @property({ type: Number }) max?: number;
   /** Accepts `'any'` (the native way to disable step validation) in addition to a numeric step. */
   @property() step?: number | 'any';

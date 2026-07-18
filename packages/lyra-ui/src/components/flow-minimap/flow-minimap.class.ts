@@ -55,6 +55,13 @@ export class LyraFlowMinimap extends LyraElement {
     this.unsubscribe?.();
     this.unsubscribe = undefined;
     this.canvasEl = undefined;
+    // If the element is removed mid-drag, nothing else ever detaches the window-level drag
+    // listeners, so they are removed unconditionally here.
+    this.dragState = undefined;
+    window.removeEventListener('pointermove', this.onViewportPointerMove);
+    window.removeEventListener('pointerup', this.onViewportPointerUp);
+    window.removeEventListener('pointercancel', this.onViewportPointerUp);
+    window.removeEventListener('lostpointercapture', this.onViewportPointerUp);
   }
 
   private resolveCanvas(): FlowCanvasLike | null {
@@ -129,6 +136,11 @@ export class LyraFlowMinimap extends LyraElement {
     (e.target as SVGElement).setPointerCapture?.(e.pointerId);
     window.addEventListener('pointermove', this.onViewportPointerMove);
     window.addEventListener('pointerup', this.onViewportPointerUp);
+    // A touch scroll takeover can fire `pointercancel` (never `pointerup`), and losing capture
+    // (e.g. element removed) fires `lostpointercapture` -- both need the same teardown as
+    // pointerup or the drag listeners outlive the gesture.
+    window.addEventListener('pointercancel', this.onViewportPointerUp);
+    window.addEventListener('lostpointercapture', this.onViewportPointerUp);
   };
 
   private onViewportPointerMove = (e: PointerEvent): void => {
@@ -152,6 +164,8 @@ export class LyraFlowMinimap extends LyraElement {
     this.dragState = undefined;
     window.removeEventListener('pointermove', this.onViewportPointerMove);
     window.removeEventListener('pointerup', this.onViewportPointerUp);
+    window.removeEventListener('pointercancel', this.onViewportPointerUp);
+    window.removeEventListener('lostpointercapture', this.onViewportPointerUp);
   };
 
   private onViewportKeyDown = (e: KeyboardEvent): void => {

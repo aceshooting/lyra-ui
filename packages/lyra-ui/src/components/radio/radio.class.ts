@@ -137,6 +137,10 @@ export class LyraRadio extends LyraElement<LyraRadioEventMap> {
     this.syncFormState();
     this.requestUpdate('checked', old);
   }
+  formDisabledCallback(disabled: boolean): void {
+    this._fieldsetDisabled = disabled;
+    this.requestUpdate();
+  }
 
   private updateValidity(): void {
     this.validityController.setValidity(

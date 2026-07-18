@@ -210,9 +210,15 @@ describe('lyra-dataset-viewer', () => {
         const list = el.shadowRoot!.querySelector('lyra-virtual-list')!;
         const highlighted = list.shadowRoot!.querySelector('[part~="cell-highlight"]') as HTMLElement | null;
         expect(highlighted).to.exist;
-        expect(highlighted!.getAttribute('tabindex')).to.equal('0');
+        // The cell itself stays structural (role="cell", not focusable); the activation
+        // affordance is the nested native button.
+        expect(highlighted!.getAttribute('role')).to.equal('cell');
+        expect(highlighted!.hasAttribute('tabindex')).to.be.false;
+        const action = highlighted!.querySelector('[part="cell-highlight-action"]') as HTMLElement | null;
+        expect(action).to.exist;
+        expect(action!.tagName).to.equal('BUTTON');
         const listener = oneEvent(el, 'lyra-highlight-activate');
-        highlighted!.click();
+        action!.click();
         const event = (await listener) as CustomEvent<{ id: string }>;
         expect(event.detail).to.deep.equal({ id: 'h1' });
       } finally {
@@ -220,20 +226,25 @@ describe('lyra-dataset-viewer', () => {
       }
     });
 
-    it('activates a highlighted cell via Enter/Space and never a plain cell', async () => {
+    it('exposes an activation button only inside a highlighted cell, never a plain cell', async () => {
       const el = (await fixture(html`<lyra-dataset-viewer></lyra-dataset-viewer>`)) as LyraDatasetViewer;
       const restore = fetchText(GRID_DATASET);
       try {
         el.src = 'https://example.test/data.tsv';
         await waitUntil(() => el.shadowRoot!.querySelector('[part="table"]') !== null);
-        el.highlights = [{ id: 'h1', anchor: { kind: 'cell-range', range: 'A2' } }];
+        el.highlights = [{ id: 'h1', anchor: { kind: 'cell-range', range: 'A2' }, label: 'First result' }];
         await el.updateComplete;
         const list = el.shadowRoot!.querySelector('lyra-virtual-list')!;
         const plain = list.shadowRoot!.querySelector('[part="cell"]') as HTMLElement;
         expect(plain.hasAttribute('tabindex')).to.be.false;
-        const highlighted = list.shadowRoot!.querySelector('[part~="cell-highlight"]') as HTMLElement;
+        expect(plain.querySelector('button')).to.equal(null);
+        // A native <button> provides Enter/Space activation as built-in behavior, so proving the
+        // control is a button with the highlight's accessible name covers the keyboard contract.
+        const action = list.shadowRoot!.querySelector('[part="cell-highlight-action"]') as HTMLButtonElement;
+        expect(action.tagName).to.equal('BUTTON');
+        expect(action.getAttribute('aria-label')).to.equal('First result');
         const listener = oneEvent(el, 'lyra-highlight-activate');
-        highlighted.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, composed: true }));
+        action.click();
         const event = (await listener) as CustomEvent<{ id: string }>;
         expect(event.detail).to.deep.equal({ id: 'h1' });
       } finally {

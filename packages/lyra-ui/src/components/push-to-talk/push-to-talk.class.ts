@@ -3,6 +3,7 @@ import { property, query, state } from 'lit/decorators.js';
 import { LyraElement } from '../../internal/lyra-element.js';
 import type { LyraLiveRegion } from '../live-region/live-region.class.js';
 import '../live-region/live-region.class.js';
+import { finiteDuration, MAX_TIMEOUT_MS } from '../../internal/numbers.js';
 import { styles } from './push-to-talk.styles.js';
 
 export type PushToTalkMode = 'hold' | 'toggle';
@@ -94,6 +95,10 @@ export class LyraPushToTalk extends LyraElement<LyraPushToTalkEventMap> {
   static styles = [LyraElement.styles, styles];
 
   @property({ reflect: true }) mode: PushToTalkMode = 'hold';
+  /** `> 0` requests periodic `lyra-record-chunk` slices from `MediaRecorder` every this-many
+   *  milliseconds; `0` (the default) requests one slice at stop. Clamped to
+   *  `[1, MAX_TIMEOUT_MS]` at the point it's handed to `MediaRecorder.start()` -- see `start()` --
+   *  so a non-finite/oversized value can't reach that native API unsanitized. */
   @property({ type: Number, attribute: 'timeslice-ms' }) timesliceMs = 0;
   @property({ attribute: 'mime-type' }) mimeType = '';
   @property({ attribute: 'device-id' }) deviceId = '';
@@ -101,7 +106,9 @@ export class LyraPushToTalk extends LyraElement<LyraPushToTalkEventMap> {
   @property({ attribute: false }) audioConstraints?: MediaTrackConstraints;
   @property({ type: Boolean, attribute: 'level-events' }) levelEvents = false;
   /** `> 0` auto-stops the take at this many milliseconds (a stuck-key guard); `0` (the default)
-   *  never auto-stops. */
+   *  never auto-stops. Clamped to `[1, MAX_TIMEOUT_MS]` at the point it's handed to `setTimeout()`
+   *  -- see `start()` -- the browser timer ceiling, matching `lyra-playback`'s `interval-ms`
+   *  handling of its own duration-like property. */
   @property({ type: Number, attribute: 'max-duration-ms' }) maxDurationMs = 0;
   @property({ type: Boolean, attribute: 'show-timer' }) showTimer = true;
   @property({ type: Boolean, reflect: true }) disabled = false;
@@ -205,14 +212,23 @@ export class LyraPushToTalk extends LyraElement<LyraPushToTalkEventMap> {
         if (this.timesliceMs > 0) this.emit<{ blob: Blob }>('lyra-record-chunk', { blob: e.data });
       };
       this.recorder.onstop = () => this.finalizeStop();
-      this.recorder.start(this.timesliceMs > 0 ? this.timesliceMs : undefined);
+      // Both duration-like properties are clamped right here, at the point they reach a native
+      // timer/API, rather than by normalizing the public property itself -- same convention as
+      // lyra-playback's scheduleTick() for interval-ms. `> 0` already excludes NaN/negative (both
+      // fail that comparison), but not Infinity or an oversized finite value that would otherwise
+      // overflow setTimeout's 32-bit delay or fail MediaRecorder.start()'s unsigned-long timeslice.
+      const timeslice = this.timesliceMs > 0 ? finiteDuration(this.timesliceMs, MAX_TIMEOUT_MS, 1, MAX_TIMEOUT_MS) : undefined;
+      this.recorder.start(timeslice);
       this.recordingStartedAt = performance.now();
       this.elapsedMs = 0;
       this.setState('recording');
       this.emit<{ stream: MediaStream }>('lyra-record-start', { stream });
       this.announce(this.localize('pushToTalkStarted'));
       if (this.levelEvents) this.startLevelMeter(stream);
-      if (this.maxDurationMs > 0) this.maxDurationTimer = setTimeout(() => this.stop(), this.maxDurationMs);
+      if (this.maxDurationMs > 0) {
+        const delay = finiteDuration(this.maxDurationMs, MAX_TIMEOUT_MS, 1, MAX_TIMEOUT_MS);
+        this.maxDurationTimer = setTimeout(() => this.stop(), delay);
+      }
       if (this.showTimer) {
         this.tickTimer = setInterval(() => {
           this.elapsedMs = performance.now() - this.recordingStartedAt;

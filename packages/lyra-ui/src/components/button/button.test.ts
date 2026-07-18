@@ -187,6 +187,52 @@ describe('lyra-button', () => {
     expect(Array.from(form.elements)).to.include(el);
   });
 
+  it('reflects disabled synchronously on assignment, with no await', async () => {
+    const el = (await fixture(html`<lyra-button>Save</lyra-button>`)) as LyraButton;
+    expect(el.hasAttribute('disabled')).to.be.false;
+
+    // No `await`: the `disabled` setter must synchronously reflect the host attribute before any
+    // same-tick native form API (e.g. a `<fieldset>` toggle or `:disabled` check) runs.
+    el.disabled = true;
+    expect(el.hasAttribute('disabled'), 'the host attribute must be set synchronously').to.be.true;
+    expect(el.effectiveDisabled).to.be.true;
+
+    el.disabled = false;
+    expect(el.hasAttribute('disabled')).to.be.false;
+    expect(el.effectiveDisabled).to.be.false;
+  });
+
+  it('cascades disabled state from an ancestor fieldset without mutating the disabled property', async () => {
+    const form = (await fixture(html`
+      <form>
+        <fieldset>
+          <lyra-button>Save</lyra-button>
+        </fieldset>
+      </form>
+    `)) as HTMLFormElement;
+    const el = form.querySelector('lyra-button') as LyraButton;
+    const fieldset = form.querySelector('fieldset') as HTMLFieldSetElement;
+    await el.updateComplete;
+    expect(el.effectiveDisabled).to.be.false;
+
+    // No `await` before these assertions: `formDisabledCallback` fires synchronously when the
+    // fieldset's `disabled` property is set, and it must never mutate the button's own `disabled`
+    // property/attribute -- mirrors `<lyra-checkbox>`'s/`<lyra-token-input>`'s identical tests.
+    fieldset.disabled = true;
+    expect(el.disabled, 'fieldset state must not mutate the public property').to.be.false;
+    expect(el.hasAttribute('disabled'), 'fieldset state must not mutate the host attribute either').to.be.false;
+    expect(el.effectiveDisabled, 'the button reflects inherited fieldset state').to.be.true;
+
+    await el.updateComplete;
+    const button = el.shadowRoot!.querySelector('button[part="base"]') as HTMLButtonElement;
+    expect(button.disabled, 'the internal native button reflects the inherited state').to.be.true;
+
+    fieldset.disabled = false;
+    await el.updateComplete;
+    expect(el.effectiveDisabled).to.be.false;
+    expect(button.disabled).to.be.false;
+  });
+
   it('supports appearance="accent" as a loud filled tier distinct from "filled" for variant="neutral"', async () => {
     const filledEl = (await fixture(
       html`<lyra-button appearance="filled" variant="neutral">Save</lyra-button>`,

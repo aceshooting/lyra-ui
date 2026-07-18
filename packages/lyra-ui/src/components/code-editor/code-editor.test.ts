@@ -17,6 +17,53 @@ it('renders line numbers and inserts spaces for Tab', async () => {
   expect(el.value).to.contain('  one');
 });
 
+// Regression test for a confirmed crash: `tabSize` fed `' '.repeat(Math.max(1, this.tabSize))`
+// directly. `String.prototype.repeat()` throws a `RangeError` for a count of `+Infinity`
+// specifically (per spec, `ToIntegerOrInfinity` maps `NaN` to `0` -- harmless -- but `Infinity`
+// stays `Infinity`, and `repeat()` explicitly rejects that) -- and `Number("Infinity")` is exactly
+// what Lit's `type: Number` converter produces for a literal `tab-size="Infinity"` attribute, so
+// this was reachable from plain markup, not just a hand-crafted property write. `tabSize` is now
+// sanitized to a finite integer in `[1, 16]` at assignment time via `finiteInteger`, so neither
+// `Infinity` nor any other non-finite/negative/oversized value ever reaches `repeat()`. Matching
+// `finiteInteger`'s own established contract (see e.g. `<lyra-qr-code>`'s `size`/`radius`), a
+// non-finite input (Infinity/NaN) resolves to the documented fallback default, while a merely
+// out-of-range *finite* input clamps to the nearest bound instead.
+it('never throws RangeError from an Infinity/NaN/negative tabSize, and clamps it into a safe [1, 16] range', async () => {
+  const el = (await fixture(html`<lyra-code-editor value="one"></lyra-code-editor>`)) as LyraCodeEditor;
+  const textarea = el.shadowRoot!.querySelector('textarea')!;
+  const pressTab = () => {
+    textarea.focus();
+    textarea.setSelectionRange(0, 0);
+    textarea.dispatchEvent(new KeyboardEvent('keydown', { key: 'Tab', bubbles: true, cancelable: true }));
+  };
+
+  el.tabSize = Infinity;
+  await el.updateComplete;
+  expect(pressTab).to.not.throw(RangeError);
+  expect(el.tabSize).to.equal(2); // non-finite input falls back to the default, not left as Infinity
+
+  el.value = 'one';
+  el.tabSize = NaN;
+  expect(el.tabSize).to.equal(2); // falls back to the documented default, not NaN
+  await el.updateComplete;
+  expect(pressTab).to.not.throw();
+  expect(el.value).to.contain('  one'); // still indents (unlike raw NaN, silently a no-op insert)
+
+  el.value = 'one';
+  el.tabSize = -5;
+  expect(el.tabSize).to.be.at.least(1); // out-of-range but finite -- clamped to the lower bound
+
+  await el.updateComplete;
+  expect(pressTab).to.not.throw();
+
+  el.value = 'one';
+  el.tabSize = 999;
+  expect(el.tabSize).to.equal(16); // out-of-range but finite -- clamped to the upper bound
+  await el.updateComplete;
+  expect(pressTab).to.not.throw();
+  expect(el.value.startsWith(' '.repeat(16))).to.be.true;
+});
+
 it('is accessible', async () => {
   const el = await fixture(html`<lyra-code-editor label="Source"></lyra-code-editor>`);
   await expect(el).to.be.accessible();

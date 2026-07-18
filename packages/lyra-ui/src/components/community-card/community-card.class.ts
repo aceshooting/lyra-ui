@@ -1,6 +1,7 @@
 import { html, nothing, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { LyraElement } from '../../internal/lyra-element.js';
+import { finiteCount } from '../../internal/numbers.js';
 import type { LyraEntity } from '../entity-card/entity-card.class.js';
 import '../chip/chip.class.js';
 import '../button/button.class.js';
@@ -55,6 +56,14 @@ export class LyraCommunityCard extends LyraElement<LyraCommunityCardEventMap> {
   /** Single-row layout (title + member count + drill button, no summary/chips). */
   @property({ type: Boolean, reflect: true }) compact = false;
 
+  /** `maxMembers` normalized to a finite, non-negative integer count -- passed straight to
+   *  `Array.prototype.slice()` below, which would otherwise silently misbehave on a non-finite or
+   *  negative input (e.g. a negative `end` slices from the far end of the array instead of
+   *  limiting how many members show). */
+  private get effectiveMaxMembers(): number {
+    return finiteCount(this.maxMembers, 8);
+  }
+
   private onDrill = (): void => {
     if (this.community) this.emit('lyra-drill', { id: this.community.id });
   };
@@ -66,7 +75,7 @@ export class LyraCommunityCard extends LyraElement<LyraCommunityCardEventMap> {
     const community = this.community;
     const titleText = community.label || this.localize('untitledCommunity');
     const memberCount = community.memberCount ?? this.members.length;
-    const visibleMembers = this.members.slice(0, this.maxMembers);
+    const visibleMembers = this.members.slice(0, this.effectiveMaxMembers);
     const overflowCount = Math.max(0, memberCount - visibleMembers.length);
 
     return html`

@@ -85,6 +85,13 @@ export const styles = css`
     background: transparent;
     border: var(--lyra-border-width-thin) dashed var(--lyra-color-border-strong);
   }
+  /* background-position is physical, so the stripe crawl direction does not mirror on its own
+     under RTL; play the same keyframes backwards there. animation-direction (not a second
+     animation-name) keeps the reduced-motion 'animation: none' override below effective --
+     this rule's higher specificity would otherwise win the animation-name longhand back. */
+  :host(:dir(rtl)) [part='bar'][data-tone='accent'] {
+    animation-direction: reverse;
+  }
   @media (prefers-reduced-motion: reduce) {
     [part='bar'][data-tone='accent'] {
       animation: none;

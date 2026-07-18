@@ -12,6 +12,7 @@ import type {
 } from '../document-viewer/anchors.js';
 import { safeMediaSrc } from '../../internal/safe-url.js';
 import { srOnly } from '../../internal/a11y.js';
+import { finiteRange } from '../../internal/numbers.js';
 import '../virtual-list/virtual-list.js';
 import { styles } from './av-player.styles.js';
 
@@ -40,6 +41,13 @@ export interface LyraAvTrack {
 /** Throttle window for `lyra-time-change` while playing -- at most 4/s, plus one extra emission per
  *  discrete `seek()` regardless of the window. */
 const TIME_CHANGE_THROTTLE_MS = 250;
+
+/** `HTMLMediaElement.playbackRate`'s reliably-supported range across browsers (values outside this
+ *  commonly clamp silently or throw natively) -- kept explicit here so an out-of-range/non-finite
+ *  assignment self-heals through `finiteRange` before it ever reaches the native element, instead of
+ *  reaching it unsanitized. */
+const MIN_PLAYBACK_RATE = 0.0625;
+const MAX_PLAYBACK_RATE = 16;
 
 function formatTime(seconds: number): string {
   const total = Math.max(0, Math.round(seconds));
@@ -116,6 +124,15 @@ class LyraAvPlayerBase extends LyraElement<LyraAvPlayerEventMap> {}
 export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
   static styles = [LyraElement.styles, styles, srOnly];
 
+  // `playbackRate` is declared here (rather than via a plain `@property()` decorator, like the rest
+  // of this class) with a hand-written accessor below -- mirrors lyra-slider's identical
+  // min/max/step pattern -- so an out-of-range/non-finite assignment self-heals synchronously
+  // through `finiteRange` instead of leaving the native media element unsanitized until the next
+  // `updated()` flush.
+  static properties = {
+    playbackRate: { type: Number, attribute: 'playback-rate', reflect: true, noAccessor: true },
+  };
+
   /** Media URL; validated with `safeMediaSrc` before it ever reaches the `<audio>`/`<video>` `src`. */
   @property() src = '';
   /** Accessible name of `[part="base"]`; a host `aria-label` wins, then the localized
@@ -131,8 +148,19 @@ export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
   @property({ type: Boolean }) loop = false;
   @property({ type: Boolean }) muted = false;
   @property() preload: 'none' | 'metadata' | 'auto' = 'metadata';
-  /** Playback-rate multiplier, reflected to the native media element. */
-  @property({ type: Number, attribute: 'playback-rate', reflect: true }) playbackRate = 1;
+  private _playbackRate = 1;
+  /** Playback-rate multiplier, reflected to the native media element. Clamped to
+   *  `[MIN_PLAYBACK_RATE, MAX_PLAYBACK_RATE]` -- a non-finite or wildly out-of-range assignment
+   *  (e.g. a bad computed value) self-heals rather than reaching `HTMLMediaElement.playbackRate`
+   *  unsanitized. */
+  get playbackRate(): number {
+    return this._playbackRate;
+  }
+  set playbackRate(next: number) {
+    const old = this._playbackRate;
+    this._playbackRate = finiteRange(next, 1, MIN_PLAYBACK_RATE, MAX_PLAYBACK_RATE);
+    this.requestUpdate('playbackRate', old);
+  }
   /** Selectable rates offered by `[part="rate-select"]`. */
   @property({ attribute: false }) rates: number[] = [0.75, 1, 1.25, 1.5, 2];
   /** Transcript entries, rendered as a virtualized, `currentTime`-synced list. */
@@ -167,9 +195,15 @@ export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
     return this.mediaEl ? this.mediaEl.currentTime : this.currentTimeState;
   }
   set currentTime(value: number) {
-    if (this.mediaEl) this.mediaEl.currentTime = value;
-    else this.pendingSeek = value;
-    this.currentTimeState = value;
+    // `this.duration` stays 0 until real metadata loads (see onLoadedMetadata()), so clamping the
+    // upper bound to it unconditionally would wrongly zero out a pending seek issued before that --
+    // only a real, positive, finite duration narrows the range; otherwise a non-negative value of
+    // any size is accepted verbatim, same as this.duration being genuinely unknown.
+    const max = this.duration > 0 ? this.duration : Infinity;
+    const clamped = finiteRange(value, 0, 0, max);
+    if (this.mediaEl) this.mediaEl.currentTime = clamped;
+    else this.pendingSeek = clamped;
+    this.currentTimeState = clamped;
   }
 
   private detectedKind(): AvKind {
@@ -186,9 +220,18 @@ export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
     if (changed.has('peaks')) this.drawWaveform();
   }
 
+  connectedCallback(): void {
+    super.connectedCallback();
+    // Added here (not in firstUpdated) so it pairs symmetrically with disconnectedCallback's
+    // removeEventListener: firstUpdated runs only once per element lifetime while
+    // disconnectedCallback runs on every disconnect, so a disconnect/reconnect cycle (e.g. a
+    // reparent) would otherwise leave the waveform permanently deaf to window resizes. Re-adding
+    // the same listener reference on the initial connect is a native no-op, so no guard is needed.
+    window.addEventListener('resize', this.onWindowResize);
+  }
+
   firstUpdated(): void {
     this.drawWaveform();
-    window.addEventListener('resize', this.onWindowResize);
   }
 
   disconnectedCallback(): void {

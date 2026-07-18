@@ -1,5 +1,6 @@
 import { fixture, expect, html } from '@open-wc/testing';
 import { LitElement } from 'lit';
+import { tag } from './prefix.js';
 import { tokens } from './tokens.styles.js';
 
 class TokenProbe extends LitElement {
@@ -8,7 +9,7 @@ class TokenProbe extends LitElement {
     return html`<div part="probe"></div>`;
   }
 }
-customElements.define('lyra-token-probe', TokenProbe);
+customElements.define(tag('token-probe'), TokenProbe);
 
 async function probeVar(name: string): Promise<string> {
   const el = (await fixture(html`<lyra-token-probe></lyra-token-probe>`)) as TokenProbe;

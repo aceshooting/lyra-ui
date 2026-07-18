@@ -63,6 +63,10 @@ export class LyraTextarea extends FormAssociated(LyraTextareaBase) {
   static styles = [LyraElement.styles, styles];
 
   /** Visible text rows. */
+  // numeric-guard-exempt: forwarded only to the native <textarea rows> attribute (see the
+  // template below) -- the browser's own "rules for parsing non-negative integers" fall back to
+  // its default for an invalid value instead of throwing, and this file performs no arithmetic on
+  // `rows` itself (fitToContent() measures the live DOM scrollHeight, not this property).
   @property({ type: Number }) rows = 3;
   /** Native CSS `resize` behavior for the textarea, plus `'auto'`: a `ResizeObserver`-driven
    *  grow-to-content mode with no manual drag handle (mirrors `wa-textarea`'s `resize="auto"`). */

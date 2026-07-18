@@ -617,6 +617,45 @@ it('barWidth (attribute "bar-width") sets the fixed per-bar width used by layout
   expect(viewBoxW).to.be.closeTo(444, 0.5);
 });
 
+it('falls back to the 32px default barWidth when the bar-width attribute is non-finite, instead of a NaN slot width', async () => {
+  const labels = ['a', 'b'];
+  const el = await mount(html`<lyra-lite-chart
+    type="bar"
+    layout="scroll"
+    bar-width="not-a-number"
+    style="width: 80px"
+    .labels=${labels}
+    .datasets=${[{ label: 'S', data: labels.map(() => 1) }]}
+  ></lyra-lite-chart>`);
+  const svgEl = el.shadowRoot!.querySelector('svg')!;
+  const viewBoxW = Number(svgEl.getAttribute('viewBox')!.split(' ')[2]);
+  // w = plotX(36, no yLabel) + n(2)*barWidth(32, the default fallback) + PAD_RIGHT(8) = 108.
+  expect(viewBoxW).to.be.closeTo(108, 0.5);
+  expect(svgEl.getAttribute('viewBox')).to.not.contain('NaN');
+});
+
+it('clamps a negative barWidth to 0 instead of a negative slot width, without throwing', async () => {
+  const labels = ['a', 'b'];
+  const el = await mount(html`<lyra-lite-chart
+    type="bar"
+    layout="scroll"
+    style="width: 80px"
+    .labels=${labels}
+    .datasets=${[{ label: 'S', data: labels.map(() => 1) }]}
+  ></lyra-lite-chart>`);
+  el.barWidth = -10;
+  await el.updateComplete;
+  const svgEl = el.shadowRoot!.querySelector('svg')!;
+  const viewBoxW = Number(svgEl.getAttribute('viewBox')!.split(' ')[2]);
+  // w = plotX(36) + n(2)*barWidth(clamped to 0) + PAD_RIGHT(8) = 44.
+  expect(viewBoxW).to.be.closeTo(44, 0.5);
+  const bars = [...el.shadowRoot!.querySelectorAll('[part="bar"]')] as SVGRectElement[];
+  for (const bar of bars) {
+    expect(Number(bar.getAttribute('width'))).to.be.at.least(0);
+    expect(bar.getAttribute('width')).to.not.contain('NaN');
+  }
+});
+
 it('keeps bars and their axis labels aligned in layout="scroll" (no drift between the two width models)', async () => {
   const labels = ['x', 'y', 'z', 'w', 'v'];
   const el = await mount(html`<lyra-lite-chart
@@ -675,6 +714,36 @@ it('renders every label when maxLabels is unset, even for a long category list (
   ></lyra-lite-chart>`);
   const axisLabels = [...el.shadowRoot!.querySelectorAll('[part="axis-label"][text-anchor="middle"]')];
   expect(axisLabels.length).to.equal(20);
+});
+
+it('renders every label (no cap) when maxLabels is non-finite, instead of crashing or hiding every label', async () => {
+  const labels = Array.from({ length: 20 }, (_, i) => `L${i}`);
+  const el = await mount(html`<lyra-lite-chart
+    type="bar"
+    max-labels="not-a-number"
+    .labels=${labels}
+    .datasets=${[{ label: 's', data: labels.map((_, i) => i + 1) }]}
+  ></lyra-lite-chart>`);
+  const axisLabels = [...el.shadowRoot!.querySelectorAll('[part="axis-label"][text-anchor="middle"]')];
+  expect(axisLabels.length).to.equal(20);
+  expect(el.shadowRoot!.querySelectorAll('[part="bar"]').length).to.equal(20);
+});
+
+it('does not crash and still keeps the first/last label for a negative maxLabels', async () => {
+  const labels = Array.from({ length: 20 }, (_, i) => `L${i}`);
+  const el = await mount(html`<lyra-lite-chart
+    type="bar"
+    .labels=${labels}
+    .datasets=${[{ label: 's', data: labels.map((_, i) => i + 1) }]}
+  ></lyra-lite-chart>`);
+  el.maxLabels = -5;
+  await el.updateComplete;
+  const axisLabels = [...el.shadowRoot!.querySelectorAll('[part="axis-label"][text-anchor="middle"]')].map(
+    (n) => n.textContent,
+  );
+  expect(axisLabels).to.include('L0');
+  expect(axisLabels).to.include('L19');
+  expect(el.shadowRoot!.querySelectorAll('[part="bar"]').length).to.equal(20);
 });
 
 // --- barX coordinate override -------------------------------------------------
@@ -840,6 +909,35 @@ it('padLeft overrides the default 36px left padding, shifting the plot origin', 
   expect(x).to.be.closeTo(80 + (212 - 212 * 0.8) / 2, 0.5);
 });
 
+it('falls back to the 36px default axis gutter when pad-left is non-finite, instead of a NaN bar position', async () => {
+  const el = (await fixture(
+    html`<lyra-lite-chart type="bar" pad-left="not-a-number" .labels=${['only']} .datasets=${[{ label: 's', data: [5] }]}></lyra-lite-chart>`,
+  )) as LyraLiteChart;
+  (el as unknown as { plotWidth: number; plotHeight: number }).plotWidth = 300;
+  (el as unknown as { plotHeight: number }).plotHeight = 150;
+  await el.updateComplete;
+  const bar = el.shadowRoot!.querySelector('[part="bar"]') as SVGRectElement;
+  const x = Number(bar.getAttribute('x'));
+  // plotX(36, the fallback default) + (slot - groupW)/2, slot = 300 - 36 - 8 = 256, groupW = slot*0.8.
+  expect(x).to.be.closeTo(36 + (256 - 256 * 0.8) / 2, 0.5);
+  expect(bar.getAttribute('x')).to.not.contain('NaN');
+});
+
+it('clamps a negative padLeft to 0 instead of a negative axis gutter, without throwing', async () => {
+  const el = (await fixture(
+    html`<lyra-lite-chart type="bar" .labels=${['only']} .datasets=${[{ label: 's', data: [5] }]}></lyra-lite-chart>`,
+  )) as LyraLiteChart;
+  (el as unknown as { plotWidth: number; plotHeight: number }).plotWidth = 300;
+  (el as unknown as { plotHeight: number }).plotHeight = 150;
+  el.padLeft = -50;
+  await el.updateComplete;
+  const bar = el.shadowRoot!.querySelector('[part="bar"]') as SVGRectElement;
+  const x = Number(bar.getAttribute('x'));
+  // plotX(clamped to 0) + (slot - groupW)/2, slot = 300 - 0 - 8 = 292, groupW = slot*0.8.
+  expect(x).to.be.closeTo(0 + (292 - 292 * 0.8) / 2, 0.5);
+  expect(x).to.be.at.least(0);
+});
+
 // --- barGapRatio ----------------------------------------------------------------
 
 it('barGapRatio overrides the default 0.2 gap fraction, changing bar width relative to slot', async () => {
@@ -861,6 +959,35 @@ it('uses the default 0.2 gap fraction when barGapRatio is unset (regression)', a
   )) as LyraLiteChart;
   (el as unknown as { plotWidth: number; plotHeight: number }).plotWidth = 300;
   (el as unknown as { plotHeight: number }).plotHeight = 150;
+  await el.updateComplete;
+  const bar = el.shadowRoot!.querySelector('[part="bar"]') as SVGRectElement;
+  const slot = 300 - 36 - 8;
+  const expectedWidth = slot * (1 - 0.2);
+  expect(Number(bar.getAttribute('width'))).to.be.closeTo(expectedWidth, 0.5);
+});
+
+it('clamps an out-of-range bar-gap-ratio into [0, 1] instead of an inverted/oversized bar, without throwing', async () => {
+  const el = (await fixture(
+    html`<lyra-lite-chart type="bar" bar-gap-ratio="5" .labels=${['only']} .datasets=${[{ label: 's', data: [5] }]}></lyra-lite-chart>`,
+  )) as LyraLiteChart;
+  (el as unknown as { plotWidth: number; plotHeight: number }).plotWidth = 300;
+  (el as unknown as { plotHeight: number }).plotHeight = 150;
+  await el.updateComplete;
+  const bar = el.shadowRoot!.querySelector('[part="bar"]') as SVGRectElement;
+  // Clamped to 1 -> groupW = slot * (1 - 1) = 0.
+  const width = Number(bar.getAttribute('width'));
+  expect(width).to.be.at.least(0);
+  expect(width).to.be.closeTo(0, 0.5);
+  expect(bar.getAttribute('width')).to.not.contain('NaN');
+});
+
+it('falls back to the default 0.2 gap fraction when barGapRatio is non-finite, instead of NaN bar geometry', async () => {
+  const el = (await fixture(
+    html`<lyra-lite-chart type="bar" .labels=${['only']} .datasets=${[{ label: 's', data: [5] }]}></lyra-lite-chart>`,
+  )) as LyraLiteChart;
+  (el as unknown as { plotWidth: number; plotHeight: number }).plotWidth = 300;
+  (el as unknown as { plotHeight: number }).plotHeight = 150;
+  el.barGapRatio = Number.NaN;
   await el.updateComplete;
   const bar = el.shadowRoot!.querySelector('[part="bar"]') as SVGRectElement;
   const slot = 300 - 36 - 8;
@@ -1001,6 +1128,36 @@ describe('minBarHeight', () => {
     const bars = el.shadowRoot!.querySelectorAll('[part="bar"]');
     const tinyHeight = Number(bars[1]!.getAttribute('height'));
     expect(tinyHeight).to.be.lessThan(4);
+  });
+
+  it('treats a non-finite or negative minBarHeight as a no-op floor instead of corrupting bar geometry', async () => {
+    const el = (await fixture(html`
+      <lyra-lite-chart
+        type="bar"
+        stacked
+        .labels=${['a']}
+        .datasets=${[
+          { label: 'big', data: [1000] },
+          { label: 'tiny', data: [1] },
+        ]}
+      ></lyra-lite-chart>
+    `)) as LyraLiteChart;
+    el.style.height = '300px';
+    await el.updateComplete;
+    await aTimeout(0);
+
+    for (const invalid of [Number.NaN, -5, Number.POSITIVE_INFINITY]) {
+      el.minBarHeight = invalid;
+      await el.updateComplete;
+      await aTimeout(0);
+      const bars = el.shadowRoot!.querySelectorAll('[part="bar"]');
+      expect(bars).to.have.length(2);
+      for (const bar of bars) {
+        const height = bar.getAttribute('height')!;
+        expect(height).to.not.contain('NaN');
+        expect(Number(height)).to.be.at.least(0);
+      }
+    }
   });
 
   it('does not let a floored tiny segment get overdrawn by the next stacked segment (z-order/gap check)', async () => {

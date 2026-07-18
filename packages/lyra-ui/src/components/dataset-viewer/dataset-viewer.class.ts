@@ -39,8 +39,9 @@ class LyraDatasetViewerBase extends LyraElement<LyraDatasetViewerEventMap> {}
  * the header row always occupying row 1 (this component always parses with PapaParse's `header:
  * true`, so the first row is never part of the virtualized body) -- `scrollToAnchor()` scrolls the
  * addressed row into view via the virtualized list's `active-id`. A `sheet`-qualified anchor never
- * resolves here -- this viewer has no sheets. `highlights` paint as a focusable `part="cell-
- * highlight"` on membership, recomputed per row inside `renderRow()` so a row scrolled out and back
+ * resolves here -- this viewer has no sheets. `highlights` paint as a `part="cell-highlight"` cell
+ * wrapping a focusable `part="cell-highlight-action"` native button (keeping the ARIA table tree
+ * intact) on membership, recomputed per row inside `renderRow()` so a row scrolled out and back
  * in reconstructs its highlight for free, with no persistent DOM to keep in sync. `search()` is a
  * case-insensitive substring match over every body cell's raw string value, ordered row then column.
  *
@@ -60,8 +61,10 @@ class LyraDatasetViewerBase extends LyraElement<LyraDatasetViewerEventMap> {}
  * @csspart header-cell - A header cell (`role="columnheader"`).
  * @csspart data-row - One virtualized data row.
  * @csspart cell - One rendered cell (`role="cell"`).
- * @csspart cell-highlight - A cell covered by a `highlights` entry -- focusable, emits
- *   `lyra-highlight-activate` on click or Enter/Space.
+ * @csspart cell-highlight - A cell (`role="cell"`) covered by a `highlights` entry; wraps the
+ *   `cell-highlight-action` button.
+ * @csspart cell-highlight-action - The native button filling a highlighted cell -- focusable,
+ *   emits `lyra-highlight-activate` on click or Enter/Space.
  * @csspart spinner - The loading status region.
  * @csspart error - The error message region.
  */
@@ -151,19 +154,17 @@ export class LyraDatasetViewer extends DocumentAnchorTarget(LyraDatasetViewerBas
     const active = colHighlights.find((entry) => entry.highlight.id === this.activeHighlightId);
     const primary = active ?? colHighlights[0]!;
     const activate = (): void => { this.emit('lyra-highlight-activate', { id: primary.highlight.id }); };
-    return html`<div
-      part="cell cell-highlight"
-      role="cell"
-      ?data-active=${!!active}
-      tabindex="0"
-      aria-label=${primary.highlight.label || this.localize('viewerHighlightLabel')}
-      @click=${activate}
-      @keydown=${(e: KeyboardEvent) => {
-        if (e.key !== 'Enter' && e.key !== ' ') return;
-        e.preventDefault();
-        activate();
-      }}
-    >${value}</div>`;
+    // The outer element must stay a plain `role="cell"` so the ARIA table tree (table > row >
+    // cell) remains valid; the activation affordance is a nested native <button>, which carries
+    // the button role plus Enter/Space activation on its own, without disturbing that structure.
+    return html`<div part="cell cell-highlight" role="cell" ?data-active=${!!active}>
+      <button
+        part="cell-highlight-action"
+        type="button"
+        aria-label=${primary.highlight.label || this.localize('viewerHighlightLabel')}
+        @click=${activate}
+      >${value}</button>
+    </div>`;
   }
 
   private renderRow = (row: Record<string, string>, index: number, fields: string[]): TemplateResult => {

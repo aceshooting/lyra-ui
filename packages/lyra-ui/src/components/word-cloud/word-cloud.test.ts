@@ -1,7 +1,7 @@
 import { fixture, expect, html, oneEvent } from '@open-wc/testing';
 import './word-cloud.js';
 import type { LyraWordCloud } from './word-cloud.js';
-import { MAX_FONT_SIZE_PX, MAX_WORDS } from './word-cloud-layout.js';
+import { MAX_FONT_SIZE_PX, MAX_WORDS, MIN_SANE_FONT_SIZE } from './word-cloud-layout.js';
 import { styles } from './word-cloud.styles.js';
 
 const WORDS = [
@@ -93,6 +93,71 @@ it('bounds huge finite font sizes assigned directly as properties', async () => 
 
   const word = el.shadowRoot!.querySelector('[part="word"]')!;
   expect(Number(word.getAttribute('font-size'))).to.equal(MAX_FONT_SIZE_PX);
+});
+
+it('clamps a negative/zero minFontSize to the minimum sane font size instead of NaN/non-positive output', async () => {
+  const el = (await fixture(html`<lyra-word-cloud></lyra-word-cloud>`)) as LyraWordCloud;
+  el.words = [{ text: 'bounded', weight: 1 }];
+  el.minFontSize = -5;
+  await el.updateComplete;
+  let word = el.shadowRoot!.querySelector('[part="word"]')!;
+  expect(Number(word.getAttribute('font-size'))).to.equal(MIN_SANE_FONT_SIZE);
+
+  el.minFontSize = 0;
+  await el.updateComplete;
+  word = el.shadowRoot!.querySelector('[part="word"]')!;
+  expect(Number(word.getAttribute('font-size'))).to.equal(MIN_SANE_FONT_SIZE);
+});
+
+it('falls back to the default maxFontSize for a non-finite (NaN/Infinity) value instead of NaN output', async () => {
+  // A single word always gets t=0 (weight === the only weight present), so its font-size reflects
+  // minFontSize regardless of maxFontSize -- two differently-weighted words are needed so the
+  // heaviest one (t=1) actually exercises the guarded maxFontSize value.
+  const words = [
+    { text: 'alpha', weight: 10 },
+    { text: 'gamma', weight: 1 },
+  ];
+  const el = (await fixture(html`<lyra-word-cloud></lyra-word-cloud>`)) as LyraWordCloud;
+  el.words = words;
+  el.maxFontSize = Number.NaN;
+  await el.updateComplete;
+  let alpha = Array.from(el.shadowRoot!.querySelectorAll('[part="word"]')).find((n) => n.textContent === 'alpha')!;
+  expect(Number(alpha.getAttribute('font-size'))).to.equal(48); // DEFAULT_MAX_FONT_SIZE
+
+  el.maxFontSize = Number.POSITIVE_INFINITY;
+  await el.updateComplete;
+  alpha = Array.from(el.shadowRoot!.querySelectorAll('[part="word"]')).find((n) => n.textContent === 'alpha')!;
+  expect(Number(alpha.getAttribute('font-size'))).to.equal(48);
+});
+
+it('renders every word with a finite, positive, in-range font-size for a reversed or all-invalid min/max pair', async () => {
+  const words = [
+    { text: 'alpha', weight: 10 },
+    { text: 'beta', weight: 5 },
+    { text: 'gamma', weight: 1 },
+  ];
+
+  for (const [minFontSize, maxFontSize] of [
+    [40, 10], // reversed (min > max)
+    [Number.NaN, Number.NaN],
+    [-100, -1],
+  ] as const) {
+    const el = (await fixture(html`<lyra-word-cloud></lyra-word-cloud>`)) as LyraWordCloud;
+    el.words = words;
+    el.minFontSize = minFontSize;
+    el.maxFontSize = maxFontSize;
+    await el.updateComplete;
+
+    const rendered = el.shadowRoot!.querySelectorAll('[part="word"]');
+    expect(rendered.length).to.equal(3);
+    for (const node of rendered) {
+      const size = Number(node.getAttribute('font-size'));
+      expect(Number.isFinite(size)).to.be.true;
+      expect(size).to.be.greaterThan(0);
+      expect(size).to.be.at.most(MAX_FONT_SIZE_PX);
+      expect(node.getAttribute('font-size')).to.not.contain('NaN');
+    }
+  }
 });
 
 it('shows a "No data" placeholder and no word nodes when words is empty', async () => {

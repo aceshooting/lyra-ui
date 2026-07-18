@@ -1,6 +1,7 @@
 import { fixture, expect, html, oneEvent } from '@open-wc/testing';
 import './entity-card.js';
 import type { LyraEntityCard, LyraEntity } from './entity-card.js';
+import type { LyraResultField } from '../result-card/result-field.class.js';
 
 const entity: LyraEntity = {
   id: 'e1',
@@ -55,10 +56,23 @@ it('renders degree and community rows with their localized labels', async () => 
   el.entity = entity;
   el.communityLabel = 'Nobel laureates';
   await el.updateComplete;
-  expect(el.shadowRoot!.querySelector('[part="degree"]')!.textContent).to.include('Connections');
-  expect(el.shadowRoot!.querySelector('[part="degree"]')!.textContent).to.include('5');
-  expect(el.shadowRoot!.querySelector('[part="community"]')!.textContent).to.include('Community');
-  expect(el.shadowRoot!.querySelector('[part="community"]')!.textContent).to.include('Nobel laureates');
+  const degree = el.shadowRoot!.querySelector('[part="degree"]') as LyraResultField;
+  expect(degree.label).to.equal('Connections');
+  expect(degree.value).to.equal('5');
+  const community = el.shadowRoot!.querySelector('[part="community"]') as LyraResultField;
+  expect(community.label).to.equal('Community');
+  expect(community.textContent).to.include('Nobel laureates');
+});
+
+it('localizes the degree row label via this.localize() when .strings overrides entityDegree', async () => {
+  const el = (await fixture(html`
+    <lyra-entity-card .strings=${{ entityDegree: 'Connexions' }}></lyra-entity-card>
+  `)) as LyraEntityCard;
+  el.entity = entity;
+  await el.updateComplete;
+  const degree = el.shadowRoot!.querySelector('[part="degree"]') as LyraResultField;
+  await degree.updateComplete;
+  expect(degree.shadowRoot!.querySelector('[part="label"]')!.textContent).to.include('Connexions');
 });
 
 it('emits lyra-entity-activate from the built-in focus button', async () => {

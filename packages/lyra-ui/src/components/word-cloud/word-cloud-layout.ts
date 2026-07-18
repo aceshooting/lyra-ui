@@ -73,8 +73,9 @@ const RADIUS_STEP_PER_RADIAN = 3;
  *  repeated many times) ever exhausts it. */
 const MAX_RADIUS_AREA_FACTOR = 6;
 /** Fallback used by `resolveFontSizeBounds()` for any non-finite/non-positive
- *  `minFontSize`/`maxFontSize` input. */
-const MIN_SANE_FONT_SIZE = 1;
+ *  `minFontSize`/`maxFontSize` input -- also reused by `<lyra-word-cloud>` itself as the lower
+ *  clamp bound for its own guard on those two properties. */
+export const MIN_SANE_FONT_SIZE = 1;
 
 /** Normalizes possibly-invalid minFontSize/maxFontSize into a finite,
  *  positive, bounded, correctly-ordered pair — non-finite/negative inputs

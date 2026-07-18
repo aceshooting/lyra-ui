@@ -179,6 +179,7 @@ export type LyraMessageKey =
   | 'citationUnverified'
   | 'contextMeterUsed'
   | 'contextMeterUsedOfTotal'
+  | 'contextMeterSegmentLabel'
   | 'untitledConversation'
   | 'dockPanelCollapse'
   | 'dockPanelExpand'
@@ -248,6 +249,7 @@ export type LyraMessageKey =
   | 'chartSeriesNoData'
   | 'chartSummaryWithData'
   | 'chartSummaryEmpty'
+  | 'chartSummarySeparator'
   | 'chartData'
   | 'chart'
   | 'chartTypeLine'
@@ -555,6 +557,7 @@ export type LyraMessageKey =
   | 'pushToTalkStart'
   | 'pushToTalkStop'
   | 'traceTree'
+  | 'traceTreeSpanStatus'
   | 'spanKindAgent'
   | 'spanKindLlm'
   | 'spanKindTool'
@@ -871,7 +874,7 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, string> = {
   expandCode: 'Expand code',
   collapseCode: 'Collapse code',
   copyCode: 'Copy code',
-  copiedToClipboard: 'Copied! to clipboard',
+  copiedToClipboard: 'Copied to clipboard',
   codeRegion: 'Code',
   codeRegionWithLanguage: '{language} code',
   codeBlockLineLabel: 'Line {line}',
@@ -934,6 +937,7 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, string> = {
   citationUnverified: 'Unverified',
   contextMeterUsed: '{used} used',
   contextMeterUsedOfTotal: '{used} of {total} used',
+  contextMeterSegmentLabel: '{label}: {count}',
   untitledConversation: 'Untitled conversation',
   dockPanelCollapse: 'Collapse panel',
   dockPanelExpand: 'Expand panel',
@@ -1003,6 +1007,7 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, string> = {
   chartSeriesNoData: '{label}: no data',
   chartSummaryWithData: '{type} chart. {summaries}.',
   chartSummaryEmpty: '{type} chart with no data.',
+  chartSummarySeparator: '. ',
   chartData: 'Chart data',
   chart: 'Chart',
   chartTypeLine: 'Line',
@@ -1310,6 +1315,7 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, string> = {
   pushToTalkStart: 'Start recording',
   pushToTalkStop: 'Stop recording',
   traceTree: 'Trace tree',
+  traceTreeSpanStatus: '{name} — {status}',
   spanKindAgent: 'Agent',
   spanKindLlm: 'LLM',
   spanKindTool: 'Tool',
@@ -1577,17 +1583,63 @@ function inheritedLocale(host: Element): string {
   return activeLocale || 'en';
 }
 
-/** Resolve the locale inherited by a component host. */
-export function resolveLyraLocale(host: Element): string {
-  return inheritedLocale(host);
+/**
+ * Per-host memos for `resolveLyraLocale()`/`resolveLyraDirection()`. The
+ * ancestor-chain walk (and `getComputedStyle` for direction) is a per-call
+ * cost that per-row template loops multiply by hundreds within a single
+ * render pass. Caching is strictly opt-in via `enableLyraLocaleCache()`
+ * because a host must guarantee invalidation for the memo to stay honest —
+ * arbitrary elements passed to the public resolvers get no caching.
+ */
+const cacheableLocaleHosts = new WeakSet<Element>();
+const resolvedLocaleCache = new WeakMap<Element, string>();
+const resolvedDirectionCache = new WeakMap<Element, 'ltr' | 'rtl'>();
+
+/**
+ * Opts a host into memoized locale/direction resolution. The host must call
+ * `invalidateLyraLocaleCache()` whenever a new update cycle is scheduled and
+ * on (re)connection, so a memo never outlives the render pass that produced
+ * it. An ancestor `lang`/`dir` change mid-cycle is only reflected in rendered
+ * output on the next update anyway, so per-cycle reuse changes nothing
+ * observable.
+ */
+export function enableLyraLocaleCache(host: Element): void {
+  cacheableLocaleHosts.add(host);
 }
 
-/** Resolve the direction inherited by a component host. */
-export function resolveLyraDirection(host: Element): 'ltr' | 'rtl' {
+/** Drops a host's memoized locale/direction so the next read re-resolves. */
+export function invalidateLyraLocaleCache(host: Element): void {
+  resolvedLocaleCache.delete(host);
+  resolvedDirectionCache.delete(host);
+}
+
+/** Resolve the locale inherited by a component host. */
+export function resolveLyraLocale(host: Element): string {
+  if (!cacheableLocaleHosts.has(host)) return inheritedLocale(host);
+  let locale = resolvedLocaleCache.get(host);
+  if (locale === undefined) {
+    locale = inheritedLocale(host);
+    resolvedLocaleCache.set(host, locale);
+  }
+  return locale;
+}
+
+function inheritedDirection(host: Element): 'ltr' | 'rtl' {
   const explicit = host.getAttribute('dir');
   if (explicit === 'rtl' || explicit === 'ltr') return explicit;
   if (typeof getComputedStyle === 'function') return getComputedStyle(host).direction === 'rtl' ? 'rtl' : 'ltr';
   return 'ltr';
+}
+
+/** Resolve the direction inherited by a component host. */
+export function resolveLyraDirection(host: Element): 'ltr' | 'rtl' {
+  if (!cacheableLocaleHosts.has(host)) return inheritedDirection(host);
+  let direction = resolvedDirectionCache.get(host);
+  if (direction === undefined) {
+    direction = inheritedDirection(host);
+    resolvedDirectionCache.set(host, direction);
+  }
+  return direction;
 }
 
 /**

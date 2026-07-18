@@ -9,6 +9,7 @@ import {
 } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../internal/lyra-element.js';
+import { finiteCount, finiteRange } from '../../internal/numbers.js';
 import { styles } from './generation-status.styles.js';
 
 // Mirrors the shared icon set's viewBox/stroke conventions
@@ -309,7 +310,11 @@ export class LyraGenerationStatus extends LyraElement<LyraGenerationStatusEventM
   // Treating an invalid value the same as "unset" here restores this
   // property's own documented fallback-clock behavior instead.
   private get validStartedAt(): number | undefined {
-    return this.startedAt != null && Number.isFinite(this.startedAt) ? this.startedAt : undefined;
+    if (this.startedAt == null || !Number.isFinite(this.startedAt)) return undefined;
+    // Clamped to non-negative -- any finite epoch-ms instant is otherwise accepted as-is (no
+    // upper bound: a slightly future, clock-skewed timestamp is still a real instant); only a
+    // negative value (nonsensical for "when generation began") is floored to 0.
+    return finiteRange(this.startedAt, this.startedAt, 0);
   }
 
   private computeElapsedMs(): number {
@@ -317,16 +322,25 @@ export class LyraGenerationStatus extends LyraElement<LyraGenerationStatusEventM
     return start == null ? 0 : Math.max(0, Date.now() - start);
   }
 
+  /** `tokenCount` normalized to a finite, non-negative integer -- `undefined` while unset or
+   *  non-finite (the `tokens` segment is omitted entirely; see the class doc). */
+  private get validTokenCount(): number | undefined {
+    if (this.tokenCount == null || !Number.isFinite(this.tokenCount)) return undefined;
+    return finiteCount(Math.round(this.tokenCount));
+  }
+
   /** `tokens-per-second` when set; otherwise a derived figure once enough
    *  elapsed time has accumulated for it to be meaningful; otherwise
    *  `undefined` (the throughput segment doesn't render at all). */
   private get effectiveTokensPerSecond(): number | undefined {
     if (this.tokensPerSecond != null && Number.isFinite(this.tokensPerSecond)) {
-      return this.tokensPerSecond;
+      // Clamped to non-negative -- a host-supplied negative rate is never a meaningful reading.
+      return finiteRange(this.tokensPerSecond, this.tokensPerSecond, 0);
     }
-    if (this.tokenCount != null && Number.isFinite(this.tokenCount)) {
+    const tokenCount = this.validTokenCount;
+    if (tokenCount !== undefined) {
       const elapsedSeconds = this.elapsedMs / 1000;
-      if (elapsedSeconds >= 1) return this.tokenCount / elapsedSeconds;
+      if (elapsedSeconds >= 1) return tokenCount / elapsedSeconds;
     }
     return undefined;
   }
@@ -336,12 +350,13 @@ export class LyraGenerationStatus extends LyraElement<LyraGenerationStatusEventM
   };
 
   render(): TemplateResult {
-    const hasTokens = this.tokenCount != null && Number.isFinite(this.tokenCount);
+    const validTokenCount = this.validTokenCount;
+    const hasTokens = validTokenCount !== undefined;
     const throughput = this.effectiveTokensPerSecond;
     const hasThroughput = throughput !== undefined;
     const locale = this.effectiveLocale;
     const elapsed = formatElapsed(this.elapsedMs, locale);
-    const tokenCount = hasTokens ? formatTokenCount(this.tokenCount!, locale) : undefined;
+    const tokenCount = hasTokens ? formatTokenCount(validTokenCount!, locale) : undefined;
     const tokenMessageKey =
       tokenCount && new Intl.PluralRules(locale).select(tokenCount.rounded) === 'one'
         ? 'generationStatusTokenCount'

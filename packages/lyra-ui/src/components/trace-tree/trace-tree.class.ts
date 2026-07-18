@@ -1,6 +1,7 @@
 import { html, svg, nothing, type TemplateResult, type PropertyValues, type SVGTemplateResult } from 'lit';
 import { property, state, query } from 'lit/decorators.js';
 import { LyraElement } from '../../internal/lyra-element.js';
+import { getNumberFormat } from '../../internal/intl-cache.js';
 import { isRtl } from '../../internal/rtl.js';
 import { prefersReducedMotion } from '../../internal/motion.js';
 import { chevronIcon } from '../../internal/icons.js';
@@ -172,7 +173,7 @@ export class LyraTraceTree extends LyraElement<LyraTraceTreeEventMap> {
   }
 
   private formatNumber(n: number): string {
-    return new Intl.NumberFormat(this.effectiveLocale).format(n);
+    return getNumberFormat(this.effectiveLocale).format(n);
   }
 
   private toggleSpan(id: string): void {
@@ -302,7 +303,12 @@ export class LyraTraceTree extends LyraElement<LyraTraceTreeEventMap> {
       for (const span of this.spans) {
         const prev = this.previousStatuses.get(span.id);
         if (prev !== undefined && prev !== span.status) {
-          this.pendingAnnouncements.push(`${span.name} — ${this.localize(STATUS_LABEL_KEY[span.status])}`);
+          this.pendingAnnouncements.push(
+            this.localize('traceTreeSpanStatus', undefined, {
+              name: span.name,
+              status: this.localize(STATUS_LABEL_KEY[span.status]),
+            }),
+          );
         }
       }
       this.previousStatuses = new Map(this.spans.map((s) => [s.id, s.status]));

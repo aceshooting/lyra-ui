@@ -4,6 +4,7 @@ import { LyraElement } from '../../internal/lyra-element.js';
 import { activateOverlay, type OverlayHandle } from '../../internal/overlay-manager.js';
 import { lockScroll } from '../../internal/scroll-lock.js';
 import { isRtl } from '../../internal/rtl.js';
+import { finiteRange } from '../../internal/numbers.js';
 import { styles } from './split.styles.js';
 
 const KEYBOARD_STEP = 2;
@@ -383,7 +384,7 @@ export class LyraSplit extends LyraElement<LyraSplitEventMap> {
       const isValid =
         Array.isArray(parsed) &&
         parsed.length === this.panelCount &&
-        parsed.every((n) => typeof n === 'number' && Number.isFinite(n) && n >= this.min);
+        parsed.every((n) => typeof n === 'number' && Number.isFinite(n) && n >= this.safeMin);
       if (isValid) this.sizes = parsed;
     } catch {
       /* ignore malformed persisted state */
@@ -489,7 +490,7 @@ export class LyraSplit extends LyraElement<LyraSplitEventMap> {
     if (this.collapse === 'none') return;
     if (this._forced) return;
     const next: SplitCollapseState =
-      width < this.floatBreakpoint ? 'floating' : width < this.railBreakpoint ? 'rail' : 'wide';
+      width < this.safeFloatBreakpoint ? 'floating' : width < this.safeRailBreakpoint ? 'rail' : 'wide';
     this.applyCollapseStateChange(next);
   }
 
@@ -526,12 +527,34 @@ export class LyraSplit extends LyraElement<LyraSplitEventMap> {
     this.armCollapseObserver();
   }
 
+  /** `min` normalized to a finite, non-negative percent floor before it reaches
+   *  `normalizedDefaultMin()`/`resolveConstraintBounds()`'s clamp math or `loadPersisted()`'s
+   *  validity check -- an invalid attribute value would otherwise poison every panel's percent
+   *  bounds with `NaN` or a negative floor. */
+  private get safeMin(): number {
+    return finiteRange(this.min, 10, 0);
+  }
+
+  /** `floatBreakpoint` normalized to a finite, non-negative px width before `updateCollapseState()`'s
+   *  breakpoint comparison. */
+  private get safeFloatBreakpoint(): number {
+    return finiteRange(this.floatBreakpoint, 400, 0);
+  }
+
+  /** `railBreakpoint` normalized the same way, then cross-referenced against the already-sanitized
+   *  float breakpoint -- the class doc requires it stay above `floatBreakpoint`, and an
+   *  inverted/invalid pair would otherwise let `updateCollapseState()` skip the `'rail'` state
+   *  entirely. */
+  private get safeRailBreakpoint(): number {
+    return Math.max(this.safeFloatBreakpoint, finiteRange(this.railBreakpoint, 640, 0));
+  }
+
   /** The safe fallback for a shared percent minimum. A value above the
    *  available share is still useful as a consumer intent, but it cannot be
    *  honored for every panel at once, so reduce it proportionally. */
   private normalizedDefaultMin(): number {
     if (this.panelCount <= 0) return 0;
-    const requested = Number.isFinite(this.min) ? Math.max(0, this.min) : 0;
+    const requested = this.safeMin;
     // Leave one keyboard step of aggregate slack after rejecting an
     // infeasible configuration, so an equal starting layout remains
     // resizable instead of merely becoming a different frozen layout.
@@ -556,7 +579,7 @@ export class LyraSplit extends LyraElement<LyraSplitEventMap> {
 
     for (let index = 0; index < this.panelCount; index++) {
       const constraint = this.panelConstraints[index];
-      let min = Number.isFinite(this.min) ? Math.max(0, this.min) : 0;
+      let min = this.safeMin;
       let max = Infinity;
       if (constraint) {
         if (constraint.minPx != null && Number.isFinite(constraint.minPx) && constraint.minPx >= 0 && containerSize > 0) {

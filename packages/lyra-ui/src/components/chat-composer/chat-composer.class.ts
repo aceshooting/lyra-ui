@@ -10,6 +10,7 @@ import {
 import { property, state, query } from 'lit/decorators.js';
 import { LyraElement } from '../../internal/lyra-element.js';
 import { FormAssociated } from '../../internal/form-associated.js';
+import { finiteInteger } from '../../internal/numbers.js';
 import { styles } from './chat-composer.styles.js';
 
 /**
@@ -198,6 +199,21 @@ export class LyraChatComposer extends FormAssociated(LyraChatComposerBase) {
   private textareaResizeObserver?: ResizeObserver;
   private textareaResizeRaf?: number;
 
+  // Purely presentational sizing (never form-submitted, unlike `value`/`disabled`/`required`
+  // above), so a read-time getter -- mirroring `<lyra-audio-visualizer>`'s `effectiveBarCount` --
+  // is enough; no write-time accessor is needed to keep some other reactive state in sync.
+  private get effectiveMinRows(): number {
+    return finiteInteger(this.minRows, 1, 1);
+  }
+
+  /** Never less than {@link effectiveMinRows} -- an inverted min/max-rows pair (authored
+   *  backwards, or a live update that shrinks `max-rows` below the current `min-rows`) still
+   *  produces a usable, non-collapsed range instead of clipping the textarea to less than its own
+   *  minimum. */
+  private get effectiveMaxRows(): number {
+    return Math.max(this.effectiveMinRows, finiteInteger(this.maxRows, this.effectiveMinRows, 1));
+  }
+
   constructor() {
     super();
     this.addEventListener('invalid', () => {
@@ -338,8 +354,8 @@ export class LyraChatComposer extends FormAssociated(LyraChatComposerBase) {
     const lineHeight = parseFloat(cs.lineHeight) || parseFloat(cs.fontSize) * 1.2;
     const paddingBlock = parseFloat(cs.paddingTop) + parseFloat(cs.paddingBottom);
     const borderBlock = parseFloat(cs.borderTopWidth) + parseFloat(cs.borderBottomWidth);
-    const minRows = Math.max(1, this.minRows || 1);
-    const maxRows = Math.max(minRows, this.maxRows || minRows);
+    const minRows = this.effectiveMinRows;
+    const maxRows = this.effectiveMaxRows;
     const minHeight = lineHeight * minRows + paddingBlock + borderBlock;
     const maxHeight = lineHeight * maxRows + paddingBlock + borderBlock;
 
@@ -507,7 +523,7 @@ export class LyraChatComposer extends FormAssociated(LyraChatComposerBase) {
             enterkeyhint=${this.enterKeyHint || nothing}
             .value=${this.value}
             placeholder=${this.placeholder}
-            rows=${Math.max(1, this.minRows || 1)}
+            rows=${this.effectiveMinRows}
             ?required=${this.required}
             ?disabled=${this.effectiveDisabled}
             @input=${this.onTextareaInput}

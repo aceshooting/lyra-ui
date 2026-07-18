@@ -1,3 +1,5 @@
+import { minMax } from '../heatmap/heatmap-scale.js';
+
 /** One topic in the hierarchy. Owns the shared `LyraTopic` shape for the whole component, the same
  *  way `word-cloud-layout.ts` owns `WordCloudWord`. */
 export interface LyraTopic {
@@ -120,12 +122,17 @@ export function layoutMindMap(topics: LyraTopic[], hubLabel: string, opts: MindM
   const links: { fromId: string; toId: string }[] = [];
   place(root, 0, 0, 2 * Math.PI, null, 0, 0, opts, placed, links);
 
-  const xs = placed.map((p) => p.x);
-  const ys = placed.map((p) => p.y);
-  const minX = Math.min(...xs) - LAYOUT_PADDING;
-  const maxX = Math.max(...xs) + LAYOUT_PADDING;
-  const minY = Math.min(...ys) - LAYOUT_PADDING;
-  const maxY = Math.max(...ys) + LAYOUT_PADDING;
+  // `placed` always has >= 1 entry here (the `topics.length === 0` guard above already returned,
+  // and `place()` unconditionally pushes the root), so `minMax` never returns `null` below. Using
+  // `minMax()` instead of `Math.min(...xs)`/`Math.max(...xs)` avoids spreading a potentially huge
+  // array as call arguments -- see heatmap-scale.ts's `minMax()` doc comment for the
+  // `RangeError: Maximum call stack size exceeded` this sidesteps once topic counts get large.
+  const [xLo, xHi] = minMax(placed.map((p) => p.x)) ?? [0, 0];
+  const [yLo, yHi] = minMax(placed.map((p) => p.y)) ?? [0, 0];
+  const minX = xLo - LAYOUT_PADDING;
+  const maxX = xHi + LAYOUT_PADDING;
+  const minY = yLo - LAYOUT_PADDING;
+  const maxY = yHi + LAYOUT_PADDING;
 
   return {
     placed: placed.map((p) => ({ ...p, x: p.x - minX, y: p.y - minY })),

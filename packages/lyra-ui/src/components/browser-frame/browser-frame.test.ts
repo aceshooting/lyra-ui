@@ -1,4 +1,4 @@
-import { fixture, expect, html, oneEvent } from '@open-wc/testing';
+import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import './browser-frame.js';
 import type { LyraBrowserFrame } from './browser-frame.js';
 
@@ -99,6 +99,46 @@ describe('lyra-browser-frame', () => {
     expect(pings[0].getAttribute('aria-hidden')).to.equal('true');
     expect(pings[0].dataset.kind).to.equal('click');
     expect(pings[1].dataset.kind).to.equal('type');
+  });
+
+  it('positions pings with physical left/top under dir="rtl" so they stay over the non-mirroring screenshot', async () => {
+    const el = (await fixture(html`
+      <lyra-browser-frame dir="rtl" .pings=${[{ id: 'p1', x: 10, y: 20, kind: 'click' }]}></lyra-browser-frame>
+    `)) as LyraBrowserFrame;
+    await el.updateComplete;
+    const ping = el.shadowRoot!.querySelector('[part="ping"]') as HTMLElement;
+    expect(ping.style.left).to.equal('10%');
+    expect(ping.style.top).to.equal('20%');
+    expect(ping.style.getPropertyValue('inset-inline-start')).to.equal('');
+  });
+
+  it('keeps the ping content rect tracking viewport resizes after a disconnect/reconnect', async () => {
+    const wrapper = (await fixture(html`
+      <div style="inline-size: 400px">
+        <lyra-browser-frame
+          frame-src="https://example.com/shot.png"
+          .pings=${[{ id: 'p1', x: 50, y: 50, kind: 'click' }]}
+        ></lyra-browser-frame>
+      </div>
+    `)) as HTMLDivElement;
+    const el = wrapper.querySelector('lyra-browser-frame') as LyraBrowserFrame;
+    await el.updateComplete;
+    const img = el.shadowRoot!.querySelector('[part="frame"]') as HTMLImageElement;
+    Object.defineProperty(img, 'naturalWidth', { value: 800, configurable: true });
+    Object.defineProperty(img, 'naturalHeight', { value: 450, configurable: true });
+    img.dispatchEvent(new Event('load'));
+    await el.updateComplete;
+    const pingLeft = () => (el.shadowRoot!.querySelector('[part="ping"]') as HTMLElement).style.left;
+    await waitUntil(() => pingLeft().endsWith('px'), 'ping never switched to the measured pixel content rect');
+    el.remove();
+    wrapper.append(el);
+    await el.updateComplete;
+    const before = pingLeft();
+    wrapper.style.inlineSize = '200px';
+    await waitUntil(
+      () => pingLeft().endsWith('px') && pingLeft() !== before,
+      'ping did not track the viewport resize after a reconnect',
+    );
   });
 
   it('never captures or forwards pointer/keyboard input to any transport (no such listener exists)', async () => {

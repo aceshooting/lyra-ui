@@ -96,6 +96,15 @@ it('renders through the internal virtual-list once chunks exceeds virtualizeAt',
   expect(el.shadowRoot!.querySelector('lyra-virtual-list')).to.exist;
 });
 
+it('normalizes a NaN virtualizeAt to the default (50) instead of silently disabling virtualization', async () => {
+  const many: LyraChunk[] = Array.from({ length: 51 }, (_, i) => ({ id: `c${i}`, text: `chunk ${i}`, score: 0.5, sourceId: 's1' }));
+  const el = (await fixture(html`<lyra-chunk-inspector virtualize-at="not-a-number"></lyra-chunk-inspector>`)) as LyraChunkInspector;
+  expect(Number.isNaN(el.virtualizeAt)).to.be.true;
+  el.chunks = many;
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelector('lyra-virtual-list')).to.exist;
+});
+
 it('shows chunkInspectorEmpty when chunks is empty', async () => {
   const el = (await fixture(html`<lyra-chunk-inspector></lyra-chunk-inspector>`)) as LyraChunkInspector;
   await el.updateComplete;

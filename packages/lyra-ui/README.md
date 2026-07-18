@@ -12,7 +12,7 @@
 **Lyra UI — the free, independent web-component alternative.** A MIT-licensed [Lit](https://lit.dev)
 library for accessible forms, dashboards, charts, data visualization, and Conversation & Agent UI.
 It is a practical open-source alternative to [Shoelace](https://shoelace.style/) and
-[Web Awesome](https://webawesome.com/), with 221 custom elements, native custom-element APIs,
+[Web Awesome](https://webawesome.com/), with 222 custom elements, native custom-element APIs,
 tree-shakeable imports, its own `--lyra-*` design tokens, built-in localization and RTL support,
 and no runtime dependency on either project.
 
@@ -258,7 +258,7 @@ containing the component's token CSS and internal `<button>` markup, and the con
 `ElementInternals`-based `attachInternals()` call (used for native form association) does not throw
 under `@lit-labs/ssr-dom-shim`'s server DOM shim.
 
-That said, **lyra-ui has not been systematically tested or tuned for SSR** across its 168 components:
+That said, **lyra-ui has not been systematically tested or tuned for SSR** across its full component catalog:
 no CI job renders the library under `@lit-labs/ssr`, no component has been verified to hydrate
 correctly on the client afterward, and components that reach for browser-only APIs early
 (`ResizeObserver`/`IntersectionObserver`, Floating UI positioning in the popover/tooltip/dropdown
@@ -321,7 +321,7 @@ coverage automatically from the bundled `web-types.json` — JetBrains IDEs pick
 
 ## Components
 
-The catalog below lists all 221 tags in the current Custom Elements Manifest, grouped by
+The catalog below lists all 222 tags in the current Custom Elements Manifest, grouped by
 capability. The manifest and live docs are the authoritative sources for the complete generated
 API details.
 
@@ -539,6 +539,7 @@ each one-liner below.
 | `<lyra-notebook-viewer>` | — (extra) | Read-only Jupyter notebook (nbformat 4.x) renderer composing existing components per cell — Markdown cells through `<lyra-markdown>`, code cells through `<lyra-code-block>`, rich outputs preferring image/HTML/JSON/plain-text in order; optional-DOMPurify sanitizes raw HTML/SVG output |
 | `<lyra-spreadsheet-viewer>` | — (extra) | Optional-SheetJS `.xlsx`/`.xls` workbook viewer with sheet tabs and virtualized rows |
 | `<lyra-csv-viewer>` | — (extra) | Optional-PapaParse CSV viewer with quoted-field support and virtualized rows |
+| `<lyra-geojson-view>` | — (extra) | Document-registry bridge that renders a fetched `.geojson`/`application/geo+json` file through `<lyra-map>`'s `dataLayers` (falls back to `<lyra-json-viewer>` without the optional `maplibre-gl` peer); registered by importing `geojson-view/geojson-view.js` directly — not part of the root barrel |
 | `<lyra-docx-viewer>` | — (extra) | Optional-Mammoth DOCX viewer that renders sanitized semantic HTML |
 | `<lyra-email-viewer>` | — (extra) | Optional-PostalMime `.eml` viewer with sanitized HTML and plain-text fallback |
 | `<lyra-calendar-viewer>` | — (extra) | Optional-ical.js `.ics` viewer for event summaries and times |

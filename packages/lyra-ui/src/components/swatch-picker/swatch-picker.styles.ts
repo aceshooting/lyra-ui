@@ -40,45 +40,57 @@ export const styles = css`
   }
   [part='swatch'] {
     box-sizing: border-box;
+    /* The interactive hit target meets the shared minimum tappable size (same
+       --lyra-icon-button-size floor as lyra-code-block's/lyra-json-viewer's [part='toggle']), while
+       the *visible* fill stays a compact --lyra-size-1-5rem circle -- rendered on the separate
+       [part='swatch-fill']/[part='swatch-icon'] child below and centered via flex, not by resizing
+       this button itself. A swatch's own fill/icon is what previously doubled as the clickable box;
+       splitting them keeps the dense picker grid's visual density unchanged while still growing the
+       real click/tap area. */
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-inline-size: var(--lyra-icon-button-size);
+    min-block-size: var(--lyra-icon-button-size);
+    padding: 0;
+    border: none;
+    border-radius: 50%;
+    background: none;
+    /* Exposes the option's color to a slotted icon (part='swatch-icon') via currentColor -- inert
+       when no icon is present, since [part='swatch-fill'] paints its own background-color instead. */
+    color: var(--lyra-swatch-color);
+    cursor: pointer;
+  }
+  [part='swatch-fill'] {
+    box-sizing: border-box;
+    display: block;
     inline-size: var(--lyra-size-1-5rem);
     block-size: var(--lyra-size-1-5rem);
-    padding: 0;
     border: var(--lyra-border-width-thin) solid var(--lyra-color-border);
     border-radius: 50%;
     /* Per-swatch fill from the option's color, set inline by swatch-picker.class.ts.
        Read through a var() (rather than an inline background-color declaration) so a
-       consumer's ::part(swatch) background rule can still win when overriding it. */
+       consumer's ::part(swatch-fill) background rule can still win when overriding it. */
     background-color: var(--lyra-swatch-color);
-    /* Exposes the option's color to a slotted icon (part='swatch-icon') via currentColor,
-       so a consumer's stroke="currentColor"/fill="currentColor" SVG is tinted automatically --
-       inert when no icon is present. */
-    color: var(--lyra-swatch-color);
-    cursor: pointer;
     transition: transform var(--lyra-transition-fast);
-  }
-  /* An icon option renders its own shape instead of the plain filled circle, so drop the
-     circle's fill/border and let the icon (tinted via currentColor above) stand on its own --
-     matches how consumers hand-rolled a plain unfilled/unbordered icon button before this field
-     existed. */
-  [part='swatch']:has([part='swatch-icon']) {
-    background-color: transparent;
-    border-color: transparent;
   }
   [part='swatch-icon'] {
     display: flex;
     align-items: center;
     justify-content: center;
-    inline-size: 100%;
-    block-size: 100%;
+    inline-size: var(--lyra-size-1-5rem);
+    block-size: var(--lyra-size-1-5rem);
+    transition: transform var(--lyra-transition-fast);
   }
-  [part='swatch']:hover {
+  [part='swatch']:hover [part='swatch-fill'],
+  [part='swatch']:hover [part='swatch-icon'] {
     transform: scale(1.2);
   }
   [part='swatch']:focus-visible {
     outline: var(--lyra-focus-ring-width) solid var(--lyra-focus-ring-color);
     outline-offset: var(--lyra-focus-ring-offset);
   }
-  [part='swatch'][aria-checked='true'] {
+  [part='swatch'][aria-checked='true'] [part='swatch-fill'] {
     transform: scale(1.2);
     box-shadow: 0 0 var(--lyra-swatch-picker-selected-blur) var(--lyra-border-width-thick) var(--lyra-swatch-picker-selected-color);
     animation: lyra-swatch-picker-shine var(--lyra-swatch-picker-shine-duration) ease-in-out infinite;
@@ -92,16 +104,13 @@ export const styles = css`
       filter: brightness(1.4);
     }
   }
-  /* A plain color swatch is a filled circle, so the ring/glow above (drawn around the box)
-     already hugs its true shape. An icon option's swatch box is transparent/unbordered (see
-     above) and the icon rarely fills it edge-to-edge -- a box-shadow there would glow around an
-     invisible circle instead of the icon's actual silhouette. Swap to a drop-shadow on the icon
-     itself, which follows its real rendered shape, and suppress the box's own ring so the two
-     don't double up. */
-  [part='swatch'][aria-checked='true']:has([part='swatch-icon']) {
-    box-shadow: none;
-  }
+  /* An icon option renders its own shape instead of the plain filled circle, so the box-shadow ring
+     above (drawn around [part='swatch-fill']'s true shape) doesn't apply to it at all -- render()
+     only ever mounts one of [part='swatch-fill']/[part='swatch-icon'] per swatch (see
+     swatch-picker.class.ts), so this selector and the one above never both match the same swatch.
+     Swap to a drop-shadow on the icon itself, which follows its real rendered shape. */
   [part='swatch'][aria-checked='true'] [part='swatch-icon'] {
+    transform: scale(1.2);
     filter: drop-shadow(0 0 var(--lyra-swatch-picker-selected-blur) var(--lyra-swatch-picker-selected-color));
   }
   /* The scale is redundant selection feedback (the ring already conveys it), so keep the
@@ -111,10 +120,11 @@ export const styles = css`
      loops -- a host that opted into --lyra-swatch-picker-shine-duration still gets a selected
      swatch, just without the rhythmic brightening. */
   @media (prefers-reduced-motion: reduce) {
-    [part='swatch'] {
+    [part='swatch-fill'],
+    [part='swatch-icon'] {
       transition: none;
     }
-    [part='swatch'][aria-checked='true'] {
+    [part='swatch'][aria-checked='true'] [part='swatch-fill'] {
       animation: none;
     }
   }

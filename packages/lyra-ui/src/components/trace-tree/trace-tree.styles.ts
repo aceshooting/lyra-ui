@@ -127,14 +127,26 @@ export const styles = css`
     background-size: 200% 100%;
     animation: lyra-trace-tree-stripe var(--lyra-transition-ambient) infinite;
   }
+  /* background-position animates in physical coordinates, so the sweep needs
+     an explicit mirrored keyframe track to travel inline-start -> inline-end
+     in RTL as well. */
+  :host(:dir(rtl)) [part='bar'][data-status='running'] {
+    animation-name: lyra-trace-tree-stripe-rtl;
+  }
   @media (prefers-reduced-motion: reduce) {
-    [part='bar'][data-status='running'] {
+    /* the RTL selector outranks the bare one, so it must be silenced here
+       explicitly or its animation-name would win over 'animation: none' */
+    [part='bar'][data-status='running'],
+    :host(:dir(rtl)) [part='bar'][data-status='running'] {
       animation: none;
       background-position: 0 0;
     }
   }
   @keyframes lyra-trace-tree-stripe {
     to { background-position: calc(var(--lyra-size-24px) * -1) 0; }
+  }
+  @keyframes lyra-trace-tree-stripe-rtl {
+    to { background-position: var(--lyra-size-24px) 0; }
   }
 
   [part='duration'],

@@ -146,6 +146,18 @@ describe('independent name/size/mime-type props', () => {
     expect(sizePart2.textContent).to.equal('2.3 MB');
   });
 
+  it('treats a negative or NaN size the same as 0/unset -- hides the size part instead of rendering "NaN B"/a negative size', async () => {
+    const negative = (await fixture(
+      html`<lyra-attachment-chip name="a.txt" .size=${-5}></lyra-attachment-chip>`,
+    )) as LyraAttachmentChip;
+    expect((negative.shadowRoot!.querySelector('[part="size"]') as HTMLElement).hidden).to.be.true;
+
+    const nan = (await fixture(
+      html`<lyra-attachment-chip name="a.txt" .size=${NaN}></lyra-attachment-chip>`,
+    )) as LyraAttachmentChip;
+    expect((nan.shadowRoot!.querySelector('[part="size"]') as HTMLElement).hidden).to.be.true;
+  });
+
   it('renders thumbnail-src as the thumbnail image when file is unset', async () => {
     const el = (await fixture(
       html`<lyra-attachment-chip name="pic.png" thumbnail-src="https://example.test/thumb.png"></lyra-attachment-chip>`,
@@ -315,6 +327,20 @@ describe('status accents and progress', () => {
     )) as LyraAttachmentChip;
     const bar = el.shadowRoot!.querySelector('[part="progress"]') as HTMLElement;
     expect(bar.getAttribute('aria-valuenow')).to.equal('100');
+  });
+
+  it('falls back to the indeterminate spinner for a negative or NaN progress, instead of a broken/negative progressbar', async () => {
+    const negative = (await fixture(
+      html`<lyra-attachment-chip name="a.zip" status="uploading" .progress=${-10}></lyra-attachment-chip>`,
+    )) as LyraAttachmentChip;
+    expect(negative.shadowRoot!.querySelector('[part="progress"]')).to.not.exist;
+    expect(negative.shadowRoot!.querySelector('[part="spinner"]')).to.exist;
+
+    const nan = (await fixture(
+      html`<lyra-attachment-chip name="a.zip" status="uploading" .progress=${NaN}></lyra-attachment-chip>`,
+    )) as LyraAttachmentChip;
+    expect(nan.shadowRoot!.querySelector('[part="progress"]')).to.not.exist;
+    expect(nan.shadowRoot!.querySelector('[part="spinner"]')).to.exist;
   });
 
   it('shows the same clamped number in status-text as the progressbar aria-valuenow, for an out-of-range progress', async () => {

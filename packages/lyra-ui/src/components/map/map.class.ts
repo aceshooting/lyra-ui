@@ -5,6 +5,7 @@ import type { Feature, FeatureCollection } from 'geojson';
 import { LyraElement } from '../../internal/lyra-element.js';
 import type { OptionalPeerApi } from '../../internal/optional-peer-types.js';
 import { sanitizeSwatchColor } from '../../internal/safe-css.js';
+import { finiteRange } from '../../internal/numbers.js';
 import { loadMaplibre } from './map-loader.js';
 import { styles } from './map.styles.js';
 import '../skeleton/skeleton.class.js';
@@ -237,6 +238,14 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     return this._map;
   }
 
+  /** `zoom` normalized to a finite value clamped into `[0, 22]` -- maplibre-gl's own default
+   *  `minZoom`/`maxZoom` (this component passes neither option to `new maplibregl.Map()`, so
+   *  those are the bounds the underlying map itself enforces). A non-finite value would otherwise
+   *  reach the constructor's initial `zoom` option or a live `setZoom()` call unnormalized. */
+  private get safeZoom(): number {
+    return finiteRange(this.zoom, 2, 0, 22);
+  }
+
   connectedCallback(): void {
     super.connectedCallback();
     const generation = ++this._connectGeneration;
@@ -304,7 +313,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
       container: this.containerEl,
       style: this.mapStyle,
       center: this.center,
-      zoom: this.zoom,
+      zoom: this.safeZoom,
     });
     // maplibre-gl's Evented base rethrows an 'error' emission that has no
     // listener attached (mirroring Node's EventEmitter convention) -- with
@@ -372,7 +381,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
       this.applyDataLayers();
     }
     if (changed.has('center') && this._map) this._map.setCenter(this.center);
-    if (changed.has('zoom') && this._map) this._map.setZoom(this.zoom);
+    if (changed.has('zoom') && this._map) this._map.setZoom(this.safeZoom);
     if (changed.has('markers') && this._map) this.applyMarkers();
   }
 

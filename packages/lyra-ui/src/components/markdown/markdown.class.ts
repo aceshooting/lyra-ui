@@ -9,6 +9,7 @@ import { Slugger } from '../../internal/slugger.js';
 import { DocumentAnchorTarget, type LyraAnchorTargetEventMap } from '../../internal/anchor-target.js';
 import { scopeFromElement, resolveTextQuote, buildQuoteAnchor } from '../../internal/text-quote.js';
 import { acquireHighlightHandle, supportsCustomHighlights, type HighlightHandle } from '../../internal/text-highlights.js';
+import { finiteInteger } from '../../internal/numbers.js';
 import type { LyraAnchor, LyraAnchorKind, LyraHighlightTone, HighlightActivateDetail } from '../document-viewer/anchors.js';
 import { loadMarkdownDeps, getMarkdownDepsIfLoaded, type MarkdownDeps } from './markdown-loader.js';
 import {
@@ -78,6 +79,14 @@ export interface MarkdownHeadingItem {
  *  wholesale per call, so a tone this pass has nothing for still needs an explicit empty call to
  *  clear whatever it painted last pass. */
 const HIGHLIGHT_TONES: LyraHighlightTone[] = ['accent', 'success', 'warning', 'danger', 'neutral'];
+
+/** Upper bound on `highlightCache` entries per instance. Each entry holds a fully-highlighted
+ *  HTML string (potentially large for a long code block), and the cache is content-addressed --
+ *  on a long-lived instance whose `content` keeps changing (a chat transcript, live docs), an
+ *  unbounded map would retain the highlighted HTML of every code block ever rendered. 100 far
+ *  exceeds the fenced-block count of any one document, so eviction only trims blocks that
+ *  scrolled out of the content long ago. */
+const HIGHLIGHT_CACHE_MAX = 100;
 
 // -- math (KaTeX) -----------------------------------------------------------------------------
 
@@ -410,8 +419,31 @@ export class LyraMarkdown extends DocumentAnchorTarget(LyraMarkdownBase) {
   /** `(lang, code)` -> already-highlighted HTML, content-addressed (see `PendingHighlight`'s doc).
    *  Persists across renders of this instance; populated asynchronously by `highlightPending()`.
    *  Never consulted while `streaming` is `true` or `highlightCode` is `false` -- both gates live
-   *  in the `code()` renderer inside `parseMarkdown()`. */
+   *  in the `code()` renderer inside `parseMarkdown()`. Bounded to {@link HIGHLIGHT_CACHE_MAX}
+   *  entries, least-recently-used first out, via `getCachedHighlight()`/`setCachedHighlight()` --
+   *  always go through those instead of the map directly so hits refresh recency. */
   private highlightCache = new Map<string, string>();
+
+  /** LRU read: a hit is re-inserted so Map iteration order (insertion order) keeps the first key
+   *  the least recently used one -- the entry `setCachedHighlight()` evicts when full. */
+  private getCachedHighlight(key: string): string | undefined {
+    const cached = this.highlightCache.get(key);
+    if (cached !== undefined) {
+      this.highlightCache.delete(key);
+      this.highlightCache.set(key, cached);
+    }
+    return cached;
+  }
+
+  private setCachedHighlight(key: string, html: string): void {
+    if (this.highlightCache.has(key)) {
+      this.highlightCache.delete(key);
+    } else if (this.highlightCache.size >= HIGHLIGHT_CACHE_MAX) {
+      const oldest = this.highlightCache.keys().next().value;
+      if (oldest !== undefined) this.highlightCache.delete(oldest);
+    }
+    this.highlightCache.set(key, html);
+  }
 
   /** Bumped on every `highlightPending()` call, including ones that end up not actually loading
    *  anything -- guards against a newer `content`/`streaming` change superseding an older in-flight
@@ -677,7 +709,7 @@ export class LyraMarkdown extends DocumentAnchorTarget(LyraMarkdownBase) {
           themes: SHIKI_THEMES,
           transformers: [markdownCodeTransformer(pending.lang)],
         });
-        this.highlightCache.set(pending.key, `${html}\n`);
+        this.setCachedHighlight(pending.key, `${html}\n`);
       } catch {
         this.failedHighlightKeys.add(pending.key);
         // Tokenization failed for a reason other than an unrecognized grammar (already handled by
@@ -702,7 +734,10 @@ export class LyraMarkdown extends DocumentAnchorTarget(LyraMarkdownBase) {
     // The default '_blank' is already truthy, so this preserves today's
     // exact output when the property is left unset.
     const linkTarget = this.linkTarget;
-    const headingOffset = this.headingOffset;
+    // A raw NaN (e.g. an invalid `heading-offset` attribute) would otherwise flow straight into
+    // `token.depth + headingOffset` below, producing a NaN heading depth and an invalid `<hNaN>`
+    // tag -- finiteInteger() normalizes it back to the documented `0` (additive-only) default.
+    const headingOffset = finiteInteger(this.headingOffset, 0);
     // Captured as a local distinct from the free function `escapeHtml` above
     // (imported/defined at the top of this file) to avoid shadowing/
     // ambiguity inside the renderer closure below, matching how
@@ -710,7 +745,9 @@ export class LyraMarkdown extends DocumentAnchorTarget(LyraMarkdownBase) {
     // same reason.
     const escapeHtmlOption = this.escapeHtml;
     const highlightCodeOption = this.highlightCode && !this.streaming;
-    const highlightCache = this.highlightCache;
+    // Bound method reference (not the raw map): reads must go through the LRU accessor so a hit
+    // refreshes its recency. The renderer methods below run with marked's own `this`.
+    const getCachedHighlight = (key: string) => this.getCachedHighlight(key);
     const failedHighlightKeys = this.failedHighlightKeys;
     const headingAnchorsOption = this.headingAnchors;
     const slugger = new Slugger();
@@ -778,7 +815,7 @@ export class LyraMarkdown extends DocumentAnchorTarget(LyraMarkdownBase) {
           const text = token.escaped ? body : escapeHtml(body);
           if (highlightCodeOption && lang) {
             const key = `${lang}\n${body}`;
-            const cached = highlightCache.get(key);
+            const cached = getCachedHighlight(key);
             if (cached !== undefined) return cached;
             if (!failedHighlightKeys.has(key)) pendingKeys.push({ key, lang, code: body });
           }

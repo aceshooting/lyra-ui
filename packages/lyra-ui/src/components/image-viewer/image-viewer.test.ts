@@ -1,6 +1,6 @@
 import { fixture, expect, html, oneEvent } from '@open-wc/testing';
 import './image-viewer.js';
-import type { LyraImageViewer } from './image-viewer.js';
+import type { LyraImageViewer, ImageRotation } from './image-viewer.js';
 import type { LyraHighlight } from '../document-viewer/anchors.js';
 
 const PNG_SRC = 'https://example.test/photo.png';
@@ -103,6 +103,37 @@ describe('zoom, rotation, and fit', () => {
     expect(el.rotation).to.equal(0);
   });
 
+  // Regression coverage for the shared finite-number normalization layer (`src/internal/numbers.ts`)
+  // -- a non-finite/negative/non-multiple-of-90 `rotation` used to reach the CSS
+  // `rotate(${rotation}deg)` transform and the pointer-to-image coordinate math unnormalized.
+  it('normalizes a non-finite/non-right-angle rotation to the nearest supported 90-degree step', async () => {
+    const el = (await fixture(html`<lyra-image-viewer src=${PNG_SRC}></lyra-image-viewer>`)) as LyraImageViewer;
+
+    el.rotation = Number.NaN as ImageRotation;
+    await el.updateComplete;
+    let wrapper = el.shadowRoot!.querySelector('[part="image-wrapper"]') as HTMLElement;
+    expect(wrapper.style.transform).to.equal('rotate(0deg)');
+
+    el.rotation = 45 as ImageRotation;
+    await el.updateComplete;
+    wrapper = el.shadowRoot!.querySelector('[part="image-wrapper"]') as HTMLElement;
+    expect(wrapper.style.transform).to.equal('rotate(90deg)');
+
+    el.rotation = -90 as ImageRotation;
+    await el.updateComplete;
+    wrapper = el.shadowRoot!.querySelector('[part="image-wrapper"]') as HTMLElement;
+    expect(wrapper.style.transform).to.equal('rotate(270deg)');
+  });
+
+  it('rotate() normalizes an already-invalid rotation before stepping instead of propagating NaN', async () => {
+    const el = (await fixture(html`<lyra-image-viewer src=${PNG_SRC}></lyra-image-viewer>`)) as LyraImageViewer;
+    el.rotation = Number.NaN as ImageRotation;
+    await el.updateComplete;
+    const event = oneEvent(el, 'lyra-rotation-change');
+    el.rotate();
+    expect((await event).detail).to.deep.equal({ rotation: 90 });
+  });
+
   it('emits lyra-fit-change when fit is reassigned after first render', async () => {
     const el = (await fixture(html`<lyra-image-viewer src=${PNG_SRC}></lyra-image-viewer>`)) as LyraImageViewer;
     const eventPromise = oneEvent(el, 'lyra-fit-change');
@@ -136,6 +167,14 @@ describe('region highlights', () => {
     expect((await eventPromise).detail).to.deep.equal({ id: 'h2' });
     await el.updateComplete;
     expect(el.activeHighlightId).to.equal('h2');
+  });
+
+  it('positions highlight boxes with physical left/top under dir="rtl" so they stay over the non-mirroring image', async () => {
+    const el = (await fixture(html`<lyra-image-viewer dir="rtl" src=${PNG_SRC} .highlights=${highlights}></lyra-image-viewer>`)) as LyraImageViewer;
+    const box = el.shadowRoot!.querySelector('[part="highlight"]') as HTMLElement;
+    expect(box.style.left).to.equal('10%');
+    expect(box.style.top).to.equal('10%');
+    expect(box.style.getPropertyValue('inset-inline-start')).to.equal('');
   });
 
   it('scrollToAnchor resolves true for a region anchor and false for an unsupported kind', async () => {
@@ -179,11 +218,11 @@ describe('annotation', () => {
     await el.updateComplete;
     let box = el.shadowRoot!.querySelector('[part="annotation-box"]') as HTMLElement;
     expect(box).to.exist;
-    expect(box.style.insetInlineStart).to.equal('37.5%');
+    expect(box.style.left).to.equal('37.5%');
     viewport.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
     await el.updateComplete;
     box = el.shadowRoot!.querySelector('[part="annotation-box"]') as HTMLElement;
-    expect(box.style.insetInlineStart).to.equal('39.5%');
+    expect(box.style.left).to.equal('39.5%');
     const eventPromise = oneEvent(el, 'lyra-annotation-create');
     viewport.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
     const event = await eventPromise;
@@ -200,7 +239,7 @@ describe('annotation', () => {
     viewport.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', shiftKey: true, bubbles: true }));
     await el.updateComplete;
     const box = el.shadowRoot!.querySelector('[part="annotation-box"]') as HTMLElement;
-    expect(box.style.inlineSize).to.equal('27%');
+    expect(box.style.width).to.equal('27%');
     let fired = false;
     el.addEventListener('lyra-annotation-create', () => (fired = true));
     viewport.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));

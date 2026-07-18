@@ -1,6 +1,6 @@
 import { fixture, expect, html, oneEvent } from '@open-wc/testing';
 import './file-input.js';
-import type { LyraFileInput } from './file-input.js';
+import { DEFAULT_MAX_FILE_SIZE_BYTES, type LyraFileInput } from './file-input.js';
 import { styles } from './file-input.styles.js';
 
 function makeFile(name: string, type: string): File {
@@ -9,6 +9,15 @@ function makeFile(name: string, type: string): File {
 
 function makeSizedFile(name: string, type: string, sizeBytes: number): File {
   return new File([new Uint8Array(sizeBytes)], name, { type });
+}
+
+/** Overrides `.size` on a real (empty-content) `File` rather than allocating `sizeBytes` of real
+ *  data -- lets a test exercise a huge size (e.g. past `DEFAULT_MAX_FILE_SIZE_BYTES`) without
+ *  actually allocating tens of megabytes per test run. */
+function makeFakeSizedFile(name: string, type: string, sizeBytes: number): File {
+  const file = new File([], name, { type });
+  Object.defineProperty(file, 'size', { value: sizeBytes });
+  return file;
 }
 
 function dropWith(el: HTMLElement, files: File[]): void {
@@ -139,6 +148,46 @@ it('rejects a file over maxFileSize with reason "size"', async () => {
   setTimeout(() => dropWith(base, [makeSizedFile('a.csv', 'text/csv', 10)]));
   const ev = await oneEvent(el, 'lyra-files');
   expect(ev.detail.files.length).to.equal(0);
+  expect(ev.detail.rejected.length).to.equal(1);
+  expect(ev.detail.rejected[0].reason).to.equal('size');
+});
+
+it('keeps maxFileSize="0" (explicit or default) meaning "no limit", not a cap', async () => {
+  const el = (await fixture(html`<lyra-file-input></lyra-file-input>`)) as LyraFileInput;
+  expect(el.maxFileSize).to.equal(0);
+  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  const hugeFile = makeFakeSizedFile('huge.bin', 'application/octet-stream', DEFAULT_MAX_FILE_SIZE_BYTES * 10);
+  setTimeout(() => dropWith(base, [hugeFile]));
+  const ev = await oneEvent(el, 'lyra-files');
+  expect(ev.detail.files.length).to.equal(1);
+  expect(ev.detail.rejected.length).to.equal(0);
+});
+
+it('does not silently disable maxFileSize when the attribute is invalid (NaN) -- falls back to a sane cap instead of "no limit"', async () => {
+  const el = (await fixture(
+    html`<lyra-file-input max-file-size="not-a-number"></lyra-file-input>`,
+  )) as LyraFileInput;
+  // Confirms the reproduction premise: an invalid attribute really does land as `NaN`, the
+  // exact value that made the old `this.maxFileSize > 0` gate silently false (bypassing the
+  // whole size check, since `NaN > 0` is always false).
+  expect(Number.isNaN(el.maxFileSize)).to.be.true;
+  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  const oversizedFile = makeFakeSizedFile('big.bin', 'application/octet-stream', DEFAULT_MAX_FILE_SIZE_BYTES + 1);
+  setTimeout(() => dropWith(base, [oversizedFile]));
+  const ev = await oneEvent(el, 'lyra-files');
+  expect(ev.detail.files.length).to.equal(0);
+  expect(ev.detail.rejected.length).to.equal(1);
+  expect(ev.detail.rejected[0].reason).to.equal('size');
+});
+
+it('falls back to the same sane cap for a negative maxFileSize override', async () => {
+  const el = (await fixture(html`<lyra-file-input></lyra-file-input>`)) as LyraFileInput;
+  el.maxFileSize = -1;
+  await el.updateComplete;
+  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  const oversizedFile = makeFakeSizedFile('big.bin', 'application/octet-stream', DEFAULT_MAX_FILE_SIZE_BYTES + 1);
+  setTimeout(() => dropWith(base, [oversizedFile]));
+  const ev = await oneEvent(el, 'lyra-files');
   expect(ev.detail.rejected.length).to.equal(1);
   expect(ev.detail.rejected[0].reason).to.equal('size');
 });

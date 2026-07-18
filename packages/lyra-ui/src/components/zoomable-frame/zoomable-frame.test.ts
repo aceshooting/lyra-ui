@@ -70,3 +70,69 @@ it('localizes the reset button\'s visible zoom percentage via .strings', async (
   const reset = el.shadowRoot!.querySelector('[part="reset"]') as HTMLButtonElement;
   expect(reset.textContent?.trim()).to.equal('100 pourcent');
 });
+
+it('names the focusable viewport with role="group", forwarding a host aria-label', async () => {
+  const el = (await fixture(html`<lyra-zoomable-frame></lyra-zoomable-frame>`)) as LyraZoomableFrame;
+  await el.updateComplete;
+  const viewport = el.shadowRoot!.querySelector('[part="viewport"]') as HTMLElement;
+  expect(viewport.getAttribute('tabindex')).to.equal('0');
+  expect(viewport.getAttribute('role')).to.equal('group');
+  expect(viewport.getAttribute('aria-label')).to.equal('Zoomable content');
+
+  el.setAttribute('aria-label', 'Map preview');
+  await el.updateComplete;
+  expect(viewport.getAttribute('aria-label')).to.equal('Map preview');
+});
+
+// Regression coverage for the shared finite-number normalization layer (`src/internal/numbers.ts`)
+// -- this component previously hand-rolled its own Number.isFinite guards instead of using it;
+// a non-finite/negative min-zoom, max-zoom, zoom-step, or zoom used to be able to flow straight
+// into the stepped-zoom clamp and produce NaN geometry/CSS instead of a sane default.
+it('normalizes a non-finite zoom to a clamped, finite value instead of NaN', async () => {
+  const el = (await fixture(html`<lyra-zoomable-frame zoom="NaN"></lyra-zoomable-frame>`)) as LyraZoomableFrame;
+  await el.updateComplete;
+  const content = el.shadowRoot!.querySelector('[part="content"]') as HTMLElement;
+  expect(content.getAttribute('data-zoom')).to.not.match(/NaN/);
+  expect(Number.isFinite(Number(content.getAttribute('data-zoom')))).to.be.true;
+});
+
+it('normalizes non-finite min-zoom/max-zoom to finite fallback bounds so controls stay usable', async () => {
+  const el = (await fixture(
+    html`<lyra-zoomable-frame min-zoom="NaN" max-zoom="Infinity"></lyra-zoomable-frame>`,
+  )) as LyraZoomableFrame;
+  await el.updateComplete;
+  const zoomOut = el.shadowRoot!.querySelector('[part="zoom-out"]') as HTMLButtonElement;
+  const zoomIn = el.shadowRoot!.querySelector('[part="zoom-in"]') as HTMLButtonElement;
+  // Both bounds fell back to their finite defaults (0.5/4), so the default zoom of 1 sits
+  // strictly inside the range and neither control is stuck disabled.
+  expect(zoomIn.disabled).to.be.false;
+  expect(zoomOut.disabled).to.be.false;
+});
+
+it('clamps max-zoom below min-zoom to a collapsed-but-finite range instead of NaN', async () => {
+  const el = (await fixture(html`<lyra-zoomable-frame max-zoom="0.1"></lyra-zoomable-frame>`)) as LyraZoomableFrame;
+  await el.updateComplete;
+  // max-zoom (0.1) is below the default min-zoom (0.5) -- the range collapses to a single point
+  // at min-zoom instead of inverting or producing NaN, so the default zoom (1) clamps down to it.
+  const content = el.shadowRoot!.querySelector('[part="content"]') as HTMLElement;
+  expect(content.getAttribute('data-zoom')).to.equal('0.5');
+  const zoomOut = el.shadowRoot!.querySelector('[part="zoom-out"]') as HTMLButtonElement;
+  const zoomIn = el.shadowRoot!.querySelector('[part="zoom-in"]') as HTMLButtonElement;
+  expect(zoomIn.disabled).to.be.true;
+  expect(zoomOut.disabled).to.be.true;
+});
+
+it('clamps a non-finite/negative zoom-step to a positive floor so zoomIn/zoomOut keep making progress', async () => {
+  const el = (await fixture(html`<lyra-zoomable-frame zoom-step="-1"></lyra-zoomable-frame>`)) as LyraZoomableFrame;
+  const before = el.zoom;
+  el.zoomIn();
+  await el.updateComplete;
+  expect(el.zoom).to.be.greaterThan(before);
+
+  el.zoomStep = Number.NaN;
+  await el.updateComplete;
+  const afterFirstZoomIn = el.zoom;
+  el.zoomIn();
+  await el.updateComplete;
+  expect(el.zoom).to.be.greaterThan(afterFirstZoomIn);
+});

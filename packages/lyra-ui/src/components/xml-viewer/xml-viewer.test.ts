@@ -57,6 +57,14 @@ describe('collapsedDepth and toggling', () => {
     expect(rootToggle.getAttribute('aria-expanded')).to.equal('true');
   });
 
+  it('normalizes a NaN collapsedDepth to 0 (fully collapsed) instead of silently disabling auto-collapse', async () => {
+    const el = (await fixture(html`<lyra-xml-viewer .xml=${SIMPLE_XML}></lyra-xml-viewer>`)) as LyraXmlViewer;
+    el.collapsedDepth = NaN;
+    await el.updateComplete;
+    const rootToggle = el.shadowRoot!.querySelector('[part="toggle"]') as HTMLButtonElement;
+    expect(rootToggle.getAttribute('aria-expanded')).to.equal('false');
+  });
+
   it('toggling a node flips its expand state and survives an xml reassignment with the same shape', async () => {
     const el = (await fixture(html`<lyra-xml-viewer .xml=${SIMPLE_XML}></lyra-xml-viewer>`)) as LyraXmlViewer;
     await el.updateComplete;

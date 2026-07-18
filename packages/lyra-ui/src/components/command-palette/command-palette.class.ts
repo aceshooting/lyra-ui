@@ -33,6 +33,25 @@ export class LyraCommandPalette extends LyraElement<LyraCommandPaletteEventMap> 
   private listId = nextId('command-list');
   private releaseScrollLock?: () => void;
   private overlay?: OverlayHandle;
+  /** The `commands` array `haystacks` was built from -- reference-keyed memo, since `commands`
+   *  only ever changes by reassignment (it's `attribute: false`; in-place mutation wouldn't
+   *  trigger a re-render either). */
+  private haystacksFor?: LyraCommand[];
+  private haystacks: string[] = [];
+
+  /** One lowercased searchable string per command, index-aligned with `commands`. `filtered`
+   *  runs on every keystroke (and every ArrowUp/ArrowDown/Enter), so re-joining and lowercasing
+   *  every row per call would scale with palette size for a result that only changes when the
+   *  command list itself does. */
+  private get searchHaystacks(): string[] {
+    if (this.haystacksFor !== this.commands) {
+      this.haystacksFor = this.commands;
+      this.haystacks = this.commands.map((command) =>
+        [command.label, command.description ?? '', command.group ?? '', ...(command.keywords ?? [])].join(' ').toLowerCase(),
+      );
+    }
+    return this.haystacks;
+  }
 
   protected willUpdate(changed: PropertyValues): void {
     if (changed.has('open')) {
@@ -104,7 +123,7 @@ export class LyraCommandPalette extends LyraElement<LyraCommandPaletteEventMap> 
     return event.ctrlKey === parts.includes('ctrl');
   }
   private onGlobalKeyDown = (event: KeyboardEvent): void => { if (this.matchesShortcut(event)) { event.preventDefault(); this.open ? this.close() : this.openPalette(); } };
-  private get filtered(): LyraCommand[] { const q = this.queryText.trim().toLowerCase(); return this.commands.filter((command) => !q || [command.label, command.description ?? '', command.group ?? '', ...(command.keywords ?? [])].join(' ').toLowerCase().includes(q)); }
+  private get filtered(): LyraCommand[] { const q = this.queryText.trim().toLowerCase(); if (!q) return this.commands; const haystacks = this.searchHaystacks; return this.commands.filter((_, index) => haystacks[index]!.includes(q)); }
   private select(command: LyraCommand): void { if (command.disabled) return; this.emit('lyra-select', { command }); command.onSelect?.(); this.close(); }
   private onKeyDown = (event: KeyboardEvent): void => { const rows = this.filtered; if (event.key === 'ArrowDown') { event.preventDefault(); this.activeIndex = Math.min(this.activeIndex + 1, Math.max(0, rows.length - 1)); } else if (event.key === 'ArrowUp') { event.preventDefault(); this.activeIndex = Math.max(0, this.activeIndex - 1); } else if (event.key === 'Enter' && rows[this.activeIndex]) { event.preventDefault(); this.select(rows[this.activeIndex]); } };
   private onInput = (event: Event): void => { this.queryText = (event.target as HTMLInputElement).value; this.activeIndex = 0; };

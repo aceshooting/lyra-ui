@@ -4,10 +4,10 @@ import { LyraElement } from '../../internal/lyra-element.js';
 import { srOnly } from '../../internal/a11y.js';
 import { styles } from './graph-legend.styles.js';
 
-/** The exact §3.4 `lyra-graph.nodeTypes` entry shape, declared locally (not imported from
+/** The exact `lyra-graph.nodeTypes` entry shape, declared locally (not imported from
  *  `lyra-graph`) so this zero-dependency component never pulls in the graph's own d3 optional-peer
- *  chain and has no build-time coupling to the parallel Family J workstream — TypeScript's
- *  structural typing makes `legend.types = graph.nodeTypes` interchangeable regardless. */
+ *  chain and has no build-time coupling to `lyra-graph` itself — TypeScript's structural typing
+ *  makes `legend.types = graph.nodeTypes` interchangeable regardless. */
 export type LyraGraphLegendType = {
   id: string;
   label: string;
@@ -24,15 +24,15 @@ export interface LyraGraphLegendEventMap {
 }
 
 const PALETTE_SIZE = 8;
-/** Read from `--lyra-graph-cat-1`..`-8` (defined by Family J's `lyra-graph` type-styling) with
- *  this hardcoded fallback -- the same computed-style-with-a-hardcoded-fallback pattern
+/** Read from `--lyra-graph-cat-1`..`-8` (defined by `lyra-graph` type-styling) with this
+ *  hardcoded fallback -- the same computed-style-with-a-hardcoded-fallback pattern
  *  `lyra-word-cloud`'s own `--lyra-word-cloud-color-1`..`-8` palette already uses, so this legend
- *  renders sensible colors whether or not `lyra-graph`'s upgrade has landed yet. */
+ *  renders sensible colors even when no theme defines those variables. */
 const FALLBACK_PALETTE = ['#0969da', '#1a7f37', '#9a6700', '#cf222e', '#8250df', '#bf3989', '#0a7d91', '#57606a'];
 
 /**
  * `<lyra-graph-legend>` — a node-type legend for a paired `lyra-graph`: one swatch + label + count
- * row per §3.4 node type, doubling as visibility filters. Never reads or writes a graph directly —
+ * row per `lyra-graph` node type, doubling as visibility filters. Never reads or writes a graph directly —
  * the host forwards `types` in from `graph.nodeTypes` and `hiddenTypes` back out to
  * `graph.hiddenTypes` on `lyra-visibility-change`, the same event-decoupled contract every sibling
  * in this family follows.
@@ -45,11 +45,12 @@ const FALLBACK_PALETTE = ['#0969da', '#1a7f37', '#9a6700', '#cf222e', '#8250df',
  * @csspart swatch - The type's shape glyph.
  * @csspart label - The type's label text.
  * @csspart count - The optional per-type count.
+ * @csspart live-region - The visually hidden filter-toggle announcement.
  */
 export class LyraGraphLegend extends LyraElement<LyraGraphLegendEventMap> {
   static styles = [LyraElement.styles, styles, srOnly];
 
-  /** The §3.4 `nodeTypes` array, passed through verbatim. */
+  /** The `lyra-graph.nodeTypes` array, passed through verbatim. */
   @property({ attribute: false }) types: LyraGraphLegendType[] = [];
   /** Optional per-type node counts keyed by type id; a type with no entry renders no count. */
   @property({ attribute: false }) counts?: Record<string, number>;

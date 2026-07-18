@@ -32,6 +32,13 @@ export const styles = css`
     background-size: 200% 100%;
     animation: lyra-skeleton-sheen var(--lyra-transition-ambient) infinite;
   }
+  /* background-position percentages are physical, so the sheen highlight always travels
+     left-to-right; play the same keyframes backwards under RTL so it sweeps in the reading
+     direction. animation-direction (not a second animation-name) leaves the reduced-motion
+     'animation: none !important' below fully in charge of disabling it. */
+  :host([effect='sheen']:dir(rtl)) [part='base'] {
+    animation-direction: reverse;
+  }
   @keyframes lyra-skeleton-pulse {
     0%,
     100% {

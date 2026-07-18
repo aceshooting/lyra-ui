@@ -2,6 +2,8 @@ import { html, svg, nothing, type TemplateResult, type PropertyValues } from 'li
 import { property, state, query } from 'lit/decorators.js';
 import { LyraElement } from '../../internal/lyra-element.js';
 import { srOnly } from '../../internal/a11y.js';
+import { getNumberFormat } from '../../internal/intl-cache.js';
+import { finiteCount, finiteRange } from '../../internal/numbers.js';
 import type { LyraLiveRegion } from '../live-region/live-region.class.js';
 import '../live-region/live-region.class.js';
 import { styles } from './lite-chart.styles.js';
@@ -365,7 +367,7 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
     return this.localize('liteChartMarkSummary', undefined, {
       series,
       label: mark.label,
-      value: new Intl.NumberFormat(this.effectiveLocale).format(mark.value),
+      value: getNumberFormat(this.effectiveLocale).format(mark.value),
       index: index + 1,
       total: marks.length,
     });
@@ -414,6 +416,14 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
     }
     const span = hi - lo || 1;
     return plotY + plotH - ((value - lo) / span) * plotH;
+  }
+
+  /** Normalizes `minBarHeight` to a non-negative pixel floor, or `undefined` when left unset -- a
+   *  non-finite/negative explicit value falls back to `0` (a no-op floor, since a bar's natural
+   *  height is never negative) rather than corrupting every stacked-bar Y position it's compared
+   *  against/subtracted from in `renderBars()`. */
+  private effectiveMinBarHeight(): number | undefined {
+    return this.minBarHeight == null ? undefined : finiteRange(this.minBarHeight, 0, 0);
   }
 
   /**
@@ -525,11 +535,21 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
   private renderBars(plotX: number, plotY: number, plotH: number, slot: number, lo: number, hi: number) {
     const n = this.labels.length;
     const groupCount = this.stacked ? 1 : Math.max(1, this.datasets.length);
-    const groupGap = this.barGapRatio ?? BAR_GROUP_GAP;
+    // barGapRatio is a fraction of a category slot (groupW = slot * (1 - groupGap)) -- clamped to
+    // [0, 1] so a non-finite or out-of-range value can't invert groupW negative (>1) or leave no
+    // gap logic at all (<0), either of which would corrupt every bar's x-position/width below.
+    const groupGap = finiteRange(this.barGapRatio ?? BAR_GROUP_GAP, BAR_GROUP_GAP, 0, 1);
     const groupW = slot * (1 - groupGap);
     const barW = (groupW - BAR_GAP * slot * (groupCount - 1)) / groupCount;
     const markIndexes = this.markIndexMap();
     const activeMarkIndex = this.normalizedMarkIndex();
+    // Hoisted out of the per-bar loop: the whole SVG re-renders on every reactive change
+    // (including each roving-tabindex arrow-key move), so a formatter lookup per bar would
+    // repeat for every mark on every one of those passes.
+    const numberFormat = getNumberFormat(this.effectiveLocale);
+    // minBarHeight is a non-negative pixel floor, or undefined when unset -- resolved once per
+    // render pass (not per bar/segment) since every usage below needs the same normalized value.
+    const minBarHeight = this.effectiveMinBarHeight();
     // Only meaningful for stacked + scale="sqrt": each category's *positive*
     // and *negative* stack totals, sqrt-compressed once per category (not
     // per segment) -- see barValueToY()'s doc for why this has to be a
@@ -613,13 +633,13 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
             // not on where it sits in the stack -- compute it in isolation, floor it, then stack
             // from the running pixel cursor rather than from cumulative value.
             const naturalH = Math.max(0, zeroY - this.barValueToY(v, plotY, plotH, lo, hi));
-            const segH = this.minBarHeight != null && v !== 0 && naturalH < this.minBarHeight ? this.minBarHeight : naturalH;
+            const segH = minBarHeight != null && v !== 0 && naturalH < minBarHeight ? minBarHeight : naturalH;
             y2 = posPixelTop;
             y1 = posPixelTop - segH;
             posPixelTop = y1;
           } else {
             const naturalH = Math.max(0, this.barValueToY(v, plotY, plotH, lo, hi) - zeroY);
-            const segH = this.minBarHeight != null && v !== 0 && naturalH < this.minBarHeight ? this.minBarHeight : naturalH;
+            const segH = minBarHeight != null && v !== 0 && naturalH < minBarHeight ? minBarHeight : naturalH;
             y1 = negPixelBottom;
             y2 = negPixelBottom + segH;
             negPixelBottom = y2;
@@ -639,7 +659,7 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
           this.localize('liteChartBarLabel', undefined, {
             series: s.label,
             label,
-            value: new Intl.NumberFormat(this.effectiveLocale).format(v),
+            value: numberFormat.format(v),
           });
         const ariaLabel = barText;
         const titleText = barText;
@@ -654,10 +674,10 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
         // The plain-stacked branch above already applies minBarHeight per-segment against a running
         // pixel cursor (so a floored segment "pushes" the next one) -- applying the floor again here
         // would double-apply it. Only the non-stacked and stackedSqrt paths still need it here.
-        if (!(this.stacked && !stackedSqrt) && this.minBarHeight != null && v !== 0 && h < this.minBarHeight) {
-          const extra = this.minBarHeight - h;
+        if (!(this.stacked && !stackedSqrt) && minBarHeight != null && v !== 0 && h < minBarHeight) {
+          const extra = minBarHeight - h;
           y1 -= extra;
-          h = this.minBarHeight;
+          h = minBarHeight;
         }
         const markIndex = markIndexes.get(`${di}:${i}`)!;
         const selected = this.selectedIndex.includes(i);
@@ -707,6 +727,9 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
     const yFor = (v: number) => plotY + plotH - ((v - lo) / span) * plotH;
     const markIndexes = this.markIndexMap();
     const activeMarkIndex = this.normalizedMarkIndex();
+    // Hoisted out of the per-point loop for the same reason as renderBars(): the whole SVG
+    // re-renders per reactive change, so this would otherwise repeat per point per pass.
+    const numberFormat = getNumberFormat(this.effectiveLocale);
 
     return this.datasets.map((s, di) => {
       const color = this.colorFor(di, s);
@@ -730,7 +753,7 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
           this.localize('liteChartBarLabel', undefined, {
             series: s.label,
             label,
-            value: new Intl.NumberFormat(this.effectiveLocale).format(v),
+            value: numberFormat.format(v),
           });
         const ariaLabel = barText;
         const titleText = barText;
@@ -773,15 +796,26 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
    * index (enforced by the caller, not here).
    */
   private labelStep(n: number): number {
-    const max = this.maxLabels;
-    if (max == null || n <= max) return 1;
+    if (this.maxLabels == null) return 1;
+    // finiteCount() falls back to `n` itself for a non-finite maxLabels (NaN/Infinity, e.g. an
+    // unparsable attribute) -- making the `n <= max` check below always true, i.e. reproducing "no
+    // cap", the same behavior as maxLabels being unset entirely. An explicit *negative* (but
+    // finite) value instead clamps to `0` (finiteCount's own floor, same convention as
+    // `normalizeBucketCount()`'s handling of a negative bucket count elsewhere in this codebase),
+    // which still can't go negative or divide by zero below thanks to `Math.max(1, max - 1)`.
+    const max = finiteCount(this.maxLabels, n);
+    if (n <= max) return 1;
     return Math.max(1, Math.ceil((n - 1) / Math.max(1, max - 1)));
   }
 
   private renderChart(): TemplateResult {
     const n = this.labels.length;
     const h = this.plotHeight || 200;
-    const axisGutter = (this.padLeft ?? PAD_LEFT) + (this.yLabel ? AXIS_TITLE_SPACE : 0);
+    // padLeft is a non-negative pixel gutter width -- a non-finite explicit value (NaN/Infinity,
+    // e.g. an unparsable attribute) falls back to the PAD_LEFT default; an explicit negative value
+    // instead clamps to 0. Either way the gutter never goes negative or NaN.
+    const padLeft = this.padLeft == null ? PAD_LEFT : finiteRange(this.padLeft, PAD_LEFT, 0);
+    const axisGutter = padLeft + (this.yLabel ? AXIS_TITLE_SPACE : 0);
     const rtl = this.effectiveDirection === 'rtl';
     const padBottom = PAD_BOTTOM + (this.xLabel ? AXIS_TITLE_SPACE : 0);
     const plotX = rtl ? PAD_RIGHT : axisGutter;
@@ -797,7 +831,10 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
       // the svg gets an explicit inline-size below (not 100%) and
       // `:host([layout='scroll']) [part='base']` (lite-chart.styles.ts)
       // turns on `overflow-x: auto` so the host scrolls to reveal the rest.
-      slot = this.barWidth;
+      // barWidth is a non-negative fixed per-bar pixel width -- a non-finite value (NaN/Infinity)
+      // falls back to the 32px default; an explicit negative value clamps to 0. Either way the
+      // slot width never goes negative or NaN.
+      slot = finiteRange(this.barWidth, 32, 0);
       plotW = Math.max(0, n * slot);
       w = axisGutter + plotW + PAD_RIGHT;
     } else {

@@ -9,6 +9,19 @@ class Demo extends LyraElement {
 }
 customElements.define(tag('demo-base'), Demo);
 
+class DemoLocale extends LyraElement {
+  get exposedLocale() {
+    return this.effectiveLocale;
+  }
+  get exposedDirection() {
+    return this.effectiveDirection;
+  }
+  render() {
+    return html`<span>${this.localize('cancel')}</span>`;
+  }
+}
+customElements.define(tag('demo-locale'), DemoLocale);
+
 it('applies the token font-family from the base', async () => {
   const el = await fixture<Demo>(`<lyra-demo-base></lyra-demo-base>`);
   expect(getComputedStyle(el).fontFamily).to.not.be.empty;
@@ -23,6 +36,57 @@ it('emit() dispatches a composed, bubbling lyra event', async () => {
   expect(caught!.bubbles).to.be.true;
   expect(caught!.composed).to.be.true;
   expect((caught!.detail as { ok: boolean }).ok).to.be.true;
+});
+
+it('resolves the inherited locale at most once per update cycle', async () => {
+  const wrapper = await fixture<HTMLDivElement>(
+    html`<div lang="x-memo"><lyra-demo-locale></lyra-demo-locale></div>`,
+  );
+  const el = wrapper.querySelector('lyra-demo-locale') as DemoLocale;
+  await el.updateComplete;
+
+  let ancestorReads = 0;
+  const original = wrapper.getAttribute.bind(wrapper);
+  wrapper.getAttribute = (name: string) => {
+    ancestorReads++;
+    return original(name);
+  };
+
+  // The initial render already resolved the locale, so reads reuse the memo
+  // without touching the ancestor chain again.
+  expect(el.exposedLocale).to.equal('x-memo');
+  expect(ancestorReads).to.equal(0);
+
+  // Scheduling a new update drops the memo; the next read re-walks once and
+  // subsequent reads within the same cycle reuse it.
+  el.requestUpdate();
+  expect(el.exposedLocale).to.equal('x-memo');
+  expect(ancestorReads).to.be.greaterThan(0);
+  const walksAfterFirstRead = ancestorReads;
+  expect(el.exposedLocale).to.equal('x-memo');
+  expect(ancestorReads).to.equal(walksAfterFirstRead);
+  await el.updateComplete;
+});
+
+it('re-resolves locale and direction when reconnected under a different ancestor', async () => {
+  const host = await fixture<HTMLDivElement>(
+    html`<div>
+      <section lang="x-one"></section>
+      <section lang="x-two" dir="rtl"></section>
+    </div>`,
+  );
+  const sections = host.querySelectorAll('section');
+  const el = document.createElement('lyra-demo-locale') as DemoLocale;
+  sections[0]!.append(el);
+  await el.updateComplete;
+  expect(el.exposedLocale).to.equal('x-one');
+  expect(el.exposedDirection).to.equal('ltr');
+
+  // Moving the element disconnects and reconnects it without scheduling an
+  // update, so the resolution must not reuse the previous tree's values.
+  sections[1]!.append(el);
+  expect(el.exposedLocale).to.equal('x-two');
+  expect(el.exposedDirection).to.equal('rtl');
 });
 
 it('makes notifications non-cancelable unless a caller opts into veto semantics', async () => {

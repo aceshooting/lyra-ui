@@ -176,6 +176,42 @@ it('lets a consumer retheme the popover popup width via --lyra-overlay-max-inlin
   expect(getComputedStyle(popup).maxInlineSize).to.include(`${5 * remPx}px`);
 });
 
+it('does not poison popover/tooltip positioning with NaN when distance is invalid', async () => {
+  const popover = (await fixture(
+    html`<lyra-popover open distance="not-a-number"><button slot="trigger">Open</button><p>Details</p></lyra-popover>`,
+  )) as LyraPopover;
+  await popover.updateComplete;
+  // autoUpdate schedules an async computePosition; wait a frame for it to land.
+  await new Promise((r) => requestAnimationFrame(() => r(null)));
+  await new Promise((r) => requestAnimationFrame(() => r(null)));
+  const popoverPopup = popover.shadowRoot!.querySelector('[part="popup"]') as HTMLElement;
+  expect(popoverPopup.style.left).to.not.include('NaN');
+  expect(popoverPopup.style.top).to.not.include('NaN');
+
+  const tooltip = (await fixture(
+    html`<lyra-tooltip delay="0" distance="not-a-number">Info<button slot="trigger">Help</button></lyra-tooltip>`,
+  )) as LyraTooltip;
+  const trigger = tooltip.querySelector('button') as HTMLButtonElement;
+  trigger.focus();
+  await tooltip.updateComplete;
+  await new Promise((r) => requestAnimationFrame(() => r(null)));
+  await new Promise((r) => requestAnimationFrame(() => r(null)));
+  const tooltipPopup = tooltip.shadowRoot!.querySelector('[part="popup"]') as HTMLElement;
+  expect(tooltipPopup.style.left).to.not.include('NaN');
+  expect(tooltipPopup.style.top).to.not.include('NaN');
+});
+
+it('falls back to the default 150ms delay when delay is NaN, instead of opening instantly', async () => {
+  const el = (await fixture(html`<lyra-tooltip>Info<button slot="trigger">Help</button></lyra-tooltip>`)) as LyraTooltip;
+  el.delay = NaN;
+  await el.updateComplete;
+  const trigger = el.querySelector('button') as HTMLButtonElement;
+  trigger.dispatchEvent(new FocusEvent('focus'));
+  expect(el.open, 'must not open synchronously on an invalid delay').to.be.false;
+  await new Promise((resolve) => setTimeout(resolve, 250));
+  expect(el.open, 'must still open, via the normalized default delay').to.be.true;
+});
+
 it('lets a consumer retheme the tooltip via --lyra-tooltip-max-inline-size/-background/-color', async () => {
   const el = (await fixture(html`<lyra-tooltip delay="0">Info<button slot="trigger">Help</button></lyra-tooltip>`)) as LyraTooltip;
   await el.updateComplete;

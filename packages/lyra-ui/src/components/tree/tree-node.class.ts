@@ -4,6 +4,7 @@ import { repeat } from 'lit/directives/repeat.js';
 import { LyraElement } from '../../internal/lyra-element.js';
 import { tag } from '../../internal/prefix.js';
 import { chevronIcon } from '../../internal/icons.js';
+import { finiteInteger } from '../../internal/numbers.js';
 import { cascadeUpdateComplete } from './update-cascade.js';
 import { styles } from './tree-node.styles.js';
 import type { TreeItem } from './tree.class.js';
@@ -40,12 +41,56 @@ export class LyraTreeNode extends LyraElement<LyraTreeNodeEventMap> {
   static styles = [LyraElement.styles, styles];
 
   @property({ attribute: false }) item!: TreeItem;
-  @property({ type: Number }) depth = 0;
   @property({ type: Boolean, reflect: true }) expanded = false;
   /** The id of the tree's roving-tabindex-focused item, pushed down from `<lyra-tree>`. */
   @property({ attribute: false }) activeId: string | null = null;
-  @property({ type: Number, attribute: false }) setSize = 1;
-  @property({ type: Number, attribute: false }) posInSet = 1;
+
+  private _depth = 0;
+  /** Nesting depth, 0 = top-level. Feeds `aria-level` (`depth + 1`) in `willUpdate()` below and the
+   *  `--lyra-tree-depth` custom property, and is passed down `+ 1` to each rendered child --
+   *  per the ARIA spec `aria-level` must be a positive integer, so a NaN/negative `depth` would
+   *  produce invalid ARIA output (and, recursively, poison every descendant's own depth too).
+   *  Clamped to a finite integer `>= 0` (never negative -- `0` is the legitimate top-level value,
+   *  matching `aria-level="1"`). */
+  @property({ type: Number })
+  get depth(): number {
+    return this._depth;
+  }
+  set depth(value: number) {
+    const old = this._depth;
+    this._depth = finiteInteger(value, 0, 0);
+    this.requestUpdate('depth', old);
+  }
+
+  private _setSize = 1;
+  /** Feeds `aria-setsize` directly. Per the ARIA spec this must be a positive integer, with `-1`
+   *  as the sole legitimate sentinel meaning "set size unknown" (e.g. a virtualized/lazily-loaded
+   *  tree) -- that sentinel is passed through unchanged; every other value is clamped to a finite
+   *  integer `>= 1` (current usage in `<lyra-tree>` never assigns `-1`, but the accessor still
+   *  honors it since it's valid ARIA and a future virtualized consumer may need it). */
+  @property({ type: Number, attribute: false })
+  get setSize(): number {
+    return this._setSize;
+  }
+  set setSize(value: number) {
+    const old = this._setSize;
+    this._setSize = value === -1 ? -1 : finiteInteger(value, 1, 1);
+    this.requestUpdate('setSize', old);
+  }
+
+  private _posInSet = 1;
+  /** Feeds `aria-posinset` directly. Per the ARIA spec this must be a positive integer -- unlike
+   *  `aria-setsize`, there is no "unknown position" sentinel, so this is always clamped to a
+   *  finite integer `>= 1`. */
+  @property({ type: Number, attribute: false })
+  get posInSet(): number {
+    return this._posInSet;
+  }
+  set posInSet(value: number) {
+    const old = this._posInSet;
+    this._posInSet = finiteInteger(value, 1, 1);
+    this.requestUpdate('posInSet', old);
+  }
 
   get hasChildren(): boolean {
     return Boolean(this.item.children?.length);

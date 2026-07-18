@@ -43,6 +43,22 @@ describe('fetching and parsing', () => {
     await el.updateComplete;
     expect(el.shadowRoot!.querySelector('[role="alert"]')).to.exist;
   });
+
+  it('resolves the invalid-GeoJSON error message through a .strings override for geojsonViewInvalid', async () => {
+    // The error path localizes before maplibre-gl is ever touched, so this
+    // exercises the .strings resolution without the optional peer.
+    stubFetch({ not: 'geojson' });
+    const el = (await fixture(
+      html`<lyra-geojson-view
+        src=${GEOJSON_URL}
+        .strings=${{ geojsonViewInvalid: 'Fichier GeoJSON invalide.' }}
+      ></lyra-geojson-view>`,
+    )) as LyraGeojsonView;
+    const eventPromise = oneEvent(el, 'lyra-render-error');
+    await eventPromise;
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('[role="alert"]')!.textContent).to.equal('Fichier GeoJSON invalide.');
+  });
 });
 
 describe('missing maplibre-gl peer', () => {

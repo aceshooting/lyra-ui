@@ -57,6 +57,29 @@ describe('lyra-page-rail', () => {
     expect(el.page).to.equal(2);
   });
 
+  it('wired mode: keeps tracking the viewer after a bare reconnect with no property change (e.g. a reparent)', async () => {
+    const viewer = new StubViewer();
+    const el = await fixture<LyraPageRail>(html`<lyra-page-rail .viewer=${viewer}></lyra-page-rail>`);
+    viewer.emitLoad(3);
+    await el.updateComplete;
+
+    // A pure reparent: disconnectedCallback unbinds the viewer, and neither
+    // `viewer` nor `for` changes, so no willUpdate pass would rebind it.
+    const parent = el.parentElement!;
+    el.remove();
+    parent.append(el);
+    await el.updateComplete;
+
+    viewer.emitPageChange(2);
+    await el.updateComplete;
+    expect(el.page, 'page tracking should survive a reparent').to.equal(2);
+
+    viewer.emitLoad(5);
+    await el.updateComplete;
+    const list = el.shadowRoot!.querySelector('lyra-virtual-list') as HTMLElement & { items: unknown[] };
+    expect(list.items, 'page-count tracking should survive a reparent').to.deep.equal([1, 2, 3, 4, 5]);
+  });
+
   it('for= resolves a PageThumbnailSource by id in the same root', async () => {
     const viewer = document.createElement('div') as unknown as HTMLDivElement & PageThumbnailSource;
     viewer.id = 'doc-source';
@@ -170,5 +193,45 @@ describe('lyra-page-rail', () => {
     const el = await fixture<LyraPageRail>(html`<lyra-page-rail page-count="3" .highlights=${highlights}></lyra-page-rail>`);
     await el.updateComplete;
     await expect(el).to.be.accessible();
+  });
+
+  // -- numeric guard regressions (pageCount / page / thumbWidth) --
+
+  it('sanitizes a negative or NaN page-count instead of a negative/NaN-length Array.from crash', async () => {
+    for (const raw of ['-5', 'NaN']) {
+      const el = await fixture<LyraPageRail>(html`<lyra-page-rail page-count=${raw}></lyra-page-rail>`);
+      await waitUntil(() => el.shadowRoot!.querySelector('lyra-virtual-list') !== null);
+      const list = el.shadowRoot!.querySelector('lyra-virtual-list') as HTMLElement & { items: unknown[] };
+      expect(list.items, raw).to.deep.equal([]);
+    }
+  });
+
+  it('sanitizes a negative or NaN thumb-width before it reaches renderPageThumbnail', async () => {
+    const viewer = new StubViewer();
+    const el = await fixture<LyraPageRail>(
+      html`<lyra-page-rail .viewer=${viewer} thumb-width="-40"></lyra-page-rail>`,
+    );
+    viewer.emitLoad(1);
+    await el.updateComplete;
+    await waitUntil(() => viewer.renderCalls.length > 0);
+    expect(viewer.renderCalls[0].width).to.equal(0);
+  });
+
+  it('clamps an out-of-range or NaN page into [1, pageCount] for the virtual-list active-id binding', async () => {
+    const el = await fixture<LyraPageRail>(html`<lyra-page-rail page-count="5"></lyra-page-rail>`);
+    await waitUntil(() => el.shadowRoot!.querySelector('lyra-virtual-list') !== null);
+    const list = el.shadowRoot!.querySelector('lyra-virtual-list') as HTMLElement & { activeId: unknown };
+
+    el.page = 999;
+    await el.updateComplete;
+    expect(list.activeId).to.equal(5);
+
+    el.page = NaN;
+    await el.updateComplete;
+    expect(list.activeId).to.equal(1);
+
+    el.page = -3;
+    await el.updateComplete;
+    expect(list.activeId).to.equal(1);
   });
 });

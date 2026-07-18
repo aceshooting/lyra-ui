@@ -378,3 +378,24 @@ it('gives an option a :hover treatment, matching lyra-select/lyra-combobox/lyra-
   const css = styles.cssText.replace(/\s+/g, ' ');
   expect(css).to.match(/\[part='option'\]:hover,\s*\[part='option'\]\[data-active\]\s*\{[^}]+\}/);
 });
+
+// -- Available-space clamping (internal/positioner.js's place()) ------------
+
+it("declares [part='listbox']'s max-block-size/max-inline-size/min-inline-size against place()'s published --lyra-positioner-available-* custom properties, mirroring lyra-menu's/lyra-combobox's identical clamp", () => {
+  const css = styles.cssText.replace(/\s+/g, ' ');
+  const listboxBlock = /\[part=['"]?listbox['"]?\]\s*\{([^}]+)\}/.exec(css);
+  expect(listboxBlock, 'expected a [part="listbox"] rule').to.not.equal(null);
+  const body = listboxBlock![1];
+  expect(body).to.match(/max-block-size:\s*min\([^;]*var\(--lyra-positioner-available-block-size/);
+  expect(body).to.match(/max-inline-size:\s*min\([^;]*var\(--lyra-positioner-available-inline-size/);
+  expect(body).to.match(/min-inline-size:\s*min\([^;]*var\(--lyra-positioner-available-inline-size/);
+});
+
+it("actually applies place()'s available-space custom properties onto the rendered listbox once open, not just declaring them in CSS", async () => {
+  const el = await openWithItems();
+  await waitFor(
+    () => listbox(el).style.getPropertyValue('--lyra-positioner-available-block-size'),
+    (v) => v !== '',
+  );
+  expect(listbox(el).style.getPropertyValue('--lyra-positioner-available-inline-size')).to.not.equal('');
+});

@@ -40,6 +40,23 @@ it('defaults max-visible to unset, showing every child and no overflow indicator
   expect(chips.every((c) => !c.hidden)).to.be.true;
 });
 
+it('sanitizes a NaN/negative maxVisible to a finite non-negative integer instead of poisoning overflow math with NaN', async () => {
+  const el = (await fixture(fiveChips())) as LyraChipGroup;
+
+  el.maxVisible = NaN;
+  expect(el.maxVisible).to.equal(0); // finiteCount's own fallback of 0 for a NaN input
+  await el.updateComplete;
+  const chips = Array.from(el.querySelectorAll('lyra-chip')) as HTMLElement[];
+  expect(chips.every((c) => c.hidden)).to.be.true; // 0 visible, all 5 collapse behind the indicator
+  expect(el.shadowRoot!.querySelector('[part="overflow-indicator"]')).to.exist;
+
+  el.maxVisible = -5;
+  expect(el.maxVisible).to.equal(0); // clamped to the non-negative floor
+
+  el.maxVisible = undefined;
+  expect(el.maxVisible).to.be.undefined; // explicitly unsetting still means "no limit"
+});
+
 it('shows every child when max-visible is greater than or equal to the child count', async () => {
   const el = (await fixture(html`
     <lyra-chip-group max-visible="10">

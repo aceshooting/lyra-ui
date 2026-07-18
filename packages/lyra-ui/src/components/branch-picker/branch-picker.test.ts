@@ -97,3 +97,50 @@ it('is accessible', async () => {
   )) as LyraBranchPicker;
   await expect(el).to.be.accessible();
 });
+
+it('renders nothing for a NaN or negative count instead of throwing or showing NaN', async () => {
+  const el = (await fixture(
+    html`<lyra-branch-picker index="0" count="3"></lyra-branch-picker>`,
+  )) as LyraBranchPicker;
+  expect(el.shadowRoot!.querySelector('[part="base"]')).to.exist;
+
+  el.count = NaN;
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelector('[part="base"]')).to.not.exist;
+
+  el.count = -5;
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelector('[part="base"]')).to.not.exist;
+});
+
+it('clamps a NaN, negative, or oversized index to a valid branch instead of NaN/out-of-range', async () => {
+  const el = (await fixture(
+    html`<lyra-branch-picker index="1" count="3"></lyra-branch-picker>`,
+  )) as LyraBranchPicker;
+  const position = () => el.shadowRoot!.querySelector('[part="position"]')!.textContent!.trim();
+
+  el.index = NaN;
+  await el.updateComplete;
+  expect(position()).to.include('1'); // non-finite falls back to the first branch
+
+  el.index = -5;
+  await el.updateComplete;
+  expect(position()).to.include('1'); // clamped to the first branch
+
+  el.index = 999;
+  await el.updateComplete;
+  expect(position()).to.include('3'); // clamped to the last branch
+});
+
+it('never fires lyra-branch-change past either bound when count is non-finite', async () => {
+  const el = (await fixture(
+    html`<lyra-branch-picker index="0" count="3"></lyra-branch-picker>`,
+  )) as LyraBranchPicker;
+  el.count = NaN; // renders nothing at all, but requestIndex() must still stay bound-safe
+  await el.updateComplete;
+  let fired = false;
+  el.addEventListener('lyra-branch-change', () => (fired = true));
+
+  (el as unknown as { requestIndex(next: number): void }).requestIndex(5);
+  expect(fired).to.be.false;
+});

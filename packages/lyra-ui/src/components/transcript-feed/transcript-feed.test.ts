@@ -87,7 +87,29 @@ it('a same-id text update replaces the row in place rather than duplicating it',
   expect(el.shadowRoot!.querySelector('[part="text"]')!.textContent).to.equal('ab');
 });
 
+it('names the log via label, with a host aria-label winning over both label and the localized default', async () => {
+  const el = (await fixture(html`<lyra-transcript-feed label="Call captions"></lyra-transcript-feed>`)) as LyraTranscriptFeed;
+  el.entries = [{ id: '1', text: 'hi' }];
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelector('[part="log"]')!.getAttribute('aria-label')).to.equal('Call captions');
+
+  el.setAttribute('aria-label', 'Support call');
+  await el.updateComplete;
+  expect(el.accessibleLabel).to.equal('Support call');
+  expect(el.shadowRoot!.querySelector('[part="log"]')!.getAttribute('aria-label')).to.equal('Support call');
+});
+
 describe('timestamps', () => {
+  it('renders the built-in short-time format when no formatTimestamp is supplied', async () => {
+    const el = (await fixture(html`<lyra-transcript-feed show-timestamps locale="en"></lyra-transcript-feed>`)) as LyraTranscriptFeed;
+    el.entries = [{ id: '1', text: 'hi', timestamp: Date.UTC(2026, 0, 1, 12, 34) }];
+    await el.updateComplete;
+    const rendered = el.shadowRoot!.querySelector('[part="timestamp"]')!.textContent!;
+    expect(rendered).to.equal(
+      new Intl.DateTimeFormat('en', { hour: 'numeric', minute: '2-digit' }).format(new Date(Date.UTC(2026, 0, 1, 12, 34))),
+    );
+  });
+
   it('hides timestamps by default and shows them (via formatTimestamp when supplied) when show-timestamps is set', async () => {
     const el = (await fixture(html`<lyra-transcript-feed></lyra-transcript-feed>`)) as LyraTranscriptFeed;
     el.entries = [{ id: '1', text: 'hi', timestamp: 1700000000000 }];
@@ -112,6 +134,20 @@ it('max-rendered-entries caps the DOM row count to the newest N without mutating
   expect(el.entries.length).to.equal(3); // host data untouched
   expect(entryEls(el).length).to.equal(2);
   expect(el.shadowRoot!.querySelector('[part="log"]')!.textContent).to.contain('three');
+});
+
+it('normalizes a NaN max-rendered-entries to 0 ("render all") instead of leaving it unclamped', async () => {
+  const el = (await fixture(
+    html`<lyra-transcript-feed max-rendered-entries="not-a-number"></lyra-transcript-feed>`,
+  )) as LyraTranscriptFeed;
+  expect(Number.isNaN(el.maxRenderedEntries)).to.be.true;
+  el.entries = [
+    { id: '1', text: 'one' },
+    { id: '2', text: 'two' },
+    { id: '3', text: 'three' },
+  ];
+  await el.updateComplete;
+  expect(entryEls(el).length).to.equal(3);
 });
 
 describe('follow / stick-to-bottom contract', () => {

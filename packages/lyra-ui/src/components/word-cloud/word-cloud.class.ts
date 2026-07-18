@@ -4,7 +4,16 @@ import { LyraElement } from '../../internal/lyra-element.js';
 import { srOnly } from '../../internal/a11y.js';
 import { isRtl } from '../../internal/rtl.js';
 import { getScratchCtx } from '../../internal/canvas.js';
-import { layoutWordCloud, MAX_WORDS, type PlacedWord, type WordCloudLayoutResult, type WordCloudWord } from './word-cloud-layout.js';
+import { finiteRange } from '../../internal/numbers.js';
+import {
+  layoutWordCloud,
+  MAX_FONT_SIZE_PX,
+  MAX_WORDS,
+  MIN_SANE_FONT_SIZE,
+  type PlacedWord,
+  type WordCloudLayoutResult,
+  type WordCloudWord,
+} from './word-cloud-layout.js';
 import { styles } from './word-cloud.styles.js';
 
 export type { WordCloudWord };
@@ -190,9 +199,16 @@ export class LyraWordCloud extends LyraElement<LyraWordCloudEventMap> {
       ctx.font = `${fontWeight} ${fontSize}px ${fontFamily}`;
       return ctx.measureText(text).width;
     };
+    // Both are clamped finite/positive (bounded at the same MAX_FONT_SIZE_PX ceiling
+    // layoutWordCloud()'s own resolveFontSizeBounds() enforces) as a guard at this property
+    // boundary, matching this codebase's numeric-guard convention -- a reversed pair
+    // (minFontSize > maxFontSize) is left to resolveFontSizeBounds() itself, which already swaps
+    // it, rather than duplicating that swap as a second source of truth here.
+    const minFontSize = finiteRange(this.minFontSize, DEFAULT_MIN_FONT_SIZE, MIN_SANE_FONT_SIZE, MAX_FONT_SIZE_PX);
+    const maxFontSize = finiteRange(this.maxFontSize, DEFAULT_MAX_FONT_SIZE, MIN_SANE_FONT_SIZE, MAX_FONT_SIZE_PX);
     this.cachedLayout = layoutWordCloud(this.words, {
-      minFontSize: this.minFontSize,
-      maxFontSize: this.maxFontSize,
+      minFontSize,
+      maxFontSize,
       scale: this.scale,
       orientations: this.orientations,
       measureText,

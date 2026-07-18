@@ -3,6 +3,7 @@ import { property, state, query } from 'lit/decorators.js';
 import { LyraElement } from '../../internal/lyra-element.js';
 import { srOnly } from '../../internal/a11y.js';
 import { isRtl } from '../../internal/rtl.js';
+import { finiteCount } from '../../internal/numbers.js';
 import { layoutMindMap, type LyraTopic, type MindMapLayoutResult, type PlacedTopic } from './mind-map-layout.js';
 import { styles } from './mind-map.styles.js';
 
@@ -65,8 +66,16 @@ export class LyraMindMap extends LyraElement<LyraMindMapEventMap> {
 
   private cachedLayout: MindMapLayoutResult = { placed: [], links: [], width: 0, height: 0, centerX: 0, centerY: 0 };
 
+  /** `expandDepth`, normalized to a finite non-negative integer (falling back to the property's own
+   *  default of `1`) -- a raw `NaN` (e.g. an invalid `expand-depth` attribute) would otherwise make
+   *  every `depth < expandDepth` comparison false, silently collapsing every ring instead of just
+   *  falling back to the default. */
+  private get effectiveExpandDepth(): number {
+    return finiteCount(this.expandDepth, 1);
+  }
+
   private isExpanded(id: string, depth: number): boolean {
-    return this.expandedOverrides.get(id) ?? depth < this.expandDepth;
+    return this.expandedOverrides.get(id) ?? depth < this.effectiveExpandDepth;
   }
 
   private ringGapPx(): number {

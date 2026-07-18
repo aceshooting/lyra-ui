@@ -163,6 +163,7 @@ export class LyraSpreadsheetViewer extends DocumentAnchorTarget(LyraSpreadsheetV
     const activate = (): void => { this.emit('lyra-highlight-activate', { id: primary.highlight.id }); };
     return html`<div
       part="cell cell-highlight"
+      role="button"
       ?data-active=${!!active}
       tabindex="0"
       aria-label=${primary.highlight.label || this.localize('viewerHighlightLabel')}

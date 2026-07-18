@@ -12,6 +12,7 @@ import { loadD3, type D3Modules } from './graph-loader.js';
 import { convexHull, hullPathD, hullCentroidX, hullTopY, type HullPoint } from './graph-hull.js';
 import { drawGraphScene, drawPickingScene, pickColorToIndex, type CanvasCamera, type CanvasScene } from './graph-canvas.js';
 import { layeredLayout } from '../../internal/layered-layout.js';
+import { finiteNumber, finiteRange, finiteInteger } from '../../internal/numbers.js';
 import '../skeleton/skeleton.class.js';
 
 export interface GraphNode {
@@ -102,6 +103,7 @@ type SimLink = Omit<GraphLink, 'source' | 'target'> & SimulationLinkDatum<SimNod
 const STUB_OFFSET_PX = 14; // matches the length of a typical broken-link stub in comparable UIs
 const EDGE_LABEL_OFFSET_PX = 4; // perpendicular offset from the segment midpoint, in world px
 const EDGE_LABEL_LENGTH_GATE_RATIO = 0.85; // label hides when its measured width exceeds this * edge length
+const EDGE_LABEL_WIDTH_CACHE_MAX = 512; // distinct measured label texts kept before the oldest entry is evicted
 const EXPAND_KEY_INTERVAL_MS = 500; // window for a double-Enter/Space to count as a double-activate
 const EXPAND_BADGE_R = 5; // world px, the "+" badge circle radius
 const EXPAND_BADGE_OFFSET = Math.SQRT1_2; // places the badge at the node's edge, diagonally upper-right
@@ -447,6 +449,20 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
   private canvasDragNode?: SimNode;
   private canvasPointerId?: number;
   private canvasPointerDownAt?: { x: number; y: number };
+  /** The latest hover pointer position awaiting a hit test -- `pointermove` can fire far more
+   *  often than the display refreshes, and each hit test costs a bounding-rect read plus a
+   *  pick-pixel readback, so hover resolution is coalesced to at most one per animation frame. */
+  private pendingHover?: { x: number; y: number };
+  private hoverRafId?: number;
+  /** Cached world-space draw scene, reused for camera-only repaints (pan/zoom moves the camera,
+   *  not the scene) -- building it costs a `getComputedStyle()` pass plus full per-node/per-link
+   *  array rebuilds, so it's only invalidated (`markCanvasDirty()`) when data/selection/style
+   *  state or node positions actually change. */
+  private canvasScene?: CanvasScene;
+  /** Whether `canvasScene` was built with edge labels included -- the zoom gate makes the scene
+   *  camera-dependent at exactly two thresholds (`edgeLabelMinZoom`, `CANVAS_NODE_LABEL_MIN_ZOOM`),
+   *  so a camera-only draw that crosses either must rebuild instead of reusing the cache. */
+  private canvasSceneHasEdgeLabels = false;
   /** The in-flight `requestAnimationFrame` id for a camera tween (`focusNode()`/`fit()`), if any --
    *  canceled by a new tween request or a user pan/zoom gesture (see `applyInteractions()`'s zoom
    *  `'start'` handler). */
@@ -512,12 +528,21 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
   disconnectedCallback(): void {
     super.disconnectedCallback();
     this.simulation?.stop();
+    // An in-flight focusNode()/fit() tween would otherwise keep scheduling frames and writing
+    // zoom transforms against the detached tree -- cancel it (which also settles the caller's
+    // pending Promise with `false` instead of leaving it hanging forever).
+    this.cancelCameraTween();
     this.canvasResizeObserver?.disconnect();
     this.canvasDprQuery?.removeEventListener('change', this.onCanvasDprChange);
     if (this.canvasDrawRafId != null) {
       cancelAnimationFrame(this.canvasDrawRafId);
       this.canvasDrawRafId = undefined;
     }
+    if (this.hoverRafId != null) {
+      cancelAnimationFrame(this.hoverRafId);
+      this.hoverRafId = undefined;
+    }
+    this.pendingHover = undefined;
   }
 
   /**
@@ -530,6 +555,57 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
   private nodeRadius(n: GraphNode): number {
     const r = n.radius ?? (MIN_RADIUS + MAX_RADIUS) / 2;
     return Number.isFinite(r) ? Math.min(MAX_RADIUS, Math.max(MIN_RADIUS, r)) : (MIN_RADIUS + MAX_RADIUS) / 2;
+  }
+
+  /** `width`/`height` normalized to a finite, positive viewport size — an invalid attribute value
+   *  would otherwise flow straight into `forceCenter`, the SVG `viewBox`, and the canvas backing
+   *  store's `width`/`height`, producing `NaN` geometry/transforms that silently render nothing
+   *  instead of erroring. */
+  private get safeWidth(): number {
+    return finiteRange(this.width, 800, 1);
+  }
+  private get safeHeight(): number {
+    return finiteRange(this.height, 600, 1);
+  }
+
+  /** `minZoom`/`maxZoom` normalized to finite, positive scale bounds before ever reaching
+   *  d3-zoom's `scaleExtent()` or a camera-clamp `Math.min`/`Math.max` — a non-finite bound would
+   *  otherwise poison every subsequent zoom/pan computation with `NaN`. */
+  private get safeMinZoom(): number {
+    return finiteRange(this.minZoom, 0.1, 0.001, 1000);
+  }
+  private get safeMaxZoom(): number {
+    return finiteRange(this.maxZoom, 8, 0.001, 1000);
+  }
+
+  /** `edgeLabelMinZoom` is compared directly against the live camera scale (same domain as
+   *  `minZoom`/`maxZoom`), so it's normalized with the same bounds -- a non-finite value would
+   *  otherwise make every `>=`/`<` comparison against it silently `false`/`true` forever. */
+  private get safeEdgeLabelMinZoom(): number {
+    return finiteRange(this.edgeLabelMinZoom, 0.6, 0.001, 1000);
+  }
+
+  /** `seed`, normalized to a finite integer when set -- `undefined` (unseeded/random) is left
+   *  untouched, since it's a meaningful third state, not a missing number. Without this,
+   *  `hashNodeSeed`/`mulberry32`'s `>>> 0` coercion would silently fold `NaN`/`Infinity` to `0`
+   *  instead of normalizing an out-of-range attribute value the way every other numeric prop here
+   *  does. */
+  private get safeSeed(): number | undefined {
+    return this.seed == null ? undefined : finiteInteger(this.seed, 0);
+  }
+
+  /** `chargeStrength` is a signed d3-force strength (negative = repulsion, positive = attraction)
+   *  — only guarded for finiteness, not clamped to a range, since either sign is a legitimate
+   *  value. */
+  private get safeChargeStrength(): number {
+    return finiteNumber(this.chargeStrength, -300);
+  }
+
+  /** `linkDistance` normalized to a finite, non-negative pixel distance — feeds `forceLink()`'s
+   *  `distance()`, the layered layout's `gapY`, and the neighbor-jitter spawn radius, none of
+   *  which have a sane meaning for a negative/non-finite value. */
+  private get safeLinkDistance(): number {
+    return finiteRange(this.linkDistance, 100, 0);
   }
 
   private resolveNodeType(node: GraphNode): GraphNodeType | undefined {
@@ -717,9 +793,11 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
     const node = this.simNodes.find((n) => n.id === id);
     if (!node || !this.d3 || !this.zoomedEl || !this.zoomBehavior) return false;
     const current = this.d3.zoomTransform(this.zoomedEl);
-    const k = Math.min(this.maxZoom, Math.max(this.minZoom, options?.zoom ?? (current.k as number)));
+    const k = Math.min(this.safeMaxZoom, Math.max(this.safeMinZoom, options?.zoom ?? (current.k as number)));
     const arrived = await this.tweenCamera(() =>
-      this.d3!.zoomIdentity.translate(this.width / 2 - k * (node.x ?? 0), this.height / 2 - k * (node.y ?? 0)).scale(k),
+      this.d3!.zoomIdentity
+        .translate(this.safeWidth / 2 - k * (node.x ?? 0), this.safeHeight / 2 - k * (node.y ?? 0))
+        .scale(k),
     );
     if (arrived) {
       this.graphLiveText = this.localize('graphNodeFocused', undefined, { label: this.nodeAccessibleText(node) });
@@ -756,12 +834,12 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
       }
       const boxW = Math.max(1, maxX - minX);
       const boxH = Math.max(1, maxY - minY);
-      const availW = Math.max(1, this.width - padding * 2);
-      const availH = Math.max(1, this.height - padding * 2);
-      const k = Math.min(this.maxZoom, Math.max(this.minZoom, Math.min(availW / boxW, availH / boxH)));
+      const availW = Math.max(1, this.safeWidth - padding * 2);
+      const availH = Math.max(1, this.safeHeight - padding * 2);
+      const k = Math.min(this.safeMaxZoom, Math.max(this.safeMinZoom, Math.min(availW / boxW, availH / boxH)));
       const cx = (minX + maxX) / 2;
       const cy = (minY + maxY) / 2;
-      return this.d3!.zoomIdentity.translate(this.width / 2 - k * cx, this.height / 2 - k * cy).scale(k);
+      return this.d3!.zoomIdentity.translate(this.safeWidth / 2 - k * cx, this.safeHeight / 2 - k * cy).scale(k);
     });
   }
 
@@ -800,6 +878,10 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
   }
 
   private watchCanvasResize(): void {
+    // Re-arming replaces the observer instance -- disconnect the previous one first, or a
+    // canvas -> svg -> canvas renderer round trip leaves an orphaned observer still watching the
+    // host (disconnectedCallback only ever cleans up whichever instance is current).
+    this.canvasResizeObserver?.disconnect();
     this.canvasResizeObserver = new ResizeObserver(() => this.markCanvasDirty());
     this.canvasResizeObserver.observe(this);
   }
@@ -819,6 +901,17 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
   };
 
   private markCanvasDirty(): void {
+    this.canvasScene = undefined;
+    this.pickDirty = true;
+    this.scheduleCanvasDraw();
+  }
+
+  /** The camera-only sibling of `markCanvasDirty()`: a pan/zoom moves the camera but leaves every
+   *  world-space scene value (positions, colors, labels) untouched, so the cached `canvasScene`
+   *  stays valid and only needs redrawing under the new transform. The pick canvas bakes the
+   *  camera transform into its pixels, though, so it still needs a redraw before the next hit
+   *  test. */
+  private markCanvasCameraDirty(): void {
     this.pickDirty = true;
     this.scheduleCanvasDraw();
   }
@@ -867,7 +960,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
       };
     });
     const edgeLabels =
-      this.showEdgeLabels && this.canvasCamera.k >= this.edgeLabelMinZoom
+      this.showEdgeLabels && this.canvasCamera.k >= this.safeEdgeLabelMinZoom
         ? this.simLinks
             .filter((l) => l.label)
             .map((l) => {
@@ -936,8 +1029,8 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
   private drawCanvas(): void {
     if (!this.canvasEl || !this.canvasCtx) return;
     const dpr = window.devicePixelRatio || 1;
-    const w = this.canvasEl.clientWidth || this.width;
-    const h = this.canvasEl.clientHeight || this.height;
+    const w = this.canvasEl.clientWidth || this.safeWidth;
+    const h = this.canvasEl.clientHeight || this.safeHeight;
     const backingW = Math.round(w * dpr);
     const backingH = Math.round(h * dpr);
     if (this.canvasEl.width !== backingW || this.canvasEl.height !== backingH) {
@@ -947,7 +1040,20 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
     const ctx = this.canvasCtx;
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.clearRect(0, 0, w, h);
-    drawGraphScene(ctx, this.canvasCamera, this.buildCanvasScene(getComputedStyle(this)));
+    // Reuse the cached scene for a camera-only repaint; rebuild when it was invalidated
+    // (markCanvasDirty()) or when the camera crossed one of the two label-visibility zoom gates
+    // the scene bakes in (see canvasSceneHasEdgeLabels' doc).
+    const edgeLabelsVisible = this.showEdgeLabels && this.canvasCamera.k >= this.safeEdgeLabelMinZoom;
+    const nodeLabelsVisible = this.canvasCamera.k >= CANVAS_NODE_LABEL_MIN_ZOOM;
+    if (
+      !this.canvasScene ||
+      this.canvasScene.showNodeLabels !== nodeLabelsVisible ||
+      this.canvasSceneHasEdgeLabels !== edgeLabelsVisible
+    ) {
+      this.canvasScene = this.buildCanvasScene(getComputedStyle(this));
+      this.canvasSceneHasEdgeLabels = edgeLabelsVisible;
+    }
+    drawGraphScene(ctx, this.canvasCamera, this.canvasScene);
   }
 
   // ---------------------------------------------------------------------------------------------
@@ -1010,7 +1116,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
     if (!this.d3 || !this.canvasEl) return;
     this.zoomBehavior = this.d3
       .zoom<HTMLCanvasElement, unknown>()
-      .scaleExtent([this.minZoom, this.maxZoom])
+      .scaleExtent([this.safeMinZoom, this.safeMaxZoom])
       .on('start', () => {
         // Same self-triggered-echo guard as the svg zoom bind's own 'start' handler above (see its
         // comment) -- a camera tween's per-frame applyZoomTransform() call fires this synchronously,
@@ -1022,7 +1128,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
       })
       .on('zoom', (event: OptionalPeerApi) => {
         this.canvasCamera = { k: event.transform.k, x: event.transform.x, y: event.transform.y };
-        this.markCanvasDirty();
+        this.markCanvasCameraDirty();
       })
       .on('end', () => {
         this.isPanning = false;
@@ -1062,9 +1168,34 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
       this.markCanvasDirty();
       return;
     }
-    const hit = this.hitTest(e.clientX, e.clientY);
-    this.updateCanvasTooltip(hit, e.clientX, e.clientY);
+    // Coalesce hover hit-testing to one per animation frame (see pendingHover's doc) -- only the
+    // latest position matters, and running the readback-per-pointermove would multiply the cost
+    // by however many moves the browser delivers between paints.
+    this.pendingHover = { x: e.clientX, y: e.clientY };
+    if (this.hoverRafId != null) return;
+    this.hoverRafId = requestAnimationFrame(() => {
+      this.hoverRafId = undefined;
+      const pending = this.pendingHover;
+      this.pendingHover = undefined;
+      if (!pending) return;
+      // While the force simulation is still ticking, every tick invalidates the pick canvas, so
+      // resolving hover here would re-render the full offscreen picking scene once per frame on
+      // top of the per-tick visible redraw -- and the result would be stale a frame later anyway,
+      // since positions are still moving. Defer hover resolution until the layout settles; the
+      // next pointermove after that picks it up.
+      if (this.pickDirty && this.simulationIsTicking()) return;
+      const hit = this.hitTest(pending.x, pending.y);
+      this.updateCanvasTooltip(hit, pending.x, pending.y);
+    });
   };
+
+  /** `alpha` decays toward `alphaMin` and d3-force stops its internal timer once it crosses below
+   *  it, so `alpha > alphaMin` mirrors the simulation's own running condition -- including a drag's
+   *  `alphaTarget(0.3)` reheat, and correctly excluding a seeded/reduced-motion graph whose settle
+   *  loop already converged synchronously. */
+  private simulationIsTicking(): boolean {
+    return this.simulation != null && this.simulation.alpha() > this.simulation.alphaMin();
+  }
 
   private onCanvasPointerUp = (e: PointerEvent): void => {
     // Starting a drag on a node (onCanvasPointerDown) and ending it here without ever crossing the
@@ -1097,6 +1228,13 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
   };
 
   private onCanvasPointerLeave = (): void => {
+    // Drop any coalesced hover still waiting on its frame -- letting it run after the pointer
+    // already left would re-show the tooltip this handler is about to hide.
+    this.pendingHover = undefined;
+    if (this.hoverRafId != null) {
+      cancelAnimationFrame(this.hoverRafId);
+      this.hoverRafId = undefined;
+    }
     this.updateCanvasTooltip(undefined, 0, 0);
   };
 
@@ -1120,8 +1258,11 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
     const rect = this.canvasEl!.getBoundingClientRect();
     this.canvasTooltipEl.textContent =
       hit.kind === 'node' ? this.nodeAccessibleText(hit.node) : this.linkAccessibleText(hit.link);
-    this.canvasTooltipEl.style.insetInlineStart = `${clientX - rect.left}px`;
-    this.canvasTooltipEl.style.insetBlockStart = `${clientY - rect.top}px`;
+    // `clientX - rect.left`/`clientY - rect.top` are physical viewport offsets, so they must be
+    // written to the physical `left`/`top` -- a logical `inset-inline-start` maps to `right` under
+    // RTL and would mirror the tooltip across the canvas instead of tracking the cursor.
+    this.canvasTooltipEl.style.left = `${clientX - rect.left}px`;
+    this.canvasTooltipEl.style.top = `${clientY - rect.top}px`;
     this.canvasTooltipEl.removeAttribute('hidden');
   }
 
@@ -1215,7 +1356,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
       // update batch, and both retunes must apply — not just whichever branch
       // happens to come first.
       if (changed.has('width') || changed.has('height')) {
-        this.simulation?.force('center', this.d3.forceCenter(this.width / 2, this.height / 2));
+        this.simulation?.force('center', this.d3.forceCenter(this.safeWidth / 2, this.safeHeight / 2));
         this.simulation?.alpha(0.1).restart();
       }
       if (changed.has('chargeStrength') || changed.has('linkDistance')) {
@@ -1223,8 +1364,8 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
         // the next time nodes/links also changed (rebuildSimulation() reads
         // them fresh) — retune the already-created force objects in place
         // instead of rebuilding the whole simulation.
-        if (changed.has('chargeStrength')) this.chargeForce?.strength(this.chargeStrength);
-        if (changed.has('linkDistance')) this.linkForce?.distance(this.linkDistance);
+        if (changed.has('chargeStrength')) this.chargeForce?.strength(this.safeChargeStrength);
+        if (changed.has('linkDistance')) this.linkForce?.distance(this.safeLinkDistance);
         this.simulation?.alpha(0.3).restart();
       }
     }
@@ -1279,12 +1420,17 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
 
     const svgEl = this.renderRoot.querySelector('svg');
     if (svgEl && svgEl !== this.zoomedEl) {
+      // Binding a fresh svg means any previous renderer="canvas" surface is gone -- stop its
+      // resize watcher now (it observes the host, not the removed <canvas>, so it would keep
+      // firing markCanvasDirty() for as long as the element lives in svg mode).
+      this.canvasResizeObserver?.disconnect();
+      this.canvasResizeObserver = undefined;
       this.zoomedEl = svgEl;
       this.gEl = this.renderRoot.querySelector('g') ?? undefined;
       this.focusHaloEl = (this.renderRoot.querySelector('[part="focus-halo"]') as SVGCircleElement) ?? undefined;
       this.zoomBehavior = this.d3
         .zoom<SVGSVGElement, unknown>()
-        .scaleExtent([this.minZoom, this.maxZoom])
+        .scaleExtent([this.safeMinZoom, this.safeMaxZoom])
         .on('start', () => {
           // A camera tween writes a transform on every frame via applyZoomTransform(), which
           // itself synchronously replays this same 'start' handler -- ignore that self-triggered
@@ -1309,7 +1455,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
       // of what edgeLabelMinZoom actually is.
       this.updateEdgeLabelZoomGate(1);
     } else if (this.zoomBehavior && (changed.has('minZoom') || changed.has('maxZoom'))) {
-      this.zoomBehavior.scaleExtent([this.minZoom, this.maxZoom]);
+      this.zoomBehavior.scaleExtent([this.safeMinZoom, this.safeMaxZoom]);
     }
 
     if (
@@ -1544,7 +1690,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
     const links = resolvedLinks; // stubs never enter d3-force's own simulation input
     this.danglingLinks = danglingLinks;
 
-    const seedForSpawn = this.seed;
+    const seedForSpawn = this.safeSeed;
 
     // Give a brand-new node with no carried-over position (from prevById above) a spawn point
     // near an already-positioned neighbor instead of forceSimulation()'s eventual random start --
@@ -1561,7 +1707,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
       const source = neighborLink.source as SimNode;
       const target = neighborLink.target as SimNode;
       const neighbor = source.id === n.id ? target : source;
-      const jitterRadius = this.linkDistance / 2;
+      const jitterRadius = this.safeLinkDistance / 2;
       const angle =
         seedForSpawn != null
           ? (hashNodeSeed(seedForSpawn, n.id) / 4294967296) * Math.PI * 2
@@ -1580,19 +1726,19 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
       for (const n of nodes) {
         if (n.x != null && n.y != null) continue;
         const rng = mulberry32(hashNodeSeed(seedForSpawn, n.id));
-        n.x = rng() * this.width;
-        n.y = rng() * this.height;
+        n.x = rng() * this.safeWidth;
+        n.y = rng() * this.safeHeight;
       }
     }
 
-    this.linkForce = this.d3.forceLink<SimNode, SimLink>(links).distance(this.linkDistance);
-    this.chargeForce = this.d3.forceManyBody<SimNode>().strength(this.chargeStrength);
+    this.linkForce = this.d3.forceLink<SimNode, SimLink>(links).distance(this.safeLinkDistance);
+    this.chargeForce = this.d3.forceManyBody<SimNode>().strength(this.safeChargeStrength);
 
     const simulation = this.d3
       .forceSimulation(nodes)
       .force('link', this.linkForce)
       .force('charge', this.chargeForce)
-      .force('center', this.d3.forceCenter(this.width / 2, this.height / 2))
+      .force('center', this.d3.forceCenter(this.safeWidth / 2, this.safeHeight / 2))
       .force(
         'collide',
         this.d3.forceCollide<SimNode>().radius((n: SimNode) => this.nodeRadius(n) + 10),
@@ -1600,7 +1746,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
       .on('tick', () => this.onTick());
     this.simulation = simulation;
 
-    if (prefersReducedMotion() || this.seed != null) {
+    if (prefersReducedMotion() || this.safeSeed != null) {
       // Pin every node that already had a known position before this rebuild -- either carried
       // over directly (fx/fy, the same mechanism a user drag uses) or restored from
       // lastPositionById after being hidden by hiddenTypes -- so introducing a new node/link can't
@@ -1694,7 +1840,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
     const edges = this.links
       .filter((l) => visibleIds.has(l.source) && visibleIds.has(l.target))
       .map((l) => ({ source: l.source, target: l.target }));
-    const raw = layeredLayout({ nodes: boxes, edges, options: { gapX: 12, gapY: this.linkDistance } });
+    const raw = layeredLayout({ nodes: boxes, edges, options: { gapX: 12, gapY: this.safeLinkDistance } });
 
     let minX = Infinity;
     let minY = Infinity;
@@ -1706,12 +1852,12 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
       minY = Math.min(minY, p.y);
       maxY = Math.max(maxY, p.y);
     }
-    const offsetX = raw.size ? this.width / 2 - (minX + (maxX - minX) / 2) : this.width / 2;
-    const offsetY = raw.size ? this.height / 2 - (minY + (maxY - minY) / 2) : this.height / 2;
+    const offsetX = raw.size ? this.safeWidth / 2 - (minX + (maxX - minX) / 2) : this.safeWidth / 2;
+    const offsetY = raw.size ? this.safeHeight / 2 - (minY + (maxY - minY) / 2) : this.safeHeight / 2;
 
     const nodes: SimNode[] = visible.map((n) => {
       const p = raw.get(n.id);
-      return { ...n, x: (p?.x ?? this.width / 2) + offsetX, y: (p?.y ?? this.height / 2) + offsetY };
+      return { ...n, x: (p?.x ?? this.safeWidth / 2) + offsetX, y: (p?.y ?? this.safeHeight / 2) + offsetY };
     });
     const byId = new Map(nodes.map((n) => [n.id, n]));
     const { resolved, dangling } = this.resolveLinksAgainst(byId);
@@ -1851,6 +1997,13 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
     } else {
       width = text.length * this.edgeLabelFontPx() * 0.6;
     }
+    // Bound the cache under label churn (a streaming graph can cycle through unbounded distinct
+    // label texts) -- Map iteration yields insertion order, so evicting the first key drops the
+    // oldest-measured entry.
+    if (this.edgeLabelWidthCache.size >= EDGE_LABEL_WIDTH_CACHE_MAX) {
+      const oldest = this.edgeLabelWidthCache.keys().next().value;
+      if (oldest !== undefined) this.edgeLabelWidthCache.delete(oldest);
+    }
     this.edgeLabelWidthCache.set(text, width);
     return width;
   }
@@ -1860,7 +2013,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
    *  beneath the attribute) so this scales with every pan/zoom event without a Lit re-render. */
   private updateEdgeLabelZoomGate(k: number): void {
     if (!this.gEl) return;
-    if (k < this.edgeLabelMinZoom) this.gEl.setAttribute('data-edge-labels-hidden', '');
+    if (k < this.safeEdgeLabelMinZoom) this.gEl.setAttribute('data-edge-labels-hidden', '');
     else this.gEl.removeAttribute('data-edge-labels-hidden');
   }
 
@@ -1977,7 +2130,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
         <div part="base">
           <lyra-skeleton
             variant="rect"
-            style=${`--lyra-skeleton-w:${this.width}px;--lyra-skeleton-h:${this.height}px`}
+            style=${`--lyra-skeleton-w:${this.safeWidth}px;--lyra-skeleton-h:${this.safeHeight}px`}
           ></lyra-skeleton>
         </div>
       `;
@@ -2085,7 +2238,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
             nodeCount: this.simNodes.length,
             linkCount: this.simLinks.length,
           })}
-          viewBox="0 0 ${this.width} ${this.height}"
+          viewBox="0 0 ${this.safeWidth} ${this.safeHeight}"
           tabindex=${this.graphItemCount() ? '-1' : '0'}
           @click=${(e: MouseEvent) => {
             if (e.target === e.currentTarget) this.clearSelection();

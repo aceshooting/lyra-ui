@@ -36,12 +36,16 @@ afterEach(() => {
  * starts out as the real loader) without firing `connectedCallback()`, so overriding the field here,
  * between creation and insertion, is what actually lets the fake intercept the initial auto-load.
  * Defaults to a no-op loader (resolves `null`) for tests that supply their own `groups` afterward.
+ * `dir` is applied to the host *before* it connects, so the first direction resolution already
+ * sees it (mirrors a consumer writing `<lyra-emoji-picker dir="rtl">` declaratively).
  */
 async function connectEmojiPicker(
   loadGroups: () => Promise<EmojiPickerGroup[] | null> = () => Promise.resolve(null),
+  dir?: 'ltr' | 'rtl',
 ): Promise<LyraEmojiPicker> {
   const el = document.createElement('lyra-emoji-picker') as LyraEmojiPicker;
   (el as unknown as { loadGroups: () => Promise<EmojiPickerGroup[] | null> }).loadGroups = loadGroups;
+  if (dir) el.setAttribute('dir', dir);
   created.push(el);
   document.body.append(el);
   await el.updateComplete;
@@ -86,6 +90,15 @@ it('sets value and fires lyra-change when an emoji is picked', async () => {
   expect(event.detail).to.deep.equal({ emoji: '😀' });
 });
 
+it('gives each emoji button the shared minimum hit area without enlarging the glyph', async () => {
+  const el = await connectEmojiPicker();
+  el.groups = groups;
+  await el.updateComplete;
+  const button = el.shadowRoot!.querySelector('[part="emoji"]') as HTMLElement;
+  expect(getComputedStyle(button).minInlineSize).to.equal('40px');
+  expect(getComputedStyle(button).minBlockSize).to.equal('40px');
+});
+
 describe('search filtering', () => {
   it('filters emojis by name and shortcode, case-insensitively', async () => {
     const el = await connectEmojiPicker();
@@ -126,6 +139,92 @@ describe('keyboard navigation', () => {
     const event = await eventPromise;
     expect(event.detail).to.deep.equal({ emoji: '😂' }); // second emoji, after one ArrowRight from index 0
   });
+
+  it('swaps ArrowLeft/ArrowRight under RTL so "forward" follows reading direction', async () => {
+    const el = await connectEmojiPicker(undefined, 'rtl');
+    el.groups = groups;
+    await el.updateComplete;
+    const grid = el.shadowRoot!.querySelector('[part="grid"]') as HTMLElement;
+    const buttons = [...el.shadowRoot!.querySelectorAll('[part="emoji"]')];
+
+    grid.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true }));
+    expect(buttons[1].getAttribute('aria-selected')).to.equal('true'); // ArrowLeft is "forward" under RTL
+    expect(buttons[0].getAttribute('aria-selected')).to.equal('false');
+
+    grid.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+    expect(buttons[0].getAttribute('aria-selected')).to.equal('true'); // ArrowRight is "backward" under RTL
+    expect(buttons[1].getAttribute('aria-selected')).to.equal('false');
+  });
+
+  it('activates the focused emoji on Enter, not a stale active index', async () => {
+    const el = await connectEmojiPicker();
+    el.groups = groups;
+    await el.updateComplete;
+    const third = el.shadowRoot!.querySelectorAll<HTMLButtonElement>('[part="emoji"]')[2];
+
+    third.focus(); // focusin syncs the active index to the truly focused option
+    const eventPromise = oneEvent(el, 'lyra-change');
+    third.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+    const event = await eventPromise;
+    expect(event.detail).to.deep.equal({ emoji: '🐶' });
+  });
+
+  it('navigates the grid from the search input via the combobox contract', async () => {
+    const el = await connectEmojiPicker();
+    el.groups = groups;
+    await el.updateComplete;
+    const input = el.shadowRoot!.querySelector('[part="search"]') as HTMLInputElement;
+    expect(input.getAttribute('role')).to.equal('combobox');
+    expect(input.getAttribute('aria-expanded')).to.equal('true');
+    expect(input.getAttribute('aria-activedescendant')).to.match(/-item-0$/);
+
+    input.focus();
+    input.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+    expect(input.getAttribute('aria-activedescendant')).to.match(/-item-1$/);
+    // Combobox idiom: focus stays in the input while the active option moves.
+    expect(el.shadowRoot!.activeElement?.getAttribute('part')).to.equal('search');
+
+    const eventPromise = oneEvent(el, 'lyra-change');
+    input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+    const event = await eventPromise;
+    expect(event.detail).to.deep.equal({ emoji: '😂' });
+  });
+
+  it('keeps exactly one emoji tabbable (roving tabindex) and supports ArrowDown/ArrowUp/Home/End', async () => {
+    const el = await connectEmojiPicker();
+    el.groups = groups;
+    await el.updateComplete;
+    const grid = el.shadowRoot!.querySelector('[part="grid"]') as HTMLElement;
+    const buttons = [...el.shadowRoot!.querySelectorAll<HTMLButtonElement>('[part="emoji"]')];
+    expect(buttons.map((b) => b.tabIndex)).to.deep.equal([0, -1, -1]);
+
+    // Group labels span the full row, so the two smileys form the first visual row and the dog
+    // starts the next one: one row down from index 0 lands on index 2.
+    grid.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }));
+    expect(buttons.map((b) => b.tabIndex)).to.deep.equal([-1, -1, 0]);
+    expect(el.shadowRoot!.activeElement?.id).to.equal(buttons[2].id); // roving focus follows
+
+    grid.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowUp', bubbles: true }));
+    expect(buttons.map((b) => b.tabIndex)).to.deep.equal([0, -1, -1]);
+
+    grid.dispatchEvent(new KeyboardEvent('keydown', { key: 'End', bubbles: true }));
+    expect(buttons[2].tabIndex).to.equal(0);
+    grid.dispatchEvent(new KeyboardEvent('keydown', { key: 'Home', bubbles: true }));
+    expect(buttons[0].tabIndex).to.equal(0);
+    expect(buttons[2].tabIndex).to.equal(-1);
+  });
+});
+
+it('forwards a host aria-label to the emoji listbox, falling back to the localized default', async () => {
+  const el = await connectEmojiPicker();
+  el.groups = groups;
+  await el.updateComplete;
+  const grid = el.shadowRoot!.querySelector('[part="grid"]')!;
+  expect(grid.getAttribute('aria-label')).to.equal('Emoji');
+
+  el.setAttribute('aria-label', 'Reaction picker');
+  await el.updateComplete;
+  expect(grid.getAttribute('aria-label')).to.equal('Reaction picker');
 });
 
 it('auto-loads a default emoji set on connect when groups is left unset', async () => {

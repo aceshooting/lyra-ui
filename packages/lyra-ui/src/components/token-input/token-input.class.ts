@@ -32,13 +32,17 @@ export interface LyraTokenInputEventMap {
 export class LyraTokenInput extends LyraElement<LyraTokenInputEventMap> {
   static formAssociated = true;
   static styles = [LyraElement.styles, styles];
+
+  static properties = {
+    name: { reflect: true, noAccessor: true },
+    required: { type: Boolean, reflect: true, noAccessor: true },
+    disabled: { type: Boolean, reflect: true, noAccessor: true },
+  };
+
   @property() label = '';
   @property() hint = '';
   @property({ attribute: 'error-text' }) errorText = '';
   @property() placeholder = '';
-  @property({ reflect: true }) name = '';
-  @property({ type: Boolean, reflect: true }) required = false;
-  @property({ type: Boolean, reflect: true }) disabled = false;
   @property({ attribute: 'aria-label' }) accessibleLabel = '';
   @property({ attribute: 'allow-duplicates', type: Boolean }) allowDuplicates = false;
   @property({ attribute: 'delimiter' }) delimiter = ',';
@@ -63,10 +67,47 @@ export class LyraTokenInput extends LyraElement<LyraTokenInputEventMap> {
   // lyra-select's/lyra-combobox's identical `_fieldsetDisabled`/
   // `effectiveDisabled` pattern), only the combined getter below.
   private _fieldsetDisabled = false;
+  private _name = '';
+  private _required = false;
+  private _disabled = false;
 
   @property({ attribute: false })
   get value(): string[] { return this._value; }
   set value(next: string[]) { const old = this._value; this._value = Array.isArray(next) ? [...next] : []; this.requestUpdate('value', old); if (this.internals) this.syncValidity(); }
+
+  /** The form submission key, reflected synchronously for native form APIs.
+   *  This control keys its `FormData` entries directly off `name` (see
+   *  `syncValidity()`), so a rename must rebuild that `FormData` in the same
+   *  tick -- mirrors `<lyra-combobox>`'s identical `name` setter. */
+  get name(): string { return this._name; }
+  set name(next: string) {
+    const old = this._name;
+    this._name = next ?? '';
+    if (this._name) {
+      this.setAttribute('name', this._name);
+    } else {
+      this.removeAttribute('name');
+    }
+    this.syncValidity();
+    this.requestUpdate('name', old);
+  }
+
+  get required(): boolean { return this._required; }
+  set required(next: boolean) {
+    const old = this._required;
+    this._required = Boolean(next);
+    this.toggleAttribute('required', this._required);
+    this.syncValidity();
+    this.requestUpdate('required', old);
+  }
+
+  get disabled(): boolean { return this._disabled; }
+  set disabled(next: boolean) {
+    const old = this._disabled;
+    this._disabled = Boolean(next);
+    this.toggleAttribute('disabled', this._disabled);
+    this.requestUpdate('disabled', old);
+  }
 
   constructor() { super(); this.internals = this.attachInternals(); this.validityController = new AnchoredValidityController(this, this.internals, () => this[VALIDITY_ANCHOR]()); }
   connectedCallback(): void { super.connectedCallback(); this.syncValidity(); }
@@ -86,7 +127,7 @@ export class LyraTokenInput extends LyraElement<LyraTokenInputEventMap> {
    */
   formDisabledCallback(disabled: boolean): void { this._fieldsetDisabled = disabled; this.requestUpdate(); }
   /** @internal */
-  [VALIDITY_ANCHOR](): HTMLElement | null { return this.inputEl ?? this.renderRoot.querySelector('[part="input-wrapper"]'); }
+  [VALIDITY_ANCHOR](): HTMLElement | null { return this.inputEl ?? this.renderRoot?.querySelector('[part="input-wrapper"]') ?? null; }
   checkValidity(): boolean { return this.internals.checkValidity(); }
   reportValidity(): boolean { return this.internals.reportValidity(); }
   override focus(options?: FocusOptions): void { this.inputEl?.focus(options); }

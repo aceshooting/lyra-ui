@@ -10,7 +10,7 @@ import { styles } from './streaming-text.styles.js';
 // thresholds are used instead, the same way lyra-stream-status's own
 // timer-driven tests do.
 
-type Internals = { displayedContent: string };
+type Internals = { displayedContent: string; coalescer: { throttleMs: number } };
 
 function plainText(el: LyraStreamingText): string {
   const span = el.shadowRoot!.querySelector('.plain');
@@ -41,6 +41,28 @@ it('reflects streaming as a boolean host attribute', async () => {
 it('maps the coalesce-ms attribute onto the coalesceMs number property', async () => {
   const el = (await fixture(html`<lyra-streaming-text coalesce-ms="120"></lyra-streaming-text>`)) as LyraStreamingText;
   expect(el.coalesceMs).to.equal(120);
+});
+
+it('self-heals a NaN/negative coalesce-ms instead of feeding setTimeout a nonsensical delay', async () => {
+  // Regression test: `coalesceMs` reaches `Announcer.throttleMs` and, from there, a raw
+  // `setTimeout()` call -- a NaN/negative value must not reach it unsanitized.
+  const nanEl = (await fixture(html`<lyra-streaming-text coalesce-ms="NaN"></lyra-streaming-text>`)) as LyraStreamingText;
+  expect((nanEl as unknown as Internals).coalescer.throttleMs, 'NaN falls back to the constructed default').to.equal(
+    50,
+  );
+
+  const negativeEl = (await fixture(
+    html`<lyra-streaming-text coalesce-ms="-30"></lyra-streaming-text>`,
+  )) as LyraStreamingText;
+  expect((negativeEl as unknown as Internals).coalescer.throttleMs, 'a negative delay clamps to 0').to.equal(0);
+
+  // Also re-clamped when reassigned after mount, not just at initial attribute mapping.
+  const reassigned = (await fixture(
+    html`<lyra-streaming-text coalesce-ms="80"></lyra-streaming-text>`,
+  )) as LyraStreamingText;
+  reassigned.coalesceMs = Number.NaN;
+  await reassigned.updateComplete;
+  expect((reassigned as unknown as Internals).coalescer.throttleMs).to.equal(50);
 });
 
 it('honors coalesceMs reassigned after mount for a subsequent burst, not just the initial attribute mapping', async () => {
@@ -235,6 +257,56 @@ describe('markdown heuristic memoization', () => {
     } finally {
       RegExp.prototype.test = originalTest;
     }
+  });
+
+  it('skips re-running the regex battery when already-matched content only appends', async () => {
+    // markdown="false" keeps the rendered output on the plain-text path (so no
+    // <lyra-markdown>/marked regex activity pollutes the counter below) while the
+    // auto-detect scan in willUpdate still runs on every displayedContent change.
+    const el = (await fixture(
+      html`<lyra-streaming-text markdown="false" .content=${'# Heading'}></lyra-streaming-text>`,
+    )) as LyraStreamingText;
+    await el.updateComplete;
+
+    const originalTest = RegExp.prototype.test;
+    let scans = 0;
+    try {
+      RegExp.prototype.test = function (this: RegExp, str: string): boolean {
+        scans++;
+        return originalTest.call(this, str);
+      };
+
+      el.content = '# Heading\n\nmore streamed prose arriving later';
+      // The false -> true streaming transition forces the coalescer to flush the new
+      // content within this same update, so the appended text reaches displayedContent
+      // (and the memo check) without waiting out a coalesce window.
+      el.streaming = true;
+      await el.updateComplete;
+
+      expect(
+        scans,
+        'appended content whose prefix already matched must not re-run the full pattern battery',
+      ).to.equal(0);
+    } finally {
+      RegExp.prototype.test = originalTest;
+    }
+  });
+
+  it('re-evaluates the markdown auto-detect when content is replaced rather than appended', async () => {
+    const el = (await fixture(
+      html`<lyra-streaming-text .content=${'# Heading'}></lyra-streaming-text>`,
+    )) as LyraStreamingText;
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('lyra-markdown'), 'precondition: auto-detected as Markdown').to.exist;
+
+    // A brand-new stream on a reused element: the replacement is not an append of the
+    // previous text, so the memoized "already matched" result must not stick.
+    el.content = 'plain prose for a brand-new stream';
+    el.streaming = true;
+    await el.updateComplete;
+
+    expect(el.shadowRoot!.querySelector('lyra-markdown')).to.not.exist;
+    expect(el.shadowRoot!.querySelector('.plain')).to.exist;
   });
 });
 

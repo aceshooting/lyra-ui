@@ -8,6 +8,7 @@ import { Announcer } from '../../internal/announcer.js';
 import { isRtl } from '../../internal/rtl.js';
 import { prefersReducedMotion } from '../../internal/motion.js';
 import { layeredLayout } from '../../internal/layered-layout.js';
+import { finiteRange } from '../../internal/numbers.js';
 import { styles } from './flow-canvas.styles.js';
 
 export interface FlowHandle {
@@ -72,6 +73,16 @@ const KEYBOARD_PAN_STEP = 32;
 
 function toggledSelection(list: string[], id: string): string[] {
   return list.includes(id) ? list.filter((x) => x !== id) : [...list, id];
+}
+
+/** One incident edge of the node being dragged, with its records and SVG elements resolved
+ *  up-front -- see `buildDragEdgeRefs()`. */
+interface DragEdgeRef {
+  edge: FlowEdge;
+  sourceNode: FlowNode;
+  targetNode: FlowNode;
+  pathEl: SVGPathElement | null;
+  labelEl: Element | null;
 }
 
 export interface LyraFlowCanvasEventMap {
@@ -167,6 +178,35 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
   @property({ attribute: false }) decorations: FlowRunDecorations | null = null;
   @property({ attribute: 'aria-label' }) accessibleLabel: string | null = null;
 
+  /** `minZoom`/`maxZoom` normalized to finite, positive scale bounds before ever reaching
+   *  `clampZoom()`'s `Math.min`/`Math.max` — an invalid attribute value would otherwise poison
+   *  every zoom/pan computation (`viewport.zoom`, the world layer's `scale(...)` transform) with
+   *  `NaN`, which the browser silently drops as invalid CSS rather than surfacing as an error. */
+  private get safeMinZoom(): number {
+    return finiteRange(this.minZoom, 0.25, 0.001, 1000);
+  }
+  private get safeMaxZoom(): number {
+    return finiteRange(this.maxZoom, 2, 0.001, 1000);
+  }
+
+  /** `grid` normalized to a finite, non-negative snap increment — `0` still means "no snapping"
+   *  (see `snap()`), but a negative/non-finite value can no longer reach the `value / this.grid`
+   *  division in `snap()`/`nudgeNode()`, nor the `--lyra-flow-canvas-grid-size` custom property. */
+  private get safeGrid(): number {
+    return finiteRange(this.grid, 8, 0);
+  }
+
+  /** `layerGap`/`nodeGap` normalized to finite, non-negative pixel gaps before reaching
+   *  `layeredLayout()`'s `gapY`/`gapX` — an invalid value would otherwise flow into every
+   *  auto-laid-out node's computed position, producing a `NaN` `translate(...)` that silently
+   *  renders the card nowhere instead of at a real position. */
+  private get safeLayerGap(): number {
+    return finiteRange(this.layerGap, 64, 0);
+  }
+  private get safeNodeGap(): number {
+    return finiteRange(this.nodeGap, 24, 0);
+  }
+
   private readonly arrowMarkerId = nextId('flow-canvas-arrow');
   private readonly liveRegionId = nextId('flow-canvas-live');
   private readonly announcer = new Announcer({ onFlush: (text) => (this.liveText = text) });
@@ -184,7 +224,7 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
   private measuredSizes = new Map<string, { width: number; height: number }>();
 
   private resizeObserver?: ResizeObserver;
-  private readonly observedNodeEls = new WeakSet<Element>();
+  private readonly observedNodeEls = new Set<Element>();
   private layoutRaf: number | null = null;
 
   private panX = 0;
@@ -194,7 +234,16 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
   private worldEl?: HTMLElement;
   private viewportChangeRaf: number | null = null;
   private hasFitOnce = false;
-  private panDrag?: { pointerId: number; startClientX: number; startClientY: number; startPanX: number; startPanY: number };
+  private wheelMeasure: { rect: DOMRect; rtl: boolean } | null = null;
+  private wheelMeasureRaf: number | null = null;
+  private panDrag?: {
+    pointerId: number;
+    startClientX: number;
+    startClientY: number;
+    startPanX: number;
+    startPanY: number;
+    rtlFlip: number;
+  };
 
   private nodeDrag?: {
     pointerId: number;
@@ -206,10 +255,23 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
     currentX?: number;
     currentY?: number;
     wrapper: HTMLElement;
+    rtlFlip: number;
   };
   private nodeIncidentEdges = new Map<string, string[]>();
+  /** Per-drag snapshot of the dragged node's incident edges -- edge/node records and shadow-DOM
+   *  element refs resolved once at drag start, so the per-pointermove path rewrite does no
+   *  per-edge array scans or shadow-root-wide `querySelector` calls. */
+  private dragEdgeRefs?: DragEdgeRef[];
 
-  private connectState?: { sourceId: string; sourceHandle: string; startPt: { x: number; y: number } };
+  private connectState?: {
+    sourceId: string;
+    sourceHandle: string;
+    startPt: { x: number; y: number };
+    /** Viewport rect and RTL resolution measured once at gesture start -- `getBoundingClientRect`
+     *  and `getComputedStyle` per pointermove would force layout on every move. */
+    rect: DOMRect | null;
+    rtl: boolean;
+  };
   private connectionLineEl?: SVGPathElement;
   private connectInvalidNodeId: string | null = null;
 
@@ -219,12 +281,68 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
   connectedCallback(): void {
     super.connectedCallback();
     this.resizeObserver = new ResizeObserver((entries) => this.onNodesResized(entries));
+    // updated() only runs on renders -- a disconnect/reconnect (e.g. a reparenting move) that
+    // changes no reactive property never triggers one, which would leave every already-rendered
+    // wrapper unwatched by the freshly created observer above, so re-observe directly here.
+    if (this.hasUpdated) this.observeNodeWrappers();
   }
 
   disconnectedCallback(): void {
     super.disconnectedCallback();
     this.resizeObserver?.disconnect();
-    if (this.layoutRaf != null) cancelAnimationFrame(this.layoutRaf);
+    this.resizeObserver = undefined;
+    this.observedNodeEls.clear();
+    if (this.layoutRaf != null) {
+      cancelAnimationFrame(this.layoutRaf);
+      this.layoutRaf = null;
+    }
+    if (this.companionRaf != null) {
+      cancelAnimationFrame(this.companionRaf);
+      this.companionRaf = null;
+    }
+    if (this.viewportChangeRaf != null) {
+      cancelAnimationFrame(this.viewportChangeRaf);
+      this.viewportChangeRaf = null;
+    }
+    if (this.wheelMeasureRaf != null) {
+      cancelAnimationFrame(this.wheelMeasureRaf);
+      this.wheelMeasureRaf = null;
+      this.wheelMeasure = null;
+    }
+    // An in-flight pan/node-drag/connect gesture holds window-level listeners; if the element is
+    // removed mid-gesture nothing else ever detaches them, and a later unrelated pointerup would
+    // fire against a detached tree with stale gesture state.
+    this.panDrag = undefined;
+    window.removeEventListener('pointermove', this.onBackgroundPointerMove);
+    window.removeEventListener('pointerup', this.onBackgroundPointerUp);
+    window.removeEventListener('pointercancel', this.onBackgroundPointerUp);
+    window.removeEventListener('lostpointercapture', this.onBackgroundPointerUp);
+    this.nodeDrag = undefined;
+    this.dragEdgeRefs = undefined;
+    window.removeEventListener('pointermove', this.onNodePointerMove);
+    window.removeEventListener('pointerup', this.onNodePointerUp);
+    window.removeEventListener('pointercancel', this.onNodePointerUp);
+    window.removeEventListener('lostpointercapture', this.onNodePointerUp);
+    this.connectState = undefined;
+    this.connecting = false;
+    this.connectInvalidNodeId = null;
+    window.removeEventListener('pointermove', this.onConnectPointerMove);
+    window.removeEventListener('pointerup', this.onConnectPointerUp);
+    window.removeEventListener('pointercancel', this.onConnectPointerCancel);
+    window.removeEventListener('lostpointercapture', this.onConnectPointerCancel);
+  }
+
+  /** Observes every node wrapper not yet tracked by the current `ResizeObserver` instance. The
+   *  tracking set is cleared alongside the observer itself in `disconnectedCallback()`, so a
+   *  reconnect re-observes each wrapper with the freshly created observer instead of treating it
+   *  as already watched. */
+  private observeNodeWrappers(): void {
+    for (const el of Array.from(this.renderRoot.querySelectorAll('[part="node"]'))) {
+      if (!this.observedNodeEls.has(el)) {
+        this.observedNodeEls.add(el);
+        this.resizeObserver?.observe(el);
+      }
+    }
   }
 
   protected willUpdate(changed: PropertyValues): void {
@@ -243,12 +361,7 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
       this.scheduleCompanionNotify();
     }
     if (changed.has('decorations')) this.scheduleCompanionNotify();
-    for (const el of Array.from(this.renderRoot.querySelectorAll('[part="node"]'))) {
-      if (!this.observedNodeEls.has(el)) {
-        this.observedNodeEls.add(el);
-        this.resizeObserver?.observe(el);
-      }
-    }
+    this.observeNodeWrappers();
     const viewportEl = this.renderRoot.querySelector('[part="viewport"]') as HTMLElement | null;
     if (viewportEl && viewportEl !== this.viewportEl) {
       this.viewportEl = viewportEl;
@@ -439,24 +552,18 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
    *  nodes exactly as given (routed through as `fixedPositions` so the shared util lays out around
    *  them). A no-op when every node already has a `position`.
    *
-   *  Deviation from the plan brief (documented per this task's execution instructions): the real
-   *  `../../internal/layered-layout.ts` export is `layeredLayout({ nodes, edges, options })` — a
-   *  single object argument — not the two-argument `layeredLayout(graph, options?)` curried form the
-   *  brief assumed; the call below uses the real shape. The brief also assumed the util treats its
-   *  own `x` as the layering axis ("this canvas is what remaps that to the visual axis"); the util's
-   *  own JSDoc says the opposite -- "coordinates assigned top -> bottom (block axis)... left -> right
-   *  within a layer" -- i.e. `y` is the layer/downstream axis and `x` is the in-layer sibling axis
-   *  (confirmed further by `nodeGap`'s default of 24 matching the util's own `gapX` default, and
-   *  `layerGap`'s default of 64 being the same order of magnitude as the util's `gapY` default of
-   *  100). `swap` below reconciles the two frames: canvas `orientation="vertical"` (downstream = y)
-   *  already matches the util's native frame directly, so only `orientation="horizontal"`
-   *  (downstream = x) needs both axes swapped when talking to the util, and `gapX`/`gapY` are always
-   *  passed as `nodeGap`/`layerGap` respectively (never swapped) since those map to the util's own
-   *  fixed sibling/layer axes regardless of how the *result* is later remapped into canvas space.
-   *  The util also documents its return value as "raw box centers", whereas this canvas's own
-   *  `position` convention (see `render()`'s `translate(x,y)` and `[part='node']`'s
-   *  `inset-block-start/inline-start: 0`) is a top-left corner -- `nodeSize()` is used to convert
-   *  between the two in both directions (`fixedPositions` in, the returned map out). */
+   *  Axis mapping: `../../internal/layered-layout.ts` assigns coordinates top -> bottom (block
+   *  axis), left -> right within a layer -- i.e. its `y` is the layer/downstream axis and its `x`
+   *  is the in-layer sibling axis. `swap` below reconciles that frame with this canvas's: canvas
+   *  `orientation="vertical"` (downstream = y) already matches the util's native frame directly,
+   *  so only `orientation="horizontal"` (downstream = x) needs both axes swapped when talking to
+   *  the util, and `gapX`/`gapY` are always passed as `nodeGap`/`layerGap` respectively (never
+   *  swapped) since those map to the util's own fixed sibling/layer axes regardless of how the
+   *  *result* is later remapped into canvas space. The util also returns raw box centers, whereas
+   *  this canvas's own `position` convention (see `render()`'s `translate(x,y)` and
+   *  `[part='node']`'s `inset-block-start/inline-start: 0`) is a top-left corner -- `nodeSize()`
+   *  is used to convert between the two in both directions (`fixedPositions` in, the returned map
+   *  out). */
   private runAutoLayoutIfNeeded(): void {
     const unpositioned = this.nodes.filter((n) => !n.position);
     if (unpositioned.length === 0) return;
@@ -479,7 +586,7 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
     const result = layeredLayout({
       nodes: graphNodes,
       edges: graphEdges,
-      options: { gapX: this.nodeGap, gapY: this.layerGap, fixedPositions },
+      options: { gapX: this.safeNodeGap, gapY: this.safeLayerGap, fixedPositions },
     });
     const positions: Record<string, { x: number; y: number }> = {};
     for (const n of unpositioned) {
@@ -614,7 +721,7 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
   }
 
   private clampZoom(z: number): number {
-    return Math.min(this.maxZoom, Math.max(this.minZoom, z));
+    return Math.min(this.safeMaxZoom, Math.max(this.safeMinZoom, z));
   }
 
   private applyWorldTransform(): void {
@@ -653,16 +760,26 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
    *  canvas's pre-mirror world-local X. Every other pan/zoom/drag calculation stays in plain
    *  physical coordinates because `[part='viewport']`'s own CSS mirrors the whole `.world` layer
    *  under RTL; panning/zoom math never needs to know about RTL beyond this one conversion. */
-  private localWorldX(clientX: number, rect: DOMRect): number {
+  private localWorldX(clientX: number, rect: DOMRect, rtl = isRtl(this)): number {
     const local = clientX - rect.left;
-    return this.orientation === 'horizontal' && isRtl(this) ? rect.width - local : local;
+    return this.orientation === 'horizontal' && rtl ? rect.width - local : local;
   }
 
   private onWheel = (e: WheelEvent): void => {
     if (this.locked || !this.viewportEl) return;
     e.preventDefault();
-    const rect = this.viewportEl.getBoundingClientRect();
-    const localX = this.localWorldX(e.clientX, rect);
+    // Wheel events arrive in dense bursts; neither the viewport's rect nor the resolved text
+    // direction can change within a single frame, so both are measured at most once per frame
+    // instead of forcing a layout/style recalc on every event.
+    if (!this.wheelMeasure) {
+      this.wheelMeasure = { rect: this.viewportEl.getBoundingClientRect(), rtl: isRtl(this) };
+      this.wheelMeasureRaf = requestAnimationFrame(() => {
+        this.wheelMeasure = null;
+        this.wheelMeasureRaf = null;
+      });
+    }
+    const { rect, rtl } = this.wheelMeasure;
+    const localX = this.localWorldX(e.clientX, rect, rtl);
     const localY = e.clientY - rect.top;
     const factor = e.deltaY < 0 ? ZOOM_MULTIPLIER : 1 / ZOOM_MULTIPLIER;
     this.zoomAtPoint(localX, localY, this.zoomLevel * factor);
@@ -670,7 +787,15 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
 
   private onBackgroundPointerDown = (e: PointerEvent): void => {
     if (this.locked) return;
-    this.panDrag = { pointerId: e.pointerId, startClientX: e.clientX, startClientY: e.clientY, startPanX: this.panX, startPanY: this.panY };
+    this.panDrag = {
+      pointerId: e.pointerId,
+      startClientX: e.clientX,
+      startClientY: e.clientY,
+      startPanX: this.panX,
+      startPanY: this.panY,
+      // Resolved once per gesture: isRtl() reads getComputedStyle, too costly per pointermove.
+      rtlFlip: this.orientation === 'horizontal' && isRtl(this) ? -1 : 1,
+    };
     (e.target as HTMLElement).setPointerCapture?.(e.pointerId);
     this.viewportEl?.setAttribute('data-panning', '');
     window.addEventListener('pointermove', this.onBackgroundPointerMove);
@@ -684,8 +809,7 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
     if (!drag || e.pointerId !== drag.pointerId) return;
     // Panning tracks the pointer's *physical* direction, so under the RTL ancestor mirror the
     // stored panX delta must be negated to still visually follow the cursor.
-    const rtlFlip = this.orientation === 'horizontal' && isRtl(this) ? -1 : 1;
-    this.panX = drag.startPanX + (e.clientX - drag.startClientX) * rtlFlip;
+    this.panX = drag.startPanX + (e.clientX - drag.startClientX) * drag.rtlFlip;
     this.panY = drag.startPanY + (e.clientY - drag.startClientY);
     this.applyWorldTransform();
     this.scheduleViewportChange();
@@ -986,7 +1110,8 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
   // ---------------------------------------------------------------------
 
   private snap(value: number): number {
-    return this.grid > 0 ? Math.round(value / this.grid) * this.grid : value;
+    const grid = this.safeGrid;
+    return grid > 0 ? Math.round(value / grid) * grid : value;
   }
 
   private rebuildIncidentEdgesIndex(): void {
@@ -1000,22 +1125,38 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
     this.nodeIncidentEdges = map;
   }
 
-  private updateIncidentEdges(nodeId: string, x: number, y: number): void {
+  /** Resolves the dragged node's incident edge records and their SVG elements once, so
+   *  `updateIncidentEdges()` -- called on every drag pointermove -- touches only prefetched
+   *  references. */
+  private buildDragEdgeRefs(nodeId: string): DragEdgeRef[] {
+    const refs: DragEdgeRef[] = [];
     for (const edgeId of this.nodeIncidentEdges.get(nodeId) ?? []) {
       const edge = this.edges.find((e) => e.id === edgeId);
       const sourceNode = edge && this.nodes.find((n) => n.id === edge.source);
       const targetNode = edge && this.nodes.find((n) => n.id === edge.target);
       if (!edge || !sourceNode || !targetNode) continue;
+      const group = this.renderRoot.querySelector(`[data-edge-id="${CSS.escape(edgeId)}"]`);
+      refs.push({
+        edge,
+        sourceNode,
+        targetNode,
+        pathEl: (group?.querySelector('[part="edge"]') as SVGPathElement | null) ?? null,
+        labelEl: group?.querySelector('[part="edge-label"]') ?? null,
+      });
+    }
+    return refs;
+  }
+
+  private updateIncidentEdges(nodeId: string, x: number, y: number): void {
+    for (const { edge, sourceNode, targetNode, pathEl, labelEl } of this.dragEdgeRefs ?? []) {
       const sourceResolved = edge.source === nodeId ? { ...this.resolvedNode(sourceNode), x, y } : this.resolvedNode(sourceNode);
       const targetResolved = edge.target === nodeId ? { ...this.resolvedNode(targetNode), x, y } : this.resolvedNode(targetNode);
       const sourcePt = this.handlePoint(sourceResolved, 'output', edge.sourceHandle ?? 'out');
       const targetPt = this.handlePoint(targetResolved, 'input', edge.targetHandle ?? 'in');
-      const group = this.renderRoot.querySelector(`[data-edge-id="${CSS.escape(edgeId)}"]`);
-      group?.querySelector('[part="edge"]')?.setAttribute('d', this.edgePathD(sourcePt, targetPt));
-      const label = group?.querySelector('[part="edge-label"]');
-      if (label) {
-        label.setAttribute('x', String((sourcePt.x + targetPt.x) / 2));
-        label.setAttribute('y', String((sourcePt.y + targetPt.y) / 2));
+      pathEl?.setAttribute('d', this.edgePathD(sourcePt, targetPt));
+      if (labelEl) {
+        labelEl.setAttribute('x', String((sourcePt.x + targetPt.x) / 2));
+        labelEl.setAttribute('y', String((sourcePt.y + targetPt.y) / 2));
       }
     }
   }
@@ -1023,22 +1164,32 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
   private onNodePointerDown(e: PointerEvent, node: FlowNode): void {
     if (!this.nodesDraggable || this.locked) return;
     const wrapper = e.currentTarget as HTMLElement;
-    // Deviation from the plan brief: the brief's literal `(e.target).closest(selector)` (with no
-    // scoping) also matches `[part='viewport']` -- an ANCESTOR of every node wrapper that (Slice D)
-    // itself carries `tabindex="0"` and a `part` other than `"node"`, so `[tabindex]:not([part=
-    // "node"])` matches it too. `closest()` doesn't stop at shadow-DOM part boundaries, only at
-    // shadow-root boundaries, so it walks straight past the wrapper up to the viewport and returns a
-    // match unconditionally, silently no-op'ing every drag attempt regardless of node content. The
-    // `wrapper.contains(...)` guard below restricts the exclusion to genuine interactive DESCENDANTS
-    // of this node's own card (the intent -- e.g. a button inside the card) while ignoring ancestor
-    // matches outside it.
+    // An unscoped `closest()` match cannot be trusted on its own here: `[part='viewport']` is an
+    // ANCESTOR of every node wrapper that itself carries `tabindex="0"` and a `part` other than
+    // `"node"`, so `[tabindex]:not([part="node"])` matches it too. `closest()` doesn't stop at
+    // shadow-DOM part boundaries, only at shadow-root boundaries, so it walks straight past the
+    // wrapper up to the viewport and returns a match unconditionally, which would silently no-op
+    // every drag attempt regardless of node content. The `wrapper.contains(...)` guard below
+    // restricts the exclusion to genuine interactive DESCENDANTS of this node's own card (the
+    // intent -- e.g. a button inside the card) while ignoring ancestor matches outside it.
     const interactive = (e.target as HTMLElement).closest(
       'button, a[href], input, select, textarea, [role="button"], [tabindex]:not([part="node"])',
     );
     if (interactive && interactive !== wrapper && wrapper.contains(interactive)) return;
     e.stopPropagation();
     const start = this.nodePosition(node);
-    this.nodeDrag = { pointerId: e.pointerId, nodeId: node.id, startClientX: e.clientX, startClientY: e.clientY, startX: start.x, startY: start.y, wrapper };
+    this.nodeDrag = {
+      pointerId: e.pointerId,
+      nodeId: node.id,
+      startClientX: e.clientX,
+      startClientY: e.clientY,
+      startX: start.x,
+      startY: start.y,
+      wrapper,
+      // Resolved once per gesture: isRtl() reads getComputedStyle, too costly per pointermove.
+      rtlFlip: this.orientation === 'horizontal' && isRtl(this) ? -1 : 1,
+    };
+    this.dragEdgeRefs = this.buildDragEdgeRefs(node.id);
     wrapper.setPointerCapture?.(e.pointerId);
     window.addEventListener('pointermove', this.onNodePointerMove);
     window.addEventListener('pointerup', this.onNodePointerUp);
@@ -1049,8 +1200,7 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
   private onNodePointerMove = (e: PointerEvent): void => {
     const drag = this.nodeDrag;
     if (!drag || e.pointerId !== drag.pointerId) return;
-    const rtlFlip = this.orientation === 'horizontal' && isRtl(this) ? -1 : 1;
-    const dx = ((e.clientX - drag.startClientX) * rtlFlip) / this.zoomLevel;
+    const dx = ((e.clientX - drag.startClientX) * drag.rtlFlip) / this.zoomLevel;
     const dy = (e.clientY - drag.startClientY) / this.zoomLevel;
     const x = this.snap(drag.startX + dx);
     const y = this.snap(drag.startY + dy);
@@ -1064,6 +1214,7 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
     const drag = this.nodeDrag;
     if (!drag || e.pointerId !== drag.pointerId) return;
     this.nodeDrag = undefined;
+    this.dragEdgeRefs = undefined;
     window.removeEventListener('pointermove', this.onNodePointerMove);
     window.removeEventListener('pointerup', this.onNodePointerUp);
     window.removeEventListener('pointercancel', this.onNodePointerUp);
@@ -1073,15 +1224,13 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
     if (position.x !== previous.x || position.y !== previous.y) {
       this.emit('lyra-node-move', { id: drag.nodeId, position, previous });
     }
-    // Deviation from the plan brief: relying on `requestUpdate()` alone (the brief's literal
-    // comment: "snaps the wrapper back to the ... data position") does not actually reset anything
-    // when the host doesn't apply the move (or applies the identical position) -- Lit's own
-    // AttributePart dirty-checks the *interpolated string* against what Lit itself last committed,
-    // and that string is unchanged from the pre-drag render (this loop's imperative
-    // `drag.wrapper.style.transform = ...` writes during the drag never went through Lit, so Lit's
-    // cached value was never invalidated). `requestUpdate()` therefore re-renders but skips
-    // rewriting this exact attribute, leaving the mid-drag transform stuck. Writing the reset
-    // transform directly (looked up fresh by id, in case a synchronous host listener already
+    // `requestUpdate()` alone cannot snap the wrapper back when the host doesn't apply the move
+    // (or applies the identical position) -- Lit's AttributePart dirty-checks the *interpolated
+    // string* against what Lit itself last committed, and that string is unchanged from the
+    // pre-drag render (the imperative `drag.wrapper.style.transform = ...` writes during the drag
+    // never went through Lit, so Lit's cached value was never invalidated). A re-render therefore
+    // skips rewriting this exact attribute, leaving the mid-drag transform stuck. Writing the
+    // reset transform directly (looked up fresh by id, in case a synchronous host listener already
     // applied a new position) fixes the visible state immediately regardless of Lit's diffing.
     const resetNode = this.nodes.find((n) => n.id === drag.nodeId);
     const resetPos = resetNode ? this.nodePosition(resetNode) : previous;
@@ -1093,7 +1242,7 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
     const node = this.nodes.find((n) => n.id === nodeId);
     if (!node) return;
     const current = this.nodePosition(node);
-    const step = this.grid > 0 ? this.grid : 1;
+    const step = this.safeGrid > 0 ? this.safeGrid : 1;
     const rtlFlip = this.orientation === 'horizontal' && isRtl(this) ? -1 : 1;
     let dx = 0;
     let dy = 0;
@@ -1149,20 +1298,42 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
     const sourceNode = this.nodes.find((n) => n.id === nodeId);
     if (!sourceNode) return;
     const startPt = this.handlePoint(this.resolvedNode(sourceNode), 'output', handleId);
-    this.connectState = { sourceId: nodeId, sourceHandle: handleId, startPt };
+    this.connectState = {
+      sourceId: nodeId,
+      sourceHandle: handleId,
+      startPt,
+      rect: this.viewportEl?.getBoundingClientRect() ?? null,
+      rtl: isRtl(this),
+    };
     this.connecting = true;
     this.announcer.announce(this.localize('flowConnectStarted', undefined, { label: this.nodeAccessibleText(sourceNode) }));
     void this.updateComplete.then(() => {
       this.connectionLineEl = (this.renderRoot.querySelector('[part="connection-line"]') as SVGPathElement) ?? undefined;
-      this.connectionLineEl?.setAttribute('d', this.edgePathD(startPt, this.toContentPoint(clientX, clientY)));
+      this.connectionLineEl?.setAttribute('d', this.edgePathD(startPt, this.connectContentPoint(clientX, clientY)));
     });
     window.addEventListener('pointermove', this.onConnectPointerMove);
     window.addEventListener('pointerup', this.onConnectPointerUp);
+    // A touch scroll takeover or the browser reclaiming the pointer (e.g. alt-tab) fires
+    // `pointercancel` instead of `pointerup`, and losing capture fires `lostpointercapture` --
+    // without these the ghost connection line and both window listeners would outlive the
+    // gesture, and a later unrelated pointerup could commit against the stale connect state.
+    window.addEventListener('pointercancel', this.onConnectPointerCancel);
+    window.addEventListener('lostpointercapture', this.onConnectPointerCancel);
+  }
+
+  /** `toContentPoint()` against the viewport rect and RTL resolution snapshotted at
+   *  connect-gesture start, so each pointermove avoids a fresh layout/style measurement. */
+  private connectContentPoint(clientX: number, clientY: number): { x: number; y: number } {
+    const state = this.connectState;
+    if (!state?.rect) return { x: 0, y: 0 };
+    const localX = this.localWorldX(clientX, state.rect, state.rtl);
+    const localY = clientY - state.rect.top;
+    return { x: (localX - this.panX) / this.zoomLevel, y: (localY - this.panY) / this.zoomLevel };
   }
 
   private onConnectPointerMove = (e: PointerEvent): void => {
     if (!this.connectState) return;
-    const targetPt = this.toContentPoint(e.clientX, e.clientY);
+    const targetPt = this.connectContentPoint(e.clientX, e.clientY);
     this.connectionLineEl?.setAttribute('d', this.edgePathD(this.connectState.startPt, targetPt));
     const hoveredId = this.nodeIdFromComposedPath(e.composedPath());
     const invalid = hoveredId != null && this.isInvalidConnectTarget(hoveredId);
@@ -1200,6 +1371,14 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
     return this.edges.some((e) => e.source === state.sourceId && e.target === hoveredId);
   }
 
+  /** Ends the gesture without committing -- pointercancel/lostpointercapture mean the pointer
+   *  stream is gone, so there is no release target to connect to. */
+  private onConnectPointerCancel = (): void => {
+    if (!this.connectState) return;
+    this.endConnectGesture();
+    this.announcer.announce(this.localize('flowConnectCancelled'));
+  };
+
   private endConnectGesture(): void {
     if (this.connectInvalidNodeId) {
       this.renderRoot.querySelector(`[data-node-id="${CSS.escape(this.connectInvalidNodeId)}"]`)?.removeAttribute('data-connect-invalid');
@@ -1209,6 +1388,8 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
     this.connecting = false;
     window.removeEventListener('pointermove', this.onConnectPointerMove);
     window.removeEventListener('pointerup', this.onConnectPointerUp);
+    window.removeEventListener('pointercancel', this.onConnectPointerCancel);
+    window.removeEventListener('lostpointercapture', this.onConnectPointerCancel);
   }
 
   private eligibleConnectTargets(sourceId: string): FlowNode[] {
@@ -1376,6 +1557,7 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
     return html`<div part="base" role="region" aria-label=${this.localize('flowCanvasLabel')}>
       <div
         part="viewport"
+        role="group"
         tabindex="0"
         aria-label=${this.accessibleLabel ||
         this.localize('flowCanvasSummary', undefined, {
@@ -1386,7 +1568,7 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
         <div class="world" @pointerdown=${this.onWorldPointerDown}>
           <div
             part="background"
-            style="--lyra-flow-canvas-grid-size:${this.grid > 0 ? this.grid : 8}px"
+            style="--lyra-flow-canvas-grid-size:${this.safeGrid > 0 ? this.safeGrid : 8}px"
             @pointerdown=${this.onBackgroundPointerDown}
           ></div>
           <svg part="edges">

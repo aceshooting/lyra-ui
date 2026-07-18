@@ -1,6 +1,7 @@
 import { html, svg, type TemplateResult, type SVGTemplateResult } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
 import { LyraElement } from '../../internal/lyra-element.js';
+import { finiteDuration } from '../../internal/numbers.js';
 import { styles } from './copy-button.styles.js';
 
 /** How long the checkmark confirmation state lasts before reverting -- matches
@@ -116,9 +117,9 @@ export class LyraCopyButton extends LyraElement<LyraCopyButtonEventMap> {
     this.emit('lyra-copy', { text: this.value });
     this.justCopied = true;
     clearTimeout(this.copyTimeoutId);
-    const duration = Number.isFinite(this.feedbackDuration)
-      ? Math.max(0, this.feedbackDuration)
-      : DEFAULT_FEEDBACK_DURATION;
+    // A NaN/negative feedbackDuration (a bad attribute, or a stray programmatic assignment) must
+    // not reach setTimeout() unsanitized -- self-heals to the constructed default instead.
+    const duration = finiteDuration(this.feedbackDuration, DEFAULT_FEEDBACK_DURATION, 0);
     this.copyTimeoutId = setTimeout(() => {
       this.justCopied = false;
     }, duration);

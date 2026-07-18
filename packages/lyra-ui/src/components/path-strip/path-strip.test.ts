@@ -75,6 +75,19 @@ it('shows an empty message when path is empty', async () => {
   expect(el.shadowRoot!.querySelector('[part="empty"]')).to.exist;
 });
 
+it('announces node focus through a .strings override for pathNodeStatus, interpolating its placeholders', async () => {
+  const el = (await fixture(
+    html`<lyra-path-strip .strings=${{ pathNodeStatus: '{label}, nœud {position} sur {total}' }}></lyra-path-strip>`,
+  )) as LyraPathStrip;
+  el.path = path;
+  await el.updateComplete;
+
+  (el.shadowRoot!.querySelectorAll('[part="node"]')[0] as HTMLButtonElement).focus();
+  await el.updateComplete;
+
+  expect(el.shadowRoot!.querySelector('[role="status"]')!.textContent).to.equal('Marie Curie, nœud 1 sur 3');
+});
+
 it('is accessible with a full path', async () => {
   const el = (await fixture(html`<lyra-path-strip></lyra-path-strip>`)) as LyraPathStrip;
   el.path = path;

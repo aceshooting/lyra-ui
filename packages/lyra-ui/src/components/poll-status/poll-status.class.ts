@@ -2,6 +2,7 @@ import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state, query } from 'lit/decorators.js';
 import { LyraElement } from '../../internal/lyra-element.js';
 import { pauseIcon, playIcon } from '../../internal/icons.js';
+import { finiteDuration } from '../../internal/numbers.js';
 import type { LyraLiveRegion } from '../live-region/live-region.class.js';
 import '../live-region/live-region.class.js';
 import { styles } from './poll-status.styles.js';
@@ -68,9 +69,19 @@ export class LyraPollStatus extends LyraElement<LyraPollStatusEventMap> {
   protected updated(changed: PropertyValues): void {
     if (changed.has('nextInMs')) {
       if (this.nextInMs != null) {
-        this.targetAt = Date.now() + this.nextInMs;
+        // A NaN/negative nextInMs (a bad attribute, or a stray programmatic assignment) must not
+        // reach `Date.now() + nextInMs` unsanitized -- that would poison `targetAt` with NaN,
+        // which every subsequent tick's `Math.max(0, targetAt - Date.now())` also evaluates to
+        // NaN (Math.max never recovers from a NaN operand), permanently bricking the countdown:
+        // `remainingMs === 0` never becomes true, so the ticker runs forever and `lyra-poll-due`
+        // never fires. Clamping to a non-negative, finite value up front (0 means "due
+        // immediately," consistent with a countdown that's already reached zero) keeps the
+        // ticker's own `Math.max(0, ...)` clamp meaningful instead of masking a NaN that already
+        // got in.
+        const nextInMs = finiteDuration(this.nextInMs, 0, 0);
+        this.targetAt = Date.now() + nextInMs;
         this.due = false;
-        this.remainingMs = this.nextInMs;
+        this.remainingMs = nextInMs;
         if (this.active && !this.paused) this.armTicker();
       } else {
         // Clearing next-in-ms (e.g. between poll cycles) must stop the

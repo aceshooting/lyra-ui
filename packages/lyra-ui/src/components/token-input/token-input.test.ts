@@ -94,6 +94,68 @@ it('cascades disabled state from an ancestor fieldset without mutating the disab
   expect(input.disabled).to.be.false;
 });
 
+it('submits under a programmatically assigned name in the same tick', async () => {
+  const form = (await fixture(html`
+    <form><lyra-token-input .value=${['alpha', 'beta']}></lyra-token-input></form>
+  `)) as HTMLFormElement;
+  const el = form.querySelector('lyra-token-input') as LyraTokenInput;
+
+  el.name = 'tags';
+  expect(el.getAttribute('name')).to.equal('tags');
+  expect(new FormData(form).getAll('tags')).to.deep.equal(['alpha', 'beta']);
+
+  el.name = 'labels';
+  const renamed = new FormData(form);
+  expect(renamed.has('tags'), 'the old name must not still hold entries').to.be.false;
+  expect(renamed.getAll('labels')).to.deep.equal(['alpha', 'beta']);
+
+  el.name = '';
+  expect(el.hasAttribute('name')).to.be.false;
+  expect(el.name).to.equal('');
+  expect(new FormData(form).has('labels')).to.be.false;
+
+  el.setAttribute('name', 'from-attribute');
+  expect(el.name).to.equal('from-attribute');
+  expect(new FormData(form).getAll('from-attribute')).to.deep.equal(['alpha', 'beta']);
+  el.removeAttribute('name');
+  expect(el.name).to.equal('');
+  expect(new FormData(form).has('from-attribute')).to.be.false;
+});
+
+it('updates validity synchronously when required changes, with no await', async () => {
+  const el = (await fixture(html`<lyra-token-input></lyra-token-input>`)) as LyraTokenInput;
+  expect(el.checkValidity()).to.be.true;
+
+  el.required = true;
+  expect(el.hasAttribute('required')).to.be.true;
+  expect(el.checkValidity()).to.be.false;
+
+  el.value = ['ready'];
+  expect(el.checkValidity()).to.be.true;
+
+  el.value = [];
+  el.required = false;
+  expect(el.checkValidity()).to.be.true;
+});
+
+it('applies and removes explicit disabled form state synchronously, with no await', async () => {
+  const form = (await fixture(html`
+    <form><lyra-token-input name="tags" .value=${['alpha']}></lyra-token-input></form>
+  `)) as HTMLFormElement;
+  const el = form.querySelector('lyra-token-input') as LyraTokenInput;
+  expect(new FormData(form).getAll('tags')).to.deep.equal(['alpha']);
+
+  el.disabled = true;
+  expect(el.hasAttribute('disabled'), 'the host attribute must be set synchronously').to.be.true;
+  expect(el.effectiveDisabled).to.be.true;
+  expect(new FormData(form).has('tags'), 'a disabled control must be omitted from FormData').to.be.false;
+
+  el.disabled = false;
+  expect(el.hasAttribute('disabled')).to.be.false;
+  expect(el.effectiveDisabled).to.be.false;
+  expect(new FormData(form).getAll('tags')).to.deep.equal(['alpha']);
+});
+
 it('commits the draft on Tab without trapping focus for an extra keystroke', async () => {
   const el = (await fixture(html`<lyra-token-input></lyra-token-input>`)) as LyraTokenInput;
   const input = el.shadowRoot!.querySelector('input') as HTMLInputElement;

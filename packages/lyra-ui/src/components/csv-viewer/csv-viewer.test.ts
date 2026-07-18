@@ -85,6 +85,7 @@ describe('lyra-csv-viewer', () => {
         const highlighted = list.shadowRoot!.querySelector('[part~="cell-highlight"]') as HTMLElement;
         expect(highlighted).to.exist;
         expect(highlighted.getAttribute('tabindex')).to.equal('0');
+        expect(highlighted.getAttribute('role')).to.equal('button');
         expect(highlighted.getAttribute('aria-label')).to.equal('First result');
         const listener = oneEvent(el, 'lyra-highlight-activate');
         highlighted.click();

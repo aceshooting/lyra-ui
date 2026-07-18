@@ -1,6 +1,7 @@
 import { html, nothing, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../internal/lyra-element.js';
+import { finiteRange } from '../../internal/numbers.js';
 import { styles } from './commit-card.styles.js';
 import type { GitStatus } from '../file-tree/file-tree.class.js';
 
@@ -81,6 +82,16 @@ export class LyraCommitCard extends LyraElement<LyraCommitCardEventMap> {
     return this.message.split('\n').slice(1).join('\n').trim();
   }
 
+  /** `timestamp` normalized to a finite, non-negative epoch-ms value -- `undefined` while unset or
+   *  non-finite. Commit times are never before the epoch, so unlike a general-purpose timestamp,
+   *  a negative value is clamped to 0 rather than accepted as-is; more importantly, guarding
+   *  non-finite here matters because `new Date(NaN).toISOString()` *throws* (not just an "Invalid
+   *  Date" render) inside the `<time datetime>` binding below. */
+  private get validTimestamp(): number | undefined {
+    if (this.timestamp == null || !Number.isFinite(this.timestamp)) return undefined;
+    return finiteRange(this.timestamp, this.timestamp, 0);
+  }
+
   private get totals(): { additions: number; deletions: number } {
     return this.files.reduce(
       (acc, f) => ({ additions: acc.additions + f.additions, deletions: acc.deletions + f.deletions }),
@@ -112,6 +123,7 @@ export class LyraCommitCard extends LyraElement<LyraCommitCardEventMap> {
 
   render(): TemplateResult {
     const { additions, deletions } = this.totals;
+    const timestamp = this.validTimestamp;
     return html`
       <div part="base" role="group" aria-label=${this.localize('commitCardLabel')}>
         <div part="subject">${this.subject}</div>
@@ -119,13 +131,13 @@ export class LyraCommitCard extends LyraElement<LyraCommitCardEventMap> {
         <div part="meta">
           ${this.hash ? html`<span part="hash" dir="ltr">${this.hash.slice(0, 7)}</span>` : nothing}
           ${this.author ? html`<span part="author">${this.author}</span>` : nothing}
-          ${this.timestamp !== undefined
+          ${timestamp !== undefined
             ? html`<span part="time"
-                ><time datetime=${new Date(this.timestamp).toISOString()}
+                ><time datetime=${new Date(timestamp).toISOString()}
                   >${new Intl.DateTimeFormat(this.effectiveLocale, {
                     dateStyle: 'medium',
                     timeStyle: 'short',
-                  }).format(new Date(this.timestamp))}</time
+                  }).format(new Date(timestamp))}</time
                 ></span
               >`
             : nothing}

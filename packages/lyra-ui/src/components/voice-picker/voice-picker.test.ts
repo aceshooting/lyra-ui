@@ -1,6 +1,7 @@
 import { fixture, expect, oneEvent, html } from '@open-wc/testing';
 import './voice-picker.js';
 import type { LyraVoicePicker } from './voice-picker.js';
+import { styles } from './voice-picker.styles.js';
 
 const CATALOG = ['alloy', 'verse'];
 const OBJECT_CATALOG = [
@@ -19,6 +20,22 @@ function rows(el: LyraVoicePicker): NodeListOf<HTMLElement> {
 }
 function previewButton(el: LyraVoicePicker): HTMLButtonElement {
   return el.shadowRoot!.querySelector('[part="preview-button"]') as HTMLButtonElement;
+}
+function listbox(el: LyraVoicePicker): HTMLElement {
+  return el.shadowRoot!.querySelector('[part="listbox"]') as HTMLElement;
+}
+
+/** Polls until `read()` satisfies `until`, or throws once `timeoutMs` elapses -- same idiom as
+ *  internal/positioner.test.ts's/lyra-menu's identical helper, for waiting out place()'s async
+ *  computePosition. */
+async function waitFor<T>(read: () => T, until: (v: T) => boolean, timeoutMs = 2000): Promise<T> {
+  const start = performance.now();
+  for (;;) {
+    const value = read();
+    if (until(value)) return value;
+    if (performance.now() - start > timeoutMs) throw new Error(`waitFor timed out after ${timeoutMs}ms`);
+    await new Promise((r) => requestAnimationFrame(() => r(null)));
+  }
 }
 
 // -- Mode selection (mirrors lyra-model-select) ------------------------------
@@ -242,4 +259,27 @@ it('localizes the fallback accessible name and preview labels via this.localize(
   `)) as LyraVoicePicker;
   expect(trigger(el).getAttribute('aria-label')).to.equal('Voix');
   expect(previewButton(el).getAttribute('aria-label')).to.equal('Écouter alloy');
+});
+
+// -- Available-space clamping (internal/positioner.js's place()) ------------
+
+it("declares [part='listbox']'s max-block-size/max-inline-size/min-inline-size against place()'s published --lyra-positioner-available-* custom properties, mirroring lyra-menu's/lyra-combobox's identical clamp", () => {
+  const css = styles.cssText.replace(/\s+/g, ' ');
+  const listboxBlock = /\[part=['"]?listbox['"]?\]\s*\{([^}]+)\}/.exec(css);
+  expect(listboxBlock, 'expected a [part="listbox"] rule').to.not.equal(null);
+  const body = listboxBlock![1];
+  expect(body).to.match(/max-block-size:\s*min\([^;]*var\(--lyra-positioner-available-block-size/);
+  expect(body).to.match(/max-inline-size:\s*min\([^;]*var\(--lyra-positioner-available-inline-size/);
+  expect(body).to.match(/min-inline-size:\s*min\([^;]*var\(--lyra-positioner-available-inline-size/);
+});
+
+it("actually applies place()'s available-space custom properties onto the rendered listbox once open, not just declaring them in CSS", async () => {
+  const el = (await fixture(html`<lyra-voice-picker .catalog=${CATALOG}></lyra-voice-picker>`)) as LyraVoicePicker;
+  trigger(el).click();
+  await el.updateComplete;
+  await waitFor(
+    () => listbox(el).style.getPropertyValue('--lyra-positioner-available-block-size'),
+    (v) => v !== '',
+  );
+  expect(listbox(el).style.getPropertyValue('--lyra-positioner-available-inline-size')).to.not.equal('');
 });

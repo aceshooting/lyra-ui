@@ -156,6 +156,17 @@ describe('lyra-stepper', () => {
     await expect(el).to.be.accessible();
   });
 
+  it('forwards a host aria-label to the role="tablist" element, and omits the attribute when unset', async () => {
+    const el = (await fixture(html`<lyra-stepper .steps=${steps()}></lyra-stepper>`)) as LyraStepper;
+    const tablist = el.shadowRoot!.querySelector('[role="tablist"]')!;
+    expect(tablist.hasAttribute('aria-label')).to.be.false;
+
+    el.setAttribute('aria-label', 'Signup progress');
+    await el.updateComplete;
+    expect(el.accessibleLabel).to.equal('Signup progress');
+    expect(tablist.getAttribute('aria-label')).to.equal('Signup progress');
+  });
+
   it('gives a non-disabled step a :hover treatment, matching the click-to-jump affordance', () => {
     const css = styles.cssText.replace(/\s+/g, ' ');
     expect(css).to.match(/\[part='step'\]:hover:not\(\[aria-disabled='true'\]\)\s*\{[^}]+\}/);

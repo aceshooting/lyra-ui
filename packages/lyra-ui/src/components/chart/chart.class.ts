@@ -697,7 +697,9 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
     return summaries.length
       ? this.localize('chartSummaryWithData', undefined, {
           type: this.localizedChartType(),
-          summaries: summaries.join('. '),
+          // the sentence separator is a message of its own since not every
+          // language delimits sentences with a period-space pair
+          summaries: summaries.join(this.localize('chartSummarySeparator')),
         })
       : this.localize('chartSummaryEmpty', undefined, { type: this.localizedChartType() });
   }

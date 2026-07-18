@@ -96,6 +96,71 @@ it('restores the declarative default-checked state on form reset', async () => {
   expect(b.checked, 'b restores its (unchecked) declarative default').to.be.false;
 });
 
+it('temporarily disables a bare radio through an ancestor fieldset without overwriting the author disabled state', async () => {
+  const form = (await fixture(html`
+    <form>
+      <fieldset>
+        <lyra-radio value="a">A</lyra-radio>
+        <lyra-radio value="b" disabled>B</lyra-radio>
+      </fieldset>
+    </form>
+  `)) as HTMLFormElement;
+  const [a, b] = [...form.querySelectorAll('lyra-radio')] as LyraRadio[];
+  const fieldset = form.querySelector('fieldset') as HTMLFieldSetElement;
+
+  expect(a.effectiveDisabled).to.be.false;
+  expect(b.disabled).to.be.true;
+
+  // No `await` before these assertions: `formDisabledCallback` fires
+  // synchronously when the fieldset's `disabled` property is set.
+  fieldset.disabled = true;
+  expect(a.effectiveDisabled, 'an ancestor fieldset must reach a bare lyra-radio').to.be.true;
+  expect(a.disabled, 'fieldset state must never mutate the public disabled property').to.be.false;
+  expect(a.hasAttribute('disabled'), 'the host attribute must not be mutated either').to.be.false;
+  expect(b.disabled, 'an already-explicitly-disabled radio is unaffected').to.be.true;
+  expect(b.effectiveDisabled).to.be.true;
+
+  fieldset.disabled = false;
+  expect(a.effectiveDisabled, 'must not be permanently stuck disabled once the fieldset re-enables').to.be.false;
+  expect(a.disabled).to.be.false;
+  expect(b.disabled, 'an explicit disabled state survives the fieldset cycle').to.be.true;
+  expect(b.effectiveDisabled).to.be.true;
+
+  await Promise.all([a.updateComplete, b.updateComplete]);
+  const aBase = a.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  expect(aBase.getAttribute('aria-disabled')).to.equal('false');
+  expect(aBase.getAttribute('tabindex')).to.equal('0');
+});
+
+it('cascades fieldset-disabled state down to radios nested inside a lyra-radio-group', async () => {
+  const form = (await fixture(html`
+    <form>
+      <fieldset>
+        <lyra-radio-group label="Choice">
+          <lyra-radio value="a">A</lyra-radio>
+          <lyra-radio value="b">B</lyra-radio>
+        </lyra-radio-group>
+      </fieldset>
+    </form>
+  `)) as HTMLFormElement;
+  const group = form.querySelector('lyra-radio-group') as LyraRadioGroup;
+  const [a, b] = [...group.querySelectorAll('lyra-radio')] as LyraRadio[];
+  const fieldset = form.querySelector('fieldset') as HTMLFieldSetElement;
+  await group.updateComplete;
+
+  expect(a.effectiveDisabled).to.be.false;
+  expect(b.effectiveDisabled).to.be.false;
+
+  fieldset.disabled = true;
+  expect(a.effectiveDisabled, 'fieldset state must reach radios nested inside a radio-group').to.be.true;
+  expect(b.effectiveDisabled).to.be.true;
+  expect(a.disabled, 'fieldset state must never mutate the public disabled property').to.be.false;
+
+  fieldset.disabled = false;
+  expect(a.effectiveDisabled).to.be.false;
+  expect(b.effectiveDisabled).to.be.false;
+});
+
 it('wires hint/error text to aria-describedby on the radiogroup', async () => {
   const group = (await fixture(html`
     <lyra-radio-group label="Choice">

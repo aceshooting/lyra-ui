@@ -1,7 +1,7 @@
 import { html, type TemplateResult, type PropertyValues } from 'lit';
 import { property, query } from 'lit/decorators.js';
 import { LyraElement } from '../../internal/lyra-element.js';
-import { finiteInteger } from '../../internal/numbers.js';
+import { finiteInteger, finiteNumber, finiteRange } from '../../internal/numbers.js';
 import { prefersReducedMotion } from '../../internal/motion.js';
 import { styles } from './audio-visualizer.styles.js';
 
@@ -20,6 +20,12 @@ const AMBIENT_REDUCED_MOTION_INTERVAL_MS = 500; // ~2 Hz snapshot cadence
  * `prefers-reduced-motion` — that is live, user-controlled feedback, not decorative motion; only the
  * signal-less ambient animation is throttled and simplified under reduced motion.
  *
+ * Animation frames are only scheduled while the drawn output is actually time-varying (live analyser
+ * data, or a non-reduced ambient pulse/sweep). Static output — a constant `level`, idle bars, or the
+ * flattened reduced-motion ambient patterns — draws once and stops; any change that could alter the
+ * next frame (properties, stream/`AudioContext` state, size, theme, motion preference) re-enters the
+ * loop via `scheduleDraw()`.
+ *
  * @customElement lyra-audio-visualizer
  * @csspart base - The root wrapper.
  * @csspart canvas - The drawing surface (`aria-hidden`; the host itself carries `role="img"` and the
@@ -31,10 +37,14 @@ export class LyraAudioVisualizer extends LyraElement {
   static styles = [LyraElement.styles, styles];
 
   @property({ attribute: false }) stream: MediaStream | null = null;
+  /** Externally-computed amplitude, `[0, 1]`, for a host that already derives its own level
+   *  (e.g. `lyra-push-to-talk`'s `lyra-level`). `null` (the default) means "no external signal" --
+   *  see `effectiveLevel` for how a non-null value is clamped/NaN-guarded before it feeds `draw()`. */
   @property({ type: Number }) level: number | null = null;
   @property({ reflect: true }) state: AudioVisualizerState = 'idle';
   @property({ reflect: true }) variant: AudioVisualizerVariant = 'bars';
   @property({ type: Number, attribute: 'bar-count' }) barCount = 5;
+  /** Amplitude multiplier applied in `draw()`. NaN/non-finite falls back to `1` via `effectiveGain`. */
   @property({ type: Number }) gain = 1;
   /** Accessible-name override. Unset (the default) auto-generates "Voice activity: {state}". */
   @property() label = '';
@@ -42,6 +52,7 @@ export class LyraAudioVisualizer extends LyraElement {
   @query('canvas') private canvas?: HTMLCanvasElement;
   private resizeObserver?: ResizeObserver;
   private dprQuery?: MediaQueryList;
+  private motionQuery?: MediaQueryList;
   private colorSchemeQuery?: MediaQueryList;
   private themeObserver?: MutationObserver;
   private themeRefreshQueued = false;
@@ -49,6 +60,10 @@ export class LyraAudioVisualizer extends LyraElement {
   private lastAmbientDrawMs = 0;
   private authorSuppliedRole = false;
   private authorSuppliedAriaLabel = false;
+  /** Host size cached from the `ResizeObserver` so `draw()` never forces a per-frame layout read. */
+  private hostSize?: { width: number; height: number };
+  /** Token colors resolved once per theme change so `draw()` never calls `getComputedStyle` per frame. */
+  private resolvedColors?: { active: string; quiet: string };
 
   private audioCtx?: AudioContext;
   private analyser?: AnalyserNode;
@@ -59,12 +74,33 @@ export class LyraAudioVisualizer extends LyraElement {
     return finiteInteger(this.barCount, 5, 1, 64);
   }
 
+  /** `level` normalized to `[0, 1]`, or `null` when no external signal is set. A non-null-but-NaN
+   *  `level` (e.g. a bad attribute) still counts as "level-driven" (see `hasLiveSignal`) but
+   *  clamps to `0` here rather than flowing NaN into the canvas draw. */
+  private get effectiveLevel(): number | null {
+    return this.level == null ? null : finiteRange(this.level, 0, 0, 1);
+  }
+
+  private get effectiveGain(): number {
+    return finiteNumber(this.gain, 1);
+  }
+
   connectedCallback(): void {
     super.connectedCallback();
-    this.resizeObserver = new ResizeObserver(this.scheduleDraw);
+    this.resizeObserver = new ResizeObserver((entries) => {
+      const rect = entries[entries.length - 1]?.contentRect;
+      if (rect) this.hostSize = { width: rect.width, height: rect.height };
+      this.scheduleDraw();
+    });
     this.resizeObserver.observe(this);
     this.watchDpr();
+    // The draw loop parks itself while ambient output is static under reduced motion, so a
+    // preference flip must restart it (and re-simplify/re-animate the pattern) explicitly.
+    this.motionQuery =
+      typeof matchMedia === 'function' ? matchMedia('(prefers-reduced-motion: reduce)') : undefined;
+    this.motionQuery?.addEventListener('change', this.onMotionPreferenceChange);
     this.watchTheme();
+    this.resolvedColors = undefined; // a reconnect may land under a different theme scope
     this.syncAnalyser();
     this.scheduleDraw();
   }
@@ -72,7 +108,10 @@ export class LyraAudioVisualizer extends LyraElement {
   disconnectedCallback(): void {
     super.disconnectedCallback();
     this.resizeObserver?.disconnect();
+    this.hostSize = undefined;
     this.dprQuery?.removeEventListener('change', this.onDprChange);
+    this.motionQuery?.removeEventListener('change', this.onMotionPreferenceChange);
+    this.motionQuery = undefined;
     this.colorSchemeQuery?.removeEventListener('change', this.onColorSchemeChange);
     this.themeObserver?.disconnect();
     this.themeObserver = undefined;
@@ -93,6 +132,9 @@ export class LyraAudioVisualizer extends LyraElement {
   }
   private onDprChange = (): void => {
     this.watchDpr();
+    this.scheduleDraw();
+  };
+  private onMotionPreferenceChange = (): void => {
     this.scheduleDraw();
   };
   private onColorSchemeChange = (): void => {
@@ -129,6 +171,7 @@ export class LyraAudioVisualizer extends LyraElement {
 
   /** Redraws canvas content after an upstream token or theme change. */
   refreshTheme(): void {
+    this.resolvedColors = undefined;
     this.scheduleDraw();
   }
 
@@ -143,6 +186,9 @@ export class LyraAudioVisualizer extends LyraElement {
           (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
         if (!AudioCtxCtor) return;
         this.audioCtx = new AudioCtxCtor();
+        // `resume()`/`suspend()` settle asynchronously, and the parked draw loop only animates while
+        // the context reports `running` — restart it once the transition lands.
+        this.audioCtx.addEventListener('statechange', this.onAudioCtxStateChange);
       } else {
         void this.audioCtx.resume().catch(() => {});
       }
@@ -161,12 +207,17 @@ export class LyraAudioVisualizer extends LyraElement {
     }
   }
 
+  private onAudioCtxStateChange = (): void => {
+    this.scheduleDraw();
+  };
+
   private closeAudioContext(): void {
     this.sourceNode?.disconnect();
     this.sourceNode = undefined;
     this.analyser = undefined;
     this.timeDomainData = undefined;
     if (this.audioCtx) {
+      this.audioCtx.removeEventListener('statechange', this.onAudioCtxStateChange);
       void this.audioCtx.close().catch(() => {});
       this.audioCtx = undefined;
     }
@@ -205,7 +256,20 @@ export class LyraAudioVisualizer extends LyraElement {
   }
 
   protected updated(changed: PropertyValues): void {
-    if (['state', 'variant', 'barCount', 'gain', 'level'].some((key) => changed.has(key))) this.scheduleDraw();
+    if (['state', 'variant', 'barCount', 'gain', 'level', 'stream'].some((key) => changed.has(key))) {
+      this.scheduleDraw();
+    }
+  }
+
+  /** Whether the next frame's content differs from the current one with no external change — i.e.
+   *  the drawing is a function of time: live analyser data, or a non-reduced ambient pulse/sweep.
+   *  A constant `level`, the flat idle pattern, and every reduced-motion ambient pattern are all
+   *  time-independent, so re-rendering them each frame would produce identical pixels. */
+  private get isTimeDriven(): boolean {
+    if (this.analyser && this.audioCtx?.state === 'running') return true;
+    if (this.level != null) return false;
+    if (prefersReducedMotion()) return false;
+    return this.state !== 'idle';
   }
 
   private scheduleDraw = (): void => {
@@ -225,7 +289,10 @@ export class LyraAudioVisualizer extends LyraElement {
       this.lastAmbientDrawMs = nowMs;
     }
     this.draw(nowMs);
-    this.rafId = requestAnimationFrame(this.drawFrame);
+    // Static output parks the loop after this frame; `scheduleDraw()` restarts it from every input
+    // that could change the picture (reactive properties, resize, DPR/theme/motion changes,
+    // `AudioContext` state transitions).
+    if (this.isTimeDriven) this.rafId = requestAnimationFrame(this.drawFrame);
   };
 
   private barsFromTimeDomain(data: Uint8Array, barCount: number): number[] {
@@ -276,44 +343,64 @@ export class LyraAudioVisualizer extends LyraElement {
       if (this.variant === 'waveform') return Array.from(this.timeDomainData, (v) => (v - 128) / 128);
       return this.barsFromTimeDomain(this.timeDomainData, this.effectiveBarCount);
     }
-    if (this.level != null) {
+    if (this.effectiveLevel != null) {
       const n = this.variant === 'waveform' ? WAVEFORM_SAMPLES : this.effectiveBarCount;
-      const amp = Math.max(0, Math.min(1, this.level));
-      return new Array(n).fill(amp);
+      return new Array(n).fill(this.effectiveLevel);
     }
     return this.ambientAmplitudes(nowMs, prefersReducedMotion());
+  }
+
+  /** Resolves the two drawing colors once; the theme/color-scheme observers and `refreshTheme()`
+   *  invalidate the cached pair, so steady-state frames never pay for `getComputedStyle`. */
+  private resolveColors(): { active: string; quiet: string } {
+    const cs = getComputedStyle(this);
+    return {
+      active: cs.getPropertyValue('--lyra-audio-visualizer-color').trim() || '#0969da',
+      quiet: cs.getPropertyValue('--lyra-audio-visualizer-quiet-color').trim() || '#ddf4ff',
+    };
   }
 
   private draw(nowMs: number): void {
     const canvas = this.canvas;
     if (!canvas) return;
-    const rect = this.getBoundingClientRect();
-    const w = Math.max(1, rect.width);
-    const h = Math.max(1, rect.height || 48);
+    // The ResizeObserver keeps `hostSize` current; measuring here would force a layout read on
+    // every animation frame. The one-off fallback covers the first frame, which can land before
+    // the observer's initial entry is delivered.
+    const size = this.hostSize ?? this.getBoundingClientRect();
+    const w = Math.max(1, size.width);
+    const h = Math.max(1, size.height || 48);
     const dpr = window.devicePixelRatio || 1;
-    canvas.width = w * dpr;
-    canvas.height = h * dpr;
-    canvas.style.width = `${w}px`;
-    canvas.style.height = `${h}px`;
+    // Assigning `width`/`height` reallocates and clears the backing store even when the value is
+    // unchanged, so only touch them when the target really differs (canvas dimensions truncate
+    // fractional assignments, hence the floor). `setTransform` (absolute, unlike a relative
+    // `scale`) keeps the DPR mapping correct whether or not this frame resized.
+    const backingW = Math.floor(w * dpr);
+    const backingH = Math.floor(h * dpr);
+    if (canvas.width !== backingW) canvas.width = backingW;
+    if (canvas.height !== backingH) canvas.height = backingH;
+    const cssW = `${w}px`;
+    const cssH = `${h}px`;
+    if (canvas.style.width !== cssW) canvas.style.width = cssW;
+    if (canvas.style.height !== cssH) canvas.style.height = cssH;
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
-    ctx.scale(dpr, dpr);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.clearRect(0, 0, w, h);
 
-    const cs = getComputedStyle(this);
-    const activeColor = cs.getPropertyValue('--lyra-audio-visualizer-color').trim() || '#0969da';
-    const quietColor = cs.getPropertyValue('--lyra-audio-visualizer-quiet-color').trim() || '#ddf4ff';
+    this.resolvedColors ??= this.resolveColors();
+    const { active: activeColor, quiet: quietColor } = this.resolvedColors;
     const amplitudes = this.currentAmplitudes(nowMs);
     const active = this.hasLiveSignal || this.state === 'listening' || this.state === 'speaking';
     ctx.fillStyle = active ? activeColor : quietColor;
     ctx.strokeStyle = active ? activeColor : quietColor;
 
+    const gain = this.effectiveGain;
     if (this.variant === 'waveform') {
       ctx.lineWidth = 2;
       ctx.beginPath();
       amplitudes.forEach((amp, i) => {
         const x = (i / (amplitudes.length - 1 || 1)) * w;
-        const y = h / 2 - amp * (h / 2) * this.gain;
+        const y = h / 2 - amp * (h / 2) * gain;
         if (i === 0) ctx.moveTo(x, y);
         else ctx.lineTo(x, y);
       });
@@ -323,7 +410,7 @@ export class LyraAudioVisualizer extends LyraElement {
       const gap = 4;
       const barWidth = Math.max(2, (w - gap * (n - 1)) / n);
       amplitudes.forEach((amp, i) => {
-        const barH = Math.max(2, Math.min(h, amp * h * this.gain));
+        const barH = Math.max(2, Math.min(h, amp * h * gain));
         const x = i * (barWidth + gap);
         const y = (h - barH) / 2;
         ctx.fillRect(x, y, barWidth, barH);

@@ -143,6 +143,14 @@ export class LyraCheckbox extends LyraElement<LyraCheckboxEventMap> {
   private _defaultChecked = false;
   private _defaultCaptured = false;
   private _fieldsetDisabled = false;
+  // Tracked separately from `_fieldsetDisabled` -- driven by an owning
+  // `<lyra-checkbox-group>` propagating its own effective (explicit-or-
+  // inherited) disabled state, rather than by this checkbox's own direct
+  // `formDisabledCallback()`. Kept as its own private channel (never the
+  // public `disabled` property/attribute) for the same reason `_fieldsetDisabled`
+  // is: so a checkbox's own explicitly-set `disabled` survives the group
+  // re-enabling instead of being permanently overwritten.
+  private _groupDisabled = false;
   private _name = '';
   private _checked = false;
   private _indeterminate = false;
@@ -150,9 +158,9 @@ export class LyraCheckbox extends LyraElement<LyraCheckboxEventMap> {
   private _required = false;
   private _value = 'on';
 
-  /** Whether the control is disabled explicitly or by an ancestor fieldset. */
+  /** Whether the control is disabled explicitly, by an ancestor fieldset, or by an owning `<lyra-checkbox-group>`. */
   get effectiveDisabled(): boolean {
-    return this.disabled || this._fieldsetDisabled;
+    return this.disabled || this._fieldsetDisabled || this._groupDisabled;
   }
 
   get checked(): boolean {
@@ -322,6 +330,12 @@ export class LyraCheckbox extends LyraElement<LyraCheckboxEventMap> {
   }
   formDisabledCallback(disabled: boolean): void {
     this._fieldsetDisabled = disabled;
+    this.requestUpdate();
+  }
+  /** @internal Driven by an owning `<lyra-checkbox-group>`; released when the checkbox leaves the group's control. */
+  setGroupDisabled(value: boolean): void {
+    if (this._groupDisabled === value) return;
+    this._groupDisabled = value;
     this.requestUpdate();
   }
   checkValidity(): boolean {

@@ -178,6 +178,12 @@ describe('lyra-pdf-viewer', () => {
       el.previousPage();
       await el.updateComplete;
       expect(el.page).to.equal(2);
+      el.page = NaN;
+      await el.updateComplete;
+      expect(el.page).to.equal(1); // non-finite falls back to page 1 instead of NaN
+      el.page = -7;
+      await el.updateComplete;
+      expect(el.page).to.equal(1); // clamped to the first valid page
     } finally { restore(); }
   });
 
@@ -198,6 +204,12 @@ describe('lyra-pdf-viewer', () => {
       el.zoomOut();
       await el.updateComplete;
       expect(el.zoom).to.equal(0.25);
+      el.zoom = NaN;
+      await el.updateComplete;
+      expect(el.zoom).to.equal(1); // non-finite falls back to 100% instead of NaN
+      el.zoom = 999;
+      await el.updateComplete;
+      expect(el.zoom).to.equal(4); // clamped to the maximum supported zoom
     } finally { restore(); }
   });
 

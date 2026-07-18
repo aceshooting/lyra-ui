@@ -65,6 +65,12 @@ export class LyraTabs extends LyraElement<LyraTabsEventMap> {
   /** The active tab's `slot`/id. Falls back to the first enabled tab whenever the current value doesn't resolve to one. */
   @property({ reflect: true }) active = '';
 
+  /** Accessible name for the `role="tablist"` strip. Attribute-reflects from a host-level
+   *  `aria-label` so a plain-markup consumer gets ARIA-name forwarding without setting a JS
+   *  property. Unset, the tablist renders without an `aria-label` (the role carries no localized
+   *  default name). */
+  @property({ attribute: 'aria-label' }) accessibleLabel: string | null = null;
+
   @state() private tabs: TabDef[] = [];
 
   private baseId = nextId('tabs');
@@ -251,7 +257,7 @@ export class LyraTabs extends LyraElement<LyraTabsEventMap> {
     // additions/removals anywhere in the list.
     return html`
       <div part="base">
-        <div part="tablist" role="tablist" aria-orientation="horizontal" @keydown=${this.onTabListKeyDown}>
+        <div part="tablist" role="tablist" aria-label=${this.accessibleLabel || nothing} aria-orientation="horizontal" @keydown=${this.onTabListKeyDown}>
           ${repeat(this.tabs, (tab) => tab.slotName, (tab) => this.renderTab(tab))}
         </div>
         ${repeat(this.tabs, (tab) => tab.slotName, (tab) => this.renderPanel(tab))}

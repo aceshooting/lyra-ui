@@ -2,6 +2,7 @@ import { html, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { ref } from 'lit/directives/ref.js';
 import { LyraElement } from '../../internal/lyra-element.js';
+import { finiteNumber, finiteRange } from '../../internal/numbers.js';
 import { safeFetchUrl } from '../../internal/safe-url.js';
 import { isAbortError, isResourceLimitError, readResponseArrayBuffer } from '../../internal/resource-loader.js';
 import { srOnly } from '../../internal/a11y.js';
@@ -28,9 +29,10 @@ const ZOOM_STEP = 0.25;
 const PAGE_TEXT_CACHE_LIMIT = 64;
 const DEFAULT_THUMBNAIL_WIDTH = 96;
 
+/** Clamps a candidate zoom multiplier to `[MIN_ZOOM, MAX_ZOOM]`, defaulting non-finite/`NaN` input
+ *  to `1` (100%) rather than letting it reach the PDF.js viewport scale unsanitized. */
 function clampZoom(value: number): number {
-  if (!Number.isFinite(value)) return 1;
-  return Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, value));
+  return finiteRange(value, 1, MIN_ZOOM, MAX_ZOOM);
 }
 
 /** `Node.contains()` never crosses a shadow boundary -- it walks plain light-DOM `parentNode` links,
@@ -264,10 +266,13 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
     if (this.loadState.kind === 'ready') void this.loadState.doc.destroy?.();
   }
 
+  /** Clamps a candidate page number to `[1, pageCount]` (or `[1, 1]` before a document is loaded),
+   *  rounding a fractional page to the nearest whole page and defaulting a non-finite/`NaN` page
+   *  to `1` rather than letting it reach the virtualized page list unsanitized. */
   private clampPage(value: number): number {
     const pageCount = this.loadState.kind === 'ready' ? this.loadState.pageCount : 1;
-    if (!Number.isFinite(value)) return 1;
-    return Math.min(pageCount, Math.max(1, Math.round(value)));
+    const rounded = Math.round(finiteNumber(value, 1));
+    return finiteRange(rounded, 1, 1, pageCount);
   }
 
   private async load(): Promise<void> {

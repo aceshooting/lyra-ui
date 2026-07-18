@@ -3,6 +3,7 @@ import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../internal/lyra-element.js';
 import { nextId } from '../../internal/a11y.js';
 import { closeIcon, expandIcon, fileIcon } from '../../internal/icons.js';
+import { finiteRange } from '../../internal/numbers.js';
 import { styles } from './attachment-chip.styles.js';
 
 export type AttachmentChipStatus = 'pending' | 'uploading' | 'error' | 'done';
@@ -166,7 +167,8 @@ export class LyraAttachmentChip extends LyraElement<LyraAttachmentChipEventMap> 
   /** Filename, used only while `file` is unset. */
   @property() name = '';
 
-  /** File size in bytes, used only while `file` is unset. */
+  /** File size in bytes, used only while `file` is unset. NaN/negative normalize to `0` (renders
+   *  as "unknown size", same as an unset size) via `effectiveSize` -- see that getter. */
   @property({ type: Number }) size = 0;
 
   /** MIME type, used only while `file` is unset. */
@@ -190,7 +192,8 @@ export class LyraAttachmentChip extends LyraElement<LyraAttachmentChipEventMap> 
   @property({ reflect: true }) status: AttachmentChipStatus = 'pending';
 
   /** Upload completion, 0-100. Only meaningful while `status="uploading"`;
-   *  a value of 0 (the default) or `NaN` falls back to the indeterminate spinner. */
+   *  a value of 0 (the default), `NaN`, or negative falls back to the indeterminate spinner
+   *  (see `hasNumericProgress`); an oversized value clamps to 100 (see `clampedProgress`). */
   @property({ type: Number }) progress = 0;
 
   /** Shows the remove (×) button. */
@@ -251,7 +254,9 @@ export class LyraAttachmentChip extends LyraElement<LyraAttachmentChipEventMap> 
   }
 
   private get effectiveSize(): number {
-    return this.file ? this.file.size : this.size;
+    // `File.size` is always a genuine finite non-negative number; only the independent `size`
+    // prop (a plain reactive property, so a caller could pass NaN/negative) needs guarding.
+    return this.file ? this.file.size : finiteRange(this.size, 0, 0);
   }
 
   private get effectiveMimeType(): string {
@@ -269,11 +274,11 @@ export class LyraAttachmentChip extends LyraElement<LyraAttachmentChipEventMap> 
   }
 
   private get hasNumericProgress(): boolean {
-    return this.status === 'uploading' && Number.isFinite(this.progress) && this.progress > 0;
+    return this.status === 'uploading' && this.clampedProgress > 0;
   }
 
   private get clampedProgress(): number {
-    return Math.min(100, Math.max(0, this.progress));
+    return finiteRange(this.progress, 0, 0, 100);
   }
 
   /** Returns (creating or reusing as needed) the object URL for `file`'s

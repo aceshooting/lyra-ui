@@ -194,6 +194,36 @@ it('paginates client-side rows and emits controlled page requests', async () => 
   expect(el.shadowRoot!.querySelector('[part="row"]')!.textContent).to.contain('Beta');
 });
 
+it('clamps an oversized or NaN page to a valid page instead of NaN/out-of-range', async () => {
+  const el = (await fixture(html`<lyra-table page-size="1"></lyra-table>`)) as LyraTable<Row>;
+  el.columns = columns;
+  el.rows = rows;
+  el.rowKey = (r) => r.id;
+  await el.updateComplete;
+
+  el.page = 9999;
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelector('[part="row"]')!.textContent).to.contain('Beta'); // clamped to the last page
+
+  el.page = NaN;
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelector('[part="row"]')!.textContent).to.contain('Alpha'); // falls back to the first page
+});
+
+it('treats a non-finite pageSize as "no pagination" (renders every row) instead of NaN math', async () => {
+  const el = (await fixture(html`<lyra-table page-size="1"></lyra-table>`)) as LyraTable<Row>;
+  el.columns = columns;
+  el.rows = rows;
+  el.rowKey = (r) => r.id;
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelectorAll('[part="row"]').length).to.equal(1);
+
+  el.pageSize = NaN;
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelector('lyra-pagination')).to.not.exist;
+  expect(el.shadowRoot!.querySelectorAll('[part="row"]').length).to.equal(2);
+});
+
 it('renders a localized busy state before rows while loading', async () => {
   const el = (await fixture(html`<lyra-table loading></lyra-table>`)) as LyraTable<Row>;
   el.columns = columns;
@@ -1739,5 +1769,123 @@ describe('rowTotal / grandTotal', () => {
     const expandedCell = el.shadowRoot!.querySelector('[part="expanded-cell"]') as HTMLElement;
     // 2 data columns + 1 leading expand-toggle column + 1 trailing row-total column
     expect(expandedCell.getAttribute('colspan')).to.equal('4');
+  });
+});
+
+describe('matching-entries memoization', () => {
+  it('does not re-run row filtering for an unrelated reactive update (roving focus move)', async () => {
+    const manyRows: Row[] = [
+      { id: 'a', name: 'Alpha', score: 3 },
+      { id: 'b', name: 'Beta', score: 1 },
+      { id: 'c', name: 'Gamma', score: 2 },
+    ];
+    let filterCalls = 0;
+    const el = (await fixture(html`<lyra-table filterable></lyra-table>`)) as LyraTable<Row>;
+    el.columns = columns;
+    el.rows = manyRows;
+    el.rowKey = (r) => r.id;
+    el.filter = (row, text) => {
+      filterCalls += 1;
+      return row.name.toLocaleLowerCase().includes(text.toLocaleLowerCase());
+    };
+    el.filterText = 'a';
+    await el.updateComplete;
+    expect(filterCalls).to.be.greaterThan(0);
+    const callsAfterInitialRender = filterCalls;
+
+    // An arrow-key focus move only changes the roving-tabindex position —
+    // none of the inputs the row-matching computation reads — so it must not
+    // re-run the filter predicate over the rows array.
+    const firstRow = el.shadowRoot!.querySelector('[part="row"]') as HTMLElement;
+    firstRow.focus();
+    firstRow.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }));
+    await el.updateComplete;
+
+    expect(el.shadowRoot!.activeElement?.getAttribute('data-row-key')).to.equal('string:b');
+    expect(filterCalls).to.equal(callsAfterInitialRender);
+  });
+
+  it('recomputes matches when rows is reassigned while a filter is active (default JSON filter)', async () => {
+    const el = (await fixture(html`<lyra-table filterable></lyra-table>`)) as LyraTable<Row>;
+    el.columns = columns;
+    el.rows = rows;
+    el.rowKey = (r) => r.id;
+    el.filterText = 'alpha';
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelectorAll('[part="row"]').length).to.equal(1);
+
+    el.rows = [...rows, { id: 'c', name: 'Alphaville', score: 9 }];
+    await el.updateComplete;
+    const rowEls = [...el.shadowRoot!.querySelectorAll('[part="row"]')];
+    expect(rowEls.length).to.equal(2);
+    expect(rowEls.map((r) => r.textContent).join(' ')).to.contain('Alphaville');
+  });
+
+  it('recomputes matches when the effective locale changes (locale-sensitive case-folding)', async () => {
+    const el = (await fixture(html`<lyra-table filterable></lyra-table>`)) as LyraTable<Row>;
+    el.columns = columns;
+    el.rows = [
+      { id: 'a', name: 'III', score: 1 },
+      { id: 'b', name: 'beta', score: 2 },
+    ];
+    el.rowKey = (r) => r.id;
+    el.filterText = 'iii';
+    await el.updateComplete;
+    // Default case-folding lowercases 'III' to 'iii' — one match.
+    expect(el.shadowRoot!.querySelectorAll('[part="row"]').length).to.equal(1);
+
+    // Turkish case-folding lowercases 'III' to dotless 'ııı', which no longer
+    // contains 'iii' — the match set must follow the locale change.
+    el.locale = 'tr';
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelectorAll('[part="row"]').length).to.equal(0);
+  });
+});
+
+describe('sticky-offset observation across reconnect', () => {
+  it('keeps tracking a header resize after the table is detached and re-attached', async () => {
+    const stickyColumns: TableColumn<Row>[] = [
+      { key: 'name', label: 'Name', sticky: true, cell: (r) => r.name },
+      { key: 'score', label: 'Score', sticky: true, cell: (r) => r.score },
+    ];
+    const el = (await fixture(
+      html`<lyra-table style="inline-size: 600px"></lyra-table>`,
+    )) as LyraTable<Row>;
+    el.columns = stickyColumns;
+    el.rows = rows;
+    el.rowKey = (r) => r.id;
+    await el.updateComplete;
+
+    const headers = () => el.shadowRoot!.querySelectorAll<HTMLElement>('th[data-col-key]');
+    await waitUntil(
+      () => headers()[1].style.getPropertyValue('--lyra-table-sticky-offset') !== '',
+      'expected an initial sticky offset on the second sticky column',
+    );
+    const initialOffset = headers()[1].style.getPropertyValue('--lyra-table-sticky-offset');
+
+    // A pure DOM move never runs the Lit update lifecycle, so only the
+    // reconnect path itself can restore the per-header resize observations.
+    const parent = el.parentElement!;
+    el.remove();
+    parent.appendChild(el);
+    await el.updateComplete;
+    // The reconnect-created ResizeObserver delivers an initial size for every
+    // newly-observed element one rendering frame after observe(); let that
+    // delivery settle first so the header resize below is only observable
+    // through a live per-header observation, not the initial delivery.
+    const nextFrame = () => new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+    await nextFrame();
+    await nextFrame();
+
+    const first = headers()[0];
+    first.style.inlineSize = '100px';
+    await waitUntil(
+      () => {
+        const offset = headers()[1].style.getPropertyValue('--lyra-table-sticky-offset');
+        return offset === `${first.offsetWidth}px` && offset !== initialOffset;
+      },
+      'expected the second sticky column offset to track the resized first header after reconnect',
+      { timeout: 2000 },
+    );
   });
 });

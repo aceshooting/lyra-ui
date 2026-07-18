@@ -79,6 +79,19 @@ it('renders through the internal virtual-list once rows exceeds virtualizeAt', a
   expect(el.shadowRoot!.querySelector('lyra-virtual-list')).to.exist;
 });
 
+it('normalizes a NaN virtualizeAt to the default (100) instead of silently disabling virtualization', async () => {
+  const many: LyraNeighborRow[] = Array.from({ length: 101 }, (_, i) => ({
+    relation: 'related_to',
+    direction: 'out' as const,
+    node: { id: `n${i}`, label: `Node ${i}` },
+  }));
+  const el = (await fixture(html`<lyra-neighbor-list virtualize-at="not-a-number"></lyra-neighbor-list>`)) as LyraNeighborList;
+  expect(Number.isNaN(el.virtualizeAt)).to.be.true;
+  el.rows = many;
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelector('lyra-virtual-list')).to.exist;
+});
+
 it('renders the direction as an aria-hidden glyph plus localized text folded into the row name', async () => {
   const el = (await fixture(html`<lyra-neighbor-list></lyra-neighbor-list>`)) as LyraNeighborList;
   el.rows = rows;

@@ -37,6 +37,38 @@ it('does not emit lyra-change when the clamped value is unchanged', async () => 
   expect(changeCount).to.equal(0);
 });
 
+it('clamps a non-finite or oversized max to a safe, bounded star count', async () => {
+  const nan = (await fixture(html`<lyra-rating max="abc"></lyra-rating>`)) as LyraRating;
+  const nanBase = nan.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  expect(nanBase.getAttribute('aria-valuemax')).to.equal('5');
+  expect(nan.shadowRoot!.querySelectorAll('[part="star"]').length).to.equal(5);
+
+  const huge = (await fixture(html`<lyra-rating max="1000000"></lyra-rating>`)) as LyraRating;
+  expect(huge.shadowRoot!.querySelectorAll('[part="star"]').length).to.equal(100);
+});
+
+it('clamps an out-of-range or non-finite value to [0, max]', async () => {
+  const negative = (await fixture(html`<lyra-rating value="-10" max="5"></lyra-rating>`)) as LyraRating;
+  expect(negative.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-valuenow')).to.equal('0');
+
+  const over = (await fixture(html`<lyra-rating value="999" max="5"></lyra-rating>`)) as LyraRating;
+  expect(over.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-valuenow')).to.equal('5');
+
+  const nan = (await fixture(html`<lyra-rating max="5"></lyra-rating>`)) as LyraRating;
+  nan.value = NaN;
+  await nan.updateComplete;
+  expect(nan.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-valuenow')).to.equal('0');
+});
+
+it('falls back to a safe positive precision instead of throwing when precision is non-finite', async () => {
+  const el = (await fixture(html`<lyra-rating value="2" precision="abc"></lyra-rating>`)) as LyraRating;
+  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  expect(() =>
+    base.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true, cancelable: true })),
+  ).to.not.throw();
+  expect(el.value).to.equal(3);
+});
+
 it('renders a distinct partial fill for a fractional value under a fractional precision', async () => {
   const el = (await fixture(html`<lyra-rating value="3.5" precision="0.5" max="5"></lyra-rating>`)) as LyraRating;
   const stars = el.shadowRoot!.querySelectorAll('[part="star"]');

@@ -9,14 +9,14 @@ import '../chip/chip.class.js';
 import '../button/button.class.js';
 import '../empty/empty.class.js';
 
-/** One knowledge-graph entity, as consumed by every Family K component. Field names deliberately
- *  mirror §3.4's `GraphNode` additions (`type`, `communityId`), so `{ ...graphNode, label:
- *  graphNode.label ?? graphNode.id }` adapts a graph node into a `LyraEntity` with no mapping
- *  table. */
+/** One knowledge-graph entity, as consumed by every knowledge-graph explorer component. Field
+ *  names deliberately mirror `lyra-graph`'s node shape (`type`, `communityId`), so
+ *  `{ ...graphNode, label: graphNode.label ?? graphNode.id }` adapts a graph node into a
+ *  `LyraEntity` with no mapping table. */
 export interface LyraEntity {
   id: string;
   label: string;
-  /** Matches a §3.4 `nodeTypes[].id` on the paired `lyra-graph`. */
+  /** Matches a `nodeTypes[].id` on the paired `lyra-graph`. */
   type?: string;
   description?: string;
   /** Key/value dossier rows, rendered in insertion order. */
@@ -26,8 +26,8 @@ export interface LyraEntity {
   communityId?: string;
 }
 
-/** The exact §3.4 `nodeTypes` entry shape -- see `lyra-graph-legend`'s identical local alias for
- *  why this isn't imported from `lyra-graph` itself. */
+/** The exact `lyra-graph.nodeTypes` entry shape -- see `lyra-graph-legend`'s identical local
+ *  alias for why this isn't imported from `lyra-graph` itself. */
 type NodeTypeStyle = { id: string; label: string; color?: string; shape?: 'circle' | 'square' | 'diamond' };
 
 export interface LyraEntityCardEventMap {
@@ -39,17 +39,19 @@ function sanitizeTypeColor(color: string | undefined): string | undefined {
 }
 
 /** Derives themeable `--lyra-badge-*` overrides from a data-driven type color -- the same "type
- *  color is data-driven by design" exception §2 already grants graph nodes, applied here to the
- *  type badge only; every other color in this component comes from tokens. */
+ *  color is data-driven by design" exception `lyra-graph`'s `nodeTypes` colors already have,
+ *  applied here to the type badge only; every other color in this component comes from tokens. */
 function typeBadgeStyle(color: string | undefined): Record<string, string> {
   const safe = sanitizeTypeColor(color);
   if (!safe) return {};
   return {
     '--lyra-badge-color': safe,
-    // 10% (not the 16% other quiet-tint recipes in this codebase use) -- WCAG AA 4.5:1 text
-    // contrast must hold for *any* data-driven type color against --lyra-color-surface, and 16%
-    // measurably fails it for saturated hues (e.g. #7c3aed lands at 4.46:1, confirmed via axe).
-    '--lyra-badge-background': `color-mix(in srgb, ${safe} 10%, var(--lyra-color-surface))`,
+    // 8% (not the 16% other quiet-tint recipes in this codebase use) -- WCAG AA 4.5:1 text
+    // contrast must hold for *any* data-driven type color against --lyra-color-surface. 16%
+    // measurably fails it for saturated hues (e.g. #7c3aed lands at 4.46:1, confirmed via axe),
+    // and even 10% isn't safe margin for every hue in this palette -- e.g.
+    // --lyra-theme-color-chart-1 (#8250df) lands at 4.42:1. 8% clears 4.5:1 for both with margin.
+    '--lyra-badge-background': `color-mix(in srgb, ${safe} 8%, var(--lyra-color-surface))`,
     '--lyra-badge-border': safe,
   };
 }
@@ -57,8 +59,8 @@ function typeBadgeStyle(color: string | undefined): Record<string, string> {
 /**
  * `<lyra-entity-card>` — a dossier card for one `LyraEntity`: type badge, description, key/value
  * property rows, degree, community chip, plus a built-in "focus in graph" action. Never fetches or
- * focuses a graph itself — `lyra-entity-activate` is a request a host routes into §3.4's
- * `graph.focusNode(id, { zoom? })`.
+ * focuses a graph itself — `lyra-entity-activate` is a request a host routes into `lyra-graph`'s
+ * `focusNode(id, { zoom? })`.
  *
  * @customElement lyra-entity-card
  * @slot - Extra body content below the property rows (e.g. a `lyra-neighbor-list`).
@@ -82,8 +84,8 @@ export class LyraEntityCard extends LyraElement<LyraEntityCardEventMap> {
 
   /** `null` renders the shared `lyra-empty` `noData` state. */
   @property({ attribute: false }) entity: LyraEntity | null = null;
-  /** §3.4 `nodeTypes` pass-through used to resolve the type badge's label and swatch color; an
-   *  unresolvable `entity.type` renders as its raw id in a neutral badge. */
+  /** `lyra-graph` `nodeTypes` pass-through used to resolve the type badge's label and swatch
+   *  color; an unresolvable `entity.type` renders as its raw id in a neutral badge. */
   @property({ attribute: false }) types: NodeTypeStyle[] = [];
   /** Display label for `entity.communityId`'s chip; falls back to the raw id. */
   @property({ attribute: 'community-label' }) communityLabel = '';
@@ -109,13 +111,11 @@ export class LyraEntityCard extends LyraElement<LyraEntityCardEventMap> {
     const properties = Object.entries(entity.properties ?? {});
     const ariaLevel = this.getAttribute('aria-level') || '3';
 
-    // The degree/community rows below deliberately don't use `lyra-result-field`'s own
-    // `label`/`value` props (unlike the plain `property` rows above): that props-driven text is
-    // synthesized inside `lyra-result-field`'s *own* shadow root, so it never shows up in
-    // `resultField.textContent` read from outside (shadow trees aren't part of a light-DOM
-    // descendant's `textContent`) -- only genuinely slotted (light-DOM) content does. Writing the
-    // localized label directly into the default slot keeps the row introspectable from a host's
-    // perspective while still visually reading as "Label: value", matching the property rows.
+    // The degree/community rows route their localized labels through `lyra-result-field`'s
+    // `label` prop, exactly like the plain `property` rows above: the label/value separator is
+    // presentation that belongs to `lyra-result-field` (a single, locale-adjustable place), not a
+    // literal joined into this template. The community *value* stays slotted because it's rich
+    // content (a chip), which the default slot handles by design.
     return html`
       <div part="base">
         <div part="header">
@@ -140,14 +140,15 @@ export class LyraEntityCard extends LyraElement<LyraEntityCardEventMap> {
             ([key, value]) => html`<lyra-result-field part="property" label=${key} value=${String(value)}></lyra-result-field>`,
           )}
           ${entity.degree != null
-            ? html`<lyra-result-field part="degree"
-                >${this.localize('entityDegree')}: ${String(entity.degree)}</lyra-result-field
-              >`
+            ? html`<lyra-result-field
+                part="degree"
+                label=${this.localize('entityDegree')}
+                value=${String(entity.degree)}
+              ></lyra-result-field>`
             : nothing}
           ${entity.communityId
-            ? html`<lyra-result-field part="community"
-                >${this.localize('entityCommunity')}:
-                <lyra-chip>${this.communityLabel || entity.communityId}</lyra-chip></lyra-result-field
+            ? html`<lyra-result-field part="community" label=${this.localize('entityCommunity')}
+                ><lyra-chip>${this.communityLabel || entity.communityId}</lyra-chip></lyra-result-field
               >`
             : nothing}
         </div>

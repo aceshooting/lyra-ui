@@ -98,6 +98,20 @@ it('allows the shared ambient-motion token to retime the animation', async () =>
   expect(getComputedStyle(base).animationTimingFunction).to.equal('linear');
 });
 
+it('reverses the sheen sweep under dir="rtl" so it travels in the reading direction', async () => {
+  const ltr = (await fixture(html`<lyra-skeleton effect="sheen"></lyra-skeleton>`)) as LyraSkeleton;
+  const ltrBase = ltr.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  expect(getComputedStyle(ltrBase).animationDirection).to.equal('normal');
+
+  // background-position percentages are physical, so the RTL variant plays the same keyframes
+  // backwards instead of always sweeping left-to-right.
+  const rtl = (await fixture(
+    html`<lyra-skeleton effect="sheen" dir="rtl"></lyra-skeleton>`,
+  )) as LyraSkeleton;
+  const rtlBase = rtl.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  expect(getComputedStyle(rtlBase).animationDirection).to.equal('reverse');
+});
+
 it('defaults the accessible name to "Loading…" and reflects a custom label', async () => {
   const defaulted = (await fixture(html`<lyra-skeleton></lyra-skeleton>`)) as LyraSkeleton;
   expect(defaulted.shadowRoot!.querySelector('.sr-only')!.textContent).to.equal('Loading…');

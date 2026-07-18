@@ -69,6 +69,16 @@ it('uses the singular form for exactly one completed step', async () => {
   expect(el.shadowRoot!.querySelector('[part="summary"]')!.textContent!.trim()).to.equal('Completed 1 step');
 });
 
+it('uses string overrides for the header label and completed-steps summary', async () => {
+  const el = (await fixture(
+    html`<lyra-activity-feed mode="post-hoc" .entries=${makeEntries(3)}></lyra-activity-feed>`,
+  )) as LyraActivityFeed;
+  el.strings = { activityFeedLabel: 'Activité', activityFeedCompletedSteps: '{count} étapes terminées' };
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelector('[part="label"]')!.textContent!.trim()).to.equal('Activité');
+  expect(el.shadowRoot!.querySelector('[part="summary"]')!.textContent!.trim()).to.equal('3 étapes terminées');
+});
+
 it('toggles expanded and fires lyra-toggle on header click', async () => {
   const el = (await fixture(html`<lyra-activity-feed></lyra-activity-feed>`)) as LyraActivityFeed;
   const header = el.shadowRoot!.querySelector('[part="header"]') as HTMLButtonElement;
@@ -216,6 +226,14 @@ describe('follow contract (virtualized)', () => {
     )) as LyraActivityFeed;
     expect(el.shadowRoot!.querySelector('lyra-virtual-list')).to.exist;
     expect(el.shadowRoot!.querySelector('[part="body"][role="list"]')).to.not.exist;
+  });
+
+  it('normalizes a NaN virtualizeThreshold to the default (200) instead of silently disabling virtualization', async () => {
+    const el = (await fixture(
+      html`<lyra-activity-feed expanded virtualize-threshold="not-a-number" .entries=${makeEntries(200)}></lyra-activity-feed>`,
+    )) as LyraActivityFeed;
+    expect(Number.isNaN(el.virtualizeThreshold)).to.be.true;
+    expect(el.shadowRoot!.querySelector('lyra-virtual-list')).to.exist;
   });
 
   it('forwards the header label as aria-label onto the internal virtual-list', async () => {

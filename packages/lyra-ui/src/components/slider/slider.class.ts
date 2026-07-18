@@ -130,6 +130,16 @@ export class LyraSlider extends FormAssociated(LyraSliderBase) {
   private activePointers = new Set<number>();
   private changedPointers = new Set<number>();
   private keyboardChanged = false;
+  // `[part="track"]`'s rect and the resolved direction, snapshotted once per
+  // gesture in beginDrag() rather than re-read on every pointermove:
+  // getBoundingClientRect()/getComputedStyle() in a window-level pointermove
+  // handler force a synchronous layout/style flush interleaved with the
+  // previous move's own style writes, and neither value changes from this
+  // component's own updates mid-drag (the drag only moves the thumb/fill,
+  // never the track's box). Re-measured at every gesture start, so any
+  // between-gesture layout change is always picked up.
+  private dragTrackRect: DOMRect | null = null;
+  private dragRtl = false;
 
   connectedCallback(): void {
     super.connectedCallback();
@@ -150,6 +160,7 @@ export class LyraSlider extends FormAssociated(LyraSliderBase) {
     this.activePointers.clear();
     this.changedPointers.clear();
     this.keyboardChanged = false;
+    this.dragTrackRect = null;
     window.removeEventListener('pointermove', this.onPointerMove);
     window.removeEventListener('pointerup', this.onPointerUp);
     window.removeEventListener('pointercancel', this.onPointerUp);
@@ -333,6 +344,9 @@ export class LyraSlider extends FormAssociated(LyraSliderBase) {
    *  one that starts elsewhere on the track (see `onBasePointerDown`), so
    *  both gestures continue identically from here on. */
   private beginDrag(pointerId: number, captureTarget: HTMLElement): void {
+    const track = this.renderRoot.querySelector('[part="track"]') as HTMLElement | null;
+    this.dragTrackRect = track?.getBoundingClientRect() ?? null;
+    this.dragRtl = isRtl(this);
     this.activePointers.add(pointerId);
     this.changedPointers.delete(pointerId);
     captureTarget.setPointerCapture(pointerId);
@@ -389,14 +403,13 @@ export class LyraSlider extends FormAssociated(LyraSliderBase) {
       this.endDrag(e.pointerId, false);
       return;
     }
-    const track = this.renderRoot.querySelector('[part="track"]') as HTMLElement | null;
-    if (!track) return;
-    const rect = track.getBoundingClientRect();
+    const rect = this.dragTrackRect;
+    if (!rect) return;
     const raw = rect.width === 0 ? 0 : (e.clientX - rect.left) / rect.width;
     // The track is positioned with inset-inline-start (0% at the visual
     // right edge under RTL), so the pointer ratio has to mirror that or a
     // rightward drag would move the thumb the wrong way.
-    const ratio = Math.min(1, Math.max(0, isRtl(this) ? 1 - raw : raw));
+    const ratio = Math.min(1, Math.max(0, this.dragRtl ? 1 - raw : raw));
     const { lo, hi } = this.domain();
     if (this.setValue(lo + ratio * (hi - lo), false)) this.changedPointers.add(e.pointerId);
   };
@@ -414,6 +427,7 @@ export class LyraSlider extends FormAssociated(LyraSliderBase) {
     // Only the last concurrent drag to end tears down the shared window
     // listeners — an overlapping second pointer may still be down.
     if (this.activePointers.size === 0) {
+      this.dragTrackRect = null;
       window.removeEventListener('pointermove', this.onPointerMove);
       window.removeEventListener('pointerup', this.onPointerUp);
       window.removeEventListener('pointercancel', this.onPointerUp);

@@ -121,6 +121,40 @@ it('keyboard: Space toggles the focused row, ArrowDown moves focus, ArrowRight e
   expect(event.detail.selectedIds.sort()).to.deep.equal(['doc1', 'doc2']);
 });
 
+it('keyboard: Space and Enter on the select-all checkbox toggle every leaf', async () => {
+  const el = (await fixture(html`<lyra-source-picker></lyra-source-picker>`)) as LyraSourcePicker;
+  el.sources = sources;
+  await el.updateComplete;
+  const selectAll = el.shadowRoot!.querySelector('[part="select-all"] [role="checkbox"]') as HTMLElement;
+
+  const selectListener = oneEvent(el, 'lyra-sources-change');
+  const space = new KeyboardEvent('keydown', { key: ' ', bubbles: true, cancelable: true });
+  selectAll.dispatchEvent(space);
+  const selected = await selectListener;
+  expect(selected.detail.selectedIds.sort()).to.deep.equal(['doc1', 'doc2', 'doc3']);
+  expect(space.defaultPrevented).to.be.true; // Space must not scroll
+
+  el.selectedIds = ['doc1', 'doc2', 'doc3'];
+  await el.updateComplete;
+  const deselectListener = oneEvent(el, 'lyra-sources-change');
+  selectAll.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
+  const deselected = await deselectListener;
+  expect(deselected.detail.selectedIds).to.deep.equal([]);
+});
+
+it('forwards a host aria-label to the role="tree" element, winning over label', async () => {
+  const el = (await fixture(html`<lyra-source-picker aria-label="Grounding sources" label="Sources"></lyra-source-picker>`)) as LyraSourcePicker;
+  el.sources = sources;
+  await el.updateComplete;
+  expect(el.accessibleLabel).to.equal('Grounding sources');
+  const tree = el.shadowRoot!.querySelector('[role="tree"]')!;
+  expect(tree.getAttribute('aria-label')).to.equal('Grounding sources');
+
+  el.accessibleLabel = null;
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelector('[role="tree"]')!.getAttribute('aria-label')).to.equal('Sources');
+});
+
 it('is not FormAssociated -- no internals/checkValidity surface', async () => {
   const el = (await fixture(html`<lyra-source-picker></lyra-source-picker>`)) as LyraSourcePicker;
   expect((el as unknown as { checkValidity?: unknown }).checkValidity).to.equal(undefined);

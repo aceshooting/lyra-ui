@@ -3,6 +3,7 @@ import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../internal/lyra-element.js';
 import { chevronIcon } from '../../internal/icons.js';
 import { nextId, srOnly } from '../../internal/a11y.js';
+import { finiteNumber } from '../../internal/numbers.js';
 import { styles } from './stat.styles.js';
 
 export type StatVariant = 'neutral' | 'success' | 'warning' | 'danger';
@@ -52,7 +53,25 @@ export class LyraStat extends LyraElement {
   @property() value = '';
   @property() unit = '';
   @property({ reflect: true }) variant: StatVariant = 'neutral';
-  @property({ type: Number }) trend = NaN;
+
+  private _trend = NaN;
+  /** Percentage/delta value for the trend pill (e.g. `-12.5` renders a down arrow at "12.5%").
+   *  `NaN` (the default, and what a removed `trend` attribute resolves to — Lit's `type: Number`
+   *  converter maps a missing attribute to `null`, treated the same as `NaN` here) is a
+   *  deliberate sentinel meaning "no trend": it hides the pill entirely and is preserved as-is,
+   *  never coerced away. Any other non-finite input (e.g. a literal `trend="Infinity"` attribute)
+   *  is normalized via `finiteNumber` to a flat `0` instead of rendering a bogus
+   *  "Infinity%"/"-Infinity%" pill; genuine finite numbers pass through unclamped. */
+  @property({ type: Number })
+  get trend(): number {
+    return this._trend;
+  }
+  set trend(value: number | null) {
+    const old = this._trend;
+    this._trend = value == null || Number.isNaN(value) ? NaN : finiteNumber(value, 0);
+    this.requestUpdate('trend', old);
+  }
+
   @property() caption = '';
   /** Which trend direction counts as "good" — inverts arrow/color polarity for
    *  cost/latency/error-rate-style metrics where a decrease is the win. */
@@ -124,11 +143,10 @@ export class LyraStat extends LyraElement {
   };
 
   render(): TemplateResult {
-    // Lit's built-in Number converter maps a removed/absent attribute to
-    // `null`, not NaN, even though the property is typed `number` — so
-    // `isNaN(this.trend)` alone is false for a cleared attribute and the pill
-    // would reappear showing a fabricated "unchanged, 0%". Treat null/undefined
-    // the same as NaN here instead of trusting the static type.
+    // `trend`'s own accessor above already normalizes a removed/absent attribute (which Lit's
+    // `type: Number` converter delivers as `null`, not `NaN`) to the same `NaN` "no trend"
+    // sentinel, so `this.trend` is never actually `null` here — the `!= null` check is kept as a
+    // defensive belt-and-suspenders against the static type lying.
     const hasTrend = this.trend != null && !isNaN(this.trend);
     const rawDirection = this.trend > 0 ? 'up' : this.trend < 0 ? 'down' : 'flat';
     const isGood = rawDirection === 'flat' ? null : rawDirection === this.goodDirection;

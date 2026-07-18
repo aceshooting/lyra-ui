@@ -136,6 +136,70 @@ describe('lyra-tour', () => {
     expect(tour.getAttribute('active-index')).to.equal('2');
   });
 
+  it('normalizes an out-of-range/NaN activeIndex set directly (bypassing goToStep) to [0, steps.length - 1]', async () => {
+    const el = (await fixture(
+      html`<div>
+        <lyra-tour .steps=${makeSteps(3)}></lyra-tour>
+        ${targetButtons(3)}
+      </div>`,
+    )) as HTMLDivElement;
+    const tour = el.querySelector('lyra-tour') as LyraTour;
+
+    tour.activeIndex = 99;
+    await tour.updateComplete;
+    expect(tour.activeIndex).to.equal(2);
+
+    tour.activeIndex = -5;
+    await tour.updateComplete;
+    expect(tour.activeIndex).to.equal(0);
+
+    tour.activeIndex = NaN;
+    await tour.updateComplete;
+    expect(tour.activeIndex).to.equal(0);
+  });
+
+  it('falls back to the default spotlight padding when spotlight-padding is invalid, instead of poisoning the cutout with NaN', async () => {
+    const el = (await fixture(
+      html`<div>
+        <lyra-tour .steps=${makeSteps(1)} spotlight-padding="not-a-number"></lyra-tour>
+        <button id="tour-target-0" style="position:fixed; top:100px; left:100px; width:50px; height:30px;">
+          target 0
+        </button>
+      </div>`,
+    )) as HTMLDivElement;
+    const tour = el.querySelector('lyra-tour') as LyraTour;
+    const targetButton = el.querySelector('#tour-target-0') as HTMLButtonElement;
+    tour.start();
+    await tour.updateComplete;
+    const cutout = () => tour.shadowRoot!.querySelector('[part="backdrop"] .cutout') as SVGRectElement;
+    await waitFor(() => cutout().getAttribute('width'), (v) => v !== null && v !== '0');
+
+    const rect = targetButton.getBoundingClientRect();
+    // Default spotlight padding is 4px -- an invalid `spotlight-padding` must fall back to it
+    // rather than corrupting the cutout rect with NaN.
+    expect(Number(cutout().getAttribute('x'))).to.be.closeTo(rect.left - 4, 0.5);
+    expect(Number(cutout().getAttribute('y'))).to.be.closeTo(rect.top - 4, 0.5);
+  });
+
+  it('does not poison the step popover position with NaN when distance is invalid', async () => {
+    const el = (await fixture(
+      html`<div>
+        <lyra-tour .steps=${makeSteps(1)} distance="not-a-number"></lyra-tour>
+        <button id="tour-target-0" style="position:fixed; top:100px; left:100px; width:50px; height:30px;">
+          target 0
+        </button>
+      </div>`,
+    )) as HTMLDivElement;
+    const tour = el.querySelector('lyra-tour') as LyraTour;
+    tour.start();
+    await tour.updateComplete;
+    await new Promise((r) => requestAnimationFrame(() => r(null)));
+    await new Promise((r) => requestAnimationFrame(() => r(null)));
+    const popover = tour.shadowRoot!.querySelector('[part="popover"]') as HTMLElement;
+    expect(popover.style.left).to.not.include('NaN');
+    expect(popover.style.top).to.not.include('NaN');
+  });
+
   it('next() fires a cancelable lyra-tour-step-change before activeIndex changes; preventDefault() keeps it unchanged', async () => {
     const el = (await fixture(
       html`<div>
@@ -761,5 +825,42 @@ describe('lyra-tour', () => {
     expect(styles.cssText).to.match(/@media \(prefers-reduced-motion: reduce\)/);
     expect(styles.cssText).to.match(/@media \(prefers-reduced-motion: reduce\) \{[^]*\[part='popover'\][^{]*\{[^}]*animation:\s*none/);
     expect(styles.cssText).to.include('var(--lyra-transition-base)');
+  });
+
+  it('does not trigger a Lit "scheduled an update after an update completed" dev warning across start/next/back/goToStep/a missing-target step/end', async () => {
+    const globalWarnings = (globalThis as { litIssuedWarnings?: Set<string> }).litIssuedWarnings;
+    globalWarnings?.forEach((warning) => {
+      if (warning.includes('scheduled an update')) globalWarnings.delete(warning);
+    });
+    const originalWarn = console.warn;
+    const calls: unknown[][] = [];
+    console.warn = (...args: unknown[]) => calls.push(args);
+    try {
+      const el = (await fixture(
+        html`<div>
+          <lyra-tour
+            .steps=${makeSteps(3, (index) => (index === 1 ? { target: '#does-not-exist' } : {}))}
+          ></lyra-tour>
+          ${targetButtons(3)}
+        </div>`,
+      )) as HTMLDivElement;
+      const tour = el.querySelector('lyra-tour') as LyraTour;
+
+      tour.start();
+      await tour.updateComplete;
+      tour.next(); // step 1: target does not resolve -- exercises the unanchored path
+      await tour.updateComplete;
+      tour.next(); // step 2: target resolves again
+      await tour.updateComplete;
+      tour.back();
+      await tour.updateComplete;
+      tour.goToStep(2);
+      await tour.updateComplete;
+      tour.end('api');
+      await tour.updateComplete;
+    } finally {
+      console.warn = originalWarn;
+    }
+    expect(calls.flat().map(String).some((message) => message.includes('scheduled an update'))).to.be.false;
   });
 });

@@ -1,6 +1,7 @@
 import { html, nothing, svg, type TemplateResult, type SVGTemplateResult, type PropertyValues } from 'lit';
 import { property, state, query } from 'lit/decorators.js';
 import { LyraElement } from '../../internal/lyra-element.js';
+import { getDateTimeFormat } from '../../internal/intl-cache.js';
 import { styles } from './conversation-item.styles.js';
 
 export interface ConversationItemRenameDetail {
@@ -51,13 +52,17 @@ function pencilIcon(): SVGTemplateResult {
  *  job. `formatTimestamp` overrides this
  *  entirely, mirroring `<lyra-chat-message>`'s identical override hook. */
 function defaultFormatTimestamp(date: Date, locale: string, now: Date = new Date()): string {
+  // Shared per-locale+options formatter cache: this runs per row per render in a history
+  // sidebar list, and constructing an `Intl.DateTimeFormat` per call is an ICU locale-data
+  // lookup. `effectiveLocale` always resolves to a non-empty tag (it falls back to `'en'`),
+  // so no empty-locale guard is needed.
   const sameDay = date.toDateString() === now.toDateString();
   if (sameDay) {
-    return new Intl.DateTimeFormat(locale || undefined, { hour: 'numeric', minute: '2-digit' }).format(date);
+    return getDateTimeFormat(locale, { hour: 'numeric', minute: '2-digit' }).format(date);
   }
   const sameYear = date.getFullYear() === now.getFullYear();
-  return new Intl.DateTimeFormat(
-    locale || undefined,
+  return getDateTimeFormat(
+    locale,
     sameYear ? { month: 'short', day: 'numeric' } : { month: 'short', day: 'numeric', year: 'numeric' },
   ).format(date);
 }

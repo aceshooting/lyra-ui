@@ -3,6 +3,7 @@ import { property, state, query } from 'lit/decorators.js';
 import { LyraElement } from '../../internal/lyra-element.js';
 import { nextId } from '../../internal/a11y.js';
 import { chevronIcon } from '../../internal/icons.js';
+import { getDateTimeFormat } from '../../internal/intl-cache.js';
 import type { LyraLiveRegion } from '../live-region/live-region.class.js';
 import '../live-region/live-region.class.js';
 import { styles } from './chat-message.styles.js';
@@ -37,9 +38,14 @@ function retryIcon(): SVGTemplateResult {
 }
 
 /** `hour:minute` in the component's effective locale; `formatTimestamp`
- *  overrides it when an application needs a different date/time contract. */
+ *  overrides it when an application needs a different date/time contract.
+ *  Uses the shared per-locale formatter cache -- this runs on every render
+ *  of every message in a conversation surface, and constructing an
+ *  `Intl.DateTimeFormat` per call is an ICU locale-data lookup.
+ *  `effectiveLocale` always resolves to a non-empty tag (it falls back to
+ *  `'en'`), so no empty-locale guard is needed. */
 function defaultFormatTimestamp(date: Date, locale: string): string {
-  return new Intl.DateTimeFormat(locale || undefined, { hour: 'numeric', minute: '2-digit' }).format(date);
+  return getDateTimeFormat(locale, { hour: 'numeric', minute: '2-digit' }).format(date);
 }
 
 /** Visible (not just color-coded) text for every non-resting status --

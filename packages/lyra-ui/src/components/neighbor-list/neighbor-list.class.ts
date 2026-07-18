@@ -3,6 +3,7 @@ import { property } from 'lit/decorators.js';
 import { LyraElement } from '../../internal/lyra-element.js';
 import { isRtl } from '../../internal/rtl.js';
 import { expandIcon } from '../../internal/icons.js';
+import { finiteCount } from '../../internal/numbers.js';
 import type { LyraEntity } from '../entity-card/entity-card.class.js';
 import type { VirtualListGroup } from '../virtual-list/virtual-list.class.js';
 import '../virtual-list/virtual-list.class.js';
@@ -18,7 +19,7 @@ export interface LyraNeighborRow {
 
 export interface LyraNeighborListEventMap {
   'lyra-entity-activate': CustomEvent<{ id: string }>;
-  /** Deliberately the *same name and detail* as §3.4's `lyra-graph` event, so one host handler
+  /** Deliberately the *same name and detail* as the `lyra-graph` event, so one host handler
    *  serves both ("expand this node's neighborhood"). */
   'lyra-node-expand': CustomEvent<{ id: string }>;
 }
@@ -54,6 +55,14 @@ export class LyraNeighborList extends LyraElement<LyraNeighborListEventMap> {
   @property({ type: Number, attribute: 'virtualize-at' }) virtualizeAt = 100;
   /** Accessible name; falls back to the localized `neighborListLabel`. */
   @property() label = '';
+
+  /** `virtualizeAt`, normalized to a finite non-negative integer (falling back to the property's
+   *  own default of `100`) -- a raw `NaN` (e.g. an invalid `virtualize-at` attribute) would
+   *  otherwise make `sorted.length > virtualizeAt` always false, silently disabling
+   *  virtualization instead of falling back to the default threshold. */
+  private get effectiveVirtualizeAt(): number {
+    return finiteCount(this.virtualizeAt, 100);
+  }
 
   private sortedRows(): LyraNeighborRow[] {
     if (!this.groupByRelation) return this.rows;
@@ -140,7 +149,7 @@ export class LyraNeighborList extends LyraElement<LyraNeighborListEventMap> {
         <lyra-empty part="empty"><span slot="heading">${this.localize('neighborListEmpty')}</span></lyra-empty>
       </div>`;
     }
-    if (sorted.length > this.virtualizeAt) {
+    if (sorted.length > this.effectiveVirtualizeAt) {
       return html`
         <div part="base" role="group" aria-label=${label}>
           <lyra-virtual-list

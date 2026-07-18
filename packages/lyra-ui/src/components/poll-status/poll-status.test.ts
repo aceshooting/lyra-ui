@@ -51,6 +51,22 @@ describe('lyra-poll-status', () => {
     expect(el.shadowRoot!.querySelector('[part="indicator"]')!.hasAttribute('data-due')).to.be.false;
   });
 
+  it('clamps a NaN/negative next-in-ms to a due-immediately countdown instead of permanently bricking the ticker', async () => {
+    // Regression test: `Date.now() + NaN` poisons `targetAt` with NaN, and every subsequent tick's
+    // `Math.max(0, targetAt - Date.now())` also evaluates to NaN (Math.max never recovers from a
+    // NaN operand) -- `remainingMs` never becomes exactly `0`, so `lyra-poll-due` never fires and
+    // the ticker runs forever in the background.
+    const nan = (await fixture(html`<lyra-poll-status next-in-ms="NaN"></lyra-poll-status>`)) as LyraPollStatus;
+    await oneEvent(nan, 'lyra-poll-due');
+    await nan.updateComplete;
+    expect(nan.shadowRoot!.querySelector('[part="countdown"]')!.textContent).to.include('Refreshing');
+
+    const negative = (await fixture(html`<lyra-poll-status next-in-ms="-500"></lyra-poll-status>`)) as LyraPollStatus;
+    await oneEvent(negative, 'lyra-poll-due');
+    await negative.updateComplete;
+    expect(negative.shadowRoot!.querySelector('[part="countdown"]')!.textContent).to.include('Refreshing');
+  });
+
   it('disarms the ticker when next-in-ms is cleared, instead of leaving a stale deadline running', async () => {
     // Regression test: updated() only reacted to nextInMs becoming non-null;
     // clearing it left the ticker armed for the previous deadline still

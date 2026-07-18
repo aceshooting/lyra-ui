@@ -3,6 +3,7 @@ import { property, state, query } from 'lit/decorators.js';
 import { LyraElement } from '../../internal/lyra-element.js';
 import { place } from '../../internal/positioner.js';
 import { nextId } from '../../internal/a11y.js';
+import { finiteInteger } from '../../internal/numbers.js';
 import { styles } from './citation-badge.styles.js';
 
 export type CitationBadgeStatus = 'default' | 'high' | 'medium' | 'low' | 'verified' | 'unverified';
@@ -116,8 +117,20 @@ function isRealPreviewNode(n: Node): boolean {
 export class LyraCitationBadge extends LyraElement<LyraCitationBadgeEventMap> {
   static styles = [LyraElement.styles, styles];
 
-  /** The citation number shown, e.g. `3` renders as `[3]`. */
-  @property({ type: Number }) index = 1;
+  private _index = 1;
+  /** The citation number shown, e.g. `3` renders as `[3]`. Renders directly as visible text (and
+   *  feeds `lyra-citation-activate`/`lyra-citation-open`'s `detail.index`), so a NaN/non-integer
+   *  value would be a real user-facing rendering bug — clamped to a finite, 1-indexed integer
+   *  (citation numbers are conventionally 1-indexed, matching this property's own default). */
+  @property({ type: Number })
+  get index(): number {
+    return this._index;
+  }
+  set index(value: number) {
+    const old = this._index;
+    this._index = finiteInteger(value, 1, 1);
+    this.requestUpdate('index', old);
+  }
 
   /** Confidence/verification state — drives the badge's color and (unless
    *  `label` is set) part of its accessible name. */

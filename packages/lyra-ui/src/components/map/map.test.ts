@@ -119,6 +119,44 @@ it('calls setCenter/setZoom on the underlying map when center/zoom change after 
   expect(zoomArg).to.equal(7);
 });
 
+// Regression coverage for the shared finite-number normalization layer (`src/internal/numbers.ts`)
+// -- a non-finite/out-of-range `zoom` used to flow straight into the maplibregl.Map constructor's
+// `zoom` option and a live `setZoom()` call instead of clamping into the range ([0, 22]) the
+// underlying map itself is configured with (no minZoom/maxZoom option is passed here, so those
+// are maplibre-gl's own defaults).
+it('normalizes a non-finite initial zoom before constructing the underlying maplibregl.Map', async () => {
+  const el = (await fixture(html`<lyra-map zoom="NaN"></lyra-map>`)) as LyraMap;
+  el.mapStyle = RASTER_STYLE;
+  await el.updateComplete;
+  await waitUntil(() => el.map != null, 'map never initialized', { timeout: 2000 });
+  expect(Number.isFinite(el.map!.getZoom())).to.be.true;
+});
+
+it('clamps a non-finite/out-of-range zoom passed to setZoom on the live map after mount', async () => {
+  const el = (await fixture(html`<lyra-map></lyra-map>`)) as LyraMap;
+  el.mapStyle = RASTER_STYLE;
+  await el.updateComplete;
+  await waitUntil(() => el.map != null, 'map never initialized', { timeout: 2000 });
+
+  let zoomArg: unknown;
+  el.map!.setZoom = ((z: unknown) => {
+    zoomArg = z;
+    return el.map;
+  }) as typeof el.map.setZoom;
+
+  el.zoom = Number.NaN;
+  await el.updateComplete;
+  expect(Number.isFinite(zoomArg as number)).to.be.true;
+
+  el.zoom = 999;
+  await el.updateComplete;
+  expect(zoomArg).to.equal(22);
+
+  el.zoom = -5;
+  await el.updateComplete;
+  expect(zoomArg).to.equal(0);
+});
+
 it('does not leak a second maplibregl.Map when disconnected and reconnected before the loader promise resolves', async () => {
   const el = document.createElement('lyra-map') as LyraMap;
   el.mapStyle = RASTER_STYLE;

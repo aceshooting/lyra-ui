@@ -90,6 +90,17 @@ export class LyraBrowserFrame extends LyraElement<LyraBrowserFrameEventMap> {
 
   private viewportResizeObserver?: ResizeObserver;
 
+  connectedCallback(): void {
+    super.connectedCallback();
+    // The viewport observer is torn down on disconnect, and a reattached, already-rendered frame
+    // <img> fires no new load event -- re-arm and re-measure here so the content rect keeps
+    // tracking resizes after a move within the DOM.
+    if (this.hasUpdated) {
+      this.observeViewport();
+      this.recomputeContentRect();
+    }
+  }
+
   disconnectedCallback(): void {
     super.disconnectedCallback();
     this.viewportResizeObserver?.disconnect();
@@ -113,12 +124,15 @@ export class LyraBrowserFrame extends LyraElement<LyraBrowserFrameEventMap> {
     this.contentRect = containRect(viewport.clientWidth, viewport.clientHeight, img.naturalWidth, img.naturalHeight);
   }
 
+  // Ping coordinates are physical percent-of-frame over a screenshot that never mirrors, so
+  // position with physical left/top -- logical inset-inline-start would flip the markers under
+  // RTL while the screenshot underneath stays put.
   private pingStyle(ping: BrowserPing): string {
     const rect = this.contentRect;
-    if (!rect) return `inset-inline-start:${ping.x}%;inset-block-start:${ping.y}%`;
+    if (!rect) return `left:${ping.x}%;top:${ping.y}%`;
     const left = rect.left + (ping.x / 100) * rect.width;
     const top = rect.top + (ping.y / 100) * rect.height;
-    return `inset-inline-start:${left}px;inset-block-start:${top}px`;
+    return `left:${left}px;top:${top}px`;
   }
 
   private onSlotChange = (e: Event): void => {

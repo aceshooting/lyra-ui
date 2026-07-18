@@ -56,6 +56,10 @@ export class LyraNodePalette extends LyraElement<LyraNodePaletteEventMap> {
 
   @property({ attribute: false }) items: PaletteItem[] = [];
   @property() label = '';
+  /** Overrides the listbox's computed accessible name. Wins over `label` and the localized
+   *  default. Attribute-reflects from a host-level `aria-label` so a plain-markup consumer gets
+   *  ARIA-name forwarding without setting a JS property. */
+  @property({ attribute: 'aria-label' }) accessibleLabel: string | null = null;
 
   @state() private queryText = '';
   @state() private activeIndex = 0;
@@ -193,7 +197,7 @@ export class LyraNodePalette extends LyraElement<LyraNodePaletteEventMap> {
         @input=${this.onSearchInput}
         @keydown=${this.onFieldKeyDown}
       />
-      <div part="list" id=${this.listId} role="listbox" aria-label=${this.label || this.localize('nodePaletteLabel')}>
+      <div part="list" id=${this.listId} role="listbox" aria-label=${this.accessibleLabel || this.label || this.localize('nodePaletteLabel')}>
         ${groups.length === 0
           ? html`<div part="empty">${this.localize('nodePaletteEmpty')}</div>`
           : groups.map(

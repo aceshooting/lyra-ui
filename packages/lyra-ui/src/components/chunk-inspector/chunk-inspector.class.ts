@@ -2,13 +2,14 @@ import { html, nothing, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { styleMap } from 'lit/directives/style-map.js';
 import { LyraElement } from '../../internal/lyra-element.js';
+import { finiteCount } from '../../internal/numbers.js';
 import '../virtual-list/virtual-list.class.js';
 import '../empty/empty.class.js';
 import { styles } from './chunk-inspector.styles.js';
 
-/** A local, non-exported structural copy of §3.1's `LyraAnchor` discriminated union (Family G's
- *  contract, not yet implemented on disk) -- see this plan's "Implementation notes". Structurally
- *  identical to the real thing once it lands, so `chunk.anchor` interops with a real
+/** A local, non-exported structural copy of the `lyra-document-viewer` `LyraAnchor` discriminated
+ *  union, declared here (rather than imported) so this component has no build-time coupling to the
+ *  viewer stack. Structurally identical to the real thing, so `chunk.anchor` interops with a
  *  `document-viewer.anchor` assignment with no mapping needed. */
 type LyraChunkAnchor =
   | { kind: 'page'; page: number }
@@ -59,9 +60,9 @@ type Tier = 'high' | 'medium' | 'low';
  * @csspart score-fill - The score bar's tone-mapped fill.
  * @csspart open-button - The chunk's title/open `<button>`.
  * @csspart title - The `<span>` inside `open-button` carrying the visible title text. Split from
- * `open-button` (rather than a dual part name on one element, as originally sketched) because an
- * exact-match `[part="..."]` CSS attribute selector -- as used by this component's own tests --
- * cannot match a multi-token `part` attribute value.
+ * `open-button` (rather than a dual part name on one element) because an exact-match
+ * `[part="..."]` CSS attribute selector -- as used by this component's own tests -- cannot match
+ * a multi-token `part` attribute value.
  * @csspart text - The chunk's text preview, line-clamped unless expanded. Omitted when `compact`.
  * @csspart toggle - The "Show more"/"Show less" button. Omitted when `compact`.
  * @csspart empty - The empty-state message, shown when `chunks` is empty.
@@ -80,6 +81,14 @@ export class LyraChunkInspector extends LyraElement<LyraChunkInspectorEventMap> 
   @property() label = '';
 
   @state() private expandedIds = new Set<string>();
+
+  /** `virtualizeAt`, normalized to a finite non-negative integer (falling back to the property's
+   *  own default of `50`) -- a raw `NaN` (e.g. an invalid `virtualize-at` attribute) would
+   *  otherwise make `sorted.length > virtualizeAt` always false, silently disabling
+   *  virtualization instead of falling back to the default threshold. */
+  private get effectiveVirtualizeAt(): number {
+    return finiteCount(this.virtualizeAt, 50);
+  }
 
   private sortedChunks(): LyraChunk[] {
     return this.sort === 'score' ? [...this.chunks].sort((a, b) => b.score - a.score) : this.chunks;
@@ -157,7 +166,7 @@ export class LyraChunkInspector extends LyraElement<LyraChunkInspectorEventMap> 
     }
     return html`
       <div part="base" role="group" aria-label=${label}>
-        ${sorted.length > this.virtualizeAt
+        ${sorted.length > this.effectiveVirtualizeAt
           ? html`<lyra-virtual-list
               .items=${sorted}
               .renderItem=${this.renderChunk}

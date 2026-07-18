@@ -874,4 +874,36 @@ describe('itemRole / rowIndexOffset', () => {
     await aTimeout(50); // allow ResizeObserver to report real row heights and trigger a re-render
     expect(el.shadowRoot!.querySelectorAll('[part="row"]').length).to.be.greaterThan(0);
   });
+
+  it('sanitizes an invalid row-index-offset instead of producing aria-rowindex="NaN"', async () => {
+    const cases = [
+      { value: 'NaN', expected: 0 },
+      { value: 'Infinity', expected: 0 },
+      { value: '2.9', expected: 2 },
+    ];
+    for (const { value, expected } of cases) {
+      const el = (await fixture(
+        html`<lyra-virtual-list style="height:100px" item-role="row" row-index-offset=${value}></lyra-virtual-list>`,
+      )) as LyraVirtualList;
+      el.items = ['a'];
+      el.renderItem = (item: unknown) => html`<span>${item}</span>`;
+      await el.updateComplete;
+      await aTimeout(0);
+      const firstRow = el.shadowRoot!.querySelector('[part="row"]')!;
+      expect(firstRow.getAttribute('aria-rowindex'), value).to.equal(String(1 + expected));
+    }
+  });
+
+  it('uses the same sanitized fallback for a direct out-of-range rowIndexOffset property assignment', async () => {
+    const el = (await fixture(
+      html`<lyra-virtual-list style="height:100px" item-role="row"></lyra-virtual-list>`,
+    )) as LyraVirtualList;
+    el.items = ['a'];
+    el.renderItem = (item: unknown) => html`<span>${item}</span>`;
+    el.rowIndexOffset = NaN;
+    await el.updateComplete;
+    await aTimeout(0);
+    const firstRow = el.shadowRoot!.querySelector('[part="row"]')!;
+    expect(firstRow.getAttribute('aria-rowindex')).to.equal('1');
+  });
 });

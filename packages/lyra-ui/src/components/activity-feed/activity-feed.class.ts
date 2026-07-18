@@ -4,6 +4,8 @@ import { repeat } from 'lit/directives/repeat.js';
 import { LyraElement } from '../../internal/lyra-element.js';
 import { nextId } from '../../internal/a11y.js';
 import { chevronIcon } from '../../internal/icons.js';
+import { getDateTimeFormat } from '../../internal/intl-cache.js';
+import { finiteCount } from '../../internal/numbers.js';
 import type { LyraLiveRegion } from '../live-region/live-region.class.js';
 import '../live-region/live-region.js';
 import type { LyraVirtualList, VirtualListRange } from '../virtual-list/virtual-list.class.js';
@@ -62,9 +64,13 @@ const trueDefaultBooleanConverter: ComplexAttributeConverter<boolean> = {
 };
 
 /** `hour:minute` in the component's effective locale -- identical algorithm to
- *  `<lyra-chat-message>`'s own `defaultFormatTimestamp`, duplicated locally. */
+ *  `<lyra-chat-message>`'s own `defaultFormatTimestamp`, duplicated locally. Uses the shared
+ *  per-locale formatter cache: this runs once per entry on every render of a live feed, and
+ *  constructing an `Intl.DateTimeFormat` per call is an ICU locale-data lookup that would
+ *  otherwise repeat for every visible row on every appended entry. `effectiveLocale` always
+ *  resolves to a non-empty tag (it falls back to `'en'`), so no empty-locale guard is needed. */
 function defaultFormatTimestamp(date: Date, locale: string): string {
-  return new Intl.DateTimeFormat(locale || undefined, { hour: 'numeric', minute: '2-digit' }).format(date);
+  return getDateTimeFormat(locale, { hour: 'numeric', minute: '2-digit' }).format(date);
 }
 
 /**
@@ -148,8 +154,16 @@ export class LyraActivityFeed extends LyraElement<LyraActivityFeedEventMap> {
     }
   }
 
+  /** `virtualizeThreshold`, normalized to a finite non-negative integer (falling back to the
+   *  property's own default of `200`) -- a raw `NaN` (e.g. an invalid `virtualize-threshold`
+   *  attribute) would otherwise make `entries.length >= virtualizeThreshold` always false,
+   *  silently disabling virtualization instead of falling back to the default threshold. */
+  private get effectiveVirtualizeThreshold(): number {
+    return finiteCount(this.virtualizeThreshold, 200);
+  }
+
   private get isVirtualized(): boolean {
-    return this.entries.length >= this.virtualizeThreshold;
+    return this.entries.length >= this.effectiveVirtualizeThreshold;
   }
 
   protected willUpdate(changed: PropertyValues): void {

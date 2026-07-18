@@ -2,6 +2,7 @@ import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state, query } from 'lit/decorators.js';
 import { LyraElement } from '../../internal/lyra-element.js';
 import { prefersReducedMotion } from '../../internal/motion.js';
+import { finiteRange } from '../../internal/numbers.js';
 import type { LyraLiveRegion } from '../live-region/live-region.class.js';
 import '../live-region/live-region.class.js';
 import '../empty/empty.class.js';
@@ -95,7 +96,10 @@ export class LyraSpanWaterfall extends LyraElement<LyraSpanWaterfallEventMap> {
   /** Identical contract to `<lyra-trace-tree>.spans`; rows sort by `startMs` (ties keep array order). */
   @property({ attribute: false }) spans: LyraSpan[] = [];
   @property({ attribute: 'active-span-id' }) activeSpanId: string | null = null;
-  /** Visible time window in trace-relative ms. Both `null` (the default) fits the whole trace. */
+  /** Visible time window in trace-relative ms (same non-negative, trace-relative vocabulary as
+   *  `LyraSpan.startMs`/`endMs` -- never a wall-clock timestamp). Both `null` (the default) fits
+   *  the whole trace; a non-null NaN (e.g. an unparsable attribute) is normalized the same way as
+   *  `null` by `viewWindow()` rather than poisoning the axis/bar math with NaN. */
   @property({ type: Number, attribute: 'view-start-ms' }) viewStartMs: number | null = null;
   @property({ type: Number, attribute: 'view-end-ms' }) viewEndMs: number | null = null;
   @property({ type: Boolean, attribute: 'hide-axis' }) hideAxis = false;
@@ -114,8 +118,16 @@ export class LyraSpanWaterfall extends LyraElement<LyraSpanWaterfallEventMap> {
 
   private viewWindow(): ViewWindow {
     const extentEnd = this.spans.reduce((m, s) => Math.max(m, s.endMs ?? s.startMs, s.startMs), 0);
-    const start = this.viewStartMs ?? 0;
-    const end = this.viewEndMs ?? Math.max(extentEnd, 1);
+    const fallbackEnd = Math.max(extentEnd, 1);
+    // `null` means "fit the whole trace"; a non-null-but-NaN value (a bad attribute) falls back
+    // to that same default instead of flowing NaN into axisTicks()/barGeometry(). Both bounds are
+    // trace-relative ms, so never negative (min 0), mirroring `LyraSpan.startMs`'s own contract.
+    const start = this.viewStartMs == null ? 0 : finiteRange(this.viewStartMs, 0, 0);
+    const end = this.viewEndMs == null ? fallbackEnd : finiteRange(this.viewEndMs, fallbackEnd, 0);
+    // A caller-supplied window with end <= start (inverted or degenerate) still needs *some*
+    // positive width to render/position bars sanely -- widen to a minimal 1ms window rather than
+    // swapping start/end (unlike `<lyra-time-range>`'s handle-drag case, swapping here would
+    // silently reverse which side of the timeline is being viewed).
     return { start, end: end > start ? end : start + 1 };
   }
 

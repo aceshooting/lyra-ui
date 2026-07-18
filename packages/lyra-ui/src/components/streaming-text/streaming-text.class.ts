@@ -2,6 +2,7 @@ import { html, nothing, type TemplateResult, type PropertyValues, type ComplexAt
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../internal/lyra-element.js';
 import { Announcer } from '../../internal/announcer.js';
+import { finiteDuration } from '../../internal/numbers.js';
 import '../markdown/markdown.class.js';
 import { styles } from './streaming-text.styles.js';
 
@@ -156,6 +157,15 @@ export class LyraStreamingText extends LyraElement {
 
   private readonly coalescer: Announcer;
 
+  /** `coalesceMs` normalized to a finite, non-negative timer delay before it ever reaches
+   *  `Announcer.throttleMs` (and, from there, a raw `setTimeout()` call) -- a `NaN`/negative raw
+   *  value would otherwise feed the platform a nonsensical delay (clamped to `0` by the
+   *  browser, firing on every burst instead of ever actually coalescing) rather than falling
+   *  back to this component's own constructed default. */
+  private get safeCoalesceMs(): number {
+    return finiteDuration(this.coalesceMs, DEFAULT_COALESCE_MS, 0);
+  }
+
   constructor() {
     super();
     // Built in the constructor (not a class-field initializer) so it reads
@@ -163,7 +173,7 @@ export class LyraStreamingText extends LyraElement {
     // already run and set the declared default -- same ordering rationale as
     // lyra-live-region's identical constructor-built Announcer.
     this.coalescer = new Announcer({
-      throttleMs: this.coalesceMs,
+      throttleMs: this.safeCoalesceMs,
       onFlush: (text) => {
         this.displayedContent = text;
       },
@@ -172,7 +182,7 @@ export class LyraStreamingText extends LyraElement {
 
   protected willUpdate(changed: PropertyValues): void {
     if (changed.has('coalesceMs')) {
-      this.coalescer.throttleMs = this.coalesceMs;
+      this.coalescer.throttleMs = this.safeCoalesceMs;
     }
     if (changed.has('content')) {
       // The very first content assignment after mount always flushes
@@ -198,8 +208,18 @@ export class LyraStreamingText extends LyraElement {
       this.coalescer.announce(this.content, { force: true });
     }
     if (changed.has('displayedContent') && this.displayedContent !== this.lastScannedContent) {
+      const previous = this.lastScannedContent;
       this.lastScannedContent = this.displayedContent;
-      this.lastScannedResult = looksLikeMarkdown(this.displayedContent);
+      // Every MARKDOWN_PATTERNS entry is append-monotonic: a match found in some prefix of the
+      // string still exists (at the same offset) after more text is appended, so once a scan has
+      // returned `true` for a prefix of the current content, re-running the whole battery over
+      // the ever-growing accumulated string on every coalesced flush would be quadratic work for
+      // a result that cannot change. The `startsWith` check is what verifies "content only
+      // appended" -- a non-append change (e.g. a reused element starting a brand-new stream)
+      // fails it and falls through to a full rescan, which is also what resets the memo.
+      if (!(this.lastScannedResult && previous !== undefined && this.displayedContent.startsWith(previous))) {
+        this.lastScannedResult = looksLikeMarkdown(this.displayedContent);
+      }
     }
   }
 

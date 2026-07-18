@@ -1,6 +1,7 @@
 import { html, svg, nothing, type TemplateResult, type SVGTemplateResult, type ComplexAttributeConverter } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../internal/lyra-element.js';
+import { getDateTimeFormat } from '../../internal/intl-cache.js';
 import { spinnerIcon } from '../../internal/icons.js';
 import { styles } from './checkpoint.styles.js';
 
@@ -32,9 +33,11 @@ function bookmarkIcon(): SVGTemplateResult {
   `;
 }
 
-/** `hour:minute` in the component's effective locale. */
+/** `hour:minute` in the component's effective locale. The `'en'` guard mirrors the library-wide
+ *  locale-resolution fallback — an empty locale string would make the `Intl.DateTimeFormat`
+ *  constructor throw. */
 function defaultFormatTimestamp(date: Date, locale: string): string {
-  return new Intl.DateTimeFormat(locale || undefined, { hour: 'numeric', minute: '2-digit' }).format(date);
+  return getDateTimeFormat(locale || 'en', { hour: 'numeric', minute: '2-digit' }).format(date);
 }
 
 /** `true`-defaulting boolean attribute converter -- Lit's default presence-based `type: Boolean`
@@ -73,6 +76,8 @@ const trueDefaultBooleanConverter: ComplexAttributeConverter<boolean> = {
  * @csspart confirm-prompt - The confirm prompt text.
  * @csspart confirm-button - Confirms the restore, firing `lyra-restore`.
  * @csspart cancel-button - Cancels, reverting to `restore-button`.
+ * @cssprop [--lyra-checkpoint-spin-duration=1s] - Duration of one restoring-spinner rotation
+ *   (stopped under reduced motion).
  */
 export class LyraCheckpoint extends LyraElement<LyraCheckpointEventMap> {
   static styles = [LyraElement.styles, styles];

@@ -1,6 +1,7 @@
 import { html, nothing, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../internal/lyra-element.js';
+import { finiteCount } from '../../internal/numbers.js';
 import { styles } from './chip-group.styles.js';
 
 export interface ChipGroupOverflowToggleDetail {
@@ -41,10 +42,22 @@ export interface LyraChipGroupEventMap {
 export class LyraChipGroup extends LyraElement<LyraChipGroupEventMap> {
   static styles = [LyraElement.styles, styles];
 
+  private _maxVisible?: number;
   /** Maximum number of assigned children shown before the rest collapse behind a "+N"
    *  indicator. Flattened slot-forwarded children count the same as direct light-DOM children.
-   *  Unset (the default) means no limit — every child is always shown. */
-  @property({ type: Number, attribute: 'max-visible' }) maxVisible?: number;
+   *  Unset (the default) means no limit — every child is always shown. Any explicitly assigned
+   *  value is sanitized to a finite, non-negative integer via `finiteCount` — this feeds the
+   *  `hasOverflow`/`syncChildVisibility` index comparisons below directly, so a NaN/negative value
+   *  must never reach them. */
+  @property({ type: Number, attribute: 'max-visible' })
+  get maxVisible(): number | undefined {
+    return this._maxVisible;
+  }
+  set maxVisible(next: number | undefined | null) {
+    const old = this._maxVisible;
+    this._maxVisible = next == null ? undefined : finiteCount(next);
+    this.requestUpdate('maxVisible', old);
+  }
 
   // Tracks the default slot's assigned-element count, the same
   // connectedCallback/willUpdate + slotchange convention `<lyra-split>`'s
@@ -89,8 +102,10 @@ export class LyraChipGroup extends LyraElement<LyraChipGroupEventMap> {
   }
 
   private get hasOverflow(): boolean {
+    // `maxVisible`'s own accessor already sanitizes to a finite, non-negative integer (or
+    // `undefined`) on assignment, so no further finiteness check is needed here.
     const max = this.maxVisible;
-    return max != null && Number.isFinite(max) && max >= 0 && this.childCount > max;
+    return max != null && this.childCount > max;
   }
 
   private syncChildVisibility(): void {

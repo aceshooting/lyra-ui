@@ -18,17 +18,14 @@ interface FlowCanvasLike extends HTMLElement {
 const GLYPH_VIEW_BOX = '0 0 24 24';
 const GLYPH_STROKE_WIDTH = '1.75';
 
-// NOTE (deviation from the plan's literal Step 4 code): the brief's `glyphSvg(inner: string)`
-// built the outer <svg> via `html\`...\`` and spliced each glyph's inner markup in by casting a
-// plain `[inner]` array to `TemplateStringsArray`. Lit's installed dev build (lit-html 3.3.3)
-// rejects that at render time -- "Internal Error: expected template strings to be an array with a
-// 'raw' field" -- because it tracks genuine tagged-template-literal call sites (via their frozen
-// `strings` object identity) to guard against exactly this "fake the template strings" pattern
-// (its own error message names this as equivalent to `unsafeHtml`). This isn't a stale-brief typo,
-// it reproduces on every run against the currently installed lit-html. Fixed by authoring each
-// glyph as its own real `svg\`...\`` tagged template and composing them via an `SVGTemplateResult`
-// child (interpolating a SVGTemplateResult into another svg-tagged template is Lit's normal,
-// supported nesting -- no casting involved), matching this repo's existing icon convention (see
+// Each glyph is authored as its own real `svg\`...\`` tagged template and composed into the
+// shared outer <svg> as an `SVGTemplateResult` child -- interpolating one svg-tagged template
+// into another is Lit's normal, supported nesting. Taking the inner markup as a plain string and
+// splicing it in by casting a `[inner]` array to `TemplateStringsArray` is rejected by lit-html
+// at render time ("Internal Error: expected template strings to be an array with a 'raw' field"):
+// it tracks genuine tagged-template-literal call sites via their frozen `strings` object identity
+// to guard against exactly that "fake the template strings" pattern (its own error message names
+// it as equivalent to `unsafeHtml`). This also matches the repo's existing icon convention (see
 // `internal/icons.ts`'s local `icon()` wrapper, and `rating.class.ts`/`attachment-chip.class.ts`).
 function glyphSvg(inner: SVGTemplateResult): SVGTemplateResult {
   return svg`<svg

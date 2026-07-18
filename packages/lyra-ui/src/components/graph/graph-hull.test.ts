@@ -120,4 +120,9 @@ describe('hullCentroidX / hullTopY', () => {
     expect(hullCentroidX([])).to.equal(0);
     expect(hullTopY([])).to.equal(0);
   });
+
+  it('hullTopY does not throw a call-stack RangeError over a very large hull (regression: must not spread hull points into Math.min)', () => {
+    const hull: HullPoint[] = Array.from({ length: 150_000 }, (_, i) => ({ x: i, y: i }));
+    expect(hullTopY(hull)).to.equal(0);
+  });
 });

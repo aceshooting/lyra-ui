@@ -3,6 +3,7 @@ import { property, query, state } from 'lit/decorators.js';
 import { live } from 'lit/directives/live.js';
 import { chevronIcon } from '../../internal/icons.js';
 import { LyraElement } from '../../internal/lyra-element.js';
+import { finiteCount, finiteInteger } from '../../internal/numbers.js';
 import { styles } from './pagination.styles.js';
 
 export type LyraPaginationSize = 'xs' | 's' | 'm' | 'l' | 'xl';
@@ -80,14 +81,14 @@ export class LyraPagination extends LyraElement<LyraPaginationEventMap> {
     this.pageInput?.blur();
   }
 
+  /** Read-time-safe view of `totalItems` -- non-negative, finite, truncated to a whole item count. */
   private get normalizedTotalItems(): number {
-    if (!Number.isFinite(this.totalItems)) return 0;
-    return Math.max(0, Math.trunc(this.totalItems));
+    return finiteCount(this.totalItems);
   }
 
+  /** Read-time-safe view of `pageSize` -- non-negative, finite, truncated to a whole item count. */
   private get normalizedPageSize(): number {
-    if (!Number.isFinite(this.pageSize)) return 0;
-    return Math.max(0, Math.trunc(this.pageSize));
+    return finiteCount(this.pageSize);
   }
 
   /** Total page count derived from `totalItems` and `pageSize`. */
@@ -96,10 +97,12 @@ export class LyraPagination extends LyraElement<LyraPaginationEventMap> {
     return Math.ceil(this.normalizedTotalItems / this.normalizedPageSize);
   }
 
+  /** Read-time-safe view of the controlled `page` property, clamped to `[1, pageCount]` (the
+   *  page count itself depending on the now-safe `totalItems`/`pageSize` above) -- never mutates
+   *  `page` itself, matching this component's fully controlled contract. */
   private get currentPage(): number {
     if (this.pageCount === 0) return 0;
-    const page = Number.isFinite(this.page) ? Math.trunc(this.page) : 1;
-    return Math.min(this.pageCount, Math.max(1, page));
+    return finiteInteger(this.page, 1, 1, this.pageCount);
   }
 
   private get controlsDisabled(): boolean {

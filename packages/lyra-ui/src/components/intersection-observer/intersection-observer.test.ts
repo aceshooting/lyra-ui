@@ -47,6 +47,22 @@ describe('<lyra-intersection-observer>', () => {
     parent.append(el);
   });
 
+  it('resumes observation after a bare reconnect with no property change (e.g. a reparent)', async () => {
+    const el = await fixture<LyraIntersectionObserver>(html`<lyra-intersection-observer><div>Observed</div></lyra-intersection-observer>`);
+    const parent = el.parentElement!;
+    await aTimeout(0);
+    expect((el as unknown as { observer?: IntersectionObserver }).observer, 'observer should exist after the initial connect').to.exist;
+
+    // A pure reparent -- no property change, and the slot's assigned-node set
+    // is unchanged, so slotchange never fires either.
+    el.remove();
+    expect((el as unknown as { observer?: IntersectionObserver }).observer, 'observer should be torn down on disconnect').to.be.undefined;
+
+    parent.append(el);
+    await aTimeout(0);
+    expect((el as unknown as { observer?: IntersectionObserver }).observer, 'observer should be re-armed on reconnect').to.exist;
+  });
+
   it('is accessible', async () => {
     const el = await fixture<LyraIntersectionObserver>(html`<lyra-intersection-observer><button>Observed</button></lyra-intersection-observer>`);
     await expect(el).to.be.accessible();

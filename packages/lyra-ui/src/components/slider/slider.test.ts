@@ -578,6 +578,22 @@ it('widens the thumb hit/drag area past the visible 16px dot via a transparent :
   expect(before.height).to.equal('28px');
 });
 
+it('flips the thumb and hit-area centering translate under dir="rtl"', async () => {
+  const ltr = (await fixture(html`<lyra-slider value="20"></lyra-slider>`)) as LyraSlider;
+  const ltrThumb = ltr.shadowRoot!.querySelector('[part="thumb"]') as HTMLElement;
+  expect(new DOMMatrixReadOnly(getComputedStyle(ltrThumb).transform).m41).to.be.lessThan(0);
+  expect(new DOMMatrixReadOnly(getComputedStyle(ltrThumb, '::before').transform).m41).to.be.lessThan(0);
+
+  // The thumb (and its enlarged ::before hit-area) is positioned via a logical
+  // inset-inline-start percentage, which anchors to the physical right edge under RTL -- the
+  // centering translateX must flip to positive there or the visible dot (and the drag hit
+  // zone) lands a full box-width off from its true track position.
+  const rtl = (await fixture(html`<lyra-slider dir="rtl" value="20"></lyra-slider>`)) as LyraSlider;
+  const rtlThumb = rtl.shadowRoot!.querySelector('[part="thumb"]') as HTMLElement;
+  expect(new DOMMatrixReadOnly(getComputedStyle(rtlThumb).transform).m41).to.be.greaterThan(0);
+  expect(new DOMMatrixReadOnly(getComputedStyle(rtlThumb, '::before').transform).m41).to.be.greaterThan(0);
+});
+
 it('references the shared focus-ring tokens on the thumb focus-visible outline', () => {
   expect(styles.cssText).to.include(
     'outline: var(--lyra-focus-ring-width) solid var(--lyra-focus-ring-color)',

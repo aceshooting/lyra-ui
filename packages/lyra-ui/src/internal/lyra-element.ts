@@ -1,7 +1,9 @@
-import { LitElement, type CSSResultGroup } from 'lit';
+import { LitElement, type CSSResultGroup, type PropertyDeclaration } from 'lit';
 import { property } from 'lit/decorators.js';
 import { tokens } from './tokens.styles.js';
 import {
+  enableLyraLocaleCache,
+  invalidateLyraLocaleCache,
   resolveLyraDirection,
   resolveLyraString,
   resolveLyraLocale,
@@ -37,6 +39,11 @@ export class LyraElement<Events = LyraEventMap> extends LitElement {
 
   connectedCallback(): void {
     super.connectedCallback();
+    // A reconnected element may sit under a different `lang`/`dir` ancestor,
+    // and Lit schedules no update for a pure DOM move — the memo from the
+    // previous tree must not carry over.
+    enableLyraLocaleCache(this);
+    invalidateLyraLocaleCache(this);
     this.stopLocaleSubscription = subscribeLyraLocale(() => this.requestUpdate());
     const deferred = this.deferredLoad;
     if (deferred) {
@@ -50,7 +57,21 @@ export class LyraElement<Events = LyraEventMap> extends LitElement {
     this.pendingLoadController = undefined;
     this.stopLocaleSubscription?.();
     this.stopLocaleSubscription = undefined;
+    invalidateLyraLocaleCache(this);
     super.disconnectedCallback();
+  }
+
+  /**
+   * Every update cycle begins with at least one `requestUpdate()` call, and
+   * unlike `willUpdate()` (which subclasses routinely override without a
+   * `super` call) it cannot be bypassed — so this is the one reliable seam
+   * for dropping the memoized locale/direction. Resolution then happens at
+   * most once per update cycle no matter how many times a template loop calls
+   * `localize()`/`effectiveLocale`/`effectiveDirection`.
+   */
+  requestUpdate(name?: PropertyKey, oldValue?: unknown, options?: PropertyDeclaration): void {
+    invalidateLyraLocaleCache(this);
+    super.requestUpdate(name, oldValue, options);
   }
 
   /** Starts a component-owned cancellable load and aborts the previous one. */

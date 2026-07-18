@@ -13,11 +13,14 @@ export const styles = css`
     position: fixed;
     z-index: var(--lyra-layer-dropdown);
     box-sizing: border-box;
-    max-block-size: var(--lyra-size-16rem);
+    /* Clamped against internal/positioner.js's place()-published available-space custom
+       properties (see menu.styles.ts's/combobox.styles.ts's identical [part='listbox']
+       treatment) so this popup can't overflow off-screen on a short/keyboard-shrunk viewport. */
+    max-block-size: min(var(--lyra-size-16rem), var(--lyra-positioner-available-block-size, var(--lyra-size-16rem)));
     overflow-y: auto;
     inline-size: max-content;
-    min-inline-size: var(--lyra-size-14rem);
-    max-inline-size: min(92vw, var(--lyra-size-24rem));
+    min-inline-size: min(var(--lyra-size-14rem), var(--lyra-positioner-available-inline-size, var(--lyra-size-14rem)));
+    max-inline-size: min(92vw, var(--lyra-size-24rem), var(--lyra-positioner-available-inline-size, 100vw));
     padding: var(--lyra-space-xs);
     background: var(--lyra-color-surface);
     border: var(--lyra-border-width-thin) solid var(--lyra-color-border);

@@ -84,6 +84,22 @@ describe('restoring state', () => {
     expect(fired).to.be.false;
     expect(el.shadowRoot!.querySelector('[part="confirm-group"]')).to.not.exist;
   });
+
+  it('dims the restore button with the shared disabled-opacity token', async () => {
+    const el = (await fixture(html`<lyra-checkpoint restoring></lyra-checkpoint>`)) as LyraCheckpoint;
+    const button = el.shadowRoot!.querySelector('[part="restore-button"]') as HTMLButtonElement;
+    const expected = getComputedStyle(el).getPropertyValue('--lyra-opacity-disabled').trim();
+    expect(expected).to.not.equal('');
+    expect(getComputedStyle(button).opacity).to.equal(expected);
+  });
+
+  it('exposes --lyra-checkpoint-spin-duration to retheme the spinner rotation period', async () => {
+    const el = (await fixture(
+      html`<lyra-checkpoint restoring style="--lyra-checkpoint-spin-duration: 3s"></lyra-checkpoint>`,
+    )) as LyraCheckpoint;
+    const svg = el.shadowRoot!.querySelector('.restore-spinner svg') as SVGElement;
+    expect(getComputedStyle(svg).animationDuration).to.equal('3s');
+  });
 });
 
 describe('confirm flow (confirmRestore=true, the default)', () => {

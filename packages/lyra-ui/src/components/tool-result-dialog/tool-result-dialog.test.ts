@@ -150,6 +150,16 @@ it('omits non-finite durations', async () => {
   expect(el.shadowRoot!.querySelector('[part="duration"]')).to.not.exist;
 });
 
+it('clamps a negative duration to 0 instead of rendering a nonsensical negative duration', async () => {
+  const el = (await fixture(
+    html`<lyra-tool-result-dialog tool-name="run_python"></lyra-tool-result-dialog>`,
+  )) as LyraToolResultDialog;
+  el.durationMs = -20;
+  await el.updateComplete;
+
+  expect(el.shadowRoot!.querySelector('[part="duration"]')!.textContent).to.equal('0ms');
+});
+
 it('uses themeable running motion and lets footer actions wrap', async () => {
   const css = styles.cssText.replace(/\s+/g, ' ');
   expect(css).to.include(

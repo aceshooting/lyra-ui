@@ -3147,6 +3147,9 @@ with a `droppable` canvas on the `FLOW_PALETTE_MIME_TYPE` drag payload shape.
   `type` is the `FlowNode.type` a placement/drop creates, `category` groups items under
   first-appearance-ordered headings, `disabled` renders an item visible but not draggable/placeable
 - `label: string = ''` — accessible name for the search field/listbox
+- `accessibleLabel: string | null = null` (attribute `aria-label`) — overrides the listbox's
+  computed accessible name; wins over `label` and the localized default, and attribute-reflects
+  from a host-level `aria-label`
 
 **Events:** `lyra-palette-place` (`detail: { type }`, a pointer click or Enter/Space — the
 click/keyboard alternative to dragging), `lyra-select` (`detail: { item }`, emitted alongside
@@ -3258,7 +3261,7 @@ after each toggle).
 **Slots:** none.
 
 **CSS parts:** `base`, `item` (a `<button>` when `interactive`, a plain `<div>` otherwise), `swatch`,
-`label`, `count`.
+`label`, `count`, `live-region` (the visually hidden filter-toggle announcement).
 
 **Themeable custom properties:** no component-local tokens; reads `--lyra-graph-cat-1` through `-8`
 (the same computed-style fallback palette `lyra-graph`/`lyra-word-cloud` use) plus shared tokens.
@@ -3579,6 +3582,9 @@ stance `lyra-tool-select-dialog` already takes.
 - `showSelectAll: boolean = true` (attribute `show-select-all`)
 - `searchable: boolean = true`
 - `label: string = ''`
+- `accessibleLabel: string | null = null` (attribute `aria-label`) — overrides the tree's computed
+  accessible name; wins over `label` and the localized default, and attribute-reflects from a
+  host-level `aria-label` so plain markup gets ARIA-name forwarding
 
 **Events:** `lyra-sources-change` (`detail: { selectedIds }`, the complete updated leaf-id array,
 fired after every toggle including select-all).
@@ -4692,6 +4698,9 @@ wrapper at all, so existing text-only tabs are unaffected.
 - `active: string = ''` (reflected) — the active tab's `slot`/id; falls back to the first enabled
   tab whenever the current value doesn't resolve to one (including on every children/attribute
   change, tracked via a `MutationObserver`)
+- `accessibleLabel: string | null = null` (attribute `aria-label`) — accessible name applied to the
+  `role="tablist"` strip; attribute-reflects from a host-level `aria-label`. Unset, the tablist
+  renders without an `aria-label` (there is no localized default name).
 
 **Events:** `lyra-tabs-change` (`detail: { tabId: string }`) — fired when the active tab changes via
 click or keyboard. Not fired when `active` self-corrects to a valid tab (initial default, or a tab
@@ -4754,6 +4763,9 @@ convention).
 - `orientation: 'horizontal' | 'vertical' = 'horizontal'` (reflected) — `'horizontal'` (the default)
   lays steps out in a row (Left/Right, RTL-aware, navigate); `'vertical'` stacks them (Up/Down
   navigate instead, no RTL swap needed).
+- `accessibleLabel: string | null = null` (attribute `aria-label`) — accessible name applied to the
+  `role="tablist"` step strip; attribute-reflects from a host-level `aria-label`. Unset, the
+  tablist renders without an `aria-label` (there is no localized default name).
 
 **Events:** `lyra-step-select` (`detail: { index, id }`) — fired on click, or Enter/Space while
 focused, on a non-`disabled` step. Cancelable, though this component takes no default action of its
@@ -9461,7 +9473,8 @@ item-role="row">` for the body) using the optional `papaparse` peer. The documen
 Adopts `DocumentAnchorTarget`: a `cell-range` anchor addresses the raw file grid, 1-based, with the
 header row always occupying row 1 (this component always parses with a header row, so the first row
 is never part of the virtualized body); `scrollToAnchor()` scrolls the addressed row into view via
-the virtualized list's `active-id`. `highlights` paint as a focusable `part="cell-highlight"`.
+the virtualized list's `active-id`. `highlights` paint as a `part="cell-highlight"` cell wrapping a
+focusable `part="cell-highlight-action"` native button, keeping the ARIA table tree intact.
 
 **Properties:** `src`, `name`, and `maxHeight` (attribute `max-height`) are strings. `anchorKinds` is
 a readonly `['cell-range']` (this viewer's supported `LyraAnchor.kind` values for the shared
@@ -9479,7 +9492,9 @@ Enter/Space. `lyra-anchor-result` (`detail: { found }`) — fired after an `anch
 `search()`/`searchNext()`/`searchPrevious()`/`clearSearch()`.
 
 **CSS parts:** `base`, `body`, `table`, `header-row`, `header-cell`, `data-row`, `cell`,
-`cell-highlight` (a cell covered by a `highlights` entry), `spinner`, and `error`.
+`cell-highlight` (a `role="cell"` covered by a `highlights` entry; wraps the action button),
+`cell-highlight-action` (the native button filling a highlighted cell — focusable, emits
+`lyra-highlight-activate` on click or Enter/Space), `spinner`, and `error`.
 
 **Exports:** `DatasetTable` is `{ fields: string[]; rows: Record<string, string>[] }`.
 
@@ -10296,17 +10311,23 @@ supplied (an explicit empty array still counts as supplied and skips the auto-lo
 `groups: EmojiPickerGroup[] = []` (attribute: false) — `EmojiPickerGroup { key, label, emojis:
 EmojiPickerItem[] }`, `EmojiPickerItem { emoji, name, shortcodes? }`; the search field matches `name`
 and every `shortcodes` entry, case-insensitively. Empty (the default, before the auto-loader
-resolves) renders just the search input and the empty state.
+resolves) renders just the search input and the empty state. `accessibleLabel` (`aria-label`)
+forwards a host-supplied accessible name to the internal `role="listbox"` grid; empty falls back to
+the localized default grid label.
 
 **Events:** `lyra-change` with `detail: { emoji }` (an emoji was picked — click, or Enter/Space on
 the active grid cell; also sets `value`), plus the shared form `input`, `change`, `focus`, and `blur`.
 
-**Keyboard:** ArrowLeft/ArrowRight step the active item across the flattened, filtered item list (no
-vertical Up/Down navigation despite the visual grid layout); Enter/Space picks the active item;
-hovering an emoji with the pointer also moves the active item to it.
+**Keyboard:** the grid is a roving-tabindex listbox (a single Tab stop — only the active emoji is
+tabbable). ArrowLeft/ArrowRight step the active item backward/forward following reading direction
+(swapped under RTL), ArrowUp/ArrowDown move by one visual row (measured from the live wrap layout),
+Home/End jump to the first/last item, and Enter/Space picks the active item. The search input is a
+`role="combobox"` over the same listbox: the arrow keys and Enter also work while focus stays in
+the input, with `aria-activedescendant` tracking the active option. Hovering an emoji with the
+pointer also moves the active item to it.
 
-**CSS parts:** `base`, `search`, `grid` (`role="listbox"`), `group-label`, `emoji` (each emoji's own
-`role="option"` button), `empty` (shown when the search matches nothing).
+**CSS parts:** `base`, `search` (`role="combobox"`), `grid` (`role="listbox"`), `group-label`,
+`emoji` (each emoji's own `role="option"` button), `empty` (shown when the search matches nothing).
 
 **Optional peer dependency:** install `emoji-picker-element-data` with
 `pnpm add emoji-picker-element-data` for the built-in auto-loaded default emoji set — omit it and
@@ -10528,7 +10549,9 @@ outside its own component.
 `lyra-message-feedback` (its `reasons`/`commentable`/`detailFor` are never forwarded, so its detail
 panel never opens). `revealOnHover: boolean = false` (reflected, attribute `reveal-on-hover`) — hides
 the bar until the closest `lyra-chat-message` ancestor is hovered or a control inside has focus.
-`label: string = ''` — accessible name override for the toolbar.
+`label: string = ''` — accessible name override for the toolbar. `accessibleLabel: string | null =
+null` (attribute `aria-label`) — overrides the toolbar's computed accessible name, winning over
+`label` and the localized default; attribute-reflects from a host-level `aria-label`.
 
 **Events:** `lyra-regenerate`/`lyra-edit` — a built-in was activated, no detail. `lyra-copy` —
 `detail: { text }`, surfaced by the embedded `lyra-copy-button` (bubbles/composed already, not
@@ -10845,8 +10868,11 @@ transcript sync is a separate concern.
 
 **Properties:** `entries: LyraTranscriptEntry[] = []` (attribute: false), `follow: boolean = true`
 (reflected), `showTimestamps: boolean = false` (attribute `show-timestamps`), `formatTimestamp?:
-(epochMs: number) => string` (attribute: false), and `maxRenderedEntries: number = 0` (attribute
-`max-rendered-entries`).
+(epochMs: number) => string` (attribute: false), `maxRenderedEntries: number = 0` (attribute
+`max-rendered-entries`), `label: string = ''` — accessible name for the `role="log"` region
+(default: the localized `transcriptFeedLabel`), and `accessibleLabel: string | null = null`
+(attribute `aria-label`) — overrides the log's computed accessible name, winning over `label` and
+the localized default; attribute-reflects from a host-level `aria-label`.
 
 **Methods:** `scrollToBottom()` re-engages `follow` and scrolls to the latest entry.
 
@@ -10967,7 +10993,10 @@ it. `bottomThreshold: number = 24` (attribute `bottom-threshold`) — px distanc
 counted as "at bottom." `unreadStartIndex: number | null = null` (attribute `unread-start-index`) —
 index of the first unread item (element-child index in slotted mode, `items` index in virtual mode);
 `null` disables both the divider and the pill's unread count. `label: string = ''` — accessible name
-for the log region, defaults to the localized `chatViewportLabel`.
+for the log region, defaults to the localized `chatViewportLabel`. `accessibleLabel: string | null =
+null` (attribute `aria-label`) — host `aria-label`, forwarded to the internal `role="log"` element
+(an `aria-label` left on the host itself names nothing, since the log role lives inside the shadow
+root); wins over `label` and the localized default.
 
 **Methods:** `scrollToBottom(options?)` — scrolls to the end and re-engages `follow`; default
 `smooth`, forced to `auto` under `prefers-reduced-motion`. `scrollToUnread(options?)` — scrolls the
@@ -11145,6 +11174,9 @@ the inline confirm when `confirmRestore` is on. Not cancelable.
 **CSS parts:** `base` (`role="group"`), `line` (each of the two flanking rules), `icon` (bookmark
 glyph), `label`, `timestamp`, `restore-button` (only while `restorable`), `confirm-group`,
 `confirm-prompt`, `confirm-button`, `cancel-button`.
+
+**Themeable custom properties:** `--lyra-checkpoint-spin-duration` (default `1s`) — duration of one
+restoring-spinner rotation; stopped under reduced motion.
 
 ```html
 <lyra-checkpoint checkpoint-id="ck_18" label="Before refactor" .timestamp=${t}

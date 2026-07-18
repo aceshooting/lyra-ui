@@ -2,6 +2,7 @@ import { html, nothing, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { styleMap } from 'lit/directives/style-map.js';
 import { LyraElement } from '../../internal/lyra-element.js';
+import { finiteCount } from '../../internal/numbers.js';
 import { styles } from './avatar-group.styles.js';
 // Type-only import — erased at build. Importing the value module (`avatar.ts`/`avatar.js`) here
 // would side-effect-register `<lyra-avatar>` just from importing `<lyra-avatar-group>`, which this
@@ -81,10 +82,22 @@ export interface LyraAvatarGroupEventMap {
 export class LyraAvatarGroup extends LyraElement<LyraAvatarGroupEventMap> {
   static styles = [LyraElement.styles, styles];
 
+  private _max?: number;
   /** Maximum number of assigned children shown before the rest collapse behind a "+N" badge.
    *  Flattened slot-forwarded children count the same as direct light-DOM children. Unset (the
-   *  default) means no limit — every child is always shown. */
-  @property({ type: Number }) max?: number;
+   *  default) means no limit — every child is always shown. Any explicitly assigned value is
+   *  sanitized to a finite, non-negative integer via `finiteCount` — this feeds the
+   *  `hasOverflow`/`syncChildVisibility`/`onOverflowClick` index math below directly, so a
+   *  NaN/negative value must never reach it. */
+  @property({ type: Number })
+  get max(): number | undefined {
+    return this._max;
+  }
+  set max(next: number | undefined | null) {
+    const old = this._max;
+    this._max = next == null ? undefined : finiteCount(next);
+    this.requestUpdate('max', old);
+  }
 
   /** Visual size, reused verbatim from `<lyra-avatar>`'s own `AvatarSize` union. Drives the
    *  overflow badge's size and the overlap amount — does not resize slotted avatars (see class
@@ -130,8 +143,10 @@ export class LyraAvatarGroup extends LyraElement<LyraAvatarGroupEventMap> {
   }
 
   private get hasOverflow(): boolean {
+    // `max`'s own accessor already sanitizes to a finite, non-negative integer (or `undefined`)
+    // on assignment, so no further finiteness check is needed here.
     const max = this.max;
-    return max != null && Number.isFinite(max) && max >= 0 && this.childCount > max;
+    return max != null && this.childCount > max;
   }
 
   private get hiddenCount(): number {

@@ -5,6 +5,7 @@ import { place } from '../../internal/positioner.js';
 import { nextId } from '../../internal/a11y.js';
 import { chevronIcon, closeIcon } from '../../internal/icons.js';
 import { AnchoredValidityController, VALIDITY_ANCHOR } from '../../internal/anchored-validity.js';
+import { finiteCount } from '../../internal/numbers.js';
 import { styles } from './combobox.styles.js';
 import { LyraOption } from './option.class.js';
 import './option.class.js';
@@ -101,6 +102,8 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
     required: { type: Boolean, reflect: true, noAccessor: true },
     value: { noAccessor: true },
     name: { reflect: true, noAccessor: true },
+    maxOptionsVisible: { type: Number, attribute: 'max-options-visible', noAccessor: true },
+    maxRender: { type: Number, attribute: 'max-render', noAccessor: true },
   };
 
   @property() placeholder = '';
@@ -121,7 +124,6 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
   @property({ converter: spellcheckConverter }) spellcheck = true;
   @property() autocapitalize = '';
   @property({ attribute: 'autocorrect' }) autoCorrect = '';
-  @property({ attribute: 'max-options-visible', type: Number }) maxOptionsVisible = 3;
   /** Status copy shown in the listbox when no rows match. Empty string falls back to a localized message. */
   @property({ attribute: 'empty-text' }) emptyText = '';
   /** Status copy shown in the listbox while a `source` fetch is in flight. Empty string falls back to a localized message. */
@@ -130,7 +132,6 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
   @property({ attribute: 'overflow-text' }) overflowText = '';
   @property({ attribute: false }) filter: OptionFilter | null = null;
   @property({ attribute: false }) source: ComboboxSource | null = null;
-  @property({ attribute: 'max-render', type: Number }) maxRender = 200;
 
   @state() private query = '';
   @state() private activeIndex = -1;
@@ -204,6 +205,12 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
   // property-only assignment like `el.name = 'b'` invisible to a same-tick
   // `new FormData(form)`/submit, so the attribute write happens here instead.
   private _name = '';
+  // `noAccessor` hand-rolled accessors (mirrors `name`/`multiple`/etc. above): these feed
+  // virtualization/render-limiting logic (`shownTags.slice`, `renderedRows`'s cap) directly, so a
+  // NaN/negative value must never reach it -- sanitized synchronously here via `finiteCount`
+  // rather than left for Lit's default async field setter to hand through unchecked.
+  private _maxOptionsVisible = 3;
+  private _maxRender = 200;
 
   constructor() {
     super();
@@ -401,6 +408,29 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
     this.reflectSelected();
     this.updateValidity();
     this.requestUpdate('value', old);
+  }
+
+  /** Maximum number of selected-value tags shown before the rest collapse behind a "+N" tag
+   *  (multi-select only). Sanitized to a finite, non-negative integer. */
+  get maxOptionsVisible(): number {
+    return this._maxOptionsVisible;
+  }
+  set maxOptionsVisible(next: number) {
+    const old = this._maxOptionsVisible;
+    this._maxOptionsVisible = finiteCount(next, 3);
+    this.requestUpdate('maxOptionsVisible', old);
+  }
+
+  /** Maximum number of rows rendered before the rest collapse behind the overflow indicator
+   *  (the current selection is always kept visible regardless). Sanitized to a finite,
+   *  non-negative integer. */
+  get maxRender(): number {
+    return this._maxRender;
+  }
+  set maxRender(next: number) {
+    const old = this._maxRender;
+    this._maxRender = finiteCount(next, 200);
+    this.requestUpdate('maxRender', old);
   }
 
   /** Structured rows corresponding to the current selection, including opaque async-row data. */

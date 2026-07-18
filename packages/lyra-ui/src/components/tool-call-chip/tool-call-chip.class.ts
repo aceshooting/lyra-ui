@@ -11,6 +11,7 @@ import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../internal/lyra-element.js';
 import { place } from '../../internal/positioner.js';
 import { nextId } from '../../internal/a11y.js';
+import { finiteRange } from '../../internal/numbers.js';
 
 import { styles } from './tool-call-chip.styles.js';
 
@@ -349,12 +350,22 @@ export class LyraToolCallChip extends LyraElement<LyraToolCallChipEventMap> {
     return STATUS_VALUES.has(this.status) ? this.status : 'pending';
   }
 
+  /** `durationMs` normalized to a finite, non-negative value, or `null` -- `null`/`undefined`
+   *  and a non-finite raw value (e.g. a stray `NaN` assignment) both mean "no duration to show,"
+   *  matching this property's own "omitted from the chip entirely when unset" contract, rather
+   *  than rendering a literal "NaN ms". A finite negative value clamps to `0` instead of
+   *  rendering a nonsensical negative duration. */
+  private get safeDurationMs(): number | null {
+    return this.durationMs != null && Number.isFinite(this.durationMs) ? finiteRange(this.durationMs, 0, 0) : null;
+  }
+
   private get accessibleLabel(): string {
     const parts = [this.name || this.localize('toolCall')];
     if (this.summary) parts.push(this.summary);
     parts.push(this.localize(STATUS_LABEL_KEY[this.effectiveStatus]));
-    if (this.durationMs != null && Number.isFinite(this.durationMs)) {
-      parts.push(this.localizedDuration(this.durationMs));
+    const durationMs = this.safeDurationMs;
+    if (durationMs != null) {
+      parts.push(this.localizedDuration(durationMs));
     }
     return parts.join(' — ');
   }
@@ -367,7 +378,8 @@ export class LyraToolCallChip extends LyraElement<LyraToolCallChipEventMap> {
   render(): TemplateResult {
     const hasCategory = this.category.length > 0;
     const hasSummary = this.summary.length > 0;
-    const hasDuration = this.durationMs != null && Number.isFinite(this.durationMs);
+    const durationMs = this.safeDurationMs;
+    const hasDuration = durationMs != null;
     const status = this.effectiveStatus;
 
     return html`
@@ -394,7 +406,7 @@ export class LyraToolCallChip extends LyraElement<LyraToolCallChipEventMap> {
         <span part="meta">
           <span part="status-text">${this.localize(STATUS_LABEL_KEY[status])}</span>
           <span part="duration" ?hidden=${!hasDuration}
-            >${hasDuration ? this.localizedDuration(this.durationMs!) : nothing}</span
+            >${durationMs != null ? this.localizedDuration(durationMs) : nothing}</span
           >
         </span>
       </button>

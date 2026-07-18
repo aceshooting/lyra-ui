@@ -119,6 +119,9 @@ export class LyraHighlightLayer extends LyraElement<LyraHighlightLayerEventMap> 
         ${this.items.map((item, index) => {
           const isActive = this.activeId === item.id;
           const isFlash = this.flashingId === item.id;
+          // Rect coordinates are physical percent-of-box over content that never mirrors (a
+          // rendered image/page), so position with physical left/top -- logical
+          // inset-inline-start would flip the overlay under RTL while the content stays put.
           return item.rects.map(
             (rect) => html`
               <span
@@ -131,7 +134,7 @@ export class LyraHighlightLayer extends LyraElement<LyraHighlightLayerEventMap> 
                 role=${this.interactive ? 'button' : nothing}
                 tabindex=${this.interactive ? (tabStop === item.id ? '0' : '-1') : nothing}
                 aria-label=${this.interactive ? this.rectLabel(item, index) : nothing}
-                style="inset-inline-start:${rect.x}%; inset-block-start:${rect.y}%; inline-size:${rect.width}%; block-size:${rect.height}%"
+                style="left:${rect.x}%; top:${rect.y}%; width:${rect.width}%; height:${rect.height}%"
                 @click=${this.interactive ? () => this.onRectClick(item.id) : nothing}
                 @focus=${this.interactive ? () => this.onRectFocus(item.id) : nothing}
                 @keydown=${this.interactive ? (e: KeyboardEvent) => this.onRectKeyDown(e, index) : nothing}

@@ -536,6 +536,24 @@ it('defaults the nav-button labels to English but lets them be overridden for ot
   expect(el.shadowRoot!.querySelector('[part="next"]')!.getAttribute('aria-label')).to.equal('Mois suivant');
 });
 
+it('resolves the nav-button labels through a .strings override when the label props are left at their defaults', async () => {
+  // previousLabel/nextLabel stay at their built-in defaults here, so the
+  // conditional fallback passed to localize() must be undefined and the
+  // localization registry/.strings path must win -- a customized prop
+  // (covered by the test above) would short-circuit it verbatim instead.
+  const el = (await fixture(html`
+    <lyra-date-picker
+      value="2026-07-15"
+      .strings=${{ previousMonth: 'Mois précédent', nextMonth: 'Mois suivant' }}
+    ></lyra-date-picker>
+  `)) as LyraDatePicker;
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelector('[part="previous"]')!.getAttribute('aria-label')).to.equal(
+    'Mois précédent',
+  );
+  expect(el.shadowRoot!.querySelector('[part="next"]')!.getAttribute('aria-label')).to.equal('Mois suivant');
+});
+
 it('gives each visible month grid its own accessible name via aria-labelledby, distinguishing them with months=2', async () => {
   const el = (await fixture(
     html`<lyra-date-picker value="2026-07-15" months="2"></lyra-date-picker>`,

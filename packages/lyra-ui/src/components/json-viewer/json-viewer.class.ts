@@ -4,6 +4,7 @@ import { repeat } from 'lit/directives/repeat.js';
 import { LyraElement } from '../../internal/lyra-element.js';
 import { chevronIcon } from '../../internal/icons.js';
 import { prefersReducedMotion } from '../../internal/motion.js';
+import { finiteCount } from '../../internal/numbers.js';
 import { styles } from './json-viewer.styles.js';
 
 type JsonPathSegment = string | number;
@@ -133,6 +134,15 @@ export class LyraJsonViewer extends LyraElement<LyraJsonViewerEventMap> {
   /** Memoized result of the last `computeSearch()` walk -- see `willUpdate()`. */
   private searchState: SearchState = EMPTY_SEARCH;
 
+  /** `collapsedDepth`, normalized to a finite non-negative integer when set -- `undefined`
+   *  (nothing auto-collapses) is left as-is, since it's a meaningful, intentional value, not an
+   *  invalid one. A raw `NaN` (e.g. an invalid `collapsed-depth` attribute) would otherwise make
+   *  every `depth >= collapsedDepth` comparison false, silently disabling auto-collapse instead of
+   *  falling back to a sane depth. */
+  private get safeCollapsedDepth(): number | undefined {
+    return this.collapsedDepth === undefined ? undefined : finiteCount(this.collapsedDepth);
+  }
+
   private previewText(type: 'object' | 'array', count: number): string {
     // {count} is interpolated via the values arg (not string-concatenated) --
     // same "{count} tool"/"{count} tools" template pattern as toolCount/
@@ -148,7 +158,8 @@ export class LyraJsonViewer extends LyraElement<LyraJsonViewerEventMap> {
     const override = this.expandedOverrides.get(pathKey);
     if (override !== undefined) return override;
     if (forceExpand.has(pathKey)) return true;
-    if (this.collapsedDepth !== undefined && depth >= this.collapsedDepth) return false;
+    const collapsedDepth = this.safeCollapsedDepth;
+    if (collapsedDepth !== undefined && depth >= collapsedDepth) return false;
     return true;
   }
 

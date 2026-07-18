@@ -104,6 +104,30 @@ describe('duration display', () => {
     expect(postHocDuration.textContent!.trim()).to.equal('Thought for 820ms');
   });
 
+  it('treats a NaN duration-ms like unset (pending placeholder in live mode, nothing in post-hoc), and clamps a negative one to 0', async () => {
+    const liveNan = (await fixture(
+      html`<lyra-thinking-panel mode="live"></lyra-thinking-panel>`,
+    )) as LyraThinkingPanel;
+    liveNan.durationMs = Number.NaN;
+    await liveNan.updateComplete;
+    const liveDuration = liveNan.shadowRoot!.querySelector('[part="duration"]') as HTMLElement;
+    expect(liveDuration.textContent!.trim()).to.equal('Thinking…');
+
+    const postHocNan = (await fixture(
+      html`<lyra-thinking-panel mode="post-hoc"></lyra-thinking-panel>`,
+    )) as LyraThinkingPanel;
+    postHocNan.durationMs = Number.NaN;
+    await postHocNan.updateComplete;
+    expect(postHocNan.shadowRoot!.querySelector('[part="duration"]')).to.not.exist;
+
+    const negative = (await fixture(
+      html`<lyra-thinking-panel mode="post-hoc"></lyra-thinking-panel>`,
+    )) as LyraThinkingPanel;
+    negative.durationMs = -50;
+    await negative.updateComplete;
+    expect(negative.shadowRoot!.querySelector('[part="duration"]')!.textContent!.trim()).to.equal('Thought for 0ms');
+  });
+
   it('localizes the "Thinking…" pending placeholder via this.localize() when .strings overrides thinking', async () => {
     const el = (await fixture(
       html`<lyra-thinking-panel mode="live" .strings=${{ thinking: 'Réflexion…' }}></lyra-thinking-panel>`,

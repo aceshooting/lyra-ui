@@ -50,6 +50,12 @@ export const styles = css`
     pointer-events: none;
     z-index: var(--lyra-layer-content);
   }
+  /* The tooltip centers on inset-inline-start: 50%, which anchors to the physical right edge
+     under RTL -- the fixed horizontal -50% translate must flip sign there or the tooltip sits
+     entirely start-of-center (translateX is physical; logical properties don't cover it). */
+  :host(:dir(rtl)) [part='tooltip'] {
+    transform: translate(50%, calc(-1 * var(--lyra-size-6px)));
+  }
   [part='tooltip'][hidden] {
     display: none;
   }

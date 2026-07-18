@@ -368,6 +368,17 @@ it('keeps real keyboard focus on the active tab when a tab BEFORE it is removed'
   expect(focused?.getAttribute('aria-selected')).to.equal('true');
 });
 
+it('forwards a host aria-label to the role="tablist" element, and omits the attribute when unset', async () => {
+  const el = (await fixture(basic())) as LyraTabs;
+  const tablist = el.shadowRoot!.querySelector('[role="tablist"]')!;
+  expect(tablist.hasAttribute('aria-label')).to.be.false;
+
+  el.setAttribute('aria-label', 'Editor views');
+  await el.updateComplete;
+  expect(el.accessibleLabel).to.equal('Editor views');
+  expect(tablist.getAttribute('aria-label')).to.equal('Editor views');
+});
+
 it('does not steal focus by reassigning it when the invalid-active correction happens with focus elsewhere', async () => {
   const el = (await fixture(basic())) as LyraTabs;
   const outside = document.createElement('button');

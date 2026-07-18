@@ -7,6 +7,7 @@ import { nextId } from '../../internal/a11y.js';
 import { closeIcon } from '../../internal/icons.js';
 import { tag } from '../../internal/prefix.js';
 import { isRtl } from '../../internal/rtl.js';
+import { finiteRange } from '../../internal/numbers.js';
 import { styles } from './app-rail.styles.js';
 import './app-rail-item.class.js';
 
@@ -296,12 +297,31 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
     this.setEffectiveMode(next);
   }
 
+  /** `minRailWidthPx` normalized to a finite, non-negative px floor -- an invalid attribute value
+   *  would otherwise poison every `Math.min(maxRailWidthPx, Math.max(minRailWidthPx, ...))` clamp
+   *  below (both the drag and keyboard-step handlers) and the resizer's own `aria-valuemin`. */
+  private get safeMinRailWidthPx(): number {
+    return finiteRange(this.minRailWidthPx, 190, 0);
+  }
+
+  /** `maxRailWidthPx` normalized the same way, then cross-referenced against the already-sanitized
+   *  minimum so an inverted/invalid pair (e.g. `maxRailWidthPx` left below a since-raised
+   *  `minRailWidthPx`) can never produce a negative-width clamp range. */
+  private get safeMaxRailWidthPx(): number {
+    return Math.max(this.safeMinRailWidthPx, finiteRange(this.maxRailWidthPx, 440, 0));
+  }
+
   /** The rail's current effective width in px, whether or not `railWidthPx` has ever been
    *  explicitly set — falls back to the live measured width of `[part=base]` so the resizer's
    *  `aria-valuenow` and the first drag/keyboard step's start-width reflect the real rendered
-   *  width even before a consumer ever sets `railWidthPx`. */
+   *  width even before a consumer ever sets `railWidthPx`. A set `railWidthPx` is clamped into
+   *  `[safeMinRailWidthPx, safeMaxRailWidthPx]` here -- a NaN/negative/out-of-bounds direct
+   *  assignment would otherwise reach `updated()`'s inline-size write and this resizer's own
+   *  `aria-valuenow` exactly as given. */
   private get effectiveRailWidthPx(): number {
-    if (this.railWidthPx != null) return this.railWidthPx;
+    if (this.railWidthPx != null) {
+      return finiteRange(this.railWidthPx, this.safeMinRailWidthPx, this.safeMinRailWidthPx, this.safeMaxRailWidthPx);
+    }
     return this.baseEl?.getBoundingClientRect().width ?? 240;
   }
 
@@ -346,7 +366,7 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
       this.baseEl
     ) {
       if (this.resizable && this.railWidthPx != null && this._mode === 'full') {
-        this.baseEl.style.setProperty('inline-size', `${this.railWidthPx}px`);
+        this.baseEl.style.setProperty('inline-size', `${this.effectiveRailWidthPx}px`);
       } else {
         this.baseEl.style.removeProperty('inline-size');
       }
@@ -504,7 +524,7 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
     if (e.pointerId !== this.resizePointerId) return;
     let delta = e.clientX - this.resizeStartX;
     if (isRtl(this)) delta = -delta;
-    const next = Math.min(this.maxRailWidthPx, Math.max(this.minRailWidthPx, this.resizeStartWidth + delta));
+    const next = Math.min(this.safeMaxRailWidthPx, Math.max(this.safeMinRailWidthPx, this.resizeStartWidth + delta));
     this.railWidthPx = next;
     this.emit<AppRailResizeDetail>('lyra-rail-resize', { widthPx: next });
   };
@@ -526,12 +546,12 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
     const step = 8;
     if (e.key === forwardKey) {
       e.preventDefault();
-      const next = Math.min(this.maxRailWidthPx, this.effectiveRailWidthPx + step);
+      const next = Math.min(this.safeMaxRailWidthPx, this.effectiveRailWidthPx + step);
       this.railWidthPx = next;
       this.emit<AppRailResizeDetail>('lyra-rail-resize', { widthPx: next });
     } else if (e.key === backwardKey) {
       e.preventDefault();
-      const next = Math.max(this.minRailWidthPx, this.effectiveRailWidthPx - step);
+      const next = Math.max(this.safeMinRailWidthPx, this.effectiveRailWidthPx - step);
       this.railWidthPx = next;
       this.emit<AppRailResizeDetail>('lyra-rail-resize', { widthPx: next });
     }
@@ -579,8 +599,8 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
             aria-orientation="vertical"
             aria-label=${this.localize('resizeNavigation')}
             aria-valuenow=${Math.round(this.effectiveRailWidthPx)}
-            aria-valuemin=${this.minRailWidthPx}
-            aria-valuemax=${this.maxRailWidthPx}
+            aria-valuemin=${this.safeMinRailWidthPx}
+            aria-valuemax=${this.safeMaxRailWidthPx}
             tabindex="0"
             @pointerdown=${this.onResizerPointerDown}
             @keydown=${this.onResizerKeyDown}

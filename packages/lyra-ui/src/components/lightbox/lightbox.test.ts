@@ -156,3 +156,76 @@ it('jumps to the first/last image on Home/End', async () => {
 
   el.open = false;
 });
+
+// Regression coverage for the shared finite-number normalization layer (`src/internal/numbers.ts`)
+// -- currentIndex() previously hand-rolled its own Number.isFinite/Math.trunc guard instead of
+// using it; a non-finite, negative, non-integer, or out-of-range `index` must still clamp to a
+// valid, in-bounds image instead of throwing or rendering nothing.
+it('clamps a non-finite index to a valid in-range image instead of rendering nothing', async () => {
+  const images = [image, { ...image, caption: 'Second' }, { ...image, caption: 'Third' }];
+  const el = (await fixture(html`<lyra-lightbox .images=${images} open></lyra-lightbox>`)) as LyraLightbox;
+  await el.updateComplete;
+
+  el.index = Number.NaN;
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelector('[part="caption"]')!.textContent).to.contain('A blue square');
+
+  // Non-finite falls back to 0, exactly like NaN above -- only a genuinely out-of-range *finite*
+  // value (e.g. -5 below) clamps to the nearer bound instead.
+  el.index = Infinity;
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelector('[part="caption"]')!.textContent).to.contain('A blue square');
+
+  el.index = -5;
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelector('[part="caption"]')!.textContent).to.contain('A blue square');
+
+  el.index = 1.9;
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelector('[part="caption"]')!.textContent).to.contain('Second');
+
+  el.open = false;
+});
+
+// -- Live-region announcement (see willUpdate()'s doc for why liveText is derived there, not in
+// updated()) --------------------------------------------------------------------------------
+
+it('announces the current position in part="live-region" and keeps it in sync across navigation', async () => {
+  const images = [image, { ...image, caption: 'Second' }, { ...image, caption: 'Third' }];
+  const el = (await fixture(html`<lyra-lightbox .images=${images} open></lyra-lightbox>`)) as LyraLightbox;
+  await el.updateComplete;
+  const liveRegion = el.shadowRoot!.querySelector('[part="live-region"]') as HTMLElement;
+  expect(liveRegion.textContent).to.equal('Image 1 of 3');
+
+  el.next();
+  await el.updateComplete;
+  expect(liveRegion.textContent).to.equal('Image 2 of 3');
+
+  el.open = false;
+});
+
+it('does not trigger a Lit "scheduled an update after an update completed" dev warning when index/images change while open', async () => {
+  const globalWarnings = (globalThis as { litIssuedWarnings?: Set<string> }).litIssuedWarnings;
+  globalWarnings?.forEach((warning) => {
+    if (warning.includes('scheduled an update')) globalWarnings.delete(warning);
+  });
+  const originalWarn = console.warn;
+  const calls: unknown[][] = [];
+  console.warn = (...args: unknown[]) => calls.push(args);
+  try {
+    const images = [image, { ...image, caption: 'Second' }, { ...image, caption: 'Third' }];
+    const el = (await fixture(html`<lyra-lightbox .images=${images} open></lyra-lightbox>`)) as LyraLightbox;
+    await el.updateComplete;
+    el.next();
+    await el.updateComplete;
+    el.previous();
+    await el.updateComplete;
+    el.images = [...images, { ...image, caption: 'Fourth' }];
+    await el.updateComplete;
+    el.open = false;
+    await el.updateComplete;
+  } finally {
+    console.warn = originalWarn;
+  }
+  expect(calls.flat().map(String).some((message) => message.includes('scheduled an update'))).to.be.false;
+});

@@ -53,6 +53,61 @@ it('falls back gracefully when value is programmatically set to NaN', async () =
   expect(el.shadowRoot?.textContent?.trim()).to.equal('');
 });
 
+it('clamps an out-of-range decimals instead of letting Intl.NumberFormat throw a RangeError (crash regression)', async () => {
+  // Intl.NumberFormat's maximumFractionDigits only accepts [0, 100] and throws a RangeError
+  // outside that (or for a non-finite value) -- decimals reaches it unguarded pre-fix.
+  const el = (await fixture(html`<lyra-format-bytes value="123456"></lyra-format-bytes>`)) as LyraFormatBytes;
+
+  el.decimals = -1;
+  await el.updateComplete;
+  expect(el.shadowRoot?.textContent?.trim()).to.not.equal('');
+  expect(el.shadowRoot?.textContent).to.not.contain('NaN');
+
+  el.decimals = 500;
+  await el.updateComplete;
+  expect(el.shadowRoot?.textContent?.trim()).to.not.equal('');
+
+  el.decimals = NaN;
+  await el.updateComplete;
+  expect(el.shadowRoot?.textContent?.trim()).to.not.equal('');
+});
+
+it('falls back to a safe default unit-step instead of dividing by Math.log(1) === 0 (crash regression)', async () => {
+  const el = (await fixture(html`<lyra-format-bytes value="123456"></lyra-format-bytes>`)) as LyraFormatBytes;
+  el.unitStep = 1;
+  await el.updateComplete;
+  expect(el.shadowRoot?.textContent?.trim()).to.not.equal('');
+  expect(el.shadowRoot?.textContent).to.not.contain('NaN');
+
+  el.unitStep = NaN;
+  await el.updateComplete;
+  expect(el.shadowRoot?.textContent?.trim()).to.not.equal('');
+});
+
+it('clamps out-of-range minimum/maximumFractionDigits instead of letting Intl.NumberFormat throw a RangeError (crash regression)', async () => {
+  // Both minimumFractionDigits and maximumFractionDigits throw a RangeError outside [0, 100],
+  // and throw even when each is individually in range if minimum > maximum -- unguarded pre-fix.
+  const el = (await fixture(html`<lyra-format-number value="1234.5"></lyra-format-number>`)) as LyraFormatNumber;
+
+  el.maximumFractionDigits = -1;
+  await el.updateComplete;
+  expect(el.shadowRoot?.textContent?.trim()).to.not.equal('');
+
+  el.maximumFractionDigits = 500;
+  await el.updateComplete;
+  expect(el.shadowRoot?.textContent?.trim()).to.not.equal('');
+
+  el.minimumFractionDigits = NaN;
+  await el.updateComplete;
+  expect(el.shadowRoot?.textContent?.trim()).to.not.equal('');
+
+  // Individually in-range, but inverted -- reordered rather than left to throw.
+  el.minimumFractionDigits = 5;
+  el.maximumFractionDigits = 2;
+  await el.updateComplete;
+  expect(el.shadowRoot?.textContent?.trim()).to.not.equal('');
+});
+
 it('reflects the locale property back to the locale attribute (inherited LyraElement `reflect: true`)', async () => {
   const numberEl = (await fixture(html`<lyra-format-number value="1234.5"></lyra-format-number>`)) as LyraFormatNumber;
   const dateEl = (await fixture(html`<lyra-format-date date="2024-01-01T00:00:00Z"></lyra-format-date>`)) as LyraFormatDate;

@@ -1,7 +1,17 @@
 import { html, svg, type SVGTemplateResult, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { LyraElement } from '../../internal/lyra-element.js';
+import { finiteCount, finiteRange } from '../../internal/numbers.js';
 import { styles } from './rating.styles.js';
+
+const DEFAULT_MAX = 5;
+/** No real-world star rating needs more stars than this; caps an untrusted `max` so it can't turn
+ *  `render()`'s `Array.from({ length: count })` below into an unbounded allocation. */
+const MAX_STARS = 100;
+const DEFAULT_PRECISION = 1;
+/** A `<= 0` precision would divide-by-zero when `setValue` snaps `next / precision`; keep it
+ *  comfortably positive and no coarser than the star count itself. */
+const MIN_PRECISION = 0.01;
 
 export interface LyraRatingEventMap { 'lyra-change': CustomEvent<{ value: number }>; }
 
@@ -42,10 +52,29 @@ export class LyraRating extends LyraElement<LyraRatingEventMap> {
   @property({ type: Boolean, reflect: true }) readonly = false;
   @property({ type: Boolean, reflect: true }) disabled = false;
   @property({ attribute: 'aria-label' }) accessibleLabel = '';
+
+  /** `max`, normalized to a finite non-negative integer count and capped at `MAX_STARS` so an
+   *  untrusted attribute can't blow up the star count rendered below. */
+  private get safeMax(): number {
+    return finiteCount(this.max, DEFAULT_MAX, MAX_STARS);
+  }
+
+  /** `value`, normalized to a finite number clamped to `[0, safeMax]`. */
+  private get safeValue(): number {
+    return finiteRange(this.value, 0, 0, this.safeMax);
+  }
+
+  /** `precision`, normalized to a finite number and kept within `[MIN_PRECISION, safeMax]` — a
+   *  `<= 0` precision would otherwise divide-by-zero in `setValue`'s `next / precision` step. */
+  private get safePrecision(): number {
+    const precision = finiteRange(this.precision, DEFAULT_PRECISION, MIN_PRECISION, this.safeMax);
+    return precision > 0 ? precision : DEFAULT_PRECISION;
+  }
+
   private setValue(next: number): void {
     if (this.readonly || this.disabled) return;
-    const precision = this.precision > 0 ? this.precision : 1;
-    const clamped = Math.max(0, Math.min(this.max, Math.round(next / precision) * precision));
+    const precision = this.safePrecision;
+    const clamped = Math.max(0, Math.min(this.safeMax, Math.round(next / precision) * precision));
     if (clamped === this.value) return;
     this.value = clamped;
     this.emit('lyra-change', { value: this.value });
@@ -57,21 +86,23 @@ export class LyraRating extends LyraElement<LyraRatingEventMap> {
   private onKeyDown = (event: KeyboardEvent): void => {
     const forwardKey = this.effectiveDirection === 'rtl' ? 'ArrowLeft' : 'ArrowRight';
     const backwardKey = this.effectiveDirection === 'rtl' ? 'ArrowRight' : 'ArrowLeft';
-    if (event.key === forwardKey || event.key === 'ArrowUp') { event.preventDefault(); this.setValue(this.value + this.precision); }
-    if (event.key === backwardKey || event.key === 'ArrowDown') { event.preventDefault(); this.setValue(this.value - this.precision); }
+    if (event.key === forwardKey || event.key === 'ArrowUp') { event.preventDefault(); this.setValue(this.safeValue + this.safePrecision); }
+    if (event.key === backwardKey || event.key === 'ArrowDown') { event.preventDefault(); this.setValue(this.safeValue - this.safePrecision); }
     if (event.key === 'Home') { event.preventDefault(); this.setValue(0); }
-    if (event.key === 'End') { event.preventDefault(); this.setValue(this.max); }
+    if (event.key === 'End') { event.preventDefault(); this.setValue(this.safeMax); }
   };
   render(): TemplateResult {
-    const count = Math.max(0, Math.round(this.max));
+    const safeMax = this.safeMax;
+    const safeValue = this.safeValue;
+    const count = Math.round(safeMax);
     return html`<div part="base" role="slider" tabindex=${this.disabled ? '-1' : '0'}
       aria-label=${this.getAttribute('aria-label') || this.accessibleLabel || this.localize('rating')}
-      aria-valuemin="0" aria-valuemax=${this.max} aria-valuenow=${this.value}
+      aria-valuemin="0" aria-valuemax=${safeMax} aria-valuenow=${safeValue}
       aria-disabled=${this.disabled ? 'true' : 'false'} aria-readonly=${this.readonly ? 'true' : 'false'}
       @click=${this.onClick} @keydown=${this.onKeyDown}>
       ${Array.from({ length: count }, (_, index) => {
         const star = index + 1;
-        const fraction = Math.max(0, Math.min(1, this.value - index));
+        const fraction = Math.max(0, Math.min(1, safeValue - index));
         return html`<span part="star" data-value=${star} ?data-filled=${fraction >= 1} aria-hidden="true">
           ${starOutline()}
           <span part="star-fill" style=${`inline-size:${fraction * 100}%`}>${starSolid()}</span>

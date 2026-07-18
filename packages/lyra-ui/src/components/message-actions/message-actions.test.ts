@@ -106,6 +106,20 @@ it('is role="toolbar" with a localized default label, or a custom label override
   );
 });
 
+it('forwards a host aria-label to the toolbar, winning over label', async () => {
+  const el = (await fixture(
+    html`<lyra-message-actions aria-label="Reply toolbar" label="Assistant reply actions"></lyra-message-actions>`,
+  )) as LyraMessageActions;
+  expect(el.accessibleLabel).to.equal('Reply toolbar');
+  expect(el.shadowRoot!.querySelector('[role="toolbar"]')!.getAttribute('aria-label')).to.equal('Reply toolbar');
+
+  el.accessibleLabel = null;
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelector('[role="toolbar"]')!.getAttribute('aria-label')).to.equal(
+    'Assistant reply actions',
+  );
+});
+
 it('roving tabindex: only the active plain-button stop is tabbable, and ArrowRight/ArrowLeft move it', async () => {
   const el = (await fixture(
     html`<lyra-message-actions .controls=${['regenerate', 'edit']}></lyra-message-actions>`,

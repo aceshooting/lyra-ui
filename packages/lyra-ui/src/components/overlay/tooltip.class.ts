@@ -5,7 +5,14 @@ import { LyraElement } from '../../internal/lyra-element.js';
 import { nextId } from '../../internal/a11y.js';
 import { place } from '../../internal/positioner.js';
 import { rtlAwarePlacement } from '../../internal/rtl.js';
+import { finiteDuration, finiteNumber } from '../../internal/numbers.js';
 import { tooltipStyles } from './overlay.styles.js';
+
+/** Default show/hide timer delay (ms). */
+const DEFAULT_DELAY = 150;
+/** Default anchor-offset distance (px), passed to Floating UI's `offset()` middleware -- same
+ *  semantics as `<lyra-popover>.distance` (both wrap the same `place()`/`offset()` middleware). */
+const DEFAULT_DISTANCE = 6;
 
 /**
  * `<lyra-tooltip>` — a localized, hover/focus tooltip for a consumer-owned trigger.
@@ -23,9 +30,13 @@ export class LyraTooltip extends LyraElement {
   static styles = [LyraElement.styles, tooltipStyles];
   @property({ type: Boolean, reflect: true }) open = false;
   @property({ type: Boolean }) manual = false;
-  @property({ type: Number }) delay = 150;
+  /** Show/hide timer delay (ms) -- see `setOpen()`. NaN/negative/oversized all normalize through
+   *  `finiteDuration`. */
+  @property({ type: Number }) delay = DEFAULT_DELAY;
   @property({ reflect: true }) placement: Placement = 'top';
-  @property({ type: Number }) distance = 6;
+  /** Anchor-offset distance (px) passed to Floating UI's `offset()` middleware -- identical
+   *  semantics to `<lyra-popover>.distance` (can legitimately be negative for overlap). */
+  @property({ type: Number }) distance = DEFAULT_DISTANCE;
   @property() content = '';
   @property({ attribute: 'aria-label' }) accessibleLabel = '';
   @state() private trigger?: HTMLElement;
@@ -60,7 +71,12 @@ export class LyraTooltip extends LyraElement {
   }
   private position(): void {
     const popup = this.renderRoot.querySelector('[part="popup"]') as HTMLElement | null;
-    if (this.open && this.trigger && popup) this.cleanup = place(this.trigger, popup, { placement: rtlAwarePlacement(this.placement, this), offset: this.distance });
+    if (this.open && this.trigger && popup) {
+      this.cleanup = place(this.trigger, popup, {
+        placement: rtlAwarePlacement(this.placement, this),
+        offset: finiteNumber(this.distance, DEFAULT_DISTANCE),
+      });
+    }
   }
   private syncTriggerA11y(): void {
     if (!this.trigger) return;
@@ -69,7 +85,8 @@ export class LyraTooltip extends LyraElement {
   }
   private setOpen(next: boolean): void {
     clearTimeout(this.timer);
-    if (next && this.delay > 0) this.timer = setTimeout(() => { this.open = true; }, this.delay);
+    const delay = finiteDuration(this.delay, DEFAULT_DELAY);
+    if (next && delay > 0) this.timer = setTimeout(() => { this.open = true; }, delay);
     else this.open = next;
   }
   private bindTrigger(trigger: HTMLElement): void {

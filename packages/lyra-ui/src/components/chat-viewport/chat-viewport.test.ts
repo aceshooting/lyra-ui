@@ -40,6 +40,40 @@ it('is role="log" with aria-live="off" and tabindex="0", labeled by the default 
   );
 });
 
+it('forwards a host aria-label to the role="log" element, winning over the label property', async () => {
+  const el = (await fixture(
+    html`<lyra-chat-viewport aria-label="Team thread" label="Support thread"></lyra-chat-viewport>`,
+  )) as LyraChatViewport;
+  const scroll = el.shadowRoot!.querySelector('[part="scroll"]')!;
+  // An aria-label on the custom-element host itself never names the shadow-side log element --
+  // the forwarded accessibleLabel property is what actually reaches the role.
+  expect(el.accessibleLabel).to.equal('Team thread');
+  expect(scroll.getAttribute('aria-label')).to.equal('Team thread');
+
+  // Clearing the forwarded name falls back to the label property.
+  el.accessibleLabel = null;
+  await el.updateComplete;
+  expect(scroll.getAttribute('aria-label')).to.equal('Support thread');
+});
+
+it('keeps the jump pill horizontally centered under dir="rtl" by flipping its translate sign', async () => {
+  const pillTranslateX = async (dirAttr: string): Promise<number> => {
+    const el = (await fixture(
+      html`<lyra-chat-viewport dir=${dirAttr} style="block-size:100px"
+        >${Array.from({ length: 10 }, (_, i) => row(`m${i}`))}</lyra-chat-viewport
+      >`,
+    )) as LyraChatViewport;
+    el.follow = false;
+    await el.updateComplete;
+    const pill = el.shadowRoot!.querySelector('[part="jump-pill"]') as HTMLElement;
+    return new DOMMatrixReadOnly(getComputedStyle(pill).transform).m41;
+  };
+  // inset-inline-start: 50% anchors the pill to the physical right edge under RTL, so the
+  // centering translateX must resolve leftward (negative) in LTR and rightward (positive) in RTL.
+  expect(await pillTranslateX('ltr')).to.be.lessThan(0);
+  expect(await pillTranslateX('rtl')).to.be.greaterThan(0);
+});
+
 describe('slotted mode -- follow/release/re-engage state machine', () => {
   it('auto-scrolls to the end as content grows while following', async () => {
     const el = (await fixture(
@@ -81,6 +115,28 @@ describe('slotted mode -- follow/release/re-engage state machine', () => {
     const ev = await eventPromise;
     expect(ev.detail).to.deep.equal({ following: false });
     expect(el.follow).to.be.false;
+  });
+
+  it('falls back to the documented default distance when bottom-threshold is non-finite or negative, instead of permanently blocking re-engagement', async () => {
+    const expectReengages = async (bottomThreshold: string) => {
+      const el = (await fixture(
+        html`<lyra-chat-viewport style="block-size:100px" bottom-threshold=${bottomThreshold}
+          >${Array.from({ length: 10 }, (_, i) => row(`m${i}`))}</lyra-chat-viewport
+        >`,
+      )) as LyraChatViewport;
+      el.follow = false;
+      await el.updateComplete;
+      await nextFrame();
+      const scroll = el.shadowRoot!.querySelector('[part="scroll"]') as HTMLElement;
+      scroll.scrollTop = scroll.scrollHeight - scroll.clientHeight; // exactly at the end
+      scroll.dispatchEvent(new Event('scroll', { bubbles: true }));
+      expect(
+        el.follow,
+        `bottom-threshold="${bottomThreshold}" must not permanently block reaching the bottom (a NaN comparison is always false)`,
+      ).to.be.true;
+    };
+    await expectReengages('not-a-number');
+    await expectReengages('-10');
   });
 
   it('does not release follow for a programmatic/layout-driven scroll with no preceding intent gesture', async () => {
@@ -251,6 +307,32 @@ describe('unread divider (slotted mode)', () => {
     await el.updateComplete;
     await nextFrame();
     expect(el.shadowRoot!.querySelector('[part="unread-divider"]')).to.not.exist;
+    // `null` is the one true "disabled" sentinel -- confirmed untouched by the clamping in the
+    // next test, which normalizes every other (non-null) value to a safe non-negative integer.
+    expect(el.unreadStartIndex).to.equal(null);
+  });
+
+  it('clamps a non-finite or negative unread-start-index to a safe non-negative index instead of silently disabling the divider', async () => {
+    const negative = (await fixture(
+      html`<lyra-chat-viewport style="block-size:200px" unread-start-index="-3"
+        >${Array.from({ length: 5 }, (_, i) => row(`m${i}`))}</lyra-chat-viewport
+      >`,
+    )) as LyraChatViewport;
+    await negative.updateComplete;
+    await nextFrame();
+    const negativeDivider = negative.shadowRoot!.querySelector('[part="unread-divider"]') as HTMLElement;
+    expect(negativeDivider, 'a negative index must clamp to 0, not silently disable the divider').to.exist;
+    expect(parseFloat(negativeDivider.style.top)).to.equal(0);
+
+    const nonFinite = (await fixture(
+      html`<lyra-chat-viewport style="block-size:200px" unread-start-index="not-a-number"
+        >${Array.from({ length: 5 }, (_, i) => row(`m${i}`))}</lyra-chat-viewport
+      >`,
+    )) as LyraChatViewport;
+    await nonFinite.updateComplete;
+    await nextFrame();
+    expect(nonFinite.shadowRoot!.querySelector('[part="unread-divider"]'), 'NaN must clamp the same way as a negative index')
+      .to.exist;
   });
 
   it('scrollToUnread scrolls to the divider and returns true; false when unreadStartIndex is null', async () => {

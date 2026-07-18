@@ -1,4 +1,4 @@
-import { expect, fixture, html, oneEvent } from '@open-wc/testing';
+import { aTimeout, expect, fixture, html, oneEvent } from '@open-wc/testing';
 import './mutation-observer.js';
 import type { LyraMutationObserver } from './mutation-observer.class.js';
 
@@ -60,6 +60,25 @@ describe('<lyra-mutation-observer>', () => {
     // driven entirely by the internal <slot>'s own @slotchange template binding, confirming
     // there is no host-level slotchange wiring left to maintain.
     expect(hostSlotchangeFired).to.equal(false);
+  });
+
+  it('still reports mutations after a bare reconnect with no property change (e.g. a reparent)', async () => {
+    const el = await fixture<LyraMutationObserver>(html`<lyra-mutation-observer><div></div></lyra-mutation-observer>`);
+    await el.updateComplete;
+    const parent = el.parentElement!;
+
+    // A pure reparent -- no property change, and the slot's assigned-node set
+    // is unchanged, so neither updated() nor slotchange re-arms observation;
+    // only connectedCallback's own re-arm covers this path.
+    el.remove();
+    parent.append(el);
+    await aTimeout(0);
+
+    const target = el.querySelector('div')!;
+    const event = oneEvent(el, 'lyra-mutation');
+    target.append(document.createElement('span'));
+    const result = (await event) as CustomEvent<{ records: MutationRecord[] }>;
+    expect(result.detail.records.length).to.be.greaterThan(0);
   });
 
   it('supports disabled observation', async () => {

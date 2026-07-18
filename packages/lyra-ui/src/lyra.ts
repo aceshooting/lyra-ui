@@ -254,7 +254,11 @@ export { LyraSparkline } from './components/sparkline/sparkline.js';
 export { LyraSequenceStrip } from './components/sequence-strip/sequence-strip.js';
 export type { SequenceStripItem, SequenceStripCategory } from './components/sequence-strip/sequence-strip.js';
 export { LyraEmojiPicker } from './components/emoji-picker/emoji-picker.js';
-export type { EmojiPickerItem, EmojiPickerGroup } from './components/emoji-picker/emoji-picker.js';
+export type {
+  EmojiPickerItem,
+  EmojiPickerGroup,
+  LyraEmojiPickerEventMap,
+} from './components/emoji-picker/emoji-picker.js';
 export { LyraToast } from './components/toast/toast.js';
 export type { ToastPlacement, ToastCreateOptions } from './components/toast/toast.js';
 export { LyraToastItem } from './components/toast/toast-item.js';
@@ -797,6 +801,7 @@ export type { LyraRadioGroupEventMap } from './components/radio/radio-group.js';
 export type { LyraJsonViewerEventMap } from './components/json-viewer/json-viewer.js';
 export type { LyraLiteChartEventMap } from './components/chart/lite-chart.js';
 export type { LyraMapEventMap } from './components/map/map.js';
+export type { LyraGeojsonViewEventMap } from './components/geojson-view/geojson-view.js';
 export type { LyraMarkdownEventMap } from './components/markdown/markdown.js';
 export type { LyraMediaCardEventMap } from './components/media-card/media-card.js';
 export type { LyraMentionPopoverEventMap } from './components/mention-popover/mention-popover.js';

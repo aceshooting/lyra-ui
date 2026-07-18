@@ -2,6 +2,7 @@ import { fixture, expect, oneEvent, aTimeout, html } from '@open-wc/testing';
 import './push-to-talk.js';
 import '../live-region/live-region.js';
 import type { LyraPushToTalk } from './push-to-talk.js';
+import { MAX_TIMEOUT_MS } from '../../internal/numbers.js';
 
 // -- Fakes for getUserMedia / MediaRecorder / AudioContext -----------------
 // No `sinon` in this repo -- plain manual monkey-patching (save the real
@@ -465,6 +466,71 @@ it('auto-stops at max-duration-ms', async () => {
     await el.start();
     await stopPromise;
     expect(el.state).to.equal('idle');
+  } finally {
+    restore();
+  }
+});
+
+// -- Numeric safety (finiteDuration clamping) --------------------------------
+
+it('clamps a NaN/oversized timeslice-ms before it reaches MediaRecorder.start() instead of an unsanitized value reaching that native API (regression)', async () => {
+  const restore = stubSuccessfulCapture();
+  const originalStart = FakeMediaRecorder.prototype.start;
+  const startArgs: (number | undefined)[] = [];
+  FakeMediaRecorder.prototype.start = function (this: FakeMediaRecorder, timeslice?: number) {
+    startArgs.push(timeslice);
+    return originalStart.call(this, timeslice);
+  };
+  try {
+    const el = (await fixture(html`<lyra-push-to-talk></lyra-push-to-talk>`)) as LyraPushToTalk;
+    el.timesliceMs = Number.MAX_SAFE_INTEGER;
+    await el.start();
+    expect(startArgs).to.have.lengthOf(1);
+    expect(Number.isFinite(startArgs[0])).to.be.true;
+    expect(startArgs[0]).to.be.at.most(MAX_TIMEOUT_MS);
+  } finally {
+    FakeMediaRecorder.prototype.start = originalStart;
+    restore();
+  }
+});
+
+it('clamps an oversized max-duration-ms to the browser timer ceiling instead of overflowing setTimeout\'s 32-bit delay (regression)', async () => {
+  const restore = stubSuccessfulCapture();
+  const originalSetTimeout = window.setTimeout;
+  const delays: number[] = [];
+  window.setTimeout = ((handler: TimerHandler, delay?: number, ...args: unknown[]) => {
+    delays.push(delay ?? 0);
+    return originalSetTimeout(handler, delay, ...args);
+  }) as typeof window.setTimeout;
+  try {
+    const el = (await fixture(html`<lyra-push-to-talk></lyra-push-to-talk>`)) as LyraPushToTalk;
+    el.maxDurationMs = Number.MAX_SAFE_INTEGER;
+    await el.start();
+    expect(delays.length).to.be.greaterThan(0);
+    expect(Math.max(...delays)).to.be.at.most(MAX_TIMEOUT_MS);
+    el.cancel();
+  } finally {
+    window.setTimeout = originalSetTimeout;
+    restore();
+  }
+});
+
+it('never schedules a max-duration-ms auto-stop for a NaN or negative value (the existing `> 0` guard already excludes them)', async () => {
+  const restore = stubSuccessfulCapture();
+  try {
+    const nan = (await fixture(html`<lyra-push-to-talk></lyra-push-to-talk>`)) as LyraPushToTalk;
+    nan.maxDurationMs = NaN;
+    await nan.start();
+    await aTimeout(30);
+    expect(nan.state).to.equal('recording'); // never auto-stopped
+    nan.cancel();
+
+    const negative = (await fixture(html`<lyra-push-to-talk></lyra-push-to-talk>`)) as LyraPushToTalk;
+    negative.maxDurationMs = -100;
+    await negative.start();
+    await aTimeout(30);
+    expect(negative.state).to.equal('recording');
+    negative.cancel();
   } finally {
     restore();
   }

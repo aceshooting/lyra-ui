@@ -5,6 +5,7 @@ import { LyraElement } from '../../internal/lyra-element.js';
 import { srOnly } from '../../internal/a11y.js';
 import { Announcer } from '../../internal/announcer.js';
 import { createAnsiParser, type AnsiSegment, type AnsiStyles } from '../../internal/ansi.js';
+import { finiteCount } from '../../internal/numbers.js';
 import type {
   LyraAnchor,
   LyraHighlight,
@@ -126,6 +127,8 @@ export class LyraTerminal extends LyraElement<LyraTerminalEventMap> {
   static styles = [LyraElement.styles, styles, srOnly];
 
   @property() content = '';
+  /** Line-count scrollback buffer limit. NaN/negative/oversized (e.g. `Infinity`) all normalize
+   *  through `finiteCount`, with a floor of 1 -- see `appendLine()`. */
   @property({ type: Number, attribute: 'max-scrollback' }) maxScrollback = 5000;
   @property({ type: Boolean, reflect: true }) follow = true;
   @property({ type: Boolean, reflect: true }) wrap = true;
@@ -202,7 +205,7 @@ export class LyraTerminal extends LyraElement<LyraTerminalEventMap> {
 
   private appendLine(): void {
     this.buffer.push({ number: ++this.lineSeq, cells: [] });
-    const max = Math.max(1, Math.floor(this.maxScrollback) || 5000);
+    const max = Math.max(1, finiteCount(this.maxScrollback, 5000));
     while (this.buffer.length > max) this.buffer.shift();
     this.column = 0;
   }

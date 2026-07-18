@@ -12,6 +12,23 @@ it('defaults to index=1, status="default", empty source-id/href/label', async ()
   expect(el.label).to.equal('');
 });
 
+it('sanitizes a NaN/non-integer/non-positive index to a finite, 1-indexed integer instead of rendering "[NaN]"', async () => {
+  const el = (await fixture(html`<lyra-citation-badge></lyra-citation-badge>`)) as LyraCitationBadge;
+
+  el.index = NaN;
+  expect(el.index).to.equal(1); // falls back to the documented default, not NaN
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelector('[part="index"]')!.textContent).to.equal('1');
+
+  el.index = -5;
+  expect(el.index).to.equal(1); // clamped to the 1-indexed floor
+
+  el.index = 3.7;
+  expect(el.index).to.equal(3); // truncated, not rounded
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelector('[part="index"]')!.textContent).to.equal('3');
+});
+
 it('renders [index] as its visible content', async () => {
   const el = (await fixture(html`<lyra-citation-badge index="3"></lyra-citation-badge>`)) as LyraCitationBadge;
   const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;

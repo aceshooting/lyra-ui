@@ -2,6 +2,7 @@ import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
 import { LyraElement } from '../../internal/lyra-element.js';
 import { FormAssociated } from '../../internal/form-associated.js';
+import { finiteInteger } from '../../internal/numbers.js';
 import { styles } from './code-editor.styles.js';
 
 export interface LyraCodeEditorEventMap { input: CustomEvent<{ value: string }>; change: CustomEvent<{ value: string }>; blur: CustomEvent<undefined>; focus: CustomEvent<undefined>; }
@@ -26,7 +27,26 @@ export class LyraCodeEditor extends FormAssociated(LyraCodeEditorBase) {
   static styles = [LyraElement.styles, styles];
   @property() language = '';
   @property({ type: Boolean, reflect: true, attribute: 'line-numbers' }) lineNumbers = true;
-  @property({ type: Number, attribute: 'tab-size' }) tabSize = 2;
+
+  private _tabSize = 2;
+  /** Spaces inserted per Tab keypress, and the native `tab-size` CSS value. Confirmed-crash
+   *  history: this used to feed `' '.repeat(Math.max(1, this.tabSize))` directly in `onKeyDown`
+   *  below -- `String.prototype.repeat()` throws a `RangeError` for a count of `+Infinity`
+   *  specifically (e.g. a literal `tab-size="Infinity"` attribute, which `Number("Infinity")`
+   *  happily converts to), and `Math.max(1, NaN)` is itself `NaN`, silently producing an empty,
+   *  non-indenting insert for a NaN `tabSize`. Sanitized to a finite integer in `[1, 16]` at
+   *  assignment time instead, so both the `repeat()` call and the inline `tab-size` style always
+   *  see a safe value. */
+  @property({ type: Number, attribute: 'tab-size' })
+  get tabSize(): number {
+    return this._tabSize;
+  }
+  set tabSize(value: number) {
+    const old = this._tabSize;
+    this._tabSize = finiteInteger(value, 2, 1, 16);
+    this.requestUpdate('tabSize', old);
+  }
+
   @property() label = '';
   @property() hint = '';
   @property({ attribute: 'error-text' }) errorText = '';
@@ -59,7 +79,7 @@ export class LyraCodeEditor extends FormAssociated(LyraCodeEditorBase) {
   private onChange = (): void => { this.emit('change', { value: this.value }); };
   private onFocus = (): void => { this.emit('focus'); };
   private onBlur = (): void => { this.touched = true; this.emit('blur'); };
-  private onKeyDown = (event: KeyboardEvent): void => { if (event.key === 'Tab' && !this.readonly) { event.preventDefault(); const target = event.target as HTMLTextAreaElement; const start = target.selectionStart; target.setRangeText(' '.repeat(Math.max(1, this.tabSize)), start, target.selectionEnd, 'end'); this.value = target.value; this.emit('input', { value: this.value }); } };
+  private onKeyDown = (event: KeyboardEvent): void => { if (event.key === 'Tab' && !this.readonly) { event.preventDefault(); const target = event.target as HTMLTextAreaElement; const start = target.selectionStart; target.setRangeText(' '.repeat(this.tabSize), start, target.selectionEnd, 'end'); this.value = target.value; this.emit('input', { value: this.value }); } };
   private onLabelSlotChange = (e: Event): void => { this.hasLabelSlot = (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length > 0; };
   private onHintSlotChange = (e: Event): void => { this.hasHintSlot = (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length > 0; };
   private onErrorSlotChange = (e: Event): void => { this.hasErrorSlot = (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length > 0; };

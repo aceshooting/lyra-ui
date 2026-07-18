@@ -4,6 +4,7 @@ import { repeat } from 'lit/directives/repeat.js';
 import { styleMap } from 'lit/directives/style-map.js';
 import { LyraElement } from '../../internal/lyra-element.js';
 import { prefersReducedMotion } from '../../internal/motion.js';
+import { finiteInteger } from '../../internal/numbers.js';
 import { styles } from './virtual-list.styles.js';
 
 /** Fallback per-row height (px) used for any row that hasn't been measured
@@ -212,6 +213,14 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
 
   /** When true, scrolling near the bottom fires `lyra-load-more`. */
   @property({ type: Boolean, attribute: 'has-more', reflect: true }) hasMore = false;
+
+  /** `rowIndexOffset` normalized to a finite integer before it's added into `renderRow()`'s
+   *  `aria-rowindex` -- mirrors `normalizeOverscan()`'s own defensive normalization for `overscan`
+   *  above, guarding a `NaN`/non-integer attribute value from producing a nonsensical
+   *  `aria-rowindex="NaN"` for every row in `item-role="row"` mode. */
+  private get safeRowIndexOffset(): number {
+    return finiteInteger(this.rowIndexOffset, 0);
+  }
 
   // Named distinctly from the inherited DOM `scrollTop` (a `HTMLElement`
   // property this class would otherwise shadow) -- this tracks the *scroll
@@ -657,7 +666,7 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
         data-row-index=${index}
         aria-setsize=${isRowMode ? nothing : total}
         aria-posinset=${isRowMode ? nothing : index + 1}
-        aria-rowindex=${isRowMode ? index + 1 + this.rowIndexOffset : nothing}
+        aria-rowindex=${isRowMode ? index + 1 + this.safeRowIndexOffset : nothing}
         aria-current=${isActive ? 'true' : nothing}
         style=${styleMap({ transform: `translateY(${top}px)` })}
       >

@@ -629,6 +629,33 @@ it('renders sub and dot-color from light-DOM options', async () => {
   );
 });
 
+it('sanitizes maxOptionsVisible/maxRender to finite non-negative integers instead of poisoning the row cap/tag cap with NaN', async () => {
+  const el = (await fixture(html`<lyra-combobox></lyra-combobox>`)) as LyraCombobox;
+
+  el.maxOptionsVisible = NaN;
+  expect(el.maxOptionsVisible).to.equal(3); // falls back to the documented default
+
+  el.maxOptionsVisible = -5;
+  expect(el.maxOptionsVisible).to.equal(0); // clamped to the non-negative floor
+
+  el.maxRender = NaN;
+  expect(el.maxRender).to.equal(200); // falls back to the documented default
+
+  el.maxRender = -5;
+  expect(el.maxRender).to.equal(0); // clamped to the non-negative floor
+
+  // A capped-to-0 maxRender must not crash renderRows()/renderedRows -- rendering falls through to
+  // the empty-listbox message (no rows survive the 0-sized cap), rather than throwing.
+  const opt = document.createElement('lyra-option');
+  opt.value = '0';
+  opt.textContent = 'Item 0';
+  el.appendChild(opt);
+  el.open = true;
+  expect(async () => await el.updateComplete).to.not.throw();
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelectorAll('[part="option"]').length).to.equal(0);
+});
+
 it('caps rendered rows at maxRender and shows an overflow indicator', async () => {
   const el = (await fixture(html`<lyra-combobox max-render="3"></lyra-combobox>`)) as LyraCombobox;
   for (let i = 0; i < 10; i++) {
@@ -944,6 +971,49 @@ it('shows the empty-state message with a custom emptyText when no rows match', a
   const empty = el.shadowRoot!.querySelector('.empty');
   expect(empty).to.exist;
   expect(empty!.textContent).to.equal('Nothing here');
+});
+
+// The loadingText/emptyText/overflowText props are passed to localize() as
+// `this.xText || undefined`, so with the props unset the .strings/registry
+// path must resolve each listbox message -- a set prop wins verbatim instead
+// (covered by the emptyText test above).
+it('resolves the loading message through .strings when loadingText is unset', async () => {
+  const el = (await fixture(
+    html`<lyra-combobox .strings=${{ loading: 'Chargement…' }}></lyra-combobox>`,
+  )) as LyraCombobox;
+  el.source = () => new Promise(() => {});
+  el.open = true;
+  await el.updateComplete;
+  await aTimeout(250);
+  await el.updateComplete;
+
+  expect(el.shadowRoot!.querySelector('.loading')!.textContent).to.equal('Chargement…');
+});
+
+it('resolves the no-matches message through .strings when emptyText is unset', async () => {
+  const el = (await fixture(
+    html`<lyra-combobox .strings=${{ noMatches: 'Aucun résultat' }}></lyra-combobox>`,
+  )) as LyraCombobox;
+  el.open = true;
+  await el.updateComplete;
+
+  expect(el.shadowRoot!.querySelector('.empty')!.textContent).to.equal('Aucun résultat');
+});
+
+it('resolves the overflow indicator through .strings, interpolating {n}, when overflowText is unset', async () => {
+  const el = (await fixture(
+    html`<lyra-combobox max-render="3" .strings=${{ comboboxOverflow: '+{n} de plus' }}></lyra-combobox>`,
+  )) as LyraCombobox;
+  for (let i = 0; i < 10; i++) {
+    const opt = document.createElement('lyra-option');
+    opt.value = `${i}`;
+    opt.textContent = `Item ${i}`;
+    el.appendChild(opt);
+  }
+  el.open = true;
+  await el.updateComplete;
+
+  expect(el.shadowRoot!.querySelector('[part="option-overflow"]')!.textContent).to.contain('+7 de plus');
 });
 
 it('disables the combobox when its containing fieldset is disabled', async () => {

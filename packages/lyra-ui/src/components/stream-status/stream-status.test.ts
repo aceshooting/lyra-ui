@@ -398,6 +398,21 @@ it('never arms a timer for a non-positive stall-threshold-ms', async () => {
   expect(el.phase).to.equal('streaming');
 });
 
+it('caps an absurdly large stall-threshold-ms at the browser timer ceiling instead of overflowing into an near-immediate stall', async () => {
+  // `setTimeout` takes a 32-bit signed-int delay under the hood -- a raw value above
+  // MAX_TIMEOUT_MS (2_147_483_647) overflows and gets silently coerced down to ~1ms in every
+  // engine this library targets, which would fire `lyra-stall` almost instantly instead of after
+  // the (much longer) delay the host actually asked for. finiteDuration's cap prevents that.
+  const el = (await fixture(
+    html`<lyra-stream-status phase="streaming" stall-threshold-ms="9007199254740991"></lyra-stream-status>`,
+  )) as LyraStreamStatus;
+  let stalled = false;
+  el.addEventListener('lyra-stall', () => (stalled = true));
+  await aTimeout(80);
+  expect(stalled, 'an uncapped delay would have overflowed and fired within a few ms').to.be.false;
+  expect(el.phase).to.equal('streaming');
+});
+
 it('is accessible in the default idle state', async () => {
   const el = (await fixture(html`<lyra-stream-status></lyra-stream-status>`)) as LyraStreamStatus;
   await expect(el).to.be.accessible();

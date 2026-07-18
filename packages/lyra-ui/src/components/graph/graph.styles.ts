@@ -26,8 +26,12 @@ export const styles = css`
   }
   [part='tooltip'] {
     position: absolute;
-    inset-inline-start: 0;
-    inset-block-start: 0;
+    /* Physical left/top on purpose: the inline position written on hover is a physical offset
+       derived from getBoundingClientRect(), and it targets these same physical properties. A
+       logical inset-inline-start would compute to right under RTL, leaving both edges pinned
+       (stretching the box) once the inline left lands on top of it. */
+    left: 0;
+    top: 0;
     pointer-events: none;
     background: var(--lyra-color-surface);
     color: var(--lyra-color-text);

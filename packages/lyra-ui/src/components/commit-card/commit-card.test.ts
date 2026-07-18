@@ -82,6 +82,24 @@ describe('lyra-commit-card', () => {
     expect(time.getAttribute('datetime')).to.be.a('string').and.not.equal('');
   });
 
+  it('omits the time segment (never throws) for a non-finite timestamp, and clamps a negative one to epoch 0', async () => {
+    const nonFinite = (await fixture(
+      html`<lyra-commit-card .timestamp=${Number.NaN}></lyra-commit-card>`,
+    )) as LyraCommitCard;
+    // `new Date(NaN).toISOString()` throws a RangeError -- fixture()/updateComplete resolving at
+    // all (rather than rejecting) is itself proof render() didn't hit that path.
+    await nonFinite.updateComplete;
+    expect(nonFinite.shadowRoot!.querySelector('[part="time"]')).to.not.exist;
+
+    const negative = (await fixture(
+      html`<lyra-commit-card .timestamp=${-5000}></lyra-commit-card>`,
+    )) as LyraCommitCard;
+    await negative.updateComplete;
+    const time = negative.shadowRoot!.querySelector('[part="time"] time')!;
+    expect(time).to.exist;
+    expect(time.getAttribute('datetime')).to.equal(new Date(0).toISOString());
+  });
+
   it('is accessible with hash, message, author, timestamp, and files', async () => {
     const el = (await fixture(html`
       <lyra-commit-card

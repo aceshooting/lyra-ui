@@ -2,6 +2,7 @@ import { html, nothing, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { LyraElement } from '../../internal/lyra-element.js';
 import { safeMediaSrc } from '../../internal/safe-url.js';
+import { finiteRange } from '../../internal/numbers.js';
 import { styles } from './zoomable-frame.styles.js';
 
 export interface LyraZoomableFrameEventMap {
@@ -42,20 +43,35 @@ export class LyraZoomableFrame extends LyraElement<LyraZoomableFrameEventMap> {
   @property() alt = '';
   @property({ attribute: 'aria-label' }) accessibleLabel: string | null = null;
 
-  private normalizedBounds(): { min: number; max: number; step: number } {
-    const min = Number.isFinite(this.minZoom) ? Math.max(0.01, this.minZoom) : 0.5;
-    const max = Number.isFinite(this.maxZoom) ? Math.max(min, this.maxZoom) : Math.max(min, 4);
-    const step = Number.isFinite(this.zoomStep) && this.zoomStep > 0 ? this.zoomStep : 0.25;
-    return { min, max, step };
+  /** `minZoom`/`maxZoom` normalized to finite, positive scale bounds before any zoom math -- an
+   *  invalid attribute value would otherwise flow straight into the stepped-zoom clamp below,
+   *  producing `NaN` instead of falling back to a sane default. Bounds mirror the pan/zoom
+   *  convention already established for `<lyra-flow-canvas>`/`<lyra-graph>`. */
+  private get safeMinZoom(): number {
+    return finiteRange(this.minZoom, 0.5, 0.01, 1000);
+  }
+  private get safeMaxZoom(): number {
+    return finiteRange(this.maxZoom, 4, this.safeMinZoom, 1000);
   }
 
-  private normalizedZoom(): number {
-    const { min, max } = this.normalizedBounds();
-    return Math.min(max, Math.max(min, Number.isFinite(this.zoom) ? this.zoom : 1));
+  /** `zoomStep` normalized to a finite, strictly-positive increment -- a zero/negative/non-finite
+   *  step would otherwise stall `zoomIn`/`zoomOut` (no-op or reverse direction) instead of clamping
+   *  to a usable floor. `0.01` matches `setZoom()`'s own rounding grain (`Math.round(x * 100) /
+   *  100`), so the floor itself always produces a visible zoom change instead of one the final
+   *  rounding silently erases. */
+  private get safeZoomStep(): number {
+    return finiteRange(this.zoomStep, 0.25, 0.01, 1000);
+  }
+
+  /** The current `zoom`, normalized to a finite value clamped into `[safeMinZoom, safeMaxZoom]`. */
+  private get safeZoom(): number {
+    return finiteRange(this.zoom, 1, this.safeMinZoom, this.safeMaxZoom);
   }
 
   private setZoom(value: number): void {
-    const { min, max, step } = this.normalizedBounds();
+    const min = this.safeMinZoom;
+    const max = this.safeMaxZoom;
+    const step = this.safeZoomStep;
     const stepped = Math.round(value / step) * step;
     const next = Math.min(max, Math.max(min, Math.round(stepped * 100) / 100));
     if (next === this.zoom) return;
@@ -63,8 +79,8 @@ export class LyraZoomableFrame extends LyraElement<LyraZoomableFrameEventMap> {
     this.emit('lyra-zoom-change', { zoom: next });
   }
 
-  zoomIn = (): void => this.setZoom(this.normalizedZoom() + this.normalizedBounds().step);
-  zoomOut = (): void => this.setZoom(this.normalizedZoom() - this.normalizedBounds().step);
+  zoomIn = (): void => this.setZoom(this.safeZoom + this.safeZoomStep);
+  zoomOut = (): void => this.setZoom(this.safeZoom - this.safeZoomStep);
   /** Resets zoom to 1 only -- deliberately leaves the viewport's native scroll offset
    *  untouched, so a consumer relying on "reset zoom but keep my pan position" (a legitimate
    *  photo-viewer pattern) doesn't regress. Backs the built-in reset button and the `0` keyboard
@@ -93,11 +109,12 @@ export class LyraZoomableFrame extends LyraElement<LyraZoomableFrameEventMap> {
   };
 
   render(): TemplateResult {
-    const zoom = this.normalizedZoom();
-    const { min, max } = this.normalizedBounds();
+    const zoom = this.safeZoom;
+    const min = this.safeMinZoom;
+    const max = this.safeMaxZoom;
     const label = this.accessibleLabel || this.localize('zoomableFrameLabel');
     return html`<div part="base" role="region" aria-label=${label}>
-      <div part="viewport" tabindex="0" @keydown=${this.onViewportKeyDown}>
+      <div part="viewport" role="group" aria-label=${label} tabindex="0" @keydown=${this.onViewportKeyDown}>
         <div part="content" data-zoom=${String(zoom)} style="--lyra-zoomable-frame-zoom: ${zoom}">
           ${this.src ? html`<img src=${safeMediaSrc(this.src) ?? ''} alt=${this.alt} />` : html`<slot></slot>`}
         </div>

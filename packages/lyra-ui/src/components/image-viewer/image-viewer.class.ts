@@ -11,6 +11,7 @@ import type {
 } from '../document-viewer/anchors.js';
 import { safeMediaSrc } from '../../internal/safe-url.js';
 import { srOnly } from '../../internal/a11y.js';
+import { finiteNumber } from '../../internal/numbers.js';
 import type { LyraZoomableFrame } from '../zoomable-frame/zoomable-frame.class.js';
 import type { LyraLiveRegion } from '../live-region/live-region.class.js';
 import '../zoomable-frame/zoomable-frame.js';
@@ -117,6 +118,7 @@ export class LyraImageViewer extends DocumentAnchorTarget(LyraImageViewerBase) {
    *  frame's inline size, `actual` shows the image at its natural pixel dimensions. */
   @property({ reflect: true }) fit: ImageFit = 'contain';
   /** Multiplier over the fit-derived base scale, delegated to the embedded zoomable-frame. */
+  // numeric-guard-exempt: pure pass-through to <lyra-zoomable-frame>, which already normalizes it via its own safeZoom
   @property({ type: Number, reflect: true }) zoom = 1;
   /** Clockwise rotation in 90-degree steps. */
   @property({ type: Number, reflect: true }) rotation: ImageRotation = 0;
@@ -133,6 +135,19 @@ export class LyraImageViewer extends DocumentAnchorTarget(LyraImageViewerBase) {
   @query('lyra-live-region') private liveRegion?: LyraLiveRegion;
   @query('[part="image-wrapper"]') private wrapperEl?: HTMLElement;
 
+  /** `rotation` normalized to one of the four right-angle steps this component actually supports
+   *  (`0`/`90`/`180`/`270`) -- `rotate()`'s own `% 360` step only ever produces one of these four
+   *  values from an already-valid `rotation`, but a directly-assigned `rotation` (attribute or
+   *  property) isn't guaranteed to be: a non-finite/negative/non-multiple-of-90 value would
+   *  otherwise reach the CSS `rotate(${rotation}deg)` transform and
+   *  `screenPercentToImagePercent()`'s right-angle-only coordinate math unnormalized. Rounds to
+   *  the nearest right angle, then wraps into `[0, 360)`. */
+  private get safeRotation(): ImageRotation {
+    const degrees = finiteNumber(this.rotation, 0);
+    const steps = Math.round(degrees / 90);
+    return ((((steps % 4) + 4) % 4) * 90) as ImageRotation;
+  }
+
   protected willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed); // reaches DocumentAnchorTarget's own willUpdate (declarative `anchor`)
     if (changed.has('src')) {
@@ -143,7 +158,7 @@ export class LyraImageViewer extends DocumentAnchorTarget(LyraImageViewerBase) {
 
   protected updated(changed: PropertyValues): void {
     super.updated(changed);
-    if (changed.has('rotation') && changed.get('rotation') !== undefined) this.emit('lyra-rotation-change', { rotation: this.rotation });
+    if (changed.has('rotation') && changed.get('rotation') !== undefined) this.emit('lyra-rotation-change', { rotation: this.safeRotation });
     if (changed.has('fit') && changed.get('fit') !== undefined) this.emit('lyra-fit-change', { fit: this.fit });
     if (changed.has('annotatable') && this.annotatable && changed.get('annotatable') !== undefined) {
       this.liveRegion?.announce(this.localize('imageViewerAnnotationHint'), { force: true });
@@ -155,7 +170,7 @@ export class LyraImageViewer extends DocumentAnchorTarget(LyraImageViewerBase) {
   resetZoom = (): void => this.frameEl?.resetZoom();
 
   rotate(): void {
-    this.rotation = ((this.rotation + 90) % 360) as ImageRotation;
+    this.rotation = ((this.safeRotation + 90) % 360) as ImageRotation;
   }
 
   protected async applyAnchor(anchor: LyraAnchor): Promise<boolean> {
@@ -271,7 +286,7 @@ export class LyraImageViewer extends DocumentAnchorTarget(LyraImageViewerBase) {
     const rect = this.wrapperEl.getBoundingClientRect();
     const px = clamp(((event.clientX - rect.left) / rect.width) * 100, 0, 100);
     const py = clamp(((event.clientY - rect.top) / rect.height) * 100, 0, 100);
-    const origin = screenPercentToImagePercent(px, py, this.rotation);
+    const origin = screenPercentToImagePercent(px, py, this.safeRotation);
     this.pointerOrigin = origin;
     this.pointerDraftId = event.pointerId;
     this.wrapperEl.setPointerCapture(event.pointerId);
@@ -284,7 +299,7 @@ export class LyraImageViewer extends DocumentAnchorTarget(LyraImageViewerBase) {
     const rect = this.wrapperEl.getBoundingClientRect();
     const px = clamp(((event.clientX - rect.left) / rect.width) * 100, 0, 100);
     const py = clamp(((event.clientY - rect.top) / rect.height) * 100, 0, 100);
-    const point = screenPercentToImagePercent(px, py, this.rotation);
+    const point = screenPercentToImagePercent(px, py, this.safeRotation);
     const x = Math.min(this.pointerOrigin.x, point.x);
     const y = Math.min(this.pointerOrigin.y, point.y);
     const width = Math.abs(point.x - this.pointerOrigin.x);
@@ -308,6 +323,10 @@ export class LyraImageViewer extends DocumentAnchorTarget(LyraImageViewerBase) {
       (h): h is LyraHighlight & { anchor: { kind: 'region'; rect: ImageRegionRect } } => h.anchor.kind === 'region',
     );
     if (!regionHighlights.length) return nothing;
+    // Region rects are physical percent-of-image coordinates and the raster underneath never
+    // mirrors, so position with physical left/top -- logical inset-inline-start would flip the
+    // overlay under RTL while the image stays put. This also keeps the boxes consistent with the
+    // pointer math (clientX - rect.left) and the physical-arrow keyboard model above.
     return html`<div part="highlight-layer" role="group" aria-label=${this.localize('imageViewerHighlightsLabel')}>
       ${regionHighlights.map(
         (h, index) => html`
@@ -316,7 +335,7 @@ export class LyraImageViewer extends DocumentAnchorTarget(LyraImageViewerBase) {
           type="button"
           data-tone=${h.tone ?? 'accent'}
           ?data-active=${this.activeHighlightId === h.id}
-          style="inset-inline-start:${h.anchor.rect.x}%;inset-block-start:${h.anchor.rect.y}%;inline-size:${h.anchor.rect.width}%;block-size:${h.anchor.rect.height}%"
+          style="left:${h.anchor.rect.x}%;top:${h.anchor.rect.y}%;width:${h.anchor.rect.width}%;height:${h.anchor.rect.height}%"
           aria-label=${h.label || this.localize('imageViewerUnlabeledHighlight', undefined, { index: index + 1 })}
           @click=${() => this.onHighlightActivate(h.id)}
         >${h.label ? html`<span part="highlight-label">${h.label}</span>` : nothing}</button>
@@ -327,7 +346,9 @@ export class LyraImageViewer extends DocumentAnchorTarget(LyraImageViewerBase) {
 
   private renderDraft(): TemplateResult | typeof nothing {
     if (!this.draft) return nothing;
-    return html`<div part="annotation-box" style="inset-inline-start:${this.draft.x}%;inset-block-start:${this.draft.y}%;inline-size:${this.draft.width}%;block-size:${this.draft.height}%"></div>`;
+    // Physical left/top for the same reason as renderHighlights(): the draft's x/y come from
+    // physical pointer/arrow-key math over a non-mirroring raster.
+    return html`<div part="annotation-box" style="left:${this.draft.x}%;top:${this.draft.y}%;width:${this.draft.width}%;height:${this.draft.height}%"></div>`;
   }
 
   private renderBody(): TemplateResult {
@@ -342,7 +363,7 @@ export class LyraImageViewer extends DocumentAnchorTarget(LyraImageViewerBase) {
       <div
         part="image-wrapper"
         tabindex=${this.annotatable ? '0' : '-1'}
-        style="transform:rotate(${this.rotation}deg)"
+        style="transform:rotate(${this.safeRotation}deg)"
         @keydown=${this.onWrapperKeyDown}
         @pointerdown=${this.onWrapperPointerDown}
         @pointermove=${this.onWrapperPointerMove}

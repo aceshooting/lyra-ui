@@ -37,11 +37,9 @@ it("uses a type's own color for its swatch when set, and a palette fallback othe
   expect(swatches[1]!.getAttribute('fill') ?? swatches[1]!.querySelector('[fill]')?.getAttribute('fill')).to.equal(
     '#7c3aed',
   );
-  // 'person' has no explicit color -- falls back to the categorical palette. Family J's
-  // `lyra-graph` has landed by the time this test runs, so `--lyra-graph-cat-1` now resolves to
-  // its real token value (tokens.styles.ts) rather than this component's own hardcoded
-  // FALLBACK_PALETTE[0] -- exactly the "reads the real tokens once they land" behavior the plan's
-  // Implementation Note 2 calls out.
+  // 'person' has no explicit color -- falls back to the categorical palette. The design tokens
+  // define `--lyra-graph-cat-1` (tokens.styles.ts), so the computed style resolves to that real
+  // token value rather than this component's own hardcoded FALLBACK_PALETTE[0].
   const personFill = swatches[0]!.getAttribute('fill') ?? swatches[0]!.querySelector('[fill]')?.getAttribute('fill');
   expect(personFill).to.equal('#8250df');
 });

@@ -55,7 +55,18 @@ export function hullCentroidX(hull: HullPoint[]): number {
   return hull.reduce((sum, p) => sum + p.x, 0) / hull.length;
 }
 
+/**
+ * Lowest (minimum) y across `hull`'s vertices, or 0 for an empty hull. A plain scan, not
+ * `Math.min(...hull.map(...))` -- spreading a large array as call arguments throws `RangeError:
+ * Maximum call stack size exceeded` once the engine's argument-list limit is exceeded (verified at
+ * ~150k+ elements). Hull-vertex counts are practically bounded by `lyra-graph`'s own ~5,000-node
+ * ceiling, but this mirrors heatmap-scale.ts's `minMax()` precedent for consistency.
+ */
 export function hullTopY(hull: HullPoint[]): number {
   if (!hull.length) return 0;
-  return Math.min(...hull.map((p) => p.y));
+  let top = hull[0]!.y;
+  for (let i = 1; i < hull.length; i++) {
+    if (hull[i]!.y < top) top = hull[i]!.y;
+  }
+  return top;
 }

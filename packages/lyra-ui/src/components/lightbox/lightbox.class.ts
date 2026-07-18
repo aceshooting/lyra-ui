@@ -5,6 +5,7 @@ import { lockScroll } from '../../internal/scroll-lock.js';
 import { activateOverlay, type OverlayHandle } from '../../internal/overlay-manager.js';
 import { nextId, srOnly } from '../../internal/a11y.js';
 import { closeIcon, chevronIcon } from '../../internal/icons.js';
+import { finiteCount } from '../../internal/numbers.js';
 import { styles } from './lightbox.styles.js';
 import '../zoomable-frame/zoomable-frame.class.js';
 import type { LyraZoomableFrame } from '../zoomable-frame/zoomable-frame.class.js';
@@ -156,12 +157,15 @@ export class LyraLightbox extends LyraElement<LyraLightboxEventMap> {
 
   /** Passed through to the embedded `<lyra-zoomable-frame>` as `.minZoom`. Same default as
    *  `<lyra-zoomable-frame>` itself. */
+  // numeric-guard-exempt: pure pass-through to <lyra-zoomable-frame>, which already normalizes it via its own safeMinZoom
   @property({ type: Number, attribute: 'min-zoom' }) minZoom = 0.5;
 
   /** Passed through to the embedded `<lyra-zoomable-frame>` as `.maxZoom`. */
+  // numeric-guard-exempt: pure pass-through to <lyra-zoomable-frame>, which already normalizes it via its own safeMaxZoom
   @property({ type: Number, attribute: 'max-zoom' }) maxZoom = 4;
 
   /** Passed through to the embedded `<lyra-zoomable-frame>` as `.zoomStep`. */
+  // numeric-guard-exempt: pure pass-through to <lyra-zoomable-frame>, which already normalizes it via its own safeZoomStep
   @property({ type: Number, attribute: 'zoom-step' }) zoomStep = 0.25;
 
   /** Host-level `aria-label` override for the panel's accessible name -- wins over the
@@ -178,13 +182,12 @@ export class LyraLightbox extends LyraElement<LyraLightboxEventMap> {
   private overlay?: OverlayHandle;
   private readonly captionId = nextId('lightbox-caption');
 
-  /** Clamped, always-valid index for rendering -- never throws on an out-of-range, negative, or
-   *  non-integer `index`. */
+  /** Clamped, always-valid index for rendering -- never throws on an out-of-range, negative,
+   *  non-integer, or non-finite `index`. */
   private currentIndex(): number {
     const count = this.images.length;
     if (count === 0) return 0;
-    const raw = Number.isFinite(this.index) ? Math.trunc(this.index) : 0;
-    return Math.min(count - 1, Math.max(0, raw));
+    return finiteCount(this.index, 0, count - 1);
   }
 
   // Silently re-syncs `index` onto the clamped value with no event -- mirrors
@@ -236,6 +239,15 @@ export class LyraLightbox extends LyraElement<LyraLightboxEventMap> {
     if (changed.has('images') || changed.has('index')) {
       this.syncImages();
     }
+    // Purely derived from already-current state (images/the just-synced index/strings/locale)
+    // with no DOM measurement involved, so this belongs here, not in updated(): setting `liveText`
+    // (a reactive property) from updated()/firstUpdated() schedules a *second* update on top of
+    // the one that just finished, which Lit's dev-mode console flags ("scheduled an update ...
+    // after an update completed") -- mirrors lyra-split's/lyra-virtual-list's identical
+    // willUpdate()-not-updated() fix for their own derived-property writes.
+    if (changed.has('index') || changed.has('images') || changed.has('strings') || changed.has('locale')) {
+      this.updateLiveRegion();
+    }
     if (changed.has('open')) {
       if (this.open) {
         this.activateOverlay();
@@ -255,9 +267,6 @@ export class LyraLightbox extends LyraElement<LyraLightboxEventMap> {
     // keep working past the first navigation.
     if (changed.has('index') && this.open) {
       this.frameEl?.resetView();
-    }
-    if (changed.has('index') || changed.has('images') || changed.has('strings') || changed.has('locale')) {
-      this.updateLiveRegion();
     }
   }
 

@@ -6,6 +6,7 @@ import { srOnly } from '../../internal/a11y.js';
 import { safeFetchUrl, safeLinkHref, safeMediaSrc } from '../../internal/safe-url.js';
 import { isAbortError, isResourceLimitError, readResponseText } from '../../internal/resource-loader.js';
 import { prefersReducedMotion } from '../../internal/motion.js';
+import { finiteRange } from '../../internal/numbers.js';
 import { styles } from './document-preview.styles.js';
 import '../zoomable-frame/zoomable-frame.js';
 import type { LyraAnchor, LyraHighlight } from '../document-viewer/anchors.js';
@@ -301,7 +302,11 @@ export class LyraDocumentPreview extends LyraElement<LyraDocumentPreviewEventMap
   private renderSpinner(label: string, progressValue?: number): TemplateResult {
     const hasProgress = progressValue != null && Number.isFinite(progressValue);
     if (hasProgress) {
-      const clamped = Math.min(100, Math.max(0, progressValue));
+      // The host-supplied `progress` property (passed in here as `progressValue`) is already
+      // known finite at this point (`hasProgress` above), but an out-of-range override (e.g.
+      // `progress="150"`) would otherwise render an invalid `aria-valuenow`/bar width --
+      // finiteRange() clamps it into the documented 0-100 contract instead.
+      const clamped = finiteRange(progressValue, 0, 0, 100);
       const rounded = Math.round(clamped);
       return html`
         <div
@@ -373,6 +378,9 @@ export class LyraDocumentPreview extends LyraElement<LyraDocumentPreviewEventMap
         h.anchor.kind === 'region',
     );
     if (!regionHighlights.length) return nothing;
+    // Region rects are physical percent-of-image coordinates and the previewed image never
+    // mirrors, so position with physical left/top -- logical inset-inline-start would flip the
+    // overlay under RTL while the image underneath stays put.
     return html`<div part="highlight-layer">
       ${regionHighlights.map(
         (h) => html`<div
@@ -380,7 +388,7 @@ export class LyraDocumentPreview extends LyraElement<LyraDocumentPreviewEventMap
           data-id=${h.id}
           data-tone=${h.tone ?? 'accent'}
           ?data-active=${h.id === this.activeHighlightId}
-          style="inset-inline-start:${h.anchor.rect.x}%;inset-block-start:${h.anchor.rect.y}%;inline-size:${h.anchor.rect.width}%;block-size:${h.anchor.rect.height}%"
+          style="left:${h.anchor.rect.x}%;top:${h.anchor.rect.y}%;width:${h.anchor.rect.width}%;height:${h.anchor.rect.height}%"
           tabindex="0"
           role="button"
           aria-label=${h.label || this.localize('viewerHighlightLabel')}

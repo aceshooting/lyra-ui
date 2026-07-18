@@ -90,6 +90,29 @@ describe('level-driven amplitude', () => {
     const amps = (el as unknown as { currentAmplitudes: (nowMs: number) => number[] }).currentAmplitudes(0);
     expect(amps.every((a) => a === 0.5)).to.be.true; // gain is applied at draw time, not baked into the amplitude array
   });
+
+  it('clamps an out-of-range level into [0, 1], and a NaN level still counts as level-driven but clamps to 0', async () => {
+    const tooHigh = (await fixture(html`<lyra-audio-visualizer level="5"></lyra-audio-visualizer>`)) as LyraAudioVisualizer;
+    expect((tooHigh as unknown as { effectiveLevel: number | null }).effectiveLevel).to.equal(1);
+
+    const negative = (await fixture(html`<lyra-audio-visualizer level="-5"></lyra-audio-visualizer>`)) as LyraAudioVisualizer;
+    expect((negative as unknown as { effectiveLevel: number | null }).effectiveLevel).to.equal(0);
+
+    const nan = (await fixture(html`<lyra-audio-visualizer .level=${NaN}></lyra-audio-visualizer>`)) as LyraAudioVisualizer;
+    // A non-null-but-NaN level (e.g. an unparsable attribute) still means "an external level is
+    // set" -- not the ambient/no-signal case -- so it should keep driving amplitude, just safely
+    // clamped to 0 rather than poisoning the draw with NaN.
+    expect((nan as unknown as { effectiveLevel: number | null }).effectiveLevel).to.equal(0);
+    const amps = (nan as unknown as { currentAmplitudes: (nowMs: number) => number[] }).currentAmplitudes(0);
+    expect(amps.every((a) => a === 0)).to.be.true;
+  });
+
+  it('falls back to gain=1 for a NaN gain instead of poisoning the drawn amplitude with NaN', async () => {
+    const el = (await fixture(
+      html`<lyra-audio-visualizer level="0.5" .gain=${NaN}></lyra-audio-visualizer>`,
+    )) as LyraAudioVisualizer;
+    expect((el as unknown as { effectiveGain: number }).effectiveGain).to.equal(1);
+  });
 });
 
 describe('reduced motion behaves at 320px', () => {
@@ -102,6 +125,55 @@ describe('reduced motion behaves at 320px', () => {
       ></lyra-audio-visualizer>`,
     )) as LyraAudioVisualizer;
     expect(el.shadowRoot!.querySelector('canvas')).to.exist;
+  });
+});
+
+describe('draw-loop scheduling', () => {
+  const nextFrame = () => new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+  const rafId = (el: LyraAudioVisualizer) => (el as unknown as { rafId?: number }).rafId;
+  // Waits until no frame has been scheduled for two consecutive frames (the initial
+  // ResizeObserver delivery legitimately schedules one extra draw after the first frame), or
+  // gives up after `frames` frames so an always-running loop still fails the assertion below.
+  const settle = async (el: LyraAudioVisualizer, frames = 20): Promise<void> => {
+    for (let i = 0; i < frames; i++) {
+      await nextFrame();
+      if (rafId(el) === undefined) {
+        await nextFrame();
+        if (rafId(el) === undefined) return;
+      }
+    }
+  };
+
+  it('parks the animation loop after drawing the static idle pattern', async () => {
+    const el = (await fixture(html`<lyra-audio-visualizer state="idle"></lyra-audio-visualizer>`)) as LyraAudioVisualizer;
+    await settle(el);
+    expect(rafId(el)).to.be.undefined;
+    // The single settled draw still sized the backing store.
+    const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
+    expect(canvas.width).to.be.greaterThan(0);
+  });
+
+  it('parks the animation loop after drawing a constant level', async () => {
+    const el = (await fixture(
+      html`<lyra-audio-visualizer level="0.4" state="idle"></lyra-audio-visualizer>`,
+    )) as LyraAudioVisualizer;
+    await settle(el);
+    expect(rafId(el)).to.be.undefined;
+  });
+
+  it('resumes scheduling on a property change and keeps animating time-driven ambient states', async () => {
+    const el = (await fixture(html`<lyra-audio-visualizer state="idle"></lyra-audio-visualizer>`)) as LyraAudioVisualizer;
+    await settle(el);
+    expect(rafId(el)).to.be.undefined;
+
+    el.state = 'thinking';
+    await el.updateComplete;
+    expect(rafId(el)).to.not.be.undefined; // a frame is scheduled again
+    if (!matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      await nextFrame();
+      await nextFrame();
+      expect(rafId(el)).to.not.be.undefined; // the ambient sweep keeps the loop alive
+    }
   });
 });
 

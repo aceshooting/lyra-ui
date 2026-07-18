@@ -144,6 +144,24 @@ it('restarts the timer when duration changes from disabled (0) back to a positiv
   expect(el.isConnected).to.be.false;
 });
 
+it('keeps an explicit Infinity duration meaning "never auto-dismiss" instead of coercing it into a large finite timeout', async () => {
+  const el = (await fixture(html`<lyra-toast-item duration="Infinity">msg</lyra-toast-item>`)) as LyraToastItem;
+  expect((el as any).safeDuration).to.equal(Infinity);
+  await aTimeout(60);
+  expect(el.isConnected, 'Infinity must never schedule a real dismiss timer').to.be.true;
+});
+
+it('self-heals a NaN duration to the constructed default, and a negative duration to the same disabled state as 0', async () => {
+  const nanEl = (await fixture(html`<lyra-toast-item duration="NaN">msg</lyra-toast-item>`)) as LyraToastItem;
+  expect((nanEl as any).safeDuration).to.equal(5000);
+
+  const negativeEl = (await fixture(html`<lyra-toast-item duration="-50">msg</lyra-toast-item>`)) as LyraToastItem;
+  expect((negativeEl as any).safeDuration).to.equal(0);
+  await aTimeout(30);
+  expect(negativeEl.isConnected, 'a negative duration clamps to 0, which this component already treats as disabled').to.be
+    .true;
+});
+
 it('resolves hide() even if the element disconnects mid-hide-animation', async () => {
   const el = (await fixture(html`<lyra-toast-item>msg</lyra-toast-item>`)) as LyraToastItem;
   const hidden = el.hide();

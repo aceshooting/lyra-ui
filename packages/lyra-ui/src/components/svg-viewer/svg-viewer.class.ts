@@ -135,6 +135,9 @@ export class LyraSvgViewer extends LyraElement<LyraSvgViewerEventMap> {
         h.anchor.kind === 'region',
     );
     if (!regionHighlights.length) return nothing;
+    // Region rects are physical percent-of-render coordinates and the rendered SVG never
+    // mirrors, so position with physical left/top -- logical inset-inline-start would flip the
+    // overlay under RTL while the render underneath stays put.
     return html`<div part="highlight-layer">
       ${regionHighlights.map(
         (h) => html`<div
@@ -142,7 +145,7 @@ export class LyraSvgViewer extends LyraElement<LyraSvgViewerEventMap> {
           data-id=${h.id}
           data-tone=${h.tone ?? 'accent'}
           ?data-active=${h.id === this.activeHighlightId}
-          style="inset-inline-start:${h.anchor.rect.x}%;inset-block-start:${h.anchor.rect.y}%;inline-size:${h.anchor.rect.width}%;block-size:${h.anchor.rect.height}%"
+          style="left:${h.anchor.rect.x}%;top:${h.anchor.rect.y}%;width:${h.anchor.rect.width}%;height:${h.anchor.rect.height}%"
           tabindex="0"
           role="button"
           aria-label=${h.label || this.localize('viewerHighlightLabel')}

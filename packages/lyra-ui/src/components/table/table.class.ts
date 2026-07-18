@@ -10,6 +10,7 @@ import { repeat } from 'lit/directives/repeat.js';
 import { styleMap } from 'lit/directives/style-map.js';
 import { LyraElement } from '../../internal/lyra-element.js';
 import { isRtl } from '../../internal/rtl.js';
+import { finiteCount, finiteInteger } from '../../internal/numbers.js';
 import { styles } from './table.styles.js';
 import { chevronIcon } from '../../internal/icons.js';
 import { minMax } from '../heatmap/heatmap-scale.js';
@@ -450,12 +451,19 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
     // A reconnect re-creates the observer above but the shadow root content
     // survives across disconnect/reconnect (Lit doesn't tear down the shadow
     // root) — re-observe [part='base'] here if it already exists from before
-    // the disconnect. On the very first mount connectedCallback() fires
+    // the disconnect, and the sticky-column header cells along with it
+    // (disconnectedCallback() cleared observedHeaders, and observeHeaders()
+    // otherwise only runs from updated(), which a pure DOM move never
+    // triggers — a header resize between reconnect and the next update would
+    // go unnoticed). On the very first mount connectedCallback() fires
     // *before* Lit's first render, so [part='base'] doesn't exist yet and
     // this is a no-op; updated() below (which always runs after render, first
     // paint included) covers that case instead.
     const base = this.renderRoot?.querySelector('[part="base"]');
-    if (base) this.observeBase(base);
+    if (base) {
+      this.observeBase(base);
+      this.observeHeaders();
+    }
   }
 
   disconnectedCallback(): void {
@@ -525,36 +533,72 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
     return this.rowKey ? this.rowKey(row) : index;
   }
 
-  /** Memoized for the duration of a single update cycle — `willUpdate()` invalidates the cache, but
-   *  this method itself is read (directly or transitively, via `matchingTotalItems`/`pageCount`/
-   *  `appliedPage`/`renderedEntries()`) around a dozen times across one `willUpdate()` + `render()`
-   *  pass. Recomputing from scratch each time re-runs the `JSON.stringify()`-per-row default filter
-   *  that many times over; memoizing collapses that to a single pass per update. */
+  /** Memoized across update cycles and re-validated against the exact inputs the computation
+   *  reads — `rows` and `filter` by identity, the trimmed filter text, and (only when there is
+   *  text to case-fold at all) the effective locale. This method is read (directly or
+   *  transitively, via `matchingTotalItems`/`pageCount`/`appliedPage`/`renderedEntries()`) around
+   *  a dozen times across one `willUpdate()` + `render()` pass, and an *unrelated* reactive
+   *  update (a roving-tabindex move, an inline-editor open, ...) shouldn't re-run the
+   *  `JSON.stringify()`-per-row default filter over the full `rows` array even once — comparing
+   *  the recorded inputs instead of dropping the cache on every update keeps both cases to a
+   *  single filtering pass. The locale is compared as its resolved string, so a change that
+   *  arrives without a matching reactive-property key (an ancestor `lang` edit picked up on the
+   *  next update, `setLyraLocale()`'s keyless `requestUpdate()`) still recomputes. */
   private cachedMatchingEntries: Array<{ row: T; index: number }> | null = null;
+  private matchingEntriesInputs: {
+    rows: T[];
+    filter: ((row: T, text: string) => boolean) | undefined;
+    text: string;
+    locale: string;
+  } | null = null;
   private matchingEntries(): Array<{ row: T; index: number }> {
-    if (this.cachedMatchingEntries) return this.cachedMatchingEntries;
     const text = this.filterText.trim();
-    if (text === '') {
-      this.cachedMatchingEntries = this.rows.map((row, index) => ({ row, index }));
+    // The locale only affects case-folding, which only happens when there is
+    // filter text — skipping the read here keeps a locale change from
+    // invalidating an unfiltered cache.
+    const locale = text === '' ? '' : this.effectiveLocale;
+    const inputs = this.matchingEntriesInputs;
+    if (
+      this.cachedMatchingEntries !== null &&
+      inputs !== null &&
+      inputs.rows === this.rows &&
+      inputs.filter === this.filter &&
+      inputs.text === text &&
+      inputs.locale === locale
+    ) {
       return this.cachedMatchingEntries;
     }
-    const normalized = text.toLocaleLowerCase(this.effectiveLocale);
-    this.cachedMatchingEntries = this.rows.flatMap((row, index) => {
-      const matches = this.filter
-        ? this.filter(row, text)
-        : safeStringifyForFilter(row).toLocaleLowerCase(this.effectiveLocale).includes(normalized);
-      return matches ? [{ row, index }] : [];
-    });
-    return this.cachedMatchingEntries;
+    let entries: Array<{ row: T; index: number }>;
+    if (text === '') {
+      entries = this.rows.map((row, index) => ({ row, index }));
+    } else {
+      const normalized = text.toLocaleLowerCase(locale);
+      entries = this.rows.flatMap((row, index) => {
+        const matches = this.filter
+          ? this.filter(row, text)
+          : safeStringifyForFilter(row).toLocaleLowerCase(locale).includes(normalized);
+        return matches ? [{ row, index }] : [];
+      });
+    }
+    this.matchingEntriesInputs = { rows: this.rows, filter: this.filter, text, locale };
+    this.cachedMatchingEntries = entries;
+    return entries;
   }
 
+  /** Read-time-safe view of `pageSize` -- non-negative, finite, truncated to a whole item count.
+   *  Mirrors `<lyra-pagination>`'s own identically-named getter (this component composes that
+   *  primitive for the actual pagination UI in `render()`, but slices `rows` itself for client-mode
+   *  pagination, so it needs the same safe count independently). */
   private get normalizedPageSize(): number {
-    return Number.isFinite(this.pageSize) ? Math.max(0, Math.trunc(this.pageSize)) : 0;
+    return finiteCount(this.pageSize);
   }
 
+  /** `totalItems: -1` (the default) is a sentinel meaning "derive from filtered rows" -- normalize
+   *  first so a non-finite/garbage `totalItems` degrades to that same derived-count fallback
+   *  instead of propagating NaN, while a genuine non-negative value is still honored verbatim. */
   private get matchingTotalItems(): number {
-    if (Number.isFinite(this.totalItems) && this.totalItems >= 0) return Math.trunc(this.totalItems);
-    return this.matchingEntries().length;
+    const totalItems = finiteInteger(this.totalItems, -1);
+    return totalItems >= 0 ? totalItems : this.matchingEntries().length;
   }
 
   private get pageCount(): number {
@@ -562,10 +606,12 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
     return pageSize > 0 ? Math.ceil(this.matchingTotalItems / pageSize) : 0;
   }
 
+  /** Read-time-safe view of the controlled `page` property, clamped to `[1, pageCount]` -- mirrors
+   *  `<lyra-pagination>`'s own `currentPage` getter and, like `<lyra-av-player>`'s `currentTime`
+   *  setter, clamps against a dynamic, just-computed upper bound rather than a fixed one. */
   private get appliedPage(): number {
     if (this.pageCount === 0) return 1;
-    const page = Number.isFinite(this.page) ? Math.trunc(this.page) : 1;
-    return Math.min(this.pageCount, Math.max(1, page));
+    return finiteInteger(this.page, 1, 1, this.pageCount);
   }
 
   private renderedEntries(): Array<{ row: T; index: number }> {
@@ -614,7 +660,6 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
   }
 
   protected willUpdate(changed: PropertyValues): void {
-    this.cachedMatchingEntries = null;
     if (
       changed.has('rows') ||
       changed.has('rowKey') ||
@@ -645,10 +690,16 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
    *  laid-out `offsetWidth` of each earlier sticky column's header cell. */
   private stickyOffsets(): Map<string, number> {
     const offsets = new Map<string, number>();
-    const headerWidth = (key: string): number =>
-      [...this.renderRoot.querySelectorAll<HTMLElement>('th[data-col-key]')].find(
-        (el) => el.dataset.colKey === key,
-      )?.offsetWidth ?? 0;
+    // One DOM query, indexed by column key — the width lookup below runs once
+    // per sticky column, and re-querying every header cell for each lookup
+    // would be quadratic in column count. First cell wins on a duplicate key,
+    // matching a first-match linear scan over document order.
+    const headerWidths = new Map<string, number>();
+    for (const el of this.renderRoot.querySelectorAll<HTMLElement>('th[data-col-key]')) {
+      const key = el.dataset.colKey;
+      if (key !== undefined && !headerWidths.has(key)) headerWidths.set(key, el.offsetWidth);
+    }
+    const headerWidth = (key: string): number => headerWidths.get(key) ?? 0;
     // 'start' columns stack left-to-right in array order (unchanged from
     // today); 'end' columns stack right-to-left (reverse array order) so a
     // trailing sticky column sits flush against the edge and an earlier

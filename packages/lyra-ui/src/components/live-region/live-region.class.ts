@@ -2,6 +2,7 @@ import { html, type TemplateResult, type PropertyValues } from 'lit';
 import { property } from 'lit/decorators.js';
 import { LyraElement } from '../../internal/lyra-element.js';
 import { srOnly } from '../../internal/a11y.js';
+import { finiteDuration } from '../../internal/numbers.js';
 import { Announcer, type AnnounceOptions } from '../../internal/announcer.js';
 import { styles } from './live-region.styles.js';
 
@@ -87,20 +88,28 @@ export class LyraLiveRegion extends LyraElement {
   // here instead of silently dropping it.
   private pendingWrite?: string;
 
+  /** `throttleMs` normalized to a finite timer duration before it reaches `Announcer`'s own
+   *  `setTimeout(..., throttleMs)` call -- an invalid attribute value would otherwise schedule a
+   *  same-tick flush (NaN/negative both clamp to 0 per the `setTimeout` spec) or hit browsers'
+   *  32-bit `setTimeout` ceiling unpredictably (`Infinity`/an absurdly large value). */
+  private get safeThrottleMs(): number {
+    return finiteDuration(this.throttleMs, 500);
+  }
+
   constructor() {
     super();
     // Built in the constructor (not a class-field initializer) so it reads
     // `this.throttleMs` only after that property's own field initializer
     // has already run and set the declared default.
     this.announcer = new Announcer({
-      throttleMs: this.throttleMs,
+      throttleMs: this.safeThrottleMs,
       onFlush: (text) => this.write(text),
     });
   }
 
   protected updated(changed: PropertyValues): void {
     if (changed.has('throttleMs')) {
-      this.announcer.throttleMs = this.throttleMs;
+      this.announcer.throttleMs = this.safeThrottleMs;
     }
   }
 

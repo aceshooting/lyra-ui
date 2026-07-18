@@ -9,6 +9,12 @@ export const styles = css`
   [part='label'] { display: flex; justify-content: space-between; gap: var(--lyra-space-s); margin-block-end: var(--lyra-space-xs); color: var(--lyra-color-text); font-size: var(--lyra-font-size-sm); }
   [part='label'][hidden] { display: none; }
   @keyframes lyra-progress-slide { from { transform: translateX(-100%); } to { transform: translateX(250%); } }
+  /* The determinate fill mirrors for free (a block box anchors to the inline-start edge, the
+     physical right under RTL), but translateX is physical, so the indeterminate sweep needs
+     mirrored keyframes to travel end-to-start under RTL: the indicator's static position is
+     right-anchored there, so just-off-screen is +100% (right) through -250% (left). */
+  :host([indeterminate]:dir(rtl)) [part='indicator'] { animation-name: lyra-progress-slide-rtl; }
+  @keyframes lyra-progress-slide-rtl { from { transform: translateX(100%); } to { transform: translateX(-250%); } }
   @media (prefers-reduced-motion: reduce) { [part='indicator'] { transition: none; animation: none !important; } }
 `;
 

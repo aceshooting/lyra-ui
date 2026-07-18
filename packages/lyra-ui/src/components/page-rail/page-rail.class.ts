@@ -2,6 +2,7 @@ import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { ref } from 'lit/directives/ref.js';
 import { LyraElement } from '../../internal/lyra-element.js';
+import { finiteCount, finiteInteger, finiteRange } from '../../internal/numbers.js';
 import type { LyraHighlight, LyraHighlightTone } from '../document-viewer/anchors.js';
 import '../virtual-list/virtual-list.js';
 import '../skeleton/skeleton.js';
@@ -82,6 +83,15 @@ export class LyraPageRail extends LyraElement<LyraPageRailEventMap> {
     if (!this.hasUpdated || changed.has('viewer') || changed.has('for')) this.resolveViewer();
   }
 
+  connectedCallback(): void {
+    super.connectedCallback();
+    // disconnectedCallback unbinds the wired viewer on every disconnect, but willUpdate only
+    // rebinds on the first update or when `viewer`/`for` themselves change -- a bare reconnect
+    // (e.g. a reparent) schedules no update and changes neither property, so rebind here or the
+    // rail stays permanently unbound (page tracking stops; wired mode renders an empty rail).
+    if (this.hasUpdated) this.resolveViewer();
+  }
+
   disconnectedCallback(): void {
     super.disconnectedCallback();
     this.unbindViewer();
@@ -111,8 +121,32 @@ export class LyraPageRail extends LyraElement<LyraPageRailEventMap> {
     return (root.getElementById?.(this.for) as unknown as PageThumbnailSource | null) ?? null;
   }
 
+  /** `pageCount` normalized to a finite, non-negative integer before `effectivePageCount()`'s
+   *  mediated-mode fallback -- an invalid attribute value would otherwise reach `render()`'s
+   *  `Array.from({ length: count }, ...)` (a negative/NaN length throws) and every page-bounds
+   *  check derived from it. */
+  private get safePageCount(): number {
+    return finiteCount(this.pageCount, 0);
+  }
+
+  /** `page` normalized to a finite integer clamped into `[1, effectivePageCount()]` (or held at the
+   *  `1` default while no page count is known yet) -- guards `renderPageItem()`'s `aria-current`
+   *  comparison and the `lyra-virtual-list` `active-id` binding from an out-of-range/NaN value, e.g.
+   *  a consumer setting a stale mediated-mode `page` before also updating `page-count`. */
+  private get safePage(): number {
+    const count = this.effectivePageCount();
+    return finiteInteger(this.page, 1, 1, Math.max(1, count));
+  }
+
+  /** `thumbWidth` normalized to a finite, non-negative CSS px width before it reaches
+   *  `renderPageThumbnail()`'s `{ width }` option -- an invalid attribute value would otherwise ask
+   *  a wired viewer to rasterize a `NaN`/negative-width thumbnail. */
+  private get safeThumbWidth(): number {
+    return finiteRange(this.thumbWidth, 96, 0);
+  }
+
   private effectivePageCount(): number {
-    return this.boundViewer ? this.resolvedPageCount : this.pageCount;
+    return this.boundViewer ? this.resolvedPageCount : this.safePageCount;
   }
 
   private canvasRef(pageNumber: number): (el: Element | undefined) => void {
@@ -138,7 +172,7 @@ export class LyraPageRail extends LyraElement<LyraPageRailEventMap> {
     this.requestUpdate();
     let ok: boolean;
     try {
-      ok = await viewer.renderPageThumbnail(pageNumber, canvas, { width: this.thumbWidth });
+      ok = await viewer.renderPageThumbnail(pageNumber, canvas, { width: this.safeThumbWidth });
     } catch {
       // A rejected renderPageThumbnail() (decode error, detached canvas, resource exhaustion, ...)
       // is otherwise an unhandled rejection that leaves this page's skeleton spinning forever --
@@ -197,7 +231,7 @@ export class LyraPageRail extends LyraElement<LyraPageRailEventMap> {
         part="page"
         type="button"
         aria-label=${name}
-        aria-current=${this.page === number ? 'true' : nothing}
+        aria-current=${this.safePage === number ? 'true' : nothing}
         @click=${() => this.onPageActivate(number)}
       >
         <span part="thumbnail">
@@ -230,7 +264,7 @@ export class LyraPageRail extends LyraElement<LyraPageRailEventMap> {
           .items=${items}
           .renderItem=${this.renderPageItem}
           .keyFunction=${(item: unknown) => item as number}
-          .activeId=${this.page}
+          .activeId=${this.safePage}
         ></lyra-virtual-list>
       </div>
     `;

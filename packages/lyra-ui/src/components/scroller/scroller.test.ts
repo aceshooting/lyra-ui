@@ -73,4 +73,51 @@ describe('<lyra-scroller>', () => {
     const el = await fixture<LyraScroller>(html`<lyra-scroller label="Recent items"><span>Content</span></lyra-scroller>`);
     await expect(el).to.be.accessible();
   });
+
+  // -- numeric guard regressions (scrollStep) --
+
+  it('falls back to the viewport-percentage default instead of scrolling by NaN/Infinity when scrollStep is invalid', async () => {
+    const el = await fixture<LyraScroller>(html`
+      <lyra-scroller controls style="inline-size: 100px;">
+        <div style="inline-size: 400px;">wide content</div>
+      </lyra-scroller>
+    `);
+    const viewport = el.shadowRoot!.querySelector('[part="viewport"]') as HTMLElement;
+    const scrollBySpy: number[] = [];
+    viewport.scrollBy = ((opts: ScrollToOptions) => {
+      scrollBySpy.push(opts.left ?? 0);
+    }) as typeof viewport.scrollBy;
+
+    for (const scrollStep of [NaN, Infinity, -50]) {
+      (el as unknown as { scrollStep: number }).scrollStep = scrollStep;
+      const next = el.shadowRoot!.querySelector('[part~="next"]') as HTMLButtonElement;
+      next.click();
+    }
+
+    // Every call must fall through to the finite viewport-percentage default (80px for a 100px-wide
+    // viewport) -- never a NaN/Infinity/negative `left` reaching the real scrollBy().
+    expect(scrollBySpy).to.have.lengthOf(3);
+    for (const left of scrollBySpy) {
+      expect(Number.isFinite(left), String(left)).to.be.true;
+      expect(left).to.be.greaterThan(0);
+    }
+  });
+
+  it('honors a valid positive scrollStep as an explicit override amount', async () => {
+    const el = await fixture<LyraScroller>(html`
+      <lyra-scroller controls scroll-step="42" style="inline-size: 100px;">
+        <div style="inline-size: 400px;">wide content</div>
+      </lyra-scroller>
+    `);
+    const viewport = el.shadowRoot!.querySelector('[part="viewport"]') as HTMLElement;
+    let capturedLeft: number | undefined;
+    viewport.scrollBy = ((opts: ScrollToOptions) => {
+      capturedLeft = opts.left;
+    }) as typeof viewport.scrollBy;
+
+    const next = el.shadowRoot!.querySelector('[part~="next"]') as HTMLButtonElement;
+    next.click();
+
+    expect(capturedLeft).to.equal(42);
+  });
 });

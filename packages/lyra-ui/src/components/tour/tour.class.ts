@@ -9,7 +9,14 @@ import { nextId, hasRealContent } from '../../internal/a11y.js';
 import { place, trackRect } from '../../internal/positioner.js';
 import { rtlAwarePlacement } from '../../internal/rtl.js';
 import { prefersReducedMotion } from '../../internal/motion.js';
+import { finiteInteger, finiteNumber, finiteRange } from '../../internal/numbers.js';
 import { styles } from './tour.styles.js';
+
+/** Default distance (px) between the target and the popover -- see `LyraTour.distance`. */
+const DEFAULT_DISTANCE = 12;
+/** Default extra px between a target's own box and the spotlight cutout/ring -- see
+ *  `LyraTour.spotlightPadding`. */
+const DEFAULT_SPOTLIGHT_PADDING = 4;
 
 /**
  * Resolves the element a step spotlights/anchors to. A `string` is resolved via
@@ -209,7 +216,10 @@ export class LyraTour extends LyraElement<LyraTourEventMap> {
    *  component contract. Empty (the default) renders nothing. */
   @property({ attribute: false }) steps: TourStep[] = [];
 
-  /** Index of the currently active step, clamped to `[0, steps.length - 1]` by `goToStep()`. */
+  /** Index of the currently active step, clamped to `[0, steps.length - 1]` by `goToStep()` --
+   *  and, for a direct property/attribute assignment that bypasses that method (e.g. two-way
+   *  binding an external store, or a bad `active-index` attribute), normalized the same way in
+   *  `willUpdate()` below. */
   @property({ type: Number, reflect: true, attribute: 'active-index' }) activeIndex = 0;
 
   /** Tour-level default Floating UI placement, overridable per step via `TourStep.placement`. */
@@ -217,12 +227,12 @@ export class LyraTour extends LyraElement<LyraTourEventMap> {
 
   /** Distance (px) between the target and the popover, passed straight to Floating UI's
    *  `offset()` middleware -- a tour-level-only setting, mirroring `lyra-popover`'s `distance`
-   *  prop exactly. */
-  @property({ type: Number }) distance = 12;
+   *  prop exactly (can legitimately be negative for overlap). */
+  @property({ type: Number }) distance = DEFAULT_DISTANCE;
 
   /** Tour-level default extra px between a target's own box and the spotlight cutout/ring,
-   *  overridable per step via `TourStep.spotlightPadding`. */
-  @property({ type: Number, attribute: 'spotlight-padding' }) spotlightPadding = 4;
+   *  overridable per step via `TourStep.spotlightPadding`. Non-negative. */
+  @property({ type: Number, attribute: 'spotlight-padding' }) spotlightPadding = DEFAULT_SPOTLIGHT_PADDING;
 
   /** Whether a backdrop click dismisses the tour (`end('skip')`). Defaults to `false` -- a
    *  deliberate inversion of `lyra-dialog`'s `noLightDismiss` (opt-out, default
@@ -254,6 +264,16 @@ export class LyraTour extends LyraElement<LyraTourEventMap> {
   private readonly progressTextId = nextId('tour-progress-text');
 
   protected willUpdate(changed: PropertyValues): void {
+    // Normalizes a direct `activeIndex` assignment (property or `active-index` attribute) that
+    // bypasses `goToStep()`'s own `clampIndex()` -- e.g. two-way-binding an external store, or a
+    // non-numeric `active-index` attribute (NaN via the `type: Number` converter). Setting the
+    // property here, before render, is safe and doesn't schedule a second update -- same pattern
+    // as this method's `unanchored` derivation below.
+    if (changed.has('activeIndex')) {
+      const maxIndex = Math.max(0, this.steps.length - 1);
+      const normalizedIndex = finiteInteger(this.activeIndex, 0, 0, maxIndex);
+      if (normalizedIndex !== this.activeIndex) this.activeIndex = normalizedIndex;
+    }
     if (!this.hasUpdated) {
       this.hasSlotContent = hasRealContent(this.childNodes);
     }
@@ -264,6 +284,23 @@ export class LyraTour extends LyraElement<LyraTourEventMap> {
         this.deactivateOverlayInternal();
       }
     }
+    // Resolved here, not in updated()/activateStep(), purely to derive `unanchored` -- a value
+    // this same render branches on (the backdrop's mask-vs-plain-scrim markup, [part="popover"]'s
+    // data-unanchored) -- before render runs, so the popover renders in its correct
+    // anchored/unanchored shape on the first pass instead of needing a second corrective render.
+    // resolveTarget() only ever queries the top-level document or calls an external resolver
+    // function -- never this element's own render tree -- so it's safe to call this early, unlike
+    // the DOM-measurement-dependent half of step activation (scrollIntoView/place()/trackRect(),
+    // which need the freshly rendered popover and so still run from updated(), via
+    // activateStep()). Setting a reactive property from updated()/firstUpdated() instead schedules
+    // a *second* update on top of the one that just finished, which Lit's dev-mode console flags
+    // ("scheduled an update ... after an update completed") -- mirrors lyra-split's/
+    // lyra-virtual-list's identical willUpdate()-not-updated() fix for their own derived-property
+    // writes.
+    if ((changed.has('open') && this.open) || changed.has('activeIndex')) {
+      const step = this.steps[this.activeIndex];
+      this.unanchored = step ? !this.resolveTarget(step) : false;
+    }
   }
 
   // Runs after render so the manager can resolve the (possibly just-swapped, per keyed()) panel,
@@ -271,7 +308,7 @@ export class LyraTour extends LyraElement<LyraTourEventMap> {
   protected updated(changed: PropertyValues): void {
     if ((changed.has('open') && this.open) || changed.has('activeIndex')) {
       this.overlay?.focusInitial();
-      if (this.open) void this.activateStep();
+      if (this.open) this.activateStep();
     }
   }
 
@@ -289,8 +326,14 @@ export class LyraTour extends LyraElement<LyraTourEventMap> {
         this.activateOverlayInternal();
       }
       queueMicrotask(() => {
+        // willUpdate() never reruns on a reconnect (see the comment above), so re-derive
+        // `unanchored` here too -- the target's resolvability may have changed while
+        // disconnected. Safe to set directly: this runs after connectedCallback() already
+        // returned, well outside any Lit lifecycle-callback's synchronous call stack.
+        const step = this.steps[this.activeIndex];
+        this.unanchored = step ? !this.resolveTarget(step) : false;
         this.overlay?.focusInitial();
-        void this.activateStep();
+        this.activateStep();
       });
     }
   }
@@ -396,24 +439,18 @@ export class LyraTour extends LyraElement<LyraTourEventMap> {
   // Resolves the active step's target, scrolls it into view, and (re)wires the shared
   // positioner (`place()`) for the popover and `trackRect()` for the spotlight cutout/ring.
   // Re-run on every step activation -- targets are never cached, per TourTarget's doc comment.
-  private async activateStep(): Promise<void> {
+  // `unanchored` is already correctly derived for this render by willUpdate() (see its own doc)
+  // by the time this runs, so the freshly queried popover already reflects the right
+  // anchored/unanchored shape -- no separate corrective re-render/await round-trip needed here.
+  private activateStep(): void {
     this.disposePositioning();
     const step = this.steps[this.activeIndex];
     if (!step) return;
-    const stepId = step.id;
     const target = this.resolveTarget(step);
 
     if (!target) {
-      if (!this.unanchored) this.unanchored = true;
       this.emit<{ index: number; step: TourStep }>('lyra-tour-target-missing', { index: this.activeIndex, step });
       return;
-    }
-
-    if (this.unanchored) {
-      this.unanchored = false;
-      await this.updateComplete;
-      // The active step may have changed again while this render was pending.
-      if (this.steps[this.activeIndex]?.id !== stepId) return;
     }
 
     const popover = this.renderRoot.querySelector('[part="popover"]') as HTMLElement | null;
@@ -426,9 +463,9 @@ export class LyraTour extends LyraElement<LyraTourEventMap> {
     });
 
     const placement = rtlAwarePlacement(step.placement ?? this.placement, this);
-    this.placeCleanup = place(target, popover, { placement, offset: this.distance });
+    this.placeCleanup = place(target, popover, { placement, offset: finiteNumber(this.distance, DEFAULT_DISTANCE) });
 
-    const padding = step.spotlightPadding ?? this.spotlightPadding;
+    const padding = finiteRange(step.spotlightPadding ?? this.spotlightPadding, DEFAULT_SPOTLIGHT_PADDING, 0);
     const interactive = !!step.interactiveTarget;
     this.spotlightCleanup = trackRect(target, (rect) => this.paintSpotlight(rect, padding, interactive));
   }

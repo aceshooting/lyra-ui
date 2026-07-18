@@ -3,7 +3,7 @@ import { property, query, state } from 'lit/decorators.js';
 import { styleMap } from 'lit/directives/style-map.js';
 import { LyraElement } from '../../internal/lyra-element.js';
 import { srOnly } from '../../internal/a11y.js';
-import { finiteInteger } from '../../internal/numbers.js';
+import { finiteInteger, finiteRange } from '../../internal/numbers.js';
 import { getScratchCtx } from '../../internal/canvas.js';
 import { linearAlpha, linearBucket, minMax, sqrtStep } from './heatmap-scale.js';
 import { styles } from './heatmap.styles.js';
@@ -313,7 +313,13 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
 
   set cellSize(value: number) {
     const oldValue = this._cellSize;
-    this._cellSize = value;
+    // A non-finite, zero, or negative explicit size would divide-by-zero (or draw inverted
+    // geometry) in every cell-position calculation derived from it -- calendar mode's
+    // columnXFor()/weekAtX()/weekdayAtY()/calendarCellSize() and matrix mode's matrixCellSize()
+    // all divide by cellSize (directly or via + CAL_GAP). Clamp to a sane positive floor, falling
+    // back to the current mode-appropriate default (mirroring the getter's own fallback) for a
+    // non-finite input.
+    this._cellSize = finiteRange(value, this.mode === 'calendar' ? CAL_CELL : DEFAULT_MATRIX_CELL_SIZE, 1);
     this.requestUpdate('cellSize', oldValue);
   }
   @property({ attribute: 'value-label' }) valueLabel = 'value';
@@ -339,15 +345,30 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
   @property({ type: Boolean, attribute: 'fit-to-width' }) fitToWidth = false;
   @property() mode: 'matrix' | 'calendar' = 'matrix';
   @property({ attribute: false }) days: CalendarDay[] = [];
+  private _firstDayOfWeek = 0;
+
   /**
    * Calendar mode only (no-op in matrix mode): anchors the calendar grid at
    * a different weekday instead of always Sunday — `0`-`6`, same numbering
    * as `CalendarCellPos.weekday` (`0` Sunday .. `6` Saturday, matching
    * `CalendarCell.weekday`'s existing convention). Threaded into
    * `buildCalendarGrid()`. Defaults to `0` (Sunday), unchanged from before
-   * this property existed.
+   * this property existed. Normalized into `[0, 6]` via modulo wrap (not
+   * clamp) -- mirrors `buildCalendarGrid()`'s own `(x + 7) % 7` weekday-wrapping
+   * convention (already used elsewhere in this file), so e.g. `7` wraps to `0`
+   * (Sunday) and `-1` wraps to `6` (Saturday) rather than being clamped to the
+   * nearest in-range end. A non-finite input falls back to `0`.
    */
-  @property({ type: Number, attribute: 'first-day-of-week' }) firstDayOfWeek = 0;
+  @property({ type: Number, attribute: 'first-day-of-week' })
+  get firstDayOfWeek(): number {
+    return this._firstDayOfWeek;
+  }
+
+  set firstDayOfWeek(value: number) {
+    const oldValue = this._firstDayOfWeek;
+    this._firstDayOfWeek = ((finiteInteger(value, 0) % 7) + 7) % 7;
+    this.requestUpdate('firstDayOfWeek', oldValue);
+  }
   private _bucketCount = DEFAULT_BUCKET_COUNT;
 
   @property({ attribute: 'bucket-count', converter: bucketCountConverter })
@@ -751,46 +772,47 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
     this.draw();
   }
 
+  /* Every token reader below takes the host's already-resolved computed-style
+   * declaration rather than calling getComputedStyle(this) itself:
+   * drawMatrix()/drawCalendar() resolve it once per draw pass and thread it
+   * through, since each getComputedStyle() call can force a style
+   * recalculation and one canvas pass consults up to seven tokens. */
+
   /** Reads the customizable ramp endpoints off the host's computed style. */
-  private scaleEndpoints(): [string, string] {
-    const cs = getComputedStyle(this);
+  private scaleEndpoints(cs: CSSStyleDeclaration): [string, string] {
     const lo = cs.getPropertyValue('--lyra-heatmap-scale-lo').trim() || FALLBACK_SCALE_LO;
     const hi = cs.getPropertyValue('--lyra-heatmap-scale-hi').trim() || FALLBACK_SCALE_HI;
     return [lo, hi];
   }
 
   /** Resolves the `--lyra-color-text-quiet` chrome token for axis labels. */
-  private labelColor(): string {
-    return getComputedStyle(this).getPropertyValue('--lyra-color-text-quiet').trim() || '#6b7280';
+  private labelColor(cs: CSSStyleDeclaration): string {
+    return cs.getPropertyValue('--lyra-color-text-quiet').trim() || '#6b7280';
   }
 
   /** Reads the customizable canvas axis/label font off the host's computed style. */
-  private labelFont(): string {
-    return getComputedStyle(this).getPropertyValue('--lyra-heatmap-label-font').trim() || FALLBACK_LABEL_FONT;
+  private labelFont(cs: CSSStyleDeclaration): string {
+    return cs.getPropertyValue('--lyra-heatmap-label-font').trim() || FALLBACK_LABEL_FONT;
   }
 
   /** Reads the customizable no-data cell fill off the host's computed style. */
-  private noDataFill(): string {
-    return getComputedStyle(this).getPropertyValue('--lyra-heatmap-no-data-fill').trim() || FALLBACK_NO_DATA_FILL;
+  private noDataFill(cs: CSSStyleDeclaration): string {
+    return cs.getPropertyValue('--lyra-heatmap-no-data-fill').trim() || FALLBACK_NO_DATA_FILL;
   }
 
   /** Reads the customizable canvas-drawn keyboard-focus-ring stroke color off the host's computed style. */
-  private focusRingColor(): string {
-    return (
-      getComputedStyle(this).getPropertyValue('--lyra-heatmap-focus-ring-color').trim() || FALLBACK_FOCUS_RING_COLOR
-    );
+  private focusRingColor(cs: CSSStyleDeclaration): string {
+    return cs.getPropertyValue('--lyra-heatmap-focus-ring-color').trim() || FALLBACK_FOCUS_RING_COLOR;
   }
 
   /** Reads the customizable canvas-drawn annotation-ring stroke color off the host's computed style. */
-  private annotationColor(): string {
-    return (
-      getComputedStyle(this).getPropertyValue('--lyra-heatmap-annotation-color').trim() || FALLBACK_ANNOTATION_COLOR
-    );
+  private annotationColor(cs: CSSStyleDeclaration): string {
+    return cs.getPropertyValue('--lyra-heatmap-annotation-color').trim() || FALLBACK_ANNOTATION_COLOR;
   }
 
   /** Reads the customizable canvas-drawn selected-cell-ring stroke color off the host's computed style. */
-  private selectedColor(): string {
-    return getComputedStyle(this).getPropertyValue('--lyra-heatmap-selected-color').trim() || FALLBACK_SELECTED_COLOR;
+  private selectedColor(cs: CSSStyleDeclaration): string {
+    return cs.getPropertyValue('--lyra-heatmap-selected-color').trim() || FALLBACK_SELECTED_COLOR;
   }
 
   /** Whether `selectedCell` refers to the given grid position, in whichever mode is active --
@@ -820,7 +842,10 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
     });
   };
 
-  private colorRamp(bucketCount: number): {
+  private colorRamp(
+    bucketCount: number,
+    cs: CSSStyleDeclaration,
+  ): {
     colors: string[];
     loRgb: [number, number, number, number];
     hiRgb: [number, number, number, number];
@@ -835,7 +860,7 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
       this.cachedRamp = { key, colors, loRgb, hiRgb };
       return this.cachedRamp;
     }
-    const [scaleLo, scaleHi] = this.scaleEndpoints();
+    const [scaleLo, scaleHi] = this.scaleEndpoints(cs);
     const normalizedBucketCount = normalizeBucketCount(bucketCount);
     const key = `${scaleLo}\u0000${scaleHi}\u0000${normalizedBucketCount}`;
     if (this.cachedRamp?.key === key) return this.cachedRamp;
@@ -990,11 +1015,14 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
     ctx.scale(dpr, dpr);
     ctx.clearRect(0, 0, w, h);
 
+    // One computed-style resolution per draw pass, threaded through every
+    // token reader below -- see the token-reader block's rationale comment.
+    const cs = getComputedStyle(this);
     // Normalize at the allocation boundary as a final guard even though the
     // public accessor and attribute converter already normalize their inputs.
     const buckets = normalizeBucketCount(this.bucketCount);
-    const ramp = this.colorRamp(buckets).colors;
-    const noDataFill = this.noDataFill();
+    const ramp = this.colorRamp(buckets, cs).colors;
+    const noDataFill = this.noDataFill(cs);
     this.canvasColorCache.clear();
     // Only consulted when `scale === 'sqrt'` — mirrors `drawMatrix()`'s own
     // `hi` bound, reusing the already-cached value range instead of
@@ -1016,7 +1044,7 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
         const y = this.rowYFor(weekday);
         const override = this.cellColor?.({ week, weekday }, value);
         if (override != null) {
-          ctx.fillStyle = this.resolveCanvasColor(override);
+          ctx.fillStyle = this.resolveCanvasColor(override, cs);
         } else if (value < 0 || !Number.isFinite(value)) {
           ctx.fillStyle = noDataFill;
         } else if (this.scale === 'sqrt') {
@@ -1037,7 +1065,7 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
     // this block for the matrix-mode equivalent.
     if (this.annotations.length) {
       ctx.lineWidth = RING_LINE_WIDTH;
-      ctx.strokeStyle = this.annotationColor();
+      ctx.strokeStyle = this.annotationColor(cs);
       for (const ann of this.annotations) {
         if (ann.date == null) continue;
         const match = cells.find((c) => c.date === ann.date);
@@ -1056,7 +1084,7 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
       const match = cells.find((c) => c.date === this.selectedCell!.date);
       if (match) {
         ctx.lineWidth = RING_LINE_WIDTH;
-        ctx.strokeStyle = this.selectedColor();
+        ctx.strokeStyle = this.selectedColor(cs);
         const x = this.columnXFor(match.week);
         const y = this.rowYFor(match.weekday);
         ctx.strokeRect(x + 0.5, y + 0.5, cellSize - 1, cellSize - 1);
@@ -1069,15 +1097,15 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
       const { week, weekday } = this.focusedCell;
       if (week < weekCount && weekday < 7) {
         ctx.lineWidth = RING_LINE_WIDTH;
-        ctx.strokeStyle = this.focusRingColor();
+        ctx.strokeStyle = this.focusRingColor(cs);
         const x = this.columnXFor(week);
         const y = this.rowYFor(weekday);
         ctx.strokeRect(x + 0.5, y + 0.5, cellSize - 1, cellSize - 1);
       }
     }
 
-    ctx.fillStyle = this.labelColor();
-    ctx.font = this.labelFont();
+    ctx.fillStyle = this.labelColor(cs);
+    ctx.font = this.labelFont(cs);
     for (const m of monthLabels) {
       ctx.fillText(m.label, this.columnXFor(m.week), CAL_LABEL_H - 4);
     }
@@ -1120,13 +1148,16 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
     ctx.scale(dpr, dpr);
     ctx.clearRect(0, 0, w, h);
 
+    // One computed-style resolution per draw pass, threaded through every
+    // token reader below -- see the token-reader block's rationale comment.
+    const cs = getComputedStyle(this);
     const bounds = this.cachedValueRange;
     const lo = bounds ? bounds[0] : 0;
     const hi = bounds ? bounds[1] : 1;
-    const rampData = this.colorRamp(RAMP_STEPS);
+    const rampData = this.colorRamp(RAMP_STEPS, cs);
     const ramp = rampData.colors;
     const { loRgb, hiRgb } = rampData;
-    const noDataFill = this.noDataFill();
+    const noDataFill = this.noDataFill(cs);
     this.canvasColorCache.clear();
 
     for (let r = 0; r < rows; r++) {
@@ -1136,7 +1167,7 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
         const y = PAD_TOP + r * cellSize;
         const override = this.cellColor?.({ row: r, col: c }, v);
         if (override != null) {
-          ctx.fillStyle = this.resolveCanvasColor(override);
+          ctx.fillStyle = this.resolveCanvasColor(override, cs);
         } else if (v < 0 || !Number.isFinite(v)) {
           // `v < 0` alone is false for NaN, which would otherwise fall through to
           // the ramp branches below, compute an unparsable rgb(NaN, NaN, NaN)
@@ -1170,7 +1201,7 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
     // visible regardless of which point on that ramp it's drawn over.
     if (this.annotations.length) {
       ctx.lineWidth = RING_LINE_WIDTH;
-      ctx.strokeStyle = this.annotationColor();
+      ctx.strokeStyle = this.annotationColor(cs);
       for (const ann of this.annotations) {
         if (ann.row == null || ann.col == null) continue;
         if (ann.row < 0 || ann.row >= rows || ann.col < 0 || ann.col >= cols) continue;
@@ -1187,7 +1218,7 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
       const { row, col } = this.selectedCell;
       if (row >= 0 && row < rows && col >= 0 && col < cols) {
         ctx.lineWidth = RING_LINE_WIDTH;
-        ctx.strokeStyle = this.selectedColor();
+        ctx.strokeStyle = this.selectedColor(cs);
         const x = PAD_LEFT + col * cellSize;
         const y = PAD_TOP + row * cellSize;
         ctx.strokeRect(x + 1, y + 1, cellSize - 3, cellSize - 3);
@@ -1202,15 +1233,15 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
       const { row, col } = this.focusedCell;
       if (row < rows && col < cols) {
         ctx.lineWidth = RING_LINE_WIDTH;
-        ctx.strokeStyle = this.focusRingColor();
+        ctx.strokeStyle = this.focusRingColor(cs);
         const x = PAD_LEFT + col * cellSize;
         const y = PAD_TOP + row * cellSize;
         ctx.strokeRect(x + 1, y + 1, cellSize - 3, cellSize - 3);
       }
     }
 
-    ctx.fillStyle = this.labelColor();
-    ctx.font = this.labelFont();
+    ctx.fillStyle = this.labelColor(cs);
+    ctx.font = this.labelFont(cs);
     this.rowLabels.forEach((label, r) => {
       ctx.fillText(label, 4, PAD_TOP + r * cellSize + cellSize / 2 + 3);
     });
@@ -1410,10 +1441,15 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
     return this.cellInteractive?.(pos, this.valueAt(pos)) ?? true;
   }
 
-  /** Refreshes the visually-hidden live-region text for a newly-focused cell. */
+  /** Refreshes the visually-hidden live-region text for a newly-focused cell.
+   *  The selected state goes through the same `heatmapSelectedCellLabel`
+   *  template as the host aria-label, so a locale can place the "selected"
+   *  wording anywhere around the cell text instead of it being appended. */
   private announce(pos: CellPos): void {
     const text = this.resolveCellText(pos);
-    this.liveText = this.isSelectedPos(pos) ? `${text}${this.localize('heatmapCellSelectedSuffix')}` : text;
+    this.liveText = this.isSelectedPos(pos)
+      ? this.localize('heatmapSelectedCellLabel', undefined, { cell: text })
+      : text;
   }
 
   private emitCellClick(pos: CellPos): void {
@@ -1550,7 +1586,7 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
    *  fillStyle silently no-ops on an unparseable string, per the Canvas 2D
    *  spec, leaving whatever the previous cell painted. Falls back to
    *  noDataFill() for a genuinely invalid color. */
-  private resolveCanvasColor(value: string): string {
+  private resolveCanvasColor(value: string, cs: CSSStyleDeclaration): string {
     if (!value.includes('var(')) return value;
     const cached = this.canvasColorCache.get(value);
     if (cached !== undefined) return cached;
@@ -1561,7 +1597,7 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
       this.shadowRoot!.appendChild(this.colorProbe);
     }
     this.colorProbe.style.color = value;
-    const resolved = this.colorProbe.style.color ? getComputedStyle(this.colorProbe).color : this.noDataFill();
+    const resolved = this.colorProbe.style.color ? getComputedStyle(this.colorProbe).color : this.noDataFill(cs);
     this.canvasColorCache.set(value, resolved);
     return resolved;
   }

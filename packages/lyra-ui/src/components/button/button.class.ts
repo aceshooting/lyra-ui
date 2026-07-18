@@ -42,8 +42,33 @@ export class LyraButton extends LyraElement {
   static styles = [LyraElement.styles, styles];
   // A button is form-associated so it is discoverable through form.elements. The generic
   // FormAssociated mixin is intentionally not used: action buttons do not have its value,
-  // name, or required semantics.
+  // name, or required semantics. `disabled` is still hardened the same way the mixin-based
+  // controls are (synchronous accessor + `formDisabledCallback`), since an ancestor
+  // `<fieldset disabled>` must still cascade into this component the same way it would a
+  // native `<button>` -- see `effectiveDisabled` below.
   static formAssociated = true;
+
+  static properties = {
+    disabled: { type: Boolean, reflect: true, noAccessor: true },
+  };
+
+  private _fieldsetDisabled = false;
+  private _disabled = false;
+
+  get disabled(): boolean {
+    return this._disabled;
+  }
+  set disabled(next: boolean) {
+    const old = this._disabled;
+    this._disabled = Boolean(next);
+    this.toggleAttribute('disabled', this._disabled);
+    this.requestUpdate('disabled', old);
+  }
+
+  /** Whether the button is disabled explicitly or by an ancestor fieldset. */
+  get effectiveDisabled(): boolean {
+    return this._disabled || this._fieldsetDisabled;
+  }
 
   constructor() {
     super();
@@ -75,7 +100,6 @@ export class LyraButton extends LyraElement {
    *  clearing `disabled` — a consumer's own `disabled` state and a transient `loading` state are
    *  independent (mirrors `<lyra-export-button>`'s own `loading`/`disabled` pair). */
   @property({ type: Boolean, reflect: true }) loading = false;
-  @property({ type: Boolean, reflect: true }) disabled = false;
 
   @query('button') private buttonEl?: HTMLButtonElement;
 
@@ -100,6 +124,17 @@ export class LyraButton extends LyraElement {
     }
   };
 
+  /**
+   * Called by the browser when an ancestor `<fieldset disabled>` toggles. Tracked separately
+   * from the consumer's own `disabled` (see `effectiveDisabled`) so a consumer's explicit
+   * `disabled` survives the fieldset re-enabling instead of being permanently overwritten --
+   * mirrors `<lyra-checkbox>`'s/`<lyra-switch>`'s identical `_fieldsetDisabled` pattern.
+   */
+  formDisabledCallback(disabled: boolean): void {
+    this._fieldsetDisabled = disabled;
+    this.requestUpdate();
+  }
+
   render(): TemplateResult {
     const ariaLabel = this.getAttribute('aria-label');
     return html`
@@ -108,7 +143,7 @@ export class LyraButton extends LyraElement {
         type="button"
         aria-label=${ariaLabel || nothing}
         aria-busy=${this.loading ? 'true' : 'false'}
-        ?disabled=${this.disabled || this.loading}
+        ?disabled=${this.effectiveDisabled || this.loading}
         @click=${this.onClick}
       >
         <span part="start"><slot name="start"></slot></span>

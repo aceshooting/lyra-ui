@@ -209,6 +209,16 @@ it('never renders a NaN-containing elapsed string when started-at is a malformed
   expect(parseElapsedSeconds(later)).to.be.greaterThan(0.5);
 });
 
+it('clamps a negative started-at to epoch 0 rather than treating it the same as "unset"', async () => {
+  const el = (await fixture(html`<lyra-generation-status></lyra-generation-status>`)) as LyraGenerationStatus;
+  el.startedAt = -5000;
+
+  // Clamped to 0, not `undefined` -- an `undefined` result here would mean this negative value
+  // was (wrongly) treated the same as "unset", which instead falls back to capturing `Date.now()`
+  // as the start instant (see `validStartedAt`'s own doc).
+  expect((el as unknown as { validStartedAt: number | undefined }).validStartedAt).to.equal(0);
+});
+
 it('restarts the fallback clock from scratch on a fresh false -> true transition with no started-at', async () => {
   const el = (await fixture(html`<lyra-generation-status active></lyra-generation-status>`)) as LyraGenerationStatus;
   await aTimeout(1150);
@@ -232,6 +242,26 @@ it('renders the tokens segment once token-count is set, using singular/plural wo
   el.tokenCount = 1;
   await el.updateComplete;
   expect(tokensText(el)).to.equal('1 token');
+});
+
+it('clamps a negative token-count to 0 and omits the segment entirely for a non-numeric token-count', async () => {
+  const negative = (await fixture(
+    html`<lyra-generation-status token-count="-5"></lyra-generation-status>`,
+  )) as LyraGenerationStatus;
+  expect(tokensText(negative)).to.equal('0 tokens');
+
+  const nonFinite = (await fixture(
+    html`<lyra-generation-status token-count="not-a-number"></lyra-generation-status>`,
+  )) as LyraGenerationStatus;
+  expect(Number.isNaN(nonFinite.tokenCount)).to.be.true;
+  expect(tokensText(nonFinite), 'a non-numeric token-count must omit the segment, the same as unset').to.be.null;
+});
+
+it('clamps a negative host-supplied tokens-per-second to 0 rather than rendering a negative rate', async () => {
+  const el = (await fixture(
+    html`<lyra-generation-status tokens-per-second="-12"></lyra-generation-status>`,
+  )) as LyraGenerationStatus;
+  expect(throughputText(el)).to.equal('0 tok/s');
 });
 
 it('localizes the complete tokens segment via .strings so translations can reorder the count', async () => {

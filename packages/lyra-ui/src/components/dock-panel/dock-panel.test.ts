@@ -266,6 +266,25 @@ it('rotates the collapse-toggle chevron toward the pinned edge when expanded, aw
   expect(chevron(startRtl).style.transform).to.equal('rotate(180deg)');
 });
 
+it('flips the top/bottom collapse-toggle centering translate under dir="rtl"', async () => {
+  const toggleTranslateX = async (dirAttr: string): Promise<number> => {
+    const wrapper = (await fixture(
+      `<div dir="${dirAttr}" style="position: relative; height: 10rem;">
+        <lyra-dock-panel edge="top" collapsible>panel body</lyra-dock-panel>
+      </div>`,
+    )) as HTMLDivElement;
+    const el = wrapper.querySelector('lyra-dock-panel') as LyraDockPanel;
+    await elementUpdated(el);
+    const toggle = el.shadowRoot!.querySelector('[part="collapse-toggle"]') as HTMLElement;
+    return new DOMMatrixReadOnly(getComputedStyle(toggle).transform).m41;
+  };
+  // The top/bottom toggles center on inset-inline-start: 50%, which anchors to the physical
+  // right edge under RTL -- the centering translateX must resolve leftward (negative) in LTR
+  // and rightward (positive) in RTL to keep the toggle at the horizontal center.
+  expect(await toggleTranslateX('ltr')).to.be.lessThan(0);
+  expect(await toggleTranslateX('rtl')).to.be.greaterThan(0);
+});
+
 it('keeps aria-valuemax/aria-valuenow live against a passive container resize', async () => {
   const wrapper = (await fixture(
     `<div style="position: relative; width: 400px; height: 20rem; display: flex;">

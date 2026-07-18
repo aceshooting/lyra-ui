@@ -3,6 +3,7 @@ import { property } from 'lit/decorators.js';
 import { LyraElement } from '../../internal/lyra-element.js';
 import { nextId } from '../../internal/a11y.js';
 import { chevronIcon } from '../../internal/icons.js';
+import { finiteRange } from '../../internal/numbers.js';
 import { styles } from './thinking-panel.styles.js';
 
 export type ThinkingPanelMode = 'live' | 'post-hoc';
@@ -217,10 +218,20 @@ export class LyraThinkingPanel extends LyraElement<LyraThinkingPanelEventMap> {
     this.emit<ThinkingPanelToggleDetail>('lyra-toggle', { expanded: this.expanded });
   };
 
+  /** `durationMs` normalized to a finite, non-negative value, or `null` -- `null`/`undefined`
+   *  and a non-finite raw value (e.g. a stray `NaN` assignment) both mean "no duration known yet,"
+   *  matching this property's own "omitted entirely while unset" contract, rather than rendering
+   *  a literal "NaN ms". A finite negative value clamps to `0` instead of rendering a nonsensical
+   *  negative duration. */
+  private get safeDurationMs(): number | null {
+    return this.durationMs != null && Number.isFinite(this.durationMs) ? finiteRange(this.durationMs, 0, 0) : null;
+  }
+
   private get durationDisplay(): { text: string; pending: boolean } | null {
-    if (this.durationMs != null && Number.isFinite(this.durationMs)) {
+    const durationMs = this.safeDurationMs;
+    if (durationMs != null) {
       return {
-        text: this.localize('thoughtFor', undefined, { duration: formatDuration(this.durationMs) }),
+        text: this.localize('thoughtFor', undefined, { duration: formatDuration(durationMs) }),
         pending: false,
       };
     }

@@ -1226,6 +1226,88 @@ it('honors custom rail-breakpoint/float-breakpoint attributes', async () => {
   }
 });
 
+// -- numeric guard regressions (min / railBreakpoint / floatBreakpoint) ----
+
+it('sanitizes a NaN min to its own declared default instead of letting NaN reach the percent-bounds clamp', async () => {
+  const el = (await fixture(
+    html`<lyra-split min="NaN"><div>A</div><div>B</div></lyra-split>`,
+  )) as LyraSplit;
+  await elementUpdated(el);
+  el.sizes = [50, 50];
+  await elementUpdated(el);
+  const divider = el.shadowRoot!.querySelector('[part="divider"]') as HTMLElement;
+  // A NaN min must fall back to the property's own declared default (10), not propagate NaN through
+  // aria-valuemin/percentBounds.
+  expect(divider.getAttribute('aria-valuemin')).to.equal('10');
+});
+
+it('clamps a negative min to 0 rather than a nonsensical negative floor', async () => {
+  const el = (await fixture(
+    html`<lyra-split><div>A</div><div>B</div></lyra-split>`,
+  )) as LyraSplit;
+  await elementUpdated(el);
+  el.sizes = [1, 99];
+  await elementUpdated(el);
+  (el as unknown as { min: number }).min = -20;
+  await elementUpdated(el);
+  const divider = el.shadowRoot!.querySelector('[part="divider"]') as HTMLElement;
+  expect(divider.getAttribute('aria-valuemin')).to.equal('0');
+
+  divider.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true }));
+  await elementUpdated(el);
+  expect(el.sizes[0]).to.be.at.least(0);
+});
+
+it('honors custom rail-breakpoint/float-breakpoint attributes with an invalid/inverted pair sanitized', async () => {
+  const spy = installResizeObserverSpy();
+  try {
+    const el = (await fixture(
+      html`<lyra-split
+        collapse="start"
+        rail-breakpoint="NaN"
+        float-breakpoint="600"
+      ><div>A</div><div>B</div></lyra-split>`,
+    )) as LyraSplit;
+    await elementUpdated(el);
+
+    // railBreakpoint falls back to its own 640 default, still above the valid floatBreakpoint(600).
+    fireCollapseResize(spy.callbacks[0], 620); // between 600 (float) and the sanitized 640 (rail) default
+    await elementUpdated(el);
+    expect(el.getAttribute('data-collapse-state')).to.equal('rail');
+
+    fireCollapseResize(spy.callbacks[0], 300); // below floatBreakpoint(600)
+    await elementUpdated(el);
+    expect(el.getAttribute('data-collapse-state')).to.equal('floating');
+  } finally {
+    spy.restore();
+  }
+});
+
+it('never gets permanently stuck in floating for an inverted rail/float pair -- reaches wide at a large width', async () => {
+  const spy = installResizeObserverSpy();
+  try {
+    const el = (await fixture(
+      html`<lyra-split
+        collapse="start"
+        rail-breakpoint="100"
+        float-breakpoint="600"
+      ><div>A</div><div>B</div></lyra-split>`,
+    )) as LyraSplit;
+    await elementUpdated(el);
+
+    // railBreakpoint(100) is below floatBreakpoint(600) -- the sanitized rail breakpoint is raised to
+    // match floatBreakpoint(600) rather than staying inverted, so a comfortably wide container still
+    // resolves to 'wide' (never stuck reporting 'floating'/'rail' regardless of width). 'wide' has no
+    // `data-collapse-state` attribute at all (only a genuinely collapsed state sets one).
+    fireCollapseResize(spy.callbacks[0], 2000);
+    await elementUpdated(el);
+    expect(el.collapseState).to.equal('wide');
+    expect(el.hasAttribute('data-collapse-state')).to.be.false;
+  } finally {
+    spy.restore();
+  }
+});
+
 // -- collapseState: forceable accessor (mirrors lyra-app-rail's `mode`) ----
 
 it('pins a forced collapseState across a subsequent resize, ignoring measurement until released', async () => {

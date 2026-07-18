@@ -1,7 +1,7 @@
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, query } from 'lit/decorators.js';
 import { LyraElement } from '../../internal/lyra-element.js';
-import { finiteDuration } from '../../internal/numbers.js';
+import { finiteDuration, finiteInteger } from '../../internal/numbers.js';
 import { styles } from './random-content.styles.js';
 
 export type LyraRandomContentAnimation = 'none' | 'fade' | 'fade-up' | 'fade-down' | 'fade-left' | 'fade-right';
@@ -61,7 +61,9 @@ export class LyraRandomContent extends LyraElement<LyraRandomContentEventMap> {
   /** Milliseconds between autoplay ticks. Clamped to a 1000ms floor. */
   @property({ type: Number, attribute: 'autoplay-interval' }) autoplayInterval = 3000;
 
-  /** How many children are shown simultaneously. Clamped to at least 1 and at most the pool size. */
+  /** How many children are shown simultaneously -- a count, not the pool itself. NaN/negative/
+   *  fractional/oversized all normalize through `finiteInteger`, clamped to at least 1 and at
+   *  most the pool size -- see `clampedCount()`. */
   @property({ type: Number }) items = 1;
 
   /** Selection algorithm — see `randomize()`. */
@@ -136,8 +138,9 @@ export class LyraRandomContent extends LyraElement<LyraRandomContentEventMap> {
   }
 
   private clampedCount(poolSize: number): number {
-    const n = Number.isFinite(this.items) ? Math.max(1, Math.trunc(this.items)) : 1;
-    return Math.min(n, poolSize);
+    // Only called with poolSize >= 1 (reselect() returns early for an empty pool), so a [1,
+    // poolSize] clamp is always well-formed here.
+    return finiteInteger(this.items, 1, 1, poolSize);
   }
 
   private poolsEqual(a: HTMLElement[], b: HTMLElement[]): boolean {

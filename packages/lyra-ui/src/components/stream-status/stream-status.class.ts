@@ -3,6 +3,7 @@ import { property, state, query } from 'lit/decorators.js';
 import { LyraElement } from '../../internal/lyra-element.js';
 import type { LyraLiveRegion } from '../live-region/live-region.class.js';
 import '../live-region/live-region.class.js';
+import { finiteDuration, MAX_TIMEOUT_MS } from '../../internal/numbers.js';
 import { styles } from './stream-status.styles.js';
 
 export type StreamStatusPhase = 'idle' | 'connecting' | 'streaming' | 'stalled';
@@ -231,12 +232,19 @@ export class LyraStreamStatus extends LyraElement<LyraStreamStatusEventMap> {
 
   private armStallTimer(): void {
     this.disarmStallTimer();
+    // A non-finite or non-positive stallThresholdMs deliberately disables stall detection
+    // entirely (never arms a timer) -- see the "never arms a timer for a non-positive
+    // stall-threshold-ms" test. Once past that check, the value is otherwise finite and
+    // positive, but still needs finiteDuration's MAX_TIMEOUT_MS cap: a raw delay above the
+    // 32-bit signed-int ceiling setTimeout silently truncates to would otherwise fire almost
+    // immediately instead of after the intended (much longer) wait.
     const threshold = this.stallThresholdMs;
     if (!Number.isFinite(threshold) || threshold <= 0) return;
+    const delay = finiteDuration(threshold, threshold, 0, MAX_TIMEOUT_MS);
     this.stallTimer = setTimeout(() => {
       this.stallTimer = undefined;
       this.phase = 'stalled';
-    }, threshold);
+    }, delay);
   }
 
   private disarmStallTimer(): void {

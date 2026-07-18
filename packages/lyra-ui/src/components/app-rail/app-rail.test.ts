@@ -708,6 +708,51 @@ describe('resizable', () => {
     await el.updateComplete;
     expect(el.dragging).to.be.false;
   });
+
+  // -- numeric guard regressions (railWidthPx/minRailWidthPx/maxRailWidthPx) --
+
+  it('clamps a NaN or negative railWidthPx to a sane in-bounds width instead of leaking through to layout', async () => {
+    const el = (await fixture(
+      html`<lyra-app-rail resizable min-rail-width-px="190" max-rail-width-px="440"></lyra-app-rail>`,
+    )) as LyraAppRail;
+    await el.updateComplete;
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    const resizer = el.shadowRoot!.querySelector('[part="resizer"]') as HTMLElement;
+
+    el.railWidthPx = NaN;
+    await el.updateComplete;
+    expect(base.style.getPropertyValue('inline-size')).to.equal('190px');
+    expect(resizer.getAttribute('aria-valuenow')).to.equal('190');
+
+    el.railWidthPx = -999;
+    await el.updateComplete;
+    expect(base.style.getPropertyValue('inline-size')).to.equal('190px');
+    expect(resizer.getAttribute('aria-valuenow')).to.equal('190');
+  });
+
+  it('sanitizes a NaN minRailWidthPx/maxRailWidthPx instead of letting it poison every clamp', async () => {
+    const el = (await fixture(
+      html`<lyra-app-rail resizable rail-width-px="9999" min-rail-width-px="NaN" max-rail-width-px="NaN"></lyra-app-rail>`,
+    )) as LyraAppRail;
+    await el.updateComplete;
+    const resizer = el.shadowRoot!.querySelector('[part="resizer"]') as HTMLElement;
+    expect(resizer.getAttribute('aria-valuemin')).to.equal('190');
+    expect(resizer.getAttribute('aria-valuemax')).to.equal('440');
+    expect(resizer.getAttribute('aria-valuenow')).to.equal('440'); // clamped down into the sanitized bounds
+  });
+
+  it('keeps maxRailWidthPx from resolving below minRailWidthPx for an inverted pair', async () => {
+    const el = (await fixture(
+      html`<lyra-app-rail resizable rail-width-px="240" min-rail-width-px="500" max-rail-width-px="100"></lyra-app-rail>`,
+    )) as LyraAppRail;
+    await el.updateComplete;
+    const resizer = el.shadowRoot!.querySelector('[part="resizer"]') as HTMLElement;
+    const min = Number(resizer.getAttribute('aria-valuemin'));
+    const max = Number(resizer.getAttribute('aria-valuemax'));
+    expect(min).to.equal(500);
+    expect(max).to.be.at.least(min);
+    expect(resizer.getAttribute('aria-valuenow')).to.equal('500'); // 240 clamped up into range
+  });
 });
 
 describe('hideToggle', () => {

@@ -35,10 +35,12 @@ export interface LyraSwatchPickerEventMap {
  * @event lyra-change - Fired when the selected value changes via click or keyboard.
  *   `detail: { value }`.
  * @csspart base - The `role="radiogroup"` root.
- * @csspart swatch - A single `role="radio"` color swatch; the selected one is
- *   `[part='swatch'][aria-checked='true']`.
+ * @csspart swatch - A single `role="radio"` color swatch's interactive hit target; sized to the
+ *   shared minimum tappable size (`--lyra-icon-button-size`), independent of the smaller visible
+ *   fill/icon rendered inside it. The selected one is `[part='swatch'][aria-checked='true']`.
+ * @csspart swatch-fill - The compact filled circle rendered when the option has no custom `icon`.
  * @csspart swatch-icon - Optional custom shape supplied by the option's `icon` field; when present it
- *   replaces the plain filled circle and the swatch renders unfilled/unbordered behind it.
+ *   replaces `swatch-fill` and the swatch renders unfilled/unbordered behind it.
  * @cssprop [--lyra-swatch-picker-selected-color=var(--lyra-color-brand)] - Ring color drawn around
  *   the selected swatch, themeable independently of the focus ring and every other ring color.
  * @cssprop [--lyra-swatch-picker-selected-blur=0px] - Blur radius of that same ring. 0 by default
@@ -133,7 +135,11 @@ export class LyraSwatchPicker extends LyraElement<LyraSwatchPickerEventMap> {
             tabindex=${index === tabbableIndex ? '0' : '-1'}
             style=${styleMap({ '--lyra-swatch-color': option.color })}
             @click=${() => this.select(option)}
-          >${option.icon ? html`<span part="swatch-icon" aria-hidden="true">${option.icon}</span>` : nothing}</button>`,
+          >${
+            option.icon
+              ? html`<span part="swatch-icon" aria-hidden="true">${option.icon}</span>`
+              : html`<span part="swatch-fill" aria-hidden="true"></span>`
+          }</button>`,
         )}
       </div>
     `;

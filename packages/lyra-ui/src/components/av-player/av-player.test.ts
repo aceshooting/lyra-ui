@@ -152,12 +152,70 @@ describe('time-range anchors', () => {
   });
 });
 
+describe('numeric safety (finite clamping)', () => {
+  it('clamps playbackRate to a finite, HTMLMediaElement-supported range instead of an unsanitized assignment (regression)', async () => {
+    const el = (await fixture(html`<lyra-av-player src=${MP3_SRC}></lyra-av-player>`)) as LyraAvPlayer;
+    el.playbackRate = NaN;
+    expect(el.playbackRate).to.equal(1);
+    el.playbackRate = -5;
+    expect(el.playbackRate).to.equal(0.0625);
+    el.playbackRate = 999;
+    expect(el.playbackRate).to.equal(16);
+    // A value already within range passes through unchanged.
+    el.playbackRate = 1.5;
+    expect(el.playbackRate).to.equal(1.5);
+  });
+
+  it('clamps currentTime to a non-negative value, preserving an oversized pending seek until a real duration is known (regression)', async () => {
+    const el = (await fixture(html`<lyra-av-player src=${MP3_SRC}></lyra-av-player>`)) as LyraAvPlayer;
+    const media = mediaEl(el);
+    // Before metadata loads, `duration` is still 0 (not yet real) -- clamping the upper bound to it
+    // would wrongly zero out a legitimate pending seek, so only the lower bound applies here.
+    el.currentTime = -5;
+    expect(media.currentTime).to.equal(0);
+    el.currentTime = NaN;
+    expect(media.currentTime).to.equal(0);
+    el.currentTime = 500;
+    expect(media.currentTime).to.equal(500);
+
+    // Once a real, positive duration is known, an oversized value clamps to it.
+    Object.defineProperty(media, 'duration', { value: 100, configurable: true });
+    media.dispatchEvent(new Event('loadedmetadata'));
+    await el.updateComplete;
+    el.currentTime = 99999;
+    expect(media.currentTime).to.equal(100);
+    el.currentTime = -20;
+    expect(media.currentTime).to.equal(0);
+  });
+});
+
 describe('waveform', () => {
   it('renders a plain seek rail when peaks is empty, and a canvas when peaks is set', async () => {
     const withoutPeaks = (await fixture(html`<lyra-av-player src=${MP3_SRC}></lyra-av-player>`)) as LyraAvPlayer;
     expect(withoutPeaks.shadowRoot!.querySelector('canvas')).to.not.exist;
     const withPeaks = (await fixture(html`<lyra-av-player src=${MP3_SRC} .peaks=${[0.1, 0.5, 0.9, 0.3]}></lyra-av-player>`)) as LyraAvPlayer;
     expect(withPeaks.shadowRoot!.querySelector('canvas')).to.exist;
+  });
+
+  it('still redraws on window resize after a disconnect/reconnect (regression)', async () => {
+    const el = (await fixture(html`<lyra-av-player src=${MP3_SRC} .peaks=${[0.2, 0.8]}></lyra-av-player>`)) as LyraAvPlayer;
+    const parent = el.parentElement!;
+
+    // A reparent runs disconnectedCallback (which removes the window resize
+    // listener) then connectedCallback, with no new firstUpdated pass.
+    el.remove();
+    parent.append(el);
+    await el.updateComplete;
+
+    // The resize handler dispatches through `this.drawWaveform()` at call
+    // time, so an own-property spy shadows the prototype method and records
+    // whether the window listener is still attached.
+    let redraws = 0;
+    (el as unknown as { drawWaveform: () => void }).drawWaveform = () => {
+      redraws += 1;
+    };
+    window.dispatchEvent(new Event('resize'));
+    expect(redraws, 'the resize listener should be re-attached on reconnect').to.equal(1);
   });
 });
 

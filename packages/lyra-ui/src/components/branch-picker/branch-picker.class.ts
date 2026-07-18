@@ -3,6 +3,7 @@ import { property, query } from 'lit/decorators.js';
 import { LyraElement } from '../../internal/lyra-element.js';
 import { nextId } from '../../internal/a11y.js';
 import { chevronIcon } from '../../internal/icons.js';
+import { finiteCount, finiteInteger } from '../../internal/numbers.js';
 import '../live-region/live-region.class.js';
 import type { LyraLiveRegion } from '../live-region/live-region.class.js';
 import { styles } from './branch-picker.styles.js';
@@ -52,11 +53,30 @@ export class LyraBranchPicker extends LyraElement<LyraBranchPickerEventMap> {
    *  announcements. */
   private isMounting = true;
 
+  /** Read-time-safe view of `count` -- non-negative, finite, truncated to a whole branch count.
+   *  Both `index` and `count` are fully controlled (this component never writes to them), so an
+   *  out-of-range/non-finite value assigned from outside would otherwise reach the `count - 1`/
+   *  `index + 1` arithmetic below unsanitized; a non-finite value falls back to `1` (matching the
+   *  property's own default), which keeps the render-nothing-while-`count < 2` contract intact
+   *  instead of throwing or displaying `NaN`. */
+  private get normalizedCount(): number {
+    return finiteCount(this.count, 1);
+  }
+
+  /** Read-time-safe view of the controlled `index` property, clamped to `[0, normalizedCount - 1]`
+   *  -- never mutates `index` itself, matching this component's fully controlled contract (mirrors
+   *  `<lyra-pagination>`'s identical `currentPage` pattern). */
+  private get normalizedIndex(): number {
+    const count = this.normalizedCount;
+    if (count === 0) return 0;
+    return finiteInteger(this.index, 0, 0, count - 1);
+  }
+
   /** Focuses whichever chevron button isn't currently `disabled` -- mirrors `<lyra-copy-button>`'s
    *  own `focus()`-delegation-to-the-internal-control pattern, so this component composes cleanly
    *  as one stop inside a parent toolbar. */
   override focus(options?: FocusOptions): void {
-    const target = this.index > 0 ? this.previousButtonEl : this.nextButtonEl;
+    const target = this.normalizedIndex > 0 ? this.previousButtonEl : this.nextButtonEl;
     (target ?? this.previousButtonEl ?? this.nextButtonEl)?.focus(options);
   }
 
@@ -74,14 +94,14 @@ export class LyraBranchPicker extends LyraElement<LyraBranchPickerEventMap> {
       // to throttle, and a delayed/dropped announcement here would read as the control silently
       // failing. Same reasoning as `<lyra-chat-message>`'s own forced status-change announcements.
       this.liveRegion?.announce(
-        this.localize('branchPosition', undefined, { index: this.index + 1, total: this.count }),
+        this.localize('branchPosition', undefined, { index: this.normalizedIndex + 1, total: this.normalizedCount }),
         { force: true },
       );
     }
   }
 
   private requestIndex(next: number): void {
-    if (next < 0 || next > this.count - 1 || next === this.index) return;
+    if (next < 0 || next > this.normalizedCount - 1 || next === this.normalizedIndex) return;
     this.emit<{ index: number }>('lyra-branch-change', { index: next });
   }
 
@@ -90,7 +110,9 @@ export class LyraBranchPicker extends LyraElement<LyraBranchPickerEventMap> {
   // and the stylesheet owns 100% of the rotation, both the LTR base state and the RTL override,
   // via `transform` on those two parts.
   render(): TemplateResult {
-    if (this.count < 2) return html``;
+    const count = this.normalizedCount;
+    if (count < 2) return html``;
+    const index = this.normalizedIndex;
     const label = this.label || this.localize('branchPickerLabel');
     const formatter = new Intl.NumberFormat(this.effectiveLocale);
     return html`
@@ -99,18 +121,18 @@ export class LyraBranchPicker extends LyraElement<LyraBranchPickerEventMap> {
           part="previous-button"
           type="button"
           aria-label=${this.localize('branchPrevious')}
-          ?disabled=${this.index <= 0}
-          @click=${() => this.requestIndex(this.index - 1)}
+          ?disabled=${index <= 0}
+          @click=${() => this.requestIndex(index - 1)}
         >
           <span part="previous-glyph">${chevronIcon()}</span>
         </button>
-        <span part="position">${formatter.format(this.index + 1)} / ${formatter.format(this.count)}</span>
+        <span part="position">${formatter.format(index + 1)} / ${formatter.format(count)}</span>
         <button
           part="next-button"
           type="button"
           aria-label=${this.localize('branchNext')}
-          ?disabled=${this.index >= this.count - 1}
-          @click=${() => this.requestIndex(this.index + 1)}
+          ?disabled=${index >= count - 1}
+          @click=${() => this.requestIndex(index + 1)}
         >
           <span part="next-glyph">${chevronIcon()}</span>
         </button>

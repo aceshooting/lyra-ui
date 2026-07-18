@@ -119,6 +119,30 @@ describe('lyra-copy-button', () => {
     expect(button.getAttribute('aria-label')).to.equal('Copy');
   });
 
+  it('falls back to the default feedback duration for a non-finite/negative value instead of leaving the confirmation state stuck', async () => {
+    const el = (await fixture(html`
+      <lyra-copy-button value="hello" feedback-duration="NaN"></lyra-copy-button>
+    `)) as LyraCopyButton;
+    const button = el.shadowRoot!.querySelector('[part="base"]') as HTMLButtonElement;
+    button.click();
+    await el.updateComplete;
+    expect(button.getAttribute('aria-label')).to.equal('Copied!');
+
+    // NaN self-heals to the DEFAULT_FEEDBACK_DURATION (1500ms), not 0/never -- a short wait must
+    // NOT have already reverted it.
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    await el.updateComplete;
+    expect(button.getAttribute('aria-label')).to.equal('Copied!');
+
+    el.feedbackDuration = -20;
+    button.click();
+    await el.updateComplete;
+    // A negative duration clamps to 0, reverting on the very next tick.
+    await new Promise((resolve) => setTimeout(resolve, 10));
+    await el.updateComplete;
+    expect(button.getAttribute('aria-label')).to.equal('Copy');
+  });
+
   it('is accessible', async () => {
     const el = await fixture(html`<lyra-copy-button value="hello"></lyra-copy-button>`);
     await expect(el).to.be.accessible();

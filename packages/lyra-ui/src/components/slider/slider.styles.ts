@@ -43,6 +43,14 @@ export const styles = css`
     cursor: grab;
     touch-action: none;
   }
+  /* [part='thumb'] is positioned with a logical inset-inline-start:<pct>% (set inline in
+     render()), which the browser anchors to the box's own *start* edge -- the physical right
+     edge under :dir(rtl). The fixed horizontal -50% above assumes an LTR left-edge anchor, so
+     it has to flip sign under RTL or the visible dot ends up a full thumb-width off from its
+     true track position. Mirrors lyra-time-range's identical handle rule. */
+  :host(:dir(rtl)) [part='thumb'] {
+    transform: translate(50%, -50%);
+  }
   /* The visible dot is 16px, under the ~24px touch-target minimum. Widen the
      hit/drag area with a transparent ::before instead of growing the thumb
      itself — onPointerMove never reads the thumb's own
@@ -60,6 +68,13 @@ export const styles = css`
     block-size: var(--lyra-size-28px);
     transform: translate(-50%, -50%);
     border-radius: 50%;
+  }
+  /* Same logical-inset-vs-physical-transform mismatch as the thumb itself: this enlarged
+     hit-area is centered on inset-inline-start: 50%, so its horizontal translate must flip
+     sign under RTL too or the actual drag hit zone detaches from the visible thumb. Mirrors
+     lyra-time-range's identical handle::before rule. */
+  :host(:dir(rtl)) [part='thumb']::before {
+    transform: translate(50%, -50%);
   }
   [part='thumb']:focus-visible {
     outline: var(--lyra-focus-ring-width) solid var(--lyra-focus-ring-color);

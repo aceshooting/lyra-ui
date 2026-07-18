@@ -183,6 +183,49 @@ it('respects explicit min/max overrides for point placement', async () => {
   expect(explicitHeights[1]).to.be.closeTo(10, 0.5);
 });
 
+it('falls back to the auto-scanned data range when min/max attributes are unparsable, instead of a NaN path', async () => {
+  const el = (await fixture(
+    `<lyra-sparkline min="not-a-number" max="not-a-number"></lyra-sparkline>`,
+  )) as LyraSparkline;
+  el.values = [1, 5, 10];
+  await el.updateComplete;
+  const path = el.shadowRoot!.querySelector('[part="line"]')!;
+  const d = path.getAttribute('d')!;
+  expect(d).to.not.contain('NaN');
+  // Same as the fully-auto case (min/max both invalid -> both fall back to the scanned 1..10 range).
+  const auto = (await fixture(`<lyra-sparkline></lyra-sparkline>`)) as LyraSparkline;
+  auto.values = [1, 5, 10];
+  await auto.updateComplete;
+  expect(d).to.equal(auto.shadowRoot!.querySelector('[part="line"]')!.getAttribute('d'));
+});
+
+it('falls back to the auto-scanned data range when min/max are assigned NaN/Infinity directly as properties', async () => {
+  const el = (await fixture(`<lyra-sparkline></lyra-sparkline>`)) as LyraSparkline;
+  el.values = [1, 5, 10];
+  el.min = Number.NaN;
+  el.max = Number.POSITIVE_INFINITY;
+  await el.updateComplete;
+  const path = el.shadowRoot!.querySelector('[part="line"]')!;
+  const d = path.getAttribute('d')!;
+  expect(d).to.not.contain('NaN');
+  expect(d).to.not.contain('Infinity');
+});
+
+it('swaps a reversed explicit min/max pair instead of producing an inverted/NaN path', async () => {
+  const el = (await fixture(`<lyra-sparkline min="10" max="0"></lyra-sparkline>`)) as LyraSparkline;
+  el.values = [0, 5, 10];
+  await el.updateComplete;
+  const path = el.shadowRoot!.querySelector('[part="line"]')!;
+  const d = path.getAttribute('d')!;
+  expect(d).to.not.contain('NaN');
+
+  // Swapping [10, 0] to [0, 10] reproduces the same plot as passing them in the right order.
+  const normal = (await fixture(`<lyra-sparkline min="0" max="10"></lyra-sparkline>`)) as LyraSparkline;
+  normal.values = [0, 5, 10];
+  await normal.updateComplete;
+  expect(d).to.equal(normal.shadowRoot!.querySelector('[part="line"]')!.getAttribute('d'));
+});
+
 it('labels the empty state', async () => {
   const el = (await fixture(`<lyra-sparkline></lyra-sparkline>`)) as LyraSparkline;
   await el.updateComplete;

@@ -64,14 +64,14 @@ export const styles = css`
   }
   [part='restore-button'][aria-disabled='true'] {
     cursor: default;
-    opacity: 0.7;
+    opacity: var(--lyra-opacity-disabled);
   }
   .restore-spinner {
     display: inline-flex;
   }
   .restore-spinner svg {
     display: block;
-    animation: lyra-checkpoint-spin 1s linear infinite;
+    animation: lyra-checkpoint-spin var(--lyra-checkpoint-spin-duration, 1s) linear infinite;
   }
   [part='confirm-group'] {
     display: flex;

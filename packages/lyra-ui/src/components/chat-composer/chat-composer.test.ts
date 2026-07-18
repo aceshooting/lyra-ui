@@ -388,6 +388,36 @@ it('reflects rows="min-rows" onto the native textarea attribute', async () => {
   expect(textareaOf(el).getAttribute('rows')).to.equal('3');
 });
 
+it('normalizes a non-finite or non-positive min-rows to 1 rather than rendering rows="NaN"/0/negative', async () => {
+  const nan = (await fixture(html`<lyra-chat-composer min-rows="not-a-number"></lyra-chat-composer>`)) as LyraChatComposer;
+  await nan.updateComplete;
+  expect(textareaOf(nan).getAttribute('rows')).to.equal('1');
+
+  const zero = (await fixture(html`<lyra-chat-composer min-rows="0"></lyra-chat-composer>`)) as LyraChatComposer;
+  await zero.updateComplete;
+  expect(textareaOf(zero).getAttribute('rows')).to.equal('1');
+
+  const negative = (await fixture(html`<lyra-chat-composer min-rows="-5"></lyra-chat-composer>`)) as LyraChatComposer;
+  await negative.updateComplete;
+  expect(textareaOf(negative).getAttribute('rows')).to.equal('1');
+});
+
+it('clamps max-rows up to min-rows when an inverted (or non-finite) pair is authored, instead of collapsing the growable range', async () => {
+  const inverted = (await fixture(
+    html`<lyra-chat-composer min-rows="5" max-rows="2"></lyra-chat-composer>`,
+  )) as LyraChatComposer;
+  const el = inverted as unknown as { effectiveMinRows: number; effectiveMaxRows: number };
+  expect(el.effectiveMinRows).to.equal(5);
+  expect(el.effectiveMaxRows, 'max-rows must never end up below min-rows').to.equal(5);
+
+  const nonFiniteMax = (await fixture(
+    html`<lyra-chat-composer min-rows="4" max-rows="not-a-number"></lyra-chat-composer>`,
+  )) as LyraChatComposer;
+  const elNonFinite = nonFiniteMax as unknown as { effectiveMinRows: number; effectiveMaxRows: number };
+  expect(elNonFinite.effectiveMinRows).to.equal(4);
+  expect(elNonFinite.effectiveMaxRows).to.equal(4);
+});
+
 it('grows the textarea height as multi-line content is typed, then switches to internal scrolling past max-rows', async () => {
   const el = (await fixture(
     html`<lyra-chat-composer min-rows="1" max-rows="3"></lyra-chat-composer>`,

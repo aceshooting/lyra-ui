@@ -1119,6 +1119,46 @@ describe('first-day-of-week (calendar mode)', () => {
     expect(el.firstDayOfWeek).to.equal(0);
   });
 
+  it('falls back to 0 for a non-finite first-day-of-week attribute, instead of NaN propagating into the grid math', async () => {
+    const el = (await fixture(
+      html`<lyra-heatmap mode="calendar" first-day-of-week="not-a-number"></lyra-heatmap>`,
+    )) as LyraHeatmap;
+    expect(el.firstDayOfWeek).to.equal(0);
+  });
+
+  it('wraps an out-of-range firstDayOfWeek into [0, 6] via modulo instead of an invalid weekday index', async () => {
+    const el = (await fixture(html`<lyra-heatmap mode="calendar"></lyra-heatmap>`)) as LyraHeatmap;
+
+    el.firstDayOfWeek = 7; // one past Saturday -> wraps to 0 (Sunday)
+    await el.updateComplete;
+    expect(el.firstDayOfWeek).to.equal(0);
+
+    el.firstDayOfWeek = 10; // wraps to 3 (Wednesday)
+    await el.updateComplete;
+    expect(el.firstDayOfWeek).to.equal(3);
+
+    el.firstDayOfWeek = -1; // wraps to 6 (Saturday)
+    await el.updateComplete;
+    expect(el.firstDayOfWeek).to.equal(6);
+
+    el.firstDayOfWeek = Number.NaN;
+    await el.updateComplete;
+    expect(el.firstDayOfWeek).to.equal(0);
+  });
+
+  it('renders without throwing for an out-of-range firstDayOfWeek', async () => {
+    const el = (await fixture(html`<lyra-heatmap mode="calendar" first-day-of-week="10"></lyra-heatmap>`)) as LyraHeatmap;
+    el.days = [
+      { date: '2026-03-01', value: 1 },
+      { date: '2026-03-08', value: 9 },
+    ];
+    await el.updateComplete;
+    expect(el.firstDayOfWeek).to.equal(3);
+    const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
+    expect(canvas.width).to.be.greaterThan(0);
+    expect(canvas.height).to.be.greaterThan(0);
+  });
+
   it('shifts which week/row a known date lands in, calendar mode', async () => {
     const el = (await fixture(
       html`<lyra-heatmap mode="calendar" first-day-of-week="1"></lyra-heatmap>`,
@@ -1288,6 +1328,48 @@ describe('calendar-mode cellSize/fitToWidth (extends the existing matrix-only pr
     const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
     // 28 + 1*(20+2) = 50, independent of host width.
     expect(parseInt(canvas.style.width, 10)).to.equal(50);
+  });
+});
+
+describe('cellSize numeric guard', () => {
+  it('falls back to the mode-appropriate default when cell-size is non-finite, instead of NaN canvas geometry', async () => {
+    const matrix = (await fixture(html`<lyra-heatmap cell-size="not-a-number"></lyra-heatmap>`)) as LyraHeatmap;
+    matrix.rowLabels = ['a'];
+    matrix.colLabels = ['x', 'y'];
+    matrix.values = [[1, 2]];
+    await matrix.updateComplete;
+    expect(matrix.cellSize).to.equal(22); // DEFAULT_MATRIX_CELL_SIZE
+    const matrixCanvas = matrix.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
+    // PAD_LEFT(60) + 2 cols * 22px = 104, unchanged from the unset-cellSize default.
+    expect(parseInt(matrixCanvas.style.width, 10)).to.equal(104);
+
+    const calendar = (await fixture(
+      html`<lyra-heatmap mode="calendar" cell-size="not-a-number"></lyra-heatmap>`,
+    )) as LyraHeatmap;
+    calendar.days = [{ date: '2026-03-01', value: 5 }];
+    await calendar.updateComplete;
+    expect(calendar.cellSize).to.equal(11); // CAL_CELL
+  });
+
+  it('clamps a zero/negative explicit cell-size to a 1px floor instead of dividing by zero, without throwing', async () => {
+    const el = (await fixture(html`<lyra-heatmap mode="calendar" cell-size="0"></lyra-heatmap>`)) as LyraHeatmap;
+    el.days = [
+      { date: '2026-03-01', value: 1 },
+      { date: '2026-03-08', value: 9 },
+    ];
+    await el.updateComplete;
+    expect(el.cellSize).to.equal(1);
+    const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
+    expect(canvas.width).to.be.greaterThan(0);
+    expect(canvas.height).to.be.greaterThan(0);
+    expect(Number.isFinite(canvas.width)).to.be.true;
+    expect(Number.isFinite(canvas.height)).to.be.true;
+
+    el.cellSize = -20;
+    await el.updateComplete;
+    expect(el.cellSize).to.equal(1);
+    expect(canvas.width).to.be.greaterThan(0);
+    expect(Number.isFinite(canvas.width)).to.be.true;
   });
 });
 
@@ -1624,7 +1706,7 @@ describe('selectedCell', () => {
     expect(el.getAttribute('aria-label')).to.not.include('Selected');
   });
 
-  it('appends a "(selected)" suffix to the live-region announcement for the selected cell', async () => {
+  it('announces the selected cell through the heatmapSelectedCellLabel template, not a bolted-on suffix', async () => {
     const el = (await fixture(html`
       <lyra-heatmap
         .rowLabels=${['Mon', 'Tue']}
@@ -1637,7 +1719,9 @@ describe('selectedCell', () => {
     canvas.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true, cancelable: true }));
     await el.updateComplete;
     const liveRegion = el.shadowRoot!.querySelector('[part="live-region"]') as HTMLElement;
-    expect(liveRegion.textContent).to.include('(selected)');
+    // the same "Selected: {cell}." template as the host aria-label, so a locale
+    // can position the selected wording anywhere around the cell text
+    expect(liveRegion.textContent).to.include('Selected: Row Mon, Col 00h: 1.');
   });
 
   it('is left to the consumer -- selectedCell is not reset alongside focusedCell on a grid-shape change', async () => {

@@ -203,6 +203,21 @@ it('localizes the chart-type name in the generated summary instead of the raw Ch
   expect(description.textContent).to.not.contain('polarArea');
 });
 
+it('joins per-series summary sentences with the localizable chartSummarySeparator message', async () => {
+  const el = (await fixture(html`<lyra-chart></lyra-chart>`)) as LyraChart;
+  el.strings = { chartSummarySeparator: ' | ' };
+  el.labels = ['A'];
+  el.datasets = [
+    { label: 'Revenue', data: [1] },
+    { label: 'Cost', data: [2] },
+  ];
+  await el.updateComplete;
+  await waitUntil(() => (el as any).chart != null);
+
+  const description = el.shadowRoot!.querySelector('[part="description"]')!;
+  expect(description.textContent).to.contain('trend | Cost:');
+});
+
 it('exposes a customizable accessible description and a data-table alternative', async () => {
   const el = (await fixture(html`<lyra-chart></lyra-chart>`)) as LyraChart;
   el.accessibleLabel = 'Revenue history';

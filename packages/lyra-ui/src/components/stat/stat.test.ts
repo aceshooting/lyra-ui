@@ -39,6 +39,28 @@ it('is accessible', async () => {
   await expect(el).to.be.accessible();
 });
 
+it('preserves NaN/null as the deliberate "no trend" sentinel, but normalizes Infinity to a flat 0% instead of rendering "Infinity%"', async () => {
+  const el = (await fixture(html`<lyra-stat label="x" value="1" trend="5"></lyra-stat>`)) as LyraStat;
+
+  el.trend = NaN;
+  expect(el.trend).to.satisfy(Number.isNaN); // still the hidden sentinel, not coerced to 0
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelector('[part="trend"]')).to.not.exist;
+
+  el.trend = Infinity;
+  expect(el.trend).to.equal(0); // normalized to a flat, finite trend instead of "Infinity%"
+  await el.updateComplete;
+  let trend = el.shadowRoot!.querySelector('[part="trend"]')!;
+  expect(trend).to.exist;
+  expect(trend.textContent).to.not.contain('Infinity');
+
+  el.trend = -Infinity;
+  expect(el.trend).to.equal(0);
+  await el.updateComplete;
+  trend = el.shadowRoot!.querySelector('[part="trend"]')!;
+  expect(trend.textContent).to.not.contain('Infinity');
+});
+
 it('stretches [part=base] to fill the host, matching lyra-word-cloud/lyra-context-meter\'s convention', async () => {
   const el = (await fixture(html`<lyra-stat label="Revenue" value="12.4"></lyra-stat>`)) as LyraStat;
   el.style.blockSize = '200px';

@@ -171,6 +171,13 @@ export const styles = css`
   [part='edge'][data-running-static] {
     stroke-dasharray: 6 4;
   }
+  /* The JS gate only evaluates the preference at render time; this CSS branch also covers a
+     preference change while an already-rendered edge is still marching. */
+  @media (prefers-reduced-motion: reduce) {
+    [part='edge'][data-running] {
+      animation: none;
+    }
+  }
   @keyframes lyra-flow-canvas-march {
     to {
       stroke-dashoffset: -20;

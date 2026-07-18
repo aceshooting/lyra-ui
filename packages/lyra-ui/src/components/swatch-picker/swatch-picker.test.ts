@@ -147,16 +147,34 @@ describe('lyra-swatch-picker', () => {
     expect(buttons[1]!.style.getPropertyValue('--lyra-swatch-color')).to.equal('#1a7f37');
   });
 
-  it('exposes the swatch color through `color` for currentColor icons, and suppresses fill/border when an icon is present', () => {
+  it('exposes the swatch color through `color` for currentColor icons, and paints the fill circle\'s background from it', () => {
     const css = styles.cssText.replace(/\s+/g, ' ');
     expect(css).to.include('color: var(--lyra-swatch-color); cursor: pointer;');
-    expect(css).to.include("[part='swatch']:has([part='swatch-icon']) { background-color: transparent");
+    expect(css).to.include("[part='swatch-fill'] { box-sizing: border-box; display: block;");
+    expect(css).to.match(/\[part='swatch-fill'\]\s*\{[^}]*background-color:\s*var\(--lyra-swatch-color\)/);
+  });
+
+  it('gives the swatch hit target the shared minimum touch-target size without inflating the visible fill', async () => {
+    const el = (await fixture(
+      html`<lyra-swatch-picker .options=${options()} value="blue"></lyra-swatch-picker>`,
+    )) as LyraSwatchPicker;
+    const swatch = swatches(el)[0]!;
+    const fill = swatch.querySelector('[part="swatch-fill"]') as HTMLElement;
+    expect(getComputedStyle(swatch).minInlineSize).to.equal('40px');
+    expect(getComputedStyle(swatch).minBlockSize).to.equal('40px');
+    // The visible fill itself stays compact (--lyra-size-1-5rem = 24px), not blown up to 40px --
+    // the button's own box grows around it via flex centering instead.
+    expect(getComputedStyle(fill).inlineSize).to.equal('24px');
+    expect(getComputedStyle(fill).blockSize).to.equal('24px');
   });
 
   it('draws the selected ring through the --lyra-swatch-picker-selected-color token', () => {
     const css = styles.cssText.replace(/\s+/g, ' ');
+    // The ring lives on [part='swatch-fill'], a descendant of the checked [part='swatch'] -- split
+    // out of the interactive hit target so the hit box can grow to the shared minimum tappable size
+    // without inflating the visible ring/fill (see [part='swatch']'s own styles.ts comment).
     expect(css).to.match(
-      /\[part='swatch'\]\[aria-checked='true'\]\s*\{[^}]*var\(--lyra-swatch-picker-selected-color\)/,
+      /\[part='swatch'\]\[aria-checked='true'\]\s*\[part='swatch-fill'\]\s*\{[^}]*var\(--lyra-swatch-picker-selected-color\)/,
     );
   });
 
@@ -164,7 +182,7 @@ describe('lyra-swatch-picker', () => {
     const css = styles.cssText.replace(/\s+/g, ' ');
     expect(css).to.include('--lyra-swatch-picker-shine-duration: 0s;');
     expect(css).to.match(
-      /\[part='swatch'\]\[aria-checked='true'\]\s*\{[^}]*animation:\s*lyra-swatch-picker-shine var\(--lyra-swatch-picker-shine-duration\)/,
+      /\[part='swatch'\]\[aria-checked='true'\]\s*\[part='swatch-fill'\]\s*\{[^}]*animation:\s*lyra-swatch-picker-shine var\(--lyra-swatch-picker-shine-duration\)/,
     );
     expect(css).to.match(/@keyframes lyra-swatch-picker-shine\s*\{[\s\S]*?50%\s*\{[^}]*filter:\s*brightness\(1\.4\)/);
   });
@@ -172,7 +190,7 @@ describe('lyra-swatch-picker', () => {
   it('disables the shine animation outright under prefers-reduced-motion, independent of the transform-easing rule', () => {
     const css = styles.cssText.replace(/\s+/g, ' ');
     expect(css).to.match(
-      /@media \(prefers-reduced-motion: reduce\) \{[^]*\[part='swatch'\]\[aria-checked='true'\]\s*\{[^}]*animation:\s*none[^}]*\}[^]*\}/,
+      /@media \(prefers-reduced-motion: reduce\) \{[^]*\[part='swatch'\]\[aria-checked='true'\]\s*\[part='swatch-fill'\]\s*\{[^}]*animation:\s*none[^}]*\}[^]*\}/,
     );
   });
 

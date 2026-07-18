@@ -43,7 +43,7 @@ export class LyraEntityChip extends LyraElement<LyraEntityChipEventMap> {
   @property({ attribute: 'entity-id' }) entityId = '';
   /** The visible chip text (unlike citation-badge, the chip renders its label, not `[n]`). */
   @property() label = '';
-  /** The entity's §3.4 type id; reflected so hosts theme per type from CSS. */
+  /** The entity's `lyra-graph` `nodeTypes` id; reflected so hosts theme per type from CSS. */
   @property({ reflect: true }) type = '';
   /** Resolved display label for `type`; when set, the accessible name speaks it instead of the raw
    *  type id. */

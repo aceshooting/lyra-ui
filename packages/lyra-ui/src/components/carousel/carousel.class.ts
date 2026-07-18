@@ -1,6 +1,7 @@
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, query } from 'lit/decorators.js';
 import { LyraElement } from '../../internal/lyra-element.js';
+import { finiteDuration, finiteInteger } from '../../internal/numbers.js';
 import { styles } from './carousel.styles.js';
 
 export interface LyraCarouselEventMap {
@@ -74,9 +75,12 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
     );
   }
 
+  /** Read-time-safe view of the reflected `index` property, clamped to `[0, count - 1]` -- `count`
+   *  is the live slotted-slide count, not a static bound, so this re-clamps on every call rather
+   *  than caching. */
   private normalizedIndex(count = this.slides().length): number {
     if (count === 0) return 0;
-    return Math.min(count - 1, Math.max(0, Number.isFinite(this.index) ? Math.trunc(this.index) : 0));
+    return finiteInteger(this.index, 0, 0, count - 1);
   }
 
   private syncSlides = (): void => {
@@ -125,7 +129,10 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
   private restartAutoplay(): void {
     this.stopAutoplay();
     if (!this.autoplay || this.reduceMotion || this.slides().length < 2) return;
-    const interval = Number.isFinite(this.autoplayInterval) ? Math.max(1000, this.autoplayInterval) : 5000;
+    // `autoplayInterval` is a timer duration handed straight to `setInterval` -- floor it at 1s (a
+    // sub-second autoplay interval would fight the transition and hurt usability more than help)
+    // and default a non-finite/`NaN` value to the property's own 5s default.
+    const interval = finiteDuration(this.autoplayInterval, 5000, 1000);
     this.timer = window.setInterval(() => {
       if (this.loop || this.index < this.slides().length - 1) this.next();
       else this.stopAutoplay();
@@ -166,6 +173,8 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
     return html`<section part="base" role="region" aria-roledescription=${this.localize('carousel')} aria-label=${label}>
       <div
         part="viewport"
+        role="group"
+        aria-label=${label}
         tabindex="0"
         aria-live=${this.autoplay ? 'off' : 'polite'}
         @keydown=${this.onViewportKeyDown}

@@ -60,6 +60,10 @@ export class LyraSourcePicker extends LyraElement<LyraSourcePickerEventMap> {
   @property({ type: Boolean, attribute: 'show-select-all' }) showSelectAll = true;
   @property({ type: Boolean }) searchable = true;
   @property() label = '';
+  /** Overrides the tree's computed accessible name. Wins over `label` and the localized
+   *  default. Attribute-reflects from a host-level `aria-label` so a plain-markup consumer
+   *  gets ARIA-name forwarding without setting a JS property. */
+  @property({ attribute: 'aria-label' }) accessibleLabel: string | null = null;
 
   @state() private expandedIds = new Set<string>();
   @state() private query = '';
@@ -236,7 +240,7 @@ export class LyraSourcePicker extends LyraElement<LyraSourcePickerEventMap> {
   }
 
   render(): TemplateResult {
-    const label = this.label || this.localize('sourceListDefaultLabel');
+    const label = this.accessibleLabel || this.label || this.localize('sourceListDefaultLabel');
     if (this.sources.length === 0) {
       return html`<div part="base"><lyra-empty part="empty" heading=${this.localize('noData')}></lyra-empty></div>`;
     }
@@ -264,7 +268,16 @@ export class LyraSourcePicker extends LyraElement<LyraSourcePickerEventMap> {
           : nothing}
         ${this.showSelectAll
           ? html`<div part="select-all">
-              <span role="checkbox" tabindex="0" aria-checked=${selectAllState} @click=${() => this.toggleSelectAll()}
+              <span
+                role="checkbox"
+                tabindex="0"
+                aria-checked=${selectAllState}
+                @click=${() => this.toggleSelectAll()}
+                @keydown=${(e: KeyboardEvent) => {
+                  if (e.key !== 'Enter' && e.key !== ' ') return;
+                  e.preventDefault(); // Space must not scroll the panel
+                  this.toggleSelectAll();
+                }}
                 >${this.localize('selectAllSources')}</span
               >
               <span part="summary">${this.localize('sourcePickerSelection', undefined, { selected: this.selectedIds.length, total: allLeaves.length })}</span>

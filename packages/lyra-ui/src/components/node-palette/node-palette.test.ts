@@ -16,6 +16,22 @@ it('defaults to empty items and label', async () => {
   expect(el.label).to.equal('');
 });
 
+it('names the listbox via label, with a host aria-label winning over both label and the localized default', async () => {
+  const el = (await fixture(html`<lyra-node-palette .items=${items}></lyra-node-palette>`)) as LyraNodePalette;
+  await el.updateComplete;
+  const listbox = el.shadowRoot!.querySelector('[role="listbox"]')!;
+  expect(listbox.getAttribute('aria-label')).to.equal('Node palette');
+
+  el.label = 'Workflow nodes';
+  await el.updateComplete;
+  expect(listbox.getAttribute('aria-label')).to.equal('Workflow nodes');
+
+  el.setAttribute('aria-label', 'Automation blocks');
+  await el.updateComplete;
+  expect(el.accessibleLabel).to.equal('Automation blocks');
+  expect(listbox.getAttribute('aria-label')).to.equal('Automation blocks');
+});
+
 it('renders one item per entry, grouped by category in first-appearance order', async () => {
   const el = (await fixture(html`<lyra-node-palette .items=${items}></lyra-node-palette>`)) as LyraNodePalette;
   await el.updateComplete;

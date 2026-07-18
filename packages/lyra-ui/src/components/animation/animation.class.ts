@@ -2,6 +2,7 @@ import { html, type PropertyValues, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { LyraElement } from '../../internal/lyra-element.js';
 import { prefersReducedMotion } from '../../internal/motion.js';
+import { finiteDuration, finiteNumber, finiteRange } from '../../internal/numbers.js';
 import { styles } from './animation.styles.js';
 
 /** Curated preset catalog for the `name` property. `slide-in-start`/`slide-in-end`/
@@ -187,6 +188,44 @@ export class LyraAnimation extends LyraElement<LyraAnimationEventMap> {
   private visibilityObserver?: IntersectionObserver;
   private motionQuery?: MediaQueryList;
 
+  // `delay`/`duration`/`endDelay`/`iterations`/`iterationStart`/`playbackRate` all ultimately reach
+  // `Element.animate()` or a live `Animation`'s own IDL setters -- the Web Animations API's
+  // `EffectTiming`/`OptionalEffectTiming` conversion *synchronously throws* a `TypeError` for a
+  // non-finite/negative `duration`, `delay`, or `endDelay`, and for a negative or non-finite
+  // `iterationStart` (see the W3C spec's "update the timing properties of an animation effect"
+  // procedure). That crash would surface from `createAnimation()`, which `updated()` calls on
+  // nearly every property change including this component's very first render -- so a single bad
+  // attribute (a stray `duration="NaN"`, or any of these left `undefined` by a buggy caller) would
+  // otherwise crash the whole component rather than degrading gracefully. `delay`/`endDelay`, per
+  // this component's own contract, are always non-negative durations (`finiteDuration` bounds
+  // them at 0 and the timer-safe ceiling); `iterationStart` is bounded at 0 only (no timer
+  // ceiling applies); `playbackRate` has no such throw risk (it's a plain `double` IDL setter) but
+  // still needs finiteness so `NaN` doesn't poison the animation's timing math.
+  private get safeDelay(): number {
+    return finiteDuration(this.delay, 0, 0);
+  }
+  private get safeDuration(): number {
+    return finiteDuration(this.duration, 1000, 0);
+  }
+  private get safeEndDelay(): number {
+    return finiteDuration(this.endDelay, 0, 0);
+  }
+  /** `iterations` normalized to a finite, non-negative real -- *or* `Infinity` verbatim.
+   *  `Infinity` is this property's own documented default (an animation that repeats forever,
+   *  mirroring the upstream Web Awesome/Shoelace contract) and a legitimate, spec-sanctioned
+   *  `EffectTiming.iterations` value, so it must never be coerced away by `finiteRange`'s clamp
+   *  (which cannot itself represent "fall back to Infinity" -- its fallback parameter must be
+   *  finite). Only a genuinely invalid raw value (`NaN`, negative, `-Infinity`) falls back to `1`. */
+  private get safeIterations(): number {
+    return this.iterations === Infinity ? Infinity : finiteRange(this.iterations, 1, 0);
+  }
+  private get safeIterationStart(): number {
+    return finiteRange(this.iterationStart, 0, 0);
+  }
+  private get safePlaybackRate(): number {
+    return finiteNumber(this.playbackRate, 1);
+  }
+
   connectedCallback(): void {
     super.connectedCallback();
     this.motionQuery = typeof matchMedia === 'function' ? matchMedia('(prefers-reduced-motion: reduce)') : undefined;
@@ -228,7 +267,7 @@ export class LyraAnimation extends LyraElement<LyraAnimationEventMap> {
     ] as const;
     if (rebuildKeys.some((key) => changed.has(key))) this.createAnimation();
     else if (changed.has('play')) this.applyPlayState();
-    if (changed.has('playbackRate') && this.animation) this.animation.playbackRate = this.playbackRate;
+    if (changed.has('playbackRate') && this.animation) this.animation.playbackRate = this.safePlaybackRate;
     if (['playOnVisible', 'playOnVisibleRepeat', 'rootMargin', 'threshold', 'root'].some((key) => changed.has(key))) {
       this.scheduleAfterUpdate(this.syncVisibilityObserver);
     }
@@ -312,19 +351,21 @@ export class LyraAnimation extends LyraElement<LyraAnimationEventMap> {
     if (!target || !keyframes) return;
     const reduced = this.respectReducedMotion && prefersReducedMotion();
     const { duration, easing } =
-      this.timingPreset === 'custom' ? { duration: this.duration, easing: this.easing } : resolveTimingToken(this, this.timingPreset);
+      this.timingPreset === 'custom'
+        ? { duration: this.safeDuration, easing: this.easing }
+        : resolveTimingToken(this, this.timingPreset);
     const options: KeyframeAnimationOptions = {
-      delay: this.delay,
+      delay: this.safeDelay,
       direction: this.direction,
       duration,
       easing,
-      endDelay: this.endDelay,
+      endDelay: this.safeEndDelay,
       fill: this.fill,
-      iterationStart: this.iterationStart,
-      iterations: reduced ? Math.min(this.iterations, 1) : this.iterations,
+      iterationStart: this.safeIterationStart,
+      iterations: reduced ? Math.min(this.safeIterations, 1) : this.safeIterations,
     };
     this.animation = target.animate(keyframes, options);
-    this.animation.playbackRate = this.playbackRate;
+    this.animation.playbackRate = this.safePlaybackRate;
     this.animation.addEventListener('cancel', this.onAnimationCancel);
     this.animation.addEventListener('finish', this.onAnimationFinish);
     if (this.play) {

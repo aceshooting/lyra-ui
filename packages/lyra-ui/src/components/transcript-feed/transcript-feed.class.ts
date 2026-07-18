@@ -2,6 +2,8 @@ import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property } from 'lit/decorators.js';
 import { repeat } from 'lit/directives/repeat.js';
 import { LyraElement } from '../../internal/lyra-element.js';
+import { getDateTimeFormat } from '../../internal/intl-cache.js';
+import { finiteCount } from '../../internal/numbers.js';
 import { styles } from './transcript-feed.styles.js';
 
 export interface LyraTranscriptEntry {
@@ -58,12 +60,28 @@ export class LyraTranscriptFeed extends LyraElement<LyraTranscriptFeedEventMap> 
   @property({ attribute: false }) formatTimestamp?: (epochMs: number) => string;
   /** `> 0` renders only the newest N rows (host `entries` data is untouched); `0` renders all. */
   @property({ type: Number, attribute: 'max-rendered-entries' }) maxRenderedEntries = 0;
+  /** Accessible name for the `role="log"` region. Defaults to the localized `transcriptFeedLabel`. */
+  @property() label = '';
+  /** Overrides the log region's computed accessible name. Wins over `label` and the localized
+   *  default. Attribute-reflects from a host-level `aria-label` so a plain-markup consumer gets
+   *  ARIA-name forwarding without setting a JS property. */
+  @property({ attribute: 'aria-label' }) accessibleLabel: string | null = null;
 
   private _isFirstUpdate = true;
 
+  /** `maxRenderedEntries`, normalized to a finite non-negative integer (falling back to the
+   *  property's own default of `0`, meaning "render all") -- a raw `NaN` (e.g. an invalid
+   *  `max-rendered-entries` attribute) would otherwise make `maxRenderedEntries > 0` always
+   *  false, which happens to already match the "render all" fallback, but only by the same
+   *  accidental-`NaN`-comparison quirk this guard exists to remove. */
+  private get effectiveMaxRenderedEntries(): number {
+    return finiteCount(this.maxRenderedEntries, 0);
+  }
+
   private get renderedEntries(): LyraTranscriptEntry[] {
-    if (this.maxRenderedEntries > 0 && this.entries.length > this.maxRenderedEntries) {
-      return this.entries.slice(-this.maxRenderedEntries);
+    const maxRenderedEntries = this.effectiveMaxRenderedEntries;
+    if (maxRenderedEntries > 0 && this.entries.length > maxRenderedEntries) {
+      return this.entries.slice(-maxRenderedEntries);
     }
     return this.entries;
   }
@@ -113,7 +131,7 @@ export class LyraTranscriptFeed extends LyraElement<LyraTranscriptFeedEventMap> 
 
   private formatTs(epochMs: number): string {
     if (this.formatTimestamp) return this.formatTimestamp(epochMs);
-    return new Intl.DateTimeFormat(this.effectiveLocale || undefined, { hour: 'numeric', minute: '2-digit' }).format(
+    return getDateTimeFormat(this.effectiveLocale || 'en', { hour: 'numeric', minute: '2-digit' }).format(
       new Date(epochMs),
     );
   }
@@ -142,7 +160,7 @@ export class LyraTranscriptFeed extends LyraElement<LyraTranscriptFeedEventMap> 
         ${empty
           ? html`<div part="empty"><slot name="empty">${this.localize('transcriptFeedEmpty')}</slot></div>`
           : html`
-              <div part="log" role="log" aria-label=${this.localize('transcriptFeedLabel')}>
+              <div part="log" role="log" aria-label=${this.accessibleLabel || this.label || this.localize('transcriptFeedLabel')}>
                 ${repeat(
                   finals,
                   (e) => e.id,

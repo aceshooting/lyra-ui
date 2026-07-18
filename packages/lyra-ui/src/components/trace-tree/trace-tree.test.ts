@@ -166,6 +166,24 @@ describe('lyra-trace-tree', () => {
     expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('Arbre de trace');
   });
 
+  it('builds status-change announcements from the traceTreeSpanStatus template, so a locale controls name/status order', async () => {
+    const el = (await fixture(html`<lyra-trace-tree .spans=${SPANS}></lyra-trace-tree>`)) as LyraTraceTree;
+    await el.updateComplete;
+    // reorder the placeholders to prove the announcement is interpolated,
+    // not the span name concatenated with the localized status
+    el.strings = { traceTreeSpanStatus: 'Status {status} for {name}' };
+    const live = el.shadowRoot!.querySelector('lyra-live-region')!;
+    live.throttleMs = 0;
+    await el.updateComplete;
+    await live.updateComplete;
+    el.spans = SPANS.map((s) => (s.id === 'llm' ? { ...s, status: 'success' as const } : s));
+    await el.updateComplete;
+    // the live region's announcer flushes on a (zero-length) timeout
+    await new Promise((resolve) => setTimeout(resolve, 60));
+    const region = live.shadowRoot!.querySelector('[part="region"]')!;
+    expect(region.textContent).to.equal('Status Success for gpt-turbo');
+  });
+
   it('is accessible', async () => {
     const el = (await fixture(html`<lyra-trace-tree .spans=${SPANS} show-tokens show-cost></lyra-trace-tree>`)) as LyraTraceTree;
     await el.updateComplete;

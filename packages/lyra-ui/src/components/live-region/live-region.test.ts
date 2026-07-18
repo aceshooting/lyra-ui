@@ -108,6 +108,33 @@ it('back-to-back distinct announcements never need the clear step', async () => 
   expect(region.textContent, 'distinct text should be set directly, no clear step').to.equal('two');
 });
 
+it('normalizes a NaN/negative throttleMs to the sane 500ms default instead of an ~immediate flush', async () => {
+  const el = (await fixture(html`<lyra-live-region></lyra-live-region>`)) as LyraLiveRegion;
+  const region = regionEl(el);
+
+  el.throttleMs = NaN;
+  await el.updateComplete;
+  el.announce('a');
+  // An unsanitized NaN/negative throttleMs reaching the real setTimeout would clamp to ~0ms per spec
+  // and flush almost immediately; the sanitized 500ms default must still be pending a frame later.
+  await nextFrame();
+  expect(region.textContent, 'must not have flushed on the very next frame with the sanitized default').to.equal(
+    '',
+  );
+  await waitUntil(() => region.textContent === 'a', 'expected the sanitized default window to eventually flush', {
+    timeout: 2000,
+  });
+
+  el.throttleMs = -100;
+  await el.updateComplete;
+  el.announce('b');
+  await nextFrame();
+  expect(region.textContent, 'a negative throttleMs must also fall back, not flush immediately').to.equal('a');
+  await waitUntil(() => region.textContent === 'b', 'expected the sanitized default window to eventually flush', {
+    timeout: 2000,
+  });
+});
+
 it('changing throttle-ms applies to the next burst', async () => {
   const el = (await fixture(
     html`<lyra-live-region throttle-ms="5000"></lyra-live-region>`,

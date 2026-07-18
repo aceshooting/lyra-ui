@@ -412,6 +412,62 @@ it('forwards spellcheck=false, autocapitalize, and autocorrect onto the internal
   expect(input.getAttribute('autocorrect')).to.equal('off');
 });
 
+it('uses string overrides for the country-select label and both validation messages', async () => {
+  const el = (await fixture(html`
+    <lyra-phone-input label="Phone number" default-country="LU" .adapter=${adapter}></lyra-phone-input>
+  `)) as LyraPhoneInput;
+  el.strings = {
+    select: 'Choisir',
+    phoneInputIncomplete: 'Numéro incomplet.',
+    valueInvalid: 'Numéro invalide.',
+  };
+  await el.updateComplete;
+  const select = el.shadowRoot!.querySelector('[part="country-select"]') as HTMLSelectElement;
+  const input = el.input!;
+
+  expect(select.getAttribute('aria-label')).to.equal('Choisir');
+
+  input.value = '123';
+  input.dispatchEvent(new InputEvent('input', { bubbles: true }));
+  input.dispatchEvent(new Event('change', { bubbles: true }));
+  expect(el.internals.validationMessage).to.equal('Numéro incomplet.');
+
+  input.value = '000000';
+  input.dispatchEvent(new InputEvent('input', { bubbles: true }));
+  input.dispatchEvent(new Event('change', { bubbles: true }));
+  expect(el.internals.validationMessage).to.equal('Numéro invalide.');
+});
+
+it('passes non-default country-label, incomplete-text, and invalid-text attributes through verbatim', async () => {
+  // A consumer-supplied non-default value must pass through verbatim -- the localize()
+  // fallback is only reached while each property still holds its documented default.
+  const el = (await fixture(html`
+    <lyra-phone-input
+      label="Phone number"
+      default-country="LU"
+      country-label="Calling country"
+      incomplete-text="Keep typing"
+      invalid-text="Not a number"
+      .adapter=${adapter}
+    ></lyra-phone-input>
+  `)) as LyraPhoneInput;
+  await el.updateComplete;
+  const select = el.shadowRoot!.querySelector('[part="country-select"]') as HTMLSelectElement;
+  const input = el.input!;
+
+  expect(select.getAttribute('aria-label')).to.equal('Calling country');
+
+  input.value = '123';
+  input.dispatchEvent(new InputEvent('input', { bubbles: true }));
+  input.dispatchEvent(new Event('change', { bubbles: true }));
+  expect(el.internals.validationMessage).to.equal('Keep typing');
+
+  input.value = '000000';
+  input.dispatchEvent(new InputEvent('input', { bubbles: true }));
+  input.dispatchEvent(new Event('change', { bubbles: true }));
+  expect(el.internals.validationMessage).to.equal('Not a number');
+});
+
 it('is accessible', async () => {
   const el = (await fixture(html`
     <lyra-phone-input

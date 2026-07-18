@@ -922,6 +922,16 @@ describe('focus & fit (J4 camera)', () => {
     }
   });
 
+  it('disconnect cancels an in-flight camera tween instead of animating a detached tree (regression)', async () => {
+    const el = await mountWide();
+    const call = el.focusNode('a');
+    el.remove();
+    // cancelCameraTween() both stops the rAF loop (no more frames scheduled against the detached
+    // tree) and settles the caller's Promise with `false` instead of leaving it hanging.
+    expect(await call).to.be.false;
+    expect((el as unknown as { cameraTweenId?: number }).cameraTweenId).to.be.undefined;
+  });
+
   it('a superseded focusNode() call resolves false instead of hanging (regression)', async () => {
     const el = await mountWide();
     const firstCall = el.focusNode('a');
@@ -1666,6 +1676,17 @@ describe('canvas renderer — static draw', () => {
     await expect(el).to.be.accessible();
   });
 
+  it('switching renderer back to svg tears down the canvas resize watcher (no observer stacking across round trips, regression)', async () => {
+    const el = await mountCanvas();
+    expect((el as unknown as { canvasResizeObserver?: ResizeObserver }).canvasResizeObserver).to.exist;
+    el.renderer = 'svg';
+    await el.updateComplete;
+    await waitUntil(() => !!el.shadowRoot!.querySelector('svg'), undefined, { timeout: NODE_COUNT_TIMEOUT });
+    // Re-entering canvas mode re-arms a fresh observer; leaving it must disconnect the old one,
+    // or every canvas -> svg -> canvas round trip would stack another live observer on the host.
+    expect((el as unknown as { canvasResizeObserver?: ResizeObserver }).canvasResizeObserver).to.be.undefined;
+  });
+
   it('existing graph usage unaffected: renderer unset renders the untouched svg path', async () => {
     const el = (await fixture(html`<lyra-graph></lyra-graph>`)) as LyraGraph;
     el.nodes = nodes;
@@ -1741,8 +1762,23 @@ describe('canvas renderer — interaction and a11y', () => {
     expect(detail).to.deep.equal({ id: target.id });
   });
 
+  // Seeded so the force layout converges synchronously: hover hit-testing is coalesced to one per
+  // animation frame and deferred while the simulation is still ticking, so a still-settling mount
+  // would never resolve a hover at all.
+  async function mountSettledCanvas(): Promise<LyraGraph> {
+    const el = (await fixture(
+      html`<lyra-graph renderer="canvas" seed="7" width="400" height="300" style="width:400px;height:300px"></lyra-graph>`,
+    )) as LyraGraph;
+    el.nodes = nodes;
+    el.links = links;
+    await el.updateComplete;
+    await waitUntil(() => !!el.shadowRoot!.querySelector('canvas'), undefined, { timeout: NODE_COUNT_TIMEOUT });
+    await aTimeout(50); // let the draw rAF fire so the backing store is sized for hit-testing
+    return el;
+  }
+
   it('shows a hover tooltip with the item label on pointer hover, hides it off-item', async () => {
-    const el = await mountCanvas();
+    const el = await mountSettledCanvas();
     const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
     const target = el.simNodes[0]!;
     const rect = canvas.getBoundingClientRect();
@@ -1755,7 +1791,9 @@ describe('canvas renderer — interaction and a11y', () => {
       }),
     );
     const tooltip = el.shadowRoot!.querySelector('[part="tooltip"]') as HTMLElement;
-    expect(tooltip.hasAttribute('hidden')).to.be.false;
+    // Hover hit-testing is coalesced to one per animation frame, so the tooltip appears on the
+    // frame after the pointermove, not synchronously within its dispatch.
+    await waitUntil(() => !tooltip.hasAttribute('hidden'), 'coalesced hover should resolve on the next frame');
     // nodeAccessibleText() is private -- read it via the same `unknown` cast this file already
     // uses elsewhere for private-member assertions, to compute the exact expected label.
     const expectedLabel = (el as unknown as { nodeAccessibleText: (n: unknown) => string }).nodeAccessibleText(target);
@@ -1764,7 +1802,40 @@ describe('canvas renderer — interaction and a11y', () => {
     canvas.dispatchEvent(
       new PointerEvent('pointermove', { bubbles: true, clientX: rect.left + 399, clientY: rect.top + 299, pointerId: 3 }),
     );
-    expect(tooltip.hasAttribute('hidden')).to.be.true;
+    await waitUntil(() => tooltip.hasAttribute('hidden'), 'off-item hover should hide the tooltip on the next frame');
+  });
+
+  it('positions the hover tooltip from the physical left edge so it tracks the cursor under dir="rtl" (regression)', async () => {
+    const container = (await fixture(html`
+      <div dir="rtl">
+        <lyra-graph renderer="canvas" seed="7" width="400" height="300" style="width:400px;height:300px"></lyra-graph>
+      </div>
+    `)) as HTMLElement;
+    const el = container.querySelector('lyra-graph') as LyraGraph;
+    el.nodes = nodes;
+    el.links = links;
+    await el.updateComplete;
+    await waitUntil(() => !!el.shadowRoot!.querySelector('canvas'), undefined, { timeout: NODE_COUNT_TIMEOUT });
+    await aTimeout(50);
+    const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
+    const target = el.simNodes[0]!;
+    const rect = canvas.getBoundingClientRect();
+    canvas.dispatchEvent(
+      new PointerEvent('pointermove', {
+        bubbles: true,
+        clientX: rect.left + target.x!,
+        clientY: rect.top + target.y!,
+        pointerId: 9,
+      }),
+    );
+    const tooltip = el.shadowRoot!.querySelector('[part="tooltip"]') as HTMLElement;
+    await waitUntil(() => !tooltip.hasAttribute('hidden'), 'coalesced hover should resolve on the next frame');
+    // The offset is computed from the canvas's physical left edge, so it must land on the physical
+    // `left` property -- `inset-inline-start` maps to `right` under RTL, which would mirror the
+    // tooltip across the canvas instead of placing it at the cursor.
+    expect(parseFloat(tooltip.style.left)).to.be.closeTo(target.x!, 1);
+    expect(parseFloat(tooltip.style.top)).to.be.closeTo(target.y!, 1);
+    expect(tooltip.style.insetInlineStart).to.equal('');
   });
 
   it('renders one offscreen cursor-item button per node/link, in the same roving order as svg mode, driving the same keyboard/announcement logic', async () => {
@@ -1989,6 +2060,153 @@ it('recenters the simulation and bumps alpha when width/height change post-mount
   expect(center.x()).to.equal(500);
   expect(center.y()).to.equal(200);
   expect(simulation.alpha()).to.be.greaterThan(simulation.alphaMin());
+});
+
+// Regression coverage for the shared finite-number normalization layer (`src/internal/numbers.ts`)
+// not previously wired up for width/height/min-zoom/max-zoom/charge-strength/link-distance -- an
+// invalid attribute value used to flow straight into forceCenter()/d3-force's strength()/
+// distance()/scaleExtent() and the SVG viewBox, poisoning the simulation and rendered geometry
+// with NaN instead of being clamped like every other numeric property in this library.
+it('normalizes non-finite/non-positive width or height so the viewBox and force-center stay finite', async () => {
+  const el = (await fixture(html`<lyra-graph width="NaN" height="-100"></lyra-graph>`)) as LyraGraph;
+  el.nodes = nodes;
+  el.links = links;
+  await el.updateComplete;
+  await waitUntil(() => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2, undefined, {
+    timeout: NODE_COUNT_TIMEOUT,
+  });
+
+  const svgEl = el.shadowRoot!.querySelector('svg') as SVGSVGElement;
+  expect(svgEl.getAttribute('viewBox')).to.not.match(/NaN|Infinity|-100/);
+
+  const simulation = (el as any).simulation as { force: (name: string) => { x: () => number; y: () => number } };
+  const center = simulation.force('center');
+  expect(Number.isFinite(center.x())).to.be.true;
+  expect(Number.isFinite(center.y())).to.be.true;
+});
+
+it('normalizes non-finite/negative min-zoom or max-zoom so the live scaleExtent and zoomed scale stay finite', async () => {
+  const el = (await fixture(html`<lyra-graph></lyra-graph>`)) as LyraGraph;
+  el.nodes = nodes;
+  el.links = links;
+  await el.updateComplete;
+  await waitUntil(() => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2, undefined, {
+    timeout: NODE_COUNT_TIMEOUT,
+  });
+
+  el.minZoom = NaN;
+  el.maxZoom = Infinity;
+  await el.updateComplete;
+  const zoomBehavior = (el as any).zoomBehavior as { scaleExtent: () => [number, number] };
+  let [lo, hi] = zoomBehavior.scaleExtent();
+  expect(Number.isFinite(lo)).to.be.true;
+  expect(Number.isFinite(hi)).to.be.true;
+  expect(lo).to.be.greaterThan(0);
+
+  el.minZoom = -Infinity;
+  el.maxZoom = -5; // a negative upper zoom bound is meaningless
+  await el.updateComplete;
+  [lo, hi] = zoomBehavior.scaleExtent();
+  expect(Number.isFinite(lo)).to.be.true;
+  expect(Number.isFinite(hi)).to.be.true;
+  expect(hi).to.be.greaterThan(0);
+
+  const svgEl = el.shadowRoot!.querySelector('svg') as SVGSVGElement;
+  const g = el.shadowRoot!.querySelector('g') as SVGGElement;
+  svgEl.dispatchEvent(
+    new WheelEvent('wheel', { bubbles: true, cancelable: true, deltaY: -100000, clientX: 10, clientY: 10 }),
+  );
+  await el.updateComplete;
+  const match = /scale\(([^)]+)\)/.exec(g.getAttribute('transform') ?? '');
+  expect(match).to.exist;
+  expect(Number.isFinite(Number(match![1]))).to.be.true;
+});
+
+it('normalizes non-finite charge-strength and non-finite/negative link-distance so the live d3-force objects never receive NaN', async () => {
+  const el = (await fixture(html`<lyra-graph></lyra-graph>`)) as LyraGraph;
+  el.nodes = nodes;
+  el.links = links;
+  await el.updateComplete;
+  await waitUntil(() => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2, undefined, {
+    timeout: NODE_COUNT_TIMEOUT,
+  });
+
+  el.chargeStrength = NaN;
+  el.linkDistance = -250; // a negative link distance has no sane geometric meaning
+  await el.updateComplete;
+
+  const chargeForce = (el as any).chargeForce as { strength: () => () => number };
+  const linkForce = (el as any).linkForce as { distance: () => () => number };
+  expect(Number.isFinite(chargeForce.strength()())).to.be.true;
+  const distance = linkForce.distance()();
+  expect(Number.isFinite(distance)).to.be.true;
+  expect(distance).to.be.at.least(0);
+
+  el.chargeStrength = Infinity;
+  await el.updateComplete;
+  expect(Number.isFinite(chargeForce.strength()())).to.be.true;
+});
+
+it('normalizes a non-finite seed to a finite integer instead of poisoning the deterministic spawn hash', async () => {
+  const el = (await fixture(html`<lyra-graph></lyra-graph>`)) as LyraGraph;
+  el.seed = Number.NaN;
+  el.nodes = nodes;
+  el.links = links;
+  await el.updateComplete;
+  await waitUntil(() => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2, undefined, {
+    timeout: NODE_COUNT_TIMEOUT,
+  });
+
+  for (const n of el.nodes) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const sim = (el as any).simNodes.find((s: { id: string }) => s.id === n.id);
+    expect(Number.isFinite(sim.x)).to.be.true;
+    expect(Number.isFinite(sim.y)).to.be.true;
+  }
+
+  el.seed = Infinity;
+  el.links = [...links];
+  await el.updateComplete;
+  await waitUntil(() => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2, undefined, {
+    timeout: NODE_COUNT_TIMEOUT,
+  });
+  for (const n of el.nodes) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const sim = (el as any).simNodes.find((s: { id: string }) => s.id === n.id);
+    expect(Number.isFinite(sim.x)).to.be.true;
+    expect(Number.isFinite(sim.y)).to.be.true;
+  }
+});
+
+it('leaves seed undefined (unseeded/random) alone -- only a defined-but-non-finite seed is normalized', async () => {
+  const el = (await fixture(html`<lyra-graph></lyra-graph>`)) as LyraGraph;
+  expect(el.seed).to.be.undefined;
+  expect((el as any).safeSeed).to.be.undefined;
+});
+
+it('normalizes a non-finite edge-label-min-zoom so the live edge-label visibility gate keeps working instead of never hiding', async () => {
+  const el = (await fixture(html`<lyra-graph show-edge-labels></lyra-graph>`)) as LyraGraph;
+  el.nodes = nodes;
+  el.links = [{ source: 'a', target: 'b', label: 'A to B' }];
+  await el.updateComplete;
+  await waitUntil(() => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2, undefined, {
+    timeout: NODE_COUNT_TIMEOUT,
+  });
+
+  el.edgeLabelMinZoom = Number.NaN;
+  await el.updateComplete;
+  expect(Number.isFinite((el as any).safeEdgeLabelMinZoom)).to.be.true;
+
+  // Un-normalized, `k < NaN` is always false, so the labels would never hide no matter how far
+  // out the camera zooms -- zoom out past the (fallback-normalized) default threshold and confirm
+  // the gate still engages.
+  const svgEl = el.shadowRoot!.querySelector('svg') as SVGSVGElement;
+  const g = el.shadowRoot!.querySelector('g') as SVGGElement;
+  svgEl.dispatchEvent(
+    new WheelEvent('wheel', { bubbles: true, cancelable: true, deltaY: 100000, clientX: 10, clientY: 10 }),
+  );
+  await el.updateComplete;
+  expect(g.hasAttribute('data-edge-labels-hidden')).to.be.true;
 });
 
 it('does not reassign simNodes/simLinks references on tick, only positions (avoids a full Lit re-render every animation frame)', async () => {

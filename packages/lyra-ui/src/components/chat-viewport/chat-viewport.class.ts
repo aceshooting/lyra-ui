@@ -3,6 +3,7 @@ import { property, query, state } from 'lit/decorators.js';
 import { styleMap } from 'lit/directives/style-map.js';
 import { LyraElement } from '../../internal/lyra-element.js';
 import { prefersReducedMotion } from '../../internal/motion.js';
+import { finiteCount, finiteRange } from '../../internal/numbers.js';
 import { LyraVirtualList, type VirtualListRange } from '../virtual-list/virtual-list.class.js';
 import { styles } from './chat-viewport.styles.js';
 
@@ -68,8 +69,14 @@ export class LyraChatViewport extends LyraElement<LyraChatViewportEventMap> {
    *  mode. Host-owned unread bookkeeping in, divider/pill count out. `null` disables both. */
   @property({ type: Number, attribute: 'unread-start-index' }) unreadStartIndex: number | null = null;
 
-  /** Accessible name for the log region. Defaults to the localized `chatViewportLabel`. */
+  /** Accessible name for the log region. Defaults to the localized `chatViewportLabel`;
+   *  a host `aria-label` (see `accessibleLabel`) wins over both. */
   @property() label = '';
+
+  /** Host `aria-label`, forwarded to the internal `role="log"` element -- an `aria-label` left
+   *  on the custom-element host itself names nothing, because the log role lives inside the
+   *  shadow root. Wins over `label` and the localized default. */
+  @property({ attribute: 'aria-label' }) accessibleLabel: string | null = null;
 
   @state() private unreadDividerTop: number | null = null;
 
@@ -97,6 +104,20 @@ export class LyraChatViewport extends LyraElement<LyraChatViewportEventMap> {
     return children.length === 1 && children[0] instanceof LyraVirtualList
       ? (children[0] as LyraVirtualList)
       : null;
+  }
+
+  /** `bottomThreshold` normalized to a finite, non-negative pixel distance -- a non-finite value
+   *  would otherwise make the `distanceFromEnd <= bottomThreshold` comparison in `onScroll()`
+   *  always false (a `NaN` comparison never succeeds), permanently preventing `follow` from
+   *  re-engaging once released. */
+  private get effectiveBottomThreshold(): number {
+    return finiteRange(this.bottomThreshold, 24, 0);
+  }
+
+  /** `unreadStartIndex` normalized to a finite, non-negative integer -- `null` (the documented
+   *  "disabled" sentinel) is passed through as-is, never coerced into a number. */
+  private get effectiveUnreadStartIndex(): number | null {
+    return this.unreadStartIndex == null ? null : finiteCount(this.unreadStartIndex);
   }
 
   connectedCallback(): void {
@@ -160,12 +181,13 @@ export class LyraChatViewport extends LyraElement<LyraChatViewportEventMap> {
    *  `null`/out of range. Does not re-engage `follow`. See the class doc for why virtual mode uses
    *  `align: 'start'` and what that trades off. */
   scrollToUnread(options?: { behavior?: 'auto' | 'smooth' }): boolean {
-    if (this.unreadStartIndex == null) return false;
+    const unreadStartIndex = this.effectiveUnreadStartIndex;
+    if (unreadStartIndex == null) return false;
     const behavior = prefersReducedMotion() ? 'auto' : (options?.behavior ?? 'smooth');
     const list = this.virtualListEl;
     if (list) {
-      if (this.unreadStartIndex < 0 || this.unreadStartIndex >= list.items.length) return false;
-      list.scrollToIndex(this.unreadStartIndex, { align: 'start', behavior });
+      if (unreadStartIndex >= list.items.length) return false;
+      list.scrollToIndex(unreadStartIndex, { align: 'start', behavior });
       return true;
     }
     const scrollEl = this.scrollEl;
@@ -191,8 +213,9 @@ export class LyraChatViewport extends LyraElement<LyraChatViewportEventMap> {
   }
 
   private get unreadCount(): number {
-    if (this.unreadStartIndex == null) return 0;
-    return Math.max(0, this.totalCount - this.unreadStartIndex);
+    const unreadStartIndex = this.effectiveUnreadStartIndex;
+    if (unreadStartIndex == null) return 0;
+    return Math.max(0, this.totalCount - unreadStartIndex);
   }
 
   private pillLabel(): string {
@@ -204,13 +227,14 @@ export class LyraChatViewport extends LyraElement<LyraChatViewportEventMap> {
   }
 
   private updateUnreadDividerPosition(): void {
-    if (this.virtualListEl || this.unreadStartIndex == null) {
+    const unreadStartIndex = this.effectiveUnreadStartIndex;
+    if (this.virtualListEl || unreadStartIndex == null) {
       this.unreadDividerTop = null;
       return;
     }
     const content = this.contentEl;
     const children = Array.from(this.children) as HTMLElement[];
-    const target = children[this.unreadStartIndex];
+    const target = children[unreadStartIndex];
     if (!target || !content) {
       this.unreadDividerTop = null;
       return;
@@ -245,7 +269,7 @@ export class LyraChatViewport extends LyraElement<LyraChatViewportEventMap> {
     const el = this.scrollEl;
     if (!el) return;
     const distanceFromEnd = el.scrollHeight - el.scrollTop - el.clientHeight;
-    const atBottom = distanceFromEnd <= this.bottomThreshold;
+    const atBottom = distanceFromEnd <= this.effectiveBottomThreshold;
     if (atBottom) {
       this.pendingUserIntent = false;
       if (!this.follow) this.follow = true;
@@ -392,7 +416,7 @@ export class LyraChatViewport extends LyraElement<LyraChatViewportEventMap> {
   }
 
   render(): TemplateResult {
-    const label = this.label || this.localize('chatViewportLabel');
+    const label = this.accessibleLabel || this.label || this.localize('chatViewportLabel');
     return html`
       <div part="base">
         <div

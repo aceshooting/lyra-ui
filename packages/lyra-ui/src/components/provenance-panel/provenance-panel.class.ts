@@ -49,7 +49,7 @@ export class LyraProvenancePanel extends LyraElement<LyraProvenancePanelEventMap
   static styles = [LyraElement.styles, styles];
 
   @property({ attribute: false }) provenance: LyraProvenance | null = null;
-  /** §3.4 `nodeTypes` pass-through; resolves each `entity.type` for the entity chips' `typeLabel`. */
+  /** `lyra-graph` `nodeTypes` pass-through; resolves each `entity.type` for the entity chips' `typeLabel`. */
   @property({ attribute: false }) types: NodeTypeStyle[] = [];
   @property({ attribute: false }) thresholds: { high: number; medium: number } = { high: 0.75, medium: 0.5 };
   @property() label = '';

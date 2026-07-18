@@ -40,6 +40,28 @@ it('renders up to maxMembers chips and a +N overflow chip', async () => {
   expect(el.shadowRoot!.querySelector('[part="overflow"]')!.textContent).to.include('1');
 });
 
+it('clamps a negative max-members to showing zero members, not slice(0, -1)\'s "all but the last" behavior', async () => {
+  const el = (await fixture(html`<lyra-community-card max-members="-1"></lyra-community-card>`)) as LyraCommunityCard;
+  el.community = community;
+  el.members = members;
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelectorAll('[part="member"]').length).to.equal(0);
+  expect(el.shadowRoot!.querySelector('[part="overflow"]')!.textContent).to.include('3');
+});
+
+it('falls back to the documented default of 8 for a non-numeric max-members', async () => {
+  const el = (await fixture(
+    html`<lyra-community-card max-members="not-a-number"></lyra-community-card>`,
+  )) as LyraCommunityCard;
+  el.community = community;
+  el.members = members;
+  await el.updateComplete;
+  // All 3 members shown (well under the default cap of 8), and no overflow chip -- unlike
+  // slice(0, NaN)'s coincidental (and undocumented) "0 members" behavior.
+  expect(el.shadowRoot!.querySelectorAll('[part="member"]').length).to.equal(3);
+  expect(el.shadowRoot!.querySelector('[part="overflow"]')).to.not.exist;
+});
+
 it('emits lyra-entity-activate when a member chip is activated', async () => {
   const el = (await fixture(html`<lyra-community-card></lyra-community-card>`)) as LyraCommunityCard;
   el.community = community;

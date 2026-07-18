@@ -29,6 +29,21 @@ export class LyraMutationObserver extends LyraElement<LyraMutationObserverEventM
 
   private observer?: MutationObserver;
 
+  connectedCallback(): void {
+    super.connectedCallback();
+    // A reconnect (e.g. a drag-and-drop reparent, a tab/panel re-hosting its
+    // children, a virtualized list moving this same element instance) fires
+    // disconnectedCallback then connectedCallback synchronously with no
+    // update and no slotchange in between (the assigned-node set is
+    // unchanged by a pure reparent) -- so neither updated()'s
+    // property-change gate nor a fresh slotchange ever fires to re-arm
+    // observation. disconnectedCallback already tore the previous
+    // MutationObserver down, so resume it here on every reconnect after the
+    // very first (that initial case is already covered by the first
+    // render's own slotchange).
+    if (this.hasUpdated) this.scheduleAfterUpdate(this.observeTargets);
+  }
+
   disconnectedCallback(): void {
     this.disconnect();
     super.disconnectedCallback();
