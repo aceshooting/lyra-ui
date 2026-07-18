@@ -88,6 +88,38 @@ describe('duration composition', () => {
   });
 });
 
+describe('numeric guards', () => {
+  it('clamps an out-of-range progress into [0, 100] instead of over/under-filling the bar', async () => {
+    const el = (await fixture(html`<lyra-flow-node></lyra-flow-node>`)) as LyraFlowNode;
+    el.progress = 150;
+    await el.updateComplete;
+    expect((el.shadowRoot!.querySelector('.progress-fill') as HTMLElement).style.inlineSize).to.equal('100%');
+
+    el.progress = -40;
+    await el.updateComplete;
+    expect((el.shadowRoot!.querySelector('.progress-fill') as HTMLElement).style.inlineSize).to.equal('0%');
+  });
+
+  it('treats a NaN progress the same as unset -- no progress bar at all', async () => {
+    const el = (await fixture(html`<lyra-flow-node></lyra-flow-node>`)) as LyraFlowNode;
+    el.progress = Number.NaN;
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('[part="progress"]')).to.not.exist;
+  });
+
+  it('clamps a negative durationMs to 0 instead of rendering a negative duration', async () => {
+    const el = (await fixture(html`<lyra-flow-node status="success" duration-ms="-500"></lyra-flow-node>`)) as LyraFlowNode;
+    expect(el.shadowRoot!.querySelector('[part="status"]')!.textContent).to.include('0ms');
+  });
+
+  it('treats a NaN durationMs the same as unset -- falls back to the plain status label', async () => {
+    const el = (await fixture(html`<lyra-flow-node status="success"></lyra-flow-node>`)) as LyraFlowNode;
+    el.durationMs = Number.NaN;
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('[part="status"]')!.textContent!.trim()).to.equal('Success');
+  });
+});
+
 describe('reduced-motion running pulse', () => {
   it('pulses the running status ring by default', async () => {
     const el = (await fixture(html`<lyra-flow-node status="running"></lyra-flow-node>`)) as LyraFlowNode;

@@ -58,3 +58,12 @@ it('clamps a NaN/negative posInSet to a finite integer >= 1', async () => {
   await el.updateComplete;
   expect(el.getAttribute('aria-posinset')).to.equal('1');
 });
+
+it('gives the expand/collapse toggle the shared minimum tappable size', async () => {
+  const withChildren = { ...item, children: [{ id: '1.1', label: 'Child' }] };
+  const el = (await fixture(html`<lyra-tree-node .item=${withChildren}></lyra-tree-node>`)) as LyraTreeNode;
+  await el.updateComplete;
+  const toggle = el.shadowRoot!.querySelector('[part="toggle"]') as HTMLElement;
+  expect(getComputedStyle(toggle).minInlineSize).to.equal('40px');
+  expect(getComputedStyle(toggle).minBlockSize).to.equal('40px');
+});

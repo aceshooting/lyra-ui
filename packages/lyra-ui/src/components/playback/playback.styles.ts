@@ -17,8 +17,15 @@ export const styles = css`
     gap: var(--lyra-space-s);
   }
   [part='play-button'] {
+    /* Already exactly the shared floor (2.5rem/40px) via inline-size/block-size for
+       this circular button's own shape -- min-inline-size/min-block-size are added
+       alongside (not swapped in) at the same value, so the floor is explicit and this
+       resolves through the shared token like every other icon-button in the library,
+       without disturbing the fixed circle. */
     inline-size: var(--lyra-icon-button-size);
     block-size: var(--lyra-icon-button-size);
+    min-inline-size: var(--lyra-icon-button-size);
+    min-block-size: var(--lyra-icon-button-size);
     border-radius: 50%;
     border: var(--lyra-border-width-thin) solid var(--lyra-color-border);
     background: var(--lyra-color-surface);

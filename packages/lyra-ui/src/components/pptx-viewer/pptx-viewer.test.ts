@@ -91,6 +91,26 @@ describe('lyra-pptx-viewer', () => {
     }
   });
 
+  it('gives the previous/next slide-nav buttons the shared minimum hit area', async () => {
+    const fake = fakeModule();
+    const restore = stubFetch();
+    try {
+      const el = (await fixture(html`<lyra-pptx-viewer></lyra-pptx-viewer>`)) as LyraPptxViewer;
+      el.loadRenderer = async () => fake.module;
+      el.src = 'https://example.test/deck.pptx';
+      await aTimeout(30);
+      const previous = el.shadowRoot!.querySelector('[part="previous-button"]') as HTMLElement;
+      const next = el.shadowRoot!.querySelector('[part="next-button"]') as HTMLElement;
+
+      expect(getComputedStyle(previous).minInlineSize).to.equal('40px');
+      expect(getComputedStyle(previous).minBlockSize).to.equal('40px');
+      expect(getComputedStyle(next).minInlineSize).to.equal('40px');
+      expect(getComputedStyle(next).minBlockSize).to.equal('40px');
+    } finally {
+      restore();
+    }
+  });
+
   it('renders unsafe-url and missing-renderer errors', async () => {
     const unsafe = (await fixture(html`<lyra-pptx-viewer .src=${'javascript:alert(1)'}></lyra-pptx-viewer>`)) as LyraPptxViewer;
     await aTimeout(10);

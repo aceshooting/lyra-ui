@@ -100,6 +100,17 @@ describe('lyra-ebook-viewer', () => {
     expect((el.shadowRoot!.querySelector('[part="next-button"]') as HTMLButtonElement).disabled).to.be.true;
   });
 
+  it('gives the page-turn buttons the shared minimum hit area', async () => {
+    const el = (await fixture(html`<lyra-ebook-viewer></lyra-ebook-viewer>`)) as LyraEbookViewer;
+    const previous = el.shadowRoot!.querySelector('[part="previous-button"]') as HTMLElement;
+    const next = el.shadowRoot!.querySelector('[part="next-button"]') as HTMLElement;
+
+    expect(getComputedStyle(previous).minInlineSize).to.equal('40px');
+    expect(getComputedStyle(previous).minBlockSize).to.equal('40px');
+    expect(getComputedStyle(next).minInlineSize).to.equal('40px');
+    expect(getComputedStyle(next).minBlockSize).to.equal('40px');
+  });
+
   it('loads a book, enables navigation, and destroys it when disconnected', async () => {
     const fake = fakeBook();
     __setEpubJsForTesting(fake.factory as never);

@@ -73,24 +73,31 @@ export const styles = css`
     transition: none;
   }
 
+  /* The interactive hit target meets the shared minimum tappable size (same --lyra-icon-button-size
+     floor as lyra-code-block's/lyra-json-viewer's [part='toggle'] and lyra-swatch-picker's
+     [part='swatch']), centered on the same inset-inline-end edge the old 3px-wide box occupied --
+     while the *visible* drag line stays a slim 3px bar, rendered on the separate [part='resizer-track']
+     child below and centered via flex, not by resizing this element itself. */
   [part='resizer'] {
     position: absolute;
     inset-block: 0;
-    inset-inline-end: calc(var(--lyra-size-3px) * -0.5);
-    inline-size: var(--lyra-size-3px);
+    inset-inline-end: calc(var(--lyra-icon-button-size) * -0.5);
+    inline-size: var(--lyra-icon-button-size);
+    min-inline-size: var(--lyra-icon-button-size);
+    min-block-size: var(--lyra-icon-button-size);
+    display: flex;
+    align-items: stretch;
+    justify-content: center;
     background: transparent;
     cursor: col-resize;
     touch-action: none;
   }
-  /* Transparent hit-slop: widens the draggable/tappable box along the resize axis only, without
-     changing the resizer's visible 3px width -- mirrors lyra-split's own [part="divider"]::before. */
-  [part='resizer']::before {
-    content: '';
-    position: absolute;
-    inset-block: 0;
-    inset-inline: var(--lyra-size-neg-6px);
+  [part='resizer-track'] {
+    inline-size: var(--lyra-size-3px);
+    background: transparent;
+    transition: background-color var(--lyra-transition-fast);
   }
-  [part='resizer']:hover {
+  [part='resizer']:hover [part='resizer-track'] {
     background: var(--lyra-color-brand);
   }
   [part='resizer']:focus-visible {
@@ -156,7 +163,8 @@ export const styles = css`
 
   @media (prefers-reduced-motion: reduce) {
     [part='base'],
-    [part='panel'] {
+    [part='panel'],
+    [part='resizer-track'] {
       transition: none !important;
     }
   }

@@ -119,6 +119,12 @@ export const styles = css`
     justify-content: center;
     inline-size: var(--lyra-size-2-5rem);
     block-size: var(--lyra-size-2-5rem);
+    /* Already exactly the shared floor via inline-size/block-size above (--lyra-size-2-5rem
+       == --lyra-icon-button-size == 40px) -- min-inline-size/min-block-size are added
+       alongside so a later, more specific override can never shrink this box below that
+       floor, matching every other icon-button-shaped part in this library. */
+    min-inline-size: var(--lyra-icon-button-size);
+    min-block-size: var(--lyra-icon-button-size);
     border: var(--lyra-border-width-thin) solid var(--lyra-color-border);
     border-radius: var(--lyra-radius);
     background: var(--lyra-color-surface);

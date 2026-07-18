@@ -69,6 +69,17 @@ describe('<lyra-scroller>', () => {
     expect(nextGlyph.textContent).to.equal('↓');
   });
 
+  it('gives the previous/next controls the shared minimum hit area', async () => {
+    const el = await fixture<LyraScroller>(html`<lyra-scroller controls><span>Content</span></lyra-scroller>`);
+    const previous = el.shadowRoot!.querySelector('[part~="previous"]') as HTMLElement;
+    const next = el.shadowRoot!.querySelector('[part~="next"]') as HTMLElement;
+
+    expect(getComputedStyle(previous).minInlineSize).to.equal('40px');
+    expect(getComputedStyle(previous).minBlockSize).to.equal('40px');
+    expect(getComputedStyle(next).minInlineSize).to.equal('40px');
+    expect(getComputedStyle(next).minBlockSize).to.equal('40px');
+  });
+
   it('is accessible', async () => {
     const el = await fixture<LyraScroller>(html`<lyra-scroller label="Recent items"><span>Content</span></lyra-scroller>`);
     await expect(el).to.be.accessible();

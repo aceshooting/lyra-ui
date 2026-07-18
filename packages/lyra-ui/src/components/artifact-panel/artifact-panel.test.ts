@@ -58,6 +58,21 @@ describe('lyra-artifact-panel', () => {
     expect(el.activeVersionId).to.equal('v2');
   });
 
+  it('gives the version-previous/version-next buttons the shared minimum hit area', async () => {
+    const el = (await fixture(html`
+      <lyra-artifact-panel
+        .versions=${[{ id: 'v1' }, { id: 'v2' }, { id: 'v3' }]}
+      ></lyra-artifact-panel>
+    `)) as LyraArtifactPanel;
+    await el.updateComplete;
+    const previous = el.shadowRoot!.querySelector('[part="version-previous"]') as HTMLElement;
+    const next = el.shadowRoot!.querySelector('[part="version-next"]') as HTMLElement;
+    expect(getComputedStyle(previous).minInlineSize).to.equal('40px');
+    expect(getComputedStyle(previous).minBlockSize).to.equal('40px');
+    expect(getComputedStyle(next).minInlineSize).to.equal('40px');
+    expect(getComputedStyle(next).minBlockSize).to.equal('40px');
+  });
+
   it('renders a restore button only while the active version is not latest, emitting lyra-restore', async () => {
     const el = (await fixture(html`
       <lyra-artifact-panel

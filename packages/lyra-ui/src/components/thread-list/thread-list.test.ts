@@ -152,6 +152,22 @@ describe('data mode', () => {
     expect((await deletePromise).detail).to.deep.equal({ id: 't1' });
   });
 
+  it('gives every row-action button the shared minimum hit area', async () => {
+    const el = (await fixture(
+      html`<lyra-thread-list style="block-size:400px" .threads=${threads} .rowActions=${['pin', 'archive', 'delete']}></lyra-thread-list>`,
+    )) as LyraThreadList;
+    await el.updateComplete;
+    await nextFrame();
+    const row = dataRow(el, 't1');
+    const actionsSlot = row.querySelector('[slot="actions"]')!;
+    const buttons = [...actionsSlot.querySelectorAll('button')];
+    expect(buttons.length).to.equal(3);
+    for (const button of buttons) {
+      expect(getComputedStyle(button).minInlineSize).to.equal('40px');
+      expect(getComputedStyle(button).minBlockSize).to.equal('40px');
+    }
+  });
+
   it('shows a small pin glyph in the meta slot for a pinned row', async () => {
     const el = (await fixture(
       html`<lyra-thread-list style="block-size:400px" .threads=${threads}></lyra-thread-list>`,

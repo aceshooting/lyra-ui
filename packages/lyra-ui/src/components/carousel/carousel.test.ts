@@ -29,6 +29,18 @@ it('exposes one visible slide and localized navigation controls', async () => {
   expect(el.shadowRoot!.querySelector('[part="indicator"]')!.getAttribute('role')).to.be.null;
 });
 
+it('gives each indicator the shared minimum hit area without inflating the visible dot', async () => {
+  const el = await carousel();
+  const indicator = el.shadowRoot!.querySelector('[part="indicator"]') as HTMLElement;
+  const dot = indicator.querySelector('[part="indicator-dot"]') as HTMLElement;
+  expect(getComputedStyle(indicator).minInlineSize).to.equal('40px');
+  expect(getComputedStyle(indicator).minBlockSize).to.equal('40px');
+  // The visible dot itself stays compact (--lyra-size-0-5rem = 8px), not blown up to 40px -- the
+  // button's own box grows around it via flex centering instead.
+  expect(getComputedStyle(dot).inlineSize).to.equal('8px');
+  expect(getComputedStyle(dot).blockSize).to.equal('8px');
+});
+
 it('omits the indicator group entirely when showIndicators is false', async () => {
   const el = await carousel(html`
     <lyra-carousel .showIndicators=${false}>

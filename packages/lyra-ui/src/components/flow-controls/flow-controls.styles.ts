@@ -17,12 +17,20 @@ export const styles = css`
   :host([orientation='vertical']) [part='base'] {
     flex-direction: column;
   }
-  [part='base'] button {
+  /* Enumerated by part (rather than the previous bare "[part='base'] button"
+     tag selector) so each control resolves to the shared minimum tappable
+     size (--lyra-icon-button-size) directly off its own [part='...'] --
+     the floating toolbar already has the room, this doesn't change the
+     rendered box, just how it's declared. */
+  [part='zoom-in'],
+  [part='zoom-out'],
+  [part='fit'],
+  [part='lock'] {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    inline-size: var(--lyra-icon-button-size);
-    block-size: var(--lyra-icon-button-size);
+    min-inline-size: var(--lyra-icon-button-size);
+    min-block-size: var(--lyra-icon-button-size);
     padding: 0;
     border: none;
     border-radius: var(--lyra-radius);

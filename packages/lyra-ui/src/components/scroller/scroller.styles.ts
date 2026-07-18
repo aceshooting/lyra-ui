@@ -55,16 +55,34 @@ export const styles = css`
   }
 
   [part='control'] {
+    /* Keep the glyph-sized control compact by default (--lyra-scroller-control-size
+       is a consumer-tunable custom property, not this floor) while still giving the
+       interactive box the shared minimum target size -- same "small glyph, padded hit
+       box" pattern as lyra-code-block's/lyra-json-viewer's [part='toggle']. Covers
+       both previous and next (the shared part on both, per csspart doc above). */
     display: inline-grid;
     place-items: center;
     inline-size: var(--lyra-scroller-control-size, var(--lyra-size-2rem));
     block-size: var(--lyra-scroller-control-size, var(--lyra-size-2rem));
+    min-inline-size: var(--lyra-icon-button-size);
+    min-block-size: var(--lyra-icon-button-size);
     padding: 0;
     border: var(--lyra-border-width-thin) solid var(--lyra-color-border);
     border-radius: var(--lyra-radius-xs);
     background: var(--lyra-color-surface);
     color: var(--lyra-color-text);
     cursor: pointer;
+  }
+
+  /* previous/next are the same rendered button as [part='control'] above (each
+     button's part attribute carries both tokens, e.g. part="control previous", so
+     this needs the token-matching ~= form, not =, to actually hit it) -- this
+     restates the identical floor directly against each individual part name too,
+     since a shadow-part guard lookup is per-name, not per-rendered-element. */
+  [part~='previous'],
+  [part~='next'] {
+    min-inline-size: var(--lyra-icon-button-size);
+    min-block-size: var(--lyra-icon-button-size);
   }
 
   [part='control']:disabled {

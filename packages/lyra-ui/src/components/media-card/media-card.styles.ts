@@ -72,8 +72,12 @@ export const styles = css`
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    min-inline-size: min(var(--lyra-icon-button-size), var(--lyra-size-2rem));
-    min-block-size: min(var(--lyra-icon-button-size), var(--lyra-size-2rem));
+    /* Meets the shared minimum tappable size (--lyra-icon-button-size) --
+       previously capped at 2rem/32px for a compact overlay look, but this
+       button floats over the video's own generous canvas (absolutely
+       positioned in a corner), which has ample room for the full floor. */
+    min-inline-size: var(--lyra-icon-button-size);
+    min-block-size: var(--lyra-icon-button-size);
     padding: 0;
     border: none;
     border-radius: var(--lyra-radius);

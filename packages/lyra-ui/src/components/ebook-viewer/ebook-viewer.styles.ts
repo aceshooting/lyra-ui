@@ -27,8 +27,12 @@ export const styles = css`
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    inline-size: var(--lyra-size-2rem);
-    block-size: var(--lyra-size-2rem);
+    /* Meets the shared minimum tappable size (same --lyra-icon-button-size
+       floor as lyra-code-block's [part='toggle']) -- the toolbar has ample
+       room (flex + justify-content: space-between), so the button box
+       itself grows rather than relying on invisible hit-slop. */
+    min-inline-size: var(--lyra-icon-button-size);
+    min-block-size: var(--lyra-icon-button-size);
     padding: 0;
     border: var(--lyra-border-width-thin) solid var(--lyra-color-border);
     border-radius: var(--lyra-radius);

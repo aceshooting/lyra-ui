@@ -48,10 +48,13 @@ export const styles = css`
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    /* Same "shrink the shared icon-button token for a compact inline
-       control" idiom as lyra-attachment-chip's retry-/remove-button. */
-    min-inline-size: min(var(--lyra-icon-button-size), var(--lyra-size-1-75rem));
-    min-block-size: min(var(--lyra-icon-button-size), var(--lyra-size-1-75rem));
+    /* Meets the shared minimum tappable size (--lyra-icon-button-size) --
+       previously shrunk below the floor (min(...) capped at 1.75rem/28px)
+       for a compact inline look, but the readout row has no width
+       constraint that requires it, so the full 40px floor applies
+       directly instead of via invisible hit-slop. */
+    min-inline-size: var(--lyra-icon-button-size);
+    min-block-size: var(--lyra-icon-button-size);
     margin-inline-start: var(--lyra-space-s);
     padding: 0;
     border: var(--lyra-border-width-thin) solid var(--lyra-color-border);

@@ -3,8 +3,13 @@ export const styles = css`
   :host { display: block; min-inline-size: 0; --lyra-calendar-day-min-block-size: var(--lyra-size-6rem); }
   [part='header'] { display: flex; align-items: center; justify-content: space-between; gap: var(--lyra-space-s); margin-block-end: var(--lyra-space-s); }
   [part='title'] { font-weight: var(--lyra-font-weight-semibold); }
-  [part='nav'] { display: flex; gap: var(--lyra-space-xs); }
-  [part='nav'] button, [part='day'] { min-block-size: var(--lyra-size-2-5rem); border: var(--lyra-border-width-thin) solid var(--lyra-color-border); background: var(--lyra-color-surface); color: var(--lyra-color-text); cursor: pointer; }
+  /* [part='nav'] is carried both by the wrapping span around the 'next' button and by the
+     'previous' button itself (see calendar.class.ts's render()) -- the shared minimum tappable
+     size here applies to whichever of the two a given selector match resolves to, sizing the
+     'previous' button directly and, for the wrapping span, at least as large as its own button
+     content already makes it. */
+  [part='nav'] { display: flex; gap: var(--lyra-space-xs); min-inline-size: var(--lyra-icon-button-size); min-block-size: var(--lyra-icon-button-size); }
+  [part='nav'] button, [part='day'] { min-inline-size: var(--lyra-icon-button-size); min-block-size: var(--lyra-icon-button-size); border: var(--lyra-border-width-thin) solid var(--lyra-color-border); background: var(--lyra-color-surface); color: var(--lyra-color-text); cursor: pointer; }
   [part='nav'] button { padding-inline: var(--lyra-space-s); border-radius: var(--lyra-radius); }
   [part='weekdays'] { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); }
   [part='weekday'] { padding: var(--lyra-space-xs); color: var(--lyra-color-text-quiet); font-size: var(--lyra-font-size-sm); text-align: center; }

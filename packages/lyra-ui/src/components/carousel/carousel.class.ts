@@ -26,7 +26,11 @@ export interface LyraCarouselEventMap {
  * @csspart next-button - Next slide button.
  * @csspart next-glyph - The chevron glyph inside `next-button`, mirrored under RTL.
  * @csspart indicators - Indicator button group.
- * @csspart indicator - An individual slide indicator.
+ * @csspart indicator - An individual slide indicator's interactive hit target, sized to the
+ *   shared minimum tappable size (`--lyra-icon-button-size`), independent of the smaller visible
+ *   dot rendered inside it (mirrors `<lyra-swatch-picker>`'s `[part="swatch"]`/`[part="swatch-fill"]`
+ *   split).
+ * @csspart indicator-dot - The individual indicator's compact visible dot.
  */
 export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
   static styles = [LyraElement.styles, styles];
@@ -198,7 +202,7 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
                     aria-label=${this.localize('carouselGoTo', undefined, { index: slideIndex + 1 })}
                     aria-current=${slideIndex === current ? 'true' : 'false'}
                     @click=${() => this.goTo(slideIndex)}
-                  ></button>`)}
+                  ><span part="indicator-dot" aria-hidden="true"></span></button>`)}
                 </div>`
               : nothing}
             <button

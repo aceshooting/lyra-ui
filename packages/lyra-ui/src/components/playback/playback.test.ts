@@ -423,6 +423,14 @@ it('derives the play/pause icon size from --lyra-icon-button-size via a token, n
   expect(getComputedStyle(button).fontSize).to.equal('35px');
 });
 
+it('gives the play/pause button the shared minimum hit area', async () => {
+  const el = (await fixture(html`<lyra-playback length="3"></lyra-playback>`)) as LyraPlayback;
+  const button = el.shadowRoot!.querySelector('[part="play-button"]') as HTMLElement;
+
+  expect(getComputedStyle(button).minInlineSize).to.equal('40px');
+  expect(getComputedStyle(button).minBlockSize).to.equal('40px');
+});
+
 describe('string localization', () => {
   function playButton(el: LyraPlayback): HTMLButtonElement {
     return el.shadowRoot!.querySelector('[part="play-button"]') as HTMLButtonElement;

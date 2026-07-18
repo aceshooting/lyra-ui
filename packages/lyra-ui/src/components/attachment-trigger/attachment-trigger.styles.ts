@@ -76,6 +76,17 @@ export const styles = css`
     display: block;
   }
 
+  /* Both trigger buttons must independently meet the shared minimum tappable size
+     (--lyra-icon-button-size), overriding .trigger-button's own more compact
+     min-inline-size/min-block-size above -- same tie-break-by-source-order specificity as every
+     other single-attribute-selector override in this file (equal (0,1,0) specificity to
+     .trigger-button's own (0,1,0), so this later rule wins). */
+  [part='trigger'],
+  [part='menu-trigger'] {
+    min-inline-size: var(--lyra-icon-button-size);
+    min-block-size: var(--lyra-icon-button-size);
+  }
+
   /* [part='menu-trigger'] carries a second glyph (the paperclip plus this
      disclosure chevron) alongside the single-capability [part='trigger']'s
      one, so it alone needs a gap between them. */

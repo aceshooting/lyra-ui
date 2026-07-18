@@ -192,6 +192,8 @@ export const styles = css`
     padding: var(--lyra-space-xs);
     cursor: pointer;
     color: inherit;
+    min-inline-size: var(--lyra-icon-button-size);
+    min-block-size: var(--lyra-icon-button-size);
   }
   [part='row-expand-toggle']:focus-visible {
     outline: var(--lyra-focus-ring-width) solid var(--lyra-focus-ring-color);

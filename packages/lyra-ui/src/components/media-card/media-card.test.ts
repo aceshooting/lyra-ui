@@ -257,6 +257,15 @@ describe('kind="video"', () => {
     expect(el.shadowRoot!.querySelector('[part="open-button"]')).to.exist;
   });
 
+  it('gives the open-button the shared minimum hit area', async () => {
+    const el = (await fixture(
+      html`<lyra-media-card src="https://example.test/a.mp4" kind="video"></lyra-media-card>`,
+    )) as LyraMediaCard;
+    const openButton = el.shadowRoot!.querySelector('[part="open-button"]') as HTMLElement;
+    expect(getComputedStyle(openButton).minInlineSize).to.equal('40px');
+    expect(getComputedStyle(openButton).minBlockSize).to.equal('40px');
+  });
+
   it('the video aria-label falls back from alt -> filename -> generic description', async () => {
     const el = (await fixture(
       html`<lyra-media-card src="https://example.test/a.mp4" kind="video" filename="clip.mp4"></lyra-media-card>`,

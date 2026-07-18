@@ -10,6 +10,19 @@ it('renders a month and emits date selections', async () => {
   expect((await selected).detail.date).to.equal('2026-07-15');
 });
 
+it('gives the previous/next month nav buttons the shared minimum hit area', async () => {
+  const el = (await fixture(html`<lyra-calendar view-date="2026-07-01"></lyra-calendar>`)) as LyraCalendar;
+  // The 'previous' button itself carries part="nav"; the 'next' button is nested inside a
+  // wrapping <span part="nav"> instead (see calendar.class.ts's render()) -- both selector shapes
+  // are needed to reach both buttons.
+  const previous = el.shadowRoot!.querySelector('button[part="nav"]') as HTMLElement;
+  const next = el.shadowRoot!.querySelector('[part="nav"] button') as HTMLElement;
+  for (const button of [previous, next]) {
+    expect(getComputedStyle(button).minInlineSize).to.equal('40px');
+    expect(getComputedStyle(button).minBlockSize).to.equal('40px');
+  }
+});
+
 it('is accessible', async () => {
   const el = await fixture(html`<lyra-calendar aria-label="Schedule"></lyra-calendar>`);
   await expect(el).to.be.accessible();

@@ -53,6 +53,35 @@ export const styles = css`
     font-size: var(--lyra-font-size-xs);
     margin-inline-start: auto;
   }
+  [part='version-previous'],
+  [part='version-next'] {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-inline-size: var(--lyra-icon-button-size);
+    min-block-size: var(--lyra-icon-button-size);
+    border: none;
+    background: none;
+    color: var(--lyra-color-text);
+    font-size: var(--lyra-font-size-md);
+    cursor: pointer;
+    border-radius: var(--lyra-radius);
+  }
+  [part='version-previous']:hover,
+  [part='version-next']:hover {
+    background: var(--lyra-color-brand-quiet);
+    color: var(--lyra-color-brand);
+  }
+  [part='version-previous']:focus-visible,
+  [part='version-next']:focus-visible {
+    outline: var(--lyra-focus-ring-width) solid var(--lyra-focus-ring-color);
+    outline-offset: var(--lyra-focus-ring-offset);
+  }
+  [part='version-previous']:disabled,
+  [part='version-next']:disabled {
+    cursor: not-allowed;
+    opacity: var(--lyra-opacity-disabled);
+  }
   [part='body'] {
     flex: 1 1 auto;
     padding: var(--lyra-space-m);

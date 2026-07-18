@@ -161,8 +161,13 @@ export const styles = css`
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    min-inline-size: min(var(--lyra-icon-button-size), var(--lyra-size-1-75rem));
-    min-block-size: min(var(--lyra-icon-button-size), var(--lyra-size-1-75rem));
+    /* Full --lyra-icon-button-size floor (not the min()-capped --lyra-size-1-75rem
+       compromise some inline/dense controls use elsewhere) -- an attachment chip is
+       wide enough for its action buttons to meet the same tappable-size floor as a
+       standalone icon button, matching [part='thumbnail'] above, which already sizes
+       to this same token. */
+    min-inline-size: var(--lyra-icon-button-size);
+    min-block-size: var(--lyra-icon-button-size);
     padding: 0;
     border: none;
     border-radius: calc(var(--lyra-radius) * 0.6);

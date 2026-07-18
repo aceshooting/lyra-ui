@@ -28,11 +28,17 @@ export const styles = css`
     background: var(--lyra-color-brand-quiet);
   }
   [part='toggle'] {
-    /* Deliberately smaller than the shared --lyra-icon-button-size (2.5rem,
-       for standalone icon-only buttons) — this toggle sits inline in a
-       compact row, but still needs a real touch target, not a 1rem hitbox. */
-    min-inline-size: var(--lyra-size-1-75rem);
-    min-block-size: var(--lyra-size-1-75rem);
+    /* Keep the chevron glyph compact (the row itself stays a --lyra-size-1-75rem-ish
+       visual rhythm) while giving the interactive box the shared minimum tappable
+       size -- same "small glyph, padded hit box" pattern as lyra-code-block's/
+       lyra-json-viewer's/lyra-trace-tree's own [part='toggle']. min-inline-size/
+       min-block-size always win over a smaller explicit size, so the *visible*
+       icon stays put via its own 1em SVG sizing while the clickable box floors
+       out at 40px. */
+    inline-size: var(--lyra-size-1-75rem);
+    block-size: var(--lyra-size-1-75rem);
+    min-inline-size: var(--lyra-icon-button-size);
+    min-block-size: var(--lyra-icon-button-size);
     padding: var(--lyra-space-xs);
     display: inline-flex;
     align-items: center;

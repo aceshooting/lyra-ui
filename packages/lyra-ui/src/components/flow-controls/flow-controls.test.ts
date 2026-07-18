@@ -13,6 +13,15 @@ it('defaults to orientation vertical, hideLock false, empty for', async () => {
   expect(el.for).to.equal('');
 });
 
+it('gives every toolbar button the shared minimum hit area', async () => {
+  const el = (await fixture(html`<lyra-flow-controls></lyra-flow-controls>`)) as LyraFlowControls;
+  for (const part of ['zoom-in', 'zoom-out', 'fit', 'lock']) {
+    const button = el.shadowRoot!.querySelector(`[part="${part}"]`) as HTMLElement;
+    expect(getComputedStyle(button).minInlineSize).to.equal('40px');
+    expect(getComputedStyle(button).minBlockSize).to.equal('40px');
+  }
+});
+
 it('disables every button when no canvas can be resolved', async () => {
   const el = (await fixture(html`<lyra-flow-controls></lyra-flow-controls>`)) as LyraFlowControls;
   expect((el.shadowRoot!.querySelector('[part="zoom-in"]') as HTMLButtonElement).disabled).to.be.true;

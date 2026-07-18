@@ -11,6 +11,11 @@ export const styles = css`
   [part='icon'][hidden], [part='close-button'][hidden] { display: none; }
   [part='heading'] { margin-block-end: var(--lyra-space-xs); font-weight: var(--lyra-font-weight-semibold); }
   [part='content'] { min-inline-size: 0; }
+  /* The interactive hit target meets the shared minimum tappable size (--lyra-icon-button-size)
+     in both the default panel and the compact [inline] variant below -- the *visible* "×" glyph
+     is what shrinks for [inline] instead, rendered on the separate [part='close-icon'] child and
+     centered via this button's own flex layout, not by resizing the button itself. Mirrors
+     lyra-swatch-picker's [part='swatch']/[part='swatch-fill'] split. */
   [part='close-button'] { display: inline-flex; align-items: center; justify-content: center; min-inline-size: var(--lyra-icon-button-size); min-block-size: var(--lyra-icon-button-size); border: 0; border-radius: var(--lyra-radius-pill); background: transparent; color: inherit; cursor: pointer; }
   [part='close-button']:focus-visible { outline: var(--lyra-focus-ring-width) solid var(--lyra-focus-ring-color); outline-offset: var(--lyra-focus-ring-offset); }
   :host([inline]) [part='base'] {
@@ -22,8 +27,11 @@ export const styles = css`
   }
   :host([inline]) [part='icon'] { font-size: var(--lyra-font-size-md); }
   :host([inline]) [part='heading'] { margin-block-end: 0; }
-  :host([inline]) [part='close-button'] {
-    min-inline-size: var(--lyra-size-1-5rem);
-    min-block-size: var(--lyra-size-1-5rem);
+  :host([inline]) [part='close-icon'] {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    inline-size: var(--lyra-size-1-5rem);
+    block-size: var(--lyra-size-1-5rem);
   }
 `;

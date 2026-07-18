@@ -233,6 +233,17 @@ it('focus() delegates to the thumb matching the current value', async () => {
   expect(el.shadowRoot!.activeElement).to.equal(el.shadowRoot!.querySelector('[part="down-button"]'));
 });
 
+it('gives the up/down thumb buttons the shared minimum hit area', async () => {
+  const el = (await fixture(html`<lyra-message-feedback></lyra-message-feedback>`)) as LyraMessageFeedback;
+  const up = el.shadowRoot!.querySelector('[part="up-button"]') as HTMLElement;
+  const down = el.shadowRoot!.querySelector('[part="down-button"]') as HTMLElement;
+
+  expect(getComputedStyle(up).minInlineSize).to.equal('40px');
+  expect(getComputedStyle(up).minBlockSize).to.equal('40px');
+  expect(getComputedStyle(down).minInlineSize).to.equal('40px');
+  expect(getComputedStyle(down).minBlockSize).to.equal('40px');
+});
+
 it('is accessible in every configuration', async () => {
   const plain = (await fixture(html`<lyra-message-feedback></lyra-message-feedback>`)) as LyraMessageFeedback;
   await expect(plain).to.be.accessible();

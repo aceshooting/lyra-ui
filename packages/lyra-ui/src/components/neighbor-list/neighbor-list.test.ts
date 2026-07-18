@@ -1,4 +1,4 @@
-import { fixture, expect, html, oneEvent, aTimeout } from '@open-wc/testing';
+import { fixture, expect, html, oneEvent } from '@open-wc/testing';
 import './neighbor-list.js';
 import type { LyraNeighborList, LyraNeighborRow } from './neighbor-list.js';
 
@@ -80,20 +80,25 @@ it('renders through the internal virtual-list once rows exceeds virtualizeAt', a
 });
 
 it('normalizes a NaN virtualizeAt to the default (100) instead of silently disabling virtualization', async () => {
-  const many: LyraNeighborRow[] = Array.from({ length: 101 }, (_, i) => ({
-    relation: 'related_to',
-    direction: 'out' as const,
-    node: { id: `n${i}`, label: `Node ${i}` },
-  }));
+  // A small row count (3, well below the real default of 100) -- proves the NaN falls back to a
+  // real, non-negative default rather than an always-false comparison letting virtualization run
+  // at any size: with the guard in place, 3 rows stay in the plain (non-virtualized) list.
   const el = (await fixture(html`<lyra-neighbor-list virtualize-at="not-a-number"></lyra-neighbor-list>`)) as LyraNeighborList;
   expect(Number.isNaN(el.virtualizeAt)).to.be.true;
-  el.rows = many;
+  el.rows = rows;
   await el.updateComplete;
-  // Lets the newly-mounted internal virtual-list's row-height="auto" ResizeObserver measurements
-  // settle within this test -- matching virtual-list.test.ts's own convention -- rather than
-  // asserting immediately, since that observer callback would otherwise still be pending.
-  await aTimeout(50);
-  expect(el.shadowRoot!.querySelector('lyra-virtual-list')).to.exist;
+  expect(el.shadowRoot!.querySelector('lyra-virtual-list')).to.not.exist;
+  expect(el.shadowRoot!.querySelectorAll('[part="row"]').length).to.equal(rows.length);
+});
+
+it('gives the per-row expand button the shared minimum hit area', async () => {
+  const el = (await fixture(html`<lyra-neighbor-list></lyra-neighbor-list>`)) as LyraNeighborList;
+  el.rows = rows;
+  el.expandable = true;
+  await el.updateComplete;
+  const expandButton = el.shadowRoot!.querySelector('[part="expand-button"]') as HTMLElement;
+  expect(getComputedStyle(expandButton).minInlineSize).to.equal('40px');
+  expect(getComputedStyle(expandButton).minBlockSize).to.equal('40px');
 });
 
 it('renders the direction as an aria-hidden glyph plus localized text folded into the row name', async () => {

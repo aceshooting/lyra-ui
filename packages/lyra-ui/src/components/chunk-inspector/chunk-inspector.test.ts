@@ -1,4 +1,4 @@
-import { fixture, expect, html, oneEvent, aTimeout } from '@open-wc/testing';
+import { fixture, expect, html, oneEvent } from '@open-wc/testing';
 import './chunk-inspector.js';
 import type { LyraChunkInspector, LyraChunk } from './chunk-inspector.js';
 
@@ -97,16 +97,15 @@ it('renders through the internal virtual-list once chunks exceeds virtualizeAt',
 });
 
 it('normalizes a NaN virtualizeAt to the default (50) instead of silently disabling virtualization', async () => {
-  const many: LyraChunk[] = Array.from({ length: 51 }, (_, i) => ({ id: `c${i}`, text: `chunk ${i}`, score: 0.5, sourceId: 's1' }));
+  // A small chunk count (3, well below the real default of 50) -- proves the NaN falls back to a
+  // real, non-negative default rather than an always-false comparison letting virtualization run
+  // at any size: with the guard in place, 3 chunks stay in the plain (non-virtualized) list.
   const el = (await fixture(html`<lyra-chunk-inspector virtualize-at="not-a-number"></lyra-chunk-inspector>`)) as LyraChunkInspector;
   expect(Number.isNaN(el.virtualizeAt)).to.be.true;
-  el.chunks = many;
+  el.chunks = chunks;
   await el.updateComplete;
-  // Lets the newly-mounted internal virtual-list's row-height="auto" ResizeObserver measurements
-  // settle within this test -- matching virtual-list.test.ts's own convention -- rather than
-  // asserting immediately, since that observer callback would otherwise still be pending.
-  await aTimeout(50);
-  expect(el.shadowRoot!.querySelector('lyra-virtual-list')).to.exist;
+  expect(el.shadowRoot!.querySelector('lyra-virtual-list')).to.not.exist;
+  expect(el.shadowRoot!.querySelectorAll('[part="chunk"]').length).to.equal(chunks.length);
 });
 
 it('shows chunkInspectorEmpty when chunks is empty', async () => {

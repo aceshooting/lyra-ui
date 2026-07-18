@@ -31,11 +31,16 @@ export const styles = css`
   }
   [part~='regenerate-button'],
   [part~='edit-button'] {
+    /* Keep the glyph compact while giving the interactive box the shared
+       minimum target size -- same "small glyph, padded hit box" pattern as
+       lyra-code-block's/lyra-json-viewer's [part='toggle']. */
     display: inline-flex;
     align-items: center;
     justify-content: center;
     inline-size: var(--lyra-size-1-75rem);
     block-size: var(--lyra-size-1-75rem);
+    min-inline-size: var(--lyra-icon-button-size);
+    min-block-size: var(--lyra-icon-button-size);
     padding: 0;
     border: 0;
     border-radius: var(--lyra-radius);

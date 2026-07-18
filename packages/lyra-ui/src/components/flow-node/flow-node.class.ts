@@ -3,6 +3,7 @@ import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../internal/lyra-element.js';
 import type { FlowHandle, FlowRunStatus } from '../flow-canvas/flow-canvas.class.js';
 import { prefersReducedMotion } from '../../internal/motion.js';
+import { finiteRange } from '../../internal/numbers.js';
 import { styles } from './flow-node.styles.js';
 
 const DEFAULT_INPUTS: FlowHandle[] = [{ id: 'in' }];
@@ -62,6 +63,24 @@ export class LyraFlowNode extends LyraElement {
     this.hasHeaderSlot = (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length > 0;
   };
 
+  /** `progress` normalized to a finite `[0, 100]` percentage, or `null` -- `null`/`undefined` and a
+   *  non-finite raw value (e.g. a stray `NaN` push from a decoration) both mean "no determinate
+   *  progress bar," matching this property's own "omitted from render entirely when unset"
+   *  contract, rather than rendering a bar at a literal `NaN%` inline-size. A finite out-of-range
+   *  value clamps into `[0, 100]` instead of over/under-filling the bar -- same shape as
+   *  `tool-call-chip`'s/`thinking-panel`'s own `safeDurationMs` getter. */
+  private get safeProgress(): number | null {
+    return this.progress != null && Number.isFinite(this.progress) ? finiteRange(this.progress, 0, 0, 100) : null;
+  }
+
+  /** `durationMs` normalized to a finite, non-negative value, or `null` -- same "omitted when
+   *  unset/non-finite" contract and clamp-to-`0` shape as `safeProgress` above (and as
+   *  `tool-call-chip`'s/`thinking-panel`'s own `safeDurationMs` getters); this is a purely
+   *  displayed value here (formatted by `formattedDuration()`), never fed to a timer. */
+  private get safeDurationMs(): number | null {
+    return this.durationMs != null && Number.isFinite(this.durationMs) ? finiteRange(this.durationMs, 0, 0) : null;
+  }
+
   private statusLabel(): string {
     switch (this.status) {
       case 'pending':
@@ -92,7 +111,7 @@ export class LyraFlowNode extends LyraElement {
   }
 
   render(): TemplateResult {
-    const clampedProgress = this.progress != null ? Math.min(100, Math.max(0, this.progress)) : null;
+    const clampedProgress = this.safeProgress;
     return html`<div part="base">
       <div class="handles handles-input">${this.inputs.map((h) => this.handleTemplate('input', h))}</div>
       <div class="card" ?data-pulse=${this.pulsesRing}>
@@ -118,10 +137,11 @@ export class LyraFlowNode extends LyraElement {
   }
 
   private formattedDuration(): string {
-    if (this.durationMs == null) return '';
-    return this.durationMs < 1000
-      ? this.localize('durationMilliseconds', undefined, { value: Math.round(this.durationMs) })
-      : this.localize('durationSeconds', undefined, { value: Math.round(this.durationMs / 100) / 10 });
+    const durationMs = this.safeDurationMs;
+    if (durationMs == null) return '';
+    return durationMs < 1000
+      ? this.localize('durationMilliseconds', undefined, { value: Math.round(durationMs) })
+      : this.localize('durationSeconds', undefined, { value: Math.round(durationMs / 100) / 10 });
   }
 
   private statusText(): string {

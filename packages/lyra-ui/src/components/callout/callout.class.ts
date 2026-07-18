@@ -22,7 +22,11 @@ export interface LyraCalloutEventMap { 'lyra-close': CustomEvent<undefined>; }
  * @csspart content - The message content.
  * @csspart heading - The heading wrapper.
  * @csspart message - The message content wrapper.
- * @csspart close-button - The close button.
+ * @csspart close-button - The close button's interactive hit target, sized to the shared minimum
+ *   tappable size (`--lyra-icon-button-size`) in both the default panel and the compact `inline`
+ *   variant.
+ * @csspart close-icon - The close button's visible "×" glyph, independent of `close-button`'s hit
+ *   target size -- shrinks in the `inline` variant while the hit target stays full-size.
  */
 export class LyraCallout extends LyraElement<LyraCalloutEventMap> {
   static styles = [LyraElement.styles, styles];
@@ -53,7 +57,7 @@ export class LyraCallout extends LyraElement<LyraCalloutEventMap> {
         <div part="heading" ?hidden=${!this.heading && !this.hasHeading}>${this.heading}<slot name="heading" @slotchange=${this.onSlotChange}></slot></div>
         <div part="message"><slot></slot></div>
       </div>
-      <button part="close-button" ?hidden=${!this.closable} aria-label=${this.localize('close')} @click=${this.close}>×</button>
+      <button part="close-button" ?hidden=${!this.closable} aria-label=${this.localize('close')} @click=${this.close}><span part="close-icon" aria-hidden="true">×</span></button>
     </div>`;
   }
 }

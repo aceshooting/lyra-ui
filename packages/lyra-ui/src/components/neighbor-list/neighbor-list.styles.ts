@@ -50,8 +50,12 @@ export const styles = css`
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    min-inline-size: var(--lyra-size-1-25rem);
-    min-block-size: var(--lyra-size-1-25rem);
+    /* Keep the glyph compact while giving the interactive box the shared minimum target size --
+       same split as lyra-code-block's own [part='toggle']. */
+    inline-size: var(--lyra-size-1-25rem);
+    block-size: var(--lyra-size-1-25rem);
+    min-inline-size: var(--lyra-icon-button-size);
+    min-block-size: var(--lyra-icon-button-size);
     border: none;
     border-radius: var(--lyra-radius-xs);
     background: transparent;

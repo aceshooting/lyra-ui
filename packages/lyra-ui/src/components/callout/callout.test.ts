@@ -36,6 +36,24 @@ it('lets accessible-label take precedence over a host-level aria-label', async (
   expect(el.shadowRoot!.querySelector('[part="base"]')?.getAttribute('aria-label')).to.equal('Explicit label');
 });
 
+it('gives the close button the shared minimum hit area in both the default and inline variants, shrinking only the visible glyph', async () => {
+  const el = (await fixture(html`<lyra-callout closable>Message</lyra-callout>`)) as LyraCallout;
+  const button = el.shadowRoot!.querySelector('[part="close-button"]') as HTMLElement;
+  expect(getComputedStyle(button).minInlineSize).to.equal('40px');
+  expect(getComputedStyle(button).minBlockSize).to.equal('40px');
+
+  const inlineEl = (await fixture(
+    html`<lyra-callout inline closable>Message</lyra-callout>`,
+  )) as LyraCallout;
+  const inlineButton = inlineEl.shadowRoot!.querySelector('[part="close-button"]') as HTMLElement;
+  const inlineIcon = inlineEl.shadowRoot!.querySelector('[part="close-icon"]') as HTMLElement;
+  expect(getComputedStyle(inlineButton).minInlineSize).to.equal('40px');
+  expect(getComputedStyle(inlineButton).minBlockSize).to.equal('40px');
+  // The visible "×" glyph shrinks to the compact inline size, not the button's own hit target.
+  expect(getComputedStyle(inlineIcon).inlineSize).to.equal('24px');
+  expect(getComputedStyle(inlineIcon).blockSize).to.equal('24px');
+});
+
 it('supports a lightweight inline status/error treatment', async () => {
   const el = (await fixture(html`<lyra-callout inline variant="danger"><span slot="icon">!</span>Try again</lyra-callout>`)) as LyraCallout;
   expect(el.inline).to.be.true;

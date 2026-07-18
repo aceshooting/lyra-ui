@@ -114,6 +114,14 @@ it('the standalone preview-button previews the committed value and is disabled w
   expect(previewButton(el).getAttribute('aria-label')).to.equal('Preview alloy');
 });
 
+it('gives the standalone preview-button the shared minimum tappable size', async () => {
+  const el = (await fixture(html`<lyra-voice-picker .catalog=${CATALOG} value="alloy"></lyra-voice-picker>`)) as LyraVoicePicker;
+  await el.updateComplete;
+  const btn = previewButton(el);
+  expect(getComputedStyle(btn).minInlineSize).to.equal('40px');
+  expect(getComputedStyle(btn).minBlockSize).to.equal('40px');
+});
+
 it('clicking preview fires cancelable lyra-preview-request with the resolved previewUrl', async () => {
   const el = (await fixture(
     html`<lyra-voice-picker .catalog=${OBJECT_CATALOG} value="aria"></lyra-voice-picker>`,

@@ -1299,6 +1299,18 @@ describe('expandable rows', () => {
     expect(toggleCells[0].querySelector('button')).to.exist;
   });
 
+  it('gives the row-expand toggle button the shared minimum hit area', async () => {
+    const el = (await fixture(html`<lyra-table></lyra-table>`)) as LyraTable<Row>;
+    el.columns = expandableColumns;
+    el.rows = rows;
+    el.rowKey = (r) => r.id;
+    el.expandedContent = (r) => html`<p>${r.name} details</p>`;
+    await el.updateComplete;
+    const toggle = el.shadowRoot!.querySelector('[part="row-expand-toggle"]') as HTMLElement;
+    expect(getComputedStyle(toggle).minInlineSize).to.equal('40px');
+    expect(getComputedStyle(toggle).minBlockSize).to.equal('40px');
+  });
+
   it('renders an empty, non-interactive toggle cell for a row that fails canExpand', async () => {
     const el = (await fixture(html`<lyra-table></lyra-table>`)) as LyraTable<Row>;
     el.columns = expandableColumns;

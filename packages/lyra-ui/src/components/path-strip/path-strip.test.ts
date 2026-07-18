@@ -88,6 +88,19 @@ it('announces node focus through a .strings override for pathNodeStatus, interpo
   expect(el.shadowRoot!.querySelector('[role="status"]')!.textContent).to.equal('Marie Curie, nœud 1 sur 3');
 });
 
+it('gives both node and relation pills the shared minimum hit area', async () => {
+  const el = (await fixture(html`<lyra-path-strip></lyra-path-strip>`)) as LyraPathStrip;
+  el.path = path;
+  await el.updateComplete;
+  const node = el.shadowRoot!.querySelector('[part="node"]') as HTMLElement;
+  const relation = el.shadowRoot!.querySelector('[part="relation"]') as HTMLElement;
+
+  expect(getComputedStyle(node).minInlineSize).to.equal('40px');
+  expect(getComputedStyle(node).minBlockSize).to.equal('40px');
+  expect(getComputedStyle(relation).minInlineSize).to.equal('40px');
+  expect(getComputedStyle(relation).minBlockSize).to.equal('40px');
+});
+
 it('is accessible with a full path', async () => {
   const el = (await fixture(html`<lyra-path-strip></lyra-path-strip>`)) as LyraPathStrip;
   el.path = path;

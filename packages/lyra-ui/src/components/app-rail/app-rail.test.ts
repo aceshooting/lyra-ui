@@ -638,6 +638,18 @@ describe('resizable', () => {
     expect(resizer.getAttribute('aria-label')).to.equal('Resize navigation');
   });
 
+  it('gives the resizer hit target the shared minimum tappable size without inflating the visible drag line', async () => {
+    const el = (await fixture(html`<lyra-app-rail resizable></lyra-app-rail>`)) as LyraAppRail;
+    await el.updateComplete;
+    const resizer = el.shadowRoot!.querySelector('[part="resizer"]') as HTMLElement;
+    const track = resizer.querySelector('[part="resizer-track"]') as HTMLElement;
+    expect(getComputedStyle(resizer).minInlineSize).to.equal('40px');
+    expect(getComputedStyle(resizer).minBlockSize).to.equal('40px');
+    // The visible drag line itself stays a slim 3px bar, not blown up to 40px -- the handle's own
+    // box grows around it via flex centering instead.
+    expect(getComputedStyle(track).inlineSize).to.equal('3px');
+  });
+
   it('does not render a resizer in icon-only or mobile mode even when resizable', async () => {
     const el = (await fixture(html`<lyra-app-rail resizable mode="icon-only"></lyra-app-rail>`)) as LyraAppRail;
     await el.updateComplete;

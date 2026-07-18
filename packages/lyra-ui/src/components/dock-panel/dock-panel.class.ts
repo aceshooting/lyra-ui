@@ -328,6 +328,11 @@ export class LyraDockPanel extends LyraElement<LyraDockPanelEventMap> {
   private handleTemplate(): TemplateResult | typeof nothing {
     if (!this.resizable || this.collapsed) return nothing;
     const { minPx, maxPx } = this.resolveBoundsPx();
+    // hit-area-exempt: a drag-handle separator (role="separator",
+    // mouse-drag/arrow-key resize), not a tap-to-activate icon button --
+    // mirrors lyra-split's own [part="divider"] precedent exactly: the
+    // visible bar stays a slim 3px while [part='handle']::before (see
+    // dock-panel.styles.ts) widens the real pointer-capture hit-slop.
     return html`<div
       part="handle"
       role="separator"

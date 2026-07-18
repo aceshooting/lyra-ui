@@ -136,8 +136,13 @@ export interface LyraAppRailEventMap {
  * @csspart backdrop - The mobile overlay's scrim. Only rendered while open.
  * @csspart panel - The mobile overlay's floating panel — see the class doc
  *   for why it's the same element as `base`, never both at once.
- * @csspart resizer - The `resizable` opt-in's drag handle. Only rendered while `resizable` and
- *   `mode` is `'full'`.
+ * @csspart resizer - The `resizable` opt-in's drag handle -- its interactive hit target, sized to
+ *   the shared minimum tappable size (`--lyra-icon-button-size`), independent of the slimmer
+ *   visible line rendered by its `resizer-track` child. Only rendered while `resizable` and `mode`
+ *   is `'full'`.
+ * @csspart resizer-track - The resizer's slim visible drag line, centered inside `[part="resizer"]`'s
+ *   larger hit target (mirrors `<lyra-swatch-picker>`'s `[part="swatch"]`/`[part="swatch-fill"]`
+ *   split). Colors on hover/focus the same way the whole handle previously did.
  *
  * @example
  * Use the item contract so the visible label collapses while its accessible
@@ -604,7 +609,7 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
             tabindex="0"
             @pointerdown=${this.onResizerPointerDown}
             @keydown=${this.onResizerKeyDown}
-          ></div>`
+          ><span part="resizer-track"></span></div>`
         : nothing}
     `;
   }

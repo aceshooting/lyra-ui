@@ -216,6 +216,19 @@ it('reveal-on-hover binds to the closest lyra-chat-message ancestor', async () =
   }
 });
 
+it('gives the regenerate/edit built-in buttons the shared minimum hit area', async () => {
+  const el = (await fixture(
+    html`<lyra-message-actions .controls=${['regenerate', 'edit']}></lyra-message-actions>`,
+  )) as LyraMessageActions;
+  const regenerate = el.shadowRoot!.querySelector('[part~="regenerate-button"]') as HTMLElement;
+  const edit = el.shadowRoot!.querySelector('[part~="edit-button"]') as HTMLElement;
+
+  expect(getComputedStyle(regenerate).minInlineSize).to.equal('40px');
+  expect(getComputedStyle(regenerate).minBlockSize).to.equal('40px');
+  expect(getComputedStyle(edit).minInlineSize).to.equal('40px');
+  expect(getComputedStyle(edit).minBlockSize).to.equal('40px');
+});
+
 it('is accessible with every built-in enabled', async () => {
   const el = (await fixture(
     html`<lyra-message-actions

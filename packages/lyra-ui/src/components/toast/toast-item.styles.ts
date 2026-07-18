@@ -133,6 +133,8 @@ export const styles = css`
     line-height: var(--lyra-line-height-none);
     padding: var(--lyra-space-xs);
     border-radius: var(--lyra-radius);
+    min-inline-size: var(--lyra-icon-button-size);
+    min-block-size: var(--lyra-icon-button-size);
   }
   [part='close-button']:hover:not([aria-disabled='true']) {
     color: var(--lyra-color-text);

@@ -54,6 +54,13 @@ it('defaults to inactive with no optional segments, and a stop button with a cle
   expect(stopButton.getAttribute('aria-label')).to.equal('Stop generating');
 });
 
+it('gives the stop button the shared minimum hit area', async () => {
+  const el = (await fixture(html`<lyra-generation-status></lyra-generation-status>`)) as LyraGenerationStatus;
+  const stopButton = el.shadowRoot!.querySelector('[part="stop-button"]') as HTMLElement;
+  expect(getComputedStyle(stopButton).minInlineSize).to.equal('40px');
+  expect(getComputedStyle(stopButton).minBlockSize).to.equal('40px');
+});
+
 it('localizes the stop button aria-label via .strings (stopGenerating)', async () => {
   const el = (await fixture(html`
     <lyra-generation-status .strings=${{ stopGenerating: 'Arrêter' }}></lyra-generation-status>

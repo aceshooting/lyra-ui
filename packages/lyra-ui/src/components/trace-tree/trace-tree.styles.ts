@@ -45,9 +45,14 @@ export const styles = css`
   }
 
   [part='toggle'] {
+    /* Keep the chevron glyph compact while giving the interactive box the shared minimum
+       tappable size -- same "small glyph, padded hit box" pattern as lyra-code-block's/
+       lyra-json-viewer's own [part='toggle']. */
     flex: 0 0 auto;
     inline-size: var(--lyra-size-1-25rem);
     block-size: var(--lyra-size-1-25rem);
+    min-inline-size: var(--lyra-icon-button-size);
+    min-block-size: var(--lyra-icon-button-size);
     display: inline-flex;
     align-items: center;
     justify-content: center;

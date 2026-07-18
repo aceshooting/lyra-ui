@@ -34,8 +34,7 @@ export const styles = css`
     gap: var(--lyra-space-s);
   }
   [part='previous-button'],
-  [part='next-button'],
-  [part='indicator'] {
+  [part='next-button'] {
     border: var(--lyra-border-width-thin) solid var(--lyra-color-border);
     border-radius: var(--lyra-radius-pill);
     background: var(--lyra-color-surface);
@@ -52,8 +51,7 @@ export const styles = css`
     min-block-size: var(--lyra-icon-button-size);
   }
   [part='previous-button']:hover,
-  [part='next-button']:hover,
-  [part='indicator'][aria-current='true'] {
+  [part='next-button']:hover {
     background: var(--lyra-color-brand-quiet);
     border-color: var(--lyra-color-brand);
   }
@@ -73,10 +71,34 @@ export const styles = css`
     justify-content: center;
     gap: var(--lyra-space-xs);
   }
+  /* The interactive hit target meets the shared minimum tappable size (same --lyra-icon-button-size
+     floor as lyra-code-block's/lyra-json-viewer's [part='toggle'] and lyra-swatch-picker's
+     [part='swatch']), while the *visible* dot stays a compact --lyra-size-0-5rem circle -- rendered
+     on the separate [part='indicator-dot'] child below and centered via flex, not by resizing this
+     button itself. */
   [part='indicator'] {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-inline-size: var(--lyra-icon-button-size);
+    min-block-size: var(--lyra-icon-button-size);
+    padding: 0;
+    border: none;
+    border-radius: var(--lyra-radius-pill);
+    background: transparent;
+    cursor: pointer;
+  }
+  [part='indicator-dot'] {
+    display: block;
     inline-size: var(--lyra-size-0-5rem);
     block-size: var(--lyra-size-0-5rem);
-    padding: 0;
+    border: var(--lyra-border-width-thin) solid var(--lyra-color-border);
+    border-radius: var(--lyra-radius-pill);
+    background: var(--lyra-color-surface);
+  }
+  [part='indicator'][aria-current='true'] [part='indicator-dot'] {
+    background: var(--lyra-color-brand-quiet);
+    border-color: var(--lyra-color-brand);
   }
   :host(:dir(rtl)) [part='previous-glyph'],
   :host(:dir(rtl)) [part='next-glyph'] {

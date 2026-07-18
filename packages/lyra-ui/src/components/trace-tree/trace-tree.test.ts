@@ -189,4 +189,12 @@ describe('lyra-trace-tree', () => {
     await el.updateComplete;
     await expect(el).to.be.accessible();
   });
+
+  it('gives the expand/collapse toggle the shared minimum tappable size without inflating the chevron glyph', async () => {
+    const el = (await fixture(html`<lyra-trace-tree .spans=${SPANS}></lyra-trace-tree>`)) as LyraTraceTree;
+    await el.updateComplete;
+    const toggle = el.shadowRoot!.querySelector('[data-id="root"] [part="toggle"]') as HTMLElement;
+    expect(getComputedStyle(toggle).minInlineSize).to.equal('40px');
+    expect(getComputedStyle(toggle).minBlockSize).to.equal('40px');
+  });
 });

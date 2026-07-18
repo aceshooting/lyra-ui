@@ -2184,6 +2184,11 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
           >
             ${this.simNodes.map(
               (n, i) => html`
+                <!-- hit-area-exempt: this button lives inside [part="cursor-items"]'s
+                     class="sr-only" (internal/a11y.ts's clip: rect(0 0 0 0) box) -- it's
+                     the offscreen keyboard-roving a11y virtual cursor described in this
+                     class's own doc comment, never a visible/pointer-clickable box, so
+                     the 40px hit-area floor (meant for on-screen tap targets) doesn't apply. -->
                 <button
                   part="cursor-item"
                   tabindex=${this.normalizedGraphItem() === i ? '0' : '-1'}
@@ -2197,6 +2202,8 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
             ${this.simLinks.map((l, li) => {
               const i = this.simNodes.length + li;
               return html`
+                <!-- hit-area-exempt: see the node cursor-item above -- same offscreen
+                     sr-only virtual-cursor button, no visible/pointer-clickable box. -->
                 <button
                   part="cursor-item"
                   tabindex=${this.normalizedGraphItem() === i ? '0' : '-1'}
@@ -2214,6 +2221,8 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
                 count: entry.members.length,
               });
               return html`
+                <!-- hit-area-exempt: see the node cursor-item above -- same offscreen
+                     sr-only virtual-cursor button, no visible/pointer-clickable box. -->
                 <button
                   part="cursor-item"
                   tabindex=${this.normalizedGraphItem() === i ? '0' : '-1'}

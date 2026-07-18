@@ -445,6 +445,24 @@ describe('remove affordance', () => {
   });
 });
 
+describe('hit area', () => {
+  it('gives retry-button, preview-button, and remove-button the shared minimum tappable size', async () => {
+    const el = (await fixture(html`
+      <lyra-attachment-chip
+        name="invoice.pdf"
+        status="error"
+        .file=${makeFile('invoice.pdf', 'text/plain')}
+      ></lyra-attachment-chip>
+    `)) as LyraAttachmentChip;
+    for (const part of ['retry-button', 'preview-button', 'remove-button']) {
+      const btn = el.shadowRoot!.querySelector(`[part="${part}"]`) as HTMLElement;
+      expect(btn, `[part="${part}"] should render`).to.exist;
+      expect(getComputedStyle(btn).minInlineSize, `${part} minInlineSize`).to.equal('40px');
+      expect(getComputedStyle(btn).minBlockSize, `${part} minBlockSize`).to.equal('40px');
+    }
+  });
+});
+
 describe('id resolution', () => {
   it('derives a stable id from file name+size+lastModified when no id attribute is set', async () => {
     const file = makeFile('a.png', 'image/png', 10);
