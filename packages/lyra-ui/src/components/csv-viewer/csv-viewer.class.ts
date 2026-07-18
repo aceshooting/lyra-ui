@@ -153,6 +153,7 @@ export class LyraCsvViewer extends DocumentAnchorTarget(LyraCsvViewerBase) {
     const active = colHighlights.find((entry) => entry.highlight.id === this.activeHighlightId);
     const primary = active ?? colHighlights[0]!;
     const activate = (): void => { this.emit('lyra-highlight-activate', { id: primary.highlight.id }); };
+    // hit-area-exempt: dense data-grid cell, not an icon-only control
     return html`<div
       part="cell cell-highlight"
       role="button"

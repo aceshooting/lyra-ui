@@ -119,13 +119,16 @@ export const styles = css`
     font-variant-numeric: tabular-nums;
   }
 
+  /* A conversation-item row has real room (unlike a compact chip pill) -- the rename button gets
+     the full shared --lyra-icon-button-size floor directly, no capped/split-glyph compromise
+     needed. */
   [part='rename-button'] {
     flex: 0 0 auto;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    min-inline-size: min(var(--lyra-icon-button-size), var(--lyra-size-1-75rem));
-    min-block-size: min(var(--lyra-icon-button-size), var(--lyra-size-1-75rem));
+    min-inline-size: var(--lyra-icon-button-size);
+    min-block-size: var(--lyra-icon-button-size);
     padding: 0;
     border: none;
     border-radius: calc(var(--lyra-radius) * 0.6);

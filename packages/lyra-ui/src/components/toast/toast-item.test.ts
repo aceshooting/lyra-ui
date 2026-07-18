@@ -249,6 +249,14 @@ it('marks the close button aria-disabled once hiding starts and ignores a rapid 
   expect(afterHideCount, 'lyra-after-hide should fire exactly once').to.equal(1);
 });
 
+it('gives the close button the shared minimum hit area', async () => {
+  const el = (await fixture(html`<lyra-toast-item duration="0">dismiss me</lyra-toast-item>`)) as LyraToastItem;
+  await oneEvent(el, 'lyra-show');
+  const button = el.shadowRoot!.querySelector('[part="close-button"]') as HTMLElement;
+  expect(getComputedStyle(button).minInlineSize).to.equal('40px');
+  expect(getComputedStyle(button).minBlockSize).to.equal('40px');
+});
+
 it('keeps focus on the close button once hiding starts, instead of dropping it to <body>', async () => {
   // A native `disabled` attribute forces the browser to blur the element
   // outright with nothing to move focus to -- the primary way a keyboard or

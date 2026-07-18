@@ -104,14 +104,23 @@ export const styles = css`
     white-space: nowrap;
   }
 
+  /* The interactive hit target meets the shared minimum tappable size (same --lyra-icon-button-size
+     floor as lyra-swatch-picker's [part='swatch']/lyra-token-input's [part='remove']), while the
+     *visible* glyph stays a compact 0.75em × close icon -- a chip is a small horizontal pill, and
+     growing the whole button box to 40px would visually balloon the row. Since the button sits at
+     the pill's trailing edge with nothing after it, the extra hit-target growth is pulled back via
+     a matching negative margin (rather than growing outward into the next chip in a wrapped row) so
+     the *visible* pill footprint is unchanged -- the enlarged hit area simply overlaps into the
+     pill's own padding/background rather than expanding the row's layout box. */
   [part='remove-button'] {
     flex: 0 0 auto;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    min-inline-size: min(var(--lyra-icon-button-size), var(--lyra-size-1-25rem));
-    min-block-size: min(var(--lyra-icon-button-size), var(--lyra-size-1-25rem));
-    margin-inline-end: var(--lyra-size-neg-0-15rem);
+    min-inline-size: var(--lyra-icon-button-size);
+    min-block-size: var(--lyra-icon-button-size);
+    margin: calc((var(--lyra-icon-button-size) - var(--lyra-size-1-25rem)) / -2);
+    margin-inline-end: calc((var(--lyra-icon-button-size) - var(--lyra-size-1-25rem)) / -2 + var(--lyra-size-neg-0-15rem));
     padding: 0;
     border: none;
     border-radius: var(--lyra-radius-pill);

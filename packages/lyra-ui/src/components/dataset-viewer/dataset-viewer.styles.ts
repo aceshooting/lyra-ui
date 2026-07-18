@@ -24,11 +24,18 @@ export const styles = css`
      whole cell and the rendered text position is unchanged. */
   [part~='cell-highlight'] { outline: var(--lyra-border-width-medium) solid var(--lyra-color-brand); outline-offset: calc(-1 * var(--lyra-border-width-medium)); cursor: pointer; padding: 0; }
   [part~='cell-highlight'][data-active] { outline-color: var(--lyra-color-warning, var(--lyra-color-brand)); }
+  /* A real action button (not a plain grid cell -- see [part='cell']/[part~='cell'] above), so it
+     gets the shared minimum tappable floor in the block dimension via a min-block-size on top of
+     the "all: unset" reset above; its inline size already spans the full cell (inline-size: 100%)
+     so no min-inline-size is strictly needed to reach the floor there, but it is set anyway so the
+     part is self-describing independent of its container. */
   [part='cell-highlight-action'] {
     all: unset;
     box-sizing: border-box;
     display: block;
     inline-size: 100%;
+    min-inline-size: var(--lyra-icon-button-size);
+    min-block-size: var(--lyra-icon-button-size);
     padding: var(--lyra-space-xs) var(--lyra-space-s);
     overflow: hidden;
     text-overflow: ellipsis;

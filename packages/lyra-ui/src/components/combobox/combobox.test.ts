@@ -478,9 +478,21 @@ it('uses the shared disabled-opacity token for the disabled host and disabled op
 
 it('gives the clear button and expand icon a real touch target instead of collapsing to bare glyph height', async () => {
   const css = styles.cssText;
-  const btnBlock = /\[part=['"]?clear-button['"]?],\s*\[part=['"]?expand-icon['"]?]\s*{([^}]*)}/.exec(css);
-  expect(btnBlock, 'expected a shared [part="clear-button"], [part="expand-icon"] rule').to.not.equal(null);
-  expect(btnBlock![1]).to.include('var(--lyra-icon-button-size)');
+  // [part='clear-button'] and [part='expand-icon'] used to share one rule for their sizing; they
+  // now resolve independently ([[part='clear-button'] to the full --lyra-icon-button-size floor,
+  // since it's a real independently-focusable button; [part='expand-icon'] to its smaller capped
+  // box, since it's a decorative aria-hidden indicator with no click handler of its own) -- both
+  // still reference the shared token.
+  // Each part now has its own dedicated sizing rule (in addition to the shared base rule the two
+  // still share for layout/color/cursor) -- there can be more than one block whose selector
+  // matches either part, so scan every match and require at least one dedicated rule per part to
+  // reference the shared token.
+  const clearBlocks = [...css.matchAll(/\[part=['"]?clear-button['"]?]\s*{([^}]*)}/g)];
+  expect(clearBlocks.length, 'expected at least one [part="clear-button"] rule').to.be.greaterThan(0);
+  expect(clearBlocks.some((m) => m[1].includes('var(--lyra-icon-button-size)'))).to.be.true;
+  const expandBlocks = [...css.matchAll(/\[part=['"]?expand-icon['"]?]\s*{([^}]*)}/g)];
+  expect(expandBlocks.length, 'expected at least one [part="expand-icon"] rule').to.be.greaterThan(0);
+  expect(expandBlocks.some((m) => m[1].includes('var(--lyra-icon-button-size)'))).to.be.true;
 
   const el = (await fixture(basic())) as LyraCombobox;
   el.withClear = true;
@@ -494,6 +506,22 @@ it('gives the clear button and expand icon a real touch target instead of collap
 
   const expandIcon = el.shadowRoot!.querySelector('[part="expand-icon"]') as HTMLElement;
   expect(expandIcon.getBoundingClientRect().width).to.be.greaterThan(24);
+});
+
+it('meets the shared 40px hit-area floor on the tag remove button and clear button', async () => {
+  const el = (await fixture(basic())) as LyraCombobox;
+  el.multiple = true;
+  el.withClear = true;
+  el.value = ['a'];
+  await el.updateComplete;
+
+  const removeBtn = el.shadowRoot!.querySelector('[part="tag__remove-button"]') as HTMLElement;
+  expect(getComputedStyle(removeBtn).minInlineSize).to.equal('40px');
+  expect(getComputedStyle(removeBtn).minBlockSize).to.equal('40px');
+
+  const clearBtn = el.shadowRoot!.querySelector('[part="clear-button"]') as HTMLElement;
+  expect(getComputedStyle(clearBtn).minInlineSize).to.equal('40px');
+  expect(getComputedStyle(clearBtn).minBlockSize).to.equal('40px');
 });
 
 it('hides the error and hint parts when empty, shows them once populated', async () => {

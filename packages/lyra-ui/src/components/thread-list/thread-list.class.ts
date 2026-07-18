@@ -1,5 +1,6 @@
 import { html, nothing, svg, type PropertyValues, type SVGTemplateResult, type TemplateResult } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
+import { styleMap } from 'lit/directives/style-map.js';
 import { LyraElement } from '../../internal/lyra-element.js';
 import type { LyraConversationItem } from '../conversation-item/conversation-item.class.js';
 import '../conversation-item/conversation-item.js';
@@ -343,13 +344,30 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
     });
   };
 
+  // Constant across every render -- computed once rather than inside styleMap() per button, since
+  // it depends on nothing per-thread. See renderRowActions()'s own doc comment for why this needs to
+  // be an inline style rather than living solely in thread-list.styles.ts's own [part~='row-action']
+  // rule.
+  private readonly rowActionButtonStyle = styleMap({
+    minInlineSize: 'var(--lyra-icon-button-size)',
+    minBlockSize: 'var(--lyra-icon-button-size)',
+  });
+
   private renderRowActions(thread: ChatThread): TemplateResult {
+    // Rendered via <lyra-virtual-list>'s `renderItem` callback, this markup mounts inside
+    // *virtual-list's own* shadow tree, not this element's -- so thread-list.styles.ts's own
+    // `[part~='row-action']` rule (a same-tree-scope attribute selector) never actually reaches
+    // these buttons at runtime; only an inherited property (a custom property, or an inline style,
+    // both of which cross shadow boundaries via normal CSS inheritance) can. The `minRowActionSize`
+    // inline style below is that fix -- kept in sync with the (still-present, for documentation/
+    // future-refactor and ::part()-styling purposes) stylesheet rule's own floor.
     return html`
       <span slot="actions">
         ${this.rowActions.includes('pin')
           ? html`<button
               type="button"
               part="row-action"
+              style=${this.rowActionButtonStyle}
               aria-label=${this.localize(thread.pinned ? 'unpinConversation' : 'pinConversation')}
               @click=${() => this.emit('lyra-thread-pin', { id: thread.id, pinned: !thread.pinned })}
             >
@@ -360,6 +378,7 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
           ? html`<button
               type="button"
               part="row-action"
+              style=${this.rowActionButtonStyle}
               aria-label=${this.localize(thread.archived ? 'unarchiveConversation' : 'archiveConversation')}
               @click=${() => this.emit('lyra-thread-archive', { id: thread.id, archived: !thread.archived })}
             >
@@ -370,6 +389,7 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
           ? html`<button
               type="button"
               part="row-action"
+              style=${this.rowActionButtonStyle}
               aria-label=${this.localize('deleteConversation')}
               @click=${() => this.emit('lyra-thread-delete', { id: thread.id })}
             >

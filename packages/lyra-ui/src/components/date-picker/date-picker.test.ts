@@ -519,6 +519,17 @@ it('renders chevron icons for month navigation instead of text glyphs', async ()
   expect(next.textContent).to.not.contain('›');
 });
 
+it('gives the month-navigation buttons the shared minimum hit area', async () => {
+  const el = (await fixture(html`<lyra-date-picker value="2026-07-15"></lyra-date-picker>`)) as LyraDatePicker;
+  await el.updateComplete;
+  const previous = el.shadowRoot!.querySelector('[part="previous"]') as HTMLElement;
+  const next = el.shadowRoot!.querySelector('[part="next"]') as HTMLElement;
+  expect(getComputedStyle(previous).minInlineSize).to.equal('40px');
+  expect(getComputedStyle(previous).minBlockSize).to.equal('40px');
+  expect(getComputedStyle(next).minInlineSize).to.equal('40px');
+  expect(getComputedStyle(next).minBlockSize).to.equal('40px');
+});
+
 it('defaults the nav-button labels to English but lets them be overridden for other locales', async () => {
   const el = (await fixture(html`<lyra-date-picker value="2026-07-15"></lyra-date-picker>`)) as LyraDatePicker;
   await el.updateComplete;

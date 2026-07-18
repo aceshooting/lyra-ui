@@ -217,6 +217,9 @@ describe('lyra-dataset-viewer', () => {
         const action = highlighted!.querySelector('[part="cell-highlight-action"]') as HTMLElement | null;
         expect(action).to.exist;
         expect(action!.tagName).to.equal('BUTTON');
+        // A real action button (not a plain grid cell) -- gets the shared minimum hit area.
+        expect(getComputedStyle(action!).minInlineSize).to.equal('40px');
+        expect(getComputedStyle(action!).minBlockSize).to.equal('40px');
         const listener = oneEvent(el, 'lyra-highlight-activate');
         action!.click();
         const event = (await listener) as CustomEvent<{ id: string }>;

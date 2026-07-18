@@ -40,6 +40,13 @@ it('localizes the remove button accessible name via .strings', async () => {
   expect(removeBtn.getAttribute('aria-label')).to.equal('Retirer alpha');
 });
 
+it('gives the per-token remove button the shared minimum hit area', async () => {
+  const el = (await fixture(html`<lyra-token-input .value=${['alpha']}></lyra-token-input>`)) as LyraTokenInput;
+  const removeBtn = el.shadowRoot!.querySelector('[part="remove"]') as HTMLElement;
+  expect(getComputedStyle(removeBtn).minInlineSize).to.equal('40px');
+  expect(getComputedStyle(removeBtn).minBlockSize).to.equal('40px');
+});
+
 it('renders label/hint/error content passed through named slots', async () => {
   const el = (await fixture(html`
     <lyra-token-input>

@@ -131,6 +131,13 @@ describe('remove affordance', () => {
     expect(el.isConnected).to.be.true;
     expect(el.shadowRoot!.querySelector('[part="remove-button"]')).to.exist;
   });
+
+  it('gives the remove button the shared minimum hit area', async () => {
+    const el = (await fixture(html`<lyra-chip removable>Tag</lyra-chip>`)) as LyraChip;
+    const btn = el.shadowRoot!.querySelector('[part="remove-button"]') as HTMLElement;
+    expect(getComputedStyle(btn).minInlineSize).to.equal('40px');
+    expect(getComputedStyle(btn).minBlockSize).to.equal('40px');
+  });
 });
 
 it('is accessible in the default (non-removable, no icon) state', async () => {

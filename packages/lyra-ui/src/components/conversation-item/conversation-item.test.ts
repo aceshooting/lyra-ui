@@ -240,6 +240,13 @@ describe('inline rename', () => {
     expect(notEditable.shadowRoot!.querySelector('[part="rename-button"]')).to.not.exist;
   });
 
+  it('gives the rename button the shared minimum hit area', async () => {
+    const el = (await fixture(html`<lyra-conversation-item title="A"></lyra-conversation-item>`)) as LyraConversationItem;
+    const btn = el.shadowRoot!.querySelector('[part="rename-button"]') as HTMLElement;
+    expect(getComputedStyle(btn).minInlineSize).to.equal('40px');
+    expect(getComputedStyle(btn).minBlockSize).to.equal('40px');
+  });
+
   it('swaps the title for a focused, pre-filled input when the rename button is activated', async () => {
     const el = (await fixture(html`<lyra-conversation-item title="Old name"></lyra-conversation-item>`)) as LyraConversationItem;
     const btn = el.shadowRoot!.querySelector('[part="rename-button"]') as HTMLButtonElement;

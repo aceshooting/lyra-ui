@@ -95,7 +95,21 @@ export const styles = css`
     color: var(--lyra-color-text);
     border-radius: var(--lyra-radius);
   }
+  /* Same compact-chip-remove pattern as lyra-chip's [part='remove-button']: the interactive hit
+     target meets the shared --lyra-icon-button-size floor, while the visible glyph stays a
+     compact 1rem close icon (font-size: var(--lyra-font-size-md), independent of the tag's own
+     --lyra-combobox-tag-font-size, which shrinks well below that at size="xs"/"s") -- a selected
+     tag is a small inline pill, so growing its whole box to 40px would visually balloon the tags
+     row. The negative margin pulls the enlarged hit area back in so the *visible* tag footprint
+     is unchanged; it overlaps into the tag's own padding/background rather than expanding the
+     row's layout box. */
   [part='tag__remove-button'] {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-inline-size: var(--lyra-icon-button-size);
+    min-block-size: var(--lyra-icon-button-size);
+    margin: calc((var(--lyra-icon-button-size) - var(--lyra-size-1rem)) / -2);
     border: none;
     background: none;
     cursor: pointer;
@@ -126,15 +140,23 @@ export const styles = css`
     cursor: pointer;
     color: var(--lyra-color-text-quiet);
     padding: var(--lyra-space-xs);
-    /* Real touch target in *both* dimensions (WCAG 2.2 SC 2.5.8 needs
-       24x24 CSS px, not just height — min-block-size alone left these
-       buttons ~21px wide). icon-button-size is
-       the ceiling, but never grow past what the [part=combobox] row's own
-       2.5rem min-block-size has room for once its own block padding is
-       subtracted. */
+    line-height: var(--lyra-line-height-none);
+  }
+  /* [part='expand-icon'] is a decorative aria-hidden dropdown indicator, not an independently
+     clickable target of its own -- the whole [part='combobox'] row opens the listbox via
+     onComboMouseDown, so this keeps its existing compact box rather than the interactive floor
+     below (which would force every size variant's trigger row taller just to fit a glyph nobody
+     taps directly). */
+  [part='expand-icon'] {
     min-inline-size: min(var(--lyra-icon-button-size), var(--lyra-size-1-75rem));
     min-block-size: min(var(--lyra-icon-button-size), var(--lyra-size-1-75rem));
-    line-height: var(--lyra-line-height-none);
+  }
+  /* Unlike [part='expand-icon'], [part='clear-button'] is a real, independently-focusable
+     <button> (see combobox.class.ts's @click) -- it gets the full shared icon-button hit-area
+     floor instead of the capped box above. */
+  [part='clear-button'] {
+    min-inline-size: var(--lyra-icon-button-size);
+    min-block-size: var(--lyra-icon-button-size);
   }
   [part='expand-icon'] svg {
     transform: rotate(90deg);

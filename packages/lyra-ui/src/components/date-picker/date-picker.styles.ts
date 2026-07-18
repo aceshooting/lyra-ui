@@ -35,6 +35,11 @@ export const styles = css`
   }
   [part='previous'],
   [part='next'] {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-inline-size: var(--lyra-icon-button-size);
+    min-block-size: var(--lyra-icon-button-size);
     border: none;
     background: none;
     cursor: pointer;

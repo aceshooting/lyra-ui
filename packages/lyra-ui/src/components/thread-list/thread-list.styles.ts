@@ -52,8 +52,12 @@ export const styles = css`
     display: inline-flex;
     align-items: center;
     justify-content: center;
+    /* Keep the glyph compact while giving the interactive box the shared
+       minimum target size. */
     inline-size: var(--lyra-size-1-5rem);
     block-size: var(--lyra-size-1-5rem);
+    min-inline-size: var(--lyra-icon-button-size);
+    min-block-size: var(--lyra-icon-button-size);
     padding: 0;
     border: 0;
     border-radius: var(--lyra-radius-xs);
