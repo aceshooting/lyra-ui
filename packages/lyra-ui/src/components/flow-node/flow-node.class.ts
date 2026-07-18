@@ -1,0 +1,143 @@
+import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
+import { property, state } from 'lit/decorators.js';
+import { LyraElement } from '../../internal/lyra-element.js';
+import type { FlowHandle, FlowRunStatus } from '../flow-canvas/flow-canvas.class.js';
+import { prefersReducedMotion } from '../../internal/motion.js';
+import { styles } from './flow-node.styles.js';
+
+const DEFAULT_INPUTS: FlowHandle[] = [{ id: 'in' }];
+const DEFAULT_OUTPUTS: FlowHandle[] = [{ id: 'out' }];
+
+/**
+ * `<lyra-flow-node>` — the card a workflow node renders as: header/body/toolbar chrome,
+ * tool-lifecycle status tones, and the named connection-handle elements edges anchor to. Used as
+ * `lyra-flow-canvas`'s default card and as a slotted override; also renders standalone (palette
+ * previews, docs). Purely presentational — activation, selection, movement, and connection are all
+ * `lyra-flow-canvas` events; this component owns none of that.
+ *
+ * @customElement lyra-flow-node
+ * @slot - Body content.
+ * @slot icon - Leading header glyph.
+ * @slot header - Replaces the built-in heading row entirely.
+ * @slot toolbar - Action row at the block-end edge.
+ * @csspart base - The card root.
+ * @csspart header - The built-in header row (hidden when the `header` slot has content).
+ * @csspart icon - The wrapper around the `icon` slot.
+ * @csspart heading - The heading text.
+ * @csspart status - The visible status chip (status is never color-only).
+ * @csspart progress - The determinate progress bar.
+ * @csspart body - The default-slot body wrapper.
+ * @csspart toolbar - The toolbar row wrapper.
+ * @csspart handle - Every handle dot (input or output).
+ * @csspart handle-input - An input handle dot (also carries the shared `handle` part).
+ * @csspart handle-output - An output handle dot (also carries the shared `handle` part).
+ * @cssprop [--lyra-flow-node-min-inline-size=11rem] - Minimum card inline size.
+ */
+export class LyraFlowNode extends LyraElement {
+  static styles = [LyraElement.styles, styles];
+
+  @property({ attribute: 'node-id' }) nodeId = '';
+  @property() heading = '';
+  @property({ reflect: true }) status: FlowRunStatus | null = null;
+  @property({ type: Number }) progress: number | null = null;
+  @property({ attribute: 'status-detail' }) statusDetail = '';
+  @property({ type: Number, attribute: 'duration-ms' }) durationMs: number | null = null;
+  @property({ type: Boolean, reflect: true }) selected = false;
+  @property({ attribute: false }) inputs: FlowHandle[] = DEFAULT_INPUTS;
+  @property({ attribute: false }) outputs: FlowHandle[] = DEFAULT_OUTPUTS;
+  /** Additive: which physical edge handles render on, mirroring the canvas's own `orientation` when
+   *  this card is canvas-adopted; a standalone card defaults to `"horizontal"`. */
+  @property({ reflect: true }) orientation: 'horizontal' | 'vertical' = 'horizontal';
+
+  @state() private hasHeaderSlot = false;
+
+  protected willUpdate(changed: PropertyValues): void {
+    if (!this.hasUpdated) {
+      this.hasHeaderSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'header');
+    }
+    void changed;
+  }
+
+  private onHeaderSlotChange = (e: Event): void => {
+    this.hasHeaderSlot = (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length > 0;
+  };
+
+  private statusLabel(): string {
+    switch (this.status) {
+      case 'pending':
+        return this.localize('statusPending');
+      case 'running':
+        return this.localize('statusRunning');
+      case 'success':
+        return this.localize('statusSuccess');
+      case 'error':
+        return this.localize('statusError');
+      case 'denied':
+        return this.localize('statusDenied');
+      default:
+        return '';
+    }
+  }
+
+  private handleTemplate(kind: 'input' | 'output', handle: FlowHandle): TemplateResult {
+    const label = handle.label ?? this.localize(kind === 'input' ? 'flowInputHandle' : 'flowOutputHandle', undefined, { id: handle.id });
+    return html`<span
+      part="handle handle-${kind}"
+      class="handle"
+      data-handle-id=${handle.id}
+      data-handle-kind=${kind}
+      aria-hidden="true"
+      title=${label}
+    ></span>`;
+  }
+
+  render(): TemplateResult {
+    const clampedProgress = this.progress != null ? Math.min(100, Math.max(0, this.progress)) : null;
+    return html`<div part="base">
+      <div class="handles handles-input">${this.inputs.map((h) => this.handleTemplate('input', h))}</div>
+      <div class="card" ?data-pulse=${this.pulsesRing}>
+        ${this.hasHeaderSlot
+          ? html`<slot name="header" @slotchange=${this.onHeaderSlotChange}></slot>`
+          : html`<div part="header">
+              <slot name="icon" part="icon"></slot>
+              <span part="heading">${this.heading}</span>
+            </div>`}
+        ${this.status
+          ? html`<div part="status" data-status=${this.status}>
+              <span class="status-dot"></span>${this.statusText()}
+            </div>`
+          : nothing}
+        ${clampedProgress != null
+          ? html`<div part="progress"><div class="progress-fill" style="inline-size:${clampedProgress}%"></div></div>`
+          : nothing}
+        <div part="body"><slot></slot></div>
+        <div part="toolbar"><slot name="toolbar"></slot></div>
+      </div>
+      <div class="handles handles-output">${this.outputs.map((h) => this.handleTemplate('output', h))}</div>
+    </div>`;
+  }
+
+  private formattedDuration(): string {
+    if (this.durationMs == null) return '';
+    return this.durationMs < 1000
+      ? this.localize('durationMilliseconds', undefined, { value: Math.round(this.durationMs) })
+      : this.localize('durationSeconds', undefined, { value: Math.round(this.durationMs / 100) / 10 });
+  }
+
+  private statusText(): string {
+    const label = this.statusLabel();
+    const duration = this.formattedDuration();
+    const withDuration = duration ? this.localize('flowStatusWithDuration', undefined, { status: label, duration }) : label;
+    return this.statusDetail ? `${withDuration} — ${this.statusDetail}` : withDuration;
+  }
+
+  private get pulsesRing(): boolean {
+    return this.status === 'running' && !prefersReducedMotion();
+  }
+}
+
+declare global {
+  interface HTMLElementTagNameMap {
+    'lyra-flow-node': LyraFlowNode;
+  }
+}

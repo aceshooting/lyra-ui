@@ -2908,6 +2908,810 @@ indentation), plus the shared tokens listed above.
 
 ---
 
+# Flow canvas
+
+## `lyra-flow-canvas`
+
+A pannable/zoomable DAG workflow canvas: positions HTML node cards, draws SVG edges between their
+handles, runs a shared layered auto-layout for unpositioned nodes, and owns all selection/drag/
+connect interaction as controlled events. Readonly (viewer) by default; opt into editor gestures
+individually via `nodes-draggable`, `connectable`, `droppable`. Never mutates `nodes` or `edges`
+itself — every edit intent is an event the host applies, mirroring `lyra-stepper`/`lyra-table`'s
+controlled-component contract.
+
+**Properties:**
+- `nodes: FlowNode[] = []` (attribute: false) — `FlowNode { id: string; type?: string; position?: {
+  x, y }; data?: Record<string, unknown>; accessibleLabel?: string; inputs?: FlowHandle[]; outputs?:
+  FlowHandle[] }`; a node with no `position` is placed by the layered auto-layout, and `data.label`/
+  `data.description` feed the default `<lyra-flow-node>` card when no matching light-DOM child exists
+- `edges: FlowEdge[] = []` (attribute: false) — `FlowEdge { id: string; source: string; target:
+  string; sourceHandle?: string; targetHandle?: string; label?: string; tone?: 'accent' | 'success' |
+  'warning' | 'danger' | 'neutral' }` (source/target are node ids; `label` draws at the edge midpoint,
+  unlike `lyra-graph`'s spoken-only `GraphLink.label`)
+- `orientation: 'horizontal' | 'vertical' = 'horizontal'` (reflected) — downstream layout/handle axis
+- `nodesDraggable: boolean = false` (attribute `nodes-draggable`)
+- `connectable: boolean = false`
+- `droppable: boolean = false` — accepts drops carrying the `FLOW_PALETTE_MIME_TYPE` payload a
+  `lyra-node-palette` drag sets, emitting `lyra-node-add`
+- `locked: boolean = false` (reflected) — freezes pan/zoom/drag/connect without touching the other
+  gesture flags
+- `selectedNodeIds: string[] = []`, `selectedEdgeIds: string[] = []` (attribute: false) — controlled;
+  the host assigns these back from `lyra-selection-change`
+- `minZoom: number = 0.25` (attribute `min-zoom`), `maxZoom: number = 2` (attribute `max-zoom`)
+- `grid: number = 8` — snap step in content px for drags/nudges/drop positions (`0` disables
+  snapping); also the dotted background's base spacing
+- `layerGap: number = 64` (attribute `layer-gap`), `nodeGap: number = 24` (attribute `node-gap`) —
+  auto-layout layer/sibling spacing
+- `decorations: FlowRunDecorations | null = null` (attribute: false) — `Record<nodeOrEdgeId,
+  FlowRunDecoration>`, `FlowRunDecoration { status: 'pending'|'running'|'success'|'error'|'denied';
+  progress?: number; durationMs?: number; detail?: string }`; pushed onto adopted `lyra-flow-node`
+  cards, typically supplied via a `lyra-flow-run-overlay`
+- `accessibleLabel: string | null = null` (attribute `aria-label`)
+- `viewport` (read-only getter) — `{ x, y, zoom }`, the current pan/zoom state
+
+**Methods:** `setViewport({ x, y, zoom })`, `zoomIn()`, `zoomOut()`, `resetZoom()`,
+`fit(options?: { padding?: number })` (frames every node), `focusNode(id, options?: { zoom? })`
+(pans/zooms to one node and moves roving focus onto it), `toContentPoint(clientX, clientY)` (maps a
+pointer position to content coordinates, RTL-aware), `registerCompanion(cb: (snapshot:
+FlowStructureSnapshot) => void): () => void` — the subscription `lyra-flow-minimap` uses to read
+live node/edge/viewport geometry without this canvas ever importing the minimap.
+
+**Events:** `lyra-node-click` (`detail: { id }`), `lyra-edge-click` (`detail: { id, source, target
+}`), `lyra-selection-change` (`detail: { nodeIds, edgeIds }`), `lyra-node-move` (`detail: { id,
+position, previous }`), `lyra-connect` (`detail: { source, target, sourceHandle, targetHandle }`),
+`lyra-node-add` (`detail: { type, position }`, from a palette drop), `lyra-selection-delete`
+(`detail: { nodeIds, edgeIds }`), `lyra-viewport-change` (`detail: { x, y, zoom }`),
+`lyra-layout-change` (`detail: { positions }`, fired after an auto-layout pass places previously
+unpositioned nodes).
+
+**Slots:** default (`lyra-flow-node` children adopted by `node-id`; a non-matching child is ignored
+with a console warning), `top-start`, `top-end` (floating corner overlays), `bottom-start` (e.g.
+`lyra-flow-controls`), `bottom-end` (e.g. `lyra-flow-minimap`).
+
+**CSS parts:** `base`, `viewport`, `background`, `edges`, `edge`, `edge-label`, `arrowhead`, `stub`
+(a dangling-edge stub line), `connection-line` (in-progress connect gesture), `node`, `empty`,
+`live-region`, `edge-list` (a visually hidden list of every edge).
+
+**Themeable custom properties:** `--lyra-flow-canvas-grid-size` (default `8px`, dotted background
+spacing), `--lyra-flow-canvas-march-duration` (default `var(--lyra-transition-ambient)`, running-edge
+march animation duration).
+
+**Optional peer deps:** none.
+
+```html
+<lyra-flow-canvas id="canvas" nodes-draggable connectable droppable style="height:480px"></lyra-flow-canvas>
+<lyra-flow-controls slot="bottom-start" for="canvas"></lyra-flow-controls>
+<lyra-flow-minimap slot="bottom-end" for="canvas"></lyra-flow-minimap>
+<script>
+  const canvas = document.getElementById('canvas');
+  canvas.nodes = [
+    { id: 'a', data: { label: 'Fetch' } },
+    { id: 'b', data: { label: 'Transform' } },
+  ];
+  canvas.edges = [{ id: 'a-b', source: 'a', target: 'b' }];
+  canvas.addEventListener('lyra-node-move', (e) => {
+    canvas.nodes = canvas.nodes.map((n) => (n.id === e.detail.id ? { ...n, position: e.detail.position } : n));
+  });
+</script>
+```
+
+**Known gotchas:**
+- Fully controlled: `nodes`/`edges`/`selectedNodeIds`/`selectedEdgeIds` are never mutated
+  internally — `lyra-node-move`, `lyra-selection-change`, `lyra-connect`, `lyra-node-add`, and
+  `lyra-selection-delete` are all requests the host applies back, same contract as `lyra-table`.
+- Auto-layout (via the dependency-free `layeredLayout()` util) only ever positions nodes that are
+  missing an explicit `position`; a node the host has already positioned is left exactly where it is
+  and used as a fixed anchor for the rest of the layout pass.
+- `droppable` only accepts drags carrying the exact `FLOW_PALETTE_MIME_TYPE` MIME type a
+  `lyra-node-palette` drag sets — the two components can never disagree on the payload shape because
+  they share one exported constant.
+- Pan/drag/zoom track the pointer's physical direction; under an RTL ancestor the pan and node-drag
+  deltas are mirrored so content still visually follows the cursor, matching every other
+  RTL-mirrored surface in this library.
+
+---
+
+## `lyra-flow-node`
+
+The card a workflow node renders as: header/body/toolbar chrome, tool-lifecycle status tones, and
+the named connection-handle elements edges anchor to. Used as `lyra-flow-canvas`'s default card and
+as a slotted override; also renders standalone (palette previews, docs). Purely presentational —
+activation, selection, movement, and connection are all `lyra-flow-canvas` events; this component
+owns none of that.
+
+**Properties:**
+- `nodeId: string = ''` (attribute `node-id`)
+- `heading: string = ''`
+- `status: 'pending' | 'running' | 'success' | 'error' | 'denied' | null = null` (reflected)
+- `progress: number | null = null` — renders a determinate `[part="progress"]` bar when set
+- `statusDetail: string = ''` (attribute `status-detail`) — appended to the status line
+- `durationMs: number | null = null` (attribute `duration-ms`) — formatted into the status line
+- `selected: boolean = false` (reflected)
+- `inputs: FlowHandle[] = [{ id: 'in' }]`, `outputs: FlowHandle[] = [{ id: 'out' }]` (attribute:
+  false) — `FlowHandle { id: string; label?: string }`
+- `orientation: 'horizontal' | 'vertical' = 'horizontal'` (reflected) — which physical edge handles
+  render on; mirrors the adopting canvas's own `orientation`
+
+**Events:** none — purely presentational, activation/drag/connect all live on `lyra-flow-canvas`.
+
+**Slots:** default (body content), `icon` (leading header glyph), `header` (replaces the built-in
+heading row entirely), `toolbar` (action row at the block-end edge).
+
+**CSS parts:** `base`, `header`, `icon`, `heading`, `status` (never color-only — always paired with
+text), `progress`, `body`, `toolbar`, `handle` (every handle dot), `handle-input`, `handle-output`.
+
+**Themeable custom properties:** `--lyra-flow-node-min-inline-size` (default `11rem`).
+
+**Optional peer deps:** none.
+
+```html
+<lyra-flow-node node-id="a" heading="Fetch" status="running" progress="40"></lyra-flow-node>
+```
+
+**Known gotchas:**
+- A running node's card pulses (`?data-pulse`) unless `prefers-reduced-motion` is set — the same
+  reduced-motion exception every animated surface in this library follows.
+- `status` drives a status chip with a localized label plus `statusDetail`/`durationMs`, never a
+  color-only indicator.
+
+---
+
+## `lyra-flow-minimap`
+
+A corner overview map of a `lyra-flow-canvas`: scaled node rectangles plus a draggable viewport
+rectangle, for orientation and fast navigation on canvases larger than the screen. Draws no edges
+(nodes only, matching the React Flow/n8n minimap convention) and never reads `nodes` itself —
+geometry always comes from the canvas's `registerCompanion()` snapshots, so the two can never
+disagree.
+
+**Properties:**
+- `for: string = ''` — id of the target `lyra-flow-canvas`; when empty, the nearest ancestor canvas
+  is used (the slotted-into-a-corner-slot case, the primary wiring)
+- `label: string = ''` — accessible name for the map region; falls back to a host `aria-label`, then
+  a localized default
+
+**Events:** none.
+
+**Slots:** none.
+
+**CSS parts:** `base`, `map` (the scaled SVG), `node` (one rect per node), `viewport` (the
+draggable, focusable view rectangle).
+
+**Themeable custom properties:** `--lyra-flow-minimap-inline-size` (default `12rem`),
+`--lyra-flow-minimap-block-size` (default `8rem`).
+
+**Optional peer deps:** none.
+
+```html
+<lyra-flow-canvas id="canvas" style="height:480px">
+  <lyra-flow-minimap slot="bottom-end" for="canvas"></lyra-flow-minimap>
+</lyra-flow-canvas>
+```
+
+**Known gotchas:**
+- Never resolves `nodes`/`edges` on its own — it subscribes to `registerCompanion()` and repaints
+  from whatever snapshot the canvas last pushed, so it can only ever show what the canvas itself
+  currently renders.
+- Dragging the viewport rectangle calls the canvas's `setViewport()` directly; there's no separate
+  event to wire up.
+
+---
+
+## `lyra-flow-controls`
+
+The canvas's button cluster: zoom in/out, fit, and interaction lock, so every flow surface ships the
+same affordances without hosts rebuilding them. Manipulates only view state, never `nodes`/`edges` —
+no editing commands live here.
+
+**Properties:**
+- `for: string = ''` — id of the target `lyra-flow-canvas`; empty resolves to the nearest ancestor
+- `orientation: 'vertical' | 'horizontal' = 'vertical'` (reflected) — button-cluster layout axis
+- `hideLock: boolean = false` (attribute `hide-lock`) — omits the lock/unlock toggle button
+
+**Events:** none dispatched directly — each button calls the resolved canvas's own `zoomIn()`/
+`zoomOut()`/`fit()`, or toggles its `locked` property.
+
+**Slots:** default — extra host buttons appended to the cluster, styled by the same group.
+
+**CSS parts:** `base` (the `role="group"` wrapper), `zoom-in`, `zoom-out`, `fit`, `lock` (omitted
+when `hideLock`).
+
+**Themeable custom properties:** shared tokens only.
+
+**Optional peer deps:** none.
+
+```html
+<lyra-flow-canvas id="canvas" style="height:480px">
+  <lyra-flow-controls slot="bottom-start" for="canvas"></lyra-flow-controls>
+</lyra-flow-canvas>
+```
+
+**Known gotchas:**
+- `for` resolution is identical to `lyra-flow-minimap`/`lyra-flow-run-overlay`: an explicit id, else
+  the nearest ancestor canvas — none of the three companions import `LyraFlowCanvas` as a value, only
+  its types, so registration order between them and the canvas never matters.
+
+---
+
+## `lyra-node-palette`
+
+The searchable, categorized node library for workflow editors: drag an item onto a canvas, or place
+it by keyboard. Never creates nodes or touches a canvas's data itself — the drop/place handshake ends
+at `lyra-node-add`/`lyra-palette-place`; the host mutates `nodes`. Fully decoupled from
+`lyra-flow-canvas` (no `for` resolution, unlike the other three companions) — it only needs to agree
+with a `droppable` canvas on the `FLOW_PALETTE_MIME_TYPE` drag payload shape.
+
+**Properties:**
+- `items: PaletteItem[] = []` (attribute: false) — `PaletteItem { type: string; label: string;
+  description?: string; category?: string; keywords?: string[]; icon?: unknown; disabled?: boolean }`;
+  `type` is the `FlowNode.type` a placement/drop creates, `category` groups items under
+  first-appearance-ordered headings, `disabled` renders an item visible but not draggable/placeable
+- `label: string = ''` — accessible name for the search field/listbox
+
+**Events:** `lyra-palette-place` (`detail: { type }`, a pointer click or Enter/Space — the
+click/keyboard alternative to dragging), `lyra-select` (`detail: { item }`, emitted alongside
+`lyra-palette-place` on both gestures, carrying the full item).
+
+**Slots:** `header` (content above the search field, e.g. a heading or tabs), `footer` (content
+below the list).
+
+**CSS parts:** `base`, `search`, `list` (the listbox), `group-header`, `item`, `item-icon`,
+`item-label`, `item-description`, `empty` (no-results message), `live-region` (result-count
+announcement).
+
+**Themeable custom properties:** shared tokens only.
+
+**Optional peer deps:** none.
+
+```html
+<lyra-node-palette id="palette"></lyra-node-palette>
+<lyra-flow-canvas id="canvas" droppable style="height:480px"></lyra-flow-canvas>
+<script>
+  document.getElementById('palette').items = [
+    { type: 'http-request', label: 'HTTP Request', category: 'Actions' },
+    { type: 'transform', label: 'Transform', category: 'Actions' },
+  ];
+  document.getElementById('canvas').addEventListener('lyra-node-add', (e) => {
+    console.log('drop payload type:', e.detail.type, e.detail.position);
+  });
+</script>
+```
+
+**Known gotchas:**
+- A drag from this palette carries `FLOW_PALETTE_MIME_TYPE` as its `DataTransfer` type — only a
+  `droppable` `lyra-flow-canvas` (or a host reimplementing the same MIME type) accepts it.
+- Clicking or activating an item by keyboard fires `lyra-palette-place`/`lyra-select` immediately, no
+  drag required — the host decides where the new node lands (there's no pointer position to derive
+  one from on a keyboard placement).
+
+---
+
+## `lyra-flow-run-overlay`
+
+Execution-state presentation for a `lyra-flow-canvas`: pushes a `FlowRunDecorations` map into the
+resolved canvas (the canvas itself renders the node/edge paint) and renders a compact run-summary
+strip. Does not execute, poll, or time anything — pure pushed state; `durationMs` is host-computed.
+
+**Properties:**
+- `for: string = ''` — id of the target `lyra-flow-canvas`; empty resolves to the nearest ancestor
+- `decorations: FlowRunDecorations = {}` (attribute: false) — `Record<nodeOrEdgeId,
+  FlowRunDecoration>`, pushed verbatim onto the resolved canvas's own `decorations` property
+- `hideSummary: boolean = false` (attribute `hide-summary`) — omits the "{done} of {total} steps
+  complete" strip, keeping only the decoration push
+- `label: string = ''` — accessible name for the summary strip
+
+**Events:** none dispatched directly.
+
+**Slots:** default — extra host chrome appended to the strip (e.g. a cancel button or a usage
+badge).
+
+**CSS parts:** `base`, `summary` (the "{done} of {total} steps complete" line), `count` (one per
+status present, text + tone dot, never color-only), `live-region` (step-transition announcement).
+
+**Themeable custom properties:** shared tokens only.
+
+**Optional peer deps:** none.
+
+```html
+<lyra-flow-canvas id="canvas" style="height:480px">
+  <lyra-flow-run-overlay slot="top-start" for="canvas"></lyra-flow-run-overlay>
+</lyra-flow-canvas>
+<script>
+  document.querySelector('lyra-flow-run-overlay').decorations = {
+    a: { status: 'success', durationMs: 820 },
+    b: { status: 'running', progress: 40 },
+  };
+</script>
+```
+
+**Known gotchas:**
+- Purely a pushed-state conduit: it never starts, stops, or times a run itself — the host recomputes
+  `decorations` (including `durationMs`) on whatever cadence its own execution engine ticks at.
+- `for` resolution matches `lyra-flow-minimap`/`lyra-flow-controls`.
+
+---
+
+# Knowledge graph & RAG exploration
+
+## `lyra-graph-legend`
+
+A node-type legend for a paired `lyra-graph`: one swatch + label + count row per node type, doubling
+as visibility filters. Never reads or writes a graph directly — the host forwards `types` in from
+`graph.nodeTypes` and `hiddenTypes` back out to `graph.hiddenTypes` on `lyra-visibility-change`, the
+same event-decoupled contract every sibling in this family follows.
+
+**Properties:**
+- `types: LyraGraphLegendType[] = []` (attribute: false) — `{ id: string; label: string; color?:
+  string; shape?: 'circle' | 'square' | 'diamond' }`, the exact `lyra-graph.nodeTypes` entry shape
+  (declared locally, not imported, so this stays a zero-dependency component)
+- `counts?: Record<string, number>` (attribute: false) — optional per-type count shown alongside the
+  label
+- `hiddenTypes: string[] = []` (attribute: false) — controlled; the host assigns this back from
+  `lyra-visibility-change`
+- `interactive: boolean = true` (reflected) — renders each row as a toggle `<button>`; `false` renders
+  plain, non-interactive rows
+- `label: string = ''` — accessible name for the `role="group"` wrapper
+
+**Events:** `lyra-visibility-change` (`detail: { hiddenTypes }`, the complete updated array, fired
+after each toggle).
+
+**Slots:** none.
+
+**CSS parts:** `base`, `item` (a `<button>` when `interactive`, a plain `<div>` otherwise), `swatch`,
+`label`, `count`.
+
+**Themeable custom properties:** no component-local tokens; reads `--lyra-graph-cat-1` through `-8`
+(the same computed-style fallback palette `lyra-graph`/`lyra-word-cloud` use) plus shared tokens.
+
+**Optional peer deps:** none.
+
+```html
+<lyra-graph-legend id="legend"></lyra-graph-legend>
+<lyra-graph id="graph" style="height:480px"></lyra-graph>
+<script>
+  const graph = document.getElementById('graph');
+  const legend = document.getElementById('legend');
+  legend.types = [{ id: 'person', label: 'Person', color: '#0969da' }, { id: 'org', label: 'Organization' }];
+  legend.addEventListener('lyra-visibility-change', (e) => {
+    legend.hiddenTypes = e.detail.hiddenTypes;
+    graph.hiddenTypes = e.detail.hiddenTypes;
+  });
+</script>
+```
+
+**Known gotchas:**
+- Ships no coupling to `lyra-graph`'s optional `d3-force`/`d3-drag`/`d3-zoom`/`d3-selection` peers —
+  `types`/`counts`/`hiddenTypes` are plain data the host derives from a graph, never a live reference
+  to one.
+
+---
+
+## `lyra-entity-card`
+
+A dossier card for one knowledge-graph entity: type badge, description, key/value property rows,
+degree, community chip, plus a built-in "focus in graph" action. Never fetches or focuses a graph
+itself — `lyra-entity-activate` is a request a host routes into `lyra-graph`'s own
+`focusNode(id, options?)`.
+
+**Properties:**
+- `entity: LyraEntity | null = null` (attribute: false) — `LyraEntity { id: string; label: string;
+  type?: string; description?: string; properties?: Record<string, string | number>; degree?:
+  number; communityId?: string }`; field names deliberately mirror `lyra-graph`'s `GraphNode`
+  additions, so a graph node adapts into a `LyraEntity` with no mapping table; `null` renders the
+  empty state
+- `types: NodeTypeStyle[] = []` (attribute: false) — the same `lyra-graph.nodeTypes`/
+  `lyra-graph-legend.types` entry shape, resolving `entity.type` to a label/color/shape for the badge
+- `communityLabel: string = ''` (attribute `community-label`) — override text for the community chip
+- `showFocusButton: boolean = true` (attribute `show-focus-button`)
+
+**Events:** `lyra-entity-activate` (`detail: { id }`, the built-in focus button was activated).
+
+**Slots:** default (extra body content below the property rows, e.g. a `lyra-neighbor-list`),
+`actions` (extra header actions alongside the built-in focus button).
+
+**CSS parts:** `base`, `header`, `type-badge`, `title` (`role="heading" aria-level="3"` by default),
+`description`, `properties`, `property` (one key/value row), `degree`, `community`, `actions`,
+`focus-button`, `empty` (shown when `entity` is `null`).
+
+**Themeable custom properties:** shared tokens only; a data-driven `entity.type` color is applied as
+sanitized inline `--lyra-badge-*` overrides on the type badge only (the one "type color is
+data-driven by design" exception this library already grants graph nodes) — every other color comes
+from tokens.
+
+**Optional peer deps:** none.
+
+```html
+<lyra-entity-card id="card"></lyra-entity-card>
+<script>
+  document.getElementById('card').entity = {
+    id: 'e1', label: 'Ada Lovelace', type: 'person',
+    description: 'Mathematician', properties: { born: 1815 }, degree: 4,
+  };
+  document.getElementById('card').addEventListener('lyra-entity-activate', (e) => graph.focusNode(e.detail.id));
+</script>
+```
+
+**Known gotchas:**
+- The type badge's data-driven background uses a 10% (not this codebase's usual 16%) quiet-tint mix
+  against `--lyra-color-surface` — the lower percentage is required to hold WCAG AA 4.5:1 text
+  contrast for arbitrary, unvetted type colors.
+
+---
+
+## `lyra-entity-chip`
+
+An inline `@entity` mention for agent prose: flow content, keyboard-focusable, with a hover/focus
+preview popover. The knowledge-graph sibling of `lyra-citation-badge`, reusing its interaction
+contract wholesale. Carries ids through events only — no entity data resolution, no navigation.
+
+**Properties:**
+- `entityId: string = ''` (attribute `entity-id`)
+- `label: string = ''` — the chip's visible text
+- `type: string = ''` (reflected) — lets a host theme per type from CSS, e.g.
+  `lyra-entity-chip[type='person'] { --lyra-entity-chip-color: ... }`
+- `typeLabel?: string` (attribute `type-label`) — optional spoken/visible type qualifier
+
+**Events:** `lyra-entity-activate` (`detail: { id }`, click, or Enter while focused),
+`lyra-entity-open` (`detail: { id }`, dblclick, or Space while focused).
+
+**Slots:** default — rich preview content (typically a compact `lyra-entity-card`), shown in a
+floating popover on hover/focus. No content means no popover and no hover affordance at all.
+
+**CSS parts:** `base` (the clickable `<button>`), `label`, `popover`.
+
+**Themeable custom properties:** `--lyra-entity-chip-color` (default `var(--lyra-color-brand)`,
+text/accent color), `--lyra-entity-chip-bg` (default `var(--lyra-color-brand-quiet)`).
+
+**Optional peer deps:** none.
+
+```html
+<p>…first described by <lyra-entity-chip entity-id="e1" label="Ada Lovelace" type="person">
+  <lyra-entity-card slot=""></lyra-entity-card>
+</lyra-entity-chip>.</p>
+```
+
+**Known gotchas:**
+- Reuses `lyra-citation-badge`'s exact "real preview content" detection (an assigned element with no
+  other `slot`, or non-whitespace text) to decide whether a popover exists at all.
+
+---
+
+## `lyra-neighbor-list`
+
+One entity's relationship rows: relation, direction, neighbor, with per-row navigate and
+expand-in-graph affordances. Never computes neighbors itself (the host derives rows from its own
+graph data) and never mutates a graph.
+
+**Properties:**
+- `rows: LyraNeighborRow[] = []` (attribute: false) — `LyraNeighborRow { relation: string; direction:
+  'in' | 'out' | 'both'; node: LyraEntity }`
+- `groupByRelation: boolean = false` (attribute `group-by-relation`) — inserts a `group-header` row per
+  distinct `relation`
+- `expandable: boolean = false` — renders a per-row expand-in-graph icon button
+- `virtualizeAt: number = 100` (attribute `virtualize-at`) — row count above which the list virtualizes
+- `label: string = ''`
+
+**Events:** `lyra-entity-activate` (`detail: { id }`, a row's node button was activated),
+`lyra-node-expand` (`detail: { id }`, a row's expand button was activated — deliberately the same
+name and detail shape as `lyra-graph`'s own event, so one host handler serves both).
+
+**Slots:** none.
+
+**CSS parts:** `base` (`role="list"`), `group-header` (only when `groupByRelation`), `row`
+(`role="listitem"`), `direction` (`aria-hidden` glyph), `relation`, `node-label`, `node-meta`
+(secondary type/degree text, when present), `expand-button` (only when `expandable`), `empty`
+(shown when `rows` is empty).
+
+**Themeable custom properties:** shared tokens only.
+
+**Optional peer deps:** none.
+
+```html
+<lyra-neighbor-list expandable group-by-relation></lyra-neighbor-list>
+<script>
+  document.querySelector('lyra-neighbor-list').rows = [
+    { relation: 'works_for', direction: 'out', node: { id: 'e2', label: 'Analytical Engine Co.' } },
+  ];
+</script>
+```
+
+**Known gotchas:**
+- `lyra-node-expand`'s detail shape is intentionally identical to `lyra-graph`'s own event of the
+  same name, so a single listener wired to both handles "expand this node's neighborhood" uniformly.
+
+---
+
+## `lyra-path-strip`
+
+A linear node → relation → node chain rendering "why A connects to B" (GraphRAG local-search
+reasoning paths) as a compact, horizontally scrollable strip. One-dimensional and presentational: no
+path finding, no branching, no per-element popovers.
+
+**Properties:**
+- `path: LyraPathElement[] = []` (attribute: false) — a flat alternating sequence:
+  `{ kind: 'node'; node: LyraEntity } | { kind: 'edge'; relation: string; directed?: boolean;
+  reverse?: boolean }`
+- `label: string = ''`
+
+**Events:** `lyra-entity-activate` (`detail: { id }`, a node element activated),
+`lyra-relation-activate` (`detail: { relation, sourceId?, targetId? }`, an edge element activated —
+source/target resolved from the adjacent node elements, `undefined` when the path is malformed at
+that position).
+
+**Slots:** none.
+
+**CSS parts:** `base` (hosts the delegated roving-tabindex keydown handler), `node` (a `<button>`),
+`relation` (a `<button>`), `arrow` (`aria-hidden`, logical — mirrors under RTL), `empty` (shown when
+`path` is empty).
+
+**Themeable custom properties:** shared tokens only.
+
+**Optional peer deps:** none.
+
+```html
+<lyra-path-strip></lyra-path-strip>
+<script>
+  document.querySelector('lyra-path-strip').path = [
+    { kind: 'node', node: { id: 'a', label: 'Ada Lovelace' } },
+    { kind: 'edge', relation: 'wrote', directed: true },
+    { kind: 'node', node: { id: 'b', label: 'Notes on the Analytical Engine' } },
+  ];
+</script>
+```
+
+**Known gotchas:**
+- Purely presentational rendering of a caller-supplied path — it never computes shortest paths or
+  fetches relationship data itself, and never branches (one linear chain per instance).
+
+---
+
+## `lyra-community-card`
+
+A cluster/community summary card (GraphRAG community report): label, LLM summary excerpt, member
+count, member chips with overflow, and a drill-in action. Doesn't own community rendering on the
+graph or membership fetching — `lyra-drill` asks the host to load members/subgraph.
+
+**Properties:**
+- `community: LyraCommunity | null = null` (attribute: false) — `LyraCommunity { id: string; label:
+  string; summary?: string; memberCount?: number }`; `memberCount` is authoritative when it exceeds
+  `members.length`; `null` renders the empty state
+- `members: LyraEntity[] = []` (attribute: false) — rendered as chips, up to `maxMembers`
+- `maxMembers: number = 8` (attribute `max-members`) — remaining members collapse into a "+N"
+  overflow chip
+- `compact: boolean = false` (reflected) — omits the summary excerpt and member chips
+
+**Events:** `lyra-drill` (`detail: { id }`, the drill button, header, or overflow chip — all three
+mean "show me this whole community"), `lyra-entity-activate` (`detail: { id }`, a member chip was
+activated).
+
+**Slots:** `actions` — extra header actions alongside the built-in drill button.
+
+**CSS parts:** `base`, `header`, `title` (`role="heading" aria-level="3"` wrapping a `<button>`),
+`member-count`, `summary` (omitted in `compact`), `members` (omitted in `compact`), `member`,
+`overflow` (the "+N" chip button), `drill-button`, `actions`, `empty` (shown when `community` is
+`null`).
+
+**Themeable custom properties:** shared tokens only.
+
+**Optional peer deps:** none.
+
+```html
+<lyra-community-card></lyra-community-card>
+<script>
+  document.querySelector('lyra-community-card').community = { id: 'c1', label: 'Early computing pioneers', summary: 'A cluster of 19th-century mathematicians and engineers.', memberCount: 12 };
+</script>
+```
+
+**Known gotchas:**
+- `memberCount` (not `members.length`) is the authoritative displayed count whenever it's larger —
+  useful when the host sends only a preview slice of members alongside the real total.
+
+---
+
+## `lyra-chunk-inspector`
+
+A ranked retrieved-chunks list: relevance score bars with tier tones, expandable chunk text, and the
+deep-link event that lands a chunk in `lyra-document-viewer`. Never fetches, ranks, or dedupes; never
+opens documents itself.
+
+**Properties:**
+- `chunks: LyraChunk[] = []` (attribute: false) — `LyraChunk { id: string; text: string; score:
+  number; sourceId: string; title?: string; page?: string | number; anchor?: LyraChunkAnchor }`;
+  `score` is 0–1, `title` falls back to a localized "untitled source", `anchor` (the same
+  discriminated union `lyra-document-viewer.anchor` accepts — page/text-quote/fragment/line-range/
+  cell-range/cfi/time-range/region/node-path) is carried through `lyra-chunk-open` verbatim
+- `thresholds: { high: number; medium: number } = { high: 0.75, medium: 0.5 }` (attribute: false) —
+  score-bar tier cutoffs
+- `sort: 'score' | 'none' = 'score'`
+- `activeId: string = ''` (attribute `active-id`)
+- `virtualizeAt: number = 50` (attribute `virtualize-at`)
+- `compact: boolean = false` (reflected) — hides the text preview/toggle, title/score row only
+- `label: string = ''`
+
+**Events:** `lyra-chunk-open` (`detail: { id, sourceId, anchor? }`, a chunk's title/open button was
+activated — the event a host routes into `lyra-document-viewer`, setting `src` from `sourceId` and
+`anchor` from the chunk's own), `lyra-expand` (`detail: { id, expanded }`, a chunk's text toggle was
+activated).
+
+**Slots:** none.
+
+**CSS parts:** `base` (`role="group"`), `chunk` (`role="listitem"`), `score` (visible percent text),
+`score-bar` (`aria-hidden` track), `score-fill` (tone-mapped fill), `open-button`, `title` (the
+`<span>` inside `open-button` carrying the visible title text), `text` (line-clamped unless
+expanded, omitted when `compact`), `toggle` ("Show more"/"Show less", omitted when `compact`),
+`empty` (shown when `chunks` is empty).
+
+**Themeable custom properties:** shared tokens only.
+
+**Optional peer deps:** none.
+
+```html
+<lyra-chunk-inspector></lyra-chunk-inspector>
+<script>
+  const inspector = document.querySelector('lyra-chunk-inspector');
+  inspector.chunks = [
+    { id: 'c1', text: 'Revenue grew 12% year over year…', score: 0.91, sourceId: 'doc-1', title: 'Q3 report', page: 4 },
+  ];
+  inspector.addEventListener('lyra-chunk-open', (e) => documentViewer.openAt(e.detail.sourceId, e.detail.anchor));
+</script>
+```
+
+**Known gotchas:**
+- `title` and `open-button` are split into two separate parts (rather than one dual-part-name
+  element) because an exact-match `[part="..."]` CSS attribute selector — as this component's own
+  tests use — cannot match a multi-token `part` attribute value.
+
+---
+
+## `lyra-source-picker`
+
+A checkbox tree/list scoping which sources ground the next answer: tri-state folders, select-all,
+type icons, search. **Not `FormAssociated`, deliberately**: this is a scoping panel, not a form
+control — the selection is immediate app state consumed by the next retrieval call, exactly the
+stance `lyra-tool-select-dialog` already takes.
+
+**Properties:**
+- `sources: LyraSourceEntry[] = []` (attribute: false) — `LyraSourceEntry { id: string; label:
+  string; mimeType?: string; name?: string; children?: LyraSourceEntry[] }`; flat (no `children`) or
+  a tree — presence of `children` makes a row a group/folder with tri-state select
+- `selectedIds: string[] = []` (attribute: false) — controlled; the host assigns this back from
+  `lyra-sources-change`
+- `showSelectAll: boolean = true` (attribute `show-select-all`)
+- `searchable: boolean = true`
+- `label: string = ''`
+
+**Events:** `lyra-sources-change` (`detail: { selectedIds }`, the complete updated leaf-id array,
+fired after every toggle including select-all).
+
+**Slots:** none.
+
+**CSS parts:** `base`, `search` (the built-in filter `lyra-input`, only when `searchable`),
+`select-all` (only when `showSelectAll`), `summary` ("{selected} of {total} selected"), `tree`
+(`role="tree"`), `item` (`role="treeitem"`), `checkbox` (tri-state glyph), `icon` (the
+`lyra-file-icon` type badge), `label`, `empty` (`noData` when `sources` is empty, `noMatches` when a
+filter empties the tree).
+
+**Themeable custom properties:** shared tokens only.
+
+**Optional peer deps:** none.
+
+```html
+<lyra-source-picker></lyra-source-picker>
+<script>
+  const picker = document.querySelector('lyra-source-picker');
+  picker.sources = [
+    { id: 'folder-1', label: 'Reports', children: [{ id: 'doc-1', label: 'Q3.pdf', mimeType: 'application/pdf' }] },
+  ];
+  picker.addEventListener('lyra-sources-change', (e) => (retrievalScope = e.detail.selectedIds));
+</script>
+```
+
+**Known gotchas:**
+- Deliberately not form-associated — `lyra-sources-change` is the only wiring; there's no
+  `name`/`value`/`FormData` participation the way a genuine form control would have.
+
+---
+
+## `lyra-provenance-panel`
+
+The grounding breakdown for one answer: a sectioned disclosure panel (Entities / Relationships /
+Communities / Text chunks) composing this family's own pieces. The chat ↔ graph ↔ document glue
+component. Pure projection + event conduit: no fetching, no graph/viewer imports, no persistence.
+
+**Properties:**
+- `provenance: LyraProvenance | null = null` (attribute: false) — `LyraProvenance { entities?:
+  LyraEntity[]; relationships?: { path: LyraPathElement[] }[]; communities?: LyraCommunity[]; chunks?:
+  LyraChunk[] }`; each present array renders through the matching sibling component (`lyra-entity-
+  chip` row, one `lyra-path-strip` per relationship, `lyra-community-card`, `lyra-chunk-inspector`);
+  `null` or every section empty renders the overall empty state
+- `types: NodeTypeStyle[] = []` (attribute: false) — forwarded to the Entities section's chips
+- `thresholds: { high: number; medium: number } = { high: 0.75, medium: 0.5 }` (attribute: false) —
+  forwarded to the Text chunks section's `lyra-chunk-inspector`
+- `label: string = ''`
+
+**Events:** `lyra-toggle` (`detail: { section, expanded }`, a section header was toggled —
+`section` is `'entities' | 'relationships' | 'communities' | 'chunks'`).
+
+**Slots:** none.
+
+**CSS parts:** `base`, `section`, `header` (a section's disclosure `<button>`), `count` (a section's
+item-count badge), `body` (`hidden` while collapsed), `empty` (shown when every section is empty).
+
+**Themeable custom properties:** shared tokens only.
+
+**Optional peer deps:** none.
+
+```html
+<lyra-provenance-panel></lyra-provenance-panel>
+<script>
+  document.querySelector('lyra-provenance-panel').provenance = {
+    entities: [{ id: 'e1', label: 'Ada Lovelace', type: 'person' }],
+    chunks: [{ id: 'c1', text: 'Revenue grew 12%…', score: 0.91, sourceId: 'doc-1' }],
+  };
+</script>
+```
+
+**Known gotchas:**
+- Composes `lyra-entity-chip`, `lyra-path-strip`, `lyra-community-card`, and `lyra-chunk-inspector`
+  directly rather than reimplementing their rendering — events from those inner components (e.g.
+  `lyra-entity-activate`, `lyra-chunk-open`) still bubble/compose up through this panel's light DOM
+  for the host to handle in one place.
+
+---
+
+## `lyra-mind-map`
+
+A radial expandable topic tree (NotebookLM Mind Maps): a spatial overview of a topic hierarchy where
+activating a topic drills in or hands the topic to the chat. Hierarchy, not network — no cross-links,
+no force simulation, no communities, no edge labels (that's `lyra-graph`). Zero-dependency SVG; the
+radial layout is closed-form arithmetic, in its own `mind-map-layout.ts` module, mirroring
+`lyra-word-cloud`'s dependency-free precedent.
+
+**Properties:**
+- `topics: LyraTopic[] = []` (attribute: false) — `LyraTopic { id: string; label: string; children?:
+  LyraTopic[] }`; a single root sits at the center, multiple roots hang off an implicit center hub
+- `label: string = ''` — accessible name for the SVG group and the implicit hub's text
+- `expandDepth: number = 1` (attribute `expand-depth`) — initial expansion depth (root + first
+  ring); expansion state afterward is component-managed per topic id and survives `topics`
+  reassignment
+
+**Events:** `lyra-topic-select` (`detail: { id }`, a *leaf* topic was activated),
+`lyra-topic-toggle` (`detail: { id, expanded }`, a parent topic was activated, or auto-expanded by
+keyboard descent).
+
+**Slots:** none.
+
+**CSS parts:** `base`, `svg` (the single-tab-stop focus target), `node`, `node-label`, `link`
+(parent-child connector), `focus-ring` (keyboard focus ring), `live-region` (visually hidden
+announcement region), `empty` (shown when `topics` is empty).
+
+**Themeable custom properties:** `--lyra-mind-map-ring-gap` (default `6rem`, radius step per depth
+ring).
+
+**Optional peer deps:** none.
+
+```html
+<lyra-mind-map style="height:480px" expand-depth="2"></lyra-mind-map>
+<script>
+  document.querySelector('lyra-mind-map').topics = [
+    { id: 'root', label: 'Computing history', children: [
+      { id: 'people', label: 'People', children: [{ id: 'ada', label: 'Ada Lovelace' }] },
+      { id: 'machines', label: 'Machines' },
+    ] },
+  ];
+</script>
+```
+
+**Known gotchas:**
+- A user's explicit expand/collapse only ever overrides the `depth < expandDepth` default in the
+  direction chosen — reassigning `topics` (even with the same ids) never silently discards that
+  override.
+- Node-position transitions use `--lyra-transition-base`, which already collapses to near-zero under
+  `prefers-reduced-motion: reduce` globally, so expansion snaps rather than tweening for a
+  reduced-motion user with no extra branching in this component.
+
+---
+
 # Chart family (`chart/`)
 
 ## `lyra-chart` (core)

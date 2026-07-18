@@ -2432,6 +2432,65 @@
       ]
     },
     {
+      "name": "lyra-chunk-inspector",
+      "description": {
+        "kind": "markdown",
+        "value": "`<lyra-chunk-inspector>` — a ranked retrieved-chunks list: relevance score bars with tier tones,\nexpandable chunk text, and the deep-link event that lands a chunk in `lyra-document-viewer`.\nNever fetches, ranks, or dedupes; never opens documents itself.\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `base` | The `role=\"group\"` wrapper. |\n| `chunk` | One chunk row (`role=\"listitem\"`). |\n| `empty` | The empty-state message, shown when `chunks` is empty. |\n| `open-button` | The chunk's title/open `<button>`. |\n| `score` | The visible percent-score text. |\n| `score-bar` | The `aria-hidden` score bar track. |\n| `score-fill` | The score bar's tone-mapped fill. |\n| `text` | The chunk's text preview, line-clamped unless expanded. Omitted when `compact`. |\n| `title` | The `<span>` inside `open-button` carrying the visible title text. Split from `open-button` (rather than a dual part name on one element, as originally sketched) because an exact-match `[part=\"...\"]` CSS attribute selector -- as used by this component's own tests -- cannot match a multi-token `part` attribute value. |\n| `toggle` | The \"Show more\"/\"Show less\" button. Omitted when `compact`. |"
+      },
+      "attributes": [
+        {
+          "name": "active-id",
+          "description": {
+            "kind": "markdown",
+            "value": "Marks the chunk currently open in the viewer.\n\nType: `string`  \nDefault: `''`"
+          }
+        },
+        {
+          "name": "compact",
+          "description": {
+            "kind": "markdown",
+            "value": "Compact rows render title + score bar + open button only.\n\nType: `boolean`  \nDefault: `false`"
+          }
+        },
+        {
+          "name": "label",
+          "description": {
+            "kind": "markdown",
+            "value": "Type: `string`  \nDefault: `''`"
+          }
+        },
+        {
+          "name": "locale",
+          "description": {
+            "kind": "markdown",
+            "value": "Optional locale override. Otherwise the nearest `locale`/`lang` ancestor is used.\n\nType: `string`  \nDefault: `''`"
+          }
+        },
+        {
+          "name": "sort",
+          "description": {
+            "kind": "markdown",
+            "value": "Type: `'score' | 'none'`  \nDefault: `'score'`"
+          },
+          "values": [
+            {
+              "name": "score"
+            },
+            {
+              "name": "none"
+            }
+          ]
+        },
+        {
+          "name": "virtualize-at",
+          "description": {
+            "kind": "markdown",
+            "value": "Type: `number`  \nDefault: `50`"
+          }
+        }
+      ]
+    },
+    {
       "name": "lyra-citation-badge",
       "description": {
         "kind": "markdown",
@@ -3140,6 +3199,36 @@
           "description": {
             "kind": "markdown",
             "value": "Type: `string`  \nDefault: `''`"
+          }
+        }
+      ]
+    },
+    {
+      "name": "lyra-community-card",
+      "description": {
+        "kind": "markdown",
+        "value": "`<lyra-community-card>` — a cluster/community summary card (GraphRAG community report): label,\nLLM summary excerpt, member count, member chips with overflow, and a drill-in action. Doesn't\nown community rendering on the graph or membership fetching -- `lyra-drill` asks the host to\nload members/subgraph.\n\n---\n\n**Slots**\n\n| Name | Description |\n| --- | --- |\n| `actions` | Extra header actions alongside the built-in drill button. |\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `actions` | The wrapper around the `actions` slot and the drill button. |\n| `base` | The outer bordered container. |\n| `drill-button` | The built-in \"Explore community\" button. |\n| `empty` | The empty state shown when `community` is `null`. |\n| `header` | The header row. |\n| `member` | One member chip button. |\n| `member-count` | The `\"{count} members\"` text. |\n| `members` | The wrapper around member chips, omitted in `compact` mode. |\n| `overflow` | The \"+N\" overflow chip button. |\n| `summary` | The LLM summary excerpt, omitted in `compact` mode. |\n| `title` | The community label, `role=\"heading\" aria-level=\"3\"` wrapping a `<button>`. |"
+      },
+      "attributes": [
+        {
+          "name": "compact",
+          "description": {
+            "kind": "markdown",
+            "value": "Single-row layout (title + member count + drill button, no summary/chips).\n\nType: `boolean`  \nDefault: `false`"
+          }
+        },
+        {
+          "name": "locale",
+          "description": {
+            "kind": "markdown",
+            "value": "Optional locale override. Otherwise the nearest `locale`/`lang` ancestor is used.\n\nType: `string`  \nDefault: `''`"
+          }
+        },
+        {
+          "name": "max-members",
+          "description": {
+            "kind": "markdown",
+            "value": "Visible member chips before the \"+N\" overflow chip.\n\nType: `number`  \nDefault: `8`"
           }
         }
       ]
@@ -4723,6 +4812,80 @@
       ]
     },
     {
+      "name": "lyra-entity-card",
+      "description": {
+        "kind": "markdown",
+        "value": "`<lyra-entity-card>` — a dossier card for one `LyraEntity`: type badge, description, key/value\nproperty rows, degree, community chip, plus a built-in \"focus in graph\" action. Never fetches or\nfocuses a graph itself — `lyra-entity-activate` is a request a host routes into §3.4's\n`graph.focusNode(id, { zoom? })`.\n\n---\n\n**Slots**\n\n| Name | Description |\n| --- | --- |\n| (default) | Extra body content below the property rows (e.g. a `lyra-neighbor-list`). |\n| `actions` | Extra header actions alongside the built-in focus button. |\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `actions` | The wrapper around the `actions` slot and the built-in focus button. |\n| `base` | The outer bordered container. |\n| `community` | The community-chip row. |\n| `degree` | The relationship-count row. |\n| `description` | The entity's description text. |\n| `empty` | The empty state shown when `entity` is `null`. |\n| `focus-button` | The built-in \"Focus in graph\" button. |\n| `header` | The header row wrapping the type badge, title, and actions. |\n| `properties` | The wrapper around every property/degree/community row. |\n| `property` | One key/value dossier row. |\n| `title` | The entity's label, `role=\"heading\" aria-level=\"3\"` by default. |\n| `type-badge` | The resolved entity-type badge. |"
+      },
+      "attributes": [
+        {
+          "name": "community-label",
+          "description": {
+            "kind": "markdown",
+            "value": "Display label for `entity.communityId`'s chip; falls back to the raw id.\n\nType: `string`  \nDefault: `''`"
+          }
+        },
+        {
+          "name": "locale",
+          "description": {
+            "kind": "markdown",
+            "value": "Optional locale override. Otherwise the nearest `locale`/`lang` ancestor is used.\n\nType: `string`  \nDefault: `''`"
+          }
+        },
+        {
+          "name": "show-focus-button",
+          "description": {
+            "kind": "markdown",
+            "value": "Hides the built-in focus action on pages with no graph.\n\nType: `boolean`  \nDefault: `true`"
+          }
+        }
+      ]
+    },
+    {
+      "name": "lyra-entity-chip",
+      "description": {
+        "kind": "markdown",
+        "value": "`<lyra-entity-chip>` — an inline `@entity` mention for agent prose: flow content,\nkeyboard-focusable, with a hover/focus preview popover. The knowledge-graph sibling of\n`lyra-citation-badge`, reusing its interaction contract wholesale. Carries ids through events\nonly -- no entity data resolution, no navigation.\n\n---\n\n**Slots**\n\n| Name | Description |\n| --- | --- |\n| (default) | Rich preview content (typically a compact `lyra-entity-card`), shown in a floating popover on hover/focus. No content -> no popover and no hover affordance at all. |\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `base` | The clickable chip (`<button>`). |\n| `label` | The chip's visible label text. |\n| `popover` | The floating preview panel. |\n\n---\n\n**CSS Custom Properties**\n\n- `--lyra-entity-chip-color` (default: `var(--lyra-color-brand)`) — Text/accent color. Reflected `type` lets a host theme per type from CSS, e.g. `lyra-entity-chip[type='person'] { --lyra-entity-chip-color: ... }`.\n- `--lyra-entity-chip-bg` (default: `var(--lyra-color-brand-quiet)`) — Background color."
+      },
+      "attributes": [
+        {
+          "name": "entity-id",
+          "description": {
+            "kind": "markdown",
+            "value": "Echoed verbatim in both events, never validated -- the citation-badge `source-id` contract.\n\nType: `string`  \nDefault: `''`"
+          }
+        },
+        {
+          "name": "label",
+          "description": {
+            "kind": "markdown",
+            "value": "The visible chip text (unlike citation-badge, the chip renders its label, not `[n]`).\n\nType: `string`  \nDefault: `''`"
+          }
+        },
+        {
+          "name": "locale",
+          "description": {
+            "kind": "markdown",
+            "value": "Optional locale override. Otherwise the nearest `locale`/`lang` ancestor is used.\n\nType: `string`  \nDefault: `''`"
+          }
+        },
+        {
+          "name": "type",
+          "description": {
+            "kind": "markdown",
+            "value": "The entity's §3.4 type id; reflected so hosts theme per type from CSS.\n\nType: `string`  \nDefault: `''`"
+          }
+        },
+        {
+          "name": "type-label",
+          "description": {
+            "kind": "markdown",
+            "value": "Resolved display label for `type`; when set, the accessible name speaks it instead of the raw\ntype id.\n\nType: `string | undefined`"
+          }
+        }
+      ]
+    },
+    {
       "name": "lyra-env-list",
       "description": {
         "kind": "markdown",
@@ -5059,6 +5222,299 @@
           "description": {
             "kind": "markdown",
             "value": "Which fidelity tier to load, for the ~65 `country`/`language` codes whose source art embeds a\ncoat of arms/seal/emblem (for every other code all tiers are the same file, so this is a safe\nno-op):\n- `\"compact\"` — a tiny WebP raster for icon-scale use (menu items, language selectors, dense\n  lists; ~12–28px), where the emblem detail is invisible anyway.\n- `\"standard\"` (default) — the icon-optimized vector, for card/row sizes (~28–96px).\n- `\"detailed\"` — the pristine, full-detail vector, for rendering larger than icon scale (e.g.\n  a hero display) where the extra illustrative detail is actually visible.\n\nHas no effect when `src` is set — a pre-resolved URL is used as-is regardless. Takes precedence\nover the deprecated `detailed` boolean.\n\nType: `FlagVariant | undefined`"
+          }
+        }
+      ]
+    },
+    {
+      "name": "lyra-flow-canvas",
+      "description": {
+        "kind": "markdown",
+        "value": "`<lyra-flow-canvas>` — a pannable/zoomable DAG workflow canvas: positions HTML node cards, draws\nSVG edges between their handles, runs a shared layered auto-layout for unpositioned nodes, and owns\nall selection/drag/connect interaction as controlled events. Readonly (viewer) by default; opt into\neditor gestures individually via `nodes-draggable`, `connectable`, `droppable`. Never mutates `nodes`\nor `edges` itself — every edit intent is an event the host applies, mirroring `lyra-stepper`/\n`lyra-table`'s controlled-component contract.\n\n---\n\n**Slots**\n\n| Name | Description |\n| --- | --- |\n| (default) | `lyra-flow-node` children to adopt by `node-id`; non-matching children are ignored with a console warning. |\n| `bottom-end` | Floating corner overlay (e.g. `lyra-flow-minimap`). |\n| `bottom-start` | Floating corner overlay (e.g. `lyra-flow-controls`). |\n| `top-end` | Floating corner overlay. |\n| `top-start` | Floating corner overlay (e.g. `lyra-flow-run-overlay`). |\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `arrowhead` | The shared directed-edge arrowhead marker. |\n| `background` | The dotted background grid. |\n| `base` | The root wrapper. |\n| `connection-line` | The in-progress connect-gesture path. |\n| `edge` | A single edge path. |\n| `edge-label` | An edge's drawn label. |\n| `edge-list` | A visually hidden list of every edge. |\n| `edges` | The edges SVG. |\n| `empty` | The `lyra-empty` shown when `nodes` is empty. |\n| `live-region` | The current item/gesture announcement. |\n| `node` | A node's positioned wrapper. |\n| `stub` | A dangling-edge stub line. |\n| `viewport` | The focusable pan/zoom surface. |\n\n---\n\n**CSS Custom Properties**\n\n- `--lyra-flow-canvas-grid-size` (default: `8px`) — Dotted background spacing.\n- `--lyra-flow-canvas-march-duration` (default: `var(--lyra-transition-ambient)`) — Running-edge march animation duration."
+      },
+      "attributes": [
+        {
+          "name": "aria-label",
+          "description": {
+            "kind": "markdown",
+            "value": "Type: `string | null`  \nDefault: `null`"
+          }
+        },
+        {
+          "name": "connectable",
+          "description": {
+            "kind": "markdown",
+            "value": "Type: `boolean`  \nDefault: `false`"
+          }
+        },
+        {
+          "name": "droppable",
+          "description": {
+            "kind": "markdown",
+            "value": "Type: `boolean`  \nDefault: `false`"
+          }
+        },
+        {
+          "name": "grid",
+          "description": {
+            "kind": "markdown",
+            "value": "Snap step, in content px, for drags/nudges/drop positions; `0` disables snapping. Also the\ndotted background's base spacing.\n\nType: `number`  \nDefault: `8`"
+          }
+        },
+        {
+          "name": "layer-gap",
+          "description": {
+            "kind": "markdown",
+            "value": "Type: `number`  \nDefault: `64`"
+          }
+        },
+        {
+          "name": "locale",
+          "description": {
+            "kind": "markdown",
+            "value": "Optional locale override. Otherwise the nearest `locale`/`lang` ancestor is used.\n\nType: `string`  \nDefault: `''`"
+          }
+        },
+        {
+          "name": "locked",
+          "description": {
+            "kind": "markdown",
+            "value": "Type: `boolean`  \nDefault: `false`"
+          }
+        },
+        {
+          "name": "max-zoom",
+          "description": {
+            "kind": "markdown",
+            "value": "Type: `number`  \nDefault: `2`"
+          }
+        },
+        {
+          "name": "min-zoom",
+          "description": {
+            "kind": "markdown",
+            "value": "Type: `number`  \nDefault: `0.25`"
+          }
+        },
+        {
+          "name": "node-gap",
+          "description": {
+            "kind": "markdown",
+            "value": "Type: `number`  \nDefault: `24`"
+          }
+        },
+        {
+          "name": "nodes-draggable",
+          "description": {
+            "kind": "markdown",
+            "value": "Type: `boolean`  \nDefault: `false`"
+          }
+        },
+        {
+          "name": "orientation",
+          "description": {
+            "kind": "markdown",
+            "value": "Type: `'horizontal' | 'vertical'`  \nDefault: `'horizontal'`"
+          },
+          "values": [
+            {
+              "name": "horizontal"
+            },
+            {
+              "name": "vertical"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "lyra-flow-controls",
+      "description": {
+        "kind": "markdown",
+        "value": "`<lyra-flow-controls>` — the canvas's button cluster: zoom in/out, fit, and interaction lock, so\nevery flow surface ships the same affordances without hosts rebuilding them. Manipulates only\nview state, never `nodes`/`edges` — no editing commands live here.\n\n---\n\n**Slots**\n\n| Name | Description |\n| --- | --- |\n| (default) | Extra host buttons appended to the cluster, styled by the same group. |\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `base` | The `role=\"group\"` wrapper. |\n| `fit` | Zoom-to-fit button. |\n| `lock` | Lock/unlock toggle button (omitted when `hideLock`). |\n| `zoom-in` | Zoom-in button. |\n| `zoom-out` | Zoom-out button. |"
+      },
+      "attributes": [
+        {
+          "name": "for",
+          "description": {
+            "kind": "markdown",
+            "value": "Type: `string`  \nDefault: `''`"
+          }
+        },
+        {
+          "name": "hide-lock",
+          "description": {
+            "kind": "markdown",
+            "value": "Type: `boolean`  \nDefault: `false`"
+          }
+        },
+        {
+          "name": "locale",
+          "description": {
+            "kind": "markdown",
+            "value": "Optional locale override. Otherwise the nearest `locale`/`lang` ancestor is used.\n\nType: `string`  \nDefault: `''`"
+          }
+        },
+        {
+          "name": "orientation",
+          "description": {
+            "kind": "markdown",
+            "value": "Type: `'vertical' | 'horizontal'`  \nDefault: `'vertical'`"
+          },
+          "values": [
+            {
+              "name": "vertical"
+            },
+            {
+              "name": "horizontal"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "lyra-flow-minimap",
+      "description": {
+        "kind": "markdown",
+        "value": "`<lyra-flow-minimap>` — a corner overview map of a `lyra-flow-canvas`: scaled node rectangles plus\na draggable viewport rectangle, for orientation and fast navigation on canvases larger than the\nscreen. Draws no edges (nodes only, matching the React Flow/n8n minimap convention) and never\nreads `nodes` itself — geometry always comes from the canvas's `registerCompanion()` snapshots, so\nthe two can never disagree.\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `base` | The root wrapper. |\n| `map` | The scaled SVG. |\n| `node` | One rect per node. |\n| `viewport` | The draggable, focusable view rectangle. |\n\n---\n\n**CSS Custom Properties**\n\n- `--lyra-flow-minimap-inline-size` (default: `12rem`) — Map inline size.\n- `--lyra-flow-minimap-block-size` (default: `8rem`) — Map block size."
+      },
+      "attributes": [
+        {
+          "name": "for",
+          "description": {
+            "kind": "markdown",
+            "value": "Id of the target `lyra-flow-canvas`. When empty, the nearest ancestor is used (the\nslotted-into-a-corner-slot case, the primary wiring).\n\nType: `string`  \nDefault: `''`"
+          }
+        },
+        {
+          "name": "label",
+          "description": {
+            "kind": "markdown",
+            "value": "Accessible name for the map region; falls back to a host `aria-label`, then `flowMinimapLabel`.\n\nType: `string`  \nDefault: `''`"
+          }
+        },
+        {
+          "name": "locale",
+          "description": {
+            "kind": "markdown",
+            "value": "Optional locale override. Otherwise the nearest `locale`/`lang` ancestor is used.\n\nType: `string`  \nDefault: `''`"
+          }
+        }
+      ]
+    },
+    {
+      "name": "lyra-flow-node",
+      "description": {
+        "kind": "markdown",
+        "value": "`<lyra-flow-node>` — the card a workflow node renders as: header/body/toolbar chrome,\ntool-lifecycle status tones, and the named connection-handle elements edges anchor to. Used as\n`lyra-flow-canvas`'s default card and as a slotted override; also renders standalone (palette\npreviews, docs). Purely presentational — activation, selection, movement, and connection are all\n`lyra-flow-canvas` events; this component owns none of that.\n\n---\n\n**Slots**\n\n| Name | Description |\n| --- | --- |\n| (default) | Body content. |\n| `header` | Replaces the built-in heading row entirely. |\n| `icon` | Leading header glyph. |\n| `toolbar` | Action row at the block-end edge. |\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `base` | The card root. |\n| `body` | The default-slot body wrapper. |\n| `handle` | Every handle dot (input or output). |\n| `handle-input` | An input handle dot (also carries the shared `handle` part). |\n| `handle-output` | An output handle dot (also carries the shared `handle` part). |\n| `header` | The built-in header row (hidden when the `header` slot has content). |\n| `heading` | The heading text. |\n| `icon` | The wrapper around the `icon` slot. |\n| `progress` | The determinate progress bar. |\n| `status` | The visible status chip (status is never color-only). |\n| `toolbar` | The toolbar row wrapper. |\n\n---\n\n**CSS Custom Properties**\n\n- `--lyra-flow-node-min-inline-size` (default: `11rem`) — Minimum card inline size."
+      },
+      "attributes": [
+        {
+          "name": "duration-ms",
+          "description": {
+            "kind": "markdown",
+            "value": "Type: `number | null`  \nDefault: `null`"
+          }
+        },
+        {
+          "name": "heading",
+          "description": {
+            "kind": "markdown",
+            "value": "Type: `string`  \nDefault: `''`"
+          }
+        },
+        {
+          "name": "locale",
+          "description": {
+            "kind": "markdown",
+            "value": "Optional locale override. Otherwise the nearest `locale`/`lang` ancestor is used.\n\nType: `string`  \nDefault: `''`"
+          }
+        },
+        {
+          "name": "node-id",
+          "description": {
+            "kind": "markdown",
+            "value": "Type: `string`  \nDefault: `''`"
+          }
+        },
+        {
+          "name": "orientation",
+          "description": {
+            "kind": "markdown",
+            "value": "Additive: which physical edge handles render on, mirroring the canvas's own `orientation` when\nthis card is canvas-adopted; a standalone card defaults to `\"horizontal\"`.\n\nType: `'horizontal' | 'vertical'`  \nDefault: `'horizontal'`"
+          },
+          "values": [
+            {
+              "name": "horizontal"
+            },
+            {
+              "name": "vertical"
+            }
+          ]
+        },
+        {
+          "name": "progress",
+          "description": {
+            "kind": "markdown",
+            "value": "Type: `number | null`  \nDefault: `null`"
+          }
+        },
+        {
+          "name": "selected",
+          "description": {
+            "kind": "markdown",
+            "value": "Type: `boolean`  \nDefault: `false`"
+          }
+        },
+        {
+          "name": "status",
+          "description": {
+            "kind": "markdown",
+            "value": "Type: `FlowRunStatus | null`  \nDefault: `null`"
+          }
+        },
+        {
+          "name": "status-detail",
+          "description": {
+            "kind": "markdown",
+            "value": "Type: `string`  \nDefault: `''`"
+          }
+        }
+      ]
+    },
+    {
+      "name": "lyra-flow-run-overlay",
+      "description": {
+        "kind": "markdown",
+        "value": "`<lyra-flow-run-overlay>` — execution-state presentation for a `lyra-flow-canvas`: pushes a\n`FlowRunDecorations` map into the resolved canvas (the canvas itself renders the node/edge paint)\nand renders a compact run-summary strip. Does not execute, poll, or time anything — pure pushed\nstate; `durationMs` is host-computed.\n\n---\n\n**Slots**\n\n| Name | Description |\n| --- | --- |\n| (default) | Extra host chrome appended to the strip (e.g. a cancel button or a usage badge). |\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `base` | The root wrapper. |\n| `count` | One per status present (text + tone dot, never color-only). |\n| `live-region` | The step-transition announcement. |\n| `summary` | The \"{done} of {total} steps complete\" line. |"
+      },
+      "attributes": [
+        {
+          "name": "for",
+          "description": {
+            "kind": "markdown",
+            "value": "Type: `string`  \nDefault: `''`"
+          }
+        },
+        {
+          "name": "hide-summary",
+          "description": {
+            "kind": "markdown",
+            "value": "Type: `boolean`  \nDefault: `false`"
+          }
+        },
+        {
+          "name": "label",
+          "description": {
+            "kind": "markdown",
+            "value": "Type: `string`  \nDefault: `''`"
+          }
+        },
+        {
+          "name": "locale",
+          "description": {
+            "kind": "markdown",
+            "value": "Optional locale override. Otherwise the nearest `locale`/`lang` ancestor is used.\n\nType: `string`  \nDefault: `''`"
           }
         }
       ]
@@ -5492,6 +5948,36 @@
           "description": {
             "kind": "markdown",
             "value": "Type: `number`  \nDefault: `800`"
+          }
+        }
+      ]
+    },
+    {
+      "name": "lyra-graph-legend",
+      "description": {
+        "kind": "markdown",
+        "value": "`<lyra-graph-legend>` — a node-type legend for a paired `lyra-graph`: one swatch + label + count\nrow per §3.4 node type, doubling as visibility filters. Never reads or writes a graph directly —\nthe host forwards `types` in from `graph.nodeTypes` and `hiddenTypes` back out to\n`graph.hiddenTypes` on `lyra-visibility-change`, the same event-decoupled contract every sibling\nin this family follows.\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `base` | The `role=\"group\"` wrapper. |\n| `count` | The optional per-type count. |\n| `item` | One row per type — a `<button>` when `interactive`, a plain `<div>` otherwise. |\n| `label` | The type's label text. |\n| `swatch` | The type's shape glyph. |"
+      },
+      "attributes": [
+        {
+          "name": "interactive",
+          "description": {
+            "kind": "markdown",
+            "value": "`false` renders a read-only legend (no buttons, no toggling).\n\nType: `boolean`  \nDefault: `true`"
+          }
+        },
+        {
+          "name": "label",
+          "description": {
+            "kind": "markdown",
+            "value": "Accessible name for the group; falls back to the localized `graphLegendLabel`.\n\nType: `string`  \nDefault: `''`"
+          }
+        },
+        {
+          "name": "locale",
+          "description": {
+            "kind": "markdown",
+            "value": "Optional locale override. Otherwise the nearest `locale`/`lang` ancestor is used.\n\nType: `string`  \nDefault: `''`"
           }
         }
       ]
@@ -7227,6 +7713,36 @@
       ]
     },
     {
+      "name": "lyra-mind-map",
+      "description": {
+        "kind": "markdown",
+        "value": "`<lyra-mind-map>` — a radial expandable topic tree (NotebookLM Mind Maps): a spatial overview of\na topic hierarchy where activating a topic drills in or hands the topic to the chat. Hierarchy,\nnot network — no cross-links, no force simulation, no communities, no edge labels (that's\n`lyra-graph`). Zero-dependency SVG; the radial layout is closed-form arithmetic, in its own\n`mind-map-layout.ts` module, mirroring `lyra-word-cloud`'s dependency-free precedent.\n\nNode-position transitions use `--lyra-transition-base`, which already collapses to near-zero\nunder `prefers-reduced-motion: reduce` globally (`tokens.styles.ts`), so expansion snaps rather\nthan tweening for a reduced-motion user with no extra branching in this component.\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `base` | The wrapper. |\n| `empty` | The empty-state message, shown when `topics` is empty. |\n| `focus-ring` | The keyboard focus ring. |\n| `link` | A parent-child connector. |\n| `live-region` | The visually hidden announcement region. |\n| `node` | A topic node group. |\n| `node-label` | A topic's label text. |\n| `svg` | The single-tab-stop SVG focus target. |\n\n---\n\n**CSS Custom Properties**\n\n- `--lyra-mind-map-ring-gap` (default: `6rem`) — Radius step per depth ring."
+      },
+      "attributes": [
+        {
+          "name": "expand-depth",
+          "description": {
+            "kind": "markdown",
+            "value": "Initial expansion depth (root + first ring). Expansion state is component-managed\nafterward, keyed by topic id, and survives `topics` reassignment.\n\nType: `number`  \nDefault: `1`"
+          }
+        },
+        {
+          "name": "label",
+          "description": {
+            "kind": "markdown",
+            "value": "Accessible name for the SVG group *and* the implicit hub's text; falls back to the localized\n`mindMapLabel`.\n\nType: `string`  \nDefault: `''`"
+          }
+        },
+        {
+          "name": "locale",
+          "description": {
+            "kind": "markdown",
+            "value": "Optional locale override. Otherwise the nearest `locale`/`lang` ancestor is used.\n\nType: `string`  \nDefault: `''`"
+          }
+        }
+      ]
+    },
+    {
       "name": "lyra-model-select",
       "description": {
         "kind": "markdown",
@@ -7487,6 +8003,73 @@
           "description": {
             "kind": "markdown",
             "value": "Type: `boolean`  \nDefault: `true`"
+          }
+        }
+      ]
+    },
+    {
+      "name": "lyra-neighbor-list",
+      "description": {
+        "kind": "markdown",
+        "value": "`<lyra-neighbor-list>` — one entity's relationship rows: relation, direction, neighbor, with\nper-row navigate and expand-in-graph affordances. Never computes neighbors itself (the host\nderives rows from its own graph data) and never mutates a graph.\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `base` | The root wrapper (`role=\"list\"`). |\n| `direction` | The `aria-hidden` direction glyph. |\n| `empty` | The empty-state message, shown when `rows` is empty. |\n| `expand-button` | The per-row expand-in-graph icon button, only rendered when `expandable`. |\n| `group-header` | A relation group header, only rendered when `groupByRelation`. |\n| `node-label` | The row's node `<button>`. |\n| `node-meta` | Secondary node text (type/degree), when present. |\n| `relation` | The relation text. |\n| `row` | One relationship row (`role=\"listitem\"`). |"
+      },
+      "attributes": [
+        {
+          "name": "expandable",
+          "description": {
+            "kind": "markdown",
+            "value": "Shows a per-row expand icon-button emitting `lyra-node-expand`.\n\nType: `boolean`  \nDefault: `false`"
+          }
+        },
+        {
+          "name": "group-by-relation",
+          "description": {
+            "kind": "markdown",
+            "value": "Stable-sorts rows by relation and renders one group header per relation with a count.\n\nType: `boolean`  \nDefault: `false`"
+          }
+        },
+        {
+          "name": "label",
+          "description": {
+            "kind": "markdown",
+            "value": "Accessible name; falls back to the localized `neighborListLabel`.\n\nType: `string`  \nDefault: `''`"
+          }
+        },
+        {
+          "name": "locale",
+          "description": {
+            "kind": "markdown",
+            "value": "Optional locale override. Otherwise the nearest `locale`/`lang` ancestor is used.\n\nType: `string`  \nDefault: `''`"
+          }
+        },
+        {
+          "name": "virtualize-at",
+          "description": {
+            "kind": "markdown",
+            "value": "Above this row count the list renders through an internal `lyra-virtual-list`.\n\nType: `number`  \nDefault: `100`"
+          }
+        }
+      ]
+    },
+    {
+      "name": "lyra-node-palette",
+      "description": {
+        "kind": "markdown",
+        "value": "`<lyra-node-palette>` — the searchable, categorized node library for workflow editors: drag an\nitem onto a canvas, or place it by keyboard. Never creates nodes or touches a canvas's data\nitself — the drop/place handshake ends at `lyra-node-add`/`lyra-palette-place`; the host mutates\n`nodes`. Fully decoupled from `lyra-flow-canvas` (no `for` resolution, unlike\n`lyra-flow-minimap`/`lyra-flow-controls`/`lyra-flow-run-overlay`) — it only needs to agree with a\n`droppable` canvas on the `FLOW_PALETTE_MIME_TYPE` drag payload shape.\n\n---\n\n**Slots**\n\n| Name | Description |\n| --- | --- |\n| `footer` | Content below the list. |\n| `header` | Content above the search field (e.g. a heading or tabs). |\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `base` | The root wrapper. |\n| `empty` | The no-results message. |\n| `group-header` | A category heading (`role=\"presentation\"`). |\n| `item` | A single option row. |\n| `item-description` | An item's description text. |\n| `item-icon` | An item's icon wrapper. |\n| `item-label` | An item's label text. |\n| `list` | The listbox. |\n| `live-region` | The result-count announcement. |\n| `search` | The search input. |"
+      },
+      "attributes": [
+        {
+          "name": "label",
+          "description": {
+            "kind": "markdown",
+            "value": "Type: `string`  \nDefault: `''`"
+          }
+        },
+        {
+          "name": "locale",
+          "description": {
+            "kind": "markdown",
+            "value": "Optional locale override. Otherwise the nearest `locale`/`lang` ancestor is used.\n\nType: `string`  \nDefault: `''`"
           }
         }
       ]
@@ -7889,6 +8472,29 @@
           "description": {
             "kind": "markdown",
             "value": "Total number of items across every page. Non-positive values render the empty state.\n\nType: `number`  \nDefault: `0`"
+          }
+        }
+      ]
+    },
+    {
+      "name": "lyra-path-strip",
+      "description": {
+        "kind": "markdown",
+        "value": "`<lyra-path-strip>` — a linear node -> relation -> node chain rendering \"why A connects to B\"\n(GraphRAG local-search reasoning paths) as a compact, horizontally scrollable strip.\nOne-dimensional and presentational: no path finding, no branching, no per-element popovers.\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `arrow` | The `aria-hidden` directed-edge arrow glyph, logical (mirrors under RTL). |\n| `base` | The root wrapper, hosting the delegated roving-tabindex keydown handler. |\n| `empty` | The empty-state message, shown when `path` is empty. |\n| `node` | One `node`-kind element (a `<button>`). |\n| `relation` | One `edge`-kind element's relation label (a `<button>`). |"
+      },
+      "attributes": [
+        {
+          "name": "label",
+          "description": {
+            "kind": "markdown",
+            "value": "Accessible name; falls back to the localized `pathStripLabel`.\n\nType: `string`  \nDefault: `''`"
+          }
+        },
+        {
+          "name": "locale",
+          "description": {
+            "kind": "markdown",
+            "value": "Optional locale override. Otherwise the nearest `locale`/`lang` ancestor is used.\n\nType: `string`  \nDefault: `''`"
           }
         }
       ]
@@ -8600,6 +9206,29 @@
           "description": {
             "kind": "markdown",
             "value": "Type: `number`  \nDefault: `0`"
+          }
+        }
+      ]
+    },
+    {
+      "name": "lyra-provenance-panel",
+      "description": {
+        "kind": "markdown",
+        "value": "`<lyra-provenance-panel>` — the grounding breakdown for one answer: a sectioned disclosure\npanel (Entities / Relationships / Communities / Text chunks) composing this family's own pieces.\nThe chat <-> graph <-> document glue component. Pure projection + event conduit: no fetching, no\ngraph/viewer imports, no persistence.\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `base` | The root wrapper. |\n| `body` | A section's content wrapper, `hidden` while collapsed. |\n| `count` | A section's item-count badge. |\n| `empty` | The empty state, shown when every section is empty. |\n| `header` | A section's disclosure `<button>`. |\n| `section` | One section's wrapper. |"
+      },
+      "attributes": [
+        {
+          "name": "label",
+          "description": {
+            "kind": "markdown",
+            "value": "Type: `string`  \nDefault: `''`"
+          }
+        },
+        {
+          "name": "locale",
+          "description": {
+            "kind": "markdown",
+            "value": "Optional locale override. Otherwise the nearest `locale`/`lang` ancestor is used.\n\nType: `string`  \nDefault: `''`"
           }
         }
       ]
@@ -9819,6 +10448,43 @@
           "description": {
             "kind": "markdown",
             "value": "Optional locale override. Otherwise the nearest `locale`/`lang` ancestor is used.\n\nType: `string`  \nDefault: `''`"
+          }
+        }
+      ]
+    },
+    {
+      "name": "lyra-source-picker",
+      "description": {
+        "kind": "markdown",
+        "value": "`<lyra-source-picker>` — a checkbox tree/list scoping which sources ground the next answer:\ntri-state folders, select-all, type icons, search. **Not `FormAssociated`, deliberately**: this\nis a scoping panel, not a form control — the selection is immediate app state consumed by the\nnext retrieval call, exactly the stance `lyra-tool-select-dialog` already takes.\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `base` | The root wrapper. |\n| `checkbox` | The tri-state checkbox glyph. |\n| `empty` | The empty state (`noData` when `sources` is empty, `noMatches` when a filter empties the tree). |\n| `icon` | The `lyra-file-icon` type badge. |\n| `item` | One `role=\"treeitem\"` row. |\n| `label` | The entry's label text. |\n| `search` | The built-in filter `lyra-input`, only rendered when `searchable`. |\n| `select-all` | The header select-all row, only rendered when `showSelectAll`. |\n| `summary` | The \"{selected} of {total} selected\" text. |\n| `tree` | The `role=\"tree\"` container. |"
+      },
+      "attributes": [
+        {
+          "name": "label",
+          "description": {
+            "kind": "markdown",
+            "value": "Type: `string`  \nDefault: `''`"
+          }
+        },
+        {
+          "name": "locale",
+          "description": {
+            "kind": "markdown",
+            "value": "Optional locale override. Otherwise the nearest `locale`/`lang` ancestor is used.\n\nType: `string`  \nDefault: `''`"
+          }
+        },
+        {
+          "name": "searchable",
+          "description": {
+            "kind": "markdown",
+            "value": "Type: `boolean`  \nDefault: `true`"
+          }
+        },
+        {
+          "name": "show-select-all",
+          "description": {
+            "kind": "markdown",
+            "value": "Type: `boolean`  \nDefault: `true`"
           }
         }
       ]

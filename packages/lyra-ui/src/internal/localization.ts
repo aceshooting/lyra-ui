@@ -5,6 +5,10 @@
  */
 export type LyraMessageKey =
   | 'noData'
+  | 'graphLegendLabel'
+  | 'legendTypeShown'
+  | 'legendTypeHidden'
+  | 'entityChipWithType'
   | 'jumpToLatest'
   | 'terminalLabel'
   | 'terminalDownload'
@@ -684,12 +688,82 @@ export type LyraMessageKey =
   | 'geojsonViewInvalid'
   | 'geojsonViewFeatureCount'
   | 'geojsonViewFeatureCountPlural'
-  | 'geojsonViewMissingMapLibrary';
+  | 'geojsonViewMissingMapLibrary'
+  | 'mindMapLabel'
+  | 'mindMapTopicStatus'
+  | 'mindMapLeafStatus'
+  | 'mindMapExpanded'
+  | 'mindMapCollapsed'
+  | 'entityDegree'
+  | 'entityCommunity'
+  | 'focusInGraph'
+  | 'untitledEntity'
+  | 'untitledCommunity'
+  | 'communityMemberCount'
+  | 'communityDrillIn'
+  | 'selectAllSources'
+  | 'sourcePickerSelection'
+  | 'provenancePanelLabel'
+  | 'provenanceEntities'
+  | 'provenanceRelationships'
+  | 'provenanceCommunities'
+  | 'provenanceChunks'
+  | 'provenanceEmpty'
+  | 'chunkInspectorLabel'
+  | 'chunkScore'
+  | 'scoreTierHigh'
+  | 'scoreTierMedium'
+  | 'scoreTierLow'
+  | 'chunkInspectorEmpty'
+  | 'flowCanvasLabel'
+  | 'flowCanvasSummary'
+  | 'flowNode'
+  | 'flowEdge'
+  | 'flowEdgeWithLabel'
+  | 'flowItemAnnouncement'
+  | 'flowEdgeList'
+  | 'flowNodeSelected'
+  | 'flowNodeDeselected'
+  | 'flowSelectionCleared'
+  | 'flowNodeMoved'
+  | 'flowConnectStarted'
+  | 'flowConnectCommitted'
+  | 'flowConnectCancelled'
+  | 'zoomToFit'
+  | 'flowLockCanvas'
+  | 'flowControlsLabel'
+  | 'flowMinimapLabel'
+  | 'flowMinimapViewport'
+  | 'nodePaletteLabel'
+  | 'nodePalettePlaceholder'
+  | 'nodePaletteEmpty'
+  | 'nodePaletteDragHint'
+  | 'pathStripLabel'
+  | 'pathNodeStatus'
+  | 'pathRelationStatus'
+  | 'flowInputHandle'
+  | 'flowOutputHandle'
+  | 'flowStatusWithDuration'
+  | 'neighborListLabel'
+  | 'neighborRowLabel'
+  | 'neighborDirectionIn'
+  | 'neighborDirectionOut'
+  | 'neighborDirectionBoth'
+  | 'neighborExpand'
+  | 'neighborListEmpty'
+  | 'neighborGroupHeader'
+  | 'flowRunOverlayLabel'
+  | 'flowRunSummary'
+  | 'flowRunStepStatus';
 
 export type LyraLocaleStrings = Partial<Record<LyraMessageKey, string>> & Record<string, string | undefined>;
 
 const DEFAULT_STRINGS: Record<LyraMessageKey, string> = {
   noData: 'No data',
+  graphLegendLabel: 'Graph legend',
+  legendTypeShown: '{label} shown',
+  legendTypeHidden: '{label} hidden',
+  entityChipWithType: '{label}, {type}',
   jumpToLatest: 'Jump to latest',
   terminalLabel: 'Terminal output',
   terminalDownload: 'Download log',
@@ -1370,6 +1444,73 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, string> = {
   geojsonViewFeatureCount: '{count} feature',
   geojsonViewFeatureCountPlural: '{count} features',
   geojsonViewMissingMapLibrary: 'Install the optional maplibre-gl peer to render this file on a map. Showing the raw GeoJSON instead.',
+  mindMapLabel: 'Mind map',
+  mindMapTopicStatus: '{label}, level {level}, {count} subtopics',
+  mindMapLeafStatus: '{label}, level {level}',
+  mindMapExpanded: '{label} expanded',
+  mindMapCollapsed: '{label} collapsed',
+  entityDegree: 'Connections',
+  entityCommunity: 'Community',
+  focusInGraph: 'Focus in graph',
+  untitledEntity: 'Untitled entity',
+  untitledCommunity: 'Untitled community',
+  communityMemberCount: '{count} members',
+  communityDrillIn: 'Explore community',
+  selectAllSources: 'Select all sources',
+  sourcePickerSelection: '{selected} of {total} selected',
+  provenancePanelLabel: 'Grounding',
+  provenanceEntities: 'Entities',
+  provenanceRelationships: 'Relationships',
+  provenanceCommunities: 'Communities',
+  provenanceChunks: 'Text chunks',
+  provenanceEmpty: 'No grounding data for this answer',
+  chunkInspectorLabel: 'Retrieved chunks',
+  chunkScore: 'Relevance {percent}%',
+  scoreTierHigh: 'High relevance',
+  scoreTierMedium: 'Medium relevance',
+  scoreTierLow: 'Low relevance',
+  chunkInspectorEmpty: 'No chunks retrieved',
+  flowCanvasLabel: 'Workflow canvas',
+  flowCanvasSummary: 'Workflow with {nodeCount} nodes and {edgeCount} edges',
+  flowNode: 'Node {label}',
+  flowEdge: 'Edge from {source} to {target}',
+  flowEdgeWithLabel: '{label}, edge from {source} to {target}',
+  flowItemAnnouncement: '{item} ({index} of {total})',
+  flowEdgeList: 'Workflow edges',
+  flowNodeSelected: '{label} selected',
+  flowNodeDeselected: '{label} deselected',
+  flowSelectionCleared: 'Selection cleared',
+  flowNodeMoved: 'Moved {label} to {x}, {y}',
+  flowConnectStarted:
+    'Connecting from {label}. Use arrow keys to choose a target, Enter to connect, Escape to cancel.',
+  flowConnectCommitted: 'Connected {source} to {target}',
+  flowConnectCancelled: 'Connection cancelled',
+  zoomToFit: 'Zoom to fit',
+  flowLockCanvas: 'Lock canvas',
+  flowControlsLabel: 'Canvas controls',
+  flowMinimapLabel: 'Workflow overview',
+  flowMinimapViewport: 'Visible area',
+  nodePaletteLabel: 'Node palette',
+  nodePalettePlaceholder: 'Search nodes…',
+  nodePaletteEmpty: 'No matching nodes.',
+  nodePaletteDragHint: 'Drag to the canvas, or press Enter to place',
+  pathStripLabel: 'Path',
+  pathNodeStatus: '{label}, node {position} of {total}',
+  pathRelationStatus: '{relation}, relation',
+  flowInputHandle: 'Input {id}',
+  flowOutputHandle: 'Output {id}',
+  flowStatusWithDuration: '{status} ({duration})',
+  neighborListLabel: 'Relationships',
+  neighborRowLabel: '{label}, {relation}, {direction}',
+  neighborDirectionIn: 'Incoming',
+  neighborDirectionOut: 'Outgoing',
+  neighborDirectionBoth: 'Bidirectional',
+  neighborExpand: 'Expand {label} in graph',
+  neighborListEmpty: 'No relationships',
+  neighborGroupHeader: '{relation} ({count})',
+  flowRunOverlayLabel: 'Run status',
+  flowRunSummary: '{done} of {total} steps complete',
+  flowRunStepStatus: '{label}: {status}',
 };
 
 const locales = new Map<string, LyraLocaleStrings>();

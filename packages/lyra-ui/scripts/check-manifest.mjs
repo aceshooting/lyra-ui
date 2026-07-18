@@ -67,6 +67,29 @@ function namesFromTemplates(source) {
   for (const match of source.matchAll(/\bpart\s*:\s*((?:'[^']+'|"[^"]+")(?:\s*\|\s*(?:'[^']+'|"[^"]+"))*)/g)) {
     for (const literal of match[1].matchAll(/["']([^"']+)["']/g)) names.add(literal[1]);
   }
+  // A static `part="prefix ...${identifier}"` attribute (a literal string with one interpolated
+  // segment, not a fully dynamic binding) -- e.g. <lyra-flow-node>'s
+  // `part="handle handle-${kind}"` where `kind: 'input' | 'output'` is a typed function parameter.
+  // Resolve every possible rendered value by cross-multiplying the literal prefix/suffix text
+  // around the interpolation with that parameter's own string-literal union type (declared
+  // anywhere else in the file), same source of truth as the `part: 'a' | 'b'` pass above.
+  for (const match of source.matchAll(/\bpart\s*=\s*["']([^"']*)\$\{(\w+)\}([^"']*)["']/g)) {
+    const [, prefix, identifier, suffix] = match;
+    const typeMatch = source.match(
+      new RegExp(`\\b${identifier}\\s*:\\s*((?:'[^']+'|"[^"]+")(?:\\s*\\|\\s*(?:'[^']+'|"[^"]+"))*)`),
+    );
+    const values = typeMatch ? [...typeMatch[1].matchAll(/["']([^"']+)["']/g)].map((m) => m[1]) : [];
+    for (const value of values) {
+      for (const name of `${prefix}${value}${suffix}`.trim().split(/\s+/)) {
+        if (name) names.add(name);
+      }
+    }
+    // The static (non-interpolated) tokens in the same attribute are still real, e.g. the
+    // leading "handle" in "handle handle-${kind}".
+    for (const name of `${prefix} ${suffix}`.trim().split(/\s+/)) {
+      if (name) names.add(name);
+    }
+  }
   // `element.setAttribute('part', 'literal')` -- the imperative-DOM equivalent of a literal
   // `part="literal"` template attribute, used by the shared <mark>-wrap highlight-painting
   // fallback (see internal/text-highlights.js's adopting viewers) since that shared module can't

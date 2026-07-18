@@ -1,0 +1,61 @@
+import type { Meta, StoryObj } from '@storybook/web-components-vite';
+import { html } from 'lit';
+import './flow-node.js';
+
+const meta: Meta = {
+  title: 'Flow Node',
+  component: 'lyra-flow-node',
+  tags: ['autodocs'],
+};
+export default meta;
+type Story = StoryObj;
+
+export const Default: Story = {
+  render: () => html`<lyra-flow-node heading="Web search"></lyra-flow-node>`,
+};
+
+export const RunStates: Story = {
+  render: () => html`
+    <div style="display:flex;flex-direction:column;gap:1rem;align-items:flex-start">
+      <lyra-flow-node heading="Fetch data" status="pending"></lyra-flow-node>
+      <lyra-flow-node heading="Summarize" status="running" progress="40" duration-ms="1800" status-detail="chunk 2 of 5"></lyra-flow-node>
+      <lyra-flow-node heading="Notify" status="success" duration-ms="812"></lyra-flow-node>
+      <lyra-flow-node heading="Validate" status="error" status-detail="schema mismatch"></lyra-flow-node>
+      <lyra-flow-node heading="Send email" status="denied"></lyra-flow-node>
+    </div>
+  `,
+};
+
+export const WithSlots: Story = {
+  render: () => html`
+    <lyra-flow-node heading="Review" status="running">
+      <span slot="icon">👁</span>
+      Custom body content describing the review step.
+      <button slot="toolbar" type="button">Open</button>
+    </lyra-flow-node>
+  `,
+};
+
+export const VerticalOrientation: Story = {
+  render: () => html`<lyra-flow-node heading="Fetch data" orientation="vertical"></lyra-flow-node>`,
+};
+
+export const NarrowAllocation: Story = {
+  name: 'Narrow allocation (320px)',
+  parameters: {
+    docs: {
+      description: {
+        story: 'The card wraps its heading/body rather than clipping at a 320px allocation.',
+      },
+    },
+  },
+  render: () => html`
+    <div style="inline-size:320px; max-inline-size:100%; border:1px dashed var(--lyra-color-border); padding:0.5rem;">
+      <lyra-flow-node
+        heading="Summarize a long document into a structured report with multiple sections"
+        status="running"
+        progress="40"
+      ></lyra-flow-node>
+    </div>
+  `,
+};

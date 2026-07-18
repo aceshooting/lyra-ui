@@ -1,0 +1,182 @@
+import { html, nothing, svg, type SVGTemplateResult, type TemplateResult } from 'lit';
+import { property, state } from 'lit/decorators.js';
+import { LyraElement } from '../../internal/lyra-element.js';
+import { tag } from '../../internal/prefix.js';
+import type { FlowStructureSnapshot } from '../flow-canvas/flow-canvas.class.js';
+import { styles } from './flow-controls.styles.js';
+
+interface FlowCanvasLike extends HTMLElement {
+  registerCompanion(cb: (snapshot: FlowStructureSnapshot) => void): () => void;
+  zoomIn(): void;
+  zoomOut(): void;
+  fit(options?: { padding?: number }): void;
+  minZoom: number;
+  maxZoom: number;
+  locked: boolean;
+}
+
+const GLYPH_VIEW_BOX = '0 0 24 24';
+const GLYPH_STROKE_WIDTH = '1.75';
+
+// NOTE (deviation from the plan's literal Step 4 code): the brief's `glyphSvg(inner: string)`
+// built the outer <svg> via `html\`...\`` and spliced each glyph's inner markup in by casting a
+// plain `[inner]` array to `TemplateStringsArray`. Lit's installed dev build (lit-html 3.3.3)
+// rejects that at render time -- "Internal Error: expected template strings to be an array with a
+// 'raw' field" -- because it tracks genuine tagged-template-literal call sites (via their frozen
+// `strings` object identity) to guard against exactly this "fake the template strings" pattern
+// (its own error message names this as equivalent to `unsafeHtml`). This isn't a stale-brief typo,
+// it reproduces on every run against the currently installed lit-html. Fixed by authoring each
+// glyph as its own real `svg\`...\`` tagged template and composing them via an `SVGTemplateResult`
+// child (interpolating a SVGTemplateResult into another svg-tagged template is Lit's normal,
+// supported nesting -- no casting involved), matching this repo's existing icon convention (see
+// `internal/icons.ts`'s local `icon()` wrapper, and `rating.class.ts`/`attachment-chip.class.ts`).
+function glyphSvg(inner: SVGTemplateResult): SVGTemplateResult {
+  return svg`<svg
+    width="1em"
+    height="1em"
+    viewBox=${GLYPH_VIEW_BOX}
+    fill="none"
+    stroke="currentColor"
+    stroke-width=${GLYPH_STROKE_WIDTH}
+    stroke-linecap="round"
+    stroke-linejoin="round"
+    aria-hidden="true"
+    focusable="false"
+  >${inner}</svg>`;
+}
+
+const plusGlyph = () =>
+  glyphSvg(svg`<line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line>`);
+const minusGlyph = () => glyphSvg(svg`<line x1="5" y1="12" x2="19" y2="12"></line>`);
+const fitGlyph = () =>
+  glyphSvg(svg`
+    <polyline points="9 3 3 3 3 9"></polyline>
+    <polyline points="15 3 21 3 21 9"></polyline>
+    <polyline points="3 15 3 21 9 21"></polyline>
+    <polyline points="21 15 21 21 15 21"></polyline>
+  `);
+const lockClosedGlyph = () =>
+  glyphSvg(svg`<rect x="4" y="11" width="16" height="9" rx="2"></rect><path d="M8 11V7a4 4 0 0 1 8 0v4"></path>`);
+const lockOpenGlyph = () =>
+  glyphSvg(svg`<rect x="4" y="11" width="16" height="9" rx="2"></rect><path d="M8 11V7a4 4 0 0 1 7.4-2"></path>`);
+
+/**
+ * `<lyra-flow-controls>` — the canvas's button cluster: zoom in/out, fit, and interaction lock, so
+ * every flow surface ships the same affordances without hosts rebuilding them. Manipulates only
+ * view state, never `nodes`/`edges` — no editing commands live here.
+ *
+ * @customElement lyra-flow-controls
+ * @slot - Extra host buttons appended to the cluster, styled by the same group.
+ * @csspart base - The `role="group"` wrapper.
+ * @csspart zoom-in - Zoom-in button.
+ * @csspart zoom-out - Zoom-out button.
+ * @csspart fit - Zoom-to-fit button.
+ * @csspart lock - Lock/unlock toggle button (omitted when `hideLock`).
+ */
+export class LyraFlowControls extends LyraElement {
+  static styles = [LyraElement.styles, styles];
+
+  @property() for = '';
+  @property({ reflect: true }) orientation: 'vertical' | 'horizontal' = 'vertical';
+  @property({ type: Boolean, attribute: 'hide-lock' }) hideLock = false;
+
+  @state() private snapshot: FlowStructureSnapshot | null = null;
+  @state() private locked = false;
+  private canvasEl?: FlowCanvasLike;
+  private unsubscribe?: () => void;
+  private lockObserver?: MutationObserver;
+
+  connectedCallback(): void {
+    super.connectedCallback();
+    this.resolveAndAttach();
+  }
+
+  disconnectedCallback(): void {
+    super.disconnectedCallback();
+    this.unsubscribe?.();
+    this.unsubscribe = undefined;
+    this.lockObserver?.disconnect();
+    this.lockObserver = undefined;
+    this.canvasEl = undefined;
+  }
+
+  private resolveCanvas(): FlowCanvasLike | null {
+    if (this.for) {
+      const root = this.getRootNode() as Document | ShadowRoot;
+      const byId = root.getElementById?.(this.for);
+      if (byId && byId.tagName.toLowerCase() === tag('flow-canvas')) return byId as unknown as FlowCanvasLike;
+    }
+    const ancestor = this.closest(tag('flow-canvas'));
+    return (ancestor as unknown as FlowCanvasLike) ?? null;
+  }
+
+  private resolveAndAttach(): void {
+    const canvas = this.resolveCanvas();
+    if (!canvas) return;
+    this.canvasEl = canvas;
+    this.locked = canvas.locked;
+    this.unsubscribe = canvas.registerCompanion((snapshot) => {
+      this.snapshot = snapshot;
+    });
+    this.lockObserver = new MutationObserver(() => {
+      this.locked = canvas.locked;
+    });
+    this.lockObserver.observe(canvas, { attributes: true, attributeFilter: ['locked'] });
+  }
+
+  private toggleLock = (): void => {
+    if (!this.canvasEl) return;
+    this.canvasEl.locked = !this.canvasEl.locked;
+  };
+
+  render(): TemplateResult {
+    const disabled = !this.canvasEl;
+    const zoom = this.snapshot?.viewport.zoom ?? 1;
+    const atMin = this.canvasEl ? zoom <= this.canvasEl.minZoom : false;
+    const atMax = this.canvasEl ? zoom >= this.canvasEl.maxZoom : false;
+    return html`<div part="base" role="group" aria-label=${this.localize('flowControlsLabel')}>
+      <button
+        part="zoom-in"
+        type="button"
+        ?disabled=${disabled || atMax}
+        aria-label=${this.localize('zoomIn')}
+        title=${this.localize('zoomIn')}
+        @click=${() => this.canvasEl?.zoomIn()}
+      >${plusGlyph()}</button>
+      <button
+        part="zoom-out"
+        type="button"
+        ?disabled=${disabled || atMin}
+        aria-label=${this.localize('zoomOut')}
+        title=${this.localize('zoomOut')}
+        @click=${() => this.canvasEl?.zoomOut()}
+      >${minusGlyph()}</button>
+      <button
+        part="fit"
+        type="button"
+        ?disabled=${disabled}
+        aria-label=${this.localize('zoomToFit')}
+        title=${this.localize('zoomToFit')}
+        @click=${() => this.canvasEl?.fit()}
+      >${fitGlyph()}</button>
+      ${this.hideLock
+        ? nothing
+        : html`<button
+            part="lock"
+            type="button"
+            ?disabled=${disabled}
+            aria-pressed=${this.locked ? 'true' : 'false'}
+            aria-label=${this.localize('flowLockCanvas')}
+            title=${this.localize('flowLockCanvas')}
+            @click=${this.toggleLock}
+          >${this.locked ? lockClosedGlyph() : lockOpenGlyph()}</button>`}
+      <slot></slot>
+    </div>`;
+  }
+}
+
+declare global {
+  interface HTMLElementTagNameMap {
+    'lyra-flow-controls': LyraFlowControls;
+  }
+}

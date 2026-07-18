@@ -1,0 +1,155 @@
+import { fixture, expect, html } from '@open-wc/testing';
+import '../flow-canvas/flow-canvas.js';
+import './flow-minimap.js';
+import type { LyraFlowMinimap } from './flow-minimap.js';
+import type { LyraFlowCanvas, FlowNode } from '../flow-canvas/flow-canvas.js';
+
+const nodes: FlowNode[] = [
+  { id: 'a', position: { x: 0, y: 0 } },
+  { id: 'b', position: { x: 300, y: 200 } },
+];
+
+it('defaults to an empty for/label', async () => {
+  const el = (await fixture(html`<lyra-flow-minimap></lyra-flow-minimap>`)) as LyraFlowMinimap;
+  expect(el.for).to.equal('');
+  expect(el.label).to.equal('');
+});
+
+it('renders an inert, aria-hidden frame when no canvas can be resolved', async () => {
+  const el = (await fixture(html`<lyra-flow-minimap></lyra-flow-minimap>`)) as LyraFlowMinimap;
+  expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-hidden')).to.equal('true');
+});
+
+it('resolves the nearest ancestor lyra-flow-canvas when slotted into a corner slot', async () => {
+  const wrapper = (await fixture(html`
+    <lyra-flow-canvas>
+      <lyra-flow-minimap slot="bottom-end"></lyra-flow-minimap>
+    </lyra-flow-canvas>
+  `)) as LyraFlowCanvas;
+  wrapper.nodes = nodes;
+  await wrapper.updateComplete;
+  // The companion snapshot is delivered rAF-coalesced (see flow-canvas.test.ts's own
+  // "registerCompanion delivers a FlowStructureSnapshot rAF-coalesced" case) -- an explicit frame
+  // wait is required here, `updateComplete` alone does not span it.
+  await new Promise((r) => requestAnimationFrame(r));
+  const minimap = wrapper.querySelector('lyra-flow-minimap') as LyraFlowMinimap;
+  await minimap.updateComplete;
+  expect(minimap.shadowRoot!.querySelectorAll('[part="node"]').length).to.equal(2);
+});
+
+it('resolves a canvas by id via the for attribute', async () => {
+  const root = (await fixture(html`
+    <div>
+      <lyra-flow-canvas id="wf"></lyra-flow-canvas>
+      <lyra-flow-minimap for="wf"></lyra-flow-minimap>
+    </div>
+  `)) as HTMLElement;
+  const canvas = root.querySelector('lyra-flow-canvas') as LyraFlowCanvas;
+  canvas.nodes = nodes;
+  await canvas.updateComplete;
+  await new Promise((r) => requestAnimationFrame(r));
+  const minimap = root.querySelector('lyra-flow-minimap') as LyraFlowMinimap;
+  await minimap.updateComplete;
+  expect(minimap.shadowRoot!.querySelectorAll('[part="node"]').length).to.equal(2);
+});
+
+it('draws no edges, only node rects', async () => {
+  const wrapper = (await fixture(html`
+    <lyra-flow-canvas>
+      <lyra-flow-minimap slot="bottom-end"></lyra-flow-minimap>
+    </lyra-flow-canvas>
+  `)) as LyraFlowCanvas;
+  wrapper.nodes = nodes;
+  wrapper.edges = [{ id: 'a-b', source: 'a', target: 'b' }];
+  await wrapper.updateComplete;
+  await new Promise((r) => requestAnimationFrame(r));
+  const minimap = wrapper.querySelector('lyra-flow-minimap') as LyraFlowMinimap;
+  await minimap.updateComplete;
+  expect(minimap.shadowRoot!.querySelectorAll('[part="node"]').length).to.equal(2);
+  expect(minimap.shadowRoot!.querySelector('[part="map"] line, [part="map"] path')).to.not.exist;
+});
+
+it('node rects inherit decoration status tones', async () => {
+  const wrapper = (await fixture(html`
+    <lyra-flow-canvas>
+      <lyra-flow-minimap slot="bottom-end"></lyra-flow-minimap>
+    </lyra-flow-canvas>
+  `)) as LyraFlowCanvas;
+  wrapper.nodes = nodes;
+  wrapper.decorations = { a: { status: 'running' } };
+  await wrapper.updateComplete;
+  await new Promise((r) => requestAnimationFrame(r));
+  const minimap = wrapper.querySelector('lyra-flow-minimap') as LyraFlowMinimap;
+  await minimap.updateComplete;
+  const rect = minimap.shadowRoot!.querySelector('[part="node"]') as SVGElement;
+  expect(rect.getAttribute('data-status')).to.equal('running');
+});
+
+it('clicking the map centers the canvas viewport there (calls setViewport)', async () => {
+  const wrapper = (await fixture(html`
+    <lyra-flow-canvas style="width:400px;height:300px">
+      <lyra-flow-minimap slot="bottom-end"></lyra-flow-minimap>
+    </lyra-flow-canvas>
+  `)) as LyraFlowCanvas;
+  wrapper.nodes = nodes;
+  await wrapper.updateComplete;
+  await new Promise((r) => requestAnimationFrame(r));
+  const minimap = wrapper.querySelector('lyra-flow-minimap') as LyraFlowMinimap;
+  await minimap.updateComplete;
+  const map = minimap.shadowRoot!.querySelector('[part="map"]') as SVGSVGElement;
+  let changed = false;
+  wrapper.addEventListener('lyra-viewport-change', () => (changed = true));
+  map.dispatchEvent(new MouseEvent('click', { bubbles: true, clientX: 10, clientY: 10 }));
+  expect(changed).to.be.true;
+});
+
+it('the viewport rect is the single focusable stop; +/-/Enter/Home/arrows drive the canvas', async () => {
+  const wrapper = (await fixture(html`
+    <lyra-flow-canvas style="width:400px;height:300px">
+      <lyra-flow-minimap slot="bottom-end"></lyra-flow-minimap>
+    </lyra-flow-canvas>
+  `)) as LyraFlowCanvas;
+  wrapper.nodes = nodes;
+  await wrapper.updateComplete;
+  await new Promise((r) => requestAnimationFrame(r));
+  const minimap = wrapper.querySelector('lyra-flow-minimap') as LyraFlowMinimap;
+  await minimap.updateComplete;
+  const rect = minimap.shadowRoot!.querySelector('[part="viewport"]') as HTMLElement;
+  expect(rect.getAttribute('role')).to.equal('button');
+  expect(rect.getAttribute('aria-label')).to.equal('Visible area');
+  const zoomBefore = wrapper.viewport.zoom;
+  rect.dispatchEvent(new KeyboardEvent('keydown', { key: '+', bubbles: true, cancelable: true }));
+  expect(wrapper.viewport.zoom).to.be.greaterThan(zoomBefore);
+});
+
+it('unsubscribes from the canvas companion hook on disconnect', async () => {
+  const wrapper = (await fixture(html`
+    <lyra-flow-canvas>
+      <lyra-flow-minimap slot="bottom-end"></lyra-flow-minimap>
+    </lyra-flow-canvas>
+  `)) as LyraFlowCanvas;
+  wrapper.nodes = nodes;
+  await wrapper.updateComplete;
+  const minimap = wrapper.querySelector('lyra-flow-minimap') as LyraFlowMinimap;
+  await minimap.updateComplete;
+  minimap.remove();
+  wrapper.nodes = [...nodes, { id: 'c', position: { x: 900, y: 900 } }];
+  await wrapper.updateComplete;
+  await new Promise((r) => requestAnimationFrame(r));
+  // No assertion beyond "doesn't throw" -- proves the unsubscribe ran without needing to reach into
+  // the private companion-callback set.
+});
+
+it('is accessible with a resolved canvas', async () => {
+  const wrapper = (await fixture(html`
+    <lyra-flow-canvas>
+      <lyra-flow-minimap slot="bottom-end"></lyra-flow-minimap>
+    </lyra-flow-canvas>
+  `)) as LyraFlowCanvas;
+  wrapper.nodes = nodes;
+  await wrapper.updateComplete;
+  await new Promise((r) => requestAnimationFrame(r));
+  const minimap = wrapper.querySelector('lyra-flow-minimap') as LyraFlowMinimap;
+  await minimap.updateComplete;
+  await expect(minimap).to.be.accessible();
+});

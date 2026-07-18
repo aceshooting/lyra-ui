@@ -124,7 +124,7 @@ Contributors and AI coding agents working on this repo: see [AGENTS.md](./AGENTS
 
 ## Components
 
-206 custom elements across five component families. Every tag has a live, interactive example on the
+222 custom elements across five component families. Every tag has a live, interactive example on the
 [docs site](https://aceshooting.github.io/lyra-ui/); for the full per-tag reference (Web Awesome
 mirror, props, events, slots, parts) see
 [`packages/lyra-ui/README.md#components`](./packages/lyra-ui/README.md#components).
@@ -139,7 +139,7 @@ mirror, props, events, slots, parts) see
 
 ## Theming, internationalization & RTL
 
-Every one of the 206 tags is built on the same three guarantees — not opt-in per component:
+Every one of the 222 tags is built on the same three guarantees — not opt-in per component:
 
 - **Theming** through `--lyra-*` design tokens — retheme by overriding a custom property,
   no per-component theming API to learn.

@@ -2709,6 +2709,61 @@
           ]
         },
         {
+          "name": "lyra-chunk-inspector",
+          "description": "`<lyra-chunk-inspector>` — a ranked retrieved-chunks list: relevance score bars with tier tones,\nexpandable chunk text, and the deep-link event that lands a chunk in `lyra-document-viewer`.\nNever fetches, ranks, or dedupes; never opens documents itself.\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `base` | The `role=\"group\"` wrapper. |\n| `chunk` | One chunk row (`role=\"listitem\"`). |\n| `empty` | The empty-state message, shown when `chunks` is empty. |\n| `open-button` | The chunk's title/open `<button>`. |\n| `score` | The visible percent-score text. |\n| `score-bar` | The `aria-hidden` score bar track. |\n| `score-fill` | The score bar's tone-mapped fill. |\n| `text` | The chunk's text preview, line-clamped unless expanded. Omitted when `compact`. |\n| `title` | The `<span>` inside `open-button` carrying the visible title text. Split from `open-button` (rather than a dual part name on one element, as originally sketched) because an exact-match `[part=\"...\"]` CSS attribute selector -- as used by this component's own tests -- cannot match a multi-token `part` attribute value. |\n| `toggle` | The \"Show more\"/\"Show less\" button. Omitted when `compact`. |",
+          "attributes": [
+            {
+              "name": "active-id",
+              "description": "Marks the chunk currently open in the viewer.\n\nType: `string`  \nDefault: `''`",
+              "value": {
+                "type": [
+                  "string"
+                ]
+              }
+            },
+            {
+              "name": "compact",
+              "description": "Compact rows render title + score bar + open button only.\n\nType: `boolean`  \nDefault: `false`",
+              "value": {
+                "type": [
+                  "boolean"
+                ]
+              }
+            },
+            {
+              "name": "label",
+              "description": "Type: `string`  \nDefault: `''`",
+              "value": {
+                "type": [
+                  "string"
+                ]
+              }
+            },
+            {
+              "name": "locale",
+              "description": "Optional locale override. Otherwise the nearest `locale`/`lang` ancestor is used.\n\nType: `string`  \nDefault: `''`",
+              "value": {
+                "type": [
+                  "string"
+                ]
+              }
+            },
+            {
+              "name": "sort",
+              "description": "Type: `'score' | 'none'`  \nDefault: `'score'`"
+            },
+            {
+              "name": "virtualize-at",
+              "description": "Type: `number`  \nDefault: `50`",
+              "value": {
+                "type": [
+                  "number"
+                ]
+              }
+            }
+          ]
+        },
+        {
           "name": "lyra-citation-badge",
           "description": "`<lyra-citation-badge>` — an inline `[n]` citation marker with a hover/\nfocus preview popover and confidence/verification-status coloring. Used\nfor an agent response's inline citations, each carrying a `source-id`\nthat matches a corresponding `<lyra-source-card>` shown elsewhere on the\npage (a sibling component in this same family — this component doesn't\nimport or know anything about it, only carries the id through its\nevents).\n\nThe default slot is *not* the badge's visible content — the badge always\nrenders `[index]` — it's reserved for optional rich preview content (e.g.\na filename + short excerpt) shown in a floating popover on hover/focus,\npositioned with `internal/positioner.js`'s `place()` the same way\n`<lyra-tool-call-chip>` positions its own detail tooltip. No popover shows\nat all when the slot carries no content, and the popover never traps\nfocus — it's supplementary preview content, not a modal, so Tab continues\npast the badge normally even while it happens to be visible from a mouse\nhover. When preview content exists, the button keeps a stable\n`aria-describedby` relationship to the `role=\"tooltip\"` panel while it is\nboth hidden and visible, so assistive technology can resolve the preview\nas soon as focus causes it to open.\n\nTwo distinct signals fire from the same badge: `lyra-citation-activate`\n(click, or Enter while focused — native `<button>` behavior, no listener\nneeded for the Enter case) is the lightweight \"jump to this source\"\nsignal a host wires to scrolling/highlighting the matching\n`<lyra-source-card>`. `lyra-citation-open` (dblclick, or Space while\nfocused) is a distinct \"full preview\" signal — `href` in its detail is\n`undefined` when the `href` prop isn't set; the consumer decides what\n\"open\" means (a new tab, a dialog, etc). A double-click still fires two\n`lyra-citation-activate` events (one per constituent click — standard\nbrowser `dblclick` behavior) in addition to the one `lyra-citation-open`;\na consumer that only cares about the richer signal on a double-click\nshould ignore the paired activate events in that case.\n\nStatus coloring: `verified`/`high` use the success tones (a claim that's\nbeen checked out, or the model is confident in). `medium`/`low` use\nwarning (progressively less certain, but still a real citation).\n`unverified` uses danger — deliberately distinct from `low`: \"hasn't been\nchecked at all\" is a different (arguably riskier) claim than \"checked but\nuncertain\". `default` renders as plain neutral text with no background\ntint, for citations that carry no confidence/verification signal at all.\n\n---\n\n**Slots**\n\n| Name | Description |\n| --- | --- |\n| (default) | Rich preview/tooltip content (e.g. a filename + excerpt), shown in a floating popover on hover/focus. Nothing renders (no hover affordance at all) when this slot is empty. |\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `base` | The clickable badge (`<button>`). |\n| `bracket` | Each of the two literal `[`/`]` glyphs. |\n| `index` | The citation number. |\n| `popover` | The floating preview panel (only meaningful while open). |",
           "attributes": [
@@ -3518,6 +3573,39 @@
               "value": {
                 "type": [
                   "string"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "lyra-community-card",
+          "description": "`<lyra-community-card>` — a cluster/community summary card (GraphRAG community report): label,\nLLM summary excerpt, member count, member chips with overflow, and a drill-in action. Doesn't\nown community rendering on the graph or membership fetching -- `lyra-drill` asks the host to\nload members/subgraph.\n\n---\n\n**Slots**\n\n| Name | Description |\n| --- | --- |\n| `actions` | Extra header actions alongside the built-in drill button. |\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `actions` | The wrapper around the `actions` slot and the drill button. |\n| `base` | The outer bordered container. |\n| `drill-button` | The built-in \"Explore community\" button. |\n| `empty` | The empty state shown when `community` is `null`. |\n| `header` | The header row. |\n| `member` | One member chip button. |\n| `member-count` | The `\"{count} members\"` text. |\n| `members` | The wrapper around member chips, omitted in `compact` mode. |\n| `overflow` | The \"+N\" overflow chip button. |\n| `summary` | The LLM summary excerpt, omitted in `compact` mode. |\n| `title` | The community label, `role=\"heading\" aria-level=\"3\"` wrapping a `<button>`. |",
+          "attributes": [
+            {
+              "name": "compact",
+              "description": "Single-row layout (title + member count + drill button, no summary/chips).\n\nType: `boolean`  \nDefault: `false`",
+              "value": {
+                "type": [
+                  "boolean"
+                ]
+              }
+            },
+            {
+              "name": "locale",
+              "description": "Optional locale override. Otherwise the nearest `locale`/`lang` ancestor is used.\n\nType: `string`  \nDefault: `''`",
+              "value": {
+                "type": [
+                  "string"
+                ]
+              }
+            },
+            {
+              "name": "max-members",
+              "description": "Visible member chips before the \"+N\" overflow chip.\n\nType: `number`  \nDefault: `8`",
+              "value": {
+                "type": [
+                  "number"
                 ]
               }
             }
@@ -5271,6 +5359,85 @@
           ]
         },
         {
+          "name": "lyra-entity-card",
+          "description": "`<lyra-entity-card>` — a dossier card for one `LyraEntity`: type badge, description, key/value\nproperty rows, degree, community chip, plus a built-in \"focus in graph\" action. Never fetches or\nfocuses a graph itself — `lyra-entity-activate` is a request a host routes into §3.4's\n`graph.focusNode(id, { zoom? })`.\n\n---\n\n**Slots**\n\n| Name | Description |\n| --- | --- |\n| (default) | Extra body content below the property rows (e.g. a `lyra-neighbor-list`). |\n| `actions` | Extra header actions alongside the built-in focus button. |\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `actions` | The wrapper around the `actions` slot and the built-in focus button. |\n| `base` | The outer bordered container. |\n| `community` | The community-chip row. |\n| `degree` | The relationship-count row. |\n| `description` | The entity's description text. |\n| `empty` | The empty state shown when `entity` is `null`. |\n| `focus-button` | The built-in \"Focus in graph\" button. |\n| `header` | The header row wrapping the type badge, title, and actions. |\n| `properties` | The wrapper around every property/degree/community row. |\n| `property` | One key/value dossier row. |\n| `title` | The entity's label, `role=\"heading\" aria-level=\"3\"` by default. |\n| `type-badge` | The resolved entity-type badge. |",
+          "attributes": [
+            {
+              "name": "community-label",
+              "description": "Display label for `entity.communityId`'s chip; falls back to the raw id.\n\nType: `string`  \nDefault: `''`",
+              "value": {
+                "type": [
+                  "string"
+                ]
+              }
+            },
+            {
+              "name": "locale",
+              "description": "Optional locale override. Otherwise the nearest `locale`/`lang` ancestor is used.\n\nType: `string`  \nDefault: `''`",
+              "value": {
+                "type": [
+                  "string"
+                ]
+              }
+            },
+            {
+              "name": "show-focus-button",
+              "description": "Hides the built-in focus action on pages with no graph.\n\nType: `boolean`  \nDefault: `true`",
+              "value": {
+                "type": [
+                  "boolean"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "lyra-entity-chip",
+          "description": "`<lyra-entity-chip>` — an inline `@entity` mention for agent prose: flow content,\nkeyboard-focusable, with a hover/focus preview popover. The knowledge-graph sibling of\n`lyra-citation-badge`, reusing its interaction contract wholesale. Carries ids through events\nonly -- no entity data resolution, no navigation.\n\n---\n\n**Slots**\n\n| Name | Description |\n| --- | --- |\n| (default) | Rich preview content (typically a compact `lyra-entity-card`), shown in a floating popover on hover/focus. No content -> no popover and no hover affordance at all. |\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `base` | The clickable chip (`<button>`). |\n| `label` | The chip's visible label text. |\n| `popover` | The floating preview panel. |\n\n---\n\n**CSS Custom Properties**\n\n- `--lyra-entity-chip-color` (default: `var(--lyra-color-brand)`) — Text/accent color. Reflected `type` lets a host theme per type from CSS, e.g. `lyra-entity-chip[type='person'] { --lyra-entity-chip-color: ... }`.\n- `--lyra-entity-chip-bg` (default: `var(--lyra-color-brand-quiet)`) — Background color.",
+          "attributes": [
+            {
+              "name": "entity-id",
+              "description": "Echoed verbatim in both events, never validated -- the citation-badge `source-id` contract.\n\nType: `string`  \nDefault: `''`",
+              "value": {
+                "type": [
+                  "string"
+                ]
+              }
+            },
+            {
+              "name": "label",
+              "description": "The visible chip text (unlike citation-badge, the chip renders its label, not `[n]`).\n\nType: `string`  \nDefault: `''`",
+              "value": {
+                "type": [
+                  "string"
+                ]
+              }
+            },
+            {
+              "name": "locale",
+              "description": "Optional locale override. Otherwise the nearest `locale`/`lang` ancestor is used.\n\nType: `string`  \nDefault: `''`",
+              "value": {
+                "type": [
+                  "string"
+                ]
+              }
+            },
+            {
+              "name": "type",
+              "description": "The entity's §3.4 type id; reflected so hosts theme per type from CSS.\n\nType: `string`  \nDefault: `''`",
+              "value": {
+                "type": [
+                  "string"
+                ]
+              }
+            },
+            {
+              "name": "type-label",
+              "description": "Resolved display label for `type`; when set, the accessible name speaks it instead of the raw\ntype id.\n\nType: `string | undefined`"
+            }
+          ]
+        },
+        {
           "name": "lyra-env-list",
           "description": "`<lyra-env-list>` — masked key/value list for environment variables and secrets, with per-row\nreveal and copy. Masking is presentational, not a security boundary: the real value sits in a DOM\nproperty regardless of mask state.\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `base` | The `<dl>` root. |\n| `copy-button` | The per-row copy button. |\n| `name` | The `<dt>` name text. |\n| `reveal-button` | The per-row reveal/hide toggle. |\n| `value` | The value text itself; carries `data-masked`. |\n| `value-cell` | The `<dd>` wrapping one entry's value text and its buttons; buttons live here (not as siblings of `<dt>`/`<dd>`) so the `<dl>` keeps a valid dt/dd content model. |",
           "attributes": [
@@ -5637,6 +5804,289 @@
             {
               "name": "variant",
               "description": "Which fidelity tier to load, for the ~65 `country`/`language` codes whose source art embeds a\ncoat of arms/seal/emblem (for every other code all tiers are the same file, so this is a safe\nno-op):\n- `\"compact\"` — a tiny WebP raster for icon-scale use (menu items, language selectors, dense\n  lists; ~12–28px), where the emblem detail is invisible anyway.\n- `\"standard\"` (default) — the icon-optimized vector, for card/row sizes (~28–96px).\n- `\"detailed\"` — the pristine, full-detail vector, for rendering larger than icon scale (e.g.\n  a hero display) where the extra illustrative detail is actually visible.\n\nHas no effect when `src` is set — a pre-resolved URL is used as-is regardless. Takes precedence\nover the deprecated `detailed` boolean.\n\nType: `FlagVariant | undefined`"
+            }
+          ]
+        },
+        {
+          "name": "lyra-flow-canvas",
+          "description": "`<lyra-flow-canvas>` — a pannable/zoomable DAG workflow canvas: positions HTML node cards, draws\nSVG edges between their handles, runs a shared layered auto-layout for unpositioned nodes, and owns\nall selection/drag/connect interaction as controlled events. Readonly (viewer) by default; opt into\neditor gestures individually via `nodes-draggable`, `connectable`, `droppable`. Never mutates `nodes`\nor `edges` itself — every edit intent is an event the host applies, mirroring `lyra-stepper`/\n`lyra-table`'s controlled-component contract.\n\n---\n\n**Slots**\n\n| Name | Description |\n| --- | --- |\n| (default) | `lyra-flow-node` children to adopt by `node-id`; non-matching children are ignored with a console warning. |\n| `bottom-end` | Floating corner overlay (e.g. `lyra-flow-minimap`). |\n| `bottom-start` | Floating corner overlay (e.g. `lyra-flow-controls`). |\n| `top-end` | Floating corner overlay. |\n| `top-start` | Floating corner overlay (e.g. `lyra-flow-run-overlay`). |\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `arrowhead` | The shared directed-edge arrowhead marker. |\n| `background` | The dotted background grid. |\n| `base` | The root wrapper. |\n| `connection-line` | The in-progress connect-gesture path. |\n| `edge` | A single edge path. |\n| `edge-label` | An edge's drawn label. |\n| `edge-list` | A visually hidden list of every edge. |\n| `edges` | The edges SVG. |\n| `empty` | The `lyra-empty` shown when `nodes` is empty. |\n| `live-region` | The current item/gesture announcement. |\n| `node` | A node's positioned wrapper. |\n| `stub` | A dangling-edge stub line. |\n| `viewport` | The focusable pan/zoom surface. |\n\n---\n\n**CSS Custom Properties**\n\n- `--lyra-flow-canvas-grid-size` (default: `8px`) — Dotted background spacing.\n- `--lyra-flow-canvas-march-duration` (default: `var(--lyra-transition-ambient)`) — Running-edge march animation duration.",
+          "attributes": [
+            {
+              "name": "aria-label",
+              "description": "Type: `string | null`  \nDefault: `null`"
+            },
+            {
+              "name": "connectable",
+              "description": "Type: `boolean`  \nDefault: `false`",
+              "value": {
+                "type": [
+                  "boolean"
+                ]
+              }
+            },
+            {
+              "name": "droppable",
+              "description": "Type: `boolean`  \nDefault: `false`",
+              "value": {
+                "type": [
+                  "boolean"
+                ]
+              }
+            },
+            {
+              "name": "grid",
+              "description": "Snap step, in content px, for drags/nudges/drop positions; `0` disables snapping. Also the\ndotted background's base spacing.\n\nType: `number`  \nDefault: `8`",
+              "value": {
+                "type": [
+                  "number"
+                ]
+              }
+            },
+            {
+              "name": "layer-gap",
+              "description": "Type: `number`  \nDefault: `64`",
+              "value": {
+                "type": [
+                  "number"
+                ]
+              }
+            },
+            {
+              "name": "locale",
+              "description": "Optional locale override. Otherwise the nearest `locale`/`lang` ancestor is used.\n\nType: `string`  \nDefault: `''`",
+              "value": {
+                "type": [
+                  "string"
+                ]
+              }
+            },
+            {
+              "name": "locked",
+              "description": "Type: `boolean`  \nDefault: `false`",
+              "value": {
+                "type": [
+                  "boolean"
+                ]
+              }
+            },
+            {
+              "name": "max-zoom",
+              "description": "Type: `number`  \nDefault: `2`",
+              "value": {
+                "type": [
+                  "number"
+                ]
+              }
+            },
+            {
+              "name": "min-zoom",
+              "description": "Type: `number`  \nDefault: `0.25`",
+              "value": {
+                "type": [
+                  "number"
+                ]
+              }
+            },
+            {
+              "name": "node-gap",
+              "description": "Type: `number`  \nDefault: `24`",
+              "value": {
+                "type": [
+                  "number"
+                ]
+              }
+            },
+            {
+              "name": "nodes-draggable",
+              "description": "Type: `boolean`  \nDefault: `false`",
+              "value": {
+                "type": [
+                  "boolean"
+                ]
+              }
+            },
+            {
+              "name": "orientation",
+              "description": "Type: `'horizontal' | 'vertical'`  \nDefault: `'horizontal'`"
+            }
+          ]
+        },
+        {
+          "name": "lyra-flow-controls",
+          "description": "`<lyra-flow-controls>` — the canvas's button cluster: zoom in/out, fit, and interaction lock, so\nevery flow surface ships the same affordances without hosts rebuilding them. Manipulates only\nview state, never `nodes`/`edges` — no editing commands live here.\n\n---\n\n**Slots**\n\n| Name | Description |\n| --- | --- |\n| (default) | Extra host buttons appended to the cluster, styled by the same group. |\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `base` | The `role=\"group\"` wrapper. |\n| `fit` | Zoom-to-fit button. |\n| `lock` | Lock/unlock toggle button (omitted when `hideLock`). |\n| `zoom-in` | Zoom-in button. |\n| `zoom-out` | Zoom-out button. |",
+          "attributes": [
+            {
+              "name": "for",
+              "description": "Type: `string`  \nDefault: `''`",
+              "value": {
+                "type": [
+                  "string"
+                ]
+              }
+            },
+            {
+              "name": "hide-lock",
+              "description": "Type: `boolean`  \nDefault: `false`",
+              "value": {
+                "type": [
+                  "boolean"
+                ]
+              }
+            },
+            {
+              "name": "locale",
+              "description": "Optional locale override. Otherwise the nearest `locale`/`lang` ancestor is used.\n\nType: `string`  \nDefault: `''`",
+              "value": {
+                "type": [
+                  "string"
+                ]
+              }
+            },
+            {
+              "name": "orientation",
+              "description": "Type: `'vertical' | 'horizontal'`  \nDefault: `'vertical'`"
+            }
+          ]
+        },
+        {
+          "name": "lyra-flow-minimap",
+          "description": "`<lyra-flow-minimap>` — a corner overview map of a `lyra-flow-canvas`: scaled node rectangles plus\na draggable viewport rectangle, for orientation and fast navigation on canvases larger than the\nscreen. Draws no edges (nodes only, matching the React Flow/n8n minimap convention) and never\nreads `nodes` itself — geometry always comes from the canvas's `registerCompanion()` snapshots, so\nthe two can never disagree.\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `base` | The root wrapper. |\n| `map` | The scaled SVG. |\n| `node` | One rect per node. |\n| `viewport` | The draggable, focusable view rectangle. |\n\n---\n\n**CSS Custom Properties**\n\n- `--lyra-flow-minimap-inline-size` (default: `12rem`) — Map inline size.\n- `--lyra-flow-minimap-block-size` (default: `8rem`) — Map block size.",
+          "attributes": [
+            {
+              "name": "for",
+              "description": "Id of the target `lyra-flow-canvas`. When empty, the nearest ancestor is used (the\nslotted-into-a-corner-slot case, the primary wiring).\n\nType: `string`  \nDefault: `''`",
+              "value": {
+                "type": [
+                  "string"
+                ]
+              }
+            },
+            {
+              "name": "label",
+              "description": "Accessible name for the map region; falls back to a host `aria-label`, then `flowMinimapLabel`.\n\nType: `string`  \nDefault: `''`",
+              "value": {
+                "type": [
+                  "string"
+                ]
+              }
+            },
+            {
+              "name": "locale",
+              "description": "Optional locale override. Otherwise the nearest `locale`/`lang` ancestor is used.\n\nType: `string`  \nDefault: `''`",
+              "value": {
+                "type": [
+                  "string"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "lyra-flow-node",
+          "description": "`<lyra-flow-node>` — the card a workflow node renders as: header/body/toolbar chrome,\ntool-lifecycle status tones, and the named connection-handle elements edges anchor to. Used as\n`lyra-flow-canvas`'s default card and as a slotted override; also renders standalone (palette\npreviews, docs). Purely presentational — activation, selection, movement, and connection are all\n`lyra-flow-canvas` events; this component owns none of that.\n\n---\n\n**Slots**\n\n| Name | Description |\n| --- | --- |\n| (default) | Body content. |\n| `header` | Replaces the built-in heading row entirely. |\n| `icon` | Leading header glyph. |\n| `toolbar` | Action row at the block-end edge. |\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `base` | The card root. |\n| `body` | The default-slot body wrapper. |\n| `handle` | Every handle dot (input or output). |\n| `handle-input` | An input handle dot (also carries the shared `handle` part). |\n| `handle-output` | An output handle dot (also carries the shared `handle` part). |\n| `header` | The built-in header row (hidden when the `header` slot has content). |\n| `heading` | The heading text. |\n| `icon` | The wrapper around the `icon` slot. |\n| `progress` | The determinate progress bar. |\n| `status` | The visible status chip (status is never color-only). |\n| `toolbar` | The toolbar row wrapper. |\n\n---\n\n**CSS Custom Properties**\n\n- `--lyra-flow-node-min-inline-size` (default: `11rem`) — Minimum card inline size.",
+          "attributes": [
+            {
+              "name": "duration-ms",
+              "description": "Type: `number | null`  \nDefault: `null`"
+            },
+            {
+              "name": "heading",
+              "description": "Type: `string`  \nDefault: `''`",
+              "value": {
+                "type": [
+                  "string"
+                ]
+              }
+            },
+            {
+              "name": "locale",
+              "description": "Optional locale override. Otherwise the nearest `locale`/`lang` ancestor is used.\n\nType: `string`  \nDefault: `''`",
+              "value": {
+                "type": [
+                  "string"
+                ]
+              }
+            },
+            {
+              "name": "node-id",
+              "description": "Type: `string`  \nDefault: `''`",
+              "value": {
+                "type": [
+                  "string"
+                ]
+              }
+            },
+            {
+              "name": "orientation",
+              "description": "Additive: which physical edge handles render on, mirroring the canvas's own `orientation` when\nthis card is canvas-adopted; a standalone card defaults to `\"horizontal\"`.\n\nType: `'horizontal' | 'vertical'`  \nDefault: `'horizontal'`"
+            },
+            {
+              "name": "progress",
+              "description": "Type: `number | null`  \nDefault: `null`"
+            },
+            {
+              "name": "selected",
+              "description": "Type: `boolean`  \nDefault: `false`",
+              "value": {
+                "type": [
+                  "boolean"
+                ]
+              }
+            },
+            {
+              "name": "status",
+              "description": "Type: `FlowRunStatus | null`  \nDefault: `null`"
+            },
+            {
+              "name": "status-detail",
+              "description": "Type: `string`  \nDefault: `''`",
+              "value": {
+                "type": [
+                  "string"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "lyra-flow-run-overlay",
+          "description": "`<lyra-flow-run-overlay>` — execution-state presentation for a `lyra-flow-canvas`: pushes a\n`FlowRunDecorations` map into the resolved canvas (the canvas itself renders the node/edge paint)\nand renders a compact run-summary strip. Does not execute, poll, or time anything — pure pushed\nstate; `durationMs` is host-computed.\n\n---\n\n**Slots**\n\n| Name | Description |\n| --- | --- |\n| (default) | Extra host chrome appended to the strip (e.g. a cancel button or a usage badge). |\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `base` | The root wrapper. |\n| `count` | One per status present (text + tone dot, never color-only). |\n| `live-region` | The step-transition announcement. |\n| `summary` | The \"{done} of {total} steps complete\" line. |",
+          "attributes": [
+            {
+              "name": "for",
+              "description": "Type: `string`  \nDefault: `''`",
+              "value": {
+                "type": [
+                  "string"
+                ]
+              }
+            },
+            {
+              "name": "hide-summary",
+              "description": "Type: `boolean`  \nDefault: `false`",
+              "value": {
+                "type": [
+                  "boolean"
+                ]
+              }
+            },
+            {
+              "name": "label",
+              "description": "Type: `string`  \nDefault: `''`",
+              "value": {
+                "type": [
+                  "string"
+                ]
+              }
+            },
+            {
+              "name": "locale",
+              "description": "Optional locale override. Otherwise the nearest `locale`/`lang` ancestor is used.\n\nType: `string`  \nDefault: `''`",
+              "value": {
+                "type": [
+                  "string"
+                ]
+              }
             }
           ]
         },
@@ -6010,6 +6460,39 @@
               "value": {
                 "type": [
                   "number"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "lyra-graph-legend",
+          "description": "`<lyra-graph-legend>` — a node-type legend for a paired `lyra-graph`: one swatch + label + count\nrow per §3.4 node type, doubling as visibility filters. Never reads or writes a graph directly —\nthe host forwards `types` in from `graph.nodeTypes` and `hiddenTypes` back out to\n`graph.hiddenTypes` on `lyra-visibility-change`, the same event-decoupled contract every sibling\nin this family follows.\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `base` | The `role=\"group\"` wrapper. |\n| `count` | The optional per-type count. |\n| `item` | One row per type — a `<button>` when `interactive`, a plain `<div>` otherwise. |\n| `label` | The type's label text. |\n| `swatch` | The type's shape glyph. |",
+          "attributes": [
+            {
+              "name": "interactive",
+              "description": "`false` renders a read-only legend (no buttons, no toggling).\n\nType: `boolean`  \nDefault: `true`",
+              "value": {
+                "type": [
+                  "boolean"
+                ]
+              }
+            },
+            {
+              "name": "label",
+              "description": "Accessible name for the group; falls back to the localized `graphLegendLabel`.\n\nType: `string`  \nDefault: `''`",
+              "value": {
+                "type": [
+                  "string"
+                ]
+              }
+            },
+            {
+              "name": "locale",
+              "description": "Optional locale override. Otherwise the nearest `locale`/`lang` ancestor is used.\n\nType: `string`  \nDefault: `''`",
+              "value": {
+                "type": [
+                  "string"
                 ]
               }
             }
@@ -7884,6 +8367,39 @@
           ]
         },
         {
+          "name": "lyra-mind-map",
+          "description": "`<lyra-mind-map>` — a radial expandable topic tree (NotebookLM Mind Maps): a spatial overview of\na topic hierarchy where activating a topic drills in or hands the topic to the chat. Hierarchy,\nnot network — no cross-links, no force simulation, no communities, no edge labels (that's\n`lyra-graph`). Zero-dependency SVG; the radial layout is closed-form arithmetic, in its own\n`mind-map-layout.ts` module, mirroring `lyra-word-cloud`'s dependency-free precedent.\n\nNode-position transitions use `--lyra-transition-base`, which already collapses to near-zero\nunder `prefers-reduced-motion: reduce` globally (`tokens.styles.ts`), so expansion snaps rather\nthan tweening for a reduced-motion user with no extra branching in this component.\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `base` | The wrapper. |\n| `empty` | The empty-state message, shown when `topics` is empty. |\n| `focus-ring` | The keyboard focus ring. |\n| `link` | A parent-child connector. |\n| `live-region` | The visually hidden announcement region. |\n| `node` | A topic node group. |\n| `node-label` | A topic's label text. |\n| `svg` | The single-tab-stop SVG focus target. |\n\n---\n\n**CSS Custom Properties**\n\n- `--lyra-mind-map-ring-gap` (default: `6rem`) — Radius step per depth ring.",
+          "attributes": [
+            {
+              "name": "expand-depth",
+              "description": "Initial expansion depth (root + first ring). Expansion state is component-managed\nafterward, keyed by topic id, and survives `topics` reassignment.\n\nType: `number`  \nDefault: `1`",
+              "value": {
+                "type": [
+                  "number"
+                ]
+              }
+            },
+            {
+              "name": "label",
+              "description": "Accessible name for the SVG group *and* the implicit hub's text; falls back to the localized\n`mindMapLabel`.\n\nType: `string`  \nDefault: `''`",
+              "value": {
+                "type": [
+                  "string"
+                ]
+              }
+            },
+            {
+              "name": "locale",
+              "description": "Optional locale override. Otherwise the nearest `locale`/`lang` ancestor is used.\n\nType: `string`  \nDefault: `''`",
+              "value": {
+                "type": [
+                  "string"
+                ]
+              }
+            }
+          ]
+        },
+        {
           "name": "lyra-model-select",
           "description": "`<lyra-model-select>` — a provider/model picker that renders as a closed\ndropdown when a fixed `catalog` is available, or as a filterable free-text\ncombobox when it isn't (or when `allow-custom` explicitly permits typing\nsomething outside the catalog). Built directly on the shared\ntrigger-button/aria-activedescendant listbox technique `<lyra-select>` uses\nand the filter-as-you-type suggestion-popup technique `<lyra-combobox>`\nuses — not by composing either element, since the mode switch and the\nstale-value handling below are specific to this control.\n\nA `value` that isn't present in `catalog` (e.g. a model id saved from a\nprovider whose live catalog has since changed) is never silently dropped:\n`effectiveEntries` appends it to the rendered option list as a synthetic,\nvisually-distinct row (dashed border, italic label, \"not in catalog\"\nbadge — see `model-select.styles.ts`) computed fresh from `catalog` +\n`value` on every render, without ever mutating the `catalog` property\nitself.\n\nShips an opt-in `hint`/`errorText` form-control chrome (props + matching named slots +\n`hint`/`error` parts), mirroring `<lyra-select>`'s exact pattern -- left unset, neither renders.\nPairs with the existing `label` prop/part (also mirroring `<lyra-select>`) for a full\nlabel/hint/error field.\n\n---\n\n**Slots**\n\n| Name | Description |\n| --- | --- |\n| `error` | Custom error content. |\n| `hint` | Custom hint content. |\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `combobox` | The text-input container (free-text mode's positioning anchor). |\n| `combobox-input` | The free-text mode's text input. |\n| `empty` | The empty-listbox message, shown when no rows match. |\n| `error` | The error message. |\n| `expand-icon` | The dropdown indicator. |\n| `form-control-label` | The `<label>` element (only rendered — and only contributes to the accessible name — once `label` is non-empty). |\n| `hint` | The hint message. |\n| `listbox` | The options popover (shared by both modes). |\n| `option` | An option row. |\n| `option-badge` | The \"not in catalog\" badge on a synthetic stale-value row. |\n| `option-label` | An option row's label. |\n| `provider-badge` | The optional leading `provider` label. |\n| `trigger` | The trigger button (closed-dropdown mode's positioning anchor). |",
           "attributes": [
@@ -8182,6 +8698,81 @@
               "value": {
                 "type": [
                   "boolean"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "lyra-neighbor-list",
+          "description": "`<lyra-neighbor-list>` — one entity's relationship rows: relation, direction, neighbor, with\nper-row navigate and expand-in-graph affordances. Never computes neighbors itself (the host\nderives rows from its own graph data) and never mutates a graph.\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `base` | The root wrapper (`role=\"list\"`). |\n| `direction` | The `aria-hidden` direction glyph. |\n| `empty` | The empty-state message, shown when `rows` is empty. |\n| `expand-button` | The per-row expand-in-graph icon button, only rendered when `expandable`. |\n| `group-header` | A relation group header, only rendered when `groupByRelation`. |\n| `node-label` | The row's node `<button>`. |\n| `node-meta` | Secondary node text (type/degree), when present. |\n| `relation` | The relation text. |\n| `row` | One relationship row (`role=\"listitem\"`). |",
+          "attributes": [
+            {
+              "name": "expandable",
+              "description": "Shows a per-row expand icon-button emitting `lyra-node-expand`.\n\nType: `boolean`  \nDefault: `false`",
+              "value": {
+                "type": [
+                  "boolean"
+                ]
+              }
+            },
+            {
+              "name": "group-by-relation",
+              "description": "Stable-sorts rows by relation and renders one group header per relation with a count.\n\nType: `boolean`  \nDefault: `false`",
+              "value": {
+                "type": [
+                  "boolean"
+                ]
+              }
+            },
+            {
+              "name": "label",
+              "description": "Accessible name; falls back to the localized `neighborListLabel`.\n\nType: `string`  \nDefault: `''`",
+              "value": {
+                "type": [
+                  "string"
+                ]
+              }
+            },
+            {
+              "name": "locale",
+              "description": "Optional locale override. Otherwise the nearest `locale`/`lang` ancestor is used.\n\nType: `string`  \nDefault: `''`",
+              "value": {
+                "type": [
+                  "string"
+                ]
+              }
+            },
+            {
+              "name": "virtualize-at",
+              "description": "Above this row count the list renders through an internal `lyra-virtual-list`.\n\nType: `number`  \nDefault: `100`",
+              "value": {
+                "type": [
+                  "number"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "lyra-node-palette",
+          "description": "`<lyra-node-palette>` — the searchable, categorized node library for workflow editors: drag an\nitem onto a canvas, or place it by keyboard. Never creates nodes or touches a canvas's data\nitself — the drop/place handshake ends at `lyra-node-add`/`lyra-palette-place`; the host mutates\n`nodes`. Fully decoupled from `lyra-flow-canvas` (no `for` resolution, unlike\n`lyra-flow-minimap`/`lyra-flow-controls`/`lyra-flow-run-overlay`) — it only needs to agree with a\n`droppable` canvas on the `FLOW_PALETTE_MIME_TYPE` drag payload shape.\n\n---\n\n**Slots**\n\n| Name | Description |\n| --- | --- |\n| `footer` | Content below the list. |\n| `header` | Content above the search field (e.g. a heading or tabs). |\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `base` | The root wrapper. |\n| `empty` | The no-results message. |\n| `group-header` | A category heading (`role=\"presentation\"`). |\n| `item` | A single option row. |\n| `item-description` | An item's description text. |\n| `item-icon` | An item's icon wrapper. |\n| `item-label` | An item's label text. |\n| `list` | The listbox. |\n| `live-region` | The result-count announcement. |\n| `search` | The search input. |",
+          "attributes": [
+            {
+              "name": "label",
+              "description": "Type: `string`  \nDefault: `''`",
+              "value": {
+                "type": [
+                  "string"
+                ]
+              }
+            },
+            {
+              "name": "locale",
+              "description": "Optional locale override. Otherwise the nearest `locale`/`lang` ancestor is used.\n\nType: `string`  \nDefault: `''`",
+              "value": {
+                "type": [
+                  "string"
                 ]
               }
             }
@@ -8646,6 +9237,30 @@
               "value": {
                 "type": [
                   "number"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "lyra-path-strip",
+          "description": "`<lyra-path-strip>` — a linear node -> relation -> node chain rendering \"why A connects to B\"\n(GraphRAG local-search reasoning paths) as a compact, horizontally scrollable strip.\nOne-dimensional and presentational: no path finding, no branching, no per-element popovers.\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `arrow` | The `aria-hidden` directed-edge arrow glyph, logical (mirrors under RTL). |\n| `base` | The root wrapper, hosting the delegated roving-tabindex keydown handler. |\n| `empty` | The empty-state message, shown when `path` is empty. |\n| `node` | One `node`-kind element (a `<button>`). |\n| `relation` | One `edge`-kind element's relation label (a `<button>`). |",
+          "attributes": [
+            {
+              "name": "label",
+              "description": "Accessible name; falls back to the localized `pathStripLabel`.\n\nType: `string`  \nDefault: `''`",
+              "value": {
+                "type": [
+                  "string"
+                ]
+              }
+            },
+            {
+              "name": "locale",
+              "description": "Optional locale override. Otherwise the nearest `locale`/`lang` ancestor is used.\n\nType: `string`  \nDefault: `''`",
+              "value": {
+                "type": [
+                  "string"
                 ]
               }
             }
@@ -9460,6 +10075,30 @@
               "value": {
                 "type": [
                   "number"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "lyra-provenance-panel",
+          "description": "`<lyra-provenance-panel>` — the grounding breakdown for one answer: a sectioned disclosure\npanel (Entities / Relationships / Communities / Text chunks) composing this family's own pieces.\nThe chat <-> graph <-> document glue component. Pure projection + event conduit: no fetching, no\ngraph/viewer imports, no persistence.\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `base` | The root wrapper. |\n| `body` | A section's content wrapper, `hidden` while collapsed. |\n| `count` | A section's item-count badge. |\n| `empty` | The empty state, shown when every section is empty. |\n| `header` | A section's disclosure `<button>`. |\n| `section` | One section's wrapper. |",
+          "attributes": [
+            {
+              "name": "label",
+              "description": "Type: `string`  \nDefault: `''`",
+              "value": {
+                "type": [
+                  "string"
+                ]
+              }
+            },
+            {
+              "name": "locale",
+              "description": "Optional locale override. Otherwise the nearest `locale`/`lang` ancestor is used.\n\nType: `string`  \nDefault: `''`",
+              "value": {
+                "type": [
+                  "string"
                 ]
               }
             }
@@ -10838,6 +11477,48 @@
               "value": {
                 "type": [
                   "string"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "lyra-source-picker",
+          "description": "`<lyra-source-picker>` — a checkbox tree/list scoping which sources ground the next answer:\ntri-state folders, select-all, type icons, search. **Not `FormAssociated`, deliberately**: this\nis a scoping panel, not a form control — the selection is immediate app state consumed by the\nnext retrieval call, exactly the stance `lyra-tool-select-dialog` already takes.\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `base` | The root wrapper. |\n| `checkbox` | The tri-state checkbox glyph. |\n| `empty` | The empty state (`noData` when `sources` is empty, `noMatches` when a filter empties the tree). |\n| `icon` | The `lyra-file-icon` type badge. |\n| `item` | One `role=\"treeitem\"` row. |\n| `label` | The entry's label text. |\n| `search` | The built-in filter `lyra-input`, only rendered when `searchable`. |\n| `select-all` | The header select-all row, only rendered when `showSelectAll`. |\n| `summary` | The \"{selected} of {total} selected\" text. |\n| `tree` | The `role=\"tree\"` container. |",
+          "attributes": [
+            {
+              "name": "label",
+              "description": "Type: `string`  \nDefault: `''`",
+              "value": {
+                "type": [
+                  "string"
+                ]
+              }
+            },
+            {
+              "name": "locale",
+              "description": "Optional locale override. Otherwise the nearest `locale`/`lang` ancestor is used.\n\nType: `string`  \nDefault: `''`",
+              "value": {
+                "type": [
+                  "string"
+                ]
+              }
+            },
+            {
+              "name": "searchable",
+              "description": "Type: `boolean`  \nDefault: `true`",
+              "value": {
+                "type": [
+                  "boolean"
+                ]
+              }
+            },
+            {
+              "name": "show-select-all",
+              "description": "Type: `boolean`  \nDefault: `true`",
+              "value": {
+                "type": [
+                  "boolean"
                 ]
               }
             }
@@ -14211,6 +14892,14 @@
           "description": "**`<lyra-empty>`** (default: `var(--lyra-space-xs)`) — Padding used in compact mode; accepts any padding shorthand (e.g. `8px 2px`)."
         },
         {
+          "name": "--lyra-entity-chip-bg",
+          "description": "**`<lyra-entity-chip>`** (default: `var(--lyra-color-brand-quiet)`) — Background color."
+        },
+        {
+          "name": "--lyra-entity-chip-color",
+          "description": "**`<lyra-entity-chip>`** (default: `var(--lyra-color-brand)`) — Text/accent color. Reflected `type` lets a host theme per type from CSS, e.g. `lyra-entity-chip[type='person'] { --lyra-entity-chip-color: ... }`."
+        },
+        {
           "name": "--lyra-file-icon-size",
           "description": "**`<lyra-file-icon>`** (default: `var(--lyra-size-2rem)`) — Inline/block size of the format badge."
         },
@@ -14225,6 +14914,26 @@
         {
           "name": "--lyra-flag-radius",
           "description": "**`<lyra-flag>`** — Rectangular flag corner radius."
+        },
+        {
+          "name": "--lyra-flow-canvas-grid-size",
+          "description": "**`<lyra-flow-canvas>`** (default: `8px`) — Dotted background spacing."
+        },
+        {
+          "name": "--lyra-flow-canvas-march-duration",
+          "description": "**`<lyra-flow-canvas>`** (default: `var(--lyra-transition-ambient)`) — Running-edge march animation duration."
+        },
+        {
+          "name": "--lyra-flow-minimap-block-size",
+          "description": "**`<lyra-flow-minimap>`** (default: `8rem`) — Map block size."
+        },
+        {
+          "name": "--lyra-flow-minimap-inline-size",
+          "description": "**`<lyra-flow-minimap>`** (default: `12rem`) — Map inline size."
+        },
+        {
+          "name": "--lyra-flow-node-min-inline-size",
+          "description": "**`<lyra-flow-node>`** (default: `11rem`) — Minimum card inline size."
         },
         {
           "name": "--lyra-gauge-fill",
@@ -14309,6 +15018,10 @@
         {
           "name": "--lyra-lite-chart-selected-outline-color",
           "description": "**`<lyra-lite-chart>`** (default: `var(--lyra-color-brand)`) — Stroke for a bar/point whose category index is in `selectedIndex`."
+        },
+        {
+          "name": "--lyra-mind-map-ring-gap",
+          "description": "**`<lyra-mind-map>`** (default: `6rem`) — Radius step per depth ring."
         },
         {
           "name": "--lyra-node-fill",

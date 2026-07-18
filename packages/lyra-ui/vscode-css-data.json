@@ -289,6 +289,20 @@
       }
     },
     {
+      "name": "--lyra-entity-chip-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lyra-entity-chip>`** (default: `var(--lyra-color-brand-quiet)`) — Background color."
+      }
+    },
+    {
+      "name": "--lyra-entity-chip-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lyra-entity-chip>`** (default: `var(--lyra-color-brand)`) — Text/accent color. Reflected `type` lets a host theme per type from CSS, e.g. `lyra-entity-chip[type='person'] { --lyra-entity-chip-color: ... }`."
+      }
+    },
+    {
       "name": "--lyra-file-icon-size",
       "description": {
         "kind": "markdown",
@@ -314,6 +328,41 @@
       "description": {
         "kind": "markdown",
         "value": "**`<lyra-flag>`** — Rectangular flag corner radius."
+      }
+    },
+    {
+      "name": "--lyra-flow-canvas-grid-size",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lyra-flow-canvas>`** (default: `8px`) — Dotted background spacing."
+      }
+    },
+    {
+      "name": "--lyra-flow-canvas-march-duration",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lyra-flow-canvas>`** (default: `var(--lyra-transition-ambient)`) — Running-edge march animation duration."
+      }
+    },
+    {
+      "name": "--lyra-flow-minimap-block-size",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lyra-flow-minimap>`** (default: `8rem`) — Map block size."
+      }
+    },
+    {
+      "name": "--lyra-flow-minimap-inline-size",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lyra-flow-minimap>`** (default: `12rem`) — Map inline size."
+      }
+    },
+    {
+      "name": "--lyra-flow-node-min-inline-size",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lyra-flow-node>`** (default: `11rem`) — Minimum card inline size."
       }
     },
     {
@@ -461,6 +510,13 @@
       "description": {
         "kind": "markdown",
         "value": "**`<lyra-lite-chart>`** (default: `var(--lyra-color-brand)`) — Stroke for a bar/point whose category index is in `selectedIndex`."
+      }
+    },
+    {
+      "name": "--lyra-mind-map-ring-gap",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lyra-mind-map>`** (default: `6rem`) — Radius step per depth ring."
       }
     },
     {

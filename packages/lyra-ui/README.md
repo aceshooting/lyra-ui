@@ -12,7 +12,7 @@
 **Lyra UI — the free, independent web-component alternative.** A MIT-licensed [Lit](https://lit.dev)
 library for accessible forms, dashboards, charts, data visualization, and Conversation & Agent UI.
 It is a practical open-source alternative to [Shoelace](https://shoelace.style/) and
-[Web Awesome](https://webawesome.com/), with 168 custom elements, native custom-element APIs,
+[Web Awesome](https://webawesome.com/), with 221 custom elements, native custom-element APIs,
 tree-shakeable imports, its own `--lyra-*` design tokens, built-in localization and RTL support,
 and no runtime dependency on either project.
 
@@ -321,7 +321,7 @@ coverage automatically from the bundled `web-types.json` — JetBrains IDEs pick
 
 ## Components
 
-The catalog below lists all 205 tags in the current Custom Elements Manifest, grouped by
+The catalog below lists all 221 tags in the current Custom Elements Manifest, grouped by
 capability. The manifest and live docs are the authoritative sources for the complete generated
 API details.
 
@@ -399,6 +399,32 @@ API details.
 | `<lyra-sequence-strip>` | — (extra) | Compact, one-thin-cell-per-item strip visualizing a sequence of categorical states with an optional secondary per-cell marker — pure CSS/flex, no chart.js/SVG/canvas; a glanceable aggregate (`role="img"`) sized/named consistently with the sparkline/heatmap family, not a `role="list"` of separately-operable cells |
 | `<lyra-graph>` | — (extra) | Force-directed node-link diagram with pan/zoom/drag, directed/styled relationship links, and rich accessible metadata — needs the optional peer deps `d3-force`, `d3-drag`, `d3-zoom`, `d3-selection` |
 | `<lyra-tree>` + `<lyra-tree-node>` | — (extra) | Expand/collapse hierarchy with structured icon/label/description/badge rows, optional richer accessible labels, and APG tree keyboard navigation |
+
+**Flow canvas — workflow & DAG diagramming**
+
+| Component | Mirrors | Notes |
+|-----------|---------|-------|
+| `<lyra-flow-canvas>` | — (extra) | Pannable/zoomable DAG workflow canvas — positions node cards, draws SVG edges, and runs a shared layered auto-layout for unpositioned nodes; readonly (viewer) by default, opt into editor gestures individually via `nodes-draggable`/`connectable`/`droppable`; a controlled component, never mutates `nodes`/`edges` itself |
+| `<lyra-flow-node>` | — (extra) | The default workflow node card — header/body/toolbar chrome, tool-lifecycle `status` tones, and named connection-handle elements edges anchor to; purely presentational, used as `lyra-flow-canvas`'s default card, a slotted override, or standalone |
+| `<lyra-flow-minimap>` | — (extra) | Corner overview map of a `lyra-flow-canvas` — scaled node rectangles plus a draggable viewport rectangle; resolves its target canvas via `for` (or the nearest ancestor) and reads geometry only from the canvas's `registerCompanion()` snapshots, never `nodes` directly |
+| `<lyra-flow-controls>` | — (extra) | The canvas's zoom-in/zoom-out, fit, and interaction-lock button cluster; drives only view state on a resolved `for` canvas, never touches `nodes`/`edges` |
+| `<lyra-node-palette>` | — (extra) | Searchable, categorized node library for workflow editors — drag an item onto a canvas or place it by keyboard, emitting `lyra-palette-place`/`lyra-select`; never creates nodes or touches a canvas's data itself |
+| `<lyra-flow-run-overlay>` | — (extra) | Execution-state overlay for a `lyra-flow-canvas` — pushes a `FlowRunDecorations` map into the resolved canvas and renders a compact "{done} of {total} steps complete" run-summary strip; pure pushed state, never executes or polls anything |
+
+**Knowledge graph & RAG exploration**
+
+| Component | Mirrors | Notes |
+|-----------|---------|-------|
+| `<lyra-graph-legend>` | — (extra) | Node-type legend for a paired `lyra-graph` — one swatch/label/count row per node type, doubling as visibility filters via `lyra-visibility-change`; never reads or writes a graph directly |
+| `<lyra-entity-card>` | — (extra) | Knowledge-graph entity dossier card — type badge, description, key/value property rows, degree, community chip, and a built-in "focus in graph" action (`lyra-entity-activate`); never fetches or focuses a graph itself |
+| `<lyra-entity-chip>` | — (extra) | Inline `@entity` mention for agent prose — flow content, keyboard-focusable, with a hover/focus preview popover; the knowledge-graph sibling of `lyra-citation-badge`, carrying ids through events only |
+| `<lyra-neighbor-list>` | — (extra) | One entity's relationship rows — relation, direction, neighbor — with per-row navigate and expand-in-graph affordances; never computes neighbors itself or mutates a graph |
+| `<lyra-path-strip>` | — (extra) | Compact, horizontally scrollable node → relation → node chain rendering "why A connects to B" (GraphRAG local-search reasoning paths); one-dimensional and presentational, no path finding |
+| `<lyra-community-card>` | — (extra) | GraphRAG community/cluster summary card — label, LLM summary excerpt, member count, member chips with overflow, and a drill-in action (`lyra-drill`); doesn't own community rendering or membership fetching |
+| `<lyra-chunk-inspector>` | — (extra) | Ranked retrieved-chunks list — relevance score bars with tier tones, expandable chunk text, and a `lyra-chunk-open` deep-link event that lands a chunk in `lyra-document-viewer`; never fetches, ranks, or dedupes |
+| `<lyra-source-picker>` | — (extra) | Checkbox tree/list scoping which sources ground the next answer — tri-state folders, select-all, type icons, search; deliberately not form-associated, an immediate app-state scoping panel wired through `lyra-sources-change` |
+| `<lyra-provenance-panel>` | — (extra) | Sectioned grounding-breakdown disclosure panel for one answer (Entities / Relationships / Communities / Text chunks), composing `lyra-entity-chip`/`lyra-path-strip`/`lyra-community-card`/`lyra-chunk-inspector`; pure projection and event conduit, no fetching |
+| `<lyra-mind-map>` | — (extra) | Radial expandable topic tree (NotebookLM-style mind map) — zero-dependency SVG with a closed-form radial layout; hierarchy only, no cross-links, force simulation, communities, or edge labels (that's `lyra-graph`) |
 
 **Overlays**
 

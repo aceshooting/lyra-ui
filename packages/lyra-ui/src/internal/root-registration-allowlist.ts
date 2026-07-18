@@ -196,6 +196,22 @@ export const ROOT_BARREL_TAGS = [
   'lyra-usage-badge',
   'lyra-voice-picker',
   'lyra-widget-renderer',
+  'lyra-flow-canvas',
+  'lyra-flow-node',
+  'lyra-flow-minimap',
+  'lyra-flow-controls',
+  'lyra-node-palette',
+  'lyra-flow-run-overlay',
+  'lyra-graph-legend',
+  'lyra-entity-card',
+  'lyra-entity-chip',
+  'lyra-neighbor-list',
+  'lyra-path-strip',
+  'lyra-community-card',
+  'lyra-chunk-inspector',
+  'lyra-source-picker',
+  'lyra-provenance-panel',
+  'lyra-mind-map',
 ] as const;
 
 export const ROOT_BARREL_OPTIONAL_PEER_TAGS = [
