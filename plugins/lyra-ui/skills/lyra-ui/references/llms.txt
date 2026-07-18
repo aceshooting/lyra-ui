@@ -48,6 +48,19 @@ The catalog is grouped by capability; `llms-full.txt` follows the same consumer-
 - **Temporal & graph** — time-series and hierarchy/network widgets: `lyra-time-range`,
   `lyra-playback`, `lyra-heatmap` (matrix and calendar layouts), `lyra-graph` (needs the optional peer
   deps `d3-force`/`d3-drag`/`d3-zoom`/`d3-selection`), `lyra-tree`/`lyra-tree-node`.
+- **Flow canvas** — a dependency-free workflow/DAG diagramming family built around
+  `lyra-flow-canvas` (pannable/zoomable, layered auto-layout, controlled selection/drag/connect
+  events): `lyra-flow-node` (the default node card), `lyra-flow-minimap`, `lyra-flow-controls`
+  (zoom/fit/lock), `lyra-node-palette` (searchable, drag-or-keyboard node library), and
+  `lyra-flow-run-overlay` (pushes execution-state decorations onto the canvas).
+- **Knowledge graph & RAG exploration** — a `lyra-graph`-adjacent family for grounding/citation UI
+  over a knowledge graph: `lyra-graph-legend` (type legend + visibility filter), `lyra-entity-card`/
+  `lyra-entity-chip` (dossier card and inline `@mention`), `lyra-neighbor-list`, `lyra-path-strip`
+  (GraphRAG local-search reasoning paths), `lyra-community-card` (GraphRAG community reports),
+  `lyra-chunk-inspector` (ranked retrieved chunks, deep-links into `lyra-document-viewer`),
+  `lyra-source-picker` (scopes which sources ground the next answer), `lyra-provenance-panel`
+  (the sectioned Entities/Relationships/Communities/Chunks breakdown composing the rest of this
+  family), and `lyra-mind-map` (a zero-dependency radial topic-tree overview).
 - **Chart family** — a Chart.js wrapper and its typed subclasses, plus two bespoke chart types:
   `lyra-chart` (core) and its locked-`type` subclasses (`lyra-line-chart`, `lyra-bar-chart`,
   `lyra-pie-chart`, `lyra-doughnut-chart`, `lyra-radar-chart`, `lyra-polar-area-chart`,
