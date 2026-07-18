@@ -218,6 +218,32 @@ describe('slotted mode -- follow/release/re-engage state machine', () => {
     expect(fired, 'a stuck scrollbarDragActive flag would misattribute this as a user release').to.be.false;
     expect(el.follow).to.be.true;
   });
+
+  for (const releaseEventType of ['pointercancel', 'lostpointercapture']) {
+    it(`clears scrollbarDragActive on a ${releaseEventType} (drag interrupted without a pointerup), so a later layout-shift scroll away from the bottom does not spuriously release follow`, async () => {
+      const el = (await fixture(
+        html`<lyra-chat-viewport style="block-size:100px"
+          >${Array.from({ length: 10 }, (_, i) => row(`m${i}`))}</lyra-chat-viewport
+        >`,
+      )) as LyraChatViewport;
+      await el.updateComplete;
+      await nextFrame();
+      const scroll = el.shadowRoot!.querySelector('[part="scroll"]') as HTMLElement;
+
+      // A scrollbar-drag start interrupted by a system gesture (pointercancel) or a loss of
+      // implicit pointer capture (lostpointercapture) -- neither is a pointerup, so a listener
+      // that only tears down on pointerup would never see this and would leave the flag stuck.
+      scroll.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, composed: true }));
+      window.dispatchEvent(new PointerEvent(releaseEventType));
+
+      let fired = false;
+      el.addEventListener('lyra-follow-change', () => (fired = true));
+      scroll.scrollTop = 0;
+      scroll.dispatchEvent(new Event('scroll', { bubbles: true }));
+      expect(fired, 'a stuck scrollbarDragActive flag would misattribute this as a user release').to.be.false;
+      expect(el.follow).to.be.true;
+    });
+  }
 });
 
 describe('scrollToBottom()', () => {
