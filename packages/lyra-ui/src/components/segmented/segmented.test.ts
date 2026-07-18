@@ -3,6 +3,8 @@ import { html as litHtml } from 'lit';
 import './segmented.js';
 import type { LyraSegmented } from './segmented.js';
 import { styles } from './segmented.styles.js';
+import '../select/select.js';
+import type { LyraSelect } from '../select/select.js';
 
 const items = () => [
   { value: 'day', label: 'Day' },
@@ -190,5 +192,30 @@ describe('narrow allocation', () => {
     // The host's own box must not overflow the 320px allocation; the row itself
     // owns horizontal scrolling for long translated labels.
     expect((el as HTMLElement).getBoundingClientRect().width).to.be.at.most(320);
+  });
+});
+
+describe('size', () => {
+  it('defaults to size="m" and leaves the default rendering unchanged', async () => {
+    const el = (await fixture(html`<lyra-segmented .items=${items()} value="day"></lyra-segmented>`)) as LyraSegmented;
+    expect(el.size).to.equal('m');
+    expect(el.getAttribute('size')).to.equal('m');
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    expect(getComputedStyle(base).minBlockSize).to.equal('auto');
+  });
+
+  it('matches <lyra-select size="s">\'s control height at size="s"', async () => {
+    const segmented = (await fixture(
+      html`<lyra-segmented size="s" .items=${items()} value="day"></lyra-segmented>`,
+    )) as LyraSegmented;
+    const select = (await fixture(html`<lyra-select size="s"></lyra-select>`)) as LyraSelect;
+    const segmentedBase = segmented.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    const selectTrigger = select.shadowRoot!.querySelector('[part="trigger"]') as HTMLElement;
+    expect(getComputedStyle(segmentedBase).minBlockSize).to.equal(getComputedStyle(selectTrigger).minBlockSize);
+  });
+
+  it('reflects size as a host attribute for every tier', async () => {
+    const el = (await fixture(html`<lyra-segmented size="xl" .items=${items()}></lyra-segmented>`)) as LyraSegmented;
+    expect(el.getAttribute('size')).to.equal('xl');
   });
 });

@@ -8,6 +8,34 @@ export const styles = css`
        items would otherwise force the scroll container wide. */
     min-inline-size: 0;
     max-inline-size: 100%;
+    --lyra-segmented-track-min-height: auto;
+    --lyra-segmented-segment-padding: var(--lyra-size-0-125rem) var(--lyra-space-s);
+    --lyra-segmented-font-size: var(--lyra-font-size-sm);
+  }
+  :host([size='2xs']) {
+    --lyra-segmented-track-min-height: var(--lyra-size-1-25rem);
+    --lyra-segmented-segment-padding: var(--lyra-size-0-0625rem) var(--lyra-space-2xs);
+    --lyra-segmented-font-size: var(--lyra-font-size-2xs);
+  }
+  :host([size='xs']) {
+    --lyra-segmented-track-min-height: var(--lyra-size-1-5rem);
+    --lyra-segmented-segment-padding: var(--lyra-size-0-125rem) var(--lyra-space-xs);
+    --lyra-segmented-font-size: var(--lyra-font-size-xs);
+  }
+  :host([size='s']) {
+    --lyra-segmented-track-min-height: var(--lyra-size-1-875rem);
+    --lyra-segmented-segment-padding: var(--lyra-space-xs) var(--lyra-space-xs);
+    --lyra-segmented-font-size: var(--lyra-font-size-sm);
+  }
+  :host([size='l']) {
+    --lyra-segmented-track-min-height: var(--lyra-size-3rem);
+    --lyra-segmented-segment-padding: var(--lyra-space-s) var(--lyra-space-m);
+    --lyra-segmented-font-size: var(--lyra-font-size-lg);
+  }
+  :host([size='xl']) {
+    --lyra-segmented-track-min-height: var(--lyra-size-3-5rem);
+    --lyra-segmented-segment-padding: var(--lyra-space-m) var(--lyra-space-l);
+    --lyra-segmented-font-size: var(--lyra-font-size-xl);
   }
   [part='base'] {
     display: inline-flex;
@@ -15,6 +43,7 @@ export const styles = css`
     overflow-x: auto;
     overflow-y: hidden;
     min-inline-size: 0;
+    min-block-size: var(--lyra-segmented-track-min-height);
     border: var(--lyra-border-width-thin) solid var(--lyra-color-border);
     border-radius: var(--lyra-radius);
     padding: var(--lyra-size-0-125rem);
@@ -43,8 +72,8 @@ export const styles = css`
     background: transparent;
     color: var(--lyra-color-text-quiet);
     font: inherit;
-    font-size: var(--lyra-font-size-sm);
-    padding: var(--lyra-size-0-125rem) var(--lyra-space-s);
+    font-size: var(--lyra-segmented-font-size);
+    padding: var(--lyra-segmented-segment-padding);
     cursor: pointer;
   }
   [part='segment-icon'] {

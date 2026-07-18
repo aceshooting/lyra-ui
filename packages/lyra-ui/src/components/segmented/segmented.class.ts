@@ -15,6 +15,8 @@ export interface SegmentedItem {
   disabled?: boolean;
 }
 
+export type LyraSegmentedSize = '2xs' | 'xs' | 's' | 'm' | 'l' | 'xl';
+
 export interface LyraSegmentedEventMap {
   'lyra-change': CustomEvent<{ value: string }>;
 }
@@ -25,7 +27,9 @@ export interface LyraSegmentedEventMap {
  * arrow-key move both select immediately, like a native radio group), cyclic Arrow/Home/End
  * navigation among non-disabled items. First-party invention --
  * "choose exactly one of N labeled options, rendered as a button row" is ubiquitous
- * settings/filter-panel UI.
+ * settings/filter-panel UI. Supports the same `2xs`-`xl` compact-form-control `size` scale as
+ * `<lyra-select>`/`<lyra-combobox>`/`<lyra-input>`, so it can sit flush beside those controls in a
+ * toolbar at a matching height.
  *
  * @customElement lyra-segmented
  * @event lyra-change - Fired when the selected value changes via click or keyboard.
@@ -52,6 +56,12 @@ export class LyraSegmented extends LyraElement<LyraSegmentedEventMap> {
    *  attribute on the host itself is honored as a fallback when this is left
    *  unset, matching `<lyra-slider>`. */
   @property() label = '';
+
+  /** Visual size — same `2xs`-`xl` scale as `<lyra-select>`/`<lyra-combobox>` (`s` through `xl`)
+   *  and `<lyra-input>` (`2xs`). Reflects as the `size` attribute. The default `m` tier is
+   *  identical to this component's pre-`size` rendering, so leaving it unset never changes
+   *  output. */
+  @property({ reflect: true }) size: LyraSegmentedSize = 'm';
 
   private select(item: SegmentedItem): void {
     if (item.disabled || item.value === this.value) return;

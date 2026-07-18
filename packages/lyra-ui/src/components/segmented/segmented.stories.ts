@@ -173,3 +173,21 @@ export const Events: Story = {
     </div>
   `,
 };
+
+export const Sizes: Story = {
+  render: () => html`
+    <div style="display: flex; flex-direction: column; gap: 8px; align-items: flex-start;">
+      ${(['2xs', 'xs', 's', 'm', 'l', 'xl'] as const).map(
+        (size) => html`<lyra-segmented
+          size=${size}
+          .items=${[
+            { value: 'day', label: 'Day' },
+            { value: 'week', label: 'Week' },
+            { value: 'month', label: 'Month' },
+          ]}
+          value="week"
+        ></lyra-segmented>`,
+      )}
+    </div>
+  `,
+};
