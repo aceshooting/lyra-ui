@@ -632,6 +632,13 @@
       }
     },
     {
+      "name": "--lyra-scroll-fade-size",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lyra-segmented>`, `<lyra-tabs>`** (default: `2rem`) — Width of the static fade at each horizontal scroll edge."
+      }
+    },
+    {
       "name": "--lyra-scroller-control-size",
       "description": {
         "kind": "markdown",
