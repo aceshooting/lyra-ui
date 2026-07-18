@@ -1,8 +1,7 @@
 #!/usr/bin/env bash
 # Packages plugins/lyra-ui/skills/lyra-ui/ into ./skills/lyra-ui.skill, after regenerating its
 # references/ from packages/lyra-ui/llms*.txt (the published component API docs). See
-# docs/superpowers/specs/2026-07-17-lyra-ui-claude-code-marketplace-design.md for why the
-# references are generated copies rather than a live cross-directory reference.
+# The references are generated copies so the archive remains self-contained.
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -38,7 +37,13 @@ TMP_DIR="$(mktemp -d)"
 trap 'rm -rf "${TMP_DIR}"' EXIT
 cp -r "${SKILL_DIR}" "${TMP_DIR}/lyra-ui"
 find "${TMP_DIR}" -name '.DS_Store' -delete
-(cd "${TMP_DIR}/lyra-ui" && zip -rq "${OUTPUT_PATH}" .)
+# ZIP stores per-entry timestamps and follows filesystem traversal order. Normalize both so
+# packaging unchanged inputs does not rewrite the tracked archive with metadata-only changes.
+find "${TMP_DIR}/lyra-ui" -exec touch -t 198001010000.00 {} +
+(
+  cd "${TMP_DIR}/lyra-ui"
+  find . -mindepth 1 -print | LC_ALL=C sort | zip -X -q "${OUTPUT_PATH}" -@
+)
 
 if [[ -s "${OUTPUT_PATH}" ]]; then
   echo "Created ${OUTPUT_PATH} ($(du -h "${OUTPUT_PATH}" | cut -f1))"
