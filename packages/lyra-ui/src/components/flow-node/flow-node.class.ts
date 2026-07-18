@@ -22,7 +22,7 @@ const DEFAULT_OUTPUTS: FlowHandle[] = [{ id: 'out' }];
  * @slot header - Replaces the built-in heading row entirely.
  * @slot toolbar - Action row at the block-end edge.
  * @csspart base - The card root.
- * @csspart header - The built-in header row (hidden when the `header` slot has content).
+ * @csspart header - The built-in header row (omitted when the `header` slot has content).
  * @csspart icon - The wrapper around the `icon` slot.
  * @csspart heading - The heading text.
  * @csspart status - The visible status chip (status is never color-only).
@@ -116,10 +116,12 @@ export class LyraFlowNode extends LyraElement {
       <div class="handles handles-input">${this.inputs.map((h) => this.handleTemplate('input', h))}</div>
       <div class="card" ?data-pulse=${this.pulsesRing}>
         <slot name="header" @slotchange=${this.onHeaderSlotChange}></slot>
-        <div part="header" ?hidden=${this.hasHeaderSlot}>
-          <slot name="icon" part="icon"></slot>
-          <span part="heading">${this.heading}</span>
-        </div>
+        ${this.hasHeaderSlot
+          ? nothing
+          : html`<div part="header">
+              <slot name="icon" part="icon"></slot>
+              <span part="heading">${this.heading}</span>
+            </div>`}
         ${this.status
           ? html`<div part="status" data-status=${this.status}>
               <span class="status-dot"></span>${this.statusText()}

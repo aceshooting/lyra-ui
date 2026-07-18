@@ -76,9 +76,9 @@ const BUDGETS = {
   // (observed ~30,000 nodes for 5,000 graph nodes / 10,000 links). Budget only guards against a
   // further multiplication of that (e.g. duplicated cursor-items).
   graphMaxDomNodes: 40_000,
-  // Observed median across several local runs: ~80-125ms (pushCardPropsAll() does a
-  // querySelector('[node-id="..."]') scan per node -- O(n) DOM queries against 1,000 light-DOM
-  // children -- plus the resulting per-card property pushes). ~3x headroom over the high end.
+  // Observed median across several local runs: ~80-125ms (pushCardPropsAll() indexes the 1,000
+  // light-DOM children once, then forwards the changed decoration properties to each card).
+  // ~3x headroom over the high end.
   flowCanvasMs: 350,
   // Observed median across several local runs: ~4-7ms (closed-form radial arithmetic, no physics
   // simulation) -- generous ~20x headroom, matching heatmap's own tolerance for an inherently fast

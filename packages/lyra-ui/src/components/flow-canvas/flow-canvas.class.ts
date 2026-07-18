@@ -350,7 +350,7 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
       this.syncDefaultCards();
     }
     if (changed.has('nodes') || changed.has('selectedNodeIds') || changed.has('decorations')) {
-      this.pushCardPropsAll();
+      this.pushCardPropsAll(changed);
     }
   }
 
@@ -421,21 +421,36 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
     }
   }
 
-  /** Pushes `inputs`/`outputs`/`selected`/decoration-derived `status`/`progress`/`statusDetail` onto
-   *  every currently-adopted card (default or user-authored) so handles and run paint always match
-   *  the model, regardless of which slot mechanism produced the card. */
-  private pushCardPropsAll(): void {
+  /** Pushes changed node/selection/decoration state onto every currently-adopted card (default or
+   *  user-authored) so handles and run paint always match the model, regardless of which slot
+   *  mechanism produced the card. Indexing the direct children once avoids a full descendant
+   *  selector scan for every node in large flows. */
+  private pushCardPropsAll(changed: PropertyValues): void {
+    const nodesChanged = changed.has('nodes');
+    const selectionChanged = nodesChanged || changed.has('selectedNodeIds');
+    const decorationsChanged = nodesChanged || changed.has('decorations');
+    const cardsByNodeId = new Map<string, FlowNodeCardEl>();
+    for (const child of Array.from(this.children)) {
+      const nodeId = child.getAttribute('node-id');
+      if (nodeId) cardsByNodeId.set(nodeId, child as FlowNodeCardEl);
+    }
+    const selectedNodeIds = selectionChanged ? new Set(this.selectedNodeIds) : null;
+
     for (const node of this.nodes) {
-      const el = this.querySelector(`[node-id="${CSS.escape(node.id)}"]`) as FlowNodeCardEl | null;
+      const el = cardsByNodeId.get(node.id);
       if (!el) continue;
-      el.inputs = node.inputs ?? [{ id: 'in' }];
-      el.outputs = node.outputs ?? [{ id: 'out' }];
-      el.selected = this.selectedNodeIds.includes(node.id);
-      const decoration = this.decorations?.[node.id];
-      el.status = decoration?.status ?? null;
-      el.progress = decoration?.progress ?? null;
-      el.statusDetail = decoration?.detail ?? '';
-      el.durationMs = decoration?.durationMs ?? null;
+      if (nodesChanged) {
+        el.inputs = node.inputs ?? [{ id: 'in' }];
+        el.outputs = node.outputs ?? [{ id: 'out' }];
+      }
+      if (selectedNodeIds) el.selected = selectedNodeIds.has(node.id);
+      if (decorationsChanged) {
+        const decoration = this.decorations?.[node.id];
+        el.status = decoration?.status ?? null;
+        el.progress = decoration?.progress ?? null;
+        el.statusDetail = decoration?.detail ?? '';
+        el.durationMs = decoration?.durationMs ?? null;
+      }
     }
   }
 

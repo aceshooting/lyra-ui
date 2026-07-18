@@ -60,13 +60,17 @@ it('header slot replaces the built-in heading row entirely', async () => {
   const el = (await fixture(
     html`<lyra-flow-node heading="Ignored"><span slot="header">Custom header</span></lyra-flow-node>`,
   )) as LyraFlowNode;
-  expect(el.shadowRoot!.querySelector('[part="header"]')!.hasAttribute('hidden')).to.be.true;
+  // Removed from the DOM outright (not merely hidden), so it never visually stacks with the
+  // slotted replacement -- an author stylesheet's unconditional `[part='header']{display:flex}`
+  // rule always beats a `[hidden]` override at equal specificity/origin, so hiding via attribute
+  // alone would leave both rows rendered.
+  expect(el.shadowRoot!.querySelector('[part="header"]')).to.not.exist;
   expect(el.shadowRoot!.querySelector('slot[name="header"]')).to.exist;
 });
 
 it('a header child appended after the initial render still replaces the built-in heading row', async () => {
   const el = (await fixture(html`<lyra-flow-node heading="Ignored"></lyra-flow-node>`)) as LyraFlowNode;
-  expect(el.shadowRoot!.querySelector('[part="header"]')!.hasAttribute('hidden')).to.be.false;
+  expect(el.shadowRoot!.querySelector('[part="header"]')).to.exist;
 
   const span = document.createElement('span');
   span.slot = 'header';
@@ -76,7 +80,7 @@ it('a header child appended after the initial render still replaces the built-in
   await new Promise((r) => setTimeout(r, 0));
   await el.updateComplete;
 
-  expect(el.shadowRoot!.querySelector('[part="header"]')!.hasAttribute('hidden')).to.be.true;
+  expect(el.shadowRoot!.querySelector('[part="header"]')).to.not.exist;
   const slot = el.shadowRoot!.querySelector('slot[name="header"]') as HTMLSlotElement;
   const assigned = slot.assignedElements({ flatten: true });
   expect(assigned.length).to.equal(1);

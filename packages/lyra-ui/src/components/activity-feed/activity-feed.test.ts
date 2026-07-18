@@ -229,15 +229,27 @@ describe('follow contract (virtualized)', () => {
   });
 
   it('normalizes a NaN virtualizeThreshold to the default (200) instead of silently disabling virtualization', async () => {
-    // A small entries count (5, below the real default of 200) -- proves the NaN falls back to a
-    // real, non-negative default rather than an always-false comparison letting virtualization run
-    // at any size: with the guard in place, 5 entries stay in the plain keyed list.
     const el = (await fixture(
       html`<lyra-activity-feed expanded virtualize-threshold="not-a-number" .entries=${makeEntries(5)}></lyra-activity-feed>`,
     )) as LyraActivityFeed;
     expect(Number.isNaN(el.virtualizeThreshold)).to.be.true;
     expect(el.shadowRoot!.querySelector('lyra-virtual-list')).to.not.exist;
     expect(el.shadowRoot!.querySelectorAll('[part="entry"]').length).to.equal(5);
+
+    const nativeResizeObserver = window.ResizeObserver;
+    class InertResizeObserver {
+      observe(): void {}
+      unobserve(): void {}
+      disconnect(): void {}
+    }
+    window.ResizeObserver = InertResizeObserver as unknown as typeof ResizeObserver;
+    try {
+      el.entries = makeEntries(200);
+      await el.updateComplete;
+      expect(el.shadowRoot!.querySelector('lyra-virtual-list')).to.exist;
+    } finally {
+      window.ResizeObserver = nativeResizeObserver;
+    }
   });
 
   it('forwards the header label as aria-label onto the internal virtual-list', async () => {
