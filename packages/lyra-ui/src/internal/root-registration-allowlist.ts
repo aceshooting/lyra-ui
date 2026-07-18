@@ -90,6 +90,7 @@ export const ROOT_BARREL_TAGS = [
   'lyra-lite-chart',
   'lyra-live-region',
   'lyra-markdown',
+  'lyra-markdown-core',
   'lyra-media-card',
   'lyra-mention-popover',
   'lyra-menu',
