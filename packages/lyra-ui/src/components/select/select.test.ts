@@ -893,3 +893,35 @@ it('leaves today\'s min-height-floor-only behavior unchanged when the override i
   // No forced block-size -- the trigger's rendered height still comes from its own
   // padding/line-height/border, only floored by --lyra-select-trigger-min-height as before.
 });
+
+describe('per-size min-height floor', () => {
+  it('actually enforces --lyra-select-trigger-min-height at each non-default size', async () => {
+    // --lyra-select-trigger-min-height is declared per size tier (xs=1.5rem, s=1.875rem,
+    // l=3rem, xl=3.5rem) but was never wired to min-block-size for those tiers -- this is the
+    // regression test for that fix.
+    const expected: Record<string, string> = { xs: '24px', s: '30px', l: '48px', xl: '56px' };
+    for (const [size, px] of Object.entries(expected)) {
+      const el = (await fixture(
+        html`<lyra-select size=${size} label="Role"><lyra-option value="a">A</lyra-option></lyra-select>`,
+      )) as LyraSelect;
+      const t = el.shadowRoot!.querySelector('[part="trigger"]') as HTMLElement;
+      expect(getComputedStyle(t).minBlockSize, `size=${size}`).to.equal(px);
+    }
+  });
+
+  it('leaves the default (m) tier unaffected by the fix -- no enforced floor, matching pre-fix behavior', async () => {
+    const el = (await fixture(html`<lyra-select label="Role"><lyra-option value="a">A</lyra-option></lyra-select>`)) as LyraSelect;
+    const t = el.shadowRoot!.querySelector('[part="trigger"]') as HTMLElement;
+    expect(getComputedStyle(t).minBlockSize).to.equal('0px');
+  });
+
+  it('a consumer-pinned --lyra-select-trigger-height still overrides the per-size floor', async () => {
+    const el = (await fixture(
+      html`<lyra-select size="s" label="Role"><lyra-option value="a">A</lyra-option></lyra-select>`,
+    )) as LyraSelect;
+    el.style.setProperty('--lyra-select-trigger-height', '43px');
+    await el.updateComplete;
+    const t = el.shadowRoot!.querySelector('[part="trigger"]') as HTMLElement;
+    expect(getComputedStyle(t).blockSize).to.equal('43px');
+  });
+});

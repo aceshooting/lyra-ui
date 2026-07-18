@@ -31,6 +31,19 @@ export const styles = css`
     --lyra-select-trigger-min-height: var(--lyra-size-3-5rem);
     --lyra-select-font-size: var(--lyra-font-size-xl);
   }
+  /* [part='trigger']'s own min-block-size resolves through --lyra-select-trigger-height, which
+     :host always declares as 'auto' -- so its var() fallback to --lyra-select-trigger-min-height
+     never triggers (a defined 'auto' value isn't "unset" for var() fallback purposes). That's
+     intentional for the default/unsized trigger (preserves this component's original,
+     pre-size floor-free height), but it silently made --lyra-select-trigger-min-height dead
+     code for every non-default size too. These four rules restore the floor for xs/s/l/xl
+     specifically, via selector specificity, without touching the default tier. */
+  :host([size='xs']) [part='trigger'],
+  :host([size='s']) [part='trigger'],
+  :host([size='l']) [part='trigger'],
+  :host([size='xl']) [part='trigger'] {
+    min-block-size: var(--lyra-select-trigger-min-height);
+  }
   [part='form-control-label'] {
     display: block;
     margin-block-end: var(--lyra-space-xs);
