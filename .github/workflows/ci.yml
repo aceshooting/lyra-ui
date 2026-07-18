@@ -44,6 +44,8 @@ jobs:
       - run: git diff --exit-code -- plugins/lyra-ui/skills/lyra-ui/references/
       - run: pnpm skill:check
       - run: pnpm docs:build
+      - run: git diff --exit-code -- .storybook/sitemap.xml
+      - run: pnpm docs:check
       - run: pnpm storybook:check
       - run: pnpm storybook:check-theme
       # Informational/non-blocking on purpose: the baseline PNGs under

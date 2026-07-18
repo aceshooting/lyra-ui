@@ -66,6 +66,10 @@ pnpm skill:check
 step "docs:build"
 pnpm docs:build
 
+step "docs:check"
+git diff --exit-code -- .storybook/sitemap.xml
+pnpm docs:check
+
 step "storybook:check"
 pnpm storybook:check
 
