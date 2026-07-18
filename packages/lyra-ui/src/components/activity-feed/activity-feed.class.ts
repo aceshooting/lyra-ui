@@ -83,6 +83,10 @@ function defaultFormatTimestamp(date: Date, locale: string): string {
  * `virtualizeThreshold` entries, the body renders through an internal `<lyra-virtual-list>`
  * instead of a plain keyed list — same list semantics either way, keyed by `id`.
  *
+ * Each entry's `text` renders as plain text by default; a host needing richer per-entry content
+ * (rendered markdown, a trailing tool-call chip list, etc.) sets `renderText` to fully replace it,
+ * identically whether or not the feed is currently virtualized.
+ *
  * @customElement lyra-activity-feed
  * @event lyra-toggle - The header was activated, expanding or collapsing the body. `detail: {
  *   expanded }`.
@@ -98,7 +102,8 @@ function defaultFormatTimestamp(date: Date, locale: string): string {
  * @csspart body - The scrollable region containing the entries (or the internal virtual-list).
  * @csspart entry - One entry row; carries `data-tone`.
  * @csspart entry-icon - The literal `icon` hint, or a tone dot when unset.
- * @csspart entry-text - The entry's `text`.
+ * @csspart entry-text - The entry's `text`. Not rendered while `renderText` is set — its returned
+ *   content replaces this part entirely.
  * @csspart entry-timestamp - The formatted timestamp, only rendered while `showTimestamps` and a
  *   valid `timestamp` is set.
  * @cssprop [--lyra-activity-feed-max-height=16rem] - Cap on how tall the expanded body grows
@@ -130,6 +135,14 @@ export class LyraActivityFeed extends LyraElement<LyraActivityFeedEventMap> {
 
   /** Overrides the default `hour:minute` rendering of every entry's `timestamp`. */
   @property({ attribute: false }) formatTimestamp?: (date: Date) => string;
+
+  /** Overrides the default plain-text `[part="entry-text"]` rendering of every entry with an
+   *  arbitrary `TemplateResult` (e.g. rendered markdown, or markdown plus a trailing list of
+   *  `<lyra-tool-call-chip>`s) — the returned content fully replaces `[part="entry-text"]` rather
+   *  than augmenting it, the same way `formatTimestamp` fully replaces the default timestamp
+   *  formatting. Applies identically whether or not the feed is currently virtualized, since both
+   *  paths render every entry through the same internal template. */
+  @property({ attribute: false }) renderText?: (entry: ActivityEntry) => TemplateResult;
 
   /** At/above this entry count, the body renders through an internal `<lyra-virtual-list>`. */
   @property({ type: Number, attribute: 'virtualize-threshold' }) virtualizeThreshold = 200;
@@ -260,7 +273,7 @@ export class LyraActivityFeed extends LyraElement<LyraActivityFeedEventMap> {
     return html`
       <div part="entry" role=${ownRole ? 'listitem' : nothing} data-tone=${entry.tone ?? 'neutral'}>
         <span part="entry-icon" aria-hidden="true">${entry.icon ? entry.icon : html`<span class="tone-dot"></span>`}</span>
-        <span part="entry-text">${entry.text}</span>
+        ${this.renderText ? this.renderText(entry) : html`<span part="entry-text">${entry.text}</span>`}
         ${this.showTimestamps && ts
           ? html`<time part="entry-timestamp" datetime=${ts.toISOString()}>${formatter(ts)}</time>`
           : nothing}

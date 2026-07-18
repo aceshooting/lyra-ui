@@ -1,4 +1,5 @@
 import { fixture, expect, html, oneEvent } from '@open-wc/testing';
+import { render } from 'lit';
 import './activity-feed.js';
 import type { LyraActivityFeed, ActivityEntry } from './activity-feed.js';
 
@@ -128,6 +129,51 @@ describe('showTimestamps', () => {
       ></lyra-activity-feed>`,
     )) as LyraActivityFeed;
     expect(el.shadowRoot!.querySelector('[part="entry-timestamp"]')).to.not.exist;
+  });
+});
+
+describe('renderText', () => {
+  it('renders plain entry.text in [part="entry-text"] when unset (default, non-virtualized)', async () => {
+    const el = (await fixture(
+      html`<lyra-activity-feed expanded .entries=${[{ id: '1', text: 'plain narration' }]}></lyra-activity-feed>`,
+    )) as LyraActivityFeed;
+    expect(el.shadowRoot!.querySelector('[part="entry-text"]')!.textContent!.trim()).to.equal('plain narration');
+  });
+
+  it('lets renderText replace the entry content with an arbitrary TemplateResult, non-virtualized', async () => {
+    const el = (await fixture(html`<lyra-activity-feed expanded></lyra-activity-feed>`)) as LyraActivityFeed;
+    el.renderText = (entry) => html`<strong class="rich">${entry.text.toUpperCase()}</strong><em class="chip">tool: read</em>`;
+    el.entries = [{ id: '1', text: 'narration' }];
+    await el.updateComplete;
+    const row = el.shadowRoot!.querySelector('[part="entry"]') as HTMLElement;
+    // The default plain-text part is gone -- renderText fully owns this entry's content area, the
+    // same way formatTimestamp fully replaces the default timestamp formatting rather than
+    // augmenting it. Compared as a boolean, never a raw element, per this repo's own documented
+    // chai/loupe DOM-node-serialization hang pitfall (AGENTS.md's testing conventions).
+    expect(row.querySelector('[part="entry-text"]') === null).to.be.true;
+    expect(row.querySelector('strong.rich')!.textContent).to.equal('NARRATION');
+    expect(row.querySelector('em.chip')!.textContent).to.equal('tool: read');
+  });
+
+  it('also applies through the internal lyra-virtual-list at/above virtualizeThreshold', async () => {
+    // Both the non-virtualized repeat() path and the virtualized lyra-virtual-list path render
+    // every entry through the exact same entryTemplate() method, so there's no separate code path
+    // for renderText to miss in virtualized mode -- proven here by invoking the internal
+    // lyra-virtual-list's own .renderItem callback directly (real virtualized row content isn't
+    // reliably assertable without real browser layout, which none of this file's other
+    // virtualized-mode tests attempt either -- they only assert on the lyra-virtual-list element's
+    // existence/attributes, not its rendered row content).
+    const el = (await fixture(html`<lyra-activity-feed expanded virtualize-threshold="1"></lyra-activity-feed>`)) as LyraActivityFeed;
+    el.renderText = (entry) => html`<strong class="rich">${entry.text}</strong>`;
+    el.entries = [{ id: '1', text: 'virtualized narration' }, { id: '2', text: 'second' }];
+    await el.updateComplete;
+    const virtualList = el.shadowRoot!.querySelector('lyra-virtual-list') as unknown as {
+      renderItem: (item: unknown, index: number) => unknown;
+    } | null;
+    expect(virtualList !== null).to.be.true;
+    const container = document.createElement('div');
+    render(virtualList!.renderItem(el.entries[0], 0) as ReturnType<typeof html>, container);
+    expect(container.querySelector('strong.rich')!.textContent).to.equal('virtualized narration');
   });
 });
 

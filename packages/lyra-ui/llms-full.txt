@@ -10826,8 +10826,12 @@ entries, the body renders through an internal `<lyra-virtual-list>` instead of a
 **Properties:** `entries: ActivityEntry[] = []` (attribute: false), `mode: 'live' | 'post-hoc' =
 'live'` (reflected), `follow: boolean = true` (reflected), `expanded: boolean = false` (reflected),
 `label: string = 'Activity'`, `showTimestamps: boolean = false` (attribute `show-timestamps`),
-`formatTimestamp?: (date: Date) => string` (attribute: false), and `virtualizeThreshold: number =
-200` (attribute `virtualize-threshold`).
+`formatTimestamp?: (date: Date) => string` (attribute: false), `renderText?: (entry: ActivityEntry)
+=> TemplateResult` (attribute: false) — overrides the default plain-text `entry-text` rendering with
+arbitrary rich content (e.g. rendered markdown, or markdown plus a trailing tool-call chip list),
+identically whether or not the feed is currently virtualized; fully replaces `[part="entry-text"]`
+rather than augmenting it, and `virtualizeThreshold: number = 200` (attribute
+`virtualize-threshold`).
 
 **Events:** `lyra-toggle` (`detail: { expanded }`, the header was activated) and
 `lyra-follow-change` (`detail: { following }`, `follow` released or re-engaged).
