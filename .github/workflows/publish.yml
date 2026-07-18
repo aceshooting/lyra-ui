@@ -75,11 +75,11 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      # Install the npm CLI from the commit that publishes npm 12.0.1. The full Git SHA keeps
-      # this build dependency immutable; update the SHA and expected version together.
+      # Install the immutable npm 12.0.1 registry release. Using the registry package avoids
+      # intermittent failures while fetching npm CLI through GitHub's codeload path.
       - name: Update npm CLI (trusted publishing needs >=11.5.1)
         run: |
-          npm i -g git+https://github.com/npm/cli.git#868e586497cdc17b66eb9a8424bad67136e789f9
+          npm i -g npm@12.0.1
           test "$(npm --version)" = "12.0.1"
 
       # --if-present mirrors scripts/publish.sh's own per-package gate: lyra-flags has no "build"
