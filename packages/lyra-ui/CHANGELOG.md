@@ -1,5 +1,601 @@
 # Changelog
 
+## 3.8.0
+
+### Minor Changes
+
+- c4cb188: Adds `<lyra-activity-feed>`: an append-only streaming log of granular agent actions, collapsing to
+  a localized "Completed N steps" summary once the run is over. Implements the shared follow
+  (stick-to-bottom) contract (`follow` property, `lyra-follow-change` event) and virtualizes its body
+  through an internal `<lyra-virtual-list>` at/above `virtualizeThreshold` entries, using that
+  component's `scrollToIndex()` method to drive its stick-to-bottom follow. `<lyra-virtual-list>`
+  also gains `aria-label` forwarding from the host element onto its internal `role="list"`
+  container, usable independently of `<lyra-activity-feed>`.
+- 5a0276e: Adds an internal, dependency-free ANSI/SGR parser (`src/internal/ansi.ts`, not a public export) —
+  shared groundwork for `lyra-terminal`'s streamed console-output rendering. No public API surface
+  change on its own; ships alongside the `lyra-terminal` component in the same release.
+- b92b5d4: Adds `<lyra-artifact-panel>`: a shell around one generated artifact — title/kind header, a
+  preview↔code toggle (rendered only once the `code` slot has content), version navigation with a
+  "Restore this version" affordance (`lyra-version-change`/`lyra-restore`, versions are host state),
+  `streaming`/`aria-busy` state, and built-in copy/download actions. Renders none of the artifact
+  itself — content is slotted.
+- cf005b9: `lyra-attachment-trigger` gains an `'audio'` capability, following the existing `camera` capability's
+  request-only pattern exactly: activating it fires `lyra-audio-request` (no embedded recorder), and the
+  host opens its own capture UI — typically `<lyra-push-to-talk>` in a `<lyra-overlay>`/popover — then
+  hands the resulting blob to its attachment tray. Purely additive: the default `capabilities` stays
+  `['files']`, and every existing `files`/`image`/`camera` behavior is unchanged.
+- b85934b: Adds `<lyra-audio-visualizer>`: a presentational, canvas-drawn voice-activity visualization (bars or
+  waveform), driven by a `MediaStream` (lazily wired to a WebAudio analyser), a numeric `level`, or a
+  `state` (`idle`/`listening`/`thinking`/`speaking`) alone for an ambient animation. Pairs with
+  `lyra-push-to-talk`'s `stream`/`lyra-level` output. Zero dependencies — native Web Audio only,
+  reduced-motion-aware.
+- 3310f16: Adds `<lyra-av-player>`: an audio/video player built on a native media element with a cue transcript
+  synced to playback, `time-range` anchor/highlight support, an optional dependency-free waveform
+  (peaks-in, no in-component decoding), playback-rate control, and imperative transcript search.
+  Self-registers into the document-viewer registry for the common audio/video MIME types. Owns
+  recorded-media transcript sync — distinct from `lyra-transcript-feed` (live voice-session captions)
+  and from `lyra-playback` (an index stepper, no media).
+- 0fe240b: Adds `<lyra-branch-picker>`: a controlled "‹ 2 / 5 ›" navigator across regenerated/edited variants of
+  one chat message, mirroring `lyra-pagination`'s "never mutates its own state" contract. Fires
+  `lyra-branch-change` with the requested (always in-bounds) index; the host swaps the displayed branch
+  content and applies the new index back. Designed to slot into `lyra-message-actions`' default slot or
+  directly into `lyra-chat-message`'s `actions`/`badges` slots.
+- bc75a1f: Adds `<lyra-browser-frame>`: a presentational "agent computer" viewport — a safe-URL-gated
+  screenshot/frame stream `<img>` (or slotted live media), read-only address bar, visible (never
+  color-only) connection status, kind-distinct action-ping overlays, and take-over/stop affordances
+  (`lyra-take-over`, `lyra-stop`). No automation transport and no input relay — take-over is an event;
+  the host swaps in its own interactive element.
+- e29f575: `lyra-button` and `lyra-input` gain `size="2xs"`, a sub-`xs` tier for dense, toolbar-embedded controls
+  (e.g. a search input and text buttons inside a compact dialog header). Composes with `appearance`/
+  `variant` the same way the existing five sizes already do.
+- e4762fd: `lyra-button` gains `appearance="quiet"`: a bordered, transparent-until-hover tier for a toolbar-style
+  icon+label action whose border/text read fixed `--lyra-color-border`/`--lyra-color-text-quiet` tokens
+  regardless of `variant`, unlike `appearance="outlined"`'s variant-tinted text — for a call site that
+  needs a genuinely muted resting state rather than a bold bordered button. New
+  `--lyra-button-quiet-border`/`--lyra-button-quiet-text` custom properties back the two tokens.
+- 4ac983b: `lyra-chat-message` gains `actionsOutsideBubble` (reflects to `actions-outside-bubble`): renders the
+  `actions` slot's content as a sibling immediately after the message bubble instead of nested inside its
+  footer's own padding/background box. Previously a consumer whose action row (e.g. a hover-reveal copy
+  button) had to sit visually outside the bubble's chrome could not adopt this component at all, since
+  `::part(footer)` styling alone cannot detach it from the bubble's box.
+- 65a1f8c: Adds `<lyra-chat-viewport>`: the transcript scroll container for a chat/agent conversation surface —
+  owns the stick-to-bottom `follow` state machine (`follow` property, `lyra-follow-change` event,
+  matching the same shared follow contract `<lyra-activity-feed>` already implements) while an answer
+  streams, a built-in "jump to latest" pill with a pluralized unread count, and an unread divider. Two
+  content shapes are auto-detected: ordinary element children (slotted mode) or exactly one
+  `lyra-virtual-list` (virtual mode, built on that component's `scrollToIndex()` method). Renders no
+  messages and computes no unread state itself — the host supplies `unreadStartIndex` and slots its
+  own message elements or a virtual list.
+- bf601c8: Adds `<lyra-checkpoint>`: an inline conversation restore point — a labeled marker between messages
+  whose Restore affordance confirms inline (an accessible-name-carrying button swap, focus-managed,
+  Escape/focus-out-aware) before firing a `lyra-restore { checkpointId, label }` event. Persists and
+  restores nothing itself — host state in, events out. `confirmRestore="false"` skips the inline
+  confirm step entirely; `restorable="false"` renders a plain, non-interactive marker for read-only
+  views or the currently-restored point.
+- 22c1006: Adds `<lyra-chunk-inspector>`: a ranked retrieved-chunks "why this answer" panel — relevance score
+  bars with tier-mapped tones, expandable chunk text (state keyed by chunk id, survives streaming
+  reassignment), and `lyra-chunk-open` for landing a chunk in `lyra-document-viewer` with its anchor.
+  Virtualizes automatically above `virtualizeAt` rows via the existing `lyra-virtual-list`.
+- c274bd6: `lyra-code-block` and `lyra-code-block-core` gain `highlight-lines` (declarative `"3-5,7"`-style
+  line emphasis), `interactive-lines` (turns the line-number gutter into a keyboard-navigable,
+  clickable roving-tabindex group emitting `lyra-line-click`), and `line-range` anchor-target support
+  (`highlights`, `activeHighlightId`, `scrollToAnchor()`, event `lyra-text-select`) — identical on
+  both components since they share the new line-addressing logic. Previously there was no way to
+  emphasize or deep-link to a specific line/range of lines in a rendered code block.
+- f71fcac: Adds `<lyra-commit-card>`: a compact commit summary card — abbreviated/copyable hash, subject/body
+  message split, author/time meta, a non-color-only aggregate `+N -M` diffstat, and a collapsible
+  per-file change list (`lyra-file-select` on activation) reusing `lyra-file-tree`'s `GitStatus`
+  vocabulary and shared `gitStatus*` labels.
+- 22c1006: Adds `<lyra-community-card>`: a GraphRAG community-report card — label, summary excerpt, member
+  count, member chips with a "+N" overflow chip, and a drill-in action (`lyra-drill`) surfaced from
+  the header, an explicit drill button, and the overflow chip alike. A `compact` mode renders just
+  title + member count + drill button for dense listings (e.g. inside `lyra-provenance-panel`).
+- 1432601: Add `lyra-compare-panel`: side-by-side A/B output comparison with a winner vote (LMSYS-arena /
+  LangSmith-pairwise style) — two slotted panes (`a`/`b`), an optional shared `prompt` header, a
+  `role="group"` vote bar (better-A / better-B / tie / both-bad, the last two individually
+  hideable), and optional proportional `syncScroll` between panes. No hotkeys (slotted content may
+  contain inputs); casting a vote announces through an internal live region.
+- bc75a1f: Adds `<lyra-confirm-bar>`: an inline, non-modal approve/deny block for one proposed action — the
+  in-flow sibling of `lyra-tool-approval-dialog` for confirmations that belong in the transcript instead
+  of an overlay. Same `lyra-approve`/`lyra-deny` event shapes and the same heading/args-label/deny/approve
+  localization keys as the dialog, so the two stay in lockstep. No focus trap, scroll lock, or
+  Escape/backdrop handling; on activation, focus moves synchronously to the always-present decided-state
+  text before the Deny/Approve buttons unmount, and an internal live region announces the outcome.
+- 23bfb7b: `lyra-conversation-item` gains a `meta` slot (small, non-focusable structured fields below the
+  title/excerpt — e.g. a day label, project name, cost) and an `excerpt` slot that wins over the
+  existing `excerpt` property whenever it has assigned content, mirroring `lyra-timeline-item`'s own
+  `timestamp` slot-wins-over-property pattern. Previously a consumer needing a rich excerpt (e.g. a
+  search-hit snippet with `<mark>` highlighting) or a multi-field meta line had to flatten that
+  structure into the plain-text `excerpt` property or hand-roll the row entirely.
+- 2ad038b: `lyra-dataset-viewer` now virtualizes through `lyra-virtual-list` (a new `item-role="row"` mode,
+  mapping to a proper `role="table"`/`role="row"`/`role="rowgroup"` accessibility tree) instead of a
+  single synchronous `<table>`, lifting its row cap from 1,000 to the shared 10,000-row default every
+  other tabular viewer already uses. It also gains `cell-range` anchor-target support (`highlights`,
+  `activeHighlightId`, `scrollToAnchor()`, event `lyra-highlight-activate`) and an imperative
+  in-document search API (`search()`, `searchNext()`, `searchPrevious()`, `clearSearch()`, event
+  `lyra-search-change`), sharing the same raw-grid cell addressing as `lyra-csv-viewer`, with the
+  header row always included since this viewer always parses with PapaParse's `header: true`. The
+  `lyra:dataset` document-viewer registration now declares `capabilities: { anchors: ['cell-range'],
+search: true, textSelect: false }`. `lyra-virtual-list` itself gains the underlying
+  `item-role`/`row-index-offset` properties this required, additive and defaulting to today's exact
+  `listitem` behavior for every other consumer. Previously a 1,001+ row dataset file failed to load at
+  all, and there was no way to highlight or search a cell.
+- 2ad038b: `lyra-diff-view` gains `layout="split"` (two side-by-side columns derived from the same line-diff
+  alignment as the default unified view — unbalanced replace hunks pad the shorter side with empty
+  placeholder rows) and optional syntax highlighting via `language`/`languages` (same fine-grained
+  shiki-core-only shape as `lyra-code-block-core`, so the peer-free default stays truly peer-free).
+  Previously diff-view only rendered a single interleaved unified view with no highlighting option.
+- dc168c7: `lyra-docx-viewer` gains `getHeadingTree()` (a document-ordered heading outline stamped with
+  GitHub-slugger-style ids, using the same slugging algorithm as `lyra-markdown`), `fragment`/
+  `text-quote` anchor-target support (`highlights`, `activeHighlightId`, `scrollToAnchor()`, events
+  `lyra-highlight-activate`/`lyra-text-select`/`lyra-anchor-result`), and an imperative in-document
+  search API (`search()`, `searchNext()`, `searchPrevious()`, `clearSearch()`, event
+  `lyra-search-change`). Previously there was no way to deep-link into a section, highlight a quoted
+  passage, or search inside a rendered Word document.
+- d3edf31: `lyra-ebook-viewer` gains `getToc()` (a flat, nested table of contents from the EPUB's own
+  navigation document), a `location` property (get/set the current CFI or spine href, with
+  `lyra-location-change` on user navigation), an imperative in-book search API (`search()`,
+  `searchNext()`, `searchPrevious()`, `clearSearch()`, event `lyra-search-change`), and `cfi`/
+  `text-quote` anchor-target support (`highlights`, `activeHighlightId`, `scrollToAnchor()`, events
+  `lyra-highlight-activate`/`lyra-text-select`). Previously there was no way to read an EPUB's table
+  of contents, deep-link into a specific location, or search inside a rendered book.
+- 2ad038b: `lyra-email-viewer` attachments become interactive: each row is now a real button emitting
+  `lyra-attachment-open { attachment: { filename, mimeType, content } }` with the attachment's decoded
+  bytes attached (the component itself never opens/downloads anything — host-owned routing, e.g. into
+  `lyra-document-viewer`). A new `fold-quotes` property collapses trailing quoted-reply text/HTML
+  (`>`-prefixed text runs, `gmail_quote`/`yahoo_quoted`/Outlook-style HTML blocks) behind a localized
+  toggle. Previously attachments were inert metadata with no way to retrieve their content, and quoted
+  reply chains always rendered in full.
+- ba094cb: Adds `<lyra-emoji-picker>`: a searchable, keyboard-navigable, form-associated emoji picker
+  (`value`/`lyra-change`, matching this library's other form-control conventions). `groups` is fully
+  consumer-suppliable — this component ships no emoji data of its own — with an optional convenience
+  auto-loader for a default set via the `emoji-picker-element-data` peer when `groups` is left unset.
+  Lets a consumer currently wrapping the third-party `emoji-picker-element` custom element (plus its
+  locale-data package) as a direct dependency replace it with a first-party `lyra-*` component instead.
+- 22c1006: Adds `<lyra-entity-card>`: a dossier card for one knowledge-graph entity (`LyraEntity`) — type
+  badge, description, key/value property rows, relationship-degree and community rows, and a
+  built-in "focus in graph" action that emits `lyra-entity-activate` for a host to route into
+  `lyra-graph`'s `focusNode()`.
+- 22c1006: Adds `<lyra-entity-chip>`: an inline `@entity` mention for agent prose with a hover/focus preview
+  popover, reusing `lyra-citation-badge`'s interaction contract wholesale (200ms hover-leave grace,
+  independent hover/focus hold-open state, Escape dismissal, Space opens/Enter activates). The
+  knowledge-graph sibling of `lyra-citation-badge` — renders its `label` text rather than a `[n]`
+  index, and reflects `type` for host-level per-type theming.
+- 2ab49e6: Adds `<lyra-env-list>`: a masked key/value list for environment variables and secrets
+  (`<dl>`/`<dt>`/`<dd>` semantics), defaulting every entry to masked (a fixed eight-bullet run,
+  length-independent so value length is never leaked) with per-row reveal (`lyra-reveal-change`, state
+  keyed by name and position, and reset for a row whose name shifts position) and copy (`lyra-copy`,
+  always copies the real value). `revealable=false` for screen-share-safe hosts. Masking is
+  presentational, not a security boundary.
+- 892c9d3: Adds `<lyra-file-tree>`: a file-explorer preset over `lyra-tree` + `lyra-file-icon` with path-keyed
+  nodes, per-file git-status badges and `+N -M` diffstat, lazy directory loading (`setChildren()`,
+  `lyra-load-children`), `revealPath()`, and `lyra-file-select`/`lyra-file-open` events (matching the
+  "Enter/click on an already-selected file opens it" keyboard parity rule).
+- 22c1006: Adds `<lyra-flow-canvas>`: a dependency-free, pannable/zoomable DAG workflow canvas — HTML card
+  nodes with typed connection handles, SVG Bézier edges with arrowheads and labels, a shared layered
+  auto-layout for unpositioned nodes, and controlled selection/drag/connect gestures behind three
+  independent opt-in flags (`nodes-draggable`, `connectable`, `droppable`). Readonly viewer by default;
+  never mutates `nodes`/`edges` itself. Ships a `registerCompanion()` hook so `lyra-flow-minimap`,
+  `lyra-flow-controls`, and `lyra-flow-run-overlay` (following in subsequent releases) can attach
+  without reaching into its shadow DOM.
+- 22c1006: Adds `<lyra-flow-controls>`: the zoom in/out, fit, and interaction-lock button cluster for
+  `lyra-flow-canvas`, so every flow surface ships the same affordances without hosts rebuilding them.
+  Zoom buttons disable at the resolved canvas's `minZoom`/`maxZoom` bounds; the lock toggle stays in
+  sync with the canvas's `locked` attribute regardless of what changed it.
+- 22c1006: Adds `<lyra-flow-minimap>`: a corner overview map for `lyra-flow-canvas` — scaled node rectangles
+  (status-tinted) plus a draggable, keyboard-operable viewport rectangle for orientation and fast
+  navigation on canvases larger than the screen. Attaches via `registerCompanion()`, either slotted
+  into one of the canvas's corner slots or externally via `for="canvas-id"`.
+- 22c1006: Adds `<lyra-flow-node>`: the workflow node card — header/body/toolbar chrome, tool-lifecycle status
+  tones with a visible (never color-only) status chip, a determinate progress bar, and named
+  connection-handle elements. Used automatically by `lyra-flow-canvas` as the default card for any
+  node without a slotted override, and usable standalone for palette previews or docs.
+- 22c1006: Adds `<lyra-flow-run-overlay>`: execution-state presentation for `lyra-flow-canvas` — mirrors a
+  `FlowRunDecorations` map into the resolved canvas (which owns the actual node/edge paint) and
+  renders a compact "{done} of {total} steps complete" summary strip with per-status counts.
+  Status transitions announce through a throttled live region. Pure pushed state — no execution,
+  polling, or internal clock.
+- 2ad038b: Adds an internal `application/geo+json` document-viewer registry bridge (`<lyra-geojson-view>`,
+  `.geojson` filename matching included): fetches and validates a GeoJSON `Feature`/`FeatureCollection`/
+  bare-geometry payload, computes a bounding-box fit, and renders it through `lyra-map`'s new
+  `dataLayers` property with a feature-count status line. Falls back to `lyra-json-viewer` with a
+  missing-library callout when the optional `maplibre-gl` peer isn't installed. Not a documented public
+  tag this round — importing `geojson-view/geojson-view.js` opts a host into the bridge, matching how
+  `lyra-map`/`lyra-graph`/the chart family already stay out of the root barrel import.
+- ca9258f: `lyra-graph` gains `renderer: 'svg' | 'canvas'` (default `'svg'`, unchanged). `'canvas'` swaps the
+  per-node/per-link SVG DOM for a single DPR-aware `<canvas>` (reusing `lyra-heatmap`'s proven backing-
+  store/resize/DPR-watch machinery), targeting roughly 5,000 nodes / 10,000 links versus SVG's ~500/
+  ~1,500 ceiling. Hit-testing uses an offscreen color-picking canvas (exact hits for all three node
+  shapes, stroked/dashed links, and hull blobs, one code path, zero new dependencies); pointer drag,
+  click, double-click-to-expand, and hover tooltips all work via that same hit-test. Keyboard/screen-
+  reader parity is preserved through an offscreen virtual-cursor button list driving the identical
+  roving/announcement logic as SVG mode — the honest v1 trade-off is no `::part(node)`/`::part(link)`
+  styling (pixels, not elements) and a drawn focus ring instead of a CSS one, both documented. Fully
+  additive — the default `renderer: 'svg'` reproduces today's DOM exactly.
+- c6ab7c8: `lyra-graph` gains `GraphNode.communityId` and a `communities` property, rendering one translucent
+  convex-hull blob per entry (membership = union of `memberIds` and matching `communityId`) behind
+  links/nodes. Hulls are keyboard/click-activatable (`lyra-community-click`), join the roving focus
+  ring after nodes and links, and are included in `fit()`'s bounding-box calculation. Fully additive
+  — an empty `communities` array (the default) renders no hulls and leaves the roving ring/`fit()`
+  behavior unchanged.
+- c996af0: `lyra-graph` gains `showEdgeLabels` (default `false`) to draw each link's `label` as visible SVG
+  text at the segment midpoint, and `edgeLabelMinZoom` (default `0.6`) to hide all edge labels below
+  that zoom scale. A per-label length gate also hides a label whose measured text width exceeds 85%
+  of its edge's current on-screen length. Labels are `aria-hidden` (the accessible name already
+  carries `label` via the existing link announcement) and fully opt-in — a graph that never sets
+  `showEdgeLabels` renders no edge-label DOM at all.
+- 7f7511a: `lyra-graph` gains a double-activate expand gesture: double-clicking a node, or activating the same
+  focused node twice via Enter/Space within 500ms, emits `lyra-node-expand { id }`. A new
+  `GraphNode.expandable` flag renders a "+" badge and adds "expandable" to the node's spoken text. A
+  node newly linked to an already-positioned neighbor (e.g. appended after an expand) now spawns near
+  that neighbor instead of a random position. Fully additive — no existing click/keyboard behavior
+  changes, and a graph that never sets `expandable` never renders the badge (though the
+  `lyra-node-expand` event itself fires for any double-activated node, matching native
+  dblclick semantics).
+- 5d77b48: `lyra-graph` gains a programmatic camera (`focusNode(id, { zoom? })`, `fit({ padding? })`, both
+  reduced-motion-aware rAF tweens that keep d3-zoom's own state consistent), a declarative
+  `focusId` twin (centers once, renders a persistent `focus-halo` ring), and a controlled selection
+  model (`selectionMode: 'none' | 'single' | 'multiple'`, `selectedNodeIds`/`selectedLinkIds`,
+  `lyra-selection-change`) mirroring `lyra-heatmap.selectedCell`'s controlled contract — the
+  component only ever emits intent, never assigns the selection props itself. Fully additive: default
+  `selectionMode: 'none'` and unset `focusId` reproduce today's behavior exactly.
+- 844fe95: `lyra-graph` gains `lyra-node-enter`/`lyra-node-leave`/`lyra-link-enter`/`lyra-link-leave` hover
+  events (mirroring the existing `lyra-node-click`/`lyra-link-click` detail shapes) plus a `data-hovered`
+  attribute toggled on the hovered node/link element for pure-CSS theming. Both are suppressed while a
+  drag or pan gesture is in progress, so a drag crossing over other nodes/links doesn't spam
+  enter/leave pairs. Previously a consumer computing an adjacency-based neighbor highlight on hover
+  (e.g. dimming every unconnected node/link) had no way to observe which node/link was currently
+  hovered from outside the component.
+- f8d6b9e: `lyra-graph` gains `layout: 'force' | 'layered'` (default `'force'`, unchanged). `'layered'`
+  computes a deterministic Sugiyama-lite layout instead of running d3-force — longest-path layering,
+  barycenter crossing reduction, cycle-safe (back edges reversed internally, the caller's data is
+  never mutated). The algorithm itself lives in a new shared, dependency-free
+  `src/internal/layered-layout.ts`, a standalone util suitable for any future layered-diagram
+  consumer. Node drag is disabled in layered mode; pan/zoom, keyboard, focus/fit, hulls, edge labels,
+  and type filtering all work identically to force mode. Fully additive — the default `layout:
+'force'` reproduces today's simulation-driven layout exactly.
+- 22c1006: Adds `<lyra-graph-legend>`: a node-type legend for a paired `lyra-graph`, rendering one swatch +
+  label + count row per §3.4 node type and doubling as a visibility filter. Event-decoupled from any
+  graph instance — a host forwards `graph.nodeTypes` in as `types` and forwards
+  `lyra-visibility-change`'s `hiddenTypes` back out to `graph.hiddenTypes`.
+- 942798e: `lyra-graph` gains `GraphNode.type` and a new `nodeTypes` property declaring each type's legend
+  label, fill color, and shape (`circle`/`square`/`diamond`). Fill resolution precedence is
+  `node.color` > the type's own color > an ordered categorical fallback palette
+  (`--lyra-graph-cat-1`…`--lyra-graph-cat-8`, new tokens) by the type's index in `nodeTypes` > the
+  existing untyped default. Typed nodes also gain richer spoken text ("{label} ({type})"). Fully
+  additive — a graph with no `type`/`nodeTypes` set renders identical circles, unchanged.
+- 32f7b12: `lyra-graph` gains `hiddenTypes: string[]`, hiding every node whose `type` is listed (plus incident
+  links) from rendering, the simulation, the keyboard roving ring, and the accessible data list/
+  counts. Positions round-trip via a new remembered-position cache, so toggling a type off and back
+  on restores each node where it was instead of re-randomizing. Fully additive — an empty
+  `hiddenTypes` (the default) renders every node/link exactly as before.
+- e022166: Adds `<lyra-handoff-divider>`: a labeled semantic separator marking control transfer between agents
+  in a transcript (e.g. "Transferred to Research Agent"), with an optional `avatar` slot. Root is
+  `role="separator"` named by the computed label; the label is announced once on first connect
+  through an internal live region, since a handoff lands mid-stream and later property changes never
+  re-announce.
+- 4cddc07: Adds `<lyra-highlight-layer>`: a presentational overlay that paints highlight rectangles
+  (percent-of-box coordinates) over positioned content — a pdf page, an image, any relatively-positioned
+  frame. Roving-tabindex keyboard access (ArrowUp/Down/Left/Right honoring RTL, Home/End, Enter/Space),
+  `aria-current` on the active rect, a one-shot `flash()` emphasis pulse with a reduced-motion static
+  fallback, and token-mapped tones. Zero dependencies. `lyra-pdf-viewer` adopts it next for per-page
+  highlight painting.
+- 4c707de: Adds `<lyra-image-viewer>`: a full pan/zoom raster-image viewer with labeled region highlights and
+  opt-in region annotation (pointer-drag or keyboard), self-registering into the document-viewer
+  registry for `image/png`, `image/jpeg`, `image/webp`, `image/gif`, `image/avif`, and `image/bmp`.
+  Distinct from `<lyra-svg-viewer>` (vector documents) and `<lyra-image-comparer>` (before/after
+  comparison) — this is the landing surface for `region`-anchored citations (bounding-box grounding).
+- 2ad038b: `lyra-json-viewer` gains an imperative search API (`runSearch()`, `searchNext()`,
+  `searchPrevious()`, `clearSearch()`, event `lyra-search-change`) as a thin layer over its existing
+  declarative `search` property -- the property, its highlighting, and its force-expand behavior are
+  unchanged; the new methods add match-count resolution and a navigable cursor (`data-active` on the
+  current match) on top. The count-resolving entry point is named `runSearch()` rather than `search()`
+  (unlike this same quartet on other viewers) because `search` is already this component's own public
+  string property -- a method can't share its name. Previously there was no way to count matches or
+  step between them programmatically.
+- ac19eb0: `lyra-lite-chart` gains a `legendText?: (label: string, datasetIndex: number) => string` hook,
+  appending formatter-supplied text (e.g. a value or percentage share) after each series' label in the
+  built-in legend row — mirrors the existing `pointText`/`tickFormat` opt-in-hook convention. Previously
+  a consumer needing per-series legend text beyond the bare label had to hand-roll an entire replacement
+  legend instead of using the built-in `legend` prop.
+- c721d97: `lyra-map` gains a `dataLayers: GeoJsonDataLayer[]` property: each entry adds a GeoJSON source plus
+  fill/line/circle layers (colored from `--lyra-*` tokens by an optional `tone`), independent of the
+  existing `choropleth` prop (which requires `field`/`stops` and can't display plain geometry). Defaults
+  to an empty array — zero behavior change for existing `lyra-map` users. This is the enabler for the
+  upcoming GeoJSON-file document-viewer bridge, and is useful standalone for rendering arbitrary
+  GeoJSON shapes (routes, zones, points of interest) without hand-building maplibre-gl layers.
+- 92955fc: `lyra-markdown` gains `heading-anchors` (stamps computed GitHub-slugger-style ids on headings),
+  `getHeadingTree()` (a document-ordered heading outline, computed regardless of `heading-anchors`),
+  `fragment`/`text-quote` anchor-target support (`highlights`, `activeHighlightId`, `anchor`,
+  `scrollToAnchor()`, events `lyra-highlight-activate`/`lyra-text-select`/`lyra-anchor-result`), and
+  `math` (renders `$...$`/`$$...$$` TeX as MathML via the optional `katex` peer, falling back to
+  literal source text when the peer isn't installed). Previously there was no way to deep-link into a
+  section, highlight a quoted passage, or render math in rendered Markdown content.
+- 3492739: `lyra-markdown` gains real shiki syntax highlighting for fenced code blocks, reusing
+  `<lyra-code-block>`'s own optional `shiki` peer and grammar-loading machinery directly (not by
+  embedding `<lyra-code-block>` itself, which would have hit DOMPurify's default custom-element
+  blocklist and re-mounted — losing state and re-triggering async loads — on every streaming chunk).
+  On by default whenever the `shiki` peer is installed (set `highlightCode="false"` to opt out); new
+  `languages`/`languagesOnly` properties mirror `<lyra-code-block>`'s own fine-grained bundle-size
+  controls. Highlighting is skipped entirely while `streaming` is `true` and applied once a stream
+  settles, so there is no added per-chunk cost while content is still arriving.
+- e5df5af: Adds `<lyra-message-actions>`: the per-message action toolbar for `lyra-chat-message`'s `actions` slot
+  — opt-in built-ins (`copy` / `regenerate` / `edit` / `feedback`, in `controls`-array order) that emit
+  intent events (`lyra-regenerate`, `lyra-edit`, plus bubbled `lyra-copy`/`lyra-change`/`lyra-submit`
+  from the embedded copy button and thumbs-only feedback), and a default slot for custom controls (e.g.
+  a slotted `lyra-branch-picker`) that participate in the toolbar's ArrowLeft/ArrowRight/Home/End
+  navigation. Optional `reveal-on-hover` hides the bar until the enclosing `lyra-chat-message` is
+  hovered or a control inside has focus.
+- 9544450: Add `lyra-message-feedback`: thumbs up/down for one assistant message, with an optional inline
+  detail step (multi-select reason chips + a free-text comment) that opens as a disclosure directly
+  below the thumbs rather than a floating overlay. Fires `lyra-change` on every rating toggle and
+  `lyra-submit` (`{ value, reasonIds, comment }`) from the panel's submit button; stores nothing
+  itself — a host persists the rating and may reflect a previously-recorded one back via `value` +
+  `disabled`. Re-activating the pressed thumb clears the rating unless its own detail panel is open,
+  in which case that click re-opens the panel with any surviving draft instead.
+- 22c1006: Adds `<lyra-mind-map>`: a radial expandable topic tree (NotebookLM-style Mind Maps) — zero-dependency
+  SVG, closed-form arc-subdivision layout in its own `mind-map-layout.ts` module, single-tab-stop
+  keyboard roving (mirroring `lyra-word-cloud`), and `lyra-topic-select`/`lyra-topic-toggle` events.
+  Multiple root topics hang off an implicit center hub; expansion state is keyed by topic id and
+  survives streaming `topics` reassignment.
+- 2ad038b: Recorded decision: `.msg` (Outlook) files are not supported this round. `.msg` is OLE/CFB binary per
+  MS-OXMSG; the available npm parser (`@kenjiuno/msgreader` plus its `decompressrtf` companion) is
+  below this library's maintenance bar for an optional peer. `.msg` files continue to resolve to
+  `<lyra-document-preview>`'s generic download fallback, exactly like any other unregistered format —
+  convert to `.eml` server-side to use `<lyra-email-viewer>` instead. No API change; this changeset
+  exists to document the decision, guarded by a permanent regression test.
+- 22c1006: Adds `<lyra-neighbor-list>`: one entity's relationship rows (relation, direction, neighbor) with
+  per-row navigate (`lyra-entity-activate`) and expand-in-graph (`lyra-node-expand`, matching
+  `lyra-graph`'s own event name/detail) affordances, optional relation grouping, and automatic
+  `lyra-virtual-list` virtualization above `virtualizeAt` rows.
+- 22c1006: Adds `<lyra-node-palette>`: a searchable, categorized node library for workflow editors — drag an
+  item onto a `droppable` `lyra-flow-canvas`, or place it by keyboard (`lyra-palette-place`/
+  `lyra-select`). Fully decoupled from the canvas itself, agreeing only on the exported
+  `FLOW_PALETTE_MIME_TYPE` drag-payload constant.
+- a0e579a: Adds `<lyra-notebook-viewer>`: a read-only Jupyter notebook (nbformat 4.x) renderer that parses
+  `.ipynb` JSON natively and composes `lyra-markdown`/`lyra-code-block`/`lyra-json-viewer` per cell,
+  with `node-path`/`fragment` cell anchors and imperative search over cell sources and text outputs.
+  Self-registers into the document-viewer registry for `application/x-ipynb+json`. Execution, kernels,
+  and ipywidgets are out of scope; stream/error outputs render as plain preformatted text this round.
+- 15062d0: Adds `<lyra-page-rail>`: a virtualized vertical thumbnail rail for page-addressed documents, with
+  per-page highlight heat markers. Wired mode (`viewer`/`for`) tracks page/count from a
+  `PageThumbnailSource`-shaped viewer's own `lyra-load`/`lyra-page-change` events and lazily renders
+  thumbnails as rows materialize (`lyra-pdf-viewer` satisfies this structurally); mediated mode
+  (`page-count`/`page`) works as a fully functional pager without a wired viewer. Roving-tabindex
+  keyboard access via `lyra-virtual-list`, typed-digit page jump, `lyra-page-select` event.
+- 22c1006: Adds `<lyra-path-strip>`: a compact, horizontally scrollable node -> relation -> node chain
+  rendering a GraphRAG reasoning path, with one roving tab stop across every element (nodes and
+  relations alike), logical (RTL-mirroring) directed-edge arrows, and `lyra-entity-activate`/
+  `lyra-relation-activate` events.
+- 75c17bd: `lyra-pdf-viewer` becomes the reference `DocumentAnchorTarget` implementation: resolves `page`,
+  `text-quote`, and `region` anchors (`scrollToAnchor()`), paints highlights per page via
+  `lyra-highlight-layer`, exposes `getPageText(page)` and `renderPageThumbnail(page, canvas, options?)`
+  for rail/search/chunking consumers, and emits `lyra-load { pageCount }`,
+  `lyra-highlight-activate`/`lyra-text-select`/`lyra-anchor-result`. The `application/pdf` document-
+  viewer registration now declares its anchor/text-select capabilities and forwards `anchor`/
+  `highlights`. All additive — existing `src`/`page`/`zoom`/`nextPage()`/`previousPage()`/`zoomIn()`/
+  `zoomOut()` and their events are unchanged.
+- 1879c40: `lyra-pdf-viewer` gains an imperative in-document search API (`search()`, `searchNext()`,
+  `searchPrevious()`, `clearSearch()`, event `lyra-search-change`), a public `goToPage(page):
+Promise<boolean>` method, and `getOutline(): Promise<PdfOutlineItem[]>` for reading a PDF's table of
+  contents. Search matches paint as `<mark part="search-match">` (`search-match-active` for the
+  current one) without touching any highlight state. The `application/pdf` document-viewer
+  registration now declares `search: true` in its capabilities. Previously there was no way to search
+  inside a rendered PDF, jump to a page programmatically, or read its outline.
+- 22c1006: Adds `<lyra-provenance-panel>`: the grounding breakdown for one answer — a four-section disclosure
+  panel (Entities / Relationships / Communities / Text chunks) composing `lyra-entity-chip`,
+  `lyra-path-strip`, compact `lyra-community-card`s, and a compact `lyra-chunk-inspector`. Every child
+  event bubbles straight through unmodified; its own `lyra-toggle` event tracks per-section
+  expand/collapse state, which survives streaming `provenance` reassignment.
+- 2d15c51: Adds `<lyra-push-to-talk>`: a mic capture button owning the full `getUserMedia`/`MediaRecorder`
+  lifecycle — permission request, hold or toggle recording, optional chunked streaming
+  (`lyra-record-chunk`) for streaming STT, an opt-in RMS level meter (`lyra-level`), a `max-duration-ms`
+  auto-stop guard, and `lyra-record-start`/`lyra-record-stop`/`lyra-record-cancel`/`lyra-record-error`
+  events. No SDK dependency — native browser APIs only. Previously lyra-ui had no voice-capture
+  component at all; every agentic voice UI had to hand-roll this lifecycle from scratch.
+- 3a2f6d2: Add `lyra-rubric-form`: a configurable annotation rubric (LangSmith annotation-queue style) —
+  score, category, and freeform-comment keys with a submit-and-next flow for working through an eval
+  queue. Follows `lyra-tool-param-form`'s exact `ElementInternals`-attached-directly, JSON-serialized
+  form-value pattern; a `score` key renders `lyra-segmented` (≤10 integer steps) or `lyra-slider`,
+  `category` renders `lyra-select` or `lyra-checkbox-group` (`multiple`), and `comment` renders
+  `lyra-textarea`.
+- c388b94: Add themeable static edge fades and native horizontal scrolling to overflowing `lyra-segmented` and
+  `lyra-tabs` rows.
+- de5b8b7: Adds `<lyra-sequence-strip>`: a compact, one-thin-cell-per-item strip visualizing a sequence of
+  categorical states with an optional secondary per-cell marker (e.g. a CI build-step strip, a
+  log-severity strip, or — the motivating case — a per-turn conversation-history strip). Pure CSS/flex,
+  zero dependencies, `role="img"` with an auto-generated per-category "label: count" `aria-label`
+  summary (matching `lyra-sparkline`'s accessibility model), plus a pointer-hover tooltip showing each
+  item's own label.
+- 22c1006: Adds `<lyra-source-picker>`: a checkbox tree/list scoping which sources ground the next answer —
+  tri-state folders, select-all, `lyra-file-icon` type icons, and built-in search that keeps matching
+  descendants' ancestors visible. Deliberately not `FormAssociated` (a scoping panel, not a form
+  control, mirroring `lyra-tool-select-dialog`'s stance) and renders its own `role="tree"` rather than
+  composing `lyra-tree`, since `TreeItem` has no tri-state checkbox model.
+- 685eb35: Add `lyra-span-waterfall`: the horizontal-timeline projection of the same `LyraSpan[]`
+  `lyra-trace-tree` consumes — a time axis, one row per span in start order, and status-toned,
+  keyboard-navigable bars (Langfuse timeline / Temporal event-history style). Declarative
+  `viewStartMs`/`viewEndMs` window props (composable with `lyra-time-range` as a brush) stand in for
+  zoom/pan gestures this round. Both components emit the same `lyra-span-select { id }` and accept
+  the same `activeSpanId`, so a host syncs selection between them with two listeners and one property
+  binding.
+- 2ad038b: `lyra-spreadsheet-viewer` and `lyra-csv-viewer` gain `cell-range` anchor-target support
+  (`highlights`, `activeHighlightId`, `scrollToAnchor()`, event `lyra-highlight-activate`) and an
+  imperative in-document search API (`search()`, `searchNext()`, `searchPrevious()`, `clearSearch()`,
+  event `lyra-search-change`) — identical on both viewers, addressing cells by the same 1-based raw
+  grid (header row included) an A1 reference already implies. Spreadsheet's search/anchor resolution
+  additionally spans every sheet, switching `lyra-tabs` as needed. Both registry entries now declare
+  `capabilities: { anchors: ['cell-range'], search: true, textSelect: false }`. Previously there was
+  no way to highlight or search a specific cell/range in a rendered spreadsheet or CSV file.
+- 761ab24: Adds `<lyra-stack-trace>`: parses V8/JS-TS, Firefox/Safari, and Python stack traces (including
+  chained-error groups) into a message plus collapsible, activatable frames (`lyra-frame-select`),
+  folding internal frames (`node_modules/`, `node:internal`, `site-packages/`, ...) behind a
+  count-labeled toggle. Falls back to verbatim raw text when nothing parses.
+- b33bb35: Adds `<lyra-suggestion-chips>`: starter prompts (empty thread) and follow-up suggestions (after a
+  response) as a horizontally scrollable chip row (or a wrapping grid via `wrap`), each with an optional
+  secondary detail line. Fires `lyra-suggestion-select` (`{ id, label }`) on activation — never writes
+  into a composer or sends anything itself. Keyed `repeat()` on `id` preserves focus across a mid-stream
+  suggestions replacement.
+- 2ad038b: `lyra-svg-viewer` and `lyra-document-preview` (its image-format path) gain an opt-in `zoomable`
+  property that wraps the rendered content in an internal `lyra-zoomable-frame` for pan/zoom
+  inspection, plus display-only `region` anchor-target support (`highlights`, `activeHighlightId`,
+  `scrollToAnchor()`, event `lyra-highlight-activate`) for percent-unit bounding-box highlights that
+  scale with the zoom level. `zoomable` defaults to `false` on both, so an inline thumbnail (e.g. in a
+  chat stream) doesn't unexpectedly grow a focusable zoom-chrome viewport. Previously neither viewer
+  had any pan/zoom or region-highlighting capability.
+- 1e051a4: `lyra-swatch-picker` options gain an optional `icon` field (`SwatchOption.icon`, mirroring
+  `lyra-segmented`'s `SegmentedItem.icon`): a consumer-supplied shape (e.g. a brand glyph) rendered in
+  place of the plain filled circle, exposed as `::part(swatch-icon)`. A `currentColor`-based SVG picks up
+  the option's `color` automatically through the swatch's `color` custom property, so consumers who
+  previously hand-rolled a row of colored icon buttons (rather than plain color circles) can now use the
+  picker directly.
+
+  The selected swatch also gains two new opt-in, off-by-default custom properties for a more emphatic
+  selected state: `--lyra-swatch-picker-selected-blur` (0 by default, a crisp ring; set a real length for
+  a soft glow tinted by the swatch's own color -- works for both a plain color circle and an icon swatch,
+  via a `box-shadow`/`drop-shadow` split so the glow follows the icon's actual silhouette rather than an
+  invisible transparent box) and `--lyra-swatch-picker-shine-duration` (0s by default, static; set a real
+  duration for a rhythmic brighten-and-settle pulse, disabled under `prefers-reduced-motion: reduce`).
+  Together they cover a "shining" gemstone-style accent-theme picker without changing the default look
+  for any existing consumer.
+
+- 55140c3: `lyra-table` gains heat-tint mode: a per-column `heatValue(row)` accessor drives a `color-mix()`-based
+  cell background computed from a shared min/max scale across the whole grid (auto-derived from the
+  data, or overridden via the new `heatTintScale` property), matching `lyra-heatmap`'s own
+  `--lyra-heatmap-scale-lo`/`-hi` ramp-token convention via new `--lyra-table-heat-tint-lo`/`-hi` custom
+  properties. Previously a consumer needing a value-driven cell background had to hand-compute a color
+  string themselves via the existing `cellStyle` escape hatch.
+- 6f7c938: `lyra-table` gains `rowTotal`/`grandTotal`: a trailing column showing each row's total (`rowTotal`)
+  and, when at least one column also defines `footer`, a grand-total cell at its bottom-right
+  intersection (`grandTotal`). Both share the existing `footer(rows)` hook's "consumer computes/renders,
+  table only positions" contract rather than assuming addition. Previously a consumer needing row/grand
+  totals alongside `lyra-table`'s existing per-column `footer` had to render them outside the table
+  entirely, breaking column alignment.
+- 4cae327: Adds `<lyra-task-list>`: a live, collapsible tracker for an agent's plan, embedded in the
+  transcript. Renders ordered steps with per-step lifecycle status (`pending`/`running`/`success`/
+  `error`) and one level of nested sub-steps; status changes are announced through an internal
+  throttled live region. A dynamic `detail-<id>` slot per item accepts rich content such as a
+  `<lyra-tool-call-chip>`. Unlike `<lyra-stepper>` (a single-selection navigation control),
+  `<lyra-task-list>` is a read-only status report — several steps may be `running` at once, and
+  there is no selection.
+- bf223ca: Adds `<lyra-terminal>`: a read-only, virtualized ANSI console for streamed agent/tool output — SGR
+  color rendering (16 named colors, 256-color, truecolor), stick-to-bottom `follow` with a
+  `lyra-follow-change` event, `write()`/`content` streaming, `\r`/`\b`/`\t` cursor handling so progress
+  bars render correctly, in-buffer `search()`/`searchNext()`/`searchPrevious()`/`clearSearch()`,
+  `line-range` highlight/anchor support (`scrollToAnchor()`, `lyra-highlight-activate`), and built-in
+  copy/download affordances. Not a PTY — no stdin/keystroke handling or cursor-addressed full-screen
+  apps.
+- 52a90e5: Adds `<lyra-test-results>`: a pass/fail suite summary with visible (never color-only) per-status
+  counts, `aria-pressed` status filter toggles, and failure rows that auto-expand by default and can
+  host a slotted `detail-{testId}` diff/code block. Row state (expansion, filter) survives a streaming
+  `suites` reassignment mid-run, and a run's completion is announced through an internal live region.
+- 967e785: Adds `<lyra-thread-list>`: the conversation sidebar — a grouped ("Pinned / Today / Yesterday / Previous
+  7 days / …"), searchable list of chat sessions built on `lyra-conversation-item` and virtualized via
+  `lyra-virtual-list`. Data mode (`threads` array) renders rows with optional pin/archive/delete row
+  actions, all controlled events (`lyra-thread-pin`/`-archive`/`-delete`/`-rename`) carrying the
+  _requested_ new state — no CRUD or persistence of its own. Slotted mode (host-supplied
+  `lyra-conversation-item`s) skips grouping/virtualization/row-actions entirely, for a host that wants
+  full control over a short, unconstrained list.
+- 9448c10: Add `lyra-trace-tree`: a collapsible span hierarchy for one agent/LLM trace (Langfuse/LangSmith
+  run-tree style) — kind icon, name, status, an inline duration bar on the shared trace time scale,
+  and optional tokens/cost columns. Consumes a flat `LyraSpan[]` array (hierarchy derived from
+  `parentId`); expand state survives a streaming reassignment of `spans`. The shared `LyraSpan` type
+  (`components/trace-tree/span.ts`) is also consumed by the upcoming `lyra-span-waterfall`, so the
+  two components can render the same trace as two synchronized projections.
+- bef6b0d: Adds `<lyra-transcript-feed>`: a data-driven live-captions surface for an in-progress voice session —
+  `entries` in (`{ id, speaker?, text, interim?, timestamp? }[]`), reconciled keyed by `id` so a same-id
+  interim-to-final upgrade moves the row into the announcing `role="log"` region without a duplicate
+  announcement. Ships the shared stick-to-bottom "follow" contract (`follow`/`lyra-follow-change`, the
+  same vocabulary `lyra-terminal` uses). No dependency, no STT/diarization built in — bring your own
+  transcription source and stream entries in.
+- ec5fe96: Adds the `DocumentAnchorTarget` mixin (`internal/anchor-target.ts`) and its `LyraAnchorTarget`
+  interface: the shared implementation of the anchor-target contract every anchor-capable lyra-ui
+  viewer adopts — `highlights`/`activeHighlightId`/`anchor` properties, `scrollToAnchor()` with a
+  generation-guarded retry-until-loaded loop and screen-reader announcements, and
+  `lyra-highlight-activate`/`lyra-text-select`/`lyra-anchor-result` event plumbing including
+  selection->anchor emission. Internal module; no adopter yet in this release (`lyra-pdf-viewer` adopts
+  it next). No behavior change for any existing component.
+- 44b6de7: Adds the shared `LyraAnchor`/`LyraHighlight` grounding-bridge type module
+  (`@aceshooting/lyra-ui/components/document-viewer/anchors.js`): a W3C Web-Annotation-inspired
+  discriminated union (`page`, `text-quote`, `fragment`, `line-range`, `cell-range`, `cfi`,
+  `time-range`, `region`, `node-path`) that every anchor-capable viewer and every knowledge-grounded
+  citation surface will address a passage through. Pure types plus one constant; nothing to register,
+  no runtime behavior change for existing components.
+- c644abd: Widens `DocumentFile` with optional `anchor`/`highlights`/`alt` fields and
+  `DocumentRendererDefinition` with an optional `capabilities` declaration; `lyra-document-viewer` gains
+  matching `anchor`/`highlights`/`alt` properties, forwards them to the resolved renderer, and emits
+  `lyra-anchor-result { found }` once per applied anchor. Every addition is optional and every existing
+  registration/usage is unaffected — this removes the previous limitation where even a renderer's own
+  props (like pdf's `page`) couldn't be reached through the router.
+- 5f92994: Adds `internal/text-highlights.ts`: a highlight paint manager for HTML-flow document viewers, using
+  the CSS Custom Highlight API when available and falling back to `<mark>`-wrapping otherwise, with a
+  uniform `acquireHighlightHandle()` API that never requires callers to branch on browser support
+  themselves. Internal module with no public tag and no adopter yet in this release; ships ahead of the
+  markdown/html-viewer/docx-viewer highlight support that will consume it. No behavior change for any
+  existing component.
+- b067b83: Adds `internal/text-quote.ts`: dependency-free `text-quote` anchor resolution (quote/prefix/suffix ->
+  DOM `Range`, and the reverse — a selection `Range` -> a `text-quote` anchor with captured context).
+  Internal module with no public tag; used by the `DocumentAnchorTarget` mixin's default selection
+  handling and by `lyra-pdf-viewer`'s anchor/highlight resolution. No behavior change for any existing
+  component.
+- bc75a1f: Adds `<lyra-usage-badge>`: a compact, static resource strip for one message or run — tokens in/out,
+  cost, latency — with a hover/focus tooltip breakdown (full grouped figures, plus a computed Total
+  tokens row when both counts are set). Purely formatting: it computes no counts, rates, or prices,
+  and every segment is independently optional. Reuses `<lyra-tool-call-chip>`'s hover/focus/Escape
+  tooltip contract. Distinct from `<lyra-context-meter>` (occupancy of a fixed capacity) and
+  `<lyra-generation-status>` (a live ticking readout with a Stop button) — this is the static spend
+  record shown after a message or run completes.
+- f3c744b: `lyra-virtual-list` gains a public `scrollToIndex(index, { align, behavior })` method: scrolls a
+  specific row into view (`align: 'start' | 'end' | 'auto'`, reduced-motion-aware `behavior`) without
+  the `aria-current`/"active row" side effect of the existing `active-id` property. In
+  `row-height="auto"` mode, a far-off target's estimate-based offset is corrected with a single re-scroll
+  once the row's real height is measured. Previously there was no way to programmatically scroll to a
+  specific row at all except by driving `active-id`, which also marks that row as the current selection —
+  a streaming transcript's own stick-to-bottom auto-scroll has nothing to do with "selection."
+- e24ae10: Adds `<lyra-voice-picker>`: a TTS voice selector mirroring `lyra-model-select`'s closed-dropdown/
+  free-text-combobox dual mode and form-association, with a `catalog` entry shape carrying
+  `language`/`description`/`previewUrl`, and an event-first preview affordance (`lyra-preview-request`,
+  cancelable) that plays through one internal `<audio>` when a `previewUrl` is present and the host
+  doesn't take over. No TTS SDK, no catalog fetching, no selection persistence — those stay host
+  concerns.
+- 37a89cb: Adds `lyra-widget-renderer`'s internal type registry (`registerWidgetType()`,
+  `getDefaultWidgetTypeRegistry()`) and its security-critical, DOM-free allowlist resolver
+  (`resolveTree()`): unknown widget types and disallowed/mistyped props are skipped, never rendered;
+  `forcedProps` always win; a child's `slot` outside its parent's allowlist renders unslotted; depth
+  (32) and node-count (5000) caps are enforced. No public API surface change on its own — groundwork
+  for the `<lyra-widget-renderer>` element, landing in the same release.
+- bcd3c2b: Adds `<lyra-widget-renderer>`: renders an agent-streamed declarative JSON widget tree through an
+  allowlisted `type → lyra tag` registry (`card`/`badge`/`button`/`stat`/`result-card`/`result-field`/
+  `markdown`/`image` built in, plus `row`/`col`/`text` structural built-ins) — unknown types and
+  disallowed/mistyped props are silently skipped, never rendered, with a deduped dev-mode warning; a
+  single bubbling `lyra-widget-action` event surfaces actions; streamed updates reconcile keyed by
+  `id` (or structural path), so a mapped widget's own internal state survives a re-resolve.
+  `registerWidgetType()` extends the default registry app-side; a per-instance `registry` property
+  fully overrides it. No `innerHTML`/`unsafeHTML` path exists anywhere in the implementation.
+- dc168c7: Adds `<lyra-xml-viewer>`: a `DOMParser`-based collapsible XML tree view mirroring
+  `lyra-json-viewer`'s UX (`collapsed-depth`, `copyable`, structural-path expand state that
+  survives a same-shape `xml` reassignment), with an imperative `search()`/`searchNext()`/
+  `searchPrevious()`/`clearSearch()` API and `node-path` anchors (element indices plus an optional
+  trailing `'@attrName'` segment for attribute-level targeting). Self-registers into the
+  document-viewer registry for `application/xml`/`text/xml` and `.xml`/`.xsd`/`.xsl`/`.xslt`/`.rss`/
+  `.atom` files. No XPath/XSLT evaluation, no editing, no schema validation.
+
+### Patch Changes
+
+- 7bbd069: Internal only: adds three new `src/internal/` modules (`slugger.ts`, `cell-range.ts`,
+  `viewer-search.ts`) and five new localization keys (`viewerSearchMatchCount(Plural)`,
+  `viewerSearchNoMatches`, `viewerSearchActiveMatch`, `viewerHighlightLabel`) used by upcoming
+  per-viewer search/anchor/highlight support. No consumer-visible behavior change on its own.
+- da8bbf0: Requires `@aceshooting/lyra-flags` `^1.4.0` (up from `^1.3.0`) as the optional flag-asset peer.
+  1.4.0 is a docs/metadata-only release of the flags package (no runtime change), so this is a
+  range refresh, not a behavioral requirement bump.
+- 967e785: Fixes `<lyra-virtual-list>`: a `groups`-supplied group marker no longer carries `role="heading"`
+  `aria-level="2"`. Those markers render inside the scroll container's `role="list"`, and ARIA's `list`
+  role only permits `listitem` as a direct owned child — a `heading` sibling was a critical
+  `aria-required-children` violation for any consumer combining `groups` with an accessibility check
+  (surfaced by `<lyra-thread-list>`'s date-grouped rows). The marker is still rendered as visible,
+  non-interactive text; it's just no longer exposed as a heading landmark.
+
 ## 3.7.0
 
 ### Minor Changes
