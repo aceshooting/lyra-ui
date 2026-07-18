@@ -548,7 +548,7 @@
     "lit": "^3.3.3"
   },
   "peerDependencies": {
-    "@aceshooting/lyra-flags": "workspace:^1.3.0",
+    "@aceshooting/lyra-flags": "workspace:^1.4.0",
     "@aiden0z/pptx-renderer": "^1.2.4",
     "@sgratzl/chartjs-chart-boxplot": "^4.4.0",
     "chart.js": "^4.5.0",
@@ -652,7 +652,7 @@
     }
   },
   "devDependencies": {
-    "@aceshooting/lyra-flags": "workspace:^1.3.0",
+    "@aceshooting/lyra-flags": "workspace:^1.4.0",
     "@aiden0z/pptx-renderer": "^1.2.4",
     "@custom-elements-manifest/analyzer": "^0.11.0",
     "@open-wc/testing": "^5.0.0",
