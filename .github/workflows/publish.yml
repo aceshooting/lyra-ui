@@ -118,8 +118,10 @@ jobs:
           BUNDLE: ${{ steps.attest.outputs.bundle-path }}
         run: |
           provenance="$TARBALL.sigstore.json"
+          intoto="$TARBALL.intoto.jsonl"
           cp "$BUNDLE" "$provenance"
-          gh release upload "$TAG" "$provenance" --repo "$GITHUB_REPOSITORY" --clobber
+          cp "$BUNDLE" "$intoto"
+          gh release upload "$TAG" "$provenance" "$intoto" --repo "$GITHUB_REPOSITORY" --clobber
 
       - name: Publish to npm
         working-directory: ${{ steps.pkg.outputs.dir }}
