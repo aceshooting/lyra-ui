@@ -79,8 +79,10 @@ jobs:
       - name: Update npm CLI (trusted publishing needs >=11.5.1)
         run: npm i -g npm@12.0.1
 
+      # --if-present mirrors scripts/publish.sh's own per-package gate: lyra-flags has no "build"
+      # script (its generated index is produced by `prepack` at publish time), only lyra-ui does.
       - name: Build package
-        run: pnpm --filter "${{ steps.pkg.outputs.name }}" run build
+        run: pnpm --filter "${{ steps.pkg.outputs.name }}" run --if-present build
 
       - name: Publish to npm
         working-directory: ${{ steps.pkg.outputs.dir }}
