@@ -66,7 +66,7 @@ export class LyraPollStatus extends LyraElement<LyraPollStatusEventMap> {
     this.disarmTicker();
   }
 
-  protected updated(changed: PropertyValues): void {
+  protected willUpdate(changed: PropertyValues): void {
     if (changed.has('nextInMs')) {
       if (this.nextInMs != null) {
         // A NaN/negative nextInMs (a bad attribute, or a stray programmatic assignment) must not
@@ -82,7 +82,17 @@ export class LyraPollStatus extends LyraElement<LyraPollStatusEventMap> {
         this.targetAt = Date.now() + nextInMs;
         this.due = false;
         this.remainingMs = nextInMs;
-        if (this.active && !this.paused) this.armTicker();
+      } else {
+        this.due = false;
+        this.remainingMs = 0;
+      }
+    }
+  }
+
+  protected updated(changed: PropertyValues): void {
+    if (changed.has('nextInMs')) {
+      if (this.nextInMs != null && this.active && !this.paused) {
+        this.armTicker();
       } else {
         // Clearing next-in-ms (e.g. between poll cycles) must stop the
         // ticker armed for the previous deadline -- otherwise it keeps
@@ -90,8 +100,6 @@ export class LyraPollStatus extends LyraElement<LyraPollStatusEventMap> {
         // lyra-poll-due for a countdown the host no longer considers active,
         // while [part='countdown'] already renders nothing.
         this.disarmTicker();
-        this.due = false;
-        this.remainingMs = 0;
       }
     }
     if (changed.has('paused')) {

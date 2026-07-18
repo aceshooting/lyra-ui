@@ -155,7 +155,9 @@ export class LyraCheckboxGroup extends LyraElement<LyraCheckboxGroupEventMap> {
   connectedCallback(): void {
     super.connectedCallback();
     this.addEventListener('change', this.emitChange as EventListener);
-    queueMicrotask(() => this.onSlotChange());
+    // Initialize light-DOM-derived state before the first render. Doing this in firstUpdated()
+    // schedules a redundant follow-up update and triggers Lit's change-in-update warning.
+    this.onSlotChange();
   }
 
   disconnectedCallback(): void {
@@ -164,7 +166,6 @@ export class LyraCheckboxGroup extends LyraElement<LyraCheckboxGroupEventMap> {
   }
 
   protected firstUpdated(): void {
-    this.onSlotChange();
     this.addEventListener('blur', () => { this.touched = true; this.sync(); }, true);
   }
 
