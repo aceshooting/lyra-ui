@@ -1,5 +1,46 @@
 # Changelog
 
+## 3.9.0
+
+### Minor Changes
+
+- abdd967: `lyra-activity-feed` gains `renderText?: (entry: ActivityEntry) => TemplateResult`, overriding the
+  default plain-text `[part="entry-text"]` rendering with arbitrary rich content — rendered markdown,
+  or markdown plus a trailing tool-call chip list — identically whether or not the feed is currently
+  virtualized, since both the plain and virtualized paths render every entry through the same
+  internal template. Previously `ActivityEntry.text` could only ever render as plain escaped text,
+  with no way to attach richer per-entry content.
+- b64d4d2: `lyra-graph` gains `dimmedNodeIds`/`dimmedLinkIds` (controlled, mirroring
+  `selectedNodeIds`/`selectedLinkIds`): a host can now apply a themeable low-opacity treatment to
+  arbitrary nodes/links -- e.g. dimming every non-neighbor of a hovered node -- via a new
+  `--lyra-graph-dimmed-opacity` custom property, in both the `svg` (default) and `canvas` renderers.
+  Previously the only way to express this was reaching into the shadow DOM; `1` (no-op) by default,
+  so existing usage is unaffected.
+- 1d1935e: `lyra-input` gains `'search'` as a documented `LyraInputType` member. It already worked at runtime
+  via unchecked passthrough to the internal native `<input type="search">` (`type` has no runtime
+  validation), but the exported type union didn't include it, so a consumer setting `type="search"`
+  got no compile-time confirmation it was supported and no protection against a future stricter-typed
+  release silently dropping it.
+- f6b4957: New `<lyra-markdown-core>` entry point: a build-lean variant of `<lyra-markdown>` for a consumer
+  whose `languages` map already covers every language it renders, mirroring the existing
+  `<lyra-code-block>`/`<lyra-code-block-core>` split. Its own module never imports shiki's ~200-
+  language default dynamic-import table -- `<lyra-markdown>`'s existing `languagesOnly` flag can't
+  give a bundler that guarantee, since it's checked at runtime, not statically provable. Every other
+  capability (GFM, heading anchors, text-quote highlights, math) is unchanged from `<lyra-markdown>`;
+  a fenced block whose language isn't in `languages` always renders the plain-text fallback.
+- 0a5227e: `lyra-thread-list` gains `wrapRow?: (thread: ChatThread, row: TemplateResult) => TemplateResult`
+  (data mode only): wraps each row's built-in `lyra-conversation-item` with host-supplied content
+  that has no home in the item's own `title`/`excerpt`/`meta`/`actions` surface — most notably a
+  leading purpose icon, since `lyra-conversation-item` has no default slot to receive one at all.
+  Previously data mode forced an all-or-nothing choice between its built-in grouping/virtualization
+  and a host's need for row content outside that surface, which only slotted mode (no grouping, no
+  virtualization) could accommodate.
+- d3f2e13: `lyra-usage-badge` gains `formatLatency?: (ms: number) => string`, overriding the built-in duration
+  algorithm (which has no minutes/hours tier — `'{ms}ms'`, or one-decimal seconds above 1000ms) in
+  both the visible strip and the tooltip row. Mirrors `lyra-activity-feed`'s `formatTimestamp`
+  convention. Previously a consumer whose latencies commonly exceed a minute (e.g. a long-running
+  agent run) had no way to render its own duration scale instead of a bare seconds count.
+
 ## 3.8.0
 
 ### Minor Changes
