@@ -29,16 +29,12 @@ const optionalPeers = [
 const bundleEntries = {
   core: {
     fixture: 'core',
-    // Bumped from 1_000_000, then 1_100_000, then 1_200_000, then 1_300_000: the root barrel's
-    // registered-tag count has continued to grow across component hardening passes (206 tags as
-    // of this bump, including 11 components -- artifact-panel, browser-frame, chat-viewport,
-    // checkpoint, confirm-bar, notebook-viewer, suggestion-chips, thread-list, usage-badge,
-    // voice-picker, widget-renderer -- that had shipped complete, tested source for a while but
-    // were never actually wired into src/lyra.ts's root barrel or the registration allowlist, so
-    // this bump also reflects that latent gap finally closing), growing the core bundle to
-    // ~1461.9 KiB. Budget leaves headroom over that measured size for incremental growth before
-    // the next bump is needed.
-    maxRawBytes: 1_650_000,
+    // The root barrel registers the full non-optional component set, so its raw bundle grows as
+    // those implementations gain functionality even when the tag count is stable. The current
+    // 208-tag entry measures ~1766.8 KiB with optional peers externalized; this leaves about 10%
+    // headroom while the tighter single-component gzip canary below still catches an accidental
+    // eager dependency in the shared base layer.
+    maxRawBytes: 2_000_000,
   },
   // Single-component regression canary: catches a PR silently dragging something heavy into the
   // eager import graph (e.g. a `*-loader.ts`'s dynamic `import()` accidentally hoisted to a
