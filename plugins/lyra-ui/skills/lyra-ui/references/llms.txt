@@ -75,6 +75,15 @@ The catalog is grouped by capability; `llms-full.txt` follows the same consumer-
 - **Media and interaction primitives** — `lyra-animated-image`, `lyra-animation`, `lyra-avatar-group`,
   `lyra-include`, `lyra-known-date`, `lyra-lightbox`, `lyra-qr-code` (needs the optional peer `qrcode`),
   `lyra-random-content`, `lyra-timeline`/`lyra-timeline-item`, and `lyra-tour`.
+- **Additional interaction, observability, and viewer primitives** — `lyra-activity-feed`,
+  `lyra-audio-visualizer`, `lyra-av-player`, `lyra-branch-picker`, `lyra-calendar`,
+  `lyra-checkbox-group`, `lyra-code-editor`, `lyra-command-palette`, `lyra-commit-card`,
+  `lyra-compare-panel`, `lyra-data-grid`, `lyra-emoji-picker`, `lyra-env-list`, `lyra-file-tree`,
+  `lyra-geojson-view`, `lyra-handoff-divider`, `lyra-highlight-layer`, `lyra-icon`/`lyra-icon-button`,
+  `lyra-image-viewer`, `lyra-message-actions`, `lyra-message-feedback`, `lyra-page-rail`,
+  `lyra-push-to-talk`, `lyra-rubric-form`, `lyra-sequence-strip`, `lyra-span-waterfall`,
+  `lyra-stack-trace`, `lyra-task-list`, `lyra-terminal`, `lyra-test-results`, `lyra-token-input`,
+  `lyra-trace-tree`, and `lyra-transcript-feed`.
 - **Conversation & Agent UI** — chat/tool-call/agent-config building blocks for streaming AI
   interfaces: `lyra-dialog`/`confirm()`, `lyra-tabs`, `lyra-checkbox`, `lyra-switch`,
   `lyra-radio`/`lyra-radio-group`, `lyra-input`, `lyra-textarea`, `lyra-callout`, `lyra-spinner`,
