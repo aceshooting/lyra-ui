@@ -11,7 +11,7 @@ export async function loadSheetJs(
     const candidate = (module as { default?: SheetJsApi }).default;
     return candidate && typeof candidate.read === 'function' ? candidate : module as SheetJsApi;
   } catch (error) {
-    console.warn('<lyra-spreadsheet-viewer> needs the optional peer dependency `xlsx` to parse workbooks — install it with `pnpm add xlsx`:', error);
+    console.warn('<lyra-spreadsheet-viewer> needs the optional peer dependency `xlsx` to parse workbooks — install it with `pnpm add https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz`:', error);
     return null;
   }
 }

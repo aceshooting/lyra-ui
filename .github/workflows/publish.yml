@@ -22,8 +22,10 @@ jobs:
   publish:
     runs-on: ubuntu-latest
     permissions:
-      contents: read
+      contents: write
       id-token: write
+      attestations: write
+      artifact-metadata: write
     steps:
       - name: Resolve release tag
         id: tag
@@ -73,16 +75,48 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      # Pinned to an exact version (OSSF Scorecard's Pinned-Dependencies check flags floating tags
-      # like `npm@latest`) -- bump manually when a newer npm CLI is needed; Dependabot can't track
-      # a version embedded in this inline command.
+      # Install the npm CLI from the commit that publishes npm 12.0.1. The full Git SHA keeps
+      # this build dependency immutable; update the SHA and expected version together.
       - name: Update npm CLI (trusted publishing needs >=11.5.1)
-        run: npm i -g npm@12.0.1
+        run: |
+          npm i -g git+https://github.com/npm/cli.git#868e586497cdc17b66eb9a8424bad67136e789f9
+          test "$(npm --version)" = "12.0.1"
 
       # --if-present mirrors scripts/publish.sh's own per-package gate: lyra-flags has no "build"
       # script (its generated index is produced by `prepack` at publish time), only lyra-ui does.
       - name: Build package
         run: pnpm --filter "${{ steps.pkg.outputs.name }}" run --if-present build
+
+      - name: Download release tarball
+        id: release_asset
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.tag.outputs.tag }}
+        run: |
+          dir="$RUNNER_TEMP/release-assets"
+          mkdir -p "$dir"
+          gh release download "$TAG" --pattern '*.tgz' --dir "$dir"
+
+          tarball="$(find "$dir" -maxdepth 1 -type f -name '*.tgz' -print -quit)"
+          test -n "$tarball"
+          echo "path=$tarball" >> "$GITHUB_OUTPUT"
+
+      - name: Generate release provenance
+        id: attest
+        uses: actions/attest@f7c74d28b9d84cb8768d0b8ca14a4bac6ef463e6 # v4
+        with:
+          subject-path: ${{ steps.release_asset.outputs.path }}
+
+      - name: Upload provenance to GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.tag.outputs.tag }}
+          TARBALL: ${{ steps.release_asset.outputs.path }}
+          BUNDLE: ${{ steps.attest.outputs.bundle-path }}
+        run: |
+          provenance="$TARBALL.sigstore.json"
+          cp "$BUNDLE" "$provenance"
+          gh release upload "$TAG" "$provenance" --clobber
 
       - name: Publish to npm
         working-directory: ${{ steps.pkg.outputs.dir }}

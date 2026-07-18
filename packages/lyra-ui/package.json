@@ -572,7 +572,7 @@
     "postal-mime": "^2.7.5",
     "qrcode": "^1.5.4",
     "shiki": "^4.3.1",
-    "xlsx": ">=0.18.5 <0.21.0"
+    "xlsx": ">=0.20.3 <0.21.0"
   },
   "peerDependenciesMeta": {
     "@aceshooting/lyra-flags": {
@@ -677,6 +677,7 @@
     "dompurify": "^3.4.12",
     "emoji-picker-element-data": "^1.8.0",
     "epubjs": "^0.3.93",
+    "fast-check": "^4.9.0",
     "ical.js": "^2.2.1",
     "jszip": "^3.10.1",
     "katex": "^0.17.0",
@@ -693,7 +694,7 @@
     "qrcode": "^1.5.4",
     "shiki": "^4.3.1",
     "typescript": "^7.0.2",
-    "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.2/xlsx-0.20.2.tgz"
+    "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz"
   },
   "packageManager": "pnpm@11.13.0",
   "customElements": "custom-elements.json"

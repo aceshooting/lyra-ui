@@ -1,4 +1,5 @@
 import { expect } from '@open-wc/testing';
+import * as fc from 'fast-check';
 import { matchesAccept } from './accept.js';
 
 const file = (name: string, type: string) => new File(['x'], name, { type });
@@ -41,4 +42,11 @@ it('treats an unresolved extension pattern as a match when assumeExtensionMatch 
   expect(matchesAccept(nameless, '.csv,.xlsx', true)).to.be.true;
   // A pattern that isn't extension-based is unaffected by the flag.
   expect(matchesAccept(nameless, 'image/*', true)).to.be.false;
+});
+
+it('handles arbitrary file metadata and accept strings without throwing', () => {
+  fc.assert(fc.property(fc.string(), fc.string(), fc.string(), (name, type, accept) => {
+    const result = matchesAccept(file(name, type), accept);
+    expect(result).to.be.a('boolean');
+  }));
 });

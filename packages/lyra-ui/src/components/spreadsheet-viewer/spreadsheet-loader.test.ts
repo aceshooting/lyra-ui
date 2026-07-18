@@ -20,6 +20,6 @@ it('supports injected imports and reports a missing peer', async () => {
   console.warn = (...args: unknown[]) => calls.push(args);
   try {
     expect(await loadSheetJs(() => Promise.reject(new Error('xlsx boom')))).to.equal(null);
-    expect(calls.flat().join(' ')).to.contain('pnpm add xlsx');
+    expect(calls.flat().join(' ')).to.contain('pnpm add https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz');
   } finally { console.warn = originalWarn; }
 });
