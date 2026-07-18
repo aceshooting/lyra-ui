@@ -1,4 +1,4 @@
-import { fixture, expect, html, oneEvent } from '@open-wc/testing';
+import { fixture, expect, html, oneEvent, aTimeout } from '@open-wc/testing';
 import './chunk-inspector.js';
 import type { LyraChunkInspector, LyraChunk } from './chunk-inspector.js';
 
@@ -102,6 +102,10 @@ it('normalizes a NaN virtualizeAt to the default (50) instead of silently disabl
   expect(Number.isNaN(el.virtualizeAt)).to.be.true;
   el.chunks = many;
   await el.updateComplete;
+  // Lets the newly-mounted internal virtual-list's row-height="auto" ResizeObserver measurements
+  // settle within this test -- matching virtual-list.test.ts's own convention -- rather than
+  // asserting immediately, since that observer callback would otherwise still be pending.
+  await aTimeout(50);
   expect(el.shadowRoot!.querySelector('lyra-virtual-list')).to.exist;
 });
 

@@ -9,6 +9,11 @@ export interface LyraCodeEditorEventMap { input: CustomEvent<{ value: string }>;
 class LyraCodeEditorBase extends LyraElement<LyraCodeEditorEventMap> {}
 
 /** `<lyra-code-editor>` — dependency-free multiline code editing surface with optional line numbers.
+ *
+ * Keyboard contract (no keyboard trap, WCAG 2.1.2): Tab inserts `tabSize` spaces at the caret.
+ * Shift+Tab is never captured, so it always performs native reverse focus traversal. Pressing
+ * Escape releases the next Tab for native forward traversal instead of indenting; typing any other
+ * key, or focus leaving the editor, re-arms Tab indentation.
  * @customElement lyra-code-editor
  * @slot label - Visible label content.
  * @slot hint - Supporting text.

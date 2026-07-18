@@ -901,10 +901,18 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
   };
 
   // Delegated onto [part="listbox"] (see render()) rather than one closure
-  // pair allocated per option per render -- resolves the target row via
-  // closest('[part="option"]') + a data-value lookup into `_rowsByValue`.
+  // pair allocated per option per render -- the click handler resolves the
+  // target row via closest('[part="option"]') + a data-value lookup into
+  // `_rowsByValue`.
+  //
+  // mousedown must be cancelled for ANY press inside the listbox, not just on
+  // option rows: the browser's default action moves focus to the pressed
+  // element, so a drag on the listbox scrollbar, a press on a group label, or
+  // the overflow row would blur the input, whose blur handler hides the
+  // dropdown mid-interaction. Cancelling mousedown does not suppress the
+  // subsequent click, so option selection still lands in onListboxClick.
   private onListboxMouseDown = (e: MouseEvent): void => {
-    if ((e.target as HTMLElement).closest('[part="option"]')) e.preventDefault();
+    e.preventDefault();
   };
 
   private onListboxClick = (e: MouseEvent): void => {

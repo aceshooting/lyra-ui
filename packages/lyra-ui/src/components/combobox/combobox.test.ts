@@ -1143,6 +1143,28 @@ it('closes the listbox when the input blurs (e.g. tabbing away), not just on out
   expect(el.open).to.be.false;
 });
 
+it('keeps the dropdown open on a mousedown inside the listbox but outside any option (scrollbar, group label, overflow row)', async () => {
+  const el = (await fixture(basic())) as LyraCombobox;
+  const input = el.shadowRoot!.querySelector('[part="combobox-input"]') as HTMLInputElement;
+  input.focus();
+  await el.updateComplete;
+  expect(el.open).to.be.true;
+
+  const listbox = el.shadowRoot!.querySelector('[part="listbox"]') as HTMLElement;
+  const ev = new MouseEvent('mousedown', { bubbles: true, composed: true, cancelable: true });
+  listbox.dispatchEvent(ev);
+  // The browser's default action for an uncancelled mousedown moves focus to
+  // the pressed element, blurring the input. Synthetic dispatchEvent never
+  // runs default actions, so replicate that blur here for the un-prevented
+  // path -- exactly what happens when a user grabs the listbox scrollbar.
+  if (!ev.defaultPrevented) input.dispatchEvent(new FocusEvent('blur'));
+  await el.updateComplete;
+
+  expect(el.open, 'dropdown must stay open while interacting with the listbox itself').to.be.true;
+  expect(ev.defaultPrevented, 'mousedown default must be prevented so the input keeps focus').to.be.true;
+  expect(el.shadowRoot!.activeElement?.getAttribute('part')).to.equal('combobox-input');
+});
+
 it('ignores a mousedown on the combobox container while disabled', async () => {
   const el = (await fixture(basic())) as LyraCombobox;
   el.disabled = true;

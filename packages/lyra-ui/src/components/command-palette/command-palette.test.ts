@@ -31,6 +31,39 @@ it('wires aria-activedescendant to a stable id on the active command row', async
   expect(input.getAttribute('aria-activedescendant')).to.equal(rows[1].id);
 });
 
+it('skips disabled commands during arrow navigation and marks them aria-disabled', async () => {
+  const el = (await fixture(html`<lyra-command-palette .commands=${[
+    { id: 'a', label: 'Alpha' },
+    { id: 'b', label: 'Bravo', disabled: true },
+    { id: 'c', label: 'Charlie' },
+  ]}></lyra-command-palette>`)) as LyraCommandPalette;
+  el.openPalette(); await el.updateComplete;
+  const input = el.shadowRoot!.querySelector('input')!;
+  const rows = el.shadowRoot!.querySelectorAll('[part="command"]');
+  expect(rows[0].getAttribute('aria-disabled')).to.equal('false');
+  expect(rows[1].getAttribute('aria-disabled')).to.equal('true');
+  input.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, cancelable: true }));
+  await el.updateComplete;
+  expect(input.getAttribute('aria-activedescendant')).to.equal(rows[2].id);
+  input.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowUp', bubbles: true, cancelable: true }));
+  await el.updateComplete;
+  expect(input.getAttribute('aria-activedescendant')).to.equal(rows[0].id);
+});
+
+it('never rests the active option on a disabled command when one leads the list', async () => {
+  const el = (await fixture(html`<lyra-command-palette .commands=${[
+    { id: 'a', label: 'Alpha', disabled: true },
+    { id: 'b', label: 'Bravo' },
+  ]}></lyra-command-palette>`)) as LyraCommandPalette;
+  el.openPalette(); await el.updateComplete;
+  const input = el.shadowRoot!.querySelector('input')!;
+  const rows = el.shadowRoot!.querySelectorAll('[part="command"]');
+  expect(input.getAttribute('aria-activedescendant')).to.equal(rows[1].id);
+  input.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowUp', bubbles: true, cancelable: true }));
+  await el.updateComplete;
+  expect(input.getAttribute('aria-activedescendant')).to.equal(rows[1].id);
+});
+
 it('scrolls the newly active row into view when navigating with arrow keys', async () => {
   const commands = Array.from({ length: 5 }, (_unused, i) => ({ id: `c${i}`, label: `Command ${i}` }));
   const el = (await fixture(html`<lyra-command-palette .commands=${commands}></lyra-command-palette>`)) as LyraCommandPalette;

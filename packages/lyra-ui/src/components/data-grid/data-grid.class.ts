@@ -1,4 +1,4 @@
-import { html, nothing, type TemplateResult } from 'lit';
+import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../internal/lyra-element.js';
 import { styles } from './data-grid.styles.js';
@@ -32,6 +32,16 @@ export class LyraDataGrid<T = Record<string, unknown>> extends LyraElement<LyraD
   @state() private focusRow = 0;
   @state() private focusColumn = 0;
 
+  protected willUpdate(changed: PropertyValues): void {
+    // Re-clamp the roving focus position whenever the data changes: if rows/columns shrink
+    // below the remembered indices, no rendered cell would match them and the grid body would
+    // lose its single tabindex="0" stop entirely, making it unreachable by keyboard.
+    if (changed.has('rows') || changed.has('columns')) {
+      this.focusRow = Math.max(0, Math.min(this.rows.length - 1, this.focusRow));
+      this.focusColumn = Math.max(0, Math.min(this.columns.length - 1, this.focusColumn));
+    }
+  }
+
   private value(row: T, column: DataGridColumn<T>): unknown { return column.value ? column.value(row) : (row as Record<string, unknown>)[column.key]; }
   private activate(row: T): void { this.selectedKey = this.rowKey(row, this.rows.indexOf(row)); this.emit('lyra-row-click', { row }); this.emit('lyra-selection-change', { row }); }
   private sort(column: DataGridColumn<T>): void { if (!column.sortable) return; if (this.sortKey === column.key) this.sortDirection = this.sortDirection === 'ascending' ? 'descending' : 'ascending'; else { this.sortKey = column.key; this.sortDirection = 'ascending'; } this.emit('lyra-sort', { key: column.key, direction: this.sortDirection }); }
@@ -40,7 +50,7 @@ export class LyraDataGrid<T = Record<string, unknown>> extends LyraElement<LyraD
   render(): TemplateResult {
     const label = this.accessibleLabel || this.localize('dataGridLabel');
     return html`<div part="viewport"><table part="grid" role="grid" aria-label=${label} aria-rowcount=${this.rows.length + 1} aria-colcount=${this.columns.length}>
-      ${this.columns.length ? html`<thead><tr role="row">${this.columns.map((column, index) => html`<th part="header" role="columnheader" tabindex=${index === 0 ? '0' : '-1'} style=${column.width ? `inline-size:${column.width}` : ''} aria-sort=${this.sortKey === column.key ? this.sortDirection : 'none'}><button type="button" @click=${() => this.sort(column)}>${column.label}</button></th>`)}</tr></thead>` : nothing}
+      ${this.columns.length ? html`<thead><tr role="row">${this.columns.map((column) => html`<th part="header" role="columnheader" style=${column.width ? `inline-size:${column.width}` : ''} aria-sort=${this.sortKey === column.key ? this.sortDirection : 'none'}><button type="button" @click=${() => this.sort(column)}>${column.label}</button></th>`)}</tr></thead>` : nothing}
       <tbody>${this.loading ? html`<tr><td role="gridcell" colspan=${Math.max(1, this.columns.length)} part="empty">${this.localize('loading')}</td></tr>` : this.rows.length ? this.rows.map((row, rowIndex) => html`<tr part="row" role="row" data-selected=${this.rowKey(row, rowIndex) === this.selectedKey ? 'true' : 'false'} aria-selected=${this.rowKey(row, rowIndex) === this.selectedKey ? 'true' : 'false'} @click=${() => this.activate(row)}>${this.columns.map((column, columnIndex) => html`<td part="cell" role="gridcell" tabindex=${rowIndex === this.focusRow && columnIndex === this.focusColumn ? '0' : '-1'} data-row=${rowIndex} data-column=${columnIndex} aria-colindex=${columnIndex + 1} aria-rowindex=${rowIndex + 2} @keydown=${(event: KeyboardEvent) => this.onCellKeyDown(event, rowIndex, columnIndex)} @focus=${() => { this.focusRow = rowIndex; this.focusColumn = columnIndex; this.emit('lyra-cell-focus', { row, column: column.key }); }}>${this.cell(row, column)}</td>`)}</tr>`) : html`<tr><td role="gridcell" colspan=${Math.max(1, this.columns.length)} part="empty">${this.emptyText || this.localize('noData')}</td></tr>`}</tbody>
     </table></div>`;
   }

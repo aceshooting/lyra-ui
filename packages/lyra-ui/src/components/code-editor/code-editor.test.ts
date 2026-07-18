@@ -64,6 +64,57 @@ it('never throws RangeError from an Infinity/NaN/negative tabSize, and clamps it
   expect(el.value.startsWith(' '.repeat(16))).to.be.true;
 });
 
+// Keyboard-trap coverage (WCAG 2.1.2): a synthetic KeyboardEvent is untrusted, so the browser
+// never performs real focus traversal for it — the observable contract is that the component
+// leaves the event un-defaultPrevented (letting a real browser traverse) and inserts nothing.
+it('lets Shift+Tab perform native reverse focus traversal instead of inserting spaces', async () => {
+  const el = (await fixture(html`<lyra-code-editor value="one"></lyra-code-editor>`)) as LyraCodeEditor;
+  const textarea = el.shadowRoot!.querySelector('textarea')!;
+  textarea.focus();
+  textarea.setSelectionRange(0, 0);
+  const shiftTab = new KeyboardEvent('keydown', { key: 'Tab', shiftKey: true, bubbles: true, cancelable: true });
+  textarea.dispatchEvent(shiftTab);
+  expect(shiftTab.defaultPrevented).to.be.false;
+  expect(el.value).to.equal('one');
+});
+
+it('releases the next Tab for native forward focus traversal after Escape', async () => {
+  const el = (await fixture(html`<lyra-code-editor value="one"></lyra-code-editor>`)) as LyraCodeEditor;
+  const textarea = el.shadowRoot!.querySelector('textarea')!;
+  textarea.focus();
+  textarea.setSelectionRange(0, 0);
+  textarea.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+  const tab = new KeyboardEvent('keydown', { key: 'Tab', bubbles: true, cancelable: true });
+  textarea.dispatchEvent(tab);
+  expect(tab.defaultPrevented).to.be.false;
+  expect(el.value).to.equal('one');
+});
+
+it('re-arms Tab indentation after the Escape bypass is cancelled by typing or by leaving the editor', async () => {
+  const el = (await fixture(html`<lyra-code-editor value="one" tab-size="2"></lyra-code-editor>`)) as LyraCodeEditor;
+  const textarea = el.shadowRoot!.querySelector('textarea')!;
+  const pressTab = () => {
+    textarea.setSelectionRange(0, 0);
+    textarea.dispatchEvent(new KeyboardEvent('keydown', { key: 'Tab', bubbles: true, cancelable: true }));
+  };
+  textarea.focus();
+
+  // Any non-Tab keypress after Escape means the user resumed editing: Tab indents again.
+  textarea.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+  textarea.dispatchEvent(new KeyboardEvent('keydown', { key: 'a', bubbles: true, cancelable: true }));
+  pressTab();
+  expect(el.value).to.equal('  one');
+
+  // Leaving the editor (blur) also clears the bypass, so a refocused editor indents on Tab.
+  el.value = 'one';
+  await el.updateComplete;
+  textarea.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+  textarea.dispatchEvent(new FocusEvent('blur', { bubbles: true }));
+  textarea.focus();
+  pressTab();
+  expect(el.value).to.equal('  one');
+});
+
 it('is accessible', async () => {
   const el = await fixture(html`<lyra-code-editor label="Source"></lyra-code-editor>`);
   await expect(el).to.be.accessible();

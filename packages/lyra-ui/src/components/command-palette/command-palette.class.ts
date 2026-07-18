@@ -112,7 +112,7 @@ export class LyraCommandPalette extends LyraElement<LyraCommandPaletteEventMap> 
     });
   }
 
-  openPalette(): void { if (this.open) return; this.open = true; this.queryText = ''; this.activeIndex = 0; this.emit('lyra-open'); }
+  openPalette(): void { if (this.open) return; this.open = true; this.queryText = ''; this.activeIndex = Math.max(0, this.seekEnabled(this.filtered, 0, 1)); this.emit('lyra-open'); }
   close(): void { if (!this.open) return; this.open = false; this.emit('lyra-close'); }
   registerCommand(command: LyraCommand): () => void { this.commands = [...this.commands, command]; return () => { this.commands = this.commands.filter((item) => item !== command); }; }
   private matchesShortcut(event: KeyboardEvent): boolean {
@@ -125,8 +125,15 @@ export class LyraCommandPalette extends LyraElement<LyraCommandPaletteEventMap> 
   private onGlobalKeyDown = (event: KeyboardEvent): void => { if (this.matchesShortcut(event)) { event.preventDefault(); this.open ? this.close() : this.openPalette(); } };
   private get filtered(): LyraCommand[] { const q = this.queryText.trim().toLowerCase(); if (!q) return this.commands; const haystacks = this.searchHaystacks; return this.commands.filter((_, index) => haystacks[index]!.includes(q)); }
   private select(command: LyraCommand): void { if (command.disabled) return; this.emit('lyra-select', { command }); command.onSelect?.(); this.close(); }
-  private onKeyDown = (event: KeyboardEvent): void => { const rows = this.filtered; if (event.key === 'ArrowDown') { event.preventDefault(); this.activeIndex = Math.min(this.activeIndex + 1, Math.max(0, rows.length - 1)); } else if (event.key === 'ArrowUp') { event.preventDefault(); this.activeIndex = Math.max(0, this.activeIndex - 1); } else if (event.key === 'Enter' && rows[this.activeIndex]) { event.preventDefault(); this.select(rows[this.activeIndex]); } };
-  private onInput = (event: Event): void => { this.queryText = (event.target as HTMLInputElement).value; this.activeIndex = 0; };
+  /** First enabled index at or past `from`, walking in `step` direction; -1 when every row that
+   *  way is disabled (callers then keep the current index, preserving clamp-at-the-ends arrow
+   *  behavior). Keeps the active option off disabled rows so Enter always has a live target. */
+  private seekEnabled(rows: LyraCommand[], from: number, step: 1 | -1): number {
+    for (let index = from; index >= 0 && index < rows.length; index += step) if (!rows[index]!.disabled) return index;
+    return -1;
+  }
+  private onKeyDown = (event: KeyboardEvent): void => { const rows = this.filtered; if (event.key === 'ArrowDown') { event.preventDefault(); const next = this.seekEnabled(rows, this.activeIndex + 1, 1); if (next !== -1) this.activeIndex = next; } else if (event.key === 'ArrowUp') { event.preventDefault(); const previous = this.seekEnabled(rows, this.activeIndex - 1, -1); if (previous !== -1) this.activeIndex = previous; } else if (event.key === 'Enter' && rows[this.activeIndex]) { event.preventDefault(); this.select(rows[this.activeIndex]); } };
+  private onInput = (event: Event): void => { this.queryText = (event.target as HTMLInputElement).value; this.activeIndex = Math.max(0, this.seekEnabled(this.filtered, 0, 1)); };
   render(): TemplateResult {
     if (!this.open) return html``;
     const rows = this.filtered;
@@ -136,7 +143,7 @@ export class LyraCommandPalette extends LyraElement<LyraCommandPaletteEventMap> 
       <section part="dialog" role="dialog" aria-modal="true" aria-label=${this.accessibleLabel || this.localize('commandPaletteLabel')} tabindex="-1" @keydown=${this.onKeyDown}>
         <div part="search"><lyra-icon name="search" aria-hidden="true"></lyra-icon><input part="input" type="search" .value=${this.queryText} placeholder=${this.localize('commandPalettePlaceholder')} aria-controls=${this.listId} aria-activedescendant=${activeId} @input=${this.onInput} /></div>
         <div part="list" id=${this.listId} role="listbox" aria-label=${this.localize('commandPaletteResults')}>
-          ${rows.length ? rows.map((command, index) => { const group = command.group ?? ''; const heading = group && group !== previousGroup ? (previousGroup = group, html`<div part="group">${group}</div>`) : nothing; return html`${heading}<button id=${`${this.listId}-opt-${index}`} part="command" role="option" data-active=${index === this.activeIndex ? 'true' : 'false'} aria-selected=${index === this.activeIndex ? 'true' : 'false'} ?disabled=${command.disabled} @mouseenter=${() => { this.activeIndex = index; }} @click=${() => this.select(command)}><span>${command.label}</span><span part="description">${command.description ?? ''}</span>${command.shortcut ? html`<span part="shortcut">${command.shortcut}</span>` : nothing}</button>`; }) : html`<div part="empty">${this.localize('commandPaletteEmpty')}</div>`}
+          ${rows.length ? rows.map((command, index) => { const group = command.group ?? ''; const heading = group && group !== previousGroup ? (previousGroup = group, html`<div part="group">${group}</div>`) : nothing; return html`${heading}<button id=${`${this.listId}-opt-${index}`} part="command" role="option" data-active=${index === this.activeIndex ? 'true' : 'false'} aria-selected=${index === this.activeIndex ? 'true' : 'false'} aria-disabled=${command.disabled ? 'true' : 'false'} ?disabled=${command.disabled} @mouseenter=${() => { if (!command.disabled) this.activeIndex = index; }} @click=${() => this.select(command)}><span>${command.label}</span><span part="description">${command.description ?? ''}</span>${command.shortcut ? html`<span part="shortcut">${command.shortcut}</span>` : nothing}</button>`; }) : html`<div part="empty">${this.localize('commandPaletteEmpty')}</div>`}
         </div>
       </section>
     </div>`;

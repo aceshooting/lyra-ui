@@ -57,6 +57,51 @@ it('moves roving tabindex to a cell that receives focus via a mouse click, not j
   expect(otherCells[0]).to.equal(targetCell);
 });
 
+it('keeps exactly one body-cell tab stop after rows shrink below the focused row index', async () => {
+  const columns: DataGridColumn[] = [{ key: 'name', label: 'Name' }, { key: 'count', label: 'Count' }];
+  const rows = Array.from({ length: 10 }, (_, i) => ({ name: `Row ${i}`, count: i }));
+  const el = (await fixture(
+    html`<lyra-data-grid .columns=${columns} .rows=${rows} aria-label="Results"></lyra-data-grid>`,
+  )) as LyraDataGrid;
+  const targetCell = el.shadowRoot!.querySelector('[data-row="5"][data-column="1"]') as HTMLElement;
+  targetCell.focus();
+  await el.updateComplete;
+  expect(targetCell.getAttribute('tabindex')).to.equal('0');
+  el.rows = rows.slice(0, 3);
+  await el.updateComplete;
+  const stops = el.shadowRoot!.querySelectorAll('[role="gridcell"][tabindex="0"]');
+  expect(stops).to.have.length(1);
+  expect(stops[0].getAttribute('data-row')).to.equal('2');
+  expect(stops[0].getAttribute('data-column')).to.equal('1');
+});
+
+it('keeps exactly one body-cell tab stop after columns shrink below the focused column index', async () => {
+  const columns: DataGridColumn[] = [{ key: 'name', label: 'Name' }, { key: 'count', label: 'Count' }];
+  const rows = [{ name: 'Alpha', count: 1 }, { name: 'Beta', count: 2 }];
+  const el = (await fixture(
+    html`<lyra-data-grid .columns=${columns} .rows=${rows} aria-label="Results"></lyra-data-grid>`,
+  )) as LyraDataGrid;
+  const targetCell = el.shadowRoot!.querySelector('[data-row="1"][data-column="1"]') as HTMLElement;
+  targetCell.focus();
+  await el.updateComplete;
+  el.columns = columns.slice(0, 1);
+  await el.updateComplete;
+  const stops = el.shadowRoot!.querySelectorAll('[role="gridcell"][tabindex="0"]');
+  expect(stops).to.have.length(1);
+  expect(stops[0].getAttribute('data-row')).to.equal('1');
+  expect(stops[0].getAttribute('data-column')).to.equal('0');
+});
+
+it('leaves header cells without tabindex so the sort button is the only header tab stop', async () => {
+  const columns: DataGridColumn[] = [{ key: 'name', label: 'Name', sortable: true }, { key: 'count', label: 'Count' }];
+  const el = (await fixture(
+    html`<lyra-data-grid .columns=${columns} .rows=${[{ name: 'Alpha', count: 1 }]} aria-label="Results"></lyra-data-grid>`,
+  )) as LyraDataGrid;
+  const headers = el.shadowRoot!.querySelectorAll('th');
+  expect(headers).to.have.length(2);
+  for (const th of headers) expect(th.hasAttribute('tabindex'), 'th must not carry its own tab stop').to.be.false;
+});
+
 it('swaps ArrowLeft/ArrowRight under dir="rtl" for roving cell navigation', async () => {
   const columns: DataGridColumn[] = [{ key: 'name', label: 'Name' }, { key: 'count', label: 'Count' }];
   const rows = [{ name: 'Alpha', count: 1 }];
