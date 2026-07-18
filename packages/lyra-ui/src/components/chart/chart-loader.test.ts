@@ -30,23 +30,43 @@ describe('loadChartAndZoom (independent chart.js / zoom-plugin loading)', () => 
 
   it('still resolves chart.js when the zoom plugin fails to load — a partial install (chart.js only, no zoom) must not break every chart', async () => {
     const zoomError = new Error('zoom boom');
-    const result = await loadChartAndZoom(
-      () => import('chart.js'),
-      () => Promise.reject(zoomError),
-      true,
-    );
+    const originalWarn = console.warn;
+    const warnings: unknown[][] = [];
+    console.warn = (...args: unknown[]) => warnings.push(args);
+    let result: Awaited<ReturnType<typeof loadChartAndZoom>>;
+    try {
+      result = await loadChartAndZoom(
+        () => import('chart.js'),
+        () => Promise.reject(zoomError),
+        true,
+      );
+    } finally {
+      console.warn = originalWarn;
+    }
     expect(result).to.not.be.null;
     expect(result!.mod.Chart).to.exist;
     expect(result!.zoomPlugin).to.equal(undefined);
+    expect(warnings.flat()).to.contain(zoomError);
+    expect(warnings.flat().join(' ')).to.contain('pnpm add chartjs-plugin-zoom');
   });
 
   it('resolves null when chart.js itself fails to load, even though the zoom plugin would have loaded fine', async () => {
     const chartError = new Error('chart.js boom');
-    const result = await loadChartAndZoom(
-      () => Promise.reject(chartError),
-      () => import('chartjs-plugin-zoom'),
-    );
+    const originalWarn = console.warn;
+    const warnings: unknown[][] = [];
+    console.warn = (...args: unknown[]) => warnings.push(args);
+    let result: Awaited<ReturnType<typeof loadChartAndZoom>>;
+    try {
+      result = await loadChartAndZoom(
+        () => Promise.reject(chartError),
+        () => import('chartjs-plugin-zoom'),
+      );
+    } finally {
+      console.warn = originalWarn;
+    }
     expect(result).to.equal(null);
+    expect(warnings.flat()).to.contain(chartError);
+    expect(warnings.flat().join(' ')).to.contain('pnpm add chart.js');
   });
 
   it('logs the real caught error (not a generic message) when chart.js fails to load', async () => {

@@ -13,7 +13,17 @@ describe('pptx loader', () => {
   });
 
   it('returns null for an unavailable peer and caches successful loads', async () => {
-    expect(await loadPptxRenderer(() => Promise.reject(new Error('missing')))).to.be.null;
+    const error = new Error('missing');
+    const originalWarn = console.warn;
+    const warnings: unknown[][] = [];
+    console.warn = (...args: unknown[]) => warnings.push(args);
+    try {
+      expect(await loadPptxRenderer(() => Promise.reject(error))).to.be.null;
+    } finally {
+      console.warn = originalWarn;
+    }
+    expect(warnings.flat()).to.contain(error);
+    expect(warnings.flat().join(' ')).to.contain('@aiden0z/pptx-renderer');
     const fake = { PptxViewer: class {}, RECOMMENDED_ZIP_LIMITS: {} } as never;
     __setPptxRendererForTesting(fake);
     expect(await getPptxRenderer()).to.equal(fake);

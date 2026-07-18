@@ -18,12 +18,23 @@ describe('email loader', () => {
   });
 
   it('loads each peer independently', async () => {
-    const deps = await loadEmailAndSanitizer(
-      () => Promise.reject(new Error('postal boom')),
-      () => Promise.resolve({ default: { sanitize: (value: string) => value } }),
-    );
+    const error = new Error('postal boom');
+    const originalWarn = console.warn;
+    const warnings: unknown[][] = [];
+    console.warn = (...args: unknown[]) => warnings.push(args);
+    let deps: Awaited<ReturnType<typeof loadEmailAndSanitizer>>;
+    try {
+      deps = await loadEmailAndSanitizer(
+        () => Promise.reject(error),
+        () => Promise.resolve({ default: { sanitize: (value: string) => value } }),
+      );
+    } finally {
+      console.warn = originalWarn;
+    }
     expect(deps.PostalMime).to.be.undefined;
     expect(deps.DOMPurify?.sanitize).to.exist;
+    expect(warnings.flat()).to.contain(error);
+    expect(warnings.flat().join(' ')).to.contain('pnpm add postal-mime');
   });
 
   it('preserves postal-mime when DOMPurify fails and logs install fixes', async () => {

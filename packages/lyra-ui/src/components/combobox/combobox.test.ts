@@ -1397,13 +1397,23 @@ it('recovers loading=false and does not throw when source() rejects', async () =
 
 it('recovers loading=false when source() throws synchronously instead of returning a rejected promise', async () => {
   const el = (await fixture(html`<lyra-combobox></lyra-combobox>`)) as LyraCombobox;
-  el.source = (() => {
-    throw new Error('synchronous failure');
-  }) as unknown as (query: string) => Promise<import('./combobox.js').ComboboxSourceRow[]>;
-  el.open = true;
-  await el.updateComplete;
-  await aTimeout(250);
-  expect((el as unknown as { loading: boolean }).loading).to.be.false;
+  const error = new Error('synchronous failure');
+  const originalWarn = console.warn;
+  const warnCalls: unknown[][] = [];
+  console.warn = (...args: unknown[]) => warnCalls.push(args);
+  try {
+    el.source = (() => {
+      throw error;
+    }) as unknown as (query: string) => Promise<import('./combobox.js').ComboboxSourceRow[]>;
+    el.open = true;
+    await el.updateComplete;
+    await aTimeout(250);
+    expect((el as unknown as { loading: boolean }).loading).to.be.false;
+  } finally {
+    console.warn = originalWarn;
+  }
+  expect(warnCalls.flat()).to.contain(error);
+  expect(String(warnCalls[0][0])).to.include('rejected');
 });
 
 it('resolves a programmatically-set value to its label from asyncRows, warming the fetch before the listbox ever opens (single-select)', async () => {

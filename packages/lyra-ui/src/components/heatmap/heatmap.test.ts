@@ -579,7 +579,16 @@ describe('resolveRgb', () => {
   });
 
   it('falls back to the given fallback (not black) for an unparsable color string', () => {
-    expect(resolveRgb('not-a-real-color', '#123456')).to.deep.equal([0x12, 0x34, 0x56, 1]);
+    const originalWarn = console.warn;
+    const warnings: unknown[][] = [];
+    console.warn = (...args: unknown[]) => warnings.push(args);
+    try {
+      expect(resolveRgb('not-a-real-color', '#123456')).to.deep.equal([0x12, 0x34, 0x56, 1]);
+    } finally {
+      console.warn = originalWarn;
+    }
+    expect(warnings).to.have.length(1);
+    expect(warnings.flat().join(' ')).to.contain('not-a-real-color');
   });
 });
 
@@ -643,13 +652,23 @@ it('refreshes the canvas when a theme token changes without changing component d
 });
 
 it('retheming with an unparsable custom property value does not throw and does not go solid black', async () => {
-  const el = (await fixture(html`
-    <lyra-heatmap style="--lyra-heatmap-scale-lo: not-a-real-color;"></lyra-heatmap>
-  `)) as LyraHeatmap;
-  el.rowLabels = ['a'];
-  el.colLabels = ['x'];
-  el.values = [[5]];
-  await el.updateComplete;
+  const originalWarn = console.warn;
+  const warnings: unknown[][] = [];
+  console.warn = (...args: unknown[]) => warnings.push(args);
+  let el: LyraHeatmap;
+  try {
+    el = (await fixture(html`
+      <lyra-heatmap style="--lyra-heatmap-scale-lo: still-not-a-real-color;"></lyra-heatmap>
+    `)) as LyraHeatmap;
+    el.rowLabels = ['a'];
+    el.colLabels = ['x'];
+    el.values = [[5]];
+    await el.updateComplete;
+  } finally {
+    console.warn = originalWarn;
+  }
+  expect(warnings).to.have.length(1);
+  expect(warnings.flat().join(' ')).to.contain('still-not-a-real-color');
   const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
   expect(canvas).to.exist;
   const ctx = canvas.getContext('2d')!;
