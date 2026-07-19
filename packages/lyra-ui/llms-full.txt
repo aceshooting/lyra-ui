@@ -8179,6 +8179,9 @@ First-party invention (no Web Awesome equivalent).
   dynamic-import table.
 - `languages?: Record<string, ShikiLanguageInput>` (attribute: false) — grammar definitions this
   instance can highlight, same shape as `lr-code-block-core`'s own `languages`.
+- `contextLines: number | undefined` (attribute: `context-lines`) — keeps this many unchanged
+  lines around each change and collapses longer unchanged runs into a localized fold marker. The
+  default `undefined` shows every line; negative and non-finite values also disable folding.
 
 **Events:** `lr-copy` (`detail: { text: string }` — the full unified-diff text, fired on
 copy-button activation regardless of whether the clipboard write actually succeeded).
@@ -8186,8 +8189,9 @@ copy-button activation regardless of whether the clipboard write actually succee
 **Slots:** none.
 
 **CSS parts:** `base` (the root wrapper), `line` (a single line; carries
-`data-type="equal"|"add"|"remove"|"empty"` — `"empty"` is an unbalanced-replace placeholder cell in
-`layout="split"` and never carries a `+`/`-` prefix), `copy-button` (the copy affordance, only
+`data-type="equal"|"add"|"remove"|"empty"|"fold"` — `"empty"` is an unbalanced-replace placeholder cell in
+`layout="split"` and never carries a `+`/`-` prefix; `"fold"` is the localized unchanged-lines
+marker), `copy-button` (the copy affordance, only
 rendered while `copyable`), `side` (one column in `layout="split"`, `data-side="old"|"new"`).
 
 **Themeable custom properties:** `--lr-diff-view-font` (default `var(--lr-font-mono)`), plus
