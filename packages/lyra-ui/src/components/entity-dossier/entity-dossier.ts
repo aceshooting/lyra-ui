@@ -1,0 +1,11 @@
+export * from './entity-dossier.class.js';
+import { LyraEntityDossier } from './entity-dossier.class.js';
+import { defineElement } from '../../internal/prefix.js';
+import '../entity-card/entity-card.js';
+import '../neighbor-list/neighbor-list.js';
+import '../chunk-inspector/chunk-inspector.js';
+import '../provenance-panel/provenance-panel.js';
+import '../stat/stat.js';
+import '../tabs/tabs.js';
+import '../empty/empty.js';
+defineElement('entity-dossier', LyraEntityDossier);
