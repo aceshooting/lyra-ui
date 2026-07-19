@@ -7,6 +7,17 @@ export const styles = css`
        width" token exists to resolve through, same rationale as
        --lr-json-viewer-max-height in json-viewer.styles.ts. */
     --lr-chat-message-max-width: 80%;
+    /* Role-scoped bubble fill/text tokens -- component-scoped indirection
+       over the shared semantic --lr-color-* tokens below, so a consumer can
+       retint one role's bubble without reaching for a shared token that
+       other parts of this component (e.g. [part='collapse-button']:hover)
+       also consume. Defaults resolve to exactly the values the bubble
+       already used before these tokens existed, so declaring them changes
+       nothing for a consumer who overrides none of them. */
+    --lr-chat-message-bubble-bg: var(--lr-color-surface);
+    --lr-chat-message-bubble-color: var(--lr-color-text);
+    --lr-chat-message-user-bubble-bg: var(--lr-color-brand-quiet);
+    --lr-chat-message-user-bubble-color: var(--lr-color-text);
     font-size: var(--lr-font-size-md-sm);
     line-height: var(--lr-line-height-normal);
   }
@@ -18,7 +29,8 @@ export const styles = css`
     padding: var(--lr-space-m);
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
     border-radius: var(--lr-radius);
-    background: var(--lr-color-surface);
+    background: var(--lr-chat-message-bubble-bg);
+    color: var(--lr-chat-message-bubble-color);
     overflow-wrap: anywhere;
   }
 
@@ -28,7 +40,8 @@ export const styles = css`
      'data-role'. */
   :host([data-role='user']) [part='bubble'] {
     margin-inline-start: auto;
-    background: var(--lr-color-brand-quiet);
+    background: var(--lr-chat-message-user-bubble-bg);
+    color: var(--lr-chat-message-user-bubble-color);
     border-color: transparent;
   }
   :host([data-role='assistant']) [part='bubble'] {

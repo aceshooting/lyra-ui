@@ -377,6 +377,76 @@ it('allows the ambient motion token to retime the streaming indicator', async ()
   expect(getComputedStyle(indicator).animationTimingFunction).to.equal('linear');
 });
 
+it('routes the bubble fill/text through the new role-scoped cssprops, leaving [part="collapse-button"]:hover keyed directly to --lr-color-brand-quiet', () => {
+  const css = styles.cssText.replace(/\s+/g, ' ');
+  expect(css).to.include('--lr-chat-message-bubble-bg: var(--lr-color-surface);');
+  expect(css).to.include('--lr-chat-message-bubble-color: var(--lr-color-text);');
+  expect(css).to.include('--lr-chat-message-user-bubble-bg: var(--lr-color-brand-quiet);');
+  expect(css).to.include('--lr-chat-message-user-bubble-color: var(--lr-color-text);');
+  expect(css).to.match(/\[part='bubble'\] \{[^}]*background: var\(--lr-chat-message-bubble-bg\);/);
+  expect(css).to.match(/\[part='bubble'\] \{[^}]*color: var\(--lr-chat-message-bubble-color\);/);
+  expect(css).to.match(
+    /data-role='user'\]\) \[part='bubble'\] \{[^}]*background: var\(--lr-chat-message-user-bubble-bg\);[^}]*color: var\(--lr-chat-message-user-bubble-color\);/,
+  );
+  // Unrelated consumer of the same shared token this component used to
+  // wire the user bubble to directly -- must stay untouched by this change.
+  expect(css).to.include(
+    "[part='collapse-button']:hover { background: var(--lr-color-brand-quiet); color: var(--lr-color-brand); }",
+  );
+});
+
+it('defaults the generic bubble fill/text to --lr-color-surface/--lr-color-text, unchanged now that they route through cssprops', async () => {
+  const el = (await fixture(html`<lr-chat-message>hi</lr-chat-message>`)) as LyraChatMessage;
+  const bubble = el.shadowRoot!.querySelector('[part="bubble"]') as HTMLElement;
+  const probe = document.createElement('div');
+  probe.style.cssText = 'background: var(--lr-color-surface); color: var(--lr-color-text);';
+  el.shadowRoot!.appendChild(probe);
+
+  expect(getComputedStyle(bubble).backgroundColor).to.equal(getComputedStyle(probe).backgroundColor);
+  expect(getComputedStyle(bubble).color).to.equal(getComputedStyle(probe).color);
+});
+
+it('defaults the user-role bubble fill/text to --lr-color-brand-quiet/--lr-color-text, unchanged now that they route through cssprops', async () => {
+  const el = (await fixture(html`<lr-chat-message data-role="user">hi</lr-chat-message>`)) as LyraChatMessage;
+  const bubble = el.shadowRoot!.querySelector('[part="bubble"]') as HTMLElement;
+  const probe = document.createElement('div');
+  probe.style.cssText = 'background: var(--lr-color-brand-quiet); color: var(--lr-color-text);';
+  el.shadowRoot!.appendChild(probe);
+
+  expect(getComputedStyle(bubble).backgroundColor).to.equal(getComputedStyle(probe).backgroundColor);
+  expect(getComputedStyle(bubble).color).to.equal(getComputedStyle(probe).color);
+});
+
+it('retints the generic bubble fill/text via --lr-chat-message-bubble-bg/-color', async () => {
+  const el = (await fixture(html`
+    <lr-chat-message
+      style="--lr-chat-message-bubble-bg: rgb(1, 2, 3); --lr-chat-message-bubble-color: rgb(4, 5, 6);"
+    >hi</lr-chat-message>
+  `)) as LyraChatMessage;
+  const bubble = el.shadowRoot!.querySelector('[part="bubble"]') as HTMLElement;
+
+  expect(getComputedStyle(bubble).backgroundColor).to.equal('rgb(1, 2, 3)');
+  expect(getComputedStyle(bubble).color).to.equal('rgb(4, 5, 6)');
+});
+
+it('retints the user-role bubble fill/text via --lr-chat-message-user-bubble-bg/-color, independent of the generic pair', async () => {
+  const el = (await fixture(html`
+    <lr-chat-message
+      data-role="user"
+      style="
+        --lr-chat-message-user-bubble-bg: rgb(7, 8, 9);
+        --lr-chat-message-user-bubble-color: rgb(10, 11, 12);
+        --lr-chat-message-bubble-bg: rgb(1, 2, 3);
+        --lr-chat-message-bubble-color: rgb(4, 5, 6);
+      "
+    >hi</lr-chat-message>
+  `)) as LyraChatMessage;
+  const bubble = el.shadowRoot!.querySelector('[part="bubble"]') as HTMLElement;
+
+  expect(getComputedStyle(bubble).backgroundColor).to.equal('rgb(7, 8, 9)');
+  expect(getComputedStyle(bubble).color).to.equal('rgb(10, 11, 12)');
+});
+
 it('localizes the live-region status-change announcements via this.localize()', async () => {
   const el = (await fixture(
     html`<lr-chat-message .strings=${{ chatFailedAnnounce: 'Échec.', chatCompleteAnnounce: 'Terminé.' }}

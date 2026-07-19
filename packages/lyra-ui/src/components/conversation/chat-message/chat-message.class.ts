@@ -135,7 +135,7 @@ export interface LyraChatMessageEventMap {
  *   same event contract a listener further up a conversation surface already relies on for every
  *   other message.
  * @event lr-collapse-toggle - `detail: boolean` (the new `collapsed` state) — fired when the user activates the built-in collapse button.
- * @csspart bubble - The message bubble root. Programmatically focusable (`tabindex="-1"`) so focus has a stable place to land when the built-in retry button is removed (e.g. a `lr-retry` listener flipping `status` away from `"failed"`).
+ * @csspart bubble - The message bubble root. Programmatically focusable (`tabindex="-1"`) so focus has a stable place to land when the built-in retry button is removed (e.g. a `lr-retry` listener flipping `status` away from `"failed"`). Its fill/text derive from `--lr-chat-message-bubble-bg`/`--lr-chat-message-bubble-color` for every role except `user`, which derives from `--lr-chat-message-user-bubble-bg`/`--lr-chat-message-user-bubble-color` instead — override those cssprops rather than the shared `--lr-color-*` tokens they default to.
  * @csspart header - The row above the message body — avatar, badges, and the collapse toggle. Hidden entirely when none of those have anything to show.
  * @csspart avatar - The wrapper around the `avatar` slot.
  * @csspart badges - The wrapper around the `badges` slot.
@@ -152,6 +152,10 @@ export interface LyraChatMessageEventMap {
  * @csspart retry-button - The built-in retry button (only rendered when `status="failed"`).
  * @csspart actions - The wrapper around the `actions` slot. Rendered inside the footer by default; a sibling immediately after `bubble` when `actionsOutsideBubble` is set.
  * @cssprop [--lr-chat-message-max-width=80%] - Maximum inline size of the message bubble.
+ * @cssprop [--lr-chat-message-bubble-bg=var(--lr-color-surface)] - Bubble fill for every role except `user`.
+ * @cssprop [--lr-chat-message-bubble-color=var(--lr-color-text)] - Bubble text color for every role except `user`.
+ * @cssprop [--lr-chat-message-user-bubble-bg=var(--lr-color-brand-quiet)] - Bubble fill for `data-role="user"`.
+ * @cssprop [--lr-chat-message-user-bubble-color=var(--lr-color-text)] - Bubble text color for `data-role="user"`.
  * @cssprop [--lr-transition-ambient=1.8s ease-in-out] - Streaming-indicator animation duration
  *   and timing function.
  */
