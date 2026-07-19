@@ -140,7 +140,7 @@ export default {
   // turning a completed browser run into an infrastructure timeout.
   testsFinishTimeout: 180000,
   plugins: [
-    esbuildPlugin({ ts: true, target: 'es2022', tsconfig: 'tsconfig.json' }),
+    esbuildPlugin({ ts: true, json: true, target: 'es2022', tsconfig: 'tsconfig.json' }),
     hammerEsmInteropPlugin,
     maplibreEsmInteropPlugin,
     papaparseEsmInteropPlugin,

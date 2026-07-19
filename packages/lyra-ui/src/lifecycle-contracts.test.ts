@@ -101,6 +101,13 @@ function mountPoint(): HTMLDivElement {
   return host;
 }
 
+/** Keep the generic lifecycle checks independent of optional data-loader peers. */
+function prepareDefaultElement(tag: string, el: Element): void {
+  if (tag === 'lr-emoji-picker') {
+    (el as unknown as { loadGroups: () => Promise<null> }).loadGroups = () => Promise.resolve(null);
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Contract 1 — reconnect-smoke
 // ---------------------------------------------------------------------------
@@ -113,6 +120,7 @@ describe('lifecycle contract: reconnect-smoke', () => {
       const host = mountPoint();
       try {
         const el = document.createElement(tag);
+        prepareDefaultElement(tag, el);
         host.appendChild(el);
         await settle(el);
 
@@ -341,6 +349,7 @@ describe('lifecycle contract: leak-contract', () => {
       const observers = instrumentObservers();
       try {
         const el = document.createElement(tag);
+        prepareDefaultElement(tag, el);
         host.appendChild(el);
         await settle(el);
         // One extra full update cycle between connect and disconnect, so
@@ -478,6 +487,7 @@ describe('lifecycle contract: focusable-name-contract', () => {
       const host = mountPoint();
       try {
         const el = document.createElement(tag);
+        prepareDefaultElement(tag, el);
         host.appendChild(el);
         await settle(el);
         // Some components finish composing their default state a frame after
