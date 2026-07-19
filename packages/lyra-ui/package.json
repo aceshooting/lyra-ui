@@ -58,6 +58,7 @@
     ".": "./dist/lyra.js",
     "./components/*": "./dist/components/*",
     "./internal/*": "./dist/internal/*",
+    "./ai/*": "./dist/ai/*",
     "./theme.css": "./dist/theme.css",
     "./testing": "./dist/testing/happy-dom-shims.js",
     "./package.json": "./package.json"
