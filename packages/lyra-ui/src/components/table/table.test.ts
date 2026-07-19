@@ -67,6 +67,38 @@ it('resizes a resizable column through its native pointer handle and emits live 
   expect((el.shadowRoot!.querySelector('col') as HTMLElement).style.inlineSize).to.equal(`${detail!.width}px`);
 });
 
+it('uses the themed minimum width when a resizable column has no explicit minimum', async () => {
+  const el = (await fixture(
+    html`<lr-table style="--lr-table-resize-min-width:90px"></lr-table>`,
+  )) as LyraTable<Row>;
+  el.columns = [{ key: 'name', label: 'Name', width: '120px', resizable: true, cell: (r) => r.name }];
+  el.rows = rows;
+  await el.updateComplete;
+
+  const handle = el.shadowRoot!.querySelector('[part="resize-handle"]') as HTMLElement;
+  handle.setPointerCapture = () => {};
+  handle.releasePointerCapture = () => {};
+  handle.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, pointerId: 2, clientX: 100 }));
+  window.dispatchEvent(new PointerEvent('pointermove', { pointerId: 2, clientX: -10000 }));
+
+  expect((el as unknown as { resizedColumnWidths: Map<string, number> }).resizedColumnWidths.get('name')).to.equal(90);
+  window.dispatchEvent(new PointerEvent('pointerup', { pointerId: 2, clientX: -10000 }));
+});
+
+it('reflects spellcheck=false when assigned as a property', async () => {
+  const el = (await fixture(html`<lr-table filterable></lr-table>`)) as LyraTable<Row>;
+  el.spellcheck = false;
+  await el.updateComplete;
+  const property = (el.constructor as typeof LyraTable & {
+    elementProperties: Map<string, { converter?: { toAttribute?: (value: boolean) => string | null } }>;
+  }).elementProperties.get('spellcheck');
+  expect(property?.converter?.toAttribute?.(false)).to.equal('false');
+
+  el.spellcheck = true;
+  await el.updateComplete;
+  expect(property?.converter?.toAttribute?.(true)).to.equal(null);
+});
+
 it('opens an editable cell on double-click and emits a typed edit intent', async () => {
   const el = (await fixture(html`<lr-table></lr-table>`)) as LyraTable<Row>;
   el.columns = editableColumns;
@@ -91,6 +123,25 @@ it('opens an editable cell on double-click and emits a typed edit intent', async
   expect(el.shadowRoot!.querySelector('[part="cell-editor"]')).to.not.exist;
 });
 
+it('commits an inline edit with Enter', async () => {
+  const el = (await fixture(html`<lr-table></lr-table>`)) as LyraTable<Row>;
+  el.columns = editableColumns;
+  el.rows = rows;
+  el.rowKey = (r) => r.id;
+  await el.updateComplete;
+
+  const cell = el.shadowRoot!.querySelector('[part="row"] [part="cell"]') as HTMLElement;
+  cell.dispatchEvent(new MouseEvent('dblclick', { bubbles: true, composed: true }));
+  await el.updateComplete;
+  const input = cell.querySelector('[part="cell-editor"]') as HTMLInputElement;
+  input.value = 'Enter name';
+  const eventPromise = oneEvent(el, 'lr-cell-edit');
+  input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, composed: true, cancelable: true }));
+  const event = await eventPromise;
+  expect(event.detail.value).to.equal('Enter name');
+  expect(el.shadowRoot!.querySelector('[part="cell-editor"]')).to.not.exist;
+});
+
 it('renders grouped row sections without making group headers focus stops', async () => {
   const el = (await fixture(html`<lr-table></lr-table>`)) as LyraTable<Row>;
   el.columns = columns;
@@ -105,6 +156,17 @@ it('renders grouped row sections without making group headers focus stops', asyn
   expect(groups[1].textContent).to.contain('Needs review');
   expect(groups[0].getAttribute('tabindex')).to.equal(null);
   expect(el.shadowRoot!.querySelectorAll('[part="row"]').length).to.equal(3);
+});
+
+it('uses groupLabel to render custom group header content', async () => {
+  const el = (await fixture(html`<lr-table></lr-table>`)) as LyraTable<Row>;
+  el.columns = columns;
+  el.rows = rows;
+  el.groupBy = (r) => (r.score > 2 ? 'Passing' : 'Needs review');
+  el.groupLabel = (key, groupedRows) => html`<strong>${key}:${groupedRows.length}</strong>`;
+  await el.updateComplete;
+
+  expect(el.shadowRoot!.querySelector('[part="group-cell"]')!.textContent).to.contain('Passing:1');
 });
 
 it('filters rows through the built-in filter field and emits the requested text', async () => {
@@ -200,6 +262,20 @@ it('filters without throwing over rows containing a circular reference or a BigI
   expect(el.shadowRoot!.querySelector('[part="row"]')!.textContent).to.contain('Beta');
 });
 
+it('does not throw when the default filter encounters a row with a throwing toJSON method', async () => {
+  const hostile = { id: 'bad', name: 'Hostile', score: 0, toJSON: () => { throw new Error('nope'); } };
+  const el = (await fixture(html`<lr-table filterable></lr-table>`)) as LyraTable<Row>;
+  el.columns = columns;
+  el.rows = [...rows, hostile as unknown as Row];
+  await el.updateComplete;
+
+  const input = el.shadowRoot!.querySelector('[part="filter"]') as HTMLInputElement;
+  input.value = 'hostile';
+  input.dispatchEvent(new Event('input', { bubbles: true, composed: true }));
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelectorAll('[part="row"]')).to.have.length(0);
+});
+
 it('paginates client-side rows and emits controlled page requests', async () => {
   const el = (await fixture(html`<lr-table page-size="1"></lr-table>`)) as LyraTable<Row>;
   el.columns = columns;
@@ -279,6 +355,22 @@ it('supports opt-in multiple row selection without changing the default presenta
   expect(event.detail.keys).to.deep.equal(['a']);
   expect(el.selectedKeys.has('a')).to.be.true;
   expect(row.getAttribute('aria-selected')).to.equal('true');
+});
+
+it('supports single row selection and emits the selected key', async () => {
+  const el = (await fixture(html`<lr-table></lr-table>`)) as LyraTable<Row>;
+  el.columns = columns;
+  el.rows = rows;
+  el.rowKey = (row) => row.id;
+  el.selectionMode = 'single';
+  await el.updateComplete;
+
+  const row = el.shadowRoot!.querySelector('[part="row"]') as HTMLElement;
+  const eventPromise = oneEvent(el, 'lr-selection-change');
+  row.click();
+  const event = await eventPromise;
+  expect(event.detail.keys).to.deep.equal(['a']);
+  expect(el.selectedKey).to.equal('a');
 });
 
 it('emits lr-sort when a sortable header is clicked', async () => {
@@ -1018,6 +1110,41 @@ it('moves the roving tabindex between rows with ArrowDown/ArrowUp, and ArrowUp f
   expect(el.shadowRoot!.activeElement).to.equal(nameHeader);
 });
 
+it('supports Home/End row navigation and ignores unknown keyboard commands', async () => {
+  const el = (await fixture(html`<lr-table></lr-table>`)) as LyraTable<Row>;
+  el.columns = columns;
+  el.rows = rows;
+  el.rowKey = (r) => r.id;
+  await el.updateComplete;
+  const [firstRow, secondRow] = [...el.shadowRoot!.querySelectorAll('[part="row"]')] as HTMLElement[];
+
+  secondRow.focus();
+  secondRow.dispatchEvent(new KeyboardEvent('keydown', { key: 'Home', bubbles: true }));
+  await el.updateComplete;
+  expect(el.shadowRoot!.activeElement?.getAttribute('data-row-key')).to.equal(firstRow.dataset.rowKey);
+
+  firstRow.dispatchEvent(new KeyboardEvent('keydown', { key: 'End', bubbles: true }));
+  await el.updateComplete;
+  expect(el.shadowRoot!.activeElement?.getAttribute('data-row-key')).to.equal(secondRow.dataset.rowKey);
+
+  const before = el.shadowRoot!.activeElement?.getAttribute('data-row-key');
+  secondRow.dispatchEvent(new KeyboardEvent('keydown', { key: 'Unrelated', bubbles: true }));
+  await el.updateComplete;
+  expect(el.shadowRoot!.activeElement?.getAttribute('data-row-key')).to.equal(before);
+});
+
+it('ignores unknown keyboard commands on a header', async () => {
+  const el = (await fixture(html`<lr-table></lr-table>`)) as LyraTable<Row>;
+  el.columns = columns;
+  el.rows = rows;
+  await el.updateComplete;
+  const header = el.shadowRoot!.querySelector('[part="header-cell"]') as HTMLElement;
+  header.focus();
+  header.dispatchEvent(new KeyboardEvent('keydown', { key: 'Unrelated', bubbles: true }));
+  await el.updateComplete;
+  expect(el.shadowRoot!.activeElement?.getAttribute('data-col-key')).to.equal(header.dataset.colKey);
+});
+
 it('skips a priority-hidden header cell when navigating with ArrowRight, instead of stranding focus on it', async () => {
   const skipColumns: TableColumn<Row>[] = [
     { key: 'name', label: 'Name', cell: (r) => r.name },
@@ -1041,6 +1168,35 @@ it('skips a priority-hidden header cell when navigating with ArrowRight, instead
   await el.updateComplete;
   expect(el.shadowRoot!.activeElement).to.equal(idHeader);
   expect(idHeader.getAttribute('tabindex')).to.equal('0');
+});
+
+it('rehomes the active column when its priority-hidden header is no longer visible', async () => {
+  const priorityColumns: TableColumn<Row>[] = [
+    { key: 'name', label: 'Name', cell: (r) => r.name },
+    { key: 'score', label: 'Score', priority: 'low', cell: (r) => r.score },
+  ];
+  const el = (await fixture(html`<lr-table style="display:block;width:300px"></lr-table>`)) as LyraTable<Row>;
+  el.columns = priorityColumns;
+  el.rows = rows;
+  await el.updateComplete;
+  (el as unknown as { activeColKey: string | null }).activeColKey = 'score';
+  el.rows = [...rows];
+  await el.updateComplete;
+
+  expect((el as unknown as { activeColKey: string | null }).activeColKey).to.equal('name');
+});
+
+it('stops observing removed sticky headers when sticky columns are replaced', async () => {
+  const el = (await fixture(html`<lr-table></lr-table>`)) as LyraTable<Row>;
+  el.columns = [
+    { key: 'name', label: 'Name', sticky: true, cell: (r) => r.name },
+    { key: 'score', label: 'Score', sticky: true, cell: (r) => r.score },
+  ];
+  el.rows = rows;
+  await el.updateComplete;
+  el.columns = columns;
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelectorAll('th[data-col-key]').length).to.equal(2);
 });
 
 it('moves focus from the header into the body row with ArrowDown', async () => {
@@ -1931,4 +2087,3 @@ describe('sticky-offset observation across reconnect', () => {
     );
   });
 });
-

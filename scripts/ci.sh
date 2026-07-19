@@ -10,6 +10,7 @@
 #                                   # (firefox + webkit; browsers are downloaded on demand)
 #   ./scripts/ci.sh --platform-matrix # run the CI platform matrix (Node 20/22 x Firefox/WebKit)
 #                                   # requires Node 20/22 and pnpm 10/11 locally
+#   ./scripts/ci.sh --all           # full build-test gate plus the platform matrix
 #
 # The platform matrix can use non-default executable names/paths when needed:
 #   CI_SH_NODE20_BIN=/path/to/node20 CI_SH_PNPM20_BIN=/path/to/pnpm10 \
@@ -87,6 +88,18 @@ run_with_toolchain() {
   PATH="$(dirname "$node_bin"):$PATH" \
     CI=true npm_config_manage_package_manager_versions=false \
     "$pnpm_bin" "$@"
+}
+
+run_platform_matrix_leg() {
+  local node_version="$1"
+  local node_bin="$2"
+  local pnpm_bin="$3"
+  local browser="$4"
+  step "platform contracts: Node $node_version / $browser"
+  run_with_toolchain "$node_bin" "$pnpm_bin" install --frozen-lockfile || return
+  run_with_toolchain "$node_bin" "$pnpm_bin" --filter @aceshooting/lyra-ui exec playwright install --with-deps "$browser" || return
+  WTR_BROWSER="$browser" WTR_STRICT_CONSOLE=1 \
+    run_with_toolchain "$node_bin" "$pnpm_bin" --filter @aceshooting/lyra-ui test:platform || return
 }
 
 if [[ "${CI_SH_SKIP_INSTALL:-0}" != "1" ]]; then
@@ -180,6 +193,7 @@ if [[ "$RUN_PLATFORM" == "1" ]]; then
 fi
 
 if [[ "$RUN_PLATFORM_MATRIX" == "1" ]]; then
+  platform_failures=0
   for node_version in 20 22; do
     node_bin="$(resolve_node_for_version "$node_version")"
     if [[ -z "$node_bin" ]]; then
@@ -199,13 +213,16 @@ if [[ "$RUN_PLATFORM_MATRIX" == "1" ]]; then
     fi
 
     for browser in firefox webkit; do
-      step "platform contracts: Node $node_version / $browser"
-      run_with_toolchain "$node_bin" "$pnpm_bin" install --frozen-lockfile
-      run_with_toolchain "$node_bin" "$pnpm_bin" --filter @aceshooting/lyra-ui exec playwright install --with-deps "$browser"
-      WTR_BROWSER="$browser" WTR_STRICT_CONSOLE=1 \
-        run_with_toolchain "$node_bin" "$pnpm_bin" --filter @aceshooting/lyra-ui test:platform
+      if ! run_platform_matrix_leg "$node_version" "$node_bin" "$pnpm_bin" "$browser"; then
+        platform_failures=$((platform_failures + 1))
+        printf '\033[31mFAILED: Node %s / %s\033[0m\n' "$node_version" "$browser" >&2
+      fi
     done
   done
+  if ((platform_failures > 0)); then
+    echo "$platform_failures platform-contract leg(s) failed" >&2
+    exit 1
+  fi
 fi
 
 printf '\n\033[32mCI gate complete.\033[0m\n'
