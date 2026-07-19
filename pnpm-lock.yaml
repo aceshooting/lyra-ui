@@ -109,7 +109,7 @@ importers:
         version: 3.3.3
     devDependencies:
       '@aceshooting/lyra-flags':
-        specifier: workspace:^1.4.0
+        specifier: workspace:^2.0.0
         version: link:../lyra-flags
       '@aiden0z/pptx-renderer':
         specifier: ^1.2.4
