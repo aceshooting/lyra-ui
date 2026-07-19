@@ -94,13 +94,18 @@ export class LyraInput extends FormAssociated(LyraInputBase) {
   @property({ attribute: 'inputmode' }) inputMode = '';
   @property({ attribute: 'enterkeyhint' }) enterKeyHint = '';
   /** `type="number"` only — forwarded to the internal native `<input>`'s own `min`/`max`/`step`
-   *  and consulted by that same native input's constraint validation (see `updateValidity()`). */
+   *  and consulted by that same native input's constraint validation (see `updateValidity()`).
+   *  Defaults to `undefined` (no lower bound). The `min` attribute is parsed as a number here; the
+   *  declared type also admits a string so a subclass bound to a non-numeric native input type can
+   *  narrow the attribute parsing to that type's own literal form (`<lr-time-input>`'s `09:00`)
+   *  without redeclaring the whole property surface. */
   // numeric-guard-exempt: passed straight through to the native <input min> and its own
   // ValidityState.rangeUnderflow check, both of which already tolerate a non-finite value
   // without throwing; never used in arithmetic in this file.
-  @property({ type: Number }) min?: number;
+  @property({ type: Number }) min?: number | string;
+  /** Upper counterpart of `min`, with the same parsing and the same default of `undefined`. */
   // numeric-guard-exempt: same rationale as `min` above, for the native <input max> attribute.
-  @property({ type: Number }) max?: number;
+  @property({ type: Number }) max?: number | string;
   /** Accepts `'any'` (the native way to disable step validation) in addition to a numeric step. */
   @property() step?: number | 'any';
   /** `type="password"` only — whether the field currently reveals its raw text. Toggled by the
