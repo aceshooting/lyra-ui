@@ -24,7 +24,7 @@ const config = {
   // nesting.
   staticDirs: [
     { from: './lyra-mark.svg', to: './lyra-mark.svg' },
-    { from: '../packages/lyra-ui/src/components/pdf-viewer/fixtures/sample.pdf', to: './fixtures/sample.pdf' },
+    { from: '../packages/lyra-ui/src/components/viewers/pdf-viewer/fixtures/sample.pdf', to: './fixtures/sample.pdf' },
     { from: '../packages/lyra-ui/llms.txt', to: './llms.txt' },
     { from: '../packages/lyra-ui/llms-full.txt', to: './llms-full.txt' },
     { from: './robots.txt', to: './robots.txt' },
