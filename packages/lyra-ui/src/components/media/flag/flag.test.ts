@@ -43,7 +43,14 @@ it('shows a loading skeleton and aria-busy while the flag package loads, and ign
   expect(el.hasAttribute('aria-busy')).to.be.false;
 });
 
-it('renders an img for a country code', async () => {
+it('renders an img for a country code', async function () {
+  // The first test in this file to await img()'s wait to completion uninterrupted (the very
+  // first test above deliberately interrupts mid-resolution instead) -- genuinely exposed to
+  // @aceshooting/lyra-flags' cold-start dynamic import latency under full-suite concurrency, the
+  // same class of flake img()'s own comment already raised its internal wait to 15000ms for.
+  // That inner ceiling is moot without also raising this test's own mocha-level timeout past the
+  // 6000ms default, which mocha would otherwise still enforce first.
+  this.timeout(20_000);
   const el = (await fixture(html`<lr-flag country="fr"></lr-flag>`)) as LyraFlag;
   const el2 = await img(el);
   expect(el2.getAttribute('src')).to.contain('fr.svg');
