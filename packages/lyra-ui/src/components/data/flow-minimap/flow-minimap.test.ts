@@ -103,6 +103,28 @@ it('clicking the map centers the canvas viewport there (calls setViewport)', asy
   expect(changed).to.be.true;
 });
 
+it('wheeling over the map zooms in on scroll-down and out on scroll-up', async () => {
+  const wrapper = (await fixture(html`
+    <lr-flow-canvas style="width:400px;height:300px">
+      <lr-flow-minimap slot="bottom-end"></lr-flow-minimap>
+    </lr-flow-canvas>
+  `)) as LyraFlowCanvas;
+  wrapper.nodes = nodes;
+  await wrapper.updateComplete;
+  await new Promise((r) => requestAnimationFrame(r));
+  const minimap = wrapper.querySelector('lr-flow-minimap') as LyraFlowMinimap;
+  await minimap.updateComplete;
+  const map = minimap.shadowRoot!.querySelector('[part="map"]') as SVGSVGElement;
+
+  const zoomBefore = wrapper.viewport.zoom;
+  map.dispatchEvent(new WheelEvent('wheel', { bubbles: true, cancelable: true, deltaY: -100 }));
+  expect(wrapper.viewport.zoom).to.be.greaterThan(zoomBefore);
+
+  const zoomAfterZoomIn = wrapper.viewport.zoom;
+  map.dispatchEvent(new WheelEvent('wheel', { bubbles: true, cancelable: true, deltaY: 100 }));
+  expect(wrapper.viewport.zoom).to.be.lessThan(zoomAfterZoomIn);
+});
+
 it('the viewport rect is the single focusable stop; +/-/Enter/Home/arrows drive the canvas', async () => {
   const wrapper = (await fixture(html`
     <lr-flow-canvas style="width:400px;height:300px">
@@ -120,6 +142,74 @@ it('the viewport rect is the single focusable stop; +/-/Enter/Home/arrows drive 
   const zoomBefore = wrapper.viewport.zoom;
   rect.dispatchEvent(new KeyboardEvent('keydown', { key: '+', bubbles: true, cancelable: true }));
   expect(wrapper.viewport.zoom).to.be.greaterThan(zoomBefore);
+});
+
+it('the "-" key zooms the canvas out', async () => {
+  const wrapper = (await fixture(html`
+    <lr-flow-canvas style="width:400px;height:300px">
+      <lr-flow-minimap slot="bottom-end"></lr-flow-minimap>
+    </lr-flow-canvas>
+  `)) as LyraFlowCanvas;
+  wrapper.nodes = nodes;
+  await wrapper.updateComplete;
+  await new Promise((r) => requestAnimationFrame(r));
+  const minimap = wrapper.querySelector('lr-flow-minimap') as LyraFlowMinimap;
+  await minimap.updateComplete;
+  const rect = minimap.shadowRoot!.querySelector('[part="viewport"]') as HTMLElement;
+  const zoomBefore = wrapper.viewport.zoom;
+  rect.dispatchEvent(new KeyboardEvent('keydown', { key: '-', bubbles: true, cancelable: true }));
+  expect(wrapper.viewport.zoom).to.be.lessThan(zoomBefore);
+});
+
+it('Enter and Home both fit the canvas to its content', async () => {
+  const wrapper = (await fixture(html`
+    <lr-flow-canvas style="width:400px;height:300px">
+      <lr-flow-minimap slot="bottom-end"></lr-flow-minimap>
+    </lr-flow-canvas>
+  `)) as LyraFlowCanvas;
+  wrapper.nodes = nodes;
+  await wrapper.updateComplete;
+  await new Promise((r) => requestAnimationFrame(r));
+  const minimap = wrapper.querySelector('lr-flow-minimap') as LyraFlowMinimap;
+  await minimap.updateComplete;
+  const rect = minimap.shadowRoot!.querySelector('[part="viewport"]') as HTMLElement;
+
+  const before = { ...wrapper.viewport };
+  rect.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
+  expect(wrapper.viewport).to.not.deep.equal(before);
+
+  // Reset so the Home-triggered fit() has somewhere to move from (fit() is idempotent for the same
+  // nodes/viewport size, so re-pressing without resetting would land on the same values again).
+  wrapper.setViewport({ x: 0, y: 0, zoom: 1 });
+  const beforeHome = { ...wrapper.viewport };
+  rect.dispatchEvent(new KeyboardEvent('keydown', { key: 'Home', bubbles: true, cancelable: true }));
+  expect(wrapper.viewport).to.not.deep.equal(beforeHome);
+});
+
+it('arrow keys pan the canvas viewport in each physical direction', async () => {
+  const wrapper = (await fixture(html`
+    <lr-flow-canvas style="width:400px;height:300px">
+      <lr-flow-minimap slot="bottom-end"></lr-flow-minimap>
+    </lr-flow-canvas>
+  `)) as LyraFlowCanvas;
+  wrapper.nodes = nodes;
+  await wrapper.updateComplete;
+  await new Promise((r) => requestAnimationFrame(r));
+  const minimap = wrapper.querySelector('lr-flow-minimap') as LyraFlowMinimap;
+  await minimap.updateComplete;
+  const rect = minimap.shadowRoot!.querySelector('[part="viewport"]') as HTMLElement;
+
+  rect.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true, cancelable: true }));
+  expect(wrapper.viewport.x).to.be.lessThan(0);
+
+  rect.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true, cancelable: true }));
+  expect(wrapper.viewport.x).to.be.greaterThan(0);
+
+  rect.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, cancelable: true }));
+  expect(wrapper.viewport.y).to.be.lessThan(0);
+
+  rect.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowUp', bubbles: true, cancelable: true }));
+  expect(wrapper.viewport.y).to.be.greaterThan(0);
 });
 
 it('pointercancel ends a viewport drag so a later pointermove no longer pans the canvas', async () => {
@@ -211,6 +301,42 @@ it('resolves a for-target canvas that mounts into the document after the minimap
   await minimap.updateComplete;
 
   expect(minimap.shadowRoot!.querySelectorAll('[part="node"]').length).to.equal(2);
+});
+
+it('disconnects an in-flight canvas watcher when the for attribute changes again before it resolves', async () => {
+  const root = (await fixture(html`<div><lr-flow-minimap for="missing-one"></lr-flow-minimap></div>`)) as HTMLElement;
+  const minimap = root.querySelector('lr-flow-minimap') as LyraFlowMinimap;
+  expect(minimap.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-hidden')).to.equal('true');
+
+  // No canvas ever resolved for "missing-one", so a MutationObserver is still watching. Changing
+  // `for` again before it resolves must tear down that in-flight watcher (not leak it) and start a
+  // fresh resolve attempt for the new target instead.
+  minimap.for = 'missing-two';
+  await minimap.updateComplete;
+  expect(minimap.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-hidden')).to.equal('true');
+
+  const canvas = document.createElement('lr-flow-canvas') as LyraFlowCanvas;
+  canvas.id = 'missing-two';
+  root.appendChild(canvas);
+  canvas.nodes = nodes;
+  await canvas.updateComplete;
+  await new Promise((r) => requestAnimationFrame(r));
+  await new Promise((r) => setTimeout(r, 0));
+  await minimap.updateComplete;
+  expect(minimap.shadowRoot!.querySelectorAll('[part="node"]').length).to.equal(2);
+});
+
+it('ignores a repeated DOM mutation while already watching for an unresolved canvas', async () => {
+  const root = (await fixture(html`<div><lr-flow-minimap for="still-missing"></lr-flow-minimap></div>`)) as HTMLElement;
+  const minimap = root.querySelector('lr-flow-minimap') as LyraFlowMinimap;
+  expect(minimap.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-hidden')).to.equal('true');
+
+  // Trigger an unrelated DOM mutation under the watched root while still unresolved -- the
+  // MutationObserver callback re-enters resolveAndAttach() -> watchForCanvas() while a watcher is
+  // already active, which must no-op instead of creating a second observer.
+  root.appendChild(document.createElement('span'));
+  await new Promise((r) => setTimeout(r, 0));
+  expect(minimap.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-hidden')).to.equal('true');
 });
 
 it('unsubscribes from the canvas companion hook on disconnect', async () => {
