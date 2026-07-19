@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
-import type { ComboboxSource, LyraCombobox, OptionFilter } from './combobox.js';
+import type { ComboboxFilterDetail, ComboboxSource, LyraCombobox, OptionFilter } from './combobox.js';
 
 const meta: Meta = {
   title: 'Combobox',
@@ -171,6 +171,44 @@ export const CustomFilter: Story = {
         <lr-option value="c">Cherry</lr-option>
         <lr-option value="d">Date</lr-option>
       </lr-combobox>
+    `;
+  },
+};
+
+/**
+ * `lr-filter` reports the live, in-progress filter text (`detail.value`) on every user keystroke —
+ * the thing `value` deliberately is *not*, since `value` is the committed selection. Use it to
+ * drive search-as-you-type side effects outside the listbox, such as this "No matches for “…”"
+ * empty state, instead of reading the shadow input.
+ *
+ * It fires for user input only: picking a row, the clear button, `form.reset()`, dismissing the
+ * listbox and programmatic `value` writes all blank the filter silently.
+ */
+export const LiveFilterText: Story = {
+  render: () => {
+    const fruits = ['Apple', 'Banana', 'Cherry', 'Date'];
+
+    const onFilter = (event: Event) => {
+      const combobox = event.currentTarget as LyraCombobox;
+      const { value } = (event as CustomEvent<ComboboxFilterDetail>).detail;
+      const status = combobox.parentElement?.querySelector('output');
+      if (!status) return;
+      const query = value.trim();
+      if (!query) {
+        status.textContent = 'Type to filter — the live text arrives on every keystroke.';
+        return;
+      }
+      const matches = fruits.filter((fruit) => fruit.toLowerCase().includes(query.toLowerCase()));
+      status.textContent = matches.length ? `${matches.length} match(es) for “${query}”` : `No matches for “${query}”`;
+    };
+
+    return html`
+      <div style="max-width: 22rem">
+        <lr-combobox label="Fruit" placeholder="Type to search…" clearable @lr-filter=${onFilter}>
+          ${fruits.map((fruit) => html`<lr-option value=${fruit.toLowerCase()}>${fruit}</lr-option>`)}
+        </lr-combobox>
+        <output aria-live="polite">Type to filter — the live text arrives on every keystroke.</output>
+      </div>
     `;
   },
 };

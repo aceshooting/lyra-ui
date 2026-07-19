@@ -38,10 +38,16 @@ const spellcheckConverter = {
   toAttribute: (value: boolean): string => (value ? 'true' : 'false'),
 };
 
+/** Detail of `lr-filter`: the in-progress filter text, never the committed selection. */
+export interface ComboboxFilterDetail {
+  value: string;
+}
+
 export interface LyraComboboxEventMap {
   'lr-show': CustomEvent<undefined>;
   'lr-hide': CustomEvent<undefined>;
   'lr-clear': CustomEvent<undefined>;
+  'lr-filter': CustomEvent<ComboboxFilterDetail>;
   blur: CustomEvent<undefined>;
   focus: CustomEvent<undefined>;
 }
@@ -67,6 +73,11 @@ export interface LyraComboboxEventMap {
  * @event lr-show - The listbox opened.
  * @event lr-hide - The listbox closed.
  * @event lr-clear - The value was cleared.
+ * @event {CustomEvent<ComboboxFilterDetail>} lr-filter - The in-progress filter text changed
+ * through user input. `detail.value` is the live filter string, which is not the same thing as the
+ * host's `value` (the committed selection). User-input only: the programmatic paths that blank the
+ * filter — picking a row, the clear button, `form.reset()`, dismissing the listbox, a `value`
+ * write, `setRangeText()` — are all silent, mirroring `<lr-input>`'s `lr-input`.
  * @event blur - Re-dispatched from the internal native input as a bubbling, composed event.
  * @event focus - Re-dispatched from the internal native input as a bubbling, composed event.
  * @csspart form-control - The outer wrapper around label, combobox, listbox, error and hint.
@@ -136,6 +147,14 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
   @property({ attribute: false }) filter: OptionFilter | null = null;
   @property({ attribute: false }) source: ComboboxSource | null = null;
 
+  // The in-progress filter text. Public read access is the `lr-filter` event
+  // rather than a property, so consumers never have to reach into the shadow
+  // input for it. Exactly one writer is user-driven and therefore emits:
+  // `onInput()`. Every other assignment below -- `setRangeText()` (a
+  // programmatic editing API; native `<input>.setRangeText()` likewise fires
+  // no `input` event), `formResetCallback()`, `hide()`, `pickRow()`'s two
+  // commit resets, and `clear()` -- is the component blanking its own filter,
+  // never the user typing, so none of them emit.
   @state() private query = '';
   @state() private activeIndex = -1;
   @state() private options: LyraOption[] = [];
@@ -790,6 +809,9 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
     this.activeIndex = -1;
     this.show();
     if (this.source) this.runSource(this.query);
+    // The only user-driven `query` writer, so the only one that announces the
+    // new filter text (see the `query` declaration above).
+    this.emit('lr-filter', { value: this.query });
   };
 
   private runSource(query: string): void {

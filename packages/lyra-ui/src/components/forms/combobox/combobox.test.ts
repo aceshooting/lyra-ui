@@ -4,7 +4,7 @@ import './option.js';
 import '../input/input.js';
 import '../select/select.js';
 import '../../layout/segmented/segmented.js';
-import type { LyraCombobox } from './combobox.js';
+import type { ComboboxFilterDetail, LyraCombobox } from './combobox.js';
 import { styles } from './combobox.styles.js';
 
 const basic = () => html`
@@ -1913,5 +1913,160 @@ describe('native input surface', () => {
     const blurEvent = await blurPromise;
     expect(blurEvent.bubbles).to.be.true;
     expect(blurEvent.composed).to.be.true;
+  });
+});
+
+describe('lr-filter (live filter text)', () => {
+  /** Collects every `lr-filter` detail value in dispatch order. */
+  function trackFilter(el: LyraCombobox): { values: string[]; events: CustomEvent<ComboboxFilterDetail>[] } {
+    const values: string[] = [];
+    const events: CustomEvent<ComboboxFilterDetail>[] = [];
+    el.addEventListener('lr-filter', (event) => {
+      events.push(event);
+      values.push(event.detail.value);
+    });
+    return { values, events };
+  }
+
+  it('emits one lr-filter per keystroke carrying the in-progress filter text', async () => {
+    const el = (await fixture(basic())) as LyraCombobox;
+    const { values, events } = trackFilter(el);
+
+    await typeQuery(el, 'b');
+    await typeQuery(el, 'ba');
+    await typeQuery(el, 'ban');
+
+    expect(values).to.deep.equal(['b', 'ba', 'ban']);
+    expect(events.every((event) => event.bubbles && event.composed)).to.be.true;
+    expect(events.every((event) => !event.cancelable)).to.be.true;
+    expect(events.every((event) => (event.target as Element).localName === 'lr-combobox')).to.be.true;
+  });
+
+  it('emits lr-filter when the user clears the filter text back to empty', async () => {
+    const el = (await fixture(basic())) as LyraCombobox;
+    await typeQuery(el, 'ban');
+    const { values } = trackFilter(el);
+
+    await typeQuery(el, '');
+
+    expect(values).to.deep.equal(['']);
+  });
+
+  it('does not emit lr-filter when a pointer selection commits and resets the query (single)', async () => {
+    const el = (await fixture(basic())) as LyraCombobox;
+    el.open = true;
+    await el.updateComplete;
+    await typeQuery(el, 'ban');
+    const { values } = trackFilter(el);
+    const changes: string[] = [];
+    el.addEventListener('change', (event) => changes.push(event.type));
+
+    (el.shadowRoot!.querySelectorAll('[part="option"]')[0] as HTMLElement).click();
+    await el.updateComplete;
+
+    expect(el.value).to.equal('b');
+    expect(changes).to.deep.equal(['change']);
+    expect(values).to.deep.equal([]);
+  });
+
+  it('does not emit lr-filter when a keyboard selection commits and resets the query (multiple)', async () => {
+    const el = (await fixture(basic())) as LyraCombobox;
+    el.multiple = true;
+    const input = el.shadowRoot!.querySelector('[part="combobox-input"]') as HTMLInputElement;
+    input.focus();
+    el.open = true;
+    await el.updateComplete;
+    await typeQuery(el, 'ban');
+    const { values } = trackFilter(el);
+
+    input.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }));
+    input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+    await el.updateComplete;
+
+    expect(el.value).to.deep.equal(['b']);
+    expect(values).to.deep.equal([]);
+  });
+
+  it('does not emit lr-filter for the clear button, a value write, form.reset(), or closing the listbox', async () => {
+    const form = (await fixture(html`
+      <form>
+        <lr-combobox name="fruit" clearable>
+          <lr-option value="a">Apple</lr-option>
+          <lr-option value="b" selected>Banana</lr-option>
+        </lr-combobox>
+      </form>
+    `)) as HTMLFormElement;
+    const el = form.querySelector('lr-combobox') as LyraCombobox;
+    await el.updateComplete;
+    await typeQuery(el, 'app');
+    const { values } = trackFilter(el);
+
+    // Clear button: resets both the selection and the query programmatically.
+    (el.shadowRoot!.querySelector('[part="clear-button"]') as HTMLButtonElement).click();
+    await el.updateComplete;
+    expect(values, 'clear button must not emit lr-filter').to.deep.equal([]);
+
+    // Programmatic `value` assignment.
+    el.value = 'a';
+    await el.updateComplete;
+    expect(values, 'value assignment must not emit lr-filter').to.deep.equal([]);
+
+    // form.reset() -> formResetCallback() blanks the query.
+    await typeQuery(el, 'che');
+    values.length = 0;
+    form.reset();
+    await el.updateComplete;
+    expect(values, 'form.reset() must not emit lr-filter').to.deep.equal([]);
+
+    // Closing the listbox (single mode) abandons the in-progress query.
+    await typeQuery(el, 'che');
+    values.length = 0;
+    el.open = false;
+    await el.updateComplete;
+    expect(values, 'closing the listbox must not emit lr-filter').to.deep.equal([]);
+  });
+
+  it('does not emit lr-filter for the programmatic setRangeText() editing API', async () => {
+    const el = (await fixture(html`<lr-combobox multiple></lr-combobox>`)) as LyraCombobox;
+    await typeQuery(el, 'hello world');
+    const { values } = trackFilter(el);
+
+    el.setSelectionRange(6, 11, 'forward');
+    el.setRangeText('there', 6, 11, 'select');
+    await el.updateComplete;
+
+    expect(el.input?.value).to.equal('hello there');
+    expect(values).to.deep.equal([]);
+  });
+
+  it('reports the filter text, never the committed selection (single)', async () => {
+    const el = (await fixture(basic())) as LyraCombobox;
+    el.open = true;
+    await el.updateComplete;
+    (el.shadowRoot!.querySelectorAll('[part="option"]')[0] as HTMLElement).click();
+    await el.updateComplete;
+    expect(el.value).to.equal('a');
+
+    const { values } = trackFilter(el);
+    await typeQuery(el, 'che');
+
+    expect(values).to.deep.equal(['che']);
+    expect(el.value).to.equal('a');
+  });
+
+  it('reports the filter text, never the committed selection (multiple)', async () => {
+    const el = (await fixture(basic())) as LyraCombobox;
+    el.multiple = true;
+    el.open = true;
+    await el.updateComplete;
+    (el.shadowRoot!.querySelectorAll('[part="option"]')[0] as HTMLElement).click();
+    await el.updateComplete;
+    expect(el.value).to.deep.equal(['a']);
+
+    const { values } = trackFilter(el);
+    await typeQuery(el, 'che');
+
+    expect(values).to.deep.equal(['che']);
+    expect(el.value).to.deep.equal(['a']);
   });
 });
