@@ -207,6 +207,34 @@ describe('shiki highlighting (real peer)', () => {
     expect(internals.highlightedHtml).to.equal(correctHtml);
     expect(el.language).to.equal('javascript');
   });
+
+  it('falls back to plain text when the highlighter throws while tokenizing (tokenize() catch branch)', async () => {
+    const el = (await fixture(
+      html`<lr-code-block language="javascript" .code=${jsSample}></lr-code-block>`,
+    )) as LyraCodeBlock;
+    await waitUntil(() => el.shadowRoot!.querySelector('.shiki') !== null, undefined, { timeout: 8000 });
+
+    const internals = internalsOf(el);
+    // `internals.highlighter` is loadShikiHighlighter()'s page-lifetime singleton, shared by every
+    // other test in this file that uses the default (non-`languages`) loading path -- the patch
+    // must be undone afterward, or every later real-peer test hangs forever waiting for `.shiki`
+    // output that can now never be produced again.
+    const hl = internals.highlighter as unknown as { codeToHtml: (...args: unknown[]) => string };
+    const originalCodeToHtml = hl.codeToHtml;
+    try {
+      hl.codeToHtml = () => {
+        throw new Error('malformed grammar');
+      };
+      internals.syncHighlight();
+      await el.updateComplete;
+
+      expect(internals.highlightedHtml).to.equal(null);
+      expect(el.shadowRoot!.querySelector('.shiki')).to.not.exist;
+      expect(el.shadowRoot!.querySelector('[part="code"]')!.textContent).to.equal(jsSample);
+    } finally {
+      hl.codeToHtml = originalCodeToHtml;
+    }
+  });
 });
 
 describe('languages (fine-grained shiki opt-in)', () => {
@@ -361,7 +389,8 @@ describe('copy button', () => {
     }
   });
 
-  it('shows a transient "Copied!" confirmation label after copying', async () => {
+  it('shows a transient "Copied!" confirmation label after copying, then reverts after the timeout', async function () {
+    this.timeout(5000);
     const el = (await fixture(html`<lr-code-block .code=${jsSample}></lr-code-block>`)) as LyraCodeBlock;
     const button = el.shadowRoot!.querySelector('[part="copy-button"]') as HTMLButtonElement;
     expect(button.textContent!.trim()).to.equal('Copy');
@@ -369,6 +398,32 @@ describe('copy button', () => {
     button.click();
     await el.updateComplete;
     expect(button.textContent!.trim()).to.equal('Copied!');
+
+    await aTimeout(1600);
+    await el.updateComplete;
+    expect(button.textContent!.trim()).to.equal('Copy');
+  });
+
+  it('still fires lr-copy when navigator.clipboard throws synchronously (writeClipboard catch branch)', async () => {
+    const original = Object.getOwnPropertyDescriptor(navigator, 'clipboard');
+    Object.defineProperty(navigator, 'clipboard', {
+      get() {
+        throw new Error('blocked by permissions policy');
+      },
+      configurable: true,
+    });
+
+    try {
+      const el = (await fixture(html`<lr-code-block .code=${jsSample}></lr-code-block>`)) as LyraCodeBlock;
+      const button = el.shadowRoot!.querySelector('[part="copy-button"]') as HTMLButtonElement;
+
+      const listener = oneEvent(el, 'lr-copy');
+      button.click();
+      const { detail } = await listener;
+      expect(detail).to.deep.equal({ text: jsSample });
+    } finally {
+      if (original) Object.defineProperty(navigator, 'clipboard', original);
+    }
   });
 
   it('does not render a copy button when copyable is false', async () => {
@@ -566,6 +621,17 @@ describe('highlight-lines', () => {
     await after.updateComplete;
     expect(after.shadowRoot!.querySelector('[part="body"]')!.innerHTML).to.equal(beforeHtml);
   });
+
+  it('ignores non-line-range highlight entries when merging highlight-lines', async () => {
+    const el = (await fixture(html`<lr-code-block code=${'a\nb\nc'}></lr-code-block>`)) as LyraCodeBlock;
+    el.highlights = [
+      { id: 'p1', anchor: { kind: 'page', page: 1 } },
+      { id: 'h1', anchor: { kind: 'line-range', start: 2, end: 2 } },
+    ];
+    await el.updateComplete;
+    const lines = [...el.shadowRoot!.querySelectorAll('[data-line]')];
+    expect(lines.map((l) => l.hasAttribute('data-highlighted'))).to.deep.equal([false, true, false]);
+  });
 });
 
 describe('anchor-target (line-range)', () => {
@@ -588,6 +654,20 @@ describe('anchor-target (line-range)', () => {
     expect(await el.scrollToAnchor({ kind: 'line-range', start: 99 })).to.be.false;
   });
 
+  it('resolves a `highlights` id string to its anchor, and resolves false for an unknown id', async () => {
+    const el = (await fixture(html`<lr-code-block code=${'a\nb\nc\nd\ne'}></lr-code-block>`)) as LyraCodeBlock;
+    el.highlights = [{ id: 'h1', anchor: { kind: 'line-range', start: 3 } }];
+    await el.updateComplete;
+    let scrolled = false;
+    const body = el.shadowRoot!.querySelector('[part="body"]') as HTMLElement;
+    body.scrollTo = () => {
+      scrolled = true;
+    };
+    expect(await el.scrollToAnchor('h1')).to.be.true;
+    expect(scrolled).to.be.true;
+    expect(await el.scrollToAnchor('does-not-exist')).to.be.false;
+  });
+
   it('renders a line-range highlight from the highlights array', async () => {
     const el = (await fixture(
       html`<lr-code-block code=${'a\nb\nc'}></lr-code-block>`,
@@ -596,6 +676,83 @@ describe('anchor-target (line-range)', () => {
     await el.updateComplete;
     const line2 = el.shadowRoot!.querySelector('[data-line="2"]')!;
     expect(line2.hasAttribute('data-highlighted')).to.be.true;
+  });
+
+  it('marks active highlight lines with data-active based on activeHighlightId, including the open-ended end fallback', async () => {
+    const el = (await fixture(html`<lr-code-block code=${'a\nb\nc'}></lr-code-block>`)) as LyraCodeBlock;
+    // `end` intentionally omitted -- exercises the `active.anchor.end ?? active.anchor.start` fallback.
+    el.highlights = [{ id: 'h1', anchor: { kind: 'line-range', start: 2 } }];
+    el.activeHighlightId = 'h1';
+    await el.updateComplete;
+    const line1 = el.shadowRoot!.querySelector('[data-line="1"]')!;
+    const line2 = el.shadowRoot!.querySelector('[data-line="2"]')!;
+    expect(line2.hasAttribute('data-active')).to.be.true;
+    expect(line1.hasAttribute('data-active')).to.be.false;
+  });
+});
+
+describe('text selection (lr-text-select)', () => {
+  it('emits lr-text-select for a text selection spanning code lines', async () => {
+    const el = (await fixture(html`<lr-code-block code=${'alpha\nbeta\ngamma'}></lr-code-block>`)) as LyraCodeBlock;
+    await el.updateComplete;
+    const body = el.shadowRoot!.querySelector('[part="body"]') as HTMLElement;
+    const line1 = el.shadowRoot!.querySelector('[data-line="1"]')!;
+    const line2 = el.shadowRoot!.querySelector('[data-line="2"]')!;
+    // Lit inserts a static per-expression marker comment before the dynamic text node it commits,
+    // so the real Text node is not reliably `firstChild` -- find it directly instead of assuming a
+    // fixed sibling position (same precedent as terminal.test.ts's identical selection test).
+    const textNodeOf = (line: Element): Node => [...line.childNodes].find((n) => n.nodeType === Node.TEXT_NODE)!;
+    const range = document.createRange();
+    range.setStart(textNodeOf(line1), 0);
+    range.setEnd(textNodeOf(line2), 2);
+    // `ShadowRoot.getSelection` is a Chromium-only extension -- same precedent the component
+    // itself documents for onBodyMouseUp(). Falls back to window.getSelection() otherwise.
+    const shadowSelection = (el.shadowRoot as unknown as { getSelection?: () => Selection | null }).getSelection?.();
+    const selection = shadowSelection ?? window.getSelection()!;
+    selection.removeAllRanges();
+    selection.addRange(range);
+    const listener = oneEvent(el, 'lr-text-select');
+    body.dispatchEvent(new MouseEvent('mouseup', { bubbles: true, composed: true }));
+    const event = (await listener) as CustomEvent<{ text: string; anchor: unknown }>;
+    expect(event.detail.anchor).to.deep.equal({ kind: 'line-range', start: 1, end: 2 });
+    expect(event.detail.text.length).to.be.greaterThan(0);
+  });
+
+  it('does not emit lr-text-select when there is no active selection on mouseup', async () => {
+    const el = (await fixture(html`<lr-code-block code=${'a\nb'}></lr-code-block>`)) as LyraCodeBlock;
+    await el.updateComplete;
+    const shadowSelection = (el.shadowRoot as unknown as { getSelection?: () => Selection | null }).getSelection?.();
+    (shadowSelection ?? window.getSelection())?.removeAllRanges();
+    let fired = false;
+    el.addEventListener('lr-text-select', () => {
+      fired = true;
+    });
+    const body = el.shadowRoot!.querySelector('[part="body"]') as HTMLElement;
+    body.dispatchEvent(new MouseEvent('mouseup', { bubbles: true, composed: true }));
+    await aTimeout(0);
+    expect(fired).to.be.false;
+  });
+
+  it('does not emit lr-text-select for a whitespace-only selection', async () => {
+    const el = (await fixture(html`<lr-code-block code=${'a  \nb'}></lr-code-block>`)) as LyraCodeBlock;
+    await el.updateComplete;
+    const line1 = el.shadowRoot!.querySelector('[data-line="1"]')!;
+    const textNodeOf = (line: Element): Node => [...line.childNodes].find((n) => n.nodeType === Node.TEXT_NODE)!;
+    const range = document.createRange();
+    range.setStart(textNodeOf(line1), 1);
+    range.setEnd(textNodeOf(line1), 3); // just the trailing spaces
+    const shadowSelection = (el.shadowRoot as unknown as { getSelection?: () => Selection | null }).getSelection?.();
+    const selection = shadowSelection ?? window.getSelection()!;
+    selection.removeAllRanges();
+    selection.addRange(range);
+    let fired = false;
+    el.addEventListener('lr-text-select', () => {
+      fired = true;
+    });
+    const body = el.shadowRoot!.querySelector('[part="body"]') as HTMLElement;
+    body.dispatchEvent(new MouseEvent('mouseup', { bubbles: true, composed: true }));
+    await aTimeout(0);
+    expect(fired).to.be.false;
   });
 });
 
@@ -638,5 +795,52 @@ describe('interactive-lines', () => {
     const el = (await fixture(html`<lr-code-block code=${'a\nb'} line-numbers></lr-code-block>`)) as LyraCodeBlock;
     await el.updateComplete;
     expect(el.shadowRoot!.querySelectorAll('[part~="line-button"]').length).to.equal(0);
+  });
+
+  it('moves focus with ArrowUp, jumps with Home/End, and activates on Enter and Space', async () => {
+    const el = (await fixture(
+      html`<lr-code-block code=${'a\nb\nc\nd'} line-numbers interactive-lines></lr-code-block>`,
+    )) as LyraCodeBlock;
+    await el.updateComplete;
+
+    const line3 = el.shadowRoot!.querySelector('[data-line="3"]') as HTMLButtonElement;
+    line3.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowUp', bubbles: true, cancelable: true }));
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('[data-line="2"]')!.getAttribute('tabindex')).to.equal('0');
+
+    const line2 = el.shadowRoot!.querySelector('[data-line="2"]') as HTMLButtonElement;
+    line2.dispatchEvent(new KeyboardEvent('keydown', { key: 'End', bubbles: true, cancelable: true }));
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('[data-line="4"]')!.getAttribute('tabindex')).to.equal('0');
+
+    const line4 = el.shadowRoot!.querySelector('[data-line="4"]') as HTMLButtonElement;
+    line4.dispatchEvent(new KeyboardEvent('keydown', { key: 'Home', bubbles: true, cancelable: true }));
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('[data-line="1"]')!.getAttribute('tabindex')).to.equal('0');
+
+    const line1 = el.shadowRoot!.querySelector('[data-line="1"]') as HTMLButtonElement;
+    let listener = oneEvent(el, 'lr-line-click');
+    line1.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
+    let event = (await listener) as CustomEvent<{ line: number }>;
+    expect(event.detail).to.deep.equal({ line: 1 });
+
+    listener = oneEvent(el, 'lr-line-click');
+    line1.dispatchEvent(new KeyboardEvent('keydown', { key: ' ', bubbles: true, cancelable: true }));
+    event = (await listener) as CustomEvent<{ line: number }>;
+    expect(event.detail).to.deep.equal({ line: 1 });
+
+    // Home while already on line 1 is a no-op (next === line) -- must not move focus or throw.
+    line1.dispatchEvent(new KeyboardEvent('keydown', { key: 'Home', bubbles: true, cancelable: true }));
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('[data-line="1"]')!.getAttribute('tabindex')).to.equal('0');
+  });
+
+  it('marks a highlighted line as both line-button and line-highlight when interactive-lines and highlight-lines are combined', async () => {
+    const el = (await fixture(
+      html`<lr-code-block code=${'a\nb\nc'} line-numbers interactive-lines highlight-lines="2"></lr-code-block>`,
+    )) as LyraCodeBlock;
+    await el.updateComplete;
+    const line2 = el.shadowRoot!.querySelector('[data-line="2"]')!;
+    expect(line2.getAttribute('part')).to.equal('line-button line-highlight');
   });
 });
