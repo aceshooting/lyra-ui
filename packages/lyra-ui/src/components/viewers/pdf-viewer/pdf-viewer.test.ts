@@ -90,6 +90,24 @@ function fakeDocumentWithText(pages: string[], outline: unknown[] | null = null)
   };
 }
 
+/** A promise plus its externally-callable resolve/reject, for precisely timing a stale in-flight
+ *  `load()` against a later superseding `src` change. */
+function deferred<T>(): { promise: Promise<T>; resolve: (value: T) => void; reject: (error: unknown) => void } {
+  let resolve!: (value: T) => void;
+  let reject!: (error: unknown) => void;
+  const promise = new Promise<T>((res, rej) => {
+    resolve = res;
+    reject = rej;
+  });
+  return { promise, resolve, reject };
+}
+
+/** Waits two animation frames -- enough for `<lr-virtual-list>`'s own rAF-coalesced scroll handler
+ *  to have run (mirrors the identical helper in virtual-list.test.ts). */
+async function nextFrame(): Promise<void> {
+  await new Promise<void>((r) => requestAnimationFrame(() => requestAnimationFrame(() => r())));
+}
+
 describe('lr-pdf-viewer', () => {
   it('defaults to an empty document, page one, and 100% zoom', async () => {
     const el = (await fixture(html`<lr-pdf-viewer></lr-pdf-viewer>`)) as LyraPdfViewer;
@@ -276,6 +294,219 @@ describe('lr-pdf-viewer', () => {
       await expect(el).to.be.accessible();
     } finally { restore(); }
   });
+
+  it('emits lr-render-error when a page canvas render task itself rejects', async () => {
+    const el = (await fixture(html`<lr-pdf-viewer></lr-pdf-viewer>`)) as LyraPdfViewer;
+    const boom = new Error('canvas render boom');
+    const doc = {
+      numPages: 1,
+      getPage: (pageNumber: number) => Promise.resolve({ ...fakePage(pageNumber), render: () => ({ promise: Promise.reject(boom), cancel: () => {} }) }),
+    };
+    installFakeLoader(el, doc);
+    const restore = stubFetch();
+    try {
+      const eventPromise = oneEvent(el, 'lr-render-error');
+      el.src = 'https://example.test/report.pdf';
+      expect((await eventPromise).detail.error).to.equal(boom);
+    } finally { restore(); }
+  });
+
+  it('emits lr-render-error when the text layer render itself rejects', async () => {
+    const el = (await fixture(html`<lr-pdf-viewer></lr-pdf-viewer>`)) as LyraPdfViewer;
+    const boom = new Error('text layer boom');
+    class FailingTextLayer {
+      constructor(private options: { container: HTMLElement }) {}
+      render(): Promise<void> { return Promise.reject(boom); }
+      cancel(): void {}
+    }
+    (el as unknown as { loadLibrary: () => Promise<unknown> }).loadLibrary = () => Promise.resolve({
+      getDocument: () => ({ promise: Promise.resolve(fakeDocument(1)) }),
+      GlobalWorkerOptions: { workerSrc: '' },
+      TextLayer: FailingTextLayer,
+    });
+    const restore = stubFetch();
+    try {
+      const eventPromise = oneEvent(el, 'lr-render-error');
+      el.src = 'https://example.test/report.pdf';
+      expect((await eventPromise).detail.error).to.equal(boom);
+    } finally { restore(); }
+  });
+
+  it('setting highlights before any page has mounted is a no-op (empty pageCanvases)', async () => {
+    const el = (await fixture(html`<lr-pdf-viewer></lr-pdf-viewer>`)) as LyraPdfViewer;
+    el.highlights = [{ id: 'cite-1', anchor: { kind: 'page', page: 1 } }];
+    await el.updateComplete;
+    expect(el.highlights).to.have.length(1);
+    expect(el.shadowRoot!.querySelector('.empty-note')).to.exist;
+  });
+
+  it('changing highlights after pages are already mounted repaints every mounted page', async () => {
+    const el = (await fixture(html`<lr-pdf-viewer></lr-pdf-viewer>`)) as LyraPdfViewer;
+    installFakeLoader(el, fakeDocument(1));
+    const restore = stubFetch();
+    try {
+      el.src = 'https://example.test/report.pdf';
+      await waitFor(el, '[part="toolbar"]');
+      await aTimeout(50); // page 1's canvas is already mounted (pageCanvases is non-empty)
+      el.highlights = [{ id: 'cite-1', anchor: { kind: 'page', page: 1 } }];
+      await el.updateComplete;
+      await aTimeout(20);
+      const list = el.shadowRoot!.querySelector('lr-virtual-list')!;
+      const layer = list.shadowRoot!.querySelector('lr-highlight-layer') as unknown as { items: { id: string }[] };
+      expect(layer.items.some((item) => item.id === 'cite-1')).to.be.true;
+    } finally {
+      restore();
+    }
+  });
+
+  it('shows the resource-too-large error for a response whose Content-Length exceeds the limit', async () => {
+    const el = (await fixture(html`<lr-pdf-viewer></lr-pdf-viewer>`)) as LyraPdfViewer;
+    installFakeLoader(el, fakeDocument(1));
+    const original = window.fetch;
+    window.fetch = (() => Promise.resolve({
+      ok: true,
+      status: 200,
+      statusText: 'OK',
+      headers: { get: (name: string) => (name === 'content-length' ? String(30 * 1024 * 1024) : null) },
+      arrayBuffer: () => Promise.resolve(new ArrayBuffer(8)),
+    } as unknown as Response)) as typeof window.fetch;
+    try {
+      const eventPromise = oneEvent(el, 'lr-render-error');
+      el.src = 'https://example.test/huge.pdf';
+      await eventPromise;
+      await waitFor(el, '[part="error"]');
+      expect(el.shadowRoot!.querySelector('[part="error"]')!.textContent).to.equal('This document is too large to preview.');
+    } finally { window.fetch = original; }
+  });
+
+  it('loads without an abort signal when AbortController is unavailable', async () => {
+    const el = (await fixture(html`<lr-pdf-viewer></lr-pdf-viewer>`)) as LyraPdfViewer;
+    installFakeLoader(el, fakeDocument(2));
+    const restore = stubFetch();
+    const originalAbortController = window.AbortController;
+    (window as unknown as { AbortController?: unknown }).AbortController = undefined;
+    try {
+      const eventPromise = oneEvent(el, 'lr-load');
+      el.src = 'https://example.test/report.pdf';
+      expect((await eventPromise).detail).to.deep.equal({ pageCount: 2 });
+    } finally {
+      window.AbortController = originalAbortController;
+      restore();
+    }
+  });
+
+  it('disconnecting while a page-render and a thumbnail-render task are in-flight cancels both', async () => {
+    const el = (await fixture(html`<lr-pdf-viewer></lr-pdf-viewer>`)) as LyraPdfViewer;
+    const cancels: string[] = [];
+    const doc = {
+      numPages: 1,
+      getPage: (pageNumber: number) =>
+        Promise.resolve({ ...fakePage(pageNumber), render: () => ({ promise: new Promise<void>(() => {}), cancel: () => cancels.push('cancel') }) }),
+    };
+    installFakeLoader(el, doc);
+    const restore = stubFetch();
+    try {
+      el.src = 'https://example.test/report.pdf';
+      await waitFor(el, '[part="toolbar"]');
+      await aTimeout(30); // let the page-1 canvas mount and start its (never-resolving) render task
+      const canvas = document.createElement('canvas');
+      void el.renderPageThumbnail(1, canvas); // a second, separately-tracked in-flight render task
+      await aTimeout(30);
+      if (document.body.contains(el)) el.remove();
+      expect(cancels.length).to.be.greaterThan(1); // both the page-render task and the thumbnail task were cancelled
+    } finally { restore(); }
+  });
+
+  it('onPageClick activates a highlight whose painted rect contains the click point', async () => {
+    const el = (await fixture(html`<lr-pdf-viewer></lr-pdf-viewer>`)) as LyraPdfViewer;
+    installFakeLoader(el, fakeDocument(1));
+    const restore = stubFetch();
+    try {
+      el.highlights = [{ id: 'cite-1', anchor: { kind: 'page', page: 1 } }];
+      el.src = 'https://example.test/report.pdf';
+      await waitFor(el, '[part="toolbar"]');
+      await aTimeout(50);
+      const list = el.shadowRoot!.querySelector('lr-virtual-list')!;
+      const canvas = list.shadowRoot!.querySelector('[part="page"] canvas') as HTMLCanvasElement;
+      const pageDiv = list.shadowRoot!.querySelector('[part="page"]') as HTMLElement;
+      const rect = canvas.getBoundingClientRect();
+      const eventPromise = oneEvent(el, 'lr-highlight-activate');
+      pageDiv.dispatchEvent(new MouseEvent('click', { bubbles: true, clientX: rect.left + rect.width / 2, clientY: rect.top + rect.height / 2 }));
+      expect((await eventPromise).detail).to.deep.equal({ id: 'cite-1' });
+    } finally { restore(); }
+  });
+
+  it('onPageClick ignores a click while a text selection is active', async () => {
+    const el = (await fixture(html`<lr-pdf-viewer></lr-pdf-viewer>`)) as LyraPdfViewer;
+    installFakeLoader(el, fakeDocument(1));
+    const restore = stubFetch();
+    try {
+      el.highlights = [{ id: 'cite-1', anchor: { kind: 'page', page: 1 } }];
+      el.src = 'https://example.test/report.pdf';
+      await waitFor(el, '[part="toolbar"]');
+      await aTimeout(50);
+      const list = el.shadowRoot!.querySelector('lr-virtual-list')!;
+      const canvas = list.shadowRoot!.querySelector('[part="page"] canvas') as HTMLCanvasElement;
+      const pageDiv = list.shadowRoot!.querySelector('[part="page"]') as HTMLElement;
+      const span = list.shadowRoot!.querySelector('[part="text-layer"] span');
+      const selection = window.getSelection()!;
+      selection.removeAllRanges();
+      if (span) {
+        const range = document.createRange();
+        range.selectNodeContents(span);
+        selection.addRange(range);
+      }
+      let activated = false;
+      el.addEventListener('lr-highlight-activate', () => { activated = true; });
+      const rect = canvas.getBoundingClientRect();
+      pageDiv.dispatchEvent(new MouseEvent('click', { bubbles: true, clientX: rect.left + rect.width / 2, clientY: rect.top + rect.height / 2 }));
+      await aTimeout(10);
+      expect(activated).to.be.false;
+      selection.removeAllRanges();
+    } finally { restore(); }
+  });
+
+  it('onPageClick is a no-op when the page has no painted highlights', async () => {
+    const el = (await fixture(html`<lr-pdf-viewer></lr-pdf-viewer>`)) as LyraPdfViewer;
+    installFakeLoader(el, fakeDocument(1));
+    const restore = stubFetch();
+    try {
+      el.src = 'https://example.test/report.pdf';
+      await waitFor(el, '[part="toolbar"]');
+      await aTimeout(50);
+      const list = el.shadowRoot!.querySelector('lr-virtual-list')!;
+      const canvas = list.shadowRoot!.querySelector('[part="page"] canvas') as HTMLCanvasElement;
+      const pageDiv = list.shadowRoot!.querySelector('[part="page"]') as HTMLElement;
+      let activated = false;
+      el.addEventListener('lr-highlight-activate', () => { activated = true; });
+      const rect = canvas.getBoundingClientRect();
+      expect(() => pageDiv.dispatchEvent(new MouseEvent('click', { bubbles: true, clientX: rect.left + rect.width / 2, clientY: rect.top + rect.height / 2 }))).to.not.throw();
+      await aTimeout(10);
+      expect(activated).to.be.false;
+    } finally { restore(); }
+  });
+
+  it('onPageClick ignores a click outside every highlight rect', async () => {
+    const el = (await fixture(html`<lr-pdf-viewer></lr-pdf-viewer>`)) as LyraPdfViewer;
+    installFakeLoader(el, fakeDocument(1));
+    const restore = stubFetch();
+    try {
+      el.highlights = [{ id: 'cite-1', anchor: { kind: 'region', page: 1, rect: { x: 0, y: 0, width: 10, height: 10 } } }];
+      el.src = 'https://example.test/report.pdf';
+      await waitFor(el, '[part="toolbar"]');
+      await aTimeout(50);
+      const list = el.shadowRoot!.querySelector('lr-virtual-list')!;
+      const canvas = list.shadowRoot!.querySelector('[part="page"] canvas') as HTMLCanvasElement;
+      const pageDiv = list.shadowRoot!.querySelector('[part="page"]') as HTMLElement;
+      let activated = false;
+      el.addEventListener('lr-highlight-activate', () => { activated = true; });
+      const rect = canvas.getBoundingClientRect();
+      // Bottom-right corner of the canvas, well outside the highlight's 10%x10% region near the origin.
+      pageDiv.dispatchEvent(new MouseEvent('click', { bubbles: true, clientX: rect.right - 2, clientY: rect.bottom - 2 }));
+      await aTimeout(10);
+      expect(activated).to.be.false;
+    } finally { restore(); }
+  });
 });
 
 describe('anchor-target adoption', () => {
@@ -377,6 +608,117 @@ describe('anchor-target adoption', () => {
     }
   });
 
+  it('scrollToAnchor with a region anchor navigates to the page and scrolls the rect into view', async () => {
+    const el = (await fixture(html`<lr-pdf-viewer></lr-pdf-viewer>`)) as LyraPdfViewer;
+    installFakeLoader(el, fakeDocument(3));
+    const restore = stubFetch();
+    try {
+      el.src = 'https://example.test/report.pdf';
+      await waitFor(el, '[part="toolbar"]');
+      const ok = await el.scrollToAnchor({ kind: 'region', page: 2, rect: { x: 10, y: 20, width: 30, height: 15 } });
+      expect(ok).to.be.true;
+      expect(el.page).to.equal(2);
+    } finally {
+      restore();
+    }
+  });
+
+  it('scrollToAnchor resolves false for an anchor kind pdf-viewer does not handle (applyAnchor default case)', async () => {
+    const el = (await fixture(html`<lr-pdf-viewer></lr-pdf-viewer>`)) as LyraPdfViewer;
+    installFakeLoader(el, fakeDocument(1));
+    (el as unknown as { anchorTimeoutMs: number }).anchorTimeoutMs = 30;
+    (el as unknown as { anchorRetryIntervalMs: number }).anchorRetryIntervalMs = 5;
+    const restore = stubFetch();
+    try {
+      el.src = 'https://example.test/report.pdf';
+      await waitFor(el, '[part="toolbar"]');
+      const ok = await el.scrollToAnchor({ kind: 'fragment', id: 'introduction' });
+      expect(ok).to.be.false;
+    } finally {
+      restore();
+    }
+  });
+
+  it('a src change while awaiting the pdf.js library import supersedes the earlier load (stale generation)', async () => {
+    const el = (await fixture(html`<lr-pdf-viewer></lr-pdf-viewer>`)) as LyraPdfViewer;
+    const restore = stubFetch();
+    const lib = deferred<unknown>();
+    (el as unknown as { loadLibrary: () => Promise<unknown> }).loadLibrary = () => lib.promise;
+    try {
+      el.src = 'https://example.test/first.pdf';
+      await aTimeout(20); // let load() reach `await this.loadLibrary()` and suspend there
+      installFakeLoader(el, fakeDocument(2));
+      const loadPromise = oneEvent(el, 'lr-load');
+      el.src = 'https://example.test/second.pdf'; // bumps generation, superseding the first load
+      expect((await loadPromise).detail).to.deep.equal({ pageCount: 2 });
+      let extraLoadFired = false;
+      el.addEventListener('lr-load', () => { extraLoadFired = true; });
+      // The stale first load's library import now resolves late; it must bail silently instead of
+      // clobbering the second (current) document.
+      lib.resolve({ getDocument: () => ({ promise: Promise.resolve(fakeDocument(1)) }), GlobalWorkerOptions: { workerSrc: '' }, TextLayer: FakeTextLayer });
+      await aTimeout(20);
+      expect(extraLoadFired).to.be.false;
+      expect(el.shadowRoot!.querySelector('[part="page-indicator"]')!.textContent).to.equal('Page 1 of 2');
+    } finally {
+      restore();
+    }
+  });
+
+  it('a src change while awaiting the pdf document promise supersedes the earlier load (stale generation)', async () => {
+    const el = (await fixture(html`<lr-pdf-viewer></lr-pdf-viewer>`)) as LyraPdfViewer;
+    const restore = stubFetch();
+    const docPromise = deferred<unknown>();
+    (el as unknown as { loadLibrary: () => Promise<unknown> }).loadLibrary = () => Promise.resolve({
+      getDocument: () => ({ promise: docPromise.promise }),
+      GlobalWorkerOptions: { workerSrc: '' },
+      TextLayer: FakeTextLayer,
+    });
+    try {
+      el.src = 'https://example.test/first.pdf';
+      await aTimeout(20); // let load() reach `await pdfjsLib.getDocument({ data }).promise` and suspend there
+      installFakeLoader(el, fakeDocument(3));
+      const loadPromise = oneEvent(el, 'lr-load');
+      el.src = 'https://example.test/second.pdf'; // bumps generation, superseding the first load
+      expect((await loadPromise).detail).to.deep.equal({ pageCount: 3 });
+      let extraLoadFired = false;
+      el.addEventListener('lr-load', () => { extraLoadFired = true; });
+      // The stale first load's document promise now resolves late; it must bail silently instead of
+      // clobbering the second (current) document.
+      docPromise.resolve(fakeDocument(1));
+      await aTimeout(20);
+      expect(extraLoadFired).to.be.false;
+      expect(el.shadowRoot!.querySelector('[part="page-indicator"]')!.textContent).to.equal('Page 1 of 3');
+    } finally {
+      restore();
+    }
+  });
+
+  it('a superseded in-flight load that later rejects does not surface a stale render-error', async () => {
+    const el = (await fixture(html`<lr-pdf-viewer></lr-pdf-viewer>`)) as LyraPdfViewer;
+    const restore = stubFetch();
+    const docPromise = deferred<unknown>();
+    (el as unknown as { loadLibrary: () => Promise<unknown> }).loadLibrary = () => Promise.resolve({
+      getDocument: () => ({ promise: docPromise.promise }),
+      GlobalWorkerOptions: { workerSrc: '' },
+      TextLayer: FakeTextLayer,
+    });
+    try {
+      el.src = 'https://example.test/first.pdf';
+      await aTimeout(20);
+      installFakeLoader(el, fakeDocument(1));
+      const loadPromise = oneEvent(el, 'lr-load');
+      el.src = 'https://example.test/second.pdf';
+      await loadPromise;
+      let renderErrorFired = false;
+      el.addEventListener('lr-render-error', () => { renderErrorFired = true; });
+      docPromise.reject(new Error('stale boom'));
+      await aTimeout(20);
+      expect(renderErrorFired).to.be.false;
+    } finally {
+      restore();
+    }
+  });
+
   it('getPageText returns raw page text and rejects out-of-range pages', async () => {
     const el = (await fixture(html`<lr-pdf-viewer></lr-pdf-viewer>`)) as LyraPdfViewer;
     installFakeLoader(el, fakeDocument(2));
@@ -444,6 +786,33 @@ describe('anchor-target adoption', () => {
     }
   });
 
+  it('getPageText evicts the oldest cached page once the cache exceeds 64 pages (LRU)', async () => {
+    const el = (await fixture(html`<lr-pdf-viewer></lr-pdf-viewer>`)) as LyraPdfViewer;
+    const getPageCalls: number[] = [];
+    const doc = {
+      numPages: 70,
+      getPage: (pageNumber: number) => {
+        getPageCalls.push(pageNumber);
+        return Promise.resolve(fakePage(pageNumber));
+      },
+    };
+    installFakeLoader(el, doc);
+    const restore = stubFetch();
+    try {
+      el.src = 'https://example.test/report.pdf';
+      await waitFor(el, '[part="toolbar"]');
+      getPageCalls.length = 0; // drop the initial page-1 canvas render's own (unrelated) getPage call
+      for (let page = 1; page <= 65; page++) await el.getPageText(page);
+      const callsForPage1BeforeRefetch = getPageCalls.filter((n) => n === 1).length;
+      // Page 1 was the first of 65 distinct pages cached (limit 64) -- it must have been evicted, so
+      // this re-fetch triggers a fresh doc.getPage(1) call instead of hitting the cache.
+      await el.getPageText(1);
+      expect(getPageCalls.filter((n) => n === 1).length).to.be.greaterThan(callsForPage1BeforeRefetch);
+    } finally {
+      restore();
+    }
+  });
+
   it('renderPageThumbnail renders into the caller-supplied canvas and resolves false out of range', async () => {
     const el = (await fixture(html`<lr-pdf-viewer></lr-pdf-viewer>`)) as LyraPdfViewer;
     installFakeLoader(el, fakeDocument(1));
@@ -482,6 +851,51 @@ describe('anchor-target adoption', () => {
     }
   });
 
+  it('renderPageThumbnail resolves false when the render task aborts', async () => {
+    const el = (await fixture(html`<lr-pdf-viewer></lr-pdf-viewer>`)) as LyraPdfViewer;
+    const doc = {
+      numPages: 1,
+      getPage: (pageNumber: number) =>
+        Promise.resolve({ ...fakePage(pageNumber), render: () => ({ promise: Promise.reject(Object.assign(new Error('aborted'), { name: 'AbortError' })), cancel: () => {} }) }),
+    };
+    installFakeLoader(el, doc);
+    const restore = stubFetch();
+    try {
+      el.src = 'https://example.test/report.pdf';
+      await waitFor(el, '[part="toolbar"]');
+      const canvas = document.createElement('canvas');
+      expect(await el.renderPageThumbnail(1, canvas)).to.be.false;
+    } finally {
+      restore();
+    }
+  });
+
+  it('renderPageThumbnail rethrows a non-abort render error', async () => {
+    const el = (await fixture(html`<lr-pdf-viewer></lr-pdf-viewer>`)) as LyraPdfViewer;
+    const boom = new Error('thumbnail render boom');
+    const doc = {
+      numPages: 1,
+      getPage: (pageNumber: number) =>
+        Promise.resolve({ ...fakePage(pageNumber), render: () => ({ promise: Promise.reject(boom), cancel: () => {} }) }),
+    };
+    installFakeLoader(el, doc);
+    const restore = stubFetch();
+    try {
+      el.src = 'https://example.test/report.pdf';
+      await waitFor(el, '[part="toolbar"]');
+      const canvas = document.createElement('canvas');
+      let caught: unknown;
+      try {
+        await el.renderPageThumbnail(1, canvas);
+      } catch (error) {
+        caught = error;
+      }
+      expect(caught).to.equal(boom);
+    } finally {
+      restore();
+    }
+  });
+
   it('paints per-page highlight rects and forwards activeHighlightId to each page layer', async () => {
     const el = (await fixture(html`<lr-pdf-viewer></lr-pdf-viewer>`)) as LyraPdfViewer;
     installFakeLoader(el, fakeDocument(1));
@@ -500,6 +914,71 @@ describe('anchor-target adoption', () => {
       el.activeHighlightId = 'cite-1';
       await el.updateComplete;
       expect(layer.activeId).to.equal('cite-1');
+    } finally {
+      restore();
+    }
+  });
+
+  it('a highlight anchored to a different page resolves to no rects for the current page', async () => {
+    const el = (await fixture(html`<lr-pdf-viewer></lr-pdf-viewer>`)) as LyraPdfViewer;
+    installFakeLoader(el, fakeDocument(1));
+    const restore = stubFetch();
+    try {
+      el.highlights = [
+        { id: 'cite-1', anchor: { kind: 'page', page: 1 } },
+        { id: 'cite-elsewhere', anchor: { kind: 'page', page: 99 } }, // never matches page 1
+      ];
+      el.src = 'https://example.test/report.pdf';
+      await waitFor(el, '[part="toolbar"]');
+      await aTimeout(50);
+      const list = el.shadowRoot!.querySelector('lr-virtual-list')!;
+      const layer = list.shadowRoot!.querySelector('lr-highlight-layer') as unknown as { items: { id: string }[] };
+      expect(layer.items.some((item) => item.id === 'cite-1')).to.be.true;
+      expect(layer.items.some((item) => item.id === 'cite-elsewhere')).to.be.false;
+    } finally {
+      restore();
+    }
+  });
+
+  it('resolves highlight rects for a text-quote anchor against the rendered text layer', async () => {
+    const el = (await fixture(html`<lr-pdf-viewer></lr-pdf-viewer>`)) as LyraPdfViewer;
+    installFakeLoader(el, fakeDocument(1));
+    const restore = stubFetch();
+    try {
+      el.highlights = [{ id: 'cite-1', anchor: { kind: 'text-quote', quote: 'revenue grew 12%' } }];
+      el.src = 'https://example.test/report.pdf';
+      await waitFor(el, '[part="toolbar"]');
+      await aTimeout(80); // let the text layer render so resolveHighlightRectsForPage() has a scope
+      const list = el.shadowRoot!.querySelector('lr-virtual-list')!;
+      const layer = list.shadowRoot!.querySelector('lr-highlight-layer') as unknown as { items: { id: string; rects: unknown[] }[] };
+      const item = layer.items.find((i) => i.id === 'cite-1');
+      expect(item).to.exist;
+      expect(item!.rects.length).to.be.greaterThan(0);
+    } finally {
+      restore();
+    }
+  });
+
+  it('highlightLayerRef sizes a freshly-mounted layer from an already-sized canvas', async () => {
+    const el = (await fixture(html`<lr-pdf-viewer></lr-pdf-viewer>`)) as LyraPdfViewer;
+    installFakeLoader(el, fakeDocument(1));
+    const restore = stubFetch();
+    try {
+      el.src = 'https://example.test/report.pdf';
+      await waitFor(el, '[part="toolbar"]');
+      await aTimeout(50); // let renderPage() actually set the real canvas's style.width/height
+      const list = el.shadowRoot!.querySelector('lr-virtual-list')!;
+      const canvas = list.shadowRoot!.querySelector('[part="page"] canvas') as HTMLCanvasElement;
+      expect(canvas.style.width).to.not.equal('');
+      // Simulates a fresh <lr-highlight-layer> mount for the same page number arriving after the
+      // canvas is already sized (the ref callback is memoized per page number by
+      // highlightLayerRef(), so invoking it directly here is the same function the real ref="..."
+      // binding on the template would call).
+      const refCallback = (el as unknown as { highlightLayerRef: (pageNumber: number) => (element: Element | undefined) => void }).highlightLayerRef(1);
+      const freshLayer = document.createElement('lr-highlight-layer') as unknown as HTMLElement;
+      refCallback(freshLayer);
+      expect(freshLayer.style.width).to.equal(canvas.style.width);
+      expect(freshLayer.style.height).to.equal(canvas.style.height);
     } finally {
       restore();
     }
@@ -531,6 +1010,122 @@ describe('anchor-target adoption', () => {
       if (detail.anchor!.kind === 'text-quote') expect(detail.anchor!.page).to.equal(1);
       selection.removeAllRanges();
     } finally {
+      restore();
+    }
+  });
+
+  it('lr-text-select fires with a null anchor when the selection falls outside every page (e.g. the toolbar)', async () => {
+    const el = (await fixture(html`<lr-pdf-viewer></lr-pdf-viewer>`)) as LyraPdfViewer;
+    installFakeLoader(el, fakeDocument(1));
+    const restore = stubFetch();
+    try {
+      el.src = 'https://example.test/report.pdf';
+      await waitFor(el, '[part="page-indicator"]');
+      const label = el.shadowRoot!.querySelector('[part="page-indicator"]') as HTMLElement;
+      const range = document.createRange();
+      range.selectNodeContents(label);
+      const selection = window.getSelection()!;
+      selection.removeAllRanges();
+      selection.addRange(range);
+      const eventPromise = oneEvent(el, 'lr-text-select');
+      el.shadowRoot!.querySelector('[part="base"]')!.dispatchEvent(new PointerEvent('pointerup', { bubbles: true }));
+      const detail = (await eventPromise).detail;
+      expect(detail.anchor).to.be.null;
+      expect(detail.text).to.equal('Page 1 of 1');
+      selection.removeAllRanges();
+    } finally {
+      restore();
+    }
+  });
+
+  it('resolveSelectionRange falls back to shadow-root/global Selection when getComposedRanges is unavailable', async () => {
+    const el = (await fixture(html`<lr-pdf-viewer></lr-pdf-viewer>`)) as LyraPdfViewer;
+    installFakeLoader(el, fakeDocument(1));
+    const restore = stubFetch();
+    const originalGetSelection = window.getSelection;
+    let listShadowRoot: ShadowRoot | undefined;
+    try {
+      el.src = 'https://example.test/report.pdf';
+      await waitFor(el, 'lr-virtual-list');
+      const list = el.shadowRoot!.querySelector('lr-virtual-list') as HTMLElement;
+      await waitUntil(() => list.shadowRoot!.querySelector('[part="text-layer"] span') !== null);
+      listShadowRoot = list.shadowRoot!;
+      const span = listShadowRoot.querySelector('[part="text-layer"] span') as HTMLElement;
+      const range = document.createRange();
+      range.selectNodeContents(span);
+      // Real Chromium normally supports Selection.getComposedRanges(), exercised by the primary
+      // "lr-text-select fires..." test above. Stubbing window.getSelection to omit that method forces
+      // resolveSelectionRange() down its shadow-root/global-Selection fallback path -- but Chromium's
+      // non-standard ShadowRoot.getSelection() would otherwise still return a (real, but unrelated
+      // and empty) Selection for the nested list shadow root, short-circuiting the `??` before it
+      // ever reaches our fake global one, so that's stubbed out here too.
+      window.getSelection = (() => ({ rangeCount: 1, isCollapsed: false, getRangeAt: () => range })) as unknown as typeof window.getSelection;
+      (listShadowRoot as unknown as { getSelection: () => Selection | null }).getSelection = () => null;
+      const eventPromise = oneEvent(el, 'lr-text-select');
+      el.shadowRoot!.querySelector('[part="base"]')!.dispatchEvent(new PointerEvent('pointerup', { bubbles: true }));
+      const detail = (await eventPromise).detail;
+      expect(detail.anchor).to.exist;
+      expect(detail.anchor!.kind).to.equal('text-quote');
+    } finally {
+      window.getSelection = originalGetSelection;
+      if (listShadowRoot) delete (listShadowRoot as unknown as { getSelection?: unknown }).getSelection;
+      restore();
+    }
+  });
+
+  it('bindTextSelection tears down a previous binding before installing a new one', async () => {
+    const el = (await fixture(html`<lr-pdf-viewer></lr-pdf-viewer>`)) as LyraPdfViewer;
+    installFakeLoader(el, fakeDocument(1));
+    const restore = stubFetch();
+    try {
+      el.src = 'https://example.test/report.pdf';
+      await waitFor(el, 'lr-virtual-list');
+      const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+      const removedTypes: string[] = [];
+      const originalRemove = base.removeEventListener.bind(base);
+      base.removeEventListener = ((type: string, listener: EventListenerOrEventListenerObject, options?: boolean | EventListenerOptions) => {
+        removedTypes.push(type);
+        originalRemove(type, listener, options);
+      }) as typeof base.removeEventListener;
+      try {
+        // firstUpdated() already bound once; re-invoking directly (the same escape-hatch cast
+        // docx-viewer.class.ts / markdown-core.class.ts use internally for this same override) must
+        // tear down that earlier binding's listeners (the `this.textSelectionCleanup?.()` non-null
+        // branch) instead of stacking a second, duplicate set alongside it.
+        (el as unknown as { bindTextSelection: (root: Element) => void }).bindTextSelection(base);
+      } finally {
+        base.removeEventListener = originalRemove;
+      }
+      expect(removedTypes).to.include('pointerup');
+      expect(removedTypes).to.include('keyup');
+    } finally {
+      restore();
+    }
+  });
+
+  it('a selection outside the viewer entirely (crossing no shadow boundary back into it) does not emit lr-text-select', async () => {
+    const el = (await fixture(html`<lr-pdf-viewer></lr-pdf-viewer>`)) as LyraPdfViewer;
+    installFakeLoader(el, fakeDocument(1));
+    const restore = stubFetch();
+    const outside = document.createElement('div');
+    outside.textContent = 'text entirely outside the pdf viewer';
+    document.body.appendChild(outside);
+    try {
+      el.src = 'https://example.test/report.pdf';
+      await waitFor(el, '[part="toolbar"]');
+      const range = document.createRange();
+      range.selectNodeContents(outside);
+      const selection = window.getSelection()!;
+      selection.removeAllRanges();
+      selection.addRange(range);
+      let fired = false;
+      el.addEventListener('lr-text-select', () => { fired = true; });
+      el.shadowRoot!.querySelector('[part="base"]')!.dispatchEvent(new PointerEvent('pointerup', { bubbles: true }));
+      await aTimeout(10);
+      expect(fired).to.be.false;
+      selection.removeAllRanges();
+    } finally {
+      outside.remove();
       restore();
     }
   });
@@ -574,6 +1169,64 @@ describe('goToPage', () => {
       await waitFor(el, '[part="toolbar"]');
       expect(await el.goToPage(3)).to.be.true;
       expect(el.page).to.equal(3);
+    } finally {
+      restore();
+    }
+  });
+
+  it('waits for a page well outside the initial render window to actually mount (waitForPageMount)', async () => {
+    const el = (await fixture(html`<lr-pdf-viewer style="--lr-pdf-viewer-height: 100px;"></lr-pdf-viewer>`)) as LyraPdfViewer;
+    installFakeLoader(el, fakeDocument(30));
+    const restore = stubFetch();
+    try {
+      el.src = 'https://example.test/report.pdf';
+      await waitFor(el, 'lr-virtual-list');
+      const list = el.shadowRoot!.querySelector('lr-virtual-list') as HTMLElement & {
+        overscan: number;
+        scrollToIndex: (index: number, options?: { align?: 'start' | 'end' | 'auto'; behavior?: 'auto' | 'smooth' }) => void;
+      };
+      list.overscan = 0;
+      await nextFrame();
+      // A small height + zero overscan keeps the render window narrow -- page 20 is well outside it.
+      expect(list.shadowRoot!.querySelectorAll('[part="page"]').length).to.be.lessThan(15);
+      const goToPromise = el.goToPage(20);
+      await el.updateComplete; // let goToPage() reach `await this.waitForPageMount(20)` and register its listener
+      list.scrollToIndex(19, { align: 'start', behavior: 'auto' });
+      await nextFrame();
+      const ok = await goToPromise;
+      expect(ok).to.be.true;
+      expect(el.page).to.equal(20);
+    } finally {
+      restore();
+    }
+  });
+
+  it('still resolves true via the fallback timeout when the target page never mounts at all', async () => {
+    const el = (await fixture(html`<lr-pdf-viewer style="--lr-pdf-viewer-height: 100px;"></lr-pdf-viewer>`)) as LyraPdfViewer;
+    installFakeLoader(el, fakeDocument(30));
+    const restore = stubFetch();
+    try {
+      el.src = 'https://example.test/report.pdf';
+      await waitFor(el, 'lr-virtual-list');
+      const list = el.shadowRoot!.querySelector('lr-virtual-list') as HTMLElement & { overscan: number };
+      list.overscan = 0;
+      await nextFrame();
+      const base = list.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+      const originalScrollTo = base.scrollTo.bind(base);
+      // Setting `page` also flips `activeId`, which the list would otherwise answer with its own
+      // real (asynchronous, physics-driven) scrollActiveIntoView() -- neutralize that so nothing else
+      // ever brings page 20 into view or re-fires lr-visible-range-changed during this test, leaving
+      // waitForPageMount()'s internal 500ms timeout as the only way this can resolve.
+      base.scrollTo = (() => {}) as typeof base.scrollTo;
+      try {
+        const started = Date.now();
+        const ok = await el.goToPage(20);
+        expect(ok).to.be.true;
+        expect(el.page).to.equal(20);
+        expect(Date.now() - started).to.be.greaterThan(400);
+      } finally {
+        base.scrollTo = originalScrollTo;
+      }
     } finally {
       restore();
     }
@@ -652,6 +1305,40 @@ describe('search', () => {
       expect(el.page).to.equal(3);
       expect(await el.searchNext()).to.be.true;
       expect(el.page).to.equal(1); // wrapped back to the first match
+    } finally {
+      restore();
+    }
+  });
+
+  it('finds a match against real (unoverridden) getPageText, whose raw text trails a normalized space', async () => {
+    const el = (await fixture(html`<lr-pdf-viewer></lr-pdf-viewer>`)) as LyraPdfViewer;
+    installFakeLoader(el, fakeDocument(1));
+    const restore = stubFetch();
+    try {
+      el.src = 'https://example.test/report.pdf';
+      await waitFor(el, '[part="toolbar"]');
+      // Deliberately does NOT override getPageText -- loadPageText() appends a trailing ' ' after
+      // every item (including the last), so normalizeForSearch()'s raw text here genuinely ends in
+      // whitespace, exercising its trailing-space trim branch.
+      const count = await el.search('demand');
+      expect(count).to.equal(1);
+      expect(el.page).to.equal(1);
+    } finally {
+      restore();
+    }
+  });
+
+  it('skips a page whose getPageText rejects and keeps scanning the rest', async () => {
+    const el = (await fixture(html`<lr-pdf-viewer></lr-pdf-viewer>`)) as LyraPdfViewer;
+    installFakeLoader(el, fakeDocument(3));
+    const restore = stubFetch();
+    try {
+      el.src = 'https://example.test/report.pdf';
+      await waitFor(el, '[part="toolbar"]');
+      (el as unknown as { getPageText: (page: number) => Promise<string> }).getPageText = (page: number) =>
+        page === 2 ? Promise.reject(new Error('boom')) : Promise.resolve(page === 1 ? 'the cat sat' : 'the CAT ran');
+      const count = await el.search('cat');
+      expect(count).to.equal(2); // page 2 silently skipped, matches on pages 1 and 3 still found
     } finally {
       restore();
     }
