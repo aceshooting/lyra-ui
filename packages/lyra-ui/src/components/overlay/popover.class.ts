@@ -3,7 +3,7 @@ import { property, state } from 'lit/decorators.js';
 import type { Placement } from '@floating-ui/dom';
 import { LyraElement } from '../../internal/lyra-element.js';
 import { nextId } from '../../internal/a11y.js';
-import { place } from '../../internal/positioner.js';
+import { place, virtualAnchorFromRect, type VirtualAnchor } from '../../internal/positioner.js';
 import { rtlAwarePlacement } from '../../internal/rtl.js';
 import { finiteNumber } from '../../internal/numbers.js';
 import { styles } from './overlay.styles.js';
@@ -40,6 +40,13 @@ export class LyraPopover extends LyraElement<LyraPopoverEventMap> {
   /** Semantic role used by the popup. Dropdown subclasses set this to `menu`. */
   @property({ attribute: 'popup-role' }) popupRole: 'dialog' | 'menu' = 'dialog';
   @state() private trigger?: HTMLElement;
+  /** The virtual anchor set by `showAt()`, taking priority over `trigger` for positioning while
+   *  set. Cleared whenever the popover closes, so a later `open = true` with no fresh `showAt()`
+   *  call reverts to plain trigger-based behavior. */
+  private virtualAnchor?: VirtualAnchor;
+  /** `options.returnFocusTo` from the `showAt()` call that opened the popover, if any -- see
+   *  `showAt()`'s doc comment and `onVirtualAnchorKeyDown`. */
+  private returnFocusTo?: HTMLElement;
   private cleanup?: () => void;
   private readonly popupId = nextId('popover');
   private firstUpdate = true;
@@ -56,9 +63,16 @@ export class LyraPopover extends LyraElement<LyraPopoverEventMap> {
       if (changed.has('open')) {
         if (this.open) {
           document.addEventListener('pointerdown', this.onDocumentPointer);
+          // A virtual anchor has no slotted trigger and (typically) no focused popup content for
+          // the existing trigger-/popup-scoped keydown handlers below to catch Escape through --
+          // bind a document-level Escape listener for that path specifically.
+          if (this.virtualAnchor) document.addEventListener('keydown', this.onVirtualAnchorKeyDown);
           if (!this.firstUpdate) this.emit('lr-show');
         } else {
           document.removeEventListener('pointerdown', this.onDocumentPointer);
+          document.removeEventListener('keydown', this.onVirtualAnchorKeyDown);
+          this.virtualAnchor = undefined;
+          this.returnFocusTo = undefined;
           if (!this.firstUpdate) this.emit('lr-hide');
         }
       }
@@ -75,6 +89,7 @@ export class LyraPopover extends LyraElement<LyraPopoverEventMap> {
     // the Floating UI positioner subscription it dropped.
     if (this.hasUpdated && this.open) {
       document.addEventListener('pointerdown', this.onDocumentPointer);
+      if (this.virtualAnchor) document.addEventListener('keydown', this.onVirtualAnchorKeyDown);
       this.position();
     }
   }
@@ -82,12 +97,38 @@ export class LyraPopover extends LyraElement<LyraPopoverEventMap> {
     this.cleanup?.();
     this.cleanup = undefined;
     document.removeEventListener('pointerdown', this.onDocumentPointer);
+    document.removeEventListener('keydown', this.onVirtualAnchorKeyDown);
     super.disconnectedCallback();
+  }
+  /**
+   * Opens the popover anchored to an arbitrary rectangle instead of the slotted `trigger` -- for
+   * anchoring to a graph node, a canvas pixel, a chart datum, or any other non-DOM location.
+   * `width`/`height` default to `0` (a point). Positions exactly as `place()` would against a real
+   * element (flip/shift/RTL all apply unchanged).
+   *
+   * A virtual anchor has no DOM node, so `autoUpdate()` can't track it moving on its own -- call
+   * `showAt()` again with fresh coordinates to re-anchor an already-open popover (e.g. on a graph
+   * pan/zoom tick); the popover stays open across such a call, it does not toggle.
+   *
+   * A virtual anchor also has no `.focus()`. Escape and light-dismiss return focus to
+   * `options.returnFocusTo` when supplied, or skip focus-return entirely otherwise -- refocusing
+   * the right place after a virtual anchor closes is the host's responsibility, since Lyra can't
+   * assume how e.g. a graph node's own keyboard model wants focus back.
+   */
+  showAt(
+    rect: { x: number; y: number; width?: number; height?: number },
+    options?: { returnFocusTo?: HTMLElement },
+  ): void {
+    this.virtualAnchor = virtualAnchorFromRect(rect);
+    this.returnFocusTo = options?.returnFocusTo;
+    if (this.open) this.position();
+    else this.open = true;
   }
   private position(): void {
     const popup = this.renderRoot.querySelector('[part="popup"]') as HTMLElement | null;
-    if (!this.open || !this.trigger || !popup) return;
-    this.cleanup = place(this.trigger, popup, {
+    const anchor = this.virtualAnchor ?? this.trigger;
+    if (!this.open || !anchor || !popup) return;
+    this.cleanup = place(anchor, popup, {
       placement: rtlAwarePlacement(this.placement, this),
       offset: finiteNumber(this.distance, DEFAULT_DISTANCE),
     });
@@ -109,6 +150,17 @@ export class LyraPopover extends LyraElement<LyraPopoverEventMap> {
   };
   private onPopupKeyDown = (event: KeyboardEvent): void => {
     if (event.key === 'Escape') { event.preventDefault(); this.open = false; this.trigger?.focus(); }
+  };
+  /** Escape handling for a popover opened via `showAt()` -- bound at the document level (not
+   *  scoped to the trigger/popup elements) while such a popover is open, since a virtual anchor
+   *  has no slotted trigger or (typically) focused popup content for `onTriggerKeyDown`/
+   *  `onPopupKeyDown` above to catch Escape through. */
+  private onVirtualAnchorKeyDown = (event: KeyboardEvent): void => {
+    if (event.key !== 'Escape') return;
+    event.preventDefault();
+    const returnFocusTarget = this.returnFocusTo;
+    this.open = false;
+    returnFocusTarget?.focus();
   };
   private onDocumentPointer = (event: PointerEvent): void => {
     if (!event.composedPath().includes(this)) this.open = false;

@@ -3,7 +3,7 @@ import { property, state } from 'lit/decorators.js';
 import type { Placement } from '@floating-ui/dom';
 import { LyraElement } from '../../internal/lyra-element.js';
 import { nextId } from '../../internal/a11y.js';
-import { place } from '../../internal/positioner.js';
+import { place, virtualAnchorFromRect, type VirtualAnchor } from '../../internal/positioner.js';
 import { rtlAwarePlacement } from '../../internal/rtl.js';
 import { finiteDuration, finiteNumber } from '../../internal/numbers.js';
 import { tooltipStyles } from './overlay.styles.js';
@@ -40,6 +40,13 @@ export class LyraTooltip extends LyraElement {
   @property() content = '';
   @property({ attribute: 'aria-label' }) accessibleLabel = '';
   @state() private trigger?: HTMLElement;
+  /** The virtual anchor set by `showAt()`, taking priority over `trigger` for positioning while
+   *  set. Cleared whenever the tooltip closes, so a later `open = true` with no fresh `showAt()`
+   *  call reverts to plain trigger-based behavior. */
+  private virtualAnchor?: VirtualAnchor;
+  /** `options.returnFocusTo` from the `showAt()` call that opened the tooltip, if any -- see
+   *  `showAt()`'s doc comment and `onVirtualAnchorKeyDown`. */
+  private returnFocusTo?: HTMLElement;
   private cleanup?: () => void;
   private timer?: ReturnType<typeof setTimeout>;
   private readonly tooltipId = nextId('tooltip');
@@ -49,6 +56,19 @@ export class LyraTooltip extends LyraElement {
       this.cleanup?.();
       this.cleanup = undefined;
       if (this.open) this.position();
+      if (changed.has('open')) {
+        // A virtual anchor has no slotted trigger to bind hover/focus/keydown listeners to (see
+        // bindTrigger()) -- bind a document-level Escape listener for that path specifically
+        // while such a tooltip is open, and clear the virtual-anchor state on close so a later
+        // `open = true` with no fresh `showAt()` call reverts to plain trigger-based behavior.
+        if (this.open) {
+          if (this.virtualAnchor) document.addEventListener('keydown', this.onVirtualAnchorKeyDown);
+        } else {
+          document.removeEventListener('keydown', this.onVirtualAnchorKeyDown);
+          this.virtualAnchor = undefined;
+          this.returnFocusTo = undefined;
+        }
+      }
       this.syncTriggerA11y();
     }
   }
@@ -61,18 +81,50 @@ export class LyraTooltip extends LyraElement {
     // subscription it dropped. The trigger's own listeners are untouched by
     // (dis)connect since they live on a light-DOM element the reconnect
     // doesn't move independently of this host.
-    if (this.hasUpdated && this.open) this.position();
+    if (this.hasUpdated && this.open) {
+      this.position();
+      if (this.virtualAnchor) document.addEventListener('keydown', this.onVirtualAnchorKeyDown);
+    }
   }
   disconnectedCallback(): void {
     clearTimeout(this.timer);
     this.cleanup?.();
     this.cleanup = undefined;
+    document.removeEventListener('keydown', this.onVirtualAnchorKeyDown);
     super.disconnectedCallback();
+  }
+  /**
+   * Opens the tooltip anchored to an arbitrary rectangle instead of the slotted `trigger` -- for
+   * anchoring to a graph node, a canvas pixel, a chart datum, or any other non-DOM location.
+   * `width`/`height` default to `0` (a point). Positions exactly as `place()` would against a real
+   * element (flip/shift/RTL all apply unchanged). Opens immediately, bypassing `delay`/`manual`
+   * (both are hover-debounce concerns for a slotted trigger, not relevant to a deliberate
+   * programmatic `showAt()` call).
+   *
+   * A virtual anchor has no DOM node, so `autoUpdate()` can't track it moving on its own -- call
+   * `showAt()` again with fresh coordinates to re-anchor an already-open tooltip (e.g. on a graph
+   * pan/zoom tick); the tooltip stays open across such a call, it does not toggle. Close it the
+   * same way any tooltip closes: set `open = false` (there is no separate `hide()`).
+   *
+   * A virtual anchor also has no `.focus()`. Escape returns focus to `options.returnFocusTo` when
+   * supplied, or skips focus-return entirely otherwise -- refocusing the right place after a
+   * virtual anchor closes is the host's responsibility, since Lyra can't assume how e.g. a graph
+   * node's own keyboard model wants focus back.
+   */
+  showAt(
+    rect: { x: number; y: number; width?: number; height?: number },
+    options?: { returnFocusTo?: HTMLElement },
+  ): void {
+    this.virtualAnchor = virtualAnchorFromRect(rect);
+    this.returnFocusTo = options?.returnFocusTo;
+    if (this.open) this.position();
+    else this.open = true;
   }
   private position(): void {
     const popup = this.renderRoot.querySelector('[part="popup"]') as HTMLElement | null;
-    if (this.open && this.trigger && popup) {
-      this.cleanup = place(this.trigger, popup, {
+    const anchor = this.virtualAnchor ?? this.trigger;
+    if (this.open && anchor && popup) {
+      this.cleanup = place(anchor, popup, {
         placement: rtlAwarePlacement(this.placement, this),
         offset: finiteNumber(this.distance, DEFAULT_DISTANCE),
       });
@@ -128,6 +180,18 @@ export class LyraTooltip extends LyraElement {
     event.preventDefault();
     clearTimeout(this.timer);
     this.open = false;
+  };
+  /** Escape handling for a tooltip opened via `showAt()` -- bound at the document level while
+   *  such a tooltip is open, since a virtual anchor has no slotted trigger for `onTriggerKeyDown`
+   *  above to catch Escape through (that listener is only ever bound to a real trigger element via
+   *  `bindTrigger()`). Only ever attached while `virtualAnchor` is set, so this never runs for a
+   *  normal trigger-driven tooltip. */
+  private onVirtualAnchorKeyDown = (event: KeyboardEvent): void => {
+    if (event.key !== 'Escape') return;
+    event.preventDefault();
+    const returnFocusTarget = this.returnFocusTo;
+    this.open = false;
+    returnFocusTarget?.focus();
   };
   render(): TemplateResult {
     const label = this.getAttribute('aria-label') || this.accessibleLabel || nothing;

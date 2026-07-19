@@ -14,11 +14,41 @@ export interface PlaceOptions {
 }
 
 /**
+ * A synthetic anchor for `place()` -- structurally matches Floating UI's own `VirtualElement`
+ * (`@floating-ui/dom`), so it can be passed to `computePosition()`/`autoUpdate()` wherever a real
+ * `Element` is accepted. Lets a popup be positioned against an arbitrary rectangle (a graph node,
+ * a canvas pixel, a chart datum, a text-selection range) instead of a real DOM element. See
+ * `virtualAnchorFromRect()` to build one from a plain `{x, y, width?, height?}` rect.
+ */
+export interface VirtualAnchor {
+  getBoundingClientRect(): DOMRect;
+  /** A real element `place()`'s underlying platform can use for scale/RTL context that a plain
+   *  rect can't supply on its own. Optional -- omitting it still works, but `autoUpdate()`'s
+   *  ancestor-scroll/resize tracking has nothing to observe, so a caller whose anchor point moves
+   *  on its own (e.g. a graph pan/zoom tick) must re-supply a fresh anchor itself. */
+  contextElement?: Element;
+}
+
+/**
+ * Builds a `VirtualAnchor` from a plain rect, for `showAt()`-style APIs that anchor a popup to an
+ * arbitrary point or box instead of a real DOM element. `width`/`height` default to `0` (a point).
+ */
+export function virtualAnchorFromRect(rect: {
+  x: number;
+  y: number;
+  width?: number;
+  height?: number;
+}): VirtualAnchor {
+  const domRect = new DOMRect(rect.x, rect.y, rect.width ?? 0, rect.height ?? 0);
+  return { getBoundingClientRect: () => domRect };
+}
+
+/**
  * Position `popup` (fixed) relative to `anchor` with flip/shift, keeping it
  * updated on scroll/resize. Returns a cleanup function that stops updating.
  */
 export function place(
-  anchor: HTMLElement,
+  anchor: Element | VirtualAnchor,
   popup: HTMLElement,
   opts: PlaceOptions = {},
 ): () => void {
@@ -60,7 +90,9 @@ export function place(
   // mobile on-screen keyboard opens or closes. Floating UI's normal window
   // resize listener does not receive those events, so keep the available-size
   // CSS variables and fixed coordinates in sync with the visual viewport too.
-  const visualViewport = anchor.ownerDocument.defaultView?.visualViewport;
+  // Read from `popup` rather than `anchor` -- a VirtualAnchor has no `ownerDocument` of its own,
+  // and `popup` is always a real element in the same document a real `anchor` would be anyway.
+  const visualViewport = popup.ownerDocument.defaultView?.visualViewport;
   const updateFromVisualViewport = () => void update();
   visualViewport?.addEventListener('resize', updateFromVisualViewport);
   visualViewport?.addEventListener('scroll', updateFromVisualViewport);

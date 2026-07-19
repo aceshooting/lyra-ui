@@ -228,3 +228,165 @@ it('lets a consumer retheme the tooltip via --lr-tooltip-max-inline-size/-backgr
   expect(getComputedStyle(popup).backgroundColor).to.equal('rgb(1, 2, 3)');
   expect(getComputedStyle(popup).color).to.equal('rgb(4, 5, 6)');
 });
+
+// --- showAt() virtual-anchor contract -------------------------------------------------------
+
+it('opens a popover anchored to an arbitrary rect via showAt(), with no slotted trigger', async () => {
+  const el = (await fixture(html`<lr-popover><p>Node details</p></lr-popover>`)) as LyraPopover;
+  el.showAt({ x: 120, y: 80 });
+  await el.updateComplete;
+  await new Promise((r) => requestAnimationFrame(() => r(null)));
+  await new Promise((r) => requestAnimationFrame(() => r(null)));
+
+  expect(el.open).to.be.true;
+  const popup = el.shadowRoot!.querySelector('[part="popup"]') as HTMLElement;
+  expect(popup.hasAttribute('data-hidden')).to.be.false;
+  expect(popup.style.left).to.not.be.empty;
+  expect(popup.style.top).to.not.be.empty;
+  await expect(el).to.be.accessible();
+});
+
+it('re-anchors an already-open showAt() popover when called again with fresh coordinates', async () => {
+  const el = (await fixture(html`<lr-popover><p>Node details</p></lr-popover>`)) as LyraPopover;
+  el.showAt({ x: 10, y: 10 });
+  await el.updateComplete;
+  await new Promise((r) => requestAnimationFrame(() => r(null)));
+  await new Promise((r) => requestAnimationFrame(() => r(null)));
+  const popup = el.shadowRoot!.querySelector('[part="popup"]') as HTMLElement;
+  const firstTop = popup.style.top;
+
+  el.showAt({ x: 10, y: 400 });
+  await new Promise((r) => requestAnimationFrame(() => r(null)));
+  await new Promise((r) => requestAnimationFrame(() => r(null)));
+
+  expect(el.open, 'showAt() called again while open must stay open, not toggle').to.be.true;
+  expect(popup.style.top, 'a second showAt() call must reposition against the new rect').to.not.equal(firstTop);
+});
+
+it('returns focus to options.returnFocusTo on Escape after showAt()', async () => {
+  const el = (await fixture(html`<lr-popover><p>Node details</p></lr-popover>`)) as LyraPopover;
+  const returnTarget = document.createElement('button');
+  returnTarget.textContent = 'Back';
+  document.body.appendChild(returnTarget);
+  returnTarget.focus();
+
+  el.showAt({ x: 50, y: 50 }, { returnFocusTo: returnTarget });
+  await el.updateComplete;
+  expect(el.open).to.be.true;
+
+  document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+  await el.updateComplete;
+
+  expect(el.open).to.be.false;
+  expect(document.activeElement, 'Escape must return focus to returnFocusTo').to.equal(returnTarget);
+  returnTarget.remove();
+});
+
+it('does not throw on Escape after showAt() without returnFocusTo, and closes without focusing anything', async () => {
+  const el = (await fixture(html`<lr-popover><p>Node details</p></lr-popover>`)) as LyraPopover;
+  el.showAt({ x: 50, y: 50 });
+  await el.updateComplete;
+  expect(el.open).to.be.true;
+
+  expect(() => {
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+  }, 'Escape with no returnFocusTo and no real trigger must not throw trying to call .focus()').to.not.throw();
+  await el.updateComplete;
+
+  expect(el.open).to.be.false;
+});
+
+it('closes a showAt()-opened popover on an outside pointerdown (light dismiss)', async () => {
+  const el = (await fixture(html`<lr-popover><p>Node details</p></lr-popover>`)) as LyraPopover;
+  el.showAt({ x: 50, y: 50 });
+  await el.updateComplete;
+  expect(el.open).to.be.true;
+
+  document.body.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, composed: true }));
+  await el.updateComplete;
+
+  expect(el.open, 'an outside pointerdown must still light-dismiss a showAt()-opened popover').to.be.false;
+});
+
+it('leaves normal slotted-trigger popover behavior unchanged when showAt() is never used', async () => {
+  // Regression guard for the virtual-anchor widening: a popover that never calls showAt() must
+  // behave byte-identical to before -- same open/close via trigger click, same Escape-returns-
+  // focus-to-trigger behavior.
+  const el = await fixture(html`
+    <lr-popover><button slot="trigger">Open</button><p>Details</p></lr-popover>
+  `);
+  const trigger = el.querySelector('button') as HTMLButtonElement;
+  trigger.click();
+  await (el as HTMLElement & { updateComplete: Promise<unknown> }).updateComplete;
+  expect((el as HTMLElement).hasAttribute('open')).to.be.true;
+
+  trigger.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+  await (el as HTMLElement & { updateComplete: Promise<unknown> }).updateComplete;
+  expect((el as HTMLElement).hasAttribute('open')).to.be.false;
+  expect(document.activeElement, 'Escape must return focus to the real slotted trigger, as before').to.equal(trigger);
+});
+
+it('opens a tooltip anchored to an arbitrary rect via showAt(), with no slotted trigger', async () => {
+  const el = (await fixture(html`<lr-tooltip>Node info</lr-tooltip>`)) as LyraTooltip;
+  el.showAt({ x: 200, y: 150 });
+  await el.updateComplete;
+  await new Promise((r) => requestAnimationFrame(() => r(null)));
+  await new Promise((r) => requestAnimationFrame(() => r(null)));
+
+  expect(el.open).to.be.true;
+  const popup = el.shadowRoot!.querySelector('[part="popup"]') as HTMLElement;
+  expect(popup.hasAttribute('data-hidden')).to.be.false;
+  expect(popup.style.left).to.not.be.empty;
+  expect(popup.style.top).to.not.be.empty;
+  await expect(el).to.be.accessible();
+});
+
+it('returns focus to options.returnFocusTo on Escape after tooltip showAt()', async () => {
+  const el = (await fixture(html`<lr-tooltip>Node info</lr-tooltip>`)) as LyraTooltip;
+  const returnTarget = document.createElement('button');
+  returnTarget.textContent = 'Back';
+  document.body.appendChild(returnTarget);
+  returnTarget.focus();
+
+  el.showAt({ x: 50, y: 50 }, { returnFocusTo: returnTarget });
+  await el.updateComplete;
+  expect(el.open).to.be.true;
+
+  document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+  await el.updateComplete;
+
+  expect(el.open).to.be.false;
+  expect(document.activeElement, 'Escape must return focus to returnFocusTo').to.equal(returnTarget);
+  returnTarget.remove();
+});
+
+it('does not throw on Escape after tooltip showAt() without returnFocusTo', async () => {
+  const el = (await fixture(html`<lr-tooltip>Node info</lr-tooltip>`)) as LyraTooltip;
+  el.showAt({ x: 50, y: 50 });
+  await el.updateComplete;
+  expect(el.open).to.be.true;
+
+  expect(() => {
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+  }, 'Escape with no returnFocusTo and no real trigger must not throw trying to call .focus()').to.not.throw();
+  await el.updateComplete;
+
+  expect(el.open).to.be.false;
+});
+
+it('leaves normal slotted-trigger tooltip behavior unchanged when showAt() is never used', async () => {
+  // Regression guard for the virtual-anchor widening, mirroring the popover one above.
+  const el = (await fixture(
+    html`<lr-tooltip delay="0">Helpful text<button slot="trigger">Help</button></lr-tooltip>`,
+  )) as LyraTooltip;
+  const trigger = el.querySelector('button') as HTMLButtonElement;
+  trigger.focus();
+  await el.updateComplete;
+  expect(el.open).to.be.true;
+
+  trigger.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+  await el.updateComplete;
+
+  expect(el.open).to.be.false;
+  expect(document.activeElement, 'Escape must not move focus off the trigger, as before').to.equal(trigger);
+});
