@@ -242,7 +242,11 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
   private chartJsModule?: OptionalPeerApi;
   private resizeObserver?: ResizeObserver;
   @state() private autoLegendPosition: Exclude<LyraChartLegendPosition, 'auto'> = 'right';
-  @state() private resolvedChartArea?: LyraChartArea;
+  // Chart.js computes this geometry while drawing, after Lit has rendered the
+  // canvas. Keep the cache non-reactive so that draw() does not trigger a
+  // second update merely by recording the overlay position.
+  private resolvedChartArea?: LyraChartArea;
+  private chartAreaUpdateQueued = false;
   // Tracks the *effective* Chart.js type actually passed to `new Chart()` —
   // i.e. `config.type` post-merge, not `this.type` — since `config.type` (the
   // raw passthrough) can override the generated type in `buildConfig()`. See
@@ -640,6 +644,13 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
       return;
     }
     this.resolvedChartArea = next;
+    if (!this.chartAreaUpdateQueued) {
+      this.chartAreaUpdateQueued = true;
+      queueMicrotask(() => {
+        this.chartAreaUpdateQueued = false;
+        if (this.isConnected) this.requestUpdate();
+      });
+    }
   }
 
   /** The current Chart.js chart-area geometry in canvas-local coordinates. */
