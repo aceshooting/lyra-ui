@@ -344,4 +344,207 @@ describe('lr-graph-query-builder', () => {
     expect(el.shadowRoot!.querySelector('[part="saved-item"]')).to.exist;
     await expect(el).to.be.accessible();
   });
+
+  it('exposes the ElementInternals-delegated form-participation getters', async () => {
+    const form = (await fixture(html`
+      <form>
+        <lr-graph-query-builder name="query"></lr-graph-query-builder>
+      </form>
+    `)) as HTMLFormElement;
+    const el = form.querySelector('lr-graph-query-builder') as LyraGraphQueryBuilder;
+    await el.updateComplete;
+    expect(el.form).to.equal(form);
+    expect(el.labels.length).to.equal(0);
+    expect(el.willValidate).to.be.true;
+    // Default value has an empty startId, which computeValidation() flags as missing.
+    expect(el.validity.valueMissing).to.be.true;
+    expect(el.validity.valid).to.be.false;
+    expect(el.validationMessage).to.equal('This field is required.');
+  });
+
+  it('normalizes a nullish name to an empty string, exercising the removeAttribute branch of the name setter', async () => {
+    const el = (await fixture(html`<lr-graph-query-builder name="query"></lr-graph-query-builder>`)) as LyraGraphQueryBuilder;
+    await el.updateComplete;
+    expect(el.name).to.equal('query');
+    expect(el.getAttribute('name')).to.equal('query');
+
+    el.name = null as unknown as string;
+    // The setter's own synchronous `else this.removeAttribute('name')` branch runs immediately;
+    // this component's `name` also carries `reflect: true`, so Lit's own reflection pass on the
+    // next update independently re-applies the (now-empty) property value to the attribute.
+    expect(el.hasAttribute('name')).to.be.false;
+    await el.updateComplete;
+    expect(el.name).to.equal('');
+    expect(el.getAttribute('name')).to.equal('');
+  });
+
+  it('normalizes a null/undefined value assignment to the empty query', async () => {
+    const el = (await fixture(
+      html`<lr-graph-query-builder .value=${query({ startId: 'node-1' })}></lr-graph-query-builder>`,
+    )) as LyraGraphQueryBuilder;
+    await el.updateComplete;
+    expect(el.value.startId).to.equal('node-1');
+    el.value = null as unknown as GraphQuery;
+    await el.updateComplete;
+    expect(el.value).to.deep.equal(query());
+  });
+
+  it('excludes the field from form submission when the current value cannot be JSON-serialized (circular reference)', async () => {
+    const form = (await fixture(html`
+      <form>
+        <lr-graph-query-builder name="query"></lr-graph-query-builder>
+      </form>
+    `)) as HTMLFormElement;
+    const el = form.querySelector('lr-graph-query-builder') as LyraGraphQueryBuilder;
+    await el.updateComplete;
+    const circular: Record<string, unknown> = { startId: 'node-1' };
+    circular.self = circular;
+    el.value = circular as unknown as GraphQuery;
+    await el.updateComplete;
+    const data = new FormData(form);
+    expect(data.get('query')).to.be.null;
+  });
+
+  it('formStateRestoreCallback restores a JSON-encoded value', async () => {
+    const el = (await fixture(html`<lr-graph-query-builder></lr-graph-query-builder>`)) as LyraGraphQueryBuilder;
+    await el.updateComplete;
+    el.formStateRestoreCallback(JSON.stringify(query({ startId: 'restored-1', relationshipTypes: ['works_for'] })));
+    await el.updateComplete;
+    expect(el.value.startId).to.equal('restored-1');
+    expect(el.value.relationshipTypes).to.deep.equal(['works_for']);
+  });
+
+  it('formStateRestoreCallback falls back to the empty value for malformed JSON', async () => {
+    const el = (await fixture(
+      html`<lr-graph-query-builder .value=${query({ startId: 'node-1' })}></lr-graph-query-builder>`,
+    )) as LyraGraphQueryBuilder;
+    await el.updateComplete;
+    el.formStateRestoreCallback('{not valid json');
+    await el.updateComplete;
+    expect(el.value.startId).to.equal('');
+  });
+
+  it('formStateRestoreCallback falls back to the empty value for non-string state (e.g. FormData)', async () => {
+    const el = (await fixture(
+      html`<lr-graph-query-builder .value=${query({ startId: 'node-1' })}></lr-graph-query-builder>`,
+    )) as LyraGraphQueryBuilder;
+    await el.updateComplete;
+    el.formStateRestoreCallback(new FormData());
+    await el.updateComplete;
+    expect(el.value.startId).to.equal('');
+  });
+
+  it('formStateRestoreCallback falls back to the empty value when the parsed JSON is not a plain object (e.g. an array)', async () => {
+    const el = (await fixture(
+      html`<lr-graph-query-builder .value=${query({ startId: 'node-1' })}></lr-graph-query-builder>`,
+    )) as LyraGraphQueryBuilder;
+    await el.updateComplete;
+    el.formStateRestoreCallback('[1,2,3]');
+    await el.updateComplete;
+    expect(el.value.startId).to.equal('');
+  });
+
+  it('marks the start field as touched on blur, revealing its error only once (already-touched guard)', async () => {
+    const el = (await fixture(html`<lr-graph-query-builder></lr-graph-query-builder>`)) as LyraGraphQueryBuilder;
+    await el.updateComplete;
+    const startInput = el.shadowRoot!.querySelector('[part="start-input"]') as HTMLElement & { errorText: string };
+    expect(startInput.errorText).to.equal('');
+    startInput.dispatchEvent(new Event('blur'));
+    await el.updateComplete;
+    expect(startInput.errorText).to.equal('This field is required.');
+    // A second blur hits the already-touched guard and is a no-op.
+    startInput.dispatchEvent(new Event('blur'));
+    await el.updateComplete;
+    expect(startInput.errorText).to.equal('This field is required.');
+  });
+
+  it('add pickers ignore an empty selection and an already-active duplicate, for both relationship and node types', async () => {
+    const el = (await fixture(
+      html`<lr-graph-query-builder
+        .relationshipTypeOptions=${RELATIONSHIP_OPTIONS}
+        .nodeTypeOptions=${NODE_TYPE_OPTIONS}
+        .value=${query({ relationshipTypes: ['works_for'], nodeTypes: ['person'] })}
+      ></lr-graph-query-builder>`,
+    )) as LyraGraphQueryBuilder;
+    await el.updateComplete;
+    let fired = false;
+    el.addEventListener('lr-input', () => (fired = true));
+
+    const relPicker = el.shadowRoot!.querySelector('[part="relationship-picker"]') as HTMLElement & { value: string };
+    relPicker.dispatchEvent(new Event('change')); // empty selection (picker left at its placeholder)
+    relPicker.value = 'works_for'; // already active
+    relPicker.dispatchEvent(new Event('change'));
+
+    const nodePicker = el.shadowRoot!.querySelector('[part="node-type-picker"]') as HTMLElement & { value: string };
+    nodePicker.dispatchEvent(new Event('change')); // empty selection
+    nodePicker.value = 'person'; // already active
+    nodePicker.dispatchEvent(new Event('change'));
+
+    await el.updateComplete;
+    expect(fired).to.be.false;
+    expect(el.value.relationshipTypes).to.deep.equal(['works_for']);
+    expect(el.value.nodeTypes).to.deep.equal(['person']);
+  });
+
+  it('guards runQuery/saveQuery/loadQuery/deleteQuery against being invoked while disabled', async () => {
+    const saved: GraphQuerySavedItem[] = [{ id: 's1', name: 'Coworkers', query: query({ startId: 'node-9' }) }];
+    const el = (await fixture(
+      html`<lr-graph-query-builder
+        disabled
+        .savedQueries=${saved}
+        .value=${query({ startId: 'node-1' })}
+      ></lr-graph-query-builder>`,
+    )) as LyraGraphQueryBuilder;
+    await el.updateComplete;
+
+    let runFired = false;
+    let saveFired = false;
+    let loadFired = false;
+    let deleteFired = false;
+    el.addEventListener('lr-query-run', () => (runFired = true));
+    el.addEventListener('lr-query-save', () => (saveFired = true));
+    el.addEventListener('lr-query-load', () => (loadFired = true));
+    el.addEventListener('lr-query-delete', () => (deleteFired = true));
+
+    // These handlers are only reachable through their (correctly disabled) buttons in the UI;
+    // called directly here to exercise the defensive effectiveDisabled guard each one starts with.
+    const internal = el as unknown as {
+      runQuery(): void;
+      saveQuery(): void;
+      loadQuery(item: GraphQuerySavedItem): void;
+      deleteQuery(item: GraphQuerySavedItem): void;
+    };
+    internal.runQuery();
+    internal.saveQuery();
+    internal.loadQuery(saved[0]);
+    internal.deleteQuery(saved[0]);
+
+    expect(runFired).to.be.false;
+    expect(saveFired).to.be.false;
+    expect(loadFired).to.be.false;
+    expect(deleteFired).to.be.false;
+  });
+
+  it('saveQuery no-ops when the save name is blank, even called directly (defensive guard behind the disabled save button)', async () => {
+    const el = (await fixture(
+      html`<lr-graph-query-builder .value=${query({ startId: 'node-1' })}></lr-graph-query-builder>`,
+    )) as LyraGraphQueryBuilder;
+    await el.updateComplete;
+    let fired = false;
+    el.addEventListener('lr-query-save', () => (fired = true));
+    (el as unknown as { saveQuery(): void }).saveQuery();
+    expect(fired).to.be.false;
+  });
+
+  it('reveals the max-hops error text after reportValidity when minHops exceeds maxHops', async () => {
+    const el = (await fixture(
+      html`<lr-graph-query-builder .value=${query({ startId: 'node-1', minHops: 3, maxHops: 1 })}></lr-graph-query-builder>`,
+    )) as LyraGraphQueryBuilder;
+    await el.updateComplete;
+    el.reportValidity();
+    await el.updateComplete;
+    const maxHopsSelect = el.shadowRoot!.querySelector('[part="max-hops"]') as HTMLElement & { errorText: string };
+    expect(maxHopsSelect.errorText).to.equal(el.errors['max-hops']);
+    expect(maxHopsSelect.errorText).to.not.equal('');
+  });
 });
