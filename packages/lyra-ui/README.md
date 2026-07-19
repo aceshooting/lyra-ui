@@ -12,7 +12,7 @@
 **Lyra UI — the free, independent web-component alternative.** A MIT-licensed [Lit](https://lit.dev)
 library for accessible forms, dashboards, charts, data visualization, and Conversation & Agent UI.
 It is a practical open-source alternative to [Shoelace](https://shoelace.style/) and
-[Web Awesome](https://webawesome.com/), with 224 custom elements, native custom-element APIs,
+[Web Awesome](https://webawesome.com/), with 248 custom elements, native custom-element APIs,
 tree-shakeable imports, its own `--lr-*` design tokens, built-in localization and RTL support,
 and no runtime dependency on either project.
 
@@ -321,7 +321,7 @@ coverage automatically from the bundled `web-types.json` — JetBrains IDEs pick
 
 ## Components
 
-The catalog below lists all 224 tags in the current Custom Elements Manifest, grouped by
+The catalog below lists all 248 tags in the current Custom Elements Manifest, grouped by
 capability. The manifest and live docs are the authoritative sources for the complete generated
 API details.
 
@@ -425,6 +425,55 @@ API details.
 | `<lr-source-picker>` | — (extra) | Checkbox tree/list scoping which sources ground the next answer — tri-state folders, select-all, type icons, search; deliberately not form-associated, an immediate app-state scoping panel wired through `lr-sources-change` |
 | `<lr-provenance-panel>` | — (extra) | Sectioned grounding-breakdown disclosure panel for one answer (Entities / Relationships / Communities / Text chunks), composing `lr-entity-chip`/`lr-path-strip`/`lr-community-card`/`lr-chunk-inspector`; pure projection and event conduit, no fetching |
 | `<lr-mind-map>` | — (extra) | Radial expandable topic tree (NotebookLM-style mind map) — zero-dependency SVG with a closed-form radial layout; hierarchy only, no cross-links, force simulation, communities, or edge labels (that's `lr-graph`) |
+| `<lr-knowledge-graph-explorer>` | — (extra) | Orchestration-level surface for exploring a knowledge graph — the `lr-graph` canvas plus entity search, type filters, neighborhood expansion, pinned nodes, path finding between pins, and a details overlay; composes `lr-graph`, `lr-graph-legend`, `lr-entity-card`, `lr-neighbor-list`, `lr-path-strip`, and `lr-popover.showAt()` rather than re-implementing graph rendering itself |
+| `<lr-graph-query-builder>` | — (extra) | Editor for a single typed relationship/path filter (`GraphQuery`) over a knowledge graph — start/end entity anchors, relationship-type and node-type pickers with a removable active-filter chip display, a traversal direction, a min/max hop range, validation, and a host-persisted saved-query list; a serializable query model for GraphRAG workflows |
+| `<lr-entity-dossier>` | — (extra) | Full entity detail surface — a persistent header (`lr-entity-card` plus a confidence `lr-stat`) above an `lr-tabs` strip for Relationships (`lr-neighbor-list`), Supporting chunks (`lr-chunk-inspector`), and Provenance (`lr-provenance-panel`); pure layout, never fetches or mutates graph/document state |
+
+**Retrieval & grounding**
+
+| Component | Mirrors | Notes |
+|-----------|---------|-------|
+| `<lr-retrieval-search>` | — (extra) | Query bar for a retrieval/RAG surface — query text, an active-filter/scope chip row, a vector/keyword/hybrid mode selector, and loading/error/empty status feedback; fully controlled, emits `lr-search` only and never performs retrieval itself |
+| `<lr-retrieval-results>` | — (extra) | Orchestration-level ranked-chunk-list surface — deduplication, optional grouping by source, multi-selection, pagination/infinite loading, and a compact/expanded presentation switch; composes an `lr-chunk-inspector` per row and an internal `lr-virtual-list` for large result sets |
+| `<lr-retrieval-trace>` | — (extra) | Retrieval pipeline's stage timeline (query rewriting, embedding, retrieval, reranking, filtering) rendered through `lr-span-waterfall`, plus a disclosure list exposing each stage's evidence (chunks via `lr-chunk-inspector`, free-form text, and/or metadata); never fetches or computes retrieval results itself |
+| `<lr-grounding-summary>` | — (extra) | Claim-level scorecard for one generated answer — supported/unsupported claim counts, citation coverage, an optional confidence score, warnings, and (when supplied) a list of evidence citations; composes `lr-stat` and `lr-citation-badge`, pure projection and event conduit |
+| `<lr-context-inspector>` | — (extra) | Inspection view of the exact context assembled for a model call — per-segment token estimates via `lr-context-meter`, source attribution via `lr-citation-badge`, copy/export affordances, and truncation-boundary/redaction-marker rendering; pure projection, never fetches, estimates, or redacts itself |
+
+**Knowledge base & document management**
+
+| Component | Mirrors | Notes |
+|-----------|---------|-------|
+| `<lr-knowledge-base>` | — (extra) | Source list for a retrieval knowledge base — sync status, indexing health, permissions, and per-row create/sync/pause/delete affordances; a controlled data view that never syncs or indexes anything itself, only presents `sources` and emits request-only events |
+| `<lr-ingestion-queue>` | — (extra) | Controlled list of documents moving through an ingestion pipeline (upload → text extraction → chunking → embedding → indexing), each row showing its stage, progress, chunk/embedding counts, and a retry or cancel affordance; presentation only, virtualizes at or above `virtualizeThreshold` items |
+| `<lr-document-library>` | — (extra) | Searchable, filterable inventory of documents with versions, tags, owners, freshness, and bulk selection; composes `lr-table` for the grid and `lr-input`/`lr-combobox` for search and tag-facet filtering — a controlled data view, no upload/sync/mutation of its own |
+| `<lr-document-compare>` | — (extra) | Side-by-side or inline comparison of two document versions, composed from `lr-diff-view` (`view="diff"`, the default) and `lr-document-preview` (`view="side-by-side"`), with proportional scroll sync and matching-highlight activation keeping the two independent preview panes aligned |
+
+**Agent runs & observability**
+
+| Component | Mirrors | Notes |
+|-----------|---------|-------|
+| `<lr-agent-run>` | — (extra) | Top-level shell for one `AgentRun` — lifecycle-status badge, elapsed time, current step, model/cost summary, and built-in Cancel/Retry controls in a header, plus `tasks`/`tools`/`reasoning`/`output` composition slots; a shell only, every piece of per-step rendering routes through an existing primitive |
+| `<lr-agent-trace>` | — (extra) | Provider-neutral agent/LLM trace view — a span-kind filter row, a handoff quick-jump list, and the full trace hierarchy, all rendered through `lr-trace-tree` over one shared `LyraSpan[]` array |
+| `<lr-tool-timeline>` | — (extra) | Chronological list of an agent run's tool/function calls, each rendered through `lr-tool-call-chip` (name/status/duration) and `lr-tool-result-view` (args/result), with per-entry retry counts, sensitive-field redaction, and a shared `lr-tool-approval-dialog` for entries gated behind human approval |
+| `<lr-memory-panel>` | — (extra) | Agent working-memory surface — short-term context and long-term memories, each item's confidence and optional grounding provenance via `lr-provenance-panel`, with add/remove/forget actions gated behind an `lr-confirm-bar` confirmation step |
+| `<lr-policy-summary>` | — (extra) | Read-only list of guardrail, permission, privacy, and tool-policy decisions (`allow`/`deny`/`needs-review`), each with an always-visible, accessible explanation never conveyed by color alone; composes `lr-badge` and `lr-callout`, with `lr-details` for optional richer detail |
+
+**Dashboards & orchestration**
+
+| Component | Mirrors | Notes |
+|-----------|---------|-------|
+| `<lr-dashboard-grid>` | — (extra) | Responsive, keyboard-accessible widget grid — positions `layout` entries on a CSS Grid, composing `lr-widget` + `lr-widget-renderer` for each cell's default content, with drag/resize/collision handled as controlled events; readonly (viewer) by default, opt into editor gestures via `cells-draggable`/`cells-resizable` |
+| `<lr-filter-bar>` | — (extra) | Row of dashboard filters declared by the host (`filters`) rather than invented by this component — each composes an existing Lyra input (`lr-select`/`lr-combobox`/`lr-date-input`), plus a removable `lr-chip-group` summary and a reset button; controlled, emits a single `lr-input` carrying the full resulting value |
+| `<lr-query-builder>` | — (extra) | Composable structured-query builder for tabular/dashboard data — a flat list of field/operator/value condition rows combined with one AND/OR combinator; fully controlled, distinct from `lr-graph-query-builder`'s typed graph/path queries |
+| `<lr-drilldown-panel>` | — (extra) | Controlled navigation from a chart/table datum to its related evidence, documents, entities, or agent runs — a breadcrumb trail (`lr-breadcrumb`) over `path` plus, per category the current node has content for, the matching existing primitive (`lr-source-card`, `lr-document-preview`, `lr-entity-card`), wrapped in `lr-tabs` only when more than one category applies |
+
+**Evaluation**
+
+| Component | Mirrors | Notes |
+|-----------|---------|-------|
+| `<lr-eval-dataset>` | — (extra) | Dataset management for an evaluation suite — a filterable/taggable list of `EvalExample` rows via `lr-data-grid`, an `lr-chip`/`lr-chip-group` tag-based browse filter, and add/remove/import/export affordances; fully controlled, never mutates `examples` or performs I/O itself |
+| `<lr-evaluation-run>` | — (extra) | Evaluation batch's live progress — an overall `lr-progress-bar` counting terminal (done/error/cancelled) examples against the batch total, plus one `lr-details` disclosure per example showing input/output, an optional `lr-grounding-summary`, and an optional `lr-tool-timeline` |
+| `<lr-eval-result>` | — (extra) | Rubric scoring, human review, and comparison across a single evaluation example's runs — composes `lr-data-grid` for the runs comparison table, `lr-rubric-form` for the selected run's human-review scoring, and `lr-diff-view` to compare a run's output against a baseline run |
 
 **Overlays**
 

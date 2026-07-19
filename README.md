@@ -128,7 +128,7 @@ Contributors and AI coding agents working on this repo: see [AGENTS.md](./AGENTS
 
 ## Components
 
-248 custom elements across five component families. Every tag has a live, interactive example on the
+248 custom elements across six component families. Every tag has a live, interactive example on the
 [docs site](https://aceshooting.github.io/lyra-ui/); for the full per-tag reference (Web Awesome
 mirror, props, events, slots, parts) see
 [`packages/lyra-ui/README.md#components`](./packages/lyra-ui/README.md#components).
@@ -140,6 +140,7 @@ mirror, props, events, slots, parts) see
 | Layout, navigation, and overlays | tabs, menus, command palette, breadcrumbs, details/accordion, dialog, drawer, carousel, popover, tooltip, dropdown, scroller, resize/observer utilities, and responsive panels |
 | Conversation and Agent UI | chat messages and composer, streaming text, citations, sources, tool-call/result/approval flows, model selection, document/media previews, and more |
 | Display and utility primitives | badges, tags, icons and icon buttons, callouts, cards, avatars, skeletons, progress, spinners, rating, formatting, markdown, code blocks and a code editor, JSON, and live-region helpers |
+| Agentic AI infrastructure | retrieval search/results/trace, grounding summary, context inspector, knowledge base and ingestion queue, document library and compare, agent run/trace, tool timeline, memory panel, policy summary, knowledge-graph explorer, graph query builder, entity dossier, dashboard grid, filter bar, query builder, drilldown panel, and eval dataset/run/result |
 
 ## Theming, internationalization & RTL
 
