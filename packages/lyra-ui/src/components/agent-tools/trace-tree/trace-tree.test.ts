@@ -197,4 +197,206 @@ describe('lr-trace-tree', () => {
     expect(getComputedStyle(toggle).minInlineSize).to.equal('40px');
     expect(getComputedStyle(toggle).minBlockSize).to.equal('40px');
   });
+
+  it('renders the embedding- and retriever-kind icons, and formats a >=1s duration in seconds', async () => {
+    const spans: LyraSpan[] = [
+      { id: 'emb', name: 'embed_docs', kind: 'embedding', startMs: 0, endMs: 1500, status: 'success' },
+      { id: 'retr', name: 'vector_lookup', kind: 'retriever', startMs: 0, endMs: 40, status: 'success' },
+    ];
+    const el = (await fixture(html`<lr-trace-tree .spans=${spans}></lr-trace-tree>`)) as LyraTraceTree;
+    await el.updateComplete;
+    const embRow = el.shadowRoot!.querySelector('[data-id="emb"]') as HTMLElement;
+    // embeddingIcon() is the only kind icon built from five <circle>s -- this distinguishes it
+    // from the other five kind icons rather than merely asserting "an svg exists".
+    expect(embRow.querySelectorAll('[part="icon"] circle').length).to.equal(5);
+    expect(embRow.querySelector('[part="duration"]')!.textContent).to.equal('1.5s');
+    const retrRow = el.shadowRoot!.querySelector('[data-id="retr"]') as HTMLElement;
+    // retrieverIcon() is the only kind icon built from exactly one <circle> plus one <line>.
+    expect(retrRow.querySelectorAll('[part="icon"] circle').length).to.equal(1);
+    expect(retrRow.querySelectorAll('[part="icon"] line').length).to.equal(1);
+  });
+
+  it('moves roving tabindex with Home/End', async () => {
+    const el = (await fixture(html`<lr-trace-tree .spans=${SPANS}></lr-trace-tree>`)) as LyraTraceTree;
+    await el.updateComplete;
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    base.dispatchEvent(new KeyboardEvent('keydown', { key: 'End', bubbles: true, composed: true }));
+    await el.updateComplete;
+    expect((el.shadowRoot!.querySelector('[data-id="llm"]') as HTMLElement).getAttribute('tabindex')).to.equal('0');
+    base.dispatchEvent(new KeyboardEvent('keydown', { key: 'Home', bubbles: true, composed: true }));
+    await el.updateComplete;
+    expect((el.shadowRoot!.querySelector('[data-id="root"]') as HTMLElement).getAttribute('tabindex')).to.equal('0');
+    expect((el.shadowRoot!.querySelector('[data-id="llm"]') as HTMLElement).getAttribute('tabindex')).to.equal('-1');
+  });
+
+  it('moves roving tabindex with ArrowUp', async () => {
+    const el = (await fixture(html`<lr-trace-tree .spans=${SPANS}></lr-trace-tree>`)) as LyraTraceTree;
+    await el.updateComplete;
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    base.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, composed: true }));
+    await el.updateComplete;
+    expect((el.shadowRoot!.querySelector('[data-id="search"]') as HTMLElement).getAttribute('tabindex')).to.equal('0');
+    base.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowUp', bubbles: true, composed: true }));
+    await el.updateComplete;
+    expect((el.shadowRoot!.querySelector('[data-id="root"]') as HTMLElement).getAttribute('tabindex')).to.equal('0');
+  });
+
+  it('expands or moves focus into a child with ArrowRight, and no-ops on a leaf', async () => {
+    const el = (await fixture(html`<lr-trace-tree .spans=${SPANS}></lr-trace-tree>`)) as LyraTraceTree;
+    await el.updateComplete;
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+
+    // "root" starts expanded -> ArrowRight moves focus into its first child.
+    base.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true, composed: true }));
+    await el.updateComplete;
+    expect((el.shadowRoot!.querySelector('[data-id="search"]') as HTMLElement).getAttribute('tabindex')).to.equal('0');
+
+    // "search" is a leaf -> ArrowRight is a no-op.
+    base.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true, composed: true }));
+    await el.updateComplete;
+    expect((el.shadowRoot!.querySelector('[data-id="search"]') as HTMLElement).getAttribute('tabindex')).to.equal('0');
+
+    // Collapse everything (focus re-points to "root"), then ArrowRight re-expands it.
+    el.collapseAll();
+    await el.updateComplete;
+    expect((el.shadowRoot!.querySelector('[data-id="root"]') as HTMLElement).getAttribute('tabindex')).to.equal('0');
+    setTimeout(() => base.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true, composed: true })));
+    const ev = await oneEvent(el, 'lr-span-toggle');
+    expect(ev.detail).to.deep.equal({ id: 'root', expanded: true });
+  });
+
+  it('collapses with ArrowLeft, and walks up to the nearest shallower ancestor from a leaf', async () => {
+    const el = (await fixture(html`<lr-trace-tree .spans=${SPANS}></lr-trace-tree>`)) as LyraTraceTree;
+    await el.updateComplete;
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    (el.shadowRoot!.querySelector('[data-id="search"]') as HTMLElement).click();
+    await el.updateComplete;
+
+    // "search" has no children -> ArrowLeft walks back to the nearest shallower ancestor ("root").
+    base.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true, composed: true }));
+    await el.updateComplete;
+    expect((el.shadowRoot!.querySelector('[data-id="root"]') as HTMLElement).getAttribute('tabindex')).to.equal('0');
+
+    // "root" has children and is expanded -> ArrowLeft collapses it.
+    setTimeout(() => base.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true, composed: true })));
+    const ev = await oneEvent(el, 'lr-span-toggle');
+    expect(ev.detail).to.deep.equal({ id: 'root', expanded: false });
+  });
+
+  it('emits lr-span-select on Enter and on Space (keyboard activation)', async () => {
+    const el = (await fixture(html`<lr-trace-tree .spans=${SPANS}></lr-trace-tree>`)) as LyraTraceTree;
+    await el.updateComplete;
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    setTimeout(() => base.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, composed: true })));
+    const enterEv = await oneEvent(el, 'lr-span-select');
+    expect(enterEv.detail).to.deep.equal({ id: 'root' });
+
+    setTimeout(() => base.dispatchEvent(new KeyboardEvent('keydown', { key: ' ', bubbles: true, composed: true })));
+    const spaceEv = await oneEvent(el, 'lr-span-select');
+    expect(spaceEv.detail).to.deep.equal({ id: 'root' });
+  });
+
+  it('ignores unhandled keys', async () => {
+    const el = (await fixture(html`<lr-trace-tree .spans=${SPANS}></lr-trace-tree>`)) as LyraTraceTree;
+    await el.updateComplete;
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    const root = el.shadowRoot!.querySelector('[data-id="root"]') as HTMLElement;
+    expect(root.getAttribute('tabindex')).to.equal('0');
+    base.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, composed: true }));
+    await el.updateComplete;
+    expect(root.getAttribute('tabindex')).to.equal('0');
+  });
+
+  it('prunes collapsed ids that disappear from a spans update, falling back to the first row when activeSpanId is unset', async () => {
+    const el = (await fixture(html`<lr-trace-tree .spans=${SPANS}></lr-trace-tree>`)) as LyraTraceTree;
+    await el.updateComplete;
+    const toggle = el.shadowRoot!.querySelector('[data-id="root"] [part="toggle"]') as HTMLElement;
+    setTimeout(() => toggle.click());
+    await oneEvent(el, 'lr-span-toggle');
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelectorAll('[part="row"]').length).to.equal(1);
+
+    const newSpans: LyraSpan[] = [{ id: 'other', name: 'other_root', kind: 'other', startMs: 0, endMs: 50, status: 'success' }];
+    el.spans = newSpans;
+    await el.updateComplete;
+    expect((el.shadowRoot!.querySelector('[data-id="other"]') as HTMLElement).getAttribute('tabindex')).to.equal('0');
+
+    // The stale "root" collapsed id was pruned rather than lingering -- bringing spans back
+    // renders fully expanded instead of silently honoring a collapse for an id that no longer exists.
+    el.spans = [...SPANS];
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelectorAll('[part="row"]').length).to.equal(3);
+  });
+
+  it('falls back to activeSpanId (not just the first row) when the focused row disappears but activeSpanId is still present', async () => {
+    const el = (await fixture(
+      html`<lr-trace-tree .spans=${SPANS} active-span-id="llm"></lr-trace-tree>`,
+    )) as LyraTraceTree;
+    await el.updateComplete;
+    (el.shadowRoot!.querySelector('[data-id="search"]') as HTMLElement).click();
+    await el.updateComplete;
+    expect((el.shadowRoot!.querySelector('[data-id="search"]') as HTMLElement).getAttribute('tabindex')).to.equal('0');
+
+    el.spans = SPANS.filter((s) => s.id !== 'search');
+    await el.updateComplete;
+    expect((el.shadowRoot!.querySelector('[data-id="llm"]') as HTMLElement).getAttribute('tabindex')).to.equal('0');
+  });
+
+  it('does not throw when activeSpanId does not match any rendered row', async () => {
+    const el = (await fixture(
+      html`<lr-trace-tree .spans=${SPANS} active-span-id="missing"></lr-trace-tree>`,
+    )) as LyraTraceTree;
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('[data-active]')).to.not.exist;
+  });
+
+  it('shows only the tokens columns, or only the cost column, in the header row', async () => {
+    const el = (await fixture(html`<lr-trace-tree .spans=${SPANS} show-tokens></lr-trace-tree>`)) as LyraTraceTree;
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('.col-tokens')).to.exist;
+    expect(el.shadowRoot!.querySelector('.col-cost')).to.not.exist;
+
+    el.showTokens = false;
+    el.showCost = true;
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('.col-tokens')).to.not.exist;
+    expect(el.shadowRoot!.querySelector('.col-cost')).to.exist;
+  });
+
+  it('ignores keydown when there are no rows to navigate', async () => {
+    const el = (await fixture(html`<lr-trace-tree></lr-trace-tree>`)) as LyraTraceTree;
+    await el.updateComplete;
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    // Should not throw despite there being no rows for onKeyDown to index into.
+    base.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, composed: true }));
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('lr-empty')).to.exist;
+  });
+
+  it('suppresses the duration bar (both header and rows) when hide-bars is set', async () => {
+    const el = (await fixture(
+      html`<lr-trace-tree .spans=${SPANS} show-tokens hide-bars></lr-trace-tree>`,
+    )) as LyraTraceTree;
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('.col-bar')).to.not.exist;
+    expect(el.shadowRoot!.querySelector('[part="bar-track"]')).to.not.exist;
+  });
+
+  it('swaps ArrowLeft/ArrowRight for expand/collapse under RTL', async () => {
+    const el = (await fixture(
+      html`<lr-trace-tree dir="rtl" .spans=${SPANS}></lr-trace-tree>`,
+    )) as LyraTraceTree;
+    await el.updateComplete;
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    // Under RTL, ArrowLeft is the expand key: "root" starts expanded, so it moves focus into
+    // its first child rather than toggling -- the mirror image of the LTR ArrowRight test.
+    base.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true, composed: true }));
+    await el.updateComplete;
+    expect((el.shadowRoot!.querySelector('[data-id="search"]') as HTMLElement).getAttribute('tabindex')).to.equal('0');
+
+    // ArrowRight is the collapse key under RTL: "search" is a leaf, so it walks up to "root".
+    base.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true, composed: true }));
+    await el.updateComplete;
+    expect((el.shadowRoot!.querySelector('[data-id="root"]') as HTMLElement).getAttribute('tabindex')).to.equal('0');
+  });
 });
