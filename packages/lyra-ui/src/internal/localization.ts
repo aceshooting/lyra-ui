@@ -815,7 +815,26 @@ export type LyraMessageKey =
   | 'queryBuilderOperatorIn'
   | 'queryBuilderOperatorNotIn'
   | 'queryBuilderOperatorIsEmpty'
-  | 'queryBuilderOperatorIsNotEmpty';
+  | 'queryBuilderOperatorIsNotEmpty'
+  | 'memoryPanelLabel'
+  | 'memoryPanelShortTermHeading'
+  | 'memoryPanelLongTermHeading'
+  | 'memoryPanelAdd'
+  | 'memoryPanelAddWithContext'
+  | 'memoryPanelForgetAll'
+  | 'memoryPanelConfirmAddHeading'
+  | 'memoryPanelConfirmRemoveHeading'
+  | 'memoryPanelConfirmForgetHeading'
+  | 'memoryPanelConfirmForgetBody'
+  | 'graphExplorerLabel'
+  | 'graphExplorerSearchPlaceholder'
+  | 'graphExplorerSearchResultsLabel'
+  | 'graphExplorerPin'
+  | 'graphExplorerUnpin'
+  | 'graphExplorerPinned'
+  | 'graphExplorerUnpinned'
+  | 'graphExplorerPinnedHeading'
+  | 'graphExplorerFindPath';
 
 export type LyraLocaleStrings = Partial<Record<LyraMessageKey, string>> & Record<string, string | undefined>;
 
@@ -1633,6 +1652,25 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, string> = {
   queryBuilderOperatorNotIn: 'Is none of',
   queryBuilderOperatorIsEmpty: 'Is empty',
   queryBuilderOperatorIsNotEmpty: 'Is not empty',
+  memoryPanelLabel: 'Memory',
+  memoryPanelShortTermHeading: 'Short-term context',
+  memoryPanelLongTermHeading: 'Long-term memories',
+  memoryPanelAdd: 'Add to long-term memory',
+  memoryPanelAddWithContext: 'Add "{label}" to long-term memory',
+  memoryPanelForgetAll: 'Forget all',
+  memoryPanelConfirmAddHeading: 'Add this to long-term memory?',
+  memoryPanelConfirmRemoveHeading: 'Remove this item?',
+  memoryPanelConfirmForgetHeading: 'Forget all long-term memories?',
+  memoryPanelConfirmForgetBody: 'This permanently forgets all {count} long-term memories.',
+  graphExplorerLabel: 'Knowledge graph explorer',
+  graphExplorerSearchPlaceholder: 'Search entities…',
+  graphExplorerSearchResultsLabel: 'Search results',
+  graphExplorerPin: 'Pin',
+  graphExplorerUnpin: 'Unpin',
+  graphExplorerPinned: '{label} pinned',
+  graphExplorerUnpinned: '{label} unpinned',
+  graphExplorerPinnedHeading: 'Pinned',
+  graphExplorerFindPath: 'Find path',
 };
 
 const locales = new Map<string, LyraLocaleStrings>();

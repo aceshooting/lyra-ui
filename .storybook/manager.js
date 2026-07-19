@@ -78,7 +78,7 @@ const LYRA_MANAGER_THEMES = {
 };
 
 addons.setConfig({
-  theme: LYRA_MANAGER_THEMES.light,
+  theme: LYRA_MANAGER_THEMES.dark,
 });
 
 // The preview's "Theme" toolbar global (.storybook/preview.js) only reaches the preview iframe's
@@ -87,6 +87,6 @@ addons.setConfig({
 // one channel event both sides share, so re-applying setConfig here is what keeps the manager
 // chrome in sync with the toolbar instead of staying permanently light.
 addons.getChannel().on(GLOBALS_UPDATED, ({ globals }) => {
-  const theme = Object.hasOwn(LYRA_MANAGER_THEMES, globals?.theme) ? globals.theme : 'light';
+  const theme = Object.hasOwn(LYRA_MANAGER_THEMES, globals?.theme) ? globals.theme : 'dark';
   addons.setConfig({ theme: LYRA_MANAGER_THEMES[theme] });
 });

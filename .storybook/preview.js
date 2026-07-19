@@ -139,7 +139,7 @@ const LYRA_THEME_TOKENS = {
 };
 
 function applyLyraTheme(themeName) {
-  const theme = Object.hasOwn(LYRA_THEME_TOKENS, themeName) ? themeName : 'light';
+  const theme = Object.hasOwn(LYRA_THEME_TOKENS, themeName) ? themeName : 'dark';
   const root = document.documentElement;
   const body = document.body;
   const colorScheme = theme === 'dark' ? 'dark' : 'light';
@@ -181,7 +181,7 @@ const preview = {
     theme: {
       name: 'Theme',
       description: 'Lyra semantic color theme',
-      defaultValue: 'light',
+      defaultValue: 'dark',
       toolbar: {
         icon: 'paintbrush',
         items: [

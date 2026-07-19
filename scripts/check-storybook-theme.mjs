@@ -8,6 +8,7 @@ const preview = readFileSync(join(root, '.storybook/preview.js'), 'utf8');
 for (const required of [
   "globalTypes: {",
   "theme: {",
+  "defaultValue: 'dark'",
   "{ value: 'light', title: 'Light' }",
   "{ value: 'dark', title: 'Dark' }",
   "{ value: 'high-contrast', title: 'High contrast' }",
