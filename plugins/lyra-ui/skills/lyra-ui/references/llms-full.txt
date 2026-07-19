@@ -192,7 +192,8 @@ shared `FormAssociated` mixin — see gotchas).
 **Properties:**
 - `multiple: boolean = false` (reflected)
 - `size: 'xs' | 's' | 'm' | 'l' | 'xl' = 'm'` (reflected — same scale as `lr-select`'s `size`;
-  also scales the "+N" overflow tag's padding/font-size to match)
+  also scales the "+N" overflow tag and decorative expand icon; `size="s"` shares its outer
+  control height with `lr-input`, `lr-select`, and `lr-segmented` without part overrides)
 - `placeholder: string = ''`
 - `disabled: boolean = false` (reflected)
 - `required: boolean = false` (reflected — enforced via `internals.setValidity()`; also reflected as
@@ -266,7 +267,10 @@ leading visual for an async row), `option-label`, `option-sub` (a row's secondar
 is set), `option-badge` (an async row's trailing metadata), `option-overflow` (the "+N more"
 indicator from `maxRender`), `error`, `hint`
 
-**Themeable custom properties:** shared tokens only.
+**Themeable custom properties:** `--lr-combobox-trigger-padding`,
+`--lr-combobox-trigger-min-height`, `--lr-combobox-font-size`, `--lr-combobox-tag-padding`,
+`--lr-combobox-tag-font-size`, and `--lr-combobox-expand-size` (the decorative icon box; each
+standard size supplies an aligned default), plus shared tokens.
 
 **Optional peer deps:** none.
 
@@ -409,7 +413,7 @@ control's accessible description.
 secondary line, when `sub` is set), `expand-icon`, `error`, `hint`
 
 **Themeable custom properties:** `--lr-select-trigger-padding`, `--lr-select-trigger-min-height`,
-`--lr-select-font-size` — all three auto-swapped per `size` (`xs`…`xl`), the same pattern
+`--lr-select-font-size`, `--lr-select-expand-size` — all four auto-swapped per `size` (`xs`…`xl`), the same pattern
 `lr-toast-item`'s `--lr-toast-padding`/`--lr-toast-font-size` use. `--lr-select-trigger-height`
 (default `auto`) — unset, it leaves `--lr-select-trigger-min-height` as a floor only, unchanged; set
 it to force an exact trigger height (e.g. to pixel-match a sibling text field in the same row), which
@@ -813,6 +817,9 @@ form-associated via the same `FormAssociated` mixin as `lr-textarea`. Ships the 
 - `size: '2xs' | 'xs' | 's' | 'm' | 'l' | 'xl' = 'm'` (reflected)
 - `value: string = ''` (from `FormAssociated`)
 - `placeholder: string = ''`
+- `clearable: boolean = false` (reflected) — shows a localized clear action while a `text` or
+  `search` input has a value; clearing preserves input focus
+- `readonly: boolean = false` (reflected) — forwarded to the native input and disables clearing
 - `label: string = ''`
 - `hint: string = ''`
 - `errorText: string = ''` (attribute `error-text`)
@@ -832,15 +839,19 @@ access), `focus(options?: FocusOptions)`, `blur()`, `select()`.
 **Events:** native-style composed `input` and `change`, plus `lr-input` (`detail: { value }`,
 fired on every user-driven edit) and `lr-change` (`detail: { value }`, fired on the native
 `change` timing), `blur`/`focus` (re-dispatched bubbling + composed from the internal native input's
-own `blur`/`focus`).
+own `blur`/`focus`), and `lr-clear` (no detail, fired after the clear action's `input`/`lr-input`/
+`change`/`lr-change` sequence).
 
-**Slots:** `label`, `hint`, `error`.
+**Slots:** `label`, `hint`, `error`, `start` (adornment before the input), `end` (adornment after the
+input and built-in actions).
 
 **CSS parts:** `form-control`, `form-control-label`, `input-wrapper`, `input`, `password-toggle`
-(present only when `type="password"`), `hint`, `error`.
+(present only when `type="password"`), `start`, `end`, `clear-button` (non-empty clearable
+`text`/`search` inputs only), `hint`, `error`.
 
 **Themeable custom properties:** `--lr-input-padding-block`, `--lr-input-padding-inline`,
-`--lr-input-font-size` — all three auto-swapped per `size` (`xs`…`xl`), the same pattern
+`--lr-input-font-size`, `--lr-input-control-min-height` — all four auto-swapped per `size`
+(`2xs`…`xl`), the same pattern
 `lr-select`'s `--lr-select-trigger-padding`/`--lr-select-font-size` use.
 
 **Optional peer deps:** none.
@@ -849,6 +860,7 @@ own `blur`/`focus`).
 <lr-input type="password" label="Password"></lr-input>
 <lr-input type="email" label="Email" required></lr-input>
 <lr-input size="s" placeholder="Compact"></lr-input>
+<lr-input type="search" clearable value="workflow" aria-label="Search"><span slot="start">⌕</span></lr-input>
 ```
 
 **Known gotchas:**
@@ -1390,6 +1402,9 @@ KPI/stat card — value + unit + label + optional icon/trend/caption.
 - `label: string = ''`
 - `value: string = ''`
 - `unit: string = ''`
+- `href?: string` — when it resolves to a safe URL, the root is a real whole-stat `<a>`; unsafe
+  URL schemes keep the stat non-interactive
+- `target?: string` / `rel?: string` — forwarded to the anchor while `href` is active
 - `variant: 'neutral'|'success'|'warning'|'danger' = 'neutral'` (reflected)
 - `trend: number = NaN` (a `NaN` sentinel hides the trend pill entirely — set an actual number to
   show it)
@@ -1426,7 +1441,7 @@ slot="spark">`, or other compact trend visual — `lr-stat` only reserves the sl
 render one itself), `sub` (rich sub-line content — overrides the `sub` attribute when slotted content
 is provided)
 
-**CSS parts:** `base`, `icon`, `label`, `value-row`, `value`, `unit`, `trend`, `sub`, `spark`,
+**CSS parts:** `base` (a `<div>`, or an `<a>` for a safe `href`), `icon`, `label`, `value-row`, `value`, `unit`, `trend`, `sub`, `spark`,
 `caption`, `rows`, `row`, `row-label`, `row-value` — `[part="value"]` gets `aria-labelledby` pairing
 it with `[part="label"]`'s generated id whenever `label` is non-empty (so tabbing straight to the
 `exactValue`-focusable value still announces e.g. "Revenue $1.2K", not just the bare value); each
@@ -1442,9 +1457,12 @@ accent edge and value tint).
 <lr-stat label="Active users" value="1,204" trend="4.2" variant="success">
   <svg slot="">...</svg>
 </lr-stat>
+<lr-stat label="Memories" value="128" href="/memories"></lr-stat>
 ```
 
 **Known gotchas:**
+- When `href` makes the whole stat a link, exact-value spans keep their hover tooltips but omit
+  their own `tabindex` to avoid nesting focus targets inside the anchor.
 - no `aria-live` region wraps `value`/`trend` — an in-place update after first render still isn't
   proactively announced to screen readers. The trend pill's direction/polarity is no longer
   conveyed by icon rotation/color alone, though: a visually-hidden span now spells it out in plain
@@ -1466,7 +1484,7 @@ own "consumer computes/renders" contract rather than assuming addition.
 
 **Properties:**
 - `columns: TableColumn<T>[] = []` (attribute: false) — `{ key, label, headerCell?, width?,
-  minWidth?, resizable?, sortable?, align?: 'start'|'end', priority?: 'medium'|'low', sticky?: boolean |
+  minWidth?, maxWidth?, resizable?, sortable?, align?: 'start'|'end', priority?: 'medium'|'low', sticky?: boolean |
   'start' | 'end', footer?, cellStyle?, heatValue?, cell: (row) => unknown }` —
   `priority` progressively hides that column via a `@container` query as `[part='base']` narrows
   (`'low'` hides first, under a ~900px container width; `'medium'` next, under ~640px; both
@@ -1487,8 +1505,11 @@ own "consumer computes/renders" contract rather than assuming addition.
   background a `cell()`-returned inner element can't paint into the cell's own padding — omit it for
   no per-cell style override (the default, unchanged output); `editable` enables double-click
   editing, `editValue` supplies the editor value, and `editType` selects `text` or `number`
-  `resizable` adds a pointer-driven `[part='resize-handle']` and emits `lr-column-resize` with the
-  live width in CSS pixels; an explicit pixel `minWidth` is respected.
+  `resizable` adds a focusable separator `[part='resize-handle']` and emits `lr-column-resize` with
+  the live width in CSS pixels. Drag it, or use logical ArrowLeft/ArrowRight for 10px steps (mirrored
+  under RTL), Shift+Arrow for 50px steps, Home for the minimum, and End for an explicit pixel
+  `maxWidth`; explicit pixel `minWidth`/`maxWidth` values bound both input paths. The separator
+  exposes its current/minimum/bounded-maximum pixel width through ARIA value attributes.
 - `columnsHidden: boolean = false` (attribute `columns-hidden`, reflected) — computed/read-only: true
   when a `priority` column is *actually* hidden right now by the `@container` breakpoints above, or
   `showAllColumns` force-visible mode is currently active. Measured via a `ResizeObserver` on
@@ -1576,7 +1597,7 @@ own "consumer computes/renders" contract rather than assuming addition.
 `lr-selection-change` (`detail: { keys }`) when selection is enabled, `lr-filter-change`
 (`detail: { text }`), and `lr-page-change` (`detail: { page }`) from the controlled
 filter/pagination surfaces, and `lr-cell-edit` (`detail: { row, key, value }`) for editable
-columns, and `lr-column-resize` (`detail: { key, width }`) on every resize drag step
+columns, and `lr-column-resize` (`detail: { key, width }`) on every pointer or keyboard resize step
 
 **Slots:** none — content comes entirely from `columns`/`rows`.
 
@@ -1588,7 +1609,8 @@ column defines `footer`), `footer-row`, `footer-cell`, `row-total-cell` (each bo
 cell, holding `grandTotal`, is a `footer-cell` instead, matching every other footer cell),
 `expand-toggle-cell`, `row-expand-toggle`,
 `row-expand-icon`, `expanded-row`, `expanded-cell`, `filter-label`, `filter`, `loading`, and
-`pagination`, `cell-editor`, `group-row`, `group-cell`, and `resize-handle`
+`pagination`, `cell-editor`, `group-row`, `group-cell`, and `resize-handle` (the focusable column
+separator)
 
 **Themeable custom properties:** `--lr-table-max-height` (default `none`; controls the scrollable
 body's `max-block-size`). `--lr-table-heat-tint-lo` (default `var(--lr-color-brand-quiet)`) and
@@ -1911,18 +1933,31 @@ auto-inserted between each adjacent pair.
 **Properties:**
 - `sizes: number[] = []` (attribute: false — percentages per panel, auto-computed equally if
   omitted/mismatched)
+- `defaultSizes: number[] = []` (attribute: false) — initialization-only fallback: a valid restored
+  `storageKey` layout wins first; otherwise a valid `defaultSizes` wins over equal distribution.
+  Later reassignment never overwrites live drag/persisted state — set it once, at mount.
 - `min: number = 10` (min % per panel)
-- `orientation: 'horizontal'|'vertical' = 'horizontal'` (reflected)
+- `orientation: 'horizontal'|'vertical' = 'horizontal'` (reflected) — the axis used at/above
+  `orientationBreakpoint` (or always, when that's unset).
+- `orientationBreakpoint?: number` (attribute `orientation-breakpoint`, px) — opt-in inline-size
+  breakpoint measured on `[part='base']`; unset (the default) means no behavior change at all.
+  Below it, `narrowOrientation` becomes the effective axis instead of `orientation`.
+- `narrowOrientation: 'horizontal'|'vertical' = 'vertical'` (reflected, attribute `narrow-orientation`)
+- `effectiveOrientation: 'horizontal'|'vertical'` (readonly getter) — the live resize/layout axis
+  actually in effect; identical to `orientation` whenever `orientationBreakpoint` is unset. Also
+  reflected as `data-effective-orientation` (only present while `orientationBreakpoint` is set).
 - `storageKey?: string` (attribute `storage-key` — persists sizes to `localStorage` under
   `` `lr-split:${key}:${panelCount}` ``, scoped by panel count so a stale layout for a different
   panel count is ignored)
 - `panelConstraints: (PanelConstraint | null)[] = []` (attribute: false) — `PanelConstraint { minPx?:
-  number; maxPx?: number }`, index-aligned with `sizes`; a `null`/missing entry (or an omitted bound
-  within an entry) leaves that side of that panel purely percent-based (the existing `min`-only
-  behavior). `sizes`, the `lr-resize` payload, and localStorage persistence stay percent-based
-  regardless — only the effective drag/keyboard clamp bounds (and the rendered `flex-basis`, via a
-  native CSS `clamp()` so a constrained panel stays pinned between its px bounds across container
-  resizes with no extra `ResizeObserver`) change for a constrained panel.
+  number; maxPx?: number; minPercent?: number; maxPercent?: number }`, index-aligned with `sizes`; a
+  `null`/missing entry (or an omitted bound within an entry) leaves that side of that panel purely
+  percent-based (the existing `min`-only behavior). Combining a px and a percent bound on the same
+  side resolves to the stricter one (larger for min, smaller for max) via a native CSS `max()`/`min()`
+  in the rendered `clamp()` flex-basis. `sizes`, the `lr-resize` payload, and localStorage persistence
+  stay percent-based regardless — only the effective drag/keyboard clamp bounds (and the rendered
+  `flex-basis`, via a native CSS `clamp()` so a constrained panel stays pinned between its bounds
+  across container resizes with no extra `ResizeObserver`) change for a constrained panel.
 - `collapse: 'start'|'end'|'none' = 'none'` (reflected) — opt-in responsive collapse for one panel:
   `'start'`/`'end'` is a *logical* position (RTL-aware, matching CSS logical properties — the panel at
   the document's visual leading/trailing edge, not a raw array index). `lr-split` only owns the
@@ -1966,7 +2001,8 @@ keyboard step), `lr-split-collapse-change` (`detail: { state: 'wide'|'rail'|'flo
 on a real `collapse`-state transition, never on every resize/render),
 `lr-split-constraints-invalid` (`detail: SplitConstraintIssueDetail`, fired once when the configured
 panel minimums/maximums cannot fit the track; the infeasible set is rejected for interaction and a
-normalized percent minimum is used instead)
+normalized percent minimum is used instead), `lr-split-orientation-change` (`detail: { orientation }`,
+fired only when an enabled `orientationBreakpoint` actually changes `effectiveOrientation`)
 
 **Slots:** default (each direct child element is one panel).
 
@@ -2017,6 +2053,8 @@ the visually-adjacent panel).
   rejected rather than restored.
 - Pointer-drag lifecycle (pointer capture, window-listener cleanup on both drag-end and
   `disconnectedCallback`) is solid and safe to rely on.
+- `orientationBreakpoint` shares its `[part='base']` `ResizeObserver` with `collapse` (one observer,
+  not two) — arming logic covers either feature being opted into independently.
 
 ---
 
@@ -2795,14 +2833,21 @@ only emits `lr-selection-change` (`detail: { nodeIds, linkIds }`) — the host a
 mirroring `lr-heatmap`'s `selectedCell` contract. `dimmedNodeIds: string[] = []` / `dimmedLinkIds:
 string[] = []` (both attribute: false) are the same controlled shape for dimming instead of
 selecting — the component never assigns either itself, only renders `data-dimmed` on the matching
-`[part="node"]`/`[part="link"]` (themeable via `--lr-graph-dimmed-opacity`); a host typically
-computes the set from a `lr-node-enter`/`lr-link-enter` hover (the complement of the hovered
-id's neighbor set) and assigns it back. Empty (the default) renders every node/link at full
-opacity, unchanged from today. `communities: GraphCommunity[] = []` (attribute:
+`[part="node"]`/`[part="link"]`, themed via `--lr-graph-dimmed-opacity` (default `0.35` — visible out
+of the box with no host styling required); a host typically computes the set from a
+`lr-node-enter`/`lr-link-enter` hover (the complement of the hovered id's neighbor set) and assigns
+it back — `lr-knowledge-graph-explorer`'s own `highlight` property is exactly this composition,
+built-in. Empty (the default) renders every node/link at full opacity, unchanged from today.
+`communities: GraphCommunity[] = []` (attribute:
 false) draws one translucent convex-hull blob per entry behind links/nodes. `focusId: string | null =
 null` (attribute `focus-id`) tracks a persistent focus ring (`[part="focus-halo"]`) around one node;
 `focusNode(id, options?)` and `fit(options?)` are the imperative camera-tween counterparts (pan/zoom
-to a node, or to fit the whole graph), both resolving once the tween settles.
+to a node, or to fit the whole graph), both resolving once the tween settles. `lr-viewport-change`
+(`detail: { k, x, y }`, the live d3-zoom camera transform) fires at most once per animation frame,
+coalescing every source that can move a rendered node's screen position — a pan/zoom gesture, a
+`focusNode()`/`fit()` tween, and every simulation tick — so a consumer anchoring its own UI (e.g. a
+details popover) to a node's `getBoundingClientRect()` can re-read it from this event instead of
+polling its own `requestAnimationFrame` loop.
 
 ---
 
@@ -4793,7 +4838,17 @@ convention).
   Empty (the default) renders nothing.
 - `orientation: 'horizontal' | 'vertical' = 'horizontal'` (reflected) — `'horizontal'` (the default)
   lays steps out in a row (Left/Right, RTL-aware, navigate); `'vertical'` stacks them (Up/Down
-  navigate instead, no RTL swap needed).
+  navigate instead, no RTL swap needed). The axis used at/above `orientationBreakpoint` (or always,
+  when that's unset).
+- `orientationBreakpoint?: number` (attribute `orientation-breakpoint`, px) — opt-in inline-size
+  breakpoint measured on `[part='base']`; unset (the default) means no behavior change at all.
+  Below it, `narrowOrientation` becomes the effective axis instead of `orientation`. Mirrors
+  `<lr-split>`'s identically-named contract.
+- `narrowOrientation: 'horizontal' | 'vertical' = 'vertical'` (reflected, attribute
+  `narrow-orientation`)
+- `effectiveOrientation: 'horizontal' | 'vertical'` (readonly getter) — the live layout/navigation
+  axis actually in effect; identical to `orientation` whenever `orientationBreakpoint` is unset.
+  Also reflected as `data-effective-orientation` (only present while `orientationBreakpoint` is set).
 - `accessibleLabel: string | null = null` (attribute `aria-label`) — accessible name applied to the
   `role="tablist"` step strip; attribute-reflects from a host-level `aria-label`. Unset, the
   tablist renders without an `aria-label` (there is no localized default name).
@@ -4801,7 +4856,9 @@ convention).
 **Events:** `lr-step-select` (`detail: { index, id }`) — fired on click, or Enter/Space while
 focused, on a non-`disabled` step. Cancelable, though this component takes no default action of its
 own to prevent (it never mutates `steps`) — `preventDefault()` is available for a host that wants a
-single place to short-circuit its own listener's follow-up work.
+single place to short-circuit its own listener's follow-up work. `lr-stepper-orientation-change`
+(`detail: { orientation }`) — fired only when an enabled `orientationBreakpoint` actually changes
+`effectiveOrientation`.
 
 **Slots:** none.
 
@@ -6060,6 +6117,9 @@ reveals the invalid state, and `form.reset()` clears the touched presentation.
   built-in button's icon/label (send vs. stop) and whether Enter still submits
 - `submitOnEnter: boolean = true` (reflected, attribute `submit-on-enter`) — when `false`, Enter
   always inserts a newline instead of submitting
+- `submitDisabled: boolean = false` (reflected, attribute `submit-disabled`) — consumer-controlled
+  validation gate; while idle, disables the built-in Send button and suppresses Enter/click
+  submission without disabling the textarea or a busy-state Stop action
 - `stoppable: boolean = true` (reflected) — when false, busy states keep a disabled Send button
   instead of exposing a Stop action
 - `accessibleLabel: string | null = null` (attribute `aria-label`) — names the internal textarea;
@@ -6083,7 +6143,7 @@ auto-sizing. `checkValidity()`/`reportValidity()` remain inherited.
 - `lr-input` (`detail: { value }`) — fired on every user-driven edit of the textarea, not a
   programmatic `.value` assignment
 - `lr-submit` (`detail: { value }`) — fired by Enter (per `submit-on-enter`) or the built-in
-  button while `status="idle"`. `detail.value` is always the exact, untrimmed current value;
+  button while `status="idle"` and `submitDisabled` is false. `detail.value` is always the exact, untrimmed current value;
   trimming is left to the consumer. Submitting does **not** clear `value`
 - `lr-stop` (no detail) — fired by the built-in button while `status` is `"sending"` or
   `"streaming"`
@@ -6139,7 +6199,8 @@ Shift+Enter always inserts a newline regardless of `submit-on-enter`; an IME com
 report `isComposing` inconsistently) is never treated as a submit trigger; and while `status` isn't
 `"idle"`, Enter is left alone to insert a newline instead of resubmitting — the textarea itself is
 **not** auto-disabled during `sending`/`streaming`, so a user can keep composing their next message
-while a previous one is in flight.
+while a previous one is in flight. While idle, `submitDisabled` suppresses Enter/click submission
+and disables only the built-in Send button; editing and busy-state Stop behavior remain available.
 
 **Known gotchas:**
 - `lr-submit` never clears `value` — the consumer must clear it once a submission is actually
@@ -8728,6 +8789,8 @@ already follow.
 ### `lr-chip`
 
 **Properties:**
+- `size: '2xs' | 'xs' | 's' | 'm' | 'l' | 'xl' = 'm'` (reflected) — standard visual-density
+  scale for typography, padding, gap, and icon size; `m` preserves the original chip dimensions
 - `tone: 'neutral' | 'brand' | 'success' | 'warning' | 'danger' = 'neutral'` (reflected — tints the
   whole pill using a loud-color-on-quiet-tint convention; `neutral` has no dedicated token pair, so
   it falls back to a plain bordered-surface look)
@@ -10425,7 +10488,9 @@ non-finite value.
 ## `lr-format-date`
 
 Locale-aware `Intl.DateTimeFormat` output. **Properties:** `date`, `locale`, `year`, `month`, `day`,
-`dateStyle`, and `timeStyle`. Default slot is fallback content for an invalid date.
+`dateStyle`, `timeStyle`, and `timeZone` (attribute `time-zone`, forwarded through both granular and
+style-based formatting). An invalid time-zone name falls back to the browser's local time zone.
+Default slot is fallback content for an invalid date.
 
 ## `lr-format-bytes`
 
@@ -11171,14 +11236,19 @@ content growth re-scrolls to the end; release happens only on a user-intent gest
 touchmove, scrollbar-drag, or PageUp/ArrowUp/Home while the log region has focus) that leaves the
 view more than `bottomThreshold` from the end — a scroll caused by this component's own programmatic
 scrolling, or by a layout shift, never releases it. Reaching the bottom again by any means re-engages
-`follow`.
+`follow`. The internal log defaults to `live="off"`, which avoids announcing every streaming token;
+consumers that append complete messages at an announcement-safe cadence can opt into `polite` or
+`assertive`.
 
 **Properties:** `follow: boolean = true` (reflected) — component-managed stick-to-bottom state,
 host-writable: setting `true` scrolls to the end and re-engages following, setting `false` releases
 it. `bottomThreshold: number = 24` (attribute `bottom-threshold`) — px distance from the end still
 counted as "at bottom." `unreadStartIndex: number | null = null` (attribute `unread-start-index`) —
 index of the first unread item (element-child index in slotted mode, `items` index in virtual mode);
-`null` disables both the divider and the pill's unread count. `label: string = ''` — accessible name
+`null` disables both the divider and the pill's unread count. `live: 'off' | 'polite' | 'assertive' =
+'off'` (reflected) — live-region policy forwarded to the internal `role="log"`; keep `off` for
+token-by-token streaming and opt in only when messages are committed at an announcement-safe cadence.
+`label: string = ''` — accessible name
 for the log region, defaults to the localized `chatViewportLabel`. `accessibleLabel: string | null =
 null` (attribute `aria-label`) — host `aria-label`, forwarded to the internal `role="log"` element
 (an `aria-label` left on the host itself names nothing, since the log role lives inside the shadow
@@ -11259,9 +11329,18 @@ timestamp?, pinned?, archived? }`). `activeId: string = ''` (attribute `active-i
 marks the matching row `active`/`aria-current` and scrolls it into view. `searchable: boolean =
 false` (reflected) — shows the built-in search field. `filter?: (thread, query) => boolean`
 (attribute: false) — overrides the default case-insensitive `title` + `excerpt` substring match.
-`grouping: 'date' | 'none' = 'date'` — data mode: bucket rows under localized date headers
-(Pinned/Today/Yesterday/Previous 7 days/Previous 30 days/one bucket per month/Archived), or a flat
-list. `rowActions: ThreadRowAction[] = []` (attribute: false, each `'pin' | 'archive' | 'delete'`) —
+`grouping: 'date' | 'custom' | 'none' = 'date'` — data mode: bucket rows under localized date headers
+(Pinned/Today/Yesterday/Previous 7 days/Previous 30 days/one bucket per month/Archived), use the
+arbitrary grouping callbacks below, or render a flat list. `groupBy?: (thread: ChatThread) => string`
+(attribute: false) derives each group id in `grouping="custom"`; omitting it leaves the custom mode
+flat. `formatGroup?: (id: string, threads: ChatThread[]) => string | TemplateResult` (attribute:
+false) renders non-interactive custom group-label content. `groupOrder?: string[] | ((a: string, b:
+string) => number)` (attribute: false) supplies an explicit order or comparator; ids omitted from an
+array follow in first-seen order. `collapsedGroupIds: string[] = []` (attribute: false) is the
+controlled collapsed state for both date and custom groups. A collapsed group's header remains in
+the virtual list while its conversation rows are removed from the virtual-list item/measurement
+set; `lr-group-toggle` requests the matching state change. `rowActions: ThreadRowAction[] = []`
+(attribute: false, each `'pin' | 'archive' | 'delete'`) —
 data mode only: built-in icon buttons rendered into each row's `actions` slot. `showArchived: boolean
 = false` (attribute `show-archived`, reflected) — data mode: include `archived` threads (in their own
 trailing group). `editable: boolean = true` (reflected) — forwarded to each data-mode row's inline
@@ -11280,8 +11359,10 @@ leading content in each virtualized row. `renderMeta?: (thread: ChatThread) => T
 `renderRowContent?: (thread: ChatThread) => TemplateResult` (attribute: false) — replaces the
 conversation item's title/excerpt/meta content area with custom non-interactive row content.
 `formatGroupLabel?: (key: ThreadBucketKey, date?: Date) => string` (attribute: false) — overrides
-group labels. `formatDate?: (date: Date) => string` (attribute: false) — overrides month-group date
-formatting.
+built-in date-group labels (use `formatGroup` for custom groups). `formatDate?: (date: Date) =>
+string` (attribute: false) — overrides month-group date formatting. `wrapRow` remains wholly
+host-owned and therefore receives no library-added wrapper part; use the focused `row-*` hook parts
+or add the host's own styling hook inside that callback.
 
 **Slots:** default — slotted mode only: host-supplied `lr-conversation-item`s, rendered in order.
 `empty` — replaces the built-in empty state.
@@ -11290,12 +11371,18 @@ formatting.
 id }`), `lr-thread-pin` (`detail: { id, pinned }` — the requested new state), `lr-thread-archive`
 (`detail: { id, archived }`), `lr-thread-delete` (`detail: { id }`, no built-in confirmation),
 `lr-thread-rename` (`detail: { id, title }`, re-emitted from the row's `lr-rename`),
-`lr-filter-change` (`detail: { text, matchCount }`).
+`lr-filter-change` (`detail: { text, matchCount }`), `lr-group-toggle` (`detail: { id, collapsed }` —
+controlled intent; native group buttons provide Enter/Space activation and explicit
+`aria-expanded="true"|"false"`).
 
 **CSS parts:** `base`, `search`/`search-input` (the search field wrapper and `<input
-type="search">`), `list` (the list region), `empty`, `row-action` (a built-in pin/archive/delete icon
-button), `pin-glyph` (the small pin indicator on a pinned row), `group-header`/`row` (exported from
-the internal `lr-virtual-list`).
+type="search">`), `list` (the list region), `empty`, `viewport` (the actual internal virtual-list
+scroll container, suitable for scrollbar styling), `row-action` (a built-in pin/archive/delete icon
+button), `pin-glyph` (the small pin indicator on a pinned row), `group-header`, `group-toggle`,
+`group-label`, `group-icon`, `row` (all exported across the internal `lr-virtual-list` shadow
+boundary), and `row-leading`/`row-content`/`row-meta`/`row-actions` (the library-owned wrappers around
+their corresponding render-hook output; inherited fonts, layout values, and theme custom properties
+reach callback-rendered descendants through these parts).
 
 ```html
 <lr-thread-list
@@ -11766,9 +11853,15 @@ metrics, and Cancel/Retry actions. Built-in and application-defined lifecycle st
 replace the corresponding built-in chrome, while `tasks`, `tools`, `reasoning`, `output`, and
 `actions` support host-controlled composition.
 
+The nine built-in status kinds are `idle`, `queued`, `collecting`, `running`, `waiting-input`,
+`waiting-approval`, `done`, `error`, and `cancelled`; arbitrary application-defined string kinds are
+also accepted. Live elapsed time and Cancel are available for `running`, `collecting`,
+`waiting-input`, and `waiting-approval`. `queued` is pending rather than actively ticking or
+cancelable. Retry is available for `error` and `cancelled`.
+
 **Properties:** `run`, `formatCost`, `statusLabels`, `statusVariants`, `metrics`, `showCancel`, `showRetry`.
 `metrics` accepts `{ id, label, value, variant? }` records such as token counts. **Events:** `lr-cancel` (`detail:
-{ run }`), `lr-retry` (`detail: { run, attempt }`). **Slots:** `tasks`, `tools`, `reasoning`,
+{ reason }`, `reason` is undefined from the built-in button), `lr-retry` (`detail: { attempt }`). **Slots:** `tasks`, `tools`, `reasoning`,
 `output`, `actions`, `header`, `summary`. **CSS parts:** `base`, `header`, `status`, `status-badge`, `status-message`,
 `elapsed`, `elapsed-static`, `summary`, `model`, `usage`, `current-step`, `current-step-icon`,
 `current-step-label`, `body`, `tasks`, `tools`, `reasoning`, `output`, `actions`, `cancel-button`,
@@ -11936,7 +12029,10 @@ Knowledge-graph exploration shell combining graph rendering, entity search, type
 neighborhood expansion, pinned nodes, path finding, and a details overlay.
 
 **Properties:** `nodes`, `links`, `nodeTypes`, `communities`, `entityDetails`, `width`, `height`,
-`renderer`, `hiddenTypes`, `selectedNodeId`, `pinnedNodeIds`, `path`, `label`. **Events:**
+`renderer`, `hiddenTypes`, `selectedNodeId`, `pinnedNodeIds`, `path`, `highlight` (`'selection' |
+'hover' | 'none' = 'selection'` — what drives the search/selection/hover-based dimming forwarded to
+the composed `lr-graph`'s `dimmedNodeIds`/`dimmedLinkIds`; `'none'` opts a host out entirely), `label`.
+**Events:**
 `lr-node-click`, `lr-link-click`, `lr-community-click`, `lr-node-expand`, `lr-pin-change`,
 `lr-path-request`, `lr-relation-activate`. **Slots:** `details`. **CSS parts:** `base`, `toolbar`,
 `search`, `search-results`, `search-result`, `search-empty`, `pinned`, `pinned-heading`, `legend`,
@@ -12160,8 +12256,8 @@ create-source action, `hideSummary` hides aggregate status, and `label` names th
 Provides search, filtering, selection, pinning, and path requests over a knowledge graph. Set
 `nodes`, `links`, `nodeTypes`, `communities`, and optional `entityDetails`; `renderer` controls the
 graph renderer. `selectedNodeId` and `pinnedNodeIds` hold interaction state, while `path` contains
-the returned path. `hiddenTypes` controls type visibility, `width` and `height` size the graph, and
-`label` names it.
+the returned path. `hiddenTypes` controls type visibility, `highlight` (`'selection'`/`'hover'`/
+`'none'`) controls what drives dimming, `width` and `height` size the graph, and `label` names it.
 
 ## `lr-memory-panel`
 
