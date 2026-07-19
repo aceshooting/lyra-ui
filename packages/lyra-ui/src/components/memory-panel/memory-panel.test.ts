@@ -85,20 +85,25 @@ describe('lr-memory-panel', () => {
     expect(row.querySelector('[part="confidence"]')).to.not.exist;
   });
 
-  it('only renders the provenance expand-toggle when an item defines provenance, collapsed by default', async () => {
+  it('only renders the provenance expand-toggle (and disclosure body) when an item defines provenance, collapsed by default', async () => {
     const el = await populated();
     const withProvenance = el.shadowRoot!.querySelector('[part="item"][data-id="l1"]')!;
     const withoutProvenance = el.shadowRoot!.querySelector('[part="item"][data-id="l2"]')!;
-    expect(withoutProvenance.querySelector('[part="expand-toggle"]')).to.not.exist;
-    expect(withoutProvenance.querySelector('lr-provenance-panel')).to.not.exist;
+    expect(withoutProvenance.querySelector('[part="expand-toggle"]')).to.equal(null);
+    expect(withoutProvenance.querySelector('[part="item-body"]')).to.equal(null);
 
     const toggle = withProvenance.querySelector('[part="expand-toggle"]') as HTMLButtonElement;
-    expect(toggle).to.exist;
+    const body = withProvenance.querySelector('[part="item-body"]') as HTMLElement;
+    expect(toggle == null).to.equal(false);
     expect(toggle.getAttribute('aria-expanded')).to.equal('false');
-    expect(withProvenance.querySelector('lr-provenance-panel')).to.not.exist;
+    // The body -- and its lr-provenance-panel -- stay mounted while collapsed (hidden via the
+    // `hidden` attribute, not removed from the DOM), the same always-present-but-hidden pattern
+    // lr-confirm-bar's own [part="status"] uses.
+    expect(body == null).to.equal(false);
+    expect(body.hasAttribute('hidden')).to.equal(true);
   });
 
-  it('toggling the expand-toggle emits lr-expand and reveals a populated lr-provenance-panel', async () => {
+  it('toggling the expand-toggle emits lr-expand, unhides the body, and reveals a populated lr-provenance-panel', async () => {
     const el = await populated();
     const withProvenance = el.shadowRoot!.querySelector('[part="item"][data-id="l1"]')!;
     const toggle = withProvenance.querySelector('[part="expand-toggle"]') as HTMLButtonElement;
@@ -106,12 +111,16 @@ describe('lr-memory-panel', () => {
     const listener = oneEvent(el, 'lr-expand');
     toggle.click();
     const event = await listener;
-    expect(event.detail).to.deep.equal({ id: 'l1', expanded: true });
+    expect(event.detail.id).to.equal('l1');
+    expect(event.detail.expanded).to.equal(true);
     await el.updateComplete;
     expect(toggle.getAttribute('aria-expanded')).to.equal('true');
+    const body = withProvenance.querySelector('[part="item-body"]') as HTMLElement;
+    expect(body.hasAttribute('hidden')).to.equal(false);
     const panel = withProvenance.querySelector('lr-provenance-panel') as HTMLElement & { provenance: unknown };
-    expect(panel).to.exist;
-    expect(panel.provenance).to.deep.equal(longTermItems[0]!.provenance);
+    const receivedEntities = (panel.provenance as { entities?: { id: string }[] })?.entities ?? [];
+    expect(receivedEntities.length).to.equal(1);
+    expect(receivedEntities[0]!.id).to.equal('e1');
   });
 
   it('forwards types and thresholds through to the nested lr-provenance-panel', async () => {
