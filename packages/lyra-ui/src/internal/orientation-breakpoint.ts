@@ -4,6 +4,15 @@ import { resolveCssLength } from './css-length.js';
 /** Which box an orientation breakpoint is compared against. @internal */
 export type OrientationBreakpointBasis = 'container' | 'viewport';
 
+/** A bare CSS `<number>` with no unit — mirrors css-length.ts's `BREAKPOINT_LENGTH_RE` numeric
+ *  part. `matchMedia()`, unlike `resolveCssLength`, has no unitless default, so this is what the
+ *  raw value must match before `arm()` appends `px` to it. */
+const BARE_NUMBER_RE = /^[+-]?(?:\d+(?:\.\d+)?|\.\d+)$/;
+
+/** An `em` (not `rem`) length — mirrors css-length.ts's `BREAKPOINT_LENGTH_RE` unit alternation,
+ *  narrowed to the one unit `resolved` rejects under `'viewport'` basis (see class doc). */
+const EM_LENGTH_RE = /^[+-]?(?:\d+(?:\.\d+)?|\.\d+)em$/i;
+
 /**
  * Owns the "is this component currently below its orientation breakpoint?"
  * question for `<lr-split>` and `<lr-stepper>`, which expose an identically
@@ -14,6 +23,12 @@ export type OrientationBreakpointBasis = 'container' | 'viewport';
  * basis this controller holds a `MediaQueryList` and the passed width is
  * ignored — the case a self-measured threshold cannot express, e.g. two
  * siblings in a row that stacks via a pure-CSS `@media` rule.
+ *
+ * An `em` breakpoint is unsupported under `'viewport'` basis: `resolveCssLength` resolves `em`
+ * against the host's own computed font size, but `em` inside a real `@media` feature resolves
+ * against the browser's initial font size with no element context, so the two would disagree.
+ * Rather than silently drive `isBelow()` off a value `resolved` doesn't agree with, it's treated
+ * as fully unset — `em` remains fully supported under `'container'` basis.
  *
  * Listener teardown rides on `hostDisconnected()`, so neither component
  * hand-writes it.
@@ -35,11 +50,16 @@ export class OrientationBreakpointController implements ReactiveController {
     host.addController(this);
   }
 
-  /** The breakpoint in pixels, or `undefined` when unset or unresolvable.
+  /** The breakpoint in pixels, or `undefined` when unset or unresolvable — including an `em`
+   *  value under `'viewport'` basis, which is unsupported (see class doc) and always unset here,
+   *  regardless of what `resolveCssLength` alone would report.
    *  Deliberately re-resolved on every read rather than cached, so a `rem`
    *  breakpoint tracks the live root font size — caching would freeze the
    *  crossing width and defeat the point of accepting `rem`. */
   get resolved(): number | undefined {
+    if (this.basis === 'viewport' && typeof this.raw === 'string' && EM_LENGTH_RE.test(this.raw.trim())) {
+      return undefined;
+    }
     return resolveCssLength(this.raw, this.host);
   }
 
@@ -80,9 +100,11 @@ export class OrientationBreakpointController implements ReactiveController {
       this.belowViewport = false;
       return;
     }
-    // The authored string goes to the browser verbatim so `rem` resolves with real
-    // media-query semantics; a bare number becomes `<n>px`, the documented default unit.
-    const length = typeof this.raw === 'number' ? `${this.raw}px` : String(this.raw).trim();
+    // The authored string goes to the browser verbatim so `rem` resolves with real media-query
+    // semantics; a bare number/numeric-string — same unitless form `resolveCssLength` accepts —
+    // becomes `<n>px`, the documented default unit, since `matchMedia()` has no unitless default.
+    const trimmed = typeof this.raw === 'number' ? `${this.raw}` : String(this.raw).trim();
+    const length = BARE_NUMBER_RE.test(trimmed) ? `${trimmed}px` : trimmed;
     this.mediaQuery = matchMedia(`(max-width: ${length})`);
     this.mediaQuery.addEventListener('change', this.onChange);
     this.belowViewport = this.mediaQuery.matches;

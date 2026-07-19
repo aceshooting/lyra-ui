@@ -79,6 +79,26 @@ describe('OrientationBreakpointController', () => {
     expect(c.isBelow(0)).to.be.true;
   });
 
+  it('serializes a bare numeric string to px for the media query', async () => {
+    const below = new OrientationBreakpointController(await makeHost(), () => {});
+    below.configure('99999', 'viewport');
+    expect(below.resolved).to.equal(99999);
+    expect(below.isBelow(0)).to.be.true;
+
+    const notBelow = new OrientationBreakpointController(await makeHost(), () => {});
+    notBelow.configure('1', 'viewport');
+    expect(notBelow.resolved).to.equal(1);
+    expect(notBelow.isBelow(0)).to.be.false;
+  });
+
+  it('treats an em breakpoint as fully unset under viewport basis', async () => {
+    const c = new OrientationBreakpointController(await makeHost('font-size: 20px'), () => {});
+    c.configure('3em', 'viewport');
+    expect(c.resolved).to.equal(undefined);
+    expect(c.containerObservationEnabled).to.be.false;
+    expect(c.isBelow(0)).to.be.false;
+  });
+
   it('re-arms against the new query when reconfigured', async () => {
     const c = new OrientationBreakpointController(await makeHost(), () => {});
     c.configure('1px', 'viewport');
