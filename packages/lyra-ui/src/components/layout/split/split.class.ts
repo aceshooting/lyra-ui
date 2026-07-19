@@ -5,6 +5,7 @@ import { activateOverlay, type OverlayHandle } from '../../../internal/overlay-m
 import { lockScroll } from '../../../internal/scroll-lock.js';
 import { isRtl } from '../../../internal/rtl.js';
 import { finiteRange } from '../../../internal/numbers.js';
+import { resolveCssLength } from '../../../internal/css-length.js';
 import { styles } from './split.styles.js';
 
 const KEYBOARD_STEP = 2;
@@ -172,8 +173,25 @@ export class LyraSplit extends LyraElement<LyraSplitEventMap> {
   @property({ attribute: false }) defaultSizes: number[] = [];
   @property({ type: Number }) min = 10;
   @property({ reflect: true }) orientation: SplitOrientation = 'horizontal';
-  /** Opt-in inline-size breakpoint (px). Below it, `narrowOrientation` becomes effective. */
-  @property({ type: Number, attribute: 'orientation-breakpoint' }) orientationBreakpoint?: number;
+  /** Opt-in inline-size breakpoint for this component's *own* measured allocation. Below it,
+   *  `narrowOrientation` becomes effective. Unset by default — the whole responsive-orientation
+   *  feature (and its `ResizeObserver`) is off, and `effectiveOrientation` just tracks
+   *  `orientation`.
+   *
+   *  Accepts a bare pixel number (`900`, `orientation-breakpoint="900"` — the original form) or a
+   *  CSS length string: `'900px'`, `'56.25rem'`, `'3em'`. `rem` resolves against the *document
+   *  root*'s font size, exactly as a `rem` in a CSS `@media` query does — not against this element
+   *  — so a breakpoint authored to match a sibling `@media (max-width: 56.25rem)` rule stays in
+   *  sync with it across browser zoom or an app-level base-size change. `em` resolves against this
+   *  element's own computed font size. The length is re-resolved on every measurement, never cached
+   *  at first render, so a root font-size change moves the crossing width with no invalidation
+   *  step.
+   *
+   *  Anything else — `''`, `'auto'`, garbage, a non-finite number, and deliberately `%`/`vw`/`vh`/
+   *  `calc()` (which would mix reference boxes against an element-relative measurement) — behaves
+   *  exactly as unset. Use a `matchMedia()`-driven `orientation` binding for a viewport-relative
+   *  breakpoint instead. */
+  @property({ attribute: 'orientation-breakpoint' }) orientationBreakpoint?: number | string;
   /** Layout/resize axis used below `orientationBreakpoint`. */
   @property({ reflect: true, attribute: 'narrow-orientation' }) narrowOrientation: SplitOrientation = 'vertical';
   @property({ attribute: 'storage-key' }) storageKey?: string;
@@ -356,19 +374,34 @@ export class LyraSplit extends LyraElement<LyraSplitEventMap> {
   }
 
   /** The live layout and resize axis after applying `orientationBreakpoint` — identical to
-   *  `orientation` whenever `orientationBreakpoint` is unset. Also reflected as the
-   *  `data-effective-orientation` host attribute (only present while `orientationBreakpoint`
-   *  is set, mirroring `data-collapse-state`'s only-present-while-active contract) so CSS can
+   *  `orientation` whenever `orientationBreakpoint` is unset (or set to something that doesn't
+   *  resolve to a length). Also reflected as the `data-effective-orientation` host attribute (only
+   *  present while `orientationBreakpoint` resolves, mirroring `data-collapse-state`'s
+   *  only-present-while-active contract) so CSS can
    *  target the live axis directly instead of every consumer duplicating this fallback. */
   get effectiveOrientation(): SplitOrientation {
     return this._effectiveOrientation;
+  }
+
+  /** `orientationBreakpoint` resolved to pixels, or `undefined` when it's unset or unresolvable
+   *  (see the property's own doc). Deliberately a getter, not a cached field: every read
+   *  re-resolves, so a `rem` breakpoint tracks the live root font size — caching it at first render
+   *  would silently freeze the crossing width and defeat the whole point of accepting `rem`. `this`
+   *  is passed as the `em` reference element.
+   *
+   *  Every consumer of the breakpoint gates on *this* rather than on `orientationBreakpoint != null`
+   *  — an unresolvable value (`"abc"`, `"80vw"`) must behave as fully unset, otherwise it would arm
+   *  the `ResizeObserver` and publish a `data-effective-orientation` marker for a threshold that can
+   *  never be crossed. */
+  private get resolvedOrientationBreakpoint(): number | undefined {
+    return resolveCssLength(this.orientationBreakpoint, this);
   }
 
   /** Whether the shared collapse/orientation `ResizeObserver` needs to be armed at all — true
    *  when either responsive feature (`collapse` or `orientationBreakpoint`) is opted into, since
    *  both are driven off the same measured `[part="base"]` width (see `armCollapseObserver()`). */
   private get responsiveObservationEnabled(): boolean {
-    return this.collapse !== 'none' || this.orientationBreakpoint != null;
+    return this.collapse !== 'none' || this.resolvedOrientationBreakpoint !== undefined;
   }
 
   /** Classifies a measured inline size into the effective resize/layout axis and, only on an
@@ -381,10 +414,11 @@ export class LyraSplit extends LyraElement<LyraSplitEventMap> {
    *  the documented exception (unlike `updated()`/`firstUpdated()`, `willUpdate()` runs before
    *  Lit clears its pending-update flag, so this can't schedule a redundant second update). */
   private updateEffectiveOrientation(width: number, shouldEmit: boolean): void {
+    // Resolved here, per measurement, rather than once at first render -- see
+    // `resolvedOrientationBreakpoint`.
+    const breakpoint = this.resolvedOrientationBreakpoint;
     const next: SplitOrientation =
-      this.orientationBreakpoint != null && width < this.orientationBreakpoint
-        ? this.narrowOrientation
-        : this.orientation;
+      breakpoint !== undefined && width < breakpoint ? this.narrowOrientation : this.orientation;
     if (next === this._effectiveOrientation) return;
     this._effectiveOrientation = next;
     this.requestUpdate();
@@ -934,7 +968,7 @@ export class LyraSplit extends LyraElement<LyraSplitEventMap> {
     // Host-level marker for external CSS targeting of the live resize/layout axis (mirrors
     // `data-collapse-state` below) -- only present while the feature is actually opted into,
     // same only-while-active contract.
-    if (this.orientationBreakpoint != null) {
+    if (this.resolvedOrientationBreakpoint !== undefined) {
       this.setAttribute('data-effective-orientation', this._effectiveOrientation);
     } else {
       this.removeAttribute('data-effective-orientation');

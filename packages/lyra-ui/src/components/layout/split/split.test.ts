@@ -37,6 +37,33 @@ function installResizeObserverSpy(): { callbacks: ResizeObserverCallback[]; rest
   };
 }
 
+/** Like `installResizeObserverSpy()`, but the observer is a stub that never observes anything, so
+ *  the only measurements a component sees are the synthetic ones the test fires. The
+ *  orientation-breakpoint tests need that isolation: they assert narrow states on a fixture the
+ *  browser really lays out wide (and one of them changes the root font size mid-test), so every
+ *  real delivery would contradict the synthetic one — making the assertions racy and flipping the
+ *  layout axis back and forth often enough to trip Chromium's "ResizeObserver loop completed with
+ *  undelivered notifications" error. Restore in a `finally`. */
+function installStubResizeObserver(): { callbacks: ResizeObserverCallback[]; restore: () => void } {
+  const callbacks: ResizeObserverCallback[] = [];
+  const OriginalRO = window.ResizeObserver;
+  class StubResizeObserver implements ResizeObserver {
+    constructor(callback: ResizeObserverCallback) {
+      callbacks.push(callback);
+    }
+    observe(): void {}
+    unobserve(): void {}
+    disconnect(): void {}
+  }
+  (window as unknown as { ResizeObserver: typeof ResizeObserver }).ResizeObserver = StubResizeObserver;
+  return {
+    callbacks,
+    restore: () => {
+      (window as unknown as { ResizeObserver: typeof ResizeObserver }).ResizeObserver = OriginalRO;
+    },
+  };
+}
+
 function fireCollapseResize(callback: ResizeObserverCallback, width: number): void {
   callback(
     [{ contentBoxSize: [{ inlineSize: width, blockSize: 0 }] } as unknown as ResizeObserverEntry],
@@ -257,6 +284,126 @@ it('keeps the authored orientation and no effective marker when no breakpoint is
   await elementUpdated(el);
   expect(el.effectiveOrientation).to.equal('vertical');
   expect(el.hasAttribute('data-effective-orientation')).to.be.false;
+});
+
+it('accepts a rem orientation breakpoint, crossing at the same width as the equivalent px number', async () => {
+  const spy = installStubResizeObserver();
+  const previousRootFontSize = document.documentElement.style.fontSize;
+  try {
+    // 31.25rem at a 16px root is exactly the 500px the sibling test above uses.
+    document.documentElement.style.fontSize = '16px';
+    const el = (await fixture(
+      html`<lr-split orientation-breakpoint="31.25rem" narrow-orientation="vertical"><div>A</div><div>B</div></lr-split>`,
+    )) as LyraSplit;
+    await elementUpdated(el);
+    // The attribute is no longer coerced to a number, so the CSS length survives intact.
+    expect(el.orientationBreakpoint).to.equal('31.25rem');
+    expect(spy.callbacks.length).to.equal(1);
+
+    fireCollapseResize(spy.callbacks[0], 501);
+    await elementUpdated(el);
+    expect(el.effectiveOrientation).to.equal('horizontal');
+    expect(el.getAttribute('data-effective-orientation')).to.equal('horizontal');
+
+    fireCollapseResize(spy.callbacks[0], 499);
+    await elementUpdated(el);
+    expect(el.effectiveOrientation).to.equal('vertical');
+    expect(el.getAttribute('data-effective-orientation')).to.equal('vertical');
+  } finally {
+    document.documentElement.style.fontSize = previousRootFontSize;
+    spy.restore();
+  }
+});
+
+it('keeps the bare-number orientation breakpoint working from both the attribute and the property', async () => {
+  const spy = installStubResizeObserver();
+  try {
+    const el = (await fixture(
+      html`<lr-split orientation-breakpoint="900" narrow-orientation="vertical"><div>A</div><div>B</div></lr-split>`,
+    )) as LyraSplit;
+    await elementUpdated(el);
+    expect(spy.callbacks.length).to.equal(1);
+
+    fireCollapseResize(spy.callbacks[0], 899);
+    await elementUpdated(el);
+    expect(el.effectiveOrientation).to.equal('vertical');
+    fireCollapseResize(spy.callbacks[0], 901);
+    await elementUpdated(el);
+    expect(el.effectiveOrientation).to.equal('horizontal');
+
+    // The same threshold assigned as a real number behaves identically.
+    el.orientationBreakpoint = 900;
+    await elementUpdated(el);
+    expect(el.effectiveOrientation).to.equal('horizontal');
+    fireCollapseResize(spy.callbacks[0], 899);
+    await elementUpdated(el);
+    expect(el.effectiveOrientation).to.equal('vertical');
+    expect(el.getAttribute('data-effective-orientation')).to.equal('vertical');
+    fireCollapseResize(spy.callbacks[0], 901);
+    await elementUpdated(el);
+    expect(el.effectiveOrientation).to.equal('horizontal');
+  } finally {
+    spy.restore();
+  }
+});
+
+it('re-resolves a rem orientation breakpoint per measurement, so a root font-size change moves the crossing width', async () => {
+  const spy = installStubResizeObserver();
+  const previousRootFontSize = document.documentElement.style.fontSize;
+  try {
+    document.documentElement.style.fontSize = '16px';
+    const el = (await fixture(
+      html`<lr-split orientation-breakpoint="20rem" narrow-orientation="vertical"><div>A</div><div>B</div></lr-split>`,
+    )) as LyraSplit;
+    await elementUpdated(el);
+
+    // 20rem === 320px here, so 400px is still above the breakpoint.
+    fireCollapseResize(spy.callbacks[0], 400);
+    await elementUpdated(el);
+    expect(el.effectiveOrientation).to.equal('horizontal');
+
+    // 20rem === 640px now: the *same* measured width is suddenly below it.
+    document.documentElement.style.fontSize = '32px';
+    fireCollapseResize(spy.callbacks[0], 400);
+    await elementUpdated(el);
+    expect(el.effectiveOrientation).to.equal('vertical');
+    expect(el.getAttribute('data-effective-orientation')).to.equal('vertical');
+  } finally {
+    document.documentElement.style.fontSize = previousRootFontSize;
+    spy.restore();
+  }
+});
+
+it('treats an unparseable orientation breakpoint as unset (no observation, no effective marker)', async () => {
+  const spy = installStubResizeObserver();
+  try {
+    const el = (await fixture(
+      html`<lr-split orientation-breakpoint="abc" narrow-orientation="vertical"><div>A</div><div>B</div></lr-split>`,
+    )) as LyraSplit;
+    await elementUpdated(el);
+    // Gated on the *resolved* length, not on the raw property being non-null: an
+    // unresolvable value must not arm the observer it could never cross.
+    expect(spy.callbacks.length).to.equal(0);
+    expect(el.effectiveOrientation).to.equal('horizontal');
+    expect(el.hasAttribute('data-effective-orientation')).to.be.false;
+
+    // A viewport unit is deliberately unresolvable too (it would mix reference boxes).
+    el.orientationBreakpoint = '80vw';
+    await elementUpdated(el);
+    expect(spy.callbacks.length).to.equal(0);
+    expect(el.hasAttribute('data-effective-orientation')).to.be.false;
+
+    // ...but a resolvable value assigned later still arms it normally.
+    el.orientationBreakpoint = '500px';
+    await elementUpdated(el);
+    expect(spy.callbacks.length).to.equal(1);
+    fireCollapseResize(spy.callbacks[0], 320);
+    await elementUpdated(el);
+    expect(el.effectiveOrientation).to.equal('vertical');
+    expect(el.getAttribute('data-effective-orientation')).to.equal('vertical');
+  } finally {
+    spy.restore();
+  }
 });
 
 it('supports vertical orientation with vertical arrow keys', async () => {

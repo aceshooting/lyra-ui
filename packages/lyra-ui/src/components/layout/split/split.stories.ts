@@ -98,6 +98,33 @@ export const ResponsiveOrientation: Story = {
         <div style="padding: 0.5rem">Panel B</div>
       </lr-split>
     </div>
+
+    <div
+      style="resize: horizontal; overflow: hidden; inline-size: 100%; min-inline-size: 8rem; max-inline-size: 100%; border: 1px dashed var(--lr-color-border); padding: 0.5rem; margin-block-start: 1rem;"
+    >
+      <p style="margin: 0 0 0.5rem; font: 12px sans-serif; color: var(--lr-color-text-quiet)">
+        The same breakpoint authored as a CSS length
+        (<code>orientation-breakpoint="31.25rem"</code>) — identical crossing
+        width at the default 16px root font size, but it now tracks the root
+        font size the way a sibling
+        <code>@media (max-width: 31.25rem)</code> rule does. Try it: run
+        <code>document.documentElement.style.fontSize = '32px'</code> in the
+        console and this split stacks at twice the width, while the
+        <code>500</code> one above doesn't move. <code>px</code>/<code>em</code>
+        are accepted too; an unparseable or viewport-relative value
+        (<code>80vw</code>) behaves as unset.
+      </p>
+      <lr-split
+        orientation-breakpoint="31.25rem"
+        narrow-orientation="vertical"
+        style="height: 12rem; border: 1px solid var(--lr-color-border)"
+        @lr-split-orientation-change=${(e: CustomEvent<{ orientation: string }>) =>
+          console.log('lr-split-orientation-change (rem)', e.detail.orientation)}
+      >
+        <div style="padding: 0.5rem">Panel A</div>
+        <div style="padding: 0.5rem">Panel B</div>
+      </lr-split>
+    </div>
   `,
 };
 
