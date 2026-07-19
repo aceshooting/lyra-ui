@@ -66,13 +66,13 @@ npm install @aceshooting/lyra-ui
 Import just what you use (tree-shakeable, granular entry points):
 
 ```js
-import '@aceshooting/lyra-ui/components/combobox/combobox.js';
-import '@aceshooting/lyra-ui/components/combobox/option.js';
+import '@aceshooting/lyra-ui/components/forms/combobox/combobox.js';
+import '@aceshooting/lyra-ui/components/forms/combobox/option.js';
 ```
 
 These component entry points register their tags. For a class-only import (for subclassing or
 type-directed composition), use the matching `.class.js` entry, such as
-`@aceshooting/lyra-ui/components/empty/empty.class.js`; class-only entries do not touch the
+`@aceshooting/lyra-ui/components/overlays/empty/empty.class.js`; class-only entries do not touch the
 custom-element registry.
 
 ```html
@@ -94,16 +94,16 @@ needs an optional peer dependency (see Install above), so they always require th
 own explicit subpath import, even when pulling the rest of the library in bulk:
 
 ```js
-import '@aceshooting/lyra-ui/components/chart/chart.js';
-import '@aceshooting/lyra-ui/components/map/map.js';
-import '@aceshooting/lyra-ui/components/graph/graph.js';
+import '@aceshooting/lyra-ui/components/charts/chart/chart.js';
+import '@aceshooting/lyra-ui/components/media/map/map.js';
+import '@aceshooting/lyra-ui/components/retrieval/graph/graph.js';
 ```
 
 The root import registers `<lr-flag>` without pulling in the optional flag asset graph. If a
 flag uses `country` or `language`, also import the peer registration entry once:
 
 ```js
-import '@aceshooting/lyra-ui/components/flag/flag-peer.js';
+import '@aceshooting/lyra-ui/components/media/flag/flag-peer.js';
 ```
 
 Passing a pre-resolved `src` does not require that entry.
