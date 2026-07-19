@@ -17,11 +17,11 @@ export const styles = css`
     gap: var(--lr-space-m);
   }
   [part='entity-card'] {
-    flex: 1 1 16rem;
+    flex: 1 1 var(--lr-size-16rem);
     min-inline-size: 0;
   }
   [part='confidence'] {
-    flex: 0 1 12rem;
+    flex: 0 1 var(--lr-size-12rem);
     min-inline-size: 0;
   }
   [part='tabs'] {

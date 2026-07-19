@@ -26,7 +26,7 @@ export const styles = css`
     color: var(--lr-color-text);
   }
   [part='progress'] {
-    flex: 1 1 12rem;
+    flex: 1 1 var(--lr-size-12rem);
     min-inline-size: 0;
   }
   [part='summary'] {

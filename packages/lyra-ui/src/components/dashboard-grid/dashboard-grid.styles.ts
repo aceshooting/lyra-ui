@@ -13,7 +13,7 @@ export const styles = css`
   [part='base'] {
     display: grid;
     grid-template-columns: repeat(var(--lr-dashboard-grid-columns, 12), minmax(0, 1fr));
-    grid-auto-rows: var(--lr-dashboard-grid-row-height, 5rem);
+    grid-auto-rows: var(--lr-dashboard-grid-row-height, var(--lr-size-5rem));
     gap: var(--lr-dashboard-grid-gap, var(--lr-space-m));
     align-items: stretch;
   }

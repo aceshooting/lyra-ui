@@ -17,14 +17,14 @@ export const styles = css`
     gap: var(--lr-space-s);
   }
   [part='search'] {
-    flex: 1 1 12rem;
+    flex: 1 1 var(--lr-size-12rem);
     min-inline-size: 0;
   }
   [part='search-results'] {
     display: flex;
     flex-direction: column;
     gap: var(--lr-size-2px);
-    max-block-size: 12rem;
+    max-block-size: var(--lr-size-12rem);
     overflow-y: auto;
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
     border-radius: var(--lr-radius);

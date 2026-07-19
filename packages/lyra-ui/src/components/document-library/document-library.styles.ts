@@ -18,11 +18,11 @@ export const styles = css`
     gap: var(--lr-space-s);
   }
   [part='search'] {
-    flex: 1 1 12rem;
+    flex: 1 1 var(--lr-size-12rem);
     min-inline-size: 0;
   }
   [part='tag-filter'] {
-    flex: 1 1 10rem;
+    flex: 1 1 var(--lr-size-10rem);
     min-inline-size: 0;
   }
   [part='selection-bar'] {

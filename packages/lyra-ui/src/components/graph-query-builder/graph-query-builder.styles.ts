@@ -20,12 +20,12 @@ export const styles = css`
     gap: var(--lr-space-m);
   }
   [part='path-fields'] > * {
-    flex: 1 1 10rem;
+    flex: 1 1 var(--lr-size-10rem);
     min-inline-size: 0;
   }
   [part='min-hops'],
   [part='max-hops'] {
-    flex-basis: 7rem;
+    flex-basis: var(--lr-size-7rem);
   }
 
   [part='filter-group'] {
@@ -101,7 +101,7 @@ export const styles = css`
     gap: var(--lr-space-s);
   }
   [part='save-row'] > [part='save-name-input'] {
-    flex: 1 1 12rem;
+    flex: 1 1 var(--lr-size-12rem);
     min-inline-size: 0;
   }
 
@@ -156,8 +156,8 @@ export const styles = css`
     cursor: pointer;
   }
   [part='saved-delete-button'] svg {
-    inline-size: 1em;
-    block-size: 1em;
+    inline-size: var(--lr-size-1em);
+    block-size: var(--lr-size-1em);
   }
   [part='saved-delete-button']:hover {
     color: var(--lr-color-danger);

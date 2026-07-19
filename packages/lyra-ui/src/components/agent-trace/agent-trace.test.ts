@@ -113,6 +113,24 @@ describe('lr-agent-trace', () => {
     expect(subAgentButton).to.exist;
   });
 
+  it('applies localized handoff accessible names', async () => {
+    const el = (await fixture(html`
+      <lr-agent-trace
+        .spans=${SPANS}
+        .strings=${{
+          handoffToAgent: 'Transféré vers {agent}',
+          handoffFromToAgent: 'Transféré de {from} vers {to}',
+        }}
+      ></lr-agent-trace>
+    `)) as LyraAgentTrace;
+    await el.updateComplete;
+    const buttons = [...el.shadowRoot!.querySelectorAll('[part="handoff"]')] as HTMLButtonElement[];
+    expect(buttons.find((button) => button.getAttribute('aria-label') === 'Transféré vers Trip Planner')).to.exist;
+    expect(
+      buttons.find((button) => button.getAttribute('aria-label') === 'Transféré de Trip Planner vers Research Agent'),
+    ).to.exist;
+  });
+
   it('omits the handoffs section entirely when there are no agent-kind spans', async () => {
     const noAgentSpans = SPANS.filter((s) => s.kind !== 'agent');
     const el = (await fixture(html`<lr-agent-trace .spans=${noAgentSpans}></lr-agent-trace>`)) as LyraAgentTrace;

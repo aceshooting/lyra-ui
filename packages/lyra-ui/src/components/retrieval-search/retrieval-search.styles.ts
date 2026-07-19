@@ -17,7 +17,7 @@ export const styles = css`
     gap: var(--lr-space-xs);
   }
   [part='query'] {
-    flex: 1 1 12rem;
+    flex: 1 1 var(--lr-size-12rem);
     min-inline-size: 0;
   }
   [part='mode'] {

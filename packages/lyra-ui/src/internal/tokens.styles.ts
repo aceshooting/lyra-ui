@@ -203,10 +203,12 @@ export const tokens = css`
     --lr-size-4rem: var(--lr-theme-size-4rem, 4rem);
     --lr-size-4ch: var(--lr-theme-size-4ch, 4ch);
     --lr-size-5em: var(--lr-theme-size-5em, 5em);
+    --lr-size-5rem: var(--lr-theme-size-5rem, 5rem);
     --lr-size-6em: var(--lr-theme-size-6em, 6em);
     --lr-size-6px: var(--lr-theme-size-6px, 6px);
     --lr-size-6rem: var(--lr-theme-size-6rem, 6rem);
     --lr-size-6ch: var(--lr-theme-size-6ch, 6ch);
+    --lr-size-7rem: var(--lr-theme-size-7rem, 7rem);
     --lr-size-8em: var(--lr-theme-size-8em, 8em);
     --lr-size-8rem: var(--lr-theme-size-8rem, 8rem);
     --lr-radius: var(--lr-theme-border-radius-m, 0.375rem);
