@@ -1,0 +1,102 @@
+import type { Meta, StoryObj } from '@storybook/web-components-vite';
+import { html, nothing } from 'lit';
+import type { RetrievalStage } from './retrieval-trace.class.js';
+
+const stages: RetrievalStage[] = [
+  {
+    id: 'rewrite',
+    kind: 'query-rewrite',
+    startMs: 0,
+    endMs: 60,
+    status: 'success',
+    evidence: { text: 'best hiking trails near Seattle with waterfalls' },
+  },
+  {
+    id: 'embed',
+    kind: 'embed',
+    startMs: 60,
+    endMs: 110,
+    status: 'success',
+    evidence: { metadata: { model: 'text-embedding-3-large', dimensions: 3072 } },
+  },
+  {
+    id: 'retrieve',
+    kind: 'retrieve',
+    startMs: 110,
+    endMs: 240,
+    status: 'success',
+    detail: '2 chunks',
+    evidence: {
+      chunks: [
+        { id: 'c1', text: 'Mount Si is a popular day hike near North Bend with a steep final mile.', score: 0.91, source: { id: 's1', name: 'trail-guide.pdf' } },
+        { id: 'c2', text: 'Rattlesnake Ledge offers sweeping views of Rattlesnake Lake.', score: 0.84, source: { id: 's2', name: 'trail-guide.pdf' } },
+      ],
+    },
+  },
+  {
+    id: 'rerank',
+    kind: 'rerank',
+    startMs: 240,
+    endMs: 280,
+    status: 'success',
+    detail: 'cross-encoder',
+    evidence: { metadata: { model: 'bge-reranker-large' } },
+  },
+  {
+    id: 'filter',
+    kind: 'filter',
+    startMs: 280,
+    endMs: 300,
+    status: 'success',
+    evidence: { metadata: { minScore: 0.5 } },
+  },
+];
+
+const runningStages: RetrievalStage[] = [
+  ...stages.slice(0, 3),
+  { id: 'rerank-running', kind: 'rerank', startMs: 240, status: 'running' },
+];
+
+const meta: Meta = {
+  title: 'Retrieval/Retrieval Trace',
+  component: 'lr-retrieval-trace',
+  tags: ['autodocs'],
+};
+export default meta;
+type Story = StoryObj;
+
+export const Default: Story = {
+  render: () => html`<lr-retrieval-trace style="max-width: 40rem" .stages=${stages}></lr-retrieval-trace>`,
+};
+
+export const InProgress: Story = {
+  render: () => html`<lr-retrieval-trace style="max-width: 40rem" .stages=${runningStages}></lr-retrieval-trace>`,
+};
+
+export const SyncedWithSelection: Story = {
+  render: () => {
+    let selected: string | null = null;
+    const getEl = () => document.getElementById('synced-retrieval-trace') as HTMLElement & { activeStageId: string | null };
+    return html`
+      <lr-retrieval-trace
+        id="synced-retrieval-trace"
+        style="max-width: 40rem"
+        .stages=${stages}
+        active-stage-id=${selected ?? nothing}
+        @lr-stage-select=${(e: CustomEvent<{ id: string }>) => {
+          selected = e.detail.id;
+          getEl().activeStageId = selected;
+        }}
+      ></lr-retrieval-trace>
+    `;
+  },
+};
+
+export const Empty: Story = {
+  render: () => html`<lr-retrieval-trace style="max-width: 40rem"></lr-retrieval-trace>`,
+};
+
+/** 320px container — the timeline's own responsive rules apply, and evidence rows wrap to fit. */
+export const Narrow: Story = {
+  render: () => html`<lr-retrieval-trace style="max-width: 320px" .stages=${stages}></lr-retrieval-trace>`,
+};
