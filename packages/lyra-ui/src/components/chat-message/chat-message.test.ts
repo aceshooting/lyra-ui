@@ -1,6 +1,7 @@
 import { fixture, expect, html } from '@open-wc/testing';
 import './chat-message.js';
 import '../live-region/live-region.js';
+import '../markdown/markdown-core.js';
 import type { LyraChatMessage } from './chat-message.js';
 import type { LyraLiveRegion } from '../live-region/live-region.js';
 import { styles } from './chat-message.styles.js';
@@ -436,5 +437,207 @@ describe('attachments-position', () => {
   it('reflects attachments-position onto the property', async () => {
     const el = (await fixture(html`<lr-chat-message attachments-position="before"></lr-chat-message>`)) as LyraChatMessage;
     expect(el.attachmentsPosition).to.equal('before');
+  });
+});
+
+describe('failure slot', () => {
+  it('renders exactly the consumer failure presentation -- not the built-in one -- once populated', async () => {
+    const el = (await fixture(html`
+      <lr-chat-message status="failed">
+        <lr-markdown-core>Message body</lr-markdown-core>
+        <div slot="failure" role="alert">
+          Send failed
+          <button type="button">Retry</button>
+        </div>
+      </lr-chat-message>
+    `)) as LyraChatMessage;
+
+    // Built-in failed UI is suppressed -- there is exactly one failure presentation, the consumer's.
+    expect(el.shadowRoot!.querySelector('[part="status-text"]'), 'built-in status text is suppressed').to.not.exist;
+    expect(el.shadowRoot!.querySelector('[part="status-indicator"]'), 'built-in status dot is suppressed').to.not
+      .exist;
+    expect(el.shadowRoot!.querySelector('[part="retry-button"]'), 'built-in retry button is suppressed').to.not
+      .exist;
+
+    const slot = el.shadowRoot!.querySelector('slot[name="failure"]') as HTMLSlotElement;
+    const assigned = slot.assignedElements({ flatten: true });
+    expect(assigned).to.have.lengthOf(1);
+    expect(assigned[0].getAttribute('role')).to.equal('alert');
+    expect(assigned[0].textContent).to.contain('Send failed');
+    expect(assigned[0].querySelector('button')).to.exist;
+  });
+
+  it('lets the consumer failure content lay out exactly as authored, without any ::part(failure) override', async () => {
+    const el = (await fixture(html`
+      <lr-chat-message status="failed">
+        <div slot="failure" role="alert" style="display: flex; gap: 4px;">
+          Send failed
+          <button type="button">Retry</button>
+        </div>
+      </lr-chat-message>
+    `)) as LyraChatMessage;
+
+    const failureContent = el.querySelector('[slot="failure"]') as HTMLElement;
+    expect(getComputedStyle(failureContent).display).to.equal('flex');
+    // [part="failure"] itself contributes no box (display: contents), so it never constrains or
+    // wraps the consumer's own element -- no ::part(failure) reach-through is needed to get there.
+    const slotPart = el.shadowRoot!.querySelector('[part="failure"]') as HTMLElement;
+    expect(getComputedStyle(slotPart).display).to.equal('contents');
+  });
+
+  it('is not present in the DOM at all unless status="failed", regardless of pre-existing slot="failure" content', async () => {
+    const el = (await fixture(html`
+      <lr-chat-message><div slot="failure" role="alert">Send failed</div>hi</lr-chat-message>
+    `)) as LyraChatMessage;
+    expect(el.shadowRoot!.querySelector('slot[name="failure"]')).to.not.exist;
+    // The status is "sent" -- the content sits inert in the light DOM, unslotted, exactly like any
+    // other slot="..." content this component doesn't currently have a matching <slot> for.
+    expect((el.shadowRoot!.querySelector('[part="footer"]') as HTMLElement).hasAttribute('hidden')).to.be.true;
+
+    el.status = 'sent';
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('slot[name="failure"]')).to.not.exist;
+  });
+
+  it('detects pre-existing failure-slot content on first paint when mounting directly into status="failed", not just via slotchange', async () => {
+    const el = (await fixture(html`
+      <lr-chat-message status="failed"><div slot="failure" role="alert">Send failed</div>hi</lr-chat-message>
+    `)) as LyraChatMessage;
+    expect(el.shadowRoot!.querySelector('[part="status-text"]')).to.not.exist;
+    expect(el.shadowRoot!.querySelector('[part="retry-button"]')).to.not.exist;
+    const slot = el.shadowRoot!.querySelector('slot[name="failure"]') as HTMLSlotElement;
+    expect(slot.assignedElements({ flatten: true })).to.have.lengthOf(1);
+  });
+
+  it('detects pre-existing failure-slot content when entering "failed" after mount (not just via slotchange)', async () => {
+    const el = (await fixture(html`
+      <lr-chat-message><div slot="failure" role="alert">Send failed</div>hi</lr-chat-message>
+    `)) as LyraChatMessage;
+
+    el.status = 'failed';
+    await el.updateComplete;
+
+    expect(el.shadowRoot!.querySelector('[part="status-text"]')).to.not.exist;
+    expect(el.shadowRoot!.querySelector('[part="retry-button"]')).to.not.exist;
+    const slot = el.shadowRoot!.querySelector('slot[name="failure"]') as HTMLSlotElement;
+    expect(slot.assignedElements({ flatten: true })).to.have.lengthOf(1);
+  });
+
+  it('restores the built-in failed UI via slotchange once failure-slot content is removed', async () => {
+    const el = (await fixture(html`
+      <lr-chat-message status="failed"><div slot="failure" role="alert">Send failed</div>hi</lr-chat-message>
+    `)) as LyraChatMessage;
+    expect(el.shadowRoot!.querySelector('[part="status-text"]')).to.not.exist;
+
+    const failureContent = el.querySelector('[slot="failure"]')!;
+    el.removeChild(failureContent);
+    const slot = el.shadowRoot!.querySelector('slot[name="failure"]') as HTMLSlotElement;
+    slot.dispatchEvent(new Event('slotchange'));
+    await el.updateComplete;
+
+    expect((el.shadowRoot!.querySelector('[part="status-text"]') as HTMLElement).textContent).to.equal(
+      'Failed to send',
+    );
+    expect(el.shadowRoot!.querySelector('[part="retry-button"]')).to.exist;
+  });
+
+  it('suppresses the built-in chatFailedAnnounce live-region announcement once the failure slot is used', async () => {
+    const el = (await fixture(html`<lr-chat-message status="streaming">hi</lr-chat-message>`)) as LyraChatMessage;
+    const failureContent = document.createElement('div');
+    failureContent.slot = 'failure';
+    failureContent.setAttribute('role', 'alert');
+    failureContent.textContent = 'Send failed';
+    el.appendChild(failureContent);
+
+    el.status = 'failed';
+    await el.updateComplete;
+
+    expect(liveRegionText(el), 'the host owns announcing its own alert content').to.equal('');
+  });
+
+  it('fires lr-retry when a custom failure-slot control dispatches it, same event contract as the built-in retry button', async () => {
+    const el = (await fixture(html`
+      <lr-chat-message status="failed">
+        <div slot="failure" role="alert">
+          Send failed
+          <button type="button" id="custom-retry">Retry</button>
+        </div>
+      </lr-chat-message>
+    `)) as LyraChatMessage;
+    let fired = false;
+    el.addEventListener('lr-retry', () => (fired = true));
+    const button = el.querySelector('#custom-retry') as HTMLButtonElement;
+    button.addEventListener('click', () => {
+      button.dispatchEvent(new CustomEvent('lr-retry', { bubbles: true, composed: true }));
+    });
+    button.click();
+    expect(fired).to.be.true;
+  });
+
+  it('keeps focus inside the message (never document.body) when a custom failure-slot control clears the failed state', async () => {
+    const el = (await fixture(html`
+      <lr-chat-message status="failed">
+        <div slot="failure" role="alert">
+          Send failed
+          <button type="button" id="custom-retry">Retry</button>
+        </div>
+      </lr-chat-message>
+    `)) as LyraChatMessage;
+    const button = el.querySelector('#custom-retry') as HTMLButtonElement;
+    // The documented, expected response to a retry action.
+    button.addEventListener('click', () => {
+      el.status = 'sent';
+    });
+
+    button.focus();
+    expect(document.activeElement).to.equal(button);
+    button.click();
+    await el.updateComplete;
+
+    expect(el.shadowRoot!.querySelector('slot[name="failure"]'), 'the failure slot is gone once status flips').to
+      .not.exist;
+    expect(document.activeElement, 'focus must not have silently reverted to <body>').to.not.equal(document.body);
+    expect(el.shadowRoot!.activeElement).to.equal(el.shadowRoot!.querySelector('[part="bubble"]'));
+  });
+
+  it('leaves the default (no failure slot) status text, retry button, and live-region announcement byte-identical', async () => {
+    const el = (await fixture(html`<lr-chat-message status="streaming">hi</lr-chat-message>`)) as LyraChatMessage;
+    el.status = 'failed';
+    await el.updateComplete;
+
+    expect((el.shadowRoot!.querySelector('[part="status-text"]') as HTMLElement).textContent).to.equal(
+      'Failed to send',
+    );
+    expect(el.shadowRoot!.querySelector('[part="status-indicator"]')).to.exist;
+    expect(el.shadowRoot!.querySelector('[part="retry-button"]')).to.exist;
+    expect(liveRegionText(el)).to.equal('Message failed to send.');
+    const region = el.shadowRoot!.querySelector('lr-live-region') as LyraLiveRegion;
+    expect(region.mode).to.equal('assertive');
+  });
+
+  it('leaves actionsOutsideBubble behavior unaffected when the failure slot is also in use', async () => {
+    const el = (await fixture(html`
+      <lr-chat-message status="failed" actions-outside-bubble>
+        <div slot="failure" role="alert">Send failed</div>
+        <button slot="actions">Copy</button>
+      </lr-chat-message>
+    `)) as LyraChatMessage;
+    const bubble = el.shadowRoot!.querySelector('[part="bubble"]') as HTMLElement;
+    const actions = el.shadowRoot!.querySelector('[part="actions"]') as HTMLElement;
+    expect(bubble.contains(actions)).to.be.false;
+    expect(actions.previousElementSibling === bubble || bubble.nextElementSibling === actions).to.be.true;
+  });
+
+  it('is accessible with a custom failure-slot alert banner', async () => {
+    const el = (await fixture(html`
+      <lr-chat-message status="failed">
+        Message body
+        <div slot="failure" role="alert">
+          Send failed
+          <button type="button">Retry</button>
+        </div>
+      </lr-chat-message>
+    `)) as LyraChatMessage;
+    await expect(el).to.be.accessible();
   });
 });

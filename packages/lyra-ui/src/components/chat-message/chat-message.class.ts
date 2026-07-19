@@ -88,7 +88,11 @@ export interface LyraChatMessageEventMap {
  * finishing), is additionally announced through an internal
  * `<lr-live-region>` (see that component's header for the throttled-
  * announcement wiring this composes) so a screen-reader user who isn't
- * currently focused on this message still learns about it. This differs
+ * currently focused on this message still learns about it — *unless* the
+ * `failure` slot has content, in which case this internal announcement is
+ * skipped: the host's own `role="alert"` failure content is expected to
+ * announce itself, and firing both would double-announce the same failure
+ * with two different (and differently specific) messages. This differs
  * from `<lr-typing-indicator>`'s deliberately simpler `role="status"`
  * approach — that component only ever has one thing to announce (its own
  * mount); this one has a `status` that can flip between several values
@@ -112,7 +116,22 @@ export interface LyraChatMessageEventMap {
  * @slot badges - Small status/metric chips (e.g. token count, latency, model name) — entirely app-supplied; this component computes none of that itself.
  * @slot actions - Action controls (e.g. copy, retry), rendered at the end of the footer.
  * @slot attachments - File/image attachment chips, rendered below the message body by default; see `attachments-position`.
- * @event lr-retry - Fired by the built-in retry button, only rendered when `status="failed"`.
+ * @slot failure - Only ever rendered while `status="failed"`. Empty (the default), the footer keeps
+ *   its built-in `[part="status-text"]`/`[part="retry-button"]` exactly as before. The moment this
+ *   slot has assigned content, that built-in status text and retry button are suppressed — the host
+ *   is now fully responsible for presenting its own failure UI, and the built-in `chatFailedAnnounce`
+ *   live-region announcement is suppressed too (see `@event lr-retry` below for the effect on that
+ *   event, and the "Accessibility of `status`" paragraph above for the built-in announcement this
+ *   replaces). Content assigned here should carry `role="alert"` itself when it represents an
+ *   actionable send failure — this component does not add that role on the host's behalf, since it
+ *   has no way to know what markup the host puts in this slot. This mirrors `lr-flow-node`'s `header`
+ *   slot, which replaces that component's own built-in heading row the same way.
+ * @event lr-retry - Fired by the built-in retry button, only rendered when `status="failed"` and the
+ *   `failure` slot is empty. A host using the `failure` slot owns its own retry control and is not
+ *   required to use this event at all — but nothing stops that control from dispatching its own
+ *   `new CustomEvent('lr-retry', { bubbles: true, composed: true })` to stay consistent with the
+ *   same event contract a listener further up a conversation surface already relies on for every
+ *   other message.
  * @event lr-collapse-toggle - `detail: boolean` (the new `collapsed` state) — fired when the user activates the built-in collapse button.
  * @csspart bubble - The message bubble root. Programmatically focusable (`tabindex="-1"`) so focus has a stable place to land when the built-in retry button is removed (e.g. a `lr-retry` listener flipping `status` away from `"failed"`).
  * @csspart header - The row above the message body — avatar, badges, and the collapse toggle. Hidden entirely when none of those have anything to show.
@@ -121,6 +140,9 @@ export interface LyraChatMessageEventMap {
  * @csspart collapse-button - The built-in collapse/expand toggle (only rendered when `collapsible`).
  * @csspart body - The wrapper around the default slot (the message content). Hidden while `collapsed`.
  * @csspart attachments - The wrapper around the `attachments` slot.
+ * @csspart failure - The `failure` slot itself (`display: contents` — it contributes no box of its
+ *   own, so the host's own content lays out exactly as if it were a direct child of `bubble`, with no
+ *   `::part(failure)` override needed to get there). Only present in the DOM while `status="failed"`.
  * @csspart footer - The row below the message body — status, timestamp, retry, and actions. Hidden entirely when none of those have anything to show.
  * @csspart status-indicator - A small decorative (`aria-hidden`) dot reflecting `status`; absent while `status="sent"`.
  * @csspart status-text - The visible text twin of `status-indicator` — carries the state in text, not just color.
@@ -183,6 +205,11 @@ export class LyraChatMessage extends LyraElement<LyraChatMessageEventMap> {
   @state() private hasBadgesSlot = false;
   @state() private hasAttachmentsSlot = false;
   @state() private hasActionsSlot = false;
+  /** Whether the `failure` slot currently has assigned content. Only meaningful while
+   *  `status === "failed"` -- that's the only time the slot itself is even in the render (see
+   *  `render()`), mirroring `lr-flow-node`'s identical `hasHeaderSlot` flag for its own
+   *  entirely-replaces-the-built-in-UI `header` slot. */
+  @state() private hasFailureSlot = false;
 
   @query('lr-live-region') private liveRegion?: LyraLiveRegion;
   @query('[part="bubble"]') private bubbleEl?: HTMLElement;
@@ -225,12 +252,36 @@ export class LyraChatMessage extends LyraElement<LyraChatMessageEventMap> {
     this.requestUpdate('status', old);
   }
 
-  protected willUpdate(): void {
+  protected willUpdate(changed: PropertyValues): void {
     if (!this.hasUpdated) {
       this.hasAvatarSlot = this.hasSlotted('avatar');
       this.hasBadgesSlot = this.hasSlotted('badges');
       this.hasAttachmentsSlot = this.hasSlotted('attachments');
       this.hasActionsSlot = this.hasSlotted('actions');
+      // Mounting directly into status="failed" with failure-slot content already present in the
+      // initial markup -- the <slot name="failure"> element is about to exist for the very first
+      // time this render, so there's no prior slotchange to have fired yet. Same "detected on first
+      // paint, not just via slotchange" need the avatar/badges flags above already have.
+      if (this.status === 'failed') {
+        this.hasFailureSlot = this.hasSlotted('failure');
+      }
+    } else if (changed.has('status')) {
+      if (this.status === 'failed') {
+        // Entering "failed" *after* mount -- the <slot name="failure"> element didn't exist in the
+        // previous render (see render()), so any slot="failure" content the host already had sitting
+        // in its light DOM has never had a slotchange fire for it either. Recheck directly, same
+        // reasoning as the mount-time check above.
+        this.hasFailureSlot = this.hasSlotted('failure');
+      } else if (this.previousStatus === 'failed' && this.hasFailureSlot && this.isFocusWithinFailureSlot()) {
+        // Leaving "failed" while the host's own failure content held focus (e.g. the host's own
+        // retry button, whose click listener is documented to flip status away from "failed") --
+        // the <slot name="failure"> this content was rendering through is about to disappear from
+        // this render entirely. An assigned node with no <slot> left to render into is forcibly
+        // blurred by the browser, which silently drops focus to <body> if nothing intervenes. Move
+        // focus to the always-rendered bubble first, synchronously, mirroring onRetryClick's
+        // identical rescue for the built-in retry button.
+        this.bubbleEl?.focus();
+      }
     }
   }
 
@@ -244,6 +295,17 @@ export class LyraChatMessage extends LyraElement<LyraChatMessageEventMap> {
 
   private hasSlotted(name: string): boolean {
     return Array.from(this.children).some((el) => el.getAttribute('slot') === name);
+  }
+
+  /** Whether `document.activeElement` is (or is inside) one of this host's `slot="failure"`
+   *  children. Slotting doesn't move an element out of the light DOM -- `document.activeElement`
+   *  reports the actual focused node regardless of where Shadow DOM projects it for rendering --
+   *  so this walks the host's real children, same as `hasSlotted` above, rather than anything
+   *  shadow-root-relative. */
+  private isFocusWithinFailureSlot(): boolean {
+    const active = document.activeElement;
+    if (!active) return false;
+    return Array.from(this.children).some((el) => el.getAttribute('slot') === 'failure' && el.contains(active));
   }
 
   private get normalizedTimestamp(): Date | undefined {
@@ -261,6 +323,10 @@ export class LyraChatMessage extends LyraElement<LyraChatMessageEventMap> {
     const region = this.liveRegion;
     if (!region) return;
     if (this.status === 'failed') {
+      // The `failure` slot's own content is expected to carry `role="alert"` and announce itself --
+      // see the class doc's "Accessibility of `status`" paragraph. Firing this generic announcement
+      // on top of that would double-announce the same failure.
+      if (this.hasFailureSlot) return;
       region.mode = 'assertive';
       region.announce(this.localize('chatFailedAnnounce'), { force: true });
     } else if (previous === 'streaming' && this.status === 'sent') {
@@ -285,6 +351,10 @@ export class LyraChatMessage extends LyraElement<LyraChatMessageEventMap> {
     this.hasActionsSlot = (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length > 0;
   };
 
+  private onFailureSlotChange = (e: Event): void => {
+    this.hasFailureSlot = (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length > 0;
+  };
+
   private toggleCollapsed = (): void => {
     this.collapsed = !this.collapsed;
     this.emit<boolean>('lr-collapse-toggle', this.collapsed);
@@ -303,10 +373,14 @@ export class LyraChatMessage extends LyraElement<LyraChatMessageEventMap> {
   render(): TemplateResult {
     const ts = this.normalizedTimestamp;
     const formatter = this.formatTimestamp ?? ((date: Date) => defaultFormatTimestamp(date, this.effectiveLocale));
-    const statusText = this.statusText;
+    // Once the `failure` slot is populated it takes over full responsibility for presenting the
+    // failed state -- suppress the built-in status text and retry button so a consumer is never
+    // shown both at once (see the class doc's `failure` slot entry).
+    const suppressBuiltInFailedUi = this.status === 'failed' && this.hasFailureSlot;
+    const statusText = suppressBuiltInFailedUi ? undefined : this.statusText;
     const showHeader = this.hasAvatarSlot || this.hasBadgesSlot || this.collapsible;
-    // `statusText` is already truthy whenever `status === 'failed'`, so it
-    // alone covers that case here too.
+    // `statusText` is already truthy whenever `status === 'failed'` and the built-in UI isn't
+    // suppressed, so it alone covers that case here too.
     const showFooter = Boolean(statusText) || Boolean(ts) || (!this.actionsOutsideBubble && this.hasActionsSlot);
     const actionsBlock = html`<span part="actions" ?hidden=${!this.hasActionsSlot}
       ><slot name="actions" @slotchange=${this.onActionsSlotChange}></slot
@@ -342,6 +416,9 @@ export class LyraChatMessage extends LyraElement<LyraChatMessageEventMap> {
           <slot></slot>
         </div>
         ${this.attachmentsPosition === 'before' ? nothing : attachmentsBlock}
+        ${this.status === 'failed'
+          ? html`<slot part="failure" name="failure" @slotchange=${this.onFailureSlotChange}></slot>`
+          : nothing}
         <div part="footer" ?hidden=${!showFooter}>
           ${statusText
             ? html`<span part="status-indicator" aria-hidden="true"></span><span part="status-text"
@@ -349,7 +426,7 @@ export class LyraChatMessage extends LyraElement<LyraChatMessageEventMap> {
                 >`
             : nothing}
           ${ts ? html`<time part="timestamp" datetime=${ts.toISOString()}>${formatter(ts)}</time>` : nothing}
-          ${this.status === 'failed'
+          ${this.status === 'failed' && !suppressBuiltInFailedUi
             ? html`<button part="retry-button" type="button" @click=${this.onRetryClick}>
                 ${retryIcon()}<span>${this.localize('retry')}</span>
               </button>`

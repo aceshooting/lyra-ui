@@ -60,6 +60,38 @@ export const Statuses: Story = {
   `,
 };
 
+export const CustomFailureSlot: Story = {
+  render: () => html`
+    <div style="display: flex; flex-direction: column; gap: 0.75rem; max-width: 32rem;">
+      <lr-chat-message data-role="assistant" status="failed" style="max-width: 32rem; display: block;">
+        This message uses the built-in failed treatment -- no failure slot content, so the default
+        status text and retry button are unchanged from before this slot existed.
+      </lr-chat-message>
+      <lr-chat-message data-role="assistant" status="failed" style="max-width: 32rem; display: block;">
+        The consumer's own alert banner (below) fully replaces the built-in status text and retry
+        button -- there is exactly one failure presentation, not two stacked on top of each other.
+        <div
+          slot="failure"
+          role="alert"
+          style="display:flex;align-items:center;gap:0.5rem;margin-block-start:0.5rem;padding:0.5rem 0.75rem;border-radius:0.375rem;background:var(--lr-color-danger-quiet);color:var(--lr-color-danger);font-weight:600;"
+        >
+          <span>Send failed — the deploy service didn't respond.</span>
+          <button
+            type="button"
+            style="font:inherit;background:none;border:none;padding:0;color:inherit;text-decoration:underline;cursor:pointer;"
+            @click=${(e: Event) =>
+              (e.currentTarget as HTMLElement).dispatchEvent(
+                new CustomEvent('lr-retry', { bubbles: true, composed: true }),
+              )}
+          >
+            Retry
+          </button>
+        </div>
+      </lr-chat-message>
+    </div>
+  `,
+};
+
 export const WithAvatarBadgesAndActions: Story = {
   render: () => html`
     <lr-chat-message data-role="assistant" .timestamp=${new Date()} style="max-width: 32rem; display: block;">

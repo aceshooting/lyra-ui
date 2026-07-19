@@ -128,6 +128,20 @@ export const styles = css`
     gap: var(--lr-space-xs);
   }
 
+  /* Fully transparent to layout -- the same display:contents idiom
+     lr-attachment-trigger's :host and lr-combobox's [part='tags'] already
+     use for identical reasons. The slot itself contributes no box, so
+     whatever the host slots in here (expected to be a block-level
+     role="alert" element) becomes a direct flex item of [part='bubble'],
+     inheriting its gap, exactly as if it had been authored as a sibling of
+     [part='body']/[part='footer'] -- no ::part(failure) override needed to
+     get there. When empty, this produces zero boxes and zero footprint,
+     which is what keeps the failed state byte-identical to today's
+     rendering whenever the failure slot goes unused. */
+  [part='failure'] {
+    display: contents;
+  }
+
   [part='footer'] {
     display: flex;
     flex-wrap: wrap;

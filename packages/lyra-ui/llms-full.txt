@@ -5563,15 +5563,19 @@ the user activates the built-in collapse button)
 **Slots:** default (the message body), `avatar` (an avatar/icon for the message author), `badges`
 (small status/metric chips — e.g. token count, latency, model name — entirely app-supplied), `actions`
 (action controls such as copy/retry, rendered at the end of the footer), `attachments` (file/image
-attachment chips, rendered below the message body)
+attachment chips, rendered below the message body), `failure` (only meaningful while
+`status="failed"`: host-supplied content — typically a `role="alert"` banner plus its own retry
+control — that replaces the built-in status text, retry button, and live-region announcement
+entirely; unset, `status="failed"` renders exactly as before)
 
 **CSS parts:** `bubble`, `header` (hidden entirely when nothing is in it), `avatar`, `badges`,
 `collapse-button` (only rendered when `collapsible`), `body` (hidden while `collapsed`),
 `attachments`, `footer` (hidden entirely when nothing is in it), `status-indicator` (a small
 decorative `aria-hidden` dot, absent while `status="sent"`), `status-text` (the visible text twin of
-`status-indicator`), `timestamp`, `retry-button` (only rendered when `status="failed"`), `actions`
-(rendered inside the footer by default; a sibling immediately after `bubble` when
-`actionsOutsideBubble` is set)
+`status-indicator`), `timestamp`, `retry-button` (only rendered when `status="failed"` and the
+`failure` slot is empty), `actions` (rendered inside the footer by default; a sibling immediately
+after `bubble` when `actionsOutsideBubble` is set), `failure` (`display: contents` wrapper for the
+`failure` slot; contributes no box when the slot is empty)
 
 **Themeable custom properties:** `--lr-chat-message-max-width` (default `80%` — the bubble's max
 inline size; component-specific, no shared width token exists), plus shared tokens
