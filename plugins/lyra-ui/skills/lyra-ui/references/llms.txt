@@ -109,6 +109,13 @@ The catalog is grouped by capability; `llms-full.txt` follows the same consumer-
   `lr-voice-picker`, `lr-notebook-viewer` (needs the optional peers `marked`/`dompurify`/`shiki`),
   `lr-xml-viewer`, `lr-markdown-core` (needs the optional peers `marked`/`dompurify`/`shiki`;
   build-lean sibling of `lr-markdown`, never references shiki's full ~200-language table).
+- **Agent, retrieval, evaluation, and workspace surfaces** — `lr-agent-run`, `lr-agent-trace`,
+  `lr-context-inspector`, `lr-dashboard-grid`, `lr-document-compare`, `lr-document-library`,
+  `lr-drilldown-panel`, `lr-entity-dossier`, `lr-eval-dataset`, `lr-eval-result`,
+  `lr-evaluation-run`, `lr-filter-bar`, `lr-graph-query-builder`, `lr-grounding-summary`,
+  `lr-ingestion-queue`, `lr-knowledge-base`, `lr-knowledge-graph-explorer`, `lr-memory-panel`,
+  `lr-policy-summary`, `lr-query-builder`, `lr-retrieval-results`, `lr-retrieval-search`,
+  `lr-retrieval-trace`, and `lr-tool-timeline`.
 
 ## Also useful
 

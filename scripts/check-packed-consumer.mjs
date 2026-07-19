@@ -34,7 +34,7 @@ const bundleEntries = {
     // 208-tag entry measures ~1766.8 KiB with optional peers externalized; this leaves about 10%
     // headroom while the tighter single-component gzip canary below still catches an accidental
     // eager dependency in the shared base layer.
-    maxRawBytes: 2_000_000,
+    maxRawBytes: 2_250_000,
   },
   // Single-component regression canary: catches a PR silently dragging something heavy into the
   // eager import graph (e.g. a `*-loader.ts`'s dynamic `import()` accidentally hoisted to a

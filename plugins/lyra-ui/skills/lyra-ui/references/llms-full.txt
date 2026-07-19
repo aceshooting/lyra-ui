@@ -550,6 +550,10 @@ Text field + calendar popover, **form-associated** via the shared `FormAssociate
   `enterKeyHint: string = ''` (attribute `enterkeyhint`) — forwarded to the internal date input
 - `autocomplete: string = ''`, `inputMode: string = ''` (`inputmode`), and `enterKeyHint: string = ''`
   (`enterkeyhint`) — forwarded to the internal `<input>`.
+- `size: '2xs' | 'xs' | 's' | 'm' | 'l' | 'xl' = 'm'` (reflected) — visual size, matching
+  `lr-input`/`lr-select`/`lr-combobox`'s shared scale. Governs the field's padding and font-size;
+  the calendar-toggle and clear buttons keep a constant, accessible touch target at every size.
+  The default `m` tier is unchanged from this component's pre-`size` rendering.
 
 **Methods:** `show()`, `hide()`, `clear()`, `focus(options?)`, `blur()`, `select()`,
 `setSelectionRange()`, `setRangeText()` (all of the focus/selection methods forward to the internal
@@ -4887,6 +4891,9 @@ labeled options, rendered as a button row" is ubiquitous settings/filter-panel U
 - `value: string = ''` — the currently selected item's `value`.
 - `label: string = ''` — accessible name copied to the internal `role="radiogroup"`; when empty, a
   host-level `aria-label` is used as a fallback.
+- `size: '2xs' | 'xs' | 's' | 'm' | 'l' | 'xl' = 'm'` (reflected) — visual size, matching
+  `lr-select`/`lr-combobox`'s `xs`-`xl` scale plus `lr-input`'s `2xs` tier. `m` (the default) is
+  unchanged from this component's pre-`size` rendering.
 
 **Events:** `lr-change` (`detail: { value }`) — fired when the selected value changes via click or
 keyboard.
@@ -5556,15 +5563,19 @@ the user activates the built-in collapse button)
 **Slots:** default (the message body), `avatar` (an avatar/icon for the message author), `badges`
 (small status/metric chips — e.g. token count, latency, model name — entirely app-supplied), `actions`
 (action controls such as copy/retry, rendered at the end of the footer), `attachments` (file/image
-attachment chips, rendered below the message body)
+attachment chips, rendered below the message body), `failure` (only meaningful while
+`status="failed"`: host-supplied content — typically a `role="alert"` banner plus its own retry
+control — that replaces the built-in status text, retry button, and live-region announcement
+entirely; unset, `status="failed"` renders exactly as before)
 
 **CSS parts:** `bubble`, `header` (hidden entirely when nothing is in it), `avatar`, `badges`,
 `collapse-button` (only rendered when `collapsible`), `body` (hidden while `collapsed`),
 `attachments`, `footer` (hidden entirely when nothing is in it), `status-indicator` (a small
 decorative `aria-hidden` dot, absent while `status="sent"`), `status-text` (the visible text twin of
-`status-indicator`), `timestamp`, `retry-button` (only rendered when `status="failed"`), `actions`
-(rendered inside the footer by default; a sibling immediately after `bubble` when
-`actionsOutsideBubble` is set)
+`status-indicator`), `timestamp`, `retry-button` (only rendered when `status="failed"` and the
+`failure` slot is empty), `actions` (rendered inside the footer by default; a sibling immediately
+after `bubble` when `actionsOutsideBubble` is set), `failure` (`display: contents` wrapper for the
+`failure` slot; contributes no box when the slot is empty)
 
 **Themeable custom properties:** `--lr-chat-message-max-width` (default `80%` — the bubble's max
 inline size; component-specific, no shared width token exists), plus shared tokens
@@ -10193,6 +10204,14 @@ and `blur()` forward to the internal radio control.
 A click-triggered, light-dismiss floating surface positioned with the shared Floating UI positioner.
 
 **Properties:** `open`, `placement`, `distance`, `accessibleLabel` (`aria-label`), and `popupRole` (`popup-role`).
+**Methods:** `showAt(rect: { x, y, width?, height? }, options?: { returnFocusTo?: HTMLElement })`
+opens the popover anchored to an arbitrary rectangle instead of the slotted `trigger` — for a graph
+node, a canvas pixel, a chart datum, or any other non-DOM location (`width`/`height` default to `0`,
+a point). Escape and light-dismiss return focus to `options.returnFocusTo` when supplied, or skip
+focus-return entirely otherwise, since a virtual anchor has no `.focus()`. The virtual anchor has no
+DOM node for `autoUpdate()` to track on its own, so re-call `showAt()` with fresh coordinates to
+re-anchor an already-open popover to a moving point (e.g. a graph pan/zoom tick) — the popover stays
+open across such a call. A popover that never calls `showAt()` behaves exactly as before.
 **Events:** `lr-show`, `lr-hide`. **Slots:** `trigger`, default content. **CSS parts:** `trigger`,
 `popup`, `content`. **Themeable custom properties:** `--lr-overlay-max-inline-size` (default
 `--lr-size-20rem` — maximum inline size of the popup).
@@ -10202,10 +10221,35 @@ A click-triggered, light-dismiss floating surface positioned with the shared Flo
 A hover/focus tooltip positioned with the shared Floating UI positioner.
 
 **Properties:** `open`, `manual`, `delay`, `placement`, `distance`, `content`, and
-`accessibleLabel` (`aria-label`). **Slots:** `trigger`, default content. **CSS parts:**
-`trigger`, `popup`. **Themeable custom properties:** `--lr-tooltip-max-inline-size` (default
-`--lr-size-20rem`), `--lr-tooltip-background` (default `--lr-color-neutral`), and
+`accessibleLabel` (`aria-label`). **Methods:** `showAt(rect: { x, y, width?, height? }, options?: {
+returnFocusTo?: HTMLElement })` — same virtual-anchor contract as `lr-popover.showAt()` above
+(anchors to an arbitrary rectangle instead of the slotted `trigger`, `width`/`height` default to
+`0`, Escape returns focus to `options.returnFocusTo` or skips focus-return, re-call with fresh
+coordinates to re-anchor a moving point). Opens immediately, bypassing `delay`/`manual` (both are
+hover-debounce concerns for a slotted trigger, not a deliberate programmatic call); close it the
+same way any tooltip closes, by setting `open = false`. **Slots:** `trigger`, default content.
+**CSS parts:** `trigger`, `popup`. **Themeable custom properties:** `--lr-tooltip-max-inline-size`
+(default `--lr-size-20rem`), `--lr-tooltip-background` (default `--lr-color-neutral`), and
 `--lr-tooltip-color` (default `--lr-color-on-neutral`).
+
+**`showAt()` composed with `lr-graph`** — anchoring a popover to a clicked graph node. Note:
+`lr-graph.getNodePosition()` and the `lr-node-click` event's `{ x, y }` are in the graph's own
+*local drawing space* (pre pan/zoom), not viewport pixels, so they can't be passed to `showAt()`
+directly. For `renderer="svg"` (the default), read the clicked node's own rendered element instead,
+whose `getBoundingClientRect()` is already viewport-relative; for `renderer="canvas"` (no per-node
+DOM element), use the click event's own `clientX`/`clientY`.
+
+```js
+const graph = document.querySelector('lr-graph');
+const detail = document.querySelector('lr-popover'); // no slotted trigger needed for showAt()
+
+graph.addEventListener('click', (event) => {
+  const nodeEl = event.composedPath().find((el) => el instanceof Element && el.matches('[part="node"]'));
+  if (!nodeEl) return; // clicked empty canvas/background, not a node
+  const rect = nodeEl.getBoundingClientRect();
+  detail.showAt({ x: rect.left + rect.width / 2, y: rect.top, width: rect.width, height: rect.height });
+});
+```
 
 ## `lr-dropdown`
 
@@ -11211,6 +11255,10 @@ rename. `label: string = ''` — accessible name for the list region, defaults t
 false) — data mode only: wraps each row's built-in `lr-conversation-item` with host-supplied content
 that has no home in the item's own `title`/`excerpt`/`meta`/`actions` surface (e.g. a leading purpose
 icon — the item has no default slot to receive one); unset renders the built-in row unwrapped.
+`renderActions?: (thread: ChatThread) => TemplateResult` (attribute: false) — data mode only:
+appends host-supplied content (re-invoked per row on every render, e.g. a `lr-menu` with custom
+actions) after the built-in `rowActions` output in each row's `actions` slot; events it fires reach
+the host normally and never trigger `lr-select`. Unset renders only the built-in `rowActions`.
 
 **Slots:** default — slotted mode only: host-supplied `lr-conversation-item`s, rendered in order.
 `empty` — replaces the built-in empty state.
@@ -11670,6 +11718,256 @@ elements), `error`, `spinner`.
 Node cap: 50,000 — exceeding it renders the localized `xmlViewerTooManyNodes` error instead of the
 tree.
 
+## `lr-agent-run`
+
+Top-level shell for one agent run: status, elapsed time, current step, model/cost summary, and
+Cancel/Retry actions. Named `tasks`, `tools`, `reasoning`, `output`, and `actions` slots support
+host-controlled composition.
+
+**Properties:** `run`, `formatCost`, `showCancel`, `showRetry`. **Events:** `lr-cancel` (`detail:
+{ run }`), `lr-retry` (`detail: { run, attempt }`). **Slots:** `tasks`, `tools`, `reasoning`,
+`output`, `actions`. **CSS parts:** `base`, `header`, `status`, `status-badge`, `status-message`,
+`elapsed`, `elapsed-static`, `summary`, `model`, `usage`, `current-step`, `current-step-icon`,
+`current-step-label`, `body`, `tasks`, `tools`, `reasoning`, `output`, `actions`, `cancel-button`,
+`retry-button`, `empty`.
+
+## `lr-agent-trace`
+
+Provider-neutral agent/LLM trace view combining span-kind filters, handoff quick-jumps, and a
+hierarchical trace tree from one shared `spans` array.
+
+**Properties:** `spans`, `activeSpanId`, `hiddenKinds`, `label`, `showCost`, `showTokens`,
+`hideBars`. **Events:** `lr-span-select` (`detail: { id }`), `lr-span-toggle` (`detail: { id,
+expanded }`), `lr-visibility-change` (`detail: { hiddenTypes }`). **CSS parts:** `base`, `filter`,
+`handoffs`, `handoff`, `tree`.
+
+## `lr-context-inspector`
+
+Inspection view of model-call context segments, with token estimates, source citations, redaction
+markers, and copy/export controls.
+
+**Properties:** `segments`, `total`, `label`, `filename`, `formats`. **Events:** `lr-citation-activate`,
+`lr-citation-open`, `lr-copy`, `lr-export`, `lr-export-complete`. **CSS parts:** `base`, `toolbar`,
+`segments`, `segment`, `segment-header`, `segment-label`, `segment-text`, `segment-tokens`,
+`meter`, `citation`, `redaction`, `truncation-boundary`, `copy-button`, `export-button`, `empty`.
+
+## `lr-dashboard-grid`
+
+Responsive, keyboard-accessible controlled widget grid. It positions layout entries and emits
+move, resize, collision, and layout-change requests; the host owns persistence and applies updates.
+
+**Properties:** `layout`, `columns`, `rowHeight`, `gap`, `cellsDraggable`, `cellsResizable`,
+`collision`, `locked`, `accessibleLabel`. **Events:** `lr-cell-move`, `lr-cell-resize`,
+`lr-collision`, `lr-layout-change`. **Slots:** `cell-{id}`. **CSS parts:** `base`, `cell`, `empty`,
+`resize-handle`, `live-region`.
+
+## `lr-document-compare`
+
+Comparison surface for two document versions, using `lr-diff-view` for textual diffs and
+`lr-document-preview` for side-by-side rendered content.
+
+**Properties:** `oldVersion`, `newVersion`, `view`, `diffLayout`, `language`, `languages`, `anchor`,
+`copyable`, `syncScroll`. **Events:** `lr-copy`, `lr-download`, `lr-highlight-activate`,
+`lr-render-error`. **CSS parts:** `base`, `diff`, `panes`, `pane-old`, `pane-new`, `pane-header`,
+`pane-empty`.
+
+## `lr-document-library`
+
+Controlled searchable and filterable document inventory with versions, tags, owners, freshness,
+sorting, and bulk selection.
+
+**Properties:** `documents`, `filter`, `label`, `loading`, `selectedIds`, `sortKey`, `sortDirection`,
+`tagFilter`. **Events:** `lr-filter-change`, `lr-open`, `lr-selection-change`, `lr-sort`. **CSS
+parts:** `base`, `toolbar`, `search`, `tag-filter`, `selection-bar`, `selection-count`,
+`clear-selection`, `table`, `row`, `cell`, `header-cell`, `document-name`.
+
+## `lr-drilldown-panel`
+
+Controlled navigation shell from a chart or table datum to related evidence, documents, entities,
+or agent runs. It renders a breadcrumb path and delegates category content to existing primitives.
+
+**Properties:** `path`, `types`, `accessibleLabel`, `communityLabel`, `showFocusButton`. **Events:**
+`lr-drilldown-navigate` (`detail: { id, index }`). **Slots:** `runs`. **CSS parts:** `base`,
+`breadcrumb`, `breadcrumb-item`, `breadcrumb-button`, `tabs`, `category`, `content`, `evidence-item`,
+`document-item`, `entity-item`, `empty`.
+
+## `lr-entity-dossier`
+
+Entity detail surface with an entity header, optional confidence statistic, and tabs for
+relationships, supporting chunks, and provenance.
+
+**Properties:** `entity`, `confidence`, `neighbors`, `chunks`, `provenance`, `types`, `thresholds`,
+`groupByRelation`, `expandable`, `showFocusButton`, `accessibleLabel`, `communityLabel`. **CSS
+parts:** `base`, `empty`, `header`, `entity-card`, `confidence`, `tabs`, `neighbor-list`,
+`chunk-inspector`, `provenance-panel`.
+
+## `lr-eval-dataset`
+
+Filterable and taggable evaluation-example list with add, remove, import, and export affordances.
+
+**Properties:** `examples`, `label`, `disabled`, `searchable`, `accept`, `exportFormats`. **Events:**
+`lr-example-select`, `lr-example-add-request`, `lr-example-remove-request`, `lr-import-request`,
+`lr-export-request`. **CSS parts:** `base`, `toolbar`, `search`, `search-input`, `tag-filter`, `grid`,
+`add-button`, `remove-button`, `import`, `export`.
+
+## `lr-eval-result`
+
+Rubric scoring and human-review surface for comparing the runs of one evaluation example.
+
+**Properties:** `runs`, `columns`, `selectedRunId`, `baselineRunId`, `rubricKeys`, `disabled`,
+`reviewSkippable`. **Events:** `lr-run-select`, `lr-review-input`, `lr-review-validity-change`,
+`lr-review-submit`, `lr-review-skip`. **CSS parts:** `base`, `empty`, `grid`, `diff`, `diff-view`,
+`diff-labels`, `diff-label-old`, `diff-label-new`, `review`.
+
+## `lr-evaluation-run`
+
+Evaluation-batch progress view with overall progress and one disclosure per example. Inputs and
+outputs may render as Markdown or code, with optional grounding and tool-trace sections.
+
+**Properties:** `examples`, `total`, `label`. **Events:** `lr-example-toggle`,
+`lr-example-citation-select`, `lr-example-tool-approval-decide`. **CSS parts:** `base`, `header`,
+`header-label`, `progress`, `summary`, `counts`, `count`, `examples`, `example`, `example-summary`,
+`example-label`, `example-status`, `input-section`, `input`, `output-section`, `output`,
+`grounding-section`, `grounding-summary`, `tool-trace-section`, `tool-trace`, `section-heading`,
+`live-region`, `empty`.
+
+## `lr-filter-bar`
+
+Dashboard filter row that composes Lyra inputs and removable chips, with reset and loading states.
+
+**Properties:** `filters`, `value`, `disabled`, `loading`, `label`, `hasActiveFilters`,
+`invalidFilterIds`, `checkValidity`, `reportValidity`, `reset`. **Events:** `lr-input`, `lr-reset`,
+`lr-validity-change`. **CSS parts:** `base`, `controls`, `filter-control`, `active-filters`,
+`chips`, `chip`, `reset-button`, `status`.
+
+## `lr-graph-query-builder`
+
+Form-associated editor for a typed graph relationship/path query, including entity anchors,
+relationship and node-type filters, hop limits, validation, and saved queries.
+
+**Properties:** `value`, `label`, `labels`, `name`, `disabled`, `effectiveDisabled`, `nodeTypeOptions`,
+`relationshipTypeOptions`, `hopLimit`, `savedQueries`, `errors`, `form`, `validity`,
+`validationMessage`, `willValidate`, `checkValidity`, `reportValidity`, `formDisabledCallback`,
+`formResetCallback`, `formStateRestoreCallback`. **Events:** `lr-input`, `lr-validity-change`,
+`lr-query-run`, `lr-query-save`, `lr-query-load`, `lr-query-delete`. **Slots:** `actions`. **CSS
+parts:** `base`, `path-fields`, `start-input`, `end-input`, `relationship-picker`,
+`relationship-chips`, `node-type-picker`, `node-type-chips`, `direction`, `filter-group`,
+`min-hops`, `max-hops`, `footer`, `run-button`, `save-button`, `save-row`, `save-name-input`,
+`saved-queries`, `saved-queries-label`, `saved-list`, `saved-item`, `saved-load-button`,
+`saved-delete-button`, `saved-empty`.
+
+## `lr-grounding-summary`
+
+Claim-level grounding scorecard showing support counts, citation coverage, confidence, warnings,
+and evidence citations.
+
+**Properties:** `assessment`, `citations`, `label`, `thresholds`. **Events:** `lr-citation-select`.
+**CSS parts:** `base`, `empty`, `stats`, `warnings`, `warnings-heading`, `warnings-count`,
+`warnings-list`, `warning`, `evidence`, `evidence-heading`, `evidence-count`, `evidence-item`,
+`evidence-label`, `evidence-span`.
+
+## `lr-ingestion-queue`
+
+Controlled list of documents moving through an ingestion pipeline, showing stage, progress,
+counts, errors, and retry/cancel requests.
+
+**Properties:** `items`, `label`, `virtualizeThreshold`. **Events:** `lr-retry`, `lr-cancel`. **CSS
+parts:** `base`, `list`, `item`, `item-header`, `item-name`, `item-meta`, `item-progress`,
+`item-chunk-count`, `item-embedding-status`, `item-attempts`, `item-error`, `item-actions`,
+`retry-button`, `cancel-button`, `empty`.
+
+## `lr-knowledge-base`
+
+Controlled retrieval knowledge-base source list with sync status, indexing health, permissions,
+and per-row management requests.
+
+**Properties:** `sources`, `label`, `hideCreate`, `hideSummary`. **Events:** `lr-kb-create`,
+`lr-kb-sync`, `lr-kb-pause`, `lr-kb-delete`. **CSS parts:** `base`, `toolbar`, `create-button`,
+`summary`, `summary-stat`, `table`, `source-name`, `source-type`, `document-count`, `permission-badge`,
+`health-badge`, `health-cell`, `sync-badge`, `sync-cell`, `sync-error`, `sync-timestamp`,
+`actions-trigger`, `actions-menu`, `name-cell`.
+
+## `lr-knowledge-graph-explorer`
+
+Knowledge-graph exploration shell combining graph rendering, entity search, type filters,
+neighborhood expansion, pinned nodes, path finding, and a details overlay.
+
+**Properties:** `nodes`, `links`, `nodeTypes`, `communities`, `entityDetails`, `width`, `height`,
+`renderer`, `hiddenTypes`, `selectedNodeId`, `pinnedNodeIds`, `path`, `label`. **Events:**
+`lr-node-click`, `lr-link-click`, `lr-community-click`, `lr-node-expand`, `lr-pin-change`,
+`lr-path-request`, `lr-relation-activate`. **Slots:** `details`. **CSS parts:** `base`, `toolbar`,
+`search`, `search-results`, `search-result`, `search-empty`, `pinned`, `pinned-heading`, `legend`,
+`graph`, `path`, `detail-popover`, `detail-card`.
+
+## `lr-memory-panel`
+
+Agent working-memory surface for short-term context and long-term memories, with confidence,
+optional provenance, and confirmation-gated add, remove, expand, and forget actions.
+
+**Properties:** `shortTerm`, `longTerm`, `label`, `thresholds`, `types`. **Events:** `lr-add`,
+`lr-remove`, `lr-expand`, `lr-forget`. **CSS parts:** `base`, `heading`, `section`, `section-header`,
+`section-empty`, `list`, `item`, `item-row`, `item-body`, `item-text`, `confidence`, `item-actions`,
+`add-button`, `remove-button`, `expand-toggle`, `forget-all-button`, `empty`.
+
+## `lr-policy-summary`
+
+Read-only list of guardrail, permission, privacy, and tool-policy decisions with accessible
+allow, deny, or needs-review explanations.
+
+**Properties:** `decisions`. **CSS parts:** `base`, `empty`, `summary`, `count`, `state-badge`,
+`list`, `decision`, `decision-header`, `category`, `label`, `detail`, `explanation`.
+
+## `lr-query-builder`
+
+Composable structured-query builder for tabular or dashboard data: condition rows combined with an
+AND/OR combinator.
+
+**Properties:** `fields`, `value`, `disabled`, `addCondition`, `removeCondition`. **Events:**
+`lr-input`, `lr-add-condition`, `lr-remove-condition`. **CSS parts:** `base`, `conditions`,
+`condition`, `field-select`, `operator-select`, `value`, `combinator`, `add-button`,
+`remove-button`, `empty`.
+
+## `lr-retrieval-results`
+
+Ranked retrieval-chunk list with deduplication, source grouping, selection, pagination or infinite
+loading, and compact/expanded presentation modes.
+
+**Properties:** `chunks`, `label`, `activeId`, `dedupe`, `grouping`, `selectable`, `selectedIds`,
+`sort`, `presentation`, `loading`, `error`, `hasMore`, `thresholds`, `virtualizeAt`. **Events:**
+`lr-chunk-open`, `lr-select`, `lr-load-more`. **CSS parts:** `base`, `row`, `row-body`, `select`,
+`metadata`, `metadata-entry`, `group-header`, `load-more-row`, `load-more`, `spinner`, `error`,
+`empty`.
+
+## `lr-retrieval-search`
+
+Retrieval/RAG query bar with query text, filter and scope chips, vector/keyword/hybrid mode, and
+loading, error, and empty feedback.
+
+**Properties:** `query`, `label`, `accessibleLabel`, `placeholder`, `mode`, `filters`, `scope`,
+`loading`, `errorText`, `empty`. **Events:** `lr-search`, `lr-cancel`, `lr-filters-change`. **CSS
+parts:** `base`, `row`, `query`, `mode`, `filters`, `submit`, `spinner`, `error`, `empty`.
+
+## `lr-retrieval-trace`
+
+Retrieval-pipeline stage timeline rendered through `lr-span-waterfall`, with expandable evidence
+for each stage.
+
+**Properties:** `stages`, `activeStageId`, `label`. **Events:** `lr-stage-select`, `lr-stage-toggle`.
+**CSS parts:** `base`, `timeline`, `evidence-list`, `evidence-row`, `evidence-toggle`,
+`evidence-toggle-icon`, `evidence-body`, `evidence-text`, `evidence-metadata`,
+`evidence-metadata-key`, `evidence-metadata-value`.
+
+## `lr-tool-timeline`
+
+Chronological list of agent tool/function calls composed from tool-call, result, and approval
+primitives, with retry counts and sensitive-field redaction.
+
+**Properties:** `entries`, `formatTimestamp`, `approvalEditable`. **Events:**
+`lr-tool-approval-decide` (`detail: { invocationId, approved, args? }`). **CSS parts:** `base`,
+`entry`, `entry-marker`, `entry-header`, `entry-timestamp`, `entry-body`, `entry-details`,
+`entry-result`, `entry-error`, `entry-retries`, `entry-retries-count`, `entry-retries-label`,
+`entry-redacted-indicator`, `entry-approval-status`, `approval-dialog`.
+
 ## `lr-geojson-view`
 
 Internal document-registry bridge that fetches, validates, and renders a GeoJSON file through
@@ -11701,3 +11999,153 @@ Registered by importing `geojson-view/geojson-view.js` directly — not part of 
 same as `lr-map`/`lr-graph`, since it depends on the same optional `maplibre-gl` peer. Remote
 resources are capped at 25 MB; exceeding it surfaces the localized `documentPreviewResourceTooLarge`
 message instead of the map.
+
+## `lr-agent-run`
+
+Renders the status and controls for one agent run. Set `run` to the run data, and use
+`showCancel`, `showRetry`, and `formatCost` to control the optional actions and cost formatting.
+
+## `lr-agent-trace`
+
+Displays a filterable trace made of `spans`. `activeSpanId` identifies the selected span;
+`hiddenKinds`, `hideBars`, `showCost`, and `showTokens` control the trace presentation. `label`
+sets the accessible label for the trace surface.
+
+## `lr-context-inspector`
+
+Shows the final model context as token-counted `segments`, including redactions and source
+attribution. `filename` labels the inspected context, `formats` controls available export formats,
+and `total` supplies the overall token total. `label` sets its accessible name.
+
+## `lr-dashboard-grid`
+
+Lays out dashboard cells from `layout` using `columns`, `rowHeight`, and `gap`. `locked` disables
+layout interaction; `cellsDraggable` and `cellsResizable` control the corresponding gestures.
+`collision` selects collision handling, and `accessibleLabel` names the grid.
+
+## `lr-document-compare`
+
+Compares `oldVersion` and `newVersion` as a diff or synchronized document panes. `view` selects
+the rendering mode, while `diffLayout` selects the diff layout. `anchor` controls synchronized
+highlight navigation, `syncScroll` links pane scrolling, and `copyable` enables copying. `language`
+sets the diff language and `languages` provides language choices.
+
+## `lr-document-library`
+
+Renders a searchable, sortable document inventory from `documents`. `filter` and `tagFilter`
+control the active filters; `sortKey` and `sortDirection` control ordering; `selectedIds` contains
+the selected documents; `loading` shows the loading state; and `label` names the library.
+
+## `lr-drilldown-panel`
+
+Displays the current entity path and its related evidence, documents, entities, and runs. `path`
+contains the drilldown levels and `types` describes node types. `communityLabel` customizes the
+community heading, `showFocusButton` controls focus actions, and `accessibleLabel` names the panel.
+
+## `lr-entity-dossier`
+
+Presents an entity with relationships, supporting chunks, and provenance. Set `entity`, `neighbors`,
+`chunks`, `provenance`, and `confidence` with the corresponding domain data. `types` describes node
+types; `thresholds` controls confidence display; `groupByRelation` groups neighbors; `expandable`
+controls disclosure; `communityLabel` customizes community text; `showFocusButton` controls focus
+actions; and `accessibleLabel` names the dossier.
+
+## `lr-eval-dataset`
+
+Manages a controlled evaluation dataset in `examples`, with optional search and import/export
+actions. `searchable` enables filtering, `accept` controls accepted import formats, `exportFormats`
+lists available export formats, `disabled` disables actions, and `label` names the dataset.
+
+## `lr-eval-result`
+
+Shows the runs for one evaluation example and the selected run's review form. `runs` supplies the
+results, `columns` defines comparison columns, and `selectedRunId` identifies the active run.
+`baselineRunId` marks the baseline; `rubricKeys` defines review criteria; `reviewSkippable` enables
+skip; and `disabled` disables review controls.
+
+## `lr-evaluation-run`
+
+Displays an evaluation run summary and its examples. Set `examples` and `total` with the run data;
+`label` provides the accessible name.
+
+## `lr-filter-bar`
+
+Renders a controlled collection of `filters`. `value` is the current filter state, `hasActiveFilters`
+reflects whether any filter is active, and `invalidFilterIds` identifies invalid filters. `loading`
+shows pending filter work, `disabled` disables editing, and `label` names the bar. `checkValidity()`,
+`reportValidity()`, and `reset()` expose the native-like validation and reset actions.
+
+## `lr-graph-query-builder`
+
+Builds a graph query from `nodeTypeOptions`, `relationshipTypeOptions`, and `hopLimit`, with
+`errors` for validation feedback and `savedQueries` for saved query entries. `value` contains the
+current query; `label` and `name` provide form metadata; and `disabled` controls editing. It exposes
+the form-associated `checkValidity()`, `reportValidity()`, `formDisabledCallback()`,
+`formResetCallback()`, and `formStateRestoreCallback()` methods plus `form`, `labels`, `validity`,
+`validationMessage`, `willValidate`, `effectiveDisabled`, and `value`/`name`/`disabled` accessors.
+
+## `lr-grounding-summary`
+
+Summarizes the grounding assessment for an answer. Set `assessment` and `citations` with the
+grounding data, `thresholds` to control confidence bands, and `label` for the accessible name.
+
+## `lr-ingestion-queue`
+
+Displays document ingestion `items` with stage and progress information. `virtualizeThreshold`
+switches to virtual rendering for large queues, and `label` names the queue.
+
+## `lr-knowledge-base`
+
+Displays connected knowledge-base `sources` and their sync/indexing state. `hideCreate` hides the
+create-source action, `hideSummary` hides aggregate status, and `label` names the surface.
+
+## `lr-knowledge-graph-explorer`
+
+Provides search, filtering, selection, pinning, and path requests over a knowledge graph. Set
+`nodes`, `links`, `nodeTypes`, `communities`, and optional `entityDetails`; `renderer` controls the
+graph renderer. `selectedNodeId` and `pinnedNodeIds` hold interaction state, while `path` contains
+the returned path. `hiddenTypes` controls type visibility, `width` and `height` size the graph, and
+`label` names it.
+
+## `lr-memory-panel`
+
+Displays short-term and long-term memory entries. Set `shortTerm` and `longTerm` with memory data;
+`types` describes entity types and `thresholds` controls confidence display. `label` names the panel.
+
+## `lr-policy-summary`
+
+Summarizes policy decisions from `decisions`, including their category, outcome, explanation, and
+optional detail.
+
+## `lr-query-builder`
+
+Builds a controlled set of filter conditions from `fields`. `value` contains the current query and
+`disabled` prevents editing. `addCondition()` and `removeCondition()` provide programmatic condition
+management.
+
+## `lr-retrieval-results`
+
+Renders retrieval `chunks` with loading, error, selection, grouping, and pagination states. `activeId`
+identifies the active chunk; `selectedIds` contains selected chunks; `selectable` enables selection;
+`presentation` controls presentation; `grouping` and `sort` control organization; `dedupe` removes
+duplicates; `thresholds` controls score display; `virtualizeAt` controls virtualization; and
+`hasMore` indicates another page is available. `label` names the results, while `loading` and `error`
+describe request state.
+
+## `lr-retrieval-search`
+
+Provides a controlled retrieval query bar. `query`, `mode`, `filters`, and `scope` contain the
+search state; `placeholder` supplies the query hint; `loading` controls submit/cancel state; and
+`empty` and `errorText` provide result-state messaging. `label` and `accessibleLabel` name the
+control.
+
+## `lr-retrieval-trace`
+
+Shows the stages of a retrieval pipeline from `stages`. `activeStageId` identifies the expanded
+stage and `label` names the trace.
+
+## `lr-tool-timeline`
+
+Displays chronological tool-call `entries`, including retries, approval state, and redacted
+details. `approvalEditable` controls whether approval decisions can be changed, and
+`formatTimestamp` formats entry timestamps.

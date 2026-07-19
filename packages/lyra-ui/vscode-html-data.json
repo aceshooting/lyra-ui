@@ -120,6 +120,87 @@
       ]
     },
     {
+      "name": "lr-agent-run",
+      "description": {
+        "kind": "markdown",
+        "value": "`<lr-agent-run>` — the top-level shell for one `AgentRun`: lifecycle-status badge, elapsed\ntime, current step, model/cost summary, and built-in Cancel/Retry controls in a header, plus\nfour named composition slots (`tasks`/`tools`/`reasoning`/`output`) for the run's actual\ncontent. This is deliberately a SHELL, not a new step-rendering surface — every piece of\nper-step or per-invocation rendering routes through an existing primitive:\n\n- **Elapsed time**: composes `<lr-generation-status>` (`active`/`started-at`, its own built-in\n  Stop button hidden via `show-stop=\"false\"` since this component renders its own Cancel/Retry\n  pair instead) for the *live, ticking* readout while the run is genuinely in progress\n  (`running`/`waiting-input`/`waiting-approval`). `<lr-stream-status>` was considered too (per\n  this family's own composition brief) but doesn't fit: its `phase` vocabulary\n  (`idle`/`connecting`/`streaming`/`stalled`) models transport/connection health, not an agent\n  run's seven-state lifecycle, and it exposes no elapsed-time readout at all — exactly the\n  distinction `<lr-generation-status>`'s own class doc already draws between the two. Once the\n  run reaches a terminal state (`done`/`error`/`cancelled`) with both a `startedAt` and an\n  `endedAt`, this component instead renders a small locally-formatted static duration\n  (`endedAt - startedAt`): `<lr-generation-status>`'s freeze-on-`active=false` semantics only\n  ever freeze at whatever it last computed *live*, so mounting it directly against a completed\n  run loaded from history (e.g. `startedAt` yesterday, `endedAt` five minutes later, loaded\n  today) would either show a stale zero or the wrong multi-hour span — it has no way to render a\n  fixed historical span on demand. That static fallback reuses the same small `formatDuration()`\n  algorithm `<lr-usage-badge>` and `<lr-tool-call-chip>` already duplicate locally for the same\n  reason (see this file's own copy).\n- **Model + cost summary**: composes `<lr-usage-badge>`, fed `run.costEstimate` (formatted via\n  `formatCost`, or a plain `Intl.NumberFormat` by default — this library never assumes a\n  currency, see `<lr-format-number>`'s own explicit `currency` prop) as its `cost-text`.\n  `run.model` (a plain string with no analogous `<lr-usage-badge>` property) renders alongside\n  as plain text.\n- **Current step**: a single-line summary of whichever `run.steps` entry currently has\n  `status.kind === 'running'` (the last such entry, if more than one) — a plain text line, not a\n  list, so it doesn't duplicate `<lr-task-list>`'s own per-item rendering.\n- **Tasks slot default content**: when the host doesn't slot anything into `tasks` and\n  `run.steps` is non-empty, this component's own `<slot>` fallback renders a `<lr-task-list>`\n  populated by mapping every `AgentStep` to a `TaskItem` (see `toTaskItem()`) — a plain data\n  adapter between the two existing shapes, not new rendering.\n- **Status badge**: composes `<lr-badge>`. **Empty state**: composes `<lr-empty>` when `run` is\n  `null`.\n\n`tools`/`reasoning`/`output` are plain named slots with no default content — entirely the\nhost's own composition (typically `<lr-tool-call-chip>`/`<lr-tool-result-view>` rows,\nreasoning/streaming text, and final output respectively). An `actions` slot adds extra header\ncontrols alongside the built-in Cancel/Retry pair.\n\nThe built-in Cancel button renders while `showCancel` is true and the run's status is one of\n`TICKING_KINDS` (still genuinely in progress); Retry renders while `showRetry` is true and the\nstatus is `error` or `cancelled`. Clicking either fires `lr-cancel`/`lr-retry` with\n`CancelEventDetail`/`RetryEventDetail` from `src/ai/types.ts` — this component never cancels or\nretries anything itself, it only requests. `RetryEventDetail.attempt` is a 1-based counter\nlocal to this component, incremented on every `lr-retry` click and reset to `0` whenever\n`run.id` changes (a genuinely new run replacing the old one, as opposed to the same run's status\nmerely updating in place).\n\nLifecycle transitions into an attention-needing or terminal state (`waiting-input`,\n`waiting-approval`, `done`, `error`, `cancelled`) are announced through an internal\n`<lr-live-region>`, mirroring `<lr-stream-status>`'s own stall/recover announcements —\n`running`/`idle` transitions are frequent and not independently actionable, so they stay\nsilent, and whatever status a freshly-assigned `run` (a new `run.id`) happens to already carry\nis never itself treated as an eventful transition, only a later in-place change is.\n\n---\n\n**Slots**\n\n| Name | Description |\n| --- | --- |\n| `actions` | Extra header actions alongside the built-in Cancel/Retry buttons. |\n| `output` | The run's final output content. No default content. |\n| `reasoning` | Reasoning/thinking content. No default content. |\n| `tasks` | Task/plan content. Falls back to a `<lr-task-list>` built from `run.steps` when nothing is slotted and `run.steps` is non-empty. |\n| `tools` | Tool-call content (e.g. `<lr-tool-call-chip>`/`<lr-tool-result-view>` rows). No default content. |\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `actions` | Wrapper around the `actions` slot and the built-in Cancel/Retry buttons. |\n| `base` | The root container. |\n| `body` | Wrapper around the four composition slots. |\n| `cancel-button` | The built-in Cancel button. Only rendered while cancelable (see the class doc). |\n| `current-step` | Wrapper around the current-step icon and label. Only rendered while a step has `status.kind === 'running'`. |\n| `current-step-icon` | The spinning current-step icon. |\n| `current-step-label` | The current step's `label` text. |\n| `elapsed` | The composed `<lr-generation-status>`, only rendered while the run is actively ticking (see the class doc). |\n| `elapsed-static` | The static formatted duration for a terminal run with both `startedAt` and `endedAt`. |\n| `empty` | The `<lr-empty>` shown when `run` is `null`. |\n| `header` | The header row wrapping status, elapsed time, current step, summary, and actions. |\n| `model` | `run.model`, when set. |\n| `output` | The `output` slot. |\n| `reasoning` | The `reasoning` slot. |\n| `retry-button` | The built-in Retry button. Only rendered while retryable. |\n| `status` | Wrapper around the status badge and optional status message. |\n| `status-badge` | The resolved `<lr-badge>` lifecycle-status pill. |\n| `status-message` | `run.status.message`, when set. |\n| `summary` | Wrapper around the model text and the composed `<lr-usage-badge>`. Only rendered while `run.model` or a valid `run.costEstimate` is present. |\n| `tasks` | The `tasks` slot. |\n| `tools` | The `tools` slot. |\n| `usage` | The composed `<lr-usage-badge>`. |"
+      },
+      "attributes": [
+        {
+          "name": "locale",
+          "description": {
+            "kind": "markdown",
+            "value": "Optional locale override. Otherwise the nearest `locale`/`lang` ancestor is used.\n\nType: `string`  \nDefault: `''`"
+          }
+        },
+        {
+          "name": "show-cancel",
+          "description": {
+            "kind": "markdown",
+            "value": "Whether the built-in Cancel button can render at all -- still gated by the run's own status\nbeing cancelable (`running`/`waiting-input`/`waiting-approval`). Set `false` for a read-only\nviewer.\n\nType: `boolean`  \nDefault: `true`"
+          }
+        },
+        {
+          "name": "show-retry",
+          "description": {
+            "kind": "markdown",
+            "value": "Whether the built-in Retry button can render at all -- still gated by the run's own status\nbeing retryable (`error`/`cancelled`).\n\nType: `boolean`  \nDefault: `true`"
+          }
+        }
+      ]
+    },
+    {
+      "name": "lr-agent-trace",
+      "description": {
+        "kind": "markdown",
+        "value": "`<lr-agent-trace>` — a provider-neutral agent/LLM trace view: a span-kind filter row, a\nhandoff quick-jump list, and the full trace hierarchy, all driven by one shared `LyraSpan[]`\narray (the same shape `<lr-trace-tree>` and `<lr-span-waterfall>` already consume).\n\nThe actual trace rendering -- hierarchy, expand/collapse, roving-tabindex keyboard navigation,\nduration bars, the empty state -- is entirely `<lr-trace-tree>`'s own: this component only ever\npasses it a (possibly filtered) `spans` array plus a handful of pass-through properties, never\nbuilding its own row markup. `<lr-trace-tree>` was chosen over `<lr-span-waterfall>` because a\ntrace is fundamentally the hierarchy relationship between spans (which agent called which tool,\nwhich handed off to which sub-agent) -- exactly what `parentId`-derived `aria-level` nesting\nconveys and a flat, `startMs`-ordered timeline does not.\n\nThis component's own contribution is the multi-domain filter layer on top of that: a filter\nrow composing `<lr-graph-legend>` -- the same abstract type/visibility-toggle legend pattern\nthat component already establishes for `<lr-graph>`'s node types, reused here (it neither\nreads nor writes an actual graph) for `LyraSpan.kind` visibility instead -- and a handoff\nquick-jump list composing `<lr-handoff-divider>` for each visible `'agent'`-kind span (an\nagent invocation is, in trace terms, a handoff of control to that agent). Hidden kinds are\nsimply excluded from the array handed to `<lr-trace-tree>`; a span whose parent got filtered\nout is promoted to a root by `<lr-trace-tree>`'s own existing orphan handling, never dropped.\n\nSelection is controlled end-to-end for deep-linking: `activeSpanId` flows down into\n`<lr-trace-tree>` verbatim, and both activation paths -- a row click inside the tree, or a\nhandoff quick-jump entry -- update it and fire the identical `lr-span-select` `{ id }` shape, so\na host can encode the current span id in a URL and feed it straight back in.\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `base` | The root wrapper. |\n| `filter` | The composed `<lr-graph-legend>` filter row, only rendered while `spans` has at least one span. |\n| `handoff` | One handoff quick-jump entry (a `<button>` wrapping an `<lr-handoff-divider>`); carries `data-active`. |\n| `handoffs` | The handoff quick-jump list wrapper, only rendered while at least one visible span has `kind: 'agent'`. |\n| `tree` | The composed `<lr-trace-tree>`. |"
+      },
+      "attributes": [
+        {
+          "name": "active-span-id",
+          "description": {
+            "kind": "markdown",
+            "value": "Controlled selection, forwarded verbatim into the composed `<lr-trace-tree>`. Updated\nlocally (and re-emitted as `lr-span-select`) whenever a span is activated from either the\ntree or the handoff quick-jump list, so a host can also treat it as a two-way binding.\n\nType: `string | null`  \nDefault: `null`"
+          }
+        },
+        {
+          "name": "hide-bars",
+          "description": {
+            "kind": "markdown",
+            "value": "Forwarded verbatim to the composed `<lr-trace-tree>`.\n\nType: `boolean`  \nDefault: `false`"
+          }
+        },
+        {
+          "name": "label",
+          "description": {
+            "kind": "markdown",
+            "value": "Accessible name forwarded to the composed `<lr-trace-tree>`. See its own `label` property.\n\nType: `string`  \nDefault: `''`"
+          }
+        },
+        {
+          "name": "locale",
+          "description": {
+            "kind": "markdown",
+            "value": "Optional locale override. Otherwise the nearest `locale`/`lang` ancestor is used.\n\nType: `string`  \nDefault: `''`"
+          }
+        },
+        {
+          "name": "show-cost",
+          "description": {
+            "kind": "markdown",
+            "value": "Forwarded verbatim to the composed `<lr-trace-tree>`.\n\nType: `boolean`  \nDefault: `false`"
+          }
+        },
+        {
+          "name": "show-tokens",
+          "description": {
+            "kind": "markdown",
+            "value": "Forwarded verbatim to the composed `<lr-trace-tree>`.\n\nType: `boolean`  \nDefault: `false`"
+          }
+        }
+      ]
+    },
+    {
       "name": "lr-animated-image",
       "description": {
         "kind": "markdown",
@@ -2098,7 +2179,7 @@
       "name": "lr-chat-message",
       "description": {
         "kind": "markdown",
-        "value": "`<lr-chat-message>` — a role-based message bubble *shell* for a chat/\nagent conversation surface. It renders none of the message content itself:\nthe default slot carries whatever a consumer wants to display (plain\ntext, a `<lr-markdown>`, a custom template, anything at all) and this\ncomponent only supplies the surrounding chrome — alignment/coloring by\n`role`, an avatar/badges header row, an optional collapse toggle, an\nattachments strip, and a status-aware footer (a live-updating status dot +\ntext, the formatted `timestamp`, a built-in retry affordance for\n`status=\"failed\"`, and an `actions` slot for everything else).\n\nNo built-in copy button is rendered. Deciding what \"the copyable text\" of\nan arbitrary slotted message even means (plain text? the rendered\nmarkdown source? something else?) is exactly the kind of content\ninterpretation this shell deliberately stays out of — slot a copy control\ninto `actions` instead. Firing `lr-copy` (`detail: { text }`) from that\ncontrol keeps the event name consistent with `<lr-json-viewer>`'s own\ncopy affordance, for anything listening at the conversation-surface level.\n\nAccessibility of `status`: the current status is always available as\nplain visible text (`[part=\"status-text\"]`), never color alone. A\ntransition *to* `\"failed\"`, or *from* `\"streaming\"` to `\"sent\"` (a stream\nfinishing), is additionally announced through an internal\n`<lr-live-region>` (see that component's header for the throttled-\nannouncement wiring this composes) so a screen-reader user who isn't\ncurrently focused on this message still learns about it. This differs\nfrom `<lr-typing-indicator>`'s deliberately simpler `role=\"status\"`\napproach — that component only ever has one thing to announce (its own\nmount); this one has a `status` that can flip between several values\nacross a single element's lifetime, which is exactly the coalescing job\n`<lr-live-region>` exists for.\n\n`role` is a message-author role (`user`/`assistant`/`system`, matching\nthe vocabulary of every chat/completion API), *not* a WAI-ARIA role, so\nit reflects to a `data-role` attribute rather than the bare `role`\nattribute — `role=\"user\"` would collide with `Element`'s own ARIA `role`\naccessor and is not a valid ARIA role token to begin with.\n\n`actionsOutsideBubble` allows the `actions` slot to render as a sibling\nimmediately after the message bubble instead of nested inside the footer —\nuseful for consumers whose action row (e.g., a hover-reveal copy button)\nmust sit visually outside the bubble's chrome.\n\n---\n\n**Slots**\n\n| Name | Description |\n| --- | --- |\n| (default) | The message body. |\n| `actions` | Action controls (e.g. copy, retry), rendered at the end of the footer. |\n| `attachments` | File/image attachment chips, rendered below the message body by default; see `attachments-position`. |\n| `avatar` | An avatar/icon for the message author. |\n| `badges` | Small status/metric chips (e.g. token count, latency, model name) — entirely app-supplied; this component computes none of that itself. |\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `actions` | The wrapper around the `actions` slot. Rendered inside the footer by default; a sibling immediately after `bubble` when `actionsOutsideBubble` is set. |\n| `attachments` | The wrapper around the `attachments` slot. |\n| `avatar` | The wrapper around the `avatar` slot. |\n| `badges` | The wrapper around the `badges` slot. |\n| `body` | The wrapper around the default slot (the message content). Hidden while `collapsed`. |\n| `bubble` | The message bubble root. Programmatically focusable (`tabindex=\"-1\"`) so focus has a stable place to land when the built-in retry button is removed (e.g. a `lr-retry` listener flipping `status` away from `\"failed\"`). |\n| `collapse-button` | The built-in collapse/expand toggle (only rendered when `collapsible`). |\n| `footer` | The row below the message body — status, timestamp, retry, and actions. Hidden entirely when none of those have anything to show. |\n| `header` | The row above the message body — avatar, badges, and the collapse toggle. Hidden entirely when none of those have anything to show. |\n| `retry-button` | The built-in retry button (only rendered when `status=\"failed\"`). |\n| `status-indicator` | A small decorative (`aria-hidden`) dot reflecting `status`; absent while `status=\"sent\"`. |\n| `status-text` | The visible text twin of `status-indicator` — carries the state in text, not just color. |\n| `timestamp` | The formatted `timestamp`, rendered in a `<time>` element. |\n\n---\n\n**CSS Custom Properties**\n\n- `--lr-chat-message-max-width` (default: `80%`) — Maximum inline size of the message bubble.\n- `--lr-transition-ambient` (default: `1.8s ease-in-out`) — Streaming-indicator animation duration and timing function."
+        "value": "`<lr-chat-message>` — a role-based message bubble *shell* for a chat/\nagent conversation surface. It renders none of the message content itself:\nthe default slot carries whatever a consumer wants to display (plain\ntext, a `<lr-markdown>`, a custom template, anything at all) and this\ncomponent only supplies the surrounding chrome — alignment/coloring by\n`role`, an avatar/badges header row, an optional collapse toggle, an\nattachments strip, and a status-aware footer (a live-updating status dot +\ntext, the formatted `timestamp`, a built-in retry affordance for\n`status=\"failed\"`, and an `actions` slot for everything else).\n\nNo built-in copy button is rendered. Deciding what \"the copyable text\" of\nan arbitrary slotted message even means (plain text? the rendered\nmarkdown source? something else?) is exactly the kind of content\ninterpretation this shell deliberately stays out of — slot a copy control\ninto `actions` instead. Firing `lr-copy` (`detail: { text }`) from that\ncontrol keeps the event name consistent with `<lr-json-viewer>`'s own\ncopy affordance, for anything listening at the conversation-surface level.\n\nAccessibility of `status`: the current status is always available as\nplain visible text (`[part=\"status-text\"]`), never color alone. A\ntransition *to* `\"failed\"`, or *from* `\"streaming\"` to `\"sent\"` (a stream\nfinishing), is additionally announced through an internal\n`<lr-live-region>` (see that component's header for the throttled-\nannouncement wiring this composes) so a screen-reader user who isn't\ncurrently focused on this message still learns about it — *unless* the\n`failure` slot has content, in which case this internal announcement is\nskipped: the host's own `role=\"alert\"` failure content is expected to\nannounce itself, and firing both would double-announce the same failure\nwith two different (and differently specific) messages. This differs\nfrom `<lr-typing-indicator>`'s deliberately simpler `role=\"status\"`\napproach — that component only ever has one thing to announce (its own\nmount); this one has a `status` that can flip between several values\nacross a single element's lifetime, which is exactly the coalescing job\n`<lr-live-region>` exists for.\n\n`role` is a message-author role (`user`/`assistant`/`system`, matching\nthe vocabulary of every chat/completion API), *not* a WAI-ARIA role, so\nit reflects to a `data-role` attribute rather than the bare `role`\nattribute — `role=\"user\"` would collide with `Element`'s own ARIA `role`\naccessor and is not a valid ARIA role token to begin with.\n\n`actionsOutsideBubble` allows the `actions` slot to render as a sibling\nimmediately after the message bubble instead of nested inside the footer —\nuseful for consumers whose action row (e.g., a hover-reveal copy button)\nmust sit visually outside the bubble's chrome.\n\n---\n\n**Slots**\n\n| Name | Description |\n| --- | --- |\n| (default) | The message body. |\n| `actions` | Action controls (e.g. copy, retry), rendered at the end of the footer. |\n| `attachments` | File/image attachment chips, rendered below the message body by default; see `attachments-position`. |\n| `avatar` | An avatar/icon for the message author. |\n| `badges` | Small status/metric chips (e.g. token count, latency, model name) — entirely app-supplied; this component computes none of that itself. |\n| `failure` | Only ever rendered while `status=\"failed\"`. Empty (the default), the footer keeps its built-in `[part=\"status-text\"]`/`[part=\"retry-button\"]` exactly as before. The moment this slot has assigned content, that built-in status text and retry button are suppressed — the host is now fully responsible for presenting its own failure UI, and the built-in `chatFailedAnnounce` live-region announcement is suppressed too (see `@event lr-retry` below for the effect on that event, and the \"Accessibility of `status`\" paragraph above for the built-in announcement this replaces). Content assigned here should carry `role=\"alert\"` itself when it represents an actionable send failure — this component does not add that role on the host's behalf, since it has no way to know what markup the host puts in this slot. This mirrors `lr-flow-node`'s `header` slot, which replaces that component's own built-in heading row the same way. |\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `actions` | The wrapper around the `actions` slot. Rendered inside the footer by default; a sibling immediately after `bubble` when `actionsOutsideBubble` is set. |\n| `attachments` | The wrapper around the `attachments` slot. |\n| `avatar` | The wrapper around the `avatar` slot. |\n| `badges` | The wrapper around the `badges` slot. |\n| `body` | The wrapper around the default slot (the message content). Hidden while `collapsed`. |\n| `bubble` | The message bubble root. Programmatically focusable (`tabindex=\"-1\"`) so focus has a stable place to land when the built-in retry button is removed (e.g. a `lr-retry` listener flipping `status` away from `\"failed\"`). |\n| `collapse-button` | The built-in collapse/expand toggle (only rendered when `collapsible`). |\n| `failure` | The `failure` slot itself (`display: contents` — it contributes no box of its own, so the host's own content lays out exactly as if it were a direct child of `bubble`, with no `::part(failure)` override needed to get there). Only present in the DOM while `status=\"failed\"`. |\n| `footer` | The row below the message body — status, timestamp, retry, and actions. Hidden entirely when none of those have anything to show. |\n| `header` | The row above the message body — avatar, badges, and the collapse toggle. Hidden entirely when none of those have anything to show. |\n| `retry-button` | The built-in retry button (only rendered when `status=\"failed\"`). |\n| `status-indicator` | A small decorative (`aria-hidden`) dot reflecting `status`; absent while `status=\"sent\"`. |\n| `status-text` | The visible text twin of `status-indicator` — carries the state in text, not just color. |\n| `timestamp` | The formatted `timestamp`, rendered in a `<time>` element. |\n\n---\n\n**CSS Custom Properties**\n\n- `--lr-chat-message-max-width` (default: `80%`) — Maximum inline size of the message bubble.\n- `--lr-transition-ambient` (default: `1.8s ease-in-out`) — Streaming-indicator animation duration and timing function."
       },
       "attributes": [
         {
@@ -3415,6 +3496,43 @@
       ]
     },
     {
+      "name": "lr-context-inspector",
+      "description": {
+        "kind": "markdown",
+        "value": "`<lr-context-inspector>` — an inspection view of the exact context assembled for a model call:\nper-segment token estimates via `<lr-context-meter>`, source attribution via\n`<lr-citation-badge>`, and copy/export affordances via `<lr-copy-button>`/`<lr-export-button>`.\nTruncation-boundary and redaction-marker rendering are this component's own minimal\npresentational logic (see `ContextInspectorSegment`'s `truncated`/`omittedTokens`/`redactions`\nfields) — no existing primitive covers \"show where this got cut off / redacted\", so this stays a\nsmall, purpose-built rendering step rather than a general text-annotation system.\n\nPure projection: never fetches, estimates tokens, or performs redaction itself — `segments` is\nexpected to already carry each field's final, already-processed value (e.g. `text` already has\nany redaction placeholders substituted in; this component never sees or renders the original\nunredacted content).\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `base` | The `role=\"group\"` wrapper. |\n| `citation` | A segment's embedded `lr-citation-badge`, rendered only when it carries a `citation`. |\n| `copy-button` | The embedded `lr-copy-button`. |\n| `empty` | The empty state, shown when `segments` is empty. |\n| `export-button` | The embedded `lr-export-button`. |\n| `meter` | The embedded `lr-context-meter`. Omitted (replaced by `empty`) when `segments` is empty. |\n| `redaction` | One redacted range within a segment's text (a `<mark>`). |\n| `segment` | One segment's wrapper (`role=\"listitem\"`). |\n| `segment-header` | A segment's label/token-count/citation row. |\n| `segment-label` | A segment's visible label text. |\n| `segment-text` | A segment's text body, carrying any `redaction` marks and its own trailing `truncation-boundary` marker. |\n| `segment-tokens` | A segment's visible token-estimate text. |\n| `segments` | The `role=\"list\"` wrapper around all segments. Omitted (replaced by `empty`) when `segments` is empty. |\n| `toolbar` | The wrapper around the copy/export affordances. Omitted when `segments` is empty. |\n| `truncation-boundary` | The marker appended after a `truncated` segment's text. |"
+      },
+      "attributes": [
+        {
+          "name": "filename",
+          "description": {
+            "kind": "markdown",
+            "value": "Download filename (no extension) passed through to `<lr-export-button>`.\n\nType: `string`  \nDefault: `'context'`"
+          }
+        },
+        {
+          "name": "label",
+          "description": {
+            "kind": "markdown",
+            "value": "Accessible group name, and the embedded `<lr-context-meter>`'s own visible caption, e.g. \"128K context window\".\n\nType: `string`  \nDefault: `''`"
+          }
+        },
+        {
+          "name": "locale",
+          "description": {
+            "kind": "markdown",
+            "value": "Optional locale override. Otherwise the nearest `locale`/`lang` ancestor is used.\n\nType: `string`  \nDefault: `''`"
+          }
+        },
+        {
+          "name": "total",
+          "description": {
+            "kind": "markdown",
+            "value": "The full token budget `segments` are measured against — passed straight through to `<lr-context-meter>`'s own `total`.\n\nType: `number`  \nDefault: `0`"
+          }
+        }
+      ]
+    },
+    {
       "name": "lr-context-meter",
       "description": {
         "kind": "markdown",
@@ -3621,6 +3739,78 @@
       ]
     },
     {
+      "name": "lr-dashboard-grid",
+      "description": {
+        "kind": "markdown",
+        "value": "`<lr-dashboard-grid>` — a responsive, keyboard-accessible widget grid: positions `layout`\nentries (`DashboardCell`: `x`/`y`/`w`/`h` grid units + a widget descriptor) on a CSS Grid,\ncomposing `<lr-widget>` + `<lr-widget-renderer>` for each cell's default content, and owns all\ndrag/resize/collision interaction as controlled events -- it never mutates `layout` itself, nor\never touches `localStorage`/network; the host applies (or ignores) every emitted event and owns\npersistence entirely, mirroring `lr-flow-canvas`/`lr-table`'s own controlled-component\nconvention. Readonly (viewer) by default; opt into editor gestures individually via\n`cells-draggable`/`cells-resizable`, or lock the whole grid via `locked`.\n\nCell content: a `layout` entry with no matching light-DOM child (matched by `cell-id`) gets a\ndefault `<lr-widget label=\"...\">` wrapping an `<lr-widget-renderer .tree=${cell.widget}>`\nauto-created and adopted into `slot=\"cell-{id}\"` -- this component's own job is the grid\nlayout/drag/resize/collision/persistence-event mechanics *around* that content, not widget\nrendering itself (see `lr-widget-renderer`'s own doc for its declarative-tree contract). A\nconsumer wanting full control over one cell's markup can instead author\n`<div cell-id=\"...\">...</div>` as a direct child; it is adopted in place of the default cell.\n\nKeyboard: cells share one roving tabindex, in row-major (`sortSpatial`) order. Arrow\nkeys/Home/End move the roving focus (RTL-aware: physical Left/Right always match what the\ncursor visually does, matching `lr-flow-canvas`'s own convention). While a cell has focus,\nCtrl/Cmd+Arrow moves it by one grid unit and Ctrl/Cmd+Shift+Arrow resizes it by one grid unit\n(Right/Down grow, Left/Up shrink) -- the full keyboard-operable equivalent of the pointer\ndrag/resize gestures below, per this library's accessibility bar (no pointer-only interaction).\n\nCollision: every move/resize request -- pointer or keyboard -- is resolved through `collision`\n(`'reject'` the default, `'push'`, or `'overlap'`; see `resolvePlacement()` in `layout.ts` for\nthe exact rule). A rejected request leaves `layout` untouched and only announces; an accepted\none emits `lr-cell-move`/`lr-cell-resize` plus a `lr-layout-change` snapshot of the full\nproposed layout (including any `'push'` cascade) -- the host's one persistence hook: listen for\nit and persist `event.detail.layout` however it likes (`localStorage`, a network call, neither).\n\nResponsive: below a ~40rem container allocation (`@container`, not the viewport -- a dashboard\ngrid is commonly embedded in a panel of varying width), cells stack into a single flowing\ncolumn in the same row-major order the grid itself renders them in, instead of overflowing or\nshrinking columns unreadably.\n\n---\n\n**Slots**\n\n| Name | Description |\n| --- | --- |\n| `cell-{id}` | A `layout` entry's cell content; auto-populated by a default composed `<lr-widget>`/`<lr-widget-renderer>` pair unless a light-DOM `[cell-id=\"{id}\"]` child is authored instead. |\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `base` | The grid root. |\n| `cell` | A single cell's positioned wrapper. |\n| `empty` | The `lr-empty` shown when `layout` is empty. |\n| `live-region` | The current move/resize/collision announcement. |\n| `resize-handle` | The pointer resize grip in a cell's trailing/bottom corner (only rendered while `cells-resizable`); the Ctrl/Cmd+Shift+Arrow keyboard path is the resize handle's full accessible equivalent, so the handle itself is `aria-hidden`. |"
+      },
+      "attributes": [
+        {
+          "name": "aria-label",
+          "description": {
+            "kind": "markdown",
+            "value": "Overrides the grid region's accessible name; falls back to a generic localized label. Fed\nonly by a host `aria-label`, matching `lr-flow-canvas`'s own host-override pattern.\n\nType: `string | null`  \nDefault: `null`"
+          }
+        },
+        {
+          "name": "cells-draggable",
+          "description": {
+            "kind": "markdown",
+            "value": "Opts into pointer-drag + Ctrl/Cmd+Arrow keyboard move for unlocked cells.\n\nType: `boolean`  \nDefault: `false`"
+          }
+        },
+        {
+          "name": "cells-resizable",
+          "description": {
+            "kind": "markdown",
+            "value": "Opts into the pointer resize handle + Ctrl/Cmd+Shift+Arrow keyboard resize for unlocked cells.\n\nType: `boolean`  \nDefault: `false`"
+          }
+        },
+        {
+          "name": "collision",
+          "description": {
+            "kind": "markdown",
+            "value": "How a move/resize that would overlap another cell is resolved -- see the class doc.\n\nType: `DashboardCollisionPolicy`  \nDefault: `'reject'`"
+          }
+        },
+        {
+          "name": "columns",
+          "description": {
+            "kind": "markdown",
+            "value": "Column count of the underlying CSS Grid.\n\nType: `number`  \nDefault: `12`"
+          }
+        },
+        {
+          "name": "gap",
+          "description": {
+            "kind": "markdown",
+            "value": "Gap between cells, in px, on both axes.\n\nType: `number`  \nDefault: `8`"
+          }
+        },
+        {
+          "name": "locale",
+          "description": {
+            "kind": "markdown",
+            "value": "Optional locale override. Otherwise the nearest `locale`/`lang` ancestor is used.\n\nType: `string`  \nDefault: `''`"
+          }
+        },
+        {
+          "name": "locked",
+          "description": {
+            "kind": "markdown",
+            "value": "Disables every drag/resize gesture grid-wide, regardless of `cells-draggable`/\n`cells-resizable` or a cell's own `locked`.\n\nType: `boolean`  \nDefault: `false`"
+          }
+        },
+        {
+          "name": "row-height",
+          "description": {
+            "kind": "markdown",
+            "value": "Row track height, in px (also the pointer-resize/drag row snap pitch, together with `gap`).\n\nType: `number`  \nDefault: `80`"
+          }
+        }
+      ]
+    },
+    {
       "name": "lr-data-grid",
       "description": {
         "kind": "markdown",
@@ -3698,7 +3888,7 @@
       "name": "lr-date-input",
       "description": {
         "kind": "markdown",
-        "value": "`<lr-date-input>` — a date field with an attached calendar popover.\nMirrors the core `<wa-date-input>` API under `lr-`. Value is ISO 8601\n(`YYYY-MM-DD`, or `YYYY-MM-DD/YYYY-MM-DD` in range mode). Form-associated.\n\nThis component uses a single text field; typing accepts ISO or a\nlocale-parseable date.\n\n---\n\n**Slots**\n\n| Name | Description |\n| --- | --- |\n| `error` | Custom error content. |\n| `hint` | Custom hint content. |\n| `label` | Custom label content. |\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `clear-button` | The clear control. |\n| `date-picker` | The nested date picker. |\n| `error` | The validation message. |\n| `expand-button` | The calendar popup toggle. |\n| `expand-icon` | The calendar icon. |\n| `form-control` | The outer form-control wrapper. |\n| `form-control-label` | The label wrapper. |\n| `hint` | The hint message. |\n| `input` | The text input. |\n| `input-wrapper` | The input and button wrapper. |\n| `popup` | The positioned calendar popup. |"
+        "value": "`<lr-date-input>` — a date field with an attached calendar popover.\nMirrors the core `<wa-date-input>` API under `lr-`. Value is ISO 8601\n(`YYYY-MM-DD`, or `YYYY-MM-DD/YYYY-MM-DD` in range mode). Form-associated.\n\nThis component uses a single text field; typing accepts ISO or a\nlocale-parseable date.\n\n`size` uses the same `2xs`–`xl` scale as `lr-input`/`lr-select`/`lr-combobox`'s own `size`,\ndefault `m`. The calendar-toggle and clear buttons keep a constant touch-target size at every\ntier (mirroring `lr-input`'s own password-toggle button), so only the field's density scales.\n\n---\n\n**Slots**\n\n| Name | Description |\n| --- | --- |\n| `error` | Custom error content. |\n| `hint` | Custom hint content. |\n| `label` | Custom label content. |\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `clear-button` | The clear control. |\n| `date-picker` | The nested date picker. |\n| `error` | The validation message. |\n| `expand-button` | The calendar popup toggle. |\n| `expand-icon` | The calendar icon. |\n| `form-control` | The outer form-control wrapper. |\n| `form-control-label` | The label wrapper. |\n| `hint` | The hint message. |\n| `input` | The text input. |\n| `input-wrapper` | The input and button wrapper. |\n| `popup` | The positioned calendar popup. |"
       },
       "attributes": [
         {
@@ -3876,6 +4066,13 @@
           "description": {
             "kind": "markdown",
             "value": "Type: `boolean`"
+          }
+        },
+        {
+          "name": "size",
+          "description": {
+            "kind": "markdown",
+            "value": "Visual size — same `2xs`–`xl` scale as `lr-input`/`lr-select`/`lr-combobox`'s own `size`.\n`'2xs'` is the tightest tier, for dense toolbar-embedded fields.\n\nType: `LyraDateInputSize`  \nDefault: `'m'`"
           }
         },
         {
@@ -4259,6 +4456,125 @@
       ]
     },
     {
+      "name": "lr-document-compare",
+      "description": {
+        "kind": "markdown",
+        "value": "`<lr-document-compare>` — side-by-side or inline comparison of two document versions, composed\nentirely from two existing primitives rather than reimplementing either: `<lr-diff-view>` is the\nreal two-string line diff (`view=\"diff\"`, the default), and `<lr-document-preview>` renders each\nversion's own actual content in `view=\"side-by-side\"`.\n\n**Synchronized anchors.** `<lr-diff-view>`'s own `layout=\"split\"` needs no scroll-sync of its\nown -- both columns already live inside one shared scrolling container, so they move together\nfor free. `view=\"side-by-side\"` is different: it renders two *independent*\n`<lr-document-preview>` panes, each with its own scrollbar, so nothing keeps them aligned on its\nown. This component adds exactly two minimal, purpose-built coordination mechanisms for that\ncase (mirroring `<lr-compare-panel>`'s own proven proportional-scroll algorithm rather than\ninventing a new one):\n- **Continuous scroll sync** (`syncScroll`, default `true`): scrolling either pane\n  proportionally scrolls the other to the same *fraction* of its own scrollable range, not the\n  same pixel offset -- the two versions can have very different lengths. A re-entrancy guard\n  stops the mirrored write from bouncing back.\n- **Highlight-anchor sync**: activating a region highlight in one pane (`lr-highlight-activate`)\n  that shares its `id` with a highlight in the *other* version's `highlights` scrolls that pane\n  to its own matching highlight via `<lr-document-preview>`'s own `scrollToAnchor()`. The\n  `lr-highlight-activate` event itself still bubbles through unchanged (`detail: { id }`, no\n  side discriminator) so an existing listener contract stays exactly what\n  `<lr-document-preview>` already documents.\n- A shared `anchor` property (same declarative shape as `<lr-document-viewer>`'s own `anchor`)\n  drives both panes to the same target at once via their own `scrollToAnchor()`.\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `base` | The root wrapper. |\n| `diff` | The internal `<lr-diff-view>`, rendered while `view=\"diff\"`. |\n| `pane-empty` | The placeholder shown in a pane whose version is unset. |\n| `pane-header` | A pane's visible label. |\n| `pane-new` | The second (new/after) version's labeled, independently-scrollable pane. |\n| `pane-old` | The first (old/before) version's labeled, independently-scrollable pane. |\n| `panes` | The row (or, under 640px, column) wrapping both panes, rendered while `view=\"side-by-side\"`. |\n\n---\n\n**CSS Custom Properties**\n\n- `--lr-document-compare-pane-max-height` (default: `24rem`) — Maximum block size of a side-by-side pane before it scrolls internally."
+      },
+      "attributes": [
+        {
+          "name": "copyable",
+          "description": {
+            "kind": "markdown",
+            "value": "Forwarded to the internal `<lr-diff-view>`'s own `copyable` property while `view=\"diff\"`.\n\nType: `boolean`  \nDefault: `false`"
+          }
+        },
+        {
+          "name": "diff-layout",
+          "description": {
+            "kind": "markdown",
+            "value": "Forwarded to the internal `<lr-diff-view>`'s own `layout` property while `view=\"diff\"`.\n\nType: `'unified' | 'split'`  \nDefault: `'unified'`"
+          },
+          "values": [
+            {
+              "name": "unified"
+            },
+            {
+              "name": "split"
+            }
+          ]
+        },
+        {
+          "name": "language",
+          "description": {
+            "kind": "markdown",
+            "value": "Forwarded to the internal `<lr-diff-view>`'s own `language` property while `view=\"diff\"`.\n\nType: `string`  \nDefault: `''`"
+          }
+        },
+        {
+          "name": "locale",
+          "description": {
+            "kind": "markdown",
+            "value": "Optional locale override. Otherwise the nearest `locale`/`lang` ancestor is used.\n\nType: `string`  \nDefault: `''`"
+          }
+        },
+        {
+          "name": "sync-scroll",
+          "description": {
+            "kind": "markdown",
+            "value": "Whether scrolling one `view=\"side-by-side\"` pane proportionally scrolls the other. See the\nclass doc's \"Synchronized anchors\" section.\n\nType: `boolean`  \nDefault: `true`"
+          }
+        },
+        {
+          "name": "view",
+          "description": {
+            "kind": "markdown",
+            "value": "`'diff'` (the default) renders one inline `<lr-diff-view>`; `'side-by-side'` renders two\nindependently-scrollable `<lr-document-preview>` panes -- see the class doc's \"Synchronized\nanchors\" section for how the two panes are kept in sync.\n\nType: `'diff' | 'side-by-side'`  \nDefault: `'diff'`"
+          },
+          "values": [
+            {
+              "name": "diff"
+            },
+            {
+              "name": "side-by-side"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "lr-document-library",
+      "description": {
+        "kind": "markdown",
+        "value": "`<lr-document-library>` — a searchable, filterable inventory of documents with versions, tags,\nowners, freshness, and bulk selection. A controlled data view: it performs no upload, sync, or\nmutation of its own, only presents `documents` and emits request/notification events, mirroring\nthis package's other orchestration-level list surfaces (`<lr-thread-list>`'s\n`lr-thread-pin`/`-archive`/`-delete` convention).\n\nComposes `<lr-table>` (not `<lr-data-grid>`) for the inventory grid itself: `<lr-data-grid>`\nonly supports a single `selectedKey` and stringifies every cell value (`String(value)`), so it\ncannot host the checkbox/chip/icon content bulk selection, tags, and per-row type icons need.\n`<lr-table>` supports arbitrary `cell()`/`headerCell()` content and `priority`-driven responsive\ncolumn hiding, which this component relies on for its 320px-allocation behavior. Search\n(`<lr-input type=\"search\">`) and the tag facet (`<lr-combobox multiple>`) are both self-managed\n(client-side filtering against `documents`, like `<lr-thread-list>`'s own `searchable` field) —\noverride matching entirely via `filter`. Row selection uses `<lr-checkbox>` per cell rather than\n`<lr-table>`'s own built-in `selectionMode`, since that mode's click-anywhere-in-the-row toggle\nwould conflict with the row's own name button opening the document; `<lr-table>`'s\n`selectedKeys` is still fed from `selectedIds` purely for its `aria-selected` row styling.\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `base` | The root region. |\n| `cell` | Exported from `<lr-table>`'s own `cell` part. |\n| `clear-selection` | The \"Clear selection\" button inside `selection-bar`. |\n| `document-name` | Each row's clickable document-name button. |\n| `header-cell` | Exported from `<lr-table>`'s own `header-cell` part. |\n| `row` | Exported from `<lr-table>`'s own `row` part. |\n| `search` | The `<lr-input>` search field. |\n| `selection-bar` | The \"N selected\" / \"Clear selection\" bar. Only rendered while `selectedIds` is non-empty. |\n| `selection-count` | The selected-count text inside `selection-bar`. |\n| `table` | The `<lr-table>` inventory grid. |\n| `tag-filter` | The `<lr-combobox>` tag facet filter. Only rendered while at least one document declares a `tags` entry. |\n| `toolbar` | Wraps the search field and tag filter. |"
+      },
+      "attributes": [
+        {
+          "name": "label",
+          "description": {
+            "kind": "markdown",
+            "value": "Accessible name for the region and the inner grid. Defaults to the localized\n`documentLibraryLabel`.\n\nType: `string`  \nDefault: `''`"
+          }
+        },
+        {
+          "name": "loading",
+          "description": {
+            "kind": "markdown",
+            "value": "Type: `boolean`  \nDefault: `false`"
+          }
+        },
+        {
+          "name": "locale",
+          "description": {
+            "kind": "markdown",
+            "value": "Optional locale override. Otherwise the nearest `locale`/`lang` ancestor is used.\n\nType: `string`  \nDefault: `''`"
+          }
+        },
+        {
+          "name": "sort-direction",
+          "description": {
+            "kind": "markdown",
+            "value": "Type: `'ascending' | 'descending'`  \nDefault: `'ascending'`"
+          },
+          "values": [
+            {
+              "name": "ascending"
+            },
+            {
+              "name": "descending"
+            }
+          ]
+        },
+        {
+          "name": "sort-key",
+          "description": {
+            "kind": "markdown",
+            "value": "Type: `LibraryDocumentSortKey`  \nDefault: `'name'`"
+          }
+        }
+      ]
+    },
+    {
       "name": "lr-document-preview",
       "description": {
         "kind": "markdown",
@@ -4619,6 +4935,43 @@
       ]
     },
     {
+      "name": "lr-drilldown-panel",
+      "description": {
+        "kind": "markdown",
+        "value": "`<lr-drilldown-panel>` — controlled navigation from a chart/table datum to its related evidence,\ndocuments, entities, or agent runs. This is a navigation *shell*: it never re-renders any of that\ncontent itself, only a breadcrumb trail (`lr-breadcrumb`) over `path` plus, for whichever\ncategories the current (last) node actually has content for, the one existing primitive that\nalready renders that content type (`lr-source-card` for evidence, `lr-document-preview` for\ndocuments, `lr-entity-card` for entities) -- wrapped in an `lr-tabs` strip only when more than one\ncategory has content, so a single-category node renders that category directly with no tab\nchrome.\n\nControlled, like every other Lyra component: `path` is the full breadcrumb trail (oldest first,\ncurrent node last) and is owned entirely by the host. Activating a *non-current* breadcrumb step\nfires `lr-drilldown-navigate` with that step's `id`/`index` — this component never mutates `path`\nitself; a listener typically responds with `this.path = this.path.slice(0, e.detail.index + 1)`\n(truncate back to that level) or replaces `path` outright with newly fetched levels. An empty\n`path` renders the shared `lr-empty` \"no selection\" state; a non-empty `path` whose current node\nhas no content in any category renders the shared `lr-empty` `noData` state instead.\n\n**Agent runs.** Unlike evidence/documents/entities, this library has no existing \"render one\nagent run\" primitive yet (a future orchestration-level component, not part of this layer, is the\nnatural home for that once it exists) — so, rather than inventing bespoke run-rendering here, the\n`runs` slot is this component's escape hatch: whatever a host projects into it renders as the\n\"Agent runs\" category tab (shown only while the slot actually has assigned content), exactly the\nsame tradeoff `<lr-document-preview>`'s own `unsupported` slot makes. Because slot content is\nordinary light DOM, not part of the `path` data model, a host drilling into different agent-run\ncontent per level re-projects new content into the slot whenever the current node changes — the\nsame thing a `<lr-document-preview>` consumer already does for its `unsupported` slot.\n\n---\n\n**Slots**\n\n| Name | Description |\n| --- | --- |\n| `runs` | Host-rendered agent-run content for the current node's \"Agent runs\" category — see the class doc's \"Agent runs\" section. The category (and its tab, once more than one category is present) only appears while this slot has assigned content. |\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `base` | The root wrapper. |\n| `breadcrumb` | The nested `lr-breadcrumb` trail, hidden entirely while `path` is empty. |\n| `breadcrumb-button` | The clickable label of a non-current breadcrumb step. |\n| `breadcrumb-item` | One nested `lr-breadcrumb-item`. |\n| `category` | The wrapper around one category's rendered items — used both as the sole direct child of `content` (single-category node) and inside each `lr-tabs` panel (multi-category node). |\n| `content` | The wrapper around the current node's category content (or an empty state). |\n| `document-item` | One nested `lr-document-preview`. |\n| `empty` | The empty state, shown when `path` is empty or the current node has no content in any category. |\n| `entity-item` | One nested `lr-entity-card`. |\n| `evidence-item` | One nested `lr-source-card`. |\n| `tabs` | The nested `lr-tabs` strip, only rendered when the current node has content in more than one category. |"
+      },
+      "attributes": [
+        {
+          "name": "aria-label",
+          "description": {
+            "kind": "markdown",
+            "value": "Accessible name forwarded to the internal `lr-tabs` strip (only rendered while the current\nnode has more than one populated category). Unset, the tab strip renders without an\n`aria-label`, matching `lr-tabs`' own unset-default behavior.\n\nType: `string | null`  \nDefault: `null`"
+          }
+        },
+        {
+          "name": "community-label",
+          "description": {
+            "kind": "markdown",
+            "value": "Forwarded to every nested `lr-entity-card`'s own `communityLabel`.\n\nType: `string`  \nDefault: `''`"
+          }
+        },
+        {
+          "name": "locale",
+          "description": {
+            "kind": "markdown",
+            "value": "Optional locale override. Otherwise the nearest `locale`/`lang` ancestor is used.\n\nType: `string`  \nDefault: `''`"
+          }
+        },
+        {
+          "name": "show-focus-button",
+          "description": {
+            "kind": "markdown",
+            "value": "Forwarded to every nested `lr-entity-card`'s own `showFocusButton`.\n\nType: `boolean`  \nDefault: `true`"
+          }
+        }
+      ]
+    },
+    {
       "name": "lr-dropdown",
       "description": {
         "kind": "markdown",
@@ -4951,6 +5304,57 @@
       ]
     },
     {
+      "name": "lr-entity-dossier",
+      "description": {
+        "kind": "markdown",
+        "value": "`<lr-entity-dossier>` — a full entity detail surface: a persistent header (`lr-entity-card` plus\nan optional confidence `lr-stat`) above a `lr-tabs` strip for Relationships (`lr-neighbor-list`),\nSupporting chunks (`lr-chunk-inspector`), and Provenance (`lr-provenance-panel`). Pure layout —\nit never fetches, ranks, or mutates graph/document state, and never re-renders what any of those\nfive composed components already render themselves; every one of their own events (`\nlr-entity-activate`, `lr-node-expand`, `lr-chunk-open`, `lr-expand`, `lr-toggle`, `lr-tabs-change`)\nbubbles through unmodified (`composed: true` crosses this component's own shadow boundary with no\nre-dispatch needed) rather than being re-declared as this component's own event.\n\n`chunks`/`thresholds` (the \"supporting chunks\" tab) and `provenance` (the \"Provenance\" tab) are\ndeliberately separate inputs even though `lr-provenance-panel` can itself also show a chunks\nsection: the \"Supporting chunks\" tab is the evidence for *this entity's own* summary/properties,\nwhile `provenance` is the broader grounding chain (which may span other entities, relationships,\nand communities, and may or may not reuse the same chunk set) — a host is free to pass the same\narray to both when the two concepts genuinely coincide.\n\nTab labels reuse the exact `localize()` keys the composed child already uses for its own\naccessible name (`neighborListLabel`, `chunkInspectorLabel`, `provenancePanelLabel`) rather than\nnew dossier-specific keys, so a translated locale only has to cover each string once and the tab\nstrip and the panel underneath it always agree.\n\nThis component declares no events of its own -- `lr-tabs-change` (`detail: { tabId:\nLyraEntityDossierTab }`) and every composed child's own event bubble through unmodified, the\nsame \"pure projection + event conduit\" convention `lr-provenance-panel` and\n`lr-spreadsheet-viewer`'s internal `lr-tabs` already establish.\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `base` | The root wrapper, or the empty state's wrapper when `entity` is `null`. |\n| `chunk-inspector` | The nested `lr-chunk-inspector`, inside the Supporting chunks tab. |\n| `confidence` | The nested confidence `lr-stat`, only rendered when `confidence` is set. |\n| `empty` | The empty state shown when `entity` is `null`. |\n| `entity-card` | The nested `lr-entity-card`. |\n| `header` | The wrapper around the entity summary and the confidence stat. |\n| `neighbor-list` | The nested `lr-neighbor-list`, inside the Relationships tab. |\n| `provenance-panel` | The nested `lr-provenance-panel`, inside the Provenance tab. |\n| `tabs` | The nested `lr-tabs` strip. |"
+      },
+      "attributes": [
+        {
+          "name": "aria-label",
+          "description": {
+            "kind": "markdown",
+            "value": "Accessible name forwarded to the internal `lr-tabs` strip. Unset, the tab strip renders\nwithout an `aria-label` (matching `lr-tabs`' own unset-default behavior).\n\nType: `string | null`  \nDefault: `null`"
+          }
+        },
+        {
+          "name": "community-label",
+          "description": {
+            "kind": "markdown",
+            "value": "Forwarded to `lr-entity-card`'s own `communityLabel`.\n\nType: `string`  \nDefault: `''`"
+          }
+        },
+        {
+          "name": "expandable",
+          "description": {
+            "kind": "markdown",
+            "value": "Forwarded to `lr-neighbor-list`'s own `expandable`.\n\nType: `boolean`  \nDefault: `false`"
+          }
+        },
+        {
+          "name": "group-by-relation",
+          "description": {
+            "kind": "markdown",
+            "value": "Forwarded to `lr-neighbor-list`'s own `groupByRelation`.\n\nType: `boolean`  \nDefault: `false`"
+          }
+        },
+        {
+          "name": "locale",
+          "description": {
+            "kind": "markdown",
+            "value": "Optional locale override. Otherwise the nearest `locale`/`lang` ancestor is used.\n\nType: `string`  \nDefault: `''`"
+          }
+        },
+        {
+          "name": "show-focus-button",
+          "description": {
+            "kind": "markdown",
+            "value": "Forwarded to `lr-entity-card`'s own `showFocusButton`.\n\nType: `boolean`  \nDefault: `true`"
+          }
+        }
+      ]
+    },
+    {
       "name": "lr-env-list",
       "description": {
         "kind": "markdown",
@@ -4983,6 +5387,124 @@
           "description": {
             "kind": "markdown",
             "value": "Whether each secret entry gets a reveal/hide toggle.\n\nType: `boolean`  \nDefault: `true`"
+          }
+        }
+      ]
+    },
+    {
+      "name": "lr-eval-dataset",
+      "description": {
+        "kind": "markdown",
+        "value": "`<lr-eval-dataset>` — dataset management for an evaluation suite: a filterable/taggable list of\n`EvalExample` rows, plus add/remove/import/export affordances.\n\nFully controlled, matching this library's established convention for every other\norchestration-level component in this family (e.g. `<lr-thread-list>`'s\n`lr-thread-pin`/`-archive`/`-delete`): `examples` is the host's own data, and this component\nnever mutates it or performs any I/O itself. Every action a user takes -- adding a row,\nremoving the selected row, importing files, exporting to a format -- fires a `*-request` event\ncarrying just enough information to act on; the host decides how (a local mutation, a network\nround-trip, opening its own creation dialog, parsing an imported file's actual contents, writing\nan exported file to disk or a server) and passes an updated `examples` array back in.\n\nComposes `<lr-data-grid>` for the row list (columns for `input`/`expectedOutput`/joined\n`tags`), `<lr-chip>`/`<lr-chip-group>` as a tag-based browse filter (one toggleable chip per\ndistinct tag currently present across `examples`; multiple active tags OR together, matching\nthe common \"browse by any of these tags\" idiom rather than requiring every tag to match),\n`<lr-file-input>` for the import affordance, and `<lr-export-button>` for the export affordance\n-- its own built-in client-side CSV/JSON download is deliberately suppressed\n(`event.preventDefault()` on its `lr-export`) since `<lr-export-button>`'s flat `rows`/`columns`\nCSV/JSON builder can't preserve an `EvalExample`'s own `tags`/`metadata` shape faithfully, and\nproducing the actual exported file/API-call either way is the host's job per this component's\nown controlled contract; this keeps `lr-export-request` the single source of truth for every\nconfigured format rather than one format silently downloading locally while every other format\ndoes nothing.\n\nRow sorting is *not* re-implemented here: `<lr-data-grid>`'s own `lr-sort` bubbles through\n(composed events cross a shadow boundary automatically) for a host that wants to reorder\n`examples` and hand back a resorted array -- the same \"the host owns the actual data\" contract\nas every other mutation this component surfaces.\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `add-button` | The \"Add example\" button. |\n| `base` | The root. |\n| `export` | The internal `<lr-export-button>`. |\n| `grid` | The internal `<lr-data-grid>`. |\n| `import` | The internal `<lr-file-input>`. |\n| `remove-button` | The \"Remove\" button, disabled while nothing is selected. |\n| `search` | The search field's wrapper. Only rendered while `searchable`. |\n| `search-input` | The `<input type=\"search\">`. Only rendered while `searchable`. |\n| `tag-filter` | The tag-filter chip group's wrapper. Only rendered while `examples` carries at least one tag. |\n| `toolbar` | The row of add/remove/import/export controls. |"
+      },
+      "attributes": [
+        {
+          "name": "accept",
+          "description": {
+            "kind": "markdown",
+            "value": "Forwarded to the internal `<lr-file-input>`'s own `accept` (native-file-input-style pattern,\ne.g. `'.json,.csv'`). Empty (the default) accepts any file type.\n\nType: `string`  \nDefault: `''`"
+          }
+        },
+        {
+          "name": "disabled",
+          "description": {
+            "kind": "markdown",
+            "value": "Disables every add/remove/import/export affordance -- e.g. while a host-side mutation from a\nprevious request is still in flight.\n\nType: `boolean`  \nDefault: `false`"
+          }
+        },
+        {
+          "name": "label",
+          "description": {
+            "kind": "markdown",
+            "value": "Accessible name for the example grid region. Defaults to the localized `evalDatasetLabel`.\n\nType: `string`  \nDefault: `''`"
+          }
+        },
+        {
+          "name": "locale",
+          "description": {
+            "kind": "markdown",
+            "value": "Optional locale override. Otherwise the nearest `locale`/`lang` ancestor is used.\n\nType: `string`  \nDefault: `''`"
+          }
+        },
+        {
+          "name": "searchable",
+          "description": {
+            "kind": "markdown",
+            "value": "Shows the built-in free-text search field, filtering by a case-insensitive substring match\nagainst `input`, `expectedOutput`, and `tags`.\n\nType: `boolean`  \nDefault: `false`"
+          }
+        }
+      ]
+    },
+    {
+      "name": "lr-eval-result",
+      "description": {
+        "kind": "markdown",
+        "value": "`<lr-eval-result>` — rubric scoring, human review, and comparison across a single evaluation\nexample's runs (one per model or prompt version), LangSmith/Arize-eval-result style.\n\nComposes three existing primitives directly rather than re-deriving any of their behavior:\n`<lr-data-grid>` renders the `runs` comparison table (`columns` is a plain pass-through to its\nown `DataGridColumn[]` shape, the same way `rubricKeys` is a pass-through to\n`<lr-rubric-form>`'s own `keys` -- neither is re-derived here); `<lr-rubric-form>` is the\nhuman-review scoring surface for whichever run is currently selected, reading/writing that\nrun's own `review` value and re-emitting its `lr-input`/`lr-validity-change`/`lr-submit`/\n`lr-skip` events with the run id attached; `<lr-diff-view>` compares the selected run's output\nagainst `baselineRunId`'s output -- `layout=\"split\"` once they resolve to two distinct runs,\n`layout=\"unified\"` (an all-equal diff, i.e. a plain read of the one run's output) once they\nresolve to the same run or no baseline resolves at all -- so there is no separate un-diffed\n\"just show the output\" code path to keep in sync with the comparison one.\n\n`selectedRunId`/`baselineRunId` are both fully controlled: this component never mutates either\nproperty itself. Each one falls back to `runs[0]?.id` purely for *rendering* whenever the\nproperty is unset, so the component renders something useful with zero configuration beyond\n`runs` -- but moving the selection for real requires the host to set `selectedRunId` in\nresponse to `lr-run-select`, the same shape `<lr-rubric-form>`'s own `itemId` already uses. A\n`selectedRunId`/`baselineRunId` that doesn't match any entry in `runs` degrades gracefully: the\ncomparison grid still renders, and the review/diff sections simply don't (no error, no crash).\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `base` | The outer wrapper. |\n| `diff` | The wrapper around the diff caption and `<lr-diff-view>`. |\n| `diff-label-new` | The selected run's caption. |\n| `diff-label-old` | The baseline run's caption. |\n| `diff-labels` | The caption row naming the two compared runs (only rendered while comparing two distinct runs). |\n| `diff-view` | The `<lr-diff-view>` comparing the baseline and selected runs' output. |\n| `empty` | The message shown when `runs` has no entries. |\n| `grid` | The `<lr-data-grid>` comparison table. |\n| `review` | The `<lr-rubric-form>` scoring the selected run. |"
+      },
+      "attributes": [
+        {
+          "name": "baseline-run-id",
+          "description": {
+            "kind": "markdown",
+            "value": "The run compared against, and the diff's \"old\" side. Falls back to `runs[0]?.id` when unset.\n\nType: `string`  \nDefault: `''`"
+          }
+        },
+        {
+          "name": "disabled",
+          "description": {
+            "kind": "markdown",
+            "value": "Disables the review form's controls. The comparison grid stays interactive (selecting a run to inspect is not a mutation).\n\nType: `boolean`  \nDefault: `false`"
+          }
+        },
+        {
+          "name": "locale",
+          "description": {
+            "kind": "markdown",
+            "value": "Optional locale override. Otherwise the nearest `locale`/`lang` ancestor is used.\n\nType: `string`  \nDefault: `''`"
+          }
+        },
+        {
+          "name": "review-skippable",
+          "description": {
+            "kind": "markdown",
+            "value": "Shows a Skip control on the review form (forwarded to `<lr-rubric-form>`'s own `skippable`).\n\nType: `boolean`  \nDefault: `false`"
+          }
+        },
+        {
+          "name": "selected-run-id",
+          "description": {
+            "kind": "markdown",
+            "value": "The run currently open for review, and the diff's \"new\" side. Falls back to `runs[0]?.id` when unset.\n\nType: `string`  \nDefault: `''`"
+          }
+        }
+      ]
+    },
+    {
+      "name": "lr-evaluation-run",
+      "description": {
+        "kind": "markdown",
+        "value": "`<lr-evaluation-run>` — an evaluation batch's live progress: an overall `<lr-progress-bar>`\ncounting terminal (done/error/cancelled) examples against the batch total, plus one\n`<lr-details>` disclosure per example showing its input/output (`<lr-markdown>` or\n`<lr-code-block>`, per `inputFormat`/`outputFormat`), a `<lr-grounding-summary>` when the\nexample carries a `GroundingAssessment`, and a `<lr-tool-timeline>` when it carries\n`toolTrace` entries. Controlled: `examples` mirrors this package's other data-driven\ncomponents' own convention (a plain prop the host replaces wholesale to update, never mutated\nin place).\n\nNested-component events that need per-example correlation are intercepted and re-emitted under\nthis component's own name with the originating example's `id` folded into `detail` (matching\n`<lr-tool-timeline>`'s own precedent of extending a shared `*EventDetail` type from\n`src/ai/types.ts` rather than inventing a divergent shape) -- a host listening at this\ncomponent's boundary never needs to walk the DOM to find out which example a nested selection\nor approval decision came from.\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `base` | The root wrapper. |\n| `count` | One count badge; carries `data-kind=\"running\"\\|\"error\"`. |\n| `counts` | Wrapper around the running/failed count badges. |\n| `empty` | The empty-state message shown when `examples` is empty. |\n| `example` | One example's `<lr-details>` row; carries `data-status` (the example's `status.kind`). |\n| `example-label` | An example's label text. |\n| `example-status` | An example's status badge. |\n| `example-summary` | The wrapper around an example's label and status badge, in the `<lr-details>` `summary` slot. |\n| `examples` | Wrapper around the per-example `<lr-details>` rows. |\n| `grounding-section` | Wrapper around an example's `<lr-grounding-summary>`, only rendered when the example carries a `grounding` assessment. |\n| `grounding-summary` | The nested `<lr-grounding-summary>` for an example's grounding assessment. |\n| `header` | The batch-progress header row. |\n| `header-label` | The run's label, defaulting to a localized \"Evaluation run\". |\n| `input` | The rendered `<lr-markdown>`/`<lr-code-block>` for an example's input. |\n| `input-section` | Wrapper around an example's input heading + rendered content. |\n| `live-region` | The internal status-announcement live region. |\n| `output` | The rendered `<lr-markdown>`/`<lr-code-block>` for an example's output. |\n| `output-section` | Wrapper around an example's output heading + rendered content. |\n| `progress` | The batch `<lr-progress-bar>`. |\n| `section-heading` | The heading text inside any of the four sections above. |\n| `summary` | The \"N of M examples complete\" text. |\n| `tool-trace` | The nested `<lr-tool-timeline>` for an example's tool calls. |\n| `tool-trace-section` | Wrapper around an example's `<lr-tool-timeline>`, only rendered when the example carries non-empty `toolTrace` entries. |"
+      },
+      "attributes": [
+        {
+          "name": "label",
+          "description": {
+            "kind": "markdown",
+            "value": "Header label and accessible-name source. Falls back to a localized \"Evaluation run\" when\nunset.\n\nType: `string`  \nDefault: `''`"
+          }
+        },
+        {
+          "name": "locale",
+          "description": {
+            "kind": "markdown",
+            "value": "Optional locale override. Otherwise the nearest `locale`/`lang` ancestor is used.\n\nType: `string`  \nDefault: `''`"
+          }
+        },
+        {
+          "name": "total",
+          "description": {
+            "kind": "markdown",
+            "value": "The batch's expected total example count. `null` (the default) derives it from\n`examples.length` instead -- the common case once every result has already arrived; set this\nexplicitly while a batch is still streaming in and the eventual total is already known ahead\nof every example actually completing.\n\nType: `number | null`  \nDefault: `null`"
           }
         }
       ]
@@ -5215,6 +5737,43 @@
           "description": {
             "kind": "markdown",
             "value": "Type: `string | null`  \nDefault: `null`"
+          }
+        }
+      ]
+    },
+    {
+      "name": "lr-filter-bar",
+      "description": {
+        "kind": "markdown",
+        "value": "`<lr-filter-bar>` — a row of dashboard filters, each declared by the host (`filters`) rather\nthan invented by this component: every filter composes an existing Lyra input --\n`<lr-select>`/`<lr-combobox>` for closed choice sets, `<lr-date-input>` (single or `mode=\"range\"`)\nfor dates -- plus a `<lr-chip-group>` of removable `<lr-chip>`s summarizing the currently-active\nfilters, an `<lr-button>` that resets every filter, and (while `loading`) an `<lr-spinner>`\nstatus indicator.\n\nControlled, like every other Lyra data component: `value` is a plain, JSON-serializable object\n(`FilterBarValue`) the host reads/writes directly -- this component never touches\n`location`/`history`/storage itself, so turning `value` into (and back out of) a URL\nquerystring or an app state store is entirely the host's own concern. Every edit -- picking an\noption, committing a date, removing an active-filter chip, or clicking reset -- goes through\nthe same `setFilterValue()` path and emits a single `lr-input` carrying the *full* resulting\n`value`, not just the changed filter's own value, mirroring `<lr-tool-param-form>`'s identical\n\"always the whole object\" event contract.\n\nValidation is scoped to each filter definition's own `required` flag: `invalidFilterIds`/\n`checkValidity()` are always live (plain getters over `filters`/`value`, not cached), and\n`reportValidity()` additionally reveals every currently-invalid filter's inline error (rendered\nby that filter's own composed control, via its `errorText`/`required` props -- this component\nnever renders a second, duplicate label/hint/error chrome of its own around an already-chromed\ncontrol) the same way a blur naturally would. `lr-validity-change` fires whenever the computed\n`{ valid, invalidFilterIds }` actually changes.\n\nDeliberately not form-associated: a dashboard filter bar's state is not a submitted form field,\nand every value it holds already round-trips through `value` directly -- see `disabled` below,\na plain property with no `<fieldset disabled>` cascade, for the same reason.\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `active-filters` | The `role=\"group\"` wrapper around the active-filter chip row, only rendered while any filter is set. |\n| `base` | The root `role=\"group\"` wrapper. |\n| `chip` | One active-filter `<lr-chip>`. |\n| `chips` | The `<lr-chip-group>` inside `active-filters`. |\n| `controls` | The row holding every filter control, the reset button, and the loading status. |\n| `filter-control` | One filter's composed `<lr-select>`/`<lr-combobox>`/`<lr-date-input>`. |\n| `reset-button` | The reset `<lr-button>`. |\n| `status` | The loading `<lr-spinner>`, only rendered while `loading`. |"
+      },
+      "attributes": [
+        {
+          "name": "disabled",
+          "description": {
+            "kind": "markdown",
+            "value": "Disables every composed filter control and the reset button. Plain property -- see the\nclass doc for why this component isn't form-associated / fieldset-cascaded.\n\nType: `boolean`  \nDefault: `false`"
+          }
+        },
+        {
+          "name": "label",
+          "description": {
+            "kind": "markdown",
+            "value": "Accessible name for the root `role=\"group\"` wrapper. A plain `aria-label` attribute on the\nhost itself is honored as a fallback when this is left unset, matching `<lr-control-group>`.\n\nType: `string`  \nDefault: `''`"
+          }
+        },
+        {
+          "name": "loading",
+          "description": {
+            "kind": "markdown",
+            "value": "Shows the `status` spinner. Purely presentational -- filters stay editable while `loading`,\nsince a host typically wants a user to keep refining filters while a previous query is\nstill in flight; only the reset button (which would otherwise race a fresh, unrequeried\nreset against an in-flight fetch for the *previous* value) is disabled by it.\n\nType: `boolean`  \nDefault: `false`"
+          }
+        },
+        {
+          "name": "locale",
+          "description": {
+            "kind": "markdown",
+            "value": "Optional locale override. Otherwise the nearest `locale`/`lang` ancestor is used.\n\nType: `string`  \nDefault: `''`"
           }
         }
       ]
@@ -6048,6 +6607,73 @@
       ]
     },
     {
+      "name": "lr-graph-query-builder",
+      "description": {
+        "kind": "markdown",
+        "value": "`<lr-graph-query-builder>` — an editor for a single typed relationship/path filter\n(`GraphQuery`) over a knowledge graph: start/end entity anchors, relationship-type and\nnode-type pickers with a removable active-filter chip display, a traversal direction, a\nmin/max hop range, validation, and a host-persisted saved-query list -- a serializable query\nmodel for GraphRAG workflows (feed the `value`/`lr-query-run` payload straight to a retrieval\nor traversal backend).\n\nComposes `<lr-select>` for every closed-choice picker (relationship type, node type,\ndirection, hop counts) and `<lr-input>` for the free-text entity ids -- the relationship/\nnode-type pickers are \"add\" selects: choosing an option appends it to the corresponding\narray and the picker itself resets to its placeholder, so the *current* selection is shown\nseparately as a row of removable `<lr-chip>`s inside an `<lr-chip-group>` (click a chip's\nremove button to drop that one type). A type value present in `value` but missing from\n`relationshipTypeOptions`/`nodeTypeOptions` (e.g. a saved query referencing a type that was\nsince renamed/removed from the picker's own option list) still renders as a chip, labeled with\nits raw value, rather than being silently dropped.\n\n**Query model placement:** `GraphQuery` is kept local to this component rather than promoted\nto the shared `src/ai/types.ts` surface. Unlike that module's types (`ChatMessage`,\n`Citation`, `RetrievalQuery`, etc.), which each mirror a shape multiple existing primitives\nalready consume, `GraphQuery` is specific to this component's own editable-filter-set shape\n(its `minHops`/`maxHops` selects, its \"add picker + chip list\" editing idiom) -- no other\ncomponent reads or produces this exact shape today. This mirrors `<lr-rubric-form>`'s\n`RubricValue`/`RubricKey` and `<lr-tool-param-form>`'s `ToolParamFormSchema`, both also kept\nlocal to their own component for the identical reason.\n\n**Form association:** every other \"structured, non-string value\" editor in this package that\nlooks like this one -- `<lr-rubric-form>`, `<lr-tool-param-form>`, `<lr-time-range>` -- attaches\n`ElementInternals` directly (the `FormAssociated` mixin only fits a plain string value) and\ntreats native `<form>` participation as a nice-to-have layered on top of its primary\n`value`/`lr-input`/`lr-validity-change` integration contract, not a requirement. This component\nfollows that same established convention: `value` round-trips through `JSON.stringify()` as the\nsubmitted form value, and a consumer that never places this inside a `<form>` loses nothing.\n\n**Pending localization keys:** every visible string below routes through `this.localize()`,\nbut the keys this component introduces (`graphQueryStartLabel`, `graphQueryEndLabel`,\n`graphQueryMinHopsLabel`, `graphQueryMaxHopsLabel`, `graphQueryRelationshipTypeLabel`,\n`graphQueryNodeTypeLabel`, `graphQueryDirectionLabel`, `graphQueryRun`,\n`graphQuerySaveNameLabel`, `graphQuerySaveButton`, `graphQuerySavedQueriesLabel`,\n`graphQueryDeleteWithContext`, `graphQueryHopRangeInvalid`, `graphQueryBuilderLabel`) are not\nyet registered in `src/internal/localization.ts`'s shared `DEFAULT_STRINGS`/`LyraMessageKey`\nunion, so each call site below passes an explicit English fallback as `localize()`'s second\nargument. A per-instance `.strings` override still wins over that fallback (`resolveLyraString`\nchecks `.strings` first); only a *registered* `registerLyraLocale()` translation is shadowed,\nand none can exist yet for a key with no shared entry. Once these keys are added to that shared\nfile, the literal fallback argument at each call site below must be removed, per this package's\nown `localize-fallback` source-policy rule (which only fires for keys it already recognizes).\nEvery other key used here (`noData`, `fieldRequired`, `select`, `neighborDirectionIn`,\n`neighborDirectionOut`, `neighborDirectionBoth`) is an existing shared key, reused as-is.\n\n---\n\n**Slots**\n\n| Name | Description |\n| --- | --- |\n| `actions` | Extra host controls rendered in the footer beside the Run button. |\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `base` | The outer wrapper around every section. |\n| `direction` | The traversal-direction `<lr-select>`. |\n| `end-input` | The end-entity `<lr-input>`. |\n| `filter-group` | One type-filter section (relationship or node type); rendered twice. |\n| `footer` | The row containing the actions slot and the Run button. |\n| `max-hops` | The maximum-hops `<lr-select>`. |\n| `min-hops` | The minimum-hops `<lr-select>`. |\n| `node-type-chips` | The `<lr-chip-group>` listing currently active node types. |\n| `node-type-picker` | The \"add a node type\" `<lr-select>`. |\n| `path-fields` | The row wrapping the start/end entity inputs and hop-count selects. |\n| `relationship-chips` | The `<lr-chip-group>` listing currently active relationship types. |\n| `relationship-picker` | The \"add a relationship type\" `<lr-select>`. |\n| `run-button` | The Run button. |\n| `save-button` | The Save button. |\n| `save-name-input` | The new-saved-query name `<lr-input>`. |\n| `save-row` | The row containing the save-name input and Save button. |\n| `saved-delete-button` | A saved query row's delete button. |\n| `saved-empty` | The message shown when `savedQueries` has no entries. |\n| `saved-item` | One saved query's row. |\n| `saved-list` | The list of saved queries. |\n| `saved-load-button` | A saved query row's Load button. |\n| `saved-queries` | The wrapper around the save row and the saved-query list. |\n| `saved-queries-label` | The saved-queries section heading. |\n| `start-input` | The start-entity `<lr-input>`. |"
+      },
+      "attributes": [
+        {
+          "name": "disabled",
+          "description": {
+            "kind": "markdown",
+            "value": "Type: `boolean`"
+          }
+        },
+        {
+          "name": "hop-limit",
+          "description": {
+            "kind": "markdown",
+            "value": "Upper bound (inclusive) offered by the minimum/maximum hop selects. Sanitized to a finite\ninteger in `[1, 20]`, falling back to `6`.\n\nType: `number`  \nDefault: `6`"
+          }
+        },
+        {
+          "name": "label",
+          "description": {
+            "kind": "markdown",
+            "value": "Accessible name for the whole component; falls back to the localized `graphQueryBuilderLabel`.\n\nType: `string`  \nDefault: `''`"
+          }
+        },
+        {
+          "name": "locale",
+          "description": {
+            "kind": "markdown",
+            "value": "Optional locale override. Otherwise the nearest `locale`/`lang` ancestor is used.\n\nType: `string`  \nDefault: `''`"
+          }
+        },
+        {
+          "name": "name",
+          "description": {
+            "kind": "markdown",
+            "value": "Type: `string`"
+          }
+        }
+      ]
+    },
+    {
+      "name": "lr-grounding-summary",
+      "description": {
+        "kind": "markdown",
+        "value": "`<lr-grounding-summary>` -- the claim-level scorecard for one generated answer: supported/\nunsupported claim counts, citation coverage, an optional confidence score, any warnings, and\n(when `citations` is supplied) a list of evidence citations linking back to their exact spans.\nConsumes `GroundingAssessment` from `src/ai/types.ts` directly as its primary input. Pure\nprojection + event conduit: never fetches or computes an assessment itself.\n\nComposes `<lr-stat>` for every numeric display (claim counts, coverage, confidence) and\n`<lr-citation-badge>` for each evidence entry -- this component defines no numeric-badge or\ncitation-link markup of its own.\n\n`<lr-citation-badge>`'s own `lr-citation-activate` event (`detail: { sourceId, index }`) still\nbubbles through unmodified, same as every other Lyra component composing a child that emits its\nown events. This component additionally listens for it and re-emits the richer\n`lr-citation-select` (`detail: { citation }`, `CitationSelectEventDetail` from `src/ai/types.ts`)\ncarrying the full `Citation` -- including its `span` -- since a bare `sourceId`/`index` pair\ncan't by itself tell a host which exact evidence span to jump to.\n\ni18n note: every user-facing label below is written via `this.localize()`, but with an explicit\nliteral English fallback for now (`groundingSummary*` keys aren't yet registered in\n`src/internal/localization.ts`'s `LyraMessageKey`/`DEFAULT_STRINGS` -- this component's own\nchange intentionally stays scoped to its own directory; registering the keys centrally is a\nfollow-up). `this.strings` per-instance overrides still take priority over the fallback (verified\nby this component's own tests), so per-app translation already works; only\n`registerLyraLocale()`-based translation additionally needs those keys landing centrally.\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `base` | The `role=\"group\"` root wrapper. |\n| `empty` | The empty-state message, shown when `assessment` is `null`. |\n| `evidence` | Wrapper for the evidence section. Omitted when `citations` is empty. |\n| `evidence-count` | The evidence count. |\n| `evidence-heading` | The \"Evidence\" heading text. |\n| `evidence-item` | One citation's row (badge + always-visible label/span text). |\n| `evidence-label` | A citation's `label`, shown next to its badge (omitted when unset). |\n| `evidence-span` | A citation's formatted `span` range, shown next to its badge (omitted when `span` is unset). |\n| `stats` | Container for the claim-count/coverage/confidence `<lr-stat>` row. |\n| `warning` | One warning `<li>`. |\n| `warnings` | Wrapper for the warnings section. Omitted when there are no warnings. |\n| `warnings-count` | The warnings count. |\n| `warnings-heading` | The \"Warnings\" heading text. |\n| `warnings-list` | The `<ul>` of warning messages. |"
+      },
+      "attributes": [
+        {
+          "name": "label",
+          "description": {
+            "kind": "markdown",
+            "value": "Accessible group label override. Falls back to a host `aria-label`, then the localized\n`groundingSummaryLabel` default.\n\nType: `string`  \nDefault: `''`"
+          }
+        },
+        {
+          "name": "locale",
+          "description": {
+            "kind": "markdown",
+            "value": "Optional locale override. Otherwise the nearest `locale`/`lang` ancestor is used.\n\nType: `string`  \nDefault: `''`"
+          }
+        }
+      ]
+    },
+    {
       "name": "lr-handoff-divider",
       "description": {
         "kind": "markdown",
@@ -6620,6 +7246,36 @@
       ]
     },
     {
+      "name": "lr-ingestion-queue",
+      "description": {
+        "kind": "markdown",
+        "value": "`<lr-ingestion-queue>` — a controlled list of documents moving through an ingestion pipeline\n(upload → text extraction → chunking → embedding → indexing), each row showing its stage,\nprogress, chunk/embedding counts, and a retry or cancel affordance. Presentation only: this\ncomponent runs no ingestion itself, persists nothing, and never mutates `items` -- retrying or\ncancelling a row fires a controlled `lr-retry`/`lr-cancel` request event and waits for the host\nto supply an updated `items` array, the same request/response convention `<lr-thread-list>`'s\n`lr-thread-pin`/`-archive`/`-delete` events already establish.\n\nAt or above `virtualizeThreshold` items, the list renders through an internal\n`<lr-virtual-list>` instead of a plain keyed list (same precedent as `<lr-thread-list>`'s data\nmode and `<lr-activity-feed>`'s `virtualizeThreshold`) -- identical row markup and behavior\neither way, keyed by `id`.\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `base` | The root region. |\n| `cancel-button` | Fires `lr-cancel`. Only rendered for non-terminal rows. |\n| `empty` | The `<lr-empty>` zero-items state. |\n| `item` | One queue item row; carries `data-stage`. When virtualized, reached from this component's own stylesheet via `lr-virtual-list::part(item)` (renders inside the internal `<lr-virtual-list>`'s own shadow root, not this component's). |\n| `item-actions` | Wrapper around the retry/cancel buttons. |\n| `item-attempts` | The attempt count, only rendered once `attempts` is greater than 0. |\n| `item-chunk-count` | The chunk count, only rendered once `chunkCount` is set. |\n| `item-embedding-status` | The \"N of M chunks embedded\" text, only rendered once both `chunkCount` and `embeddedChunkCount` are set. |\n| `item-error` | The failure message, only rendered for `stage=\"failed\"` with `error` set. |\n| `item-header` | The row's name/stage-badge line. |\n| `item-meta` | Wrapper around the chunk-count/embedding-status/attempt-count text. |\n| `item-name` | The document's `name`. |\n| `item-progress` | The row's `<lr-progress-bar>`, only rendered for an active (uploading through indexing) stage. |\n| `list` | The row container in non-virtualized mode (`role=\"list\"`). |\n| `retry-button` | Fires `lr-retry`. Only rendered for `stage=\"failed\"` rows. |\n\n---\n\n**CSS Custom Properties**\n\n- `--lr-ingestion-queue-max-height` (default: `none`) — Non-virtualized mode only: caps how tall the list grows before it scrolls internally. Has no effect once virtualized -- the internal `<lr-virtual-list>`'s own viewport keeps its independent, fixed default height (retheme it directly via `<lr-ingestion-queue>`'s own `lr-virtual-list { --lr-virtual-list-height: ... }` if needed)."
+      },
+      "attributes": [
+        {
+          "name": "label",
+          "description": {
+            "kind": "markdown",
+            "value": "Accessible name for the region. Defaults to the localized `ingestionQueueLabel`. A host\n`aria-label` attribute wins over both.\n\nType: `string`  \nDefault: `''`"
+          }
+        },
+        {
+          "name": "locale",
+          "description": {
+            "kind": "markdown",
+            "value": "Optional locale override. Otherwise the nearest `locale`/`lang` ancestor is used.\n\nType: `string`  \nDefault: `''`"
+          }
+        },
+        {
+          "name": "virtualize-threshold",
+          "description": {
+            "kind": "markdown",
+            "value": "At/above this item count, the list renders through an internal `<lr-virtual-list>`.\n\nDefault: `DEFAULT_VIRTUALIZE_THRESHOLD`"
+          }
+        }
+      ]
+    },
+    {
       "name": "lr-input",
       "description": {
         "kind": "markdown",
@@ -6847,6 +7503,102 @@
           "description": {
             "kind": "markdown",
             "value": "Optional locale override. Otherwise the nearest `locale`/`lang` ancestor is used.\n\nType: `string`  \nDefault: `''`"
+          }
+        }
+      ]
+    },
+    {
+      "name": "lr-knowledge-base",
+      "description": {
+        "kind": "markdown",
+        "value": "`<lr-knowledge-base>` — a source list for a retrieval knowledge base: sync status, indexing\nhealth, permissions, and per-row create/sync/pause/delete affordances. A controlled data view,\nlike every other Lyra data component: it never syncs or indexes anything itself, only presents\n`sources` and emits request-only events (`lr-kb-create`/`-sync`/`-pause`/`-delete`) for the host\nto act on and reflect back into a new `sources` value -- mirrors `lr-thread-list`'s\n`lr-thread-pin`/`-archive`/`-delete` convention exactly.\n\n`permission` is rendered informationally only (a badge in the permission column); this component\ndoes not gate the per-row action menu by it -- authorization enforcement is the host's own\nconcern, consistent with the controlled/presentational-only contract above. A `'syncing'` row's\n\"Sync now\" action is disabled (a sync is already running); every other row's is enabled,\nincluding `'error'`, so re-running a failed sync is one click. \"Pause sync\" is enabled only while\n`'syncing'`.\n\nComposes `<lr-table>` for the source list (its own click/keydown delegation already treats any\ncustom-element or `role=\"menuitem\"` cell content as interactive, so the per-row `<lr-menu>` never\nmisfires the table's row-click handling), `<lr-badge>` for the sync-status/indexing-health/\npermission indicators, `<lr-stat>` for the aggregate summary row above the table, and `<lr-menu>`\nfor the per-row action affordances. The table's own `lr-row-click` is intentionally stopped from\npropagating further (this component doesn't expose row-click/selection semantics -- only the\nper-row action menu is interactive).\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `actions-menu` | A row's `<lr-menu>`. |\n| `actions-trigger` | The kebab `<button>` opening a row's action menu. |\n| `base` | The root. |\n| `create-button` | The \"Add source\" `<lr-button>`, omitted while `hideCreate` is set. |\n| `document-count` | The formatted `documentCount` text, omitted when unset. |\n| `heading` | The heading text. |\n| `health-badge` | The indexing-health `<lr-badge>`. |\n| `health-cell` | A row's indexing-health cell wrapper. |\n| `name-cell` | A row's source-name cell wrapper. |\n| `permission-badge` | The permission `<lr-badge>`, omitted when `permission` is unset. |\n| `source-name` | The source's name text. |\n| `source-type` | The source's `type` text, omitted when unset. |\n| `summary` | The aggregate-stats row, omitted while `hideSummary` is set or `sources` is empty. |\n| `summary-stat` | One `<lr-stat>` inside `summary`. |\n| `sync-badge` | The sync-status `<lr-badge>`. |\n| `sync-cell` | A row's sync-status cell wrapper. |\n| `sync-error` | The `errorMessage` text, shown only while `syncStatus` is `'error'` and it's set. |\n| `sync-timestamp` | The formatted `lastSyncedAt` text (or a \"never synced\" fallback). |\n| `table` | The `<lr-table>` listing every source. |\n| `toolbar` | The heading + \"Add source\" row. |"
+      },
+      "attributes": [
+        {
+          "name": "hide-create",
+          "description": {
+            "kind": "markdown",
+            "value": "Hides the toolbar's \"Add source\" affordance, e.g. for a read-only or permission-gated view.\n\nType: `boolean`  \nDefault: `false`"
+          }
+        },
+        {
+          "name": "hide-summary",
+          "description": {
+            "kind": "markdown",
+            "value": "Hides the aggregate summary row (total/synced/syncing/needs-attention).\n\nType: `boolean`  \nDefault: `false`"
+          }
+        },
+        {
+          "name": "label",
+          "description": {
+            "kind": "markdown",
+            "value": "Heading text and the table's accessible name. Falls back to a localized default.\n\nType: `string`  \nDefault: `''`"
+          }
+        },
+        {
+          "name": "locale",
+          "description": {
+            "kind": "markdown",
+            "value": "Optional locale override. Otherwise the nearest `locale`/`lang` ancestor is used.\n\nType: `string`  \nDefault: `''`"
+          }
+        }
+      ]
+    },
+    {
+      "name": "lr-knowledge-graph-explorer",
+      "description": {
+        "kind": "markdown",
+        "value": "`<lr-knowledge-graph-explorer>` — an orchestration-level surface for exploring a knowledge\ngraph: the `lr-graph` canvas plus entity search, type filters, neighborhood expansion, pinned\nnodes, path finding between pins, node selection, and a details overlay. Composes existing\nprimitives rather than re-implementing graph rendering: `lr-graph` (canvas/pan-zoom/selection),\n`lr-graph-legend` (type filters), `lr-entity-card` (the details popover's default content),\n`lr-neighbor-list` (the selected entity's relationships), `lr-path-strip` (a found path), and\n`lr-popover.showAt()` (the details overlay itself).\n\n**How the details popover finds its viewport position.** `lr-graph.getNodePosition()` and the\n`lr-node-click` event's `{ x, y }` are in the graph's own *local drawing space* (pre pan/zoom),\nnever viewport pixels -- passing them straight to `showAt()` would anchor the popover at the\nwrong place as soon as the graph has panned or zoomed even once. A direct node click resolves\nthe correct viewport rect the way this library's own documented `lr-graph` + `lr-popover.showAt()`\ncomposition does: for `renderer=\"svg\"` (the default), `event.composedPath()` (the native `click`\nthat bubbles out of `lr-graph`'s shadow root) locates the actual clicked `[part=\"node\"]` element,\nwhose `getBoundingClientRect()` is already viewport-relative; for `renderer=\"canvas\"` (no\nper-node DOM element to find), the click event's own `clientX`/`clientY` are used directly, since\ncanvas hit-testing already treats those as viewport coordinates internally. While the popover\nstays open after an `renderer=\"svg\"` click, this component re-reads that same resolved node\nelement's `getBoundingClientRect()` on a bounded `requestAnimationFrame` loop and re-calls\n`showAt()` every frame -- `lr-graph` exposes no public pan/zoom/tick event to subscribe to\ninstead, so polling the live element (which pan/zoom moves via an ancestor transform, not by\nmutating the element itself) is the closest available approximation to the \"re-anchor on\npan/zoom\" contract `showAt()`'s own docs describe as the caller's responsibility; the loop stops\nautomatically once the popover closes or the element leaves the DOM. Selecting a node any other\nway -- a search result, a neighbor row, a path-strip element, keyboard Enter/Space on a graph\nnode (which never dispatches a native `click`) -- has no click event to read a rect from, so it\ninstead calls the public `lr-graph.focusNode(id)` (which centers that node in the viewport) and\nthen anchors the popover at the graph element's own `getBoundingClientRect()` center once that\nsettles; no continuous tracking applies to that path.\n\n**Controlled vs. self-managed state.** `nodes`/`links`/`nodeTypes`/`communities`/`entityDetails`/\n`path` are purely host-supplied data, rendered as given. `hiddenTypes`/`selectedNodeId`/\n`searchQuery`/`pinnedNodeIds` are this component's own genuinely new contribution: it wires them\ninto `lr-graph`'s existing controlled props (`hiddenTypes`, `selectedNodeIds`, `dimmedNodeIds`)\nitself, toggling its own copy on interaction (the same self-toggle-then-emit contract\n`lr-graph-legend` already uses) so every feature works with zero host wiring, while still being\npresettable/observable properties and emitting events (`lr-pin-change`, `lr-path-request`,\nplus every composed primitive's own event bubbling straight through unmodified) for a host that\nwants to persist or react to them.\n\n---\n\n**Slots**\n\n| Name | Description |\n| --- | --- |\n| `details` | Overrides the details popover's default content (an `lr-entity-card` with a nested `lr-neighbor-list` and a pin toggle). Receives no data -- a consumer overriding this slot reads the selected entity from `selectedNodeId`/`nodes` itself. |\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `base` | The root `role=\"group\"` wrapper. |\n| `detail-card` | The default-content `lr-entity-card`, only present while `selectedNodeId` resolves to a node. |\n| `detail-popover` | The composed `lr-popover` hosting the details overlay. |\n| `graph` | The composed `lr-graph`. |\n| `legend` | The composed `lr-graph-legend`. |\n| `path` | The composed `lr-path-strip`, only rendered while `path` is non-empty. |\n| `pinned` | The pinned-nodes row, only rendered while `pinnedNodeIds` is non-empty. |\n| `pinned-heading` | The pinned-nodes row's leading label. |\n| `search` | The composed `lr-entity-card` search `lr-input`. |\n| `search-empty` | The \"no matches\" message, shown when `searchQuery` is non-empty but no node matches. |\n| `search-result` | One search-match row (`role=\"listitem\"`, wrapping a `<button>`). |\n| `search-results` | The search-match list, only rendered while `searchQuery` is non-empty. |\n| `toolbar` | The row wrapping the search input and the type-filter legend. |"
+      },
+      "attributes": [
+        {
+          "name": "height",
+          "description": {
+            "kind": "markdown",
+            "value": "Type: `number`  \nDefault: `600`"
+          }
+        },
+        {
+          "name": "label",
+          "description": {
+            "kind": "markdown",
+            "value": "Accessible name for the root landmark; falls back to the localized `graphExplorerLabel`.\n\nType: `string`  \nDefault: `''`"
+          }
+        },
+        {
+          "name": "locale",
+          "description": {
+            "kind": "markdown",
+            "value": "Optional locale override. Otherwise the nearest `locale`/`lang` ancestor is used.\n\nType: `string`  \nDefault: `''`"
+          }
+        },
+        {
+          "name": "renderer",
+          "description": {
+            "kind": "markdown",
+            "value": "Forwarded to `lr-graph.renderer`. `renderer=\"canvas\"` has no per-node DOM element, which\nnarrows how the node-detail popover anchors and disables its pan/zoom tracking -- see the\nclass doc's anchoring note.\n\nType: `'svg' | 'canvas'`  \nDefault: `'svg'`"
+          },
+          "values": [
+            {
+              "name": "svg"
+            },
+            {
+              "name": "canvas"
+            }
+          ]
+        },
+        {
+          "name": "selected-node-id",
+          "description": {
+            "kind": "markdown",
+            "value": "The currently-selected node id, driving both the details popover and `lr-graph`'s\n`selectedNodeIds` visual state. Presettable (e.g. to deep-link to a specific entity) as well\nas self-managed on every selection interaction. `null` (the default) shows no selection and\nkeeps the details popover closed.\n\nType: `string | null`  \nDefault: `null`"
+          }
+        },
+        {
+          "name": "width",
+          "description": {
+            "kind": "markdown",
+            "value": "Type: `number`  \nDefault: `800`"
           }
         }
       ]
@@ -7636,6 +8388,29 @@
           "description": {
             "kind": "markdown",
             "value": "The media URL. Always re-validated against a safe-scheme allowlist\nbefore use — see the class doc.\n\nType: `string`  \nDefault: `''`"
+          }
+        }
+      ]
+    },
+    {
+      "name": "lr-memory-panel",
+      "description": {
+        "kind": "markdown",
+        "value": "`<lr-memory-panel>` — an agent's working memory surface: short-term context and long-term\nmemories, each item's confidence and (optional) grounding provenance, and add/remove/forget\nactions gated behind an explicit confirmation step before anything is reported as decided.\n\nComposes `lr-provenance-panel` for a per-item's provenance breakdown (revealed behind a\ndisclosure toggle, only rendered when `item.provenance` is set) and `lr-confirm-bar` for every\nadd/remove/forget confirmation -- this component never re-implements a new inline-confirmation\npattern of its own. A memory item's confidence reuses `lr-citation-badge`'s own confidence\nvocabulary (`citationHighConfidence`/`citationMediumConfidence`/`citationLowConfidence`), tiered\nagainst `thresholds` the same way `lr-chunk-inspector` tiers a chunk's relevance score.\n\n`shortTerm`/`longTerm` are controlled and never mutated by this component -- approving a pending\naction only fires the matching event; the host applies the resulting state change (adding to\n`longTerm`, removing an item, clearing `longTerm`) and passes new arrays back down. At most one\nconfirmation is ever pending at a time: starting a new action (on the same item or a different\none) silently cancels whichever confirmation was already open, the same way only one row can be\nmid-edit in a list at once.\n\nThree distinct, non-overlapping actions: `add` promotes a short-term item into long-term memory\n(only offered on short-term items -- long-term items are already there); `remove` deletes one\nspecific item from whichever list it's in (offered on every item); `forget` is deliberately\nscoped to the whole long-term list at once (a single \"Forget all\" control in that section's\nheader, only rendered while `longTerm` is non-empty) -- a bulk, more consequential action kept\ndistinct from the per-item `remove`.\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `add-button` | The \"Add to long-term memory\" action. Only rendered on short-term items. |\n| `base` | The root wrapper. |\n| `confidence` | The item's confidence tier text, carrying `data-tone`. Omitted when `confidence` is unset. |\n| `empty` | The all-empty `lr-empty` state, shown when both lists are empty. |\n| `expand-toggle` | The provenance disclosure toggle. Omitted when `provenance` is unset. |\n| `forget-all-button` | The long-term section's bulk \"Forget all\" action. Only rendered while `longTerm` is non-empty. |\n| `heading` | A section's visible heading text. |\n| `item` | One memory item row (`role=\"listitem\"`); carries `data-id`/`data-scope` and a stable `tabindex=\"-1\"` so focus has somewhere to land after a pending confirmation on this row resolves. |\n| `item-actions` | The wrapper around an item's action row (or its pending `lr-confirm-bar`). |\n| `item-body` | The disclosed `lr-provenance-panel` wrapper, `hidden` while collapsed. Omitted when `provenance` is unset. |\n| `item-row` | The wrapper around an item's text and confidence indicator. |\n| `item-text` | The item's `text`. |\n| `list` | A section's `role=\"list\"` wrapper, omitted while that section is empty. |\n| `remove-button` | The \"Remove\" action. Rendered on every item. |\n| `section` | One of the two (short-term/long-term) sections; carries `data-scope`. |\n| `section-empty` | A section's \"no items\" text, shown when that section's own list is empty. |\n| `section-header` | A section's heading + (long-term only) \"Forget all\" control row. |"
+      },
+      "attributes": [
+        {
+          "name": "label",
+          "description": {
+            "kind": "markdown",
+            "value": "Overall accessible label override.\n\nType: `string`  \nDefault: `''`"
+          }
+        },
+        {
+          "name": "locale",
+          "description": {
+            "kind": "markdown",
+            "value": "Optional locale override. Otherwise the nearest `locale`/`lang` ancestor is used.\n\nType: `string`  \nDefault: `''`"
           }
         }
       ]
@@ -9183,6 +9958,22 @@
       ]
     },
     {
+      "name": "lr-policy-summary",
+      "description": {
+        "kind": "markdown",
+        "value": "`<lr-policy-summary>` — a read-only list of guardrail, permission, privacy, and tool-policy\ndecisions, each carrying an `allow` / `deny` / `needs-review` state and an always-visible,\naccessible explanation of why that decision was made -- never conveyed by color alone.\n\nComposes `<lr-badge>` for the compact per-decision state indicator and `<lr-callout inline>`\nfor the explanation text: the callout's own `role=\"alert\"`/`role=\"status\"` semantics already\ncarry the right urgency per state (`deny` renders as an alert, `allow`/`needs-review` as\nstatus), so this component only needs to pick the matching `variant` rather than re-implement\nthat wiring. `<lr-details>` renders a decision's optional richer `detail` (matched rule text,\npolicy id, cited evidence) behind progressive disclosure, collapsed by default, instead of\nalways showing it alongside the shorter `explanation`.\n\n`decisions` is controlled and never mutated by this component -- pass a new array (e.g. as a\nguardrail pipeline resolves) to update it. This is a summary surface, not an approval gate:\nthere is no per-decision action here, and a decision's `state` is fixed data, not something a\nviewer can change from this component.\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `base` | The root wrapper, only rendered while `decisions` is non-empty. |\n| `category` | The decision's localized category text. |\n| `count` | One state's localized count text; carries `data-state`. |\n| `decision` | One decision row (`role=\"listitem\"`); carries `data-state` and `data-category`. |\n| `decision-header` | The row's category/label/state-badge line. |\n| `detail` | The `<lr-details>` progressive-disclosure panel for `detail`, only rendered when a decision defines one. |\n| `empty` | The `<lr-empty>` shown when `decisions` is empty. |\n| `explanation` | The `<lr-callout inline>` wrapping the always-visible `explanation` text. |\n| `label` | The decision's `label` text. |\n| `list` | The `role=\"list\"` wrapper around every decision row. |\n| `state-badge` | The resolved `<lr-badge>` state indicator. |\n| `summary` | The always-visible allow/deny/needs-review count row. |"
+      },
+      "attributes": [
+        {
+          "name": "locale",
+          "description": {
+            "kind": "markdown",
+            "value": "Optional locale override. Otherwise the nearest `locale`/`lang` ancestor is used.\n\nType: `string`  \nDefault: `''`"
+          }
+        }
+      ]
+    },
+    {
       "name": "lr-poll-status",
       "description": {
         "kind": "markdown",
@@ -9559,6 +10350,29 @@
           "description": {
             "kind": "markdown",
             "value": "The data to encode. Empty renders `[part=\"empty\"]` -- no encode is attempted.\n\nType: `string`  \nDefault: `''`"
+          }
+        }
+      ]
+    },
+    {
+      "name": "lr-query-builder",
+      "description": {
+        "kind": "markdown",
+        "value": "`<lr-query-builder>` — a composable structured-query builder for tabular/dashboard data: a\nflat list of field/operator/value condition rows combined with one AND/OR combinator.\n\nDistinct from this package's `<lr-graph-query-builder>`: that component builds typed\nrelationship/path queries over a knowledge graph, a genuinely different data model from this\none's flat tabular field/operator/value conditions — they never share a file or a value type.\n\nFully controlled: a host supplies `fields` (the available columns, each with a\n`QueryBuilderFieldType` that determines its offered operators and value control) and `value`\n(a plain, serializable `{ combinator, conditions }` object — safe to persist or send to a\nbackend as-is, the same shape convention as this package's `<lr-rubric-form>`/`<lr-filter-bar>`).\nThis component never mutates `fields`/`value` in place or calls out to storage/network itself;\nevery change is surfaced through `value`/`lr-input` for the host to own.\n\nEach row composes `<lr-select>` for the field and operator pickers, and a value control chosen\nfrom the selected field's `type`: `<lr-input type=\"text\">` (`string`), `<lr-input\ntype=\"number\">` (`number`), `<lr-select>` with `True`/`False` options (`boolean`),\n`<lr-date-input>` (`date`), `<lr-select>` (`enum`, `eq`/`neq`) or a multi-select\n`<lr-combobox>` (`enum`, `in`/`notIn`). A unary operator (`isEmpty`/`isNotEmpty`) renders no\nvalue control. `<lr-icon-button icon=\"trash\">` removes a row; `<lr-button>` appends one.\n\nThis is a composite query-definition control, not a single submittable form field — it\ndeliberately ships no `label`/`hint`/`errorText` chrome or native form association (the\n`label`/`hint`/`error` triad those controls share doesn't fit a multi-row, multi-field\ncomposite the way it fits one value). A host names the whole control via a plain `aria-label`\nattribute, applied to the element that owns `role=\"group\"`.\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `add-button` | The \"Add condition\" `lr-button`. |\n| `base` | The outer wrapper. |\n| `combinator` | The AND/OR combinator `lr-select`, rendered only when there are 2+ conditions. |\n| `condition` | One field/operator/value row. |\n| `conditions` | The wrapper around the condition rows. |\n| `empty` | The message shown when there are no fields, or no conditions yet. |\n| `field-select` | A row's field `lr-select`. |\n| `operator-select` | A row's operator `lr-select`. |\n| `remove-button` | A row's remove `lr-icon-button`. |\n| `value` | A row's value control (whichever of `lr-input`/`lr-select`/`lr-date-input`/ `lr-combobox` applies, or an empty placeholder for a unary operator or an incomplete row). |"
+      },
+      "attributes": [
+        {
+          "name": "disabled",
+          "description": {
+            "kind": "markdown",
+            "value": "Type: `boolean`"
+          }
+        },
+        {
+          "name": "locale",
+          "description": {
+            "kind": "markdown",
+            "value": "Optional locale override. Otherwise the nearest `locale`/`lang` ancestor is used.\n\nType: `string`  \nDefault: `''`"
           }
         }
       ]
@@ -10098,6 +10912,225 @@
           "description": {
             "kind": "markdown",
             "value": "Plain-text value, e.g. \"200 OK\". Ignored once the default slot carries\nreal content — see the `@slot` doc.\n\nType: `string`  \nDefault: `''`"
+          }
+        }
+      ]
+    },
+    {
+      "name": "lr-retrieval-results",
+      "description": {
+        "kind": "markdown",
+        "value": "`<lr-retrieval-results>` — the orchestration-level ranked-chunk-list surface: takes raw\n`RetrievalChunk[]` (the shared retrieval-and-grounding type from `src/ai/types.ts`) and adds\neverything a single retrieval call's result set needs beyond what one chunk's own rendering\nprovides -- deduplication, optional grouping by source, multi-selection, pagination/infinite\nloading, and a compact/expanded presentation switch -- while composing existing primitives for\nevery part that already has one, never re-implementing chunk/score/source rendering itself.\n\n**Composition, not reinvention.** Each rendered row wraps exactly one chunk in an internal\n`<lr-chunk-inspector>` (fed a single-element `chunks` array), reusing its score bar/tier\ncoloring, title+page rendering, expandable text, and `compact` mode verbatim -- this component\nnever hand-rolls chunk-card markup. `metadata` (arbitrary `Record<string, unknown>`, which no\nexisting primitive renders) is the one genuinely new bit of presentation here, shown as a plain\nkey/value list in `expanded` presentation only. Large result sets are windowed through an\ninternal `<lr-virtual-list>`, exactly like `<lr-thread-list>`'s own data-mode rendering -- each\nrow's rendered content therefore lives inside `<lr-virtual-list>`'s own shadow root, not this\ncomponent's, whenever virtualization is active (see that component's own doc for why).\n\n**Controlled component.** `chunks`/`selectedIds`/`loading`/`error`/`hasMore` are all host-owned;\nthis component never fetches, retries, or mutates its own copy of `chunks`. Selecting a row\nupdates `selectedIds` locally *then* emits `lr-select` (the same \"update own copy, then emit;\nreassign to control\" convention `<lr-source-picker>` already uses) so a host can either accept\nthe update as-is or override it before the next render.\n\n**Deduplication** keeps, per duplicate `id`, whichever chunk has the higher `score` -- set\n`dedupe=\"false\"` to see every raw entry `chunks` contains, duplicates included. **Grouping**\n(`grouping=\"source\"`) buckets the deduplicated, score-sorted list by `source.id`, each bucket\nordered by its own best-scoring chunk first, and always renders through the internal\n`<lr-virtual-list>` (regardless of `virtualize-at`) so group headers have a single rendering path\n— `<lr-thread-list>`'s own date-bucket grouping takes the identical approach.\n\n**Pagination.** While virtualized, `has-more`/`loading` are forwarded straight to the internal\n`<lr-virtual-list>`, which fires `lr-load-more` itself on scroll-near-bottom (re-emitted here\nunchanged). Below the virtualization threshold (a short, non-grouped list), scrolling near the\nbottom isn't a meaningful gesture, so a `[part=\"load-more\"]` button takes its place instead,\nshowing a spinner in place of the button while `loading` is true.\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `base` | The outer container. |\n| `empty` | The `<lr-empty>` wrapper, shown when `chunks` is empty and neither `error` nor `loading` is set. |\n| `error` | The error message region (`role=\"alert\"`), shown while `error` is non-empty. |\n| `group-header` | Exported from the internal `<lr-virtual-list>`'s `group` part — grouped/virtualized mode only. |\n| `load-more` | The \"Load more\" button itself (non-virtualized mode, `loading` false). |\n| `load-more-row` | The wrapper around the non-virtualized-mode pagination footer. |\n| `metadata` | The `<dl>` of a chunk's `metadata` entries — omitted entirely when a chunk has no `metadata`, or while `presentation=\"compact\"`. |\n| `metadata-entry` | One metadata key/value pair's wrapper. |\n| `row` | One result row's wrapper. Below the virtualization threshold this is a plain, directly-styleable element in this component's own shadow root; while virtualized it is exported from the internal `<lr-virtual-list>`'s own `row` part instead (`::part(row)` still reaches it either way). |\n| `row-body` | The wrapper around a row's `<lr-chunk-inspector>` plus its optional metadata list; carries `data-selected` while that row is selected. |\n| `select` | The per-row `<lr-checkbox>`, omitted entirely when `selectable` is false. |\n| `spinner` | The initial-load `<lr-spinner>`, shown while `loading` is true and `chunks` is still empty. |"
+      },
+      "attributes": [
+        {
+          "name": "active-id",
+          "description": {
+            "kind": "markdown",
+            "value": "Marks the chunk currently open in a viewer -- forwarded to each per-row `<lr-chunk-inspector>`\nand to the internal `<lr-virtual-list>` (which scrolls the matching row into view).\n\nType: `string`  \nDefault: `''`"
+          }
+        },
+        {
+          "name": "dedupe",
+          "description": {
+            "kind": "markdown",
+            "value": "Drops duplicate `id`s before rendering, keeping whichever duplicate has the higher `score`.\n\nType: `boolean`  \nDefault: `true`"
+          }
+        },
+        {
+          "name": "error",
+          "description": {
+            "kind": "markdown",
+            "value": "Non-empty replaces the entire result view with a `role=\"alert\"` error message -- caller-\nsupplied text, not routed through `localize()` (the same stance `<lr-document-preview>`'s own\n`error-message` takes for the same reason: this is app/network data, not library copy).\n\nType: `string`  \nDefault: `''`"
+          }
+        },
+        {
+          "name": "grouping",
+          "description": {
+            "kind": "markdown",
+            "value": "`'source'` buckets rows under a header per `source.id` (always rendered through the internal\n`<lr-virtual-list>`, regardless of `virtualize-at`); `'none'` (default) is a flat ranked list.\n\nType: `'source' | 'none'`  \nDefault: `'none'`"
+          },
+          "values": [
+            {
+              "name": "source"
+            },
+            {
+              "name": "none"
+            }
+          ]
+        },
+        {
+          "name": "has-more",
+          "description": {
+            "kind": "markdown",
+            "value": "While virtualized, forwarded to the internal `<lr-virtual-list>` so scrolling near the bottom\nfires `lr-load-more`; otherwise shows the built-in `[part=\"load-more\"]` footer.\n\nType: `boolean`  \nDefault: `false`"
+          }
+        },
+        {
+          "name": "label",
+          "description": {
+            "kind": "markdown",
+            "value": "Accessible name for the results region. Defaults to the localized `chunkInspectorLabel`\n(\"Retrieved chunks\") -- reused rather than a new key, since it already says exactly what this\nregion is.\n\nType: `string`  \nDefault: `''`"
+          }
+        },
+        {
+          "name": "loading",
+          "description": {
+            "kind": "markdown",
+            "value": "Type: `boolean`  \nDefault: `false`"
+          }
+        },
+        {
+          "name": "locale",
+          "description": {
+            "kind": "markdown",
+            "value": "Optional locale override. Otherwise the nearest `locale`/`lang` ancestor is used.\n\nType: `string`  \nDefault: `''`"
+          }
+        },
+        {
+          "name": "presentation",
+          "description": {
+            "kind": "markdown",
+            "value": "`'expanded'` (default) shows each chunk's full `<lr-chunk-inspector>` row (score bar, text\npreview with its own expand toggle) plus any `metadata`; `'compact'` shows title + score bar\nonly, on both.\n\nType: `'compact' | 'expanded'`  \nDefault: `'expanded'`"
+          },
+          "values": [
+            {
+              "name": "compact"
+            },
+            {
+              "name": "expanded"
+            }
+          ]
+        },
+        {
+          "name": "selectable",
+          "description": {
+            "kind": "markdown",
+            "value": "Shows a per-row `<lr-checkbox>`.\n\nType: `boolean`  \nDefault: `true`"
+          }
+        },
+        {
+          "name": "sort",
+          "description": {
+            "kind": "markdown",
+            "value": "`'score'` (default) sorts the deduplicated list descending by `score`; `'none'` preserves\n`chunks`' own given order.\n\nType: `'score' | 'none'`  \nDefault: `'score'`"
+          },
+          "values": [
+            {
+              "name": "score"
+            },
+            {
+              "name": "none"
+            }
+          ]
+        },
+        {
+          "name": "virtualize-at",
+          "description": {
+            "kind": "markdown",
+            "value": "Above this many rows (after dedup, before grouping), rendering switches from a plain list to\nthe internal `<lr-virtual-list>`. Grouped mode always virtualizes regardless of this value.\n\nType: `number`  \nDefault: `50`"
+          }
+        }
+      ]
+    },
+    {
+      "name": "lr-retrieval-search",
+      "description": {
+        "kind": "markdown",
+        "value": "`<lr-retrieval-search>` -- the query bar for a retrieval/RAG surface: query text, an active-\nfilter/scope chip row, a vector/keyword/hybrid mode selector, and loading/error/empty status\nfeedback. Consumes `RetrievalQuery` (`src/ai/types.ts`) as the shape emitted on submit.\n\nFully controlled, like every other Lyra input: `query`/`mode`/`filters`/`scope` are host-owned\nproperties. This component never performs retrieval itself -- it only emits `lr-search`; the\nhost owns the actual fetch and toggles `loading` around it. Because this component has no way\nto know when a request resolves (only `loading`, set from outside), submitting again (Enter, or\nclicking the button) while `loading` is already `true` is treated as **superseding** the\nin-flight request: `lr-cancel` fires immediately before the new `lr-search`. The submit button\nitself doubles as an explicit Cancel affordance while `loading` -- clicking it only emits\n`lr-cancel`, without resubmitting, the same \"just stop\" action `<lr-chat-composer>`'s Stop\nbutton offers for its own `stoppable` busy state.\n\nComposes `<lr-input type=\"search\">` for the query field, `<lr-segmented>` for the mode\nselector (the same small-closed-set-choice-in-a-toolbar role it already fills, sized to sit\nflush beside `<lr-input>`), `<lr-chip>`/`<lr-chip-group>` for removable active-filter/scope\nchips, `<lr-spinner>` for the loading state, and `<lr-empty>` (compact) for the empty state.\n`filters`/`scope` chip removal updates this component's own copy first, then emits\n`lr-filters-change` with the complete next state -- the same \"update, then emit; reassign to\ncontrol\" round-trip `<lr-source-picker>`'s `selectedIds` already establishes. `empty` is a\nhost-driven flag (the last completed search returned zero results); this component holds no\nresults data of its own -- see `<lr-retrieval-results>` for rendering the actual chunk list.\n\ni18n note: every user-facing label below is written via `this.localize()`, with an explicit\nliteral English fallback for the `retrievalSearch*`/`retrievalMode*`/`retrievalFilter*` keys,\nwhich aren't yet registered in `src/internal/localization.ts`'s `LyraMessageKey`/\n`DEFAULT_STRINGS` -- this component's own change intentionally stays scoped to its own\ndirectory; registering the keys centrally is a follow-up. `this.strings` per-instance overrides\nstill take priority over the fallback (verified by this component's own tests), so per-app\ntranslation already works; only `registerLyraLocale()`-based translation additionally needs\nthose keys landing centrally.\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `base` | The `role=\"search\"` root landmark. |\n| `empty` | The compact `<lr-empty>`, shown only when `empty` is `true` and neither `loading` nor `errorText` is set. |\n| `error` | The `role=\"alert\"` error message, shown only when `errorText` is non-empty and not `loading`. |\n| `filters` | The active-filter/scope `<lr-chip-group>`. Omitted entirely when both `filters` and `scope` are empty. |\n| `mode` | The vector/keyword/hybrid `<lr-segmented>`. |\n| `query` | The query `<lr-input type=\"search\">`. |\n| `row` | The row holding the query field, mode selector, and submit/cancel button. |\n| `spinner` | The busy `<lr-spinner>`, shown only while `loading`. |\n| `submit` | The submit/cancel `<button>`. Reads \"Search\" while idle, \"Cancel\" while `loading`. |"
+      },
+      "attributes": [
+        {
+          "name": "aria-label",
+          "description": {
+            "kind": "markdown",
+            "value": "Overrides the computed accessible name for the `role=\"search\"` landmark. Wins over `label`\nand the localized default. Attribute-reflects from a host-level `aria-label`.\n\nType: `string | null`  \nDefault: `null`"
+          }
+        },
+        {
+          "name": "empty",
+          "description": {
+            "kind": "markdown",
+            "value": "Host-driven flag: the last completed search returned zero results. Renders a compact\n`<lr-empty>` beneath the search row. Never inferred by this component itself -- see the\nclass doc; it holds no results data of its own.\n\nType: `boolean`  \nDefault: `false`"
+          }
+        },
+        {
+          "name": "error-text",
+          "description": {
+            "kind": "markdown",
+            "value": "Host-supplied error message from the last failed search, shown verbatim (caller-owned text,\nnot localized) in a `role=\"alert\"` region. Empty string (the default) shows nothing.\n\nType: `string`  \nDefault: `''`"
+          }
+        },
+        {
+          "name": "label",
+          "description": {
+            "kind": "markdown",
+            "value": "Accessible name for the `role=\"search\"` landmark. Falls back to the localized default; a\nhost `aria-label` (via `accessibleLabel`) wins over both.\n\nType: `string`  \nDefault: `''`"
+          }
+        },
+        {
+          "name": "loading",
+          "description": {
+            "kind": "markdown",
+            "value": "Host-driven busy flag. This component never performs retrieval itself and has no way to know\nwhen a request resolves, so the host toggles this explicitly around its own fetch -- see the\nclass doc for the resulting submit/cancel/supersede behavior.\n\nType: `boolean`  \nDefault: `false`"
+          }
+        },
+        {
+          "name": "locale",
+          "description": {
+            "kind": "markdown",
+            "value": "Optional locale override. Otherwise the nearest `locale`/`lang` ancestor is used.\n\nType: `string`  \nDefault: `''`"
+          }
+        },
+        {
+          "name": "mode",
+          "description": {
+            "kind": "markdown",
+            "value": "Retrieval mode. Defaults to `'hybrid'`, the common default for a search bar combining both\nvector and keyword retrieval.\n\nType: `LyraRetrievalMode`  \nDefault: `'hybrid'`"
+          }
+        },
+        {
+          "name": "placeholder",
+          "description": {
+            "kind": "markdown",
+            "value": "Placeholder for the query field. Empty string (the default) falls back to the localized\ngeneric \"Search\" placeholder, which also becomes that field's accessible name (mirroring\n`<lr-input>`'s own placeholder-as-label fallback).\n\nType: `string`  \nDefault: `''`"
+          }
+        },
+        {
+          "name": "query",
+          "description": {
+            "kind": "markdown",
+            "value": "The current query text. Controlled -- the internal `lr-input` updates this optimistically as\nthe user types (mirroring every other Lyra input's controlled-value convention), and a host\nreassignment always wins.\n\nType: `string`  \nDefault: `''`"
+          }
+        }
+      ]
+    },
+    {
+      "name": "lr-retrieval-trace",
+      "description": {
+        "kind": "markdown",
+        "value": "`<lr-retrieval-trace>` — a retrieval pipeline's stage timeline (query rewriting, embedding,\nretrieval, reranking, filtering), rendered through `<lr-span-waterfall>`'s existing\ntime-scaled bar rendering, plus a disclosure list below it exposing each stage's evidence:\nfree-form text, retrieved/reranked/filtered chunks via `<lr-chunk-inspector>`, and/or arbitrary\nstage metadata. Never fetches, ranks, or computes retrieval results itself.\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `base` | The root wrapper. |\n| `evidence-body` | A stage's evidence content wrapper, hidden while collapsed. |\n| `evidence-list` | The wrapper around every stage's evidence disclosure row. Omitted when no stage has evidence. |\n| `evidence-metadata` | A stage's key/value metadata list (a `<dl>`). |\n| `evidence-metadata-key` | One metadata entry's key (a `<dt>`). |\n| `evidence-metadata-value` | One metadata entry's value (a `<dd>`). |\n| `evidence-row` | One stage's evidence disclosure row. Omitted for a stage with no evidence. |\n| `evidence-text` | A stage's free-form text evidence. |\n| `evidence-toggle` | A stage's evidence disclosure `<button>`. |\n| `evidence-toggle-icon` | The disclosure button's chevron glyph. |\n| `timeline` | The internal `<lr-span-waterfall>` element. |"
+      },
+      "attributes": [
+        {
+          "name": "active-stage-id",
+          "description": {
+            "kind": "markdown",
+            "value": "Controlled selection, forwarded verbatim to the internal `<lr-span-waterfall>`'s `activeSpanId`.\n\nType: `string | null`  \nDefault: `null`"
+          }
+        },
+        {
+          "name": "label",
+          "description": {
+            "kind": "markdown",
+            "value": "Accessible name for the internal timeline. Falls back to a host `aria-label`, then the timeline's own localized default.\n\nType: `string`  \nDefault: `''`"
+          }
+        },
+        {
+          "name": "locale",
+          "description": {
+            "kind": "markdown",
+            "value": "Optional locale override. Otherwise the nearest `locale`/`lang` ancestor is used.\n\nType: `string`  \nDefault: `''`"
           }
         }
       ]
@@ -11995,7 +13028,7 @@
       "name": "lr-thread-list",
       "description": {
         "kind": "markdown",
-        "value": "`<lr-thread-list>` — the conversation sidebar: a grouped, searchable list of chat sessions with\npin/archive/delete/rename affordances. *Data mode* (non-empty `threads`, or empty `threads` with\nnothing slotted) renders every row as a `<lr-conversation-item>` inside an internal\n`<lr-virtual-list>` — virtualized by construction, scroll position and per-row state survive a\n`threads` replacement; zero rows renders the built-in empty state. *Slotted mode* (empty `threads`\n*and* real slotted content) renders host-supplied `<lr-conversation-item>`s from the default slot\nas-is: no grouping, virtualization, or row actions in that mode — those are data-mode-only by design\n(shadow DOM cannot inject group headers between slotted children).\n\nNo thread CRUD or persistence: every mutation (`lr-thread-pin`/`-archive`/`-delete`/`-rename`) is\na controlled event carrying the *requested* new state — the host mutates `threads`.\n\nData mode: a host needing content with no home in `lr-conversation-item`'s own\n`title`/`excerpt`/`meta`/`actions` surface (e.g. a leading purpose icon — the item has no default\nslot to receive one) sets `wrapRow` to wrap the already-built row.\n\n---\n\n**Slots**\n\n| Name | Description |\n| --- | --- |\n| (default) | Slotted mode only: host-supplied `lr-conversation-item`s, rendered in order. Each top-level assigned element that doesn't already carry an explicit `role` is given `role=\"listitem\"`, since `[part=\"list\"]` is `role=\"list\"` in this mode and `lr-conversation-item` deliberately doesn't self-apply that role (see its own class doc). |\n| `empty` | Replaces the built-in empty state. |\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `base` | The root. |\n| `empty` | The empty/no-matches state. |\n| `group-header` | Exported from the internal `lr-virtual-list`'s `group` part (data mode, `grouping=\"date\"`). |\n| `list` | The list region. |\n| `pin-glyph` | The small pin indicator shown in a pinned row's `meta` slot (data mode). |\n| `row` | Exported from the internal `lr-virtual-list`'s `row` part (data mode). |\n| `row-action` | A built-in pin/archive/delete icon button (data mode, when `rowActions` includes it). |\n| `search` | The search field wrapper. |\n| `search-input` | The `<input type=\"search\">`. |"
+        "value": "`<lr-thread-list>` — the conversation sidebar: a grouped, searchable list of chat sessions with\npin/archive/delete/rename affordances. *Data mode* (non-empty `threads`, or empty `threads` with\nnothing slotted) renders every row as a `<lr-conversation-item>` inside an internal\n`<lr-virtual-list>` — virtualized by construction, scroll position and per-row state survive a\n`threads` replacement; zero rows renders the built-in empty state. *Slotted mode* (empty `threads`\n*and* real slotted content) renders host-supplied `<lr-conversation-item>`s from the default slot\nas-is: no grouping, virtualization, or row actions in that mode — those are data-mode-only by design\n(shadow DOM cannot inject group headers between slotted children).\n\nNo thread CRUD or persistence: every mutation (`lr-thread-pin`/`-archive`/`-delete`/`-rename`) is\na controlled event carrying the *requested* new state — the host mutates `threads`.\n\nData mode: a host needing content with no home in `lr-conversation-item`'s own\n`title`/`excerpt`/`meta`/`actions` surface (e.g. a leading purpose icon — the item has no default\nslot to receive one) sets `wrapRow` to wrap the already-built row. A host needing a fully custom\n`actions` surface itself — beyond `rowActions`'s closed `pin | archive | delete` set, e.g. a\n`<lr-menu>` with Rename/Delete — sets `renderActions` instead; its content is appended after any\nbuilt-in `rowActions` output in the same slot, and `wrapRow` continues to compose around the result.\n\n---\n\n**Slots**\n\n| Name | Description |\n| --- | --- |\n| (default) | Slotted mode only: host-supplied `lr-conversation-item`s, rendered in order. Each top-level assigned element that doesn't already carry an explicit `role` is given `role=\"listitem\"`, since `[part=\"list\"]` is `role=\"list\"` in this mode and `lr-conversation-item` deliberately doesn't self-apply that role (see its own class doc). |\n| `empty` | Replaces the built-in empty state. |\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `base` | The root. |\n| `empty` | The empty/no-matches state. |\n| `group-header` | Exported from the internal `lr-virtual-list`'s `group` part (data mode, `grouping=\"date\"`). |\n| `list` | The list region. |\n| `pin-glyph` | The small pin indicator shown in a pinned row's `meta` slot (data mode). |\n| `row` | Exported from the internal `lr-virtual-list`'s `row` part (data mode). |\n| `row-action` | A built-in pin/archive/delete icon button (data mode, when `rowActions` includes it). |\n| `search` | The search field wrapper. |\n| `search-input` | The `<input type=\"search\">`. |"
       },
       "attributes": [
         {
@@ -12849,6 +13882,29 @@
           "description": {
             "kind": "markdown",
             "value": "Whether the conversation is using the default tool set (`true`) or a custom selection (`false`) — see the class doc for the exact interaction with `selected`/per-tool editing.\n\nType: `boolean`  \nDefault: `false`"
+          }
+        }
+      ]
+    },
+    {
+      "name": "lr-tool-timeline",
+      "description": {
+        "kind": "markdown",
+        "value": "`<lr-tool-timeline>` — a chronological list of an agent run's tool/function calls, each\nrendered through `<lr-tool-call-chip>` (name/status/duration) and `<lr-tool-result-view>`\n(args/result), with per-entry retry counts, sensitive-field redaction, and a shared\n`<lr-tool-approval-dialog>` for entries gated behind a human approval decision. This component\nowns none of the actual per-call rendering -- that is entirely those three existing\nprimitives -- its own job is ordering `entries` chronologically, computing each entry's\nduration from `startedAt`/`endedAt`, masking `redactedFields` before handing `args`/`result` to\n`<lr-tool-result-view>`, and opening/closing the one shared approval dialog for whichever entry\nis currently pending a decision.\n\nOrdering: `entries` is sorted ascending by `startedAt`; an entry with no `startedAt` sorts after\nevery timed entry, keeping its position relative to any other untimed entries stable (input\norder is preserved among ties) — a still-pending call with no timestamp yet naturally lands at\nthe end without needing to be pre-sorted by the host.\n\nRedaction only ever affects the read-only detail view: the copy of `args` handed to the\napproval dialog is always the entry's real, unmasked value. Approving a masked-args call must\nlet the reviewer see (and, if `approvalEditable`, edit) what will actually be sent — handing the\ndialog a placeholder string in place of a real field would silently corrupt the decision.\n\nApproval: activating the chip (`lr-tool-call-chip-select`) of an entry with `needsApproval` and\nan undecided `approved` opens the shared dialog for that entry; approving or denying emits this\ncomponent's own `lr-tool-approval-decide` and closes the dialog. This component never mutates\n`entries` itself — a host applies the decision (and any resulting status change) and re-assigns\n`entries`; if the entry currently under review disappears or no longer qualifies as pending\n(its `approved` was resolved some other way) by the time `entries` changes, the dialog closes on\nits own rather than staying open over stale data. A chip belonging to an entry that isn't\npending approval is left alone — its own `lr-tool-call-chip-select` (and deprecated\n`lr-tool-chip-select` alias) still bubble out normally for a host that wants to react to raw\nchip selection for its own purposes.\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `approval-dialog` | The single shared `<lr-tool-approval-dialog>` instance. |\n| `base` | The root `<ol>`. |\n| `entry` | One entry's `<li>`; carries `data-status` (the entry's `status`) and `data-pending-approval` (`\"true\"`/`\"false\"`). |\n| `entry-approval-status` | The \"Approved\"/\"Denied\" badge, only rendered once `approved` is set; carries `data-decision` (`\"approved\"`/`\"denied\"`). |\n| `entry-body` | Wrapper around one entry's header and details. |\n| `entry-details` | The `<lr-details>` disclosure wrapping the entry's result view. |\n| `entry-error` | The entry's `error` text, only rendered when set. |\n| `entry-header` | Wrapper around the timestamp, chip, retry badge, and approval status. |\n| `entry-marker` | The decorative rail dot/connector for one entry. |\n| `entry-redacted-indicator` | A decorative marker shown when `redactedFields` is non-empty for that entry. |\n| `entry-result` | The entry's `<lr-tool-result-view>`. |\n| `entry-retries` | The retry-count badge, only rendered while `retryCount > 0`. |\n| `entry-retries-count` | The formatted retry count within the retry badge. |\n| `entry-retries-label` | The localized \"Retry\" text within the retry badge. |\n| `entry-timestamp` | The formatted `startedAt`, only rendered while it's set. |\n\n---\n\n**CSS Custom Properties**\n\n- `--lr-tool-timeline-gap` (default: `var(--lr-space-l)`) — Vertical gap between entries."
+      },
+      "attributes": [
+        {
+          "name": "approval-editable",
+          "description": {
+            "kind": "markdown",
+            "value": "Forwarded to the shared approval dialog's own `editable` — whether a reviewer can edit an\nentry's arguments before approving it.\n\nType: `boolean`  \nDefault: `true`"
+          }
+        },
+        {
+          "name": "locale",
+          "description": {
+            "kind": "markdown",
+            "value": "Optional locale override. Otherwise the nearest `locale`/`lang` ancestor is used.\n\nType: `string`  \nDefault: `''`"
           }
         }
       ]

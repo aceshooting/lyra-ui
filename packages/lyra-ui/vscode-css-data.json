@@ -240,6 +240,13 @@
       }
     },
     {
+      "name": "--lr-document-compare-pane-max-height",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-document-compare>`** (default: `24rem`) — Maximum block size of a side-by-side pane before it scrolls internally."
+      }
+    },
+    {
       "name": "--lr-document-preview-font",
       "description": {
         "kind": "markdown",
@@ -496,6 +503,13 @@
       "description": {
         "kind": "markdown",
         "value": "**`<lr-heatmap>`** (default: `var(--lr-color-text)`) — Hover tooltip text color."
+      }
+    },
+    {
+      "name": "--lr-ingestion-queue-max-height",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-ingestion-queue>`** (default: `none`) — Non-virtualized mode only: caps how tall the list grows before it scrolls internally. Has no effect once virtualized -- the internal `<lr-virtual-list>`'s own viewport keeps its independent, fixed default height (retheme it directly via `<lr-ingestion-queue>`'s own `lr-virtual-list { --lr-virtual-list-height: ... }` if needed)."
       }
     },
     {
@@ -811,6 +825,13 @@
       "description": {
         "kind": "markdown",
         "value": "**`<lr-tool-result-dialog>`** (default: `1s linear`) — Running-status animation duration and timing."
+      }
+    },
+    {
+      "name": "--lr-tool-timeline-gap",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-tool-timeline>`** (default: `var(--lr-space-l)`) — Vertical gap between entries."
       }
     },
     {
