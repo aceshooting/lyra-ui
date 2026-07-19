@@ -239,7 +239,7 @@ export class LyraDrilldownPanel extends LyraElement<LyraDrilldownPanelEventMap> 
       categories.push({ key: 'evidence', label: this.localize('sourceListDefaultLabel'), content: this.renderEvidence(evidence) });
     }
     if (documents.length > 0) {
-      categories.push({ key: 'documents', label: this.localize('drilldownDocuments', 'Documents'), content: this.renderDocuments(documents) });
+      categories.push({ key: 'documents', label: this.localize('drilldownDocuments'), content: this.renderDocuments(documents) });
     }
     if (entities.length > 0) {
       categories.push({ key: 'entities', label: this.localize('provenanceEntities'), content: this.renderEntities(entities) });
@@ -247,7 +247,7 @@ export class LyraDrilldownPanel extends LyraElement<LyraDrilldownPanelEventMap> 
     if (this.hasRunsSlot) {
       categories.push({
         key: 'runs',
-        label: this.localize('drilldownRuns', 'Agent runs'),
+        label: this.localize('drilldownRuns'),
         content: html`<slot name="runs"></slot>`,
       });
     }
@@ -282,7 +282,7 @@ export class LyraDrilldownPanel extends LyraElement<LyraDrilldownPanelEventMap> 
   private renderContent(): TemplateResult {
     const node = this.currentNode;
     if (!node) {
-      return html`<lr-empty part="empty" heading=${this.localize('drilldownEmpty', 'No item selected')}></lr-empty>`;
+      return html`<lr-empty part="empty" heading=${this.localize('drilldownEmpty')}></lr-empty>`;
     }
     const categories = this.categoriesFor(node);
     if (categories.length === 0) {

@@ -204,25 +204,25 @@ export class LyraEvaluationRun extends LyraElement<LyraEvaluationRunEventMap> {
   }
 
   private exampleLabel(example: EvaluationExampleResult, index: number): string {
-    return example.label || this.localize('evaluationRunExampleLabel', 'Example {index}', { index: index + 1 });
+    return example.label || this.localize('evaluationRunExampleLabel', undefined, { index: index + 1 });
   }
 
   private statusLabel(kind: AgentStatusKind): string {
     switch (kind) {
       case 'idle':
-        return this.localize('evaluationRunStatusIdle', 'Idle');
+        return this.localize('evaluationRunStatusIdle');
       case 'running':
         return this.localize('statusRunning');
       case 'waiting-input':
-        return this.localize('evaluationRunStatusWaitingInput', 'Waiting for input');
+        return this.localize('evaluationRunStatusWaitingInput');
       case 'waiting-approval':
-        return this.localize('evaluationRunStatusWaitingApproval', 'Waiting for approval');
+        return this.localize('evaluationRunStatusWaitingApproval');
       case 'done':
         return this.localize('statusSuccess');
       case 'error':
         return this.localize('statusError');
       case 'cancelled':
-        return this.localize('evaluationRunStatusCancelled', 'Cancelled');
+        return this.localize('evaluationRunStatusCancelled');
     }
   }
 
@@ -241,27 +241,27 @@ export class LyraEvaluationRun extends LyraElement<LyraEvaluationRunEventMap> {
       switch (kind) {
         case 'running':
           region.mode = 'polite';
-          region.announce(this.localize('evaluationRunExampleStartedAnnounce', '{label} started', { label }), { force: true });
+          region.announce(this.localize('evaluationRunExampleStartedAnnounce', undefined, { label }), { force: true });
           break;
         case 'done':
           region.mode = 'polite';
-          region.announce(this.localize('evaluationRunExampleCompletedAnnounce', '{label} completed', { label }), { force: true });
+          region.announce(this.localize('evaluationRunExampleCompletedAnnounce', undefined, { label }), { force: true });
           break;
         case 'error':
           region.mode = 'assertive';
-          region.announce(this.localize('evaluationRunExampleFailedAnnounce', '{label} failed', { label }), { force: true });
+          region.announce(this.localize('evaluationRunExampleFailedAnnounce', undefined, { label }), { force: true });
           break;
         case 'cancelled':
           region.mode = 'polite';
-          region.announce(this.localize('evaluationRunExampleCancelledAnnounce', '{label} cancelled', { label }), { force: true });
+          region.announce(this.localize('evaluationRunExampleCancelledAnnounce', undefined, { label }), { force: true });
           break;
         case 'waiting-input':
           region.mode = 'polite';
-          region.announce(this.localize('evaluationRunExampleWaitingInputAnnounce', '{label} needs input', { label }), { force: true });
+          region.announce(this.localize('evaluationRunExampleWaitingInputAnnounce', undefined, { label }), { force: true });
           break;
         case 'waiting-approval':
           region.mode = 'polite';
-          region.announce(this.localize('evaluationRunExampleWaitingApprovalAnnounce', '{label} needs approval', { label }), { force: true });
+          region.announce(this.localize('evaluationRunExampleWaitingApprovalAnnounce', undefined, { label }), { force: true });
           break;
         case 'idle':
           break; // Not a meaningful transition to announce -- mirrors task-list's own silence here.
@@ -305,7 +305,7 @@ export class LyraEvaluationRun extends LyraElement<LyraEvaluationRunEventMap> {
   private renderGrounding(example: EvaluationExampleResult): TemplateResult {
     return html`
       <section part="grounding-section">
-        <h4 part="section-heading">${this.localize('evaluationRunGroundingHeading', 'Grounding')}</h4>
+        <h4 part="section-heading">${this.localize('evaluationRunGroundingHeading')}</h4>
         <lr-grounding-summary
           part="grounding-summary"
           .assessment=${example.grounding ?? null}
@@ -320,7 +320,7 @@ export class LyraEvaluationRun extends LyraElement<LyraEvaluationRunEventMap> {
   private renderToolTrace(example: EvaluationExampleResult): TemplateResult {
     return html`
       <section part="tool-trace-section">
-        <h4 part="section-heading">${this.localize('evaluationRunToolTraceHeading', 'Tool trace')}</h4>
+        <h4 part="section-heading">${this.localize('evaluationRunToolTraceHeading')}</h4>
         <lr-tool-timeline
           part="tool-trace"
           .entries=${example.toolTrace ?? []}
@@ -345,11 +345,11 @@ export class LyraEvaluationRun extends LyraElement<LyraEvaluationRunEventMap> {
           <lr-badge part="example-status" variant=${STATUS_VARIANT[kind]}>${this.statusLabel(kind)}</lr-badge>
         </span>
         <section part="input-section">
-          <h4 part="section-heading">${this.localize('evaluationRunInputHeading', 'Input')}</h4>
+          <h4 part="section-heading">${this.localize('evaluationRunInputHeading')}</h4>
           ${this.renderContent(example.input, example.inputFormat, example.inputLanguage, 'input')}
         </section>
         <section part="output-section">
-          <h4 part="section-heading">${this.localize('evaluationRunOutputHeading', 'Output')}</h4>
+          <h4 part="section-heading">${this.localize('evaluationRunOutputHeading')}</h4>
           ${this.renderContent(example.output, example.outputFormat, example.outputLanguage, 'output')}
         </section>
         ${example.grounding ? this.renderGrounding(example) : nothing}
@@ -362,7 +362,7 @@ export class LyraEvaluationRun extends LyraElement<LyraEvaluationRunEventMap> {
     const resolvedTotal = this.total != null ? finiteCount(this.total, this.examples.length) : this.examples.length;
     const counts = this.statusCounts();
     const completed = this.examples.filter((example) => isTerminal(example.status.kind)).length;
-    const headerLabel = this.label || this.getAttribute('aria-label') || this.localize('evaluationRunLabel', 'Evaluation run');
+    const headerLabel = this.label || this.getAttribute('aria-label') || this.localize('evaluationRunLabel');
 
     return html`
       <div part="base" role="region" aria-label=${headerLabel}>
@@ -373,10 +373,10 @@ export class LyraEvaluationRun extends LyraElement<LyraEvaluationRunEventMap> {
             value=${completed}
             max=${Math.max(resolvedTotal, 1)}
             show-value
-            accessible-label=${this.localize('evaluationRunProgressLabel', 'Evaluation batch progress')}
+            accessible-label=${this.localize('evaluationRunProgressLabel')}
           ></lr-progress-bar>
           <span part="summary"
-            >${this.localize('evaluationRunProgressSummary', '{completed} of {total} examples complete', {
+            >${this.localize('evaluationRunProgressSummary', undefined, {
               completed,
               total: resolvedTotal,
             })}</span
@@ -388,8 +388,8 @@ export class LyraEvaluationRun extends LyraElement<LyraEvaluationRunEventMap> {
               const badgeVariant: BadgeVariant = kind === 'running' ? 'brand' : 'danger';
               const text =
                 kind === 'running'
-                  ? this.localize('evaluationRunRunningCount', '{count} running', { count })
-                  : this.localize('evaluationRunFailedCount', '{count} failed', { count });
+                  ? this.localize('evaluationRunRunningCount', undefined, { count })
+                  : this.localize('evaluationRunFailedCount', undefined, { count });
               return html`<lr-badge part="count" data-kind=${kind} variant=${badgeVariant}>${text}</lr-badge>`;
             })}
           </span>

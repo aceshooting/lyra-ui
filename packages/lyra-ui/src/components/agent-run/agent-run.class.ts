@@ -53,21 +53,15 @@ const TERMINAL_KINDS: ReadonlySet<AgentStatusKind> = new Set(['done', 'error', '
  *  counterpart -- `<lr-task-list>`'s own vocabulary (`pending`/`running`/`success`/`error`) is
  *  deliberately narrower than `AgentStatusKind` (see `AgentStatus`'s own doc comment in
  *  `src/ai/types.ts`) and collapsing e.g. `waiting-input`/`waiting-approval` down to it would
- *  discard exactly the distinction a host most needs to act on. These five keys are not yet part
- *  of `DEFAULT_STRINGS` -- each call site below passes an explicit English fallback until they
- *  are registered there, at which point the fallback argument should be dropped (see
- *  `resolveLyraString()`'s precedence: a defined fallback always wins over a
- *  `registerLyraLocale()` translation, so leaving it in place after registration would silently
- *  shadow translations forever). A `.strings` override still works correctly in the meantime,
- *  since `this.strings` is resolved before the fallback either way. */
-const STATUS_LABEL: Record<AgentStatusKind, { key: string; fallback?: string }> = {
-  idle: { key: 'agentRunStatusIdle', fallback: 'Idle' },
+ *  discard exactly the distinction a host most needs to act on. */
+const STATUS_LABEL: Record<AgentStatusKind, { key: string }> = {
+  idle: { key: 'agentRunStatusIdle' },
   running: { key: 'statusRunning' },
-  'waiting-input': { key: 'agentRunStatusWaitingInput', fallback: 'Waiting for input' },
-  'waiting-approval': { key: 'agentRunStatusWaitingApproval', fallback: 'Waiting for approval' },
-  done: { key: 'agentRunStatusDone', fallback: 'Done' },
+  'waiting-input': { key: 'agentRunStatusWaitingInput' },
+  'waiting-approval': { key: 'agentRunStatusWaitingApproval' },
+  done: { key: 'agentRunStatusDone' },
   error: { key: 'statusError' },
-  cancelled: { key: 'agentRunStatusCancelled', fallback: 'Cancelled' },
+  cancelled: { key: 'agentRunStatusCancelled' },
 };
 
 const STATUS_VARIANT: Record<AgentStatusKind, BadgeVariant> = {
@@ -286,17 +280,13 @@ export class LyraAgentRun extends LyraElement<LyraAgentRunEventMap> {
     const region = this.liveRegion;
     if (!region) return;
     region.mode = kind === 'error' || kind === 'waiting-input' || kind === 'waiting-approval' ? 'assertive' : 'polite';
-    region.announce(
-      // Not yet part of DEFAULT_STRINGS -- see STATUS_LABEL's own doc comment for why an explicit
-      // fallback is passed here and what removing it later requires.
-      this.localize('agentRunStatusAnnounce', 'Status: {status}.', { status: this.statusLabel(kind) }),
-      { force: true },
-    );
+    region.announce(this.localize('agentRunStatusAnnounce', undefined, { status: this.statusLabel(kind) }), {
+      force: true,
+    });
   }
 
   private statusLabel(kind: AgentStatusKind): string {
-    const { key, fallback } = STATUS_LABEL[kind];
-    return this.localize(key, fallback);
+    return this.localize(STATUS_LABEL[kind].key);
   }
 
   private get currentStep(): AgentStep | undefined {
@@ -387,7 +377,7 @@ export class LyraAgentRun extends LyraElement<LyraAgentRunEventMap> {
                 <div part="current-step">
                   <span part="current-step-icon" aria-hidden="true">${spinnerIcon()}</span>
                   <span class="sr-only"
-                    >${this.localize('agentRunCurrentStepLabel', 'Current step')}</span
+                    >${this.localize('agentRunCurrentStepLabel')}</span
                   >
                   <span part="current-step-label">${step.label}</span>
                 </div>

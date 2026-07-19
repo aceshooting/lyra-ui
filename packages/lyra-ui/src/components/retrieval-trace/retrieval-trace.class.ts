@@ -59,22 +59,13 @@ const STAGE_SPAN_KIND: Record<RetrievalStageKind, LyraSpan['kind']> = {
   filter: 'tool',
 };
 
-/**
- * Default English label + `this.localize()` key per stage kind. These keys have no
- * `src/internal/localization.ts` registry entry yet, so `this.localize()` is called with a
- * defined fallback (the only way to get a sensible default for a key the registry doesn't know
- * about) -- once `retrievalStageQueryRewrite`/`retrievalStageEmbed`/`retrievalStageRetrieve`/
- * `retrievalStageRerank`/`retrievalStageFilter`/`retrievalTraceEvidenceToggle` are added to
- * `DEFAULT_STRINGS` (with matching `LyraMessageKey` union entries) verbatim from the fallbacks
- * below, a `registerLyraLocale()` translation will resolve correctly; until then, only a
- * `.strings` override on this component reaches these labels, same as any other unregistered key.
- */
-const STAGE_LABEL: Record<RetrievalStageKind, { key: string; fallback: string }> = {
-  'query-rewrite': { key: 'retrievalStageQueryRewrite', fallback: 'Query rewrite' },
-  embed: { key: 'retrievalStageEmbed', fallback: 'Embed' },
-  retrieve: { key: 'retrievalStageRetrieve', fallback: 'Retrieve' },
-  rerank: { key: 'retrievalStageRerank', fallback: 'Rerank' },
-  filter: { key: 'retrievalStageFilter', fallback: 'Filter' },
+/** `this.localize()` key per stage kind. */
+const STAGE_LABEL: Record<RetrievalStageKind, { key: string }> = {
+  'query-rewrite': { key: 'retrievalStageQueryRewrite' },
+  embed: { key: 'retrievalStageEmbed' },
+  retrieve: { key: 'retrievalStageRetrieve' },
+  rerank: { key: 'retrievalStageRerank' },
+  filter: { key: 'retrievalStageFilter' },
 };
 
 function hasEvidence(evidence: RetrievalStageEvidence | undefined): evidence is RetrievalStageEvidence {
@@ -146,8 +137,7 @@ export class LyraRetrievalTrace extends LyraElement<LyraRetrievalTraceEventMap> 
 
   private stageLabel(stage: RetrievalStage): string {
     if (stage.label) return stage.label;
-    const { key, fallback } = STAGE_LABEL[stage.kind];
-    return this.localize(key, fallback);
+    return this.localize(STAGE_LABEL[stage.kind].key);
   }
 
   private toSpans(): LyraSpan[] {
@@ -238,7 +228,7 @@ export class LyraRetrievalTrace extends LyraElement<LyraRetrievalTraceEventMap> 
           @click=${() => this.toggleEvidence(stage.id)}
         >
           <span part="evidence-toggle-icon" aria-hidden="true">${chevronIcon()}</span>
-          <span>${this.localize('retrievalTraceEvidenceToggle', '{label} evidence', { label })}</span>
+          <span>${this.localize('retrievalTraceEvidenceToggle', undefined, { label })}</span>
         </button>
         <div part="evidence-body" id=${bodyId} ?hidden=${!expanded}>${this.renderEvidenceBody(stage.evidence!)}</div>
       </div>

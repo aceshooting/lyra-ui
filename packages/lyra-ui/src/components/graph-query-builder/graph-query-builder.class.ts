@@ -122,22 +122,6 @@ export interface LyraGraphQueryBuilderEventMap {
  * follows that same established convention: `value` round-trips through `JSON.stringify()` as the
  * submitted form value, and a consumer that never places this inside a `<form>` loses nothing.
  *
- * **Pending localization keys:** every visible string below routes through `this.localize()`,
- * but the keys this component introduces (`graphQueryStartLabel`, `graphQueryEndLabel`,
- * `graphQueryMinHopsLabel`, `graphQueryMaxHopsLabel`, `graphQueryRelationshipTypeLabel`,
- * `graphQueryNodeTypeLabel`, `graphQueryDirectionLabel`, `graphQueryRun`,
- * `graphQuerySaveNameLabel`, `graphQuerySaveButton`, `graphQuerySavedQueriesLabel`,
- * `graphQueryDeleteWithContext`, `graphQueryHopRangeInvalid`, `graphQueryBuilderLabel`) are not
- * yet registered in `src/internal/localization.ts`'s shared `DEFAULT_STRINGS`/`LyraMessageKey`
- * union, so each call site below passes an explicit English fallback as `localize()`'s second
- * argument. A per-instance `.strings` override still wins over that fallback (`resolveLyraString`
- * checks `.strings` first); only a *registered* `registerLyraLocale()` translation is shadowed,
- * and none can exist yet for a key with no shared entry. Once these keys are added to that shared
- * file, the literal fallback argument at each call site below must be removed, per this package's
- * own `localize-fallback` source-policy rule (which only fires for keys it already recognizes).
- * Every other key used here (`noData`, `fieldRequired`, `select`, `neighborDirectionIn`,
- * `neighborDirectionOut`, `neighborDirectionBoth`) is an existing shared key, reused as-is.
- *
  * @customElement lr-graph-query-builder
  * @slot actions - Extra host controls rendered in the footer beside the Run button.
  * @event lr-input - `detail: { value }` — any field changed; the full current query.
@@ -296,7 +280,7 @@ export class LyraGraphQueryBuilder extends LyraElement<LyraGraphQueryBuilderEven
       flags.valueMissing = true;
     }
     if (this._value.minHops > this._value.maxHops) {
-      errors['max-hops'] = this.localize('graphQueryHopRangeInvalid', 'Maximum hops must be at least the minimum.');
+      errors['max-hops'] = this.localize('graphQueryHopRangeInvalid');
       flags.rangeUnderflow = true;
     }
     return { errors, flags };
@@ -444,8 +428,8 @@ export class LyraGraphQueryBuilder extends LyraElement<LyraGraphQueryBuilderEven
     const chipsPart = kind === 'relationship' ? 'relationship-chips' : 'node-type-chips';
     const pickerLabel =
       kind === 'relationship'
-        ? this.localize('graphQueryRelationshipTypeLabel', 'Relationship type')
-        : this.localize('graphQueryNodeTypeLabel', 'Node type');
+        ? this.localize('graphQueryRelationshipTypeLabel')
+        : this.localize('graphQueryNodeTypeLabel');
     const available = options.filter((o) => !selected.includes(o.value));
     return html`
       <div part="filter-group" data-kind=${kind}>
@@ -483,14 +467,14 @@ export class LyraGraphQueryBuilder extends LyraElement<LyraGraphQueryBuilderEven
     const value = this._value;
     const hasStartError = this.touchedFields.has('start-input') && Boolean(this._errors['start-input']);
     const hasHopError = this.touchedFields.has('max-hops') && Boolean(this._errors['max-hops']);
-    const regionLabel = this.label || this.localize('graphQueryBuilderLabel', 'Graph query builder');
+    const regionLabel = this.label || this.localize('graphQueryBuilderLabel');
 
     return html`
       <div part="base" role="group" aria-label=${regionLabel}>
         <div part="path-fields">
           <lr-input
             part="start-input"
-            label=${this.localize('graphQueryStartLabel', 'Start entity')}
+            label=${this.localize('graphQueryStartLabel')}
             .value=${value.startId}
             error-text=${hasStartError ? this._errors['start-input'] : ''}
             ?disabled=${disabled}
@@ -499,14 +483,14 @@ export class LyraGraphQueryBuilder extends LyraElement<LyraGraphQueryBuilderEven
           ></lr-input>
           <lr-input
             part="end-input"
-            label=${this.localize('graphQueryEndLabel', 'End entity')}
+            label=${this.localize('graphQueryEndLabel')}
             .value=${value.endId}
             ?disabled=${disabled}
             @lr-input=${(e: CustomEvent<{ value: string }>) => this.setValue({ ...value, endId: e.detail.value })}
           ></lr-input>
           <lr-select
             part="min-hops"
-            label=${this.localize('graphQueryMinHopsLabel', 'Minimum hops')}
+            label=${this.localize('graphQueryMinHopsLabel')}
             .value=${String(value.minHops)}
             ?disabled=${disabled}
             @change=${(e: Event) => this.setValue({ ...value, minHops: Number((e.target as LyraSelect).value) })}
@@ -515,7 +499,7 @@ export class LyraGraphQueryBuilder extends LyraElement<LyraGraphQueryBuilderEven
           </lr-select>
           <lr-select
             part="max-hops"
-            label=${this.localize('graphQueryMaxHopsLabel', 'Maximum hops')}
+            label=${this.localize('graphQueryMaxHopsLabel')}
             .value=${String(value.maxHops)}
             error-text=${hasHopError ? this._errors['max-hops'] : ''}
             ?disabled=${disabled}
@@ -544,7 +528,7 @@ export class LyraGraphQueryBuilder extends LyraElement<LyraGraphQueryBuilderEven
 
         <lr-select
           part="direction"
-          label=${this.localize('graphQueryDirectionLabel', 'Direction')}
+          label=${this.localize('graphQueryDirectionLabel')}
           .value=${value.direction}
           ?disabled=${disabled}
           @change=${(e: Event) =>
@@ -558,16 +542,16 @@ export class LyraGraphQueryBuilder extends LyraElement<LyraGraphQueryBuilderEven
         <div part="footer">
           <slot name="actions"></slot>
           <button part="run-button" type="button" ?disabled=${disabled} @click=${() => this.runQuery()}>
-            ${this.localize('graphQueryRun', 'Run query')}
+            ${this.localize('graphQueryRun')}
           </button>
         </div>
 
         <div part="saved-queries">
-          <h3 part="saved-queries-label">${this.localize('graphQuerySavedQueriesLabel', 'Saved queries')}</h3>
+          <h3 part="saved-queries-label">${this.localize('graphQuerySavedQueriesLabel')}</h3>
           <div part="save-row">
             <lr-input
               part="save-name-input"
-              label=${this.localize('graphQuerySaveNameLabel', 'Query name')}
+              label=${this.localize('graphQuerySaveNameLabel')}
               .value=${this.saveName}
               ?disabled=${disabled}
               @lr-input=${(e: CustomEvent<{ value: string }>) => (this.saveName = e.detail.value)}
@@ -578,7 +562,7 @@ export class LyraGraphQueryBuilder extends LyraElement<LyraGraphQueryBuilderEven
               ?disabled=${disabled || !this.saveName.trim()}
               @click=${() => this.saveQuery()}
             >
-              ${this.localize('graphQuerySaveButton', 'Save query')}
+              ${this.localize('graphQuerySaveButton')}
             </button>
           </div>
           ${this.savedQueries.length === 0
@@ -593,7 +577,7 @@ export class LyraGraphQueryBuilder extends LyraElement<LyraGraphQueryBuilderEven
                       part="saved-delete-button"
                       type="button"
                       ?disabled=${disabled}
-                      aria-label=${this.localize('graphQueryDeleteWithContext', 'Delete {name}', { name: item.name })}
+                      aria-label=${this.localize('graphQueryDeleteWithContext', undefined, { name: item.name })}
                       @click=${() => this.deleteQuery(item)}
                     >
                       ${closeIcon()}

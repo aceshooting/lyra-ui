@@ -274,11 +274,11 @@ export class LyraDocumentLibrary extends LyraElement<LyraDocumentLibraryEventMap
   private freshnessLabel(freshness: LibraryDocumentFreshness): string {
     switch (freshness) {
       case 'fresh':
-        return this.localize('documentLibraryFreshnessFresh', 'Fresh');
+        return this.localize('documentLibraryFreshnessFresh');
       case 'aging':
-        return this.localize('documentLibraryFreshnessAging', 'Aging');
+        return this.localize('documentLibraryFreshnessAging');
       case 'stale':
-        return this.localize('documentLibraryFreshnessStale', 'Stale');
+        return this.localize('documentLibraryFreshnessStale');
     }
   }
 
@@ -288,7 +288,7 @@ export class LyraDocumentLibrary extends LyraElement<LyraDocumentLibraryEventMap
     return html`<lr-checkbox
       .checked=${allSelected}
       .indeterminate=${someSelected}
-      aria-label=${this.localize('documentLibrarySelectAll', 'Select all documents')}
+      aria-label=${this.localize('documentLibrarySelectAll')}
       @lr-change=${(event: CustomEvent<{ checked: boolean }>) =>
         this.toggleSelectAll(event.detail.checked, visible)}
     ></lr-checkbox>`;
@@ -297,7 +297,7 @@ export class LyraDocumentLibrary extends LyraElement<LyraDocumentLibraryEventMap
   private renderRowCheckbox(document: LibraryDocument): TemplateResult {
     return html`<lr-checkbox
       .checked=${this.selectedIds.includes(document.id)}
-      aria-label=${this.localize('documentLibrarySelectDocument', 'Select {name}', { name: document.name })}
+      aria-label=${this.localize('documentLibrarySelectDocument', undefined, { name: document.name })}
       @lr-change=${(event: CustomEvent<{ checked: boolean }>) => this.toggleSelection(document, event.detail.checked)}
     ></lr-checkbox>`;
   }
@@ -328,52 +328,52 @@ export class LyraDocumentLibrary extends LyraElement<LyraDocumentLibraryEventMap
     return [
       {
         key: 'select',
-        label: this.localize('documentLibrarySelectColumn', 'Select'),
+        label: this.localize('documentLibrarySelectColumn'),
         headerCell: () => this.renderSelectAllCheckbox(visible),
         cell: (document) => this.renderRowCheckbox(document),
       },
       {
         key: 'type',
-        label: this.localize('documentLibraryTypeColumn', 'Type'),
+        label: this.localize('documentLibraryTypeColumn'),
         cell: (document) =>
           html`<lr-file-icon mime-type=${document.mimeType ?? ''} name=${document.name} decorative></lr-file-icon>`,
       },
       {
         key: 'name',
-        label: this.localize('documentLibraryNameColumn', 'Name'),
+        label: this.localize('documentLibraryNameColumn'),
         sortable: true,
         cell: (document) => this.renderNameCell(document),
       },
       {
         key: 'version',
-        label: this.localize('documentLibraryVersionColumn', 'Version'),
+        label: this.localize('documentLibraryVersionColumn'),
         sortable: true,
         priority: 'medium',
         cell: (document) => document.version ?? '',
       },
       {
         key: 'owner',
-        label: this.localize('documentLibraryOwnerColumn', 'Owner'),
+        label: this.localize('documentLibraryOwnerColumn'),
         sortable: true,
         priority: 'medium',
         cell: (document) => document.owner ?? '',
       },
       {
         key: 'tags',
-        label: this.localize('documentLibraryTagsColumn', 'Tags'),
+        label: this.localize('documentLibraryTagsColumn'),
         priority: 'low',
         cell: (document) => this.renderTagsCell(document),
       },
       {
         key: 'freshness',
-        label: this.localize('documentLibraryFreshnessColumn', 'Freshness'),
+        label: this.localize('documentLibraryFreshnessColumn'),
         sortable: true,
         priority: 'low',
         cell: (document) => this.renderFreshnessCell(document),
       },
       {
         key: 'updatedAt',
-        label: this.localize('documentLibraryUpdatedColumn', 'Updated'),
+        label: this.localize('documentLibraryUpdatedColumn'),
         sortable: true,
         priority: 'low',
         cell: (document) => this.renderUpdatedCell(document),
@@ -382,13 +382,13 @@ export class LyraDocumentLibrary extends LyraElement<LyraDocumentLibraryEventMap
   }
 
   render(): TemplateResult {
-    const label = this.label || this.localize('documentLibraryLabel', 'Document library');
+    const label = this.label || this.localize('documentLibraryLabel');
     const visible = this.visibleDocuments;
     const tags = this.allTags;
     const emptyHeading =
       this.documents.length === 0
-        ? this.localize('documentLibraryEmptyHeading', 'No documents yet')
-        : this.localize('documentLibraryNoMatchesHeading', 'No matching documents');
+        ? this.localize('documentLibraryEmptyHeading')
+        : this.localize('documentLibraryNoMatchesHeading');
 
     return html`
       <div part="base" role="region" aria-label=${label}>
@@ -397,8 +397,8 @@ export class LyraDocumentLibrary extends LyraElement<LyraDocumentLibraryEventMap
             part="search"
             type="search"
             .value=${this.searchText}
-            placeholder=${this.localize('documentLibrarySearchPlaceholder', 'Search documents')}
-            aria-label=${this.localize('documentLibrarySearchPlaceholder', 'Search documents')}
+            placeholder=${this.localize('documentLibrarySearchPlaceholder')}
+            aria-label=${this.localize('documentLibrarySearchPlaceholder')}
             @lr-input=${this.onSearchInput}
           ></lr-input>
           ${tags.length > 0
@@ -406,8 +406,8 @@ export class LyraDocumentLibrary extends LyraElement<LyraDocumentLibraryEventMap
                 part="tag-filter"
                 multiple
                 .value=${this.tagFilter}
-                placeholder=${this.localize('documentLibraryFilterByTag', 'Filter by tag')}
-                aria-label=${this.localize('documentLibraryFilterByTag', 'Filter by tag')}
+                placeholder=${this.localize('documentLibraryFilterByTag')}
+                aria-label=${this.localize('documentLibraryFilterByTag')}
                 @change=${this.onTagFilterChange}
               >
                 ${tags.map((tag) => html`<lr-option value=${tag}>${tag}</lr-option>`)}
@@ -420,7 +420,7 @@ export class LyraDocumentLibrary extends LyraElement<LyraDocumentLibraryEventMap
                 >${this.localize('documentLibrarySelectedCount', undefined, { count: this.selectedIds.length })}</span
               >
               <button type="button" part="clear-selection" @click=${this.clearSelection}>
-                ${this.localize('documentLibraryClearSelection', 'Clear selection')}
+                ${this.localize('documentLibraryClearSelection')}
               </button>
             </div>`
           : nothing}

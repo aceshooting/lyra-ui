@@ -380,7 +380,7 @@ export class LyraFilterBar extends LyraElement<LyraFilterBarEventMap> {
             ?disabled=${this.disabled || this.loading || !this.hasActiveFilters}
             @click=${() => this.reset()}
           >
-            ${this.localize('filterBarReset', 'Reset filters')}
+            ${this.localize('filterBarReset')}
           </lr-button>
           ${this.loading ? html`<lr-spinner part="status"></lr-spinner>` : nothing}
         </div>
@@ -388,7 +388,7 @@ export class LyraFilterBar extends LyraElement<LyraFilterBarEventMap> {
           ? html`<div
               part="active-filters"
               role="group"
-              aria-label=${this.localize('filterBarActiveFilters', 'Active filters')}
+              aria-label=${this.localize('filterBarActiveFilters')}
             >
               <lr-chip-group part="chips">
                 ${active.map(

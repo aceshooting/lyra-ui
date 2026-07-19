@@ -54,15 +54,6 @@ export interface LyraRetrievalSearchEventMap {
  * host-driven flag (the last completed search returned zero results); this component holds no
  * results data of its own -- see `<lr-retrieval-results>` for rendering the actual chunk list.
  *
- * i18n note: every user-facing label below is written via `this.localize()`, with an explicit
- * literal English fallback for the `retrievalSearch*`/`retrievalMode*`/`retrievalFilter*` keys,
- * which aren't yet registered in `src/internal/localization.ts`'s `LyraMessageKey`/
- * `DEFAULT_STRINGS` -- this component's own change intentionally stays scoped to its own
- * directory; registering the keys centrally is a follow-up. `this.strings` per-instance overrides
- * still take priority over the fallback (verified by this component's own tests), so per-app
- * translation already works; only `registerLyraLocale()`-based translation additionally needs
- * those keys landing centrally.
- *
  * @customElement lr-retrieval-search
  * @event lr-search - The query was submitted (Enter in the query field, or the submit button
  *   while not `loading`). `detail`: the full `RetrievalQuery` (`{ text, mode, filters, scope }`).
@@ -134,9 +125,9 @@ export class LyraRetrievalSearch extends LyraElement<LyraRetrievalSearchEventMap
 
   private modeItems(): SegmentedItem[] {
     return [
-      { value: 'vector', label: this.localize('retrievalModeVector', 'Vector') },
-      { value: 'keyword', label: this.localize('retrievalModeKeyword', 'Keyword') },
-      { value: 'hybrid', label: this.localize('retrievalModeHybrid', 'Hybrid') },
+      { value: 'vector', label: this.localize('retrievalModeVector') },
+      { value: 'keyword', label: this.localize('retrievalModeKeyword') },
+      { value: 'hybrid', label: this.localize('retrievalModeHybrid') },
     ];
   }
 
@@ -213,7 +204,7 @@ export class LyraRetrievalSearch extends LyraElement<LyraRetrievalSearchEventMap
 
   render(): TemplateResult {
     const label =
-      this.accessibleLabel || this.label || this.localize('retrievalSearchLabel', 'Retrieval search');
+      this.accessibleLabel || this.label || this.localize('retrievalSearchLabel');
     const hasFilters = Object.keys(this.filters).length > 0 || this.scope.length > 0;
 
     return html`
@@ -231,7 +222,7 @@ export class LyraRetrievalSearch extends LyraElement<LyraRetrievalSearchEventMap
             part="mode"
             .items=${this.modeItems()}
             .value=${this.mode}
-            label=${this.localize('retrievalModeLabel', 'Search mode')}
+            label=${this.localize('retrievalModeLabel')}
             @lr-change=${this.onModeChange}
           ></lr-segmented>
           <button part="submit" type="button" @click=${this.onSubmitClick}>
@@ -242,7 +233,7 @@ export class LyraRetrievalSearch extends LyraElement<LyraRetrievalSearchEventMap
           ? html`<lr-chip-group
               part="filters"
               role="group"
-              aria-label=${this.localize('retrievalFiltersLabel', 'Active filters')}
+              aria-label=${this.localize('retrievalFiltersLabel')}
             >
               ${this.scope.map(
                 (s) => html`<lr-chip tone="brand" removable value=${s} @lr-remove=${() => this.removeScope(s)}
@@ -251,7 +242,7 @@ export class LyraRetrievalSearch extends LyraElement<LyraRetrievalSearchEventMap
               )}
               ${Object.entries(this.filters).map(
                 ([k, v]) => html`<lr-chip removable value=${k} @lr-remove=${() => this.removeFilter(k)}
-                  >${this.localize('retrievalFilterChipLabel', '{key}: {value}', {
+                  >${this.localize('retrievalFilterChipLabel', undefined, {
                     key: k,
                     value: this.formatFilterValue(v),
                   })}</lr-chip
@@ -268,9 +259,7 @@ export class LyraRetrievalSearch extends LyraElement<LyraRetrievalSearchEventMap
                   part="empty"
                   compact
                   heading=${this.localize('noMatches')}
-                  description=${this.localize(
-                    'retrievalSearchEmptyDescription',
-                    'Try a different search term or filters.',
+                  description=${this.localize('retrievalSearchEmptyDescription', undefined,
                   )}
                 ></lr-empty>`
               : nothing}

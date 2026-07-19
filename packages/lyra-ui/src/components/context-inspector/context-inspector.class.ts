@@ -178,7 +178,7 @@ export class LyraContextInspector extends LyraElement {
     for (const r of redactions) {
       if (r.start > cursor) nodes.push(text.slice(cursor, r.start));
       nodes.push(
-        html`<mark part="redaction" title=${r.reason || this.localize('contextInspectorRedacted', 'Redacted')}
+        html`<mark part="redaction" title=${r.reason || this.localize('contextInspectorRedacted')}
           >${text.slice(r.start, r.end)}</mark
         >`,
       );
@@ -191,15 +191,15 @@ export class LyraContextInspector extends LyraElement {
   private renderTruncationBoundary(segment: ContextInspectorSegment): TemplateResult {
     const text =
       segment.omittedTokens != null
-        ? this.localize('contextInspectorTruncatedCount', 'Truncated — {count} tokens omitted', {
+        ? this.localize('contextInspectorTruncatedCount', undefined, {
             count: formatCount(segment.omittedTokens, this.effectiveLocale),
           })
-        : this.localize('contextInspectorTruncated', 'Truncated');
+        : this.localize('contextInspectorTruncated');
     return html`<div part="truncation-boundary" role="note">${text}</div>`;
   }
 
   private renderSegment(segment: ContextInspectorSegment, citationIndex: number): TemplateResult {
-    const tokensText = this.localize('contextInspectorSegmentTokens', '{tokens} tokens', {
+    const tokensText = this.localize('contextInspectorSegmentTokens', undefined, {
       tokens: formatCount(segment.tokens, this.effectiveLocale),
     });
     return html`
@@ -221,12 +221,12 @@ export class LyraContextInspector extends LyraElement {
   }
 
   render(): TemplateResult {
-    const groupLabel = this.getAttribute('aria-label') || this.label || this.localize('contextInspectorLabel', 'Context inspector');
+    const groupLabel = this.getAttribute('aria-label') || this.label || this.localize('contextInspectorLabel');
 
     if (this.segments.length === 0) {
       return html`
         <div part="base" role="group" aria-label=${groupLabel}>
-          <lr-empty part="empty" heading=${this.localize('contextInspectorEmpty', 'No context segments')}></lr-empty>
+          <lr-empty part="empty" heading=${this.localize('contextInspectorEmpty')}></lr-empty>
         </div>
       `;
     }
@@ -239,7 +239,7 @@ export class LyraContextInspector extends LyraElement {
           <lr-copy-button
             part="copy-button"
             .value=${this.assembledText}
-            aria-label=${this.localize('contextInspectorCopyLabel', 'Copy assembled context')}
+            aria-label=${this.localize('contextInspectorCopyLabel')}
           ></lr-copy-button>
           <lr-export-button part="export-button" .rows=${this.exportRows} .formats=${this.formats} filename=${this.filename}></lr-export-button>
         </div>

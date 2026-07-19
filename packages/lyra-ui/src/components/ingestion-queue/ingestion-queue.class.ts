@@ -194,31 +194,31 @@ export class LyraIngestionQueue extends LyraElement<LyraIngestionQueueEventMap> 
   private stageLabel(stage: IngestionStage): string {
     switch (stage) {
       case 'queued':
-        return this.localize('ingestionStageQueued', 'Queued');
+        return this.localize('ingestionStageQueued');
       case 'uploading':
-        return this.localize('ingestionStageUploading', 'Uploading');
+        return this.localize('ingestionStageUploading');
       case 'extracting':
-        return this.localize('ingestionStageExtracting', 'Extracting text');
+        return this.localize('ingestionStageExtracting');
       case 'chunking':
-        return this.localize('ingestionStageChunking', 'Chunking');
+        return this.localize('ingestionStageChunking');
       case 'embedding':
-        return this.localize('ingestionStageEmbedding', 'Embedding');
+        return this.localize('ingestionStageEmbedding');
       case 'indexing':
-        return this.localize('ingestionStageIndexing', 'Indexing');
+        return this.localize('ingestionStageIndexing');
       case 'done':
-        return this.localize('ingestionStageDone', 'Done');
+        return this.localize('ingestionStageDone');
       case 'failed':
-        return this.localize('ingestionStageFailed', 'Failed');
+        return this.localize('ingestionStageFailed');
       case 'cancelled':
-        return this.localize('ingestionStageCancelled', 'Cancelled');
+        return this.localize('ingestionStageCancelled');
     }
   }
 
   private chunkCountText(count: number): string {
     const plural = getPluralRules(this.effectiveLocale).select(count) !== 'one';
     return plural
-      ? this.localize('ingestionChunkCountPlural', '{count} chunks', { count })
-      : this.localize('ingestionChunkCount', '{count} chunk', { count });
+      ? this.localize('ingestionChunkCountPlural', undefined, { count })
+      : this.localize('ingestionChunkCount', undefined, { count });
   }
 
   private onRetryClick(item: IngestionQueueItem): void {
@@ -249,7 +249,7 @@ export class LyraIngestionQueue extends LyraElement<LyraIngestionQueueEventMap> 
               part="item-progress"
               .value=${item.progress ?? 0}
               ?indeterminate=${indeterminate}
-              accessible-label=${this.localize('ingestionItemProgressLabel', '{name} — {stage}', {
+              accessible-label=${this.localize('ingestionItemProgressLabel', undefined, {
                 name: item.document.name,
                 stage: stageLabel,
               })}
@@ -262,7 +262,7 @@ export class LyraIngestionQueue extends LyraElement<LyraIngestionQueueEventMap> 
                 : nothing}
               ${item.chunkCount !== undefined && item.embeddedChunkCount !== undefined
                 ? html`<span part="item-embedding-status"
-                    >${this.localize('ingestionEmbeddedOfTotal', '{embedded} of {total} chunks embedded', {
+                    >${this.localize('ingestionEmbeddedOfTotal', undefined, {
                       embedded: item.embeddedChunkCount,
                       total: item.chunkCount,
                     })}</span
@@ -270,7 +270,7 @@ export class LyraIngestionQueue extends LyraElement<LyraIngestionQueueEventMap> 
                 : nothing}
               ${(item.attempts ?? 0) > 0
                 ? html`<span part="item-attempts"
-                    >${this.localize('ingestionAttemptCount', 'Attempt {count}', { count: item.attempts! })}</span
+                    >${this.localize('ingestionAttemptCount', undefined, { count: item.attempts! })}</span
                   >`
                 : nothing}
             </div>`
@@ -284,7 +284,7 @@ export class LyraIngestionQueue extends LyraElement<LyraIngestionQueueEventMap> 
                 ? html`<button
                     part="retry-button"
                     type="button"
-                    aria-label=${this.localize('ingestionRetryWithContext', 'Retry {label}', {
+                    aria-label=${this.localize('ingestionRetryWithContext', undefined, {
                       label: item.document.name,
                     })}
                     @click=${() => this.onRetryClick(item)}
@@ -296,7 +296,7 @@ export class LyraIngestionQueue extends LyraElement<LyraIngestionQueueEventMap> 
                 ? html`<button
                     part="cancel-button"
                     type="button"
-                    aria-label=${this.localize('ingestionCancelWithContext', 'Cancel {label}', {
+                    aria-label=${this.localize('ingestionCancelWithContext', undefined, {
                       label: item.document.name,
                     })}
                     @click=${() => this.onCancelClick(item)}
@@ -311,13 +311,13 @@ export class LyraIngestionQueue extends LyraElement<LyraIngestionQueueEventMap> 
   };
 
   render(): TemplateResult {
-    const computedLabel = this.label || this.localize('ingestionQueueLabel', 'Ingestion queue');
+    const computedLabel = this.label || this.localize('ingestionQueueLabel');
     const ariaLabel = this.getAttribute('aria-label') || computedLabel;
 
     if (this.items.length === 0) {
       return html`<lr-empty
         part="empty"
-        heading=${this.localize('ingestionQueueEmpty', 'No documents queued')}
+        heading=${this.localize('ingestionQueueEmpty')}
       ></lr-empty>`;
     }
 

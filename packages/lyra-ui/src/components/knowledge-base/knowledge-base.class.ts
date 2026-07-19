@@ -189,41 +189,41 @@ export class LyraKnowledgeBase extends LyraElement<LyraKnowledgeBaseEventMap> {
   private syncStatusLabel(status: KnowledgeSourceSyncStatus): string {
     switch (status) {
       case 'idle':
-        return this.localize('knowledgeBaseSyncIdle', 'Idle');
+        return this.localize('knowledgeBaseSyncIdle');
       case 'syncing':
-        return this.localize('knowledgeBaseSyncSyncing', 'Syncing');
+        return this.localize('knowledgeBaseSyncSyncing');
       case 'paused':
-        return this.localize('knowledgeBaseSyncPaused', 'Paused');
+        return this.localize('knowledgeBaseSyncPaused');
       case 'synced':
-        return this.localize('knowledgeBaseSyncSynced', 'Synced');
+        return this.localize('knowledgeBaseSyncSynced');
       case 'error':
-        return this.localize('knowledgeBaseSyncError', 'Error');
+        return this.localize('knowledgeBaseSyncError');
     }
   }
 
   private healthLabel(health: KnowledgeSourceIndexingHealth): string {
     switch (health) {
       case 'healthy':
-        return this.localize('knowledgeBaseHealthHealthy', 'Healthy');
+        return this.localize('knowledgeBaseHealthHealthy');
       case 'degraded':
-        return this.localize('knowledgeBaseHealthDegraded', 'Degraded');
+        return this.localize('knowledgeBaseHealthDegraded');
       case 'failed':
-        return this.localize('knowledgeBaseHealthFailed', 'Failed');
+        return this.localize('knowledgeBaseHealthFailed');
       case 'unknown':
-        return this.localize('knowledgeBaseHealthUnknown', 'Unknown');
+        return this.localize('knowledgeBaseHealthUnknown');
     }
   }
 
   private permissionLabel(permission: KnowledgeSourcePermission): string {
     switch (permission) {
       case 'owner':
-        return this.localize('knowledgeBasePermissionOwner', 'Owner');
+        return this.localize('knowledgeBasePermissionOwner');
       case 'editor':
-        return this.localize('knowledgeBasePermissionEditor', 'Editor');
+        return this.localize('knowledgeBasePermissionEditor');
       case 'viewer':
-        return this.localize('knowledgeBasePermissionViewer', 'Viewer');
+        return this.localize('knowledgeBasePermissionViewer');
       case 'restricted':
-        return this.localize('knowledgeBasePermissionRestricted', 'Restricted');
+        return this.localize('knowledgeBasePermissionRestricted');
     }
   }
 
@@ -246,7 +246,7 @@ export class LyraKnowledgeBase extends LyraElement<LyraKnowledgeBaseEventMap> {
         <span part="sync-timestamp">
           ${lastSynced
             ? getDateTimeFormat(this.effectiveLocale, { dateStyle: 'medium', timeStyle: 'short' }).format(lastSynced)
-            : this.localize('knowledgeBaseNeverSynced', 'Never synced')}
+            : this.localize('knowledgeBaseNeverSynced')}
         </span>
         ${source.syncStatus === 'error' && source.errorMessage
           ? html`<span part="sync-error">${source.errorMessage}</span>`
@@ -262,7 +262,7 @@ export class LyraKnowledgeBase extends LyraElement<LyraKnowledgeBaseEventMap> {
         <lr-badge part="health-badge" variant=${HEALTH_VARIANT[health]}>${this.healthLabel(health)}</lr-badge>
         ${source.documentCount != null
           ? html`<span part="document-count"
-              >${this.localize('knowledgeBaseDocumentCount', '{count} indexed', {
+              >${this.localize('knowledgeBaseDocumentCount', undefined, {
                 count: source.documentCount,
               })}</span
             >`
@@ -287,7 +287,7 @@ export class LyraKnowledgeBase extends LyraElement<LyraKnowledgeBaseEventMap> {
   private renderActionsCell(source: KnowledgeSource): TemplateResult {
     const canPause = source.syncStatus === 'syncing';
     const canSync = source.syncStatus !== 'syncing';
-    const label = this.localize('knowledgeBaseRowActionsLabel', 'Actions for {name}', { name: source.name });
+    const label = this.localize('knowledgeBaseRowActionsLabel', undefined, { name: source.name });
     return html`
       <lr-menu
         part="actions-menu"
@@ -297,15 +297,15 @@ export class LyraKnowledgeBase extends LyraElement<LyraKnowledgeBaseEventMap> {
         <button slot="trigger" type="button" part="actions-trigger" aria-label=${label}>${kebabIcon()}</button>
         <lr-menu-item value="sync" ?disabled=${!canSync}>
           <span slot="icon">${playIcon()}</span>
-          ${this.localize('knowledgeBaseSyncAction', 'Sync now')}
+          ${this.localize('knowledgeBaseSyncAction')}
         </lr-menu-item>
         <lr-menu-item value="pause" ?disabled=${!canPause}>
           <span slot="icon">${pauseIcon()}</span>
-          ${this.localize('knowledgeBasePauseAction', 'Pause sync')}
+          ${this.localize('knowledgeBasePauseAction')}
         </lr-menu-item>
         <lr-menu-item value="delete" destructive>
           <span slot="icon">${trashIcon()}</span>
-          ${this.localize('knowledgeBaseDeleteAction', 'Delete source')}
+          ${this.localize('knowledgeBaseDeleteAction')}
         </lr-menu-item>
       </lr-menu>
     `;
@@ -317,27 +317,27 @@ export class LyraKnowledgeBase extends LyraElement<LyraKnowledgeBaseEventMap> {
     return [
       {
         key: 'name',
-        label: this.localize('knowledgeBaseNameColumn', 'Source'),
+        label: this.localize('knowledgeBaseNameColumn'),
         cell: (row) => this.renderNameCell(row),
       },
       {
         key: 'sync',
-        label: this.localize('knowledgeBaseSyncColumn', 'Sync status'),
+        label: this.localize('knowledgeBaseSyncColumn'),
         cell: (row) => this.renderSyncCell(row),
       },
       {
         key: 'health',
-        label: this.localize('knowledgeBaseHealthColumn', 'Indexing health'),
+        label: this.localize('knowledgeBaseHealthColumn'),
         cell: (row) => this.renderHealthCell(row),
       },
       {
         key: 'permission',
-        label: this.localize('knowledgeBasePermissionColumn', 'Permission'),
+        label: this.localize('knowledgeBasePermissionColumn'),
         cell: (row) => this.renderPermissionCell(row),
       },
       {
         key: 'actions',
-        label: this.localize('knowledgeBaseActionsColumn', 'Actions'),
+        label: this.localize('knowledgeBaseActionsColumn'),
         align: 'end',
         cell: (row) => this.renderActionsCell(row),
       },
@@ -355,23 +355,23 @@ export class LyraKnowledgeBase extends LyraElement<LyraKnowledgeBaseEventMap> {
       <div part="summary">
         <lr-stat
           part="summary-stat"
-          label=${this.localize('knowledgeBaseTotalSources', 'Sources')}
+          label=${this.localize('knowledgeBaseTotalSources')}
           value=${String(total)}
         ></lr-stat>
         <lr-stat
           part="summary-stat"
-          label=${this.localize('knowledgeBaseSyncedSources', 'Synced')}
+          label=${this.localize('knowledgeBaseSyncedSources')}
           value=${String(synced)}
         ></lr-stat>
         <lr-stat
           part="summary-stat"
-          label=${this.localize('knowledgeBaseSyncingSources', 'Syncing')}
+          label=${this.localize('knowledgeBaseSyncingSources')}
           value=${String(syncing)}
         ></lr-stat>
         <lr-stat
           part="summary-stat"
           variant=${attention > 0 ? 'danger' : 'neutral'}
-          label=${this.localize('knowledgeBaseNeedsAttention', 'Needs attention')}
+          label=${this.localize('knowledgeBaseNeedsAttention')}
           value=${String(attention)}
         ></lr-stat>
       </div>
@@ -379,7 +379,7 @@ export class LyraKnowledgeBase extends LyraElement<LyraKnowledgeBaseEventMap> {
   }
 
   render(): TemplateResult {
-    const heading = this.label || this.localize('knowledgeBaseHeading', 'Knowledge base');
+    const heading = this.label || this.localize('knowledgeBaseHeading');
     return html`
       <div part="base">
         <div part="toolbar">
@@ -391,7 +391,7 @@ export class LyraKnowledgeBase extends LyraElement<LyraKnowledgeBaseEventMap> {
                 size="s"
                 @click=${() => this.emit('lr-kb-create')}
               >
-                ${this.localize('knowledgeBaseCreateSource', 'Add source')}
+                ${this.localize('knowledgeBaseCreateSource')}
               </lr-button>`
             : nothing}
         </div>
@@ -402,10 +402,8 @@ export class LyraKnowledgeBase extends LyraElement<LyraKnowledgeBaseEventMap> {
           .rows=${this.sources}
           .rowKey=${(row: KnowledgeSource) => row.id}
           aria-label=${heading}
-          empty-heading=${this.localize('knowledgeBaseEmptyHeading', 'No knowledge sources yet')}
-          empty-description=${this.localize(
-            'knowledgeBaseEmptyDescription',
-            'Add a source to start indexing content.',
+          empty-heading=${this.localize('knowledgeBaseEmptyHeading')}
+          empty-description=${this.localize('knowledgeBaseEmptyDescription', undefined,
           )}
           @lr-row-click=${(e: Event) => e.stopPropagation()}
         ></lr-table>

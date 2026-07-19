@@ -162,14 +162,8 @@ export class LyraDocumentCompare extends LyraElement<LyraDocumentCompareEventMap
     void otherPreview?.scrollToAnchor(id);
   }
 
-  // documentCompare* keys are not yet registered in `src/internal/localization.ts`'s
-  // `DEFAULT_STRINGS` (a shared file deliberately left untouched by this component's own change --
-  // see this class's own history for why), so each call below passes an explicit English fallback.
-  // This is the one legitimate case for an *unconditional* literal fallback: a key with no
-  // `DEFAULT_STRINGS` entry at all has no registry lookup for the fallback to short-circuit, unlike
-  // the documented anti-pattern of shadowing a key that already has one.
-  private versionLabel(version: DocumentCompareVersion | undefined, fallbackKey: 'documentCompareOldVersion' | 'documentCompareNewVersion', fallbackText: string): string {
-    return version?.name || version?.version || this.localize(fallbackKey, fallbackText);
+  private versionLabel(version: DocumentCompareVersion | undefined, fallbackKey: 'documentCompareOldVersion' | 'documentCompareNewVersion'): string {
+    return version?.name || version?.version || this.localize(fallbackKey);
   }
 
   private renderDiff(): TemplateResult {
@@ -187,7 +181,7 @@ export class LyraDocumentCompare extends LyraElement<LyraDocumentCompareEventMap
   }
 
   private renderVersionPane(version: DocumentCompareVersion | undefined, side: 'old' | 'new'): TemplateResult {
-    if (!version) return html`<p part="pane-empty">${this.localize('documentCompareNoVersion', 'No version provided.')}</p>`;
+    if (!version) return html`<p part="pane-empty">${this.localize('documentCompareNoVersion')}</p>`;
     return html`
       <lr-document-preview
         filename=${version.name ?? ''}
@@ -200,8 +194,8 @@ export class LyraDocumentCompare extends LyraElement<LyraDocumentCompareEventMap
   }
 
   private renderSideBySide(): TemplateResult {
-    const oldLabel = this.versionLabel(this.oldVersion, 'documentCompareOldVersion', 'Old version');
-    const newLabel = this.versionLabel(this.newVersion, 'documentCompareNewVersion', 'New version');
+    const oldLabel = this.versionLabel(this.oldVersion, 'documentCompareOldVersion');
+    const newLabel = this.versionLabel(this.newVersion, 'documentCompareNewVersion');
     return html`
       <div part="panes">
         <div part="pane-old" role="region" aria-label=${oldLabel} tabindex="0" @scroll=${this.onPaneScroll('old')}>
@@ -218,7 +212,7 @@ export class LyraDocumentCompare extends LyraElement<LyraDocumentCompareEventMap
 
   render(): TemplateResult {
     return html`
-      <div part="base" role="group" aria-label=${this.getAttribute('aria-label') || this.localize('documentCompareLabel', 'Document comparison')}>
+      <div part="base" role="group" aria-label=${this.getAttribute('aria-label') || this.localize('documentCompareLabel')}>
         ${this.view === 'side-by-side' ? this.renderSideBySide() : this.renderDiff()}
       </div>
     `;

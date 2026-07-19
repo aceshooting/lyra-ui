@@ -40,14 +40,6 @@ export interface GroundingSummaryThresholds {
  * carrying the full `Citation` -- including its `span` -- since a bare `sourceId`/`index` pair
  * can't by itself tell a host which exact evidence span to jump to.
  *
- * i18n note: every user-facing label below is written via `this.localize()`, but with an explicit
- * literal English fallback for now (`groundingSummary*` keys aren't yet registered in
- * `src/internal/localization.ts`'s `LyraMessageKey`/`DEFAULT_STRINGS` -- this component's own
- * change intentionally stays scoped to its own directory; registering the keys centrally is a
- * follow-up). `this.strings` per-instance overrides still take priority over the fallback (verified
- * by this component's own tests), so per-app translation already works; only
- * `registerLyraLocale()`-based translation additionally needs those keys landing centrally.
- *
  * @customElement lr-grounding-summary
  * @event lr-citation-select - An evidence citation badge was activated. `detail: { citation }`.
  * @csspart base - The `role="group"` root wrapper.
@@ -103,7 +95,7 @@ export class LyraGroundingSummary extends LyraElement<LyraGroundingSummaryEventM
 
   private renderEvidenceItem = (citation: Citation, index: number): TemplateResult => {
     const spanText = citation.span
-      ? this.localize('groundingSummaryEvidenceSpan', 'Characters {start}–{end}', {
+      ? this.localize('groundingSummaryEvidenceSpan', undefined, {
           start: citation.span.start,
           end: citation.span.end,
         })
@@ -125,12 +117,12 @@ export class LyraGroundingSummary extends LyraElement<LyraGroundingSummaryEventM
   };
 
   render(): TemplateResult {
-    const groupLabel = this.getAttribute('aria-label') || this.label || this.localize('groundingSummaryLabel', 'Grounding summary');
+    const groupLabel = this.getAttribute('aria-label') || this.label || this.localize('groundingSummaryLabel');
     const a = this.assessment;
 
     if (!a) {
       return html`<div part="base" role="group" aria-label=${groupLabel}>
-        <lr-empty part="empty" heading=${this.localize('groundingSummaryEmpty', 'No grounding assessment available')}></lr-empty>
+        <lr-empty part="empty" heading=${this.localize('groundingSummaryEmpty')}></lr-empty>
       </div>`;
     }
 
@@ -145,23 +137,23 @@ export class LyraGroundingSummary extends LyraElement<LyraGroundingSummaryEventM
       <div part="base" role="group" aria-label=${groupLabel}>
         <div part="stats">
           <lr-stat
-            label=${this.localize('groundingSummarySupportedLabel', 'Supported claims')}
+            label=${this.localize('groundingSummarySupportedLabel')}
             value=${numberFormat.format(supportedClaims)}
             variant=${supportedClaims > 0 ? 'success' : 'neutral'}
           ></lr-stat>
           <lr-stat
-            label=${this.localize('groundingSummaryUnsupportedLabel', 'Unsupported claims')}
+            label=${this.localize('groundingSummaryUnsupportedLabel')}
             value=${numberFormat.format(unsupportedClaims)}
             variant=${unsupportedClaims > 0 ? 'danger' : 'neutral'}
           ></lr-stat>
           <lr-stat
-            label=${this.localize('groundingSummaryCoverageLabel', 'Citation coverage')}
+            label=${this.localize('groundingSummaryCoverageLabel')}
             value=${this.formatPercent(coverage)}
             variant=${this.tone(coverage)}
           ></lr-stat>
           ${hasConfidence
             ? html`<lr-stat
-                label=${this.localize('groundingSummaryConfidenceLabel', 'Confidence')}
+                label=${this.localize('groundingSummaryConfidenceLabel')}
                 value=${this.formatPercent(a.confidence as number)}
                 variant=${this.tone(finiteRange(a.confidence as number, 0, 0, 1))}
               ></lr-stat>`
@@ -170,7 +162,7 @@ export class LyraGroundingSummary extends LyraElement<LyraGroundingSummaryEventM
         ${warnings.length > 0
           ? html`
               <div part="warnings">
-                <span part="warnings-heading">${this.localize('groundingSummaryWarningsHeading', 'Warnings')}</span>
+                <span part="warnings-heading">${this.localize('groundingSummaryWarningsHeading')}</span>
                 <span part="warnings-count">${warnings.length}</span>
                 <ul part="warnings-list">
                   ${warnings.map((warning) => html`<li part="warning">${warning}</li>`)}
@@ -181,7 +173,7 @@ export class LyraGroundingSummary extends LyraElement<LyraGroundingSummaryEventM
         ${this.citations.length > 0
           ? html`
               <div part="evidence">
-                <span part="evidence-heading">${this.localize('groundingSummaryEvidenceHeading', 'Evidence')}</span>
+                <span part="evidence-heading">${this.localize('groundingSummaryEvidenceHeading')}</span>
                 <span part="evidence-count">${this.citations.length}</span>
                 <div>${this.citations.map((citation, index) => this.renderEvidenceItem(citation, index))}</div>
               </div>

@@ -834,7 +834,156 @@ export type LyraMessageKey =
   | 'graphExplorerPinned'
   | 'graphExplorerUnpinned'
   | 'graphExplorerPinnedHeading'
-  | 'graphExplorerFindPath';
+  | 'graphExplorerFindPath'
+  | 'retrievalModeVector'
+  | 'retrievalModeKeyword'
+  | 'retrievalModeHybrid'
+  | 'retrievalSearchLabel'
+  | 'retrievalModeLabel'
+  | 'retrievalFiltersLabel'
+  | 'groundingSummaryLabel'
+  | 'groundingSummaryEmpty'
+  | 'groundingSummarySupportedLabel'
+  | 'groundingSummaryUnsupportedLabel'
+  | 'groundingSummaryCoverageLabel'
+  | 'groundingSummaryConfidenceLabel'
+  | 'groundingSummaryWarningsHeading'
+  | 'groundingSummaryEvidenceHeading'
+  | 'contextInspectorRedacted'
+  | 'contextInspectorTruncated'
+  | 'contextInspectorLabel'
+  | 'contextInspectorEmpty'
+  | 'contextInspectorCopyLabel'
+  | 'knowledgeBaseSyncIdle'
+  | 'knowledgeBaseSyncSyncing'
+  | 'knowledgeBaseSyncPaused'
+  | 'knowledgeBaseSyncSynced'
+  | 'knowledgeBaseSyncError'
+  | 'knowledgeBaseHealthHealthy'
+  | 'knowledgeBaseHealthDegraded'
+  | 'knowledgeBaseHealthFailed'
+  | 'knowledgeBaseHealthUnknown'
+  | 'knowledgeBasePermissionOwner'
+  | 'knowledgeBasePermissionEditor'
+  | 'knowledgeBasePermissionViewer'
+  | 'knowledgeBasePermissionRestricted'
+  | 'knowledgeBaseNeverSynced'
+  | 'knowledgeBaseSyncAction'
+  | 'knowledgeBasePauseAction'
+  | 'knowledgeBaseDeleteAction'
+  | 'knowledgeBaseNameColumn'
+  | 'knowledgeBaseSyncColumn'
+  | 'knowledgeBaseHealthColumn'
+  | 'knowledgeBasePermissionColumn'
+  | 'knowledgeBaseActionsColumn'
+  | 'knowledgeBaseTotalSources'
+  | 'knowledgeBaseSyncedSources'
+  | 'knowledgeBaseSyncingSources'
+  | 'knowledgeBaseNeedsAttention'
+  | 'knowledgeBaseHeading'
+  | 'knowledgeBaseCreateSource'
+  | 'knowledgeBaseEmptyHeading'
+  | 'ingestionStageQueued'
+  | 'ingestionStageUploading'
+  | 'ingestionStageExtracting'
+  | 'ingestionStageChunking'
+  | 'ingestionStageEmbedding'
+  | 'ingestionStageIndexing'
+  | 'ingestionStageDone'
+  | 'ingestionStageFailed'
+  | 'ingestionStageCancelled'
+  | 'ingestionQueueLabel'
+  | 'ingestionQueueEmpty'
+  | 'documentLibraryFreshnessFresh'
+  | 'documentLibraryFreshnessAging'
+  | 'documentLibraryFreshnessStale'
+  | 'documentLibrarySelectAll'
+  | 'documentLibrarySelectColumn'
+  | 'documentLibraryTypeColumn'
+  | 'documentLibraryNameColumn'
+  | 'documentLibraryVersionColumn'
+  | 'documentLibraryOwnerColumn'
+  | 'documentLibraryTagsColumn'
+  | 'documentLibraryFreshnessColumn'
+  | 'documentLibraryUpdatedColumn'
+  | 'documentLibraryLabel'
+  | 'documentLibraryEmptyHeading'
+  | 'documentLibraryNoMatchesHeading'
+  | 'documentLibrarySearchPlaceholder'
+  | 'documentLibraryFilterByTag'
+  | 'documentLibraryClearSelection'
+  | 'documentCompareNoVersion'
+  | 'documentCompareLabel'
+  | 'agentRunCurrentStepLabel'
+  | 'graphQueryHopRangeInvalid'
+  | 'graphQueryRelationshipTypeLabel'
+  | 'graphQueryNodeTypeLabel'
+  | 'graphQueryBuilderLabel'
+  | 'graphQueryStartLabel'
+  | 'graphQueryEndLabel'
+  | 'graphQueryMinHopsLabel'
+  | 'graphQueryMaxHopsLabel'
+  | 'graphQueryDirectionLabel'
+  | 'graphQueryRun'
+  | 'graphQuerySavedQueriesLabel'
+  | 'graphQuerySaveNameLabel'
+  | 'graphQuerySaveButton'
+  | 'filterBarReset'
+  | 'filterBarActiveFilters'
+  | 'drilldownDocuments'
+  | 'drilldownRuns'
+  | 'drilldownEmpty'
+  | 'evaluationRunStatusIdle'
+  | 'evaluationRunStatusWaitingInput'
+  | 'evaluationRunStatusWaitingApproval'
+  | 'evaluationRunStatusCancelled'
+  | 'evaluationRunGroundingHeading'
+  | 'evaluationRunToolTraceHeading'
+  | 'evaluationRunInputHeading'
+  | 'evaluationRunOutputHeading'
+  | 'evaluationRunLabel'
+  | 'evaluationRunProgressLabel'
+  | 'retrievalFilterChipLabel'
+  | 'retrievalSearchEmptyDescription'
+  | 'groundingSummaryEvidenceSpan'
+  | 'contextInspectorTruncatedCount'
+  | 'contextInspectorSegmentTokens'
+  | 'knowledgeBaseDocumentCount'
+  | 'knowledgeBaseRowActionsLabel'
+  | 'knowledgeBaseEmptyDescription'
+  | 'ingestionChunkCountPlural'
+  | 'ingestionChunkCount'
+  | 'ingestionItemProgressLabel'
+  | 'ingestionEmbeddedOfTotal'
+  | 'ingestionAttemptCount'
+  | 'ingestionRetryWithContext'
+  | 'ingestionCancelWithContext'
+  | 'documentLibrarySelectDocument'
+  | 'agentRunStatusAnnounce'
+  | 'graphQueryDeleteWithContext'
+  | 'evaluationRunExampleLabel'
+  | 'evaluationRunExampleStartedAnnounce'
+  | 'evaluationRunExampleCompletedAnnounce'
+  | 'evaluationRunExampleFailedAnnounce'
+  | 'evaluationRunExampleCancelledAnnounce'
+  | 'evaluationRunExampleWaitingInputAnnounce'
+  | 'evaluationRunExampleWaitingApprovalAnnounce'
+  | 'evaluationRunProgressSummary'
+  | 'evaluationRunRunningCount'
+  | 'evaluationRunFailedCount'
+  | 'retrievalStageQueryRewrite'
+  | 'retrievalStageEmbed'
+  | 'retrievalStageRetrieve'
+  | 'retrievalStageRerank'
+  | 'retrievalStageFilter'
+  | 'retrievalTraceEvidenceToggle'
+  | 'documentCompareOldVersion'
+  | 'documentCompareNewVersion'
+  | 'agentRunStatusIdle'
+  | 'agentRunStatusWaitingInput'
+  | 'agentRunStatusWaitingApproval'
+  | 'agentRunStatusDone'
+  | 'agentRunStatusCancelled';
 
 export type LyraLocaleStrings = Partial<Record<LyraMessageKey, string>> & Record<string, string | undefined>;
 
@@ -1671,6 +1820,155 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, string> = {
   graphExplorerUnpinned: '{label} unpinned',
   graphExplorerPinnedHeading: 'Pinned',
   graphExplorerFindPath: 'Find path',
+  retrievalModeVector: 'Vector',
+  retrievalModeKeyword: 'Keyword',
+  retrievalModeHybrid: 'Hybrid',
+  retrievalSearchLabel: 'Retrieval search',
+  retrievalModeLabel: 'Search mode',
+  retrievalFiltersLabel: 'Active filters',
+  groundingSummaryLabel: 'Grounding summary',
+  groundingSummaryEmpty: 'No grounding assessment available',
+  groundingSummarySupportedLabel: 'Supported claims',
+  groundingSummaryUnsupportedLabel: 'Unsupported claims',
+  groundingSummaryCoverageLabel: 'Citation coverage',
+  groundingSummaryConfidenceLabel: 'Confidence',
+  groundingSummaryWarningsHeading: 'Warnings',
+  groundingSummaryEvidenceHeading: 'Evidence',
+  contextInspectorRedacted: 'Redacted',
+  contextInspectorTruncated: 'Truncated',
+  contextInspectorLabel: 'Context inspector',
+  contextInspectorEmpty: 'No context segments',
+  contextInspectorCopyLabel: 'Copy assembled context',
+  knowledgeBaseSyncIdle: 'Idle',
+  knowledgeBaseSyncSyncing: 'Syncing',
+  knowledgeBaseSyncPaused: 'Paused',
+  knowledgeBaseSyncSynced: 'Synced',
+  knowledgeBaseSyncError: 'Error',
+  knowledgeBaseHealthHealthy: 'Healthy',
+  knowledgeBaseHealthDegraded: 'Degraded',
+  knowledgeBaseHealthFailed: 'Failed',
+  knowledgeBaseHealthUnknown: 'Unknown',
+  knowledgeBasePermissionOwner: 'Owner',
+  knowledgeBasePermissionEditor: 'Editor',
+  knowledgeBasePermissionViewer: 'Viewer',
+  knowledgeBasePermissionRestricted: 'Restricted',
+  knowledgeBaseNeverSynced: 'Never synced',
+  knowledgeBaseSyncAction: 'Sync now',
+  knowledgeBasePauseAction: 'Pause sync',
+  knowledgeBaseDeleteAction: 'Delete source',
+  knowledgeBaseNameColumn: 'Source',
+  knowledgeBaseSyncColumn: 'Sync status',
+  knowledgeBaseHealthColumn: 'Indexing health',
+  knowledgeBasePermissionColumn: 'Permission',
+  knowledgeBaseActionsColumn: 'Actions',
+  knowledgeBaseTotalSources: 'Sources',
+  knowledgeBaseSyncedSources: 'Synced',
+  knowledgeBaseSyncingSources: 'Syncing',
+  knowledgeBaseNeedsAttention: 'Needs attention',
+  knowledgeBaseHeading: 'Knowledge base',
+  knowledgeBaseCreateSource: 'Add source',
+  knowledgeBaseEmptyHeading: 'No knowledge sources yet',
+  ingestionStageQueued: 'Queued',
+  ingestionStageUploading: 'Uploading',
+  ingestionStageExtracting: 'Extracting text',
+  ingestionStageChunking: 'Chunking',
+  ingestionStageEmbedding: 'Embedding',
+  ingestionStageIndexing: 'Indexing',
+  ingestionStageDone: 'Done',
+  ingestionStageFailed: 'Failed',
+  ingestionStageCancelled: 'Cancelled',
+  ingestionQueueLabel: 'Ingestion queue',
+  ingestionQueueEmpty: 'No documents queued',
+  documentLibraryFreshnessFresh: 'Fresh',
+  documentLibraryFreshnessAging: 'Aging',
+  documentLibraryFreshnessStale: 'Stale',
+  documentLibrarySelectAll: 'Select all documents',
+  documentLibrarySelectColumn: 'Select',
+  documentLibraryTypeColumn: 'Type',
+  documentLibraryNameColumn: 'Name',
+  documentLibraryVersionColumn: 'Version',
+  documentLibraryOwnerColumn: 'Owner',
+  documentLibraryTagsColumn: 'Tags',
+  documentLibraryFreshnessColumn: 'Freshness',
+  documentLibraryUpdatedColumn: 'Updated',
+  documentLibraryLabel: 'Document library',
+  documentLibraryEmptyHeading: 'No documents yet',
+  documentLibraryNoMatchesHeading: 'No matching documents',
+  documentLibrarySearchPlaceholder: 'Search documents',
+  documentLibraryFilterByTag: 'Filter by tag',
+  documentLibraryClearSelection: 'Clear selection',
+  documentCompareNoVersion: 'No version provided.',
+  documentCompareLabel: 'Document comparison',
+  agentRunCurrentStepLabel: 'Current step',
+  graphQueryHopRangeInvalid: 'Maximum hops must be at least the minimum.',
+  graphQueryRelationshipTypeLabel: 'Relationship type',
+  graphQueryNodeTypeLabel: 'Node type',
+  graphQueryBuilderLabel: 'Graph query builder',
+  graphQueryStartLabel: 'Start entity',
+  graphQueryEndLabel: 'End entity',
+  graphQueryMinHopsLabel: 'Minimum hops',
+  graphQueryMaxHopsLabel: 'Maximum hops',
+  graphQueryDirectionLabel: 'Direction',
+  graphQueryRun: 'Run query',
+  graphQuerySavedQueriesLabel: 'Saved queries',
+  graphQuerySaveNameLabel: 'Query name',
+  graphQuerySaveButton: 'Save query',
+  filterBarReset: 'Reset filters',
+  filterBarActiveFilters: 'Active filters',
+  drilldownDocuments: 'Documents',
+  drilldownRuns: 'Agent runs',
+  drilldownEmpty: 'No item selected',
+  evaluationRunStatusIdle: 'Idle',
+  evaluationRunStatusWaitingInput: 'Waiting for input',
+  evaluationRunStatusWaitingApproval: 'Waiting for approval',
+  evaluationRunStatusCancelled: 'Cancelled',
+  evaluationRunGroundingHeading: 'Grounding',
+  evaluationRunToolTraceHeading: 'Tool trace',
+  evaluationRunInputHeading: 'Input',
+  evaluationRunOutputHeading: 'Output',
+  evaluationRunLabel: 'Evaluation run',
+  evaluationRunProgressLabel: 'Evaluation batch progress',
+  retrievalFilterChipLabel: '{key}: {value}',
+  retrievalSearchEmptyDescription: 'Try a different search term or filters.',
+  groundingSummaryEvidenceSpan: 'Characters {start}–{end}',
+  contextInspectorTruncatedCount: 'Truncated — {count} tokens omitted',
+  contextInspectorSegmentTokens: '{tokens} tokens',
+  knowledgeBaseDocumentCount: '{count} indexed',
+  knowledgeBaseRowActionsLabel: 'Actions for {name}',
+  knowledgeBaseEmptyDescription: 'Add a source to start indexing content.',
+  ingestionChunkCountPlural: '{count} chunks',
+  ingestionChunkCount: '{count} chunk',
+  ingestionItemProgressLabel: '{name} — {stage}',
+  ingestionEmbeddedOfTotal: '{embedded} of {total} chunks embedded',
+  ingestionAttemptCount: 'Attempt {count}',
+  ingestionRetryWithContext: 'Retry {label}',
+  ingestionCancelWithContext: 'Cancel {label}',
+  documentLibrarySelectDocument: 'Select {name}',
+  agentRunStatusAnnounce: 'Status: {status}.',
+  graphQueryDeleteWithContext: 'Delete {name}',
+  evaluationRunExampleLabel: 'Example {index}',
+  evaluationRunExampleStartedAnnounce: '{label} started',
+  evaluationRunExampleCompletedAnnounce: '{label} completed',
+  evaluationRunExampleFailedAnnounce: '{label} failed',
+  evaluationRunExampleCancelledAnnounce: '{label} cancelled',
+  evaluationRunExampleWaitingInputAnnounce: '{label} needs input',
+  evaluationRunExampleWaitingApprovalAnnounce: '{label} needs approval',
+  evaluationRunProgressSummary: '{completed} of {total} examples complete',
+  evaluationRunRunningCount: '{count} running',
+  evaluationRunFailedCount: '{count} failed',
+  retrievalStageQueryRewrite: 'Query rewrite',
+  retrievalStageEmbed: 'Embed',
+  retrievalStageRetrieve: 'Retrieve',
+  retrievalStageRerank: 'Rerank',
+  retrievalStageFilter: 'Filter',
+  retrievalTraceEvidenceToggle: '{label} evidence',
+  documentCompareOldVersion: 'Old version',
+  documentCompareNewVersion: 'New version',
+  agentRunStatusIdle: 'Idle',
+  agentRunStatusWaitingInput: 'Waiting for input',
+  agentRunStatusWaitingApproval: 'Waiting for approval',
+  agentRunStatusDone: 'Done',
+  agentRunStatusCancelled: 'Cancelled',
 };
 
 const locales = new Map<string, LyraLocaleStrings>();
