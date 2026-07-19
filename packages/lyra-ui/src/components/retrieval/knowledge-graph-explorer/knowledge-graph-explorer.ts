@@ -1,0 +1,13 @@
+export * from './knowledge-graph-explorer.class.js';
+import { LyraKnowledgeGraphExplorer } from './knowledge-graph-explorer.class.js';
+import { defineElement } from '../../../internal/prefix.js';
+import '../graph/graph.js';
+import '../graph-legend/graph-legend.js';
+import '../entity-card/entity-card.js';
+import '../neighbor-list/neighbor-list.js';
+import '../path-strip/path-strip.js';
+import '../../overlays/overlay/popover.js';
+import '../../forms/input/input.js';
+import '../../overlays/chip/chip.js';
+import '../../forms/button/button.js';
+defineElement('knowledge-graph-explorer', LyraKnowledgeGraphExplorer);

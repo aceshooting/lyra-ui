@@ -3,7 +3,7 @@ import { html as litHtml } from 'lit';
 import { property } from 'lit/decorators.js';
 import { LyraElement } from './lyra-element.js';
 import { DocumentAnchorTarget, type LyraAnchorTargetEventMap } from './anchor-target.js';
-import type { LyraAnchor } from '../components/document-viewer/anchors.js';
+import type { LyraAnchor } from '../components/viewers/document-viewer/anchors.js';
 import { defineElement } from './prefix.js';
 
 class StubAnchorTargetBase extends LyraElement<LyraAnchorTargetEventMap> {

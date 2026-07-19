@@ -9,7 +9,7 @@ import type {
   HighlightActivateDetail,
   TextSelectDetail,
   AnchorResultDetail,
-} from '../components/document-viewer/anchors.js';
+} from '../components/viewers/document-viewer/anchors.js';
 
 type Constructor<T> = new (...args: any[]) => T;
 

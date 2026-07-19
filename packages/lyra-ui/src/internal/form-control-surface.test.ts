@@ -1,11 +1,11 @@
 import { expect, fixture } from '@open-wc/testing';
 import { html, type TemplateResult } from 'lit';
-import '../components/checkbox/checkbox.js';
-import '../components/switch/switch.js';
-import '../components/combobox/combobox.js';
-import '../components/select/select.js';
-import '../components/model-select/model-select.js';
-import '../components/tool-param-form/tool-param-form.js';
+import '../components/forms/checkbox/checkbox.js';
+import '../components/forms/switch/switch.js';
+import '../components/forms/combobox/combobox.js';
+import '../components/forms/select/select.js';
+import '../components/conversation/model-select/model-select.js';
+import '../components/agent-tools/tool-param-form/tool-param-form.js';
 
 interface NativeLikeFormSurface extends HTMLElement {
   disabled: boolean;

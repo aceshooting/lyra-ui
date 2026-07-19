@@ -1,7 +1,7 @@
 import { fixture, expect, html } from '@open-wc/testing';
 import { registerLyraLocale, setLyraLocale, LYRA_DEFAULT_STRINGS } from './localization.js';
-import '../components/sparkline/sparkline.js';
-import type { LyraSparkline } from '../components/sparkline/sparkline.js';
+import '../components/data/sparkline/sparkline.js';
+import type { LyraSparkline } from '../components/data/sparkline/sparkline.js';
 
 it('resolves registered locale messages and per-instance overrides', async () => {
   registerLyraLocale('x-test', {

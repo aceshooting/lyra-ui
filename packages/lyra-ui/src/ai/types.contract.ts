@@ -1,9 +1,9 @@
-import type { LyraChatMessage } from '../components/chat-message/chat-message.class.js';
-import type { LyraToolCallChip } from '../components/tool-call-chip/tool-call-chip.class.js';
-import type { LyraToolResultView } from '../components/tool-result-view/tool-result-view.class.js';
-import type { LyraSourceCard } from '../components/source-card/source-card.class.js';
-import type { LyraAttachmentChip } from '../components/attachment-chip/attachment-chip.class.js';
-import type { LyraDocumentPreview } from '../components/document-preview/document-preview.class.js';
+import type { LyraChatMessage } from '../components/conversation/chat-message/chat-message.class.js';
+import type { LyraToolCallChip } from '../components/agent-tools/tool-call-chip/tool-call-chip.class.js';
+import type { LyraToolResultView } from '../components/agent-tools/tool-result-view/tool-result-view.class.js';
+import type { LyraSourceCard } from '../components/retrieval/source-card/source-card.class.js';
+import type { LyraAttachmentChip } from '../components/media/attachment-chip/attachment-chip.class.js';
+import type { LyraDocumentPreview } from '../components/viewers/document-preview/document-preview.class.js';
 import type {
   AgentRun,
   AgentStatus,

@@ -1,0 +1,11 @@
+export * from './document-library.class.js';
+import { LyraDocumentLibrary } from './document-library.class.js';
+import { defineElement } from '../../../internal/prefix.js';
+import '../table/table.js';
+import '../../forms/checkbox/checkbox.js';
+import '../../overlays/chip/chip.js';
+import '../../overlays/chip/chip-group.js';
+import '../../media/file-icon/file-icon.js';
+import '../../forms/input/input.js';
+import '../../forms/combobox/combobox.js';
+defineElement('document-library', LyraDocumentLibrary);

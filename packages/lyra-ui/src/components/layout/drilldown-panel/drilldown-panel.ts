@@ -1,0 +1,11 @@
+export * from './drilldown-panel.class.js';
+import { LyraDrilldownPanel } from './drilldown-panel.class.js';
+import { defineElement } from '../../../internal/prefix.js';
+import '../breadcrumb/breadcrumb.js';
+import '../breadcrumb/breadcrumb-item.js';
+import '../tabs/tabs.js';
+import '../../viewers/document-preview/document-preview.js';
+import '../../retrieval/entity-card/entity-card.js';
+import '../../retrieval/source-card/source-card.js';
+import '../../overlays/empty/empty.js';
+defineElement('drilldown-panel', LyraDrilldownPanel);

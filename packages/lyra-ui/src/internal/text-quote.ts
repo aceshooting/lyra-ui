@@ -1,5 +1,5 @@
-import type { LyraAnchor } from '../components/document-viewer/anchors.js';
-import { TEXT_QUOTE_CONTEXT_CHARS } from '../components/document-viewer/anchors.js';
+import type { LyraAnchor } from '../components/viewers/document-viewer/anchors.js';
+import { TEXT_QUOTE_CONTEXT_CHARS } from '../components/viewers/document-viewer/anchors.js';
 
 const SOFT_HYPHEN = '­';
 // ECMAScript's `\s` already covers every Unicode Space_Separator code point plus NBSP and

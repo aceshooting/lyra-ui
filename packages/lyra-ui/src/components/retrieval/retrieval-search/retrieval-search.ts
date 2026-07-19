@@ -1,0 +1,10 @@
+export * from './retrieval-search.class.js';
+import { LyraRetrievalSearch } from './retrieval-search.class.js';
+import { defineElement } from '../../../internal/prefix.js';
+import '../../forms/input/input.js';
+import '../../layout/segmented/segmented.js';
+import '../../overlays/chip/chip.js';
+import '../../overlays/chip/chip-group.js';
+import '../../overlays/spinner/spinner.js';
+import '../../overlays/empty/empty.js';
+defineElement('retrieval-search', LyraRetrievalSearch);

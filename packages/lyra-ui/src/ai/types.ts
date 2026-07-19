@@ -1,5 +1,5 @@
-import type { ChatMessageRole, ChatMessageStatus } from '../components/chat-message/chat-message.class.js';
-import type { ToolCallStatus } from '../components/tool-call-chip/tool-call-chip.class.js';
+import type { ChatMessageRole, ChatMessageStatus } from '../components/conversation/chat-message/chat-message.class.js';
+import type { ToolCallStatus } from '../components/agent-tools/tool-call-chip/tool-call-chip.class.js';
 
 export type { ChatMessageRole, ChatMessageStatus, ToolCallStatus };
 

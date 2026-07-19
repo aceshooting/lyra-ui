@@ -1,15 +1,15 @@
 import { expect } from '@open-wc/testing';
 import { composedContains, deepActiveElement } from './overlay-manager.js';
-import '../components/dialog/dialog.js';
-import '../components/responsive-panel/responsive-panel.js';
-import '../components/tool-select-dialog/tool-select-dialog.js';
-import '../components/tool-approval-dialog/tool-approval-dialog.js';
-import '../components/tool-result-dialog/tool-result-dialog.js';
-import '../components/app-rail/app-rail.js';
-import '../components/widget/widget.js';
-import '../components/date-picker/date-input.js';
-import '../components/lightbox/lightbox.js';
-import type { LyraLightboxImage } from '../components/lightbox/lightbox.class.js';
+import '../components/overlays/dialog/dialog.js';
+import '../components/layout/responsive-panel/responsive-panel.js';
+import '../components/agent-tools/tool-select-dialog/tool-select-dialog.js';
+import '../components/agent-tools/tool-approval-dialog/tool-approval-dialog.js';
+import '../components/agent-tools/tool-result-dialog/tool-result-dialog.js';
+import '../components/layout/app-rail/app-rail.js';
+import '../components/layout/widget/widget.js';
+import '../components/forms/date-picker/date-input.js';
+import '../components/media/lightbox/lightbox.js';
+import type { LyraLightboxImage } from '../components/media/lightbox/lightbox.class.js';
 
 interface ReactiveOverlay extends HTMLElement {
   updateComplete: Promise<unknown>;

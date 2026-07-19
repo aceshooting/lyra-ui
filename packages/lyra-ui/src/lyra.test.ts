@@ -26,19 +26,19 @@ it('does NOT register the optional-peer-dependent chart/map/graph families from 
 });
 
 it('still registers each excluded family when imported directly from its own subpath', async () => {
-  await import('./components/chart/chart.js');
-  await import('./components/chart/bar-chart.js');
-  await import('./components/chart/line-chart.js');
-  await import('./components/chart/pie-chart.js');
-  await import('./components/chart/doughnut-chart.js');
-  await import('./components/chart/scatter-chart.js');
-  await import('./components/chart/bubble-chart.js');
-  await import('./components/chart/radar-chart.js');
-  await import('./components/chart/polar-area-chart.js');
-  await import('./components/chart/box-plot.js');
-  await import('./components/chart/histogram.js');
-  await import('./components/map/map.js');
-  await import('./components/graph/graph.js');
+  await import('./components/charts/chart/chart.js');
+  await import('./components/charts/chart/bar-chart.js');
+  await import('./components/charts/chart/line-chart.js');
+  await import('./components/charts/chart/pie-chart.js');
+  await import('./components/charts/chart/doughnut-chart.js');
+  await import('./components/charts/chart/scatter-chart.js');
+  await import('./components/charts/chart/bubble-chart.js');
+  await import('./components/charts/chart/radar-chart.js');
+  await import('./components/charts/chart/polar-area-chart.js');
+  await import('./components/charts/chart/box-plot.js');
+  await import('./components/charts/chart/histogram.js');
+  await import('./components/media/map/map.js');
+  await import('./components/retrieval/graph/graph.js');
   const tags = [
     'chart',
     'bar-chart',

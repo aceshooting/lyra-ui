@@ -1,4 +1,4 @@
-import type { LyraHighlightTone } from '../components/document-viewer/anchors.js';
+import type { LyraHighlightTone } from '../components/viewers/document-viewer/anchors.js';
 
 const TONE_NAMES: LyraHighlightTone[] = ['accent', 'success', 'warning', 'danger', 'neutral'];
 const DEFAULT_FLASH_MS = 1800; // mirrors --lr-transition-ambient's default duration (see tokens.styles.ts)
