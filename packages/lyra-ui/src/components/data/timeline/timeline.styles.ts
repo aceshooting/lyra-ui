@@ -3,9 +3,12 @@ import { css } from 'lit';
 export const styles = css`
   :host {
     display: block;
-    /* Internal, undocumented implementation properties (no @cssprop tag -- not part of the public
-       retheming surface, overriding any of these to a bogus value breaks layout rather than just
-       looking different) propagating orientation into every slotted <lr-timeline-item>'s own
+    /* Internal implementation properties: they ARE declared with @cssprop on <lr-timeline-item>
+       (the element that reads them), because an undeclared custom property is invisible to
+       web-types/vscode-css-data and to the docs freshness check -- but each declaration says
+       plainly that it is plumbing, not a retheming knob, since overriding one to a bogus value
+       breaks layout rather than just looking different. They propagate orientation into every
+       slotted <lr-timeline-item>'s own
        stylesheet, via ordinary CSS custom-property inheritance across the slot boundary -- no JS
        coordination between the two components is needed for orientation to propagate.
        --lr-timeline-item-direction drives an item's own [part='base'] flex-direction; the

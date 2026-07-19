@@ -117,6 +117,8 @@ function detectKind(mimeType: string): MediaCardKind {
  * @csspart filename - The filename text, shown only in the file-chip fallback.
  * @csspart open-button - The explicit "open" affordance rendered next to
  * `[part="media"]` for `kind="video"` only — see the class doc.
+ * @cssprop [--lr-media-card-max-height=var(--lr-size-20rem)] - Cap on the block size of the
+ * `<img>`/`<video>` in `[part="media"]`.
  */
 export class LyraMediaCard extends LyraElement<LyraMediaCardEventMap> {
   static styles = [LyraElement.styles, styles];

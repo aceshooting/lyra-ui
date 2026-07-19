@@ -122,6 +122,9 @@ export interface LyraTerminalEventMap {
  *   `lr-virtual-list::part(line)`, one hop of the standard CSS Shadow Parts selector.
  * @csspart jump-to-latest - The pill shown while `follow` is disengaged and new output has arrived.
  * @csspart announcer - The visually-hidden `role="status"` region used when `announce-output` is set.
+ * @cssprop [--lr-terminal-height=var(--lr-size-20rem)] - Block size of `[part="viewport"]`, the
+ *   scrollable log region. Not declared on `:host`, so it is inherited — set it on the host or any
+ *   ancestor.
  */
 export class LyraTerminal extends LyraElement<LyraTerminalEventMap> {
   static styles = [LyraElement.styles, styles, srOnly];

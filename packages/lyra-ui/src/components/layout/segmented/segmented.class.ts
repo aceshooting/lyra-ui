@@ -40,6 +40,12 @@ export interface LyraSegmentedEventMap {
  *   may have a natural aspect ratio and is not restricted to a square icon.
  * @csspart segment-label - The segment's label text.
  * @cssprop [--lr-scroll-fade-size=2rem] - Width of the static fade at each horizontal scroll edge.
+ * @cssprop [--lr-segmented-track-min-height=auto] - Minimum height of the `base` track. Re-set per
+ *   `size` (`2xs` through `xl`); the `auto` default applies at the unset/`m` size.
+ * @cssprop [--lr-segmented-segment-padding=var(--lr-size-0-125rem) var(--lr-space-s)] - Each
+ *   segment's padding. Re-set per `size`; this default applies at the unset/`m` size.
+ * @cssprop [--lr-segmented-font-size=var(--lr-font-size-sm)] - Each segment's font size. Re-set per
+ *   `size`; this default applies at the unset/`m` size.
  */
 export class LyraSegmented extends LyraElement<LyraSegmentedEventMap> {
   static styles = [LyraElement.styles, styles];

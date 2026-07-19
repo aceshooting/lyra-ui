@@ -11,6 +11,12 @@ export type BadgeVariant = 'neutral' | 'brand' | 'success' | 'warning' | 'danger
  * @customElement lr-badge
  * @slot - Badge content.
  * @csspart base - The badge surface.
+ * @cssprop [--lr-badge-background=var(--lr-color-surface)] - The badge's background. Each non-neutral
+ * `variant` sets it to that variant's `-quiet` tint.
+ * @cssprop [--lr-badge-border=var(--lr-color-border)] - The badge's border color. Each non-neutral
+ * `variant` sets it to that variant's loud color.
+ * @cssprop [--lr-badge-color=var(--lr-color-text)] - The badge's text color. Each non-neutral
+ * `variant` sets it to that variant's loud color.
  */
 export class LyraBadge extends LyraElement {
   static styles = [LyraElement.styles, styles];

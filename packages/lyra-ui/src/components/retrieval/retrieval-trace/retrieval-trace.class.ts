@@ -117,6 +117,7 @@ export interface LyraRetrievalTraceEventMap {
  * @csspart evidence-body - A stage's evidence content wrapper, hidden while collapsed.
  * @csspart evidence-text - A stage's free-form text evidence.
  * @csspart evidence-metadata - A stage's key/value metadata list (a `<dl>`).
+ * @csspart evidence-metadata-row - One metadata entry's `<dt>`/`<dd>` pair wrapper, inside `evidence-metadata`.
  * @csspart evidence-metadata-key - One metadata entry's key (a `<dt>`).
  * @csspart evidence-metadata-value - One metadata entry's value (a `<dd>`).
  */

@@ -155,6 +155,19 @@ export interface LyraAttachmentChipEventMap {
  * @csspart remove-button - The remove (×) affordance, only rendered while `removable`.
  * @cssprop [--lr-attachment-chip-spinner-duration=0.8s] - Duration of one indeterminate
  * upload-spinner rotation. The ambient loop stops under reduced motion.
+ * @cssprop [--lr-attachment-chip-accent=var(--lr-color-text-quiet)] - Accent color used for the
+ * status text, spinner, and progress fill. Auto-swapped per `status`
+ * (`uploading`/`error`/`done`); the default is the neutral `pending` tone.
+ * @cssprop [--lr-attachment-chip-bg=var(--lr-color-surface)] - Chip background, auto-swapped per
+ * `status` to that status's `-quiet` tint.
+ * @cssprop [--lr-attachment-chip-border=var(--lr-color-border)] - Chip border color. Every
+ * non-`pending` `status` sets it to `transparent`.
+ * @cssprop [--lr-attachment-chip-compact-thumbnail-size=var(--lr-size-1-75rem)] - Thumbnail size
+ * while `compact`, rethemeable independently of `--lr-icon-button-size`.
+ * @cssprop [--lr-attachment-chip-compact-font-size=var(--lr-font-size-xs)] - Font size of
+ * `[part="base"]` while `compact`.
+ * @cssprop [--lr-attachment-chip-compact-gap=var(--lr-size-0-25rem)] - Gap between the chip's parts
+ * while `compact`.
  */
 export class LyraAttachmentChip extends LyraElement<LyraAttachmentChipEventMap> {
   static styles = [LyraElement.styles, styles];

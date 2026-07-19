@@ -49,6 +49,8 @@ export interface LyraPlaybackEventMap {
  * @csspart base - The playback controls wrapper.
  * @csspart play-button - The play/pause button.
  * @csspart slider - The playback position slider.
+ * @cssprop [--lr-playback-icon-size=calc(var(--lr-icon-button-size) * 0.35)] - Font size of the
+ *   play/pause glyph, derived from the shared icon-button hit-target size.
  */
 export class LyraPlayback extends LyraElement<LyraPlaybackEventMap> {
   static styles = [LyraElement.styles, styles];

@@ -103,6 +103,9 @@ export interface LyraJsonViewerEventMap {
  * @csspart bracket - A `{`, `}`, `[`, or `]` delimiter.
  * @csspart toggle - A container node's expand/collapse button (hidden, but present for row alignment, on leaf/empty nodes).
  * @csspart copy-button - A copy-to-clipboard button -- the top-level one (in `toolbar`, labelled "Copy JSON to clipboard") or a per-node one (only rendered when `copyable`; labelled with its own key/type, e.g. "Copy age", so assistive tech can tell rows apart).
+ * @cssprop [--lr-json-viewer-max-height=none] - Cap on `[part="base"]`'s block size, past which the
+ *   viewer scrolls internally. The `maxHeight` property sets this token inline on `[part="base"]`.
+ * @cssprop [--lr-json-viewer-font=var(--lr-font-mono)] - Font family used for the rendered tree.
  */
 export class LyraJsonViewer extends LyraElement<LyraJsonViewerEventMap> {
   static styles = [LyraElement.styles, styles];

@@ -33,6 +33,9 @@ class LyraCodeEditorBase extends LyraElement<LyraCodeEditorEventMap> {}
  * @csspart textarea - Native textarea.
  * @csspart hint - Supporting text.
  * @csspart error - Validation message.
+ * @cssprop [--lr-code-editor-min-block-size=var(--lr-size-8rem)] - Minimum block size of the editor frame and its textarea.
+ * @cssprop [--lr-code-editor-line-height=1.5] - Line height shared by the gutter and the textarea, so line numbers stay aligned with their lines.
+ * @cssprop [--lr-code-editor-tab-size=2] - The textarea's `tab-size`. The single channel for tab width — the class writes this token rather than setting `tab-size` directly.
  */
 export class LyraCodeEditor extends FormAssociated(LyraCodeEditorBase) {
   static styles = [LyraElement.styles, styles];

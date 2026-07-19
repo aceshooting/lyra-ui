@@ -148,11 +148,13 @@ export interface LyraConversationItemEventMap {
  * @event focus - Re-dispatched from the in-place rename input as a bubbling, composed event.
  * @csspart base - The outer row wrapper (plain, no ARIA role) laying out `[part="option"]`, the rename button, and `actions`.
  * @csspart option - The selectable region (`role="button"`, removed while renaming -- see the class doc). Wraps `content` and `timestamp`.
+ * @csspart leading - The wrapper around the `leading` slot, inside `option`. Always rendered, but `hidden` while that slot is empty.
  * @csspart content - Wrapper around the title and excerpt.
  * @csspart title - The title text, shown while not renaming.
  * @csspart title-input - The in-place rename `<input>`, shown only while renaming.
  * @csspart rename-button - The pencil/edit affordance that starts a rename (only rendered while `editable` and not already renaming).
  * @csspart excerpt - The last-message preview snippet. Only rendered when `excerpt` is non-empty.
+ * @csspart meta - The wrapper around the `meta` slot. Only rendered in the built-in content path (not when the `content` slot is used), and `hidden` while the `meta` slot is empty.
  * @csspart timestamp - The formatted `timestamp`, rendered in a `<time>` element. Only rendered when `timestamp` is set and valid.
  * @csspart actions - The wrapper around the `actions` slot.
  */

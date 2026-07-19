@@ -15,6 +15,8 @@ export type SkeletonEffect = 'pulse' | 'sheen';
  * @csspart base - The placeholder shape.
  * @cssprop [--lr-transition-ambient=1.8s ease-in-out] - Animation duration and timing function
  *   shared by the pulse and sheen effects.
+ * @cssprop [--lr-skeleton-w=100%] - Inline size of the placeholder.
+ * @cssprop [--lr-skeleton-h=var(--lr-size-1em)] - Block size of the placeholder.
  */
 export class LyraSkeleton extends LyraElement {
   static styles = [LyraElement.styles, styles, srOnly];

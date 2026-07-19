@@ -113,6 +113,14 @@ function isRealPreviewNode(n: Node): boolean {
  * @csspart bracket - Each of the two literal `[`/`]` glyphs.
  * @csspart index - The citation number.
  * @csspart popover - The floating preview panel (only meaningful while open).
+ * @cssprop [--lr-citation-badge-accent=var(--lr-color-text-quiet)] - Text color of `base`, and its
+ * hover border color. Swapped by the reflected `status`: `var(--lr-color-success)` for
+ * `high`/`verified`, `var(--lr-color-warning)` for `medium`/`low`, `var(--lr-color-danger)` for
+ * `unverified`.
+ * @cssprop [--lr-citation-badge-bg=transparent] - Background of `base`. Swapped by the reflected
+ * `status` to the matching `-quiet` tone (`success`/`warning`/`danger`).
+ * @cssprop [--lr-citation-badge-border=transparent] - Resting border color of `base`; no `status`
+ * changes it, so it stays transparent unless a host overrides it.
  */
 export class LyraCitationBadge extends LyraElement<LyraCitationBadgeEventMap> {
   static styles = [LyraElement.styles, styles];

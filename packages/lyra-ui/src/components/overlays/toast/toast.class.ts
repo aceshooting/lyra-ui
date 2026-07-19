@@ -27,6 +27,21 @@ export interface ToastCreateOptions {
  * @customElement lr-toast
  * @slot - `<lr-toast-item>` elements.
  * @csspart stack - The fl-column container holding the items.
+ * @cssprop [--lr-toast-gap=var(--lr-space-s)] - Gap between stacked items.
+ * @cssprop [--lr-toast-width=var(--lr-size-28rem)] - Inline size of the stack, capped by the
+ *   viewport minus the placement insets.
+ * @cssprop [--lr-toast-accent-width=var(--lr-size-4px)] - Width of a slotted item's accent bar.
+ *   Read by `<lr-toast-item>`'s own stylesheet, so set it on the item.
+ * @cssprop [--lr-toast-accent-color=var(--lr-color-border)] - Accent bar / icon color of a slotted
+ *   item, auto-swapped per its `variant`. Read by `<lr-toast-item>`, so set it on the item.
+ * @cssprop [--lr-toast-padding=var(--lr-space-m)] - Padding of a slotted item, auto-swapped per its
+ *   `size`. Read by `<lr-toast-item>`, so set it on the item.
+ * @cssprop [--lr-toast-font-size=var(--lr-font-size-md)] - Font size of a slotted item,
+ *   auto-swapped per its `size`. Read by `<lr-toast-item>`, so set it on the item.
+ * @cssprop [--lr-toast-show-duration=var(--lr-transition-base, 180ms ease-out)] - Show transition
+ *   of a slotted item. Read by `<lr-toast-item>`, so set it on the item.
+ * @cssprop [--lr-toast-hide-duration=var(--lr-transition-base, 180ms ease-out)] - Hide transition
+ *   of a slotted item. Read by `<lr-toast-item>`, so set it on the item.
  */
 export class LyraToast extends LyraElement {
   static styles = [LyraElement.styles, styles];

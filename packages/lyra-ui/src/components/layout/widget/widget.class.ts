@@ -72,6 +72,12 @@ export interface LyraWidgetEventMap {
  * @csspart fullscreen-button - The fullscreen toggle button.
  * @csspart body - The wrapper around the default slot (the panel body).
  * @csspart backdrop - The fullscreen scrim behind the panel.
+ * @cssprop [--lr-widget-overlay-color=var(--lr-color-overlay)] - The fullscreen scrim's color,
+ *   applied to `[part="backdrop"]`.
+ * @cssprop [--lr-widget-fullscreen-inset=max(var(--lr-space-l), var(--lr-safe-area-top)) max(var(--lr-space-l), var(--lr-safe-area-inline-end)) max(var(--lr-space-l), var(--lr-safe-area-bottom)) max(var(--lr-space-l), var(--lr-safe-area-inline-start))] - The `inset` applied to `[part="base"]` while `fullscreen`. Also set inline from the `fullscreen-inset` attribute.
+ * @cssprop [--lr-widget-backdrop-inset=var(--lr-widget-fullscreen-inset)] - The `inset` applied to
+ *   `[part="backdrop"]`, so the scrim can be pulled back independently of the panel. Also set
+ *   inline from the `backdrop-inset` attribute (falling back to `fullscreen-inset`).
  *
  * `fullscreen-inset` overrides the default `var(--lr-space-l)` inset applied to `[part="base"]`
  * and `[part="backdrop"]` while fullscreen (e.g. `"0 0 0 240px"` to leave a persistent sidebar

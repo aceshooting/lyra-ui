@@ -35,6 +35,7 @@ function isRealPreviewNode(n: Node): boolean {
  * @cssprop [--lr-entity-chip-color=var(--lr-color-brand)] - Text/accent color. Reflected `type`
  * lets a host theme per type from CSS, e.g. `lr-entity-chip[type='person'] { --lr-entity-chip-color: ... }`.
  * @cssprop [--lr-entity-chip-bg=var(--lr-color-brand-quiet)] - Background color.
+ * @cssprop [--lr-entity-chip-border=transparent] - Border color of the chip.
  */
 export class LyraEntityChip extends LyraElement<LyraEntityChipEventMap> {
   static styles = [LyraElement.styles, styles];

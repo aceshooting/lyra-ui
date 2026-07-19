@@ -168,6 +168,8 @@ function redactField(value: unknown, root: string, paths: readonly string[], pla
  * @csspart entry-error - The entry's `error` text, only rendered when set.
  * @csspart approval-dialog - The single shared `<lr-tool-approval-dialog>` instance.
  * @cssprop [--lr-tool-timeline-gap=var(--lr-space-l)] - Vertical gap between entries.
+ * @cssprop [--lr-tool-timeline-marker-size=var(--lr-size-0-625rem)] - Diameter of an entry's rail
+ *   dot; also the width of the marker gutter column.
  */
 export class LyraToolTimeline extends LyraElement<LyraToolTimelineEventMap> {
   static styles = [LyraElement.styles, styles];

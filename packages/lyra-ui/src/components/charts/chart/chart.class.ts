@@ -185,6 +185,21 @@ export interface LyraChartEventMap {
  * @csspart description - The accessible chart summary.
  * @csspart data-table - The optional generated or slotted data table.
  * @csspart center - The chart-area-centered overlay wrapper for the `center` slot.
+ * @cssprop [--lr-chart-height=var(--lr-size-280px)] - The host's `block-size`. Set on the host
+ *   element from the `height` property on every change (custom properties only cascade downward,
+ *   so it cannot be set from inside the shadow root); a host-level override is overwritten the
+ *   next time `height` changes.
+ * @cssprop [--lr-chart-grid-color=var(--lr-color-border)] - Grid-line color. Resolved via
+ *   `getComputedStyle` on every draw (Chart.js paints to canvas and cannot consume `var()`).
+ * @cssprop [--lr-chart-tick-color=var(--lr-color-text-quiet)] - Axis tick-label color; also used
+ *   for the `xLabel`/`yLabel`/`y2Label` axis-title text (there is no separate title-color token).
+ *   Resolved via `getComputedStyle` on every draw.
+ * @cssprop [--lr-chart-legend-color=var(--lr-color-text)] - Legend label color. Resolved via
+ *   `getComputedStyle` on every draw.
+ * @cssprop [--lr-chart-tooltip-bg=var(--lr-color-surface)] - Tooltip background color. Resolved
+ *   via `getComputedStyle` on every draw.
+ * @cssprop [--lr-chart-tooltip-text=var(--lr-color-text)] - Tooltip text color. Resolved via
+ *   `getComputedStyle` on every draw.
  * @slot data-table - An optional consumer-provided accessible table alternative.
  * @slot center - Optional overlay content positioned at the chart area's center. Useful for
  *   doughnut and pie totals.

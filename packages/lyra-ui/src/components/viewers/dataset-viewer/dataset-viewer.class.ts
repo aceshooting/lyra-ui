@@ -67,6 +67,11 @@ class LyraDatasetViewerBase extends LyraElement<LyraDatasetViewerEventMap> {}
  *   emits `lr-highlight-activate` on click or Enter/Space.
  * @csspart spinner - The loading status region.
  * @csspart error - The error message region.
+ * @cssprop [--lr-dataset-viewer-max-height=none] - Maximum block size of `[part="body"]` before it
+ *   scrolls internally. The `maxHeight` property sets this token inline on `[part="base"]`.
+ * @cssprop [--lr-dataset-viewer-highlight-color=var(--lr-color-brand)] - Outline color of a
+ *   highlighted cell. The active highlight sets it inline to
+ *   `var(--lr-color-warning, var(--lr-color-brand))`.
  */
 export class LyraDatasetViewer extends DocumentAnchorTarget(LyraDatasetViewerBase) {
   static styles = [LyraElement.styles, styles, srOnly];

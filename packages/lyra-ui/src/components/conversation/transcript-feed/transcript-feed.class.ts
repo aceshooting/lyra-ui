@@ -42,6 +42,7 @@ export interface LyraTranscriptFeedEventMap {
  *   value already in effect on the very first render.
  * @csspart base - The scroll container.
  * @csspart log - The `role="log"` region wrapping final entries only.
+ * @csspart interim-area - The wrapper around the interim (not-yet-final) entries, rendered as a sibling of `log`. Only rendered while at least one interim entry exists.
  * @csspart entry - One entry row (final or interim).
  * @csspart speaker - An entry's speaker label (omitted for a row that repeats the previous row's speaker).
  * @csspart text - An entry's text (`dir="auto"`, for mixed-language captions).

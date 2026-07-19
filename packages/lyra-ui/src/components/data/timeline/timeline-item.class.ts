@@ -80,6 +80,23 @@ export type TimelineItemVariant = 'neutral' | 'brand' | 'success' | 'warning' | 
  * @cssprop [--lr-timeline-marker-color=var(--lr-color-text-quiet)] - Marker fill/accent color.
  *   Swapped per `variant` (see the class doc's variant table); a consumer overriding this directly on
  *   one item wins over the variant default via normal CSS cascade/specificity.
+ * @cssprop [--lr-timeline-item-direction=row] - Internal orientation plumbing, not a retheming
+ *   knob: `[part="base"]`'s `flex-direction`, set by an ancestor `<lr-timeline>`'s `:host` and
+ *   inherited across the slot boundary (`row` vertical, `column` horizontal). The `row` fallback
+ *   applies when the item is used standalone.
+ * @cssprop [--lr-timeline-item-track-direction=column] - Internal orientation plumbing, not a
+ *   retheming knob: `[part="track"]`'s `flex-direction`, always the opposite axis from
+ *   `--lr-timeline-item-direction` and set alongside it by `<lr-timeline>`.
+ * @cssprop [--lr-timeline-item-gap-block-end=0] - Internal orientation plumbing, not a retheming
+ *   knob: `[part="content"]`'s `padding-block-end`, set by a vertical `<lr-timeline>` so the rail
+ *   reaches the next item's marker. `0` when standalone or horizontal; retheme
+ *   `--lr-timeline-gap` on `<lr-timeline>` instead.
+ * @cssprop [--lr-timeline-item-gap-inline-end=0] - Internal orientation plumbing, not a retheming
+ *   knob: the inline-axis counterpart of `--lr-timeline-item-gap-block-end`, non-zero only under a
+ *   horizontal `<lr-timeline>`.
+ * @cssprop [--lr-timeline-item-rail-visibility=visible] - Internal plumbing, not a retheming knob:
+ *   `[part="rail"]`'s `visibility`, set to `hidden` by `<lr-timeline>`'s
+ *   `::slotted(:last-child)` rule so the final item has no trailing rail.
  */
 export class LyraTimelineItem extends LyraElement {
   static styles = [LyraElement.styles, styles];

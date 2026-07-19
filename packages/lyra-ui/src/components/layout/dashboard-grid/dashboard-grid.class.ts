@@ -126,6 +126,13 @@ export interface LyraDashboardGridEventMap {
  *   rendered while `cells-resizable`); the Ctrl/Cmd+Shift+Arrow keyboard path is the resize
  *   handle's full accessible equivalent, so the handle itself is `aria-hidden`.
  * @csspart live-region - The current move/resize/collision announcement.
+ * @cssprop [--lr-dashboard-grid-columns=12] - Column count of the underlying CSS Grid. Written
+ *   inline on `[part="base"]` from the `columns` property on every render, so the fallback only
+ *   applies to a `[part="base"]` this component has not rendered yet.
+ * @cssprop [--lr-dashboard-grid-row-height=var(--lr-size-5rem)] - Row track height. Written inline
+ *   on `[part="base"]` from the `rowHeight` property (in px) on every render.
+ * @cssprop [--lr-dashboard-grid-gap=var(--lr-space-m)] - Gap between cells on both axes. Written
+ *   inline on `[part="base"]` from the `gap` property (in px) on every render.
  */
 export class LyraDashboardGrid extends LyraElement<LyraDashboardGridEventMap> {
   static styles = [LyraElement.styles, styles, srOnly];

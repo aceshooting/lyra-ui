@@ -284,6 +284,8 @@ class LyraMarkdownBase extends LyraElement<LyraMarkdownEventMap> {}
  * @csspart blockquote - Every rendered `<blockquote>`.
  * @csspart img - Every rendered `<img>`.
  * @csspart math - A rendered inline or block math span (`data-display="inline"|"block"`).
+ * @cssprop [--lr-markdown-font-mono=var(--lr-font-mono)] - Monospace family for rendered `<code>`
+ *   inside `content`.
  */
 export class LyraMarkdown extends DocumentAnchorTarget(LyraMarkdownBase) {
   static styles = [LyraElement.styles, styles, srOnly];

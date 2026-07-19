@@ -128,6 +128,9 @@ class LyraDateInputBase extends LyraElement<LyraDateInputEventMap> {}
  * @csspart date-picker - The nested date picker.
  * @csspart hint - The hint message.
  * @csspart error - The validation message.
+ * @cssprop [--lr-date-input-padding-block=var(--lr-space-xs)] - Block padding of the input row, scaled by `size`.
+ * @cssprop [--lr-date-input-padding-inline=var(--lr-space-s)] - Inline padding of the input row, scaled by `size`.
+ * @cssprop [--lr-date-input-font-size=inherit] - Font size of the text input, scaled by `size`.
  * @slot label - Custom label content.
  * @slot error - Custom error content.
  * @slot hint - Custom hint content.

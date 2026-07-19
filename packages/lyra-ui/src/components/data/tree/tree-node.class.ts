@@ -36,6 +36,9 @@ export interface LyraTreeNodeEventMap {
  * @csspart badge - The optional node badge (the legacy `item.badge`, and/or one chip per
  *   `item.badges` entry, tone-mapped via `data-tone`).
  * @csspart group - The wrapper around a node's expanded child items.
+ * @cssprop [--lr-tree-depth=0] - Internal indent plumbing, not a retheming knob: this node's
+ *   `depth`, written inline onto `[part="row"]` by the component and multiplied by
+ *   `--lr-space-l` (capped at `--lr-size-8rem`) to produce the row's `padding-inline-start`.
  */
 export class LyraTreeNode extends LyraElement<LyraTreeNodeEventMap> {
   static styles = [LyraElement.styles, styles];

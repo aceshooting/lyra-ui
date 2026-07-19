@@ -68,6 +68,9 @@ class LyraInputBase extends LyraElement<LyraInputEventMap> {}
  * @csspart hint - The hint message.
  * @csspart error - The error message.
  * @cssprop --lr-input-control-min-height - Outer control height floor, scaled by `size`.
+ * @cssprop --lr-input-padding-block - Block padding of the native input, scaled by `size`.
+ * @cssprop --lr-input-padding-inline - Inline padding of the control row, scaled by `size`.
+ * @cssprop --lr-input-font-size - Font size of the native input, scaled by `size`.
  */
 export class LyraInput extends FormAssociated(LyraInputBase) {
   static styles = [LyraElement.styles, styles];

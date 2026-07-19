@@ -31,6 +31,9 @@ export interface LyraZoomableFrameEventMap {
  * @csspart zoom-in - Zoom-in button.
  * @csspart reset - Reset-to-100-percent button.
  * @cssprop --lr-zoomable-frame-min-block-size - Minimum viewport block size.
+ * @cssprop [--lr-zoomable-frame-zoom=1] - The scale factor applied to `[part="content"]`. Written
+ *   by the component itself on every render from the current `zoom`, so it is a read-out rather
+ *   than a consumer knob; set the `zoom` property instead.
  */
 export class LyraZoomableFrame extends LyraElement<LyraZoomableFrameEventMap> {
   static styles = [LyraElement.styles, styles];

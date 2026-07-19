@@ -96,6 +96,8 @@ function defaultFormatTimestamp(date: Date, locale: string): string {
  * @csspart base - The outer container.
  * @csspart header - The clickable header (`<button>`).
  * @csspart status-dot - The decorative mode indicator dot; pulses while `mode="live"`.
+ * @csspart label - The header's title text — `label`, or its localized default when `label` is
+ *   left at `'Activity'`.
  * @csspart summary - The header's one-line ticker (`live`) or completed-count summary
  *   (`post-hoc`).
  * @csspart toggle - The chevron indicator inside the header.

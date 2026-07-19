@@ -7,6 +7,10 @@ import { styles } from './icon-button.styles.js';
  * @customElement lr-icon-button
  * @slot - Optional custom icon content.
  * @csspart button - Native button.
+ * @cssprop [--lr-icon-button-size=2.5rem] - Inline and block size of the native button. A
+ *   library-wide token (declared on `:root` by `tokens.styles.ts`, and the shared minimum
+ *   tappable size several other components size their icon controls against), so overriding it
+ *   globally resizes all of them together.
  */
 export class LyraIconButton extends LyraElement {
   static styles = [LyraElement.styles, styles];

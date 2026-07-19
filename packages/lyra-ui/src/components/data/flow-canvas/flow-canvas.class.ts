@@ -153,7 +153,9 @@ interface FlowNodeCardEl extends HTMLElement {
  * @csspart empty - The `lr-empty` shown when `nodes` is empty.
  * @csspart live-region - The current item/gesture announcement.
  * @csspart edge-list - A visually hidden list of every edge.
- * @cssprop [--lr-flow-canvas-grid-size=8px] - Dotted background spacing.
+ * @cssprop [--lr-flow-canvas-grid-size=var(--lr-size-0-5rem)] - Dotted background spacing. The
+ *   canvas also writes it inline as `${grid}px` from the `grid` property, which wins over the
+ *   stylesheet fallback whenever a grid is in effect.
  * @cssprop [--lr-flow-canvas-march-duration=var(--lr-transition-ambient)] - Running-edge march animation duration.
  */
 export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {

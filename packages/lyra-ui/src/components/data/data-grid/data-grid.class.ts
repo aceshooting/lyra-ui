@@ -17,6 +17,7 @@ export interface LyraDataGridEventMap<T = unknown> { 'lr-row-click': CustomEvent
  * @csspart header - Header cell.
  * @csspart row - Body row.
  * @csspart cell - Body cell.
+ * @csspart empty - The single full-width cell rendered in place of body rows while `loading`, or when `rows` is empty.
  */
 export class LyraDataGrid<T = Record<string, unknown>> extends LyraElement<LyraDataGridEventMap<T>> {
   static styles = [LyraElement.styles, styles];

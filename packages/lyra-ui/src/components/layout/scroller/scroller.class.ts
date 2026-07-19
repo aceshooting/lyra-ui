@@ -31,8 +31,8 @@ export interface LyraScrollerEventMap {
  * @csspart control - Shared part on both `previous` and `next`.
  * @csspart previous-glyph - The chevron glyph inside `previous`, mirrored under RTL.
  * @csspart next-glyph - The chevron glyph inside `next`, mirrored under RTL.
- * @cssprop --lr-scroller-control-size - Control size.
- * @cssprop --lr-scroller-min-block-size - Minimum vertical scroller size.
+ * @cssprop [--lr-scroller-control-size=var(--lr-size-2rem)] - Control size.
+ * @cssprop [--lr-scroller-min-block-size=var(--lr-size-10rem)] - Minimum vertical scroller size.
  */
 export class LyraScroller extends LyraElement<LyraScrollerEventMap> {
   static styles = [LyraElement.styles, styles];

@@ -149,6 +149,7 @@ export interface LyraSplitEventMap {
  * @csspart base - The flex layout wrapper (`position: relative`, so the `'floating'` collapse state can anchor to it).
  * @csspart divider - Each divider between two panels; carries `aria-disabled="true"` and is drag/keyboard-inert while its adjacent panel is collapsed (`'rail'`/`'floating'`).
  * @csspart backdrop - The `'floating'` drawer's scrim. Only rendered while `collapseState === 'floating'` and `open`.
+ * @cssprop [--lr-split-overlay-color=var(--lr-color-overlay)] - The `'floating'` drawer scrim's color, applied to `[part="backdrop"]`.
  */
 export class LyraSplit extends LyraElement<LyraSplitEventMap> {
   static styles = [LyraElement.styles, styles];

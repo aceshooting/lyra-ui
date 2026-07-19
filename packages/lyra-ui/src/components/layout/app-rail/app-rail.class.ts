@@ -143,6 +143,14 @@ export interface LyraAppRailEventMap {
  * @csspart resizer-track - The resizer's slim visible drag line, centered inside `[part="resizer"]`'s
  *   larger hit target (mirrors `<lr-swatch-picker>`'s `[part="swatch"]`/`[part="swatch-fill"]`
  *   split). Colors on hover/focus the same way the whole handle previously did.
+ * @cssprop [--lr-app-rail-width=var(--lr-size-15rem)] - The inline rail's width in `'full'` mode.
+ *   Overridden by an inline width while a `resizable` rail has an explicit `railWidthPx`.
+ * @cssprop [--lr-app-rail-icon-width=var(--lr-size-4rem)] - The inline rail's width in
+ *   `'icon-only'` mode, and the maximum width of each slotted `<lr-app-rail-item>` in that mode.
+ * @cssprop [--lr-app-rail-mobile-width=var(--lr-size-18rem)] - The mobile overlay panel's width,
+ *   capped at `85vw`.
+ * @cssprop [--lr-app-rail-overlay-color=var(--lr-color-overlay)] - The mobile overlay scrim's
+ *   background.
  *
  * @example
  * Use the item contract so the visible label collapses while its accessible

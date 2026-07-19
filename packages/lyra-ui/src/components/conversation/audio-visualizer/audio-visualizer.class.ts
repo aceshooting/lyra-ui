@@ -32,6 +32,8 @@ const AMBIENT_REDUCED_MOTION_INTERVAL_MS = 500; // ~2 Hz snapshot cadence
  *   accessible name).
  * @cssprop [--lr-audio-visualizer-color=var(--lr-color-brand)] - Active bar/waveform color.
  * @cssprop [--lr-audio-visualizer-quiet-color=var(--lr-color-brand-quiet)] - Inactive/idle color.
+ * @cssprop [--lr-audio-visualizer-height=var(--lr-size-3rem)] - The host's block size, which the
+ *   canvas fills at 100%.
  */
 export class LyraAudioVisualizer extends LyraElement {
   static styles = [LyraElement.styles, styles];

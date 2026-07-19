@@ -133,6 +133,17 @@ class LyraKnownDateBase extends LyraElement<LyraKnownDateEventMap> {}
  * @csspart field-label - The small visible per-field text label ("Day"/"Month"/"Year").
  * @csspart hint - The hint message.
  * @csspart error - The validation message.
+ * @cssprop [--lr-known-date-field-padding-block=var(--lr-space-s)] - Block padding of each
+ *   `field-input`, auto-swapped per `size`.
+ * @cssprop [--lr-known-date-field-padding-inline=var(--lr-space-s)] - Inline padding of each
+ *   `field-input`, auto-swapped per `size`.
+ * @cssprop [--lr-known-date-field-font-size=var(--lr-font-size-md-sm)] - Font size of each
+ *   `field-input`, auto-swapped per `size`.
+ * @cssprop [--lr-known-date-field-gap=var(--lr-space-s)] - Gap between the three field blocks.
+ * @cssprop [--lr-known-date-day-field-width=var(--lr-size-3-5em)] - Inline size of the day field.
+ * @cssprop [--lr-known-date-month-field-width=var(--lr-size-3-5em)] - Inline size of the month
+ *   field.
+ * @cssprop [--lr-known-date-year-field-width=var(--lr-size-5em)] - Inline size of the year field.
  */
 export class LyraKnownDate extends FormAssociated(LyraKnownDateBase) {
   static styles = [LyraElement.styles, styles];

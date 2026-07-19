@@ -140,6 +140,7 @@ interface ToolGroup {
  * `tool-checkbox` (alongside `tool-name`/`tool-description`) so it contributes to the
  * checkbox's accessible name/description instead of going unannounced.
  * @csspart footer - The wrapper around the `footer` slot.
+ * @cssprop [--lr-tool-select-dialog-overlay-color=var(--lr-color-overlay)] - Backdrop scrim color.
  */
 export class LyraToolSelectDialog extends LyraElement<LyraToolSelectDialogEventMap> {
   static styles = [LyraElement.styles, styles, srOnly];

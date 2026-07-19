@@ -26,6 +26,12 @@ export type AvatarTone = 'neutral' | 'brand' | 'success' | 'warning' | 'danger';
  *   no icon content is slotted).
  * @csspart initials - The fallback initials text, rendered whenever neither slotted content nor
  *   `image` is.
+ * @cssprop [--lr-avatar-size=var(--lr-size-2rem)] - Inline and block size of the container. `size`
+ *   swaps it to `var(--lr-size-1-5rem)` (`sm`) or `var(--lr-size-2-5rem)` (`lg`).
+ * @cssprop [--lr-avatar-bg=var(--lr-color-border)] - Container background. Each non-neutral `tone`
+ *   sets it to that tone's `-quiet` tint.
+ * @cssprop [--lr-avatar-color=var(--lr-color-text)] - Initials/glyph color. Each non-neutral `tone`
+ *   sets it to that tone's loud color.
  */
 export class LyraAvatar extends LyraElement {
   static styles = [LyraElement.styles, styles];

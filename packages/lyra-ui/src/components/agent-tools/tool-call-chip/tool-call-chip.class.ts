@@ -203,6 +203,9 @@ function formatDuration(ms: number): {
  * @csspart tooltip - The floating detail popup (only meaningful while open).
  * @cssprop [--lr-tool-call-chip-spin=1s linear] - Running-icon animation duration and timing.
  * @cssprop [--lr-transition-ambient=1.8s ease-in-out] - Pending-icon pulse duration and timing.
+ * @cssprop [--lr-tool-call-chip-accent=var(--lr-color-text-quiet)] - Per-status accent color for the status glyph and status text. Reassigned by this component's own `:host([status="…"])` rules (`running` → brand, `success` → success, `error` → danger, `denied` → warning), so a page-level override only wins for the default/`pending` tone.
+ * @cssprop [--lr-tool-call-chip-bg=var(--lr-color-surface)] - Per-status chip background. Reassigned by the same `:host([status="…"])` rules (each status's `-quiet` tint).
+ * @cssprop [--lr-tool-call-chip-border=var(--lr-color-border)] - Per-status chip border color. Reassigned by the same `:host([status="…"])` rules (`transparent` for every non-`pending` status).
  */
 export class LyraToolCallChip extends LyraElement<LyraToolCallChipEventMap> {
   static styles = [LyraElement.styles, styles];

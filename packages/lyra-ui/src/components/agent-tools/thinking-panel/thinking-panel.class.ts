@@ -112,6 +112,8 @@ function formatDuration(ms: number): string {
  * @csspart body - The wrapper around the default slot, `hidden` while
  * collapsed. Independently keyboard-focusable (`tabindex="0"`, `role="group"`
  * named from `label`) since it's its own capped-height scrollable region.
+ * @cssprop [--lr-thinking-panel-max-block-size=var(--lr-size-16rem)] - Cap on how tall the
+ *   expanded reasoning transcript grows before `[part="body"]` scrolls internally.
  */
 export class LyraThinkingPanel extends LyraElement<LyraThinkingPanelEventMap> {
   static styles = [LyraElement.styles, styles];

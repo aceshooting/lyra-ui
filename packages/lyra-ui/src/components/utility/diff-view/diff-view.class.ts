@@ -35,6 +35,7 @@ export interface LyraDiffViewEventMap {
  *   `+`/`-` prefix; `"fold"` is the collapsed-unchanged-lines marker `contextLines` produces).
  * @csspart copy-button - The copy affordance, only rendered while `copyable`.
  * @csspart side - One column in `layout="split"` (`data-side="old"|"new"`).
+ * @cssprop [--lr-diff-view-font=var(--lr-font-mono)] - Font family used for the diff lines.
  */
 export class LyraDiffView extends LyraElement<LyraDiffViewEventMap> {
   static styles = [LyraElement.styles, styles];

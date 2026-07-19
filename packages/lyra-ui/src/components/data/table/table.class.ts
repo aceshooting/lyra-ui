@@ -317,6 +317,17 @@ export interface LyraTableEventMap<T = unknown> {
  * @cssprop [--lr-table-resize-min-width=var(--lr-size-3rem)] - Default minimum width for a
  *   resizable column without an explicit pixel `minWidth`.
  * @cssprop [--lr-table-resize-handle-opacity=0.12] - Hover/focus opacity of the resize handle.
+ * @cssprop [--lr-table-max-height=none] - Cap on the scroll container's block size, past which the
+ *   table body scrolls.
+ * @cssprop [--lr-table-heat-tint-lo=var(--lr-color-brand-quiet)] - Low endpoint of the heat-tint
+ *   ramp used by `heatValue` columns.
+ * @cssprop [--lr-table-heat-tint-hi=var(--lr-color-brand)] - High endpoint of the heat-tint ramp
+ *   used by `heatValue` columns.
+ * @cssprop [--lr-table-heat-t] - This cell's position on the heat-tint ramp, as a percentage
+ *   string. Set inline by the component on each `[data-heat]` cell; not consumer-settable.
+ * @cssprop [--lr-table-sticky-offset=0] - Distance a `sticky` column pins from the inline edge.
+ *   Measured and set inline per column by the component so multiple sticky columns stack instead
+ *   of overlapping; falls back to `0` for the first one, or before the first measurement pass.
  */
 export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
   static styles = [LyraElement.styles, styles];

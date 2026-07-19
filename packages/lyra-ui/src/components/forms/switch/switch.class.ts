@@ -47,6 +47,12 @@ export interface LyraSwitchEventMap {
  * @csspart label - The wrapper around the default slot.
  * @csspart hint - The hint message.
  * @csspart error - The error message.
+ * @cssprop [--lr-switch-track-inline-size=var(--lr-size-2-25rem)] - Inline size of the track, and
+ *   (with the block size) the distance the thumb travels when checked.
+ * @cssprop [--lr-switch-track-block-size=var(--lr-size-1-25rem)] - Block size of the track; the
+ *   thumb's diameter is derived from it minus twice `--lr-switch-thumb-offset`.
+ * @cssprop [--lr-switch-thumb-offset=var(--lr-size-2px)] - Inset of the thumb from the track's
+ *   edges.
  */
 export class LyraSwitch extends LyraElement<LyraSwitchEventMap> {
   static styles = [LyraElement.styles, styles];

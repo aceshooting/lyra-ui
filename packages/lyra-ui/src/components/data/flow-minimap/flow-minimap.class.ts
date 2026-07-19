@@ -28,8 +28,8 @@ interface FlowCanvasLike extends HTMLElement {
  * @csspart map - The scaled SVG.
  * @csspart node - One rect per node.
  * @csspart viewport - The draggable, focusable view rectangle.
- * @cssprop [--lr-flow-minimap-inline-size=12rem] - Map inline size.
- * @cssprop [--lr-flow-minimap-block-size=8rem] - Map block size.
+ * @cssprop [--lr-flow-minimap-inline-size=var(--lr-size-12rem)] - Map inline size.
+ * @cssprop [--lr-flow-minimap-block-size=var(--lr-size-8rem)] - Map block size.
  */
 export class LyraFlowMinimap extends LyraElement {
   static styles = [LyraElement.styles, styles];

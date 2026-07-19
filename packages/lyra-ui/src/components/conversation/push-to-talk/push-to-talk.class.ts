@@ -90,6 +90,8 @@ export interface LyraPushToTalkEventMap {
  *   while recording.
  * @csspart timer - The `M:SS` elapsed-time readout, rendered only while recording and `show-timer`.
  * @csspart status - Visible status text for the `requesting`/`denied`/`error`/unsupported states.
+ * @cssprop [--lr-push-to-talk-size=var(--lr-size-3rem)] - Inline and block size of the circular
+ *   `trigger` button.
  */
 export class LyraPushToTalk extends LyraElement<LyraPushToTalkEventMap> {
   static styles = [LyraElement.styles, styles];

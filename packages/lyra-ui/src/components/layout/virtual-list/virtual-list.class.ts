@@ -162,6 +162,9 @@ export interface LyraVirtualListEventMap {
  * @csspart group - A positioned group label.
  * @csspart row - One rendered row's absolutely-positioned wrapper
  *   (`role="listitem"`); `renderItem`'s return value renders inside it.
+ * @cssprop [--lr-virtual-list-height=var(--lr-size-24rem)] - The scroll viewport's height. A
+ *   virtualized list needs a bounded scroll extent, so this ships a default rather than
+ *   collapsing to zero when a caller does not size the host.
  */
 export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
   static styles = [LyraElement.styles, styles];

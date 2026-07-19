@@ -15,6 +15,7 @@ const DEFAULT_MAX = 100;
  * @csspart track - The SVG track.
  * @csspart indicator - The SVG indicator.
  * @csspart label - The center label.
+ * @cssprop [--lr-progress-ring-size=var(--lr-size-2-5rem)] - Outer diameter of the ring.
  */
 export class LyraProgressRing extends LyraElement {
   static styles = [LyraElement.styles, ringStyles];

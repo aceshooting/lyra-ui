@@ -106,6 +106,11 @@ export interface LyraStreamStatusEventMap {
  * @csspart indicator - The decorative (`aria-hidden`) status dot.
  * @csspart message - Wrapper around the default slot; only rendered while `phase="stalled"`.
  * @csspart actions - Wrapper around the `actions` slot.
+ * @cssprop [--lr-stream-status-dot-color=var(--lr-color-text-quiet)] - `indicator` dot color.
+ *   Swapped by the reflected `phase`: `var(--lr-color-brand)` for `connecting`/`streaming`,
+ *   `var(--lr-color-warning)` for `stalled`.
+ * @cssprop [--lr-stream-status-dot-opacity=0.35] - `indicator` dot opacity. Swapped by the
+ *   reflected `phase`: `0.6` for `connecting`, `1` for `streaming` and `stalled`.
  */
 export class LyraStreamStatus extends LyraElement<LyraStreamStatusEventMap> {
   static styles = [LyraElement.styles, styles];

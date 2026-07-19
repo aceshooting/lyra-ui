@@ -317,6 +317,7 @@ export interface LyraHeatmapEventMap {
  * @cssprop [--lr-heatmap-focus-ring-color=var(--lr-focus-ring-color)] - Focus ring around a focused cell.
  * @cssprop [--lr-heatmap-annotation-color=var(--lr-color-danger)] - Border color for an annotated cell.
  * @cssprop [--lr-heatmap-selected-color=var(--lr-color-success)] - Border color for the selected cell.
+ * @cssprop [--lr-heatmap-color-steps-gradient=linear-gradient(to right, var(--lr-heatmap-scale-lo), var(--lr-heatmap-scale-hi))] - Gradient painted on the continuous legend bar. Set on the host by the component itself while `colorSteps` is supplied, and removed again when it is not; the fallback is the two-endpoint scale ramp.
  */
 export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
   static styles = [LyraElement.styles, styles, srOnly];

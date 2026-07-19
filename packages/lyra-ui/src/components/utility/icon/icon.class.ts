@@ -21,6 +21,7 @@ const PATHS: Record<string, string> = {
  * @customElement lr-icon
  * @slot - Optional custom SVG/path content when `name` is not supplied.
  * @csspart svg - The rendered SVG.
+ * @cssprop [--lr-icon-size=var(--lr-size-1-25rem)] - Inline and block size of the icon box.
  */
 export class LyraIcon extends LyraElement {
   static styles = [LyraElement.styles, styles];

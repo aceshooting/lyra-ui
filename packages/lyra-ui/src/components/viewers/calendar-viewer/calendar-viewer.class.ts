@@ -34,6 +34,8 @@ function formatEventTime(start: Date | null, end: Date | null, locale: string): 
  * @csspart event-description - The event description.
  * @csspart error - The error region.
  * @csspart spinner - The loading region.
+ * @cssprop [--lr-calendar-viewer-max-height=none] - Maximum block size of `[part="body"]` before it
+ *   scrolls internally. The `maxHeight` property sets this token inline on `[part="base"]`.
  */
 export class LyraCalendarViewer extends LyraElement<LyraCalendarViewerEventMap> {
   static styles = [LyraElement.styles, styles, srOnly];

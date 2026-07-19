@@ -54,6 +54,7 @@ export interface LyraToolResultViewEventMap {
  * @csspart base - The root wrapper around the resolved renderer's output (or the loading/fallback view).
  * @csspart fallback-text - The `<pre>` element for the `fallback="text"` kind's preformatted result text (only present in that mode).
  * @csspart fallback-copy - The `<lr-copy-button>` shown when `copyable` is set alongside the `fallback="text"` kind (only present when both are set).
+ * @cssprop [--lr-tool-result-view-font=var(--lr-font-mono)] - Font family for the `fallback="text"` preformatted output.
  */
 export class LyraToolResultView extends LyraElement<LyraToolResultViewEventMap> {
   static styles = [LyraElement.styles, styles];

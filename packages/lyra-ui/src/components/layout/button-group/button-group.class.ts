@@ -13,7 +13,7 @@ export type ButtonGroupOrientation = 'horizontal' | 'vertical';
  * @customElement lr-button-group
  * @slot - Buttons or other action controls.
  * @csspart base - The group wrapper.
- * @cssprop --lr-button-group-gap - Gap between grouped controls.
+ * @cssprop [--lr-button-group-gap=var(--lr-space-2xs)] - Gap between grouped controls.
  */
 export class LyraButtonGroup extends LyraElement {
   static styles = [LyraElement.styles, styles];

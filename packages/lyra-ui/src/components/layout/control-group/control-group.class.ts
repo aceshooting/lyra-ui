@@ -14,7 +14,7 @@ import { styles } from './control-group.styles.js';
  * @customElement lr-control-group
  * @slot - Form controls, buttons, or any other action content.
  * @csspart base - The group wrapper (`role="group"`).
- * @cssprop --lr-control-group-gap - Gap between grouped controls.
+ * @cssprop [--lr-control-group-gap=var(--lr-space-xs)] - Gap between grouped controls.
  */
 export class LyraControlGroup extends LyraElement {
   static styles = [LyraElement.styles, styles];

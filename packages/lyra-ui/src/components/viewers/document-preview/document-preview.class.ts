@@ -168,6 +168,9 @@ export interface LyraDocumentPreviewEventMap {
  * @cssprop [--lr-document-preview-max-height=none] - Maximum body block size before the preview scrolls internally.
  * @cssprop [--lr-document-preview-font=var(--lr-font-mono)] - Font used for plain-text previews.
  * @cssprop [--lr-document-preview-spin-duration=0.8s] - Duration of one indeterminate loading-indicator rotation.
+ * @cssprop [--lr-document-preview-progress=0] - Unitless 0-100 completion of the determinate
+ *   loading ring (multiplied by `1%` in its conic gradient). Written inline by the component from
+ *   the clamped `progress` value, so it is a read-out rather than a consumer knob.
  */
 export class LyraDocumentPreview extends LyraElement<LyraDocumentPreviewEventMap> {
   static styles = [LyraElement.styles, styles, srOnly];

@@ -34,6 +34,11 @@ export interface LyraStackTraceEventMap {
  * @csspart internal-toggle - The collapse/expand toggle for a run of internal frames.
  * @csspart raw - The verbatim `<pre>` fallback when zero structured frames parsed.
  * @csspart copy-button - The copy-to-clipboard button, only rendered while `copyable`.
+ * @cssprop [--lr-stack-trace-max-height=none] - Cap on how tall `[part="base"]` grows before it
+ *   scrolls internally. `none` lets the component grow with its content; the `max-height`
+ *   attribute sets this token.
+ * @cssprop [--lr-stack-trace-font=var(--lr-font-mono)] - Font family for the parsed frames and the
+ *   verbatim raw fallback.
  */
 export class LyraStackTrace extends LyraElement<LyraStackTraceEventMap> {
   static styles = [LyraElement.styles, styles];

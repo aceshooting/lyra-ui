@@ -242,6 +242,7 @@ export interface LyraAgentRunEventMap {
  * @csspart tools - The `tools` slot.
  * @csspart reasoning - The `reasoning` slot.
  * @csspart output - The `output` slot.
+ * @cssprop [--lr-agent-run-spin=1s linear] - Current-step icon spin animation duration and timing.
  */
 export class LyraAgentRun extends LyraElement<LyraAgentRunEventMap> {
   static styles = [LyraElement.styles, srOnly, styles];

@@ -30,6 +30,8 @@ export interface LyraComparePanelEventMap {
  * @csspart vote-bar - The `role="group"` row of vote buttons.
  * @csspart vote-button - One vote button.
  * @csspart live-region - The internal vote-announcement live region.
+ * @cssprop [--lr-compare-panel-max-height=var(--lr-size-24rem)] - Cap on how tall each pane's
+ *   scroll region grows before it scrolls internally.
  */
 export class LyraComparePanel extends LyraElement<LyraComparePanelEventMap> {
   static styles = [LyraElement.styles, styles];

@@ -104,6 +104,12 @@ export interface LyraDialogEventMap {
  *   `aria-labelledby` when no heading is slotted and `heading` is unset.
  * @csspart body - The wrapper around the default slot.
  * @csspart footer - The wrapper around the `footer` slot.
+ * @cssprop [--lr-dialog-overlay-color=var(--lr-color-overlay)] - Backdrop scrim color.
+ * @cssprop [--lr-dialog-width=auto] - Assertive inline size for the panel. Left at `auto` the panel
+ *   shrink-wraps to its content.
+ * @cssprop [--lr-dialog-max-width=var(--lr-dialog-width, var(--lr-size-32rem))] - Cap on the
+ *   panel's inline size. Falls back to `--lr-dialog-width` when that is set, so an assertive width
+ *   is not clipped by the 32rem default; the viewport (`100%`) is always a hard limit on top.
  */
 export class LyraDialog extends LyraElement<LyraDialogEventMap> {
   static styles = [LyraElement.styles, srOnly, styles];

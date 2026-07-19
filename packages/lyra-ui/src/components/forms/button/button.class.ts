@@ -37,6 +37,30 @@ export type ButtonType = 'button' | 'submit' | 'reset';
  * @cssprop [--lr-button-active-scale=0.9875] - `transform: scale()` factor applied while a
  * non-disabled button is pressed.
  * @cssprop [--lr-button-spinner-duration=1s] - Rotation period of the `loading` spinner.
+ * @cssprop [--lr-button-accent=var(--lr-color-text)] - Text/glyph color for the chrome-less
+ * appearances (`outlined`, `plain`, `link`). Swapped per `variant` to that variant's semantic color.
+ * @cssprop [--lr-button-fill=var(--lr-color-surface)] - Background of `appearance="filled"`.
+ * Swapped per `variant` to that variant's semantic color.
+ * @cssprop [--lr-button-on-fill=var(--lr-color-text)] - Text color on top of `--lr-button-fill`.
+ * Swapped per `variant` to that variant's `on-*` color.
+ * @cssprop [--lr-button-accent-fill=var(--lr-color-neutral)] - Background of
+ * `appearance="accent"` (and its border color). Swapped per `variant` to that variant's semantic color.
+ * @cssprop [--lr-button-accent-on-fill=var(--lr-color-on-neutral)] - Text color on top of
+ * `--lr-button-accent-fill`. Swapped per `variant` to that variant's `on-*` color.
+ * @cssprop [--lr-button-border=var(--lr-color-border)] - Border color of the internal button.
+ * Swapped per `variant` to that variant's semantic color.
+ * @cssprop [--lr-button-outlined-border=var(--lr-color-border-strong)] - Border color of
+ * `appearance="outlined"`, which overrides `--lr-button-border`.
+ * @cssprop [--lr-button-quiet-border=var(--lr-color-border)] - Border color of
+ * `appearance="quiet"`.
+ * @cssprop [--lr-button-quiet-text=var(--lr-color-text-quiet)] - Text color of
+ * `appearance="quiet"`.
+ * @cssprop [--lr-button-size-2xs=var(--lr-size-1-25rem)] - `min-block-size` at `size="2xs"`.
+ * @cssprop [--lr-button-size-xs=var(--lr-size-1-5rem)] - `min-block-size` at `size="xs"`.
+ * @cssprop [--lr-button-size-s=var(--lr-size-1-75rem)] - `min-block-size` at `size="s"`.
+ * @cssprop [--lr-button-size-m=var(--lr-size-2rem)] - `min-block-size` at `size="m"`.
+ * @cssprop [--lr-button-size-l=var(--lr-size-2-5rem)] - `min-block-size` at `size="l"`.
+ * @cssprop [--lr-button-size-xl=var(--lr-size-3rem)] - `min-block-size` at `size="xl"`.
  */
 export class LyraButton extends LyraElement {
   static styles = [LyraElement.styles, styles];

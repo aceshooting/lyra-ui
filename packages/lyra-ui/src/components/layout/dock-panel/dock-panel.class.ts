@@ -118,6 +118,9 @@ interface DragState {
  * @csspart handle - The draggable resize handle on the panel's inner edge. Only rendered when
  *   `resizable` and not `collapsed`.
  * @csspart collapse-toggle - The collapse/expand toggle button. Only rendered when `collapsible`.
+ * @cssprop [--lr-dock-panel-collapsed-size=var(--lr-icon-button-size)] - The extent the panel
+ *   keeps along its resize axis while `collapsed` -- enough to still host the toggle button that
+ *   re-expands it.
  */
 export class LyraDockPanel extends LyraElement<LyraDockPanelEventMap> {
   static styles = [LyraElement.styles, styles];

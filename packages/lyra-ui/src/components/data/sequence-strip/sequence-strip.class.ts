@@ -42,6 +42,9 @@ export interface SequenceStripCategory {
  * @csspart legend-item - One swatch + label pair in the legend, one per `categories` entry.
  * @csspart legend-swatch - The color chip of a legend item, matching that category's cell color.
  * @csspart legend-label - The text of a legend item (the category's `label`, or its `key`).
+ * @cssprop [--lr-sequence-strip-height=var(--lr-size-1-5rem)] - Block size of the strip.
+ * @cssprop [--lr-sequence-strip-marker-color=var(--lr-color-text)] - Color of the bottom marker on a `marker: true` cell.
+ * @cssprop [--lr-sequence-strip-legend-swatch-size=var(--lr-size-0-625rem)] - Inline and block size of a legend swatch.
  */
 export class LyraSequenceStrip extends LyraElement {
   static styles = [LyraElement.styles, styles];

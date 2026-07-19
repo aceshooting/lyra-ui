@@ -18,9 +18,21 @@ export interface LyraCommandPaletteEventMap { 'lr-select': CustomEvent<{ command
  * @event lr-close - The palette closed.
  * @csspart backdrop - Modal backdrop.
  * @csspart dialog - Palette dialog.
+ * @csspart search - The search row wrapping the leading icon and the `input`.
  * @csspart input - Search input.
  * @csspart list - Command list.
+ * @csspart group - A group heading, rendered before the first command of each `group`.
  * @csspart command - A command button.
+ * @csspart description - A command's secondary description text. Rendered for every command; empty
+ *   when the command has no `description`.
+ * @csspart shortcut - A command's trailing shortcut hint. Only rendered when the command has a
+ *   `shortcut`.
+ * @csspart empty - The "no results" message. Only rendered when the filter matches no command.
+ * @cssprop [--lr-command-palette-z-index=var(--lr-overlay-stack-index, var(--lr-layer-modal))] - Stacking index of the backdrop.
+ * @cssprop [--lr-command-palette-max-inline-size=var(--lr-size-48rem)] - Maximum dialog width.
+ * @cssprop [--lr-command-palette-max-block-size=70vh] - Maximum dialog height.
+ * @cssprop [--lr-command-palette-list-max-block-size=50vh] - Maximum height of the scrolling command list.
+ * @cssprop [--lr-command-palette-offset-block-start=12vh] - Gap between the viewport top and the dialog.
  */
 export class LyraCommandPalette extends LyraElement<LyraCommandPaletteEventMap> {
   static styles = [LyraElement.styles, styles];

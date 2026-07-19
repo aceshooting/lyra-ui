@@ -116,6 +116,8 @@ export interface LyraToolApprovalDialogEventMap {
  * @csspart deny-button - The built-in Deny button.
  * @csspart edit-button - The built-in Edit/Cancel toggle button (only rendered while `editable`).
  * @csspart approve-button - The built-in Approve button — `disabled` while an in-progress edit is invalid JSON.
+ * @cssprop [--lr-tool-approval-dialog-overlay-color=var(--lr-color-overlay)] - Backdrop scrim color.
+ * @cssprop [--lr-tool-approval-dialog-mono-font=var(--lr-font-mono)] - Font family for the tool name and the raw-JSON args editor.
  */
 export class LyraToolApprovalDialog extends LyraElement<LyraToolApprovalDialogEventMap> {
   static styles = [LyraElement.styles, styles];

@@ -28,6 +28,8 @@ export interface LyraTokenInputEventMap {
  * @csspart input - Native text input.
  * @csspart hint - Supporting text.
  * @csspart error - Validation message.
+ * @cssprop [--lr-token-input-input-inline-size=var(--lr-size-8rem)] - `flex-basis` of the native text input within the token row.
+ * @cssprop [--lr-token-input-min-input-inline-size=var(--lr-size-4rem)] - Inline-size floor of the native text input, so it stays usable once tokens wrap.
  */
 export class LyraTokenInput extends LyraElement<LyraTokenInputEventMap> {
   static formAssociated = true;

@@ -28,7 +28,9 @@ export interface LyraBranchPickerEventMap {
  *   displayed branch content.
  * @csspart base - The group wrapper (`role="group"`).
  * @csspart previous-button - The previous-branch chevron button.
+ * @csspart previous-glyph - The chevron glyph wrapper inside `previous-button`.
  * @csspart next-button - The next-branch chevron button.
+ * @csspart next-glyph - The chevron glyph wrapper inside `next-button`.
  * @csspart position - The visible "2 / 5" text.
  */
 export class LyraBranchPicker extends LyraElement<LyraBranchPickerEventMap> {

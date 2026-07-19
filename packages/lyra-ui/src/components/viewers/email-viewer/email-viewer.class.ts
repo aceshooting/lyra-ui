@@ -109,6 +109,8 @@ function foldHtmlQuotes(html: string, localize: (key: string) => string): string
  * @csspart quote-toggle - The show/hide-quoted-text toggle button.
  * @csspart error - The error region.
  * @csspart spinner - The loading region.
+ * @cssprop [--lr-email-viewer-max-height=none] - Maximum block size of `[part="body"]` before it
+ *   scrolls internally. The `maxHeight` property sets this token inline on `[part="base"]`.
  */
 export class LyraEmailViewer extends LyraElement<LyraEmailViewerEventMap> {
   static styles = [LyraElement.styles, styles, srOnly];

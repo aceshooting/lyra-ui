@@ -59,8 +59,26 @@ export interface LyraChipEventMap {
  * @csspart icon - Wrapper around the `icon` slot. Hidden entirely while empty.
  * @csspart label - Wrapper around the default slot.
  * @csspart remove-button - The remove (×) affordance, only rendered while `removable`.
+ * @cssprop [--lr-chip-accent=var(--lr-color-text)] - Text/icon color of the pill. Each `tone` sets
+ * it to that tone's loud color.
+ * @cssprop [--lr-chip-bg=var(--lr-color-surface)] - Background of the pill. Each `tone` sets it to
+ * that tone's `-quiet` tint.
+ * @cssprop [--lr-chip-border=var(--lr-color-border)] - Border color of the pill. Every non-neutral
+ * `tone` sets it to `transparent`.
+ * @cssprop [--lr-chip-font-size=var(--lr-font-size-sm)] - Label font size. Each `size` sets it to
+ * that step's font size.
+ * @cssprop [--lr-chip-gap=var(--lr-space-xs)] - Gap between the icon, label, and remove button.
+ * Each `size` sets it to that step's gap.
+ * @cssprop [--lr-chip-icon-size=var(--lr-font-size-sm)] - Font size of the `icon` slot wrapper.
+ * Each `size` sets it to that step's icon size.
+ * @cssprop [--lr-chip-padding-block=var(--lr-size-0-25rem)] - Block padding of the pill. Each
+ * `size` sets it to that step's block padding.
+ * @cssprop [--lr-chip-padding-inline=var(--lr-space-s)] - Inline padding of the pill. Each `size`
+ * sets it to that step's inline padding.
  * @cssprop [--lr-chip-pressed-bg=var(--lr-chip-bg)] - Background while a toggleable chip is
  * selected, independently themeable from its resting background.
+ * @cssprop [--lr-chip-pressed-border=var(--lr-chip-accent)] - Border color while a toggleable chip
+ * is selected, independently themeable from the label/icon color.
  */
 export class LyraChip extends LyraElement<LyraChipEventMap> {
   static styles = [LyraElement.styles, styles];

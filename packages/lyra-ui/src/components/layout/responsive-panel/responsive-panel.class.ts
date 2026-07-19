@@ -114,6 +114,8 @@ export function resolveEffectiveMode(mode: ResponsivePanelMode, belowBreakpoint:
  * @csspart header - The wrapper around the `header` slot.
  * @csspart body - The wrapper around the default slot.
  * @csspart footer - The wrapper around the `footer` slot.
+ * @cssprop [--lr-responsive-panel-overlay-color=var(--lr-color-overlay)] - The overlay
+ *   presentation's scrim color, applied to `[part="backdrop"]`.
  */
 export class LyraResponsivePanel extends LyraElement<LyraResponsivePanelEventMap> {
   static styles = [LyraElement.styles, styles];

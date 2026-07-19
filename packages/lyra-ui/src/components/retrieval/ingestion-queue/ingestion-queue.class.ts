@@ -148,6 +148,8 @@ const DEFAULT_VIRTUALIZE_THRESHOLD = 100;
  *   `<lr-virtual-list>`'s own shadow root, not this component's).
  * @csspart item-header - The row's name/stage-badge line.
  * @csspart item-name - The document's `name`.
+ * @csspart item-stage - The row's `<lr-badge>` showing the localized stage label; its `variant`
+ *   tracks `stage`.
  * @csspart item-progress - The row's `<lr-progress-bar>`, only rendered for an active (uploading
  *   through indexing) stage.
  * @csspart item-meta - Wrapper around the chunk-count/embedding-status/attempt-count text.

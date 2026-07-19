@@ -17,6 +17,12 @@ export type LyraDrawerPlacement = 'start' | 'end' | 'top' | 'bottom';
  * `panel`, `header`, `heading`, `close-button`, `label`, `body`, and `footer`.
  * @cssprop --lr-drawer-width - Inline size for start/end drawers.
  * @cssprop --lr-drawer-height - Block size for top/bottom drawers.
+ * @cssprop [--lr-drawer-enter-x=calc(-1 * var(--lr-size-1rem))] - Horizontal offset the panel
+ *   animates in from for start/end drawers. Set per placement (and flipped under RTL) by the
+ *   stylesheet; only read when `prefers-reduced-motion` is `no-preference`.
+ * @cssprop [--lr-drawer-enter-y=calc(-1 * var(--lr-size-1rem))] - Vertical offset the panel
+ *   animates in from for top/bottom drawers. Set to `var(--lr-size-1rem)` for `bottom`; only read
+ *   when `prefers-reduced-motion` is `no-preference`.
  */
 export class LyraDrawer extends LyraDialog {
   static styles = [LyraDialog.styles, styles];

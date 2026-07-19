@@ -124,6 +124,10 @@ export interface LyraCodeBlockEventMap {
  *   `highlights`.
  * @csspart line-button - A gutter line-number button, only rendered while `interactive-lines` and
  *   `line-numbers` are both set.
+ * @cssprop [--lr-code-block-max-height=none] - Scroll cap applied to `body`. The `max-height`
+ *   attribute, when set, writes this same property inline on `body` and therefore wins.
+ * @cssprop [--lr-code-block-font=var(--lr-font-mono)] - Monospace family for the rendered `pre`
+ *   and `code`.
  */
 export class LyraCodeBlock extends LyraElement<LyraCodeBlockEventMap> {
   static styles = [LyraElement.styles, styles];

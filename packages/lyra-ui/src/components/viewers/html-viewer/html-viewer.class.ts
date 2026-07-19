@@ -28,6 +28,8 @@ export interface LyraHtmlViewerEventMap {
  * @csspart html - The sanitized HTML document, once loaded.
  * @csspart spinner - The loading region.
  * @csspart error - The error region.
+ * @cssprop [--lr-html-viewer-max-height=none] - Maximum block size of `[part="body"]` before it
+ *   scrolls internally. The `maxHeight` property sets this token inline on `[part="base"]`.
  */
 export class LyraHtmlViewer extends LyraElement<LyraHtmlViewerEventMap> {
   static styles = [LyraElement.styles, styles, srOnly];

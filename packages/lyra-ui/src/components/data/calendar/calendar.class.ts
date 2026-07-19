@@ -28,14 +28,20 @@ const monthStart = (date: Date): Date => new Date(date.getFullYear(), date.getMo
  * @event lr-event-select - An event was selected.
  * @event lr-view-change - The visible month changed.
  * @csspart header - Calendar header.
+ * @csspart nav - A previous/next navigation control in the header (the previous button, and the wrapper around the next button).
  * @csspart nav-glyph - The previous/next chevron glyph, mirrored under RTL.
+ * @csspart title - The header's month/year title.
  * @csspart weekdays - Weekday header row.
  * @csspart weekday - One weekday header cell.
  * @csspart grid - Month grid.
  * @csspart week - One week row within the month grid.
  * @csspart day - Day cell.
+ * @csspart date - The day-of-month number inside a day cell.
  * @csspart event - Event marker.
  * @csspart agenda - Agenda list.
+ * @csspart agenda-event - One focusable event button in agenda view (`view="agenda"` only).
+ * @cssprop [--lr-calendar-day-min-block-size=var(--lr-size-6rem)] - Minimum block size of a day cell.
+ * @cssprop [--lr-calendar-day-min-block-size-narrow=4rem] - Minimum block size of a day cell once the host is narrower than 28rem.
  */
 export class LyraCalendar extends LyraElement<LyraCalendarEventMap> {
   static styles = [LyraElement.styles, styles];

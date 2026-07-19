@@ -42,6 +42,17 @@ export interface LyraToastItemEventMap {
  * @csspart icon - The icon wrapper.
  * @csspart content - The message wrapper.
  * @csspart close-button - The dismiss button.
+ * @cssprop [--lr-toast-accent-width=var(--lr-size-4px)] - Width of the accent bar, and the extra
+ *   inline-start padding reserved for it.
+ * @cssprop [--lr-toast-accent-color=var(--lr-color-border)] - Color of the accent bar and the icon,
+ *   auto-swapped per `variant`.
+ * @cssprop [--lr-toast-padding=var(--lr-space-m)] - Padding of the item, auto-swapped per `size`.
+ * @cssprop [--lr-toast-font-size=var(--lr-font-size-md)] - Font size of the item, auto-swapped per
+ *   `size`.
+ * @cssprop [--lr-toast-show-duration=var(--lr-transition-base, 180ms ease-out)] - Opacity/transform
+ *   transition used while showing.
+ * @cssprop [--lr-toast-hide-duration=var(--lr-transition-base, 180ms ease-out)] - Opacity/transform
+ *   transition used while hiding.
  */
 export class LyraToastItem extends LyraElement<LyraToastItemEventMap> {
   static styles = [LyraElement.styles, styles];

@@ -43,7 +43,7 @@ export interface LyraSwatchPickerEventMap {
  *   replaces `swatch-fill` and the swatch renders unfilled/unbordered behind it.
  * @cssprop [--lr-swatch-picker-selected-color=var(--lr-color-brand)] - Ring color drawn around
  *   the selected swatch, themeable independently of the focus ring and every other ring color.
- * @cssprop [--lr-swatch-picker-selected-blur=0px] - Blur radius of that same ring. 0 by default
+ * @cssprop [--lr-swatch-picker-selected-blur=0] - Blur radius of that same ring. 0 by default
  *   (a crisp ring); set a real length (e.g. 0.4rem) for a soft glow instead.
  * @cssprop [--lr-swatch-picker-shine-duration=0s] - Duration of a rhythmic brighten-and-settle
  *   "shine" on the selected swatch. `0s` (the default) is a no-op -- today's static look for every

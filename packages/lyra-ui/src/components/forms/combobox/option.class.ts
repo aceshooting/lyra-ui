@@ -3,6 +3,10 @@ import { property } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { styles } from './option.styles.js';
 
+export interface LyraOptionEventMap {
+  'lr-option-change': CustomEvent<undefined>;
+}
+
 /**
  * `<lr-option>` — a selectable option for `<lr-combobox>`.
  * Mirrors `<wa-option>`. Acts as the data source; the combobox renders the
@@ -12,9 +16,6 @@ import { styles } from './option.styles.js';
  *
  * @customElement lr-option
  */
-export interface LyraOptionEventMap {
-  'lr-option-change': CustomEvent<undefined>;
-}
 export class LyraOption extends LyraElement<LyraOptionEventMap> {
   static styles = [LyraElement.styles, styles];
 

@@ -27,6 +27,12 @@ export interface LyraCalloutEventMap { 'lr-close': CustomEvent<undefined>; }
  *   variant.
  * @csspart close-icon - The close button's visible "×" glyph, independent of `close-button`'s hit
  *   target size -- shrinks in the `inline` variant while the hit target stays full-size.
+ * @cssprop [--lr-callout-background=var(--lr-color-surface)] - The callout surface's background.
+ *   Each non-neutral `variant` sets it to that variant's `-quiet` tint.
+ * @cssprop [--lr-callout-border=var(--lr-color-border)] - The callout surface's border color. Each
+ *   non-neutral `variant` sets it to that variant's loud color.
+ * @cssprop [--lr-callout-color=var(--lr-color-text)] - The callout's text color. Each non-neutral
+ *   `variant` sets it to that variant's loud color.
  */
 export class LyraCallout extends LyraElement<LyraCalloutEventMap> {
   static styles = [LyraElement.styles, styles];

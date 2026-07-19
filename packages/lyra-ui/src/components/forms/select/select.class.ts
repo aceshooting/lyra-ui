@@ -84,6 +84,14 @@ export interface LyraSelectEventMap {
  * @csspart error - The error message.
  * @csspart hint - The hint message.
  * @cssprop --lr-select-expand-size - Decorative expand-icon box size, scaled by `size`.
+ * @cssprop --lr-select-trigger-padding - Trigger padding shorthand, scaled by `size`.
+ * @cssprop --lr-select-trigger-min-height - Trigger block-size floor, scaled by `size`. Applied
+ *   only for the `xs`/`s`/`l`/`xl` tiers — see the stylesheet note; the default tier stays
+ *   floor-free.
+ * @cssprop --lr-select-font-size - Trigger font size, scaled by `size`.
+ * @cssprop [--lr-select-trigger-height=auto] - Exact trigger height. Left at `auto` the trigger is
+ *   floored only; set it to a length to both floor and cap the trigger (e.g. to pixel-match a
+ *   sibling field in the same row).
  */
 export class LyraSelect extends LyraElement<LyraSelectEventMap> {
   static formAssociated = true;

@@ -13,6 +13,10 @@ export type SpinnerLabelPlacement = 'none' | 'after';
  * @csspart base - The wrapper.
  * @csspart spinner - The animated indicator.
  * @csspart label - The accessible/visible label wrapper.
+ * @cssprop [--lr-spinner-size=var(--lr-size-1-25rem)] - Outer diameter of the indicator.
+ * @cssprop [--lr-spinner-track-width=var(--lr-border-width-medium)] - Thickness of the ring track.
+ * @cssprop [--lr-spinner-duration=800ms] - Duration of one rotation. Not read under
+ *   `prefers-reduced-motion: reduce`, where the animation is disabled entirely.
  */
 export class LyraSpinner extends LyraElement {
   static styles = [LyraElement.styles, styles];

@@ -91,6 +91,19 @@ class EmojiPickerBase extends LyraElement<LyraEmojiPickerEventMap> {}
  * @csspart emoji - Each emoji's own `<button>`; meets the shared minimum tappable size
  *   (`--lr-icon-button-size`) without enlarging the rendered emoji glyph itself.
  * @csspart empty - The empty-state message, shown when the search matches nothing.
+ * @csspart virtual-spacer - The full-height scroll spacer that gives the grid its scrollbar while
+ *   only the visible rows exist in the DOM. Rendered on the windowed path only.
+ * @csspart virtual-row - One windowed row, absolutely positioned at the `--lr-emoji-picker-row-height`
+ *   pitch. Rendered on the windowed path only.
+ * @csspart virtual-label - The `aria-hidden` placeholder that reserves a row's group-label band when
+ *   that row has no label, keeping every row the same height. Rendered on the windowed path only.
+ * @csspart virtual-items - The flex row holding one windowed row's emoji buttons.
+ * @cssprop [--lr-emoji-picker-item-size=var(--lr-icon-button-size)] - Each emoji button's box.
+ *   Clamped up to `--lr-icon-button-size`: a smaller value does not shrink the button.
+ * @cssprop [--lr-emoji-picker-gap=var(--lr-space-2xs)] - Gap between emoji within a windowed row.
+ * @cssprop [--lr-emoji-picker-row-height=calc(var(--lr-emoji-picker-item-size) + var(--lr-space-l))] -
+ *   One windowed row's height. Must stay at or above the item size plus the group-label band, or
+ *   consecutive absolutely-positioned rows overlap.
  */
 export class LyraEmojiPicker extends FormAssociated(EmojiPickerBase) {
   static styles = [LyraElement.styles, styles];
