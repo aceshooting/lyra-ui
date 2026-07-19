@@ -8,6 +8,31 @@ import {
   resolveRgb,
 } from './heatmap.js';
 
+/** Scans a CSS-px rectangle of `ctx` for any pixel whose [r,g,b] satisfies `match` — used by the
+ *  focus-ring fast-path repaint tests below, where pinning an exact sub-pixel stroke coordinate
+ *  would be brittle against anti-aliasing, but "this color appears somewhere in the cell" is a
+ *  robust, meaningful assertion that the ring was actually stroked. */
+function findPixel(
+  ctx: CanvasRenderingContext2D,
+  cssX: number,
+  cssY: number,
+  cssW: number,
+  cssH: number,
+  match: (r: number, g: number, b: number) => boolean,
+): boolean {
+  const dpr = window.devicePixelRatio || 1;
+  const img = ctx.getImageData(
+    Math.round(cssX * dpr),
+    Math.round(cssY * dpr),
+    Math.max(1, Math.round(cssW * dpr)),
+    Math.max(1, Math.round(cssH * dpr)),
+  );
+  for (let i = 0; i < img.data.length; i += 4) {
+    if (match(img.data[i]!, img.data[i + 1]!, img.data[i + 2]!)) return true;
+  }
+  return false;
+}
+
 it('sets a group role (not img, which conflicts with the canvas\'s focusable descendant) and a summarizing aria-label', async () => {
   const el = (await fixture(html`<lr-heatmap></lr-heatmap>`)) as LyraHeatmap;
   el.rowLabels = ['Mon', 'Tue'];
@@ -1787,5 +1812,554 @@ describe('selectedCell', () => {
       ></lr-heatmap>
     `);
     await expect(el).to.be.accessible();
+  });
+});
+
+describe('coverage: color/theme helper edge cases', () => {
+  it('resolveRgb: falls back to opaque black when the fallback color itself is not a valid hex string', () => {
+    const originalWarn = console.warn;
+    console.warn = () => {};
+    try {
+      expect(
+        resolveRgb('lyra-coverage-fallback-hex-invalid-color', 'lyra-coverage-fallback-hex-invalid-fallback'),
+      ).to.deep.equal([0, 0, 0, 1]);
+    } finally {
+      console.warn = originalWarn;
+    }
+  });
+
+  it('warnInvalidColor: warns only once for repeated occurrences of the same invalid color within a draw pass (dedup)', async () => {
+    const originalWarn = console.warn;
+    const warnings: unknown[][] = [];
+    console.warn = (...args: unknown[]) => warnings.push(args);
+    try {
+      const el = (await fixture(html`
+        <lr-heatmap
+          style="--lr-heatmap-scale-lo: lyra-coverage-dedupe-invalid-color; --lr-heatmap-scale-hi: lyra-coverage-dedupe-invalid-color;"
+        ></lr-heatmap>
+      `)) as LyraHeatmap;
+      el.rowLabels = ['a'];
+      el.colLabels = ['x'];
+      el.values = [[5]];
+      await el.updateComplete;
+    } finally {
+      console.warn = originalWarn;
+    }
+    const matching = warnings.filter((args) => args.join(' ').includes('lyra-coverage-dedupe-invalid-color'));
+    expect(matching.length).to.equal(1);
+  });
+
+  it('formats a translucent theme ramp color as rgba(...) rather than dropping the alpha to fully opaque', async () => {
+    const el = (await fixture(html`
+      <lr-heatmap
+        style="--lr-heatmap-scale-lo: rgba(0, 128, 0, 0.5); --lr-heatmap-scale-hi: rgba(0, 128, 0, 0.5);"
+      ></lr-heatmap>
+    `)) as LyraHeatmap;
+    el.rowLabels = ['a'];
+    el.colLabels = ['x'];
+    el.values = [[5]];
+    await el.updateComplete;
+    const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
+    const ctx = canvas.getContext('2d')!;
+    const dpr = window.devicePixelRatio || 1;
+    const pixel = ctx.getImageData(Math.round(65 * dpr), Math.round(25 * dpr), 1, 1).data;
+    expect(pixel[0]).to.equal(0);
+    expect(pixel[1]).to.be.closeTo(128, 5);
+    expect(pixel[2]).to.equal(0);
+    // ~0.5 alpha over a cleared (fully transparent) canvas -- not the fully-opaque 255 a dropped-alpha bug would produce.
+    expect(pixel[3]).to.be.closeTo(128, 15);
+  });
+
+  it('retheming --lr-color-text-quiet changes the canvas label text color', async () => {
+    const el = (await fixture(html`
+      <lr-heatmap style="--lr-color-text-quiet: rgb(0, 150, 0);"></lr-heatmap>
+    `)) as LyraHeatmap;
+    el.rowLabels = ['a'];
+    el.colLabels = ['x'];
+    el.values = [[5]];
+    await el.updateComplete;
+    const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
+    const ctx = canvas.getContext('2d')!;
+    // The label fillStyle assignment is the last one drawMatrix() makes, so it's still current here.
+    expect(ctx.fillStyle).to.equal('#009600');
+  });
+
+  it('bucket-count: removing the attribute resets to the default via fromAttribute(null)', async () => {
+    const el = (await fixture(html`<lr-heatmap bucket-count="7"></lr-heatmap>`)) as LyraHeatmap;
+    expect(el.bucketCount).to.equal(7);
+    el.removeAttribute('bucket-count');
+    await el.updateComplete;
+    expect(el.bucketCount).to.equal(5);
+  });
+
+  it('formatNumericValue(): passes undefined (not an empty string) to Intl.NumberFormat when effectiveLocale resolves empty', async () => {
+    const el = (await fixture(html`<lr-heatmap></lr-heatmap>`)) as LyraHeatmap;
+    // effectiveLocale (this.locale || resolveLyraLocale(this)) never actually resolves to '' via
+    // the public API -- resolveLyraLocale() always falls back to 'en' at worst -- so shadow the
+    // protected getter directly on this instance to exercise the defensive `|| undefined` fallback.
+    Object.defineProperty(el, 'effectiveLocale', { configurable: true, get: () => '' });
+    try {
+      // Passing '' straight to Intl.NumberFormat throws a RangeError (invalid language tag);
+      // formatNumericValue() must fall back to `undefined` (the runtime default locale) instead.
+      expect(() => (el as unknown as { formatNumericValue(v: number): string }).formatNumericValue(1234)).to.not.throw();
+    } finally {
+      delete (el as unknown as Record<string, unknown>).effectiveLocale;
+    }
+  });
+});
+
+describe('coverage: theme-watcher defensive branches', () => {
+  it('onColorSchemeChange (prefers-color-scheme listener) redraws without throwing', async () => {
+    const el = (await fixture(html`<lr-heatmap></lr-heatmap>`)) as LyraHeatmap;
+    el.rowLabels = ['a'];
+    el.colLabels = ['x'];
+    el.values = [[5]];
+    await el.updateComplete;
+    expect(() => (el as unknown as { onColorSchemeChange(): void }).onColorSchemeChange()).to.not.throw();
+    expect(el.shadowRoot!.querySelector('canvas')).to.exist;
+  });
+
+  it('watchTheme(): returns before touching colorSchemeQuery when ownerDocument has no defaultView', async () => {
+    const el = (await fixture(html`<lr-heatmap></lr-heatmap>`)) as LyraHeatmap;
+    await el.updateComplete;
+    const before = (el as unknown as { colorSchemeQuery?: MediaQueryList }).colorSchemeQuery;
+    const fakeDoc = { defaultView: null } as unknown as Document;
+    Object.defineProperty(el, 'ownerDocument', { configurable: true, value: fakeDoc });
+    try {
+      (el as unknown as { watchTheme(): void }).watchTheme();
+    } finally {
+      delete (el as unknown as Record<string, unknown>).ownerDocument;
+    }
+    const after = (el as unknown as { colorSchemeQuery?: MediaQueryList }).colorSchemeQuery;
+    expect(after).to.equal(before);
+  });
+
+  it('watchTheme(): skips creating a MutationObserver when the global is unavailable', async () => {
+    const el = (await fixture(html`<lr-heatmap></lr-heatmap>`)) as LyraHeatmap;
+    await el.updateComplete;
+    const originalMO = window.MutationObserver;
+    // @ts-expect-error -- deliberately removing the global to exercise the defensive fallback branch
+    delete window.MutationObserver;
+    try {
+      expect(() => (el as unknown as { watchTheme(): void }).watchTheme()).to.not.throw();
+    } finally {
+      window.MutationObserver = originalMO;
+    }
+  });
+});
+
+describe('coverage: draw guard branches', () => {
+  it('scheduleDraw(): coalesces multiple calls into a single pending animation frame', async () => {
+    const el = (await fixture(html`<lr-heatmap></lr-heatmap>`)) as LyraHeatmap;
+    await el.updateComplete;
+    let rafCalls = 0;
+    const originalRaf = window.requestAnimationFrame;
+    window.requestAnimationFrame = ((cb: FrameRequestCallback) => {
+      rafCalls++;
+      return originalRaf(cb);
+    }) as typeof window.requestAnimationFrame;
+    try {
+      const instrumented = el as unknown as { scheduleDraw(): void };
+      instrumented.scheduleDraw();
+      instrumented.scheduleDraw();
+      instrumented.scheduleDraw();
+    } finally {
+      window.requestAnimationFrame = originalRaf;
+    }
+    expect(rafCalls).to.equal(1);
+  });
+
+  it('drawMatrix(): no-ops before the canvas has ever been rendered (defensive early return)', () => {
+    const el = document.createElement('lr-heatmap') as unknown as { drawMatrix(): void };
+    expect(() => el.drawMatrix()).to.not.throw();
+  });
+
+  it('drawMatrix(): no-ops when the canvas 2D context is unavailable', async () => {
+    const el = (await fixture(html`<lr-heatmap></lr-heatmap>`)) as LyraHeatmap;
+    el.rowLabels = ['a'];
+    el.colLabels = ['x'];
+    el.values = [[1]];
+    await el.updateComplete;
+    const original = HTMLCanvasElement.prototype.getContext;
+    // @ts-expect-error -- force a null 2D context to exercise the defensive early return
+    HTMLCanvasElement.prototype.getContext = () => null;
+    try {
+      expect(() => (el as unknown as { drawMatrix(): void }).drawMatrix()).to.not.throw();
+    } finally {
+      HTMLCanvasElement.prototype.getContext = original;
+    }
+  });
+
+  it('drawMatrix(): falls back to a 1x device pixel ratio when window.devicePixelRatio is falsy', async () => {
+    const el = (await fixture(html`<lr-heatmap></lr-heatmap>`)) as LyraHeatmap;
+    el.rowLabels = ['a'];
+    el.colLabels = ['x'];
+    el.values = [[5]];
+    await el.updateComplete;
+    const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
+    const originalDescriptor = Object.getOwnPropertyDescriptor(window, 'devicePixelRatio');
+    Object.defineProperty(window, 'devicePixelRatio', { configurable: true, value: 0 });
+    try {
+      (el as unknown as { drawMatrix(): void }).drawMatrix();
+    } finally {
+      if (originalDescriptor) Object.defineProperty(window, 'devicePixelRatio', originalDescriptor);
+      else delete (window as unknown as Record<string, unknown>).devicePixelRatio;
+    }
+    // With dpr forced to 1 (0 || 1), canvas.width equals the CSS width exactly.
+    expect(canvas.width).to.equal(parseInt(canvas.style.width, 10));
+  });
+
+  it('matrix mode: falls back to the PAD_LEFT + cols*cellSize formula for fitToWidth when the host has no measured width (e.g. display: none)', async () => {
+    const el = (await fixture(
+      html`<lr-heatmap fit-to-width style="display: none" cell-size="10"></lr-heatmap>`,
+    )) as LyraHeatmap;
+    el.rowLabels = ['a'];
+    el.colLabels = ['x', 'y'];
+    el.values = [[1, 2]];
+    await el.updateComplete;
+    const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
+    // clientWidth is 0 while hidden -> falls back to PAD_LEFT(60) + 2*cellSize(10) = 80.
+    expect(parseInt(canvas.style.width, 10)).to.equal(80);
+  });
+});
+
+describe('coverage: selectedCellDescription resolves to "" for an unresolvable selectedCell', () => {
+  it('calendar mode: selectedCell without a date', async () => {
+    const el = (await fixture(html`<lr-heatmap mode="calendar"></lr-heatmap>`)) as LyraHeatmap;
+    el.days = [{ date: '2026-03-01', value: 5 }];
+    el.selectedCell = { row: 0, col: 0 };
+    await el.updateComplete;
+    expect(el.getAttribute('aria-label')).to.not.include('Selected');
+  });
+
+  it('calendar mode: selectedCell date outside the built grid', async () => {
+    const el = (await fixture(html`<lr-heatmap mode="calendar"></lr-heatmap>`)) as LyraHeatmap;
+    el.days = [{ date: '2026-03-01', value: 5 }];
+    el.selectedCell = { date: '2099-01-01' };
+    await el.updateComplete;
+    expect(el.getAttribute('aria-label')).to.not.include('Selected');
+  });
+
+  it('matrix mode: selectedCell missing both row and col', async () => {
+    const el = (await fixture(html`<lr-heatmap></lr-heatmap>`)) as LyraHeatmap;
+    el.rowLabels = ['a'];
+    el.colLabels = ['x'];
+    el.values = [[5]];
+    el.selectedCell = {};
+    await el.updateComplete;
+    expect(el.getAttribute('aria-label')).to.not.include('Selected');
+  });
+});
+
+describe('coverage: calendar full-draw cellColor/colorSteps/focus-ring', () => {
+  it('calendar mode: a cellColor override is used for the matching day during a full draw', async () => {
+    const el = (await fixture(html`
+      <lr-heatmap
+        mode="calendar"
+        .cellColor=${(_pos: unknown, value: number) => (value === 5 ? 'rgb(255, 0, 255)' : undefined)}
+      ></lr-heatmap>
+    `)) as LyraHeatmap;
+    el.days = [{ date: '2026-03-01', value: 5 }];
+    await el.updateComplete;
+    const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
+    const ctx = canvas.getContext('2d')!;
+    const dpr = window.devicePixelRatio || 1;
+    const pixel = ctx.getImageData(Math.round(33 * dpr), Math.round(21 * dpr), 1, 1).data;
+    expect(pixel[0]).to.equal(255);
+    expect(pixel[1]).to.equal(0);
+    expect(pixel[2]).to.equal(255);
+  });
+
+  it('calendar mode: colorSteps buckets a day linearly across the discrete steps during a full draw', async () => {
+    const el = (await fixture(html`
+      <lr-heatmap mode="calendar" .colorSteps=${['#ff0000', '#00ff00', '#0000ff']}></lr-heatmap>
+    `)) as LyraHeatmap;
+    el.days = [
+      { date: '2026-03-01', value: 1 }, // week 0, weekday 0 -- range low end
+      { date: '2026-03-08', value: 100 }, // week 1, weekday 0 -- range high end
+    ];
+    await el.updateComplete;
+    const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
+    const ctx = canvas.getContext('2d')!;
+    const dpr = window.devicePixelRatio || 1;
+    const pixel = ctx.getImageData(Math.round(33 * dpr), Math.round(21 * dpr), 1, 1).data;
+    expect(pixel[0]).to.equal(0xff);
+    expect(pixel[1]).to.equal(0x00);
+    expect(pixel[2]).to.equal(0x00);
+  });
+
+  it('calendar mode: a full redraw (not just the focus-ring fast path) also strokes the keyboard focus ring while focusedCell is set', async () => {
+    const el = (await fixture(html`<lr-heatmap mode="calendar"></lr-heatmap>`)) as LyraHeatmap;
+    el.days = [{ date: '2026-03-01', value: 5 }];
+    await el.updateComplete;
+    const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
+    canvas.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true })); // sets focusedCell (fast path)
+    await el.updateComplete;
+
+    type Internals = { drawCalendar(): void };
+    const internals = el as unknown as Internals;
+    let fullDraws = 0;
+    const original = internals.drawCalendar.bind(el);
+    internals.drawCalendar = () => {
+      fullDraws++;
+      original();
+    };
+
+    el.annotations = [{ date: '2026-03-01', label: 'x' }]; // any non-focus change forces a full draw()
+    await el.updateComplete;
+    // Proves drawCalendar() ran its full pass (not just repaintCalendarFocusCell) while
+    // focusedCell was still set, exercising its own focus-ring block.
+    expect(fullDraws).to.equal(1);
+  });
+});
+
+describe('coverage: focus-ring fast-path repaint color/overlay branches', () => {
+  it('matrix mode: respects scale="sqrt" when computing the repainted cell color', async () => {
+    const el = (await fixture(html`<lr-heatmap scale="sqrt"></lr-heatmap>`)) as LyraHeatmap;
+    el.rowLabels = ['a'];
+    el.colLabels = ['x', 'y'];
+    el.values = [[1, 100]];
+    await el.updateComplete; // full draw already happened -> canvasHasContent = true
+    const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
+    canvas.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true })); // focuses (0,0) via the fast path
+    await el.updateComplete;
+    const ctx = canvas.getContext('2d')!;
+    const dpr = window.devicePixelRatio || 1;
+    const pixel = ctx.getImageData(Math.round(65 * dpr), Math.round(25 * dpr), 1, 1).data;
+    // sqrtStep(1, 100, 7) === 0 -> exactly the ramp's lo endpoint.
+    expect(pixel[0]).to.equal(0xdd);
+    expect(pixel[1]).to.equal(0xf4);
+    expect(pixel[2]).to.equal(0xff);
+  });
+
+  it('matrix mode: respects colorSteps when computing the repainted cell color', async () => {
+    const el = (await fixture(
+      html`<lr-heatmap .colorSteps=${['#ff0000', '#00ff00', '#0000ff']}></lr-heatmap>`,
+    )) as LyraHeatmap;
+    el.rowLabels = ['a'];
+    el.colLabels = ['x', 'y'];
+    el.values = [[1, 100]];
+    await el.updateComplete;
+    const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
+    canvas.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+    await el.updateComplete;
+    const ctx = canvas.getContext('2d')!;
+    const dpr = window.devicePixelRatio || 1;
+    const pixel = ctx.getImageData(Math.round(65 * dpr), Math.round(25 * dpr), 1, 1).data;
+    // value 1 is the range's low end -> bucket 0 -> colorSteps[0].
+    expect(pixel[0]).to.equal(0xff);
+    expect(pixel[1]).to.equal(0x00);
+    expect(pixel[2]).to.equal(0x00);
+  });
+
+  it('matrix mode: repainting a de-focused cell still strokes its annotation ring', async () => {
+    const el = (await fixture(html`<lr-heatmap></lr-heatmap>`)) as LyraHeatmap;
+    el.rowLabels = ['a'];
+    el.colLabels = ['x', 'y'];
+    el.values = [[5, 6]];
+    el.annotations = [{ row: 0, col: 0, label: 'Peak' }];
+    await el.updateComplete;
+    const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
+    canvas.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true })); // focuses (0,0)
+    await el.updateComplete;
+    canvas.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true })); // moves to (0,1), repainting (0,0)
+    await el.updateComplete;
+    const ctx = canvas.getContext('2d')!;
+    // (0,0) is no longer focused, so only its annotation ring (default #cf222e) should be visible.
+    expect(findPixel(ctx, 59, 19, 24, 24, (r, g, b) => r === 0xcf && g === 0x22 && b === 0x2e)).to.equal(true);
+  });
+
+  it('calendar mode: respects scale="sqrt" when computing the repainted cell color', async () => {
+    const el = (await fixture(html`<lr-heatmap mode="calendar" scale="sqrt"></lr-heatmap>`)) as LyraHeatmap;
+    el.days = [
+      { date: '2026-03-01', value: 1 },
+      { date: '2026-03-02', value: 100 },
+    ];
+    await el.updateComplete;
+    const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
+    canvas.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }));
+    await el.updateComplete;
+    const ctx = canvas.getContext('2d')!;
+    const dpr = window.devicePixelRatio || 1;
+    const pixel = ctx.getImageData(Math.round(33 * dpr), Math.round(21 * dpr), 1, 1).data;
+    expect(pixel[0]).to.equal(0xdd);
+    expect(pixel[1]).to.equal(0xf4);
+    expect(pixel[2]).to.equal(0xff);
+  });
+
+  it('calendar mode: respects colorSteps when computing the repainted cell color', async () => {
+    const el = (await fixture(html`
+      <lr-heatmap mode="calendar" .colorSteps=${['#ff0000', '#00ff00', '#0000ff']}></lr-heatmap>
+    `)) as LyraHeatmap;
+    el.days = [
+      { date: '2026-03-01', value: 1 },
+      { date: '2026-03-08', value: 100 },
+    ];
+    await el.updateComplete;
+    const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
+    canvas.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }));
+    await el.updateComplete;
+    const ctx = canvas.getContext('2d')!;
+    const dpr = window.devicePixelRatio || 1;
+    const pixel = ctx.getImageData(Math.round(33 * dpr), Math.round(21 * dpr), 1, 1).data;
+    expect(pixel[0]).to.equal(0xff);
+    expect(pixel[1]).to.equal(0x00);
+    expect(pixel[2]).to.equal(0x00);
+  });
+
+  it('calendar mode: repainting a de-focused cell still strokes its annotation and selected rings', async () => {
+    const el = (await fixture(html`<lr-heatmap mode="calendar"></lr-heatmap>`)) as LyraHeatmap;
+    el.days = [
+      { date: '2026-03-01', value: 5 }, // week 0, weekday 0
+      { date: '2026-03-02', value: 9 }, // week 0, weekday 1
+    ];
+    el.annotations = [{ date: '2026-03-01', label: 'Launch' }];
+    el.selectedCell = { date: '2026-03-01' };
+    await el.updateComplete;
+    const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
+    canvas.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true })); // focuses weekday 0
+    await el.updateComplete;
+    canvas.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true })); // moves to weekday 1, repainting weekday 0
+    await el.updateComplete;
+    const ctx = canvas.getContext('2d')!;
+    // weekday 0 is no longer focused; the selected ring (#1a7f37, stroked after the annotation ring) should be visible.
+    expect(findPixel(ctx, 27, 15, 13, 13, (r, g, b) => r === 0x1a && g === 0x7f && b === 0x37)).to.equal(true);
+  });
+});
+
+describe('coverage: matrix full-draw annotation validity guards', () => {
+  it('an annotation missing row/col, or pointing out of range, is skipped without throwing', async () => {
+    const el = (await fixture(html`<lr-heatmap></lr-heatmap>`)) as LyraHeatmap;
+    el.rowLabels = ['a'];
+    el.colLabels = ['x'];
+    el.values = [[5]];
+    el.annotations = [
+      { date: '2026-01-01', label: 'Calendar-shaped, ignored in matrix mode' }, // row/col both null
+      { row: 99, col: 99, label: 'Out of range' }, // valid shape, out of bounds
+    ];
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('canvas')).to.exist;
+    // Legend filtering only checks `.label`, independent of row/col validity -- both still appear.
+    expect(el.shadowRoot!.querySelectorAll('[part="legend-annotation"]').length).to.equal(2);
+  });
+});
+
+describe('coverage: roving focus with no interactive cells at all', () => {
+  it('matrix mode: ArrowRight is a no-op when every cell is excluded via cellInteractive', async () => {
+    const el = (await fixture(html`<lr-heatmap></lr-heatmap>`)) as LyraHeatmap;
+    el.rowLabels = ['a'];
+    el.colLabels = ['x', 'y'];
+    el.values = [[1, 2]];
+    el.cellInteractive = () => false;
+    await el.updateComplete;
+    const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
+    const live = el.shadowRoot!.querySelector('[part="live-region"]') as HTMLElement;
+    canvas.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+    await el.updateComplete;
+    expect(live.textContent).to.equal('');
+  });
+
+  it('calendar mode: ArrowDown is a no-op when every cell is excluded via cellInteractive', async () => {
+    const el = (await fixture(html`<lr-heatmap mode="calendar"></lr-heatmap>`)) as LyraHeatmap;
+    el.days = [{ date: '2026-03-01', value: 5 }];
+    el.cellInteractive = () => false;
+    await el.updateComplete;
+    const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
+    const live = el.shadowRoot!.querySelector('[part="live-region"]') as HTMLElement;
+    canvas.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }));
+    await el.updateComplete;
+    expect(live.textContent).to.equal('');
+  });
+});
+
+describe('coverage: miscellaneous cell-text/navigation/accessible-cells branches', () => {
+  it('matrix mode: hover tooltip shows the localized no-data text for a -1 sentinel cell', async () => {
+    const el = (await fixture(html`<lr-heatmap cell-size="22"></lr-heatmap>`)) as LyraHeatmap;
+    el.rowLabels = ['a'];
+    el.colLabels = ['x'];
+    el.values = [[-1]];
+    await el.updateComplete;
+    const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
+    const rect = canvas.getBoundingClientRect();
+    canvas.dispatchEvent(
+      new PointerEvent('pointermove', { clientX: rect.left + 65, clientY: rect.top + 25, bubbles: true }),
+    );
+    await el.updateComplete;
+    const tooltip = el.shadowRoot!.querySelector('[part="tooltip"]') as HTMLElement;
+    expect(tooltip.textContent?.trim()).to.equal('Row a, Col x: no data');
+  });
+
+  it('calendar mode: ArrowLeft/ArrowRight move the focused cell by a whole week', async () => {
+    const el = (await fixture(html`<lr-heatmap mode="calendar"></lr-heatmap>`)) as LyraHeatmap;
+    el.days = [
+      { date: '2026-03-01', value: 5 }, // week 0, weekday 0
+      { date: '2026-03-08', value: 9 }, // week 1, weekday 0
+    ];
+    await el.updateComplete;
+    const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
+    const live = el.shadowRoot!.querySelector('[part="live-region"]') as HTMLElement;
+    canvas.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }));
+    await el.updateComplete;
+    expect(live.textContent).to.equal('Mar 1: 5');
+
+    canvas.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+    await el.updateComplete;
+    expect(live.textContent).to.equal('Mar 8: 9');
+
+    canvas.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true }));
+    await el.updateComplete;
+    expect(live.textContent).to.equal('Mar 1: 5');
+  });
+
+  it('calendar mode: accessible-cells marks the selected day (by date) as aria-pressed="true"', async () => {
+    const el = (await fixture(html`
+      <lr-heatmap
+        accessible-cells
+        mode="calendar"
+        .days=${[{ date: '2026-03-01', value: 5 }]}
+        .selectedCell=${{ date: '2026-03-01' }}
+      ></lr-heatmap>
+    `)) as LyraHeatmap;
+    await el.updateComplete;
+    const cells = [...el.shadowRoot!.querySelectorAll<HTMLButtonElement>('[part="cell"]')];
+    const match = cells.find((c) => c.dataset.cellKey === 'calendar-0-0');
+    expect(match).to.exist;
+    expect(match!.getAttribute('aria-pressed')).to.equal('true');
+    expect(cells.filter((c) => c !== match).every((c) => c.getAttribute('aria-pressed') === 'false')).to.equal(true);
+  });
+
+  it('accessible-cells: renders zero cells (and no throw) for an empty grid with no focused cell', async () => {
+    const el = (await fixture(html`<lr-heatmap accessible-cells></lr-heatmap>`)) as LyraHeatmap;
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelectorAll('[part="cell"]').length).to.equal(0);
+  });
+
+  it('samePos(): treats a stale hoverCell from the previous mode as different from a same-tick new-mode hit test', async () => {
+    const el = (await fixture(html`<lr-heatmap></lr-heatmap>`)) as LyraHeatmap;
+    el.rowLabels = ['a'];
+    el.colLabels = ['x'];
+    el.values = [[1]];
+    el.days = [{ date: '2026-03-01', value: 5 }]; // pre-populate so the calendar grid is already built
+    await el.updateComplete;
+
+    const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
+    const rect = canvas.getBoundingClientRect();
+    canvas.dispatchEvent(
+      new PointerEvent('pointermove', { clientX: rect.left + 65, clientY: rect.top + 25, bubbles: true }),
+    );
+    await el.updateComplete;
+    expect((el as unknown as { hoverCell: unknown }).hoverCell).to.deep.equal({ row: 0, col: 0 });
+
+    // Switch mode WITHOUT awaiting -- this.mode already reads 'calendar' synchronously (a plain
+    // property write), but willUpdate() (which resets hoverCell to null on a mode change) hasn't
+    // run yet, since Lit's update is scheduled, not synchronous. A pointermove dispatched right now
+    // hit-tests against the NEW mode while hoverCell still holds the OLD mode's MatrixCellPos,
+    // forcing samePos() to compare mismatched cell shapes.
+    el.mode = 'calendar';
+    canvas.dispatchEvent(
+      new PointerEvent('pointermove', { clientX: rect.left + 33, clientY: rect.top + 21, bubbles: true }),
+    );
+    expect((el as unknown as { hoverCell: unknown }).hoverCell).to.deep.equal({ week: 0, weekday: 0 });
+    await el.updateComplete;
   });
 });
