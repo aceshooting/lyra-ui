@@ -1,6 +1,9 @@
 import { fixture, expect, oneEvent, html, aTimeout } from '@open-wc/testing';
 import './combobox.js';
 import './option.js';
+import '../input/input.js';
+import '../select/select.js';
+import '../segmented/segmented.js';
 import type { LyraCombobox } from './combobox.js';
 import { styles } from './combobox.styles.js';
 
@@ -1780,6 +1783,32 @@ describe('size', () => {
     expect(parseFloat(getComputedStyle(xsBox).minHeight)).to.be.lessThan(
       parseFloat(getComputedStyle(mBox).minHeight),
     );
+  });
+
+  it('aligns input, select, combobox, and segmented at size="s" without part overrides', async () => {
+    const root = await fixture(html`
+      <div style="display:flex;align-items:center;">
+        <lr-input size="s" aria-label="Input"></lr-input>
+        <lr-select size="s" aria-label="Select"></lr-select>
+        <lr-combobox size="s" aria-label="Combobox"><lr-option value="a">Apple</lr-option></lr-combobox>
+        <lr-segmented
+          size="s"
+          value="a"
+          .items=${[{ value: 'a', label: 'Alpha' }]}
+        ></lr-segmented>
+      </div>
+    `);
+    const input = root.querySelector('lr-input')!.shadowRoot!.querySelector('[part="input-wrapper"]') as HTMLElement;
+    const select = root.querySelector('lr-select')!.shadowRoot!.querySelector('[part="trigger"]') as HTMLElement;
+    const combobox = root.querySelector('lr-combobox')!.shadowRoot!.querySelector('[part="combobox"]') as HTMLElement;
+    const segmented = root.querySelector('lr-segmented')!.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    const heights = [input, select, combobox, segmented].map((element) => element.getBoundingClientRect().height);
+    expect(new Set(heights).size, `control heights: ${heights.join(', ')}`).to.equal(1);
+
+    const expand = root.querySelector('lr-combobox')!.shadowRoot!.querySelector('[part="expand-icon"]') as HTMLElement;
+    expect(expand.getAttribute('aria-hidden')).to.equal('true');
+    expect(expand.hasAttribute('tabindex')).to.be.false;
+    expect(expand.getBoundingClientRect().height).to.be.at.most(combobox.getBoundingClientRect().height);
   });
 
   it('the "+N" overflow tag scales its font-size with size', async () => {

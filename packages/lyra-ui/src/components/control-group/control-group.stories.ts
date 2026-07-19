@@ -4,6 +4,8 @@ import './control-group.js';
 import '../select/select.js';
 import '../segmented/segmented.js';
 import '../button/button.js';
+import '../input/input.js';
+import '../combobox/combobox.js';
 
 const meta: Meta = { title: 'Primitives/Control Group', component: 'lr-control-group' };
 export default meta;
@@ -11,6 +13,7 @@ type Story = StoryObj;
 
 export const Default: Story = {
   render: () => html`<lr-control-group label="Chart controls">
+    <lr-input size="s" aria-label="Search" placeholder="Search"></lr-input>
     <lr-segmented
       size="s"
       .items=${[
@@ -23,6 +26,10 @@ export const Default: Story = {
       <lr-option value="day">Day</lr-option>
       <lr-option value="week">Week</lr-option>
     </lr-select>
+    <lr-combobox size="s" aria-label="Timezone" placeholder="Timezone" style="max-width: 9rem">
+      <lr-option value="utc">UTC</lr-option>
+      <lr-option value="local">Local</lr-option>
+    </lr-combobox>
     <lr-button size="s" variant="brand">Export</lr-button>
   </lr-control-group>`,
 };

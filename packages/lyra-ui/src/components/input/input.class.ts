@@ -67,6 +67,7 @@ class LyraInputBase extends LyraElement<LyraInputEventMap> {}
  * @csspart password-toggle - The show/hide-password button, present only when `type="password"`.
  * @csspart hint - The hint message.
  * @csspart error - The error message.
+ * @cssprop --lr-input-control-min-height - Outer control height floor, scaled by `size`.
  */
 export class LyraInput extends FormAssociated(LyraInputBase) {
   static styles = [LyraElement.styles, styles];

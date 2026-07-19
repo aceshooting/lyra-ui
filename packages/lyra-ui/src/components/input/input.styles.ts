@@ -6,31 +6,37 @@ export const styles = css`
     --lr-input-padding-block: var(--lr-space-s);
     --lr-input-padding-inline: var(--lr-space-s);
     --lr-input-font-size: var(--lr-font-size-md-sm);
+    --lr-input-control-min-height: var(--lr-size-2-5rem);
   }
   :host([size='2xs']) {
     --lr-input-padding-block: var(--lr-size-0-0625rem);
     --lr-input-padding-inline: var(--lr-space-2xs);
     --lr-input-font-size: var(--lr-font-size-2xs);
+    --lr-input-control-min-height: var(--lr-size-1-25rem);
   }
   :host([size='xs']) {
     --lr-input-padding-block: var(--lr-size-0-125rem);
     --lr-input-padding-inline: var(--lr-space-xs);
     --lr-input-font-size: var(--lr-font-size-xs);
+    --lr-input-control-min-height: var(--lr-size-1-5rem);
   }
   :host([size='s']) {
     --lr-input-padding-block: var(--lr-space-xs);
     --lr-input-padding-inline: var(--lr-space-xs);
     --lr-input-font-size: var(--lr-font-size-sm);
+    --lr-input-control-min-height: var(--lr-size-1-875rem);
   }
   :host([size='l']) {
     --lr-input-padding-block: var(--lr-space-m);
     --lr-input-padding-inline: var(--lr-space-m);
     --lr-input-font-size: var(--lr-font-size-lg);
+    --lr-input-control-min-height: var(--lr-size-3rem);
   }
   :host([size='xl']) {
     --lr-input-padding-block: var(--lr-space-l);
     --lr-input-padding-inline: var(--lr-space-l);
     --lr-input-font-size: var(--lr-font-size-xl);
+    --lr-input-control-min-height: var(--lr-size-3-5rem);
   }
   [part='form-control-label'] {
     display: block;
@@ -51,6 +57,7 @@ export const styles = css`
     gap: var(--lr-space-xs);
     inline-size: 100%;
     box-sizing: border-box;
+    min-block-size: var(--lr-input-control-min-height);
     padding-inline: var(--lr-input-padding-inline);
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
     border-radius: var(--lr-radius);

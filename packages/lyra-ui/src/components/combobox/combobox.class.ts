@@ -51,6 +51,8 @@ export interface LyraComboboxEventMap {
  *
  * Options are `<lr-option value>` children. Emits native-style `change`/`input`
  * (like Web Awesome) plus `lr-show`/`lr-hide`/`lr-clear`.
+ * Standard size tiers share their outer control height with sibling Lyra controls; the decorative
+ * expand icon scales inside that allocation without creating an independent action target.
  *
  * @customElement lr-combobox
  * @slot - `<lr-option>` elements.
@@ -91,6 +93,7 @@ export interface LyraComboboxEventMap {
  * @cssprop --lr-combobox-font-size - Input text size.
  * @cssprop --lr-combobox-tag-padding - Selected-tag padding.
  * @cssprop --lr-combobox-tag-font-size - Selected-tag text size.
+ * @cssprop --lr-combobox-expand-size - Decorative expand-icon box size, scaled by `size`.
  */
 export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
   static formAssociated = true;

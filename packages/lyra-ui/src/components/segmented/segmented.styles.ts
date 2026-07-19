@@ -24,7 +24,7 @@ export const styles = css`
   }
   :host([size='s']) {
     --lr-segmented-track-min-height: var(--lr-size-1-875rem);
-    --lr-segmented-segment-padding: var(--lr-space-xs) var(--lr-space-xs);
+    --lr-segmented-segment-padding: var(--lr-size-0-125rem) var(--lr-space-xs);
     --lr-segmented-font-size: var(--lr-font-size-sm);
   }
   :host([size='l']) {
@@ -44,6 +44,7 @@ export const styles = css`
     overflow-y: hidden;
     min-inline-size: 0;
     min-block-size: var(--lr-segmented-track-min-height);
+    box-sizing: border-box;
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
     border-radius: var(--lr-radius);
     padding: var(--lr-size-0-125rem);

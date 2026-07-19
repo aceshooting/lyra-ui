@@ -83,6 +83,7 @@ export interface LyraSelectEventMap {
  * @csspart expand-icon - The dropdown indicator.
  * @csspart error - The error message.
  * @csspart hint - The hint message.
+ * @cssprop --lr-select-expand-size - Decorative expand-icon box size, scaled by `size`.
  */
 export class LyraSelect extends LyraElement<LyraSelectEventMap> {
   static formAssociated = true;

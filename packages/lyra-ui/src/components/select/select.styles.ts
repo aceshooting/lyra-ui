@@ -6,6 +6,7 @@ export const styles = css`
     --lr-select-trigger-padding: var(--lr-space-xs) var(--lr-space-s);
     --lr-select-trigger-min-height: var(--lr-size-2-5rem);
     --lr-select-font-size: var(--lr-font-size-md);
+    --lr-select-expand-size: var(--lr-size-1-75rem);
     /* Unset (the default) leaves min-block-size as a floor only, exactly as before this property
        existed. Set it to force an exact trigger height (e.g. to pixel-match a sibling text field in
        the same row) -- this both floors and caps the trigger at that height. */
@@ -15,11 +16,13 @@ export const styles = css`
     --lr-select-trigger-padding: var(--lr-size-0-125rem) var(--lr-space-xs);
     --lr-select-trigger-min-height: var(--lr-size-1-5rem);
     --lr-select-font-size: var(--lr-font-size-xs);
+    --lr-select-expand-size: var(--lr-size-1rem);
   }
   :host([size='s']) {
     --lr-select-trigger-padding: var(--lr-space-xs) var(--lr-space-xs);
     --lr-select-trigger-min-height: var(--lr-size-1-875rem);
     --lr-select-font-size: var(--lr-font-size-sm);
+    --lr-select-expand-size: var(--lr-size-1-25rem);
   }
   :host([size='l']) {
     --lr-select-trigger-padding: var(--lr-space-s) var(--lr-space-m);
@@ -72,6 +75,7 @@ export const styles = css`
     gap: var(--lr-space-xs);
     inline-size: 100%;
     min-block-size: var(--lr-select-trigger-height, var(--lr-select-trigger-min-height));
+    box-sizing: border-box;
     block-size: var(--lr-select-trigger-height, auto);
     padding: var(--lr-select-trigger-padding);
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
@@ -116,8 +120,8 @@ export const styles = css`
     justify-content: center;
     color: var(--lr-color-text-quiet);
     /* Same real-touch-target reasoning as lr-combobox's expand-icon. */
-    min-inline-size: min(var(--lr-icon-button-size), var(--lr-size-1-75rem));
-    min-block-size: min(var(--lr-icon-button-size), var(--lr-size-1-75rem));
+    min-inline-size: min(var(--lr-icon-button-size), var(--lr-select-expand-size));
+    min-block-size: min(var(--lr-icon-button-size), var(--lr-select-expand-size));
     line-height: var(--lr-line-height-none);
   }
   [part='expand-icon'] svg {

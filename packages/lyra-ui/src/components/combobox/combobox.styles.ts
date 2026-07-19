@@ -8,6 +8,7 @@ export const styles = css`
     --lr-combobox-font-size: var(--lr-font-size-md);
     --lr-combobox-tag-padding: var(--lr-size-0-1rem) var(--lr-size-0-4rem);
     --lr-combobox-tag-font-size: var(--lr-font-size-sm);
+    --lr-combobox-expand-size: var(--lr-size-1-75rem);
   }
   :host([size='xs']) {
     --lr-combobox-trigger-padding: var(--lr-size-0-125rem) var(--lr-space-xs);
@@ -15,6 +16,7 @@ export const styles = css`
     --lr-combobox-font-size: var(--lr-font-size-xs);
     --lr-combobox-tag-padding: 0 var(--lr-size-0-25rem);
     --lr-combobox-tag-font-size: var(--lr-font-size-2xs);
+    --lr-combobox-expand-size: var(--lr-size-1rem);
   }
   :host([size='s']) {
     --lr-combobox-trigger-padding: var(--lr-space-xs) var(--lr-space-xs);
@@ -22,6 +24,7 @@ export const styles = css`
     --lr-combobox-font-size: var(--lr-font-size-sm);
     --lr-combobox-tag-padding: var(--lr-size-0-05rem) var(--lr-size-0-3125rem);
     --lr-combobox-tag-font-size: var(--lr-font-size-xs);
+    --lr-combobox-expand-size: var(--lr-size-1-25rem);
   }
   :host([size='l']) {
     --lr-combobox-trigger-padding: var(--lr-space-s) var(--lr-space-m);
@@ -64,6 +67,7 @@ export const styles = css`
     gap: var(--lr-space-xs);
     inline-size: 100%;
     min-block-size: var(--lr-combobox-trigger-min-height);
+    box-sizing: border-box;
     padding: var(--lr-combobox-trigger-padding);
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
     border-radius: var(--lr-radius);
@@ -148,8 +152,10 @@ export const styles = css`
      below (which would force every size variant's trigger row taller just to fit a glyph nobody
      taps directly). */
   [part='expand-icon'] {
-    min-inline-size: min(var(--lr-icon-button-size), var(--lr-size-1-75rem));
-    min-block-size: min(var(--lr-icon-button-size), var(--lr-size-1-75rem));
+    box-sizing: border-box;
+    min-inline-size: min(var(--lr-icon-button-size), var(--lr-combobox-expand-size));
+    min-block-size: min(var(--lr-icon-button-size), var(--lr-combobox-expand-size));
+    padding: 0;
   }
   /* Unlike [part='expand-icon'], [part='clear-button'] is a real, independently-focusable
      <button> (see combobox.class.ts's @click) -- it gets the full shared icon-button hit-area

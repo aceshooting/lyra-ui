@@ -192,11 +192,9 @@ shared `FormAssociated` mixin — see gotchas).
 **Properties:**
 - `multiple: boolean = false` (reflected)
 - `size: 'xs' | 's' | 'm' | 'l' | 'xl' = 'm'` (reflected — same scale as `lr-select`'s `size`;
-  also scales the "+N" overflow tag's padding/font-size to match)
+  also scales the "+N" overflow tag and decorative expand icon; `size="s"` shares its outer
+  control height with `lr-input`, `lr-select`, and `lr-segmented` without part overrides)
 - `placeholder: string = ''`
-- `clearable: boolean = false` (reflected) — shows a localized clear action while a `text` or
-  `search` input has a value; clearing preserves input focus
-- `readonly: boolean = false` (reflected) — forwarded to the native input and disables clearing
 - `disabled: boolean = false` (reflected)
 - `required: boolean = false` (reflected — enforced via `internals.setValidity()`; also reflected as
   `aria-required` on `<input part="combobox-input">` immediately, and `aria-invalid` once the field
@@ -269,7 +267,10 @@ leading visual for an async row), `option-label`, `option-sub` (a row's secondar
 is set), `option-badge` (an async row's trailing metadata), `option-overflow` (the "+N more"
 indicator from `maxRender`), `error`, `hint`
 
-**Themeable custom properties:** shared tokens only.
+**Themeable custom properties:** `--lr-combobox-trigger-padding`,
+`--lr-combobox-trigger-min-height`, `--lr-combobox-font-size`, `--lr-combobox-tag-padding`,
+`--lr-combobox-tag-font-size`, and `--lr-combobox-expand-size` (the decorative icon box; each
+standard size supplies an aligned default), plus shared tokens.
 
 **Optional peer deps:** none.
 
@@ -412,7 +413,7 @@ control's accessible description.
 secondary line, when `sub` is set), `expand-icon`, `error`, `hint`
 
 **Themeable custom properties:** `--lr-select-trigger-padding`, `--lr-select-trigger-min-height`,
-`--lr-select-font-size` — all three auto-swapped per `size` (`xs`…`xl`), the same pattern
+`--lr-select-font-size`, `--lr-select-expand-size` — all four auto-swapped per `size` (`xs`…`xl`), the same pattern
 `lr-toast-item`'s `--lr-toast-padding`/`--lr-toast-font-size` use. `--lr-select-trigger-height`
 (default `auto`) — unset, it leaves `--lr-select-trigger-min-height` as a floor only, unchanged; set
 it to force an exact trigger height (e.g. to pixel-match a sibling text field in the same row), which
@@ -816,6 +817,9 @@ form-associated via the same `FormAssociated` mixin as `lr-textarea`. Ships the 
 - `size: '2xs' | 'xs' | 's' | 'm' | 'l' | 'xl' = 'm'` (reflected)
 - `value: string = ''` (from `FormAssociated`)
 - `placeholder: string = ''`
+- `clearable: boolean = false` (reflected) — shows a localized clear action while a `text` or
+  `search` input has a value; clearing preserves input focus
+- `readonly: boolean = false` (reflected) — forwarded to the native input and disables clearing
 - `label: string = ''`
 - `hint: string = ''`
 - `errorText: string = ''` (attribute `error-text`)
@@ -846,7 +850,8 @@ input and built-in actions).
 `text`/`search` inputs only), `hint`, `error`.
 
 **Themeable custom properties:** `--lr-input-padding-block`, `--lr-input-padding-inline`,
-`--lr-input-font-size` — all three auto-swapped per `size` (`xs`…`xl`), the same pattern
+`--lr-input-font-size`, `--lr-input-control-min-height` — all four auto-swapped per `size`
+(`2xs`…`xl`), the same pattern
 `lr-select`'s `--lr-select-trigger-padding`/`--lr-select-font-size` use.
 
 **Optional peer deps:** none.
