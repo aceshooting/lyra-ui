@@ -1,5 +1,39 @@
 # Changelog
 
+## 4.2.0
+
+### Minor Changes
+
+- f3ae130: Adds an `@aceshooting/lyra-ui/ai` entrypoint re-exporting the provider-neutral AI/agent data
+  contracts from `src/ai/types.ts` (also re-exported as types from the root `lyra.ts` barrel), so
+  consumers importing these shared types don't have to reach into `./ai/types` directly.
+- 46eb4d2: `<lr-diff-view>` gains a `contextLines` property: collapses a run of unchanged lines longer than
+  `2 * contextLines` behind a single localized fold marker reporting how many lines it hides, keeping
+  only `contextLines` lines of context immediately before/after each change (leading/trailing runs
+  keep only their nearest `contextLines` lines) — the same context-window convention `git diff -U<n>`
+  uses. Default `undefined` renders every line unconditionally, exactly as before this property
+  existed. Works identically in both `unified` and `split` layout.
+
+### Patch Changes
+
+- fffd101: `<lr-chart>` no longer tracks its resolved Chart.js draw-time chart-area geometry as a reactive
+  `@state()` field — recording it during Chart.js's own draw pass could trigger a second synchronous
+  Lit update mid-draw. It's now a plain private field with a microtask-coalesced `requestUpdate()`,
+  so repeated geometry updates within the same draw pass collapse into a single re-render.
+- 273d5da: Fixed `lr-csv-viewer` and `lr-spreadsheet-viewer`: data rows rendered as unstyled stacked text
+  instead of a proper grid, because their styling lived in a `[part='data-row']`/`[part='cell']`
+  CSS selector scoped to the wrong shadow root (data rows render inside the nested
+  `<lr-virtual-list>`'s own shadow tree via its `renderItem` callback, not the viewer's own). Only
+  the header row, rendered directly by the viewer, was ever actually styled. Fixed with
+  `lr-virtual-list::part(data-row)`/`::part(cell)` rules that correctly reach across that shadow
+  boundary.
+- a15cb97: `<lr-notebook-viewer>` now interprets ANSI SGR color/style escape codes embedded in stream and error
+  outputs (common in colorized Python tracebacks and console output), rendering them as styled spans
+  via the same shared `internal/ansi.ts` parser `<lr-terminal>` uses, instead of showing the raw
+  escape sequences as literal text.
+- ef988d8: `<lr-trace-tree>` now syncs `focusedId` from `activeSpanId` in `willUpdate()` instead of `updated()`,
+  so the roving-tabindex target updates before render rather than one tick after it.
+
 ## 4.1.0
 
 ### Minor Changes
