@@ -70,12 +70,31 @@ after `bubble` when `actionsOutsideBubble` is set), `failure` (`display: content
 `failure` slot; contributes no box when the slot is empty)
 
 **Themeable custom properties:** `--lr-chat-message-max-width` (default `80%` — the bubble's max
-inline size; component-specific, no shared width token exists), plus shared tokens
-`--lr-space-xs/-m`, `--lr-color-border`, `--lr-color-surface`, `--lr-color-brand-quiet`,
-`--lr-color-brand`, `--lr-color-text-quiet`, `--lr-color-danger`, `--lr-color-danger-quiet`,
-`--lr-radius`, `--lr-icon-button-size`, `--lr-focus-ring-*`, `--lr-transition-fast`, and
-`--lr-transition-ambient` (default `1.8s ease-in-out`) — the streaming-indicator pulse animation's
-cycle, the same shared compound token `<lr-typing-indicator>` uses.
+inline size; component-specific, no shared width token exists), four role-scoped bubble color
+properties:
+
+- `--lr-chat-message-bubble-bg` (default `var(--lr-color-surface)`) — bubble fill for every role
+  except `user`.
+- `--lr-chat-message-bubble-color` (default `var(--lr-color-text)`) — bubble text color for those
+  same roles.
+- `--lr-chat-message-user-bubble-bg` (default `var(--lr-color-brand-quiet)`) — bubble fill for
+  `data-role="user"`.
+- `--lr-chat-message-user-bubble-color` (default `var(--lr-color-text)`) — bubble text color for
+  `data-role="user"`.
+
+Prefer these over re-pointing the shared token a default happens to reference. Overriding
+`--lr-color-brand-quiet` on the host also retints `[part='collapse-button']:hover` within this same
+component, and which shared token backs each role's fill is not a stable contract — it changed
+between 4.x and 5.0.0, which silently turned one consumer's inner-surface scrim into the whole
+bubble (near-black text on `rgba(0,0,0,0.22)`, visible only by eye). These four are that stable
+contract.
+
+Plus shared tokens `--lr-space-xs/-m`, `--lr-color-border`, `--lr-color-surface`,
+`--lr-color-brand-quiet`, `--lr-color-brand`, `--lr-color-text-quiet`, `--lr-color-danger`,
+`--lr-color-danger-quiet`, `--lr-radius`, `--lr-icon-button-size`, `--lr-focus-ring-*`,
+`--lr-transition-fast`, and `--lr-transition-ambient` (default `1.8s ease-in-out`) — the
+streaming-indicator pulse animation's cycle, the same shared compound token
+`<lr-typing-indicator>` uses.
 
 `[part=bubble]`'s background resolves through `--lr-color-surface`. If your own panel/container
 background already maps to that same token, override `[part=bubble]`'s background explicitly (e.g.

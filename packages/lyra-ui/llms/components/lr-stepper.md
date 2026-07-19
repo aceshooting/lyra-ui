@@ -33,17 +33,26 @@ convention).
   breakpoint measured on `[part='base']`; unset (the default) means no behavior change at all, and
   no `ResizeObserver` is armed. Below it, `narrowOrientation` becomes the effective axis instead of
   `orientation`. Accepts a bare pixel number (`900`, `orientation-breakpoint="900"`) or a CSS length
-  string: `'900px'`, `'56.25rem'`, `'3em'`. **`rem` resolves against the document root's font size —
-  exactly as a `rem` in a CSS `@media` query does, *not* against this element** — so a breakpoint
-  authored to match a sibling `@media (max-width: 56.25rem)` rule stays in sync with it across
-  browser zoom, a user font-size preference, or an app changing its base size token. `em` resolves
-  against the element's own computed font size. The length is **re-resolved on every measurement**,
-  never cached at first render, so a root font-size change moves the crossing width with no
-  invalidation step on the consumer's side. Anything that isn't a resolvable length behaves exactly
-  as unset (no observation, no `data-effective-orientation`): `''`, `'auto'`, garbage, a non-finite
-  number, and deliberately `%`, `vw`/`vh` and `calc()` — a viewport-relative threshold would mix
-  reference boxes against a measurement of the element's own allocation. Mirrors `<lr-split>`'s
-  identically-named contract, unit handling included.
+  string: `'900px'`, `'56.25rem'`, `'3em'`. Under the default `orientationBreakpointBasis='container'`,
+  `rem` resolves against the document root's **computed** font size (the rule a `@container` query
+  follows) and `em` against this element's own computed font size. The length is **re-resolved on
+  every measurement**, never cached at first render, so a root font-size change moves the crossing
+  width with no invalidation step on the consumer's side. Anything that isn't a resolvable length
+  behaves exactly as unset (no observation, no `data-effective-orientation`): `''`, `'auto'`,
+  garbage, a non-finite number, and deliberately `%`, `vw`/`vh` and `calc()` — a viewport-relative
+  threshold would mix reference boxes against a measurement of the element's own allocation. Mirrors
+  `<lr-split>`'s identically-named contract, unit handling included.
+- `orientationBreakpointBasis: 'container'|'viewport' = 'container'` (reflected, attribute
+  `orientation-breakpoint-basis`) — which box `orientationBreakpoint` is compared against. Unset,
+  behavior is identical to before this property existed. `'container'` measures the stepper's own
+  `[part='base']` via `ResizeObserver`, comparing strictly `<`; `'viewport'` evaluates
+  `matchMedia('(max-width: <breakpoint>)')`, arms no `ResizeObserver`, and compares inclusively
+  (`<=`) per native `max-width` semantics. **A stepper given a fixed width in a row layout cannot
+  react to that row stacking by measuring itself — its own width never changes — so that case
+  requires `'viewport'`.** Relative units also differ by basis: inside a media query they resolve
+  against the browser's *initial* font size, ignoring `html { font-size }`, which is precisely why
+  `'viewport'` matches a CSS `@media` rule authored with the same length. Mirrors `<lr-split>`'s
+  identically-named contract.
 - `narrowOrientation: 'horizontal' | 'vertical' = 'vertical'` (reflected, attribute
   `narrow-orientation`)
 - `effectiveOrientation: 'horizontal' | 'vertical'` (readonly getter) — the live layout/navigation
@@ -89,14 +98,14 @@ single place to short-circuit its own listener's follow-up work. `lr-stepper-ori
 ```
 
 **Known gotchas:**
-- `orientationBreakpoint` observes **the stepper's own allocated inline size**, so it fits a stepper
-  that is the sole flex/grid item in its measured container. In a row where the stepper is a
-  fixed-width sidebar beside another element, its own width never changes with the viewport at all,
-  so no breakpoint value can react to that row stacking via a CSS `@media` rule. For that layout,
-  leave `orientationBreakpoint` unset and drive the `orientation` attribute for both siblings from
-  one shared consumer-side breakpoint controller matching the same query as the CSS rule — the
-  intended pattern for sibling-coupled layouts, not a workaround. See `<lr-split>`'s own note above
-  for the full explanation of why a shared row can't be inferred from one element's measurement.
+- `orientationBreakpointBasis='container'` (the default) observes **the stepper's own allocated
+  inline size**, so it fits a stepper that is the sole flex/grid item in its measured container. In
+  a row where the stepper is a fixed-width sidebar beside another element, its own width never
+  changes with the viewport at all, so no container breakpoint can react to that row stacking via a
+  CSS `@media` rule. Use `orientationBreakpointBasis='viewport'` for that layout — give the stepper
+  and its sibling the same `orientation-breakpoint` and both flip in lockstep with the CSS rule. See
+  `<lr-split>`'s own note above for the full explanation of why a shared row can't be inferred from
+  one element's measurement, and for a worked example.
 - there's no built-in "step forward/back" method — advancing the wizard is entirely the host's job:
   react to `lr-step-select` (or its own Next/Back buttons) and reassign `steps` with updated
   `state` values.

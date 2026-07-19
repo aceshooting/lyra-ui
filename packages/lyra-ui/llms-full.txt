@@ -3497,18 +3497,29 @@ auto-inserted between each adjacent pair.
   breakpoint measured on `[part='base']`; unset (the default) means no behavior change at all, and
   no `ResizeObserver` is armed. Below it, `narrowOrientation` becomes the effective axis instead of
   `orientation`. Accepts a bare pixel number (`900`, `orientation-breakpoint="900"`) or a CSS length
-  string: `'900px'`, `'56.25rem'`, `'3em'`. **`rem` resolves against the document root's font size —
-  exactly as a `rem` in a CSS `@media` query does, *not* against this element** — so a breakpoint
-  authored to match a sibling `@media (max-width: 56.25rem)` rule stays in sync with it across
-  browser zoom, a user font-size preference, or an app changing its base size token. `em` resolves
-  against the element's own computed font size. The length is **re-resolved on every measurement**,
-  never cached at first render, so a root font-size change moves the crossing width with no
-  invalidation step on the consumer's side. Anything that isn't a resolvable length behaves exactly
-  as unset (no observation, no `data-effective-orientation`): `''`, `'auto'`, garbage, a non-finite
-  number, and deliberately `%`, `vw`/`vh` and `calc()` — a viewport-relative threshold would mix
-  reference boxes against a measurement of the element's own allocation. For a genuinely viewport-relative
-  breakpoint, leave `orientationBreakpoint` unset and bind `orientation` from your own
-  `matchMedia()` controller — see the composition note in the gotchas below.
+  string: `'900px'`, `'56.25rem'`, `'3em'`. Under the default `orientationBreakpointBasis='container'`,
+  `rem` resolves against the document root's **computed** font size (the rule a `@container` query
+  follows) and `em` against this element's own computed font size. The length is **re-resolved on
+  every measurement**, never cached at first render, so a root font-size change moves the crossing
+  width with no invalidation step on the consumer's side. Anything that isn't a resolvable length
+  behaves exactly as unset (no observation, no `data-effective-orientation`): `''`, `'auto'`,
+  garbage, a non-finite number, and deliberately `%`, `vw`/`vh` and `calc()` — a viewport-relative
+  threshold would mix reference boxes against a measurement of the element's own allocation. For a
+  genuinely viewport-relative breakpoint set `orientationBreakpointBasis='viewport'` instead.
+- `orientationBreakpointBasis: 'container'|'viewport' = 'container'` (reflected, attribute
+  `orientation-breakpoint-basis`) — which box `orientationBreakpoint` is compared against. Unset,
+  behavior is identical to before this property existed. `'container'` measures this component's own
+  `[part='base']` via `ResizeObserver` and compares strictly `<`. `'viewport'` evaluates
+  `matchMedia('(max-width: <breakpoint>)')` and arms no `ResizeObserver` for the orientation feature
+  at all, so the shared observer stays armed only for `collapse`; its comparison is inclusive (`<=`),
+  because that is what native `max-width` means — deliberate, so the crossing point matches a CSS
+  `@media` rule authored with the same length exactly.
+  **`rem`/`em` mean different things under the two bases, and this is the reason `'viewport'` exists.**
+  Inside a media query, relative units resolve against the browser's *initial* font size and ignore
+  any `html { font-size }` override; under `'container'` they resolve against live computed font
+  sizes. The two agree unless an app re-points the root font size. So when the breakpoint must stay
+  in lockstep with a CSS `@media` rule, `'viewport'` is the exact match — the browser evaluates the
+  same query, live, across browser zoom and user font-size preferences, with no px re-derivation.
 - `narrowOrientation: 'horizontal'|'vertical' = 'vertical'` (reflected, attribute `narrow-orientation`)
 - `effectiveOrientation: 'horizontal'|'vertical'` (readonly getter) — the live resize/layout axis
   actually in effect; identical to `orientation` whenever `orientationBreakpoint` is unset or
@@ -3625,19 +3636,26 @@ the visually-adjacent panel).
   `disconnectedCallback`) is solid and safe to rely on.
 - `orientationBreakpoint` shares its `[part='base']` `ResizeObserver` with `collapse` (one observer,
   not two) — arming logic covers either feature being opted into independently.
-- `orientationBreakpoint` observes **the component's own allocated inline size**, not the viewport
-  and not a shared row. It therefore fits a component that is the sole flex/grid item in the
-  container being measured. It does **not** fit a component sitting beside a fixed-width sibling in
-  a row that stacks via a CSS `@media` rule: while the row is a row, this element's width shrinks
+- **Picking a basis.** `orientationBreakpointBasis='container'` (the default) observes the
+  component's own allocated inline size, so it fits a component that is the sole flex/grid item in
+  the container being measured. It does **not** fit a component sitting beside a fixed-width sibling
+  in a row that stacks via a CSS `@media` rule: while the row is a row, this element's width shrinks
   with the viewport; the instant the row stacks (a pure-CSS event no component can observe) it jumps
   to the *full* row width — wider than it was just before the transition. Because the measured width
-  is not monotonic across that transition, no single threshold both stays wide while the row is a
-  row and goes narrow exactly when it stacks. A fixed-width sibling is worse still: its own width
-  never changes with the viewport at all, so no breakpoint on it can react to the stacking.
-  For that layout, leave `orientationBreakpoint` unset and drive the `orientation` attribute from
-  one shared consumer-side breakpoint controller (a `matchMedia()` listener matching the same query
-  as the CSS rule). That is the intended, supported pattern for sibling-coupled layouts — not a
-  workaround.
+  is not monotonic across that transition, no single container threshold both stays wide while the
+  row is a row and goes narrow exactly when it stacks. A fixed-width sibling is worse still: its own
+  width never changes with the viewport at all, so no container breakpoint on it can react to the
+  stacking.
+  That layout is what `orientationBreakpointBasis='viewport'` is for. Give every sibling the same
+  `orientation-breakpoint` and `orientation-breakpoint-basis='viewport'` and they flip together, in
+  lockstep with the CSS rule that stacks the row:
+  ```html
+  <lr-stepper orientation-breakpoint="56.25rem" orientation-breakpoint-basis="viewport"></lr-stepper>
+  <lr-split   orientation-breakpoint="56.25rem" orientation-breakpoint-basis="viewport"></lr-split>
+  <style>@media (max-width: 56.25rem) { .shell { flex-direction: column; } }</style>
+  ```
+  A consumer-side `matchMedia()` controller driving the `orientation` attribute directly is still
+  supported and still correct — it is simply no longer required for this case.
 
 ---
 
@@ -3931,17 +3949,26 @@ convention).
   breakpoint measured on `[part='base']`; unset (the default) means no behavior change at all, and
   no `ResizeObserver` is armed. Below it, `narrowOrientation` becomes the effective axis instead of
   `orientation`. Accepts a bare pixel number (`900`, `orientation-breakpoint="900"`) or a CSS length
-  string: `'900px'`, `'56.25rem'`, `'3em'`. **`rem` resolves against the document root's font size —
-  exactly as a `rem` in a CSS `@media` query does, *not* against this element** — so a breakpoint
-  authored to match a sibling `@media (max-width: 56.25rem)` rule stays in sync with it across
-  browser zoom, a user font-size preference, or an app changing its base size token. `em` resolves
-  against the element's own computed font size. The length is **re-resolved on every measurement**,
-  never cached at first render, so a root font-size change moves the crossing width with no
-  invalidation step on the consumer's side. Anything that isn't a resolvable length behaves exactly
-  as unset (no observation, no `data-effective-orientation`): `''`, `'auto'`, garbage, a non-finite
-  number, and deliberately `%`, `vw`/`vh` and `calc()` — a viewport-relative threshold would mix
-  reference boxes against a measurement of the element's own allocation. Mirrors `<lr-split>`'s
-  identically-named contract, unit handling included.
+  string: `'900px'`, `'56.25rem'`, `'3em'`. Under the default `orientationBreakpointBasis='container'`,
+  `rem` resolves against the document root's **computed** font size (the rule a `@container` query
+  follows) and `em` against this element's own computed font size. The length is **re-resolved on
+  every measurement**, never cached at first render, so a root font-size change moves the crossing
+  width with no invalidation step on the consumer's side. Anything that isn't a resolvable length
+  behaves exactly as unset (no observation, no `data-effective-orientation`): `''`, `'auto'`,
+  garbage, a non-finite number, and deliberately `%`, `vw`/`vh` and `calc()` — a viewport-relative
+  threshold would mix reference boxes against a measurement of the element's own allocation. Mirrors
+  `<lr-split>`'s identically-named contract, unit handling included.
+- `orientationBreakpointBasis: 'container'|'viewport' = 'container'` (reflected, attribute
+  `orientation-breakpoint-basis`) — which box `orientationBreakpoint` is compared against. Unset,
+  behavior is identical to before this property existed. `'container'` measures the stepper's own
+  `[part='base']` via `ResizeObserver`, comparing strictly `<`; `'viewport'` evaluates
+  `matchMedia('(max-width: <breakpoint>)')`, arms no `ResizeObserver`, and compares inclusively
+  (`<=`) per native `max-width` semantics. **A stepper given a fixed width in a row layout cannot
+  react to that row stacking by measuring itself — its own width never changes — so that case
+  requires `'viewport'`.** Relative units also differ by basis: inside a media query they resolve
+  against the browser's *initial* font size, ignoring `html { font-size }`, which is precisely why
+  `'viewport'` matches a CSS `@media` rule authored with the same length. Mirrors `<lr-split>`'s
+  identically-named contract.
 - `narrowOrientation: 'horizontal' | 'vertical' = 'vertical'` (reflected, attribute
   `narrow-orientation`)
 - `effectiveOrientation: 'horizontal' | 'vertical'` (readonly getter) — the live layout/navigation
@@ -3987,14 +4014,14 @@ single place to short-circuit its own listener's follow-up work. `lr-stepper-ori
 ```
 
 **Known gotchas:**
-- `orientationBreakpoint` observes **the stepper's own allocated inline size**, so it fits a stepper
-  that is the sole flex/grid item in its measured container. In a row where the stepper is a
-  fixed-width sidebar beside another element, its own width never changes with the viewport at all,
-  so no breakpoint value can react to that row stacking via a CSS `@media` rule. For that layout,
-  leave `orientationBreakpoint` unset and drive the `orientation` attribute for both siblings from
-  one shared consumer-side breakpoint controller matching the same query as the CSS rule — the
-  intended pattern for sibling-coupled layouts, not a workaround. See `<lr-split>`'s own note above
-  for the full explanation of why a shared row can't be inferred from one element's measurement.
+- `orientationBreakpointBasis='container'` (the default) observes **the stepper's own allocated
+  inline size**, so it fits a stepper that is the sole flex/grid item in its measured container. In
+  a row where the stepper is a fixed-width sidebar beside another element, its own width never
+  changes with the viewport at all, so no container breakpoint can react to that row stacking via a
+  CSS `@media` rule. Use `orientationBreakpointBasis='viewport'` for that layout — give the stepper
+  and its sibling the same `orientation-breakpoint` and both flip in lockstep with the CSS rule. See
+  `<lr-split>`'s own note above for the full explanation of why a shared row can't be inferred from
+  one element's measurement, and for a worked example.
 - there's no built-in "step forward/back" method — advancing the wizard is entirely the host's job:
   react to `lr-step-select` (or its own Next/Back buttons) and reassign `steps` with updated
   `state` values.
@@ -9549,12 +9576,31 @@ after `bubble` when `actionsOutsideBubble` is set), `failure` (`display: content
 `failure` slot; contributes no box when the slot is empty)
 
 **Themeable custom properties:** `--lr-chat-message-max-width` (default `80%` — the bubble's max
-inline size; component-specific, no shared width token exists), plus shared tokens
-`--lr-space-xs/-m`, `--lr-color-border`, `--lr-color-surface`, `--lr-color-brand-quiet`,
-`--lr-color-brand`, `--lr-color-text-quiet`, `--lr-color-danger`, `--lr-color-danger-quiet`,
-`--lr-radius`, `--lr-icon-button-size`, `--lr-focus-ring-*`, `--lr-transition-fast`, and
-`--lr-transition-ambient` (default `1.8s ease-in-out`) — the streaming-indicator pulse animation's
-cycle, the same shared compound token `<lr-typing-indicator>` uses.
+inline size; component-specific, no shared width token exists), four role-scoped bubble color
+properties:
+
+- `--lr-chat-message-bubble-bg` (default `var(--lr-color-surface)`) — bubble fill for every role
+  except `user`.
+- `--lr-chat-message-bubble-color` (default `var(--lr-color-text)`) — bubble text color for those
+  same roles.
+- `--lr-chat-message-user-bubble-bg` (default `var(--lr-color-brand-quiet)`) — bubble fill for
+  `data-role="user"`.
+- `--lr-chat-message-user-bubble-color` (default `var(--lr-color-text)`) — bubble text color for
+  `data-role="user"`.
+
+Prefer these over re-pointing the shared token a default happens to reference. Overriding
+`--lr-color-brand-quiet` on the host also retints `[part='collapse-button']:hover` within this same
+component, and which shared token backs each role's fill is not a stable contract — it changed
+between 4.x and 5.0.0, which silently turned one consumer's inner-surface scrim into the whole
+bubble (near-black text on `rgba(0,0,0,0.22)`, visible only by eye). These four are that stable
+contract.
+
+Plus shared tokens `--lr-space-xs/-m`, `--lr-color-border`, `--lr-color-surface`,
+`--lr-color-brand-quiet`, `--lr-color-brand`, `--lr-color-text-quiet`, `--lr-color-danger`,
+`--lr-color-danger-quiet`, `--lr-radius`, `--lr-icon-button-size`, `--lr-focus-ring-*`,
+`--lr-transition-fast`, and `--lr-transition-ambient` (default `1.8s ease-in-out`) — the
+streaming-indicator pulse animation's cycle, the same shared compound token
+`<lr-typing-indicator>` uses.
 
 `[part=bubble]`'s background resolves through `--lr-color-surface`. If your own panel/container
 background already maps to that same token, override `[part=bubble]`'s background explicitly (e.g.
