@@ -1,18 +1,5 @@
 # Changelog
 
-## 4.0.0
-
-### Breaking Changes
-
-- Renames every public custom-element tag from `lyra-*` to `lr-*`.
-- Renames library-specific event names from `lyra-*` to `lr-*`.
-- Renames the public design-token and component custom-property namespace from `--lyra-*` to `--lr-*`.
-- Keeps the npm package name `@aceshooting/lyra-ui`, exported `Lyra*` JavaScript class names, and repository paths unchanged.
-- Adds `lr-control-group` and completes the `lr-segmented` size API in the 4.0.0 surface.
-
-Consumers must update markup, event listeners, and custom-property overrides together; the old
-`lyra-*` tags/events/tokens are not aliases in this major release.
-
 ## 3.9.0
 
 ### Minor Changes
