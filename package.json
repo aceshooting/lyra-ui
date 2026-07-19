@@ -33,6 +33,7 @@
     "@aceshooting/lyra-ui": "workspace:*",
     "@arethetypeswrong/cli": "^0.18.5",
     "@changesets/cli": "^2.31.1",
+    "@codecov/vite-plugin": "^2.0.1",
     "@sgratzl/chartjs-chart-boxplot": "^4.4.5",
     "@storybook/addon-a11y": "^10.5.2",
     "@storybook/addon-docs": "^10.5.2",

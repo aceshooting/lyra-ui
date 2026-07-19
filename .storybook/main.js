@@ -1,4 +1,8 @@
+import { existsSync, readdirSync, rmSync } from 'node:fs';
+import { join } from 'node:path';
+
 import tailwindcss from '@tailwindcss/vite';
+import { codecovVitePlugin } from '@codecov/vite-plugin';
 
 /** @type { import('@storybook/web-components-vite').StorybookConfig } */
 const config = {
@@ -62,6 +66,38 @@ const config = {
         return 'vendor-d3';
       }
     };
+    // Codecov bundle analysis for the *docs site* only -- this is the sole vite build in the
+    // repo. The published npm package is built by esbuild and is tracked separately, under the
+    // `lyra-ui-dist` bundle (see packages/lyra-ui/scripts/codecov-bundle.mjs). Pushed last on
+    // purpose: Codecov's plugin reads the finished bundle, so it must sit after every other
+    // plugin in the array. Without CODECOV_TOKEN (any local `pnpm dev`/`pnpm docs:build`) the
+    // plugin is inert, so no one needs a token to build the docs.
+    viteConfig.plugins.push(
+      codecovVitePlugin({
+        enableBundleAnalysis: process.env.CODECOV_TOKEN !== undefined,
+        bundleName: 'lyra-ui-docs',
+        uploadToken: process.env.CODECOV_TOKEN,
+      }),
+    );
+    // The Codecov plugin also *writes* its report as `<bundleName>-<format>-stats.json` into the
+    // build output, which for a site this size is a multi-MB inventory of every asset, chunk and
+    // module -- and storybook-static/ is deployed verbatim to lyra-ui.com, so it would ship as a
+    // public file. The upload happens in the plugin's writeBundle hook and `closeBundle` runs
+    // strictly after every writeBundle, so deleting here removes the artifact without affecting
+    // what Codecov received.
+    viteConfig.plugins.push({
+      name: 'lyra-strip-codecov-stats',
+      apply: 'build',
+      closeBundle() {
+        // readdirSync rather than fs.globSync: the latter needs Node 22 and package.json
+        // declares `engines.node: >=20`.
+        const outDir = viteConfig.build?.outDir ?? 'dist';
+        if (!existsSync(outDir)) return;
+        for (const file of readdirSync(outDir)) {
+          if (file.endsWith('-stats.json')) rmSync(join(outDir, file), { force: true });
+        }
+      },
+    });
     return viteConfig;
   },
   // Keep the sidebar oriented around how people think about components, while allowing

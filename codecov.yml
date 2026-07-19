@@ -61,6 +61,16 @@ flags:
     paths:
       - packages/lyra-ui/src/**
 
+# Separate product from the coverage config above. Two bundles are reported per commit:
+# `lyra-ui-dist` -- the published package's six representative entry points, esbuild-bundled by
+# packages/lyra-ui/scripts/codecov-bundle.mjs (the npm build is plain tsc, so there is no bundler
+# plugin to hook); and `lyra-ui-docs` -- the Storybook site, via @codecov/vite-plugin in
+# .storybook/main.js. Informational for the same reason the coverage statuses are: the blocking
+# weight gate is check:bundle-size's hard gzip budgets, not a Codecov delta.
+bundle_analysis:
+  status: informational
+  warning_threshold: "5%"
+
 comment:
   layout: "header, diff, flags, components"
   behavior: default

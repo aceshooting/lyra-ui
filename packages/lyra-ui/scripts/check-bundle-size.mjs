@@ -15,15 +15,23 @@
 // as `<name>/*` because the loaders import subpaths too (`shiki/core`, `libphonenumber-js/min`,
 // `mammoth/mammoth.browser.js`, `emoji-picker-element-data/en/...`). Hard dependencies (lit,
 // @floating-ui/dom) stay bundled -- consumers pay for them, so the budget must include them.
-import { readFileSync, writeFileSync, existsSync } from 'node:fs';
+import { readFileSync, writeFileSync, existsSync, mkdirSync, rmSync } from 'node:fs';
 import { createRequire } from 'node:module';
-import { join } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { gzipSync } from 'node:zlib';
 
 const packageDir = fileURLToPath(new URL('..', import.meta.url));
 const budgetsPath = join(packageDir, 'scripts', 'bundle-budgets.json');
 const writeBudgets = process.argv.includes('--write-budgets');
+
+// `--emit=<dir>` additionally writes the bundles this script already builds in memory. Nothing in
+// the repo produces a bundled artifact otherwise -- `pnpm build` is plain `tsc`, so dist/ is ~800
+// unbundled modules -- and Codecov bundle analysis needs real bundle output to report on. Opt-in
+// so the normal budget check stays a pure read. See scripts/codecov-bundle.mjs.
+const emitArg = process.argv.find((arg) => arg.startsWith('--emit='));
+const emitDir = emitArg ? resolve(packageDir, emitArg.slice('--emit='.length)) : null;
+if (emitDir) rmSync(emitDir, { recursive: true, force: true });
 
 // esbuild is not a direct dependency of this package; it reaches the workspace through
 // @web/dev-server-esbuild (the wtr pipeline). Under pnpm's strict node_modules layout it is only
@@ -77,6 +85,14 @@ if (missingEntries.length) {
       logLevel: 'silent',
     });
     const contents = result.outputFiles[0].contents;
+    // Mirror the entry's path under the emit dir (minus the `dist/` prefix) rather than flattening
+    // to a basename: keeps two same-named entries from colliding and gives Codecov asset names
+    // that match what a consumer actually imports.
+    if (emitDir) {
+      const outPath = join(emitDir, entry.replace(/^dist\//, ''));
+      mkdirSync(dirname(outPath), { recursive: true });
+      writeFileSync(outPath, contents);
+    }
     // level 9 approximates the static-hosting gzip a consumer actually ships.
     measured.push({ entry, minBytes: contents.length, gzipBytes: gzipSync(contents, { level: 9 }).length });
   }

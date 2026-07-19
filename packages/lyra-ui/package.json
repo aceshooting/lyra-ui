@@ -589,6 +589,7 @@
     "style-policy": "node scripts/check-style-policy.mjs",
     "check:source-policy": "node scripts/check-source-policy.mjs",
     "check:bundle-size": "node scripts/check-bundle-size.mjs",
+    "codecov:bundle": "node scripts/check-bundle-size.mjs --emit=.codecov-bundle && node scripts/codecov-bundle.mjs",
     "provenance-policy": "node scripts/check-provenance.mjs",
     "contract-checklist": "node scripts/check-contract-checklist.mjs",
     "manifest": "cem analyze --litelement --outdir .",
@@ -716,6 +717,7 @@
   "devDependencies": {
     "@aceshooting/lyra-flags": "workspace:^2.0.0",
     "@aiden0z/pptx-renderer": "^1.2.4",
+    "@codecov/bundle-analyzer": "^2.0.1",
     "@custom-elements-manifest/analyzer": "^0.11.0",
     "@open-wc/testing": "^5.0.0",
     "@sgratzl/chartjs-chart-boxplot": "^4.4.5",

@@ -14,6 +14,11 @@ storybook-static
 # committed, deliberately outside this pattern.
 .visual-diff-output/
 
+# scripts/check-bundle-size.mjs --emit output: esbuild-bundled copies of the published entry
+# points, produced only so Codecov bundle analysis has a real bundle to report on
+# (scripts/codecov-bundle.mjs). Regenerated from dist/ on every run.
+.codecov-bundle/
+
 # Internal planning/working docs (specs, plans, feature requests) -- never staged. The rest of
 # docs/ (e.g. docs/index.md) IS committed and is real, public documentation.
 docs/superpowers/
