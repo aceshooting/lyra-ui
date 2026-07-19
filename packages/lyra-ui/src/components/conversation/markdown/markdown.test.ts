@@ -258,6 +258,39 @@ it('renders an <img> from source markdown with part="img"', async () => {
   expect(img.getAttribute('alt')).to.equal('alt text');
 });
 
+it('drops an <img> (rendering the escaped alt text) when its href is malformed (lone surrogate)', async () => {
+  const el = (await fixture(html`<lr-markdown content=${'![alt](\uD800)'}></lr-markdown>`)) as LyraMarkdown;
+  await waitUntil(() => el.shadowRoot!.querySelector('[part="content"]')!.textContent!.trim().length > 0);
+  expect(el.shadowRoot!.querySelector('img')).to.not.exist;
+  expect(el.shadowRoot!.querySelector('[part="content"]')!.textContent).to.contain('alt');
+});
+
+it('renders a title attribute on a link and an image when the source supplies one', async () => {
+  const el = (await fixture(
+    html`<lr-markdown content=${'[docs](https://example.com "Docs title")\n\n![alt](https://example.com/pic.png "Pic title")'}></lr-markdown>`,
+  )) as LyraMarkdown;
+  await waitUntil(() => el.shadowRoot!.querySelector('img') !== null);
+  expect(el.shadowRoot!.querySelector('a')!.getAttribute('title')).to.equal('Docs title');
+  expect(el.shadowRoot!.querySelector('img')!.getAttribute('title')).to.equal('Pic title');
+});
+
+it('adds an align attribute to an aligned table header cell, and omits <tbody> for a header-only table', async () => {
+  const el = (await fixture(html`<lr-markdown content=${'| a | b |\n| :--- | ---: |\n'}></lr-markdown>`)) as LyraMarkdown;
+  await waitUntil(() => el.shadowRoot!.querySelector('[part="table"]') !== null);
+  const ths = el.shadowRoot!.querySelectorAll('[part="table"] th');
+  expect(ths[0].getAttribute('align')).to.equal('left');
+  expect(ths[1].getAttribute('align')).to.equal('right');
+  expect(el.shadowRoot!.querySelector('[part="table"] tbody')).to.not.exist;
+});
+
+it('renders a 4-space indented code block (marked pre-escapes it; token.escaped is true)', async () => {
+  const el = (await fixture(html`<lr-markdown content=${'    <div>indented</div>'}></lr-markdown>`)) as LyraMarkdown;
+  await waitUntil(() => el.shadowRoot!.querySelector('[part="code-block"]') !== null);
+  const code = el.shadowRoot!.querySelector('[part="code-block"] code')!;
+  expect(code.textContent).to.equal('<div>indented</div>\n');
+  expect(el.shadowRoot!.querySelector('[part="code-block"] div')).to.not.exist;
+});
+
 it('defaults heading-offset to 0, preserving today\'s exact <h${depth}> output', async () => {
   const el = (await fixture(html`<lr-markdown></lr-markdown>`)) as LyraMarkdown;
   expect(el.headingOffset).to.equal(0);
@@ -423,7 +456,57 @@ it('coalesces rapid streaming content updates to one parse per animation frame',
   expect(internals.renderedHtml).to.contain('Chunk 2');
 });
 
+it('cancels a pending streaming raf on disconnect before it fires', async () => {
+  const el = (await fixture(html`<lr-markdown></lr-markdown>`)) as LyraMarkdown;
+  await el.updateComplete;
+  type Internals = { streamingRenderRaf?: number };
+  // A real, still-pending raf id we can safely cancel twice -- avoids racing the real
+  // scheduleStreamingRender() timing while still exercising disconnectedCallback()'s own cleanup.
+  const rafId = requestAnimationFrame(() => {});
+  (el as unknown as Internals).streamingRenderRaf = rafId;
+  el.remove();
+  expect((el as unknown as Internals).streamingRenderRaf).to.equal(undefined);
+  cancelAnimationFrame(rafId);
+});
+
+it('cancels a stale pending streaming raf when a non-streaming property change triggers an immediate render', async () => {
+  const el = (await fixture(html`<lr-markdown content="hello"></lr-markdown>`)) as LyraMarkdown;
+  await el.updateComplete;
+  type Internals = { streamingRenderRaf?: number };
+  const rafId = requestAnimationFrame(() => {});
+  (el as unknown as Internals).streamingRenderRaf = rafId;
+  el.sanitize = false;
+  await el.updateComplete;
+  expect((el as unknown as Internals).streamingRenderRaf).to.equal(undefined);
+});
+
+it('does not schedule a second streaming raf while one is already pending (scheduleStreamingRender guard)', async () => {
+  const el = (await fixture(html`<lr-markdown></lr-markdown>`)) as LyraMarkdown;
+  await el.updateComplete;
+  type Internals = { streamingRenderRaf?: number; scheduleStreamingRender(): void };
+  const internals = el as unknown as Internals;
+  internals.scheduleStreamingRender();
+  const rafId = internals.streamingRenderRaf;
+  expect(rafId, 'a raf should now be scheduled').to.not.equal(undefined);
+  internals.scheduleStreamingRender(); // guarded no-op: must not replace the pending raf
+  expect(internals.streamingRenderRaf).to.equal(rafId);
+  cancelAnimationFrame(rafId!);
+  internals.streamingRenderRaf = undefined; // cleanup so no stray renderMarkdown() fires later
+});
+
 describe('fallback matrix', () => {
+  it('renderMarkdown() no-ops when deps has not been set yet', () => {
+    const el = fixtureSync(html`<lr-markdown content="# hi"></lr-markdown>`) as LyraMarkdown;
+    type Internals = { deps?: unknown; renderMarkdown(): void; renderedHtml: string | null };
+    const internals = el as unknown as Internals;
+    // Precondition: fixtureSync() does not await the async loadMarkdownDeps() hop, so deps is
+    // still unset at this point (mirrors the "without eager-load, deps stay unset synchronously"
+    // test's own precondition above).
+    expect(internals.deps).to.equal(undefined);
+    internals.renderMarkdown();
+    expect(internals.renderedHtml, 'no render should have happened').to.equal(null);
+  });
+
   it('falls back to plain text and fires lr-render-error when the marked peer is unavailable', async () => {
     const el = (await fixture(html`<lr-markdown content="# hi"></lr-markdown>`)) as LyraMarkdown;
     type Internals = { deps?: { marked: unknown; DOMPurify: unknown }; renderMarkdown(): void };
@@ -524,6 +607,11 @@ describe('paragraph/list/inline-code parts', () => {
     el.content = '1. a\n2. b';
     await el.updateComplete;
     await waitUntil(() => el.shadowRoot!.querySelector('[part="list"]')?.tagName === 'OL', 'never rendered', { timeout: 4000 });
+    expect(el.shadowRoot!.querySelector('[part="list"]')!.hasAttribute('start')).to.be.false;
+
+    el.content = '5. a\n6. b';
+    await el.updateComplete;
+    await waitUntil(() => el.shadowRoot!.querySelector('[part="list"]')?.getAttribute('start') === '5', 'never rendered', { timeout: 4000 });
   });
 
   it('adds part="inline-code" to a bare inline codespan, but not to a fenced code block\'s <code>', async () => {
@@ -603,6 +691,27 @@ describe('highlightCode cache plumbing (no async loading yet)', () => {
     const pre = el.shadowRoot!.querySelector('[part="code-block"]') as HTMLElement;
     expect(pre.querySelector('code')!.className).to.equal('');
     expect(pre.querySelector('code')!.textContent).to.equal('plain text\n');
+  });
+
+  it('overwrites (refreshes) an existing cache entry instead of duplicating it', async () => {
+    const el = (await fixture(html`<lr-markdown></lr-markdown>`)) as LyraMarkdown;
+    type SetInternals = Internals & { setCachedHighlight(key: string, html: string): void };
+    const internals = el as unknown as SetInternals;
+    internals.setCachedHighlight('k1', 'first');
+    internals.setCachedHighlight('k1', 'second');
+    expect(internals.highlightCache.get('k1')).to.equal('second');
+    expect(internals.highlightCache.size).to.equal(1);
+  });
+
+  it('evicts the oldest entry once the cache exceeds its 100-entry bound', async () => {
+    const el = (await fixture(html`<lr-markdown></lr-markdown>`)) as LyraMarkdown;
+    type SetInternals = Internals & { setCachedHighlight(key: string, html: string): void };
+    const internals = el as unknown as SetInternals;
+    for (let i = 0; i < 100; i++) internals.setCachedHighlight(`k${i}`, `v${i}`);
+    expect(internals.highlightCache.has('k0')).to.be.true;
+    internals.setCachedHighlight('k100', 'v100');
+    expect(internals.highlightCache.has('k0'), 'oldest entry should have been evicted').to.be.false;
+    expect(internals.highlightCache.size).to.equal(100);
   });
 });
 
@@ -838,9 +947,41 @@ describe('scrollToAnchor (fragment)', () => {
     expect(await el.scrollToAnchor({ kind: 'fragment', id: 'does-not-exist' })).to.be.false;
   });
 
+  it('resolves false for an empty fragment id', async () => {
+    const el = (await fixture(html`<lr-markdown content=${'# Title'}></lr-markdown>`)) as LyraMarkdown;
+    (el as unknown as { anchorTimeoutMs: number }).anchorTimeoutMs = 30;
+    (el as unknown as { anchorRetryIntervalMs: number }).anchorRetryIntervalMs = 5;
+    await waitUntil(() => el.shadowRoot!.querySelector('[part="heading"]') !== null);
+    expect(await el.scrollToAnchor({ kind: 'fragment', id: '' })).to.be.false;
+  });
+
+  it('applyAnchor/computeSelectionAnchor no-op when the content root is not yet in the DOM', async () => {
+    const el = fixtureSync(html`<lr-markdown content=${'# Title'}></lr-markdown>`) as LyraMarkdown;
+    expect(el.shadowRoot!.querySelector('[part="content"]')).to.equal(null);
+    type Internals = {
+      applyAnchor(anchor: { kind: 'fragment'; id: string }): Promise<boolean>;
+      computeSelectionAnchor(range: Range): unknown;
+    };
+    const internals = el as unknown as Internals;
+    // computeSelectionAnchor() first, synchronously -- awaiting applyAnchor() below yields at
+    // least one microtask, which is enough for Lit's already-scheduled first update to slip in
+    // and render [part="content"], which would otherwise make this a false negative.
+    const range = document.createRange();
+    expect(internals.computeSelectionAnchor(range)).to.equal(null);
+    expect(await internals.applyAnchor({ kind: 'fragment', id: 'x' })).to.be.false;
+  });
+
   it('reports its supported anchor kinds', async () => {
     const el = (await fixture(html`<lr-markdown></lr-markdown>`)) as LyraMarkdown;
     expect(el.anchorKinds).to.deep.equal(['fragment', 'text-quote']);
+  });
+
+  it('resolves false via the default switch case for an anchor kind this component does not support', async () => {
+    const el = (await fixture(html`<lr-markdown content=${'# Title'}></lr-markdown>`)) as LyraMarkdown;
+    (el as unknown as { anchorTimeoutMs: number }).anchorTimeoutMs = 30;
+    (el as unknown as { anchorRetryIntervalMs: number }).anchorRetryIntervalMs = 5;
+    await waitUntil(() => el.shadowRoot!.querySelector('[part="heading"]') !== null);
+    expect(await el.scrollToAnchor({ kind: 'page', page: 1 })).to.be.false;
   });
 
   it('resolves a fragment anchor via position even when DOMPurify stripped its id (a document-property-colliding slug)', async () => {
@@ -906,6 +1047,44 @@ describe('scrollToAnchor / highlights (text-quote)', () => {
     await el.updateComplete;
     expect(highlightPainted(el, 'warning')).to.be.true;
     expect(highlightPainted(el, 'accent')).to.be.false;
+  });
+
+  it('ignores a non-text-quote highlight kind (nothing to paint) while still painting a text-quote one alongside it', async () => {
+    const el = (await fixture(
+      html`<lr-markdown content=${'The quick brown fox jumps over the lazy dog.'}></lr-markdown>`,
+    )) as LyraMarkdown;
+    el.highlights = [
+      { id: 'h0', anchor: { kind: 'fragment', id: 'nope' } },
+      { id: 'h1', anchor: { kind: 'text-quote', quote: 'brown fox' } },
+    ];
+    await waitUntil(() => el.shadowRoot!.querySelector('[part="paragraph"]') !== null);
+    await el.updateComplete;
+    expect(highlightPainted(el)).to.be.true;
+  });
+
+  it('marks the active highlight via activeHighlightId', async () => {
+    const el = (await fixture(
+      html`<lr-markdown content=${'The quick brown fox jumps over the lazy dog.'}></lr-markdown>`,
+    )) as LyraMarkdown;
+    el.highlights = [{ id: 'h1', anchor: { kind: 'text-quote', quote: 'brown fox' } }];
+    el.activeHighlightId = 'h1';
+    await waitUntil(() => el.shadowRoot!.querySelector('[part="paragraph"]') !== null);
+    await el.updateComplete;
+    if (supportsCustomHighlights()) {
+      const registry = (globalThis as unknown as { CSS: { highlights: Map<string, { size: number }> } }).CSS.highlights;
+      expect((registry.get('lr-highlight-active')?.size ?? 0) > 0).to.be.true;
+    } else {
+      expect(el.shadowRoot!.querySelector('[part="content"] mark[data-lr-highlight-name="lr-highlight-active"]')).to.exist;
+    }
+  });
+
+  it('repaintHighlights no-ops when the content root is not yet in the DOM', () => {
+    const el = fixtureSync(html`<lr-markdown></lr-markdown>`) as LyraMarkdown;
+    // Precondition: fixtureSync() connects but does not await the first Lit update, so the
+    // [part="content"] wrapper hasn't been rendered into the shadow root yet.
+    expect(el.shadowRoot!.querySelector('[part="content"]')).to.equal(null);
+    (el as unknown as { repaintHighlights(): void }).repaintHighlights();
+    // No throw -- repaintHighlights() must bail out cleanly with nothing to paint into yet.
   });
 
   it('survives a streaming content re-render (resolution by quote, not node identity)', async () => {
@@ -1057,6 +1236,64 @@ describe('math (KaTeX)', () => {
   it('defaults math to false', async () => {
     const el = (await fixture(html`<lr-markdown></lr-markdown>`)) as LyraMarkdown;
     expect(el.math).to.be.false;
+  });
+
+  it('invokes the math extension\'s start() hook and finds no `$` at all in ordinary content', async () => {
+    __setKatexForTesting(null);
+    const el = (await fixture(html`<lr-markdown math content=${'No math in this sentence'}></lr-markdown>`)) as LyraMarkdown;
+    await waitUntil(() => el.shadowRoot!.querySelector('[part="paragraph"]') !== null);
+    expect(el.shadowRoot!.querySelector('[part="paragraph"]')!.textContent).to.equal('No math in this sentence');
+  });
+
+  it('renders literal block-math source and fires lr-render-error when katex is confirmed missing', async () => {
+    __setKatexForTesting(null);
+    const el = fixtureSync(html`<lr-markdown math content=${'$$x^2$$'}></lr-markdown>`) as LyraMarkdown;
+    const event = (await oneEvent(el, 'lr-render-error')) as CustomEvent<{ error: unknown }>;
+    expect(event.detail.error).to.exist;
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('[part="content"]')!.textContent).to.contain('$$x^2$$');
+  });
+
+  it('falls back to the literal source (inline and block) when the katex peer throws while rendering, without firing an error', async () => {
+    const throwingKatex = {
+      renderToString: () => {
+        throw new Error('boom');
+      },
+    };
+    __setKatexForTesting(throwingKatex as never);
+    const el = (await fixture(html`<lr-markdown math content=${'$x$ and $$y$$'}></lr-markdown>`)) as LyraMarkdown;
+    let fired = false;
+    el.addEventListener('lr-render-error', () => (fired = true));
+    await waitUntil(() => !el.shadowRoot!.querySelector('[part="content"]')!.hasAttribute('data-fallback'));
+    const text = el.shadowRoot!.querySelector('[part="content"]')!.textContent!;
+    expect(text).to.contain('$x$');
+    expect(text).to.contain('$$y$$');
+    expect(el.shadowRoot!.querySelector('[part="math"]')).to.not.exist;
+    expect(fired, 'a throwing (but installed) peer is not "confirmed missing" -- no error event').to.be.false;
+  });
+
+  it('still reports a permanently-missing katex peer even when sanitize is explicitly false', async () => {
+    __setKatexForTesting(null);
+    const el = fixtureSync(html`<lr-markdown math .sanitize=${false} content=${'$a$'}></lr-markdown>`) as LyraMarkdown;
+    const event = (await oneEvent(el, 'lr-render-error')) as CustomEvent<{ error: unknown }>;
+    expect(event.detail.error).to.exist;
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('[part="content"]')!.textContent).to.contain('$a$');
+  });
+});
+
+describe('math (real katex peer, unmocked)', () => {
+  it('loads the real katex peer and renders MathML when math is on without any test override', async function () {
+    // A real, unmocked dynamic import('katex') -- mirrors the "shiki highlighting (real peer)"
+    // describe block's own budget/rationale above for a first cold peer load.
+    this.timeout(20_000);
+    const el = (await fixture(html`<lr-markdown math content=${'$x^2$'}></lr-markdown>`)) as LyraMarkdown;
+    await waitUntil(
+      () => el.shadowRoot!.querySelector('[part="math"] math') !== null,
+      'never rendered via the real katex peer',
+      { timeout: 15_000 },
+    );
+    expect(el.shadowRoot!.querySelector('[part="math"]')!.getAttribute('data-display')).to.equal('inline');
   });
 });
 
