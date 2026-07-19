@@ -37,6 +37,14 @@ describe('lr-eval-result', () => {
     expect(el.shadowRoot!.querySelector('[part="grid"]')).to.not.exist;
   });
 
+  it('resolves the empty-state message through a .strings override, proving the localize() wiring reaches the DOM', async () => {
+    const el = (await fixture(
+      html`<lr-eval-result .strings=${{ noData: 'Aucune donnée' }}></lr-eval-result>`,
+    )) as LyraEvalResult;
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('[part="empty"]')!.textContent).to.equal('Aucune donnée');
+  });
+
   it('emits lr-run-select when a comparison row is activated', async () => {
     const el = (await fixture(
       html`<lr-eval-result .runs=${RUNS} .columns=${COLUMNS}></lr-eval-result>`,
