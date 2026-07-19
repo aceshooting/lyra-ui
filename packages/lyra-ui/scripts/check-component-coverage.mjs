@@ -23,7 +23,11 @@ function exercisesTag(tests, tag) {
 
 for (const module of manifest.modules) {
   if (!module.path.startsWith('src/components/')) continue;
-  const family = module.path.slice('src/components/'.length).split('/')[0];
+  // Exactly two segments (family, component name) regardless of how deep the analyzed module
+  // itself sits below that -- a component's own fixtures/ subfolder can hold its own analyzed
+  // .ts modules, but its stories/tests still live directly in the component's own directory.
+  const relPath = module.path.slice('src/components/'.length);
+  const family = relPath.split('/').slice(0, 2).join('/');
   const stories = readFamilyFiles(family, '.stories.ts').join('\n');
   const tests = readFamilyFiles(family, '.test.ts').join('\n');
   for (const declaration of module.declarations ?? []) {

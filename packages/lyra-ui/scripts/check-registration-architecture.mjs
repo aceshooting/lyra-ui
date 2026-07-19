@@ -36,12 +36,12 @@ const optionalBlock = allowlist.match(/ROOT_BARREL_OPTIONAL_PEER_TAGS\s*=\s*\[([
 assert.ok(optionalBlock, 'root registration allowlist must define ROOT_BARREL_OPTIONAL_PEER_TAGS');
 const expectedOptionalTags = [...optionalBlock[1].matchAll(/'([^']+)'/g)].map((match) => match[1]).sort();
 const importedRootTags = [
-  ...rootBarrel.matchAll(/^import '\.\/components\/(?:[^/]+\/)?([^']+)\.js';$/gm),
+  ...rootBarrel.matchAll(/^import '\.\/components\/(?:[^/\n]+\/)*([^']+)\.js';$/gm),
 ]
   .map((match) => match[1])
   .filter((moduleName) => !moduleName.endsWith('-register'))
   .map((moduleName) => `lr-${moduleName}`);
-if (rootBarrel.includes("export { LyraFlag } from './components/flag/flag.js';")) {
+if (rootBarrel.includes("export { LyraFlag } from './components/media/flag/flag.js';")) {
   importedRootTags.push('lr-flag');
 }
 assert.deepEqual(

@@ -1,42 +1,94 @@
 [
   {
     "id": "forms",
-    "files": ["src/internal/form-associated.test.ts", "src/internal/form-control-surface.test.ts"],
-    "markers": ["new FormData", "checkValidity", "form.reset"]
+    "files": [
+      "src/internal/form-associated.test.ts",
+      "src/internal/form-control-surface.test.ts"
+    ],
+    "markers": [
+      "new FormData",
+      "checkValidity",
+      "form.reset"
+    ]
   },
   {
     "id": "deep-focus",
-    "files": ["src/components/date-picker/date-input.test.ts", "src/components/select/select.test.ts"],
-    "markers": ["reportValidity", "activeElement"]
+    "files": [
+      "src/components/forms/date-picker/date-input.test.ts",
+      "src/components/forms/select/select.test.ts"
+    ],
+    "markers": [
+      "reportValidity",
+      "activeElement"
+    ]
   },
   {
     "id": "native-events",
-    "files": ["src/components/combobox/combobox.test.ts"],
-    "markers": ["constructor.name", "composed", "['input', 'change']"]
+    "files": [
+      "src/components/forms/combobox/combobox.test.ts"
+    ],
+    "markers": [
+      "constructor.name",
+      "composed",
+      "['input', 'change']"
+    ]
   },
   {
     "id": "overlay-stack",
-    "files": ["src/internal/overlay-components.test.ts", "src/internal/overlay-manager.test.ts", "src/components/dialog/dialog.test.ts"],
-    "markers": ["topmost", "inert", "Escape"]
+    "files": [
+      "src/internal/overlay-components.test.ts",
+      "src/internal/overlay-manager.test.ts",
+      "src/components/overlays/dialog/dialog.test.ts"
+    ],
+    "markers": [
+      "topmost",
+      "inert",
+      "Escape"
+    ]
   },
   {
     "id": "date-roving-focus",
-    "files": ["src/components/date-picker/date-picker.test.ts"],
-    "markers": ["disabled day", "commits the currently-focused day", "tabindex=\"0\""]
+    "files": [
+      "src/components/forms/date-picker/date-picker.test.ts"
+    ],
+    "markers": [
+      "disabled day",
+      "commits the currently-focused day",
+      "tabindex=\"0\""
+    ]
   },
   {
     "id": "live-region",
-    "files": ["src/components/live-region/live-region.test.ts"],
-    "markers": ["same text", "stale", "disconnect"]
+    "files": [
+      "src/components/utility/live-region/live-region.test.ts"
+    ],
+    "markers": [
+      "same text",
+      "stale",
+      "disconnect"
+    ]
   },
   {
     "id": "virtual-list",
-    "files": ["src/components/virtual-list/virtual-list.test.ts"],
-    "markers": ["prunes stale", "numeric and string keys", "overscan"]
+    "files": [
+      "src/components/layout/virtual-list/virtual-list.test.ts"
+    ],
+    "markers": [
+      "prunes stale",
+      "numeric and string keys",
+      "overscan"
+    ]
   },
   {
     "id": "theme-and-target-size",
-    "files": ["src/internal/tokens.test.ts", "src/components/json-viewer/json-viewer.test.ts"],
-    "markers": ["forced-colors", "dark-aware", "minimum hit area"]
+    "files": [
+      "src/internal/tokens.test.ts",
+      "src/components/utility/json-viewer/json-viewer.test.ts"
+    ],
+    "markers": [
+      "forced-colors",
+      "dark-aware",
+      "minimum hit area"
+    ]
   }
 ]
