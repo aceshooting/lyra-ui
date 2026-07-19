@@ -167,3 +167,202 @@ it('is accessible with a mixed-selection tree', async () => {
   await el.updateComplete;
   await expect(el).to.be.accessible();
 });
+
+it('toggling a fully-selected folder deselects all of its descendant leaves', async () => {
+  const el = (await fixture(html`<lr-source-picker></lr-source-picker>`)) as LyraSourcePicker;
+  el.sources = sources;
+  el.selectedIds = ['doc1', 'doc2'];
+  await el.updateComplete;
+  const folderRow = el.shadowRoot!.querySelector('[role="treeitem"]') as HTMLElement;
+  expect(folderRow.getAttribute('aria-checked')).to.equal('true');
+  const listener = oneEvent(el, 'lr-sources-change');
+  folderRow.click();
+  const event = await listener;
+  expect(event.detail.selectedIds).to.deep.equal([]);
+  expect(el.selectedIds).to.deep.equal([]);
+});
+
+it('keyboard: ArrowDown/ArrowUp move the active row and DOM focus between top-level entries', async () => {
+  const el = (await fixture(html`<lr-source-picker></lr-source-picker>`)) as LyraSourcePicker;
+  el.sources = sources;
+  await el.updateComplete;
+  const tree = el.shadowRoot!.querySelector('[part="tree"]')!;
+
+  tree.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, cancelable: true }));
+  await el.updateComplete;
+  let items = el.shadowRoot!.querySelectorAll('[role="treeitem"]');
+  expect(items[1]!.getAttribute('tabindex')).to.equal('0');
+  expect(items[0]!.getAttribute('tabindex')).to.equal('-1');
+  expect(el.shadowRoot!.activeElement).to.equal(items[1]);
+
+  tree.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowUp', bubbles: true, cancelable: true }));
+  await el.updateComplete;
+  items = el.shadowRoot!.querySelectorAll('[role="treeitem"]');
+  expect(items[0]!.getAttribute('tabindex')).to.equal('0');
+  expect(el.shadowRoot!.activeElement).to.equal(items[0]);
+});
+
+it('keyboard: Home/End jump the active row to the first/last visible entry', async () => {
+  const el = (await fixture(html`<lr-source-picker></lr-source-picker>`)) as LyraSourcePicker;
+  el.sources = sources;
+  await el.updateComplete;
+  const tree = el.shadowRoot!.querySelector('[part="tree"]')!;
+
+  tree.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true, cancelable: true })); // expand folder1
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelectorAll('[role="treeitem"]').length).to.equal(4);
+
+  tree.dispatchEvent(new KeyboardEvent('keydown', { key: 'End', bubbles: true, cancelable: true }));
+  await el.updateComplete;
+  let items = el.shadowRoot!.querySelectorAll('[role="treeitem"]');
+  expect(items[3]!.getAttribute('tabindex')).to.equal('0'); // doc3, the last visible row
+  expect(el.shadowRoot!.activeElement).to.equal(items[3]);
+
+  tree.dispatchEvent(new KeyboardEvent('keydown', { key: 'Home', bubbles: true, cancelable: true }));
+  await el.updateComplete;
+  items = el.shadowRoot!.querySelectorAll('[role="treeitem"]');
+  expect(items[0]!.getAttribute('tabindex')).to.equal('0'); // folder1, the first visible row
+  expect(el.shadowRoot!.activeElement).to.equal(items[0]);
+});
+
+it('keyboard: ArrowRight on an already-expanded, focused folder moves focus into its first child', async () => {
+  const el = (await fixture(html`<lr-source-picker></lr-source-picker>`)) as LyraSourcePicker;
+  el.sources = sources;
+  await el.updateComplete;
+  const tree = el.shadowRoot!.querySelector('[part="tree"]')!;
+
+  tree.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true, cancelable: true })); // expand
+  await el.updateComplete;
+  tree.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true, cancelable: true })); // move into child
+  await el.updateComplete;
+
+  const items = el.shadowRoot!.querySelectorAll('[role="treeitem"]');
+  expect(items.length).to.equal(4);
+  expect(items[1]!.getAttribute('tabindex')).to.equal('0'); // doc1, folder1's first child
+  expect(el.shadowRoot!.activeElement).to.equal(items[1]);
+});
+
+it('keyboard: ArrowLeft collapses an expanded, focused folder', async () => {
+  const el = (await fixture(html`<lr-source-picker></lr-source-picker>`)) as LyraSourcePicker;
+  el.sources = sources;
+  await el.updateComplete;
+  const tree = el.shadowRoot!.querySelector('[part="tree"]')!;
+
+  tree.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true, cancelable: true })); // expand
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelectorAll('[role="treeitem"]').length).to.equal(4);
+
+  tree.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true, cancelable: true })); // collapse
+  await el.updateComplete;
+  const items = el.shadowRoot!.querySelectorAll('[role="treeitem"]');
+  expect(items.length).to.equal(2);
+  expect(items[0]!.getAttribute('aria-expanded')).to.equal('false');
+});
+
+it('keyboard: ArrowLeft on a focused leaf walks focus back to its ancestor folder', async () => {
+  const el = (await fixture(html`<lr-source-picker></lr-source-picker>`)) as LyraSourcePicker;
+  el.sources = sources;
+  await el.updateComplete;
+  const tree = el.shadowRoot!.querySelector('[part="tree"]')!;
+
+  tree.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true, cancelable: true })); // expand folder1
+  await el.updateComplete;
+  tree.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, cancelable: true })); // focus doc1
+  await el.updateComplete;
+  let items = el.shadowRoot!.querySelectorAll('[role="treeitem"]');
+  expect(items[1]!.getAttribute('tabindex')).to.equal('0'); // sanity: doc1 is focused, has no children
+
+  tree.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true, cancelable: true }));
+  await el.updateComplete;
+  items = el.shadowRoot!.querySelectorAll('[role="treeitem"]');
+  expect(items[0]!.getAttribute('tabindex')).to.equal('0'); // back to folder1
+  expect(el.shadowRoot!.activeElement).to.equal(items[0]);
+});
+
+it('keyboard: Enter on the focused tree row toggles it, same as Space', async () => {
+  const el = (await fixture(html`<lr-source-picker></lr-source-picker>`)) as LyraSourcePicker;
+  el.sources = sources;
+  await el.updateComplete;
+  const tree = el.shadowRoot!.querySelector('[part="tree"]')!;
+  const listener = oneEvent(el, 'lr-sources-change');
+  tree.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
+  const event = await listener;
+  expect(event.detail.selectedIds.sort()).to.deep.equal(['doc1', 'doc2']);
+});
+
+it('keyboard: under dir="rtl", ArrowLeft expands and ArrowRight collapses (expand/collapse keys swap)', async () => {
+  const el = (await fixture(html`<lr-source-picker dir="rtl"></lr-source-picker>`)) as LyraSourcePicker;
+  el.sources = sources;
+  await el.updateComplete;
+  const tree = el.shadowRoot!.querySelector('[part="tree"]')!;
+
+  tree.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true, cancelable: true }));
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelectorAll('[role="treeitem"]').length).to.equal(4);
+
+  tree.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true, cancelable: true }));
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelectorAll('[role="treeitem"]').length).to.equal(2);
+});
+
+it('keyboard: an unrecognized key is a no-op', async () => {
+  const el = (await fixture(html`<lr-source-picker></lr-source-picker>`)) as LyraSourcePicker;
+  el.sources = sources;
+  await el.updateComplete;
+  const tree = el.shadowRoot!.querySelector('[part="tree"]')!;
+  let fired = false;
+  el.addEventListener('lr-sources-change', () => {
+    fired = true;
+  });
+
+  tree.dispatchEvent(new KeyboardEvent('keydown', { key: 'a', bubbles: true, cancelable: true }));
+  await el.updateComplete;
+  expect(fired).to.be.false;
+  expect(el.shadowRoot!.querySelectorAll('[role="treeitem"]')[0]!.getAttribute('tabindex')).to.equal('0');
+});
+
+it('focusing a row directly (e.g. via Tab) moves the active/tabindex row to it', async () => {
+  const el = (await fixture(html`<lr-source-picker></lr-source-picker>`)) as LyraSourcePicker;
+  el.sources = sources;
+  await el.updateComplete;
+  const items = el.shadowRoot!.querySelectorAll('[role="treeitem"]');
+  expect(items[0]!.getAttribute('tabindex')).to.equal('0');
+
+  (items[1] as HTMLElement).focus();
+  await el.updateComplete;
+  const updated = el.shadowRoot!.querySelectorAll('[role="treeitem"]');
+  expect(updated[1]!.getAttribute('tabindex')).to.equal('0');
+  expect(updated[0]!.getAttribute('tabindex')).to.equal('-1');
+});
+
+it('searchable=false omits the built-in filter input', async () => {
+  const el = (await fixture(html`<lr-source-picker></lr-source-picker>`)) as LyraSourcePicker;
+  el.searchable = false;
+  el.sources = sources;
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelector('[part="search"]')).to.not.exist;
+});
+
+it('showSelectAll=false omits the select-all header row', async () => {
+  const el = (await fixture(html`<lr-source-picker></lr-source-picker>`)) as LyraSourcePicker;
+  el.showSelectAll = false;
+  el.sources = sources;
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelector('[part="select-all"]')).to.not.exist;
+});
+
+it('keyboard: a non-activation key on the select-all checkbox is a no-op', async () => {
+  const el = (await fixture(html`<lr-source-picker></lr-source-picker>`)) as LyraSourcePicker;
+  el.sources = sources;
+  await el.updateComplete;
+  const selectAll = el.shadowRoot!.querySelector('[part="select-all"] [role="checkbox"]') as HTMLElement;
+  let fired = false;
+  el.addEventListener('lr-sources-change', () => {
+    fired = true;
+  });
+  const tab = new KeyboardEvent('keydown', { key: 'Tab', bubbles: true, cancelable: true });
+  selectAll.dispatchEvent(tab);
+  await el.updateComplete;
+  expect(fired).to.be.false;
+  expect(tab.defaultPrevented).to.be.false;
+});
