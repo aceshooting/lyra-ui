@@ -17,6 +17,10 @@ regressed Storybook theme-color check, a stale root README) shipped in 2.2.0 des
 `scripts/publish.sh`'s own lint/test/build gate passing clean. That gate is narrower than full CI;
 this command exists to close that gap.
 
+The canonical release entry point is `scripts/publish.sh`; there is no root-level `./publish.sh` in
+this checkout. The website deploy is a separate step described below and now mounts the generated
+Storybook at `https://www.lyra-ui.com/docs/` from this repository's source of truth.
+
 ## 1. Preflight sanity
 
 - `git status --short` — the tree must be clean before you start (untracked files under
@@ -47,6 +51,7 @@ pnpm manifest
 git diff --exit-code -- packages/lyra-ui/custom-elements.json   # manifest must already be committed/fresh -- this is the freshness check; a standalone `manifest:check` step would be redundant with it
 pnpm readme:check
 pnpm docs:build
+pnpm docs:check-show-code
 pnpm storybook:check
 pnpm storybook:check-theme
 pnpm check:packed-consumer
@@ -68,8 +73,17 @@ union shipping with no compile-time contract coverage could land undetected. If 
 public type-only export, consider whether `packages/lyra-ui/type-tests/` should assert it stays
 importable/shaped-correctly — `lint` now enforces whatever's actually written there, not more.
 
-These are the exact steps `.github/workflows/ci.yml`'s `build-test` job runs. If you want extra
-confidence, also run the `platform-contracts` job's suite locally: `pnpm --filter @aceshooting/lyra-ui test:platform` (needs Firefox/WebKit via Playwright).
+`pnpm docs:check-show-code` runs the Playwright sweep against the freshly generated static
+Storybook. It discovers every `type: "docs"` entry, clicks every `Show code` control, and records
+console warnings/errors, page errors, and failed requests in its JSON output. It starts a temporary
+local static server itself, fails on navigation/click/unexpanded-control regressions, and leaves
+intentional fixture diagnostics visible for review (for example, stories that deliberately load a
+missing media URL to demonstrate an error state).
+
+The commands through `pnpm docs:build` mirror the relevant steps in `.github/workflows/ci.yml`'s
+`build-test` job; `pnpm docs:check-show-code` is the additional release-time browser sweep. If you
+want extra confidence, also run the `platform-contracts` job's suite locally:
+`pnpm --filter @aceshooting/lyra-ui test:platform` (needs Firefox/WebKit via Playwright).
 
 ## 3. Lightweight regression spot-check
 
@@ -178,8 +192,11 @@ need to match what you actually intend to do.
 The marketing/demo site lives in a sibling repo, `../lyra-ui.com`
 (`git@github.com:aceshooting/lyra-ui.com.git`, deployed at `https://www.lyra-ui.com/`). It depends
 on this repo via `file:../lyra-ui/packages/*` — always the local source tree, never the npm
-tarball — so it never picks up new components, translations, or a version bump on its own; this
-step is what keeps it honest. Run it after step 5 succeeds, on every release, automatically — no
+tarball — so it never picks up new components, translations, or a version bump on its own. Its
+`scripts/build-docs.mjs` runs this repo's `manifest` and `docs:build` commands, then mounts the
+result under the website's ignored `public/docs/` directory for the production build. This keeps
+the website route first-party without maintaining a second copy of the documentation source.
+Run it after step 5 succeeds, on every release, automatically — no
 confirmation prompt for the commit/push/deploy below (the user has authorized this). "Automatic"
 doesn't mean "ignore failures": a dirty tree, a failed build, or a failed deploy smoke-test still
 stops you here, same as every gate above.
@@ -204,6 +221,8 @@ stops you here, same as every gate above.
   same rule as step 2 above. Note `update.md`'s own "Out of scope" section says "don't commit or
   push in this repo" — that's true when running `update.md` on its own, but this step deliberately
   overrides it: the commit + push below is this file's job, not `update.md`'s.
+  The website build must leave `dist/docs/index.html` and `dist/docs/index.json` present. Do not
+  commit `public/docs/`: it is generated from Storybook and ignored by the website repository.
 - **Commit + push** in `../lyra-ui.com`:
 
   ```bash
@@ -213,8 +232,9 @@ stops you here, same as every gate above.
   ```
 
 - **Deploy**: `cd ../lyra-ui.com && ./deploy.sh` — rebuilds, rsyncs `dist/` to the production host,
-  and runs its own smoke-test curl against `https://www.lyra-ui.com/`. If that smoke test fails,
-  stop and report immediately; don't retry blindly.
+  and runs its own smoke-test curl against the homepage, locale route, `/docs/`, `/docs/index.json`,
+  and a representative AppRail docs iframe. If that smoke test fails, stop and report immediately;
+  don't retry blindly.
 - Add to the final report (alongside step 5's): whether the website changed (new
   components/translations added, counts or the bundle-size stat changed), the commit pushed to
   `lyra-ui.com`, and the deploy smoke-test result with the live URL.

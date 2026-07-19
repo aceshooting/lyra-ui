@@ -31,9 +31,9 @@ const textDataUrl = `data:text/plain;charset=utf-8,${encodeURIComponent(SAMPLE_T
 
 export const FallbackToDocumentPreview: Story = {
   name: 'No renderer registered — falls back to lr-document-preview',
-  render: () => html`
+  render: (_args, context) => html`
     <lr-document-viewer
-      open
+      .open=${context.viewMode !== 'docs'}
       name="response.json"
       mime-type="application/json"
       src=${textDataUrl}
@@ -47,9 +47,9 @@ registerDocumentRenderer('application/x-lr-demo', {
 
 export const RegisteredRenderer: Story = {
   name: 'A registerDocumentRenderer() entry',
-  render: () => html`
+  render: (_args, context) => html`
     <lr-document-viewer
-      open
+      .open=${context.viewMode !== 'docs'}
       name="demo.lyra"
       mime-type="application/x-lr-demo"
       src="https://example.com/demo.lyra"

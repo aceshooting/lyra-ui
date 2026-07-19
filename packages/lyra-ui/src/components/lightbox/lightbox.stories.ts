@@ -7,6 +7,14 @@ const meta: Meta = {
   title: 'Lightbox',
   component: 'lr-lightbox',
   tags: ['autodocs'],
+  // CSS custom properties are documented in the API table, but they are not story args.
+  // Keeping them out of the Controls panel avoids Storybook inferring a color control with
+  // no runtime value while still leaving the CSS contract visible in the generated docs.
+  argTypes: {
+    '--lr-lightbox-overlay-color': { control: false },
+    '--lr-lightbox-control-bg': { control: false },
+    '--lr-lightbox-control-color': { control: false },
+  },
 };
 export default meta;
 type Story = StoryObj;
@@ -35,5 +43,5 @@ export const Default: Story = {
 };
 
 export const OpenInitially: Story = {
-  render: () => html`<lr-lightbox .images=${images} open></lr-lightbox>`,
+  render: (_args, context) => html`<lr-lightbox .images=${images} .open=${context.viewMode !== 'docs'}></lr-lightbox>`,
 };

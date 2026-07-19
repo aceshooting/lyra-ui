@@ -41,16 +41,16 @@ export const Default: Story = {
 };
 
 export const OpenInitially: Story = {
-  render: () => html`
-    <lr-tool-approval-dialog open tool-name="web_search" .args=${SEARCH_ARGS}></lr-tool-approval-dialog>
+  render: (_args, context) => html`
+    <lr-tool-approval-dialog .open=${context.viewMode !== 'docs'} tool-name="web_search" .args=${SEARCH_ARGS}></lr-tool-approval-dialog>
   `,
 };
 
 export const NotEditable: Story = {
   name: 'Not editable',
-  render: () => html`
+  render: (_args, context) => html`
     <lr-tool-approval-dialog
-      open
+      .open=${context.viewMode !== 'docs'}
       tool-name="delete_file"
       .args=${{ path: '/workspace/report-draft.md' }}
       .editable=${false}
@@ -59,9 +59,9 @@ export const NotEditable: Story = {
 };
 
 export const NestedArguments: Story = {
-  render: () => html`
+  render: (_args, context) => html`
     <lr-tool-approval-dialog
-      open
+      .open=${context.viewMode !== 'docs'}
       tool-name="run_python"
       .args=${{
         code: 'print("hello")',

@@ -98,9 +98,9 @@ export const Default: Story = {
 };
 
 export const OpenInitially: Story = {
-  render: () => html`
+  render: (_args, context) => html`
     <lr-tool-select-dialog
-      open
+      .open=${context.viewMode !== 'docs'}
       .tools=${TOOLS}
       .selected=${['web_search', 'fetch_url', 'run_python', 'read_file']}
     ></lr-tool-select-dialog>
@@ -109,9 +109,9 @@ export const OpenInitially: Story = {
 
 export const UsingDefaults: Story = {
   name: 'Using default tools (locked)',
-  render: () => html`
+  render: (_args, context) => html`
     <lr-tool-select-dialog
-      open
+      .open=${context.viewMode !== 'docs'}
       use-defaults
       .tools=${TOOLS}
       .selected=${['web_search', 'fetch_url', 'run_python', 'read_file', 'write_file']}
@@ -120,9 +120,9 @@ export const UsingDefaults: Story = {
 };
 
 export const NoCategories: Story = {
-  render: () => html`
+  render: (_args, context) => html`
     <lr-tool-select-dialog
-      open
+      .open=${context.viewMode !== 'docs'}
       .tools=${[
         { id: 'a', name: 'Tool A', description: 'An uncategorized tool.' },
         { id: 'b', name: 'Tool B', description: 'Another uncategorized tool.' },
@@ -133,7 +133,7 @@ export const NoCategories: Story = {
 };
 
 export const Empty: Story = {
-  render: () => html`<lr-tool-select-dialog open .tools=${[]} .selected=${[]}></lr-tool-select-dialog>`,
+  render: (_args, context) => html`<lr-tool-select-dialog .open=${context.viewMode !== 'docs'} .tools=${[]} .selected=${[]}></lr-tool-select-dialog>`,
 };
 
 export const WithFooterActions: Story = {

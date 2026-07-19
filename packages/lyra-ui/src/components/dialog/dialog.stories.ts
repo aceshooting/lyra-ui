@@ -47,8 +47,8 @@ export const Default: Story = {
 };
 
 export const OpenInitially: Story = {
-  render: () => html`
-    <lr-dialog open>
+  render: (_args, context) => html`
+    <lr-dialog .open=${context.viewMode !== 'docs'}>
       <h2 style="margin: 0 0 0.5rem;">Rendered already open</h2>
       <p style="margin: 0;">Backdrop, centered panel, and dialog semantics -- no trigger needed for this story.</p>
       <div slot="footer">

@@ -9,6 +9,13 @@ const meta: Meta = {
   title: 'ToolResultDialog',
   component: 'lr-tool-result-dialog',
   tags: ['autodocs'],
+  // These are CSS custom properties, not story args. Explicitly disabling their controls
+  // prevents the docs addon from trying to render an empty color control for the overlay token.
+  argTypes: {
+    '--lr-tool-result-dialog-overlay-color': { control: false },
+    '--lr-tool-result-dialog-maximized-inset': { control: false },
+    '--lr-tool-result-dialog-spin': { control: false },
+  },
   parameters: {
     docs: {
       description: {
@@ -59,8 +66,8 @@ export const Default: Story = {
 };
 
 export const OpenInitially: Story = {
-  render: () => html`
-    <lr-tool-result-dialog open tool-name="run_python" status="success" duration-ms="820">
+  render: (_args, context) => html`
+    <lr-tool-result-dialog .open=${context.viewMode !== 'docs'} tool-name="run_python" status="success" duration-ms="820">
       ${toolCallPanels()}
     </lr-tool-result-dialog>
   `,
@@ -104,8 +111,8 @@ export const Statuses: Story = {
 };
 
 export const MaximizedInitially: Story = {
-  render: () => html`
-    <lr-tool-result-dialog open maximized tool-name="run_python" status="success" duration-ms="2300">
+  render: (_args, context) => html`
+    <lr-tool-result-dialog .open=${context.viewMode !== 'docs'} maximized tool-name="run_python" status="success" duration-ms="2300">
       ${toolCallPanels()}
     </lr-tool-result-dialog>
   `,
@@ -163,9 +170,9 @@ export const Events: Story = {
 };
 
 export const NamedAndRetimed: Story = {
-  render: () => html`
+  render: (_args, context) => html`
     <lr-tool-result-dialog
-      open
+      .open=${context.viewMode !== 'docs'}
       tool-name="search_web"
       status="running"
       aria-label="Web search execution details"

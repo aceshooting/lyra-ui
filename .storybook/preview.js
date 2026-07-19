@@ -174,6 +174,9 @@ const withLyraTheme = (story, context) => {
 
 /** @type { import('@storybook/web-components-vite').Preview } */
 const preview = {
+  // Generate a component docs page for every story file by default. Individual
+  // story files may still add or override tags when a page needs special handling.
+  tags: ['autodocs'],
   globalTypes: {
     theme: {
       name: 'Theme',
@@ -217,7 +220,9 @@ const preview = {
   parameters: {
     controls: {
       expanded: true,
-      matchers: { color: /(background|color)$/i, date: /Date$/i },
+      // Match conventional story args only. CSS custom properties such as
+      // --lr-lightbox-control-color are documented tokens, not color controls.
+      matchers: { color: /^(background|color)$/i, date: /Date$/i },
     },
     docs: {
       toc: { headingSelector: 'h2, h3' },

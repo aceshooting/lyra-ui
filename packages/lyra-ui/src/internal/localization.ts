@@ -759,7 +759,63 @@ export type LyraMessageKey =
   | 'neighborGroupHeader'
   | 'flowRunOverlayLabel'
   | 'flowRunSummary'
-  | 'flowRunStepStatus';
+  | 'flowRunStepStatus'
+  | 'policySummaryLabel'
+  | 'policySummaryAllowCount'
+  | 'policySummaryDenyCount'
+  | 'policySummaryNeedsReviewCount'
+  | 'policySummaryStateAllow'
+  | 'policySummaryStateDeny'
+  | 'policySummaryStateNeedsReview'
+  | 'policySummaryCategoryGuardrail'
+  | 'policySummaryCategoryPermission'
+  | 'policySummaryCategoryPrivacy'
+  | 'policySummaryCategoryTool'
+  | 'policySummaryDetailLabel'
+  | 'evalDatasetLabel'
+  | 'evalDatasetAddExample'
+  | 'evalDatasetRemoveExample'
+  | 'evalDatasetImportLabel'
+  | 'evalDatasetSearchLabel'
+  | 'evalDatasetTagFilterLabel'
+  | 'evalDatasetEmpty'
+  | 'evalDatasetNoMatches'
+  | 'evalDatasetColumnInput'
+  | 'evalDatasetColumnExpectedOutput'
+  | 'evalDatasetColumnTags'
+  | 'queryBuilderLabel'
+  | 'queryBuilderEmpty'
+  | 'queryBuilderNoFields'
+  | 'queryBuilderAddCondition'
+  | 'queryBuilderRemoveCondition'
+  | 'queryBuilderFieldLabel'
+  | 'queryBuilderFieldPlaceholder'
+  | 'queryBuilderOperatorLabel'
+  | 'queryBuilderOperatorPlaceholder'
+  | 'queryBuilderValueLabel'
+  | 'queryBuilderValuePlaceholder'
+  | 'queryBuilderCombinatorLabel'
+  | 'queryBuilderCombinatorAnd'
+  | 'queryBuilderCombinatorOr'
+  | 'queryBuilderBooleanTrue'
+  | 'queryBuilderBooleanFalse'
+  | 'queryBuilderOperatorEquals'
+  | 'queryBuilderOperatorNotEquals'
+  | 'queryBuilderOperatorGreaterThan'
+  | 'queryBuilderOperatorGreaterThanOrEqual'
+  | 'queryBuilderOperatorLessThan'
+  | 'queryBuilderOperatorLessThanOrEqual'
+  | 'queryBuilderOperatorAfter'
+  | 'queryBuilderOperatorOnOrAfter'
+  | 'queryBuilderOperatorBefore'
+  | 'queryBuilderOperatorOnOrBefore'
+  | 'queryBuilderOperatorContains'
+  | 'queryBuilderOperatorStartsWith'
+  | 'queryBuilderOperatorEndsWith'
+  | 'queryBuilderOperatorIn'
+  | 'queryBuilderOperatorNotIn'
+  | 'queryBuilderOperatorIsEmpty'
+  | 'queryBuilderOperatorIsNotEmpty';
 
 export type LyraLocaleStrings = Partial<Record<LyraMessageKey, string>> & Record<string, string | undefined>;
 
@@ -1521,6 +1577,62 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, string> = {
   flowRunOverlayLabel: 'Run status',
   flowRunSummary: '{done} of {total} steps complete',
   flowRunStepStatus: '{label}: {status}',
+  policySummaryLabel: 'Policy decisions',
+  policySummaryAllowCount: '{count} allowed',
+  policySummaryDenyCount: '{count} denied',
+  policySummaryNeedsReviewCount: '{count} needs review',
+  policySummaryStateAllow: 'Allow',
+  policySummaryStateDeny: 'Deny',
+  policySummaryStateNeedsReview: 'Needs review',
+  policySummaryCategoryGuardrail: 'Guardrail',
+  policySummaryCategoryPermission: 'Permission',
+  policySummaryCategoryPrivacy: 'Privacy',
+  policySummaryCategoryTool: 'Tool',
+  policySummaryDetailLabel: 'More detail',
+  evalDatasetLabel: 'Evaluation examples',
+  evalDatasetAddExample: 'Add example',
+  evalDatasetRemoveExample: 'Remove example',
+  evalDatasetImportLabel: 'Import examples',
+  evalDatasetSearchLabel: 'Search examples',
+  evalDatasetTagFilterLabel: 'Filter by tag',
+  evalDatasetEmpty: 'No examples yet.',
+  evalDatasetNoMatches: 'No examples match the current filters.',
+  evalDatasetColumnInput: 'Input',
+  evalDatasetColumnExpectedOutput: 'Expected output',
+  evalDatasetColumnTags: 'Tags',
+  queryBuilderLabel: 'Query builder',
+  queryBuilderEmpty: 'No conditions yet.',
+  queryBuilderNoFields: 'No fields available.',
+  queryBuilderAddCondition: 'Add condition',
+  queryBuilderRemoveCondition: 'Remove condition {index}',
+  queryBuilderFieldLabel: 'Field',
+  queryBuilderFieldPlaceholder: 'Select field',
+  queryBuilderOperatorLabel: 'Operator',
+  queryBuilderOperatorPlaceholder: 'Select operator',
+  queryBuilderValueLabel: 'Value',
+  queryBuilderValuePlaceholder: 'Select value',
+  queryBuilderCombinatorLabel: 'Combine conditions with',
+  queryBuilderCombinatorAnd: 'All conditions (AND)',
+  queryBuilderCombinatorOr: 'Any condition (OR)',
+  queryBuilderBooleanTrue: 'True',
+  queryBuilderBooleanFalse: 'False',
+  queryBuilderOperatorEquals: 'Equals',
+  queryBuilderOperatorNotEquals: 'Does not equal',
+  queryBuilderOperatorGreaterThan: 'Greater than',
+  queryBuilderOperatorGreaterThanOrEqual: 'Greater than or equal to',
+  queryBuilderOperatorLessThan: 'Less than',
+  queryBuilderOperatorLessThanOrEqual: 'Less than or equal to',
+  queryBuilderOperatorAfter: 'After',
+  queryBuilderOperatorOnOrAfter: 'On or after',
+  queryBuilderOperatorBefore: 'Before',
+  queryBuilderOperatorOnOrBefore: 'On or before',
+  queryBuilderOperatorContains: 'Contains',
+  queryBuilderOperatorStartsWith: 'Starts with',
+  queryBuilderOperatorEndsWith: 'Ends with',
+  queryBuilderOperatorIn: 'Is any of',
+  queryBuilderOperatorNotIn: 'Is none of',
+  queryBuilderOperatorIsEmpty: 'Is empty',
+  queryBuilderOperatorIsNotEmpty: 'Is not empty',
 };
 
 const locales = new Map<string, LyraLocaleStrings>();

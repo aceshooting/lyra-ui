@@ -36,8 +36,8 @@ export const CollapsedInitially: Story = {
 };
 
 export const FullscreenInitially: Story = {
-  render: () => html`
-    <lr-widget label="Load profile" sublabel="Last 7 days" expandable fullscreen style="max-width: 28rem;">
+  render: (_args, context) => html`
+    <lr-widget label="Load profile" sublabel="Last 7 days" expandable .fullscreen=${context.viewMode !== 'docs'} style="max-width: 28rem;">
       <span slot="actions"><button>Refresh</button></span>
       <div style="padding: 1rem;">
         <p style="margin: 0;">Rendered already fullscreen — backdrop, fixed panel, and dialog semantics.</p>
@@ -47,7 +47,7 @@ export const FullscreenInitially: Story = {
 };
 
 export const FullscreenWithSidebarInset: Story = {
-  render: () => html`
+  render: (_args, context) => html`
     <div style="position: relative;">
       <div
         style="position: fixed; inset: 0 auto 0 0; inline-size: 240px; background: var(--lr-color-text); color: var(--lr-color-surface); padding: 1rem; z-index: 1001;"
@@ -58,7 +58,7 @@ export const FullscreenWithSidebarInset: Story = {
         label="Load profile"
         sublabel="Last 7 days"
         expandable
-        fullscreen
+        .fullscreen=${context.viewMode !== 'docs'}
         fullscreen-inset="0 0 0 240px"
         style="max-width: 28rem;"
       >

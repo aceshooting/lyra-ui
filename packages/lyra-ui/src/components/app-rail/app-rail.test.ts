@@ -1,6 +1,7 @@
 import { fixture, expect, html, oneEvent } from '@open-wc/testing';
 import './app-rail.js';
 import { computeAppRailMode, type LyraAppRail, type AppRailModeChangeDetail, type AppRailToggleDetail } from './app-rail.js';
+import { styles } from './app-rail.styles.js';
 
 // Deterministic matchMedia stand-in -- avoids depending on the real test
 // browser's viewport width (which @web/test-runner gives no control over)
@@ -224,6 +225,12 @@ it('the toggle button opens and closes the overlay, updating aria-expanded/aria-
   toggle.click();
   await el.updateComplete;
   expect(el.open).to.be.false;
+});
+
+it('keeps the close toggle above the open mobile panel', () => {
+  const css = styles.cssText.replace(/\s+/g, ' ');
+  expect(css).to.include(":host([mode='mobile'][open]) [part='toggle']");
+  expect(css).to.match(/:host\(\[mode='mobile'\]\[open\]\) \[part='toggle'\][^}]*z-index:/);
 });
 
 it('toggling emits lr-toggle with the new open state', async () => {

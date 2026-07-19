@@ -31,6 +31,10 @@ export const styles = css`
   :host([hide-toggle][mode='mobile']) [part='toggle'] {
     display: none;
   }
+  :host([mode='mobile'][open]) [part='toggle'] {
+    position: relative;
+    z-index: calc(var(--lr-overlay-stack-index, var(--lr-layer-modal)) + 2);
+  }
   [part='toggle']:hover {
     background: var(--lr-color-brand-quiet);
     color: var(--lr-color-brand);

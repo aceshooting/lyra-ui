@@ -1,5 +1,8 @@
 #!/usr/bin/env bash
 # Interactive release script for the @aceshooting/lyra-* workspace packages.
+# This is the canonical release entry point; there is intentionally no root-level
+# ./publish.sh wrapper. Run .claude/commands/publish.md first, including the
+# docs:build and docs:check-show-code gates.
 #
 # Packages under packages/* are versioned and released independently, driven
 # entirely by pending changesets in .changeset/. Steps: ensure main is clean
@@ -19,6 +22,10 @@
 #                     package.json/lockfile and requires a separate typed
 #                     confirmation before lint/test/build proceed, since this
 #                     can silently pull in unrelated major-version bumps.
+#
+# The sibling website is deployed separately after the release. Its build runs
+# ../lyra-ui.com/scripts/build-docs.mjs, which regenerates this Storybook and
+# mounts it at https://www.lyra-ui.com/docs/ without a second docs source tree.
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"

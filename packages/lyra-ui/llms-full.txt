@@ -10204,6 +10204,14 @@ and `blur()` forward to the internal radio control.
 A click-triggered, light-dismiss floating surface positioned with the shared Floating UI positioner.
 
 **Properties:** `open`, `placement`, `distance`, `accessibleLabel` (`aria-label`), and `popupRole` (`popup-role`).
+**Methods:** `showAt(rect: { x, y, width?, height? }, options?: { returnFocusTo?: HTMLElement })`
+opens the popover anchored to an arbitrary rectangle instead of the slotted `trigger` — for a graph
+node, a canvas pixel, a chart datum, or any other non-DOM location (`width`/`height` default to `0`,
+a point). Escape and light-dismiss return focus to `options.returnFocusTo` when supplied, or skip
+focus-return entirely otherwise, since a virtual anchor has no `.focus()`. The virtual anchor has no
+DOM node for `autoUpdate()` to track on its own, so re-call `showAt()` with fresh coordinates to
+re-anchor an already-open popover to a moving point (e.g. a graph pan/zoom tick) — the popover stays
+open across such a call. A popover that never calls `showAt()` behaves exactly as before.
 **Events:** `lr-show`, `lr-hide`. **Slots:** `trigger`, default content. **CSS parts:** `trigger`,
 `popup`, `content`. **Themeable custom properties:** `--lr-overlay-max-inline-size` (default
 `--lr-size-20rem` — maximum inline size of the popup).
@@ -10213,10 +10221,35 @@ A click-triggered, light-dismiss floating surface positioned with the shared Flo
 A hover/focus tooltip positioned with the shared Floating UI positioner.
 
 **Properties:** `open`, `manual`, `delay`, `placement`, `distance`, `content`, and
-`accessibleLabel` (`aria-label`). **Slots:** `trigger`, default content. **CSS parts:**
-`trigger`, `popup`. **Themeable custom properties:** `--lr-tooltip-max-inline-size` (default
-`--lr-size-20rem`), `--lr-tooltip-background` (default `--lr-color-neutral`), and
+`accessibleLabel` (`aria-label`). **Methods:** `showAt(rect: { x, y, width?, height? }, options?: {
+returnFocusTo?: HTMLElement })` — same virtual-anchor contract as `lr-popover.showAt()` above
+(anchors to an arbitrary rectangle instead of the slotted `trigger`, `width`/`height` default to
+`0`, Escape returns focus to `options.returnFocusTo` or skips focus-return, re-call with fresh
+coordinates to re-anchor a moving point). Opens immediately, bypassing `delay`/`manual` (both are
+hover-debounce concerns for a slotted trigger, not a deliberate programmatic call); close it the
+same way any tooltip closes, by setting `open = false`. **Slots:** `trigger`, default content.
+**CSS parts:** `trigger`, `popup`. **Themeable custom properties:** `--lr-tooltip-max-inline-size`
+(default `--lr-size-20rem`), `--lr-tooltip-background` (default `--lr-color-neutral`), and
 `--lr-tooltip-color` (default `--lr-color-on-neutral`).
+
+**`showAt()` composed with `lr-graph`** — anchoring a popover to a clicked graph node. Note:
+`lr-graph.getNodePosition()` and the `lr-node-click` event's `{ x, y }` are in the graph's own
+*local drawing space* (pre pan/zoom), not viewport pixels, so they can't be passed to `showAt()`
+directly. For `renderer="svg"` (the default), read the clicked node's own rendered element instead,
+whose `getBoundingClientRect()` is already viewport-relative; for `renderer="canvas"` (no per-node
+DOM element), use the click event's own `clientX`/`clientY`.
+
+```js
+const graph = document.querySelector('lr-graph');
+const detail = document.querySelector('lr-popover'); // no slotted trigger needed for showAt()
+
+graph.addEventListener('click', (event) => {
+  const nodeEl = event.composedPath().find((el) => el instanceof Element && el.matches('[part="node"]'));
+  if (!nodeEl) return; // clicked empty canvas/background, not a node
+  const rect = nodeEl.getBoundingClientRect();
+  detail.showAt({ x: rect.left + rect.width / 2, y: rect.top, width: rect.width, height: rect.height });
+});
+```
 
 ## `lr-dropdown`
 

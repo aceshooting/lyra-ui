@@ -1,0 +1,12 @@
+export * from './filter-bar.class.js';
+import { LyraFilterBar } from './filter-bar.class.js';
+import { defineElement } from '../../internal/prefix.js';
+import "../select/select.js";
+import "../combobox/combobox.js";
+import "../combobox/option.js";
+import "../date-picker/date-input.js";
+import "../chip/chip.js";
+import "../chip/chip-group.js";
+import "../button/button.js";
+import "../spinner/spinner.js";
+defineElement('filter-bar', LyraFilterBar);

@@ -84,9 +84,9 @@ export const ForcedMobile: Story = {
 };
 
 export const MobileOpenInitially: Story = {
-  render: () =>
+  render: (_args, context) =>
     page(html`
-      <lr-app-rail label="Primary" mode="mobile" open style="block-size:100%;">
+      <lr-app-rail label="Primary" mode="mobile" .open=${context.viewMode !== 'docs'} style="block-size:100%;">
         <span slot="header" style="padding:0.5rem; font-weight:600;">Acme</span>
         ${navItems}
       </lr-app-rail>
