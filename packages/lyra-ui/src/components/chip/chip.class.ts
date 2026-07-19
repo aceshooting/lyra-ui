@@ -5,6 +5,7 @@ import { closeIcon } from '../../internal/icons.js';
 import { styles } from './chip.styles.js';
 
 export type ChipTone = 'neutral' | 'brand' | 'success' | 'warning' | 'danger';
+export type ChipSize = '2xs' | 'xs' | 's' | 'm' | 'l' | 'xl';
 
 export interface ChipRemoveDetail {
   value?: string;
@@ -63,6 +64,9 @@ export interface LyraChipEventMap {
  */
 export class LyraChip extends LyraElement<LyraChipEventMap> {
   static styles = [LyraElement.styles, styles];
+
+  /** Visual density. `m` preserves the original chip dimensions. */
+  @property({ reflect: true }) size: ChipSize = 'm';
 
   /** Status/emphasis color. `neutral` (the default) reads as plain/unstyled. */
   @property({ reflect: true }) tone: ChipTone = 'neutral';

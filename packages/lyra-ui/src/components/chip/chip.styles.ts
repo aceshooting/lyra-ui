@@ -15,6 +15,48 @@ export const styles = css`
     --lr-chip-accent: var(--lr-color-text);
     --lr-chip-bg: var(--lr-color-surface);
     --lr-chip-border: var(--lr-color-border);
+    /* The medium defaults exactly reproduce the original fixed chip treatment. */
+    --lr-chip-font-size: var(--lr-font-size-sm);
+    --lr-chip-padding-block: var(--lr-size-0-25rem);
+    --lr-chip-padding-inline: var(--lr-space-s);
+    --lr-chip-gap: var(--lr-space-xs);
+    --lr-chip-icon-size: var(--lr-font-size-sm);
+  }
+
+  :host([size='2xs']) {
+    --lr-chip-font-size: var(--lr-font-size-2xs);
+    --lr-chip-padding-block: var(--lr-size-0-0625rem);
+    --lr-chip-padding-inline: var(--lr-space-2xs);
+    --lr-chip-gap: var(--lr-space-2xs);
+    --lr-chip-icon-size: var(--lr-font-size-2xs);
+  }
+  :host([size='xs']) {
+    --lr-chip-font-size: var(--lr-font-size-xs);
+    --lr-chip-padding-block: var(--lr-size-0-125rem);
+    --lr-chip-padding-inline: var(--lr-space-xs);
+    --lr-chip-gap: var(--lr-space-2xs);
+    --lr-chip-icon-size: var(--lr-font-size-xs);
+  }
+  :host([size='s']) {
+    --lr-chip-font-size: var(--lr-font-size-xs);
+    --lr-chip-padding-block: var(--lr-size-0-125rem);
+    --lr-chip-padding-inline: var(--lr-size-0-375rem);
+    --lr-chip-gap: var(--lr-space-2xs);
+    --lr-chip-icon-size: var(--lr-font-size-xs);
+  }
+  :host([size='l']) {
+    --lr-chip-font-size: var(--lr-font-size-m);
+    --lr-chip-padding-block: var(--lr-size-0-375rem);
+    --lr-chip-padding-inline: var(--lr-space-m);
+    --lr-chip-gap: var(--lr-size-0-375rem);
+    --lr-chip-icon-size: var(--lr-font-size-m);
+  }
+  :host([size='xl']) {
+    --lr-chip-font-size: var(--lr-font-size-lg);
+    --lr-chip-padding-block: var(--lr-space-s);
+    --lr-chip-padding-inline: var(--lr-space-l);
+    --lr-chip-gap: var(--lr-space-s);
+    --lr-chip-icon-size: var(--lr-font-size-lg);
   }
 
   :host([tone='brand']) {
@@ -41,22 +83,23 @@ export const styles = css`
   [part='base'] {
     display: inline-flex;
     align-items: center;
-    gap: var(--lr-space-xs);
+    gap: var(--lr-chip-gap);
     max-inline-size: 100%;
     box-sizing: border-box;
-    padding: var(--lr-size-0-25rem) var(--lr-space-s);
+    padding: var(--lr-chip-padding-block) var(--lr-chip-padding-inline);
     border: var(--lr-border-width-thin) solid var(--lr-chip-border);
     border-radius: var(--lr-radius-pill);
     background: var(--lr-chip-bg);
     color: var(--lr-chip-accent);
     font: inherit;
-    font-size: var(--lr-font-size-sm);
+    font-size: var(--lr-chip-font-size);
     font-weight: var(--lr-font-weight-medium);
     line-height: var(--lr-line-height-snug);
   }
 
   [part='base'][role='button'] {
     cursor: pointer;
+    min-block-size: var(--lr-size-1-5rem);
     -webkit-tap-highlight-color: transparent;
     transition: background-color var(--lr-transition-fast);
   }
@@ -85,6 +128,7 @@ export const styles = css`
     flex: 0 0 auto;
     align-items: center;
     justify-content: center;
+    font-size: var(--lr-chip-icon-size);
   }
   [part='icon'] ::slotted(*) {
     display: block;

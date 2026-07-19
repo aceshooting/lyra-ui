@@ -2,12 +2,68 @@ import { fixture, expect, html, oneEvent } from '@open-wc/testing';
 import './chip.js';
 import type { LyraChip } from './chip.js';
 
-it('defaults to tone="neutral", removable=false, and value=undefined', async () => {
+it('defaults to size="m", tone="neutral", removable=false, and value=undefined', async () => {
   const el = (await fixture(html`<lr-chip>Tag</lr-chip>`)) as LyraChip;
+  expect(el.size).to.equal('m');
+  expect(el.getAttribute('size')).to.equal('m');
   expect(el.tone).to.equal('neutral');
   expect(el.getAttribute('tone')).to.equal('neutral');
   expect(el.removable).to.be.false;
   expect(el.value).to.be.undefined;
+});
+
+it('keeps size="m" pixel-equivalent to the original chip and scales compact tiers', async () => {
+  const render = async (size?: string): Promise<LyraChip> =>
+    (await fixture(html`
+      <lr-chip size=${size ?? 'm'}><svg slot="icon" viewBox="0 0 10 10"></svg>Tag</lr-chip>
+    `)) as LyraChip;
+  const metrics = (el: LyraChip) => {
+    const base = getComputedStyle(el.shadowRoot!.querySelector('[part="base"]') as HTMLElement);
+    const icon = getComputedStyle(el.shadowRoot!.querySelector('[part="icon"]') as HTMLElement);
+    return {
+      font: Number.parseFloat(base.fontSize),
+      paddingBlock: Number.parseFloat(base.paddingBlockStart),
+      paddingInline: Number.parseFloat(base.paddingInlineStart),
+      gap: Number.parseFloat(base.gap),
+      icon: Number.parseFloat(icon.fontSize),
+    };
+  };
+
+  const defaultChip = (await fixture(html`
+    <lr-chip><svg slot="icon" viewBox="0 0 10 10"></svg>Tag</lr-chip>
+  `)) as LyraChip;
+  const explicitMedium = await render('m');
+  expect(metrics(defaultChip)).to.deep.equal(metrics(explicitMedium));
+  expect(metrics(defaultChip)).to.deep.equal({ font: 13, paddingBlock: 4, paddingInline: 8, gap: 4, icon: 13 });
+
+  const medium = metrics(explicitMedium);
+  for (const size of ['2xs', 'xs', 's']) {
+    const compact = metrics(await render(size));
+    expect(compact.font, `${size} font`).to.be.lessThan(medium.font);
+    expect(compact.paddingBlock, `${size} block padding`).to.be.lessThan(medium.paddingBlock);
+    expect(compact.paddingInline, `${size} inline padding`).to.be.lessThan(medium.paddingInline);
+    expect(compact.gap, `${size} gap`).to.be.lessThan(medium.gap);
+    expect(compact.icon, `${size} icon`).to.be.lessThan(medium.icon);
+  }
+});
+
+it('keeps compact removable and toggleable chips keyboard-accessible with adequate targets', async () => {
+  for (const size of ['2xs', 'xs', 's', 'm'] as const) {
+    const removable = (await fixture(html`
+      <lr-chip size=${size} removable><span slot="icon">●</span>Tag</lr-chip>
+    `)) as LyraChip;
+    const removeButton = removable.shadowRoot!.querySelector('[part="remove-button"]') as HTMLElement;
+    expect(Number.parseFloat(getComputedStyle(removeButton).minBlockSize), `${size} remove target`).to.be.at.least(40);
+    await expect(removable).to.be.accessible();
+
+    const toggleable = (await fixture(html`
+      <lr-chip size=${size} toggleable><span slot="icon">●</span>Tag</lr-chip>
+    `)) as LyraChip;
+    const base = toggleable.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    expect(Number.parseFloat(getComputedStyle(base).minBlockSize), `${size} toggle target`).to.be.at.least(24);
+    expect(base.getAttribute('tabindex')).to.equal('0');
+    await expect(toggleable).to.be.accessible();
+  }
 });
 
 it('reflects tone and removable changes onto host attributes', async () => {
