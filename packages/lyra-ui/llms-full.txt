@@ -1933,18 +1933,31 @@ auto-inserted between each adjacent pair.
 **Properties:**
 - `sizes: number[] = []` (attribute: false — percentages per panel, auto-computed equally if
   omitted/mismatched)
+- `defaultSizes: number[] = []` (attribute: false) — initialization-only fallback: a valid restored
+  `storageKey` layout wins first; otherwise a valid `defaultSizes` wins over equal distribution.
+  Later reassignment never overwrites live drag/persisted state — set it once, at mount.
 - `min: number = 10` (min % per panel)
-- `orientation: 'horizontal'|'vertical' = 'horizontal'` (reflected)
+- `orientation: 'horizontal'|'vertical' = 'horizontal'` (reflected) — the axis used at/above
+  `orientationBreakpoint` (or always, when that's unset).
+- `orientationBreakpoint?: number` (attribute `orientation-breakpoint`, px) — opt-in inline-size
+  breakpoint measured on `[part='base']`; unset (the default) means no behavior change at all.
+  Below it, `narrowOrientation` becomes the effective axis instead of `orientation`.
+- `narrowOrientation: 'horizontal'|'vertical' = 'vertical'` (reflected, attribute `narrow-orientation`)
+- `effectiveOrientation: 'horizontal'|'vertical'` (readonly getter) — the live resize/layout axis
+  actually in effect; identical to `orientation` whenever `orientationBreakpoint` is unset. Also
+  reflected as `data-effective-orientation` (only present while `orientationBreakpoint` is set).
 - `storageKey?: string` (attribute `storage-key` — persists sizes to `localStorage` under
   `` `lr-split:${key}:${panelCount}` ``, scoped by panel count so a stale layout for a different
   panel count is ignored)
 - `panelConstraints: (PanelConstraint | null)[] = []` (attribute: false) — `PanelConstraint { minPx?:
-  number; maxPx?: number }`, index-aligned with `sizes`; a `null`/missing entry (or an omitted bound
-  within an entry) leaves that side of that panel purely percent-based (the existing `min`-only
-  behavior). `sizes`, the `lr-resize` payload, and localStorage persistence stay percent-based
-  regardless — only the effective drag/keyboard clamp bounds (and the rendered `flex-basis`, via a
-  native CSS `clamp()` so a constrained panel stays pinned between its px bounds across container
-  resizes with no extra `ResizeObserver`) change for a constrained panel.
+  number; maxPx?: number; minPercent?: number; maxPercent?: number }`, index-aligned with `sizes`; a
+  `null`/missing entry (or an omitted bound within an entry) leaves that side of that panel purely
+  percent-based (the existing `min`-only behavior). Combining a px and a percent bound on the same
+  side resolves to the stricter one (larger for min, smaller for max) via a native CSS `max()`/`min()`
+  in the rendered `clamp()` flex-basis. `sizes`, the `lr-resize` payload, and localStorage persistence
+  stay percent-based regardless — only the effective drag/keyboard clamp bounds (and the rendered
+  `flex-basis`, via a native CSS `clamp()` so a constrained panel stays pinned between its bounds
+  across container resizes with no extra `ResizeObserver`) change for a constrained panel.
 - `collapse: 'start'|'end'|'none' = 'none'` (reflected) — opt-in responsive collapse for one panel:
   `'start'`/`'end'` is a *logical* position (RTL-aware, matching CSS logical properties — the panel at
   the document's visual leading/trailing edge, not a raw array index). `lr-split` only owns the
@@ -1988,7 +2001,8 @@ keyboard step), `lr-split-collapse-change` (`detail: { state: 'wide'|'rail'|'flo
 on a real `collapse`-state transition, never on every resize/render),
 `lr-split-constraints-invalid` (`detail: SplitConstraintIssueDetail`, fired once when the configured
 panel minimums/maximums cannot fit the track; the infeasible set is rejected for interaction and a
-normalized percent minimum is used instead)
+normalized percent minimum is used instead), `lr-split-orientation-change` (`detail: { orientation }`,
+fired only when an enabled `orientationBreakpoint` actually changes `effectiveOrientation`)
 
 **Slots:** default (each direct child element is one panel).
 
@@ -2039,6 +2053,8 @@ the visually-adjacent panel).
   rejected rather than restored.
 - Pointer-drag lifecycle (pointer capture, window-listener cleanup on both drag-end and
   `disconnectedCallback`) is solid and safe to rely on.
+- `orientationBreakpoint` shares its `[part='base']` `ResizeObserver` with `collapse` (one observer,
+  not two) — arming logic covers either feature being opted into independently.
 
 ---
 
@@ -2817,14 +2833,21 @@ only emits `lr-selection-change` (`detail: { nodeIds, linkIds }`) — the host a
 mirroring `lr-heatmap`'s `selectedCell` contract. `dimmedNodeIds: string[] = []` / `dimmedLinkIds:
 string[] = []` (both attribute: false) are the same controlled shape for dimming instead of
 selecting — the component never assigns either itself, only renders `data-dimmed` on the matching
-`[part="node"]`/`[part="link"]` (themeable via `--lr-graph-dimmed-opacity`); a host typically
-computes the set from a `lr-node-enter`/`lr-link-enter` hover (the complement of the hovered
-id's neighbor set) and assigns it back. Empty (the default) renders every node/link at full
-opacity, unchanged from today. `communities: GraphCommunity[] = []` (attribute:
+`[part="node"]`/`[part="link"]`, themed via `--lr-graph-dimmed-opacity` (default `0.35` — visible out
+of the box with no host styling required); a host typically computes the set from a
+`lr-node-enter`/`lr-link-enter` hover (the complement of the hovered id's neighbor set) and assigns
+it back — `lr-knowledge-graph-explorer`'s own `highlight` property is exactly this composition,
+built-in. Empty (the default) renders every node/link at full opacity, unchanged from today.
+`communities: GraphCommunity[] = []` (attribute:
 false) draws one translucent convex-hull blob per entry behind links/nodes. `focusId: string | null =
 null` (attribute `focus-id`) tracks a persistent focus ring (`[part="focus-halo"]`) around one node;
 `focusNode(id, options?)` and `fit(options?)` are the imperative camera-tween counterparts (pan/zoom
-to a node, or to fit the whole graph), both resolving once the tween settles.
+to a node, or to fit the whole graph), both resolving once the tween settles. `lr-viewport-change`
+(`detail: { k, x, y }`, the live d3-zoom camera transform) fires at most once per animation frame,
+coalescing every source that can move a rendered node's screen position — a pan/zoom gesture, a
+`focusNode()`/`fit()` tween, and every simulation tick — so a consumer anchoring its own UI (e.g. a
+details popover) to a node's `getBoundingClientRect()` can re-read it from this event instead of
+polling its own `requestAnimationFrame` loop.
 
 ---
 
@@ -4815,7 +4838,17 @@ convention).
   Empty (the default) renders nothing.
 - `orientation: 'horizontal' | 'vertical' = 'horizontal'` (reflected) — `'horizontal'` (the default)
   lays steps out in a row (Left/Right, RTL-aware, navigate); `'vertical'` stacks them (Up/Down
-  navigate instead, no RTL swap needed).
+  navigate instead, no RTL swap needed). The axis used at/above `orientationBreakpoint` (or always,
+  when that's unset).
+- `orientationBreakpoint?: number` (attribute `orientation-breakpoint`, px) — opt-in inline-size
+  breakpoint measured on `[part='base']`; unset (the default) means no behavior change at all.
+  Below it, `narrowOrientation` becomes the effective axis instead of `orientation`. Mirrors
+  `<lr-split>`'s identically-named contract.
+- `narrowOrientation: 'horizontal' | 'vertical' = 'vertical'` (reflected, attribute
+  `narrow-orientation`)
+- `effectiveOrientation: 'horizontal' | 'vertical'` (readonly getter) — the live layout/navigation
+  axis actually in effect; identical to `orientation` whenever `orientationBreakpoint` is unset.
+  Also reflected as `data-effective-orientation` (only present while `orientationBreakpoint` is set).
 - `accessibleLabel: string | null = null` (attribute `aria-label`) — accessible name applied to the
   `role="tablist"` step strip; attribute-reflects from a host-level `aria-label`. Unset, the
   tablist renders without an `aria-label` (there is no localized default name).
@@ -4823,7 +4856,9 @@ convention).
 **Events:** `lr-step-select` (`detail: { index, id }`) — fired on click, or Enter/Space while
 focused, on a non-`disabled` step. Cancelable, though this component takes no default action of its
 own to prevent (it never mutates `steps`) — `preventDefault()` is available for a host that wants a
-single place to short-circuit its own listener's follow-up work.
+single place to short-circuit its own listener's follow-up work. `lr-stepper-orientation-change`
+(`detail: { orientation }`) — fired only when an enabled `orientationBreakpoint` actually changes
+`effectiveOrientation`.
 
 **Slots:** none.
 
@@ -11994,7 +12029,10 @@ Knowledge-graph exploration shell combining graph rendering, entity search, type
 neighborhood expansion, pinned nodes, path finding, and a details overlay.
 
 **Properties:** `nodes`, `links`, `nodeTypes`, `communities`, `entityDetails`, `width`, `height`,
-`renderer`, `hiddenTypes`, `selectedNodeId`, `pinnedNodeIds`, `path`, `label`. **Events:**
+`renderer`, `hiddenTypes`, `selectedNodeId`, `pinnedNodeIds`, `path`, `highlight` (`'selection' |
+'hover' | 'none' = 'selection'` — what drives the search/selection/hover-based dimming forwarded to
+the composed `lr-graph`'s `dimmedNodeIds`/`dimmedLinkIds`; `'none'` opts a host out entirely), `label`.
+**Events:**
 `lr-node-click`, `lr-link-click`, `lr-community-click`, `lr-node-expand`, `lr-pin-change`,
 `lr-path-request`, `lr-relation-activate`. **Slots:** `details`. **CSS parts:** `base`, `toolbar`,
 `search`, `search-results`, `search-result`, `search-empty`, `pinned`, `pinned-heading`, `legend`,
@@ -12218,8 +12256,8 @@ create-source action, `hideSummary` hides aggregate status, and `label` names th
 Provides search, filtering, selection, pinning, and path requests over a knowledge graph. Set
 `nodes`, `links`, `nodeTypes`, `communities`, and optional `entityDetails`; `renderer` controls the
 graph renderer. `selectedNodeId` and `pinnedNodeIds` hold interaction state, while `path` contains
-the returned path. `hiddenTypes` controls type visibility, `width` and `height` size the graph, and
-`label` names it.
+the returned path. `hiddenTypes` controls type visibility, `highlight` (`'selection'`/`'hover'`/
+`'none'`) controls what drives dimming, `width` and `height` size the graph, and `label` names it.
 
 ## `lr-memory-panel`
 
