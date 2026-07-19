@@ -5,8 +5,8 @@ it('resolves the published root entry and representative granular subpaths', asy
   // test files when the full suite starts them concurrently.
   this.timeout(60_000);
   const root = await import('@aceshooting/lyra-ui');
-  const classEntry = await import('@aceshooting/lyra-ui/components/empty/empty.class.js');
-  const helperEntry = await import('@aceshooting/lyra-ui/components/export-button/csv.js');
+  const classEntry = await import('@aceshooting/lyra-ui/components/overlays/empty/empty.class.js');
+  const helperEntry = await import('@aceshooting/lyra-ui/components/utility/export-button/csv.js');
 
   expect(typeof root.LyraElement).to.equal('function');
   expect(typeof root.groupByRecency).to.equal('function');
