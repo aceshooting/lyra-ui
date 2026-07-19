@@ -894,3 +894,5 @@ export type { LyraWordCloudEventMap } from './components/word-cloud/word-cloud.j
 export { LyraElement } from './internal/lyra-element.js';
 export { FormAssociated } from './internal/form-associated.js';
 export { LYRA_PREFIX, tag, defineElement } from './internal/prefix.js';
+
+export type * from './ai/types.js';
