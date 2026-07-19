@@ -1,5 +1,51 @@
 # Changelog
 
+## 5.0.0
+
+### Major Changes
+
+- 3abb16e: Reorganized `packages/lyra-ui/src/components/` into 11 named family subfolders (Conversation &
+  Chat, Agent Tools & Observability, Retrieval & Knowledge Graphs, Forms & Inputs, Data Display,
+  Charts, Layout & Navigation, Overlays & Feedback, Document & File Viewers, Media & Files, Utility)
+  instead of a flat 212-directory list.
+
+  **Breaking:** any consumer importing an individual component's granular subpath (e.g.
+  `@aceshooting/lyra-ui/components/combobox/combobox.js`) must add that component's family segment
+  (`@aceshooting/lyra-ui/components/forms/combobox/combobox.js`). The root entry
+  (`@aceshooting/lyra-ui`) and the `@aceshooting/lyra-ui/components/*` wildcard export are
+  unaffected for consumers who only import the root barrel. See
+  `packages/lyra-ui/scripts/component-families.json` for the full directory-to-family mapping.
+
+### Minor Changes
+
+- 0ed6e71: Added a frame-coalesced `lr-viewport-change` event to `lr-graph`, firing at most once per
+  animation frame for every source that can move a rendered node's screen position (pan/zoom, a
+  `focusNode()`/`fit()` tween, or a simulation tick) so a consumer anchoring its own UI to a node's
+  `getBoundingClientRect()` no longer needs to poll its own `requestAnimationFrame` loop.
+  `--lr-graph-dimmed-opacity` now defaults to `0.35` (previously the inert `1`), so `dimmedNodeIds`/
+  `dimmedLinkIds` are visible out of the box with no host styling required.
+
+  `lr-knowledge-graph-explorer` now computes and forwards `dimmedLinkIds` alongside
+  `dimmedNodeIds`, switched its details-popover pan/zoom tracking from RAF polling to the new
+  `lr-viewport-change` event, and added a `highlight: 'selection' | 'hover' | 'none' = 'selection'`
+  property: `'hover'` also dims by the currently pointer-hovered node's neighborhood, `'none'` opts
+  a host out of this component's own dimming entirely.
+
+- bd501b7: Added `defaultSizes` to `lr-split` for an initialization-only fallback (a valid restored
+  `storageKey` layout still wins, then `defaultSizes`, then equal distribution) that's never
+  overwritten by a later reactive parent render. Added an opt-in `orientationBreakpoint`/
+  `narrowOrientation` responsive-axis contract (mirrored below by `lr-stepper`): below the
+  component's own measured inline size, `narrowOrientation` becomes the effective resize axis
+  instead of the authored `orientation`, exposed via `effectiveOrientation`, a
+  `data-effective-orientation` attribute, and `lr-split-orientation-change`. Extended
+  `panelConstraints` with `minPercent`/`maxPercent`, combining with `minPx`/`maxPx` on the same side
+  via the stricter bound.
+- 5319ed6: Added an opt-in `orientationBreakpoint`/`narrowOrientation` responsive-axis contract to
+  `lr-stepper`, mirroring `lr-split`'s identically-named properties: below the stepper's own
+  measured inline size, `narrowOrientation` becomes the effective layout/navigation axis instead of
+  the authored `orientation`, exposed via `effectiveOrientation`, a `data-effective-orientation`
+  attribute, and `lr-stepper-orientation-change`. Unset (the default), behavior is unchanged.
+
 ## 4.2.0
 
 ### Minor Changes
