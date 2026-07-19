@@ -25,9 +25,9 @@ const entity: LyraEntity = {
 };
 
 const types = [
-  { id: 'person', label: 'Person', color: '#8250df' },
-  { id: 'element', label: 'Element', color: '#1a7f37' },
-  { id: 'org', label: 'Organization', color: '#0969da' },
+  { id: 'person', label: 'Person', color: 'var(--lr-color-brand)' },
+  { id: 'element', label: 'Element', color: 'var(--lr-color-success)' },
+  { id: 'org', label: 'Organization', color: 'var(--lr-color-danger)' },
 ];
 
 const confidence: LyraEntityDossierConfidence = {

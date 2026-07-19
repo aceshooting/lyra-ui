@@ -20,7 +20,7 @@ const entity: LyraEntity = {
   degree: 7,
 };
 
-const types = [{ id: 'org', label: 'Organization', color: '#0969da' }];
+const types = [{ id: 'org', label: 'Organization', color: 'var(--lr-color-brand)' }];
 
 const path: DrilldownNode[] = [
   {
