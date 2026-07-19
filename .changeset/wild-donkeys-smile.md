@@ -1,5 +1,5 @@
 ---
-'@aceshooting/lyra-ui': minor
+"@aceshooting/lyra-ui": minor
 ---
 
 Restructure the AI-agent-facing reference so a component lookup costs a few hundred tokens instead
