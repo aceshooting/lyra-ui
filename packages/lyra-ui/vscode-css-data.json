@@ -9,6 +9,13 @@
       }
     },
     {
+      "name": "--lr-agent-run-spin",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-agent-run>`** (default: `1s linear`) — Current-step icon spin animation duration and timing."
+      }
+    },
+    {
       "name": "--lr-animated-image-control-box-size",
       "description": {
         "kind": "markdown",
@@ -58,6 +65,76 @@
       }
     },
     {
+      "name": "--lr-app-rail-icon-width",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-app-rail>`** (default: `var(--lr-size-4rem)`) — The inline rail's width in `'icon-only'` mode, and the maximum width of each slotted `<lr-app-rail-item>` in that mode."
+      }
+    },
+    {
+      "name": "--lr-app-rail-mobile-width",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-app-rail>`** (default: `var(--lr-size-18rem)`) — The mobile overlay panel's width, capped at `85vw`."
+      }
+    },
+    {
+      "name": "--lr-app-rail-overlay-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-app-rail>`** (default: `var(--lr-color-overlay)`) — The mobile overlay scrim's background."
+      }
+    },
+    {
+      "name": "--lr-app-rail-width",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-app-rail>`** (default: `var(--lr-size-15rem)`) — The inline rail's width in `'full'` mode. Overridden by an inline width while a `resizable` rail has an explicit `railWidthPx`."
+      }
+    },
+    {
+      "name": "--lr-attachment-chip-accent",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-attachment-chip>`** (default: `var(--lr-color-text-quiet)`) — Accent color used for the status text, spinner, and progress fill. Auto-swapped per `status` (`uploading`/`error`/`done`); the default is the neutral `pending` tone."
+      }
+    },
+    {
+      "name": "--lr-attachment-chip-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-attachment-chip>`** (default: `var(--lr-color-surface)`) — Chip background, auto-swapped per `status` to that status's `-quiet` tint."
+      }
+    },
+    {
+      "name": "--lr-attachment-chip-border",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-attachment-chip>`** (default: `var(--lr-color-border)`) — Chip border color. Every non-`pending` `status` sets it to `transparent`."
+      }
+    },
+    {
+      "name": "--lr-attachment-chip-compact-font-size",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-attachment-chip>`** (default: `var(--lr-font-size-xs)`) — Font size of `[part=\"base\"]` while `compact`."
+      }
+    },
+    {
+      "name": "--lr-attachment-chip-compact-gap",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-attachment-chip>`** (default: `var(--lr-size-0-25rem)`) — Gap between the chip's parts while `compact`."
+      }
+    },
+    {
+      "name": "--lr-attachment-chip-compact-thumbnail-size",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-attachment-chip>`** (default: `var(--lr-size-1-75rem)`) — Thumbnail size while `compact`, rethemeable independently of `--lr-icon-button-size`."
+      }
+    },
+    {
       "name": "--lr-attachment-chip-spinner-duration",
       "description": {
         "kind": "markdown",
@@ -72,6 +149,13 @@
       }
     },
     {
+      "name": "--lr-audio-visualizer-height",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-audio-visualizer>`** (default: `var(--lr-size-3rem)`) — The host's block size, which the canvas fills at 100%."
+      }
+    },
+    {
       "name": "--lr-audio-visualizer-quiet-color",
       "description": {
         "kind": "markdown",
@@ -83,6 +167,20 @@
       "description": {
         "kind": "markdown",
         "value": "**`<lr-av-player>`** (default: `var(--lr-size-16rem)`) — Block size of the virtualized transcript list."
+      }
+    },
+    {
+      "name": "--lr-avatar-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-avatar>`** (default: `var(--lr-color-border)`) — Container background. Each non-neutral `tone` sets it to that tone's `-quiet` tint."
+      }
+    },
+    {
+      "name": "--lr-avatar-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-avatar>`** (default: `var(--lr-color-text)`) — Initials/glyph color. Each non-neutral `tone` sets it to that tone's loud color."
       }
     },
     {
@@ -128,10 +226,59 @@
       }
     },
     {
+      "name": "--lr-avatar-size",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-avatar>`** (default: `var(--lr-size-2rem)`) — Inline and block size of the container. `size` swaps it to `var(--lr-size-1-5rem)` (`sm`) or `var(--lr-size-2-5rem)` (`lg`)."
+      }
+    },
+    {
+      "name": "--lr-badge-background",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-badge>`, `<lr-tag>`** (default: `var(--lr-color-surface)`) — The badge's background. Each non-neutral `variant` sets it to that variant's `-quiet` tint."
+      }
+    },
+    {
+      "name": "--lr-badge-border",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-badge>`, `<lr-tag>`** (default: `var(--lr-color-border)`) — The badge's border color. Each non-neutral `variant` sets it to that variant's loud color."
+      }
+    },
+    {
+      "name": "--lr-badge-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-badge>`, `<lr-tag>`** (default: `var(--lr-color-text)`) — The badge's text color. Each non-neutral `variant` sets it to that variant's loud color."
+      }
+    },
+    {
       "name": "--lr-browser-frame-aspect-ratio",
       "description": {
         "kind": "markdown",
         "value": "**`<lr-browser-frame>`** (default: `16 / 9`) — The viewport's aspect ratio."
+      }
+    },
+    {
+      "name": "--lr-button-accent",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-button>`** (default: `var(--lr-color-text)`) — Text/glyph color for the chrome-less appearances (`outlined`, `plain`, `link`). Swapped per `variant` to that variant's semantic color."
+      }
+    },
+    {
+      "name": "--lr-button-accent-fill",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-button>`** (default: `var(--lr-color-neutral)`) — Background of `appearance=\"accent\"` (and its border color). Swapped per `variant` to that variant's semantic color."
+      }
+    },
+    {
+      "name": "--lr-button-accent-on-fill",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-button>`** (default: `var(--lr-color-on-neutral)`) — Text color on top of `--lr-button-accent-fill`. Swapped per `variant` to that variant's `on-*` color."
       }
     },
     {
@@ -142,10 +289,24 @@
       }
     },
     {
+      "name": "--lr-button-border",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-button>`** (default: `var(--lr-color-border)`) — Border color of the internal button. Swapped per `variant` to that variant's semantic color."
+      }
+    },
+    {
+      "name": "--lr-button-fill",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-button>`** (default: `var(--lr-color-surface)`) — Background of `appearance=\"filled\"`. Swapped per `variant` to that variant's semantic color."
+      }
+    },
+    {
       "name": "--lr-button-group-gap",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-button-group>`** — Gap between grouped controls."
+        "value": "**`<lr-button-group>`** (default: `var(--lr-space-2xs)`) — Gap between grouped controls."
       }
     },
     {
@@ -153,6 +314,76 @@
       "description": {
         "kind": "markdown",
         "value": "**`<lr-button>`** (default: `1.08`) — `filter: brightness()` multiplier applied while hovering a non-disabled button."
+      }
+    },
+    {
+      "name": "--lr-button-on-fill",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-button>`** (default: `var(--lr-color-text)`) — Text color on top of `--lr-button-fill`. Swapped per `variant` to that variant's `on-*` color."
+      }
+    },
+    {
+      "name": "--lr-button-outlined-border",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-button>`** (default: `var(--lr-color-border-strong)`) — Border color of `appearance=\"outlined\"`, which overrides `--lr-button-border`."
+      }
+    },
+    {
+      "name": "--lr-button-quiet-border",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-button>`** (default: `var(--lr-color-border)`) — Border color of `appearance=\"quiet\"`."
+      }
+    },
+    {
+      "name": "--lr-button-quiet-text",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-button>`** (default: `var(--lr-color-text-quiet)`) — Text color of `appearance=\"quiet\"`."
+      }
+    },
+    {
+      "name": "--lr-button-size-2xs",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-button>`** (default: `var(--lr-size-1-25rem)`) — `min-block-size` at `size=\"2xs\"`."
+      }
+    },
+    {
+      "name": "--lr-button-size-l",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-button>`** (default: `var(--lr-size-2-5rem)`) — `min-block-size` at `size=\"l\"`."
+      }
+    },
+    {
+      "name": "--lr-button-size-m",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-button>`** (default: `var(--lr-size-2rem)`) — `min-block-size` at `size=\"m\"`."
+      }
+    },
+    {
+      "name": "--lr-button-size-s",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-button>`** (default: `var(--lr-size-1-75rem)`) — `min-block-size` at `size=\"s\"`."
+      }
+    },
+    {
+      "name": "--lr-button-size-xl",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-button>`** (default: `var(--lr-size-3rem)`) — `min-block-size` at `size=\"xl\"`."
+      }
+    },
+    {
+      "name": "--lr-button-size-xs",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-button>`** (default: `var(--lr-size-1-5rem)`) — `min-block-size` at `size=\"xs\"`."
       }
     },
     {
@@ -170,10 +401,122 @@
       }
     },
     {
+      "name": "--lr-calendar-day-min-block-size",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-calendar>`** (default: `var(--lr-size-6rem)`) — Minimum block size of a day cell."
+      }
+    },
+    {
+      "name": "--lr-calendar-day-min-block-size-narrow",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-calendar>`** (default: `4rem`) — Minimum block size of a day cell once the host is narrower than 28rem."
+      }
+    },
+    {
+      "name": "--lr-calendar-viewer-max-height",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-calendar-viewer>`** (default: `none`) — Maximum block size of `[part=\"body\"]` before it scrolls internally. The `maxHeight` property sets this token inline on `[part=\"base\"]`."
+      }
+    },
+    {
+      "name": "--lr-callout-background",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-callout>`** (default: `var(--lr-color-surface)`) — The callout surface's background. Each non-neutral `variant` sets it to that variant's `-quiet` tint."
+      }
+    },
+    {
+      "name": "--lr-callout-border",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-callout>`** (default: `var(--lr-color-border)`) — The callout surface's border color. Each non-neutral `variant` sets it to that variant's loud color."
+      }
+    },
+    {
+      "name": "--lr-callout-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-callout>`** (default: `var(--lr-color-text)`) — The callout's text color. Each non-neutral `variant` sets it to that variant's loud color."
+      }
+    },
+    {
+      "name": "--lr-chart-grid-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-bar-chart>`, `<lr-bubble-chart>`, `<lr-chart>`, `<lr-doughnut-chart>`, `<lr-histogram>`, `<lr-line-chart>`, `<lr-pie-chart>`, `<lr-polar-area-chart>`, `<lr-radar-chart>`, `<lr-scatter-chart>`** (default: `var(--lr-color-border)`) — Grid-line color. Resolved via `getComputedStyle` on every draw (Chart.js paints to canvas and cannot consume `var()`)."
+      }
+    },
+    {
+      "name": "--lr-chart-height",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-bar-chart>`, `<lr-bubble-chart>`, `<lr-chart>`, `<lr-doughnut-chart>`, `<lr-histogram>`, `<lr-line-chart>`, `<lr-pie-chart>`, `<lr-polar-area-chart>`, `<lr-radar-chart>`, `<lr-scatter-chart>`** (default: `var(--lr-size-280px)`) — The host's `block-size`. Set on the host element from the `height` property on every change (custom properties only cascade downward, so it cannot be set from inside the shadow root); a host-level override is overwritten the next time `height` changes."
+      }
+    },
+    {
+      "name": "--lr-chart-legend-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-bar-chart>`, `<lr-bubble-chart>`, `<lr-chart>`, `<lr-doughnut-chart>`, `<lr-histogram>`, `<lr-line-chart>`, `<lr-pie-chart>`, `<lr-polar-area-chart>`, `<lr-radar-chart>`, `<lr-scatter-chart>`** (default: `var(--lr-color-text)`) — Legend label color. Resolved via `getComputedStyle` on every draw."
+      }
+    },
+    {
+      "name": "--lr-chart-tick-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-bar-chart>`, `<lr-bubble-chart>`, `<lr-chart>`, `<lr-doughnut-chart>`, `<lr-histogram>`, `<lr-line-chart>`, `<lr-pie-chart>`, `<lr-polar-area-chart>`, `<lr-radar-chart>`, `<lr-scatter-chart>`** (default: `var(--lr-color-text-quiet)`) — Axis tick-label color; also used for the `xLabel`/`yLabel`/`y2Label` axis-title text (there is no separate title-color token). Resolved via `getComputedStyle` on every draw."
+      }
+    },
+    {
+      "name": "--lr-chart-tooltip-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-bar-chart>`, `<lr-bubble-chart>`, `<lr-chart>`, `<lr-doughnut-chart>`, `<lr-histogram>`, `<lr-line-chart>`, `<lr-pie-chart>`, `<lr-polar-area-chart>`, `<lr-radar-chart>`, `<lr-scatter-chart>`** (default: `var(--lr-color-surface)`) — Tooltip background color. Resolved via `getComputedStyle` on every draw."
+      }
+    },
+    {
+      "name": "--lr-chart-tooltip-text",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-bar-chart>`, `<lr-bubble-chart>`, `<lr-chart>`, `<lr-doughnut-chart>`, `<lr-histogram>`, `<lr-line-chart>`, `<lr-pie-chart>`, `<lr-polar-area-chart>`, `<lr-radar-chart>`, `<lr-scatter-chart>`** (default: `var(--lr-color-text)`) — Tooltip text color. Resolved via `getComputedStyle` on every draw."
+      }
+    },
+    {
+      "name": "--lr-chat-message-bubble-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-chat-message>`** (default: `var(--lr-color-surface)`) — Bubble fill for every role except `user`."
+      }
+    },
+    {
+      "name": "--lr-chat-message-bubble-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-chat-message>`** (default: `var(--lr-color-text)`) — Bubble text color for every role except `user`."
+      }
+    },
+    {
       "name": "--lr-chat-message-max-width",
       "description": {
         "kind": "markdown",
         "value": "**`<lr-chat-message>`** (default: `80%`) — Maximum inline size of the message bubble."
+      }
+    },
+    {
+      "name": "--lr-chat-message-user-bubble-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-chat-message>`** (default: `var(--lr-color-brand-quiet)`) — Bubble fill for `data-role=\"user\"`."
+      }
+    },
+    {
+      "name": "--lr-chat-message-user-bubble-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-chat-message>`** (default: `var(--lr-color-text)`) — Bubble text color for `data-role=\"user\"`."
       }
     },
     {
@@ -184,10 +527,129 @@
       }
     },
     {
+      "name": "--lr-chip-accent",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-chip>`** (default: `var(--lr-color-text)`) — Text/icon color of the pill. Each `tone` sets it to that tone's loud color."
+      }
+    },
+    {
+      "name": "--lr-chip-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-chip>`** (default: `var(--lr-color-surface)`) — Background of the pill. Each `tone` sets it to that tone's `-quiet` tint."
+      }
+    },
+    {
+      "name": "--lr-chip-border",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-chip>`** (default: `var(--lr-color-border)`) — Border color of the pill. Every non-neutral `tone` sets it to `transparent`."
+      }
+    },
+    {
+      "name": "--lr-chip-font-size",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-chip>`** (default: `var(--lr-font-size-sm)`) — Label font size. Each `size` sets it to that step's font size."
+      }
+    },
+    {
+      "name": "--lr-chip-gap",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-chip>`** (default: `var(--lr-space-xs)`) — Gap between the icon, label, and remove button. Each `size` sets it to that step's gap."
+      }
+    },
+    {
+      "name": "--lr-chip-icon-size",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-chip>`** (default: `var(--lr-font-size-sm)`) — Font size of the `icon` slot wrapper. Each `size` sets it to that step's icon size."
+      }
+    },
+    {
+      "name": "--lr-chip-padding-block",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-chip>`** (default: `var(--lr-size-0-25rem)`) — Block padding of the pill. Each `size` sets it to that step's block padding."
+      }
+    },
+    {
+      "name": "--lr-chip-padding-inline",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-chip>`** (default: `var(--lr-space-s)`) — Inline padding of the pill. Each `size` sets it to that step's inline padding."
+      }
+    },
+    {
       "name": "--lr-chip-pressed-bg",
       "description": {
         "kind": "markdown",
         "value": "**`<lr-chip>`** (default: `var(--lr-chip-bg)`) — Background while a toggleable chip is selected, independently themeable from its resting background."
+      }
+    },
+    {
+      "name": "--lr-chip-pressed-border",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-chip>`** (default: `var(--lr-chip-accent)`) — Border color while a toggleable chip is selected, independently themeable from the label/icon color."
+      }
+    },
+    {
+      "name": "--lr-citation-badge-accent",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-citation-badge>`** (default: `var(--lr-color-text-quiet)`) — Text color of `base`, and its hover border color. Swapped by the reflected `status`: `var(--lr-color-success)` for `high`/`verified`, `var(--lr-color-warning)` for `medium`/`low`, `var(--lr-color-danger)` for `unverified`."
+      }
+    },
+    {
+      "name": "--lr-citation-badge-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-citation-badge>`** (default: `transparent`) — Background of `base`. Swapped by the reflected `status` to the matching `-quiet` tone (`success`/`warning`/`danger`)."
+      }
+    },
+    {
+      "name": "--lr-citation-badge-border",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-citation-badge>`** (default: `transparent`) — Resting border color of `base`; no `status` changes it, so it stays transparent unless a host overrides it."
+      }
+    },
+    {
+      "name": "--lr-code-block-font",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-code-block>`** (default: `var(--lr-font-mono)`) — Monospace family for the rendered `pre` and `code`."
+      }
+    },
+    {
+      "name": "--lr-code-block-max-height",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-code-block>`** (default: `none`) — Scroll cap applied to `body`. The `max-height` attribute, when set, writes this same property inline on `body` and therefore wins."
+      }
+    },
+    {
+      "name": "--lr-code-editor-line-height",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-code-editor>`** (default: `1.5`) — Line height shared by the gutter and the textarea, so line numbers stay aligned with their lines."
+      }
+    },
+    {
+      "name": "--lr-code-editor-min-block-size",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-code-editor>`** (default: `var(--lr-size-8rem)`) — Minimum block size of the editor frame and its textarea."
+      }
+    },
+    {
+      "name": "--lr-code-editor-tab-size",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-code-editor>`** (default: `2`) — The textarea's `tab-size`. The single channel for tab width — the class writes this token rather than setting `tab-size` directly."
       }
     },
     {
@@ -233,6 +695,48 @@
       }
     },
     {
+      "name": "--lr-command-palette-list-max-block-size",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-command-palette>`** (default: `50vh`) — Maximum height of the scrolling command list."
+      }
+    },
+    {
+      "name": "--lr-command-palette-max-block-size",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-command-palette>`** (default: `70vh`) — Maximum dialog height."
+      }
+    },
+    {
+      "name": "--lr-command-palette-max-inline-size",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-command-palette>`** (default: `var(--lr-size-48rem)`) — Maximum dialog width."
+      }
+    },
+    {
+      "name": "--lr-command-palette-offset-block-start",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-command-palette>`** (default: `12vh`) — Gap between the viewport top and the dialog."
+      }
+    },
+    {
+      "name": "--lr-command-palette-z-index",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-command-palette>`** (default: `var(--lr-overlay-stack-index, var(--lr-layer-modal))`) — Stacking index of the backdrop."
+      }
+    },
+    {
+      "name": "--lr-compare-panel-max-height",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-compare-panel>`** (default: `var(--lr-size-24rem)`) — Cap on how tall each pane's scroll region grows before it scrolls internally."
+      }
+    },
+    {
       "name": "--lr-contact-viewer-max-height",
       "description": {
         "kind": "markdown",
@@ -240,17 +744,115 @@
       }
     },
     {
+      "name": "--lr-context-meter-segment-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-context-meter>`** — Per-segment color. Set inline on `[part=\"segment\"]` by the component itself whenever that segment supplies a `color`; unset (and the token unread) otherwise, leaving the `data-tone` palette in charge."
+      }
+    },
+    {
       "name": "--lr-control-group-gap",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-control-group>`** — Gap between grouped controls."
+        "value": "**`<lr-control-group>`** (default: `var(--lr-space-xs)`) — Gap between grouped controls."
+      }
+    },
+    {
+      "name": "--lr-dashboard-grid-columns",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-dashboard-grid>`** (default: `12`) — Column count of the underlying CSS Grid. Written inline on `[part=\"base\"]` from the `columns` property on every render, so the fallback only applies to a `[part=\"base\"]` this component has not rendered yet."
+      }
+    },
+    {
+      "name": "--lr-dashboard-grid-gap",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-dashboard-grid>`** (default: `var(--lr-space-m)`) — Gap between cells on both axes. Written inline on `[part=\"base\"]` from the `gap` property (in px) on every render."
+      }
+    },
+    {
+      "name": "--lr-dashboard-grid-row-height",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-dashboard-grid>`** (default: `var(--lr-size-5rem)`) — Row track height. Written inline on `[part=\"base\"]` from the `rowHeight` property (in px) on every render."
+      }
+    },
+    {
+      "name": "--lr-dataset-viewer-highlight-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-dataset-viewer>`** (default: `var(--lr-color-brand)`) — Outline color of a highlighted cell. The active highlight sets it inline to `var(--lr-color-warning, var(--lr-color-brand))`."
+      }
+    },
+    {
+      "name": "--lr-dataset-viewer-max-height",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-dataset-viewer>`** (default: `none`) — Maximum block size of `[part=\"body\"]` before it scrolls internally. The `maxHeight` property sets this token inline on `[part=\"base\"]`."
+      }
+    },
+    {
+      "name": "--lr-date-input-font-size",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-date-input>`** (default: `inherit`) — Font size of the text input, scaled by `size`."
+      }
+    },
+    {
+      "name": "--lr-date-input-padding-block",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-date-input>`** (default: `var(--lr-space-xs)`) — Block padding of the input row, scaled by `size`."
+      }
+    },
+    {
+      "name": "--lr-date-input-padding-inline",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-date-input>`** (default: `var(--lr-space-s)`) — Inline padding of the input row, scaled by `size`."
+      }
+    },
+    {
+      "name": "--lr-dialog-max-width",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-dialog>`, `<lr-drawer>`** (default: `var(--lr-dialog-width, var(--lr-size-32rem))`) — Cap on the panel's inline size. Falls back to `--lr-dialog-width` when that is set, so an assertive width is not clipped by the 32rem default; the viewport (`100%`) is always a hard limit on top."
+      }
+    },
+    {
+      "name": "--lr-dialog-overlay-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-dialog>`, `<lr-drawer>`** (default: `var(--lr-color-overlay)`) — Backdrop scrim color."
+      }
+    },
+    {
+      "name": "--lr-dialog-width",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-dialog>`, `<lr-drawer>`** (default: `auto`) — Assertive inline size for the panel. Left at `auto` the panel shrink-wraps to its content."
+      }
+    },
+    {
+      "name": "--lr-diff-view-font",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-diff-view>`** (default: `var(--lr-font-mono)`) — Font family used for the diff lines."
+      }
+    },
+    {
+      "name": "--lr-dock-panel-collapsed-size",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-dock-panel>`** (default: `var(--lr-icon-button-size)`) — The extent the panel keeps along its resize axis while `collapsed` -- enough to still host the toggle button that re-expands it."
       }
     },
     {
       "name": "--lr-document-compare-pane-max-height",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-document-compare>`** (default: `24rem`) — Maximum block size of a side-by-side pane before it scrolls internally."
+        "value": "**`<lr-document-compare>`** (default: `var(--lr-size-24rem)`) — Maximum block size of a side-by-side pane before it scrolls internally."
       }
     },
     {
@@ -265,6 +867,13 @@
       "description": {
         "kind": "markdown",
         "value": "**`<lr-document-preview>`** (default: `none`) — Maximum body block size before the preview scrolls internally."
+      }
+    },
+    {
+      "name": "--lr-document-preview-progress",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-document-preview>`** (default: `0`) — Unitless 0-100 completion of the determinate loading ring (multiplied by `1%` in its conic gradient). Written inline by the component from the clamped `progress` value, so it is a read-out rather than a consumer knob."
       }
     },
     {
@@ -289,6 +898,20 @@
       }
     },
     {
+      "name": "--lr-drawer-enter-x",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-drawer>`** (default: `calc(-1 * var(--lr-size-1rem))`) — Horizontal offset the panel animates in from for start/end drawers. Set per placement (and flipped under RTL) by the stylesheet; only read when `prefers-reduced-motion` is `no-preference`."
+      }
+    },
+    {
+      "name": "--lr-drawer-enter-y",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-drawer>`** (default: `calc(-1 * var(--lr-size-1rem))`) — Vertical offset the panel animates in from for top/bottom drawers. Set to `var(--lr-size-1rem)` for `bottom`; only read when `prefers-reduced-motion` is `no-preference`."
+      }
+    },
+    {
       "name": "--lr-drawer-height",
       "description": {
         "kind": "markdown",
@@ -300,6 +923,34 @@
       "description": {
         "kind": "markdown",
         "value": "**`<lr-drawer>`** — Inline size for start/end drawers."
+      }
+    },
+    {
+      "name": "--lr-email-viewer-max-height",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-email-viewer>`** (default: `none`) — Maximum block size of `[part=\"body\"]` before it scrolls internally. The `maxHeight` property sets this token inline on `[part=\"base\"]`."
+      }
+    },
+    {
+      "name": "--lr-emoji-picker-gap",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-emoji-picker>`** (default: `var(--lr-space-2xs)`) — Gap between emoji within a windowed row."
+      }
+    },
+    {
+      "name": "--lr-emoji-picker-item-size",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-emoji-picker>`** (default: `var(--lr-icon-button-size)`) — Each emoji button's box. Clamped up to `--lr-icon-button-size`: a smaller value does not shrink the button."
+      }
+    },
+    {
+      "name": "--lr-emoji-picker-row-height",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-emoji-picker>`** (default: `calc(var(--lr-emoji-picker-item-size) + var(--lr-space-l))`) — One windowed row's height. Must stay at or above the item size plus the group-label band, or consecutive absolutely-positioned rows overlap."
       }
     },
     {
@@ -321,6 +972,13 @@
       "description": {
         "kind": "markdown",
         "value": "**`<lr-entity-chip>`** (default: `var(--lr-color-brand-quiet)`) — Background color."
+      }
+    },
+    {
+      "name": "--lr-entity-chip-border",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-entity-chip>`** (default: `transparent`) — Border color of the chip."
       }
     },
     {
@@ -362,7 +1020,7 @@
       "name": "--lr-flow-canvas-grid-size",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-flow-canvas>`** (default: `8px`) — Dotted background spacing."
+        "value": "**`<lr-flow-canvas>`** (default: `var(--lr-size-0-5rem)`) — Dotted background spacing. The canvas also writes it inline as `${grid}px` from the `grid` property, which wins over the stylesheet fallback whenever a grid is in effect."
       }
     },
     {
@@ -376,21 +1034,21 @@
       "name": "--lr-flow-minimap-block-size",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-flow-minimap>`** (default: `8rem`) — Map block size."
+        "value": "**`<lr-flow-minimap>`** (default: `var(--lr-size-8rem)`) — Map block size."
       }
     },
     {
       "name": "--lr-flow-minimap-inline-size",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-flow-minimap>`** (default: `12rem`) — Map inline size."
+        "value": "**`<lr-flow-minimap>`** (default: `var(--lr-size-12rem)`) — Map inline size."
       }
     },
     {
       "name": "--lr-flow-node-min-inline-size",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-flow-node>`** (default: `11rem`) — Minimum card inline size."
+        "value": "**`<lr-flow-node>`** (default: `calc(var(--lr-size-10rem) + var(--lr-size-1rem))`) — Minimum card inline size."
       }
     },
     {
@@ -457,6 +1115,13 @@
       }
     },
     {
+      "name": "--lr-heatmap-color-steps-gradient",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-heatmap>`** (default: `linear-gradient(to right, var(--lr-heatmap-scale-lo), var(--lr-heatmap-scale-hi))`) — Gradient painted on the continuous legend bar. Set on the host by the component itself while `colorSteps` is supplied, and removed again when it is not; the fallback is the two-endpoint scale ramp."
+      }
+    },
+    {
       "name": "--lr-heatmap-focus-ring-color",
       "description": {
         "kind": "markdown",
@@ -513,6 +1178,27 @@
       }
     },
     {
+      "name": "--lr-html-viewer-max-height",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-html-viewer>`** (default: `none`) — Maximum block size of `[part=\"body\"]` before it scrolls internally. The `maxHeight` property sets this token inline on `[part=\"base\"]`."
+      }
+    },
+    {
+      "name": "--lr-icon-button-size",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-icon-button>`** (default: `2.5rem`) — Inline and block size of the native button. A library-wide token (declared on `:root` by `tokens.styles.ts`, and the shared minimum tappable size several other components size their icon controls against), so overriding it globally resizes all of them together."
+      }
+    },
+    {
+      "name": "--lr-icon-size",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-icon>`** (default: `var(--lr-size-1-25rem)`) — Inline and block size of the icon box."
+      }
+    },
+    {
       "name": "--lr-ingestion-queue-max-height",
       "description": {
         "kind": "markdown",
@@ -524,6 +1210,90 @@
       "description": {
         "kind": "markdown",
         "value": "**`<lr-input>`, `<lr-number-input>`, `<lr-time-input>`** — Outer control height floor, scaled by `size`."
+      }
+    },
+    {
+      "name": "--lr-input-font-size",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-input>`, `<lr-number-input>`, `<lr-time-input>`** — Font size of the native input, scaled by `size`."
+      }
+    },
+    {
+      "name": "--lr-input-padding-block",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-input>`, `<lr-number-input>`, `<lr-time-input>`** — Block padding of the native input, scaled by `size`."
+      }
+    },
+    {
+      "name": "--lr-input-padding-inline",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-input>`, `<lr-number-input>`, `<lr-time-input>`** — Inline padding of the control row, scaled by `size`."
+      }
+    },
+    {
+      "name": "--lr-json-viewer-font",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-json-viewer>`** (default: `var(--lr-font-mono)`) — Font family used for the rendered tree."
+      }
+    },
+    {
+      "name": "--lr-json-viewer-max-height",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-json-viewer>`** (default: `none`) — Cap on `[part=\"base\"]`'s block size, past which the viewer scrolls internally. The `maxHeight` property sets this token inline on `[part=\"base\"]`."
+      }
+    },
+    {
+      "name": "--lr-known-date-day-field-width",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-known-date>`** (default: `var(--lr-size-3-5em)`) — Inline size of the day field."
+      }
+    },
+    {
+      "name": "--lr-known-date-field-font-size",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-known-date>`** (default: `var(--lr-font-size-md-sm)`) — Font size of each `field-input`, auto-swapped per `size`."
+      }
+    },
+    {
+      "name": "--lr-known-date-field-gap",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-known-date>`** (default: `var(--lr-space-s)`) — Gap between the three field blocks."
+      }
+    },
+    {
+      "name": "--lr-known-date-field-padding-block",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-known-date>`** (default: `var(--lr-space-s)`) — Block padding of each `field-input`, auto-swapped per `size`."
+      }
+    },
+    {
+      "name": "--lr-known-date-field-padding-inline",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-known-date>`** (default: `var(--lr-space-s)`) — Inline padding of each `field-input`, auto-swapped per `size`."
+      }
+    },
+    {
+      "name": "--lr-known-date-month-field-width",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-known-date>`** (default: `var(--lr-size-3-5em)`) — Inline size of the month field."
+      }
+    },
+    {
+      "name": "--lr-known-date-year-field-width",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-known-date>`** (default: `var(--lr-size-5em)`) — Inline size of the year field."
       }
     },
     {
@@ -559,6 +1329,20 @@
       "description": {
         "kind": "markdown",
         "value": "**`<lr-lite-chart>`** (default: `var(--lr-color-brand)`) — Stroke for a bar/point whose category index is in `selectedIndex`."
+      }
+    },
+    {
+      "name": "--lr-markdown-font-mono",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-markdown>`** (default: `var(--lr-font-mono)`) — Monospace family for rendered `<code>` inside `content`."
+      }
+    },
+    {
+      "name": "--lr-media-card-max-height",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-media-card>`** (default: `var(--lr-size-20rem)`) — Cap on the block size of the `<img>`/`<video>` in `[part=\"media\"]`."
       }
     },
     {
@@ -618,6 +1402,27 @@
       }
     },
     {
+      "name": "--lr-playback-icon-size",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-playback>`** (default: `calc(var(--lr-icon-button-size) * 0.35)`) — Font size of the play/pause glyph, derived from the shared icon-button hit-target size."
+      }
+    },
+    {
+      "name": "--lr-progress-ring-size",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-progress-ring>`** (default: `var(--lr-size-2-5rem)`) — Outer diameter of the ring."
+      }
+    },
+    {
+      "name": "--lr-push-to-talk-size",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-push-to-talk>`** (default: `var(--lr-size-3rem)`) — Inline and block size of the circular `trigger` button."
+      }
+    },
+    {
       "name": "--lr-qr-code-background",
       "description": {
         "kind": "markdown",
@@ -674,6 +1479,13 @@
       }
     },
     {
+      "name": "--lr-responsive-panel-overlay-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-responsive-panel>`** (default: `var(--lr-color-overlay)`) — The overlay presentation's scrim color, applied to `[part=\"backdrop\"]`."
+      }
+    },
+    {
       "name": "--lr-scroll-fade-size",
       "description": {
         "kind": "markdown",
@@ -684,14 +1496,35 @@
       "name": "--lr-scroller-control-size",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-scroller>`** — Control size."
+        "value": "**`<lr-scroller>`** (default: `var(--lr-size-2rem)`) — Control size."
       }
     },
     {
       "name": "--lr-scroller-min-block-size",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-scroller>`** — Minimum vertical scroller size."
+        "value": "**`<lr-scroller>`** (default: `var(--lr-size-10rem)`) — Minimum vertical scroller size."
+      }
+    },
+    {
+      "name": "--lr-segmented-font-size",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-segmented>`** (default: `var(--lr-font-size-sm)`) — Each segment's font size. Re-set per `size`; this default applies at the unset/`m` size."
+      }
+    },
+    {
+      "name": "--lr-segmented-segment-padding",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-segmented>`** (default: `var(--lr-size-0-125rem) var(--lr-space-s)`) — Each segment's padding. Re-set per `size`; this default applies at the unset/`m` size."
+      }
+    },
+    {
+      "name": "--lr-segmented-track-min-height",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-segmented>`** (default: `auto`) — Minimum height of the `base` track. Re-set per `size` (`2xs` through `xl`); the `auto` default applies at the unset/`m` size."
       }
     },
     {
@@ -699,6 +1532,69 @@
       "description": {
         "kind": "markdown",
         "value": "**`<lr-select>`** — Decorative expand-icon box size, scaled by `size`."
+      }
+    },
+    {
+      "name": "--lr-select-font-size",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-select>`** — Trigger font size, scaled by `size`."
+      }
+    },
+    {
+      "name": "--lr-select-trigger-height",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-select>`** (default: `auto`) — Exact trigger height. Left at `auto` the trigger is floored only; set it to a length to both floor and cap the trigger (e.g. to pixel-match a sibling field in the same row)."
+      }
+    },
+    {
+      "name": "--lr-select-trigger-min-height",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-select>`** — Trigger block-size floor, scaled by `size`. Applied only for the `xs`/`s`/`l`/`xl` tiers — see the stylesheet note; the default tier stays floor-free."
+      }
+    },
+    {
+      "name": "--lr-select-trigger-padding",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-select>`** — Trigger padding shorthand, scaled by `size`."
+      }
+    },
+    {
+      "name": "--lr-sequence-strip-height",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-sequence-strip>`** (default: `var(--lr-size-1-5rem)`) — Block size of the strip."
+      }
+    },
+    {
+      "name": "--lr-sequence-strip-legend-swatch-size",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-sequence-strip>`** (default: `var(--lr-size-0-625rem)`) — Inline and block size of a legend swatch."
+      }
+    },
+    {
+      "name": "--lr-sequence-strip-marker-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-sequence-strip>`** (default: `var(--lr-color-text)`) — Color of the bottom marker on a `marker: true` cell."
+      }
+    },
+    {
+      "name": "--lr-skeleton-h",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-skeleton>`** (default: `var(--lr-size-1em)`) — Block size of the placeholder."
+      }
+    },
+    {
+      "name": "--lr-skeleton-w",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-skeleton>`** (default: `100%`) — Inline size of the placeholder."
       }
     },
     {
@@ -730,6 +1626,76 @@
       }
     },
     {
+      "name": "--lr-spinner-duration",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-spinner>`** (default: `800ms`) — Duration of one rotation. Not read under `prefers-reduced-motion: reduce`, where the animation is disabled entirely."
+      }
+    },
+    {
+      "name": "--lr-spinner-size",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-spinner>`** (default: `var(--lr-size-1-25rem)`) — Outer diameter of the indicator."
+      }
+    },
+    {
+      "name": "--lr-spinner-track-width",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-spinner>`** (default: `var(--lr-border-width-medium)`) — Thickness of the ring track."
+      }
+    },
+    {
+      "name": "--lr-split-overlay-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-split>`** (default: `var(--lr-color-overlay)`) — The `'floating'` drawer scrim's color, applied to `[part=\"backdrop\"]`."
+      }
+    },
+    {
+      "name": "--lr-stack-trace-font",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-stack-trace>`** (default: `var(--lr-font-mono)`) — Font family for the parsed frames and the verbatim raw fallback."
+      }
+    },
+    {
+      "name": "--lr-stack-trace-max-height",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-stack-trace>`** (default: `none`) — Cap on how tall `[part=\"base\"]` grows before it scrolls internally. `none` lets the component grow with its content; the `max-height` attribute sets this token."
+      }
+    },
+    {
+      "name": "--lr-stream-status-dot-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-stream-status>`** (default: `var(--lr-color-text-quiet)`) — `indicator` dot color. Swapped by the reflected `phase`: `var(--lr-color-brand)` for `connecting`/`streaming`, `var(--lr-color-warning)` for `stalled`."
+      }
+    },
+    {
+      "name": "--lr-stream-status-dot-opacity",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-stream-status>`** (default: `0.35`) — `indicator` dot opacity. Swapped by the reflected `phase`: `0.6` for `connecting`, `1` for `streaming` and `stalled`."
+      }
+    },
+    {
+      "name": "--lr-streaming-text-cursor-height",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-streaming-text>`** (default: `var(--lr-size-1em)`) — Height of the `cursor` bar."
+      }
+    },
+    {
+      "name": "--lr-streaming-text-cursor-width",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-streaming-text>`** (default: `var(--lr-size-0-125rem)`) — Width of the `cursor` bar (also its border radius)."
+      }
+    },
+    {
       "name": "--lr-svg-viewer-max-height",
       "description": {
         "kind": "markdown",
@@ -740,7 +1706,7 @@
       "name": "--lr-swatch-picker-selected-blur",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-swatch-picker>`** (default: `0px`) — Blur radius of that same ring. 0 by default (a crisp ring); set a real length (e.g. 0.4rem) for a soft glow instead."
+        "value": "**`<lr-swatch-picker>`** (default: `0`) — Blur radius of that same ring. 0 by default (a crisp ring); set a real length (e.g. 0.4rem) for a soft glow instead."
       }
     },
     {
@@ -758,6 +1724,55 @@
       }
     },
     {
+      "name": "--lr-switch-thumb-offset",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-switch>`** (default: `var(--lr-size-2px)`) — Inset of the thumb from the track's edges."
+      }
+    },
+    {
+      "name": "--lr-switch-track-block-size",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-switch>`** (default: `var(--lr-size-1-25rem)`) — Block size of the track; the thumb's diameter is derived from it minus twice `--lr-switch-thumb-offset`."
+      }
+    },
+    {
+      "name": "--lr-switch-track-inline-size",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-switch>`** (default: `var(--lr-size-2-25rem)`) — Inline size of the track, and (with the block size) the distance the thumb travels when checked."
+      }
+    },
+    {
+      "name": "--lr-table-heat-t",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-table>`** — This cell's position on the heat-tint ramp, as a percentage string. Set inline by the component on each `[data-heat]` cell; not consumer-settable."
+      }
+    },
+    {
+      "name": "--lr-table-heat-tint-hi",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-table>`** (default: `var(--lr-color-brand)`) — High endpoint of the heat-tint ramp used by `heatValue` columns."
+      }
+    },
+    {
+      "name": "--lr-table-heat-tint-lo",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-table>`** (default: `var(--lr-color-brand-quiet)`) — Low endpoint of the heat-tint ramp used by `heatValue` columns."
+      }
+    },
+    {
+      "name": "--lr-table-max-height",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-table>`** (default: `none`) — Cap on the scroll container's block size, past which the table body scrolls."
+      }
+    },
+    {
       "name": "--lr-table-resize-handle-opacity",
       "description": {
         "kind": "markdown",
@@ -772,10 +1787,24 @@
       }
     },
     {
+      "name": "--lr-table-sticky-offset",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-table>`** (default: `0`) — Distance a `sticky` column pins from the inline edge. Measured and set inline per column by the component so multiple sticky columns stack instead of overlapping; falls back to `0` for the first one, or before the first measurement pass."
+      }
+    },
+    {
       "name": "--lr-task-list-spin",
       "description": {
         "kind": "markdown",
         "value": "**`<lr-task-list>`** (default: `1s linear`) — Running-status icon spin animation duration/timing."
+      }
+    },
+    {
+      "name": "--lr-terminal-height",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-terminal>`** (default: `var(--lr-size-20rem)`) — Block size of `[part=\"viewport\"]`, the scrollable log region. Not declared on `:host`, so it is inherited — set it on the host or any ancestor."
       }
     },
     {
@@ -786,10 +1815,52 @@
       }
     },
     {
+      "name": "--lr-thinking-panel-max-block-size",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-thinking-panel>`** (default: `var(--lr-size-16rem)`) — Cap on how tall the expanded reasoning transcript grows before `[part=\"body\"]` scrolls internally."
+      }
+    },
+    {
       "name": "--lr-timeline-gap",
       "description": {
         "kind": "markdown",
         "value": "**`<lr-timeline>`** (default: `var(--lr-space-l)`) — Spacing between consecutive items along the timeline's main axis; also the length each item's own rail visually bridges to reach the next item's marker. Declared here but actually consumed inside each `<lr-timeline-item>`'s own stylesheet, via ordinary CSS custom-property inheritance across the slot boundary."
+      }
+    },
+    {
+      "name": "--lr-timeline-item-direction",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-timeline-item>`** (default: `row`) — Internal orientation plumbing, not a retheming knob: `[part=\"base\"]`'s `flex-direction`, set by an ancestor `<lr-timeline>`'s `:host` and inherited across the slot boundary (`row` vertical, `column` horizontal). The `row` fallback applies when the item is used standalone."
+      }
+    },
+    {
+      "name": "--lr-timeline-item-gap-block-end",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-timeline-item>`** (default: `0`) — Internal orientation plumbing, not a retheming knob: `[part=\"content\"]`'s `padding-block-end`, set by a vertical `<lr-timeline>` so the rail reaches the next item's marker. `0` when standalone or horizontal; retheme `--lr-timeline-gap` on `<lr-timeline>` instead."
+      }
+    },
+    {
+      "name": "--lr-timeline-item-gap-inline-end",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-timeline-item>`** (default: `0`) — Internal orientation plumbing, not a retheming knob: the inline-axis counterpart of `--lr-timeline-item-gap-block-end`, non-zero only under a horizontal `<lr-timeline>`."
+      }
+    },
+    {
+      "name": "--lr-timeline-item-rail-visibility",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-timeline-item>`** (default: `visible`) — Internal plumbing, not a retheming knob: `[part=\"rail\"]`'s `visibility`, set to `hidden` by `<lr-timeline>`'s `::slotted(:last-child)` rule so the final item has no trailing rail."
+      }
+    },
+    {
+      "name": "--lr-timeline-item-track-direction",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-timeline-item>`** (default: `column`) — Internal orientation plumbing, not a retheming knob: `[part=\"track\"]`'s `flex-direction`, always the opposite axis from `--lr-timeline-item-direction` and set alongside it by `<lr-timeline>`."
       }
     },
     {
@@ -821,6 +1892,111 @@
       }
     },
     {
+      "name": "--lr-toast-accent-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-toast>`** (default: `var(--lr-color-border)`) — Accent bar / icon color of a slotted item, auto-swapped per its `variant`. Read by `<lr-toast-item>`, so set it on the item.\n\n**`<lr-toast-item>`** (default: `var(--lr-color-border)`) — Color of the accent bar and the icon, auto-swapped per `variant`."
+      }
+    },
+    {
+      "name": "--lr-toast-accent-width",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-toast>`** (default: `var(--lr-size-4px)`) — Width of a slotted item's accent bar. Read by `<lr-toast-item>`'s own stylesheet, so set it on the item.\n\n**`<lr-toast-item>`** (default: `var(--lr-size-4px)`) — Width of the accent bar, and the extra inline-start padding reserved for it."
+      }
+    },
+    {
+      "name": "--lr-toast-font-size",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-toast>`** (default: `var(--lr-font-size-md)`) — Font size of a slotted item, auto-swapped per its `size`. Read by `<lr-toast-item>`, so set it on the item.\n\n**`<lr-toast-item>`** (default: `var(--lr-font-size-md)`) — Font size of the item, auto-swapped per `size`."
+      }
+    },
+    {
+      "name": "--lr-toast-gap",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-toast>`** (default: `var(--lr-space-s)`) — Gap between stacked items."
+      }
+    },
+    {
+      "name": "--lr-toast-hide-duration",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-toast>`** (default: `var(--lr-transition-base, 180ms ease-out)`) — Hide transition of a slotted item. Read by `<lr-toast-item>`, so set it on the item.\n\n**`<lr-toast-item>`** (default: `var(--lr-transition-base, 180ms ease-out)`) — Opacity/transform transition used while hiding."
+      }
+    },
+    {
+      "name": "--lr-toast-padding",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-toast>`** (default: `var(--lr-space-m)`) — Padding of a slotted item, auto-swapped per its `size`. Read by `<lr-toast-item>`, so set it on the item.\n\n**`<lr-toast-item>`** (default: `var(--lr-space-m)`) — Padding of the item, auto-swapped per `size`."
+      }
+    },
+    {
+      "name": "--lr-toast-show-duration",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-toast>`** (default: `var(--lr-transition-base, 180ms ease-out)`) — Show transition of a slotted item. Read by `<lr-toast-item>`, so set it on the item.\n\n**`<lr-toast-item>`** (default: `var(--lr-transition-base, 180ms ease-out)`) — Opacity/transform transition used while showing."
+      }
+    },
+    {
+      "name": "--lr-toast-width",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-toast>`** (default: `var(--lr-size-28rem)`) — Inline size of the stack, capped by the viewport minus the placement insets."
+      }
+    },
+    {
+      "name": "--lr-token-input-input-inline-size",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-token-input>`** (default: `var(--lr-size-8rem)`) — `flex-basis` of the native text input within the token row."
+      }
+    },
+    {
+      "name": "--lr-token-input-min-input-inline-size",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-token-input>`** (default: `var(--lr-size-4rem)`) — Inline-size floor of the native text input, so it stays usable once tokens wrap."
+      }
+    },
+    {
+      "name": "--lr-tool-approval-dialog-mono-font",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-tool-approval-dialog>`** (default: `var(--lr-font-mono)`) — Font family for the tool name and the raw-JSON args editor."
+      }
+    },
+    {
+      "name": "--lr-tool-approval-dialog-overlay-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-tool-approval-dialog>`** (default: `var(--lr-color-overlay)`) — Backdrop scrim color."
+      }
+    },
+    {
+      "name": "--lr-tool-call-chip-accent",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-tool-call-chip>`** (default: `var(--lr-color-text-quiet)`) — Per-status accent color for the status glyph and status text. Reassigned by this component's own `:host([status=\"…\"])` rules (`running` → brand, `success` → success, `error` → danger, `denied` → warning), so a page-level override only wins for the default/`pending` tone."
+      }
+    },
+    {
+      "name": "--lr-tool-call-chip-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-tool-call-chip>`** (default: `var(--lr-color-surface)`) — Per-status chip background. Reassigned by the same `:host([status=\"…\"])` rules (each status's `-quiet` tint)."
+      }
+    },
+    {
+      "name": "--lr-tool-call-chip-border",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-tool-call-chip>`** (default: `var(--lr-color-border)`) — Per-status chip border color. Reassigned by the same `:host([status=\"…\"])` rules (`transparent` for every non-`pending` status)."
+      }
+    },
+    {
       "name": "--lr-tool-call-chip-spin",
       "description": {
         "kind": "markdown",
@@ -849,10 +2025,31 @@
       }
     },
     {
+      "name": "--lr-tool-result-view-font",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-tool-result-view>`** (default: `var(--lr-font-mono)`) — Font family for the `fallback=\"text\"` preformatted output."
+      }
+    },
+    {
+      "name": "--lr-tool-select-dialog-overlay-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-tool-select-dialog>`** (default: `var(--lr-color-overlay)`) — Backdrop scrim color."
+      }
+    },
+    {
       "name": "--lr-tool-timeline-gap",
       "description": {
         "kind": "markdown",
         "value": "**`<lr-tool-timeline>`** (default: `var(--lr-space-l)`) — Vertical gap between entries."
+      }
+    },
+    {
+      "name": "--lr-tool-timeline-marker-size",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-tool-timeline>`** (default: `var(--lr-size-0-625rem)`) — Diameter of an entry's rail dot; also the width of the marker gutter column."
       }
     },
     {
@@ -919,6 +2116,13 @@
       }
     },
     {
+      "name": "--lr-tree-depth",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-tree-node>`** (default: `0`) — Internal indent plumbing, not a retheming knob: this node's `depth`, written inline onto `[part=\"row\"]` by the component and multiplied by `--lr-space-l` (capped at `--lr-size-8rem`) to produce the row's `padding-inline-start`."
+      }
+    },
+    {
       "name": "--lr-typing-dot-stagger-1",
       "description": {
         "kind": "markdown",
@@ -930,6 +2134,34 @@
       "description": {
         "kind": "markdown",
         "value": "**`<lr-typing-indicator>`** (default: `1200ms`) — Delay for the third dot in the dots variant."
+      }
+    },
+    {
+      "name": "--lr-virtual-list-height",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-virtual-list>`** (default: `var(--lr-size-24rem)`) — The scroll viewport's height. A virtualized list needs a bounded scroll extent, so this ships a default rather than collapsing to zero when a caller does not size the host."
+      }
+    },
+    {
+      "name": "--lr-widget-backdrop-inset",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-widget>`** (default: `var(--lr-widget-fullscreen-inset)`) — The `inset` applied to `[part=\"backdrop\"]`, so the scrim can be pulled back independently of the panel. Also set inline from the `backdrop-inset` attribute (falling back to `fullscreen-inset`). `fullscreen-inset` overrides the default `var(--lr-space-l)` inset applied to `[part=\"base\"]` and `[part=\"backdrop\"]` while fullscreen (e.g. `\"0 0 0 240px\"` to leave a persistent sidebar visible). `compact` tightens header/body padding — same convention as `lr-empty`'s `compact`."
+      }
+    },
+    {
+      "name": "--lr-widget-fullscreen-inset",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-widget>`** (default: `max(var(--lr-space-l), var(--lr-safe-area-top)) max(var(--lr-space-l), var(--lr-safe-area-inline-end)) max(var(--lr-space-l), var(--lr-safe-area-bottom)) max(var(--lr-space-l), var(--lr-safe-area-inline-start))`) — The `inset` applied to `[part=\"base\"]` while `fullscreen`. Also set inline from the `fullscreen-inset` attribute."
+      }
+    },
+    {
+      "name": "--lr-widget-overlay-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-widget>`** (default: `var(--lr-color-overlay)`) — The fullscreen scrim's color, applied to `[part=\"backdrop\"]`."
       }
     },
     {
@@ -1000,6 +2232,13 @@
       "description": {
         "kind": "markdown",
         "value": "**`<lr-zoomable-frame>`** — Minimum viewport block size."
+      }
+    },
+    {
+      "name": "--lr-zoomable-frame-zoom",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-zoomable-frame>`** (default: `1`) — The scale factor applied to `[part=\"content\"]`. Written by the component itself on every render from the current `zoom`, so it is a read-out rather than a consumer knob; set the `zoom` property instead."
       }
     }
   ]
