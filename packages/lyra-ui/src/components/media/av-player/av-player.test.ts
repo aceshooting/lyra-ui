@@ -68,6 +68,25 @@ describe('playback controls', () => {
     await pausePromise;
   });
 
+  it('toggle() plays when the media element is paused, and pauses when it is not', async () => {
+    const el = (await fixture(html`<lr-av-player src=${MP3_SRC}></lr-av-player>`)) as LyraAvPlayer;
+    const media = mediaEl(el);
+    let played = false;
+    let paused = false;
+    Object.defineProperty(media, 'play', { value: () => { played = true; return Promise.resolve(); }, configurable: true });
+    Object.defineProperty(media, 'pause', { value: () => { paused = true; }, configurable: true });
+
+    // A freshly-mounted, never-played native media element reports paused: true.
+    expect(media.paused).to.be.true;
+    el.toggle();
+    expect(played, 'toggle() should play() while paused').to.be.true;
+    expect(paused).to.be.false;
+
+    Object.defineProperty(media, 'paused', { value: false, configurable: true });
+    el.toggle();
+    expect(paused, 'toggle() should pause() while playing').to.be.true;
+  });
+
   it('seek() sets currentTime on the media element and playbackRate reflects to it', async () => {
     const el = (await fixture(html`<lr-av-player src=${MP3_SRC}></lr-av-player>`)) as LyraAvPlayer;
     const media = mediaEl(el);
@@ -119,6 +138,14 @@ describe('cues and transcript', () => {
     rows[2].click();
     expect(media.currentTime).to.equal(25);
   });
+
+  it('formats a cue timestamp with an hours component once start reaches 1 hour', async () => {
+    const longCues: LyraAvCue[] = [{ id: 'long', start: 3661, text: 'An hour in' }];
+    const el = (await fixture(html`<lr-av-player src=${MP3_SRC} .cues=${longCues}></lr-av-player>`)) as LyraAvPlayer;
+    await el.updateComplete;
+    const rows = cueRows(el);
+    expect(rows[0].querySelector('[part="cue-time"]')!.textContent).to.equal('1:01:01');
+  });
 });
 
 describe('search', () => {
@@ -126,6 +153,13 @@ describe('search', () => {
     const el = (await fixture(html`<lr-av-player src=${MP3_SRC} .cues=${CUES}></lr-av-player>`)) as LyraAvPlayer;
     const count = await el.search('HOST');
     expect(count).to.equal(2);
+  });
+
+  it('search() with an empty/whitespace-only query clears matches instead of matching everything', async () => {
+    const el = (await fixture(html`<lr-av-player src=${MP3_SRC} .cues=${CUES}></lr-av-player>`)) as LyraAvPlayer;
+    await el.search('host');
+    const count = await el.search('   ');
+    expect(count).to.equal(0);
   });
 
   it('searchNext/searchPrevious wrap and emit lr-search-change with the active index', async () => {
@@ -136,6 +170,17 @@ describe('search', () => {
     expect((await eventPromise).detail).to.deep.equal({ query: 'host', matchCount: 2, activeIndex: 1 });
     const wrapPromise = oneEvent(el, 'lr-search-change');
     el.searchNext();
+    expect((await wrapPromise).detail.activeIndex).to.equal(0);
+  });
+
+  it('searchPrevious() wraps to the last match and emits lr-search-change with the active index', async () => {
+    const el = (await fixture(html`<lr-av-player src=${MP3_SRC} .cues=${CUES}></lr-av-player>`)) as LyraAvPlayer;
+    await el.search('host'); // 2 matches, activeIndex starts at 0
+    const eventPromise = oneEvent(el, 'lr-search-change');
+    el.searchPrevious();
+    expect((await eventPromise).detail).to.deep.equal({ query: 'host', matchCount: 2, activeIndex: 1 });
+    const wrapPromise = oneEvent(el, 'lr-search-change');
+    el.searchPrevious();
     expect((await wrapPromise).detail.activeIndex).to.equal(0);
   });
 
@@ -199,6 +244,107 @@ describe('timeline marker RTL positioning', () => {
   });
 });
 
+describe('timeline marker activation', () => {
+  it('clicking a marker seeks to its start, sets activeHighlightId, and emits lr-highlight-activate', async () => {
+    const el = (await fixture(html`
+      <lr-av-player
+        src=${MP3_SRC}
+        .highlights=${[{ id: 'h1', anchor: { kind: 'time-range', start: 30 } }]}
+      ></lr-av-player>
+    `)) as LyraAvPlayer;
+    const media = mediaEl(el);
+    // No `end` on this highlight -- exercises the `h.anchor.end ?? h.anchor.start` fallback used to
+    // position the marker's inline-size.
+    Object.defineProperty(media, 'duration', { value: 100, configurable: true });
+    media.dispatchEvent(new Event('loadedmetadata'));
+    await el.updateComplete;
+    const marker = el.shadowRoot!.querySelector('[part="timeline-marker"]') as HTMLButtonElement;
+    const eventPromise = oneEvent(el, 'lr-highlight-activate');
+    marker.click();
+    expect((await eventPromise).detail).to.deep.equal({ id: 'h1' });
+    expect(media.currentTime).to.equal(30);
+    expect(el.activeHighlightId).to.equal('h1');
+  });
+});
+
+describe('timeline click-to-seek', () => {
+  it('clicking the timeline seeks proportionally to the click position', async () => {
+    const el = (await fixture(html`<lr-av-player src=${MP3_SRC}></lr-av-player>`)) as LyraAvPlayer;
+    const media = mediaEl(el);
+    Object.defineProperty(media, 'duration', { value: 100, configurable: true });
+    media.dispatchEvent(new Event('loadedmetadata'));
+    await el.updateComplete;
+    const timeline = el.shadowRoot!.querySelector('[part="timeline"]') as HTMLElement;
+    const rect = timeline.getBoundingClientRect();
+    expect(rect.width, 'the timeline needs real layout for this test to be meaningful').to.be.greaterThan(0);
+    timeline.dispatchEvent(new MouseEvent('click', { clientX: rect.left + rect.width / 2, bubbles: true }));
+    expect(media.currentTime).to.be.closeTo(50, 1);
+  });
+
+  it('is a no-op before duration is known', async () => {
+    const el = (await fixture(html`<lr-av-player src=${MP3_SRC}></lr-av-player>`)) as LyraAvPlayer;
+    const media = mediaEl(el);
+    const timeline = el.shadowRoot!.querySelector('[part="timeline"]') as HTMLElement;
+    timeline.dispatchEvent(new MouseEvent('click', { clientX: 10, bubbles: true }));
+    expect(media.currentTime).to.equal(0);
+  });
+});
+
+describe('timeline keyboard seeking', () => {
+  it('ArrowRight/ArrowLeft seek by 5s, or 15s with Shift', async () => {
+    const el = (await fixture(html`<lr-av-player src=${MP3_SRC}></lr-av-player>`)) as LyraAvPlayer;
+    const media = mediaEl(el);
+    Object.defineProperty(media, 'duration', { value: 100, configurable: true });
+    media.dispatchEvent(new Event('loadedmetadata'));
+    await el.updateComplete;
+    const timeline = el.shadowRoot!.querySelector('[part="timeline"]') as HTMLElement;
+    el.currentTime = 50;
+
+    const right = new KeyboardEvent('keydown', { key: 'ArrowRight', cancelable: true, bubbles: true });
+    timeline.dispatchEvent(right);
+    expect(media.currentTime).to.equal(55);
+    expect(right.defaultPrevented, 'a handled key calls preventDefault()').to.be.true;
+
+    const left = new KeyboardEvent('keydown', { key: 'ArrowLeft', shiftKey: true, cancelable: true, bubbles: true });
+    timeline.dispatchEvent(left);
+    expect(media.currentTime).to.equal(40);
+  });
+
+  it('Home/End jump to the start/duration', async () => {
+    const el = (await fixture(html`<lr-av-player src=${MP3_SRC}></lr-av-player>`)) as LyraAvPlayer;
+    const media = mediaEl(el);
+    Object.defineProperty(media, 'duration', { value: 100, configurable: true });
+    media.dispatchEvent(new Event('loadedmetadata'));
+    await el.updateComplete;
+    const timeline = el.shadowRoot!.querySelector('[part="timeline"]') as HTMLElement;
+
+    timeline.dispatchEvent(new KeyboardEvent('keydown', { key: 'End', cancelable: true, bubbles: true }));
+    expect(media.currentTime).to.equal(100);
+    timeline.dispatchEvent(new KeyboardEvent('keydown', { key: 'Home', cancelable: true, bubbles: true }));
+    expect(media.currentTime).to.equal(0);
+  });
+
+  it('Space toggles playback', async () => {
+    const el = (await fixture(html`<lr-av-player src=${MP3_SRC}></lr-av-player>`)) as LyraAvPlayer;
+    const media = mediaEl(el);
+    const timeline = el.shadowRoot!.querySelector('[part="timeline"]') as HTMLElement;
+    let played = false;
+    Object.defineProperty(media, 'play', { value: () => { played = true; return Promise.resolve(); }, configurable: true });
+
+    timeline.dispatchEvent(new KeyboardEvent('keydown', { key: ' ', cancelable: true, bubbles: true }));
+    expect(played).to.be.true;
+  });
+
+  it('an unhandled key is a no-op', async () => {
+    const el = (await fixture(html`<lr-av-player src=${MP3_SRC}></lr-av-player>`)) as LyraAvPlayer;
+    const media = mediaEl(el);
+    const timeline = el.shadowRoot!.querySelector('[part="timeline"]') as HTMLElement;
+    el.currentTime = 50;
+    timeline.dispatchEvent(new KeyboardEvent('keydown', { key: 'a', cancelable: true, bubbles: true }));
+    expect(media.currentTime).to.equal(50);
+  });
+});
+
 describe('time-range anchors', () => {
   it('applyAnchor seeks to the anchor start once metadata is loaded', async () => {
     const el = (await fixture(html`<lr-av-player src=${MP3_SRC} .cues=${CUES}></lr-av-player>`)) as LyraAvPlayer;
@@ -248,6 +394,29 @@ describe('numeric safety (finite clamping)', () => {
   });
 });
 
+describe('seeking before the media element mounts', () => {
+  it('queues a currentTime set before mount as a pending seek and applies it once metadata loads', async () => {
+    const el = document.createElement('lr-av-player') as LyraAvPlayer;
+    el.src = MP3_SRC;
+    // Not yet connected: Lit creates `renderRoot` lazily on first connect/update, so the
+    // `@query('audio, video')`-backed `mediaEl` genuinely resolves to nothing here, exercising the
+    // pendingSeek branch instead of writing straight through to a native element.
+    el.currentTime = 42;
+    try {
+      document.body.append(el);
+      await el.updateComplete;
+      const media = mediaEl(el);
+      expect(media.currentTime, 'not yet applied to the native element').to.equal(0);
+
+      Object.defineProperty(media, 'duration', { value: 100, configurable: true });
+      media.dispatchEvent(new Event('loadedmetadata'));
+      expect(media.currentTime, 'the pending seek is flushed once metadata loads').to.equal(42);
+    } finally {
+      el.remove();
+    }
+  });
+});
+
 describe('waveform', () => {
   it('renders a plain seek rail when peaks is empty, and a canvas when peaks is set', async () => {
     const withoutPeaks = (await fixture(html`<lr-av-player src=${MP3_SRC}></lr-av-player>`)) as LyraAvPlayer;
@@ -276,6 +445,61 @@ describe('waveform', () => {
     window.dispatchEvent(new Event('resize'));
     expect(redraws, 'the resize listener should be re-attached on reconnect').to.equal(1);
   });
+
+  it('falls back to devicePixelRatio 1 and 1px dimensions when those signals are unavailable', async () => {
+    const el = (await fixture(html`<lr-av-player src=${MP3_SRC} .peaks=${[0.2, 0.6]}></lr-av-player>`)) as LyraAvPlayer;
+    const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
+    const originalDpr = Object.getOwnPropertyDescriptor(window, 'devicePixelRatio');
+    Object.defineProperty(window, 'devicePixelRatio', { value: 0, configurable: true });
+    Object.defineProperty(canvas, 'clientWidth', { value: 0, configurable: true });
+    Object.defineProperty(canvas, 'clientHeight', { value: 0, configurable: true });
+    try {
+      window.dispatchEvent(new Event('resize'));
+      expect(canvas.width).to.equal(1);
+      expect(canvas.height).to.equal(1);
+    } finally {
+      if (originalDpr) Object.defineProperty(window, 'devicePixelRatio', originalDpr);
+      else delete (window as unknown as { devicePixelRatio?: number }).devicePixelRatio;
+    }
+  });
+
+  it('is a no-op when the canvas cannot provide a 2d context', async () => {
+    const el = (await fixture(html`<lr-av-player src=${MP3_SRC} .peaks=${[0.2, 0.6]}></lr-av-player>`)) as LyraAvPlayer;
+    const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
+    Object.defineProperty(canvas, 'getContext', { value: () => null, configurable: true });
+    expect(() => window.dispatchEvent(new Event('resize'))).to.not.throw();
+  });
+
+  it('uses the --lr-color-brand custom property for the waveform fill when the host defines it', async () => {
+    const el = (await fixture(html`<lr-av-player src=${MP3_SRC} .peaks=${[1, 1]}></lr-av-player>`)) as LyraAvPlayer;
+    el.style.setProperty('--lr-color-brand', 'rgb(0, 200, 0)');
+    window.dispatchEvent(new Event('resize'));
+    const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
+    const ctx = canvas.getContext('2d')!;
+    const probe = document.createElement('canvas').getContext('2d')!;
+    probe.fillStyle = 'rgb(0, 200, 0)';
+    expect(ctx.fillStyle).to.equal(probe.fillStyle);
+  });
+});
+
+describe('tracks', () => {
+  it('renders a <track> for each safe source and silently drops unsafe ones', async () => {
+    const el = (await fixture(html`
+      <lr-av-player
+        src=${MP3_SRC}
+        .tracks=${[
+          { src: 'https://example.test/en.vtt', kind: 'subtitles', srclang: 'en', label: 'English', default: true },
+          { src: 'javascript:alert(1)', kind: 'captions', srclang: 'fr', label: 'French' },
+        ]}
+      ></lr-av-player>
+    `)) as LyraAvPlayer;
+    const media = mediaEl(el);
+    const trackEls = [...media.querySelectorAll('track')];
+    expect(trackEls.length).to.equal(1);
+    expect(trackEls[0].src).to.equal('https://example.test/en.vtt');
+    expect(trackEls[0].label).to.equal('English');
+    expect(trackEls[0].default).to.be.true;
+  });
 });
 
 describe('accessibility', () => {
@@ -302,5 +526,20 @@ describe('render error', () => {
     const eventPromise = oneEvent(el, 'lr-render-error');
     media.dispatchEvent(new Event('error'));
     await eventPromise;
+  });
+});
+
+describe('render branches', () => {
+  it('renders an error region instead of a media element when src is unsafe', async () => {
+    const el = (await fixture(html`<lr-av-player src="javascript:alert(1)"></lr-av-player>`)) as LyraAvPlayer;
+    expect(el.shadowRoot!.querySelector('audio, video')).to.not.exist;
+    expect(el.shadowRoot!.querySelector('[part="error"]')).to.exist;
+  });
+
+  it('renders <audio src=""> when kind is forced to audio with no src set', async () => {
+    const el = (await fixture(html`<lr-av-player kind="audio"></lr-av-player>`)) as LyraAvPlayer;
+    const audio = el.shadowRoot!.querySelector('audio');
+    expect(audio).to.exist;
+    expect(audio!.getAttribute('src')).to.equal('');
   });
 });
