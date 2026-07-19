@@ -15,14 +15,25 @@ function stepButtons(el: LyraStepper): HTMLButtonElement[] {
 
 /** Spies on the real `ResizeObserver` constructor so a test can manually drive a component's
  *  effective-orientation callback with a synthetic width -- same technique split.test.ts's own
- *  collapse-state tests use for their identically-shaped `ResizeObserver`. Restore in a `finally`. */
-function installResizeObserverSpy(): { callbacks: ResizeObserverCallback[]; restore: () => void } {
+ *  collapse-state tests use for their identically-shaped `ResizeObserver`. Restore in a `finally`.
+ *
+ *  `inert` additionally makes `observe()` a no-op, so *only* synthetic widths ever reach the
+ *  component. Needed by any test that mutates layout mid-test (e.g. the root font size): a real
+ *  observation would otherwise deliver the fixture's actual width right after the synthetic one and
+ *  overwrite the state under assertion -- and re-entrant real deliveries surface as the browser's
+ *  "ResizeObserver loop completed with undelivered notifications" error. */
+function installResizeObserverSpy(
+  { inert = false }: { inert?: boolean } = {},
+): { callbacks: ResizeObserverCallback[]; restore: () => void } {
   const callbacks: ResizeObserverCallback[] = [];
   const OriginalRO = window.ResizeObserver;
   class SpyResizeObserver extends OriginalRO {
     constructor(callback: ResizeObserverCallback) {
       super(callback);
       callbacks.push(callback);
+    }
+    override observe(target: Element, options?: ResizeObserverOptions): void {
+      if (!inert) super.observe(target, options);
     }
   }
   (window as unknown as { ResizeObserver: typeof ResizeObserver }).ResizeObserver = SpyResizeObserver;
@@ -238,5 +249,120 @@ describe('lr-stepper', () => {
     await elementUpdated(el);
     expect(el.effectiveOrientation).to.equal('vertical');
     expect(el.hasAttribute('data-effective-orientation')).to.be.false;
+  });
+
+  describe('orientationBreakpoint as a CSS length', () => {
+    afterEach(() => {
+      document.documentElement.style.fontSize = '';
+    });
+
+    /** Mounts a stepper with the given breakpoint and hands back the `ResizeObserver` callback it
+     *  armed (or `undefined` when it armed none), so a test can drive synthetic widths. */
+    async function mount(
+      spy: ReturnType<typeof installResizeObserverSpy>,
+      breakpoint: number | string,
+    ): Promise<{ el: LyraStepper; callback?: ResizeObserverCallback }> {
+      const before = spy.callbacks.length;
+      const el = (await fixture(
+        html`<lr-stepper
+          orientation-breakpoint=${breakpoint}
+          narrow-orientation="vertical"
+          .steps=${steps()}
+        ></lr-stepper>`,
+      )) as LyraStepper;
+      await elementUpdated(el);
+      return { el, callback: spy.callbacks[before] };
+    }
+
+    it('crosses at the same measured width for a rem breakpoint as for the equivalent px number', async () => {
+      document.documentElement.style.fontSize = '16px';
+      const spy = installResizeObserverSpy({ inert: true });
+      try {
+        const rem = await mount(spy, '31.25rem'); // 31.25rem @ 16px root === 500px
+        const px = await mount(spy, 500);
+        expect(rem.callback, 'a rem breakpoint must arm the resize observer').to.exist;
+        expect(px.callback).to.exist;
+
+        for (const { el, callback } of [rem, px]) {
+          fireResize(callback!, 499);
+          await elementUpdated(el);
+          expect(el.effectiveOrientation).to.equal('vertical');
+          expect(el.getAttribute('data-effective-orientation')).to.equal('vertical');
+
+          fireResize(callback!, 500);
+          await elementUpdated(el);
+          expect(el.effectiveOrientation).to.equal('horizontal');
+          expect(el.getAttribute('data-effective-orientation')).to.equal('horizontal');
+        }
+      } finally {
+        spy.restore();
+      }
+    });
+
+    it('keeps the bare-number form working identically, as an attribute and as a property', async () => {
+      const spy = installResizeObserverSpy({ inert: true });
+      try {
+        const attr = await mount(spy, 500);
+
+        const before = spy.callbacks.length;
+        const prop = (await fixture(
+          html`<lr-stepper narrow-orientation="vertical" .steps=${steps()}></lr-stepper>`,
+        )) as LyraStepper;
+        prop.orientationBreakpoint = 500;
+        await elementUpdated(prop);
+        const propCallback = spy.callbacks[before];
+        expect(propCallback, 'a numeric property must arm the resize observer').to.exist;
+
+        for (const { el, callback } of [attr, { el: prop, callback: propCallback }]) {
+          fireResize(callback!, 320);
+          await elementUpdated(el);
+          expect(el.effectiveOrientation).to.equal('vertical');
+
+          fireResize(callback!, 700);
+          await elementUpdated(el);
+          expect(el.effectiveOrientation).to.equal('horizontal');
+        }
+      } finally {
+        spy.restore();
+      }
+    });
+
+    it('moves the crossing width when the root font size changes, for a rem breakpoint', async () => {
+      document.documentElement.style.fontSize = '16px';
+      const spy = installResizeObserverSpy({ inert: true });
+      try {
+        const { el, callback } = await mount(spy, '31.25rem'); // 500px @ 16px root
+        fireResize(callback!, 600);
+        await elementUpdated(el);
+        expect(el.effectiveOrientation).to.equal('horizontal'); // 600 >= 500
+
+        document.documentElement.style.fontSize = '20px'; // 31.25rem is now 625px
+        fireResize(callback!, 600);
+        await elementUpdated(el);
+        expect(el.effectiveOrientation).to.equal('vertical'); // 600 < 625 -- re-read, not frozen
+      } finally {
+        spy.restore();
+      }
+    });
+
+    it('treats an unparseable breakpoint exactly as unset -- no observation, no effective marker', async () => {
+      const spy = installResizeObserverSpy({ inert: true });
+      try {
+        const el = (await fixture(
+          html`<lr-stepper
+            orientation="horizontal"
+            orientation-breakpoint="abc"
+            narrow-orientation="vertical"
+            .steps=${steps()}
+          ></lr-stepper>`,
+        )) as LyraStepper;
+        await elementUpdated(el);
+        expect(spy.callbacks.length, 'no responsive observation may be armed').to.equal(0);
+        expect(el.effectiveOrientation).to.equal('horizontal');
+        expect(el.hasAttribute('data-effective-orientation')).to.be.false;
+      } finally {
+        spy.restore();
+      }
+    });
   });
 });

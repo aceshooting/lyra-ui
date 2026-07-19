@@ -110,3 +110,28 @@ export const ResponsiveOrientation: Story = {
     </div>
   `,
 };
+
+export const ResponsiveOrientationRem: Story = {
+  render: () => html`
+    <div
+      style="resize: horizontal; overflow: hidden; inline-size: 100%; min-inline-size: 8rem; max-inline-size: 100%; border: 1px dashed var(--lr-color-border); padding: 0.5rem;"
+    >
+      <p style="margin: 0 0 0.5rem; font: 12px sans-serif; color: var(--lr-color-text-quiet)">
+        The same breakpoint authored as a CSS length —
+        <code>orientation-breakpoint="31.25rem"</code> — which is 500px at the default 16px root
+        font size. <code>rem</code> resolves against the <strong>document root</strong>, exactly as
+        it does in a CSS <code>@media</code> query (not against the stepper), so this stays in step
+        with a sibling <code>@media (max-width: 31.25rem)</code> rule even when the root font size
+        changes; it is re-resolved on every measurement, never cached. <code>px</code> and
+        <code>em</code> lengths and the historical bare number all still work.
+      </p>
+      <lr-stepper
+        orientation-breakpoint="31.25rem"
+        narrow-orientation="vertical"
+        .steps=${wizardSteps}
+        @lr-stepper-orientation-change=${(e: CustomEvent<{ orientation: string }>) =>
+          console.log('lr-stepper-orientation-change', e.detail.orientation)}
+      ></lr-stepper>
+    </div>
+  `,
+};

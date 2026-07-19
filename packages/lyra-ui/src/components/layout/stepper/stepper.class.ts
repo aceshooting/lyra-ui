@@ -1,6 +1,7 @@
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, query } from 'lit/decorators.js';
 import { repeat } from 'lit/directives/repeat.js';
+import { resolveCssLength } from '../../../internal/css-length.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { isRtl } from '../../../internal/rtl.js';
 import { styles } from './stepper.styles.js';
@@ -56,8 +57,9 @@ function checkmarkGlyph() {
  *
  * An opt-in `orientationBreakpoint` (unset by default -- no behavior change) makes the effective
  * layout/navigation axis respond to the stepper's own measured inline size instead of only the
- * authored `orientation`: below that width (px, measured on `[part="base"]` via `ResizeObserver`),
- * `narrowOrientation` becomes effective; at/above it, `orientation` does. This mirrors `<lr-split>`'s
+ * authored `orientation`: below that width (a pixel number or a `px`/`rem`/`em` CSS length,
+ * measured on `[part="base"]` via `ResizeObserver`), `narrowOrientation` becomes effective;
+ * at/above it, `orientation` does. This mirrors `<lr-split>`'s
  * identically-named `orientationBreakpoint`/`narrowOrientation` contract -- the observation boundary
  * is the component's own allocation, not the viewport, so a stepper placed in a narrow split pane or
  * dialog still responds correctly even in a wide window. The effective axis is exposed via the
@@ -92,10 +94,24 @@ export class LyraStepper extends LyraElement<LyraStepperEventMap> {
    *  `effectiveOrientation` for the live axis actually in effect. */
   @property({ reflect: true }) orientation: StepperOrientation = 'horizontal';
 
-  /** Opt-in inline-size breakpoint (px, measured on `[part="base"]`). Below it, `narrowOrientation`
+  /** Opt-in inline-size breakpoint, measured on `[part="base"]`. Below it, `narrowOrientation`
    *  becomes effective instead of `orientation`. Unset (the default): no behavior change, the
-   *  authored `orientation` always applies. */
-  @property({ type: Number, attribute: 'orientation-breakpoint' }) orientationBreakpoint?: number;
+   *  authored `orientation` always applies.
+   *
+   *  Accepts a bare pixel number (`500`, `'500'`), an explicit `px` length (`'500px'`), a `rem`
+   *  length (`'31.25rem'`) or an `em` length (`'3em'`). `rem` resolves against the **document
+   *  root**'s computed font size -- exactly as a `rem` in a CSS `@media` query does, and *not*
+   *  against this element -- so a breakpoint authored in `rem` stays numerically in step with a
+   *  sibling `@media (max-width: …rem)` rule instead of drifting from it when the root font size
+   *  changes (browser zoom, a user font-size preference, an app base-size token). `em` resolves
+   *  against this element's own computed font size. The length is re-resolved on every
+   *  measurement, never cached, so those changes are picked up with no invalidation step.
+   *
+   *  Any other value -- `%`, `vw`, `calc()`, `'auto'`, an unparseable string -- behaves exactly as
+   *  unset (no responsive observation at all), rather than as an armed breakpoint that can never
+   *  be crossed. For a viewport-relative breakpoint, leave this unset and drive `orientation`
+   *  from your own `matchMedia()` controller. */
+  @property({ attribute: 'orientation-breakpoint' }) orientationBreakpoint?: number | string;
 
   /** Layout/navigation axis used below `orientationBreakpoint`. */
   @property({ reflect: true, attribute: 'narrow-orientation' }) narrowOrientation: StepperOrientation = 'vertical';
@@ -116,9 +132,17 @@ export class LyraStepper extends LyraElement<LyraStepperEventMap> {
     return this._effectiveOrientation;
   }
 
+  /** `orientationBreakpoint` in pixels, or `undefined` when unset *or* unparseable -- the single
+   *  gate every responsive code path reads, so a value CSS could not resolve behaves as "no
+   *  breakpoint" rather than as one that can never be crossed. Deliberately re-resolved per call
+   *  (never cached): a `rem` breakpoint has to track the live root font size. */
+  private get resolvedOrientationBreakpoint(): number | undefined {
+    return resolveCssLength(this.orientationBreakpoint, this);
+  }
+
   connectedCallback(): void {
     super.connectedCallback();
-    if (this.orientationBreakpoint != null) this.armResizeObserver();
+    if (this.resolvedOrientationBreakpoint !== undefined) this.armResizeObserver();
   }
 
   disconnectedCallback(): void {
@@ -127,7 +151,7 @@ export class LyraStepper extends LyraElement<LyraStepperEventMap> {
   }
 
   protected firstUpdated(): void {
-    if (this.orientationBreakpoint != null) this.armResizeObserver();
+    if (this.resolvedOrientationBreakpoint !== undefined) this.armResizeObserver();
   }
 
   protected willUpdate(changed: PropertyValues): void {
@@ -138,7 +162,7 @@ export class LyraStepper extends LyraElement<LyraStepperEventMap> {
 
   protected updated(changed: PropertyValues): void {
     if (changed.has('orientationBreakpoint')) {
-      if (this.orientationBreakpoint != null) this.armResizeObserver();
+      if (this.resolvedOrientationBreakpoint !== undefined) this.armResizeObserver();
       else this.resizeObserver?.disconnect();
     }
   }
@@ -148,9 +172,10 @@ export class LyraStepper extends LyraElement<LyraStepperEventMap> {
    *  `updateEffectiveOrientation()`. `emitOnChange` is false for the property-driven re-derivation
    *  in `willUpdate()` and true for the `ResizeObserver` callback's fresh measurement. */
   private updateEffectiveOrientation(width: number, emitOnChange: boolean): void {
+    const breakpoint = this.resolvedOrientationBreakpoint;
     const next: StepperOrientation =
-      this.orientationBreakpoint != null && width < this.orientationBreakpoint ? this.narrowOrientation : this.orientation;
-    if (this.orientationBreakpoint != null) {
+      breakpoint != null && width < breakpoint ? this.narrowOrientation : this.orientation;
+    if (breakpoint != null) {
       this.setAttribute('data-effective-orientation', next);
     } else {
       this.removeAttribute('data-effective-orientation');
