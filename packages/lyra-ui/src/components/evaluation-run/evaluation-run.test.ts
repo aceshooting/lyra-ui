@@ -1,7 +1,8 @@
 import { fixture, expect, html, oneEvent } from '@open-wc/testing';
 import './evaluation-run.js';
 import type { LyraEvaluationRun, EvaluationExampleResult } from './evaluation-run.js';
-import type { LyraSpan } from '../trace-tree/span.js';
+import type { Citation, GroundingAssessment } from '../../ai/types.js';
+import type { ToolTimelineEntry } from '../tool-timeline/tool-timeline.class.js';
 
 const examples: EvaluationExampleResult[] = [
   {
@@ -28,8 +29,8 @@ const examples: EvaluationExampleResult[] = [
   },
 ];
 
-const spans: LyraSpan[] = [
-  { id: 'span-1', name: 'search', kind: 'tool', startMs: 0, endMs: 120, status: 'success' },
+const toolTrace: ToolTimelineEntry[] = [
+  { id: 'call-1', name: 'search', args: { query: 'refund policy' }, status: 'success', result: { hits: 2 } },
 ];
 
 it('defaults to examples=[], total=null, label=""', async () => {
@@ -113,23 +114,16 @@ it('renders no grounding section when the example carries no grounding assessmen
   expect(rows[1]!.querySelector('[part="grounding-section"]')).to.not.exist;
 });
 
-it('renders a grounding stat (coverage + supported/unsupported/confidence rows) and warnings when present', async () => {
-  const withWarnings: EvaluationExampleResult[] = [
-    {
-      ...examples[0]!,
-      grounding: { ...examples[0]!.grounding!, warnings: ['Unverified claim about pricing'] },
-    },
-  ];
-  const el = (await fixture(html`<lr-evaluation-run .examples=${withWarnings}></lr-evaluation-run>`)) as LyraEvaluationRun;
+it('composes lr-grounding-summary with the example assessment and citations when grounding is present', async () => {
+  const citations: Citation[] = [{ id: 'cite-1', sourceId: 'doc-1', label: 'Refund policy doc' }];
+  const withCitations: EvaluationExampleResult[] = [{ ...examples[0]!, citations }];
+  const el = (await fixture(html`<lr-evaluation-run .examples=${withCitations}></lr-evaluation-run>`)) as LyraEvaluationRun;
   const section = el.shadowRoot!.querySelector('[part="grounding-section"]') as HTMLElement;
   expect(section).to.exist;
-  const stat = section.querySelector('[part="grounding-stat"]') as HTMLElement;
-  expect(stat.getAttribute('value')).to.equal('85%');
-  const rows = (stat as unknown as { rows: { label: string; value: string }[] }).rows;
-  expect(rows.map((r) => r.value)).to.deep.equal(['3', '1', '90%']);
-  expect(section.querySelector('[part="grounding-warning"]')!.textContent!.trim()).to.equal(
-    'Unverified claim about pricing',
-  );
+  const summary = section.querySelector('[part="grounding-summary"]') as HTMLElement;
+  expect(summary.tagName.toLowerCase()).to.equal('lr-grounding-summary');
+  expect((summary as unknown as { assessment: GroundingAssessment }).assessment).to.deep.equal(examples[0]!.grounding);
+  expect((summary as unknown as { citations: Citation[] }).citations).to.deep.equal(citations);
 });
 
 it('renders no tool-trace section when the example has no toolTrace', async () => {
@@ -138,12 +132,12 @@ it('renders no tool-trace section when the example has no toolTrace', async () =
   expect(row.querySelector('[part="tool-trace-section"]')).to.not.exist;
 });
 
-it('falls back to lr-trace-tree, composed with the example spans, for the tool-trace section', async () => {
-  const withTrace: EvaluationExampleResult[] = [{ ...examples[0]!, toolTrace: spans }];
+it('composes lr-tool-timeline with the example entries for the tool-trace section', async () => {
+  const withTrace: EvaluationExampleResult[] = [{ ...examples[0]!, toolTrace }];
   const el = (await fixture(html`<lr-evaluation-run .examples=${withTrace}></lr-evaluation-run>`)) as LyraEvaluationRun;
-  const traceTree = el.shadowRoot!.querySelector('[part="tool-trace"]') as HTMLElement;
-  expect(traceTree.tagName.toLowerCase()).to.equal('lr-trace-tree');
-  expect((traceTree as unknown as { spans: LyraSpan[] }).spans).to.deep.equal(spans);
+  const timeline = el.shadowRoot!.querySelector('[part="tool-trace"]') as HTMLElement;
+  expect(timeline.tagName.toLowerCase()).to.equal('lr-tool-timeline');
+  expect((timeline as unknown as { entries: ToolTimelineEntry[] }).entries).to.deep.equal(toolTrace);
 });
 
 it('fires lr-example-toggle (not a raw lr-toggle) when an example is expanded', async () => {
@@ -157,20 +151,43 @@ it('fires lr-example-toggle (not a raw lr-toggle) when an example is expanded', 
   expect((event as CustomEvent).detail).to.deep.equal({ id: 'ex-1', expanded: true });
 });
 
-it('correlates a nested trace-tree span selection with its example id via lr-tool-span-select', async () => {
-  const withTrace: EvaluationExampleResult[] = [{ ...examples[0]!, toolTrace: spans }];
+it('correlates a nested grounding-summary citation selection with its example id via lr-example-citation-select', async () => {
+  const el = (await fixture(html`<lr-evaluation-run .examples=${examples}></lr-evaluation-run>`)) as LyraEvaluationRun;
+  const row = el.shadowRoot!.querySelector('[part="example"]') as HTMLElement & { open: boolean };
+  row.open = true;
+  await el.updateComplete;
+  const summary = el.shadowRoot!.querySelector('[part="grounding-summary"]') as HTMLElement;
+  const citation: Citation = { id: 'cite-1', sourceId: 'doc-1', label: 'Refund policy doc' };
+
+  const firing = oneEvent(el, 'lr-example-citation-select');
+  summary.dispatchEvent(new CustomEvent('lr-citation-select', { detail: { citation }, bubbles: true, composed: true }));
+  const event = await firing;
+  expect((event as CustomEvent).detail).to.deep.equal({ exampleId: 'ex-1', citation });
+});
+
+it('correlates a nested tool-approval decision with its example id via lr-example-tool-approval-decide', async () => {
+  const withTrace: EvaluationExampleResult[] = [{ ...examples[0]!, toolTrace }];
   const el = (await fixture(html`<lr-evaluation-run .examples=${withTrace}></lr-evaluation-run>`)) as LyraEvaluationRun;
   const row = el.shadowRoot!.querySelector('[part="example"]') as HTMLElement & { open: boolean };
   row.open = true;
   await el.updateComplete;
-  const bar = el.shadowRoot!.querySelector('[part="tool-trace"]')!.shadowRoot!.querySelector(
-    '[data-id="span-1"]',
-  ) as HTMLElement;
+  const timeline = el.shadowRoot!.querySelector('[part="tool-trace"]') as HTMLElement;
 
-  const firing = oneEvent(el, 'lr-tool-span-select');
-  bar.click();
+  const firing = oneEvent(el, 'lr-example-tool-approval-decide');
+  timeline.dispatchEvent(
+    new CustomEvent('lr-tool-approval-decide', {
+      detail: { invocationId: 'call-1', approved: true, args: { query: 'refund policy' } },
+      bubbles: true,
+      composed: true,
+    }),
+  );
   const event = await firing;
-  expect((event as CustomEvent).detail).to.deep.equal({ exampleId: 'ex-1', id: 'span-1' });
+  expect((event as CustomEvent).detail).to.deep.equal({
+    exampleId: 'ex-1',
+    invocationId: 'call-1',
+    approved: true,
+    args: { query: 'refund policy' },
+  });
 });
 
 describe('status-change announcements', () => {
@@ -235,7 +252,12 @@ it('is accessible with no examples', async () => {
 
 it('is accessible with populated, expanded examples including grounding and a tool trace', async () => {
   const populated: EvaluationExampleResult[] = [
-    { ...examples[0]!, toolTrace: spans, grounding: { ...examples[0]!.grounding!, warnings: ['Check pricing claim'] } },
+    {
+      ...examples[0]!,
+      toolTrace,
+      citations: [{ id: 'cite-1', sourceId: 'doc-1', label: 'Refund policy doc' }],
+      grounding: { ...examples[0]!.grounding!, warnings: ['Check pricing claim'] },
+    },
     examples[1]!,
     examples[2]!,
   ];
@@ -243,7 +265,7 @@ it('is accessible with populated, expanded examples including grounding and a to
   const rows = [...el.shadowRoot!.querySelectorAll('[part="example"]')] as (HTMLElement & { open: boolean })[];
   for (const row of rows) row.open = true;
   await el.updateComplete;
-  expect(el.shadowRoot!.querySelector('[part="grounding-warning"]')).to.exist;
+  expect(el.shadowRoot!.querySelector('[part="grounding-summary"]')).to.exist;
   expect(el.shadowRoot!.querySelector('[part="tool-trace"]')).to.exist;
   await expect(el).to.be.accessible();
 });

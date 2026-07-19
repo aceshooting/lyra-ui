@@ -70,12 +70,4 @@ export const styles = css`
     font-weight: var(--lr-font-weight-semibold);
     color: var(--lr-color-text-quiet);
   }
-  [part='grounding-warnings'] {
-    display: flex;
-    flex-direction: column;
-    gap: var(--lr-space-2xs);
-    margin: 0;
-    padding: 0;
-    list-style: none;
-  }
 `;
