@@ -309,7 +309,14 @@ describe('loadFlagUrl (uncached, dependency-injectable)', () => {
   });
 
   it('resolves null when the peer package fails to load, e.g. because it is not installed', async () => {
-    const resolve = await loadFlagUrl(() => Promise.reject(new Error('boom')));
+    const originalWarn = console.warn;
+    console.warn = () => {};
+    let resolve: Awaited<ReturnType<typeof loadFlagUrl>> | undefined;
+    try {
+      resolve = await loadFlagUrl(() => Promise.reject(new Error('boom')));
+    } finally {
+      console.warn = originalWarn;
+    }
     expect(resolve).to.equal(null);
   });
 
@@ -347,12 +354,21 @@ describe('a rejected resolver (the willUpdate() .catch() handling)', () => {
     );
     let caught: unknown;
     const onUnhandled = (e: PromiseRejectionEvent) => (caught = e.reason);
+    const originalWarn = console.warn;
+    const warnings: string[] = [];
+    console.warn = (...args: unknown[]) => warnings.push(args.map(String).join(' '));
     window.addEventListener('unhandledrejection', onUnhandled);
-    const el = (await fixture(html`<lr-flag country="fr"></lr-flag>`)) as LyraFlag;
-    // Give the rejection every chance to surface as an unhandled rejection before asserting.
-    await aTimeout(50);
-    window.removeEventListener('unhandledrejection', onUnhandled);
+    let el!: LyraFlag;
+    try {
+      el = (await fixture(html`<lr-flag country="fr"></lr-flag>`)) as LyraFlag;
+      // Give the rejection every chance to surface as an unhandled rejection before asserting.
+      await aTimeout(50);
+    } finally {
+      window.removeEventListener('unhandledrejection', onUnhandled);
+      console.warn = originalWarn;
+    }
     expect(caught, 'no unhandledrejection event should have fired').to.be.undefined;
+    expect(warnings.join('\n')).to.include('failed to resolve a flag URL for "fr"');
     expect(el.loading).to.be.false;
     expect(el.hasAttribute('aria-busy')).to.be.false;
     expect(el.shadowRoot!.querySelector('img')).to.not.exist;
@@ -370,31 +386,40 @@ describe('a rejected resolver (the willUpdate() .catch() handling)', () => {
     );
     let caught: unknown;
     const onUnhandled = (e: PromiseRejectionEvent) => (caught = e.reason);
+    const originalWarn = console.warn;
+    const warnings: string[] = [];
+    console.warn = (...args: unknown[]) => warnings.push(args.map(String).join(' '));
     window.addEventListener('unhandledrejection', onUnhandled);
+    let el!: LyraFlag;
+    try {
+      el = (await fixture(html`<lr-flag country="fr"></lr-flag>`)) as LyraFlag;
+      await el.updateComplete;
+      expect(el.loading, 'still awaiting the fr resolution').to.be.true;
 
-    const el = (await fixture(html`<lr-flag country="fr"></lr-flag>`)) as LyraFlag;
-    await el.updateComplete;
-    expect(el.loading, 'still awaiting the fr resolution').to.be.true;
+      // Supersede the in-flight 'fr' resolution before it ever settles -- bumps resolveToken.
+      el.country = 'de';
+      await el.updateComplete;
+      expect(el.loading, 'now awaiting the de resolution').to.be.true;
+      expect(rejecters.length).to.equal(2);
 
-    // Supersede the in-flight 'fr' resolution before it ever settles -- bumps resolveToken.
-    el.country = 'de';
-    await el.updateComplete;
-    expect(el.loading, 'now awaiting the de resolution').to.be.true;
-    expect(rejecters.length).to.equal(2);
+      // Reject the stale 'fr' call first: the guard must recognize it as superseded and no-op,
+      // leaving the still-in-flight 'de' call's loading state untouched.
+      rejecters[0](new Error('stale fr failure'));
+      await aTimeout(20);
+      expect(el.loading, 'the stale rejection must not touch loading').to.be.true;
 
-    // Reject the stale 'fr' call first: the guard must recognize it as superseded and no-op,
-    // leaving the still-in-flight 'de' call's loading state untouched.
-    rejecters[0](new Error('stale fr failure'));
-    await aTimeout(20);
-    expect(el.loading, 'the stale rejection must not touch loading').to.be.true;
-
-    // Now reject the current 'de' call: its own .catch() branch (token === resolveToken) must
-    // still fire and recover to loading=false.
-    rejecters[1](new Error('de failure'));
-    await aTimeout(20);
-    window.removeEventListener('unhandledrejection', onUnhandled);
+      // Now reject the current 'de' call: its own .catch() branch (token === resolveToken) must
+      // still fire and recover to loading=false.
+      rejecters[1](new Error('de failure'));
+      await aTimeout(20);
+    } finally {
+      window.removeEventListener('unhandledrejection', onUnhandled);
+      console.warn = originalWarn;
+    }
 
     expect(caught, 'no unhandledrejection event should have fired').to.be.undefined;
+    expect(warnings.join('\n')).to.not.include('stale fr failure');
+    expect(warnings.join('\n')).to.include('failed to resolve a flag URL for "de"');
     expect(el.loading).to.be.false;
     expect(el.shadowRoot!.querySelector('img')).to.not.exist;
   });

@@ -219,16 +219,15 @@ export class LyraDashboardGrid extends LyraElement<LyraDashboardGridEventMap> {
       if (ids.has(cellId)) {
         child.setAttribute('slot', `cell-${cellId}`);
       } else {
+        if (child.hasAttribute('data-dashboard-grid-default-cell')) {
+          child.remove();
+          byCellId.delete(cellId);
+          continue;
+        }
         child.removeAttribute('slot');
         console.warn(
           `<lr-dashboard-grid> a child with cell-id="${cellId}" matches no entry in \`layout\`; it will not render.`,
         );
-      }
-    }
-    for (const [cellId, child] of byCellId) {
-      if (!ids.has(cellId) && child.hasAttribute('data-dashboard-grid-default-cell')) {
-        child.remove();
-        byCellId.delete(cellId);
       }
     }
     for (const cell of this.layout) {

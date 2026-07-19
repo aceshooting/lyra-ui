@@ -18,6 +18,18 @@ function keydown(el: LyraWordCloud, key: string): void {
   svgEl(el).dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true, composed: true }));
 }
 
+async function captureWarnings(work: () => Promise<void>): Promise<string[]> {
+  const originalWarn = console.warn;
+  const warnings: string[] = [];
+  console.warn = (...args: unknown[]) => warnings.push(args.map(String).join(' '));
+  try {
+    await work();
+  } finally {
+    console.warn = originalWarn;
+  }
+  return warnings;
+}
+
 it('renders one labeled [part="word"] per word, as a single tab stop on [part="svg"]', async () => {
   const el = (await fixture(html`<lr-word-cloud></lr-word-cloud>`)) as LyraWordCloud;
   el.words = WORDS;
@@ -365,8 +377,12 @@ it('renders a rotate transform on [part="word"] when orientations is "mixed" and
 
 it('renders at most MAX_WORDS words even when given more', async () => {
   const words = Array.from({ length: MAX_WORDS + 10 }, (_, i) => ({ text: `w${i}`, weight: i }));
-  const el = (await fixture(html`<lr-word-cloud .words=${words}></lr-word-cloud>`)) as LyraWordCloud;
-  await el.updateComplete;
+  let el!: LyraWordCloud;
+  const warnings = await captureWarnings(async () => {
+    el = (await fixture(html`<lr-word-cloud .words=${words}></lr-word-cloud>`)) as LyraWordCloud;
+    await el.updateComplete;
+  });
+  expect(warnings.join('\n')).to.include('10 word(s)');
   expect(el.shadowRoot!.querySelectorAll('[part="word"]')).to.have.length(MAX_WORDS);
 });
 
@@ -432,15 +448,19 @@ it('calls refreshTheme() alone to re-measure and re-layout for font-family chang
 });
 
 it('announces the count of words actually rendered, not the raw input count', async () => {
-  const el = (await fixture(
-    html`<lr-word-cloud
-      .words=${[
-        { text: '', weight: 1 },
-        { text: 'ok', weight: 2 },
-      ]}
-    ></lr-word-cloud>`,
-  )) as LyraWordCloud;
-  await el.updateComplete;
+  let el!: LyraWordCloud;
+  const warnings = await captureWarnings(async () => {
+    el = (await fixture(
+      html`<lr-word-cloud
+        .words=${[
+          { text: '', weight: 1 },
+          { text: 'ok', weight: 2 },
+        ]}
+      ></lr-word-cloud>`,
+    )) as LyraWordCloud;
+    await el.updateComplete;
+  });
+  expect(warnings.join('\n')).to.include('1 word(s)');
   expect(el.getAttribute('aria-label')).to.include('1 word');
 });
 

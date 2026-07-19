@@ -101,9 +101,8 @@ describe('default cell composition', () => {
 
   it('routes a user-authored child into its wrapper by cell-id instead of creating a default cell', async () => {
     const el = (await fixture(
-      html`<lr-dashboard-grid><div cell-id="a">Custom</div></lr-dashboard-grid>`,
+      html`<lr-dashboard-grid .layout=${[{ id: 'a', x: 0, y: 0, w: 1, h: 1 }]}><div cell-id="a">Custom</div></lr-dashboard-grid>`,
     )) as LyraDashboardGrid;
-    el.layout = [{ id: 'a', x: 0, y: 0, w: 1, h: 1 }];
     await el.updateComplete;
     const custom = el.querySelector('[cell-id="a"]') as HTMLElement;
     expect(custom.tagName.toLowerCase()).to.equal('div');
@@ -436,13 +435,12 @@ describe('narrow allocation', () => {
     const container = document.createElement('div');
     container.style.inlineSize = '320px';
     const el = (await fixture(
-      html`<lr-dashboard-grid>
+      html`<lr-dashboard-grid .layout=${twoCells()}>
         <div cell-id="a">A</div>
         <div cell-id="b">B</div>
       </lr-dashboard-grid>`,
       { parentNode: container },
     )) as LyraDashboardGrid;
-    el.layout = twoCells();
     await el.updateComplete;
     const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
     expect(getComputedStyle(base).display).to.equal('flex');

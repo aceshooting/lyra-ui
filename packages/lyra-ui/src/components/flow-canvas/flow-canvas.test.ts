@@ -74,9 +74,8 @@ describe('static rendering', () => {
 
   it('routes a user-authored child into its wrapper by node-id instead of creating a default card', async () => {
     const el = (await fixture(
-      html`<lr-flow-canvas><div node-id="a">Custom</div></lr-flow-canvas>`,
+      html`<lr-flow-canvas .nodes=${nodes}><div node-id="a">Custom</div></lr-flow-canvas>`,
     )) as LyraFlowCanvas;
-    el.nodes = nodes;
     await el.updateComplete;
     const custom = el.querySelector('[node-id="a"]') as HTMLElement;
     expect(custom.tagName.toLowerCase()).to.equal('div');
@@ -962,13 +961,12 @@ describe('disconnect/reconnect', () => {
   it('re-observes node wrappers after a reconnect so later size changes still reach the snapshot geometry', async () => {
     const container = (await fixture(html`
       <div>
-        <lr-flow-canvas style="width:400px;height:300px">
+        <lr-flow-canvas .nodes=${[{ id: 'a', position: { x: 0, y: 0 } }]} style="width:400px;height:300px">
           <div node-id="a" style="width:100px;height:50px">Card</div>
         </lr-flow-canvas>
       </div>
     `)) as HTMLElement;
     const el = container.querySelector('lr-flow-canvas') as LyraFlowCanvas;
-    el.nodes = [{ id: 'a', position: { x: 0, y: 0 } }];
     await el.updateComplete;
     await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
 

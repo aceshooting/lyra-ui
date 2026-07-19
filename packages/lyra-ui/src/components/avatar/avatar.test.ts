@@ -3,6 +3,7 @@ import './avatar.js';
 import type { LyraAvatar } from './avatar.js';
 
 const TEST_IMAGE_SRC = 'data:image/gif;base64,R0lGODlhAQABAAAAACw=';
+const TEST_IMAGE_SRC_REPLACEMENT = 'data:image/gif;base64,R0lGODlhAQABAIABAAAAAP///yw=';
 
 describe('lr-avatar', () => {
   it('renders initials by default', async () => {
@@ -32,17 +33,17 @@ describe('lr-avatar', () => {
 
   it('tries a new image after a previous src failed', async () => {
     const el = (await fixture(
-      html`<lr-avatar initials="AB" src=${TEST_IMAGE_SRC} alt="A. Bee"></lr-avatar>`,
+      html`<lr-avatar initials="AB" src="https://example.invalid/previously-failed.png" alt="A. Bee"></lr-avatar>`,
     )) as LyraAvatar;
     (el.shadowRoot!.querySelector('img') as HTMLImageElement).dispatchEvent(new Event('error'));
     await el.updateComplete;
     expect(el.shadowRoot!.querySelector('[part="image"]')).to.not.exist;
 
-    el.src = 'data:image/gif;base64,R0lGODlhAQABAAAAACw=';
+    el.src = TEST_IMAGE_SRC_REPLACEMENT;
     await el.updateComplete;
     const replacement = el.shadowRoot!.querySelector('[part="image"]') as HTMLImageElement;
     expect(replacement).to.exist;
-    expect(replacement.getAttribute('src')).to.equal('data:image/gif;base64,R0lGODlhAQABAAAAACw=');
+    expect(replacement.getAttribute('src')).to.equal(TEST_IMAGE_SRC_REPLACEMENT);
   });
 
   it('defaults size to md, shape to circle, tone to neutral', async () => {
