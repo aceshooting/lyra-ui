@@ -34,6 +34,31 @@ export const Empty: Story = {
   render: () => html`<lr-sequence-strip></lr-sequence-strip>`,
 };
 
+/** A per-turn conversation timeline with a persistent key of the category colors, so the mapping
+ *  stays readable without hovering each cell. The legend is static: it lists every entry of
+ *  `categories` (whether or not any item uses it) and toggles nothing. */
+export const WithLegend: Story = {
+  render: () => html`<lr-sequence-strip show-legend .items=${items} .categories=${categories}></lr-sequence-strip>`,
+};
+
+/** The same legend in a 320px allocation with long, translation-length labels — it wraps onto
+ *  further rows instead of overflowing the strip's own width. */
+export const LegendNarrowAllocation: Story = {
+  render: () => html`
+    <div style="inline-size: 320px">
+      <lr-sequence-strip
+        show-legend
+        .items=${items}
+        .categories=${[
+          ...categories,
+          { key: 'sub', color: storyColor('chart4'), label: 'Dispatched to a subagent' },
+          { key: 'err', color: storyColor('danger'), label: 'Errored tool invocation' },
+        ] as SequenceStripCategory[]}
+      ></lr-sequence-strip>
+    </div>
+  `,
+};
+
 export const CustomAccessibleLabel: Story = {
   render: () =>
     html`<lr-sequence-strip

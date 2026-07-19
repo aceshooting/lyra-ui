@@ -37,6 +37,11 @@ export interface SequenceStripCategory {
  * @csspart cell - Each item's cell, background-colored by its category.
  * @csspart marker - The small bottom marker on a cell whose item sets `marker: true`.
  * @csspart tooltip - The hover tooltip showing the hovered item's label.
+ * @csspart legend - The static category key rendered below the strip when `showLegend` is set
+ * (`aria-hidden` — it repeats the strip's own `aria-label` visually).
+ * @csspart legend-item - One swatch + label pair in the legend, one per `categories` entry.
+ * @csspart legend-swatch - The color chip of a legend item, matching that category's cell color.
+ * @csspart legend-label - The text of a legend item (the category's `label`, or its `key`).
  */
 export class LyraSequenceStrip extends LyraElement {
   static styles = [LyraElement.styles, styles];
@@ -49,6 +54,12 @@ export class LyraSequenceStrip extends LyraElement {
   /** Overrides the auto-generated `aria-label` (a per-category "label: count" summary). Unset
    *  computes the summary from `items`/`categories`. */
   @property({ attribute: 'accessible-label' }) accessibleLabel?: string;
+  /** Renders a static `[part="legend"]` key of every `categories` entry below the strip, so the
+   *  color-to-category mapping is readable without hovering each cell. Deliberately
+   *  non-interactive: unlike `<lr-graph-legend>` this toggles nothing and emits nothing — the
+   *  strip is a presentational aggregate, and the key describes the scheme, not the current data
+   *  (a category with no matching item still gets a row). */
+  @property({ type: Boolean, reflect: true, attribute: 'show-legend' }) showLegend = false;
 
   /** The item index currently under the pointer (`null` when not hovering any cell) — drives
    *  `[part="tooltip"]`, mirroring `<lr-heatmap>`'s own `hoverCell` pattern. No keyboard/focus
@@ -84,6 +95,26 @@ export class LyraSequenceStrip extends LyraElement {
     this.hoverIndex = null;
   }
 
+  /** The legend repeats, in visible form, exactly the category names the strip already announces
+   *  through `[part="base"]`'s `role="img"` + `aria-label` summary. Exposing it to assistive
+   *  technology as well would read the same scheme out twice, so the whole subtree is
+   *  `aria-hidden` — it is a decorative duplicate, and it renders outside the `role="img"` element
+   *  so hiding it removes nothing from the announced summary. */
+  private renderLegend(): TemplateResult {
+    return html`
+      <div part="legend" aria-hidden="true">
+        ${this.categories.map(
+          (category) => html`
+            <span part="legend-item">
+              <span part="legend-swatch" style="background-color:${category.color}"></span>
+              <span part="legend-label">${category.label ?? category.key}</span>
+            </span>
+          `,
+        )}
+      </div>
+    `;
+  }
+
   render(): TemplateResult {
     const ariaLabel = this.accessibleLabel || this.autoSummary();
     const hovered = this.hoverIndex !== null ? this.items[this.hoverIndex] : undefined;
@@ -103,6 +134,7 @@ export class LyraSequenceStrip extends LyraElement {
         )}
         <div part="tooltip" ?hidden=${!hovered}>${hovered ? this.itemLabel(hovered) : ''}</div>
       </div>
+      ${this.showLegend ? this.renderLegend() : nothing}
     `;
   }
 }

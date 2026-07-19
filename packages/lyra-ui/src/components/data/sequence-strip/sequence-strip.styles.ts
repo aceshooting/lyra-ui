@@ -59,4 +59,33 @@ export const styles = css`
   [part='tooltip'][hidden] {
     display: none;
   }
+  /* The legend keys the whole category scheme, so its row count grows with the consumer's
+     categories and its labels grow with translation -- it wraps rather than overflowing, and each
+     item keeps min-inline-size: 0 so a long label shrinks inside its own row instead of forcing
+     the strip's allocation wider. */
+  [part='legend'] {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--lr-space-2xs) var(--lr-space-s);
+    margin-block-start: var(--lr-space-xs);
+    font-size: var(--lr-font-size-xs);
+    color: var(--lr-color-text-quiet);
+  }
+  [part='legend-item'] {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--lr-space-2xs);
+    min-inline-size: 0;
+  }
+  [part='legend-swatch'] {
+    flex: none;
+    inline-size: var(--lr-sequence-strip-legend-swatch-size, var(--lr-size-0-625rem));
+    block-size: var(--lr-sequence-strip-legend-swatch-size, var(--lr-size-0-625rem));
+    border-radius: var(--lr-radius-xs);
+  }
+  [part='legend-label'] {
+    min-inline-size: 0;
+    overflow-wrap: anywhere;
+  }
 `;
