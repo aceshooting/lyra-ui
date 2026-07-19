@@ -230,7 +230,6 @@ export const ROOT_BARREL_TAGS = [
   'lr-grounding-summary',
   'lr-ingestion-queue',
   'lr-knowledge-base',
-  'lr-knowledge-graph-explorer',
   'lr-memory-panel',
   'lr-policy-summary',
   'lr-query-builder',
@@ -255,4 +254,5 @@ export const ROOT_BARREL_OPTIONAL_PEER_TAGS = [
   'lr-map',
   'lr-graph',
   'lr-geojson-view',
+  'lr-knowledge-graph-explorer',
 ] as const;
