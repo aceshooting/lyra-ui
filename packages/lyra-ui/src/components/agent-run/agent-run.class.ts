@@ -49,8 +49,8 @@ const TERMINAL_KINDS: ReadonlySet<string> = new Set(['done', 'error', 'cancelled
 
 /** Badge label per status. `running`/`error` reuse this library's existing generic `statusRunning`/
  *  `statusError` keys (identical wording already used by `<lr-task-list>`'s own per-item status
- *  text) rather than duplicating them. The other five kinds have no existing generic-enough
- *  counterpart -- `<lr-task-list>`'s own vocabulary (`pending`/`running`/`success`/`error`) is
+ *  text) rather than duplicating them. The other seven built-in kinds use agent-run-specific keys.
+ *  `<lr-task-list>`'s own vocabulary (`pending`/`running`/`success`/`error`) is
  *  deliberately narrower than `AgentStatusKind` (see `AgentStatus`'s own doc comment in
  *  `src/ai/types.ts`) and collapsing e.g. `waiting-input`/`waiting-approval` down to it would
  *  discard exactly the distinction a host most needs to act on. */
@@ -145,10 +145,10 @@ export interface LyraAgentRunEventMap {
  * - **Elapsed time**: composes `<lr-generation-status>` (`active`/`started-at`, its own built-in
  *   Stop button hidden via `show-stop="false"` since this component renders its own Cancel/Retry
  *   pair instead) for the *live, ticking* readout while the run is genuinely in progress
- *   (`running`/`waiting-input`/`waiting-approval`). `<lr-stream-status>` was considered too (per
- *   this family's own composition brief) but doesn't fit: its `phase` vocabulary
+ *   (`running`/`collecting`/`waiting-input`/`waiting-approval`). `<lr-stream-status>` doesn't fit:
+ *   its `phase` vocabulary
  *   (`idle`/`connecting`/`streaming`/`stalled`) models transport/connection health, not an agent
- *   run's seven-state lifecycle, and it exposes no elapsed-time readout at all — exactly the
+ *   run's nine built-in lifecycle statuses (plus application-defined extensions), and it exposes no elapsed-time readout at all — exactly the
  *   distinction `<lr-generation-status>`'s own class doc already draws between the two. Once the
  *   run reaches a terminal state (`done`/`error`/`cancelled`) with both a `startedAt` and an
  *   `endedAt`, this component instead renders a small locally-formatted static duration
@@ -265,7 +265,7 @@ export class LyraAgentRun extends LyraElement<LyraAgentRunEventMap> {
   @property({ attribute: false }) metrics: AgentRunMetric[] = [];
 
   /** Whether the built-in Cancel button can render at all -- still gated by the run's own status
-   *  being cancelable (`running`/`waiting-input`/`waiting-approval`). Set `false` for a read-only
+   *  being cancelable (`running`/`collecting`/`waiting-input`/`waiting-approval`). Set `false` for a read-only
    *  viewer. */
   @property({ type: Boolean, attribute: 'show-cancel', converter: trueDefaultBooleanConverter }) showCancel = true;
 

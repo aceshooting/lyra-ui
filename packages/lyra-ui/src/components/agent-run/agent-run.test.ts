@@ -50,9 +50,11 @@ it('renders a lifecycle-status badge with the built-in generic labels for runnin
   expect(failed.shadowRoot!.querySelector('[part="status-badge"]')!.textContent!.trim()).to.equal('Error');
 });
 
-it('renders English fallback labels for the five agent-run-specific statuses', async () => {
+it('renders English fallback labels for the seven agent-run-specific statuses', async () => {
   const cases: [AgentStatusKind, string][] = [
     ['idle', 'Idle'],
+    ['queued', 'Queued'],
+    ['collecting', 'Collecting context'],
     ['waiting-input', 'Waiting for input'],
     ['waiting-approval', 'Waiting for approval'],
     ['done', 'Done'],
@@ -94,8 +96,8 @@ describe('elapsed time', () => {
     expect(el.shadowRoot!.querySelector('[part="elapsed-static"]')).to.not.exist;
   });
 
-  it('also ticks while waiting-input/waiting-approval, not just running', async () => {
-    for (const kind of ['waiting-input', 'waiting-approval'] as const) {
+  it('also ticks while collecting/waiting-input/waiting-approval, not just running', async () => {
+    for (const kind of ['collecting', 'waiting-input', 'waiting-approval'] as const) {
       const el = (await fixture(
         html`<lr-agent-run .run=${makeRun({ status: { kind } })}></lr-agent-run>`,
       )) as LyraAgentRun;
@@ -183,10 +185,10 @@ describe('model + cost summary', () => {
 });
 
 describe('cancel/retry controls', () => {
-  const cancelableKinds: AgentStatusKind[] = ['running', 'waiting-input', 'waiting-approval'];
-  const nonCancelableKinds: AgentStatusKind[] = ['idle', 'done', 'error', 'cancelled'];
+  const cancelableKinds: AgentStatusKind[] = ['running', 'collecting', 'waiting-input', 'waiting-approval'];
+  const nonCancelableKinds: AgentStatusKind[] = ['idle', 'queued', 'done', 'error', 'cancelled'];
   const retryableKinds: AgentStatusKind[] = ['error', 'cancelled'];
-  const nonRetryableKinds: AgentStatusKind[] = ['idle', 'running', 'waiting-input', 'waiting-approval', 'done'];
+  const nonRetryableKinds: AgentStatusKind[] = ['idle', 'queued', 'running', 'collecting', 'waiting-input', 'waiting-approval', 'done'];
 
   for (const kind of cancelableKinds) {
     it(`shows Cancel while status is "${kind}"`, async () => {
@@ -483,21 +485,36 @@ it('is accessible with a terminal error state (retry button, static elapsed)', a
   await expect(el).to.be.accessible();
 });
 
-it('supports queued and collecting lifecycle states with custom labels and metrics', async () => {
-  const el = (await fixture(html`
-    <lr-agent-run
-      .run=${makeRun({ status: { kind: 'queued' } })}
-      .statusLabels=${{ queued: 'Waiting in queue' }}
-      .statusVariants=${{ queued: 'warning' }}
-      .metrics=${[
-        { id: 'input', label: 'Input tokens', value: 123 },
-        { id: 'output', label: 'Output tokens', value: 45 },
-      ]}
-    ></lr-agent-run>
-  `)) as LyraAgentRun;
-  expect(el.shadowRoot!.querySelector('[part="status-badge"]')!.textContent!.trim()).to.equal('Waiting in queue');
-  expect(el.shadowRoot!.querySelectorAll('[part="metric"]')).to.have.length(2);
-  expect(el.shadowRoot!.querySelector('[part="status-badge"]')!.getAttribute('variant')).to.equal('warning');
+it('renders and distinguishes queued and collecting lifecycle states', async () => {
+  const root = await fixture(html`
+    <div>
+      <lr-agent-run
+        id="queued"
+        .run=${makeRun({ status: { kind: 'queued' } })}
+        .statusLabels=${{ queued: 'Waiting in queue' }}
+        .statusVariants=${{ queued: 'warning' }}
+      ></lr-agent-run>
+      <lr-agent-run
+        id="collecting"
+        .run=${makeRun({ status: { kind: 'collecting' } })}
+        .metrics=${[
+          { id: 'input', label: 'Input tokens', value: 123 },
+          { id: 'output', label: 'Output tokens', value: 45 },
+        ]}
+      ></lr-agent-run>
+    </div>
+  `);
+  const queued = root.querySelector('#queued') as LyraAgentRun;
+  expect(queued.shadowRoot!.querySelector('[part="status-badge"]')!.textContent!.trim()).to.equal('Waiting in queue');
+  expect(queued.shadowRoot!.querySelector('[part="status-badge"]')!.getAttribute('variant')).to.equal('warning');
+  expect(queued.shadowRoot!.querySelector('lr-generation-status')).to.not.exist;
+  expect(queued.shadowRoot!.querySelector('[part="cancel-button"]')).to.not.exist;
+
+  const collecting = root.querySelector('#collecting') as LyraAgentRun;
+  expect(collecting.shadowRoot!.querySelector('[part="status-badge"]')!.textContent!.trim()).to.equal('Collecting context');
+  expect(collecting.shadowRoot!.querySelector('lr-generation-status')).to.exist;
+  expect(collecting.shadowRoot!.querySelector('[part="cancel-button"]')).to.exist;
+  expect(collecting.shadowRoot!.querySelectorAll('[part="metric"]')).to.have.length(2);
 });
 
 it('lets header and summary slots replace the built-in chrome', async () => {

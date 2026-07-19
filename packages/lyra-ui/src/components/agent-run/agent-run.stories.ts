@@ -54,16 +54,20 @@ export const WaitingForApproval: Story = {
 
 export const QueuedAndCollecting: Story = {
   render: () => html`
-    <lr-agent-run
-      style="max-width: 40rem;"
-      .run=${{ ...runningRun, status: { kind: 'queued' } }}
-      .statusLabels=${{ queued: 'Waiting for a worker' }}
-      .statusVariants=${{ queued: 'warning' }}
-      .metrics=${[
-        { id: 'input', label: 'Input tokens', value: 1240 },
-        { id: 'output', label: 'Output tokens', value: 0 },
-      ]}
-    ></lr-agent-run>
+    <div style="display:grid;gap:1rem;max-width:40rem;">
+      <lr-agent-run
+        .run=${{ ...runningRun, status: { kind: 'queued' } }}
+        .statusLabels=${{ queued: 'Waiting for a worker' }}
+        .statusVariants=${{ queued: 'warning' }}
+      ></lr-agent-run>
+      <lr-agent-run
+        .run=${{ ...runningRun, status: { kind: 'collecting' } }}
+        .metrics=${[
+          { id: 'input', label: 'Input tokens', value: 1240 },
+          { id: 'output', label: 'Output tokens', value: 0 },
+        ]}
+      ></lr-agent-run>
+    </div>
   `,
 };
 

@@ -11779,9 +11779,15 @@ metrics, and Cancel/Retry actions. Built-in and application-defined lifecycle st
 replace the corresponding built-in chrome, while `tasks`, `tools`, `reasoning`, `output`, and
 `actions` support host-controlled composition.
 
+The nine built-in status kinds are `idle`, `queued`, `collecting`, `running`, `waiting-input`,
+`waiting-approval`, `done`, `error`, and `cancelled`; arbitrary application-defined string kinds are
+also accepted. Live elapsed time and Cancel are available for `running`, `collecting`,
+`waiting-input`, and `waiting-approval`. `queued` is pending rather than actively ticking or
+cancelable. Retry is available for `error` and `cancelled`.
+
 **Properties:** `run`, `formatCost`, `statusLabels`, `statusVariants`, `metrics`, `showCancel`, `showRetry`.
 `metrics` accepts `{ id, label, value, variant? }` records such as token counts. **Events:** `lr-cancel` (`detail:
-{ run }`), `lr-retry` (`detail: { run, attempt }`). **Slots:** `tasks`, `tools`, `reasoning`,
+{ reason }`, `reason` is undefined from the built-in button), `lr-retry` (`detail: { attempt }`). **Slots:** `tasks`, `tools`, `reasoning`,
 `output`, `actions`, `header`, `summary`. **CSS parts:** `base`, `header`, `status`, `status-badge`, `status-message`,
 `elapsed`, `elapsed-static`, `summary`, `model`, `usage`, `current-step`, `current-step-icon`,
 `current-step-label`, `body`, `tasks`, `tools`, `reasoning`, `output`, `actions`, `cancel-button`,
