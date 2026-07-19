@@ -23,7 +23,7 @@ describe('lr-avatar', () => {
   });
 
   it('falls back to initials when the image fails to load', async () => {
-    const el = (await fixture(html`<lr-avatar initials="AB" src="https://example.invalid/nonexistent.png" alt="A. Bee"></lr-avatar>`)) as LyraAvatar;
+    const el = (await fixture(html`<lr-avatar initials="AB" src=${TEST_IMAGE_SRC} alt="A. Bee"></lr-avatar>`)) as LyraAvatar;
     const img = el.shadowRoot!.querySelector('img') as HTMLImageElement;
     img.dispatchEvent(new Event('error'));
     await el.updateComplete;
@@ -33,7 +33,7 @@ describe('lr-avatar', () => {
 
   it('tries a new image after a previous src failed', async () => {
     const el = (await fixture(
-      html`<lr-avatar initials="AB" src="https://example.invalid/previously-failed.png" alt="A. Bee"></lr-avatar>`,
+      html`<lr-avatar initials="AB" src=${TEST_IMAGE_SRC} alt="A. Bee"></lr-avatar>`,
     )) as LyraAvatar;
     (el.shadowRoot!.querySelector('img') as HTMLImageElement).dispatchEvent(new Event('error'));
     await el.updateComplete;
