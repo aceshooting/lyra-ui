@@ -153,6 +153,37 @@ describe('static rendering', () => {
     const bg = el.shadowRoot!.querySelector('[part="background"]') as HTMLElement;
     expect(bg.style.getPropertyValue('--lr-flow-canvas-grid-size')).to.equal('16px');
   });
+
+  it('sets the default card textContent from node.data.description when present', async () => {
+    const el = (await fixture(html`<lr-flow-canvas></lr-flow-canvas>`)) as LyraFlowCanvas;
+    el.nodes = [{ id: 'a', data: { label: 'Fetch', description: 'Grabs the payload' } }];
+    await el.updateComplete;
+    const card = el.querySelector('[node-id="a"]') as HTMLElement;
+    expect(card.textContent).to.equal('Grabs the payload');
+  });
+
+  it('removes a default card once its node id disappears from nodes', async () => {
+    const el = (await fixture(html`<lr-flow-canvas></lr-flow-canvas>`)) as LyraFlowCanvas;
+    el.nodes = [{ id: 'a' }, { id: 'b' }];
+    await el.updateComplete;
+    expect(el.querySelector('[node-id="b"]')).to.exist;
+    el.nodes = [{ id: 'a' }];
+    await el.updateComplete;
+    expect(el.querySelector('[node-id="b"]')).to.not.exist;
+  });
+
+  it('skips pushing props for a node whose card was removed independently of nodes', async () => {
+    const el = (await fixture(html`<lr-flow-canvas></lr-flow-canvas>`)) as LyraFlowCanvas;
+    el.nodes = [{ id: 'a' }, { id: 'b' }];
+    await el.updateComplete;
+    // Removed directly (not via `nodes`), so `pushCardPropsAll()` finds no adopted card for 'b'
+    // on its next pass -- must skip that node rather than throwing on the missing element.
+    el.querySelector('[node-id="b"]')!.remove();
+    el.decorations = { a: { status: 'running' } };
+    await el.updateComplete;
+    const cardA = el.querySelector('[node-id="a"]') as unknown as { status: string };
+    expect(cardA.status).to.equal('running');
+  });
 });
 
 describe('auto-layout', () => {
@@ -205,6 +236,19 @@ describe('auto-layout', () => {
     const [, vy] = parse(vB.style.transform);
     expect(hx).to.be.greaterThan(0);
     expect(vy).to.be.greaterThan(0);
+  });
+
+  it('keeps an explicitly-positioned node fixed during vertical auto-layout of an unpositioned sibling', async () => {
+    // orientation="vertical" takes the un-swapped axis path when recording a fixed position for
+    // the layout util (unlike the horizontal case exercised by the "assigns a position" test
+    // above, which swaps x/y) -- covers that branch explicitly.
+    const el = (await fixture(html`<lr-flow-canvas orientation="vertical"></lr-flow-canvas>`)) as LyraFlowCanvas;
+    el.nodes = [{ id: 'a', position: { x: 40, y: 40 } }, { id: 'b' }];
+    el.edges = [{ id: 'a-b', source: 'a', target: 'b' }];
+    await el.updateComplete;
+    await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+    const wrapperA = el.shadowRoot!.querySelector('[data-node-id="a"]') as HTMLElement;
+    expect(wrapperA.style.transform).to.equal('translate(40px, 40px)');
   });
 
   it('keeps stable node wrapper DOM identity across a nodes reorder (repeat() keying)', async () => {
@@ -328,6 +372,31 @@ describe('pan & zoom', () => {
     const xBefore = el.viewport.x;
     fire('ArrowRight');
     expect(el.viewport.x).to.equal(xBefore - 32);
+  });
+
+  it('keyboard "-" zooms out the focused viewport', async () => {
+    const el = (await fixture(html`<lr-flow-canvas style="width:400px;height:300px"></lr-flow-canvas>`)) as LyraFlowCanvas;
+    el.nodes = nodes;
+    await el.updateComplete;
+    const viewportEl = el.shadowRoot!.querySelector('[part="viewport"]') as HTMLElement;
+    const zoomBefore = el.viewport.zoom;
+    viewportEl.dispatchEvent(new KeyboardEvent('keydown', { key: '-', bubbles: true, cancelable: true }));
+    expect(el.viewport.zoom).to.be.lessThan(zoomBefore);
+  });
+
+  it('keyboard ArrowLeft/ArrowDown/ArrowUp pan the focused viewport in the remaining three directions', async () => {
+    const el = (await fixture(html`<lr-flow-canvas style="width:400px;height:300px"></lr-flow-canvas>`)) as LyraFlowCanvas;
+    el.nodes = nodes;
+    await el.updateComplete;
+    const viewportEl = el.shadowRoot!.querySelector('[part="viewport"]') as HTMLElement;
+    const fire = (key: string) => viewportEl.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true }));
+    const { x: x0, y: y0 } = el.viewport;
+    fire('ArrowLeft');
+    expect(el.viewport.x).to.equal(x0 + 32);
+    fire('ArrowDown');
+    expect(el.viewport.y).to.equal(y0 - 32);
+    fire('ArrowUp');
+    expect(el.viewport.y).to.equal(y0);
   });
 
   it('locked disables wheel zoom, background pan, and the keyboard shortcuts', async () => {
@@ -625,6 +694,25 @@ describe('node drag', () => {
     expect(detail).to.deep.equal({ id: 'a', position: { x: 48, y: 40 }, previous: { x: 40, y: 40 } });
   });
 
+  it('Ctrl/Cmd+Arrow nudges the focused node in the remaining three directions', async () => {
+    const el = (await fixture(html`<lr-flow-canvas nodes-draggable></lr-flow-canvas>`)) as LyraFlowCanvas;
+    el.nodes = [{ id: 'a', position: { x: 40, y: 40 } }];
+    await el.updateComplete;
+    const wrapper = el.shadowRoot!.querySelector('[part="node"]') as HTMLElement;
+    let detail: { id: string; position: { x: number; y: number }; previous: { x: number; y: number } } | undefined;
+    el.addEventListener('lr-node-move', (e) => (detail = (e as CustomEvent).detail));
+    const fire = (key: string) =>
+      wrapper.dispatchEvent(new KeyboardEvent('keydown', { key, ctrlKey: true, bubbles: true, cancelable: true }));
+    // Each nudge is computed fresh from the unchanged `node.position` data (the component never
+    // mutates `nodes` itself), so every direction below is relative to the same { x: 40, y: 40 }.
+    fire('ArrowLeft');
+    expect(detail).to.deep.equal({ id: 'a', position: { x: 32, y: 40 }, previous: { x: 40, y: 40 } });
+    fire('ArrowDown');
+    expect(detail).to.deep.equal({ id: 'a', position: { x: 40, y: 48 }, previous: { x: 40, y: 40 } });
+    fire('ArrowUp');
+    expect(detail).to.deep.equal({ id: 'a', position: { x: 40, y: 32 }, previous: { x: 40, y: 40 } });
+  });
+
   it('rewrites an incident edge path live during a node drag without a Lit re-render', async () => {
     const el = (await fixture(html`<lr-flow-canvas nodes-draggable></lr-flow-canvas>`)) as LyraFlowCanvas;
     el.nodes = [
@@ -640,6 +728,24 @@ describe('node drag', () => {
     wrapper.dispatchEvent(new PointerEvent('pointerdown', { pointerId: 1, clientX: 0, clientY: 0, bubbles: true }));
     window.dispatchEvent(new PointerEvent('pointermove', { pointerId: 1, clientX: 50, clientY: 0 }));
     expect(pathEl.getAttribute('d')).to.not.equal(before);
+    window.dispatchEvent(new PointerEvent('pointerup', { pointerId: 1, clientX: 50, clientY: 0 }));
+  });
+
+  it('also rewrites the edge-label position live during a node drag when the edge has a label', async () => {
+    const el = (await fixture(html`<lr-flow-canvas nodes-draggable></lr-flow-canvas>`)) as LyraFlowCanvas;
+    el.nodes = [
+      { id: 'a', position: { x: 0, y: 0 } },
+      { id: 'b', position: { x: 200, y: 0 } },
+    ];
+    el.edges = [{ id: 'a-b', source: 'a', target: 'b', label: 'then' }];
+    await el.updateComplete;
+    const labelEl = el.shadowRoot!.querySelector('[part="edge-label"]') as SVGTextElement;
+    const beforeX = labelEl.getAttribute('x');
+    const wrapper = el.shadowRoot!.querySelector('[data-node-id="a"]') as HTMLElement;
+    wrapper.setPointerCapture = () => {};
+    wrapper.dispatchEvent(new PointerEvent('pointerdown', { pointerId: 1, clientX: 0, clientY: 0, bubbles: true }));
+    window.dispatchEvent(new PointerEvent('pointermove', { pointerId: 1, clientX: 50, clientY: 0 }));
+    expect(labelEl.getAttribute('x')).to.not.equal(beforeX);
     window.dispatchEvent(new PointerEvent('pointerup', { pointerId: 1, clientX: 50, clientY: 0 }));
   });
 });
@@ -725,6 +831,121 @@ describe('connect gesture', () => {
     // is corrected here to match the (deliberately handle-computing) implementation instead of
     // weakening the event's detail shape to satisfy the narrower literal text.
     expect(detail).to.deep.equal({ source: 'a', target: 'b', sourceHandle: 'out', targetHandle: 'in' });
+  });
+
+  it('keyboard: arrow keys cycle the connect target forward and backward while connect mode is active', async () => {
+    const el = (await fixture(html`<lr-flow-canvas connectable></lr-flow-canvas>`)) as LyraFlowCanvas;
+    el.nodes = [
+      { id: 'a', position: { x: 0, y: 0 } },
+      { id: 'b', position: { x: 200, y: 0 } },
+      { id: 'c', position: { x: 400, y: 0 } },
+    ];
+    await el.updateComplete;
+    const wrapperA = el.shadowRoot!.querySelector('[data-node-id="a"]') as HTMLElement;
+    const wrapperB = el.shadowRoot!.querySelector('[data-node-id="b"]') as HTMLElement;
+    const wrapperC = el.shadowRoot!.querySelector('[data-node-id="c"]') as HTMLElement;
+
+    wrapperA.dispatchEvent(new KeyboardEvent('keydown', { key: 'c', bubbles: true, cancelable: true }));
+    await el.updateComplete;
+    expect(wrapperB.hasAttribute('data-connect-target')).to.be.true;
+
+    wrapperA.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true, cancelable: true }));
+    await el.updateComplete;
+    expect(wrapperC.hasAttribute('data-connect-target')).to.be.true;
+    expect(wrapperB.hasAttribute('data-connect-target')).to.be.false;
+
+    wrapperA.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true, cancelable: true }));
+    await el.updateComplete;
+    expect(wrapperB.hasAttribute('data-connect-target')).to.be.true;
+
+    // An unrelated key while connect mode is active falls through every case and is swallowed
+    // rather than leaking to node activation/roving-nav handling below.
+    wrapperA.dispatchEvent(new KeyboardEvent('keydown', { key: 'x', bubbles: true, cancelable: true }));
+    await el.updateComplete;
+    expect(wrapperB.hasAttribute('data-connect-target')).to.be.true;
+
+    let detail: { source: string; target: string; sourceHandle: string; targetHandle: string } | undefined;
+    el.addEventListener('lr-connect', (e) => (detail = (e as CustomEvent).detail));
+    wrapperA.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
+    expect(detail).to.deep.equal({ source: 'a', target: 'b', sourceHandle: 'out', targetHandle: 'in' });
+  });
+
+  it('does not enter connect mode via keyboard when there are no eligible targets', async () => {
+    const el = (await fixture(html`<lr-flow-canvas connectable></lr-flow-canvas>`)) as LyraFlowCanvas;
+    el.nodes = [{ id: 'a', position: { x: 0, y: 0 } }];
+    await el.updateComplete;
+    const wrapperA = el.shadowRoot!.querySelector('[data-node-id="a"]') as HTMLElement;
+    wrapperA.dispatchEvent(new KeyboardEvent('keydown', { key: 'c', bubbles: true, cancelable: true }));
+    await el.updateComplete;
+    expect(wrapperA.hasAttribute('data-connect-target')).to.be.false;
+    let fired = false;
+    el.addEventListener('lr-connect', () => (fired = true));
+    wrapperA.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
+    expect(fired).to.be.false;
+  });
+
+  it('does not emit lr-connect on commit when the cycled target disappears from nodes first', async () => {
+    const el = (await fixture(html`<lr-flow-canvas connectable></lr-flow-canvas>`)) as LyraFlowCanvas;
+    el.nodes = [
+      { id: 'a', position: { x: 0, y: 0 } },
+      { id: 'b', position: { x: 200, y: 0 } },
+    ];
+    await el.updateComplete;
+    const wrapperA = el.shadowRoot!.querySelector('[data-node-id="a"]') as HTMLElement;
+    wrapperA.dispatchEvent(new KeyboardEvent('keydown', { key: 'c', bubbles: true, cancelable: true }));
+    await el.updateComplete;
+    // 'b' was the only eligible target when connect mode started; removing it from `nodes` (a
+    // controlled component never resets keyboard-connect state on its own here) leaves the commit
+    // with no resolvable target at all.
+    el.nodes = [{ id: 'a', position: { x: 0, y: 0 } }];
+    await el.updateComplete;
+    let fired = false;
+    el.addEventListener('lr-connect', () => (fired = true));
+    wrapperA.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
+    expect(fired).to.be.false;
+  });
+
+  it('falls back to out/in handle ids when the source/target node has an empty handle array', async () => {
+    const el = (await fixture(html`<lr-flow-canvas connectable></lr-flow-canvas>`)) as LyraFlowCanvas;
+    el.nodes = [
+      { id: 'a', position: { x: 0, y: 0 }, outputs: [] },
+      { id: 'b', position: { x: 200, y: 0 }, inputs: [] },
+    ];
+    await el.updateComplete;
+    const wrapperA = el.shadowRoot!.querySelector('[data-node-id="a"]') as HTMLElement;
+    let detail: { source: string; target: string; sourceHandle: string; targetHandle: string } | undefined;
+    el.addEventListener('lr-connect', (e) => (detail = (e as CustomEvent).detail));
+    wrapperA.dispatchEvent(new KeyboardEvent('keydown', { key: 'c', bubbles: true, cancelable: true }));
+    wrapperA.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
+    expect(detail).to.deep.equal({ source: 'a', target: 'b', sourceHandle: 'out', targetHandle: 'in' });
+  });
+
+  it('marks an already-connected hovered node invalid, and clears the marker when hovering a different node', async () => {
+    const el = (await fixture(html`<lr-flow-canvas connectable></lr-flow-canvas>`)) as LyraFlowCanvas;
+    el.nodes = [
+      { id: 'a', position: { x: 0, y: 0 } },
+      { id: 'b', position: { x: 200, y: 0 } },
+      { id: 'c', position: { x: 400, y: 0 } },
+    ];
+    // a->b already exists, so hovering b during a new gesture from a must be marked invalid --
+    // not because b is the source (it isn't), but because the edge would be a duplicate.
+    el.edges = [{ id: 'a-b', source: 'a', target: 'b' }];
+    await el.updateComplete;
+    const wrapperA = el.shadowRoot!.querySelector('[data-node-id="a"]') as HTMLElement;
+    const wrapperB = el.shadowRoot!.querySelector('[data-node-id="b"]') as HTMLElement;
+    const wrapperC = el.shadowRoot!.querySelector('[data-node-id="c"]') as HTMLElement;
+    const outputHandle = makeHandle('output', 'out');
+    wrapperA.appendChild(outputHandle);
+
+    outputHandle.dispatchEvent(new PointerEvent('pointerdown', { pointerId: 1, clientX: 0, clientY: 0, bubbles: true, composed: true }));
+    wrapperB.dispatchEvent(new PointerEvent('pointermove', { pointerId: 1, clientX: 200, clientY: 0, bubbles: true, composed: true }));
+    expect(wrapperB.hasAttribute('data-connect-invalid')).to.be.true;
+
+    wrapperC.dispatchEvent(new PointerEvent('pointermove', { pointerId: 1, clientX: 400, clientY: 0, bubbles: true, composed: true }));
+    expect(wrapperB.hasAttribute('data-connect-invalid')).to.be.false;
+    expect(wrapperC.hasAttribute('data-connect-invalid')).to.be.false;
+
+    window.dispatchEvent(new PointerEvent('pointerup', { pointerId: 1, clientX: 400, clientY: 0 }));
   });
 
   it('pointercancel ends the connect gesture without committing', async () => {
@@ -815,6 +1036,21 @@ describe('droppable', () => {
     expect(fired).to.be.false;
   });
 
+  it('ignores a drop whose payload is not valid JSON', async () => {
+    const el = (await fixture(html`<lr-flow-canvas droppable style="width:400px;height:300px"></lr-flow-canvas>`)) as LyraFlowCanvas;
+    el.nodes = [{ id: 'seed', position: { x: 0, y: 0 } }];
+    await el.updateComplete;
+    const viewportEl = el.shadowRoot!.querySelector('[part="viewport"]') as HTMLElement;
+    const dataTransfer = new DataTransfer();
+    dataTransfer.setData(FLOW_PALETTE_MIME_TYPE, '{not valid json');
+    let fired = false;
+    el.addEventListener('lr-node-add', () => (fired = true));
+    viewportEl.dispatchEvent(
+      new DragEvent('drop', { bubbles: true, cancelable: true, clientX: 10, clientY: 10, dataTransfer }),
+    );
+    expect(fired).to.be.false;
+  });
+
   it('marks data-drop-active on dragover with the recognized MIME type and clears it on dragleave/drop', async () => {
     const el = (await fixture(html`<lr-flow-canvas droppable style="width:400px;height:300px"></lr-flow-canvas>`)) as LyraFlowCanvas;
     el.nodes = [{ id: 'seed', position: { x: 0, y: 0 } }];
@@ -875,6 +1111,27 @@ describe('registerCompanion & decorations', () => {
     el.decorations = { 'a-b': { status: 'error' } };
     await el.updateComplete;
     expect(el.shadowRoot!.querySelector('[part="edge"]')!.getAttribute('data-tone')).to.equal('danger');
+  });
+
+  it('maps edge decoration status success/denied/pending to their tones, including the neutral fallback', async () => {
+    const el = (await fixture(html`<lr-flow-canvas></lr-flow-canvas>`)) as LyraFlowCanvas;
+    el.nodes = nodes;
+    el.edges = edges;
+    const path = () => el.shadowRoot!.querySelector('[part="edge"]')!;
+
+    el.decorations = { 'a-b': { status: 'success' } };
+    await el.updateComplete;
+    expect(path().getAttribute('data-tone')).to.equal('success');
+
+    el.decorations = { 'a-b': { status: 'denied' } };
+    await el.updateComplete;
+    expect(path().getAttribute('data-tone')).to.equal('warning');
+
+    // 'pending' matches none of the explicit status->tone cases, exercising statusTone()'s final
+    // fallback.
+    el.decorations = { 'a-b': { status: 'pending' } };
+    await el.updateComplete;
+    expect(path().getAttribute('data-tone')).to.equal('neutral');
   });
 
   it('a running decorated edge gets an animated march unless prefers-reduced-motion', async () => {
@@ -958,6 +1215,33 @@ describe('locked (consolidated)', () => {
 });
 
 describe('disconnect/reconnect', () => {
+  it('cancels a pending wheel-measure rAF on disconnect instead of leaving it to fire on a torn-down instance', async () => {
+    const el = (await fixture(html`<lr-flow-canvas style="width:400px;height:300px"></lr-flow-canvas>`)) as LyraFlowCanvas;
+    el.nodes = nodes;
+    await el.updateComplete;
+    const viewportEl = el.shadowRoot!.querySelector('[part="viewport"]') as HTMLElement;
+    // A wheel event schedules a measurement-cache rAF (see onWheel's wheelMeasure) that normally
+    // clears itself a frame later; disconnecting before that frame fires must cancel it directly
+    // instead of leaving it to run after teardown.
+    viewportEl.dispatchEvent(
+      new WheelEvent('wheel', { deltaY: -100, clientX: 10, clientY: 10, bubbles: true, cancelable: true }),
+    );
+    el.remove();
+    // Should not throw even once the deferred rAF's original tick would have fired.
+    await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+  });
+
+  it('cancels a pending companion-notify rAF on disconnect', async () => {
+    const el = (await fixture(html`<lr-flow-canvas></lr-flow-canvas>`)) as LyraFlowCanvas;
+    el.nodes = [{ id: 'a', position: { x: 0, y: 0 } }];
+    await el.updateComplete;
+    // registerCompanion() schedules a companion-notify rAF; disconnecting before it fires must
+    // cancel it directly instead of leaving it to run after teardown.
+    el.registerCompanion(() => {});
+    el.remove();
+    await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+  });
+
   it('re-observes node wrappers after a reconnect so later size changes still reach the snapshot geometry', async () => {
     const container = (await fixture(html`
       <div>
