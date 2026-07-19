@@ -5366,8 +5366,10 @@ while content is still arriving.
   plain-text-fallback first paint) when the cache isn't warm yet. `false` (the default) is
   byte-identical to always taking the async path
 - `streaming: boolean = false` (reflected) — marks the host `aria-busy="true"` while partial Markdown
-  is still arriving and lets consumers target `lr-markdown[streaming]`; busy state also remains
-  true while parser dependencies are loading
+  is still arriving and lets consumers target `lr-markdown[streaming]`; content updates while it is
+  true are coalesced to at most one parse per animation frame, while the final `streaming=false`
+  update flushes the latest content immediately; busy state also remains true while parser
+  dependencies are loading
 - `highlightCode: boolean = true` (attribute `highlight-code`) — syntax-highlights fenced code
   blocks via the optional `shiki` peer. `true` (the default) upgrades every fenced block once the
   peer is available; set `false` to keep plain output even when `shiki` is installed. No effect
@@ -10484,6 +10486,8 @@ A searchable, keyboard-navigable, form-associated emoji picker. `groups` is full
 as `<lr-lite-chart>`/`<lr-heatmap>`; an optional convenience auto-loader fetches a default set on
 connect from the `emoji-picker-element-data` peer, but only when `groups` hasn't already been
 supplied (an explicit empty array still counts as supplied and skips the auto-load).
+When the filtered set reaches 200 items, the grid automatically windows its visible rows while
+preserving the full option count through `aria-setsize`/`aria-posinset`.
 
 **Properties:** the shared form properties `name`, `value`, `disabled`, and `required`, plus
 `groups: EmojiPickerGroup[] = []` (attribute: false) — `EmojiPickerGroup { key, label, emojis:
