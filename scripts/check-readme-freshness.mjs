@@ -9,15 +9,18 @@ import { fileURLToPath } from 'node:url';
 
 const root = fileURLToPath(new URL('..', import.meta.url));
 const readme = readFileSync(join(root, 'README.md'), 'utf8');
+const pkgReadmePath = join(root, 'packages/lyra-ui/README.md');
+const pkgReadme = readFileSync(pkgReadmePath, 'utf8');
 const manifest = JSON.parse(readFileSync(join(root, 'packages/lyra-ui/custom-elements.json'), 'utf8'));
 const pkg = JSON.parse(readFileSync(join(root, 'packages/lyra-ui/package.json'), 'utf8'));
 
-const tagCount = new Set(
+const manifestTags = new Set(
   (manifest.modules ?? [])
     .flatMap((mod) => mod.declarations ?? [])
     .map((decl) => decl.tagName)
     .filter(Boolean),
-).size;
+);
+const tagCount = manifestTags.size;
 
 const NUMBER_WORDS = ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten'];
 
@@ -54,9 +57,26 @@ if (!versionMatch) {
   errors.push(`README.md claims lyra-ui is published at ${versionMatch[1]}, but package.json says ${pkg.version} — update the "## Status" section`);
 }
 
+// Per-tag catalog coverage: packages/lyra-ui/README.md is the one README with an actual per-tag
+// table (the root README is a family-level summary by design, already checked above via its
+// aggregate count + family-table row count, not a per-tag catalog). A tag present in the manifest
+// but never mentioned here is a real, silent documentation gap -- catch it precisely, by tag,
+// rather than only via an aggregate count that a combined multi-tag row (e.g. `<lr-combobox>` +
+// `<lr-option>` sharing one row) could keep matching by coincidence even if a *different* tag
+// silently dropped out.
+const mentionedTags = new Set(
+  [...pkgReadme.matchAll(/`<(lr-[a-z0-9-]+)>`/g)].map((m) => m[1]),
+);
+const missingFromPkgReadme = [...manifestTags].filter((t) => !mentionedTags.has(t)).sort();
+if (missingFromPkgReadme.length) {
+  errors.push(
+    `packages/lyra-ui/README.md: ${missingFromPkgReadme.length} manifest tag(s) have no \`<tag>\` mention anywhere in the component tables: ${missingFromPkgReadme.join(', ')}`,
+  );
+}
+
 if (errors.length) {
   console.error(errors.join('\n'));
   process.exitCode = 1;
 } else {
-  console.log(`README freshness check passed (${tagCount} tags, v${pkg.version}).`);
+  console.log(`README freshness check passed (${tagCount} tags, v${pkg.version}, per-tag coverage in packages/lyra-ui/README.md verified).`);
 }
