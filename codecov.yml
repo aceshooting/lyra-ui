@@ -1,0 +1,71 @@
+coverage:
+  status:
+    project:
+      default:
+        target: auto
+        informational: true
+    patch:
+      default:
+        target: auto
+        informational: true
+
+component_management:
+  individual_components:
+    - component_id: agent-tools
+      name: agent-tools
+      paths:
+        - packages/lyra-ui/src/components/agent-tools/**
+    - component_id: charts
+      name: charts
+      paths:
+        - packages/lyra-ui/src/components/charts/**
+    - component_id: conversation
+      name: conversation
+      paths:
+        - packages/lyra-ui/src/components/conversation/**
+    - component_id: data
+      name: data
+      paths:
+        - packages/lyra-ui/src/components/data/**
+    - component_id: forms
+      name: forms
+      paths:
+        - packages/lyra-ui/src/components/forms/**
+    - component_id: layout
+      name: layout
+      paths:
+        - packages/lyra-ui/src/components/layout/**
+    - component_id: media
+      name: media
+      paths:
+        - packages/lyra-ui/src/components/media/**
+    - component_id: overlays
+      name: overlays
+      paths:
+        - packages/lyra-ui/src/components/overlays/**
+    - component_id: retrieval
+      name: retrieval
+      paths:
+        - packages/lyra-ui/src/components/retrieval/**
+    - component_id: utility
+      name: utility
+      paths:
+        - packages/lyra-ui/src/components/utility/**
+    - component_id: viewers
+      name: viewers
+      paths:
+        - packages/lyra-ui/src/components/viewers/**
+
+flags:
+  lyra-ui:
+    paths:
+      - packages/lyra-ui/src/**
+
+comment:
+  layout: "header, diff, flags, components"
+  behavior: default
+
+ignore:
+  - "**/*.stories.ts"
+  - "**/*.test.ts"
+  - "**/custom-elements.json"
