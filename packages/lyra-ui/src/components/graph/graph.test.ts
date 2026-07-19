@@ -1,4 +1,4 @@
-import { fixture, expect, html, waitUntil, aTimeout } from '@open-wc/testing';
+import { fixture, expect, html, waitUntil, aTimeout, oneEvent } from '@open-wc/testing';
 import { select } from 'd3-selection';
 import './graph.js';
 import type { LyraGraph } from './graph.js';
@@ -937,10 +937,49 @@ describe('focus & fit (J4 camera)', () => {
       } finally {
         window.requestAnimationFrame = originalRaf;
       }
-      expect(rafCalls).to.equal(0);
+      // Exactly one -- the single coalesced lr-viewport-change signal the jump's own zoom handler
+      // schedules (see scheduleViewportChange()), not a recurring tween loop. A real tween would
+      // request a fresh frame from inside each previous one and rack up far more than one call.
+      expect(rafCalls).to.equal(1);
     } finally {
       window.matchMedia = originalMatchMedia;
     }
+  });
+
+  it('emits lr-viewport-change with the live camera transform after a focusNode jump', async () => {
+    // Reduced-motion writes the transform in one synchronous jump (see the test above), so the
+    // single lr-viewport-change it schedules is guaranteed to reflect the arrived-at transform --
+    // a real tween instead emits progressively across every frame, and this only needs to prove
+    // the payload shape/value, not the tween's own settling behavior.
+    const originalMatchMedia = window.matchMedia;
+    window.matchMedia = ((query: string) => ({
+      matches: query.includes('prefers-reduced-motion'),
+      media: query,
+      addEventListener() {},
+      removeEventListener() {},
+    })) as typeof window.matchMedia;
+    try {
+      const el = await mountWide();
+      const changed = oneEvent(el, 'lr-viewport-change');
+      await el.focusNode('a', { zoom: 2 });
+      const detail = (await changed).detail as { k: number; x: number; y: number };
+      expect(detail.k).to.be.closeTo(2, 0.01);
+    } finally {
+      window.matchMedia = originalMatchMedia;
+    }
+  });
+
+  it('coalesces a real pan/zoom gesture into a single lr-viewport-change per frame', async () => {
+    const el = await mountWide();
+    let changeCount = 0;
+    el.addEventListener('lr-viewport-change', () => changeCount++);
+    const svgEl = el.shadowRoot!.querySelector('svg') as SVGSVGElement;
+    // Two wheel events land well within the same animation frame -- both should fold into one
+    // scheduled emission rather than firing twice.
+    svgEl.dispatchEvent(new WheelEvent('wheel', { bubbles: true, cancelable: true, deltaY: -100, clientX: 10, clientY: 10 }));
+    svgEl.dispatchEvent(new WheelEvent('wheel', { bubbles: true, cancelable: true, deltaY: -100, clientX: 10, clientY: 10 }));
+    await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+    expect(changeCount).to.equal(1);
   });
 
   it('disconnect cancels an in-flight camera tween instead of animating a detached tree (regression)', async () => {
@@ -2734,6 +2773,16 @@ describe('dimming (adjacency highlight)', () => {
     const [nodeA, nodeB] = [...el.shadowRoot!.querySelectorAll('[part="node"]')] as SVGElement[];
     expect(nodeA!.hasAttribute('data-dimmed')).to.be.false;
     expect(nodeB!.hasAttribute('data-dimmed')).to.be.true;
+  });
+
+  it('is visibly dimmed by default -- no host styling required to see the effect', async () => {
+    const el = await mountDimmable();
+    el.dimmedNodeIds = ['b'];
+    await el.updateComplete;
+    const nodeB = el.shadowRoot!.querySelectorAll('[part="node"]')[1] as SVGElement;
+    const opacity = Number(getComputedStyle(nodeB).opacity);
+    expect(opacity).to.be.greaterThan(0);
+    expect(opacity).to.be.lessThan(1);
   });
 
   it('applies data-dimmed to a matching link via its linkKey (id, else source->target)', async () => {

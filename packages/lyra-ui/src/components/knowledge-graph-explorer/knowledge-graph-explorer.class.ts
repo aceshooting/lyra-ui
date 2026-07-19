@@ -59,12 +59,10 @@ export interface LyraKnowledgeGraphExplorerEventMap {
  * per-node DOM element to find), the click event's own `clientX`/`clientY` are used directly, since
  * canvas hit-testing already treats those as viewport coordinates internally. While the popover
  * stays open after an `renderer="svg"` click, this component re-reads that same resolved node
- * element's `getBoundingClientRect()` on a bounded `requestAnimationFrame` loop and re-calls
- * `showAt()` every frame -- `lr-graph` exposes no public pan/zoom/tick event to subscribe to
- * instead, so polling the live element (which pan/zoom moves via an ancestor transform, not by
- * mutating the element itself) is the closest available approximation to the "re-anchor on
- * pan/zoom" contract `showAt()`'s own docs describe as the caller's responsibility; the loop stops
- * automatically once the popover closes or the element leaves the DOM. Selecting a node any other
+ * element's `getBoundingClientRect()` and re-calls `showAt()` every time the composed `lr-graph`
+ * emits its own `lr-viewport-change` (a frame-coalesced pan/zoom/simulation-tick signal) --
+ * schedules no `requestAnimationFrame` loop of its own, unlike an idle popover polling the DOM on
+ * every frame regardless of whether anything actually moved. Selecting a node any other
  * way -- a search result, a neighbor row, a path-strip element, keyboard Enter/Space on a graph
  * node (which never dispatches a native `click`) -- has no click event to read a rect from, so it
  * instead calls the public `lr-graph.focusNode(id)` (which centers that node in the viewport) and
@@ -74,12 +72,19 @@ export interface LyraKnowledgeGraphExplorerEventMap {
  * **Controlled vs. self-managed state.** `nodes`/`links`/`nodeTypes`/`communities`/`entityDetails`/
  * `path` are purely host-supplied data, rendered as given. `hiddenTypes`/`selectedNodeId`/
  * `searchQuery`/`pinnedNodeIds` are this component's own genuinely new contribution: it wires them
- * into `lr-graph`'s existing controlled props (`hiddenTypes`, `selectedNodeIds`, `dimmedNodeIds`)
- * itself, toggling its own copy on interaction (the same self-toggle-then-emit contract
- * `lr-graph-legend` already uses) so every feature works with zero host wiring, while still being
- * presettable/observable properties and emitting events (`lr-pin-change`, `lr-path-request`,
- * plus every composed primitive's own event bubbling straight through unmodified) for a host that
- * wants to persist or react to them.
+ * into `lr-graph`'s existing controlled props (`hiddenTypes`, `selectedNodeIds`, `dimmedNodeIds`,
+ * `dimmedLinkIds`) itself, toggling its own copy on interaction (the same self-toggle-then-emit
+ * contract `lr-graph-legend` already uses) so every feature works with zero host wiring, while
+ * still being presettable/observable properties and emitting events (`lr-pin-change`,
+ * `lr-path-request`, plus every composed primitive's own event bubbling straight through
+ * unmodified) for a host that wants to persist or react to them.
+ *
+ * `highlight` controls what drives that dimming, on top of the always-active search-match
+ * dimming: `'selection'` (the default) dims by the selected node's immediate neighborhood;
+ * `'hover'` also dims by whichever node is currently pointer-hovered (falling back to the selected
+ * node's neighborhood while nothing is hovered); `'none'` turns this component's own dimming off
+ * entirely, forwarding empty `dimmedNodeIds`/`dimmedLinkIds` regardless of search/selection state
+ * -- for a host that wants to drive `lr-graph`'s dimming through a different composition instead.
  *
  * @customElement lr-knowledge-graph-explorer
  * @slot details - Overrides the details popover's default content (an `lr-entity-card` with a
@@ -142,9 +147,15 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
   @property({ type: Number }) height = 600;
   /** Accessible name for the root landmark; falls back to the localized `graphExplorerLabel`. */
   @property() label = '';
+  /** What drives this component's own `dimmedNodeIds`/`dimmedLinkIds` forwarding, on top of the
+   *  always-active search-match dimming -- see the class doc's dedicated paragraph. */
+  @property() highlight: 'selection' | 'hover' | 'none' = 'selection';
 
   @state() private searchQuery = '';
   @state() private pinLiveText = '';
+  /** Currently pointer-hovered node id, set only while `highlight === 'hover'` (see
+   *  `onGraphNodeEnter`/`onGraphNodeLeave`) -- read by `computedDimmedNodeIds`. */
+  @state() private hoveredNodeId: string | null = null;
 
   @query('[part="graph"]') private graphEl?: LyraGraph;
   @query('[part="detail-popover"]') private popoverEl?: LyraPopover;
@@ -155,15 +166,9 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
    *  never dispatches a synthetic `click` on a `role="button"` SVG/canvas element). */
   private pendingNodeId?: string;
   /** The exact rendered `[part="node"]` element resolved for the currently-open popover
-   *  (`renderer="svg"`, direct-click path only) -- re-read every tracking frame so the popover
-   *  keeps tracking a pan/zoom gesture while it stays open. */
+   *  (`renderer="svg"`, direct-click path only) -- re-read on every `lr-viewport-change` so the
+   *  popover keeps tracking a pan/zoom gesture or simulation tick while it stays open. */
   private trackedNodeEl?: Element;
-  private trackRafId?: number;
-
-  disconnectedCallback(): void {
-    super.disconnectedCallback();
-    this.stopTracking();
-  }
 
   protected willUpdate(changed: PropertyValues): void {
     // A node removed from `nodes` (or `hiddenTypes` hiding its whole type) shouldn't leave a
@@ -235,22 +240,41 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
     return ids;
   }
 
-  /** Non-matching nodes while searching; otherwise everything outside the selected node's
-   *  immediate neighborhood while a selection is active; otherwise nothing. Wires the search/
-   *  selection state this component owns into `lr-graph`'s existing `dimmedNodeIds` contract
+  /** The same key derivation `lr-graph`'s own (private) `linkKey()` uses for `dimmedLinkIds` --
+   *  an explicit `id` when the link has one, else `source->target`. */
+  private linkKey(link: GraphLink): string {
+    return link.id ?? `${link.source}->${link.target}`;
+  }
+
+  /** Non-matching nodes while searching; otherwise everything outside the focus node's immediate
+   *  neighborhood (the selected node, or -- while `highlight === 'hover'` -- the hovered node when
+   *  nothing is selected); otherwise nothing while `highlight === 'none'`. Wires the search/
+   *  selection/hover state this component owns into `lr-graph`'s existing `dimmedNodeIds` contract
    *  instead of introducing a parallel highlighting mechanism. */
   private get computedDimmedNodeIds(): string[] {
+    if (this.highlight === 'none') return [];
     const matches = this.matchingNodes();
     if (matches) {
       const matchIds = new Set(matches.map((n) => n.id));
       return this.nodes.filter((n) => !matchIds.has(n.id)).map((n) => n.id);
     }
-    if (this.selectedNodeId) {
-      const keep = this.neighborIdsOf(this.selectedNodeId);
-      keep.add(this.selectedNodeId);
+    const focusId = this.selectedNodeId ?? (this.highlight === 'hover' ? this.hoveredNodeId : null);
+    if (focusId) {
+      const keep = this.neighborIdsOf(focusId);
+      keep.add(focusId);
       return this.nodes.filter((n) => !keep.has(n.id)).map((n) => n.id);
     }
     return [];
+  }
+
+  /** The link-side mirror of `computedDimmedNodeIds` -- a link is dimmed whenever either endpoint
+   *  is, so unrelated edges dim along with unrelated nodes with no extra host wiring. */
+  private get computedDimmedLinkIds(): string[] {
+    const dimmedNodes = new Set(this.computedDimmedNodeIds);
+    if (dimmedNodes.size === 0) return [];
+    return this.links
+      .filter((l) => dimmedNodes.has(l.source) || dimmedNodes.has(l.target))
+      .map((l) => this.linkKey(l));
   }
 
   private togglePin(id: string): void {
@@ -301,7 +325,6 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
     if (!popover) return;
     popover.accessibleLabel = this.entityFor(id)?.label || '';
     popover.showAt(rect);
-    this.startTracking();
   }
 
   /** Resolves the viewport rect for a direct pointer click on a graph node -- see the class doc's
@@ -342,32 +365,28 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
     this.openDetailAt(id, this.resolveDirectClickAnchor(event));
   };
 
-  private startTracking(): void {
-    this.stopTracking();
-    if (this.renderer === 'canvas' || !this.trackedNodeEl) return;
-    const step = (): void => {
-      const el = this.trackedNodeEl;
-      const popover = this.popoverEl;
-      if (!el?.isConnected || !popover?.open) {
-        this.trackRafId = undefined;
-        return;
-      }
-      const rect = el.getBoundingClientRect();
-      popover.showAt({ x: rect.left + rect.width / 2, y: rect.top, width: rect.width, height: rect.height });
-      this.trackRafId = requestAnimationFrame(step);
-    };
-    this.trackRafId = requestAnimationFrame(step);
-  }
+  /** Re-anchors the open details popover to `trackedNodeEl`'s current rect -- wired to the
+   *  composed `lr-graph`'s `lr-viewport-change` (see the class doc's anchoring note). A no-op
+   *  whenever there's nothing to track (`renderer="canvas"`, a non-direct-click selection, or the
+   *  popover isn't open), so this never schedules work of its own; it only reacts to `lr-graph`'s
+   *  already frame-coalesced signal. */
+  private onGraphViewportChange = (): void => {
+    const el = this.trackedNodeEl;
+    const popover = this.popoverEl;
+    if (!el?.isConnected || !popover?.open) return;
+    const rect = el.getBoundingClientRect();
+    popover.showAt({ x: rect.left + rect.width / 2, y: rect.top, width: rect.width, height: rect.height });
+  };
 
-  private stopTracking(): void {
-    if (this.trackRafId != null) {
-      cancelAnimationFrame(this.trackRafId);
-      this.trackRafId = undefined;
-    }
-  }
+  private onGraphNodeEnter = (event: CustomEvent<{ id: string }>): void => {
+    if (this.highlight === 'hover') this.hoveredNodeId = event.detail.id;
+  };
+
+  private onGraphNodeLeave = (event: CustomEvent<{ id: string }>): void => {
+    if (this.highlight === 'hover' && this.hoveredNodeId === event.detail.id) this.hoveredNodeId = null;
+  };
 
   private onPopoverHide = (): void => {
-    this.stopTracking();
     this.trackedNodeEl = undefined;
     this.selectedNodeId = null;
   };
@@ -440,11 +459,15 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
           .hiddenTypes=${this.hiddenTypes}
           .selectedNodeIds=${this.selectedNodeId ? [this.selectedNodeId] : []}
           .dimmedNodeIds=${this.computedDimmedNodeIds}
+          .dimmedLinkIds=${this.computedDimmedLinkIds}
           renderer=${this.renderer}
           width=${this.width}
           height=${this.height}
           @lr-node-click=${this.onGraphNodeClick}
           @click=${this.onGraphNativeClick}
+          @lr-node-enter=${this.onGraphNodeEnter}
+          @lr-node-leave=${this.onGraphNodeLeave}
+          @lr-viewport-change=${this.onGraphViewportChange}
         ></lr-graph>
         <lr-popover part="detail-popover" popup-role="dialog" @lr-hide=${this.onPopoverHide}>
           <slot name="details">

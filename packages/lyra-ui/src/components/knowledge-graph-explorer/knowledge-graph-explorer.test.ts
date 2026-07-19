@@ -91,7 +91,7 @@ describe('lr-knowledge-graph-explorer', () => {
     expect(graph.hiddenTypes).to.deep.equal(['person']);
   });
 
-  it('filters search matches, shows a no-matches state, and dims non-matching nodes on lr-graph', async () => {
+  it('filters search matches, shows a no-matches state, and dims non-matching nodes/links on lr-graph', async () => {
     const el = (await fixture(html`
       <lr-knowledge-graph-explorer .nodes=${nodes} .links=${links} .nodeTypes=${nodeTypes}></lr-knowledge-graph-explorer>
     `)) as LyraKnowledgeGraphExplorer;
@@ -106,12 +106,55 @@ describe('lr-knowledge-graph-explorer', () => {
     expect(results.length).to.equal(2);
     const graph = el.shadowRoot!.querySelector('[part="graph"]') as LyraGraph;
     expect(graph.dimmedNodeIds).to.deep.equal(['polonium']);
+    // polonium is dimmed, so both links touching it (married_to doesn't, discovered does) --
+    // only "discovered" (marie->polonium) should dim; "married_to" (marie<->pierre) shouldn't.
+    expect(graph.dimmedLinkIds).to.deep.equal(['marie->polonium']);
 
     native.value = 'nonexistent';
     native.dispatchEvent(new Event('input', { bubbles: true }));
     await el.updateComplete;
     expect(el.shadowRoot!.querySelector('[part="search-empty"]')).to.exist;
     expect(graph.dimmedNodeIds).to.deep.equal(['marie', 'pierre', 'polonium']);
+    expect(graph.dimmedLinkIds).to.deep.equal(['marie->pierre', 'marie->polonium']);
+  });
+
+  it('dims the selected node\'s neighborhood (nodes and links) once a node is selected', async () => {
+    const el = await settledFixture();
+    el.selectedNodeId = 'polonium';
+    await el.updateComplete;
+    const graph = el.shadowRoot!.querySelector('[part="graph"]') as LyraGraph;
+    // polonium's only neighbor is marie -- pierre is outside the kept neighborhood.
+    expect(graph.dimmedNodeIds).to.deep.equal(['pierre']);
+    expect(graph.dimmedLinkIds).to.deep.equal(['marie->pierre']);
+  });
+
+  it('highlight="none" forwards no dimming regardless of search/selection state', async () => {
+    const el = await settledFixture();
+    el.highlight = 'none';
+    el.selectedNodeId = 'polonium';
+    await el.updateComplete;
+    const graph = el.shadowRoot!.querySelector('[part="graph"]') as LyraGraph;
+    expect(graph.dimmedNodeIds).to.deep.equal([]);
+    expect(graph.dimmedLinkIds).to.deep.equal([]);
+  });
+
+  it('highlight="hover" dims by the hovered node\'s neighborhood when nothing is selected', async () => {
+    const el = await settledFixture();
+    el.highlight = 'hover';
+    await el.updateComplete;
+    const graph = el.shadowRoot!.querySelector('[part="graph"]') as LyraGraph;
+    expect(graph.dimmedNodeIds).to.deep.equal([]);
+
+    // polonium's (index 2) only neighbor is marie -- pierre sits outside that neighborhood, so
+    // hovering polonium should dim exactly pierre.
+    const poloniumNode = graphNodeEls(el)[2]!;
+    poloniumNode.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true, composed: true }));
+    await el.updateComplete;
+    expect(graph.dimmedNodeIds).to.deep.equal(['pierre']);
+
+    poloniumNode.dispatchEvent(new MouseEvent('mouseleave', { bubbles: true, composed: true }));
+    await el.updateComplete;
+    expect(graph.dimmedNodeIds).to.deep.equal([]);
   });
 
   it('activating a search result focuses the node and opens the details popover with its entity card', async () => {
@@ -190,6 +233,33 @@ describe('lr-knowledge-graph-explorer', () => {
     // it settled by the time `open` did.
     await waitUntil(() => popup.style.left !== '', undefined, { timeout: NODE_COUNT_TIMEOUT });
     expect(popup.style.position).to.equal('fixed');
+  });
+
+  it('re-anchors the open popover from lr-graph\'s own lr-viewport-change, and stops once it closes', async () => {
+    const el = await settledFixture();
+    const circle = graphNodeEls(el)[0]!;
+    circle.dispatchEvent(new MouseEvent('click', { bubbles: true, composed: true }));
+    await waitUntil(() => (el.shadowRoot!.querySelector('[part="detail-popover"]') as LyraPopover).open, undefined, {
+      timeout: NODE_COUNT_TIMEOUT,
+    });
+    const popover = el.shadowRoot!.querySelector('[part="detail-popover"]') as LyraPopover;
+    const showAtCalls: unknown[] = [];
+    const originalShowAt = popover.showAt.bind(popover);
+    popover.showAt = ((rect: Parameters<LyraPopover['showAt']>[0]) => {
+      showAtCalls.push(rect);
+      return originalShowAt(rect);
+    }) as typeof popover.showAt;
+
+    // Re-anchors purely in response to lr-graph's own event -- this component schedules no
+    // requestAnimationFrame loop of its own (see onGraphViewportChange's doc comment).
+    const before = showAtCalls.length;
+    graphEl(el).dispatchEvent(new CustomEvent('lr-viewport-change', { detail: { k: 1, x: 0, y: 0 } }));
+    expect(showAtCalls.length).to.equal(before + 1);
+
+    popover.open = false;
+    const afterClose = showAtCalls.length;
+    graphEl(el).dispatchEvent(new CustomEvent('lr-viewport-change', { detail: { k: 1, x: 0, y: 0 } }));
+    expect(showAtCalls.length).to.equal(afterClose); // no re-anchor once the popover is closed
   });
 
   it('keyboard Enter activation on a graph node (no native click) still opens the details popover', async () => {

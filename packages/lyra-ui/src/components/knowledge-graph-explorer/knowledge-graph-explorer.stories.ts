@@ -80,3 +80,23 @@ export const Narrow: Story = {
     </div>
   `,
 };
+
+export const HoverHighlight: Story = {
+  render: () => html`
+    <lr-knowledge-graph-explorer
+      .nodes=${nodes}
+      .links=${links}
+      .nodeTypes=${nodeTypes}
+      highlight="hover"
+      style="height: 32rem;"
+    ></lr-knowledge-graph-explorer>
+  `,
+  parameters: {
+    docs: {
+      description: {
+        story:
+          '`highlight="hover"` dims both unrelated nodes and unrelated edges by whichever node is currently pointer-hovered, on top of the always-active search-match dimming -- falls back to the selected node\'s neighborhood while nothing is hovered.',
+      },
+    },
+  },
+};

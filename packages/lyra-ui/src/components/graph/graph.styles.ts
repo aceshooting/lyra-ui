@@ -126,10 +126,10 @@ export const styles = css`
     stroke-width: var(--lr-size-3px);
   }
   [part='node'][data-dimmed] {
-    opacity: var(--lr-graph-dimmed-opacity, 1);
+    opacity: var(--lr-graph-dimmed-opacity, 0.35);
   }
   [part='link'][data-dimmed] {
-    opacity: var(--lr-graph-dimmed-opacity, 1);
+    opacity: var(--lr-graph-dimmed-opacity, 0.35);
   }
   [part='hull'] {
     fill: var(--lr-graph-hull-fill, var(--lr-color-brand));

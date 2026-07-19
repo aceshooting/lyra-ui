@@ -203,6 +203,8 @@ export interface LyraGraphEventMap {
   'lr-node-expand': CustomEvent<{ id: string }>;
   'lr-selection-change': CustomEvent<{ nodeIds: string[]; linkIds: string[] }>;
   'lr-community-click': CustomEvent<{ id: string }>;
+  /** Frame-coalesced pan/zoom/layout signal — see the class doc's `lr-viewport-change` event entry. */
+  'lr-viewport-change': CustomEvent<{ k: number; x: number; y: number }>;
 }
 /**
  * `<lr-graph>` — a force-directed node-link diagram with pan/zoom/drag.
@@ -262,6 +264,13 @@ export interface LyraGraphEventMap {
  *   `'none'` and the user activates/clears a node or link. The component never assigns
  *   `selectedNodeIds`/`selectedLinkIds` itself -- controlled, mirroring `lr-heatmap.selectedCell`.
  * @event lr-community-click - A hull was activated. `detail: { id }`.
+ * @event lr-viewport-change - `detail: { k, x, y }`, the live d3-zoom camera transform. Fires at
+ *   most once per animation frame regardless of how many pan/zoom/simulation-tick updates land
+ *   within it, coalescing every source that can move a rendered node's screen position -- a user
+ *   pan/zoom gesture, `focusNode()`/`fit()`'s camera tween, and every d3-force simulation tick
+ *   (dragging a node, or the initial settle). A consumer anchoring its own UI (e.g. a details
+ *   popover) to a node's `getBoundingClientRect()` can re-read it from this event instead of
+ *   polling on a `requestAnimationFrame` loop of its own.
  * @csspart base - The graph wrapper.
  * @csspart svg - The graph SVG.
  * @csspart node - A graph node.
@@ -290,9 +299,10 @@ export interface LyraGraphEventMap {
  *   behind a drawn edge label, painted under the fill via `paint-order: stroke`.
  * @cssprop [--lr-graph-focus-halo-color=var(--lr-color-brand)] - `focus-halo` stroke color.
  * @cssprop [--lr-graph-selected-color=var(--lr-color-success)] - Selected node/link stroke.
- * @cssprop [--lr-graph-dimmed-opacity=1] - Opacity applied to a node/link when
- *   `dimmedNodeIds`/`dimmedLinkIds` includes its id (both SVG and canvas renderers). `1` (the
- *   default) is a no-op -- an unset host sees no visual change.
+ * @cssprop [--lr-graph-dimmed-opacity=0.35] - Opacity applied to a node/link when
+ *   `dimmedNodeIds`/`dimmedLinkIds` includes its id (both SVG and canvas renderers). Visible by
+ *   default -- a consumer controlling `dimmedNodeIds`/`dimmedLinkIds` (e.g.
+ *   `lr-knowledge-graph-explorer`) sees the dimming take effect with no extra host styling.
  * @cssprop [--lr-graph-hull-fill=var(--lr-color-brand)] - Hull fill/stroke color.
  * @cssprop [--lr-graph-hull-opacity=0.12] - Hull element opacity (composites fill+stroke as one
  *   group, avoiding a double-opacity seam at the fill/stroke boundary).
@@ -492,6 +502,10 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
    *  within one frame rather than staying true for the tween's real duration the way an actual
    *  user gesture does. */
   private isCameraTweening = false;
+  /** Pending rAF id for the coalesced `lr-viewport-change` emission — see
+   *  `scheduleViewportChange()`. Only one is ever outstanding at a time regardless of how many
+   *  zoom/tick callbacks request one within the same frame. */
+  private viewportChangeRafId?: number;
   private linkEls: SVGLineElement[] = [];
   private linkLabelEls: (SVGTextElement | null)[] = [];
   /** Per-simLink-index flip cache for the length declutter gate -- `onTick()` only writes
@@ -557,6 +571,25 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
       this.hoverRafId = undefined;
     }
     this.pendingHover = undefined;
+    if (this.viewportChangeRafId != null) {
+      cancelAnimationFrame(this.viewportChangeRafId);
+      this.viewportChangeRafId = undefined;
+    }
+  }
+
+  /** Coalesces every pan/zoom/tick-driven `lr-viewport-change` emission into at most one per
+   *  animation frame -- called from both the svg/canvas zoom handlers and `onTick()`, all of which
+   *  can fire far more often than once per frame (a wheel-zoom gesture, a settling simulation). */
+  private scheduleViewportChange(): void {
+    if (this.viewportChangeRafId != null) return;
+    this.viewportChangeRafId = requestAnimationFrame(() => {
+      this.viewportChangeRafId = undefined;
+      const transform =
+        this.renderer === 'canvas' || !this.d3 || !this.zoomedEl
+          ? this.canvasCamera
+          : this.d3.zoomTransform(this.zoomedEl);
+      this.emit('lr-viewport-change', { k: transform.k, x: transform.x, y: transform.y });
+    });
   }
 
   /**
@@ -1027,7 +1060,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
         cs.getPropertyValue('--lr-graph-focus-halo-color').trim() || cs.getPropertyValue('--lr-color-brand').trim(),
       selectedColor:
         cs.getPropertyValue('--lr-graph-selected-color').trim() || cs.getPropertyValue('--lr-color-success').trim(),
-      dimmedOpacity: Number(cs.getPropertyValue('--lr-graph-dimmed-opacity').trim()) || 1,
+      dimmedOpacity: Number(cs.getPropertyValue('--lr-graph-dimmed-opacity').trim()) || 0.35,
       labelColor: cs.getPropertyValue('--lr-color-text').trim(),
       labelHaloColor:
         cs.getPropertyValue('--lr-graph-edge-label-halo').trim() || cs.getPropertyValue('--lr-color-surface').trim(),
@@ -1146,6 +1179,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
       .on('zoom', (event: OptionalPeerApi) => {
         this.canvasCamera = { k: event.transform.k, x: event.transform.x, y: event.transform.y };
         this.markCanvasCameraDirty();
+        this.scheduleViewportChange();
       })
       .on('end', () => {
         this.isPanning = false;
@@ -1483,6 +1517,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
         .on('zoom', (event: OptionalPeerApi) => {
           this.gEl?.setAttribute('transform', event.transform.toString());
           this.updateEdgeLabelZoomGate(event.transform.k);
+          this.scheduleViewportChange();
         })
         .on('end', () => {
           this.isPanning = false;
@@ -1685,6 +1720,9 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
     // animation and a live node drag actually repaint the canvas rather than freezing at whatever
     // was last drawn on mount.
     if (this.renderer === 'canvas') this.markCanvasDirty();
+    // A settling/dragged simulation moves rendered node screen positions the same way a pan/zoom
+    // does, even with the camera transform unchanged -- see `lr-viewport-change`'s class doc.
+    this.scheduleViewportChange();
   }
 
   private rebuildSimulation(): void {
