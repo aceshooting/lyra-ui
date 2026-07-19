@@ -117,6 +117,21 @@ focus; it continues to emit `lr-cell-click` and leaves selection state consumer-
   governs both `mode`s and both `scale` values, discretizing whichever scale would otherwise
   interpolate continuously into `colorSteps.length` buckets instead. Unset (the default, or fewer
   than 2 entries) keeps today's 2-endpoint interpolation exactly.
+- `legendStops?: HeatmapLegendStop[]` (attribute: false) — `HeatmapLegendStop { value: number;
+  color: string; label?: string }`: a discrete legend key rendered **instead of** the
+  `--lr-heatmap-scale-lo`/`-hi` gradient bar and its `[part="legend-lo"]`/`[part="legend-hi"]`
+  endpoint labels — one `[part="legend-stop"]` per entry, in array order, each a
+  `[part="legend-swatch"]` filled with that entry's `color` plus a `[part="legend-stop-label"]`.
+  A stop's label defaults to the component's own locale-aware numeric formatting of `value`, so an
+  explicit `label` is only needed when the number isn't the right caption ("none", "≥ 90%"). Exists
+  for the consumer who supplies `cellColor`: because that callback overrides a cell's color
+  entirely, the built-in two-endpoint bar can end up describing a ramp the grid no longer uses —
+  supplying the same colors here keeps the legend honest instead of hiding `::part(legend)` and
+  re-implementing swatches, labels and annotation entries by hand. Strictly presentation: the stops
+  are never consulted by the color ramp, the bucket math, the tooltip, or the generated accessible
+  name, so adding them changes nothing a cell renders. Labeled `annotations` still render their
+  `[part="legend-annotation"]` entries after the stops. Unset (the default) or an empty array
+  reproduces the exact gradient legend, unchanged.
 
 **Getters/methods:** `refreshTheme()` — redraws canvas content after an upstream design-token or
 color-scheme change; called automatically on theme changes, exposed for a consumer that needs to
@@ -130,8 +145,10 @@ force a redraw manually.
 **CSS parts:** `base`, `canvas`, `cells` (opt-in per-cell overlay), `cell` (one opt-in native cell
 button), `tooltip` (hover tooltip, positioned over the hovered cell),
 `live-region` (visually-hidden `role="status" aria-live="polite"` element announcing the
-keyboard-focused cell), `legend`, `legend-lo`, `legend-hi`, `legend-annotation` (one per labeled
-`annotations` entry)
+keyboard-focused cell), `legend`, `legend-lo`, `legend-hi` (both omitted, along with the gradient
+bar between them, while `legendStops` is supplied), `legend-stop` (one per `legendStops` entry),
+`legend-swatch` (that stop's color chip), `legend-stop-label` (that stop's text),
+`legend-annotation` (one per labeled `annotations` entry)
 
 **Themeable custom properties:** `--lr-heatmap-scale-lo` (default `#cde2fb`),
 `--lr-heatmap-scale-hi` (default `#0969da`) — the sequential color-ramp endpoints (matrix mode) or
@@ -142,7 +159,11 @@ resolve-via-`getComputedStyle` pattern), `--lr-heatmap-label-font` (default `10p
 canvas-drawn axis/month/weekday label font), `--lr-heatmap-focus-ring-color` (default
 `var(--lr-focus-ring-color)` — the canvas-drawn ring stroked around the keyboard-focused cell;
 also reused by `[part="canvas"]`'s own `:focus-visible` outline so the two stay visually in sync),
-`--lr-heatmap-annotation-color` (default `var(--lr-color-danger)` — the canvas-drawn ring
+`--lr-heatmap-color-steps-gradient` (default
+`linear-gradient(to right, var(--lr-heatmap-scale-lo), var(--lr-heatmap-scale-hi))` — the gradient
+painted on the continuous legend bar; the component writes it onto the host itself while
+`colorSteps` is supplied and removes it again when it isn't, so it is a read-out rather than a knob
+you set). `--lr-heatmap-annotation-color` (default `var(--lr-color-danger)` — the canvas-drawn ring
 stroked around an annotated cell, deliberately not one of the sequential ramp colors so it stays
 visible regardless of what it's drawn over). `--lr-heatmap-selected-color` (default
 `var(--lr-color-success)` — the canvas-drawn ring stroked around the persistent `selectedCell`, a
@@ -180,6 +201,11 @@ same color as `--lr-heatmap-focus-ring-color`).
 ```
 
 **Known gotchas:**
+- `legendStops` *replaces* the lo/hi gradient bar rather than adding to it: supplying it removes
+  `[part="legend-lo"]`, `[part="legend-hi"]` and the bar from the DOM, so a stylesheet targeting
+  those parts silently stops applying. It is also presentation-only — it never feeds back into the
+  cell colors, so the stops and a `cellColor` callback have to be kept in agreement by the consumer
+  (the point of the property is that they *can* be, from one shared function).
 - the `ResizeObserver` only actually resizes the drawn grid **when `fit-to-width` is set**, in either
   mode. Without it (the default), `draw()` sizes the canvas as `PAD_LEFT + cols * cellSize` (matrix
   mode) or `CAL_PAD_LEFT + weekCount * cellSize` (calendar mode), never from the host's measured

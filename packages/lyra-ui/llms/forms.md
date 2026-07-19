@@ -71,6 +71,15 @@ pointer or keyboard selection, multiple-value toggle, tag/Backspace removal, or 
 one bubbling/composed, non-cancelable plain `input` `Event`, immediately followed by the same shape
 of `change` `Event`. Re-picking the current single value and programmatic/default/reset/restore
 writes are silent. The clear button emits one `lr-clear` after its `input`/`change` pair.
+`lr-filter` (`detail: { value: string }`) reports the in-progress filter text on every user-driven
+keystroke — the live as-you-typed search string, deliberately *not* `value`, which is the committed
+selection. It is the supported way to read that text; reaching into the shadow root for
+`[part="combobox-input"]`'s value is not. Named `lr-filter` rather than `lr-input` precisely because
+`lr-input`'s detail on `<lr-input>` is the committed value, and the two must not share a name while
+carrying different strings. It fires for user input only: picking a row, the clear button,
+`form.reset()`, dismissing the listbox, a programmatic `value` write, and `setRangeText()` all blank
+the filter silently, mirroring how `<lr-input>`'s `lr-input` only reports user edits.
+
 `lr-show` and `lr-hide` report listbox visibility transitions.
 The internal input's `focus` and `blur` are re-dispatched as bubbling, composed host events.
 
@@ -698,8 +707,10 @@ form-associated via the same `FormAssociated` mixin as `lr-textarea`. Ships the 
 - `min?: number` / `max?: number` (attributes `min`/`max`) / `step?: number | 'any'` (attribute
   `step`, accepts the native `'any'` value alongside a number) — forwarded verbatim to the native
   input and validated by it. Intended for `type="number"`; `step` is equally meaningful on
-  `type="time"`, but `min`/`max` are `type: Number`-converted, so a non-numeric bound only survives
-  a direct property assignment, never the attribute. Inert for the other types
+  `type="time"`. On `lr-input` itself the `min`/`max` *attributes* are number-converted, so a
+  non-numeric bound only survives a direct property assignment; the declared type also admits a
+  string so a subclass can narrow the attribute parsing to its own native type's literal form —
+  `lr-time-input` does exactly that. Inert for the other types
 - `passwordVisible: boolean = false` (attribute `password-visible` — `type="password"` only)
 - `name`/`disabled`/`required` (from `FormAssociated`)
 
@@ -761,8 +772,9 @@ input), and `lr-clear` (inherited, never fired here).
 `hint`, `error`, plus the inherited `clear-button` and `password-toggle`, neither of which this
 alias ever renders.
 
-**Themeable custom properties:** `--lr-input-control-min-height` and the rest of `lr-input`'s
-per-`size` scale.
+**Themeable custom properties:** inherited from `lr-input`, identical in meaning —
+`--lr-input-control-min-height`, `--lr-input-padding-block`, `--lr-input-padding-inline` and
+`--lr-input-font-size` (the last three swap per `size`).
 
 **Known gotchas:**
 - `clearable`/`clear-button`/`lr-clear` are inert: the clear action only renders for
@@ -774,7 +786,8 @@ per-`size` scale.
 ## `lr-time-input`
 
 A migration-friendly time alias of `lr-input` — the same subclassing shape as `lr-number-input`,
-with the constructor and `connectedCallback()` setting `type = 'time'`. It adds no API of its own.
+with the constructor and `connectedCallback()` setting `type = 'time'`. Its only own API is a
+re-typed `min`/`max` pair (below); every other property, event, slot and part is `lr-input`'s.
 
 **Properties:** `size` (`2xs`…`xl`), `placeholder`, `readonly`, `label`, `hint`, `errorText`
 (`error-text`), `accessibleLabel` (`aria-label`), `autocomplete`, `spellcheck`, `autocapitalize`,
@@ -783,10 +796,15 @@ with the constructor and `connectedCallback()` setting `type = 'time'`. It adds 
 `lr-number-input`.
 
 `step` is forwarded verbatim to the native time input, where it means seconds (`step="1"` reveals
-the seconds field, `'any'` disables step validation). `min`/`max` are forwarded too, but they are
-declared `type: Number` on `lr-input`, so a `min="09:00"` **attribute** parses to `NaN` and reaches
-the native input as the string `NaN`, which the browser discards — assign the property directly
-(`el.min = '09:00'`, TS-widening required) if you need real time bounds.
+the seconds field, `'any'` disables step validation).
+
+`min?: string | number` / `max?: string | number` (attributes `min`/`max`, both defaulting to
+`undefined` — no bound) are re-declared here with a converter that forwards the attribute verbatim
+instead of `lr-input`'s numeric parsing, so they take the native `<input type="time">` literal form:
+`min="09:00"`, or `min="09:00:30"` alongside a seconds-precision `step`. Attribute and property are
+interchangeable (`el.min = '09:00'` needs no cast), removing the attribute clears the bound, and the
+native input's own constraint validation reports `rangeUnderflow`/`rangeOverflow` through
+`checkValidity()`.
 
 **Events:** `input`/`change` (native-style, composed), `lr-input`/`lr-change`
 (`detail: { value }`), `focus`/`blur` (re-dispatched bubbling + composed), and `lr-clear`
@@ -797,8 +815,9 @@ the native input as the string `NaN`, which the browser discards — assign the 
 **CSS parts:** `form-control`, `form-control-label`, `input-wrapper`, `input`, `start`, `end`,
 `hint`, `error`, plus the inherited, never-rendered `clear-button` and `password-toggle`.
 
-**Themeable custom properties:** `--lr-input-control-min-height` and the rest of `lr-input`'s
-per-`size` scale.
+**Themeable custom properties:** inherited from `lr-input`, identical in meaning —
+`--lr-input-control-min-height`, `--lr-input-padding-block`, `--lr-input-padding-inline` and
+`--lr-input-font-size` (the last three swap per `size`).
 
 **Known gotchas:** the same two as `lr-number-input` — the inert clear/password surface, and `type`
 only being re-forced on connect. The native `type="time"` UI (spinners, AM/PM, picker) is the
@@ -1444,12 +1463,18 @@ components), `editor` (the bordered frame and the single scroll viewport), `gutt
 **Themeable custom properties:** `--lr-code-editor-min-block-size` (default `--lr-size-8rem`, the
 frame's and textarea's height floor) and `--lr-code-editor-line-height` (default `1.5`, applied to
 both gutter and textarea so line numbers stay aligned with their lines).
-`--lr-code-editor-tab-size` (default `2`) is declared and read by the `textarea` part's rule, but
-the `tabSize` property writes an inline `tab-size` on that same element on every render, so the
-inline value always wins — set `tabSize`, not this token.
+`--lr-code-editor-tab-size` (default `2`) is read by the `textarea` part's rule and drives both the
+rendered tab stops and the number of spaces Tab inserts. Precedence, highest first: an explicitly
+assigned `tabSize` (property or `tab-size` attribute) > a host-level `--lr-code-editor-tab-size` >
+the `:host` default of `2`. The component writes the token inline on the `textarea` part only while
+`tabSize` has been assigned, so an untouched `tabSize` leaves your override in charge; removing the
+`tab-size` attribute hands control back to the token. A length-valued override (`40px`, `2ch`, …)
+still sets the visual tab stops for literal tab characters, but is not reinterpreted as a count of
+spaces — the Tab key keeps inserting `tabSize` spaces in that case.
 
 **Known gotchas:**
-- Keyboard contract (no keyboard trap, WCAG 2.1.2): Tab inserts `tabSize` spaces at the caret;
+- Keyboard contract (no keyboard trap, WCAG 2.1.2): Tab inserts one indent unit of spaces at the
+  caret (see the tab-width precedence above);
   Shift+Tab is never captured, so reverse focus traversal always works; pressing Escape releases
   the *next* Tab for forward traversal instead, and any other keypress (or focus leaving the
   editor) re-arms Tab indentation.
@@ -1506,12 +1531,20 @@ emoji flex line).
 each emoji button's box), `--lr-emoji-picker-gap` (default `--lr-space-2xs`, the gap between
 emoji within a windowed row), and `--lr-emoji-picker-row-height` (default
 `calc(var(--lr-emoji-picker-item-size) + var(--lr-space-l))`, one windowed row's height). All three
-are also read back in JS — `parseFloat(getComputedStyle(host).getPropertyValue(token))` — to derive
-columns-per-row and row offsets for the windowed layout. That parse takes the leading number and
-treats it as **pixels**, so a `rem` value is read as that many pixels and a `calc()` is unparseable
-and falls back (`40`, `4`, and `64` respectively — the `calc()`-based default row height always
-takes the `64` path). Give these `px` values when the windowed geometry has to line up exactly with
-what is painted.
+are also read back in JS to derive columns-per-row and row offsets for the windowed layout,
+resolved to real pixels by measuring hidden probe boxes the component's own stylesheet sizes from
+those same tokens — so any CSS length unit works, `rem`/`em` and `calc()` included, and the windowed
+geometry matches what is painted without expressing the tokens in `px`. The measurement is cached
+and re-derived only when the resolved pixels can actually change (a token override applied after the
+first render, a theme swap, a root or host font-size change feeding a `rem`/`em` value), never per
+frame.
+
+Two constraints remain. `--lr-emoji-picker-item-size` is clamped up to `--lr-icon-button-size`, the
+shared minimum tappable box: a smaller value does not shrink the button, and the windowed geometry
+follows the clamped, painted size. And windowed rows are absolutely positioned at the row-height
+pitch, so `--lr-emoji-picker-row-height` must stay at or above the item size plus the group-label
+band (`--lr-space-l`) — the default's own formula — or consecutive rows overlap. Columns per
+windowed row are additionally capped at 20 regardless of available width.
 
 **Optional peer dependency:** install `emoji-picker-element-data` with
 `pnpm add emoji-picker-element-data` for the built-in auto-loaded default emoji set — omit it and

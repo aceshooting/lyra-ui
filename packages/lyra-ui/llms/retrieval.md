@@ -1101,7 +1101,8 @@ Both `RetryEventDetail` and `CancelEventDetail` come from `@aceshooting/lyra-ui/
 
 **Slots:** none.
 
-**CSS parts:** `base`, `list`, `item`, `item-header`, `item-name`, `item-meta`, `item-progress`,
+**CSS parts:** `base`, `list`, `item`, `item-header`, `item-name`, `item-meta`, `item-stage` (the
+per-item stage label), `item-progress`,
 `item-chunk-count`, `item-embedding-status` (the "N of M chunks embedded" text, only once both
 `chunkCount` and `embeddedChunkCount` are set), `item-attempts` (only once `attempts > 0`),
 `item-error` (only for `stage="failed"` with `error` set), `item-actions`, `retry-button`,
@@ -1474,7 +1475,8 @@ first time).
 **CSS parts:** `base`, `timeline` (the internal `lr-span-waterfall`), `evidence-list` (omitted when
 no stage has evidence), `evidence-row` (omitted for a stage with no evidence), `evidence-toggle`,
 `evidence-toggle-icon`, `evidence-body` (hidden while collapsed), `evidence-text`,
-`evidence-metadata` (a `<dl>`), `evidence-metadata-key` (`<dt>`), `evidence-metadata-value` (`<dd>`).
+`evidence-metadata` (a `<dl>`), `evidence-metadata-row` (one key/value pair), `evidence-metadata-key`
+(`<dt>`), `evidence-metadata-value` (`<dd>`).
 
 **Themeable custom properties:** shared tokens only.
 

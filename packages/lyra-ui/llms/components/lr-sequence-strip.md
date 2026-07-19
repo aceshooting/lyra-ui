@@ -18,7 +18,9 @@ consistently with the sparkline/heatmap family, but a glanceable *aggregate* vis
 (`role="img"`, one summarizing `aria-label`) rather than a `role="list"` of separately-operable
 items: there is no per-cell keyboard focus and no per-cell click event, matching `<lr-sparkline>`'s
 accessibility model rather than `<lr-heatmap>`'s heavier canvas-plus-keyboard-roving one. Hovering a
-cell (pointer only) shows `[part="tooltip"]` with that item's label.
+cell (pointer only) shows `[part="tooltip"]` with that item's label. Setting `showLegend`
+additionally renders a static `[part="legend"]` key below the strip, so the color-to-category
+mapping is readable without hovering each cell.
 
 **Properties:**
 - `items: SequenceStripItem[] = []` (attribute: false) — `{ id, category, marker?, label? }`;
@@ -35,6 +37,14 @@ cell (pointer only) shows `[part="tooltip"]` with that item's label.
 - `accessibleLabel?: string` (attribute `accessible-label`) — overrides the auto-generated
   `aria-label` (a per-category "label: count" summary, e.g. `"Text: 2, Tool: 1"`). Unset computes the
   summary from `items`/`categories`
+- `showLegend: boolean = false` (attribute `show-legend`, reflected) — renders a static
+  `[part="legend"]` key below the strip, one swatch + label row per `categories` entry, in array
+  order. The key describes the *scheme*, not the current data: a category with no matching item
+  still gets a row, and an item whose `category` matches no entry adds none. Deliberately
+  non-interactive — it toggles nothing and emits nothing (`lr-graph-legend` is the interactive,
+  filtering legend). Because it only repeats the category names `[part="base"]` already announces
+  through its `role="img"` summary, the legend is `aria-hidden` — visible on screen, announced
+  exactly once — and it wraps onto further rows in a narrow allocation rather than overflowing
 
 **Events:** none.
 
@@ -42,12 +52,19 @@ cell (pointer only) shows `[part="tooltip"]` with that item's label.
 
 **CSS parts:** `base` (the root strip, `role="img"`), `cell` (each item's cell, background-colored
 by its category), `marker` (the small bottom marker on a cell whose item sets `marker: true`),
-`tooltip` (the hover tooltip showing the hovered item's label, hidden until a cell is hovered).
+`tooltip` (the hover tooltip showing the hovered item's label, hidden until a cell is hovered),
+`legend` (the static category key rendered below the strip when `showLegend` is set — `aria-hidden`,
+as it repeats the strip's own `aria-label`), `legend-item` (one swatch + label pair, one per
+`categories` entry), `legend-swatch` (the color chip, matching that category's cell color),
+`legend-label` (the category's `label`, or its `key` when unset).
 
 **Themeable custom properties:** `--lr-sequence-strip-height` (default `1.5rem` — the strip's
-block-size) and `--lr-sequence-strip-marker-color` (default `var(--lr-color-text)` — the
-`[part="marker"]` fill); the tooltip also consumes shared tokens `--lr-color-surface`,
-`--lr-color-text`, `--lr-font-size-xs`, `--lr-radius`, and `--lr-shadow`.
+block-size), `--lr-sequence-strip-marker-color` (default `var(--lr-color-text)` — the
+`[part="marker"]` fill), and `--lr-sequence-strip-legend-swatch-size` (default `0.625rem` — the
+`[part="legend-swatch"]` chip's inline- and block-size); the tooltip also consumes shared tokens
+`--lr-color-surface`, `--lr-color-text`, `--lr-font-size-xs`, `--lr-radius`, and `--lr-shadow`, and
+the legend consumes `--lr-space-2xs`, `--lr-space-xs`, `--lr-space-s`, `--lr-font-size-xs`,
+`--lr-color-text-quiet`, and `--lr-radius-xs`.
 
 **Optional peer deps:** none.
 

@@ -654,6 +654,21 @@ focus; it continues to emit `lr-cell-click` and leaves selection state consumer-
   governs both `mode`s and both `scale` values, discretizing whichever scale would otherwise
   interpolate continuously into `colorSteps.length` buckets instead. Unset (the default, or fewer
   than 2 entries) keeps today's 2-endpoint interpolation exactly.
+- `legendStops?: HeatmapLegendStop[]` (attribute: false) — `HeatmapLegendStop { value: number;
+  color: string; label?: string }`: a discrete legend key rendered **instead of** the
+  `--lr-heatmap-scale-lo`/`-hi` gradient bar and its `[part="legend-lo"]`/`[part="legend-hi"]`
+  endpoint labels — one `[part="legend-stop"]` per entry, in array order, each a
+  `[part="legend-swatch"]` filled with that entry's `color` plus a `[part="legend-stop-label"]`.
+  A stop's label defaults to the component's own locale-aware numeric formatting of `value`, so an
+  explicit `label` is only needed when the number isn't the right caption ("none", "≥ 90%"). Exists
+  for the consumer who supplies `cellColor`: because that callback overrides a cell's color
+  entirely, the built-in two-endpoint bar can end up describing a ramp the grid no longer uses —
+  supplying the same colors here keeps the legend honest instead of hiding `::part(legend)` and
+  re-implementing swatches, labels and annotation entries by hand. Strictly presentation: the stops
+  are never consulted by the color ramp, the bucket math, the tooltip, or the generated accessible
+  name, so adding them changes nothing a cell renders. Labeled `annotations` still render their
+  `[part="legend-annotation"]` entries after the stops. Unset (the default) or an empty array
+  reproduces the exact gradient legend, unchanged.
 
 **Getters/methods:** `refreshTheme()` — redraws canvas content after an upstream design-token or
 color-scheme change; called automatically on theme changes, exposed for a consumer that needs to
@@ -667,8 +682,10 @@ force a redraw manually.
 **CSS parts:** `base`, `canvas`, `cells` (opt-in per-cell overlay), `cell` (one opt-in native cell
 button), `tooltip` (hover tooltip, positioned over the hovered cell),
 `live-region` (visually-hidden `role="status" aria-live="polite"` element announcing the
-keyboard-focused cell), `legend`, `legend-lo`, `legend-hi`, `legend-annotation` (one per labeled
-`annotations` entry)
+keyboard-focused cell), `legend`, `legend-lo`, `legend-hi` (both omitted, along with the gradient
+bar between them, while `legendStops` is supplied), `legend-stop` (one per `legendStops` entry),
+`legend-swatch` (that stop's color chip), `legend-stop-label` (that stop's text),
+`legend-annotation` (one per labeled `annotations` entry)
 
 **Themeable custom properties:** `--lr-heatmap-scale-lo` (default `#cde2fb`),
 `--lr-heatmap-scale-hi` (default `#0969da`) — the sequential color-ramp endpoints (matrix mode) or
@@ -679,7 +696,11 @@ resolve-via-`getComputedStyle` pattern), `--lr-heatmap-label-font` (default `10p
 canvas-drawn axis/month/weekday label font), `--lr-heatmap-focus-ring-color` (default
 `var(--lr-focus-ring-color)` — the canvas-drawn ring stroked around the keyboard-focused cell;
 also reused by `[part="canvas"]`'s own `:focus-visible` outline so the two stay visually in sync),
-`--lr-heatmap-annotation-color` (default `var(--lr-color-danger)` — the canvas-drawn ring
+`--lr-heatmap-color-steps-gradient` (default
+`linear-gradient(to right, var(--lr-heatmap-scale-lo), var(--lr-heatmap-scale-hi))` — the gradient
+painted on the continuous legend bar; the component writes it onto the host itself while
+`colorSteps` is supplied and removes it again when it isn't, so it is a read-out rather than a knob
+you set). `--lr-heatmap-annotation-color` (default `var(--lr-color-danger)` — the canvas-drawn ring
 stroked around an annotated cell, deliberately not one of the sequential ramp colors so it stays
 visible regardless of what it's drawn over). `--lr-heatmap-selected-color` (default
 `var(--lr-color-success)` — the canvas-drawn ring stroked around the persistent `selectedCell`, a
@@ -717,6 +738,11 @@ same color as `--lr-heatmap-focus-ring-color`).
 ```
 
 **Known gotchas:**
+- `legendStops` *replaces* the lo/hi gradient bar rather than adding to it: supplying it removes
+  `[part="legend-lo"]`, `[part="legend-hi"]` and the bar from the DOM, so a stylesheet targeting
+  those parts silently stops applying. It is also presentation-only — it never feeds back into the
+  cell colors, so the stops and a `cellColor` callback have to be kept in agreement by the consumer
+  (the point of the property is that they *can* be, from one shared function).
 - the `ResizeObserver` only actually resizes the drawn grid **when `fit-to-width` is set**, in either
   mode. Without it (the default), `draw()` sizes the canvas as `PAD_LEFT + cols * cellSize` (matrix
   mode) or `CAL_PAD_LEFT + weekCount * cellSize` (calendar mode), never from the host's measured
@@ -750,7 +776,9 @@ consistently with the sparkline/heatmap family, but a glanceable *aggregate* vis
 (`role="img"`, one summarizing `aria-label`) rather than a `role="list"` of separately-operable
 items: there is no per-cell keyboard focus and no per-cell click event, matching `<lr-sparkline>`'s
 accessibility model rather than `<lr-heatmap>`'s heavier canvas-plus-keyboard-roving one. Hovering a
-cell (pointer only) shows `[part="tooltip"]` with that item's label.
+cell (pointer only) shows `[part="tooltip"]` with that item's label. Setting `showLegend`
+additionally renders a static `[part="legend"]` key below the strip, so the color-to-category
+mapping is readable without hovering each cell.
 
 **Properties:**
 - `items: SequenceStripItem[] = []` (attribute: false) — `{ id, category, marker?, label? }`;
@@ -767,6 +795,14 @@ cell (pointer only) shows `[part="tooltip"]` with that item's label.
 - `accessibleLabel?: string` (attribute `accessible-label`) — overrides the auto-generated
   `aria-label` (a per-category "label: count" summary, e.g. `"Text: 2, Tool: 1"`). Unset computes the
   summary from `items`/`categories`
+- `showLegend: boolean = false` (attribute `show-legend`, reflected) — renders a static
+  `[part="legend"]` key below the strip, one swatch + label row per `categories` entry, in array
+  order. The key describes the *scheme*, not the current data: a category with no matching item
+  still gets a row, and an item whose `category` matches no entry adds none. Deliberately
+  non-interactive — it toggles nothing and emits nothing (`lr-graph-legend` is the interactive,
+  filtering legend). Because it only repeats the category names `[part="base"]` already announces
+  through its `role="img"` summary, the legend is `aria-hidden` — visible on screen, announced
+  exactly once — and it wraps onto further rows in a narrow allocation rather than overflowing
 
 **Events:** none.
 
@@ -774,12 +810,19 @@ cell (pointer only) shows `[part="tooltip"]` with that item's label.
 
 **CSS parts:** `base` (the root strip, `role="img"`), `cell` (each item's cell, background-colored
 by its category), `marker` (the small bottom marker on a cell whose item sets `marker: true`),
-`tooltip` (the hover tooltip showing the hovered item's label, hidden until a cell is hovered).
+`tooltip` (the hover tooltip showing the hovered item's label, hidden until a cell is hovered),
+`legend` (the static category key rendered below the strip when `showLegend` is set — `aria-hidden`,
+as it repeats the strip's own `aria-label`), `legend-item` (one swatch + label pair, one per
+`categories` entry), `legend-swatch` (the color chip, matching that category's cell color),
+`legend-label` (the category's `label`, or its `key` when unset).
 
 **Themeable custom properties:** `--lr-sequence-strip-height` (default `1.5rem` — the strip's
-block-size) and `--lr-sequence-strip-marker-color` (default `var(--lr-color-text)` — the
-`[part="marker"]` fill); the tooltip also consumes shared tokens `--lr-color-surface`,
-`--lr-color-text`, `--lr-font-size-xs`, `--lr-radius`, and `--lr-shadow`.
+block-size), `--lr-sequence-strip-marker-color` (default `var(--lr-color-text)` — the
+`[part="marker"]` fill), and `--lr-sequence-strip-legend-swatch-size` (default `0.625rem` — the
+`[part="legend-swatch"]` chip's inline- and block-size); the tooltip also consumes shared tokens
+`--lr-color-surface`, `--lr-color-text`, `--lr-font-size-xs`, `--lr-radius`, and `--lr-shadow`, and
+the legend consumes `--lr-space-2xs`, `--lr-space-xs`, `--lr-space-s`, `--lr-font-size-xs`,
+`--lr-color-text-quiet`, and `--lr-radius-xs`.
 
 **Optional peer deps:** none.
 

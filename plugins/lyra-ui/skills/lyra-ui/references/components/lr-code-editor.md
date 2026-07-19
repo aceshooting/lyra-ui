@@ -53,12 +53,18 @@ components), `editor` (the bordered frame and the single scroll viewport), `gutt
 **Themeable custom properties:** `--lr-code-editor-min-block-size` (default `--lr-size-8rem`, the
 frame's and textarea's height floor) and `--lr-code-editor-line-height` (default `1.5`, applied to
 both gutter and textarea so line numbers stay aligned with their lines).
-`--lr-code-editor-tab-size` (default `2`) is declared and read by the `textarea` part's rule, but
-the `tabSize` property writes an inline `tab-size` on that same element on every render, so the
-inline value always wins — set `tabSize`, not this token.
+`--lr-code-editor-tab-size` (default `2`) is read by the `textarea` part's rule and drives both the
+rendered tab stops and the number of spaces Tab inserts. Precedence, highest first: an explicitly
+assigned `tabSize` (property or `tab-size` attribute) > a host-level `--lr-code-editor-tab-size` >
+the `:host` default of `2`. The component writes the token inline on the `textarea` part only while
+`tabSize` has been assigned, so an untouched `tabSize` leaves your override in charge; removing the
+`tab-size` attribute hands control back to the token. A length-valued override (`40px`, `2ch`, …)
+still sets the visual tab stops for literal tab characters, but is not reinterpreted as a count of
+spaces — the Tab key keeps inserting `tabSize` spaces in that case.
 
 **Known gotchas:**
-- Keyboard contract (no keyboard trap, WCAG 2.1.2): Tab inserts `tabSize` spaces at the caret;
+- Keyboard contract (no keyboard trap, WCAG 2.1.2): Tab inserts one indent unit of spaces at the
+  caret (see the tab-width precedence above);
   Shift+Tab is never captured, so reverse focus traversal always works; pressing Escape releases
   the *next* Tab for forward traversal instead, and any other keypress (or focus leaving the
   editor) re-arms Tab indentation.

@@ -445,6 +445,15 @@ pointer or keyboard selection, multiple-value toggle, tag/Backspace removal, or 
 one bubbling/composed, non-cancelable plain `input` `Event`, immediately followed by the same shape
 of `change` `Event`. Re-picking the current single value and programmatic/default/reset/restore
 writes are silent. The clear button emits one `lr-clear` after its `input`/`change` pair.
+`lr-filter` (`detail: { value: string }`) reports the in-progress filter text on every user-driven
+keystroke — the live as-you-typed search string, deliberately *not* `value`, which is the committed
+selection. It is the supported way to read that text; reaching into the shadow root for
+`[part="combobox-input"]`'s value is not. Named `lr-filter` rather than `lr-input` precisely because
+`lr-input`'s detail on `<lr-input>` is the committed value, and the two must not share a name while
+carrying different strings. It fires for user input only: picking a row, the clear button,
+`form.reset()`, dismissing the listbox, a programmatic `value` write, and `setRangeText()` all blank
+the filter silently, mirroring how `<lr-input>`'s `lr-input` only reports user edits.
+
 `lr-show` and `lr-hide` report listbox visibility transitions.
 The internal input's `focus` and `blur` are re-dispatched as bubbling, composed host events.
 
@@ -1072,8 +1081,10 @@ form-associated via the same `FormAssociated` mixin as `lr-textarea`. Ships the 
 - `min?: number` / `max?: number` (attributes `min`/`max`) / `step?: number | 'any'` (attribute
   `step`, accepts the native `'any'` value alongside a number) — forwarded verbatim to the native
   input and validated by it. Intended for `type="number"`; `step` is equally meaningful on
-  `type="time"`, but `min`/`max` are `type: Number`-converted, so a non-numeric bound only survives
-  a direct property assignment, never the attribute. Inert for the other types
+  `type="time"`. On `lr-input` itself the `min`/`max` *attributes* are number-converted, so a
+  non-numeric bound only survives a direct property assignment; the declared type also admits a
+  string so a subclass can narrow the attribute parsing to its own native type's literal form —
+  `lr-time-input` does exactly that. Inert for the other types
 - `passwordVisible: boolean = false` (attribute `password-visible` — `type="password"` only)
 - `name`/`disabled`/`required` (from `FormAssociated`)
 
@@ -1135,8 +1146,9 @@ input), and `lr-clear` (inherited, never fired here).
 `hint`, `error`, plus the inherited `clear-button` and `password-toggle`, neither of which this
 alias ever renders.
 
-**Themeable custom properties:** `--lr-input-control-min-height` and the rest of `lr-input`'s
-per-`size` scale.
+**Themeable custom properties:** inherited from `lr-input`, identical in meaning —
+`--lr-input-control-min-height`, `--lr-input-padding-block`, `--lr-input-padding-inline` and
+`--lr-input-font-size` (the last three swap per `size`).
 
 **Known gotchas:**
 - `clearable`/`clear-button`/`lr-clear` are inert: the clear action only renders for
@@ -1148,7 +1160,8 @@ per-`size` scale.
 ## `lr-time-input`
 
 A migration-friendly time alias of `lr-input` — the same subclassing shape as `lr-number-input`,
-with the constructor and `connectedCallback()` setting `type = 'time'`. It adds no API of its own.
+with the constructor and `connectedCallback()` setting `type = 'time'`. Its only own API is a
+re-typed `min`/`max` pair (below); every other property, event, slot and part is `lr-input`'s.
 
 **Properties:** `size` (`2xs`…`xl`), `placeholder`, `readonly`, `label`, `hint`, `errorText`
 (`error-text`), `accessibleLabel` (`aria-label`), `autocomplete`, `spellcheck`, `autocapitalize`,
@@ -1157,10 +1170,15 @@ with the constructor and `connectedCallback()` setting `type = 'time'`. It adds 
 `lr-number-input`.
 
 `step` is forwarded verbatim to the native time input, where it means seconds (`step="1"` reveals
-the seconds field, `'any'` disables step validation). `min`/`max` are forwarded too, but they are
-declared `type: Number` on `lr-input`, so a `min="09:00"` **attribute** parses to `NaN` and reaches
-the native input as the string `NaN`, which the browser discards — assign the property directly
-(`el.min = '09:00'`, TS-widening required) if you need real time bounds.
+the seconds field, `'any'` disables step validation).
+
+`min?: string | number` / `max?: string | number` (attributes `min`/`max`, both defaulting to
+`undefined` — no bound) are re-declared here with a converter that forwards the attribute verbatim
+instead of `lr-input`'s numeric parsing, so they take the native `<input type="time">` literal form:
+`min="09:00"`, or `min="09:00:30"` alongside a seconds-precision `step`. Attribute and property are
+interchangeable (`el.min = '09:00'` needs no cast), removing the attribute clears the bound, and the
+native input's own constraint validation reports `rangeUnderflow`/`rangeOverflow` through
+`checkValidity()`.
 
 **Events:** `input`/`change` (native-style, composed), `lr-input`/`lr-change`
 (`detail: { value }`), `focus`/`blur` (re-dispatched bubbling + composed), and `lr-clear`
@@ -1171,8 +1189,9 @@ the native input as the string `NaN`, which the browser discards — assign the 
 **CSS parts:** `form-control`, `form-control-label`, `input-wrapper`, `input`, `start`, `end`,
 `hint`, `error`, plus the inherited, never-rendered `clear-button` and `password-toggle`.
 
-**Themeable custom properties:** `--lr-input-control-min-height` and the rest of `lr-input`'s
-per-`size` scale.
+**Themeable custom properties:** inherited from `lr-input`, identical in meaning —
+`--lr-input-control-min-height`, `--lr-input-padding-block`, `--lr-input-padding-inline` and
+`--lr-input-font-size` (the last three swap per `size`).
 
 **Known gotchas:** the same two as `lr-number-input` — the inert clear/password surface, and `type`
 only being re-forced on connect. The native `type="time"` UI (spinners, AM/PM, picker) is the
@@ -1818,12 +1837,18 @@ components), `editor` (the bordered frame and the single scroll viewport), `gutt
 **Themeable custom properties:** `--lr-code-editor-min-block-size` (default `--lr-size-8rem`, the
 frame's and textarea's height floor) and `--lr-code-editor-line-height` (default `1.5`, applied to
 both gutter and textarea so line numbers stay aligned with their lines).
-`--lr-code-editor-tab-size` (default `2`) is declared and read by the `textarea` part's rule, but
-the `tabSize` property writes an inline `tab-size` on that same element on every render, so the
-inline value always wins — set `tabSize`, not this token.
+`--lr-code-editor-tab-size` (default `2`) is read by the `textarea` part's rule and drives both the
+rendered tab stops and the number of spaces Tab inserts. Precedence, highest first: an explicitly
+assigned `tabSize` (property or `tab-size` attribute) > a host-level `--lr-code-editor-tab-size` >
+the `:host` default of `2`. The component writes the token inline on the `textarea` part only while
+`tabSize` has been assigned, so an untouched `tabSize` leaves your override in charge; removing the
+`tab-size` attribute hands control back to the token. A length-valued override (`40px`, `2ch`, …)
+still sets the visual tab stops for literal tab characters, but is not reinterpreted as a count of
+spaces — the Tab key keeps inserting `tabSize` spaces in that case.
 
 **Known gotchas:**
-- Keyboard contract (no keyboard trap, WCAG 2.1.2): Tab inserts `tabSize` spaces at the caret;
+- Keyboard contract (no keyboard trap, WCAG 2.1.2): Tab inserts one indent unit of spaces at the
+  caret (see the tab-width precedence above);
   Shift+Tab is never captured, so reverse focus traversal always works; pressing Escape releases
   the *next* Tab for forward traversal instead, and any other keypress (or focus leaving the
   editor) re-arms Tab indentation.
@@ -1880,12 +1905,20 @@ emoji flex line).
 each emoji button's box), `--lr-emoji-picker-gap` (default `--lr-space-2xs`, the gap between
 emoji within a windowed row), and `--lr-emoji-picker-row-height` (default
 `calc(var(--lr-emoji-picker-item-size) + var(--lr-space-l))`, one windowed row's height). All three
-are also read back in JS — `parseFloat(getComputedStyle(host).getPropertyValue(token))` — to derive
-columns-per-row and row offsets for the windowed layout. That parse takes the leading number and
-treats it as **pixels**, so a `rem` value is read as that many pixels and a `calc()` is unparseable
-and falls back (`40`, `4`, and `64` respectively — the `calc()`-based default row height always
-takes the `64` path). Give these `px` values when the windowed geometry has to line up exactly with
-what is painted.
+are also read back in JS to derive columns-per-row and row offsets for the windowed layout,
+resolved to real pixels by measuring hidden probe boxes the component's own stylesheet sizes from
+those same tokens — so any CSS length unit works, `rem`/`em` and `calc()` included, and the windowed
+geometry matches what is painted without expressing the tokens in `px`. The measurement is cached
+and re-derived only when the resolved pixels can actually change (a token override applied after the
+first render, a theme swap, a root or host font-size change feeding a `rem`/`em` value), never per
+frame.
+
+Two constraints remain. `--lr-emoji-picker-item-size` is clamped up to `--lr-icon-button-size`, the
+shared minimum tappable box: a smaller value does not shrink the button, and the windowed geometry
+follows the clamped, painted size. And windowed rows are absolutely positioned at the row-height
+pitch, so `--lr-emoji-picker-row-height` must stay at or above the item size plus the group-label
+band (`--lr-space-l`) — the default's own formula — or consecutive rows overlap. Columns per
+windowed row are additionally capped at 20 regardless of available width.
 
 **Optional peer dependency:** install `emoji-picker-element-data` with
 `pnpm add emoji-picker-element-data` for the built-in auto-loaded default emoji set — omit it and
@@ -2576,6 +2609,21 @@ focus; it continues to emit `lr-cell-click` and leaves selection state consumer-
   governs both `mode`s and both `scale` values, discretizing whichever scale would otherwise
   interpolate continuously into `colorSteps.length` buckets instead. Unset (the default, or fewer
   than 2 entries) keeps today's 2-endpoint interpolation exactly.
+- `legendStops?: HeatmapLegendStop[]` (attribute: false) — `HeatmapLegendStop { value: number;
+  color: string; label?: string }`: a discrete legend key rendered **instead of** the
+  `--lr-heatmap-scale-lo`/`-hi` gradient bar and its `[part="legend-lo"]`/`[part="legend-hi"]`
+  endpoint labels — one `[part="legend-stop"]` per entry, in array order, each a
+  `[part="legend-swatch"]` filled with that entry's `color` plus a `[part="legend-stop-label"]`.
+  A stop's label defaults to the component's own locale-aware numeric formatting of `value`, so an
+  explicit `label` is only needed when the number isn't the right caption ("none", "≥ 90%"). Exists
+  for the consumer who supplies `cellColor`: because that callback overrides a cell's color
+  entirely, the built-in two-endpoint bar can end up describing a ramp the grid no longer uses —
+  supplying the same colors here keeps the legend honest instead of hiding `::part(legend)` and
+  re-implementing swatches, labels and annotation entries by hand. Strictly presentation: the stops
+  are never consulted by the color ramp, the bucket math, the tooltip, or the generated accessible
+  name, so adding them changes nothing a cell renders. Labeled `annotations` still render their
+  `[part="legend-annotation"]` entries after the stops. Unset (the default) or an empty array
+  reproduces the exact gradient legend, unchanged.
 
 **Getters/methods:** `refreshTheme()` — redraws canvas content after an upstream design-token or
 color-scheme change; called automatically on theme changes, exposed for a consumer that needs to
@@ -2589,8 +2637,10 @@ force a redraw manually.
 **CSS parts:** `base`, `canvas`, `cells` (opt-in per-cell overlay), `cell` (one opt-in native cell
 button), `tooltip` (hover tooltip, positioned over the hovered cell),
 `live-region` (visually-hidden `role="status" aria-live="polite"` element announcing the
-keyboard-focused cell), `legend`, `legend-lo`, `legend-hi`, `legend-annotation` (one per labeled
-`annotations` entry)
+keyboard-focused cell), `legend`, `legend-lo`, `legend-hi` (both omitted, along with the gradient
+bar between them, while `legendStops` is supplied), `legend-stop` (one per `legendStops` entry),
+`legend-swatch` (that stop's color chip), `legend-stop-label` (that stop's text),
+`legend-annotation` (one per labeled `annotations` entry)
 
 **Themeable custom properties:** `--lr-heatmap-scale-lo` (default `#cde2fb`),
 `--lr-heatmap-scale-hi` (default `#0969da`) — the sequential color-ramp endpoints (matrix mode) or
@@ -2601,7 +2651,11 @@ resolve-via-`getComputedStyle` pattern), `--lr-heatmap-label-font` (default `10p
 canvas-drawn axis/month/weekday label font), `--lr-heatmap-focus-ring-color` (default
 `var(--lr-focus-ring-color)` — the canvas-drawn ring stroked around the keyboard-focused cell;
 also reused by `[part="canvas"]`'s own `:focus-visible` outline so the two stay visually in sync),
-`--lr-heatmap-annotation-color` (default `var(--lr-color-danger)` — the canvas-drawn ring
+`--lr-heatmap-color-steps-gradient` (default
+`linear-gradient(to right, var(--lr-heatmap-scale-lo), var(--lr-heatmap-scale-hi))` — the gradient
+painted on the continuous legend bar; the component writes it onto the host itself while
+`colorSteps` is supplied and removes it again when it isn't, so it is a read-out rather than a knob
+you set). `--lr-heatmap-annotation-color` (default `var(--lr-color-danger)` — the canvas-drawn ring
 stroked around an annotated cell, deliberately not one of the sequential ramp colors so it stays
 visible regardless of what it's drawn over). `--lr-heatmap-selected-color` (default
 `var(--lr-color-success)` — the canvas-drawn ring stroked around the persistent `selectedCell`, a
@@ -2639,6 +2693,11 @@ same color as `--lr-heatmap-focus-ring-color`).
 ```
 
 **Known gotchas:**
+- `legendStops` *replaces* the lo/hi gradient bar rather than adding to it: supplying it removes
+  `[part="legend-lo"]`, `[part="legend-hi"]` and the bar from the DOM, so a stylesheet targeting
+  those parts silently stops applying. It is also presentation-only — it never feeds back into the
+  cell colors, so the stops and a `cellColor` callback have to be kept in agreement by the consumer
+  (the point of the property is that they *can* be, from one shared function).
 - the `ResizeObserver` only actually resizes the drawn grid **when `fit-to-width` is set**, in either
   mode. Without it (the default), `draw()` sizes the canvas as `PAD_LEFT + cols * cellSize` (matrix
   mode) or `CAL_PAD_LEFT + weekCount * cellSize` (calendar mode), never from the host's measured
@@ -2672,7 +2731,9 @@ consistently with the sparkline/heatmap family, but a glanceable *aggregate* vis
 (`role="img"`, one summarizing `aria-label`) rather than a `role="list"` of separately-operable
 items: there is no per-cell keyboard focus and no per-cell click event, matching `<lr-sparkline>`'s
 accessibility model rather than `<lr-heatmap>`'s heavier canvas-plus-keyboard-roving one. Hovering a
-cell (pointer only) shows `[part="tooltip"]` with that item's label.
+cell (pointer only) shows `[part="tooltip"]` with that item's label. Setting `showLegend`
+additionally renders a static `[part="legend"]` key below the strip, so the color-to-category
+mapping is readable without hovering each cell.
 
 **Properties:**
 - `items: SequenceStripItem[] = []` (attribute: false) — `{ id, category, marker?, label? }`;
@@ -2689,6 +2750,14 @@ cell (pointer only) shows `[part="tooltip"]` with that item's label.
 - `accessibleLabel?: string` (attribute `accessible-label`) — overrides the auto-generated
   `aria-label` (a per-category "label: count" summary, e.g. `"Text: 2, Tool: 1"`). Unset computes the
   summary from `items`/`categories`
+- `showLegend: boolean = false` (attribute `show-legend`, reflected) — renders a static
+  `[part="legend"]` key below the strip, one swatch + label row per `categories` entry, in array
+  order. The key describes the *scheme*, not the current data: a category with no matching item
+  still gets a row, and an item whose `category` matches no entry adds none. Deliberately
+  non-interactive — it toggles nothing and emits nothing (`lr-graph-legend` is the interactive,
+  filtering legend). Because it only repeats the category names `[part="base"]` already announces
+  through its `role="img"` summary, the legend is `aria-hidden` — visible on screen, announced
+  exactly once — and it wraps onto further rows in a narrow allocation rather than overflowing
 
 **Events:** none.
 
@@ -2696,12 +2765,19 @@ cell (pointer only) shows `[part="tooltip"]` with that item's label.
 
 **CSS parts:** `base` (the root strip, `role="img"`), `cell` (each item's cell, background-colored
 by its category), `marker` (the small bottom marker on a cell whose item sets `marker: true`),
-`tooltip` (the hover tooltip showing the hovered item's label, hidden until a cell is hovered).
+`tooltip` (the hover tooltip showing the hovered item's label, hidden until a cell is hovered),
+`legend` (the static category key rendered below the strip when `showLegend` is set — `aria-hidden`,
+as it repeats the strip's own `aria-label`), `legend-item` (one swatch + label pair, one per
+`categories` entry), `legend-swatch` (the color chip, matching that category's cell color),
+`legend-label` (the category's `label`, or its `key` when unset).
 
 **Themeable custom properties:** `--lr-sequence-strip-height` (default `1.5rem` — the strip's
-block-size) and `--lr-sequence-strip-marker-color` (default `var(--lr-color-text)` — the
-`[part="marker"]` fill); the tooltip also consumes shared tokens `--lr-color-surface`,
-`--lr-color-text`, `--lr-font-size-xs`, `--lr-radius`, and `--lr-shadow`.
+block-size), `--lr-sequence-strip-marker-color` (default `var(--lr-color-text)` — the
+`[part="marker"]` fill), and `--lr-sequence-strip-legend-swatch-size` (default `0.625rem` — the
+`[part="legend-swatch"]` chip's inline- and block-size); the tooltip also consumes shared tokens
+`--lr-color-surface`, `--lr-color-text`, `--lr-font-size-xs`, `--lr-radius`, and `--lr-shadow`, and
+the legend consumes `--lr-space-2xs`, `--lr-space-xs`, `--lr-space-s`, `--lr-font-size-xs`,
+`--lr-color-text-quiet`, and `--lr-radius-xs`.
 
 **Optional peer deps:** none.
 
@@ -3417,13 +3493,27 @@ auto-inserted between each adjacent pair.
 - `min: number = 10` (min % per panel)
 - `orientation: 'horizontal'|'vertical' = 'horizontal'` (reflected) — the axis used at/above
   `orientationBreakpoint` (or always, when that's unset).
-- `orientationBreakpoint?: number` (attribute `orientation-breakpoint`, px) — opt-in inline-size
-  breakpoint measured on `[part='base']`; unset (the default) means no behavior change at all.
-  Below it, `narrowOrientation` becomes the effective axis instead of `orientation`.
+- `orientationBreakpoint?: number | string` (attribute `orientation-breakpoint`) — opt-in inline-size
+  breakpoint measured on `[part='base']`; unset (the default) means no behavior change at all, and
+  no `ResizeObserver` is armed. Below it, `narrowOrientation` becomes the effective axis instead of
+  `orientation`. Accepts a bare pixel number (`900`, `orientation-breakpoint="900"`) or a CSS length
+  string: `'900px'`, `'56.25rem'`, `'3em'`. **`rem` resolves against the document root's font size —
+  exactly as a `rem` in a CSS `@media` query does, *not* against this element** — so a breakpoint
+  authored to match a sibling `@media (max-width: 56.25rem)` rule stays in sync with it across
+  browser zoom, a user font-size preference, or an app changing its base size token. `em` resolves
+  against the element's own computed font size. The length is **re-resolved on every measurement**,
+  never cached at first render, so a root font-size change moves the crossing width with no
+  invalidation step on the consumer's side. Anything that isn't a resolvable length behaves exactly
+  as unset (no observation, no `data-effective-orientation`): `''`, `'auto'`, garbage, a non-finite
+  number, and deliberately `%`, `vw`/`vh` and `calc()` — a viewport-relative threshold would mix
+  reference boxes against a measurement of the element's own allocation. For a genuinely viewport-relative
+  breakpoint, leave `orientationBreakpoint` unset and bind `orientation` from your own
+  `matchMedia()` controller — see the composition note in the gotchas below.
 - `narrowOrientation: 'horizontal'|'vertical' = 'vertical'` (reflected, attribute `narrow-orientation`)
 - `effectiveOrientation: 'horizontal'|'vertical'` (readonly getter) — the live resize/layout axis
-  actually in effect; identical to `orientation` whenever `orientationBreakpoint` is unset. Also
-  reflected as `data-effective-orientation` (only present while `orientationBreakpoint` is set).
+  actually in effect; identical to `orientation` whenever `orientationBreakpoint` is unset or
+  doesn't resolve to a length. Also reflected as `data-effective-orientation` (only present while
+  `orientationBreakpoint` resolves to a usable length).
 - `storageKey?: string` (attribute `storage-key` — persists sizes to `localStorage` under
   `` `lr-split:${key}:${panelCount}` ``, scoped by panel count so a stale layout for a different
   panel count is ignored)
@@ -3535,6 +3625,19 @@ the visually-adjacent panel).
   `disconnectedCallback`) is solid and safe to rely on.
 - `orientationBreakpoint` shares its `[part='base']` `ResizeObserver` with `collapse` (one observer,
   not two) — arming logic covers either feature being opted into independently.
+- `orientationBreakpoint` observes **the component's own allocated inline size**, not the viewport
+  and not a shared row. It therefore fits a component that is the sole flex/grid item in the
+  container being measured. It does **not** fit a component sitting beside a fixed-width sibling in
+  a row that stacks via a CSS `@media` rule: while the row is a row, this element's width shrinks
+  with the viewport; the instant the row stacks (a pure-CSS event no component can observe) it jumps
+  to the *full* row width — wider than it was just before the transition. Because the measured width
+  is not monotonic across that transition, no single threshold both stays wide while the row is a
+  row and goes narrow exactly when it stacks. A fixed-width sibling is worse still: its own width
+  never changes with the viewport at all, so no breakpoint on it can react to the stacking.
+  For that layout, leave `orientationBreakpoint` unset and drive the `orientation` attribute from
+  one shared consumer-side breakpoint controller (a `matchMedia()` listener matching the same query
+  as the CSS rule). That is the intended, supported pattern for sibling-coupled layouts — not a
+  workaround.
 
 ---
 
@@ -3824,15 +3927,27 @@ convention).
   lays steps out in a row (Left/Right, RTL-aware, navigate); `'vertical'` stacks them (Up/Down
   navigate instead, no RTL swap needed). The axis used at/above `orientationBreakpoint` (or always,
   when that's unset).
-- `orientationBreakpoint?: number` (attribute `orientation-breakpoint`, px) — opt-in inline-size
-  breakpoint measured on `[part='base']`; unset (the default) means no behavior change at all.
-  Below it, `narrowOrientation` becomes the effective axis instead of `orientation`. Mirrors
-  `<lr-split>`'s identically-named contract.
+- `orientationBreakpoint?: number | string` (attribute `orientation-breakpoint`) — opt-in inline-size
+  breakpoint measured on `[part='base']`; unset (the default) means no behavior change at all, and
+  no `ResizeObserver` is armed. Below it, `narrowOrientation` becomes the effective axis instead of
+  `orientation`. Accepts a bare pixel number (`900`, `orientation-breakpoint="900"`) or a CSS length
+  string: `'900px'`, `'56.25rem'`, `'3em'`. **`rem` resolves against the document root's font size —
+  exactly as a `rem` in a CSS `@media` query does, *not* against this element** — so a breakpoint
+  authored to match a sibling `@media (max-width: 56.25rem)` rule stays in sync with it across
+  browser zoom, a user font-size preference, or an app changing its base size token. `em` resolves
+  against the element's own computed font size. The length is **re-resolved on every measurement**,
+  never cached at first render, so a root font-size change moves the crossing width with no
+  invalidation step on the consumer's side. Anything that isn't a resolvable length behaves exactly
+  as unset (no observation, no `data-effective-orientation`): `''`, `'auto'`, garbage, a non-finite
+  number, and deliberately `%`, `vw`/`vh` and `calc()` — a viewport-relative threshold would mix
+  reference boxes against a measurement of the element's own allocation. Mirrors `<lr-split>`'s
+  identically-named contract, unit handling included.
 - `narrowOrientation: 'horizontal' | 'vertical' = 'vertical'` (reflected, attribute
   `narrow-orientation`)
 - `effectiveOrientation: 'horizontal' | 'vertical'` (readonly getter) — the live layout/navigation
-  axis actually in effect; identical to `orientation` whenever `orientationBreakpoint` is unset.
-  Also reflected as `data-effective-orientation` (only present while `orientationBreakpoint` is set).
+  axis actually in effect; identical to `orientation` whenever `orientationBreakpoint` is unset or
+  doesn't resolve to a length. Also reflected as `data-effective-orientation` (only present while
+  `orientationBreakpoint` resolves to a usable length).
 - `accessibleLabel: string | null = null` (attribute `aria-label`) — accessible name applied to the
   `role="tablist"` step strip; attribute-reflects from a host-level `aria-label`. Unset, the
   tablist renders without an `aria-label` (there is no localized default name).
@@ -3872,6 +3987,14 @@ single place to short-circuit its own listener's follow-up work. `lr-stepper-ori
 ```
 
 **Known gotchas:**
+- `orientationBreakpoint` observes **the stepper's own allocated inline size**, so it fits a stepper
+  that is the sole flex/grid item in its measured container. In a row where the stepper is a
+  fixed-width sidebar beside another element, its own width never changes with the viewport at all,
+  so no breakpoint value can react to that row stacking via a CSS `@media` rule. For that layout,
+  leave `orientationBreakpoint` unset and drive the `orientation` attribute for both siblings from
+  one shared consumer-side breakpoint controller matching the same query as the CSS rule — the
+  intended pattern for sibling-coupled layouts, not a workaround. See `<lr-split>`'s own note above
+  for the full explanation of why a shared row can't be inferred from one element's measurement.
 - there's no built-in "step forward/back" method — advancing the wizard is entirely the host's job:
   react to `lr-step-select` (or its own Next/Back buttons) and reassign `steps` with updated
   `state` values.
@@ -5075,7 +5198,9 @@ used by `placement="top"|"bottom"`), `--lr-drawer-enter-x` / `--lr-drawer-enter-
 entrance-animation translate offset — `-x` for start/end, `-y` for top/bottom; both default to
 `±--lr-size-1rem` and are set per `placement`, with `-x` explicitly flipped under `:dir(rtl)` since
 `translateX` is physical. Override to lengthen/shorten the slide-in; the animation is dropped
-entirely under `prefers-reduced-motion: reduce`), and inherited dialog surface/overlay tokens.
+entirely under `prefers-reduced-motion: reduce`). It also inherits `<lr-dialog>`'s own tokens —
+`--lr-dialog-overlay-color`, `--lr-dialog-width` and `--lr-dialog-max-width` — since `LyraDrawer`
+extends `LyraDialog`; the drawer's own width tokens take precedence for its panel.
 
 ```html
 <lr-drawer open placement="end" heading="Filters" closable>
@@ -8107,8 +8232,11 @@ and `label` the generated bucket range string (`"lo–hi"`, both bounds at one d
 
 **CSS parts:** `base`, `canvas`, `reset-zoom-button`, `description`, `data-table`, `center`.
 
-**Themeable custom properties / optional peer deps:** the same `--lr-chart-*` tokens and the same
-`chart.js` (+ `chartjs-plugin-zoom` when `zoom` is set) peers.
+**Themeable custom properties:** `--lr-chart-height`, `--lr-chart-grid-color`,
+`--lr-chart-tick-color`, `--lr-chart-legend-color`, `--lr-chart-tooltip-bg`,
+`--lr-chart-tooltip-text` — inherited from `LyraChart`, identical in meaning.
+
+**Optional peer deps:** the same `chart.js` (+ `chartjs-plugin-zoom` when `zoom` is set) peers.
 
 All of the above behave exactly as documented in `llms/components/lr-chart.md` — read that file for
 their semantics, defaults, and gotchas.
@@ -10588,8 +10716,9 @@ on every message regardless of whether that message actually has multiple branch
 valid target (never past either bound); the consumer applies `index` after switching the displayed
 branch content.
 
-**CSS parts:** `base` (the group wrapper, `role="group"`), `previous-button`, `next-button`, and
-`position` (the visible "2 / 5" text).
+**CSS parts:** `base` (the group wrapper, `role="group"`), `previous-button`, `next-button`,
+`previous-glyph` and `next-glyph` (the chevron inside each button — target these to swap the
+arrow without restyling the button), and `position` (the visible "2 / 5" text).
 
 ## `lr-message-actions`
 
@@ -10724,7 +10853,8 @@ the localized default; attribute-reflects from a host-level `aria-label`.
 **CSS parts:** `base` (the scroll container), `log` (the `role="log"` region wrapping final entries
 only), `entry`, `speaker` (omitted for a row repeating the previous row's speaker), `text`
 (`dir="auto"`), `timestamp` (only while `show-timestamps`), `interim` (present alongside `entry` on
-an interim row), `jump-button` (shown only while `follow` is `false`), and `empty`.
+an interim row), `interim-area` (the wrapper holding the interim row, present whether or not an
+interim entry is showing), `jump-button` (shown only while `follow` is `false`), and `empty`.
 
 ## `lr-handoff-divider`
 
@@ -13909,7 +14039,8 @@ Both `RetryEventDetail` and `CancelEventDetail` come from `@aceshooting/lyra-ui/
 
 **Slots:** none.
 
-**CSS parts:** `base`, `list`, `item`, `item-header`, `item-name`, `item-meta`, `item-progress`,
+**CSS parts:** `base`, `list`, `item`, `item-header`, `item-name`, `item-meta`, `item-stage` (the
+per-item stage label), `item-progress`,
 `item-chunk-count`, `item-embedding-status` (the "N of M chunks embedded" text, only once both
 `chunkCount` and `embeddedChunkCount` are set), `item-attempts` (only once `attempts > 0`),
 `item-error` (only for `stage="failed"` with `error` set), `item-actions`, `retry-button`,
@@ -14282,7 +14413,8 @@ first time).
 **CSS parts:** `base`, `timeline` (the internal `lr-span-waterfall`), `evidence-list` (omitted when
 no stage has evidence), `evidence-row` (omitted for a stage with no evidence), `evidence-toggle`,
 `evidence-toggle-icon`, `evidence-body` (hidden while collapsed), `evidence-text`,
-`evidence-metadata` (a `<dl>`), `evidence-metadata-key` (`<dt>`), `evidence-metadata-value` (`<dd>`).
+`evidence-metadata` (a `<dl>`), `evidence-metadata-row` (one key/value pair), `evidence-metadata-key`
+(`<dt>`), `evidence-metadata-value` (`<dd>`).
 
 **Themeable custom properties:** shared tokens only.
 

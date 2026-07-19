@@ -44,7 +44,8 @@ Both `RetryEventDetail` and `CancelEventDetail` come from `@aceshooting/lyra-ui/
 
 **Slots:** none.
 
-**CSS parts:** `base`, `list`, `item`, `item-header`, `item-name`, `item-meta`, `item-progress`,
+**CSS parts:** `base`, `list`, `item`, `item-header`, `item-name`, `item-meta`, `item-stage` (the
+per-item stage label), `item-progress`,
 `item-chunk-count`, `item-embedding-status` (the "N of M chunks embedded" text, only once both
 `chunkCount` and `embeddedChunkCount` are set), `item-attempts` (only once `attempts > 0`),
 `item-error` (only for `stage="failed"` with `error` set), `item-actions`, `retry-button`,

@@ -38,8 +38,10 @@ form-associated via the same `FormAssociated` mixin as `lr-textarea`. Ships the 
 - `min?: number` / `max?: number` (attributes `min`/`max`) / `step?: number | 'any'` (attribute
   `step`, accepts the native `'any'` value alongside a number) — forwarded verbatim to the native
   input and validated by it. Intended for `type="number"`; `step` is equally meaningful on
-  `type="time"`, but `min`/`max` are `type: Number`-converted, so a non-numeric bound only survives
-  a direct property assignment, never the attribute. Inert for the other types
+  `type="time"`. On `lr-input` itself the `min`/`max` *attributes* are number-converted, so a
+  non-numeric bound only survives a direct property assignment; the declared type also admits a
+  string so a subclass can narrow the attribute parsing to its own native type's literal form —
+  `lr-time-input` does exactly that. Inert for the other types
 - `passwordVisible: boolean = false` (attribute `password-visible` — `type="password"` only)
 - `name`/`disabled`/`required` (from `FormAssociated`)
 

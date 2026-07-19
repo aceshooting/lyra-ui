@@ -32,8 +32,9 @@ input), and `lr-clear` (inherited, never fired here).
 `hint`, `error`, plus the inherited `clear-button` and `password-toggle`, neither of which this
 alias ever renders.
 
-**Themeable custom properties:** `--lr-input-control-min-height` and the rest of `lr-input`'s
-per-`size` scale.
+**Themeable custom properties:** inherited from `lr-input`, identical in meaning —
+`--lr-input-control-min-height`, `--lr-input-padding-block`, `--lr-input-padding-inline` and
+`--lr-input-font-size` (the last three swap per `size`).
 
 **Known gotchas:**
 - `clearable`/`clear-button`/`lr-clear` are inert: the clear action only renders for

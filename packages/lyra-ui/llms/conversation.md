@@ -1444,8 +1444,9 @@ on every message regardless of whether that message actually has multiple branch
 valid target (never past either bound); the consumer applies `index` after switching the displayed
 branch content.
 
-**CSS parts:** `base` (the group wrapper, `role="group"`), `previous-button`, `next-button`, and
-`position` (the visible "2 / 5" text).
+**CSS parts:** `base` (the group wrapper, `role="group"`), `previous-button`, `next-button`,
+`previous-glyph` and `next-glyph` (the chevron inside each button — target these to swap the
+arrow without restyling the button), and `position` (the visible "2 / 5" text).
 
 ## `lr-message-actions`
 
@@ -1580,7 +1581,8 @@ the localized default; attribute-reflects from a host-level `aria-label`.
 **CSS parts:** `base` (the scroll container), `log` (the `role="log"` region wrapping final entries
 only), `entry`, `speaker` (omitted for a row repeating the previous row's speaker), `text`
 (`dir="auto"`), `timestamp` (only while `show-timestamps`), `interim` (present alongside `entry` on
-an interim row), `jump-button` (shown only while `follow` is `false`), and `empty`.
+an interim row), `interim-area` (the wrapper holding the interim row, present whether or not an
+interim entry is showing), `jump-button` (shown only while `follow` is `false`), and `empty`.
 
 ## `lr-handoff-divider`
 

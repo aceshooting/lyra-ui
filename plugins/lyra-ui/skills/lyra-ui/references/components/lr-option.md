@@ -84,6 +84,15 @@ pointer or keyboard selection, multiple-value toggle, tag/Backspace removal, or 
 one bubbling/composed, non-cancelable plain `input` `Event`, immediately followed by the same shape
 of `change` `Event`. Re-picking the current single value and programmatic/default/reset/restore
 writes are silent. The clear button emits one `lr-clear` after its `input`/`change` pair.
+`lr-filter` (`detail: { value: string }`) reports the in-progress filter text on every user-driven
+keystroke — the live as-you-typed search string, deliberately *not* `value`, which is the committed
+selection. It is the supported way to read that text; reaching into the shadow root for
+`[part="combobox-input"]`'s value is not. Named `lr-filter` rather than `lr-input` precisely because
+`lr-input`'s detail on `<lr-input>` is the committed value, and the two must not share a name while
+carrying different strings. It fires for user input only: picking a row, the clear button,
+`form.reset()`, dismissing the listbox, a programmatic `value` write, and `setRangeText()` all blank
+the filter silently, mirroring how `<lr-input>`'s `lr-input` only reports user edits.
+
 `lr-show` and `lr-hide` report listbox visibility transitions.
 The internal input's `focus` and `blur` are re-dispatched as bubbling, composed host events.
 

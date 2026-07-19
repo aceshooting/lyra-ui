@@ -47,7 +47,8 @@ first time).
 **CSS parts:** `base`, `timeline` (the internal `lr-span-waterfall`), `evidence-list` (omitted when
 no stage has evidence), `evidence-row` (omitted for a stage with no evidence), `evidence-toggle`,
 `evidence-toggle-icon`, `evidence-body` (hidden while collapsed), `evidence-text`,
-`evidence-metadata` (a `<dl>`), `evidence-metadata-key` (`<dt>`), `evidence-metadata-value` (`<dd>`).
+`evidence-metadata` (a `<dl>`), `evidence-metadata-row` (one key/value pair), `evidence-metadata-key`
+(`<dt>`), `evidence-metadata-value` (`<dd>`).
 
 **Themeable custom properties:** shared tokens only.
 

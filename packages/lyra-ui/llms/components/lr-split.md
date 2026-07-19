@@ -24,13 +24,27 @@ auto-inserted between each adjacent pair.
 - `min: number = 10` (min % per panel)
 - `orientation: 'horizontal'|'vertical' = 'horizontal'` (reflected) — the axis used at/above
   `orientationBreakpoint` (or always, when that's unset).
-- `orientationBreakpoint?: number` (attribute `orientation-breakpoint`, px) — opt-in inline-size
-  breakpoint measured on `[part='base']`; unset (the default) means no behavior change at all.
-  Below it, `narrowOrientation` becomes the effective axis instead of `orientation`.
+- `orientationBreakpoint?: number | string` (attribute `orientation-breakpoint`) — opt-in inline-size
+  breakpoint measured on `[part='base']`; unset (the default) means no behavior change at all, and
+  no `ResizeObserver` is armed. Below it, `narrowOrientation` becomes the effective axis instead of
+  `orientation`. Accepts a bare pixel number (`900`, `orientation-breakpoint="900"`) or a CSS length
+  string: `'900px'`, `'56.25rem'`, `'3em'`. **`rem` resolves against the document root's font size —
+  exactly as a `rem` in a CSS `@media` query does, *not* against this element** — so a breakpoint
+  authored to match a sibling `@media (max-width: 56.25rem)` rule stays in sync with it across
+  browser zoom, a user font-size preference, or an app changing its base size token. `em` resolves
+  against the element's own computed font size. The length is **re-resolved on every measurement**,
+  never cached at first render, so a root font-size change moves the crossing width with no
+  invalidation step on the consumer's side. Anything that isn't a resolvable length behaves exactly
+  as unset (no observation, no `data-effective-orientation`): `''`, `'auto'`, garbage, a non-finite
+  number, and deliberately `%`, `vw`/`vh` and `calc()` — a viewport-relative threshold would mix
+  reference boxes against a measurement of the element's own allocation. For a genuinely viewport-relative
+  breakpoint, leave `orientationBreakpoint` unset and bind `orientation` from your own
+  `matchMedia()` controller — see the composition note in the gotchas below.
 - `narrowOrientation: 'horizontal'|'vertical' = 'vertical'` (reflected, attribute `narrow-orientation`)
 - `effectiveOrientation: 'horizontal'|'vertical'` (readonly getter) — the live resize/layout axis
-  actually in effect; identical to `orientation` whenever `orientationBreakpoint` is unset. Also
-  reflected as `data-effective-orientation` (only present while `orientationBreakpoint` is set).
+  actually in effect; identical to `orientation` whenever `orientationBreakpoint` is unset or
+  doesn't resolve to a length. Also reflected as `data-effective-orientation` (only present while
+  `orientationBreakpoint` resolves to a usable length).
 - `storageKey?: string` (attribute `storage-key` — persists sizes to `localStorage` under
   `` `lr-split:${key}:${panelCount}` ``, scoped by panel count so a stale layout for a different
   panel count is ignored)
@@ -142,5 +156,18 @@ the visually-adjacent panel).
   `disconnectedCallback`) is solid and safe to rely on.
 - `orientationBreakpoint` shares its `[part='base']` `ResizeObserver` with `collapse` (one observer,
   not two) — arming logic covers either feature being opted into independently.
+- `orientationBreakpoint` observes **the component's own allocated inline size**, not the viewport
+  and not a shared row. It therefore fits a component that is the sole flex/grid item in the
+  container being measured. It does **not** fit a component sitting beside a fixed-width sibling in
+  a row that stacks via a CSS `@media` rule: while the row is a row, this element's width shrinks
+  with the viewport; the instant the row stacks (a pure-CSS event no component can observe) it jumps
+  to the *full* row width — wider than it was just before the transition. Because the measured width
+  is not monotonic across that transition, no single threshold both stays wide while the row is a
+  row and goes narrow exactly when it stacks. A fixed-width sibling is worse still: its own width
+  never changes with the viewport at all, so no breakpoint on it can react to the stacking.
+  For that layout, leave `orientationBreakpoint` unset and drive the `orientation` attribute from
+  one shared consumer-side breakpoint controller (a `matchMedia()` listener matching the same query
+  as the CSS rule). That is the intended, supported pattern for sibling-coupled layouts — not a
+  workaround.
 
 ---

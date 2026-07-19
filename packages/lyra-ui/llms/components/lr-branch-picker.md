@@ -27,5 +27,6 @@ on every message regardless of whether that message actually has multiple branch
 valid target (never past either bound); the consumer applies `index` after switching the displayed
 branch content.
 
-**CSS parts:** `base` (the group wrapper, `role="group"`), `previous-button`, `next-button`, and
-`position` (the visible "2 / 5" text).
+**CSS parts:** `base` (the group wrapper, `role="group"`), `previous-button`, `next-button`,
+`previous-glyph` and `next-glyph` (the chevron inside each button — target these to swap the
+arrow without restyling the button), and `position` (the visible "2 / 5" text).

@@ -380,6 +380,7 @@ export type {
   MatrixCellPos,
   CalendarCellPos,
   HeatmapAnnotation,
+  HeatmapLegendStop,
   HeatmapSelectedCell,
   LyraHeatmapCellClickDetail,
 } from './components/data/heatmap/heatmap.js';
@@ -425,7 +426,11 @@ export { LyraWidget } from './components/layout/widget/widget.js';
 export type { WidgetView } from './components/layout/widget/widget.js';
 export { LyraWordCloud } from './components/data/word-cloud/word-cloud.js';
 export type { WordCloudWord } from './components/data/word-cloud/word-cloud.js';
-export type { ComboboxSource, ComboboxSourceRow } from './components/forms/combobox/combobox.js';
+export type {
+  ComboboxFilterDetail,
+  ComboboxSource,
+  ComboboxSourceRow,
+} from './components/forms/combobox/combobox.js';
 export type { CalendarDay } from './components/data/heatmap/calendar-grid.js';
 export { LyraDialog } from './components/overlays/dialog/dialog.js';
 export { LyraDrawer } from './components/overlays/drawer/drawer.js';

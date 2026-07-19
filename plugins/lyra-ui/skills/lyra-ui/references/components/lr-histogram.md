@@ -42,8 +42,11 @@ and `label` the generated bucket range string (`"lo–hi"`, both bounds at one d
 
 **CSS parts:** `base`, `canvas`, `reset-zoom-button`, `description`, `data-table`, `center`.
 
-**Themeable custom properties / optional peer deps:** the same `--lr-chart-*` tokens and the same
-`chart.js` (+ `chartjs-plugin-zoom` when `zoom` is set) peers.
+**Themeable custom properties:** `--lr-chart-height`, `--lr-chart-grid-color`,
+`--lr-chart-tick-color`, `--lr-chart-legend-color`, `--lr-chart-tooltip-bg`,
+`--lr-chart-tooltip-text` — inherited from `LyraChart`, identical in meaning.
+
+**Optional peer deps:** the same `chart.js` (+ `chartjs-plugin-zoom` when `zoom` is set) peers.
 
 All of the above behave exactly as documented in `llms/components/lr-chart.md` — read that file for
 their semantics, defaults, and gotchas.

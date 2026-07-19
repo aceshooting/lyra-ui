@@ -21,7 +21,7 @@ Optional peers: `llms/peers.md`. `wa-*`/`sl-*` renames: `llms/migration.md`.
 ## Form controls & inputs — `components/forms/` (25)
 
 - `lr-combobox` · forms/combobox/combobox.js — a filterable single/multi select that combines a text input with a listbox.
-- `lr-option` · forms/combobox/option.js — Filterable single/multi-select combining a text input with a listbox.
+- `lr-option` · forms/combobox/option.js — a selectable option for `<lr-combobox>`.
 - `lr-select` · forms/select/select.js — a plain closed-list dropdown: a direct `<lr-*>` counterpart to `<wa-select>`/`<wa-option>`.
 - `lr-date-picker` · forms/date-picker/date-picker.js — an inline month-grid calendar for picking a single date or a date range.
 - `lr-date-input` · forms/date-picker/date-input.js — a date field with an attached calendar popover.

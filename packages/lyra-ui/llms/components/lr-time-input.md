@@ -13,7 +13,8 @@
 ## `lr-time-input`
 
 A migration-friendly time alias of `lr-input` — the same subclassing shape as `lr-number-input`,
-with the constructor and `connectedCallback()` setting `type = 'time'`. It adds no API of its own.
+with the constructor and `connectedCallback()` setting `type = 'time'`. Its only own API is a
+re-typed `min`/`max` pair (below); every other property, event, slot and part is `lr-input`'s.
 
 **Properties:** `size` (`2xs`…`xl`), `placeholder`, `readonly`, `label`, `hint`, `errorText`
 (`error-text`), `accessibleLabel` (`aria-label`), `autocomplete`, `spellcheck`, `autocapitalize`,
@@ -22,10 +23,15 @@ with the constructor and `connectedCallback()` setting `type = 'time'`. It adds 
 `lr-number-input`.
 
 `step` is forwarded verbatim to the native time input, where it means seconds (`step="1"` reveals
-the seconds field, `'any'` disables step validation). `min`/`max` are forwarded too, but they are
-declared `type: Number` on `lr-input`, so a `min="09:00"` **attribute** parses to `NaN` and reaches
-the native input as the string `NaN`, which the browser discards — assign the property directly
-(`el.min = '09:00'`, TS-widening required) if you need real time bounds.
+the seconds field, `'any'` disables step validation).
+
+`min?: string | number` / `max?: string | number` (attributes `min`/`max`, both defaulting to
+`undefined` — no bound) are re-declared here with a converter that forwards the attribute verbatim
+instead of `lr-input`'s numeric parsing, so they take the native `<input type="time">` literal form:
+`min="09:00"`, or `min="09:00:30"` alongside a seconds-precision `step`. Attribute and property are
+interchangeable (`el.min = '09:00'` needs no cast), removing the attribute clears the bound, and the
+native input's own constraint validation reports `rangeUnderflow`/`rangeOverflow` through
+`checkValidity()`.
 
 **Events:** `input`/`change` (native-style, composed), `lr-input`/`lr-change`
 (`detail: { value }`), `focus`/`blur` (re-dispatched bubbling + composed), and `lr-clear`
@@ -36,8 +42,9 @@ the native input as the string `NaN`, which the browser discards — assign the 
 **CSS parts:** `form-control`, `form-control-label`, `input-wrapper`, `input`, `start`, `end`,
 `hint`, `error`, plus the inherited, never-rendered `clear-button` and `password-toggle`.
 
-**Themeable custom properties:** `--lr-input-control-min-height` and the rest of `lr-input`'s
-per-`size` scale.
+**Themeable custom properties:** inherited from `lr-input`, identical in meaning —
+`--lr-input-control-min-height`, `--lr-input-padding-block`, `--lr-input-padding-inline` and
+`--lr-input-font-size` (the last three swap per `size`).
 
 **Known gotchas:** the same two as `lr-number-input` — the inert clear/password surface, and `type`
 only being re-forced on connect. The native `type="time"` UI (spinners, AM/PM, picker) is the

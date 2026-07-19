@@ -50,12 +50,20 @@ emoji flex line).
 each emoji button's box), `--lr-emoji-picker-gap` (default `--lr-space-2xs`, the gap between
 emoji within a windowed row), and `--lr-emoji-picker-row-height` (default
 `calc(var(--lr-emoji-picker-item-size) + var(--lr-space-l))`, one windowed row's height). All three
-are also read back in JS — `parseFloat(getComputedStyle(host).getPropertyValue(token))` — to derive
-columns-per-row and row offsets for the windowed layout. That parse takes the leading number and
-treats it as **pixels**, so a `rem` value is read as that many pixels and a `calc()` is unparseable
-and falls back (`40`, `4`, and `64` respectively — the `calc()`-based default row height always
-takes the `64` path). Give these `px` values when the windowed geometry has to line up exactly with
-what is painted.
+are also read back in JS to derive columns-per-row and row offsets for the windowed layout,
+resolved to real pixels by measuring hidden probe boxes the component's own stylesheet sizes from
+those same tokens — so any CSS length unit works, `rem`/`em` and `calc()` included, and the windowed
+geometry matches what is painted without expressing the tokens in `px`. The measurement is cached
+and re-derived only when the resolved pixels can actually change (a token override applied after the
+first render, a theme swap, a root or host font-size change feeding a `rem`/`em` value), never per
+frame.
+
+Two constraints remain. `--lr-emoji-picker-item-size` is clamped up to `--lr-icon-button-size`, the
+shared minimum tappable box: a smaller value does not shrink the button, and the windowed geometry
+follows the clamped, painted size. And windowed rows are absolutely positioned at the row-height
+pitch, so `--lr-emoji-picker-row-height` must stay at or above the item size plus the group-label
+band (`--lr-space-l`) — the default's own formula — or consecutive rows overlap. Columns per
+windowed row are additionally capped at 20 regardless of available width.
 
 **Optional peer dependency:** install `emoji-picker-element-data` with
 `pnpm add emoji-picker-element-data` for the built-in auto-loaded default emoji set — omit it and

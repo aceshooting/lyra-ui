@@ -35,7 +35,9 @@ used by `placement="top"|"bottom"`), `--lr-drawer-enter-x` / `--lr-drawer-enter-
 entrance-animation translate offset — `-x` for start/end, `-y` for top/bottom; both default to
 `±--lr-size-1rem` and are set per `placement`, with `-x` explicitly flipped under `:dir(rtl)` since
 `translateX` is physical. Override to lengthen/shorten the slide-in; the animation is dropped
-entirely under `prefers-reduced-motion: reduce`), and inherited dialog surface/overlay tokens.
+entirely under `prefers-reduced-motion: reduce`). It also inherits `<lr-dialog>`'s own tokens —
+`--lr-dialog-overlay-color`, `--lr-dialog-width` and `--lr-dialog-max-width` — since `LyraDrawer`
+extends `LyraDialog`; the drawer's own width tokens take precedence for its panel.
 
 ```html
 <lr-drawer open placement="end" heading="Filters" closable>
