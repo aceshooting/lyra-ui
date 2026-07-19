@@ -214,6 +214,23 @@ it("falls back to the item's index as the row key when keyFunction is omitted", 
   expect(rows.map((r) => r.dataset.rowKey)).to.deep.equal(['number:0', 'number:1', 'number:2']);
 });
 
+it('keeps NaN and negative zero keys distinct in their DOM tokens', async () => {
+  const el = (await fixture(
+    html`<lr-virtual-list
+      style="--lr-virtual-list-height:200px"
+      row-height="40"
+      .items=${[NaN, -0]}
+      .renderItem=${renderText}
+      .keyFunction=${(item: unknown) => item as number}
+    ></lr-virtual-list>`,
+  )) as LyraVirtualList;
+  await el.updateComplete;
+  await nextFrame();
+
+  const rows = [...el.shadowRoot!.querySelectorAll<HTMLElement>('[part="row"]')];
+  expect(rows.map((row) => row.dataset.rowKey)).to.deep.equal(['number:NaN', 'number:-0']);
+});
+
 it("measures each row's real height via ResizeObserver in row-height='auto' mode instead of only using the fallback estimate", async () => {
   const tallRender = () => html`<div style="block-size:100px;box-sizing:border-box;">row</div>`;
   const items = Array.from({ length: 5 }, (_, i) => i);
@@ -868,6 +885,22 @@ it('renders valid group labels at their indexed row offsets', async () => {
   const groups = [...el.shadowRoot!.querySelectorAll<HTMLElement>('[part="group"]')];
   expect(groups.map((group) => group.textContent?.trim())).to.deep.equal(['First', 'Second']);
   expect(groups[1].style.transform).to.equal('translateY(80px)');
+});
+
+it('falls back to a group key when a group has no explicit label', async () => {
+  const el = (await fixture(
+    html`<lr-virtual-list
+      style="--lr-virtual-list-height:200px"
+      row-height="40"
+      .items=${['a', 'b']}
+      .groups=${[{ key: 'Ungrouped', startIndex: 0 }]}
+      .renderItem=${renderText}
+    ></lr-virtual-list>`,
+  )) as LyraVirtualList;
+  await el.updateComplete;
+  await nextFrame();
+
+  expect(el.shadowRoot!.querySelector('[part="group"]')!.textContent?.trim()).to.equal('Ungrouped');
 });
 
 describe('itemRole / rowIndexOffset', () => {

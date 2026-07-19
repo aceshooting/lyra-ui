@@ -412,6 +412,33 @@ it('collects rendered focus targets through slots and nested shadow roots', () =
   wrapper.remove();
 });
 
+it('accepts a ShadowRoot directly when collecting focus targets', () => {
+  const host = document.createElement('div');
+  const shadow = host.attachShadow({ mode: 'open' });
+  const input = document.createElement('input');
+  shadow.append(input);
+  document.body.append(host);
+
+  expect(collectFocusableElements(shadow)).to.deep.equal([input]);
+  host.remove();
+});
+
+it('restores a pre-existing overlay stack style after deactivation', () => {
+  const overlay = createOverlay(document, 'styled-dialog');
+  overlay.host.style.setProperty('--lr-overlay-stack-index', 'custom', 'important');
+  const handle = activateOverlay({
+    host: overlay.host,
+    panel: () => overlay.panel,
+    onEscape: () => undefined,
+    modal: false,
+  });
+
+  expect(overlay.host.style.getPropertyValue('--lr-overlay-stack-index')).to.not.equal('custom');
+  handle.deactivate({ restoreFocus: false });
+  expect(overlay.host.style.getPropertyValue('--lr-overlay-stack-index')).to.equal('custom');
+  expect(overlay.host.style.getPropertyPriority('--lr-overlay-stack-index')).to.equal('important');
+});
+
 it('skips visibility-hidden focus targets and focuses the next rendered target', () => {
   const overlay = createOverlay(document, 'dialog');
   overlay.first.style.visibility = 'hidden';

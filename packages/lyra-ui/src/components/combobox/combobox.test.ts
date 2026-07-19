@@ -281,6 +281,35 @@ it('forwards selection editing methods to the native input and handles an empty 
   expect(el.hasAttribute('name')).to.be.false;
 });
 
+it('keeps the native editing facade safe before the internal input exists', () => {
+  const el = document.createElement('lr-combobox') as LyraCombobox;
+
+  expect(el.input).to.equal(null);
+  expect(el.selectionStart).to.equal(null);
+  expect(el.selectionEnd).to.equal(null);
+  expect(el.selectionDirection).to.equal(undefined);
+  expect(() => {
+    el.selectionStart = 0;
+    el.selectionEnd = 0;
+    el.selectionDirection = 'forward';
+    el.setSelectionRange(0, 0);
+    el.setRangeText('ignored');
+  }).to.not.throw();
+});
+
+it('renders the native autocomplete attribute only when configured', async () => {
+  const el = (await fixture(basic())) as LyraCombobox;
+  const input = () => el.shadowRoot!.querySelector('[part="combobox-input"]') as HTMLInputElement;
+
+  expect(input().getAttribute('autocomplete')).to.equal('off');
+  el.autocomplete = '';
+  await el.updateComplete;
+  expect(input().hasAttribute('autocomplete')).to.be.false;
+  el.autocomplete = 'one-time-code';
+  await el.updateComplete;
+  expect(input().getAttribute('autocomplete')).to.equal('one-time-code');
+});
+
 it('resolves selectedRows from local rows and uncached async rows', async () => {
   const el = (await fixture(basic())) as LyraCombobox;
   el.value = 'a';

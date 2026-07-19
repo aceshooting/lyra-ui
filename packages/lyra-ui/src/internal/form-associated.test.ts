@@ -88,6 +88,10 @@ it('reflects a property-assigned `name` to the content attribute so form submiss
   const ctl = (await fixture(html`<lr-demo-ctl></lr-demo-ctl>`)) as unknown as Ctl;
   ctl.name = 'quantity';
   expect((ctl as unknown as HTMLElement).getAttribute('name')).to.equal('quantity');
+  ctl.name = '';
+  expect((ctl as unknown as HTMLElement).hasAttribute('name')).to.be.false;
+  ctl.setFormValue('updated');
+  expect(ctl.value).to.equal('updated');
 });
 
 it('submits an empty string, not a missing field, before `value` is ever assigned', async () => {
