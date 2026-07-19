@@ -1,5 +1,353 @@
 # Changelog
 
+## 4.1.0
+
+### Minor Changes
+
+- b28758d: New `<lr-agent-run>` component: the top-level shell for one `AgentRun` (from `@aceshooting/lyra-ui/ai/types`) -- lifecycle-status badge, elapsed time, current step, model/cost summary, and built-in Cancel/Retry controls in a header, plus four named composition slots (`tasks`/`tools`/`reasoning`/`output`) for the run's actual content. Composes `lr-generation-status` for the live elapsed-time ticker while a run is in progress, `lr-usage-badge` for the cost summary, `lr-task-list` for the `tasks` slot's default content (mapped from `run.steps`), and `lr-badge`/`lr-empty` for the status pill and empty state -- no new step-rendering logic. Emits `lr-cancel`/`lr-retry` (`CancelEventDetail`/`RetryEventDetail`) rather than cancelling or retrying anything itself.
+- f33364d: New `<lr-agent-trace>` component: a provider-neutral agent/LLM trace view combining a span-kind
+  filter row, a handoff quick-jump list, and the full trace hierarchy, all driven by one shared
+  `LyraSpan[]` array. All trace rendering -- hierarchy, expand/collapse, keyboard navigation,
+  duration bars, empty state -- is entirely `<lr-trace-tree>`'s own; this component only ever hands
+  it a (possibly filtered) `spans` array plus pass-through properties, never building its own row
+  markup. The filter row composes `<lr-graph-legend>` (the same type/visibility-toggle legend
+  pattern already established for `<lr-graph>` node types, reused here for `LyraSpan.kind`
+  visibility) and the handoff list composes `<lr-handoff-divider>` for each visible `'agent'`-kind
+  span. Selection (`activeSpanId`) is controlled end-to-end for deep-linking: both a tree-row click
+  and a handoff quick-jump activation update it and fire the identical `lr-span-select` `{ id }`
+  shape.
+- eb3e833: New provider-neutral shared type surface at `@aceshooting/lyra-ui/ai/types`: `AgentStatus`,
+  `AgentRun`, `AgentStep`, `ChatMessage`, `ToolInvocation`, `RetrievalQuery`, `RetrievalChunk`,
+  `Citation`, `DocumentRef`, `GroundingAssessment`, and shared run-lifecycle/retrieval-progress/
+  citation-select/tool-approval/cancel/retry/export event-detail types. A foundational types-only
+  module (no runtime code, no new custom elements) for the upcoming retrieval, agent-run,
+  knowledge-graph, dashboard, and evaluation component families -- structurally compatible with the
+  prop shapes `lr-chat-message`, `lr-citation-badge`, `lr-tool-call-chip`, `lr-tool-result-view`,
+  `lr-source-card`, `lr-attachment-chip`, and `lr-document-preview` already expose, so these types
+  assign directly onto those components' own properties with no adapters. `ToolInvocation.status`
+  reuses `lr-tool-call-chip`'s own `ToolCallStatus` union rather than the broader `AgentStatus`
+  shape, since a single tool call's terminal state is exactly what that existing vocabulary already
+  covers.
+- c2d8f05: `lyra-chat-message` gains a `failure` slot, only ever rendered while `status="failed"`. Left empty
+  (the default), today's built-in failed-state UI is unchanged: the `[part="status-text"]` message,
+  the `[part="retry-button"]`, and the `chatFailedAnnounce` live-region announcement all keep working
+  exactly as before. Once the slot has assigned content, that built-in status text and retry button
+  are suppressed -- the host is now fully responsible for its own failure presentation (e.g. a
+  prominent, translated `role="alert"` banner with its own retry control), and the built-in
+  live-region announcement is suppressed too, so a host's own alert content doesn't get double
+  announced alongside a generic built-in one. The `failure` slot itself contributes no box
+  (`display: contents`), so the host's content lays out exactly as authored without needing any
+  `::part(failure)` override. Content assigned to it should carry `role="alert"` itself when it
+  represents an actionable send failure -- this component has no way to add that role on the host's
+  behalf. Programmatic focus is rescued to `[part="bubble"]` (mirroring the existing built-in retry
+  button's own focus rescue) whenever the failure slot's content held focus and `status` changes away
+  from `"failed"`, so a host's own retry control clearing the failed state never silently drops focus
+  to `document.body`. The existing `lr-retry` event contract is untouched; a host's own retry control
+  can dispatch it manually to stay consistent with listeners elsewhere in a conversation surface, but
+  nothing requires it to.
+- 3f35f20: New `<lr-context-inspector>` component: an inspection view of the exact context assembled for a
+  model call. Renders per-segment token estimates through an embedded `<lr-context-meter>`, source
+  attribution through `<lr-citation-badge>`, and copy/export affordances through
+  `<lr-copy-button>`/`<lr-export-button>` -- composing all four rather than re-implementing any of
+  their rendering. Adds two small, purpose-built presentational features no existing primitive
+  covers: a truncation-boundary marker for a segment cut short of its original content
+  (`ContextInspectorSegment.truncated`/`omittedTokens`), and titled `<mark part="redaction">`
+  highlighting for character ranges a segment's `text` already carries a redaction placeholder in
+  (`ContextInspectorSegment.redactions`) -- this component never receives or renders unredacted
+  content, only marks where a host-side redaction already happened. Pure projection: never fetches,
+  estimates tokens, or performs redaction itself.
+- 607b832: Add `<lr-dashboard-grid>`, a responsive, keyboard-accessible widget-layout shell: a controlled
+  `layout: DashboardCell[]` (grid-unit `x`/`y`/`w`/`h` + a widget descriptor) drives a CSS Grid,
+  composing `<lr-widget>`/`<lr-widget-renderer>` for each cell's default content unless a
+  light-DOM `[cell-id]` child is authored instead. Pointer drag/resize and Ctrl/Cmd+Arrow (move) /
+  Ctrl/Cmd+Shift+Arrow (resize) keyboard equivalents both route through the same `collision`-policy
+  resolution (`'reject'` the default, `'push'`, or `'overlap'`), emitting `lr-cell-move`/
+  `lr-cell-resize`/`lr-collision`/`lr-layout-change` -- the component never mutates `layout` itself
+  nor touches `localStorage`/network; the host applies (or ignores) every event and owns persistence
+  entirely, matching `lr-flow-canvas`/`lr-table`'s own controlled-component convention. Below a
+  ~40rem container allocation (`@container`, not the viewport), cells stack into a single flowing
+  column instead of shrinking columns unreadably.
+- 21de4b4: `lyra-date-input` gains a `size: '2xs' | 'xs' | 's' | 'm' | 'l' | 'xl' = 'm'` property, matching
+  `lyra-input`/`lyra-select`/`lyra-combobox`'s shared control-size scale. `size="s"` now renders the
+  field at the same height/density as `lyra-input size="s"`, so a date field can sit flush beside a
+  compact input or select in the same form row or toolbar. The calendar-toggle and clear buttons
+  keep their existing minimum touch target at every tier instead of shrinking below it. The default
+  `m` tier is pixel-identical to this component's previous, only rendering.
+- d44e979: New `<lr-document-compare>` component: side-by-side or inline comparison of two document versions,
+  composed entirely from existing primitives -- `<lr-diff-view>` (the real two-string line diff,
+  `view="diff"`, the default) and `<lr-document-preview>` (each version's own actual rendered
+  content, `view="side-by-side"`). The side-by-side panes are independently scrollable, so this
+  component adds two minimal, purpose-built coordination mechanisms scoped narrowly to that: a
+  proportional scroll-position sync (`syncScroll`, default `true`, mirroring `<lr-compare-panel>`'s
+  own proven algorithm) and highlight-anchor sync (activating a region highlight shared by `id`
+  across both versions' `highlights` scrolls the other pane to its own matching highlight). A shared
+  `anchor` property (matching `<lr-document-viewer>`'s own) drives both panes to the same target at
+  once. New `DocumentCompareVersion` type extends the shared `DocumentRef` (from `@aceshooting/lyra-ui/ai/types`)
+  with `text` (diffed directly, no fetch) and per-version `highlights`.
+- 7dfbed7: New `<lr-document-library>`: a searchable, filterable document inventory with versions, tags,
+  owners, freshness, and bulk selection. Consumes the shared `DocumentRef` type from
+  `@aceshooting/lyra-ui/ai/types` (`id`/`name`/`mimeType`/`uri`/`version`) as its base row shape,
+  extended locally (`LibraryDocument`) with `tags`/`owner`/`updatedAt`/`freshness` -- the fields an
+  inventory view needs that a provider-neutral document reference deliberately doesn't carry.
+  Composes `<lr-table>` for the grid itself (`<lr-data-grid>` was evaluated and ruled out: it only
+  supports a single `selectedKey` and stringifies every cell value, so it cannot host the checkbox/
+  chip/icon content bulk selection, tags, and per-row type icons need; `<lr-table>` supports
+  arbitrary cell content and `priority`-driven responsive column hiding), `<lr-chip>`/`<lr-chip-
+group>` for tags and the freshness badge, `<lr-file-icon>` for per-document type icons, `<lr-
+input type="search">` for free-text search, and `<lr-combobox multiple>` for a tag facet filter
+  (AND semantics -- a document must carry every selected tag). Bulk selection renders a `<lr-
+checkbox>` per row plus a header select-all checkbox (indeterminate when some but not all visible
+  rows are selected) independently of `<lr-table>`'s own built-in `selectionMode`, since that mode's
+  click-anywhere-on-the-row toggle would conflict with the row's own name button opening the
+  document. A controlled data view like this package's other orchestration-level list surfaces: no
+  upload/sync/mutation logic of its own, only `lr-filter-change` / `lr-sort` / `lr-selection-change`
+  / `lr-open` request-and-notification events. `selectedIds` referencing a document no longer present
+  in `documents` is silently pruned (no event fires for that pruning, mirroring `<lr-chip-group>`'s
+  identical silent-resync convention) rather than left dangling.
+- a012673: New `<lr-drilldown-panel>` component: controlled navigation from a chart/table datum to its related
+  evidence, documents, entities, or agent runs. A navigation shell only -- an `lr-breadcrumb` trail
+  over a host-owned `path`, plus, for whichever categories the current node actually has content for,
+  the one existing primitive that already renders that content type (`lr-source-card` for evidence,
+  `lr-document-preview` for documents, `lr-entity-card` for entities), wrapped in an `lr-tabs` strip
+  only when more than one category has content. Agent-run content has no dedicated rendering primitive
+  yet in this library, so it composes via a `runs` slot instead of inventing bespoke rendering.
+  Activating a non-current breadcrumb step fires `lr-drilldown-navigate` (`detail: { id, index }`) --
+  the component never mutates `path` itself.
+- a0bb717: New `<lr-entity-dossier>` component: a full knowledge-graph entity detail surface combining
+  properties, relationships, supporting chunks, confidence, and provenance into one composed
+  layout. A persistent header renders `<lr-entity-card>` (the entity's summary/properties) next to
+  an optional confidence `<lr-stat>`, above an `<lr-tabs>` strip for Relationships
+  (`<lr-neighbor-list>`), Supporting chunks (`<lr-chunk-inspector>`), and Provenance
+  (`<lr-provenance-panel>`). Pure layout -- it never fetches, ranks, or mutates graph/document state,
+  and never re-renders what any of those five composed components already render themselves; every
+  one of their own events bubbles through unmodified rather than being re-declared as this
+  component's own. Tab labels reuse the exact `localize()` keys the composed child underneath
+  already uses for its own accessible name (`neighborListLabel`, `chunkInspectorLabel`,
+  `provenancePanelLabel`), so no new localization keys were needed and a translated locale only has
+  to cover each string once.
+- 5f2927f: New `<lr-eval-dataset>` component: dataset management for an evaluation suite -- a filterable,
+  taggable list of `EvalExample` rows (`id`, `input`, `expectedOutput?`, `tags?`, `metadata?`) with
+  add/remove/import/export affordances. Fully controlled, matching this library's established
+  convention for the rest of the agentic-AI orchestration layer: `examples` is the host's own data,
+  and the component never mutates it or performs any I/O itself -- every action fires an
+  `lr-example-select` / `lr-example-add-request` / `lr-example-remove-request` /
+  `lr-import-request` / `lr-export-request` event and the host decides how to act on it.
+
+  Composes `<lr-data-grid>` for the row list, `<lr-chip>`/`<lr-chip-group>` as a toggleable,
+  OR-matched tag-browse filter, `<lr-file-input>` for the import affordance, and
+  `<lr-export-button>` for the export affordance (its own built-in client-side download is
+  suppressed so every configured format routes through `lr-export-request` uniformly). Ships with a
+  searchable free-text filter, RTL and 320px-allocation coverage, and localized strings with
+  `.strings` override support.
+
+- f5870ef: New `<lr-eval-result>`: rubric scoring, human review, and comparison across a single evaluation
+  example's runs (one per model or prompt version), LangSmith/Arize-eval-result style. Composes
+  three existing primitives directly rather than re-deriving their behavior: `<lr-data-grid>` renders
+  the `runs` comparison table (`columns` is a plain pass-through to its own `DataGridColumn[]`
+  shape); `<lr-rubric-form>` is the human-review scoring surface for whichever run is selected,
+  reading/writing that run's own `review` value and re-emitting its
+  `lr-input`/`lr-validity-change`/`lr-submit`/`lr-skip` events as
+  `lr-review-input`/`lr-review-validity-change`/`lr-review-submit`/`lr-review-skip` with the run id
+  attached; `<lr-diff-view>` compares the selected run's output against `baselineRunId`'s output --
+  `layout="split"` once they resolve to two distinct runs, `layout="unified"` (an all-equal diff,
+  i.e. a plain read of the one run's output) once they resolve to the same run or no baseline
+  resolves at all. `selectedRunId`/`baselineRunId` are both fully controlled (never mutated
+  internally) and fall back to `runs[0]?.id` purely for rendering when unset, so the component
+  renders something useful with zero configuration beyond `runs`; a `selectedRunId`/`baselineRunId`
+  that matches no entry in `runs` degrades gracefully (the comparison grid still renders, the
+  review/diff sections simply don't).
+- 3827a19: New `<lr-evaluation-run>` component: an evaluation batch's live progress. An overall
+  `<lr-progress-bar>` counts terminal (done/error/cancelled) examples against the batch's `total`
+  (or `examples.length` when unset), with running/failed count badges alongside it. Each example
+  renders as its own `<lr-details>` disclosure showing input/output via `<lr-markdown>` or
+  `<lr-code-block>` (per `inputFormat`/`outputFormat`), a composed `<lr-grounding-summary>` when the
+  example carries a `GroundingAssessment` (plus optional evidence `citations`), and a composed
+  `<lr-tool-timeline>` when it carries `toolTrace` entries -- this component defines no grounding-
+  scoring or tool-call rendering of its own. `status` reuses the shared `AgentStatus` contract from
+  `@aceshooting/lyra-ui/ai/types`, the same run-lifecycle vocabulary an agent step already uses.
+  Nested `<lr-grounding-summary>`/`<lr-tool-timeline>` selection and approval events are intercepted
+  and re-emitted as this component's own `lr-example-citation-select`/
+  `lr-example-tool-approval-decide`, correlated with the originating example's `id` so a host never
+  needs to walk the DOM to find out which example a nested interaction came from. Per-example
+  disclosure toggling fires `lr-example-toggle`. A live region announces per-example status
+  transitions (started/completed/failed/cancelled/needs input/needs approval), gated so a freshly-
+  mounted run never announces its initial statuses.
+- 0669f01: New `<lr-filter-bar>` component: a row of composable dashboard filters, each declared by the host
+  (`filters: FilterBarFilterDefinition[]`) rather than invented by this component -- every filter
+  renders an existing Lyra input (`<lr-select>`/`<lr-combobox>` for closed choice sets,
+  `<lr-date-input>` in single or `mode="range"` for dates), plus a `<lr-chip-group>` of removable
+  `<lr-chip>`s summarizing the active filters, an `<lr-button>` reset action, and (while `loading`)
+  an `<lr-spinner>` status indicator. Controlled, like every other Lyra data component: `value` is a
+  plain, JSON-serializable `FilterBarValue` object the host reads/writes directly -- this component
+  never touches `location`/`history`/storage itself, so turning `value` into (and back out of) a URL
+  querystring or app-state store is entirely the host's own concern. `required`-flagged filters get
+  live `invalidFilterIds`/`checkValidity()`/`reportValidity()` and a `lr-validity-change` event, with
+  each filter's own inline error rendered by its already-chromed composed control rather than a
+  second, duplicate label/hint/error frame. `reset()` restores every filter to its own
+  `defaultValue` (or unset) and emits both the standard `lr-input` and a dedicated `lr-reset`,
+  mirroring `<lr-combobox>`'s own `clear()`/`lr-clear` pattern.
+- c5a4786: New `<lr-graph-query-builder>` component: an editor for a single typed relationship/path filter
+  (`GraphQuery`) over a knowledge graph -- start/end entity anchors, relationship-type and
+  node-type "add" pickers (`<lr-select>`) with a removable active-filter chip display
+  (`<lr-chip>`/`<lr-chip-group>`), a traversal direction, a min/max hop range, validation
+  (`value`/`checkValidity()`/`reportValidity()`/`lr-validity-change`, form-associated via
+  `ElementInternals` the same way `<lr-rubric-form>`/`<lr-tool-param-form>` are), and a
+  host-persisted saved-query list (`savedQueries` + `lr-query-save`/`lr-query-load`/
+  `lr-query-delete`). `GraphQuery` is a serializable, provider-neutral query model suitable for
+  handing straight to a GraphRAG retrieval/traversal backend via `value` or the `lr-query-run`
+  event's payload.
+- a5723c3: New `<lr-grounding-summary>` component: the claim-level scorecard for one generated answer,
+  consuming `GroundingAssessment` from `@aceshooting/lyra-ui`'s `src/ai/types.ts` directly as its
+  `assessment` property. Composes `lr-stat` for the supported/unsupported claim counts, citation
+  coverage, and optional confidence numeric displays (tone-mapped via a `thresholds` property), and
+  `lr-citation-badge` for an optional `citations` list linking each evidence entry back to its exact
+  `span`. Activating a citation badge emits `lr-citation-select` (detail: `{ citation }`, the
+  `CitationSelectEventDetail` shape from `src/ai/types.ts`) carrying the full citation record, in
+  addition to the badge's own `lr-citation-activate` still bubbling through unmodified. Warnings
+  render verbatim as caller-supplied data; every other label is localized via `this.localize()`.
+- 497c8d3: New `<lr-ingestion-queue>` component: a controlled list of documents moving through an ingestion
+  pipeline (`queued` → `uploading` → `extracting` → `chunking` → `embedding` → `indexing`, plus the
+  terminal `done`/`failed`/`cancelled` stages), each row composing `lr-badge` for its stage label,
+  `lr-progress-bar` for in-flight progress, and chunk-count/embedding-status/attempt-count text.
+  `lr-empty` renders the zero-items state. Presentation only -- this component runs no ingestion
+  itself and never mutates `items`; retrying a `failed` row or cancelling any non-terminal row fires
+  a controlled `lr-retry`/`lr-cancel` request event (`detail` extends the shared `RetryEventDetail`/
+  `CancelEventDetail` from `src/ai/types.ts` with the `itemId` identifying which row) and waits for
+  the host to supply an updated `items` array, the same request/response convention
+  `<lr-thread-list>`'s row-action events already establish. At or above `virtualizeThreshold` items
+  the list renders through an internal `<lr-virtual-list>` instead of a plain keyed list, matching
+  `<lr-thread-list>`'s data mode and `<lr-activity-feed>`'s own `virtualizeThreshold` precedent.
+- 593e879: New `<lr-knowledge-base>` component: a knowledge-base source list showing sync status, indexing
+  health, and permissions per source, plus an aggregate summary row. A controlled data view -- it
+  never syncs or indexes anything itself, only presents `sources: KnowledgeSource[]` and emits
+  request-only `lr-kb-create`/`lr-kb-sync`/`lr-kb-pause`/`lr-kb-delete` events for the host to act on
+  and reflect back into a new `sources` value, mirroring `lr-thread-list`'s `lr-thread-pin`/
+  `-archive`/`-delete` convention. Composes `lr-table` for the source list (its own interactive-cell
+  click guarding keeps the per-row `lr-menu` from misfiring row activation), `lr-badge` for the
+  sync-status/indexing-health/permission indicators, `lr-stat` for the aggregate summary, and
+  `lr-menu` for the per-row Sync now/Pause sync/Delete source actions.
+- f04b670: Add `<lr-knowledge-graph-explorer>`, an orchestration-level knowledge-graph surface composing the
+  existing `lr-graph` canvas with entity search, type filters (via `lr-graph-legend`), neighborhood
+  expansion, pinned nodes, path finding between pins (via `lr-path-strip`), node selection, and a
+  node-details popover (via `lr-popover.showAt()` and `lr-entity-card`/`lr-neighbor-list`). Composes
+  existing primitives rather than re-implementing graph rendering. New events `lr-path-request` and
+  `lr-pin-change`; every composed primitive's own event (`lr-node-click`, `lr-node-expand`,
+  `lr-selection-change`, `lr-community-click`, `lr-relation-activate`, etc.) bubbles straight through
+  unmodified.
+- 593e879: New `<lr-memory-panel>` component: an agent's working memory surface -- short-term context and
+  long-term memories, each item's confidence and optional grounding provenance, and add/remove/forget
+  actions gated behind an explicit confirmation step. Composes `<lr-provenance-panel>` for a per-item
+  provenance breakdown (behind a disclosure toggle, only rendered when an item defines one) and
+  `<lr-confirm-bar>` for every add/remove/forget confirmation, reusing this repo's existing inline
+  confirmation pattern rather than inventing a new one. A memory item's confidence reuses
+  `<lr-citation-badge>`'s own confidence vocabulary, tiered against `thresholds` the same way
+  `<lr-chunk-inspector>` tiers a chunk's relevance score. `shortTerm`/`longTerm` are controlled and
+  never mutated by the component -- approving a pending action only fires the matching `lr-add` /
+  `lr-remove` / `lr-forget` event; the host applies the resulting state change.
+- ac4857d: Add `showAt(rect, options?)` to `<lr-popover>` and `<lr-tooltip>`, a virtual-anchor API that opens
+  the overlay positioned against an arbitrary rectangle (`{ x, y, width?, height? }`, defaulting to a
+  zero-size point) instead of the slotted `trigger`. This lets a canvas/SVG surface -- a `<lr-graph>`
+  node, a chart datum, a text-selection range -- get flip/shift/RTL-aware positioning, Escape,
+  light-dismiss, and (optional, via `options.returnFocusTo`) focus-return for free, without a
+  consumer hand-rolling absolute positioning and dismissal logic around it. Both components remain
+  fully backward compatible: a component that never calls `showAt()` behaves byte-identical to
+  before. `place()` (`src/internal/positioner.ts`) is widened from `HTMLElement` to `Element |
+VirtualAnchor` to support this, with no behavior change for existing real-element anchors.
+- 823f19b: New `<lr-policy-summary>` component: a read-only list of guardrail, permission, privacy, and
+  tool-policy decisions, each carrying an `allow` / `deny` / `needs-review` state and an
+  always-visible, accessible explanation of why that decision was made -- never conveyed by color
+  alone. Composes `<lr-badge>` for the compact per-decision state indicator and `<lr-callout
+inline>` for the explanation text, whose own `role="alert"`/`role="status"` semantics already
+  carry the right urgency per state, plus `<lr-details>` for a decision's optional richer `detail`
+  (matched rule text, policy id, cited evidence) behind progressive disclosure. `decisions` is
+  controlled and never mutated by the component -- this is a summary surface, not an approval gate
+  (see `<lr-tool-approval-dialog>`/`<lr-confirm-bar>` for that).
+- c6dd883: New `<lr-query-builder>` component: a composable structured-query builder for tabular/dashboard
+  data queries -- a flat list of field/operator/value condition rows combined with one AND/OR
+  combinator. Distinct from `<lr-graph-query-builder>`, which builds typed relationship/path
+  queries over a knowledge graph -- a genuinely different data model that never shares a file or a
+  value type with this one.
+
+  Fully controlled: a host supplies `fields` (available columns, each carrying a
+  `QueryBuilderFieldType` of `string` / `number` / `boolean` / `date` / `enum` that determines its
+  offered operators and value control) and a plain, serializable `value: { combinator, conditions }`
+  object, the same controlled-plain-object-`value` convention as `<lr-rubric-form>`. Each row
+  composes `<lr-select>` for the field and operator pickers and a value control chosen from the
+  selected field's type: `<lr-input type="text">`, `<lr-input type="number">`, `<lr-select>` with
+  True/False options, `<lr-date-input>`, or `<lr-select>`/a multi-select `<lr-combobox>` for `enum`
+  fields (`eq`/`neq` vs. `in`/`notIn`). A unary operator (`isEmpty`/`isNotEmpty`) renders no value
+  control. `<lr-icon-button icon="trash">` removes a row and `<lr-button>` appends one, both
+  surfaced through public `addCondition()`/`removeCondition(id)` methods and `lr-add-condition`/
+  `lr-remove-condition`/`lr-input` events -- the component never mutates `fields`/`value` in place
+  or touches storage/network itself.
+
+- b443be6: New `<lr-retrieval-results>` component: the orchestration-level ranked-chunk-list surface for
+  retrieval/grounding workflows, consuming `RetrievalChunk[]` from `@aceshooting/lyra-ui/ai/types`.
+  Composes an internal `<lr-chunk-inspector>` per row (reusing its score bar, tier coloring, title/
+  page rendering, expandable text, and `compact` mode verbatim -- no hand-rolled chunk-card markup)
+  and an internal `<lr-virtual-list>` for windowing once the result count is large or `grouping` is
+  active. Adds deduplication by `id` (keeping the higher-scoring duplicate), optional grouping by
+  `source.id` (bucketed, best-scoring group first, same convention `<lr-thread-list>`'s date grouping
+  already uses), multi-selection via a per-row `<lr-checkbox>` (`selectedIds` controlled, `lr-select`
+  emits the updated ids and matching chunks), pagination/infinite loading (`has-more`/`loading`
+  forwarded to the internal `<lr-virtual-list>` while virtualized, or a `[part="load-more"]` button
+  otherwise -- both paths emit `lr-load-more`), and a `compact`/`expanded` `presentation` switch.
+  `metadata` (arbitrary `Record<string, unknown>`, not rendered by any existing primitive) shows as a
+  plain key/value list in `expanded` presentation. A row's `lr-chunk-open` is forwarded verbatim for
+  routing into `<lr-document-viewer>`.
+- 5f2927f: New `<lr-retrieval-search>` component: the query bar for a retrieval/RAG surface, composing
+  `lr-input` (query text), `lr-segmented` (vector/keyword/hybrid mode), `lr-chip`/`lr-chip-group`
+  (removable active-filter/scope chips), `lr-spinner` (loading), and `lr-empty` (empty results).
+  Fully controlled and network-free -- `query`/`mode`/`filters`/`scope` are host-owned properties,
+  and the component only emits `lr-search` (detail: a `RetrievalQuery` from `@aceshooting/lyra-ui`'s
+  `src/ai/types.ts`) on Enter or the submit button; the host performs the actual retrieval and
+  toggles `loading` around it. Because this component has no way to know when a request resolves,
+  submitting again while already `loading` is treated as superseding the in-flight request:
+  `lr-cancel` fires immediately before the new `lr-search`, and the submit button itself doubles as
+  an explicit Cancel affordance while `loading`. Filter/scope chip removal updates this component's
+  own copy first, then emits `lr-filters-change` with the complete next `{ filters, scope }` state,
+  mirroring `lr-source-picker`'s existing round-trip convention.
+- 3d6479f: New `<lr-retrieval-trace>` component: a retrieval pipeline's stage timeline (query rewriting,
+  embedding, retrieval, reranking, filtering), rendered through `<lr-span-waterfall>`'s existing
+  time-scaled bar rendering rather than a new timeline widget -- each `RetrievalStage` projects to
+  one `LyraSpan`, with `kind` mapped onto whichever existing `LyraSpan['kind']` fits best (`embed`
+  -> `'embedding'`, `retrieve` -> `'retriever'`, `query-rewrite` -> `'llm'`, `rerank`/`filter` ->
+  `'tool'`). Below the timeline, a disclosure list exposes each stage's expandable evidence panel:
+  free-form text, retrieved/reranked/filtered chunks via a compact `<lr-chunk-inspector>` (`chunks`
+  accepts `RetrievalChunk` from `@aceshooting/lyra-ui/ai/types` directly), and/or arbitrary stage
+  metadata as a key/value list. Controlled `stages`/`activeStageId` properties; emits `lr-stage-select`
+  and `lr-stage-toggle`. Never fetches, ranks, or computes retrieval results itself.
+- 5597050: `lyra-thread-list` gains a `renderActions?: (thread: ChatThread) => TemplateResult` data-mode
+  property, an escape hatch for a fully custom per-row action surface (e.g. a `<lr-menu>` with
+  Rename/Delete, a rename dialog, delete-confirmation state) that the existing `rowActions`'s closed
+  `pin | archive | delete` set can't express. Its content is appended after any built-in `rowActions`
+  buttons in the same row's `actions` slot -- additive, not a replacement, the same composition
+  direction `wrapRow` already takes elsewhere on the row. Set `rowActions` to `[]` (its default) to
+  use only the callback's content. `renderActions` is re-invoked per row on every render with the
+  current thread (never memoized/stale) and its content sits as a DOM sibling of the row's own
+  selectable region, so activating a custom action never also fires `lr-select` -- the same
+  structural mechanism the built-in row-action buttons already rely on. Leaving `renderActions`
+  unset leaves `rowActions`' rendered output byte-for-byte unchanged, and `wrapRow` continues to
+  compose independently around the result either way.
+- c67e88b: New `<lr-tool-timeline>` component: a chronological list of an agent run's tool calls, rendering
+  each entry through `<lr-tool-call-chip>` (name/status/duration) and `<lr-tool-result-view>`
+  (args/result) -- both already built for exactly this -- plus one shared `<lr-tool-approval-dialog>`
+  for entries gated behind a human decision. Its own job is strictly ordering and layout on top of
+  those existing primitives: `entries` (a new `ToolTimelineEntry[]`, extending `ToolInvocation` from
+  `@aceshooting/lyra-ui/ai/types` with `startedAt`/`endedAt`, `retryCount`, `redactedFields`,
+  `needsApproval`, and `approved`) sorts ascending by `startedAt`, with untimed entries trailing in
+  their original relative order; duration is derived from `startedAt`/`endedAt` and handed to the
+  chip's own `durationMs`; a retry badge renders only while `retryCount > 0`; and per-entry
+  `redactedFields` (dotted paths, or a bare `"args"`/`"result"`/`"error"` for a whole branch) mask
+  sensitive values in the read-only detail view with a "Value hidden" placeholder -- the copy of
+  `args` handed to the approval dialog is always the real, unredacted value, since approving a call
+  requires seeing what will actually run. Activating a pending entry's chip opens the shared dialog;
+  approving or denying it emits this component's own `lr-tool-approval-decide`
+  (`{ invocationId, approved, args? }`, extending the shared `ToolApprovalEventDetail`) and never
+  mutates `entries` itself -- a host applies the decision and re-assigns `entries`, and the dialog
+  closes on its own if the entry under review disappears or resolves out from under it in the
+  meantime.
+
 ## 4.0.0
 
 ### Major Changes
