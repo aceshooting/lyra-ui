@@ -98,7 +98,10 @@ function defaultFilter(thread: ChatThread, query: string): boolean {
  *
  * Data mode: a host needing content with no home in `lr-conversation-item`'s own
  * `title`/`excerpt`/`meta`/`actions` surface (e.g. a leading purpose icon — the item has no default
- * slot to receive one) sets `wrapRow` to wrap the already-built row.
+ * slot to receive one) sets `wrapRow` to wrap the already-built row. A host needing a fully custom
+ * `actions` surface itself — beyond `rowActions`'s closed `pin | archive | delete` set, e.g. a
+ * `<lr-menu>` with Rename/Delete — sets `renderActions` instead; its content is appended after any
+ * built-in `rowActions` output in the same slot, and `wrapRow` continues to compose around the result.
  *
  * @customElement lr-thread-list
  * @slot - Slotted mode only: host-supplied `lr-conversation-item`s, rendered in order. Each
@@ -145,6 +148,22 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
 
   /** Data mode only: built-in icon buttons rendered into each row's `actions` slot, in display order. */
   @property({ attribute: false }) rowActions: ThreadRowAction[] = [];
+
+  /** Data mode only: appended after any built-in `rowActions` buttons in the same row's `actions`
+   *  slot -- the escape hatch for a fully custom per-row action surface (e.g. a `<lr-menu>` with
+   *  Rename/Delete, mirroring an app's own richer row-action menu) that `rowActions`'s closed
+   *  `pin | archive | delete` set can't express. Additive, not a replacement: both render together
+   *  when `rowActions` is also non-empty, the same composition direction `wrapRow` already takes
+   *  elsewhere on the row (it only ever adds content, never removes built-in output) -- set
+   *  `rowActions` to `[]` (its default) to omit the built-in buttons and use only the callback's
+   *  content. Receives the *current* thread on every render, re-invoked per row through the
+   *  virtualized `renderItem` path exactly like `wrapRow` -- never memoized or stale. Rendered as a
+   *  DOM sibling of the row's own selectable region (`lr-conversation-item`'s `[part="option"]`),
+   *  the same structural reason the built-in `rowActions` buttons don't also trigger `lr-select` --
+   *  so ordinary Lyra controls returned here (`lr-menu`, `lr-icon-button`, etc.) fire their own
+   *  events normally without also selecting the row. Unset (the default) leaves `rowActions`'
+   *  output byte-for-byte unchanged. */
+  @property({ attribute: false }) renderActions?: (thread: ChatThread) => TemplateResult;
 
   /** Data mode: include `archived` threads (in their own trailing group under `grouping="date"`). */
   @property({ type: Boolean, attribute: 'show-archived', reflect: true }) showArchived = false;
@@ -408,6 +427,7 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
               ${trashIcon()}
             </button>`
           : nothing}
+        ${this.renderActions ? this.renderActions(thread) : nothing}
       </span>
     `;
   }
@@ -427,7 +447,7 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
           this.emit('lr-thread-rename', { id: thread.id, title: e.detail.title })}
       >
         ${thread.pinned ? html`<span slot="meta" part="pin-glyph" aria-hidden="true">${pinIcon()}</span>` : nothing}
-        ${this.rowActions.length > 0 ? this.renderRowActions(thread) : nothing}
+        ${this.rowActions.length > 0 || this.renderActions ? this.renderRowActions(thread) : nothing}
       </lr-conversation-item>
     `;
     return this.wrapRow ? this.wrapRow(thread, row) : row;

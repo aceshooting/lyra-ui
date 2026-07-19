@@ -11214,6 +11214,10 @@ rename. `label: string = ''` — accessible name for the list region, defaults t
 false) — data mode only: wraps each row's built-in `lr-conversation-item` with host-supplied content
 that has no home in the item's own `title`/`excerpt`/`meta`/`actions` surface (e.g. a leading purpose
 icon — the item has no default slot to receive one); unset renders the built-in row unwrapped.
+`renderActions?: (thread: ChatThread) => TemplateResult` (attribute: false) — data mode only:
+appends host-supplied content (re-invoked per row on every render, e.g. a `lr-menu` with custom
+actions) after the built-in `rowActions` output in each row's `actions` slot; events it fires reach
+the host normally and never trigger `lr-select`. Unset renders only the built-in `rowActions`.
 
 **Slots:** default — slotted mode only: host-supplied `lr-conversation-item`s, rendered in order.
 `empty` — replaces the built-in empty state.

@@ -180,6 +180,108 @@ describe('data mode', () => {
     expect(unpinnedRow.querySelector('[slot="meta"]')).to.not.exist;
   });
 
+  describe('renderActions', () => {
+    it('leaves rowActions output byte-for-byte unchanged when unset (regression guard)', async () => {
+      const el = (await fixture(
+        html`<lr-thread-list style="block-size:400px" .threads=${threads} .rowActions=${['pin', 'archive', 'delete']}></lr-thread-list>`,
+      )) as LyraThreadList;
+      await el.updateComplete;
+      await nextFrame();
+      const row = dataRow(el, 't1');
+      const actionsSlot = row.querySelector('[slot="actions"]')!;
+      // Exactly the three built-in buttons and nothing else -- no extra wrapper/callback content
+      // leaks in merely because the `renderActions` machinery now exists in the render path.
+      expect(actionsSlot.children.length).to.equal(3);
+      expect([...actionsSlot.children].every((c) => c.tagName === 'BUTTON')).to.be.true;
+    });
+
+    it("renders the callback's content in each row's actions slot, appended after rowActions, and its events reach the host", async () => {
+      const el = (await fixture(
+        html`<lr-thread-list style="block-size:400px" .threads=${threads} .rowActions=${['pin']}></lr-thread-list>`,
+      )) as LyraThreadList;
+      el.renderActions = (thread) =>
+        html`<button
+          type="button"
+          class="custom-action"
+          data-thread-id=${thread.id}
+          @click=${() => el.dispatchEvent(new CustomEvent('custom-rename', { detail: { id: thread.id } }))}
+        >
+          Rename
+        </button>`;
+      await el.updateComplete;
+      await nextFrame();
+      const row = dataRow(el, 't1');
+      const actionsSlot = row.querySelector('[slot="actions"]')!;
+      const children = [...actionsSlot.children];
+      // Built-in pin button first, custom content appended after it -- the documented precedence.
+      expect(children.length).to.equal(2);
+      expect(children[0].getAttribute('aria-label')).to.equal('Pin conversation');
+      expect(children[1].classList.contains('custom-action')).to.be.true;
+
+      const customPromise = oneEvent(el, 'custom-rename');
+      (children[1] as HTMLButtonElement).click();
+      expect((await customPromise).detail).to.deep.equal({ id: 't1' });
+    });
+
+    it('does not fire lr-select when a custom action is activated', async () => {
+      const el = (await fixture(
+        html`<lr-thread-list style="block-size:400px" .threads=${threads}></lr-thread-list>`,
+      )) as LyraThreadList;
+      el.renderActions = (thread) =>
+        html`<button type="button" class="custom-action" data-thread-id=${thread.id}>Rename</button>`;
+      await el.updateComplete;
+      await nextFrame();
+      const row = dataRow(el, 't1');
+      const customButton = row.querySelector('.custom-action') as HTMLButtonElement;
+
+      let selectFired = false;
+      el.addEventListener('lr-select', () => {
+        selectFired = true;
+      });
+      customButton.click();
+      await nextFrame();
+      expect(selectFired).to.be.false;
+    });
+
+    it('is re-invoked per row with the current thread on every render (not memoized)', async () => {
+      const received: string[] = [];
+      const localThreads = [{ id: 't1', title: 'Today thread', timestamp: now }];
+      const el = (await fixture(
+        html`<lr-thread-list style="block-size:400px" .threads=${localThreads}></lr-thread-list>`,
+      )) as LyraThreadList;
+      el.renderActions = (thread) => {
+        received.push(thread.title);
+        return html`<span class="custom-action">x</span>`;
+      };
+      await el.updateComplete;
+      await nextFrame();
+      // Virtual-list's own render passes (e.g. a measurement pass) can invoke `renderItem` more
+      // than once even with no prop change -- the point under test isn't the exact call count, it's
+      // that every invocation received the *current* thread, and that a later `threads` replacement
+      // is reflected on the very next invocation rather than a stale/memoized value.
+      expect(received.every((title) => title === 'Today thread')).to.be.true;
+
+      el.threads = [{ id: 't1', title: 'Renamed thread', timestamp: now }];
+      await el.updateComplete;
+      await nextFrame();
+      expect(received[received.length - 1]).to.equal('Renamed thread');
+    });
+
+    it('composes with wrapRow -- the custom actions still render inside the wrapped row', async () => {
+      const el = (await fixture(
+        html`<lr-thread-list style="block-size:400px" .threads=${threads}></lr-thread-list>`,
+      )) as LyraThreadList;
+      el.renderActions = (thread) =>
+        html`<button type="button" class="custom-action" data-thread-id=${thread.id}>Rename</button>`;
+      el.wrapRow = (thread, row) => html`<div class="row-wrapper" data-thread-id=${thread.id}>${row}</div>`;
+      await el.updateComplete;
+      await nextFrame();
+      const list = el.shadowRoot!.querySelector('lr-virtual-list')!;
+      const wrapper = list.shadowRoot!.querySelector('.row-wrapper[data-thread-id="t1"]')!;
+      expect(wrapper.querySelector('.custom-action')).to.exist;
+    });
+  });
+
   describe('wrapRow', () => {
     it('renders the built-in row unwrapped when unset (default)', async () => {
       const el = (await fixture(

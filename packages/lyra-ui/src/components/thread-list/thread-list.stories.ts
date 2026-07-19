@@ -2,6 +2,9 @@ import { html } from 'lit';
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import './thread-list.js';
 import type { ChatThread } from './thread-list.class.js';
+import '../menu/menu.js';
+import '../menu/menu-item.js';
+import type { MenuSelectDetail } from '../menu/menu.js';
 
 const meta: Meta = {
   title: 'ThreadList',
@@ -40,6 +43,47 @@ export const Default: Story = {
         active-id="2"
         .threads=${threads}
         .rowActions=${['pin', 'archive', 'delete']}
+      ></lr-thread-list>
+    </div>`,
+};
+
+/** `renderActions` replaces the built-in pin/archive/delete icon buttons with a fully custom
+ *  per-row menu -- the shape a consumer with its own richer row-action surface (a `<lr-menu>` with
+ *  Rename/Delete, a rename dialog, delete-confirmation state, etc.) needs instead of `rowActions`'
+ *  closed `pin | archive | delete` set. `rowActions` is left unset here, so nothing built-in
+ *  precedes the menu in the `actions` slot -- setting both would append this menu after the
+ *  built-in buttons instead. */
+export const CustomRowActions: Story = {
+  render: () =>
+    html`<div style="block-size:400px;inline-size:320px;border:1px solid var(--lr-color-border);">
+      <lr-thread-list
+        searchable
+        active-id="2"
+        .threads=${threads}
+        .renderActions=${(thread: ChatThread) => html`
+          <lr-menu label="Conversation actions" placement="bottom-end">
+            <button
+              slot="trigger"
+              aria-label="Conversation actions"
+              style="border:none;background:none;cursor:pointer;font-size:1.25rem;line-height:1;padding:0.25rem;"
+            >
+              ⋮
+            </button>
+            <lr-menu-item
+              value="rename"
+              @lr-menu-select=${(e: CustomEvent<MenuSelectDetail>) =>
+                console.log('rename', thread.id, e.detail.value)}
+              >Rename</lr-menu-item
+            >
+            <lr-menu-item
+              value="delete"
+              destructive
+              @lr-menu-select=${(e: CustomEvent<MenuSelectDetail>) =>
+                console.log('delete', thread.id, e.detail.value)}
+              >Delete</lr-menu-item
+            >
+          </lr-menu>
+        `}
       ></lr-thread-list>
     </div>`,
 };
