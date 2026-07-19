@@ -1002,9 +1002,9 @@ consumer-supplied lazy loader below. Because the import expression lives in cons
 numbering metadata enters a bundle that does not opt in.
 
 ```ts
-import '@aceshooting/lyra-ui/components/phone-input/phone-input.js';
+import '@aceshooting/lyra-ui/components/forms/phone-input/phone-input.js';
 import { loadLibphonenumberAdapter } from
-  '@aceshooting/lyra-ui/components/phone-input/phone-input.class.js';
+  '@aceshooting/lyra-ui/components/forms/phone-input/phone-input.class.js';
 
 const phone = document.querySelector('lr-phone-input');
 phone.adapter = await loadLibphonenumberAdapter(() => import('libphonenumber-js/min'));
@@ -1256,7 +1256,7 @@ pnpm add @aceshooting/lyra-flags   # required peer — without it, <lr-flag> ren
 ```
 
 ```js
-import '@aceshooting/lyra-ui/components/flag/flag-peer.js';
+import '@aceshooting/lyra-ui/components/media/flag/flag-peer.js';
 ```
 
 **Known gotchas:**
@@ -4712,7 +4712,7 @@ root it labels.
 A drop-in async replacement for `window.confirm()`, built on `<lr-dialog>`.
 
 ```ts
-import { confirm } from '@aceshooting/lyra-ui/components/dialog/confirm.js';
+import { confirm } from '@aceshooting/lyra-ui/components/overlays/dialog/confirm.js';
 
 const ok = await confirm({
   title: 'Delete conversation?',
@@ -5253,7 +5253,7 @@ Consolas, monospace` — component-specific since no shared monospace token exis
 
 ```ts
 import { html } from 'lit';
-import '@aceshooting/lyra-ui/components/json-viewer/json-viewer.js';
+import '@aceshooting/lyra-ui/components/utility/json-viewer/json-viewer.js';
 
 html`<lr-json-viewer .data=${apiResponse} copyable max-height="24rem" search=${query}></lr-json-viewer>`;
 ```
@@ -5970,7 +5970,7 @@ a transient network failure) gets a fresh `load()` call rather than being stuck 
 promise forever.
 
 ```ts
-import { registerToolRenderer } from '@aceshooting/lyra-ui/components/tool-result-view/registry.js';
+import { registerToolRenderer } from '@aceshooting/lyra-ui/components/agent-tools/tool-result-view/registry.js';
 
 registerToolRenderer('get_weather', {
   render: (result, args) => html`<weather-card .data=${result} .city=${args?.city}></weather-card>`,
