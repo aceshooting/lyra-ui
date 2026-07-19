@@ -114,6 +114,132 @@ describe('drawGraphScene', () => {
     const brightAlpha = brightCtx.getImageData(50, 50, 1, 1).data[3];
     expect(dimmedAlpha).to.be.lessThan(brightAlpha);
   });
+
+  it('draws square/diamond node shapes (not just circle) without throwing, painting a non-transparent pixel at each center', () => {
+    const ctx = make2dContext();
+    expect(() =>
+      drawGraphScene(ctx, { k: 1, x: 0, y: 0 }, {
+        hulls: [],
+        links: [],
+        edgeLabels: [],
+        nodes: [
+          { x: 30, y: 30, r: 10, shape: 'square', fill: '#00ff00' },
+          { x: 70, y: 70, r: 10, shape: 'diamond', fill: '#0000ff' },
+        ],
+        nodeLabels: [],
+        showNodeLabels: true,
+        haloColor: '#000',
+        selectedColor: '#000',
+        labelColor: '#000',
+        labelHaloColor: '#fff',
+        font: '10px sans-serif',
+      }),
+    ).to.not.throw();
+    expect(ctx.getImageData(30, 30, 1, 1).data[3]).to.be.greaterThan(0);
+    expect(ctx.getImageData(70, 70, 1, 1).data[3]).to.be.greaterThan(0);
+  });
+
+  it('draws a directed link (arrowhead) without throwing, painting near the target end', () => {
+    const ctx = make2dContext();
+    expect(() =>
+      drawGraphScene(ctx, { k: 1, x: 0, y: 0 }, {
+        hulls: [],
+        links: [{ x1: 10, y1: 50, x2: 90, y2: 50, color: '#000', width: 2, directed: true }],
+        edgeLabels: [],
+        nodes: [],
+        nodeLabels: [],
+        showNodeLabels: true,
+        haloColor: '#000',
+        selectedColor: '#000',
+        labelColor: '#000',
+        labelHaloColor: '#fff',
+        font: '10px sans-serif',
+      }),
+    ).to.not.throw();
+    expect(ctx.getImageData(88, 50, 1, 1).data[3]).to.be.greaterThan(0);
+  });
+
+  it('draws an arrowhead for a zero-length directed link without dividing by zero (NaN direction)', () => {
+    const ctx = make2dContext();
+    expect(() =>
+      drawGraphScene(ctx, { k: 1, x: 0, y: 0 }, {
+        hulls: [],
+        links: [{ x1: 50, y1: 50, x2: 50, y2: 50, color: '#000', width: 2, directed: true }],
+        edgeLabels: [],
+        nodes: [],
+        nodeLabels: [],
+        showNodeLabels: true,
+        haloColor: '#000',
+        selectedColor: '#000',
+        labelColor: '#000',
+        labelHaloColor: '#fff',
+        font: '10px sans-serif',
+      }),
+    ).to.not.throw();
+  });
+
+  it('draws a community hull fill/stroke without throwing, painting inside the hull path', () => {
+    const ctx = make2dContext();
+    expect(() =>
+      drawGraphScene(ctx, { k: 1, x: 0, y: 0 }, {
+        hulls: [{ d: 'M 20 20 L 80 20 L 80 80 L 20 80 Z', fill: '#00ff00' }],
+        links: [],
+        edgeLabels: [],
+        nodes: [],
+        nodeLabels: [],
+        showNodeLabels: true,
+        haloColor: '#000',
+        selectedColor: '#000',
+        labelColor: '#000',
+        labelHaloColor: '#fff',
+        font: '10px sans-serif',
+      }),
+    ).to.not.throw();
+    expect(ctx.getImageData(50, 50, 1, 1).data[3]).to.be.greaterThan(0);
+  });
+
+  it('strokes a selected link with selectedColor instead of its own color', () => {
+    const ctx = make2dContext();
+    drawGraphScene(ctx, { k: 1, x: 0, y: 0 }, {
+      hulls: [],
+      links: [{ x1: 10, y1: 50, x2: 90, y2: 50, color: '#000000', width: 4, selected: true }],
+      edgeLabels: [],
+      nodes: [],
+      nodeLabels: [],
+      showNodeLabels: true,
+      haloColor: '#000',
+      selectedColor: '#00ff00',
+      labelColor: '#000',
+      labelHaloColor: '#fff',
+      font: '10px sans-serif',
+    });
+    const pixel = ctx.getImageData(50, 50, 1, 1).data;
+    expect([pixel[0], pixel[1], pixel[2]]).to.deep.equal([0, 255, 0]);
+  });
+
+  it('draws the focus halo and keyboard focus ring without throwing', () => {
+    const ctx = make2dContext();
+    expect(() =>
+      drawGraphScene(ctx, { k: 1, x: 0, y: 0 }, {
+        hulls: [],
+        links: [],
+        edgeLabels: [],
+        nodes: [],
+        nodeLabels: [],
+        showNodeLabels: true,
+        focusHalo: { x: 50, y: 50, r: 20 },
+        keyboardFocusRing: { x: 50, y: 50, r: 25 },
+        haloColor: '#ff00ff',
+        selectedColor: '#000',
+        labelColor: '#000',
+        labelHaloColor: '#fff',
+        font: '10px sans-serif',
+      }),
+    ).to.not.throw();
+    // The ring is stroked, not filled -- sample along its radius (50,30 = center minus r=20), not
+    // the empty center.
+    expect(ctx.getImageData(50, 30, 1, 1).data[3]).to.be.greaterThan(0);
+  });
 });
 
 describe('drawPickingScene', () => {
@@ -153,5 +279,18 @@ describe('drawPickingScene', () => {
     });
     const hit = ctx.getImageData(50, 20, 1, 1).data; // 20 (node x) + 30 (camera x offset)
     expect(pickColorToIndex(hit[0]!, hit[1]!, hit[2]!)).to.equal(0);
+  });
+
+  it('assigns a distinguishable pick color to a hull region, ordered before links/nodes', () => {
+    const ctx = make2dContext();
+    drawPickingScene(ctx, { k: 1, x: 0, y: 0 }, {
+      hulls: [{ d: 'M 10 10 L 50 10 L 50 50 L 10 50 Z' }],
+      links: [],
+      nodes: [{ x: 80, y: 80, r: 10, shape: 'circle' }],
+    });
+    const hullPixel = ctx.getImageData(30, 30, 1, 1).data;
+    const nodePixel = ctx.getImageData(80, 80, 1, 1).data;
+    expect(pickColorToIndex(hullPixel[0]!, hullPixel[1]!, hullPixel[2]!)).to.equal(0);
+    expect(pickColorToIndex(nodePixel[0]!, nodePixel[1]!, nodePixel[2]!)).to.equal(1);
   });
 });
