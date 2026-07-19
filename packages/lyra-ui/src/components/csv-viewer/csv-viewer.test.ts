@@ -19,6 +19,32 @@ describe('lr-csv-viewer', () => {
     const restore = fetchText('Name,Notes\nAda,"Wrote notes on the ""Engine"", 1843"');
     try { el.src = 'https://example.test/people.csv'; await waitUntil(() => el.shadowRoot!.querySelector('[part="header-row"]') !== null); expect((el.shadowRoot!.querySelector('lr-virtual-list') as HTMLElement & { items: unknown[][] }).items[0]).to.deep.equal(['Ada', 'Wrote notes on the "Engine", 1843']); } finally { restore(); }
   });
+  it('renders data rows as a grid, matching the header row, not as unstyled stacked text', async () => {
+    // Regression test: renderRow()/renderCell()'s output for data rows is rendered inside
+    // <lr-virtual-list>'s own shadow root via its renderItem callback, a different shadow tree
+    // than csv-viewer.styles.ts's stylesheet is scoped to -- a plain [part='data-row']/[part='cell']
+    // CSS selector there can never reach it, only the header row (rendered directly by csv-viewer).
+    const el = (await fixture(html`<lr-csv-viewer></lr-csv-viewer>`)) as LyraCsvViewer;
+    const restore = fetchText(GRID_CSV);
+    try {
+      el.src = 'https://example.test/people.csv';
+      await waitUntil(() => el.shadowRoot!.querySelector('lr-virtual-list') !== null);
+      const list = el.shadowRoot!.querySelector('lr-virtual-list')!;
+      await waitUntil(() => list.shadowRoot!.querySelector('[part="data-row"]') !== null);
+      const headerRow = el.shadowRoot!.querySelector('[part="header-row"]') as HTMLElement;
+      const dataRow = list.shadowRoot!.querySelector('[part="data-row"]') as HTMLElement;
+      expect(getComputedStyle(dataRow).display).to.equal('grid');
+      expect(getComputedStyle(dataRow).display).to.equal(getComputedStyle(headerRow).display);
+      const headerCell = headerRow.querySelector('[part="cell"]') as HTMLElement;
+      const dataCell = dataRow.querySelector('[part="cell"]') as HTMLElement;
+      expect(getComputedStyle(dataCell).paddingInlineStart).to.not.equal('0px');
+      expect(getComputedStyle(dataCell).paddingInlineStart).to.equal(getComputedStyle(headerCell).paddingInlineStart);
+      expect(getComputedStyle(dataCell).borderInlineEndStyle).to.equal('solid');
+    } finally {
+      restore();
+    }
+  });
+
   it('loads a src that changed while detached once it is reconnected', async () => {
     const el = (await fixture(html`<lr-csv-viewer></lr-csv-viewer>`)) as LyraCsvViewer;
     const parent = el.parentElement!;

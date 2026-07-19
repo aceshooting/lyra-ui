@@ -43,6 +43,31 @@ describe('lr-spreadsheet-viewer', () => {
     } finally { restore(); }
   });
 
+  it('renders data rows as a grid, matching the header row, not as unstyled stacked text', async () => {
+    // Regression test: renderRow()/renderCell()'s output for data rows is rendered inside
+    // <lr-virtual-list>'s own shadow root via its renderItem callback, a different shadow tree
+    // than spreadsheet-viewer.styles.ts's stylesheet is scoped to -- a plain [part='data-row']/
+    // [part='cell'] CSS selector there can never reach it, only the header row (rendered directly
+    // by this component). Same bug/fix as lr-csv-viewer's identical architecture.
+    const el = (await fixture(html`<lr-spreadsheet-viewer></lr-spreadsheet-viewer>`)) as LyraSpreadsheetViewer;
+    const restore = fetchBuffer(buffer(GRID_WORKBOOK));
+    try {
+      el.src = 'https://example.test/book.xlsx';
+      await waitUntil(() => el.shadowRoot!.querySelector('lr-virtual-list') !== null);
+      const list = el.shadowRoot!.querySelector('lr-virtual-list')!;
+      await waitUntil(() => list.shadowRoot!.querySelector('[part="data-row"]') !== null);
+      const headerRow = el.shadowRoot!.querySelector('[part="header-row"]') as HTMLElement;
+      const dataRow = list.shadowRoot!.querySelector('[part="data-row"]') as HTMLElement;
+      expect(getComputedStyle(dataRow).display).to.equal('grid');
+      expect(getComputedStyle(dataRow).display).to.equal(getComputedStyle(headerRow).display);
+      const headerCell = headerRow.querySelector('[part="cell"]') as HTMLElement;
+      const dataCell = dataRow.querySelector('[part="cell"]') as HTMLElement;
+      expect(getComputedStyle(dataCell).paddingInlineStart).to.not.equal('0px');
+      expect(getComputedStyle(dataCell).paddingInlineStart).to.equal(getComputedStyle(headerCell).paddingInlineStart);
+      expect(getComputedStyle(dataCell).borderInlineEndStyle).to.equal('solid');
+    } finally { restore(); }
+  });
+
   it('renders tabs for multiple sheets', async () => {
     const el = (await fixture(html`<lr-spreadsheet-viewer></lr-spreadsheet-viewer>`)) as LyraSpreadsheetViewer;
     const restore = fetchBuffer(buffer({ Inventory: [['Name'], ['Widget']], Summary: [['Total'], [12]] }));
