@@ -8,12 +8,36 @@ import { styles } from './emoji-picker.styles.js';
 import { loadEmojiDataCached } from './emoji-data-loader.js';
 
 const VIRTUALIZE_AT = 200;
-const VIRTUAL_ROW_HEIGHT_FALLBACK = 64;
+// Only used while the probe boxes have no used size to read (the element is not laid out at all --
+// `display: none`, a detached render). They mirror the shipped token defaults at a 16px root font
+// size: 2.5rem, 0.125rem, and 2.5rem + 1rem.
+const ITEM_SIZE_FALLBACK = 40;
+const GAP_FALLBACK = 2;
+const VIRTUAL_ROW_HEIGHT_FALLBACK = 56;
 const MAX_VIRTUAL_COLUMNS = 20;
 
 interface VirtualEmojiRow {
   label?: string;
   items: Array<{ item: EmojiPickerItem; index: number }>;
+}
+
+/** Pixel geometry of the windowed layout, resolved from the three geometry custom properties. */
+interface EmojiPickerGeometry {
+  itemSize: number;
+  gap: number;
+  rowHeight: number;
+}
+
+/** One probe box's used inline size in CSS pixels, or `fallback` when it has no usable box yet. */
+function probePixels(probe: HTMLElement, fallback: number, allowZero = false): number {
+  // The *used* value (post-layout, minimum-clamped) rather than `getBoundingClientRect()` on
+  // purpose: `inline-size`'s resolved value is in untransformed CSS pixels, the same space as the
+  // `clientWidth`/`scrollTop` numbers this geometry is combined with. A rect is in transformed
+  // viewport space, so a scaled ancestor would rescale the column count and row pitch relative to
+  // the scroller they drive.
+  const px = Number.parseFloat(getComputedStyle(probe).inlineSize);
+  if (!Number.isFinite(px) || px < 0) return fallback;
+  return px > 0 || allowZero ? px : fallback;
 }
 
 export interface EmojiPickerItem {
@@ -87,6 +111,9 @@ export class LyraEmojiPicker extends FormAssociated(EmojiPickerBase) {
 
   connectedCallback(): void {
     super.connectedCallback();
+    // Re-arms the geometry sensor after a reconnect; the cache is deliberately kept across the
+    // disconnect, so the first delivery here still re-renders if the tokens moved while detached.
+    this.observeGeometryProbe();
     // Only auto-loads when the consumer hasn't already supplied groups directly -- an explicit
     // `groups` (even an empty array set intentionally) always wins, matching the "consumer-supplied
     // data takes precedence over any built-in default" convention this library uses elsewhere (e.g.
@@ -114,6 +141,9 @@ export class LyraEmojiPicker extends FormAssociated(EmojiPickerBase) {
   private observedGrid?: HTMLElement;
   private observedGridVirtualized = false;
   private gridResizeObserver?: ResizeObserver;
+  private geometryProbe?: { root: HTMLElement; item: HTMLElement; gap: HTMLElement; row: HTMLElement };
+  private geometryCache?: EmojiPickerGeometry;
+  private geometryObserver?: ResizeObserver;
 
   @query('[part="search"]') private searchEl?: HTMLInputElement;
 
@@ -153,14 +183,75 @@ export class LyraEmojiPicker extends FormAssociated(EmojiPickerBase) {
     return this.flatItems.length >= VIRTUALIZE_AT;
   }
 
-  private cssPixelValue(name: string, fallback: number): number {
-    const value = Number.parseFloat(getComputedStyle(this).getPropertyValue(name));
-    return Number.isFinite(value) && value > 0 ? value : fallback;
+  /**
+   * The windowed layout's pixel geometry. `getComputedStyle(host).getPropertyValue('--x')` hands
+   * back a custom property's *computed token stream* (`2.5rem`, `calc(2.5rem + 1rem)`) and never a
+   * pixel length, so parsing it reads a `rem` value's leading number as pixels and cannot read a
+   * `calc()` at all. Measuring the probe boxes the stylesheet sizes from those same tokens makes
+   * the browser do the unit math instead, for every unit `calc()` included.
+   *
+   * Measured at most once per geometry change, not per frame: the result is cached, and the probe
+   * boxes themselves are the invalidation signal (see `observeGeometryProbe`).
+   */
+  private geometry(): EmojiPickerGeometry {
+    if (this.geometryCache) return this.geometryCache;
+    const probe = this.geometryProbe;
+    if (!probe) {
+      return { itemSize: ITEM_SIZE_FALLBACK, gap: GAP_FALLBACK, rowHeight: VIRTUAL_ROW_HEIGHT_FALLBACK };
+    }
+    // A zero gap is a legitimate value; a zero item size or row height is not (it would divide the
+    // scroll offset by zero), so those fall back instead.
+    this.geometryCache = {
+      itemSize: probePixels(probe.item, ITEM_SIZE_FALLBACK),
+      gap: probePixels(probe.gap, GAP_FALLBACK, true),
+      rowHeight: probePixels(probe.row, VIRTUAL_ROW_HEIGHT_FALLBACK),
+    };
+    return this.geometryCache;
   }
 
-  private virtualRowHeight(): number {
-    return this.cssPixelValue('--lr-emoji-picker-row-height', VIRTUAL_ROW_HEIGHT_FALLBACK);
+  /** Creates the measurement probe the first time the windowed path needs it. Runs before
+   *  `render()` so the very first windowed render already measures real pixels. */
+  private syncGeometryProbe(): void {
+    if (this.geometryProbe || !this.isVirtualized) return;
+    const makeProbe = (name: string): HTMLDivElement => {
+      const probe = document.createElement('div');
+      probe.dataset.probe = name;
+      return probe;
+    };
+    const root = makeProbe('root');
+    root.setAttribute('aria-hidden', 'true');
+    const item = makeProbe('item');
+    const gap = makeProbe('gap');
+    const row = makeProbe('row');
+    root.append(item, gap, row);
+    this.renderRoot.append(root);
+    this.geometryProbe = { root, item, gap, row };
+    this.observeGeometryProbe();
   }
+
+  /** The probe boxes double as the change sensor: anything that can move the geometry -- a token
+   *  override applied after the first render, a theme swap, a root/host font-size change feeding a
+   *  `rem`/`em` value -- resizes them, so the cached pixels are re-derived exactly when they can
+   *  actually differ, with no per-frame reads. */
+  private observeGeometryProbe(): void {
+    const probe = this.geometryProbe;
+    if (!probe) return;
+    this.geometryObserver ??= new ResizeObserver(this.onGeometryResize);
+    this.geometryObserver.observe(probe.item);
+    this.geometryObserver.observe(probe.gap);
+    this.geometryObserver.observe(probe.row);
+  }
+
+  private onGeometryResize = (): void => {
+    const previous = this.geometryCache;
+    this.geometryCache = undefined;
+    if (!previous) return; // nothing has been rendered against the stale numbers yet
+    const next = this.geometry();
+    if (next.itemSize === previous.itemSize && next.gap === previous.gap && next.rowHeight === previous.rowHeight) {
+      return;
+    }
+    this.requestUpdate();
+  };
 
   private virtualRows(): VirtualEmojiRow[] {
     const columns = this.columnsPerRow();
@@ -187,8 +278,7 @@ export class LyraEmojiPicker extends FormAssociated(EmojiPickerBase) {
     if (this.isVirtualized) {
       const grid = this.renderRoot.querySelector<HTMLElement>('[part="grid"]');
       const width = grid?.clientWidth ?? 0;
-      const itemSize = this.cssPixelValue('--lr-emoji-picker-item-size', 40);
-      const gap = this.cssPixelValue('--lr-emoji-picker-gap', 4);
+      const { itemSize, gap } = this.geometry();
       return Math.min(MAX_VIRTUAL_COLUMNS, Math.max(1, Math.floor((Math.max(width, itemSize) + gap) / (itemSize + gap))));
     }
     const buttons = this.optionButtons();
@@ -232,7 +322,7 @@ export class LyraEmojiPicker extends FormAssociated(EmojiPickerBase) {
       const rowIndex = this.virtualRows().findIndex((row) => row.items.some(({ index }) => index === this.activeIndex));
       const grid = this.renderRoot.querySelector<HTMLElement>('[part="grid"]');
       if (rowIndex >= 0 && grid) {
-        grid.scrollTop = rowIndex * this.virtualRowHeight();
+        grid.scrollTop = rowIndex * this.geometry().rowHeight;
         this.virtualScrollTop = grid.scrollTop;
         this.requestUpdate();
       }
@@ -318,6 +408,11 @@ export class LyraEmojiPicker extends FormAssociated(EmojiPickerBase) {
     this.gridResizeObserver.observe(grid);
   }
 
+  protected willUpdate(changed: PropertyValues): void {
+    super.willUpdate(changed);
+    this.syncGeometryProbe();
+  }
+
   protected updated(changed: PropertyValues): void {
     this.syncGridObserver();
     if (!changed.has('queryText') && !changed.has('groups')) return;
@@ -338,6 +433,10 @@ export class LyraEmojiPicker extends FormAssociated(EmojiPickerBase) {
     this.observedGrid?.removeEventListener('scroll', this.onGridScroll);
     this.gridResizeObserver?.disconnect();
     this.gridResizeObserver = undefined;
+    // The probe node itself stays in the shadow root (it is re-observed on reconnect); only the
+    // observer is torn down, so nothing keeps measuring while detached.
+    this.geometryObserver?.disconnect();
+    this.geometryObserver = undefined;
     this.observedGrid = undefined;
     this.observedGridVirtualized = false;
     if (this.virtualScrollRaf !== undefined) {
@@ -367,7 +466,7 @@ export class LyraEmojiPicker extends FormAssociated(EmojiPickerBase) {
 
   private renderVirtualRows(): TemplateResult {
     const rows = this.virtualRows();
-    const rowHeight = this.virtualRowHeight();
+    const rowHeight = this.geometry().rowHeight;
     const grid = this.renderRoot.querySelector<HTMLElement>('[part="grid"]');
     const viewportHeight = grid?.clientHeight || 256;
     const start = Math.max(0, Math.floor(this.virtualScrollTop / rowHeight) - 3);

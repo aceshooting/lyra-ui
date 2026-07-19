@@ -35,6 +35,28 @@ export const WithSuppliedGroups: Story = {
   render: () => html`<lr-emoji-picker .groups=${groups}></lr-emoji-picker>`,
 };
 
+// The windowed path (200+ filtered items) with all three geometry tokens overridden in `rem`.
+// Row pitch and columns-per-row are resolved to real pixels from those tokens, so the windowed
+// geometry stays in step with what is painted for any CSS length unit, `calc()` included.
+const pool = ['😀', '😂', '😍', '🐶', '🐱', '🦊', '🍎', '🍇', '⚽', '🚀'];
+const largeGroups: EmojiPickerGroup[] = [
+  {
+    key: 'all',
+    label: 'A large set',
+    emojis: Array.from({ length: 400 }, (_, index) => ({
+      emoji: pool[index % pool.length],
+      name: `sample emoji ${index + 1}`,
+    })),
+  },
+];
+
+export const WindowedWithRemGeometry: Story = {
+  render: () => html`<lr-emoji-picker
+    style="--lr-emoji-picker-item-size: 3rem; --lr-emoji-picker-gap: 0.5rem; --lr-emoji-picker-row-height: calc(3rem + 1rem)"
+    .groups=${largeGroups}
+  ></lr-emoji-picker>`,
+};
+
 // Leaves `groups` unset, exercising the optional emoji-picker-element-data auto-loader from
 // emoji-data-loader.ts -- renders empty (just the search input) if that peer isn't installed in
 // whatever environment is running Storybook, which is the fully-supported default, not an error.

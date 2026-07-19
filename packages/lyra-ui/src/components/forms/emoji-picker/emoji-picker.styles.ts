@@ -39,6 +39,36 @@ export const styles = css`
   [part='grid'] {
     scrollbar-gutter: stable;
   }
+  /* Off-flow geometry probes (not parts -- never exposed to consumers). A custom property's
+     computed value is an unresolved token stream ('2.5rem', 'calc(2.5rem + 1rem)'), never a pixel
+     length, so the windowed layout resolves each geometry token by assigning it to one of these
+     boxes and reading that box's used inline size back. Absolutely positioned and hidden, so they
+     take part in layout (a box is what makes a used size exist) without painting or affecting the
+     grid. */
+  [data-probe='root'] {
+    position: absolute;
+    inset-block-start: 0;
+    inset-inline-start: 0;
+    visibility: hidden;
+    pointer-events: none;
+  }
+  [data-probe='item'],
+  [data-probe='gap'],
+  [data-probe='row'] {
+    block-size: 0;
+  }
+  [data-probe='item'] {
+    /* Mirrors [part='emoji']'s inline box, shared minimum included, so the resolved item size is
+       the size actually painted. */
+    inline-size: var(--lr-emoji-picker-item-size);
+    min-inline-size: var(--lr-icon-button-size);
+  }
+  [data-probe='gap'] {
+    inline-size: var(--lr-emoji-picker-gap);
+  }
+  [data-probe='row'] {
+    inline-size: var(--lr-emoji-picker-row-height);
+  }
   [part='virtual-spacer'] {
     position: relative;
     min-block-size: 100%;

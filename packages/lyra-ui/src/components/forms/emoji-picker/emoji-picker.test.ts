@@ -85,6 +85,115 @@ it('virtualizes large emoji sets while keeping the full option count in ARIA met
   expect(grid.scrollHeight).to.be.greaterThan(0);
 });
 
+describe('windowed geometry token resolution', () => {
+  // The three geometry tokens are authored in `rem`/`calc()` (`--lr-emoji-picker-item-size`
+  // defaults to `--lr-icon-button-size` = 2.5rem, `--lr-emoji-picker-gap` to `--lr-space-2xs` =
+  // 0.125rem, and `--lr-emoji-picker-row-height` to `calc(item-size + --lr-space-l)`), so every
+  // expectation below is derived from the live root font size rather than hard-coded pixels.
+  const rootFontSize = (): number => Number.parseFloat(getComputedStyle(document.documentElement).fontSize);
+
+  const largeGroups = (count = 500): EmojiPickerGroup[] => [
+    {
+      key: 'large',
+      label: 'Large set',
+      emojis: Array.from({ length: count }, (_, index) => ({ emoji: `😀${index}`, name: `emoji ${index}` })),
+    },
+  ];
+
+  /** Each windowed row's `translateY` offset, in the order they are rendered. */
+  const rowOffsets = (el: LyraEmojiPicker): number[] =>
+    [...el.shadowRoot!.querySelectorAll<HTMLElement>('[part="virtual-row"]')].map((row) =>
+      Number.parseFloat(/translateY\((-?[\d.]+)px\)/.exec(row.style.transform)?.[1] ?? 'NaN'),
+    );
+
+  /** The row pitch the component actually laid out with, read back from two adjacent rows. */
+  const renderedRowHeight = (el: LyraEmojiPicker): number => {
+    const offsets = rowOffsets(el);
+    return offsets[1] - offsets[0];
+  };
+
+  const firstRowButtons = (el: LyraEmojiPicker): HTMLElement[] => [
+    ...el.shadowRoot!.querySelector<HTMLElement>('[part="virtual-row"]')!.querySelectorAll<HTMLElement>('[part="emoji"]'),
+  ];
+
+  /** Painted width of the first row's flex line -- it must fit inside the scroll viewport. */
+  const lineWidth = (buttons: HTMLElement[]): number =>
+    buttons.at(-1)!.getBoundingClientRect().right - buttons[0]!.getBoundingClientRect().left;
+
+  it('derives the windowed column count from the pixel-resolved item size, not the raw rem number', async () => {
+    const el = await connectEmojiPicker();
+    el.style.inlineSize = '320px';
+    el.style.setProperty('--lr-emoji-picker-item-size', '3rem');
+    el.groups = largeGroups();
+    await el.updateComplete;
+
+    const grid = el.shadowRoot!.querySelector<HTMLElement>('[part="grid"]')!;
+    const buttons = firstRowButtons(el);
+    const itemSize = 3 * rootFontSize();
+    const gap = 0.125 * rootFontSize();
+    expect(buttons.length).to.equal(Math.max(1, Math.floor((grid.clientWidth + gap) / (itemSize + gap))));
+    // Reading `3rem` as `3` packs 20 columns (the cap) into the row, overflowing the viewport.
+    expect(lineWidth(buttons)).to.be.at.most(grid.clientWidth + 1);
+  });
+
+  it('derives the windowed column count from the pixel-resolved gap, so a rem gap never overflows the row', async () => {
+    const el = await connectEmojiPicker();
+    el.style.inlineSize = '320px';
+    el.style.setProperty('--lr-emoji-picker-gap', '1rem');
+    el.groups = largeGroups();
+    await el.updateComplete;
+
+    const grid = el.shadowRoot!.querySelector<HTMLElement>('[part="grid"]')!;
+    const buttons = firstRowButtons(el);
+    const itemSize = 2.5 * rootFontSize();
+    const gap = rootFontSize();
+    expect(buttons.length).to.equal(Math.max(1, Math.floor((grid.clientWidth + gap) / (itemSize + gap))));
+    expect(lineWidth(buttons)).to.be.at.most(grid.clientWidth + 1);
+  });
+
+  it('resolves the calc()-based default row height instead of falling back to a hardcoded pitch', async () => {
+    const el = await connectEmojiPicker();
+    el.style.inlineSize = '320px';
+    el.groups = largeGroups();
+    await el.updateComplete;
+
+    // calc(var(--lr-emoji-picker-item-size) + var(--lr-space-l)) = 2.5rem + 1rem.
+    const expected = 3.5 * rootFontSize();
+    expect(renderedRowHeight(el)).to.be.closeTo(expected, 0.5);
+    const spacer = el.shadowRoot!.querySelector<HTMLElement>('[part="virtual-spacer"]')!;
+    const rows = Math.ceil(500 / firstRowButtons(el).length);
+    expect(Number.parseFloat(spacer.style.blockSize)).to.be.closeTo(rows * expected, 0.5);
+  });
+
+  it('resolves the geometry on the very first windowed render, not one update cycle late', async () => {
+    const el = document.createElement('lr-emoji-picker') as LyraEmojiPicker;
+    (el as unknown as { loadGroups: () => Promise<EmojiPickerGroup[] | null> }).loadGroups = () => Promise.resolve(null);
+    el.style.inlineSize = '320px';
+    // Overridden to a value the numeric fallback can't coincide with, and applied before the
+    // element ever connects -- the first render is the windowed one.
+    el.style.setProperty('--lr-emoji-picker-row-height', '6rem');
+    el.groups = largeGroups();
+    created.push(el);
+    document.body.append(el);
+    await el.updateComplete;
+    expect(renderedRowHeight(el)).to.be.closeTo(6 * rootFontSize(), 0.5);
+  });
+
+  it('re-resolves the geometry when a token override lands after the first render', async () => {
+    const el = await connectEmojiPicker();
+    el.style.inlineSize = '320px';
+    el.groups = largeGroups();
+    await el.updateComplete;
+    expect(renderedRowHeight(el)).to.be.closeTo(3.5 * rootFontSize(), 0.5);
+
+    el.style.setProperty('--lr-emoji-picker-row-height', '6rem');
+    await waitUntil(
+      () => Math.abs(renderedRowHeight(el) - 6 * rootFontSize()) < 0.5,
+      'the windowed row pitch never picked up the late --lr-emoji-picker-row-height override',
+    );
+  });
+});
+
 it('is form-associated, participating in an ancestor form.elements', async () => {
   const form = document.createElement('form');
   const el = document.createElement('lr-emoji-picker') as LyraEmojiPicker;
