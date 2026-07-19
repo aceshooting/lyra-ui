@@ -67,6 +67,13 @@ describe('image loading', () => {
     await el.updateComplete;
     expect((el.shadowRoot!.querySelector('img') as HTMLImageElement).alt).to.equal('');
   });
+
+  it('uses an explicitly provided non-empty alt instead of the name fallback', async () => {
+    const el = (await fixture(
+      html`<lr-image-viewer src=${PNG_SRC} name="Chart" alt="Custom alt text"></lr-image-viewer>`,
+    )) as LyraImageViewer;
+    expect((el.shadowRoot!.querySelector('img') as HTMLImageElement).alt).to.equal('Custom alt text');
+  });
 });
 
 describe('zoom, rotation, and fit', () => {
@@ -140,6 +147,16 @@ describe('zoom, rotation, and fit', () => {
     el.fit = 'actual';
     const event = await eventPromise;
     expect(event.detail).to.deep.equal({ fit: 'actual' });
+  });
+
+  it('updates fit from the toolbar select and emits lr-fit-change', async () => {
+    const el = (await fixture(html`<lr-image-viewer src=${PNG_SRC}></lr-image-viewer>`)) as LyraImageViewer;
+    const select = el.shadowRoot!.querySelector('[part="fit-control"]') as HTMLSelectElement;
+    select.value = 'width';
+    const eventPromise = oneEvent(el, 'lr-fit-change');
+    select.dispatchEvent(new Event('change', { bubbles: true }));
+    expect((await eventPromise).detail).to.deep.equal({ fit: 'width' });
+    expect(el.fit).to.equal('width');
   });
 });
 
@@ -243,6 +260,181 @@ describe('annotation', () => {
     let fired = false;
     el.addEventListener('lr-annotation-create', () => (fired = true));
     viewport.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    await el.updateComplete;
+    expect(fired).to.be.false;
+    expect(el.shadowRoot!.querySelector('[part="annotation-box"]')).to.not.exist;
+  });
+
+  it('moves the draft box with ArrowLeft/ArrowUp/ArrowDown and ignores unrecognized keys', async () => {
+    const el = (await fixture(html`<lr-image-viewer src=${PNG_SRC} annotatable></lr-image-viewer>`)) as LyraImageViewer;
+    const viewport = el.shadowRoot!.querySelector('[part="image-wrapper"]') as HTMLElement;
+    viewport.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+    await el.updateComplete;
+    // Starter box: { x: 37.5, y: 37.5, width: 25, height: 25 }.
+    viewport.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true }));
+    await el.updateComplete;
+    let box = el.shadowRoot!.querySelector('[part="annotation-box"]') as HTMLElement;
+    expect(box.style.left).to.equal('35.5%');
+
+    viewport.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowUp', bubbles: true }));
+    await el.updateComplete;
+    box = el.shadowRoot!.querySelector('[part="annotation-box"]') as HTMLElement;
+    expect(box.style.top).to.equal('35.5%');
+
+    viewport.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }));
+    await el.updateComplete;
+    box = el.shadowRoot!.querySelector('[part="annotation-box"]') as HTMLElement;
+    expect(box.style.top).to.equal('37.5%');
+
+    // An unhandled key falls through the switch's default branch and is a no-op.
+    viewport.dispatchEvent(new KeyboardEvent('keydown', { key: 'PageDown', bubbles: true }));
+    await el.updateComplete;
+    box = el.shadowRoot!.querySelector('[part="annotation-box"]') as HTMLElement;
+    expect(box.style.left).to.equal('35.5%');
+    expect(box.style.top).to.equal('37.5%');
+  });
+
+  it('resizes with Shift+ArrowLeft/ArrowUp/ArrowDown', async () => {
+    const el = (await fixture(html`<lr-image-viewer src=${PNG_SRC} annotatable></lr-image-viewer>`)) as LyraImageViewer;
+    const viewport = el.shadowRoot!.querySelector('[part="image-wrapper"]') as HTMLElement;
+    viewport.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+    await el.updateComplete;
+    // Starter box: { x: 37.5, y: 37.5, width: 25, height: 25 }.
+    viewport.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', shiftKey: true, bubbles: true }));
+    await el.updateComplete;
+    let box = el.shadowRoot!.querySelector('[part="annotation-box"]') as HTMLElement;
+    expect(box.style.width).to.equal('23%');
+
+    viewport.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowUp', shiftKey: true, bubbles: true }));
+    await el.updateComplete;
+    box = el.shadowRoot!.querySelector('[part="annotation-box"]') as HTMLElement;
+    expect(box.style.height).to.equal('23%');
+
+    viewport.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', shiftKey: true, bubbles: true }));
+    await el.updateComplete;
+    box = el.shadowRoot!.querySelector('[part="annotation-box"]') as HTMLElement;
+    expect(box.style.height).to.equal('25%');
+  });
+
+  it('ignores keydown on the wrapper while annotation mode is off', async () => {
+    // The keydown listener is always bound (unconditionally in the template), regardless of
+    // `annotatable` -- this exercises its own early-return guard, distinct from the toolbar
+    // toggle that normally keeps annotation-mode off.
+    const el = (await fixture(html`<lr-image-viewer src=${PNG_SRC}></lr-image-viewer>`)) as LyraImageViewer;
+    const viewport = el.shadowRoot!.querySelector('[part="image-wrapper"]') as HTMLElement;
+    viewport.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('[part="annotation-box"]')).to.not.exist;
+  });
+});
+
+// Positions the wrapper's bounding box deterministically -- a real image never actually loads in
+// this test environment (see stubImageLoad above), so layout-derived dimensions can't be relied on.
+function stubWrapperRect(el: LyraImageViewer, width = 200, height = 100): HTMLElement {
+  const wrapper = el.shadowRoot!.querySelector('[part="image-wrapper"]') as HTMLElement;
+  wrapper.getBoundingClientRect = () =>
+    ({
+      left: 0,
+      top: 0,
+      right: width,
+      bottom: height,
+      width,
+      height,
+      x: 0,
+      y: 0,
+      toJSON() {
+        return {};
+      },
+    }) as DOMRect;
+  wrapper.setPointerCapture = () => {}; // real setPointerCapture throws for a synthetic pointerId in tests
+  return wrapper;
+}
+
+describe('pointer-driven annotation', () => {
+  it('draws a region by dragging the pointer and commits it once large enough', async () => {
+    const el = (await fixture(html`<lr-image-viewer src=${PNG_SRC} annotatable></lr-image-viewer>`)) as LyraImageViewer;
+    const wrapper = stubWrapperRect(el);
+    wrapper.dispatchEvent(new PointerEvent('pointerdown', { pointerId: 1, clientX: 20, clientY: 10, bubbles: true }));
+    await el.updateComplete;
+    let box = el.shadowRoot!.querySelector('[part="annotation-box"]') as HTMLElement;
+    expect(box).to.exist;
+    expect(box.style.left).to.equal('10%'); // 20 / 200 * 100
+    expect(box.style.top).to.equal('10%'); // 10 / 100 * 100
+
+    wrapper.dispatchEvent(new PointerEvent('pointermove', { pointerId: 1, clientX: 100, clientY: 50, bubbles: true }));
+    await el.updateComplete;
+    box = el.shadowRoot!.querySelector('[part="annotation-box"]') as HTMLElement;
+    expect(box.style.left).to.equal('10%');
+    expect(box.style.top).to.equal('10%');
+    expect(box.style.width).to.equal('40%'); // |50 - 10|
+    expect(box.style.height).to.equal('40%'); // |50 - 10|
+
+    const eventPromise = oneEvent(el, 'lr-annotation-create');
+    wrapper.dispatchEvent(new PointerEvent('pointerup', { pointerId: 1, bubbles: true }));
+    const event = await eventPromise;
+    expect(event.detail.anchor.kind).to.equal('region');
+    expect(event.detail.anchor.rect.width).to.be.closeTo(40, 0.01);
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('[part="annotation-box"]')).to.not.exist;
+  });
+
+  it('cancels the pointer-drawn draft on release if the dragged region stays too small', async () => {
+    const el = (await fixture(html`<lr-image-viewer src=${PNG_SRC} annotatable></lr-image-viewer>`)) as LyraImageViewer;
+    const wrapper = stubWrapperRect(el);
+    wrapper.dispatchEvent(new PointerEvent('pointerdown', { pointerId: 2, clientX: 20, clientY: 10, bubbles: true }));
+    await el.updateComplete;
+    wrapper.dispatchEvent(new PointerEvent('pointermove', { pointerId: 2, clientX: 21, clientY: 11, bubbles: true }));
+    await el.updateComplete;
+    let fired = false;
+    el.addEventListener('lr-annotation-create', () => (fired = true));
+    wrapper.dispatchEvent(new PointerEvent('pointerup', { pointerId: 2, bubbles: true }));
+    await el.updateComplete;
+    expect(fired).to.be.false;
+    expect(el.shadowRoot!.querySelector('[part="annotation-box"]')).to.not.exist;
+  });
+
+  it('maps the pointer position through the rotated coordinate space for 90/180/270 rotations', async () => {
+    const el = (await fixture(html`<lr-image-viewer src=${PNG_SRC} annotatable></lr-image-viewer>`)) as LyraImageViewer;
+    const wrapper = stubWrapperRect(el, 100, 100);
+    const cases: Array<[ImageRotation, string, string]> = [
+      [90, '20%', '90%'], // { x: py, y: 100 - px }
+      [180, '90%', '80%'], // { x: 100 - px, y: 100 - py }
+      [270, '80%', '10%'], // { x: 100 - py, y: px }
+    ];
+    for (const [rotation, expectedLeft, expectedTop] of cases) {
+      el.rotation = rotation;
+      await el.updateComplete;
+      wrapper.dispatchEvent(new PointerEvent('pointerdown', { pointerId: 9, clientX: 10, clientY: 20, bubbles: true }));
+      await el.updateComplete;
+      const box = el.shadowRoot!.querySelector('[part="annotation-box"]') as HTMLElement;
+      expect(box.style.left).to.equal(expectedLeft);
+      expect(box.style.top).to.equal(expectedTop);
+      // Release with no movement -- the zero-size draft is discarded, resetting state for the next case.
+      wrapper.dispatchEvent(new PointerEvent('pointerup', { pointerId: 9, bubbles: true }));
+      await el.updateComplete;
+    }
+  });
+
+  it('ignores pointerdown on the wrapper while annotation mode is off', async () => {
+    // pointerdown/pointermove/pointerup are always bound in the template regardless of
+    // `annotatable`; each handler has its own early-return guard for that case.
+    const el = (await fixture(html`<lr-image-viewer src=${PNG_SRC}></lr-image-viewer>`)) as LyraImageViewer;
+    const wrapper = stubWrapperRect(el);
+    wrapper.dispatchEvent(new PointerEvent('pointerdown', { pointerId: 3, clientX: 20, clientY: 10, bubbles: true }));
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('[part="annotation-box"]')).to.not.exist;
+  });
+
+  it('ignores a pointermove/pointerup that never had a matching pointerdown', async () => {
+    const el = (await fixture(html`<lr-image-viewer src=${PNG_SRC} annotatable></lr-image-viewer>`)) as LyraImageViewer;
+    const wrapper = stubWrapperRect(el);
+    // No prior pointerdown -- pointerDraftId stays null, so both handlers should bail out via
+    // their `pointerDraftId !== event.pointerId` guard instead of touching `draft`.
+    wrapper.dispatchEvent(new PointerEvent('pointermove', { pointerId: 4, clientX: 50, clientY: 50, bubbles: true }));
+    await el.updateComplete;
+    let fired = false;
+    el.addEventListener('lr-annotation-create', () => (fired = true));
+    wrapper.dispatchEvent(new PointerEvent('pointerup', { pointerId: 4, bubbles: true }));
     await el.updateComplete;
     expect(fired).to.be.false;
     expect(el.shadowRoot!.querySelector('[part="annotation-box"]')).to.not.exist;
