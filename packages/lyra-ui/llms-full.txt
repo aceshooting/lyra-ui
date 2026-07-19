@@ -1484,7 +1484,7 @@ own "consumer computes/renders" contract rather than assuming addition.
 
 **Properties:**
 - `columns: TableColumn<T>[] = []` (attribute: false) — `{ key, label, headerCell?, width?,
-  minWidth?, resizable?, sortable?, align?: 'start'|'end', priority?: 'medium'|'low', sticky?: boolean |
+  minWidth?, maxWidth?, resizable?, sortable?, align?: 'start'|'end', priority?: 'medium'|'low', sticky?: boolean |
   'start' | 'end', footer?, cellStyle?, heatValue?, cell: (row) => unknown }` —
   `priority` progressively hides that column via a `@container` query as `[part='base']` narrows
   (`'low'` hides first, under a ~900px container width; `'medium'` next, under ~640px; both
@@ -1505,8 +1505,11 @@ own "consumer computes/renders" contract rather than assuming addition.
   background a `cell()`-returned inner element can't paint into the cell's own padding — omit it for
   no per-cell style override (the default, unchanged output); `editable` enables double-click
   editing, `editValue` supplies the editor value, and `editType` selects `text` or `number`
-  `resizable` adds a pointer-driven `[part='resize-handle']` and emits `lr-column-resize` with the
-  live width in CSS pixels; an explicit pixel `minWidth` is respected.
+  `resizable` adds a focusable separator `[part='resize-handle']` and emits `lr-column-resize` with
+  the live width in CSS pixels. Drag it, or use logical ArrowLeft/ArrowRight for 10px steps (mirrored
+  under RTL), Shift+Arrow for 50px steps, Home for the minimum, and End for an explicit pixel
+  `maxWidth`; explicit pixel `minWidth`/`maxWidth` values bound both input paths. The separator
+  exposes its current/minimum/bounded-maximum pixel width through ARIA value attributes.
 - `columnsHidden: boolean = false` (attribute `columns-hidden`, reflected) — computed/read-only: true
   when a `priority` column is *actually* hidden right now by the `@container` breakpoints above, or
   `showAllColumns` force-visible mode is currently active. Measured via a `ResizeObserver` on
@@ -1594,7 +1597,7 @@ own "consumer computes/renders" contract rather than assuming addition.
 `lr-selection-change` (`detail: { keys }`) when selection is enabled, `lr-filter-change`
 (`detail: { text }`), and `lr-page-change` (`detail: { page }`) from the controlled
 filter/pagination surfaces, and `lr-cell-edit` (`detail: { row, key, value }`) for editable
-columns, and `lr-column-resize` (`detail: { key, width }`) on every resize drag step
+columns, and `lr-column-resize` (`detail: { key, width }`) on every pointer or keyboard resize step
 
 **Slots:** none — content comes entirely from `columns`/`rows`.
 
@@ -1606,7 +1609,8 @@ column defines `footer`), `footer-row`, `footer-cell`, `row-total-cell` (each bo
 cell, holding `grandTotal`, is a `footer-cell` instead, matching every other footer cell),
 `expand-toggle-cell`, `row-expand-toggle`,
 `row-expand-icon`, `expanded-row`, `expanded-cell`, `filter-label`, `filter`, `loading`, and
-`pagination`, `cell-editor`, `group-row`, `group-cell`, and `resize-handle`
+`pagination`, `cell-editor`, `group-row`, `group-cell`, and `resize-handle` (the focusable column
+separator)
 
 **Themeable custom properties:** `--lr-table-max-height` (default `none`; controls the scrollable
 body's `max-block-size`). `--lr-table-heat-tint-lo` (default `var(--lr-color-brand-quiet)`) and

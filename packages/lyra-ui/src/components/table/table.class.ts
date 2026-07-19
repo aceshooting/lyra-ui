@@ -52,8 +52,11 @@ export interface TableColumn<T> {
   /** CSS length for this column's minimum width (e.g. '80px'). Has no effect unless at least one
    *  column in the table also defines `width` (see `width`'s own doc). */
   minWidth?: string;
-  /** Enables pointer-driven resizing from this column's header. The table keeps the live width
-   *  internally and emits `lr-column-resize` on every drag step. */
+  /** CSS length for this column's maximum width (e.g. '320px'). Pixel values also bound pointer
+   *  and keyboard resizing; other CSS lengths still constrain the rendered column. */
+  maxWidth?: string;
+  /** Enables pointer and keyboard resizing from this column's header. The table keeps the live
+   *  width internally and emits `lr-column-resize` on every resize step. */
   resizable?: boolean;
   sortable?: boolean;
   align?: 'start' | 'end';
@@ -273,7 +276,7 @@ export interface LyraTableEventMap<T = unknown> {
  * @event lr-filter-change - The filter field changed. `detail: { text }`.
  * @event lr-page-change - A pagination control requested a page. `detail: { page }`.
  * @event lr-cell-edit - An inline editor committed a value. `detail: { row, key, value }`.
- * @event lr-column-resize - A resizable column changed width during a pointer drag. `detail:
+ * @event lr-column-resize - A resizable column changed width by pointer or keyboard. `detail:
  *   { key, width }`, where `width` is in CSS pixels.
  * @event focus - Re-dispatched from the internal filter/cell-editor native inputs' own `focus` —
  *   bubbling and composed (unlike the native event, which is neither).
@@ -283,7 +286,7 @@ export interface LyraTableEventMap<T = unknown> {
  * @csspart table - The `<table role="grid">` element.
  * @csspart head - The `<thead>` element.
  * @csspart header-cell - Each `<th>` header cell.
- * @csspart resize-handle - The pointer resize handle in a `resizable` column header.
+ * @csspart resize-handle - The focusable separator used to resize a `resizable` column.
  * @csspart row - Each body `<tr>`.
  * @csspart cell - Each body `<td>`.
  * @csspart row-total-cell - Each body row's trailing `<td>` holding `rowTotal(row)`, rendered only
@@ -440,6 +443,7 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
     startX: number;
     startWidth: number;
     minWidth: number;
+    maxWidth: number;
     handle: HTMLElement;
   };
 
@@ -473,10 +477,39 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
   private minimumResizeWidth(column: TableColumn<T>): number {
     const explicit = this.parsePixelLength(column.minWidth);
     if (explicit !== undefined) return Math.max(0, explicit);
-    const themed = Number.parseFloat(
-      getComputedStyle(this).getPropertyValue('--lr-table-resize-min-width'),
-    );
-    return Number.isFinite(themed) ? Math.max(0, themed) : 48;
+    const themed = getComputedStyle(this).getPropertyValue('--lr-table-resize-min-width').trim();
+    const value = Number.parseFloat(themed);
+    if (!Number.isFinite(value)) return 48;
+    if (themed.endsWith('rem')) {
+      return Math.max(0, value * Number.parseFloat(getComputedStyle(document.documentElement).fontSize));
+    }
+    if (themed.endsWith('em')) {
+      return Math.max(0, value * Number.parseFloat(getComputedStyle(this).fontSize));
+    }
+    return Math.max(0, value);
+  }
+
+  private maximumResizeWidth(column: TableColumn<T>, minWidth: number): number {
+    const explicit = this.parsePixelLength(column.maxWidth);
+    return explicit === undefined ? Number.POSITIVE_INFINITY : Math.max(minWidth, explicit);
+  }
+
+  private currentResizeWidth(column: TableColumn<T>, handle?: HTMLElement): number {
+    const resized = this.resizedColumnWidths.get(column.key);
+    if (resized !== undefined) return resized;
+    const explicit = this.parsePixelLength(column.width);
+    if (explicit !== undefined) return explicit;
+    const rendered = handle?.closest('th[data-col-key]')?.getBoundingClientRect().width;
+    return rendered && rendered > 0 ? rendered : this.minimumResizeWidth(column);
+  }
+
+  private resizeColumnTo(column: TableColumn<T>, requestedWidth: number): void {
+    const minWidth = this.minimumResizeWidth(column);
+    const maxWidth = this.maximumResizeWidth(column, minWidth);
+    const width = Math.min(maxWidth, Math.max(minWidth, requestedWidth));
+    if (this.resizedColumnWidths.get(column.key) === width) return;
+    this.resizedColumnWidths = new Map(this.resizedColumnWidths).set(column.key, width);
+    this.emit('lr-column-resize', { key: column.key, width });
   }
 
   private renderedColumnWidth(column: TableColumn<T>): string | undefined {
@@ -490,12 +523,14 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
     const column = key ? this.columnsByKey.get(key) : undefined;
     const header = handle.closest('th[data-col-key]') as HTMLElement | null;
     if (!key || !column || !header) return;
+    const minWidth = this.minimumResizeWidth(column);
     this.resizeState = {
       key,
       pointerId: event.pointerId,
       startX: event.clientX,
       startWidth: header.getBoundingClientRect().width,
-      minWidth: this.minimumResizeWidth(column),
+      minWidth,
+      maxWidth: this.maximumResizeWidth(column, minWidth),
       handle,
     };
     event.preventDefault();
@@ -510,11 +545,69 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
     const state = this.resizeState;
     if (!state || event.pointerId !== state.pointerId) return;
     const delta = isRtl(this) ? state.startX - event.clientX : event.clientX - state.startX;
-    const width = Math.max(state.minWidth, state.startWidth + delta);
+    const width = Math.min(state.maxWidth, Math.max(state.minWidth, state.startWidth + delta));
     if (this.resizedColumnWidths.get(state.key) === width) return;
     this.resizedColumnWidths = new Map(this.resizedColumnWidths).set(state.key, width);
     this.emit('lr-column-resize', { key: state.key, width });
   };
+
+  private onResizeKeyDown = (event: KeyboardEvent): void => {
+    const handle = event.currentTarget as HTMLElement;
+    const key = handle.dataset.colKey;
+    const column = key ? this.columnsByKey.get(key) : undefined;
+    if (!column) return;
+
+    const minWidth = this.minimumResizeWidth(column);
+    const maxWidth = this.maximumResizeWidth(column, minWidth);
+    const currentWidth = this.currentResizeWidth(column, handle);
+    const step = event.shiftKey ? 50 : 10;
+    let requestedWidth: number | undefined;
+    if (event.key === 'Home') requestedWidth = minWidth;
+    else if (event.key === 'End' && Number.isFinite(maxWidth)) requestedWidth = maxWidth;
+    else if (event.key === 'ArrowLeft') requestedWidth = currentWidth + (isRtl(this) ? step : -step);
+    else if (event.key === 'ArrowRight') requestedWidth = currentWidth + (isRtl(this) ? -step : step);
+    if (requestedWidth === undefined) return;
+
+    event.preventDefault();
+    event.stopPropagation();
+    this.resizeColumnTo(column, requestedWidth);
+  };
+
+  private renderResizeHandle(column: TableColumn<T>) {
+    if (!column.resizable) return nothing;
+    const minWidth = this.minimumResizeWidth(column);
+    const maxWidth = this.maximumResizeWidth(column, minWidth);
+    return html`<span
+      part="resize-handle"
+      data-col-key=${column.key}
+      role="separator"
+      tabindex="0"
+      aria-orientation="vertical"
+      aria-label=${this.localize('resizeColumn', undefined, { label: column.label })}
+      aria-valuemin=${Math.round(minWidth)}
+      aria-valuenow=${Math.round(this.currentResizeWidth(column))}
+      aria-valuemax=${Number.isFinite(maxWidth) ? Math.round(maxWidth) : nothing}
+      @pointerdown=${this.onResizePointerDown}
+      @keydown=${this.onResizeKeyDown}
+    ></span>`;
+  }
+
+  private syncResizeHandleValues(): void {
+    for (const handle of this.renderRoot.querySelectorAll<HTMLElement>('[part="resize-handle"]')) {
+      const key = handle.dataset.colKey;
+      if (!key) continue;
+      const column = this.columnsByKey.get(key);
+      if (
+        !column ||
+        this.resizedColumnWidths.has(key) ||
+        this.parsePixelLength(column.width) !== undefined
+      ) {
+        continue;
+      }
+      const rendered = handle.closest('th[data-col-key]')?.getBoundingClientRect().width;
+      if (rendered && rendered > 0) handle.setAttribute('aria-valuenow', String(Math.round(rendered)));
+    }
+  }
 
   private onResizePointerEnd = (event: PointerEvent): void => {
     if (!this.resizeState || event.pointerId !== this.resizeState.pointerId) return;
@@ -530,6 +623,7 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
     this.resizeObserver = new ResizeObserver(() => {
       this.recomputeColumnsHidden();
       this.applyStickyOffsets();
+      this.syncResizeHandleValues();
     });
     // A reconnect re-creates the observer above but the shadow root content
     // survives across disconnect/reconnect (Lit doesn't tear down the shadow
@@ -569,7 +663,7 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
 
   private observeHeaders(): void {
     const headers = new Set<Element>(
-      this.columns.some((column) => column.sticky)
+      this.columns.some((column) => column.sticky || column.resizable)
         ? this.renderRoot.querySelectorAll<HTMLElement>('th[data-col-key]')
         : [],
     );
@@ -870,6 +964,7 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
    *  reflects the rendered columns. */
   protected updated(changed: PropertyValues): void {
     if (changed.has('columns') || changed.has('rows') || changed.has('rowKey')) this.applyStickyOffsets();
+    this.syncResizeHandleValues();
     // Re-observe [part='base'] whenever this update's render() produced a
     // fresh one (first mount, or a swap to/from the <lr-empty> template
     // shape) — observeBase() itself no-ops when it's the same element as
@@ -1167,6 +1262,7 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
                   html`<col style=${styleMap({
                     'inline-size': this.renderedColumnWidth(col),
                     'min-inline-size': col.minWidth,
+                    'max-inline-size': col.maxWidth,
                   })} />`,
               )}
               ${hasRowTotal ? html`<col />` : nothing}
@@ -1193,16 +1289,7 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
                     tabindex=${col.key === focusedCol ? '0' : '-1'}
                   >
                     ${col.headerCell ? col.headerCell(col) : col.label}
-                    ${col.resizable
-                      ? html`<span
-                          part="resize-handle"
-                          data-col-key=${col.key}
-                          role="separator"
-                          aria-orientation="vertical"
-                          aria-label=${this.localize('resizeColumn', undefined, { label: col.label })}
-                          @pointerdown=${this.onResizePointerDown}
-                        ></span>`
-                      : nothing}
+                    ${this.renderResizeHandle(col)}
                     ${active
                       ? html`<span part="sort-icon" data-dir=${this.sortDir} aria-hidden="true"
                           >${chevronIcon()}</span

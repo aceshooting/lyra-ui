@@ -32,10 +32,18 @@ export const Default: Story = {
 };
 
 export const ResizableColumns: Story = {
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'Drag a separator, or focus it and use ArrowLeft/ArrowRight (10px), Shift+Arrow (50px), Home, and End.',
+      },
+    },
+  },
   render: () => html`
     <lr-table
       .columns=${[
-        { ...columns[0]!, width: '12rem', minWidth: '8rem', resizable: true },
+        { ...columns[0]!, width: '192px', minWidth: '128px', maxWidth: '320px', resizable: true },
         { ...columns[1]!, resizable: true },
       ]}
       .rows=${rows}

@@ -85,6 +85,85 @@ it('uses the themed minimum width when a resizable column has no explicit minimu
   window.dispatchEvent(new PointerEvent('pointerup', { pointerId: 2, clientX: -10000 }));
 });
 
+it('exposes focusable separator state and resizes by keyboard without sorting the header', async () => {
+  const el = (await fixture(html`<lr-table></lr-table>`)) as LyraTable<Row>;
+  el.columns = [
+    {
+      key: 'name',
+      label: 'Name',
+      width: '120px',
+      minWidth: '80px',
+      maxWidth: '160px',
+      resizable: true,
+      sortable: true,
+      cell: (row) => row.name,
+    },
+  ];
+  el.rows = rows;
+  await el.updateComplete;
+
+  const handle = el.shadowRoot!.querySelector('[part="resize-handle"]') as HTMLElement;
+  expect(handle.getAttribute('tabindex')).to.equal('0');
+  expect(handle.getAttribute('role')).to.equal('separator');
+  expect(handle.getAttribute('aria-valuemin')).to.equal('80');
+  expect(handle.getAttribute('aria-valuenow')).to.equal('120');
+  expect(handle.getAttribute('aria-valuemax')).to.equal('160');
+  handle.focus();
+  expect((el.shadowRoot!.activeElement as HTMLElement | null)?.getAttribute('part')).to.equal('resize-handle');
+
+  const widths: number[] = [];
+  el.addEventListener('lr-column-resize', (event) => widths.push(event.detail.width));
+  const press = async (key: string, shiftKey = false): Promise<KeyboardEvent> => {
+    const event = new KeyboardEvent('keydown', { key, shiftKey, bubbles: true, composed: true, cancelable: true });
+    handle.dispatchEvent(event);
+    await el.updateComplete;
+    return event;
+  };
+
+  expect((await press('ArrowRight')).defaultPrevented).to.be.true;
+  expect(handle.getAttribute('aria-valuenow')).to.equal('130');
+  expect(el.sortKey).to.equal('');
+  await press('ArrowLeft', true);
+  expect(handle.getAttribute('aria-valuenow')).to.equal('80');
+  await press('End');
+  expect(handle.getAttribute('aria-valuenow')).to.equal('160');
+  await press('Home');
+  expect(handle.getAttribute('aria-valuenow')).to.equal('80');
+  expect(widths).to.deep.equal([130, 80, 160, 80]);
+});
+
+it('mirrors resize ArrowLeft/ArrowRight under RTL and passes axe populated', async () => {
+  const el = (await fixture(html`<lr-table dir="rtl"></lr-table>`)) as LyraTable<Row>;
+  el.columns = [
+    { key: 'name', label: 'Name', width: '120px', minWidth: '80px', resizable: true, cell: (row) => row.name },
+  ];
+  el.rows = rows;
+  await el.updateComplete;
+  const handle = el.shadowRoot!.querySelector('[part="resize-handle"]') as HTMLElement;
+
+  handle.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true, cancelable: true }));
+  await el.updateComplete;
+  expect(handle.getAttribute('aria-valuenow')).to.equal('110');
+  handle.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true, cancelable: true }));
+  await el.updateComplete;
+  expect(handle.getAttribute('aria-valuenow')).to.equal('120');
+  await expect(el).to.be.accessible();
+});
+
+it('announces the rendered width when a resizable column has no pixel width', async () => {
+  const el = (await fixture(html`<lr-table></lr-table>`)) as LyraTable<Row>;
+  el.columns = [{ key: 'name', label: 'Name', width: '12rem', resizable: true, cell: (row) => row.name }];
+  el.rows = rows;
+  await el.updateComplete;
+
+  const header = el.shadowRoot!.querySelector('th[data-col-key="name"]') as HTMLElement;
+  header.getBoundingClientRect = () => ({ width: 192 }) as DOMRect;
+  el.requestUpdate();
+  await el.updateComplete;
+
+  expect(el.shadowRoot!.querySelector('[part="resize-handle"]')!.getAttribute('aria-valuenow')).to.equal('192');
+});
+
 it('reflects spellcheck=false when assigned as a property', async () => {
   const el = (await fixture(html`<lr-table filterable></lr-table>`)) as LyraTable<Row>;
   el.spellcheck = false;
