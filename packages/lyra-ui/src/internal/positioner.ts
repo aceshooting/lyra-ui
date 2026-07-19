@@ -32,15 +32,17 @@ export interface VirtualAnchor {
 /**
  * Builds a `VirtualAnchor` from a plain rect, for `showAt()`-style APIs that anchor a popup to an
  * arbitrary point or box instead of a real DOM element. `width`/`height` default to `0` (a point).
+ * An optional `contextElement` is forwarded verbatim -- see `VirtualAnchor.contextElement`.
  */
 export function virtualAnchorFromRect(rect: {
   x: number;
   y: number;
   width?: number;
   height?: number;
+  contextElement?: Element;
 }): VirtualAnchor {
   const domRect = new DOMRect(rect.x, rect.y, rect.width ?? 0, rect.height ?? 0);
-  return { getBoundingClientRect: () => domRect };
+  return { getBoundingClientRect: () => domRect, contextElement: rect.contextElement };
 }
 
 /**

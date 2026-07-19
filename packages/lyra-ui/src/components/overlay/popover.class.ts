@@ -108,7 +108,10 @@ export class LyraPopover extends LyraElement<LyraPopoverEventMap> {
    *
    * A virtual anchor has no DOM node, so `autoUpdate()` can't track it moving on its own -- call
    * `showAt()` again with fresh coordinates to re-anchor an already-open popover (e.g. on a graph
-   * pan/zoom tick); the popover stays open across such a call, it does not toggle.
+   * pan/zoom tick); the popover stays open across such a call, it does not toggle. Pass
+   * `rect.contextElement` (a real, still-connected element near the virtual point) when available
+   * so `autoUpdate()` has something to observe for ancestor-scroll/resize tracking; omitting it
+   * still works, it just means only explicit re-`showAt()` calls keep the popover anchored.
    *
    * A virtual anchor also has no `.focus()`. Escape and light-dismiss return focus to
    * `options.returnFocusTo` when supplied, or skip focus-return entirely otherwise -- refocusing
@@ -116,7 +119,7 @@ export class LyraPopover extends LyraElement<LyraPopoverEventMap> {
    * assume how e.g. a graph node's own keyboard model wants focus back.
    */
   showAt(
-    rect: { x: number; y: number; width?: number; height?: number },
+    rect: { x: number; y: number; width?: number; height?: number; contextElement?: Element },
     options?: { returnFocusTo?: HTMLElement },
   ): void {
     this.virtualAnchor = virtualAnchorFromRect(rect);

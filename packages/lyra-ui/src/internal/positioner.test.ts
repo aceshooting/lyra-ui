@@ -221,4 +221,15 @@ describe('virtualAnchorFromRect', () => {
     expect(rect.left).to.equal(5);
     expect(rect.top).to.equal(6);
   });
+
+  it('forwards an optional contextElement onto the built VirtualAnchor', () => {
+    const el = document.createElement('div');
+    const anchor = virtualAnchorFromRect({ x: 0, y: 0, contextElement: el });
+    expect(anchor.contextElement).to.equal(el);
+  });
+
+  it('leaves contextElement undefined when not supplied', () => {
+    const anchor = virtualAnchorFromRect({ x: 0, y: 0 });
+    expect(anchor.contextElement).to.equal(undefined);
+  });
 });

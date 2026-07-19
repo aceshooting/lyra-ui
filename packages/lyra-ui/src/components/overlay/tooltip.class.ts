@@ -104,7 +104,10 @@ export class LyraTooltip extends LyraElement {
    * A virtual anchor has no DOM node, so `autoUpdate()` can't track it moving on its own -- call
    * `showAt()` again with fresh coordinates to re-anchor an already-open tooltip (e.g. on a graph
    * pan/zoom tick); the tooltip stays open across such a call, it does not toggle. Close it the
-   * same way any tooltip closes: set `open = false` (there is no separate `hide()`).
+   * same way any tooltip closes: set `open = false` (there is no separate `hide()`). Pass
+   * `rect.contextElement` (a real, still-connected element near the virtual point) when available
+   * so `autoUpdate()` has something to observe for ancestor-scroll/resize tracking; omitting it
+   * still works, it just means only explicit re-`showAt()` calls keep the tooltip anchored.
    *
    * A virtual anchor also has no `.focus()`. Escape returns focus to `options.returnFocusTo` when
    * supplied, or skips focus-return entirely otherwise -- refocusing the right place after a
@@ -112,7 +115,7 @@ export class LyraTooltip extends LyraElement {
    * node's own keyboard model wants focus back.
    */
   showAt(
-    rect: { x: number; y: number; width?: number; height?: number },
+    rect: { x: number; y: number; width?: number; height?: number; contextElement?: Element },
     options?: { returnFocusTo?: HTMLElement },
   ): void {
     this.virtualAnchor = virtualAnchorFromRect(rect);
