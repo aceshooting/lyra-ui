@@ -82,7 +82,7 @@ jobs:
           npm i -g npm@12.0.1
           test "$(npm --version)" = "12.0.1"
 
-      # --if-present mirrors scripts/publish.sh's own per-package gate: lr-flags has no "build"
+      # --if-present mirrors scripts/publish.sh's own per-package gate: lyra-flags has no "build"
       # script (its generated index is produced by `prepack` at publish time), only lyra-ui does.
       - name: Build package
         run: pnpm --filter "${{ steps.pkg.outputs.name }}" run --if-present build
@@ -138,7 +138,7 @@ jobs:
             # already provenance-attested above, instead of letting `npm publish` re-pack from
             # this directory's live package.json. Re-packing here would matter: `pnpm pack`
             # rewrites `workspace:*` peer/dev dependency specifiers (e.g.
-            # "@aceshooting/lr-flags": "workspace:^1.4.0") to a real published semver range,
+            # "@aceshooting/lyra-flags": "workspace:^1.4.0") to a real published semver range,
             # but plain `npm pack`/`npm publish` treat `workspace:` as an opaque string and
             # publish it verbatim -- breaking peer-dependency resolution for every consumer,
             # even one with a correctly matching version installed. Publishing the pre-built
