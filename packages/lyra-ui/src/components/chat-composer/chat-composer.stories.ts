@@ -107,6 +107,17 @@ export const SubmitOnEnterDisabled: Story = {
   `,
 };
 
+export const SubmissionValidationGate: Story = {
+  render: () => html`
+    <lr-chat-composer
+      submit-disabled
+      value="   "
+      placeholder="The consumer keeps Send disabled until this draft is valid."
+      style="max-width: 32rem; display: block;"
+    ></lr-chat-composer>
+  `,
+};
+
 export const WithLeadingAndChips: Story = {
   render: () => html`
     <lr-chat-composer placeholder="Message the assistant…" style="max-width: 32rem; display: block;">

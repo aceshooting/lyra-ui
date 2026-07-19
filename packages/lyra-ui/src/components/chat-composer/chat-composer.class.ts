@@ -131,13 +131,15 @@ class LyraChatComposerBase extends LyraElement<LyraChatComposerEventMap> {}
  * itself reports. Submitting does not clear `value`; the consumer clears it
  * once the submission has actually been accepted (so e.g. a failed send can
  * leave the text in place for retry).
+ * `submitDisabled` lets the consumer apply its own validation policy without
+ * disabling the textarea or the busy-state Stop action.
  *
  * @customElement lr-chat-composer
  * @slot leading - Content rendered before the textarea (e.g. an attach-file trigger button).
  * @slot chips - An attachment tray rendered above the input row (e.g. files queued for this message).
  * @slot trailing - Overrides the built-in send/stop button entirely when it has assigned content.
  * @event lr-input - Fired on every user-driven edit of the textarea (not a programmatic `.value` assignment). `detail: { value }`.
- * @event lr-submit - Fired by Enter (per `submit-on-enter`) or the built-in button while `status="idle"`. `detail: { value }`.
+ * @event lr-submit - Fired by Enter (per `submit-on-enter`) or the built-in button while `status="idle"` and `submitDisabled` is false. `detail: { value }`.
  * @event lr-stop - Fired by the built-in button while `status` is `"sending"` or `"streaming"` and `stoppable` is `true` (the default). No detail.
  * @event blur - Re-dispatched from the internal native textarea as a bubbling, composed event.
  * @event focus - Re-dispatched from the internal native textarea as a bubbling, composed event.
@@ -157,6 +159,10 @@ export class LyraChatComposer extends FormAssociated(LyraChatComposerBase) {
   @property({ type: Number, attribute: 'max-rows' }) maxRows = 8;
   @property({ reflect: true }) status: ChatComposerStatus = 'idle';
   @property({ type: Boolean, reflect: true, attribute: 'submit-on-enter' }) submitOnEnter = true;
+  /** Consumer-controlled validation gate for submission. While idle, disables the built-in Send
+   * button and suppresses Enter/click submission without disabling the textarea. Busy Stop behavior
+   * remains governed by `status` and `stoppable`. */
+  @property({ type: Boolean, reflect: true, attribute: 'submit-disabled' }) submitDisabled = false;
   /** When `false`, the built-in button never renders as a Stop/cancel control
    *  while busy -- instead it stays a (disabled) Send button, since there is
    *  no cancellation operation to offer. Defaults to `true`, reproducing
@@ -459,6 +465,7 @@ export class LyraChatComposer extends FormAssociated(LyraChatComposerBase) {
   };
 
   private submit(): void {
+    if (this.submitDisabled || this.effectiveDisabled || this.status !== 'idle') return;
     this.emit('lr-submit', { value: this.value });
   }
 
@@ -491,7 +498,7 @@ export class LyraChatComposer extends FormAssociated(LyraChatComposerBase) {
         part="action-button"
         type="button"
         aria-label=${showStop ? this.localize('stopGenerating') : this.localize('sendMessage')}
-        ?disabled=${this.effectiveDisabled || (busy && !this.stoppable)}
+        ?disabled=${this.effectiveDisabled || (busy ? !this.stoppable : this.submitDisabled)}
         @click=${this.onActionClick}
       >
         ${showStop ? stopIcon() : sendIcon()}

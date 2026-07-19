@@ -20,13 +20,14 @@ function enterKeydown(init: KeyboardEventInit = {}): KeyboardEvent {
   return new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true, ...init });
 }
 
-it('defaults to status="idle", min-rows=1, max-rows=8, submit-on-enter=true', async () => {
+it('defaults to status="idle", min-rows=1, max-rows=8, submit-on-enter=true, and submitDisabled=false', async () => {
   const el = (await fixture(html`<lr-chat-composer></lr-chat-composer>`)) as LyraChatComposer;
   expect(el.status).to.equal('idle');
   expect(el.minRows).to.equal(1);
   expect(el.maxRows).to.equal(8);
   expect(el.submitOnEnter).to.be.true;
   expect(el.hasAttribute('submit-on-enter')).to.be.true;
+  expect(el.submitDisabled).to.be.false;
 });
 
 it('uses placeholder as the textarea accessible name, falling back to "Message"', async () => {
@@ -193,6 +194,46 @@ it('clicking the built-in button while idle fires lr-submit and does not clear t
   const ev = await listening;
   expect(ev.detail.value).to.equal('hi there');
   expect(el.value).to.equal('hi there');
+});
+
+it('submit-disabled blocks idle Enter and button submission without disabling editing', async () => {
+  const el = (await fixture(
+    html`<lr-chat-composer submit-disabled value="   "></lr-chat-composer>`,
+  )) as LyraChatComposer;
+  const textarea = textareaOf(el);
+  const button = actionButtonOf(el)!;
+  expect(el.submitDisabled).to.be.true;
+  expect(button.disabled).to.be.true;
+  expect(textarea.disabled).to.be.false;
+
+  let submitted = false;
+  let inputValue = '';
+  el.addEventListener('lr-submit', () => (submitted = true));
+  el.addEventListener('lr-input', (event) => (inputValue = event.detail.value));
+
+  const enter = enterKeydown();
+  textarea.dispatchEvent(enter);
+  button.click();
+  typeInto(el, 'next message');
+  await el.updateComplete;
+
+  expect(enter.defaultPrevented).to.be.true;
+  expect(submitted).to.be.false;
+  expect(inputValue).to.equal('next message');
+  expect(el.value).to.equal('next message');
+});
+
+it('submit-disabled does not disable or replace the busy Stop action', async () => {
+  const el = (await fixture(
+    html`<lr-chat-composer status="streaming" submit-disabled></lr-chat-composer>`,
+  )) as LyraChatComposer;
+  const button = actionButtonOf(el)!;
+  expect(button.disabled).to.be.false;
+  expect(button.getAttribute('aria-label')).to.equal('Stop generating');
+
+  const listening = oneEvent(el, 'lr-stop');
+  button.click();
+  await listening;
 });
 
 it('clicking the built-in button while sending/streaming fires lr-stop instead of lr-submit', async () => {

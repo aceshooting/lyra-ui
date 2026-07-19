@@ -6060,6 +6060,9 @@ reveals the invalid state, and `form.reset()` clears the touched presentation.
   built-in button's icon/label (send vs. stop) and whether Enter still submits
 - `submitOnEnter: boolean = true` (reflected, attribute `submit-on-enter`) — when `false`, Enter
   always inserts a newline instead of submitting
+- `submitDisabled: boolean = false` (reflected, attribute `submit-disabled`) — consumer-controlled
+  validation gate; while idle, disables the built-in Send button and suppresses Enter/click
+  submission without disabling the textarea or a busy-state Stop action
 - `stoppable: boolean = true` (reflected) — when false, busy states keep a disabled Send button
   instead of exposing a Stop action
 - `accessibleLabel: string | null = null` (attribute `aria-label`) — names the internal textarea;
@@ -6083,7 +6086,7 @@ auto-sizing. `checkValidity()`/`reportValidity()` remain inherited.
 - `lr-input` (`detail: { value }`) — fired on every user-driven edit of the textarea, not a
   programmatic `.value` assignment
 - `lr-submit` (`detail: { value }`) — fired by Enter (per `submit-on-enter`) or the built-in
-  button while `status="idle"`. `detail.value` is always the exact, untrimmed current value;
+  button while `status="idle"` and `submitDisabled` is false. `detail.value` is always the exact, untrimmed current value;
   trimming is left to the consumer. Submitting does **not** clear `value`
 - `lr-stop` (no detail) — fired by the built-in button while `status` is `"sending"` or
   `"streaming"`
@@ -6139,7 +6142,8 @@ Shift+Enter always inserts a newline regardless of `submit-on-enter`; an IME com
 report `isComposing` inconsistently) is never treated as a submit trigger; and while `status` isn't
 `"idle"`, Enter is left alone to insert a newline instead of resubmitting — the textarea itself is
 **not** auto-disabled during `sending`/`streaming`, so a user can keep composing their next message
-while a previous one is in flight.
+while a previous one is in flight. While idle, `submitDisabled` suppresses Enter/click submission
+and disables only the built-in Send button; editing and busy-state Stop behavior remain available.
 
 **Known gotchas:**
 - `lr-submit` never clears `value` — the consumer must clear it once a submission is actually
