@@ -64,6 +64,88 @@ it('never throws RangeError from an Infinity/NaN/negative tabSize, and clamps it
   expect(el.value.startsWith(' '.repeat(16))).to.be.true;
 });
 
+// `--lr-code-editor-tab-size` used to be inert: the stylesheet read it on the `textarea` part, but
+// `render()` also wrote an inline `tab-size:${this.tabSize}` on that very element, and an inline
+// declaration always beats a rule. The documented precedence is now: an explicitly assigned
+// `tabSize` wins over everything, otherwise a host-level token override wins, otherwise the `:host`
+// default of `2`.
+describe('tab width precedence', () => {
+  const computedTabSize = (el: LyraCodeEditor): string =>
+    getComputedStyle(el.shadowRoot!.querySelector('textarea')!).tabSize;
+  const pressTab = (el: LyraCodeEditor): void => {
+    const textarea = el.shadowRoot!.querySelector('textarea')!;
+    textarea.focus();
+    textarea.setSelectionRange(0, 0);
+    textarea.dispatchEvent(new KeyboardEvent('keydown', { key: 'Tab', bubbles: true, cancelable: true }));
+  };
+
+  it('falls back to the token default when neither tabSize nor the token is set', async () => {
+    const el = (await fixture(html`<lr-code-editor value="one"></lr-code-editor>`)) as LyraCodeEditor;
+    expect(computedTabSize(el)).to.equal('2');
+    pressTab(el);
+    expect(el.value).to.equal('  one');
+  });
+
+  it('honours a host-level --lr-code-editor-tab-size override while tabSize is untouched', async () => {
+    const el = (await fixture(
+      html`<lr-code-editor value="one" style="--lr-code-editor-tab-size: 8"></lr-code-editor>`,
+    )) as LyraCodeEditor;
+    expect(computedTabSize(el)).to.equal('8');
+    pressTab(el);
+    expect(el.value).to.equal(`${' '.repeat(8)}one`);
+  });
+
+  it('keeps an explicitly set tabSize winning over a host-level token override', async () => {
+    const el = (await fixture(
+      html`<lr-code-editor value="one" tab-size="4" style="--lr-code-editor-tab-size: 8"></lr-code-editor>`,
+    )) as LyraCodeEditor;
+    expect(computedTabSize(el)).to.equal('4');
+    pressTab(el);
+    expect(el.value).to.equal('    one');
+
+    const assigned = (await fixture(
+      html`<lr-code-editor value="one" style="--lr-code-editor-tab-size: 8"></lr-code-editor>`,
+    )) as LyraCodeEditor;
+    assigned.tabSize = 3;
+    await assigned.updateComplete;
+    expect(computedTabSize(assigned)).to.equal('3');
+    pressTab(assigned);
+    expect(assigned.value).to.equal('   one');
+  });
+
+  // A length-valued token is a purely visual metric for rendering literal tab characters; it must
+  // not be reinterpreted as a count of spaces for the Tab key.
+  it('ignores a length-valued token for the indent unit but still renders it', async () => {
+    const el = (await fixture(
+      html`<lr-code-editor value="one" style="--lr-code-editor-tab-size: 40px"></lr-code-editor>`,
+    )) as LyraCodeEditor;
+    expect(computedTabSize(el)).to.equal('40px');
+    pressTab(el);
+    expect(el.value).to.equal('  one');
+  });
+
+  it('hands control back to the token when the tab-size attribute is removed', async () => {
+    const el = (await fixture(
+      html`<lr-code-editor value="one" tab-size="4" style="--lr-code-editor-tab-size: 8"></lr-code-editor>`,
+    )) as LyraCodeEditor;
+    expect(computedTabSize(el)).to.equal('4');
+    el.removeAttribute('tab-size');
+    await el.updateComplete;
+    expect(computedTabSize(el)).to.equal('8');
+    pressTab(el);
+    expect(el.value).to.equal(`${' '.repeat(8)}one`);
+  });
+
+  // Out-of-range token values go through the same [1, 16] sanitisation as the property.
+  it('clamps an out-of-range token before using it as the indent unit', async () => {
+    const el = (await fixture(
+      html`<lr-code-editor value="one" style="--lr-code-editor-tab-size: 999"></lr-code-editor>`,
+    )) as LyraCodeEditor;
+    pressTab(el);
+    expect(el.value).to.equal(`${' '.repeat(16)}one`);
+  });
+});
+
 // Keyboard-trap coverage (WCAG 2.1.2): a synthetic KeyboardEvent is untrusted, so the browser
 // never performs real focus traversal for it — the observable contract is that the component
 // leaves the event un-defaultPrevented (letting a real browser traverse) and inserts nothing.

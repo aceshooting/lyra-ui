@@ -10,10 +10,16 @@ class LyraCodeEditorBase extends LyraElement<LyraCodeEditorEventMap> {}
 
 /** `<lr-code-editor>` — dependency-free multiline code editing surface with optional line numbers.
  *
- * Keyboard contract (no keyboard trap, WCAG 2.1.2): Tab inserts `tabSize` spaces at the caret.
- * Shift+Tab is never captured, so it always performs native reverse focus traversal. Pressing
- * Escape releases the next Tab for native forward traversal instead of indenting; typing any other
- * key, or focus leaving the editor, re-arms Tab indentation.
+ * Keyboard contract (no keyboard trap, WCAG 2.1.2): Tab inserts one indent unit of spaces at the
+ * caret. Shift+Tab is never captured, so it always performs native reverse focus traversal.
+ * Pressing Escape releases the next Tab for native forward traversal instead of indenting; typing
+ * any other key, or focus leaving the editor, re-arms Tab indentation.
+ *
+ * Tab-width precedence, highest first: an explicitly assigned `tabSize` (property or `tab-size`
+ * attribute) wins over everything; otherwise a host-level `--lr-code-editor-tab-size` override
+ * wins; otherwise the stylesheet's `:host` default of `2` applies. The property therefore stays the
+ * primary knob, but it no longer silently shadows the token while it sits at its default -- see
+ * `indentWidth` for how the same order drives the Tab key, not just the rendered tab stops.
  * @customElement lr-code-editor
  * @slot label - Visible label content.
  * @slot hint - Supporting text.
@@ -34,22 +40,37 @@ export class LyraCodeEditor extends FormAssociated(LyraCodeEditorBase) {
   @property({ type: Boolean, reflect: true, attribute: 'line-numbers' }) lineNumbers = true;
 
   private _tabSize = 2;
-  /** Spaces inserted per Tab keypress, and the native `tab-size` CSS value. Confirmed-crash
-   *  history: this used to feed `' '.repeat(Math.max(1, this.tabSize))` directly in `onKeyDown`
-   *  below -- `String.prototype.repeat()` throws a `RangeError` for a count of `+Infinity`
-   *  specifically (e.g. a literal `tab-size="Infinity"` attribute, which `Number("Infinity")`
-   *  happily converts to), and `Math.max(1, NaN)` is itself `NaN`, silently producing an empty,
-   *  non-indenting insert for a NaN `tabSize`. Sanitized to a finite integer in `[1, 16]` at
-   *  assignment time instead, so both the `repeat()` call and the inline `tab-size` style always
-   *  see a safe value. */
+  private tabSizeAssigned = false;
+  /** Spaces inserted per Tab keypress, and the rendered `tab-size`. Assigning it (or setting the
+   *  `tab-size` attribute) pins both, overriding any `--lr-code-editor-tab-size` the host set;
+   *  leaving it alone lets that token drive them instead. Confirmed-crash history: this used to
+   *  feed `' '.repeat(Math.max(1, this.tabSize))` directly in `onKeyDown` below --
+   *  `String.prototype.repeat()` throws a `RangeError` for a count of `+Infinity` specifically
+   *  (e.g. a literal `tab-size="Infinity"` attribute, which `Number("Infinity")` happily converts
+   *  to), and `Math.max(1, NaN)` is itself `NaN`, silently producing an empty, non-indenting insert
+   *  for a NaN `tabSize`. Sanitized to a finite integer in `[1, 16]` at assignment time instead, so
+   *  both the `repeat()` call and the emitted tab-width style always see a safe value. */
   @property({ type: Number, attribute: 'tab-size' })
   get tabSize(): number {
     return this._tabSize;
   }
   set tabSize(value: number) {
     const old = this._tabSize;
+    // Removing the `tab-size` attribute hands Lit's Number converter a `null`: treat that as "back
+    // to unset" so the token regains control rather than staying pinned to the sanitized fallback.
+    this.tabSizeAssigned = (value as number | null) != null;
     this._tabSize = finiteInteger(value, 2, 1, 16);
     this.requestUpdate('tabSize', old);
+  }
+  /** Spaces a Tab press inserts, resolved with the documented precedence: an explicitly assigned
+   *  `tabSize`, else the rendered `--lr-code-editor-tab-size` when it is a plain number, else the
+   *  default. A length-valued token (`40px`, `2ch`, ...) is a purely visual tab-stop metric for
+   *  literal tab characters, so it is deliberately not reinterpreted as a count of spaces. */
+  private get indentWidth(): number {
+    if (this.tabSizeAssigned || !this.textarea) return this._tabSize;
+    const resolved = getComputedStyle(this.textarea).tabSize.trim();
+    if (!/^\d+(?:\.\d+)?$/.test(resolved)) return this._tabSize;
+    return finiteInteger(Number(resolved), this._tabSize, 1, 16);
   }
 
   @property() label = '';
@@ -94,7 +115,7 @@ export class LyraCodeEditor extends FormAssociated(LyraCodeEditorBase) {
       event.preventDefault();
       const target = event.target as HTMLTextAreaElement;
       const start = target.selectionStart;
-      target.setRangeText(' '.repeat(this.tabSize), start, target.selectionEnd, 'end');
+      target.setRangeText(' '.repeat(this.indentWidth), start, target.selectionEnd, 'end');
       this.value = target.value;
       this.emit('input', { value: this.value });
       return;
@@ -119,6 +140,10 @@ export class LyraCodeEditor extends FormAssociated(LyraCodeEditorBase) {
   }
   render(): TemplateResult {
     const lineCount = Math.max(1, this.value.split('\n').length);
+    // Write the token, not `tab-size` itself: the stylesheet's `tab-size: var(--lr-code-editor-tab-size)`
+    // resolves it, so an untouched `tabSize` leaves a host-level override of that token in charge
+    // instead of being overwritten by an inline declaration on every update.
+    const tabWidthStyle = this.tabSizeAssigned ? `;--lr-code-editor-tab-size:${this._tabSize}` : '';
     const hasLabel = this.hasLabelSlot || this.label.length > 0;
     const hasHint = this.hasHintSlot || this.hint.length > 0;
     const hasError = this.hasErrorSlot || this.errorText.length > 0;
@@ -128,7 +153,7 @@ export class LyraCodeEditor extends FormAssociated(LyraCodeEditorBase) {
       <label part="label" for="textarea" ?hidden=${!hasLabel}>${this.label}<slot name="label" @slotchange=${this.onLabelSlotChange}></slot>${this.required ? html`<span aria-hidden="true">*</span>` : nothing}</label>
       <div part="editor" data-language=${this.language}>
         ${this.lineNumbers ? html`<div part="gutter" aria-hidden="true">${Array.from({ length: lineCount }, (_v, i) => html`<div>${i + 1}</div>`)}</div>` : nothing}
-        <textarea id="textarea" part="textarea" .value=${this.value} aria-label=${label} aria-describedby=${describedBy || nothing} aria-invalid=${this.touched && !this.internals.validity.valid ? 'true' : 'false'} placeholder=${this.placeholder} ?readonly=${this.readonly} ?disabled=${this.effectiveDisabled} spellcheck=${this.spellcheck} autocapitalize=${this.autocapitalize} autocorrect=${this.autoCorrect} wrap=${this.wrap} style=${`resize:${this.resize};tab-size:${this.tabSize}`} @input=${this.onInput} @change=${this.onChange} @keydown=${this.onKeyDown} @focus=${this.onFocus} @blur=${this.onBlur}></textarea>
+        <textarea id="textarea" part="textarea" .value=${this.value} aria-label=${label} aria-describedby=${describedBy || nothing} aria-invalid=${this.touched && !this.internals.validity.valid ? 'true' : 'false'} placeholder=${this.placeholder} ?readonly=${this.readonly} ?disabled=${this.effectiveDisabled} spellcheck=${this.spellcheck} autocapitalize=${this.autocapitalize} autocorrect=${this.autoCorrect} wrap=${this.wrap} style=${`resize:${this.resize}${tabWidthStyle}`} @input=${this.onInput} @change=${this.onChange} @keydown=${this.onKeyDown} @focus=${this.onFocus} @blur=${this.onBlur}></textarea>
       </div>
       <div id="textarea-hint" part="hint" ?hidden=${!hasHint}>${this.hint}<slot name="hint" @slotchange=${this.onHintSlotChange}></slot></div>
       <div id="textarea-error" part="error" ?hidden=${!hasError}>${this.errorText}<slot name="error" @slotchange=${this.onErrorSlotChange}></slot></div>
