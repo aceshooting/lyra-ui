@@ -3,6 +3,38 @@ import { css } from 'lit';
 export const styles = css`
   :host {
     display: block;
+    --lr-date-input-padding-block: var(--lr-space-xs);
+    --lr-date-input-padding-inline: var(--lr-space-s);
+    --lr-date-input-font-size: inherit;
+  }
+  /* Each tier mirrors lr-input's own 2xs-xl padding/font-size scale (input.styles.ts) so
+     lr-date-input size="s" ends up visually height/density-matched with lr-input size="s", etc.
+     'm' is the default and stays on the :host block above instead of a same-shaped rule here,
+     so the unset-size render is untouched by this scale. */
+  :host([size='2xs']) {
+    --lr-date-input-padding-block: var(--lr-size-0-0625rem);
+    --lr-date-input-padding-inline: var(--lr-space-2xs);
+    --lr-date-input-font-size: var(--lr-font-size-2xs);
+  }
+  :host([size='xs']) {
+    --lr-date-input-padding-block: var(--lr-size-0-125rem);
+    --lr-date-input-padding-inline: var(--lr-space-xs);
+    --lr-date-input-font-size: var(--lr-font-size-xs);
+  }
+  :host([size='s']) {
+    --lr-date-input-padding-block: var(--lr-space-xs);
+    --lr-date-input-padding-inline: var(--lr-space-xs);
+    --lr-date-input-font-size: var(--lr-font-size-sm);
+  }
+  :host([size='l']) {
+    --lr-date-input-padding-block: var(--lr-space-m);
+    --lr-date-input-padding-inline: var(--lr-space-m);
+    --lr-date-input-font-size: var(--lr-font-size-lg);
+  }
+  :host([size='xl']) {
+    --lr-date-input-padding-block: var(--lr-space-l);
+    --lr-date-input-padding-inline: var(--lr-space-l);
+    --lr-date-input-font-size: var(--lr-font-size-xl);
   }
   [part='form-control-label'] {
     display: block;
@@ -28,7 +60,7 @@ export const styles = css`
     align-items: center;
     gap: var(--lr-space-xs);
     inline-size: 100%;
-    padding: var(--lr-space-xs) var(--lr-space-s);
+    padding: var(--lr-date-input-padding-block) var(--lr-date-input-padding-inline);
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
     border-radius: var(--lr-radius);
     background: var(--lr-color-surface);
@@ -48,6 +80,7 @@ export const styles = css`
     background: transparent;
     color: inherit;
     font: inherit;
+    font-size: var(--lr-date-input-font-size);
   }
   [part='clear-button'],
   [part='expand-button'] {
@@ -64,7 +97,11 @@ export const styles = css`
        24x24 CSS px, not just height — min-block-size alone left these
        buttons 24px tall but narrower than that).
        The row has no explicit min-block-size of its own (unlike combobox's
-       [part=combobox]), so it can grow to fit the full touch target. */
+       [part=combobox]), so it can grow to fit the full touch target.
+       Deliberately not gated by size (matches lr-input's own
+       password-toggle button) -- the interactive hit area stays constant
+       across every tier instead of shrinking below the accessible minimum
+       at '2xs'/'xs'. */
     min-inline-size: var(--lr-icon-button-size);
     min-block-size: var(--lr-icon-button-size);
     line-height: var(--lr-line-height-none);

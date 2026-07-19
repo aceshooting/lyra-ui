@@ -15,6 +15,19 @@ export const Default: Story = {
   `,
 };
 
+/** `size` spans the same `2xs`–`xl` scale as `lr-input`/`lr-select`, default `m`. */
+export const Sizes: Story = {
+  render: () => html`
+    <div style="display: flex; flex-direction: column; gap: 1rem; max-width: 20rem">
+      ${(['2xs', 'xs', 's', 'm', 'l', 'xl'] as const).map(
+        (size) => html`
+          <lr-date-input size=${size} placeholder=${`Size "${size}"`}></lr-date-input>
+        `,
+      )}
+    </div>
+  `,
+};
+
 export const MinMax: Story = {
   render: () => html`
     <lr-date-input

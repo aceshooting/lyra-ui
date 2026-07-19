@@ -83,6 +83,7 @@ const weekdayFormatConverter: ComplexAttributeConverter<WeekdayFormat> = {
 };
 
 export type LyraDateInputSelectionDirection = 'forward' | 'backward' | 'none';
+export type LyraDateInputSize = '2xs' | 'xs' | 's' | 'm' | 'l' | 'xl';
 
 export interface LyraDateInputEventMap {
   'lr-show': CustomEvent<undefined>;
@@ -102,6 +103,10 @@ class LyraDateInputBase extends LyraElement<LyraDateInputEventMap> {}
  *
  * This component uses a single text field; typing accepts ISO or a
  * locale-parseable date.
+ *
+ * `size` uses the same `2xs`–`xl` scale as `lr-input`/`lr-select`/`lr-combobox`'s own `size`,
+ * default `m`. The calendar-toggle and clear buttons keep a constant touch-target size at every
+ * tier (mirroring `lr-input`'s own password-toggle button), so only the field's density scales.
  *
  * @customElement lr-date-input
  * @event input - Fired on edits.
@@ -141,6 +146,9 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
 
   @property({ type: Boolean, reflect: true }) open = false;
   @property({ type: Boolean, attribute: 'with-clear' }) withClear = false;
+  /** Visual size — same `2xs`–`xl` scale as `lr-input`/`lr-select`/`lr-combobox`'s own `size`.
+   *  `'2xs'` is the tightest tier, for dense toolbar-embedded fields. */
+  @property({ reflect: true }) size: LyraDateInputSize = 'm';
   @property() label = '';
   @property() hint = '';
   @property({ attribute: 'error-text' }) errorText = '';

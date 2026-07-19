@@ -64,6 +64,64 @@ it('opens the calendar and commits a picked date', async () => {
   expect(el.open).to.be.false; // single mode closes on pick
 });
 
+it('defaults to size "m" and reflects a non-default size attribute', async () => {
+  const defaultEl = (await fixture(html`<lr-date-input></lr-date-input>`)) as LyraDateInput;
+  expect(defaultEl.size).to.equal('m');
+  expect(defaultEl.getAttribute('size')).to.equal('m');
+  const el = (await fixture(html`<lr-date-input size="s"></lr-date-input>`)) as LyraDateInput;
+  expect(el.size).to.equal('s');
+  expect(el.getAttribute('size')).to.equal('s');
+});
+
+it('supports size="2xs": tighter padding/font-size than the default m tier', () => {
+  const css = styles.cssText.replace(/\s+/g, ' ');
+  expect(css).to.match(
+    /:host\(\[size='2xs'\]\)\s*\{[^}]*--lr-date-input-padding-block:\s*var\(--lr-size-0-0625rem\);[^}]*--lr-date-input-padding-inline:\s*var\(--lr-space-2xs\);[^}]*--lr-date-input-font-size:\s*var\(--lr-font-size-2xs\);/,
+  );
+});
+
+it('opens the calendar popover and commits a picked date at a non-default size, keeping the toggle buttons\' touch target', async () => {
+  // Exercises the popup/toggle at a non-default size tier: the field's own
+  // padding/font-size shrink under size="s", but positioning, keyboard
+  // interaction, and the accessible minimum hit area on the calendar-toggle
+  // and clear buttons must all keep working exactly as at the default size.
+  const el = (await fixture(
+    html`<lr-date-input size="s" value="2026-07-15" with-clear></lr-date-input>`,
+  )) as LyraDateInput;
+  expect(el.getAttribute('size')).to.equal('s');
+  el.show();
+  await el.updateComplete;
+  expect(el.open).to.be.true;
+
+  const picker = el.shadowRoot!.querySelector('lr-date-picker')!;
+  await (picker as unknown as LyraDateInput).updateComplete;
+  const day = picker.shadowRoot!.querySelector('[data-date="2026-07-22"]') as HTMLButtonElement;
+  setTimeout(() => day.click());
+  await oneEvent(el, 'change');
+  expect(el.value).to.equal('2026-07-22');
+  expect(el.open).to.be.false;
+
+  const expandBtn = el.shadowRoot!.querySelector('[part="expand-button"]') as HTMLElement;
+  expect(expandBtn.getBoundingClientRect().height).to.be.greaterThan(24);
+  expect(expandBtn.getBoundingClientRect().width).to.be.greaterThan(24);
+  const clearBtn = el.shadowRoot!.querySelector('[part="clear-button"]') as HTMLElement;
+  expect(clearBtn.getBoundingClientRect().height).to.be.greaterThan(24);
+  expect(clearBtn.getBoundingClientRect().width).to.be.greaterThan(24);
+});
+
+it('renders the unset default size identically to an explicit size="m"', async () => {
+  const unset = (await fixture(html`<lr-date-input value="2026-07-15"></lr-date-input>`)) as LyraDateInput;
+  const explicit = (await fixture(
+    html`<lr-date-input size="m" value="2026-07-15"></lr-date-input>`,
+  )) as LyraDateInput;
+  const unsetWrapper = unset.shadowRoot!.querySelector('[part="input-wrapper"]') as HTMLElement;
+  const explicitWrapper = explicit.shadowRoot!.querySelector('[part="input-wrapper"]') as HTMLElement;
+  expect(getComputedStyle(unsetWrapper).padding).to.equal(getComputedStyle(explicitWrapper).padding);
+  const unsetInput = unset.shadowRoot!.querySelector('[part="input"]') as HTMLElement;
+  const explicitInput = explicit.shadowRoot!.querySelector('[part="input"]') as HTMLElement;
+  expect(getComputedStyle(unsetInput).fontSize).to.equal(getComputedStyle(explicitInput).fontSize);
+});
+
 it('fires exactly one input event per day pick, not two', async () => {
   // Regression test: the nested <lr-date-picker>'s own 'input' event
   // (LyraElement.emit always dispatches bubbles:true, composed:true) had no

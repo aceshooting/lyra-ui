@@ -550,6 +550,10 @@ Text field + calendar popover, **form-associated** via the shared `FormAssociate
   `enterKeyHint: string = ''` (attribute `enterkeyhint`) — forwarded to the internal date input
 - `autocomplete: string = ''`, `inputMode: string = ''` (`inputmode`), and `enterKeyHint: string = ''`
   (`enterkeyhint`) — forwarded to the internal `<input>`.
+- `size: '2xs' | 'xs' | 's' | 'm' | 'l' | 'xl' = 'm'` (reflected) — visual size, matching
+  `lr-input`/`lr-select`/`lr-combobox`'s shared scale. Governs the field's padding and font-size;
+  the calendar-toggle and clear buttons keep a constant, accessible touch target at every size.
+  The default `m` tier is unchanged from this component's pre-`size` rendering.
 
 **Methods:** `show()`, `hide()`, `clear()`, `focus(options?)`, `blur()`, `select()`,
 `setSelectionRange()`, `setRangeText()` (all of the focus/selection methods forward to the internal

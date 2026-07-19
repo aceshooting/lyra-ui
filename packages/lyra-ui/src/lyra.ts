@@ -746,7 +746,7 @@ export type { LyraComboboxEventMap } from './components/combobox/combobox.js';
 export type { LyraOptionEventMap } from './components/combobox/option.js';
 export type { LyraConversationItemEventMap } from './components/conversation-item/conversation-item.js';
 export type { LyraCopyButtonEventMap } from './components/copy-button/copy-button.js';
-export type { LyraDateInputEventMap } from './components/date-picker/date-input.js';
+export type { LyraDateInputEventMap, LyraDateInputSize } from './components/date-picker/date-input.js';
 export type { LyraDatePickerEventMap } from './components/date-picker/date-picker.js';
 export type { LyraDialogEventMap } from './components/dialog/dialog.js';
 export type { LyraDiffViewEventMap } from './components/diff-view/diff-view.js';
