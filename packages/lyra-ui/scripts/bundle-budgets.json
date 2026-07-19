@@ -3,7 +3,7 @@
   "dist/lyra.js": 515,
   "dist/components/button/button.js": 26,
   "dist/components/select/select.js": 37,
-  "dist/components/gauge/gauge.js": 25,
+  "dist/components/gauge/gauge.js": 26,
   "dist/components/pdf-viewer/pdf-viewer.js": 42,
   "dist/components/flow-canvas/flow-canvas.js": 40
 }
