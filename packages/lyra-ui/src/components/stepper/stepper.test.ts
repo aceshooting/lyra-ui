@@ -1,4 +1,4 @@
-import { fixture, expect, html, oneEvent } from '@open-wc/testing';
+import { fixture, expect, html, oneEvent, elementUpdated } from '@open-wc/testing';
 import './stepper.js';
 import type { LyraStepper } from './stepper.js';
 import { styles } from './stepper.styles.js';
@@ -11,6 +11,34 @@ const steps = () => [
 
 function stepButtons(el: LyraStepper): HTMLButtonElement[] {
   return [...el.shadowRoot!.querySelectorAll('[part="step"]')] as HTMLButtonElement[];
+}
+
+/** Spies on the real `ResizeObserver` constructor so a test can manually drive a component's
+ *  effective-orientation callback with a synthetic width -- same technique split.test.ts's own
+ *  collapse-state tests use for their identically-shaped `ResizeObserver`. Restore in a `finally`. */
+function installResizeObserverSpy(): { callbacks: ResizeObserverCallback[]; restore: () => void } {
+  const callbacks: ResizeObserverCallback[] = [];
+  const OriginalRO = window.ResizeObserver;
+  class SpyResizeObserver extends OriginalRO {
+    constructor(callback: ResizeObserverCallback) {
+      super(callback);
+      callbacks.push(callback);
+    }
+  }
+  (window as unknown as { ResizeObserver: typeof ResizeObserver }).ResizeObserver = SpyResizeObserver;
+  return {
+    callbacks,
+    restore: () => {
+      (window as unknown as { ResizeObserver: typeof ResizeObserver }).ResizeObserver = OriginalRO;
+    },
+  };
+}
+
+function fireResize(callback: ResizeObserverCallback, width: number): void {
+  callback(
+    [{ contentBoxSize: [{ inlineSize: width, blockSize: 0 }] } as unknown as ResizeObserverEntry],
+    {} as ResizeObserver,
+  );
 }
 
 describe('lr-stepper', () => {
@@ -170,5 +198,45 @@ describe('lr-stepper', () => {
   it('gives a non-disabled step a :hover treatment, matching the click-to-jump affordance', () => {
     const css = styles.cssText.replace(/\s+/g, ' ');
     expect(css).to.match(/\[part='step'\]:hover:not\(\[aria-disabled='true'\]\)\s*\{[^}]+\}/);
+  });
+
+  it('switches the navigation axis from its own inline-size breakpoint and reports the effective orientation', async () => {
+    const spy = installResizeObserverSpy();
+    try {
+      const el = (await fixture(
+        html`<lr-stepper orientation-breakpoint="500" narrow-orientation="vertical" .steps=${steps()}></lr-stepper>`,
+      )) as LyraStepper;
+      await elementUpdated(el);
+      expect(spy.callbacks.length).to.equal(1);
+      expect(el.effectiveOrientation).to.equal('horizontal'); // unmeasured yet -- assumes wide
+
+      fireResize(spy.callbacks[0]!, 320);
+      await elementUpdated(el);
+      expect(el.effectiveOrientation).to.equal('vertical');
+      expect(el.getAttribute('data-effective-orientation')).to.equal('vertical');
+      const tablist = el.shadowRoot!.querySelector('[role="tablist"]')!;
+      expect(tablist.getAttribute('aria-orientation')).to.equal('vertical');
+      const buttons = stepButtons(el);
+      buttons[1]!.focus();
+      buttons[1]!.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, cancelable: true }));
+      await elementUpdated(el);
+      expect(el.shadowRoot!.activeElement).to.equal(buttons[2]);
+
+      const changed = oneEvent(el, 'lr-stepper-orientation-change');
+      fireResize(spy.callbacks[0]!, 700);
+      expect((await changed).detail).to.deep.equal({ orientation: 'horizontal' });
+      await elementUpdated(el);
+      expect(el.effectiveOrientation).to.equal('horizontal');
+      expect(tablist.getAttribute('aria-orientation')).to.equal('horizontal');
+    } finally {
+      spy.restore();
+    }
+  });
+
+  it('keeps the authored orientation and no effective marker when no breakpoint is configured', async () => {
+    const el = (await fixture(html`<lr-stepper orientation="vertical" .steps=${steps()}></lr-stepper>`)) as LyraStepper;
+    await elementUpdated(el);
+    expect(el.effectiveOrientation).to.equal('vertical');
+    expect(el.hasAttribute('data-effective-orientation')).to.be.false;
   });
 });

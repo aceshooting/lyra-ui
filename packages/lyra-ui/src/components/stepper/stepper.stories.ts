@@ -88,3 +88,25 @@ export const StepSelectEvent: Story = {
     </div>
   `,
 };
+
+export const ResponsiveOrientation: Story = {
+  render: () => html`
+    <div
+      style="resize: horizontal; overflow: hidden; inline-size: 100%; min-inline-size: 8rem; max-inline-size: 100%; border: 1px dashed var(--lr-color-border); padding: 0.5rem;"
+    >
+      <p style="margin: 0 0 0.5rem; font: 12px sans-serif; color: var(--lr-color-text-quiet)">
+        Drag this box's bottom-right corner to shrink it below 500px — the
+        stepper switches to a vertical strip (<code>orientation-breakpoint="500"
+        narrow-orientation="vertical"</code>) even though the surrounding page
+        is wide. Mirrors <code>lr-split</code>'s identically-named contract.
+      </p>
+      <lr-stepper
+        orientation-breakpoint="500"
+        narrow-orientation="vertical"
+        .steps=${wizardSteps}
+        @lr-stepper-orientation-change=${(e: CustomEvent<{ orientation: string }>) =>
+          console.log('lr-stepper-orientation-change', e.detail.orientation)}
+      ></lr-stepper>
+    </div>
+  `,
+};

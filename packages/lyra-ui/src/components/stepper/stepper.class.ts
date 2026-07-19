@@ -1,11 +1,17 @@
-import { html, nothing, type TemplateResult } from 'lit';
-import { property } from 'lit/decorators.js';
+import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
+import { property, query } from 'lit/decorators.js';
 import { repeat } from 'lit/directives/repeat.js';
 import { LyraElement } from '../../internal/lyra-element.js';
 import { isRtl } from '../../internal/rtl.js';
 import { styles } from './stepper.styles.js';
 
 export type StepState = 'pending' | 'current' | 'completed' | 'disabled' | 'error';
+
+export type StepperOrientation = 'horizontal' | 'vertical';
+
+export interface StepperOrientationChangeDetail {
+  orientation: StepperOrientation;
+}
 
 export interface StepItem {
   id: string;
@@ -18,6 +24,7 @@ export interface StepItem {
 
 export interface LyraStepperEventMap {
   'lr-step-select': CustomEvent<{ index: number; id: string }>;
+  'lr-stepper-orientation-change': CustomEvent<StepperOrientationChangeDetail>;
 }
 
 const GLYPH_VIEW_BOX = '0 0 24 24';
@@ -47,11 +54,23 @@ function checkmarkGlyph() {
  * `lr-step-select`, and the host decides whether/how `steps` changes in response (mirroring
  * `lr-dialog-close`'s cancelable-event convention).
  *
+ * An opt-in `orientationBreakpoint` (unset by default -- no behavior change) makes the effective
+ * layout/navigation axis respond to the stepper's own measured inline size instead of only the
+ * authored `orientation`: below that width (px, measured on `[part="base"]` via `ResizeObserver`),
+ * `narrowOrientation` becomes effective; at/above it, `orientation` does. This mirrors `<lr-split>`'s
+ * identically-named `orientationBreakpoint`/`narrowOrientation` contract -- the observation boundary
+ * is the component's own allocation, not the viewport, so a stepper placed in a narrow split pane or
+ * dialog still responds correctly even in a wide window. The effective axis is exposed via the
+ * `effectiveOrientation` getter, a `data-effective-orientation` host attribute (only present while
+ * `orientationBreakpoint` is set), and `lr-stepper-orientation-change`.
+ *
  * @customElement lr-stepper
  * @event lr-step-select - Fired on click, or Enter/Space while focused, on a non-`disabled`
  *   step. `detail: { index, id }`. Cancelable, though this component takes no default action of
  *   its own to prevent (it never mutates `steps`) -- `preventDefault()` is available for a host
  *   that wants a single place to short-circuit its own listener's follow-up work.
+ * @event lr-stepper-orientation-change - `detail: { orientation }`, fired when an enabled
+ *   `orientationBreakpoint` changes the effective layout/navigation axis.
  * @csspart base - The root wrapper.
  * @csspart step - A single step button.
  * @csspart step-index - The numbered index chip, shown for `pending`/`current`/`error` steps.
@@ -68,14 +87,94 @@ export class LyraStepper extends LyraElement<LyraStepperEventMap> {
   @property({ attribute: false }) steps: StepItem[] = [];
 
   /** `'horizontal'` (the default) lays steps out in a row (Left/Right, RTL-aware, to navigate);
-   *  `'vertical'` stacks them (Up/Down navigate instead, no RTL swap needed). */
-  @property({ reflect: true }) orientation: 'horizontal' | 'vertical' = 'horizontal';
+   *  `'vertical'` stacks them (Up/Down navigate instead, no RTL swap needed). The *authored* axis
+   *  used at/above `orientationBreakpoint` (or always, when that's unset) -- see
+   *  `effectiveOrientation` for the live axis actually in effect. */
+  @property({ reflect: true }) orientation: StepperOrientation = 'horizontal';
+
+  /** Opt-in inline-size breakpoint (px, measured on `[part="base"]`). Below it, `narrowOrientation`
+   *  becomes effective instead of `orientation`. Unset (the default): no behavior change, the
+   *  authored `orientation` always applies. */
+  @property({ type: Number, attribute: 'orientation-breakpoint' }) orientationBreakpoint?: number;
+
+  /** Layout/navigation axis used below `orientationBreakpoint`. */
+  @property({ reflect: true, attribute: 'narrow-orientation' }) narrowOrientation: StepperOrientation = 'vertical';
 
   /** Accessible name for the `role="tablist"` step strip. Attribute-reflects from a host-level
    *  `aria-label` so a plain-markup consumer gets ARIA-name forwarding without setting a JS
    *  property. Unset, the tablist renders without an `aria-label` (the role carries no localized
    *  default name). */
   @property({ attribute: 'aria-label' }) accessibleLabel: string | null = null;
+
+  private _effectiveOrientation: StepperOrientation = 'horizontal';
+  private resizeObserver?: ResizeObserver;
+  @query('[part="base"]') private baseEl?: HTMLElement;
+
+  /** The live layout/navigation axis after applying `orientationBreakpoint` -- identical to
+   *  `orientation` whenever that's unset. See the class doc. */
+  get effectiveOrientation(): StepperOrientation {
+    return this._effectiveOrientation;
+  }
+
+  connectedCallback(): void {
+    super.connectedCallback();
+    if (this.orientationBreakpoint != null) this.armResizeObserver();
+  }
+
+  disconnectedCallback(): void {
+    super.disconnectedCallback();
+    this.resizeObserver?.disconnect();
+  }
+
+  protected firstUpdated(): void {
+    if (this.orientationBreakpoint != null) this.armResizeObserver();
+  }
+
+  protected willUpdate(changed: PropertyValues): void {
+    if (changed.has('orientation') || changed.has('narrowOrientation') || changed.has('orientationBreakpoint')) {
+      this.updateEffectiveOrientation(this.baseEl?.clientWidth ?? Number.POSITIVE_INFINITY, false);
+    }
+  }
+
+  protected updated(changed: PropertyValues): void {
+    if (changed.has('orientationBreakpoint')) {
+      if (this.orientationBreakpoint != null) this.armResizeObserver();
+      else this.resizeObserver?.disconnect();
+    }
+  }
+
+  /** Classifies a measured inline size into the effective layout/navigation axis and, only on an
+   *  actual transition, applies it -- mirrors `<lr-split>`'s identically-shaped
+   *  `updateEffectiveOrientation()`. `emitOnChange` is false for the property-driven re-derivation
+   *  in `willUpdate()` and true for the `ResizeObserver` callback's fresh measurement. */
+  private updateEffectiveOrientation(width: number, emitOnChange: boolean): void {
+    const next: StepperOrientation =
+      this.orientationBreakpoint != null && width < this.orientationBreakpoint ? this.narrowOrientation : this.orientation;
+    if (this.orientationBreakpoint != null) {
+      this.setAttribute('data-effective-orientation', next);
+    } else {
+      this.removeAttribute('data-effective-orientation');
+    }
+    if (next === this._effectiveOrientation) return;
+    this._effectiveOrientation = next;
+    this.requestUpdate();
+    if (emitOnChange) {
+      this.emit<StepperOrientationChangeDetail>('lr-stepper-orientation-change', { orientation: next });
+    }
+  }
+
+  /** Creates (idempotently) and (re-)observes `[part="base"]` -- a no-op until `baseEl` exists (see
+   *  `firstUpdated()`/`connectedCallback()`). */
+  private armResizeObserver(): void {
+    if (!this.resizeObserver) {
+      this.resizeObserver = new ResizeObserver((entries) => {
+        const box = entries[0]?.contentBoxSize?.[0];
+        const width = box ? box.inlineSize : (this.baseEl?.getBoundingClientRect().width ?? 0);
+        this.updateEffectiveOrientation(width, true);
+      });
+    }
+    if (this.baseEl) this.resizeObserver.observe(this.baseEl);
+  }
 
   private selectStep(step: StepItem, index: number): void {
     if (step.state === 'disabled') return;
@@ -95,7 +194,7 @@ export class LyraStepper extends LyraElement<LyraStepperEventMap> {
     const focused = (this.renderRoot as ShadowRoot).activeElement as HTMLElement | null;
     const currentId = focused?.dataset.id;
     const currentIndex = navigable.findIndex((s) => s.id === currentId);
-    const vertical = this.orientation === 'vertical';
+    const vertical = this.effectiveOrientation === 'vertical';
     const rtl = !vertical && isRtl(this);
     const forwardKey = vertical ? 'ArrowDown' : rtl ? 'ArrowLeft' : 'ArrowRight';
     const backwardKey = vertical ? 'ArrowUp' : rtl ? 'ArrowRight' : 'ArrowLeft';
@@ -137,7 +236,7 @@ export class LyraStepper extends LyraElement<LyraStepperEventMap> {
     // button at tabindex="-1" and drop the whole stepper out of the tab order.
     const rovingId = this.steps.find((s) => s.state === 'current')?.id ?? this.steps.find((s) => s.state !== 'disabled')?.id;
     return html`
-      <div part="base" role="tablist" aria-label=${this.accessibleLabel || nothing} aria-orientation=${this.orientation} @keydown=${this.onKeyDown}>
+      <div part="base" role="tablist" aria-label=${this.accessibleLabel || nothing} aria-orientation=${this.effectiveOrientation} @keydown=${this.onKeyDown}>
         ${repeat(
           this.steps,
           (step) => step.id,

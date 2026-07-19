@@ -13,6 +13,17 @@ export const styles = css`
     flex-direction: column;
     overflow-x: visible;
   }
+  /* orientationBreakpoint's live axis -- only present while that feature is opted into (see
+     stepper.ts's updateEffectiveOrientation()), so it can override the authored orientation rules
+     above by source order alone (equal specificity) whenever the effective axis diverges from it. */
+  :host([data-effective-orientation='vertical']) [part='base'] {
+    flex-direction: column;
+    overflow-x: visible;
+  }
+  :host([data-effective-orientation='horizontal']) [part='base'] {
+    flex-direction: row;
+    overflow-x: auto;
+  }
   [part='step'] {
     display: flex;
     align-items: center;
