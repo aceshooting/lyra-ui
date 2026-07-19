@@ -2,6 +2,7 @@ import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { unsafeHTML } from 'lit/directives/unsafe-html.js';
 import { unsafeSVG } from 'lit/directives/unsafe-svg.js';
+import { styleMap } from 'lit/directives/style-map.js';
 import { LyraElement } from '../../internal/lyra-element.js';
 import { DocumentAnchorTarget } from '../../internal/anchor-target.js';
 import type { LyraAnchor, LyraAnchorKind } from '../document-viewer/anchors.js';
@@ -9,6 +10,7 @@ import { safeFetchUrl } from '../../internal/safe-url.js';
 import { isAbortError, isResourceLimitError, LyraUserFacingError, readResponseText } from '../../internal/resource-loader.js';
 import { srOnly } from '../../internal/a11y.js';
 import { finiteCount } from '../../internal/numbers.js';
+import { createAnsiParser, type AnsiStyles } from '../../internal/ansi.js';
 import { loadNotebookSanitizer } from './dompurify-loader.js';
 import '../virtual-list/virtual-list.js';
 import '../markdown/markdown.js';
@@ -78,8 +80,9 @@ export interface LyraNotebookViewerEventMap {
  * notebook's kernel language for syntax highlighting), and raw cells as plain preformatted text. A
  * code cell's `execute_result`/`display_data` outputs prefer, in order, `image/png`, `image/jpeg`,
  * `image/svg+xml` (sanitized), `text/html` (sanitized), `application/json` (via `<lr-json-viewer>`),
- * then `text/plain`. Stream/error outputs render as plain preformatted text this round (tinted
- * `danger` for stderr/tracebacks) rather than interpreting ANSI escapes. Sanitizing raw HTML/SVG
+ * then `text/plain`. Stream/error outputs (tinted `danger` for stderr/tracebacks) interpret embedded
+ * ANSI SGR color/style escapes via the shared `internal/ansi.ts` parser, same as `<lr-terminal>`.
+ * Sanitizing raw HTML/SVG
  * output markup lazy-loads the optional peer dependency `dompurify` via `dompurify-loader.ts`; when
  * that peer isn't installed, the output renders a localized notice instead of raw markup.
  *
@@ -304,6 +307,28 @@ export class LyraNotebookViewer extends DocumentAnchorTarget(LyraElement) {
     this.expandedOutputs = next;
   }
 
+  /** Feeds `text` through a fresh, one-shot ANSI parser (this is always a complete, already-final
+   *  string -- never a live stream chunk -- so there is no parser state to persist across renders,
+   *  unlike `<lr-terminal>`'s incremental `push()` usage) and renders the resulting segments as
+   *  styled spans, same color/style token mapping `<lr-terminal>` uses. */
+  private renderAnsiText(text: string): TemplateResult {
+    const segments = createAnsiParser().push(text);
+    return html`${segments.map((seg) => html`<span style=${styleMap(this.segmentStyle(seg.styles))}>${seg.text}</span>`)}`;
+  }
+
+  private segmentStyle(s: AnsiStyles): Record<string, string> {
+    const fg = s.fg ?? 'var(--lr-color-text)';
+    const bg = s.bg ?? 'transparent';
+    return {
+      'font-weight': s.bold ? 'bold' : 'normal',
+      opacity: s.dim ? '0.7' : '1',
+      'font-style': s.italic ? 'italic' : 'normal',
+      'text-decoration': s.underline ? 'underline' : 'none',
+      color: s.inverse ? bg : fg,
+      'background-color': s.inverse ? fg : bg,
+    };
+  }
+
   private renderTextOutput(index: number, text: string, tone?: 'danger'): TemplateResult {
     const lines = text.split('\n');
     const outputCollapseLines = this.effectiveOutputCollapseLines;
@@ -311,7 +336,7 @@ export class LyraNotebookViewer extends DocumentAnchorTarget(LyraElement) {
     const expanded = this.expandedOutputs.has(index) || !collapsible;
     const shown = expanded ? text : lines.slice(0, outputCollapseLines).join('\n');
     return html`<div part="output" data-output-type="stream" data-stream=${tone === 'danger' ? 'stderr' : 'stdout'}
-      >${shown}${collapsible
+      >${this.renderAnsiText(shown)}${collapsible
         ? html`<button
             part="output-toggle"
             type="button"
@@ -333,7 +358,7 @@ export class LyraNotebookViewer extends DocumentAnchorTarget(LyraElement) {
       // string-joined onto the traceback, so the label's position relative to
       // the data never depends on the sentence order of any one language.
       return html`<div part="output" data-output-type="error"
-        ><span class="error-output-label">${this.localize('notebookViewerErrorOutput')}</span>${text}</div
+        ><span class="error-output-label">${this.localize('notebookViewerErrorOutput')}</span>${this.renderAnsiText(text)}</div
       >`;
     }
     const data = output.data ?? {};

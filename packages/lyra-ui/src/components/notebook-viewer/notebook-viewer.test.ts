@@ -92,6 +92,44 @@ describe('parsing and rendering', () => {
     expect(output.textContent).to.not.include('Error: NameError');
   });
 
+  it('interprets ANSI SGR codes in a stream output as styled spans, stripping the escape sequences', async () => {
+    const notebook = {
+      nbformat: 4, nbformat_minor: 5,
+      cells: [{
+        cell_type: 'code', id: 'c1', source: 'print(x)', execution_count: 1, metadata: {},
+        outputs: [{ output_type: 'stream', name: 'stdout', text: '[31mred text[0m plain' }],
+      }],
+    };
+    const el = (await fixture(html`<lr-notebook-viewer .notebook=${notebook}></lr-notebook-viewer>`)) as LyraNotebookViewer;
+    await waitUntil(() => rowRoot(el).querySelector('[part="output"]') !== null);
+    const output = rowRoot(el).querySelector('[part="output"]')!;
+    expect(output.textContent).to.equal('red text plain');
+    const styledSpan = output.querySelector('span')!;
+    expect(styledSpan).to.exist;
+    expect(styledSpan.textContent).to.equal('red text');
+    expect(styledSpan.style.color).to.equal('var(--lr-terminal-color-red)');
+  });
+
+  it('interprets ANSI SGR codes in an error traceback the same way', async () => {
+    const notebook = {
+      nbformat: 4, nbformat_minor: 5,
+      cells: [{
+        cell_type: 'code', id: 'c1', source: 'x', execution_count: 1, metadata: {},
+        outputs: [{
+          output_type: 'error', ename: 'NameError', evalue: "name 'x' is not defined",
+          traceback: ['[1mbold frame[0m plain frame'],
+        }],
+      }],
+    };
+    const el = (await fixture(html`<lr-notebook-viewer .notebook=${notebook}></lr-notebook-viewer>`)) as LyraNotebookViewer;
+    await waitUntil(() => rowRoot(el).querySelector('[part="output"][data-output-type="error"]') !== null);
+    const output = rowRoot(el).querySelector('[part="output"][data-output-type="error"]')!;
+    expect(output.textContent).to.include('bold frame plain frame');
+    const styledSpan = [...output.querySelectorAll('span')].find((s) => s.textContent === 'bold frame');
+    expect(styledSpan).to.exist;
+    expect(styledSpan!.style.fontWeight).to.equal('bold');
+  });
+
   it('rejects an unsupported nbformat major version with the localized error', async () => {
     const el = (await fixture(html`<lr-notebook-viewer></lr-notebook-viewer>`)) as LyraNotebookViewer;
     const eventPromise = oneEvent(el, 'lr-render-error');
