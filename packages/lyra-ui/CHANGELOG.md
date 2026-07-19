@@ -1,5 +1,37 @@
 # Changelog
 
+## 4.0.0
+
+### Major Changes
+
+- cf2cbbb: Release 4.0.0 renames the public custom-element, event, and design-token prefixes from
+  `lyra-*`/`--lyra-*` to `lr-*`/`--lr-*`. The package name, JavaScript `Lyra*` class names,
+  and `lyra-ui` repository/package paths remain unchanged. This is a breaking migration:
+  update element tags, library-specific event names, and CSS custom-property overrides.
+
+### Minor Changes
+
+- cf2cbbb: New `lr-control-group` primitive: a responsive layout wrapper (`role="group"`, `flex-wrap: wrap`,
+  `align-items: center`) for a row of mixed form controls and action buttons — a segmented switcher
+  beside a select and an export button, for example. Distinct from `lr-button-group` (which
+  stretches uniform-height buttons to a shared row height): `lr-control-group` centers children of
+  differing intrinsic heights instead, since it makes no assumption about child type. Gap is
+  themeable via `--lr-control-group-gap`.
+- aa1fb49: `lr-segmented` gains a `size: '2xs' | 'xs' | 's' | 'm' | 'l' | 'xl' = 'm'` property, matching
+  `lr-select`/`lr-combobox`'s compact-form-control scale (`xs`-`xl`) plus `lr-input`'s `2xs`
+  tier. `size="s"` now renders at the same control height as `lr-select size="s"`/
+  `lr-combobox size="s"`, so a segmented metric switcher can sit flush beside a compact select or
+  combobox in the same toolbar without consumer CSS reaching into `::part(base)`. The default `m`
+  tier is pixel-identical to this component's previous, only rendering.
+
+### Patch Changes
+
+- 5266832: Fixed `lr-select`'s `size="xs"`/`"s"`/`"l"`/`"xl"` to actually enforce their documented
+  per-size minimum trigger height. A `var()` fallback bug meant `--lr-select-trigger-min-height`
+  was silently dead code at every size — only padding and font-size ever varied, height did not.
+  The default (`m`) tier's rendering is unchanged; a consumer-set `--lr-select-trigger-height`
+  override still wins over the per-size floor, as before.
+
 ## 3.9.0
 
 ### Minor Changes
