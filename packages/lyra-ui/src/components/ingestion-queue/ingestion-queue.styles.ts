@@ -16,9 +16,21 @@ export const styles = css`
     max-block-size: var(--lr-ingestion-queue-max-height);
     overflow-y: auto;
   }
+  /* Deliberately NOT derived from --lr-ingestion-queue-max-height (whose own default is the
+     keyword 'none', valid for [part='list']'s max-block-size above but not for a length-only
+     custom property): chaining var(--lr-ingestion-queue-max-height, var(--lr-size-24rem)) here
+     would make that 'none' win unconditionally (a var() fallback only applies when the referenced
+     property is *unset*, not when it resolves to a keyword that happens to be invalid for this
+     use), leaving --lr-virtual-list-height literally 'none' -- an invalid block-size that resolves
+     to 'auto', which is the one sizing lr-virtual-list's own windowing math cannot tolerate: its
+     viewport height would then depend on its rendered rows' height while the rendered rows
+     themselves depend on the viewport height, a genuine circular layout dependency that surfaces
+     as a real "ResizeObserver loop completed with undelivered notifications" browser error, not
+     mere test flakiness. A fixed token default, independent of the non-virtualized list's own cap,
+     is the same choice <lr-dataset-viewer>'s own lr-virtual-list sizing rule makes. */
   lr-virtual-list {
     display: block;
-    --lr-virtual-list-height: var(--lr-ingestion-queue-max-height, var(--lr-size-24rem));
+    --lr-virtual-list-height: var(--lr-size-24rem);
   }
   /* [part='item'] and its descendants below also target lr-virtual-list::part(x): above
      virtualize-threshold, itemTemplate()'s return value is <lr-virtual-list>'s .renderItem, and

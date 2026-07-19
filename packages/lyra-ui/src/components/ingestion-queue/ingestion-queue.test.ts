@@ -7,6 +7,16 @@ function item(overrides: Partial<IngestionQueueItem> & Pick<IngestionQueueItem, 
   return { document: { id: overrides.id, name: `Doc ${overrides.id}` }, ...overrides };
 }
 
+/** Waits two animation frames -- enough for a freshly-mounted <lr-virtual-list>'s container/row
+ *  ResizeObservers to settle before the fixture is torn down for the next test, matching
+ *  virtual-list.test.ts's own identical helper/rationale. Without this, a queued ResizeObserver
+ *  callback can still be pending when mocha tears down this test's fixture and starts the next
+ *  one, which is what surfaces Chromium's benign-but-uncaught "ResizeObserver loop completed with
+ *  undelivered notifications" as a spurious failure attributed to an unrelated later test. */
+async function nextFrame(): Promise<void> {
+  await new Promise<void>((r) => requestAnimationFrame(() => requestAnimationFrame(() => r())));
+}
+
 it('defaults to items=[], label="", virtualizeThreshold=100', async () => {
   const el = (await fixture(html`<lr-ingestion-queue></lr-ingestion-queue>`)) as LyraIngestionQueue;
   expect(el.items).to.deep.equal([]);
@@ -324,6 +334,7 @@ describe('virtualization', () => {
     expect(el.shadowRoot!.querySelector('[part="list"]')).to.not.exist;
     expect(virtualList!.items).to.equal(items);
     expect(virtualList!.keyFunction(items[1], 1)).to.equal('2');
+    await nextFrame();
   });
 
   it('renders row content identically through the internal lr-virtual-list renderItem callback', async () => {
@@ -346,6 +357,7 @@ describe('virtualization', () => {
     // Rendered outside the internal virtual-list's own role="listitem" row wrapper here, so this
     // component's own item div deliberately omits a redundant role in that mode.
     expect(container.querySelector('[part="item"]')!.hasAttribute('role')).to.be.false;
+    await nextFrame();
   });
 });
 

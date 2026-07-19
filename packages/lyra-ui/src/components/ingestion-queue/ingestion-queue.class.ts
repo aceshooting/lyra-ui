@@ -159,8 +159,11 @@ const DEFAULT_VIRTUALIZE_THRESHOLD = 100;
  * @csspart item-actions - Wrapper around the retry/cancel buttons.
  * @csspart retry-button - Fires `lr-retry`. Only rendered for `stage="failed"` rows.
  * @csspart cancel-button - Fires `lr-cancel`. Only rendered for non-terminal rows.
- * @cssprop [--lr-ingestion-queue-max-height=none] - Caps how tall the list grows before it
- *   scrolls internally; also sizes the internal virtual-list's viewport once virtualized.
+ * @cssprop [--lr-ingestion-queue-max-height=none] - Non-virtualized mode only: caps how tall the
+ *   list grows before it scrolls internally. Has no effect once virtualized -- the internal
+ *   `<lr-virtual-list>`'s own viewport keeps its independent, fixed default height (retheme it
+ *   directly via `<lr-ingestion-queue>`'s own `lr-virtual-list { --lr-virtual-list-height: ... }`
+ *   if needed).
  */
 export class LyraIngestionQueue extends LyraElement<LyraIngestionQueueEventMap> {
   static styles = [LyraElement.styles, styles];
