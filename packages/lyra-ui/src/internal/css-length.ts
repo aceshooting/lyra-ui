@@ -13,15 +13,22 @@ function fontSizePx(element: Element): number {
 }
 
 /**
- * Resolves a CSS length to pixels against the document root (like a `@media`/`@container` query),
- * so a breakpoint authored in `rem` tracks the user's root font size.
+ * Resolves a CSS length to pixels against the document root (like a `@container` query), so a
+ * breakpoint authored in `rem` tracks the user's root font size.
+ *
+ * Note this is a `@container` query's rule, NOT a `@media` query's: inside a media query, relative
+ * units resolve against the browser's *initial* font size and ignore any `html { font-size }`
+ * override entirely. The two agree only while an app leaves the root font size alone. Callers that
+ * need real media-query semantics must hand the authored length to `matchMedia()` and let the
+ * browser resolve it, rather than converting it here first — see `OrientationBreakpointController`'s
+ * `'viewport'` basis.
  *
  * Accepted forms — the ones that mean something as a *layout breakpoint*:
  *
  * - a bare number, or a numeric string, in px (`900`, `'900'`) — the historical form;
  * - `px` (`'900px'`), identical to the bare form;
- * - `rem` (`'56.25rem'`), resolved against `document.documentElement`'s computed font size, exactly
- *   as a `rem` in a CSS `@media` query is — *not* against `host`;
+ * - `rem` (`'56.25rem'`), resolved against `document.documentElement`'s computed font size — *not*
+ *   against `host`;
  * - `em` (`'3em'`), resolved against `host`'s own computed font size, falling back to the document
  *   root (i.e. behaving like `rem`) when `host` is omitted or has no computed style.
  *

@@ -354,6 +354,11 @@ describe('lr-graph-query-builder', () => {
     const el = form.querySelector('lr-graph-query-builder') as LyraGraphQueryBuilder;
     await el.updateComplete;
     expect(el.form).to.equal(form);
+    // Reads the native ElementInternals.labels accessor -- confirmed safe with this fixture (wrapped
+    // in a <form>). A *different* fixture shape (no wrapping <form>, no labels) hung headless
+    // Chromium indefinitely reading the very same accessor on <lr-rubric-form>; see
+    // docs/superpowers/feature_requests/2026-07-19-latent-bugs-found-during-coverage-push.md item 3
+    // before assuming a change here is automatically safe.
     expect(el.labels.length).to.equal(0);
     expect(el.willValidate).to.be.true;
     // Default value has an empty startId, which computeValidation() flags as missing.

@@ -163,6 +163,11 @@ it('exposes native-like form ownership, label, and constraint-validation state',
   };
 
   expect(ctl.form?.id).to.equal('owner');
+  // Reads the native ElementInternals.labels accessor -- confirmed safe with this fixture (wrapped in
+  // a <form>, a real <label for>). A *different* fixture shape (no wrapping <form>, no labels) hung
+  // headless Chromium indefinitely reading the very same accessor on <lr-rubric-form>; see
+  // docs/superpowers/feature_requests/2026-07-19-latent-bugs-found-during-coverage-push.md item 3
+  // before assuming a change here (or reuse of this pattern elsewhere) is automatically safe.
   expect(ctl.labels.length).to.equal(1);
   expect((ctl.labels.item(0) as HTMLElement | null)?.id).to.equal('caption');
   expect(ctl.validity.valueMissing).to.be.true;

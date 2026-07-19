@@ -180,13 +180,14 @@ export class LyraSplit extends LyraElement<LyraSplitEventMap> {
    *  `orientation`.
    *
    *  Accepts a bare pixel number (`900`, `orientation-breakpoint="900"` — the original form) or a
-   *  CSS length string: `'900px'`, `'56.25rem'`, `'3em'`. `rem` resolves against the *document
-   *  root*'s font size, exactly as a `rem` in a CSS `@media` query does — not against this element
-   *  — so a breakpoint authored to match a sibling `@media (max-width: 56.25rem)` rule stays in
-   *  sync with it across browser zoom or an app-level base-size change. `em` resolves against this
-   *  element's own computed font size. The length is re-resolved on every measurement, never cached
-   *  at first render, so a root font-size change moves the crossing width with no invalidation
-   *  step.
+   *  CSS length string: `'900px'`, `'56.25rem'`, `'3em'`. Under the default
+   *  `orientationBreakpointBasis="container"`, `rem` resolves against the *document root*'s
+   *  computed font size — the rule a `@container` query follows, not a `@media` query's — and `em`
+   *  against this element's own computed font size. The length is re-resolved on every measurement,
+   *  never cached at first render, so a root font-size change moves the crossing width with no
+   *  invalidation step. To stay in step with a sibling `@media (max-width: 56.25rem)` rule, use
+   *  `orientationBreakpointBasis="viewport"`, which hands the length to the browser instead; see
+   *  that property for why the two resolve `rem` differently.
    *
    *  Anything else — `''`, `'auto'`, garbage, a non-finite number, and deliberately `%`/`vw`/`vh`/
    *  `calc()` (which would mix reference boxes against an element-relative measurement) — behaves

@@ -101,13 +101,14 @@ export class LyraStepper extends LyraElement<LyraStepperEventMap> {
    *  authored `orientation` always applies.
    *
    *  Accepts a bare pixel number (`500`, `'500'`), an explicit `px` length (`'500px'`), a `rem`
-   *  length (`'31.25rem'`) or an `em` length (`'3em'`). `rem` resolves against the **document
-   *  root**'s computed font size -- exactly as a `rem` in a CSS `@media` query does, and *not*
-   *  against this element -- so a breakpoint authored in `rem` stays numerically in step with a
-   *  sibling `@media (max-width: …rem)` rule instead of drifting from it when the root font size
-   *  changes (browser zoom, a user font-size preference, an app base-size token). `em` resolves
-   *  against this element's own computed font size. The length is re-resolved on every
-   *  measurement, never cached, so those changes are picked up with no invalidation step.
+   *  length (`'31.25rem'`) or an `em` length (`'3em'`). Under the default
+   *  `orientationBreakpointBasis="container"`, `rem` resolves against the **document root**'s
+   *  computed font size -- the rule a `@container` query follows, and *not* a `@media` query's --
+   *  while `em` resolves against this element's own computed font size. The length is re-resolved
+   *  on every measurement, never cached, so browser zoom, a user font-size preference or an app
+   *  base-size token change are picked up with no invalidation step. To stay in step with a
+   *  sibling `@media (max-width: …rem)` rule, use `orientationBreakpointBasis="viewport"`, which
+   *  hands the length to the browser instead; see that property for why the two differ.
    *
    *  Any other value -- `%`, `vw`, `calc()`, `'auto'`, an unparseable string -- behaves exactly as
    *  unset (no responsive observation at all), rather than as an armed breakpoint that can never

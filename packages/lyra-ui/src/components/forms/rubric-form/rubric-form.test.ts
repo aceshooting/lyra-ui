@@ -305,6 +305,10 @@ describe('lr-rubric-form', () => {
     `)) as HTMLFormElement;
     const el = form.querySelector('lr-rubric-form') as LyraRubricForm;
     await el.updateComplete;
+    // Deliberately no `expect(el.labels...)` here -- reading it hangs headless Chromium indefinitely
+    // (see the `labels` getter's own doc comment in rubric-form.class.ts and
+    // docs/superpowers/feature_requests/2026-07-19-latent-bugs-found-during-coverage-push.md item 3).
+    // Do not add it back without first confirming the hang is resolved.
     expect(el.form).to.equal(form);
     expect(el.validity.valid).to.be.false;
     expect(el.validationMessage).to.be.a('string');
