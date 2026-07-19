@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { existsSync, readFileSync, readdirSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -15,9 +15,8 @@ const tags = [...new Set(
     .filter((declaration) => declaration.customElement && declaration.tagName)
     .map((declaration) => declaration.tagName),
 )].sort();
-const familyCount = readdirSync(join(packageRoot, 'src/components'), { withFileTypes: true })
-  .filter((entry) => entry.isDirectory())
-  .length;
+const { families } = JSON.parse(read('packages/lyra-ui/scripts/component-families.json'));
+const familyCount = families.length;
 
 const docsIndex = read('docs/index.md');
 if (!docsIndex.includes(`${tags.length} custom elements across ${familyCount} component families`)) {
