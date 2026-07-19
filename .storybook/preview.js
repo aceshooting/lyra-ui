@@ -8,19 +8,19 @@ import '../packages/lyra-ui/src/lyra.js';
 // barrel never pull in those peers unconditionally. Storybook, unlike a real
 // consumer, always has every peer installed and needs every component's
 // story to render — so register these directly here instead.
-import '../packages/lyra-ui/src/components/chart/chart.js';
-import '../packages/lyra-ui/src/components/chart/bar-chart.js';
-import '../packages/lyra-ui/src/components/chart/line-chart.js';
-import '../packages/lyra-ui/src/components/chart/pie-chart.js';
-import '../packages/lyra-ui/src/components/chart/doughnut-chart.js';
-import '../packages/lyra-ui/src/components/chart/scatter-chart.js';
-import '../packages/lyra-ui/src/components/chart/bubble-chart.js';
-import '../packages/lyra-ui/src/components/chart/radar-chart.js';
-import '../packages/lyra-ui/src/components/chart/polar-area-chart.js';
-import '../packages/lyra-ui/src/components/chart/box-plot.js';
-import '../packages/lyra-ui/src/components/chart/histogram.js';
-import '../packages/lyra-ui/src/components/map/map.js';
-import '../packages/lyra-ui/src/components/graph/graph.js';
+import '../packages/lyra-ui/src/components/charts/chart/chart.js';
+import '../packages/lyra-ui/src/components/charts/chart/bar-chart.js';
+import '../packages/lyra-ui/src/components/charts/chart/line-chart.js';
+import '../packages/lyra-ui/src/components/charts/chart/pie-chart.js';
+import '../packages/lyra-ui/src/components/charts/chart/doughnut-chart.js';
+import '../packages/lyra-ui/src/components/charts/chart/scatter-chart.js';
+import '../packages/lyra-ui/src/components/charts/chart/bubble-chart.js';
+import '../packages/lyra-ui/src/components/charts/chart/radar-chart.js';
+import '../packages/lyra-ui/src/components/charts/chart/polar-area-chart.js';
+import '../packages/lyra-ui/src/components/charts/chart/box-plot.js';
+import '../packages/lyra-ui/src/components/charts/chart/histogram.js';
+import '../packages/lyra-ui/src/components/media/map/map.js';
+import '../packages/lyra-ui/src/components/retrieval/graph/graph.js';
 // <lr-map>'s optional peer `maplibre-gl` ships its own CSS as a side-effect import — same
 // requirement as the old docs/ playground had.
 import 'maplibre-gl/dist/maplibre-gl.css';

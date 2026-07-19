@@ -149,16 +149,16 @@ async function writeFixture(fixtureDir, packageTarball, flagsTarball, withOption
   await writeFile(
     join(fixtureDir, 'src', 'node-imports.mjs'),
     `const root = await import('@aceshooting/lyra-ui');
-const granularClass = await import('@aceshooting/lyra-ui/components/empty/empty.class.js');
-await import('@aceshooting/lyra-ui/components/code-block/code-loader.js');
-await import('@aceshooting/lyra-ui/components/map/map-loader.js');
-await import('@aceshooting/lyra-ui/components/markdown/markdown-loader.js');
-await import('@aceshooting/lyra-ui/components/graph/graph-loader.js');
-await import('@aceshooting/lyra-ui/components/empty/empty.js');
-await import('@aceshooting/lyra-ui/components/chart/chart.js');
-await import('@aceshooting/lyra-ui/components/code-block/code-block.js');
-await import('@aceshooting/lyra-ui/components/graph/graph.js');
-await import('@aceshooting/lyra-ui/components/map/map.js');
+const granularClass = await import('@aceshooting/lyra-ui/components/overlays/empty/empty.class.js');
+await import('@aceshooting/lyra-ui/components/conversation/code-block/code-loader.js');
+await import('@aceshooting/lyra-ui/components/media/map/map-loader.js');
+await import('@aceshooting/lyra-ui/components/conversation/markdown/markdown-loader.js');
+await import('@aceshooting/lyra-ui/components/retrieval/graph/graph-loader.js');
+await import('@aceshooting/lyra-ui/components/overlays/empty/empty.js');
+await import('@aceshooting/lyra-ui/components/charts/chart/chart.js');
+await import('@aceshooting/lyra-ui/components/conversation/code-block/code-block.js');
+await import('@aceshooting/lyra-ui/components/retrieval/graph/graph.js');
+await import('@aceshooting/lyra-ui/components/media/map/map.js');
 const prefix = await import('@aceshooting/lyra-ui/internal/prefix.js');
 
 if (typeof root.LyraEmpty !== 'function' || typeof granularClass.LyraEmpty !== 'function') {
@@ -180,12 +180,12 @@ console.log('Node ESM package imports passed.');
   defineElement,
   tag,
 } from '@aceshooting/lyra-ui';
-import { LyraEmpty as GranularLyraEmpty } from '@aceshooting/lyra-ui/components/empty/empty.class.js';
-import { loadChartAndZoom } from '@aceshooting/lyra-ui/components/chart/chart-loader.js';
-import { loadMaplibre } from '@aceshooting/lyra-ui/components/map/map-loader.js';
-import { loadMarkdownAndSanitizer } from '@aceshooting/lyra-ui/components/markdown/markdown-loader.js';
-import { loadShikiHighlighter } from '@aceshooting/lyra-ui/components/code-block/code-loader.js';
-import { loadD3 } from '@aceshooting/lyra-ui/components/graph/graph-loader.js';
+import { LyraEmpty as GranularLyraEmpty } from '@aceshooting/lyra-ui/components/overlays/empty/empty.class.js';
+import { loadChartAndZoom } from '@aceshooting/lyra-ui/components/charts/chart/chart-loader.js';
+import { loadMaplibre } from '@aceshooting/lyra-ui/components/media/map/map-loader.js';
+import { loadMarkdownAndSanitizer } from '@aceshooting/lyra-ui/components/conversation/markdown/markdown-loader.js';
+import { loadShikiHighlighter } from '@aceshooting/lyra-ui/components/conversation/code-block/code-loader.js';
+import { loadD3 } from '@aceshooting/lyra-ui/components/retrieval/graph/graph-loader.js';
 import type {
   LyraChartEventMap,
   LyraGraphEventMap,
@@ -261,12 +261,12 @@ export default defineConfig({
 
   const bundleSources = {
     core: `import '@aceshooting/lyra-ui';\nexport const loaded = true;\n`,
-    button: `import '@aceshooting/lyra-ui/components/button/button.js';\nexport const loaded = true;\n`,
+    button: `import '@aceshooting/lyra-ui/components/forms/button/button.js';\nexport const loaded = true;\n`,
     flag: `import flagUrl from '@aceshooting/lyra-flags/flags/fr.svg';\nexport { flagUrl };\n`,
-    codeBlock: `import '@aceshooting/lyra-ui/components/code-block/code-block.js';\nexport const loaded = true;\n`,
-    chart: `import '@aceshooting/lyra-ui/components/chart/chart.js';\nexport const loaded = true;\n`,
-    map: `import '@aceshooting/lyra-ui/components/map/map.js';\nexport const loaded = true;\n`,
-    graph: `import '@aceshooting/lyra-ui/components/graph/graph.js';\nexport const loaded = true;\n`,
+    codeBlock: `import '@aceshooting/lyra-ui/components/conversation/code-block/code-block.js';\nexport const loaded = true;\n`,
+    chart: `import '@aceshooting/lyra-ui/components/charts/chart/chart.js';\nexport const loaded = true;\n`,
+    map: `import '@aceshooting/lyra-ui/components/media/map/map.js';\nexport const loaded = true;\n`,
+    graph: `import '@aceshooting/lyra-ui/components/retrieval/graph/graph.js';\nexport const loaded = true;\n`,
   };
   await Promise.all(
     Object.entries(bundleSources).map(([name, source]) => writeFile(join(fixtureDir, 'src', `bundle-${name}.ts`), source)),
