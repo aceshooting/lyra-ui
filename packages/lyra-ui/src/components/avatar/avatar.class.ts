@@ -1,4 +1,4 @@
-import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
+import { html, nothing, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../internal/lyra-element.js';
 import { styles } from './avatar.styles.js';
@@ -54,18 +54,14 @@ export class LyraAvatar extends LyraElement {
    *  `'neutral'` (the default) reads as a plain, unaccented circle. */
   @property({ reflect: true }) tone: AvatarTone = 'neutral';
 
-  @state() private imageFailed = false;
+  @state() private failedSrc?: string;
 
   // `[part='icon']:empty` never matches because the part always contains a literal `<slot>`
   // child -- same fix `lr-empty`/`lr-stat` already established. Track real slot assignment
   // in JS instead.
   @state() private hasIcon = false;
 
-  protected willUpdate(changed: PropertyValues<this>): void {
-    // A load failure belongs to one URL, not to the avatar forever. Reset before rendering a
-    // newly assigned src so the replacement image gets its own load attempt.
-    if (changed.has('src')) this.imageFailed = false;
-
+  protected willUpdate(): void {
     // Set from light-DOM children before the first render so the initial paint already reflects
     // any icon content present at parse time, rather than waiting a render behind `slotchange`.
     if (!this.hasUpdated) {
@@ -73,8 +69,10 @@ export class LyraAvatar extends LyraElement {
     }
   }
 
-  private onImageError = (): void => {
-    this.imageFailed = true;
+  private onImageError = (event: Event): void => {
+    const image = event.currentTarget as HTMLImageElement | null;
+    const failedSrc = image?.getAttribute('src');
+    if (failedSrc) this.failedSrc = failedSrc;
   };
 
   private onIconSlotChange = (e: Event): void => {
@@ -82,7 +80,7 @@ export class LyraAvatar extends LyraElement {
   };
 
   render(): TemplateResult {
-    const showImage = !this.hasIcon && !!this.src && !this.imageFailed;
+    const showImage = !this.hasIcon && !!this.src && this.src !== this.failedSrc;
     const showInitials = !this.hasIcon && !showImage;
     const accessibleName = this.getAttribute('aria-label') ?? this.alt;
     // Whenever `alt` is set, [part='base'] needs a real accessible name
