@@ -67,6 +67,24 @@ it('renders one button per emoji, grouped under a heading per group', async () =
   expect(headings).to.deep.equal(['Smileys', 'Animals']);
 });
 
+it('virtualizes large emoji sets while keeping the full option count in ARIA metadata', async () => {
+  const largeGroup: EmojiPickerGroup = {
+    key: 'large',
+    label: 'Large set',
+    emojis: Array.from({ length: 500 }, (_, index) => ({ emoji: `😀${index}`, name: `emoji ${index}` })),
+  };
+  const el = await connectEmojiPicker();
+  el.groups = [largeGroup];
+  await el.updateComplete;
+
+  const grid = el.shadowRoot!.querySelector('[part="grid"]') as HTMLElement;
+  const buttons = el.shadowRoot!.querySelectorAll('[part="emoji"]');
+  expect(el.shadowRoot!.querySelector('[part="virtual-spacer"]')).to.exist;
+  expect(buttons.length).to.be.lessThan(500);
+  expect(buttons[0]!.getAttribute('aria-setsize')).to.equal('500');
+  expect(grid.scrollHeight).to.be.greaterThan(0);
+});
+
 it('is form-associated, participating in an ancestor form.elements', async () => {
   const form = document.createElement('form');
   const el = document.createElement('lr-emoji-picker') as LyraEmojiPicker;

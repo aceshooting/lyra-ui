@@ -1,4 +1,5 @@
 import { fixture, expect, html, oneEvent } from '@open-wc/testing';
+import jsGrammar from 'shiki/langs/javascript.mjs';
 import './document-compare.js';
 import type { LyraDocumentCompare } from './document-compare.js';
 import type { LyraDocumentPreview } from '../document-preview/document-preview.class.js';
@@ -34,7 +35,7 @@ describe('lr-document-compare', () => {
           diff-layout="split"
           copyable
           language="js"
-          .languages=${{ js: {} }}
+          .languages=${{ js: jsGrammar }}
           .oldVersion=${{ id: 'v1', name: 'v1', text: 'a' }}
           .newVersion=${{ id: 'v2', name: 'v2', text: 'b' }}
         ></lr-document-compare>
@@ -48,7 +49,7 @@ describe('lr-document-compare', () => {
       expect(diff.layout).to.equal('split');
       expect(diff.copyable).to.be.true;
       expect(diff.language).to.equal('js');
-      expect(diff.languages).to.deep.equal({ js: {} });
+      expect(diff.languages).to.deep.equal({ js: jsGrammar });
     });
 
     it('bubbles lr-copy unchanged from the internal lr-diff-view', async () => {

@@ -64,6 +64,26 @@ it('renders a canvas sized to the grid dimensions', async () => {
   expect(canvas).to.exist;
 });
 
+it('repaints only the focus-cell dirty rectangles when keyboard focus moves', async () => {
+  const el = (await fixture(html`
+    <lr-heatmap .rowLabels=${['A', 'B']} .colLabels=${['X', 'Y']} .values=${[[1, 2], [3, 4]]}></lr-heatmap>
+  `)) as LyraHeatmap;
+  await el.updateComplete;
+  type Internals = { drawMatrix(): void };
+  const internals = el as unknown as Internals;
+  let fullDraws = 0;
+  const original = internals.drawMatrix.bind(el);
+  internals.drawMatrix = () => {
+    fullDraws++;
+    original();
+  };
+
+  const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
+  canvas.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+  await el.updateComplete;
+  expect(fullDraws).to.equal(0);
+});
+
 it('treats -1 as a no-data sentinel without throwing', async () => {
   const el = (await fixture(html`<lr-heatmap></lr-heatmap>`)) as LyraHeatmap;
   el.values = [[-1, 2]];

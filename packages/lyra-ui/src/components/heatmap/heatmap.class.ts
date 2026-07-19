@@ -507,6 +507,9 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
     loRgb: [number, number, number, number];
     hiRgb: [number, number, number, number];
   } | null = null;
+  /** Set after a complete canvas pass. Focus movement can then repaint only the old/new cell
+   * rectangles instead of clearing and repainting an entire dense heatmap. */
+  private canvasHasContent = false;
 
   /** The cell currently under the pointer (`null` when not hovering one) — drives `[part="tooltip"]`. */
   @state() private hoverCell: CellPos | null = null;
@@ -768,6 +771,8 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
         'selectedCell',
       ].some((name) => changed.has(name))
     ) {
+      const focusOnly = changed.has('focusedCell') && [...changed.keys()].every((key) => key === 'focusedCell' || key === 'liveText');
+      if (focusOnly && this.repaintFocusRing(changed.get('focusedCell') as CellPos | null | undefined)) return;
       this.draw();
     }
   }
@@ -835,8 +840,28 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
   }
 
   private draw(): void {
+    this.canvasHasContent = false;
     if (this.mode === 'calendar') this.drawCalendar();
     else this.drawMatrix();
+  }
+
+  /** Repaints the old and new focus-ring cells after keyboard/click navigation. The underlying
+   * cell fill plus annotation/selection rings are restored before the new focus ring is stroked,
+   * so clearing a dirty rectangle never erases persistent data. Returns false when a complete draw
+   * is still required (for example before the first canvas pass or after a mode change). */
+  private repaintFocusRing(previous: CellPos | null | undefined): boolean {
+    if (!this.canvasHasContent || !this.canvas) return false;
+    const current = this.focusedCell;
+    if (this.mode === 'calendar') {
+      if ((previous && !('week' in previous)) || (current && !('week' in current))) return false;
+      this.repaintCalendarFocusCell(previous && 'week' in previous ? previous : null);
+      if (current && (!previous || !this.samePos(previous, current))) this.repaintCalendarFocusCell(current);
+    } else {
+      if ((previous && !('row' in previous)) || (current && !('row' in current))) return false;
+      this.repaintMatrixFocusCell(previous && 'row' in previous ? previous : null);
+      if (current && (!previous || !this.samePos(previous, current))) this.repaintMatrixFocusCell(current);
+    }
+    return true;
   }
 
   private scheduleDraw = (): void => {
@@ -1118,6 +1143,7 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
     WEEKDAY_LABELS.forEach((label, weekday) => {
       if (label) ctx.fillText(label, 2, this.rowYFor(weekday) + cellSize - 1);
     });
+    this.canvasHasContent = true;
   }
 
   /**
@@ -1133,6 +1159,157 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
       return Math.max(4, (hostWidth - PAD_LEFT) / cols);
     }
     return this.cellSize;
+  }
+
+  private paintMatrixCell(
+    ctx: CanvasRenderingContext2D,
+    row: number,
+    col: number,
+    cellSize: number,
+    cs: CSSStyleDeclaration,
+    rampData: ReturnType<LyraHeatmap['colorRamp']>,
+    noDataFill: string,
+  ): void {
+    const value = this.values[row]?.[col] ?? -1;
+    const bounds = this.cachedValueRange;
+    const lo = bounds ? bounds[0] : 0;
+    const hi = bounds ? bounds[1] : 1;
+    const override = this.cellColor?.({ row, col }, value);
+    if (override != null) ctx.fillStyle = this.resolveCanvasColor(override, cs);
+    else if (value < 0 || !Number.isFinite(value)) ctx.fillStyle = noDataFill;
+    else if (this.scale === 'sqrt') {
+      const step = sqrtStep(value, hi, rampData.colors.length);
+      ctx.fillStyle = step < 0 ? noDataFill : rampData.colors[step]!;
+    } else if (this.colorSteps && this.colorSteps.length >= 2) {
+      ctx.fillStyle = rampData.colors[linearBucket(value, lo, hi, rampData.colors.length)]!;
+    } else {
+      ctx.fillStyle = mixRgb(rampData.loRgb, rampData.hiRgb, linearAlpha(value, lo, hi));
+    }
+    ctx.fillRect(PAD_LEFT + col * cellSize, PAD_TOP + row * cellSize, cellSize - 1, cellSize - 1);
+  }
+
+  private paintMatrixFocusOverlays(
+    ctx: CanvasRenderingContext2D,
+    row: number,
+    col: number,
+    cellSize: number,
+    cs: CSSStyleDeclaration,
+  ): void {
+    const x = PAD_LEFT + col * cellSize;
+    const y = PAD_TOP + row * cellSize;
+    if (this.annotations.some((ann) => ann.row === row && ann.col === col)) {
+      ctx.lineWidth = RING_LINE_WIDTH;
+      ctx.strokeStyle = this.annotationColor(cs);
+      ctx.strokeRect(x + 1, y + 1, cellSize - 3, cellSize - 3);
+    }
+    if (this.selectedCell?.row === row && this.selectedCell.col === col) {
+      ctx.lineWidth = RING_LINE_WIDTH;
+      ctx.strokeStyle = this.selectedColor(cs);
+      ctx.strokeRect(x + 1, y + 1, cellSize - 3, cellSize - 3);
+    }
+    if (this.focusedCell && 'row' in this.focusedCell && this.focusedCell.row === row && this.focusedCell.col === col) {
+      ctx.lineWidth = RING_LINE_WIDTH;
+      ctx.strokeStyle = this.focusRingColor(cs);
+      ctx.strokeRect(x + 1, y + 1, cellSize - 3, cellSize - 3);
+    }
+  }
+
+  private repaintMatrixFocusCell(pos: MatrixCellPos | null): void {
+    if (!pos || !this.canvas) return;
+    const rows = this.rowLabels.length;
+    const cols = this.colLabels.length;
+    if (pos.row < 0 || pos.row >= rows || pos.col < 0 || pos.col >= cols) return;
+    const cellSize = this.matrixCellSize(cols);
+    const x = PAD_LEFT + pos.col * cellSize;
+    const y = PAD_TOP + pos.row * cellSize;
+    const ctx = this.canvas.getContext('2d');
+    if (!ctx) return;
+    ctx.clearRect(x - RING_LINE_WIDTH - 1, y - RING_LINE_WIDTH - 1, cellSize + 2 * (RING_LINE_WIDTH + 1), cellSize + 2 * (RING_LINE_WIDTH + 1));
+    const cs = getComputedStyle(this);
+    this.paintMatrixCell(ctx, pos.row, pos.col, cellSize, cs, this.colorRamp(RAMP_STEPS, cs), this.noDataFill(cs));
+    this.paintMatrixFocusOverlays(ctx, pos.row, pos.col, cellSize, cs);
+  }
+
+  private paintCalendarCell(
+    ctx: CanvasRenderingContext2D,
+    week: number,
+    weekday: number,
+    cellSize: number,
+    cs: CSSStyleDeclaration,
+    ramp: string[],
+    noDataFill: string,
+  ): void {
+    const value = this.cachedCalendarCellsByPos.get(`${week}:${weekday}`)?.value ?? -1;
+    const bounds = this.cachedValueRange;
+    const lo = bounds ? bounds[0] : 0;
+    const hi = bounds ? bounds[1] : 1;
+    const override = this.cellColor?.({ week, weekday }, value);
+    if (override != null) ctx.fillStyle = this.resolveCanvasColor(override, cs);
+    else if (value < 0 || !Number.isFinite(value)) ctx.fillStyle = noDataFill;
+    else if (this.scale === 'sqrt') {
+      const step = sqrtStep(value, hi, ramp.length);
+      ctx.fillStyle = step < 0 ? noDataFill : ramp[step]!;
+    } else if (this.colorSteps && this.colorSteps.length >= 2) {
+      ctx.fillStyle = ramp[linearBucket(value, lo, hi, ramp.length)]!;
+    } else {
+      ctx.fillStyle = ramp[quartileBucket(value, this.cachedCalendarSortedValues, ramp.length)]!;
+    }
+    ctx.fillRect(this.columnXFor(week), this.rowYFor(weekday), cellSize, cellSize);
+  }
+
+  private paintCalendarFocusOverlays(
+    ctx: CanvasRenderingContext2D,
+    week: number,
+    weekday: number,
+    cellSize: number,
+    cs: CSSStyleDeclaration,
+  ): void {
+    const date = this.calendarCellAt({ week, weekday }).date;
+    const x = this.columnXFor(week);
+    const y = this.rowYFor(weekday);
+    const matches = (candidate: { date?: string } | undefined): boolean => candidate?.date === date;
+    if (this.annotations.some(matches)) {
+      ctx.lineWidth = RING_LINE_WIDTH;
+      ctx.strokeStyle = this.annotationColor(cs);
+      ctx.strokeRect(x + 0.5, y + 0.5, cellSize - 1, cellSize - 1);
+    }
+    if (matches(this.selectedCell ?? undefined)) {
+      ctx.lineWidth = RING_LINE_WIDTH;
+      ctx.strokeStyle = this.selectedColor(cs);
+      ctx.strokeRect(x + 0.5, y + 0.5, cellSize - 1, cellSize - 1);
+    }
+    if (this.focusedCell && 'week' in this.focusedCell && this.focusedCell.week === week && this.focusedCell.weekday === weekday) {
+      ctx.lineWidth = RING_LINE_WIDTH;
+      ctx.strokeStyle = this.focusRingColor(cs);
+      ctx.strokeRect(x + 0.5, y + 0.5, cellSize - 1, cellSize - 1);
+    }
+  }
+
+  private repaintCalendarFocusCell(pos: CalendarCellPos | null): void {
+    if (!pos || !this.canvas) return;
+    const { weekCount, firstWeekStart } = this.cachedCalendarGrid;
+    if (pos.week < 0 || pos.week >= weekCount || pos.weekday < 0 || pos.weekday >= 7) return;
+    const cellSize = this.calendarCellSize();
+    const x = this.columnXFor(pos.week);
+    const y = this.rowYFor(pos.weekday);
+    const ctx = this.canvas.getContext('2d');
+    if (!ctx) return;
+    ctx.clearRect(x - RING_LINE_WIDTH - 1, y - RING_LINE_WIDTH - 1, cellSize + 2 * (RING_LINE_WIDTH + 1), cellSize + 2 * (RING_LINE_WIDTH + 1));
+    const cs = getComputedStyle(this);
+    const ramp = this.colorRamp(normalizeBucketCount(this.bucketCount), cs).colors;
+    this.paintCalendarCell(ctx, pos.week, pos.weekday, cellSize, cs, ramp, this.noDataFill(cs));
+    this.paintCalendarFocusOverlays(ctx, pos.week, pos.weekday, cellSize, cs);
+    // The first calendar row sits close to the month-axis baseline; redraw the small axis labels
+    // after clearing a focus rectangle so a ring move cannot erase adjacent label pixels.
+    ctx.fillStyle = this.labelColor(cs);
+    ctx.font = this.labelFont(cs);
+    for (const month of this.cachedCalendarGrid.monthLabels) {
+      ctx.fillText(month.label, this.columnXFor(month.week), CAL_LABEL_H - 4);
+    }
+    const labels = this.weekdayLabels(firstWeekStart);
+    labels.forEach((label, weekday) => {
+      if (label) ctx.fillText(label, 2, this.rowYFor(weekday) + cellSize - 1);
+    });
   }
 
   private drawMatrix(): void {
@@ -1253,6 +1430,7 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
     this.colLabels.forEach((label, c) => {
       ctx.fillText(label, PAD_LEFT + c * cellSize + 2, PAD_TOP - 6);
     });
+    this.canvasHasContent = true;
   }
 
   /**

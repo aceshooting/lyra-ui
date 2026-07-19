@@ -401,6 +401,28 @@ it('reflects streaming and keeps the host busy through incremental renders until
   expect(el.hasAttribute('aria-busy')).to.be.false;
 });
 
+it('coalesces rapid streaming content updates to one parse per animation frame', async () => {
+  const el = (await fixture(html`<lr-markdown content="Initial"></lr-markdown>`)) as LyraMarkdown;
+  await waitUntil(() => !el.hasAttribute('aria-busy'));
+  type Internals = { renderMarkdown(): void; renderedHtml: string | null };
+  const internals = el as unknown as Internals;
+  let renders = 0;
+  const original = internals.renderMarkdown.bind(el);
+  internals.renderMarkdown = () => {
+    renders++;
+    original();
+  };
+
+  el.streaming = true;
+  await el.updateComplete;
+  renders = 0;
+  el.content = 'Chunk 1';
+  el.content = 'Chunk 2';
+  await el.updateComplete;
+  expect(renders).to.equal(1);
+  expect(internals.renderedHtml).to.contain('Chunk 2');
+});
+
 describe('fallback matrix', () => {
   it('falls back to plain text and fires lr-render-error when the marked peer is unavailable', async () => {
     const el = (await fixture(html`<lr-markdown content="# hi"></lr-markdown>`)) as LyraMarkdown;

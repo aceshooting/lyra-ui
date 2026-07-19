@@ -85,19 +85,21 @@ describe('static rendering', () => {
   });
 
   it('warns and leaves a stale user-authored child unslotted when its node-id matches no node', async () => {
+    const originalWarn = console.warn;
+    let warning: unknown[] | undefined;
+    console.warn = (...args: unknown[]) => {
+      warning = args;
+    };
     const el = (await fixture(
       html`<lr-flow-canvas><div node-id="ghost">Gone</div></lr-flow-canvas>`,
     )) as LyraFlowCanvas;
-    const warn = console.warn;
-    let warned = false;
-    console.warn = (...args: unknown[]) => {
-      warned = true;
-      void args;
-    };
-    el.nodes = nodes;
-    await el.updateComplete;
-    console.warn = warn;
-    expect(warned).to.be.true;
+    try {
+      el.nodes = nodes;
+      await el.updateComplete;
+    } finally {
+      console.warn = originalWarn;
+    }
+    expect(warning?.join(' ')).to.include('node-id="ghost"');
     expect(el.querySelector('[node-id="ghost"]')!.getAttribute('slot')).to.be.null;
   });
 

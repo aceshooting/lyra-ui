@@ -355,9 +355,10 @@ export class LyraMarkdownCore extends DocumentAnchorTarget(LyraMarkdownCoreBase)
   @property({ type: Boolean, attribute: 'eager-load' }) eagerLoad = false;
 
   /** Signals that `content` is still arriving incrementally. Content changes
-   *  continue to render immediately; while this is `true`, the host remains
-   *  `aria-busy="true"` so assistive technology knows the rendered document
-   *  is not final. Set it back to `false` with the final content update.
+   *  are coalesced to at most one parse per animation frame while this is
+   *  `true`; the host remains `aria-busy="true"` so assistive technology knows
+   *  the rendered document is not final. Set it back to `false` with the final
+   *  content update to flush the latest content immediately.
    *  Reflects so a consumer can also target `lr-markdown[streaming]`. */
   @property({ type: Boolean, reflect: true }) streaming = false;
 
@@ -455,6 +456,11 @@ export class LyraMarkdownCore extends DocumentAnchorTarget(LyraMarkdownCoreBase)
    *  race (an async grammar load resolving after a newer call already produced correct output). */
   private highlightToken = 0;
 
+  /** Coalesces rapid streaming content assignments so a token burst cannot start one full
+   *  Markdown parse per assignment. The final `streaming = false` update cancels this frame and
+   *  renders synchronously, so consumers never lose the last chunk. */
+  private streamingRenderRaf?: number;
+
   /** Keys from `PendingHighlight` that failed to highlight -- peer missing, language unrecognized,
    *  or tokenization threw. Once a key lands here, `code()` stops re-discovering it as pending on
    *  every future render. Without this, a permanently-unhighlightable block (e.g. an unrecognized
@@ -496,6 +502,10 @@ export class LyraMarkdownCore extends DocumentAnchorTarget(LyraMarkdownCoreBase)
 
   disconnectedCallback(): void {
     super.disconnectedCallback(); // reaches DocumentAnchorTarget's own cleanup (anchor retry, selection binding)
+    if (this.streamingRenderRaf !== undefined) {
+      cancelAnimationFrame(this.streamingRenderRaf);
+      this.streamingRenderRaf = undefined;
+    }
     this.highlightHandle?.release();
     this.highlightHandle = undefined;
   }
@@ -536,8 +546,30 @@ export class LyraMarkdownCore extends DocumentAnchorTarget(LyraMarkdownCoreBase)
       changed.has('headingAnchors') ||
       changed.has('math')
     ) {
-      this.renderMarkdown();
+      if (this.streaming && changed.has('content')) this.scheduleStreamingRender();
+      else {
+        if (this.streamingRenderRaf !== undefined) {
+          cancelAnimationFrame(this.streamingRenderRaf);
+          this.streamingRenderRaf = undefined;
+        }
+        this.renderMarkdown();
+      }
     }
+  }
+
+  private scheduleStreamingRender(): void {
+    if (this.streamingRenderRaf !== undefined) return;
+    this.streamingRenderRaf = requestAnimationFrame(() => {
+      this.streamingRenderRaf = undefined;
+      if (this.isConnected) this.renderMarkdown();
+    });
+  }
+
+  protected async getUpdateComplete(): Promise<boolean> {
+    const complete = await super.getUpdateComplete();
+    if (this.streamingRenderRaf === undefined) return complete;
+    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+    return super.getUpdateComplete();
   }
 
   protected updated(changed: PropertyValues): void {

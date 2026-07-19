@@ -74,7 +74,9 @@ describe('resolveTree (security-critical allowlist enforcement)', () => {
   });
 
   it('never has an innerHTML/unsafeHTML code path -- structural guarantee via source inspection', async () => {
-    const source = await (await fetch(new URL('./resolve.js', import.meta.url))).text();
+    const response = await fetch(new URL('./resolve.ts', import.meta.url));
+    expect(response.ok).to.be.true;
+    const source = await response.text();
     expect(source).to.not.include('innerHTML');
     expect(source).to.not.include('unsafeHTML');
   });

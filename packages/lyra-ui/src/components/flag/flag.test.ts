@@ -4,6 +4,10 @@ import './flag-peer.js';
 import { loadFlagUrl, __setFlagUrlResolverForTesting } from './flag.js';
 import type { LyraFlag } from './flag.js';
 
+const TEST_FLAG_SRC = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg"%3E%3C/svg%3E';
+const TEST_FLAG_SRC_REPLACEMENT =
+  'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg"%3E%3Ccircle cx="1" cy="1" r="1"%3E%3C/circle%3E%3C/svg%3E';
+
 async function img(el: LyraFlag): Promise<HTMLImageElement> {
   // Resolving a flag now involves two sequential dynamic imports on a cold start (the
   // `@aceshooting/lyra-flags` peer package, then that specific code's own lazy loader module —
@@ -176,7 +180,7 @@ it('honors a custom label for accessibility', async () => {
 
 it('derives region names with the inherited effective locale', async () => {
   const wrapper = await fixture(html`
-    <div lang="fr"><lr-flag src="/de.svg" country="de"></lr-flag></div>
+    <div lang="fr"><lr-flag src=${TEST_FLAG_SRC} country="de"></lr-flag></div>
   `);
   const el = wrapper.querySelector('lr-flag') as LyraFlag;
   const expected = new Intl.DisplayNames(['fr'], { type: 'region' }).of('DE');
@@ -191,7 +195,7 @@ it('derives region names with the inherited effective locale', async () => {
 
 it('prefers a host aria-label over label and the derived region name', async () => {
   const el = (await fixture(html`
-    <lr-flag src="/fr.svg" country="fr" label="France" aria-label="French flag"></lr-flag>
+    <lr-flag src=${TEST_FLAG_SRC} country="fr" label="France" aria-label="French flag"></lr-flag>
   `)) as LyraFlag;
   expect(el.shadowRoot!.querySelector('img')!.getAttribute('alt')).to.equal('French flag');
 });
@@ -199,7 +203,7 @@ it('prefers a host aria-label over label and the derived region name', async () 
 it('exposes themeable aspect-ratio and object-fit custom properties', async () => {
   const el = (await fixture(html`
     <lr-flag
-      src="/fr.svg"
+      src=${TEST_FLAG_SRC}
       label="France"
       style="--lr-flag-aspect-ratio: 2 / 1; --lr-flag-object-fit: contain"
     ></lr-flag>
@@ -217,20 +221,20 @@ it('renders nothing for unknown input', async () => {
 describe('src (pre-resolved URL, bypasses the peer-package lookup)', () => {
   it('renders immediately with no loading state, ignoring country/language', async () => {
     const el = (await fixture(
-      html`<lr-flag src="/custom/flag.svg" country="fr" label="Custom"></lr-flag>`,
+      html`<lr-flag src=${TEST_FLAG_SRC} country="fr" label="Custom"></lr-flag>`,
     )) as LyraFlag;
     // No `await img(el)`/`waitUntil` needed: src bypasses the async peer-package
     // round trip entirely, so the <img> is present on the very first render.
     expect(el.hasAttribute('aria-busy')).to.be.false;
     const image = el.shadowRoot!.querySelector('img');
     expect(image).to.exist;
-    expect(image!.getAttribute('src')).to.equal('/custom/flag.svg');
+    expect(image!.getAttribute('src')).to.equal(TEST_FLAG_SRC);
     expect(image!.getAttribute('alt')).to.equal('Custom');
   });
 
   it('falls back to country/language resolution once src is cleared', async () => {
-    const el = (await fixture(html`<lr-flag src="/custom/flag.svg" country="fr"></lr-flag>`)) as LyraFlag;
-    expect(el.shadowRoot!.querySelector('img')!.getAttribute('src')).to.equal('/custom/flag.svg');
+    const el = (await fixture(html`<lr-flag src=${TEST_FLAG_SRC} country="fr"></lr-flag>`)) as LyraFlag;
+    expect(el.shadowRoot!.querySelector('img')!.getAttribute('src')).to.equal(TEST_FLAG_SRC);
 
     el.src = undefined;
     await el.updateComplete;
@@ -241,11 +245,11 @@ describe('src (pre-resolved URL, bypasses the peer-package lookup)', () => {
   });
 
   it('switching src to a new value updates the image with no loading flash', async () => {
-    const el = (await fixture(html`<lr-flag src="/a.svg" label="A"></lr-flag>`)) as LyraFlag;
-    el.src = '/b.svg';
+    const el = (await fixture(html`<lr-flag src=${TEST_FLAG_SRC} label="A"></lr-flag>`)) as LyraFlag;
+    el.src = TEST_FLAG_SRC_REPLACEMENT;
     await el.updateComplete;
     expect(el.hasAttribute('aria-busy')).to.be.false;
-    expect(el.shadowRoot!.querySelector('img')!.getAttribute('src')).to.equal('/b.svg');
+    expect(el.shadowRoot!.querySelector('img')!.getAttribute('src')).to.equal(TEST_FLAG_SRC_REPLACEMENT);
   });
 });
 

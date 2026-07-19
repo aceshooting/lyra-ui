@@ -112,19 +112,21 @@ describe('default cell composition', () => {
   });
 
   it('warns and leaves a stale user-authored child unslotted when its cell-id matches no layout entry', async () => {
+    const originalWarn = console.warn;
+    let warning: unknown[] | undefined;
+    console.warn = (...args: unknown[]) => {
+      warning = args;
+    };
     const el = (await fixture(
       html`<lr-dashboard-grid><div cell-id="ghost">Gone</div></lr-dashboard-grid>`,
     )) as LyraDashboardGrid;
-    const warn = console.warn;
-    let warned = false;
-    console.warn = (...args: unknown[]) => {
-      warned = true;
-      void args;
-    };
-    el.layout = twoCells();
-    await el.updateComplete;
-    console.warn = warn;
-    expect(warned).to.be.true;
+    try {
+      el.layout = twoCells();
+      await el.updateComplete;
+    } finally {
+      console.warn = originalWarn;
+    }
+    expect(warning?.join(' ')).to.include('cell-id="ghost"');
     expect(el.querySelector('[cell-id="ghost"]')!.getAttribute('slot')).to.be.null;
   });
 

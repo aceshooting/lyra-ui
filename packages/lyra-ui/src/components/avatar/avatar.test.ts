@@ -2,6 +2,8 @@ import { fixture, expect, html, aTimeout, oneEvent } from '@open-wc/testing';
 import './avatar.js';
 import type { LyraAvatar } from './avatar.js';
 
+const TEST_IMAGE_SRC = 'data:image/gif;base64,R0lGODlhAQABAAAAACw=';
+
 describe('lr-avatar', () => {
   it('renders initials by default', async () => {
     const el = (await fixture(html`<lr-avatar initials="AB"></lr-avatar>`)) as LyraAvatar;
@@ -30,7 +32,7 @@ describe('lr-avatar', () => {
 
   it('tries a new image after a previous src failed', async () => {
     const el = (await fixture(
-      html`<lr-avatar initials="AB" src="broken.png" alt="A. Bee"></lr-avatar>`,
+      html`<lr-avatar initials="AB" src=${TEST_IMAGE_SRC} alt="A. Bee"></lr-avatar>`,
     )) as LyraAvatar;
     (el.shadowRoot!.querySelector('img') as HTMLImageElement).dispatchEvent(new Event('error'));
     await el.updateComplete;

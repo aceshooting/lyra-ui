@@ -4,6 +4,9 @@ export const styles = css`
   :host {
     display: block;
     inline-size: 100%;
+    --lr-emoji-picker-item-size: var(--lr-icon-button-size);
+    --lr-emoji-picker-gap: var(--lr-space-2xs);
+    --lr-emoji-picker-row-height: calc(var(--lr-emoji-picker-item-size) + var(--lr-space-l));
   }
   [part='base'] {
     display: flex;
@@ -33,6 +36,27 @@ export const styles = css`
     max-block-size: var(--lr-size-16rem);
     overflow-y: auto;
   }
+  [part='grid'] {
+    scrollbar-gutter: stable;
+  }
+  [part='virtual-spacer'] {
+    position: relative;
+    min-block-size: 100%;
+  }
+  [part='virtual-row'] {
+    position: absolute;
+    inset-inline: 0;
+    inset-block-start: 0;
+    min-block-size: var(--lr-emoji-picker-row-height);
+  }
+  [part='virtual-items'] {
+    display: flex;
+    gap: var(--lr-emoji-picker-gap);
+    min-block-size: var(--lr-emoji-picker-item-size);
+  }
+  [part='virtual-label'] {
+    block-size: var(--lr-space-l);
+  }
   [part='group-label'] {
     flex-basis: 100%;
     padding-block: var(--lr-space-2xs);
@@ -47,8 +71,8 @@ export const styles = css`
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    inline-size: var(--lr-size-2rem);
-    block-size: var(--lr-size-2rem);
+    inline-size: var(--lr-emoji-picker-item-size);
+    block-size: var(--lr-emoji-picker-item-size);
     min-inline-size: var(--lr-icon-button-size);
     min-block-size: var(--lr-icon-button-size);
     border: none;

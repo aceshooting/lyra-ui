@@ -12,6 +12,47 @@ const FEATURE_COLLECTION = {
   ],
 };
 
+const EMPTY_MAP_STYLE = { version: 8, sources: {}, layers: [] };
+const OriginalIntersectionObserver = window.IntersectionObserver;
+const testObservers = new WeakMap<Element, TestIntersectionObserver>();
+
+class TestIntersectionObserver {
+  constructor(private readonly callback: IntersectionObserverCallback) {}
+
+  observe(target: Element): void {
+    testObservers.set(target, this);
+  }
+
+  unobserve(): void {}
+  disconnect(): void {}
+  takeRecords(): IntersectionObserverEntry[] { return []; }
+
+  reveal(target: Element): void {
+    this.callback([{ target, isIntersecting: true } as IntersectionObserverEntry], this as unknown as IntersectionObserver);
+  }
+}
+
+beforeEach(() => {
+  (window as unknown as { IntersectionObserver: typeof IntersectionObserver }).IntersectionObserver =
+    TestIntersectionObserver as unknown as typeof IntersectionObserver;
+});
+
+afterEach(() => {
+  (window as unknown as { IntersectionObserver: typeof IntersectionObserver }).IntersectionObserver = OriginalIntersectionObserver;
+});
+
+async function useDeterministicMapStyle(el: LyraGeojsonView): Promise<void> {
+  const map = el.shadowRoot!.querySelector('lr-map') as HTMLElement & {
+    mapStyle: unknown;
+    map?: unknown;
+  } | null;
+  if (!map) return;
+  map.mapStyle = EMPTY_MAP_STYLE;
+  await (map as unknown as { updateComplete: Promise<unknown> }).updateComplete;
+  testObservers.get(map)?.reveal(map);
+  await waitUntil(() => map.map != null, 'map never initialized with the deterministic test style', { timeout: 2000 });
+}
+
 function stubFetch(body: unknown, ok = true): void {
   (globalThis as { fetch: typeof fetch }).fetch = (() =>
     Promise.resolve(new Response(JSON.stringify(body), { status: ok ? 200 : 500 }))) as typeof fetch;
@@ -30,6 +71,7 @@ describe('fetching and parsing', () => {
       'geojson-view never reached the loaded state',
       { timeout: 2000 },
     );
+    await useDeterministicMapStyle(el);
     const status = el.shadowRoot!.querySelector('[role="status"]');
     expect(status).to.exist;
     expect(status!.textContent).to.include('2');
@@ -85,6 +127,7 @@ describe('accessibility', () => {
       'geojson-view never reached the loaded state',
       { timeout: 2000 },
     );
+    await useDeterministicMapStyle(el);
     await expect(el).to.be.accessible();
   });
 });

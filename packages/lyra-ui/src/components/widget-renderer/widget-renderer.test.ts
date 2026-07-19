@@ -5,6 +5,18 @@ import { registerDefaultWidgetTypes } from './default-registry.js';
 import type { LyraWidgetRenderer } from './widget-renderer.js';
 import type { WidgetNode } from './resolve.js';
 
+async function captureWarnings(work: () => Promise<void>): Promise<string[]> {
+  const originalWarn = console.warn;
+  const warnings: string[] = [];
+  console.warn = (...args: unknown[]) => warnings.push(args.map(String).join(' '));
+  try {
+    await work();
+  } finally {
+    console.warn = originalWarn;
+  }
+  return warnings;
+}
+
 describe('lr-widget-renderer', () => {
   beforeEach(() => {
     clearWidgetTypes();
@@ -36,22 +48,28 @@ describe('lr-widget-renderer', () => {
 
   it('SECURITY: an unknown/disallowed type is silently skipped -- never rendered, never in the DOM', async () => {
     const el = (await fixture(html`<lr-widget-renderer></lr-widget-renderer>`)) as LyraWidgetRenderer;
-    el.tree = {
-      type: 'row',
-      children: [
-        { type: 'evil-widget', props: { onclick: 'alert(1)' } },
-        { type: 'stat', props: { label: 'ok', value: '1' } },
-      ],
-    };
-    await el.updateComplete;
+    const warnings = await captureWarnings(async () => {
+      el.tree = {
+        type: 'row',
+        children: [
+          { type: 'evil-widget', props: { onclick: 'alert(1)' } },
+          { type: 'stat', props: { label: 'ok', value: '1' } },
+        ],
+      };
+      await el.updateComplete;
+    });
+    expect(warnings.join('\n')).to.include('evil-widget');
     expect(el.shadowRoot!.innerHTML).to.not.include('evil-widget');
     expect(el.shadowRoot!.querySelectorAll('lr-stat').length).to.equal(1);
   });
 
   it('SECURITY: a disallowed prop is never assigned to the underlying element', async () => {
     const el = (await fixture(html`<lr-widget-renderer></lr-widget-renderer>`)) as LyraWidgetRenderer;
-    el.tree = { type: 'card', props: { appearance: 'outlined', href: 'https://evil.example/' } };
-    await el.updateComplete;
+    const warnings = await captureWarnings(async () => {
+      el.tree = { type: 'card', props: { appearance: 'outlined', href: 'https://evil.example/' } };
+      await el.updateComplete;
+    });
+    expect(warnings.join('\n')).to.include('href');
     const card = el.shadowRoot!.querySelector('lr-card') as HTMLElement & { href?: string; appearance: string };
     expect(card.appearance).to.equal('outlined');
     expect(card.href).to.be.undefined; // 'href' is not in card's allowlist -- never assigned
@@ -70,10 +88,13 @@ describe('lr-widget-renderer', () => {
 
   it('emits lr-render-error for a structurally unusable non-null tree', async () => {
     const el = (await fixture(html`<lr-widget-renderer></lr-widget-renderer>`)) as LyraWidgetRenderer;
-    const listener = oneEvent(el, 'lr-render-error');
-    el.tree = { type: 'totally-unknown-root-type' };
-    await el.updateComplete;
-    await listener;
+    const warnings = await captureWarnings(async () => {
+      const listener = oneEvent(el, 'lr-render-error');
+      el.tree = { type: 'totally-unknown-root-type' };
+      await el.updateComplete;
+      await listener;
+    });
+    expect(warnings.join('\n')).to.include('totally-unknown-root-type');
   });
 
   it('reconciles a streamed update in place: the same mapped element instance survives a re-resolve', async () => {

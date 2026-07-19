@@ -7,6 +7,15 @@ import { nextId } from '../../internal/a11y.js';
 import { styles } from './emoji-picker.styles.js';
 import { loadEmojiDataCached } from './emoji-data-loader.js';
 
+const VIRTUALIZE_AT = 200;
+const VIRTUAL_ROW_HEIGHT_FALLBACK = 64;
+const MAX_VIRTUAL_COLUMNS = 20;
+
+interface VirtualEmojiRow {
+  label?: string;
+  items: Array<{ item: EmojiPickerItem; index: number }>;
+}
+
 export interface EmojiPickerItem {
   emoji: string;
   /** Accessible/searchable name (e.g. 'grinning face'). Used for the picked button's `aria-label`
@@ -46,7 +55,8 @@ class EmojiPickerBase extends LyraElement<LyraEmojiPickerEventMap> {}
  * under RTL; Up/Down move by one visual row, measured from the live wrap layout), Home/End jump to
  * the first/last option, and Enter/Space picks. The search input doubles as a `role="combobox"`
  * over the same listbox: the arrow keys and Enter also work there while focus stays in the input,
- * with `aria-activedescendant` tracking the active option.
+ * with `aria-activedescendant` tracking the active option. Large data sets automatically window
+ * their visible rows so scrolling does not create one button per supplied emoji in the DOM.
  *
  * @customElement lr-emoji-picker
  * @event lr-change - An emoji was picked. `detail: { emoji: string }`.
@@ -97,6 +107,14 @@ export class LyraEmojiPicker extends FormAssociated(EmojiPickerBase) {
   // whenever a real re-render (a query/groups change) happens.
   private activeIndex = 0;
 
+  /** The large-data path keeps only visible rows in the DOM. The regular path remains unchanged
+   * for small sets so consumers keep the simple grouped light-DOM shape they already receive. */
+  private virtualScrollTop = 0;
+  private virtualScrollRaf?: number;
+  private observedGrid?: HTMLElement;
+  private observedGridVirtualized = false;
+  private gridResizeObserver?: ResizeObserver;
+
   @query('[part="search"]') private searchEl?: HTMLInputElement;
 
   private readonly gridId = nextId('emoji-picker-grid');
@@ -131,6 +149,34 @@ export class LyraEmojiPicker extends FormAssociated(EmojiPickerBase) {
     return this.filteredGroups.flatMap((group) => group.emojis);
   }
 
+  private get isVirtualized(): boolean {
+    return this.flatItems.length >= VIRTUALIZE_AT;
+  }
+
+  private cssPixelValue(name: string, fallback: number): number {
+    const value = Number.parseFloat(getComputedStyle(this).getPropertyValue(name));
+    return Number.isFinite(value) && value > 0 ? value : fallback;
+  }
+
+  private virtualRowHeight(): number {
+    return this.cssPixelValue('--lr-emoji-picker-row-height', VIRTUAL_ROW_HEIGHT_FALLBACK);
+  }
+
+  private virtualRows(): VirtualEmojiRow[] {
+    const columns = this.columnsPerRow();
+    let index = 0;
+    const rows: VirtualEmojiRow[] = [];
+    for (const group of this.filteredGroups) {
+      for (let offset = 0; offset < group.emojis.length; offset += columns) {
+        rows.push({
+          label: offset === 0 ? group.label : undefined,
+          items: group.emojis.slice(offset, offset + columns).map((item) => ({ item, index: index++ })),
+        });
+      }
+    }
+    return rows;
+  }
+
   private optionButtons(): HTMLButtonElement[] {
     return [...this.renderRoot.querySelectorAll<HTMLButtonElement>('[part="emoji"]')];
   }
@@ -138,6 +184,13 @@ export class LyraEmojiPicker extends FormAssociated(EmojiPickerBase) {
   /** Options in the first rendered row. Measured from live layout at call time because the
    *  flex-wrap column count is fluid (container width, emoji font metrics). */
   private columnsPerRow(): number {
+    if (this.isVirtualized) {
+      const grid = this.renderRoot.querySelector<HTMLElement>('[part="grid"]');
+      const width = grid?.clientWidth ?? 0;
+      const itemSize = this.cssPixelValue('--lr-emoji-picker-item-size', 40);
+      const gap = this.cssPixelValue('--lr-emoji-picker-gap', 4);
+      return Math.min(MAX_VIRTUAL_COLUMNS, Math.max(1, Math.floor((Math.max(width, itemSize) + gap) / (itemSize + gap))));
+    }
     const buttons = this.optionButtons();
     if (buttons.length === 0) return 1;
     const firstTop = buttons[0].offsetTop;
@@ -155,21 +208,36 @@ export class LyraEmojiPicker extends FormAssociated(EmojiPickerBase) {
    *  in the input). */
   private setActiveIndex(next: number, focusTarget: boolean): void {
     const buttons = this.optionButtons();
-    if (buttons.length === 0) return;
-    this.activeIndex = Math.max(0, Math.min(next, buttons.length - 1));
-    const target = buttons[this.activeIndex];
+    if (buttons.length === 0 && !this.isVirtualized) return;
+    this.activeIndex = Math.max(0, Math.min(next, this.flatItems.length - 1));
+    const target = this.isVirtualized
+      ? this.renderRoot.querySelector<HTMLButtonElement>(
+          `[part="emoji"][data-index="${this.activeIndex}"]`,
+        )
+      : buttons[this.activeIndex];
     const previous = this.renderRoot.querySelector<HTMLButtonElement>('[part="emoji"][data-active]');
     if (previous && previous !== target) {
       previous.tabIndex = -1;
       previous.setAttribute('aria-selected', 'false');
       previous.removeAttribute('data-active');
     }
-    target.tabIndex = 0;
-    target.setAttribute('aria-selected', 'true');
-    target.setAttribute('data-active', '');
-    this.searchEl?.setAttribute('aria-activedescendant', target.id);
-    target.scrollIntoView({ block: 'nearest' });
-    if (focusTarget) target.focus();
+    if (target) {
+      target.tabIndex = 0;
+      target.setAttribute('aria-selected', 'true');
+      target.setAttribute('data-active', '');
+      this.searchEl?.setAttribute('aria-activedescendant', target.id);
+      target.scrollIntoView({ block: 'nearest' });
+    } else if (this.isVirtualized) {
+      this.searchEl?.setAttribute('aria-activedescendant', `${this.gridId}-item-${this.activeIndex}`);
+      const rowIndex = this.virtualRows().findIndex((row) => row.items.some(({ index }) => index === this.activeIndex));
+      const grid = this.renderRoot.querySelector<HTMLElement>('[part="grid"]');
+      if (rowIndex >= 0 && grid) {
+        grid.scrollTop = rowIndex * this.virtualRowHeight();
+        this.virtualScrollTop = grid.scrollTop;
+        this.requestUpdate();
+      }
+    }
+    if (focusTarget) target?.focus();
   }
 
   private onSearchInput = (event: Event): void => {
@@ -220,11 +288,38 @@ export class LyraEmojiPicker extends FormAssociated(EmojiPickerBase) {
   private onGridFocusIn = (event: FocusEvent): void => {
     const button = event.target;
     if (!(button instanceof HTMLButtonElement)) return;
-    const index = this.optionButtons().indexOf(button);
+    const indexed = Number(button.dataset.index);
+    const index = Number.isInteger(indexed) ? indexed : this.optionButtons().indexOf(button);
     if (index >= 0 && index !== this.activeIndex) this.setActiveIndex(index, false);
   };
 
+  private onGridScroll = (event: Event): void => {
+    if (!this.isVirtualized) return;
+    const grid = event.currentTarget as HTMLElement;
+    this.virtualScrollTop = grid.scrollTop;
+    if (this.virtualScrollRaf !== undefined) return;
+    this.virtualScrollRaf = requestAnimationFrame(() => {
+      this.virtualScrollRaf = undefined;
+      if (this.isConnected) this.requestUpdate();
+    });
+  };
+
+  private syncGridObserver(): void {
+    const grid = this.renderRoot.querySelector<HTMLElement>('[part="grid"]');
+    const virtualized = this.isVirtualized;
+    if (grid === this.observedGrid && virtualized === this.observedGridVirtualized) return;
+    this.observedGrid?.removeEventListener('scroll', this.onGridScroll);
+    this.gridResizeObserver?.disconnect();
+    this.observedGrid = grid ?? undefined;
+    this.observedGridVirtualized = virtualized;
+    if (!grid || !virtualized) return;
+    grid.addEventListener('scroll', this.onGridScroll, { passive: true });
+    this.gridResizeObserver = new ResizeObserver(() => this.requestUpdate());
+    this.gridResizeObserver.observe(grid);
+  }
+
   protected updated(changed: PropertyValues): void {
+    this.syncGridObserver();
     if (!changed.has('queryText') && !changed.has('groups')) return;
     const buttons = this.optionButtons();
     if (buttons.length === 0) {
@@ -232,10 +327,66 @@ export class LyraEmojiPicker extends FormAssociated(EmojiPickerBase) {
       this.searchEl?.removeAttribute('aria-activedescendant');
       return;
     }
-    if (this.activeIndex >= buttons.length) this.activeIndex = 0;
+    if (!this.isVirtualized && this.activeIndex >= buttons.length) this.activeIndex = 0;
     // The grid just re-rendered: re-assert the active option's imperative state (tabindex,
     // aria-selected, aria-activedescendant) against the fresh DOM and keep it scrolled into view.
     this.setActiveIndex(this.activeIndex, false);
+  }
+
+  disconnectedCallback(): void {
+    super.disconnectedCallback();
+    this.observedGrid?.removeEventListener('scroll', this.onGridScroll);
+    this.gridResizeObserver?.disconnect();
+    this.gridResizeObserver = undefined;
+    this.observedGrid = undefined;
+    this.observedGridVirtualized = false;
+    if (this.virtualScrollRaf !== undefined) {
+      cancelAnimationFrame(this.virtualScrollRaf);
+      this.virtualScrollRaf = undefined;
+    }
+  }
+
+  private renderEmojiButton(item: EmojiPickerItem, itemIndex: number, total: number): TemplateResult {
+    return html`<button
+      type="button"
+      part="emoji"
+      id=${`${this.gridId}-item-${itemIndex}`}
+      data-index=${itemIndex}
+      role="option"
+      tabindex=${live(itemIndex === this.activeIndex ? '0' : '-1')}
+      aria-selected=${live(itemIndex === this.activeIndex ? 'true' : 'false')}
+      aria-setsize=${total}
+      aria-posinset=${itemIndex + 1}
+      aria-label=${item.name}
+      ?data-active=${live(itemIndex === this.activeIndex)}
+      @click=${() => this.pick(item)}
+      @focusin=${this.onGridFocusIn}
+      @mouseenter=${() => this.setActiveIndex(itemIndex, false)}
+    >${item.emoji}</button>`;
+  }
+
+  private renderVirtualRows(): TemplateResult {
+    const rows = this.virtualRows();
+    const rowHeight = this.virtualRowHeight();
+    const grid = this.renderRoot.querySelector<HTMLElement>('[part="grid"]');
+    const viewportHeight = grid?.clientHeight || 256;
+    const start = Math.max(0, Math.floor(this.virtualScrollTop / rowHeight) - 3);
+    const end = Math.min(rows.length, Math.ceil((this.virtualScrollTop + viewportHeight) / rowHeight) + 3);
+    const total = this.flatItems.length;
+    return html`
+      <div part="virtual-spacer" style=${`block-size: ${rows.length * rowHeight}px`}>
+        ${rows.slice(start, end).map(
+          (row, offset) => html`
+            <div part="virtual-row" style=${`transform: translateY(${(start + offset) * rowHeight}px)`}>
+              ${row.label ? html`<div part="group-label">${row.label}</div>` : html`<div part="virtual-label" aria-hidden="true"></div>`}
+              <div part="virtual-items">
+                ${row.items.map(({ item, index }) => this.renderEmojiButton(item, index, total))}
+              </div>
+            </div>
+          `,
+        )}
+      </div>
+    `;
   }
 
   render(): TemplateResult {
@@ -265,24 +416,14 @@ export class LyraEmojiPicker extends FormAssociated(EmojiPickerBase) {
         >
           ${items.length === 0
             ? html`<div part="empty">${this.localize('emojiPickerEmpty')}</div>`
-            : this.filteredGroups.map(
+            : this.isVirtualized
+              ? this.renderVirtualRows()
+              : this.filteredGroups.map(
                 (group) => html`
                   <div part="group-label">${group.label}</div>
                   ${group.emojis.map((item) => {
                     index++;
-                    const itemIndex = index;
-                    return html`<button
-                      type="button"
-                      part="emoji"
-                      id=${`${this.gridId}-item-${itemIndex}`}
-                      role="option"
-                      tabindex=${live(itemIndex === this.activeIndex ? '0' : '-1')}
-                      aria-selected=${live(itemIndex === this.activeIndex ? 'true' : 'false')}
-                      aria-label=${item.name}
-                      ?data-active=${live(itemIndex === this.activeIndex)}
-                      @click=${() => this.pick(item)}
-                      @mouseenter=${() => this.setActiveIndex(itemIndex, false)}
-                    >${item.emoji}</button>`;
+                    return this.renderEmojiButton(item, index, items.length);
                   })}
                 `,
               )}
