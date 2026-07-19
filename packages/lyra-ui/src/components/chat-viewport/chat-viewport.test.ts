@@ -18,11 +18,12 @@ function row(text: string, heightPx = 40) {
   return html`<div style="block-size:${heightPx}px;box-sizing:border-box;">${text}</div>`;
 }
 
-it('defaults to follow=true, bottomThreshold=24, unreadStartIndex=null', async () => {
+it('defaults to follow=true, bottomThreshold=24, unreadStartIndex=null, and live=off', async () => {
   const el = (await fixture(html`<lr-chat-viewport></lr-chat-viewport>`)) as LyraChatViewport;
   expect(el.follow).to.be.true;
   expect(el.bottomThreshold).to.equal(24);
   expect(el.unreadStartIndex).to.equal(null);
+  expect(el.live).to.equal('off');
 });
 
 it('is role="log" with aria-live="off" and tabindex="0", labeled by the default or a custom label', async () => {
@@ -39,6 +40,23 @@ it('is role="log" with aria-live="off" and tabindex="0", labeled by the default 
   expect(labeled.shadowRoot!.querySelector('[part="scroll"]')!.getAttribute('aria-label')).to.equal(
     'Support thread',
   );
+});
+
+it('forwards the live announcement policy to the internal log and reacts to property changes', async () => {
+  const polite = (await fixture(
+    html`<lr-chat-viewport live="polite"></lr-chat-viewport>`,
+  )) as LyraChatViewport;
+  const log = polite.shadowRoot!.querySelector('[role="log"]')!;
+  expect(polite.live).to.equal('polite');
+  expect(log.getAttribute('aria-live')).to.equal('polite');
+
+  polite.live = 'assertive';
+  await polite.updateComplete;
+  expect(log.getAttribute('aria-live')).to.equal('assertive');
+
+  polite.live = 'off';
+  await polite.updateComplete;
+  expect(log.getAttribute('aria-live')).to.equal('off');
 });
 
 it('forwards a host aria-label to the role="log" element, winning over the label property', async () => {

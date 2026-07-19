@@ -11171,14 +11171,19 @@ content growth re-scrolls to the end; release happens only on a user-intent gest
 touchmove, scrollbar-drag, or PageUp/ArrowUp/Home while the log region has focus) that leaves the
 view more than `bottomThreshold` from the end — a scroll caused by this component's own programmatic
 scrolling, or by a layout shift, never releases it. Reaching the bottom again by any means re-engages
-`follow`.
+`follow`. The internal log defaults to `live="off"`, which avoids announcing every streaming token;
+consumers that append complete messages at an announcement-safe cadence can opt into `polite` or
+`assertive`.
 
 **Properties:** `follow: boolean = true` (reflected) — component-managed stick-to-bottom state,
 host-writable: setting `true` scrolls to the end and re-engages following, setting `false` releases
 it. `bottomThreshold: number = 24` (attribute `bottom-threshold`) — px distance from the end still
 counted as "at bottom." `unreadStartIndex: number | null = null` (attribute `unread-start-index`) —
 index of the first unread item (element-child index in slotted mode, `items` index in virtual mode);
-`null` disables both the divider and the pill's unread count. `label: string = ''` — accessible name
+`null` disables both the divider and the pill's unread count. `live: 'off' | 'polite' | 'assertive' =
+'off'` (reflected) — live-region policy forwarded to the internal `role="log"`; keep `off` for
+token-by-token streaming and opt in only when messages are committed at an announcement-safe cadence.
+`label: string = ''` — accessible name
 for the log region, defaults to the localized `chatViewportLabel`. `accessibleLabel: string | null =
 null` (attribute `aria-label`) — host `aria-label`, forwarded to the internal `role="log"` element
 (an `aria-label` left on the host itself names nothing, since the log role lives inside the shadow

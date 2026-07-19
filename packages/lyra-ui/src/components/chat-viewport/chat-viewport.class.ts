@@ -8,6 +8,8 @@ import { LyraVirtualList, type VirtualListRange } from '../virtual-list/virtual-
 import { styles } from './chat-viewport.styles.js';
 import { getPluralRules } from '../../internal/intl-cache.js';
 
+export type ChatViewportLive = 'off' | 'polite' | 'assertive';
+
 export interface LyraChatViewportEventMap {
   'lr-follow-change': CustomEvent<{ following: boolean }>;
 }
@@ -26,6 +28,8 @@ export interface LyraChatViewportEventMap {
  * PageUp/ArrowUp/Home while the log region has focus) that leaves the view more than
  * `bottomThreshold` from the end -- a scroll caused by this component's own programmatic scrolling,
  * or by a layout shift, never releases it. Reaching the bottom again by any means re-engages `follow`.
+ * The internal log defaults to `live="off"`, which avoids announcing every streaming token. Consumers
+ * that append complete messages at an announcement-safe cadence can opt into `polite` or `assertive`.
  *
  * **`scrollToUnread()` in virtual mode.** The target row is scrolled with `align: 'start'` so the
  * divider boundary lands at the top of the view with the unread content visible below it -- the
@@ -62,6 +66,11 @@ export class LyraChatViewport extends LyraElement<LyraChatViewportEventMap> {
   /** Component-managed stick-to-bottom state, host-writable. Setting `true` scrolls to the end and
    *  re-engages following; setting `false` releases it. */
   @property({ type: Boolean, reflect: true }) follow = true;
+
+  /** Live-region policy forwarded to the internal `role="log"`. Keep `off` for token-by-token
+   * streaming; use `polite` or `assertive` only when messages are appended at an announcement-safe
+   * cadence. */
+  @property({ reflect: true }) live: ChatViewportLive = 'off';
 
   /** Px distance from the end still counted as "at bottom." */
   @property({ type: Number, attribute: 'bottom-threshold' }) bottomThreshold = 24;
@@ -487,7 +496,7 @@ export class LyraChatViewport extends LyraElement<LyraChatViewportEventMap> {
         <div
           part="scroll"
           role="log"
-          aria-live="off"
+          aria-live=${this.live}
           aria-label=${label}
           tabindex="0"
           @scroll=${this.onScroll}

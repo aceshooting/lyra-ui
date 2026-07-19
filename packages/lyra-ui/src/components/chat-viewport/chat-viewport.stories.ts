@@ -39,6 +39,17 @@ export const SlottedMode: Story = {
   `,
 };
 
+export const PoliteAnnouncements: Story = {
+  render: () => html`
+    <div style="block-size:220px;border:1px solid var(--lr-color-border);">
+      <lr-chat-viewport live="polite">
+        ${bubble('Messages added here are announced politely once complete.')}
+        ${bubble('Leave live="off" for token-by-token streaming content.')}
+      </lr-chat-viewport>
+    </div>
+  `,
+};
+
 export const WithUnreadDivider: Story = {
   render: () => html`
     <div style="block-size:200px;border:1px solid var(--lr-color-border);">
