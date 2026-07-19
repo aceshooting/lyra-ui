@@ -19,6 +19,7 @@ describe('OrientationBreakpointController', () => {
   it('is inert until configured', async () => {
     const c = new OrientationBreakpointController(await makeHost(), () => {});
     expect(c.resolved).to.equal(undefined);
+    expect(c.active).to.be.false;
     expect(c.containerObservationEnabled).to.be.false;
     expect(c.isBelow(0)).to.be.false;
   });
@@ -27,6 +28,7 @@ describe('OrientationBreakpointController', () => {
     const c = new OrientationBreakpointController(await makeHost(), () => {});
     c.configure(500, 'container');
     expect(c.resolved).to.equal(500);
+    expect(c.active).to.be.true;
     expect(c.containerObservationEnabled).to.be.true;
     expect(c.isBelow(499)).to.be.true;
     expect(c.isBelow(500), 'strict <, so equal is NOT below').to.be.false;
@@ -50,6 +52,7 @@ describe('OrientationBreakpointController', () => {
     const c = new OrientationBreakpointController(await makeHost(), () => {});
     c.configure('80vw', 'container');
     expect(c.resolved).to.equal(undefined);
+    expect(c.active).to.be.false;
     expect(c.containerObservationEnabled).to.be.false;
     expect(c.isBelow(0)).to.be.false;
   });
@@ -91,12 +94,27 @@ describe('OrientationBreakpointController', () => {
     expect(notBelow.isBelow(0)).to.be.false;
   });
 
-  it('treats an em breakpoint as fully unset under viewport basis', async () => {
-    const c = new OrientationBreakpointController(await makeHost('font-size: 20px'), () => {});
-    c.configure('3em', 'viewport');
-    expect(c.resolved).to.equal(undefined);
-    expect(c.containerObservationEnabled).to.be.false;
-    expect(c.isBelow(0)).to.be.false;
+  it('is active for an em breakpoint under viewport basis, driven by the media query rather than resolved', async () => {
+    const below = new OrientationBreakpointController(await makeHost('font-size: 20px'), () => {});
+    below.configure('99999em', 'viewport');
+    expect(below.active).to.be.true;
+    expect(below.containerObservationEnabled, 'still false under viewport basis').to.be.false;
+    expect(below.isBelow(0)).to.be.true;
+
+    const notBelow = new OrientationBreakpointController(await makeHost('font-size: 20px'), () => {});
+    notBelow.configure('1em', 'viewport');
+    expect(notBelow.active).to.be.true;
+    expect(notBelow.isBelow(0)).to.be.false;
+  });
+
+  it('stays inactive under viewport basis for a value matchMedia grammar rejects', async () => {
+    for (const raw of ['', 'auto', '80vw', Number.NaN] as const) {
+      const c = new OrientationBreakpointController(await makeHost(), () => {});
+      c.configure(raw, 'viewport');
+      expect(c.active, `active for ${JSON.stringify(raw)}`).to.be.false;
+      expect(c.containerObservationEnabled, `containerObservationEnabled for ${JSON.stringify(raw)}`).to.be.false;
+      expect(c.isBelow(0), `isBelow for ${JSON.stringify(raw)}`).to.be.false;
+    }
   });
 
   it('re-arms against the new query when reconfigured', async () => {

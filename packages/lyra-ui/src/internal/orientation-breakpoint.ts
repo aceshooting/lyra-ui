@@ -9,9 +9,12 @@ export type OrientationBreakpointBasis = 'container' | 'viewport';
  *  raw value must match before `arm()` appends `px` to it. */
 const BARE_NUMBER_RE = /^[+-]?(?:\d+(?:\.\d+)?|\.\d+)$/;
 
-/** An `em` (not `rem`) length — mirrors css-length.ts's `BREAKPOINT_LENGTH_RE` unit alternation,
- *  narrowed to the one unit `resolved` rejects under `'viewport'` basis (see class doc). */
-const EM_LENGTH_RE = /^[+-]?(?:\d+(?:\.\d+)?|\.\d+)em$/i;
+/** The grammar a raw value must satisfy to be a usable `'viewport'`-basis breakpoint: the same
+ *  signed CSS `<number>` as `BARE_NUMBER_RE`, plus an optional `px`/`rem`/`em` unit — mirrors
+ *  css-length.ts's `BREAKPOINT_LENGTH_RE`. This only decides whether `arm()` is worth calling
+ *  `matchMedia()` at all; it is not consulted for the actual crossing comparison, which the
+ *  browser owns under viewport basis. */
+const VIEWPORT_LENGTH_RE = /^[+-]?(?:\d+(?:\.\d+)?|\.\d+)(?:px|rem|em)?$/i;
 
 /**
  * Owns the "is this component currently below its orientation breakpoint?"
@@ -24,11 +27,12 @@ const EM_LENGTH_RE = /^[+-]?(?:\d+(?:\.\d+)?|\.\d+)em$/i;
  * ignored — the case a self-measured threshold cannot express, e.g. two
  * siblings in a row that stacks via a pure-CSS `@media` rule.
  *
- * An `em` breakpoint is unsupported under `'viewport'` basis: `resolveCssLength` resolves `em`
- * against the host's own computed font size, but `em` inside a real `@media` feature resolves
- * against the browser's initial font size with no element context, so the two would disagree.
- * Rather than silently drive `isBelow()` off a value `resolved` doesn't agree with, it's treated
- * as fully unset — `em` remains fully supported under `'container'` basis.
+ * `resolved` and `active` answer different questions and must not be conflated. `resolved` is a
+ * pixel number meaningful only under `'container'` basis, where this controller — not the browser
+ * — owns the comparison. Under `'viewport'` basis the browser evaluates the `@media` rule itself,
+ * so no single pixel value describes the crossing point (e.g. an `em`/`rem` length there resolves
+ * against the browser's *initial* font size, not `resolveCssLength`'s live computed one); callers
+ * must gate on `active` instead, which only asks whether the authored value is usable at all.
  *
  * Listener teardown rides on `hostDisconnected()`, so neither component
  * hand-writes it.
@@ -50,17 +54,26 @@ export class OrientationBreakpointController implements ReactiveController {
     host.addController(this);
   }
 
-  /** The breakpoint in pixels, or `undefined` when unset or unresolvable — including an `em`
-   *  value under `'viewport'` basis, which is unsupported (see class doc) and always unset here,
-   *  regardless of what `resolveCssLength` alone would report.
+  /** The breakpoint in pixels — meaningful only under `'container'` basis, where this controller
+   *  itself owns the crossing comparison. Under `'viewport'` basis the browser's `matchMedia()`
+   *  owns the comparison instead, so this number is not the one actually in effect there (see
+   *  class doc); use `active`, not this, to test whether the feature is on.
    *  Deliberately re-resolved on every read rather than cached, so a `rem`
    *  breakpoint tracks the live root font size — caching would freeze the
    *  crossing width and defeat the point of accepting `rem`. */
   get resolved(): number | undefined {
-    if (this.basis === 'viewport' && typeof this.raw === 'string' && EM_LENGTH_RE.test(this.raw.trim())) {
-      return undefined;
-    }
     return resolveCssLength(this.raw, this.host);
+  }
+
+  /** Whether the orientation-breakpoint feature is on at all, i.e. the authored value resolves to
+   *  something usable under the current basis. Under `'container'` basis this is exactly
+   *  `resolved !== undefined`. Under `'viewport'` basis `resolved` isn't meaningful (see class
+   *  doc), so this instead checks that the raw value is a syntactically usable CSS length —
+   *  the same grammar `arm()` hands to `matchMedia()`. */
+  get active(): boolean {
+    if (this.basis !== 'viewport') return this.resolved !== undefined;
+    if (typeof this.raw === 'number') return Number.isFinite(this.raw);
+    return typeof this.raw === 'string' && VIEWPORT_LENGTH_RE.test(this.raw.trim());
   }
 
   /** Whether the host needs a container-measuring `ResizeObserver` for the
@@ -81,9 +94,10 @@ export class OrientationBreakpointController implements ReactiveController {
   /** Whether the effective axis should currently be the narrow one.
    *  `containerWidth` is consulted only under `'container'` basis. */
   isBelow(containerWidth: number): boolean {
+    if (!this.active) return false;
+    if (this.basis === 'viewport') return this.belowViewport;
     const breakpoint = this.resolved;
-    if (breakpoint === undefined) return false;
-    return this.basis === 'viewport' ? this.belowViewport : containerWidth < breakpoint;
+    return breakpoint !== undefined && containerWidth < breakpoint;
   }
 
   hostConnected(): void {
@@ -96,13 +110,17 @@ export class OrientationBreakpointController implements ReactiveController {
 
   private arm(): void {
     this.teardown();
-    if (this.basis !== 'viewport' || this.resolved === undefined || typeof matchMedia !== 'function') {
+    if (this.basis !== 'viewport' || !this.active || typeof matchMedia !== 'function') {
       this.belowViewport = false;
       return;
     }
-    // The authored string goes to the browser verbatim so `rem` resolves with real media-query
-    // semantics; a bare number/numeric-string — same unitless form `resolveCssLength` accepts —
-    // becomes `<n>px`, the documented default unit, since `matchMedia()` has no unitless default.
+    // The authored string goes to the browser verbatim. Inside a media query, `rem`/`em` resolve
+    // against the browser's *initial* font size, ignoring any `html { font-size }` override —
+    // unlike `resolveCssLength`, which reads the real computed size. That is exactly why viewport
+    // basis matches a hand-authored `@media` rule using the same length, and exactly why its
+    // crossing point can differ from container basis. A bare number/numeric-string — same
+    // unitless form `resolveCssLength` accepts — becomes `<n>px`, the documented default unit,
+    // since `matchMedia()` has no unitless default.
     const trimmed = typeof this.raw === 'number' ? `${this.raw}` : String(this.raw).trim();
     const length = BARE_NUMBER_RE.test(trimmed) ? `${trimmed}px` : trimmed;
     this.mediaQuery = matchMedia(`(max-width: ${length})`);
