@@ -8,18 +8,86 @@
 #   CI_SH_SKIP_INSTALL=1 ./scripts/ci.sh   # skip install + browser download (deps already present)
 #   ./scripts/ci.sh --platform      # ALSO run the platform-contracts suite locally
 #                                   # (firefox + webkit; browsers are downloaded on demand)
+#   ./scripts/ci.sh --platform-matrix # run the CI platform matrix (Node 20/22 x Firefox/WebKit)
+#                                   # requires Node 20/22 and pnpm 10/11 locally
+#
+# The platform matrix can use non-default executable names/paths when needed:
+#   CI_SH_NODE20_BIN=/path/to/node20 CI_SH_PNPM20_BIN=/path/to/pnpm10 \
+#   CI_SH_NODE22_BIN=/path/to/node22 CI_SH_PNPM22_BIN=/path/to/pnpm \
+#   ./scripts/ci.sh --platform-matrix
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
+# GitHub Actions sets this for every job. Several tools change their behavior
+# when running in CI, so make the local run use the same setting.
+export CI=true
+
 RUN_PLATFORM=0
+RUN_PLATFORM_MATRIX=0
 for arg in "$@"; do
   case "$arg" in
     --platform) RUN_PLATFORM=1 ;;
+    --platform-matrix|--all) RUN_PLATFORM_MATRIX=1 ;;
     *) echo "unknown argument: $arg" >&2; exit 2 ;;
   esac
 done
 
+if [[ "$RUN_PLATFORM" == "1" && "$RUN_PLATFORM_MATRIX" == "1" ]]; then
+  echo "use either --platform or --platform-matrix, not both" >&2
+  exit 2
+fi
+
 step() { printf '\n\033[1m== %s\033[0m\n' "$*"; }
+
+resolve_command() {
+  local requested="$1"
+  if [[ "$requested" == */* ]]; then
+    [[ -x "$requested" ]] && printf '%s\n' "$requested"
+    return
+  fi
+  command -v "$requested" 2>/dev/null || true
+}
+
+resolve_node_for_version() {
+  local version="$1"
+  local override=""
+  case "$version" in
+    20) override="${CI_SH_NODE20_BIN:-}" ;;
+    22) override="${CI_SH_NODE22_BIN:-}" ;;
+  esac
+
+  if [[ -n "$override" ]]; then
+    resolve_command "$override"
+    return
+  fi
+
+  local resolved
+  resolved="$(resolve_command "node$version")"
+  [[ -n "$resolved" ]] && { printf '%s\n' "$resolved"; return; }
+  resolved="$(resolve_command "node-$version")"
+  [[ -n "$resolved" ]] && { printf '%s\n' "$resolved"; return; }
+
+  # NVM installations commonly expose versioned node binaries without a
+  # node20/node22 shim. Pick the newest installed patch release for the major.
+  if [[ -n "${NVM_DIR:-}" ]]; then
+    local candidates=("$NVM_DIR"/versions/node/v"$version".*/bin/node)
+    if ((${#candidates[@]} > 0)) && [[ -x "${candidates[${#candidates[@]}-1]}" ]]; then
+      printf '%s\n' "${candidates[${#candidates[@]}-1]}"
+      return
+    fi
+  fi
+}
+
+run_with_toolchain() {
+  local node_bin="$1"
+  local pnpm_bin="$2"
+  shift 2
+  # pnpm's shebang resolves `node` through PATH. Put the selected Node first,
+  # and disable pnpm's packageManager self-reexec just like the platform job.
+  PATH="$(dirname "$node_bin"):$PATH" \
+    CI=true npm_config_manage_package_manager_versions=false \
+    "$pnpm_bin" "$@"
+}
 
 if [[ "${CI_SH_SKIP_INSTALL:-0}" != "1" ]]; then
   step "pnpm install --frozen-lockfile"
