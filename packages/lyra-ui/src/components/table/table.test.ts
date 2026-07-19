@@ -85,6 +85,48 @@ it('uses the themed minimum width when a resizable column has no explicit minimu
   window.dispatchEvent(new PointerEvent('pointerup', { pointerId: 2, clientX: -10000 }));
 });
 
+it('resolves a rem-unit themed minimum width against the root font size', async () => {
+  const el = (await fixture(
+    html`<lr-table style="--lr-table-resize-min-width:5rem"></lr-table>`,
+  )) as LyraTable<Row>;
+  el.columns = [{ key: 'name', label: 'Name', width: '400px', resizable: true, cell: (r) => r.name }];
+  el.rows = rows;
+  await el.updateComplete;
+
+  const rootFontSize = Number.parseFloat(getComputedStyle(document.documentElement).fontSize);
+  const handle = el.shadowRoot!.querySelector('[part="resize-handle"]') as HTMLElement;
+  handle.setPointerCapture = () => {};
+  handle.releasePointerCapture = () => {};
+  handle.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, pointerId: 3, clientX: 100 }));
+  window.dispatchEvent(new PointerEvent('pointermove', { pointerId: 3, clientX: -10000 }));
+
+  expect((el as unknown as { resizedColumnWidths: Map<string, number> }).resizedColumnWidths.get('name')).to.equal(
+    5 * rootFontSize,
+  );
+  window.dispatchEvent(new PointerEvent('pointerup', { pointerId: 3, clientX: -10000 }));
+});
+
+it('resolves an em-unit themed minimum width against the table\'s own font size', async () => {
+  const el = (await fixture(
+    html`<lr-table style="--lr-table-resize-min-width:3em"></lr-table>`,
+  )) as LyraTable<Row>;
+  el.columns = [{ key: 'name', label: 'Name', width: '400px', resizable: true, cell: (r) => r.name }];
+  el.rows = rows;
+  await el.updateComplete;
+
+  const ownFontSize = Number.parseFloat(getComputedStyle(el).fontSize);
+  const handle = el.shadowRoot!.querySelector('[part="resize-handle"]') as HTMLElement;
+  handle.setPointerCapture = () => {};
+  handle.releasePointerCapture = () => {};
+  handle.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, pointerId: 4, clientX: 100 }));
+  window.dispatchEvent(new PointerEvent('pointermove', { pointerId: 4, clientX: -10000 }));
+
+  expect((el as unknown as { resizedColumnWidths: Map<string, number> }).resizedColumnWidths.get('name')).to.equal(
+    3 * ownFontSize,
+  );
+  window.dispatchEvent(new PointerEvent('pointerup', { pointerId: 4, clientX: -10000 }));
+});
+
 it('exposes focusable separator state and resizes by keyboard without sorting the header', async () => {
   const el = (await fixture(html`<lr-table></lr-table>`)) as LyraTable<Row>;
   el.columns = [
@@ -162,6 +204,22 @@ it('announces the rendered width when a resizable column has no pixel width', as
   await el.updateComplete;
 
   expect(el.shadowRoot!.querySelector('[part="resize-handle"]')!.getAttribute('aria-valuenow')).to.equal('192');
+});
+
+it('starts a keyboard resize from the live rendered width when a column has no pixel width yet', async () => {
+  const el = (await fixture(html`<lr-table></lr-table>`)) as LyraTable<Row>;
+  el.columns = [{ key: 'name', label: 'Name', width: '12rem', resizable: true, cell: (row) => row.name }];
+  el.rows = rows;
+  await el.updateComplete;
+
+  const header = el.shadowRoot!.querySelector('th[data-col-key="name"]') as HTMLElement;
+  header.getBoundingClientRect = () => ({ width: 192 }) as DOMRect;
+  const handle = el.shadowRoot!.querySelector('[part="resize-handle"]') as HTMLElement;
+  handle.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true, cancelable: true }));
+  await el.updateComplete;
+
+  // 192 (the live rendered width, not the 12rem CSS length nor minimumResizeWidth's fallback) + the 10px step.
+  expect(handle.getAttribute('aria-valuenow')).to.equal('202');
 });
 
 it('reflects spellcheck=false when assigned as a property', async () => {
