@@ -25,8 +25,10 @@ export interface LyraDocumentCompareEventMap {
  * `uri`/`version`) with the two fields a comparison needs that a bare document reference doesn't
  * carry: the literal `text` an `<lr-diff-view>` diffs directly, and this version's own
  * `<lr-document-preview>` region `highlights` (see "Synchronized anchors" below). `uri` (from
- * `DocumentRef`) maps onto `<lr-document-preview>`'s own `src` property field-for-field, same as
- * `name`/`mimeType` already do.
+ * `DocumentRef`) maps onto `<lr-document-preview>`'s own `src` property, and `mimeType` maps onto
+ * its `mimeType` property field-for-field; `name` maps onto its differently-named `filename`
+ * property (per `DocumentRef`'s own doc comment, `name` matches `<lr-attachment-chip>`'s property
+ * name, not `<lr-document-preview>`'s).
  */
 export interface DocumentCompareVersion extends DocumentRef {
   /** Literal text content for this version -- diffed directly by `view="diff"` (no fetch involved), unlike `<lr-document-preview>`'s own text-format dispatch which fetches `uri`. */
@@ -188,7 +190,7 @@ export class LyraDocumentCompare extends LyraElement<LyraDocumentCompareEventMap
     if (!version) return html`<p part="pane-empty">${this.localize('documentCompareNoVersion', 'No version provided.')}</p>`;
     return html`
       <lr-document-preview
-        name=${version.name ?? ''}
+        filename=${version.name ?? ''}
         mime-type=${version.mimeType ?? ''}
         src=${version.uri ?? ''}
         .highlights=${version.highlights ?? []}

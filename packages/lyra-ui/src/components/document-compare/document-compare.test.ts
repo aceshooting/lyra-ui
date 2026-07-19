@@ -81,10 +81,10 @@ describe('lr-document-compare', () => {
       const paneNew = el.shadowRoot!.querySelector('[part="pane-new"]')!;
       const previewOld = paneOld.querySelector('lr-document-preview') as LyraDocumentPreview;
       const previewNew = paneNew.querySelector('lr-document-preview') as LyraDocumentPreview;
-      expect(previewOld.name).to.equal('Draft');
+      expect(previewOld.filename).to.equal('Draft');
       expect(previewOld.mimeType).to.equal('image/png');
       expect(previewOld.src).to.equal('https://example.test/a.png');
-      expect(previewNew.name).to.equal('Final');
+      expect(previewNew.filename).to.equal('Final');
       expect(previewNew.src).to.equal('https://example.test/b.png');
       expect(el.shadowRoot!.querySelector('lr-diff-view')).to.not.exist;
     });
