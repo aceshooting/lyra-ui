@@ -289,4 +289,242 @@ describe('lr-terminal', () => {
     await el.updateComplete;
     await expect(el).to.be.accessible();
   });
+
+  it('scrollToBottom() sets the virtual-list scroll target to the last buffered line even while follow is off', async () => {
+    const el = (await fixture(html`<lr-terminal></lr-terminal>`)) as LyraTerminal;
+    el.follow = false; // keep write() itself from moving the scroll target
+    el.write('a\nb\nc');
+    await el.updateComplete;
+    const list = el.shadowRoot!.querySelector('lr-virtual-list') as HTMLElement & { activeId: unknown };
+    expect(list.activeId).to.equal('');
+    el.scrollToBottom();
+    await el.updateComplete;
+    expect(list.activeId).to.equal(3);
+  });
+
+  it('scrollToBottom() on an empty buffer clears the scroll target instead of throwing', async () => {
+    const el = (await fixture(html`<lr-terminal></lr-terminal>`)) as LyraTerminal;
+    el.scrollToBottom();
+    await el.updateComplete;
+    const list = el.shadowRoot!.querySelector('lr-virtual-list') as HTMLElement & { activeId: unknown };
+    expect(list.activeId).to.equal('');
+  });
+
+  it('the "jump to latest" button re-engages follow, scrolls to the last line, and emits lr-follow-change', async () => {
+    const el = (await fixture(html`<lr-terminal></lr-terminal>`)) as LyraTerminal;
+    el.write('a\nb\nc');
+    el.follow = false;
+    await el.updateComplete;
+    const button = el.shadowRoot!.querySelector('[part="jump-to-latest"]') as HTMLButtonElement;
+    expect(button).to.exist;
+    const listener = oneEvent(el, 'lr-follow-change');
+    button.click();
+    const event = (await listener) as CustomEvent<{ following: boolean }>;
+    expect(event.detail.following).to.be.true;
+    expect(el.follow).to.be.true;
+    const list = el.shadowRoot!.querySelector('lr-virtual-list') as HTMLElement & { activeId: unknown };
+    expect(list.activeId).to.equal(3);
+  });
+
+  it('pressing End in the viewport re-engages follow via the same jump-to-latest path', async () => {
+    const el = (await fixture(html`<lr-terminal></lr-terminal>`)) as LyraTerminal;
+    el.write('a\nb');
+    el.follow = false;
+    await el.updateComplete;
+    const listener = oneEvent(el, 'lr-follow-change');
+    const viewport = el.shadowRoot!.querySelector('[part="viewport"]')!;
+    viewport.dispatchEvent(new KeyboardEvent('keydown', { key: 'End', bubbles: true }));
+    const event = (await listener) as CustomEvent<{ following: boolean }>;
+    expect(event.detail.following).to.be.true;
+    expect(el.follow).to.be.true;
+  });
+
+  it('write() recomputes search matches when scrollback trimming drops a matched line, clamping an out-of-range active index', async () => {
+    const el = (await fixture(html`<lr-terminal max-scrollback="3"></lr-terminal>`)) as LyraTerminal;
+    el.write('error\nerror\nerror');
+    await el.updateComplete;
+    await el.search('error');
+    el.searchNext();
+    el.searchNext();
+    const priv = el as unknown as { searchActiveIndex: number; searchMatches: { lineNumber: number }[] };
+    expect(priv.searchActiveIndex).to.equal(2);
+    el.write('\nx'); // trims line 1 ('error') out of the 3-line scrollback -- searchQuery is
+    // still set at this point, so this write() also exercises the writeInternal() recompute path.
+    await el.updateComplete;
+    expect(priv.searchMatches).to.have.lengthOf(2);
+    expect(priv.searchActiveIndex).to.equal(0); // clamped back into range rather than left dangling at 2
+  });
+
+  it('write() clears the active search index to -1 when scrollback trimming removes the last remaining match', async () => {
+    const el = (await fixture(html`<lr-terminal max-scrollback="1"></lr-terminal>`)) as LyraTerminal;
+    el.write('error');
+    await el.updateComplete;
+    await el.search('error');
+    const priv = el as unknown as { searchActiveIndex: number; searchMatches: { lineNumber: number }[] };
+    expect(priv.searchActiveIndex).to.equal(0);
+    el.write('\nx'); // trims the only 'error' line out of the 1-line scrollback
+    await el.updateComplete;
+    expect(priv.searchMatches).to.have.lengthOf(0);
+    expect(priv.searchActiveIndex).to.equal(-1);
+  });
+
+  it('Enter or Space on a highlighted line activates it, same as a click', async () => {
+    const el = (await fixture(html`<lr-terminal></lr-terminal>`)) as LyraTerminal;
+    el.write('a\nb\nc');
+    el.highlights = [{ id: 'h1', anchor: { kind: 'line-range', start: 2, end: 2 }, tone: 'warning' }];
+    await el.updateComplete;
+    const list = el.shadowRoot!.querySelector('lr-virtual-list')!;
+    const line = list.shadowRoot!.querySelector('[data-line-number="2"]') as HTMLElement;
+    const enterListener = oneEvent(el, 'lr-highlight-activate');
+    line.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
+    expect(((await enterListener) as CustomEvent<{ id: string }>).detail.id).to.equal('h1');
+    const spaceListener = oneEvent(el, 'lr-highlight-activate');
+    line.dispatchEvent(new KeyboardEvent('keydown', { key: ' ', bubbles: true, cancelable: true }));
+    expect(((await spaceListener) as CustomEvent<{ id: string }>).detail.id).to.equal('h1');
+  });
+
+  it('best-effort copy: a synchronously-throwing navigator.clipboard.writeText does not block lr-copy', async () => {
+    const original = Object.getOwnPropertyDescriptor(navigator, 'clipboard');
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: {
+        writeText: () => {
+          throw new Error('denied');
+        },
+      },
+    });
+    try {
+      const el = (await fixture(html`<lr-terminal></lr-terminal>`)) as LyraTerminal;
+      el.write('secret');
+      await el.updateComplete;
+      const button = el.shadowRoot!.querySelector('[part="copy-button"]') as HTMLButtonElement;
+      const listener = oneEvent(el, 'lr-copy');
+      button.click();
+      const event = (await listener) as CustomEvent<{ text: string }>;
+      expect(event.detail.text).to.equal('secret');
+    } finally {
+      if (original) Object.defineProperty(navigator, 'clipboard', original);
+      else delete (navigator as unknown as { clipboard?: unknown }).clipboard;
+    }
+  });
+
+  it('copy button label swaps to the localized "copied" confirmation, then reverts after ~1.5s', async () => {
+    const el = (await fixture(html`<lr-terminal></lr-terminal>`)) as LyraTerminal;
+    el.write('hi');
+    await el.updateComplete;
+    const button = el.shadowRoot!.querySelector('[part="copy-button"]') as HTMLButtonElement;
+    expect(button.textContent!.trim()).to.equal('Copy');
+    button.click();
+    await el.updateComplete;
+    expect(button.textContent!.trim()).to.equal('Copied!');
+    await new Promise((resolve) => setTimeout(resolve, 1600));
+    await el.updateComplete;
+    expect(button.textContent!.trim()).to.equal('Copy');
+  });
+
+  it('coalesces multiple write() bursts inside one throttle window into a single announcement', async () => {
+    const el = (await fixture(html`<lr-terminal announce-output></lr-terminal>`)) as LyraTerminal;
+    el.write('first chunk');
+    el.write('second chunk');
+    await el.updateComplete;
+    await new Promise((resolve) => setTimeout(resolve, 20)); // Announcer's own throttle uses real timers
+    const region = el.shadowRoot!.querySelector('[part="announcer"]')!;
+    expect(region.textContent).to.equal('first chunk\nsecond chunk');
+  });
+
+  it('lr-text-select resolves a null anchor when a selection endpoint is not inside any mounted line', async () => {
+    const el = (await fixture(html`<lr-terminal></lr-terminal>`)) as LyraTerminal;
+    el.write('first\nsecond');
+    await el.updateComplete;
+    const list = el.shadowRoot!.querySelector('lr-virtual-list')!;
+    // A selection whose endpoints don't resolve to any [data-line-number] ancestor (landing on
+    // <lr-virtual-list>'s own row/spacer scaffolding, or entirely outside the viewport) can't be
+    // walked back to a line number by lineNumberOf(). Exercised via a stand-in Selection rather
+    // than a real Range/addRange() at an element (non-text) boundary -- Chromium's Selection
+    // doesn't reliably preserve such a boundary's exact container across addRange(), so a real
+    // selection can't deterministically reproduce this case.
+    const fakeSelection = {
+      isCollapsed: false,
+      anchorNode: document.body,
+      focusNode: document.body,
+      toString: () => 'outside text',
+      getRangeAt: () => ({ getClientRects: () => [] }),
+    } as unknown as Selection;
+    (list.shadowRoot as unknown as { getSelection: () => Selection }).getSelection = () => fakeSelection;
+    const listener = oneEvent(el, 'lr-text-select');
+    el.shadowRoot!.querySelector('[part="viewport"]')!.dispatchEvent(new PointerEvent('pointerup', { bubbles: true }));
+    const event = (await listener) as CustomEvent<{ text: string; anchor: unknown }>;
+    expect(event.detail.text).to.equal('outside text');
+    expect(event.detail.anchor).to.be.null;
+  });
+
+  it('lr-text-select falls back to empty rects when reading the selection range throws', async () => {
+    const el = (await fixture(html`<lr-terminal></lr-terminal>`)) as LyraTerminal;
+    el.write('first\nsecond');
+    await el.updateComplete;
+    const list = el.shadowRoot!.querySelector('lr-virtual-list')!;
+    const line = list.shadowRoot!.querySelector('[data-line-number="1"]') as HTMLElement;
+    // A real Selection can't be coerced into throwing from getRangeAt() once isCollapsed is
+    // false (rangeCount is then guaranteed >= 1), so this exercises the defensive try/catch
+    // around getClientRects() with a minimal stand-in exposing just the members onViewportPointerUp
+    // actually reads -- the same shadow-scoped getSelection() override style the passing
+    // lr-text-select tests above already use, just returning a stub instead of the real selection.
+    const fakeSelection = {
+      isCollapsed: false,
+      anchorNode: line,
+      focusNode: line,
+      toString: () => 'first',
+      getRangeAt: () => {
+        throw new Error('no range');
+      },
+    } as unknown as Selection;
+    (list.shadowRoot as unknown as { getSelection: () => Selection }).getSelection = () => fakeSelection;
+    const listener = oneEvent(el, 'lr-text-select');
+    el.shadowRoot!.querySelector('[part="viewport"]')!.dispatchEvent(new PointerEvent('pointerup', { bubbles: true }));
+    const event = (await listener) as CustomEvent<{ text: string; rects: DOMRect[] }>;
+    expect(event.detail.text).to.equal('first');
+    expect(event.detail.rects).to.deep.equal([]);
+  });
+
+  it('renders bold/dim/italic/underline/inverse SGR styles, including inverse swapping fg/bg', async () => {
+    const el = (await fixture(html`<lr-terminal></lr-terminal>`)) as LyraTerminal;
+    el.write(
+      '\x1b[1mbold\x1b[22m\x1b[2mdim\x1b[22m\x1b[3mitalic\x1b[23m\x1b[4munderline\x1b[24m\x1b[7;41minverse\x1b[0m',
+    );
+    await el.updateComplete;
+    const list = el.shadowRoot!.querySelector('lr-virtual-list')!;
+    const spans = [...list.shadowRoot!.querySelectorAll('[data-line-number="1"] span')] as HTMLElement[];
+    const byText = (t: string): HTMLElement => spans.find((s) => s.textContent === t)!;
+    expect(byText('bold').style.fontWeight).to.equal('bold');
+    expect(byText('dim').style.opacity).to.equal('0.7');
+    expect(byText('italic').style.fontStyle).to.equal('italic');
+    expect(byText('underline').style.textDecoration).to.equal('underline');
+    const inverse = byText('inverse');
+    // \x1b[41m set an explicit background (red); inverse swaps it into `color`, and the unset
+    // foreground's own fallback var into `background-color`.
+    expect(inverse.style.color).to.equal('var(--lr-terminal-color-red)');
+    expect(inverse.style.backgroundColor).to.equal('var(--lr-color-text)');
+  });
+
+  it('omits the toolbar entirely when both copyable and downloadable are false', async () => {
+    const el = (await fixture(
+      html`<lr-terminal .copyable=${false} .downloadable=${false}></lr-terminal>`,
+    )) as LyraTerminal;
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('[part="toolbar"]')).to.be.null;
+  });
+
+  it('renders only the download button when copyable is false and downloadable is true', async () => {
+    const el = (await fixture(html`<lr-terminal .copyable=${false} downloadable></lr-terminal>`)) as LyraTerminal;
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('[part="copy-button"]')).to.be.null;
+    expect(el.shadowRoot!.querySelector('[part="download-button"]')).to.exist;
+  });
+
+  it('wrap=false uses a fixed 24px row-height on the virtual list instead of "auto"', async () => {
+    const el = (await fixture(html`<lr-terminal .wrap=${false}></lr-terminal>`)) as LyraTerminal;
+    await el.updateComplete;
+    const list = el.shadowRoot!.querySelector('lr-virtual-list')!;
+    expect(list.getAttribute('row-height')).to.equal('24');
+  });
 });
