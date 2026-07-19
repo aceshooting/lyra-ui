@@ -74,11 +74,26 @@ export const styles = css`
   [part='input']::placeholder {
     color: var(--lr-color-text-quiet);
   }
+  :host([clearable]) [part='input'][type='search']::-webkit-search-cancel-button {
+    appearance: none;
+  }
   [part='input']:disabled {
     opacity: var(--lr-opacity-disabled);
     cursor: not-allowed;
   }
-  [part='password-toggle'] {
+  [part='start'],
+  [part='end'] {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    color: var(--lr-color-text-quiet);
+  }
+  [part='start'][hidden],
+  [part='end'][hidden] {
+    display: none;
+  }
+  [part='password-toggle'],
+  [part='clear-button'] {
     flex: 0 0 auto;
     display: inline-flex;
     align-items: center;
@@ -96,7 +111,14 @@ export const styles = css`
   [part='password-toggle']:hover {
     color: var(--lr-color-text);
   }
+  [part='clear-button']:hover {
+    color: var(--lr-color-text);
+  }
   [part='password-toggle']:focus-visible {
+    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
+    outline-offset: var(--lr-focus-ring-offset);
+  }
+  [part='clear-button']:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);
   }

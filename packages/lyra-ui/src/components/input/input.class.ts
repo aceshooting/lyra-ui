@@ -3,7 +3,7 @@ import { property, query, state } from 'lit/decorators.js';
 import { LyraElement } from '../../internal/lyra-element.js';
 import { FormAssociated } from '../../internal/form-associated.js';
 import { SET_ANCHORED_VALIDITY } from '../../internal/anchored-validity.js';
-import { eyeIcon, eyeOffIcon } from '../../internal/icons.js';
+import { closeIcon, eyeIcon, eyeOffIcon } from '../../internal/icons.js';
 import { styles } from './input.styles.js';
 
 export type LyraInputType = 'text' | 'password' | 'email' | 'number' | 'time' | 'search';
@@ -19,6 +19,7 @@ export interface LyraInputEventMap {
   change: CustomEvent<undefined>;
   'lr-input': CustomEvent<{ value: string }>;
   'lr-change': CustomEvent<{ value: string }>;
+  'lr-clear': CustomEvent<undefined>;
   blur: CustomEvent<undefined>;
   focus: CustomEvent<undefined>;
 }
@@ -47,16 +48,22 @@ class LyraInputBase extends LyraElement<LyraInputEventMap> {}
  * @event change - Native-style composed event fired at the native `change` timing.
  * @event lr-input - Compatibility alias for `input`; `detail: { value }`.
  * @event lr-change - Compatibility alias for `change`; `detail: { value }`.
+ * @event lr-clear - The built-in clear button cleared a text/search value, after the input/change events.
  * @event blur - Re-dispatched from the internal native `<input>`'s own `blur` — bubbling and
  *   composed (unlike the native event, which is neither).
  * @event focus - Re-dispatched from the internal native `<input>`'s own `focus`, for the same reason as `blur`.
  * @slot label - Custom label content.
  * @slot hint - Custom hint content.
  * @slot error - Custom error content.
+ * @slot start - Adornment before the native input.
+ * @slot end - Adornment after the native input and built-in actions.
  * @csspart form-control - The outer wrapper around label, input, error and hint.
  * @csspart form-control-label - The `<label>` element.
  * @csspart input-wrapper - The row wrapping the native input and the password-toggle button.
  * @csspart input - The native `<input>` element.
+ * @csspart start - Wrapper around the `start` adornment slot.
+ * @csspart end - Wrapper around the `end` adornment slot.
+ * @csspart clear-button - The clear action, rendered for non-empty clearable text/search inputs.
  * @csspart password-toggle - The show/hide-password button, present only when `type="password"`.
  * @csspart hint - The hint message.
  * @csspart error - The error message.
@@ -69,6 +76,10 @@ export class LyraInput extends FormAssociated(LyraInputBase) {
    *  the tightest tier, for dense toolbar-embedded controls. */
   @property({ reflect: true }) size: LyraInputSize = 'm';
   @property() placeholder = '';
+  /** Shows a built-in clear action for non-empty `text` and `search` inputs. */
+  @property({ type: Boolean, reflect: true }) clearable = false;
+  /** Forwards native read-only behavior to the internal input and disables the clear action. */
+  @property({ type: Boolean, reflect: true }) readonly = false;
   @property() label = '';
   @property() hint = '';
   @property({ attribute: 'error-text' }) errorText = '';
@@ -99,6 +110,8 @@ export class LyraInput extends FormAssociated(LyraInputBase) {
   @state() private hasErrorSlot = false;
   @state() private hasLabelSlot = false;
   @state() private touched = false;
+  @state() private hasStartSlot = false;
+  @state() private hasEndSlot = false;
 
   @query('input') private inputEl?: HTMLInputElement;
 
@@ -144,6 +157,10 @@ export class LyraInput extends FormAssociated(LyraInputBase) {
    */
   protected updateValidity(): void {
     const native = this.inputEl;
+    if (this.readonly) {
+      this[SET_ANCHORED_VALIDITY]({});
+      return;
+    }
     if (!native) {
       if (this.required && this.value === '') {
         this[SET_ANCHORED_VALIDITY]({ valueMissing: true }, this.localize('fieldRequired'));
@@ -178,8 +195,16 @@ export class LyraInput extends FormAssociated(LyraInputBase) {
 
   protected updated(changed: PropertyValues): void {
     super.updated(changed);
-    if (changed.has('type') || changed.has('min') || changed.has('max') || changed.has('step')) {
+    if (changed.has('type') || changed.has('min') || changed.has('max') || changed.has('step') || changed.has('readonly')) {
       this.updateValidity();
+    }
+  }
+
+  protected willUpdate(changed: PropertyValues): void {
+    super.willUpdate(changed);
+    if (!this.hasUpdated) {
+      this.hasStartSlot = Array.from(this.children).some((element) => element.getAttribute('slot') === 'start');
+      this.hasEndSlot = Array.from(this.children).some((element) => element.getAttribute('slot') === 'end');
     }
   }
 
@@ -210,6 +235,26 @@ export class LyraInput extends FormAssociated(LyraInputBase) {
     this.passwordVisible = !this.passwordVisible;
   };
 
+  private onClear = (): void => {
+    if (this.effectiveDisabled || this.readonly || this.value === '') return;
+    this.value = '';
+    if (this.inputEl) this.inputEl.value = '';
+    this.emit('input');
+    this.emit('lr-input', { value: this.value });
+    this.emit('change');
+    this.emit('lr-change', { value: this.value });
+    this.emit('lr-clear');
+    this.inputEl?.focus();
+  };
+
+  private onStartSlotChange = (e: Event): void => {
+    this.hasStartSlot = (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length > 0;
+  };
+
+  private onEndSlotChange = (e: Event): void => {
+    this.hasEndSlot = (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length > 0;
+  };
+
   private onHintSlotChange = (e: Event): void => {
     this.hasHintSlot = (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length > 0;
   };
@@ -229,12 +274,16 @@ export class LyraInput extends FormAssociated(LyraInputBase) {
     const describedBy = [hasError ? 'input-error' : '', hasHint ? 'input-hint' : ''].filter(Boolean).join(' ');
     const isPassword = this.type === 'password';
     const nativeType = isPassword && this.passwordVisible ? 'text' : this.type;
+    const canClear = this.clearable && (this.type === 'text' || this.type === 'search') && this.value !== '';
     return html`
       <div part="form-control">
         <label part="form-control-label" for="input" ?hidden=${!hasLabel}>
           ${this.label}<slot name="label" @slotchange=${this.onLabelSlotChange}></slot>
         </label>
         <div part="input-wrapper">
+          <span part="start" ?hidden=${!this.hasStartSlot}>
+            <slot name="start" @slotchange=${this.onStartSlotChange}></slot>
+          </span>
           <input
             id="input"
             part="input"
@@ -257,6 +306,7 @@ export class LyraInput extends FormAssociated(LyraInputBase) {
             .value=${this.value}
             ?required=${this.required}
             ?disabled=${this.effectiveDisabled}
+            ?readonly=${this.readonly}
             @input=${this.onInput}
             @change=${this.onChange}
             @focus=${this.onFocus}
@@ -274,6 +324,20 @@ export class LyraInput extends FormAssociated(LyraInputBase) {
                 ${this.passwordVisible ? eyeOffIcon() : eyeIcon()}
               </button>`
             : ''}
+          ${canClear
+            ? html`<button
+                part="clear-button"
+                type="button"
+                ?disabled=${this.effectiveDisabled || this.readonly}
+                aria-label=${this.localize('clear')}
+                @click=${this.onClear}
+              >
+                ${closeIcon()}
+              </button>`
+            : nothing}
+          <span part="end" ?hidden=${!this.hasEndSlot}>
+            <slot name="end" @slotchange=${this.onEndSlotChange}></slot>
+          </span>
         </div>
         <div id="input-error" part="error" ?hidden=${!hasError}>
           ${this.errorText}<slot name="error" @slotchange=${this.onErrorSlotChange}></slot>

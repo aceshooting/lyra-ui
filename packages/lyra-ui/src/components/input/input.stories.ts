@@ -43,6 +43,15 @@ export const CompactGridRow: Story = {
   render: () => html`<lr-input aria-label="Search" placeholder="Search..."></lr-input>`,
 };
 
+export const ClearableWithAdornments: Story = {
+  render: () => html`
+    <lr-input type="search" clearable value="workflow" aria-label="Search workflows">
+      <span slot="start" aria-hidden="true">⌕</span>
+      <kbd slot="end">⌘K</kbd>
+    </lr-input>
+  `,
+};
+
 export const Disabled: Story = {
   render: () => html`<lr-input label="Name" value="Ada Lovelace" disabled></lr-input>`,
 };

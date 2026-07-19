@@ -70,6 +70,73 @@ describe('lr-input', () => {
     expect(ev.detail).to.deep.equal({ value: 'hello' });
   });
 
+  describe('adornments and clearable input', () => {
+    it('renders start/end adornment slots inside the input wrapper', async () => {
+      const el = (await fixture(html`
+        <lr-input aria-label="Search"><span slot="start">⌕</span><kbd slot="end">⌘K</kbd></lr-input>
+      `)) as LyraInput;
+      const start = el.shadowRoot!.querySelector('[part="start"]') as HTMLElement;
+      const end = el.shadowRoot!.querySelector('[part="end"]') as HTMLElement;
+      expect(start.hidden).to.be.false;
+      expect(end.hidden).to.be.false;
+      expect(start.querySelector('slot')!.assignedElements()).to.have.length(1);
+      expect(end.querySelector('slot')!.assignedElements()).to.have.length(1);
+    });
+
+    it('clears text/search values with native and typed events, then restores input focus', async () => {
+      for (const type of ['text', 'search'] as const) {
+        const el = (await fixture(html`
+          <lr-input type=${type} clearable value="query" aria-label="Search"></lr-input>
+        `)) as LyraInput;
+        const native = el.shadowRoot!.querySelector('input') as HTMLInputElement;
+        const button = el.shadowRoot!.querySelector('[part="clear-button"]') as HTMLButtonElement;
+        expect(el.clearable, type).to.be.true;
+        expect(button.getAttribute('aria-label'), type).to.equal('Clear');
+        const seen: string[] = [];
+        for (const name of ['input', 'lr-input', 'change', 'lr-change', 'lr-clear']) {
+          el.addEventListener(name, () => seen.push(name));
+        }
+        button.click();
+        await el.updateComplete;
+        expect(el.value, type).to.equal('');
+        expect(native.value, type).to.equal('');
+        expect(seen, type).to.deep.equal(['input', 'lr-input', 'change', 'lr-change', 'lr-clear']);
+        expect(el.shadowRoot!.activeElement?.id, type).to.equal('input');
+        expect(el.shadowRoot!.querySelector('[part="clear-button"]'), type).to.not.exist;
+      }
+    });
+
+    it('keeps clear disabled for disabled/read-only inputs and limits it to text/search types', async () => {
+      const disabled = (await fixture(html`
+        <lr-input clearable disabled value="query"></lr-input>
+      `)) as LyraInput;
+      expect((disabled.shadowRoot!.querySelector('[part="clear-button"]') as HTMLButtonElement).disabled).to.be.true;
+
+      const readonly = (await fixture(html`
+        <lr-input clearable readonly value="query"></lr-input>
+      `)) as LyraInput;
+      expect(readonly.readonly).to.be.true;
+      expect((readonly.shadowRoot!.querySelector('input') as HTMLInputElement).readOnly).to.be.true;
+      expect((readonly.shadowRoot!.querySelector('[part="clear-button"]') as HTMLButtonElement).disabled).to.be.true;
+
+      const email = (await fixture(html`
+        <lr-input type="email" clearable value="user@example.com"></lr-input>
+      `)) as LyraInput;
+      expect(email.shadowRoot!.querySelector('[part="clear-button"]')).to.not.exist;
+    });
+
+    it('is accessible with populated adornments and a clear action', async () => {
+      const el = await fixture(html`
+        <lr-input clearable value="query" aria-label="Search">
+          <span slot="start" aria-hidden="true">⌕</span>
+          <span slot="end" aria-hidden="true">⌘K</span>
+        </lr-input>
+      `);
+      expect(el.shadowRoot!.querySelector('[part="clear-button"]')).to.exist;
+      await expect(el).to.be.accessible();
+    });
+  });
+
   describe('label/hint/error chrome', () => {
     it('renders no chrome by default', async () => {
       const el = (await fixture(html`<lr-input></lr-input>`)) as LyraInput;

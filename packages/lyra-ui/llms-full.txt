@@ -194,6 +194,9 @@ shared `FormAssociated` mixin — see gotchas).
 - `size: 'xs' | 's' | 'm' | 'l' | 'xl' = 'm'` (reflected — same scale as `lr-select`'s `size`;
   also scales the "+N" overflow tag's padding/font-size to match)
 - `placeholder: string = ''`
+- `clearable: boolean = false` (reflected) — shows a localized clear action while a `text` or
+  `search` input has a value; clearing preserves input focus
+- `readonly: boolean = false` (reflected) — forwarded to the native input and disables clearing
 - `disabled: boolean = false` (reflected)
 - `required: boolean = false` (reflected — enforced via `internals.setValidity()`; also reflected as
   `aria-required` on `<input part="combobox-input">` immediately, and `aria-invalid` once the field
@@ -832,12 +835,15 @@ access), `focus(options?: FocusOptions)`, `blur()`, `select()`.
 **Events:** native-style composed `input` and `change`, plus `lr-input` (`detail: { value }`,
 fired on every user-driven edit) and `lr-change` (`detail: { value }`, fired on the native
 `change` timing), `blur`/`focus` (re-dispatched bubbling + composed from the internal native input's
-own `blur`/`focus`).
+own `blur`/`focus`), and `lr-clear` (no detail, fired after the clear action's `input`/`lr-input`/
+`change`/`lr-change` sequence).
 
-**Slots:** `label`, `hint`, `error`.
+**Slots:** `label`, `hint`, `error`, `start` (adornment before the input), `end` (adornment after the
+input and built-in actions).
 
 **CSS parts:** `form-control`, `form-control-label`, `input-wrapper`, `input`, `password-toggle`
-(present only when `type="password"`), `hint`, `error`.
+(present only when `type="password"`), `start`, `end`, `clear-button` (non-empty clearable
+`text`/`search` inputs only), `hint`, `error`.
 
 **Themeable custom properties:** `--lr-input-padding-block`, `--lr-input-padding-inline`,
 `--lr-input-font-size` — all three auto-swapped per `size` (`xs`…`xl`), the same pattern
@@ -849,6 +855,7 @@ own `blur`/`focus`).
 <lr-input type="password" label="Password"></lr-input>
 <lr-input type="email" label="Email" required></lr-input>
 <lr-input size="s" placeholder="Compact"></lr-input>
+<lr-input type="search" clearable value="workflow" aria-label="Search"><span slot="start">⌕</span></lr-input>
 ```
 
 **Known gotchas:**
