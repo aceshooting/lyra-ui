@@ -40,11 +40,11 @@ const esbuild = requireFromLoaderHost('esbuild');
 // in any of the shared layers (LyraElement base, form internals, overlay stack, viewer chrome).
 const entries = [
   'dist/lyra.js',
-  'dist/components/button/button.js',
-  'dist/components/select/select.js',
-  'dist/components/gauge/gauge.js',
-  'dist/components/pdf-viewer/pdf-viewer.js',
-  'dist/components/flow-canvas/flow-canvas.js',
+  'dist/components/forms/button/button.js',
+  'dist/components/forms/select/select.js',
+  'dist/components/data/gauge/gauge.js',
+  'dist/components/viewers/pdf-viewer/pdf-viewer.js',
+  'dist/components/data/flow-canvas/flow-canvas.js',
 ];
 
 const pkg = JSON.parse(readFileSync(join(packageDir, 'package.json'), 'utf8'));
