@@ -287,6 +287,9 @@ export class LyraTraceTree extends LyraElement<LyraTraceTreeEventMap> {
   };
 
   protected willUpdate(changed: PropertyValues): void {
+    if (changed.has('activeSpanId') && this.activeSpanId) {
+      this.focusedId = this.activeSpanId;
+    }
     if (changed.has('spans')) {
       const ids = new Set(this.spans.map((s) => s.id));
       let pruned: Set<string> | null = null;
@@ -317,7 +320,6 @@ export class LyraTraceTree extends LyraElement<LyraTraceTreeEventMap> {
 
   protected updated(changed: PropertyValues): void {
     if (changed.has('activeSpanId') && this.activeSpanId) {
-      this.focusedId = this.activeSpanId;
       const row = this.renderRoot.querySelector(`[data-id="${CSS.escape(this.activeSpanId)}"]`) as HTMLElement | null;
       row?.scrollIntoView({ block: 'nearest', behavior: prefersReducedMotion() ? 'auto' : 'smooth' });
     }
