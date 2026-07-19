@@ -194,6 +194,22 @@ it('restores the scroll lock and keydown trap when reparented while still open',
   otherContainer.remove();
 });
 
+it('re-activates an open dialog when reconnecting without an existing overlay handle', async () => {
+  const el = (await fixture(html`<lr-dialog label="Untitled" open>body</lr-dialog>`)) as LyraDialog;
+  await el.updateComplete;
+  (el as unknown as { overlay?: unknown }).overlay = undefined;
+
+  const otherContainer = document.createElement('div');
+  document.body.appendChild(otherContainer);
+  otherContainer.appendChild(el);
+  await el.updateComplete;
+
+  expect(document.documentElement.style.overflow).to.equal('hidden');
+  el.close('api');
+  await el.updateComplete;
+  otherContainer.remove();
+});
+
 it('traps Tab focus inside the panel, wrapping last->first and first->last', async () => {
   const el = (await fixture(
     html`<lr-dialog label="Untitled" open
@@ -705,4 +721,3 @@ it("leaves today's shrink-to-fit-content behavior unchanged when --lr-dialog-wid
   const panel = el.shadowRoot!.querySelector('[part="panel"]') as HTMLElement;
   expect(getComputedStyle(panel).inlineSize).to.not.equal('600px');
 });
-

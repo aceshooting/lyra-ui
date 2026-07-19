@@ -538,6 +538,51 @@ it('coalesces rapid scroll events into a single visible-range recompute per anim
   expect(count, 'three rapid scroll events should coalesce to one recompute').to.equal(1);
 });
 
+it('cancels a pending scroll frame when disconnected before it runs', async () => {
+  const el = (await fixture(
+    html`<lr-virtual-list
+      style="--lr-virtual-list-height:200px"
+      row-height="40"
+      .items=${Array.from({ length: 30 }, (_, i) => i)}
+      .renderItem=${renderText}
+      .keyFunction=${numberKey}
+    ></lr-virtual-list>`,
+  )) as LyraVirtualList;
+  await el.updateComplete;
+  await nextFrame();
+
+  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  base.scrollTop = 200;
+  base.dispatchEvent(new Event('scroll'));
+  el.remove();
+  await nextFrame();
+});
+
+it('keeps the scroll position anchored when a measured row above the viewport grows', async () => {
+  const el = (await fixture(
+    html`<lr-virtual-list
+      style="--lr-virtual-list-height:200px"
+      overscan="100"
+      .items=${Array.from({ length: 20 }, (_, i) => i)}
+      .renderItem=${() => html`<div style="block-size:48px;box-sizing:border-box">row</div>`}
+      .keyFunction=${numberKey}
+    ></lr-virtual-list>`,
+  )) as LyraVirtualList;
+  await el.updateComplete;
+  await nextFrame();
+  await nextFrame();
+
+  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  base.scrollTop = 400;
+  const before = base.scrollTop;
+  const firstRow = el.shadowRoot!.querySelector('[part="row"]') as HTMLElement;
+  (firstRow.firstElementChild as HTMLElement).style.blockSize = '100px';
+  await nextFrame();
+  await nextFrame();
+
+  expect(base.scrollTop).to.be.greaterThan(before);
+});
+
 it('fires lr-load-more once when scrolling near the bottom while has-more is true and loading is false', async () => {
   const items = Array.from({ length: 20 }, (_, i) => i);
   const el = (await fixture(
@@ -907,4 +952,3 @@ describe('itemRole / rowIndexOffset', () => {
     expect(firstRow.getAttribute('aria-rowindex')).to.equal('1');
   });
 });
-

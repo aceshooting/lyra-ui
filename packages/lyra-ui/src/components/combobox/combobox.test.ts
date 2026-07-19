@@ -258,6 +258,45 @@ it('selects with keyboard (ArrowDown + Enter)', async () => {
   expect(el.value).to.equal('b');
 });
 
+it('forwards selection editing methods to the native input and handles an empty name', async () => {
+  const el = (await fixture(basic())) as LyraCombobox;
+  const input = el.shadowRoot!.querySelector('[part="combobox-input"]') as HTMLInputElement;
+  input.value = 'Apple';
+  input.setSelectionRange(1, 3);
+
+  el.selectionStart = 0;
+  el.selectionEnd = 2;
+  el.selectionDirection = 'backward';
+  expect(el.selectionStart).to.equal(0);
+  expect(el.selectionEnd).to.equal(2);
+  expect(el.selectionDirection).to.equal('backward');
+
+  el.setRangeText('X');
+  expect(input.value).to.equal('Xple');
+  expect(el.query).to.equal('Xple');
+
+  el.name = 'fruit';
+  expect(el.getAttribute('name')).to.equal('fruit');
+  el.name = '';
+  expect(el.hasAttribute('name')).to.be.false;
+});
+
+it('resolves selectedRows from local rows and uncached async rows', async () => {
+  const el = (await fixture(basic())) as LyraCombobox;
+  el.value = 'a';
+  const state = el as unknown as {
+    _selectedRowCache: Map<string, unknown>;
+    asyncRows: Array<{ value: string; label: string }>;
+  };
+  state._selectedRowCache.clear();
+  expect(el.selectedRows[0]?.value).to.equal('a');
+
+  el.value = 'remote';
+  state._selectedRowCache.clear();
+  state.asyncRows = [{ value: 'remote', label: 'Remote' }];
+  expect(el.selectedRows[0]?.label).to.equal('Remote');
+});
+
 it('participates in a form (single + multiple)', async () => {
   const form = (await fixture(html`
     <form>
@@ -1818,4 +1857,3 @@ describe('native input surface', () => {
     expect(blurEvent.composed).to.be.true;
   });
 });
-

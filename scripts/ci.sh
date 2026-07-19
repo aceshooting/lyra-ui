@@ -179,4 +179,33 @@ if [[ "$RUN_PLATFORM" == "1" ]]; then
   done
 fi
 
+if [[ "$RUN_PLATFORM_MATRIX" == "1" ]]; then
+  for node_version in 20 22; do
+    node_bin="$(resolve_node_for_version "$node_version")"
+    if [[ -z "$node_bin" ]]; then
+      echo "could not find Node $node_version; install it or set CI_SH_NODE${node_version}_BIN" >&2
+      exit 1
+    fi
+
+    if [[ "$node_version" == "20" ]]; then
+      pnpm_request="${CI_SH_PNPM20_BIN:-pnpm10}"
+    else
+      pnpm_request="${CI_SH_PNPM22_BIN:-pnpm}"
+    fi
+    pnpm_bin="$(resolve_command "$pnpm_request")"
+    if [[ -z "$pnpm_bin" ]]; then
+      echo "could not find $pnpm_request for Node $node_version; install it or set CI_SH_PNPM${node_version}_BIN" >&2
+      exit 1
+    fi
+
+    for browser in firefox webkit; do
+      step "platform contracts: Node $node_version / $browser"
+      run_with_toolchain "$node_bin" "$pnpm_bin" install --frozen-lockfile
+      run_with_toolchain "$node_bin" "$pnpm_bin" --filter @aceshooting/lyra-ui exec playwright install --with-deps "$browser"
+      WTR_BROWSER="$browser" WTR_STRICT_CONSOLE=1 \
+        run_with_toolchain "$node_bin" "$pnpm_bin" --filter @aceshooting/lyra-ui test:platform
+    done
+  done
+fi
+
 printf '\n\033[32mCI gate complete.\033[0m\n'
