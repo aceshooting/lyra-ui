@@ -1447,6 +1447,53 @@ describe('search', () => {
       restore();
     }
   });
+
+  it('paints both matches when the term repeats within a single text-layer node (regression)', async () => {
+    // A real PDF page renders one <span> per text item; when a search term occurs twice inside the
+    // same item ("aab" at offsets 0 and 3 of "aabaab", non-overlapping since search() advances by the
+    // query length), both matches land in one physical text-layer Text node. paintSearchMatches() used
+    // to throw an uncaught IndexSizeError from setStart()/setEnd() painting the second match, because
+    // wrapping the first one with surroundContents() splits/shrinks the node out from under the second
+    // match's precomputed offset. This single-span, no-trailing-whitespace TextLayer stand-in (unlike
+    // the shared FakeTextLayer, which inserts an extra whitespace Text node per word) keeps the DOM and
+    // getPageText() coordinate spaces exactly aligned so the two matches are provably in one node.
+    const el = (await fixture(html`<lr-pdf-viewer></lr-pdf-viewer>`)) as LyraPdfViewer;
+    class SingleSpanTextLayer {
+      constructor(private options: { container: HTMLElement }) {}
+      render(): Promise<void> {
+        const span = document.createElement('span');
+        span.textContent = 'aabaab';
+        this.options.container.appendChild(span);
+        return Promise.resolve();
+      }
+      cancel(): void {}
+    }
+    const doc = {
+      numPages: 1,
+      getPage: (pageNumber: number) =>
+        Promise.resolve({
+          ...fakePage(pageNumber),
+          getTextContent: () => Promise.resolve({ items: [{ str: 'aabaab', hasEOL: false }] }),
+        }),
+    };
+    (el as unknown as { loadLibrary: () => Promise<unknown> }).loadLibrary = () => Promise.resolve({
+      getDocument: () => ({ promise: Promise.resolve(doc) }),
+      GlobalWorkerOptions: { workerSrc: '' },
+      TextLayer: SingleSpanTextLayer,
+    });
+    const restore = stubFetch();
+    try {
+      el.src = 'https://example.test/report.pdf';
+      await waitFor(el, '[part="toolbar"]');
+      const count = await el.search('aab'); // used to reject with an uncaught IndexSizeError
+      expect(count).to.equal(2);
+      const marks = listShadowRoot(el).querySelectorAll('mark[part~="search-match"]');
+      expect(marks.length).to.equal(2);
+      expect(Array.from(marks).map((mark) => mark.textContent)).to.deep.equal(['aab', 'aab']);
+    } finally {
+      restore();
+    }
+  });
 });
 
 describe('registry registration', () => {

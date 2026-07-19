@@ -816,23 +816,54 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
       ranges.push({ node, start: cursor, end: cursor + len });
       cursor += len + 1;
     }
-    for (const match of pageMatches) {
-      for (const r of ranges) {
-        const start = Math.max(match.start, r.start);
-        const end = Math.min(match.start + match.length, r.end);
-        if (start >= end) continue;
+    for (const r of ranges) {
+      // Every match intersecting this one physical text node, left-to-right. Two matches can land in
+      // the same node when the search term repeats within one text-layer span (e.g. "aab" inside
+      // "aabaab") -- surroundContents() below extracts/splits the node as each one is wrapped, so a
+      // later match's offset must be computed against the node it *actually* lives in post-split, not
+      // the pristine reference `ranges` captured before any painting started (that stale reference is
+      // what used to throw an uncaught IndexSizeError from setStart()/setEnd()).
+      const intersecting = pageMatches
+        .map((match) => ({
+          matchIndex: match.matchIndex,
+          start: Math.max(match.start, r.start),
+          end: Math.min(match.start + match.length, r.end),
+        }))
+        .filter((m) => m.start < m.end)
+        .sort((a, b) => a.start - b.start);
+      let currentNode: Text = r.node;
+      let currentNodeRawStart = r.start;
+      for (const m of intersecting) {
         const range = document.createRange();
-        range.setStart(r.node, start - r.start);
-        range.setEnd(r.node, end - r.start);
+        try {
+          range.setStart(currentNode, m.start - currentNodeRawStart);
+          range.setEnd(currentNode, m.end - currentNodeRawStart);
+        } catch {
+          // Defensive only -- the running currentNode/currentNodeRawStart bookkeeping above is meant
+          // to keep this offset always valid; one bad match still shouldn't take down the rest of the
+          // page's painting.
+          continue;
+        }
         const mark = document.createElement('mark');
         const parts = ['search-match'];
-        if (match.matchIndex === this.searchActiveIndex) parts.push('search-match-active');
+        if (m.matchIndex === this.searchActiveIndex) parts.push('search-match-active');
         mark.setAttribute('part', parts.join(' '));
         try {
           range.surroundContents(mark);
         } catch {
           // A range spanning a text-layer span boundary in a way surroundContents can't wrap --
           // best-effort painting, the match is still reachable via goToPage()/searchNext().
+          continue;
+        }
+        // surroundContents() extracts the matched text out of currentNode, leaving whatever came
+        // after it in a new sibling Text node right after the inserted <mark> -- that's where a
+        // further match in this same original node now lives, starting at this match's raw end.
+        const remainder = mark.nextSibling;
+        if (remainder instanceof Text) {
+          currentNode = remainder;
+          currentNodeRawStart = m.end;
+        } else {
+          break; // nothing left in this node for a further match to land in
         }
       }
     }
