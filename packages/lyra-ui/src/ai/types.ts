@@ -36,11 +36,16 @@ export type { ChatMessageRole, ChatMessageStatus, ToolCallStatus };
 export type AgentStatusKind =
   | 'idle'
   | 'running'
+  | 'queued'
+  | 'collecting'
   | 'waiting-input'
   | 'waiting-approval'
   | 'done'
   | 'error'
-  | 'cancelled';
+  | 'cancelled'
+  // Keep autocomplete for the built-in lifecycle while allowing an application
+  // to add provider- or workflow-specific states.
+  | (string & {});
 
 /** A status value paired with an optional human-readable detail, e.g. `{ kind: 'error', message: 'Rate limited' }`. */
 export interface AgentStatus {
@@ -214,6 +219,8 @@ export interface CancelEventDetail {
 /** `detail` for a retry request. */
 export interface RetryEventDetail {
   attempt: number;
+  /** Stable id of the message being retried, when the message has one. */
+  messageId?: string;
 }
 
 /** `detail` for an export request, e.g. "export this conversation/run as `format`". */

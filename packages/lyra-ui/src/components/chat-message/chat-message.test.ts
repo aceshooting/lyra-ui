@@ -1,4 +1,4 @@
-import { fixture, expect, html } from '@open-wc/testing';
+import { fixture, expect, html, oneEvent } from '@open-wc/testing';
 import './chat-message.js';
 import '../live-region/live-region.js';
 import '../markdown/markdown-core.js';
@@ -128,6 +128,13 @@ it('only renders the built-in retry button when status="failed", and it emits lr
   el.addEventListener('lr-retry', () => (fired = true));
   button.click();
   expect(fired).to.be.true;
+});
+
+it('includes the optional stable message id in lr-retry detail', async () => {
+  const el = (await fixture(html`<lr-chat-message message-id="message-42" status="failed">hi</lr-chat-message>`)) as LyraChatMessage;
+  const event = oneEvent(el, 'lr-retry');
+  el.shadowRoot!.querySelector<HTMLButtonElement>('[part="retry-button"]')!.click();
+  expect((await event).detail).to.deep.equal({ messageId: 'message-42' });
 });
 
 it('keeps focus inside the message when a lr-retry listener flips status away from failed', async () => {

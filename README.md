@@ -32,7 +32,7 @@ a live example, source code, and API reference.
   <a href="https://aceshooting.github.io/lyra-ui/"><img src=".github/readme/preview-table.png" width="32%" alt="Lyra UI sortable table example" /></a>
   <a href="https://aceshooting.github.io/lyra-ui/"><img src=".github/readme/preview-chart.png" width="32%" alt="Lyra UI line chart example" /></a>
 </p>
-<p align="center"><sub>A few of 186 components (248 custom elements) — <a href="https://aceshooting.github.io/lyra-ui/">browse them all live →</a></sub></p>
+<p align="center"><sub>A few of 187 components (249 custom elements) — <a href="https://aceshooting.github.io/lyra-ui/">browse them all live →</a></sub></p>
 
 ## Table of Contents
 
@@ -128,7 +128,7 @@ Contributors and AI coding agents working on this repo: see [AGENTS.md](./AGENTS
 
 ## Components
 
-248 custom elements across six component families. Every tag has a live, interactive example on the
+249 custom elements across six component families. Every tag has a live, interactive example on the
 [docs site](https://aceshooting.github.io/lyra-ui/); for the full per-tag reference (Web Awesome
 mirror, props, events, slots, parts) see
 [`packages/lyra-ui/README.md#components`](./packages/lyra-ui/README.md#components).
@@ -144,7 +144,7 @@ mirror, props, events, slots, parts) see
 
 ## Theming, internationalization & RTL
 
-Every one of the 248 tags is built on the same three guarantees — not opt-in per component:
+Every one of the 249 tags is built on the same three guarantees — not opt-in per component:
 
 - **Theming** through `--lr-*` design tokens — retheme by overriding a custom property,
   no per-component theming API to learn.

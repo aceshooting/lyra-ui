@@ -60,7 +60,7 @@ const STATUS_TEXT_KEY: Record<Exclude<ChatMessageStatus, 'sent'>, string> = {
 };
 
 export interface LyraChatMessageEventMap {
-  'lr-retry': CustomEvent<undefined>;
+  'lr-retry': CustomEvent<{ messageId?: string }>;
   'lr-collapse-toggle': CustomEvent<boolean>;
 }
 /**
@@ -127,7 +127,9 @@ export interface LyraChatMessageEventMap {
  *   has no way to know what markup the host puts in this slot. This mirrors `lr-flow-node`'s `header`
  *   slot, which replaces that component's own built-in heading row the same way.
  * @event lr-retry - Fired by the built-in retry button, only rendered when `status="failed"` and the
- *   `failure` slot is empty. A host using the `failure` slot owns its own retry control and is not
+ *   `failure` slot is empty. `detail: { messageId?: string }` includes this element's stable
+ *   `messageId` when supplied, so a conversation surface can identify the message without a
+ *   closure around each row. A host using the `failure` slot owns its own retry control and is not
  *   required to use this event at all — but nothing stops that control from dispatching its own
  *   `new CustomEvent('lr-retry', { bubbles: true, composed: true })` to stay consistent with the
  *   same event contract a listener further up a conversation surface already relies on for every
@@ -167,6 +169,10 @@ export class LyraChatMessage extends LyraElement<LyraChatMessageEventMap> {
 
   /** Who authored the message. Reflects to `data-role` — see the class doc. */
   @property({ reflect: true, attribute: 'data-role' }) role: ChatMessageRole = 'assistant';
+
+  /** Optional stable application-defined identifier for this message. Included in `lr-retry`
+   *  detail when set. */
+  @property({ attribute: 'message-id', reflect: true }) messageId = '';
 
   /** When the message was sent/received. Accepts a `Date` or anything
    *  `new Date()` can parse (e.g. an ISO 8601 string); invalid input is
@@ -367,7 +373,7 @@ export class LyraChatMessage extends LyraElement<LyraChatMessageEventMap> {
     // so it lands somewhere stable inside the message instead of silently
     // reverting to `<body>` once the button it was on disappears.
     this.bubbleEl?.focus();
-    this.emit('lr-retry');
+    this.emit('lr-retry', { messageId: this.messageId || undefined });
   };
 
   render(): TemplateResult {

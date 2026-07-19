@@ -456,3 +456,35 @@ it('is accessible in both modes', async () => {
   )) as LyraThreadList;
   await expect(slottedMode).to.be.accessible();
 });
+
+it('renders first-class leading, meta, and row-content hooks inside virtualized rows', async () => {
+  const el = (await fixture(
+    html`<lr-thread-list
+      grouping="none"
+      .threads=${threads.slice(0, 1)}
+      .renderLeading=${() => html`<span data-testid="leading">Purpose</span>`}
+      .renderMeta=${() => html`<span data-testid="meta">3 sources</span>`}
+      .renderRowContent=${() => html`<strong data-testid="content">Custom row body</strong>`}
+    ></lr-thread-list>`,
+  )) as LyraThreadList;
+  await el.updateComplete;
+  await nextFrame();
+  const row = dataRows(el)[0];
+  expect(row.querySelector('[slot="leading"] [data-testid="leading"]')).to.exist;
+  expect(row.querySelector('[slot="meta"] [data-testid="meta"]')).to.exist;
+  expect(row.querySelector('[slot="content"] [data-testid="content"]')).to.exist;
+  expect(row.shadowRoot!.querySelector('[part="title"]')).to.not.exist;
+});
+
+it('allows group labels and month dates to be formatted by the host', async () => {
+  const el = (await fixture(
+    html`<lr-thread-list
+      .threads=${threads}
+      .formatGroupLabel=${(key: string, date?: Date) => `custom:${key}:${date?.getFullYear() ?? ''}`}
+    ></lr-thread-list>`,
+  )) as LyraThreadList;
+  await el.updateComplete;
+  await nextFrame();
+  const groups = el.shadowRoot!.querySelector('lr-virtual-list')!.shadowRoot!.querySelectorAll('[part="group"]');
+  expect([...groups].some((group) => group.textContent?.includes('custom:today'))).to.be.true;
+});

@@ -52,6 +52,17 @@ export const styles = css`
     outline: none; /* the visible ring below targets [part='option'] directly */
     -webkit-tap-highlight-color: transparent;
   }
+  [part='leading'] {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    min-inline-size: var(--lr-size-1-5rem);
+    min-block-size: var(--lr-size-1-5rem);
+  }
+  [part='leading'][hidden] {
+    display: none;
+  }
   [part='option']:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);

@@ -88,9 +88,11 @@ export interface LyraEvaluationRunEventMap {
 /** Badge tone per `AgentStatusKind` -- mirrors `<lr-span-waterfall>`'s own status-to-tone
  *  mapping's polarity (success/danger/warning/brand/neutral), extended for the three states
  *  `AgentStatus` has that a single span's own narrower status vocabulary doesn't. */
-const STATUS_VARIANT: Record<AgentStatusKind, BadgeVariant> = {
+const STATUS_VARIANT: Record<string, BadgeVariant> = {
   idle: 'neutral',
   running: 'brand',
+  queued: 'neutral',
+  collecting: 'brand',
   'waiting-input': 'warning',
   'waiting-approval': 'warning',
   done: 'success',
@@ -223,6 +225,8 @@ export class LyraEvaluationRun extends LyraElement<LyraEvaluationRunEventMap> {
         return this.localize('statusError');
       case 'cancelled':
         return this.localize('evaluationRunStatusCancelled');
+      default:
+        return kind.replace(/[-_]+/g, ' ').replace(/\b\w/g, (letter) => letter.toUpperCase());
     }
   }
 

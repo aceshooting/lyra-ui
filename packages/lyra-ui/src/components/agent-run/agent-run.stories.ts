@@ -52,6 +52,30 @@ export const WaitingForApproval: Story = {
   `,
 };
 
+export const QueuedAndCollecting: Story = {
+  render: () => html`
+    <lr-agent-run
+      style="max-width: 40rem;"
+      .run=${{ ...runningRun, status: { kind: 'queued' } }}
+      .statusLabels=${{ queued: 'Waiting for a worker' }}
+      .statusVariants=${{ queued: 'warning' }}
+      .metrics=${[
+        { id: 'input', label: 'Input tokens', value: 1240 },
+        { id: 'output', label: 'Output tokens', value: 0 },
+      ]}
+    ></lr-agent-run>
+  `,
+};
+
+export const ReplaceableChrome: Story = {
+  render: () => html`
+    <lr-agent-run style="max-width: 40rem;" .run=${runningRun}>
+      <div slot="header">Custom lifecycle header</div>
+      <div slot="summary">Custom metrics summary</div>
+    </lr-agent-run>
+  `,
+};
+
 export const Done: Story = {
   render: () => html`
     <lr-agent-run

@@ -78,6 +78,22 @@ export const styles = css`
     flex: 0 0 auto;
     font-size: var(--lr-font-size-sm);
   }
+  [part='metric'] {
+    display: inline-flex;
+    align-items: baseline;
+    gap: var(--lr-space-xs);
+    white-space: nowrap;
+  }
+  [part='metric-label'] {
+    color: var(--lr-color-text-quiet);
+  }
+  [part='metric-value'] {
+    font-variant-numeric: tabular-nums;
+    font-weight: var(--lr-font-weight-semibold);
+  }
+  [part='metric-value'][data-variant='danger'] { color: var(--lr-color-danger); }
+  [part='metric-value'][data-variant='success'] { color: var(--lr-color-success); }
+  [part='metric-value'][data-variant='warning'] { color: var(--lr-color-warning); }
   [part='model'] {
     color: var(--lr-color-text-quiet);
     white-space: nowrap;

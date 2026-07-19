@@ -41,11 +41,11 @@ const trueDefaultBooleanConverter: ComplexAttributeConverter<boolean> = {
 /** Statuses for which the live elapsed-time ticker (and the built-in Cancel button) apply -- a
  *  run is still genuinely "going" while waiting on the user or an approval gate, not just while
  *  actively `running`. */
-const TICKING_KINDS: ReadonlySet<AgentStatusKind> = new Set(['running', 'waiting-input', 'waiting-approval']);
+const TICKING_KINDS: ReadonlySet<string> = new Set(['running', 'collecting', 'waiting-input', 'waiting-approval']);
 
 /** Terminal statuses for which a static (not live-ticking) duration applies, and for which the
  *  built-in Retry button becomes relevant (a subset -- see `canRetry`). */
-const TERMINAL_KINDS: ReadonlySet<AgentStatusKind> = new Set(['done', 'error', 'cancelled']);
+const TERMINAL_KINDS: ReadonlySet<string> = new Set(['done', 'error', 'cancelled']);
 
 /** Badge label per status. `running`/`error` reuse this library's existing generic `statusRunning`/
  *  `statusError` keys (identical wording already used by `<lr-task-list>`'s own per-item status
@@ -54,9 +54,11 @@ const TERMINAL_KINDS: ReadonlySet<AgentStatusKind> = new Set(['done', 'error', '
  *  deliberately narrower than `AgentStatusKind` (see `AgentStatus`'s own doc comment in
  *  `src/ai/types.ts`) and collapsing e.g. `waiting-input`/`waiting-approval` down to it would
  *  discard exactly the distinction a host most needs to act on. */
-const STATUS_LABEL: Record<AgentStatusKind, { key: string }> = {
+const STATUS_LABEL: Record<string, { key: string }> = {
   idle: { key: 'agentRunStatusIdle' },
   running: { key: 'statusRunning' },
+  queued: { key: 'agentRunStatusQueued' },
+  collecting: { key: 'agentRunStatusCollecting' },
   'waiting-input': { key: 'agentRunStatusWaitingInput' },
   'waiting-approval': { key: 'agentRunStatusWaitingApproval' },
   done: { key: 'agentRunStatusDone' },
@@ -64,9 +66,11 @@ const STATUS_LABEL: Record<AgentStatusKind, { key: string }> = {
   cancelled: { key: 'agentRunStatusCancelled' },
 };
 
-const STATUS_VARIANT: Record<AgentStatusKind, BadgeVariant> = {
+const STATUS_VARIANT: Record<string, BadgeVariant> = {
   idle: 'neutral',
   running: 'brand',
+  queued: 'neutral',
+  collecting: 'brand',
   'waiting-input': 'warning',
   'waiting-approval': 'warning',
   done: 'success',
@@ -80,7 +84,7 @@ const STATUS_VARIANT: Record<AgentStatusKind, BadgeVariant> = {
  *  though it isn't actively executing -- and `cancelled` maps to `'error'`, the closest of
  *  `TaskStatus`'s four terminal-ish states since `<lr-task-list>` has no cancelled concept of its
  *  own. */
-const STEP_TO_TASK_STATUS: Record<AgentStatusKind, TaskStatus> = {
+const STEP_TO_TASK_STATUS: Record<string, TaskStatus> = {
   idle: 'pending',
   running: 'running',
   'waiting-input': 'running',
@@ -91,7 +95,19 @@ const STEP_TO_TASK_STATUS: Record<AgentStatusKind, TaskStatus> = {
 };
 
 function toTaskItem(step: AgentStep): TaskItem {
-  return { id: step.id, label: step.label, status: STEP_TO_TASK_STATUS[step.status.kind], detail: step.status.message };
+  return {
+    id: step.id,
+    label: step.label,
+    status: STEP_TO_TASK_STATUS[step.status.kind] ?? 'pending',
+    detail: step.status.message,
+  };
+}
+
+export interface AgentRunMetric {
+  id: string;
+  label: string;
+  value: string | number;
+  variant?: BadgeVariant;
 }
 
 interface FormattedDuration {
@@ -161,7 +177,10 @@ export interface LyraAgentRunEventMap {
  * `tools`/`reasoning`/`output` are plain named slots with no default content — entirely the
  * host's own composition (typically `<lr-tool-call-chip>`/`<lr-tool-result-view>` rows,
  * reasoning/streaming text, and final output respectively). An `actions` slot adds extra header
- * controls alongside the built-in Cancel/Retry pair.
+ * controls alongside the built-in Cancel/Retry pair. The `header` and `summary` slots replace the
+ * built-in lifecycle header and model/usage/metrics summary respectively. `statusLabels` and
+ * `statusVariants` make application-defined lifecycle kinds first-class, while `metrics` renders
+ * arbitrary labeled values such as prompt and completion token counts.
  *
  * The built-in Cancel button renders while `showCancel` is true and the run's status is one of
  * `TICKING_KINDS` (still genuinely in progress); Retry renders while `showRetry` is true and the
@@ -182,6 +201,8 @@ export interface LyraAgentRunEventMap {
  * @customElement lr-agent-run
  * @slot tasks - Task/plan content. Falls back to a `<lr-task-list>` built from `run.steps` when
  *   nothing is slotted and `run.steps` is non-empty.
+ * @slot header - Replaces the built-in lifecycle header and its built-in actions.
+ * @slot summary - Replaces the built-in model, usage, and metrics summary.
  * @slot tools - Tool-call content (e.g. `<lr-tool-call-chip>`/`<lr-tool-result-view>` rows). No
  *   default content.
  * @slot reasoning - Reasoning/thinking content. No default content.
@@ -209,6 +230,9 @@ export interface LyraAgentRunEventMap {
  *   rendered while `run.model` or a valid `run.costEstimate` is present.
  * @csspart model - `run.model`, when set.
  * @csspart usage - The composed `<lr-usage-badge>`.
+ * @csspart metric - One arbitrary metric in the built-in summary.
+ * @csspart metric-label - The metric's label.
+ * @csspart metric-value - The metric's value.
  * @csspart actions - Wrapper around the `actions` slot and the built-in Cancel/Retry buttons.
  * @csspart cancel-button - The built-in Cancel button. Only rendered while cancelable (see the
  *   class doc).
@@ -231,6 +255,15 @@ export class LyraAgentRun extends LyraElement<LyraAgentRunEventMap> {
    *  library never assumes on a host's behalf. */
   @property({ attribute: false }) formatCost?: (cost: number) => string;
 
+  /** Labels for application-defined lifecycle kinds. Built-in kinds remain localized by Lyra. */
+  @property({ attribute: false }) statusLabels: Record<string, string> = {};
+
+  /** Badge variants for application-defined lifecycle kinds. Unknown kinds default to `neutral`. */
+  @property({ attribute: false }) statusVariants: Record<string, BadgeVariant> = {};
+
+  /** Additional run metrics such as prompt/completion token counts. */
+  @property({ attribute: false }) metrics: AgentRunMetric[] = [];
+
   /** Whether the built-in Cancel button can render at all -- still gated by the run's own status
    *  being cancelable (`running`/`waiting-input`/`waiting-approval`). Set `false` for a read-only
    *  viewer. */
@@ -241,6 +274,8 @@ export class LyraAgentRun extends LyraElement<LyraAgentRunEventMap> {
   @property({ type: Boolean, attribute: 'show-retry', converter: trueDefaultBooleanConverter }) showRetry = true;
 
   @state() private retryAttempt = 0;
+  @state() private hasHeaderSlot = false;
+  @state() private hasSummarySlot = false;
 
   @query('lr-live-region') private liveRegion?: LyraLiveRegion;
 
@@ -252,10 +287,26 @@ export class LyraAgentRun extends LyraElement<LyraAgentRunEventMap> {
   private previousStatusKind?: AgentStatusKind;
 
   protected willUpdate(changed: PropertyValues): void {
+    if (!this.hasUpdated) {
+      this.hasHeaderSlot = this.hasSlotted('header');
+      this.hasSummarySlot = this.hasSlotted('summary');
+    }
     if (changed.has('run') && this.run?.id !== this.previousRunId) {
       this.retryAttempt = 0;
     }
   }
+
+  private hasSlotted(name: string): boolean {
+    return Array.from(this.children).some((element) => element.getAttribute('slot') === name);
+  }
+
+  private onHeaderSlotChange = (e: Event): void => {
+    this.hasHeaderSlot = (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length > 0;
+  };
+
+  private onSummarySlotChange = (e: Event): void => {
+    this.hasSummarySlot = (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length > 0;
+  };
 
   protected updated(changed: PropertyValues): void {
     if (changed.has('run')) this.handleRunChange();
@@ -286,7 +337,11 @@ export class LyraAgentRun extends LyraElement<LyraAgentRunEventMap> {
   }
 
   private statusLabel(kind: AgentStatusKind): string {
-    return this.localize(STATUS_LABEL[kind].key);
+    const custom = this.statusLabels[kind];
+    if (custom) return custom;
+    const builtIn = STATUS_LABEL[kind];
+    if (builtIn) return this.localize(builtIn.key);
+    return kind.replace(/[-_]+/g, ' ').replace(/\b\w/g, (letter) => letter.toUpperCase());
   }
 
   private get currentStep(): AgentStep | undefined {
@@ -352,60 +407,76 @@ export class LyraAgentRun extends LyraElement<LyraAgentRunEventMap> {
     const ticking = this.isTicking;
     const staticElapsed = this.staticElapsedText;
     const cost = this.costText;
-    const hasSummary = !!run.model || cost !== '';
+    const hasSummary = !!run.model || cost !== '' || this.metrics.length > 0;
 
     return html`
       <div part="base">
         <div part="header">
-          <div part="status">
-            <lr-badge part="status-badge" variant=${STATUS_VARIANT[kind]}>${this.statusLabel(kind)}</lr-badge>
-            ${run.status.message ? html`<span part="status-message">${run.status.message}</span>` : nothing}
-          </div>
-          ${ticking
-            ? html`<lr-generation-status
-                part="elapsed"
-                exportparts="elapsed:elapsed-time"
-                active
-                .startedAt=${run.startedAt}
-                .showStop=${false}
-              ></lr-generation-status>`
-            : staticElapsed
-              ? html`<span part="elapsed-static">${staticElapsed}</span>`
-              : nothing}
-          ${step
+          <slot name="header" @slotchange=${this.onHeaderSlotChange}></slot>
+          ${!this.hasHeaderSlot
             ? html`
-                <div part="current-step">
-                  <span part="current-step-icon" aria-hidden="true">${spinnerIcon()}</span>
-                  <span class="sr-only"
-                    >${this.localize('agentRunCurrentStepLabel')}</span
+                <div part="status">
+                  <lr-badge
+                    part="status-badge"
+                    variant=${this.statusVariants[kind] ?? STATUS_VARIANT[kind] ?? 'neutral'}
+                    >${this.statusLabel(kind)}</lr-badge
                   >
-                  <span part="current-step-label">${step.label}</span>
+                  ${run.status.message ? html`<span part="status-message">${run.status.message}</span>` : nothing}
                 </div>
-              `
-            : nothing}
-          ${hasSummary
-            ? html`
-                <div part="summary">
-                  ${run.model ? html`<span part="model">${run.model}</span>` : nothing}
-                  ${cost !== ''
-                    ? html`<lr-usage-badge part="usage" exportparts="cost:cost" cost-text=${cost}></lr-usage-badge>`
+                ${ticking
+                  ? html`<lr-generation-status
+                      part="elapsed"
+                      exportparts="elapsed:elapsed-time"
+                      active
+                      .startedAt=${run.startedAt}
+                      .showStop=${false}
+                    ></lr-generation-status>`
+                  : staticElapsed
+                    ? html`<span part="elapsed-static">${staticElapsed}</span>`
+                    : nothing}
+                ${step
+                  ? html`
+                      <div part="current-step">
+                        <span part="current-step-icon" aria-hidden="true">${spinnerIcon()}</span>
+                        <span class="sr-only">${this.localize('agentRunCurrentStepLabel')}</span>
+                        <span part="current-step-label">${step.label}</span>
+                      </div>
+                    `
+                  : nothing}
+                ${hasSummary || this.hasSummarySlot
+                  ? html`<div part="summary">
+                      <slot name="summary" @slotchange=${this.onSummarySlotChange}></slot>
+                      ${!this.hasSummarySlot
+                        ? html`
+                            ${run.model ? html`<span part="model">${run.model}</span>` : nothing}
+                            ${cost !== ''
+                              ? html`<lr-usage-badge part="usage" exportparts="cost:cost" cost-text=${cost}></lr-usage-badge>`
+                              : nothing}
+                            ${this.metrics.map(
+                              (metric) => html`<span part="metric" data-metric-id=${metric.id}>
+                                <span part="metric-label">${metric.label}</span>
+                                <span part="metric-value" data-variant=${metric.variant ?? nothing}>${metric.value}</span>
+                              </span>`,
+                            )}
+                          `
+                        : nothing}
+                    </div>`
+                  : nothing}
+                <div part="actions">
+                  <slot name="actions"></slot>
+                  ${this.canCancel
+                    ? html`<button part="cancel-button" type="button" @click=${this.onCancelClick}>
+                        ${this.localize('cancel')}
+                      </button>`
+                    : nothing}
+                  ${this.canRetry
+                    ? html`<button part="retry-button" type="button" @click=${this.onRetryClick}>
+                        ${this.localize('retry')}
+                      </button>`
                     : nothing}
                 </div>
               `
             : nothing}
-          <div part="actions">
-            <slot name="actions"></slot>
-            ${this.canCancel
-              ? html`<button part="cancel-button" type="button" @click=${this.onCancelClick}>
-                  ${this.localize('cancel')}
-                </button>`
-              : nothing}
-            ${this.canRetry
-              ? html`<button part="retry-button" type="button" @click=${this.onRetryClick}>
-                  ${this.localize('retry')}
-                </button>`
-              : nothing}
-          </div>
         </div>
         <div part="body">
           <slot part="tasks" name="tasks"

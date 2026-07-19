@@ -31,7 +31,7 @@ export interface LyraThreadListEventMap {
   'lr-filter-change': CustomEvent<{ text: string; matchCount: number }>;
 }
 
-type ThreadBucketKey =
+export type ThreadBucketKey =
   | 'pinned'
   | 'today'
   | 'yesterday'
@@ -97,8 +97,9 @@ function defaultFilter(thread: ChatThread, query: string): boolean {
  * a controlled event carrying the *requested* new state — the host mutates `threads`.
  *
  * Data mode: a host needing content with no home in `lr-conversation-item`'s own
- * `title`/`excerpt`/`meta`/`actions` surface (e.g. a leading purpose icon — the item has no default
- * slot to receive one) sets `wrapRow` to wrap the already-built row. A host needing a fully custom
+ * `title`/`excerpt`/`meta`/`actions` surface sets `wrapRow` to wrap the already-built row. For
+ * common row composition, `renderLeading`, `renderMeta`, and `renderRowContent` provide focused
+ * virtualized render hooks. A host needing a fully custom
  * `actions` surface itself — beyond `rowActions`'s closed `pin | archive | delete` set, e.g. a
  * `<lr-menu>` with Rename/Delete — sets `renderActions` instead; its content is appended after any
  * built-in `rowActions` output in the same slot, and `wrapRow` continues to compose around the result.
@@ -164,6 +165,26 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
    *  events normally without also selecting the row. Unset (the default) leaves `rowActions`'
    *  output byte-for-byte unchanged. */
   @property({ attribute: false }) renderActions?: (thread: ChatThread) => TemplateResult;
+
+  /** Data mode only: renders non-interactive content in the row's leading slot, before its title
+   *  and excerpt. The callback runs during the virtualized row render. */
+  @property({ attribute: false }) renderLeading?: (thread: ChatThread) => TemplateResult;
+
+  /** Data mode only: renders the row's meta content. Built-in pin metadata remains available when
+   *  present, and this result is appended in the same meta region. */
+  @property({ attribute: false }) renderMeta?: (thread: ChatThread) => TemplateResult;
+
+  /** Data mode only: replaces the conversation item's title/excerpt/meta content area with a
+   *  host-rendered row body. Use this for structured, non-interactive row content while keeping
+   *  the selectable row and timestamp semantics supplied by `<lr-conversation-item>`. */
+  @property({ attribute: false }) renderRowContent?: (thread: ChatThread) => TemplateResult;
+
+  /** Overrides the localized label for a date group. The date argument is present for month
+   *  groups and omitted for semantic groups such as `today` or `archived`. */
+  @property({ attribute: false }) formatGroupLabel?: (key: ThreadBucketKey, date?: Date) => string;
+
+  /** Overrides the default locale-aware formatting used for month group dates. */
+  @property({ attribute: false }) formatDate?: (date: Date) => string;
 
   /** Data mode: include `archived` threads (in their own trailing group under `grouping="date"`). */
   @property({ type: Boolean, attribute: 'show-archived', reflect: true }) showArchived = false;
@@ -252,6 +273,8 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
   }
 
   private bucketLabel(key: ThreadBucketKey): string {
+    const groupDate = key.startsWith('month:') ? this.dateForBucket(key) : undefined;
+    if (this.formatGroupLabel) return this.formatGroupLabel(key, groupDate);
     switch (key) {
       case 'pinned':
         return this.localize('threadGroupPinned');
@@ -266,13 +289,17 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
       case 'archived':
         return this.localize('threadGroupArchived');
       default: {
-        const [, ym] = key.split(':');
-        const [year, month] = ym!.split('-').map(Number);
-        return getDateTimeFormat(this.effectiveLocale, { month: 'long', year: 'numeric' }).format(
-          new Date(year!, month! - 1, 1),
-        );
+        return this.formatDate?.(groupDate!) ??
+          getDateTimeFormat(this.effectiveLocale, { month: 'long', year: 'numeric' }).format(groupDate!);
       }
     }
+  }
+
+  private dateForBucket(key: ThreadBucketKey): Date | undefined {
+    if (!key.startsWith('month:')) return undefined;
+    const [, ym] = key.split(':');
+    const [year, month] = ym!.split('-').map(Number);
+    return new Date(year!, month! - 1, 1);
   }
 
   private buildRows(visible: ChatThread[]): { rows: ChatThread[]; groups: VirtualListGroup[] } {
@@ -446,7 +473,10 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
         @lr-rename=${(e: CustomEvent<{ title: string }>) =>
           this.emit('lr-thread-rename', { id: thread.id, title: e.detail.title })}
       >
+        ${this.renderLeading ? html`<span slot="leading">${this.renderLeading(thread)}</span>` : nothing}
+        ${this.renderRowContent ? html`<span slot="content">${this.renderRowContent(thread)}</span>` : nothing}
         ${thread.pinned ? html`<span slot="meta" part="pin-glyph" aria-hidden="true">${pinIcon()}</span>` : nothing}
+        ${this.renderMeta ? html`<span slot="meta">${this.renderMeta(thread)}</span>` : nothing}
         ${this.rowActions.length > 0 || this.renderActions ? this.renderRowActions(thread) : nothing}
       </lr-conversation-item>
     `;

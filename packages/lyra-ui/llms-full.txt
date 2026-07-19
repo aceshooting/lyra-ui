@@ -5556,9 +5556,11 @@ conversation-surface level).
   the `actions` slot's content as a sibling immediately after `[part="bubble"]` instead of nested
   inside `[part="footer"]`'s own padding/background box, for a consumer whose action row (e.g. a
   hover-reveal copy button) must sit visually outside the bubble's chrome
+- `messageId: string = ''` (attribute `message-id`, reflected) — optional stable application id;
+  included in `lr-retry` detail when the built-in retry control is activated
 
-**Events:** `lr-retry` (no detail payload; fired by the built-in retry button, only rendered when
-`status="failed"`), `lr-collapse-toggle` (`detail: boolean`, the new `collapsed` state — fired when
+**Events:** `lr-retry` (`detail: { messageId?: string }`; fired by the built-in retry button, only
+rendered when `status="failed"`), `lr-collapse-toggle` (`detail: boolean`, the new `collapsed` state — fired when
 the user activates the built-in collapse button)
 
 **Slots:** default (the message body), `avatar` (an avatar/icon for the message author), `badges`
@@ -11268,6 +11270,14 @@ icon — the item has no default slot to receive one); unset renders the built-i
 appends host-supplied content (re-invoked per row on every render, e.g. a `lr-menu` with custom
 actions) after the built-in `rowActions` output in each row's `actions` slot; events it fires reach
 the host normally and never trigger `lr-select`. Unset renders only the built-in `rowActions`.
+`renderLeading?: (thread: ChatThread) => TemplateResult` (attribute: false) — renders non-interactive
+leading content in each virtualized row. `renderMeta?: (thread: ChatThread) => TemplateResult`
+(attribute: false) — appends structured metadata in the row's meta region.
+`renderRowContent?: (thread: ChatThread) => TemplateResult` (attribute: false) — replaces the
+conversation item's title/excerpt/meta content area with custom non-interactive row content.
+`formatGroupLabel?: (key: ThreadBucketKey, date?: Date) => string` (attribute: false) — overrides
+group labels. `formatDate?: (date: Date) => string` (attribute: false) — overrides month-group date
+formatting.
 
 **Slots:** default — slotted mode only: host-supplied `lr-conversation-item`s, rendered in order.
 `empty` — replaces the built-in empty state.
@@ -11727,15 +11737,35 @@ elements), `error`, `spinner`.
 Node cap: 50,000 — exceeding it renders the localized `xmlViewerTooManyNodes` error instead of the
 tree.
 
+## `lr-agent-workspace`
+
+Responsive controlled shell for an AI conversation and its supporting run, tool, retrieval,
+grounding, and context state. It performs no network or model work and composes the existing
+conversation primitives.
+
+**Properties:** `label`, `accessibleLabel`, `messages`, `run`, `metrics`, `tools`, `retrievalChunks`,
+`selectedRetrievalIds`, `retrievalLoading`, `retrievalHasMore`, `retrievalError`,
+`groundingAssessment`, `citations`, `contextSegments`, `contextTotal`, `follow`, `unreadStartIndex`,
+`showDetails`, `showComposer`, `composerValue`, `composerStatus`, `composerPlaceholder`,
+`composerMinRows`, `composerMaxRows`. **Slots:** `messages`, `details`, `composer`, `header-actions`.
+**Events:** `lr-input`, `lr-submit`, `lr-stop`, `lr-message-retry` (`detail: { messageId }`),
+`lr-follow-change`, `lr-retrieval-select`, `lr-citation-select`, `lr-tool-approval-decide`,
+`lr-cancel`, `lr-retry`. **CSS parts:** `base`, `header`, `heading`, `header-actions`, `body`,
+`conversation`, `viewport`, `messages`, `messages-empty`, `details`, `details-content`, `section`,
+`section-heading`, `composer`, `composer-input`.
+
 ## `lr-agent-run`
 
-Top-level shell for one agent run: status, elapsed time, current step, model/cost summary, and
-Cancel/Retry actions. Named `tasks`, `tools`, `reasoning`, `output`, and `actions` slots support
-host-controlled composition.
+Top-level shell for one agent run: status, elapsed time, current step, model/cost summary, arbitrary
+metrics, and Cancel/Retry actions. Built-in and application-defined lifecycle statuses are supported;
+`statusLabels` and `statusVariants` customize unknown status kinds. Named `header` and `summary` slots
+replace the corresponding built-in chrome, while `tasks`, `tools`, `reasoning`, `output`, and
+`actions` support host-controlled composition.
 
-**Properties:** `run`, `formatCost`, `showCancel`, `showRetry`. **Events:** `lr-cancel` (`detail:
+**Properties:** `run`, `formatCost`, `statusLabels`, `statusVariants`, `metrics`, `showCancel`, `showRetry`.
+`metrics` accepts `{ id, label, value, variant? }` records such as token counts. **Events:** `lr-cancel` (`detail:
 { run }`), `lr-retry` (`detail: { run, attempt }`). **Slots:** `tasks`, `tools`, `reasoning`,
-`output`, `actions`. **CSS parts:** `base`, `header`, `status`, `status-badge`, `status-message`,
+`output`, `actions`, `header`, `summary`. **CSS parts:** `base`, `header`, `status`, `status-badge`, `status-message`,
 `elapsed`, `elapsed-static`, `summary`, `model`, `usage`, `current-step`, `current-step-icon`,
 `current-step-label`, `body`, `tasks`, `tools`, `reasoning`, `output`, `actions`, `cancel-button`,
 `retry-button`, `empty`.
@@ -12012,7 +12042,20 @@ message instead of the map.
 ## `lr-agent-run`
 
 Renders the status and controls for one agent run. Set `run` to the run data, and use
-`showCancel`, `showRetry`, and `formatCost` to control the optional actions and cost formatting.
+`showCancel`, `showRetry`, `formatCost`, `statusLabels`, `statusVariants`, and `metrics` to control
+the lifecycle presentation, custom status labels/variants, and arbitrary counters.
+
+## `lr-agent-workspace`
+
+Responsive controlled conversation shell that composes messages, the agent run, tools, retrieval
+results, grounding, context inspection, and a composer. Use `messages`, `run`, `tools`,
+`retrievalChunks`, `groundingAssessment`, and `contextSegments` for data mode, or replace regions
+with the `messages`, `details`, and `composer` slots. `label` and `accessibleLabel` name the
+workspace; `selectedRetrievalIds`, `retrievalLoading`, `retrievalHasMore`, and `retrievalError`
+control retrieval state; `citations`, `contextTotal`, `follow`, and `unreadStartIndex` control
+supporting context and transcript behavior; `metrics` forwards arbitrary run counters; and
+`showDetails`, `showComposer`, `composerValue`, `composerStatus`, `composerPlaceholder`,
+`composerMinRows`, and `composerMaxRows` control the built-in details and composer regions.
 
 ## `lr-agent-trace`
 

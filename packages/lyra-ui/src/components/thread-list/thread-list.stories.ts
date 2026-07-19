@@ -4,6 +4,7 @@ import './thread-list.js';
 import type { ChatThread } from './thread-list.class.js';
 import '../menu/menu.js';
 import '../menu/menu-item.js';
+import '../badge/badge.js';
 import type { MenuSelectDetail } from '../menu/menu.js';
 
 const meta: Meta = {
@@ -125,4 +126,21 @@ export const Narrow320px: Story = {
     html`<div style="max-width:320px;block-size:300px;border:1px dashed var(--lr-color-border);">
       <lr-thread-list searchable .threads=${threads} .rowActions=${['pin', 'archive', 'delete']}></lr-thread-list>
     </div>`,
+};
+
+export const RenderHooks: Story = {
+  render: () => html`
+    <div style="block-size:400px;inline-size:360px;border:1px solid var(--lr-color-border);">
+      <lr-thread-list
+        .threads=${threads}
+        .renderLeading=${(thread: ChatThread) => html`<lr-badge variant=${thread.pinned ? 'brand' : 'neutral'}>AI</lr-badge>`}
+        .renderMeta=${(thread: ChatThread) => html`<span>${thread.archived ? 'Archived' : 'Knowledge base'}</span>`}
+        .renderRowContent=${(thread: ChatThread) => html`
+          <strong>${thread.title}</strong>
+          <small>${thread.excerpt ?? 'No preview available'}</small>
+        `}
+        .formatGroupLabel=${(key: string) => `Group: ${key}`}
+      ></lr-thread-list>
+    </div>
+  `,
 };

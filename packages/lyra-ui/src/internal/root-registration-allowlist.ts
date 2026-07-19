@@ -215,6 +215,7 @@ export const ROOT_BARREL_TAGS = [
   'lr-provenance-panel',
   'lr-mind-map',
   'lr-agent-run',
+  'lr-agent-workspace',
   'lr-agent-trace',
   'lr-context-inspector',
   'lr-dashboard-grid',

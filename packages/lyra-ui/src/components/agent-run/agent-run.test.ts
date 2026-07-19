@@ -482,3 +482,33 @@ it('is accessible with a terminal error state (retry button, static elapsed)', a
   expect(el.shadowRoot!.querySelector('[part="elapsed-static"]')).to.exist;
   await expect(el).to.be.accessible();
 });
+
+it('supports queued and collecting lifecycle states with custom labels and metrics', async () => {
+  const el = (await fixture(html`
+    <lr-agent-run
+      .run=${makeRun({ status: { kind: 'queued' } })}
+      .statusLabels=${{ queued: 'Waiting in queue' }}
+      .statusVariants=${{ queued: 'warning' }}
+      .metrics=${[
+        { id: 'input', label: 'Input tokens', value: 123 },
+        { id: 'output', label: 'Output tokens', value: 45 },
+      ]}
+    ></lr-agent-run>
+  `)) as LyraAgentRun;
+  expect(el.shadowRoot!.querySelector('[part="status-badge"]')!.textContent!.trim()).to.equal('Waiting in queue');
+  expect(el.shadowRoot!.querySelectorAll('[part="metric"]')).to.have.length(2);
+  expect(el.shadowRoot!.querySelector('[part="status-badge"]')!.getAttribute('variant')).to.equal('warning');
+});
+
+it('lets header and summary slots replace the built-in chrome', async () => {
+  const el = (await fixture(html`
+    <lr-agent-run .run=${makeRun({ model: 'hidden-model', costEstimate: 2 })}>
+      <span slot="header" id="custom-header">Custom header</span>
+      <span slot="summary" id="custom-summary">Custom summary</span>
+    </lr-agent-run>
+  `)) as LyraAgentRun;
+  expect(el.querySelector('#custom-header')).to.exist;
+  expect(el.querySelector('#custom-summary')).to.exist;
+  expect(el.shadowRoot!.querySelector('[part="status-badge"]')).to.not.exist;
+  expect(el.shadowRoot!.querySelector('[part="usage"]')).to.not.exist;
+});

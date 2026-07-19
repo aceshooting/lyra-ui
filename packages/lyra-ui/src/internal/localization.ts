@@ -279,6 +279,7 @@ export type LyraMessageKey =
   | 'liteChartMarkSummary'
   | 'liteChartBarLabel'
   | 'composerLabel'
+  | 'composerPlaceholder'
   | 'textareaLabel'
   | 'citation'
   | 'citationWithStatus'
@@ -393,6 +394,15 @@ export type LyraMessageKey =
   | 'threadListMatchAnnounce'
   | 'threadListMatchAnnouncePlural'
   | 'threadListEmpty'
+  | 'agentWorkspaceLabel'
+  | 'agentWorkspaceConversation'
+  | 'agentWorkspaceDetails'
+  | 'agentWorkspaceRun'
+  | 'agentWorkspaceTools'
+  | 'agentWorkspaceRetrieval'
+  | 'agentWorkspaceGrounding'
+  | 'agentWorkspaceContext'
+  | 'agentWorkspaceEmpty'
   | 'resizeDivider'
   | 'trendUnchanged'
   | 'trendIncreased'
@@ -982,6 +992,8 @@ export type LyraMessageKey =
   | 'documentCompareOldVersion'
   | 'documentCompareNewVersion'
   | 'agentRunStatusIdle'
+  | 'agentRunStatusQueued'
+  | 'agentRunStatusCollecting'
   | 'agentRunStatusWaitingInput'
   | 'agentRunStatusWaitingApproval'
   | 'agentRunStatusDone'
@@ -1265,6 +1277,7 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, string> = {
   liteChartMarkSummary: '{series}, {label}: {value} ({index} of {total})',
   liteChartBarLabel: '{series}, {label}: {value}',
   composerLabel: 'Message',
+  composerPlaceholder: 'Ask anything…',
   textareaLabel: 'Text',
   citation: 'Citation {index}',
   citationWithStatus: 'Citation {index}, {status}',
@@ -1386,6 +1399,15 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, string> = {
   threadListMatchAnnounce: '{count} conversation found',
   threadListMatchAnnouncePlural: '{count} conversations found',
   threadListEmpty: 'No conversations yet',
+  agentWorkspaceLabel: 'Agent workspace',
+  agentWorkspaceConversation: 'Conversation',
+  agentWorkspaceDetails: 'Run details',
+  agentWorkspaceRun: 'Agent run',
+  agentWorkspaceTools: 'Tools',
+  agentWorkspaceRetrieval: 'Retrieved context',
+  agentWorkspaceGrounding: 'Grounding',
+  agentWorkspaceContext: 'Context',
+  agentWorkspaceEmpty: 'No messages yet',
   resizeDivider: 'Resize divider between panel {a} and panel {b}',
   trendUnchanged: 'unchanged',
   trendIncreased: 'increased {value}%',
@@ -1969,6 +1991,8 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, string> = {
   documentCompareOldVersion: 'Old version',
   documentCompareNewVersion: 'New version',
   agentRunStatusIdle: 'Idle',
+  agentRunStatusQueued: 'Queued',
+  agentRunStatusCollecting: 'Collecting context',
   agentRunStatusWaitingInput: 'Waiting for input',
   agentRunStatusWaitingApproval: 'Waiting for approval',
   agentRunStatusDone: 'Done',

@@ -220,6 +220,7 @@ export class LyraRetrievalSearch extends LyraElement<LyraRetrievalSearchEventMap
           ></lr-input>
           <lr-segmented
             part="mode"
+            size="s"
             .items=${this.modeItems()}
             .value=${this.mode}
             label=${this.localize('retrievalModeLabel')}

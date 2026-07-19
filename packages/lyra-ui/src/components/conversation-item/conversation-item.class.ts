@@ -121,6 +121,10 @@ export interface LyraConversationItemEventMap {
  * @customElement lr-conversation-item
  * @slot actions - Overflow/icon-button controls (for example a pin/delete
  * button or a `lr-menu` trigger) rendered at the trailing edge of the row.
+ * @slot leading - Non-interactive leading content such as an avatar, purpose icon, or status
+ * indicator. It is rendered inside the selectable region before the title/excerpt content.
+ * @slot content - Replaces the built-in title, excerpt, and meta content area with host-supplied
+ * non-interactive row content.
  * @slot excerpt - Full override of the excerpt presentation (e.g. a search-hit snippet with `<mark>`
  *   highlighting). Wins over the `excerpt` property whenever it has assigned content, even if
  *   `excerpt` is also set. Only non-focusable content should be slotted here — see the `excerpt`
@@ -202,6 +206,8 @@ export class LyraConversationItem extends LyraElement<LyraConversationItemEventM
   @state() private renaming = false;
   @state() private draftTitle = '';
   @state() private hasActionsSlot = false;
+  @state() private hasLeadingSlot = false;
+  @state() private hasContentSlot = false;
   @state() private hasMetaSlot = false;
   @state() private hasExcerptSlot = false;
 
@@ -210,6 +216,8 @@ export class LyraConversationItem extends LyraElement<LyraConversationItemEventM
   protected willUpdate(changed: PropertyValues): void {
     if (!this.hasUpdated) {
       this.hasActionsSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'actions');
+      this.hasLeadingSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'leading');
+      this.hasContentSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'content');
       this.hasMetaSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'meta');
       this.hasExcerptSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'excerpt');
     }
@@ -327,6 +335,14 @@ export class LyraConversationItem extends LyraElement<LyraConversationItemEventM
     this.hasActionsSlot = (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length > 0;
   };
 
+  private onLeadingSlotChange = (e: Event): void => {
+    this.hasLeadingSlot = (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length > 0;
+  };
+
+  private onContentSlotChange = (e: Event): void => {
+    this.hasContentSlot = (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length > 0;
+  };
+
   private onMetaSlotChange = (e: Event): void => {
     this.hasMetaSlot = (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length > 0;
   };
@@ -357,29 +373,37 @@ export class LyraConversationItem extends LyraElement<LyraConversationItemEventM
           @click=${this.onOptionClick}
           @keydown=${this.onOptionKeyDown}
         >
+          <span part="leading" ?hidden=${!this.hasLeadingSlot}>
+            <slot name="leading" @slotchange=${this.onLeadingSlotChange}></slot>
+          </span>
           <div part="content">
-            ${this.renaming
-              ? html`<input
-                  part="title-input"
-                  type="text"
-                  .value=${this.draftTitle}
-                  aria-label=${renameLabel}
-                  spellcheck=${this.spellcheck}
-                  autocapitalize=${this.autocapitalize || nothing}
-                  autocorrect=${this.autoCorrect || nothing}
-                  @input=${this.onTitleInputChange}
-                  @keydown=${this.onTitleInputKeyDown}
-                  @focus=${this.onTitleInputFocus}
-                  @blur=${this.onTitleInputBlur}
-                />`
-              : html`<span part="title" title=${displayTitle}>${displayTitle}</span>`}
-            <span part="excerpt" ?hidden=${!(this.hasExcerptSlot || this.excerpt)}>
-              <slot name="excerpt" @slotchange=${this.onExcerptSlotChange}></slot>
-              ${!this.hasExcerptSlot && this.excerpt ? this.excerpt : nothing}
-            </span>
-            <span part="meta" ?hidden=${!this.hasMetaSlot}>
-              <slot name="meta" @slotchange=${this.onMetaSlotChange}></slot>
-            </span>
+            <slot name="content" @slotchange=${this.onContentSlotChange}></slot>
+            ${!this.hasContentSlot
+              ? html`
+                  ${this.renaming
+                    ? html`<input
+                        part="title-input"
+                        type="text"
+                        .value=${this.draftTitle}
+                        aria-label=${renameLabel}
+                        spellcheck=${this.spellcheck}
+                        autocapitalize=${this.autocapitalize || nothing}
+                        autocorrect=${this.autoCorrect || nothing}
+                        @input=${this.onTitleInputChange}
+                        @keydown=${this.onTitleInputKeyDown}
+                        @focus=${this.onTitleInputFocus}
+                        @blur=${this.onTitleInputBlur}
+                      />`
+                    : html`<span part="title" title=${displayTitle}>${displayTitle}</span>`}
+                  <span part="excerpt" ?hidden=${!(this.hasExcerptSlot || this.excerpt)}>
+                    <slot name="excerpt" @slotchange=${this.onExcerptSlotChange}></slot>
+                    ${!this.hasExcerptSlot && this.excerpt ? this.excerpt : nothing}
+                  </span>
+                  <span part="meta" ?hidden=${!this.hasMetaSlot}>
+                    <slot name="meta" @slotchange=${this.onMetaSlotChange}></slot>
+                  </span>
+                `
+              : nothing}
           </div>
           ${ts ? html`<time part="timestamp" datetime=${ts.toISOString()}>${formatter(ts)}</time>` : nothing}
         </div>

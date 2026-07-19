@@ -413,6 +413,7 @@ export class LyraRubricForm extends LyraElement<LyraRubricFormEventMap> {
         id=${fieldId}
         class="control"
         part="scale"
+        size="s"
         .items=${items}
         .value=${value}
         label=${k.label ?? k.key}
