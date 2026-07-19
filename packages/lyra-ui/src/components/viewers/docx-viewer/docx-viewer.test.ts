@@ -1,8 +1,9 @@
-import { expect, fixture, html, oneEvent, waitUntil } from '@open-wc/testing';
+import { aTimeout, expect, fixture, html, oneEvent, waitUntil } from '@open-wc/testing';
 import './docx-viewer.js';
 import type { LyraDocxViewer, DocxHeadingItem } from './docx-viewer.js';
 import { findDocumentRenderer } from '../document-viewer/registry.js';
 import { supportsCustomHighlights } from '../../../internal/text-highlights.js';
+import { DEFAULT_MAX_RESOURCE_BYTES } from '../../../internal/resource-loader.js';
 import { MINIMAL_DOCX_BASE64 } from './fixtures/minimal-docx-fixture.js';
 
 function base64ToArrayBuffer(base64: string): ArrayBuffer {
@@ -20,6 +21,14 @@ function stubFetch(buffer: ArrayBuffer, ok = true): () => void {
 
 function useLibrary(el: LyraDocxViewer, deps: unknown): void {
   (el as unknown as { loadLibrary: () => Promise<unknown> }).loadLibrary = () => Promise.resolve(deps);
+}
+
+/** An `Error` shaped like `DOMException('AbortError')` -- matches `<lr-include>`'s own test
+ *  helper of the same name, since both components reject a stale/aborted fetch the same way. */
+function abortError(): Error {
+  const error = new Error('The operation was aborted.');
+  error.name = 'AbortError';
+  return error;
 }
 
 const BUFFER = base64ToArrayBuffer(MINIMAL_DOCX_BASE64);
@@ -52,6 +61,16 @@ function highlightPainted(el: LyraDocxViewer, tone = 'accent'): boolean {
     return (registry.get(`lr-highlight-${tone}`)?.size ?? 0) > 0;
   }
   return el.shadowRoot!.querySelector(`[part="content"] mark[data-lr-highlight-tone="${tone}"]`) !== null;
+}
+
+/** Whether the single "active" highlight channel (distinct from the tone-based ones above) is
+ *  currently painted, via whichever paint path this browser uses. */
+function activeHighlightPainted(el: LyraDocxViewer): boolean {
+  if (supportsCustomHighlights()) {
+    const registry = (globalThis as unknown as { CSS: { highlights: Map<string, { size: number }> } }).CSS.highlights;
+    return (registry.get('lr-highlight-active')?.size ?? 0) > 0;
+  }
+  return el.shadowRoot!.querySelector('[part="content"] mark[data-lr-highlight-name="lr-highlight-active"]') !== null;
 }
 
 describe('lr-docx-viewer', () => {
@@ -188,6 +207,176 @@ describe('lr-docx-viewer', () => {
       restore();
     }
   });
+
+  it('reports a generic failure message for a non-OK HTTP response', async () => {
+    const el = await fixture<LyraDocxViewer>(html`<lr-docx-viewer></lr-docx-viewer>`);
+    const restore = stubFetch(BUFFER, false);
+    try {
+      const errorEvent = oneEvent(el, 'lr-render-error');
+      el.src = 'https://example.test/report.docx';
+      await waitUntil(() => el.shadowRoot!.querySelector('[part="error"]') !== null);
+      expect(el.shadowRoot!.querySelector('[part="error"]')!.textContent).to.equal('Failed to load document.');
+      expect((await errorEvent).detail.error).to.exist;
+    } finally {
+      restore();
+    }
+  });
+
+  it('reports a distinct message when the response exceeds the resource size limit', async () => {
+    const el = await fixture<LyraDocxViewer>(html`<lr-docx-viewer></lr-docx-viewer>`);
+    const original = window.fetch;
+    window.fetch = (() => Promise.resolve({
+      ok: true,
+      status: 200,
+      statusText: 'OK',
+      headers: { get: (name: string) => (name.toLowerCase() === 'content-length' ? String(DEFAULT_MAX_RESOURCE_BYTES + 1) : null) },
+      arrayBuffer: () => Promise.resolve(BUFFER),
+    } as unknown as Response)) as typeof window.fetch;
+    try {
+      el.src = 'https://example.test/huge.docx';
+      await waitUntil(() => el.shadowRoot!.querySelector('[part="error"]') !== null);
+      expect(el.shadowRoot!.querySelector('[part="error"]')!.textContent).to.equal('This document is too large to preview.');
+    } finally {
+      window.fetch = original;
+    }
+  });
+
+  it('silently drops an aborted load (no error state, no lr-render-error) once a newer src supersedes it', async () => {
+    const el = await fixture<LyraDocxViewer>(html`<lr-docx-viewer></lr-docx-viewer>`);
+    useLibrary(el, {
+      mammoth: { convertToHtml: () => Promise.resolve({ value: '<p>Fresh</p>', messages: [] }) },
+      DOMPurify: { sanitize: (value: string) => value },
+    });
+    const original = window.fetch;
+    const signals: (AbortSignal | null | undefined)[] = [];
+    window.fetch = ((url: string, init?: RequestInit) => {
+      signals.push(init?.signal);
+      if (url === 'https://example.test/stale.docx') {
+        // Never resolves on its own; only settles once the caller aborts it.
+        return new Promise<Response>((_resolve, reject) => {
+          init?.signal?.addEventListener('abort', () => reject(abortError()));
+        });
+      }
+      return Promise.resolve({ ok: true, status: 200, statusText: 'OK', arrayBuffer: () => Promise.resolve(BUFFER) } as Response);
+    }) as typeof window.fetch;
+    let renderErrorCount = 0;
+    el.addEventListener('lr-render-error', () => { renderErrorCount += 1; });
+    try {
+      el.src = 'https://example.test/stale.docx';
+      await waitUntil(() => signals.length > 0);
+      el.src = 'https://example.test/fresh.docx';
+      await waitUntil(() => el.shadowRoot!.querySelector('[part="content"]') !== null);
+      expect(signals[0]?.aborted, 'the stale request should have been aborted').to.be.true;
+      expect(el.shadowRoot!.querySelector('[part="error"]')).to.not.exist;
+      expect(renderErrorCount).to.equal(0);
+    } finally {
+      window.fetch = original;
+    }
+  });
+
+  it('omits the fetch signal when AbortController is unavailable in the environment', async () => {
+    const el = await fixture<LyraDocxViewer>(html`<lr-docx-viewer></lr-docx-viewer>`);
+    useLibrary(el, {
+      mammoth: { convertToHtml: () => Promise.resolve({ value: '<p>No signal</p>', messages: [] }) },
+      DOMPurify: { sanitize: (value: string) => value },
+    });
+    const originalAbortController = (globalThis as { AbortController?: typeof AbortController }).AbortController;
+    const originalFetch = window.fetch;
+    let observedSignal: AbortSignal | null | undefined = null;
+    window.fetch = ((_url: string, init?: RequestInit) => {
+      observedSignal = init?.signal;
+      return Promise.resolve({ ok: true, status: 200, statusText: 'OK', arrayBuffer: () => Promise.resolve(BUFFER) } as Response);
+    }) as typeof window.fetch;
+    (globalThis as { AbortController?: typeof AbortController | undefined }).AbortController = undefined;
+    try {
+      el.src = 'https://example.test/report.docx';
+      await waitUntil(() => el.shadowRoot!.querySelector('[part="content"]') !== null);
+      expect(observedSignal).to.equal(undefined);
+    } finally {
+      window.fetch = originalFetch;
+      (globalThis as { AbortController?: typeof AbortController }).AbortController = originalAbortController;
+    }
+  });
+
+  it('does not set state after being disconnected while the converter dependency is still loading', async () => {
+    const el = await fixture<LyraDocxViewer>(html`<lr-docx-viewer></lr-docx-viewer>`);
+    let loadLibraryCalled = false;
+    let resolveDeps!: (deps: unknown) => void;
+    (el as unknown as { loadLibrary: () => Promise<unknown> }).loadLibrary = () => {
+      loadLibraryCalled = true;
+      return new Promise((resolve) => { resolveDeps = resolve; });
+    };
+    const restore = stubFetch(BUFFER);
+    try {
+      el.src = 'https://example.test/report.docx';
+      await waitUntil(() => loadLibraryCalled);
+      el.remove();
+      resolveDeps({
+        mammoth: { convertToHtml: () => Promise.resolve({ value: '<p>Too late</p>', messages: [] }) },
+        DOMPurify: { sanitize: (value: string) => value },
+      });
+      await aTimeout(20);
+      expect(el.shadowRoot!.querySelector('[part="content"]')).to.not.exist;
+      expect(el.shadowRoot!.querySelector('[part="error"]')).to.not.exist;
+    } finally {
+      restore();
+    }
+  });
+
+  it('does not set state after being disconnected while mammoth is still converting', async () => {
+    const el = await fixture<LyraDocxViewer>(html`<lr-docx-viewer></lr-docx-viewer>`);
+    let convertCalled = false;
+    let resolveConvert!: (value: { value: string; messages: unknown[] }) => void;
+    useLibrary(el, {
+      mammoth: {
+        convertToHtml: () => {
+          convertCalled = true;
+          return new Promise((resolve) => { resolveConvert = resolve; });
+        },
+      },
+      DOMPurify: { sanitize: (value: string) => value },
+    });
+    const restore = stubFetch(BUFFER);
+    try {
+      el.src = 'https://example.test/report.docx';
+      await waitUntil(() => convertCalled);
+      el.remove();
+      resolveConvert({ value: '<p>Too late</p>', messages: [] });
+      await aTimeout(20);
+      expect(el.shadowRoot!.querySelector('[part="content"]')).to.not.exist;
+    } finally {
+      restore();
+    }
+  });
+
+  it('ignores a stale conversion result once a newer src has superseded it before mammoth resolves', async () => {
+    const el = await fixture<LyraDocxViewer>(html`<lr-docx-viewer></lr-docx-viewer>`);
+    let convertCalls = 0;
+    let resolveStaleConvert!: (value: { value: string; messages: unknown[] }) => void;
+    useLibrary(el, {
+      mammoth: {
+        convertToHtml: () => {
+          convertCalls += 1;
+          if (convertCalls === 1) return new Promise((resolve) => { resolveStaleConvert = resolve; });
+          return Promise.resolve({ value: '<p>Fresh</p>', messages: [] });
+        },
+      },
+      DOMPurify: { sanitize: (value: string) => value },
+    });
+    const restore = stubFetch(BUFFER);
+    try {
+      el.src = 'https://example.test/stale.docx';
+      await waitUntil(() => convertCalls === 1);
+      el.src = 'https://example.test/fresh.docx';
+      await waitUntil(() => el.shadowRoot!.querySelector('[part="content"]') !== null);
+      expect(el.shadowRoot!.querySelector('[part="content"]')!.textContent!.trim()).to.equal('Fresh');
+      resolveStaleConvert({ value: '<p>Stale</p>', messages: [] });
+      await aTimeout(20);
+      expect(el.shadowRoot!.querySelector('[part="content"]')!.textContent!.trim()).to.equal('Fresh');
+    } finally {
+      restore();
+    }
+  });
 });
 
 describe('DOCX registry', () => {
@@ -285,6 +474,36 @@ describe('scrollToAnchor (fragment)', () => {
   it('reports its supported anchor kinds', async () => {
     const el = await fixture<LyraDocxViewer>(html`<lr-docx-viewer></lr-docx-viewer>`);
     expect(el.anchorKinds).to.deep.equal(['fragment', 'text-quote']);
+  });
+
+  it('declines an anchor kind neither fragment nor text-quote (e.g. page)', async () => {
+    const { el, restore } = await loadWithMarkup('<h1>Title</h1>');
+    (el as unknown as { anchorTimeoutMs: number }).anchorTimeoutMs = 30;
+    (el as unknown as { anchorRetryIntervalMs: number }).anchorRetryIntervalMs = 5;
+    try {
+      expect(await el.scrollToAnchor({ kind: 'page', page: 1 })).to.be.false;
+    } finally {
+      restore();
+    }
+  });
+
+  it('still resolves a heading fragment by computed position when its id attribute is missing from the DOM', async () => {
+    const { el, restore } = await loadWithMarkup('<h1>Title</h1><h2>Section One</h2>');
+    try {
+      // Simulates DOMPurify's DOM-clobbering protection stripping an id that collides with a
+      // `document` property name (see findHeadingByComputedId's own doc comment) -- the heading is
+      // still reachable by re-deriving the same slug order getHeadingTree() was built in.
+      const heading = el.shadowRoot!.querySelector('#section-one') as HTMLElement;
+      heading.removeAttribute('id');
+      let scrolled = false;
+      heading.scrollIntoView = () => {
+        scrolled = true;
+      };
+      expect(await el.scrollToAnchor({ kind: 'fragment', id: 'section-one' })).to.be.true;
+      expect(scrolled).to.be.true;
+    } finally {
+      restore();
+    }
   });
 });
 
@@ -394,6 +613,77 @@ describe('scrollToAnchor / highlights (text-quote)', () => {
       restore();
     }
   });
+
+  it('skips a non-text-quote highlight and a text-quote highlight that resolves to nothing', async () => {
+    const { el, restore } = await loadWithMarkup('<p>Hello world</p>');
+    try {
+      el.highlights = [
+        { id: 'h-page', anchor: { kind: 'page', page: 1 } },
+        { id: 'h-miss', anchor: { kind: 'text-quote', quote: 'not present anywhere' } },
+        { id: 'h-hit', anchor: { kind: 'text-quote', quote: 'world' } },
+      ];
+      await el.updateComplete;
+      expect(highlightPainted(el)).to.be.true;
+    } finally {
+      restore();
+    }
+  });
+
+  it('marks the highlight matching activeHighlightId as the active one', async () => {
+    const { el, restore } = await loadWithMarkup('<p>Hello world</p>');
+    try {
+      el.highlights = [{ id: 'h1', anchor: { kind: 'text-quote', quote: 'world' } }];
+      el.activeHighlightId = 'h1';
+      await el.updateComplete;
+      expect(activeHighlightPainted(el)).to.be.true;
+    } finally {
+      restore();
+    }
+  });
+
+  it('falls back to <mark>-wrapped highlights, stamping a highlight part, without the CSS Custom Highlight API', async () => {
+    const originalHighlight = (globalThis as { Highlight?: unknown }).Highlight;
+    (globalThis as { Highlight?: unknown }).Highlight = undefined;
+    try {
+      const el = await fixture<LyraDocxViewer>(html`<lr-docx-viewer></lr-docx-viewer>`);
+      useLibrary(el, {
+        mammoth: { convertToHtml: () => Promise.resolve({ value: '<p>Hello world</p>', messages: [] }) },
+        DOMPurify: { sanitize: (value: string) => value },
+      });
+      const restore = stubFetch(BUFFER);
+      try {
+        el.src = 'https://example.test/report.docx';
+        await waitUntil(() => el.shadowRoot!.querySelector('[part="content"]') !== null);
+        el.highlights = [{ id: 'h1', anchor: { kind: 'text-quote', quote: 'world' } }];
+        await el.updateComplete;
+        const mark = el.shadowRoot!.querySelector('[part="content"] mark[data-lr-highlight-tone="accent"]');
+        expect(mark).to.exist;
+        expect(mark!.getAttribute('part')).to.equal('highlight');
+      } finally {
+        restore();
+      }
+    } finally {
+      (globalThis as { Highlight?: unknown }).Highlight = originalHighlight;
+    }
+  });
+
+  it('does not activate a highlight when a click misses every painted range', async () => {
+    const { el, restore } = await loadWithMarkup('<p>Hello world</p>');
+    try {
+      el.highlights = [{ id: 'h1', anchor: { kind: 'text-quote', quote: 'world' } }];
+      await el.updateComplete;
+      let activated = false;
+      el.addEventListener('lr-highlight-activate', () => {
+        activated = true;
+      });
+      const paragraph = el.shadowRoot!.querySelector('[part="content"] p')!;
+      paragraph.dispatchEvent(new MouseEvent('click', { bubbles: true, composed: true, clientX: -9999, clientY: -9999 }));
+      await aTimeout(10);
+      expect(activated).to.be.false;
+    } finally {
+      restore();
+    }
+  });
 });
 
 describe('search', () => {
@@ -458,6 +748,63 @@ describe('search', () => {
     try {
       await el.search('cat');
       await expect(el).to.be.accessible();
+    } finally {
+      restore();
+    }
+  });
+
+  it('finds a match spanning multiple text nodes created by inline markup', async () => {
+    const { el, restore } = await loadWithMarkup('<p>Hello <b>world</b>, cat!</p>');
+    try {
+      expect(await el.search('cat')).to.equal(1);
+      expect(el.shadowRoot!.querySelectorAll('[part~="search-match"]').length).to.be.greaterThan(0);
+    } finally {
+      restore();
+    }
+  });
+
+  it('resolves 0 when the query is empty/whitespace-only, clearing any previous matches', async () => {
+    const { el, restore } = await loadWithMarkup('<p>The cat sat on the mat.</p>');
+    try {
+      await el.search('cat');
+      expect(el.shadowRoot!.querySelectorAll('[part~="search-match"]').length).to.be.greaterThan(0);
+      const listener = oneEvent(el, 'lr-search-change');
+      const count = await el.search('   ');
+      const event = (await listener) as CustomEvent<{ query: string; matchCount: number; activeIndex: number }>;
+      expect(count).to.equal(0);
+      expect(event.detail).to.deep.equal({ query: '   ', matchCount: 0, activeIndex: -1 });
+      expect(el.shadowRoot!.querySelectorAll('[part~="search-match"]').length).to.equal(0);
+    } finally {
+      restore();
+    }
+  });
+
+  it('resolves 0 when no document has loaded (no content root)', async () => {
+    const el = await fixture<LyraDocxViewer>(html`<lr-docx-viewer></lr-docx-viewer>`);
+    expect(await el.search('cat')).to.equal(0);
+  });
+
+  it('re-derives fresh ranges from the current DOM on repaint, tolerating offsets that no longer resolve to any text node', async () => {
+    // A long filler prefix (containing no "cat" substring) pushes both matches' stored offsets well
+    // past the handful of whitespace-only text characters Lit's own `[part="content"]` template
+    // wrapper contributes around `${unsafeHTML(...)}` -- so once the <p> is shrunk below, those
+    // offsets can't coincidentally still resolve inside that ambient whitespace.
+    const filler = 'Lorem ipsum dolor sit amet consectetur adipiscing elit sed do eiusmod tempor incididunt ut labore. ';
+    const { el, restore } = await loadWithMarkup(`<p>${filler}The cat sat on the mat, said the cat.</p>`);
+    try {
+      expect(await el.search('cat')).to.equal(2);
+      expect(el.shadowRoot!.querySelectorAll('[part~="search-match"]').length).to.be.greaterThan(0);
+
+      // Simulate the rendered content changing out from under the stored match offsets --
+      // paintSearchMatches() always re-derives fresh Ranges from the *current* DOM and must
+      // tolerate offsets that no longer resolve to any text node instead of throwing. Mutating the
+      // inner <p> (rather than the [part="content"] wrapper Lit itself manages via unsafeHTML) keeps
+      // this a plain, safe DOM change.
+      el.shadowRoot!.querySelector('[part="content"] p')!.textContent = 'x';
+
+      expect(await el.searchNext()).to.be.true;
+      expect(el.shadowRoot!.querySelectorAll('[part~="search-match"]').length).to.equal(0);
+      expect(el.shadowRoot!.querySelector('mark[part~="search-match-active"]')).to.not.exist;
     } finally {
       restore();
     }
