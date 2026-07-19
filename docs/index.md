@@ -3,7 +3,7 @@
 Lyra UI is a free, independent alternative to Shoelace and Web Awesome: a MIT-licensed,
 framework-agnostic [Lit](https://lit.dev) web-component library covering accessible form controls,
 navigation, overlays, dashboards, data visualization, file workflows, and a complete
-Conversation & Agent UI kit — 249 custom elements across 212 component families.
+Conversation & Agent UI kit — 249 custom elements across six component families.
 
 This file is a short index. The primary documentation lives on the sites linked below, not here.
 
