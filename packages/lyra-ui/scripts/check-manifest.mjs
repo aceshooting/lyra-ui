@@ -90,6 +90,31 @@ function namesFromTemplates(source) {
       if (name) names.add(name);
     }
   }
+  // A fully dynamic Lit binding such as `part=${pickerPart}` still has a finite set of
+  // statically-resolvable names when its value comes from a local string expression (or a
+  // string-literal union annotation). Resolve the binding's identifier rather than requiring
+  // every helper to call its variable exactly `part` -- <lr-evaluation-run> and
+  // <lr-graph-query-builder> both use descriptive names for two related parts in one helper.
+  for (const match of source.matchAll(/\bpart\s*=\s*\$\{(\w+)\}/g)) {
+    const [, identifier] = match;
+    const escapedIdentifier = identifier.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const declaration = source.match(
+      new RegExp(`\\b(?:const|let)\\s+${escapedIdentifier}\\s*(?::\\s*[^=;]+)?=([^;]+);`),
+    );
+    if (declaration) {
+      for (const literal of declaration[1].matchAll(/["']([^"']+)["']/g)) {
+        for (const name of literal[1].trim().split(/\s+/)) {
+          if (name) names.add(name);
+        }
+      }
+    }
+    const typeDeclaration = source.match(
+      new RegExp(`\\b${escapedIdentifier}\\s*:\\s*((?:'[^']+'|"[^"]+")(?:\\s*\\|\\s*(?:'[^']+'|"[^"]+"))*)`),
+    );
+    if (typeDeclaration) {
+      for (const literal of typeDeclaration[1].matchAll(/["']([^"']+)["']/g)) names.add(literal[1]);
+    }
+  }
   // `element.setAttribute('part', 'literal')` -- the imperative-DOM equivalent of a literal
   // `part="literal"` template attribute, used by the shared <mark>-wrap highlight-painting
   // fallback (see internal/text-highlights.js's adopting viewers) since that shared module can't

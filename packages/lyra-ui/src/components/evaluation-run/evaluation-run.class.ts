@@ -290,7 +290,12 @@ export class LyraEvaluationRun extends LyraElement<LyraEvaluationRunEventMap> {
     this.emit<EvaluationToolApprovalDetail>('lr-example-tool-approval-decide', { exampleId, ...event.detail });
   }
 
-  private renderContent(text: string, format: EvaluationContentFormat | undefined, language: string | undefined, part: string): TemplateResult {
+  private renderContent(
+    text: string,
+    format: EvaluationContentFormat | undefined,
+    language: string | undefined,
+    part: 'input' | 'output',
+  ): TemplateResult {
     if (format === 'code') {
       return html`<lr-code-block part=${part} code=${text} language=${language ?? ''}></lr-code-block>`;
     }

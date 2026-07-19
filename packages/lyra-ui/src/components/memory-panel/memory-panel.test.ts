@@ -85,7 +85,7 @@ describe('lr-memory-panel', () => {
     expect(row.querySelector('[part="confidence"]')).to.not.exist;
   });
 
-  it('only renders the provenance expand-toggle when an item defines provenance, and toggling reveals lr-provenance-panel', async () => {
+  it('only renders the provenance expand-toggle when an item defines provenance, collapsed by default', async () => {
     const el = await populated();
     const withProvenance = el.shadowRoot!.querySelector('[part="item"][data-id="l1"]')!;
     const withoutProvenance = el.shadowRoot!.querySelector('[part="item"][data-id="l2"]')!;
@@ -96,6 +96,12 @@ describe('lr-memory-panel', () => {
     expect(toggle).to.exist;
     expect(toggle.getAttribute('aria-expanded')).to.equal('false');
     expect(withProvenance.querySelector('lr-provenance-panel')).to.not.exist;
+  });
+
+  it('toggling the expand-toggle emits lr-expand and reveals a populated lr-provenance-panel', async () => {
+    const el = await populated();
+    const withProvenance = el.shadowRoot!.querySelector('[part="item"][data-id="l1"]')!;
+    const toggle = withProvenance.querySelector('[part="expand-toggle"]') as HTMLButtonElement;
 
     const listener = oneEvent(el, 'lr-expand');
     toggle.click();
