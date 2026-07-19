@@ -1,7 +1,16 @@
 import type { ReactiveController, ReactiveControllerHost } from 'lit';
 import { resolveCssLength } from './css-length.js';
 
-/** Which box an orientation breakpoint is compared against. @internal */
+/**
+ * Which box an orientation breakpoint is compared against.
+ *
+ * This types the public `orientationBreakpointBasis` property on `<lr-split>` and `<lr-stepper>`,
+ * so it must stay in the shipped `.d.ts` — unlike the controller below, it carries no
+ * internal-visibility tag. `tsconfig.json` sets `stripInternal`, which erases any declaration whose
+ * JSDoc carries that tag; doing so here would leave two public properties referencing a member the
+ * published types don't export, which `pnpm check:packed-consumer` catches as TS2305. Note the tag
+ * is matched anywhere in the comment block, so do not name it in prose here either.
+ */
 export type OrientationBreakpointBasis = 'container' | 'viewport';
 
 /** A bare CSS `<number>` with no unit — mirrors css-length.ts's `BREAKPOINT_LENGTH_RE` numeric
