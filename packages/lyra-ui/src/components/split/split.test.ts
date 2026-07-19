@@ -188,6 +188,77 @@ it('persists sizes to localStorage when storageKey is set', async () => {
   expect(parsed.length).to.equal(2);
 });
 
+it('uses defaultSizes only for initialization, below valid persistence and above equal distribution', async () => {
+  const firstVisitKey = 'test-split-default-first-' + Math.random();
+  const firstVisit = (await fixture(
+    html`<lr-split storage-key=${firstVisitKey} .defaultSizes=${[20, 80]}><div>A</div><div>B</div></lr-split>`,
+  )) as LyraSplit;
+  await elementUpdated(firstVisit);
+  expect(firstVisit.sizes).to.deep.equal([20, 80]);
+
+  const restoredKey = 'test-split-default-restored-' + Math.random();
+  localStorage.setItem(`lr-split:${restoredKey}:2`, JSON.stringify([35, 65]));
+  const restored = (await fixture(
+    html`<lr-split storage-key=${restoredKey} .defaultSizes=${[20, 80]}><div>A</div><div>B</div></lr-split>`,
+  )) as LyraSplit;
+  await elementUpdated(restored);
+  expect(restored.sizes).to.deep.equal([35, 65]);
+
+  restored.defaultSizes = [10, 90];
+  await elementUpdated(restored);
+  expect(restored.sizes).to.deep.equal([35, 65]);
+});
+
+it('falls back from invalid persisted sizes to defaultSizes through the initialization path', async () => {
+  const storageKey = 'test-split-default-invalid-' + Math.random();
+  localStorage.setItem(`lr-split:${storageKey}:2`, JSON.stringify([5, 95]));
+  const el = (await fixture(
+    html`<lr-split storage-key=${storageKey} min="10" .defaultSizes=${[25, 75]}><div>A</div><div>B</div></lr-split>`,
+  )) as LyraSplit;
+  await elementUpdated(el);
+  expect(el.sizes).to.deep.equal([25, 75]);
+});
+
+it('switches the resize axis from its own inline-size breakpoint and reports the effective orientation', async () => {
+  const spy = installResizeObserverSpy();
+  try {
+    const el = (await fixture(
+      html`<lr-split orientation-breakpoint="500" narrow-orientation="vertical"><div>A</div><div>B</div></lr-split>`,
+    )) as LyraSplit;
+    await elementUpdated(el);
+    expect(spy.callbacks.length).to.equal(1);
+
+    fireCollapseResize(spy.callbacks[0], 320);
+    await elementUpdated(el);
+    expect(el.effectiveOrientation).to.equal('vertical');
+    expect(el.getAttribute('data-effective-orientation')).to.equal('vertical');
+    const divider = el.shadowRoot!.querySelector('[part="divider"]') as HTMLElement;
+    expect(divider.getAttribute('aria-orientation')).to.equal('horizontal');
+    const before = el.sizes[0];
+    divider.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }));
+    await elementUpdated(el);
+    expect(el.sizes[0]).to.be.greaterThan(before);
+
+    const changed = oneEvent(el, 'lr-split-orientation-change');
+    fireCollapseResize(spy.callbacks[0], 700);
+    expect((await changed).detail).to.deep.equal({ orientation: 'horizontal' });
+    await elementUpdated(el);
+    expect(el.effectiveOrientation).to.equal('horizontal');
+    expect(divider.getAttribute('aria-orientation')).to.equal('vertical');
+  } finally {
+    spy.restore();
+  }
+});
+
+it('keeps the authored orientation and no effective marker when no breakpoint is configured', async () => {
+  const el = (await fixture(
+    html`<lr-split orientation="vertical"><div>A</div><div>B</div></lr-split>`,
+  )) as LyraSplit;
+  await elementUpdated(el);
+  expect(el.effectiveOrientation).to.equal('vertical');
+  expect(el.hasAttribute('data-effective-orientation')).to.be.false;
+});
+
 it('supports vertical orientation with vertical arrow keys', async () => {
   const el = (await fixture(
     html`<lr-split orientation="vertical"><div>A</div><div>B</div></lr-split>`,
@@ -738,6 +809,56 @@ it('stops keyboard-driven resizing at a px-derived min bound instead of the plai
   }
   await elementUpdated(el);
   expect(el.sizes[0]).to.equal(30);
+});
+
+it('clamps pointer and keyboard resizing to percent-only panel bounds', async () => {
+  const el = (await fixture(
+    html`<lr-split><div>A</div><div>B</div></lr-split>`,
+  )) as LyraSplit;
+  el.panelConstraints = [{ minPercent: 30, maxPercent: 50 }, null];
+  await elementUpdated(el);
+  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  mockWidth(base, 400);
+  const divider = el.shadowRoot!.querySelector('[part="divider"]') as HTMLElement;
+  divider.setPointerCapture = () => {};
+
+  divider.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, pointerId: 11, clientX: 200 }));
+  window.dispatchEvent(new PointerEvent('pointermove', { pointerId: 11, clientX: -1000 }));
+  expect(el.sizes[0]).to.equal(30);
+  window.dispatchEvent(new PointerEvent('pointerup', { pointerId: 11 }));
+
+  for (let i = 0; i < 20; i++) {
+    divider.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+  }
+  await elementUpdated(el);
+  expect(el.sizes[0]).to.equal(50);
+  expect((el.children[0] as HTMLElement).style.flex).to.include('clamp(30%, 50%, 50%)');
+});
+
+it('combines px and percent bounds using the stricter lower and upper limits', async () => {
+  const el = (await fixture(
+    html`<lr-split><div>A</div><div>B</div></lr-split>`,
+  )) as LyraSplit;
+  el.panelConstraints = [{ minPx: 280, minPercent: 20, maxPercent: 50 }, null];
+  await elementUpdated(el);
+  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  mockWidth(base, 800); // max(280px = 35%, 20%) => 35%; max => 50%
+  const divider = el.shadowRoot!.querySelector('[part="divider"]') as HTMLElement;
+  for (let i = 0; i < 20; i++) {
+    divider.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true }));
+  }
+  await elementUpdated(el);
+  expect(el.sizes[0]).to.equal(35);
+  expect((el.children[0] as HTMLElement).style.flex).to.include('max(10%, 280px, 20%)');
+});
+
+it('reports an invalid percent range through lr-split-constraints-invalid', async () => {
+  const el = (await fixture(
+    html`<lr-split><div>A</div><div>B</div></lr-split>`,
+  )) as LyraSplit;
+  const invalid = oneEvent(el, 'lr-split-constraints-invalid');
+  el.panelConstraints = [{ minPercent: 60, maxPercent: 40 }, null];
+  expect((await invalid).detail.reason).to.equal('minimum-exceeds-maximum');
 });
 
 it('keeps a constrained panel pinned between its px bounds when the container is resized', async () => {

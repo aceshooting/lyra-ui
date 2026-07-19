@@ -74,3 +74,44 @@ export const ResponsiveCollapse: Story = {
     </div>
   `,
 };
+
+export const ResponsiveOrientation: Story = {
+  render: () => html`
+    <div
+      style="resize: horizontal; overflow: hidden; inline-size: 100%; min-inline-size: 8rem; max-inline-size: 100%; border: 1px dashed var(--lr-color-border); padding: 0.5rem;"
+    >
+      <p style="margin: 0 0 0.5rem; font: 12px sans-serif; color: var(--lr-color-text-quiet)">
+        Drag this box's bottom-right corner to shrink it below 500px — the
+        split stacks its panels (<code>orientation-breakpoint="500"
+        narrow-orientation="vertical"</code>) even though the surrounding
+        page is wide. The observation boundary is the split's own measured
+        allocation, not the viewport.
+      </p>
+      <lr-split
+        orientation-breakpoint="500"
+        narrow-orientation="vertical"
+        style="height: 12rem; border: 1px solid var(--lr-color-border)"
+        @lr-split-orientation-change=${(e: CustomEvent<{ orientation: string }>) =>
+          console.log('lr-split-orientation-change', e.detail.orientation)}
+      >
+        <div style="padding: 0.5rem">Panel A</div>
+        <div style="padding: 0.5rem">Panel B</div>
+      </lr-split>
+    </div>
+  `,
+};
+
+export const PercentPanelConstraints: Story = {
+  render: () => html`
+    <lr-split
+      style="height: 8rem; border: 1px solid var(--lr-color-border)"
+      .panelConstraints=${[{ minPx: 200, minPercent: 20, maxPercent: 50 }, null]}
+    >
+      <div style="padding: 0.5rem">
+        Sidebar — at least 200px AND at least 20% (whichever is stricter),
+        at most 50%
+      </div>
+      <div style="padding: 0.5rem">Main content — fills the rest</div>
+    </lr-split>
+  `,
+};

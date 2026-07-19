@@ -49,6 +49,33 @@ export const styles = css`
     inset-block: var(--lr-size-neg-6px);
     inset-inline: 0;
   }
+  /* orientationBreakpoint's live axis -- only present while that feature is opted into (see
+     split.ts's updated()), so it can override the authored orientation rules above by source
+     order alone (equal specificity) whenever the effective axis diverges from it. */
+  :host([data-effective-orientation='vertical']) [part='base'] {
+    flex-direction: column;
+  }
+  :host([data-effective-orientation='horizontal']) [part='base'] {
+    flex-direction: row;
+  }
+  :host([data-effective-orientation='vertical']) [part='divider'] {
+    inline-size: auto;
+    block-size: var(--lr-size-3px);
+    cursor: row-resize;
+  }
+  :host([data-effective-orientation='vertical']) [part='divider']::before {
+    inset-block: var(--lr-size-neg-6px);
+    inset-inline: 0;
+  }
+  :host([data-effective-orientation='horizontal']) [part='divider'] {
+    inline-size: var(--lr-size-3px);
+    block-size: auto;
+    cursor: col-resize;
+  }
+  :host([data-effective-orientation='horizontal']) [part='divider']::before {
+    inset-block: 0;
+    inset-inline: var(--lr-size-neg-6px);
+  }
   [part='divider']:hover {
     background: var(--lr-color-brand);
   }
