@@ -4887,6 +4887,9 @@ labeled options, rendered as a button row" is ubiquitous settings/filter-panel U
 - `value: string = ''` — the currently selected item's `value`.
 - `label: string = ''` — accessible name copied to the internal `role="radiogroup"`; when empty, a
   host-level `aria-label` is used as a fallback.
+- `size: '2xs' | 'xs' | 's' | 'm' | 'l' | 'xl' = 'm'` (reflected) — visual size, matching
+  `lr-select`/`lr-combobox`'s `xs`-`xl` scale plus `lr-input`'s `2xs` tier. `m` (the default) is
+  unchanged from this component's pre-`size` rendering.
 
 **Events:** `lr-change` (`detail: { value }`) — fired when the selected value changes via click or
 keyboard.

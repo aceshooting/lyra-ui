@@ -514,6 +514,7 @@ each one-liner below.
 | `<lr-carousel>` | `wa-carousel` | Accessible slotted-slide carousel with keyboard navigation, indicators, looping, and reduced-motion-aware autoplay |
 | `<lr-carousel-item>` | `wa-carousel-item` | Optional semantic slide wrapper for carousel content |
 | `<lr-button-group>` | `wa-button-group` | Responsive semantic grouping for related action controls |
+| `<lr-control-group>` | — (extra) | Responsive layout wrapper for a row of mixed form controls and action buttons, centered rather than stretched (unlike `<lr-button-group>`) |
 | `<lr-image-comparer>` | `wa-image-comparer` | Before/after slotted surfaces with a keyboard-accessible range divider |
 | `<lr-zoomable-frame>` | `wa-zoomable-frame` | Bounded zoom and scrollable panning for slotted content or an image source |
 | `<lr-tabs>` | — (extra) | Tab strip over direct light-DOM panels; WAI-ARIA APG automatic-activation keyboard pattern |
