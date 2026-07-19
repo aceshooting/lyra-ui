@@ -1,9 +1,26 @@
 import { fixture, expect, html, oneEvent } from '@open-wc/testing';
 import './thread-list.js';
+import '../chip/chip.js';
 import type { LyraThreadList } from './thread-list.js';
 import type { LyraConversationItem } from '../conversation-item/conversation-item.class.js';
 
 type ChatThreadLike = { id: string };
+type RenderedThreadListItem =
+  | { kind: 'group'; id: string; label: string }
+  | { kind: 'thread'; thread: ChatThreadLike };
+
+function renderedItems(el: LyraThreadList): RenderedThreadListItem[] {
+  const list = el.shadowRoot!.querySelector('lr-virtual-list')!;
+  return (list as unknown as { items: RenderedThreadListItem[] }).items;
+}
+
+function renderedThreadIds(el: LyraThreadList): string[] {
+  return renderedItems(el).flatMap((item) => (item.kind === 'thread' ? [item.thread.id] : []));
+}
+
+function renderedGroupLabels(el: LyraThreadList): string[] {
+  return renderedItems(el).flatMap((item) => (item.kind === 'group' ? [item.label] : []));
+}
 
 async function nextFrame(): Promise<void> {
   await new Promise<void>((r) => requestAnimationFrame(() => requestAnimationFrame(() => r())));
@@ -54,11 +71,8 @@ describe('data mode', () => {
     )) as LyraThreadList;
     await el.updateComplete;
     await nextFrame();
-    const list = el.shadowRoot!.querySelector('lr-virtual-list')!;
-    const items = (list as unknown as { items: unknown[] }).items;
-    expect(items.length).to.equal(3); // archived excluded by default
-    const groups = (list as unknown as { groups: { label?: string }[] }).groups;
-    expect(groups.map((g) => g.label)).to.deep.equal(['Pinned', 'Today', 'Yesterday']);
+    expect(renderedThreadIds(el).length).to.equal(3); // archived excluded by default
+    expect(renderedGroupLabels(el)).to.deep.equal(['Pinned', 'Today', 'Yesterday']);
   });
 
   it('includes archived threads in a trailing Archived group when showArchived is set', async () => {
@@ -66,9 +80,23 @@ describe('data mode', () => {
       html`<lr-thread-list style="block-size:400px" .threads=${threads} show-archived></lr-thread-list>`,
     )) as LyraThreadList;
     await el.updateComplete;
-    const list = el.shadowRoot!.querySelector('lr-virtual-list')!;
-    const groups = (list as unknown as { groups: { label?: string }[] }).groups;
-    expect(groups.map((g) => g.label)).to.deep.equal(['Pinned', 'Today', 'Yesterday', 'Archived']);
+    expect(renderedGroupLabels(el)).to.deep.equal(['Pinned', 'Today', 'Yesterday', 'Archived']);
+  });
+
+  it('uses the same controlled collapse model for built-in date groups', async () => {
+    const el = (await fixture(
+      html`<lr-thread-list style="block-size:400px" .threads=${threads}></lr-thread-list>`,
+    )) as LyraThreadList;
+    el.collapsedGroupIds = ['today'];
+    await el.updateComplete;
+    await nextFrame();
+
+    expect(renderedGroupLabels(el)).to.include('Today');
+    expect(renderedThreadIds(el)).to.not.include('t1');
+    const todayToggle = [...el.shadowRoot!.querySelector('lr-virtual-list')!.shadowRoot!.querySelectorAll<HTMLElement>(
+      '[part~="group-toggle"]',
+    )].find((button) => button.textContent?.includes('Today'))!;
+    expect(todayToggle.getAttribute('aria-expanded')).to.equal('false');
   });
 
   it('grouping="none" renders every visible thread in host order with no group headers', async () => {
@@ -76,11 +104,75 @@ describe('data mode', () => {
       html`<lr-thread-list style="block-size:400px" .threads=${threads} grouping="none" show-archived></lr-thread-list>`,
     )) as LyraThreadList;
     await el.updateComplete;
+    expect(renderedGroupLabels(el)).to.deep.equal([]);
+    expect(renderedThreadIds(el)).to.deep.equal(['p1', 't1', 'y1', 'a1']);
+  });
+
+  it('supports host-defined group keys, ordering, and rich labels', async () => {
+    const projectThreads = [
+      { id: 'a1', title: 'Alpha one', project: 'alpha' },
+      { id: 'b1', title: 'Beta one', project: 'beta' },
+      { id: 'a2', title: 'Alpha two', project: 'alpha' },
+    ];
+    const el = (await fixture(html`<lr-thread-list style="block-size:400px"></lr-thread-list>`)) as LyraThreadList;
+    el.threads = projectThreads;
+    el.grouping = 'custom';
+    el.groupBy = (thread) => (thread as (typeof projectThreads)[number]).project;
+    el.groupOrder = ['beta', 'alpha'];
+    el.formatGroup = (key, groupedThreads) => html`<strong>${key}:${groupedThreads.length}</strong>`;
+    await el.updateComplete;
+    await nextFrame();
+
     const list = el.shadowRoot!.querySelector('lr-virtual-list')!;
-    const items = (list as unknown as { items: ChatThreadLike[] }).items;
-    const groups = (list as unknown as { groups: unknown[] }).groups;
-    expect(groups).to.deep.equal([]);
-    expect(items.map((t) => t.id)).to.deep.equal(['p1', 't1', 'y1', 'a1']);
+    const groupLabels = [...list.shadowRoot!.querySelectorAll('[part~="group-label"]')].map((group) =>
+      group.textContent?.trim(),
+    );
+    expect(groupLabels).to.deep.equal(['beta:1', 'alpha:2']);
+    expect(dataRows(el).map((row) => row.id)).to.deep.equal(['b1', 'a1', 'a2']);
+  });
+
+  it('keeps group collapse controlled and removes collapsed rows from virtual-list measurement', async () => {
+    const projectThreads = [
+      { id: 'a1', title: 'Alpha one', project: 'alpha' },
+      { id: 'b1', title: 'Beta one', project: 'beta' },
+    ];
+    const el = (await fixture(html`<lr-thread-list style="block-size:400px"></lr-thread-list>`)) as LyraThreadList;
+    el.threads = projectThreads;
+    el.grouping = 'custom';
+    el.groupBy = (thread) => (thread as (typeof projectThreads)[number]).project;
+    el.collapsedGroupIds = ['alpha'];
+    await el.updateComplete;
+    await nextFrame();
+
+    const list = el.shadowRoot!.querySelector('lr-virtual-list')!;
+    const alphaToggle = [...list.shadowRoot!.querySelectorAll<HTMLButtonElement>('[part~="group-toggle"]')].find(
+      (button) => button.textContent?.includes('alpha'),
+    )!;
+    expect(alphaToggle.getAttribute('aria-expanded')).to.equal('false');
+    expect(alphaToggle.getAttribute('aria-label')).to.equal('Expand alpha');
+    expect(alphaToggle.tabIndex).to.equal(0);
+    expect(dataRows(el).map((row) => row.id)).to.deep.equal(['b1']);
+    const measuredItems = (list as unknown as { items: unknown[] }).items;
+    expect(measuredItems.length).to.equal(3); // two group headers plus the one expanded row
+
+    const togglePromise = oneEvent(el, 'lr-group-toggle');
+    alphaToggle.click();
+    expect((await togglePromise).detail).to.deep.equal({ id: 'alpha', collapsed: false });
+    expect(alphaToggle.getAttribute('aria-expanded')).to.equal('false');
+
+    el.strings = { threadGroupExpand: 'Ouvrir {label}' };
+    await el.updateComplete;
+    expect(
+      [...list.shadowRoot!.querySelectorAll<HTMLButtonElement>('[part~="group-toggle"]')]
+        .find((button) => button.textContent?.includes('alpha'))!
+        .getAttribute('aria-label'),
+    ).to.equal('Ouvrir alpha');
+
+    el.collapsedGroupIds = [];
+    await el.updateComplete;
+    await nextFrame();
+    expect(dataRows(el).map((row) => row.id)).to.deep.equal(['a1', 'b1']);
+    await expect(el).to.be.accessible();
   });
 
   it('marks the row matching activeId as active', async () => {
@@ -351,9 +443,7 @@ describe('data mode', () => {
       input.value = 'HELLO';
       input.dispatchEvent(new Event('input'));
       await el.updateComplete;
-      const list = el.shadowRoot!.querySelector('lr-virtual-list')!;
-      const items = (list as unknown as { items: { id: string }[] }).items;
-      expect(items.map((t) => t.id)).to.deep.equal(['t1']);
+      expect(renderedThreadIds(el)).to.deep.equal(['t1']);
     });
 
     it('supports a custom filter override', async () => {
@@ -370,9 +460,7 @@ describe('data mode', () => {
       input.value = 'p1';
       input.dispatchEvent(new Event('input'));
       await el.updateComplete;
-      const list = el.shadowRoot!.querySelector('lr-virtual-list')!;
-      const items = (list as unknown as { items: { id: string }[] }).items;
-      expect(items.map((t) => t.id)).to.deep.equal(['p1']);
+      expect(renderedThreadIds(el)).to.deep.equal(['p1']);
     });
 
     it('shows threadListEmpty with no query and noMatches once a query has zero results', async () => {
@@ -476,6 +564,43 @@ it('renders first-class leading, meta, and row-content hooks inside virtualized 
   expect(row.shadowRoot!.querySelector('[part="title"]')).to.not.exist;
 });
 
+it('exports the real viewport and hook wrappers as externally styleable parts', async () => {
+  const wrapper = await fixture(html`
+    <div>
+      <style>
+        lr-thread-list::part(viewport) { scrollbar-gutter: stable; }
+        lr-thread-list::part(row-leading) {
+          color: rgb(12, 34, 56);
+          --lr-theme-color-brand-fill-loud: rgb(21, 43, 65);
+        }
+      </style>
+      <lr-thread-list
+        style="block-size:400px"
+        grouping="none"
+        .threads=${threads.slice(0, 1)}
+        .renderLeading=${() => html`<lr-chip tone="brand">Purpose</lr-chip>`}
+        .renderMeta=${() => html`<span>Meta</span>`}
+        .renderRowContent=${() => html`<span>Content</span>`}
+        .renderActions=${() => html`<button type="button">Action</button>`}
+      ></lr-thread-list>
+    </div>
+  `);
+  const el = wrapper.querySelector('lr-thread-list') as LyraThreadList;
+  await el.updateComplete;
+  await nextFrame();
+  const list = el.shadowRoot!.querySelector('lr-virtual-list')!;
+  const viewport = list.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  const leading = list.shadowRoot!.querySelector('[part~="row-leading"]') as HTMLElement;
+  const chipBase = leading.querySelector('lr-chip')!.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+
+  expect(getComputedStyle(viewport).scrollbarGutter).to.equal('stable');
+  expect(getComputedStyle(leading).color).to.equal('rgb(12, 34, 56)');
+  expect(getComputedStyle(chipBase).color).to.equal('rgb(21, 43, 65)');
+  expect(list.getAttribute('exportparts')).to.contain('row-meta:row-meta');
+  expect(list.getAttribute('exportparts')).to.contain('row-content:row-content');
+  expect(list.getAttribute('exportparts')).to.contain('row-actions:row-actions');
+});
+
 it('allows group labels and month dates to be formatted by the host', async () => {
   const el = (await fixture(
     html`<lr-thread-list
@@ -485,6 +610,6 @@ it('allows group labels and month dates to be formatted by the host', async () =
   )) as LyraThreadList;
   await el.updateComplete;
   await nextFrame();
-  const groups = el.shadowRoot!.querySelector('lr-virtual-list')!.shadowRoot!.querySelectorAll('[part="group"]');
+  const groups = el.shadowRoot!.querySelector('lr-virtual-list')!.shadowRoot!.querySelectorAll('[part~="group-label"]');
   expect([...groups].some((group) => group.textContent?.includes('custom:today'))).to.be.true;
 });

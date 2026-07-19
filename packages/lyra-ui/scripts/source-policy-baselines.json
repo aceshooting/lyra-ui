@@ -70,7 +70,6 @@
     "src/components/spreadsheet-viewer/spreadsheet-viewer.class.ts",
     "src/components/svg-viewer/svg-viewer.class.ts",
     "src/components/test-results/test-results.class.ts",
-    "src/components/thread-list/thread-list.class.ts",
     "src/components/toast/toast-item.class.ts",
     "src/components/tree/tree.class.ts",
     "src/components/xml-viewer/xml-viewer.class.ts"

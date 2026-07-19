@@ -1,10 +1,9 @@
 import { html, nothing, svg, type PropertyValues, type SVGTemplateResult, type TemplateResult } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
-import { styleMap } from 'lit/directives/style-map.js';
 import { LyraElement } from '../../internal/lyra-element.js';
 import type { LyraConversationItem } from '../conversation-item/conversation-item.class.js';
 import '../conversation-item/conversation-item.js';
-import type { LyraVirtualList, VirtualListGroup } from '../virtual-list/virtual-list.class.js';
+import type { LyraVirtualList } from '../virtual-list/virtual-list.class.js';
 import '../virtual-list/virtual-list.js';
 import type { LyraLiveRegion } from '../live-region/live-region.class.js';
 import '../live-region/live-region.js';
@@ -29,6 +28,7 @@ export interface LyraThreadListEventMap {
   'lr-thread-delete': CustomEvent<{ id: string }>;
   'lr-thread-rename': CustomEvent<{ id: string; title: string }>;
   'lr-filter-change': CustomEvent<{ text: string; matchCount: number }>;
+  'lr-group-toggle': CustomEvent<{ id: string; collapsed: boolean }>;
 }
 
 export type ThreadBucketKey =
@@ -39,6 +39,16 @@ export type ThreadBucketKey =
   | 'previous30'
   | `month:${string}`
   | 'archived';
+
+type ThreadListItem =
+  | {
+      kind: 'group';
+      id: string;
+      label: string | TemplateResult;
+      accessibleLabel: string;
+      collapsed: boolean;
+    }
+  | { kind: 'thread'; thread: ChatThread };
 
 const ICON_VIEW_BOX = '0 0 24 24';
 const ICON_STROKE_WIDTH = '1.75';
@@ -117,15 +127,25 @@ function defaultFilter(thread: ChatThread, query: string): boolean {
  * @event lr-thread-rename - `detail: { id, title }`, re-emitted from the row's `lr-rename` with
  *   the id attached (data mode).
  * @event lr-filter-change - `detail: { text, matchCount }` -- fires in both modes.
+ * @event lr-group-toggle - `detail: { id, collapsed }` -- requests a controlled custom/date group
+ *   collapse-state change; the host updates `collapsedGroupIds`.
  * @csspart base - The root.
  * @csspart search - The search field wrapper.
  * @csspart search-input - The `<input type="search">`.
  * @csspart list - The list region.
  * @csspart empty - The empty/no-matches state.
+ * @csspart viewport - The real scroll container, exported from the internal `lr-virtual-list`.
  * @csspart row-action - A built-in pin/archive/delete icon button (data mode, when `rowActions` includes it).
  * @csspart pin-glyph - The small pin indicator shown in a pinned row's `meta` slot (data mode).
- * @csspart group-header - Exported from the internal `lr-virtual-list`'s `group` part (data mode, `grouping="date"`).
+ * @csspart group-header - A date/custom group header in data mode.
+ * @csspart group-toggle - The controlled group expand/collapse button.
+ * @csspart group-label - The group label inside `group-toggle`.
+ * @csspart group-icon - The decorative expand/collapse glyph.
  * @csspart row - Exported from the internal `lr-virtual-list`'s `row` part (data mode).
+ * @csspart row-leading - The wrapper around `renderLeading` output.
+ * @csspart row-content - The wrapper around `renderRowContent` output.
+ * @csspart row-meta - A wrapper around built-in or `renderMeta` metadata.
+ * @csspart row-actions - The wrapper around built-in and `renderActions` output.
  */
 export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
   static styles = [LyraElement.styles, styles];
@@ -143,9 +163,25 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
   /** Overrides the default case-insensitive `title` + `excerpt` substring match. */
   @property({ attribute: false }) filter?: (thread: ChatThread, query: string) => boolean;
 
-  /** Data mode: bucket rows under localized date headers, or `'none'` for a flat, ungrouped list in
-   *  host order (including archived threads commingled with active ones, when `showArchived`). */
-  @property() grouping: 'date' | 'none' = 'date';
+  /** Data mode: bucket rows under localized date headers, use `groupBy` with `'custom'`, or use
+   *  `'none'` for a flat list in host order. */
+  @property() grouping: 'date' | 'custom' | 'none' = 'date';
+
+  /** `grouping="custom"`: derives an arbitrary controlled group id for every visible thread. */
+  @property({ attribute: false }) groupBy?: (thread: ChatThread) => string;
+
+  /** `grouping="custom"`: renders a group label. Receives the id and matching visible threads. */
+  @property({ attribute: false }) formatGroup?: (
+    id: string,
+    threads: ChatThread[],
+  ) => string | TemplateResult;
+
+  /** `grouping="custom"`: explicit group-id order, or a comparator. Unlisted ids follow in their
+   *  first-seen order when an array is supplied. */
+  @property({ attribute: false }) groupOrder?: string[] | ((a: string, b: string) => number);
+
+  /** Data mode: controlled ids of date/custom groups whose rows are omitted from virtualization. */
+  @property({ attribute: false }) collapsedGroupIds: string[] = [];
 
   /** Data mode only: built-in icon buttons rendered into each row's `actions` slot, in display order. */
   @property({ attribute: false }) rowActions: ThreadRowAction[] = [];
@@ -199,7 +235,9 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
    *  content that has no home in the item's own `title`/`excerpt`/`meta`/`actions` surface — e.g. a
    *  leading purpose icon (`lr-conversation-item` has no default slot to receive one) or trailing
    *  tag chips. Receives the thread and the already-built row `TemplateResult`; returns the final
-   *  row content. Unset renders the built-in row unwrapped. */
+   *  row content. Unset renders the built-in row unwrapped. Because the returned wrapper is wholly
+   *  host-owned, Lyra does not add a CSS part to it; use the focused `row-*` hook parts for
+   *  library-owned wrappers or add the host's own class/part in this callback. */
   @property({ attribute: false }) wrapRow?: (thread: ChatThread, row: TemplateResult) => TemplateResult;
 
   @state() private searchText = '';
@@ -302,15 +340,70 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
     return new Date(year!, month! - 1, 1);
   }
 
-  private buildRows(visible: ChatThread[]): { rows: ChatThread[]; groups: VirtualListGroup[] } {
-    if (this.grouping === 'none') return { rows: visible, groups: [] };
+  private orderedCustomGroupIds(grouped: Map<string, ChatThread[]>): string[] {
+    const firstSeen = [...grouped.keys()];
+    if (typeof this.groupOrder === 'function') return firstSeen.sort(this.groupOrder);
+    if (!this.groupOrder) return firstSeen;
+    const ordered = [...new Set(this.groupOrder)].filter((id) => grouped.has(id));
+    const listed = new Set(ordered);
+    return [...ordered, ...firstSeen.filter((id) => !listed.has(id))];
+  }
+
+  private groupedItems(
+    grouped: Map<string, ChatThread[]>,
+    order: string[],
+    format: (id: string, threads: ChatThread[]) => string | TemplateResult,
+  ): ThreadListItem[] {
+    const collapsedIds = new Set(this.collapsedGroupIds);
+    const items: ThreadListItem[] = [];
+    for (const id of order) {
+      const groupedThreads = grouped.get(id);
+      if (!groupedThreads || groupedThreads.length === 0) continue;
+      const label = format(id, groupedThreads);
+      items.push({
+        kind: 'group',
+        id,
+        label,
+        accessibleLabel: typeof label === 'string' ? label : id,
+        collapsed: collapsedIds.has(id),
+      });
+      if (!collapsedIds.has(id)) {
+        items.push(...groupedThreads.map((thread): ThreadListItem => ({ kind: 'thread', thread })));
+      }
+    }
+    return items;
+  }
+
+  private buildItems(visible: ChatThread[]): ThreadListItem[] {
+    if (this.grouping === 'none') {
+      return visible.map((thread) => ({ kind: 'thread', thread }));
+    }
+
+    if (this.grouping === 'custom') {
+      if (!this.groupBy) return visible.map((thread) => ({ kind: 'thread', thread }));
+      const grouped = new Map<string, ChatThread[]>();
+      for (const thread of visible) {
+        const id = this.groupBy(thread);
+        const existing = grouped.get(id);
+        if (existing) existing.push(thread);
+        else grouped.set(id, [thread]);
+      }
+      return this.groupedItems(
+        grouped,
+        this.orderedCustomGroupIds(grouped),
+        (id, groupedThreads) => this.formatGroup?.(id, groupedThreads) ?? id,
+      );
+    }
+
     const now = new Date();
-    const bucketOf = new Map<ChatThread, ThreadBucketKey>();
+    const grouped = new Map<string, ChatThread[]>();
     const monthKeys = new Set<string>();
-    for (const t of visible) {
-      const key = this.bucketFor(t, now);
-      bucketOf.set(t, key);
-      if (key.startsWith('month:')) monthKeys.add(key);
+    for (const thread of visible) {
+      const id = this.bucketFor(thread, now);
+      const existing = grouped.get(id);
+      if (existing) existing.push(thread);
+      else grouped.set(id, [thread]);
+      if (id.startsWith('month:')) monthKeys.add(id);
     }
     const order: ThreadBucketKey[] = [
       'pinned',
@@ -321,15 +414,7 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
       ...([...monthKeys].sort().reverse() as ThreadBucketKey[]),
       'archived',
     ];
-    const rows: ChatThread[] = [];
-    const groups: VirtualListGroup[] = [];
-    for (const key of order) {
-      const bucketThreads = visible.filter((t) => bucketOf.get(t) === key);
-      if (bucketThreads.length === 0) continue;
-      groups.push({ key, label: this.bucketLabel(key), startIndex: rows.length });
-      rows.push(...bucketThreads);
-    }
-    return { rows, groups };
+    return this.groupedItems(grouped, order, (id) => this.bucketLabel(id as ThreadBucketKey));
   }
 
   private onSearchInput = (e: Event): void => {
@@ -402,30 +487,13 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
     });
   };
 
-  // Constant across every render -- computed once rather than inside styleMap() per button, since
-  // it depends on nothing per-thread. See renderRowActions()'s own doc comment for why this needs to
-  // be an inline style rather than living solely in thread-list.styles.ts's own [part~='row-action']
-  // rule.
-  private readonly rowActionButtonStyle = styleMap({
-    minInlineSize: 'var(--lr-icon-button-size)',
-    minBlockSize: 'var(--lr-icon-button-size)',
-  });
-
   private renderRowActions(thread: ChatThread): TemplateResult {
-    // Rendered via <lr-virtual-list>'s `renderItem` callback, this markup mounts inside
-    // *virtual-list's own* shadow tree, not this element's -- so thread-list.styles.ts's own
-    // `[part~='row-action']` rule (a same-tree-scope attribute selector) never actually reaches
-    // these buttons at runtime; only an inherited property (a custom property, or an inline style,
-    // both of which cross shadow boundaries via normal CSS inheritance) can. The `minRowActionSize`
-    // inline style below is that fix -- kept in sync with the (still-present, for documentation/
-    // future-refactor and ::part()-styling purposes) stylesheet rule's own floor.
     return html`
-      <span slot="actions">
+      <span slot="actions" part="row-actions">
         ${this.rowActions.includes('pin')
           ? html`<button
               type="button"
               part="row-action"
-              style=${this.rowActionButtonStyle}
               aria-label=${this.localize(thread.pinned ? 'unpinConversation' : 'pinConversation')}
               @click=${() => this.emit('lr-thread-pin', { id: thread.id, pinned: !thread.pinned })}
             >
@@ -436,7 +504,6 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
           ? html`<button
               type="button"
               part="row-action"
-              style=${this.rowActionButtonStyle}
               aria-label=${this.localize(thread.archived ? 'unarchiveConversation' : 'archiveConversation')}
               @click=${() => this.emit('lr-thread-archive', { id: thread.id, archived: !thread.archived })}
             >
@@ -447,7 +514,6 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
           ? html`<button
               type="button"
               part="row-action"
-              style=${this.rowActionButtonStyle}
               aria-label=${this.localize('deleteConversation')}
               @click=${() => this.emit('lr-thread-delete', { id: thread.id })}
             >
@@ -456,6 +522,26 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
           : nothing}
         ${this.renderActions ? this.renderActions(thread) : nothing}
       </span>
+    `;
+  }
+
+  private renderGroup(item: Extract<ThreadListItem, { kind: 'group' }>): TemplateResult {
+    const nextCollapsed = !item.collapsed;
+    return html`
+      <div part="group-header" data-group-id=${item.id} role="heading" aria-level="2">
+        <button
+          type="button"
+          part="group-toggle"
+          aria-expanded=${item.collapsed ? 'false' : 'true'}
+          aria-label=${this.localize(item.collapsed ? 'threadGroupExpand' : 'threadGroupCollapse', undefined, {
+            label: item.accessibleLabel,
+          })}
+          @click=${() => this.emit('lr-group-toggle', { id: item.id, collapsed: nextCollapsed })}
+        >
+          <span part="group-icon" aria-hidden="true">${item.collapsed ? '+' : '−'}</span>
+          <span part="group-label">${item.label}</span>
+        </button>
+      </div>
     `;
   }
 
@@ -473,14 +559,32 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
         @lr-rename=${(e: CustomEvent<{ title: string }>) =>
           this.emit('lr-thread-rename', { id: thread.id, title: e.detail.title })}
       >
-        ${this.renderLeading ? html`<span slot="leading">${this.renderLeading(thread)}</span>` : nothing}
-        ${this.renderRowContent ? html`<span slot="content">${this.renderRowContent(thread)}</span>` : nothing}
-        ${thread.pinned ? html`<span slot="meta" part="pin-glyph" aria-hidden="true">${pinIcon()}</span>` : nothing}
-        ${this.renderMeta ? html`<span slot="meta">${this.renderMeta(thread)}</span>` : nothing}
+        ${this.renderLeading
+          ? html`<span slot="leading" part="row-leading">${this.renderLeading(thread)}</span>`
+          : nothing}
+        ${this.renderRowContent
+          ? html`<span slot="content" part="row-content">${this.renderRowContent(thread)}</span>`
+          : nothing}
+        ${thread.pinned
+          ? html`<span slot="meta" part="row-meta pin-glyph" aria-hidden="true">${pinIcon()}</span>`
+          : nothing}
+        ${this.renderMeta
+          ? html`<span slot="meta" part="row-meta">${this.renderMeta(thread)}</span>`
+          : nothing}
         ${this.rowActions.length > 0 || this.renderActions ? this.renderRowActions(thread) : nothing}
       </lr-conversation-item>
     `;
     return this.wrapRow ? this.wrapRow(thread, row) : row;
+  };
+
+  private renderItem = (item: unknown): unknown => {
+    const listItem = item as ThreadListItem;
+    return listItem.kind === 'group' ? this.renderGroup(listItem) : this.renderRow(listItem.thread);
+  };
+
+  private itemKey = (item: unknown): string => {
+    const listItem = item as ThreadListItem;
+    return listItem.kind === 'group' ? `group:${listItem.id}` : listItem.thread.id;
   };
 
   private onDefaultSlotChange = (e: Event): void => {
@@ -522,8 +626,8 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
       `;
     }
     const visible = this.visibleThreads;
-    const { rows, groups } = this.buildRows(visible);
-    const showEmpty = rows.length === 0 && !this.hasEmptySlot;
+    const items = this.buildItems(visible);
+    const showEmpty = visible.length === 0 && !this.hasEmptySlot;
     return html`
       <div part="base" role="region" aria-label=${label}>
         ${this.searchable ? this.renderSearch() : nothing}
@@ -533,12 +637,11 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
                 this.searchText.trim() ? this.localize('noMatches') : this.localize('threadListEmpty')
               }</div>`
             : html`<lr-virtual-list
-                exportparts="group:group-header, row:row"
+                exportparts="base:viewport, row:row, group-header:group-header, group-toggle:group-toggle, group-label:group-label, group-icon:group-icon, row-leading:row-leading, row-content:row-content, row-meta:row-meta, row-actions:row-actions, row-action:row-action, pin-glyph:pin-glyph"
                 row-height="auto"
-                .items=${rows}
-                .renderItem=${this.renderRow}
-                .keyFunction=${(item: unknown) => (item as ChatThread).id}
-                .groups=${groups}
+                .items=${items}
+                .renderItem=${this.renderItem}
+                .keyFunction=${this.itemKey}
                 .activeId=${this.activeId}
               ></lr-virtual-list>`}
           <slot name="empty" @slotchange=${this.onEmptySlotChange}></slot>

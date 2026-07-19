@@ -385,6 +385,8 @@ export type LyraMessageKey =
   | 'threadGroupPrevious7Days'
   | 'threadGroupPrevious30Days'
   | 'threadGroupArchived'
+  | 'threadGroupExpand'
+  | 'threadGroupCollapse'
   | 'pinConversation'
   | 'unpinConversation'
   | 'archiveConversation'
@@ -1390,6 +1392,8 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, string> = {
   threadGroupPrevious7Days: 'Previous 7 days',
   threadGroupPrevious30Days: 'Previous 30 days',
   threadGroupArchived: 'Archived',
+  threadGroupExpand: 'Expand {label}',
+  threadGroupCollapse: 'Collapse {label}',
   pinConversation: 'Pin conversation',
   unpinConversation: 'Unpin conversation',
   archiveConversation: 'Archive conversation',

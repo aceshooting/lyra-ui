@@ -48,7 +48,46 @@ export const styles = css`
     color: var(--lr-color-text-quiet);
     text-align: center;
   }
-  [part~='row-action'] {
+  lr-virtual-list::part(group-header) {
+    box-sizing: border-box;
+    padding: var(--lr-space-xs) var(--lr-space-s);
+    background: var(--lr-color-surface);
+    color: var(--lr-color-text-quiet);
+  }
+  lr-virtual-list::part(group-toggle) {
+    display: flex;
+    align-items: center;
+    gap: var(--lr-space-xs);
+    inline-size: 100%;
+    min-block-size: var(--lr-icon-button-size);
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    font-weight: var(--lr-font-weight-semibold);
+    text-align: start;
+    cursor: pointer;
+  }
+  lr-virtual-list::part(group-toggle):focus-visible {
+    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
+    outline-offset: var(--lr-focus-ring-offset);
+  }
+  lr-virtual-list::part(group-icon) {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    inline-size: var(--lr-size-1rem);
+    font-size: var(--lr-font-size-lg);
+    font-weight: var(--lr-font-weight-normal);
+  }
+  lr-virtual-list::part(row-leading),
+  lr-virtual-list::part(row-content),
+  lr-virtual-list::part(row-meta),
+  lr-virtual-list::part(row-actions) {
+    min-inline-size: 0;
+  }
+  lr-virtual-list::part(row-action) {
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -65,15 +104,15 @@ export const styles = css`
     color: var(--lr-color-text-quiet);
     cursor: pointer;
   }
-  [part~='row-action']:hover {
+  lr-virtual-list::part(row-action):hover {
     background: var(--lr-color-surface-raised);
     color: var(--lr-color-text);
   }
-  [part~='row-action']:focus-visible {
+  lr-virtual-list::part(row-action):focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);
   }
-  [part='pin-glyph'] {
+  lr-virtual-list::part(pin-glyph) {
     display: inline-flex;
     color: var(--lr-color-text-quiet);
     font-size: var(--lr-font-size-2xs);

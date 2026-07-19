@@ -130,8 +130,25 @@ export const Narrow320px: Story = {
 
 export const RenderHooks: Story = {
   render: () => html`
+    <style>
+      .hook-parts::part(viewport) {
+        scrollbar-color: var(--lr-color-brand) var(--lr-color-surface);
+        scrollbar-gutter: stable;
+      }
+      .hook-parts::part(row-leading),
+      .hook-parts::part(row-meta) {
+        display: inline-flex;
+        gap: var(--lr-space-xs);
+        --lr-theme-color-brand-fill-loud: var(--lr-color-success);
+      }
+      .hook-parts::part(row-content) {
+        display: grid;
+        gap: var(--lr-space-2xs);
+      }
+    </style>
     <div style="block-size:400px;inline-size:360px;border:1px solid var(--lr-color-border);">
       <lr-thread-list
+        class="hook-parts"
         .threads=${threads}
         .renderLeading=${(thread: ChatThread) => html`<lr-badge variant=${thread.pinned ? 'brand' : 'neutral'}>AI</lr-badge>`}
         .renderMeta=${(thread: ChatThread) => html`<span>${thread.archived ? 'Archived' : 'Knowledge base'}</span>`}
@@ -140,6 +157,32 @@ export const RenderHooks: Story = {
           <small>${thread.excerpt ?? 'No preview available'}</small>
         `}
         .formatGroupLabel=${(key: string) => `Group: ${key}`}
+      ></lr-thread-list>
+    </div>
+  `,
+};
+
+interface ProjectThread extends ChatThread {
+  project: string;
+}
+
+const projectThreads: ProjectThread[] = [
+  { id: 'p-1', title: 'Authentication follow-up', project: 'Platform' },
+  { id: 'p-2', title: 'Release checklist', project: 'Viewer' },
+  { id: 'p-3', title: 'Keyboard audit', project: 'Viewer' },
+];
+
+export const ControlledProjectGroups: Story = {
+  render: () => html`
+    <div style="block-size:400px;inline-size:360px;border:1px solid var(--lr-color-border);">
+      <lr-thread-list
+        grouping="custom"
+        .threads=${projectThreads}
+        .groupBy=${(thread: ChatThread) => (thread as ProjectThread).project}
+        .groupOrder=${['Viewer', 'Platform']}
+        .formatGroup=${(id: string, grouped: ChatThread[]) => html`<strong>${id}</strong> (${grouped.length})`}
+        .collapsedGroupIds=${['Platform']}
+        @lr-group-toggle=${(event: CustomEvent) => console.log('controlled group intent', event.detail)}
       ></lr-thread-list>
     </div>
   `,
