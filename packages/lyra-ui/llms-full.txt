@@ -3354,9 +3354,10 @@ from tokens.
 ```
 
 **Known gotchas:**
-- The type badge's data-driven background uses a 10% (not this codebase's usual 16%) quiet-tint mix
+- The type badge's data-driven background uses an 8% (not this codebase's usual 16%) quiet-tint mix
   against `--lr-color-surface` — the lower percentage is required to hold WCAG AA 4.5:1 text
-  contrast for arbitrary, unvetted type colors.
+  contrast for arbitrary, unvetted type colors (even 10% isn't safe margin for every hue in the
+  palette).
 
 ---
 
