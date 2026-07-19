@@ -191,6 +191,13 @@
       }
     },
     {
+      "name": "--lr-combobox-expand-size",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-combobox>`** — Decorative expand-icon box size, scaled by `size`."
+      }
+    },
+    {
       "name": "--lr-combobox-font-size",
       "description": {
         "kind": "markdown",
@@ -404,7 +411,7 @@
       "name": "--lr-graph-dimmed-opacity",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-graph>`** (default: `1`) — Opacity applied to a node/link when `dimmedNodeIds`/`dimmedLinkIds` includes its id (both SVG and canvas renderers). `1` (the default) is a no-op -- an unset host sees no visual change."
+        "value": "**`<lr-graph>`** (default: `0.35`) — Opacity applied to a node/link when `dimmedNodeIds`/`dimmedLinkIds` includes its id (both SVG and canvas renderers). Visible by default -- a consumer controlling `dimmedNodeIds`/`dimmedLinkIds` (e.g. `lr-knowledge-graph-explorer`) sees the dimming take effect with no extra host styling."
       }
     },
     {
@@ -510,6 +517,13 @@
       "description": {
         "kind": "markdown",
         "value": "**`<lr-ingestion-queue>`** (default: `none`) — Non-virtualized mode only: caps how tall the list grows before it scrolls internally. Has no effect once virtualized -- the internal `<lr-virtual-list>`'s own viewport keeps its independent, fixed default height (retheme it directly via `<lr-ingestion-queue>`'s own `lr-virtual-list { --lr-virtual-list-height: ... }` if needed)."
+      }
+    },
+    {
+      "name": "--lr-input-control-min-height",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-input>`, `<lr-number-input>`, `<lr-time-input>`** — Outer control height floor, scaled by `size`."
       }
     },
     {
@@ -678,6 +692,13 @@
       "description": {
         "kind": "markdown",
         "value": "**`<lr-scroller>`** — Minimum vertical scroller size."
+      }
+    },
+    {
+      "name": "--lr-select-expand-size",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-select>`** — Decorative expand-icon box size, scaled by `size`."
       }
     },
     {
