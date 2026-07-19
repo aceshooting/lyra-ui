@@ -720,6 +720,7 @@
     "@types/sinonjs__fake-timers": "^15.0.1",
     "@web/dev-server-esbuild": "^2.0.0",
     "@web/test-runner": "^1.0.0",
+    "@web/test-runner-junit-reporter": "^1.0.0",
     "@web/test-runner-playwright": "^1.0.0",
     "chart.js": "^4.5.1",
     "chartjs-plugin-zoom": "^2.2.0",

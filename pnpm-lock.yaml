@@ -153,6 +153,9 @@ importers:
       '@web/test-runner':
         specifier: ^1.0.0
         version: 1.0.0
+      '@web/test-runner-junit-reporter':
+        specifier: ^1.0.0
+        version: 1.0.0
       '@web/test-runner-playwright':
         specifier: ^1.0.0
         version: 1.0.0
@@ -2177,6 +2180,10 @@ packages:
     resolution: {integrity: sha512-w8mMT6htB3xvHdNtnZeG3vahOKq5G3ns1Z6DXLFcgqNTnYESFHrUR9zdqzPzMfg0qrV6BNpWM7C/whQBjW7NjA==}
     engines: {node: '>=22.0.0'}
 
+  '@web/test-runner-junit-reporter@1.0.0':
+    resolution: {integrity: sha512-WVQ2v5hAKsKuGf/YLNERwSGbLLQeEDWYO6oPZfsUrXymWHpNZXUXJiX0YC91KGHrKfcq7HlzbigiwxZG6WCpnw==}
+    engines: {node: '>=22.0.0'}
+
   '@web/test-runner-mocha@1.0.0':
     resolution: {integrity: sha512-5Fb5JvCIa1wJN/mPUG/kz5nMeo8bQys+8mqWsd4g2zVg1HcLzOJiRderOQZXgxOrqDth7lcZDxhIGlyS7gjuzw==}
     engines: {node: '>=22.0.0'}
@@ -2319,6 +2326,10 @@ packages:
   array-back@6.2.3:
     resolution: {integrity: sha512-SGDvmg6QTYiTxCBkYVmThcoa67uLl35pyzRHdpCGBOcqFy6BtwnphoFPk7LhJshD+Yk1Kt35WGWeZPTgwR4Fhw==}
     engines: {node: '>=12.17'}
+
+  array-flat-polyfill@1.0.1:
+    resolution: {integrity: sha512-hfJmKupmQN0lwi0xG6FQ5U8Rd97RnIERplymOv/qpq8AoNKPPAnxJadjFA23FNWm88wykh9HmpLJUUwUtNU/iw==}
+    engines: {node: '>=6.0.0'}
 
   array-union@2.1.0:
     resolution: {integrity: sha512-HGyxoOTYUyCM6stUe6EJgnd4EoewAI7zMdfqO+kGjnlZmBDz/cR5pf8r/cR4Wq60sL/p0IkcjUEEPwS3GFrIyw==}
@@ -3635,11 +3646,6 @@ packages:
   nanocolors@0.2.13:
     resolution: {integrity: sha512-0n3mSAQLPpGLV9ORXT5+C/D4mwew7Ebws69Hx4E2sgz2ZA5+32Q80B9tL8PbL7XHnRDiAxH/pnrUJ9a4fkTNTA==}
 
-  nanoid@3.3.15:
-    resolution: {integrity: sha512-y7Wygv/7mEOvxTuEQDB8StXdMRBWf1kR/tlhAzBRUFkB2jfcLOAxO/SHmOO2zgz1pVgK29/kyupn059/bCHdjA==}
-    engines: {node: ^10 || ^12 || ^13.7 || ^14 || >=15.0.1}
-    hasBin: true
-
   nanoid@3.3.16:
     resolution: {integrity: sha512-bzlKTyNJ7+LdGIIwy8ijFpIqEQIvafahV7eYykJ8Cvh42EdJeODoJ6gUJXpQJvej1BddH8OqTXZNE/KfbWAu8Q==}
     engines: {node: ^10 || ^12 || ^13.7 || ^14 || >=15.0.1}
@@ -4530,18 +4536,6 @@ packages:
       utf-8-validate:
         optional: true
 
-  ws@8.21.0:
-    resolution: {integrity: sha512-Vsp28b7DRcimFQvrqu2Wek3z1iYxDCWqHYB8Qsnk/S4RfaCQzPGPyBNuVjJV3cd6UiKtUtp6sNM77gWvzcCH+g==}
-    engines: {node: '>=10.0.0'}
-    peerDependencies:
-      bufferutil: ^4.0.1
-      utf-8-validate: '>=5.0.2'
-    peerDependenciesMeta:
-      bufferutil:
-        optional: true
-      utf-8-validate:
-        optional: true
-
   ws@8.21.1:
     resolution: {integrity: sha512-+0NTnW77fFN/DjQi6k/Sq/Yvk4Sgajw7urW8V+asjXnRgDs9gyGkdb7EzgfhA4goXsRIZKE28fzIXBHEzhuiWw==}
     engines: {node: '>=10.0.0'}
@@ -4563,6 +4557,9 @@ packages:
     version: 0.20.3
     engines: {node: '>=0.8'}
     hasBin: true
+
+  xml@1.0.1:
+    resolution: {integrity: sha512-huCv9IH9Tcf95zuYCsQraZtWnJvBtLVE0QHMOs8bWyZAFZNDcYjsPq1nEx8jKA9y+Beo9v+7OBPRisQTjinQMw==}
 
   xmlbuilder@10.1.1:
     resolution: {integrity: sha512-OyzrcFLL/nb6fMGHbiRDuPup9ljBycsdCypwuyg5AAHvyWzGfChJpCXMG88AGTIMFhGZ9RccFN1e6lhg3hkwKg==}
@@ -6358,7 +6355,7 @@ snapshots:
       istanbul-reports: 3.2.0
       log-update: 4.0.0
       nanocolors: 0.2.13
-      nanoid: 3.3.15
+      nanoid: 3.3.16
       open: 8.4.2
       picomatch: 2.3.2
       source-map: 0.7.6
@@ -6376,6 +6373,20 @@ snapshots:
       v8-to-istanbul: 9.3.0
     transitivePeerDependencies:
       - bufferutil
+      - supports-color
+      - utf-8-validate
+
+  '@web/test-runner-junit-reporter@1.0.0':
+    dependencies:
+      '@web/test-runner-chrome': 1.0.0
+      '@web/test-runner-core': 1.0.0
+      array-flat-polyfill: 1.0.1
+      xml: 1.0.1
+    transitivePeerDependencies:
+      - bare-abort-controller
+      - bare-buffer
+      - bufferutil
+      - react-native-b4a
       - supports-color
       - utf-8-validate
 
@@ -6505,6 +6516,8 @@ snapshots:
   array-back@3.1.0: {}
 
   array-back@6.2.3: {}
+
+  array-flat-polyfill@1.0.1: {}
 
   array-union@2.1.0: {}
 
@@ -7834,8 +7847,6 @@ snapshots:
 
   nanocolors@0.2.13: {}
 
-  nanoid@3.3.15: {}
-
   nanoid@3.3.16: {}
 
   negotiator@0.6.3: {}
@@ -8159,7 +8170,7 @@ snapshots:
       devtools-protocol: 0.0.1608973
       typed-query-selector: 2.12.2
       webdriver-bidi-protocol: 0.4.1
-      ws: 8.21.0
+      ws: 8.21.1
     transitivePeerDependencies:
       - bare-abort-controller
       - bare-buffer
@@ -8840,8 +8851,6 @@ snapshots:
 
   ws@7.5.11: {}
 
-  ws@8.21.0: {}
-
   ws@8.21.1: {}
 
   wsl-utils@0.1.0:
@@ -8849,6 +8858,8 @@ snapshots:
       is-wsl: 3.1.1
 
   xlsx@https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz: {}
+
+  xml@1.0.1: {}
 
   xmlbuilder@10.1.1: {}
 

@@ -1,4 +1,6 @@
+import { defaultReporter } from '@web/test-runner';
 import { playwrightLauncher } from '@web/test-runner-playwright';
+import { junitReporter } from '@web/test-runner-junit-reporter';
 import { esbuildPlugin } from '@web/dev-server-esbuild';
 
 /**
@@ -164,6 +166,14 @@ export default {
   },
   testRunnerHtml,
   coverage: collectCoverage,
+  // Only swap in JUnit output during the coverage run (same WTR_COVERAGE gate
+  // as everything else in this file) -- keep defaultReporter() alongside it so
+  // local/CI console output during a normal `wtr` run is unaffected. Leaving
+  // `reporters` unset when collectCoverage is false preserves wtr's own
+  // built-in default reporter behavior exactly as today.
+  reporters: collectCoverage
+    ? [defaultReporter(), junitReporter({ outputPath: 'coverage/junit.xml' })]
+    : undefined,
   // Chromium reports ResizeObserver loop notifications as ErrorEvents whose
   // `error` payload is null. The runner's uncaught-error bridge logs that
   // payload before the performance suite can suppress the benign notification.
