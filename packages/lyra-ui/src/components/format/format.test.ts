@@ -28,6 +28,43 @@ it('supports style-based date formatting without mixing Intl option families', a
   expect(el.shadowRoot?.textContent).to.contain('Monday');
 });
 
+it('forwards time-zone through granular and style-based date formatting', async () => {
+  const instant = '2024-01-01T00:30:00Z';
+  const granular = (await fixture(html`
+    <lr-format-date
+      date=${instant}
+      locale="en-US"
+      year="numeric"
+      month="long"
+      day="numeric"
+      time-zone="UTC"
+    ></lr-format-date>
+  `)) as LyraFormatDate;
+  expect(granular.timeZone).to.equal('UTC');
+  expect(granular.shadowRoot?.textContent).to.contain('January 1, 2024');
+
+  const styled = (await fixture(html`
+    <lr-format-date
+      date=${instant}
+      locale="en-US"
+      date-style="full"
+      time-zone="America/Los_Angeles"
+    ></lr-format-date>
+  `)) as LyraFormatDate;
+  expect(styled.shadowRoot?.textContent).to.contain('Sunday, December 31, 2023');
+
+  styled.timeZone = 'UTC';
+  await styled.updateComplete;
+  expect(styled.shadowRoot?.textContent).to.contain('Monday, January 1, 2024');
+});
+
+it('falls back to the browser time zone when time-zone is invalid instead of throwing', async () => {
+  const el = await fixture(html`
+    <lr-format-date date="2024-01-01T00:30:00Z" locale="en-US" time-zone="Not/AZone"></lr-format-date>
+  `);
+  expect(el.shadowRoot?.textContent?.trim()).to.not.equal('');
+});
+
 it('inherits locale from an ancestor when no explicit locale is set', async () => {
   const el = await fixture(html`<div lang="de-DE"><lr-format-number value="1234.5"></lr-format-number></div>`);
   expect(el.querySelector('lr-format-number')?.shadowRoot?.textContent).to.contain('1.234,5');

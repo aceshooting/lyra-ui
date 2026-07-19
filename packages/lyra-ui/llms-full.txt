@@ -10429,7 +10429,9 @@ non-finite value.
 ## `lr-format-date`
 
 Locale-aware `Intl.DateTimeFormat` output. **Properties:** `date`, `locale`, `year`, `month`, `day`,
-`dateStyle`, and `timeStyle`. Default slot is fallback content for an invalid date.
+`dateStyle`, `timeStyle`, and `timeZone` (attribute `time-zone`, forwarded through both granular and
+style-based formatting). An invalid time-zone name falls back to the browser's local time zone.
+Default slot is fallback content for an invalid date.
 
 ## `lr-format-bytes`
 
