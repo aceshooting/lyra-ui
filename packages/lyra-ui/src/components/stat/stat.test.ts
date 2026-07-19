@@ -12,6 +12,38 @@ it('renders label, value, and unit', async () => {
   expect(el.shadowRoot!.querySelector('[part="unit"]')!.textContent).to.equal('k€');
 });
 
+it('renders a real semantic link only when href is safe and forwards target/rel', async () => {
+  const plain = (await fixture(html`
+    <lr-stat label="Memories" value="128"></lr-stat>
+  `)) as LyraStat;
+  expect(plain.shadowRoot!.querySelector('[part="base"]')!.localName).to.equal('div');
+
+  const linked = (await fixture(html`
+    <lr-stat label="Memories" value="128" href="/memories" target="_blank" rel="noreferrer"></lr-stat>
+  `)) as LyraStat;
+  const anchor = linked.shadowRoot!.querySelector('[part="base"]') as HTMLAnchorElement;
+  expect(anchor.localName).to.equal('a');
+  expect(anchor.getAttribute('href')).to.equal('/memories');
+  expect(anchor.target).to.equal('_blank');
+  expect(anchor.rel).to.equal('noreferrer');
+  anchor.focus();
+  expect(linked.shadowRoot!.activeElement?.getAttribute('href')).to.equal('/memories');
+
+  const unsafe = (await fixture(html`
+    <lr-stat label="Unsafe" value="0" href="java\tscript:alert(1)"></lr-stat>
+  `)) as LyraStat;
+  expect(unsafe.shadowRoot!.querySelector('[part="base"]')!.localName).to.equal('div');
+});
+
+it('avoids nested focus targets when an exact-value stat is linked', async () => {
+  const el = (await fixture(html`
+    <lr-stat label="Revenue" value="$1.2K" exact-value="$1,204.37" href="/revenue"></lr-stat>
+  `)) as LyraStat;
+  expect(el.shadowRoot!.querySelector('[part="base"]')!.localName).to.equal('a');
+  expect(el.shadowRoot!.querySelector('[part="value"]')!.hasAttribute('tabindex')).to.be.false;
+  await expect(el).to.be.accessible();
+});
+
 it('hides the trend pill when trend is NaN, shows it with direction otherwise', async () => {
   const el = (await fixture(html`<lr-stat label="x" value="1"></lr-stat>`)) as LyraStat;
   expect(el.shadowRoot!.querySelector('[part="trend"]')).to.not.exist;

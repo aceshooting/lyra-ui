@@ -14,6 +14,22 @@ export const styles = css`
     background: var(--lr-color-surface);
     block-size: 100%;
     box-sizing: border-box;
+    color: inherit;
+    text-decoration: none;
+  }
+  [part='base'][href] {
+    cursor: pointer;
+    transition:
+      border-color var(--lr-transition-fast),
+      box-shadow var(--lr-transition-fast);
+  }
+  [part='base'][href]:hover {
+    border-color: var(--lr-color-brand);
+    box-shadow: var(--lr-shadow-sm);
+  }
+  [part='base'][href]:focus-visible {
+    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
+    outline-offset: var(--lr-focus-ring-offset);
   }
   [part='icon'] {
     color: var(--lr-color-text-quiet);
@@ -158,5 +174,10 @@ export const styles = css`
   :host([compact]) [part='base'] {
     padding: var(--lr-space-s);
     gap: var(--lr-size-0-125rem);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    [part='base'][href] {
+      transition: none;
+    }
   }
 `;

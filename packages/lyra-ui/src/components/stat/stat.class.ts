@@ -4,6 +4,7 @@ import { LyraElement } from '../../internal/lyra-element.js';
 import { chevronIcon } from '../../internal/icons.js';
 import { nextId, srOnly } from '../../internal/a11y.js';
 import { finiteNumber } from '../../internal/numbers.js';
+import { safeLinkHref } from '../../internal/safe-url.js';
 import { styles } from './stat.styles.js';
 
 export type StatVariant = 'neutral' | 'success' | 'warning' | 'danger';
@@ -27,7 +28,7 @@ export interface StatRow {
  * @slot spark - A sparkline (e.g. `<lr-sparkline>`) or other compact trend
  *   visual. `lr-stat` only reserves the slot; it doesn't render one itself.
  * @slot sub - Rich sub-line content (overrides the `sub` attribute).
- * @csspart base - The component's root wrapper.
+ * @csspart base - The component's root wrapper (`<div>`, or a real `<a>` when `href` is safe).
  * @csspart icon - Container for the leading icon slot.
  * @csspart label - The label text.
  * @csspart value-row - Wrapper around the value and unit.
@@ -53,6 +54,12 @@ export class LyraStat extends LyraElement {
   @property() value = '';
   @property() unit = '';
   @property({ reflect: true }) variant: StatVariant = 'neutral';
+  /** When set to a safe URL, renders the whole stat as a real anchor instead of a static div. */
+  @property() href?: string;
+  /** Native anchor target, used only while `href` resolves to a link. */
+  @property() target?: string;
+  /** Native anchor relationship tokens, used only while `href` resolves to a link. */
+  @property() rel?: string;
 
   private _trend = NaN;
   /** Percentage/delta value for the trend pill (e.g. `-12.5` renders a down arrow at "12.5%").
@@ -143,6 +150,8 @@ export class LyraStat extends LyraElement {
   };
 
   render(): TemplateResult {
+    const href = safeLinkHref(this.href);
+    const linked = Boolean(href);
     // `trend`'s own accessor above already normalizes a removed/absent attribute (which Lit's
     // `type: Number` converter delivers as `null`, not `NaN`) to the same `NaN` "no trend"
     // sentinel, so `this.trend` is never actually `null` here — the `!= null` check is kept as a
@@ -167,8 +176,7 @@ export class LyraStat extends LyraElement {
             isGood == null ? '' : isGood ? this.localize('trendGoodSuffix') : this.localize('trendBadSuffix')
           }`;
 
-    return html`
-      <div part="base">
+    const content = html`
         <span part="icon" ?hidden=${!this.hasIcon}
           ><slot @slotchange=${this.onIconSlotChange}></slot
         ></span>
@@ -178,7 +186,7 @@ export class LyraStat extends LyraElement {
             part="value"
             id=${this.valueId}
             title=${this.exactValue || nothing}
-            tabindex=${this.exactValue ? '0' : nothing}
+            tabindex=${this.exactValue && !linked ? '0' : nothing}
             aria-labelledby=${this.label ? `${this.labelId} ${this.valueId}` : nothing}
             >${this.value}</span
           >
@@ -214,7 +222,7 @@ export class LyraStat extends LyraElement {
                   part="row-value"
                   id=${rowValueId}
                   title=${row.exactValue || nothing}
-                  tabindex=${row.exactValue ? '0' : nothing}
+                  tabindex=${row.exactValue && !linked ? '0' : nothing}
                   aria-labelledby=${row.label ? `${rowLabelId} ${rowValueId}` : nothing}
                   >${row.value}</span
                 >
@@ -222,8 +230,10 @@ export class LyraStat extends LyraElement {
             `;
           })}
         </div>
-      </div>
     `;
+    return href
+      ? html`<a part="base" href=${href} target=${this.target || nothing} rel=${this.rel || nothing}>${content}</a>`
+      : html`<div part="base">${content}</div>`;
   }
 }
 
@@ -233,4 +243,3 @@ declare global {
     'lr-stat': LyraStat;
   }
 }
-

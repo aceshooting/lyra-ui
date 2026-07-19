@@ -1397,6 +1397,9 @@ KPI/stat card — value + unit + label + optional icon/trend/caption.
 - `label: string = ''`
 - `value: string = ''`
 - `unit: string = ''`
+- `href?: string` — when it resolves to a safe URL, the root is a real whole-stat `<a>`; unsafe
+  URL schemes keep the stat non-interactive
+- `target?: string` / `rel?: string` — forwarded to the anchor while `href` is active
 - `variant: 'neutral'|'success'|'warning'|'danger' = 'neutral'` (reflected)
 - `trend: number = NaN` (a `NaN` sentinel hides the trend pill entirely — set an actual number to
   show it)
@@ -1433,7 +1436,7 @@ slot="spark">`, or other compact trend visual — `lr-stat` only reserves the sl
 render one itself), `sub` (rich sub-line content — overrides the `sub` attribute when slotted content
 is provided)
 
-**CSS parts:** `base`, `icon`, `label`, `value-row`, `value`, `unit`, `trend`, `sub`, `spark`,
+**CSS parts:** `base` (a `<div>`, or an `<a>` for a safe `href`), `icon`, `label`, `value-row`, `value`, `unit`, `trend`, `sub`, `spark`,
 `caption`, `rows`, `row`, `row-label`, `row-value` — `[part="value"]` gets `aria-labelledby` pairing
 it with `[part="label"]`'s generated id whenever `label` is non-empty (so tabbing straight to the
 `exactValue`-focusable value still announces e.g. "Revenue $1.2K", not just the bare value); each
@@ -1449,9 +1452,12 @@ accent edge and value tint).
 <lr-stat label="Active users" value="1,204" trend="4.2" variant="success">
   <svg slot="">...</svg>
 </lr-stat>
+<lr-stat label="Memories" value="128" href="/memories"></lr-stat>
 ```
 
 **Known gotchas:**
+- When `href` makes the whole stat a link, exact-value spans keep their hover tooltips but omit
+  their own `tabindex` to avoid nesting focus targets inside the anchor.
 - no `aria-live` region wraps `value`/`trend` — an in-place update after first render still isn't
   proactively announced to screen readers. The trend pill's direction/polarity is no longer
   conveyed by icon rotation/color alone, though: a visually-hidden span now spells it out in plain

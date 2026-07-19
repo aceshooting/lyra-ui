@@ -90,6 +90,17 @@ export const Emphasis: Story = {
   `,
 };
 
+export const LinkedKpi: Story = {
+  render: () => html`
+    <lr-stat
+      label="Memories"
+      value="128"
+      caption="Open the memory inventory"
+      href="?path=/story/stat--linked-kpi"
+    ></lr-stat>
+  `,
+};
+
 export const ExactValueSubProseCompact: Story = {
   render: () => html`
     <div class="flex flex-wrap gap-4">
