@@ -99,6 +99,9 @@ export const ResponsiveOrientation: Story = {
         stepper switches to a vertical strip (<code>orientation-breakpoint="500"
         narrow-orientation="vertical"</code>) even though the surrounding page
         is wide. Mirrors <code>lr-split</code>'s identically-named contract.
+        Add <code>orientation-breakpoint-basis="viewport"</code> to key off the viewport via
+        <code>matchMedia</code> instead of the stepper's own width — necessary when the stepper
+        has a fixed width in a row that stacks at a shared breakpoint.
       </p>
       <lr-stepper
         orientation-breakpoint="500"

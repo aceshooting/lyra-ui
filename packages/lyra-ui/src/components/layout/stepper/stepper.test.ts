@@ -365,4 +365,145 @@ describe('lr-stepper', () => {
       }
     });
   });
+
+  describe('orientationBreakpointBasis', () => {
+    it('defaults to "container", leaving committed behavior unchanged', async () => {
+      const el = (await fixture(html`<lr-stepper .steps=${steps()}></lr-stepper>`)) as LyraStepper;
+      expect(el.orientationBreakpointBasis).to.equal('container');
+      expect(el.effectiveOrientation).to.equal('horizontal');
+      expect(el.hasAttribute('data-effective-orientation')).to.be.false;
+    });
+
+    it('reflects the basis to an attribute', async () => {
+      const el = (await fixture(html`
+        <lr-stepper
+          orientation-breakpoint="1px"
+          orientation-breakpoint-basis="viewport"
+          .steps=${steps()}
+        ></lr-stepper>
+      `)) as LyraStepper;
+      await elementUpdated(el);
+      expect(el.getAttribute('orientation-breakpoint-basis')).to.equal('viewport');
+    });
+
+    it('goes narrow under basis="viewport" when an absurdly large breakpoint always matches', async () => {
+      const el = (await fixture(html`
+        <lr-stepper
+          orientation-breakpoint="99999px"
+          orientation-breakpoint-basis="viewport"
+          .steps=${steps()}
+        ></lr-stepper>
+      `)) as LyraStepper;
+      await elementUpdated(el);
+      expect(el.effectiveOrientation).to.equal('vertical');
+      expect(el.getAttribute('data-effective-orientation')).to.equal('vertical');
+    });
+
+    it('ignores its own width entirely under basis="viewport"', async () => {
+      // A stepper given a fixed narrow width in a row is exactly the filed case: its own
+      // width never tracks the viewport, so only the media query can drive the flip.
+      const wrapper = (await fixture(html`
+        <div style="inline-size: 120px">
+          <lr-stepper
+            orientation-breakpoint="1px"
+            orientation-breakpoint-basis="viewport"
+            .steps=${steps()}
+          ></lr-stepper>
+        </div>
+      `)) as HTMLElement;
+      const stepper = wrapper.querySelector('lr-stepper') as LyraStepper;
+      await elementUpdated(stepper);
+      expect(stepper.effectiveOrientation).to.equal('horizontal');
+    });
+
+    it('re-queries matchMedia when the breakpoint changes at runtime', async () => {
+      const el = (await fixture(html`
+        <lr-stepper
+          orientation-breakpoint="1px"
+          orientation-breakpoint-basis="viewport"
+          .steps=${steps()}
+        ></lr-stepper>
+      `)) as LyraStepper;
+      await elementUpdated(el);
+      expect(el.effectiveOrientation).to.equal('horizontal');
+      el.orientationBreakpoint = '99999px';
+      await elementUpdated(el);
+      expect(el.effectiveOrientation, 'a stale MediaQueryList would leave this horizontal').to.equal('vertical');
+    });
+
+    it('switches observation strategy when the basis changes at runtime', async () => {
+      const el = (await fixture(html`
+        <lr-stepper
+          orientation-breakpoint="99999px"
+          orientation-breakpoint-basis="viewport"
+          .steps=${steps()}
+        ></lr-stepper>
+      `)) as LyraStepper;
+      await elementUpdated(el);
+      expect(el.effectiveOrientation).to.equal('vertical');
+      el.orientationBreakpointBasis = 'container';
+      el.orientationBreakpoint = '1px';
+      await elementUpdated(el);
+      expect(el.effectiveOrientation, 'container basis must consult the measured width').to.equal('horizontal');
+    });
+
+    it('emits lr-stepper-orientation-change when a viewport-basis change flips the axis', async () => {
+      const el = (await fixture(html`
+        <lr-stepper
+          orientation-breakpoint="1px"
+          orientation-breakpoint-basis="viewport"
+          .steps=${steps()}
+        ></lr-stepper>
+      `)) as LyraStepper;
+      await elementUpdated(el);
+      setTimeout(() => {
+        el.orientationBreakpoint = '99999px';
+      });
+      const event = await oneEvent(el, 'lr-stepper-orientation-change');
+      expect(event.detail.orientation).to.equal('vertical');
+    });
+
+    it('treats an unresolvable breakpoint as unset under basis="viewport"', async () => {
+      const el = (await fixture(html`
+        <lr-stepper
+          orientation-breakpoint="80vw"
+          orientation-breakpoint-basis="viewport"
+          .steps=${steps()}
+        ></lr-stepper>
+      `)) as LyraStepper;
+      await elementUpdated(el);
+      expect(el.effectiveOrientation).to.equal('horizontal');
+      expect(el.hasAttribute('data-effective-orientation')).to.be.false;
+    });
+
+    it('re-arms the media query after a disconnect/reconnect cycle', async () => {
+      const el = (await fixture(html`
+        <lr-stepper
+          orientation-breakpoint="1px"
+          orientation-breakpoint-basis="viewport"
+          .steps=${steps()}
+        ></lr-stepper>
+      `)) as LyraStepper;
+      await elementUpdated(el);
+      el.remove();
+      document.body.append(el);
+      await elementUpdated(el);
+      el.orientationBreakpoint = '99999px';
+      await elementUpdated(el);
+      expect(el.effectiveOrientation).to.equal('vertical');
+      el.remove();
+    });
+
+    it('is accessible with a viewport-basis breakpoint set', async () => {
+      const el = (await fixture(html`
+        <lr-stepper
+          orientation-breakpoint="99999px"
+          orientation-breakpoint-basis="viewport"
+          .steps=${steps()}
+        ></lr-stepper>
+      `)) as LyraStepper;
+      await elementUpdated(el);
+      await expect(el).to.be.accessible();
+    });
+  });
 });
