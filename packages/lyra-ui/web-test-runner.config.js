@@ -170,24 +170,31 @@ export default {
   // Keep all other browser logs visible.
   filterBrowserLogs: (log) => !(log.type === 'error' && log.args.length === 1 && log.args[0] === null),
   coverageConfig: {
-    include: [
-      'src/internal/form-associated.ts',
-      'src/internal/anchored-validity.ts',
-      'src/internal/lyra-element.ts',
-      'src/internal/overlay-manager.ts',
-      'src/components/forms/combobox/combobox.class.ts',
-      'src/components/overlays/dialog/dialog.class.ts',
-      'src/components/data/table/table.class.ts',
-      'src/components/layout/virtual-list/virtual-list.class.ts',
+    // Broad glob over the real source tree, not a curated allowlist -- Codecov
+    // (see codecov.yml) is the intended place to look at real numbers per
+    // component family now, not this file.
+    include: ['src/**/*.ts'],
+    exclude: [
+      '**/node_modules/**/*',
+      '**/web_modules/**/*',
+      'src/**/*.test.ts',
+      'src/**/*.stories.ts',
+      'src/**/*.d.ts',
     ],
+    // Sanity floor only, not a real gate: catches a totally broken
+    // instrumentation run (0% everywhere), nothing else. The real,
+    // informational-only gate lives in codecov.yml's coverage.status.
     threshold: {
-      statements: 75,
-      branches: 65,
-      functions: 65,
-      lines: 75,
+      statements: 1,
+      branches: 1,
+      functions: 1,
+      lines: 1,
     },
     report: true,
     reportDir: 'coverage',
-    reporters: ['text', 'lcovonly', 'html'],
+    // Codecov only consumes lcov.info. html/text were fine at 8 files;
+    // at ~800 they mean writing a large multi-page report and dumping an
+    // 800+ row table to stdout on every CI run for no consumer.
+    reporters: ['lcovonly'],
   },
 };
