@@ -174,6 +174,90 @@ describe('syntax highlighting', () => {
   });
 });
 
+describe('contextLines', () => {
+  const old8 = ['a', 'ctx1', 'ctx2', 'ctx3', 'ctx4', 'ctx5', 'ctx6', 'z'].join('\n');
+  const new8 = ['A', 'ctx1', 'ctx2', 'ctx3', 'ctx4', 'ctx5', 'ctx6', 'Z'].join('\n');
+
+  it('does not fold anything when contextLines is unset, regardless of run length', async () => {
+    const el = (await fixture(html`<lr-diff-view .oldText=${old8} .newText=${new8}></lr-diff-view>`)) as LyraDiffView;
+    expect(el.shadowRoot!.querySelector('[data-type="fold"]')).to.not.exist;
+    expect(el.shadowRoot!.querySelectorAll('[part="line"]').length).to.equal(10);
+  });
+
+  it('folds a middle run of unchanged lines beyond contextLines on each side, unified layout', async () => {
+    const el = (await fixture(
+      html`<lr-diff-view .oldText=${old8} .newText=${new8} .contextLines=${2}></lr-diff-view>`,
+    )) as LyraDiffView;
+    const lines = [...el.shadowRoot!.querySelectorAll('[part="line"]')];
+    const types = lines.map((l) => l.getAttribute('data-type'));
+    // remove A, add A, ctx1, ctx2, [fold], ctx5, ctx6, remove z, add Z
+    expect(types).to.deep.equal(['remove', 'add', 'equal', 'equal', 'fold', 'equal', 'equal', 'remove', 'add']);
+    const fold = lines.find((l) => l.getAttribute('data-type') === 'fold')!;
+    expect(fold.textContent!.trim()).to.equal('2 unchanged lines');
+  });
+
+  it('folds a leading run down to the last contextLines lines before the first change', async () => {
+    const oldText = ['x1', 'x2', 'x3', 'x4', 'x5', 'a'].join('\n');
+    const newText = ['x1', 'x2', 'x3', 'x4', 'x5', 'A'].join('\n');
+    const el = (await fixture(
+      html`<lr-diff-view .oldText=${oldText} .newText=${newText} .contextLines=${2}></lr-diff-view>`,
+    )) as LyraDiffView;
+    const lines = [...el.shadowRoot!.querySelectorAll('[part="line"]')];
+    const types = lines.map((l) => l.getAttribute('data-type'));
+    expect(types).to.deep.equal(['fold', 'equal', 'equal', 'remove', 'add']);
+    expect(lines[0]!.textContent!.trim()).to.equal('3 unchanged lines');
+  });
+
+  it('folds a trailing run down to the first contextLines lines after the last change', async () => {
+    const oldText = ['a', 'y1', 'y2', 'y3', 'y4', 'y5'].join('\n');
+    const newText = ['A', 'y1', 'y2', 'y3', 'y4', 'y5'].join('\n');
+    const el = (await fixture(
+      html`<lr-diff-view .oldText=${oldText} .newText=${newText} .contextLines=${2}></lr-diff-view>`,
+    )) as LyraDiffView;
+    const lines = [...el.shadowRoot!.querySelectorAll('[part="line"]')];
+    const types = lines.map((l) => l.getAttribute('data-type'));
+    expect(types).to.deep.equal(['remove', 'add', 'equal', 'equal', 'fold']);
+    expect(lines[lines.length - 1]!.textContent!.trim()).to.equal('3 unchanged lines');
+  });
+
+  it('does not fold a run no longer than 2x contextLines', async () => {
+    const oldText = ['a', 'ctx1', 'ctx2', 'ctx3', 'ctx4', 'z'].join('\n');
+    const newText = ['A', 'ctx1', 'ctx2', 'ctx3', 'ctx4', 'Z'].join('\n');
+    const el = (await fixture(
+      html`<lr-diff-view .oldText=${oldText} .newText=${newText} .contextLines=${2}></lr-diff-view>`,
+    )) as LyraDiffView;
+    expect(el.shadowRoot!.querySelector('[data-type="fold"]')).to.not.exist;
+  });
+
+  it('uses singular localized text for exactly one hidden line', async () => {
+    const oldText = ['a', 'ctx1', 'ctx2', 'ctx3', 'z'].join('\n');
+    const newText = ['A', 'ctx1', 'ctx2', 'ctx3', 'Z'].join('\n');
+    const el = (await fixture(
+      html`<lr-diff-view .oldText=${oldText} .newText=${newText} .contextLines=${1}></lr-diff-view>`,
+    )) as LyraDiffView;
+    const fold = el.shadowRoot!.querySelector('[data-type="fold"]')!;
+    expect(fold.textContent!.trim()).to.equal('1 unchanged line');
+  });
+
+  it('folds equivalently in split layout, one fold marker per side at the same position', async () => {
+    const el = (await fixture(
+      html`<lr-diff-view layout="split" .oldText=${old8} .newText=${new8} .contextLines=${2}></lr-diff-view>`,
+    )) as LyraDiffView;
+    const oldSide = el.shadowRoot!.querySelector('[part="side"][data-side="old"]')!;
+    const newSide = el.shadowRoot!.querySelector('[part="side"][data-side="new"]')!;
+    expect(oldSide.querySelectorAll('[data-type="fold"]')).to.have.lengthOf(1);
+    expect(newSide.querySelectorAll('[data-type="fold"]')).to.have.lengthOf(1);
+    expect(oldSide.querySelector('[data-type="fold"]')!.textContent!.trim()).to.equal('2 unchanged lines');
+  });
+
+  it('does not fold when oldText and newText are identical (nothing to give context around)', async () => {
+    const el = (await fixture(
+      html`<lr-diff-view .oldText=${old8} .newText=${old8} .contextLines=${1}></lr-diff-view>`,
+    )) as LyraDiffView;
+    expect(el.shadowRoot!.querySelector('[data-type="fold"]')).to.not.exist;
+  });
+});
+
 describe('back-compat', () => {
   it('default (unified, no language) output is byte-identical to today', async () => {
     const el = (await fixture(html`<lr-diff-view .oldText=${'a\nb'} .newText=${'a\nc'}></lr-diff-view>`)) as LyraDiffView;

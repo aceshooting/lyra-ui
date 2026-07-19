@@ -124,6 +124,8 @@ export type LyraMessageKey =
   | 'copyDiff'
   | 'diffViewOldLabel'
   | 'diffViewNewLabel'
+  | 'diffViewHiddenLines'
+  | 'diffViewHiddenLinesPlural'
   | 'jsonArray'
   | 'jsonObject'
   | 'jsonValue'
@@ -1108,6 +1110,8 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, string> = {
   copyDiff: 'Copy diff',
   diffViewOldLabel: 'Original',
   diffViewNewLabel: 'Modified',
+  diffViewHiddenLines: '{count} unchanged line',
+  diffViewHiddenLinesPlural: '{count} unchanged lines',
   jsonArray: 'array',
   jsonObject: 'object',
   jsonValue: 'value',

@@ -30,8 +30,9 @@ export interface LyraDiffViewEventMap {
  * @event lr-copy - Fired on copy-button activation. `detail: { text: string }` (the full
  *   unified-diff text, regardless of whether the clipboard write actually succeeded).
  * @csspart base - The root wrapper.
- * @csspart line - A single line. Carries `data-type="equal"|"add"|"remove"|"empty"` (`"empty"` is
- *   an unbalanced-replace placeholder cell in `layout="split"` and never carries a `+`/`-` prefix).
+ * @csspart line - A single line. Carries `data-type="equal"|"add"|"remove"|"empty"|"fold"`
+ *   (`"empty"` is an unbalanced-replace placeholder cell in `layout="split"` and never carries a
+ *   `+`/`-` prefix; `"fold"` is the collapsed-unchanged-lines marker `contextLines` produces).
  * @csspart copy-button - The copy affordance, only rendered while `copyable`.
  * @csspart side - One column in `layout="split"` (`data-side="old"|"new"`).
  */
@@ -60,6 +61,13 @@ export class LyraDiffView extends LyraElement<LyraDiffViewEventMap> {
   /** Grammar definitions this instance can highlight, same shape as `lr-code-block-core`'s own
    *  `languages`. */
   @property({ attribute: false }) languages?: Record<string, ShikiLanguageInput>;
+
+  /** How many unchanged lines to keep visible immediately before/after each change. Default
+   *  `undefined` renders every line unconditionally, exactly like before this property existed. Set
+   *  to a finite number `>= 0` to collapse a longer run of unchanged lines behind a single fold
+   *  marker reporting how many lines it hides -- the same context-window convention unified diffs
+   *  and `git diff`'s `-U<n>` use. A negative or non-finite value is treated as unset (no folding). */
+  @property({ type: Number, attribute: 'context-lines' }) contextLines?: number;
 
   @state() private justCopied = false;
 
@@ -132,6 +140,64 @@ export class LyraDiffView extends LyraElement<LyraDiffViewEventMap> {
     }
   }
 
+  /** Computes which `equal` ops a fold marker should hide, keyed by object identity (not array
+   *  index) so the same result works for both `renderUnified()`'s flat op sequence and
+   *  `renderSplit()`'s `pairOpsForSplit()` rows -- an equal op's `DiffOp` object is the exact same
+   *  reference in both places. `foldBefore` maps the first visible op *after* a hidden run to how
+   *  many lines that run hid (the marker renders immediately before that op); a run hidden all the
+   *  way to the end of the diff has no "next op" to key off, so its count surfaces separately as
+   *  `trailingFold`. Only maximal `equal` runs are ever folded -- `add`/`remove` ops are always
+   *  visible. A run that is both the very first and very last thing in the diff (i.e. `oldText` and
+   *  `newText` are identical) is never folded: there is no adjacent change to give context around. */
+  private computeFolds(): { visible: Set<DiffOp>; foldBefore: Map<DiffOp, number>; trailingFold: number } {
+    const ops = this.diffOps;
+    const visible = new Set<DiffOp>(ops);
+    const foldBefore = new Map<DiffOp, number>();
+    let trailingFold = 0;
+    const ctx = this.contextLines;
+    if (ctx === undefined || !Number.isFinite(ctx) || ctx < 0) return { visible, foldBefore, trailingFold };
+    let i = 0;
+    while (i < ops.length) {
+      if (ops[i]!.type !== 'equal') {
+        i++;
+        continue;
+      }
+      let j = i;
+      while (j < ops.length && ops[j]!.type === 'equal') j++;
+      const runLength = j - i;
+      const isLeading = i === 0;
+      const isTrailing = j === ops.length;
+      if (isLeading && isTrailing) {
+        // Nothing changed anywhere in the diff -- show it all, there's no change to fold around.
+      } else if (isLeading) {
+        const hidden = Math.max(0, runLength - ctx);
+        if (hidden > 0) {
+          for (let k = i; k < i + hidden; k++) visible.delete(ops[k]!);
+          foldBefore.set(ops[i + hidden]!, hidden);
+        }
+      } else if (isTrailing) {
+        const shown = Math.min(ctx, runLength);
+        const hidden = runLength - shown;
+        if (hidden > 0) {
+          for (let k = i + shown; k < j; k++) visible.delete(ops[k]!);
+          trailingFold = hidden;
+        }
+      } else if (runLength > ctx * 2) {
+        const hiddenStart = i + ctx;
+        const hiddenEnd = j - ctx;
+        for (let k = hiddenStart; k < hiddenEnd; k++) visible.delete(ops[k]!);
+        foldBefore.set(ops[hiddenStart]!, hiddenEnd - hiddenStart);
+      }
+      i = j;
+    }
+    return { visible, foldBefore, trailingFold };
+  }
+
+  private foldMarker(count: number): TemplateResult {
+    const text = this.localize(count === 1 ? 'diffViewHiddenLines' : 'diffViewHiddenLinesPlural', undefined, { count });
+    return html`<div part="line" data-type="fold">${text}</div>`;
+  }
+
   private get unifiedText(): string {
     return this.diffOps
       .map((op) => `${op.type === 'add' ? '+' : op.type === 'remove' ? '-' : ' '} ${op.text}`)
@@ -160,30 +226,54 @@ export class LyraDiffView extends LyraElement<LyraDiffViewEventMap> {
   // follows an `equal` one, e.g. old=['a','b'] new=['a','x','b'] would highlight `x` using new
   // line 0's ('a') tokens instead of new line 1's.)
   private renderUnified(): TemplateResult {
+    const { visible, foldBefore, trailingFold } = this.computeFolds();
     let oldCounter = 0;
     let newCounter = 0;
-    return html`<pre>${this.diffOps.map((op) => {
-      const marker = op.type === 'add' ? '+' : op.type === 'remove' ? '-' : ' ';
-      const lines = op.type === 'add' ? this.highlightedNewLines : this.highlightedOldLines;
-      const index = op.type === 'add' ? newCounter : oldCounter;
-      const highlighted = lines?.[index];
+    const rows: TemplateResult[] = [];
+    for (const op of this.diffOps) {
+      const fold = foldBefore.get(op);
+      if (fold !== undefined) rows.push(this.foldMarker(fold));
+      if (visible.has(op)) {
+        const marker = op.type === 'add' ? '+' : op.type === 'remove' ? '-' : ' ';
+        const lines = op.type === 'add' ? this.highlightedNewLines : this.highlightedOldLines;
+        const index = op.type === 'add' ? newCounter : oldCounter;
+        const highlighted = lines?.[index];
+        rows.push(html`<div part="line" data-type=${op.type}>${marker} ${highlighted !== undefined ? unsafeHTML(highlighted) : op.text}</div>`);
+      }
       if (op.type !== 'add') oldCounter++;
       if (op.type !== 'remove') newCounter++;
-      return html`<div part="line" data-type=${op.type}>${marker} ${highlighted !== undefined ? unsafeHTML(highlighted) : op.text}</div>`;
-    })}</pre>`;
+    }
+    if (trailingFold > 0) rows.push(this.foldMarker(trailingFold));
+    return html`<pre>${rows}</pre>`;
   }
 
   private renderSplit(): TemplateResult {
-    const rows = pairOpsForSplit(this.diffOps);
+    const { visible, foldBefore, trailingFold } = this.computeFolds();
+    const splitRows = pairOpsForSplit(this.diffOps);
     let oldCounter = 0;
     let newCounter = 0;
     const leftCells: TemplateResult[] = [];
     const rightCells: TemplateResult[] = [];
-    for (const row of rows) {
-      leftCells.push(this.renderSplitCell(row.left, row.left ? oldCounter : -1, this.highlightedOldLines));
+    for (const row of splitRows) {
+      // An `equal` row's `left`/`right` are the exact same `DiffOp` reference (see
+      // `pairOpsForSplit()`), so folding either side is equivalent -- checked once via `row.left`.
+      const foldOp = row.left && row.left.type === 'equal' ? row.left : row.right && row.right.type === 'equal' ? row.right : null;
+      const fold = foldOp ? foldBefore.get(foldOp) : undefined;
+      if (fold !== undefined) {
+        leftCells.push(this.foldMarker(fold));
+        rightCells.push(this.foldMarker(fold));
+      }
+      const rowHidden = foldOp !== null && !visible.has(foldOp);
+      if (!rowHidden) {
+        leftCells.push(this.renderSplitCell(row.left, row.left ? oldCounter : -1, this.highlightedOldLines));
+        rightCells.push(this.renderSplitCell(row.right, row.right ? newCounter : -1, this.highlightedNewLines));
+      }
       if (row.left) oldCounter++;
-      rightCells.push(this.renderSplitCell(row.right, row.right ? newCounter : -1, this.highlightedNewLines));
       if (row.right) newCounter++;
+    }
+    if (trailingFold > 0) {
+      leftCells.push(this.foldMarker(trailingFold));
+      rightCells.push(this.foldMarker(trailingFold));
     }
     return html`
       <div class="split-grid">

@@ -46,6 +46,11 @@ export const styles = css`
     background: var(--lr-color-danger-quiet);
     color: var(--lr-color-danger);
   }
+  [part='line'][data-type='fold'] {
+    color: var(--lr-color-text-quiet);
+    background: var(--lr-color-surface-raised);
+    text-align: center;
+  }
   [part='copy-button'] {
     position: absolute;
     inset-block-start: var(--lr-space-xs);
