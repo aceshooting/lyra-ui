@@ -17,10 +17,10 @@ export const styles = css`
     padding-block: var(--lr-space-s);
     border-block-end: var(--lr-border-width-thin) solid var(--lr-color-border);
   }
-  /* Virtualized mode: the internal `<lr-virtual-list>` supplies its own per-row wrapper (exported
-     as `row` above), so this component's own row content -- the checkbox + `[part="row-body"]`
+  /* Virtualized mode: the internal lr-virtual-list supplies its own per-row wrapper (exported
+     as "row" above), so this component's own row content -- the checkbox + [part="row-body"]
      rendered directly inside that wrapper -- needs the identical flex layout applied from here,
-     one shadow hop in via `::part()`. */
+     one shadow hop in via ::part(). */
   lr-virtual-list::part(row) {
     display: flex;
     align-items: flex-start;
@@ -35,9 +35,15 @@ export const styles = css`
   [part='row-body'] {
     flex: 1 1 auto;
     min-inline-size: 0;
+    /* A border rather than a background-color change: this row's own text (the nested
+       lr-chunk-inspector's quiet-toned score text in particular) is sized/colored for the
+       page's default surface, and a tinted background can drop that text below the required
+       contrast ratio against it -- a border-only indicator carries no such risk. */
+    border-inline-start: var(--lr-space-2xs) solid transparent;
+    padding-inline-start: var(--lr-space-xs);
   }
   [part='row-body'][data-selected] {
-    background: var(--lr-color-brand-quiet);
+    border-inline-start-color: var(--lr-color-brand);
   }
   [part='metadata'] {
     display: flex;

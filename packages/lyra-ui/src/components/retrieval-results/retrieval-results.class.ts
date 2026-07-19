@@ -294,7 +294,11 @@ export class LyraRetrievalResults extends LyraElement<LyraRetrievalResultsEventM
       if (this.loading) {
         return html`<div part="base"><lr-spinner part="spinner"></lr-spinner></div>`;
       }
-      return html`<div part="base"><lr-empty part="empty" heading=${this.localize('chunkInspectorEmpty')}></lr-empty></div>`;
+      // `heading` is passed as slotted light-DOM content (rather than the `heading` attribute) so
+      // `[part="empty"]`'s `.textContent` -- a plain DOM accessor, which never pierces
+      // `<lr-empty>`'s own shadow root -- actually includes the message; the same reason
+      // `<lr-chunk-inspector>`'s own empty state takes this shape.
+      return html`<div part="base"><lr-empty part="empty"><span slot="heading">${this.localize('chunkInspectorEmpty')}</span></lr-empty></div>`;
     }
 
     const useVirtualList = this.grouping === 'source' || processed.chunks.length > this.effectiveVirtualizeAt;
