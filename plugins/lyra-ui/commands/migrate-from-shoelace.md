@@ -24,7 +24,8 @@ Steps:
    `/lyra-ui:migrate-from-wa`'s logic for that tag instead of guessing directly from Shoelace
    naming.
 3. Otherwise, look up the closest-named component in
-   `${CLAUDE_PLUGIN_ROOT}/skills/lyra-ui/references/llms-full.txt`. For each attribute/slot/event
+   `${CLAUDE_PLUGIN_ROOT}/skills/lyra-ui/references/index.md`, then read its
+   `references/components/<lr-tag>.md`. For each attribute/slot/event
    used at each call site, confirm the same name exists on the lyra-ui component's documented API
    before migrating it — if a name doesn't match, check for a renamed equivalent in that file
    rather than dropping or guessing at the attribute.

@@ -15,8 +15,9 @@ Steps:
    (`#[0-9a-fA-F]{3,8}`), `rgb(`/`rgba(`/`hsl(` literals, and hardcoded `px` spacing/sizing values
    in files that also import from `@aceshooting/lyra-ui` (skip files that don't touch lyra-ui at
    all — this command is about lyra-ui adoption, not a general lint pass).
-2. For each hit, check `${CLAUDE_PLUGIN_ROOT}/skills/lyra-ui/references/llms-full.txt`'s "Shared
-   foundation: internal/" section (the design-token catalog) for a `--lr-*` token whose
+2. For each hit, check `${CLAUDE_PLUGIN_ROOT}/skills/lyra-ui/references/tokens.md` (the full
+   generated design-token catalog: every `--lr-*` token, its `--lr-theme-*` input and its
+   fallback) for a token whose
    documented default is the same or a close color/size family. Only suggest a token replacement
    when there's a genuinely matching one — don't force an unrelated token onto an unrelated value.
 3. Separately, grep for native `<button>`, `<input>`, `<select>`, `<dialog>`, and `<textarea>` in

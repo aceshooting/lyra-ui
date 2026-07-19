@@ -2,8 +2,8 @@
 
 > **Scope note:** this file is for agents (Claude Code, Codex, etc.) modifying lyra-ui's own
 > source. It is NOT the consumer-facing API reference for apps that merely *depend on*
-> `@aceshooting/lyra-ui` — that's `packages/lyra-ui/llms.txt` (short index) and
-> `packages/lyra-ui/llms-full.txt` (full API reference). Don't confuse the two.
+> `@aceshooting/lyra-ui` — that's `packages/lyra-ui/llms.txt` (short index) and the
+> `packages/lyra-ui/llms/` reference it points into. Don't confuse the two.
 
 ## What this is
 
@@ -37,7 +37,13 @@ lyra-ui/                          (repo root — this file lives here)
                                    positioner, design tokens (tokens.styles.ts), prefix.ts, a11y.ts
         components/<name>/        one dir per component family (see README's component table)
         lyra.ts                   barrel: side-effect imports (registers every tag) + re-exports
-      llms.txt / llms-full.txt    CONSUMER-facing API reference (not this file's audience)
+      llms.txt                  CONSUMER-facing entry index (not this file's audience)
+      llms/<family>.md          CONSUMER-facing API reference — AUTHORED, one file per
+                                 src/components/<family>/ directory; edit these
+      llms/{shared,00-*}.md     authored cross-cutting reference + intro prose
+      llms-full.txt             GENERATED concatenation of the above (`pnpm run llms`)
+      llms/{index,tokens,peers,migration}.md, llms/components/<tag>.md
+                                GENERATED — never edit; CI diffs them
     lyra-flags/                   optional companion pkg — waving flag SVGs for <lr-flag>,
                                    kept out of lyra-ui's default install (vendored from Noto
                                    Emoji, Public Domain — see its THIRD_PARTY_NOTICES.md)
@@ -67,7 +73,7 @@ which only exist after a build), `manifest`, a `git diff --exit-code` check on
 `custom-elements.json` (the freshness check — a standalone `manifest:check` step would be redundant
 with this), `readme:check`, `docs:build`, `storybook:check`, `storybook:check-theme`, a `pnpm
 --filter @aceshooting/lyra-ui pack --dry-run` check that the published tarball still contains
-`custom-elements.json`/`llms.txt`/`llms-full.txt`, then `check:packed-consumer`. A separate
+`custom-elements.json`/`llms.txt`/`llms-full.txt`/`llms/`, then `check:packed-consumer`. A separate
 `platform-contracts` matrix job runs the platform contract suite (`test:platform`) against
 Firefox/WebKit on Node 20/22. Read the workflow file directly rather than trusting a restated list
 here, which will drift as steps are added — reproduce a CI failure locally by running the same
@@ -134,11 +140,12 @@ build and fails on gzip-size regressions against `scripts/bundle-budgets.json`; 
   (see any existing component, e.g. `components/empty/empty.ts`) — this feeds the generated
   manifest and the consumer-facing docs.
 - **Never reference internal process in code comments or shipped docs.** Comments, JSDoc, and
-  the `llms.txt`/`llms-full.txt` reference must not cite internal audits or design reviews,
+  the `llms.txt`/`llms/` reference must not cite internal audits or design reviews,
   plan/spec/ledger docs, internal task/tier/project codenames, section-mark (`§`) references,
   audit severity ratings (`High`/`Medium`/`Low`), dated review findings, client/project names,
   local filesystem paths, or adoption/"battle-tested" status. This source ships verbatim in the
-  public npm tarball (`dist/`, `custom-elements.json`, `llms*.txt` all carry these comments), so
+  public npm tarball (`dist/`, `custom-elements.json`, `llms.txt`, `llms-full.txt` and `llms/` all
+  carry these comments), so
   anything written here is published. Keep the *technical* rationale ("previously X was broken,
   so we do Y") and drop the provenance — a code comment explains the code, not who reviewed it.
   Local-only planning/agent-tooling directories must never be referenced by path — by name or
@@ -329,8 +336,11 @@ in an existing component and as a release blocker for a new component.
 **Public API documentation — one change, one synchronized surface:**
 
 - A public property, type, method, getter, event, slot, CSS part, or custom property is incomplete
-  until the class JSDoc, behavior tests, an illustrative Storybook story, `llms-full.txt`, and the
-  generated `custom-elements.json` agree. Update the package/root component catalog when the
+  until the class JSDoc, behavior tests, an illustrative Storybook story, the component's section
+  in `packages/lyra-ui/llms/<family>.md`, and the generated `custom-elements.json` agree. Run
+  `pnpm --filter @aceshooting/lyra-ui run llms` to regenerate `llms-full.txt`/`llms/components/`
+  afterwards; `pnpm --filter @aceshooting/lyra-ui exec node scripts/llms-gap-report.mjs <family>`
+  lists exactly which names are still undocumented, and CI fails on any that remain. Update the package/root component catalog when the
   component count or summary changes, and update exports for new public types/helpers.
 - Run `pnpm manifest` after JSDoc/API changes and inspect the generated diff. A passing TypeScript
   build does not catch stale stories, prose, CSS-part lists, or a missing manifest entry.

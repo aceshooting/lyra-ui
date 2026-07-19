@@ -82,8 +82,8 @@ npm install @aceshooting/lyra-ui
 ```
 
 ```js
-import '@aceshooting/lyra-ui/components/combobox/combobox.js';
-import '@aceshooting/lyra-ui/components/combobox/option.js';
+import '@aceshooting/lyra-ui/components/forms/combobox/combobox.js';
+import '@aceshooting/lyra-ui/components/forms/combobox/option.js';
 ```
 
 ```html
@@ -164,7 +164,7 @@ Lyra ships plain custom elements — no framework-specific wrapper package neede
 
 ```jsx
 // React 19+
-import '@aceshooting/lyra-ui/components/combobox/combobox.js';
+import '@aceshooting/lyra-ui/components/forms/combobox/combobox.js';
 
 <lr-combobox label="Fruit" with-clear>
   <lr-option value="a">Apple</lr-option>

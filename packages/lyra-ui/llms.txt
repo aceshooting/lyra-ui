@@ -1,124 +1,67 @@
 # @aceshooting/lyra-ui
 
 > Free, independent, MIT-licensed Lit web components — an open-source alternative to Shoelace and
-> Web Awesome. Lyra combines accessible form controls, dashboards, charts, data visualization, and
-> Conversation & Agent UI. Selected Web Awesome-compatible components retain documented public names
-> under a `lr-` prefix for easier migration; the implementation and design system are standalone.
+> Web Awesome. Lyra combines accessible form controls, layout and overlay primitives, dashboards,
+> charts, data visualization, document viewers, and Conversation & Agent UI. Selected components
+> keep documented Web Awesome-compatible public names under a `lr-` prefix to ease migration; the
+> implementation, design tokens, localization runtime and release surface are standalone.
 
-Every component resolves its styling through this library's own `--lr-theme-*` design tokens with
-hardcoded fallbacks, so it works fully standalone with no theme or runtime dependency required.
+Every component styles itself through this library's own `--lr-theme-*` design tokens with hardcoded
+fallbacks, so it works standalone with no theme or runtime dependency.
 
-## Docs
+## Which file to read
 
-- [Live docs site](https://aceshooting.github.io/lyra-ui/): Storybook site with a live, interactive
-  example and copy-pasteable source for every component — useful for a human reviewing this
-  library, less relevant for a coding assistant already reading this file.
-- [llms-full.txt](./llms-full.txt): Complete component-by-component API reference (properties,
-  events, slots, CSS parts, themeable custom properties, optional peer deps, usage snippets, and
-  known gotchas) for every tag in the library — the primary resource for a coding assistant
-  integrating `@aceshooting/lyra-ui`.
-- [README.md](./README.md): Install instructions, the full component catalog, `<wa-*>` →
-  `<lr-*>` and `<sl-*>` → `<lr-*>` migration notes, theming, accessibility, i18n, RTL, and
-  package-level development commands.
+Prefer the narrow file. `llms-full.txt` is the whole catalog concatenated (~250 components) and
+costs several hundred thousand tokens; you almost never want all of it.
 
-## Component categories
+- [llms/index.md](./llms/index.md): every tag, its exact import path, and a one-line purpose —
+  **start here** to pick a component.
+- [llms/components/&lt;tag&gt;.md](./llms/components/): the full API of one component (properties,
+  events, slots, CSS parts, themeable custom properties, usage snippet, gotchas). The path is
+  derived from the tag name, so no search is needed: `llms/components/lr-table.md`.
+- [llms/shared.md](./llms/shared.md): library-wide behavior — importing/registration, the event
+  contract, form association, theming, localization, RTL, TypeScript, framework integration, SSR,
+  the `@aceshooting/lyra-ui/ai` data types, and testing.
+- [llms/tokens.md](./llms/tokens.md): every design token and its `--lr-theme-*` input.
+- [llms/peers.md](./llms/peers.md): which optional peer dependency each component needs.
+- [llms/migration.md](./llms/migration.md): `wa-*`/`sl-*` → `lr-*` rename tables.
+- [llms-full.txt](./llms-full.txt): all of the above component sections in one file.
+- [README.md](./README.md): install, catalog, theming, accessibility, and package-level commands.
+- [Live docs site](https://aceshooting.github.io/lyra-ui/): interactive examples per component —
+  useful for a human reviewer, redundant for an assistant reading these files.
 
-The catalog is grouped by capability; `llms-full.txt` follows the same consumer-facing order:
+Claude Code users can install the matching skill (component APIs, theming rules, migration
+codemods) from the marketplace at <https://github.com/aceshooting/lyra-ui>.
 
-- **Form controls, toasts, sparkline, and flags** — `lr-combobox`/`lr-option`,
-  `lr-select` (a closed-list, button-trigger single-select sharing `lr-option` with
-  `lr-combobox`), `lr-date-picker`/`lr-date-input`, `lr-toast`/`lr-toast-item`/`toast()`,
-  `lr-phone-input` (optional `libphonenumber-js` peer, loaded through a consumer adapter), `lr-sparkline`,
-  `lr-textarea`, `lr-input`, `lr-button`, `lr-flag` (needs the optional peer `@aceshooting/lyra-flags`).
-- **Dashboard atoms** — first-party, no-Web-Awesome-equivalent building blocks for dashboards:
-  `lr-empty`, `lr-skeleton`, `lr-stat`, `lr-table`, `lr-pagination`, `lr-gauge`,
-  `lr-export-button`, `lr-copy-button`, `lr-split`, `lr-widget`, `lr-word-cloud`
-  (zero-dependency SVG word/tag cloud), and `lr-control-group` (responsive mixed-control layout).
-- **Web Awesome parity and visual primitives** — `lr-number-input`/`lr-time-input`,
-  `lr-color-picker`, `lr-radio`/`lr-radio-group`, `lr-spinner`,
-  `lr-progress-bar`/`lr-progress-ring`, `lr-badge`/`lr-tag`, `lr-callout`,
-  `lr-details`/`lr-accordion`/`lr-accordion-item`, `lr-divider`,
-  `lr-breadcrumb`/`lr-breadcrumb-item`, `lr-format-number`/`lr-format-date`/
-  `lr-format-bytes`/`lr-relative-time`, `lr-rating`, `lr-popover`/`lr-tooltip`/
-  `lr-dropdown`, `lr-drawer`, `lr-carousel`, `lr-image-comparer`, and
-  `lr-zoomable-frame`, `lr-carousel-item`, `lr-button-group`, and
-  `lr-dropdown-item`, and `lr-scroller` compatibility primitives.
-  Observer utilities include `lr-resize-observer`, `lr-intersection-observer`, and
-  `lr-mutation-observer`.
-- **Temporal & graph** — time-series and hierarchy/network widgets: `lr-time-range`,
-  `lr-playback`, `lr-heatmap` (matrix and calendar layouts), `lr-graph` (needs the optional peer
-  deps `d3-force`/`d3-drag`/`d3-zoom`/`d3-selection`), `lr-tree`/`lr-tree-node`.
-- **Flow canvas** — a dependency-free workflow/DAG diagramming family built around
-  `lr-flow-canvas` (pannable/zoomable, layered auto-layout, controlled selection/drag/connect
-  events): `lr-flow-node` (the default node card), `lr-flow-minimap`, `lr-flow-controls`
-  (zoom/fit/lock), `lr-node-palette` (searchable, drag-or-keyboard node library), and
-  `lr-flow-run-overlay` (pushes execution-state decorations onto the canvas).
-- **Knowledge graph & RAG exploration** — a `lr-graph`-adjacent family for grounding/citation UI
-  over a knowledge graph: `lr-graph-legend` (type legend + visibility filter), `lr-entity-card`/
-  `lr-entity-chip` (dossier card and inline `@mention`), `lr-neighbor-list`, `lr-path-strip`
-  (GraphRAG local-search reasoning paths), `lr-community-card` (GraphRAG community reports),
-  `lr-chunk-inspector` (ranked retrieved chunks, deep-links into `lr-document-viewer`),
-  `lr-source-picker` (scopes which sources ground the next answer), `lr-provenance-panel`
-  (the sectioned Entities/Relationships/Communities/Chunks breakdown composing the rest of this
-  family), and `lr-mind-map` (a zero-dependency radial topic-tree overview).
-- **Chart family** — a Chart.js wrapper and its typed subclasses, plus two bespoke chart types:
-  `lr-chart` (core) and its locked-`type` subclasses (`lr-line-chart`, `lr-bar-chart`,
-  `lr-pie-chart`, `lr-doughnut-chart`, `lr-radar-chart`, `lr-polar-area-chart`,
-  `lr-bubble-chart`, `lr-scatter-chart`), `lr-histogram`, `lr-box-plot` (needs
-  `@sgratzl/chartjs-chart-boxplot`) — the `lr-chart` family needs the optional peer deps
-  `chart.js`/`chartjs-plugin-zoom`. `lr-lite-chart` is a separate, dependency-free bar/line chart
-  (plain SVG/DOM, no peer deps at all) for projects whose architecture forbids a charting
-  dependency outright.
-- **Map & file-input** — `lr-map` (`maplibre-gl` wrapper with legend + choropleth layer + point
-  markers, needs the optional peer `maplibre-gl`), `lr-file-input` (drag-drop + click-to-browse
-  dropzone, emits raw `File[]`).
-- **Media and interaction primitives** — `lr-animated-image`, `lr-animation`, `lr-avatar-group`,
-  `lr-include`, `lr-known-date`, `lr-lightbox`, `lr-qr-code` (needs the optional peer `qrcode`),
-  `lr-random-content`, `lr-timeline`/`lr-timeline-item`, and `lr-tour`.
-- **Additional interaction, observability, and viewer primitives** — `lr-activity-feed`,
-  `lr-audio-visualizer`, `lr-av-player`, `lr-branch-picker`, `lr-calendar`,
-  `lr-checkbox-group`, `lr-code-editor`, `lr-command-palette`, `lr-commit-card`,
-  `lr-compare-panel`, `lr-data-grid`, `lr-emoji-picker`, `lr-env-list`, `lr-file-tree`,
-  `lr-geojson-view`, `lr-handoff-divider`, `lr-highlight-layer`, `lr-icon`/`lr-icon-button`,
-  `lr-image-viewer`, `lr-message-actions`, `lr-message-feedback`, `lr-page-rail`,
-  `lr-push-to-talk`, `lr-rubric-form`, `lr-sequence-strip`, `lr-span-waterfall`,
-  `lr-stack-trace`, `lr-task-list`, `lr-terminal`, `lr-test-results`, `lr-token-input`,
-  `lr-trace-tree`, and `lr-transcript-feed`.
-- **Conversation & Agent UI** — chat/tool-call/agent-config building blocks for streaming AI
-  interfaces: `lr-dialog`/`confirm()`, `lr-tabs`, `lr-checkbox`, `lr-switch`,
-  `lr-radio`/`lr-radio-group`, `lr-input`, `lr-textarea`, `lr-callout`, `lr-spinner`,
-  `lr-progress-bar`/`lr-progress-ring`, `lr-badge`/`lr-tag`,
-  `lr-json-viewer`, `lr-live-region` (+ `internal/announcer.ts`'s throttled `Announcer`),
-  `lr-markdown` (needs the optional peers `marked`/`dompurify`), `lr-chat-message`,
-  `lr-typing-indicator`, `lr-tool-call-chip`, `lr-tool-result-view` (+ its
-  `registerToolRenderer()` renderer registry), `lr-tool-result-dialog`, `lr-chat-composer`
-  (form-associated), `lr-attachment-chip`, `lr-stream-status`, `lr-virtual-list`,
-  `lr-conversation-item`, `lr-model-select`, `lr-slider` (form-associated),
-  `lr-tool-select-dialog`, `lr-citation-badge`, `lr-source-list`/`lr-source-card`,
-  `lr-app-rail`/`lr-app-rail-item`, `lr-responsive-panel`, `lr-mention-popover`, `lr-streaming-text`,
-  `lr-thinking-panel`, `lr-generation-status`, `lr-code-block` (needs the optional peer
-  `shiki`), `lr-tool-approval-dialog`, `lr-tool-param-form`, `lr-menu`/`lr-menu-item`,
-  `lr-chip`/`lr-chip-group`, `lr-model-settings-panel`, `lr-context-meter`,
-  `lr-dock-panel`, `lr-document-preview`, `lr-document-viewer`, `lr-svg-viewer`, `lr-html-viewer`,
-  `lr-dataset-viewer`, `lr-contact-viewer`, `lr-pdf-viewer`, `lr-spreadsheet-viewer`, `lr-csv-viewer`, `lr-docx-viewer`, `lr-email-viewer`, `lr-calendar-viewer`, `lr-archive-viewer`, `lr-ebook-viewer`, `lr-pptx-viewer`, `lr-file-icon`, `lr-media-card`, `lr-attachment-trigger`,
-  `lr-kbd`, `lr-result-card`/`lr-result-field`, `lr-avatar`, `lr-card`, `lr-stepper`,
-  `lr-segmented`, `lr-swatch-picker`, `lr-diff-view`, `lr-poll-status`,
-  `lr-code-block-core` (needs the optional peer `shiki`), `lr-chat-viewport`,
-  `lr-suggestion-chips`, `lr-thread-list`, `lr-confirm-bar`, `lr-checkpoint`,
-  `lr-usage-badge`, `lr-browser-frame`, `lr-artifact-panel`, `lr-widget-renderer`,
-  `lr-voice-picker`, `lr-notebook-viewer` (needs the optional peers `marked`/`dompurify`/`shiki`),
-  `lr-xml-viewer`, `lr-markdown-core` (needs the optional peers `marked`/`dompurify`/`shiki`;
-  build-lean sibling of `lr-markdown`, never references shiki's full ~200-language table).
-- **Agent, retrieval, evaluation, and workspace surfaces** — `lr-agent-run`, `lr-agent-workspace`, `lr-agent-trace`,
-  `lr-context-inspector`, `lr-dashboard-grid`, `lr-document-compare`, `lr-document-library`,
-  `lr-drilldown-panel`, `lr-entity-dossier`, `lr-eval-dataset`, `lr-eval-result`,
-  `lr-evaluation-run`, `lr-filter-bar`, `lr-graph-query-builder`, `lr-grounding-summary`,
-  `lr-ingestion-queue`, `lr-knowledge-base`, `lr-knowledge-graph-explorer`, `lr-memory-panel`,
-  `lr-policy-summary`, `lr-query-builder`, `lr-retrieval-results`, `lr-retrieval-search`,
-  `lr-retrieval-trace`, and `lr-tool-timeline`.
+## Rules that apply to every component
 
-## Also useful
+- Import path is `@aceshooting/lyra-ui/components/<family>/<dir>/<file>.js` — always with the family
+  segment, never `components/<tag>/`. `llms/index.md` has the exact path per tag.
+- Theme only by setting `--lr-theme-*` custom properties; never hardcode a value that fights them.
+- Public events are `lr-`-prefixed `CustomEvent`s, bubbling and composed, payload on `event.detail`.
+- Form controls are form-associated: they participate in native `<form>` submission and validation.
+- Every built-in string is localizable via `registerLyraLocale()` or a per-instance `.strings`.
 
-- Shared internals every tag builds on (`LyraElement` base class, the `FormAssociated` mixin, the
-  floating-ui `positioner`, and the independent `--lr-theme-*` design-token layer) are documented at the
-  top of `llms-full.txt`, along with cross-cutting packaging notes that apply to the whole library.
+## Component catalog
+
+- **Form controls & inputs** (`components/forms/`, 25) — `lr-combobox`, `lr-option`, `lr-select`, `lr-date-picker`, `lr-date-input`, `lr-textarea`, `lr-button`, `lr-icon-button`, `lr-input`, `lr-number-input`, `lr-time-input`, `lr-phone-input`, `lr-time-range`, `lr-swatch-picker`, `lr-checkbox`, `lr-switch`, `lr-slider`, `lr-radio`, `lr-radio-group`, `lr-checkbox-group`, `lr-token-input`, `lr-code-editor`, `lr-color-picker`, `lr-emoji-picker`, `lr-rubric-form`
+
+- **Data display, dashboards & flow canvas** (`components/data/`, 25) — `lr-sparkline`, `lr-stat`, `lr-table`, `lr-pagination`, `lr-gauge`, `lr-word-cloud`, `lr-heatmap`, `lr-sequence-strip`, `lr-tree`, `lr-tree-node`, `lr-flow-canvas`, `lr-flow-node`, `lr-flow-minimap`, `lr-flow-controls`, `lr-flow-run-overlay`, `lr-context-meter`, `lr-data-grid`, `lr-calendar`, `lr-timeline`, `lr-timeline-item`, `lr-file-tree`, `lr-env-list`, `lr-document-library`, `lr-graph-query-builder`, `lr-query-builder`
+
+- **Layout, navigation & structure** (`components/layout/`, 28) — `lr-split`, `lr-widget`, `lr-carousel`, `lr-carousel-item`, `lr-button-group`, `lr-scroller`, `lr-tabs`, `lr-stepper`, `lr-control-group`, `lr-segmented`, `lr-virtual-list`, `lr-app-rail`, `lr-app-rail-item`, `lr-responsive-panel`, `lr-menu`, `lr-menu-item`, `lr-dropdown-item`, `lr-dock-panel`, `lr-card`, `lr-command-palette`, `lr-details`, `lr-accordion`, `lr-accordion-item`, `lr-breadcrumb`, `lr-breadcrumb-item`, `lr-dashboard-grid`, `lr-drilldown-panel`, `lr-filter-bar`
+
+- **Overlays, status & feedback** (`components/overlays/`, 19) — `lr-toast`, `lr-toast-item`, `lr-empty`, `lr-skeleton`, `lr-drawer`, `lr-dialog`, `lr-chip`, `lr-chip-group`, `lr-kbd`, `lr-popover`, `lr-tooltip`, `lr-dropdown`, `lr-spinner`, `lr-progress-bar`, `lr-progress-ring`, `lr-badge`, `lr-tag`, `lr-callout`, `lr-rating`
+
+- **Utilities, formatting & observers** (`components/utility/`, 19) — `lr-export-button`, `lr-copy-button`, `lr-resize-observer`, `lr-intersection-observer`, `lr-mutation-observer`, `lr-json-viewer`, `lr-live-region`, `lr-poll-status`, `lr-mention-popover`, `lr-diff-view`, `lr-icon`, `lr-divider`, `lr-format-number`, `lr-format-date`, `lr-format-bytes`, `lr-relative-time`, `lr-known-date`, `lr-random-content`, `lr-tour`
+
+- **Media, files & maps** (`components/media/`, 18) — `lr-flag`, `lr-playback`, `lr-map`, `lr-file-input`, `lr-image-comparer`, `lr-zoomable-frame`, `lr-attachment-chip`, `lr-file-icon`, `lr-media-card`, `lr-attachment-trigger`, `lr-avatar`, `lr-animated-image`, `lr-animation`, `lr-avatar-group`, `lr-lightbox`, `lr-qr-code`, `lr-image-viewer`, `lr-av-player`
+
+- **Charts** (`components/charts/`, 12) — `lr-chart`, `lr-lite-chart`, `lr-line-chart`, `lr-bar-chart`, `lr-pie-chart`, `lr-doughnut-chart`, `lr-radar-chart`, `lr-polar-area-chart`, `lr-bubble-chart`, `lr-scatter-chart`, `lr-histogram`, `lr-box-plot`
+
+- **Document & file viewers** (`components/viewers/`, 22) — `lr-document-preview`, `lr-document-viewer`, `lr-docx-viewer`, `lr-email-viewer`, `lr-calendar-viewer`, `lr-archive-viewer`, `lr-ebook-viewer`, `lr-pptx-viewer`, `lr-svg-viewer`, `lr-html-viewer`, `lr-dataset-viewer`, `lr-contact-viewer`, `lr-pdf-viewer`, `lr-spreadsheet-viewer`, `lr-csv-viewer`, `lr-include`, `lr-highlight-layer`, `lr-page-rail`, `lr-notebook-viewer`, `lr-xml-viewer`, `lr-document-compare`, `lr-geojson-view`
+
+- **Conversation & chat UI** (`components/conversation/`, 28) — `lr-markdown`, `lr-markdown-core`, `lr-chat-message`, `lr-typing-indicator`, `lr-chat-composer`, `lr-stream-status`, `lr-conversation-item`, `lr-model-select`, `lr-streaming-text`, `lr-generation-status`, `lr-code-block`, `lr-code-block-core`, `lr-model-settings-panel`, `lr-audio-visualizer`, `lr-branch-picker`, `lr-message-actions`, `lr-message-feedback`, `lr-push-to-talk`, `lr-transcript-feed`, `lr-handoff-divider`, `lr-chat-viewport`, `lr-suggestion-chips`, `lr-thread-list`, `lr-checkpoint`, `lr-usage-badge`, `lr-widget-renderer`, `lr-voice-picker`, `lr-agent-workspace`
+
+- **Agent tooling, tool calls & evaluation** (`components/agent-tools/`, 29) — `lr-tool-call-chip`, `lr-tool-result-view`, `lr-tool-result-dialog`, `lr-tool-select-dialog`, `lr-thinking-panel`, `lr-stack-trace`, `lr-tool-approval-dialog`, `lr-tool-param-form`, `lr-result-card`, `lr-result-field`, `lr-compare-panel`, `lr-span-waterfall`, `lr-task-list`, `lr-terminal`, `lr-trace-tree`, `lr-activity-feed`, `lr-commit-card`, `lr-test-results`, `lr-confirm-bar`, `lr-browser-frame`, `lr-artifact-panel`, `lr-agent-run`, `lr-agent-trace`, `lr-context-inspector`, `lr-eval-dataset`, `lr-eval-result`, `lr-evaluation-run`, `lr-policy-summary`, `lr-tool-timeline`
+
+- **Retrieval, knowledge graph & grounding** (`components/retrieval/`, 24) — `lr-graph`, `lr-node-palette`, `lr-graph-legend`, `lr-entity-card`, `lr-entity-chip`, `lr-neighbor-list`, `lr-path-strip`, `lr-community-card`, `lr-chunk-inspector`, `lr-source-picker`, `lr-provenance-panel`, `lr-mind-map`, `lr-citation-badge`, `lr-source-list`, `lr-source-card`, `lr-entity-dossier`, `lr-grounding-summary`, `lr-ingestion-queue`, `lr-knowledge-base`, `lr-knowledge-graph-explorer`, `lr-memory-panel`, `lr-retrieval-results`, `lr-retrieval-search`, `lr-retrieval-trace`

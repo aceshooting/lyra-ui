@@ -10,10 +10,10 @@ e.g. `button`, or the full tag, e.g. `lr-button` — normalize to the bare name 
 Steps:
 
 1. If `$1` is empty, ask the user which component they want and stop — do not guess.
-2. Search `${CLAUDE_PLUGIN_ROOT}/skills/lyra-ui/references/llms-full.txt` for that component's
-   section (its heading is `## \`lr-$1\`` or `### \`lr-$1\`` — check both levels, since some
-   components are documented as a family, e.g. `lr-combobox` / `lr-option`). If no matching
-   section is found, say so explicitly and suggest the closest-named matches instead of inventing
+2. Read `${CLAUDE_PLUGIN_ROOT}/skills/lyra-ui/references/components/lr-$1.md` — the path is
+   derived from the tag name, so no search is needed. If that file does not exist the component
+   does not exist: say so explicitly and suggest the closest names from
+   `${CLAUDE_PLUGIN_ROOT}/skills/lyra-ui/references/index.md` instead of inventing
    an API.
 3. From that section, extract: the import path, the required/most common attributes, any default
    slot or named slots, and the primary event(s) a consumer would listen for.

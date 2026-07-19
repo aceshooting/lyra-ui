@@ -36,9 +36,24 @@ const missingFromShortLlms = tags.filter((tag) => !shortLlms.includes(`\`${tag}\
 if (missingFromShortLlms.length) {
   errors.push(`packages/lyra-ui/llms.txt is missing ${missingFromShortLlms.length} manifest tag(s): ${missingFromShortLlms.join(', ')}`);
 }
-const pluginLlms = read('plugins/lyra-ui/skills/lyra-ui/references/llms.txt');
-if (pluginLlms !== shortLlms) {
-  errors.push('plugins/lyra-ui/skills/lyra-ui/references/llms.txt is out of sync; run `./package.sh`');
+
+// The skill's references/ are generated copies of packages/lyra-ui/llms/ (see ./package.sh). Every
+// tag must have its own reference file there, and each copy must be byte-identical to its source —
+// an agent that reads a stale copy is worse off than one that reads nothing.
+const skillReferences = join(root, 'plugins/lyra-ui/skills/lyra-ui/references');
+for (const file of ['index.md', 'shared.md', 'tokens.md', 'peers.md', 'migration.md']) {
+  const copy = join(skillReferences, file);
+  if (!existsSync(copy) || readFileSync(copy, 'utf8') !== read(`packages/lyra-ui/llms/${file}`)) {
+    errors.push(`plugins/lyra-ui/skills/lyra-ui/references/${file} is missing or out of sync; run \`./package.sh\``);
+  }
+}
+const missingReferenceFiles = tags.filter(
+  (tag) => !existsSync(join(skillReferences, 'components', `${tag}.md`)),
+);
+if (missingReferenceFiles.length) {
+  errors.push(
+    `plugins/lyra-ui/skills/lyra-ui/references/components/ is missing ${missingReferenceFiles.length} tag file(s): ${missingReferenceFiles.join(', ')}; run \`./package.sh\``,
+  );
 }
 
 const indexPath = join(root, 'storybook-static/index.json');

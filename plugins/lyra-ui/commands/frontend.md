@@ -11,7 +11,7 @@ user can ask for fixes once they've seen the list).
 Check, in this order:
 
 1. **API correctness.** For every `lr-*` tag found, cross-check the attributes/slots/events
-   actually used against `${CLAUDE_PLUGIN_ROOT}/skills/lyra-ui/references/llms-full.txt`'s section
+   actually used against `${CLAUDE_PLUGIN_ROOT}/skills/lyra-ui/references/components/<lr-tag>.md`
    for that component. Flag: attributes that don't exist on that component (likely a typo or a
    stale API assumption), required attributes/slots that are missing, and event names listened for
    that the component doesn't actually fire.

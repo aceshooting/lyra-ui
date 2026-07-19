@@ -40,6 +40,11 @@ const files = [
   path.join(packageDir, 'README.md'),
   path.join(packageDir, 'llms.txt'),
   path.join(packageDir, 'llms-full.txt'),
+  // The authored llms/ sources ship verbatim (as llms-full.txt and llms/components/), so the same
+  // policy applies to them; the generated copies are covered transitively.
+  ...walk(path.join(packageDir, 'llms')).filter(
+    (file) => file.endsWith('.md') && !file.includes(`${path.sep}components${path.sep}`),
+  ),
   path.join(repositoryDir, 'packages', 'lyra-flags', 'index.js'),
   path.join(repositoryDir, 'packages', 'lyra-flags', 'README.md'),
 ];

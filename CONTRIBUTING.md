@@ -25,7 +25,7 @@ Reproduce CI locally with the same sequence CI runs: install --frozen-lockfile, 
 Chromium install, lint, **build, then test** (build must precede test — a package-entrypoints test
 imports the built `dist/` output), manifest and its consistency checks, docs/storybook checks, then a
 dry-run pack check that the published tarball still contains
-`custom-elements.json`/`llms.txt`/`llms-full.txt`. `.github/workflows/ci.yml` is the authoritative,
+`custom-elements.json`/`llms.txt`/`llms-full.txt`/`llms/`. `.github/workflows/ci.yml` is the authoritative,
 up-to-date step list — read it directly rather than trusting a restated summary here.
 
 ## Making a change
@@ -39,9 +39,13 @@ up-to-date step list — read it directly rather than trusting a restated summar
    reduced motion whenever the component's layout or animation makes those relevant.
 3. If you're adding a component or changing its public API (attributes/properties/events/slots/
    CSS parts/custom properties/types/methods), update its class JSDoc, `*.stories.ts`, and
-   `packages/lyra-ui/llms-full.txt`, then run `pnpm manifest` and inspect
+   its section in `packages/lyra-ui/llms/<family>.md` (the authored API reference —
+   `llms-full.txt` and `llms/components/` are generated from it by
+   `pnpm --filter @aceshooting/lyra-ui run llms`), then run `pnpm manifest` and inspect
    `packages/lyra-ui/custom-elements.json`. Update component catalogs and exports when applicable;
-   public API work is incomplete while any of these surfaces disagree.
+   public API work is incomplete while any of these surfaces disagree. `node
+   packages/lyra-ui/scripts/llms-gap-report.mjs <family>` lists every public name still missing
+   from the docs, and CI fails while any remain.
 4. If your change is user-facing (affects anyone depending on `@aceshooting/lyra-ui`), run
    `pnpm changeset` and describe it — this is what generates the package's `CHANGELOG.md` on
    release. Skip this for internal-only changes (docs, tests, CI, tooling).

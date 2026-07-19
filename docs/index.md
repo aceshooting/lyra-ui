@@ -18,6 +18,9 @@ This file is a short index. The primary documentation lives on the sites linked 
   and browser/Node support matrix.
 - **[Root README](../README.md)** — monorepo overview and links to every companion package
   (`@aceshooting/lyra-flags`, etc.).
+- **[llms.txt](../packages/lyra-ui/llms.txt)** — the entry index for AI coding assistants, pointing
+  into `packages/lyra-ui/llms/`: one reference file per component (`llms/components/<tag>.md`), plus
+  the library-wide contracts, design tokens, optional peers, and `wa-*`/`sl-*` migration tables.
 
 ## Contributing & policies
 

@@ -1,130 +1,39 @@
 #!/usr/bin/env node
-import { readFileSync } from 'node:fs';
-import { fileURLToPath } from 'node:url';
-import path from 'node:path';
+// Fails when the authored `llms/<family>.md` sources have drifted from custom-elements.json: any
+// public property, attribute, event, slot, CSS part, or themeable custom property that exists but
+// is never mentioned in its component's own section.
+//
+// Historically this only checked properties, only against `llms-full.txt`, and used last-wins
+// lookup on duplicate headings — so a duplicated, prose-only section could satisfy it while events,
+// slots and CSS parts went undocumented library-wide. It now shares its gap computation with
+// `scripts/llms-gap-report.mjs` (run that for the same list in worklist form). The structural
+// invariants it can't express — no duplicate sections, every tag documented exactly once, each
+// section filed under the family its tag is declared in — are enforced by `scripts/build-llms.mjs`
+// through `scripts/check-llms-artifacts.mjs`.
+import { collectGaps } from './llms-gaps.mjs';
 
-const rootDir = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
-const manifestPath = path.join(rootDir, 'custom-elements.json');
-const llmsFullPath = path.join(rootDir, 'llms-full.txt');
+const gaps = collectGaps();
 
-const manifest = JSON.parse(readFileSync(manifestPath, 'utf8'));
-const llmsFull = readFileSync(llmsFullPath, 'utf8');
-
-/**
- * Extracts `{ tagName -> sectionText }` for every documented tag in llms-full.txt.
- *
- * Two passes:
- *  1. Top-level `## ` headings define section boundaries (start = that line, end = the next
- *     `## ` heading or EOF). A heading may name more than one tag at once (e.g.
- *     `` ## `lr-menu` / `lr-menu-item` ``, or `` ## `lr-chart` (core) `` alongside a
- *     separate "Typed subclasses: `lr-line-chart`, ..." heading) — every `lr-*` substring
- *     found on the heading line maps to that heading's whole section span.
- *  2. Every heading line at any depth (`## `, `### `, ...) can also name tags — this picks up a
- *     tag documented as a nested subheading (e.g. `### \`lr-app-rail-item\`` inside
- *     `## \`lr-app-rail\``'s span) and maps it to whichever top-level span (from pass 1)
- *     contains that heading line, rather than requiring it to have its own top-level heading.
- *
- * Headings inside fenced code blocks are ignored throughout (a code sample could otherwise
- * contain a line starting with `#`).
- */
-function extractSections(text) {
-  const fenceStarts = [...text.matchAll(/^```/gm)].map((m) => m.index);
-  const isInsideFence = (idx) => {
-    let count = 0;
-    for (const f of fenceStarts) {
-      if (f < idx) count++;
-      else break;
-    }
-    return count % 2 === 1;
-  };
-
-  // Pass 1: top-level `## ` headings define the section spans.
-  const topHeadings = [...text.matchAll(/^## (.*)$/gm)].filter((m) => !isInsideFence(m.index));
-  const spans = topHeadings.map((m, i) => ({
-    start: m.index,
-    end: i + 1 < topHeadings.length ? topHeadings[i + 1].index : text.length,
-  }));
-  const spanTextAt = (idx) => {
-    const span = spans.find((s) => idx >= s.start && idx < s.end);
-    return span ? text.slice(span.start, span.end) : undefined;
-  };
-
-  // Pass 2: every heading line, at any depth, can name tags that belong to the enclosing
-  // top-level span.
-  const allHeadings = [...text.matchAll(/^#{2,}\s.*$/gm)].filter((m) => !isInsideFence(m.index));
-  const sections = new Map();
-  for (const heading of allHeadings) {
-    const sectionText = spanTextAt(heading.index);
-    if (!sectionText) continue;
-    const tagsInHeading = heading[0].match(/lr-[a-z0-9-]+/g) ?? [];
-    for (const tag of tagsInHeading) {
-      sections.set(tag, sectionText);
-    }
+if (gaps.length > 0) {
+  const byTag = new Map();
+  for (const gap of gaps) {
+    const key = `${gap.family}.md :: ${gap.tag}`;
+    if (!byTag.has(key)) byTag.set(key, []);
+    byTag.get(key).push(`${gap.kind}: ${gap.names.join(', ')}`);
   }
-  return sections;
-}
-
-// The `FormAssociated` mixin's public surface (see `src/internal/form-associated.ts`'s
-// `FormAssociatedInterface`) is a well-known, understood cross-cutting contract, not
-// component-specific API, so — like `locale`/`strings` — it's never restated per-component in
-// llms-full.txt. Some components re-declare these as their own thin-delegate overrides (e.g.
-// `checkValidity() { return this.internals.checkValidity(); }`), which makes CEM record them as
-// own (non-`inheritedFrom`) members, so they must also be excluded by name here.
-const FORM_ASSOCIATED_SURFACE = new Set([
-  'name',
-  'value',
-  'disabled',
-  'required',
-  'effectiveDisabled',
-  'form',
-  'labels',
-  'validity',
-  'validationMessage',
-  'willValidate',
-  'setFormValue',
-  'checkValidity',
-  'reportValidity',
-  'formResetCallback',
-  'formStateRestoreCallback',
-  'formDisabledCallback',
-  'internals',
-]);
-
-const sections = extractSections(llmsFull);
-const problems = [];
-
-for (const mod of manifest.modules ?? []) {
-  for (const decl of mod.declarations ?? []) {
-    if (!decl.customElement || !decl.tagName) continue;
-    const tagName = decl.tagName;
-    const section = sections.get(tagName);
-    if (!section) {
-      problems.push(`${tagName}: no "## \`${tagName}\`" section found in llms-full.txt`);
-      continue;
-    }
-    const publicNames = (decl.members ?? [])
-      .filter((m) => m.privacy !== 'private' && m.privacy !== 'protected')
-      .filter((m) => m.static !== true)
-      // Inherited members (from LyraElement or standard HTMLElement/EventTarget APIs) are never
-      // restated per-component in llms-full.txt.
-      .filter((m) => !m.inheritedFrom)
-      // Nor is the FormAssociated mixin's surface, even when a component re-declares it as its
-      // own override (see FORM_ASSOCIATED_SURFACE above).
-      .filter((m) => !FORM_ASSOCIATED_SURFACE.has(m.name))
-      .map((m) => m.name);
-    for (const name of publicNames) {
-      if (!section.includes(name)) {
-        problems.push(`${tagName}: property \`${name}\` is not mentioned in its llms-full.txt section`);
-      }
-    }
+  console.error('llms/<family>.md is stale relative to custom-elements.json:\n');
+  for (const [tag, lines] of byTag) {
+    console.error(`  ${tag}`);
+    for (const line of lines) console.error(`      ${line}`);
   }
-}
-
-if (problems.length > 0) {
-  console.error('llms-full.txt is stale relative to custom-elements.json:\n');
-  for (const p of problems) console.error(`  - ${p}`);
-  console.error(`\n${problems.length} problem(s). Update llms-full.txt (or custom-elements.json, if the drift runs the other way) and re-run.`);
+  console.error(
+    `\n${gaps.length} gap(s) across ${byTag.size} component(s). Document them in the component's` +
+      ' section (or correct custom-elements.json, if the drift runs the other way), then re-run.',
+  );
   process.exit(1);
 }
 
-console.log('llms-full.txt is fresh: every public property of every custom element is documented.');
+console.log(
+  'llms/ is fresh: every public property, attribute, event, slot, CSS part and themeable custom' +
+    ' property of every custom element is documented.',
+);

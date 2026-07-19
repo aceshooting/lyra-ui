@@ -31,7 +31,8 @@ anything it finds that isn't covered yet.
 4. **Verify against the real installed source, not memory or doc prose.** For each item on that
    list, check whether an existing (or newly-shipped) lyra-ui component now covers it. Verify
    against the *actual installed* contract in `node_modules/@aceshooting/lyra-ui/`:
-   `llms-full.txt`, `custom-elements.json`, the component's `.d.ts`, and its `dist`/`src` source
+   `llms/index.md` and `llms/components/<tag>.md`, `custom-elements.json`, the component's
+   `.d.ts`, and its `dist`/`src` source
    when needed — not doc prose or what an older version used to do. A gap that has already shipped,
    or a design detail (a `data-*` hook, a `part=` attribute) that only shows up in the real source,
    is easy to miss from memory alone.

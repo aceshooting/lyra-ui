@@ -170,7 +170,7 @@ step "verify published tarball contents"
 out="$(pnpm --filter @aceshooting/lyra-ui pack --dry-run 2>&1)"
 echo "$out"
 missing=0
-for f in custom-elements.json llms.txt llms-full.txt; do
+for f in custom-elements.json llms.txt llms-full.txt llms/index.md llms/shared.md llms/tokens.md llms/peers.md llms/migration.md llms/components/lr-table.md; do
   if ! grep -qF "$f" <<< "$out"; then
     echo "ERROR: tarball is missing expected file: $f" >&2
     missing=1

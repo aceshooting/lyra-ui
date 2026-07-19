@@ -88,10 +88,10 @@ custom-element registry.
 import '@aceshooting/lyra-ui';
 ```
 
-This registers every component **except** `<lr-chart>` and its typed subclasses,
-`<lr-box-plot>`, `<lr-histogram>`, `<lr-map>`, and `<lr-graph>` — each of those
-needs an optional peer dependency (see Install above), so they always require their
-own explicit subpath import, even when pulling the rest of the library in bulk:
+This registers every component **except** the 15 tags gated behind an optional peer dependency:
+`<lr-chart>` and its 8 typed subclasses, `<lr-box-plot>`, `<lr-histogram>`, `<lr-map>`,
+`<lr-graph>`, `<lr-knowledge-graph-explorer>`, and `<lr-geojson-view>` (see Install above). Those
+always require their own explicit subpath import, even when pulling the rest of the library in bulk:
 
 ```js
 import '@aceshooting/lyra-ui/components/charts/chart/chart.js';
@@ -117,11 +117,29 @@ toast({ message: 'Saved', variant: 'success' });
 
 ## For AI agents / LLMs
 
-- **Using this library from a consuming project?** See [`llms.txt`](./llms.txt) (short index) and
-  [`llms-full.txt`](./llms-full.txt) (full API reference) in this package directory — a
-  consumer-facing reference for coding assistants integrating `@aceshooting/lyra-ui`.
-- **Contributing to this repo itself?** See [`../../AGENTS.md`](../../AGENTS.md) instead — that's a
-  contributor guide for agents working *on* lyra-ui, not the same document as the two above.
+**Using this library from a consuming project?** The package ships a reference written for coding
+assistants, split so a lookup costs a few hundred tokens instead of the whole catalog:
+
+| Need | Read |
+|---|---|
+| Which component to use, and its import path | [`llms/index.md`](./llms/index.md) |
+| One component's full API | `llms/components/<tag>.md` — path derived from the tag, no search needed |
+| Library-wide behavior (imports, events, forms, theming, i18n, TypeScript, frameworks, SSR, AI types) | [`llms/shared.md`](./llms/shared.md) |
+| Design tokens | [`llms/tokens.md`](./llms/tokens.md) |
+| Which optional peer a component needs | [`llms/peers.md`](./llms/peers.md) |
+| `wa-*`/`sl-*` → `lr-*` renames | [`llms/migration.md`](./llms/migration.md) |
+| Everything, concatenated (large) | [`llms-full.txt`](./llms-full.txt) |
+
+[`llms.txt`](./llms.txt) is the short entry index over all of the above. Everything under `llms/` is
+generated from the authored family sources by `pnpm run llms` and verified in CI, so it cannot drift
+from `custom-elements.json`.
+
+**Claude Code users:** this repo is also a plugin marketplace — installing the `lyra-ui` plugin gives
+Claude the same reference as a skill, plus `/lyra-ui:migrate-from-wa`,
+`/lyra-ui:migrate-from-shoelace` and `/lyra-ui:update-lyra` commands.
+
+**Contributing to this repo itself?** See [`../../AGENTS.md`](../../AGENTS.md) instead — that's a
+contributor guide for agents working *on* lyra-ui, not the same document as the above.
 
 ## Migrating from Web Awesome or Shoelace
 
@@ -544,7 +562,7 @@ each one-liner below.
 | `<lr-suggestion-chips>` | — (extra) | Starter prompts (empty thread) or follow-up suggestions (after a response) as a horizontally scrollable chip row; activation hands the prompt to the host — never composes or sends anything itself |
 | `<lr-emoji-picker>` | — (extra) | Searchable, keyboard-navigable, form-associated emoji picker; ships no emoji data of its own (`groups` is consumer-suppliable) with an optional convenience auto-loader for a default set |
 | `<lr-attachment-chip>` | — (extra) | Pre-send or sent file chip with thumbnail/size/upload-progress/retry; derives metadata from a real `File` or from persisted server metadata |
-| `<lr-attachment-trigger>` | — (extra) | Attach-file affordance for a composer's leading slot; a single icon button, or a `<lr-menu>` when more than one capability (`files`/`image`/`camera`) is configured |
+| `<lr-attachment-trigger>` | — (extra) | Attach-file affordance for a composer's leading slot; a single icon button, or a `<lr-menu>` when more than one capability (`files`/`image`/`camera`/`audio`) is configured |
 | `<lr-mention-popover>` | — (extra) | Caret-anchored `@`-mention/`/`-command autocomplete popover for a host-owned `<textarea>`/`<input>`; never takes DOM focus itself |
 | `<lr-tool-call-chip>` | — (extra) | Compact inline pill for one tool/function call mid-conversation; status-aware glyph/color, optional hover/focus detail tooltip |
 | `<lr-tool-result-view>` + `registerToolRenderer()` | — (extra) | Dispatches a tool call's result to a host-registered renderer (by tool name or shape `matches()`), falling back to `<lr-json-viewer>` |
@@ -682,8 +700,8 @@ A non-exhaustive list of gaps a new consumer should know about before adopting:
   bulk/production traffic and non-compliant clients are rate-limited or IP-blocked (see
   https://operations.osmfoundation.org/policies/tiles/). Always pass your own `mapStyle` in
   production (a hosted vector/raster style from a tile provider you have a plan with).
-- `<lr-file-input>` has no paste-from-clipboard support and doesn't specially detect a dragged
-  folder (surfaces as a phantom zero-byte file rather than a clear rejection).
+- `<lr-file-input>`'s paste-from-clipboard support (`paste`, on by default) depends on
+  `clipboardData.files`, which some browsers populate only for image data.
 - The document viewers that fetch a remote resource (`<lr-archive-viewer>`, `<lr-calendar-viewer>`,
   `<lr-contact-viewer>`, `<lr-csv-viewer>`, `<lr-dataset-viewer>`, `<lr-docx-viewer>`,
   `<lr-document-preview>`, `<lr-ebook-viewer>`, `<lr-email-viewer>`, `<lr-html-viewer>`,

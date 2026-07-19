@@ -27,6 +27,9 @@ const config = {
     { from: '../packages/lyra-ui/src/components/viewers/pdf-viewer/fixtures/sample.pdf', to: './fixtures/sample.pdf' },
     { from: '../packages/lyra-ui/llms.txt', to: './llms.txt' },
     { from: '../packages/lyra-ui/llms-full.txt', to: './llms-full.txt' },
+    // The split reference llms.txt links into — one file per component plus the shared/token/peer/
+    // migration tables. A `from` that resolves to a directory is copied recursively under `to`.
+    { from: '../packages/lyra-ui/llms', to: './llms' },
     { from: './robots.txt', to: './robots.txt' },
     { from: './sitemap.xml', to: './sitemap.xml' },
   ],
