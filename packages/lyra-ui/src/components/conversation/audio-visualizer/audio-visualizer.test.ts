@@ -8,6 +8,40 @@ function ambientAmplitudes(el: LyraAudioVisualizer, nowMs: number, reduced: bool
   ).ambientAmplitudes(nowMs, reduced);
 }
 
+function waitFrame(): Promise<void> {
+  return new Promise((resolve) => requestAnimationFrame(() => resolve()));
+}
+
+/** Waits until no frame has been scheduled for two consecutive frames (mirrors the `settle` helper
+ *  used by the draw-loop-scheduling tests below), or gives up after `frames` frames. */
+async function settleRaf(el: LyraAudioVisualizer, frames = 20): Promise<void> {
+  const priv = el as unknown as { rafId?: number };
+  for (let i = 0; i < frames; i++) {
+    await waitFrame();
+    if (priv.rafId === undefined) {
+      await waitFrame();
+      if (priv.rafId === undefined) return;
+    }
+  }
+}
+
+/** Forces `prefersReducedMotion()` (internal/motion.ts) to report `true` for the duration of the
+ *  callback, using the same "replace window.matchMedia entirely" technique as motion.test.ts. */
+async function withForcedReducedMotion(fn: () => Promise<void>): Promise<void> {
+  const original = window.matchMedia;
+  window.matchMedia = ((query: string) => ({
+    matches: query === '(prefers-reduced-motion: reduce)',
+    media: query,
+    addEventListener: () => {},
+    removeEventListener: () => {},
+  })) as typeof window.matchMedia;
+  try {
+    await fn();
+  } finally {
+    window.matchMedia = original;
+  }
+}
+
 it('defaults to state=idle, variant=bars, bar-count=5, gain=1, level=null, stream=null', async () => {
   const el = (await fixture(html`<lr-audio-visualizer></lr-audio-visualizer>`)) as LyraAudioVisualizer;
   expect(el.state).to.equal('idle');
@@ -239,4 +273,512 @@ it('localizes the auto-generated aria-label via this.localize()', async () => {
     ></lr-audio-visualizer>
   `)) as LyraAudioVisualizer;
   expect(el.getAttribute('aria-label')).to.equal('Activité vocale : Parle');
+});
+
+describe('media-query change handlers', () => {
+  it('onDprChange rebuilds the DPR MediaQueryList and reschedules a draw', async () => {
+    const el = (await fixture(html`<lr-audio-visualizer state="idle"></lr-audio-visualizer>`)) as LyraAudioVisualizer;
+    await settleRaf(el);
+    const priv = el as unknown as { dprQuery?: MediaQueryList; rafId?: number };
+    expect(priv.rafId).to.be.undefined;
+    const before = priv.dprQuery;
+    expect(before).to.exist;
+    before!.dispatchEvent(new Event('change'));
+    expect(priv.dprQuery).to.exist;
+    expect(priv.dprQuery).to.not.equal(before); // watchDpr() rebuilt the MediaQueryList
+    expect(priv.rafId).to.not.be.undefined; // scheduleDraw() re-entered the loop
+  });
+
+  it('onMotionPreferenceChange reschedules a draw when the reduced-motion preference flips', async () => {
+    const el = (await fixture(html`<lr-audio-visualizer></lr-audio-visualizer>`)) as LyraAudioVisualizer;
+    await settleRaf(el);
+    const priv = el as unknown as { motionQuery?: MediaQueryList; rafId?: number };
+    expect(priv.rafId).to.be.undefined;
+    expect(priv.motionQuery).to.exist;
+    priv.motionQuery!.dispatchEvent(new Event('change'));
+    expect(priv.rafId).to.not.be.undefined;
+  });
+
+  it('onColorSchemeChange refreshes the theme (clears cached colors) and reschedules a draw', async () => {
+    const el = (await fixture(html`<lr-audio-visualizer></lr-audio-visualizer>`)) as LyraAudioVisualizer;
+    await settleRaf(el);
+    const priv = el as unknown as {
+      colorSchemeQuery?: MediaQueryList;
+      resolvedColors?: unknown;
+      rafId?: number;
+    };
+    expect(priv.rafId).to.be.undefined;
+    priv.resolvedColors = { active: 'stale', quiet: 'stale' };
+    expect(priv.colorSchemeQuery).to.exist;
+    priv.colorSchemeQuery!.dispatchEvent(new Event('change'));
+    expect(priv.resolvedColors).to.be.undefined; // refreshTheme() reset the cache
+    expect(priv.rafId).to.not.be.undefined;
+  });
+});
+
+describe('refreshTheme() public API', () => {
+  it('resets cached colors and reschedules a draw', async () => {
+    const el = (await fixture(html`<lr-audio-visualizer></lr-audio-visualizer>`)) as LyraAudioVisualizer;
+    await settleRaf(el);
+    const priv = el as unknown as { resolvedColors?: unknown; rafId?: number };
+    priv.resolvedColors = { active: 'stale', quiet: 'stale' };
+    expect(priv.rafId).to.be.undefined;
+    el.refreshTheme();
+    expect(priv.resolvedColors).to.be.undefined;
+    expect(priv.rafId).to.not.be.undefined;
+  });
+});
+
+describe('queueThemeRefresh coalescing', () => {
+  it('coalesces repeated calls into a single refreshTheme() once microtasks flush', async () => {
+    const el = (await fixture(html`<lr-audio-visualizer></lr-audio-visualizer>`)) as LyraAudioVisualizer;
+    await settleRaf(el);
+    const priv = el as unknown as {
+      queueThemeRefresh: () => void;
+      themeRefreshQueued: boolean;
+      resolvedColors?: unknown;
+      rafId?: number;
+    };
+    priv.resolvedColors = { active: 'stale', quiet: 'stale' };
+    expect(priv.themeRefreshQueued).to.be.false;
+    priv.queueThemeRefresh();
+    expect(priv.themeRefreshQueued).to.be.true;
+    priv.queueThemeRefresh(); // already queued: early-returns instead of double-queueing
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(priv.themeRefreshQueued).to.be.false;
+    expect(priv.resolvedColors).to.be.undefined; // refreshTheme() ran
+    expect(priv.rafId).to.not.be.undefined;
+  });
+});
+
+describe('watchTheme() defensive branches', () => {
+  it('no-ops when ownerDocument.defaultView is unavailable (e.g. a detached document)', async () => {
+    const el = (await fixture(html`<lr-audio-visualizer></lr-audio-visualizer>`)) as LyraAudioVisualizer;
+    Object.defineProperty(el, 'ownerDocument', { value: { defaultView: null }, configurable: true });
+    expect(() => (el as unknown as { watchTheme: () => void }).watchTheme()).to.not.throw();
+  });
+
+  it('skips the MutationObserver setup when MutationObserver is unavailable', async () => {
+    const el = (await fixture(html`<lr-audio-visualizer></lr-audio-visualizer>`)) as LyraAudioVisualizer;
+    const original = window.MutationObserver;
+    (window as unknown as { MutationObserver: unknown }).MutationObserver = undefined;
+    try {
+      expect(() => (el as unknown as { watchTheme: () => void }).watchTheme()).to.not.throw();
+    } finally {
+      (window as unknown as { MutationObserver: unknown }).MutationObserver = original;
+    }
+  });
+});
+
+describe('AudioContext constructor fallback', () => {
+  class FakeWebkitAudioContext extends EventTarget {
+    state: 'suspended' | 'running' | 'closed' = 'suspended';
+    createMediaStreamSource(_stream: unknown): { connect: () => void; disconnect: () => void } {
+      return { connect: () => {}, disconnect: () => {} };
+    }
+    createAnalyser(): { fftSize: number; frequencyBinCount: number; getByteTimeDomainData: () => void } {
+      return { fftSize: 256, frequencyBinCount: 128, getByteTimeDomainData: () => {} };
+    }
+    resume(): Promise<void> {
+      this.state = 'running';
+      this.dispatchEvent(new Event('statechange'));
+      return Promise.resolve();
+    }
+    suspend(): Promise<void> {
+      this.state = 'suspended';
+      return Promise.resolve();
+    }
+    close(): Promise<void> {
+      this.state = 'closed';
+      return Promise.resolve();
+    }
+  }
+
+  it('falls back to webkitAudioContext when window.AudioContext is unavailable', async () => {
+    const originalAudioContext = window.AudioContext;
+    const w = window as unknown as { AudioContext: unknown; webkitAudioContext?: unknown };
+    w.AudioContext = undefined;
+    w.webkitAudioContext = FakeWebkitAudioContext;
+    try {
+      const el = (await fixture(html`<lr-audio-visualizer></lr-audio-visualizer>`)) as LyraAudioVisualizer;
+      el.stream = {} as unknown as MediaStream;
+      await el.updateComplete;
+      const ctx = (el as unknown as { audioCtx?: unknown }).audioCtx;
+      expect(ctx).to.be.instanceOf(FakeWebkitAudioContext);
+    } finally {
+      w.AudioContext = originalAudioContext;
+      delete w.webkitAudioContext;
+    }
+  });
+
+  it('no-ops (leaves audioCtx unset) when neither AudioContext nor webkitAudioContext exist', async () => {
+    const originalAudioContext = window.AudioContext;
+    const w = window as unknown as { AudioContext: unknown; webkitAudioContext?: unknown };
+    w.AudioContext = undefined;
+    delete w.webkitAudioContext;
+    try {
+      const el = (await fixture(html`<lr-audio-visualizer></lr-audio-visualizer>`)) as LyraAudioVisualizer;
+      el.stream = {} as unknown as MediaStream;
+      await el.updateComplete;
+      expect((el as unknown as { audioCtx?: unknown }).audioCtx).to.be.undefined;
+    } finally {
+      w.AudioContext = originalAudioContext;
+    }
+  });
+});
+
+describe('stream lifecycle: reattach and clear', () => {
+  class TrackingFakeAudioContext extends EventTarget {
+    state: 'suspended' | 'running' | 'closed' = 'suspended';
+    disconnectCalls = 0;
+    createMediaStreamSource(_stream: unknown): { connect: () => void; disconnect: () => void } {
+      return {
+        connect: () => {},
+        disconnect: () => {
+          this.disconnectCalls++;
+        },
+      };
+    }
+    createAnalyser(): { fftSize: number; frequencyBinCount: number; getByteTimeDomainData: () => void } {
+      return { fftSize: 256, frequencyBinCount: 128, getByteTimeDomainData: () => {} };
+    }
+    resume(): Promise<void> {
+      this.state = 'running';
+      this.dispatchEvent(new Event('statechange'));
+      return Promise.resolve();
+    }
+    suspend(): Promise<void> {
+      this.state = 'suspended';
+      return Promise.resolve();
+    }
+    close(): Promise<void> {
+      this.state = 'closed';
+      return Promise.resolve();
+    }
+  }
+
+  it('disconnects the previous source on reattach, and disconnects + suspends on clear', async () => {
+    const original = window.AudioContext;
+    (window as unknown as { AudioContext: unknown }).AudioContext = TrackingFakeAudioContext;
+    try {
+      const el = (await fixture(html`<lr-audio-visualizer></lr-audio-visualizer>`)) as LyraAudioVisualizer;
+      el.stream = {} as unknown as MediaStream;
+      await el.updateComplete;
+      const ctx = (el as unknown as { audioCtx?: TrackingFakeAudioContext }).audioCtx;
+      expect(ctx).to.exist;
+      expect(ctx!.disconnectCalls).to.equal(0); // first attach: nothing to disconnect yet
+
+      // Reattach a new stream while one is already connected: disconnects the previous source.
+      el.stream = {} as unknown as MediaStream;
+      await el.updateComplete;
+      expect(ctx!.disconnectCalls).to.equal(1);
+      expect(ctx!.state).to.equal('running');
+
+      // Clear the stream: disconnects the current source and suspends the still-live context.
+      el.stream = null;
+      await el.updateComplete;
+      expect(ctx!.disconnectCalls).to.equal(2);
+      expect(ctx!.state).to.equal('suspended');
+      expect((el as unknown as { analyser?: unknown }).analyser).to.be.undefined;
+      expect((el as unknown as { sourceNode?: unknown }).sourceNode).to.be.undefined;
+    } finally {
+      (window as unknown as { AudioContext: unknown }).AudioContext = original;
+    }
+  });
+});
+
+describe('live analyser draw loop', () => {
+  class FakeRunningAudioContext extends EventTarget {
+    state: 'suspended' | 'running' | 'closed' = 'suspended';
+    createMediaStreamSource(_stream: unknown): { connect: () => void; disconnect: () => void } {
+      return { connect: () => {}, disconnect: () => {} };
+    }
+    createAnalyser(): {
+      fftSize: number;
+      frequencyBinCount: number;
+      getByteTimeDomainData: (arr: Uint8Array) => void;
+    } {
+      return {
+        fftSize: 256,
+        frequencyBinCount: 128,
+        getByteTimeDomainData: (arr: Uint8Array) => {
+          for (let i = 0; i < arr.length; i++) arr[i] = (i * 7) % 256;
+        },
+      };
+    }
+    resume(): Promise<void> {
+      this.state = 'running';
+      this.dispatchEvent(new Event('statechange'));
+      return Promise.resolve();
+    }
+    suspend(): Promise<void> {
+      this.state = 'suspended';
+      return Promise.resolve();
+    }
+    close(): Promise<void> {
+      this.state = 'closed';
+      return Promise.resolve();
+    }
+  }
+
+  it('keeps the loop alive and draws bars from real analyser time-domain data while the AudioContext is running', async () => {
+    const original = window.AudioContext;
+    (window as unknown as { AudioContext: unknown }).AudioContext = FakeRunningAudioContext;
+    try {
+      const el = (await fixture(html`<lr-audio-visualizer></lr-audio-visualizer>`)) as LyraAudioVisualizer;
+      el.stream = {} as unknown as MediaStream;
+      await el.updateComplete;
+      await waitFrame();
+      await waitFrame();
+      const priv = el as unknown as { rafId?: number; isTimeDriven: boolean };
+      expect(priv.isTimeDriven).to.be.true; // a live, running analyser is always time-driven
+      expect(priv.rafId).to.not.be.undefined; // still animating
+      const amps = (el as unknown as { currentAmplitudes: (nowMs: number) => number[] }).currentAmplitudes(0);
+      expect(amps).to.have.length(5); // default bar-count
+      expect(amps.some((a) => a > 0)).to.be.true;
+    } finally {
+      (window as unknown as { AudioContext: unknown }).AudioContext = original;
+    }
+  });
+
+  it('draws waveform samples directly from analyser time-domain data when variant is waveform', async () => {
+    const original = window.AudioContext;
+    (window as unknown as { AudioContext: unknown }).AudioContext = FakeRunningAudioContext;
+    try {
+      const el = (await fixture(
+        html`<lr-audio-visualizer variant="waveform"></lr-audio-visualizer>`,
+      )) as LyraAudioVisualizer;
+      el.stream = {} as unknown as MediaStream;
+      await el.updateComplete;
+      const analyser = (el as unknown as { analyser?: { fftSize: number } }).analyser;
+      expect(analyser?.fftSize).to.equal(2048); // waveform variant requests a finer FFT
+      const amps = (el as unknown as { currentAmplitudes: (nowMs: number) => number[] }).currentAmplitudes(0);
+      expect(amps).to.have.length(128); // frequencyBinCount from the fake analyser
+      expect(amps.some((a) => a !== 0)).to.be.true;
+    } finally {
+      (window as unknown as { AudioContext: unknown }).AudioContext = original;
+    }
+  });
+});
+
+describe('reduced-motion ambient throttling in drawFrame', () => {
+  it('throttles ambient (no-live-signal) redraws to the ~2Hz interval, then draws for real once it elapses', async () => {
+    await withForcedReducedMotion(async () => {
+      const el = (await fixture(html`<lr-audio-visualizer state="idle"></lr-audio-visualizer>`)) as LyraAudioVisualizer;
+      const priv = el as unknown as {
+        drawFrame: (nowMs: number) => void;
+        lastAmbientDrawMs: number;
+        rafId?: number;
+      };
+      // Drive drawFrame by hand with controlled timestamps so the 500ms throttle window is deterministic.
+      if (priv.rafId !== undefined) cancelAnimationFrame(priv.rafId);
+      priv.rafId = undefined;
+      priv.lastAmbientDrawMs = 1000;
+
+      priv.drawFrame(1200); // 200ms later: still inside the throttle window
+      expect(priv.lastAmbientDrawMs).to.equal(1000); // no real draw happened
+      expect(priv.rafId).to.not.be.undefined; // but another frame was requested
+
+      cancelAnimationFrame(priv.rafId!);
+      priv.rafId = undefined;
+      priv.drawFrame(1600); // 600ms after the last real draw: interval elapsed, draws for real
+      expect(priv.lastAmbientDrawMs).to.equal(1600);
+    });
+  });
+});
+
+describe('drawFrame guards', () => {
+  it('is a no-op (and clears rafId) if the element is no longer connected when a stale frame fires', async () => {
+    const el = (await fixture(html`<lr-audio-visualizer></lr-audio-visualizer>`)) as LyraAudioVisualizer;
+    const priv = el as unknown as { drawFrame: (nowMs: number) => void; rafId?: number };
+    el.remove();
+    expect(el.isConnected).to.be.false;
+    priv.rafId = 12345;
+    priv.drawFrame(0);
+    expect(priv.rafId).to.be.undefined;
+  });
+});
+
+describe('ambient amplitude branches not covered by idle/thinking tests', () => {
+  it('listening/speaking is a fixed pulse under reduced motion and a time-varying sine otherwise', async () => {
+    const el = (await fixture(html`<lr-audio-visualizer state="listening"></lr-audio-visualizer>`)) as LyraAudioVisualizer;
+    const reducedAmps = ambientAmplitudes(el, 250, true);
+    expect(new Set(reducedAmps).size).to.equal(1);
+    expect(reducedAmps[0]).to.equal(0.3);
+
+    const a1 = ambientAmplitudes(el, 0, false);
+    const a2 = ambientAmplitudes(el, 500, false);
+    expect(a1).to.not.deep.equal(a2); // sine-driven, changes over time
+
+    const speaking = (await fixture(html`<lr-audio-visualizer state="speaking"></lr-audio-visualizer>`)) as LyraAudioVisualizer;
+    expect(ambientAmplitudes(speaking, 100, true)[0]).to.equal(0.3);
+  });
+
+  it('uses WAVEFORM_SAMPLES (64) instead of bar-count for the waveform variant', async () => {
+    const el = (await fixture(
+      html`<lr-audio-visualizer variant="waveform" bar-count="7"></lr-audio-visualizer>`,
+    )) as LyraAudioVisualizer;
+    const amps = ambientAmplitudes(el, 0, false);
+    expect(amps).to.have.length(64);
+  });
+
+  it('the thinking sweep stays finite when bar-count=1 (n - 1 === 0 fallback)', async () => {
+    const el = (await fixture(
+      html`<lr-audio-visualizer state="thinking" bar-count="1"></lr-audio-visualizer>`,
+    )) as LyraAudioVisualizer;
+    const amps = ambientAmplitudes(el, 300, false);
+    expect(amps).to.have.length(1);
+    expect(Number.isFinite(amps[0])).to.be.true;
+  });
+});
+
+describe('level-driven amplitude: waveform variant', () => {
+  it('fills WAVEFORM_SAMPLES entries instead of bar-count when variant is waveform', async () => {
+    const el = (await fixture(
+      html`<lr-audio-visualizer variant="waveform" level="0.3"></lr-audio-visualizer>`,
+    )) as LyraAudioVisualizer;
+    const amps = (el as unknown as { currentAmplitudes: (nowMs: number) => number[] }).currentAmplitudes(0);
+    expect(amps).to.have.length(64);
+    expect(amps.every((a) => a === 0.3)).to.be.true;
+  });
+});
+
+describe('resolveColors()', () => {
+  it('picks up custom-property overrides instead of falling back to the hardcoded defaults', async () => {
+    const el = (await fixture(html`
+      <lr-audio-visualizer
+        style="--lr-audio-visualizer-color: rgb(1, 2, 3); --lr-audio-visualizer-quiet-color: rgb(4, 5, 6);"
+      ></lr-audio-visualizer>
+    `)) as LyraAudioVisualizer;
+    const colors = (
+      el as unknown as { resolveColors: () => { active: string; quiet: string } }
+    ).resolveColors();
+    expect(colors.active).to.equal('rgb(1, 2, 3)');
+    expect(colors.quiet).to.equal('rgb(4, 5, 6)');
+  });
+
+  it('falls back to the hardcoded defaults when the custom properties resolve empty', async () => {
+    // The component's own :host styles always set --lr-audio-visualizer-color(/-quiet-color) via
+    // var(--lr-color-brand) etc., so under normal token loading getPropertyValue() never returns
+    // an empty string -- the `|| fallback` only fires if the whole custom-property chain resolves
+    // to nothing. Stubbing getComputedStyle() is the only way to simulate that from a test.
+    const el = (await fixture(html`<lr-audio-visualizer></lr-audio-visualizer>`)) as LyraAudioVisualizer;
+    const original = window.getComputedStyle;
+    window.getComputedStyle = (() => ({
+      getPropertyValue: () => '',
+    })) as unknown as typeof window.getComputedStyle;
+    try {
+      const colors = (
+        el as unknown as { resolveColors: () => { active: string; quiet: string } }
+      ).resolveColors();
+      expect(colors.active).to.equal('#0969da');
+      expect(colors.quiet).to.equal('#ddf4ff');
+    } finally {
+      window.getComputedStyle = original;
+    }
+  });
+});
+
+describe('waveform draw with a single sample (division-by-zero guard)', () => {
+  class SingleSampleAudioContext extends EventTarget {
+    state: 'suspended' | 'running' | 'closed' = 'suspended';
+    createMediaStreamSource(_stream: unknown): { connect: () => void; disconnect: () => void } {
+      return { connect: () => {}, disconnect: () => {} };
+    }
+    createAnalyser(): {
+      fftSize: number;
+      frequencyBinCount: number;
+      getByteTimeDomainData: (arr: Uint8Array) => void;
+    } {
+      return {
+        fftSize: 2048,
+        frequencyBinCount: 1,
+        getByteTimeDomainData: (arr: Uint8Array) => {
+          arr[0] = 200;
+        },
+      };
+    }
+    resume(): Promise<void> {
+      this.state = 'running';
+      this.dispatchEvent(new Event('statechange'));
+      return Promise.resolve();
+    }
+    suspend(): Promise<void> {
+      this.state = 'suspended';
+      return Promise.resolve();
+    }
+    close(): Promise<void> {
+      this.state = 'closed';
+      return Promise.resolve();
+    }
+  }
+
+  it('does not divide by zero when the waveform has exactly one sample', async () => {
+    const original = window.AudioContext;
+    (window as unknown as { AudioContext: unknown }).AudioContext = SingleSampleAudioContext;
+    try {
+      const el = (await fixture(
+        html`<lr-audio-visualizer variant="waveform"></lr-audio-visualizer>`,
+      )) as LyraAudioVisualizer;
+      el.stream = {} as unknown as MediaStream;
+      await el.updateComplete;
+      expect(() => (el as unknown as { draw: (nowMs: number) => void }).draw(0)).to.not.throw();
+    } finally {
+      (window as unknown as { AudioContext: unknown }).AudioContext = original;
+    }
+  });
+});
+
+describe('draw() defensive branches', () => {
+  it('no-ops if the canvas is not yet in the render root (e.g. called before the first render)', () => {
+    const el = document.createElement('lr-audio-visualizer') as LyraAudioVisualizer;
+    expect(() => (el as unknown as { draw: (nowMs: number) => void }).draw(0)).to.not.throw();
+  });
+
+  it('no-ops if acquiring the 2D context fails', async () => {
+    const el = (await fixture(html`<lr-audio-visualizer></lr-audio-visualizer>`)) as LyraAudioVisualizer;
+    const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
+    (canvas as unknown as { getContext: () => null }).getContext = () => null;
+    expect(() => (el as unknown as { draw: (nowMs: number) => void }).draw(0)).to.not.throw();
+  });
+
+  it('falls back to a 48px height when the measured host size has zero height', async () => {
+    const el = (await fixture(html`<lr-audio-visualizer></lr-audio-visualizer>`)) as LyraAudioVisualizer;
+    const priv = el as unknown as {
+      hostSize?: { width: number; height: number };
+      draw: (nowMs: number) => void;
+    };
+    priv.hostSize = { width: 100, height: 0 };
+    expect(() => priv.draw(0)).to.not.throw();
+    const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
+    const dpr = window.devicePixelRatio || 1;
+    expect(canvas.height).to.equal(Math.floor(48 * dpr));
+  });
+
+  it('falls back to devicePixelRatio=1 when window.devicePixelRatio is unavailable', async () => {
+    const el = (await fixture(html`<lr-audio-visualizer></lr-audio-visualizer>`)) as LyraAudioVisualizer;
+    const original = window.devicePixelRatio;
+    (window as unknown as { devicePixelRatio: number }).devicePixelRatio = 0;
+    try {
+      const priv = el as unknown as {
+        hostSize?: { width: number; height: number };
+        draw: (nowMs: number) => void;
+      };
+      priv.hostSize = { width: 100, height: 50 };
+      priv.draw(0);
+      const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
+      expect(canvas.width).to.equal(100); // dpr fell back to 1, so the backing store matches CSS size
+      expect(canvas.height).to.equal(50);
+    } finally {
+      (window as unknown as { devicePixelRatio: number }).devicePixelRatio = original;
+    }
+  });
+
+  it('draws the waveform variant path (lineWidth/stroked path) without throwing', async () => {
+    const el = (await fixture(html`<lr-audio-visualizer variant="waveform"></lr-audio-visualizer>`)) as LyraAudioVisualizer;
+    expect(() => (el as unknown as { draw: (nowMs: number) => void }).draw(0)).to.not.throw();
+    const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
+    expect(canvas.width).to.be.greaterThan(0);
+  });
 });
