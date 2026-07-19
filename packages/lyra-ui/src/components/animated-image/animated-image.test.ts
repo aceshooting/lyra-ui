@@ -7,6 +7,7 @@ import type { LyraAnimatedImage } from './animated-image.js';
 // real browser-produced values, without depending on external network access.
 const DATA_URI =
   'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=';
+const BROKEN_DATA_URI = 'data:image/png;base64,not-a-valid-png';
 
 /** Sets `el.src` and awaits the resulting real `lr-load`, registering the
  *  listener before the assignment per this repo's `oneEvent`-races-dispatch
@@ -108,10 +109,10 @@ describe('lr-load / DPR-aware frame capture', () => {
 });
 
 describe('lr-error', () => {
-  it('fires for a real broken/404 resource and does not render control-box', async () => {
+  it('fires for a real broken image and does not render control-box', async () => {
     const el = (await fixture(html`<lr-animated-image alt="Pixel"></lr-animated-image>`)) as LyraAnimatedImage;
     const errorEvent = oneEvent(el, 'lr-error');
-    el.src = '/__does-not-exist-lr-animated-image-fixture__.png';
+    el.src = BROKEN_DATA_URI;
     await errorEvent;
     await el.updateComplete;
     expect(el.shadowRoot!.querySelector('[part="control-box"]')).to.be.null;

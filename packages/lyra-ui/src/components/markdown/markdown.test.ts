@@ -105,7 +105,7 @@ it('does not recognize a GFM table when gfm is disabled', async () => {
 
 it('strips inline event-handler attributes from raw HTML passthrough when sanitize is true (the default)', async () => {
   const el = (await fixture(html`<lr-markdown></lr-markdown>`)) as LyraMarkdown;
-  el.content = 'hi <img src="x" onerror="window.__lyraMarkdownXss = true">';
+  el.content = 'hi <img alt="test" onerror="window.__lyraMarkdownXss = true">';
   await el.updateComplete;
   await waitUntil(() => el.shadowRoot!.querySelector('img') !== null);
 
@@ -117,7 +117,7 @@ it('strips inline event-handler attributes from raw HTML passthrough when saniti
 it('renders unsanitized raw HTML when sanitize is explicitly false', async () => {
   const el = (await fixture(html`<lr-markdown></lr-markdown>`)) as LyraMarkdown;
   el.sanitize = false;
-  el.content = 'hi <img src="x" onerror="window.__lyraMarkdownXssOptOut = true">';
+  el.content = 'hi <img alt="test" onerror="window.__lyraMarkdownXssOptOut = true">';
   await el.updateComplete;
   await waitUntil(() => el.shadowRoot!.querySelector('img') !== null);
 
@@ -127,11 +127,11 @@ it('renders unsanitized raw HTML when sanitize is explicitly false', async () =>
 
 it('renders embedded raw HTML as visible escaped text when escapeHtml is set, instead of real elements', async () => {
   const el = (await fixture(html`<lr-markdown escape-html></lr-markdown>`)) as LyraMarkdown;
-  el.content = 'hi <img src="x" onerror="window.__lyraMarkdownEscapeTest = true">';
+  el.content = 'hi <img alt="test" onerror="window.__lyraMarkdownEscapeTest = true">';
   await el.updateComplete;
   await waitUntil(() => el.shadowRoot!.querySelector('[part="content"]') !== null);
   expect(el.shadowRoot!.querySelector('img')).to.not.exist;
-  expect(el.shadowRoot!.querySelector('[part="content"]')!.textContent).to.include('<img src="x" onerror="window.__lyraMarkdownEscapeTest = true">');
+  expect(el.shadowRoot!.querySelector('[part="content"]')!.textContent).to.include('<img alt="test" onerror="window.__lyraMarkdownEscapeTest = true">');
   expect((window as unknown as { __lyraMarkdownEscapeTest?: boolean }).__lyraMarkdownEscapeTest).to.be.undefined;
 });
 
@@ -448,11 +448,20 @@ describe('fallback matrix', () => {
     const internals = el as unknown as Internals;
     expect(internals.deps!.marked, 'precondition: marked must have actually loaded').to.exist;
 
-    const listener = oneEvent(el, 'lr-render-error');
-    internals.deps = { marked: internals.deps!.marked, DOMPurify: undefined };
-    internals.renderMarkdown();
-    const { detail } = await listener;
-    expect(detail.error).to.exist;
+    const originalWarn = console.warn;
+    const calls: unknown[][] = [];
+    console.warn = (...args: unknown[]) => calls.push(args);
+    try {
+      const listener = oneEvent(el, 'lr-render-error');
+      internals.deps = { marked: internals.deps!.marked, DOMPurify: undefined };
+      internals.renderMarkdown();
+      const { detail } = await listener;
+      expect(detail.error).to.exist;
+      expect(calls).to.have.length(1);
+      expect(calls[0][0]).to.contain('dompurify');
+    } finally {
+      console.warn = originalWarn;
+    }
 
     await el.updateComplete;
     expect(el.shadowRoot!.querySelector('[part="content"]')!.hasAttribute('data-fallback')).to.be.true;

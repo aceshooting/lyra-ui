@@ -164,6 +164,11 @@ export default {
   },
   testRunnerHtml,
   coverage: collectCoverage,
+  // Chromium reports ResizeObserver loop notifications as ErrorEvents whose
+  // `error` payload is null. The runner's uncaught-error bridge logs that
+  // payload before the performance suite can suppress the benign notification.
+  // Keep all other browser logs visible.
+  filterBrowserLogs: (log) => !(log.type === 'error' && log.args.length === 1 && log.args[0] === null),
   coverageConfig: {
     include: [
       'src/internal/form-associated.ts',

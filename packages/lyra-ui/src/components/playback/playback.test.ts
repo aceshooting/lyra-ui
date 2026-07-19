@@ -4,7 +4,7 @@ import type { LyraPlayback } from './playback.js';
 
 it('does not leak an untracked duplicate timer chain when play() is called synchronously from a lr-step listener during tick()', async () => {
   const el = (await fixture(
-    html`<lr-playback length="1000" interval-ms="15"></lr-playback>`,
+    html`<lr-playback length="1000" interval-ms="20"></lr-playback>`,
   )) as LyraPlayback;
   let reentered = false;
   el.addEventListener('lr-step', () => {
@@ -34,7 +34,7 @@ it('does not leak an untracked duplicate timer chain when play() is called synch
 
 it('advances the index on each tick and wraps when loop is true', async () => {
   const el = (await fixture(
-    html`<lr-playback length="3" interval-ms="10"></lr-playback>`,
+    html`<lr-playback length="3" interval-ms="20"></lr-playback>`,
   )) as LyraPlayback;
   const playEvent = oneEvent(el, 'lr-play');
   el.play();
@@ -46,7 +46,7 @@ it('advances the index on each tick and wraps when loop is true', async () => {
 
 it('stops at the last index when loop is false and not-looping is reached', async () => {
   const el = (await fixture(
-    html`<lr-playback length="2" interval-ms="10" index="1"></lr-playback>`,
+    html`<lr-playback length="2" interval-ms="20" index="1"></lr-playback>`,
   )) as LyraPlayback;
   el.loop = false;
   el.play();
@@ -77,7 +77,7 @@ it('next()/previous()/goTo() emit lr-step without starting playback', async () =
 
 it('auto-pauses on disconnect', async () => {
   const el = (await fixture(
-    html`<lr-playback length="3" interval-ms="10"></lr-playback>`,
+    html`<lr-playback length="3" interval-ms="20"></lr-playback>`,
   )) as LyraPlayback;
   el.play();
   el.remove();
@@ -86,7 +86,7 @@ it('auto-pauses on disconnect', async () => {
 
 it('auto-pauses when the element becomes hidden', async () => {
   const el = (await fixture(
-    html`<lr-playback length="3" interval-ms="10"></lr-playback>`,
+    html`<lr-playback length="3" interval-ms="20"></lr-playback>`,
   )) as LyraPlayback;
   el.play();
   await el.updateComplete;
@@ -99,7 +99,7 @@ it('auto-pauses when the element becomes hidden', async () => {
 
 it('auto-pauses when length is externally reduced to <= 1 while playing', async () => {
   const el = (await fixture(
-    html`<lr-playback length="3" interval-ms="10"></lr-playback>`,
+    html`<lr-playback length="3" interval-ms="20"></lr-playback>`,
   )) as LyraPlayback;
   el.play();
   await el.updateComplete;
@@ -344,14 +344,14 @@ it('shows a focus ring on the slider when it receives keyboard/programmatic focu
 });
 
 it('starts the real timer when `playing` is set directly, not just via play()', async () => {
-  const el = (await fixture(html`<lr-playback length="3" interval-ms="10"></lr-playback>`)) as LyraPlayback;
+  const el = (await fixture(html`<lr-playback length="3" interval-ms="20"></lr-playback>`)) as LyraPlayback;
   el.playing = true;
   await aTimeout(35);
   expect(el.index).to.be.greaterThan(0);
 });
 
 it('stops the real timer when `playing` is set to false directly, not just via pause()', async () => {
-  const el = (await fixture(html`<lr-playback length="5" interval-ms="10"></lr-playback>`)) as LyraPlayback;
+  const el = (await fixture(html`<lr-playback length="5" interval-ms="20"></lr-playback>`)) as LyraPlayback;
   el.play();
   await aTimeout(15);
   el.playing = false;
@@ -361,13 +361,22 @@ it('stops the real timer when `playing` is set to false directly, not just via p
 });
 
 it('clamps a non-positive interval-ms instead of hammering a zero-delay tick loop', async () => {
-  const el = (await fixture(html`<lr-playback length="1000" interval-ms="0"></lr-playback>`)) as LyraPlayback;
-  el.play();
-  await aTimeout(50);
-  // With no clamp this would have ticked dozens/hundreds of times already;
-  // clamped to a sane minimum, only a handful of ticks land in 50ms.
-  expect(el.index).to.be.lessThan(20);
-  el.pause();
+  const originalWarn = console.warn;
+  const calls: unknown[][] = [];
+  console.warn = (...args: unknown[]) => calls.push(args);
+  try {
+    const el = (await fixture(html`<lr-playback length="1000" interval-ms="0"></lr-playback>`)) as LyraPlayback;
+    el.play();
+    await aTimeout(50);
+    // With no clamp this would have ticked dozens/hundreds of times already;
+    // clamped to a sane minimum, only a handful of ticks land in 50ms.
+    expect(el.index).to.be.lessThan(20);
+    expect(calls).to.have.length(1);
+    expect(calls[0][0]).to.contain('below the 16ms floor');
+    el.pause();
+  } finally {
+    console.warn = originalWarn;
+  }
 });
 
 it('warns with a reason that matches the actual cause: "below the Xms floor" for a merely-small value, "non-finite" for NaN', async () => {

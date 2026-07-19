@@ -25,13 +25,21 @@ it('exposes zoomIdentity and zoomTransform for programmatic camera control (focu
 describe('loadD3Modules (uncached, dependency-injectable)', () => {
   it('resolves null when any one of the four peer dependencies fails to load', async () => {
     const err = new Error('d3-force boom');
-    const mods = await loadD3Modules(
-      () => Promise.reject(err),
-      () => import('d3-drag'),
-      () => import('d3-zoom'),
-      () => import('d3-selection'),
-    );
-    expect(mods).to.equal(null);
+    const originalWarn = console.warn;
+    const calls: unknown[][] = [];
+    console.warn = (...args: unknown[]) => calls.push(args);
+    try {
+      const mods = await loadD3Modules(
+        () => Promise.reject(err),
+        () => import('d3-drag'),
+        () => import('d3-zoom'),
+        () => import('d3-selection'),
+      );
+      expect(mods).to.equal(null);
+      expect(calls.flat()).to.contain(err);
+    } finally {
+      console.warn = originalWarn;
+    }
   });
 
   it('logs the real caught error (not a generic message) on failure', async () => {

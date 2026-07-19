@@ -24,31 +24,55 @@ it('getMarkdownDepsIfLoaded() returns the same resolved deps synchronously once 
 describe('loadMarkdownAndSanitizer (independent marked / dompurify loading)', () => {
   it('still resolves dompurify when marked fails to load — content still renders sanitized-but-empty rather than every markdown surface breaking', async () => {
     const markedError = new Error('marked boom');
-    const deps = await loadMarkdownAndSanitizer(
-      () => Promise.reject(markedError),
-      () => import('dompurify'),
-    );
-    expect(deps.marked).to.equal(undefined);
-    expect(deps.DOMPurify).to.not.equal(undefined);
+    const originalWarn = console.warn;
+    const calls: unknown[][] = [];
+    console.warn = (...args: unknown[]) => calls.push(args);
+    try {
+      const deps = await loadMarkdownAndSanitizer(
+        () => Promise.reject(markedError),
+        () => import('dompurify'),
+      );
+      expect(deps.marked).to.equal(undefined);
+      expect(deps.DOMPurify).to.not.equal(undefined);
+      expect(calls.flat()).to.contain(markedError);
+    } finally {
+      console.warn = originalWarn;
+    }
   });
 
   it('still resolves marked when dompurify fails to load — a sanitize="false" consumer does not need dompurify at all', async () => {
     const purifyError = new Error('dompurify boom');
-    const deps = await loadMarkdownAndSanitizer(
-      () => import('marked'),
-      () => Promise.reject(purifyError),
-    );
-    expect(deps.marked).to.not.equal(undefined);
-    expect(deps.DOMPurify).to.equal(undefined);
+    const originalWarn = console.warn;
+    const calls: unknown[][] = [];
+    console.warn = (...args: unknown[]) => calls.push(args);
+    try {
+      const deps = await loadMarkdownAndSanitizer(
+        () => import('marked'),
+        () => Promise.reject(purifyError),
+      );
+      expect(deps.marked).to.not.equal(undefined);
+      expect(deps.DOMPurify).to.equal(undefined);
+      expect(calls.flat()).to.contain(purifyError);
+    } finally {
+      console.warn = originalWarn;
+    }
   });
 
   it('resolves both as undefined when both peers fail to load', async () => {
-    const deps = await loadMarkdownAndSanitizer(
-      () => Promise.reject(new Error('marked boom')),
-      () => Promise.reject(new Error('dompurify boom')),
-    );
-    expect(deps.marked).to.equal(undefined);
-    expect(deps.DOMPurify).to.equal(undefined);
+    const originalWarn = console.warn;
+    const calls: unknown[][] = [];
+    console.warn = (...args: unknown[]) => calls.push(args);
+    try {
+      const deps = await loadMarkdownAndSanitizer(
+        () => Promise.reject(new Error('marked boom')),
+        () => Promise.reject(new Error('dompurify boom')),
+      );
+      expect(deps.marked).to.equal(undefined);
+      expect(deps.DOMPurify).to.equal(undefined);
+      expect(calls).to.have.length(2);
+    } finally {
+      console.warn = originalWarn;
+    }
   });
 
   it('logs the real caught error (not a generic message) when marked fails to load', async () => {

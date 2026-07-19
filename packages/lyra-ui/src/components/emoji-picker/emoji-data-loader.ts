@@ -14,7 +14,7 @@ let cached: Promise<EmojiPickerGroup[] | null> | undefined;
  */
 export async function loadEmojiData(
   importData: () => Promise<OptionalPeerApi> = () =>
-    import('emoji-picker-element-data/en/emojibase/data.json') as Promise<OptionalPeerApi>,
+    import('emoji-picker-element-data/en/emojibase/data.json', { with: { type: 'json' } }) as Promise<OptionalPeerApi>,
 ): Promise<EmojiPickerGroup[] | null> {
   try {
     const raw = await importData();
