@@ -123,6 +123,25 @@ export const styles = css`
   :host(:dir(rtl)) [part='legend'] .bar {
     transform: scaleX(-1);
   }
+  /* One discrete legendStops entry. Same swatch-then-text shape (and the same gap) as
+     [part='legend-annotation'] below, so a legend mixing stops and annotations reads as one row. */
+  [part='legend-stop'] {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--lr-size-3px);
+  }
+  /* The swatch's background is the consumer-supplied stop color, applied inline per stop --
+     it's data, not a themeable design value, so it can't live here. */
+  [part='legend-swatch'] {
+    flex: 0 0 auto;
+    inline-size: var(--lr-size-0-6rem);
+    block-size: var(--lr-size-0-6rem);
+    border-radius: var(--lr-radius-xs);
+  }
+  [part='legend-stop-label'] {
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+  }
   [part='legend-annotation'] {
     display: inline-flex;
     align-items: center;

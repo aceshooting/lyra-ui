@@ -2363,3 +2363,168 @@ describe('coverage: miscellaneous cell-text/navigation/accessible-cells branches
     await el.updateComplete;
   });
 });
+
+/** Strips Lit's internal marker comments so a legend markup snapshot compares only the nodes,
+ *  attributes and text a consumer can actually see, select and style. */
+function stripLitMarkers(markup: string): string {
+  return markup.replace(/<!--[\s\S]*?-->/g, '');
+}
+
+describe('legendStops', () => {
+  /** The exact legend markup `<lr-heatmap>` has always rendered for a 3..9 matrix. Pinned so the
+   *  new `legendStops` branch cannot alter the default output of a consumer who never sets it. */
+  const BASELINE_LEGEND =
+    '\n          <span part="legend-lo">3</span>\n' +
+    '          <span class="bar"></span>\n' +
+    '          <span part="legend-hi">9</span>\n' +
+    '          <span>value</span>\n' +
+    '          \n        ';
+
+  it('left unset, renders byte-identical lo/hi gradient legend markup', async () => {
+    const el = (await fixture(html`
+      <lr-heatmap .rowLabels=${['a']} .colLabels=${['x', 'y']} .values=${[[3, 9]]}></lr-heatmap>
+    `)) as LyraHeatmap;
+    await el.updateComplete;
+    const legend = el.shadowRoot!.querySelector('[part="legend"]') as HTMLElement;
+    expect(el.legendStops).to.equal(undefined);
+    expect(stripLitMarkers(legend.innerHTML)).to.equal(BASELINE_LEGEND);
+    expect(legend.querySelector('[part="legend-stop"]')).to.not.exist;
+  });
+
+  it('renders one legend-stop per stop, in order and in its own color, instead of the lo/hi gradient', async () => {
+    const el = (await fixture(html`
+      <lr-heatmap
+        .rowLabels=${['a']}
+        .colLabels=${['x', 'y']}
+        .values=${[[3, 9]]}
+        .legendStops=${[
+          { value: 0, color: 'rgb(255, 0, 0)' },
+          { value: 50, color: 'rgb(0, 128, 0)' },
+          { value: 100, color: 'rgb(0, 0, 255)' },
+        ]}
+      ></lr-heatmap>
+    `)) as LyraHeatmap;
+    await el.updateComplete;
+    const legend = el.shadowRoot!.querySelector('[part="legend"]') as HTMLElement;
+    const stops = [...legend.querySelectorAll('[part="legend-stop"]')];
+    expect(stops.length).to.equal(3);
+    expect(stops.map((s) => s.querySelector('[part="legend-stop-label"]')!.textContent)).to.deep.equal([
+      '0',
+      '50',
+      '100',
+    ]);
+    expect(
+      stops.map((s) => getComputedStyle(s.querySelector('[part="legend-swatch"]') as HTMLElement).backgroundColor),
+    ).to.deep.equal(['rgb(255, 0, 0)', 'rgb(0, 128, 0)', 'rgb(0, 0, 255)']);
+    // The stops replace the two-endpoint bar rather than adding to it.
+    expect(legend.querySelector('[part="legend-lo"]')).to.not.exist;
+    expect(legend.querySelector('[part="legend-hi"]')).to.not.exist;
+    expect(legend.querySelector('.bar')).to.not.exist;
+  });
+
+  it('labels a stop with the component\'s own locale-aware numeric formatting unless `label` overrides it', async () => {
+    const el = (await fixture(html`
+      <lr-heatmap
+        locale="de-DE"
+        .rowLabels=${['a']}
+        .colLabels=${['x', 'y']}
+        .values=${[[3, 9]]}
+        .legendStops=${[
+          { value: 1234.5, color: '#ff0000' },
+          { value: 2345.6, color: '#00ff00', label: 'busiest' },
+        ]}
+      ></lr-heatmap>
+    `)) as LyraHeatmap;
+    await el.updateComplete;
+    const labels = [...el.shadowRoot!.querySelectorAll('[part="legend-stop-label"]')].map((n) => n.textContent);
+    expect(labels).to.deep.equal(['1.234,5', 'busiest']);
+  });
+
+  it('is presentation only — adding legendStops next to a cellColor callback leaves cell rendering untouched', async () => {
+    const cellColor = (_pos: unknown, value: number): string | undefined =>
+      value < 0 ? undefined : value > 5 ? 'rgb(255, 0, 0)' : 'rgb(0, 128, 0)';
+    const values = [
+      [1, 4, 9],
+      [0, 2, 6],
+      [-1, 1, 4],
+    ];
+    const plain = (await fixture(html`
+      <lr-heatmap
+        cell-size="22"
+        .rowLabels=${['a', 'b', 'c']}
+        .colLabels=${['x', 'y', 'z']}
+        .values=${values}
+        .cellColor=${cellColor}
+      ></lr-heatmap>
+    `)) as LyraHeatmap;
+    const withStops = (await fixture(html`
+      <lr-heatmap
+        cell-size="22"
+        .rowLabels=${['a', 'b', 'c']}
+        .colLabels=${['x', 'y', 'z']}
+        .values=${values}
+        .cellColor=${cellColor}
+        .legendStops=${[
+          { value: 0, color: 'rgb(0, 128, 0)' },
+          { value: 9, color: 'rgb(255, 0, 0)' },
+        ]}
+      ></lr-heatmap>
+    `)) as LyraHeatmap;
+    await plain.updateComplete;
+    await withStops.updateComplete;
+    const plainCanvas = plain.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
+    const stopsCanvas = withStops.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
+    expect(withStops.shadowRoot!.querySelectorAll('[part="legend-stop"]').length).to.equal(2);
+    expect(stopsCanvas.width).to.equal(plainCanvas.width);
+    expect(stopsCanvas.height).to.equal(plainCanvas.height);
+    expect(stopsCanvas.toDataURL()).to.equal(plainCanvas.toDataURL());
+  });
+
+  it('renders labeled annotations alongside the stops', async () => {
+    const el = (await fixture(html`
+      <lr-heatmap
+        .rowLabels=${['a']}
+        .colLabels=${['x', 'y']}
+        .values=${[[3, 9]]}
+        .annotations=${[{ row: 0, col: 1, label: 'Peak load' }]}
+        .legendStops=${[
+          { value: 0, color: 'rgb(255, 0, 0)' },
+          { value: 9, color: 'rgb(0, 0, 255)' },
+        ]}
+      ></lr-heatmap>
+    `)) as LyraHeatmap;
+    await el.updateComplete;
+    const legend = el.shadowRoot!.querySelector('[part="legend"]') as HTMLElement;
+    expect(legend.querySelectorAll('[part="legend-stop"]').length).to.equal(2);
+    const annotations = [...legend.querySelectorAll('[part="legend-annotation"]')];
+    expect(annotations.length).to.equal(1);
+    expect(annotations[0]!.textContent).to.contain('Peak load');
+  });
+
+  it('stays accessible with legendStops set', async () => {
+    const el = (await fixture(html`
+      <lr-heatmap
+        .rowLabels=${['a']}
+        .colLabels=${['x', 'y']}
+        .values=${[[3, 9]]}
+        .legendStops=${[
+          { value: 0, color: 'rgb(255, 0, 0)' },
+          { value: 9, color: 'rgb(0, 0, 255)' },
+        ]}
+      ></lr-heatmap>
+    `)) as LyraHeatmap;
+    await el.updateComplete;
+    await expect(el).to.be.accessible();
+  });
+
+  it('repaints when legendStops changes on a live element', async () => {
+    const el = (await fixture(html`
+      <lr-heatmap .rowLabels=${['a']} .colLabels=${['x', 'y']} .values=${[[3, 9]]}></lr-heatmap>
+    `)) as LyraHeatmap;
+    await el.updateComplete;
+    el.legendStops = [{ value: 0, color: 'rgb(255, 0, 0)' }];
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelectorAll('[part="legend-stop"]').length).to.equal(1);
+    expect(el.shadowRoot!.querySelector('[part="legend-lo"]')).to.not.exist;
+  });
+});

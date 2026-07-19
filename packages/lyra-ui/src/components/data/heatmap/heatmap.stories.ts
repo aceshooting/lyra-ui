@@ -233,6 +233,47 @@ export const CalendarColumnAlignment: Story = {
   },
 };
 
+/**
+ * When `cellColor` paints a domain of its own, `legendStops` keeps the legend honest: the
+ * two-endpoint gradient bar is replaced by one swatch per stop, so the key matches the grid
+ * instead of the `--lr-heatmap-scale-lo`/`-hi` ramp the grid no longer follows.
+ *
+ * Here each day is shaded by its share of the busiest day, with a 12% opacity floor so "some
+ * activity, however small" stays visible; the stops reuse the same shading function. A stop's
+ * label defaults to the component's own numeric formatting of `value` — only the zero stop needs
+ * an explicit `label` override.
+ */
+export const CustomScaleLegend: Story = {
+  render: () => {
+    const days: CalendarDay[] = [];
+    const start = Date.UTC(2026, 0, 1);
+    for (let i = 0; i < 120; i++) {
+      const date = new Date(start + i * 86_400_000).toISOString().slice(0, 10);
+      const value = Math.max(0, Math.round(Math.sin(i / 9) * 12));
+      days.push({ date, value });
+    }
+    const max = days.reduce((hi, d) => Math.max(hi, d.value), 0);
+    /** A percentage of the accent color with a 12% floor, so a 1-event day still reads as "some". */
+    const shade = (ratio: number) =>
+      `color-mix(in srgb, var(--lr-color-brand) ${Math.round(Math.max(0.12, ratio) * 100)}%, transparent)`;
+    return html`
+      <lr-heatmap
+        mode="calendar"
+        value-label="events"
+        .days=${days}
+        .cellColor=${(_pos: unknown, value: number) => (value > 0 ? shade(value / max) : undefined)}
+        .legendStops=${[
+          { value: 0, color: 'var(--lr-color-no-data)', label: 'none' },
+          { value: Math.round(max * 0.25), color: shade(0.25) },
+          { value: Math.round(max * 0.5), color: shade(0.5) },
+          { value: Math.round(max * 0.75), color: shade(0.75) },
+          { value: max, color: shade(1) },
+        ]}
+      ></lr-heatmap>
+    `;
+  },
+};
+
 /** `annotations` in calendar mode match by ISO `date` instead of `row`/`col`. */
 export const CalendarAnnotations: Story = {
   render: () => {

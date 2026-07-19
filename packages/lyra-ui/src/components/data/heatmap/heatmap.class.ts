@@ -73,6 +73,19 @@ export interface HeatmapAnnotation {
   label?: string;
 }
 
+/**
+ * One entry of a discrete legend key, supplied via `legendStops`. Purely a legend description —
+ * it never feeds back into the cell color ramp (see `LyraHeatmap.legendStops`).
+ */
+export interface HeatmapLegendStop {
+  /** Domain value this stop represents; used for the rendered label. */
+  value: number;
+  /** Any CSS color — typically whatever the consumer's own `cellColor` returns for `value`. */
+  color: string;
+  /** Optional label override; defaults to the component's own numeric formatting of `value`. */
+  label?: string;
+}
+
 /** A single cell to mark as persistently selected -- `row`/`col` in matrix mode, `date` in
  *  calendar mode (whichever pair matches the active `mode`; the other field is ignored),
  *  mirroring `HeatmapAnnotation`'s own row/col/date shape. */
@@ -241,6 +254,14 @@ export interface LyraHeatmapEventMap {
  * `lr-cell-click`. `annotations` additionally strokes a ring around
  * specific cells (e.g. to call out an anomaly), each one optionally
  * surfaced in the legend too via `[part="legend-annotation"]`.
+ *
+ * `legendStops` swaps the legend's two-endpoint gradient bar for a discrete
+ * key of swatches, so a consumer whose `cellColor` callback paints an
+ * entirely different domain than the `--lr-heatmap-scale-lo`/`-hi` ramp can
+ * keep the built-in legend (labels, number formatting, annotation entries)
+ * instead of hiding `[part="legend"]` and hand-rolling swatches. It is
+ * presentation only — it never feeds back into the cell colors.
+ *
  * Set `accessibleCells` when each cell needs a persistent DOM control for
  * assistive technology. The opt-in overlay uses native buttons with a
  * roving tabindex, localized `aria-label`, and explicit `aria-pressed` state
@@ -281,8 +302,11 @@ export interface LyraHeatmapEventMap {
  * @csspart tooltip - The hover tooltip.
  * @csspart live-region - The visually hidden keyboard announcement region.
  * @csspart legend - The color legend.
- * @csspart legend-lo - The low legend endpoint.
- * @csspart legend-hi - The high legend endpoint.
+ * @csspart legend-lo - The low legend endpoint (omitted when `legendStops` is supplied).
+ * @csspart legend-hi - The high legend endpoint (omitted when `legendStops` is supplied).
+ * @csspart legend-stop - One discrete `legendStops` entry — swatch plus label.
+ * @csspart legend-swatch - The color swatch of one `legendStops` entry.
+ * @csspart legend-stop-label - The text of one `legendStops` entry.
  * @csspart legend-annotation - An annotation label.
  * @cssprop [--lr-heatmap-scale-lo=var(--lr-color-brand-quiet)] - Low endpoint of the sequential color ramp.
  * @cssprop [--lr-heatmap-scale-hi=var(--lr-color-brand)] - High endpoint of the sequential color ramp.
@@ -388,6 +412,25 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
   }
   /** Cells to ring-highlight — `row`/`col` in matrix mode, `date` in calendar mode. See `HeatmapAnnotation`. */
   @property({ attribute: false }) annotations: HeatmapAnnotation[] = [];
+  /**
+   * A discrete legend key rendered *instead of* the `--lr-heatmap-scale-lo`/`-hi` gradient bar
+   * and its `[part="legend-lo"]`/`[part="legend-hi"]` endpoint labels — one
+   * `[part="legend-stop"]` per entry, in array order, each a `[part="legend-swatch"]` in that
+   * entry's `color` plus a `[part="legend-stop-label"]`. Labels default to this component's own
+   * locale-aware numeric formatting of `value`, so a stop only needs an explicit `label` when
+   * the number isn't the right caption ("none", "≥ 90%").
+   *
+   * Exists for the consumer who supplies `cellColor`: because that callback overrides a cell's
+   * color entirely, the built-in two-endpoint bar can describe a ramp the grid no longer uses.
+   * Supplying the same colors here keeps the legend honest without hiding `[part="legend"]` and
+   * re-implementing swatches, labels and the annotation entries by hand.
+   *
+   * Strictly presentation: the stops are never consulted by the color ramp, the bucket math, the
+   * tooltip, or the accessible name — supplying them changes nothing a cell renders. Any
+   * `annotations` with a `label` still render their `[part="legend-annotation"]` entries after
+   * the stops. Unset (the default) or an empty array reproduces today's exact gradient legend.
+   */
+  @property({ attribute: false }) legendStops?: HeatmapLegendStop[];
   /**
    * The single cell to mark as persistently selected -- `row`/`col` in matrix mode, `date` in
    * calendar mode. Purely a controlled, consumer-owned visual/accessibility marker, mirroring
@@ -769,6 +812,7 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
         'colorSteps',
         'cellColor',
         'selectedCell',
+        'legendStops',
       ].some((name) => changed.has(name))
     ) {
       const focusOnly = changed.has('focusedCell') && [...changed.keys()].every((key) => key === 'focusedCell' || key === 'liveText');
@@ -1893,6 +1937,32 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
     `;
   }
 
+  /**
+   * The legend's color description: the discrete `legendStops` key when one is supplied, the
+   * original `--lr-heatmap-scale-lo`/`-hi` gradient bar and its endpoint labels otherwise. An
+   * unset (or empty) `legendStops` therefore reproduces the pre-`legendStops` markup exactly.
+   */
+  private renderLegendScale(range: [number, number] | null): TemplateResult {
+    const stops = this.legendStops;
+    if (stops && stops.length > 0) {
+      return html`${stops.map(
+        (stop) => html`
+          <span part="legend-stop">
+            <span part="legend-swatch" style=${styleMap({ background: stop.color })}></span>
+            <span part="legend-stop-label">${stop.label ?? this.formatNumericValue(stop.value)}</span>
+          </span>
+        `,
+      )}`;
+    }
+    // The indentation here, and the `<div part="legend">`-hugging interpolation in render(),
+    // are deliberate: together they reproduce this branch's markup — whitespace included —
+    // exactly as it was emitted inline before `legendStops` introduced the branch.
+    return html`
+          <span part="legend-lo">${range ? this.formatNumericValue(range[0]) : ''}</span>
+          <span class="bar"></span>
+          <span part="legend-hi">${range ? this.formatNumericValue(range[1]) : ''}</span>`;
+  }
+
   render(): TemplateResult {
     const range = this.cachedValueRange;
     const labeledAnnotations = this.annotations.filter((a) => a.label);
@@ -1916,10 +1986,7 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
           ${this.hoverCell ? this.resolveCellText(this.hoverCell) : ''}
         </div>
         <div part="live-region" class="sr-only" role="status" aria-live="polite">${this.liveText}</div>
-        <div part="legend">
-          <span part="legend-lo">${range ? this.formatNumericValue(range[0]) : ''}</span>
-          <span class="bar"></span>
-          <span part="legend-hi">${range ? this.formatNumericValue(range[1]) : ''}</span>
+        <div part="legend">${this.renderLegendScale(range)}
           <span>${this.localizedValueLabel()}</span>
           ${labeledAnnotations.map(
             (a) => html`<span part="legend-annotation"><span class="ring-swatch"></span>${a.label}</span>`,
