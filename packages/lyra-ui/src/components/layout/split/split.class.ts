@@ -364,7 +364,14 @@ export class LyraSplit extends LyraElement<LyraSplitEventMap> {
       // doc comment). Under 'container' basis there's no such fresh read here -- only a stale
       // `measuredInlineSize` snapshot -- so that case keeps deferring the emit to the
       // `ResizeObserver` callback's own fresh measurement, as before.
-      this.updateEffectiveOrientation(this.measuredInlineSize, this.orientationBreakpointBasis === 'viewport');
+      //
+      // `hasUpdated` additionally excludes the first render: Lit's initial `changed` map lists
+      // every set property, so a viewport breakpoint that already matches at mount would
+      // otherwise announce a transition that never happened. The initial axis is not a change.
+      this.updateEffectiveOrientation(
+        this.measuredInlineSize,
+        this.hasUpdated && this.orientationBreakpointBasis === 'viewport',
+      );
     }
     if (changed.has('collapse') && this.collapse === 'none') {
       this.resetCollapseState();

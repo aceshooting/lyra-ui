@@ -1973,4 +1973,23 @@ describe('orientationBreakpointBasis', () => {
     await elementUpdated(el);
     await expect(el).to.be.accessible();
   });
+
+  it('does not emit lr-split-orientation-change on the initial render', async () => {
+    // Lit's first `changed` map lists every set property, so a viewport breakpoint that
+    // already matches at mount must not be announced as a transition -- the initial axis
+    // is the starting state, not a change from anything.
+    const el = document.createElement('lr-split') as LyraSplit;
+    el.setAttribute('orientation-breakpoint', '99999px');
+    el.setAttribute('orientation-breakpoint-basis', 'viewport');
+    el.append(document.createElement('div'), document.createElement('div'));
+    let emitted = 0;
+    el.addEventListener('lr-split-orientation-change', () => {
+      emitted += 1;
+    });
+    document.body.append(el);
+    await elementUpdated(el);
+    expect(el.effectiveOrientation, 'still starts narrow').to.equal('vertical');
+    expect(emitted, 'initial render is not a transition').to.equal(0);
+    el.remove();
+  });
 });
