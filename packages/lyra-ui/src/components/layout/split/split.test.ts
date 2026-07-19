@@ -1849,3 +1849,128 @@ describe('dividerLabel', () => {
     expect(divider.getAttribute('aria-label')).to.equal('Resize divider between panel 1 and panel 2');
   });
 });
+
+describe('orientationBreakpointBasis', () => {
+  it('defaults to "container", leaving committed behavior unchanged', async () => {
+    const el = (await fixture(html`<lr-split><div>a</div><div>b</div></lr-split>`)) as LyraSplit;
+    expect(el.orientationBreakpointBasis).to.equal('container');
+    expect(el.effectiveOrientation).to.equal('horizontal');
+    expect(el.hasAttribute('data-effective-orientation')).to.be.false;
+  });
+
+  it('reflects the basis to an attribute', async () => {
+    const el = (await fixture(html`
+      <lr-split orientation-breakpoint="1px" orientation-breakpoint-basis="viewport">
+        <div>a</div><div>b</div>
+      </lr-split>
+    `)) as LyraSplit;
+    await elementUpdated(el);
+    expect(el.getAttribute('orientation-breakpoint-basis')).to.equal('viewport');
+  });
+
+  it('goes narrow under basis="viewport" when an absurdly large breakpoint always matches', async () => {
+    const el = (await fixture(html`
+      <lr-split orientation-breakpoint="99999px" orientation-breakpoint-basis="viewport">
+        <div>a</div><div>b</div>
+      </lr-split>
+    `)) as LyraSplit;
+    await elementUpdated(el);
+    expect(el.effectiveOrientation).to.equal('vertical');
+    expect(el.getAttribute('data-effective-orientation')).to.equal('vertical');
+  });
+
+  it('ignores the container width entirely under basis="viewport"', async () => {
+    // The container is 120px wide, so a container-basis reading of a 1px breakpoint
+    // would be "not below" anyway -- but a 99999px container-basis breakpoint WOULD be
+    // below. Pairing a narrow container with a never-matching viewport query proves the
+    // viewport path is the live one.
+    const wrapper = (await fixture(html`
+      <div style="inline-size: 120px">
+        <lr-split orientation-breakpoint="1px" orientation-breakpoint-basis="viewport">
+          <div>a</div><div>b</div>
+        </lr-split>
+      </div>
+    `)) as HTMLElement;
+    const split = wrapper.querySelector('lr-split') as LyraSplit;
+    await elementUpdated(split);
+    expect(split.effectiveOrientation).to.equal('horizontal');
+  });
+
+  it('re-queries matchMedia when the breakpoint changes at runtime', async () => {
+    const el = (await fixture(html`
+      <lr-split orientation-breakpoint="1px" orientation-breakpoint-basis="viewport">
+        <div>a</div><div>b</div>
+      </lr-split>
+    `)) as LyraSplit;
+    await elementUpdated(el);
+    expect(el.effectiveOrientation).to.equal('horizontal');
+    el.orientationBreakpoint = '99999px';
+    await elementUpdated(el);
+    expect(el.effectiveOrientation, 'a stale MediaQueryList would leave this horizontal').to.equal('vertical');
+  });
+
+  it('switches observation strategy when the basis changes at runtime', async () => {
+    const el = (await fixture(html`
+      <lr-split orientation-breakpoint="99999px" orientation-breakpoint-basis="viewport">
+        <div>a</div><div>b</div>
+      </lr-split>
+    `)) as LyraSplit;
+    await elementUpdated(el);
+    expect(el.effectiveOrientation).to.equal('vertical');
+    el.orientationBreakpointBasis = 'container';
+    el.orientationBreakpoint = '1px';
+    await elementUpdated(el);
+    expect(el.effectiveOrientation, 'container basis must consult the measured width').to.equal('horizontal');
+  });
+
+  it('emits lr-split-orientation-change when a viewport-basis change flips the axis', async () => {
+    const el = (await fixture(html`
+      <lr-split orientation-breakpoint="1px" orientation-breakpoint-basis="viewport">
+        <div>a</div><div>b</div>
+      </lr-split>
+    `)) as LyraSplit;
+    await elementUpdated(el);
+    setTimeout(() => {
+      el.orientationBreakpoint = '99999px';
+    });
+    const event = await oneEvent(el, 'lr-split-orientation-change');
+    expect(event.detail.orientation).to.equal('vertical');
+  });
+
+  it('treats an unresolvable breakpoint as unset under basis="viewport"', async () => {
+    const el = (await fixture(html`
+      <lr-split orientation-breakpoint="80vw" orientation-breakpoint-basis="viewport">
+        <div>a</div><div>b</div>
+      </lr-split>
+    `)) as LyraSplit;
+    await elementUpdated(el);
+    expect(el.effectiveOrientation).to.equal('horizontal');
+    expect(el.hasAttribute('data-effective-orientation')).to.be.false;
+  });
+
+  it('re-arms the media query after a disconnect/reconnect cycle', async () => {
+    const el = (await fixture(html`
+      <lr-split orientation-breakpoint="1px" orientation-breakpoint-basis="viewport">
+        <div>a</div><div>b</div>
+      </lr-split>
+    `)) as LyraSplit;
+    await elementUpdated(el);
+    el.remove();
+    document.body.append(el);
+    await elementUpdated(el);
+    el.orientationBreakpoint = '99999px';
+    await elementUpdated(el);
+    expect(el.effectiveOrientation).to.equal('vertical');
+    el.remove();
+  });
+
+  it('is accessible with a viewport-basis breakpoint set', async () => {
+    const el = (await fixture(html`
+      <lr-split orientation-breakpoint="99999px" orientation-breakpoint-basis="viewport">
+        <div>a</div><div>b</div>
+      </lr-split>
+    `)) as LyraSplit;
+    await elementUpdated(el);
+    await expect(el).to.be.accessible();
+  });
+});

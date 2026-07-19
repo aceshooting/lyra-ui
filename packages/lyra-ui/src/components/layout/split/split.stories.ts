@@ -85,7 +85,10 @@ export const ResponsiveOrientation: Story = {
         split stacks its panels (<code>orientation-breakpoint="500"
         narrow-orientation="vertical"</code>) even though the surrounding
         page is wide. The observation boundary is the split's own measured
-        allocation, not the viewport.
+        allocation, not the viewport. Add
+        <code>orientation-breakpoint-basis="viewport"</code> to key off the viewport via
+        <code>matchMedia</code> instead of the split's own width — the only way two siblings in
+        one row can flip together at a shared breakpoint.
       </p>
       <lr-split
         orientation-breakpoint="500"
