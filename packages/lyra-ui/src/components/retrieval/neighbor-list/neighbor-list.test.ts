@@ -131,3 +131,118 @@ it('gives node-label a hover state', () => {
   const css = styles.cssText.replace(/\s+/g, ' ');
   expect(css).to.match(/\[part='node-label'\]:hover/);
 });
+
+describe('row part styling reaches both rendering paths', () => {
+  const grouped: LyraNeighborRow[] = [
+    ...rows,
+    { relation: 'works_for', direction: 'out', node: { id: 'org2', label: 'Sorbonne', type: 'org' } },
+  ];
+
+  /** The shadow tree the rows actually live in: this component's own at/below `virtualize-at`,
+   *  the internal `<lr-virtual-list>`'s above it. */
+  function rowRoot(el: LyraNeighborList): ShadowRoot {
+    const list = el.shadowRoot!.querySelector('lr-virtual-list');
+    return list ? list.shadowRoot! : el.shadowRoot!;
+  }
+
+  async function list(virtualizeAt: number): Promise<LyraNeighborList> {
+    const el = (await fixture(html`<lr-neighbor-list
+      virtualize-at=${virtualizeAt}
+      group-by-relation
+      expandable
+      style="--lr-theme-color-text-quiet: rgb(4, 5, 6); --lr-theme-color-text-normal: rgb(7, 8, 9)"
+      .rows=${grouped}
+    ></lr-neighbor-list>`)) as LyraNeighborList;
+    await el.updateComplete;
+    const virtual = el.shadowRoot!.querySelector('lr-virtual-list');
+    if (virtual) await (virtual as unknown as { updateComplete: Promise<unknown> }).updateComplete;
+    await new Promise<void>((r) => requestAnimationFrame(() => requestAnimationFrame(() => r())));
+    return el;
+  }
+
+  // 1 => every fixture above virtualizes; 99 => every fixture stays on the plain path.
+  for (const [label, virtualizeAt] of [
+    ['virtualized', 1],
+    ['plain', 99],
+  ] as const) {
+    it(`lays out [part="row"] and its node-label in the ${label} path`, async () => {
+      const el = await list(virtualizeAt);
+      expect(el.shadowRoot!.querySelector('lr-virtual-list') !== null).to.equal(label === 'virtualized');
+      const rendered = [...rowRoot(el).querySelectorAll('[part~="row"]')] as HTMLElement[];
+      expect(rendered.length).to.equal(grouped.length);
+      expect(getComputedStyle(rendered[0]!).display).to.equal('flex');
+      expect(getComputedStyle(rendered[0]!).borderBlockEndStyle).to.equal('solid');
+      // Exactly one bordered row box per row -- a nested second part="row" would be matched by
+      // ::part(row) too and draw the divider twice.
+      expect(rendered[0]!.querySelectorAll('[part~="row"]').length).to.equal(0);
+
+      const button = rendered[0]!.querySelector('[part="node-label"]') as HTMLElement;
+      expect(getComputedStyle(button).flexGrow).to.equal('1');
+      expect(getComputedStyle(button).cursor).to.equal('pointer');
+      expect(getComputedStyle(button).color).to.equal('rgb(7, 8, 9)');
+    });
+
+    it(`styles the relation, direction and node-meta text in the ${label} path`, async () => {
+      const el = await list(virtualizeAt);
+      const root = rowRoot(el);
+      const relation = root.querySelector('[part="relation"]') as HTMLElement;
+      expect(getComputedStyle(relation).fontSize).to.equal('12px');
+      expect(getComputedStyle(relation).color).to.equal('rgb(4, 5, 6)');
+      expect(getComputedStyle(root.querySelector('[part="direction"]') as HTMLElement).color).to.equal('rgb(4, 5, 6)');
+      const meta = root.querySelector('[part="node-meta"]') as HTMLElement;
+      expect(getComputedStyle(meta).textOverflow).to.equal('ellipsis');
+    });
+
+    it(`gives the expand button the shared minimum hit area in the ${label} path`, async () => {
+      const el = await list(virtualizeAt);
+      const expand = rowRoot(el).querySelector('[part="expand-button"]') as HTMLElement;
+      expect(getComputedStyle(expand).minInlineSize).to.equal('40px');
+      expect(getComputedStyle(expand).minBlockSize).to.equal('40px');
+    });
+
+    it(`presents the group header identically in the ${label} path`, async () => {
+      const el = await list(virtualizeAt);
+      // Virtualized, the header is lr-virtual-list's own `group` part; plain, it is this
+      // component's `group-header` element. Both must render the same typographic treatment.
+      const root = rowRoot(el);
+      const header = root.querySelector(label === 'virtualized' ? '[part="group"]' : '[part="group-header"]') as HTMLElement;
+      expect(header.textContent!.trim().length).to.be.greaterThan(0);
+      expect(getComputedStyle(header).textTransform).to.equal('uppercase');
+      expect(getComputedStyle(header).fontSize).to.equal('12px');
+      expect(getComputedStyle(header).color).to.equal('rgb(4, 5, 6)');
+    });
+
+    it(`is accessible in the ${label} path`, async () => {
+      const el = await list(virtualizeAt);
+      expect(rowRoot(el).querySelectorAll('[part~="row"]').length).to.be.greaterThan(0);
+      await expect(el).to.be.accessible();
+    });
+  }
+
+  it('exports the virtualized row and group parts so a consumer stylesheet can reach them', async () => {
+    const wrapper = await fixture(html`
+      <div>
+        <style>
+          lr-neighbor-list::part(node-label) {
+            color: rgb(12, 34, 56);
+          }
+          lr-neighbor-list::part(group-header) {
+            outline-color: rgb(21, 43, 65);
+          }
+        </style>
+        <lr-neighbor-list virtualize-at="1" group-by-relation .rows=${grouped}></lr-neighbor-list>
+      </div>
+    `);
+    const el = wrapper.querySelector('lr-neighbor-list') as LyraNeighborList;
+    await el.updateComplete;
+    const virtual = el.shadowRoot!.querySelector('lr-virtual-list')!;
+    await (virtual as unknown as { updateComplete: Promise<unknown> }).updateComplete;
+    await new Promise<void>((r) => requestAnimationFrame(() => requestAnimationFrame(() => r())));
+    expect(virtual.getAttribute('exportparts')).to.contain('row:row');
+    expect(virtual.getAttribute('exportparts')).to.contain('group:group-header');
+    const button = virtual.shadowRoot!.querySelector('[part="node-label"]') as HTMLElement;
+    const header = virtual.shadowRoot!.querySelector('[part="group"]') as HTMLElement;
+    expect(getComputedStyle(button).color).to.equal('rgb(12, 34, 56)');
+    expect(getComputedStyle(header).outlineColor).to.equal('rgb(21, 43, 65)');
+  });
+});

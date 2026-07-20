@@ -34,8 +34,11 @@ export interface LyraNeighborListEventMap {
  * @event lr-node-expand - A row's expand button was activated (only rendered when `expandable`).
  * `detail: { id }`.
  * @csspart base - The root wrapper (`role="list"`).
- * @csspart group-header - A relation group header, only rendered when `groupByRelation`.
- * @csspart row - One relationship row (`role="listitem"`).
+ * @csspart group-header - A relation group header, only rendered when `groupByRelation`. Above
+ *   `virtualizeAt` this is the internal virtual-list's own group label, re-exported under the same
+ *   name so both paths present identically.
+ * @csspart row - One relationship row (`role="listitem"`). Above `virtualizeAt` this is the
+ *   internal virtual-list's own row wrapper, re-exported under the same name.
  * @csspart direction - The `aria-hidden` direction glyph.
  * @csspart relation - The relation text.
  * @csspart node-label - The row's node `<button>`.
@@ -104,6 +107,12 @@ export class LyraNeighborList extends LyraElement<LyraNeighborListEventMap> {
 
   private renderRow = (item: unknown): TemplateResult => this.renderNeighborRow(item as LyraNeighborRow);
 
+  /** Returns only a row's *content*, not its surrounding `role="listitem"`/`part="row"` wrapper:
+   *  `<lr-virtual-list>` already supplies exactly such a wrapper (exported from here as `row`) for
+   *  every virtualized row, and a second nested one would both duplicate the `listitem` role and
+   *  be matched a second time by `lr-virtual-list::part(row)` -- `::part()` uses `part~=` semantics
+   *  and reaches any depth of the target shadow tree -- doubling the row's padding and divider
+   *  border. The non-virtualized path below supplies the identical wrapper itself. */
   private renderNeighborRow(row: LyraNeighborRow): TemplateResult {
     const nodeLabel = row.node.label || row.node.id;
     const directionText = this.directionText(row.direction);
@@ -116,24 +125,22 @@ export class LyraNeighborList extends LyraElement<LyraNeighborListEventMap> {
       .filter((v): v is string => !!v)
       .join(' · ');
     return html`
-      <div part="row" role="listitem">
-        <button part="node-label" type="button" aria-label=${accessibleName} @click=${() => this.emit('lr-entity-activate', { id: row.node.id })}>
-          <span part="direction" aria-hidden="true">${this.directionGlyph(row.direction)}</span>
-          <span part="relation">${row.relation}</span>
-          <span>${nodeLabel}</span>
-          ${meta ? html`<span part="node-meta">${meta}</span>` : nothing}
-        </button>
-        ${this.expandable
-          ? html`<button
-              part="expand-button"
-              type="button"
-              aria-label=${this.localize('neighborExpand', undefined, { label: nodeLabel })}
-              @click=${() => this.emit('lr-node-expand', { id: row.node.id })}
-            >
-              ${expandIcon()}
-            </button>`
-          : nothing}
-      </div>
+      <button part="node-label" type="button" aria-label=${accessibleName} @click=${() => this.emit('lr-entity-activate', { id: row.node.id })}>
+        <span part="direction" aria-hidden="true">${this.directionGlyph(row.direction)}</span>
+        <span part="relation">${row.relation}</span>
+        <span>${nodeLabel}</span>
+        ${meta ? html`<span part="node-meta">${meta}</span>` : nothing}
+      </button>
+      ${this.expandable
+        ? html`<button
+            part="expand-button"
+            type="button"
+            aria-label=${this.localize('neighborExpand', undefined, { label: nodeLabel })}
+            @click=${() => this.emit('lr-node-expand', { id: row.node.id })}
+          >
+            ${expandIcon()}
+          </button>`
+        : nothing}
     `;
   }
 
@@ -153,6 +160,7 @@ export class LyraNeighborList extends LyraElement<LyraNeighborListEventMap> {
       return html`
         <div part="base" role="group" aria-label=${label}>
           <lr-virtual-list
+            exportparts="row:row, node-label:node-label, direction:direction, relation:relation, node-meta:node-meta, expand-button:expand-button, group:group-header"
             .items=${sorted}
             .renderItem=${this.renderRow}
             .keyFunction=${(item: unknown) => (item as LyraNeighborRow).node.id}
@@ -169,7 +177,7 @@ export class LyraNeighborList extends LyraElement<LyraNeighborListEventMap> {
           // `role="presentation"` (not `role="heading"`) -- ARIA's `list` role only owns
           // `listitem` children, so an explicit `heading` role here would be a disallowed child
           // (same convention as `<lr-node-palette>`'s identical category-header part).
-          return html`${group ? html`<div part="group-header" role="presentation">${group.label}</div>` : nothing}${this.renderNeighborRow(row)}`;
+          return html`${group ? html`<div part="group-header" role="presentation">${group.label}</div>` : nothing}<div part="row" role="listitem">${this.renderNeighborRow(row)}</div>`;
         })}
       </div>
     `;
