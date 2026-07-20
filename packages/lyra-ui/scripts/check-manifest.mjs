@@ -135,6 +135,34 @@ for (const file of walk(sourceDir).filter((file) => file.endsWith('.ts') && !fil
   sourceByModule.set(modulePath, fs.readFileSync(file, 'utf8'));
 }
 
+// A component that renders part of its own template from a sibling module -- the `x-shared.ts`
+// module a lean/full split pair (`x.class.ts` / `x-core.class.ts`) shares its duplicated render
+// helpers through -- still owns and documents those parts on the class itself. Scanning only the
+// class file's own text would report every such part as "not rendered statically", which would
+// make the documented de-duplication pattern unusable. Follow the module's own same-directory
+// relative imports (transitively, guarded against cycles) so the check sees the real render
+// surface rather than just the one file. Deliberately limited to same-directory siblings: a part
+// name is owned by its component, so reaching further afield would start masking real drift.
+function renderSurfaceFor(modulePath) {
+  const seen = new Set();
+  const sources = [];
+  const visit = (currentPath) => {
+    if (seen.has(currentPath)) return;
+    seen.add(currentPath);
+    const source = sourceByModule.get(currentPath);
+    if (source === undefined) return;
+    sources.push(source);
+    const dir = path.posix.dirname(currentPath);
+    for (const match of source.matchAll(/\bfrom\s+['"](\.\/[^'"]+)['"]/g)) {
+      // Import specifiers are runtime-resolvable ('./x.js'); the sources on disk are '.ts'.
+      const siblingPath = path.posix.join(dir, match[1].replace(/\.js$/, '.ts'));
+      if (path.posix.dirname(siblingPath) === dir) visit(siblingPath);
+    }
+  };
+  visit(modulePath);
+  return sources.join('\n');
+}
+
 const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
 const errors = [];
 const tags = new Set();
@@ -142,7 +170,7 @@ for (const module of manifest.modules ?? []) {
   const source = sourceByModule.get(module.path);
   if (!source) continue;
   const documented = namesFromJSDoc(source);
-  const rendered = namesFromTemplates(source);
+  const rendered = namesFromTemplates(renderSurfaceFor(module.path));
   for (const name of documented) {
     if (!rendered.has(name)) errors.push(`${module.path}: documented CSS part "${name}" is not rendered statically`);
   }
