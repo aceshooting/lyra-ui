@@ -410,7 +410,14 @@ in an existing component and as a release blocker for a new component.
   message formatting is fine (~2 ms), and deleting `actual`/`expected` off the caught
   `AssertionError` before rethrowing makes the identical failure report instantly. **Never assert on
   a DOM node/NodeList directly unless the assertion is guaranteed to pass** — compare an id, a tag
-  name, `querySelectorAll(...).length`, or `labels.length` instead. If a test file
+  name, `querySelectorAll(...).length`, or `labels.length` instead. This is not limited to
+  `.to.equal()`: every matcher that leaves the asserted object as chai's `actual` has the same
+  effect, including `expect(node).to.exist`, `.to.not.exist`, `.to.be.null`, `.to.be.undefined`, and
+  `.to.deep.equal(...)`. `.to.have.lengthOf(n)` and asserting `.length` are safe because chai passes
+  a *number* as `actual`. The trap bites only during a TDD red phase — the assertion passes fine once
+  the behaviour is right — so a hang immediately after writing a new test is almost always this, not
+  the code under test. Two separate agents hit it via `.to.not.exist` while writing tests for this
+  file's own guidance. If a test file
   hangs with no informative output: bisect it (binary-split the `it()` blocks into scratch files
   until you isolate the one test), then either fix the underlying wrong expectation or restructure
   the assertion to compare something other than the DOM elements directly (e.g. an id/attribute).
