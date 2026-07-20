@@ -21,6 +21,29 @@ export const styles = css`
     border-radius: var(--lr-radius);
     transition: background-color var(--lr-transition-fast);
   }
+  /* Density escape -- same convention as lr-empty's compact. Conversation rows render in sidebar
+     lists, so the tuned values sit behind inline var() fallbacks (rather than a :host declaration,
+     which every instance re-declares and so shadows any ancestor value) letting a list retune every
+     row at once from the outside; the fallbacks are the pre-existing values scaled down one step, so
+     an unset row renders unchanged.
+
+     MUST stay before the :host([active]) rules below: :host([compact]) [part='base'] and
+     :host([active]) [part='base'] are equal specificity, so source order alone decides which wins
+     should either ever grow a declaration the other also sets. active is the stronger statement of
+     appearance ("this is the open session"), so it goes last.
+
+     Deliberately NOT changed by compact: [part='rename-button']'s min-inline-size/min-block-size
+     (the shared --lr-icon-button-size target floor -- a density flag must never silently opt a row
+     out of it; a consumer who really wants a sub-floor row lowers that token at an ancestor),
+     [part='leading']'s min sizes, and the excerpt/timestamp font sizes (already the smallest steps
+     in use here; font size is retuned through the host's inherited font-size instead). The excerpt
+     also stays visible: it is already single-line ellipsised and ?hidden-bindable per row, so it
+     costs exactly one line -- hiding content is a per-row consumer decision, not a side effect of a
+     density flag. */
+  :host([compact]) [part='base'] {
+    padding: var(--lr-conversation-item-compact-padding, var(--lr-space-xs) var(--lr-space-s));
+    gap: var(--lr-conversation-item-compact-gap, var(--lr-space-2xs));
+  }
   :host(:hover) [part='base'] {
     background: color-mix(in srgb, var(--lr-color-text) 6%, transparent);
   }
@@ -74,6 +97,12 @@ export const styles = css`
     display: flex;
     flex-direction: column;
     gap: var(--lr-size-0-125rem);
+  }
+  /* The title/excerpt/meta column's own inter-row gap collapses entirely under compact -- the three
+     lines already carry their own line-height, so the extra hairline is the first thing to go. No
+     var() hatch here: this one has no smaller step left to retune to. */
+  :host([compact]) [part='content'] {
+    gap: 0;
   }
 
   [part='title'] {

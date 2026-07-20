@@ -75,6 +75,57 @@ export const LongContentTruncates: Story = {
   `,
 };
 
+export const Compact: Story = {
+  name: 'compact (density)',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'Tightens `[part="base"]`\'s padding and gap and collapses `[part="content"]`\'s inter-line gap — retune either through `--lr-conversation-item-compact-padding`/`--lr-conversation-item-compact-gap` on the row or any ancestor. It deliberately leaves the rename button at the shared `--lr-icon-button-size` target floor, so a row with a rename affordance still floors at roughly that height; a row with `editable=false` and no `actions` collapses much further.',
+      },
+    },
+  },
+  render: () => html`
+    <div style="display:flex;gap:2rem;align-items:flex-start;">
+      <nav aria-label="Conversations (comfortable)" style="display:flex;flex-direction:column;width:20rem;">
+        <lr-conversation-item
+          title="Nightly build failure"
+          excerpt="The lint step hit a type error in chart.ts."
+          .timestamp=${new Date()}
+          active
+        ></lr-conversation-item>
+        <lr-conversation-item
+          title="Deploy hotfix to staging"
+          excerpt="Done — the fix is live."
+          .timestamp=${new Date(Date.now() - 3 * 60 * 60 * 1000)}
+        ></lr-conversation-item>
+      </nav>
+      <nav aria-label="Conversations (compact)" style="display:flex;flex-direction:column;width:20rem;">
+        <lr-conversation-item
+          compact
+          title="Nightly build failure"
+          excerpt="The lint step hit a type error in chart.ts."
+          .timestamp=${new Date()}
+          active
+        ></lr-conversation-item>
+        <lr-conversation-item
+          compact
+          title="Deploy hotfix to staging"
+          excerpt="Done — the fix is live."
+          .timestamp=${new Date(Date.now() - 3 * 60 * 60 * 1000)}
+        ></lr-conversation-item>
+        <lr-conversation-item
+          compact
+          .editable=${false}
+          title="Read-only session (no rename affordance)"
+          excerpt="Nothing floors this row's height, so compact tightens it the most."
+          .timestamp=${new Date(Date.now() - 26 * 60 * 60 * 1000)}
+        ></lr-conversation-item>
+      </nav>
+    </div>
+  `,
+};
+
 export const NotEditable: Story = {
   name: 'editable=false (no rename affordance)',
   render: () => html`

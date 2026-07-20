@@ -166,6 +166,10 @@ export interface LyraConversationItemEventMap {
  *   `[part="excerpt"]` and `[part="timestamp"]` while `active`. **Contrast-sensitive:** it exists
  *   precisely because `--lr-color-text-quiet` only reaches ~4.25:1 against the active background;
  *   override it together with `--lr-conversation-item-active-bg`, never alone.
+ * @cssprop [--lr-conversation-item-compact-padding=var(--lr-space-xs) var(--lr-space-s)] -
+ *   `[part="base"]` padding while `compact`.
+ * @cssprop [--lr-conversation-item-compact-gap=var(--lr-space-2xs)] - Gap between `[part="base"]`'s
+ *   columns while `compact`.
  */
 export class LyraConversationItem extends LyraElement<LyraConversationItemEventMap> {
   static styles = [LyraElement.styles, styles];
@@ -193,6 +197,16 @@ export class LyraConversationItem extends LyraElement<LyraConversationItemEventM
   /** Whether this is the currently-selected/open session. Drives the
    *  brand-quiet background treatment. */
   @property({ type: Boolean, reflect: true }) active = false;
+
+  /** Tighter row padding and gaps, for the dense history sidebars these rows usually render in --
+   *  same convention as `lr-empty`'s `compact`. Defaults to `false`, i.e. the full row padding.
+   *  Purely a density knob: it tightens `[part="base"]`'s padding and gap and collapses
+   *  `[part="content"]`'s inter-line gap, and changes nothing else. In particular it does **not**
+   *  shrink `[part="rename-button"]` below the shared `--lr-icon-button-size` target floor, hide the
+   *  excerpt (bind `excerpt`/the `excerpt` slot per row for that), or reduce the excerpt/timestamp
+   *  font sizes -- so a row with a rename button or slotted `actions` still floors at roughly that
+   *  icon size plus the compact padding. */
+  @property({ type: Boolean, reflect: true }) compact = false;
 
   /** Whether inline-rename is available at all. When `false`, the rename
    *  button never renders and the row can never enter its editing state. If

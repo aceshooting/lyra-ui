@@ -590,3 +590,142 @@ describe('active-state cssprop escape hatch', () => {
     await expect(el).to.be.accessible();
   });
 });
+
+describe('compact', () => {
+  const rowChrome = (el: LyraConversationItem) => {
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    const content = el.shadowRoot!.querySelector('[part="content"]') as HTMLElement;
+    const b = getComputedStyle(base);
+    const c = getComputedStyle(content);
+    return {
+      paddingTop: b.paddingTop,
+      paddingBottom: b.paddingBottom,
+      paddingLeft: b.paddingLeft,
+      paddingRight: b.paddingRight,
+      rowGap: b.rowGap,
+      columnGap: b.columnGap,
+      contentRowGap: c.rowGap,
+    };
+  };
+
+  const partStyle = (el: LyraConversationItem, part: string): CSSStyleDeclaration =>
+    getComputedStyle(el.shadowRoot!.querySelector(`[part="${part}"]`) as HTMLElement);
+
+  it('defaults to compact=false with no compact attribute, rendering identically to .compact=${false} restated', async () => {
+    const implicit = await fixtureItem(
+      html`<lr-conversation-item title="Session" excerpt="Last message" .timestamp=${new Date()}></lr-conversation-item>`,
+    );
+    const explicit = await fixtureItem(
+      html`<lr-conversation-item
+        title="Session"
+        excerpt="Last message"
+        .timestamp=${new Date()}
+        .compact=${false}
+      ></lr-conversation-item>`,
+    );
+
+    expect(implicit.compact).to.be.false;
+    expect(implicit.hasAttribute('compact')).to.be.false;
+    expect(rowChrome(explicit)).to.deep.equal(rowChrome(implicit));
+
+    const chrome = rowChrome(implicit);
+    expect(chrome.paddingTop).to.equal('8px'); // --lr-space-s
+    expect(chrome.paddingLeft).to.equal('12px'); // --lr-space-m
+    expect(chrome.columnGap).to.equal('4px'); // --lr-space-xs
+    expect(chrome.contentRowGap).to.equal('2px'); // --lr-size-0-125rem
+  });
+
+  it('reflects compact and tightens the base padding/gap and the content gap', async () => {
+    const el = await fixtureItem(
+      html`<lr-conversation-item
+        compact
+        title="Session"
+        excerpt="Last message"
+        .timestamp=${new Date()}
+      ></lr-conversation-item>`,
+    );
+    expect(el.hasAttribute('compact')).to.be.true;
+    const chrome = rowChrome(el);
+    expect(chrome.paddingTop).to.equal('4px'); // --lr-space-xs
+    expect(chrome.paddingBottom).to.equal('4px');
+    expect(chrome.paddingLeft).to.equal('8px'); // --lr-space-s
+    expect(chrome.paddingRight).to.equal('8px');
+    expect(chrome.columnGap).to.equal('2px'); // --lr-space-2xs
+    expect(chrome.rowGap).to.equal('2px');
+    expect(chrome.contentRowGap).to.equal('0px');
+  });
+
+  it('lets a consumer retune the compact values through --lr-conversation-item-compact-*', async () => {
+    const el = await fixtureItem(
+      html`<lr-conversation-item compact title="Session" excerpt="Last message"></lr-conversation-item>`,
+    );
+    el.style.setProperty('--lr-conversation-item-compact-padding', '3px 9px');
+    el.style.setProperty('--lr-conversation-item-compact-gap', '5px');
+    await el.updateComplete;
+    const chrome = rowChrome(el);
+    expect(chrome.paddingTop).to.equal('3px');
+    expect(chrome.paddingLeft).to.equal('9px');
+    expect(chrome.columnGap).to.equal('5px');
+  });
+
+  it('keeps the rename button at the shared --lr-icon-button-size floor under compact', async () => {
+    const comfortable = await fixtureItem(html`<lr-conversation-item title="Session"></lr-conversation-item>`);
+    const el = await fixtureItem(html`<lr-conversation-item compact title="Session"></lr-conversation-item>`);
+    const floor = getComputedStyle(el).getPropertyValue('--lr-icon-button-size').trim();
+    expect(floor).to.equal('2.5rem');
+
+    const compactButton = partStyle(el, 'rename-button');
+    const comfortableButton = partStyle(comfortable, 'rename-button');
+    expect(compactButton.minInlineSize).to.equal('40px');
+    expect(compactButton.minBlockSize).to.equal('40px');
+    // Density must never silently opt a row out of the shared icon target-size floor.
+    expect(compactButton.minInlineSize).to.equal(comfortableButton.minInlineSize);
+    expect(compactButton.minBlockSize).to.equal(comfortableButton.minBlockSize);
+  });
+
+  it('keeps the active background and the promoted excerpt/timestamp color when compact and active are combined', async () => {
+    const ts = new Date();
+    const activeOnly = await fixtureItem(
+      html`<lr-conversation-item title="Session" excerpt="Last message" .timestamp=${ts} active></lr-conversation-item>`,
+    );
+    const compactOnly = await fixtureItem(
+      html`<lr-conversation-item title="Session" excerpt="Last message" .timestamp=${ts} compact></lr-conversation-item>`,
+    );
+    const both = await fixtureItem(
+      html`<lr-conversation-item
+        title="Session"
+        excerpt="Last message"
+        .timestamp=${ts}
+        compact
+        active
+      ></lr-conversation-item>`,
+    );
+
+    // `:host([compact]) [part='base']` and `:host([active]) [part='base']` have equal specificity,
+    // so this asserts the source order that lets `active` keep its statement-of-appearance.
+    const bothBg = partStyle(both, 'base').backgroundColor;
+    expect(bothBg).to.equal(partStyle(activeOnly, 'base').backgroundColor);
+    expect(bothBg).to.not.equal(partStyle(compactOnly, 'base').backgroundColor);
+
+    // The active contrast fix (excerpt/timestamp promoted to full-strength text) still applies.
+    const titleColor = partStyle(both, 'title').color;
+    expect(partStyle(both, 'excerpt').color).to.equal(titleColor);
+    expect(partStyle(both, 'timestamp').color).to.equal(titleColor);
+    expect(partStyle(compactOnly, 'excerpt').color).to.not.equal(titleColor);
+
+    // ...and compact still tightened the box.
+    expect(rowChrome(both).paddingTop).to.equal('4px');
+  });
+
+  it('is accessible in a populated compact state', async () => {
+    const el = await fixtureItem(html`
+      <lr-conversation-item compact title="Session" excerpt="Last message" .timestamp=${new Date()} active>
+        <button slot="actions" type="button" aria-label="Delete conversation">x</button>
+      </lr-conversation-item>
+    `);
+    expect(el.shadowRoot!.querySelectorAll('[part="excerpt"]').length).to.equal(1);
+    expect(el.shadowRoot!.querySelectorAll('[part="timestamp"]').length).to.equal(1);
+    expect(el.shadowRoot!.querySelectorAll('[part="rename-button"]').length).to.equal(1);
+    await expect(el).to.be.accessible();
+  });
+});
