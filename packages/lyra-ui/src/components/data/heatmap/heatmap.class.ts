@@ -29,6 +29,12 @@ const CAL_GAP = 2;
 const DEFAULT_MATRIX_CELL_SIZE = 22;
 const DEFAULT_BUCKET_COUNT = 5;
 /**
+ * Hard lower bound on a `fitToWidth`-derived cell size, in both modes. A grid squeezed below this
+ * stops being a readable heatmap and starts producing degenerate geometry (sub-pixel fill rects,
+ * a hit-test rounding to the wrong cell), so `minCellSize` can raise this floor but never lower it.
+ */
+const FIT_MIN_CELL = 4;
+/**
  * A linear RGB ramp cannot contain more than 256 visually distinct integer
  * steps on any channel. Keeping the bucket count within that bound avoids an
  * untrusted attribute/property value turning the ramp into an unbounded
@@ -57,8 +63,21 @@ export interface MatrixCellPos {
 export interface CalendarCellPos {
   week: number;
   weekday: number;
+  /**
+   * The real ISO `yyyy-mm-dd` date this grid position falls on, so a `cellText`/`cellColor`/
+   * `cellInteractive` callback can key off the date without reconstructing the grid's own
+   * `firstWeekStart + week * 7 + weekday` arithmetic. Always populated — including for a **gap**
+   * position with no matching entry in `days` at all, which still sits on a real calendar day
+   * (that case simply reports the `-1` "no data" value alongside it).
+   */
+  date: string;
 }
 type CellPos = MatrixCellPos | CalendarCellPos;
+
+/** The ISO `yyyy-mm-dd` date `dayOffset` days after a calendar grid's anchor week start. */
+function isoDateAtOffset(firstWeekStart: Date, dayOffset: number): string {
+  return new Date(firstWeekStart.getTime() + dayOffset * MS_PER_DAY).toISOString().slice(0, 10);
+}
 
 /**
  * A marker drawn as a stroked ring over a matching cell (matrix mode:
@@ -80,8 +99,14 @@ export interface HeatmapAnnotation {
 export interface HeatmapLegendStop {
   /** Domain value this stop represents; used for the rendered label. */
   value: number;
-  /** Any CSS color — typically whatever the consumer's own `cellColor` returns for `value`. */
-  color: string;
+  /**
+   * Any CSS color — typically whatever the consumer's own `cellColor` returns for `value`.
+   * Omit it (or pass an empty string) for a **caption-only** stop: the entry then renders its
+   * `[part="legend-stop-label"]` alone, with no `[part="legend-swatch"]` element in the DOM at
+   * all, so a leading "0" / trailing "more" caption around a run of colored stops doesn't leave
+   * an empty swatch box in the row.
+   */
+  color?: string;
   /** Optional label override; defaults to the component's own numeric formatting of `value`. */
   label?: string;
 }
@@ -152,6 +177,35 @@ function warnInvalidColor(color: string): void {
  */
 export function normalizeBucketCount(bucketCount: number): number {
   return finiteInteger(bucketCount, DEFAULT_BUCKET_COUNT, 2, MAX_BUCKET_COUNT);
+}
+
+/**
+ * Attribute converter for the optional `max-cell-size`/`min-cell-size` clamps. Unlike Lit's default
+ * `Number` converter — which turns a missing-but-present `foo=""` into `0` — anything that isn't a
+ * finite number (absent, empty, whitespace, `"auto"`, garbage) maps to `undefined`, i.e. genuinely
+ * unset. `max-cell-size=""` silently pinning every cell to the 4px floor would be a trap, and these
+ * two are the only properties on this component where "no value" is a meaningful state.
+ */
+const optionalCellSizeConverter = {
+  fromAttribute(value: string | null): number | undefined {
+    if (value === null || value.trim() === '') return undefined;
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : undefined;
+  },
+  toAttribute(value: number | undefined): string | null {
+    return value == null ? null : String(value);
+  },
+};
+
+/**
+ * Normalizes a `maxCellSize`/`minCellSize` assignment: a non-finite (or absent) value means
+ * genuinely unset, and anything else is clamped to the `FIT_MIN_CELL` floor via the same
+ * `finiteRange()` helper `cellSize`'s own setter uses, so the two clamps and the size they clamp
+ * agree on what a legal cell size is.
+ */
+function normalizeCellSizeClamp(value: number | undefined | null): number | undefined {
+  if (value == null || !Number.isFinite(value)) return undefined;
+  return finiteRange(value, FIT_MIN_CELL, FIT_MIN_CELL);
 }
 
 const bucketCountConverter = {
@@ -237,6 +291,14 @@ export interface LyraHeatmapEventMap {
  *   being bucketed — as is a grid position with no matching entry in `days`
  *   at all (a gap in a sparse calendar).
  *
+ * `fitToWidth` divides the host's measured width across the grid in either
+ * mode; `maxCellSize`/`minCellSize` bound the result, so a sparse grid in a
+ * wide pane cannot inflate into a few giant blocks and a year calendar in a
+ * narrow one cannot collapse into hairlines. Both are ignored while
+ * `fitToWidth` is unset (an explicit `cellSize` is an exact request), and the
+ * canvas is sized from the *clamped* size — a capped grid leaves the host's
+ * remaining width unfilled rather than stretching to it.
+ *
  * The sequential color ramp's endpoints are read from the
  * `--lr-heatmap-scale-lo`/`-hi` custom properties (declared in
  * `heatmap.styles.ts`) so hosts can retheme it — canvas can't consume
@@ -254,6 +316,12 @@ export interface LyraHeatmapEventMap {
  * `lr-cell-click`. `annotations` additionally strokes a ring around
  * specific cells (e.g. to call out an anomaly), each one optionally
  * surfaced in the legend too via `[part="legend-annotation"]`.
+ *
+ * In calendar mode every cell position handed to `cellText`, `cellColor` and
+ * `cellInteractive` is a `CalendarCellPos` carrying the resolved ISO
+ * `yyyy-mm-dd` `date` alongside `week`/`weekday` — including for a grid
+ * position with no entry in `days` at all — so a callback can key off the
+ * date without re-deriving the grid's own anchor arithmetic.
  *
  * `legendStops` swaps the legend's two-endpoint gradient bar for a discrete
  * key of swatches, so a consumer whose `cellColor` callback paints an
@@ -305,8 +373,9 @@ export interface LyraHeatmapEventMap {
  * @csspart legend-lo - The low legend endpoint (omitted when `legendStops` is supplied).
  * @csspart legend-hi - The high legend endpoint (omitted when `legendStops` is supplied).
  * @csspart legend-stop - One discrete `legendStops` entry — swatch plus label.
- * @csspart legend-swatch - The color swatch of one `legendStops` entry.
+ * @csspart legend-swatch - The color swatch of one `legendStops` entry. Not rendered at all for a caption-only stop (one with no `color`).
  * @csspart legend-stop-label - The text of one `legendStops` entry.
+ * @csspart legend-value-label - The trailing `valueLabel` caption that closes the legend row, in both the gradient and the `legendStops` branch.
  * @csspart legend-annotation - An annotation label.
  * @cssprop [--lr-heatmap-scale-lo=var(--lr-color-brand-quiet)] - Low endpoint of the sequential color ramp.
  * @cssprop [--lr-heatmap-scale-hi=var(--lr-color-brand)] - High endpoint of the sequential color ramp.
@@ -373,6 +442,56 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
    * only; now applies to calendar mode too.
    */
   @property({ type: Boolean, attribute: 'fit-to-width' }) fitToWidth = false;
+  private _maxCellSize?: number;
+
+  /**
+   * Ceiling (CSS px) on the cell size `fitToWidth` derives from the host width, in **both** modes.
+   * Ignored entirely while `fitToWidth` is unset — an explicit `cellSize` is never clamped, since
+   * it is already an exact request.
+   *
+   * Exists because `fitToWidth` divides the whole host width across the grid: a 5-week calendar or
+   * a 3-column matrix in a wide pane produces enormous cells. Capping them keeps the cell a cell.
+   * The canvas is sized *from the clamped cell size*, so a capped grid deliberately leaves the
+   * remaining host width unfilled (the canvas simply ends early) rather than stretching to fill it
+   * — position it with normal CSS on the host if you want it centered or end-aligned.
+   *
+   * Unset (the default) reproduces today's exact fit-to-width behavior. Clamped to at least the
+   * built-in `4`px floor; a non-finite value (or an empty attribute) means unset rather than `0`.
+   * When both clamps are set and `maxCellSize < minCellSize`, the ceiling wins — the same
+   * precedence `finiteRange()` itself applies.
+   */
+  @property({ type: Number, attribute: 'max-cell-size', converter: optionalCellSizeConverter })
+  get maxCellSize(): number | undefined {
+    return this._maxCellSize;
+  }
+
+  set maxCellSize(value: number | undefined) {
+    const oldValue = this._maxCellSize;
+    this._maxCellSize = normalizeCellSizeClamp(value);
+    this.requestUpdate('maxCellSize', oldValue);
+  }
+  private _minCellSize?: number;
+
+  /**
+   * Floor (CSS px) under the cell size `fitToWidth` derives from the host width, in **both** modes
+   * — the mirror of `maxCellSize`, and likewise ignored while `fitToWidth` is unset. Raises the
+   * built-in `FIT_MIN_CELL` (4px) floor so a year-long calendar in a narrow pane keeps legible,
+   * hit-testable cells and overflows its host instead of collapsing to hairlines.
+   *
+   * Can only raise that floor, never lower it: a value below `4` normalizes to `4`. Unset (the
+   * default) reproduces today's exact fit-to-width behavior, and a non-finite value (or an empty
+   * attribute) means unset.
+   */
+  @property({ type: Number, attribute: 'min-cell-size', converter: optionalCellSizeConverter })
+  get minCellSize(): number | undefined {
+    return this._minCellSize;
+  }
+
+  set minCellSize(value: number | undefined) {
+    const oldValue = this._minCellSize;
+    this._minCellSize = normalizeCellSizeClamp(value);
+    this.requestUpdate('minCellSize', oldValue);
+  }
   @property() mode: 'matrix' | 'calendar' = 'matrix';
   @property({ attribute: false }) days: CalendarDay[] = [];
   private _firstDayOfWeek = 0;
@@ -421,6 +540,11 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
    * locale-aware numeric formatting of `value`, so a stop only needs an explicit `label` when
    * the number isn't the right caption ("none", "≥ 90%").
    *
+   * A stop's `color` is optional: omit it (or pass `''`) for a **caption-only** entry, which
+   * renders its label with no `[part="legend-swatch"]` element in the DOM at all — the shape a
+   * "less ▢▢▢▢ more" style key needs for its two end captions, without an empty swatch box
+   * sitting at either end of the row.
+   *
    * Exists for the consumer who supplies `cellColor`: because that callback overrides a cell's
    * color entirely, the built-in two-endpoint bar can describe a ramp the grid no longer uses.
    * Supplying the same colors here keeps the legend honest without hiding `[part="legend"]` and
@@ -452,18 +576,22 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
    */
   @property({ type: Boolean, attribute: 'accessible-cells' }) accessibleCells = false;
   /** Formats the per-cell tooltip and keyboard live-region text — receives the cell position
-   *  (`MatrixCellPos` in matrix mode, `CalendarCellPos` in calendar mode) and its value. Falls back to
+   *  (`MatrixCellPos` in matrix mode, `CalendarCellPos` — which carries the resolved ISO
+   *  `yyyy-mm-dd` `date`, gap positions included — in calendar mode) and its value. Falls back to
    *  the built-in English "Row X, Col Y: value" / "Mon DD: value" template when unset. */
   @property({ attribute: false }) cellText?: (pos: MatrixCellPos | CalendarCellPos, value: number) => string;
   /** Opts individual cells out of the interaction model — receives the cell position and its
    *  value, return `false` to make that cell present-but-non-interactive (no hover tooltip,
    *  click, or keyboard roving-focus stop), without losing the layout/color-ramp machinery. Lets
    *  a consumer omit a future/out-of-range date from interaction, or mark a zero-value cell as
-   *  non-interactive, without ~300+ meaningless keyboard tab stops on a dense grid. Unset (the
-   *  default) keeps every cell interactive, unchanged from before this property existed. */
+   *  non-interactive, without ~300+ meaningless keyboard tab stops on a dense grid. In calendar
+   *  mode the position carries its resolved ISO `date`, so "everything after today" is a direct
+   *  string comparison. Unset (the default) keeps every cell interactive, unchanged from before
+   *  this property existed. */
   @property({ attribute: false }) cellInteractive?: (pos: MatrixCellPos | CalendarCellPos, value: number) => boolean;
   /** Overrides a cell's computed ramp/no-data color entirely for an exact value -- receives the
-   *  cell position (`MatrixCellPos` in matrix mode, `CalendarCellPos` in calendar mode) and its
+   *  cell position (`MatrixCellPos` in matrix mode, `CalendarCellPos` — carrying the resolved ISO
+   *  `date` — in calendar mode) and its
    *  value, return a CSS color string to force that cell to it, or `undefined` to fall back to the
    *  normal `colorSteps`/ramp math unchanged. Lets a consumer designate a value as categorically
    *  outside the ramp (e.g. a real zero-count day rendered as a neutral hairline, distinct from
@@ -545,6 +673,17 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
   private cachedCalendarGrid = buildCalendarGrid(this.days);
   private cachedCalendarSortedValues: number[] = [];
   private cachedCalendarCellsByPos = new Map<string, CalendarCell>();
+  /**
+   * Every grid position's ISO date, indexed by `week * 7 + weekday`, rebuilt alongside
+   * `cachedCalendarCellsByPos` whenever the grid itself is. Populating `CalendarCellPos.date` from
+   * a flat array keeps that field an O(1) string read at every call site — crucially inside
+   * `drawCalendar()`'s inner loop, where computing it per cell would be a `new Date()` plus a
+   * `toISOString()` for all ~365 positions of a year grid on *every* repaint (hover, resize, theme
+   * change). Built once per grid change instead, which is the same order of work
+   * `buildCalendarGrid()` already does on that same path. Covers gap positions too, so a day
+   * missing from `days` still resolves to its real date.
+   */
+  private cachedCalendarDateByPos: string[] = [];
   private cachedRamp: {
     key: string;
     colors: string[];
@@ -690,6 +829,10 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
       this.cachedCalendarCellsByPos = new Map(
         this.cachedCalendarGrid.cells.map((cell) => [`${cell.week}:${cell.weekday}`, cell]),
       );
+      const { firstWeekStart, weekCount } = this.cachedCalendarGrid;
+      this.cachedCalendarDateByPos = Array.from({ length: weekCount * 7 }, (_, index) =>
+        isoDateAtOffset(firstWeekStart, index),
+      );
     }
     if (!this.hasUpdated) {
       this.authorSuppliedRole = this.hasAttribute('role');
@@ -759,7 +902,7 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
       const match = this.cachedCalendarGrid.cells.find((c) => c.date === this.selectedCell!.date);
       if (!match) return '';
       return this.localize('heatmapSelectedCellLabel', undefined, {
-        cell: this.calendarCellText({ week: match.week, weekday: match.weekday }),
+        cell: this.calendarCellText({ week: match.week, weekday: match.weekday, date: match.date }),
       });
     }
     const { row, col } = this.selectedCell;
@@ -797,6 +940,8 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
         'rowLabels',
         'colLabels',
         'cellSize',
+        'maxCellSize',
+        'minCellSize',
         'valueLabel',
         'scale',
         'fitToWidth',
@@ -966,9 +1111,25 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
       // subtracted back out here — otherwise the painted width would overshoot
       // `hostWidth` by `weekCount * CAL_GAP` (every column's gap, once each).
       const hostWidth = this.clientWidth || CAL_PAD_LEFT + weekCount * (this.cellSize + CAL_GAP);
-      return Math.max(4, (hostWidth - CAL_PAD_LEFT) / weekCount - CAL_GAP);
+      return this.clampFitCellSize((hostWidth - CAL_PAD_LEFT) / weekCount - CAL_GAP);
     }
     return this.cellSize;
+  }
+
+  /**
+   * Applies the optional `minCellSize`/`maxCellSize` clamps to a width-derived cell size. Only
+   * ever reached from the `fitToWidth` branch of `calendarCellSize()`/`matrixCellSize()` — an
+   * explicitly-set `cellSize` is an exact request and is never clamped. With both clamps unset
+   * this is exactly the `Math.max(FIT_MIN_CELL, …)` floor both call sites applied before they
+   * existed, so an untouched consumer's geometry is unchanged.
+   */
+  private clampFitCellSize(size: number): number {
+    return finiteRange(
+      size,
+      FIT_MIN_CELL,
+      Math.max(FIT_MIN_CELL, this.minCellSize ?? FIT_MIN_CELL),
+      this.maxCellSize ?? Number.POSITIVE_INFINITY,
+    );
   }
 
   /**
@@ -1117,7 +1278,11 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
         const value = this.cachedCalendarCellsByPos.get(`${week}:${weekday}`)?.value ?? -1;
         const x = this.columnXFor(week);
         const y = this.rowYFor(weekday);
-        const override = this.cellColor?.({ week, weekday }, value);
+        // `calendarPos()` is an array read plus one object literal, and the optional-call syntax
+        // short-circuits it entirely when `cellColor` is unset — deliberately *not*
+        // `calendarCellAt()`, whose miss path would allocate a Date and an ISO string for every
+        // gap position on every repaint.
+        const override = this.cellColor?.(this.calendarPos(week, weekday), value);
         if (override != null) {
           ctx.fillStyle = this.resolveCanvasColor(override, cs);
         } else if (value < 0 || !Number.isFinite(value)) {
@@ -1201,7 +1366,7 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
   private matrixCellSize(cols: number): number {
     if (this.fitToWidth && cols > 0) {
       const hostWidth = this.clientWidth || PAD_LEFT + cols * this.cellSize;
-      return Math.max(4, (hostWidth - PAD_LEFT) / cols);
+      return this.clampFitCellSize((hostWidth - PAD_LEFT) / cols);
     }
     return this.cellSize;
   }
@@ -1288,7 +1453,7 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
     const bounds = this.cachedValueRange;
     const lo = bounds ? bounds[0] : 0;
     const hi = bounds ? bounds[1] : 1;
-    const override = this.cellColor?.({ week, weekday }, value);
+    const override = this.cellColor?.(this.calendarPos(week, weekday), value);
     if (override != null) ctx.fillStyle = this.resolveCanvasColor(override, cs);
     else if (value < 0 || !Number.isFinite(value)) ctx.fillStyle = noDataFill;
     else if (this.scale === 'sqrt') {
@@ -1309,7 +1474,7 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
     cellSize: number,
     cs: CSSStyleDeclaration,
   ): void {
-    const date = this.calendarCellAt({ week, weekday }).date;
+    const date = this.calendarDateAt(week, weekday);
     const x = this.columnXFor(week);
     const y = this.rowYFor(weekday);
     const matches = (candidate: { date?: string } | undefined): boolean => candidate?.date === date;
@@ -1539,7 +1704,8 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
   private firstInteractiveCalendarCell(weekCount: number): CalendarCellPos | null {
     for (let week = 0; week < weekCount; week++) {
       for (let weekday = 0; weekday < 7; weekday++) {
-        if (this.isCellInteractive({ week, weekday })) return { week, weekday };
+        const pos = this.calendarPos(week, weekday);
+        if (this.isCellInteractive(pos)) return pos;
       }
     }
     return null;
@@ -1558,10 +1724,11 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
     for (;;) {
       const nw = Math.min(weekCount - 1, Math.max(0, w + dWeek));
       const nd = Math.min(6, Math.max(0, d + dWeekday));
-      if (nw === w && nd === d) return { week, weekday };
+      if (nw === w && nd === d) return this.calendarPos(week, weekday);
       w = nw;
       d = nd;
-      if (this.isCellInteractive({ week: w, weekday: d })) return { week: w, weekday: d };
+      const pos = this.calendarPos(w, d);
+      if (this.isCellInteractive(pos)) return pos;
     }
   }
 
@@ -1571,7 +1738,7 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
     const week = this.weekAtX(x, weekCount);
     const weekday = this.weekdayAtY(y);
     if (week === null || weekday === null) return null;
-    const pos = { week, weekday };
+    const pos = this.calendarPos(week, weekday);
     return this.isCellInteractive(pos) ? pos : null;
   }
 
@@ -1583,12 +1750,31 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
    * with a `-1` "no data" sentinel value (the same convention `values`' `-1`
    * sentinel uses in matrix mode), instead of being unresolvable.
    */
-  private calendarCellAt(pos: CalendarCellPos): { date: string; value: number } {
-    const { firstWeekStart } = this.cachedCalendarGrid;
+  private calendarCellAt(pos: { week: number; weekday: number }): { date: string; value: number } {
     const match = this.cachedCalendarCellsByPos.get(`${pos.week}:${pos.weekday}`);
     if (match) return { date: match.date, value: match.value };
-    const date = new Date(firstWeekStart.getTime() + (pos.week * 7 + pos.weekday) * MS_PER_DAY);
-    return { date: date.toISOString().slice(0, 10), value: -1 };
+    return { date: this.calendarDateAt(pos.week, pos.weekday), value: -1 };
+  }
+
+  /**
+   * The ISO `yyyy-mm-dd` date of a (week, weekday) grid position — an O(1) read out of
+   * `cachedCalendarDateByPos`, falling back to the grid-geometry arithmetic for a position outside
+   * the cached grid (a cursor left over from a shrinking `days`, say). Grid geometry guarantees
+   * this agrees with the `date` of a matching `days` entry: `week * 7 + weekday` *is* the day
+   * offset from `firstWeekStart` (see `buildCalendarGrid()`).
+   */
+  private calendarDateAt(week: number, weekday: number): string {
+    const index = week * 7 + weekday;
+    return (
+      this.cachedCalendarDateByPos[index] ??
+      isoDateAtOffset(this.cachedCalendarGrid.firstWeekStart, index)
+    );
+  }
+
+  /** Builds the full calendar-mode cursor for a grid position, `date` included. Every calendar-mode
+   *  `CalendarCellPos` in this component goes through here, so no call site can forget the date. */
+  private calendarPos(week: number, weekday: number): CalendarCellPos {
+    return { week, weekday, date: this.calendarDateAt(week, weekday) };
   }
 
   /**
@@ -1839,7 +2025,7 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
       const positions: CalendarCellPos[] = [];
       for (let week = 0; week < weekCount; week++) {
         for (let weekday = 0; weekday < 7; weekday++) {
-          const pos = { week, weekday };
+          const pos = this.calendarPos(week, weekday);
           if (this.isCellInteractive(pos)) positions.push(pos);
         }
       }
@@ -1949,7 +2135,15 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
       return html`${stops.map(
         (stop) => html`
           <span part="legend-stop">
-            <span part="legend-swatch" style=${styleMap({ background: stop.color })}></span>
+            ${
+              // A template guard, deliberately not just `styleMap({ background: stop.color })` with
+              // an optional `color`: styleMap skips a nullish value silently, which is a legal
+              // no-op that would still leave the swatch's own 0.6rem box sitting in the row. A
+              // caption-only stop has to omit the element itself.
+              stop.color
+                ? html`<span part="legend-swatch" style=${styleMap({ background: stop.color })}></span>`
+                : nothing
+            }
             <span part="legend-stop-label">${stop.label ?? this.formatNumericValue(stop.value)}</span>
           </span>
         `,
@@ -1988,7 +2182,7 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
         </div>
         <div part="live-region" class="sr-only" role="status" aria-live="polite">${this.liveText}</div>
         <div part="legend">${this.renderLegendScale(range)}
-          <span>${this.localizedValueLabel()}</span>
+          <span part="legend-value-label">${this.localizedValueLabel()}</span>
           ${labeledAnnotations.map(
             (a) => html`<span part="legend-annotation"><span class="ring-swatch"></span>${a.label}</span>`,
           )}

@@ -1,6 +1,6 @@
 import { aTimeout, fixture, expect, html } from '@open-wc/testing';
 import './heatmap.js';
-import type { LyraHeatmap } from './heatmap.js';
+import type { CalendarCellPos, LyraHeatmap, MatrixCellPos } from './heatmap.js';
 import {
   MAX_BUCKET_COUNT,
   hexToRgb,
@@ -2359,7 +2359,13 @@ describe('coverage: miscellaneous cell-text/navigation/accessible-cells branches
     canvas.dispatchEvent(
       new PointerEvent('pointermove', { clientX: rect.left + 33, clientY: rect.top + 21, bubbles: true }),
     );
-    expect((el as unknown as { hoverCell: unknown }).hoverCell).to.deep.equal({ week: 0, weekday: 0 });
+    // A calendar cursor also carries its resolved ISO `date` (see `CalendarCellPos.date`);
+    // `samePos()` deliberately still compares only week/weekday.
+    expect((el as unknown as { hoverCell: unknown }).hoverCell).to.deep.equal({
+      week: 0,
+      weekday: 0,
+      date: '2026-03-01',
+    });
     await el.updateComplete;
   });
 });
@@ -2377,7 +2383,9 @@ describe('legendStops', () => {
     '\n          <span part="legend-lo">3</span>\n' +
     '          <span class="bar"></span>\n' +
     '          <span part="legend-hi">9</span>\n' +
-    '          <span>value</span>\n' +
+    // The trailing valueLabel caption gained `part="legend-value-label"` so the whole legend row
+    // is addressable from outside; every other node here is pinned unchanged.
+    '          <span part="legend-value-label">value</span>\n' +
     '          \n        ';
 
   it('left unset, renders byte-identical lo/hi gradient legend markup', async () => {
@@ -2526,5 +2534,453 @@ describe('legendStops', () => {
     await el.updateComplete;
     expect(el.shadowRoot!.querySelectorAll('[part="legend-stop"]').length).to.equal(1);
     expect(el.shadowRoot!.querySelector('[part="legend-lo"]')).to.not.exist;
+  });
+
+  it('renders a caption-only stop (no `color`) with its label and no swatch element at all', async () => {
+    const el = (await fixture(html`
+      <lr-heatmap
+        .rowLabels=${['a']}
+        .colLabels=${['x', 'y']}
+        .values=${[[3, 9]]}
+        .legendStops=${[
+          { value: 0, label: 'none' },
+          { value: 50, color: 'rgb(0, 128, 0)' },
+          { value: 100, label: 'off scale' },
+        ]}
+      ></lr-heatmap>
+    `)) as LyraHeatmap;
+    await el.updateComplete;
+    const legend = el.shadowRoot!.querySelector('[part="legend"]') as HTMLElement;
+    const stops = [...legend.querySelectorAll('[part="legend-stop"]')];
+    expect(stops.length).to.equal(3);
+    // A bare optional type is not enough: styleMap({ background: undefined }) is a legal no-op
+    // that would still leave the 0.6rem swatch box in the row. The element must be absent.
+    expect(stops.map((s) => !!s.querySelector('[part="legend-swatch"]'))).to.deep.equal([
+      false,
+      true,
+      false,
+    ]);
+    expect(legend.querySelectorAll('[part="legend-swatch"]').length).to.equal(1);
+    expect(stops.map((s) => s.querySelector('[part="legend-stop-label"]')!.textContent)).to.deep.equal([
+      'none',
+      '50',
+      'off scale',
+    ]);
+    expect(
+      getComputedStyle(stops[1]!.querySelector('[part="legend-swatch"]') as HTMLElement).backgroundColor,
+    ).to.equal('rgb(0, 128, 0)');
+  });
+
+  it('treats an empty-string color as caption-only instead of painting a transparent swatch box', async () => {
+    const el = (await fixture(html`
+      <lr-heatmap
+        .rowLabels=${['a']}
+        .colLabels=${['x', 'y']}
+        .values=${[[3, 9]]}
+        .legendStops=${[{ value: 0, color: '', label: 'none' }]}
+      ></lr-heatmap>
+    `)) as LyraHeatmap;
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelectorAll('[part="legend-swatch"]').length).to.equal(0);
+    expect(el.shadowRoot!.querySelector('[part="legend-stop-label"]')!.textContent).to.equal('none');
+  });
+
+  it('caption-only stops fall back to the same locale-aware numeric label as colored ones', async () => {
+    const el = (await fixture(html`
+      <lr-heatmap
+        locale="de-DE"
+        .rowLabels=${['a']}
+        .colLabels=${['x', 'y']}
+        .values=${[[3, 9]]}
+        .legendStops=${[{ value: 1234.5 }]}
+      ></lr-heatmap>
+    `)) as LyraHeatmap;
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('[part="legend-stop-label"]')!.textContent).to.equal('1.234,5');
+    expect(el.shadowRoot!.querySelectorAll('[part="legend-swatch"]').length).to.equal(0);
+  });
+
+  it('stays accessible with a caption-only legend stop', async () => {
+    const el = (await fixture(html`
+      <lr-heatmap
+        .rowLabels=${['a']}
+        .colLabels=${['x', 'y']}
+        .values=${[[3, 9]]}
+        .legendStops=${[{ value: 0, label: 'none' }, { value: 9, color: 'rgb(0, 0, 255)' }]}
+      ></lr-heatmap>
+    `)) as LyraHeatmap;
+    await el.updateComplete;
+    await expect(el).to.be.accessible();
+  });
+
+  it('exposes the trailing value label as [part="legend-value-label"] in both legend branches', async () => {
+    const gradient = (await fixture(html`
+      <lr-heatmap
+        value-label="events"
+        .rowLabels=${['a']}
+        .colLabels=${['x', 'y']}
+        .values=${[[3, 9]]}
+      ></lr-heatmap>
+    `)) as LyraHeatmap;
+    await gradient.updateComplete;
+    expect(gradient.shadowRoot!.querySelector('[part="legend-value-label"]')!.textContent).to.equal(
+      'events',
+    );
+
+    const withStops = (await fixture(html`
+      <lr-heatmap
+        value-label="events"
+        .rowLabels=${['a']}
+        .colLabels=${['x', 'y']}
+        .values=${[[3, 9]]}
+        .legendStops=${[{ value: 0, label: 'none' }]}
+      ></lr-heatmap>
+    `)) as LyraHeatmap;
+    await withStops.updateComplete;
+    expect(withStops.shadowRoot!.querySelector('[part="legend-value-label"]')!.textContent).to.equal(
+      'events',
+    );
+  });
+});
+
+describe('maxCellSize / minCellSize (fit-to-width clamps)', () => {
+  /** Four Sundays -> weekCount 4, so the calendar grid is wide enough for the cap to bite. */
+  const FOUR_WEEKS = [
+    { date: '2026-03-01', value: 1 },
+    { date: '2026-03-08', value: 2 },
+    { date: '2026-03-15', value: 3 },
+    { date: '2026-03-22', value: 4 },
+  ];
+
+  it('calendar mode: max-cell-size caps the fit-to-width cell size, leaving the host remainder unfilled', async () => {
+    const el = (await fixture(
+      html`<lr-heatmap mode="calendar" fit-to-width max-cell-size="26" style="inline-size: 320px"></lr-heatmap>`,
+    )) as LyraHeatmap;
+    el.days = FOUR_WEEKS;
+    await el.updateComplete;
+    expect(el.maxCellSize).to.equal(26);
+    const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
+    // Uncapped this would fill the host exactly (320). Capped: CAL_PAD_LEFT(28) + 4 * (26 + CAL_GAP(2)) = 140.
+    expect(parseInt(canvas.style.width, 10)).to.equal(140);
+  });
+
+  it('matrix mode: max-cell-size caps the fit-to-width cell size', async () => {
+    const el = (await fixture(
+      html`<lr-heatmap fit-to-width max-cell-size="26" style="inline-size: 320px"></lr-heatmap>`,
+    )) as LyraHeatmap;
+    el.rowLabels = ['a'];
+    el.colLabels = ['x', 'y', 'z', 'w'];
+    el.values = [[1, 2, 3, 4]];
+    await el.updateComplete;
+    const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
+    // Uncapped this would fill the host exactly (320). Capped: PAD_LEFT(60) + 4 * 26 = 164.
+    expect(parseInt(canvas.style.width, 10)).to.equal(164);
+  });
+
+  it('calendar mode: min-cell-size raises the floor above the built-in 4px', async () => {
+    const narrow = (await fixture(
+      html`<lr-heatmap mode="calendar" fit-to-width style="inline-size: 60px"></lr-heatmap>`,
+    )) as LyraHeatmap;
+    narrow.days = FOUR_WEEKS;
+    await narrow.updateComplete;
+    // (60 - 28) / 4 - 2 = 6 -> above the built-in 4px floor, so nothing is clamped yet.
+    expect(parseInt((narrow.shadowRoot!.querySelector('canvas') as HTMLCanvasElement).style.width, 10)).to.equal(60);
+
+    const floored = (await fixture(
+      html`<lr-heatmap mode="calendar" fit-to-width min-cell-size="16" style="inline-size: 60px"></lr-heatmap>`,
+    )) as LyraHeatmap;
+    floored.days = FOUR_WEEKS;
+    await floored.updateComplete;
+    expect(floored.minCellSize).to.equal(16);
+    // 28 + 4 * (16 + 2) = 100.
+    expect(parseInt((floored.shadowRoot!.querySelector('canvas') as HTMLCanvasElement).style.width, 10)).to.equal(100);
+  });
+
+  it('matrix mode: min-cell-size raises the floor above the built-in 4px', async () => {
+    const el = (await fixture(
+      html`<lr-heatmap fit-to-width min-cell-size="18" style="inline-size: 100px"></lr-heatmap>`,
+    )) as LyraHeatmap;
+    el.rowLabels = ['a'];
+    el.colLabels = ['v', 'w', 'x', 'y', 'z'];
+    el.values = [[1, 2, 3, 4, 5]];
+    await el.updateComplete;
+    const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
+    // (100 - 60) / 5 = 8 raw, floored to 18: PAD_LEFT(60) + 5 * 18 = 150.
+    expect(parseInt(canvas.style.width, 10)).to.equal(150);
+  });
+
+  it('leaves both modes byte-identical when neither clamp is set', async () => {
+    const calendar = (await fixture(
+      html`<lr-heatmap mode="calendar" fit-to-width style="inline-size: 320px"></lr-heatmap>`,
+    )) as LyraHeatmap;
+    calendar.days = FOUR_WEEKS;
+    await calendar.updateComplete;
+    expect(calendar.maxCellSize).to.equal(undefined);
+    expect(calendar.minCellSize).to.equal(undefined);
+    expect(parseInt((calendar.shadowRoot!.querySelector('canvas') as HTMLCanvasElement).style.width, 10)).to.equal(320);
+
+    const matrix = (await fixture(
+      html`<lr-heatmap fit-to-width style="inline-size: 320px"></lr-heatmap>`,
+    )) as LyraHeatmap;
+    matrix.rowLabels = ['a'];
+    matrix.colLabels = ['x', 'y', 'z', 'w'];
+    matrix.values = [[1, 2, 3, 4]];
+    await matrix.updateComplete;
+    expect(parseInt((matrix.shadowRoot!.querySelector('canvas') as HTMLCanvasElement).style.width, 10)).to.equal(320);
+  });
+
+  it('ignores both clamps while fit-to-width is unset', async () => {
+    const el = (await fixture(
+      html`<lr-heatmap cell-size="20" max-cell-size="8" min-cell-size="40" style="inline-size: 320px"></lr-heatmap>`,
+    )) as LyraHeatmap;
+    el.rowLabels = ['a'];
+    el.colLabels = ['x', 'y', 'z', 'w'];
+    el.values = [[1, 2, 3, 4]];
+    await el.updateComplete;
+    const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
+    // The explicit cell-size still wins outright: 60 + 4 * 20 = 140.
+    expect(parseInt(canvas.style.width, 10)).to.equal(140);
+  });
+
+  it('repaints the canvas when max-cell-size or min-cell-size changes on a live element', async () => {
+    const el = (await fixture(
+      html`<lr-heatmap mode="calendar" fit-to-width style="inline-size: 320px"></lr-heatmap>`,
+    )) as LyraHeatmap;
+    el.days = FOUR_WEEKS;
+    await el.updateComplete;
+    const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
+    expect(parseInt(canvas.style.width, 10)).to.equal(320);
+
+    el.maxCellSize = 26;
+    await el.updateComplete;
+    expect(parseInt(canvas.style.width, 10)).to.equal(140);
+
+    el.maxCellSize = undefined;
+    el.minCellSize = 100;
+    await el.updateComplete;
+    // 28 + 4 * (100 + 2) = 436.
+    expect(parseInt(canvas.style.width, 10)).to.equal(436);
+  });
+
+  it('lets the ceiling win when it is set below the floor, matching finiteRange\'s own precedence', async () => {
+    const el = (await fixture(
+      html`<lr-heatmap mode="calendar" fit-to-width max-cell-size="10" min-cell-size="30" style="inline-size: 320px"></lr-heatmap>`,
+    )) as LyraHeatmap;
+    el.days = FOUR_WEEKS;
+    await el.updateComplete;
+    // 28 + 4 * (10 + 2) = 76.
+    expect(parseInt((el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement).style.width, 10)).to.equal(76);
+  });
+
+  it('treats a non-finite clamp as unset instead of producing NaN canvas geometry', async () => {
+    const el = (await fixture(
+      html`<lr-heatmap mode="calendar" fit-to-width max-cell-size="not-a-number" min-cell-size="" style="inline-size: 320px"></lr-heatmap>`,
+    )) as LyraHeatmap;
+    el.days = FOUR_WEEKS;
+    await el.updateComplete;
+    expect(el.maxCellSize).to.equal(undefined);
+    expect(el.minCellSize).to.equal(undefined);
+    expect(parseInt((el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement).style.width, 10)).to.equal(320);
+  });
+
+  it('never lets min-cell-size drop the effective floor below the built-in 4px safety minimum', async () => {
+    const el = (await fixture(
+      html`<lr-heatmap mode="calendar" fit-to-width min-cell-size="0" style="inline-size: 40px"></lr-heatmap>`,
+    )) as LyraHeatmap;
+    el.days = FOUR_WEEKS;
+    await el.updateComplete;
+    expect(el.minCellSize).to.equal(4);
+    // (40 - 28) / 4 - 2 = 1 -> still clamped up to the built-in 4: 28 + 4 * (4 + 2) = 52.
+    expect(parseInt((el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement).style.width, 10)).to.equal(52);
+  });
+
+  it('stays accessible with both clamps applied', async () => {
+    const el = (await fixture(
+      html`<lr-heatmap mode="calendar" fit-to-width max-cell-size="26" min-cell-size="12" style="inline-size: 320px"></lr-heatmap>`,
+    )) as LyraHeatmap;
+    el.days = FOUR_WEEKS;
+    await el.updateComplete;
+    await expect(el).to.be.accessible();
+  });
+});
+
+describe('CalendarCellPos.date', () => {
+  /** 2026-03-01 is a Sunday, so it anchors week 0 exactly; 2026-03-17 lands in week 2, weekday 2.
+   *  Everything between them is a genuine gap — a grid position with no entry in `days` at all. */
+  const SPARSE_DAYS = [
+    { date: '2026-03-01', value: 5 },
+    { date: '2026-03-17', value: 2 },
+  ];
+
+  /** Reads the accessible-cell overlay's labels keyed by `calendar-<week>-<weekday>`, which come
+   *  straight from `resolveCellText()` — i.e. from the same `CalendarCellPos` every other
+   *  calendar-mode call site builds. */
+  function labelsByKey(el: LyraHeatmap): Record<string, string> {
+    const out: Record<string, string> = {};
+    for (const button of el.shadowRoot!.querySelectorAll<HTMLButtonElement>('[part="cell"]')) {
+      out[button.dataset.cellKey!] = button.getAttribute('aria-label') ?? '';
+    }
+    return out;
+  }
+
+  it('gives cellText the ISO date for a cell with data AND for a sparse gap cell', async () => {
+    const el = (await fixture(html`
+      <lr-heatmap
+        mode="calendar"
+        accessible-cells
+        .days=${SPARSE_DAYS}
+        .cellText=${(pos: MatrixCellPos | CalendarCellPos) => (pos as CalendarCellPos).date}
+      ></lr-heatmap>
+    `)) as LyraHeatmap;
+    await el.updateComplete;
+    const labels = labelsByKey(el);
+    // Week 0, weekday 0 -> the anchor Sunday, which has real data.
+    expect(labels['calendar-0-0']).to.equal('2026-03-01');
+    // Week 0, weekday 1 -> a gap: no entry in `days`, but still a real calendar date.
+    expect(labels['calendar-0-1']).to.equal('2026-03-02');
+    // Week 2, weekday 2 -> the second real day.
+    expect(labels['calendar-2-2']).to.equal('2026-03-17');
+    // Week 2, weekday 6 -> a trailing gap.
+    expect(labels['calendar-2-6']).to.equal('2026-03-21');
+  });
+
+  it('gives cellColor the ISO date on the drawCalendar full-repaint path, gaps included', async () => {
+    const seen: (string | undefined)[] = [];
+    const el = (await fixture(html`
+      <lr-heatmap
+        mode="calendar"
+        .days=${SPARSE_DAYS}
+        .cellColor=${(pos: MatrixCellPos | CalendarCellPos) => {
+          seen.push((pos as CalendarCellPos).date);
+          return undefined;
+        }}
+      ></lr-heatmap>
+    `)) as LyraHeatmap;
+    await el.updateComplete;
+    seen.length = 0;
+    el.refreshTheme(); // one clean full repaint
+    // 3 week columns * 7 weekday rows, week-major, starting at the anchor Sunday.
+    expect(seen.length).to.equal(21);
+    expect(seen[0]).to.equal('2026-03-01');
+    expect(seen[1]).to.equal('2026-03-02');
+    expect(seen[6]).to.equal('2026-03-07');
+    expect(seen[7]).to.equal('2026-03-08');
+    expect(seen[16]).to.equal('2026-03-17');
+    expect(seen[20]).to.equal('2026-03-21');
+    expect(seen.filter((d) => typeof d !== 'string').length).to.equal(0);
+  });
+
+  it('gives cellColor the ISO date on the single-cell focus-ring fast repaint path too', async () => {
+    const seen: (string | undefined)[] = [];
+    const el = (await fixture(html`
+      <lr-heatmap
+        mode="calendar"
+        .days=${SPARSE_DAYS}
+        .cellColor=${(pos: MatrixCellPos | CalendarCellPos) => {
+          seen.push((pos as CalendarCellPos).date);
+          return undefined;
+        }}
+      ></lr-heatmap>
+    `)) as LyraHeatmap;
+    await el.updateComplete;
+    const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
+    canvas.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }));
+    await el.updateComplete;
+    seen.length = 0;
+    canvas.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }));
+    await el.updateComplete;
+    expect(seen.length).to.be.greaterThan(0);
+    expect(seen.filter((d) => typeof d !== 'string').length).to.equal(0);
+  });
+
+  it('gives cellInteractive the ISO date, so a consumer can exclude dates by value', async () => {
+    const el = (await fixture(html`
+      <lr-heatmap
+        mode="calendar"
+        accessible-cells
+        .days=${SPARSE_DAYS}
+        .cellInteractive=${(pos: MatrixCellPos | CalendarCellPos) =>
+          (pos as CalendarCellPos).date <= '2026-03-07'}
+      ></lr-heatmap>
+    `)) as LyraHeatmap;
+    await el.updateComplete;
+    // Exactly the first week column survives the predicate.
+    expect(el.shadowRoot!.querySelectorAll('[part="cell"]').length).to.equal(7);
+    expect(Object.keys(labelsByKey(el)).sort()).to.deep.equal([
+      'calendar-0-0',
+      'calendar-0-1',
+      'calendar-0-2',
+      'calendar-0-3',
+      'calendar-0-4',
+      'calendar-0-5',
+      'calendar-0-6',
+    ]);
+  });
+
+  it('carries the date on the hover/keyboard cursor, and matrix positions still carry none', async () => {
+    const el = (await fixture(html`
+      <lr-heatmap mode="calendar" .days=${SPARSE_DAYS}></lr-heatmap>
+    `)) as LyraHeatmap;
+    await el.updateComplete;
+    const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
+    canvas.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+    await el.updateComplete;
+    expect((el as unknown as { focusedCell: CalendarCellPos }).focusedCell.date).to.equal('2026-03-01');
+
+    const matrix = (await fixture(html`
+      <lr-heatmap .rowLabels=${['a']} .colLabels=${['x', 'y']} .values=${[[1, 2]]}></lr-heatmap>
+    `)) as LyraHeatmap;
+    await matrix.updateComplete;
+    const matrixCanvas = matrix.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
+    matrixCanvas.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+    await matrix.updateComplete;
+    expect((matrix as unknown as { focusedCell: unknown }).focusedCell).to.deep.equal({ row: 0, col: 0 });
+  });
+
+  it('keeps `date` out of samePos(), so a repaint diff never churns on it', async () => {
+    const el = (await fixture(html`
+      <lr-heatmap mode="calendar" .days=${SPARSE_DAYS}></lr-heatmap>
+    `)) as LyraHeatmap;
+    await el.updateComplete;
+    const samePos = (el as unknown as {
+      samePos: (a: unknown, b: unknown) => boolean;
+    }).samePos.bind(el);
+    expect(samePos({ week: 1, weekday: 2, date: '2026-03-09' }, { week: 1, weekday: 2, date: 'x' })).to.equal(
+      true,
+    );
+    expect(samePos({ week: 1, weekday: 2, date: '2026-03-09' }, { week: 1, weekday: 3, date: '2026-03-09' })).to.equal(
+      false,
+    );
+    // The structural `'week' in pos` discriminator must still tell the two shapes apart.
+    expect(samePos({ week: 0, weekday: 0, date: '2026-03-01' }, { row: 0, col: 0 })).to.equal(false);
+  });
+
+  it('does not change lr-cell-click\'s detail shape', async () => {
+    const el = (await fixture(html`
+      <lr-heatmap mode="calendar" .days=${SPARSE_DAYS}></lr-heatmap>
+    `)) as LyraHeatmap;
+    await el.updateComplete;
+    const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
+    canvas.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+    await el.updateComplete;
+    let detail: unknown = null;
+    el.addEventListener('lr-cell-click', (e) => {
+      detail = (e as CustomEvent).detail;
+    });
+    canvas.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+    expect(detail).to.deep.equal({ date: '2026-03-01', value: 5 });
+  });
+
+  it('stays accessible with a date-driven cellText on the accessible-cell overlay', async () => {
+    const el = (await fixture(html`
+      <lr-heatmap
+        mode="calendar"
+        accessible-cells
+        .days=${SPARSE_DAYS}
+        .cellText=${(pos: MatrixCellPos | CalendarCellPos) => `Day ${(pos as CalendarCellPos).date}`}
+      ></lr-heatmap>
+    `)) as LyraHeatmap;
+    await el.updateComplete;
+    await expect(el).to.be.accessible();
   });
 });

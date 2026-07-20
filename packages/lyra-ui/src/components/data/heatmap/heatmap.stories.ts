@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
 import type { CalendarDay } from './calendar-grid.js';
+import type { CalendarCellPos, MatrixCellPos } from './heatmap.js';
 
 const meta: Meta = {
   title: 'Heatmap',
@@ -269,6 +270,116 @@ export const CustomScaleLegend: Story = {
           { value: Math.round(max * 0.75), color: shade(0.75) },
           { value: max, color: shade(1) },
         ]}
+      ></lr-heatmap>
+    `;
+  },
+};
+
+/**
+ * A `legendStops` entry may omit `color` entirely, rendering a **caption-only** stop: label text
+ * with no `[part="legend-swatch"]` element in the DOM. That is what a GitHub-style
+ * "Less ▢▢▢▢ More" key needs — bare captions bracketing the colored ramp, instead of two empty
+ * swatch boxes at the ends of the row.
+ */
+export const CaptionOnlyLegendStops: Story = {
+  render: () => {
+    const days: CalendarDay[] = [];
+    const start = Date.UTC(2026, 0, 1);
+    for (let i = 0; i < 120; i++) {
+      const date = new Date(start + i * 86_400_000).toISOString().slice(0, 10);
+      days.push({ date, value: Math.round(Math.abs(Math.sin(i / 6)) * 10) });
+    }
+    const shade = (ratio: number) =>
+      `color-mix(in srgb, var(--lr-color-brand) ${Math.round(ratio * 100)}%, transparent)`;
+    return html`
+      <lr-heatmap
+        mode="calendar"
+        value-label="commits"
+        .days=${days}
+        .legendStops=${[
+          { value: 0, label: 'Less' },
+          { value: 3, color: shade(0.25) },
+          { value: 5, color: shade(0.5) },
+          { value: 8, color: shade(0.75) },
+          { value: 10, color: shade(1) },
+          { value: 11, label: 'More' },
+        ]}
+      ></lr-heatmap>
+    `;
+  },
+};
+
+/**
+ * `fit-to-width` divides the whole host width across the grid, which turns a short calendar in a
+ * wide pane into a handful of giant blocks. `max-cell-size` caps that, and `min-cell-size` raises
+ * the built-in 4px floor so a long calendar in a narrow pane overflows rather than collapsing into
+ * hairlines. Both are ignored while `fit-to-width` is unset. The canvas is sized from the *clamped*
+ * cell size, so a capped grid deliberately leaves the rest of the host width unfilled.
+ */
+export const ClampedFitToWidth: Story = {
+  render: () => {
+    const days: CalendarDay[] = [];
+    const start = Date.UTC(2026, 0, 4); // a Sunday -> 5 clean week columns
+    for (let i = 0; i < 35; i++) {
+      const date = new Date(start + i * 86_400_000).toISOString().slice(0, 10);
+      days.push({ date, value: Math.round(Math.abs(Math.sin(i / 4)) * 10) });
+    }
+    return html`
+      <div style="display: grid; gap: 1.5rem;">
+        <div>
+          <p style="margin: 0 0 0.25rem; font: 0.75rem system-ui;">fit-to-width, unclamped</p>
+          <lr-heatmap mode="calendar" fit-to-width value-label="commits" .days=${days}></lr-heatmap>
+        </div>
+        <div>
+          <p style="margin: 0 0 0.25rem; font: 0.75rem system-ui;">fit-to-width, max-cell-size="26"</p>
+          <lr-heatmap
+            mode="calendar"
+            fit-to-width
+            max-cell-size="26"
+            value-label="commits"
+            .days=${days}
+          ></lr-heatmap>
+        </div>
+        <div style="inline-size: 180px;">
+          <p style="margin: 0 0 0.25rem; font: 0.75rem system-ui;">narrow host, min-cell-size="14"</p>
+          <lr-heatmap
+            mode="calendar"
+            fit-to-width
+            min-cell-size="14"
+            value-label="commits"
+            .days=${days}
+          ></lr-heatmap>
+        </div>
+      </div>
+    `;
+  },
+};
+
+/**
+ * In calendar mode the position passed to `cellText`, `cellColor` and `cellInteractive` carries the
+ * resolved ISO `date` alongside `week`/`weekday` — for gap positions with no entry in `days` too.
+ * Here `cellInteractive` retires every date after the data ends (no tooltip, no keyboard stop), and
+ * `cellText` writes the date straight into the tooltip without re-deriving the grid's anchor
+ * arithmetic.
+ */
+export const DateAwareCallbacks: Story = {
+  render: () => {
+    const days: CalendarDay[] = [];
+    const start = Date.UTC(2026, 0, 4);
+    for (let i = 0; i < 70; i++) {
+      const date = new Date(start + i * 86_400_000).toISOString().slice(0, 10);
+      if (i % 5 !== 0) days.push({ date, value: Math.round(Math.abs(Math.sin(i / 4)) * 10) });
+    }
+    const lastDay = days[days.length - 1]!.date;
+    return html`
+      <lr-heatmap
+        mode="calendar"
+        value-label="commits"
+        .days=${days}
+        .cellInteractive=${(pos: MatrixCellPos | CalendarCellPos) =>
+          (pos as CalendarCellPos).date <= lastDay}
+        .cellText=${(pos: MatrixCellPos | CalendarCellPos, value: number) =>
+          `${(pos as CalendarCellPos).date}: ${value < 0 ? 'no data' : value}`}
       ></lr-heatmap>
     `;
   },
