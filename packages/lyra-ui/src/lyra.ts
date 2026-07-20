@@ -161,6 +161,7 @@ import './components/data/timeline/timeline.js';
 import './components/utility/tour/tour.js';
 import './components/data/sequence-strip/sequence-strip.js';
 import './components/forms/emoji-picker/emoji-picker.js';
+import './components/forms/locale-picker/locale-picker.js';
 import './components/data/file-tree/file-tree.js';
 import './components/agent-tools/commit-card/commit-card.js';
 import './components/agent-tools/stack-trace/stack-trace.js';
@@ -285,6 +286,13 @@ export type {
   EmojiPickerGroup,
   LyraEmojiPickerEventMap,
 } from './components/forms/emoji-picker/emoji-picker.js';
+export { LyraLocalePicker } from './components/forms/locale-picker/locale-picker.js';
+export type {
+  LyraLocaleEntry,
+  LyraLocaleCatalog,
+  LyraLocalePickerSize,
+  LyraLocalePickerEventMap,
+} from './components/forms/locale-picker/locale-picker.js';
 export { LyraToast } from './components/overlays/toast/toast.js';
 export type { ToastPlacement, ToastCreateOptions } from './components/overlays/toast/toast.js';
 export { LyraToastItem } from './components/overlays/toast/toast-item.js';
@@ -461,6 +469,8 @@ export {
   getLyraLocale,
   registerLyraLocale,
   setLyraLocale,
+  getRegisteredLyraLocales,
+  subscribeLyraLocaleRegistry,
   resolveLyraDirection,
   resolveLyraLocale,
   resolveLyraString,

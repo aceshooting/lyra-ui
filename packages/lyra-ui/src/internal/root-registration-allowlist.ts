@@ -90,6 +90,7 @@ export const ROOT_BARREL_TAGS = [
   'lr-lightbox',
   'lr-lite-chart',
   'lr-live-region',
+  'lr-locale-picker',
   'lr-markdown',
   'lr-markdown-core',
   'lr-media-card',

@@ -1910,3 +1910,75 @@ supported ones).
 dim through `--lr-opacity-disabled`, the same library-wide token every other disabled control
 reads — so retuning `--lr-theme-opacity-disabled` keeps this form's disabled state consistent with
 the rest of the UI instead of needing a `::part()` rule here.
+
+## `lr-locale-picker`
+
+A closed-list locale switcher over the library's own locale registry. First-party invention (no
+Web Awesome equivalent). With `locales` unset (the default), the offered rows are exactly
+`getRegisteredLyraLocales()` — every locale with strings registered via `registerLyraLocale()`,
+plus `en` — kept live via `subscribeLyraLocaleRegistry()`. Built directly on `lr-select`'s
+trigger-button/`aria-activedescendant` listbox technique, not composed from it — a plain closed
+list, no filter/free-text mode.
+
+**Properties:**
+- `locales: LyraLocaleCatalog = []` (attribute: false) — `LyraLocaleCatalog = string[] |
+  LyraLocaleEntry[]`, `LyraLocaleEntry { tag: string; label?: string }`. Empty (the default)
+  auto-discovers the registry; a non-empty array (either form) overrides it entirely — a curated
+  subset, custom order, custom labels, or a locale offered before its strings are registered.
+- `showFlags: boolean = true` — each row's leading `<lr-flag language={tag} variant="compact">`;
+  `false` omits the flag element entirely (not just visually).
+- `value: string = ''` — the **committed** selection (form value, drives `lr-change`). While `''`
+  and untouched, the trigger *displays* `effectiveLocale` as a preview label, but
+  `checkValidity()`/`required` are governed by the real `value`, which stays `''` until a real
+  commit — mirrors a native `<select>` showing its first option's text without that being a
+  committed selection.
+- `required: boolean = false`, `disabled: boolean = false`, `name: string = ''` — standard
+  form-associated properties.
+- `label: string = ''`, `hint: string = ''`, `errorText: string = ''` (attribute `error-text`) —
+  same opt-in form-control chrome as `lr-select` (props + matching named slots + parts); unset
+  renders none of it.
+- `open: boolean = false` (reflected).
+- `size: 'xs' | 's' | 'm' | 'l' | 'xl' = 'm'` (reflected — same scale as `lr-select`'s `size`).
+
+**Events:** `lr-change` (`detail: { value, previousValue }`, **cancelable**) — fired on every
+explicit pick; if not `defaultPrevented`, the component applies the pick itself via
+`setLyraLocale(value)`. A listener calling `event.preventDefault()` leaves `value` updated but the
+active locale untouched, so a host can persist the choice first and apply it later. `blur`/`focus`
+re-dispatched from the internal trigger as bubbling, composed events.
+
+**Slots:** `label`, `hint`, `error`.
+
+**CSS parts:** `form-control`, `form-control-label`, `trigger`, `listbox`, `option`,
+`option-flag` (present only while `showFlags` is on), `option-label`, `option-tag` (the row's
+secondary line — the raw BCP-47 tag), `expand-icon`, `hint`, `error`.
+
+**Themeable custom properties:** `--lr-locale-picker-trigger-padding`,
+`--lr-locale-picker-trigger-min-height`, `--lr-locale-picker-trigger-height` (unset by default, a
+floor-only escape hatch — set a length to both floor and cap the trigger),
+`--lr-locale-picker-font-size`, `--lr-locale-picker-expand-size` (all scaled by `size`), and
+`--lr-locale-picker-option-active-bg` (default `--lr-color-brand-quiet`, the hovered/keyboard-active
+row background).
+
+**Optional peer deps:** none directly — each row's `<lr-flag>` degrades to an empty render (no
+peer warning duplication; `lr-flag` itself already logs one) when the optional
+`@aceshooting/lyra-flags` package isn't installed and `showFlags` is left on.
+
+```html
+<lr-locale-picker label="Language"></lr-locale-picker>
+<script type="module">
+  import { registerLyraLocale } from '@aceshooting/lyra-ui';
+  registerLyraLocale('fr', { close: 'Fermer' });
+  document
+    .querySelector('lr-locale-picker')
+    .addEventListener('lr-change', (e) => console.log(e.detail.value));
+</script>
+```
+
+**Known gotchas:**
+- selecting a row applies `setLyraLocale()` itself unless the listener calls
+  `event.preventDefault()` on `lr-change` — it does not touch
+  `document.documentElement.lang`/`dir`; apply writing-direction changes to the page yourself.
+- no filter/free-text mode — for a catalog with hundreds+ of rows, roll your own with `lr-select`
+  or `lr-combobox` instead.
+- arrow-key navigation is vertical-only (Home/End/ArrowUp/ArrowDown); there is no
+  ArrowLeft/ArrowRight remap under RTL, since there is no horizontal axis to remap.

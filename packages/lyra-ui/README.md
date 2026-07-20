@@ -27,7 +27,7 @@
 **Lyra UI — the free, independent web-component alternative.** A MIT-licensed [Lit](https://lit.dev)
 library for accessible forms, dashboards, charts, data visualization, and Conversation & Agent UI.
 It is a practical open-source alternative to [Shoelace](https://shoelace.style/) and
-[Web Awesome](https://webawesome.com/), with 249 custom elements, native custom-element APIs,
+[Web Awesome](https://webawesome.com/), with 250 custom elements, native custom-element APIs,
 tree-shakeable imports, its own `--lr-*` design tokens, built-in localization and RTL support,
 and no runtime dependency on either project.
 
@@ -354,7 +354,7 @@ coverage automatically from the bundled `web-types.json` — JetBrains IDEs pick
 
 ## Components
 
-The catalog below lists all 249 tags in the current Custom Elements Manifest, grouped by
+The catalog below lists all 250 tags in the current Custom Elements Manifest, grouped by
 capability. The manifest and live docs are the authoritative sources for the complete generated
 API details.
 
@@ -381,6 +381,7 @@ API details.
 | `<lr-spinner>` | `wa-spinner` | Localized indeterminate busy indicator with reduced-motion support |
 | `<lr-progress-bar>` + `<lr-progress-ring>` | `wa-progress-bar` / `wa-progress-ring` | Determinate or indeterminate progress indicators |
 | `<lr-flag>` | — (extra) | Country/language flags for i18n pickers — needs the optional peer `@aceshooting/lyra-flags` |
+| `<lr-locale-picker>` | — (extra) | Closed-list locale switcher over the library's own locale registry (`getRegisteredLyraLocales()`) or an explicit `locales` catalog; selecting a row calls `setLyraLocale()` unless `lr-change` is cancelled |
 
 **Additional media and interaction primitives**
 
