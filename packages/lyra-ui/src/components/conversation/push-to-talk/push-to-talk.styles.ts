@@ -33,8 +33,8 @@ export const styles = css`
     cursor: not-allowed;
   }
   :host([data-state='recording']) [part='trigger'] {
-    border-color: var(--lr-color-danger);
-    color: var(--lr-color-danger);
+    border-color: var(--lr-push-to-talk-recording-color, var(--lr-color-danger));
+    color: var(--lr-push-to-talk-recording-color, var(--lr-color-danger));
   }
   [part='icon'] {
     display: inline-flex;

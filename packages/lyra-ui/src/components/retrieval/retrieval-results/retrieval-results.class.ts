@@ -117,6 +117,9 @@ function formatMetadataValue(value: unknown): string {
  * @csspart metadata-entry - One metadata key/value pair's wrapper.
  * @csspart load-more-row - The wrapper around the non-virtualized-mode pagination footer.
  * @csspart load-more - The "Load more" button itself (non-virtualized mode, `loading` false).
+ * @cssprop [--lr-retrieval-results-selected-border=var(--lr-color-brand)] - Inline-start border
+ *   color marking a selected `[part="row-body"]`. A border rather than a fill by design (see the
+ *   styles file), so recoloring it carries no contrast risk for the row's own text.
  */
 export class LyraRetrievalResults extends LyraElement<LyraRetrievalResultsEventMap> {
   static styles = [LyraElement.styles, styles];

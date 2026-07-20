@@ -28,8 +28,8 @@ export const styles = css`
   }
   [part='select-all'] [role='checkbox'][aria-checked='true'],
   [part='select-all'] [role='checkbox'][aria-checked='mixed'] {
-    background: var(--lr-color-brand-quiet);
-    border-color: var(--lr-color-brand);
+    background: var(--lr-source-picker-checked-bg, var(--lr-color-brand-quiet));
+    border-color: var(--lr-source-picker-checked-border, var(--lr-color-brand));
   }
   [part='summary'] {
     color: var(--lr-color-text-quiet);
@@ -60,12 +60,12 @@ export const styles = css`
     background: var(--lr-color-surface);
   }
   [part='checkbox'][data-state='true'] {
-    background: var(--lr-color-brand);
-    border-color: var(--lr-color-brand);
+    background: var(--lr-source-picker-checked-bg, var(--lr-color-brand));
+    border-color: var(--lr-source-picker-checked-border, var(--lr-color-brand));
   }
   [part='checkbox'][data-state='mixed'] {
-    background: color-mix(in srgb, var(--lr-color-brand) 50%, var(--lr-color-surface));
-    border-color: var(--lr-color-brand);
+    background: var(--lr-source-picker-mixed-bg, color-mix(in srgb, var(--lr-color-brand) 50%, var(--lr-color-surface)));
+    border-color: var(--lr-source-picker-checked-border, var(--lr-color-brand));
   }
   [part='label'] {
     min-inline-size: 0;

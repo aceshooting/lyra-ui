@@ -363,3 +363,45 @@ it('can shrink to a 320px allocation without overflowing its host box', async ()
   expect((el as HTMLElement).getBoundingClientRect().width).to.be.at.most(320);
   expect(flatRows(el).length).to.equal(3);
 });
+
+describe('selected-row cssprop escape hatch', () => {
+  function resolvedInShadow(el: LyraRetrievalResults, declaration: string, property: string): string {
+    const probe = document.createElement('span');
+    probe.setAttribute('style', declaration);
+    el.shadowRoot!.appendChild(probe);
+    const value = getComputedStyle(probe).getPropertyValue(property);
+    probe.remove();
+    return value;
+  }
+
+  // Default LTR fixture: the `[part='row-body']` selected indicator is a `border-inline-start-color`,
+  // which resolves to the physical left border here.
+  async function selected(style = ''): Promise<{ el: LyraRetrievalResults; rowBody: HTMLElement }> {
+    const wrapper = (await fixture(
+      html`<div style=${style}><lr-retrieval-results></lr-retrieval-results></div>`,
+    )) as HTMLElement;
+    const el = wrapper.querySelector('lr-retrieval-results') as LyraRetrievalResults;
+    el.chunks = chunks;
+    el.selectedIds = ['c1'];
+    await el.updateComplete;
+    const rowBody = el.shadowRoot!.querySelector('[part="row-body"][data-selected]') as HTMLElement;
+    return { el, rowBody };
+  }
+
+  it('recolors the selected-row indicator from an ancestor via --lr-retrieval-results-selected-border', async () => {
+    const { rowBody } = await selected('--lr-retrieval-results-selected-border: rgb(0, 51, 102)');
+    expect(getComputedStyle(rowBody).borderLeftColor).to.equal('rgb(0, 51, 102)');
+  });
+
+  it('renders byte-identical to the brand token when unset', async () => {
+    const { el, rowBody } = await selected();
+    expect(getComputedStyle(rowBody).borderLeftColor).to.equal(
+      resolvedInShadow(el, 'border-left-color: var(--lr-color-brand)', 'border-left-color'),
+    );
+  });
+
+  it('is accessible with the selected-row prop themed', async () => {
+    const { el } = await selected('--lr-retrieval-results-selected-border: rgb(0, 51, 102)');
+    await expect(el).to.be.accessible();
+  });
+});

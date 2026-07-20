@@ -2,6 +2,7 @@ import { html } from 'lit';
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import './source-picker.js';
 import type { LyraSourceEntry } from './source-picker.class.js';
+import { storyColor } from '../../../../../../.storybook/story-theme.js';
 
 const meta: Meta = {
   title: 'Source Picker',
@@ -40,4 +41,23 @@ export const Empty: Story = {
 
 export const Narrow: Story = {
   render: () => html`<div style="max-width: 320px;"><lr-source-picker .sources=${sources}></lr-source-picker></div>`,
+};
+
+export const ThemedCheckedState: Story = {
+  name: 'Themed checked/mixed state (cssprops)',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          '`--lr-source-picker-checked-bg`, `--lr-source-picker-checked-border` and `--lr-source-picker-mixed-bg` retint the selection controls without hijacking library-wide `--lr-color-brand`/`--lr-color-brand-quiet`. None is declared on `:host`, so a value set on any ancestor is never shadowed. The select-all pill carries its own label text in `--lr-color-text`, so keep 4.5:1 against whatever background you choose.',
+      },
+    },
+  },
+  render: () => html`
+    <lr-source-picker
+      style="--lr-source-picker-checked-bg: ${storyColor('warningQuiet')}; --lr-source-picker-checked-border: ${storyColor('warning')}; --lr-source-picker-mixed-bg: ${storyColor('successQuiet')};"
+      .sources=${sources}
+      .selectedIds=${['doc1']}
+    ></lr-source-picker>
+  `,
 };

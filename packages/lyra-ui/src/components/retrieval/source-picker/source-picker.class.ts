@@ -49,6 +49,14 @@ interface SourceRow {
  * @csspart label - The entry's label text.
  * @csspart empty - The empty state (`noData` when `sources` is empty, `noMatches` when a filter
  * empties the tree).
+ * @cssprop [--lr-source-picker-checked-bg] - Background of a fully-checked selection control:
+ *   the `select-all` pill (defaults to `var(--lr-color-brand-quiet)`) and a fully-selected entry's
+ *   `[part="checkbox"]` (defaults to `var(--lr-color-brand)`). The two keep their distinct resting
+ *   defaults; setting this prop unifies both.
+ * @cssprop [--lr-source-picker-checked-border=var(--lr-color-brand)] - Border color of every
+ *   checked or mixed selection control.
+ * @cssprop [--lr-source-picker-mixed-bg=color-mix(in srgb, var(--lr-color-brand) 50%, var(--lr-color-surface))] -
+ *   Background of a partially-selected entry's `[part="checkbox"]`.
  */
 export class LyraSourcePicker extends LyraElement<LyraSourcePickerEventMap> {
   static styles = [LyraElement.styles, styles];

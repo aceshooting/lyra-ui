@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
 import './document-preview.js';
+import { storyColor } from '../../../../../../.storybook/story-theme.js';
 
 const meta: Meta = {
   title: 'DocumentPreview',
@@ -205,5 +206,30 @@ export const Events: Story = {
       ></lr-document-preview>
       <p id="document-preview-log" style="font-family: monospace; margin-top: 0.5rem;">No event fired yet.</p>
     </div>
+  `,
+};
+
+export const ThemedActiveRegion: Story = {
+  name: 'Themed active region (cssprop)',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          '`--lr-document-preview-active-border` recolors only the region highlight matching `active-highlight-id` over an image-format preview; the resting highlights keep `--lr-color-brand`. Set it on the element or any ancestor — it is not declared on `:host`, so an ancestor value is never shadowed.',
+      },
+    },
+  },
+  render: () => html`
+    <lr-document-preview
+      style="--lr-document-preview-active-border: ${storyColor('success')};"
+      mime-type="image/png"
+      src="https://picsum.photos/id/1015/900/600"
+      filename="river.png"
+      .highlights=${[
+        { id: 'h1', anchor: { kind: 'region', rect: { x: 10, y: 15, width: 30, height: 30 } }, label: 'Active region' },
+        { id: 'h2', anchor: { kind: 'region', rect: { x: 55, y: 50, width: 25, height: 25 } }, label: 'Resting region' },
+      ]}
+      active-highlight-id="h1"
+    ></lr-document-preview>
   `,
 };

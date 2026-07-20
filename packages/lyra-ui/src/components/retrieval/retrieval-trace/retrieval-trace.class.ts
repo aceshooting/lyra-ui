@@ -120,6 +120,8 @@ export interface LyraRetrievalTraceEventMap {
  * @csspart evidence-metadata-row - One metadata entry's `<dt>`/`<dd>` pair wrapper, inside `evidence-metadata`.
  * @csspart evidence-metadata-key - One metadata entry's key (a `<dt>`).
  * @csspart evidence-metadata-value - One metadata entry's value (a `<dd>`).
+ * @cssprop [--lr-retrieval-trace-active-border=var(--lr-color-brand)] - Border color of the
+ *   `[part="evidence-row"]` whose stage matches `activeStageId`.
  */
 export class LyraRetrievalTrace extends LyraElement<LyraRetrievalTraceEventMap> {
   static styles = [LyraElement.styles, styles];

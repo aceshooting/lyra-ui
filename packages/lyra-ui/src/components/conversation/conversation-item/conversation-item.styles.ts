@@ -28,7 +28,7 @@ export const styles = css`
      active-and-hovered row keeps the stronger active tint instead of the
      two backgrounds visually competing. */
   :host([active]) [part='base'] {
-    background: var(--lr-color-brand-quiet);
+    background: var(--lr-conversation-item-active-bg, var(--lr-color-brand-quiet));
   }
 
   /* text-quiet's contrast ratio against brand-quiet lands at ~4.25:1 --
@@ -39,7 +39,7 @@ export const styles = css`
      [part='footer']; same fix, full-strength text color once active. */
   :host([active]) [part='excerpt'],
   :host([active]) [part='timestamp'] {
-    color: var(--lr-color-text);
+    color: var(--lr-conversation-item-active-color, var(--lr-color-text));
   }
 
   [part='option'] {

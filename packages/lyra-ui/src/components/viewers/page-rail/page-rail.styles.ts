@@ -33,7 +33,7 @@ export const styles = css`
     outline-offset: var(--lr-focus-ring-offset);
   }
   [part='page'][aria-current='true'] {
-    background: var(--lr-color-brand-quiet);
+    background: var(--lr-page-rail-current-bg, var(--lr-color-brand-quiet));
   }
   [part='thumbnail'] {
     position: relative;

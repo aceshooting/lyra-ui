@@ -530,3 +530,63 @@ it('is accessible while renaming', async () => {
   await el.updateComplete;
   await expect(el).to.be.accessible();
 });
+
+describe('active-state cssprop escape hatch', () => {
+  // Resolves what `declaration` computes to *inside this component's shadow root*, where the
+  // `--lr-*` design tokens are declared (a light-DOM probe would see none of them) -- used to
+  // assert the unset defaults byte-for-byte against the tokens they fall back to.
+  function resolvedInShadow(el: LyraConversationItem, declaration: string, property: string): string {
+    const probe = document.createElement('span');
+    probe.setAttribute('style', declaration);
+    el.shadowRoot!.appendChild(probe);
+    const value = getComputedStyle(probe).getPropertyValue(property);
+    probe.remove();
+    return value;
+  }
+
+  async function activeItem(style = ''): Promise<LyraConversationItem> {
+    const wrapper = (await fixture(html`
+      <div style=${style}>
+        <lr-conversation-item title="Session" excerpt="Last message" .timestamp=${new Date()} active></lr-conversation-item>
+      </div>
+    `)) as HTMLElement;
+    const el = wrapper.querySelector('lr-conversation-item') as LyraConversationItem;
+    await el.updateComplete;
+    return el;
+  }
+
+  it('recolors the active row background from an ancestor via --lr-conversation-item-active-bg', async () => {
+    const el = await activeItem('--lr-conversation-item-active-bg: rgb(0, 51, 102)');
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    expect(getComputedStyle(base).backgroundColor).to.equal('rgb(0, 51, 102)');
+  });
+
+  it('restores the active excerpt/timestamp text color from an ancestor via --lr-conversation-item-active-color', async () => {
+    const el = await activeItem('--lr-conversation-item-active-color: rgb(255, 255, 255)');
+    const excerpt = el.shadowRoot!.querySelector('[part="excerpt"]') as HTMLElement;
+    const timestamp = el.shadowRoot!.querySelector('[part="timestamp"]') as HTMLElement;
+    expect(getComputedStyle(excerpt).color).to.equal('rgb(255, 255, 255)');
+    expect(getComputedStyle(timestamp).color).to.equal('rgb(255, 255, 255)');
+  });
+
+  it('renders both props byte-identical to the pre-hatch tokens when unset', async () => {
+    const el = await activeItem();
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    const excerpt = el.shadowRoot!.querySelector('[part="excerpt"]') as HTMLElement;
+    expect(getComputedStyle(base).backgroundColor).to.equal(
+      resolvedInShadow(el, 'background: var(--lr-color-brand-quiet)', 'background-color'),
+    );
+    expect(getComputedStyle(excerpt).color).to.equal(resolvedInShadow(el, 'color: var(--lr-color-text)', 'color'));
+  });
+
+  // Themed with a LIGHT active background on purpose: `[part='title']` keeps `--lr-color-text`
+  // unconditionally (only excerpt/timestamp are restored by --lr-conversation-item-active-color), so
+  // the documented WCAG-AA dependency covers the title too -- a consumer darkening the background
+  // has to darken nothing and lighten nothing, or supply its own title color. See the styles file.
+  it('is accessible with the active-state props themed', async () => {
+    const el = await activeItem(
+      '--lr-conversation-item-active-bg: rgb(255, 243, 205); --lr-conversation-item-active-color: rgb(51, 25, 0)',
+    );
+    await expect(el).to.be.accessible();
+  });
+});

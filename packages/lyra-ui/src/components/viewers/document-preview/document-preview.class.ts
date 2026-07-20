@@ -171,6 +171,9 @@ export interface LyraDocumentPreviewEventMap {
  * @cssprop [--lr-document-preview-progress=0] - Unitless 0-100 completion of the determinate
  *   loading ring (multiplied by `1%` in its conic gradient). Written inline by the component from
  *   the clamped `progress` value, so it is a read-out rather than a consumer knob.
+ * @cssprop [--lr-document-preview-active-border=var(--lr-color-warning, var(--lr-color-brand))] -
+ *   Border color of the `[part="region-highlight"]` matching `activeHighlightId` (image format
+ *   only). Distinct from the resting highlight border.
  */
 export class LyraDocumentPreview extends LyraElement<LyraDocumentPreviewEventMap> {
   static styles = [LyraElement.styles, styles, srOnly];

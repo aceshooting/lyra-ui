@@ -39,7 +39,7 @@ export const styles = css`
     outline: var(--lr-border-width-thin) dashed var(--lr-color-warning);
   }
   [part='node'][data-active-match] {
-    outline: var(--lr-border-width-medium) solid var(--lr-color-warning);
+    outline: var(--lr-border-width-medium) solid var(--lr-xml-viewer-active-match-color, var(--lr-color-warning));
   }
   [part='tag'] {
     color: var(--lr-color-brand);

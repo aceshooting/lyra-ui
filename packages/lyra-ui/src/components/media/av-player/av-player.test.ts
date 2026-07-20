@@ -543,3 +543,91 @@ describe('render branches', () => {
     expect(audio!.getAttribute('src')).to.equal('');
   });
 });
+
+describe('active-state cssprop escape hatches', () => {
+  function resolvedIn(root: DocumentFragment | ShadowRoot, declaration: string, property: string): string {
+    const probe = document.createElement('span');
+    probe.setAttribute('style', declaration);
+    (root as ShadowRoot).appendChild(probe);
+    const value = getComputedStyle(probe).getPropertyValue(property);
+    probe.remove();
+    return value;
+  }
+  const cueRoot = (el: LyraAvPlayer): ShadowRoot => el.shadowRoot!.querySelector('lr-virtual-list')!.shadowRoot!;
+
+  async function withMarker(style = ''): Promise<{ el: LyraAvPlayer; marker: HTMLElement }> {
+    const wrapper = (await fixture(html`<div style=${style}>
+      <lr-av-player
+        src=${MP3_SRC}
+        .highlights=${[{ id: 'h1', anchor: { kind: 'time-range', start: 10, end: 20 } }]}
+        active-highlight-id="h1"
+      ></lr-av-player>
+    </div>`)) as HTMLElement;
+    const el = wrapper.querySelector('lr-av-player') as LyraAvPlayer;
+    const media = mediaEl(el);
+    Object.defineProperty(media, 'duration', { value: 100, configurable: true });
+    media.dispatchEvent(new Event('loadedmetadata'));
+    await el.updateComplete;
+    const marker = el.shadowRoot!.querySelector('[part="timeline-marker"][data-active]') as HTMLElement;
+    return { el, marker };
+  }
+
+  // The transcript `[part='cue']` rows are produced by this component's `renderCue` but rendered by
+  // `<lr-virtual-list>` INTO ITS OWN shadow root, so av-player's stylesheet never reaches them --
+  // `[part='cue'][aria-current='true']`/`[data-active-match]` are inert today and the rows fall back
+  // to the UA button appearance (a separate, pre-existing data-mode gap, neither introduced nor
+  // fixed here). Both cue hatches are therefore asserted on a real probe element rendered in exactly
+  // the shadow root and custom-property context a cue row occupies. `[part='timeline-marker']`
+  // renders directly in av-player's own shadow root, so it is asserted on the real element.
+  const CUE_BG_HATCH = 'background: var(--lr-av-player-cue-current-bg, var(--lr-color-brand-quiet))';
+  const CUE_MATCH_HATCH = 'outline: 1px solid var(--lr-av-player-cue-active-match-color, var(--lr-color-warning))';
+
+  async function withCues(style = ''): Promise<LyraAvPlayer> {
+    const wrapper = (await fixture(html`<div style=${style}><lr-av-player src=${MP3_SRC} .cues=${CUES}></lr-av-player></div>`)) as HTMLElement;
+    const el = wrapper.querySelector('lr-av-player') as LyraAvPlayer;
+    const media = mediaEl(el);
+    Object.defineProperty(media, 'currentTime', { value: 12, writable: true, configurable: true });
+    media.dispatchEvent(new Event('timeupdate')); // 12s lands inside cue c2 -> aria-current
+    await el.search('host'); // matches c1/c2, activeIndex 0 -> c1 carries data-active-match
+    await el.updateComplete;
+    expect(cueRoot(el).querySelector('[part="cue"][aria-current="true"]'), 'a cue is current').to.exist;
+    expect(cueRoot(el).querySelector('[part="cue"][data-active-match]'), 'a cue is the active match').to.exist;
+    return el;
+  }
+
+  it('--lr-av-player-marker-active-color recolors the active timeline-marker outline', async () => {
+    const { marker } = await withMarker('--lr-av-player-marker-active-color: rgb(0, 51, 102)');
+    expect(getComputedStyle(marker).outlineColor).to.equal('rgb(0, 51, 102)');
+  });
+
+  it('--lr-av-player-cue-current-bg resolves the current transcript cue background', async () => {
+    const el = await withCues('--lr-av-player-cue-current-bg: rgb(0, 51, 102)');
+    expect(resolvedIn(cueRoot(el), CUE_BG_HATCH, 'background-color')).to.equal('rgb(0, 51, 102)');
+  });
+
+  it('--lr-av-player-cue-active-match-color resolves the active search-match cue outline', async () => {
+    const el = await withCues('--lr-av-player-cue-active-match-color: rgb(0, 51, 102)');
+    expect(resolvedIn(cueRoot(el), CUE_MATCH_HATCH, 'outline-color')).to.equal('rgb(0, 51, 102)');
+  });
+
+  it('renders byte-identical to the pre-hatch tokens when unset', async () => {
+    const { el: elM, marker } = await withMarker();
+    expect(getComputedStyle(marker).outlineColor).to.equal(
+      resolvedIn(elM.shadowRoot!, 'outline: 1px solid var(--lr-color-brand)', 'outline-color'),
+    );
+    const el = await withCues();
+    expect(resolvedIn(cueRoot(el), CUE_BG_HATCH, 'background-color')).to.equal(
+      resolvedIn(cueRoot(el), 'background: var(--lr-color-brand-quiet)', 'background-color'),
+    );
+    expect(resolvedIn(cueRoot(el), CUE_MATCH_HATCH, 'outline-color')).to.equal(
+      resolvedIn(cueRoot(el), 'outline: 1px solid var(--lr-color-warning)', 'outline-color'),
+    );
+  });
+
+  it('is accessible with every active-state prop themed', async () => {
+    const el = await withCues(
+      '--lr-av-player-marker-active-color: rgb(0, 51, 102); --lr-av-player-cue-current-bg: rgb(0, 51, 102); --lr-av-player-cue-active-match-color: rgb(0, 34, 68)',
+    );
+    await expect(el).to.be.accessible();
+  });
+});

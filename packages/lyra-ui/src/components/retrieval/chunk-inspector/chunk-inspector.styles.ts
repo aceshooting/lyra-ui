@@ -12,7 +12,17 @@ export const styles = css`
     border-block-end: var(--lr-border-width-thin) solid var(--lr-color-border);
   }
   [part='chunk'][aria-current='true'] {
-    background: var(--lr-color-brand-quiet);
+    background: var(--lr-chunk-inspector-current-bg, var(--lr-color-brand-quiet));
+  }
+  /* text-quiet's contrast ratio against brand-quiet lands at ~4.24:1 -- just under the WCAG AA
+     4.5:1 floor for normal-size text -- even though it comfortably passes against the plain
+     (non-current) background used the rest of the time. Same class of bug already hit and fixed in
+     lr-attachment-chip's [part='size'], lr-chat-message's [part='footer'] and lr-conversation-item's
+     [part='excerpt']/[part='timestamp']; same fix, full-strength text color once current. Paired
+     with --lr-chunk-inspector-current-bg: a consumer that restyles one has to keep the ratio, so
+     both arms of the pair are overridable. */
+  [part='chunk'][aria-current='true'] [part='score'] {
+    color: var(--lr-chunk-inspector-current-color, var(--lr-color-text));
   }
   [part='score'] {
     display: flex;

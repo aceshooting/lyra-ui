@@ -202,3 +202,56 @@ describe('back-compat', () => {
     }
   });
 });
+
+describe('active-region cssprop escape hatch', () => {
+  function resolvedInShadow(el: LyraSvgViewer, declaration: string, property: string): string {
+    const probe = document.createElement('span');
+    probe.setAttribute('style', declaration);
+    el.shadowRoot!.appendChild(probe);
+    const value = getComputedStyle(probe).getPropertyValue(property);
+    probe.remove();
+    return value;
+  }
+
+  async function activeRegion(style = ''): Promise<{ el: LyraSvgViewer; region: HTMLElement; restore: () => void }> {
+    const wrapper = (await fixture(html`<div style=${style}><lr-svg-viewer></lr-svg-viewer></div>`)) as HTMLElement;
+    const el = wrapper.querySelector('lr-svg-viewer') as LyraSvgViewer;
+    const restore = fetchSvg('<svg xmlns="http://www.w3.org/2000/svg"><circle r="5"/></svg>');
+    el.src = 'https://example.test/icon.svg';
+    await waitUntil(() => el.shadowRoot!.querySelector('[part="svg"]') !== null);
+    el.highlights = [{ id: 'h1', anchor: { kind: 'region', rect: { x: 0, y: 0, width: 10, height: 10 } } }];
+    el.activeHighlightId = 'h1';
+    await el.updateComplete;
+    const region = el.shadowRoot!.querySelector('[part="region-highlight"][data-active]') as HTMLElement;
+    return { el, region, restore };
+  }
+
+  it('recolors the active region border from an ancestor via --lr-svg-viewer-active-border', async () => {
+    const { region, restore } = await activeRegion('--lr-svg-viewer-active-border: rgb(0, 51, 102)');
+    try {
+      expect(getComputedStyle(region).borderTopColor).to.equal('rgb(0, 51, 102)');
+    } finally {
+      restore();
+    }
+  });
+
+  it('renders byte-identical to the warning-token fallback chain when unset', async () => {
+    const { el, region, restore } = await activeRegion();
+    try {
+      expect(getComputedStyle(region).borderTopColor).to.equal(
+        resolvedInShadow(el, 'border-top-color: var(--lr-color-warning, var(--lr-color-brand))', 'border-top-color'),
+      );
+    } finally {
+      restore();
+    }
+  });
+
+  it('is accessible with the active-region prop themed', async () => {
+    const { el, restore } = await activeRegion('--lr-svg-viewer-active-border: rgb(0, 51, 102)');
+    try {
+      await expect(el).to.be.accessible();
+    } finally {
+      restore();
+    }
+  });
+});

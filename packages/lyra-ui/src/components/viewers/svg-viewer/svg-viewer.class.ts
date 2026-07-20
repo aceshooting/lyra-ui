@@ -42,6 +42,9 @@ export interface LyraSvgViewerEventMap {
  * @csspart highlight-layer - The wrapper around every rendered region highlight.
  * @csspart region-highlight - One region highlight (`data-tone`, `data-active`).
  * @cssprop [--lr-svg-viewer-max-height=none] - Maximum block size of the scrollable body before it scrolls internally. Also settable via the `max-height` property.
+ * @cssprop [--lr-svg-viewer-active-border=var(--lr-color-warning, var(--lr-color-brand))] - Border
+ *   color of the `[part="region-highlight"]` matching `activeHighlightId`. Distinct from the
+ *   resting highlight border, so the active region can be recolored without touching the rest.
  */
 export class LyraSvgViewer extends LyraElement<LyraSvgViewerEventMap> {
   static styles = [LyraElement.styles, styles, srOnly];

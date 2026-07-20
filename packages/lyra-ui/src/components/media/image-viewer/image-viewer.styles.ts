@@ -28,8 +28,8 @@ export const styles = css`
     cursor: pointer;
   }
   [part='annotate-toggle'][aria-pressed='true'] {
-    background: var(--lr-color-brand-quiet);
-    border-color: var(--lr-color-brand);
+    background: var(--lr-image-viewer-annotate-active-bg, var(--lr-color-brand-quiet));
+    border-color: var(--lr-image-viewer-annotate-active-border, var(--lr-color-brand));
   }
   [part='image-wrapper'] {
     position: relative;
@@ -89,7 +89,7 @@ export const styles = css`
   [part='highlight'][data-tone='neutral'] { border-color: var(--lr-color-border); background: color-mix(in srgb, var(--lr-color-text) 12%, transparent); }
   [part='highlight'][data-active] {
     border-width: var(--lr-border-width-thick);
-    outline: var(--lr-focus-ring-width) solid var(--lr-color-brand);
+    outline: var(--lr-focus-ring-width) solid var(--lr-image-viewer-highlight-active-color, var(--lr-color-brand));
     outline-offset: var(--lr-focus-ring-offset);
   }
   [part='highlight']:focus-visible {

@@ -894,3 +894,43 @@ describe('back-compat (image format)', () => {
     expect(el.shadowRoot!.querySelector('lr-zoomable-frame')).to.not.exist;
   });
 });
+
+describe('active-region cssprop escape hatch', () => {
+  function resolvedInShadow(el: LyraDocumentPreview, declaration: string, property: string): string {
+    const probe = document.createElement('span');
+    probe.setAttribute('style', declaration);
+    el.shadowRoot!.appendChild(probe);
+    const value = getComputedStyle(probe).getPropertyValue(property);
+    probe.remove();
+    return value;
+  }
+
+  async function activeRegion(style = ''): Promise<{ el: LyraDocumentPreview; region: HTMLElement }> {
+    const wrapper = (await fixture(html`<div style=${style}>
+      <lr-document-preview mime-type="image/png" src="https://example.test/photo.png"></lr-document-preview>
+    </div>`)) as HTMLElement;
+    const el = wrapper.querySelector('lr-document-preview') as LyraDocumentPreview;
+    el.highlights = [{ id: 'h1', anchor: { kind: 'region', rect: { x: 0, y: 0, width: 20, height: 20 } } }];
+    el.activeHighlightId = 'h1';
+    await el.updateComplete;
+    const region = el.shadowRoot!.querySelector('[part="region-highlight"][data-active]') as HTMLElement;
+    return { el, region };
+  }
+
+  it('recolors the active region border from an ancestor via --lr-document-preview-active-border', async () => {
+    const { region } = await activeRegion('--lr-document-preview-active-border: rgb(0, 51, 102)');
+    expect(getComputedStyle(region).borderTopColor).to.equal('rgb(0, 51, 102)');
+  });
+
+  it('renders byte-identical to the warning-token fallback chain when unset', async () => {
+    const { el, region } = await activeRegion();
+    expect(getComputedStyle(region).borderTopColor).to.equal(
+      resolvedInShadow(el, 'border-top-color: var(--lr-color-warning, var(--lr-color-brand))', 'border-top-color'),
+    );
+  });
+
+  it('is accessible with the active-region prop themed', async () => {
+    const { el } = await activeRegion('--lr-document-preview-active-border: rgb(0, 51, 102)');
+    await expect(el).to.be.accessible();
+  });
+});

@@ -92,6 +92,9 @@ export interface LyraPushToTalkEventMap {
  * @csspart status - Visible status text for the `requesting`/`denied`/`error`/unsupported states.
  * @cssprop [--lr-push-to-talk-size=var(--lr-size-3rem)] - Inline and block size of the circular
  *   `trigger` button.
+ * @cssprop [--lr-push-to-talk-recording-color=var(--lr-color-danger)] - Border and text color of
+ *   `[part="trigger"]` while `state` is `recording`. Recolors only the recording treatment, leaving
+ *   every other danger-toned surface on the page untouched.
  */
 export class LyraPushToTalk extends LyraElement<LyraPushToTalkEventMap> {
   static styles = [LyraElement.styles, styles];

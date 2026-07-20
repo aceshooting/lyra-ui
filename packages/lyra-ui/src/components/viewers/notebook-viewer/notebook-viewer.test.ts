@@ -526,3 +526,52 @@ describe('accessibility', () => {
     await expect(el).to.be.accessible();
   });
 });
+
+describe('active-cell cssprop escape hatch', () => {
+  // `[part='cell']` is produced by this component's `renderCell` but rendered by `<lr-virtual-list>`
+  // INTO ITS OWN shadow root, so notebook-viewer's stylesheet never reaches it and
+  // `[part='cell'][data-active]` is inert today (a separate, pre-existing data-mode gap -- neither
+  // introduced nor fixed here). The hatch is therefore asserted on a real probe element rendered in
+  // exactly the shadow root and custom-property context the cell occupies, carrying the declaration
+  // the rule ships: an ancestor override must win, and an unset consumer must still get the token.
+  function resolveDeclaration(vlistRoot: ShadowRoot, declaration: string, property: string): string {
+    const probe = document.createElement('span');
+    probe.setAttribute('style', declaration);
+    vlistRoot.appendChild(probe);
+    const value = getComputedStyle(probe).getPropertyValue(property);
+    probe.remove();
+    return value;
+  }
+  const HATCH = 'background: var(--lr-notebook-viewer-active-bg, var(--lr-color-brand-quiet))';
+
+  async function activeCell(style = ''): Promise<{ el: LyraNotebookViewer; vlistRoot: ShadowRoot }> {
+    const wrapper = (await fixture(
+      html`<div style=${style}><lr-notebook-viewer .notebook=${NOTEBOOK}></lr-notebook-viewer></div>`,
+    )) as HTMLElement;
+    const el = wrapper.querySelector('lr-notebook-viewer') as LyraNotebookViewer;
+    await waitUntil(() => (el.shadowRoot!.querySelector('lr-virtual-list')?.shadowRoot?.querySelectorAll('[part="cell"]').length ?? 0) > 0);
+    // Public anchor API is the supported way to mark a cell active (drives `data-active`).
+    await el.scrollToAnchor({ kind: 'node-path', path: [0] });
+    await el.updateComplete;
+    const vlistRoot = rowRoot(el);
+    expect(vlistRoot.querySelector('[part="cell"][data-active]'), 'a cell is marked active').to.exist;
+    return { el, vlistRoot };
+  }
+
+  it('resolves the active-cell background to an ancestor --lr-notebook-viewer-active-bg', async () => {
+    const { vlistRoot } = await activeCell('--lr-notebook-viewer-active-bg: rgb(0, 51, 102)');
+    expect(resolveDeclaration(vlistRoot, HATCH, 'background-color')).to.equal('rgb(0, 51, 102)');
+  });
+
+  it('resolves byte-identical to the brand-quiet token when unset', async () => {
+    const { vlistRoot } = await activeCell();
+    expect(resolveDeclaration(vlistRoot, HATCH, 'background-color')).to.equal(
+      resolveDeclaration(vlistRoot, 'background: var(--lr-color-brand-quiet)', 'background-color'),
+    );
+  });
+
+  it('is accessible in the active-cell state with the prop themed', async () => {
+    const { el } = await activeCell('--lr-notebook-viewer-active-bg: rgb(0, 51, 102)');
+    await expect(el).to.be.accessible();
+  });
+});

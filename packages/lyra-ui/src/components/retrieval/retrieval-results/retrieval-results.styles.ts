@@ -43,7 +43,7 @@ export const styles = css`
     padding-inline-start: var(--lr-space-xs);
   }
   [part='row-body'][data-selected] {
-    border-inline-start-color: var(--lr-color-brand);
+    border-inline-start-color: var(--lr-retrieval-results-selected-border, var(--lr-color-brand));
   }
   [part='metadata'] {
     display: flex;

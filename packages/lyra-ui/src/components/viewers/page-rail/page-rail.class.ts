@@ -44,6 +44,8 @@ type ThumbnailState = 'pending' | 'ready' | 'unavailable';
  * @csspart heat - The heat-marker cluster.
  * @csspart heat-dot - One tone-colored heat marker (or the `+n` overflow marker).
  * @cssprop [--lr-page-rail-height=var(--lr-size-24rem)] - Block size of the virtualized rail.
+ * @cssprop [--lr-page-rail-current-bg=var(--lr-color-brand-quiet)] - Background of the
+ *   `[part="page"]` button for the current `page`.
  */
 export class LyraPageRail extends LyraElement<LyraPageRailEventMap> {
   static styles = [LyraElement.styles, styles];

@@ -120,6 +120,13 @@ class LyraAvPlayerBase extends LyraElement<LyraAvPlayerEventMap> {}
  * @csspart error - The error region.
  * @cssprop [--lr-av-player-transcript-height=var(--lr-size-16rem)] - Block size of the
  *   virtualized transcript list.
+ * @cssprop [--lr-av-player-marker-active-color=var(--lr-color-brand)] - Outline color of the
+ *   `[part="timeline-marker"]` matching `activeHighlightId`.
+ * @cssprop [--lr-av-player-cue-current-bg=var(--lr-color-brand-quiet)] - Background of the
+ *   `[part="cue"]` the playhead is currently inside.
+ * @cssprop [--lr-av-player-cue-active-match-color=var(--lr-color-warning)] - Outline color of the
+ *   `[part="cue"]` holding the current search match, leaving the other matches' dashed outline on
+ *   the shared warning token.
  */
 export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
   static styles = [LyraElement.styles, styles, srOnly];

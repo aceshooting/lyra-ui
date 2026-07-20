@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
 import './svg-viewer.js';
+import { storyColor } from '../../../../../../.storybook/story-theme.js';
 
 const meta: Meta = { title: 'DocumentViewer/SvgViewer', component: 'lr-svg-viewer', tags: ['autodocs'] };
 export default meta;
@@ -11,3 +12,27 @@ const src = `data:image/svg+xml,${encodeURIComponent(source)}`;
 
 export const Default: Story = { render: () => html`<lr-svg-viewer src=${src} name="Example illustration"></lr-svg-viewer>` };
 export const Empty: Story = { render: () => html`<lr-svg-viewer></lr-svg-viewer>` };
+
+export const ThemedActiveRegion: Story = {
+  name: 'Themed active region (cssprop)',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          '`--lr-svg-viewer-active-border` recolors only the region highlight matching `active-highlight-id`; the resting highlights keep `--lr-color-brand`. Set it on the element or any ancestor — it is not declared on `:host`, so an ancestor value is never shadowed. Previously the active border resolved straight through library-wide `--lr-color-warning`.',
+      },
+    },
+  },
+  render: () => html`
+    <lr-svg-viewer
+      style="--lr-svg-viewer-active-border: ${storyColor('success')};"
+      src=${src}
+      name="Example illustration"
+      .highlights=${[
+        { id: 'h1', anchor: { kind: 'region', rect: { x: 8, y: 20, width: 30, height: 55 } }, label: 'Active region' },
+        { id: 'h2', anchor: { kind: 'region', rect: { x: 52, y: 25, width: 34, height: 22 } }, label: 'Resting region' },
+      ]}
+      active-highlight-id="h1"
+    ></lr-svg-viewer>
+  `,
+};

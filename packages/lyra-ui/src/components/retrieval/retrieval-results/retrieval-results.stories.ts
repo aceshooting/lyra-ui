@@ -2,6 +2,7 @@ import { html } from 'lit';
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import './retrieval-results.js';
 import type { RetrievalChunk } from '../../../ai/types.js';
+import { storyColor } from '../../../../../../.storybook/story-theme.js';
 
 const meta: Meta = {
   title: 'Retrieval Results',
@@ -80,4 +81,23 @@ export const Empty: Story = {
 
 export const Narrow: Story = {
   render: () => html`<div style="max-width: 320px;"><lr-retrieval-results .chunks=${chunks}></lr-retrieval-results></div>`,
+};
+
+export const ThemedSelectedRow: Story = {
+  name: 'Themed selected row (cssprop)',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          '`--lr-retrieval-results-selected-border` recolors the inline-start marker on a selected row without hijacking library-wide `--lr-color-brand`. Set it on the element or any ancestor — it is not declared on `:host`, so an ancestor value is never shadowed. Selection is marked with a border rather than a fill by design, so recoloring it can never push the row’s own text below its contrast floor.',
+      },
+    },
+  },
+  render: () => html`
+    <lr-retrieval-results
+      style="--lr-retrieval-results-selected-border: ${storyColor('warning')};"
+      .chunks=${chunks}
+      .selectedIds=${['c1']}
+    ></lr-retrieval-results>
+  `,
 };

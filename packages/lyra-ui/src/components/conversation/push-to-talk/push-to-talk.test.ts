@@ -608,3 +608,46 @@ it('a host-level aria-label overrides the computed trigger label', async () => {
   )) as LyraPushToTalk;
   expect(trigger(el).getAttribute('aria-label')).to.equal('Talk to the assistant');
 });
+
+describe('recording-state cssprop escape hatch', () => {
+  function resolvedInShadow(el: LyraPushToTalk, declaration: string, property: string): string {
+    const probe = document.createElement('span');
+    probe.setAttribute('style', declaration);
+    el.shadowRoot!.appendChild(probe);
+    const value = getComputedStyle(probe).getPropertyValue(property);
+    probe.remove();
+    return value;
+  }
+
+  // The recording tint keys purely on the `data-state` attribute, so setting it directly is enough
+  // to activate the `[part='trigger']` treatment under test (the internal lifecycle sets the same
+  // attribute when a real take begins).
+  async function recording(style = ''): Promise<LyraPushToTalk> {
+    const wrapper = (await fixture(html`
+      <div style=${style}><lr-push-to-talk data-state="recording"></lr-push-to-talk></div>
+    `)) as HTMLElement;
+    const el = wrapper.querySelector('lr-push-to-talk') as LyraPushToTalk;
+    await el.updateComplete;
+    return el;
+  }
+
+  it('recolors the recording trigger border+text from an ancestor via --lr-push-to-talk-recording-color', async () => {
+    const el = await recording('--lr-push-to-talk-recording-color: rgb(0, 51, 102)');
+    const t = trigger(el);
+    expect(getComputedStyle(t).borderTopColor).to.equal('rgb(0, 51, 102)');
+    expect(getComputedStyle(t).color).to.equal('rgb(0, 51, 102)');
+  });
+
+  it('renders byte-identical to the danger token when unset', async () => {
+    const el = await recording();
+    const t = trigger(el);
+    const danger = resolvedInShadow(el, 'color: var(--lr-color-danger)', 'color');
+    expect(getComputedStyle(t).borderTopColor).to.equal(danger);
+    expect(getComputedStyle(t).color).to.equal(danger);
+  });
+
+  it('is accessible with the recording-state prop themed', async () => {
+    const el = await recording('--lr-push-to-talk-recording-color: rgb(0, 51, 102)');
+    await expect(el).to.be.accessible();
+  });
+});

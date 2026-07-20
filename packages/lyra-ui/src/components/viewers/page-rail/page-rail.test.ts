@@ -235,3 +235,51 @@ describe('lr-page-rail', () => {
     expect(list.activeId).to.equal(1);
   });
 });
+
+describe('current-page cssprop escape hatch', () => {
+  // The `[part='page']` buttons are produced by this component's `renderItem` but are rendered by
+  // `<lr-virtual-list>` INTO ITS OWN shadow root, so page-rail's stylesheet cannot reach them at all
+  // -- `[part='page'][aria-current='true']` is inert today, and the button falls back to the UA
+  // button appearance (a separate, pre-existing data-mode gap, the same class as the one tracked for
+  // thread-list/conversation-item; NOT introduced or fixed here).
+  //
+  // The hatch itself is therefore verified where it is observable: a real probe element rendered in
+  // the very shadow root and custom-property context the page button lives in, carrying the exact
+  // declaration the rule ships. That proves both arms of the `var()` chain -- an ancestor override
+  // wins, and an unset consumer still resolves the original token.
+  function resolveDeclaration(vlistRoot: ShadowRoot, declaration: string, property: string): string {
+    const probe = document.createElement('span');
+    probe.setAttribute('style', declaration);
+    vlistRoot.appendChild(probe);
+    const value = getComputedStyle(probe).getPropertyValue(property);
+    probe.remove();
+    return value;
+  }
+  const HATCH = 'background: var(--lr-page-rail-current-bg, var(--lr-color-brand-quiet))';
+
+  async function currentPage(style = ''): Promise<{ el: LyraPageRail; vlistRoot: ShadowRoot }> {
+    const wrapper = (await fixture(html`<div style=${style}><lr-page-rail page-count="3"></lr-page-rail></div>`)) as HTMLElement;
+    const el = wrapper.querySelector('lr-page-rail') as LyraPageRail;
+    await waitUntil(
+      () => el.shadowRoot!.querySelector('lr-virtual-list')?.shadowRoot?.querySelector('[part="page"][aria-current="true"]') != null,
+    );
+    return { el, vlistRoot: el.shadowRoot!.querySelector('lr-virtual-list')!.shadowRoot! };
+  }
+
+  it('resolves the current-page background to an ancestor --lr-page-rail-current-bg', async () => {
+    const { vlistRoot } = await currentPage('--lr-page-rail-current-bg: rgb(0, 51, 102)');
+    expect(resolveDeclaration(vlistRoot, HATCH, 'background-color')).to.equal('rgb(0, 51, 102)');
+  });
+
+  it('resolves byte-identical to the brand-quiet token when unset', async () => {
+    const { vlistRoot } = await currentPage();
+    expect(resolveDeclaration(vlistRoot, HATCH, 'background-color')).to.equal(
+      resolveDeclaration(vlistRoot, 'background: var(--lr-color-brand-quiet)', 'background-color'),
+    );
+  });
+
+  it('is accessible in the current-page state with the prop themed', async () => {
+    const { el } = await currentPage('--lr-page-rail-current-bg: rgb(0, 51, 102)');
+    await expect(el).to.be.accessible();
+  });
+});

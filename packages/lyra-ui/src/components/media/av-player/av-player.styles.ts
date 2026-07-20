@@ -58,7 +58,7 @@ export const styles = css`
   [part='timeline-marker'][data-tone='danger'] { background: color-mix(in srgb, var(--lr-color-danger) 35%, transparent); }
   [part='timeline-marker'][data-tone='neutral'] { background: color-mix(in srgb, var(--lr-color-text) 25%, transparent); }
   [part='timeline-marker'][data-active] {
-    outline: var(--lr-border-width-medium) solid var(--lr-color-brand);
+    outline: var(--lr-border-width-medium) solid var(--lr-av-player-marker-active-color, var(--lr-color-brand));
     outline-offset: calc(-1 * var(--lr-border-width-medium));
   }
   [part='timeline-marker']:focus-visible {
@@ -80,13 +80,13 @@ export const styles = css`
     font: inherit;
   }
   [part='cue'][aria-current='true'] {
-    background: var(--lr-color-brand-quiet);
+    background: var(--lr-av-player-cue-current-bg, var(--lr-color-brand-quiet));
   }
   [part='cue'][data-match] {
     outline: var(--lr-border-width-thin) dashed var(--lr-color-warning);
   }
   [part='cue'][data-active-match] {
-    outline: var(--lr-border-width-medium) solid var(--lr-color-warning);
+    outline: var(--lr-border-width-medium) solid var(--lr-av-player-cue-active-match-color, var(--lr-color-warning));
   }
   [part='cue']:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);

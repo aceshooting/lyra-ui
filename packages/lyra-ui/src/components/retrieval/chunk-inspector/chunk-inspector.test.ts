@@ -120,3 +120,64 @@ it('is accessible with mixed-tier chunks', async () => {
   await el.updateComplete;
   await expect(el).to.be.accessible();
 });
+
+describe('current-chunk cssprop escape hatch', () => {
+  function resolvedInShadow(el: LyraChunkInspector, declaration: string, property: string): string {
+    const probe = document.createElement('span');
+    probe.setAttribute('style', declaration);
+    el.shadowRoot!.appendChild(probe);
+    const value = getComputedStyle(probe).getPropertyValue(property);
+    probe.remove();
+    return value;
+  }
+
+  async function current(style = ''): Promise<{ el: LyraChunkInspector; chunk: HTMLElement }> {
+    const wrapper = (await fixture(
+      html`<div style=${style}><lr-chunk-inspector active-id="c1"></lr-chunk-inspector></div>`,
+    )) as HTMLElement;
+    const el = wrapper.querySelector('lr-chunk-inspector') as LyraChunkInspector;
+    el.chunks = chunks;
+    await el.updateComplete;
+    const chunk = el.shadowRoot!.querySelector('[part="chunk"][aria-current="true"]') as HTMLElement;
+    return { el, chunk };
+  }
+
+  it('recolors the current chunk background from an ancestor via --lr-chunk-inspector-current-bg', async () => {
+    const { chunk } = await current('--lr-chunk-inspector-current-bg: rgb(0, 51, 102)');
+    expect(getComputedStyle(chunk).backgroundColor).to.equal('rgb(0, 51, 102)');
+  });
+
+  it('restores the current chunk score color from an ancestor via --lr-chunk-inspector-current-color', async () => {
+    const { chunk } = await current('--lr-chunk-inspector-current-color: rgb(51, 25, 0)');
+    const score = chunk.querySelector('[part="score"]') as HTMLElement;
+    expect(getComputedStyle(score).color).to.equal('rgb(51, 25, 0)');
+  });
+
+  it('renders byte-identical to the brand-quiet token when unset', async () => {
+    const { el, chunk } = await current();
+    expect(getComputedStyle(chunk).backgroundColor).to.equal(
+      resolvedInShadow(el, 'background: var(--lr-color-brand-quiet)', 'background-color'),
+    );
+  });
+
+  // The current chunk's score line is deliberately NOT text-quiet: that token only reaches 4.24:1
+  // against brand-quiet, under the WCAG AA floor. A non-current chunk keeps the quiet treatment.
+  it('lifts the current chunk score to full-strength text, leaving non-current rows quiet', async () => {
+    const { el, chunk } = await current();
+    const currentScore = chunk.querySelector('[part="score"]') as HTMLElement;
+    expect(getComputedStyle(currentScore).color).to.equal(resolvedInShadow(el, 'color: var(--lr-color-text)', 'color'));
+    const otherScore = el.shadowRoot!.querySelector('[part="chunk"]:not([aria-current]) [part="score"]') as HTMLElement;
+    expect(getComputedStyle(otherScore).color).to.equal(
+      resolvedInShadow(el, 'color: var(--lr-color-text-quiet)', 'color'),
+    );
+  });
+
+  // Axe runs against the DEFAULT current-chunk rendering: the chunk's own title/score/text keep the
+  // library text tokens, so contrast is only guaranteed against the brand-quiet default this hatch
+  // falls back to. Picking the override color is the consumer's contrast responsibility, exactly as
+  // for any other bg-only cssprop.
+  it('is accessible in the current-chunk state', async () => {
+    const { el } = await current();
+    await expect(el).to.be.accessible();
+  });
+});

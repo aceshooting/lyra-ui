@@ -24,7 +24,7 @@ export const styles = css`
     border-block-end: var(--lr-border-width-thin) solid var(--lr-color-border);
   }
   [part='cell'][data-active] {
-    background: var(--lr-color-brand-quiet);
+    background: var(--lr-notebook-viewer-active-bg, var(--lr-color-brand-quiet));
   }
   [part='cell-gutter'] {
     min-inline-size: var(--lr-size-4rem);

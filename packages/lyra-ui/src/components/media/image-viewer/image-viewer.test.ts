@@ -463,3 +463,78 @@ describe('localization', () => {
     expect(el.shadowRoot!.querySelector('[part="rotate-button"]')!.getAttribute('aria-label')).to.equal('Pivoter');
   });
 });
+
+describe('active-state cssprop escape hatches', () => {
+  function resolvedInShadow(el: LyraImageViewer, declaration: string, property: string): string {
+    const probe = document.createElement('span');
+    probe.setAttribute('style', declaration);
+    el.shadowRoot!.appendChild(probe);
+    const value = getComputedStyle(probe).getPropertyValue(property);
+    probe.remove();
+    return value;
+  }
+
+  // A real 1x1 PNG rather than the file's https PNG_SRC placeholder: that URL never resolves, so its
+  // `<img>` eventually fires `error`, and `renderBody()` then replaces the whole frame (highlight
+  // layer included) with `[part='error']`. A data URI actually loads, keeping the highlight boxes
+  // present deterministically instead of racing the network failure.
+  const LOADABLE_PNG =
+    'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=';
+
+  async function withAnnotateActive(style = ''): Promise<{ el: LyraImageViewer; toggle: HTMLElement }> {
+    const wrapper = (await fixture(html`<div style=${style}><lr-image-viewer annotatable src=${LOADABLE_PNG}></lr-image-viewer></div>`)) as HTMLElement;
+    const el = wrapper.querySelector('lr-image-viewer') as LyraImageViewer;
+    await el.updateComplete;
+    const toggle = el.shadowRoot!.querySelector('[part="annotate-toggle"][aria-pressed="true"]') as HTMLElement;
+    expect(toggle, 'the annotate toggle renders pressed').to.exist;
+    return { el, toggle };
+  }
+
+  async function withActiveHighlight(style = ''): Promise<{ el: LyraImageViewer; box: HTMLElement }> {
+    const regions: LyraHighlight[] = [{ id: 'h1', anchor: { kind: 'region', rect: { x: 10, y: 10, width: 20, height: 15 } } }];
+    const wrapper = (await fixture(html`<div style=${style}>
+      <lr-image-viewer src=${LOADABLE_PNG} .highlights=${regions} active-highlight-id="h1"></lr-image-viewer>
+    </div>`)) as HTMLElement;
+    const el = wrapper.querySelector('lr-image-viewer') as LyraImageViewer;
+    await el.updateComplete;
+    const box = el.shadowRoot!.querySelector('[part="highlight"][data-active]') as HTMLElement;
+    expect(box, 'the active highlight box renders').to.exist;
+    return { el, box };
+  }
+
+  it('--lr-image-viewer-annotate-active-bg recolors the pressed annotate-toggle background', async () => {
+    const { toggle } = await withAnnotateActive('--lr-image-viewer-annotate-active-bg: rgb(0, 51, 102)');
+    expect(getComputedStyle(toggle).backgroundColor).to.equal('rgb(0, 51, 102)');
+  });
+
+  it('--lr-image-viewer-annotate-active-border recolors the pressed annotate-toggle border', async () => {
+    const { toggle } = await withAnnotateActive('--lr-image-viewer-annotate-active-border: rgb(0, 51, 102)');
+    expect(getComputedStyle(toggle).borderTopColor).to.equal('rgb(0, 51, 102)');
+  });
+
+  it('--lr-image-viewer-highlight-active-color recolors the active highlight outline', async () => {
+    const { box } = await withActiveHighlight('--lr-image-viewer-highlight-active-color: rgb(0, 51, 102)');
+    expect(getComputedStyle(box).outlineColor).to.equal('rgb(0, 51, 102)');
+  });
+
+  it('renders byte-identical to the pre-hatch tokens when unset', async () => {
+    const { el: elA, toggle } = await withAnnotateActive();
+    expect(getComputedStyle(toggle).backgroundColor).to.equal(
+      resolvedInShadow(elA, 'background: var(--lr-color-brand-quiet)', 'background-color'),
+    );
+    expect(getComputedStyle(toggle).borderTopColor).to.equal(
+      resolvedInShadow(elA, 'border-top-color: var(--lr-color-brand)', 'border-top-color'),
+    );
+    const { el: elH, box } = await withActiveHighlight();
+    expect(getComputedStyle(box).outlineColor).to.equal(
+      resolvedInShadow(elH, 'outline: 1px solid var(--lr-color-brand)', 'outline-color'),
+    );
+  });
+
+  it('is accessible with every active-state prop themed', async () => {
+    const { el } = await withActiveHighlight(
+      '--lr-image-viewer-annotate-active-bg: rgb(0, 51, 102); --lr-image-viewer-annotate-active-border: rgb(0, 34, 68); --lr-image-viewer-highlight-active-color: rgb(0, 51, 102)',
+    );
+    await expect(el).to.be.accessible();
+  });
+});

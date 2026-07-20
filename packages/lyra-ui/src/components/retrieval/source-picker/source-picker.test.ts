@@ -366,3 +366,79 @@ it('keyboard: a non-activation key on the select-all checkbox is a no-op', async
   expect(fired).to.be.false;
   expect(tab.defaultPrevented).to.be.false;
 });
+
+describe('checked-state cssprop escape hatch', () => {
+  function resolvedInShadow(el: LyraSourcePicker, declaration: string, property: string): string {
+    const probe = document.createElement('span');
+    probe.setAttribute('style', declaration);
+    el.shadowRoot!.appendChild(probe);
+    const value = getComputedStyle(probe).getPropertyValue(property);
+    probe.remove();
+    return value;
+  }
+
+  async function picker(selectedIds: string[], style = ''): Promise<LyraSourcePicker> {
+    const wrapper = (await fixture(html`<div style=${style}><lr-source-picker></lr-source-picker></div>`)) as HTMLElement;
+    const el = wrapper.querySelector('lr-source-picker') as LyraSourcePicker;
+    el.sources = sources;
+    el.selectedIds = selectedIds;
+    await el.updateComplete;
+    return el;
+  }
+  const selectAllBox = (el: LyraSourcePicker) =>
+    el.shadowRoot!.querySelector('[part="select-all"] [role="checkbox"]') as HTMLElement;
+  const folderCheckbox = (el: LyraSourcePicker) =>
+    el.shadowRoot!.querySelector('[role="treeitem"] [part="checkbox"]') as HTMLElement;
+
+  it('--lr-source-picker-checked-bg recolors both the checked select-all pill and a fully-selected folder box', async () => {
+    const el = await picker(['doc1', 'doc2', 'doc3'], '--lr-source-picker-checked-bg: rgb(0, 51, 102)');
+    expect(selectAllBox(el).getAttribute('aria-checked')).to.equal('true');
+    expect(getComputedStyle(selectAllBox(el)).backgroundColor).to.equal('rgb(0, 51, 102)');
+    expect(folderCheckbox(el).getAttribute('data-state')).to.equal('true');
+    expect(getComputedStyle(folderCheckbox(el)).backgroundColor).to.equal('rgb(0, 51, 102)');
+  });
+
+  it('--lr-source-picker-checked-border recolors the checked border', async () => {
+    const el = await picker(['doc1', 'doc2', 'doc3'], '--lr-source-picker-checked-border: rgb(0, 51, 102)');
+    expect(getComputedStyle(selectAllBox(el)).borderTopColor).to.equal('rgb(0, 51, 102)');
+    expect(getComputedStyle(folderCheckbox(el)).borderTopColor).to.equal('rgb(0, 51, 102)');
+  });
+
+  it('--lr-source-picker-mixed-bg recolors a partially-selected folder box', async () => {
+    const el = await picker(['doc1'], '--lr-source-picker-mixed-bg: rgb(0, 51, 102)');
+    expect(folderCheckbox(el).getAttribute('data-state')).to.equal('mixed');
+    expect(getComputedStyle(folderCheckbox(el)).backgroundColor).to.equal('rgb(0, 51, 102)');
+  });
+
+  it('renders byte-identical to the pre-hatch tokens when unset', async () => {
+    const allSel = await picker(['doc1', 'doc2', 'doc3']);
+    expect(getComputedStyle(selectAllBox(allSel)).backgroundColor).to.equal(
+      resolvedInShadow(allSel, 'background: var(--lr-color-brand-quiet)', 'background-color'),
+    );
+    expect(getComputedStyle(selectAllBox(allSel)).borderTopColor).to.equal(
+      resolvedInShadow(allSel, 'border-top-color: var(--lr-color-brand)', 'border-top-color'),
+    );
+    expect(getComputedStyle(folderCheckbox(allSel)).backgroundColor).to.equal(
+      resolvedInShadow(allSel, 'background: var(--lr-color-brand)', 'background-color'),
+    );
+    const mixed = await picker(['doc1']);
+    expect(getComputedStyle(folderCheckbox(mixed)).backgroundColor).to.equal(
+      resolvedInShadow(
+        mixed,
+        'background: color-mix(in srgb, var(--lr-color-brand) 50%, var(--lr-color-surface))',
+        'background-color',
+      ),
+    );
+  });
+
+  // A LIGHT checked background on purpose: the select-all pill carries its own label text in
+  // `--lr-color-text`, which this hatch deliberately does not restyle, so the contrast floor there
+  // is the consumer's to keep -- the same tradeoff every bg-only cssprop in the library carries.
+  it('is accessible with the checked-state props themed', async () => {
+    const el = await picker(
+      ['doc1', 'doc2', 'doc3'],
+      '--lr-source-picker-checked-bg: rgb(255, 243, 205); --lr-source-picker-checked-border: rgb(120, 80, 0)',
+    );
+    await expect(el).to.be.accessible();
+  });
+});

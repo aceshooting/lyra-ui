@@ -185,3 +185,41 @@ describe('accessibility', () => {
     await expect(el).to.be.accessible();
   });
 });
+
+describe('active-match cssprop escape hatch', () => {
+  function resolvedInShadow(el: LyraXmlViewer, declaration: string, property: string): string {
+    const probe = document.createElement('span');
+    probe.setAttribute('style', declaration);
+    el.shadowRoot!.appendChild(probe);
+    const value = getComputedStyle(probe).getPropertyValue(property);
+    probe.remove();
+    return value;
+  }
+
+  async function activeMatch(style = ''): Promise<{ el: LyraXmlViewer; node: HTMLElement }> {
+    const wrapper = (await fixture(html`<div style=${style}><lr-xml-viewer .xml=${SIMPLE_XML}></lr-xml-viewer></div>`)) as HTMLElement;
+    const el = wrapper.querySelector('lr-xml-viewer') as LyraXmlViewer;
+    await el.updateComplete;
+    await el.search('item'); // activeSearchIndex starts at 0 -> the first match node carries data-active-match
+    await el.updateComplete;
+    const node = el.shadowRoot!.querySelector('[part="node"][data-active-match]') as HTMLElement;
+    return { el, node };
+  }
+
+  it('recolors the active-match outline from an ancestor via --lr-xml-viewer-active-match-color', async () => {
+    const { node } = await activeMatch('--lr-xml-viewer-active-match-color: rgb(0, 51, 102)');
+    expect(getComputedStyle(node).outlineColor).to.equal('rgb(0, 51, 102)');
+  });
+
+  it('renders byte-identical to the warning token when unset', async () => {
+    const { el, node } = await activeMatch();
+    expect(getComputedStyle(node).outlineColor).to.equal(
+      resolvedInShadow(el, 'outline: 1px solid var(--lr-color-warning)', 'outline-color'),
+    );
+  });
+
+  it('is accessible with the active-match prop themed', async () => {
+    const { el } = await activeMatch('--lr-xml-viewer-active-match-color: rgb(0, 51, 102)');
+    await expect(el).to.be.accessible();
+  });
+});

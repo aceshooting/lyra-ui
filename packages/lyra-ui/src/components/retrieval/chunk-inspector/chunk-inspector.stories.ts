@@ -2,6 +2,7 @@ import { html } from 'lit';
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import './chunk-inspector.js';
 import type { LyraChunk } from './chunk-inspector.class.js';
+import { storyColor } from '../../../../../../.storybook/story-theme.js';
 
 const meta: Meta = {
   title: 'Chunk Inspector',
@@ -38,4 +39,23 @@ export const Empty: Story = {
 
 export const Narrow: Story = {
   render: () => html`<div style="max-width: 320px;"><lr-chunk-inspector .chunks=${chunks}></lr-chunk-inspector></div>`,
+};
+
+export const ThemedCurrentChunk: Story = {
+  name: 'Themed current chunk (cssprops)',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          '`--lr-chunk-inspector-current-bg` and `--lr-chunk-inspector-current-color` retint the chunk matching `active-id` without touching library-wide `--lr-color-brand-quiet`. Set either on the element or any ancestor — neither is declared on `:host`, so an ancestor value is never shadowed. They are a **contrast-sensitive pair**: the score line is deliberately lifted off `--lr-color-text-quiet` (only ~4.24:1 against the default tint), so keep 4.5:1 between whatever you set.',
+      },
+    },
+  },
+  render: () => html`
+    <lr-chunk-inspector
+      style="--lr-chunk-inspector-current-bg: ${storyColor('warningQuiet')}; --lr-chunk-inspector-current-color: ${storyColor('text')};"
+      .chunks=${chunks}
+      active-id="c1"
+    ></lr-chunk-inspector>
+  `,
 };

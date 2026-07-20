@@ -157,6 +157,15 @@ export interface LyraConversationItemEventMap {
  * @csspart meta - The wrapper around the `meta` slot. Only rendered in the built-in content path (not when the `content` slot is used), and `hidden` while the `meta` slot is empty.
  * @csspart timestamp - The formatted `timestamp`, rendered in a `<time>` element. Only rendered when `timestamp` is set and valid.
  * @csspart actions - The wrapper around the `actions` slot.
+ * @cssprop [--lr-conversation-item-active-bg=var(--lr-color-brand-quiet)] - Background of the row
+ *   while `active`. **Contrast-sensitive:** it is one half of a documented WCAG-AA pair — the
+ *   active row's text is sized/toned for this background, so an override has to keep at least a
+ *   4.5:1 ratio against `--lr-conversation-item-active-color` (excerpt/timestamp) and against
+ *   `--lr-color-text` (the title, which is not restyled by the pair).
+ * @cssprop [--lr-conversation-item-active-color=var(--lr-color-text)] - Text color of
+ *   `[part="excerpt"]` and `[part="timestamp"]` while `active`. **Contrast-sensitive:** it exists
+ *   precisely because `--lr-color-text-quiet` only reaches ~4.25:1 against the active background;
+ *   override it together with `--lr-conversation-item-active-bg`, never alone.
  */
 export class LyraConversationItem extends LyraElement<LyraConversationItemEventMap> {
   static styles = [LyraElement.styles, styles];

@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
 import './conversation-item.js';
+import { storyColor } from '../../../../../../.storybook/story-theme.js';
 
 const meta: Meta = {
   title: 'ConversationItem',
@@ -201,6 +202,28 @@ export const Events: Story = {
         }}
       ></lr-conversation-item>
       <p id="conversation-item-event-log" style="font-family: monospace; margin-top: 0.5rem;">No event fired yet.</p>
+    </nav>
+  `,
+};
+
+export const ThemedActiveRow: Story = {
+  name: 'Themed active row (cssprops)',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'Set `--lr-conversation-item-active-bg` and `--lr-conversation-item-active-color` on the element or any ancestor — neither is declared on `:host`, so an ancestor value is never shadowed. Before these existed the only way to retint a selected row was to hijack library-wide `--lr-color-brand-quiet`, which repainted every other surface reading it. The two are a **contrast-sensitive pair**: the active background and the excerpt/timestamp color must stay at least 4.5:1 apart, and the title keeps `--lr-color-text`, so a dark background needs a matching title color of your own.',
+      },
+    },
+  },
+  render: () => html`
+    <nav
+      style="--lr-conversation-item-active-bg: ${storyColor('warningQuiet')}; --lr-conversation-item-active-color: ${storyColor(
+        'text',
+      )};"
+    >
+      <lr-conversation-item title="Themed active session" excerpt="This row is selected." .timestamp=${new Date()} active></lr-conversation-item>
+      <lr-conversation-item title="Inactive session" excerpt="Untouched by the props." .timestamp=${new Date()}></lr-conversation-item>
     </nav>
   `,
 };

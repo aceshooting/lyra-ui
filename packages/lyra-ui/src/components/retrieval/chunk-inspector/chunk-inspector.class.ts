@@ -66,6 +66,13 @@ type Tier = 'high' | 'medium' | 'low';
  * @csspart text - The chunk's text preview, line-clamped unless expanded. Omitted when `compact`.
  * @csspart toggle - The "Show more"/"Show less" button. Omitted when `compact`.
  * @csspart empty - The empty-state message, shown when `chunks` is empty.
+ * @cssprop [--lr-chunk-inspector-current-bg=var(--lr-color-brand-quiet)] - Background of the chunk
+ *   matching `activeId`. **Contrast-sensitive:** paired with
+ *   `--lr-chunk-inspector-current-color`, which has to keep a 4.5:1 ratio against it.
+ * @cssprop [--lr-chunk-inspector-current-color=var(--lr-color-text)] - Text color of the current
+ *   chunk's `[part="score"]` line. **Contrast-sensitive:** the quiet token it replaces only reaches
+ *   ~4.24:1 against the current background, so override this together with
+ *   `--lr-chunk-inspector-current-bg`, never alone.
  */
 export class LyraChunkInspector extends LyraElement<LyraChunkInspectorEventMap> {
   static styles = [LyraElement.styles, styles];

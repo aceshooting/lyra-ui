@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html, nothing } from 'lit';
 import type { RetrievalStage } from './retrieval-trace.class.js';
+import { storyColor } from '../../../../../../.storybook/story-theme.js';
 
 const stages: RetrievalStage[] = [
   {
@@ -99,4 +100,23 @@ export const Empty: Story = {
 /** 320px container — the timeline's own responsive rules apply, and evidence rows wrap to fit. */
 export const Narrow: Story = {
   render: () => html`<lr-retrieval-trace style="max-width: 320px" .stages=${stages}></lr-retrieval-trace>`,
+};
+
+export const ThemedActiveEvidence: Story = {
+  name: 'Themed active evidence row (cssprop)',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          '`--lr-retrieval-trace-active-border` recolors the evidence row whose stage matches `active-stage-id`, leaving every other `--lr-color-brand` surface alone. Set it on the element or any ancestor — it is not declared on `:host`, so an ancestor value is never shadowed.',
+      },
+    },
+  },
+  render: () => html`
+    <lr-retrieval-trace
+      style="max-width: 40rem; --lr-retrieval-trace-active-border: ${storyColor('warning')};"
+      .stages=${stages}
+      active-stage-id="rewrite"
+    ></lr-retrieval-trace>
+  `,
 };

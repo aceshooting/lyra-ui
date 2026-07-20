@@ -2,6 +2,7 @@ import { html } from 'lit';
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import './av-player.js';
 import type { LyraAvCue } from './av-player.class.js';
+import { storyColor } from '../../../../../../.storybook/story-theme.js';
 
 const meta: Meta = {
   title: 'DocumentViewer/AvPlayer',
@@ -49,4 +50,28 @@ export const Narrow320: Story = {
   render: () => html`<div style="max-inline-size:320px">
     <lr-av-player src="https://example.test/podcast.mp3" mime-type="audio/mpeg" name="Episode 1" .cues=${CUES} .peaks=${PEAKS}></lr-av-player>
   </div>`,
+};
+
+export const ThemedActiveStates: Story = {
+  name: 'Themed active states (cssprops)',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          '`--lr-av-player-marker-active-color` (the selected timeline marker), `--lr-av-player-cue-current-bg` (the cue the playhead is inside) and `--lr-av-player-cue-active-match-color` (the current search match) each retint one state on its own. None is declared on `:host`, so a value set on any ancestor is never shadowed — and unlike hijacking `--lr-color-brand`/`--lr-color-warning`, the other markers, cues and matches keep their own treatment.',
+      },
+    },
+  },
+  render: () => html`
+    <lr-av-player
+      style="--lr-av-player-marker-active-color: ${storyColor('success')}; --lr-av-player-cue-current-bg: ${storyColor('warningQuiet')}; --lr-av-player-cue-active-match-color: ${storyColor('brand')};"
+      src="https://example.test/podcast.mp3"
+      mime-type="audio/mpeg"
+      name="Episode 1"
+      .cues=${CUES}
+      .peaks=${PEAKS}
+      .highlights=${[{ id: 'h1', anchor: { kind: 'time-range', start: 8, end: 22 }, label: 'Agentic UI segment' }]}
+      active-highlight-id="h1"
+    ></lr-av-player>
+  `,
 };

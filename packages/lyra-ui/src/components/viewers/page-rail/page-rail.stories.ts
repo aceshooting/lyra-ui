@@ -4,6 +4,7 @@ import './page-rail.js';
 import '../pdf-viewer/pdf-viewer.js';
 import '../../layout/split/split.js';
 import type { LyraHighlight } from '../document-viewer/anchors.js';
+import { storyColor } from '../../../../../../.storybook/story-theme.js';
 
 const meta: Meta = {
   title: 'DocumentViewer/PageRail',
@@ -34,4 +35,23 @@ export const WiredToPdfViewer: Story = {
 
 export const Narrow320: Story = {
   render: () => html`<lr-page-rail style="max-width: 320px;" page-count="6" page="1"></lr-page-rail>`,
+};
+
+export const ThemedCurrentPage: Story = {
+  name: 'Themed current page (cssprop)',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          '`--lr-page-rail-current-bg` recolors the thumbnail button for the current `page` without hijacking library-wide `--lr-color-brand-quiet`. Set it on the element or any ancestor — it is not declared on `:host`, so an ancestor value is never shadowed.',
+      },
+    },
+  },
+  render: () => html`
+    <lr-page-rail
+      style="max-width: 320px; --lr-page-rail-current-bg: ${storyColor('warningQuiet')};"
+      page-count="6"
+      page="2"
+    ></lr-page-rail>
+  `,
 };

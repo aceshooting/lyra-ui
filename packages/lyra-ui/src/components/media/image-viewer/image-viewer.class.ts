@@ -103,6 +103,13 @@ class LyraImageViewerBase extends LyraElement<LyraImageViewerEventMap> {}
  * @csspart highlight-label - A highlight's visible label.
  * @csspart annotation-box - The in-progress draft rectangle.
  * @csspart error - The error region.
+ * @cssprop [--lr-image-viewer-annotate-active-bg=var(--lr-color-brand-quiet)] - Background of
+ *   `[part="annotate-toggle"]` while annotation mode is on. The toggle carries its own glyph in
+ *   `--lr-color-text`, so keep a 4.5:1 ratio against it.
+ * @cssprop [--lr-image-viewer-annotate-active-border=var(--lr-color-brand)] - Border color of
+ *   `[part="annotate-toggle"]` while annotation mode is on.
+ * @cssprop [--lr-image-viewer-highlight-active-color=var(--lr-color-brand)] - Outline color of the
+ *   `[part="highlight"]` matching `activeHighlightId`, independent of the per-tone border colors.
  */
 export class LyraImageViewer extends DocumentAnchorTarget(LyraImageViewerBase) {
   static styles = [LyraElement.styles, styles, srOnly];

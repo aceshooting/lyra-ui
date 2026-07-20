@@ -110,6 +110,8 @@ export interface LyraNotebookViewerEventMap {
  * @csspart spinner - The loading status region.
  * @cssprop [--lr-notebook-viewer-max-height=none] - Maximum block size of the scrollable body
  *   before it scrolls internally. Also settable via the `max-height` property.
+ * @cssprop [--lr-notebook-viewer-active-bg=var(--lr-color-brand-quiet)] - Background of the
+ *   `[part="cell"]` currently targeted by an anchor.
  */
 export class LyraNotebookViewer extends DocumentAnchorTarget(LyraElement) {
   static styles = [LyraElement.styles, styles, srOnly];

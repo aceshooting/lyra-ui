@@ -274,3 +274,43 @@ describe('lr-retrieval-trace', () => {
     await expect(el).to.be.accessible();
   });
 });
+
+describe('active-evidence cssprop escape hatch', () => {
+  function resolvedInShadow(el: LyraRetrievalTrace, declaration: string, property: string): string {
+    const probe = document.createElement('span');
+    probe.setAttribute('style', declaration);
+    el.shadowRoot!.appendChild(probe);
+    const value = getComputedStyle(probe).getPropertyValue(property);
+    probe.remove();
+    return value;
+  }
+
+  async function activeTrace(style = ''): Promise<{ el: LyraRetrievalTrace; row: HTMLElement }> {
+    const wrapper = (await fixture(
+      html`<div style=${style}>
+        <lr-retrieval-trace .stages=${STAGES} active-stage-id="rewrite"></lr-retrieval-trace>
+      </div>`,
+    )) as HTMLElement;
+    const el = wrapper.querySelector('lr-retrieval-trace') as LyraRetrievalTrace;
+    await el.updateComplete;
+    const row = el.shadowRoot!.querySelector('[part="evidence-row"][data-active]') as HTMLElement;
+    return { el, row };
+  }
+
+  it('recolors the active evidence-row border from an ancestor via --lr-retrieval-trace-active-border', async () => {
+    const { row } = await activeTrace('--lr-retrieval-trace-active-border: rgb(0, 51, 102)');
+    expect(getComputedStyle(row).borderTopColor).to.equal('rgb(0, 51, 102)');
+  });
+
+  it('renders byte-identical to the brand token when unset', async () => {
+    const { el, row } = await activeTrace();
+    expect(getComputedStyle(row).borderTopColor).to.equal(
+      resolvedInShadow(el, 'border-top-color: var(--lr-color-brand)', 'border-top-color'),
+    );
+  });
+
+  it('is accessible with the active-evidence prop themed', async () => {
+    const { el } = await activeTrace('--lr-retrieval-trace-active-border: rgb(0, 51, 102)');
+    await expect(el).to.be.accessible();
+  });
+});

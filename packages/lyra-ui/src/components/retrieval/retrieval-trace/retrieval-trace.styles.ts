@@ -28,7 +28,7 @@ export const styles = css`
     overflow: hidden;
   }
   [part='evidence-row'][data-active] {
-    border-color: var(--lr-color-brand);
+    border-color: var(--lr-retrieval-trace-active-border, var(--lr-color-brand));
   }
 
   [part='evidence-toggle'] {

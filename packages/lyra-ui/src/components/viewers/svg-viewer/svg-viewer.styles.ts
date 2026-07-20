@@ -69,6 +69,6 @@ export const styles = css`
     cursor: pointer;
   }
   [part='region-highlight'][data-active] {
-    border-color: var(--lr-color-warning, var(--lr-color-brand));
+    border-color: var(--lr-svg-viewer-active-border, var(--lr-color-warning, var(--lr-color-brand)));
   }
 `;
