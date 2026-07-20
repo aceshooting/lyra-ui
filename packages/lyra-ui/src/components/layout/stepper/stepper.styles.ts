@@ -49,12 +49,18 @@ export const styles = css`
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);
   }
+  /* Inline var() fallbacks rather than :host-declared properties, so a consumer can set them on any
+     ancestor without a :host declaration shadowing that. ::part(step)[data-state='current'] is
+     invalid CSS (an attribute selector cannot follow ::part), so recoloring the current/error state
+     used to require hijacking the shared --lr-color-text/--lr-color-danger/--lr-color-brand tokens,
+     which repainted everything else that reads them. Unset, each falls back to the token the rule
+     used before, so the rendering is unchanged. */
   [part='step'][data-state='current'] {
-    color: var(--lr-color-text);
+    color: var(--lr-stepper-current-color, var(--lr-color-text));
     font-weight: var(--lr-font-weight-semibold);
   }
   [part='step'][data-state='error'] {
-    color: var(--lr-color-danger);
+    color: var(--lr-stepper-error-color, var(--lr-color-danger));
   }
   [part='step-index'] {
     display: inline-flex;
@@ -69,8 +75,8 @@ export const styles = css`
     flex: 0 0 auto;
   }
   [part='step'][data-state='current'] [part='step-index'] {
-    background: var(--lr-color-brand);
-    color: var(--lr-color-surface);
+    background: var(--lr-stepper-current-index-bg, var(--lr-color-brand));
+    color: var(--lr-stepper-current-index-color, var(--lr-color-surface));
   }
   [part='step-check'] {
     color: var(--lr-color-success);

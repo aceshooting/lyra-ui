@@ -1071,3 +1071,65 @@ it('is accessible with presets set', async () => {
   await el.updateComplete;
   await expect(el).to.be.accessible();
 });
+
+describe('active-preset cssprops', () => {
+  /** Resolves what a `declaration` would compute to *inside this component's shadow root*, where the
+   *  `--lr-*` design tokens actually live. Used to assert the unset defaults byte-for-byte against
+   *  the tokens they fall back to. */
+  function resolvedInShadow(el: LyraTimeRange, declaration: string, property: string): string {
+    const probe = document.createElement('span');
+    probe.setAttribute('style', declaration);
+    el.shadowRoot!.appendChild(probe);
+    const value = getComputedStyle(probe).getPropertyValue(property);
+    probe.remove();
+    return value;
+  }
+
+  const overrides =
+    '--lr-time-range-preset-active-bg: rgb(0, 51, 102);' +
+    '--lr-time-range-preset-active-border-color: rgb(0, 102, 51);' +
+    '--lr-time-range-preset-active-color: rgb(255, 255, 0);';
+
+  async function themed(style: string): Promise<LyraTimeRange> {
+    const wrapper = (await fixture(html`
+      <div style=${style}><lr-time-range min="0" max="100" start="0" end="30"></lr-time-range></div>
+    `)) as HTMLElement;
+    const el = wrapper.querySelector('lr-time-range') as LyraTimeRange;
+    el.presets = PRESETS;
+    await el.updateComplete;
+    return el;
+  }
+
+  it('recolors the active preset from an ancestor, not a :host-declared prop', async () => {
+    const el = await themed(overrides);
+    const active = el.shadowRoot!.querySelector('[part="preset-button"][data-active]') as HTMLElement;
+    expect(active).to.exist;
+    expect(active.textContent).to.include('Last 30 days');
+    const rendered = getComputedStyle(active);
+    expect(rendered.backgroundColor).to.equal('rgb(0, 51, 102)');
+    expect(rendered.borderTopColor).to.equal('rgb(0, 102, 51)');
+    expect(rendered.color).to.equal('rgb(255, 255, 0)');
+    // A non-active preset keeps its resting surface treatment -- the props are scoped to
+    // [data-active] only.
+    const inactive = el.shadowRoot!.querySelector('[part="preset-button"]:not([data-active])') as HTMLElement;
+    expect(getComputedStyle(inactive).backgroundColor).to.equal(
+      resolvedInShadow(el, 'background: var(--lr-color-surface)', 'background-color'),
+    );
+  });
+
+  it('renders byte-identically to the pre-cssprop output when the props are unset', async () => {
+    const el = await themed('');
+    const active = el.shadowRoot!.querySelector('[part="preset-button"][data-active]') as HTMLElement;
+    const rendered = getComputedStyle(active);
+    expect(rendered.backgroundColor).to.equal(resolvedInShadow(el, 'background: var(--lr-color-brand)', 'background-color'));
+    expect(rendered.borderTopColor).to.equal(
+      resolvedInShadow(el, 'border-color: var(--lr-color-brand)', 'border-top-color'),
+    );
+    expect(rendered.color).to.equal(resolvedInShadow(el, 'color: var(--lr-color-on-brand)', 'color'));
+  });
+
+  it('is accessible with the active-preset props themed', async () => {
+    const el = await themed(overrides);
+    await expect(el).to.be.accessible();
+  });
+});

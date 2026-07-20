@@ -96,9 +96,15 @@ export const styles = css`
     border-radius: var(--lr-radius-pill);
     background: var(--lr-color-surface);
   }
+  /* Inline var() fallbacks rather than :host-declared properties, so a consumer can set them on any
+     ancestor without a :host declaration shadowing that. ::part(indicator)[aria-current='true'] is
+     invalid CSS (an attribute selector cannot follow ::part), so recoloring the current indicator
+     used to require hijacking the shared --lr-color-brand-quiet/--lr-color-brand tokens, repainting
+     everything else that reads them. Unset, each falls back to the token the rule used before, so
+     the rendering is unchanged. */
   [part='indicator'][aria-current='true'] [part='indicator-dot'] {
-    background: var(--lr-color-brand-quiet);
-    border-color: var(--lr-color-brand);
+    background: var(--lr-carousel-indicator-current-bg, var(--lr-color-brand-quiet));
+    border-color: var(--lr-carousel-indicator-current-border-color, var(--lr-color-brand));
   }
   :host(:dir(rtl)) [part='previous-glyph'],
   :host(:dir(rtl)) [part='next-glyph'] {

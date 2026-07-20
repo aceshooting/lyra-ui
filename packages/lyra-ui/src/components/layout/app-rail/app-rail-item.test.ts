@@ -144,3 +144,55 @@ describe('tooltip', () => {
     expect(flyout!.textContent!.trim()).to.equal('Dashboard');
   });
 });
+
+describe('current-state cssprops', () => {
+  /** Resolves what a `declaration` would compute to *inside this component's shadow root*, where the
+   *  `--lr-*` design tokens actually live (they are declared on `:host`, so a light-DOM probe would
+   *  see none of them). Used to assert the unset defaults byte-for-byte against the tokens they fall
+   *  back to. */
+  function resolvedInShadow(el: LyraAppRailItem, declaration: string, property: string): string {
+    const probe = document.createElement('span');
+    probe.setAttribute('style', declaration);
+    el.shadowRoot!.appendChild(probe);
+    const value = getComputedStyle(probe).getPropertyValue(property);
+    probe.remove();
+    return value;
+  }
+
+  async function themed(style: string): Promise<LyraAppRailItem> {
+    const wrapper = (await fixture(
+      html`<div style=${style}><lr-app-rail-item href="/home" active>Home</lr-app-rail-item></div>`,
+    )) as HTMLElement;
+    const el = wrapper.querySelector('lr-app-rail-item') as LyraAppRailItem;
+    await el.updateComplete;
+    return el;
+  }
+
+  const overrides = '--lr-app-rail-item-current-bg: rgb(0, 51, 102); --lr-app-rail-item-current-color: rgb(255, 255, 255);';
+
+  it('recolors the aria-current item from an ancestor, not a :host-declared prop', async () => {
+    const el = await themed(overrides);
+    const base = el.shadowRoot!.querySelector('[part="base"]')!;
+    expect(base.getAttribute('aria-current')).to.equal('page');
+    const rendered = getComputedStyle(base);
+    expect(rendered.backgroundColor).to.equal('rgb(0, 51, 102)');
+    expect(rendered.color).to.equal('rgb(255, 255, 255)');
+    // The prop is never declared on :host, so an ancestor value is not shadowed.
+    expect(el.shadowRoot!.querySelector('[part="base"]')!).to.exist;
+  });
+
+  it('renders byte-identically to the pre-cssprop output when the props are unset', async () => {
+    const el = await themed('');
+    const base = el.shadowRoot!.querySelector('[part="base"]')!;
+    const rendered = getComputedStyle(base);
+    expect(rendered.backgroundColor).to.equal(
+      resolvedInShadow(el, 'background: var(--lr-color-brand-quiet)', 'background-color'),
+    );
+    expect(rendered.color).to.equal(resolvedInShadow(el, 'color: var(--lr-color-brand)', 'color'));
+  });
+
+  it('is accessible with the current-state props themed', async () => {
+    const el = await themed(overrides);
+    await expect(el).to.be.accessible();
+  });
+});

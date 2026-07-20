@@ -1,6 +1,7 @@
 import { expect, oneEvent, waitUntil } from '@open-wc/testing';
 import './emoji-picker.js';
 import type { LyraEmojiPicker, EmojiPickerGroup } from './emoji-picker.js';
+import { styles } from './emoji-picker.styles.js';
 
 const groups: EmojiPickerGroup[] = [
   {
@@ -390,4 +391,88 @@ it('is accessible with groups populated', async () => {
   el.groups = groups;
   await el.updateComplete;
   await expect(el).to.be.accessible();
+});
+
+describe('active/hover cssprop', () => {
+  /** Resolves what a `declaration` would compute to *inside this component's shadow root*, where the
+   *  `--lr-*` design tokens actually live. Used to assert the unset default byte-for-byte against
+   *  the token it falls back to. */
+  function resolvedInShadow(el: LyraEmojiPicker, declaration: string, property: string): string {
+    const probe = document.createElement('span');
+    probe.setAttribute('style', declaration);
+    el.shadowRoot!.appendChild(probe);
+    const value = getComputedStyle(probe).getPropertyValue(property);
+    probe.remove();
+    return value;
+  }
+
+  /** Builds an emoji picker inside a styled ancestor `<div>`, so the theming prop is set on an
+   *  ancestor of the host (proving a `:host` declaration would not have shadowed it). Mirrors
+   *  `connectEmojiPicker`'s pre-connect `loadGroups` override so the default auto-loader never runs. */
+  async function themedPicker(style: string): Promise<LyraEmojiPicker> {
+    const wrapper = document.createElement('div');
+    wrapper.setAttribute('style', style);
+    const el = document.createElement('lr-emoji-picker') as LyraEmojiPicker;
+    (el as unknown as { loadGroups: () => Promise<EmojiPickerGroup[] | null> }).loadGroups = () =>
+      Promise.resolve(null);
+    wrapper.append(el);
+    created.push(wrapper);
+    document.body.append(wrapper);
+    await el.updateComplete;
+    el.groups = groups;
+    await el.updateComplete;
+    return el;
+  }
+
+  /** Drives the roving grid focus one step so exactly one emoji carries `data-active` (it is set
+   *  imperatively by keyboard navigation, never on the initial render). */
+  async function activateAnEmoji(el: LyraEmojiPicker): Promise<HTMLElement> {
+    const grid = el.shadowRoot!.querySelector('[part="grid"]') as HTMLElement;
+    grid.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+    await el.updateComplete;
+    return el.shadowRoot!.querySelector('[part="emoji"][data-active]') as HTMLElement;
+  }
+
+  it('recolors the active emoji from an ancestor, not a :host-declared prop', async () => {
+    const el = await themedPicker('--lr-emoji-picker-active-bg: rgb(0, 51, 102);');
+    const active = await activateAnEmoji(el);
+    expect(active).to.exist;
+    expect(getComputedStyle(active).backgroundColor).to.equal('rgb(0, 51, 102)');
+  });
+
+  it('drives both :hover and [data-active] from the one shared hook (a single rule, one declaration)', () => {
+    // hover and active share a single rule, so one prop backs both -- read off the component's own
+    // constructed stylesheet to prove the coupling (the rendered result is asserted above/below).
+    const sheet = new CSSStyleSheet();
+    sheet.replaceSync(styles.cssText);
+    const rule = [...sheet.cssRules].find(
+      (candidate) =>
+        candidate instanceof CSSStyleRule &&
+        candidate.style.getPropertyValue('background').includes('--lr-emoji-picker-active-bg'),
+    ) as CSSStyleRule | undefined;
+    expect(rule, 'no rule reads --lr-emoji-picker-active-bg').to.exist;
+    const selector = rule!.selectorText.replace(/"/g, "'");
+    expect(selector).to.include(':hover');
+    expect(selector).to.include('[data-active]');
+    expect(rule!.style.getPropertyValue('background')).to.equal(
+      'var(--lr-emoji-picker-active-bg, var(--lr-color-brand-quiet))',
+    );
+  });
+
+  it('renders byte-identically to the pre-cssprop output when the prop is unset', async () => {
+    const el = await themedPicker('');
+    const active = await activateAnEmoji(el);
+    expect(getComputedStyle(active).backgroundColor).to.equal(
+      resolvedInShadow(el, 'background: var(--lr-color-brand-quiet)', 'background-color'),
+    );
+    // A non-active, non-hovered emoji keeps its transparent resting background.
+    const inactive = el.shadowRoot!.querySelector('[part="emoji"]:not([data-active])') as HTMLElement;
+    expect(getComputedStyle(inactive).backgroundColor).to.equal('rgba(0, 0, 0, 0)');
+  });
+
+  it('is accessible with the active prop themed', async () => {
+    const el = await themedPicker('--lr-emoji-picker-active-bg: rgb(0, 51, 102);');
+    await el.updateComplete;
+    await expect(el).to.be.accessible();
+  });
 });

@@ -111,9 +111,16 @@ export const styles = css`
     font-size: var(--lr-font-size-lg);
     cursor: pointer;
   }
+  /* Inline var() fallback rather than a :host-declared property, so a consumer can set it on any
+     ancestor without a :host declaration shadowing that. ::part(emoji)[data-active] is invalid CSS
+     (an attribute selector cannot follow ::part), so highlighting the active/hovered emoji used to
+     require hijacking the shared --lr-color-brand-quiet token, repainting everything else that reads
+     it. Hover and keyboard-active deliberately share this one rule (one declaration), so a single
+     hook backs both -- overriding it retints both consistently. Unset, it falls back to the token
+     the rule used before, so the rendering is unchanged. */
   [part='emoji']:hover,
   [part='emoji'][data-active] {
-    background: var(--lr-color-brand-quiet);
+    background: var(--lr-emoji-picker-active-bg, var(--lr-color-brand-quiet));
   }
   [part='empty'] {
     flex-basis: 100%;

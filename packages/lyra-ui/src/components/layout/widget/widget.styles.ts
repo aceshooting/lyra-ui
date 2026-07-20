@@ -91,9 +91,15 @@ export const styles = css`
     font-size: var(--lr-font-size-sm);
     cursor: pointer;
   }
+  /* Inline var() fallbacks rather than :host-declared properties, so a consumer can set them on any
+     ancestor without a :host declaration shadowing that. ::part(view-toggle)[aria-pressed='true'] is
+     invalid CSS (an attribute selector cannot follow ::part), so recoloring the pressed toggle used
+     to require hijacking the shared --lr-color-brand-quiet/--lr-color-brand tokens, repainting
+     everything else that reads them. Unset, each falls back to the token the rule used before, so
+     the rendering is unchanged. */
   [part='view-toggle'][aria-pressed='true'] {
-    background: var(--lr-color-brand-quiet);
-    color: var(--lr-color-brand);
+    background: var(--lr-widget-view-toggle-active-bg, var(--lr-color-brand-quiet));
+    color: var(--lr-widget-view-toggle-active-color, var(--lr-color-brand));
     border-color: transparent;
   }
   [part='view-toggle']:focus-visible {

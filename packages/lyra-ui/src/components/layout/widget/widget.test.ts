@@ -836,3 +836,60 @@ describe('backdrop-inset', () => {
     expect(getComputedStyle(backdrop).inset).to.not.equal(getComputedStyle(base).inset);
   });
 });
+
+describe('view-toggle active-state cssprops', () => {
+  /** Resolves what a `declaration` would compute to *inside this component's shadow root*, where the
+   *  `--lr-*` design tokens actually live. Used to assert the unset defaults byte-for-byte against
+   *  the tokens they fall back to. */
+  function resolvedInShadow(el: LyraWidget, declaration: string, property: string): string {
+    const probe = document.createElement('span');
+    probe.setAttribute('style', declaration);
+    el.shadowRoot!.appendChild(probe);
+    const value = getComputedStyle(probe).getPropertyValue(property);
+    probe.remove();
+    return value;
+  }
+
+  const overrides =
+    '--lr-widget-view-toggle-active-bg: rgb(0, 51, 102); --lr-widget-view-toggle-active-color: rgb(255, 255, 255);';
+
+  async function themed(style: string): Promise<LyraWidget> {
+    const wrapper = (await fixture(html`
+      <div style=${style}>
+        <lr-widget label="Usage" .views=${[{ id: 'chart', label: 'Chart' }, { id: 'table', label: 'Table' }]}>
+          <div slot="view-chart">chart</div>
+          <div slot="view-table">table</div>
+        </lr-widget>
+      </div>
+    `)) as HTMLElement;
+    const el = wrapper.querySelector('lr-widget') as LyraWidget;
+    await el.updateComplete;
+    return el;
+  }
+
+  it('recolors the pressed view toggle from an ancestor, not a :host-declared prop', async () => {
+    const el = await themed(overrides);
+    const pressed = el.shadowRoot!.querySelector('[part="view-toggle"][aria-pressed="true"]') as HTMLElement;
+    expect(pressed).to.exist;
+    expect(getComputedStyle(pressed).backgroundColor).to.equal('rgb(0, 51, 102)');
+    expect(getComputedStyle(pressed).color).to.equal('rgb(255, 255, 255)');
+    // The unpressed toggle keeps its transparent resting treatment -- the props are scoped to
+    // [aria-pressed='true'] only.
+    const unpressed = el.shadowRoot!.querySelector('[part="view-toggle"][aria-pressed="false"]') as HTMLElement;
+    expect(getComputedStyle(unpressed).backgroundColor).to.equal('rgba(0, 0, 0, 0)');
+  });
+
+  it('renders byte-identically to the pre-cssprop output when the props are unset', async () => {
+    const el = await themed('');
+    const pressed = el.shadowRoot!.querySelector('[part="view-toggle"][aria-pressed="true"]') as HTMLElement;
+    expect(getComputedStyle(pressed).backgroundColor).to.equal(
+      resolvedInShadow(el, 'background: var(--lr-color-brand-quiet)', 'background-color'),
+    );
+    expect(getComputedStyle(pressed).color).to.equal(resolvedInShadow(el, 'color: var(--lr-color-brand)', 'color'));
+  });
+
+  it('is accessible with the active-state props themed', async () => {
+    const el = await themed(overrides);
+    await expect(el).to.be.accessible();
+  });
+});

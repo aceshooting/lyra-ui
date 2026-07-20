@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
+import { storyColor } from '../../../../../../.storybook/story-theme.js';
 
 const meta: Meta = {
   title: 'Widget',
@@ -98,6 +99,34 @@ export const IconOnlyViewToggles: Story = {
       <div slot="view-chart" style="padding: 1rem;">Chart view body.</div>
       <div slot="view-table" style="padding: 1rem;">Table view body.</div>
     </lr-widget>
+  `,
+};
+
+/** The pressed view toggle's background and text color are themeable through
+ *  `--lr-widget-view-toggle-active-bg` and `--lr-widget-view-toggle-active-color`. Neither is
+ *  declared on `:host`, so setting them on an ancestor recolors only the active toggle — not
+ *  everything else reading `--lr-color-brand-quiet`/`--lr-color-brand`. */
+export const ThemedViewToggle: Story = {
+  name: 'Themed view toggle (cssprops)',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'Set `--lr-widget-view-toggle-active-bg` and `--lr-widget-view-toggle-active-color` on the element or any ancestor to recolor the active view toggle without hijacking the library-wide brand tokens.',
+      },
+    },
+  },
+  render: () => html`
+    <div
+      style="max-width: 28rem; --lr-widget-view-toggle-active-bg: ${storyColor(
+        'successQuiet',
+      )}; --lr-widget-view-toggle-active-color: ${storyColor('success')};"
+    >
+      <lr-widget label="Usage" sublabel="Last 7 days" .views=${[{ id: 'chart', label: 'Chart' }, { id: 'table', label: 'Table' }]}>
+        <div slot="view-chart" style="padding: 1rem;">Chart view body.</div>
+        <div slot="view-table" style="padding: 1rem;">Table view body.</div>
+      </lr-widget>
+    </div>
   `,
 };
 

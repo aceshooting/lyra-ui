@@ -36,10 +36,16 @@ export const styles = css`
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);
   }
+  /* Inline var() fallbacks rather than :host-declared properties, so a consumer can set them on any
+     ancestor without a :host declaration shadowing that. ::part(preset-button)[data-active] is
+     invalid CSS (an attribute selector cannot follow ::part), so recoloring the active preset used
+     to require hijacking the shared --lr-color-brand/--lr-color-on-brand tokens, repainting
+     everything else that reads them. Unset, each falls back to the token the rule used before, so
+     the rendering is unchanged. */
   [part='preset-button'][data-active] {
-    background: var(--lr-color-brand);
-    border-color: var(--lr-color-brand);
-    color: var(--lr-color-on-brand);
+    background: var(--lr-time-range-preset-active-bg, var(--lr-color-brand));
+    border-color: var(--lr-time-range-preset-active-border-color, var(--lr-color-brand));
+    color: var(--lr-time-range-preset-active-color, var(--lr-color-on-brand));
   }
   [part='preset-button']:disabled {
     /* Dimming already comes from :host([disabled])'s opacity below (applies

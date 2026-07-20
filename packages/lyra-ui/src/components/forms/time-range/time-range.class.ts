@@ -74,6 +74,14 @@ export interface LyraTimeRangeEventMap {
  * @csspart handle-end - The end handle.
  * @csspart presets - The preset controls wrapper.
  * @csspart preset-button - A preset button.
+ * @cssprop [--lr-time-range-preset-active-bg=var(--lr-color-brand)] - Background of the active
+ *   preset button (`[data-active]`, i.e. the preset whose range matches the current value). Declared
+ *   as an inline `var()` fallback (never on `:host`), so setting it on the element or an ancestor
+ *   recolors only the active preset without hijacking the library-wide `--lr-color-brand` token.
+ * @cssprop [--lr-time-range-preset-active-border-color=var(--lr-color-brand)] - Border color of the
+ *   active preset button.
+ * @cssprop [--lr-time-range-preset-active-color=var(--lr-color-on-brand)] - Text color of the active
+ *   preset button.
  */
 export class LyraTimeRange extends LyraElement<LyraTimeRangeEventMap> {
   static formAssociated = true;

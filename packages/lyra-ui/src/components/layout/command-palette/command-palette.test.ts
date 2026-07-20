@@ -120,3 +120,55 @@ it('does not match the default mod+k shortcut when an extra Shift modifier is he
   await el.updateComplete;
   expect(el.open).to.be.true;
 });
+
+describe('active-command cssprop', () => {
+  /** Resolves what a `declaration` would compute to *inside this component's shadow root*, where the
+   *  `--lr-*` design tokens actually live. Used to assert the unset default byte-for-byte against
+   *  the token it falls back to. */
+  function resolvedInShadow(el: LyraCommandPalette, declaration: string, property: string): string {
+    const probe = document.createElement('span');
+    probe.setAttribute('style', declaration);
+    el.shadowRoot!.appendChild(probe);
+    const value = getComputedStyle(probe).getPropertyValue(property);
+    probe.remove();
+    return value;
+  }
+
+  async function themed(style: string): Promise<LyraCommandPalette> {
+    const wrapper = (await fixture(html`
+      <div style=${style}>
+        <lr-command-palette
+          .commands=${[{ id: 'save', label: 'Save' }, { id: 'close', label: 'Close' }]}
+        ></lr-command-palette>
+      </div>
+    `)) as HTMLElement;
+    const el = wrapper.querySelector('lr-command-palette') as LyraCommandPalette;
+    el.openPalette();
+    await el.updateComplete;
+    return el;
+  }
+
+  it('recolors the active command from an ancestor, not a :host-declared prop', async () => {
+    const el = await themed('--lr-command-palette-active-bg: rgb(0, 51, 102);');
+    const active = el.shadowRoot!.querySelector('[part="command"][data-active="true"]') as HTMLElement;
+    expect(active).to.exist;
+    expect(getComputedStyle(active).backgroundColor).to.equal('rgb(0, 51, 102)');
+    // A non-active command keeps its transparent resting background -- the prop is scoped to
+    // [data-active='true'] only.
+    const inactive = el.shadowRoot!.querySelector('[part="command"][data-active="false"]') as HTMLElement;
+    expect(getComputedStyle(inactive).backgroundColor).to.equal('rgba(0, 0, 0, 0)');
+  });
+
+  it('renders byte-identically to the pre-cssprop output when the prop is unset', async () => {
+    const el = await themed('');
+    const active = el.shadowRoot!.querySelector('[part="command"][data-active="true"]') as HTMLElement;
+    expect(getComputedStyle(active).backgroundColor).to.equal(
+      resolvedInShadow(el, 'background: var(--lr-color-brand-quiet)', 'background-color'),
+    );
+  });
+
+  it('is accessible with the active-command prop themed', async () => {
+    const el = await themed('--lr-command-palette-active-bg: rgb(0, 51, 102);');
+    await expect(el).to.be.accessible();
+  });
+});

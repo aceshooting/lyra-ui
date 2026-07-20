@@ -2,6 +2,7 @@ import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
 import './stepper.js';
 import type { StepItem } from './stepper.js';
+import { storyColor } from '../../../../../../.storybook/story-theme.js';
 
 const wizardSteps: StepItem[] = [
   { id: 'account', label: 'Account', state: 'completed' },
@@ -60,6 +61,40 @@ export const Vertical: Story = {
 
 export const WithError: Story = {
   render: () => html`<lr-stepper .steps=${errorSteps}></lr-stepper>`,
+};
+
+/** The `current` and `error` state treatments — and the current step's index chip — are themeable
+ *  through `--lr-stepper-current-color`, `--lr-stepper-error-color`, `--lr-stepper-current-index-bg`
+ *  and `--lr-stepper-current-index-color`. None is declared on `:host`, so setting them on an
+ *  ancestor recolors only those states without hijacking the library-wide brand/danger tokens. */
+export const ThemedStates: Story = {
+  name: 'Themed states (cssprops)',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'Set `--lr-stepper-current-color`, `--lr-stepper-error-color`, `--lr-stepper-current-index-bg` and `--lr-stepper-current-index-color` on the element or any ancestor to recolor the current/error states without touching the shared tokens.',
+      },
+    },
+  },
+  render: () => html`
+    <div
+      style="--lr-stepper-current-color: ${storyColor('success')}; --lr-stepper-current-index-bg: ${storyColor(
+        'success',
+      )}; --lr-stepper-current-index-color: ${storyColor('onBrand')}; --lr-stepper-error-color: ${storyColor(
+        'warning',
+      )};"
+    >
+      <lr-stepper
+        .steps=${[
+          { id: 'account', label: 'Account', state: 'completed' },
+          { id: 'profile', label: 'Profile', state: 'error' },
+          { id: 'plan', label: 'Plan', state: 'current' },
+          { id: 'confirm', label: 'Confirm', state: 'pending' },
+        ] as StepItem[]}
+      ></lr-stepper>
+    </div>
+  `,
 };
 
 export const LockedStepWithTitle: Story = {

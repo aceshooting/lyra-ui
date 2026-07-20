@@ -10,6 +10,10 @@ import { styles } from './breadcrumb-item.styles.js';
  * @customElement lr-breadcrumb-item
  * @slot - Item label.
  * @csspart base - The link or current-page label.
+ * @cssprop [--lr-breadcrumb-current-color=var(--lr-color-text-quiet)] - Text color of the
+ *   current-page item (`current`/`aria-current="page"`). Declared as an inline `var()` fallback
+ *   (never on `:host`), so setting it on the element or an ancestor recolors only the current item
+ *   without hijacking the library-wide `--lr-color-text-quiet` token.
  */
 export class LyraBreadcrumbItem extends LyraElement {
   static styles = [LyraElement.styles, styles];

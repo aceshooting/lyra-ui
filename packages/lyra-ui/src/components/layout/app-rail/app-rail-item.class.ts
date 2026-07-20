@@ -20,6 +20,12 @@ import { styles } from './app-rail-item.styles.js';
  * @csspart label - The label wrapper; visually clipped in icon-only mode.
  * @csspart tooltip - The hover/focus label flyout, only rendered while `tooltip` is set, the item
  *   is `icon-only`, and it is hovered or focused.
+ * @cssprop [--lr-app-rail-item-current-bg=var(--lr-color-brand-quiet)] - Background of the
+ *   `active`/`aria-current="page"` item. Scoped to `[aria-current='page']` only and declared as an
+ *   inline `var()` fallback (never on `:host`), so setting it on the element or an ancestor recolors
+ *   only the current item without hijacking the library-wide `--lr-color-brand-quiet` token.
+ * @cssprop [--lr-app-rail-item-current-color=var(--lr-color-brand)] - Text/icon color of the
+ *   `active`/`aria-current="page"` item.
  */
 export class LyraAppRailItem extends LyraElement {
   static styles = [LyraElement.styles, styles];

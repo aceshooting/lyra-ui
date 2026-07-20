@@ -80,6 +80,14 @@ function checkmarkGlyph() {
  * @csspart step-index - The numbered index chip, shown for `pending`/`current`/`error` steps.
  * @csspart step-check - The completed-checkmark glyph, shown for `completed` steps instead of `step-index`.
  * @csspart step-label - The step's label text.
+ * @cssprop [--lr-stepper-current-color=var(--lr-color-text)] - Text color of the `current` step.
+ *   Declared as an inline `var()` fallback (never on `:host`), so setting it on the element or an
+ *   ancestor recolors only the current step without hijacking the library-wide `--lr-color-text` token.
+ * @cssprop [--lr-stepper-error-color=var(--lr-color-danger)] - Text color of an `error` step.
+ * @cssprop [--lr-stepper-current-index-bg=var(--lr-color-brand)] - Background of the `current` step's
+ *   numbered index chip (`step-index`).
+ * @cssprop [--lr-stepper-current-index-color=var(--lr-color-surface)] - Text color of the `current`
+ *   step's numbered index chip.
  */
 export class LyraStepper extends LyraElement<LyraStepperEventMap> {
   static styles = [LyraElement.styles, styles];

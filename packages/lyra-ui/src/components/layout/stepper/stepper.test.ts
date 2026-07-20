@@ -507,3 +507,74 @@ describe('lr-stepper', () => {
     });
   });
 });
+
+describe('state-styling cssprops', () => {
+  /** Resolves what a `declaration` would compute to *inside this component's shadow root*, where the
+   *  `--lr-*` design tokens actually live. Used to assert the unset defaults byte-for-byte against
+   *  the tokens they fall back to. */
+  function resolvedInShadow(el: LyraStepper, declaration: string, property: string): string {
+    const probe = document.createElement('span');
+    probe.setAttribute('style', declaration);
+    el.shadowRoot!.appendChild(probe);
+    const value = getComputedStyle(probe).getPropertyValue(property);
+    probe.remove();
+    return value;
+  }
+
+  const themedSteps = () => [
+    { id: 'basics', label: 'Basics', state: 'completed' as const },
+    { id: 'inputs', label: 'Inputs', state: 'current' as const },
+    { id: 'oops', label: 'Oops', state: 'error' as const },
+    { id: 'review', label: 'Review', state: 'pending' as const },
+  ];
+
+  const overrides =
+    '--lr-stepper-current-color: rgb(0, 51, 102);' +
+    '--lr-stepper-error-color: rgb(102, 0, 0);' +
+    '--lr-stepper-current-index-bg: rgb(10, 20, 30);' +
+    '--lr-stepper-current-index-color: rgb(200, 210, 220);';
+
+  async function themed(style: string): Promise<LyraStepper> {
+    const wrapper = (await fixture(
+      html`<div style=${style}><lr-stepper .steps=${themedSteps()}></lr-stepper></div>`,
+    )) as HTMLElement;
+    const el = wrapper.querySelector('lr-stepper') as LyraStepper;
+    await el.updateComplete;
+    return el;
+  }
+
+  function stepEl(el: LyraStepper, state: string): HTMLElement {
+    return el.shadowRoot!.querySelector(`[part="step"][data-state="${state}"]`) as HTMLElement;
+  }
+
+  it('recolors current/error steps and the current index chip from an ancestor, not a :host-declared prop', async () => {
+    const el = await themed(overrides);
+    const current = stepEl(el, 'current');
+    const error = stepEl(el, 'error');
+    const currentIndex = current.querySelector('[part="step-index"]')!;
+    expect(getComputedStyle(current).color).to.equal('rgb(0, 51, 102)');
+    expect(getComputedStyle(error).color).to.equal('rgb(102, 0, 0)');
+    expect(getComputedStyle(currentIndex).backgroundColor).to.equal('rgb(10, 20, 30)');
+    expect(getComputedStyle(currentIndex).color).to.equal('rgb(200, 210, 220)');
+  });
+
+  it('renders byte-identically to the pre-cssprop output when the props are unset', async () => {
+    const el = await themed('');
+    const current = stepEl(el, 'current');
+    const error = stepEl(el, 'error');
+    const currentIndex = current.querySelector('[part="step-index"]')!;
+    expect(getComputedStyle(current).color).to.equal(resolvedInShadow(el, 'color: var(--lr-color-text)', 'color'));
+    expect(getComputedStyle(error).color).to.equal(resolvedInShadow(el, 'color: var(--lr-color-danger)', 'color'));
+    expect(getComputedStyle(currentIndex).backgroundColor).to.equal(
+      resolvedInShadow(el, 'background: var(--lr-color-brand)', 'background-color'),
+    );
+    expect(getComputedStyle(currentIndex).color).to.equal(
+      resolvedInShadow(el, 'color: var(--lr-color-surface)', 'color'),
+    );
+  });
+
+  it('is accessible with the state-styling props themed', async () => {
+    const el = await themed(overrides);
+    await expect(el).to.be.accessible();
+  });
+});

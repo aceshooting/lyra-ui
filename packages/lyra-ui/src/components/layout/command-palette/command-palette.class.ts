@@ -33,6 +33,10 @@ export interface LyraCommandPaletteEventMap { 'lr-select': CustomEvent<{ command
  * @cssprop [--lr-command-palette-max-block-size=70vh] - Maximum dialog height.
  * @cssprop [--lr-command-palette-list-max-block-size=50vh] - Maximum height of the scrolling command list.
  * @cssprop [--lr-command-palette-offset-block-start=12vh] - Gap between the viewport top and the dialog.
+ * @cssprop [--lr-command-palette-active-bg=var(--lr-color-brand-quiet)] - Background of the active
+ *   (keyboard-highlighted, `data-active="true"`) command row. Declared as an inline `var()` fallback
+ *   (never on `:host`), so setting it on the element or an ancestor recolors only the active row
+ *   without hijacking the library-wide `--lr-color-brand-quiet` token.
  */
 export class LyraCommandPalette extends LyraElement<LyraCommandPaletteEventMap> {
   static styles = [LyraElement.styles, styles];

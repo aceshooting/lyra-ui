@@ -35,6 +35,26 @@ export const WithSuppliedGroups: Story = {
   render: () => html`<lr-emoji-picker .groups=${groups}></lr-emoji-picker>`,
 };
 
+/** The active (keyboard-highlighted) and hovered emoji share one background hook,
+ *  `--lr-emoji-picker-active-bg`. It is not declared on `:host`, so setting it on an ancestor
+ *  recolors only the emoji highlight — not everything else reading `--lr-color-brand-quiet`.
+ *  Hover an emoji, or arrow-key through the grid, to see it. */
+export const ThemedHighlight: Story = {
+  name: 'Themed highlight (cssprop)',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'Set `--lr-emoji-picker-active-bg` on the element or any ancestor to retint the hovered/active emoji highlight without hijacking the library-wide `--lr-color-brand-quiet` token.',
+      },
+    },
+  },
+  render: () => html`<lr-emoji-picker
+    style="--lr-emoji-picker-active-bg: var(--lr-color-success-quiet);"
+    .groups=${groups}
+  ></lr-emoji-picker>`,
+};
+
 // The windowed path (200+ filtered items) with all three geometry tokens overridden in `rem`.
 // Row pitch and columns-per-row are resolved to real pixels from those tokens, so the windowed
 // geometry stays in step with what is painted for any CSS length unit, `calc()` included.

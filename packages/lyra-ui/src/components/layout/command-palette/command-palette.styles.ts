@@ -8,7 +8,12 @@ export const styles = css`
   [part='list'] { max-block-size: var(--lr-command-palette-list-max-block-size); overflow: auto; padding: var(--lr-space-xs); }
   [part='group'] { padding: var(--lr-space-xs) var(--lr-space-s); color: var(--lr-color-text-quiet); font-size: var(--lr-font-size-sm); font-weight: var(--lr-font-weight-semibold); }
   [part='command'] { display: flex; align-items: center; gap: var(--lr-space-s); inline-size: 100%; padding: var(--lr-space-s); border: 0; border-radius: var(--lr-radius); background: transparent; color: inherit; text-align: start; cursor: pointer; }
-  [part='command'][data-active='true'] { background: var(--lr-color-brand-quiet); }
+  /* Inline var() fallback rather than a :host-declared property, so a consumer can set it on any
+     ancestor without a :host declaration shadowing that. ::part(command)[data-active='true'] is
+     invalid CSS (an attribute selector cannot follow ::part), so highlighting the active row used to
+     require hijacking the shared --lr-color-brand-quiet token, repainting everything else that reads
+     it. Unset, it falls back to that token, so the rendering is unchanged. */
+  [part='command'][data-active='true'] { background: var(--lr-command-palette-active-bg, var(--lr-color-brand-quiet)); }
   [part='command']:disabled { opacity: var(--lr-opacity-disabled); cursor: not-allowed; }
   [part='description'] { flex: 1; color: var(--lr-color-text-quiet); font-size: var(--lr-font-size-sm); }
   [part='shortcut'] { color: var(--lr-color-text-quiet); font-family: var(--lr-font-mono); font-size: var(--lr-font-size-sm); }

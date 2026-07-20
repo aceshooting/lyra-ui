@@ -211,3 +211,71 @@ it('names the focusable viewport with role="group", following the same label arb
   await el.updateComplete;
   expect(viewport.getAttribute('aria-label')).to.equal('Product screenshots');
 });
+
+describe('indicator current-state cssprops', () => {
+  /** Resolves what a `declaration` would compute to *inside this component's shadow root*, where the
+   *  `--lr-*` design tokens actually live. Used to assert the unset defaults byte-for-byte against
+   *  the tokens they fall back to. */
+  function resolvedInShadow(el: LyraCarousel, declaration: string, property: string): string {
+    const probe = document.createElement('span');
+    probe.setAttribute('style', declaration);
+    el.shadowRoot!.appendChild(probe);
+    const value = getComputedStyle(probe).getPropertyValue(property);
+    probe.remove();
+    return value;
+  }
+
+  const overrides =
+    '--lr-carousel-indicator-current-bg: rgb(0, 51, 102); --lr-carousel-indicator-current-border-color: rgb(0, 102, 51);';
+
+  async function themed(style: string): Promise<LyraCarousel> {
+    const wrapper = (await fixture(html`
+      <div style=${style}>
+        <lr-carousel>
+          <div>One</div>
+          <div>Two</div>
+          <div>Three</div>
+        </lr-carousel>
+      </div>
+    `)) as HTMLElement;
+    const el = wrapper.querySelector('lr-carousel') as LyraCarousel;
+    await el.updateComplete;
+    return el;
+  }
+
+  function currentDot(el: LyraCarousel): HTMLElement {
+    return el.shadowRoot!.querySelector('[part="indicator"][aria-current="true"] [part="indicator-dot"]') as HTMLElement;
+  }
+
+  it('recolors the current indicator dot from an ancestor, not a :host-declared prop', async () => {
+    const el = await themed(overrides);
+    const dot = currentDot(el);
+    expect(dot).to.exist;
+    expect(getComputedStyle(dot).backgroundColor).to.equal('rgb(0, 51, 102)');
+    expect(getComputedStyle(dot).borderTopColor).to.equal('rgb(0, 102, 51)');
+    // A non-current dot keeps its resting surface/border tokens -- the props are scoped to
+    // [aria-current='true'] only.
+    const other = el.shadowRoot!.querySelector(
+      '[part="indicator"][aria-current="false"] [part="indicator-dot"]',
+    ) as HTMLElement;
+    expect(getComputedStyle(other).backgroundColor).to.equal(
+      resolvedInShadow(el, 'background: var(--lr-color-surface)', 'background-color'),
+    );
+  });
+
+  it('renders byte-identically to the pre-cssprop output when the props are unset', async () => {
+    const el = await themed('');
+    const dot = currentDot(el);
+    expect(getComputedStyle(dot).backgroundColor).to.equal(
+      resolvedInShadow(el, 'background: var(--lr-color-brand-quiet)', 'background-color'),
+    );
+    expect(getComputedStyle(dot).borderTopColor).to.equal(
+      resolvedInShadow(el, 'border-color: var(--lr-color-brand)', 'border-top-color'),
+    );
+  });
+
+  it('is accessible with the current-state props themed', async () => {
+    const el = await themed(overrides);
+    await expect(el).to.be.accessible();
+  });
+});

@@ -104,6 +104,11 @@ class EmojiPickerBase extends LyraElement<LyraEmojiPickerEventMap> {}
  * @cssprop [--lr-emoji-picker-row-height=calc(var(--lr-emoji-picker-item-size) + var(--lr-space-l))] -
  *   One windowed row's height. Must stay at or above the item size plus the group-label band, or
  *   consecutive absolutely-positioned rows overlap.
+ * @cssprop [--lr-emoji-picker-active-bg=var(--lr-color-brand-quiet)] - Background of the
+ *   keyboard-active (`data-active`) **and** hovered emoji button — the two share a single rule, so
+ *   this one hook retints both consistently. Declared as an inline `var()` fallback (never on
+ *   `:host`), so setting it on the element or an ancestor recolors only the emoji highlight without
+ *   hijacking the library-wide `--lr-color-brand-quiet` token.
  */
 export class LyraEmojiPicker extends FormAssociated(EmojiPickerBase) {
   static styles = [LyraElement.styles, styles];

@@ -31,6 +31,12 @@ export interface LyraCarouselEventMap {
  *   dot rendered inside it (mirrors `<lr-swatch-picker>`'s `[part="swatch"]`/`[part="swatch-fill"]`
  *   split).
  * @csspart indicator-dot - The individual indicator's compact visible dot.
+ * @cssprop [--lr-carousel-indicator-current-bg=var(--lr-color-brand-quiet)] - Background of the
+ *   current slide's indicator dot (`[aria-current="true"]`). Declared as an inline `var()` fallback
+ *   (never on `:host`), so setting it on the element or an ancestor recolors only the current
+ *   indicator without hijacking the library-wide `--lr-color-brand-quiet` token.
+ * @cssprop [--lr-carousel-indicator-current-border-color=var(--lr-color-brand)] - Border color of
+ *   the current slide's indicator dot.
  */
 export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
   static styles = [LyraElement.styles, styles];

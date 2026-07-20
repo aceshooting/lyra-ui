@@ -37,3 +37,55 @@ it('is accessible', async () => {
   const el = await fixture(html`<lr-breadcrumb><lr-breadcrumb-item href="/">Home</lr-breadcrumb-item></lr-breadcrumb>`);
   await expect(el).to.be.accessible();
 });
+
+describe('current-state cssprop', () => {
+  /** Resolves what a `declaration` would compute to *inside this component's shadow root*, where the
+   *  `--lr-*` design tokens actually live. Used to assert the unset default byte-for-byte against
+   *  the token it falls back to. */
+  function resolvedInShadow(el: LyraBreadcrumbItem, declaration: string, property: string): string {
+    const probe = document.createElement('span');
+    probe.setAttribute('style', declaration);
+    el.shadowRoot!.appendChild(probe);
+    const value = getComputedStyle(probe).getPropertyValue(property);
+    probe.remove();
+    return value;
+  }
+
+  async function themedItem(style: string): Promise<LyraBreadcrumbItem> {
+    const wrapper = (await fixture(html`
+      <div style=${style}>
+        <lr-breadcrumb><lr-breadcrumb-item current>Reports</lr-breadcrumb-item></lr-breadcrumb>
+      </div>
+    `)) as HTMLElement;
+    const el = wrapper.querySelector('lr-breadcrumb-item') as LyraBreadcrumbItem;
+    await el.updateComplete;
+    return el;
+  }
+
+  it('recolors the current-page item from an ancestor, not a :host-declared prop', async () => {
+    const el = await themedItem('--lr-breadcrumb-current-color: rgb(0, 51, 102);');
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    expect(base.getAttribute('aria-current')).to.equal('page');
+    expect(getComputedStyle(base).color).to.equal('rgb(0, 51, 102)');
+  });
+
+  it('renders byte-identically to the pre-cssprop output when the prop is unset', async () => {
+    const el = await themedItem('');
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    expect(getComputedStyle(base).color).to.equal(
+      resolvedInShadow(el, 'color: var(--lr-color-text-quiet)', 'color'),
+    );
+  });
+
+  it('is accessible with the current-state prop themed', async () => {
+    const el = await fixture(html`
+      <div style="--lr-breadcrumb-current-color: rgb(0, 51, 102);">
+        <lr-breadcrumb>
+          <lr-breadcrumb-item href="/">Home</lr-breadcrumb-item>
+          <lr-breadcrumb-item current>Reports</lr-breadcrumb-item>
+        </lr-breadcrumb>
+      </div>
+    `);
+    await expect(el.querySelector('lr-breadcrumb')!).to.be.accessible();
+  });
+});

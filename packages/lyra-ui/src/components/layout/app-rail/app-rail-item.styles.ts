@@ -34,9 +34,15 @@ export const styles = css`
     opacity: var(--lr-opacity-disabled);
     cursor: not-allowed;
   }
+  /* Inline var() fallbacks rather than :host-declared properties, so a consumer can set them on any
+     ancestor and a :host declaration can never shadow that. ::part(base)[aria-current='page'] is
+     invalid CSS (an attribute selector cannot follow ::part), so hijacking the shared
+     --lr-color-brand-quiet/--lr-color-brand tokens used to be the only route -- which repainted every
+     other element reading those tokens. Unset, each falls back to the token the rule used before,
+     so the rendering is unchanged. */
   [part='base'][aria-current='page'] {
-    background: var(--lr-color-brand-quiet);
-    color: var(--lr-color-brand);
+    background: var(--lr-app-rail-item-current-bg, var(--lr-color-brand-quiet));
+    color: var(--lr-app-rail-item-current-color, var(--lr-color-brand));
     font-weight: var(--lr-font-weight-semibold);
   }
   [part='icon'] {
