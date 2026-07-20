@@ -3,6 +3,7 @@ import './thread-list.js';
 import '../../overlays/chip/chip.js';
 import type { LyraThreadList } from './thread-list.js';
 import type { LyraConversationItem } from '../conversation-item/conversation-item.class.js';
+import { styles } from './thread-list.styles.js';
 
 type ChatThreadLike = { id: string };
 type RenderedThreadListItem =
@@ -949,4 +950,9 @@ describe('data-mode row part forwarding', () => {
     const { el } = await mountRow();
     await expect(el).to.be.accessible();
   });
+});
+
+it('resets the native search-cancel glyph on the search field', () => {
+  const css = styles.cssText.replace(/\s+/g, ' ');
+  expect(css).to.match(/\[part='search-input'\]::-webkit-search-cancel-button/);
 });

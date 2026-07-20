@@ -476,3 +476,8 @@ describe('active/hover cssprop', () => {
     await expect(el).to.be.accessible();
   });
 });
+
+it('resets the native search-cancel glyph on the search field', () => {
+  const css = styles.cssText.replace(/\s+/g, ' ');
+  expect(css).to.match(/\[part='search'\]::-webkit-search-cancel-button/);
+});

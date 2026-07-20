@@ -29,6 +29,10 @@ export const styles = css`
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);
   }
+  [part='search']::-webkit-search-cancel-button,
+  [part='search']::-webkit-search-decoration {
+    appearance: none;
+  }
   [part='grid'] {
     display: flex;
     flex-wrap: wrap;
