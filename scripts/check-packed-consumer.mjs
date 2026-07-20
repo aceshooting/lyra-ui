@@ -52,12 +52,20 @@ const bundleEntries = {
   // footprint should stay essentially flat release over release. Gated on gzip rather than raw
   // bytes because that's what a consumer's browser actually pays for over the wire, and gzip is
   // more sensitive to a foreign dependency's low-entropy-relative-to-its-size bytes landing in an
-  // otherwise tiny, highly-compressible bundle. Measured ~18.0 KiB gzip as of this bump; budget
-  // leaves modest headroom for normal Lit/token growth while staying tight enough to catch an
-  // accidental heavy import.
+  // otherwise tiny, highly-compressible bundle.
+  //
+  // Raised from 28_000 after the 2026-07-20 --lr-button-gap/--lr-button-radius cssprops (measured
+  // 28,050 B gzip, just over the old ceiling) -- like the `core` re-baseline above, the added code
+  // is two more custom-property reads in button's own stylesheet, not a new dependency, so this is
+  // legitimate growth, not a leak. Deliberately re-baselined rather than waived; the shared
+  // LyraElement/token-layer growth from the same-day review-sweep fixes also landed here since
+  // `button` is built on the `core` fixture, which is why the ceiling had crept close to 28,000
+  // already before this bump. Measured ~27.4 KiB gzip as of this bump; budget leaves modest
+  // headroom for normal Lit/token growth while staying tight enough to catch an accidental heavy
+  // import.
   button: {
     fixture: 'core',
-    maxGzipBytes: 28_000,
+    maxGzipBytes: 31_000,
   },
   flag: {
     fixture: 'optional',
