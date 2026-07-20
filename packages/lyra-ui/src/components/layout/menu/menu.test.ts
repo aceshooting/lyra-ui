@@ -877,6 +877,375 @@ describe('public show()/hide()', () => {
   });
 });
 
+describe('header/footer composed-content regions', () => {
+  const composed = () => html`
+    <lr-menu label="Filters">
+      <button slot="trigger" id="trig" aria-label="Filters">⋮</button>
+      <input slot="header" id="filter" type="text" aria-label="Filter" />
+      <lr-menu-item value="a">A</lr-menu-item>
+      <lr-menu-item value="b">B</lr-menu-item>
+      <button slot="footer" id="apply" type="button">Apply</button>
+    </lr-menu>
+  `;
+
+  const part = (el: LyraMenu, name: string): HTMLElement =>
+    el.shadowRoot!.querySelector(`[part="${name}"]`) as HTMLElement;
+
+  it('adds no box and no layout shift when neither the header nor the footer slot is filled', async () => {
+    const el = (await fixture(basic())) as LyraMenu;
+    el.open = true;
+    await el.updateComplete;
+
+    const popup = part(el, 'popup');
+    const listEl = list(el);
+    const header = part(el, 'header');
+    const footer = part(el, 'footer');
+
+    // The wrappers exist in the shadow tree but must collapse to nothing --
+    // an uncollapsed wrapper would move every existing consumer's items.
+    expect(getComputedStyle(header).display).to.equal('none');
+    expect(getComputedStyle(footer).display).to.equal('none');
+    expect(header.getBoundingClientRect().height).to.equal(0);
+    expect(footer.getBoundingClientRect().height).to.equal(0);
+    expect(header.getBoundingClientRect().width).to.equal(0);
+    expect(footer.getBoundingClientRect().width).to.equal(0);
+
+    // The popup's box is still exactly its own border plus the list's box, and
+    // the list still starts immediately inside the popup's border edge.
+    const popupRect = popup.getBoundingClientRect();
+    const listRect = listEl.getBoundingClientRect();
+    const border = parseFloat(getComputedStyle(popup).borderBlockStartWidth);
+    expect(listRect.top - popupRect.top).to.be.closeTo(border, 0.05);
+    expect(popupRect.height).to.be.closeTo(listRect.height + border * 2, 0.05);
+
+    // [part='list'] itself is untouched: same role, same name, same slot content.
+    expect(listEl.getAttribute('role')).to.equal('menu');
+    expect(listEl.getAttribute('aria-label')).to.equal('Row actions');
+    expect(items(el).length).to.equal(3);
+
+    // ...and the host gains no attribute at all in the unfilled case.
+    expect(el.hasAttribute('data-has-header')).to.be.false;
+    expect(el.hasAttribute('data-has-footer')).to.be.false;
+    expect(el.hasAttribute('data-list-empty')).to.be.false;
+  });
+
+  it('renders filled header/footer regions outside the role="menu" list', async () => {
+    const el = (await fixture(composed())) as LyraMenu;
+    el.open = true;
+    await el.updateComplete;
+
+    const header = part(el, 'header');
+    const footer = part(el, 'footer');
+    expect(getComputedStyle(header).display).to.not.equal('none');
+    expect(getComputedStyle(footer).display).to.not.equal('none');
+    expect(header.getBoundingClientRect().height).to.be.greaterThan(0);
+    expect(footer.getBoundingClientRect().height).to.be.greaterThan(0);
+
+    // Neither slotted control may end up inside role="menu".
+    const input = el.querySelector('#filter') as HTMLInputElement;
+    const apply = el.querySelector('#apply') as HTMLButtonElement;
+    expect(input.assignedSlot?.getAttribute('name')).to.equal('header');
+    expect(apply.assignedSlot?.getAttribute('name')).to.equal('footer');
+    expect(list(el).contains(input)).to.be.false;
+    expect(list(el).contains(apply)).to.be.false;
+    expect(list(el).querySelectorAll('input, button').length).to.equal(0);
+
+    // Header sits above the list, footer below it.
+    expect(header.getBoundingClientRect().bottom).to.be.at.most(list(el).getBoundingClientRect().top + 0.05);
+    expect(footer.getBoundingClientRect().top).to.be.at.least(list(el).getBoundingClientRect().bottom - 0.05);
+  });
+
+  it('leaves the default slot’s item discovery unaffected by header/footer content', async () => {
+    const el = (await fixture(composed())) as LyraMenu;
+    el.open = true;
+    await el.updateComplete;
+
+    const internals = el as unknown as { items: LyraMenuItem[] };
+    expect(internals.items.length).to.equal(2);
+    expect(internals.items.map((i) => i.value)).to.deep.equal(['a', 'b']);
+    // Roving focus still lands on the first real item, not the header input.
+    expect(activeItemValue()).to.equal('item:a');
+    expect(internals.items.map((i) => i.tabIndex)).to.deep.equal([0, -1]);
+  });
+});
+
+describe('Tab across the header/footer regions', () => {
+  /** Walks every open shadow root -- `document.activeElement` stops at a shadow host. */
+  const deepActive = (): HTMLElement | null => {
+    let active = document.activeElement as HTMLElement | null;
+    while (active?.shadowRoot?.activeElement) active = active.shadowRoot.activeElement as HTMLElement;
+    return active;
+  };
+  // Never compare two DOM nodes with expect().to.equal() here -- a failure serializes the whole
+  // test page and wedges the runner. Compare a short stable id instead.
+  const activeId = (): string => {
+    const active = deepActive();
+    if (!active) return 'none';
+    return active.id || `${active.tagName.toLowerCase()}:${(active as HTMLElement & { value?: string }).value ?? ''}`;
+  };
+  const tab = (from: HTMLElement, shiftKey = false): KeyboardEvent => {
+    const ev = new KeyboardEvent('keydown', { key: 'Tab', shiftKey, bubbles: true, composed: true, cancelable: true });
+    from.dispatchEvent(ev);
+    return ev;
+  };
+
+  const withRegions = () => html`
+    <lr-menu label="Filters">
+      <button slot="trigger" id="trig" aria-label="Filters">⋮</button>
+      <input slot="header" id="filter" type="text" aria-label="Filter" />
+      <lr-menu-item value="a">A</lr-menu-item>
+      <lr-menu-item value="b">B</lr-menu-item>
+      <button slot="footer" id="apply" type="button">Apply</button>
+      <button slot="footer" id="reset" type="button">Reset</button>
+    </lr-menu>
+  `;
+
+  it('stays open on Tab from an item when the footer holds a focusable, so focus can reach it', async () => {
+    const el = (await fixture(withRegions())) as LyraMenu;
+    trigger(el).click();
+    await el.updateComplete;
+    expect(activeId()).to.equal('lr-menu-item:a');
+
+    const ev = tab(deepActive()!);
+    await el.updateComplete;
+    expect(el.open).to.be.true;
+    // The browser's own Tab advance is what moves focus -- it must not be prevented.
+    expect(ev.defaultPrevented).to.be.false;
+
+    // A closed popup is `visibility: hidden`, which makes its content unfocusable
+    // outright, so this focus() only lands while the menu really did stay open.
+    const apply = el.querySelector('#apply') as HTMLButtonElement;
+    apply.focus();
+    expect(activeId()).to.equal('apply');
+    expect(el.open).to.be.true;
+  });
+
+  it('stays open on Shift+Tab from an item when the header holds a focusable, so focus can reach it', async () => {
+    const el = (await fixture(withRegions())) as LyraMenu;
+    trigger(el).click();
+    await el.updateComplete;
+
+    const ev = tab(deepActive()!, true);
+    await el.updateComplete;
+    expect(el.open).to.be.true;
+    expect(ev.defaultPrevented).to.be.false;
+
+    const filter = el.querySelector('#filter') as HTMLInputElement;
+    filter.focus();
+    expect(activeId()).to.equal('filter');
+    expect(el.open).to.be.true;
+  });
+
+  it('closes on Tab from an item when the header/footer hold no focusable element at all', async () => {
+    const el = (await fixture(html`
+      <lr-menu label="Filters">
+        <button slot="trigger" id="trig" aria-label="Filters">⋮</button>
+        <span slot="header">Filters</span>
+        <lr-menu-item value="a">A</lr-menu-item>
+        <span slot="footer">2 of 9 shown</span>
+      </lr-menu>
+    `)) as LyraMenu;
+    trigger(el).click();
+    await el.updateComplete;
+
+    const ev = tab(deepActive()!);
+    await el.updateComplete;
+    expect(el.open).to.be.false;
+    expect(ev.defaultPrevented).to.be.false;
+  });
+
+  it('moves between two focusables inside the same region without closing', async () => {
+    const el = (await fixture(withRegions())) as LyraMenu;
+    trigger(el).click();
+    await el.updateComplete;
+    const apply = el.querySelector('#apply') as HTMLButtonElement;
+    apply.focus();
+    expect(activeId()).to.equal('apply');
+
+    const ev = tab(apply);
+    await el.updateComplete;
+    expect(el.open).to.be.true;
+    expect(ev.defaultPrevented).to.be.false;
+  });
+
+  it('closes on Tab out of the last focusable in the footer, without preventing the default advance', async () => {
+    const el = (await fixture(withRegions())) as LyraMenu;
+    trigger(el).click();
+    await el.updateComplete;
+    const reset = el.querySelector('#reset') as HTMLButtonElement;
+    reset.focus();
+    expect(activeId()).to.equal('reset');
+
+    const ev = tab(reset);
+    await el.updateComplete;
+    expect(el.open).to.be.false;
+    expect(ev.defaultPrevented).to.be.false;
+  });
+
+  it('closes on Shift+Tab out of the first focusable in the header — the other end of the same dismissal hole', async () => {
+    const el = (await fixture(withRegions())) as LyraMenu;
+    trigger(el).click();
+    await el.updateComplete;
+    const filter = el.querySelector('#filter') as HTMLInputElement;
+    filter.focus();
+
+    const ev = tab(filter, true);
+    await el.updateComplete;
+    expect(el.open).to.be.false;
+    expect(ev.defaultPrevented).to.be.false;
+  });
+
+  it('stays open on Tab from the header, whose next stop is the list itself', async () => {
+    const el = (await fixture(withRegions())) as LyraMenu;
+    trigger(el).click();
+    await el.updateComplete;
+    const filter = el.querySelector('#filter') as HTMLInputElement;
+    filter.focus();
+
+    tab(filter);
+    await el.updateComplete;
+    expect(el.open).to.be.true;
+  });
+
+  it('still closes on Tab from an item when only default-slot content follows it (the legacy shape)', async () => {
+    const el = (await fixture(html`
+      <lr-menu label="Filters">
+        <button slot="trigger" id="trig" aria-label="Filters">⋮</button>
+        <lr-menu-item value="a">A</lr-menu-item>
+        <button id="legacy-apply" type="button">Apply</button>
+      </lr-menu>
+    `)) as LyraMenu;
+    trigger(el).click();
+    await el.updateComplete;
+
+    const ev = tab(deepActive()!);
+    await el.updateComplete;
+    // Default-slot non-item content stays deliberately Tab-unreachable -- only
+    // the header/footer regions carve out of the historical "Tab closes" rule.
+    expect(el.open).to.be.false;
+    expect(ev.defaultPrevented).to.be.false;
+  });
+
+  it('closes on Tab out of the last default-slot focusable, sealing the old dismissal hole', async () => {
+    const el = (await fixture(html`
+      <lr-menu label="Filters">
+        <button slot="trigger" id="trig" aria-label="Filters">⋮</button>
+        <lr-menu-item value="a">A</lr-menu-item>
+        <button id="legacy-apply" type="button">Apply</button>
+      </lr-menu>
+    `)) as LyraMenu;
+    trigger(el).click();
+    await el.updateComplete;
+    const legacy = el.querySelector('#legacy-apply') as HTMLButtonElement;
+    legacy.focus();
+    expect(activeId()).to.equal('legacy-apply');
+
+    // Before this, Tab from non-item content was swallowed by the item-target
+    // gate: focus walked out of the popup while the menu stayed open.
+    const ev = tab(legacy);
+    await el.updateComplete;
+    expect(el.open).to.be.false;
+    expect(ev.defaultPrevented).to.be.false;
+  });
+});
+
+describe('Escape from the header/footer regions', () => {
+  const withRegions = () => html`
+    <lr-menu label="Filters">
+      <button slot="trigger" id="trig" aria-label="Filters">⋮</button>
+      <input slot="header" id="filter" type="text" aria-label="Filter" />
+      <lr-menu-item value="a">A</lr-menu-item>
+      <lr-menu-item value="b">B</lr-menu-item>
+      <button slot="footer" id="apply" type="button">Apply</button>
+    </lr-menu>
+  `;
+  const escape = (from: HTMLElement): KeyboardEvent => {
+    const ev = new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, composed: true, cancelable: true });
+    from.dispatchEvent(ev);
+    return ev;
+  };
+
+  it('closes and refocuses the trigger on Escape from header content, with closeOnEscapeAnywhere unset', async () => {
+    const el = (await fixture(withRegions())) as LyraMenu;
+    expect(el.closeOnEscapeAnywhere).to.be.false;
+    const btn = trigger(el);
+    btn.click();
+    await el.updateComplete;
+    const filter = el.querySelector('#filter') as HTMLInputElement;
+    filter.focus();
+
+    escape(filter);
+    await el.updateComplete;
+    expect(el.open).to.be.false;
+    expect((document.activeElement as HTMLElement | null)?.id).to.equal('trig');
+  });
+
+  it('closes and refocuses the trigger on Escape from footer content, with closeOnEscapeAnywhere unset', async () => {
+    const el = (await fixture(withRegions())) as LyraMenu;
+    const btn = trigger(el);
+    btn.click();
+    await el.updateComplete;
+    const apply = el.querySelector('#apply') as HTMLButtonElement;
+    apply.focus();
+
+    escape(apply);
+    await el.updateComplete;
+    expect(el.open).to.be.false;
+    expect((document.activeElement as HTMLElement | null)?.id).to.equal('trig');
+  });
+
+  it('leaves closeOnEscapeAnywhere governing only default-slot non-item content', async () => {
+    const el = (await fixture(html`
+      <lr-menu label="Filters">
+        <button slot="trigger" id="trig" aria-label="Filters">⋮</button>
+        <input slot="header" id="filter" type="text" aria-label="Filter" />
+        <lr-menu-item value="a">A</lr-menu-item>
+        <input id="legacy" type="text" aria-label="Legacy" />
+      </lr-menu>
+    `)) as LyraMenu;
+    el.open = true;
+    await el.updateComplete;
+
+    // Default slot: still gated, still `false` by default.
+    const legacy = el.querySelector('#legacy') as HTMLInputElement;
+    legacy.focus();
+    escape(legacy);
+    await el.updateComplete;
+    expect(el.open).to.be.true;
+
+    // Header: never gated.
+    const filter = el.querySelector('#filter') as HTMLInputElement;
+    filter.focus();
+    escape(filter);
+    await el.updateComplete;
+    expect(el.open).to.be.false;
+  });
+
+  it('gives Arrow/Home/End/Enter/Space from header/footer content their full native behavior', async () => {
+    const el = (await fixture(withRegions())) as LyraMenu;
+    trigger(el).click();
+    await el.updateComplete;
+    const filter = el.querySelector('#filter') as HTMLInputElement;
+    const apply = el.querySelector('#apply') as HTMLButtonElement;
+    const activeIndexOf = (): number => (el as unknown as { activeIndex: number }).activeIndex;
+    const before = activeIndexOf();
+
+    for (const source of [filter, apply]) {
+      source.focus();
+      for (const key of ['ArrowDown', 'ArrowUp', 'Home', 'End', 'Enter', ' ']) {
+        const ev = new KeyboardEvent('keydown', { key, bubbles: true, composed: true, cancelable: true });
+        source.dispatchEvent(ev);
+        // The item-target gate must not have been widened: nothing may be
+        // prevented, so the native control keeps its own behavior.
+        expect(ev.defaultPrevented, `${key} from #${source.id}`).to.be.false;
+      }
+    }
+    await el.updateComplete;
+    expect(activeIndexOf()).to.equal(before);
+    expect(el.open).to.be.true;
+  });
+});
+
 it('is accessible while closed', async () => {
   const el = (await fixture(basic())) as LyraMenu;
   await expect(el).to.be.accessible();
@@ -886,6 +1255,31 @@ it('is accessible while open', async () => {
   const el = (await fixture(basic())) as LyraMenu;
   el.open = true;
   await el.updateComplete;
+  await expect(el).to.be.accessible();
+});
+
+it('is accessible with a header input and a footer button — content role="menu" could not legally hold', async () => {
+  const el = (await fixture(html`
+    <lr-menu label="Filters">
+      <button slot="trigger" aria-label="Filters">⋮</button>
+      <input slot="header" id="filter" type="text" aria-label="Filter actions" />
+      <lr-menu-item value="a">A</lr-menu-item>
+      <lr-menu-item value="b">B</lr-menu-item>
+      <button slot="footer" id="apply" type="button">Apply</button>
+    </lr-menu>
+  `)) as LyraMenu;
+  el.open = true;
+  await el.updateComplete;
+
+  // Assert the populated state really rendered before trusting the axe pass:
+  // both regions must be visible, and neither control may sit inside the list.
+  const shadow = el.shadowRoot!;
+  expect(getComputedStyle(shadow.querySelector('[part="header"]')!).display).to.not.equal('none');
+  expect(getComputedStyle(shadow.querySelector('[part="footer"]')!).display).to.not.equal('none');
+  expect(list(el).querySelectorAll('input, button').length).to.equal(0);
+  expect(el.querySelectorAll('[slot="header"], [slot="footer"]').length).to.equal(2);
+
+  // Inside role="menu" this same content is an aria-required-children violation.
   await expect(el).to.be.accessible();
 });
 

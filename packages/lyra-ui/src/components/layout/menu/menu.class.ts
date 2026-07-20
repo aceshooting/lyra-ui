@@ -5,6 +5,7 @@ import { LyraElement } from '../../../internal/lyra-element.js';
 import { place } from '../../../internal/positioner.js';
 import { rtlAwarePlacement } from '../../../internal/rtl.js';
 import { nextId } from '../../../internal/a11y.js';
+import { collectFocusableElements, deepActiveElement } from '../../../internal/overlay-manager.js';
 import { styles } from './menu.styles.js';
 import { LyraMenuItem } from './menu-item.class.js';
 import './menu-item.class.js';
@@ -53,16 +54,27 @@ export interface LyraMenuEventMap {
  *   items (wrapping past either end — the recommended, and more common,
  *   menu-widget behavior, unlike `<lr-select>`'s clamped listbox nav).
  *   Home/End jump to the first/last non-disabled item. Enter/Space activate
- *   the focused item. Escape closes and returns focus to the trigger. Tab
- *   closes the menu without trapping focus (the browser's own default Tab
- *   behavior proceeds untouched). A printable keypress runs type-ahead:
- *   roving focus jumps to the next non-disabled item whose text starts with
- *   the accumulated buffer, cycling from just after the active item (mirrors
- *   `<lr-select>`'s identical listbox type-ahead). All of the above (except
- *   Escape) only respond to keydowns from a real `<lr-menu-item>` target,
- *   so a slotted non-item control (e.g. a date input) keeps its own full
- *   default keyboard behavior. Escape from such a slotted control closes the
- *   menu too, but only when `closeOnEscapeAnywhere` is set — it defaults to
+ *   the focused item. Escape closes and returns focus to the trigger. A
+ *   printable keypress runs type-ahead: roving focus jumps to the next
+ *   non-disabled item whose text starts with the accumulated buffer, cycling
+ *   from just after the active item (mirrors `<lr-select>`'s identical
+ *   listbox type-ahead). All of the above (except Escape and Tab) only
+ *   respond to keydowns from a real `<lr-menu-item>` target, so a slotted
+ *   non-item control (e.g. a date input) keeps its own full default keyboard
+ *   behavior.
+ * - Tab never traps focus and never calls `preventDefault()` — the browser's
+ *   own Tab navigation always proceeds untouched. It closes the menu only
+ *   when focus is on its way *out* of the popup: with a focusable in the
+ *   `header`/`footer` region on the far side of the keypress, the menu stays
+ *   open so native Tab can carry focus there instead. With neither region
+ *   filled, Tab closes exactly as it always has. Tabbing past the popup's
+ *   last focusable in either direction closes it too, including from slotted
+ *   non-item content — which previously left the menu open while focus
+ *   walked away.
+ * - Escape from `header`/`footer` content closes the menu and refocuses the
+ *   trigger unconditionally, mirroring `<lr-popover>`'s handling of arbitrary
+ *   popup content. `closeOnEscapeAnywhere` governs only the *legacy* shape —
+ *   non-item content slotted into the **default** slot — and defaults to
  *   `false`, so existing consumers keep today's behavior unchanged.
  * - A click outside both the trigger and the open popup closes it (mirrors
  *   `<lr-select>`'s `onDocPointer` exactly) — this does *not* refocus the
@@ -100,7 +112,16 @@ export interface LyraMenuEventMap {
  * `internal/positioner.js`'s `place()`.
  * @slot - `<lr-menu-item>` elements, plus optionally plain `<hr>` dividers
  * between groups (native `<hr>` already carries an implicit `separator`
- * role, matching what `role="menu"` expects between item groups).
+ * role, matching what `role="menu"` expects between item groups). Arbitrary
+ * non-item content still renders here for backward compatibility, but the
+ * `header`/`footer` slots below are the supported place for it.
+ * @slot header - Composed content rendered above the items and *outside* the
+ * `role="menu"` list — a filter/search field, a section title, a summary row.
+ * Keeps its own full default keyboard behavior, is reachable with Tab from
+ * the items, and is ARIA-valid (arbitrary content inside `role="menu"` is
+ * not). Collapses to no box at all while unfilled.
+ * @slot footer - Same as `header`, rendered below the items — an
+ * "Apply"/"Done" button, a link to a fuller settings page, a count.
  * @event lr-show - The menu opened. Not fired for markup that renders
  * `open` true from the start (mirrors `<lr-select>`'s identical guard).
  * @event lr-hide - The menu closed. Same first-render guard as `lr-show`.
@@ -111,7 +132,11 @@ export interface LyraMenuEventMap {
  * followed by the menu closing and focus returning to the trigger.
  * @csspart trigger - The wrapper around the `trigger` slot (the positioning anchor).
  * @csspart popup - The positioned floating panel.
+ * @csspart header - The wrapper around the `header` slot, above the list and
+ * outside `role="menu"`. `display: none` while the slot is unfilled.
  * @csspart list - The `role="menu"` container wrapping the default slot.
+ * @csspart footer - The wrapper around the `footer` slot, below the list and
+ * outside `role="menu"`. `display: none` while the slot is unfilled.
  */
 export class LyraMenu extends LyraElement<LyraMenuEventMap> {
   static styles = [LyraElement.styles, styles];
@@ -137,13 +162,17 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
   @property() label = 'Menu';
 
   /** Extends the Escape-closes-and-refocuses-trigger behavior to keydown
-   *  events originating from slotted non-item content within `[part="list"]`
-   *  (e.g. a date input or a custom section slotted alongside
-   *  `<lr-menu-item>`s), not just from a real `<lr-menu-item>`. Default
-   *  `false` leaves Escape from slotted non-item content with full default
-   *  keyboard behavior, matching every existing consumer. Arrow/Home/End/
-   *  Enter/Space stay scoped to real `<lr-menu-item>` targets regardless of
-   *  this property — only Escape is affected. */
+   *  events originating from non-item content slotted into the **default**
+   *  slot, i.e. rendered within `[part="list"]` alongside the
+   *  `<lr-menu-item>`s. Default `false` leaves Escape from such content with
+   *  full default keyboard behavior, matching every existing consumer.
+   *  Arrow/Home/End/Enter/Space stay scoped to real `<lr-menu-item>` targets
+   *  regardless of this property — only Escape is affected.
+   *
+   *  It has no bearing on the `header`/`footer` slots, which sit outside
+   *  `[part="list"]` and always close on Escape. Prefer those for composed
+   *  controls: they are keyboard-reachable and ARIA-valid, whereas arbitrary
+   *  content inside `role="menu"` is an `aria-required-children` violation. */
   @property({ type: Boolean, attribute: 'close-on-escape-anywhere' }) closeOnEscapeAnywhere = false;
 
   // Plain instance fields, not @state() -- render()'s template never reads
@@ -170,6 +199,36 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
 
   protected willUpdate(): void {
     this._isFirstUpdate = !this.hasUpdated;
+  }
+
+  protected firstUpdated(): void {
+    // `slotchange` only fires when a slot's assigned nodes actually *change*,
+    // so a slot that starts (and stays) empty never fires one at all. The
+    // header/footer wrappers and the divider borders are driven off these
+    // attributes, so seed them once from the real slots after the first render.
+    this.syncRegionState();
+  }
+
+  private onRegionSlotChange = (): void => {
+    this.syncRegionState();
+  };
+
+  /**
+   * Reflects "is this slot filled?" onto the host so the stylesheet can collapse an unfilled
+   * header/footer wrapper to no box at all, and can skip the divider border next to an empty
+   * list. `:empty` cannot do this job: Chromium's `:empty` does not ignore the whitespace-only
+   * text nodes Lit leaves inside a part, so a `[part='header']:empty` rule never matches.
+   *
+   * The polarity is deliberate -- `data-has-header`/`data-has-footer` are *absent* for a menu
+   * with neither slot filled, and `data-list-empty` is absent for a menu that has items, so the
+   * overwhelmingly common shape gains no host attribute of any kind.
+   */
+  private syncRegionState(): void {
+    const assigned = (selector: string): number =>
+      this.renderRoot.querySelector<HTMLSlotElement>(selector)?.assignedElements({ flatten: true }).length ?? 0;
+    this.toggleAttribute('data-has-header', assigned('slot[name="header"]') > 0);
+    this.toggleAttribute('data-has-footer', assigned('slot[name="footer"]') > 0);
+    this.toggleAttribute('data-list-empty', assigned('slot:not([name])') === 0);
   }
 
   protected updated(changed: PropertyValues): void {
@@ -356,6 +415,7 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
     }
     this.activeIndex = previouslyActive ? this.items.indexOf(previouslyActive) : -1;
     this.applyRovingTabIndex();
+    this.syncRegionState();
     if (this.open) {
       if (this.activeIndex === -1) {
         // Nothing left to preserve: the active item is gone, or nothing had
@@ -491,17 +551,85 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
         e.preventDefault();
         current?.select();
         break;
-      case 'Tab':
-        // No preventDefault -- the browser's own default Tab navigation is
-        // left to proceed untouched, only the (now-stale) open menu closes.
-        this.hide();
-        break;
+      // Tab is deliberately absent here: it is owned by onPopupKeyDown below,
+      // which sees keydowns from the header/footer regions too and so can tell
+      // "Tab moves within the popup" apart from "Tab leaves the popup". 'Tab'
+      // is longer than one character, so the type-ahead default arm ignores it.
       default:
         if (e.key.length === 1 && !e.altKey && !e.ctrlKey && !e.metaKey) {
           this.typeAhead(e.key);
         }
         return;
     }
+  };
+
+  private popupPart(name: 'popup' | 'header' | 'list' | 'footer'): HTMLElement | null {
+    return this.renderRoot.querySelector<HTMLElement>(`[part="${name}"]`);
+  }
+
+  /**
+   * Whether a Tab/Shift+Tab keypress would move focus out of `[part='popup']` altogether, rather
+   * than to another focusable inside it. The popup's Tab sequence is
+   * `[header focusables, the list, footer focusables]`, and the list contributes exactly one stop
+   * -- the roving `tabindex="0"` item.
+   *
+   * Non-item content slotted into the *default* slot is deliberately not part of that sequence
+   * from an item's point of view: Tab from an `<lr-menu-item>` closes the menu exactly as it
+   * always has unless there is a real region to move into. Tab *from* such content is still
+   * measured against its default-slot neighbors, so a legacy two-control filter row keeps
+   * working -- only tabbing past the last of them now closes the menu, which is the dismissal
+   * hole this seals (previously the item-target gate swallowed the keypress entirely and focus
+   * walked out of the popup while the menu stayed open).
+   */
+  private tabWouldLeavePopup(e: KeyboardEvent): boolean {
+    const header = this.popupPart('header');
+    const footer = this.popupPart('footer');
+    const listEl = this.popupPart('list');
+    const backwards = e.shiftKey;
+    const active = deepActiveElement(this.ownerDocument) as HTMLElement | null;
+    const headerStops = header ? collectFocusableElements(header) : [];
+    const footerStops = footer ? collectFocusableElements(footer) : [];
+    const listStops = listEl ? collectFocusableElements(listEl) : [];
+    const hasNeighbor = (stops: HTMLElement[]): boolean => {
+      const index = active ? stops.indexOf(active) : -1;
+      if (index === -1) return false;
+      return backwards ? index > 0 : index < stops.length - 1;
+    };
+
+    const path = e.composedPath();
+    if (footer && path.includes(footer)) {
+      if (hasNeighbor(footerStops)) return false;
+      return backwards ? listStops.length === 0 && headerStops.length === 0 : true;
+    }
+    if (header && path.includes(header)) {
+      if (hasNeighbor(headerStops)) return false;
+      return backwards ? true : listStops.length === 0 && footerStops.length === 0;
+    }
+    if (!(e.target instanceof LyraMenuItem) && hasNeighbor(listStops)) return false;
+    return backwards ? headerStops.length === 0 : footerStops.length === 0;
+  }
+
+  /**
+   * Bound to `[part='popup']` rather than `[part='list']` so it also sees keydowns from the
+   * `header`/`footer` regions, which sit outside the `role="menu"` list.
+   *
+   * Escape from those regions closes unconditionally, matching `<lr-popover>`'s own handling of
+   * arbitrary popup content. `closeOnEscapeAnywhere` keeps governing only the legacy case --
+   * non-item content still slotted into the *default* slot -- so Escape bubbling up from inside
+   * the list is left entirely to `onListKeyDown`.
+   */
+  private onPopupKeyDown = (e: KeyboardEvent): void => {
+    const listEl = this.popupPart('list');
+    if (e.key === 'Escape') {
+      if (listEl && e.composedPath().includes(listEl)) return;
+      e.preventDefault();
+      this.hide({ focusTrigger: true });
+      return;
+    }
+    // No preventDefault for Tab, in either branch -- the browser's own default
+    // navigation is left to proceed untouched, only the (now-stale) open menu
+    // closes, and only when Tab is actually leaving the popup.
+    if (e.key === 'Tab' && this.tabWouldLeavePopup(e)) this.hide();
   };
 
   /** Standard WAI-ARIA APG menu-button type-ahead: moves the roving focus to
@@ -543,7 +671,10 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
       <div part="trigger" @click=${this.onTriggerClick} @keydown=${this.onTriggerKeyDown}>
         <slot name="trigger" @slotchange=${this.onTriggerSlotChange}></slot>
       </div>
-      <div part="popup">
+      <div part="popup" @keydown=${this.onPopupKeyDown}>
+        <div part="header">
+          <slot name="header" @slotchange=${this.onRegionSlotChange}></slot>
+        </div>
         <div
           part="list"
           id=${this.listId}
@@ -555,6 +686,9 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
           @lr-menu-item-state-change=${this.onItemStateChange}
         >
           <slot @slotchange=${this.onItemsSlotChange}></slot>
+        </div>
+        <div part="footer">
+          <slot name="footer" @slotchange=${this.onRegionSlotChange}></slot>
         </div>
       </div>
     `;

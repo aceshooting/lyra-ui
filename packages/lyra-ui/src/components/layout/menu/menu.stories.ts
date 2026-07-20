@@ -88,12 +88,41 @@ export const WithDisabledItem: Story = {
   `,
 };
 
-/** A non-`<lr-menu-item>` control (here, a text filter input) slotted
- *  alongside the items keeps its own full default keyboard behavior —
- *  Arrow/Home/End/Enter/Space never get hijacked from it. With
- *  `close-on-escape-anywhere` set, Escape from that input still closes the
- *  menu and refocuses the trigger, matching what Escape already does from a
- *  real item; without it (the default), Escape from the input is left alone. */
+/** A filter field belongs in the `header` slot: it renders above the items but
+ *  *outside* the `role="menu"` list, so it is ARIA-valid (arbitrary content
+ *  inside `role="menu"` is not), Tab reaches it from the items instead of
+ *  closing the menu, Escape from it closes and refocuses the trigger with no
+ *  opt-in, and Arrow/Home/End/Enter/Space are never hijacked from it. */
+export const HeaderFilterField: Story = {
+  render: () => html`
+    <lr-menu label="Filtered actions">
+      <button
+        slot="trigger"
+        aria-label="Filtered actions"
+        style="border:1px solid var(--lr-color-border);border-radius:var(--lr-radius);background:var(--lr-color-surface);cursor:pointer;padding:0.4rem 0.75rem;"
+      >
+        Actions ▾
+      </button>
+      <input
+        slot="header"
+        type="text"
+        placeholder="Filter…"
+        aria-label="Filter actions"
+        style="inline-size:100%;box-sizing:border-box;padding:0.3rem 0.5rem;border:1px solid var(--lr-color-border);border-radius:var(--lr-radius);"
+      />
+      <lr-menu-item value="rename">Rename</lr-menu-item>
+      <lr-menu-item value="duplicate">Duplicate</lr-menu-item>
+      <lr-menu-item value="delete" destructive>Delete</lr-menu-item>
+    </lr-menu>
+  `,
+};
+
+/** The legacy shape the `header`/`footer` slots replace: a non-`<lr-menu-item>`
+ *  control slotted into the *default* slot, i.e. inside `role="menu"`. It still
+ *  works and still keeps its own full default keyboard behavior, but it is not
+ *  reachable with Tab from an item, and only closes on Escape when
+ *  `close-on-escape-anywhere` is set (the default is `false`, which leaves
+ *  Escape from the input alone). Prefer the story above for new code. */
 export const SlottedControlWithEscapeAnywhere: Story = {
   render: () => html`
     <lr-menu label="Filtered actions" close-on-escape-anywhere>
@@ -108,6 +137,7 @@ export const SlottedControlWithEscapeAnywhere: Story = {
         <input
           type="text"
           placeholder="Filter…"
+          aria-label="Filter actions"
           style="inline-size:100%;box-sizing:border-box;padding:0.3rem 0.5rem;border:1px solid var(--lr-color-border);border-radius:var(--lr-radius);"
         />
       </div>
@@ -119,15 +149,15 @@ export const SlottedControlWithEscapeAnywhere: Story = {
   `,
 };
 
-/** A slotted control the menu deliberately keeps its hands off — a checkbox filter set plus an
- *  Apply button — closed through the public `hide({ focusTrigger: true })`. That is the case the
- *  trigger alone can't express: the user is done, but nothing has moved focus anywhere, so the
+/** An Apply button in the `footer` slot — outside the `role="menu"` list, Tab-reachable from the
+ *  last item — closing the menu through the public `hide({ focusTrigger: true })`. That is the case
+ *  the trigger alone can't express: the user is done, but nothing has moved focus anywhere, so the
  *  menu has to hand it back to the trigger itself. `show()` is the symmetric opener. */
 export const ImperativeShowHide: Story = {
   name: 'show() / hide({ focusTrigger: true })',
   render: () => html`
     <div>
-      <lr-menu label="Filters" id="imperative-menu" close-on-escape-anywhere>
+      <lr-menu label="Filters" id="imperative-menu">
         <button
           slot="trigger"
           aria-label="Filters"
@@ -137,8 +167,7 @@ export const ImperativeShowHide: Story = {
         </button>
         <lr-menu-item value="unread">Unread only</lr-menu-item>
         <lr-menu-item value="starred">Starred only</lr-menu-item>
-        <hr />
-        <div style="padding:0.4rem 0.6rem;text-align:end;">
+        <div slot="footer" style="text-align:end;">
           <button
             type="button"
             style="border:1px solid var(--lr-color-border);border-radius:var(--lr-radius);background:var(--lr-color-surface);cursor:pointer;padding:0.25rem 0.6rem;"

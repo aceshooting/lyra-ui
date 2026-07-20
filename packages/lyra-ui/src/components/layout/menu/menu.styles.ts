@@ -18,6 +18,12 @@ export const styles = css`
     position: fixed;
     z-index: var(--lr-layer-dropdown);
     box-sizing: border-box;
+    /* A column so a filled header/footer keeps its full height and the list
+       gives up space instead (see [part='list']'s min-block-size below). With
+       neither region filled this lays out identically to the plain block box
+       it replaced -- one full-width child, sized by its own content. */
+    display: flex;
+    flex-direction: column;
     min-inline-size: var(--lr-size-10rem);
     max-inline-size: min(var(--lr-popover-viewport-clamp), var(--lr-size-20rem), var(--lr-positioner-available-inline-size, 100vw));
     max-block-size: min(var(--lr-size-20rem), var(--lr-positioner-available-block-size, var(--lr-size-20rem)));
@@ -49,9 +55,40 @@ export const styles = css`
       transition: none !important;
     }
   }
+  /* Composed content that is deliberately NOT a menu item, rendered outside
+     the role="menu" list (arbitrary content inside role="menu" is an
+     aria-required-children violation). Both wrappers collapse to no box at
+     all while their slot is unfilled, which is what keeps a menu that uses
+     neither slot rendering exactly as it did before they existed.
+     An :empty selector cannot drive that: Chromium's :empty does not ignore
+     the whitespace-only text nodes Lit leaves inside a part, so the rule
+     would silently never match -- the host attributes below are set from the
+     slots' own slotchange instead. */
+  [part='header'],
+  [part='footer'] {
+    flex: 0 0 auto;
+    padding: var(--lr-space-xs);
+  }
+  :host(:not([data-has-header])) [part='header'],
+  :host(:not([data-has-footer])) [part='footer'] {
+    display: none;
+  }
+  /* The divider only earns its keep when there are items on the other side of
+     it -- a header above an empty list would otherwise draw a stray rule. */
+  :host(:not([data-list-empty])) [part='header'] {
+    border-block-end: var(--lr-border-width-thin) solid var(--lr-color-border);
+  }
+  :host(:not([data-list-empty])) [part='footer'] {
+    border-block-start: var(--lr-border-width-thin) solid var(--lr-color-border);
+  }
   [part='list'] {
     display: flex;
     flex-direction: column;
+    /* The list, not a filled header/footer, is what scrolls when the popup
+       runs out of room -- min-block-size:0 is what lets it shrink below its
+       content height inside the popup's own column. */
+    flex: 0 1 auto;
+    min-block-size: 0;
     max-block-size: min(var(--lr-size-20rem), var(--lr-positioner-available-block-size, var(--lr-size-20rem)));
     overflow-y: auto;
     padding: var(--lr-space-xs);
