@@ -5,7 +5,12 @@ import { activateOverlay, type OverlayHandle } from '../../../internal/overlay-m
 import { lockScroll } from '../../../internal/scroll-lock.js';
 import { isRtl } from '../../../internal/rtl.js';
 import { finiteRange } from '../../../internal/numbers.js';
-import { OrientationBreakpointController, type OrientationBreakpointBasis } from '../../../internal/orientation-breakpoint.js';
+import {
+  CollapseBreakpointController,
+  OrientationBreakpointController,
+  type BreakpointBasis,
+  type OrientationBreakpointBasis,
+} from '../../../internal/orientation-breakpoint.js';
 import { styles } from './split.styles.js';
 
 const KEYBOARD_STEP = 2;
@@ -98,7 +103,10 @@ export interface LyraSplitEventMap {
  * the split's own container narrows past `railBreakpoint` that pane clamps
  * to a fixed `railWidth`, and past the narrower `floatBreakpoint` it instead
  * becomes an absolutely-positioned overlay "floating card" above the other
- * pane. This component only handles the width-collapse mechanics and
+ * pane. Both breakpoints accept a bare pixel number or a CSS length
+ * (`px`/`rem`/`em`), and `collapseBreakpointBasis="viewport"` measures them
+ * against the viewport via `matchMedia` instead of this component's own
+ * allocation. This component only handles the width-collapse mechanics and
  * signals the current state — via the `collapseState`-derived
  * `data-collapse-state` attribute (set on both the host and the collapsing
  * panel itself) and the `lr-split-collapse-change` event — it renders no
@@ -227,13 +235,54 @@ export class LyraSplit extends LyraElement<LyraSplitEventMap> {
   @property({ reflect: true }) collapse: SplitCollapseMode = 'none';
   /** Fixed CSS length the collapsing pane clamps to in the `'rail'` state. */
   @property({ attribute: 'rail-width' }) railWidth = '3.5rem';
-  /** Container width (px, measured on `[part="base"]`) below which the
-   *  collapsing pane switches from its normal percent width to the fixed
-   *  `railWidth` (`'rail'` state). Must stay above `floatBreakpoint`. */
-  @property({ type: Number, attribute: 'rail-breakpoint' }) railBreakpoint = 640;
-  /** Container width (px) below which the collapsing pane instead becomes an
-   *  absolutely-positioned overlay above the other pane (`'floating'` state). */
-  @property({ type: Number, attribute: 'float-breakpoint' }) floatBreakpoint = 400;
+  /** Width below which the collapsing pane switches from its normal percent width to the fixed
+   *  `railWidth` (`'rail'` state). Must stay above `floatBreakpoint` — an inverted pair is
+   *  sanitized by raising this one to match, which collapses the `'rail'` band away rather than
+   *  leaving a wide container reported as collapsed.
+   *
+   *  Accepts a bare pixel number (`640`, `rail-breakpoint="640"` — the original form) or a CSS
+   *  length string: `'640px'`, `'68.75rem'`, `'3em'`. Under the default
+   *  `collapseBreakpointBasis="container"` this is compared against this component's own measured
+   *  `[part="base"]` inline size, strictly `<`, and `rem` resolves against the *document root*'s
+   *  computed font size (a `@container` query's rule, not a `@media` query's) while `em` resolves
+   *  against this element's own. The length is re-resolved on every measurement, never cached, so
+   *  a root font-size change moves the crossing width with no invalidation step.
+   *
+   *  Anything the grammar rejects — `''`, `'auto'`, garbage, a non-finite number, and deliberately
+   *  `%`/`vw`/`vh`/`calc()`/`var()` — falls back to the `640` default rather than switching the
+   *  feature off (unlike `orientationBreakpoint`, this breakpoint has a documented default to fall
+   *  back to). A negative length is floored at `0`, i.e. never crossed.
+   *
+   *  Default: `640`. */
+  @property({ attribute: 'rail-breakpoint' }) railBreakpoint: number | string = 640;
+  /** Width below which the collapsing pane instead becomes an absolutely-positioned overlay above
+   *  the other pane (`'floating'` state). Same accepted forms, basis, and sanitization as
+   *  `railBreakpoint`; an unparseable value falls back to the `400` default.
+   *
+   *  Default: `400`. */
+  @property({ attribute: 'float-breakpoint' }) floatBreakpoint: number | string = 400;
+  /** Which box `railBreakpoint`/`floatBreakpoint` measure. `'container'` (the default) observes
+   *  this component's own `[part="base"]` inline size via `ResizeObserver`, comparing strictly `<`.
+   *  `'viewport'` instead evaluates `matchMedia('(max-width: <breakpoint>)')` for each of the two
+   *  thresholds, which is inclusive (`<=`) — native `max-width` semantics, deliberately, so the
+   *  crossing point matches a CSS `@media` rule authored with the same length exactly. Switching
+   *  basis therefore shifts each crossing point by 1px (the same trade-off
+   *  `orientationBreakpointBasis` already makes).
+   *
+   *  Use `'viewport'` to collapse in step with a page-level responsive layout — e.g. a shell whose
+   *  own `@media` rules restack at the same width — rather than with this split's own allocation.
+   *  `'viewport'` also lets the browser resolve a `rem` breakpoint with real `@media` semantics
+   *  (against the *initial* font size, ignoring an `html { font-size }` override), keeping it in
+   *  step with such a rule.
+   *
+   *  Both bands are classified from both queries together on every change, so a fast resize that
+   *  crosses both thresholds at once still lands on one correct state and fires
+   *  `lr-split-collapse-change` once. Under `'viewport'` basis the first paint is already correct —
+   *  no `ResizeObserver` round-trip — and the initial state is not announced as a transition.
+   *
+   *  Default: `'container'`. */
+  @property({ reflect: true, attribute: 'collapse-breakpoint-basis' })
+  collapseBreakpointBasis: BreakpointBasis = 'container';
   /** Whether the `'floating'` collapse state's drawer is shown. Only
    *  meaningful while `collapseState` is `'floating'` — the value is
    *  preserved (not reset) while another state is active, but no drawer
@@ -281,6 +330,12 @@ export class LyraSplit extends LyraElement<LyraSplitEventMap> {
    *  (including teardown on disconnect) — see `OrientationBreakpointController`. */
   private orientationBreakpoints = new OrientationBreakpointController(this, () =>
     this.updateEffectiveOrientation(this.measuredInlineSize, true),
+  );
+  /** Owns both collapse thresholds together, their basis, and the viewport `MediaQueryList`
+   *  lifecycle — see `CollapseBreakpointController` for why the three-state classification can't
+   *  be two independent single-threshold controllers. */
+  private collapseBreakpoints = new CollapseBreakpointController(this, () =>
+    this.updateCollapseState(this.measuredInlineSize, true),
   );
 
   connectedCallback(): void {
@@ -377,6 +432,27 @@ export class LyraSplit extends LyraElement<LyraSplitEventMap> {
     if (changed.has('collapse') && this.collapse === 'none') {
       this.resetCollapseState();
     }
+    if (
+      changed.has('collapse') ||
+      changed.has('railBreakpoint') ||
+      changed.has('floatBreakpoint') ||
+      changed.has('collapseBreakpointBasis')
+    ) {
+      this.collapseBreakpoints.configure(this.railBreakpoint, this.floatBreakpoint, this.collapseBreakpointBasis);
+      // Classifying here, rather than waiting for the shared `ResizeObserver`'s first callback, is
+      // what makes `data-collapse-state` correct on the *first paint* under viewport basis --
+      // `configure()` just armed both queries synchronously, so `classify()` is already a live,
+      // authoritative read (mirrors the orientation branch above). Under container basis this only
+      // re-maps the last known `measuredInlineSize` (`+Infinity`, i.e. `'wide'`, before the first
+      // measurement lands), which is exactly the pre-existing behavior; the observer's own fresh
+      // callback still owns that basis' real transitions.
+      //
+      // `hasUpdated` excludes the first render from the emit for the same reason the orientation
+      // branch does: Lit's initial `changed` map lists every set property, so a viewport
+      // breakpoint that already matches at mount would otherwise announce a transition that never
+      // happened. The initial state is not a change.
+      this.updateCollapseState(this.measuredInlineSize, this.hasUpdated);
+    }
     if (changed.has('open') || changed.has('collapseState')) {
       const next = this._collapseState === 'floating' && this.open;
       if (next !== this.overlayActive) {
@@ -437,8 +513,15 @@ export class LyraSplit extends LyraElement<LyraSplitEventMap> {
   /** Whether the shared collapse/orientation `ResizeObserver` needs to be armed at all — true when
    *  either responsive feature (`collapse` or a *container-basis* `orientationBreakpoint`) is opted
    *  into, since both are driven off the same measured `[part="base"]` width (see
-   *  `armCollapseObserver()`). A viewport-basis breakpoint is driven by `matchMedia` instead and
-   *  contributes no arming of its own. */
+   *  `armCollapseObserver()`). A viewport-basis *orientation* breakpoint is driven by `matchMedia`
+   *  instead and contributes no arming of its own.
+   *
+   *  `collapseBreakpointBasis="viewport"` deliberately does NOT drop the observer the way the
+   *  orientation feature's viewport basis does: the measurement it feeds (`measuredInlineSize`) is
+   *  still read by `updateEffectiveOrientation()` for a container-basis orientation breakpoint, and
+   *  by the `collapseState = 'auto'` release path, which re-derives from the current measured
+   *  width. Collapse's basis therefore changes only which values `classify()` consults, never
+   *  whether the split measures itself. */
   private get responsiveObservationEnabled(): boolean {
     return this.collapse !== 'none' || this.orientationBreakpoints.containerObservationEnabled;
   }
@@ -497,13 +580,15 @@ export class LyraSplit extends LyraElement<LyraSplitEventMap> {
    *  and the accessor's forced-value assignment, so the two never duplicate
    *  this logic. Leaving `'floating'` while `open` is still `true` also
    *  closes the drawer -- mirrors `<lr-app-rail>` closing its mobile
-   *  overlay when `mode` leaves `'mobile'` while open. */
-  private applyCollapseStateChange(next: SplitCollapseState): void {
+   *  overlay when `mode` leaves `'mobile'` while open. `shouldEmit` is true for every path except
+   *  the first render's viewport-basis classification (see `updateCollapseState()`), which is the
+   *  starting state rather than a transition away from anything. */
+  private applyCollapseStateChange(next: SplitCollapseState, shouldEmit = true): void {
     if (next === this._collapseState) return;
     const old = this._collapseState;
     this._collapseState = next;
     this.requestUpdate('collapseState', old);
-    this.emit<SplitCollapseChangeDetail>('lr-split-collapse-change', { state: next });
+    if (shouldEmit) this.emit<SplitCollapseChangeDetail>('lr-split-collapse-change', { state: next });
     if (next !== 'floating' && this.open) this.open = false;
   }
 
@@ -639,19 +724,21 @@ export class LyraSplit extends LyraElement<LyraSplitEventMap> {
     return index === adjacent;
   }
 
-  /** Classifies a measured container width into the collapsing pane's
-   *  responsive state and, only on an actual transition, applies it (via the
-   *  same `applyCollapseStateChange()` the accessor's forced-value path
-   *  uses). Gated behind `_forced` so a pinned `collapseState` is never
-   *  silently overwritten by a subsequent resize — this is also what the
-   *  accessor's `'auto'` release calls (with the current measured width) to
-   *  re-derive the state without duplicating the width-vs-breakpoint logic. */
-  private updateCollapseState(width: number): void {
+  /** Classifies the current width into the collapsing pane's responsive state and, only on an
+   *  actual transition, applies it (via the same `applyCollapseStateChange()` the accessor's
+   *  forced-value path uses). `width` is consulted only under `collapseBreakpointBasis =
+   *  'container'`; the viewport basis reads its two media queries instead (see
+   *  `CollapseBreakpointController`). Gated behind `_forced` so a pinned `collapseState` is never
+   *  silently overwritten by a subsequent resize — this is also what the accessor's `'auto'`
+   *  release calls (with the current measured width) to re-derive the state without duplicating
+   *  the classification logic.
+   *
+   *  `shouldEmit` is false only for the very first render's viewport-basis classification, which
+   *  establishes the starting state rather than transitioning to it — see `willUpdate()`. */
+  private updateCollapseState(width: number, shouldEmit = true): void {
     if (this.collapse === 'none') return;
     if (this._forced) return;
-    const next: SplitCollapseState =
-      width < this.safeFloatBreakpoint ? 'floating' : width < this.safeRailBreakpoint ? 'rail' : 'wide';
-    this.applyCollapseStateChange(next);
+    this.applyCollapseStateChange(this.collapseBreakpoints.classify(width), shouldEmit);
   }
 
   /** Creates (idempotently) and (re-)observes `[part="base"]` with the shared collapse-state/
@@ -695,20 +782,6 @@ export class LyraSplit extends LyraElement<LyraSplitEventMap> {
    *  bounds with `NaN` or a negative floor. */
   private get safeMin(): number {
     return finiteRange(this.min, 10, 0);
-  }
-
-  /** `floatBreakpoint` normalized to a finite, non-negative px width before `updateCollapseState()`'s
-   *  breakpoint comparison. */
-  private get safeFloatBreakpoint(): number {
-    return finiteRange(this.floatBreakpoint, 400, 0);
-  }
-
-  /** `railBreakpoint` normalized the same way, then cross-referenced against the already-sanitized
-   *  float breakpoint -- the class doc requires it stay above `floatBreakpoint`, and an
-   *  inverted/invalid pair would otherwise let `updateCollapseState()` skip the `'rail'` state
-   *  entirely. */
-  private get safeRailBreakpoint(): number {
-    return Math.max(this.safeFloatBreakpoint, finiteRange(this.railBreakpoint, 640, 0));
   }
 
   /** The safe fallback for a shared percent minimum. A value above the

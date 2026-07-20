@@ -64,6 +64,48 @@ function installStubResizeObserver(): { callbacks: ResizeObserverCallback[]; res
   };
 }
 
+/** A `window.matchMedia` stand-in whose `(max-width: <n>px)` queries are evaluated against a
+ *  mutable pretend viewport width, so a test can cross a viewport-basis breakpoint on demand —
+ *  the real viewport can't be resized from inside the test page. `px` is the only unit understood
+ *  (the component serializes a bare number to `px` and hands any other unit to the browser
+ *  verbatim), and the comparison is `<=`, matching real `max-width` semantics. Restore in a
+ *  `finally`. */
+function installMatchMediaStub(initialWidth: number): { setWidth(width: number): void; restore(): void } {
+  const original = window.matchMedia;
+  let width = initialWidth;
+  const lists: Array<{ media: string; max: number; listeners: Set<(e: MediaQueryListEvent) => void> }> = [];
+
+  window.matchMedia = ((query: string) => {
+    const match = /\(max-width:\s*([\d.]+)px\)/.exec(query);
+    const max = match ? Number.parseFloat(match[1]) : Number.NaN;
+    const entry = { media: query, max, listeners: new Set<(e: MediaQueryListEvent) => void>() };
+    lists.push(entry);
+    return {
+      media: query,
+      get matches() {
+        return width <= max;
+      },
+      addEventListener: (_type: string, fn: (e: MediaQueryListEvent) => void) => entry.listeners.add(fn),
+      removeEventListener: (_type: string, fn: (e: MediaQueryListEvent) => void) => entry.listeners.delete(fn),
+    } as unknown as MediaQueryList;
+  }) as typeof window.matchMedia;
+
+  return {
+    setWidth(next: number): void {
+      const before = lists.map((entry) => width <= entry.max);
+      width = next;
+      lists.forEach((entry, i) => {
+        const matches = width <= entry.max;
+        if (matches === before[i]) return;
+        for (const fn of [...entry.listeners]) fn({ matches, media: entry.media } as MediaQueryListEvent);
+      });
+    },
+    restore(): void {
+      window.matchMedia = original;
+    },
+  };
+}
+
 function fireCollapseResize(callback: ResizeObserverCallback, width: number): void {
   callback(
     [{ contentBoxSize: [{ inlineSize: width, blockSize: 0 }] } as unknown as ResizeObserverEntry],
@@ -1483,8 +1525,11 @@ it('honors custom rail-breakpoint/float-breakpoint attributes', async () => {
       ><div>A</div><div>B</div></lr-split>`,
     )) as LyraSplit;
     await elementUpdated(el);
-    expect(el.railBreakpoint).to.equal(900);
-    expect(el.floatBreakpoint).to.equal(600);
+    // Both properties accept a CSS length, so (like `orientationBreakpoint`) they use Lit's
+    // default string converter -- an attribute-authored bare number arrives as the string the
+    // author wrote and is resolved to px at comparison time.
+    expect(el.railBreakpoint).to.equal('900');
+    expect(el.floatBreakpoint).to.equal('600');
 
     fireCollapseResize(spy.callbacks[0], 700); // between 600 and 900 -> rail
     await elementUpdated(el);
@@ -1964,6 +2009,84 @@ describe('orientationBreakpointBasis', () => {
     el.remove();
   });
 
+  it('reports a breakpoint crossing that happened while it was detached', async () => {
+    const media = installMatchMediaStub(1000);
+    try {
+      const el = (await fixture(html`
+        <lr-split orientation-breakpoint="600px" orientation-breakpoint-basis="viewport">
+          <div>a</div><div>b</div>
+        </lr-split>
+      `)) as LyraSplit;
+      await elementUpdated(el);
+      expect(el.effectiveOrientation).to.equal('horizontal');
+
+      // No `change` listener exists across this crossing (the controller tears it down on
+      // disconnect) and a plain reconnect schedules no Lit update, so the reconnect itself is the
+      // only chance to notice.
+      el.remove();
+      media.setWidth(500);
+      document.body.append(el);
+      await elementUpdated(el);
+
+      expect(el.effectiveOrientation, 'a stale axis would still read horizontal').to.equal('vertical');
+      expect(el.getAttribute('data-effective-orientation')).to.equal('vertical');
+      el.remove();
+    } finally {
+      media.restore();
+    }
+  });
+
+  it('emits lr-split-orientation-change for a crossing observed on reconnect', async () => {
+    const media = installMatchMediaStub(1000);
+    try {
+      const el = (await fixture(html`
+        <lr-split orientation-breakpoint="600px" orientation-breakpoint-basis="viewport">
+          <div>a</div><div>b</div>
+        </lr-split>
+      `)) as LyraSplit;
+      await elementUpdated(el);
+      el.remove();
+      media.setWidth(500);
+
+      let emitted: string | undefined;
+      el.addEventListener('lr-split-orientation-change', (e) => {
+        emitted = (e as CustomEvent<{ orientation: string }>).detail.orientation;
+      });
+      document.body.append(el);
+      await elementUpdated(el);
+      expect(emitted).to.equal('vertical');
+      el.remove();
+    } finally {
+      media.restore();
+    }
+  });
+
+  it('stays silent on a reconnect that crossed nothing', async () => {
+    const media = installMatchMediaStub(500);
+    try {
+      const el = (await fixture(html`
+        <lr-split orientation-breakpoint="600px" orientation-breakpoint-basis="viewport">
+          <div>a</div><div>b</div>
+        </lr-split>
+      `)) as LyraSplit;
+      await elementUpdated(el);
+      expect(el.effectiveOrientation).to.equal('vertical');
+
+      let emitted = 0;
+      el.addEventListener('lr-split-orientation-change', () => {
+        emitted += 1;
+      });
+      el.remove();
+      document.body.append(el);
+      await elementUpdated(el);
+      expect(el.effectiveOrientation).to.equal('vertical');
+      expect(emitted, 'nothing transitioned across the reconnect').to.equal(0);
+      el.remove();
+    } finally {
+      media.restore();
+    }
+  });
+
   it('is accessible with a viewport-basis breakpoint set', async () => {
     const el = (await fixture(html`
       <lr-split orientation-breakpoint="99999px" orientation-breakpoint-basis="viewport">
@@ -1991,5 +2114,306 @@ describe('orientationBreakpointBasis', () => {
     expect(el.effectiveOrientation, 'still starts narrow').to.equal('vertical');
     expect(emitted, 'initial render is not a transition').to.equal(0);
     el.remove();
+  });
+});
+
+describe('collapse breakpoints as CSS lengths', () => {
+  it('crosses at the same width for a rem rail breakpoint as for its px equivalent', async () => {
+    // 68.75rem at the default 16px root font size is 1100px. Container basis compares strictly
+    // `<`, so 1099 is rail and 1100 is not.
+    const root = Number.parseFloat(getComputedStyle(document.documentElement).fontSize);
+    const spy = installStubResizeObserver();
+    try {
+      const el = (await fixture(html`
+        <lr-split collapse="start" rail-breakpoint="68.75rem" float-breakpoint="200">
+          <div>A</div><div>B</div>
+        </lr-split>
+      `)) as LyraSplit;
+      await elementUpdated(el);
+
+      fireCollapseResize(spy.callbacks[0], 68.75 * root + 1);
+      await elementUpdated(el);
+      expect(el.collapseState, 'above the rem breakpoint').to.equal('wide');
+
+      fireCollapseResize(spy.callbacks[0], 68.75 * root - 1);
+      await elementUpdated(el);
+      expect(el.collapseState, 'below the rem breakpoint').to.equal('rail');
+      expect(el.getAttribute('data-collapse-state')).to.equal('rail');
+    } finally {
+      spy.restore();
+    }
+  });
+
+  it('crosses at the same width for a rem float breakpoint as for its px equivalent', async () => {
+    const root = Number.parseFloat(getComputedStyle(document.documentElement).fontSize);
+    const spy = installStubResizeObserver();
+    try {
+      const el = (await fixture(html`
+        <lr-split collapse="start" rail-breakpoint="1200px" float-breakpoint="20rem">
+          <div>A</div><div>B</div>
+        </lr-split>
+      `)) as LyraSplit;
+      await elementUpdated(el);
+
+      // Deliberately not the 640/400 defaults, so a value that silently fell back would fail here.
+      fireCollapseResize(spy.callbacks[0], 1000);
+      await elementUpdated(el);
+      expect(el.collapseState, 'below the 1200px rail breakpoint').to.equal('rail');
+
+      fireCollapseResize(spy.callbacks[0], 20 * root + 1);
+      await elementUpdated(el);
+      expect(el.collapseState).to.equal('rail');
+
+      fireCollapseResize(spy.callbacks[0], 20 * root - 1);
+      await elementUpdated(el);
+      expect(el.collapseState).to.equal('floating');
+    } finally {
+      spy.restore();
+    }
+  });
+
+  it('keeps bare numbers behaving exactly as before', async () => {
+    const spy = installStubResizeObserver();
+    try {
+      const el = (await fixture(html`
+        <lr-split collapse="start"><div>A</div><div>B</div></lr-split>
+      `)) as LyraSplit;
+      await elementUpdated(el);
+      // The documented 640/400 defaults, unchanged by the widening.
+      fireCollapseResize(spy.callbacks[0], 641);
+      await elementUpdated(el);
+      expect(el.collapseState).to.equal('wide');
+      fireCollapseResize(spy.callbacks[0], 639);
+      await elementUpdated(el);
+      expect(el.collapseState).to.equal('rail');
+      fireCollapseResize(spy.callbacks[0], 399);
+      await elementUpdated(el);
+      expect(el.collapseState).to.equal('floating');
+
+      // A numeric property assignment stays a plain number.
+      el.railBreakpoint = 800;
+      await elementUpdated(el);
+      fireCollapseResize(spy.callbacks[0], 700);
+      await elementUpdated(el);
+      expect(el.collapseState).to.equal('rail');
+    } finally {
+      spy.restore();
+    }
+  });
+
+  it('falls back to the documented 640/400 defaults for unparseable lengths', async () => {
+    const spy = installStubResizeObserver();
+    try {
+      // `resolveCssLength` returns undefined (not the default) for both of these, so the
+      // fallbacks have to be reapplied explicitly.
+      const el = (await fixture(html`
+        <lr-split collapse="start" rail-breakpoint="80vw" float-breakpoint="calc(100% - 2rem)">
+          <div>A</div><div>B</div>
+        </lr-split>
+      `)) as LyraSplit;
+      await elementUpdated(el);
+
+      fireCollapseResize(spy.callbacks[0], 700);
+      await elementUpdated(el);
+      expect(el.collapseState, 'above the default 640 rail breakpoint').to.equal('wide');
+      fireCollapseResize(spy.callbacks[0], 500);
+      await elementUpdated(el);
+      expect(el.collapseState, 'below the default 640 rail breakpoint').to.equal('rail');
+      fireCollapseResize(spy.callbacks[0], 300);
+      await elementUpdated(el);
+      expect(el.collapseState, 'below the default 400 float breakpoint').to.equal('floating');
+    } finally {
+      spy.restore();
+    }
+  });
+});
+
+describe('collapseBreakpointBasis', () => {
+  it('defaults to "container", leaving committed behavior unchanged', async () => {
+    const el = (await fixture(html`<lr-split collapse="start"><div>A</div><div>B</div></lr-split>`)) as LyraSplit;
+    await elementUpdated(el);
+    expect(el.collapseBreakpointBasis).to.equal('container');
+    expect(el.collapseState).to.equal('wide');
+  });
+
+  it('reflects the basis to an attribute', async () => {
+    const el = (await fixture(html`
+      <lr-split collapse="start" collapse-breakpoint-basis="viewport"><div>A</div><div>B</div></lr-split>
+    `)) as LyraSplit;
+    await elementUpdated(el);
+    expect(el.getAttribute('collapse-breakpoint-basis')).to.equal('viewport');
+  });
+
+  it('reports data-collapse-state="rail" on the first paint, with no ResizeObserver round-trip and no event', async () => {
+    const media = installMatchMediaStub(500); // between the 400 float and 640 rail defaults
+    const spy = installStubResizeObserver(); // never delivers a measurement at all
+    try {
+      const el = document.createElement('lr-split') as LyraSplit;
+      el.setAttribute('collapse', 'start');
+      el.setAttribute('collapse-breakpoint-basis', 'viewport');
+      el.append(document.createElement('div'), document.createElement('div'));
+      let emitted = 0;
+      el.addEventListener('lr-split-collapse-change', () => {
+        emitted += 1;
+      });
+      document.body.append(el);
+      await elementUpdated(el);
+
+      expect(el.collapseState).to.equal('rail');
+      expect(el.getAttribute('data-collapse-state'), 'first paint, not a second frame').to.equal('rail');
+      expect(emitted, 'the initial state is not a transition').to.equal(0);
+      el.remove();
+    } finally {
+      spy.restore();
+      media.restore();
+    }
+  });
+
+  it('ignores the container width entirely under basis="viewport"', async () => {
+    const media = installMatchMediaStub(1000); // above both defaults
+    const spy = installStubResizeObserver();
+    try {
+      const el = (await fixture(html`
+        <lr-split collapse="start" collapse-breakpoint-basis="viewport"><div>A</div><div>B</div></lr-split>
+      `)) as LyraSplit;
+      await elementUpdated(el);
+      fireCollapseResize(spy.callbacks[0], 100); // would be 'floating' under container basis
+      await elementUpdated(el);
+      expect(el.collapseState).to.equal('wide');
+    } finally {
+      spy.restore();
+      media.restore();
+    }
+  });
+
+  it('applies both thresholds together when a fast resize crosses them at once', async () => {
+    const media = installMatchMediaStub(1000);
+    const spy = installStubResizeObserver();
+    try {
+      const el = (await fixture(html`
+        <lr-split collapse="start" collapse-breakpoint-basis="viewport"><div>A</div><div>B</div></lr-split>
+      `)) as LyraSplit;
+      await elementUpdated(el);
+      expect(el.collapseState).to.equal('wide');
+
+      const states: string[] = [];
+      el.addEventListener('lr-split-collapse-change', (e) => {
+        states.push((e as CustomEvent<{ state: string }>).detail.state);
+      });
+      // Both `MediaQueryList`s flip in one go; whichever `change` lands first must not be able to
+      // apply a band the other one already contradicts.
+      media.setWidth(300);
+      await elementUpdated(el);
+      expect(el.collapseState).to.equal('floating');
+      expect(states, 'exactly one transition, straight to floating').to.eql(['floating']);
+    } finally {
+      spy.restore();
+      media.restore();
+    }
+  });
+
+  it('transitions to rail and back as the viewport crosses the rail breakpoint', async () => {
+    const media = installMatchMediaStub(1000);
+    const spy = installStubResizeObserver();
+    try {
+      const el = (await fixture(html`
+        <lr-split collapse="start" collapse-breakpoint-basis="viewport"><div>A</div><div>B</div></lr-split>
+      `)) as LyraSplit;
+      await elementUpdated(el);
+
+      media.setWidth(500);
+      await elementUpdated(el);
+      expect(el.collapseState).to.equal('rail');
+      expect(el.getAttribute('data-collapse-state')).to.equal('rail');
+
+      media.setWidth(900);
+      await elementUpdated(el);
+      expect(el.collapseState).to.equal('wide');
+      expect(el.hasAttribute('data-collapse-state')).to.be.false;
+    } finally {
+      spy.restore();
+      media.restore();
+    }
+  });
+
+  it('matches inclusively at the breakpoint itself, unlike container basis', async () => {
+    // `matchMedia('(max-width: 640px)')` is `<=`; the container-basis comparison is strictly `<`.
+    const media = installMatchMediaStub(640);
+    const spy = installStubResizeObserver();
+    try {
+      const el = (await fixture(html`
+        <lr-split collapse="start" collapse-breakpoint-basis="viewport"><div>A</div><div>B</div></lr-split>
+      `)) as LyraSplit;
+      await elementUpdated(el);
+      expect(el.collapseState, 'viewport basis includes the breakpoint itself').to.equal('rail');
+    } finally {
+      spy.restore();
+      media.restore();
+    }
+  });
+
+  it('raises an inverted rail breakpoint to the float breakpoint under viewport basis too', async () => {
+    const media = installMatchMediaStub(2000);
+    const spy = installStubResizeObserver();
+    try {
+      const el = (await fixture(html`
+        <lr-split
+          collapse="start"
+          collapse-breakpoint-basis="viewport"
+          rail-breakpoint="100"
+          float-breakpoint="600"
+        ><div>A</div><div>B</div></lr-split>
+      `)) as LyraSplit;
+      await elementUpdated(el);
+      expect(el.collapseState, 'a wide viewport is never stuck collapsed').to.equal('wide');
+
+      media.setWidth(500);
+      await elementUpdated(el);
+      expect(el.collapseState, 'the rail band collapses away, exactly as under container basis').to.equal('floating');
+    } finally {
+      spy.restore();
+      media.restore();
+    }
+  });
+
+  it('re-derives from the measured width when the basis switches back to container', async () => {
+    const media = installMatchMediaStub(500);
+    const spy = installStubResizeObserver();
+    try {
+      const el = (await fixture(html`
+        <lr-split collapse="start" collapse-breakpoint-basis="viewport"><div>A</div><div>B</div></lr-split>
+      `)) as LyraSplit;
+      await elementUpdated(el);
+      expect(el.collapseState).to.equal('rail');
+
+      fireCollapseResize(spy.callbacks[0], 1000);
+      await elementUpdated(el);
+      expect(el.collapseState, 'still viewport-driven').to.equal('rail');
+
+      el.collapseBreakpointBasis = 'container';
+      await elementUpdated(el);
+      expect(el.collapseState, 'container basis must consult the measured width').to.equal('wide');
+    } finally {
+      spy.restore();
+      media.restore();
+    }
+  });
+
+  it('is accessible in the rail state under viewport basis', async () => {
+    const media = installMatchMediaStub(500);
+    const spy = installStubResizeObserver();
+    try {
+      const el = (await fixture(html`
+        <lr-split collapse="start" collapse-breakpoint-basis="viewport">
+          <div>Sidebar</div><div>Main</div>
+        </lr-split>
+      `)) as LyraSplit;
+      await elementUpdated(el);
+      expect(el.collapseState).to.equal('rail');
+      await expect(el).to.be.accessible();
+    } finally {
+      spy.restore();
+      media.restore();
+    }
   });
 });

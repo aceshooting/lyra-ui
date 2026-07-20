@@ -75,6 +75,65 @@ export const ResponsiveCollapse: Story = {
   `,
 };
 
+export const CollapseBreakpointLengths: Story = {
+  render: () => html`
+    <div
+      style="resize: horizontal; overflow: hidden; inline-size: 100%; min-inline-size: 12rem; max-inline-size: 100%; border: 1px dashed var(--lr-color-border); padding: 0.5rem;"
+    >
+      <p style="margin: 0 0 0.5rem; font: 12px sans-serif; color: var(--lr-color-text-quiet)">
+        The same 640px/400px thresholds authored as CSS lengths
+        (<code>rail-breakpoint="40rem" float-breakpoint="25rem"</code>) — identical crossing widths
+        at the default 16px root font size, but they now track it. Try it: run
+        <code>document.documentElement.style.fontSize = '20px'</code> in the console and this split
+        rails at 800px instead. <code>px</code>/<code>em</code> and the original bare number are
+        accepted too; an unparseable or viewport-relative value (<code>80vw</code>) falls back to
+        the documented <code>640</code>/<code>400</code> defaults rather than switching collapse off.
+      </p>
+      <lr-split
+        collapse="start"
+        rail-breakpoint="40rem"
+        float-breakpoint="25rem"
+        rail-width="3.5rem"
+        style="height: 12rem; border: 1px solid var(--lr-color-border)"
+        @lr-split-collapse-change=${(e: CustomEvent<{ state: string }>) =>
+          console.log('lr-split-collapse-change (rem)', e.detail.state)}
+      >
+        <div style="padding: 0.5rem; background: var(--lr-color-brand-quiet); overflow: hidden">
+          Sidebar
+        </div>
+        <div style="padding: 0.5rem">Main content</div>
+      </lr-split>
+    </div>
+  `,
+};
+
+export const CollapseBreakpointBasisViewport: Story = {
+  render: () => html`
+    <p style="margin: 0 0 0.5rem; font: 12px sans-serif; color: var(--lr-color-text-quiet)">
+      <code>collapse-breakpoint-basis="viewport"</code> keys the collapse thresholds off the
+      viewport via <code>matchMedia</code> instead of the split's own allocation — use it to
+      collapse in step with a page-level <code>@media</code> layout. Resize the browser window (not
+      a wrapper) past 640px and 400px. Note <code>(max-width:)</code> is inclusive, so viewport
+      basis crosses 1px later than container basis, which compares strictly <code>&lt;</code>. The
+      first paint is already in the right state — no <code>ResizeObserver</code> round-trip — and
+      that initial state is not announced as a <code>lr-split-collapse-change</code>.
+    </p>
+    <lr-split
+      collapse="start"
+      collapse-breakpoint-basis="viewport"
+      rail-width="3.5rem"
+      style="height: 12rem; border: 1px solid var(--lr-color-border)"
+      @lr-split-collapse-change=${(e: CustomEvent<{ state: string }>) =>
+        console.log('lr-split-collapse-change (viewport)', e.detail.state)}
+    >
+      <div style="padding: 0.5rem; background: var(--lr-color-brand-quiet); overflow: hidden">
+        Sidebar
+      </div>
+      <div style="padding: 0.5rem">Main content</div>
+    </lr-split>
+  `,
+};
+
 export const ResponsiveOrientation: Story = {
   render: () => html`
     <div
