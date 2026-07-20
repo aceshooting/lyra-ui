@@ -33,7 +33,11 @@ export const tokens = css`
     --lr-color-on-danger: var(--lr-theme-color-danger-on-loud, #fff);
     --lr-color-on-neutral: var(--lr-theme-color-neutral-on-loud, #fff);
     --lr-color-overlay: var(--lr-theme-color-overlay, rgb(0 0 0 / 0.5));
-    --lr-color-overlay-strong: var(--lr-theme-color-overlay, rgb(0 0 0 / 0.92));
+    /* Own input, chained through --lr-theme-color-overlay for back-compat: both scrims
+       previously read the same input, so defining it flattened the strong scrim's 0.92
+       down to the plain scrim's value. A theme that sets only --lr-theme-color-overlay
+       still tints both, exactly as before. */
+    --lr-color-overlay-strong: var(--lr-theme-color-overlay-strong, var(--lr-theme-color-overlay, rgb(0 0 0 / 0.92)));
     --lr-color-no-data: var(--lr-theme-color-no-data, rgb(128 128 128 / 25%));
     --lr-font-mono: var(--lr-theme-font-family-mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace);
     --lr-space-xs: var(--lr-theme-space-xs, 0.25rem);
@@ -230,14 +234,17 @@ export const tokens = css`
 
     /* Focus ring — every :focus-visible rule in the library should reference
        these three instead of hardcoding its own width/color/offset. */
-    --lr-focus-ring-width: 2px;
+    --lr-focus-ring-width: var(--lr-theme-focus-ring-width, 2px);
     --lr-focus-ring-color: var(--lr-theme-color-focus, var(--lr-color-brand));
-    --lr-focus-ring-offset: 2px;
+    --lr-focus-ring-offset: var(--lr-theme-focus-ring-offset, 2px);
 
     /* Minimum tappable box for an icon-only button (close/dismiss/nav
        controls). Visual icon size is unaffected; components pad out to this
-       via min-inline-size/min-block-size, not by growing the glyph itself. */
-    --lr-icon-button-size: 2.5rem;
+       via min-inline-size/min-block-size, not by growing the glyph itself.
+       Keep the resolved value at or above 24px: it backs the hit area of
+       lr-date-input, lr-combobox, lr-input and lr-select, and anything smaller
+       fails WCAG 2.2 SC 2.5.8 (Target Size (Minimum)). */
+    --lr-icon-button-size: var(--lr-theme-icon-button-size, 2.5rem);
 
     font-family: var(--lr-font);
     color: var(--lr-color-text);

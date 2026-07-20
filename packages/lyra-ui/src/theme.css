@@ -25,10 +25,93 @@
   --lr-theme-color-neutral-on-loud: #ffffff;
   --lr-theme-color-focus: #0969da;
   --lr-theme-color-no-data: rgb(128 128 128 / 25%);
+  --lr-theme-color-surface-raised: #f6f8fa;
+  /* Two independent scrims: the plain one backs dialog/drawer backdrops, the strong one
+     backs full-bleed media chrome. Set them separately. */
+  --lr-theme-color-overlay: rgb(0 0 0 / 0.5);
+  --lr-theme-color-overlay-strong: rgb(0 0 0 / 0.92);
   --lr-theme-font-family-body: system-ui, sans-serif;
   --lr-theme-font-family-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+
+  /* Type scale. `-m` is the body step; `-md` is a separate, independently tunable step
+     that happens to share its default. */
+  --lr-theme-font-size-2xs: 0.625rem;
+  --lr-theme-font-size-xs: 0.75rem;
+  --lr-theme-font-size-sm: 0.8125rem;
+  --lr-theme-font-size-md-sm: 0.875rem;
   --lr-theme-font-size-m: 1rem;
+  --lr-theme-font-size-md: 1rem;
+  --lr-theme-font-size-lg: 1.125rem;
+  --lr-theme-font-size-xl: 1.25rem;
+  --lr-theme-font-size-2xl: 1.75rem;
+  --lr-theme-font-size-3xl: 2rem;
+
+  /* Spacing scale. */
+  --lr-theme-space-2xs: 0.125rem;
+  --lr-theme-space-xs: 0.25rem;
+  --lr-theme-space-s: 0.5rem;
+  --lr-theme-space-m: 0.75rem;
+  --lr-theme-space-l: 1rem;
+  --lr-theme-space-2xl: 2rem;
+
   --lr-theme-border-radius-m: 0.375rem;
+
+  /* Focus ring geometry. The color is --lr-theme-color-focus above. */
+  --lr-theme-focus-ring-width: 2px;
+  --lr-theme-focus-ring-offset: 2px;
+
+  /* Minimum tappable box for icon-only buttons, and the hit-area floor for the expand
+     affordances inside lr-date-input/lr-combobox/lr-input/lr-select. Keep the resolved
+     value at or above 24px — anything smaller fails WCAG 2.2 SC 2.5.8. */
+  --lr-theme-icon-button-size: 2.5rem;
+
+  /* Stacking layers. Raise these together if the host app owns a higher stacking
+     context; -popover and -modal share a default deliberately. */
+  --lr-theme-z-index-base: 0;
+  --lr-theme-z-index-content: 1;
+  --lr-theme-z-index-dropdown: 900;
+  --lr-theme-z-index-popover: 1000;
+  --lr-theme-z-index-modal: 1000;
+  --lr-theme-z-index-toast: 9999;
+
+  /* Categorical chart series, assigned by series index. */
+  --lr-theme-color-chart-1: #8250df;
+  --lr-theme-color-chart-2: #bf3989;
+  --lr-theme-color-chart-3: #0a7d91;
+  --lr-theme-color-chart-4: #57606a;
+  --lr-theme-color-chart-5: #b083f5;
+  --lr-theme-color-chart-6: #f470b8;
+  --lr-theme-color-chart-7: #52d6e8;
+  --lr-theme-color-chart-8: #c9d1d9;
+
+  /* Knowledge-graph node categories, assigned by category index. Separate from the chart
+     series above so a graph and a chart on the same page can be recolored independently. */
+  --lr-theme-graph-cat-1: #8250df;
+  --lr-theme-graph-cat-2: #bf3989;
+  --lr-theme-graph-cat-3: #0a7d91;
+  --lr-theme-graph-cat-4: #57606a;
+  --lr-theme-graph-cat-5: #b083f5;
+  --lr-theme-graph-cat-6: #f470b8;
+  --lr-theme-graph-cat-7: #52d6e8;
+  --lr-theme-graph-cat-8: #c9d1d9;
+
+  /* The 16-color ANSI/SGR palette rendered by lr-terminal. */
+  --lr-theme-terminal-color-black: #24292e;
+  --lr-theme-terminal-color-red: #cf222e;
+  --lr-theme-terminal-color-green: #1a7f37;
+  --lr-theme-terminal-color-yellow: #9a6700;
+  --lr-theme-terminal-color-blue: #0969da;
+  --lr-theme-terminal-color-magenta: #8250df;
+  --lr-theme-terminal-color-cyan: #1b7c83;
+  --lr-theme-terminal-color-white: #6b7280;
+  --lr-theme-terminal-color-bright-black: #57606a;
+  --lr-theme-terminal-color-bright-red: #fa4549;
+  --lr-theme-terminal-color-bright-green: #4ac26b;
+  --lr-theme-terminal-color-bright-yellow: #d4a72c;
+  --lr-theme-terminal-color-bright-blue: #4184e4;
+  --lr-theme-terminal-color-bright-magenta: #a475f9;
+  --lr-theme-terminal-color-bright-cyan: #3192aa;
+  --lr-theme-terminal-color-bright-white: #d0d7de;
 }
 
 .lr-dark,
@@ -55,4 +138,24 @@
   --lr-theme-color-neutral-on-loud: #111827;
   --lr-theme-color-focus: #4ea0f0;
   --lr-theme-color-no-data: rgb(180 180 180 / 30%);
+  /* Every value the light block sets that has a distinct dark counterpart must be
+     re-set here, or .lr-dark keeps the light value and disagrees with the
+     prefers-color-scheme: dark fallbacks the components ship. */
+  --lr-theme-color-surface-raised: #22272e;
+  --lr-theme-color-chart-1: #b58cff;
+  --lr-theme-color-chart-2: #ff7ab2;
+  --lr-theme-color-chart-3: #4fd1c5;
+  --lr-theme-color-chart-4: #aab4c4;
+  --lr-theme-color-chart-5: #d4a7ff;
+  --lr-theme-color-chart-6: #ff91c8;
+  --lr-theme-color-chart-7: #79e2ef;
+  --lr-theme-color-chart-8: #e4e7eb;
+  --lr-theme-graph-cat-1: #b58cff;
+  --lr-theme-graph-cat-2: #ff7ab2;
+  --lr-theme-graph-cat-3: #4fd1c5;
+  --lr-theme-graph-cat-4: #aab4c4;
+  --lr-theme-graph-cat-5: #d4a7ff;
+  --lr-theme-graph-cat-6: #ff91c8;
+  --lr-theme-graph-cat-7: #79e2ef;
+  --lr-theme-graph-cat-8: #e4e7eb;
 }
