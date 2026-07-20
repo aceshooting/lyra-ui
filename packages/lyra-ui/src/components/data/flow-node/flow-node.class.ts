@@ -33,6 +33,9 @@ const DEFAULT_OUTPUTS: FlowHandle[] = [{ id: 'out' }];
  * @csspart handle-input - An input handle dot (also carries the shared `handle` part).
  * @csspart handle-output - An output handle dot (also carries the shared `handle` part).
  * @cssprop [--lr-flow-node-min-inline-size=calc(var(--lr-size-10rem) + var(--lr-size-1rem))] - Minimum card inline size.
+ * @cssprop [--lr-flow-node-selected-border=var(--lr-color-brand)] - Border color of the card while
+ *   `selected`. Overriding the selection color otherwise requires hijacking the library-wide
+ *   `--lr-color-brand` token.
  */
 export class LyraFlowNode extends LyraElement {
   static styles = [LyraElement.styles, styles];

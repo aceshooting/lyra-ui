@@ -82,3 +82,20 @@ export const RightToLeft: Story = {
   render: () =>
     html`<div dir="rtl" style="max-width:32rem"><lr-policy-summary .decisions=${mixedDecisions}></lr-policy-summary></div>`,
 };
+
+export const RetintedCounts: Story = {
+  name: 'Retinted state counts',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          '`--lr-policy-summary-count-allow-color`, `--lr-policy-summary-count-deny-color`, and `--lr-policy-summary-count-needs-review-color` retint each state count independently (here the allow count is themed to brand). `::part(count)[data-state]` is invalid CSS, so without these props a count could only be restyled by overriding the library-wide status tokens. Unset, they render exactly as before.',
+      },
+    },
+  },
+  render: () =>
+    html`<lr-policy-summary
+      style="max-width:32rem; --lr-policy-summary-count-allow-color: var(--lr-color-brand); --lr-policy-summary-count-deny-color: var(--lr-color-danger); --lr-policy-summary-count-needs-review-color: var(--lr-color-warning)"
+      .decisions=${mixedDecisions}
+    ></lr-policy-summary>`,
+};

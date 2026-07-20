@@ -144,4 +144,35 @@ describe('lr-artifact-panel', () => {
     await el.updateComplete;
     await expect(el).to.be.accessible();
   });
+
+  describe('--lr-artifact-panel-view-active-bg / -color', () => {
+    const pressedFixture = async (): Promise<LyraArtifactPanel> => {
+      const el = (await fixture(html`
+        <lr-artifact-panel><pre slot="code">code</pre></lr-artifact-panel>
+      `)) as LyraArtifactPanel;
+      await el.updateComplete;
+      return el;
+    };
+
+    it('retints the pressed view button background and color via the cssprops', async () => {
+      const el = await pressedFixture();
+      el.style.setProperty('--lr-artifact-panel-view-active-bg', 'rgb(10, 20, 30)');
+      el.style.setProperty('--lr-artifact-panel-view-active-color', 'rgb(40, 50, 60)');
+      const pressed = el.shadowRoot!.querySelector('[part="view-button"][aria-pressed="true"]') as HTMLElement;
+      expect(pressed.getAttribute('data-view')).to.equal('preview');
+      expect(getComputedStyle(pressed).backgroundColor).to.equal('rgb(10, 20, 30)');
+      expect(getComputedStyle(pressed).color).to.equal('rgb(40, 50, 60)');
+    });
+
+    it('renders byte-identically to the token defaults when unset', async () => {
+      const el = await pressedFixture();
+      const pressed = el.shadowRoot!.querySelector('[part="view-button"][aria-pressed="true"]') as HTMLElement;
+      const bg = getComputedStyle(pressed).backgroundColor;
+      const color = getComputedStyle(pressed).color;
+      el.style.setProperty('--lr-artifact-panel-view-active-bg', 'var(--lr-color-brand-quiet)');
+      el.style.setProperty('--lr-artifact-panel-view-active-color', 'var(--lr-color-brand)');
+      expect(getComputedStyle(pressed).backgroundColor).to.equal(bg);
+      expect(getComputedStyle(pressed).color).to.equal(color);
+    });
+  });
 });

@@ -59,3 +59,25 @@ export const NarrowAllocation: Story = {
     </div>
   `,
 };
+
+export const RetintedSelection: Story = {
+  name: 'Retinted selection border',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          '`--lr-flow-node-selected-border` recolors the `selected` card border without touching the library-wide `--lr-color-brand` token (the right pair is retinted, the left keeps the default). Unset, it renders exactly as before.',
+      },
+    },
+  },
+  render: () => html`
+    <div style="display:flex; gap:1rem; align-items:flex-start">
+      <lr-flow-node heading="Fetch data" selected></lr-flow-node>
+      <lr-flow-node
+        style="--lr-flow-node-selected-border: var(--lr-color-success)"
+        heading="Summarize"
+        selected
+      ></lr-flow-node>
+    </div>
+  `,
+};

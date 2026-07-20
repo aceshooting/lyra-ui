@@ -138,7 +138,7 @@ export const styles = css`
     outline-offset: var(--lr-focus-ring-offset);
   }
   [part='node'][aria-current='true'] {
-    outline: var(--lr-size-2px) solid var(--lr-color-brand);
+    outline: var(--lr-size-2px) solid var(--lr-flow-canvas-node-current-outline-color, var(--lr-color-brand));
     outline-offset: var(--lr-size-2px);
     border-radius: var(--lr-radius);
   }

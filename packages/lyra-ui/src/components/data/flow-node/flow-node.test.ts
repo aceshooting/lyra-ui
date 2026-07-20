@@ -165,3 +165,31 @@ describe('reduced-motion running pulse', () => {
     }
   });
 });
+
+describe('--lr-flow-node-selected-border', () => {
+  it('retints the selected card border via the cssprop', async () => {
+    const el = (await fixture(html`<lr-flow-node heading="Fetch" selected></lr-flow-node>`)) as LyraFlowNode;
+    el.style.setProperty('--lr-flow-node-selected-border', 'rgb(10, 20, 30)');
+    await el.updateComplete;
+    const card = el.shadowRoot!.querySelector('.card') as HTMLElement;
+    expect(getComputedStyle(card).borderTopColor).to.equal('rgb(10, 20, 30)');
+  });
+
+  it('renders byte-identically to the brand token default when unset', async () => {
+    const el = (await fixture(html`<lr-flow-node heading="Fetch" selected></lr-flow-node>`)) as LyraFlowNode;
+    await el.updateComplete;
+    const card = el.shadowRoot!.querySelector('.card') as HTMLElement;
+    const unset = getComputedStyle(card).borderTopColor;
+    el.style.setProperty('--lr-flow-node-selected-border', 'var(--lr-color-brand)');
+    expect(getComputedStyle(card).borderTopColor).to.equal(unset);
+  });
+
+  it('is accessible with a selected, retinted card', async () => {
+    const el = (await fixture(
+      html`<lr-flow-node heading="Fetch" status="success" selected></lr-flow-node>`,
+    )) as LyraFlowNode;
+    el.style.setProperty('--lr-flow-node-selected-border', 'var(--lr-color-brand)');
+    await el.updateComplete;
+    await expect(el).to.be.accessible();
+  });
+});

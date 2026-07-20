@@ -51,3 +51,26 @@ export const Narrow320: Story = {
     </div>
   `,
 };
+
+export const RetintedViewToggle: Story = {
+  render: () => html`
+    <lr-artifact-panel
+      style="max-width:36rem;height:16rem;--lr-artifact-panel-view-active-bg: var(--lr-color-success-quiet);--lr-artifact-panel-view-active-color: var(--lr-color-success)"
+      label="report.md"
+      kind="document"
+      .versions=${versions}
+      .copyText=${REPORT_MARKDOWN}
+    >
+      <div style="padding:1rem">Rendered report preview</div>
+      <pre slot="code">${REPORT_MARKDOWN}</pre>
+    </lr-artifact-panel>
+  `,
+  parameters: {
+    docs: {
+      description: {
+        story:
+          '`--lr-artifact-panel-view-active-bg` and `--lr-artifact-panel-view-active-color` retint the pressed (active) preview/code toggle button. `::part(view-button)[aria-pressed]` is invalid CSS, so without these props the pressed button could only be restyled by overriding the library-wide brand tokens. Unset, it renders exactly as before.',
+      },
+    },
+  },
+};

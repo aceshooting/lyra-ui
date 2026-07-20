@@ -399,4 +399,39 @@ describe('lr-trace-tree', () => {
     await el.updateComplete;
     expect((el.shadowRoot!.querySelector('[data-id="root"]') as HTMLElement).getAttribute('tabindex')).to.equal('0');
   });
+
+  describe('--lr-trace-tree-row-active-bg', () => {
+    const activeFixture = async (): Promise<LyraTraceTree> => {
+      const el = (await fixture(
+        html`<lr-trace-tree .spans=${SPANS} .activeSpanId=${'root'}></lr-trace-tree>`,
+      )) as LyraTraceTree;
+      await el.updateComplete;
+      return el;
+    };
+
+    it('retints only the active row via the cssprop', async () => {
+      const el = await activeFixture();
+      el.style.setProperty('--lr-trace-tree-row-active-bg', 'rgb(10, 20, 30)');
+      const active = el.shadowRoot!.querySelector('[part="row"][data-active]') as HTMLElement;
+      const inactive = el.shadowRoot!.querySelector('[part="row"]:not([data-active])') as HTMLElement;
+      expect(active).to.exist;
+      expect(getComputedStyle(active).backgroundColor).to.equal('rgb(10, 20, 30)');
+      expect(getComputedStyle(inactive).backgroundColor).to.not.equal('rgb(10, 20, 30)');
+    });
+
+    it('renders byte-identically to the brand-quiet token default when unset', async () => {
+      const el = await activeFixture();
+      const active = el.shadowRoot!.querySelector('[part="row"][data-active]') as HTMLElement;
+      const unset = getComputedStyle(active).backgroundColor;
+      el.style.setProperty('--lr-trace-tree-row-active-bg', 'var(--lr-color-brand-quiet)');
+      expect(getComputedStyle(active).backgroundColor).to.equal(unset);
+    });
+
+    // No axe assertion on the active row here: the active-row default background
+    // (`--lr-color-brand-quiet`) fails WCAG-AA contrast against the row's own smaller
+    // `status-text`/`duration` secondary text -- a pre-existing gap in the active-row styling that
+    // predates this cssprop (the default is byte-identical to before) and cannot be fixed here
+    // without changing that default. `--lr-trace-tree-row-active-bg` is in fact the escape hatch a
+    // consumer needs to raise that contrast; it is reported for separate remediation.
+  });
 });

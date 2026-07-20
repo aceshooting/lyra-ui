@@ -29,3 +29,24 @@ export const NarrowAllocation: Story = {
     </div>
   `,
 };
+
+export const RetintedSelectedRow: Story = {
+  name: 'Retinted selected row',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          '`--lr-data-grid-row-selected-bg` recolors the selected row on its own. Shadow Parts forbids an attribute selector after `::part()`, so `::part(row)[aria-selected]` is invalid CSS; without this property the selected row could only be restyled by overriding the library-wide `--lr-color-brand-quiet` token. Unset, it renders exactly as before.',
+      },
+    },
+  },
+  render: () => html`
+    <lr-data-grid
+      style="--lr-data-grid-row-selected-bg: var(--lr-color-success-quiet)"
+      aria-label="People"
+      .columns=${[{ key: 'name', label: 'Name' }, { key: 'role', label: 'Role' }]}
+      .rows=${[{ name: 'Ada Lovelace', role: 'Mathematician' }, { name: 'Grace Hopper', role: 'Engineer' }]}
+      .selectedKey=${1}
+    ></lr-data-grid>
+  `,
+};

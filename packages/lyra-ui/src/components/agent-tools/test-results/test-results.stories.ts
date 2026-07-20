@@ -45,3 +45,22 @@ export const Narrow320: Story = {
   render: () =>
     html`<div style="max-width:320px"><lr-test-results .suites=${mixedSuites}></lr-test-results></div>`,
 };
+
+export const RetintedActiveFilter: Story = {
+  name: 'Retinted active filter toggle',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          '`--lr-test-results-filter-active-bg`, `-border`, and `-color` retint the pressed (active) status filter toggle. `::part(filter-toggle)[aria-pressed]` is invalid CSS, so without these props the active toggle could only be restyled by overriding the library-wide brand tokens. Unset, it renders exactly as before.',
+      },
+    },
+  },
+  render: () => html`
+    <lr-test-results
+      style="max-width:32rem;--lr-test-results-filter-active-bg: var(--lr-color-success-quiet);--lr-test-results-filter-active-border: var(--lr-color-success);--lr-test-results-filter-active-color: var(--lr-color-success)"
+      .suites=${mixedSuites}
+      .statusFilter=${['passed']}
+    ></lr-test-results>
+  `,
+};

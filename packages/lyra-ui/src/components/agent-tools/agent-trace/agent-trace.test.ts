@@ -239,4 +239,38 @@ describe('lr-agent-trace', () => {
   // <lr-trace-tree>'s own `role="tree"` + <lr-empty> markup (confirmed reproducible on
   // <lr-trace-tree> alone, outside this component), so an empty-state accessibility regression
   // there belongs to that component's own test suite, not this one.
+
+  describe('--lr-agent-trace-handoff-active-bg', () => {
+    const activeFixture = async (): Promise<LyraAgentTrace> => {
+      const el = (await fixture(
+        html`<lr-agent-trace .spans=${SPANS} .activeSpanId=${'sub-agent'}></lr-agent-trace>`,
+      )) as LyraAgentTrace;
+      await el.updateComplete;
+      return el;
+    };
+
+    it('retints only the active handoff entry via the cssprop', async () => {
+      const el = await activeFixture();
+      el.style.setProperty('--lr-agent-trace-handoff-active-bg', 'rgb(10, 20, 30)');
+      const active = el.shadowRoot!.querySelector('[part="handoff"][data-active]') as HTMLElement;
+      const inactive = el.shadowRoot!.querySelector('[part="handoff"]:not([data-active])') as HTMLElement;
+      expect(active).to.exist;
+      expect(getComputedStyle(active).backgroundColor).to.equal('rgb(10, 20, 30)');
+      expect(getComputedStyle(inactive).backgroundColor).to.not.equal('rgb(10, 20, 30)');
+    });
+
+    it('renders byte-identically to the brand-quiet token default when unset', async () => {
+      const el = await activeFixture();
+      const active = el.shadowRoot!.querySelector('[part="handoff"][data-active]') as HTMLElement;
+      const unset = getComputedStyle(active).backgroundColor;
+      el.style.setProperty('--lr-agent-trace-handoff-active-bg', 'var(--lr-color-brand-quiet)');
+      expect(getComputedStyle(active).backgroundColor).to.equal(unset);
+    });
+
+    // No axe assertion on the active state here: setting `activeSpanId` also lights up the matching
+    // row inside the composed `<lr-trace-tree>`, whose active-row default background
+    // (`--lr-color-brand-quiet`) fails WCAG-AA contrast against that row's smaller
+    // `status-text`/`duration` text. That is a pre-existing `<lr-trace-tree>` gap (unchanged by this
+    // byte-identical cssprop) reported for separate remediation, not a regression of this change.
+  });
 });

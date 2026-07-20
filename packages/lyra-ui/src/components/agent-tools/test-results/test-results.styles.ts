@@ -35,9 +35,9 @@ export const styles = css`
     cursor: pointer;
   }
   [part='filter-toggle'][aria-pressed='true'] {
-    background: var(--lr-color-brand-quiet);
-    border-color: var(--lr-color-brand);
-    color: var(--lr-color-brand);
+    background: var(--lr-test-results-filter-active-bg, var(--lr-color-brand-quiet));
+    border-color: var(--lr-test-results-filter-active-border, var(--lr-color-brand));
+    color: var(--lr-test-results-filter-active-color, var(--lr-color-brand));
   }
   [part='filter-toggle']:focus-visible,
   [part='test-name']:focus-visible,

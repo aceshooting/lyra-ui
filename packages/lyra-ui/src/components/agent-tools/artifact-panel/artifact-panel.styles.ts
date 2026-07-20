@@ -43,8 +43,8 @@ export const styles = css`
     cursor: pointer;
   }
   [part='view-button'][aria-pressed='true'] {
-    background: var(--lr-color-brand-quiet);
-    color: var(--lr-color-brand);
+    background: var(--lr-artifact-panel-view-active-bg, var(--lr-color-brand-quiet));
+    color: var(--lr-artifact-panel-view-active-color, var(--lr-color-brand));
   }
   [part='version-nav'] {
     display: flex;

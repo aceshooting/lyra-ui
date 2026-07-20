@@ -59,3 +59,23 @@ export const NarrowAllocation: Story = {
     </div>
   `,
 };
+
+export const RetintedCurrentNode: Story = {
+  name: 'Retinted current node outline',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          '`--lr-flow-canvas-node-current-outline-color` recolors the current (`aria-current`) node outline on its own. `::part(node)[aria-current]` is invalid CSS, so without this property the outline could only be restyled by overriding the library-wide `--lr-color-brand` token. Unset, it renders exactly as before.',
+      },
+    },
+  },
+  render: () => html`
+    <lr-flow-canvas
+      style="width:100%;height:24rem;--lr-flow-canvas-node-current-outline-color: var(--lr-color-success)"
+      .nodes=${nodes}
+      .edges=${edges}
+      .selectedNodeIds=${['summarize']}
+    ></lr-flow-canvas>
+  `,
+};

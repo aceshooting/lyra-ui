@@ -15,13 +15,13 @@ export const styles = css`
     font-weight: var(--lr-font-weight-medium);
   }
   [part='count'][data-state='allow'] {
-    color: var(--lr-color-success);
+    color: var(--lr-policy-summary-count-allow-color, var(--lr-color-success));
   }
   [part='count'][data-state='deny'] {
-    color: var(--lr-color-danger);
+    color: var(--lr-policy-summary-count-deny-color, var(--lr-color-danger));
   }
   [part='count'][data-state='needs-review'] {
-    color: var(--lr-color-warning);
+    color: var(--lr-policy-summary-count-needs-review-color, var(--lr-color-warning));
   }
   [part='list'] {
     display: flex;

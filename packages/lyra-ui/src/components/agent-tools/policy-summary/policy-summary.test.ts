@@ -203,4 +203,39 @@ describe('lr-policy-summary', () => {
       expect(list.getAttribute('aria-label')).to.equal('Policy decisions');
     });
   });
+
+  describe('per-state count color cssprops', () => {
+    const summaryFixture = async (): Promise<LyraPolicySummary> => {
+      const el = (await fixture(
+        html`<lr-policy-summary .decisions=${decisions}></lr-policy-summary>`,
+      )) as LyraPolicySummary;
+      await el.updateComplete;
+      return el;
+    };
+    const countOf = (el: LyraPolicySummary, state: string): HTMLElement =>
+      el.shadowRoot!.querySelector(`[part="count"][data-state="${state}"]`) as HTMLElement;
+
+    it('retints each state count independently via its own cssprop', async () => {
+      const el = await summaryFixture();
+      el.style.setProperty('--lr-policy-summary-count-allow-color', 'rgb(10, 20, 30)');
+      el.style.setProperty('--lr-policy-summary-count-deny-color', 'rgb(40, 50, 60)');
+      el.style.setProperty('--lr-policy-summary-count-needs-review-color', 'rgb(70, 80, 90)');
+      expect(getComputedStyle(countOf(el, 'allow')).color).to.equal('rgb(10, 20, 30)');
+      expect(getComputedStyle(countOf(el, 'deny')).color).to.equal('rgb(40, 50, 60)');
+      expect(getComputedStyle(countOf(el, 'needs-review')).color).to.equal('rgb(70, 80, 90)');
+    });
+
+    it('renders byte-identically to the success/danger/warning token defaults when unset', async () => {
+      const el = await summaryFixture();
+      const allow = getComputedStyle(countOf(el, 'allow')).color;
+      const deny = getComputedStyle(countOf(el, 'deny')).color;
+      const needsReview = getComputedStyle(countOf(el, 'needs-review')).color;
+      el.style.setProperty('--lr-policy-summary-count-allow-color', 'var(--lr-color-success)');
+      el.style.setProperty('--lr-policy-summary-count-deny-color', 'var(--lr-color-danger)');
+      el.style.setProperty('--lr-policy-summary-count-needs-review-color', 'var(--lr-color-warning)');
+      expect(getComputedStyle(countOf(el, 'allow')).color).to.equal(allow);
+      expect(getComputedStyle(countOf(el, 'deny')).color).to.equal(deny);
+      expect(getComputedStyle(countOf(el, 'needs-review')).color).to.equal(needsReview);
+    });
+  });
 });

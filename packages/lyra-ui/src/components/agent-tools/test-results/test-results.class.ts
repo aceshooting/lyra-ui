@@ -80,6 +80,13 @@ export interface LyraTestResultsEventMap {
  *   for any failed test, or any test with slotted `detail-{testId}` content.
  * @csspart failure - The failure-detail wrapper; hidden while collapsed.
  * @csspart failure-message - The failure's plain message text.
+ * @cssprop [--lr-test-results-filter-active-bg=var(--lr-color-brand-quiet)] - Background of a pressed
+ *   (active) status filter toggle.
+ * @cssprop [--lr-test-results-filter-active-border=var(--lr-color-brand)] - Border color of a pressed
+ *   (active) status filter toggle.
+ * @cssprop [--lr-test-results-filter-active-color=var(--lr-color-brand)] - Text color of a pressed
+ *   (active) status filter toggle. Restyling the pressed state otherwise requires overriding the
+ *   library-wide brand tokens, since `::part(filter-toggle)[aria-pressed]` is invalid CSS.
  */
 export class LyraTestResults extends LyraElement<LyraTestResultsEventMap> {
   static styles = [LyraElement.styles, styles, srOnly];

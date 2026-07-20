@@ -48,7 +48,7 @@ export const styles = css`
     min-inline-size: 0;
   }
   :host([selected]) .card {
-    border-color: var(--lr-color-brand);
+    border-color: var(--lr-flow-node-selected-border, var(--lr-color-brand));
   }
   [part='header'] {
     display: flex;

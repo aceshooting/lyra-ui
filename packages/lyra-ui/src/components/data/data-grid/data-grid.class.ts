@@ -18,6 +18,10 @@ export interface LyraDataGridEventMap<T = unknown> { 'lr-row-click': CustomEvent
  * @csspart row - Body row.
  * @csspart cell - Body cell.
  * @csspart empty - The single full-width cell rendered in place of body rows while `loading`, or when `rows` is empty.
+ * @cssprop [--lr-data-grid-row-selected-bg=var(--lr-color-brand-quiet)] - Background of the selected
+ *   row's cells. Shadow Parts forbids an attribute selector after `::part()`, so
+ *   `::part(row)[aria-selected]` is invalid CSS and the selected row could otherwise only be restyled
+ *   by hijacking the library-wide `--lr-color-brand-quiet` token.
  */
 export class LyraDataGrid<T = Record<string, unknown>> extends LyraElement<LyraDataGridEventMap<T>> {
   static styles = [LyraElement.styles, styles];

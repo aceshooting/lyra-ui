@@ -158,4 +158,37 @@ describe('lr-span-waterfall', () => {
     await el.updateComplete;
     await expect(el).to.be.accessible();
   });
+
+  describe('--lr-span-waterfall-row-active-bg', () => {
+    const activeFixture = async (): Promise<LyraSpanWaterfall> => {
+      const el = (await fixture(
+        html`<lr-span-waterfall .spans=${SPANS} .activeSpanId=${'root'}></lr-span-waterfall>`,
+      )) as LyraSpanWaterfall;
+      await el.updateComplete;
+      return el;
+    };
+
+    it('retints only the active row via the cssprop', async () => {
+      const el = await activeFixture();
+      el.style.setProperty('--lr-span-waterfall-row-active-bg', 'rgb(10, 20, 30)');
+      const active = el.shadowRoot!.querySelector('[part="row"][data-active]') as HTMLElement;
+      const inactive = el.shadowRoot!.querySelector('[part="row"]:not([data-active])') as HTMLElement;
+      expect(active).to.exist;
+      expect(getComputedStyle(active).backgroundColor).to.equal('rgb(10, 20, 30)');
+      expect(getComputedStyle(inactive).backgroundColor).to.not.equal('rgb(10, 20, 30)');
+    });
+
+    it('renders byte-identically to the brand-quiet token default when unset', async () => {
+      const el = await activeFixture();
+      const active = el.shadowRoot!.querySelector('[part="row"][data-active]') as HTMLElement;
+      const unset = getComputedStyle(active).backgroundColor;
+      el.style.setProperty('--lr-span-waterfall-row-active-bg', 'var(--lr-color-brand-quiet)');
+      expect(getComputedStyle(active).backgroundColor).to.equal(unset);
+    });
+
+    it('is accessible with an active row', async () => {
+      const el = await activeFixture();
+      await expect(el).to.be.accessible();
+    });
+  });
 });

@@ -93,3 +93,21 @@ export const Empty: Story = {
 export const Narrow: Story = {
   render: () => html`<lr-agent-trace style="max-width: 320px" .spans=${spans} show-tokens show-cost></lr-agent-trace>`,
 };
+
+export const RetintedActiveHandoff: Story = {
+  name: 'Retinted active handoff',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          '`--lr-agent-trace-handoff-active-bg` recolors the active (`activeSpanId`) handoff quick-jump entry on its own. `::part(handoff)[data-active]` is invalid CSS, so without this property the active entry could only be restyled by overriding the library-wide `--lr-color-brand-quiet` token. Unset, it renders exactly as before.',
+      },
+    },
+  },
+  render: () =>
+    html`<lr-agent-trace
+      style="max-width: 44rem; --lr-agent-trace-handoff-active-bg: var(--lr-color-success-quiet)"
+      .spans=${spans}
+      active-span-id="sub-agent"
+    ></lr-agent-trace>`,
+};

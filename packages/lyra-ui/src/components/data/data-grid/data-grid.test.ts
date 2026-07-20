@@ -173,3 +173,30 @@ it('scrolls [part="viewport"] horizontally rather than overflowing a 320px conta
   expect(getComputedStyle(viewport).overflow).to.equal('auto');
   expect(viewport.scrollWidth).to.be.greaterThan(viewport.clientWidth);
 });
+
+describe('--lr-data-grid-row-selected-bg', () => {
+  const columns: DataGridColumn[] = [{ key: 'name', label: 'Name' }];
+  const rows = [{ name: 'Alpha' }, { name: 'Beta' }];
+  const selectionFixture = async (): Promise<LyraDataGrid> =>
+    (await fixture(
+      html`<lr-data-grid .columns=${columns} .rows=${rows} .selectedKey=${1} aria-label="Results"></lr-data-grid>`,
+    )) as LyraDataGrid;
+
+  it('recolors only the selected row, leaving the unselected one alone', async () => {
+    const el = await selectionFixture();
+    el.style.setProperty('--lr-data-grid-row-selected-bg', 'rgb(10, 20, 30)');
+    const trs = [...el.shadowRoot!.querySelectorAll('tbody tr')] as HTMLElement[];
+    const cells = trs.map((tr) => tr.querySelector('td') as HTMLElement);
+    expect(trs[1].getAttribute('aria-selected')).to.equal('true');
+    expect(getComputedStyle(cells[1]).backgroundColor).to.equal('rgb(10, 20, 30)');
+    expect(getComputedStyle(cells[0]).backgroundColor).to.not.equal('rgb(10, 20, 30)');
+  });
+
+  it('renders byte-identically to the brand-quiet token default when unset', async () => {
+    const el = await selectionFixture();
+    const selectedCell = el.shadowRoot!.querySelector('tr[data-selected="true"] td') as HTMLElement;
+    const unset = getComputedStyle(selectedCell).backgroundColor;
+    el.style.setProperty('--lr-data-grid-row-selected-bg', 'var(--lr-color-brand-quiet)');
+    expect(getComputedStyle(selectedCell).backgroundColor).to.equal(unset);
+  });
+});

@@ -52,7 +52,7 @@ export const styles = css`
     outline-offset: var(--lr-focus-ring-offset);
   }
   [part='handoff'][data-active] {
-    background: var(--lr-color-brand-quiet);
+    background: var(--lr-agent-trace-handoff-active-bg, var(--lr-color-brand-quiet));
   }
 
   [part='tree'] {

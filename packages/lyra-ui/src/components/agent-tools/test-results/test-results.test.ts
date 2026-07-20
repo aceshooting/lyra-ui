@@ -95,4 +95,45 @@ describe('lr-test-results', () => {
     await el.updateComplete;
     await expect(el).to.be.accessible();
   });
+
+  describe('--lr-test-results-filter-active-bg / -border / -color', () => {
+    const pressedFixture = async (): Promise<LyraTestResults> => {
+      const el = (await fixture(
+        html`<lr-test-results .suites=${suites} .statusFilter=${['passed']}></lr-test-results>`,
+      )) as LyraTestResults;
+      await el.updateComplete;
+      return el;
+    };
+
+    it('retints the pressed filter toggle background, border, and color via the cssprops', async () => {
+      const el = await pressedFixture();
+      el.style.setProperty('--lr-test-results-filter-active-bg', 'rgb(10, 20, 30)');
+      el.style.setProperty('--lr-test-results-filter-active-border', 'rgb(40, 50, 60)');
+      el.style.setProperty('--lr-test-results-filter-active-color', 'rgb(70, 80, 90)');
+      const pressed = el.shadowRoot!.querySelector('[part="filter-toggle"][aria-pressed="true"]') as HTMLElement;
+      expect(pressed.getAttribute('data-status')).to.equal('passed');
+      expect(getComputedStyle(pressed).backgroundColor).to.equal('rgb(10, 20, 30)');
+      expect(getComputedStyle(pressed).borderTopColor).to.equal('rgb(40, 50, 60)');
+      expect(getComputedStyle(pressed).color).to.equal('rgb(70, 80, 90)');
+    });
+
+    it('renders byte-identically to the token defaults when unset', async () => {
+      const el = await pressedFixture();
+      const pressed = el.shadowRoot!.querySelector('[part="filter-toggle"][aria-pressed="true"]') as HTMLElement;
+      const bg = getComputedStyle(pressed).backgroundColor;
+      const border = getComputedStyle(pressed).borderTopColor;
+      const color = getComputedStyle(pressed).color;
+      el.style.setProperty('--lr-test-results-filter-active-bg', 'var(--lr-color-brand-quiet)');
+      el.style.setProperty('--lr-test-results-filter-active-border', 'var(--lr-color-brand)');
+      el.style.setProperty('--lr-test-results-filter-active-color', 'var(--lr-color-brand)');
+      expect(getComputedStyle(pressed).backgroundColor).to.equal(bg);
+      expect(getComputedStyle(pressed).borderTopColor).to.equal(border);
+      expect(getComputedStyle(pressed).color).to.equal(color);
+    });
+
+    it('is accessible with a pressed filter toggle', async () => {
+      const el = await pressedFixture();
+      await expect(el).to.be.accessible();
+    });
+  });
 });

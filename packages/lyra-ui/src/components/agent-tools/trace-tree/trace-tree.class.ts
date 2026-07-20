@@ -104,6 +104,9 @@ export interface LyraTraceTreeEventMap {
  * @csspart bar - The duration bar's filled portion.
  * @csspart empty - The empty-state message shown when `spans` is empty.
  * @csspart live-region - The internal status-announcement live region.
+ * @cssprop [--lr-trace-tree-row-active-bg=var(--lr-color-brand-quiet)] - Background of the active
+ *   (`activeSpanId`) row. Shadow Parts forbids an attribute selector after `::part()`, so the active
+ *   row could otherwise only be restyled by hijacking the library-wide `--lr-color-brand-quiet` token.
  */
 export class LyraTraceTree extends LyraElement<LyraTraceTreeEventMap> {
   static styles = [LyraElement.styles, styles];

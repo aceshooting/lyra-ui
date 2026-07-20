@@ -43,7 +43,7 @@ export const styles = css`
     min-block-size: var(--lr-size-1-75rem);
   }
   [part='row'][data-active] {
-    background: var(--lr-color-brand-quiet);
+    background: var(--lr-span-waterfall-row-active-bg, var(--lr-color-brand-quiet));
   }
 
   [part='name'] {

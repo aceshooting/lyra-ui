@@ -76,3 +76,21 @@ export const Empty: Story = {
 export const Narrow: Story = {
   render: () => html`<lr-trace-tree style="max-width: 320px" .spans=${spans} show-tokens show-cost></lr-trace-tree>`,
 };
+
+export const RetintedActiveRow: Story = {
+  name: 'Retinted active row',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          '`--lr-trace-tree-row-active-bg` recolors the active (`activeSpanId`) row on its own. `::part(row)[data-active]` is invalid CSS, so without this property the active row could only be restyled by overriding the library-wide `--lr-color-brand-quiet` token. Unset, it renders exactly as before.',
+      },
+    },
+  },
+  render: () =>
+    html`<lr-trace-tree
+      style="max-width: 40rem; --lr-trace-tree-row-active-bg: var(--lr-color-success-quiet)"
+      .spans=${spans}
+      active-span-id="llm"
+    ></lr-trace-tree>`,
+};

@@ -61,3 +61,21 @@ export const Empty: Story = {
 export const Narrow: Story = {
   render: () => html`<lr-span-waterfall style="max-width: 320px" .spans=${spans}></lr-span-waterfall>`,
 };
+
+export const RetintedActiveRow: Story = {
+  name: 'Retinted active row',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          '`--lr-span-waterfall-row-active-bg` recolors the active (`activeSpanId`) row on its own. `::part(row)[data-active]` is invalid CSS, so without this property the active row could only be restyled by overriding the library-wide `--lr-color-brand-quiet` token. Unset, it renders exactly as before.',
+      },
+    },
+  },
+  render: () =>
+    html`<lr-span-waterfall
+      style="max-width: 40rem; --lr-span-waterfall-row-active-bg: var(--lr-color-success-quiet)"
+      .spans=${spans}
+      .activeSpanId=${'llm'}
+    ></lr-span-waterfall>`,
+};

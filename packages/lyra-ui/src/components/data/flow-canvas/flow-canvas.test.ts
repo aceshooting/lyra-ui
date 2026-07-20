@@ -1343,3 +1343,29 @@ describe('finite-number normalization', () => {
     expect(wrapperB.style.transform).to.not.match(/NaN|Infinity/);
   });
 });
+
+describe('--lr-flow-canvas-node-current-outline-color', () => {
+  const currentFixture = async (): Promise<LyraFlowCanvas> => {
+    const el = (await fixture(html`<lr-flow-canvas></lr-flow-canvas>`)) as LyraFlowCanvas;
+    el.nodes = nodes;
+    el.selectedNodeIds = ['a'];
+    await el.updateComplete;
+    return el;
+  };
+
+  it('retints the aria-current node outline via the cssprop', async () => {
+    const el = await currentFixture();
+    el.style.setProperty('--lr-flow-canvas-node-current-outline-color', 'rgb(10, 20, 30)');
+    const node = el.shadowRoot!.querySelector('[part="node"][aria-current="true"]') as HTMLElement;
+    expect(node).to.exist;
+    expect(getComputedStyle(node).outlineColor).to.equal('rgb(10, 20, 30)');
+  });
+
+  it('renders byte-identically to the brand token default when unset', async () => {
+    const el = await currentFixture();
+    const node = el.shadowRoot!.querySelector('[part="node"][aria-current="true"]') as HTMLElement;
+    const unset = getComputedStyle(node).outlineColor;
+    el.style.setProperty('--lr-flow-canvas-node-current-outline-color', 'var(--lr-color-brand)');
+    expect(getComputedStyle(node).outlineColor).to.equal(unset);
+  });
+});

@@ -94,6 +94,13 @@ const STATES: PolicyDecisionState[] = ['allow', 'deny', 'needs-review'];
  * @csspart detail - The `<lr-details>` progressive-disclosure panel for `detail`, only rendered
  *   when a decision defines one.
  * @csspart empty - The `<lr-empty>` shown when `decisions` is empty.
+ * @cssprop [--lr-policy-summary-count-allow-color=var(--lr-color-success)] - Text color of the
+ *   `allow` count.
+ * @cssprop [--lr-policy-summary-count-deny-color=var(--lr-color-danger)] - Text color of the `deny`
+ *   count.
+ * @cssprop [--lr-policy-summary-count-needs-review-color=var(--lr-color-warning)] - Text color of the
+ *   `needs-review` count. Restyling a state count otherwise requires overriding the library-wide
+ *   status tokens, since `::part(count)[data-state]` is invalid CSS.
  */
 export class LyraPolicySummary extends LyraElement {
   static styles = [LyraElement.styles, styles];

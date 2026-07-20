@@ -58,6 +58,11 @@ export interface LyraArtifactPanelEventMap {
  * @csspart download-button - The download button, rendered only while `downloadSrc` is non-empty.
  * @csspart body - The content body wrapper.
  * @csspart streaming-indicator - The streaming state indicator, rendered only while `streaming`.
+ * @cssprop [--lr-artifact-panel-view-active-bg=var(--lr-color-brand-quiet)] - Background of the
+ *   pressed (active) preview/code toggle button.
+ * @cssprop [--lr-artifact-panel-view-active-color=var(--lr-color-brand)] - Text color of the pressed
+ *   (active) preview/code toggle button. Restyling the pressed state otherwise requires overriding
+ *   the library-wide brand tokens, since `::part(view-button)[aria-pressed]` is invalid CSS.
  */
 export class LyraArtifactPanel extends LyraElement<LyraArtifactPanelEventMap> {
   static styles = [LyraElement.styles, styles];

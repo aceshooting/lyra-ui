@@ -34,6 +34,11 @@ export interface LyraEnvListEventMap {
  * @csspart value - The value text itself; carries `data-masked`.
  * @csspart reveal-button - The per-row reveal/hide toggle.
  * @csspart copy-button - The per-row copy button.
+ * @cssprop [--lr-env-list-reveal-active-bg=var(--lr-color-brand-quiet)] - Background of a pressed
+ *   (revealed) reveal toggle.
+ * @cssprop [--lr-env-list-reveal-active-border=var(--lr-color-brand)] - Border color of a pressed
+ *   (revealed) reveal toggle. Restyling the pressed state otherwise requires overriding the
+ *   library-wide brand tokens, since `::part(reveal-button)[aria-pressed]` is invalid CSS.
  */
 export class LyraEnvList extends LyraElement<LyraEnvListEventMap> {
   static styles = [LyraElement.styles, styles];

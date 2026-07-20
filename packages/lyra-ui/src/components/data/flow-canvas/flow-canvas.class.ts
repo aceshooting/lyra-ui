@@ -157,6 +157,9 @@ interface FlowNodeCardEl extends HTMLElement {
  *   canvas also writes it inline as `${grid}px` from the `grid` property, which wins over the
  *   stylesheet fallback whenever a grid is in effect.
  * @cssprop [--lr-flow-canvas-march-duration=var(--lr-transition-ambient)] - Running-edge march animation duration.
+ * @cssprop [--lr-flow-canvas-node-current-outline-color=var(--lr-color-brand)] - Outline color of the
+ *   current (`aria-current`) node. Shadow Parts forbids an attribute selector after `::part()`, so the
+ *   current node could otherwise only be restyled by hijacking the library-wide `--lr-color-brand` token.
  */
 export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
   static styles = [LyraElement.styles, styles, srOnly];

@@ -41,7 +41,7 @@ export const styles = css`
     outline-offset: calc(-1 * var(--lr-focus-ring-width));
   }
   [part='row'][data-active] {
-    background: var(--lr-color-brand-quiet);
+    background: var(--lr-trace-tree-row-active-bg, var(--lr-color-brand-quiet));
   }
 
   [part='toggle'] {

@@ -89,6 +89,10 @@ export interface LyraAgentTraceEventMap {
  * @csspart handoffs - The handoff quick-jump list wrapper, only rendered while at least one visible span has `kind: 'agent'`.
  * @csspart handoff - One handoff quick-jump entry (a `<button>` wrapping an `<lr-handoff-divider>`); carries `data-active`.
  * @csspart tree - The composed `<lr-trace-tree>`.
+ * @cssprop [--lr-agent-trace-handoff-active-bg=var(--lr-color-brand-quiet)] - Background of the active
+ *   (`activeSpanId`) handoff quick-jump entry. Shadow Parts forbids an attribute selector after
+ *   `::part()`, so the active entry could otherwise only be restyled by hijacking the library-wide
+ *   `--lr-color-brand-quiet` token.
  */
 export class LyraAgentTrace extends LyraElement<LyraAgentTraceEventMap> {
   static styles = [LyraElement.styles, styles];

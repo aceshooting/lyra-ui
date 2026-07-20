@@ -100,4 +100,37 @@ describe('lr-env-list', () => {
     await el.updateComplete;
     await expect(el).to.be.accessible();
   });
+
+  describe('--lr-env-list-reveal-active-bg / -border', () => {
+    const pressedFixture = async (): Promise<LyraEnvList> => {
+      const el = (await fixture(
+        html`<lr-env-list .entries=${[{ name: 'API_KEY', value: 'secret', secret: true }]}></lr-env-list>`,
+      )) as LyraEnvList;
+      await el.updateComplete;
+      (el.shadowRoot!.querySelector('[part="reveal-button"]') as HTMLButtonElement).click();
+      await el.updateComplete;
+      return el;
+    };
+
+    it('retints the pressed reveal button background and border via the cssprops', async () => {
+      const el = await pressedFixture();
+      el.style.setProperty('--lr-env-list-reveal-active-bg', 'rgb(10, 20, 30)');
+      el.style.setProperty('--lr-env-list-reveal-active-border', 'rgb(40, 50, 60)');
+      const btn = el.shadowRoot!.querySelector('[part="reveal-button"]') as HTMLElement;
+      expect(btn.getAttribute('aria-pressed')).to.equal('true');
+      expect(getComputedStyle(btn).backgroundColor).to.equal('rgb(10, 20, 30)');
+      expect(getComputedStyle(btn).borderTopColor).to.equal('rgb(40, 50, 60)');
+    });
+
+    it('renders byte-identically to the token defaults when unset', async () => {
+      const el = await pressedFixture();
+      const btn = el.shadowRoot!.querySelector('[part="reveal-button"]') as HTMLElement;
+      const bg = getComputedStyle(btn).backgroundColor;
+      const border = getComputedStyle(btn).borderTopColor;
+      el.style.setProperty('--lr-env-list-reveal-active-bg', 'var(--lr-color-brand-quiet)');
+      el.style.setProperty('--lr-env-list-reveal-active-border', 'var(--lr-color-brand)');
+      expect(getComputedStyle(btn).backgroundColor).to.equal(bg);
+      expect(getComputedStyle(btn).borderTopColor).to.equal(border);
+    });
+  });
 });
