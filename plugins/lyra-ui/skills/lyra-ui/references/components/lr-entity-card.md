@@ -27,6 +27,15 @@ itself — `lr-entity-activate` is a request a host routes into `lr-graph`'s own
   `lr-graph-legend.types` entry shape, resolving `entity.type` to a label/color/shape for the badge
 - `communityLabel: string = ''` (attribute `community-label`) — override text for the community chip
 - `showFocusButton: boolean = true` (attribute `show-focus-button`)
+- `compact: boolean = false` (reflected) — tighter root padding and row gap for dense contexts (a
+  dossier rendered in a sidebar, a result list) — the same convention as `lr-empty`'s `compact` and
+  as this component's sibling `lr-community-card`. Purely a density knob: the border and background
+  stay. `false` (the default) keeps the full card padding.
+- `appearance: 'card' | 'plain' = 'card'` (reflected) — visual chrome, mirroring `lr-card`'s
+  `appearance` vocabulary. `'card'` (the default) keeps the bordered, filled, padded box; `'plain'`
+  removes the border, background, padding and corner radius, so a card nested inside a container
+  that already draws a border doesn't double the frame. `plain` wins over `compact` when both are
+  set — there is nothing left to tighten.
 
 **Events:** `lr-entity-activate` (`detail: { id }`, the built-in focus button was activated).
 
@@ -37,7 +46,11 @@ itself — `lr-entity-activate` is a request a host routes into `lr-graph`'s own
 `description`, `properties`, `property` (one key/value row), `degree`, `community`, `actions`,
 `focus-button`, `empty` (shown when `entity` is `null`).
 
-**Themeable custom properties:** shared tokens only; a data-driven `entity.type` color is applied as
+**Themeable custom properties:** `--lr-entity-card-compact-padding` (default `var(--lr-space-s)`) —
+`[part='base']`'s padding while `compact`; `--lr-entity-card-compact-gap` (default
+`var(--lr-space-xs)`) — the gap between `[part='base']`'s rows while `compact`. Both apply only in
+the `compact` state, so a dense card can be tuned without re-pointing shared spacing tokens for
+everything else. Otherwise shared tokens; a data-driven `entity.type` color is applied as
 sanitized inline `--lr-badge-*` overrides on the type badge only (the one "type color is
 data-driven by design" exception this library already grants graph nodes) — every other color comes
 from tokens.

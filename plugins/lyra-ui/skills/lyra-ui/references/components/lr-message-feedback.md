@@ -35,3 +35,18 @@ for a set rating).
 `down-button`, `panel` (the inline detail disclosure, only rendered when `reasons` is non-empty or
 `commentable` is set), `reasons` (the reason-chip group), `comment` (the comment `<textarea>`), and
 `submit-button`.
+
+**Themeable custom properties:** six pressed-state hooks, three per thumb —
+`--lr-message-feedback-up-active-color` (default `var(--lr-color-success)`),
+`--lr-message-feedback-up-active-bg` (default `var(--lr-color-success-quiet)`),
+`--lr-message-feedback-up-active-border` (default `var(--lr-color-success)`), and the thumbs-down
+trio `--lr-message-feedback-down-active-color`, `--lr-message-feedback-down-active-bg`,
+`--lr-message-feedback-down-active-border` (defaulting to `var(--lr-color-danger)`,
+`var(--lr-color-danger-quiet)`, `var(--lr-color-danger)`). Each styles the glyph, background, and
+border of its thumb only while that thumb is pressed. All six are declared as inline `var()`
+fallbacks at the point of use and never on `:host`, so each can be set on the element *or on any
+ancestor* — a whole transcript's feedback controls retint from one declaration. That shape is
+required because `::part(up-button)[aria-pressed='true']` is invalid CSS (Shadow Parts forbids an
+attribute selector after `::part()`), which previously left overriding the library-wide
+`--lr-color-success`/`--lr-color-danger` tokens as the only lever, repainting every other element
+reading them. Unset, each falls back to exactly the token its rule used before.

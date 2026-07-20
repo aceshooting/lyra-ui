@@ -26,6 +26,14 @@ and `blur()` forward to the internal radio control.
 
 **CSS parts:** `base`, `circle`, `dot`, `label`.
 
+**Themeable custom properties:** `--lr-radio-label-indent` — the inline distance from the control's
+start edge to the start of the label text, i.e. the circle's own floor plus the gap beside it,
+defaulting to `calc(min(var(--lr-icon-button-size), 1.75rem) + var(--lr-space-s))`. The rendered
+gap is derived from it, so the advertised value and the real offset cannot drift; setting it on the
+element (or on `lr-radio` in your own stylesheet) moves the label. Exactly the same knob, defaults,
+purpose, and sideways-inheritance caveat as `--lr-checkbox-label-indent` — see `lr-checkbox` above
+for the formula to align a sibling hint element.
+
 ```html
 <lr-radio name="format" value="json">JSON</lr-radio>
 ```

@@ -63,11 +63,39 @@ loud fill token), `--lr-button-outlined-border` (default `--lr-color-border-stro
 `--lr-button-hover-brightness` (default `1.08`, the `:hover` filter intensity),
 `--lr-button-active-scale` (default `0.9875`, the `:active` press-scale, disabled under
 `prefers-reduced-motion`), `--lr-button-spinner-duration` (default `1s`, the `loading` spinner's
-rotation period; forced to `0.001ms` under `prefers-reduced-motion`), and the per-`size`
+rotation period; forced to `0.001ms` under `prefers-reduced-motion`),
+`--lr-button-outlined-fill` (default `transparent`, the `appearance="outlined"` background — also
+variant-independent; set it to tint an outlined button with, say, a faint surface wash behind the
+outline, without a `::part(base)` rule. Note that the `:hover` `filter: brightness()` applies to
+whatever fill is set, so a tinted outlined button visibly brightens on hover where a transparent
+one did not),
+and the per-`size`
 `min-block-size` floors `--lr-button-size-2xs` (`1.25rem`), `--lr-button-size-xs` (`1.5rem`),
 `--lr-button-size-s` (`1.75rem`), `--lr-button-size-m` (`2rem`), `--lr-button-size-l` (`2.5rem`),
 `--lr-button-size-xl` (`3rem`) — each read only by its own `size` tier, and all ignored by
 `appearance="link"`.
+
+**Retuning one `size` tier's geometry, without a `::part(base)` rule.** Four more properties carry
+the active tier's geometry, and every `:host([size='…'])` rule does nothing but re-assign them — no
+per-tier rule ever declares a property on `[part='base']`. Overriding one therefore retunes
+whatever tier is active (e.g. pinning a `size="s"` button into a compact toolbar row), the same
+pattern `lr-input`/`lr-select`/`lr-combobox`/`lr-segmented`/`lr-date-input` follow. Their defaults
+below are the `m` tier's values, because `size` reflects and defaults to `m`, so the `:host`
+declarations *are* the `m` tier:
+
+- `--lr-button-padding-block` (default `--lr-space-xs`)
+- `--lr-button-padding-inline` (default `--lr-space-m`)
+- `--lr-button-font-size` (default `--lr-font-size-m`)
+- `--lr-button-min-height` (default `--lr-button-size-m`) — the active tier's `min-block-size`
+  floor, re-assigned per tier to that tier's own `--lr-button-size-*` token, and used as the
+  fallback when `--lr-button-height` is unset.
+- `--lr-button-height` — an **exact** height (both floor and cap), for pinning the button to a
+  fixed toolbar row. **Undeclared by default**, so the button keeps the active tier's floor and an
+  `auto` height; see "exact-height hatches" under `lr-input`.
+
+`appearance="link"` ignores all five: it is declared after the `size` rules and resets padding,
+font, and both height properties with literals, so an inline link can never take a button-shaped
+box no matter what tier or override is in play.
 
 **Optional peer deps:** none.
 

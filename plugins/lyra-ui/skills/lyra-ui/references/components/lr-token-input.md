@@ -17,15 +17,42 @@ the last token. `value` is a `string[]` and repeated values are submitted under 
 
 **Properties:** `value`, `label`, `hint`, `errorText` (`error-text`), `placeholder`, `name`,
 `required`, `disabled`, `accessibleLabel` (attribute `aria-label` — forwarded to the internal text
-input), `allowDuplicates` (`allow-duplicates`, default `false`), and `delimiter` (default `','`).
+input), `allowDuplicates` (`allow-duplicates`, default `false`), `editable` (reflected, default
+`false` — see below), and `delimiter: string | null` (default `','` — see below).
 **Slots:** `label`, `hint`, `error`.
-**Events:** `input`, `change`, `lr-add` (`detail: { value }`), and `lr-remove`
-(`detail: { value, index }`).
-**CSS parts:** `form-control`, `form-control-label`, `input-wrapper`, `token`, `remove` (the
+**Events:** `input`, `change`, `lr-add` (`detail: { value }`), `lr-remove`
+(`detail: { value, index }`), and `lr-token-edit`
+(`detail: { value, previousValue, index }` — an existing token was edited in place and committed).
+**CSS parts:** `form-control`, `form-control-label`, `input-wrapper`, `token`, `token-label` (the
+token's text, doubling as the roving-focus edit trigger — rendered only while `editable`),
+`token-editor` (the inline text field that replaces a token's text while it is open for editing —
+rendered only while `editable` and only for the token being edited), `remove` (the
 per-token remove button, floored at the shared `--lr-icon-button-size` tap size around a compact
 glyph), `input`, `hint`, `error`. `focus()` and `blur()` forward to the internal text input.
 
+**`editable` — editing a token in place.** Off by default, in which case the token row renders
+exactly as it does without the feature and stays non-focusable. Turn it on and each token becomes a
+roving tab stop (one Tab stop for the whole row): click, Enter, Space, or F2 opens an inline
+editor on that token; ArrowLeft/ArrowRight move between tokens (swapped under RTL, since they mean
+previous/next *visually*), Home/End jump to the first/last. Inside the editor, Enter commits and
+returns focus to the token, Escape cancels (and is consumed rather than left to bubble, so an
+enclosing dialog or popover does not also close), and blurring commits *without* pulling focus
+back — a blur means the user already aimed focus elsewhere. `lr-token-edit` fires only for an edit
+that actually changed something: a reverted, unchanged, emptied, or (under the default
+`allowDuplicates = false`) duplicate-colliding edit is discarded silently, mirroring how a
+duplicate draft is skipped rather than rejecting the whole entry.
+
+**`delimiter` is nullable, and only a single character acts as a commit key.** It does two separate
+jobs: it splits a committed draft into several tokens, and — *only when it is exactly one
+character* — it is the keystroke that commits the draft. A multi-character delimiter still splits a
+pasted or committed draft, but no keystroke can ever match it, so nothing commits on typing.
+Setting it to `null` disables both, so a token may contain the delimiter verbatim. **`delimiter="null"`
+does not work** — that is the four-character string `null`. Use `delimiter="none"`, `delimiter=""`
+(both of which the attribute converter maps to `null`), or a property binding
+(`.delimiter=${null}`). Removing the attribute restores the `,` default.
+
 **Themeable custom properties:** `--lr-token-input-input-inline-size` (the editable input's
 `flex-basis` inside the wrapped token row; undeclared by default, falling back inline to
-`--lr-size-8rem`) and `--lr-token-input-min-input-inline-size` (default `--lr-size-4rem`, the floor
-that input keeps once tokens have consumed the row).
+`--lr-size-8rem`), `--lr-token-input-min-input-inline-size` (default `--lr-size-4rem`, the floor
+that input keeps once tokens have consumed the row), and `--lr-token-input-editor-inline-size`
+(default `--lr-size-6rem`, the inline size of the inline token editor opened by `editable`).

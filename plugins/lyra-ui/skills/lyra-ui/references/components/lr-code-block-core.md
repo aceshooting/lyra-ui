@@ -83,7 +83,12 @@ body ended; `anchor` is a `line-range` anchor covering the selected lines).
 `code`, `line-highlight`, `line-button` — identical set to `<lr-code-block>`.
 
 **Themeable custom properties:** identical to `<lr-code-block>` — `--lr-code-block-max-height`,
-`--lr-code-block-font`, plus the same shared tokens.
+`--lr-code-block-font`, `--lr-code-block-tab-size` (default `2`, applied to `[part='pre']`),
+`--lr-code-block-active-line-outline-color` (default `var(--lr-color-brand)`), plus the same shared
+tokens. Both of the last two are inline `var()` fallbacks at the point of use rather than `:host`
+declarations, so a page-, container-, or theme-level value reaches them; see `<lr-code-block>` above
+for the full rationale, including why `<lr-markdown>`/`<lr-markdown-core>` must declare the tab-size
+fallback separately.
 
 **Optional peer deps:** `shiki` (specifically its `shiki/core`, `shiki/engine/oniguruma`,
 `shiki/wasm`, and `shiki/themes/github-{light,dark}.mjs` subpaths — never `shiki`'s main entry point,

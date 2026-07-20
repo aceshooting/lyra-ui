@@ -43,7 +43,20 @@ activated).
 expanded, omitted when `compact`), `toggle` ("Show more"/"Show less", omitted when `compact`),
 `empty` (shown when `chunks` is empty).
 
-**Themeable custom properties:** shared tokens only.
+**Themeable custom properties:** `--lr-chunk-inspector-current-bg` (default
+`var(--lr-color-brand-quiet)`) — the background of the chunk matching `activeId`.
+`--lr-chunk-inspector-current-color` (default `var(--lr-color-text)`) — the text color of that
+chunk's `[part='score']` line. Both are inline `var()` fallbacks at the point of use rather than
+`:host` declarations, so either can be set on the element *or on any ancestor*:
+`::part(chunk)[data-active]` is invalid CSS — Shadow Parts forbids an attribute selector after
+`::part()` — so tinting the current chunk previously meant overriding the library-wide
+`--lr-color-brand-quiet` token and repainting everything else that read it.
+
+**They are a contrast-sensitive pair — override them together, never one alone.** The `-current-color`
+hook exists precisely because the quiet token it replaces only reaches about 4.24:1 against the
+current background; keep any override at 4.5:1 or better against `--lr-chunk-inspector-current-bg`.
+
+Plus shared tokens otherwise.
 
 **Optional peer deps:** none.
 

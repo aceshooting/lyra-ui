@@ -39,7 +39,12 @@ heading row entirely), `toolbar` (action row at the block-end edge).
 **CSS parts:** `base`, `header`, `icon`, `heading`, `status` (never color-only — always paired with
 text), `progress`, `body`, `toolbar`, `handle` (every handle dot), `handle-input`, `handle-output`.
 
-**Themeable custom properties:** `--lr-flow-node-min-inline-size` (default `11rem`).
+**Themeable custom properties:** `--lr-flow-node-min-inline-size` (default `11rem`) and
+`--lr-flow-node-selected-border` (default `var(--lr-color-brand)`) — the card's border color while
+`selected`. Like the other state-scoped custom properties here it is an inline `var()` fallback at
+its point of use rather than a `:host` declaration, so it can be set on the element *or any
+ancestor*; overriding the selection color otherwise means hijacking the library-wide
+`--lr-color-brand` token and repainting everything else that reads it.
 
 **Optional peer deps:** none.
 

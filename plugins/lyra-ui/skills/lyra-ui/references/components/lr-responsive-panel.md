@@ -59,7 +59,11 @@ the *effective* mode — not the `mode` prop's possibly-`'auto'` literal value �
 in the overlay presentation).
 
 **Themeable custom properties:** `--lr-responsive-panel-overlay-color` (default
-`var(--lr-color-overlay)` — the overlay presentation's backdrop scrim color), plus shared tokens (`--lr-color-border`, `--lr-color-surface`,
+`var(--lr-color-overlay)` — the overlay presentation's backdrop scrim color),
+`--lr-responsive-panel-sheet-max-block-size` (default `85dvh`, falling back to `85vh` where `dvh`
+isn't supported — the maximum height of a `variant="bottom-sheet"` overlay panel, so a long sheet
+stops short of the top of the viewport instead of covering it; it has no effect on
+`variant="fullscreen"` or on the inline presentation), plus shared tokens (`--lr-color-border`, `--lr-color-surface`,
 `--lr-space-*`, `--lr-radius`, `--lr-shadow`).
 
 **Optional peer deps:** none.

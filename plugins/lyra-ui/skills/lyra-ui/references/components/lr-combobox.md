@@ -35,7 +35,9 @@ shared `FormAssociated` mixin — see gotchas).
 - `errorText: string = ''` (attribute `error-text` — static error copy shown below the hint;
   overridden by slotted `error` content when provided)
 - `open: boolean = false` (reflected)
-- `clearable: boolean = false` (reflected) — displays the clear button while a value is selected
+- `clearable: boolean = false` (reflected) — displays the clear button while there is something to
+  clear on **either** axis this control owns: a committed selection, or *visible* filter text. See
+  "the clear button covers two axes" below
 - `withClear: boolean = false` (attribute `with-clear`) — deprecated compatibility alias for
   `clearable`; either property enables the same clear button
 - `autocomplete: string = 'off'`, `inputMode: string = ''` (attribute `inputmode`),
@@ -96,10 +98,31 @@ the filter silently, mirroring how `<lr-input>`'s `lr-input` only reports user e
 `lr-show` and `lr-hide` report listbox visibility transitions.
 The internal input's `focus` and `blur` are re-dispatched as bubbling, composed host events.
 
-**Slots:** default (`<lr-option>` children), `label`, `hint`, `error` (overrides the `errorText`
-attribute when provided)
+**The clear button covers two axes, and announces only the one that moved.** A combobox owns both a
+committed selection and an in-progress filter query, so the button renders whenever either has
+something to clear, and one press clears both:
 
-**CSS parts:** `form-control`, `form-control-label`, `combobox`, `tags`, `tag`,
+- Clearing a selection emits `input`, then `change`, then `lr-clear` — and, if the query was also
+  non-empty, `lr-filter` with an empty `value`.
+- A **query-only** clear (nothing selected, just typed text) emits `lr-filter` with an empty
+  `value` and deliberately **no** `change` and **no** `lr-clear`. There was no selection
+  transition to report, so announcing one would be a lie. Don't listen for `lr-clear` to detect
+  "the user emptied the field" — listen for `lr-filter` when you care about the query.
+- The query half of the render gate is scoped to states where the query is actually *visible*: an
+  open listbox in single-select, or any time in `multiple` mode. A closed single-select shows the
+  selected label rather than the query, so a stale query alone never surfaces a button offering to
+  clear text the user cannot see.
+
+**Slots:** default (`<lr-option>` children), `label`, `hint`, `error` (overrides the `errorText`
+attribute when provided), plus two adornment slots:
+- `start` — content at the inline-start of the trigger row, before the selected-value tags and the
+  filter input. It is decorative chrome, **not** an option: only `<lr-option>` elements in the
+  default slot are ever collected into the option list.
+- `end` — content after the filter input and the built-in clear action, and before the expand icon,
+  so consumer content never sits outboard of the dropdown chevron.
+
+**CSS parts:** `form-control`, `form-control-label`, `combobox`, `start` and `end` (the two
+adornment-slot wrappers, each `hidden` while nothing is slotted into it), `tags`, `tag`,
 `tag__remove-button`, `combobox-input`, `clear-button`, `expand-icon`, `listbox`, `option`,
 `option-dot` (the leading status dot, when a row's `dotColor` is set), `option-icon` (the decorative
 leading visual for an async row), `option-label`, `option-sub` (a row's secondary line, when `sub`
@@ -110,6 +133,13 @@ indicator from `maxRender`), `error`, `hint`
 `--lr-combobox-trigger-min-height`, `--lr-combobox-font-size`, `--lr-combobox-tag-padding`,
 `--lr-combobox-tag-font-size`, and `--lr-combobox-expand-size` (the decorative icon box; each
 standard size supplies an aligned default), plus shared tokens.
+
+`--lr-combobox-trigger-height` pins an **exact** input-container height (both floors and caps it),
+for pixel-matching an `<lr-input>` or `<lr-select>` in the same toolbar row. It is **undeclared by
+default**, leaving `--lr-combobox-trigger-min-height` as a floor only and the row free to grow —
+see "exact-height hatches" under `lr-input` for why `auto` is not a way to opt back out. Intended
+for a single-row combobox: in `multiple` mode, a tag row long enough to wrap overflows the pinned
+box visibly (nothing is clipped or made unreachable), so leave it unset there.
 
 **Optional peer deps:** none.
 

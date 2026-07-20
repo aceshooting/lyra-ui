@@ -31,3 +31,13 @@ gate.
 
 **CSS parts:** `base`, `empty`, `summary`, `count`, `state-badge`,
 `list`, `decision`, `decision-header`, `category`, `label`, `detail`, `explanation`.
+
+**Themeable custom properties:** `--lr-policy-summary-count-allow-color` (default
+`var(--lr-color-success)`), `--lr-policy-summary-count-deny-color` (default
+`var(--lr-color-danger)`) and `--lr-policy-summary-count-needs-review-color` (default
+`var(--lr-color-warning)`) — the text color of each state's count in the summary strip. All three
+follow the state-scoped-property convention described under `lr-span-waterfall`: inline `var()`
+fallbacks rather than `:host` declarations, so each can be set on the element or on any ancestor.
+They exist because `::part(count)[data-state='deny']` is invalid CSS — Shadow Parts forbids an
+attribute selector after `::part()` — so retoning one state's count otherwise meant overriding the
+library-wide status tokens and repainting every other surface reading them.

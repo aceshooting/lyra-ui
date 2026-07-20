@@ -47,6 +47,20 @@ the resolved anchor target, `data-match`, `data-active-match`), `tag` (`data-mat
 elements), `error`, `spinner`.
 
 **Themeable custom properties:** `--lr-xml-viewer-max-height` (default `none`).
+`--lr-xml-viewer-active-match-color` (default `var(--lr-color-warning)`) — the solid outline on the
+`[part='node']` holding the *current* search match, leaving every other match on its dashed
+`--lr-color-warning` outline. It is an inline `var()` fallback at the point of use rather than a
+`:host` declaration, so it can be set on the element *or on any ancestor*:
+`::part(node)[data-active-match]` is invalid CSS — Shadow Parts forbids an attribute selector after
+`::part()` — so distinguishing the active match previously meant re-pointing the shared
+`--lr-color-warning` token, which recolored every other match (and every other warning surface)
+along with it. Unset, it falls back to that token, so rendering is unchanged.
+
+`[part='toggle']`'s glyph box stays compact (`1.25rem`) while its *interactive* box takes the shared
+minimum target size as a floor via `--lr-icon-button-size`. That token is a floor, not a fixed size,
+so lowering it never squashes the chevron below its own box — the visible glyph keeps its size while
+the hit target follows the token, and it can never fall under the accessible minimum from this
+component's own rules.
 
 ```html
 <lr-xml-viewer .xml=${payload} collapsed-depth="2" copyable

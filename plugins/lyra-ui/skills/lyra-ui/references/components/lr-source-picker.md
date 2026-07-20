@@ -41,7 +41,19 @@ fired after every toggle including select-all).
 `lr-file-icon` type badge), `label`, `empty` (`noData` when `sources` is empty, `noMatches` when a
 filter empties the tree).
 
-**Themeable custom properties:** shared tokens only.
+**Themeable custom properties:** `--lr-source-picker-checked-bg` — the background of a fully-checked
+selection control: the `select-all` pill (whose resting default is `var(--lr-color-brand-quiet)`) and
+a fully-selected entry's `[part='checkbox']` (whose resting default is `var(--lr-color-brand)`). The
+two keep their distinct defaults while it is unset; setting it unifies both.
+`--lr-source-picker-checked-border` (default `var(--lr-color-brand)`) — the border color of every
+checked *or* mixed selection control. `--lr-source-picker-mixed-bg` (default
+`color-mix(in srgb, var(--lr-color-brand) 50%, var(--lr-color-surface))`) — the background of a
+partially-selected entry's `[part='checkbox']`, so a tri-state folder reads as distinct from a fully
+selected one. All three are inline `var()` fallbacks at the point of use rather than `:host`
+declarations, so each can be set on the element *or on any ancestor*:
+`::part(checkbox)[aria-checked='true']` is invalid CSS — Shadow Parts forbids an attribute selector
+after `::part()` — which previously left re-pointing the library-wide `--lr-color-brand` token as
+the only lever, repainting every other brand surface with it. Plus shared tokens otherwise.
 
 **Optional peer deps:** none.
 

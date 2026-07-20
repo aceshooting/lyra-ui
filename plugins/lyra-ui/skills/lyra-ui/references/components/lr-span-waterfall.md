@@ -37,6 +37,16 @@ Space).
 bar), `meta` (secondary row info, shown inline under 480px), `status-text`, `duration`, `empty` (shown
 when `spans` is empty), and `live-region`.
 
-**Themeable custom properties:** `--lr-span-waterfall-name-width` (default `8rem`) and
+**Themeable custom properties:** `--lr-span-waterfall-name-width` (default `8rem`),
 `--lr-span-waterfall-stripe-speed` (a `running` span's striped-bar animation duration; defaults to
-`--lr-transition-ambient`).
+`--lr-transition-ambient`), and `--lr-span-waterfall-row-active-bg` (default
+`var(--lr-color-brand-quiet)`) — the background of the active (`activeSpanId`) row.
+
+That last one follows the convention every **state-scoped** custom property in this family uses, and
+it is worth reading once: it is an inline `var()` fallback at its point of use and is deliberately
+**not** declared on `:host`, so it can be set on the element *or on any ancestor* and still reach the
+rule that consumes it. It exists because Shadow Parts forbids an attribute selector after `::part()`
+— `::part(row)[data-active]` and every selector like it is invalid CSS — so before it, the only way
+to restyle a state-dependent surface was to override a library-wide `--lr-color-*` token, which repaints
+every other surface reading that token. Every `*-active-*`, `*-selected-*` and per-state color
+property below works the same way.

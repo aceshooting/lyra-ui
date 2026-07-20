@@ -42,7 +42,29 @@ fade at each horizontal scroll edge of the track. `--lr-segmented-track-min-heig
 `--lr-segmented-segment-padding`, and `--lr-segmented-font-size` are the three knobs `size` swaps
 (`m` defaults: `auto`, `var(--lr-size-0-125rem) var(--lr-space-s)`, `var(--lr-font-size-sm)`) —
 override them on the host for a size tier the scale doesn't cover, since a `:host([size])` rule
-wins over the `:host` default. Otherwise shared tokens — `--lr-color-border`/`-surface`/`-text`/
+wins over the `:host` default.
+
+`--lr-segmented-track-height` pins the `base` track's exact height at every `size` tier (it sets
+both `block-size` and `min-block-size`), for a row that has to sit flush beside a hard-sized toolbar
+control. It is **genuinely undeclared by default** — not `auto` — and that is load-bearing: an
+exact-height hatch only works as an undeclared sentinel, because `auto` is itself a valid value that
+would always win and would silently turn every tier's `--lr-segmented-track-min-height` floor into
+dead code. While it is unset, each tier keeps its own floor and the track grows with its content.
+
+`--lr-segmented-selected-bg` (default `var(--lr-color-surface)`), `--lr-segmented-selected-color`
+(default `var(--lr-color-text)`), `--lr-segmented-selected-font-weight` (default
+`var(--lr-font-weight-semibold)`) and `--lr-segmented-selected-shadow` (default `var(--lr-shadow)`)
+style the checked segment's pill; `--lr-segmented-hover-color` (default `var(--lr-color-text)`)
+styles a hovered segment that is neither checked nor disabled, independently of the four above — so
+recoloring the checked pill never bleeds onto hover. All five are inline `var()` fallbacks at the
+point of use rather than `:host` declarations, so each can be set on the element *or on any
+ancestor*; unset, each falls back to the token its rule used before. They exist because
+`::part(segment)[aria-checked='true']` is invalid CSS — Shadow Parts forbids an attribute selector
+after `::part()` — which previously left hijacking the library-wide
+`--lr-color-surface`/`--lr-color-text` tokens as the only way to restyle a selected segment,
+repainting every other element that read them.
+
+Otherwise shared tokens — `--lr-color-border`/`-surface`/`-text`/
 `-text-quiet`, `--lr-radius`, `--lr-font-weight-semibold`, `--lr-space-s`, `--lr-shadow`,
 `--lr-opacity-disabled`, `--lr-focus-ring-*`.
 

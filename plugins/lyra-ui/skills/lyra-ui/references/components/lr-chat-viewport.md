@@ -59,6 +59,18 @@ Renders no messages and computes no unread state itself — the host supplies `u
 virtualization of its own (`lr-virtual-list`); not a generic overflow surface (`lr-scroller`); no
 message semantics (`lr-chat-message`).
 
+**Sizing in virtual mode.** `[part='scroll']` steps aside and the slotted `lr-virtual-list`'s own
+viewport becomes the real scroller, so it is given this component's full height — otherwise it would
+scroll inside `lr-virtual-list`'s `24rem` default no matter how tall the viewport is. An explicit
+`block-size` on the slotted list is what makes that resolvable: without it the list host is
+auto-height, its own base percentage chains to `auto`, and the two size each other circularly.
+`<lr-thread-list>` solves the same problem by turning the internal list's shipped `24rem` into a
+flex-basis through `::part(base)`, which is not available here — that list lives in the *consumer's*
+light DOM, and `::slotted()` cannot be followed by `::part()`. Virtual mode therefore inherits this
+component's existing requirement of a height-bounded parent, exactly as slotted mode's own
+`[part='scroll']` already does. A document-tree declaration on the list (a consumer's own rule or an
+inline style) still wins over the built-in one.
+
 ```html
 <lr-chat-viewport unread-start-index="12" @lr-follow-change=${(e) => console.log(e.detail.following)}>
   <lr-chat-message role="user">…</lr-chat-message>

@@ -58,6 +58,15 @@ while collapsed).
 - `page?: string | number` — optional page reference, e.g. `12` or `"iv"`, rendered as-is (never
   parsed/validated as a number), appended to the title as `" — p. {page}"`.
 - `href?: string` — optional URL, echoed back (unopened) in `lr-open`'s detail.
+- `compact: boolean = false` (reflected) — tighter root padding and row gap, for the dense citation
+  lists these cards usually render in — the same convention as `lr-empty`'s `compact`. Purely a
+  density knob: the border and background stay. `false` (the default) keeps the full card padding.
+- `appearance: 'card' | 'plain' = 'card'` (reflected) — visual chrome, mirroring `lr-card`'s
+  `appearance` vocabulary. `'card'` (the default) keeps the bordered, filled, padded box; `'plain'`
+  removes the border, background, padding and corner radius, so a card inside a `<lr-source-list>`
+  (or any container already drawing its own border/dividers) doesn't double the frame. `plain` wins
+  over `compact` when both are set — nothing left to tighten. The title and toggle keep their brand
+  color and hover underline under `plain`, since neither ever depended on the card chrome.
 
 **Events:**
 - `lr-expand` (`detail: { sourceId: string; expanded: boolean }`) — the per-card "Show
@@ -78,7 +87,11 @@ behind the "Show more"/"Show less" toggle — when left empty, no toggle renders
 (wrapper around the `full` slot, `hidden` while collapsed), `toggle` (the "Show more"/"Show less"
 button — only rendered when the `full` slot has content).
 
-**Themeable custom properties:** shared tokens only — `--lr-color-border`, `--lr-color-surface`,
+**Themeable custom properties:** `--lr-source-card-compact-padding` (default `var(--lr-space-xs)`) —
+`[part='base']`'s padding while `compact`; `--lr-source-card-compact-gap` (default
+`var(--lr-space-2xs)`) — the gap between `[part='base']`'s rows while `compact`. Both apply only in
+the `compact` state, so a dense citation list can be tuned without re-pointing shared spacing tokens
+elsewhere. Plus shared tokens — `--lr-color-border`, `--lr-color-surface`,
 `--lr-color-text` / `-text-quiet`, `--lr-color-brand`, `--lr-radius`, `--lr-space-xs`/`-s`,
 `--lr-focus-ring-*`.
 

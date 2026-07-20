@@ -58,7 +58,45 @@ installed, renders an empty template (see gotchas).
 Also exported from the package root:
 `languageToCountry(language: string): string | undefined` and the `LANGUAGE_TO_COUNTRY` lookup
 table (region subtag wins, e.g. `en-US` → `us`; plain `en` → `gb`; override the table per-app if you
-need different defaults).
+need different defaults), plus `localeNativeName(tag: string): string`.
+
+`localeNativeName()` returns a BCP-47 tag's **endonym** — the locale's name written in that locale
+itself (`'fr'` → `français`, `'pt-BR'` → `português (Brasil)`). That is what a language switcher
+should list, so a reader who understands none of the current UI language can still find their own.
+It derives from `Intl.DisplayNames`, so no name table ships with the library and results follow the
+browser's own ICU data; the underlying instance comes from a shared memoized cache, since a picker
+does one lookup per offered locale on every render pass. A tag with no display name resolves to the
+tag itself, and so does a structurally invalid one — `Intl.DisplayNames` throws a `RangeError` on
+those rather than falling back, and a language picker should degrade to showing the raw tag rather
+than tearing down the render. Pair it with `languageToCountry()` for the flag half of the same row.
+
+**Locale picker recipe.** A locale picker is a composition, not a component: `<lr-popover>` supplies
+the light-dismiss surface, `<lr-flag>` the country mark, `localeNativeName()` the endonym, and
+`aria-current="true"` marks the active choice. Which locales exist is the app's decision, so the app
+owns the list. Set `lang` on each row so assistive tech pronounces the endonym in its own language,
+and use `variant="compact"` at icon scale.
+
+```html
+<lr-popover placement="bottom-start">
+  <button slot="trigger">
+    <lr-flag language="fr" label="" style="height: 1rem"></lr-flag>
+    <span>français</span>
+  </button>
+  <ul role="list">
+    <!-- one <li><button lang="pt-BR" aria-current="false"> … </button></li> per offered locale -->
+  </ul>
+</lr-popover>
+```
+
+```js
+import { localeNativeName, languageToCountry } from '@aceshooting/lyra-ui';
+
+const rows = ['en', 'fr', 'de', 'pt-BR', 'ja', 'ar'].map((tag) => ({
+  tag,
+  name: localeNativeName(tag),   // endonym, e.g. "português (Brasil)"
+  country: languageToCountry(tag), // flag code for the same row
+}));
+```
 
 ```html
 <lr-flag country="fr" label="France"></lr-flag>

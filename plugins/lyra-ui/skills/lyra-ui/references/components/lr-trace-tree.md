@@ -33,3 +33,16 @@ as a root rather than being dropped. `activeSpanId: string | null = null`
 `showTokens`/`showCost`), `row` (`role="treeitem"`), `toggle`, `icon`, `name`, `detail`, `status-text`,
 `duration`, `tokens-in`, `tokens-out` (when `showTokens`), `cost` (when `showCost`), `bar-track`,
 `bar`, `empty` (shown when `spans` is empty), and `live-region`.
+
+**Themeable custom properties:** `--lr-trace-tree-row-active-bg` (default
+`var(--lr-color-brand-quiet)`) — the background of the active (`activeSpanId`) row. Same
+state-scoped-property convention described under `lr-span-waterfall` above: an inline `var()`
+fallback rather than a `:host` declaration, so it can be set on the element or any ancestor, and it
+exists because `::part(row)[data-active]` is invalid CSS.
+
+**Contrast note:** this one is contrast-sensitive. An active row carries the row's own smaller
+secondary text (`detail`, `status-text`, `duration`, and the token/cost columns), and against the
+default active tint that text already sits below a 4.5:1 ratio. A consumer restyling
+`--lr-trace-tree-row-active-bg` should pick a value that *raises* the contrast against the row's text
+colors rather than assuming any brand-quiet-like tint is safe; verify against the smallest text in
+the row, not the row name.

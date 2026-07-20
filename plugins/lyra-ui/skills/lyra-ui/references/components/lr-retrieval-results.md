@@ -71,7 +71,16 @@ virtualized — `::part(row)` reaches it either way), `group-header` (exported f
 `selectable` is false), `row-body` (carries `data-selected`), `metadata` (a `<dl>`; omitted when the
 chunk has none or while `presentation="compact"`), `metadata-entry`, `load-more-row`, `load-more`.
 
-**Themeable custom properties:** shared tokens only.
+**Themeable custom properties:** `--lr-retrieval-results-selected-border` (default
+`var(--lr-color-brand)`) — the inline-start border color marking a selected `[part='row-body']`. A
+border rather than a fill by design: the row's own text (the nested chunk inspector's quiet-toned
+score line in particular) is sized and colored for the page's default surface, and a tinted
+background can drop it below the required contrast ratio, while a border-only indicator carries no
+such risk — so recoloring this hook is contrast-safe. It is an inline `var()` fallback at the point
+of use rather than a `:host` declaration, so it can be set on the element *or on any ancestor*:
+`::part(row-body)[data-selected]` is invalid CSS — Shadow Parts forbids an attribute selector after
+`::part()` — which previously left re-pointing the library-wide `--lr-color-brand` token as the only
+lever, repainting every other brand surface with it. Plus shared tokens otherwise.
 
 **Optional peer deps:** none.
 

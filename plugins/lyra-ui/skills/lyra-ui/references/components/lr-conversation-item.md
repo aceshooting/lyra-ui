@@ -67,7 +67,24 @@ in-place rename `<input>`'s own `focus`, for the same reason as `blur`)
 **CSS parts:** `base`, `option`, `content`, `title`, `title-input`, `rename-button`, `excerpt`,
 `timestamp`, `actions`
 
-**Themeable custom properties:** shared tokens only — `--lr-space-xs/-s/-m`, `--lr-radius`,
+**Themeable custom properties:** `--lr-conversation-item-active-bg` (default
+`var(--lr-color-brand-quiet)`) — the row's background while `active`. `--lr-conversation-item-active-color`
+(default `var(--lr-color-text)`) — the text color of `[part='excerpt']` and `[part='timestamp']`
+while `active`. Both are declared as inline `var()` fallbacks at the point of use and never on
+`:host`, so either can be set on the element *or on any ancestor* (a thread-list wrapper, a page
+theme layer); `::part(base)[active]` is not valid CSS — Shadow Parts forbids an attribute selector
+after `::part()` — so the only previous lever was overriding the library-wide `--lr-color-brand-quiet`
+token and repainting everything else reading it. Unset, each falls back to exactly the token its rule
+used before.
+
+**These two are a contrast-sensitive pair — override them together, never one alone.** The
+`-active-color` hook exists precisely because the quiet text tone only reaches about 4.25:1 against
+the default active background; keep any override at 4.5:1 or better against it. And note that
+`[part='title']` is *not* restyled by the pair — it keeps `--lr-color-text` regardless — so a dark
+custom active background needs its own title color set alongside them, or the title drops below
+contrast while the excerpt stays legible.
+
+Plus shared tokens — `--lr-space-xs/-s/-m`, `--lr-radius`,
 `--lr-transition-fast`, `--lr-color-text/-text-quiet/-brand/-brand-quiet/-surface`,
 `--lr-focus-ring-width/-color/-offset`, `--lr-icon-button-size`.
 

@@ -45,3 +45,11 @@ The focus position is re-clamped whenever `rows`/`columns` shrink, so the grid c
 
 **CSS parts:** `viewport` (the scrolling bordered wrapper), `grid` (the `<table role="grid">`),
 `header` (each sticky `<th>`), `row`, `cell`, `empty` (the loading / no-data cell).
+
+**Themeable custom properties:** `--lr-data-grid-row-selected-bg` (default
+`var(--lr-color-brand-quiet)`) — the background of the selected row's cells. It is an inline `var()`
+fallback at its point of use rather than a `:host` declaration, so it can be set on the element *or
+any ancestor*. It exists because Shadow Parts forbids an attribute selector after `::part()` —
+`::part(row)[aria-selected='true']` is invalid CSS — leaving the library-wide
+`--lr-color-brand-quiet` token as the only prior lever, which repaints every other surface reading
+it. `lr-table` exposes the equivalent knob as `--lr-table-row-selected-bg`.

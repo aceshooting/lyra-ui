@@ -51,6 +51,14 @@ latest), `actions`, `copy-button` (rendered only while `copyText` is non-empty),
 (rendered only while `downloadSrc` is non-empty), `body`, `streaming-indicator` (rendered only while
 `streaming`).
 
+**Themeable custom properties:** `--lr-artifact-panel-view-active-bg` (default
+`var(--lr-color-brand-quiet)`) and `--lr-artifact-panel-view-active-color` (default
+`var(--lr-color-brand)`) — the background and text color of the pressed (active) preview/code toggle
+button. Both follow the state-scoped-property convention described under `lr-span-waterfall`: inline
+`var()` fallbacks rather than `:host` declarations, so either can be set on the element or on any
+ancestor. They exist because `::part(view-button)[aria-pressed='true']` is invalid CSS, leaving the
+library-wide brand tokens as the only prior lever.
+
 ```html
 <lr-artifact-panel label="report.md" kind="document" .versions=${versions}
   @lr-restore=${(e) => restoreVersion(e.detail.versionId)}>

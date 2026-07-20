@@ -65,6 +65,34 @@ input and built-in actions).
 `--lr-input-font-size`, `--lr-input-control-min-height` — all four auto-swapped per `size`
 (`2xs`…`xl`), the same pattern
 `lr-select`'s `--lr-select-trigger-padding`/`--lr-select-font-size` use.
+`--lr-input-control-height` pins an **exact** outer control-row height (both floors and caps it) —
+for example to pixel-match an `<lr-select>` or `<lr-combobox>` in the same toolbar row. It is
+undeclared by default, leaving `--lr-input-control-min-height` as a floor only and the row free to
+grow.
+
+### Exact-height hatches — the one rule that applies to all of them
+
+Several controls expose the same pair: a per-`size` `*-min-height` **floor**, and an exact
+`*-height` **cap**. The family is `--lr-input-control-height`, `--lr-select-trigger-height`,
+`--lr-combobox-trigger-height`, `--lr-date-input-control-height`, `--lr-button-height`,
+`--lr-known-date-field-height`, and `--lr-chip-height`. Every one of them behaves identically:
+
+- **Each is undeclared by default.** The component reads it only through two `var()` fallbacks —
+  `min-block-size: var(--lr-x-height, var(--lr-x-min-height))` and
+  `block-size: var(--lr-x-height, auto)` — so leaving it unset is what makes the per-tier floor
+  and the content-driven height work at all.
+- **Setting one to `auto` is not the same as leaving it unset.** `auto` is a perfectly valid
+  *declared* value, and a declared value wins over the `var()` fallback arm — so `auto` silently
+  turns the per-tier `*-min-height` floor into dead code, and nothing anywhere reports it. To
+  return a control to default behavior, **remove** the declaration; never neutralize it with
+  `auto`.
+- Because the component itself never declares them, each can be set inline on the element, from an
+  ancestor, or from an outer-tree rule (`lr-input { --lr-input-control-height: 44px }`) — no
+  `::part()` rule needed.
+- **A dead declaration is invisible in source.** There is no way to tell a live `--lr-*`
+  declaration from a shadowed or defeated one without rendering: a test asserting on stylesheet
+  text passes either way. Assert the rendered `min-block-size`/`block-size` via
+  `getComputedStyle` on the real element instead of reading the custom property back.
 
 **Optional peer deps:** none.
 

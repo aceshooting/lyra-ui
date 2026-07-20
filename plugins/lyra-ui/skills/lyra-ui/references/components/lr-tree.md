@@ -34,18 +34,34 @@ deeply-nested node's own shadow root still reaches it).
   `[part="base"]` element. The component forwards a host `aria-label` to that semantic element when
   `label` is empty; `label` takes precedence when both are set. External `aria-labelledby` idrefs
   are not forwarded across the shadow boundary.
+- `reorderable: boolean = false` (reflected) — opts into keyboard reordering. Unset, no `lr-reorder`
+  is ever emitted, Ctrl/Cmd+Arrow behaves exactly like a plain Arrow press, and the internal live
+  region is not rendered at all.
 
 **Keyboard:** ArrowDown/ArrowUp move the roving focus to the next/previous *visible* node.
 ArrowRight expands a collapsed node (focus stays put; a second ArrowRight then steps into the first
 child) or moves into an already-expanded node's first child. ArrowLeft collapses an expanded node, or
 moves focus to its parent. Home/End jump to the first/last visible node. Enter/Space activate
-`select()` on the focused node.
+`select()` on the focused node. While `reorderable`, **Ctrl/Cmd**+ArrowUp/ArrowDown moves the focused
+node within its own parent's child list instead of navigating. Ctrl/Cmd rather than Alt: Alt+Arrow is
+browser back/forward on Windows and Linux. ArrowUp/ArrowDown are not direction-sensitive, so this
+binding is deliberately **not** RTL-swapped — "down" always means later in the sibling list.
 
 **Methods:** `expandAll()`, `collapseAll()` (both recursive, properly sequenced around Lit's render
 cycle).
 
-**Events:** none dispatched directly (see `lr-tree-node` below — they bubble up and are also
-observed internally to keep the roving `activeId` in sync with clicks).
+**Events:** `lr-reorder` (`detail: { id, parentId, fromIndex, toIndex }`, only while `reorderable`).
+Like every other event here it is a **request**: `data` is host-owned and is never mutated by this
+component, so nothing moves until the host reassigns a reordered `data` — focus then follows the
+moved node. `parentId` is `null` for a top-level item, and `fromIndex`/`toIndex` are **sibling-scoped
+indices**, not positions in the flattened visible list. The move is constrained to one sibling list
+and never fires at a subtree boundary, so a reorder can never become a reparent: Ctrl+ArrowDown on
+the last child of a subtree is ambiguous (the visually next row is a top-level uncle, so "move down"
+could mean either "swap with the next sibling" — there is none — or "reparent up a level"), and
+reparenting is a structural edit with no keyboard affordance distinguishing the two. Such a request
+is simply not made: no event, no announcement, focus stays put. Otherwise this element dispatches
+nothing directly (see `lr-tree-node` below — those bubble up and are also observed internally to keep
+the roving `activeId` in sync with clicks).
 
 **Slots:** default (holds the `<lr-tree-node>` elements it manages).
 
@@ -129,5 +145,7 @@ indentation), plus the shared tokens listed above.
 - row enrichment is intentionally structured rather than an unrestricted renderer: use `icon`,
   `label`, `description`, `badge`, and `accessibleLabel`. This keeps the host as the single
   `role="treeitem"` interaction target and preserves the APG keyboard model.
+- `lr-file-tree` does **not** forward `reorderable`, and deliberately so: its `TreeItem[]` is derived
+  from `nodes` on every render and keyed by filesystem path, an order it does not own.
 
 ---

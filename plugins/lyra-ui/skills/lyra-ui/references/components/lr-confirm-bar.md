@@ -27,7 +27,14 @@ free-form heading override for non-tool proposals; wins over `toolName`. `args: 
 (attribute: false) — shown read-only inside a collapsed `lr-details` + `lr-json-viewer` when
 defined. `decision: 'approved' | 'denied' | null = null` (reflected) — decided state, set by the
 component on activation and host-writable (an externally-resolved decision renders identically but
-emits nothing). `tone: 'neutral' | 'danger' = 'neutral'` (reflected).
+emits nothing). `tone: 'neutral' | 'danger' = 'neutral'` (reflected). `compact: boolean = false`
+(reflected) — collapses the bar from a full card (bordered, padded, `display: block` surface) to a
+single inline row with no chrome of its own, for a confirmation that has to live inside an existing
+container: a table cell, a card's action row, a toolbar. The host becomes `inline-flex`, and the
+narrow-allocation `@container` treatment is switched off — a compact bar is *expected* to be narrow,
+so stretching the buttons to fill would be exactly wrong. Re-chrome it through the
+`--lr-confirm-bar-compact-*` properties below. Everything else is unchanged: the event shapes, the
+focus-to-`[part="status"]`-before-unmount contract, and `role="group"` with its heading label.
 
 **Slots:** default — supplementary body content between the heading and the actions (e.g. a
 `lr-diff-view`). `footer` — extra content at the start of the action row.
@@ -39,6 +46,24 @@ emits nothing). `tone: 'neutral' | 'danger' = 'neutral'` (reflected).
 details/json-viewer wrapper, only rendered when `args` is defined), `footer`, `deny-button`,
 `approve-button` (named identically to the dialog's parts), `status` (the decided-state text, always
 present in the DOM as a focus landing spot).
+
+**Themeable custom properties:** the `compact` presentation is deliberately chrome-less by default
+and re-chromed entirely through five properties, all scoped to `[part="base"]` while `compact`:
+`--lr-confirm-bar-compact-padding` (default `0`, any padding shorthand),
+`--lr-confirm-bar-compact-gap` (default `var(--lr-space-s)`, the gap between the row's items),
+`--lr-confirm-bar-compact-border` (default `none`, any `border` shorthand),
+`--lr-confirm-bar-compact-background` (default `transparent`) and
+`--lr-confirm-bar-compact-radius` (default `0` — only visible once the border or background is set).
+They are inline `var()` fallbacks at their point of use rather than `:host` declarations, so any of
+them can be set on the element *or on any ancestor*, which is what makes "give every compact confirm
+bar in this panel a hairline border" a one-rule change on the panel.
+
+**Known gotchas:**
+- `[part="status"]` is always rendered and must never be given `display: none`. Deciding moves focus
+  to it synchronously, before the Deny/Approve buttons unmount, so hiding it would drop focus to
+  `<body>`. The shipped `:empty` rule on it has never matched, and that is load-bearing.
+- `[part="deny-button"]` and `[part="approve-button"]` are raw `<button>` elements, not composed
+  `lr-button`s, so `--lr-button-*` theming does not reach them. Style them through their parts.
 
 ```html
 <lr-tool-call-chip status="pending"></lr-tool-call-chip>

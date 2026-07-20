@@ -112,7 +112,15 @@ SFMono-Regular, Menlo, Consolas, monospace`) and `--lr-document-preview-spin-dur
 `0.8s`, stopped under reduced motion). `--lr-document-preview-progress` (default `0`) — a unitless
 0–100 number the determinate spinner's `conic-gradient` fill reads; written inline on the ring by
 the component itself from the clamped `progress` property, so overriding it only makes sense to
-repaint the fraction. Plus shared tokens
+repaint the fraction. `--lr-document-preview-active-border` (default
+`var(--lr-color-warning, var(--lr-color-brand))`) — the border color of the `[part='region-highlight']`
+matching `activeHighlightId` (image format only), deliberately distinct from the resting highlight
+border so the active region can be recolored without touching the rest. Like the library's other
+state hooks it is an inline `var()` fallback at the point of use rather than a `:host` declaration,
+so it can be set on the element or on any ancestor — `::part(region-highlight)[data-active]` is
+invalid CSS (Shadow Parts forbids an attribute selector after `::part()`), which previously left
+re-pointing the shared `--lr-color-warning`/`--lr-color-brand` tokens as the only lever, repainting
+every other element that read them. Plus shared tokens
 `--lr-color-border`, `--lr-radius`, `--lr-color-surface`, `--lr-space-s/-m/-l/-xs`,
 `--lr-color-text`, `--lr-color-text-quiet`, `--lr-color-danger`, `--lr-color-brand`,
 `--lr-color-on-brand`, `--lr-focus-ring-width/-color/-offset`, `--lr-transition-fast`.

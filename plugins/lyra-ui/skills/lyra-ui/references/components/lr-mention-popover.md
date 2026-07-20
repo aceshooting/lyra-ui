@@ -71,7 +71,9 @@ row padding/gap), `--lr-color-surface`/`-border` (popup background/border), `--l
 (popup and row corners), `--lr-shadow` (popup elevation), `--lr-transition-fast` (open/close
 transition), `--lr-color-brand-quiet` (active-row background), `--lr-color-brand` (selected-row
 text), `--lr-color-text-quiet`/`--lr-color-text` (description text, full-contrast on the active
-row).
+row), and `--lr-popover-viewport-clamp` (default `92vw`) — the shared narrow-viewport ceiling the
+popup's max-inline-size is `min()`ed against, alongside its own `24rem` cap and the positioner's
+available space. See `lr-tour` for the shared-clamp note.
 
 **Optional peer deps:** none.
 

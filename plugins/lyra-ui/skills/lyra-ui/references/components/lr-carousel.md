@@ -33,6 +33,15 @@ viewport), `track`, `controls`, `previous-button`, `next-button`, `previous-glyp
 chevron inside each, mirrored under RTL), `indicators`, `indicator` (one indicator's hit target,
 sized to the shared minimum tappable size), and `indicator-dot` (the compact visible dot inside it).
 
+**Themeable custom properties:** `--lr-carousel-indicator-current-bg` (default
+`var(--lr-color-brand-quiet)`) and `--lr-carousel-indicator-current-border-color` (default
+`var(--lr-color-brand)`) — background and border color of the current slide's `indicator-dot`
+(`[aria-current='true']`). Same state-hook mechanics as `<lr-widget>`'s view-toggle pair above:
+inline `var()` fallbacks, never declared on `:host`, so either can be set on the element or on any
+ancestor; unset, each falls back to the token the rule used before. This shape is what makes the
+current indicator addressable at all — `::part(indicator)[aria-current='true']` is invalid CSS, so
+hijacking a library-wide color token was previously the only lever.
+
 ```html
 <lr-carousel aria-label="Screenshots">
   <img alt="Dashboard overview" src="overview.png">

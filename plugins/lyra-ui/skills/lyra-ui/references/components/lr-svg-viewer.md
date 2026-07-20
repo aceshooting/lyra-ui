@@ -40,6 +40,14 @@ rendered region highlight), `region-highlight` (one region highlight, `data-tone
 
 **Themeable custom properties:** `--lr-svg-viewer-max-height` (default `none`) — maximum block size
 of `[part="body"]`; also settable via the `max-height` property, which writes this token inline.
+`--lr-svg-viewer-active-border` (default `var(--lr-color-warning, var(--lr-color-brand))`) — the
+border color of the `[part='region-highlight']` matching `activeHighlightId`, distinct from the
+resting highlight border so the active region can be recolored without touching the rest. It is an
+inline `var()` fallback at the point of use rather than a `:host` declaration, so it can be set on
+the element *or on any ancestor*: `::part(region-highlight)[data-active]` is invalid CSS — Shadow
+Parts forbids an attribute selector after `::part()` — so re-pointing a shared `--lr-color-*` token,
+and repainting everything else reading it, was previously the only way. Unset, it falls back to
+exactly the tokens the rule used before.
 
 **Optional peer dependency:** `dompurify`.
 

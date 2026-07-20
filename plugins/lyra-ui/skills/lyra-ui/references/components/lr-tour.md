@@ -76,7 +76,13 @@ label switches to Done on the last step).
 `--lr-tour-spotlight-radius` (default `--lr-radius` — shared by the cutout and the ring),
 `--lr-tour-spotlight-ring-color` (default `--lr-color-brand`), `--lr-tour-spotlight-ring-width`
 (default `--lr-border-width-medium`), `--lr-tour-popover-max-width` (default `--lr-size-22rem`,
-further capped by `92vw` and the positioner's available space).
+further capped by `--lr-popover-viewport-clamp` and the positioner's available space).
+
+`--lr-popover-viewport-clamp` (default `92vw`, from `--lr-theme-popover-viewport-clamp`) is the
+shared ceiling that keeps any floating surface inside a narrow viewport. `lr-tour`,
+`lr-mention-popover`, and `lr-export-button` all `min()` their own max-inline-size against it, so
+retuning `--lr-theme-popover-viewport-clamp` once at `:root` narrows or widens all three together
+rather than per component.
 
 **Known gotchas:**
 - By default the spotlighted target is **non-interactive**: it stays visible and announceable (not
