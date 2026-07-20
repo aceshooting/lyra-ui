@@ -1,4 +1,12 @@
-import { html, nothing, svg, type PropertyValues, type SVGTemplateResult, type TemplateResult } from 'lit';
+import {
+  html,
+  nothing,
+  svg,
+  type ComplexAttributeConverter,
+  type PropertyValues,
+  type SVGTemplateResult,
+  type TemplateResult,
+} from 'lit';
 import { property, query, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import type { LyraConversationItem } from '../conversation-item/conversation-item.class.js';
@@ -92,6 +100,23 @@ function trashIcon(): SVGTemplateResult {
   `;
 }
 
+/** `true`-defaulting boolean attribute converter -- Lit's default presence-based `type: Boolean`
+ *  can never be set back to `false` from a plain-HTML attribute once a property's own default is
+ *  `true` (removing an attribute that was never present fires no `attributeChangedCallback`), so
+ *  `fromAttribute` checks the literal string instead. `toAttribute` keeps the original
+ *  presence-based reflection direction (`true` -> present, `false` -> absent) so existing
+ *  reflected-attribute expectations are unaffected -- only attribute *parsing* changes. Duplicated
+ *  locally rather than imported, matching this exact converter's repeated per-component convention
+ *  elsewhere in this library (see e.g. `<lr-task-list>`'s own `trueDefaultBooleanConverter`). */
+const trueDefaultBooleanConverter: ComplexAttributeConverter<boolean> = {
+  fromAttribute(value): boolean {
+    return value !== 'false';
+  },
+  toAttribute(value): string | null {
+    return value ? '' : null;
+  },
+};
+
 function defaultFilter(thread: ChatThread, query: string): boolean {
   return thread.title.toLowerCase().includes(query) || (thread.excerpt ?? '').toLowerCase().includes(query);
 }
@@ -132,6 +157,11 @@ function defaultFilter(thread: ChatThread, query: string): boolean {
  * @event lr-filter-change - `detail: { text, matchCount }` -- fires in both modes.
  * @event lr-group-toggle - `detail: { id, collapsed }` -- requests a controlled custom/date group
  *   collapse-state change; the host updates `collapsedGroupIds`.
+ * @event blur - `searchable`: re-dispatched from the internal search `<input>`'s own `blur` --
+ *   bubbling and composed (unlike the native event, which is neither), so a listener above the
+ *   shadow boundary can observe it.
+ * @event focus - `searchable`: re-dispatched from the internal search `<input>`'s own `focus`,
+ *   for the same reason as `blur`.
  * @csspart base - The root.
  * @csspart search - The search field wrapper.
  * @csspart search-input - The `<input type="search">`.
@@ -253,7 +283,7 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
   @property({ type: Boolean, attribute: 'show-archived', reflect: true }) showArchived = false;
 
   /** Forwarded to each data-mode row's inline rename. */
-  @property({ type: Boolean, reflect: true }) editable = true;
+  @property({ type: Boolean, reflect: true, converter: trueDefaultBooleanConverter }) editable = true;
 
   /** Data mode only: forwarded to every row `<lr-conversation-item>`'s own `compact`, tightening
    *  each row's padding and gaps in one place. Slotted mode is a deliberate no-op — this component
@@ -496,6 +526,18 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
     this.optionEl(rows[0])?.focus();
   };
 
+  // Native focus/blur on the shadow-DOM search <input> neither bubble nor cross the shadow
+  // boundary, so a host listening for focus/blur on the custom element itself is never notified
+  // without this bridge -- same convention as `<lr-textarea>`'s/`<lr-chat-composer>`'s own
+  // onFocus/onBlur.
+  private onSearchFocus = (): void => {
+    this.emit('focus');
+  };
+
+  private onSearchBlur = (): void => {
+    this.emit('blur');
+  };
+
   // Data mode's rows are rendered into `lr-virtual-list`'s own shadow root (this component only
   // supplies the `renderItem` callback), so they are reached through that component's public
   // `renderedRows` accessor -- the currently-windowed row wrappers -- rather than by querying its
@@ -720,6 +762,8 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
           placeholder=${this.localize('searchThreads')}
           @input=${this.onSearchInput}
           @keydown=${this.onSearchKeyDown}
+          @focus=${this.onSearchFocus}
+          @blur=${this.onSearchBlur}
         />
       </div>
     `;

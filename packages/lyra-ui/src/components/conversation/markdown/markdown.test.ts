@@ -75,6 +75,10 @@ it('uses logical size containment and an internal overflow surface at a narrow a
   expect(getComputedStyle(content).minInlineSize).to.equal('0px');
   expect(getComputedStyle(content).maxInlineSize).to.equal('100%');
   expect(getComputedStyle(content).overflowInline).to.equal('auto');
+  // Paired-axis overflow: leaving the block axis unset would force it to the browser's own
+  // 'auto' resolution once overflow-inline is pinned non-'visible', which can trip a spurious
+  // scrollbar from a sub-pixel content/box mismatch. See markdown.styles.ts's [part='content'].
+  expect(getComputedStyle(content).overflowBlock).to.equal('hidden');
 });
 
 it('parses GFM tables, code blocks, links, headings, and blockquotes with part attributes injected, sanitized by default', async () => {
@@ -103,6 +107,15 @@ it('does not recognize a GFM table when gfm is disabled', async () => {
   expect(el.shadowRoot!.querySelector('[part="table"]')).to.not.exist;
 });
 
+it('does not recognize a GFM table when gfm="false" is written as a plain HTML attribute string, not just a JS property', async () => {
+  const el = (await fixture(html`<lr-markdown gfm="false"></lr-markdown>`)) as LyraMarkdown;
+  expect(el.gfm).to.equal(false);
+  el.content = '| a | b |\n| --- | --- |\n| 1 | 2 |\n';
+  await el.updateComplete;
+  await waitUntil(() => (el as unknown as { renderedHtml: string | null }).renderedHtml !== null);
+  expect(el.shadowRoot!.querySelectorAll('[part="table"]').length).to.equal(0);
+});
+
 it('strips inline event-handler attributes from raw HTML passthrough when sanitize is true (the default)', async () => {
   const el = (await fixture(html`<lr-markdown></lr-markdown>`)) as LyraMarkdown;
   el.content = 'hi <img alt="test" onerror="window.__lyraMarkdownXss = true">';
@@ -123,6 +136,20 @@ it('renders unsanitized raw HTML when sanitize is explicitly false', async () =>
 
   const img = el.shadowRoot!.querySelector('img')!;
   expect(img.getAttribute('onerror')).to.equal('window.__lyraMarkdownXssOptOut = true');
+});
+
+it('renders unsanitized raw HTML when sanitize="false" is written as a plain HTML attribute string, not just a JS property', async () => {
+  // Regression guard for Lit's default presence-based Boolean converter, which can never clear a
+  // true-defaulting property from a plain attribute -- the literal string 'false' must actually
+  // parse as false, per the class doc's own "set sanitize=\"false\"" guidance.
+  const el = (await fixture(html`<lr-markdown sanitize="false"></lr-markdown>`)) as LyraMarkdown;
+  expect(el.sanitize).to.equal(false);
+  el.content = 'hi <img alt="test" onerror="window.__lyraMarkdownXssAttrOptOut = true">';
+  await el.updateComplete;
+  await waitUntil(() => el.shadowRoot!.querySelector('img') !== null);
+
+  const img = el.shadowRoot!.querySelector('img')!;
+  expect(img.getAttribute('onerror')).to.equal('window.__lyraMarkdownXssAttrOptOut = true');
 });
 
 it('renders embedded raw HTML as visible escaped text when escapeHtml is set, instead of real elements', async () => {
@@ -651,7 +678,7 @@ describe('highlightCode cache plumbing (no async loading yet)', () => {
     await el.updateComplete;
     const pre = el.shadowRoot!.querySelector('[part="code-block"]') as HTMLElement;
     expect(pre).to.exist;
-    expect(pre.querySelector('span')).to.not.exist; // no shiki spans -- still plain
+    expect(pre.querySelectorAll('span').length).to.equal(0); // no shiki spans -- still plain
     expect(pre.querySelector('code')!.className).to.equal('language-ts');
     expect(pre.querySelector('code')!.textContent).to.equal('const x = 1;\n');
   });
@@ -672,7 +699,17 @@ describe('highlightCode cache plumbing (no async loading yet)', () => {
     el.content = '```ts\nconst x = 1;\n```';
     await el.updateComplete;
     const pre = el.shadowRoot!.querySelector('[part="code-block"]') as HTMLElement;
-    expect(pre.querySelector('span')).to.not.exist;
+    expect(pre.querySelectorAll('span').length).to.equal(0);
+  });
+
+  it('never consults the cache when highlight-code="false" is written as a plain HTML attribute string, not just a JS property', async () => {
+    const el = (await fixture(html`<lr-markdown highlight-code="false"></lr-markdown>`)) as LyraMarkdown;
+    expect(el.highlightCode).to.equal(false);
+    internalsOf(el).highlightCache.set('ts\nconst x = 1;\n', '<pre part="code-block"><code class="language-ts"><span>FAKE HIGHLIGHTED</span></code></pre>\n');
+    el.content = '```ts\nconst x = 1;\n```';
+    await el.updateComplete;
+    const pre = el.shadowRoot!.querySelector('[part="code-block"]') as HTMLElement;
+    expect(pre.querySelectorAll('span').length).to.equal(0);
   });
 
   it('never consults the cache while streaming is true, even if pre-populated', async () => {
@@ -681,7 +718,7 @@ describe('highlightCode cache plumbing (no async loading yet)', () => {
     el.content = '```ts\nconst x = 1;\n```';
     await el.updateComplete;
     const pre = el.shadowRoot!.querySelector('[part="code-block"]') as HTMLElement;
-    expect(pre.querySelector('span')).to.not.exist;
+    expect(pre.querySelectorAll('span').length).to.equal(0);
   });
 
   it('skips the cache for a fenced block with no language tag, even with highlightCode true', async () => {

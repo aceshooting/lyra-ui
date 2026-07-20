@@ -86,6 +86,14 @@ it('is a focusable non-button group named "Usage" whenever any segment is set', 
   expect(base.getAttribute('aria-label')).to.equal('Usage');
 });
 
+it('lets a host-level aria-label rename the group instead of the fixed localized default', async () => {
+  const el = (await fixture(
+    html`<lr-usage-badge tokens-in="10" aria-label="Tokens for this reply"></lr-usage-badge>`,
+  )) as LyraUsageBadge;
+  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  expect(base.getAttribute('aria-label')).to.equal('Tokens for this reply');
+});
+
 describe('tooltip breakdown', () => {
   it('is hidden until hover/focus, and shows full-precision labeled rows', async () => {
     const el = (await fixture(
@@ -165,6 +173,27 @@ describe('tooltip breakdown', () => {
     await el.updateComplete;
     const tooltip = el.shadowRoot!.querySelector('[part="tooltip"]') as HTMLElement;
     expect(base.getAttribute('aria-describedby')).to.equal(tooltip.id);
+  });
+
+  it('closes the tooltip (rather than leaving it frozen open with no positioner) after a disconnect+reconnect while open', async () => {
+    const el = (await fixture(html`<lr-usage-badge tokens-in="10"></lr-usage-badge>`)) as LyraUsageBadge;
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    base.dispatchEvent(new Event('mouseenter'));
+    await el.updateComplete;
+    expect((el.shadowRoot!.querySelector('[part="tooltip"]') as HTMLElement).hidden).to.be.false;
+
+    const parent = el.parentElement!;
+    el.remove();
+    parent.appendChild(el);
+    await el.updateComplete;
+
+    // disconnectedCallback() resets tooltipOpen (and the hovering/focused reasons that could
+    // otherwise re-open it) to false -- asserting that directly is what distinguishes the fix
+    // from the pre-fix bug (tearing down cleanupPositioner alone leaves the tooltip rendered
+    // open at a stale position with no live positioner attached). Mirrors
+    // `<lr-tool-call-chip>`'s own reconnect regression test.
+    const tooltipAfterReconnect = el.shadowRoot!.querySelector('[part="tooltip"]') as HTMLElement;
+    expect(tooltipAfterReconnect.hidden).to.be.true;
   });
 
   it('renders extra slotted rows below the built-in breakdown', async () => {

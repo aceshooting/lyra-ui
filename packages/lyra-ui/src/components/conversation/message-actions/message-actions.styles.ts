@@ -4,6 +4,10 @@ export const styles = css`
   :host {
     display: inline-flex;
     max-inline-size: 100%;
+    /* Establishes the containment the @container rule below queries against -- without it, that
+       rule is permanently inert unless a consumer happens to declare container-type: inline-size
+       on some ancestor themselves. Matches lr-pagination's identical :host declaration. */
+    container-type: inline-size;
   }
   :host([reveal-on-hover]) {
     opacity: 0;

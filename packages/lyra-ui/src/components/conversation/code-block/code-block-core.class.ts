@@ -20,6 +20,7 @@ import {
   codeBlockBodyLabel,
   codeBlockLineTransformer,
   parseHighlightLines,
+  renderCodeBlockPlainCode,
 } from './code-block-shared.js';
 import type { LyraAnchor, LyraHighlight } from '../../viewers/document-viewer/anchors.js';
 import '../../overlays/skeleton/skeleton.class.js';
@@ -446,62 +447,22 @@ export class LyraCodeBlockCore extends LyraElement<LyraCodeBlockCoreEventMap> {
     }
   }
 
-  // Always splits into per-line spans/buttons (not just while lineNumbers is set) -- the per-line
-  // wrapper is what highlight-lines/highlights/interactive-lines attach to. .split() consumes each
-  // newline character, so a literal '\n' text node is re-inserted between lines to keep the
-  // non-line-numbered case's visual output (relying on [part='pre']'s white-space:pre) identical
-  // to the previous single-text-node rendering -- the line-numbered case's .line elements are
-  // already display:block (code-block.styles.ts) so that text node is inert there. interactiveLines
-  // only takes effect alongside lineNumbers -- the shiki-highlighted path doesn't render gutter
-  // buttons (see the class doc), only data-line/data-highlighted/data-active/part="line-highlight"
-  // from codeBlockLineTransformer above.
+  // Delegates to the shared renderCodeBlockPlainCode() in code-block-shared.ts -- previously a
+  // byte-for-byte-duplicated private method also defined on <lr-code-block>, moved out to stop
+  // that pair's plain-text-fallback rendering from silently drifting apart. See that function's
+  // own doc for the rendering behavior.
   private renderPlainCode(): TemplateResult {
-    const highlighted = this.lineHighlightSet();
-    const active = this.activeHighlightLineSet();
-    const lines = this.code.split(/\r\n|\r|\n/);
-    const interactive = this.interactiveLines && this.lineNumbers;
-    // The `>` sits on its own line right before the expression (and `</code` right after it,
-    // closing on the following line) so no incidental whitespace text node lands inside <code> --
-    // its textContent must be exactly the concatenated line text, matching the pre-existing
-    // single-text-node rendering this replaces.
-    return html`<code part="code" class=${this.lineNumbers ? 'line-numbered-code' : nothing}
-        >${lines.map((line, index) => {
-          const lineNumber = index + 1;
-          const isHighlighted = highlighted.has(lineNumber);
-          const isActive = active.has(lineNumber);
-          const part = interactive
-            ? isHighlighted
-              ? 'line-button line-highlight'
-              : 'line-button'
-            : isHighlighted
-              ? 'line-highlight'
-              : nothing;
-          const lineTemplate = interactive
-            ? html`<button
-                type="button"
-                class="line"
-                part=${part}
-                data-line=${lineNumber}
-                ?data-highlighted=${isHighlighted}
-                ?data-active=${isActive}
-                aria-label=${this.localize('codeBlockLineLabel', undefined, { line: lineNumber })}
-                tabindex=${this.focusedLine === lineNumber ? 0 : -1}
-                @click=${() => this.onLineActivate(lineNumber)}
-                @keydown=${(e: KeyboardEvent) => this.onLineKeyDown(e, lineNumber)}
-              >${line}</button>`
-            : html`<span
-                class="line"
-                part=${part}
-                data-line=${lineNumber}
-                ?data-highlighted=${isHighlighted}
-                ?data-active=${isActive}
-              >${line}</span>`;
-          // Only the non-line-numbered case needs the newline text node re-inserted -- the
-          // line-numbered case's .line elements are already display:block (code-block.styles.ts),
-          // and its own existing test asserts textContent has no embedded newlines between lines.
-          return index > 0 && !this.lineNumbers ? html`\n${lineTemplate}` : lineTemplate;
-        })}</code
-      >`;
+    return renderCodeBlockPlainCode({
+      code: this.code,
+      lineNumbers: this.lineNumbers,
+      interactiveLines: this.interactiveLines,
+      focusedLine: this.focusedLine,
+      highlightedLines: this.lineHighlightSet(),
+      activeLines: this.activeHighlightLineSet(),
+      localize: this.localize.bind(this),
+      onLineActivate: (line) => this.onLineActivate(line),
+      onLineKeyDown: (e, line) => this.onLineKeyDown(e, line),
+    });
   }
 
   private writeClipboard(text: string): void {

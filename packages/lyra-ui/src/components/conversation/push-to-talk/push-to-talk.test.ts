@@ -84,6 +84,7 @@ function stubSuccessfulCapture(): () => void {
  *  prompt (state === 'requesting') and exercise release-while-requesting handling. */
 function stubDeferredCapture(): { restore: () => void; resolve: () => void } {
   const original = navigator.mediaDevices.getUserMedia;
+  const originalMediaRecorder = window.MediaRecorder;
   let resolveFn: () => void = () => {};
   navigator.mediaDevices.getUserMedia = (() =>
     new Promise<MediaStream>((resolve) => {
@@ -93,6 +94,7 @@ function stubDeferredCapture(): { restore: () => void; resolve: () => void } {
   return {
     restore: () => {
       navigator.mediaDevices.getUserMedia = original;
+      window.MediaRecorder = originalMediaRecorder;
     },
     resolve: () => resolveFn(),
   };
@@ -142,9 +144,52 @@ it('defaults to mode=hold, state=idle, and every capture prop at its documented 
   expect(el.stream).to.be.null;
 });
 
+it('accepts show-timer="false" as a plain-HTML attribute string, not just a property binding', async () => {
+  const el = (await fixture(html`<lr-push-to-talk show-timer="false"></lr-push-to-talk>`)) as LyraPushToTalk;
+  expect(el.showTimer).to.be.false;
+});
+
+it('leaving show-timer unset keeps the documented true default', async () => {
+  const el = (await fixture(html`<lr-push-to-talk></lr-push-to-talk>`)) as LyraPushToTalk;
+  expect(el.showTimer).to.be.true;
+});
+
 it('gives the trigger a hover state while enabled', () => {
   const css = styles.cssText.replace(/\s+/g, ' ');
-  expect(css).to.match(/\[part='trigger'\]:hover:not\(:disabled\)[^{]*\{[^}]*background:/);
+  expect(css).to.match(/\[part='trigger'\]\):hover:where\(:not\(:disabled\)\)[^{]*\{[^}]*background:/);
+});
+
+it('wraps the trigger hover rule in :where() so a consumer ::part(trigger):hover override does not need !important (regression)', () => {
+  // The pre-fix shape -- `[part='trigger']:hover:not(:disabled)` with no `:where()` -- has
+  // specificity (0,3,0), beating a consumer's `::part(trigger):hover` ((0,1,1)); matches
+  // lr-attachment-trigger's established `:where()`-wrapped fix.
+  const css = styles.cssText.replace(/\s+/g, ' ');
+  expect(css).to.match(/:where\(\[part='trigger'\]\):hover:where\(:not\(:disabled\)\)/);
+});
+
+describe('--lr-push-to-talk-recording-color', () => {
+  it('retints both the trigger border/color and the pulse ring border together via the same cssprop (regression)', async () => {
+    const restore = stubSuccessfulCapture();
+    try {
+      const el = (await fixture(html`<lr-push-to-talk></lr-push-to-talk>`)) as LyraPushToTalk;
+      el.style.setProperty('--lr-push-to-talk-recording-color', 'rgb(10, 20, 30)');
+      const startPromise = oneEvent(el, 'lr-record-start');
+      void el.start();
+      await startPromise;
+      await el.updateComplete;
+
+      const btn = trigger(el);
+      expect(getComputedStyle(btn).borderTopColor).to.equal('rgb(10, 20, 30)');
+
+      const pulse = el.shadowRoot!.querySelector('[part="pulse"]') as HTMLElement;
+      expect(el.shadowRoot!.querySelectorAll('[part="pulse"]').length, 'pulse must actually render while recording').to.equal(1);
+      // Pre-fix, this read the hardcoded --lr-color-danger regardless of the cssprop override,
+      // visibly disagreeing with the trigger's own recolored border above.
+      expect(getComputedStyle(pulse).borderTopColor).to.equal('rgb(10, 20, 30)');
+    } finally {
+      restore();
+    }
+  });
 });
 
 // -- Unsupported environment ---------------------------------------------
@@ -275,6 +320,16 @@ describe('hold mode', () => {
     } finally {
       restore();
     }
+  });
+
+  it('stubDeferredCapture.restore() fully restores window.MediaRecorder, not just getUserMedia (regression)', () => {
+    const originalMediaRecorder = window.MediaRecorder;
+    const { restore } = stubDeferredCapture();
+    expect(window.MediaRecorder).to.equal(FakeMediaRecorder as unknown as typeof MediaRecorder);
+    restore();
+    // Pre-fix, restore() only reset navigator.mediaDevices.getUserMedia -- window.MediaRecorder
+    // stayed pointed at FakeMediaRecorder for the rest of the file's run.
+    expect(window.MediaRecorder).to.equal(originalMediaRecorder);
   });
 });
 

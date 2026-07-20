@@ -27,6 +27,19 @@ it('defaults to follow=true, bottomThreshold=24, unreadStartIndex=null, and live
   expect(el.live).to.equal('off');
 });
 
+it('parses the plain-HTML attribute string follow="false", not just a .follow property binding', async () => {
+  // trueDefaultBooleanConverter's fromAttribute checks the literal string rather than Lit's
+  // default presence-based Boolean converter, which can never distinguish an omitted attribute
+  // from one explicitly written as the literal string "false" -- both would otherwise map to
+  // `follow`'s own `true` default (auto-scroll-to-bottom staying engaged against the markup's
+  // intent). Asserted with no subsequent `.follow = false` property assignment, unlike the fixtures
+  // elsewhere in this file that set the attribute and then immediately overwrite it with a property
+  // binding before ever asserting -- that pattern never actually proves the attribute string itself
+  // was parsed.
+  const el = (await fixture(html`<lr-chat-viewport follow="false"></lr-chat-viewport>`)) as LyraChatViewport;
+  expect(el.follow).to.be.false;
+});
+
 it('is role="log" with aria-live="off" and tabindex="0", labeled by the default or a custom label', async () => {
   const el = (await fixture(html`<lr-chat-viewport></lr-chat-viewport>`)) as LyraChatViewport;
   const scroll = el.shadowRoot!.querySelector('[part="scroll"]')!;
@@ -41,6 +54,17 @@ it('is role="log" with aria-live="off" and tabindex="0", labeled by the default 
   expect(labeled.shadowRoot!.querySelector('[part="scroll"]')!.getAttribute('aria-label')).to.equal(
     'Support thread',
   );
+});
+
+it('pins overflow-x explicitly alongside overflow-y so the transcript never grows a phantom horizontal scrollbar', async () => {
+  // Per the CSS overflow spec, pinning only overflow-y to a non-'visible' value still forces the
+  // other axis's *used* value to 'auto' (never 'visible') -- so a sub-pixel-wide inline code span
+  // or a fractional-width bubble under zoom could trip a spurious horizontal scrollbar unless
+  // overflow-x is pinned explicitly too (mirrors lr-tabs's fix for the identical bug class).
+  const el = (await fixture(html`<lr-chat-viewport></lr-chat-viewport>`)) as LyraChatViewport;
+  const scroll = getComputedStyle(el.shadowRoot!.querySelector('[part="scroll"]') as HTMLElement);
+  expect(scroll.overflowX).to.equal('hidden');
+  expect(scroll.overflowY).to.equal('auto');
 });
 
 it('forwards the live announcement policy to the internal log and reacts to property changes', async () => {

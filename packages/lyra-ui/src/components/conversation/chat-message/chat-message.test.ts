@@ -377,6 +377,38 @@ it('allows the ambient motion token to retime the streaming indicator', async ()
   expect(getComputedStyle(indicator).animationTimingFunction).to.equal('linear');
 });
 
+it('actually wraps a footer crowded with status text, timestamp, retry button, and actions onto multiple lines', async () => {
+  // The cssText-regex assertion above only proves the literal declaration exists in the
+  // stylesheet source, never that it reaches a real rendered footer -- a rule that got silently
+  // overridden or dropped elsewhere in the cascade would leave this test suite green while a real
+  // narrow, crowded footer clipped or overflowed. This renders an actually-crowded footer (failed
+  // status -> indicator + status text + retry button, a timestamp, and an actions slot) inside a
+  // narrow host and asserts both the real computed flex-wrap value and that content visibly
+  // wrapped onto more than one row, not just that the property parses to "wrap".
+  const el = (await fixture(html`
+    <lr-chat-message
+      style="display: block; inline-size: 160px"
+      status="failed"
+      timestamp="2024-01-01T12:00:00Z"
+    >
+      Message body
+      <button slot="actions">Copy</button>
+      <button slot="actions">Retry all</button>
+    </lr-chat-message>
+  `)) as LyraChatMessage;
+  await el.updateComplete;
+
+  const footer = el.shadowRoot!.querySelector('[part="footer"]') as HTMLElement;
+  expect(getComputedStyle(footer).flexWrap).to.equal('wrap');
+
+  const children = Array.from(footer.children) as HTMLElement[];
+  const tops = new Set(children.map((child) => child.offsetTop));
+  expect(
+    tops.size,
+    'a crowded footer this narrow must actually wrap onto more than one row, not just parse flex-wrap: wrap',
+  ).to.be.greaterThan(1);
+});
+
 it('routes the bubble fill/text through the new role-scoped cssprops, leaving [part="collapse-button"]:hover keyed directly to --lr-color-brand-quiet', () => {
   const css = styles.cssText.replace(/\s+/g, ' ');
   expect(css).to.include('--lr-chat-message-bubble-bg: var(--lr-color-surface);');

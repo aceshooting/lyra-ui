@@ -26,6 +26,44 @@ const spellcheckConverter: ComplexAttributeConverter<boolean> = {
   },
 };
 
+/** Visual size, same `xs`-`xl` scale as `<lr-select>`'s `size`. */
+export type LyraModelSelectSize = 'xs' | 's' | 'm' | 'l' | 'xl';
+
+/** A no-op stand-in for `ElementInternals`, used only when the host environment has no real
+ *  implementation of it (e.g. a downstream consumer's Vitest + happy-dom test suite) --
+ *  `attachInternals()` is browser-only, and calling it unconditionally in the constructor would
+ *  otherwise throw before any test assertion runs, merely from constructing or importing this
+ *  component. Every member here is either an inert value or a no-op: native `<form>`
+ *  participation is unavailable in that environment, but that's an acceptable degradation rather
+ *  than a hard failure -- same fix as `<lr-tool-param-form>`'s identical
+ *  `createInternalsSafely`/`createNoopInternals` pair. */
+function createInternalsSafely(host: HTMLElement): ElementInternals {
+  if (typeof host.attachInternals !== 'function') return createNoopInternals();
+  try {
+    return host.attachInternals();
+  } catch {
+    return createNoopInternals();
+  }
+}
+
+function createNoopInternals(): ElementInternals {
+  return {
+    form: null,
+    labels: [] as unknown as NodeList,
+    validity: {} as ValidityState,
+    validationMessage: '',
+    willValidate: false,
+    setFormValue(): void {},
+    setValidity(): void {},
+    checkValidity(): boolean {
+      return true;
+    },
+    reportValidity(): boolean {
+      return true;
+    },
+  } as unknown as ElementInternals;
+}
+
 /** A catalog row: a selectable model, keyed by `id` with a display `label`. */
 export interface LyraModelCatalogEntry {
   id: string;
@@ -99,6 +137,11 @@ export interface LyraModelSelectEventMap {
  * @csspart expand-icon - The dropdown indicator.
  * @csspart hint - The hint message.
  * @csspart error - The error message.
+ * @cssprop [--lr-model-select-trigger-padding=var(--lr-space-xs) var(--lr-space-s)] - Trigger/combobox padding shorthand, scaled by `size`.
+ * @cssprop [--lr-model-select-trigger-min-height=var(--lr-size-2-5rem)] - Trigger/combobox block-size floor, scaled by `size`.
+ * @cssprop [--lr-model-select-font-size=var(--lr-font-size-md)] - Trigger/combobox font size, scaled by `size`.
+ * @cssprop [--lr-model-select-expand-size=var(--lr-size-1-75rem)] - Decorative expand-icon box size, scaled by `size`.
+ * @cssprop [--lr-model-select-option-active-bg=var(--lr-color-brand-quiet)] - Background of a hovered or keyboard-active option row.
  */
 export class LyraModelSelect extends LyraElement<LyraModelSelectEventMap> {
   static formAssociated = true;
@@ -152,6 +195,8 @@ export class LyraModelSelect extends LyraElement<LyraModelSelectEventMap> {
   @property({ attribute: 'inputmode' }) inputMode = '';
   @property({ attribute: 'enterkeyhint' }) enterKeyHint = '';
   @property({ type: Boolean, reflect: true }) open = false;
+  /** Visual size — same `xs`–`xl` scale as `lr-select`'s `size`. */
+  @property({ reflect: true }) size: LyraModelSelectSize = 'm';
 
   @state() private activeIndex = -1;
   // Free-text mode's live input text. Only meaningful while `open` — the
@@ -190,12 +235,32 @@ export class LyraModelSelect extends LyraElement<LyraModelSelectEventMap> {
 
   constructor() {
     super();
-    this.internals = this.attachInternals();
+    this.internals = createInternalsSafely(this);
     this.validityController = new AnchoredValidityController(this, this.internals, () => this[VALIDITY_ANCHOR]());
     // Native <input> always has a submission value ("") from construction —
     // without this, a control whose `value` is never touched is entirely
     // absent from FormData instead of present as "" (see form-associated.ts).
     this.internals.setFormValue('');
+  }
+
+  /** Forwards to the internal trigger button (closed-dropdown mode) or combobox input (free-text
+   *  mode) -- mirrors `<lr-button>`'s host `click()` forwarding so a generic form-automation
+   *  helper or another component calling `.click()` on the host element actually opens the
+   *  picker instead of silently doing nothing.
+   *
+   *  Closed-dropdown mode forwards via `.click()` itself, since the trigger is a real
+   *  `<button>` wired to `@click`. Free-text mode instead calls `.focus()` on the input: unlike a
+   *  genuine pointer click, `HTMLElement.click()` never moves focus (that's a mousedown side
+   *  effect the browser applies only to *real* pointer interaction), and this control's open
+   *  behavior for that mode is wired to the input's `focus` event (see `onInputFocus`), not a
+   *  `click` handler on the input itself. */
+  override click(): void {
+    const trigger = this.renderRoot?.querySelector('[part="trigger"]') as HTMLButtonElement | null;
+    if (trigger) {
+      trigger.click();
+      return;
+    }
+    (this.renderRoot?.querySelector('[part="combobox-input"]') as HTMLInputElement | null)?.focus();
   }
 
   get form(): HTMLFormElement | null {

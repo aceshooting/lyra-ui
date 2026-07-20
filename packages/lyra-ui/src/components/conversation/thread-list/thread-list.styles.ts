@@ -32,6 +32,9 @@ export const styles = css`
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);
   }
+  [part='search-input']::placeholder {
+    color: var(--lr-color-text-quiet);
+  }
   [part='search-input']::-webkit-search-cancel-button,
   [part='search-input']::-webkit-search-decoration {
     appearance: none;
@@ -93,6 +96,10 @@ export const styles = css`
     font-weight: var(--lr-font-weight-semibold);
     text-align: start;
     cursor: pointer;
+  }
+  lr-virtual-list::part(group-toggle):hover {
+    background: var(--lr-color-surface-raised);
+    color: var(--lr-color-text);
   }
   lr-virtual-list::part(group-toggle):focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);

@@ -24,7 +24,9 @@ const AMBIENT_REDUCED_MOTION_INTERVAL_MS = 500; // ~2 Hz snapshot cadence
  * data, or a non-reduced ambient pulse/sweep). Static output — a constant `level`, idle bars, or the
  * flattened reduced-motion ambient patterns — draws once and stops; any change that could alter the
  * next frame (properties, stream/`AudioContext` state, size, theme, motion preference) re-enters the
- * loop via `scheduleDraw()`.
+ * loop via `scheduleDraw()`. The loop is also paused while the host is scrolled off-screen (an
+ * `IntersectionObserver`-gated `visible` flag, mirroring `<lr-chart>`'s own `draw()` gating), so a
+ * live-signal visualizer buried behind later transcript messages doesn't keep repainting for nobody.
  *
  * @customElement lr-audio-visualizer
  * @csspart base - The root wrapper.
@@ -72,6 +74,15 @@ export class LyraAudioVisualizer extends LyraElement {
   private sourceNode?: MediaStreamAudioSourceNode;
   private timeDomainData?: Uint8Array<ArrayBuffer>;
 
+  /** Whether the host is currently on-screen, per `intersectionObserver` below. Gates
+   *  `scheduleDraw()` so a visualizer scrolled out of view (e.g. behind later transcript messages)
+   *  while still driven by a live `stream`/non-idle `state` stops burning CPU on a redraw loop
+   *  nobody can see -- mirrors `<lr-chart>`'s own `visible`-gated `draw()`. Not `@state()`: nothing
+   *  in `render()` depends on it, so making it reactive would only schedule pointless extra update
+   *  passes. */
+  private visible = true;
+  private intersectionObserver?: IntersectionObserver;
+
   private get effectiveBarCount(): number {
     return finiteInteger(this.barCount, 5, 1, 64);
   }
@@ -104,6 +115,20 @@ export class LyraAudioVisualizer extends LyraElement {
     this.watchTheme();
     this.resolvedColors = undefined; // a reconnect may land under a different theme scope
     this.syncAnalyser();
+    this.visible = true; // a reconnect may land at a different scroll position than last observed
+    if (typeof IntersectionObserver !== 'undefined') {
+      this.intersectionObserver = new IntersectionObserver((entries) => {
+        const wasVisible = this.visible;
+        this.visible = entries[0]?.isIntersecting ?? true;
+        if (this.visible && !wasVisible) {
+          this.scheduleDraw();
+        } else if (!this.visible && this.rafId !== undefined) {
+          cancelAnimationFrame(this.rafId);
+          this.rafId = undefined;
+        }
+      });
+      this.intersectionObserver.observe(this);
+    }
     this.scheduleDraw();
   }
 
@@ -117,6 +142,8 @@ export class LyraAudioVisualizer extends LyraElement {
     this.colorSchemeQuery?.removeEventListener('change', this.onColorSchemeChange);
     this.themeObserver?.disconnect();
     this.themeObserver = undefined;
+    this.intersectionObserver?.disconnect();
+    this.intersectionObserver = undefined;
     if (this.rafId !== undefined) {
       cancelAnimationFrame(this.rafId);
       this.rafId = undefined;
@@ -245,6 +272,7 @@ export class LyraAudioVisualizer extends LyraElement {
   }
 
   protected willUpdate(changed: PropertyValues): void {
+    super.willUpdate(changed);
     if (changed.has('stream') || (changed.has('variant') && this.stream)) this.syncAnalyser();
     if (!this.hasUpdated) {
       this.authorSuppliedRole = this.hasAttribute('role');
@@ -277,6 +305,7 @@ export class LyraAudioVisualizer extends LyraElement {
   }
 
   private scheduleDraw = (): void => {
+    if (!this.visible) return; // becoming visible again resumes via the IntersectionObserver above
     if (this.rafId !== undefined) return;
     this.rafId = requestAnimationFrame(this.drawFrame);
   };
@@ -284,6 +313,11 @@ export class LyraAudioVisualizer extends LyraElement {
   private drawFrame = (nowMs: number): void => {
     this.rafId = undefined;
     if (!this.isConnected) return;
+    // Belt-and-suspenders alongside `scheduleDraw()`'s own gate: `IntersectionObserver` callbacks
+    // are asynchronously batched, so a frame already in flight when visibility flips off could
+    // otherwise still draw and re-arm itself before the observer's `cancelAnimationFrame` call
+    // catches up. Redraws resume once the observer reports intersecting again via `scheduleDraw()`.
+    if (!this.visible) return;
     const reduced = prefersReducedMotion();
     if (reduced && !this.hasLiveSignal) {
       if (nowMs - this.lastAmbientDrawMs < AMBIENT_REDUCED_MOTION_INTERVAL_MS) {

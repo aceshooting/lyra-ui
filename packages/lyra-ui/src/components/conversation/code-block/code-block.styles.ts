@@ -239,7 +239,12 @@ export const styles = css`
     text-align: start;
     cursor: pointer;
   }
-  [part='pre'] button.line:hover {
+  /* :where() zeroes the wrapped selectors' specificity contribution, leaving only :hover itself
+     -- (0,1,0) total, functionally identical selection to \`[part='pre'] button.line:hover\`
+     ((0,3,1)) but now losing (on the pseudo-element tiebreak) to a consumer's own
+     \`::part(line-button):hover\` override ((0,1,1)) without that consumer needing !important --
+     same fix shape as lr-attachment-trigger's/lr-copy-button's own :where()-wrapped hover rule. */
+  :where([part='pre']) :where(button.line):hover {
     background: var(--lr-color-brand-quiet);
   }
   [part='pre'] button.line:focus-visible {

@@ -1,4 +1,5 @@
 import { fixture, expect, html } from '@open-wc/testing';
+import { LitElement, type PropertyValues } from 'lit';
 import './audio-visualizer.js';
 import type { LyraAudioVisualizer } from './audio-visualizer.js';
 
@@ -50,6 +51,34 @@ it('defaults to state=idle, variant=bars, bar-count=5, gain=1, level=null, strea
   expect(el.gain).to.equal(1);
   expect(el.level).to.be.null;
   expect(el.stream).to.be.null;
+});
+
+it('chains willUpdate() to super.willUpdate() so a mixin layered under LyraElement would still run', async () => {
+  // No shared mixin actually overrides willUpdate() today, so the only way to prove the chain is
+  // live (rather than grepping source text for the call) is to patch the base-class hook itself --
+  // the exact hook a future mixin would extend -- and confirm it actually fires.
+  const hadOwn = Object.prototype.hasOwnProperty.call(LitElement.prototype, 'willUpdate');
+  const original = (LitElement.prototype as unknown as { willUpdate?: (changed: PropertyValues) => void })
+    .willUpdate;
+  let called = false;
+  (LitElement.prototype as unknown as { willUpdate: (changed: PropertyValues) => void }).willUpdate = function (
+    this: LitElement,
+    changed: PropertyValues,
+  ) {
+    called = true;
+    original?.call(this, changed);
+  };
+  try {
+    const el = (await fixture(html`<lr-audio-visualizer></lr-audio-visualizer>`)) as LyraAudioVisualizer;
+    await el.updateComplete;
+    expect(called).to.be.true;
+  } finally {
+    if (hadOwn) {
+      (LitElement.prototype as unknown as { willUpdate: unknown }).willUpdate = original;
+    } else {
+      delete (LitElement.prototype as unknown as { willUpdate?: unknown }).willUpdate;
+    }
+  }
 });
 
 it('renders an aria-hidden canvas inside a role="img" host with an auto-generated aria-label', async () => {
@@ -208,6 +237,51 @@ describe('draw-loop scheduling', () => {
       await nextFrame();
       expect(rafId(el)).to.not.be.undefined; // the ambient sweep keeps the loop alive
     }
+  });
+
+  it('skips scheduling a redraw while scrolled off-screen (visible=false), even on a property change that would otherwise re-enter the loop', async () => {
+    const el = (await fixture(html`<lr-audio-visualizer state="idle"></lr-audio-visualizer>`)) as LyraAudioVisualizer;
+    await settle(el);
+    expect(rafId(el)).to.be.undefined;
+
+    (el as unknown as { visible: boolean }).visible = false;
+    el.state = 'thinking';
+    await el.updateComplete;
+    expect(rafId(el)).to.be.undefined; // scheduleDraw() no-ops while off-screen
+  });
+
+  it('cancels an in-flight time-driven loop as soon as drawFrame observes visible=false, instead of re-arming itself', async () => {
+    const el = (await fixture(html`<lr-audio-visualizer state="idle"></lr-audio-visualizer>`)) as LyraAudioVisualizer;
+    await settle(el);
+    const priv = el as unknown as { visible: boolean; rafId?: number; drawFrame: (nowMs: number) => void };
+    // Force the time-driven branch deterministically -- state='thinking' alone depends on the test
+    // environment's prefers-reduced-motion, which this test isn't about.
+    Object.defineProperty(el, 'isTimeDriven', { configurable: true, get: () => true });
+    try {
+      priv.drawFrame(0);
+      expect(priv.rafId).to.not.be.undefined; // still looping while visible and time-driven
+
+      cancelAnimationFrame(priv.rafId!);
+      priv.rafId = undefined;
+      priv.visible = false;
+      priv.drawFrame(16);
+      expect(priv.rafId).to.be.undefined; // stops re-arming once off-screen, despite isTimeDriven
+    } finally {
+      delete (el as unknown as { isTimeDriven?: unknown }).isTimeDriven;
+    }
+  });
+
+  it('resumes the loop once scheduleDraw() is called again after visible flips back to true', async () => {
+    const el = (await fixture(html`<lr-audio-visualizer state="idle"></lr-audio-visualizer>`)) as LyraAudioVisualizer;
+    await settle(el);
+    const priv = el as unknown as { visible: boolean; rafId?: number; scheduleDraw: () => void };
+    priv.visible = false;
+    priv.scheduleDraw();
+    expect(priv.rafId).to.be.undefined;
+
+    priv.visible = true;
+    priv.scheduleDraw();
+    expect(priv.rafId).to.not.be.undefined;
   });
 });
 

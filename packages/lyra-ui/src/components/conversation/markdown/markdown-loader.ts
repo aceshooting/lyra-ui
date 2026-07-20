@@ -32,8 +32,7 @@ let resolvedDeps: MarkdownDeps | undefined;
  */
 export async function loadMarkdownAndSanitizer(
   importMarked: () => Promise<OptionalPeerApi> = () => import('marked') as Promise<OptionalPeerApi>,
-  importDompurify: () => Promise<{ default: OptionalPeerApi }> = () =>
-    import('dompurify') as Promise<{ default: OptionalPeerApi }>,
+  importDompurify: () => Promise<OptionalPeerApi> = () => import('dompurify') as Promise<OptionalPeerApi>,
 ): Promise<MarkdownDeps> {
   let marked: OptionalPeerApi | undefined;
   try {
@@ -47,7 +46,13 @@ export async function loadMarkdownAndSanitizer(
 
   let DOMPurify: OptionalPeerApi | undefined;
   try {
-    DOMPurify = (await importDompurify()).default;
+    // Different bundler/interop configurations resolve a CJS-published optional peer as either
+    // `{ default: X }` or the bare module namespace -- reading only `.default` would silently
+    // substitute `undefined` for the real sanitizer under the other resolution, a security-
+    // relevant regression (sanitization would silently no-op). Mirrors email-loader.ts's and
+    // calendar-loader.ts's identical `module.default ?? module` fallback.
+    const module = await importDompurify();
+    DOMPurify = module.default ?? module;
   } catch (err) {
     console.warn(
       '<lr-markdown> needs the optional peer dependency `dompurify` to sanitize rendered HTML — install it ' +

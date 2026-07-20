@@ -26,6 +26,33 @@ it('renders an empty conversation and the built-in composer', async () => {
   expect(el.shadowRoot!.querySelector('lr-chat-composer')).to.exist;
 });
 
+it('clears follow/showDetails/showComposer from plain HTML `="false"` attributes, not just property bindings', async () => {
+  const el = await fixture<LyraAgentWorkspace>(html`
+    <lr-agent-workspace
+      follow="false"
+      show-details="false"
+      show-composer="false"
+      .run=${run}
+    ></lr-agent-workspace>
+  `);
+  expect(el.follow).to.be.false;
+  expect(el.showDetails).to.be.false;
+  expect(el.showComposer).to.be.false;
+  await el.updateComplete;
+  const viewport = el.shadowRoot!.querySelector('lr-chat-viewport') as unknown as { follow: boolean };
+  expect(viewport.follow).to.be.false;
+  // showDetails=false hides the built-in details pane even though `run` alone would otherwise show it.
+  expect(el.shadowRoot!.querySelectorAll('[part="details"]').length).to.equal(0);
+  expect(el.shadowRoot!.querySelectorAll('lr-chat-composer').length).to.equal(0);
+});
+
+it('still defaults follow/showDetails/showComposer to true with no attribute set', async () => {
+  const el = await fixture<LyraAgentWorkspace>(html`<lr-agent-workspace></lr-agent-workspace>`);
+  expect(el.follow).to.be.true;
+  expect(el.showDetails).to.be.true;
+  expect(el.showComposer).to.be.true;
+});
+
 it('uses localized workspace chrome', async () => {
   const el = await fixture<LyraAgentWorkspace>(html`
     <lr-agent-workspace .strings=${{ agentWorkspaceLabel: 'Assistant panel' }}></lr-agent-workspace>

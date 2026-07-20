@@ -1,4 +1,4 @@
-import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
+import { html, nothing, type TemplateResult, type PropertyValues, type ComplexAttributeConverter } from 'lit';
 import { property } from 'lit/decorators.js';
 import { repeat } from 'lit/directives/repeat.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
@@ -16,6 +16,24 @@ export interface LyraTranscriptEntry {
 }
 
 const NEAR_BOTTOM_PX = 48;
+
+/** `true`-defaulting boolean attribute converter -- Lit's default presence-based `type: Boolean`
+ *  can never be set back to `false` from a plain-HTML attribute once a property's own default is
+ *  `true` (removing an attribute that was never present fires no `attributeChangedCallback`), so
+ *  `fromAttribute` checks the literal string instead. `toAttribute` keeps the original
+ *  presence-based reflection direction (`true` -> present, `false` -> absent) so existing
+ *  `:host([follow])`-style consumer selectors and reflected-attribute expectations are unaffected
+ *  -- only attribute *parsing* changes. Duplicated locally rather than imported, matching this
+ *  exact converter's repeated per-component convention elsewhere in this library (see e.g.
+ *  `<lr-task-list>`'s own `trueDefaultBooleanConverter`). */
+const trueDefaultBooleanConverter: ComplexAttributeConverter<boolean> = {
+  fromAttribute(value): boolean {
+    return value !== 'false';
+  },
+  toAttribute(value): string | null {
+    return value ? '' : null;
+  },
+};
 
 export interface LyraTranscriptFeedEventMap {
   'lr-follow-change': CustomEvent<{ following: boolean }>;
@@ -55,7 +73,7 @@ export class LyraTranscriptFeed extends LyraElement<LyraTranscriptFeedEventMap> 
   static styles = [LyraElement.styles, styles];
 
   @property({ attribute: false }) entries: LyraTranscriptEntry[] = [];
-  @property({ type: Boolean, reflect: true }) follow = true;
+  @property({ type: Boolean, reflect: true, converter: trueDefaultBooleanConverter }) follow = true;
   @property({ type: Boolean, attribute: 'show-timestamps' }) showTimestamps = false;
   /** Overrides the default `Intl.DateTimeFormat` short-time rendering. */
   @property({ attribute: false }) formatTimestamp?: (epochMs: number) => string;

@@ -240,6 +240,13 @@ describe('inline rename', () => {
     expect(notEditable.shadowRoot!.querySelector('[part="rename-button"]')).to.not.exist;
   });
 
+  it('honors a plain editable="false" attribute (not just a .editable=${false} property binding)', async () => {
+    const el = (await fixture(html`<lr-conversation-item title="A" editable="false"></lr-conversation-item>`)) as LyraConversationItem;
+    expect(el.editable).to.be.false;
+    expect(el.hasAttribute('editable')).to.be.false;
+    expect(el.shadowRoot!.querySelectorAll('[part="rename-button"]')).to.have.lengthOf(0);
+  });
+
   it('gives the rename button the shared minimum hit area', async () => {
     const el = (await fixture(html`<lr-conversation-item title="A"></lr-conversation-item>`)) as LyraConversationItem;
     const btn = el.shadowRoot!.querySelector('[part="rename-button"]') as HTMLElement;
@@ -529,6 +536,27 @@ it('is accessible while renaming', async () => {
   (el.shadowRoot!.querySelector('[part="rename-button"]') as HTMLButtonElement).click();
   await el.updateComplete;
   await expect(el).to.be.accessible();
+});
+
+describe('nested-interactive slot contract (meta/excerpt render inside role="button")', () => {
+  // The class doc's @slot meta/@slot excerpt warnings exist specifically because [part="option"]
+  // carries role="button" (while not renaming) and wraps both slots -- axe-core's nested-interactive
+  // rule forbids a focusable descendant of a role="button" ancestor. A consumer who ignores that
+  // prose and slots a real focusable control must actually trip the violation, or the documented
+  // contract is untested and could silently stop being true.
+  it('a focusable element slotted into meta trips axe nested-interactive', async () => {
+    const el = await fixtureItem(
+      html`<lr-conversation-item title="A"><a slot="meta" href="/session/1">Open</a></lr-conversation-item>`,
+    );
+    await expect(el).to.not.be.accessible();
+  });
+
+  it('a focusable element slotted into excerpt trips axe nested-interactive', async () => {
+    const el = await fixtureItem(
+      html`<lr-conversation-item title="A"><button slot="excerpt">Retry</button></lr-conversation-item>`,
+    );
+    await expect(el).to.not.be.accessible();
+  });
 });
 
 describe('active-state cssprop escape hatch', () => {

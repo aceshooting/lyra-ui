@@ -433,6 +433,15 @@ describe('copy button', () => {
     )) as LyraCodeBlock;
     expect(el.shadowRoot!.querySelector('[part="copy-button"]')).to.not.exist;
   });
+
+  it('honors a plain copyable="false" attribute (not just a .copyable=${false} property binding)', async () => {
+    const el = (await fixture(
+      html`<lr-code-block copyable="false" .code=${jsSample} filename="x.ts"></lr-code-block>`,
+    )) as LyraCodeBlock;
+    expect(el.copyable).to.be.false;
+    expect(el.hasAttribute('copyable')).to.be.false;
+    expect(el.shadowRoot!.querySelectorAll('[part="copy-button"]')).to.have.lengthOf(0);
+  });
 });
 
 describe('collapsible / collapsed', () => {
@@ -846,6 +855,30 @@ describe('interactive-lines', () => {
   });
 });
 
+describe('gutter line-button hover specificity', () => {
+  it('a ::part(line-button):hover override wins without needing !important', async () => {
+    const style = document.createElement('style');
+    style.textContent = `lr-code-block::part(line-button):hover { color: rgb(1, 2, 3); }`;
+    document.head.appendChild(style);
+    try {
+      const el = (await fixture(
+        html`<lr-code-block code=${'a\nb'} line-numbers interactive-lines></lr-code-block>`,
+      )) as LyraCodeBlock;
+      // jsdom/browser test runners don't synthesize a real :hover pseudo-class from a dispatched
+      // event, so assert via computed specificity order instead: the internal rule must be written
+      // so its specificity never exceeds a consumer's ::part(line-button):hover -- see
+      // lr-attachment-trigger's/lr-copy-button's identical test for the same reasoning.
+      const internalSheet = (el.shadowRoot!.adoptedStyleSheets ?? [])
+        .flatMap((sheet) => Array.from(sheet.cssRules))
+        .map((rule) => rule.cssText)
+        .find((text) => text.includes(':hover') && text.includes('button.line'));
+      expect(internalSheet).to.contain(':where(');
+    } finally {
+      style.remove();
+    }
+  });
+});
+
 // `--lr-code-block-tab-size` mirrors `--lr-code-editor-tab-size` (same default of 2) so the
 // editable and the read-only code surfaces agree on how wide a literal tab renders. The rule lives
 // on [part='pre'] and must be written as a *token*, never as an inline `tab-size` -- shiki puts its
@@ -964,5 +997,56 @@ describe('shiki dark-theme signal', () => {
     const css = styles.cssText.replace(/\s+/g, ' ');
     expect(css).to.match(/\[part='body'\]\[data-dark-theme='true'\] \[part='pre'\][^{,]*\{[^}]*--shiki-dark/);
     expect(css).to.not.match(/@media \(prefers-color-scheme: dark\)[^{]*\{[^}]*--shiki-dark/);
+  });
+
+  // The cssText-regex test above only proves the gating rule's *selector* exists in source -- it
+  // never proves the color substitution actually reaches a rendered highlighted line, or that it
+  // stays off for a consumer who overrides --lr-theme-color-* independently of the OS's own
+  // prefers-color-scheme setting (exactly what the two tests above already exercise for
+  // data-dark-theme itself). This one renders a real highlighted code block in both states and
+  // reads getComputedStyle() on an actual shiki token span.
+  it('resolves a highlighted token span\'s computed color from --shiki-dark only once data-dark-theme="true", never merely from the OS dark-mode preference', async function () {
+    this.timeout(20_000);
+
+    async function firstDarkAwareSpan(wrapperStyle: string): Promise<{ span: HTMLElement; body: Element }> {
+      const wrapper = (await fixture(html`
+        <div style=${wrapperStyle}>
+          <lr-code-block language="javascript" .code=${jsSample}></lr-code-block>
+        </div>
+      `)) as HTMLElement;
+      const el = wrapper.querySelector('lr-code-block') as LyraCodeBlock;
+      await el2Ready(el);
+      await waitUntil(() => el.shadowRoot!.querySelector('.shiki') !== null, 'highlighted output never appeared', {
+        timeout: 15000,
+      });
+      const body = el.shadowRoot!.querySelector('[part="body"]')!;
+      const spans = Array.from(el.shadowRoot!.querySelectorAll('[part="pre"] span')) as HTMLElement[];
+      const span = spans.find((s) => s.style.getPropertyValue('--shiki-dark') !== '')!;
+      return { span, body };
+    }
+
+    // Light case: no dark tokens set, so data-dark-theme is never applied -- the override rule
+    // must not take effect, and the computed color must be exactly shiki's own light inline color.
+    const light = await firstDarkAwareSpan('');
+    expect(light.body.hasAttribute('data-dark-theme')).to.be.false;
+    expect(getComputedStyle(light.span).color).to.equal(light.span.style.color);
+
+    // Dark case: --lr-theme-color-* tokens (not the OS prefers-color-scheme media query) drive
+    // data-dark-theme -- the override rule must take effect, resolving to whatever --shiki-dark
+    // itself evaluates to (read via a probe rather than hardcoding shiki's palette).
+    const dark = await firstDarkAwareSpan(
+      '--lr-theme-color-text-normal:#f2f2f2; --lr-theme-color-surface-default:#1a1a1a;',
+    );
+    expect(dark.body.getAttribute('data-dark-theme')).to.equal('true');
+    const probe = document.createElement('span');
+    probe.setAttribute('style', dark.span.getAttribute('style')!);
+    probe.style.color = 'var(--shiki-dark, inherit)';
+    dark.span.parentElement!.appendChild(probe);
+    const expectedDarkColor = getComputedStyle(probe).color;
+    probe.remove();
+    expect(getComputedStyle(dark.span).color).to.equal(expectedDarkColor);
+    // And the override must actually have changed something, or this assertion would pass
+    // vacuously even with the gating broken.
+    expect(getComputedStyle(dark.span).color).to.not.equal(dark.span.style.color);
   });
 });

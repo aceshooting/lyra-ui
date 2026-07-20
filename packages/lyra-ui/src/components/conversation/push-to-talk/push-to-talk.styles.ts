@@ -32,7 +32,10 @@ export const styles = css`
     opacity: var(--lr-opacity-disabled);
     cursor: not-allowed;
   }
-  [part='trigger']:hover:not(:disabled) {
+  /* :where() zeroes the wrapped selectors' specificity contribution, leaving this at (0,1,0) --
+     matches lr-attachment-trigger's fixed convention, so a consumer's ::part(trigger):hover
+     override ((0,1,1)) still wins without needing !important. */
+  :where([part='trigger']):hover:where(:not(:disabled)) {
     background: var(--lr-color-brand-quiet);
   }
   :host([data-state='recording']) [part='trigger'] {
@@ -47,7 +50,10 @@ export const styles = css`
     position: absolute;
     inset: calc(-1 * var(--lr-size-4px));
     border-radius: 50%;
-    border: var(--lr-border-width-medium) solid var(--lr-color-danger);
+    /* Same cssprop as [data-state='recording'] [part='trigger']'s border/color above, so
+       retinting --lr-push-to-talk-recording-color recolors the whole "recording" treatment
+       (button chrome + pulse ring) together, not just half of it. */
+    border: var(--lr-border-width-medium) solid var(--lr-push-to-talk-recording-color, var(--lr-color-danger));
     pointer-events: none;
     animation: lr-push-to-talk-pulse var(--lr-transition-ambient) infinite;
   }

@@ -1,4 +1,12 @@
-import { html, nothing, svg, type TemplateResult, type SVGTemplateResult, type PropertyValues } from 'lit';
+import {
+  html,
+  nothing,
+  svg,
+  type TemplateResult,
+  type SVGTemplateResult,
+  type PropertyValues,
+  type ComplexAttributeConverter,
+} from 'lit';
 import { property, state, query } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { getDateTimeFormat } from '../../../internal/intl-cache.js';
@@ -14,6 +22,23 @@ export interface ConversationItemRenameDetail {
 const spellcheckConverter = {
   fromAttribute: (value: string | null): boolean => value !== 'false',
   toAttribute: (value: boolean): string => (value ? 'true' : 'false'),
+};
+
+/** `true`-defaulting boolean attribute converter, identical shape to `<lr-task-list>`'s
+ *  `trueDefaultBooleanConverter` -- duplicated locally per this library's convention of not
+ *  sharing these tiny converters across independently-consumable component files. Lit's default
+ *  presence-based `type: Boolean` can never be set back to `false` from a plain-HTML attribute
+ *  once the property's own default is `true` (removing an attribute that was never present fires
+ *  no `attributeChangedCallback`), so `fromAttribute` checks the literal string instead.
+ *  `toAttribute` reflects the `true` state as a present (empty-string) attribute rather than
+ *  omitting it, matching every other `reflect: true` boolean property in this library. */
+const trueDefaultBooleanConverter: ComplexAttributeConverter<boolean> = {
+  fromAttribute(value): boolean {
+    return value !== 'false';
+  },
+  toAttribute(value): string | null {
+    return value ? '' : null;
+  },
 };
 
 // Mirrors the shared icon set's viewBox/stroke conventions
@@ -212,7 +237,7 @@ export class LyraConversationItem extends LyraElement<LyraConversationItemEventM
    *  button never renders and the row can never enter its editing state. If
    *  flipped to `false` while a rename is already open, the in-progress edit
    *  is cancelled (discarded, like Escape) rather than left committable. */
-  @property({ type: Boolean, reflect: true }) editable = true;
+  @property({ type: Boolean, reflect: true, converter: trueDefaultBooleanConverter }) editable = true;
 
   /** Forwarded to the in-place rename `<input>`'s own `spellcheck`. Defaults to `true`, matching
    *  the native element's own default. `spellcheck="false"` is parsed as false. */
@@ -239,6 +264,8 @@ export class LyraConversationItem extends LyraElement<LyraConversationItemEventM
   @query('[part="title-input"]') private titleInput?: HTMLInputElement;
 
   protected willUpdate(changed: PropertyValues): void {
+    super.willUpdate(changed); // no-op in LyraElement/ReactiveElement today, but a future mixin's
+    // willUpdate() layered under this class must still run.
     if (!this.hasUpdated) {
       this.hasActionsSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'actions');
       this.hasLeadingSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'leading');
@@ -256,6 +283,8 @@ export class LyraConversationItem extends LyraElement<LyraConversationItemEventM
   }
 
   protected updated(changed: PropertyValues): void {
+    super.updated(changed); // no-op in LyraElement/ReactiveElement today, but a future mixin's
+    // updated() layered under this class must still run.
     if (changed.has('renaming') && this.renaming) {
       // Runs after render, so the input already exists in the DOM.
       this.titleInput?.focus();

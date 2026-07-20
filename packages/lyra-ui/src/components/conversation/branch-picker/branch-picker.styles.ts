@@ -25,8 +25,12 @@ export const styles = css`
     color: inherit;
     cursor: pointer;
   }
-  [part='previous-button']:hover:not(:disabled),
-  [part='next-button']:hover:not(:disabled) {
+  /* :where() zeroes the wrapped selectors' specificity contribution, leaving only :hover itself --
+     (0,1,0) total, functionally identical selection to [part='previous-button']:hover:not(:disabled)
+     ((0,3,0)) but now losing (on the pseudo-element tiebreak) to a consumer's own
+     ::part(previous-button):hover override ((0,1,1)) without that consumer needing !important. */
+  :where([part='previous-button']):hover:where(:not(:disabled)),
+  :where([part='next-button']):hover:where(:not(:disabled)) {
     background: var(--lr-color-brand-quiet);
     color: var(--lr-color-brand);
   }

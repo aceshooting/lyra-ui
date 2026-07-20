@@ -88,6 +88,40 @@ describe('mount-time announcement', () => {
   });
 });
 
+describe('localization', () => {
+  it('localizes the agent-only computed label (handoffToAgent) via .strings, reaching both the rendered label and the mount-time announcement', async () => {
+    const el = (await fixture(html`
+      <lr-handoff-divider agent="Research Agent" .strings=${{ handoffToAgent: 'Transféré à {agent}' }}></lr-handoff-divider>
+    `)) as LyraHandoffDivider;
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    expect(base.getAttribute('aria-label')).to.equal('Transféré à Research Agent');
+    expect(el.shadowRoot!.querySelector('[part="label"]')!.textContent!.trim()).to.equal('Transféré à Research Agent');
+    expect(await getLiveRegionText(el)).to.equal('Transféré à Research Agent');
+  });
+
+  it('localizes the from/to computed label (handoffFromToAgent) via .strings, reaching both the rendered label and the mount-time announcement', async () => {
+    const el = (await fixture(html`
+      <lr-handoff-divider
+        from-agent="Planner"
+        agent="Research Agent"
+        .strings=${{ handoffFromToAgent: 'Transféré de {from} à {to}' }}
+      ></lr-handoff-divider>
+    `)) as LyraHandoffDivider;
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    expect(base.getAttribute('aria-label')).to.equal('Transféré de Planner à Research Agent');
+    expect(await getLiveRegionText(el)).to.equal('Transféré de Planner à Research Agent');
+  });
+
+  it('localizes the generic fallback label (handoffLabel) via .strings, reaching both the rendered label and the mount-time announcement', async () => {
+    const el = (await fixture(html`
+      <lr-handoff-divider .strings=${{ handoffLabel: 'Transfert de contrôle' }}></lr-handoff-divider>
+    `)) as LyraHandoffDivider;
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    expect(base.getAttribute('aria-label')).to.equal('Transfert de contrôle');
+    expect(await getLiveRegionText(el)).to.equal('Transfert de contrôle');
+  });
+});
+
 it('is accessible with no agent set', async () => {
   const el = (await fixture(html`<lr-handoff-divider></lr-handoff-divider>`)) as LyraHandoffDivider;
   await expect(el).to.be.accessible();

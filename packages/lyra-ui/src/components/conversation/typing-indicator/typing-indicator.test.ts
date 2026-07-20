@@ -34,6 +34,19 @@ it('exposes role="status" and aria-label derived from label on the host', async 
   expect(el.getAttribute('aria-label')).to.equal('Generating response…');
 });
 
+it('preserves an explicit host aria-label instead of clobbering it with the label-derived default on first render', async () => {
+  const el = (await fixture(
+    html`<lr-typing-indicator aria-label="Generating response"></lr-typing-indicator>`,
+  )) as LyraTypingIndicator;
+  expect(el.getAttribute('aria-label')).to.equal('Generating response');
+  expect(el.shadowRoot!.querySelector('.sr-only')!.textContent).to.equal('Generating response');
+
+  // A later `label` update must not override the host's own explicit choice.
+  el.label = 'Thinking harder…';
+  await el.updateComplete;
+  expect(el.getAttribute('aria-label')).to.equal('Generating response');
+});
+
 it('falls back to the default accessible name when label is empty or whitespace-only', async () => {
   const empty = (await fixture(html`<lr-typing-indicator label=""></lr-typing-indicator>`)) as LyraTypingIndicator;
   expect(empty.getAttribute('aria-label')).to.equal('Thinking…');

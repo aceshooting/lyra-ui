@@ -38,6 +38,10 @@ function formatDuration(ms: number): FormattedDuration {
  * above 1000ms) — a host whose latencies commonly exceed a minute sets `formatLatency` to render
  * its own scale instead, in both the visible strip and the tooltip row.
  *
+ * An `aria-label` set on the host element (the idiomatic way to name any custom element) wins
+ * over the localized default accessible name, same convention as `<lr-tool-call-chip>`'s own
+ * `aria-label` precedence.
+ *
  * @customElement lr-usage-badge
  * @slot - Extra rows appended below the built-in tooltip breakdown (e.g. cache-read tokens). The
  *   visible strip itself is prop-driven only.
@@ -106,6 +110,16 @@ export class LyraUsageBadge extends LyraElement {
   disconnectedCallback(): void {
     super.disconnectedCallback();
     this.cleanupPositioner?.();
+    this.cleanupPositioner = undefined;
+    // Reset so a reconnect (e.g. a drag-drop reparent or a list re-render that detaches and
+    // reattaches this node) re-triggers `updated()`'s `tooltipOpen`-driven branch -- without
+    // this, `tooltipOpen` stays `true` across the disconnect/reconnect and
+    // `changed.has('tooltipOpen')` never fires again, leaving the tooltip rendered open at a
+    // stale, frozen position with no live positioner attached. Mirrors `<lr-tool-call-chip>`'s
+    // own disconnectedCallback.
+    this.tooltipOpen = false;
+    this.hovering = false;
+    this.focused = false;
   }
 
   private onDefaultSlotChange = (e: Event): void => {
@@ -204,7 +218,7 @@ export class LyraUsageBadge extends LyraElement {
         part="base"
         role="group"
         tabindex="0"
-        aria-label=${this.localize('usageBadgeLabel')}
+        aria-label=${this.getAttribute('aria-label') || this.localize('usageBadgeLabel')}
         aria-describedby=${this.tooltipOpen ? this.tooltipId : nothing}
         @mouseenter=${this.onMouseEnter}
         @mouseleave=${this.onMouseLeave}

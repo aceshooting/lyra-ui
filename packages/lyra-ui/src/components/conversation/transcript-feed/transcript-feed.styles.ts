@@ -12,6 +12,7 @@ export const styles = [
     [part='base'] {
       inline-size: 100%;
       block-size: 100%;
+      overflow-x: hidden;
       overflow-y: auto;
       display: flex;
       flex-direction: column;

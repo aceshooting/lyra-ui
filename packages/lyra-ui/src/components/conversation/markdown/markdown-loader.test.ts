@@ -58,6 +58,18 @@ describe('loadMarkdownAndSanitizer (independent marked / dompurify loading)', ()
     }
   });
 
+  it('falls back to the bare module namespace when the dompurify import resolves with no .default (module-shape interop)', async () => {
+    // Different bundler/interop configurations resolve a CJS-published optional peer as either
+    // `{ default: X }` or the bare module namespace -- reading only `.default` would silently
+    // substitute `undefined` for the real sanitizer under the other resolution.
+    const bareDompurifyModule = { sanitize: (html: string) => html, version: 'fake' };
+    const deps = await loadMarkdownAndSanitizer(
+      () => import('marked'),
+      () => Promise.resolve(bareDompurifyModule),
+    );
+    expect(deps.DOMPurify).to.equal(bareDompurifyModule);
+  });
+
   it('resolves both as undefined when both peers fail to load', async () => {
     const originalWarn = console.warn;
     const calls: unknown[][] = [];

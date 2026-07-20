@@ -1,6 +1,8 @@
 import { fixture, expect, html, oneEvent } from '@open-wc/testing';
+import { LitElement, type PropertyValues } from 'lit';
 import './branch-picker.js';
 import type { LyraBranchPicker } from './branch-picker.js';
+import { styles } from './branch-picker.styles.js';
 
 it('defaults to index 0, count 1, and renders nothing while count < 2', async () => {
   const el = (await fixture(html`<lr-branch-picker></lr-branch-picker>`)) as LyraBranchPicker;
@@ -143,4 +145,42 @@ it('never fires lr-branch-change past either bound when count is non-finite', as
 
   (el as unknown as { requestIndex(next: number): void }).requestIndex(5);
   expect(fired).to.be.false;
+});
+
+it('chains updated() to super.updated() so a mixin layered under LyraElement would still run', async () => {
+  // No shared mixin actually overrides updated() today, so the only way to prove the chain is live
+  // (rather than grepping source text for the call) is to patch the base-class hook itself -- the
+  // exact hook a future mixin would extend -- and confirm it actually fires.
+  const hadOwn = Object.prototype.hasOwnProperty.call(LitElement.prototype, 'updated');
+  const original = (LitElement.prototype as unknown as { updated?: (changed: PropertyValues) => void }).updated;
+  let called = false;
+  (LitElement.prototype as unknown as { updated: (changed: PropertyValues) => void }).updated = function (
+    this: LitElement,
+    changed: PropertyValues,
+  ) {
+    called = true;
+    original?.call(this, changed);
+  };
+  try {
+    const el = (await fixture(html`<lr-branch-picker index="0" count="3"></lr-branch-picker>`)) as LyraBranchPicker;
+    await el.updateComplete;
+    expect(called).to.be.true;
+  } finally {
+    if (hadOwn) {
+      (LitElement.prototype as unknown as { updated: unknown }).updated = original;
+    } else {
+      delete (LitElement.prototype as unknown as { updated?: unknown }).updated;
+    }
+  }
+});
+
+it('wraps the previous/next hover rule in :where() so a consumer ::part(...):hover override can win without !important', () => {
+  // :hover can't be synthesized on a real fixture in this test runner (no synthetic-pseudo-class
+  // API), so the established convention for this exact rule shape is a stylesheet-source assertion
+  // -- see attachment-trigger.test.ts's own ':where(' check for the identical carve-out.
+  const css = styles.cssText.replace(/\s+/g, ' ');
+  const hoverRule = css.match(/[^}]*:hover:where\(:not\(:disabled\)\)[^{]*\{[^}]*\}/g);
+  expect(hoverRule, 'expected a :where()-wrapped hover rule for previous/next-button').to.exist;
+  expect(hoverRule!.join(' ')).to.contain(":where([part='previous-button'])");
+  expect(hoverRule!.join(' ')).to.contain(":where([part='next-button'])");
 });

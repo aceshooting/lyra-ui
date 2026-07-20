@@ -6,9 +6,37 @@ export const styles = css`
     display: inline-block;
     inline-size: 100%;
     max-inline-size: var(--lr-size-24rem);
+    --lr-model-select-trigger-padding: var(--lr-space-xs) var(--lr-space-s);
+    --lr-model-select-trigger-min-height: var(--lr-size-2-5rem);
+    --lr-model-select-font-size: var(--lr-font-size-md);
+    --lr-model-select-expand-size: var(--lr-size-1-75rem);
   }
   :host(:disabled) {
     cursor: not-allowed;
+  }
+  /* Same xs-xl scale as lr-select's size -- see that component's identical per-tier block
+     for the source of these values. */
+  :host([size='xs']) {
+    --lr-model-select-trigger-padding: var(--lr-size-0-125rem) var(--lr-space-xs);
+    --lr-model-select-trigger-min-height: var(--lr-size-1-5rem);
+    --lr-model-select-font-size: var(--lr-font-size-xs);
+    --lr-model-select-expand-size: var(--lr-size-1rem);
+  }
+  :host([size='s']) {
+    --lr-model-select-trigger-padding: var(--lr-space-xs) var(--lr-space-xs);
+    --lr-model-select-trigger-min-height: var(--lr-size-1-875rem);
+    --lr-model-select-font-size: var(--lr-font-size-sm);
+    --lr-model-select-expand-size: var(--lr-size-1-25rem);
+  }
+  :host([size='l']) {
+    --lr-model-select-trigger-padding: var(--lr-space-s) var(--lr-space-m);
+    --lr-model-select-trigger-min-height: var(--lr-size-3rem);
+    --lr-model-select-font-size: var(--lr-font-size-lg);
+  }
+  :host([size='xl']) {
+    --lr-model-select-trigger-padding: var(--lr-space-m) var(--lr-space-l);
+    --lr-model-select-trigger-min-height: var(--lr-size-3-5rem);
+    --lr-model-select-font-size: var(--lr-font-size-xl);
   }
 
   [part='form-control-label'] {
@@ -31,14 +59,15 @@ export const styles = css`
     align-items: center;
     gap: var(--lr-space-xs);
     inline-size: 100%;
-    min-block-size: var(--lr-size-2-5rem);
+    min-block-size: var(--lr-model-select-trigger-min-height);
     box-sizing: border-box;
-    padding: var(--lr-space-xs) var(--lr-space-s);
+    padding: var(--lr-model-select-trigger-padding);
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
     border-radius: var(--lr-radius);
     background: var(--lr-color-surface);
     color: inherit;
     font: inherit;
+    font-size: var(--lr-model-select-font-size);
   }
   [part='trigger'] {
     cursor: pointer;
@@ -51,6 +80,12 @@ export const styles = css`
   [part='combobox']:focus-within {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);
+  }
+  /* :where() zeroes the wrapped selectors' specificity contribution, keeping this at (0,1,0) --
+     matches lr-attachment-trigger's fixed convention, so a consumer's ::part(trigger):hover
+     override ((0,1,1)) still wins without needing !important. */
+  :where([part='trigger']):hover:where(:not(:disabled)) {
+    background: var(--lr-color-brand-quiet);
   }
   :host([open]) [part='trigger'] {
     border-color: var(--lr-color-brand);
@@ -105,8 +140,8 @@ export const styles = css`
     align-items: center;
     justify-content: center;
     color: var(--lr-color-text-quiet);
-    min-inline-size: min(var(--lr-icon-button-size), var(--lr-size-1-75rem));
-    min-block-size: min(var(--lr-icon-button-size), var(--lr-size-1-75rem));
+    min-inline-size: min(var(--lr-icon-button-size), var(--lr-model-select-expand-size));
+    min-block-size: min(var(--lr-icon-button-size), var(--lr-model-select-expand-size));
     line-height: var(--lr-line-height-none);
   }
   [part='expand-icon'] svg {
@@ -166,7 +201,7 @@ export const styles = css`
   }
   [part='option']:hover,
   [part='option'][data-active] {
-    background: var(--lr-color-brand-quiet);
+    background: var(--lr-model-select-option-active-bg, var(--lr-color-brand-quiet));
   }
   [part='option'][aria-selected='true'] {
     border-color: var(--lr-color-brand);

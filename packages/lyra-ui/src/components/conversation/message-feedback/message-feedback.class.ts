@@ -15,6 +15,8 @@ export interface MessageFeedbackReason {
 export interface LyraMessageFeedbackEventMap {
   'lr-change': CustomEvent<{ value: 'up' | 'down' | null }>;
   'lr-submit': CustomEvent<{ value: 'up' | 'down'; reasonIds: string[]; comment: string }>;
+  blur: CustomEvent<undefined>;
+  focus: CustomEvent<undefined>;
 }
 
 // A one-off thumb glyph, sharing internal/icons.ts's 24x24 viewBox / 1em sizing / stroke-width
@@ -65,6 +67,12 @@ function thumbIcon(direction: 'up' | 'down', filled: boolean): SVGTemplateResult
  *   thumb (with no panel open) clears it to `null`. The terminal signal when no detail panel is
  *   configured for that thumb.
  * @event lr-submit - `detail: { value, reasonIds, comment }`, fired by the panel's submit button.
+ * @event blur - Re-dispatched from the comment `<textarea>`'s own native `blur` -- bubbling and
+ *   composed (unlike the native event, which is neither), so a listener above the shadow boundary
+ *   can observe it. Mirrors `<lr-model-select>`'s identical re-dispatch for its own free-text
+ *   `<input>`.
+ * @event focus - Re-dispatched from the comment `<textarea>`'s own native `focus`, for the same
+ *   reason as `blur`.
  * @csspart base - The root.
  * @csspart thumbs - The wrapper around both thumb buttons.
  * @csspart up-button - The thumbs-up toggle button.
@@ -194,6 +202,18 @@ export class LyraMessageFeedback extends LyraElement<LyraMessageFeedbackEventMap
     this.commentDraft = (e.target as HTMLTextAreaElement).value;
   };
 
+  // Native `focus`/`blur` on the comment textarea neither bubble nor cross the shadow boundary --
+  // re-dispatched (bubbling + composed, via this.emit()) so a host-level listener on
+  // <lr-message-feedback> can observe them, mirroring <lr-model-select>'s identical bridge for
+  // its own free-text <input>.
+  private onCommentFocus = (): void => {
+    this.emit('focus');
+  };
+
+  private onCommentBlur = (): void => {
+    this.emit('blur');
+  };
+
   private onSubmit = (): void => {
     if (!this.value) return;
     this.emit<{ value: 'up' | 'down'; reasonIds: string[]; comment: string }>('lr-submit', {
@@ -256,11 +276,14 @@ export class LyraMessageFeedback extends LyraElement<LyraMessageFeedbackEventMap
                           aria-label=${this.localize('feedbackCommentLabel')}
                           placeholder=${this.localize('feedbackCommentPlaceholder')}
                           .value=${this.commentDraft}
+                          ?disabled=${this.disabled}
                           @input=${this.onCommentInput}
+                          @focus=${this.onCommentFocus}
+                          @blur=${this.onCommentBlur}
                         ></textarea>
                       `
                     : nothing}
-                  <button part="submit-button" type="button" @click=${this.onSubmit}>
+                  <button part="submit-button" type="button" ?disabled=${this.disabled} @click=${this.onSubmit}>
                     ${this.localize('feedbackSubmit')}
                   </button>
                 </div>

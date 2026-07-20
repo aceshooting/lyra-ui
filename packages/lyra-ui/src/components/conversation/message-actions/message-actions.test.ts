@@ -3,6 +3,22 @@ import './message-actions.js';
 import '../branch-picker/branch-picker.js';
 import type { LyraMessageActions } from './message-actions.js';
 
+it('establishes container-type: inline-size on the host so its own @container narrow-width rule can actually fire', async () => {
+  const el = (await fixture(
+    html`<lr-message-actions
+      style="inline-size: 160px;"
+      .controls=${['regenerate', 'edit']}
+    ></lr-message-actions>`,
+  )) as LyraMessageActions;
+  expect(getComputedStyle(el).containerType).to.equal('inline-size');
+
+  // 160px is under the @container (max-inline-size: 20rem) threshold -- without container-type
+  // establishing containment, that rule can never fire and [part='base'] never gets its
+  // inline-size: 100% override, no matter how narrow the host is.
+  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  expect(getComputedStyle(base).width).to.equal('160px');
+});
+
 it('renders no built-ins by default and no copy button without copyText', async () => {
   const el = (await fixture(html`<lr-message-actions></lr-message-actions>`)) as LyraMessageActions;
   expect(el.shadowRoot!.querySelector('[part="base"]')!.children.length).to.equal(1); // just the <slot>
@@ -40,6 +56,28 @@ it('lr-copy bubbles from the embedded copy button, exactly once', async () => {
     .click();
   expect(count).to.equal(1);
   expect(detail).to.deep.equal({ text: 'hi there' });
+});
+
+it('localizes the regenerate/edit buttons and the toolbar accessible name with the built-in English fallback and via .strings override', async () => {
+  const el = (await fixture(
+    html`<lr-message-actions .controls=${['regenerate', 'edit']}></lr-message-actions>`,
+  )) as LyraMessageActions;
+  const base = el.shadowRoot!.querySelector('[part="base"]')!;
+  const regenerate = el.shadowRoot!.querySelector('[part~="regenerate-button"]')!;
+  const edit = el.shadowRoot!.querySelector('[part~="edit-button"]')!;
+  expect(base.getAttribute('aria-label')).to.equal('Message actions');
+  expect(regenerate.getAttribute('aria-label')).to.equal('Regenerate response');
+  expect(edit.getAttribute('aria-label')).to.equal('Edit message');
+
+  el.strings = {
+    messageActionsLabel: 'Actions sur le message',
+    regenerateResponse: 'Régénérer la réponse',
+    editMessage: 'Modifier le message',
+  };
+  await el.updateComplete;
+  expect(base.getAttribute('aria-label')).to.equal('Actions sur le message');
+  expect(regenerate.getAttribute('aria-label')).to.equal('Régénérer la réponse');
+  expect(edit.getAttribute('aria-label')).to.equal('Modifier le message');
 });
 
 it('fires lr-regenerate and lr-edit with no detail', async () => {

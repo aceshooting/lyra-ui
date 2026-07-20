@@ -50,6 +50,9 @@ export const styles = css`
   [part='combobox'] {
     cursor: text;
   }
+  [part='trigger']:hover:not(:disabled) {
+    border-color: var(--lr-color-brand);
+  }
   [part='trigger']:focus-visible,
   [part='combobox']:focus-within {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
@@ -135,6 +138,9 @@ export const styles = css`
     color: var(--lr-color-text);
     cursor: pointer;
   }
+  [part='preview-button']:hover:not(:disabled) {
+    background: var(--lr-color-brand-quiet);
+  }
   [part='preview-button']:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);
@@ -157,6 +163,12 @@ export const styles = css`
        treatment) so this popup can't overflow off-screen on a short/keyboard-shrunk viewport. */
     max-block-size: min(var(--lr-size-18rem), var(--lr-positioner-available-block-size, var(--lr-size-18rem)));
     overflow-y: auto;
+    /* Pinned explicitly alongside overflow-y -- per the CSS overflow spec, once one axis is
+       forced non-'visible', the other axis's used value also computes to 'auto' (never stays
+       'visible'), risking a phantom empty horizontal scrollbar from sub-pixel rounding (the same
+       bug lr-tabs' tablist was fixed for). inline-size is max-content below, so this axis never
+       actually needs to scroll. */
+    overflow-x: hidden;
     inline-size: max-content;
     min-inline-size: min(var(--lr-size-12rem), var(--lr-positioner-available-inline-size, var(--lr-size-12rem)));
     max-inline-size: min(var(--lr-popover-viewport-clamp), var(--lr-size-28rem), var(--lr-positioner-available-inline-size, 100vw));

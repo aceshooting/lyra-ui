@@ -16,6 +16,12 @@ it('defaults to entries=[], follow=true, show-timestamps=false, max-rendered-ent
   expect(el.maxRenderedEntries).to.equal(0);
 });
 
+it('never scrolls horizontally -- overflow-y:auto alone lets the x axis compute to auto too, which can show a phantom scrollbar', async () => {
+  const el = (await fixture(html`<lr-transcript-feed></lr-transcript-feed>`)) as LyraTranscriptFeed;
+  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  expect(getComputedStyle(base).overflowX).to.equal('hidden');
+});
+
 it('shows the localized empty state (or a slotted override) when entries is empty', async () => {
   const el = (await fixture(html`<lr-transcript-feed></lr-transcript-feed>`)) as LyraTranscriptFeed;
   expect(el.shadowRoot!.querySelector('[part="empty"]')!.textContent!.trim()).to.equal('No transcript yet');
@@ -210,6 +216,17 @@ describe('follow / stick-to-bottom contract', () => {
     await el.updateComplete;
     expect(count).to.equal(2);
     document.body.removeChild(el);
+  });
+
+  it('honors follow="false" as a plain HTML attribute, not just a property binding', async () => {
+    const el = (await fixture(
+      html`<lr-transcript-feed follow="false" .entries=${[{ id: '1', text: 'hi' }]}></lr-transcript-feed>`,
+    )) as LyraTranscriptFeed;
+    await el.updateComplete;
+    expect(el.follow).to.be.false;
+    // Confirms the real behavioral effect of follow=false, not just the property value: the
+    // jump-to-latest button only renders while follow is false.
+    expect(el.shadowRoot!.querySelectorAll('[part="jump-button"]').length).to.equal(1);
   });
 });
 

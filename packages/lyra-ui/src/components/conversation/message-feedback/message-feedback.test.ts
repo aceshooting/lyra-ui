@@ -220,6 +220,70 @@ it('respects a host-set disabled value as a read-only display', async () => {
   expect(fired).to.be.false;
 });
 
+it('disables the comment textarea and submit button (not just the thumbs) once disabled is set while the panel is already open', async () => {
+  const el = (await fixture(
+    html`<lr-message-feedback commentable></lr-message-feedback>`,
+  )) as LyraMessageFeedback;
+  const down = el.shadowRoot!.querySelector('[part="down-button"]') as HTMLButtonElement;
+  down.click(); // detailFor defaults to 'down' -- opens the panel
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelector('[part="panel"]')!.hasAttribute('data-open')).to.be.true;
+
+  // Host locks the whole control down mid-interaction, panel still open.
+  el.disabled = true;
+  await el.updateComplete;
+
+  const textarea = el.shadowRoot!.querySelector('[part="comment"]') as HTMLTextAreaElement;
+  const submit = el.shadowRoot!.querySelector('[part="submit-button"]') as HTMLButtonElement;
+  expect(textarea.disabled).to.be.true;
+  expect(submit.disabled).to.be.true;
+});
+
+describe('comment textarea blur/focus bubbling', () => {
+  it('re-dispatches a bubbling, composed focus event when the comment textarea focuses', async () => {
+    const el = (await fixture(html`<lr-message-feedback commentable></lr-message-feedback>`)) as LyraMessageFeedback;
+    (el.shadowRoot!.querySelector('[part="down-button"]') as HTMLButtonElement).click();
+    await el.updateComplete;
+    const textarea = el.shadowRoot!.querySelector('[part="comment"]') as HTMLTextAreaElement;
+
+    const eventPromise = oneEvent(el, 'focus');
+    textarea.focus();
+    const ev = await eventPromise;
+    expect(ev.bubbles).to.be.true;
+    expect(ev.composed).to.be.true;
+  });
+
+  it('re-dispatches a bubbling, composed blur event when the comment textarea blurs', async () => {
+    const el = (await fixture(html`<lr-message-feedback commentable></lr-message-feedback>`)) as LyraMessageFeedback;
+    (el.shadowRoot!.querySelector('[part="down-button"]') as HTMLButtonElement).click();
+    await el.updateComplete;
+    const textarea = el.shadowRoot!.querySelector('[part="comment"]') as HTMLTextAreaElement;
+    textarea.focus();
+
+    const eventPromise = oneEvent(el, 'blur');
+    textarea.blur();
+    const ev = await eventPromise;
+    expect(ev.bubbles).to.be.true;
+    expect(ev.composed).to.be.true;
+  });
+});
+
+describe('thumb-button hover specificity', () => {
+  it('the internal hover rule is :where()-wrapped so a ::part(up-button):hover override can win without !important', async () => {
+    // jsdom/browser test runners don't synthesize a real :hover pseudo-class from a dispatched
+    // event, so this asserts the fix the same way attachment-trigger.test.ts's identical
+    // regression test does: the internal rule's specificity, read from the real adopted
+    // stylesheet, must actually be reduced by :where() rather than merely styled correctly.
+    const el = (await fixture(html`<lr-message-feedback></lr-message-feedback>`)) as LyraMessageFeedback;
+    const internalRule = (el.shadowRoot!.adoptedStyleSheets ?? [])
+      .flatMap((sheet) => Array.from(sheet.cssRules))
+      .map((rule) => rule.cssText)
+      .find((text) => text.includes(':hover') && text.includes('up-button'));
+    expect(typeof internalRule).to.equal('string');
+    expect((internalRule ?? '').includes(':where(')).to.be.true;
+  });
+});
+
 it('never conveys value by color alone -- aria-pressed is present for both thumbs regardless of state', async () => {
   const el = (await fixture(html`<lr-message-feedback value="up"></lr-message-feedback>`)) as LyraMessageFeedback;
   const up = el.shadowRoot!.querySelector('[part="up-button"]')!;

@@ -265,6 +265,7 @@ export class LyraChatMessage extends LyraElement<LyraChatMessageEventMap> {
   }
 
   protected willUpdate(changed: PropertyValues): void {
+    super.willUpdate(changed);
     if (!this.hasUpdated) {
       this.hasAvatarSlot = this.hasSlotted('avatar');
       this.hasBadgesSlot = this.hasSlotted('badges');
@@ -298,6 +299,7 @@ export class LyraChatMessage extends LyraElement<LyraChatMessageEventMap> {
   }
 
   protected updated(changed: PropertyValues): void {
+    super.updated(changed);
     const wasMounting = this.isMounting;
     this.isMounting = false;
     if (!wasMounting && changed.has('status')) {

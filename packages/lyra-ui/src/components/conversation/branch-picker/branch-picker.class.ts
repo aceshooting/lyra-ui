@@ -89,6 +89,7 @@ export class LyraBranchPicker extends LyraElement<LyraBranchPickerEventMap> {
   }
 
   protected updated(changed: PropertyValues): void {
+    super.updated(changed);
     const wasMounting = this.isMounting;
     this.isMounting = false;
     if (changed.has('index') && !wasMounting) {

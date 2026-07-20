@@ -192,17 +192,22 @@ it('a voice with no previewUrl still fires the request event but never plays int
 
 it('preview=false renders no preview affordances at all', async () => {
   const el = (await fixture(
-    html`<lr-voice-picker .catalog=${OBJECT_CATALOG} value="aria" preview="false"></lr-voice-picker>`,
+    html`<lr-voice-picker .catalog=${OBJECT_CATALOG} value="aria"></lr-voice-picker>`,
   )) as LyraVoicePicker;
-  // A `true`-defaulting boolean property can only be set false via a property binding, not a
-  // ?attr=${false} template binding (see packages/lyra-ui/AGENTS.md's testing-pitfalls note) --
-  // set it imperatively instead of relying on the attribute above.
   el.preview = false;
   await el.updateComplete;
-  expect(el.shadowRoot!.querySelector('[part="preview-button"]')).to.be.null;
+  expect(el.shadowRoot!.querySelectorAll('[part="preview-button"]').length).to.equal(0);
   el.open = true;
   await el.updateComplete;
-  expect(el.shadowRoot!.querySelector('[part="option-preview"]')).to.be.null;
+  expect(el.shadowRoot!.querySelectorAll('[part="option-preview"]').length).to.equal(0);
+});
+
+it('accepts preview="false" as a plain-HTML attribute string, not just a property binding', async () => {
+  const el = (await fixture(
+    html`<lr-voice-picker preview="false" .catalog=${OBJECT_CATALOG} value="aria"></lr-voice-picker>`,
+  )) as LyraVoicePicker;
+  expect(el.preview).to.be.false;
+  expect(el.shadowRoot!.querySelectorAll('[part="preview-button"]').length).to.equal(0);
 });
 
 it('per-row option-preview icons are pointer-only (tabindex=-1, aria-hidden) and preview that specific row', async () => {
@@ -389,6 +394,22 @@ it('does not open when disabled', async () => {
   trigger(el).dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
   await el.updateComplete;
   expect(el.open).to.be.false;
+});
+
+it("forwards host .click() to the trigger button in closed-dropdown mode, since HTMLElement.prototype.click() is otherwise a no-op on a custom element", async () => {
+  const el = (await fixture(html`<lr-voice-picker .catalog=${CATALOG}></lr-voice-picker>`)) as LyraVoicePicker;
+  expect(el.open).to.be.false;
+  el.click();
+  await el.updateComplete;
+  expect(el.open).to.be.true;
+});
+
+it('forwards host .click() to the combobox input in free-text mode', async () => {
+  const el = (await fixture(html`<lr-voice-picker allow-custom></lr-voice-picker>`)) as LyraVoicePicker;
+  expect(el.open).to.be.false;
+  el.click();
+  await el.updateComplete;
+  expect(el.open).to.be.true;
 });
 
 it('clicking an open trigger closes it (toggle)', async () => {
@@ -786,4 +807,25 @@ it('clamps its floating surface width through the shared popover-viewport-clamp 
 it("colors the combobox-input's placeholder text instead of leaving the UA default", () => {
   const css = styles.cssText.replace(/\s+/g, ' ');
   expect(css).to.match(/\[part='combobox-input'\]::placeholder\s*\{[^}]*color:\s*var\(--lr-color-text-quiet\)/);
+});
+
+// -- Hover feedback (mouse users get the same 'this is clickable' cue keyboard focus gives) ------
+
+it('gives the trigger a hover state', () => {
+  const css = styles.cssText.replace(/\s+/g, ' ');
+  expect(css).to.match(/\[part='trigger'\]:hover/);
+});
+
+it('gives the standalone preview-button a hover state', () => {
+  const css = styles.cssText.replace(/\s+/g, ' ');
+  expect(css).to.match(/\[part='preview-button'\]:hover/);
+});
+
+// -- overflow-x pinned alongside the listbox's overflow-y (phantom-scrollbar guard) ---------------
+
+it("pins overflow-x alongside overflow-y on the listbox so the horizontal axis never computes to an implicit 'auto'", async () => {
+  const el = (await fixture(html`<lr-voice-picker .catalog=${CATALOG}></lr-voice-picker>`)) as LyraVoicePicker;
+  trigger(el).click();
+  await el.updateComplete;
+  expect(getComputedStyle(listbox(el)).overflowX).to.not.equal('visible');
 });

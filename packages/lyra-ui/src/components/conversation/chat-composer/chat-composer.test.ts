@@ -10,6 +10,14 @@ function actionButtonOf(el: LyraChatComposer): HTMLButtonElement | null {
   return el.shadowRoot!.querySelector('[part="action-button"]') as HTMLButtonElement | null;
 }
 
+/** The rendered color of the textarea's `::placeholder` pseudo-element -- read via
+ *  `getComputedStyle`'s pseudo-element argument rather than the stylesheet source text, since a
+ *  regression that decouples the two tokens (or a broken `var()` fallback) has to show up here to
+ *  be caught. */
+function renderedPlaceholderColor(el: LyraChatComposer): string {
+  return getComputedStyle(textareaOf(el), '::placeholder').color;
+}
+
 function typeInto(el: LyraChatComposer, value: string): void {
   const ta = textareaOf(el);
   ta.value = value;
@@ -26,7 +34,10 @@ it('defaults to status="idle", min-rows=1, max-rows=8, submit-on-enter=true, and
   expect(el.minRows).to.equal(1);
   expect(el.maxRows).to.equal(8);
   expect(el.submitOnEnter).to.be.true;
-  expect(el.hasAttribute('submit-on-enter')).to.be.true;
+  // `true` is the default -- trueDefaultBooleanConverter's toAttribute omits the attribute
+  // entirely for it (mirroring lr-checkpoint's restorable/confirmRestore), so only the non-default
+  // `false` ever needs a reflected attribute at all.
+  expect(el.hasAttribute('submit-on-enter')).to.be.false;
   expect(el.submitDisabled).to.be.false;
 });
 
@@ -109,12 +120,6 @@ it('Shift+Enter always inserts a newline and never submits, even with submit-on-
 });
 
 it('never submits on Enter while submit-on-enter is false, leaving the default newline behavior alone', async () => {
-  // The property defaults to true and reflects, so there is no *string*
-  // attribute value that means "false" (matching native boolean-attribute
-  // semantics -- presence alone is what matters, e.g. `disabled="false"` is
-  // still disabled). A `?submit-on-enter=${false}` binding just omits the
-  // attribute, which leaves the property at its true default. Setting the
-  // property directly is the correct way to get `false` from a template.
   const el = (await fixture(
     html`<lr-chat-composer .submitOnEnter=${false}></lr-chat-composer>`,
   )) as LyraChatComposer;
@@ -127,6 +132,27 @@ it('never submits on Enter while submit-on-enter is false, leaving the default n
   ta.dispatchEvent(ev);
   await el.updateComplete;
   expect(submitted).to.be.false;
+  expect(ev.defaultPrevented).to.be.false;
+});
+
+it('parses the plain-HTML attribute string submit-on-enter="false", not just a .submitOnEnter property binding', async () => {
+  // trueDefaultBooleanConverter's fromAttribute checks the literal string rather than Lit's
+  // default presence-based Boolean converter, which can never distinguish an omitted attribute
+  // from one explicitly written as the literal string "false" -- both would otherwise map to the
+  // property's own `true` default.
+  const el = (await fixture(
+    html`<lr-chat-composer submit-on-enter="false"></lr-chat-composer>`,
+  )) as LyraChatComposer;
+  expect(el.submitOnEnter).to.be.false;
+  const ta = textareaOf(el);
+
+  let submitted = false;
+  el.addEventListener('lr-submit', () => (submitted = true));
+  const ev = enterKeydown();
+  ta.dispatchEvent(ev);
+  await el.updateComplete;
+  expect(submitted, 'submit-on-enter="false" as a plain attribute must actually disable Enter-to-send').to.be
+    .false;
   expect(ev.defaultPrevented).to.be.false;
 });
 
@@ -294,6 +320,16 @@ it('stoppable=false renders a disabled Send button instead of Stop while busy, a
   button.click();
   await el.updateComplete;
   expect(stopped).to.be.false;
+});
+
+it('parses the plain-HTML attribute string stoppable="false", not just a .stoppable property binding', async () => {
+  const el = (await fixture(
+    html`<lr-chat-composer status="streaming" stoppable="false"></lr-chat-composer>`,
+  )) as LyraChatComposer;
+  expect(el.stoppable, 'stoppable="false" as a plain attribute must actually disable it').to.be.false;
+  const button = actionButtonOf(el)!;
+  expect(button.getAttribute('aria-label')).to.equal('Send message');
+  expect(button.disabled).to.be.true;
 });
 
 it('hides the chips wrapper when the chips slot is empty, shows it once populated', async () => {
@@ -709,6 +745,36 @@ it('lifts the send button on hover through the shared hover-brightness token', a
   const el = (await fixture(html`<lr-chat-composer></lr-chat-composer>`)) as LyraChatComposer;
   await el.updateComplete;
   expect(renderedHoverFilter(el, "[part='action-button']:hover")).to.equal('brightness(1.08)');
+});
+
+it('recolors the busy action-button background via --lr-chat-composer-busy-bg without affecting the textarea placeholder color', async () => {
+  // Both the busy action-button background and the textarea placeholder default to the same
+  // shared --lr-color-text-quiet token. --lr-chat-composer-busy-bg exists precisely so a consumer
+  // can override the button's busy fill alone -- overriding the shared token directly would
+  // recolor the placeholder too.
+  const el = (await fixture(html`
+    <lr-chat-composer
+      status="streaming"
+      placeholder="Message"
+      style="--lr-chat-composer-busy-bg: rgb(10, 20, 30)"
+    ></lr-chat-composer>
+  `)) as LyraChatComposer;
+  await el.updateComplete;
+  const button = actionButtonOf(el)!;
+  expect(getComputedStyle(button).backgroundColor).to.equal('rgb(10, 20, 30)');
+
+  const placeholderColor = renderedPlaceholderColor(el);
+  expect(placeholderColor).to.not.equal('rgb(10, 20, 30)');
+});
+
+it('falls back to the shared --lr-color-text-quiet token for the busy background when unset', async () => {
+  const el = (await fixture(
+    html`<lr-chat-composer status="sending"></lr-chat-composer>`,
+  )) as LyraChatComposer;
+  await el.updateComplete;
+  const button = actionButtonOf(el)!;
+  const placeholderColor = renderedPlaceholderColor(el);
+  expect(getComputedStyle(button).backgroundColor).to.equal(placeholderColor);
 });
 
 it('is accessible in the default, empty state', async () => {

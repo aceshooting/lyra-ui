@@ -1,15 +1,13 @@
-import { html, type TemplateResult, type PropertyValues } from 'lit';
+import { html, type TemplateResult, type PropertyValues, type ComplexAttributeConverter } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { unsafeHTML } from 'lit/directives/unsafe-html.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import type { OptionalPeerApi } from '../../../internal/optional-peer-types.js';
 import { srOnly } from '../../../internal/a11y.js';
 import { prefersReducedMotion } from '../../../internal/motion.js';
-import { Slugger } from '../../../internal/slugger.js';
 import { DocumentAnchorTarget, type LyraAnchorTargetEventMap } from '../../../internal/anchor-target.js';
 import { scopeFromElement, resolveTextQuote, buildQuoteAnchor } from '../../../internal/text-quote.js';
 import { acquireHighlightHandle, supportsCustomHighlights, type HighlightHandle } from '../../../internal/text-highlights.js';
-import { finiteInteger } from '../../../internal/numbers.js';
 import type { LyraAnchor, LyraAnchorKind, LyraHighlightTone, HighlightActivateDetail } from '../../viewers/document-viewer/anchors.js';
 import { loadMarkdownDeps, getMarkdownDepsIfLoaded, type MarkdownDeps } from './markdown-loader.js';
 import {
@@ -20,70 +18,25 @@ import {
   type ShikiLanguageInput,
 } from '../code-block/code-loader.js';
 import { getKatex, type KatexApi } from './katex-loader.js';
+import {
+  getCachedHighlight as getCachedHighlightShared,
+  setCachedHighlight as setCachedHighlightShared,
+  parseMarkdownDocument,
+  HIGHLIGHT_CACHE_MAX,
+  type PendingHighlight,
+  type MarkdownHeadingItem as SharedMarkdownHeadingItem,
+} from './markdown-shared.js';
 import { styles } from './markdown.styles.js';
 
-const HTML_ESCAPES: Record<string, string> = {
-  '&': '&amp;',
-  '<': '&lt;',
-  '>': '&gt;',
-  '"': '&quot;',
-  "'": '&#39;',
-};
-
-function escapeHtml(text: string): string {
-  return text.replace(/[&<>"']/g, (ch) => HTML_ESCAPES[ch] ?? ch);
-}
-
-/**
- * Mirrors marked's own default `link()` renderer's `cleanUrl()`: a malformed
- * percent-escape or lone UTF-16 surrogate in the raw href throws inside
- * `encodeURI`, and marked's default renderer responds by dropping the anchor
- * (rendering the link text alone) rather than emitting a broken `href` —
- * returning `null` here lets the caller do the same. The
- * `.replace(/%25/g, '%')` compensates for `encodeURI` re-escaping the `%` of
- * an href that was already percent-encoded (the common case for a real
- * markdown link) — without it, every existing `%XX` escape would become
- * `%25XX`, double-encoding it.
- */
-function cleanHref(href: string): string | null {
-  try {
-    return encodeURI(href).replace(/%25/g, '%');
-  } catch {
-    return null;
-  }
-}
-
-/** One pending fenced-code block discovered during a `parseMarkdown()` pass whose `(lang, code)`
- *  pair wasn't already in `highlightCache` -- collected as a side effect of the `code()` renderer so
- *  the caller (`renderMarkdown()`) knows what to highlight next, without a second pass over the
- *  source. `key` is `highlightCache`'s own lookup key for this pair. */
-interface PendingHighlight {
-  key: string;
-  lang: string;
-  code: string;
-}
-
-/** One entry of `getHeadingTree()`'s document-ordered outline. `level` already reflects
- *  `heading-offset` -- it always matches the rendered `<h${level}>` tag, not the source `#` count. */
-export interface MarkdownHeadingItem {
-  id: string;
-  label: string;
-  level: number;
-}
+/** Re-exported so `markdown-core.ts`'s `export *` keeps exposing this from the same public path as
+ *  before this type moved into the pair's shared module -- see `markdown-shared.ts`'s class doc. */
+export type MarkdownHeadingItem = SharedMarkdownHeadingItem;
 
 /** Every `LyraHighlightTone`, used to always call `HighlightHandle.setRanges()` once per tone on
  *  every repaint (with an empty array for an unused tone) -- `setRanges()` replaces a tone's ranges
  *  wholesale per call, so a tone this pass has nothing for still needs an explicit empty call to
  *  clear whatever it painted last pass. */
 const HIGHLIGHT_TONES: LyraHighlightTone[] = ['accent', 'success', 'warning', 'danger', 'neutral'];
-
-/** Upper bound on `highlightCache` entries per instance. Each entry holds a fully-highlighted
- *  HTML string (potentially large for a long code block), and the cache is content-addressed --
- *  on a long-lived instance whose `content` keeps changing (a chat transcript, live docs), an
- *  unbounded map would retain the highlighted HTML of every code block ever rendered. 100 far
- *  exceeds the fenced-block count of any one document, so eviction only trims blocks that
- *  scrolled out of the content long ago. */
-const HIGHLIGHT_CACHE_MAX = 100;
 
 // -- math (KaTeX) -----------------------------------------------------------------------------
 
@@ -122,45 +75,6 @@ function isKatexConfirmedMissing(): boolean {
   return (katexOverride !== undefined ? katexOverride : resolvedKatex) === null;
 }
 
-const MATH_BLOCK_RE = /^\$\$([^\n]+?)\$\$/;
-const MATH_INLINE_RE = /^\$((?:\\\$|[^$\s])(?:\\\$|[^$])*?)\$(?!\$)/;
-
-interface MathToken {
-  type: 'math';
-  raw: string;
-  tex: string;
-  display: boolean;
-}
-
-/** A marked inline-level extension recognizing `$...$` and `$$...$$` TeX. Tokenizing is
- *  synchronous (matching marked's own parse pass); actual KaTeX rendering happens in `renderMath`
- *  against whatever `getKatexIfLoaded()` already has resolved -- mirroring this component's
- *  existing two-phase pattern for fenced-code highlighting (`code()` returns a plain placeholder
- *  first; the real highlighted markup arrives one render later once shiki resolves). `renderer` is
- *  bundled directly into this same extension object (not marked's separate top-level `.use({
- *  renderer })` override hook -- that hook only recognizes the *built-in* renderer method names;
- *  a custom token type introduced via `.use({ extensions })` supplies its own renderer the same way). */
-function mathExtension(renderMath: (token: MathToken) => string) {
-  return {
-    name: 'math',
-    level: 'inline' as const,
-    start(src: string): number | undefined {
-      const index = src.indexOf('$');
-      return index === -1 ? undefined : index;
-    },
-    tokenizer(src: string): MathToken | undefined {
-      const block = MATH_BLOCK_RE.exec(src);
-      if (block) return { type: 'math', raw: block[0], tex: block[1].trim(), display: true };
-      const inline = MATH_INLINE_RE.exec(src);
-      if (inline) return { type: 'math', raw: inline[0], tex: inline[1].replace(/\\\$/g, '$').trim(), display: false };
-      return undefined;
-    },
-    renderer(token: OptionalPeerApi): string {
-      return renderMath(token as MathToken);
-    },
-  };
-}
-
 /**
  * Rewrites shiki's generated `<pre>`/`<code>` hast nodes so the highlighted output keeps
  * `<lr-markdown>`'s own `part="code-block"` hook and a `language-${lang}` class on `<code>` --
@@ -187,6 +101,20 @@ function markdownCodeTransformer(lang: string) {
     },
   };
 }
+
+/** `true`-defaulting boolean attribute converter -- Lit's default presence-based `type: Boolean`
+ *  can never be set back to `false` from a plain-HTML attribute once the property's own default is
+ *  `true` (removing an attribute that was never present fires no `attributeChangedCallback`), so
+ *  `fromAttribute` checks the literal string instead. Shared by `sanitize`, `gfm`, and
+ *  `highlightCode`, which have the identical `true`-default parsing need. */
+const trueDefaultBooleanConverter: ComplexAttributeConverter<boolean> = {
+  fromAttribute(value): boolean {
+    return value !== 'false';
+  },
+  toAttribute(value): string | null {
+    return value ? null : 'false';
+  },
+};
 
 export interface LyraMarkdownCoreEventMap extends LyraAnchorTargetEventMap {
   'lr-render-error': CustomEvent<{ error: unknown }>;
@@ -309,7 +237,7 @@ export class LyraMarkdownCore extends DocumentAnchorTarget(LyraMarkdownCoreBase)
   /** Sanitize marked's HTML output with DOMPurify before rendering. See the
    *  class doc for what happens when this is `true` (the default) but the
    *  `dompurify` peer isn't installed. */
-  @property({ type: Boolean }) sanitize = true;
+  @property({ converter: trueDefaultBooleanConverter }) sanitize = true;
 
   /** When `true`, overrides marked's `html` renderer hook to emit the HTML-escaped source text
    *  instead of passing raw/sanitized markup through -- for a consumer rendering arbitrary
@@ -321,7 +249,7 @@ export class LyraMarkdownCore extends DocumentAnchorTarget(LyraMarkdownCoreBase)
   @property({ type: Boolean, attribute: 'escape-html' }) escapeHtml = false;
 
   /** Enable GitHub-flavored Markdown (tables, strikethrough, autolinks, task lists). */
-  @property({ type: Boolean }) gfm = true;
+  @property({ converter: trueDefaultBooleanConverter }) gfm = true;
 
   /** `target` applied to every rendered `<a>`, with `rel="noopener
    *  noreferrer"` always added alongside it whenever a `target` is emitted.
@@ -374,7 +302,7 @@ export class LyraMarkdownCore extends DocumentAnchorTarget(LyraMarkdownCoreBase)
    *  transparently by whether `shiki` is installed at all (an app that never installs it sees
    *  byte-identical output to today). Set `false` to keep plain output even when `shiki` is
    *  installed. No effect while `streaming` is `true` -- see that property's own doc. */
-  @property({ type: Boolean, attribute: 'highlight-code' }) highlightCode = true;
+  @property({ attribute: 'highlight-code', converter: trueDefaultBooleanConverter }) highlightCode = true;
 
   /** Grammar definitions this instance can highlight, e.g. `{ json: jsonGrammar }` (import from
    *  `shiki/langs/<name>.mjs`), forwarded verbatim to `loadShikiHighlighterCore()` -- same shape as
@@ -430,30 +358,22 @@ export class LyraMarkdownCore extends DocumentAnchorTarget(LyraMarkdownCoreBase)
   /** `(lang, code)` -> already-highlighted HTML, content-addressed (see `PendingHighlight`'s doc).
    *  Persists across renders of this instance; populated asynchronously by `highlightPending()`.
    *  Never consulted while `streaming` is `true` or `highlightCode` is `false` -- both gates live
-   *  in the `code()` renderer inside `parseMarkdown()`. Bounded to {@link HIGHLIGHT_CACHE_MAX}
-   *  entries, least-recently-used first out, via `getCachedHighlight()`/`setCachedHighlight()` --
-   *  always go through those instead of the map directly so hits refresh recency. */
+   *  in the `code()` renderer inside `parseMarkdownDocument()`. Bounded to `HIGHLIGHT_CACHE_MAX`
+   *  entries (see `markdown-shared.ts`), least-recently-used first out, via
+   *  `getCachedHighlight()`/`setCachedHighlight()` -- always go through those instead of the map
+   *  directly so hits refresh recency. */
   private highlightCache = new Map<string, string>();
 
   /** LRU read: a hit is re-inserted so Map iteration order (insertion order) keeps the first key
-   *  the least recently used one -- the entry `setCachedHighlight()` evicts when full. */
+   *  the least recently used one -- the entry `setCachedHighlight()` evicts when full. Thin
+   *  instance-bound wrapper around the shared, `<lr-markdown>`-sharing implementation in
+   *  `markdown-shared.ts`. */
   private getCachedHighlight(key: string): string | undefined {
-    const cached = this.highlightCache.get(key);
-    if (cached !== undefined) {
-      this.highlightCache.delete(key);
-      this.highlightCache.set(key, cached);
-    }
-    return cached;
+    return getCachedHighlightShared(this.highlightCache, key);
   }
 
   private setCachedHighlight(key: string, html: string): void {
-    if (this.highlightCache.has(key)) {
-      this.highlightCache.delete(key);
-    } else if (this.highlightCache.size >= HIGHLIGHT_CACHE_MAX) {
-      const oldest = this.highlightCache.keys().next().value;
-      if (oldest !== undefined) this.highlightCache.delete(oldest);
-    }
-    this.highlightCache.set(key, html);
+    setCachedHighlightShared(this.highlightCache, key, html, HIGHLIGHT_CACHE_MAX);
   }
 
   /** Bumped on every `highlightPending()` call, including ones that end up not actually loading
@@ -754,162 +674,36 @@ export class LyraMarkdownCore extends DocumentAnchorTarget(LyraMarkdownCoreBase)
     this.renderMarkdown();
   }
 
+  /** Thin instance-bound wrapper around the shared, `<lr-markdown>`-sharing implementation in
+   *  `markdown-shared.ts` -- resolves every input `parseMarkdownDocument()` needs from this
+   *  instance's own properties/state, byte-identical to this method's pre-extraction behavior. */
   private parseMarkdown(
     marked: OptionalPeerApi,
     pendingKeys: PendingHighlight[],
     headingTreeOut: MarkdownHeadingItem[],
   ): { html: string; hadMathFallback: boolean } {
-    // Falsy (`null` or `''`) means the consumer explicitly opted out of
-    // target="..."/rel="..." on rendered links -- see the linkTarget doc.
-    // The default '_blank' is already truthy, so this preserves today's
-    // exact output when the property is left unset.
-    const linkTarget = this.linkTarget;
-    // A raw NaN (e.g. an invalid `heading-offset` attribute) would otherwise flow straight into
-    // `token.depth + headingOffset` below, producing a NaN heading depth and an invalid `<hNaN>`
-    // tag -- finiteInteger() normalizes it back to the documented `0` (additive-only) default.
-    const headingOffset = finiteInteger(this.headingOffset, 0);
-    // Captured as a local distinct from the free function `escapeHtml` above
-    // (imported/defined at the top of this file) to avoid shadowing/
-    // ambiguity inside the renderer closure below, matching how
-    // `linkTarget`/`headingOffset` are already captured as locals for the
-    // same reason.
-    const escapeHtmlOption = this.escapeHtml;
-    const highlightCodeOption = this.highlightCode && !this.streaming;
-    // Bound method reference (not the raw map): reads must go through the LRU accessor so a hit
-    // refreshes its recency. The renderer methods below run with marked's own `this`.
-    const getCachedHighlight = (key: string) => this.getCachedHighlight(key);
-    const failedHighlightKeys = this.failedHighlightKeys;
-    const headingAnchorsOption = this.headingAnchors;
-    const slugger = new Slugger();
-    const mathOption = this.math;
-    const cachedKatex = mathOption ? getKatexIfLoaded() : null;
-    let hadMathFallback = false;
-    const instance = new marked.Marked();
-    if (mathOption) {
-      instance.use({
-        extensions: [
-          mathExtension((token) => {
-            if (!cachedKatex) {
-              hadMathFallback = true;
-              return escapeHtml(token.display ? `$$${token.tex}$$` : `$${token.tex}$`);
-            }
-            try {
-              const mathml = cachedKatex.renderToString(token.tex, { output: 'mathml', throwOnError: false });
-              return `<span part="math" data-display="${token.display ? 'block' : 'inline'}">${mathml}</span>`;
-            } catch {
-              // throwOnError: false already handles a malformed-TeX render internally (KaTeX's own
-              // inline error form); this catch only guards against an unexpected non-KaTeX failure,
-              // e.g. a broken/incompatible peer version -- same literal fallback, no event fired.
-              return escapeHtml(token.display ? `$$${token.tex}$$` : `$${token.tex}$`);
-            }
-          }),
-        ],
-      });
-    }
-    // A fresh renderer per parse (rather than a shared/cached one) so it
-    // always closes over the *current* `linkTarget`/`headingOffset` — these
-    // properties can change between renders, and marked's `.use()` otherwise
-    // persists whatever renderer it was given for the lifetime of the
-    // instance.
-    instance.use({
-      renderer: {
-        heading(this: OptionalPeerApi, token: OptionalPeerApi) {
-          // Clamped to [1, 6]: a positive offset can never push a heading
-          // past <h6> (there is no <h7>), and the floor at 1 is defensive
-          // since headingOffset is meant to be additive-only (0 is the only
-          // documented non-positive value).
-          const depth = Math.min(6, Math.max(1, token.depth + headingOffset));
-          // Rendered through the plain textRenderer so markup never leaks into the slug -- an
-          // inline <code>/<em> inside a heading collapses to plain text for slugging purposes.
-          const label = this.parser.parseInline(token.tokens, this.parser.textRenderer) as string;
-          const slug = slugger.slug(label);
-          headingTreeOut.push({ id: slug, label, level: depth });
-          const idAttr = headingAnchorsOption && slug ? ` id="${escapeHtml(slug)}"` : '';
-          return `<h${depth} part="heading"${idAttr}>${this.parser.parseInline(token.tokens)}</h${depth}>\n`;
-        },
-        paragraph(this: OptionalPeerApi, token: OptionalPeerApi) {
-          return `<p part="paragraph">${this.parser.parseInline(token.tokens)}</p>\n`;
-        },
-        list(this: OptionalPeerApi, token: OptionalPeerApi) {
-          const ordered = token.ordered;
-          const start = token.start;
-          let body = '';
-          for (const item of token.items) body += this.listitem(item);
-          const tag = ordered ? 'ol' : 'ul';
-          const startAttr = ordered && start !== 1 ? ` start="${start}"` : '';
-          return `<${tag} part="list"${startAttr}>\n${body}</${tag}>\n`;
-        },
-        code(this: OptionalPeerApi, token: OptionalPeerApi) {
-          const lang = (token.lang ?? '').trim().split(/\s+/)[0] ?? '';
-          const body = `${token.text.replace(/\n$/, '')}\n`;
-          const text = token.escaped ? body : escapeHtml(body);
-          if (highlightCodeOption && lang) {
-            const key = `${lang}\n${body}`;
-            const cached = getCachedHighlight(key);
-            if (cached !== undefined) return cached;
-            if (!failedHighlightKeys.has(key)) pendingKeys.push({ key, lang, code: body });
-          }
-          const cls = lang ? ` class="language-${escapeHtml(lang)}"` : '';
-          return `<pre part="code-block"><code${cls}>${text}</code></pre>\n`;
-        },
-        codespan(this: OptionalPeerApi, token: OptionalPeerApi) {
-          // Mirrors marked's own default codespan() renderer's escaping exactly (it does not
-          // pre-escape token.text itself) -- only the added part="inline-code" differs.
-          return `<code part="inline-code">${escapeHtml(token.text)}</code>`;
-        },
-        blockquote(this: OptionalPeerApi, token: OptionalPeerApi) {
-          return `<blockquote part="blockquote">\n${this.parser.parse(token.tokens)}</blockquote>\n`;
-        },
-        table(this: OptionalPeerApi, token: OptionalPeerApi) {
-          // Built directly here (rather than delegating to the inherited
-          // tablecell()) so a scope="col" can be added -- marked's own
-          // default tablecell() never emits it, and without it a screen
-          // reader can't reliably associate a data cell with its column
-          // header beyond the simplest table.
-          let headerRow = '';
-          for (const cell of token.header) {
-            const text = this.parser.parseInline(cell.tokens);
-            const alignAttr = cell.align ? ` align="${cell.align}"` : '';
-            headerRow += `<th scope="col"${alignAttr}>${text}</th>`;
-          }
-          let bodyRows = '';
-          for (const row of token.rows) {
-            let rowHtml = '';
-            for (const cell of row) rowHtml += this.tablecell(cell);
-            bodyRows += this.tablerow({ text: rowHtml });
-          }
-          const thead = `<thead>\n${this.tablerow({ text: headerRow })}</thead>\n`;
-          const tbody = bodyRows ? `<tbody>${bodyRows}</tbody>\n` : '';
-          return `<table part="table">\n${thead}${tbody}</table>\n`;
-        },
-        link(this: OptionalPeerApi, token: OptionalPeerApi) {
-          const text = this.parser.parseInline(token.tokens);
-          const href = cleanHref(token.href);
-          if (href === null) return text;
-          const titleAttr = token.title ? ` title="${escapeHtml(token.title)}"` : '';
-          const targetAttr = linkTarget
-            ? ` target="${escapeHtml(linkTarget)}" rel="noopener noreferrer"`
-            : '';
-          return `<a part="link" href="${escapeHtml(href)}"${titleAttr}${targetAttr}>${text}</a>`;
-        },
-        image(this: OptionalPeerApi, token: OptionalPeerApi) {
-          // Mirrors marked's own default image() renderer (alt text
-          // re-rendered through the plain textRenderer so nested emphasis/
-          // strong/etc. inside the alt collapses to plain text, href run
-          // through the same cleanHref() the link() override above uses)
-          // with a part="img" added.
-          const altText = this.parser.parseInline(token.tokens, this.parser.textRenderer);
-          const href = cleanHref(token.href);
-          if (href === null) return escapeHtml(altText);
-          const titleAttr = token.title ? ` title="${escapeHtml(token.title)}"` : '';
-          return `<img part="img" src="${escapeHtml(href)}" alt="${escapeHtml(altText)}"${titleAttr}>`;
-        },
-        html(this: OptionalPeerApi, token: OptionalPeerApi) {
-          return escapeHtmlOption ? escapeHtml(token.text) : token.text;
-        },
-      },
+    return parseMarkdownDocument({
+      marked,
+      content: this.content,
+      gfm: this.gfm,
+      // Falsy (`null` or `''`) means the consumer explicitly opted out of
+      // target="..."/rel="..." on rendered links -- see the linkTarget doc.
+      // The default '_blank' is already truthy, so this preserves today's
+      // exact output when the property is left unset.
+      linkTarget: this.linkTarget,
+      headingOffset: this.headingOffset,
+      escapeHtmlOption: this.escapeHtml,
+      highlightCodeOption: this.highlightCode && !this.streaming,
+      // Bound method reference (not the raw map): reads must go through the LRU accessor so a hit
+      // refreshes its recency.
+      getCachedHighlight: (key: string) => this.getCachedHighlight(key),
+      failedHighlightKeys: this.failedHighlightKeys,
+      headingAnchorsOption: this.headingAnchors,
+      mathOption: this.math,
+      cachedKatex: this.math ? getKatexIfLoaded() : null,
+      pendingKeys,
+      headingTreeOut,
     });
-    return { html: instance.parse(this.content, { gfm: this.gfm, async: false }), hadMathFallback };
   }
 
   /** A document-ordered, flattened heading outline -- computed on every parse regardless of

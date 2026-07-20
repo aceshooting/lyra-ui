@@ -1,4 +1,4 @@
-import { html, nothing, type TemplateResult } from 'lit';
+import { html, nothing, type TemplateResult, type ComplexAttributeConverter } from 'lit';
 import { property } from 'lit/decorators.js';
 import { repeat } from 'lit/directives/repeat.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
@@ -27,6 +27,22 @@ import '../../retrieval/retrieval-results/retrieval-results.js';
 import '../../retrieval/grounding-summary/grounding-summary.js';
 import '../../agent-tools/context-inspector/context-inspector.js';
 import '../../overlays/empty/empty.js';
+
+/** `true`-defaulting boolean attribute converter for `follow`/`showDetails`/`showComposer` --
+ *  identical shape/rationale to `<lr-checkpoint>`'s own `trueDefaultBooleanConverter`, duplicated
+ *  locally per this library's convention of not sharing these tiny converters across
+ *  independently-consumable component files. Lit's default presence-based `type: Boolean` can
+ *  never be set back to `false` from a plain-HTML attribute once the property's own default is
+ *  `true` (removing an attribute that was never present fires no `attributeChangedCallback`), so
+ *  `fromAttribute` checks the literal string instead. */
+const trueDefaultBooleanConverter: ComplexAttributeConverter<boolean> = {
+  fromAttribute(value): boolean {
+    return value !== 'false';
+  },
+  toAttribute(value): string | null {
+    return value ? null : 'false';
+  },
+};
 
 export interface LyraAgentWorkspaceEventMap {
   'lr-input': CustomEvent<{ value: string }>;
@@ -132,16 +148,18 @@ export class LyraAgentWorkspace extends LyraElement<LyraAgentWorkspaceEventMap> 
   @property({ type: Number, attribute: 'context-total' }) contextTotal = 0;
 
   /** Whether the transcript follows the latest message. */
-  @property({ type: Boolean, reflect: true }) follow = true;
+  @property({ type: Boolean, reflect: true, converter: trueDefaultBooleanConverter }) follow = true;
 
   /** First unread message index, forwarded to the transcript viewport. */
   @property({ type: Number, attribute: 'unread-start-index' }) unreadStartIndex: number | null = null;
 
   /** Whether the built-in details pane is available when data is present. */
-  @property({ type: Boolean, attribute: 'show-details', reflect: true }) showDetails = true;
+  @property({ type: Boolean, attribute: 'show-details', reflect: true, converter: trueDefaultBooleanConverter })
+  showDetails = true;
 
   /** Whether the built-in composer is available when no `composer` slot is supplied. */
-  @property({ type: Boolean, attribute: 'show-composer', reflect: true }) showComposer = true;
+  @property({ type: Boolean, attribute: 'show-composer', reflect: true, converter: trueDefaultBooleanConverter })
+  showComposer = true;
 
   /** Controlled value of the built-in composer. */
   @property({ attribute: 'composer-value' }) composerValue = '';

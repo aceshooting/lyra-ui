@@ -1,4 +1,4 @@
-import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
+import { html, nothing, type ComplexAttributeConverter, type PropertyValues, type TemplateResult } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
 import { styleMap } from 'lit/directives/style-map.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
@@ -9,6 +9,24 @@ import { styles } from './chat-viewport.styles.js';
 import { getPluralRules } from '../../../internal/intl-cache.js';
 
 export type ChatViewportLive = 'off' | 'polite' | 'assertive';
+
+/** `true`-defaulting boolean attribute converter for `follow`. Lit's built-in `type: Boolean`
+ *  converter is presence-based -- the attribute's mere presence (regardless of its string value)
+ *  maps to `true`, so a plain-markup consumer writing the literal `follow="false"` would actually
+ *  get `true` (this property's default), the opposite of what that string reads as -- the same bug
+ *  class `<lr-checkpoint>`'s `trueDefaultBooleanConverter` documents and fixes for
+ *  `restorable`/`confirmRestore`. Attribute absent (or removed) -> `true` (the default);
+ *  `follow="false"` -> `false`; anything else present (no value, `="true"`, ...) -> `true`. */
+const trueDefaultBooleanConverter: ComplexAttributeConverter<boolean> = {
+  fromAttribute(value): boolean {
+    return value !== 'false';
+  },
+  toAttribute(value): string | null {
+    // `true` is this property's default, so there's nothing worth reflecting for it; only the
+    // non-default `false` needs an attribute at all.
+    return value ? null : 'false';
+  },
+};
 
 export interface LyraChatViewportEventMap {
   'lr-follow-change': CustomEvent<{ following: boolean }>;
@@ -69,8 +87,11 @@ export class LyraChatViewport extends LyraElement<LyraChatViewportEventMap> {
   static styles = [LyraElement.styles, styles];
 
   /** Component-managed stick-to-bottom state, host-writable. Setting `true` scrolls to the end and
-   *  re-engages following; setting `false` releases it. */
-  @property({ type: Boolean, reflect: true }) follow = true;
+   *  re-engages following; setting `false` releases it. Uses {@link trueDefaultBooleanConverter}
+   *  rather than Lit's default presence-based `type: Boolean` handling, so a plain-HTML consumer
+   *  can start released with the attribute string `follow="false"`, not just a `.follow=${false}`
+   *  property binding. */
+  @property({ type: Boolean, reflect: true, converter: trueDefaultBooleanConverter }) follow = true;
 
   /** Live-region policy forwarded to the internal `role="log"`. Keep `off` for token-by-token
    * streaming; use `polite` or `assertive` only when messages are appended at an announcement-safe
@@ -161,6 +182,7 @@ export class LyraChatViewport extends LyraElement<LyraChatViewportEventMap> {
   }
 
   protected updated(changed: PropertyValues): void {
+    super.updated(changed);
     const wasMounting = this.isMounting;
     this.isMounting = false;
     if (changed.has('follow')) {

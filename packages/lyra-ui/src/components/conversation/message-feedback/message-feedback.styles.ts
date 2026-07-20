@@ -33,8 +33,13 @@ export const styles = css`
     color: var(--lr-color-text-quiet);
     cursor: pointer;
   }
-  [part='up-button']:hover:not(:disabled),
-  [part='down-button']:hover:not(:disabled) {
+  /* :where() zeroes the wrapped selectors' specificity contribution, leaving only :hover itself
+     -- (0,1,0) total, functionally identical selection to [part='up-button']:hover:not(:disabled)
+     ((0,3,0)) but now losing (on the pseudo-element tiebreak) to a consumer's own
+     ::part(up-button):hover override ((0,1,1)) without that consumer needing !important. Mirrors
+     attachment-trigger.styles.ts's identical fix for this same shape. */
+  :where([part='up-button']):hover:where(:not(:disabled)),
+  :where([part='down-button']):hover:where(:not(:disabled)) {
     background: var(--lr-color-surface-raised);
     color: var(--lr-color-text);
   }

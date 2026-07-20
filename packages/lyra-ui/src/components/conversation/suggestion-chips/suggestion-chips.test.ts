@@ -1,6 +1,7 @@
 import { fixture, expect, html, oneEvent } from '@open-wc/testing';
 import './suggestion-chips.js';
 import type { LyraSuggestionChips } from './suggestion-chips.js';
+import { styles } from './suggestion-chips.styles.js';
 
 const suggestions = [
   { id: 'a', label: 'Summarize this' },
@@ -145,4 +146,19 @@ it('is accessible', async () => {
     html`<lr-suggestion-chips .suggestions=${suggestions}></lr-suggestion-chips>`,
   )) as LyraSuggestionChips;
   await expect(el).to.be.accessible();
+});
+
+describe('--lr-suggestion-chips-hover-bg / -hover-border', () => {
+  it('reads the hover background/border through per-component cssprops, not just the bare shared brand tokens (regression)', () => {
+    // Real :hover can't be forced from test JS without an actual pointer move, so this asserts
+    // the declaration's indirection layer directly -- same convention as the sibling
+    // --lr-env-list-reveal-active-bg/-border fix's own stylesheet-source check.
+    const css = styles.cssText.replace(/\s+/g, ' ');
+    expect(css).to.match(
+      /\[part~='chip'\]:hover\s*\{[^}]*background:\s*var\(--lr-suggestion-chips-hover-bg,\s*var\(--lr-color-brand-quiet\)\)/,
+    );
+    expect(css).to.match(
+      /\[part~='chip'\]:hover\s*\{[^}]*border-color:\s*var\(--lr-suggestion-chips-hover-border,\s*var\(--lr-color-brand\)\)/,
+    );
+  });
 });

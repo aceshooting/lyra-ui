@@ -866,3 +866,117 @@ it("colors the combobox-input's placeholder text instead of leaving the UA defau
   const css = styles.cssText.replace(/\s+/g, ' ');
   expect(css).to.match(/\[part='combobox-input'\]::placeholder\s*\{[^}]*color:\s*var\(--lr-color-text-quiet\)/);
 });
+
+// -- Hover states (mouse-modality parity with the focus ring) --------------
+
+it('gives the closed-dropdown trigger a :hover rule, matching its own :focus-visible affordance', () => {
+  const css = styles.cssText.replace(/\s+/g, ' ');
+  expect(css).to.match(/\[part='trigger'\]\)?:hover/);
+});
+
+describe('--lr-model-select-option-active-bg', () => {
+  it('retints a hovered/active option row via the cssprop, not just the bare shared token', async () => {
+    const el = (await fixture(html`<lr-model-select .catalog=${CATALOG}></lr-model-select>`)) as LyraModelSelect;
+    el.open = true;
+    await el.updateComplete;
+    el.style.setProperty('--lr-model-select-option-active-bg', 'rgb(10, 20, 30)');
+    const row = rows(el)[0];
+    // [data-active] shares the same declaration as :hover in the stylesheet (comma-separated) --
+    // real :hover can't be forced from test JS without an actual pointer move, so this exercises
+    // the identical rule via its keyboard-active twin.
+    row.setAttribute('data-active', '');
+    expect(getComputedStyle(row).backgroundColor).to.equal('rgb(10, 20, 30)');
+  });
+
+  it('renders byte-identically to the shared token default when unset', async () => {
+    const el = (await fixture(html`<lr-model-select .catalog=${CATALOG}></lr-model-select>`)) as LyraModelSelect;
+    el.open = true;
+    await el.updateComplete;
+    const row = rows(el)[0];
+    row.setAttribute('data-active', '');
+    const before = getComputedStyle(row).backgroundColor;
+    el.style.setProperty('--lr-model-select-option-active-bg', 'var(--lr-color-brand-quiet)');
+    expect(getComputedStyle(row).backgroundColor).to.equal(before);
+  });
+});
+
+// -- Host click() forwarding -------------------------------------------
+
+it('forwards a host-level .click() to the internal trigger button (closed-dropdown mode)', async () => {
+  const el = (await fixture(html`<lr-model-select .catalog=${CATALOG}></lr-model-select>`)) as LyraModelSelect;
+  expect(el.open).to.be.false;
+  el.click();
+  await el.updateComplete;
+  expect(el.open, 'a host-level click() must actually open the picker, not be a no-op').to.be.true;
+});
+
+it('forwards a host-level .click() to the internal combobox input (free-text mode)', async () => {
+  const el = (await fixture(html`<lr-model-select></lr-model-select>`)) as LyraModelSelect;
+  expect(el.open).to.be.false;
+  el.click();
+  await el.updateComplete;
+  expect(el.open, 'clicking the free-text input focuses it, which opens the suggestion popup').to.be.true;
+});
+
+it('host .click() is a no-op while disabled, matching native disabled-control semantics', async () => {
+  const el = (await fixture(
+    html`<lr-model-select disabled .catalog=${CATALOG}></lr-model-select>`,
+  )) as LyraModelSelect;
+  el.click();
+  await el.updateComplete;
+  expect(el.open).to.be.false;
+});
+
+// -- ElementInternals availability ---------------------------------------
+
+describe('ElementInternals availability', () => {
+  it('does not throw when constructed in an environment without a real ElementInternals implementation (e.g. a downstream Vitest + happy-dom suite)', async () => {
+    const original = HTMLElement.prototype.attachInternals;
+    // @ts-expect-error -- simulating an environment that lacks ElementInternals entirely
+    delete HTMLElement.prototype.attachInternals;
+    try {
+      let el: LyraModelSelect | undefined;
+      expect(() => {
+        el = document.createElement('lr-model-select') as LyraModelSelect;
+      }).to.not.throw();
+      // Confirm the fallback keeps the rest of the public surface usable rather than merely
+      // swallowing the constructor error.
+      expect(el!.checkValidity()).to.be.true;
+      expect(el!.form).to.equal(null);
+    } finally {
+      HTMLElement.prototype.attachInternals = original;
+    }
+  });
+});
+
+// -- size ------------------------------------------------------------------
+
+describe('size', () => {
+  it('defaults to size "m"', async () => {
+    const el = (await fixture(html`<lr-model-select .catalog=${CATALOG}></lr-model-select>`)) as LyraModelSelect;
+    expect(el.size).to.equal('m');
+  });
+
+  it('reflects a size attribute set as a plain HTML attribute', async () => {
+    const el = (await fixture(
+      html`<lr-model-select size="s" .catalog=${CATALOG}></lr-model-select>`,
+    )) as LyraModelSelect;
+    expect(el.getAttribute('size')).to.equal('s');
+    expect(el.size).to.equal('s');
+  });
+
+  it('enforces --lr-model-select-trigger-min-height at each non-default size (closed-dropdown mode)', async () => {
+    const expected: Record<string, string> = { xs: '24px', s: '30px', l: '48px', xl: '56px' };
+    for (const [size, px] of Object.entries(expected)) {
+      const el = (await fixture(
+        html`<lr-model-select size=${size} .catalog=${CATALOG}></lr-model-select>`,
+      )) as LyraModelSelect;
+      expect(getComputedStyle(trigger(el)).minBlockSize, `size=${size}`).to.equal(px);
+    }
+  });
+
+  it('enforces --lr-model-select-trigger-min-height at the default "m" size too (40px)', async () => {
+    const el = (await fixture(html`<lr-model-select .catalog=${CATALOG}></lr-model-select>`)) as LyraModelSelect;
+    expect(getComputedStyle(trigger(el)).minBlockSize).to.equal('40px');
+  });
+});

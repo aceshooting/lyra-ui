@@ -152,10 +152,16 @@ export const styles = css`
   }
   /* Stop affordance while generating -- a neutral/quiet treatment rather
      than the resting brand fill, so it doesn't read as "send is still
-     available" while a response is in flight. */
+     available" while a response is in flight. Reads a dedicated
+     --lr-chat-composer-busy-bg cssprop rather than the shared
+     --lr-color-text-quiet token directly: that same shared token also drives
+     [part='textarea']::placeholder's color above, so a consumer overriding it
+     to recolor just this busy-state fill would silently recolor the
+     placeholder too. Same decoupling lr-chat-message's user-bubble background
+     already does against its own shared-token collision. */
   :host([status='sending']) [part='action-button'],
   :host([status='streaming']) [part='action-button'] {
-    background: var(--lr-color-text-quiet);
+    background: var(--lr-chat-composer-busy-bg, var(--lr-color-text-quiet));
   }
 
   @media (prefers-reduced-motion: reduce) {

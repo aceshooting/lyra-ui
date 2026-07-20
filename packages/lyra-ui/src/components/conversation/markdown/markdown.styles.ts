@@ -17,6 +17,12 @@ export const styles = css`
     min-inline-size: 0;
     max-inline-size: 100%;
     overflow-inline: auto;
+    /* Paired with overflow-inline above: per the CSS overflow spec, pinning one axis to a
+       non-'visible' value forces the browser to resolve the other to 'auto' too (never
+       'visible') -- left implicit, a sub-pixel content/box mismatch on the block axis can trip a
+       spurious, non-interactive vertical scrollbar even though nothing here needs one. Mirrors
+       lr-tabs's tablist fix (overflow-x: auto; overflow-y: hidden) for the identical bug. */
+    overflow-block: hidden;
     overflow-wrap: anywhere;
   }
   /* Shared by both the "still loading" and "fell back after a failure"
@@ -53,6 +59,8 @@ export const styles = css`
     border-radius: var(--lr-radius);
     background: var(--lr-color-brand-quiet);
     overflow-inline: auto;
+    /* See [part='content']'s identical overflow-block above -- same paired-axis rationale. */
+    overflow-block: hidden;
     /* Deliberately the *shared* --lr-code-block-* name, not a --lr-markdown- one: a consumer setting
        one tab width expects every code surface in the library to honour it. The default lives here
        as a var() fallback rather than a :host declaration so a page- or container-level value can
@@ -106,6 +114,8 @@ export const styles = css`
     display: block;
     margin-block: var(--lr-space-s) var(--lr-space-s);
     overflow-inline: auto;
+    /* See [part='content']'s identical overflow-block above -- same paired-axis rationale. */
+    overflow-block: hidden;
     text-align: center;
   }
   [part='math'][data-display='inline'] {

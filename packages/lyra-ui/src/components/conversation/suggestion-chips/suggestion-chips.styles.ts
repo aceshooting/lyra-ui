@@ -34,8 +34,8 @@ export const styles = css`
     min-block-size: var(--lr-size-2-5rem);
   }
   [part~='chip']:hover {
-    background: var(--lr-color-brand-quiet);
-    border-color: var(--lr-color-brand);
+    background: var(--lr-suggestion-chips-hover-bg, var(--lr-color-brand-quiet));
+    border-color: var(--lr-suggestion-chips-hover-border, var(--lr-color-brand));
   }
   [part~='chip']:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);

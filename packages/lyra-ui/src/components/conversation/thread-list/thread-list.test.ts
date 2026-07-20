@@ -101,6 +101,15 @@ describe('data mode', () => {
     expect(todayToggle.getAttribute('aria-expanded')).to.equal('false');
   });
 
+  it('gives the group-toggle a :hover rule matching its :focus-visible affordance', () => {
+    // `:hover` can't be driven synthetically in this headless runner, so this proves the
+    // stylesheet declares a real hover background for the part (mirroring the sibling
+    // `row-action` rule in this same file), the same convention `<lr-artifact-panel>`'s own
+    // hover-coverage test already uses for exactly this defect class.
+    const css = styles.cssText.replace(/\s+/g, ' ');
+    expect(css).to.match(/lr-virtual-list::part\(group-toggle\):hover\s*\{[^}]*background:\s*var\(--lr-color-surface-raised\)/);
+  });
+
   it('grouping="none" renders every visible thread in host order with no group headers', async () => {
     const el = (await fixture(
       html`<lr-thread-list style="block-size:400px" .threads=${threads} grouping="none" show-archived></lr-thread-list>`,
@@ -220,6 +229,17 @@ describe('data mode', () => {
     await nextFrame();
     row = dataRow(el, 't1');
     expect(row.editable).to.be.false; // regression guard for the ?editable=${false}-on-a-true-default trap
+  });
+
+  it('disables row rename via the plain editable="false" attribute, not just a property binding', async () => {
+    const el = (await fixture(
+      html`<lr-thread-list style="block-size:400px" .threads=${threads} editable="false"></lr-thread-list>`,
+    )) as LyraThreadList;
+    await el.updateComplete;
+    await nextFrame();
+    expect(el.editable).to.be.false;
+    const row = dataRow(el, 't1');
+    expect(row.editable).to.be.false;
   });
 
   it('renders row actions with controlled pin/archive/delete events carrying the requested state', async () => {
@@ -494,6 +514,41 @@ describe('data mode', () => {
       await el.updateComplete;
       const firstRow = dataRows(el)[0];
       expect(firstRow.shadowRoot!.activeElement).to.exist;
+    });
+
+    it("colors the search-input's placeholder text instead of leaving the UA default", async () => {
+      const el = (await fixture(
+        html`<lr-thread-list style="block-size:400px" searchable .threads=${threads}></lr-thread-list>`,
+      )) as LyraThreadList;
+      await el.updateComplete;
+      const input = el.shadowRoot!.querySelector('[part="search-input"]') as HTMLInputElement;
+      const placeholderStyle = getComputedStyle(input, '::placeholder');
+
+      // Resolve the --lr-color-text-quiet token the same way the stylesheet does, via a probe
+      // element in the same shadow tree, rather than hardcoding an expected color string.
+      const probe = document.createElement('span');
+      probe.setAttribute('style', 'color: var(--lr-color-text-quiet)');
+      el.shadowRoot!.appendChild(probe);
+      const expectedColor = getComputedStyle(probe).color;
+      probe.remove();
+
+      expect(placeholderStyle.color).to.equal(expectedColor);
+    });
+
+    it('bridges native focus/blur on the search input to the host, since neither crosses the shadow boundary on its own', async () => {
+      const el = (await fixture(
+        html`<lr-thread-list style="block-size:400px" searchable .threads=${threads}></lr-thread-list>`,
+      )) as LyraThreadList;
+      await el.updateComplete;
+      const input = el.shadowRoot!.querySelector('[part="search-input"]') as HTMLInputElement;
+
+      const focusPromise = oneEvent(el, 'focus');
+      input.dispatchEvent(new FocusEvent('focus'));
+      await focusPromise;
+
+      const blurPromise = oneEvent(el, 'blur');
+      input.dispatchEvent(new FocusEvent('blur'));
+      await blurPromise;
     });
   });
 

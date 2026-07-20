@@ -31,6 +31,8 @@ export interface LyraSuggestionChipsEventMap {
  * @csspart chip - Each suggestion button.
  * @csspart chip-label - The primary text.
  * @csspart chip-detail - The secondary line (only rendered when `detail` is set).
+ * @cssprop [--lr-suggestion-chips-hover-bg=var(--lr-color-brand-quiet)] - Background of a hovered chip.
+ * @cssprop [--lr-suggestion-chips-hover-border=var(--lr-color-brand)] - Border color of a hovered chip.
  */
 export class LyraSuggestionChips extends LyraElement<LyraSuggestionChipsEventMap> {
   static styles = [LyraElement.styles, styles];

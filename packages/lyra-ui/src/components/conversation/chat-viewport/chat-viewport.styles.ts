@@ -19,6 +19,13 @@ export const styles = css`
   [part='scroll'] {
     flex: 1 1 auto;
     min-block-size: 0;
+    /* overflow-x pinned explicitly, not left implicit: per the CSS overflow spec, once one axis is
+       set to a non-'visible' value the other axis's used value is forced to 'auto' too (it never
+       stays 'visible') -- an implicit overflow-x here would risk a phantom horizontal scrollbar
+       from a wide inline code span or a fractional-width bubble under zoom, even though this
+       transcript is only ever meant to scroll vertically. Same fix lr-tabs already applies for the
+       identical reason. */
+    overflow-x: hidden;
     overflow-y: auto;
     overflow-anchor: none;
     padding: var(--lr-space-m);

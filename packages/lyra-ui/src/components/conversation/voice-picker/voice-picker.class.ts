@@ -25,6 +25,22 @@ const spellcheckConverter: ComplexAttributeConverter<boolean> = {
   },
 };
 
+/**
+ * `true`-defaulting boolean attribute converter for `preview`. Lit's built-in `type: Boolean`
+ * converter is presence-based -- the attribute's mere presence (regardless of its string value)
+ * maps to `true`, so a plain-markup consumer writing the literal `preview="false"` would actually
+ * get `true` (this property's default) -- the same bug class `spellcheckConverter` above and
+ * `<lr-checkpoint>`'s `restorable`/`confirmRestore` converters document and fix.
+ */
+const trueDefaultBooleanConverter: ComplexAttributeConverter<boolean> = {
+  fromAttribute(value): boolean {
+    return value !== 'false';
+  },
+  toAttribute(value): string | null {
+    return value ? null : 'false';
+  },
+};
+
 /** A catalog row: a selectable TTS voice. */
 export interface LyraVoiceCatalogEntry {
   id: string;
@@ -121,7 +137,7 @@ export class LyraVoicePicker extends LyraElement<LyraVoicePickerEventMap> {
   /** Let the user type/commit a value that isn't in `catalog`, even when `catalog` is non-empty. */
   @property({ type: Boolean, reflect: true, attribute: 'allow-custom' }) allowCustom = false;
   /** Whether to render preview affordances at all. */
-  @property({ type: Boolean, reflect: true }) preview = true;
+  @property({ reflect: true, converter: trueDefaultBooleanConverter }) preview = true;
   @property() label = '';
   @property() hint = '';
   @property({ attribute: 'error-text' }) errorText = '';
@@ -181,6 +197,26 @@ export class LyraVoicePicker extends LyraElement<LyraVoicePickerEventMap> {
   /** @internal */
   [VALIDITY_ANCHOR](): HTMLElement | null {
     return this.renderRoot?.querySelector('[part="trigger"], [part="combobox-input"]') ?? null;
+  }
+
+  /**
+   * Forwards to whichever internal control the current mode renders, since
+   * `HTMLElement.prototype.click()` is otherwise a no-op on a custom element with no native click
+   * semantics of its own (mirrors `<lr-button>`'s identical forwarding override). Closed-dropdown
+   * mode forwards a real `.click()` to the trigger `<button>`, whose own `@click` handler opens
+   * it. Free-text mode instead calls `.focus()` on the combobox `<input>`: opening there is wired
+   * to the native `focus` event (`onInputFocus`), and unlike a `<button>`, a synthetic
+   * `.click()` on a text `<input>` does not itself dispatch `focus` -- browsers only focus a text
+   * control from a real click's `mousedown` default action, which `.click()` skips -- so
+   * `.focus()` is what actually reproduces a real click's end-user-visible effect here.
+   */
+  override click(): void {
+    const trigger = this.renderRoot?.querySelector('[part="trigger"]') as HTMLButtonElement | null;
+    if (trigger) {
+      trigger.click();
+      return;
+    }
+    (this.renderRoot?.querySelector('[part="combobox-input"]') as HTMLInputElement | null)?.focus();
   }
 
   connectedCallback(): void {

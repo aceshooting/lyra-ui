@@ -1,4 +1,4 @@
-import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
+import { html, nothing, type TemplateResult, type PropertyValues, type ComplexAttributeConverter } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { unsafeHTML } from 'lit/directives/unsafe-html.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
@@ -23,12 +23,30 @@ import {
   codeBlockBodyLabel,
   codeBlockLineTransformer,
   parseHighlightLines,
+  renderCodeBlockPlainCode,
 } from './code-block-shared.js';
 import type { LyraAnchor, LyraHighlight } from '../../viewers/document-viewer/anchors.js';
 import '../../overlays/skeleton/skeleton.class.js';
 
 /** How long the copy button's confirmation state lasts before reverting. */
 const COPY_CONFIRM_MS = 1500;
+
+/** `true`-defaulting boolean attribute converter, identical shape to `<lr-task-list>`'s
+ *  `trueDefaultBooleanConverter` -- duplicated locally per this library's convention of not
+ *  sharing these tiny converters across independently-consumable component files. Lit's default
+ *  presence-based `type: Boolean` can never be set back to `false` from a plain-HTML attribute
+ *  once the property's own default is `true` (removing an attribute that was never present fires
+ *  no `attributeChangedCallback`), so `fromAttribute` checks the literal string instead.
+ *  `toAttribute` reflects the `true` state as a present (empty-string) attribute rather than
+ *  omitting it, matching every other `reflect: true` boolean property in this library. */
+const trueDefaultBooleanConverter: ComplexAttributeConverter<boolean> = {
+  fromAttribute(value): boolean {
+    return value !== 'false';
+  },
+  toAttribute(value): string | null {
+    return value ? '' : null;
+  },
+};
 
 export interface LyraCodeBlockEventMap {
   'lr-copy': CustomEvent<{ text: string }>;
@@ -172,7 +190,7 @@ export class LyraCodeBlock extends LyraElement<LyraCodeBlockEventMap> {
   @property({ type: Boolean, reflect: true }) collapsed = false;
 
   /** Shows a copy-to-clipboard button in the header. */
-  @property({ type: Boolean, reflect: true }) copyable = true;
+  @property({ type: Boolean, reflect: true, converter: trueDefaultBooleanConverter }) copyable = true;
 
   /** A CSS length (e.g. `"20rem"`); once set, the code scrolls internally
    *  past this height instead of growing the page. */
@@ -215,13 +233,19 @@ export class LyraCodeBlock extends LyraElement<LyraCodeBlockEventMap> {
    *  back to that default dynamic-import path unchanged. */
   @property({ attribute: false }) languages?: Record<string, ShikiLanguageInput>;
 
-  /** When `true`, skips the default `loadShikiHighlighter()` call in `connectedCallback()`
-   *  entirely — for a consumer whose `languages` map already covers every language every instance
-   *  will ever render, so the bundler has no reachable path from this component to shiki's
-   *  ~200-language dynamic-import table. A `language` value absent from `languages` while this is
-   *  `true` renders the plain-text fallback (no attempt to fall back to the now-unloaded default
-   *  highlighter) rather than hanging. `false` (the default) reproduces today's unconditional
-   *  `loadShikiHighlighter()` call exactly. */
+  /** When `true`, skips the *call* to the default `loadShikiHighlighter()` in
+   *  `connectedCallback()` — for a consumer whose `languages` map already covers every language
+   *  every instance will ever render. This is a runtime branch only, **not** a build-time
+   *  exclusion: `loadShikiHighlighter` is still imported unconditionally at this module's top
+   *  level (see the import list above), and a bundler doing static reachability/chunk analysis
+   *  can't prove this flag is always `true`, so shiki's ~200-language dynamic-import table stays
+   *  reachable from — and stays in the build output of — this component's module regardless of
+   *  how `languagesOnly` is set. A consumer who actually needs that table excluded from their
+   *  build has to import `<lr-code-block-core>` instead, whose module never references
+   *  `loadShikiHighlighter` at all (see its own class doc). A `language` value absent from
+   *  `languages` while this is `true` renders the plain-text fallback (no attempt to fall back to
+   *  the now-unloaded default highlighter) rather than hanging. `false` (the default) reproduces
+   *  today's unconditional `loadShikiHighlighter()` call exactly. */
   @property({ type: Boolean, attribute: 'languages-only' }) languagesOnly = false;
 
   // `null` covers every reason the plain-text fallback is showing: shiki
@@ -393,6 +417,8 @@ export class LyraCodeBlock extends LyraElement<LyraCodeBlockEventMap> {
   // documented pattern for deriving one reactive property from a change to
   // others (same approach <lr-markdown>'s `willUpdate` takes).
   protected willUpdate(changed: PropertyValues): void {
+    super.willUpdate(changed); // no-op in LyraElement/ReactiveElement today, but a future mixin's
+    // willUpdate() layered under this class must still run.
     // highlightLines/highlights/activeHighlightId/lineNumbers all feed codeBlockLineTransformer's
     // options in tokenize() below -- any of them changing (even without code/language/languages
     // changing) means the cached highlightedHtml needs recomputing to stay in sync.
@@ -419,7 +445,9 @@ export class LyraCodeBlock extends LyraElement<LyraCodeBlockEventMap> {
     }
   }
 
-  protected updated(): void {
+  protected updated(changed: PropertyValues): void {
+    super.updated(changed); // no-op in LyraElement/ReactiveElement today, but a future mixin's
+    // updated() layered under this class must still run.
     // `languagesOnly` skips the default loader entirely (see connectedCallback()), so
     // `shikiReady` never becomes true for it -- treat that as "nothing to wait for" rather than
     // "still loading", the same way a `preSuppliedGrammar()` match already does.
@@ -499,62 +527,22 @@ export class LyraCodeBlock extends LyraElement<LyraCodeBlockEventMap> {
     }
   }
 
-  // Always splits into per-line spans/buttons (not just while lineNumbers is set) -- the per-line
-  // wrapper is what highlight-lines/highlights/interactive-lines attach to. .split() consumes each
-  // newline character, so a literal '\n' text node is re-inserted between lines to keep the
-  // non-line-numbered case's visual output (relying on [part='pre']'s white-space:pre) identical
-  // to the previous single-text-node rendering -- the line-numbered case's .line elements are
-  // already display:block (code-block.styles.ts) so that text node is inert there. interactiveLines
-  // only takes effect alongside lineNumbers -- the shiki-highlighted path doesn't render gutter
-  // buttons (see the class doc), only data-line/data-highlighted/data-active/part="line-highlight"
-  // from codeBlockLineTransformer above.
+  // Delegates to the shared renderCodeBlockPlainCode() in code-block-shared.ts -- previously a
+  // byte-for-byte-duplicated private method also defined on <lr-code-block-core>, moved out to
+  // stop that pair's plain-text-fallback rendering from silently drifting apart. See that
+  // function's own doc for the rendering behavior.
   private renderPlainCode(): TemplateResult {
-    const highlighted = this.lineHighlightSet();
-    const active = this.activeHighlightLineSet();
-    const lines = this.code.split(/\r\n|\r|\n/);
-    const interactive = this.interactiveLines && this.lineNumbers;
-    // The `>` sits on its own line right before the expression (and `</code` right after it,
-    // closing on the following line) so no incidental whitespace text node lands inside <code> --
-    // its textContent must be exactly the concatenated line text, matching the pre-existing
-    // single-text-node rendering this replaces.
-    return html`<code part="code" class=${this.lineNumbers ? 'line-numbered-code' : nothing}
-        >${lines.map((line, index) => {
-          const lineNumber = index + 1;
-          const isHighlighted = highlighted.has(lineNumber);
-          const isActive = active.has(lineNumber);
-          const part = interactive
-            ? isHighlighted
-              ? 'line-button line-highlight'
-              : 'line-button'
-            : isHighlighted
-              ? 'line-highlight'
-              : nothing;
-          const lineTemplate = interactive
-            ? html`<button
-                type="button"
-                class="line"
-                part=${part}
-                data-line=${lineNumber}
-                ?data-highlighted=${isHighlighted}
-                ?data-active=${isActive}
-                aria-label=${this.localize('codeBlockLineLabel', undefined, { line: lineNumber })}
-                tabindex=${this.focusedLine === lineNumber ? 0 : -1}
-                @click=${() => this.onLineActivate(lineNumber)}
-                @keydown=${(e: KeyboardEvent) => this.onLineKeyDown(e, lineNumber)}
-              >${line}</button>`
-            : html`<span
-                class="line"
-                part=${part}
-                data-line=${lineNumber}
-                ?data-highlighted=${isHighlighted}
-                ?data-active=${isActive}
-              >${line}</span>`;
-          // Only the non-line-numbered case needs the newline text node re-inserted -- the
-          // line-numbered case's .line elements are already display:block (code-block.styles.ts),
-          // and its own existing test asserts textContent has no embedded newlines between lines.
-          return index > 0 && !this.lineNumbers ? html`\n${lineTemplate}` : lineTemplate;
-        })}</code
-      >`;
+    return renderCodeBlockPlainCode({
+      code: this.code,
+      lineNumbers: this.lineNumbers,
+      interactiveLines: this.interactiveLines,
+      focusedLine: this.focusedLine,
+      highlightedLines: this.lineHighlightSet(),
+      activeLines: this.activeHighlightLineSet(),
+      localize: this.localize.bind(this),
+      onLineActivate: (line) => this.onLineActivate(line),
+      onLineKeyDown: (e, line) => this.onLineKeyDown(e, line),
+    });
   }
 
   private writeClipboard(text: string): void {
