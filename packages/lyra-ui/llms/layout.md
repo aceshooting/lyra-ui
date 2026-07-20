@@ -529,10 +529,13 @@ convention).
 
 **Properties:**
 - `steps: StepItem[] = []` (attribute: false) — `StepItem { id: string; label: string; state:
-  'pending' | 'current' | 'completed' | 'disabled' | 'error'; title?: string }`; `title` is an
-  optional native tooltip for the step's button (e.g. explaining why a `disabled` step is locked) —
-  omit it for no `title` attribute at all, not an empty string. Never mutated by this component.
-  Empty (the default) renders nothing.
+  'pending' | 'current' | 'completed' | 'disabled' | 'error'; title?: string; icon?: unknown }`;
+  `title` is an optional native tooltip for the step's button (e.g. explaining why a `disabled` step
+  is locked) — omit it for no `title` attribute at all, not an empty string. `icon` is an optional
+  leading topic glyph (a `TemplateResult`, an emoji string, etc. — not restricted to a square icon)
+  rendered in the `step-icon` part additionally to, never instead of, the state-driven
+  `step-index`/`step-check` glyph. Never mutated by this component. Empty (the default) renders
+  nothing.
 - `orientation: 'horizontal' | 'vertical' = 'horizontal'` (reflected) — `'horizontal'` (the default)
   lays steps out in a row (Left/Right, RTL-aware, navigate); `'vertical'` stacks them (Up/Down
   navigate instead, no RTL swap needed). The axis used at/above `orientationBreakpoint` (or always,
@@ -581,12 +584,15 @@ single place to short-circuit its own listener's follow-up work. `lr-stepper-ori
 **Slots:** none.
 
 **CSS parts:** `base` (root wrapper, `role="tablist"`), `step` (a single step button, `role="tab"`),
-`step-index` (the numbered index chip, shown for `pending`/`current`/`error` steps), `step-check`
-(the completed-checkmark glyph, shown for `completed` steps instead of `step-index`), `step-label`
-(the step's label text).
+`step-icon` (optional leading topic glyph from the step's `icon` field; only rendered when the step
+has one, additionally to — never instead of — `step-index`/`step-check`), `step-index` (the numbered
+index chip, shown for `pending`/`current`/`error` steps), `step-check` (the completed-checkmark
+glyph, shown for `completed` steps instead of `step-index`), `step-label` (the step's label text).
 
 **Themeable custom properties:** `--lr-stepper-current-color` (default `var(--lr-color-text)`) —
-text color of the `current` step. `--lr-stepper-error-color` (default `var(--lr-color-danger)`) —
+text color of the `current` step. `--lr-stepper-current-font-weight` (default
+`var(--lr-font-weight-semibold)`) — font weight of the `current` step's label.
+`--lr-stepper-error-color` (default `var(--lr-color-danger)`) —
 text color of an `error` step. `--lr-stepper-current-index-bg` (default `var(--lr-color-brand)`) and
 `--lr-stepper-current-index-color` (default `var(--lr-color-surface)`) — background and text color
 of the `current` step's numbered `step-index` chip. Each is an inline `var()` fallback at the point
@@ -1697,10 +1703,13 @@ dismissal, ref-counted document scroll lock).
 **Properties:**
 - `open: boolean = false` (reflected)
 - `commands: LyraCommand[] = []` (attribute: false) — `{ id, label, description?, group?, shortcut?,
-  keywords?, disabled?, onSelect? }`. Filtering is case-insensitive substring matching over
-  `label` + `description` + `group` + `keywords` joined together (not fuzzy/subsequence), memoized
-  per `commands` array identity — reassign the array, never mutate it in place. Consecutive commands
-  sharing a `group` render one `[part='group']` heading, so pre-sort by group yourself.
+  keywords?, disabled?, icon?, onSelect? }`. `icon` is an optional leading glyph (a `TemplateResult`,
+  an emoji string, etc. — not restricted to a square icon) rendered in the `icon` part before the
+  label; a command with no `icon` renders no `icon` part at all. Filtering is case-insensitive
+  substring matching over `label` + `description` + `group` + `keywords` joined together (not
+  fuzzy/subsequence), memoized per `commands` array identity — reassign the array, never mutate it
+  in place. Consecutive commands sharing a `group` render one `[part='group']` heading, so pre-sort
+  by group yourself.
 - `shortcut: string = 'mod+k'` — global toggle chord parsed as `+`-separated parts; `mod` resolves to
   Cmd on Mac and Ctrl elsewhere. The listener is on `window`, added in `connectedCallback`.
 - `accessibleLabel: string = ''` (attribute `aria-label`) — overrides the localized dialog name
@@ -1719,7 +1728,8 @@ fired before the command's own `onSelect` runs and before the palette closes).
 
 **CSS parts:** `backdrop`, `dialog` (the `role="dialog" aria-modal="true"` panel), `search` (the
 input row), `input` (the `type="search"` field), `list` (the `role="listbox"`), `group` (a group
-heading), `command` (a `role="option"` button), `description`, `shortcut`, `empty`.
+heading), `command` (a `role="option"` button), `icon` (a command's leading icon glyph; only
+rendered when the command has one), `description`, `shortcut`, `empty`.
 
 **Themeable custom properties:** `--lr-command-palette-z-index` (default
 `var(--lr-overlay-stack-index, var(--lr-layer-modal))`), `--lr-command-palette-offset-block-start`

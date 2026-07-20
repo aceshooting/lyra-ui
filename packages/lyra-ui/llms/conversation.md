@@ -526,11 +526,15 @@ entirely when it has assigned content)
 
 **CSS parts:** `base`, `chips`, `row`, `leading`, `textarea`, `trailing`, `action-button`
 
-**Themeable custom properties:** no component-specific custom properties; consumes shared tokens
-`--lr-space-xs`, `--lr-space-s`, `--lr-color-border`, `--lr-color-surface`,
-`--lr-color-brand`, `--lr-color-on-brand`, `--lr-color-text-quiet`, `--lr-radius`,
-`--lr-icon-button-size`, `--lr-transition-fast`, `--lr-opacity-disabled`,
-`--lr-focus-ring-width`, `--lr-focus-ring-color`, `--lr-focus-ring-offset`.
+**Themeable custom properties:** `--lr-chat-composer-busy-bg` (default `var(--lr-color-text-quiet)`)
+— `[part="action-button"]`'s background while `status` is `"sending"` or `"streaming"` (the busy/stop
+treatment). Scoped separately from the shared `--lr-color-text-quiet` token, which
+`[part="textarea"]`'s placeholder color also reads — overriding this cssprop recolors only the busy
+button, not the placeholder too (the same shared-token-collision fix `<lr-chat-message>`'s own
+user-bubble background pair documents). Plus shared tokens `--lr-space-xs`, `--lr-space-s`,
+`--lr-color-border`, `--lr-color-surface`, `--lr-color-brand`, `--lr-color-on-brand`,
+`--lr-color-text-quiet`, `--lr-radius`, `--lr-icon-button-size`, `--lr-transition-fast`,
+`--lr-opacity-disabled`, `--lr-focus-ring-width`, `--lr-focus-ring-color`, `--lr-focus-ring-offset`.
 
 **Optional peer deps:** none.
 
@@ -910,9 +914,23 @@ emitting `lr-change`.
 - `disabled: boolean = false` (reflected)
 - `required: boolean = false` (reflected — enforced via `internals.setValidity()`)
 - `open: boolean = false` (reflected)
+- `size: 'xs' | 's' | 'm' | 'l' | 'xl' = 'm'` (reflected) — visual size; same `xs`–`xl` scale as
+  `<lr-select>`'s own `size`, scaling `[part="trigger"]`/`[part="combobox"]`'s padding/min-height/
+  font-size and `[part="expand-icon"]`'s box size (see the themeable custom properties below).
 - `value: string` — getter/setter (hand-rolled, not the `FormAssociated` mixin); the current model id,
   `''` when nothing is selected. Writing it calls `internals.setFormValue()` synchronously. A named,
   untouched model-select contributes `''` to `FormData` instead of omitting its key.
+
+**Methods:** `click()` (override) — forwards to whichever internal control the active mode renders,
+since `HTMLElement.prototype.click()` is otherwise a no-op on a custom element with no native click
+semantics of its own (mirrors `<lr-button>`'s identical host `click()` forwarding, so a generic
+form-automation helper or another component calling `.click()` on the host actually opens the picker
+instead of silently doing nothing). Closed-dropdown mode forwards a real `.click()` to the trigger
+`<button>`, whose own `@click` handler opens it. Free-text mode instead calls `.focus()` on the
+combobox `<input>`: unlike a genuine pointer click, `HTMLElement.click()` never moves focus (that's a
+`mousedown` side effect the browser applies only to real pointer interaction), and this mode's open
+behavior is wired to the input's `focus` event (`onInputFocus`), not a `click` handler on the input
+itself.
 
 **Mode switching:** `closedMode` (private) is `true` whenever `normalizedCatalog.length > 0 &&
 !allowCustom` — a non-empty `catalog` with `allowCustom` left `false` renders the closed dropdown
@@ -950,10 +968,21 @@ both modes), `option`, `option-label`, `option-badge` (the "not in catalog" badg
 stale-value row), `expand-icon` (the dropdown chevron, present in both modes), `hint` (the hint
 message), `error` (the error message)
 
-**Themeable custom properties:** shared tokens only — `--lr-space-xs/-s`,
-`--lr-color-border/-surface/-brand/-brand-quiet/-text-quiet`, `--lr-radius`, `--lr-shadow`,
-`--lr-focus-ring-width/-color/-offset`, `--lr-icon-button-size`, `--lr-transition-fast`,
-`--lr-opacity-disabled`.
+**Themeable custom properties:** `--lr-model-select-trigger-padding` (default `var(--lr-space-xs)
+var(--lr-space-s)`) — `[part="trigger"]`/`[part="combobox"]`'s padding shorthand.
+`--lr-model-select-trigger-min-height` (default `var(--lr-size-2-5rem)`) — their block-size floor.
+`--lr-model-select-font-size` (default `var(--lr-font-size-md)`) — their font size.
+`--lr-model-select-expand-size` (default `var(--lr-size-1-75rem)`) — `[part="expand-icon"]`'s
+decorative box size (clamped against `--lr-icon-button-size` via `min()`). All four are declared on
+`:host` at these `size="m"` (the default) values and re-declared inside each
+`:host([size="xs"|"s"|"l"|"xl"])` block at that tier's own value — same xs–xl scale `<lr-select>`
+uses — so `size` is the primary lever; override the cssprop directly only to retune a single tier or
+step outside the scale entirely. `--lr-model-select-option-active-bg` (default
+`var(--lr-color-brand-quiet)`) — background of a hovered or keyboard-active `[part="option"]` row;
+declared as a `var()` fallback at the point of use, not on `:host`, so it isn't tied to `size`. Plus
+shared tokens — `--lr-space-xs/-s`, `--lr-color-border/-surface/-brand/-brand-quiet/-text-quiet`,
+`--lr-radius`, `--lr-shadow`, `--lr-focus-ring-width/-color/-offset`, `--lr-icon-button-size`,
+`--lr-transition-fast`, `--lr-opacity-disabled`.
 
 **Optional peer deps:** none.
 
@@ -1841,6 +1870,15 @@ string = ''` — accessible name for the group, defaults to the localized `sugge
 **CSS parts:** `base` (the labeled group), `chip` (each suggestion button), `chip-label` (the primary
 text), `chip-detail` (the secondary line, only rendered when `detail` is set).
 
+**Themeable custom properties:** `--lr-suggestion-chips-hover-bg` (default
+`var(--lr-color-brand-quiet)`) — a `chip`'s background on hover. `--lr-suggestion-chips-hover-border`
+(default `var(--lr-color-brand)`) — a `chip`'s border color on hover. Both are declared as `var()`
+fallbacks at the point of use, not on `:host`. Plus shared tokens `--lr-space-xs/-m/-2xs`,
+`--lr-color-border/-surface/-text/-text-quiet`, `--lr-radius-pill`, `--lr-font-size-xs`,
+`--lr-focus-ring-width/-color/-offset`.
+
+**Optional peer deps:** none.
+
 Keyboard: roving tabindex across chips; ArrowLeft/ArrowRight (direction-aware) plus Home/End;
 Enter/Space activate. Renders inside an internal `lr-scroller` (`orientation="horizontal"`,
 `hide-scrollbar`) unless `wrap` is set.
@@ -1926,7 +1964,9 @@ id }`), `lr-thread-pin` (`detail: { id, pinned }` — the requested new state), 
 `lr-thread-rename` (`detail: { id, title }`, re-emitted from the row's `lr-rename`),
 `lr-filter-change` (`detail: { text, matchCount }`), `lr-group-toggle` (`detail: { id, collapsed }` —
 controlled intent; native group buttons provide Enter/Space activation and explicit
-`aria-expanded="true"|"false"`).
+`aria-expanded="true"|"false"`). `searchable` only: `blur`/`focus` (no detail) — re-dispatched from
+the internal search `<input>`'s own `blur`/`focus`, bubbling and composed unlike the native events,
+which are neither.
 
 **CSS parts:** `base`, `search`/`search-input` (the search field wrapper and `<input
 type="search">`), `list` (the list region), `empty`, `viewport` (the actual internal virtual-list
@@ -2164,6 +2204,14 @@ identically-named properties.
 **Form association:** hand-rolled via `attachInternals()`, mirroring `lr-model-select`: `value`
 getter/setter (the current voice id, `''` when nothing is selected), `name` (reflected), `disabled`
 (reflected), `required` (reflected — enforced via `internals.setValidity()`).
+
+**Methods:** `click()` (override) — same forwarding contract as `lr-model-select`'s own `click()`
+override (see that section for the full rationale): closed-dropdown mode forwards a real `.click()`
+to the trigger `<button>`, whose own `@click` handler opens it; free-text mode instead calls
+`.focus()` on the combobox `<input>`, since a synthetic `.click()` on a text input never dispatches
+`focus` the way a real click's `mousedown` default action does, and this mode's open behavior is
+wired to the input's native `focus` event, not a `click` handler on the input itself. Mirrors
+`<lr-button>`'s identical host `click()` forwarding.
 
 **Events:** `lr-change` — `detail: { value, inCatalog }`. `lr-preview-request` — `detail: {
 voiceId, previewUrl? }`, cancelable. `lr-preview-change` — `detail: { voiceId }`, internal playback

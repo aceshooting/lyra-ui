@@ -115,9 +115,16 @@ it with `[part="label"]`'s generated id whenever `label` is non-empty (so tabbin
 `exactValue`-focusable value still announces e.g. "Revenue $1.2K", not just the bare value); each
 `[part="row-value"]` is paired the same way with its own row's `[part="row-label"]`.
 
-**Themeable custom properties:** shared tokens only (`--lr-color-success/-warning/-danger` drive
-the `variant`-colored value text and up/down trend pill; `--lr-color-brand` drives `emphasis`'s
-accent edge and value tint).
+**Themeable custom properties:** `--lr-stat-trend-good-color` (default `var(--lr-color-success)`)
+and `--lr-stat-trend-good-bg` (default `color-mix(in srgb, var(--lr-color-success) 8%,
+transparent)`) — text/background of `[part="trend"]` when its polarity (per `goodDirection`) is
+"good"; `--lr-stat-trend-bad-color` (default `var(--lr-color-danger)`) and `--lr-stat-trend-bad-bg`
+(default `color-mix(in srgb, var(--lr-color-danger) 8%, transparent)`) — the "bad"-polarity
+counterparts. All four are independent of the headline value's `variant="success"`/`"danger"` tint,
+which keeps reading the shared `--lr-color-success`/`--lr-color-danger` tokens directly — retinting
+the trend pill doesn't also recolor the value, and vice versa. Otherwise shared tokens only
+(`--lr-color-success/-warning/-danger` drive the `variant`-colored value text; `--lr-color-brand`
+drives `emphasis`'s accent edge and value tint).
 
 **Optional peer deps:** none.
 
@@ -1230,7 +1237,12 @@ an inline `var()` fallback at its point of use rather than a `:host` declaration
 the element *or any ancestor*. It exists because Shadow Parts forbids an attribute selector after
 `::part()` — `::part(node)[aria-current='true']` is invalid CSS — so the current node could otherwise
 only be restyled by overriding the library-wide `--lr-color-brand` token, repainting everything else
-that reads it.
+that reads it. The same restriction motivates three more state-scoped outline colors:
+`--lr-flow-canvas-node-connect-invalid-outline-color` (default `var(--lr-color-danger)`) — outline of
+a node that is an invalid connect-gesture drop target; `--lr-flow-canvas-node-connect-target-outline-color`
+(default `var(--lr-color-brand)`) — outline of a node that is a valid connect-gesture drop target; and
+`--lr-flow-canvas-drop-active-outline-color` (default `var(--lr-color-brand)`) — outline of the
+viewport itself while a palette item is dragged over it (`droppable`).
 
 **Optional peer deps:** none.
 
@@ -1308,6 +1320,11 @@ carries no card chrome of its own), `card` (the bordered, filled node card), `he
 their point of use rather than `:host` declarations, so they can be set on the element *or any
 ancestor* (a canvas retunes every card at once); overriding the selection color otherwise means
 hijacking the library-wide `--lr-color-brand` token and repainting everything else that reads it.
+`--lr-flow-node-running-border` (default `var(--lr-color-brand)`) — the card's border color while
+`status="running"`, independent of `--lr-flow-node-selected-border` so a consumer can retint just one
+of the two states without the other following along — and `--lr-flow-node-running-glow` (default
+`var(--lr-color-brand-quiet)`) — the box-shadow color of the running-state ring around the card, and
+the pulse keyframes' peak color.
 
 **Optional peer deps:** none.
 
@@ -1624,7 +1641,11 @@ the next button), `nav-glyph` (the chevron, `scaleX(-1)`-mirrored under RTL), `t
 
 **Themeable custom properties:** `--lr-calendar-day-min-block-size` (default `var(--lr-size-6rem)`)
 and `--lr-calendar-day-min-block-size-narrow` (default `4rem`, applied at container inline-size
-≤ 28rem).
+≤ 28rem), and `--lr-calendar-day-selected-bg` (default `var(--lr-color-brand-quiet)`) — background of
+a selected (`data-selected="true"`) day cell. Component-scoped indirection over the shared
+`--lr-color-brand-quiet` token, so a consumer can retint the persistent selected-day highlight
+without also recoloring `[part='nav']:hover`/`[part='agenda-event']:hover`, which read that shared
+token directly for a visually distinct purpose (transient hover feedback).
 
 **Gotcha:** month-view `[part='event']` markers are a mouse-only quick-select affordance — they sit
 inside the day `<button>`, which may not contain focusable descendants. Agenda view renders each

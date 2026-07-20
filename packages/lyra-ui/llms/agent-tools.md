@@ -622,6 +622,10 @@ renders at the start of the action row, before Deny/Edit/Approve.
 **Properties:**
 - `open: boolean = false` (reflected) — set this (or call `close()`) to dismiss; there is no separate
   `show()`/`hide()` pair
+- `accessibleLabel: string | null = null` (attribute `aria-label`) — directly names the internal
+  dialog panel; otherwise the tool-name heading supplies `aria-labelledby`. Mirrors
+  `<lr-tool-result-dialog>`'s/`<lr-tool-select-dialog>`'s own host-`aria-label` override pattern; fed
+  only by a host `aria-label`
 - `toolName: string = ''` (attribute `tool-name`) — the proposed call's name, e.g. `web_search`;
   drives the heading and the dialog's accessible name
 - `args: unknown = {}` (attribute: false) — the proposed call's arguments, rendered via
@@ -634,11 +638,7 @@ renders at the start of the action row, before Deny/Edit/Approve.
   `autoCorrect: string = 'off'` (attribute `autocorrect`), `autocomplete: string = 'off'`,
   `wrap: 'hard'|'soft'|'off' = 'soft'`, `inputMode: string = ''` (attribute `inputmode`),
   and `enterKeyHint: string = ''` (attribute `enterkeyhint`) — forwarded to the raw-JSON
-  textarea; the defaults keep browser editing assistance from changing JSON text
-- `spellcheck: boolean = false`, `autocapitalize: string = 'off'`, `autoCorrect: string = 'off'`
-  (`autocorrect`), `autocomplete: string = 'off'`, `wrap: 'hard'|'soft'|'off' = 'soft'`,
-  `inputMode: string = ''` (`inputmode`), and `enterKeyHint: string = ''` (`enterkeyhint`) —
-  forwarded to the raw-JSON `<textarea>` while editing.
+  `<textarea>` while editing; the defaults keep browser editing assistance from changing JSON text
 
 **Methods:** `close(reason: ToolApprovalDialogCloseReason = 'api'): void` — closes the dialog, emits
 `lr-close` with `reason`, and returns focus to whatever had it before the dialog opened; a no-op if
@@ -873,6 +873,15 @@ A small bordered card shell. Purely visual, with no state of its own beyond slot
 **Properties:**
 - `title: string = ''` — small heading for the card. Leave unset for an untitled card (e.g. a bare
   block of `lr-result-field` rows with no natural heading).
+- `compact: boolean = false` (reflected) — tighter header/body padding for dense contexts (a card
+  rendered as a row in a transcript or result list), same convention as `<lr-agent-run>`'s own
+  `compact`. Purely a density knob: the border and background stay, so use `appearance="plain"`
+  instead to drop the chrome entirely.
+- `appearance: 'card' | 'plain' = 'card'` (reflected) — mirrors `lr-card`'s/`<lr-agent-run>`'s
+  `appearance` vocabulary. `'card'` (the default) keeps the bordered, filled box. `'plain'` removes
+  the border, background, and corner radius, so a card nested inside a host frame that already draws
+  a border (e.g. `<lr-tool-result-view>`'s own chrome) doesn't double it. `plain` wins over `compact`
+  when both are set (nothing left to tighten).
 
 **Events:** none.
 
@@ -887,8 +896,11 @@ later `slotchange` on `actions` is still observed, but `hidden` whenever there's
 default tooltip, scoped to just this element rather than the whole card), `actions` (`hidden`
 whenever the slot has no assigned content), `body`.
 
-**Themeable custom properties:** shared tokens only — `--lr-space-xs`/`-s`, `--lr-color-border`/
-`-surface`/`-text`, `--lr-radius`.
+**Themeable custom properties:** `--lr-result-card-compact-header-padding` (default
+`var(--lr-space-xs)`) — `[part="header"]` block/inline padding while `compact`;
+`--lr-result-card-compact-body-padding` (default `var(--lr-space-xs)`) — `[part="body"]` padding
+while `compact`; plus shared tokens — `--lr-space-xs`/`-s`, `--lr-color-border`/`-surface`/`-text`,
+`--lr-radius`.
 
 ### `lr-result-field`
 
@@ -1015,7 +1027,13 @@ status: TaskStatus; detail?: string; children?: TaskItem[] }` with `TaskStatus =
 'running' | 'success' | 'error'` (both exported here). `detail` is an optional secondary plain-text
 line; `children` is exactly **one** level of sub-steps — a child's own `children` is ignored with a
 `console.warn`. `label: string = 'Tasks'`, `expanded: boolean = true` (reflected), and
-`collapsible: boolean = true`.
+`collapsible: boolean = true`. `compact: boolean = false` (reflected) — tighter header/body padding
+and item gap for dense contexts (a plan tracker nested in an already-padded transcript row), same
+convention as `<lr-agent-run>`'s/`<lr-source-card>`'s `compact`; purely a density knob, the border
+and background stay. `appearance: 'card' | 'plain' = 'card'` (reflected) — mirrors `lr-card`'s
+`appearance` vocabulary; `'plain'` removes `[part="base"]`'s border, background, and corner radius so
+a list embedded in a frame that already draws a border (an agent-run panel, a message bubble) doesn't
+double it.
 
 **Slots:** `detail-<id>` — dynamic, one per item id (e.g. `slot="detail-step-3"`); rich detail under
 that item's label, typically a `<lr-tool-call-chip>` or file `<lr-chip>`.
@@ -1031,7 +1049,11 @@ indicator, only rendered when `collapsible`), `body` (the list of items, `hidden
 children).
 
 **Themeable custom properties:** `--lr-task-list-spin` (default `1s linear`) — running-status icon
-spin animation duration/timing.
+spin animation duration/timing; `--lr-task-list-compact-header-padding` (default
+`var(--lr-space-2xs) var(--lr-space-s)`) — `[part="header"]` padding while `compact`;
+`--lr-task-list-compact-gap` (default `var(--lr-space-2xs)`) — gap between `[part="body"]`'s item
+rows while `compact`; `--lr-task-list-compact-body-padding` (default `var(--lr-space-2xs)
+var(--lr-space-s) var(--lr-space-s)`) — `[part="body"]` padding while `compact`.
 
 ## `lr-terminal`
 
@@ -1066,7 +1088,17 @@ disengaged and new output has arrived), and `announcer` (the visually-hidden `ro
 used when `announce-output` is set).
 
 **Themeable custom properties:** `--lr-terminal-height` (default `var(--lr-size-20rem)`) — the
-viewport's block size.
+viewport's block size; not declared on `:host`, so it is inherited from the host or any ancestor.
+`--lr-terminal-highlight-accent-bg` (default `var(--lr-color-brand-quiet)`),
+`--lr-terminal-highlight-success-bg` (default `var(--lr-color-success-quiet)`),
+`--lr-terminal-highlight-warning-bg` (default `var(--lr-color-warning-quiet)`),
+`--lr-terminal-highlight-danger-bg` (default `var(--lr-color-danger-quiet)`), and
+`--lr-terminal-highlight-neutral-bg` (default `var(--lr-color-surface)`) — the background of a
+`highlights[]` entry of the matching `tone`. Each is decoupled from the identical shared token it
+falls back to (e.g. `accent`'s `--lr-color-brand-quiet` is also the copy/download-button hover tint)
+so retinting one tone doesn't repaint the other surface reading that token, and from any
+`::part('line')` stylesheet override — the background is applied inline, so a stylesheet rule can't
+beat it without `!important`.
 
 ## `lr-trace-tree`
 
@@ -1170,6 +1202,13 @@ number` (attribute: false, epoch milliseconds), `files: CommitFileChange[] = []`
 'conflicted' | 'ignored'` (shared with `lr-file-tree`); the diffstat is summed from `additions`/
 `deletions` across `files`. `filesCollapsed:
 boolean = true` (attribute `files-collapsed`, reflected), and `copyable: boolean = true` (reflected).
+`compact: boolean = false` (reflected) — tighter `[part="base"]` padding for a commit rendered as a
+row in a list or PR timeline, same convention as `<lr-agent-run>`'s own `compact`; the border stays,
+so pair it with `appearance="plain"` to drop the chrome entirely. `appearance: 'card' | 'plain' =
+'card'` (reflected) — mirrors `lr-card`'s/`<lr-agent-run>`'s `appearance` vocabulary: `'card'` keeps
+the bordered, padded box, `'plain'` removes the border, padding, and corner radius so a commit nested
+in a host list that already draws its own row chrome doesn't double it; `plain` wins over `compact`
+when both are set.
 
 **Slots:** `actions` — trailing header controls (e.g. an "open PR" button).
 
@@ -1179,6 +1218,9 @@ boolean = true` (attribute `files-collapsed`, reflected), and `copyable: boolean
 **CSS parts:** `base`, `subject`, `body`, `hash`, `meta`, `author`, `time`, `diffstat`, `additions`,
 `deletions`, `files-toggle`, `file` (carries `data-status`), `file-path`, `file-additions`,
 `file-deletions`, `copy-button`, and `actions`.
+
+**Themeable custom properties:** `--lr-commit-card-compact-padding` (default `var(--lr-space-s)`) —
+`[part="base"]` padding while `compact`.
 
 ## `lr-test-results`
 
@@ -1355,7 +1397,9 @@ src? }`, with the sanitized download URL).
 
 **CSS parts:** `base`, `header`, `label`, `kind`, `view-toggle` (rendered only once the `code` slot
 has content), `view-button` (carries `data-view="preview"` or `data-view="code"`), `version-nav`
-(rendered only once `versions` is non-empty), `version-previous`, `version-next`, `version-position`
+(rendered only once `versions` is non-empty), `version-previous`, `version-previous-glyph` (the `‹`
+chevron inside `version-previous`, mirrored via `scaleX(-1)` under `:dir(rtl)`), `version-next`,
+`version-next-glyph` (the `›` chevron inside `version-next`, mirrored the same way), `version-position`
 (the "Version N of M" text), `restore-button` (rendered only while the active version isn't the
 latest), `actions`, `copy-button` (rendered only while `copyText` is non-empty), `download-button`
 (rendered only while `downloadSrc` is non-empty), `body`, `streaming-indicator` (rendered only while
@@ -1552,7 +1596,9 @@ Filterable and taggable evaluation-example list with add, remove, import, and ex
 
 **Events:** `lr-example-select` (`detail: { id: string | null }`), `lr-example-add-request`
 (`detail: undefined`), `lr-example-remove-request` (`detail: { id: string }`), `lr-import-request`
-(`detail: { files: File[] }`), `lr-export-request` (`detail: { format: string }`).
+(`detail: { files: File[] }`), `lr-export-request` (`detail: { format: string }`). `focus`/`blur` —
+re-dispatched (no detail) when the internal search field (only rendered while `searchable`) gains or
+loses focus, since native focus neither bubbles nor crosses the shadow boundary.
 
 **CSS parts:** `base`, `toolbar`, `search`, `search-input`, `tag-filter`, `grid`,
 `add-button`, `remove-button`, `import`, `export`.
@@ -1710,4 +1756,9 @@ can ignore it; one actually executing the tool needs it.
 
 **Themeable custom properties:** `--lr-tool-timeline-gap` (default `var(--lr-space-l)`) — vertical
 gap between entries; `--lr-tool-timeline-marker-size` (default `var(--lr-size-0-625rem)`) — the
-per-entry timeline marker dot's size, which also sets the entry grid's leading column width.
+per-entry timeline marker dot's size, which also sets the entry grid's leading column width;
+`--lr-tool-timeline-denied-marker-color` (default `var(--lr-color-warning)`) — rail-dot color for a
+`status="denied"` entry, decoupled from the pending-approval border color below so either can be
+retinted independently; `--lr-tool-timeline-pending-approval-border-color` (default
+`var(--lr-color-warning)`) — color of the entry body's leading border while that entry's
+`data-pending-approval` is `"true"`.

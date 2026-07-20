@@ -130,8 +130,11 @@ attribute), `description` (rich description content, overrides the `description`
 
 **Themeable custom properties:** `--lr-empty-compact-align` (compact mode only; defaults preserve
 the existing `flex-start` cross-axis and `start` text alignment, and `center` centers both),
-`--lr-empty-compact-padding` (default `--lr-space-xs` — padding used in compact mode), plus
-shared tokens (`--lr-space-xs/-s/-l`, `--lr-color-text-quiet/-border/-text`).
+`--lr-empty-compact-padding` (default `--lr-space-xs` — padding used in compact mode),
+`--lr-empty-compact-gap` (default `--lr-space-2xs` — gap between the icon, heading, and description
+in compact mode; the non-compact layout's gap stays the plain shared `--lr-space-s` token, not
+independently themeable), plus shared tokens (`--lr-space-xs/-s/-l`,
+`--lr-color-text-quiet/-border/-text`).
 
 **Optional peer deps:** none.
 
@@ -746,7 +749,10 @@ period, shared with `lr-progress-bar`'s sweep).
 
 ## `lr-badge` and `lr-tag`
 
-Compact status labels. Both expose `variant: 'neutral' | 'brand' | 'success' | 'warning' | 'danger'`.
+Compact status labels. Both expose `variant: 'neutral' | 'brand' | 'success' | 'warning' | 'danger'`
+and `size: '2xs' | 'xs' | 's' | 'm' | 'l' | 'xl' = 'm'` (reflected) — the same visual-density scale
+`<lr-chip>` uses, for typography/padding/minimum block size; `m` preserves the original badge
+dimensions. `lr-tag` inherits `size` unchanged from `lr-badge` rather than redeclaring it.
 The two tags share the same visual contract; `lr-tag` is a semantic alias for migration-friendly
 markup.
 
@@ -756,6 +762,10 @@ markup.
 — the trio each `:host([variant])` rule rewrites (`neutral` defaults to
 `--lr-color-surface`/`-text`/`-border`; the other four to the matching `*-quiet` fill with the loud
 color for text and border). Set one directly on the element for a tint outside the five variants.
+`--lr-badge-font-size` (default `var(--lr-font-size-sm)`), `--lr-badge-padding-inline` (default
+`var(--lr-space-s)`), and `--lr-badge-min-height` (default `var(--lr-size-1-25rem)`) — the density
+trio each `:host([size])` rule rewrites to that step's font size, inline padding, and minimum block
+size; the `m` defaults above exactly reproduce the pre-`size` fixed badge treatment.
 
 ## `lr-callout`
 
@@ -781,7 +791,12 @@ visible "×" glyph inside it — this is what shrinks under `inline`, so the hit
 **Themeable custom properties:** `--lr-callout-background`, `--lr-callout-color`,
 `--lr-callout-border` — the trio each `:host([variant])` rule rewrites (same
 surface/text/border → `*-quiet`/loud/loud scheme as `lr-badge`). `inline` drops the border,
-background, and panel padding regardless of what these are set to.
+background, and panel padding regardless of what these are set to. `--lr-callout-close-hover-bg`
+(default `var(--lr-color-brand-quiet)`) — the close button's `:hover` background, deliberately
+decoupled from `--lr-callout-background` (which every non-neutral `variant` also retargets for the
+panel itself) so a consumer can retint the hover fill — e.g. to keep it visibly distinct from a
+`variant="brand"` panel, which shares the same default token — without a collateral effect on the
+panel background, and vice versa.
 
 ## `lr-rating`
 

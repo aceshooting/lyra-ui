@@ -266,7 +266,9 @@ exists and was hit)
 
 **Slots:** none.
 
-**CSS parts:** `base`, `container`, `legend`, `legend-swatch`
+**CSS parts:** `base`, `container`, `legend`, `legend-swatch`, `error` (`role="alert"` message
+rendered in place of `container` if the optional `maplibre-gl` peer dependency fails to load, e.g.
+not installed)
 
 **Themeable custom properties:** shared tokens only — `--lr-space-xs/-s`, `--lr-color-surface`,
 `--lr-color-border`, `--lr-shadow`, `--lr-radius`.
@@ -378,10 +380,17 @@ element carrying the drag accept/reject announcement)
 `var(--lr-space-2xs)`) — the gap between the dropzone's slotted children while `compact`; and
 `--lr-file-input-compact-font-size` (default `var(--lr-font-size-sm)`) — the label's font size while
 `compact`. All three apply only while `compact` is set, so they are the way to tune a dense dropzone
-without re-pointing shared spacing tokens for everything else on the page. Plus shared tokens —
-`--lr-space-xs`, `--lr-space-l`,
+without re-pointing shared spacing tokens for everything else on the page. The drag accept/reject
+highlight on `[part='base'][data-drag-state='accept'|'reject']` is independently overridable too:
+`--lr-file-input-accept-border-color` (default `var(--lr-color-success)`) and
+`--lr-file-input-accept-bg` (default `color-mix(in srgb, var(--lr-color-success) 8%, transparent)`)
+for the drag-accept state; `--lr-file-input-reject-border-color` (default `var(--lr-color-danger)`)
+and `--lr-file-input-reject-bg` (default `color-mix(in srgb, var(--lr-color-danger) 8%,
+transparent)`) for drag-reject. All four are inline `var()` fallbacks at the point of use, settable
+on the element or any ancestor, so a consumer can retint just this dropzone's drag highlight without
+hijacking the shared `--lr-color-success`/`--lr-color-danger` tokens used elsewhere. Plus shared
+tokens — `--lr-space-xs`, `--lr-space-l`,
 `--lr-color-border`, `--lr-radius`, `--lr-color-surface`, `--lr-color-text-quiet`,
-`--lr-color-success` (drag-accept state), `--lr-color-danger` (drag-reject state),
 `--lr-focus-ring-width/-color/-offset` (`[part="base"]:focus-visible` outline),
 `--lr-opacity-disabled` (`:host([disabled])` dimming).
 
@@ -669,6 +678,11 @@ final.
   overrides the `--lr-media-card-max-height` custom property for this instance only (applied
   inline on `[part="base"]`, so it reliably wins over a `:host{}`-declared default from outside the
   shadow root) — same contract as `<lr-document-preview>`'s identically-named prop.
+- `appearance: 'card' | 'plain' = 'card'` (reflected) — visual chrome, mirroring
+  `<lr-source-card>`'s `appearance` vocabulary. `'card'` (the default) keeps the bordered, filled
+  box. `'plain'` removes `[part="base"]`'s border, background, padding, and corner radius, so a
+  card inside a dense chat transcript (or any container already drawing its own separation between
+  attachments) doesn't double the frame.
 
 **Events:** `lr-open` (`detail: { src: string; filename: string }`, cancelable) — fired when the
 card (or, for `kind="video"`, its separate `open-button`) is activated. `detail.src` is whichever
@@ -1146,7 +1160,12 @@ documents) and `<lr-image-comparer>` (before/after slotted surfaces). Adopts `Do
 with `anchorKinds: ['region']` only — no text selection is bound.
 
 **Properties:** `src: string = ''`, `name: string = ''`, `alt?: string`, `fit: 'contain' | 'width' |
-'actual' = 'contain'` (reflected), `zoom: number = 1` (reflected), `rotation: 0 | 90 | 180 | 270 = 0`
+'actual' = 'contain'` (reflected), `zoom: number = 1` (reflected), `minZoom: number = 0.5` (attribute
+`min-zoom`), `maxZoom: number = 4` (attribute `max-zoom`), `zoomStep: number = 0.25` (attribute
+`zoom-step`) — `minZoom`/`maxZoom`/`zoomStep` are pure pass-throughs to the embedded
+`<lr-zoomable-frame>` as its own `.minZoom`/`.maxZoom`/`.zoomStep`, which does the actual
+clamping/normalizing; same names/defaults as `<lr-lightbox>`'s identical trio, both wrapping the
+same pan/zoom surface — `rotation: 0 | 90 | 180 | 270 = 0`
 (reflected), and `annotatable: boolean = false` (reflected).
 
 **Methods:** `rotate()` advances `rotation` by 90°. `zoomIn()`, `zoomOut()`, and `resetZoom()` adjust
@@ -1230,6 +1249,19 @@ the point of use rather than a `:host` declaration, so it can be set on the elem
 ancestor — `::part(timeline-marker)[data-active]` is invalid CSS (Shadow Parts forbids an attribute
 selector after `::part()`), so re-pointing the shared `--lr-color-brand` token was the only previous
 lever.
+
+Each `[part='timeline-marker']`'s own background is independently overridable per tone, the same
+inline-`var()`-fallback pattern as `--lr-av-player-marker-active-color` above:
+`--lr-av-player-marker-bg` (default `color-mix(in srgb, var(--lr-color-brand) 35%, transparent)`) —
+no (or an unrecognized) `data-tone`; `--lr-av-player-marker-success-bg` (default `color-mix(in srgb,
+var(--lr-color-success) 35%, transparent)`) — `data-tone="success"`;
+`--lr-av-player-marker-warning-bg` (default `color-mix(in srgb, var(--lr-color-warning) 35%,
+transparent)`) — `data-tone="warning"`; `--lr-av-player-marker-danger-bg` (default `color-mix(in
+srgb, var(--lr-color-danger) 35%, transparent)`) — `data-tone="danger"`; and
+`--lr-av-player-marker-neutral-bg` (default `color-mix(in srgb, var(--lr-color-text) 25%,
+transparent)`) — `data-tone="neutral"`. Each can be set on the element or on any ancestor without
+hijacking the shared `--lr-color-success`/`-warning`/`-danger`/`-brand`/`-text` tokens used
+elsewhere in the theme.
 
 Two further cue-state properties tint the transcript: `--lr-av-player-cue-current-bg` (default
 `var(--lr-color-brand-quiet)`) is the background of the `cue-current` row the playhead is inside,

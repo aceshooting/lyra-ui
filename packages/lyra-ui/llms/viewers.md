@@ -324,9 +324,10 @@ localized show/hide toggle. `false` (the default) preserves the full body render
 **CSS parts:** `base`, `headers`, `from-label`, `from`, `to-label`, `to`, `subject-label`, `subject`,
 `date-label`, `date`, `body`, `body-html`, `body-text`, `attachments`, `attachments-label`,
 `attachment-list`, `attachment-item`, `attachment-button` (an attachment's open button, inside its
-`attachment-item`), `quoted` (a folded quoted-text block, hidden until expanded, only
-while `foldQuotes`), `quote-toggle` (the show/hide-quoted-text toggle button, only while `foldQuotes`),
-`spinner`, and `error`.
+`attachment-item`), `attachment-name` (an attachment's filename, inside `attachment-button`),
+`attachment-size` (an attachment's formatted file size, inside `attachment-button`), `quoted` (a
+folded quoted-text block, hidden until expanded, only while `foldQuotes`), `quote-toggle` (the
+show/hide-quoted-text toggle button, only while `foldQuotes`), `spinner`, and `error`.
 
 **Themeable custom properties:** `--lr-email-viewer-max-height` (default `none`) — maximum block size
 of `[part="body"]`; also settable via the `max-height` property, which writes this token inline.
@@ -617,8 +618,11 @@ drag* over a highlighted passage never activates it — the selection-in-progres
 to tell that apart from a genuine activation click.
 
 **Properties:** `src` and `name` are strings. `page: number = 1` is the one-based current page and
-`zoom: number = 1` is clamped to `0.25`–`4`. `anchorKinds` is a readonly `['page', 'text-quote',
-'region']` (this viewer's supported `LyraAnchor.kind` values for the shared anchor-target contract).
+`zoom: number = 1` is clamped to `0.25`–`4`. `maxHeight: string = ''` (attribute `max-height`) is a
+CSS length that, once set, overrides `--lr-pdf-viewer-height` — the block size of the virtualized
+page list — declaratively, writing it inline on `[part="base"]`. `anchorKinds` is a readonly
+`['page', 'text-quote', 'region']` (this viewer's supported `LyraAnchor.kind` values for the shared
+anchor-target contract).
 
 **Events:**
 - `lr-render-error` — `detail: { error }` — fetching, parsing, or rendering (page canvas or text
@@ -669,7 +673,8 @@ matched against the element the selected text originates in:
 `lr-pdf-viewer::part(text-span)::selection { background: … }`.
 
 **Themeable custom properties:** `--lr-pdf-viewer-height` (default `var(--lr-size-24rem)`) — block
-size of the virtualized page list (`[part="pages"]`). Everything below the page list is retuned
+size of the virtualized page list (`[part="pages"]`); also settable via the `maxHeight` property,
+which writes this token inline on `[part="base"]`. Everything below the page list is retuned
 through the exported parts above rather than through dedicated custom properties.
 
 **Optional peer dependency:** install `pdfjs-dist` with `pnpm add pdfjs-dist`. The component registers
@@ -737,8 +742,10 @@ row/column into view via the virtualized list's `active-id`. `highlights` paint 
 
 **Properties:** `src` and `name` are strings. `hasHeaderRow: boolean = true` (attribute
 `has-header-row`) controls whether the first parsed row is rendered as a sticky header.
-`anchorKinds` is a readonly `['cell-range']` (this viewer's supported `LyraAnchor.kind` values for
-the shared anchor-target contract).
+`maxHeight: string = ''` (attribute `max-height`) is a CSS length that caps the scrollable body —
+setting it writes `--lr-csv-viewer-max-height` inline on `[part="base"]`. `anchorKinds` is a
+readonly `['cell-range']` (this viewer's supported `LyraAnchor.kind` values for the shared
+anchor-target contract).
 
 **Methods:** `search(query)` resolves the match count via a case-insensitive substring match over
 the same stringified cell values `cell()` renders, ordered row then column (empty/whitespace query
@@ -757,11 +764,14 @@ a `highlights` entry), `rows`, `spinner`, and `error`. `data-row`, `cell` and `c
 rendered inside the internal `<lr-virtual-list>` and forwarded via `exportparts`, so
 `lr-csv-viewer::part(cell)` reaches them from a consumer stylesheet.
 
-**Themeable custom properties:** `--lr-csv-viewer-highlight-color` (default `var(--lr-color-brand)`)
-— the outline color of a `cell-highlight` cell. The component writes it inline (as
-`var(--lr-color-warning, var(--lr-color-brand))`) on the cell matching `activeHighlightId`, since a
-`[data-active]` selector can't be chained onto the `::part(cell-highlight)` the cell reaches this
-component's stylesheet through; a custom property inherits across that boundary instead.
+**Themeable custom properties:** `--lr-csv-viewer-max-height` (default `none`) — maximum block size
+of `[part="body"]` before it scrolls internally; also settable via the `maxHeight` property, which
+writes this token inline on `[part="base"]`. `--lr-csv-viewer-highlight-color` (default
+`var(--lr-color-brand)`) — the outline color of a `cell-highlight` cell. The component writes it
+inline (as `var(--lr-color-warning, var(--lr-color-brand))`) on the cell matching
+`activeHighlightId`, since a `[data-active]` selector can't be chained onto the
+`::part(cell-highlight)` the cell reaches this component's stylesheet through; a custom property
+inherits across that boundary instead.
 
 **Optional peer dependency:** install `papaparse` with `pnpm add papaparse`. The registry matches
 `text/csv` and `.csv` filenames.
@@ -976,15 +986,24 @@ the resolved anchor target, `data-match`, `data-active-match`), `tag` (`data-mat
 `toggle` (an element's expand/collapse button, hidden but present for row alignment on leaf/empty
 elements), `error`, `spinner`.
 
-**Themeable custom properties:** `--lr-xml-viewer-max-height` (default `none`).
+**Themeable custom properties:** `--lr-xml-viewer-max-height` (default `none`) — maximum block size
+of the scrollable body; also settable via the `max-height` property.
 `--lr-xml-viewer-active-match-color` (default `var(--lr-color-warning)`) — the solid outline on the
 `[part='node']` holding the *current* search match, leaving every other match on its dashed
-`--lr-color-warning` outline. It is an inline `var()` fallback at the point of use rather than a
-`:host` declaration, so it can be set on the element *or on any ancestor*:
+`--lr-xml-viewer-match-color` outline. It is an inline `var()` fallback at the point of use rather
+than a `:host` declaration, so it can be set on the element *or on any ancestor*:
 `::part(node)[data-active-match]` is invalid CSS — Shadow Parts forbids an attribute selector after
 `::part()` — so distinguishing the active match previously meant re-pointing the shared
 `--lr-color-warning` token, which recolored every other match (and every other warning surface)
 along with it. Unset, it falls back to that token, so rendering is unchanged.
+
+`--lr-xml-viewer-match-color` (default `var(--lr-color-warning)`) — outline color of a non-active
+`[part='node']` search match, and (via `color-mix`) the tint source for a matching `[part='text']`'s
+background — kept distinct from `--lr-xml-viewer-active-match-color` so the non-active matches can
+be recolored without touching the active one. `--lr-xml-viewer-match-bg` (default
+`var(--lr-color-warning-quiet)`) — background of a matching `[part='tag']`/`[part='attribute-value']`.
+Both are inline `var()` fallbacks at the point of use, so either can be set on the element or any
+ancestor; unset, they fall back to the same shared tokens the rules used before.
 
 `[part='toggle']`'s glyph box stays compact (`1.25rem`) while its *interactive* box takes the shared
 minimum target size as a floor via `--lr-icon-button-size`. That token is a floor, not a fixed size,

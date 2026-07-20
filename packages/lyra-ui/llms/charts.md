@@ -61,7 +61,8 @@ number, label: string | undefined, value: unknown }`)
 optional overlay content positioned at the chart area's center, useful for doughnut and pie totals.
 
 **CSS parts:** `base`, `canvas`, `reset-zoom-button`, `description`, `data-table`, `center` (the
-chart-area-centered wrapper for the `center` slot)
+chart-area-centered wrapper for the `center` slot), `error` (`role="alert"` message rendered in
+place of `canvas` when the optional `chart.js` peer dependency fails to load)
 
 **Themeable custom properties:** `--lr-chart-height` (set programmatically on the host from the
 `height` property — must be read from the host, not a shadow-tree descendant, since custom
@@ -294,7 +295,9 @@ index, label, value }`).
 
 **Slots:** `data-table`, `center`.
 
-**CSS parts:** `base`, `canvas`, `reset-zoom-button`, `description`, `data-table`, `center`.
+**CSS parts:** `base`, `canvas`, `reset-zoom-button`, `description`, `data-table`, `center`,
+`error` (`role="alert"` message rendered in place of `canvas` when the optional `chart.js` peer
+dependency fails to load — see `llms/components/lr-chart.md`).
 
 **Themeable custom properties:** `--lr-chart-height`, `--lr-chart-grid-color`,
 `--lr-chart-tick-color`, `--lr-chart-legend-color`, `--lr-chart-tooltip-bg`,
@@ -355,7 +358,9 @@ and `label` the generated bucket range string (`"lo–hi"`, both bounds at one d
 
 **Slots:** `data-table`, `center`.
 
-**CSS parts:** `base`, `canvas`, `reset-zoom-button`, `description`, `data-table`, `center`.
+**CSS parts:** `base`, `canvas`, `reset-zoom-button`, `description`, `data-table`, `center`,
+`error` (`role="alert"` message rendered in place of `canvas` when the optional `chart.js` peer
+dependency fails to load — inherited from `LyraChart`, unaffected by the binning logic).
 
 **Themeable custom properties:** `--lr-chart-height`, `--lr-chart-grid-color`,
 `--lr-chart-tick-color`, `--lr-chart-legend-color`, `--lr-chart-tooltip-bg`,

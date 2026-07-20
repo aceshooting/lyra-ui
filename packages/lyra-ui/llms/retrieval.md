@@ -90,7 +90,10 @@ Enter/Space activations within 500ms — regardless of `GraphNode.expandable`), 
 `label`, `link-label` (a drawn edge label, only rendered when `showEdgeLabels` is set),
 `expand-indicator` (the "+" badge on a node with `expandable: true`), `focus-halo` (the persistent
 ring tracking `focusId`'s node), `hull` (a community hull), `community-label`,
-`live-region`, `data-list`, `empty`, `canvas`/`tooltip`/`cursor-items`/`cursor-item`
+`live-region`, `data-list`, `empty`, `error` (`role="alert"` message shown instead of the graph when
+the optional `d3-force`/`d3-drag`/`d3-zoom`/`d3-selection` peers fail to load —
+distinct from the empty state, which means the peers loaded fine but `nodes` is empty),
+`canvas`/`tooltip`/`cursor-items`/`cursor-item`
 (`renderer="canvas"` only — the drawing surface, its hover tooltip replacing the SVG `<title>`, and
 the offscreen keyboard-roving items)
 
@@ -231,7 +234,9 @@ with a `droppable` canvas on the `FLOW_PALETTE_MIME_TYPE` drag payload shape.
 
 **Events:** `lr-palette-place` (`detail: { type }`, a pointer click or Enter/Space — the
 click/keyboard alternative to dragging), `lr-select` (`detail: { item }`, emitted alongside
-`lr-palette-place` on both gestures, carrying the full item).
+`lr-palette-place` on both gestures, carrying the full item), `focus`/`blur` (no detail —
+re-dispatched from the internal search field's own `focus`/`blur`, bubbling and composed unlike
+the native events, since neither bubbles nor crosses the shadow boundary on its own).
 
 **Slots:** `header` (content above the search field, e.g. a heading or tabs), `footer` (content
 below the list).
@@ -294,7 +299,10 @@ after each toggle).
 **CSS parts:** `base`, `item` (a `<button>` when `interactive`, a plain `<div>` otherwise), `swatch`,
 `label`, `count`, `live-region` (the visually hidden filter-toggle announcement).
 
-**Themeable custom properties:** no component-local tokens; reads `--lr-graph-cat-1` through `-8`
+**Themeable custom properties:** `--lr-graph-legend-hidden-color` (default
+`var(--lr-color-text-quiet)`) — text color of a filtered-out (hidden) row's `label`/`count`,
+independent of the shared quiet-text token so a host can retint "hidden" rows without repainting
+every other quiet-text surface. Also reads `--lr-graph-cat-1` through `-8`
 (the same computed-style fallback palette `lr-graph`/`lr-word-cloud` use) plus shared tokens.
 
 **Optional peer deps:** none.
@@ -534,6 +542,11 @@ graph or membership fetching — `lr-drill` asks the host to load members/subgra
 - `maxMembers: number = 8` (attribute `max-members`) — remaining members collapse into a "+N"
   overflow chip
 - `compact: boolean = false` (reflected) — omits the summary excerpt and member chips
+- `appearance: 'card' | 'plain' = 'card'` (reflected) — visual chrome, mirroring `lr-card`'s
+  `appearance` vocabulary and this component's sibling `lr-entity-card`'s identical property.
+  `'card'` (the default) keeps the bordered, filled, padded box; `'plain'` removes the border,
+  background, and padding, so a card nested inside a container that already draws a border doesn't
+  double the frame.
 
 **Events:** `lr-drill` (`detail: { id }`, the drill button, header, or overflow chip — all three
 mean "show me this whole community"), `lr-entity-activate` (`detail: { id }`, a member chip was
@@ -784,7 +797,9 @@ keyboard descent).
 announcement region), `empty` (shown when `topics` is empty).
 
 **Themeable custom properties:** `--lr-mind-map-ring-gap` (default `6rem`, radius step per depth
-ring).
+ring). `--lr-mind-map-node-hover-halo` (default `var(--lr-color-brand-quiet)`) — stroke color of
+the halo drawn around a topic node's dot on `:hover`, giving mouse users the same "this is
+clickable" feedback keyboard users already get from the drawn `focus-ring` part.
 
 **Optional peer deps:** none.
 
@@ -1374,7 +1389,12 @@ somewhere to land after a confirmation resolves), `item-row`, `item-text`, `conf
 `provenance` is unset; `item-body` is `hidden` while collapsed), `item-actions`, `add-button`,
 `remove-button`, `forget-all-button`.
 
-**Themeable custom properties:** shared tokens only.
+**Themeable custom properties:** `--lr-memory-panel-confidence-success-color` (default
+`var(--lr-color-success)`), `--lr-memory-panel-confidence-warning-color` (default
+`var(--lr-color-warning)`), `--lr-memory-panel-confidence-danger-color` (default
+`var(--lr-color-danger)`) — text color of an item's `confidence` indicator, one per confidence
+tier (`high`/`medium`/`low` against `thresholds`, the same tiering `lr-chunk-inspector` uses for
+its score bar). Plus shared tokens otherwise.
 
 **Optional peer deps:** none.
 

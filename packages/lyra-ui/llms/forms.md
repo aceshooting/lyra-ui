@@ -121,6 +121,11 @@ indicator from `maxRender`), `error`, `hint`
 `--lr-combobox-tag-font-size`, and `--lr-combobox-expand-size` (the decorative icon box; each
 standard size supplies an aligned default), plus shared tokens.
 
+`--lr-combobox-option-active-bg` (default `var(--lr-color-brand-quiet)`) recolors the background of
+a hovered or keyboard-active `[part='option']` row — the same per-component indirection
+`lr-select`'s identical `--lr-select-option-active-bg` uses, so a consumer can retheme just this
+row state without hijacking the shared `--lr-color-brand-quiet` token library-wide.
+
 `--lr-combobox-trigger-height` pins an **exact** input-container height (both floors and caps it),
 for pixel-matching an `<lr-input>` or `<lr-select>` in the same toolbar row. It is **undeclared by
 default**, leaving `--lr-combobox-trigger-min-height` as a floor only and the row free to grow —
@@ -297,6 +302,12 @@ the component never declares it, it can be set inline, from an ancestor, or from
 rule. One consequence worth knowing when testing:
 `getComputedStyle(el).getPropertyValue('--lr-select-trigger-height')` now reads `''` rather than
 `'auto'` — assert the rendered `min-block-size`/`block-size` instead of the property string.
+
+`--lr-select-option-active-bg` (default `var(--lr-color-brand-quiet)`) recolors the background of a
+hovered or keyboard-active `[part='option']` row. Not declared on `:host`, so a value set on any
+ancestor is never shadowed — retheme just this row state without hijacking the shared
+`--lr-color-brand-quiet` token every other component's own hover/active state also reads. Same
+knob `lr-combobox`'s own `--lr-combobox-option-active-bg` provides.
 
 **Optional peer deps:** none.
 
@@ -774,7 +785,9 @@ With neither `accessibleLabel` nor `label` set, the name falls back to the local
 app-wide with `registerLyraLocale()` (see `llms/shared.md`); don't rely on the fallback for a
 button whose purpose isn't generic.
 
-**Methods:** `focus(options?)`, `blur()` — forward to the native button.
+**Methods:** `focus(options?)`, `blur()` — forward to the native button. `click()` also forwards to
+the native button, activating it — including this component's own `type="submit"`/`type="reset"`
+handling, since the click goes through the same `<button>` the pointer/keyboard path does.
 
 **Slots:** (default) — custom icon content. It is rendered **beside** the `icon` glyph, as a
 sibling of it, not piped through `<lr-icon>`: the internal `<lr-icon>` mounts only when `icon` is
@@ -833,7 +846,14 @@ form-associated via the same `FormAssociated` mixin as `lr-textarea`. Ships the 
 - `name`/`disabled`/`required` (from `FormAssociated`)
 
 **Getters/methods:** `input: HTMLInputElement | null` (the internal native `<input>`, for direct DOM
-access), `focus(options?: FocusOptions)`, `blur()`, `select()`.
+access), `focus(options?: FocusOptions)`, `blur()`, `select()`. Also forwards the full native
+selection/editing surface, mirroring `lr-textarea`'s identical passthrough: `selectionStart: number
+| null` and `selectionEnd: number | null` (readable/writable; `null` both before the internal input
+has rendered and whenever `type` doesn't support selection — only `text`/`search`/`password` do,
+matching the native `<input>`'s own contract), `setSelectionRange(start, end, direction?)`
+(no-op before render, otherwise throws the same native `InvalidStateError` a native `<input>` would
+for an unsupported `type`), and `setRangeText(replacement, start?, end?, selectMode?)` (no-op
+before render; syncs `value` afterward without emitting a user event).
 
 **Events:** native-style composed `input` and `change`, plus `lr-input` (`detail: { value }`,
 fired on every user-driven edit) and `lr-change` (`detail: { value }`, fired on the native
@@ -1389,6 +1409,13 @@ same formula from the `--lr-theme-*` inputs you control:
 }
 ```
 
+`--lr-checkbox-checked-bg` (default `var(--lr-color-brand)`) and `--lr-checkbox-checked-border`
+(default `var(--lr-color-brand)`) recolor `[part='box']`'s background/border while `checked` or
+`indeterminate` — a component-scoped indirection (the same pattern `lr-source-picker`'s own
+`--lr-source-picker-checked-bg`/`-border` pair uses) so a consumer can retint just this control's
+checked/indeterminate fill without hijacking the shared `--lr-color-brand` token everything else
+reads.
+
 **Optional peer deps:** none.
 
 ```html
@@ -1580,8 +1607,8 @@ A form-associated single-choice control. Use it alone or inside `lr-radio-group`
 
 **Properties:** `checked`, `disabled`, `required`, `name`, and `value` (all reflected where
 applicable). A selected radio submits its value through `ElementInternals`.
-`effectiveRequired` exposes the required state inherited from a containing radio group. `focus()`
-and `blur()` forward to the internal radio control.
+`effectiveRequired` exposes the required state inherited from a containing radio group. `focus()`,
+`blur()`, and `click()` forward to the internal radio control.
 
 **Events:** native-style composed `input` and `change`, plus `lr-change` with
 `{ checked, value }`.
@@ -1771,13 +1798,23 @@ supplied (an explicit empty array still counts as supplied and skips the auto-lo
 When the filtered set reaches 200 items, the grid automatically windows its visible rows while
 preserving the full option count through `aria-setsize`/`aria-posinset`.
 
+Ships the same opt-in `label`/`hint`/`errorText` form-control chrome as `lr-select`/
+`lr-color-picker` (props + matching named slots + `form-control`/`form-control-label`/`hint`/
+`error` CSS parts) — left unset, none of that chrome renders.
+
 **Properties:** the shared form properties `name`, `value`, `disabled`, and `required`, plus
 `groups: EmojiPickerGroup[] = []` (attribute: false) — `EmojiPickerGroup { key, label, emojis:
 EmojiPickerItem[] }`, `EmojiPickerItem { emoji, name, shortcodes? }`; the search field matches `name`
 and every `shortcodes` entry, case-insensitively. Empty (the default, before the auto-loader
 resolves) renders just the search input and the empty state. `accessibleLabel` (`aria-label`)
 forwards a host-supplied accessible name to the internal `role="listbox"` grid; empty falls back to
-the localized default grid label.
+the localized default grid label. `label: string = ''` — visible label rendered above the
+search/grid; unset renders no label chrome. When `label` (or the `label` slot) is set and
+`accessibleLabel`/a host `aria-label` is not, the grid's accessible name switches from the
+localized default to `aria-labelledby` pointing at the visible label. `hint: string = ''` —
+supporting text rendered below the search/grid; unset renders no hint chrome. `errorText: string =
+''` (attribute `error-text`) — validation-error text rendered below the hint (overridden by slotted
+`error` content when provided); unset renders no error chrome.
 
 **Events:** `lr-change` with `detail: { emoji }` (an emoji was picked — click, or Enter/Space on
 the active grid cell; also sets `value`), plus the shared form `input`, `change`, `focus`, and `blur`.
@@ -1790,9 +1827,14 @@ Home/End jump to the first/last item, and Enter/Space picks the active item. The
 the input, with `aria-activedescendant` tracking the active option. Hovering an emoji with the
 pointer also moves the active item to it.
 
-**CSS parts:** `base`, `search` (`role="combobox"`), `grid` (`role="listbox"`, the scroll
-viewport), `group-label`, `emoji` (each emoji's own `role="option"` button), `empty` (shown when
-the search matches nothing). While windowing is active the rows are wrapped in `virtual-spacer`
+**Slots:** `label` (custom label content), `hint` (custom hint content), `error` (custom error
+content, overrides the `errorText` attribute when provided).
+
+**CSS parts:** `form-control` (the outer wrapper around label, `base`, error and hint),
+`form-control-label` (the visible label), `base`, `search` (`role="combobox"`), `grid`
+(`role="listbox"`, the scroll viewport), `group-label`, `emoji` (each emoji's own `role="option"`
+button), `empty` (shown when the search matches nothing), `hint` (the hint message), `error` (the
+error message). While windowing is active the rows are wrapped in `virtual-spacer`
 (full-height scroll spacer), `virtual-row` (one absolutely-positioned row), `virtual-label` (an
 `aria-hidden` spacer standing in for a row's missing `group-label`), and `virtual-items` (the row's
 emoji flex line).

@@ -231,9 +231,12 @@ clipboard") or a per-node one (aria-label `Copy ${key/type}`, e.g. "Copy age"); 
 `copyable`)
 
 **Themeable custom properties:** `--lr-json-viewer-max-height` (default `none` — grows with content
-until `max-height` is set), `--lr-json-viewer-font` (default `ui-monospace, SFMono-Regular, Menlo,
-Consolas, monospace` — component-specific since no shared monospace token exists), plus shared tokens
-`--lr-color-border/-surface/-text/-text-quiet/-brand/-brand-quiet/-success/-warning/-warning-quiet`,
+until `max-height` is set), `--lr-json-viewer-font` (default `var(--lr-font-mono)`),
+`--lr-json-viewer-match-bg` (default `var(--lr-color-warning-quiet)`) — background, and surrounding
+box-shadow, of a key/value that currently matches `search`. Component-scoped indirection over the
+shared `--lr-color-warning-quiet` token, so a consumer can retheme just this search-match highlight
+without repainting every other warning-toned surface that reads the same shared token. Plus shared
+tokens `--lr-color-border/-surface/-text/-text-quiet/-brand/-brand-quiet/-success/-warning/-warning-quiet`,
 `--lr-radius`, `--lr-space-xs/-s/-l`, `--lr-focus-ring-width/-color/-offset`,
 `--lr-transition-fast`.
 
@@ -386,7 +389,11 @@ button).
 **CSS parts:** `base`, `indicator` (the pulsing status dot), `countdown` (the `M:SS`, or
 "Refreshing…", text), `pause-button` (the built-in pause/resume toggle).
 
-**Themeable custom properties:** shared tokens only — `--lr-space-xs`, `--lr-font-size-sm`,
+**Themeable custom properties:** `--lr-poll-status-due-bg` (default `var(--lr-color-success)`) —
+background of `indicator` while `data-due` is set. Component-scoped indirection over the shared
+`--lr-color-success` token, so a consumer can retheme just this due-state indicator without
+repainting every other component that reuses the same shared success token. Plus shared tokens —
+`--lr-space-xs`, `--lr-font-size-sm`,
 `--lr-color-text-quiet`, `--lr-color-brand`, `--lr-color-success`, `--lr-radius`/`-pill`,
 `--lr-focus-ring-*`.
 
@@ -476,10 +483,15 @@ renders `open="false"` on first paint)
 **CSS parts:** `listbox`, `option`, `option-icon` (when `icon` is set), `option-label`,
 `option-description` (when `description` is set), `empty`
 
-**Themeable custom properties:** shared tokens only — `--lr-space-xs`/`-s`/`-m` (popup padding,
+**Themeable custom properties:** `--lr-mention-popover-option-active-bg` (default
+`var(--lr-color-brand-quiet)`) — background of the hovered or `[data-active]`
+(keyboard-highlighted) suggestion row. Component-scoped indirection over the shared
+`--lr-color-brand-quiet` token, so a consumer can retheme just this highlighted/active row without
+repainting every other component that reuses the same shared token. Plus shared tokens —
+`--lr-space-xs`/`-s`/`-m` (popup padding,
 row padding/gap), `--lr-color-surface`/`-border` (popup background/border), `--lr-radius`
 (popup and row corners), `--lr-shadow` (popup elevation), `--lr-transition-fast` (open/close
-transition), `--lr-color-brand-quiet` (active-row background), `--lr-color-brand` (selected-row
+transition), `--lr-color-brand` (selected-row
 text), `--lr-color-text-quiet`/`--lr-color-text` (description text, full-contrast on the active
 row), and `--lr-popover-viewport-clamp` (default `92vw`) — the shared narrow-viewport ceiling the
 popup's max-inline-size is `min()`ed against, alongside its own `24rem` cap and the positioner's
@@ -810,11 +822,14 @@ small per-field text label), `hint`, `error` (`role="alert"`).
 `--lr-known-date-field-padding-inline`, `--lr-known-date-field-font-size`,
 `--lr-known-date-field-min-height` (all four rewritten by
 each `:host([size])` rule; `m` defaults `--lr-space-s`/`--lr-space-s`/`--lr-font-size-md-sm`/
-`--lr-size-2rem`), `--lr-known-date-field-height`,
+`--lr-size-2-5rem`), `--lr-known-date-field-height`,
 `--lr-known-date-field-gap` (default `--lr-space-s` — gap between the three field blocks),
 `--lr-known-date-day-field-width` / `--lr-known-date-month-field-width` (default `--lr-size-3-5em`)
 and `--lr-known-date-year-field-width` (default `--lr-size-5em`) — the per-field input widths, not
-size-scaled.
+size-scaled. `--lr-known-date-invalid-border-color` (default `var(--lr-color-danger)`) — border
+color of each `field-input` while `:host([data-invalid])` is set. Component-scoped indirection over
+the shared `--lr-color-danger` token, so a consumer can retheme just this invalid-field border
+without repainting every other component that reads the same shared danger token.
 
 The two height knobs work as a pair on `[part='field-input']`, the same way
 `lr-input`/`lr-select`/`lr-combobox`/`lr-date-input` expose theirs:
@@ -965,7 +980,11 @@ label switches to Done on the last step).
 `--lr-tour-spotlight-radius` (default `--lr-radius` — shared by the cutout and the ring),
 `--lr-tour-spotlight-ring-color` (default `--lr-color-brand`), `--lr-tour-spotlight-ring-width`
 (default `--lr-border-width-medium`), `--lr-tour-popover-max-width` (default `--lr-size-22rem`,
-further capped by `--lr-popover-viewport-clamp` and the positioner's available space).
+further capped by `--lr-popover-viewport-clamp` and the positioner's available space),
+`--lr-tour-progress-dot-current-bg` (default `var(--lr-color-brand)`) — background of
+`progress-dot` for the current step. Component-scoped indirection over the shared `--lr-color-brand`
+token, so a consumer can retheme just the current-step dot without repainting every other component
+that reuses the same shared brand token.
 
 `--lr-popover-viewport-clamp` (default `92vw`, from `--lr-theme-popover-viewport-clamp`) is the
 shared ceiling that keeps any floating surface inside a narrow viewport. `lr-tour`,
