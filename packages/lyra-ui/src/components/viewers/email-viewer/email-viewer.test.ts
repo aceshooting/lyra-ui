@@ -2,6 +2,7 @@ import { expect, fixture, html, oneEvent, waitUntil } from '@open-wc/testing';
 import './email-viewer.js';
 import type { LyraEmailViewer } from './email-viewer.js';
 import { __setEmailDepsForTesting } from './email-loader.js';
+import { styles } from './email-viewer.styles.js';
 
 const SAMPLE_EML = [
   'From: Ada Lovelace <ada@example.test>', 'To: Grace Hopper <grace@example.test>', 'Subject: Quarterly report',
@@ -279,5 +280,12 @@ describe('lr-email-viewer', () => {
         restore();
       }
     });
+  });
+});
+
+describe('styling', () => {
+  it('gives quote-toggle a hover state', () => {
+    const css = styles.cssText.replace(/\s+/g, ' ');
+    expect(css).to.match(/\[part='quote-toggle'\]:hover/);
   });
 });

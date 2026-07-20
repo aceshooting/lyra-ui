@@ -5,6 +5,7 @@ import type { LyraVirtualList } from '../../layout/virtual-list/virtual-list.cla
 import type { LyraChunkInspector } from '../chunk-inspector/chunk-inspector.class.js';
 import type { LyraCheckbox } from '../../forms/checkbox/checkbox.class.js';
 import type { RetrievalChunk } from '../../../ai/types.js';
+import { styles } from './retrieval-results.styles.js';
 
 async function nextFrame(): Promise<void> {
   await new Promise<void>((r) => requestAnimationFrame(() => requestAnimationFrame(() => r())));
@@ -403,5 +404,12 @@ describe('selected-row cssprop escape hatch', () => {
   it('is accessible with the selected-row prop themed', async () => {
     const { el } = await selected('--lr-retrieval-results-selected-border: rgb(0, 51, 102)');
     await expect(el).to.be.accessible();
+  });
+});
+
+describe('styling', () => {
+  it('gives load-more a hover state', () => {
+    const css = styles.cssText.replace(/\s+/g, ' ');
+    expect(css).to.match(/\[part='load-more'\]:hover/);
   });
 });

@@ -3,6 +3,7 @@ import './ebook-viewer.js';
 import { __setEpubJsForTesting } from './ebook-loader.js';
 import type { LyraEbookViewer } from './ebook-viewer.js';
 import { DEFAULT_MAX_RESOURCE_BYTES } from '../../../internal/resource-loader.js';
+import { styles } from './ebook-viewer.styles.js';
 
 function response(ok = true): Response {
   return { ok, status: ok ? 200 : 404, statusText: ok ? 'OK' : 'Not Found', arrayBuffer: () => Promise.resolve(new ArrayBuffer(1)) } as unknown as Response;
@@ -964,5 +965,13 @@ describe('back-compat', () => {
     } finally {
       restore();
     }
+  });
+});
+
+describe('styling', () => {
+  it('gives previous-button and next-button a hover state', () => {
+    const css = styles.cssText.replace(/\s+/g, ' ');
+    expect(css).to.match(/\[part='previous-button'\]:hover/);
+    expect(css).to.match(/\[part='next-button'\]:hover/);
   });
 });

@@ -40,6 +40,10 @@ export const styles = css`
     color: var(--lr-color-text);
     cursor: pointer;
   }
+  [part='previous-button']:hover,
+  [part='next-button']:hover {
+    background: var(--lr-color-brand-quiet);
+  }
   [part='previous-button']:disabled,
   [part='next-button']:disabled {
     cursor: not-allowed;

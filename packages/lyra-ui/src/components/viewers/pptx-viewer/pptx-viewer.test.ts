@@ -1,6 +1,7 @@
 import { aTimeout, expect, fixture, html } from '@open-wc/testing';
 import './pptx-viewer.js';
 import type { LyraPptxViewer } from './pptx-viewer.js';
+import { styles } from './pptx-viewer.styles.js';
 
 function response(ok = true): Response {
   return { ok, status: ok ? 200 : 404, statusText: ok ? 'OK' : 'Not Found', arrayBuffer: () => Promise.resolve(new ArrayBuffer(1)) } as unknown as Response;
@@ -125,5 +126,13 @@ describe('lr-pptx-viewer', () => {
     } finally {
       restore();
     }
+  });
+});
+
+describe('styling', () => {
+  it('gives previous-button and next-button a hover state', () => {
+    const css = styles.cssText.replace(/\s+/g, ' ');
+    expect(css).to.match(/\[part='previous-button'\]:hover/);
+    expect(css).to.match(/\[part='next-button'\]:hover/);
   });
 });

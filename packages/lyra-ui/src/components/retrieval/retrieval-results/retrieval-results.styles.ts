@@ -83,6 +83,9 @@ export const styles = css`
     padding: var(--lr-space-2xs) var(--lr-space-m);
     cursor: pointer;
   }
+  [part='load-more']:hover {
+    background: var(--lr-color-brand-quiet);
+  }
   [part='load-more']:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);

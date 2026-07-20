@@ -2,6 +2,7 @@ import { aTimeout, expect, fixture, html, oneEvent, waitUntil } from '@open-wc/t
 import './dataset-viewer.js';
 import type { LyraDatasetViewer } from './dataset-viewer.js';
 import { findDocumentRenderer } from '../document-viewer/registry.js';
+import { styles } from './dataset-viewer.styles.js';
 
 const TAB_DATA = 'name\tage\tcity\nAda\t30\tLondon\nGrace\t85\tArlington';
 const GRID_DATASET = 'name,role\nAda,Mathematician\nGrace,Scientist\nAda,Programmer';
@@ -292,5 +293,12 @@ describe('lr-dataset-viewer', () => {
         restore();
       }
     });
+  });
+});
+
+describe('styling', () => {
+  it('gives the cell-highlight-action a hover state', () => {
+    const css = styles.cssText.replace(/\s+/g, ' ');
+    expect(css).to.match(/lr-virtual-list::part\(cell-highlight-action\):hover/);
   });
 });

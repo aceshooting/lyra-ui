@@ -3,6 +3,7 @@ import './pdf-viewer.js';
 import '../../layout/virtual-list/virtual-list.js';
 import { findDocumentRenderer, loadDocumentRenderer } from '../document-viewer/registry.js';
 import type { LyraPdfViewer } from './pdf-viewer.js';
+import { styles } from './pdf-viewer.styles.js';
 
 function response(ok = true): Response {
   return { ok, status: ok ? 200 : 404, statusText: ok ? 'OK' : 'Not Found', arrayBuffer: () => Promise.resolve(new ArrayBuffer(8)) } as Response;
@@ -1510,5 +1511,12 @@ describe('registry registration', () => {
     const resolved = await loadDocumentRenderer(exact!);
     const template = resolved.render!({ name: 'a.pdf', mimeType: 'application/pdf', src: 'https://example.test/a.pdf' }) as { strings: readonly string[] };
     expect(template.strings.join('')).to.contain('lr-pdf-viewer');
+  });
+});
+
+describe('styling', () => {
+  it('gives toolbar buttons a hover state', () => {
+    const css = styles.cssText.replace(/\s+/g, ' ');
+    expect(css).to.match(/\[part='toolbar'\] button:hover/);
   });
 });

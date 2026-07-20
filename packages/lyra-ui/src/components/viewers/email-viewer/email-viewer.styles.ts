@@ -57,6 +57,7 @@ export const styles = css`
     font-size: var(--lr-font-size-sm);
     cursor: pointer;
   }
+  [part='quote-toggle']:hover { background: var(--lr-color-brand-quiet); }
   [part='quote-toggle']:focus-visible { outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color); outline-offset: var(--lr-focus-ring-offset); }
   [part='quoted'] { margin-block-start: var(--lr-space-xs); color: var(--lr-color-text-quiet); }
   .empty-note { margin: 0; padding: var(--lr-space-m); color: var(--lr-color-text-quiet); font-size: var(--lr-font-size-md-sm); }

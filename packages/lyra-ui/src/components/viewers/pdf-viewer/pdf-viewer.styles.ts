@@ -5,6 +5,7 @@ export const styles = css`
   [part='base'] { display: flex; flex-direction: column; box-sizing: border-box; border: var(--lr-border-width-thin) solid var(--lr-color-border); border-radius: var(--lr-radius); background: var(--lr-color-surface); overflow: hidden; }
   [part='toolbar'] { display: flex; align-items: center; gap: var(--lr-space-s); padding: var(--lr-space-xs) var(--lr-space-s); border-block-end: var(--lr-border-width-thin) solid var(--lr-color-border); background: var(--lr-color-brand-quiet); font-size: var(--lr-font-size-sm); flex-wrap: wrap; }
   [part='toolbar'] button { display: inline-flex; align-items: center; justify-content: center; min-inline-size: var(--lr-icon-button-size); min-block-size: var(--lr-icon-button-size); border: none; border-radius: var(--lr-radius); background: transparent; color: var(--lr-color-text); cursor: pointer; }
+  [part='toolbar'] button:hover { background: var(--lr-color-brand-quiet); }
   [part='toolbar'] button:disabled { opacity: var(--lr-opacity-disabled); cursor: default; }
   [part='toolbar'] button:focus-visible { outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color); outline-offset: var(--lr-focus-ring-offset); }
   [part='page-indicator'], [part='zoom-indicator'] { color: var(--lr-color-text); white-space: nowrap; }

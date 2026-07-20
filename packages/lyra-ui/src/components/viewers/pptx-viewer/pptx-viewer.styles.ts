@@ -53,6 +53,8 @@ export const styles = css`
     color: var(--lr-color-text);
     cursor: pointer;
   }
+  [part='previous-button']:hover,
+  [part='next-button']:hover { background: var(--lr-color-brand-quiet); }
   [part='previous-button']:disabled,
   [part='next-button']:disabled { opacity: var(--lr-opacity-disabled); cursor: not-allowed; }
   [part='previous-button']:focus-visible,
