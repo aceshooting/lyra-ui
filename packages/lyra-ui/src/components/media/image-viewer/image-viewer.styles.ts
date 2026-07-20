@@ -16,6 +16,11 @@ export const styles = css`
     align-items: center;
     gap: var(--lr-space-xs);
   }
+  .fit-control-wrapper {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+  }
   [part='fit-control'],
   [part='rotate-button'],
   [part='annotate-toggle'] {
@@ -26,6 +31,36 @@ export const styles = css`
     color: var(--lr-color-text);
     font: inherit;
     cursor: pointer;
+  }
+  [part='fit-control'] {
+    appearance: none;
+    padding-inline: var(--lr-space-s) var(--lr-space-l);
+  }
+  [part='fit-control'] option {
+    background: var(--lr-color-surface);
+    color: var(--lr-color-text);
+  }
+  [part='fit-control']:hover,
+  [part='rotate-button']:hover,
+  [part='annotate-toggle']:hover {
+    background: var(--lr-color-brand-quiet);
+  }
+  [part='fit-control']:focus-visible,
+  [part='rotate-button']:focus-visible,
+  [part='annotate-toggle']:focus-visible {
+    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
+    outline-offset: var(--lr-focus-ring-offset);
+  }
+  .fit-control-chevron {
+    position: absolute;
+    inset-inline-end: var(--lr-space-xs);
+    display: inline-flex;
+    color: var(--lr-color-text-quiet);
+    line-height: var(--lr-line-height-none);
+    pointer-events: none;
+  }
+  .fit-control-chevron svg {
+    transform: rotate(90deg);
   }
   [part='annotate-toggle'][aria-pressed='true'] {
     background: var(--lr-image-viewer-annotate-active-bg, var(--lr-color-brand-quiet));

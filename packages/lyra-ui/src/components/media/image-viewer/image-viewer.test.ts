@@ -2,6 +2,7 @@ import { fixture, expect, html, oneEvent } from '@open-wc/testing';
 import './image-viewer.js';
 import type { LyraImageViewer, ImageRotation } from './image-viewer.js';
 import type { LyraHighlight } from '../../viewers/document-viewer/anchors.js';
+import { styles } from './image-viewer.styles.js';
 
 const PNG_SRC = 'https://example.test/photo.png';
 
@@ -536,5 +537,23 @@ describe('active-state cssprop escape hatches', () => {
       '--lr-image-viewer-annotate-active-bg: rgb(0, 51, 102); --lr-image-viewer-annotate-active-border: rgb(0, 34, 68); --lr-image-viewer-highlight-active-color: rgb(0, 51, 102)',
     );
     await expect(el).to.be.accessible();
+  });
+});
+
+describe('native control theming', () => {
+  it('resets native appearance on the fit-control, themes its option list, adds a chevron, and gives all three toolbar controls hover/focus', async () => {
+    const el = (await fixture(html`<lr-image-viewer src="photo.jpg"></lr-image-viewer>`)) as LyraImageViewer;
+    await el.updateComplete;
+    const select = el.shadowRoot!.querySelector('[part="fit-control"]') as HTMLSelectElement;
+    expect(getComputedStyle(select).appearance).to.equal('none');
+    const wrapper = select.closest('.fit-control-wrapper');
+    expect(wrapper).to.exist;
+    expect(wrapper!.querySelector('.fit-control-chevron svg')).to.exist;
+    const css = styles.cssText.replace(/\s+/g, ' ');
+    expect(css).to.match(/\[part='fit-control'\] option[^{]*\{[^}]*background:/);
+    for (const part of ['fit-control', 'rotate-button', 'annotate-toggle']) {
+      expect(css, `${part} must get a hover rule`).to.match(new RegExp(`\\[part='${part}'\\]:hover`));
+      expect(css, `${part} must get a focus-visible rule`).to.match(new RegExp(`\\[part='${part}'\\]:focus-visible[^{]*\\{[^}]*outline:`));
+    }
   });
 });

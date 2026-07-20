@@ -14,6 +14,7 @@ import { srOnly } from '../../../internal/a11y.js';
 import { finiteNumber } from '../../../internal/numbers.js';
 import type { LyraZoomableFrame } from '../zoomable-frame/zoomable-frame.class.js';
 import type { LyraLiveRegion } from '../../utility/live-region/live-region.class.js';
+import { chevronIcon } from '../../../internal/icons.js';
 import '../zoomable-frame/zoomable-frame.js';
 import '../../utility/live-region/live-region.js';
 import { styles } from './image-viewer.styles.js';
@@ -390,11 +391,14 @@ export class LyraImageViewer extends DocumentAnchorTarget(LyraImageViewerBase) {
     const label = this.getAttribute('aria-label') || this.name || this.localize('imageViewerLabel');
     return html`<div part="base" aria-label=${label}>
       <div part="toolbar">
-        <select part="fit-control" aria-label=${this.localize('imageViewerFitLabel')} @change=${this.onFitChange}>
-          <option value="contain" ?selected=${this.fit === 'contain'}>${this.localize('imageViewerFitContain')}</option>
-          <option value="width" ?selected=${this.fit === 'width'}>${this.localize('imageViewerFitWidth')}</option>
-          <option value="actual" ?selected=${this.fit === 'actual'}>${this.localize('imageViewerFitActual')}</option>
-        </select>
+        <span class="fit-control-wrapper">
+          <select part="fit-control" aria-label=${this.localize('imageViewerFitLabel')} @change=${this.onFitChange}>
+            <option value="contain" ?selected=${this.fit === 'contain'}>${this.localize('imageViewerFitContain')}</option>
+            <option value="width" ?selected=${this.fit === 'width'}>${this.localize('imageViewerFitWidth')}</option>
+            <option value="actual" ?selected=${this.fit === 'actual'}>${this.localize('imageViewerFitActual')}</option>
+          </select>
+          <span class="fit-control-chevron" aria-hidden="true">${chevronIcon()}</span>
+        </span>
         <button part="rotate-button" type="button" aria-label=${this.localize('imageViewerRotate')} @click=${() => this.rotate()}>&#8635;</button>
         <button part="annotate-toggle" type="button" aria-pressed=${this.annotatable ? 'true' : 'false'} aria-label=${this.localize('imageViewerAnnotate')} @click=${this.toggleAnnotatable}>&#9633;</button>
       </div>
