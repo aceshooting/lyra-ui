@@ -20,6 +20,14 @@ export const styles = css`
     font-size: var(--lr-font-size-md-sm);
   }
   [part$='-label'] { color: var(--lr-color-text-quiet); font-weight: var(--lr-font-weight-semibold); text-align: end; }
+  /* Every header VALUE holds caller-supplied text that is routinely one unbreakable token --
+     an email address has no spaces, and neither does a long RFC-822 date -- so each needs
+     overflow-wrap: anywhere to shrink inside a narrow host. Without it the grid's min-content
+     floor is the widest address, which pushes [part='base'] past its own allocation no matter
+     how narrow the host gets (the labels column is auto-sized, the value column is
+     minmax(0, 1fr), so only the value's own wrapping can relieve it). Applied to the values
+     only -- the *-label parts are short localized words in the auto-sized column. */
+  [part='from'], [part='to'], [part='date'] { overflow-wrap: anywhere; }
   [part='subject'] { font-weight: var(--lr-font-weight-semibold); overflow-wrap: anywhere; }
   [part='body'] { box-sizing: border-box; overflow: auto; max-block-size: var(--lr-email-viewer-max-height); padding: var(--lr-space-m); }
   [part='body-html'], [part='body-text'] { color: var(--lr-color-text); font-size: var(--lr-font-size-md-sm); line-height: var(--lr-line-height-normal); }
