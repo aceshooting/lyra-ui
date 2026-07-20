@@ -70,11 +70,15 @@ tag itself, and so does a structurally invalid one — `Intl.DisplayNames` throw
 those rather than falling back, and a language picker should degrade to showing the raw tag rather
 than tearing down the render. Pair it with `languageToCountry()` for the flag half of the same row.
 
-**Locale picker recipe.** A locale picker is a composition, not a component: `<lr-popover>` supplies
-the light-dismiss surface, `<lr-flag>` the country mark, `localeNativeName()` the endonym, and
-`aria-current="true"` marks the active choice. Which locales exist is the app's decision, so the app
-owns the list. Set `lang` on each row so assistive tech pronounces the endonym in its own language,
-and use `variant="compact"` at icon scale.
+**Locale picker recipe.** `<lr-locale-picker>` (`components/forms/locale-picker/`) is the built-in
+locale switcher — a closed-list dropdown over the locale registry or an explicit catalog, with
+`lr-flag`/`localeNativeName()` rows and full form association out of the box. The manual
+composition below remains available for an app that wants different chrome (its own dismiss
+surface, a different active-state marker, or a layout `<lr-locale-picker>` doesn't offer):
+`<lr-popover>` supplies the light-dismiss surface, `<lr-flag>` the country mark,
+`localeNativeName()` the endonym, and `aria-current="true"` marks the active choice. Which locales
+exist is the app's decision, so the app owns the list. Set `lang` on each row so assistive tech
+pronounces the endonym in its own language, and use `variant="compact"` at icon scale.
 
 ```html
 <lr-popover placement="bottom-start">

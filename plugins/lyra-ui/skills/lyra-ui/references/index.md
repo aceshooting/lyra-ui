@@ -2,7 +2,7 @@
 
 # Component index
 
-249 custom elements, grouped by the source family they live in.
+250 custom elements, grouped by the source family they live in.
 
 **Reading one component.** Its reference file path is derived from the tag — no search needed:
 `llms/components/<tag>.md` (e.g. `llms/components/lr-table.md`). Each is self-contained: import
@@ -18,7 +18,7 @@ get the class without registering the tag.
 `strings`, TypeScript, frameworks, SSR): `llms/shared.md`. Design tokens: `llms/tokens.md`.
 Optional peers: `llms/peers.md`. `wa-*`/`sl-*` renames: `llms/migration.md`.
 
-## Form controls & inputs — `components/forms/` (25)
+## Form controls & inputs — `components/forms/` (26)
 
 - `lr-combobox` · forms/combobox/combobox.js — a filterable single/multi select that combines a text input with a listbox.
 - `lr-option` · forms/combobox/option.js — a selectable option for `<lr-combobox>`.
@@ -45,6 +45,7 @@ Optional peers: `llms/peers.md`. `wa-*`/`sl-*` renames: `llms/migration.md`.
 - `lr-color-picker` · forms/color-picker/color-picker.js — a form-associated native color picker with label, hint and error chrome.
 - `lr-emoji-picker` · forms/emoji-picker/emoji-picker.js — a searchable, keyboard-navigable, form-associated emoji picker.
 - `lr-rubric-form` · forms/rubric-form/rubric-form.js — a configurable annotation rubric (LangSmith annotation-queue style): score, category, and freeform-comment keys with a submit-and-next fl...
+- `lr-locale-picker` · forms/locale-picker/locale-picker.js — a closed-list locale switcher over the library's own locale registry.
 
 ## Data display, dashboards & flow canvas — `components/data/` (25)
 

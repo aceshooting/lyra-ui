@@ -216,11 +216,20 @@ setLyraLocale('fr'); // …or just set <html lang="fr"> and let components inher
 ```
 
 Exported from the package root: `registerLyraLocale`, `setLyraLocale`, `getLyraLocale`,
-`resolveLyraLocale`, `resolveLyraDirection`, `resolveLyraString`, `LYRA_DEFAULT_STRINGS`, and the
-types `LyraLocaleStrings` / `LyraMessageKey`. **`LYRA_DEFAULT_STRINGS` is the authoritative key list**
-(996 keys, matching the `LyraMessageKey` union) — read it to find the key to override rather than
+`getRegisteredLyraLocales`, `subscribeLyraLocaleRegistry`, `resolveLyraLocale`,
+`resolveLyraDirection`, `resolveLyraString`, `LYRA_DEFAULT_STRINGS`, and the types
+`LyraLocaleStrings` / `LyraMessageKey`. **`LYRA_DEFAULT_STRINGS` is the authoritative key list**
+(1005 keys, matching the `LyraMessageKey` union) — read it to find the key to override rather than
 guessing one. Lookup falls back exact locale → base language → English. Date, number, byte,
 relative-time and calendar output goes through `Intl`.
+
+`getRegisteredLyraLocales(): string[]` lists every locale with strings registered via
+`registerLyraLocale()`, plus `'en'` (always available through the built-in English fallback),
+sorted and deduped. `subscribeLyraLocaleRegistry(listener: () => void): () => void` fires whenever
+`registerLyraLocale()` registers *any* locale — including one that isn't the currently active
+locale — unlike the page-level locale-change subscription every component already uses
+internally, which only fires for the active locale's own string changes. `<lr-locale-picker>` is
+the built-in consumer of both; see `llms/components/lr-locale-picker.md`.
 
 Gotcha: `localize()`'s optional second argument is a fallback string. Passing a defined literal there
 silently defeats a registered catalog — omit it, or pass `undefined`.
