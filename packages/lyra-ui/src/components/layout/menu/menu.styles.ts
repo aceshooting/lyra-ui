@@ -19,7 +19,7 @@ export const styles = css`
     z-index: var(--lr-layer-dropdown);
     box-sizing: border-box;
     min-inline-size: var(--lr-size-10rem);
-    max-inline-size: min(92vw, var(--lr-size-20rem), var(--lr-positioner-available-inline-size, 100vw));
+    max-inline-size: min(var(--lr-popover-viewport-clamp), var(--lr-size-20rem), var(--lr-positioner-available-inline-size, 100vw));
     max-block-size: min(var(--lr-size-20rem), var(--lr-positioner-available-block-size, var(--lr-size-20rem)));
     background: var(--lr-color-surface);
     border: var(--lr-border-width-thin) solid var(--lr-color-border);

@@ -149,7 +149,7 @@ export const styles = css`
     border-color: var(--lr-color-brand);
   }
   [part='approve-button']:hover:not(:disabled) {
-    filter: brightness(1.1);
+    filter: brightness(var(--lr-hover-brightness));
   }
   [part='approve-button']:disabled {
     cursor: not-allowed;

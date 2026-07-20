@@ -102,3 +102,18 @@ export const Adornments: Story = {
     </lr-date-input>
   `,
 };
+
+export const PinnedControlHeight: Story = {
+  name: 'Pinned control height (--lr-date-input-control-height)',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'The input row grows to fit its content by default, floored per tier by `--lr-date-input-control-min-height`. Set `--lr-date-input-control-height` to pin an exact row height; the calendar toggle keeps its own 24x24 touch target even when the row is pinned shorter.',
+      },
+    },
+  },
+  render: () => html`
+    <lr-date-input label="Departure" with-clear value="2026-07-15" style="max-width: 22rem; --lr-date-input-control-height: 52px"></lr-date-input>
+  `,
+};

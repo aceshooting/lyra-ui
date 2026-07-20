@@ -33,7 +33,7 @@ export const styles = css`
     position: fixed;
     z-index: var(--lr-layer-dropdown);
     box-sizing: border-box;
-    max-inline-size: min(90vw, var(--lr-size-22rem));
+    max-inline-size: min(var(--lr-popover-viewport-clamp), var(--lr-size-22rem));
     padding: var(--lr-space-s) var(--lr-space-m);
     background: var(--lr-color-surface);
     border: var(--lr-border-width-thin) solid var(--lr-color-border);

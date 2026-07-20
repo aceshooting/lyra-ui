@@ -540,6 +540,19 @@ describe('lr-graph-query-builder', () => {
     expect(fired).to.be.false;
   });
 
+  it('dims the disabled run button through the shared disabled-opacity token', async () => {
+    const wrapper = (await fixture(
+      html`<div style="--lr-theme-opacity-disabled: 0.25">
+        <lr-graph-query-builder disabled></lr-graph-query-builder>
+      </div>`,
+    )) as HTMLElement;
+    const el = wrapper.querySelector('lr-graph-query-builder') as LyraGraphQueryBuilder;
+    await el.updateComplete;
+    const button = el.shadowRoot!.querySelector('[part="run-button"]') as HTMLButtonElement;
+    expect(button.disabled).to.be.true;
+    expect(getComputedStyle(button).opacity).to.equal('0.25');
+  });
+
   it('reveals the max-hops error text after reportValidity when minHops exceeds maxHops', async () => {
     const el = (await fixture(
       html`<lr-graph-query-builder .value=${query({ startId: 'node-1', minHops: 3, maxHops: 1 })}></lr-graph-query-builder>`,

@@ -71,6 +71,6 @@ export const styles = css`
     inline-size: 100%;
   }
   [part='detail-card'] {
-    max-inline-size: min(90vw, var(--lr-size-24rem));
+    max-inline-size: min(var(--lr-popover-viewport-clamp), var(--lr-size-24rem));
   }
 `;

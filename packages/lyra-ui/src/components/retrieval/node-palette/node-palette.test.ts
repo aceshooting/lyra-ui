@@ -135,6 +135,19 @@ it('every item carries the sr-only drag hint via aria-describedby', async () => 
   expect(el.shadowRoot!.getElementById(hintId)!.textContent).to.equal('Drag to the canvas, or press Enter to place');
 });
 
+it('dims a disabled item through the shared disabled-opacity token', async () => {
+  const wrapper = (await fixture(
+    html`<div style="--lr-theme-opacity-disabled: 0.25">
+      <lr-node-palette .items=${items}></lr-node-palette>
+    </div>`,
+  )) as HTMLElement;
+  const el = wrapper.querySelector('lr-node-palette') as LyraNodePalette;
+  await el.updateComplete;
+  const disabledItem = el.shadowRoot!.querySelectorAll('[part="item"]')[2] as HTMLElement;
+  expect(disabledItem.getAttribute('aria-disabled')).to.equal('true');
+  expect(getComputedStyle(disabledItem).opacity).to.equal('0.25');
+});
+
 it('is accessible with items, groups, and a disabled item', async () => {
   const el = (await fixture(html`<lr-node-palette .items=${items}></lr-node-palette>`)) as LyraNodePalette;
   await el.updateComplete;

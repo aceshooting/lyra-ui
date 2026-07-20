@@ -180,3 +180,27 @@ it('wraps a negative firstDayOfWeek property (not just an out-of-range attribute
   expect(days).to.have.length(42);
   expect(days.every((day) => /^\d{4}-\d{2}-\d{2}$/.test(day.dataset.date || ''))).to.be.true;
 });
+
+it('narrows the day-cell floor inside a narrow container, resolving it through the shared 4rem size token', async () => {
+  const wrapper = (await fixture(html`
+    <div style="container-type: inline-size; inline-size: 300px; --lr-theme-size-4rem: 5rem">
+      <lr-calendar view-date="2026-07-01"></lr-calendar>
+    </div>
+  `)) as HTMLElement;
+  const el = wrapper.querySelector('lr-calendar') as LyraCalendar;
+  await el.updateComplete;
+  const day = el.shadowRoot!.querySelector('[part="day"]') as HTMLElement;
+  expect(getComputedStyle(day).minBlockSize).to.equal('80px');
+});
+
+it('keeps the narrow day-cell floor overridable through its own cssprop', async () => {
+  const wrapper = (await fixture(html`
+    <div style="container-type: inline-size; inline-size: 300px; --lr-calendar-day-min-block-size-narrow: 2rem">
+      <lr-calendar view-date="2026-07-01"></lr-calendar>
+    </div>
+  `)) as HTMLElement;
+  const el = wrapper.querySelector('lr-calendar') as LyraCalendar;
+  await el.updateComplete;
+  const day = el.shadowRoot!.querySelector('[part="day"]') as HTMLElement;
+  expect(getComputedStyle(day).minBlockSize).to.equal('32px');
+});

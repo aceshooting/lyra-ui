@@ -81,7 +81,7 @@ export const styles = css`
     font-weight: var(--lr-font-weight-semibold);
   }
   [part='vote-button']:disabled {
-    opacity: 0.6;
+    opacity: var(--lr-opacity-disabled);
     cursor: not-allowed;
   }
   [part='vote-button']:focus-visible {

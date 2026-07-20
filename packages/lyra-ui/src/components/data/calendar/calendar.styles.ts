@@ -23,6 +23,6 @@ export const styles = css`
   [part='event'] { overflow: hidden; margin-block-start: var(--lr-space-2xs); padding: var(--lr-space-2xs); border-radius: var(--lr-radius); background: var(--lr-color-brand); color: var(--lr-color-on-brand); font-size: var(--lr-font-size-sm); text-overflow: ellipsis; white-space: nowrap; }
   [part='agenda'] { display: grid; gap: var(--lr-space-s); }
   [part='agenda-event'] { padding: var(--lr-space-s); border-inline-start: var(--lr-border-width-medium) solid var(--lr-color-brand); background: var(--lr-color-surface); }
-  @container (max-inline-size: 28rem) { [part='day'] { min-block-size: var(--lr-calendar-day-min-block-size-narrow, 4rem); } [part='event'] { font-size: var(--lr-font-size-xs); } }
+  @container (max-inline-size: 28rem) { [part='day'] { min-block-size: var(--lr-calendar-day-min-block-size-narrow, var(--lr-size-4rem)); } [part='event'] { font-size: var(--lr-font-size-xs); } }
   :host(:dir(rtl)) [part='nav-glyph'] { transform: scaleX(-1); }
 `;

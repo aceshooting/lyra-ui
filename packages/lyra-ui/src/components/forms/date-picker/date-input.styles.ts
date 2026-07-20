@@ -6,6 +6,21 @@ export const styles = css`
     --lr-date-input-padding-block: var(--lr-space-xs);
     --lr-date-input-padding-inline: var(--lr-space-s);
     --lr-date-input-font-size: inherit;
+    /* Per-tier minimum block size of the input row, mirroring lr-input's own min-height scale so a
+       lr-date-input size="s" ends up height-matched with lr-input size="s". Every default sits
+       below the row's own height (which is pinned transitively by the un-gated
+       --lr-icon-button-size calendar toggle), so the floor is dead until a consumer raises it --
+       the unset render is byte-identical to today at every tier. lr-input/lr-select/lr-combobox
+       all already expose this knob; lr-date-input previously had none. */
+    --lr-date-input-control-min-height: var(--lr-size-2-5rem);
+    /* --lr-date-input-control-height is intentionally NOT declared here. It is a consumer-facing
+       exact-height escape hatch consumed only through the var() fallbacks on [part='input-wrapper']
+       below; declaring any value for it (even 'auto') would make those fallback arms unreachable
+       and turn --lr-date-input-control-min-height into dead code (the lr-select trap). Left
+       undeclared, both arms stay live: the per-tier floor falls out of the fallback, and setting
+       the property pins an exact height. Pinning a height BELOW the calendar toggle's 24x24 target
+       is safe -- the toggle keeps its own --lr-icon-button-size floor and simply overflows a short
+       row rather than shrinking (WCAG 2.2 SC 2.5.8 preserved). */
   }
   /* Each tier mirrors lr-input's own 2xs-xl padding/font-size scale (input.styles.ts) so
      lr-date-input size="s" ends up visually height/density-matched with lr-input size="s", etc.
@@ -15,26 +30,31 @@ export const styles = css`
     --lr-date-input-padding-block: var(--lr-size-0-0625rem);
     --lr-date-input-padding-inline: var(--lr-space-2xs);
     --lr-date-input-font-size: var(--lr-font-size-2xs);
+    --lr-date-input-control-min-height: var(--lr-size-1-25rem);
   }
   :host([size='xs']) {
     --lr-date-input-padding-block: var(--lr-size-0-125rem);
     --lr-date-input-padding-inline: var(--lr-space-xs);
     --lr-date-input-font-size: var(--lr-font-size-xs);
+    --lr-date-input-control-min-height: var(--lr-size-1-5rem);
   }
   :host([size='s']) {
     --lr-date-input-padding-block: var(--lr-space-xs);
     --lr-date-input-padding-inline: var(--lr-space-xs);
     --lr-date-input-font-size: var(--lr-font-size-sm);
+    --lr-date-input-control-min-height: var(--lr-size-1-875rem);
   }
   :host([size='l']) {
     --lr-date-input-padding-block: var(--lr-space-m);
     --lr-date-input-padding-inline: var(--lr-space-m);
     --lr-date-input-font-size: var(--lr-font-size-lg);
+    --lr-date-input-control-min-height: var(--lr-size-3rem);
   }
   :host([size='xl']) {
     --lr-date-input-padding-block: var(--lr-space-l);
     --lr-date-input-padding-inline: var(--lr-space-l);
     --lr-date-input-font-size: var(--lr-font-size-xl);
+    --lr-date-input-control-min-height: var(--lr-size-3-5rem);
   }
   [part='form-control-label'] {
     display: block;
@@ -60,6 +80,11 @@ export const styles = css`
     align-items: center;
     gap: var(--lr-space-xs);
     inline-size: 100%;
+    box-sizing: border-box;
+    min-block-size: var(--lr-date-input-control-height, var(--lr-date-input-control-min-height));
+    /* Pinned only when --lr-date-input-control-height is set; 'auto' otherwise, so the row keeps
+       growing to fit its content and the calendar toggle's full touch target. */
+    block-size: var(--lr-date-input-control-height, auto);
     padding: var(--lr-date-input-padding-block) var(--lr-date-input-padding-inline);
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
     border-radius: var(--lr-radius);
@@ -130,7 +155,7 @@ export const styles = css`
   [part='popup'] {
     position: fixed;
     z-index: var(--lr-layer-dropdown);
-    max-inline-size: min(92vw, var(--lr-size-28rem));
+    max-inline-size: min(var(--lr-popover-viewport-clamp), var(--lr-size-28rem));
     visibility: hidden;
     opacity: 0;
     transform: translateY(var(--lr-size-neg-0-25rem));

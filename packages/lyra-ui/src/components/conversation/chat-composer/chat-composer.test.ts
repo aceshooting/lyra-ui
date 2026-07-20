@@ -683,6 +683,34 @@ it('dims the base part via the :disabled pseudo-class when disabled only through
   expect(getComputedStyle(base).cursor).to.equal('not-allowed');
 });
 
+/** Render the filter declared on `selector`'s :hover rule (read off the element's own applied
+ *  stylesheets) into the component's shadow scope, returning its resolved computed value. Proves both
+ *  that the rule is wired to the shared token and that the token resolves — a hardcoded literal or a
+ *  broken var() would compute to a different value or `none`. */
+function renderedHoverFilter(el: HTMLElement, selector: string): string {
+  const normalize = (text: string) => text.replace(/"/g, "'");
+  let declared = '';
+  for (const sheet of el.shadowRoot!.adoptedStyleSheets) {
+    for (const rule of sheet.cssRules) {
+      if (rule instanceof CSSStyleRule && normalize(rule.selectorText) === normalize(selector) && rule.style.filter) {
+        declared = rule.style.filter;
+      }
+    }
+  }
+  const probe = document.createElement('span');
+  probe.style.filter = declared;
+  el.shadowRoot!.appendChild(probe);
+  const value = getComputedStyle(probe).filter;
+  probe.remove();
+  return value;
+}
+
+it('lifts the send button on hover through the shared hover-brightness token', async () => {
+  const el = (await fixture(html`<lr-chat-composer></lr-chat-composer>`)) as LyraChatComposer;
+  await el.updateComplete;
+  expect(renderedHoverFilter(el, "[part='action-button']:hover")).to.equal('brightness(1.08)');
+});
+
 it('is accessible in the default, empty state', async () => {
   const el = (await fixture(
     html`<lr-chat-composer placeholder="Message the assistant…"></lr-chat-composer>`,

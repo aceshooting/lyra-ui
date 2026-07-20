@@ -88,6 +88,17 @@ describe('lr-compare-panel', () => {
     );
   });
 
+  it('dims a disabled vote button through the shared disabled-opacity token', async () => {
+    const wrapper = (await fixture(
+      html`<div style="--lr-theme-opacity-disabled: 0.25"><lr-compare-panel disabled></lr-compare-panel></div>`,
+    )) as HTMLElement;
+    const el = wrapper.querySelector('lr-compare-panel') as LyraComparePanel;
+    await el.updateComplete;
+    const button = el.shadowRoot!.querySelector('[part="vote-button"]') as HTMLButtonElement;
+    expect(button.disabled).to.be.true;
+    expect(getComputedStyle(button).opacity).to.equal('0.25');
+  });
+
   it('is accessible', async () => {
     const el = (await fixture(html`
       <lr-compare-panel label-a="Model A" label-b="Model B">

@@ -772,6 +772,36 @@ describe('lr-tour', () => {
     expect(popover.hasAttribute('aria-labelledby')).to.be.false;
   });
 
+  it('lifts the Next button on hover through the shared hover-brightness token', async () => {
+    const el = (await fixture(
+      html`<div>
+        <lr-tour .steps=${makeSteps(3)} open></lr-tour>
+        ${targetButtons(3)}
+      </div>`,
+    )) as HTMLDivElement;
+    const tour = el.querySelector('lr-tour') as LyraTour;
+    await tour.updateComplete;
+    const normalize = (text: string) => text.replace(/"/g, "'");
+    let declared = '';
+    for (const sheet of tour.shadowRoot!.adoptedStyleSheets) {
+      for (const rule of sheet.cssRules) {
+        if (
+          rule instanceof CSSStyleRule &&
+          normalize(rule.selectorText) === normalize("[part='next-button']:hover") &&
+          rule.style.filter
+        ) {
+          declared = rule.style.filter;
+        }
+      }
+    }
+    const probe = document.createElement('span');
+    probe.style.filter = declared;
+    tour.shadowRoot!.appendChild(probe);
+    const computed = getComputedStyle(probe).filter;
+    probe.remove();
+    expect(computed).to.equal('brightness(1.08)');
+  });
+
   it('is accessible with an open, multi-step tour and a resolvable target', async () => {
     const el = (await fixture(
       html`<div>
@@ -863,4 +893,30 @@ describe('lr-tour', () => {
     }
     expect(calls.flat().map(String).some((message) => message.includes('scheduled an update'))).to.be.false;
   });
+});
+
+it('clamps the tour popover width through the shared popover-viewport-clamp token', async () => {
+  const el = (await fixture(html`<lr-tour .steps=${makeSteps(2)}></lr-tour>`)) as LyraTour;
+  await el.updateComplete;
+  const normalize = (text: string) => text.replace(/"/g, "'");
+  let declared = '';
+  for (const sheet of el.shadowRoot!.adoptedStyleSheets) {
+    for (const rule of sheet.cssRules) {
+      if (
+        rule instanceof CSSStyleRule &&
+        normalize(rule.selectorText) === normalize("[part='popover']") &&
+        rule.style.maxInlineSize
+      ) {
+        declared = rule.style.maxInlineSize;
+      }
+    }
+  }
+  const probe = document.createElement('span');
+  probe.style.display = 'block';
+  probe.style.setProperty('--lr-popover-viewport-clamp', '10px');
+  probe.style.maxInlineSize = declared;
+  el.shadowRoot!.appendChild(probe);
+  const computed = getComputedStyle(probe).maxInlineSize;
+  probe.remove();
+  expect(computed).to.equal('10px');
 });

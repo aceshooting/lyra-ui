@@ -119,7 +119,7 @@ export const styles = css`
   }
   [part='action-button']:hover {
     background: var(--lr-color-brand);
-    filter: brightness(1.1);
+    filter: brightness(var(--lr-hover-brightness));
   }
   [part='action-button']:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);

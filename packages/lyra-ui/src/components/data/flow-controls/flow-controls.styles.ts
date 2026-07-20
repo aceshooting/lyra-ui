@@ -42,7 +42,7 @@ export const styles = css`
     background: var(--lr-color-surface-hover, var(--lr-color-border));
   }
   [part='base'] button:disabled {
-    opacity: 0.4;
+    opacity: var(--lr-opacity-disabled);
     cursor: not-allowed;
   }
   [part='base'] button:focus-visible {

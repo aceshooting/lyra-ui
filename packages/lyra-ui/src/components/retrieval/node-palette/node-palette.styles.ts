@@ -46,7 +46,7 @@ export const styles = css`
   }
   [part='item'][aria-disabled='true'] {
     cursor: not-allowed;
-    opacity: 0.5;
+    opacity: var(--lr-opacity-disabled);
   }
   [part='item']:not([aria-disabled='true']):hover,
   [part='item']:not([aria-disabled='true']):focus-visible {

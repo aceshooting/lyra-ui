@@ -117,7 +117,7 @@ export const styles = css`
     overflow-y: auto;
     inline-size: max-content;
     min-inline-size: var(--lr-size-12rem);
-    max-inline-size: min(92vw, var(--lr-size-28rem));
+    max-inline-size: min(var(--lr-popover-viewport-clamp), var(--lr-size-28rem));
     padding: var(--lr-space-xs);
     background: var(--lr-color-surface);
     border: var(--lr-border-width-thin) solid var(--lr-color-border);

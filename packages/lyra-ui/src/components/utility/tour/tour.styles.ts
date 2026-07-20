@@ -48,7 +48,7 @@ export const styles = css`
     flex-direction: column;
     gap: var(--lr-space-m);
     min-inline-size: 0;
-    max-inline-size: min(92vw, var(--lr-tour-popover-max-width), var(--lr-positioner-available-inline-size, 100vw));
+    max-inline-size: min(var(--lr-popover-viewport-clamp), var(--lr-tour-popover-max-width), var(--lr-positioner-available-inline-size, 100vw));
     max-block-size: var(--lr-positioner-available-block-size, 90vh);
     padding: var(--lr-space-l);
     background: var(--lr-color-surface);
@@ -64,7 +64,7 @@ export const styles = css`
     margin: auto;
     inline-size: fit-content;
     block-size: fit-content;
-    max-inline-size: min(92vw, var(--lr-tour-popover-max-width));
+    max-inline-size: min(var(--lr-popover-viewport-clamp), var(--lr-tour-popover-max-width));
   }
   [part='heading'] {
     font-weight: var(--lr-font-weight-semibold);
@@ -134,7 +134,7 @@ export const styles = css`
     background: var(--lr-color-brand-quiet);
   }
   [part='next-button']:hover {
-    filter: brightness(1.08);
+    filter: brightness(var(--lr-hover-brightness));
   }
   [part='previous-button']:focus-visible,
   [part='skip-button']:focus-visible,

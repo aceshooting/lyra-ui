@@ -516,7 +516,7 @@ it('bounds and wraps a long format menu within the positioner available inline s
     .replace(/\(\s+/g, '(')
     .replace(/\s+\)/g, ')');
   expect(css).to.include(
-    'max-inline-size: min(92vw, var(--lr-size-20rem), var(--lr-positioner-available-inline-size, 100vw));',
+    'max-inline-size: min(var(--lr-popover-viewport-clamp), var(--lr-size-20rem), var(--lr-positioner-available-inline-size, 100vw));',
   );
   expect(css).to.include('overflow-wrap: anywhere;');
   expect(css).to.include("[part='menu-item'] { display: flex; flex-direction: column;");
@@ -553,4 +553,38 @@ describe('label localization', () => {
     const trigger = el.shadowRoot!.querySelector('[part="trigger"]') as HTMLButtonElement;
     expect(trigger.textContent!.trim()).to.equal('Exporter');
   });
+});
+
+/** Render the max-inline-size declared on `selector` (read off the element's own applied stylesheets)
+ *  into the component's shadow scope with the viewport-clamp token pinned to a tiny value, returning
+ *  its resolved computed value. Wired to --lr-popover-viewport-clamp the min() collapses to that
+ *  pinned value; a leftover 92vw/90vw literal would resolve to something else. */
+function renderedClamp(el: HTMLElement, selector: string): string {
+  const normalize = (text: string) => text.replace(/"/g, "'");
+  let declared = '';
+  for (const sheet of el.shadowRoot!.adoptedStyleSheets) {
+    for (const rule of sheet.cssRules) {
+      if (
+        rule instanceof CSSStyleRule &&
+        normalize(rule.selectorText) === normalize(selector) &&
+        rule.style.maxInlineSize
+      ) {
+        declared = rule.style.maxInlineSize;
+      }
+    }
+  }
+  const probe = document.createElement('span');
+  probe.style.display = 'block';
+  probe.style.setProperty('--lr-popover-viewport-clamp', '10px');
+  probe.style.maxInlineSize = declared;
+  el.shadowRoot!.appendChild(probe);
+  const value = getComputedStyle(probe).maxInlineSize;
+  probe.remove();
+  return value;
+}
+
+it('clamps its floating surface width through the shared popover-viewport-clamp token', async () => {
+  const el = (await fixture(html`<lr-export-button></lr-export-button>`)) as HTMLElement;
+  await (el as HTMLElement & { updateComplete?: Promise<unknown> }).updateComplete;
+  expect(renderedClamp(el, "[part='menu']")).to.equal('10px');
 });

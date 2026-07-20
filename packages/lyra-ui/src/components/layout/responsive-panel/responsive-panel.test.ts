@@ -5,9 +5,33 @@ import { resolveEffectiveMode } from './responsive-panel.js';
 import { styles } from './responsive-panel.styles.js';
 
 it('uses a dynamic viewport fallback and safe-area padding for bottom sheets', () => {
-  expect(styles.cssText).to.include('max-block-size: 85vh');
-  expect(styles.cssText).to.include('max-block-size: 85dvh');
   expect(styles.cssText).to.include('var(--lr-safe-area-bottom)');
+});
+
+it('caps an open bottom sheet at 85% of the dynamic viewport by default', async () => {
+  const el = (await fixture(
+    html`<lr-responsive-panel mode="overlay" variant="bottom-sheet" open label="Actions"
+      ><button>Share</button></lr-responsive-panel
+    >`,
+  )) as LyraResponsivePanel;
+  await el.updateComplete;
+  const panel = el.shadowRoot!.querySelector('[part="panel"]') as HTMLElement;
+  const resolved = Number.parseFloat(getComputedStyle(panel).maxBlockSize);
+  expect(Math.abs(resolved - window.innerHeight * 0.85)).to.be.lessThan(1);
+});
+
+it('lets a host override the bottom-sheet height through --lr-responsive-panel-sheet-max-block-size', async () => {
+  const wrapper = (await fixture(html`
+    <div style="--lr-responsive-panel-sheet-max-block-size: 120px">
+      <lr-responsive-panel mode="overlay" variant="bottom-sheet" open label="Actions">
+        <button>Share</button>
+      </lr-responsive-panel>
+    </div>
+  `)) as HTMLElement;
+  const el = wrapper.querySelector('lr-responsive-panel') as LyraResponsivePanel;
+  await el.updateComplete;
+  const panel = el.shadowRoot!.querySelector('[part="panel"]') as HTMLElement;
+  expect(getComputedStyle(panel).maxBlockSize).to.equal('120px');
 });
 
 // A stand-in for a slotted component (e.g. lr-combobox) whose real

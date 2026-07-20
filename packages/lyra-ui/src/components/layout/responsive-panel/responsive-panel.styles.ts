@@ -71,11 +71,21 @@ export const styles = css`
      it) visible above it. */
   :host([variant='bottom-sheet']) [part='base'].overlay [part='panel'] {
     block-size: auto;
-    max-block-size: 85vh;
-    max-block-size: 85dvh;
+    max-block-size: var(--lr-responsive-panel-sheet-max-block-size, 85vh);
     padding-block-end: var(--lr-safe-area-bottom);
     border-start-start-radius: var(--lr-radius);
     border-start-end-radius: var(--lr-radius);
+  }
+  /* Dynamic-viewport refinement of the clamp above, so a mobile browser's
+     collapsing address bar doesn't leave the sheet taller than the visible
+     viewport. Guarded by @supports rather than written as a second plain
+     declaration: once the value comes from a custom property, an unsupported
+     dvh unit fails at computed-value time and resets max-block-size to none
+     instead of falling back to the preceding vh declaration. */
+  @supports (max-block-size: 1dvh) {
+    :host([variant='bottom-sheet']) [part='base'].overlay [part='panel'] {
+      max-block-size: var(--lr-responsive-panel-sheet-max-block-size, 85dvh);
+    }
   }
 
   [part='header'] {

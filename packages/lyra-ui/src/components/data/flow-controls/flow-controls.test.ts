@@ -132,6 +132,17 @@ it('resolves a for-target canvas that mounts into the document after the control
   expect((controls.shadowRoot!.querySelector('[part="zoom-in"]') as HTMLButtonElement).disabled).to.be.false;
 });
 
+it('dims a disabled toolbar button through the shared disabled-opacity token', async () => {
+  const wrapper = (await fixture(
+    html`<div style="--lr-theme-opacity-disabled: 0.25"><lr-flow-controls></lr-flow-controls></div>`,
+  )) as HTMLElement;
+  const el = wrapper.querySelector('lr-flow-controls') as LyraFlowControls;
+  await el.updateComplete;
+  const button = el.shadowRoot!.querySelector('[part="zoom-in"]') as HTMLButtonElement;
+  expect(button.disabled).to.be.true;
+  expect(getComputedStyle(button).opacity).to.equal('0.25');
+});
+
 it('is accessible with a resolved canvas', async () => {
   const wrapper = (await fixture(html`
     <lr-flow-canvas><lr-flow-controls slot="bottom-start"></lr-flow-controls></lr-flow-canvas>

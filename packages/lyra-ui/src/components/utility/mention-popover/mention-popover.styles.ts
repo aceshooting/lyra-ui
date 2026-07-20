@@ -20,7 +20,7 @@ export const styles = css`
     overflow-y: auto;
     inline-size: max-content;
     min-inline-size: min(var(--lr-size-14rem), var(--lr-positioner-available-inline-size, var(--lr-size-14rem)));
-    max-inline-size: min(92vw, var(--lr-size-24rem), var(--lr-positioner-available-inline-size, 100vw));
+    max-inline-size: min(var(--lr-popover-viewport-clamp), var(--lr-size-24rem), var(--lr-positioner-available-inline-size, 100vw));
     padding: var(--lr-space-xs);
     background: var(--lr-color-surface);
     border: var(--lr-border-width-thin) solid var(--lr-color-border);

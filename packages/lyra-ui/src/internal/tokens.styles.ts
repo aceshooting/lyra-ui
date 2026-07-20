@@ -232,6 +232,16 @@ export const tokens = css`
        replacing three previously-independent hardcoded values (0.5/0.4/0.35). */
     --lr-opacity-disabled: var(--lr-theme-opacity-disabled, 0.5);
 
+    /* Hover lift — the filter: brightness() multiplier applied to a solid
+       brand/fill control on :hover, so every such hover shares one rhythm
+       instead of each hardcoding its own 1.08/1.1/0.92 magic number. */
+    --lr-hover-brightness: var(--lr-theme-hover-brightness, 1.08);
+
+    /* Popover viewport clamp — the max-inline-size cap that keeps an anchored
+       popover/menu from spilling past the viewport edge, shared by every
+       floating surface so they clamp to one consistent width. */
+    --lr-popover-viewport-clamp: var(--lr-theme-popover-viewport-clamp, 92vw);
+
     /* Focus ring — every :focus-visible rule in the library should reference
        these three instead of hardcoding its own width/color/offset. */
     --lr-focus-ring-width: var(--lr-theme-focus-ring-width, 2px);

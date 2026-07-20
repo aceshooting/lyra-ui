@@ -322,6 +322,34 @@ describe('320px allocation', () => {
   });
 });
 
+describe('hover treatment', () => {
+  it('lifts the submit button on hover through the shared hover-brightness token', async () => {
+    const el = (await fixture(
+      html`<lr-retrieval-search query="inverter fault codes"></lr-retrieval-search>`,
+    )) as LyraRetrievalSearch;
+    await el.updateComplete;
+    const normalize = (text: string) => text.replace(/"/g, "'");
+    let declared = '';
+    for (const sheet of el.shadowRoot!.adoptedStyleSheets) {
+      for (const rule of sheet.cssRules) {
+        if (
+          rule instanceof CSSStyleRule &&
+          normalize(rule.selectorText) === normalize("[part='submit']:hover") &&
+          rule.style.filter
+        ) {
+          declared = rule.style.filter;
+        }
+      }
+    }
+    const probe = document.createElement('span');
+    probe.style.filter = declared;
+    el.shadowRoot!.appendChild(probe);
+    const computed = getComputedStyle(probe).filter;
+    probe.remove();
+    expect(computed).to.equal('brightness(1.08)');
+  });
+});
+
 describe('accessibility', () => {
   it('is accessible in a populated state (query, mode, filters, scope chips)', async () => {
     const el = (await fixture(html`<lr-retrieval-search query="inverter fault codes"></lr-retrieval-search>`)) as LyraRetrievalSearch;

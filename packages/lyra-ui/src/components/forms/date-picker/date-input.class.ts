@@ -133,6 +133,14 @@ class LyraDateInputBase extends LyraElement<LyraDateInputEventMap> {}
  * @cssprop [--lr-date-input-padding-block=var(--lr-space-xs)] - Block padding of the input row, scaled by `size`.
  * @cssprop [--lr-date-input-padding-inline=var(--lr-space-s)] - Inline padding of the input row, scaled by `size`.
  * @cssprop [--lr-date-input-font-size=inherit] - Font size of the text input, scaled by `size`.
+ * @cssprop [--lr-date-input-control-min-height=var(--lr-size-2-5rem)] - Minimum block size of the
+ *   input row, scaled by `size` to mirror `lr-input`'s own min-height scale. Each default sits
+ *   below the row's transitively-pinned height, so it is dead until a consumer raises it -- the
+ *   unset render is unchanged.
+ * @cssprop --lr-date-input-control-height - Exact block size of the input row. Undeclared by
+ *   default, so the row grows to fit its content (floored by `--lr-date-input-control-min-height`).
+ *   Set it to pin a fixed height; the calendar toggle keeps its own 24x24 touch target even when
+ *   this pins a shorter row.
  * @slot label - Custom label content.
  * @slot error - Custom error content.
  * @slot hint - Custom hint content.

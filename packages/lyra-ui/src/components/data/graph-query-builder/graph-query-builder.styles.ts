@@ -70,7 +70,7 @@ export const styles = css`
   [part='save-button']:disabled,
   [part='saved-load-button']:disabled,
   [part='saved-delete-button']:disabled {
-    opacity: 0.6;
+    opacity: var(--lr-opacity-disabled);
     cursor: not-allowed;
   }
   [part='run-button']:focus-visible,

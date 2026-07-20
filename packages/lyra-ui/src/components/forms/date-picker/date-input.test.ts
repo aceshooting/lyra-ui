@@ -760,7 +760,9 @@ it('does not render an orphaned asterisk when required but no label is provided'
 });
 
 it('clamps the popup to the viewport width like the combobox listbox', () => {
-  expect(styles.cssText).to.include('max-inline-size: min(92vw, var(--lr-size-28rem))');
+  expect(styles.cssText).to.include(
+    'max-inline-size: min(var(--lr-popover-viewport-clamp), var(--lr-size-28rem))',
+  );
 });
 
 it('propagates disabled/readonly to the nested lr-date-picker so its days actually stop being interactive', async () => {
@@ -1333,4 +1335,115 @@ describe('start/end adornment slots', () => {
     expect(part(el, 'clear-button')).to.exist;
     await expect(el).to.be.accessible();
   });
+});
+
+describe('control min-height knob and exact-height hatch', () => {
+  const wrapper = (el: LyraDateInput): HTMLElement =>
+    el.shadowRoot!.querySelector('[part="input-wrapper"]') as HTMLElement;
+
+  it('does NOT declare the --lr-date-input-control-height sentinel (guards the lr-select trap)', async () => {
+    const el = (await fixture(html`<lr-date-input></lr-date-input>`)) as LyraDateInput;
+    await el.updateComplete;
+    expect(getComputedStyle(el).getPropertyValue('--lr-date-input-control-height').trim()).to.equal('');
+  });
+
+  it('wires --lr-date-input-control-min-height per tier (rendered min-block-size)', async () => {
+    const expected: Record<string, string> = {
+      '2xs': '20px',
+      xs: '24px',
+      s: '30px',
+      m: '40px',
+      l: '48px',
+      xl: '56px',
+    };
+    for (const [size, px] of Object.entries(expected)) {
+      const el = (await fixture(html`<lr-date-input size=${size}></lr-date-input>`)) as LyraDateInput;
+      await el.updateComplete;
+      expect(getComputedStyle(wrapper(el)).minBlockSize, `size=${size}`).to.equal(px);
+    }
+  });
+
+  it('leaves the rendered row height byte-identical when the height hatch is unset', async () => {
+    const el = (await fixture(html`<lr-date-input value="2026-07-15"></lr-date-input>`)) as LyraDateInput;
+    await el.updateComplete;
+    const w = wrapper(el);
+    const natural = getComputedStyle(w).blockSize;
+    // The row height is pinned transitively by the un-gated 40px calendar toggle, well above the
+    // per-tier min-height floor, so the floor is dead until raised -- byte-identical to today.
+    expect(Number.parseFloat(natural)).to.be.greaterThan(
+      Number.parseFloat(getComputedStyle(w).minBlockSize),
+    );
+    el.style.setProperty('--lr-date-input-control-height', '30px');
+    await el.updateComplete;
+    expect(getComputedStyle(w).blockSize).to.equal('30px');
+    el.style.removeProperty('--lr-date-input-control-height');
+    await el.updateComplete;
+    expect(getComputedStyle(w).blockSize).to.equal(natural);
+  });
+
+  it('keeps the calendar toggle a >=24x24 target even when the height hatch crushes the row', async () => {
+    // The exact-height cap does not crush the WCAG 2.2 SC 2.5.8 target: the expand button carries
+    // its own un-gated --lr-icon-button-size floor, so it keeps 24x24 while overflowing a short row.
+    const el = (await fixture(html`<lr-date-input value="2026-07-15" with-clear></lr-date-input>`)) as LyraDateInput;
+    el.style.setProperty('--lr-date-input-control-height', '16px');
+    await el.updateComplete;
+    const expandBtn = el.shadowRoot!.querySelector('[part="expand-button"]') as HTMLElement;
+    expect(expandBtn.getBoundingClientRect().height).to.be.greaterThan(24);
+    expect(expandBtn.getBoundingClientRect().width).to.be.greaterThan(24);
+    const clearBtn = el.shadowRoot!.querySelector('[part="clear-button"]') as HTMLElement;
+    expect(clearBtn.getBoundingClientRect().height).to.be.greaterThan(24);
+    expect(clearBtn.getBoundingClientRect().width).to.be.greaterThan(24);
+  });
+
+  it('lets a consumer raise --lr-date-input-control-min-height past the row content', async () => {
+    const el = (await fixture(html`<lr-date-input></lr-date-input>`)) as LyraDateInput;
+    await el.updateComplete;
+    const w = wrapper(el);
+    const natural = Number.parseFloat(getComputedStyle(w).blockSize);
+    el.style.setProperty('--lr-date-input-control-min-height', `${natural + 20}px`);
+    await el.updateComplete;
+    expect(Number.parseFloat(getComputedStyle(w).blockSize)).to.equal(natural + 20);
+  });
+
+  it('stays accessible with a pinned exact control height', async () => {
+    const el = (await fixture(
+      html`<lr-date-input value="2026-07-15" style="--lr-date-input-control-height: 44px;"></lr-date-input>`,
+    )) as LyraDateInput;
+    await el.updateComplete;
+    await expect(el).to.be.accessible();
+  });
+});
+
+/** Render the max-inline-size declared on `selector` (read off the element's own applied stylesheets)
+ *  into the component's shadow scope with the viewport-clamp token pinned to a tiny value, returning
+ *  its resolved computed value. Wired to --lr-popover-viewport-clamp the min() collapses to that
+ *  pinned value; a leftover 92vw/90vw literal would resolve to something else. */
+function renderedClamp(el: HTMLElement, selector: string): string {
+  const normalize = (text: string) => text.replace(/"/g, "'");
+  let declared = '';
+  for (const sheet of el.shadowRoot!.adoptedStyleSheets) {
+    for (const rule of sheet.cssRules) {
+      if (
+        rule instanceof CSSStyleRule &&
+        normalize(rule.selectorText) === normalize(selector) &&
+        rule.style.maxInlineSize
+      ) {
+        declared = rule.style.maxInlineSize;
+      }
+    }
+  }
+  const probe = document.createElement('span');
+  probe.style.display = 'block';
+  probe.style.setProperty('--lr-popover-viewport-clamp', '10px');
+  probe.style.maxInlineSize = declared;
+  el.shadowRoot!.appendChild(probe);
+  const value = getComputedStyle(probe).maxInlineSize;
+  probe.remove();
+  return value;
+}
+
+it('clamps its floating surface width through the shared popover-viewport-clamp token', async () => {
+  const el = (await fixture(html`<lr-date-input></lr-date-input>`)) as HTMLElement;
+  await (el as HTMLElement & { updateComplete?: Promise<unknown> }).updateComplete;
+  expect(renderedClamp(el, "[part='popup']")).to.equal('10px');
 });

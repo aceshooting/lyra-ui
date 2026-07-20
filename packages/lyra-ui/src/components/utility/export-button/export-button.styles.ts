@@ -51,7 +51,7 @@ export const styles = css`
       var(--lr-positioner-available-inline-size, 100vw)
     );
     max-inline-size: min(
-      92vw,
+      var(--lr-popover-viewport-clamp),
       var(--lr-size-20rem),
       var(--lr-positioner-available-inline-size, 100vw)
     );

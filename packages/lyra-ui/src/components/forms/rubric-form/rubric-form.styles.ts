@@ -69,7 +69,7 @@ export const styles = css`
   }
   [part='submit']:disabled,
   [part='skip']:disabled {
-    opacity: 0.6;
+    opacity: var(--lr-opacity-disabled);
     cursor: not-allowed;
   }
   [part='submit']:focus-visible,

@@ -41,7 +41,7 @@ const monthStart = (date: Date): Date => new Date(date.getFullYear(), date.getMo
  * @csspart agenda - Agenda list.
  * @csspart agenda-event - One focusable event button in agenda view (`view="agenda"` only).
  * @cssprop [--lr-calendar-day-min-block-size=var(--lr-size-6rem)] - Minimum block size of a day cell.
- * @cssprop [--lr-calendar-day-min-block-size-narrow=4rem] - Minimum block size of a day cell once the host is narrower than 28rem.
+ * @cssprop [--lr-calendar-day-min-block-size-narrow=var(--lr-size-4rem)] - Minimum block size of a day cell once the host is narrower than 28rem.
  */
 export class LyraCalendar extends LyraElement<LyraCalendarEventMap> {
   static styles = [LyraElement.styles, styles];

@@ -600,6 +600,22 @@ describe('lr-rubric-form', () => {
     expect(el.shadowRoot!.activeElement === textarea).to.be.true;
   });
 
+  it('dims the disabled submit/skip buttons through the shared disabled-opacity token', async () => {
+    const wrapper = (await fixture(
+      html`<div style="--lr-theme-opacity-disabled: 0.25">
+        <lr-rubric-form .keys=${KEYS} skippable disabled></lr-rubric-form>
+      </div>`,
+    )) as HTMLElement;
+    const el = wrapper.querySelector('lr-rubric-form') as LyraRubricForm;
+    await el.updateComplete;
+    const submit = el.shadowRoot!.querySelector('[part="submit"]') as HTMLButtonElement;
+    const skip = el.shadowRoot!.querySelector('[part="skip"]') as HTMLButtonElement;
+    expect(submit.disabled).to.be.true;
+    expect(skip.disabled).to.be.true;
+    expect(getComputedStyle(submit).opacity).to.equal('0.25');
+    expect(getComputedStyle(skip).opacity).to.equal('0.25');
+  });
+
   it('submits on Ctrl/Cmd+Enter, but not on a plain Enter or an unmodified other key (onFormKeyDown)', async () => {
     const el = (await fixture(
       html`<lr-rubric-form .keys=${KEYS} item-id="item-1" .value=${{ accuracy: 5 }}></lr-rubric-form>`,

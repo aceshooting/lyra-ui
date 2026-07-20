@@ -623,6 +623,32 @@ describe('localization', () => {
   });
 });
 
+function renderedHoverFilter(el: HTMLElement, selector: string): string {
+  const normalize = (text: string) => text.replace(/"/g, "'");
+  let declared = '';
+  for (const sheet of el.shadowRoot!.adoptedStyleSheets) {
+    for (const rule of sheet.cssRules) {
+      if (rule instanceof CSSStyleRule && normalize(rule.selectorText) === normalize(selector) && rule.style.filter) {
+        declared = rule.style.filter;
+      }
+    }
+  }
+  const probe = document.createElement('span');
+  probe.style.filter = declared;
+  el.shadowRoot!.appendChild(probe);
+  const value = getComputedStyle(probe).filter;
+  probe.remove();
+  return value;
+}
+
+it('lifts the approve button on hover through the shared hover-brightness token', async () => {
+  const el = (await fixture(
+    html`<lr-tool-approval-dialog tool-name="web_search" .args=${ARGS} open></lr-tool-approval-dialog>`,
+  )) as LyraToolApprovalDialog;
+  await el.updateComplete;
+  expect(renderedHoverFilter(el, "[part='approve-button']:hover:not(:disabled)")).to.equal('brightness(1.08)');
+});
+
 it('is accessible while closed', async () => {
   const el = (await fixture(
     html`<lr-tool-approval-dialog tool-name="web_search" .args=${ARGS}></lr-tool-approval-dialog>`,

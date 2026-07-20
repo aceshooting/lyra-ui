@@ -42,7 +42,7 @@ export const styles = css`
   }
   [part='submit']:hover {
     background: var(--lr-color-brand);
-    filter: brightness(0.92);
+    filter: brightness(var(--lr-hover-brightness));
   }
   [part='submit']:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
