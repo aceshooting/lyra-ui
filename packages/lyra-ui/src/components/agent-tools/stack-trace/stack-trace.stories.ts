@@ -61,3 +61,23 @@ export const MaxHeight: Story = {
 export const Narrow320: Story = {
   render: () => html`<div style="max-width:320px"><lr-stack-trace .trace=${jsTrace}></lr-stack-trace></div>`,
 };
+
+export const PlainInsideCard: Story = {
+  name: 'appearance="plain" (nested in a bordered host)',
+  render: () => html`
+    <div
+      style="max-width:40rem; border:1px solid var(--lr-color-border); border-radius:var(--lr-radius); background:var(--lr-color-surface); padding:0.75rem;"
+    >
+      <div style="font-weight:600; margin-block-end:0.5rem;">Tool error</div>
+      <lr-stack-trace appearance="plain" .trace=${jsTrace}></lr-stack-trace>
+    </div>
+  `,
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'With `appearance="plain"` the trace drops its own border/background so it doesn\'t double the frame of the `lr-result-card`/`lr-agent-run` it is nested in.',
+      },
+    },
+  },
+};

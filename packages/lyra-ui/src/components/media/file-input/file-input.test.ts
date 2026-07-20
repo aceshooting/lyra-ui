@@ -460,3 +460,55 @@ it('announces accepted and rejected selection outcomes through the live region',
   await el.updateComplete;
   expect(status.textContent).to.equal('2 files added. 2 files rejected.');
 });
+
+const fileInputBaseChrome = (el: LyraFileInput) => {
+  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  const s = getComputedStyle(base);
+  return {
+    paddingTop: s.paddingTop,
+    paddingLeft: s.paddingLeft,
+    rowGap: s.rowGap,
+    fontSize: s.fontSize,
+    borderTopWidth: s.borderTopWidth,
+    borderTopStyle: s.borderTopStyle,
+  };
+};
+
+it('defaults to compact=false, rendering identically to that value restated', async () => {
+  const implicit = (await fixture(html`<lr-file-input></lr-file-input>`)) as LyraFileInput;
+  const explicit = (await fixture(html`<lr-file-input .compact=${false}></lr-file-input>`)) as LyraFileInput;
+
+  expect(implicit.compact).to.be.false;
+  expect(implicit.hasAttribute('compact')).to.be.false;
+  expect(fileInputBaseChrome(explicit)).to.deep.equal(fileInputBaseChrome(implicit));
+
+  const chrome = fileInputBaseChrome(implicit);
+  expect(chrome.paddingTop).to.equal('16px'); // --lr-space-l
+  expect(chrome.borderTopWidth).to.equal('2px'); // --lr-border-width-medium
+  expect(chrome.borderTopStyle).to.equal('dashed');
+});
+
+it('reflects compact and tightens the dropzone padding/font, keeping the dashed border', async () => {
+  const el = (await fixture(html`<lr-file-input compact></lr-file-input>`)) as LyraFileInput;
+  expect(el.hasAttribute('compact')).to.be.true;
+  const chrome = fileInputBaseChrome(el);
+  expect(chrome.paddingTop).to.equal('8px'); // --lr-space-s
+  expect(chrome.fontSize).to.equal('13px'); // --lr-font-size-sm
+  // still a dashed dropzone -- compact is a density knob, not a chrome removal.
+  expect(chrome.borderTopStyle).to.equal('dashed');
+});
+
+it('lets a consumer retune the compact values through --lr-file-input-compact-*', async () => {
+  const el = (await fixture(html`<lr-file-input compact></lr-file-input>`)) as LyraFileInput;
+  el.style.setProperty('--lr-file-input-compact-padding', '3px');
+  el.style.setProperty('--lr-file-input-compact-font-size', '9px');
+  await el.updateComplete;
+  const chrome = fileInputBaseChrome(el);
+  expect(chrome.paddingTop).to.equal('3px');
+  expect(chrome.fontSize).to.equal('9px');
+});
+
+it('is accessible while compact', async () => {
+  const el = (await fixture(html`<lr-file-input compact></lr-file-input>`)) as LyraFileInput;
+  await expect(el).to.be.accessible();
+});

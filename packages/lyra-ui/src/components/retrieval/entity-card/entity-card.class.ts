@@ -30,6 +30,9 @@ export interface LyraEntity {
  *  alias for why this isn't imported from `lr-graph` itself. */
 type NodeTypeStyle = { id: string; label: string; color?: string; shape?: 'circle' | 'square' | 'diamond' };
 
+/** Visual chrome for `<lr-entity-card>`'s root, mirroring `lr-card`'s `appearance` vocabulary. */
+export type EntityCardAppearance = 'card' | 'plain';
+
 export interface LyraEntityCardEventMap {
   'lr-entity-activate': CustomEvent<{ id: string }>;
 }
@@ -78,6 +81,10 @@ function typeBadgeStyle(color: string | undefined): Record<string, string> {
  * @csspart actions - The wrapper around the `actions` slot and the built-in focus button.
  * @csspart focus-button - The built-in "Focus in graph" button.
  * @csspart empty - The empty state shown when `entity` is `null`.
+ * @cssprop [--lr-entity-card-compact-padding=var(--lr-space-s)] - `[part="base"]` padding while
+ *   `compact`.
+ * @cssprop [--lr-entity-card-compact-gap=var(--lr-space-xs)] - Gap between `[part="base"]`'s rows
+ *   while `compact`.
  */
 export class LyraEntityCard extends LyraElement<LyraEntityCardEventMap> {
   static styles = [LyraElement.styles, styles];
@@ -91,6 +98,16 @@ export class LyraEntityCard extends LyraElement<LyraEntityCardEventMap> {
   @property({ attribute: 'community-label' }) communityLabel = '';
   /** Hides the built-in focus action on pages with no graph. */
   @property({ type: Boolean, attribute: 'show-focus-button' }) showFocusButton = true;
+  /** Tighter root padding and row gap for dense contexts (a dossier rendered in a sidebar or a
+   *  result list) -- same convention as `lr-empty`'s `compact`, and as this component's sibling
+   *  `lr-community-card`. Defaults to `false`, i.e. the full card padding. Purely a density knob:
+   *  the border and background stay, so use `appearance="plain"` to drop the chrome entirely. */
+  @property({ type: Boolean, reflect: true }) compact = false;
+  /** Visual chrome, mirroring `lr-card`'s `appearance` vocabulary. `'card'` (the default) keeps the
+   *  bordered, filled, padded box. `'plain'` removes the border, background, padding and corner
+   *  radius, so a card nested inside a container that already draws a border doesn't double it.
+   *  `plain` wins over `compact` when both are set (nothing left to tighten). */
+  @property({ reflect: true }) appearance: EntityCardAppearance = 'card';
 
   private resolvedType(type: string): NodeTypeStyle | undefined {
     return this.types.find((t) => t.id === type);

@@ -1,6 +1,7 @@
 import { fixture, expect, html, oneEvent } from '@open-wc/testing';
 import './stack-trace.js';
 import type { LyraStackTrace } from './stack-trace.js';
+import { styles } from './stack-trace.styles.js';
 
 const trace = [
   'TypeError: Cannot read properties of undefined',
@@ -86,6 +87,84 @@ describe('lr-stack-trace', () => {
 
   it('is accessible with a parsed, internal-collapsed trace', async () => {
     const el = (await fixture(html`<lr-stack-trace .trace=${trace}></lr-stack-trace>`)) as LyraStackTrace;
+    await el.updateComplete;
+    await expect(el).to.be.accessible();
+  });
+});
+
+describe('lr-stack-trace chrome', () => {
+  const baseChrome = (el: LyraStackTrace) => {
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    const s = getComputedStyle(base);
+    return {
+      paddingTop: s.paddingTop,
+      paddingLeft: s.paddingLeft,
+      borderTopWidth: s.borderTopWidth,
+      borderTopStyle: s.borderTopStyle,
+      borderTopLeftRadius: s.borderTopLeftRadius,
+      backgroundColor: s.backgroundColor,
+      overflowY: s.overflowY,
+    };
+  };
+
+  it('defaults to appearance="card", rendering identically to that value restated', async () => {
+    const implicit = (await fixture(html`<lr-stack-trace .trace=${trace}></lr-stack-trace>`)) as LyraStackTrace;
+    const explicit = (await fixture(
+      html`<lr-stack-trace appearance="card" .trace=${trace}></lr-stack-trace>`,
+    )) as LyraStackTrace;
+
+    expect(implicit.appearance).to.equal('card');
+    expect(implicit.getAttribute('appearance')).to.equal('card');
+    expect(baseChrome(explicit)).to.deep.equal(baseChrome(implicit));
+
+    const chrome = baseChrome(implicit);
+    expect(chrome.paddingTop).to.equal('8px'); // --lr-space-s
+    expect(chrome.borderTopWidth).to.equal('1px');
+    expect(chrome.borderTopStyle).to.equal('solid');
+    expect(chrome.backgroundColor).to.not.equal('rgba(0, 0, 0, 0)');
+  });
+
+  it('drops border, background, padding and radius under appearance="plain"', async () => {
+    const el = (await fixture(
+      html`<lr-stack-trace appearance="plain" .trace=${trace}></lr-stack-trace>`,
+    )) as LyraStackTrace;
+    expect(el.getAttribute('appearance')).to.equal('plain');
+    const chrome = baseChrome(el);
+    expect(chrome.borderTopWidth).to.equal('0px');
+    expect(chrome.borderTopLeftRadius).to.equal('0px');
+    expect(chrome.backgroundColor).to.equal('rgba(0, 0, 0, 0)');
+    expect(chrome.paddingTop).to.equal('0px');
+    expect(chrome.paddingLeft).to.equal('0px');
+  });
+
+  it('keeps the max-height scroll cap working under plain', async () => {
+    const el = (await fixture(
+      html`<lr-stack-trace appearance="plain" max-height="3rem" .trace=${trace}></lr-stack-trace>`,
+    )) as LyraStackTrace;
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    const s = getComputedStyle(base);
+    expect(s.maxBlockSize).to.equal('48px');
+    expect(s.overflowY).to.equal('auto');
+    expect(base.scrollHeight).to.be.greaterThan(base.clientHeight);
+  });
+
+  it('keeps the copy button and frame buttons visibly interactive under plain (their chrome is their own)', async () => {
+    const el = (await fixture(
+      html`<lr-stack-trace appearance="plain" .trace=${trace}></lr-stack-trace>`,
+    )) as LyraStackTrace;
+    const copy = el.shadowRoot!.querySelector('[part="copy-button"]') as HTMLElement;
+    expect(copy).to.exist;
+    const s = getComputedStyle(copy);
+    expect(s.borderTopWidth).to.equal('1px');
+    expect(s.backgroundColor).to.not.equal('rgba(0, 0, 0, 0)');
+    const css = styles.cssText.replace(/\s+/g, ' ');
+    expect(css).to.include("[part='frame']:hover, [part='frame']:focus-visible { color: var(--lr-color-brand); }");
+  });
+
+  it('is accessible with a parsed trace under appearance="plain"', async () => {
+    const el = (await fixture(
+      html`<lr-stack-trace appearance="plain" .trace=${trace}></lr-stack-trace>`,
+    )) as LyraStackTrace;
     await el.updateComplete;
     await expect(el).to.be.accessible();
   });

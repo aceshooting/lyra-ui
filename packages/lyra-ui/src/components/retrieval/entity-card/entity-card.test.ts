@@ -1,6 +1,7 @@
 import { fixture, expect, html, oneEvent } from '@open-wc/testing';
 import './entity-card.js';
 import type { LyraEntityCard, LyraEntity } from './entity-card.js';
+import { styles } from './entity-card.styles.js';
 import type { LyraResultField } from '../../agent-tools/result-card/result-field.class.js';
 
 const entity: LyraEntity = {
@@ -101,4 +102,107 @@ it('is accessible with a full entity', async () => {
   el.communityLabel = 'Nobel laureates';
   await el.updateComplete;
   await expect(el).to.be.accessible();
+});
+
+const baseChrome = (el: LyraEntityCard) => {
+  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  const s = getComputedStyle(base);
+  return {
+    paddingTop: s.paddingTop,
+    paddingLeft: s.paddingLeft,
+    borderTopWidth: s.borderTopWidth,
+    borderTopStyle: s.borderTopStyle,
+    borderTopLeftRadius: s.borderTopLeftRadius,
+    backgroundColor: s.backgroundColor,
+    rowGap: s.rowGap,
+    columnGap: s.columnGap,
+  };
+};
+
+it('defaults to compact=false and appearance="card", rendering identically to those values restated', async () => {
+  const implicit = (await fixture(html`<lr-entity-card .entity=${entity}></lr-entity-card>`)) as LyraEntityCard;
+  const explicit = (await fixture(
+    html`<lr-entity-card appearance="card" .compact=${false} .entity=${entity}></lr-entity-card>`,
+  )) as LyraEntityCard;
+
+  expect(implicit.compact).to.be.false;
+  expect(implicit.appearance).to.equal('card');
+  expect(implicit.hasAttribute('compact')).to.be.false;
+  expect(implicit.getAttribute('appearance')).to.equal('card');
+
+  expect(baseChrome(explicit)).to.deep.equal(baseChrome(implicit));
+  const chrome = baseChrome(implicit);
+  expect(chrome.paddingTop).to.equal('12px'); // --lr-space-m
+  expect(chrome.rowGap).to.equal('8px'); // --lr-space-s
+  expect(chrome.borderTopWidth).to.equal('1px');
+  expect(chrome.borderTopStyle).to.equal('solid');
+  expect(chrome.backgroundColor).to.not.equal('rgba(0, 0, 0, 0)');
+});
+
+it('reflects compact and tightens the base padding/gap, keeping the card border', async () => {
+  const el = (await fixture(html`<lr-entity-card compact .entity=${entity}></lr-entity-card>`)) as LyraEntityCard;
+  expect(el.hasAttribute('compact')).to.be.true;
+  const chrome = baseChrome(el);
+  expect(chrome.paddingTop).to.equal('8px'); // --lr-space-s
+  expect(chrome.rowGap).to.equal('4px'); // --lr-space-xs
+  expect(chrome.borderTopWidth).to.equal('1px');
+  expect(chrome.backgroundColor).to.not.equal('rgba(0, 0, 0, 0)');
+});
+
+it('lets a consumer retune the compact values through --lr-entity-card-compact-*', async () => {
+  const el = (await fixture(html`<lr-entity-card compact .entity=${entity}></lr-entity-card>`)) as LyraEntityCard;
+  el.style.setProperty('--lr-entity-card-compact-padding', '3px');
+  el.style.setProperty('--lr-entity-card-compact-gap', '5px');
+  await el.updateComplete;
+  const chrome = baseChrome(el);
+  expect(chrome.paddingTop).to.equal('3px');
+  expect(chrome.rowGap).to.equal('5px');
+});
+
+it('drops border, background, padding and radius under appearance="plain"', async () => {
+  const el = (await fixture(
+    html`<lr-entity-card appearance="plain" .entity=${entity}></lr-entity-card>`,
+  )) as LyraEntityCard;
+  expect(el.getAttribute('appearance')).to.equal('plain');
+  const chrome = baseChrome(el);
+  expect(chrome.borderTopWidth).to.equal('0px');
+  expect(chrome.borderTopLeftRadius).to.equal('0px');
+  expect(chrome.backgroundColor).to.equal('rgba(0, 0, 0, 0)');
+  expect(chrome.paddingTop).to.equal('0px');
+  expect(chrome.paddingLeft).to.equal('0px');
+});
+
+it('orders :host([appearance="plain"]) after :host([compact]) so the equal-specificity reset wins', () => {
+  const css = styles.cssText;
+  const compactAt = css.indexOf(':host([compact])');
+  const plainAt = css.indexOf(":host([appearance='plain'])");
+  expect(compactAt).to.be.greaterThan(-1);
+  expect(plainAt).to.be.greaterThan(-1);
+  expect(plainAt).to.be.greaterThan(compactAt);
+});
+
+it('lets plain win over compact when both are set', async () => {
+  const el = (await fixture(
+    html`<lr-entity-card compact appearance="plain" .entity=${entity}></lr-entity-card>`,
+  )) as LyraEntityCard;
+  const chrome = baseChrome(el);
+  expect(chrome.paddingTop).to.equal('0px');
+  expect(chrome.borderTopWidth).to.equal('0px');
+});
+
+it('is accessible in the populated compact and plain states', async () => {
+  const compactEl = (await fixture(
+    html`<lr-entity-card compact .entity=${entity} .types=${types} community-label="Nobel laureates"></lr-entity-card>`,
+  )) as LyraEntityCard;
+  await expect(compactEl).to.be.accessible();
+
+  const plainEl = (await fixture(
+    html`<lr-entity-card
+      appearance="plain"
+      .entity=${entity}
+      .types=${types}
+      community-label="Nobel laureates"
+    ></lr-entity-card>`,
+  )) as LyraEntityCard;
+  await expect(plainEl).to.be.accessible();
 });

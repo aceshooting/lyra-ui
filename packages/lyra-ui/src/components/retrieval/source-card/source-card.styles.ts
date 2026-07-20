@@ -13,6 +13,26 @@ export const styles = css`
     border-radius: var(--lr-radius);
     background: var(--lr-color-surface);
   }
+  /* Density escape -- same convention as lr-empty's compact. Source cards render in lists, so the
+     tuned values sit behind inline var() fallbacks (rather than a :host declaration, which every
+     instance re-declares and so shadows any ancestor value) letting a list retune every card at
+     once from the outside; the fallbacks are the pre-existing values scaled down one step, so an
+     unset card renders unchanged. */
+  :host([compact]) [part='base'] {
+    padding: var(--lr-source-card-compact-padding, var(--lr-space-xs));
+    gap: var(--lr-source-card-compact-gap, var(--lr-space-2xs));
+  }
+  /* MUST stay after :host([compact]): both selectors are :host([x]) [part='base'], i.e. equal
+     specificity, so source order alone decides which padding/gap wins when a card is both compact
+     and plain. plain is the stronger statement ("no chrome at all"), so it goes last. The title and
+     toggle affordances are brand-colored text with a hover underline, never a border, so they stay
+     legible with no chrome behind them. */
+  :host([appearance='plain']) [part='base'] {
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+  }
   [part='title'] {
     align-self: flex-start;
     border: none;

@@ -18,6 +18,17 @@ export const styles = css`
     background: var(--lr-color-surface);
     padding: var(--lr-space-s);
   }
+  /* Chrome-less escape, mirroring lr-card's appearance="plain" (and lr-callout's [inline]): a stack
+     trace is routinely nested inside an lr-result-card or lr-agent-run that already draws a border,
+     which today doubles the frame. Only the box decoration goes -- the max-block-size scroll cap
+     and overflow stay, as do the copy button's and frames' own hover/focus affordances, which never
+     depended on this border. */
+  :host([appearance='plain']) [part='base'] {
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+  }
   [part='message'] {
     font-weight: var(--lr-font-weight-bold);
     margin-block-end: var(--lr-space-s);

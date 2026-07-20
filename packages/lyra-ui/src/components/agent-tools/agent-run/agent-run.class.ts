@@ -130,6 +130,9 @@ function formatDuration(ms: number): FormattedDuration {
   return { key: 'durationSeconds', value: Number.isInteger(rounded) ? rounded.toFixed(0) : rounded.toFixed(1) };
 }
 
+/** Visual chrome for `<lr-agent-run>`'s root, mirroring `lr-card`'s `appearance` vocabulary. */
+export type AgentRunAppearance = 'card' | 'plain';
+
 export interface LyraAgentRunEventMap {
   'lr-cancel': CustomEvent<CancelEventDetail>;
   'lr-retry': CustomEvent<RetryEventDetail>;
@@ -243,6 +246,10 @@ export interface LyraAgentRunEventMap {
  * @csspart reasoning - The `reasoning` slot.
  * @csspart output - The `output` slot.
  * @cssprop [--lr-agent-run-spin=1s linear] - Current-step icon spin animation duration and timing.
+ * @cssprop [--lr-agent-run-compact-padding=var(--lr-space-s)] - `[part="base"]` padding while
+ *   `compact`.
+ * @cssprop [--lr-agent-run-compact-gap=var(--lr-space-s)] - Gap between `[part="base"]`'s header
+ *   and body while `compact`.
  */
 export class LyraAgentRun extends LyraElement<LyraAgentRunEventMap> {
   static styles = [LyraElement.styles, srOnly, styles];
@@ -273,6 +280,20 @@ export class LyraAgentRun extends LyraElement<LyraAgentRunEventMap> {
   /** Whether the built-in Retry button can render at all -- still gated by the run's own status
    *  being retryable (`error`/`cancelled`). */
   @property({ type: Boolean, attribute: 'show-retry', converter: trueDefaultBooleanConverter }) showRetry = true;
+
+  /** Tighter root padding and header/body gap for dense contexts (a run rendered as a row in a
+   *  list, a side panel) -- same convention as `lr-empty`'s `compact`. Defaults to `false`, i.e.
+   *  the full card padding. Purely a density knob: the border and background stay, so use
+   *  `appearance="plain"` instead to drop the chrome entirely. */
+  @property({ type: Boolean, reflect: true }) compact = false;
+
+  /** Visual chrome, mirroring `lr-card`'s `appearance` vocabulary. `'card'` (the default) keeps the
+   *  bordered, filled, padded box. `'plain'` removes the border, background, padding and corner
+   *  radius, so a run nested inside a host frame that already draws a border doesn't double it.
+   *  `plain` wins over `compact` when both are set (nothing left to tighten). The built-in
+   *  Cancel/Retry buttons draw their own border/background and stay visibly interactive either
+   *  way. */
+  @property({ reflect: true }) appearance: AgentRunAppearance = 'card';
 
   @state() private retryAttempt = 0;
   @state() private hasHeaderSlot = false;

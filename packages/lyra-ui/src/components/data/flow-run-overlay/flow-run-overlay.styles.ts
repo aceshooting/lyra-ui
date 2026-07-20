@@ -16,6 +16,17 @@ export const styles = css`
     box-shadow: var(--lr-shadow);
     font-size: var(--lr-font-size-xs);
   }
+  /* Chrome-less escape, mirroring lr-card's appearance="plain" (and lr-callout's [inline]): the
+     summary strip is often placed directly inside a host toolbar that already draws its own
+     border/background, where this floating-surface chrome doubles the frame. Only the box
+     decoration goes -- the flex layout, gap and the per-status count dots stay. */
+  :host([appearance='plain']) [part='base'] {
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+  }
   [part='summary'] {
     font-weight: var(--lr-font-weight-medium);
   }

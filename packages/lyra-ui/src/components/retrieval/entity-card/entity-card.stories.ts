@@ -38,3 +38,21 @@ export const NoFocusButton: Story = {
 export const Narrow: Story = {
   render: () => html`<div style="max-width: 320px;"><lr-entity-card .entity=${entity} .types=${types}></lr-entity-card></div>`,
 };
+
+export const DensityAndChrome: Story = {
+  name: 'compact + appearance="plain"',
+  render: () => html`
+    <div style="display:grid; gap:1rem; max-width:28rem;">
+      <lr-entity-card .entity=${entity} .types=${types} community-label="Nobel laureates"></lr-entity-card>
+      <lr-entity-card compact .entity=${entity} .types=${types} community-label="Nobel laureates"></lr-entity-card>
+      <div style="border:1px solid var(--lr-color-border); border-radius:var(--lr-radius); padding:0.75rem;">
+        <lr-entity-card
+          appearance="plain"
+          .entity=${entity}
+          .types=${types}
+          community-label="Nobel laureates"
+        ></lr-entity-card>
+      </div>
+    </div>
+  `,
+};

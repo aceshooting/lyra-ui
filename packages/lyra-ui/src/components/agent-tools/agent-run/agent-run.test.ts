@@ -529,3 +529,121 @@ it('lets header and summary slots replace the built-in chrome', async () => {
   expect(el.shadowRoot!.querySelector('[part="status-badge"]')).to.not.exist;
   expect(el.shadowRoot!.querySelector('[part="usage"]')).to.not.exist;
 });
+
+const baseChrome = (el: LyraAgentRun) => {
+  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  const s = getComputedStyle(base);
+  return {
+    paddingTop: s.paddingTop,
+    paddingLeft: s.paddingLeft,
+    borderTopWidth: s.borderTopWidth,
+    borderTopStyle: s.borderTopStyle,
+    borderTopLeftRadius: s.borderTopLeftRadius,
+    backgroundColor: s.backgroundColor,
+    rowGap: s.rowGap,
+    columnGap: s.columnGap,
+  };
+};
+
+it('defaults to compact=false and appearance="card", rendering identically to those values restated', async () => {
+  const implicit = (await fixture(html`<lr-agent-run .run=${makeRun({ steps })}></lr-agent-run>`)) as LyraAgentRun;
+  const explicit = (await fixture(
+    html`<lr-agent-run appearance="card" .compact=${false} .run=${makeRun({ steps })}></lr-agent-run>`,
+  )) as LyraAgentRun;
+
+  expect(implicit.compact).to.be.false;
+  expect(implicit.appearance).to.equal('card');
+  expect(implicit.hasAttribute('compact')).to.be.false;
+  expect(implicit.getAttribute('appearance')).to.equal('card');
+
+  // Restating the defaults must not move a single chrome declaration...
+  expect(baseChrome(explicit)).to.deep.equal(baseChrome(implicit));
+  // ...and those defaults are still exactly the card chrome that shipped before these axes existed.
+  const chrome = baseChrome(implicit);
+  expect(chrome.paddingTop).to.equal('12px'); // --lr-space-m
+  expect(chrome.paddingLeft).to.equal('12px');
+  expect(chrome.rowGap).to.equal('12px');
+  expect(chrome.borderTopWidth).to.equal('1px'); // --lr-border-width-thin
+  expect(chrome.borderTopStyle).to.equal('solid');
+  expect(chrome.backgroundColor).to.not.equal('rgba(0, 0, 0, 0)');
+});
+
+it('reflects compact and tightens the base padding/gap, keeping the card border', async () => {
+  const el = (await fixture(html`<lr-agent-run compact .run=${makeRun({ steps })}></lr-agent-run>`)) as LyraAgentRun;
+  expect(el.hasAttribute('compact')).to.be.true;
+  const chrome = baseChrome(el);
+  expect(chrome.paddingTop).to.equal('8px'); // --lr-space-s
+  expect(chrome.paddingLeft).to.equal('8px');
+  expect(chrome.rowGap).to.equal('8px');
+  // compact is a density escape, not a chrome escape -- the border and background stay.
+  expect(chrome.borderTopWidth).to.equal('1px');
+  expect(chrome.backgroundColor).to.not.equal('rgba(0, 0, 0, 0)');
+});
+
+it('lets a consumer retune the compact values through --lr-agent-run-compact-* without re-declaring the rule', async () => {
+  const el = (await fixture(html`<lr-agent-run compact .run=${makeRun({ steps })}></lr-agent-run>`)) as LyraAgentRun;
+  el.style.setProperty('--lr-agent-run-compact-padding', '3px');
+  el.style.setProperty('--lr-agent-run-compact-gap', '5px');
+  await el.updateComplete;
+  const chrome = baseChrome(el);
+  expect(chrome.paddingTop).to.equal('3px');
+  expect(chrome.rowGap).to.equal('5px');
+});
+
+it('drops border, background, padding and radius under appearance="plain"', async () => {
+  const el = (await fixture(
+    html`<lr-agent-run appearance="plain" .run=${makeRun({ steps })}></lr-agent-run>`,
+  )) as LyraAgentRun;
+  expect(el.getAttribute('appearance')).to.equal('plain');
+  const chrome = baseChrome(el);
+  expect(chrome.borderTopWidth).to.equal('0px');
+  expect(chrome.borderTopLeftRadius).to.equal('0px');
+  expect(chrome.backgroundColor).to.equal('rgba(0, 0, 0, 0)');
+  expect(chrome.paddingTop).to.equal('0px');
+  expect(chrome.paddingLeft).to.equal('0px');
+});
+
+it('orders :host([appearance="plain"]) after :host([compact]) so the equal-specificity reset wins', () => {
+  const css = styles.cssText;
+  const compactAt = css.indexOf(':host([compact])');
+  const plainAt = css.indexOf(":host([appearance='plain'])");
+  expect(compactAt).to.be.greaterThan(-1);
+  expect(plainAt).to.be.greaterThan(-1);
+  expect(plainAt).to.be.greaterThan(compactAt);
+});
+
+it('lets plain win over compact when both are set', async () => {
+  const el = (await fixture(
+    html`<lr-agent-run compact appearance="plain" .run=${makeRun({ steps })}></lr-agent-run>`,
+  )) as LyraAgentRun;
+  const chrome = baseChrome(el);
+  expect(chrome.paddingTop).to.equal('0px');
+  expect(chrome.paddingLeft).to.equal('0px');
+  expect(chrome.borderTopWidth).to.equal('0px');
+});
+
+it('keeps the Cancel/Retry buttons visibly interactive under plain (their chrome is their own, not the card)', async () => {
+  const el = (await fixture(
+    html`<lr-agent-run appearance="plain" .run=${makeRun({ steps })}></lr-agent-run>`,
+  )) as LyraAgentRun;
+  const cancel = el.shadowRoot!.querySelector('[part="cancel-button"]') as HTMLElement;
+  expect(cancel).to.exist;
+  const s = getComputedStyle(cancel);
+  expect(s.borderTopWidth).to.equal('1px');
+  expect(s.backgroundColor).to.not.equal('rgba(0, 0, 0, 0)');
+});
+
+it('is accessible in the populated compact + plain states', async () => {
+  const compactEl = (await fixture(
+    html`<lr-agent-run compact .run=${makeRun({ steps, model: 'gpt-4o', costEstimate: 0.42 })}></lr-agent-run>`,
+  )) as LyraAgentRun;
+  await expect(compactEl).to.be.accessible();
+
+  const plainEl = (await fixture(
+    html`<lr-agent-run
+      appearance="plain"
+      .run=${makeRun({ steps, model: 'gpt-4o', costEstimate: 0.42 })}
+    ></lr-agent-run>`,
+  )) as LyraAgentRun;
+  await expect(plainEl).to.be.accessible();
+});

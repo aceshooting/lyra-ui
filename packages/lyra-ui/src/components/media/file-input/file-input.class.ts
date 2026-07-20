@@ -43,12 +43,22 @@ export interface LyraFileInputEventMap {
  * @csspart base - The dropzone's root, clickable/focusable container.
  * @csspart input - The visually-hidden native `<input type="file">`.
  * @csspart status - The visually-hidden live region announcing drag accept/reject state.
+ * @cssprop [--lr-file-input-compact-padding=var(--lr-space-s)] - `[part="base"]` padding while
+ * `compact`.
+ * @cssprop [--lr-file-input-compact-gap=var(--lr-space-2xs)] - Gap between the dropzone's slotted
+ * children while `compact`.
+ * @cssprop [--lr-file-input-compact-font-size=var(--lr-font-size-sm)] - Label font size while
+ * `compact`.
  */
 export class LyraFileInput extends LyraElement<LyraFileInputEventMap> {
   static styles = [LyraElement.styles, styles, srOnly];
 
   @property({ type: Boolean, reflect: true }) multiple = false;
   @property({ type: Boolean, reflect: true }) disabled = false;
+  /** Tighter dropzone padding, gap and label font for constrained spaces (a toolbar, a table cell)
+   *  -- same convention as `lr-empty`'s `compact`. Defaults to `false`, i.e. the full `--lr-space-l`
+   *  dropzone. The dashed border stays; only the internal spacing shrinks. */
+  @property({ type: Boolean, reflect: true }) compact = false;
   @property() accept = '';
   @property({ attribute: false }) allowedMimeTypes: string[] = [];
   @property({ attribute: false }) forbiddenMimeTypes: string[] = [];

@@ -15,6 +15,9 @@ export interface SourceCardOpenDetail {
   href?: string;
 }
 
+/** Visual chrome for `<lr-source-card>`'s root, mirroring `lr-card`'s `appearance` vocabulary. */
+export type SourceCardAppearance = 'card' | 'plain';
+
 export interface LyraSourceCardEventMap {
   'lr-expand': CustomEvent<SourceCardExpandDetail>;
   'lr-open': CustomEvent<SourceCardOpenDetail>;
@@ -57,6 +60,10 @@ class LyraSourceCardBase extends LyraElement<LyraSourceCardEventMap> {}
  * @csspart excerpt - The wrapper around the `excerpt` slot, `hidden` when the slot has no assigned content.
  * @csspart full - The wrapper around the `full` slot, `hidden` while collapsed.
  * @csspart toggle - The "Show more"/"Show less" button. Only rendered when the `full` slot has content.
+ * @cssprop [--lr-source-card-compact-padding=var(--lr-space-xs)] - `[part="base"]` padding while
+ * `compact`.
+ * @cssprop [--lr-source-card-compact-gap=var(--lr-space-2xs)] - Gap between `[part="base"]`'s rows
+ * while `compact`.
  *
  * @example
  * ```html
@@ -99,6 +106,20 @@ export class LyraSourceCard extends StripHostTitleAttribute(LyraSourceCardBase) 
 
   /** Optional URL, echoed back (unopened) in `lr-open`'s detail. */
   @property() href?: string;
+
+  /** Tighter root padding and row gap, for the dense citation lists these cards usually render in
+   *  -- same convention as `lr-empty`'s `compact`. Defaults to `false`, i.e. the full card
+   *  padding. Purely a density knob: the border and background stay, so use `appearance="plain"`
+   *  to drop the chrome entirely. */
+  @property({ type: Boolean, reflect: true }) compact = false;
+
+  /** Visual chrome, mirroring `lr-card`'s `appearance` vocabulary. `'card'` (the default) keeps the
+   *  bordered, filled, padded box. `'plain'` removes the border, background, padding and corner
+   *  radius, so a card inside a `<lr-source-list>` (or any container already drawing its own
+   *  border/dividers) doesn't double the frame. `plain` wins over `compact` when both are set
+   *  (nothing left to tighten); the title and toggle keep their brand color and hover underline,
+   *  which never depended on the card chrome. */
+  @property({ reflect: true }) appearance: SourceCardAppearance = 'card';
 
   // See `<lr-widget>`'s `hasActionsSlot` for the identical
   // presence-tracking convention -- a `[part]` always contains a literal

@@ -1,6 +1,7 @@
 import { fixture, expect, html, oneEvent } from '@open-wc/testing';
 import './source-card.js';
 import type { LyraSourceCard } from './source-card.js';
+import { styles } from './source-card.styles.js';
 
 it('defaults to empty source-id/title and unset page/href', async () => {
   const el = (await fixture(html`<lr-source-card></lr-source-card>`)) as LyraSourceCard;
@@ -226,4 +227,136 @@ it('localizes the page-suffix format via this.localize()', async () => {
     html`<lr-source-card title="Report" .page=${4} .strings=${{ sourcePageSuffix: '{base}, page {page}' }}></lr-source-card>`,
   )) as LyraSourceCard;
   expect(el.shadowRoot!.querySelector('[part="title"]')!.textContent!.trim()).to.equal('Report, page 4');
+});
+
+const baseChrome = (el: LyraSourceCard) => {
+  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  const s = getComputedStyle(base);
+  return {
+    paddingTop: s.paddingTop,
+    paddingLeft: s.paddingLeft,
+    borderTopWidth: s.borderTopWidth,
+    borderTopStyle: s.borderTopStyle,
+    borderTopLeftRadius: s.borderTopLeftRadius,
+    backgroundColor: s.backgroundColor,
+    rowGap: s.rowGap,
+    columnGap: s.columnGap,
+  };
+};
+
+it('defaults to compact=false and appearance="card", rendering identically to those values restated', async () => {
+  const implicit = (await fixture(
+    html`<lr-source-card title="a.pdf"><span slot="excerpt">x</span></lr-source-card>`,
+  )) as LyraSourceCard;
+  const explicit = (await fixture(
+    html`<lr-source-card title="a.pdf" appearance="card" .compact=${false}
+      ><span slot="excerpt">x</span></lr-source-card
+    >`,
+  )) as LyraSourceCard;
+
+  expect(implicit.compact).to.be.false;
+  expect(implicit.appearance).to.equal('card');
+  expect(implicit.hasAttribute('compact')).to.be.false;
+  expect(implicit.getAttribute('appearance')).to.equal('card');
+
+  expect(baseChrome(explicit)).to.deep.equal(baseChrome(implicit));
+  const chrome = baseChrome(implicit);
+  expect(chrome.paddingTop).to.equal('8px'); // --lr-space-s
+  expect(chrome.rowGap).to.equal('4px'); // --lr-space-xs
+  expect(chrome.borderTopWidth).to.equal('1px');
+  expect(chrome.borderTopStyle).to.equal('solid');
+  expect(chrome.backgroundColor).to.not.equal('rgba(0, 0, 0, 0)');
+});
+
+it('reflects compact and tightens the base padding/gap, keeping the card border', async () => {
+  const el = (await fixture(
+    html`<lr-source-card compact title="a.pdf"><span slot="excerpt">x</span></lr-source-card>`,
+  )) as LyraSourceCard;
+  expect(el.hasAttribute('compact')).to.be.true;
+  const chrome = baseChrome(el);
+  expect(chrome.paddingTop).to.equal('4px'); // --lr-space-xs
+  expect(chrome.rowGap).to.equal('2px'); // --lr-space-2xs
+  expect(chrome.borderTopWidth).to.equal('1px');
+  expect(chrome.backgroundColor).to.not.equal('rgba(0, 0, 0, 0)');
+});
+
+it('lets a consumer retune the compact values through --lr-source-card-compact-*', async () => {
+  const el = (await fixture(
+    html`<lr-source-card compact title="a.pdf"><span slot="excerpt">x</span></lr-source-card>`,
+  )) as LyraSourceCard;
+  el.style.setProperty('--lr-source-card-compact-padding', '3px');
+  el.style.setProperty('--lr-source-card-compact-gap', '5px');
+  await el.updateComplete;
+  const chrome = baseChrome(el);
+  expect(chrome.paddingTop).to.equal('3px');
+  expect(chrome.rowGap).to.equal('5px');
+});
+
+it('drops border, background, padding and radius under appearance="plain"', async () => {
+  const el = (await fixture(
+    html`<lr-source-card appearance="plain" title="a.pdf"><span slot="excerpt">x</span></lr-source-card>`,
+  )) as LyraSourceCard;
+  expect(el.getAttribute('appearance')).to.equal('plain');
+  const chrome = baseChrome(el);
+  expect(chrome.borderTopWidth).to.equal('0px');
+  expect(chrome.borderTopLeftRadius).to.equal('0px');
+  expect(chrome.backgroundColor).to.equal('rgba(0, 0, 0, 0)');
+  expect(chrome.paddingTop).to.equal('0px');
+  expect(chrome.paddingLeft).to.equal('0px');
+});
+
+it('orders :host([appearance="plain"]) after :host([compact]) so the equal-specificity reset wins', () => {
+  const css = styles.cssText;
+  const compactAt = css.indexOf(':host([compact])');
+  const plainAt = css.indexOf(":host([appearance='plain'])");
+  expect(compactAt).to.be.greaterThan(-1);
+  expect(plainAt).to.be.greaterThan(-1);
+  expect(plainAt).to.be.greaterThan(compactAt);
+});
+
+it('lets plain win over compact when both are set', async () => {
+  const el = (await fixture(
+    html`<lr-source-card compact appearance="plain" title="a.pdf"><span slot="excerpt">x</span></lr-source-card>`,
+  )) as LyraSourceCard;
+  const chrome = baseChrome(el);
+  expect(chrome.paddingTop).to.equal('0px');
+  expect(chrome.borderTopWidth).to.equal('0px');
+});
+
+it('keeps the title/toggle affordances under plain (they never depended on the card chrome)', async () => {
+  const el = (await fixture(
+    html`<lr-source-card appearance="plain" title="a.pdf">
+      <span slot="excerpt">x</span><span slot="full">y</span>
+    </lr-source-card>`,
+  )) as LyraSourceCard;
+  const title = el.shadowRoot!.querySelector('[part="title"]') as HTMLElement;
+  const toggle = el.shadowRoot!.querySelector('[part="toggle"]') as HTMLElement;
+  // Brand-colored, and still hover-underlined -- the affordance is the text itself, not a border.
+  expect(getComputedStyle(title).color).to.not.equal(getComputedStyle(el).color);
+  expect(toggle).to.exist;
+  const css = styles.cssText.replace(/\s+/g, ' ');
+  expect(css).to.include("[part='title']:hover { text-decoration: underline; }");
+  expect(css).to.include("[part='toggle']:hover { text-decoration: underline; }");
+});
+
+it('is accessible in the populated compact and plain states', async () => {
+  const compactEl = (await fixture(
+    html`<lr-source-card compact source-id="doc-1" title="annual_report.pdf" page="12">
+      <span slot="excerpt">Revenue grew 12% year over year.</span>
+      <span slot="full">Revenue grew 12% year over year, driven primarily by...</span>
+    </lr-source-card>`,
+  )) as LyraSourceCard;
+  compactEl.shadowRoot!.querySelector<HTMLButtonElement>('[part="toggle"]')!.click();
+  await compactEl.updateComplete;
+  await expect(compactEl).to.be.accessible();
+
+  const plainEl = (await fixture(
+    html`<lr-source-card appearance="plain" source-id="doc-2" title="annual_report.pdf" page="12">
+      <span slot="excerpt">Revenue grew 12% year over year.</span>
+      <span slot="full">Revenue grew 12% year over year, driven primarily by...</span>
+    </lr-source-card>`,
+  )) as LyraSourceCard;
+  plainEl.shadowRoot!.querySelector<HTMLButtonElement>('[part="toggle"]')!.click();
+  await plainEl.updateComplete;
+  await expect(plainEl).to.be.accessible();
 });

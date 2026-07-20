@@ -8,6 +8,9 @@ import { parseStackTrace, DEFAULT_INTERNAL_PATTERNS, type StackFrame, type Stack
  *  `lr-copy-button`'s own confirmation duration. */
 const COPY_CONFIRM_MS = 1500;
 
+/** Visual chrome for `<lr-stack-trace>`'s root, mirroring `lr-card`'s `appearance` vocabulary. */
+export type StackTraceAppearance = 'card' | 'plain';
+
 export interface LyraStackTraceEventMap {
   'lr-frame-select': CustomEvent<{ file?: string; line?: number; column?: number; raw: string }>;
   'lr-copy': CustomEvent<{ text: string }>;
@@ -25,7 +28,8 @@ export interface LyraStackTraceEventMap {
  *   (`column` is always undefined for Python frames, which carry no column information).
  * @event lr-copy - `detail: { text }` — the raw, unparsed trace text, fired regardless of
  *   whether the OS clipboard write actually succeeded.
- * @csspart base - The root wrapper; respects `max-height`.
+ * @csspart base - The root wrapper; respects `max-height`. Drops its card chrome under
+ *   `appearance="plain"`.
  * @csspart message - The leading error message text for a group.
  * @csspart group - One chained-error group of frames.
  * @csspart frame - A single frame button; carries `data-internal` for internal frames.
@@ -55,6 +59,13 @@ export class LyraStackTrace extends LyraElement<LyraStackTraceEventMap> {
 
   /** Shows a copy-to-clipboard button for the raw trace text. */
   @property({ type: Boolean, reflect: true }) copyable = true;
+
+  /** Visual chrome, mirroring `lr-card`'s `appearance` vocabulary. `'card'` (the default) keeps the
+   *  bordered, filled, padded box. `'plain'` removes the border, background, padding and corner
+   *  radius so a trace nested inside an `lr-result-card`/`lr-agent-run` (which already draws a
+   *  border) doesn't double the frame. The `max-height` scroll cap and the copy/frame affordances
+   *  are unaffected. */
+  @property({ reflect: true }) appearance: StackTraceAppearance = 'card';
 
   /** Caps the rendered block size and enables an internal scrollbar once content exceeds it
    *  (any valid CSS length, e.g. `'20rem'`). Empty string (the default) grows with content. */
