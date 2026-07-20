@@ -533,6 +533,9 @@ export type LyraMessageKey =
   | 'pdfViewerMissingLibrary'
   | 'qrCodeMissingLibrary'
   | 'qrCodeGenerationFailed'
+  | 'mapMissingLibrary'
+  | 'chartMissingLibrary'
+  | 'graphMissingLibrary'
   | 'pdfViewerPageOf'
   | 'pdfViewerZoomIn'
   | 'pdfViewerZoomOut'
@@ -675,6 +678,8 @@ export type LyraMessageKey =
   | 'browserFrameStatusConnecting'
   | 'browserFrameStatusLive'
   | 'browserFrameStatusStalled'
+  | 'browserFrameControllerAgent'
+  | 'browserFrameControllerUser'
   | 'notebookViewerLabel'
   | 'notebookViewerInvalid'
   | 'notebookViewerUnsupportedVersion'
@@ -1542,6 +1547,9 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, string> = {
   pdfViewerMissingLibrary: 'This viewer needs the optional "pdfjs-dist" package installed to render PDF files.',
   qrCodeMissingLibrary: 'This component needs the optional "qrcode" package installed to render QR codes.',
   qrCodeGenerationFailed: 'This value could not be encoded as a QR code.',
+  mapMissingLibrary: 'This component needs the optional "maplibre-gl" package installed to render the map.',
+  chartMissingLibrary: 'This component needs the optional "chart.js" package installed to render charts.',
+  graphMissingLibrary: 'This component needs the optional "d3" package installed to render the graph.',
   pdfViewerPageOf: 'Page {page} of {total}',
   pdfViewerZoomIn: 'Zoom in',
   pdfViewerZoomOut: 'Zoom out',
@@ -1677,6 +1685,8 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, string> = {
   browserFrameStatusConnecting: 'Connecting…',
   browserFrameStatusLive: 'Live',
   browserFrameStatusStalled: 'Stalled',
+  browserFrameControllerAgent: 'Agent',
+  browserFrameControllerUser: 'User',
   notebookViewerLabel: 'Notebook viewer',
   notebookViewerInvalid: 'This file is not a valid Jupyter notebook.',
   notebookViewerUnsupportedVersion: 'Notebook format {version} is not supported.',
