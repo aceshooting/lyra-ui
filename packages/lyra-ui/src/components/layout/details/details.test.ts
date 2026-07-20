@@ -70,6 +70,12 @@ it('mirrors the disclosure marker rotation under RTL so it still points down/up 
   expect(css).to.include(":host([open]:dir(rtl)) [part='summary']::after { transform: rotate(-225deg); }");
 });
 
+it('gives the summary (the real focusable/clickable surface) hover and focus-visible treatment', () => {
+  const css = detailsStyles.cssText.replace(/\s+/g, ' ');
+  expect(css).to.match(/\[part='summary'\]:hover\s*\{[^}]*background:/);
+  expect(css).to.match(/\[part='summary'\]:focus-visible\s*\{[^}]*outline:/);
+});
+
 it('gives lr-accordion its own stylesheet instead of reusing details.styles.ts wholesale', () => {
   const css = accordionStyles.cssText.replace(/\s+/g, ' ');
   // details.styles.ts's [part='base'] rule paints a border-block-end meant for <lr-details>'s
