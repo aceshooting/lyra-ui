@@ -217,6 +217,25 @@ export const DenseRows: Story = {
   `,
 };
 
+/** `compact` is a pure forwarding property: it sets `compact` on every data-mode row
+ *  `<lr-conversation-item>`, which is where the density actually lives. It is the one-attribute
+ *  version of the `::part(row-item-*)` styling above -- reach for the parts when the tuning goes
+ *  beyond the row's own density knob. Slotted mode is a deliberate no-op: that mode renders
+ *  host-supplied items as-is, so a host sets `compact` on its own items there. */
+export const CompactRows: Story = {
+  name: 'compact (forwarded row density)',
+  render: () => html`
+    <div style="display:flex;gap:1rem;">
+      <div style="block-size:400px;inline-size:320px;border:1px solid var(--lr-color-border);">
+        <lr-thread-list active-id="2" .threads=${threads}></lr-thread-list>
+      </div>
+      <div style="block-size:400px;inline-size:320px;border:1px solid var(--lr-color-border);">
+        <lr-thread-list compact active-id="2" .threads=${threads}></lr-thread-list>
+      </div>
+    </div>
+  `,
+};
+
 interface ProjectThread extends ChatThread {
   project: string;
 }

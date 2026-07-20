@@ -247,6 +247,12 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
   /** Forwarded to each data-mode row's inline rename. */
   @property({ type: Boolean, reflect: true }) editable = true;
 
+  /** Data mode only: forwarded to every row `<lr-conversation-item>`'s own `compact`, tightening
+   *  each row's padding and gaps in one place. Slotted mode is a deliberate no-op — this component
+   *  renders host-supplied items as-is, so the host sets `compact` on its own items there, the same
+   *  division of responsibility slotted mode already has for every other row property. */
+  @property({ type: Boolean, reflect: true }) compact = false;
+
   /** Accessible name for the list region. Defaults to the localized `threadListLabel`. */
   @property() label = '';
 
@@ -580,6 +586,7 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
         excerpt=${thread.excerpt ?? ''}
         .timestamp=${thread.timestamp}
         ?active=${thread.id === this.activeId}
+        ?compact=${this.compact}
         .editable=${this.editable}
         @lr-select=${() => this.emit('lr-select', { id: thread.id })}
         @lr-rename=${(e: CustomEvent<{ title: string }>) =>

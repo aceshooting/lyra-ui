@@ -956,3 +956,60 @@ it('resets the native search-cancel glyph on the search field', () => {
   const css = styles.cssText.replace(/\s+/g, ' ');
   expect(css).to.match(/\[part='search-input'\]::-webkit-search-cancel-button/);
 });
+
+describe('compact forwarding', () => {
+  it('forwards compact onto every data-mode row', async () => {
+    const el = (await fixture(
+      html`<lr-thread-list style="block-size:400px" compact .threads=${threads}></lr-thread-list>`,
+    )) as LyraThreadList;
+    await el.updateComplete;
+    await nextFrame();
+    const rows = dataRows(el);
+    expect(rows.length).to.be.greaterThan(0);
+    expect(rows.filter((r) => r.compact).length).to.equal(rows.length);
+    expect(rows.filter((r) => r.hasAttribute('compact')).length).to.equal(rows.length);
+  });
+
+  it('leaves data-mode rows without the compact attribute while unset, and toggles them live', async () => {
+    const el = (await fixture(
+      html`<lr-thread-list style="block-size:400px" .threads=${threads}></lr-thread-list>`,
+    )) as LyraThreadList;
+    await el.updateComplete;
+    await nextFrame();
+    expect(el.compact).to.be.false;
+    expect(el.hasAttribute('compact')).to.be.false;
+    expect(dataRows(el).filter((r) => r.hasAttribute('compact')).length).to.equal(0);
+
+    el.compact = true;
+    await el.updateComplete;
+    await nextFrame();
+    const rows = dataRows(el);
+    expect(rows.filter((r) => r.hasAttribute('compact')).length).to.equal(rows.length);
+
+    el.compact = false;
+    await el.updateComplete;
+    await nextFrame();
+    expect(dataRows(el).filter((r) => r.hasAttribute('compact')).length).to.equal(0);
+  });
+
+  it('does not touch host-supplied items in slotted mode (documented no-op)', async () => {
+    const el = (await fixture(html`
+      <lr-thread-list compact>
+        <lr-conversation-item id="s1" title="Manual row"></lr-conversation-item>
+        <lr-conversation-item id="s2" title="Another manual row" compact></lr-conversation-item>
+      </lr-thread-list>
+    `)) as LyraThreadList;
+    await el.updateComplete;
+    await nextFrame();
+    // Slotted mode: no internal virtual list at all, so nothing forwards anything.
+    expect(el.shadowRoot!.querySelectorAll('lr-virtual-list').length).to.equal(0);
+    expect(el.compact).to.be.true;
+
+    const slotted = [...el.querySelectorAll<LyraConversationItem>('lr-conversation-item')];
+    expect(slotted.length).to.equal(2);
+    // The host owns its own items' density here, exactly as it owns every other row property.
+    expect(slotted[0].hasAttribute('compact')).to.be.false;
+    expect(slotted[0].compact).to.be.false;
+    expect(slotted[1].compact).to.be.true;
+  });
+});
