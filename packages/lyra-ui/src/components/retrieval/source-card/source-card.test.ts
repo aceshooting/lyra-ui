@@ -1,6 +1,6 @@
 import { fixture, expect, html, oneEvent } from '@open-wc/testing';
 import './source-card.js';
-import type { LyraSourceCard } from './source-card.js';
+import { LyraSourceCard } from './source-card.js';
 import { styles } from './source-card.styles.js';
 
 it('defaults to empty source-id/title and unset page/href', async () => {
@@ -359,4 +359,37 @@ it('is accessible in the populated compact and plain states', async () => {
   plainEl.shadowRoot!.querySelector<HTMLButtonElement>('[part="toggle"]')!.click();
   await plainEl.updateComplete;
   await expect(plainEl).to.be.accessible();
+});
+
+describe('lifecycle: super calls', () => {
+  it('calls super.willUpdate() so a future shared mixin layered under LyraElement keeps running', async () => {
+    // Neither LyraElement nor LitElement override willUpdate today (a true no-op on
+    // ReactiveElement.prototype), so this can only be proven by spying on the inherited method
+    // itself and confirming lr-source-card's own override still reaches it via
+    // `super.willUpdate()` -- mirrors `<lr-graph>`'s identical test for the same pattern.
+    const proto = Object.getPrototypeOf(LyraSourceCard.prototype) as {
+      willUpdate?: (changed: unknown) => void;
+    };
+    const hadOwnWillUpdate = Object.prototype.hasOwnProperty.call(proto, 'willUpdate');
+    const originalWillUpdate = proto.willUpdate;
+    let willUpdateCalls = 0;
+    // Created (and the `el` reference bound) via `document.createElement` *before* connecting to
+    // the DOM -- unlike `fixture()`, which appends and awaits `updateComplete` internally, so its
+    // own first `willUpdate` call would already have fired before an `await fixture(...)`
+    // assignment lands, leaving `el` still `undefined` when the spy's `this === el` check runs.
+    const el = document.createElement('lr-source-card') as LyraSourceCard;
+    proto.willUpdate = function (this: unknown, changed: unknown) {
+      if (this === el) willUpdateCalls++;
+      originalWillUpdate?.call(this, changed);
+    };
+    try {
+      document.body.appendChild(el);
+      await el.updateComplete;
+      expect(willUpdateCalls).to.be.greaterThan(0);
+    } finally {
+      el.remove();
+      if (hadOwnWillUpdate) proto.willUpdate = originalWillUpdate;
+      else delete proto.willUpdate;
+    }
+  });
 });

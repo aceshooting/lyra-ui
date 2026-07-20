@@ -32,7 +32,11 @@ export const Empty: Story = {
 };
 
 export const NoFocusButton: Story = {
-  render: () => html`<lr-entity-card .entity=${entity} .types=${types} ?show-focus-button=${false}></lr-entity-card>`,
+  // `showFocusButton` defaults to `true` -- a boolean-attribute binding (`?show-focus-button=...`)
+  // only ever toggles the attribute's *presence*, and removing an attribute that was never present
+  // fires no attributeChangedCallback, so it can never clear a true-defaulting property back to
+  // false. A property binding is the only form that actually works here.
+  render: () => html`<lr-entity-card .entity=${entity} .types=${types} .showFocusButton=${false}></lr-entity-card>`,
 };
 
 export const Narrow: Story = {

@@ -102,3 +102,51 @@ it('is accessible with types, counts, and a hidden type', async () => {
   await el.updateComplete;
   await expect(el).to.be.accessible();
 });
+
+it('honors a .strings override of graphLegendLabel on the group aria-label', async () => {
+  const el = (await fixture(html`<lr-graph-legend></lr-graph-legend>`)) as LyraGraphLegend;
+  el.strings = { graphLegendLabel: 'Étiquette du graphe' };
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('Étiquette du graphe');
+});
+
+it('honors a .strings override of legendTypeHidden/legendTypeShown in the live-region announcement', async () => {
+  const el = (await fixture(html`<lr-graph-legend></lr-graph-legend>`)) as LyraGraphLegend;
+  el.strings = { legendTypeHidden: '{label} masqué', legendTypeShown: '{label} affiché' };
+  el.types = types;
+  await el.updateComplete;
+  const button = el.shadowRoot!.querySelectorAll('[part~="item"]')[0] as HTMLButtonElement;
+  const live = el.shadowRoot!.querySelector('[part="live-region"]')!;
+
+  button.click();
+  await el.updateComplete;
+  expect(live.textContent).to.equal('Person masqué');
+
+  button.click();
+  await el.updateComplete;
+  expect(live.textContent).to.equal('Person affiché');
+});
+
+it('interactive="false" (plain HTML attribute) renders a read-only legend, matching the .interactive=false property path', async () => {
+  const el = (await fixture(html`<lr-graph-legend interactive="false"></lr-graph-legend>`)) as LyraGraphLegend;
+  expect(el.interactive).to.be.false;
+  el.types = types;
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelectorAll('button[part~="item"]').length).to.equal(0);
+  expect(el.shadowRoot!.querySelectorAll('[part~="item"]').length).to.equal(2);
+});
+
+it('declares a --lr-graph-legend-hidden-color cssprop indirection layer for a hidden row, independent of the shared quiet-text token', async () => {
+  const el = (await fixture(html`<lr-graph-legend></lr-graph-legend>`)) as LyraGraphLegend;
+  el.types = types;
+  el.hiddenTypes = ['person'];
+  await el.updateComplete;
+  const label = el.shadowRoot!.querySelector('[part~="item"][data-hidden] [part="label"]') as HTMLElement;
+
+  const unset = getComputedStyle(label).color;
+  el.style.setProperty('--lr-graph-legend-hidden-color', 'rgb(10, 20, 30)');
+  expect(getComputedStyle(label).color).to.equal('rgb(10, 20, 30)');
+
+  el.style.setProperty('--lr-graph-legend-hidden-color', 'var(--lr-color-text-quiet)');
+  expect(getComputedStyle(label).color).to.equal(unset);
+});

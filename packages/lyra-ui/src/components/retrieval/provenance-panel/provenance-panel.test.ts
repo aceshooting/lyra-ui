@@ -82,6 +82,26 @@ it('re-emits child events unmodified (lr-chunk-open bubbles through)', async () 
   expect(event.detail).to.deep.equal({ id: 'ch1', sourceId: 's1' });
 });
 
+describe('localization', () => {
+  it('localizes a section title, the group aria-label, and the empty-state heading via .strings', async () => {
+    const empty = (await fixture(
+      html`<lr-provenance-panel .strings=${{ provenanceEmpty: 'Aucune donnée' }}></lr-provenance-panel>`,
+    )) as LyraProvenancePanel;
+    await empty.updateComplete;
+    expect(empty.shadowRoot!.querySelector('lr-empty')!.getAttribute('heading')).to.equal('Aucune donnée');
+
+    const populated = (await fixture(
+      html`<lr-provenance-panel
+        .strings=${{ provenanceEntities: 'Entités', provenancePanelLabel: 'Justification' }}
+        .provenance=${{ entities: provenance.entities }}
+      ></lr-provenance-panel>`,
+    )) as LyraProvenancePanel;
+    await populated.updateComplete;
+    expect(populated.shadowRoot!.querySelector('[part="header"]')!.textContent).to.include('Entités');
+    expect(populated.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('Justification');
+  });
+});
+
 it('is accessible with full provenance', async () => {
   const el = (await fixture(html`<lr-provenance-panel></lr-provenance-panel>`)) as LyraProvenancePanel;
   el.provenance = provenance;

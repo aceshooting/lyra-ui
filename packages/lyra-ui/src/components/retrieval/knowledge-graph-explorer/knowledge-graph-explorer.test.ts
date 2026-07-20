@@ -354,6 +354,33 @@ describe('lr-knowledge-graph-explorer', () => {
   });
 });
 
+describe('lifecycle super calls', () => {
+  it('calls super.willUpdate() (regression guard: a future mixin layered under LyraKnowledgeGraphExplorer must still run)', async () => {
+    const el = (await fixture(
+      html`<lr-knowledge-graph-explorer></lr-knowledge-graph-explorer>`,
+    )) as LyraKnowledgeGraphExplorer;
+    // The immediate prototype of an instance is LyraElement.prototype -- the exact (shared, across
+    // every LyraElement subclass) object `super.willUpdate()` resolves against from inside this
+    // component's own override. This component composes several other LyraElement-based children
+    // (lr-graph, lr-input, lr-graph-legend, ...), so the patched hook is guarded by `this === el`
+    // to count only calls on the instance under test, not every composed child's own willUpdate.
+    const proto = Object.getPrototypeOf(Object.getPrototypeOf(el)) as Record<string, unknown>;
+    const originalWillUpdate = proto.willUpdate as ((changed: unknown) => void) | undefined;
+    let willUpdateCalls = 0;
+    proto.willUpdate = function (this: unknown, changed: unknown) {
+      if (this === el) willUpdateCalls++;
+      return originalWillUpdate?.call(this, changed);
+    };
+    try {
+      el.nodes = nodes;
+      await el.updateComplete;
+      expect(willUpdateCalls).to.be.greaterThan(0);
+    } finally {
+      delete proto.willUpdate;
+    }
+  });
+});
+
 /** Render the max-inline-size declared on `selector` (read off the element's own applied stylesheets)
  *  into the component's shadow scope with the viewport-clamp token pinned to a tiny value, returning
  *  its resolved computed value. Wired to --lr-popover-viewport-clamp the min() collapses to that

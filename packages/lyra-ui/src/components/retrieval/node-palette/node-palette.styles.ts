@@ -29,6 +29,9 @@ export const styles = css`
   [part='search']::-webkit-search-decoration {
     appearance: none;
   }
+  [part='search']::placeholder {
+    color: var(--lr-color-text-quiet);
+  }
   [part='list'] {
     display: flex;
     flex-direction: column;
@@ -56,8 +59,13 @@ export const styles = css`
     cursor: not-allowed;
     opacity: var(--lr-opacity-disabled);
   }
-  [part='item']:not([aria-disabled='true']):hover,
-  [part='item']:not([aria-disabled='true']):focus-visible {
+  /* :where() zeroes the wrapped attribute-selector/pseudo-class contribution, leaving only
+     :hover/:focus-visible itself -- (0,1,0) total, functionally identical selection to
+     [part='item']:not([aria-disabled='true']):hover ((0,3,0)) but now losing (on the
+     pseudo-element tiebreak) to a consumer's own ::part(item):hover override ((0,1,1)) without
+     that consumer needing !important. Matches attachment-trigger.styles.ts's remediation pattern. */
+  :where([part='item']):hover:where(:not([aria-disabled='true'])),
+  :where([part='item']):focus-visible:where(:not([aria-disabled='true'])) {
     background: var(--lr-color-surface-hover, var(--lr-color-border));
   }
   [part='item']:focus-visible {

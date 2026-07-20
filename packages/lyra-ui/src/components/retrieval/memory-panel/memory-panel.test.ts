@@ -366,4 +366,24 @@ describe('lr-memory-panel', () => {
       expect(groupLabel).to.equal('Memory');
     });
   });
+
+  describe('--lr-memory-panel-confidence-<tone>-color', () => {
+    it('recolors only the confidence indicator that reads the matching custom property', async () => {
+      const el = await populated();
+      const successConfidence = el.shadowRoot!.querySelector('[part="item"][data-id="s1"] [part="confidence"]') as HTMLElement; // data-tone="success"
+      el.style.setProperty('--lr-memory-panel-confidence-success-color', 'rgb(10, 20, 30)');
+      expect(getComputedStyle(successConfidence).color).to.equal('rgb(10, 20, 30)');
+
+      const dangerConfidence = el.shadowRoot!.querySelector('[part="item"][data-id="l1"] [part="confidence"]') as HTMLElement; // data-tone="danger"
+      expect(getComputedStyle(dangerConfidence).color).to.not.equal('rgb(10, 20, 30)');
+    });
+
+    it('renders identically to the shared success/warning/danger tokens when unset', async () => {
+      const el = await populated();
+      const successConfidence = el.shadowRoot!.querySelector('[part="item"][data-id="s1"] [part="confidence"]') as HTMLElement;
+      const unset = getComputedStyle(successConfidence).color;
+      el.style.setProperty('--lr-memory-panel-confidence-success-color', 'var(--lr-color-success)');
+      expect(getComputedStyle(successConfidence).color).to.equal(unset);
+    });
+  });
 });

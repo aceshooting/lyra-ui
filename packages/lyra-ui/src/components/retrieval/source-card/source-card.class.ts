@@ -1,4 +1,4 @@
-import { html, nothing, type TemplateResult } from 'lit';
+import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { nextId } from '../../../internal/a11y.js';
@@ -131,7 +131,8 @@ export class LyraSourceCard extends StripHostTitleAttribute(LyraSourceCardBase) 
 
   private readonly fullId = nextId('source-card-full');
 
-  protected willUpdate(): void {
+  protected willUpdate(changed: PropertyValues): void {
+    super.willUpdate(changed);
     if (!this.hasUpdated) {
       this.hasFullSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'full');
       this.hasExcerptSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'excerpt');

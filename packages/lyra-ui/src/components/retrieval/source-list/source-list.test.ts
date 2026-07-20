@@ -1,7 +1,7 @@
 import { fixture, fixtureSync, expect, html, oneEvent, aTimeout } from '@open-wc/testing';
 import './source-list.js';
 import '../source-card/source-card.js';
-import type { LyraSourceList } from './source-list.js';
+import { LyraSourceList } from './source-list.js';
 
 it('defaults to collapsed with empty label/label-plural', async () => {
   const el = (await fixture(html`<lr-source-list></lr-source-list>`)) as LyraSourceList;
@@ -150,4 +150,37 @@ it('is accessible with cards and expanded', async () => {
     </lr-source-list>`,
   )) as LyraSourceList;
   await expect(el).to.be.accessible();
+});
+
+describe('lifecycle: super calls', () => {
+  it('calls super.willUpdate() so a future shared mixin layered under LyraElement keeps running', async () => {
+    // Neither LyraElement nor LitElement override willUpdate today (a true no-op on
+    // ReactiveElement.prototype), so this can only be proven by spying on the inherited method
+    // itself and confirming lr-source-list's own override still reaches it via
+    // `super.willUpdate()` -- mirrors `<lr-graph>`'s identical test for the same pattern.
+    const proto = Object.getPrototypeOf(LyraSourceList.prototype) as {
+      willUpdate?: (changed: unknown) => void;
+    };
+    const hadOwnWillUpdate = Object.prototype.hasOwnProperty.call(proto, 'willUpdate');
+    const originalWillUpdate = proto.willUpdate;
+    let willUpdateCalls = 0;
+    // Created (and the `el` reference bound) via `document.createElement` *before* connecting to
+    // the DOM -- unlike `fixture()`, which appends and awaits `updateComplete` internally, so its
+    // own first `willUpdate` call would already have fired before an `await fixture(...)`
+    // assignment lands, leaving `el` still `undefined` when the spy's `this === el` check runs.
+    const el = document.createElement('lr-source-list') as LyraSourceList;
+    proto.willUpdate = function (this: unknown, changed: unknown) {
+      if (this === el) willUpdateCalls++;
+      originalWillUpdate?.call(this, changed);
+    };
+    try {
+      document.body.appendChild(el);
+      await el.updateComplete;
+      expect(willUpdateCalls).to.be.greaterThan(0);
+    } finally {
+      el.remove();
+      if (hadOwnWillUpdate) proto.willUpdate = originalWillUpdate;
+      else delete proto.willUpdate;
+    }
+  });
 });

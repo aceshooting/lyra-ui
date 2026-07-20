@@ -375,6 +375,28 @@ describe('hover/focus preview popover', () => {
 
     expect(popover.hidden, 'popover must close once its preview content is emptied out from under it').to.be.true;
   });
+
+  it('resets the open preview popover on disconnect, instead of leaving it visually open with a torn-down positioner', async () => {
+    const el = (await fixture(
+      html`<lr-citation-badge index="1"><p>preview</p></lr-citation-badge>`,
+    )) as LyraCitationBadge;
+    const wrapper = el.shadowRoot!.querySelector('.wrapper') as HTMLElement;
+    const popover = el.shadowRoot!.querySelector('[part="popover"]') as HTMLElement;
+
+    wrapper.dispatchEvent(new PointerEvent('pointerenter', { bubbles: true }));
+    await el.updateComplete;
+    expect(popover.hidden, 'precondition: popover is open').to.be.false;
+
+    const container = document.createElement('div');
+    document.body.appendChild(container);
+    container.appendChild(el); // disconnect + reconnect synchronously, same instance
+    await el.updateComplete;
+
+    const reconnectedPopover = el.shadowRoot!.querySelector('[part="popover"]') as HTMLElement;
+    expect(reconnectedPopover.hidden, 'a reconnect must not leave a stale popover rendered open').to.be.true;
+
+    container.remove();
+  });
 });
 
 it('is accessible in the default (empty, no preview) state', async () => {

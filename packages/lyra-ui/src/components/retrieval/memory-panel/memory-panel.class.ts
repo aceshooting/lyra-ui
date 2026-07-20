@@ -139,6 +139,12 @@ const TIER_TONE: Record<Tier, 'success' | 'warning' | 'danger'> = {
  * @csspart remove-button - The "Remove" action. Rendered on every item.
  * @csspart forget-all-button - The long-term section's bulk "Forget all" action. Only rendered
  * while `longTerm` is non-empty.
+ * @cssprop [--lr-memory-panel-confidence-success-color=var(--lr-color-success)] - Text color for a
+ * high-confidence item's confidence indicator.
+ * @cssprop [--lr-memory-panel-confidence-warning-color=var(--lr-color-warning)] - Text color for a
+ * medium-confidence item's confidence indicator.
+ * @cssprop [--lr-memory-panel-confidence-danger-color=var(--lr-color-danger)] - Text color for a
+ * low-confidence item's confidence indicator.
  */
 export class LyraMemoryPanel extends LyraElement<LyraMemoryPanelEventMap> {
   static styles = [LyraElement.styles, styles];

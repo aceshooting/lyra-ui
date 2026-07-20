@@ -285,6 +285,8 @@ export interface LyraGraphEventMap {
  * @csspart live-region - The current graph item announcement.
  * @csspart data-list - A visually hidden list alternative for graph data.
  * @csspart empty - The empty-state message, shown when `nodes` is empty.
+ * @csspart error - `role="alert"` message shown instead of the graph when the optional `d3` peer
+ *   dependency is not installed.
  * @csspart canvas - The single canvas surface (`renderer="canvas"` only).
  * @csspart tooltip - The hover tooltip (`renderer="canvas"` only; the SVG `<title>` replacement).
  * @csspart cursor-items - The container of offscreen keyboard-roving items (`renderer="canvas"` only).
@@ -393,6 +395,17 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
   /** True until the lazy-loaded d3 peer dependencies have settled (success or failure). */
   @state() private loading = true;
 
+  /**
+   * True once the optional `d3` peer failed to load (not installed) -- `render()` fails closed
+   * into `part="error" role="alert"` rather than leaving a permanently blank surface.
+   */
+  @state() private loadFailed = false;
+
+  // Overridable instance field (not a direct `loadD3()` call site) purely so tests can inject a
+  // stubbed loader before the element ever connects -- matches map/docx-viewer's own
+  // `loadLibrary` field/rationale exactly.
+  private loadLibrary: () => Promise<D3Modules | null> = loadD3;
+
   @state() private simNodes: SimNode[] = [];
   @state() private simLinks: SimLink[] = [];
   private danglingLinks: SimLink[] = [];
@@ -409,6 +422,10 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
   /** One roving tab stop across all nodes and links; nodes are the initial entry order. */
   @state() private activeGraphItem = 0;
   @state() private graphLiveText = '';
+  /** Gates the mount-time selection announcement in `willUpdate()` so a freshly-mounted graph
+   *  never announces its own initial (default-`[]`) selection as though it were a live change --
+   *  mirrors `<lr-branch-picker>`'s identical `isMounting` gate. */
+  private isMounting = true;
 
   private simulation?: import('d3-force').Simulation<SimNode, SimLink>;
   /** The live charge/link force objects, kept so chargeStrength/linkDistance
@@ -459,6 +476,18 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
   private canvasResizeObserver?: ResizeObserver;
   private canvasDprQuery?: MediaQueryList;
   private canvasDrawRafId?: number;
+  /** Gates `scheduleCanvasDraw()` -- an off-screen (scrolled away, hidden tab panel) canvas-mode
+   *  instance would otherwise still pay the full redraw cost throughout its simulation settle and
+   *  any drag, same problem `<lr-chart>`'s identical `visible`/`IntersectionObserver` pair
+   *  addresses. Not `@state()`: unlike `loading`, this never drives `render()`'s template, only
+   *  gates the imperative canvas-raster path, so making it reactive would just schedule a wasted
+   *  Lit update on every visibility crossing. */
+  private visible = true;
+  private intersectionObserver?: IntersectionObserver;
+  /** Set when `scheduleCanvasDraw()` was asked to draw while off-screen -- consulted by the
+   *  IntersectionObserver callback to catch up with exactly one draw once visible again, instead
+   *  of either silently dropping the request or drawing every missed frame. */
+  private canvasDrawPending = false;
   private pickDirty = true;
   private canvasCamera: CanvasCamera = { k: 1, x: 0, y: 0 };
   private canvasTooltipEl?: HTMLDivElement;
@@ -519,6 +548,19 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
 
   connectedCallback(): void {
     super.connectedCallback();
+    // Observed unconditionally (both first mount and any reconnect below) -- visibility gating
+    // applies regardless of whether renderer="canvas" is active yet or d3 has finished loading.
+    if (typeof IntersectionObserver !== 'undefined') {
+      this.intersectionObserver = new IntersectionObserver((entries) => {
+        const wasVisible = this.visible;
+        this.visible = entries[0]?.isIntersecting ?? true;
+        if (this.visible && !wasVisible && this.canvasDrawPending) {
+          this.canvasDrawPending = false;
+          this.scheduleCanvasDraw();
+        }
+      });
+      this.intersectionObserver.observe(this);
+    }
     // A reconnect (e.g. a drag-and-drop reparent that keeps this same
     // element instance) fires disconnectedCallback then connectedCallback
     // synchronously with no update in between — this.d3 is already set from
@@ -542,12 +584,20 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
       }
       return;
     }
-    void loadD3().then((mods) => {
+    void this.loadLibrary().then((mods) => {
       this.loading = false;
+      // A null module means the optional `d3` peer isn't installed — fail closed into the
+      // role="alert" branch rather than leaving a permanently blank surface. Guarded on
+      // `mods` alone: a disconnect is not a load failure.
+      if (!mods) {
+        this.loadFailed = true;
+        return;
+      }
+      this.loadFailed = false;
       // The element may have been removed from the DOM while the dynamic
       // d3 imports were in flight — don't spin up a simulation for a
       // detached instance (disconnectedCallback's cleanup already ran).
-      if (!mods || !this.isConnected) return;
+      if (!this.isConnected) return;
       this.d3 = mods;
       this.rebuildSimulation();
     });
@@ -560,6 +610,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
     // zoom transforms against the detached tree -- cancel it (which also settles the caller's
     // pending Promise with `false` instead of leaving it hanging forever).
     this.cancelCameraTween();
+    this.intersectionObserver?.disconnect();
     this.canvasResizeObserver?.disconnect();
     this.canvasDprQuery?.removeEventListener('change', this.onCanvasDprChange);
     if (this.canvasDrawRafId != null) {
@@ -964,6 +1015,15 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
   }
 
   private scheduleCanvasDraw(): void {
+    // markCanvasDirty()/markCanvasCameraDirty() are the only two callers, so gating here (rather
+    // than at each of their own many call sites -- onTick(), drag, resize, DPR change, zoom) is
+    // the single choke point every canvas redraw request funnels through. Remembers the request
+    // instead of dropping it, so the connectedCallback() IntersectionObserver above can issue
+    // exactly one catch-up draw once this becomes visible again.
+    if (!this.visible) {
+      this.canvasDrawPending = true;
+      return;
+    }
     if (this.canvasDrawRafId != null) return;
     this.canvasDrawRafId = requestAnimationFrame(() => {
       this.canvasDrawRafId = undefined;
@@ -1389,6 +1449,14 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
   }
 
   protected willUpdate(changed: PropertyValues): void {
+    super.willUpdate(changed); // no-op today, but a future shared mixin under LyraElement must still run
+    // Gates the mount-time selection announcement below -- selectedNodeIds/selectedLinkIds both
+    // default to `[]`, a non-undefined default, so Lit marks them "changed" on the very first
+    // update too. `wasMounting` is captured before flipping the flag so only that first pass is
+    // excluded -- mirrors `<lr-branch-picker>`'s identical `isMounting` gate for its own
+    // first-update announcement.
+    const wasMounting = this.isMounting;
+    this.isMounting = false;
     // rebuildSimulation() (re)assigns the simNodes/simLinks reactive
     // properties — doing that from willUpdate() folds them into the render
     // this same update is already about to perform. Doing it from updated()
@@ -1413,7 +1481,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
     // Same reasoning as rebuildSimulation() above -- assigning graphLiveText from updated() would
     // schedule a whole extra update pass instead of landing in the render this update is already
     // about to perform.
-    if (changed.has('selectedNodeIds') || changed.has('selectedLinkIds')) {
+    if ((changed.has('selectedNodeIds') || changed.has('selectedLinkIds')) && !wasMounting) {
       this.graphLiveText = this.localize('graphSelectionCount', undefined, {
         count: this.selectedNodeIds.length + this.selectedLinkIds.length,
       });
@@ -1421,6 +1489,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
   }
 
   protected updated(changed: PropertyValues): void {
+    super.updated(changed); // no-op today, but a future shared mixin under LyraElement must still run
     if (this.loading) this.setAttribute('aria-busy', 'true');
     else this.removeAttribute('aria-busy');
 
@@ -2220,6 +2289,11 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
           ></lr-skeleton>
         </div>
       `;
+    }
+    if (this.loadFailed) {
+      return html`<div part="base">
+        <div part="error" role="alert">${this.localize('graphMissingLibrary')}</div>
+      </div>`;
     }
     if (!this.nodes.length) {
       return html`<div part="base"><div part="empty">${this.localize('noData')}</div></div>`;

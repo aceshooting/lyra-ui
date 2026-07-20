@@ -92,7 +92,16 @@ it('hides the focus button when showFocusButton is false', async () => {
   el.entity = entity;
   el.showFocusButton = false;
   await el.updateComplete;
-  expect(el.shadowRoot!.querySelector('[part="focus-button"]')).to.not.exist;
+  expect(el.shadowRoot!.querySelectorAll('[part="focus-button"]').length).to.equal(0);
+});
+
+it('show-focus-button="false" (plain HTML attribute) also hides the focus button', async () => {
+  const el = (await fixture(
+    html`<lr-entity-card show-focus-button="false" .entity=${entity}></lr-entity-card>`,
+  )) as LyraEntityCard;
+  await el.updateComplete;
+  expect(el.showFocusButton).to.be.false;
+  expect(el.shadowRoot!.querySelectorAll('[part="focus-button"]').length).to.equal(0);
 });
 
 it('is accessible with a full entity', async () => {

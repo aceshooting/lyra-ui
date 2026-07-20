@@ -26,6 +26,12 @@ export const styles = css`
   }
   [part='node'] circle {
     fill: var(--lr-color-brand);
+    stroke: transparent;
+    stroke-width: var(--lr-space-xs);
+    transition: stroke var(--lr-transition-fast);
+  }
+  [part='node']:hover circle {
+    stroke: var(--lr-mind-map-node-hover-halo, var(--lr-color-brand-quiet));
   }
   [part='node-label'] {
     fill: var(--lr-color-text);

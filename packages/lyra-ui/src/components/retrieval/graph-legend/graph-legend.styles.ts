@@ -42,7 +42,7 @@ export const styles = css`
   }
   [part~='item'][data-hidden] [part='label'],
   [part~='item'][data-hidden] [part='count'] {
-    color: var(--lr-color-text-quiet);
+    color: var(--lr-graph-legend-hidden-color, var(--lr-color-text-quiet));
   }
   [part='swatch'] {
     flex: 0 0 auto;

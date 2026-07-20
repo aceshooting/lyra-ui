@@ -115,6 +115,41 @@ it('shows chunkInspectorEmpty when chunks is empty', async () => {
   expect(el.shadowRoot!.querySelector('[part="empty"]')!.textContent).to.include('No chunks retrieved');
 });
 
+it('routes every localized string through this.localize(), provable via a .strings override reaching the rendered DOM', async () => {
+  const el = (await fixture(
+    html`<lr-chunk-inspector
+      .strings=${{
+        chunkInspectorLabel: 'Extraits récupérés',
+        chunkScore: 'Pertinence {percent}%',
+        scoreTierHigh: 'Pertinence élevée',
+        showMore: 'Voir plus',
+        showLess: 'Voir moins',
+        untitledSource: 'Source sans titre',
+      }}
+    ></lr-chunk-inspector>`,
+  )) as LyraChunkInspector;
+  el.chunks = [{ id: 'c1', text: 'texte', score: 0.92, sourceId: 's1' }];
+  await el.updateComplete;
+
+  expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('Extraits récupérés');
+  expect(el.shadowRoot!.querySelector('[part~="score"]')!.textContent).to.include('Pertinence 92%');
+  expect(el.shadowRoot!.querySelector('[part="title"]')!.textContent).to.equal('Source sans titre');
+  expect(el.shadowRoot!.querySelector('[part="open-button"]')!.getAttribute('aria-label')).to.include('Pertinence élevée');
+  expect(el.shadowRoot!.querySelector('[part="toggle"]')!.textContent!.trim()).to.equal('Voir plus');
+
+  (el.shadowRoot!.querySelector('[part="toggle"]') as HTMLButtonElement).click();
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelector('[part="toggle"]')!.textContent!.trim()).to.equal('Voir moins');
+});
+
+it('localizes the empty-state message via a .strings override, not a hardcoded English string', async () => {
+  const el = (await fixture(
+    html`<lr-chunk-inspector .strings=${{ chunkInspectorEmpty: 'Aucun extrait récupéré' }}></lr-chunk-inspector>`,
+  )) as LyraChunkInspector;
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelector('[part="empty"]')!.textContent).to.include('Aucun extrait récupéré');
+});
+
 it('is accessible with mixed-tier chunks', async () => {
   const el = (await fixture(html`<lr-chunk-inspector></lr-chunk-inspector>`)) as LyraChunkInspector;
   el.chunks = chunks;

@@ -54,6 +54,13 @@ export const styles = css`
     fill: none;
     cursor: pointer;
   }
+  /* filter:brightness rather than a fixed background/stroke swap -- like lr-span-waterfall's
+     identical per-item [part='bar']:hover, this part's own color is per-instance/data-driven
+     (--lr-link-color, --lr-node-fill, --lr-graph-hull-fill), so a single hardcoded hover color
+     can't work across every value it might take. */
+  [part='link']:hover {
+    filter: brightness(var(--lr-hover-brightness));
+  }
   [part='arrowhead'] {
     fill: context-stroke;
   }
@@ -73,6 +80,9 @@ export const styles = css`
        lets a per-node color actually take effect. */
     fill: var(--lr-node-fill, var(--lr-color-brand));
     cursor: pointer;
+  }
+  [part='node']:hover {
+    filter: brightness(var(--lr-hover-brightness));
   }
   [part='node']:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
@@ -100,6 +110,15 @@ export const styles = css`
   [part='empty'] {
     color: var(--lr-color-text-quiet);
     font-size: var(--lr-font-size-md-sm);
+  }
+  /* Mirrors map.styles.ts's identical [part='error'] treatment for the same "optional
+     peer dependency missing" failure shape. */
+  [part='error'] {
+    margin: 0;
+    padding: var(--lr-space-l);
+    color: var(--lr-color-danger);
+    font-size: var(--lr-font-size-md-sm);
+    text-align: center;
   }
   [part='expand-indicator'] circle {
     fill: var(--lr-color-surface);
@@ -139,6 +158,9 @@ export const styles = css`
     stroke-linecap: round;
     opacity: var(--lr-graph-hull-opacity, 0.12);
     cursor: pointer;
+  }
+  [part='hull']:hover {
+    filter: brightness(var(--lr-hover-brightness));
   }
   [part='hull']:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);

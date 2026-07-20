@@ -108,6 +108,57 @@ it('renders only title + member count + drill button in compact mode -- no summa
   expect(el.shadowRoot!.querySelector('[part="drill-button"]')).to.exist;
 });
 
+it('defaults to appearance="card", keeping the bordered chrome', async () => {
+  const el = (await fixture(html`<lr-community-card></lr-community-card>`)) as LyraCommunityCard;
+  el.community = community;
+  await el.updateComplete;
+  expect(el.appearance).to.equal('card');
+  expect(el.getAttribute('appearance')).to.equal('card');
+  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  const chrome = getComputedStyle(base);
+  expect(chrome.borderTopWidth).to.not.equal('0px');
+  expect(chrome.paddingTop).to.not.equal('0px');
+});
+
+it('drops border, background, and padding under appearance="plain" -- the same nested-card escape hatch as its sibling lr-entity-card', async () => {
+  const el = (await fixture(
+    html`<lr-community-card appearance="plain"></lr-community-card>`,
+  )) as LyraCommunityCard;
+  el.community = community;
+  await el.updateComplete;
+  expect(el.getAttribute('appearance')).to.equal('plain');
+  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  const chrome = getComputedStyle(base);
+  expect(chrome.borderTopWidth).to.equal('0px');
+  expect(chrome.backgroundColor).to.equal('rgba(0, 0, 0, 0)');
+  expect(chrome.paddingTop).to.equal('0px');
+  expect(chrome.paddingLeft).to.equal('0px');
+});
+
+it('routes every localized string through this.localize(), provable via a .strings override reaching the rendered DOM', async () => {
+  const el = (await fixture(
+    html`<lr-community-card
+      .strings=${{
+        noData: 'Pas de données',
+        untitledCommunity: 'Communauté sans titre',
+        communityMemberCount: '{count} membres',
+        communityDrillIn: 'Explorer la communauté',
+        showMoreCount: '{count} de plus',
+      }}
+    ></lr-community-card>`,
+  )) as LyraCommunityCard;
+  expect(el.shadowRoot!.querySelector('lr-empty')!.getAttribute('heading')).to.equal('Pas de données');
+
+  el.community = { id: 'c2', label: '', memberCount: 5 };
+  el.members = members.slice(0, 1);
+  el.maxMembers = 0;
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelector('[part="title"]')!.textContent).to.include('Communauté sans titre');
+  expect(el.shadowRoot!.querySelector('[part="member-count"]')!.textContent).to.include('5 membres');
+  expect(el.shadowRoot!.querySelector('[part="drill-button"]')!.textContent).to.include('Explorer la communauté');
+  expect(el.shadowRoot!.querySelector('[part="overflow"]')!.textContent).to.include('5 de plus');
+});
+
 it('is accessible with members and an overflow chip', async () => {
   const el = (await fixture(html`<lr-community-card max-members="2"></lr-community-card>`)) as LyraCommunityCard;
   el.community = community;

@@ -26,6 +26,13 @@ export const styles = css`
     padding: var(--lr-size-2px) var(--lr-space-xs);
     cursor: pointer;
   }
+  [part='select-all'] [role='checkbox']:hover {
+    background: color-mix(in srgb, var(--lr-color-text) 6%, var(--lr-color-surface));
+  }
+  [part='select-all'] [role='checkbox']:focus-visible {
+    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
+    outline-offset: calc(-1 * var(--lr-focus-ring-width));
+  }
   [part='select-all'] [role='checkbox'][aria-checked='true'],
   [part='select-all'] [role='checkbox'][aria-checked='mixed'] {
     background: var(--lr-source-picker-checked-bg, var(--lr-color-brand-quiet));

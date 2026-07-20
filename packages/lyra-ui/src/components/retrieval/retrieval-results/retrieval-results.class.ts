@@ -1,4 +1,4 @@
-import { html, nothing, type TemplateResult } from 'lit';
+import { html, nothing, type TemplateResult, type ComplexAttributeConverter } from 'lit';
 import { property } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { finiteCount } from '../../../internal/numbers.js';
@@ -39,6 +39,24 @@ function toLyraChunk(chunk: RetrievalChunk): LyraChunk {
     title: chunk.source.name,
   };
 }
+
+/** `true`-defaulting boolean attribute converter, identical shape to `<lr-task-list>`'s
+ *  `trueDefaultBooleanConverter` -- duplicated locally per this library's convention of not
+ *  sharing these tiny converters across independently-consumable component files. Lit's default
+ *  presence-based `type: Boolean` can never be set back to `false` from a plain-HTML attribute
+ *  once the property's own default is `true` (removing an attribute that was never present fires
+ *  no `attributeChangedCallback`), so `fromAttribute` checks the literal string instead. Shared by
+ *  `selectable` and `dedupe`, which have the identical `true`-default parsing need. `toAttribute`
+ *  reflects the `true` state as a present (empty-string) attribute rather than omitting it,
+ *  matching every other `reflect: true` boolean property in this library. */
+const trueDefaultBooleanConverter: ComplexAttributeConverter<boolean> = {
+  fromAttribute(value): boolean {
+    return value !== 'false';
+  },
+  toAttribute(value): string | null {
+    return value ? '' : null;
+  },
+};
 
 function formatMetadataValue(value: unknown): string {
   if (value == null) return '';
@@ -155,10 +173,10 @@ export class LyraRetrievalResults extends LyraElement<LyraRetrievalResultsEventM
   @property({ attribute: false }) selectedIds: string[] = [];
 
   /** Shows a per-row `<lr-checkbox>`. */
-  @property({ type: Boolean, reflect: true }) selectable = true;
+  @property({ type: Boolean, reflect: true, converter: trueDefaultBooleanConverter }) selectable = true;
 
   /** Drops duplicate `id`s before rendering, keeping whichever duplicate has the higher `score`. */
-  @property({ type: Boolean, reflect: true }) dedupe = true;
+  @property({ type: Boolean, reflect: true, converter: trueDefaultBooleanConverter }) dedupe = true;
 
   /** `'score'` (default) sorts the deduplicated list descending by `score`; `'none'` preserves
    *  `chunks`' own given order. */

@@ -32,7 +32,11 @@ export const WithSelection: Story = {
 };
 
 export const NoSelectAllNoSearch: Story = {
-  render: () => html`<lr-source-picker .sources=${sources} ?show-select-all=${false} ?searchable=${false}></lr-source-picker>`,
+  // `.showSelectAll`/`.searchable` (property bindings), not `?show-select-all=`/`?searchable=` --
+  // both default to `true`, and a boolean-attribute binding that evaluates to `false` on a
+  // freshly-created element never actually removes an attribute that was never present, so
+  // `attributeChangedCallback` never fires and the constructor-time default would silently win.
+  render: () => html`<lr-source-picker .sources=${sources} .showSelectAll=${false} .searchable=${false}></lr-source-picker>`,
 };
 
 export const Empty: Story = {

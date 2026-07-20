@@ -32,7 +32,7 @@ export const WithHiddenType: Story = {
 };
 
 export const ReadOnly: Story = {
-  render: () => html`<lr-graph-legend .types=${types} .counts=${{ person: 12 }} ?interactive=${false}></lr-graph-legend>`,
+  render: () => html`<lr-graph-legend .types=${types} .counts=${{ person: 12 }} .interactive=${false}></lr-graph-legend>`,
 };
 
 export const Narrow: Story = {

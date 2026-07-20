@@ -118,6 +118,42 @@ it('shows neighborListEmpty when rows is empty', async () => {
   expect(el.shadowRoot!.querySelector('[part="empty"]')!.textContent).to.include('No relationships');
 });
 
+it('names the region with a host aria-label override, then the label property, then the localized default', async () => {
+  const withDefault = (await fixture(html`<lr-neighbor-list .rows=${rows}></lr-neighbor-list>`)) as LyraNeighborList;
+  await withDefault.updateComplete;
+  expect(withDefault.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('Relationships');
+
+  const withLabel = (await fixture(html`<lr-neighbor-list label="Family tree" .rows=${rows}></lr-neighbor-list>`)) as LyraNeighborList;
+  await withLabel.updateComplete;
+  expect(withLabel.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('Family tree');
+
+  const withAria = (await fixture(
+    html`<lr-neighbor-list aria-label="Custom" label="Family tree" .rows=${rows}></lr-neighbor-list>`,
+  )) as LyraNeighborList;
+  await withAria.updateComplete;
+  expect(withAria.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('Custom');
+});
+
+describe('localization', () => {
+  it('localizes the empty state and a row accessible name via .strings', async () => {
+    const empty = (await fixture(
+      html`<lr-neighbor-list .strings=${{ neighborListEmpty: 'Aucune relation' }}></lr-neighbor-list>`,
+    )) as LyraNeighborList;
+    await empty.updateComplete;
+    expect(empty.shadowRoot!.querySelector('[part="empty"]')!.textContent).to.include('Aucune relation');
+
+    const populated = (await fixture(
+      html`<lr-neighbor-list
+        .strings=${{ neighborDirectionOut: 'Sortant', neighborRowLabel: '{label} · {relation} · {direction}' }}
+        .rows=${rows}
+      ></lr-neighbor-list>`,
+    )) as LyraNeighborList;
+    await populated.updateComplete;
+    const button = populated.shadowRoot!.querySelector('[part="node-label"]') as HTMLElement;
+    expect(button.getAttribute('aria-label')).to.equal('Acme Corp · works_for · Sortant');
+  });
+});
+
 it('is accessible with grouped, expandable rows', async () => {
   const el = (await fixture(html`<lr-neighbor-list></lr-neighbor-list>`)) as LyraNeighborList;
   el.rows = rows;

@@ -41,6 +41,9 @@ const NAV_KEYS = new Set(['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Ho
  * @csspart live-region - The visually hidden announcement region.
  * @csspart empty - The empty-state message, shown when `topics` is empty.
  * @cssprop [--lr-mind-map-ring-gap=6rem] - Radius step per depth ring.
+ * @cssprop [--lr-mind-map-node-hover-halo=var(--lr-color-brand-quiet)] - Stroke color of the
+ * hover halo drawn around a topic node's dot, giving mouse users the same "this is clickable"
+ * feedback keyboard users get from the drawn focus ring.
  */
 export class LyraMindMap extends LyraElement<LyraMindMapEventMap> {
   static styles = [LyraElement.styles, styles, srOnly];
@@ -78,12 +81,22 @@ export class LyraMindMap extends LyraElement<LyraMindMapEventMap> {
     return this.expandedOverrides.get(id) ?? depth < this.effectiveExpandDepth;
   }
 
+  /** Resolves `--lr-mind-map-ring-gap` to a real used pixel value for whatever unit it carries --
+   *  a live root/host font-size read for rem/em, matching `lr-table`'s own `minimumResizeWidth()`
+   *  fix for the identical problem (a hardcoded `* 16` gets ring spacing wrong on any page whose
+   *  root font-size isn't the browser default 16px). */
   private ringGapPx(): number {
     const raw = getComputedStyle(this).getPropertyValue('--lr-mind-map-ring-gap').trim();
     if (!raw) return DEFAULT_RING_GAP_PX;
     const value = parseFloat(raw);
     if (!Number.isFinite(value)) return DEFAULT_RING_GAP_PX;
-    return raw.includes('rem') ? value * 16 : value;
+    if (raw.endsWith('rem')) {
+      return value * Number.parseFloat(getComputedStyle(document.documentElement).fontSize);
+    }
+    if (raw.endsWith('em')) {
+      return value * Number.parseFloat(getComputedStyle(this).fontSize);
+    }
+    return value;
   }
 
   private relayout(): void {
@@ -96,6 +109,7 @@ export class LyraMindMap extends LyraElement<LyraMindMapEventMap> {
   }
 
   protected willUpdate(changed: PropertyValues): void {
+    super.willUpdate(changed);
     if (changed.has('topics') || changed.has('expandDepth') || changed.has('expandedOverrides') || changed.has('label')) {
       this.relayout();
     }

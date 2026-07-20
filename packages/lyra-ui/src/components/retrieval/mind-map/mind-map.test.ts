@@ -1,6 +1,7 @@
 import { fixture, expect, html, oneEvent } from '@open-wc/testing';
 import './mind-map.js';
 import type { LyraMindMap, LyraTopic } from './mind-map.js';
+import { styles } from './mind-map.styles.js';
 
 const topics: LyraTopic[] = [
   {
@@ -126,4 +127,61 @@ it('is accessible with an expanded, multi-level tree', async () => {
   el.topics = topics;
   await el.updateComplete;
   await expect(el).to.be.accessible();
+});
+
+function nodePosition(el: LyraMindMap, labelSubstring: string): { x: number; y: number } {
+  const nodeEl = [...el.shadowRoot!.querySelectorAll('[part="node"]')].find((n) =>
+    n.textContent?.includes(labelSubstring),
+  )!;
+  const match = nodeEl.getAttribute('style')!.match(/translate\(([-\d.]+)px,\s*([-\d.]+)px\)/)!;
+  return { x: parseFloat(match[1]!), y: parseFloat(match[2]!) };
+}
+
+it('reads a live root font-size for a rem-unit --lr-mind-map-ring-gap, matching lr-table\'s own minimumResizeWidth() rem-to-px fix', async () => {
+  const originalFontSize = document.documentElement.style.fontSize;
+  document.documentElement.style.fontSize = '32px';
+  try {
+    const el = (await fixture(html`<lr-mind-map .topics=${topics}></lr-mind-map>`)) as LyraMindMap;
+    await el.updateComplete;
+    const root = nodePosition(el, 'Knowledge Graph RAG');
+    const child = nodePosition(el, 'Knowledge graphs'); // a depth-1 ring node, one ringGap away
+    const distance = Math.hypot(child.x - root.x, child.y - root.y);
+    // Default --lr-mind-map-ring-gap is 6rem; at a 32px root font-size that's 192px. A hardcoded
+    // `* 16` multiplier would instead produce 96px regardless of the live root font-size.
+    expect(distance).to.be.closeTo(192, 0.5);
+  } finally {
+    document.documentElement.style.fontSize = originalFontSize;
+  }
+});
+
+describe('lifecycle super calls', () => {
+  it('calls super.willUpdate() (regression guard: a future mixin layered under LyraMindMap must still run)', async () => {
+    const el = (await fixture(html`<lr-mind-map></lr-mind-map>`)) as LyraMindMap;
+    // The immediate prototype of an instance is LyraElement.prototype -- the exact object
+    // `super.willUpdate()` resolves against from inside this component's own override.
+    const proto = Object.getPrototypeOf(Object.getPrototypeOf(el)) as Record<string, unknown>;
+    const originalWillUpdate = proto.willUpdate as ((changed: unknown) => void) | undefined;
+    let willUpdateCalls = 0;
+    proto.willUpdate = function (this: unknown, changed: unknown) {
+      willUpdateCalls++;
+      return originalWillUpdate?.call(this, changed);
+    };
+    try {
+      el.topics = topics;
+      await el.updateComplete;
+      expect(willUpdateCalls).to.be.greaterThan(0);
+    } finally {
+      delete proto.willUpdate;
+    }
+  });
+});
+
+describe('hover feedback on [part="node"]', () => {
+  // :hover cannot be synthesized in this test runner (no real pointer), so per this repo's
+  // documented exception for genuinely-unsynthesizable pseudo-classes, this asserts against the
+  // stylesheet source instead of a rendered/computed effect.
+  it("declares a [part='node']:hover rule, giving mouse users the same 'clickable' feedback keyboard users get from the drawn focus ring", () => {
+    const css = styles.cssText.replace(/\s+/g, ' ');
+    expect(css).to.match(/\[part='node'\]:hover/);
+  });
 });

@@ -136,6 +136,20 @@ it('keeps every duplicate when dedupe is false', async () => {
   expect(flatRows(el).length).to.equal(2);
 });
 
+it('keeps every duplicate when dedupe="false" is set as a plain HTML attribute (not a property binding)', async () => {
+  // Unlike the `.dedupe=${false}` property-binding test above, this proves the *attribute* form
+  // actually clears the `true` default too -- the gap a stock `type: Boolean` converter can't
+  // close, since removing an attribute that was never present fires no `attributeChangedCallback`.
+  const el = (await fixture(html`<lr-retrieval-results dedupe="false"></lr-retrieval-results>`)) as LyraRetrievalResults;
+  expect(el.dedupe).to.be.false;
+  el.chunks = [
+    { id: 'dup', text: 'a', score: 0.3, source: { id: 's1', name: 'a.pdf' } },
+    { id: 'dup', text: 'b', score: 0.8, source: { id: 's1', name: 'a.pdf' } },
+  ];
+  await el.updateComplete;
+  expect(flatRows(el).length).to.equal(2);
+});
+
 it('renders through the internal virtual-list once the deduplicated count exceeds virtualizeAt', async () => {
   const many: RetrievalChunk[] = Array.from({ length: 5 }, (_, i) => ({
     id: `m${i}`,
@@ -219,7 +233,15 @@ describe('selection', () => {
     )) as LyraRetrievalResults;
     el.chunks = chunks;
     await el.updateComplete;
-    expect(el.shadowRoot!.querySelector('lr-checkbox')).to.not.exist;
+    expect(el.shadowRoot!.querySelectorAll('lr-checkbox').length).to.equal(0);
+  });
+
+  it('omits the checkbox when selectable="false" is set as a plain HTML attribute (not a property binding)', async () => {
+    const el = (await fixture(html`<lr-retrieval-results selectable="false"></lr-retrieval-results>`)) as LyraRetrievalResults;
+    expect(el.selectable).to.be.false;
+    el.chunks = chunks;
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelectorAll('lr-checkbox').length).to.equal(0);
   });
 
   it('tolerates a dangling id in selectedIds (no matching chunk) without throwing', async () => {

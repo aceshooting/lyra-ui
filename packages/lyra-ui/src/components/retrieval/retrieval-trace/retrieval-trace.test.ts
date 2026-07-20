@@ -1,6 +1,6 @@
 import { fixture, expect, html, oneEvent } from '@open-wc/testing';
 import './retrieval-trace.js';
-import type { LyraRetrievalTrace } from './retrieval-trace.js';
+import { LyraRetrievalTrace } from './retrieval-trace.js';
 import type { RetrievalStage } from './retrieval-trace.class.js';
 import type { LyraChunkInspector } from '../chunk-inspector/chunk-inspector.js';
 import type { LyraSpanWaterfall } from '../../agent-tools/span-waterfall/span-waterfall.js';
@@ -62,6 +62,30 @@ describe('lr-retrieval-trace', () => {
     await el.updateComplete;
     const overridden = waterfall.shadowRoot!.querySelector('[part="row"] [part="name"]');
     expect(overridden!.textContent).to.equal('Rewrite (gpt-4o-mini)');
+  });
+
+  it('falls back the internal timeline\'s accessible name to a host aria-label when label is unset', async () => {
+    // The `label` property's own doc comment promises: "Falls back to a host `aria-label`, then
+    // the timeline's own localized default." -- mirrors `<lr-trace-tree>`'s identical `label`
+    // fallback chain, forwarded here to the internal `<lr-span-waterfall>` since that's the
+    // element whose own `aria-label` actually renders.
+    const el = (await fixture(
+      html`<lr-retrieval-trace aria-label="Custom trace label" .stages=${STAGES}></lr-retrieval-trace>`,
+    )) as LyraRetrievalTrace;
+    await el.updateComplete;
+    const waterfall = el.shadowRoot!.querySelector('lr-span-waterfall') as LyraSpanWaterfall;
+    await waterfall.updateComplete;
+    expect(waterfall.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('Custom trace label');
+  });
+
+  it('lets an explicit label win over a host aria-label', async () => {
+    const el = (await fixture(
+      html`<lr-retrieval-trace aria-label="Ignored" label="Explicit label" .stages=${STAGES}></lr-retrieval-trace>`,
+    )) as LyraRetrievalTrace;
+    await el.updateComplete;
+    const waterfall = el.shadowRoot!.querySelector('lr-span-waterfall') as LyraSpanWaterfall;
+    await waterfall.updateComplete;
+    expect(waterfall.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('Explicit label');
   });
 
   it('forwards activeStageId to the internal waterfall as activeSpanId', async () => {
@@ -312,5 +336,41 @@ describe('active-evidence cssprop escape hatch', () => {
   it('is accessible with the active-evidence prop themed', async () => {
     const { el } = await activeTrace('--lr-retrieval-trace-active-border: rgb(0, 51, 102)');
     await expect(el).to.be.accessible();
+  });
+});
+
+describe('lifecycle: super calls', () => {
+  it('calls super.willUpdate() so a future shared mixin layered under LyraElement keeps running', async () => {
+    // Neither LyraElement nor LitElement override willUpdate today (a true no-op on
+    // ReactiveElement.prototype), so this can only be proven by spying on the inherited method
+    // itself and confirming lr-retrieval-trace's own override still reaches it via
+    // `super.willUpdate()` -- mirrors `<lr-graph>`'s identical test for the same pattern. The spy
+    // is filtered to `this === el` because `LyraElement.prototype` is shared by every Lyra
+    // component -- unfiltered, the nested `<lr-span-waterfall>`/`<lr-live-region>` instances this
+    // component renders would also trip it on their own (unrelated) update cycles.
+    const proto = Object.getPrototypeOf(LyraRetrievalTrace.prototype) as {
+      willUpdate?: (changed: unknown) => void;
+    };
+    const hadOwnWillUpdate = Object.prototype.hasOwnProperty.call(proto, 'willUpdate');
+    const originalWillUpdate = proto.willUpdate;
+    let willUpdateCalls = 0;
+    // Created (and the `el` reference bound) via `document.createElement` *before* connecting to
+    // the DOM -- unlike `fixture()`, which appends and awaits `updateComplete` internally, so its
+    // own first `willUpdate` call would already have fired before an `await fixture(...)`
+    // assignment lands, leaving `el` still `undefined` when the spy's `this === el` check runs.
+    const el = document.createElement('lr-retrieval-trace') as LyraRetrievalTrace;
+    proto.willUpdate = function (this: unknown, changed: unknown) {
+      if (this === el) willUpdateCalls++;
+      originalWillUpdate?.call(this, changed);
+    };
+    try {
+      document.body.appendChild(el);
+      await el.updateComplete;
+      expect(willUpdateCalls).to.be.greaterThan(0);
+    } finally {
+      el.remove();
+      if (hadOwnWillUpdate) proto.willUpdate = originalWillUpdate;
+      else delete proto.willUpdate;
+    }
   });
 });

@@ -61,6 +61,25 @@ it('falls back to the localized untitled-entity name when `label` is unset, so t
   expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('Untitled entity');
 });
 
+it('localizes the "{label}, {type}" accessible name via this.localize() when .strings overrides entityChipWithType', async () => {
+  const el = (await fixture(html`
+    <lr-entity-chip
+      label="Marie Curie"
+      type="person"
+      type-label="Personne"
+      .strings=${{ entityChipWithType: '{label} ({type})' }}
+    ></lr-entity-chip>
+  `)) as LyraEntityChip;
+  expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('Marie Curie (Personne)');
+});
+
+it('localizes the untitled-entity fallback via this.localize() when .strings overrides untitledEntity', async () => {
+  const el = (await fixture(html`
+    <lr-entity-chip entity-id="e1" .strings=${{ untitledEntity: 'Entité sans titre' }}></lr-entity-chip>
+  `)) as LyraEntityChip;
+  expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('Entité sans titre');
+});
+
 it('reflects type as a host attribute for CSS theming', async () => {
   const el = (await fixture(html`<lr-entity-chip type="person"></lr-entity-chip>`)) as LyraEntityChip;
   expect(el.getAttribute('type')).to.equal('person');
@@ -129,4 +148,24 @@ it('clamps its floating surface width through the shared popover-viewport-clamp 
   const el = (await fixture(html`<lr-entity-chip></lr-entity-chip>`)) as HTMLElement;
   await (el as HTMLElement & { updateComplete?: Promise<unknown> }).updateComplete;
   expect(renderedClamp(el, "[part='popover']")).to.equal('10px');
+});
+
+it('resets the open preview popover on disconnect so a reparent reconnect never leaves it stuck open', async () => {
+  const el = (await fixture(
+    html`<lr-entity-chip label="Marie Curie">Physicist, 1867-1934</lr-entity-chip>`,
+  )) as LyraEntityChip;
+  const wrapper = el.shadowRoot!.querySelector('.wrapper') as HTMLElement;
+  wrapper.dispatchEvent(new Event('pointerenter', { bubbles: true }));
+  await el.updateComplete;
+  expect((el.shadowRoot!.querySelector('[part="popover"]') as HTMLElement).hasAttribute('hidden')).to.be.false;
+
+  // Reparent: disconnect immediately followed by reconnect (e.g. drag-drop reparent,
+  // virtualized list reordering).
+  const parent = el.parentElement!;
+  el.remove();
+  parent.appendChild(el);
+  await el.updateComplete;
+
+  const popoverAfterReconnect = el.shadowRoot!.querySelector('[part="popover"]') as HTMLElement;
+  expect(popoverAfterReconnect.hasAttribute('hidden')).to.be.true;
 });

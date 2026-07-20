@@ -16,6 +16,10 @@ export interface LyraCommunity {
   memberCount?: number;
 }
 
+/** Visual chrome for `<lr-community-card>`'s root, mirroring `lr-card`'s `appearance` vocabulary
+ *  and this component's sibling `lr-entity-card`'s identical property. */
+export type CommunityCardAppearance = 'card' | 'plain';
+
 export interface LyraCommunityCardEventMap {
   /** The drill button, header, or overflow chip -- all three mean "show me this whole community". */
   'lr-drill': CustomEvent<{ id: string }>;
@@ -55,6 +59,11 @@ export class LyraCommunityCard extends LyraElement<LyraCommunityCardEventMap> {
   @property({ type: Number, attribute: 'max-members' }) maxMembers = 8;
   /** Single-row layout (title + member count + drill button, no summary/chips). */
   @property({ type: Boolean, reflect: true }) compact = false;
+  /** Visual chrome, mirroring `lr-card`'s `appearance` vocabulary and this component's sibling
+   *  `lr-entity-card`'s identical property. `'card'` (the default) keeps the bordered, filled,
+   *  padded box. `'plain'` removes the border, background, and padding, so a card nested inside a
+   *  container that already draws a border doesn't double it. */
+  @property({ reflect: true }) appearance: CommunityCardAppearance = 'card';
 
   /** `maxMembers` normalized to a finite, non-negative integer count -- passed straight to
    *  `Array.prototype.slice()` below, which would otherwise silently misbehave on a non-finite or

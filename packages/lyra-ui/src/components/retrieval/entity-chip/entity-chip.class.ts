@@ -81,7 +81,15 @@ export class LyraEntityChip extends LyraElement<LyraEntityChipEventMap> {
   disconnectedCallback(): void {
     super.disconnectedCallback();
     this.cleanupPositioner?.();
+    this.cleanupPositioner = undefined;
     clearTimeout(this.hideTimer);
+    this.hideTimer = undefined;
+    // Reset so a reconnect (e.g. a drag-drop reparent, or a virtualized/reordering
+    // message list moving this element) re-triggers updated()'s open-driven branch --
+    // without this, popoverOpen stays true across the disconnect/reconnect and
+    // changed.has('popoverOpen') never fires again, leaving the popover rendered open
+    // with a torn-down positioner and no live position/dismissal.
+    this.popoverOpen = false;
   }
 
   private get accessibleLabel(): string {

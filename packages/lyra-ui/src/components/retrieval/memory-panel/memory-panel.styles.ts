@@ -75,13 +75,13 @@ export const styles = css`
     font-weight: var(--lr-font-weight-medium);
   }
   [part='confidence'][data-tone='success'] {
-    color: var(--lr-color-success);
+    color: var(--lr-memory-panel-confidence-success-color, var(--lr-color-success));
   }
   [part='confidence'][data-tone='warning'] {
-    color: var(--lr-color-warning);
+    color: var(--lr-memory-panel-confidence-warning-color, var(--lr-color-warning));
   }
   [part='confidence'][data-tone='danger'] {
-    color: var(--lr-color-danger);
+    color: var(--lr-memory-panel-confidence-danger-color, var(--lr-color-danger));
   }
   [part='expand-toggle'] {
     align-self: flex-start;

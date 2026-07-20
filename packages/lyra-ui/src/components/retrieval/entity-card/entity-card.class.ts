@@ -1,4 +1,4 @@
-import { html, nothing, type TemplateResult } from 'lit';
+import { html, nothing, type ComplexAttributeConverter, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { styleMap } from 'lit/directives/style-map.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
@@ -32,6 +32,21 @@ type NodeTypeStyle = { id: string; label: string; color?: string; shape?: 'circl
 
 /** Visual chrome for `<lr-entity-card>`'s root, mirroring `lr-card`'s `appearance` vocabulary. */
 export type EntityCardAppearance = 'card' | 'plain';
+
+/** `true`-defaulting boolean attribute converter -- Lit's default presence-based `type: Boolean`
+ *  can never be set back to `false` from a plain-HTML attribute once a property's own default is
+ *  `true` (removing an attribute that was never present fires no `attributeChangedCallback`), so
+ *  `fromAttribute` checks the literal string instead. Duplicated locally rather than imported,
+ *  matching this exact converter's repeated per-component convention elsewhere in this library
+ *  (see e.g. `<lr-attachment-chip>`'s own `trueDefaultBooleanConverter`). */
+const trueDefaultBooleanConverter: ComplexAttributeConverter<boolean> = {
+  fromAttribute(value): boolean {
+    return value !== 'false';
+  },
+  toAttribute(value): string | null {
+    return value ? null : 'false';
+  },
+};
 
 export interface LyraEntityCardEventMap {
   'lr-entity-activate': CustomEvent<{ id: string }>;
@@ -97,7 +112,8 @@ export class LyraEntityCard extends LyraElement<LyraEntityCardEventMap> {
   /** Display label for `entity.communityId`'s chip; falls back to the raw id. */
   @property({ attribute: 'community-label' }) communityLabel = '';
   /** Hides the built-in focus action on pages with no graph. */
-  @property({ type: Boolean, attribute: 'show-focus-button' }) showFocusButton = true;
+  @property({ type: Boolean, attribute: 'show-focus-button', converter: trueDefaultBooleanConverter })
+  showFocusButton = true;
   /** Tighter root padding and row gap for dense contexts (a dossier rendered in a sidebar or a
    *  result list) -- same convention as `lr-empty`'s `compact`, and as this component's sibling
    *  `lr-community-card`. Defaults to `false`, i.e. the full card padding. Purely a density knob:

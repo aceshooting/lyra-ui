@@ -1,8 +1,9 @@
 import { fixture, expect, html, waitUntil, aTimeout, oneEvent } from '@open-wc/testing';
 import { select } from 'd3-selection';
 import './graph.js';
-import type { LyraGraph } from './graph.js';
+import { LyraGraph } from './graph.js';
 import { layeredLayout } from '../../../internal/layered-layout.js';
+import { styles } from './graph.styles.js';
 
 const nodes = [
   { id: 'a', label: 'A' },
@@ -21,6 +22,54 @@ const NODE_COUNT_TIMEOUT = 5000;
 // first paint NODE_COUNT_TIMEOUT above covers) needs its own, larger budget
 // or it fails on every run, not just loaded ones.
 const ALPHA_SETTLE_TIMEOUT = 15_000;
+
+interface FakeIntersectionObserverInstance {
+  callback: IntersectionObserverCallback;
+  options?: IntersectionObserverInit;
+  disconnected: boolean;
+}
+
+/** Stubs the global `IntersectionObserver` with a fully fake, manually-driven implementation so
+ *  the canvas visibility-gating tests control exactly when (and whether) intersection is
+ *  reported -- the same spy-the-observer-constructor technique `animation.test.ts`/`map.test.ts`
+ *  use, since a real IntersectionObserver reports an on-screen fixture as intersecting almost
+ *  immediately in the headless test page, making these scenarios impossible to reproduce
+ *  deterministically. Duplicated locally rather than shared, matching those same two files'
+ *  own per-file copy of this exact helper. */
+function stubIntersectionObserver() {
+  const original = window.IntersectionObserver;
+  const observedTargets: Element[] = [];
+  const instances: FakeIntersectionObserverInstance[] = [];
+  class FakeIntersectionObserver implements FakeIntersectionObserverInstance {
+    callback: IntersectionObserverCallback;
+    options?: IntersectionObserverInit;
+    disconnected = false;
+    constructor(callback: IntersectionObserverCallback, options?: IntersectionObserverInit) {
+      this.callback = callback;
+      this.options = options;
+      instances.push(this);
+    }
+    observe(target: Element): void {
+      observedTargets.push(target);
+    }
+    unobserve(): void {}
+    disconnect(): void {
+      this.disconnected = true;
+    }
+    takeRecords(): IntersectionObserverEntry[] {
+      return [];
+    }
+  }
+  (window as unknown as { IntersectionObserver: typeof IntersectionObserver }).IntersectionObserver =
+    FakeIntersectionObserver as unknown as typeof IntersectionObserver;
+  return {
+    instances,
+    observedTargets,
+    restore(): void {
+      (window as unknown as { IntersectionObserver: typeof IntersectionObserver }).IntersectionObserver = original;
+    },
+  };
+}
 
 it('shows a loading skeleton and aria-busy while d3 loads, then swaps to the svg', async () => {
   const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
@@ -1177,6 +1226,18 @@ describe('selection (J4)', () => {
     el.selectedNodeIds = ['a'];
     await el.updateComplete;
     expect(el.shadowRoot!.querySelector('[part="live-region"]')!.textContent).to.contain('1 selected');
+  });
+
+  it('does not announce "0 selected" on mount (selectedNodeIds/selectedLinkIds default to []), so the mount-time focused-item fallback still speaks', async () => {
+    // selectedNodeIds/selectedLinkIds both default to `[]`, a non-undefined default -- Lit marks
+    // a property "changed" on the component's very first update whenever it has one, so an
+    // unguarded willUpdate() would set graphLiveText to the localized "0 selected" immediately on
+    // mount and permanently block render()'s `this.graphLiveText || graphItemAnnouncement(...)`
+    // fallback for the focused node/link/community, even with no selection ever made.
+    const el = await mountSelectable('single');
+    const liveText = el.shadowRoot!.querySelector('[part="live-region"]')!.textContent;
+    expect(liveText).to.not.contain('0 selected');
+    expect(liveText).to.contain('Node A');
   });
 
   it('is accessible with a selection applied', async () => {
@@ -2893,6 +2954,111 @@ describe('coverage: canvas lifecycle (reconnect/disconnect edge cases)', () => {
   });
 });
 
+describe('canvas visibility gating (perf)', () => {
+  it('gates canvas redraw behind IntersectionObserver visibility -- no draws while off-screen, catches up once visible again', async () => {
+    const io = stubIntersectionObserver();
+    try {
+      // `seed` converges the settle synchronously (see rebuildSimulation()'s own doc comment) --
+      // with no ongoing async tick-driven rAF loop after mount, the draw count from the initial
+      // settle is stable by the time the `aTimeout` below returns, with no background-tick race
+      // against the off-screen assertion window that follows.
+      const el = (await fixture(
+        html`<lr-graph renderer="canvas" seed="7" width="200" height="200" style="width:200px;height:200px"></lr-graph>`,
+      )) as LyraGraph;
+      el.nodes = nodes;
+      el.links = links;
+      await el.updateComplete;
+      await waitUntil(() => !!el.shadowRoot!.querySelector('canvas'), undefined, { timeout: NODE_COUNT_TIMEOUT });
+
+      expect(io.observedTargets).to.include(el);
+      const latest = io.instances[io.instances.length - 1];
+
+      type Internals = { drawCanvas(): void; markCanvasDirty(): void };
+      const internals = el as unknown as Internals;
+      const originalDraw = internals.drawCanvas.bind(internals);
+      let drawCalls = 0;
+      internals.drawCanvas = () => {
+        drawCalls++;
+        originalDraw();
+      };
+      await aTimeout(50); // let the settle's single deferred draw fire and its rAF resolve
+      drawCalls = 0;
+
+      // Report off-screen, then request a redraw the way a drag/resize would.
+      latest.callback(
+        [{ isIntersecting: false } as unknown as IntersectionObserverEntry],
+        latest as unknown as IntersectionObserver,
+      );
+      internals.markCanvasDirty();
+      await aTimeout(100); // several animation frames' worth of headroom
+      expect(drawCalls, 'no redraw should happen while off-screen').to.equal(0);
+
+      // Report back on-screen -- the deferred draw request must be honored, not silently dropped.
+      latest.callback(
+        [{ isIntersecting: true } as unknown as IntersectionObserverEntry],
+        latest as unknown as IntersectionObserver,
+      );
+      await aTimeout(100);
+      expect(drawCalls, 'becoming visible again must issue the deferred draw').to.be.greaterThan(0);
+    } finally {
+      io.restore();
+    }
+  });
+
+  it('disconnects the IntersectionObserver on disconnectedCallback', async () => {
+    const io = stubIntersectionObserver();
+    try {
+      const el = (await fixture(html`<lr-graph renderer="canvas"></lr-graph>`)) as LyraGraph;
+      await el.updateComplete;
+      const latest = io.instances[io.instances.length - 1];
+      expect(latest.disconnected).to.be.false;
+      el.remove();
+      expect(latest.disconnected).to.be.true;
+    } finally {
+      io.restore();
+    }
+  });
+});
+
+describe('lifecycle: super calls', () => {
+  it('calls super.willUpdate()/super.updated() so a future shared mixin layered under LyraElement keeps running', async () => {
+    // Neither LyraElement nor LitElement override willUpdate/updated today (both are true no-ops
+    // on ReactiveElement.prototype), so this can only be proven by spying on the inherited method
+    // itself and confirming lr-graph's own override still reaches it via `super.<method>()` --
+    // mirrors csv-viewer/docx-viewer/pdf-viewer's identical super.willUpdate() call reaching
+    // DocumentAnchorTarget's mixin logic.
+    const proto = Object.getPrototypeOf(LyraGraph.prototype) as {
+      willUpdate?: (changed: unknown) => void;
+      updated?: (changed: unknown) => void;
+    };
+    const hadOwnWillUpdate = Object.prototype.hasOwnProperty.call(proto, 'willUpdate');
+    const hadOwnUpdated = Object.prototype.hasOwnProperty.call(proto, 'updated');
+    const originalWillUpdate = proto.willUpdate;
+    const originalUpdated = proto.updated;
+    let willUpdateCalls = 0;
+    let updatedCalls = 0;
+    proto.willUpdate = function (this: unknown, changed: unknown) {
+      willUpdateCalls++;
+      originalWillUpdate?.call(this, changed);
+    };
+    proto.updated = function (this: unknown, changed: unknown) {
+      updatedCalls++;
+      originalUpdated?.call(this, changed);
+    };
+    try {
+      const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
+      await el.updateComplete;
+      expect(willUpdateCalls).to.be.greaterThan(0);
+      expect(updatedCalls).to.be.greaterThan(0);
+    } finally {
+      if (hadOwnWillUpdate) proto.willUpdate = originalWillUpdate;
+      else delete proto.willUpdate;
+      if (hadOwnUpdated) proto.updated = originalUpdated;
+      else delete proto.updated;
+    }
+  });
+});
+
 describe('coverage: private-helper direct branches', () => {
   it('falls back nodeRadius to the clamped default average when radius is non-finite (NaN)', async () => {
     const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
@@ -3483,5 +3649,67 @@ describe('coverage: drawn edge label declutter gate (onTick, real ticks)', () =>
     await aTimeout(300);
     const label = el.shadowRoot!.querySelector('[part="link-label"]') as SVGTextElement;
     expect(label.getAttribute('visibility')).to.equal('hidden');
+  });
+});
+
+describe('styling', () => {
+  // A real browser :hover pseudo-class can't be forced from a dispatched event (it tracks actual
+  // pointer position), so this asserts the stylesheet source the same way this exact remediation
+  // series does for its other siblings (e.g. lr-span-waterfall's identical per-item, variable-fill
+  // `[part='bar']:hover { filter: brightness(...) }`) rather than a rendered computed-style probe.
+  it('gives node/link/hull a hover state alongside their existing :focus-visible rings', () => {
+    const css = styles.cssText.replace(/\s+/g, ' ');
+    expect(css).to.match(/\[part='node'\]:hover[^{]*\{[^}]*filter:\s*brightness/);
+    expect(css).to.match(/\[part='link'\]:hover[^{]*\{[^}]*filter:\s*brightness/);
+    expect(css).to.match(/\[part='hull'\]:hover[^{]*\{[^}]*filter:\s*brightness/);
+  });
+});
+
+// Regression coverage for the lifecycle-optional-peer-missing-fails-silently defect class --
+// when the optional `d3` peers fail to load, <lr-graph> must fail closed into a visible,
+// accessible role="alert" error state instead of leaving a permanently blank surface.
+// Mirrors lr-map's identical treatment.
+describe('optional d3 peer failure', () => {
+  it('renders a visible, accessible error state instead of a blank surface when the d3 peers fail to load', async () => {
+    // Deliberately not using fixture(): loadLibrary must be overridden *before* the element ever
+    // connects, since connectedCallback() calls it unconditionally on connect.
+    const el = document.createElement('lr-graph') as unknown as LyraGraph;
+    (el as unknown as { loadLibrary: () => Promise<unknown> }).loadLibrary = () => Promise.resolve(null);
+    el.nodes = nodes;
+    el.links = links;
+    document.body.appendChild(el);
+    try {
+      await waitUntil(() => el.shadowRoot!.querySelector('[part="error"]') != null, 'error state never rendered', {
+        timeout: 2000,
+      });
+      const errorEl = el.shadowRoot!.querySelector('[part="error"]') as HTMLElement;
+      expect(errorEl.getAttribute('role')).to.equal('alert');
+      expect(errorEl.textContent!.trim().length).to.be.greaterThan(0);
+      expect(el.hasAttribute('aria-busy')).to.be.false;
+      expect(el.shadowRoot!.querySelectorAll('svg, canvas').length).to.equal(0);
+      expect(el.shadowRoot!.querySelectorAll('lr-skeleton').length).to.equal(0);
+    } finally {
+      el.remove();
+    }
+  });
+
+  it('routes the d3 peer-missing error through a .strings override', async () => {
+    const el = document.createElement('lr-graph') as unknown as LyraGraph;
+    (el as unknown as { loadLibrary: () => Promise<unknown> }).loadLibrary = () => Promise.resolve(null);
+    (el as unknown as { strings: Record<string, string> }).strings = {
+      graphMissingLibrary: 'Bibliothèque de graphe absente',
+    };
+    el.nodes = nodes;
+    document.body.appendChild(el);
+    try {
+      await waitUntil(() => el.shadowRoot!.querySelector('[part="error"]') != null, 'error state never rendered', {
+        timeout: 2000,
+      });
+      expect(el.shadowRoot!.querySelector('[part="error"]')!.textContent!.trim()).to.equal(
+        'Bibliothèque de graphe absente',
+      );
+    } finally {
+      el.remove();
+    }
   });
 });

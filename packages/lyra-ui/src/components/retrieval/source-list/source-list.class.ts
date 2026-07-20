@@ -1,4 +1,4 @@
-import { html, type TemplateResult } from 'lit';
+import { html, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { nextId } from '../../../internal/a11y.js';
@@ -66,7 +66,8 @@ export class LyraSourceList extends LyraElement<LyraSourceListEventMap> {
 
   private readonly listId = nextId('source-list-region');
 
-  protected willUpdate(): void {
+  protected willUpdate(changed: PropertyValues): void {
+    super.willUpdate(changed);
     if (!this.hasUpdated) {
       // Must count only children assigned to the *default* slot -- same rule
       // `firstUpdated`/`onSlotChange` apply via `assignedElements()` below --

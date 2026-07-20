@@ -80,6 +80,17 @@ it('renders lr-entity-card with entity/types/communityLabel/showFocusButton forw
   expect(card.showFocusButton).to.be.false;
 });
 
+it('honors the plain show-focus-button="false" attribute form, not just a property binding', async () => {
+  const el = (await fixture(
+    html`<lr-entity-dossier show-focus-button="false"></lr-entity-dossier>`,
+  )) as LyraEntityDossier;
+  expect(el.showFocusButton).to.be.false;
+  el.entity = entity;
+  await el.updateComplete;
+  const card = el.shadowRoot!.querySelector('lr-entity-card') as LyraEntityCard;
+  expect(card.showFocusButton).to.be.false;
+});
+
 it('omits the confidence stat entirely when confidence is null (the default)', async () => {
   const el = (await fixture(html`<lr-entity-dossier></lr-entity-dossier>`)) as LyraEntityDossier;
   el.entity = entity;

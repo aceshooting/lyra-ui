@@ -56,7 +56,8 @@ export class LyraNeighborList extends LyraElement<LyraNeighborListEventMap> {
   @property({ type: Boolean }) expandable = false;
   /** Above this row count the list renders through an internal `lr-virtual-list`. */
   @property({ type: Number, attribute: 'virtualize-at' }) virtualizeAt = 100;
-  /** Accessible name; falls back to the localized `neighborListLabel`. */
+  /** Accessible name. A host `aria-label` wins over this, then this falls back to the localized
+   *  `neighborListLabel` default. */
   @property() label = '';
 
   /** `virtualizeAt`, normalized to a finite non-negative integer (falling back to the property's
@@ -146,7 +147,7 @@ export class LyraNeighborList extends LyraElement<LyraNeighborListEventMap> {
 
   render(): TemplateResult {
     const sorted = this.sortedRows();
-    const label = this.label || this.localize('neighborListLabel');
+    const label = this.getAttribute('aria-label') || this.label || this.localize('neighborListLabel');
     if (sorted.length === 0) {
       // `heading` is passed as slotted light-DOM content (rather than the `heading` attribute)
       // so `[part="empty"]`'s `.textContent` -- a plain DOM accessor, which never pierces

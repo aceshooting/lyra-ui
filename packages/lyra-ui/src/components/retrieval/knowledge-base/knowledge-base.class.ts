@@ -177,7 +177,8 @@ export class LyraKnowledgeBase extends LyraElement<LyraKnowledgeBaseEventMap> {
   /** The sources to list, in display order. */
   @property({ attribute: false }) sources: KnowledgeSource[] = [];
 
-  /** Heading text and the table's accessible name. Falls back to a localized default. */
+  /** Heading text and the table's accessible name (unless overridden by a host `aria-label`).
+   *  Falls back to a localized default. */
   @property() label = '';
 
   /** Hides the aggregate summary row (total/synced/syncing/needs-attention). */
@@ -380,6 +381,7 @@ export class LyraKnowledgeBase extends LyraElement<LyraKnowledgeBaseEventMap> {
 
   render(): TemplateResult {
     const heading = this.label || this.localize('knowledgeBaseHeading');
+    const accessibleHeading = this.getAttribute('aria-label') || heading;
     return html`
       <div part="base">
         <div part="toolbar">
@@ -401,7 +403,7 @@ export class LyraKnowledgeBase extends LyraElement<LyraKnowledgeBaseEventMap> {
           .columns=${this.tableColumns()}
           .rows=${this.sources}
           .rowKey=${(row: KnowledgeSource) => row.id}
-          aria-label=${heading}
+          aria-label=${accessibleHeading}
           empty-heading=${this.localize('knowledgeBaseEmptyHeading')}
           empty-description=${this.localize('knowledgeBaseEmptyDescription', undefined,
           )}

@@ -183,6 +183,7 @@ export class LyraRetrievalTrace extends LyraElement<LyraRetrievalTraceEventMap> 
   };
 
   protected willUpdate(changed: PropertyValues): void {
+    super.willUpdate(changed);
     if (changed.has('stages')) {
       const ids = new Set(this.stages.map((s) => s.id));
       let pruned: Set<string> | null = null;
@@ -241,13 +242,19 @@ export class LyraRetrievalTrace extends LyraElement<LyraRetrievalTraceEventMap> 
   render(): TemplateResult {
     const spans = this.toSpans();
     const hasAnyEvidence = this.stages.some((s) => hasEvidence(s.evidence));
+    // Falls back to a host `aria-label` before the internal timeline's own localized default --
+    // mirrors `<lr-trace-tree>`'s identical `label` fallback chain. The internal
+    // `<lr-span-waterfall>` already has this same fallback built in for *its own* host
+    // `aria-label`, but that never sees this component's `aria-label` (attributes don't cross
+    // custom-element boundaries), so the resolution has to happen here and be forwarded.
+    const label = this.label || this.getAttribute('aria-label') || '';
     return html`
       <div part="base">
         <lr-span-waterfall
           part="timeline"
           .spans=${spans}
           .activeSpanId=${this.activeStageId}
-          .label=${this.label}
+          .label=${label}
           @lr-span-select=${this.onStageSelect}
         ></lr-span-waterfall>
         ${hasAnyEvidence

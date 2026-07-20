@@ -194,7 +194,19 @@ export class LyraCitationBadge extends LyraElement<LyraCitationBadgeEventMap> {
   disconnectedCallback(): void {
     super.disconnectedCallback();
     this.cleanupPositioner?.();
+    this.cleanupPositioner = undefined;
     clearTimeout(this.hideTimer);
+    this.hideTimer = undefined;
+    // Reset so a reconnect (e.g. a drag-and-drop reparent, or a virtualized/reordering list
+    // moving this same element instance) re-triggers updated()'s popoverOpen-driven branch --
+    // without this, popoverOpen stays true across the disconnect/reconnect and
+    // changed.has('popoverOpen') never fires again, leaving the popover rendered open at a stale,
+    // frozen position with no positioner re-armed. Mirrors lr-mention-popover's/lr-select's
+    // identical fix. hovering/focused are reset too since the wrapper's pointerenter/focusin
+    // listeners live on light-DOM-adjacent shadow content that won't re-fire them on reconnect.
+    this.popoverOpen = false;
+    this.hovering = false;
+    this.focused = false;
   }
 
   private get accessibleLabel(): string {

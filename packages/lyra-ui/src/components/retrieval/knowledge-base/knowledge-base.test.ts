@@ -73,6 +73,14 @@ describe('lr-knowledge-base', () => {
     expect(tableEl(el).getAttribute('aria-label')).to.equal('Research library');
   });
 
+  it('a host aria-label wins over label/localized default for the table accessible name, without changing the visible heading text', async () => {
+    const el = (await fixture(
+      html`<lr-knowledge-base aria-label="Team A sources" label="Research library"></lr-knowledge-base>`,
+    )) as LyraKnowledgeBase;
+    expect(tableEl(el).getAttribute('aria-label')).to.equal('Team A sources');
+    expect(el.shadowRoot!.querySelector('[part="heading"]')!.textContent).to.equal('Research library');
+  });
+
   it('renders one table row per source with the source name and type', async () => {
     const el = (await fixture(html`<lr-knowledge-base .sources=${sources}></lr-knowledge-base>`)) as LyraKnowledgeBase;
     await el.updateComplete;

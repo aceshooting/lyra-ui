@@ -1,4 +1,5 @@
-import { fixture, expect, html, waitUntil } from '@open-wc/testing';
+import { fixture, expect, html, waitUntil, oneEvent } from '@open-wc/testing';
+import { LitElement, type PropertyValues } from 'lit';
 import './node-palette.js';
 import type { LyraNodePalette, PaletteItem } from './node-palette.js';
 import { FLOW_PALETTE_MIME_TYPE } from '../../data/flow-canvas/flow-canvas.js';
@@ -77,7 +78,13 @@ it('ArrowUp from the first item returns focus to the search field', async () => 
   const firstItem = el.shadowRoot!.querySelector('[part="item"]') as HTMLElement;
   firstItem.focus();
   firstItem.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowUp', bubbles: true, cancelable: true }));
-  expect(el.shadowRoot!.activeElement).to.equal(el.shadowRoot!.querySelector('input'));
+  // Deriving safe primitives (tagName + part attribute) instead of comparing DOM Element
+  // references directly -- a direct `.to.equal()` of two live nodes would, on a future
+  // regression where focus lands somewhere else, throw DataCloneError while
+  // @web/test-runner-mocha serializes the failure via structuredClone, silently hanging the
+  // whole test session instead of failing this one assertion normally.
+  expect(el.shadowRoot!.activeElement?.tagName).to.equal('INPUT');
+  expect(el.shadowRoot!.activeElement?.getAttribute('part')).to.equal('search');
 });
 
 it('Enter on an item emits lr-palette-place and lr-select with the same type/item', async () => {
@@ -149,14 +156,124 @@ it('dims a disabled item through the shared disabled-opacity token', async () =>
   expect(getComputedStyle(disabledItem).opacity).to.equal('0.25');
 });
 
+it('chains updated() to super.updated() so a mixin layered under LyraElement would still run', async () => {
+  // No shared mixin actually overrides updated() today, so the only way to prove the chain is
+  // live (rather than grepping source text for the call) is to patch the base-class hook itself
+  // -- the exact hook a future mixin would extend -- and confirm it actually fires. Same pattern
+  // as branch-picker.test.ts's identical check.
+  const hadOwn = Object.prototype.hasOwnProperty.call(LitElement.prototype, 'updated');
+  const original = (LitElement.prototype as unknown as { updated?: (changed: PropertyValues) => void }).updated;
+  let called = false;
+  (LitElement.prototype as unknown as { updated: (changed: PropertyValues) => void }).updated = function (
+    this: LitElement,
+    changed: PropertyValues,
+  ) {
+    called = true;
+    original?.call(this, changed);
+  };
+  try {
+    const el = (await fixture(html`<lr-node-palette></lr-node-palette>`)) as LyraNodePalette;
+    await el.updateComplete;
+    expect(called).to.be.true;
+  } finally {
+    if (hadOwn) {
+      (LitElement.prototype as unknown as { updated: unknown }).updated = original;
+    } else {
+      delete (LitElement.prototype as unknown as { updated?: unknown }).updated;
+    }
+  }
+});
+
+describe('localization', () => {
+  it('localizes the search field, listbox, empty state, and drag hint via .strings', async () => {
+    const el = (await fixture(html`
+      <lr-node-palette
+        .strings=${{
+          search: 'Rechercher',
+          nodePalettePlaceholder: 'Rechercher des nœuds…',
+          nodePaletteLabel: 'Palette de nœuds',
+          nodePaletteEmpty: 'Aucun nœud correspondant.',
+          nodePaletteDragHint: 'Faites glisser vers le canevas, ou appuyez sur Entrée',
+        }}
+      ></lr-node-palette>
+    `)) as LyraNodePalette;
+    await el.updateComplete;
+    const input = el.shadowRoot!.querySelector('input') as HTMLInputElement;
+    expect(input.getAttribute('aria-label')).to.equal('Rechercher');
+    expect(input.getAttribute('placeholder')).to.equal('Rechercher des nœuds…');
+    expect(el.shadowRoot!.querySelector('[role="listbox"]')!.getAttribute('aria-label')).to.equal('Palette de nœuds');
+    expect(el.shadowRoot!.querySelector('[part="empty"]')!.textContent).to.equal('Aucun nœud correspondant.');
+    expect(el.shadowRoot!.querySelector('span.sr-only')!.textContent).to.equal(
+      'Faites glisser vers le canevas, ou appuyez sur Entrée',
+    );
+  });
+});
+
 it('is accessible with items, groups, and a disabled item', async () => {
   const el = (await fixture(html`<lr-node-palette .items=${items}></lr-node-palette>`)) as LyraNodePalette;
   await el.updateComplete;
   await expect(el).to.be.accessible();
 });
 
+it('never announces the initial item count on mount, but does announce a later filter change', async () => {
+  const el = (await fixture(html`<lr-node-palette .items=${items}></lr-node-palette>`)) as LyraNodePalette;
+  await el.updateComplete;
+  const liveRegionText = () => el.shadowRoot!.querySelector('[part="live-region"]')!.textContent ?? '';
+  expect(liveRegionText()).to.equal('');
+  // Real timer, margined past the Announcer's default 500ms throttle -- long enough for a
+  // regression that re-introduces an unguarded mount announcement to actually flush and fail
+  // this assertion, per this repo's "no fake timers under wtr" testing convention.
+  await new Promise((r) => setTimeout(r, 600));
+  expect(liveRegionText()).to.equal('');
+
+  const input = el.shadowRoot!.querySelector('input') as HTMLInputElement;
+  input.value = 'API';
+  input.dispatchEvent(new Event('input', { bubbles: true }));
+  await el.updateComplete;
+  await new Promise((r) => setTimeout(r, 600));
+  expect(liveRegionText()).to.include('1');
+});
+
 it('gives the search field a focus-visible ring and resets the native search-cancel glyph', () => {
   const css = styles.cssText.replace(/\s+/g, ' ');
   expect(css).to.match(/\[part='search'\]:focus-visible\s*\{[^}]*outline:/);
   expect(css).to.match(/\[part='search'\]::-webkit-search-cancel-button/);
+});
+
+it("renders the search field's ::placeholder in the shared quiet-text token's color instead of the UA default", async () => {
+  const el = (await fixture(
+    html`<lr-node-palette style="--lr-color-text-quiet: rgb(12, 34, 56)"></lr-node-palette>`,
+  )) as LyraNodePalette;
+  await el.updateComplete;
+  const input = el.shadowRoot!.querySelector('[part="search"]') as HTMLInputElement;
+  expect(getComputedStyle(input, '::placeholder').color).to.equal('rgb(12, 34, 56)');
+});
+
+it('bridges the search field\'s native focus/blur across the shadow boundary as lr-node-palette focus/blur', async () => {
+  const el = (await fixture(html`<lr-node-palette .items=${items}></lr-node-palette>`)) as LyraNodePalette;
+  await el.updateComplete;
+  const input = el.shadowRoot!.querySelector('input') as HTMLInputElement;
+  const focusListener = oneEvent(el, 'focus');
+  input.dispatchEvent(new FocusEvent('focus'));
+  await focusListener;
+  const blurListener = oneEvent(el, 'blur');
+  input.dispatchEvent(new FocusEvent('blur'));
+  await blurListener;
+});
+
+it("wraps the item hover/focus-visible rule in :where() so a consumer's ::part(item):hover wins without !important", async () => {
+  const el = (await fixture(html`<lr-node-palette .items=${items}></lr-node-palette>`)) as LyraNodePalette;
+  // jsdom/browser test runners don't synthesize a real :hover pseudo-class from a dispatched
+  // event, so assert via the internal rule's specificity instead -- a :where()-wrapped selector
+  // has the same *matching* semantics as the unwrapped form but zero specificity contribution
+  // from the wrapped parts, so it loses (rather than beats) a consumer's own
+  // `::part(item):hover` override. Same technique as attachment-trigger.test.ts's identical
+  // "trigger-button hover specificity" check.
+  // Chromium's CSSOM normalizes attribute-selector quoting to double quotes in cssText, unlike
+  // the single-quoted form the source stylesheet is authored with.
+  const internalRule = (el.shadowRoot!.adoptedStyleSheets ?? [])
+    .flatMap((sheet) => Array.from(sheet.cssRules))
+    .map((rule) => rule.cssText)
+    .find((text) => text.includes(':hover') && text.includes('[part="item"]') && text.includes('background'));
+  expect(internalRule?.includes(':where(')).to.be.true;
 });

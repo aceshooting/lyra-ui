@@ -171,6 +171,7 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
   private trackedNodeEl?: Element;
 
   protected willUpdate(changed: PropertyValues): void {
+    super.willUpdate(changed);
     // A node removed from `nodes` (or `hiddenTypes` hiding its whole type) shouldn't leave a
     // dangling selection/popover pointed at nothing.
     if ((changed.has('nodes') || changed.has('hiddenTypes')) && this.selectedNodeId && !this.entityFor(this.selectedNodeId)) {

@@ -40,6 +40,8 @@ export interface LyraNodePaletteEventMap {
  *   alternative to dragging). `detail: { type }`.
  * @event lr-select - Emitted alongside `lr-palette-place` on both gestures, carrying the full
  *   item. `detail: { item }`.
+ * @event focus - Re-dispatched when the internal search field gains focus.
+ * @event blur - Re-dispatched when the internal search field loses focus.
  * @csspart base - The root wrapper.
  * @csspart search - The search input.
  * @csspart list - The listbox.
@@ -68,6 +70,10 @@ export class LyraNodePalette extends LyraElement<LyraNodePaletteEventMap> {
   private readonly listId = nextId('node-palette-list');
   private readonly hintId = nextId('node-palette-hint');
   private readonly announcer = new Announcer({ onFlush: (text) => (this.liveText = text) });
+  /** Gates the item-count announcement so a freshly-mounted palette (or one that receives its
+   *  initial `items` before/at connect) never announces its own starting count -- mirrors
+   *  `<lr-chat-message>`/`<lr-branch-picker>`'s identical `isMounting` gate. */
+  private isMounting = true;
 
   private get filtered(): PaletteItem[] {
     const q = this.queryText.trim().toLocaleLowerCase(this.effectiveLocale);
@@ -95,7 +101,10 @@ export class LyraNodePalette extends LyraElement<LyraNodePaletteEventMap> {
   }
 
   protected updated(changed: PropertyValues): void {
-    if (changed.has('queryText') || changed.has('items')) {
+    super.updated(changed);
+    const wasMounting = this.isMounting;
+    this.isMounting = false;
+    if (!wasMounting && (changed.has('queryText') || changed.has('items'))) {
       const count = this.filtered.length;
       this.announcer.announce(`${count} ${count === 1 ? this.localize('item') : this.localize('items')}`);
     }
@@ -104,6 +113,17 @@ export class LyraNodePalette extends LyraElement<LyraNodePaletteEventMap> {
   private onSearchInput = (e: Event): void => {
     this.queryText = (e.target as HTMLInputElement).value;
     this.activeIndex = 0;
+  };
+
+  // Native focus/blur neither bubble nor cross the shadow boundary, so a host listening for
+  // focus/blur directly on <lr-node-palette> (e.g. to highlight the field as active) would never
+  // hear about the internal search field without this bridge.
+  private onSearchFocus = (): void => {
+    this.emit('focus');
+  };
+
+  private onSearchBlur = (): void => {
+    this.emit('blur');
   };
 
   private onFieldKeyDown = (e: KeyboardEvent): void => {
@@ -196,6 +216,8 @@ export class LyraNodePalette extends LyraElement<LyraNodePaletteEventMap> {
         .value=${this.queryText}
         @input=${this.onSearchInput}
         @keydown=${this.onFieldKeyDown}
+        @focus=${this.onSearchFocus}
+        @blur=${this.onSearchBlur}
       />
       <div part="list" id=${this.listId} role="listbox" aria-label=${this.accessibleLabel || this.label || this.localize('nodePaletteLabel')}>
         ${groups.length === 0

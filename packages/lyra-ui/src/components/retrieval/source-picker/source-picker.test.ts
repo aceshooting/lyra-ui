@@ -1,6 +1,7 @@
 import { fixture, expect, html, oneEvent } from '@open-wc/testing';
 import './source-picker.js';
 import type { LyraSourcePicker, LyraSourceEntry } from './source-picker.js';
+import { styles } from './source-picker.styles.js';
 
 const sources: LyraSourceEntry[] = [
   {
@@ -153,6 +154,41 @@ it('forwards a host aria-label to the role="tree" element, winning over label', 
   el.accessibleLabel = null;
   await el.updateComplete;
   expect(el.shadowRoot!.querySelector('[role="tree"]')!.getAttribute('aria-label')).to.equal('Sources');
+});
+
+it('honors a .strings override for the select-all label and the empty/no-matches states', async () => {
+  const el = (await fixture(html`<lr-source-picker></lr-source-picker>`)) as LyraSourcePicker;
+  el.sources = sources;
+  el.strings = {
+    selectAllSources: 'Tout sélectionner',
+    noMatches: 'Aucun résultat',
+    noData: 'Aucune donnée',
+  };
+  await el.updateComplete;
+
+  const selectAll = el.shadowRoot!.querySelector('[part="select-all"] [role="checkbox"]')!;
+  expect(selectAll.textContent).to.equal('Tout sélectionner');
+
+  const input = el.shadowRoot!.querySelector('[part="search"]')!;
+  input.dispatchEvent(new CustomEvent('lr-input', { detail: { value: 'zzz-no-match' }, bubbles: true }));
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelector('[part="empty"]')!.textContent).to.equal('Aucun résultat');
+
+  el.sources = [];
+  await el.updateComplete;
+  const emptyHeading = el.shadowRoot!.querySelector('lr-empty')!.getAttribute('heading');
+  expect(emptyHeading).to.equal('Aucune donnée');
+});
+
+it('gives the select-all checkbox a :hover treatment matching its keyboard :focus-visible cue', () => {
+  // A dispatched pointer event never synthesizes a real `:hover` pseudo-class match in a test
+  // runner (mirrors `<lr-switch>`/`<lr-stack-trace>`'s identical stance), so this reads the
+  // exported stylesheet's own rules rather than simulating the paint -- `[part='select-all']
+  // [role='checkbox']` is the only interactive control in this file that carried `cursor: pointer`
+  // with neither rule before this fix.
+  const css = styles.cssText.replace(/\s+/g, ' ');
+  expect(css).to.match(/\[part='select-all'\] \[role='checkbox'\]:hover\s*\{[^}]+\}/);
+  expect(css).to.match(/\[part='select-all'\] \[role='checkbox'\]:focus-visible\s*\{[^}]+\}/);
 });
 
 it('is not FormAssociated -- no internals/checkValidity surface', async () => {
@@ -340,7 +376,19 @@ it('searchable=false omits the built-in filter input', async () => {
   el.searchable = false;
   el.sources = sources;
   await el.updateComplete;
-  expect(el.shadowRoot!.querySelector('[part="search"]')).to.not.exist;
+  expect(el.shadowRoot!.querySelectorAll('[part="search"]').length).to.equal(0);
+});
+
+it('searchable="false" set as a plain HTML attribute (not a property binding) also omits the filter input', async () => {
+  // Unlike the `.searchable = false` property-assignment test above, this proves the *attribute*
+  // form actually clears the `true` default too -- the gap a stock `type: Boolean` converter
+  // can't close, since removing an attribute that was never present fires no
+  // `attributeChangedCallback`.
+  const el = (await fixture(html`<lr-source-picker searchable="false"></lr-source-picker>`)) as LyraSourcePicker;
+  expect(el.searchable).to.be.false;
+  el.sources = sources;
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelectorAll('[part="search"]').length).to.equal(0);
 });
 
 it('showSelectAll=false omits the select-all header row', async () => {
@@ -348,7 +396,15 @@ it('showSelectAll=false omits the select-all header row', async () => {
   el.showSelectAll = false;
   el.sources = sources;
   await el.updateComplete;
-  expect(el.shadowRoot!.querySelector('[part="select-all"]')).to.not.exist;
+  expect(el.shadowRoot!.querySelectorAll('[part="select-all"]').length).to.equal(0);
+});
+
+it('show-select-all="false" set as a plain HTML attribute (not a property binding) also omits the select-all row', async () => {
+  const el = (await fixture(html`<lr-source-picker show-select-all="false"></lr-source-picker>`)) as LyraSourcePicker;
+  expect(el.showSelectAll).to.be.false;
+  el.sources = sources;
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelectorAll('[part="select-all"]').length).to.equal(0);
 });
 
 it('keyboard: a non-activation key on the select-all checkbox is a no-op', async () => {
