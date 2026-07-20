@@ -104,17 +104,76 @@ Readonly getters, on every form-associated control: `form`, `labels`, `validity`
 
 ## Theming and design tokens
 
-Two layers, both inherited from `LyraElement` (`internal/tokens.styles.ts`):
+Three layers, and **which one you set decides how far the override reaches**:
 
-1. **`--lr-theme-*`** — the application input layer. Set these to retheme; this is the only supported
-   theming mechanism.
+1. **`--lr-theme-*`** — the application input layer. Declared exactly once, at `:root` in
+   `theme.css`, and never inside any component's shadow styles. Set these to retheme.
 2. **`--lr-*`** — internal tokens. Each reads one `--lr-theme-*` input with a hardcoded fallback
    (`--lr-color-brand: var(--lr-theme-color-brand-fill-loud, #0969da)`), so every component renders
    correctly with no theme configured.
+3. **`--lr-<component>-*`** — per-component properties, for one element at a time. Listed in each
+   component's own section.
+
+### Where an override actually reaches
+
+**A `--lr-*` token is declared on every `lr-*` element's `:host`.** So a `--lr-*` value you set on
+an ancestor is re-declared — and lost — at the first `lr-*` element between that ancestor and the
+component you meant to style. It never reaches anything nested inside another component.
+
+**`--lr-theme-*` inputs are declared only once**, at `:root`, and never inside a component's shadow
+styles — so they inherit normally through every nested shadow root. **Setting a `--lr-theme-*` input
+on a wrapper element is the supported way to retheme one subtree.** Setting a `--lr-*` token there
+only works for that wrapper's direct children.
+
+```css
+/* Reaches everything in the subtree, however deeply nested. */
+.invoice-panel { --lr-theme-color-brand-fill-loud: #7c3aed; }
+
+/* Reaches direct lr-* children only — shadowed at the first nested lr-* host. */
+.invoice-panel { --lr-color-brand: #7c3aed; }
+```
+
+Layer 3 is the exception that proves the rule: a handful of `--lr-<component>-*` escape hatches are
+deliberately left **undeclared** by their component and read only through a `var()` fallback at the
+point of use, precisely so a value set on an ancestor is not shadowed. Each one says so in its own
+section; assume shadowing for anything that doesn't.
+
+**Diagnostic:** if a token override has no effect on a nested component, check which layer you set
+before assuming the component is at fault. A `--lr-*` override that works on a standalone control
+and stops working once you nest that control inside another component is this rule, not a bug.
+
+**There is no way to tell a live `--lr-*` declaration from a dead one without rendering.** A dead
+declaration is byte-identical to a working one in the stylesheet, and nothing in a build reports
+it — a test asserting on stylesheet source text (`expect(source).toContain('--lr-token: …')`)
+passes just as happily when the token is being shadowed at a nested host. Verify with
+`getComputedStyle` on the real element in the real state, and perturb the value deliberately to
+confirm the assertion actually bites.
+
+The same trap has a second form inside a component's own styles: a *declared* value always wins
+over a `var()` fallback arm, and `auto` is a declared value. That is why the exact-height escape
+hatches (`--lr-input-control-height`, `--lr-select-trigger-height`, `--lr-chip-height`, …) are
+undeclared by default rather than set to `auto` — see `llms/forms.md`.
+
+### Tokens with a contract attached
+
+- **`--lr-theme-icon-button-size`** (default `2.5rem`) backs `--lr-icon-button-size`, the tappable
+  box of **every** icon-only control in the library — `lr-icon-button` itself, and the
+  expand/clear/toggle affordances inside `lr-date-input`, `lr-combobox`, `lr-input`, and
+  `lr-select`. It is a *floor*, not a fixed size. Keep the resolved value **at or above 24px**
+  (WCAG 2.2 SC 2.5.8 target size); the default leaves headroom. Lowering it below that shrinks
+  every affordance in the library at once.
+- **Aligning your own content next to a checkbox or radio.** `--lr-checkbox-label-indent` /
+  `--lr-radio-label-indent` publish the label offset, but custom properties inherit *down*, not
+  sideways, so a sibling node in your tree cannot read them off the control. Compute the same
+  formula from the `--lr-theme-*` inputs you control:
+  ```css
+  padding-inline-start: calc(
+    min(var(--lr-theme-icon-button-size, 2.5rem), 1.75rem) + var(--lr-theme-space-s, 0.5rem)
+  );
+  ```
 
 **`llms/tokens.md` is the full generated catalog** of every token, its `--lr-theme-*` input, and its
-fallback — consult it rather than guessing a token name. Components additionally expose scoped
-`--lr-<component>-*` properties for one-off overrides, listed in each component's own section.
+fallback — consult it rather than guessing a token name.
 
 ```css
 @import '@aceshooting/lyra-ui/theme.css'; /* optional ready-made light + dark base */

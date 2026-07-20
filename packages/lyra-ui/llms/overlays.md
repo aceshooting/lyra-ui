@@ -468,11 +468,29 @@ back to `--lr-chip-bg`), the density quintet `--lr-chip-font-size`, `--lr-chip-p
 `--lr-chip-padding-inline`, `--lr-chip-gap`, `--lr-chip-icon-size` (all five are rewritten by each
 `:host([size])` rule, so setting one directly on the element overrides that step of the scale; the
 `m` defaults are `--lr-font-size-sm` / `--lr-size-0-25rem` / `--lr-space-s` / `--lr-space-xs` /
-`--lr-font-size-sm`), plus shared tokens (`--lr-space-xs`, `--lr-space-s`,
+`--lr-font-size-sm`), the height pair `--lr-chip-min-height` / `--lr-chip-height` (below),
+plus shared tokens (`--lr-space-xs`, `--lr-space-s`,
 `--lr-color-brand`/`-brand-quiet`, `--lr-color-success`/`-success-quiet`,
 `--lr-color-warning`/`-warning-quiet`, `--lr-color-danger`/`-danger-quiet`,
 `--lr-icon-button-size`, `--lr-focus-ring-width`, `--lr-focus-ring-color`,
 `--lr-focus-ring-offset`, `--lr-transition-fast`).
+
+**Chip height — a floor and an exact cap:**
+
+- `--lr-chip-min-height` (default `--lr-size-1-5rem`) floors an **interactive** chip only — one in
+  toggle mode or with `removable` set. `2xs`/`xs`/`s`/`m` all share that `1.5rem` value because it
+  is the 24px WCAG 2.2 SC 2.5.8 target minimum and an interactive chip must never shrink below it;
+  `l` and `xl` raise it to their own taller floors. A passive display chip takes no floor from
+  this at all, and every default sits below the chip's own content-driven height, so the floor is
+  invisible until you raise it.
+- `--lr-chip-height` pins an **exact** height on `[part='base']` — interactive and passive chips
+  alike — so a row of chips can line up with a sibling control of a known height. It is
+  **undeclared by default**, which is what keeps the per-tier floor alive: `auto` is a valid
+  declared value that would win over the `var()` fallback arm and make `--lr-chip-min-height` dead
+  code, so never set it to `auto` — remove the declaration instead. Because the component never
+  declares it, it can be set inline, from an ancestor, or from an outer-tree rule.
+  **A value below 24px is for non-interactive display chips only**; pinning an interactive chip
+  that short breaks its tap target.
 
 **Optional peer deps:** none.
 

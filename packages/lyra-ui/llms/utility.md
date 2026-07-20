@@ -37,7 +37,10 @@ built-in download completes), `lr-show`, `lr-hide` (format-menu visibility trans
 
 **CSS parts:** `trigger`, `menu`, `menu-item`, `format-label`, `format-description`
 
-**Themeable custom properties:** shared tokens only.
+**Themeable custom properties:** shared tokens only, including `--lr-popover-viewport-clamp`
+(default `92vw`) — the shared narrow-viewport ceiling the `menu`'s max-inline-size is `min()`ed
+against, alongside its own `20rem` cap and the positioner's available space. See `lr-tour` for the
+shared-clamp note.
 
 **Optional peer deps:** none.
 
@@ -478,7 +481,9 @@ row padding/gap), `--lr-color-surface`/`-border` (popup background/border), `--l
 (popup and row corners), `--lr-shadow` (popup elevation), `--lr-transition-fast` (open/close
 transition), `--lr-color-brand-quiet` (active-row background), `--lr-color-brand` (selected-row
 text), `--lr-color-text-quiet`/`--lr-color-text` (description text, full-contrast on the active
-row).
+row), and `--lr-popover-viewport-clamp` (default `92vw`) — the shared narrow-viewport ceiling the
+popup's max-inline-size is `min()`ed against, alongside its own `24rem` cap and the positioner's
+available space. See `lr-tour` for the shared-clamp note.
 
 **Optional peer deps:** none.
 
@@ -802,12 +807,28 @@ block, repeated three times, `data-field="day"|"month"|"year"`), `field-input` (
 small per-field text label), `hint`, `error` (`role="alert"`).
 
 **Themeable custom properties:** `--lr-known-date-field-padding-block`,
-`--lr-known-date-field-padding-inline`, `--lr-known-date-field-font-size` (all three rewritten by
-each `:host([size])` rule; `m` defaults `--lr-space-s`/`--lr-space-s`/`--lr-font-size-md-sm`),
+`--lr-known-date-field-padding-inline`, `--lr-known-date-field-font-size`,
+`--lr-known-date-field-min-height` (all four rewritten by
+each `:host([size])` rule; `m` defaults `--lr-space-s`/`--lr-space-s`/`--lr-font-size-md-sm`/
+`--lr-size-2rem`), `--lr-known-date-field-height`,
 `--lr-known-date-field-gap` (default `--lr-space-s` — gap between the three field blocks),
 `--lr-known-date-day-field-width` / `--lr-known-date-month-field-width` (default `--lr-size-3-5em`)
 and `--lr-known-date-year-field-width` (default `--lr-size-5em`) — the per-field input widths, not
 size-scaled.
+
+The two height knobs work as a pair on `[part='field-input']`, the same way
+`lr-input`/`lr-select`/`lr-combobox`/`lr-date-input` expose theirs:
+
+- `--lr-known-date-field-min-height` is a **floor**, re-assigned per `size` tier. Every tier's
+  default sits below the field's own padding/font-driven height, so raising it is what makes it
+  visible; lowering it changes nothing.
+- `--lr-known-date-field-height` pins an **exact** height (both floors and caps), so the three
+  inputs can line up with a neighbouring control of a known height. It is **undeclared by
+  default** — the field grows to fit its content. Never set it to `auto`: `auto` is a valid
+  declared value that wins over the `var()` fallback arm, which would make the per-tier floor
+  dead code. To go back to the default behavior, remove the declaration rather than neutralizing
+  it. Because the component never declares it, it can be set inline, from an ancestor, or from an
+  outer-tree rule.
 
 **Known gotchas:**
 - Field *order* is derived from the locale by formatting a probe date (Jan 2 2026) with
@@ -944,7 +965,13 @@ label switches to Done on the last step).
 `--lr-tour-spotlight-radius` (default `--lr-radius` — shared by the cutout and the ring),
 `--lr-tour-spotlight-ring-color` (default `--lr-color-brand`), `--lr-tour-spotlight-ring-width`
 (default `--lr-border-width-medium`), `--lr-tour-popover-max-width` (default `--lr-size-22rem`,
-further capped by `92vw` and the positioner's available space).
+further capped by `--lr-popover-viewport-clamp` and the positioner's available space).
+
+`--lr-popover-viewport-clamp` (default `92vw`, from `--lr-theme-popover-viewport-clamp`) is the
+shared ceiling that keeps any floating surface inside a narrow viewport. `lr-tour`,
+`lr-mention-popover`, and `lr-export-button` all `min()` their own max-inline-size against it, so
+retuning `--lr-theme-popover-viewport-clamp` once at `:root` narrows or widens all three together
+rather than per component.
 
 **Known gotchas:**
 - By default the spotlighted target is **non-interactive**: it stays visible and announceable (not

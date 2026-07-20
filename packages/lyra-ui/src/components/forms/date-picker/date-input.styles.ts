@@ -6,11 +6,16 @@ export const styles = css`
     --lr-date-input-padding-block: var(--lr-space-xs);
     --lr-date-input-padding-inline: var(--lr-space-s);
     --lr-date-input-font-size: inherit;
-    /* Per-tier minimum block size of the input row, mirroring lr-input's own min-height scale so a
-       lr-date-input size="s" ends up height-matched with lr-input size="s". Every default sits
-       below the row's own height (which is pinned transitively by the un-gated
-       --lr-icon-button-size calendar toggle), so the floor is dead until a consumer raises it --
-       the unset render is byte-identical to today at every tier. lr-input/lr-select/lr-combobox
+    /* Per-tier minimum block size of the input row, reusing lr-input's own min-height scale
+       values. This does NOT make the two controls height-matched at a given size, and nothing here
+       should be read as promising that: [part='input-wrapper'] has no min-block-size of its own,
+       while [part='expand-button'] pins min-block-size: var(--lr-icon-button-size) un-gated by
+       size, so the row height is pinned transitively by the calendar toggle. At size="s" an
+       lr-input floors at 1.875rem/30px while an lr-date-input cannot go below ~40px plus padding.
+       Gating the button floor by size is NOT the fix: it would drop below the 24x24 target at
+       2xs/xs, and lr-input's own password-toggle has the identical un-gated floor. Consequence:
+       every default here sits below that transitive height, so the floor is dead until a consumer
+       raises it -- the unset render is byte-identical at every tier. lr-input/lr-select/lr-combobox
        all already expose this knob; lr-date-input previously had none. */
     --lr-date-input-control-min-height: var(--lr-size-2-5rem);
     /* --lr-date-input-control-height is intentionally NOT declared here. It is a consumer-facing
@@ -22,8 +27,9 @@ export const styles = css`
        is safe -- the toggle keeps its own --lr-icon-button-size floor and simply overflows a short
        row rather than shrinking (WCAG 2.2 SC 2.5.8 preserved). */
   }
-  /* Each tier mirrors lr-input's own 2xs-xl padding/font-size scale (input.styles.ts) so
-     lr-date-input size="s" ends up visually height/density-matched with lr-input size="s", etc.
+  /* Each tier reuses lr-input's own 2xs-xl padding/font-size scale (input.styles.ts), so the two
+     read as equally dense at a given size -- density parity, not height parity; see the
+     min-height comment above for why a same-size pair does not end up the same height.
      'm' is the default and stays on the :host block above instead of a same-shaped rule here,
      so the unset-size render is untouched by this scale. */
   :host([size='2xs']) {
