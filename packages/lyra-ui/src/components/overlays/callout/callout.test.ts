@@ -63,3 +63,8 @@ it('supports a lightweight inline status/error treatment', async () => {
   expect(css).to.include('background: transparent;');
   await expect(el).to.be.accessible();
 });
+
+it('gives close-button a hover state', () => {
+  const css = styles.cssText.replace(/\s+/g, ' ');
+  expect(css).to.match(/\[part='close-button'\]:hover/);
+});

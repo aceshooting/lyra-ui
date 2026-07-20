@@ -97,6 +97,9 @@ export const styles = css`
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);
   }
+  [part='expand-toggle']:hover {
+    text-decoration: underline;
+  }
   [part='item-body'] {
     padding-block-start: var(--lr-space-xs);
     border-block-start: var(--lr-border-width-thin) solid var(--lr-color-border);
@@ -131,6 +134,11 @@ export const styles = css`
   [part='forget-all-button']:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);
+  }
+  [part='add-button']:hover,
+  [part='remove-button']:hover,
+  [part='forget-all-button']:hover {
+    background: var(--lr-color-brand-quiet);
   }
   [part='forget-all-button'] {
     color: var(--lr-color-danger);

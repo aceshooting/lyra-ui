@@ -45,6 +45,10 @@ export const styles = css`
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);
   }
+  [part='node']:hover,
+  [part='relation']:hover {
+    background: var(--lr-color-brand-quiet);
+  }
   [part='arrow'] {
     display: inline-flex;
     align-items: center;

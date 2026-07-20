@@ -1,6 +1,7 @@
 import { fixture, expect, html, oneEvent } from '@open-wc/testing';
 import './path-strip.js';
 import type { LyraPathStrip, LyraPathElement } from './path-strip.js';
+import { styles } from './path-strip.styles.js';
 
 const path: LyraPathElement[] = [
   { kind: 'node', node: { id: 'e1', label: 'Marie Curie' } },
@@ -106,4 +107,10 @@ it('is accessible with a full path', async () => {
   el.path = path;
   await el.updateComplete;
   await expect(el).to.be.accessible();
+});
+
+it('gives node and relation a hover state', () => {
+  const css = styles.cssText.replace(/\s+/g, ' ');
+  expect(css).to.match(/\[part='node'\]:hover/);
+  expect(css).to.match(/\[part='relation'\]:hover/);
 });

@@ -29,6 +29,9 @@ export const styles = css`
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);
   }
+  [part='node-label']:hover {
+    background: var(--lr-color-brand-quiet);
+  }
   [part='direction'] {
     flex: 0 0 auto;
     color: var(--lr-color-text-quiet);

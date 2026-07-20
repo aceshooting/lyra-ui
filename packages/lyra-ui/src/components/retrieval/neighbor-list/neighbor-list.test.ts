@@ -1,6 +1,7 @@
 import { fixture, expect, html, oneEvent } from '@open-wc/testing';
 import './neighbor-list.js';
 import type { LyraNeighborList, LyraNeighborRow } from './neighbor-list.js';
+import { styles } from './neighbor-list.styles.js';
 
 const rows: LyraNeighborRow[] = [
   { relation: 'works_for', direction: 'out', node: { id: 'org1', label: 'Acme Corp', type: 'org', degree: 3 } },
@@ -124,4 +125,9 @@ it('is accessible with grouped, expandable rows', async () => {
   el.expandable = true;
   await el.updateComplete;
   await expect(el).to.be.accessible();
+});
+
+it('gives node-label a hover state', () => {
+  const css = styles.cssText.replace(/\s+/g, ' ');
+  expect(css).to.match(/\[part='node-label'\]:hover/);
 });

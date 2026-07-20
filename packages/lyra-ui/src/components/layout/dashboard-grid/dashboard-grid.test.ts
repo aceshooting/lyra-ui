@@ -2,6 +2,7 @@ import { fixture, expect, html } from '@open-wc/testing';
 import './dashboard-grid.js';
 import type { LyraDashboardGrid } from './dashboard-grid.js';
 import type { DashboardCell } from './layout.js';
+import { styles } from './dashboard-grid.styles.js';
 
 function twoCells(): DashboardCell[] {
   return [
@@ -508,4 +509,9 @@ describe('localized strings', () => {
     const announcer = (el as unknown as { announcer: { pendingText?: string } }).announcer;
     expect(announcer.pendingText).to.equal('Alpha bloqué');
   });
+});
+
+it('gives resize-handle a hover state', () => {
+  const css = styles.cssText.replace(/\s+/g, ' ');
+  expect(css).to.match(/\[part='resize-handle'\]:hover/);
 });

@@ -1,6 +1,7 @@
 import { expect, fixture, html, oneEvent } from '@open-wc/testing';
 import './carousel.js';
 import type { LyraCarousel } from './carousel.js';
+import { styles } from './carousel.styles.js';
 
 async function carousel(template = html`
   <lr-carousel>
@@ -210,6 +211,11 @@ it('names the focusable viewport with role="group", following the same label arb
   el.setAttribute('aria-label', 'Product screenshots');
   await el.updateComplete;
   expect(viewport.getAttribute('aria-label')).to.equal('Product screenshots');
+});
+
+it('gives indicator a hover state that recolors its dot', () => {
+  const css = styles.cssText.replace(/\s+/g, ' ');
+  expect(css).to.match(/\[part='indicator'\]:hover \[part='indicator-dot'\]/);
 });
 
 describe('indicator current-state cssprops', () => {

@@ -65,6 +65,10 @@ export const styles = css`
     touch-action: none;
   }
 
+  [part='resize-handle']:hover {
+    background: var(--lr-color-brand-quiet);
+  }
+
   :host(:dir(rtl)) [part='resize-handle'] {
     cursor: nesw-resize;
   }

@@ -1,6 +1,7 @@
 import { fixture, expect, html, oneEvent } from '@open-wc/testing';
 import './memory-panel.js';
 import type { LyraMemoryPanel, LyraMemoryItem } from './memory-panel.js';
+import { styles } from './memory-panel.styles.js';
 
 const shortTermItems: LyraMemoryItem[] = [
   { id: 's1', text: 'User is debugging a TypeScript build error.', confidence: 0.9 },
@@ -310,6 +311,14 @@ describe('lr-memory-panel', () => {
     (el.shadowRoot!.querySelector('[part="item"][data-id="l1"] [part="remove-button"]') as HTMLButtonElement).click();
     await el.updateComplete;
     await expect(el).to.be.accessible();
+  });
+
+  it('gives expand-toggle, add-button, remove-button, and forget-all-button a hover state', () => {
+    const css = styles.cssText.replace(/\s+/g, ' ');
+    expect(css).to.match(/\[part='expand-toggle'\]:hover/);
+    expect(css).to.match(/\[part='add-button'\]:hover/);
+    expect(css).to.match(/\[part='remove-button'\]:hover/);
+    expect(css).to.match(/\[part='forget-all-button'\]:hover/);
   });
 
   describe('localization', () => {

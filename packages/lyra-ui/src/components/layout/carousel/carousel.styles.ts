@@ -106,6 +106,10 @@ export const styles = css`
     background: var(--lr-carousel-indicator-current-bg, var(--lr-color-brand-quiet));
     border-color: var(--lr-carousel-indicator-current-border-color, var(--lr-color-brand));
   }
+  [part='indicator']:hover [part='indicator-dot'] {
+    background: var(--lr-color-brand-quiet);
+    border-color: var(--lr-color-brand);
+  }
   :host(:dir(rtl)) [part='previous-glyph'],
   :host(:dir(rtl)) [part='next-glyph'] {
     transform: scaleX(-1);

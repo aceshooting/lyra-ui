@@ -17,6 +17,7 @@ export const styles = css`
      centered via this button's own flex layout, not by resizing the button itself. Mirrors
      lr-swatch-picker's [part='swatch']/[part='swatch-fill'] split. */
   [part='close-button'] { display: inline-flex; align-items: center; justify-content: center; min-inline-size: var(--lr-icon-button-size); min-block-size: var(--lr-icon-button-size); border: 0; border-radius: var(--lr-radius-pill); background: transparent; color: inherit; cursor: pointer; }
+  [part='close-button']:hover { background: var(--lr-color-brand-quiet); }
   [part='close-button']:focus-visible { outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color); outline-offset: var(--lr-focus-ring-offset); }
   :host([inline]) [part='base'] {
     gap: var(--lr-space-xs);
