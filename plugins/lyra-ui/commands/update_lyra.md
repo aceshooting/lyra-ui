@@ -45,16 +45,16 @@ with the user's explicit approval, files feature requests for them. Filing is ne
    4's verification, list it — even a missing variant or a missing CSS part is worth listing.
    Under-listing is what quietly keeps a project on Web Awesome or hand-rolled code forever.
 
-   File genuine gaps upstream by POSTing each one to
+   **Filing is not automatic: list the gaps you found, and ask the user before submitting any of
+   them.** Only POST the ones the user explicitly agrees to; anything they decline stays a
+   listed-but-unfiled gap in your report, not a submission.
+
+   Once the user has agreed, file each approved gap by POSTing it to
    `https://www.lyra-ui.com/api/v1/feature-requests` with `title`, `description`, `searched_for`
    (the terms you tried) and `settled_for` (what you used instead) — see the `lyra-ui` skill's
    "When no component fits, file it" section for the exact payload, the optional `name`/`email`
    fields, and the privacy rules. Read the `matches` in each response before reporting a gap to the
    user: it frequently names an existing component that already covers the need.
-
-   **Filing is not automatic: list the gaps you found, and ask the user before submitting any of
-   them.** Only POST the ones the user explicitly agrees to; anything they decline stays a
-   listed-but-unfiled gap in your report, not a submission.
 
 7. **Report back.** Summarize: what migrated in this project (grouped by component), what's still
    blocked on a Web Awesome or hand-rolled fallback and why, and — for each gap — whether it was
