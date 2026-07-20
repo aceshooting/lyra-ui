@@ -24,6 +24,9 @@ const tsSample = `export function greet(name: string): string {
 }
 `;
 
+// Deliberately tab-indented (not spaces) so --lr-code-block-tab-size has something to act on.
+const tabSample = 'function greet(name) {\n\tif (name) {\n\t\treturn `Hello, ${name}!`;\n\t}\n\treturn "Hello!";\n}\n';
+
 export const Default: Story = {
   render: () => html`<lr-code-block language="typescript" .code=${tsSample} style="max-width: 32rem;"></lr-code-block>`,
 };
@@ -182,5 +185,45 @@ export const CopyEvent: Story = {
         Open the console — clicking "Copy" logs the raw <code>code</code> text via <code>lr-copy</code>.
       </p>
     </div>
+  `,
+};
+
+export const TabWidth: Story = {
+  name: 'Tab width (--lr-code-block-tab-size)',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'Tab-indented source rendered at the default width of `2` (matching `--lr-code-editor-tab-size`) and at `8`. The component writes the token, never an inline `tab-size`, so the override survives shiki\'s own inline `style` on the highlighted `<pre>`.',
+      },
+    },
+  },
+  render: () => html`
+    <div style="display:flex; flex-direction:column; gap:0.75rem; max-inline-size:32rem;">
+      <lr-code-block language="javascript" .code=${tabSample}></lr-code-block>
+      <lr-code-block language="javascript" .code=${tabSample} style="--lr-code-block-tab-size: 8"></lr-code-block>
+    </div>
+  `,
+};
+
+export const ActiveLineOutlineColor: Story = {
+  name: 'Active-line outline color',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          '`--lr-code-block-active-line-outline-color` retints only the active highlight outline; every other brand-colored surface (the language pill, hover and focus states) keeps `--lr-color-brand`.',
+      },
+    },
+  },
+  render: () => html`
+    <lr-code-block
+      language="typescript"
+      .code=${tsSample}
+      line-numbers
+      .highlights=${[{ id: 'h1', anchor: { kind: 'line-range', start: 2, end: 2 } }]}
+      active-highlight-id="h1"
+      style="max-inline-size:32rem; --lr-code-block-active-line-outline-color: var(--lr-color-success);"
+    ></lr-code-block>
   `,
 };

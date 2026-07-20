@@ -166,6 +166,15 @@ export const styles = css`
     font-size: inherit;
     line-height: var(--lr-line-height-normal);
     white-space: pre;
+    /* Tab width, defaulting to the same value as --lr-code-editor-tab-size so the editable surface
+       and the read-only ones agree on what a literal tab looks like. The default lives here as a
+       var() fallback rather than as a :host declaration: a :host rule is re-stamped on every
+       instance and shadows any inherited value, so a page- or container-level declaration could
+       never reach it. lr-markdown/lr-markdown-core carry the same fallback for their own code-block
+       part -- they are sibling custom elements, not descendants, so no single rule covers both.
+       Never written as an inline tab-size: shiki puts its own style attribute on the highlighted
+       <pre>, and an inline declaration is the one thing a host override cannot beat. */
+    tab-size: var(--lr-code-block-tab-size, 2);
   }
   [part='code'] {
     font-family: inherit;
@@ -193,9 +202,15 @@ export const styles = css`
     background: var(--lr-color-warning-quiet);
   }
   /* The active highlight (highlights entry matching activeHighlightId) gets an outline on top of
-     any background -- inset so it doesn't add to the line's own box size. */
+     any background -- inset so it doesn't add to the line's own box size.
+
+     --lr-code-block-active-line-outline-color is an inline var() fallback rather than a :host
+     declaration on purpose: a :host declaration is re-stamped on every instance and would shadow
+     any ancestor/theme-level value, which is exactly what a state-styling override hook must not
+     do. Unset, it resolves to --lr-color-brand -- byte-identical to before it existed. */
   [part='pre'] [data-active] {
-    outline: var(--lr-border-width-thin) solid var(--lr-color-brand);
+    outline: var(--lr-border-width-thin) solid
+      var(--lr-code-block-active-line-outline-color, var(--lr-color-brand));
     outline-offset: calc(-1 * var(--lr-border-width-thin));
   }
   /* Native button reset for interactive-lines' gutter-button rendering (renderPlainCode() only --

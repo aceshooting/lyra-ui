@@ -914,3 +914,40 @@ describe('scrollToAnchor / highlights (text-quote)', () => {
     // No throw -- repaintHighlights() must bail out cleanly with nothing to paint into yet.
   });
 });
+
+// `--lr-code-block-tab-size` is shared with `<lr-code-block>`/`<lr-code-editor>` so all three code
+// surfaces agree on tab width. `<lr-markdown-core>` is a *sibling* of `<lr-code-block>`, not a
+// descendant, so the default has to be declared in this component's own stylesheet too -- one
+// `:host` declaration cannot reach across to another custom element.
+describe('tab width (--lr-code-block-tab-size)', () => {
+  const fencedPre = async (style = ''): Promise<HTMLElement> => {
+    const el = (await fixture(
+      html`<lr-markdown-core content=${'```\n\tone\n\t\ttwo\n```'} style=${style}></lr-markdown-core>`,
+    )) as LyraMarkdownCore;
+    await waitUntil(() => el.shadowRoot!.querySelector('[part="code-block"]') !== null, 'never rendered', {
+      timeout: 4000,
+    });
+    return el.shadowRoot!.querySelector('[part="code-block"]') as HTMLElement;
+  };
+
+  it('defaults to 2 on [part="code-block"], matching lr-code-block and lr-code-editor', async () => {
+    expect(getComputedStyle(await fencedPre()).tabSize).to.equal('2');
+  });
+
+  it('renders a tab-indented fenced block at the width the token asks for', async () => {
+    expect(getComputedStyle(await fencedPre('--lr-code-block-tab-size: 5')).tabSize).to.equal('5');
+  });
+
+  it('is accessible with a custom tab size on a tab-indented fenced block', async () => {
+    const el = (await fixture(
+      html`<lr-markdown-core
+        content=${'```\n\tone\n\t\ttwo\n```'}
+        style="--lr-code-block-tab-size: 4"
+      ></lr-markdown-core>`,
+    )) as LyraMarkdownCore;
+    await waitUntil(() => el.shadowRoot!.querySelector('[part="code-block"]') !== null, 'never rendered', {
+      timeout: 4000,
+    });
+    await expect(el).to.be.accessible();
+  });
+});

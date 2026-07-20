@@ -128,6 +128,18 @@ export interface LyraCodeBlockEventMap {
  *   attribute, when set, writes this same property inline on `body` and therefore wins.
  * @cssprop [--lr-code-block-font=var(--lr-font-mono)] - Monospace family for the rendered `pre`
  *   and `code`.
+ * @cssprop [--lr-code-block-tab-size=2] - Tab width for the rendered code, applied to `pre`.
+ *   Same default as `--lr-code-editor-tab-size`, so the editable and read-only code surfaces
+ *   agree; `lr-markdown`/`lr-markdown-core` declare the same token for their own
+ *   `code-block` part (they are sibling elements, so they cannot inherit this one). Read as a
+ *   token and never written inline, so a host override survives shiki's own inline `style` on
+ *   the highlighted `pre`. Set it on the element itself (or any rule outranking this component's
+ *   `:host`). The markdown surface wraps (`white-space: pre-wrap`) while this one does not, so
+ *   the same value can look different on a wrapped line, where tab stops restart.
+ * @cssprop [--lr-code-block-active-line-outline-color=var(--lr-color-brand)] - Outline color of
+ *   the line marked active by `active-highlight-id`. Retints just that outline, leaving every
+ *   other `--lr-color-brand` surface in the component (header pill, hover states, focus ring)
+ *   alone. Inherits, so it can also be set on an ancestor or at the theme level.
  */
 export class LyraCodeBlock extends LyraElement<LyraCodeBlockEventMap> {
   static styles = [LyraElement.styles, styles];

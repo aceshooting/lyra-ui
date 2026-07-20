@@ -26,9 +26,17 @@ export const styles = css`
     flex-direction: column;
     gap: var(--lr-space-xs);
     max-inline-size: var(--lr-chat-message-max-width);
-    padding: var(--lr-space-m);
+    /* Bubble geometry. The alternative for a consumer who wants a tighter or rounder bubble is a
+       ::part(bubble) declaration in their own tree, and an outer-tree ::part rule outranks every
+       rule in this shadow tree -- which silently suppressed the per-status border/background
+       treatments below. Defaults live here as var() fallbacks rather than as :host declarations so
+       a container running the transcript at a denser scale can set them once on an ancestor: a
+       :host rule is re-stamped on every instance and shadows any inherited value. Scoped to
+       [part='bubble'] only -- [part='collapse-button'] and [part='retry-button'] keep reading the
+       shared --lr-radius, so retuning the bubble never desyncs the controls from the library. */
+    padding: var(--lr-chat-message-bubble-padding, var(--lr-space-m));
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
-    border-radius: var(--lr-radius);
+    border-radius: var(--lr-chat-message-bubble-radius, var(--lr-radius));
     background: var(--lr-chat-message-bubble-bg);
     color: var(--lr-chat-message-bubble-color);
     overflow-wrap: anywhere;

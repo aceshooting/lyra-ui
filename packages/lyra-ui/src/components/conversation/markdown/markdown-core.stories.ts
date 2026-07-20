@@ -53,3 +53,25 @@ export const LanguageNotInMap: Story = {
     ></lr-markdown-core>
   `,
 };
+
+export const TabWidth: Story = {
+  name: 'Tab width (--lr-code-block-tab-size)',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'The same `--lr-code-block-tab-size` token `lr-code-block` and `lr-code-editor` use, re-declared here because those are sibling elements rather than ancestors. A markdown code block wraps (`pre-wrap`), so at the same value a wrapped line can still look different from `lr-code-block`.',
+      },
+    },
+  },
+  render: () => html`
+    <div style="display:flex; flex-direction:column; gap:0.75rem; max-width:32rem;">
+      <lr-markdown-core .languages=${{}} content=${'```\n\tone tab\n\t\ttwo tabs\n```'}></lr-markdown-core>
+      <lr-markdown-core
+        .languages=${{}}
+        content=${'```\n\tone tab\n\t\ttwo tabs\n```'}
+        style="--lr-code-block-tab-size: 8"
+      ></lr-markdown-core>
+    </div>
+  `,
+};

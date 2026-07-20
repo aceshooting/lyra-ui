@@ -53,6 +53,15 @@ export const styles = css`
     border-radius: var(--lr-radius);
     background: var(--lr-color-brand-quiet);
     overflow-inline: auto;
+    /* Deliberately the *shared* --lr-code-block-* name, not a --lr-markdown- one: a consumer setting
+       one tab width expects every code surface in the library to honour it. The default lives here
+       as a var() fallback rather than a :host declaration so a page- or container-level value can
+       actually reach it; lr-code-block carries the same fallback for its own <pre>, since it is a
+       sibling custom element rather than an ancestor and no single rule covers both.
+       Same value, but not necessarily the same look: this part inherits pre-wrap from
+       [part='content'] while lr-code-block's <pre> is white-space: pre, and tab stops are measured
+       from the start of each visual line, so a wrapped markdown code line restarts them. */
+    tab-size: var(--lr-code-block-tab-size, 2);
   }
   [part='code-block'] code {
     padding: 0;

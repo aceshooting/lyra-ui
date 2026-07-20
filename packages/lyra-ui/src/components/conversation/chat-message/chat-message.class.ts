@@ -135,7 +135,7 @@ export interface LyraChatMessageEventMap {
  *   same event contract a listener further up a conversation surface already relies on for every
  *   other message.
  * @event lr-collapse-toggle - `detail: boolean` (the new `collapsed` state) — fired when the user activates the built-in collapse button.
- * @csspart bubble - The message bubble root. Programmatically focusable (`tabindex="-1"`) so focus has a stable place to land when the built-in retry button is removed (e.g. a `lr-retry` listener flipping `status` away from `"failed"`). Its fill/text derive from `--lr-chat-message-bubble-bg`/`--lr-chat-message-bubble-color` for every role except `user`, which derives from `--lr-chat-message-user-bubble-bg`/`--lr-chat-message-user-bubble-color` instead — override those cssprops rather than the shared `--lr-color-*` tokens they default to.
+ * @csspart bubble - The message bubble root. Programmatically focusable (`tabindex="-1"`) so focus has a stable place to land when the built-in retry button is removed (e.g. a `lr-retry` listener flipping `status` away from `"failed"`). Its fill/text derive from `--lr-chat-message-bubble-bg`/`--lr-chat-message-bubble-color` for every role except `user`, which derives from `--lr-chat-message-user-bubble-bg`/`--lr-chat-message-user-bubble-color` instead — override those cssprops rather than the shared `--lr-color-*` tokens they default to. Its geometry comes from `--lr-chat-message-bubble-padding`/`--lr-chat-message-bubble-radius` for the same reason — a `::part(bubble)` override from the consumer's tree outranks the per-`status` rules in this shadow tree and silently erases the `failed`/`streaming` treatments.
  * @csspart header - The row above the message body — avatar, badges, and the collapse toggle. Hidden entirely when none of those have anything to show.
  * @csspart avatar - The wrapper around the `avatar` slot.
  * @csspart badges - The wrapper around the `badges` slot.
@@ -156,6 +156,8 @@ export interface LyraChatMessageEventMap {
  * @cssprop [--lr-chat-message-bubble-color=var(--lr-color-text)] - Bubble text color for every role except `user`.
  * @cssprop [--lr-chat-message-user-bubble-bg=var(--lr-color-brand-quiet)] - Bubble fill for `data-role="user"`.
  * @cssprop [--lr-chat-message-user-bubble-color=var(--lr-color-text)] - Bubble text color for `data-role="user"`.
+ * @cssprop [--lr-chat-message-bubble-padding=var(--lr-space-m)] - Bubble padding. Prefer this over a `::part(bubble)` padding override: an outer-tree `::part` declaration outranks every rule in this shadow tree, which silently suppresses the per-`status` and per-role bubble styling below it.
+ * @cssprop [--lr-chat-message-bubble-radius=var(--lr-radius)] - Bubble corner radius. Bubble-only by design — `collapse-button` and `retry-button` keep reading the shared `--lr-radius`, so a rounder bubble never desyncs the controls from the rest of the library.
  * @cssprop [--lr-transition-ambient=1.8s ease-in-out] - Streaming-indicator animation duration
  *   and timing function.
  */

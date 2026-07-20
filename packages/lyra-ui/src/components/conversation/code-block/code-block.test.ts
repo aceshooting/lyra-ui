@@ -844,3 +844,97 @@ describe('interactive-lines', () => {
     expect(line2.getAttribute('part')).to.equal('line-button line-highlight');
   });
 });
+
+// `--lr-code-block-tab-size` mirrors `--lr-code-editor-tab-size` (same default of 2) so the
+// editable and the read-only code surfaces agree on how wide a literal tab renders. The rule lives
+// on [part='pre'] and must be written as a *token*, never as an inline `tab-size` -- shiki puts its
+// own `style` attribute on the highlighted <pre>, and an inline declaration always beats a
+// stylesheet rule.
+describe('tab width (--lr-code-block-tab-size)', () => {
+  const computedTabSize = (el: LyraCodeBlock): string =>
+    getComputedStyle(el.shadowRoot!.querySelector('[part="pre"]')!).tabSize;
+
+  it('defaults to 2, matching --lr-code-editor-tab-size', async () => {
+    const el = (await fixture(
+      html`<lr-code-block .code=${'\tone\n\t\ttwo'}></lr-code-block>`,
+    )) as LyraCodeBlock;
+    await el.updateComplete;
+    expect(computedTabSize(el)).to.equal('2');
+  });
+
+  it('renders a tab-indented code string at the width the token asks for', async () => {
+    const el = (await fixture(
+      html`<lr-code-block .code=${'\tone\n\t\ttwo'} style="--lr-code-block-tab-size: 5"></lr-code-block>`,
+    )) as LyraCodeBlock;
+    await el.updateComplete;
+    expect(computedTabSize(el)).to.equal('5');
+  });
+
+  // The default is the var() fallback arm on [part='pre'], never a :host declaration -- a :host
+  // rule is re-stamped per instance and would shadow any inherited value, making a page- or
+  // container-level tab width impossible. Setting it once above a whole transcript must work.
+  it('honours a tab width set on an ancestor rather than on the element', async () => {
+    const host = (await fixture(html`
+      <div style="--lr-code-block-tab-size: 7">
+        <lr-code-block .code=${'\tone\n\t\ttwo'}></lr-code-block>
+      </div>
+    `)) as HTMLElement;
+    const el = host.querySelector('lr-code-block') as LyraCodeBlock;
+    await el.updateComplete;
+    expect(computedTabSize(el)).to.equal('7');
+  });
+
+  it('keeps honouring the token on the shiki-highlighted path, where <pre> carries an inline style', async () => {
+    const el = (await fixture(
+      html`<lr-code-block
+        language="javascript"
+        .code=${'\tconst x = 1;'}
+        style="--lr-code-block-tab-size: 6"
+      ></lr-code-block>`,
+    )) as LyraCodeBlock;
+    await waitUntil(() => el.shadowRoot!.querySelector('.shiki') !== null, undefined, { timeout: 8000 });
+    const pre = el.shadowRoot!.querySelector('[part="pre"]') as HTMLElement;
+    expect(pre.getAttribute('style'), 'shiki writes its own inline style on this element').to.exist;
+    expect(pre.style.tabSize, 'the component must never write tab-size inline').to.equal('');
+    expect(getComputedStyle(pre).tabSize).to.equal('6');
+  });
+
+  it('is accessible with a custom tab size on tab-indented code', async () => {
+    const el = (await fixture(
+      html`<lr-code-block
+        filename="indented.txt"
+        .code=${'\tone\n\t\ttwo'}
+        style="--lr-code-block-tab-size: 4"
+      ></lr-code-block>`,
+    )) as LyraCodeBlock;
+    await el.updateComplete;
+    await expect(el).to.be.accessible();
+  });
+});
+
+// Sweep F35: the active-line outline had no component-scoped override, so a consumer retinting the
+// active anchor had to reach for the shared --lr-color-brand (which every other brand-colored
+// surface in the component also reads) or a ::part override that suppresses the rest of the rule.
+describe('active-line outline color (--lr-code-block-active-line-outline-color)', () => {
+  const activeLine = async (style = ''): Promise<HTMLElement> => {
+    const el = (await fixture(
+      html`<lr-code-block code=${'a\nb\nc'} active-highlight-id="h1" style=${style}></lr-code-block>`,
+    )) as LyraCodeBlock;
+    el.highlights = [{ id: 'h1', anchor: { kind: 'line-range', start: 2, end: 2 } }];
+    await el.updateComplete;
+    return el.shadowRoot!.querySelector('[data-active]') as HTMLElement;
+  };
+
+  it('defaults to --lr-color-brand, unchanged from before the override existed', async () => {
+    const line = await activeLine();
+    const probe = document.createElement('div');
+    probe.style.cssText = 'color: var(--lr-color-brand);';
+    line.parentElement!.appendChild(probe);
+    expect(getComputedStyle(line).outlineColor).to.equal(getComputedStyle(probe).color);
+  });
+
+  it('retints the active-line outline without touching --lr-color-brand', async () => {
+    const line = await activeLine('--lr-code-block-active-line-outline-color: rgb(1, 2, 3)');
+    expect(getComputedStyle(line).outlineColor).to.equal('rgb(1, 2, 3)');
+  });
+});

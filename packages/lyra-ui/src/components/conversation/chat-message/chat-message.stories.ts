@@ -188,3 +188,24 @@ export const RetimedStreamingMotion: Story = {
     </lr-chat-message>
   `,
 };
+
+export const BubbleGeometry: Story = {
+  name: 'Retuned bubble padding/radius',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          '`--lr-chat-message-bubble-padding` and `--lr-chat-message-bubble-radius` reshape the bubble without a `::part(bubble)` override — which, coming from the consumer\'s own tree, would outrank this component\'s per-`status` rules and erase the `failed`/`streaming` treatments. Both messages below keep their status styling. The radius prop is bubble-only: `retry-button` still uses the shared `--lr-radius`.',
+      },
+    },
+  },
+  render: () => html`
+    <div
+      style="display:flex; flex-direction:column; gap:0.75rem; --lr-chat-message-bubble-padding:1.25rem 1.5rem; --lr-chat-message-bubble-radius:1.25rem;"
+    >
+      <lr-chat-message data-role="user">Tight rounded bubble, unchanged user tint.</lr-chat-message>
+      <lr-chat-message status="streaming">Streaming keeps its brand border.</lr-chat-message>
+      <lr-chat-message status="failed">Failed keeps its danger tint and retry button.</lr-chat-message>
+    </div>
+  `,
+};

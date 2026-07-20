@@ -718,3 +718,127 @@ describe('failure slot', () => {
     await expect(el).to.be.accessible();
   });
 });
+
+// The bubble's padding/radius were hardcoded, so the only way to reshape it was a
+// `::part(bubble)` override in the consumer's own tree -- and an outer-tree ::part declaration
+// beats every rule in this shadow tree, which silently suppressed the per-status border/background
+// treatments below. These two cssprops let the geometry be retuned with the status styling intact.
+describe('bubble geometry cssprops', () => {
+  it('routes the bubble padding/radius through --lr-chat-message-bubble-padding/-radius', () => {
+    const css = styles.cssText.replace(/\s+/g, ' ');
+    // Each default is carried as the var() fallback arm at the point of use, NOT as a :host
+    // declaration. A :host rule is re-stamped on every instance and shadows any inherited value,
+    // so declaring these would make an ancestor-level override impossible -- which is precisely
+    // the reach problem these props exist to solve.
+    expect(css).to.not.include('--lr-chat-message-bubble-padding:');
+    expect(css).to.not.include('--lr-chat-message-bubble-radius:');
+    expect(css).to.match(
+      /\[part='bubble'\] \{[^}]*padding: var\(--lr-chat-message-bubble-padding, var\(--lr-space-m\)\);/,
+    );
+    expect(css).to.match(
+      /\[part='bubble'\] \{[^}]*border-radius: var\(--lr-chat-message-bubble-radius, var\(--lr-radius\)\);/,
+    );
+  });
+
+  it('lets an ancestor set the bubble geometry, since the props are never :host-declared', async () => {
+    const host = (await fixture(html`
+      <div style="--lr-chat-message-bubble-padding: 3px; --lr-chat-message-bubble-radius: 11px;">
+        <lr-chat-message>hi</lr-chat-message>
+      </div>
+    `)) as HTMLElement;
+    const bubble = host.querySelector('lr-chat-message')!.shadowRoot!.querySelector('[part="bubble"]') as HTMLElement;
+    expect(getComputedStyle(bubble).paddingTop).to.equal('3px');
+    expect(getComputedStyle(bubble).borderTopLeftRadius).to.equal('11px');
+  });
+
+  it('defaults the bubble padding/radius to --lr-space-m/--lr-radius, byte-identical to before', async () => {
+    const el = (await fixture(html`<lr-chat-message>hi</lr-chat-message>`)) as LyraChatMessage;
+    const bubble = el.shadowRoot!.querySelector('[part="bubble"]') as HTMLElement;
+    const probe = document.createElement('div');
+    probe.style.cssText = 'padding: var(--lr-space-m); border-radius: var(--lr-radius);';
+    el.shadowRoot!.appendChild(probe);
+
+    expect(getComputedStyle(bubble).paddingTop).to.equal(getComputedStyle(probe).paddingTop);
+    expect(getComputedStyle(bubble).paddingInlineStart).to.equal(getComputedStyle(probe).paddingInlineStart);
+    expect(getComputedStyle(bubble).borderTopLeftRadius).to.equal(getComputedStyle(probe).borderTopLeftRadius);
+  });
+
+  it('reshapes the bubble via both props', async () => {
+    const el = (await fixture(html`
+      <lr-chat-message
+        style="--lr-chat-message-bubble-padding: 7px 9px; --lr-chat-message-bubble-radius: 13px;"
+      >hi</lr-chat-message>
+    `)) as LyraChatMessage;
+    const bubble = el.shadowRoot!.querySelector('[part="bubble"]') as HTMLElement;
+
+    expect(getComputedStyle(bubble).paddingTop).to.equal('7px');
+    expect(getComputedStyle(bubble).paddingLeft).to.equal('9px');
+    expect(getComputedStyle(bubble).borderTopLeftRadius).to.equal('13px');
+  });
+
+  // The whole point of the props: geometry is retunable *without* an outer-tree ::part(bubble)
+  // declaration, which would outrank these internal per-status rules and erase them.
+  it('keeps the failed-status danger tint applying with both geometry props set', async () => {
+    const el = (await fixture(html`
+      <lr-chat-message
+        status="failed"
+        style="--lr-chat-message-bubble-padding: 7px 9px; --lr-chat-message-bubble-radius: 13px;"
+      >hi</lr-chat-message>
+    `)) as LyraChatMessage;
+    const bubble = el.shadowRoot!.querySelector('[part="bubble"]') as HTMLElement;
+    const probe = document.createElement('div');
+    probe.style.cssText = 'background: var(--lr-color-danger-quiet); color: var(--lr-color-danger);';
+    el.shadowRoot!.appendChild(probe);
+
+    expect(getComputedStyle(bubble).backgroundColor).to.equal(getComputedStyle(probe).backgroundColor);
+    expect(getComputedStyle(bubble).borderTopColor).to.equal(getComputedStyle(probe).color);
+    expect(getComputedStyle(bubble).paddingTop).to.equal('7px');
+    expect(getComputedStyle(bubble).borderTopLeftRadius).to.equal('13px');
+  });
+
+  it('keeps the streaming-status brand border applying with both geometry props set', async () => {
+    const el = (await fixture(html`
+      <lr-chat-message
+        status="streaming"
+        style="--lr-chat-message-bubble-padding: 7px 9px; --lr-chat-message-bubble-radius: 13px;"
+      >hi</lr-chat-message>
+    `)) as LyraChatMessage;
+    const bubble = el.shadowRoot!.querySelector('[part="bubble"]') as HTMLElement;
+    const probe = document.createElement('div');
+    probe.style.cssText = 'color: var(--lr-color-brand);';
+    el.shadowRoot!.appendChild(probe);
+
+    expect(getComputedStyle(bubble).borderTopColor).to.equal(getComputedStyle(probe).color);
+    expect(getComputedStyle(bubble).borderTopLeftRadius).to.equal('13px');
+  });
+
+  it('leaves the other rounded parts on --lr-radius -- the radius prop is bubble-only', async () => {
+    const el = (await fixture(html`
+      <lr-chat-message
+        collapsible
+        status="failed"
+        style="--lr-chat-message-bubble-radius: 13px;"
+      >hi</lr-chat-message>
+    `)) as LyraChatMessage;
+    const probe = document.createElement('div');
+    probe.style.cssText = 'border-radius: var(--lr-radius);';
+    el.shadowRoot!.appendChild(probe);
+    const shared = getComputedStyle(probe).borderTopLeftRadius;
+
+    for (const part of ['collapse-button', 'retry-button']) {
+      const node = el.shadowRoot!.querySelector(`[part="${part}"]`) as HTMLElement;
+      expect(node, `[part="${part}"] must be rendered for this assertion to mean anything`).to.exist;
+      expect(getComputedStyle(node).borderTopLeftRadius, part).to.equal(shared);
+    }
+  });
+
+  it('is accessible with the bubble geometry props set on a failed message', async () => {
+    const el = (await fixture(html`
+      <lr-chat-message
+        status="failed"
+        style="--lr-chat-message-bubble-padding: 7px 9px; --lr-chat-message-bubble-radius: 13px;"
+      >hi</lr-chat-message>
+    `)) as LyraChatMessage;
+    await expect(el).to.be.accessible();
+  });
+});

@@ -286,6 +286,12 @@ class LyraMarkdownBase extends LyraElement<LyraMarkdownEventMap> {}
  * @csspart math - A rendered inline or block math span (`data-display="inline"|"block"`).
  * @cssprop [--lr-markdown-font-mono=var(--lr-font-mono)] - Monospace family for rendered `<code>`
  *   inside `content`.
+ * @cssprop [--lr-code-block-tab-size=2] - Tab width for a rendered fenced/indented `code-block`.
+ *   Deliberately the same token (and default) `lr-code-block` and `lr-code-editor` use, so a
+ *   consumer sets one tab width for every code surface — it is declared here rather than
+ *   inherited because `lr-code-block` is a sibling element, not an ancestor. A markdown code
+ *   block wraps (`white-space: pre-wrap`) while `lr-code-block` does not, so the same value can
+ *   render differently on a wrapped line, where tab stops restart.
  */
 export class LyraMarkdown extends DocumentAnchorTarget(LyraMarkdownBase) {
   static styles = [LyraElement.styles, styles, srOnly];
