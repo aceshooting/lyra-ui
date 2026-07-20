@@ -1,4 +1,4 @@
-import { html, type PropertyValues, type TemplateResult } from 'lit';
+import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { ref } from 'lit/directives/ref.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
@@ -150,6 +150,7 @@ class LyraPdfViewerBase extends LyraElement<LyraPdfViewerEventMap> {}
  * @csspart error - The error message region.
  * @csspart spinner - The loading status region.
  * @cssprop [--lr-pdf-viewer-height=var(--lr-size-24rem)] - Block size of the virtualized page list.
+ *   Also settable via the `max-height` property.
  */
 export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
   static styles = [LyraElement.styles, styles, srOnly];
@@ -162,6 +163,11 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
   @property({ type: Number, reflect: true }) page = 1;
   /** Page zoom multiplier, clamped to the range 0.25–4. */
   @property({ type: Number, reflect: true }) zoom = 1;
+  /** A CSS length (e.g. `"30rem"`); once set, overrides `--lr-pdf-viewer-height` -- the block size
+   *  of the virtualized page list -- declaratively, the same `max-height` attribute
+   *  `<lr-notebook-viewer>`/`<lr-svg-viewer>`/`<lr-xml-viewer>` expose, rather than requiring a
+   *  consumer to set the differently-named CSS custom property inline. */
+  @property({ attribute: 'max-height' }) maxHeight = '';
 
   /** Anchor kinds this viewer resolves. */
   readonly anchorKinds = ['page', 'text-quote', 'region'] as const;
@@ -1120,7 +1126,11 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
   }
 
   render(): TemplateResult {
-    return html`<div part="base" aria-label=${this.getAttribute('aria-label') || this.name || this.localize('pdfViewerLabel')}>${this.renderBody()}${this.renderAnchorLiveRegion()}</div>`;
+    return html`<div
+      part="base"
+      style=${this.maxHeight ? `--lr-pdf-viewer-height:${this.maxHeight}` : nothing}
+      aria-label=${this.getAttribute('aria-label') || this.name || this.localize('pdfViewerLabel')}
+    >${this.renderBody()}${this.renderAnchorLiveRegion()}</div>`;
   }
 }
 

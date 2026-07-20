@@ -102,6 +102,13 @@ export const styles = css`
   [part='region-highlight'][data-active] {
     border-color: var(--lr-document-preview-active-border, var(--lr-color-warning, var(--lr-color-brand)));
   }
+  [part='region-highlight']:hover {
+    background: color-mix(in srgb, var(--lr-color-brand) 20%, transparent);
+  }
+  [part='region-highlight']:focus-visible {
+    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
+    outline-offset: var(--lr-focus-ring-offset);
+  }
 
   .empty-note {
     margin: 0;

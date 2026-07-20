@@ -5,6 +5,7 @@ import { findDocumentRenderer } from '../document-viewer/registry.js';
 import { supportsCustomHighlights } from '../../../internal/text-highlights.js';
 import { DEFAULT_MAX_RESOURCE_BYTES } from '../../../internal/resource-loader.js';
 import { MINIMAL_DOCX_BASE64 } from './fixtures/minimal-docx-fixture.js';
+import { styles } from './docx-viewer.styles.js';
 
 function base64ToArrayBuffer(base64: string): ArrayBuffer {
   const binary = atob(base64);
@@ -665,6 +666,14 @@ describe('scrollToAnchor / highlights (text-quote)', () => {
     } finally {
       (globalThis as { Highlight?: unknown }).Highlight = originalHighlight;
     }
+  });
+
+  it('gives the clickable <mark>-wrap highlight fallback a :hover rule matching its cursor:pointer affordance', () => {
+    // Browser test runners don't synthesize a real :hover pseudo-class from a dispatched event
+    // (same constraint documented at tabs.test.ts's identical stylesheet-source check), so this
+    // asserts against the parsed stylesheet rather than a forced pseudo-state.
+    const css = styles.cssText.replace(/\s+/g, ' ');
+    expect(css).to.match(/mark\[data-lr-highlight-tone\]:hover/);
   });
 
   it('does not activate a highlight when a click misses every painted range', async () => {

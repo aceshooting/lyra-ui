@@ -1,8 +1,23 @@
-import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
+import { html, nothing, type ComplexAttributeConverter, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import type { LyraHighlightTone, HighlightActivateDetail } from '../document-viewer/anchors.js';
 import { styles } from './highlight-layer.styles.js';
+
+/** `true`-defaulting boolean attribute converter -- Lit's default presence-based `type: Boolean`
+ *  can never be set back to `false` from a plain-HTML attribute once a property's own default is
+ *  `true` (removing an attribute that was never present fires no `attributeChangedCallback`), so
+ *  `fromAttribute` checks the literal string instead. Duplicated locally rather than imported,
+ *  matching this exact converter's repeated per-component convention elsewhere in this library
+ *  (see e.g. `<lr-attachment-chip>`'s own `trueDefaultBooleanConverter`). */
+const trueDefaultBooleanConverter: ComplexAttributeConverter<boolean> = {
+  fromAttribute(value): boolean {
+    return value !== 'false';
+  },
+  toAttribute(value): string | null {
+    return value ? null : 'false';
+  },
+};
 
 const FLASH_DURATION_MS = 1800; // mirrors --lr-transition-ambient's default duration
 
@@ -38,13 +53,14 @@ export class LyraHighlightLayer extends LyraElement<LyraHighlightLayerEventMap> 
   @property({ attribute: 'active-id' }) activeId: string | null = null;
   /** `false` = pure paint: `pointer-events: none`, no tab stop, no role. Default-true, matching
    *  markdown's `sanitize` stance. */
-  @property({ type: Boolean, reflect: true }) interactive = true;
+  @property({ type: Boolean, reflect: true, converter: trueDefaultBooleanConverter }) interactive = true;
 
   @state() private focusedId: string | null = null;
   @state() private flashingId: string | null = null;
   private flashTimer?: ReturnType<typeof setTimeout>;
 
   protected willUpdate(changed: PropertyValues): void {
+    super.willUpdate(changed);
     if (changed.has('items') && this.focusedId && !this.items.some((i) => i.id === this.focusedId)) {
       this.focusedId = null;
     }

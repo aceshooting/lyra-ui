@@ -5,7 +5,7 @@ import { srOnly } from '../../../internal/a11y.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { safeFetchUrl } from '../../../internal/safe-url.js';
 import { isAbortError, isResourceLimitError, LyraUserFacingError, readResponseArrayBuffer } from '../../../internal/resource-loader.js';
-import { formatFileSize } from '../../media/attachment-chip/attachment-chip.class.js';
+import { formatFileSize, FILE_SIZE_UNIT_KEYS } from '../../media/attachment-chip/attachment-chip.class.js';
 import { loadEmailDeps } from './email-loader.js';
 import { styles } from './email-viewer.styles.js';
 
@@ -105,6 +105,8 @@ function foldHtmlQuotes(html: string, localize: (key: string) => string): string
  * @csspart attachment-list - The attachment list.
  * @csspart attachment-item - An attachment metadata item.
  * @csspart attachment-button - An attachment's open button.
+ * @csspart attachment-name - An attachment's filename, inside `attachment-button`.
+ * @csspart attachment-size - An attachment's formatted file size, inside `attachment-button`.
  * @csspart quoted - A folded quoted-text block (hidden until expanded).
  * @csspart quote-toggle - The show/hide-quoted-text toggle button.
  * @csspart error - The error region.
@@ -131,6 +133,7 @@ export class LyraEmailViewer extends LyraElement<LyraEmailViewerEventMap> {
   private generation = 0;
 
   protected updated(changed: PropertyValues): void {
+    super.updated(changed);
     if (changed.has('src')) this.scheduleAfterUpdate(() => { void this.load(); });
   }
 
@@ -201,7 +204,7 @@ export class LyraEmailViewer extends LyraElement<LyraEmailViewerEventMap> {
         part="attachment-button"
         aria-label=${this.localize('emailViewerOpenAttachment', undefined, { filename: attachment.filename })}
         @click=${() => this.emit('lr-attachment-open', { attachment: { filename: attachment.filename, mimeType: attachment.mimeType, content: attachment.content } })}
-      ><span>${attachment.filename}</span><span>${formatFileSize(attachment.size)}</span></button></li>`)}
+      ><span part="attachment-name">${attachment.filename}</span><span part="attachment-size">${formatFileSize(attachment.size, (unit) => this.localize(FILE_SIZE_UNIT_KEYS[unit]))}</span></button></li>`)}
     </ul></div>`;
   }
 

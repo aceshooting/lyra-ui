@@ -67,6 +67,7 @@ export class LyraPptxViewer extends LyraElement<LyraPptxViewerEventMap> {
   };
 
   protected updated(changed: PropertyValues): void {
+    super.updated(changed);
     if (changed.has('src')) this.scheduleAfterUpdate(() => { void this.mount(); });
   }
 

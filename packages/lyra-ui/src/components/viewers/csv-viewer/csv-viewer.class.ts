@@ -1,4 +1,4 @@
-import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
+import { html, nothing, type ComplexAttributeConverter, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { safeFetchUrl } from '../../../internal/safe-url.js';
@@ -21,6 +21,20 @@ function cell(value: unknown): string { return value === undefined || value === 
 function headerOffset(hasHeaderRow: boolean): number {
   return hasHeaderRow ? 1 : 0;
 }
+
+/** `true`-defaulting boolean attribute converter -- Lit's default presence-based `type: Boolean`
+ *  can never be set back to `false` from a plain-HTML attribute once the property's own default is
+ *  `true` (removing an attribute that was never present fires no `attributeChangedCallback`), so
+ *  `fromAttribute` checks the literal string instead (mirrors `lr-task-list`'s
+ *  `trueDefaultBooleanConverter`). */
+const trueDefaultBooleanConverter: ComplexAttributeConverter<boolean> = {
+  fromAttribute(value): boolean {
+    return value !== 'false';
+  },
+  toAttribute(value): string | null {
+    return value ? '' : null;
+  },
+};
 
 /** One `highlights` entry resolved against the parsed grid, alongside its parsed `cell-range`. */
 interface ResolvedCellHighlight {
@@ -60,6 +74,7 @@ class LyraCsvViewerBase extends LyraElement<LyraCsvViewerEventMap> {}
  *   changes, from `search()`/`searchNext()`/`searchPrevious()`/`clearSearch()`. `detail: { query,
  *   matchCount, activeIndex }`.
  * @csspart base - The root wrapper.
+ * @csspart body - The scrollable wrapper around the fetched-state content, capped by `max-height`.
  * @csspart sheet - The wrapper around the header row and virtualized body.
  * @csspart rows - The virtualized row list.
  * @csspart header-row - The sticky header row, rendered while `has-header-row` is set.
@@ -71,6 +86,8 @@ class LyraCsvViewerBase extends LyraElement<LyraCsvViewerEventMap> {}
  * @csspart error - The error message region.
  * @cssprop [--lr-csv-viewer-highlight-color=var(--lr-color-brand)] - Outline color of a highlighted
  *   cell. The active highlight sets it inline to `var(--lr-color-warning, var(--lr-color-brand))`.
+ * @cssprop [--lr-csv-viewer-max-height=none] - Maximum block size of `[part="body"]` before it
+ *   scrolls internally. The `maxHeight` property sets this token inline on `[part="base"]`.
  */
 export class LyraCsvViewer extends DocumentAnchorTarget(LyraCsvViewerBase) {
   static styles = [LyraElement.styles, styles, srOnly];
@@ -79,7 +96,9 @@ export class LyraCsvViewer extends DocumentAnchorTarget(LyraCsvViewerBase) {
   /** Source filename or display name, used as the viewer's accessible name. */
   @property() name = '';
   /** Whether the first parsed row is rendered as a sticky header. */
-  @property({ type: Boolean, attribute: 'has-header-row' }) hasHeaderRow = true;
+  @property({ attribute: 'has-header-row', converter: trueDefaultBooleanConverter }) hasHeaderRow = true;
+  /** CSS length that caps the scrollable body. */
+  @property({ attribute: 'max-height' }) maxHeight = '';
 
   /** Anchor kinds this viewer resolves via `scrollToAnchor()`. */
   readonly anchorKinds: readonly LyraAnchorKind[] = ['cell-range'];
@@ -285,7 +304,7 @@ export class LyraCsvViewer extends DocumentAnchorTarget(LyraCsvViewerBase) {
     } else if (this.fetchState.kind === 'loading') content = html`<div part="spinner" role="status"><span class="sr-only">${this.localize('loadingDocument')}</span></div>`;
     else if (this.fetchState.kind === 'error') content = html`<div part="error" role="alert">${this.fetchState.message}</div>`;
     else content = html`<p class="empty-note">${this.localize('documentPreviewEmpty', undefined, { type: this.localize('documentPreviewTypeDocument') })}</p>`;
-    return html`<div part="base" aria-label=${this.name || this.getAttribute('aria-label') || this.localize('csvViewerLabel')}>${content}${this.renderAnchorLiveRegion()}</div>`;
+    return html`<div part="base" style=${this.maxHeight ? `--lr-csv-viewer-max-height:${this.maxHeight}` : nothing} aria-label=${this.name || this.getAttribute('aria-label') || this.localize('csvViewerLabel')}><div part="body">${content}</div>${this.renderAnchorLiveRegion()}</div>`;
   }
 }
 

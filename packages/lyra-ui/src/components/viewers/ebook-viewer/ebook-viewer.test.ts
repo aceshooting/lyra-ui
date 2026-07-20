@@ -403,6 +403,21 @@ describe('lr-ebook-viewer', () => {
     expect(el.shadowRoot!.querySelector('[part="previous-button"]')!.getAttribute('aria-label')).to.equal('Précédent');
     await expect(el).to.be.accessible();
   });
+
+  it('is accessible once a book is loaded (enabled toolbar buttons, populated mount)', async () => {
+    const fake = fakeBook();
+    __setEpubJsForTesting(fake.factory as never);
+    const restore = stubFetch();
+    try {
+      const el = (await fixture(html`<lr-ebook-viewer src="https://example.test/book.epub"></lr-ebook-viewer>`)) as LyraEbookViewer;
+      await aTimeout(20);
+      const next = el.shadowRoot!.querySelector('[part="next-button"]') as HTMLButtonElement;
+      expect(next.disabled, 'the book must actually be loaded for this to exercise the enabled-toolbar state').to.be.false;
+      await expect(el).to.be.accessible();
+    } finally {
+      restore();
+    }
+  });
 });
 
 describe('getToc', () => {

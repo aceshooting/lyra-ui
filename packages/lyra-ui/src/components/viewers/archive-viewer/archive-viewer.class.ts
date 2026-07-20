@@ -42,6 +42,7 @@ export class LyraArchiveViewer extends LyraElement<LyraArchiveViewerEventMap> {
   private loadLibrary: () => Promise<ArchiveLibraryApi | null> = loadArchiveLibraryCached;
 
   protected updated(changed: PropertyValues): void {
+    super.updated(changed);
     if (changed.has('src')) this.scheduleAfterUpdate(() => { void this.load(); });
   }
 

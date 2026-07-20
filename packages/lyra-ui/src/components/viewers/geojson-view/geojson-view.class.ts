@@ -103,6 +103,7 @@ export class LyraGeojsonView extends LyraElement<LyraGeojsonViewEventMap> {
   forceMissingMaplibreForTesting = false;
 
   protected updated(changed: PropertyValues): void {
+    super.updated(changed);
     if (changed.has('src')) this.scheduleAfterUpdate(() => { void this.load(); });
   }
 
@@ -161,7 +162,7 @@ export class LyraGeojsonView extends LyraElement<LyraGeojsonViewEventMap> {
   }
 
   render(): TemplateResult {
-    return html`<div part="base" aria-label=${this.name || this.localize('geojsonViewLabel')}>${this.renderBody()}</div>`;
+    return html`<div part="base" aria-label=${this.name || this.getAttribute('aria-label') || this.localize('geojsonViewLabel')}>${this.renderBody()}</div>`;
   }
 }
 

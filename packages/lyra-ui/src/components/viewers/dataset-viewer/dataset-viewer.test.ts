@@ -41,14 +41,41 @@ describe('lr-dataset-viewer', () => {
       expect(el.shadowRoot!.querySelector('[part="table"]')!.getAttribute('aria-label')).to.equal('2 rows');
     } finally { restore(); }
   });
-  it('surfaces its own localized diagnostic rather than the generic failure', async () => {
+  it('renders a neutral empty-note, not the role="alert" error chrome, for a well-formed file with no rows', async () => {
+    // Regression test: a delimited-text file that parses fine but has zero data rows (or zero
+    // columns) used to throw the same LyraUserFacingError funneled through the generic catch
+    // block into `case 'error'` -- role="alert" and error-styled chrome for a state that isn't
+    // actually a failure (matching <lr-calendar-viewer>'s identical zero-events handling).
     const el = (await fixture(html`<lr-dataset-viewer></lr-dataset-viewer>`)) as LyraDatasetViewer;
     const restore = fetchText('name\tage\tcity');
     try {
       el.src = 'https://example.test/empty.tsv';
-      await waitUntil(() => el.shadowRoot!.querySelector('[role="alert"]') !== null);
-      expect(el.shadowRoot!.querySelector('[role="alert"]')!.textContent).to.equal('This dataset has no rows.');
+      await waitUntil(() => el.shadowRoot!.querySelector('.empty-note')?.textContent === 'This dataset has no rows.');
+      expect(el.shadowRoot!.querySelector('.empty-note')!.textContent).to.equal('This dataset has no rows.');
+      expect(el.shadowRoot!.querySelector('[role="alert"]')).to.equal(null);
     } finally { restore(); }
+  });
+  it('honors a host aria-label over the computed row-count caption when name is unset', async () => {
+    const el = (await fixture(html`<lr-dataset-viewer aria-label="Team roster"></lr-dataset-viewer>`)) as LyraDatasetViewer;
+    const restore = fetchText(TAB_DATA);
+    try {
+      el.src = 'https://example.test/a.tsv';
+      await waitUntil(() => el.shadowRoot!.querySelector('[part="table"]') !== null);
+      expect(el.shadowRoot!.querySelector('[part="table"]')!.getAttribute('aria-label')).to.equal('Team roster');
+    } finally { restore(); }
+  });
+  it('still lets name take precedence over a host aria-label', async () => {
+    const el = (await fixture(html`<lr-dataset-viewer name="Data" aria-label="Ignored"></lr-dataset-viewer>`)) as LyraDatasetViewer;
+    const restore = fetchText(TAB_DATA);
+    try {
+      el.src = 'https://example.test/a.tsv';
+      await waitUntil(() => el.shadowRoot!.querySelector('[part="table"]') !== null);
+      expect(el.shadowRoot!.querySelector('[part="table"]')!.getAttribute('aria-label')).to.equal('Data: 2 rows');
+    } finally { restore(); }
+  });
+  it('supports a .strings override for the empty-state message', async () => {
+    const el = (await fixture(html`<lr-dataset-viewer .strings=${{ documentPreviewEmpty: 'Aucun {type} à afficher.', documentPreviewTypeDataset: 'jeu de données' }}></lr-dataset-viewer>`)) as LyraDatasetViewer;
+    expect(el.shadowRoot!.querySelector('.empty-note')!.textContent).to.equal('Aucun jeu de données à afficher.');
   });
   it('rejects unsafe URLs', async () => {
     const el = (await fixture(html`<lr-dataset-viewer src="javascript:alert(1)"></lr-dataset-viewer>`)) as LyraDatasetViewer;

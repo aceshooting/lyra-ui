@@ -11,6 +11,25 @@ it('loads dompurify and caches the resolved module', async () => {
   expect(second).to.equal(first);
 });
 
+function fakeDompurifyModule(): { sanitize: () => string } {
+  return { sanitize: () => '<svg></svg>' };
+}
+
+it('resolves an injected module directly when it already exposes `.sanitize`', async () => {
+  // Regression test: under a bundler/interop resolution that returns the bare module namespace
+  // (no `.default`) rather than `{ default: X }`, the loader previously fell straight to
+  // `.default` and silently resolved `undefined` -- the sanitizer that stands between fetched
+  // remote SVG markup and unsafe inline rendering would then silently no-op instead of failing
+  // closed into the documented 'missing sanitizer' error state.
+  const fake = fakeDompurifyModule();
+  expect(await loadSvgSanitizerDeps(() => Promise.resolve(fake))).to.equal(fake);
+});
+
+it('unwraps an injected `{ default }` CJS-interop shape', async () => {
+  const fake = fakeDompurifyModule();
+  expect(await loadSvgSanitizerDeps(() => Promise.resolve({ default: fake }))).to.equal(fake);
+});
+
 it('returns null and logs the import error when dompurify is unavailable', async () => {
   const importError = new Error('dompurify boom');
   const originalWarn = console.warn;

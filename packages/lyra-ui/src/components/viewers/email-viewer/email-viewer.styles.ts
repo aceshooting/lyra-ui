@@ -28,10 +28,11 @@ export const styles = css`
   [part='attachments'] { padding: var(--lr-space-m); border-block-start: var(--lr-border-width-thin) solid var(--lr-color-border); }
   [part='attachments-label'] { display: block; margin-block-end: var(--lr-space-xs); color: var(--lr-color-text-quiet); font-weight: var(--lr-font-weight-semibold); font-size: var(--lr-font-size-xs); text-transform: uppercase; }
   [part='attachment-list'] { display: flex; flex-direction: column; gap: var(--lr-space-2xs); margin: 0; padding: 0; list-style: none; }
-  [part='attachment-item'] { display: flex; }
+  [part='attachment-item'] { display: flex; min-inline-size: 0; }
   [part='attachment-button'] {
     display: flex;
     flex: 1;
+    min-inline-size: 0;
     justify-content: space-between;
     gap: var(--lr-space-s);
     padding: var(--lr-space-xs) var(--lr-space-s);
@@ -45,6 +46,15 @@ export const styles = css`
   }
   [part='attachment-button']:hover { background: color-mix(in srgb, var(--lr-color-brand-quiet) 80%, var(--lr-color-text)); }
   [part='attachment-button']:focus-visible { outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color); outline-offset: var(--lr-focus-ring-offset); }
+  [part='attachment-name'] {
+    min-inline-size: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  [part='attachment-size'] {
+    flex: none;
+  }
   [part='quote-toggle'] {
     align-self: flex-start;
     margin-block-start: var(--lr-space-xs);

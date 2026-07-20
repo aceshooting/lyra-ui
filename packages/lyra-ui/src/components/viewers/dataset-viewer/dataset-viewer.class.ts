@@ -12,7 +12,7 @@ import '../../layout/virtual-list/virtual-list.js';
 import { styles } from './dataset-viewer.styles.js';
 
 export interface DatasetTable { fields: string[]; rows: Record<string, string>[]; }
-type DatasetFetchState = { kind: 'idle' } | { kind: 'loading' } | { kind: 'loaded'; table: DatasetTable } | { kind: 'error'; message: string };
+type DatasetFetchState = { kind: 'idle' } | { kind: 'loading' } | { kind: 'loaded'; table: DatasetTable } | { kind: 'empty' } | { kind: 'error'; message: string };
 
 export interface LyraDatasetViewerEventMap extends LyraAnchorTargetEventMap {
   'lr-render-error': CustomEvent<{ error: unknown }>;
@@ -56,7 +56,8 @@ class LyraDatasetViewerBase extends LyraElement<LyraDatasetViewerEventMap> {}
  *   matchCount, activeIndex }`.
  * @csspart base - The root wrapper.
  * @csspart body - The scrollable body wrapper.
- * @csspart table - The `role="table"` container (accessible name via `aria-label`).
+ * @csspart table - The `role="table"` container. Its accessible name is `name` when set,
+ *   otherwise a host `aria-label`, otherwise a localized row-count caption.
  * @csspart header-row - The sticky header row (`role="row"`).
  * @csspart header-cell - A header cell (`role="columnheader"`).
  * @csspart data-row - One virtualized data row.
@@ -77,7 +78,8 @@ export class LyraDatasetViewer extends DocumentAnchorTarget(LyraDatasetViewerBas
   static styles = [LyraElement.styles, styles, srOnly];
   /** URL to fetch and parse as delimited text. */
   @property() src = '';
-  /** Display name used for the table's accessible name. */
+  /** Display name used for the table's accessible name, taking precedence over a host
+   *  `aria-label`. */
   @property() name = '';
   /** CSS length that caps the scrollable body. */
   @property({ attribute: 'max-height' }) maxHeight = '';
@@ -122,7 +124,7 @@ export class LyraDatasetViewer extends DocumentAnchorTarget(LyraDatasetViewerBas
       const response = await fetch(url, signal ? { signal } : undefined);
       if (!response.ok) throw new Error(`${response.status} ${response.statusText}`);
       const table = await this.parse(await readResponseText(response));
-      if (this.isConnected && generation === this.generation) this.fetchState = { kind: 'loaded', table };
+      if (this.isConnected && generation === this.generation) this.fetchState = table ? { kind: 'loaded', table } : { kind: 'empty' };
     } catch (error) {
       if (isAbortError(error) || !this.isConnected || generation !== this.generation) return;
       this.fetchState = { kind: 'error', message: error instanceof LyraUserFacingError ? error.message : this.localize(isResourceLimitError(error) ? 'documentPreviewResourceTooLarge' : 'documentPreviewFailedToLoad') };
@@ -130,12 +132,16 @@ export class LyraDatasetViewer extends DocumentAnchorTarget(LyraDatasetViewerBas
     }
   }
 
-  private async parse(text: string): Promise<DatasetTable> {
+  /** Resolves `null` (not a thrown error) for a well-formed file that parses to zero fields/rows --
+   *  that is a distinct, non-error "empty" state, not the same failure as a missing parser library
+   *  or an oversized file, and must not be funneled into the same role="alert" chrome as those
+   *  genuine failures (matching `<lr-calendar-viewer>`'s identical zero-events handling). */
+  private async parse(text: string): Promise<DatasetTable | null> {
     const papa = await loadPapaParseCached();
     if (!papa) throw new LyraUserFacingError(this.localize('datasetViewerMissingParser'));
     const result = papa.parse(text, { delimiter: '', header: true, skipEmptyLines: true }) as { data: Record<string, string>[]; meta: { fields?: string[] } };
     const fields = result.meta.fields ?? [];
-    if (!fields.length || !result.data.length) throw new LyraUserFacingError(this.localize('datasetViewerEmpty'));
+    if (!fields.length || !result.data.length) return null;
     assertTableDimensions(result.data.length, fields.length);
     return { fields, rows: result.data };
   }
@@ -262,9 +268,14 @@ export class LyraDatasetViewer extends DocumentAnchorTarget(LyraDatasetViewerBas
     switch (this.fetchState.kind) {
       case 'loaded': {
         const { fields, rows } = this.fetchState.table;
+        // A host aria-label overrides the computed row-count caption, matching every sibling
+        // document viewer's accessible-name precedence (name, then a host aria-label, then a
+        // localized default) -- but only when name itself is unset, since name is baked directly
+        // into the "named" caption format below and must keep winning over aria-label, same as
+        // those siblings.
         const label = this.name
           ? this.localize('datasetViewerCaptionNamed', undefined, { name: this.name, count: rows.length })
-          : this.localize('datasetViewerCaption', undefined, { count: rows.length });
+          : this.getAttribute('aria-label') || this.localize('datasetViewerCaption', undefined, { count: rows.length });
         return html`
           <div part="table" role="table" aria-label=${label} aria-rowcount=${rows.length + 1} aria-colcount=${fields.length}>
             <div part="header-row" role="row" aria-rowindex="1">
@@ -283,6 +294,7 @@ export class LyraDatasetViewer extends DocumentAnchorTarget(LyraDatasetViewerBas
         `;
       }
       case 'loading': return html`<div part="spinner" role="status"><span class="sr-only">${this.localize('loadingDocument')}</span></div>`;
+      case 'empty': return html`<p class="empty-note">${this.localize('datasetViewerEmpty')}</p>`;
       case 'error': return html`<div part="error" role="alert">${this.fetchState.message}</div>`;
       case 'idle':
       default: return html`<p class="empty-note">${this.localize('documentPreviewEmpty', undefined, { type: this.localize('documentPreviewTypeDataset') })}</p>`;

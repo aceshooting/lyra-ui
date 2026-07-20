@@ -1,4 +1,4 @@
-import { html, type PropertyValues, type TemplateResult } from 'lit';
+import { html, type ComplexAttributeConverter, type PropertyValues, type TemplateResult } from 'lit';
 import { property, query } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import type { DocumentRef } from '../../../ai/types.js';
@@ -8,6 +8,20 @@ import type { ShikiLanguageInput } from '../../conversation/code-block/code-load
 import '../document-preview/document-preview.js';
 import '../../utility/diff-view/diff-view.js';
 import { styles } from './document-compare.styles.js';
+
+/** `true`-defaulting boolean attribute converter -- Lit's default presence-based `type: Boolean`
+ *  can never be set back to `false` from a plain-HTML attribute once the property's own default is
+ *  `true` (removing an attribute that was never present fires no `attributeChangedCallback`), so
+ *  `fromAttribute` checks the literal string instead (mirrors `lr-checkpoint`'s identical
+ *  converter). */
+const trueDefaultBooleanConverter: ComplexAttributeConverter<boolean> = {
+  fromAttribute(value): boolean {
+    return value !== 'false';
+  },
+  toAttribute(value): string | null {
+    return value ? null : 'false';
+  },
+};
 
 export interface LyraDocumentCompareEventMap {
   /** Bubbles unchanged from the internal `<lr-diff-view>` while `view="diff"`. `detail: { text }` — the full unified-diff text. */
@@ -105,7 +119,7 @@ export class LyraDocumentCompare extends LyraElement<LyraDocumentCompareEventMap
 
   /** Whether scrolling one `view="side-by-side"` pane proportionally scrolls the other. See the
    *  class doc's "Synchronized anchors" section. */
-  @property({ type: Boolean, attribute: 'sync-scroll' }) syncScroll = true;
+  @property({ attribute: 'sync-scroll', converter: trueDefaultBooleanConverter }) syncScroll = true;
 
   /** A shared scroll-to-anchor target forwarded to both `view="side-by-side"` panes'
    *  `scrollToAnchor()`. `hasChanged: () => true` so re-assigning the same value (e.g. re-clicking

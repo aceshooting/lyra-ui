@@ -1,6 +1,8 @@
 import { fixture, expect, html, oneEvent } from '@open-wc/testing';
 import './xml-viewer.js';
 import type { LyraXmlViewer } from './xml-viewer.js';
+import { registerLyraLocale } from '../../../internal/localization.js';
+import { styles } from './xml-viewer.styles.js';
 
 const SIMPLE_XML = '<root><item id="1">First</item><item id="2">Second</item></root>';
 const RSS_XML = '<rss><channel><title>Feed</title><item><link href="https://a.test">A</link></item></channel></rss>';
@@ -37,7 +39,19 @@ describe('parsing and tree rendering', () => {
     el.xml = '<root><unclosed></root>';
     await eventPromise;
     await el.updateComplete;
-    expect(el.shadowRoot!.querySelector('[part="error"]')).to.exist;
+    expect(el.shadowRoot!.querySelectorAll('[part="error"]').length).to.equal(1);
+  });
+
+  it('renders the stable localized parse-error message, never the raw browser-engine parser diagnostic glued onto it', async () => {
+    const el = (await fixture(html`<lr-xml-viewer></lr-xml-viewer>`)) as LyraXmlViewer;
+    const eventPromise = oneEvent(el, 'lr-render-error');
+    el.xml = '<root><unclosed></root>';
+    await eventPromise;
+    await el.updateComplete;
+    // Exact-equality (not just "contains the localized text") is the point: the raw,
+    // engine-dependent <parsererror> diagnostic (Chrome/Firefox/Safari each word this
+    // completely differently) must never be appended to the stable localized message.
+    expect(el.shadowRoot!.querySelector('[part="error"]')!.textContent).to.equal('This document could not be parsed as XML.');
   });
 
   it('an xml property wins over src', async () => {
@@ -221,5 +235,131 @@ describe('active-match cssprop escape hatch', () => {
   it('is accessible with the active-match prop themed', async () => {
     const { el } = await activeMatch('--lr-xml-viewer-active-match-color: rgb(0, 51, 102)');
     await expect(el).to.be.accessible();
+  });
+});
+
+describe('non-active match cssprop escape hatch', () => {
+  // Every part of this single element matches the query 'match': its tag name, its `id`
+  // attribute's value, and its own text -- so one fixture exercises the node outline, the
+  // tag/attribute-value background, and the text tint all at once. Two identical siblings so
+  // one match is the active one (index 0) and the other stays non-active, the state this
+  // describe block is about (the active one already has its own dedicated cssprop, tested
+  // above).
+  const MATCH_XML = '<root><match id="value-match">TextMatchHere</match><match id="value-match">TextMatchHere</match></root>';
+
+  function resolvedInShadow(el: LyraXmlViewer, declaration: string, property: string): string {
+    const probe = document.createElement('span');
+    probe.setAttribute('style', declaration);
+    el.shadowRoot!.appendChild(probe);
+    const value = getComputedStyle(probe).getPropertyValue(property);
+    probe.remove();
+    return value;
+  }
+
+  async function nonActiveMatch(
+    style = '',
+  ): Promise<{ el: LyraXmlViewer; node: HTMLElement; tag: HTMLElement; attrValue: HTMLElement; text: HTMLElement }> {
+    const wrapper = (await fixture(html`<div style=${style}><lr-xml-viewer .xml=${MATCH_XML}></lr-xml-viewer></div>`)) as HTMLElement;
+    const el = wrapper.querySelector('lr-xml-viewer') as LyraXmlViewer;
+    await el.updateComplete;
+    await el.search('match');
+    await el.updateComplete;
+    const nodes = [...el.shadowRoot!.querySelectorAll('[part="node"][data-match]')] as HTMLElement[];
+    const node = nodes.find((n) => !n.hasAttribute('data-active-match'))!;
+    const tag = el.shadowRoot!.querySelector('[part="tag"][data-match]') as HTMLElement;
+    const attrValue = el.shadowRoot!.querySelector('[part="attribute-value"][data-match]') as HTMLElement;
+    const text = el.shadowRoot!.querySelector('[part="text"][data-match]') as HTMLElement;
+    return { el, node, tag, attrValue, text };
+  }
+
+  it('recolors a non-active match outline from --lr-xml-viewer-match-color', async () => {
+    const { node } = await nonActiveMatch('--lr-xml-viewer-match-color: rgb(10, 20, 30)');
+    expect(getComputedStyle(node).outlineColor).to.equal('rgb(10, 20, 30)');
+  });
+
+  it('recolors the text-match tint from the same --lr-xml-viewer-match-color', async () => {
+    const { el, text } = await nonActiveMatch('--lr-xml-viewer-match-color: rgb(10, 20, 30)');
+    expect(getComputedStyle(text).backgroundColor).to.equal(
+      resolvedInShadow(el, 'background: color-mix(in srgb, rgb(10, 20, 30) 30%, transparent)', 'background-color'),
+    );
+  });
+
+  it('recolors the tag/attribute-value match background from --lr-xml-viewer-match-bg', async () => {
+    const { tag, attrValue } = await nonActiveMatch('--lr-xml-viewer-match-bg: rgb(40, 50, 60)');
+    expect(getComputedStyle(tag).backgroundColor).to.equal('rgb(40, 50, 60)');
+    expect(getComputedStyle(attrValue).backgroundColor).to.equal('rgb(40, 50, 60)');
+  });
+
+  it('renders byte-identical to the shared warning tokens when the cssprops are unset', async () => {
+    const { el, node, tag, text } = await nonActiveMatch();
+    expect(getComputedStyle(node).outlineColor).to.equal(
+      resolvedInShadow(el, 'outline: 1px dashed var(--lr-color-warning)', 'outline-color'),
+    );
+    expect(getComputedStyle(tag).backgroundColor).to.equal(resolvedInShadow(el, 'background: var(--lr-color-warning-quiet)', 'background-color'));
+    expect(getComputedStyle(text).backgroundColor).to.equal(
+      resolvedInShadow(el, 'background: color-mix(in srgb, var(--lr-color-warning) 30%, transparent)', 'background-color'),
+    );
+  });
+
+  it('is accessible with the non-active match outline color themed', async () => {
+    const { el } = await nonActiveMatch('--lr-xml-viewer-match-color: rgb(10, 20, 30)');
+    await expect(el).to.be.accessible();
+  });
+
+  it('is accessible with the non-active match background themed to a contrast-safe color', async () => {
+    // A dark override here would fail axe's text-contrast check against the fixed tag/
+    // attribute-value text colors -- a themed-contrast concern for the consumer choosing the
+    // color, not a defect in this cssprop indirection, so this uses a pale tone (in the same
+    // register as the default --lr-color-warning-quiet) to isolate the two concerns.
+    const { el } = await nonActiveMatch('--lr-xml-viewer-match-bg: rgb(255, 244, 200)');
+    await expect(el).to.be.accessible();
+  });
+});
+
+describe('hover-rule specificity (::part() theming escape hatch)', () => {
+  it("wraps the row's own copy-button reveal-on-hover rule in :where() so a consumer's ::part(copy-button):hover wins", () => {
+    const css = styles.cssText.replace(/\s+/g, ' ');
+    // Both the .row ancestor and the [part='copy-button'] target must be inside a :where() --
+    // otherwise the attribute-selector contribution alone keeps this rule out-specificitying a
+    // consumer's ::part(copy-button):hover ((0,1,1)).
+    expect(css).to.match(/:where\(\.row\):hover :where\(\[part='copy-button'\]\)/);
+    expect(css).to.match(/:where\(\.row\):focus-within :where\(\[part='copy-button'\]\)/);
+  });
+
+  it('renders correctly with a competing ::part(copy-button):hover stylesheet present', async () => {
+    const style = document.createElement('style');
+    style.textContent = `lr-xml-viewer::part(copy-button):hover { opacity: 0.5; }`;
+    document.head.appendChild(style);
+    try {
+      const el = (await fixture(html`<lr-xml-viewer .xml=${SIMPLE_XML} copyable></lr-xml-viewer>`)) as LyraXmlViewer;
+      await el.updateComplete;
+      // jsdom/browser test runners don't synthesize a real :hover pseudo-class from a dispatched
+      // event, so the actual specificity win is asserted via the stylesheet-text check above --
+      // this test just proves the fixture still renders correctly with the competing consumer
+      // stylesheet present.
+      expect(el.shadowRoot!.querySelectorAll('[part="copy-button"]').length).to.be.greaterThan(0);
+    } finally {
+      style.remove();
+    }
+  });
+});
+
+describe('localization coverage', () => {
+  it('a .strings override actually reaches the rendered parse-error message', async () => {
+    const el = (await fixture(
+      html`<lr-xml-viewer .strings=${{ xmlViewerParseError: 'Document XML invalide.' }}></lr-xml-viewer>`,
+    )) as LyraXmlViewer;
+    const eventPromise = oneEvent(el, 'lr-render-error');
+    el.xml = '<root><unclosed></root>';
+    await eventPromise;
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('[part="error"]')!.textContent).to.equal('Document XML invalide.');
+  });
+
+  it('a registered locale supplies xmlViewerLabel without an explicit .strings override', async () => {
+    registerLyraLocale('fr-test-xml-viewer', { xmlViewerLabel: 'Visionneuse XML' });
+    const el = (await fixture(html`<lr-xml-viewer locale="fr-test-xml-viewer"></lr-xml-viewer>`)) as LyraXmlViewer;
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('Visionneuse XML');
   });
 });

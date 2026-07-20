@@ -319,7 +319,7 @@ export class LyraSpreadsheetViewer extends DocumentAnchorTarget(LyraSpreadsheetV
 
   render(): TemplateResult {
     const body = this.fetchState.kind === 'loaded' ? this.renderLoaded(this.fetchState.sheets) : this.fetchState.kind === 'loading' ? html`<div part="spinner" role="status"><span class="sr-only">${this.localize('loadingDocument')}</span></div>` : this.fetchState.kind === 'error' ? html`<div part="error" role="alert">${this.fetchState.message}</div>` : html`<p class="empty-note">${this.localize('documentPreviewEmpty', undefined, { type: this.localize('documentPreviewTypeDocument') })}</p>`;
-    return html`<div part="base" aria-label=${this.name || this.getAttribute('aria-label') || this.localize('spreadsheetViewerLabel')}>${body}${this.renderAnchorLiveRegion()}</div>`;
+    return html`<div part="base" aria-label=${this.getAttribute('aria-label') || this.name || this.localize('spreadsheetViewerLabel')}>${body}${this.renderAnchorLiveRegion()}</div>`;
   }
 }
 

@@ -7,7 +7,7 @@ import { srOnly } from '../../../internal/a11y.js';
 import { parseVCards, type VCardAddress, type VCardContact } from './vcard.js';
 import { styles } from './contact-viewer.styles.js';
 
-type ContactFetchState = { kind: 'idle' } | { kind: 'loading' } | { kind: 'loaded'; contacts: VCardContact[] } | { kind: 'error'; message: string };
+type ContactFetchState = { kind: 'idle' } | { kind: 'loading' } | { kind: 'loaded'; contacts: VCardContact[] } | { kind: 'empty' } | { kind: 'error'; message: string };
 export interface LyraContactViewerEventMap { 'lr-render-error': CustomEvent<{ error: unknown }>; }
 
 /**
@@ -42,6 +42,7 @@ export class LyraContactViewer extends LyraElement<LyraContactViewerEventMap> {
   private generation = 0;
 
   protected updated(changed: PropertyValues): void {
+    super.updated(changed);
     if (changed.has('src')) this.scheduleAfterUpdate(() => { void this.load(); });
   }
 
@@ -56,8 +57,7 @@ export class LyraContactViewer extends LyraElement<LyraContactViewerEventMap> {
       const response = await fetch(url, signal ? { signal } : undefined);
       if (!response.ok) throw new Error(`${response.status} ${response.statusText}`);
       const contacts = parseVCards(await readResponseText(response));
-      if (!contacts.length) throw new LyraUserFacingError(this.localize('contactViewerNoContacts'));
-      if (generation === this.generation) this.fetchState = { kind: 'loaded', contacts };
+      if (generation === this.generation) this.fetchState = contacts.length ? { kind: 'loaded', contacts } : { kind: 'empty' };
     } catch (error) {
       if (isAbortError(error) || !this.isConnected || generation !== this.generation) return;
       this.fetchState = { kind: 'error', message: error instanceof LyraUserFacingError ? error.message : this.localize(isResourceLimitError(error) ? 'documentPreviewResourceTooLarge' : 'documentPreviewFailedToLoad') };
@@ -81,6 +81,10 @@ export class LyraContactViewer extends LyraElement<LyraContactViewerEventMap> {
     switch (this.fetchState.kind) {
       case 'loaded': return html`${this.fetchState.contacts.map((contact) => this.renderContact(contact))}`;
       case 'loading': return html`<div part="spinner" role="status"><span class="sr-only">${this.localize('loadingDocument')}</span></div>`;
+      // A well-formed vCard document with zero VCARD records is a distinct, non-error state --
+      // it must not be funneled into the same role="alert" chrome as a genuine fetch/parse
+      // failure (matching <lr-calendar-viewer>'s identical zero-events handling).
+      case 'empty': return html`<p class="empty-note">${this.localize('contactViewerNoContacts')}</p>`;
       case 'error': return html`<div part="error" role="alert">${this.fetchState.message}</div>`;
       case 'idle':
       default: return html`<p class="empty-note">${this.localize('documentPreviewEmpty', undefined, { type: this.localize('documentPreviewTypeContact') })}</p>`;

@@ -24,6 +24,9 @@ export const styles = css`
     pointer-events: auto;
     cursor: pointer;
   }
+  :host([interactive]) [part='rect']:hover {
+    outline-width: var(--lr-border-width-medium);
+  }
   [part='rect'][data-tone='success'] {
     background: var(--lr-color-success-quiet);
     outline-color: var(--lr-color-success);

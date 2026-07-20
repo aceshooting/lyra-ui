@@ -1,4 +1,5 @@
 import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
+import { LitElement, type PropertyValues } from 'lit';
 import './page-rail.js';
 import type { LyraPageRail, PageThumbnailSource } from './page-rail.js';
 import type { LyraHighlight } from '../document-viewer/anchors.js';
@@ -187,6 +188,34 @@ describe('lr-page-rail', () => {
     el.strings = { pageRailLabel: 'Vignettes de page' };
     await el.updateComplete;
     expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('Vignettes de page');
+  });
+
+  it('chains willUpdate() to super.willUpdate() so a mixin layered under LyraElement would still run', async () => {
+    // No shared mixin actually overrides willUpdate() today, so the only way to prove the chain is
+    // live (rather than grepping source text for the call) is to patch the base-class hook itself
+    // -- the exact hook a future mixin would extend -- and confirm it actually fires.
+    const hadOwn = Object.prototype.hasOwnProperty.call(LitElement.prototype, 'willUpdate');
+    const original = (LitElement.prototype as unknown as { willUpdate?: (changed: PropertyValues) => void })
+      .willUpdate;
+    let called = false;
+    (LitElement.prototype as unknown as { willUpdate: (changed: PropertyValues) => void }).willUpdate = function (
+      this: LitElement,
+      changed: PropertyValues,
+    ) {
+      called = true;
+      original?.call(this, changed);
+    };
+    try {
+      const el = (await fixture(html`<lr-page-rail></lr-page-rail>`)) as LyraPageRail;
+      await el.updateComplete;
+      expect(called).to.be.true;
+    } finally {
+      if (hadOwn) {
+        (LitElement.prototype as unknown as { willUpdate: unknown }).willUpdate = original;
+      } else {
+        delete (LitElement.prototype as unknown as { willUpdate?: unknown }).willUpdate;
+      }
+    }
   });
 
   it('is accessible in mediated mode with highlights present', async () => {

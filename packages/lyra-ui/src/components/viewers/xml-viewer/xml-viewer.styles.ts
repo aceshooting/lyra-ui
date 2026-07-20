@@ -35,8 +35,12 @@ export const styles = css`
     min-inline-size: 0;
     border-radius: var(--lr-radius);
   }
+  /* --lr-xml-viewer-match-color indirection (rather than the bare --lr-color-warning token)
+     lets a consumer retheme just this component's (non-active) search-match indicator without
+     repainting every other warning-toned surface on the page that reads the same shared token
+     -- the same rationale as --lr-xml-viewer-active-match-color just below, for the active match. */
   [part='node'][data-match] {
-    outline: var(--lr-border-width-thin) dashed var(--lr-color-warning);
+    outline: var(--lr-border-width-thin) dashed var(--lr-xml-viewer-match-color, var(--lr-color-warning));
   }
   [part='node'][data-active-match] {
     outline: var(--lr-border-width-medium) solid var(--lr-xml-viewer-active-match-color, var(--lr-color-warning));
@@ -52,9 +56,10 @@ export const styles = css`
     color: var(--lr-color-success);
     overflow-wrap: anywhere;
   }
+  /* --lr-xml-viewer-match-bg indirection, same rationale as --lr-xml-viewer-match-color above. */
   [part='tag'][data-match],
   [part='attribute-value'][data-match] {
-    background: var(--lr-color-warning-quiet);
+    background: var(--lr-xml-viewer-match-bg, var(--lr-color-warning-quiet));
     border-radius: var(--lr-size-0-1875rem);
   }
   [part='text'] {
@@ -63,7 +68,7 @@ export const styles = css`
     white-space: pre-wrap;
   }
   [part='text'][data-match] {
-    background: color-mix(in srgb, var(--lr-color-warning) 30%, transparent);
+    background: color-mix(in srgb, var(--lr-xml-viewer-match-color, var(--lr-color-warning)) 30%, transparent);
     border-radius: var(--lr-size-0-1875rem);
   }
   [part='comment'],
@@ -139,8 +144,12 @@ export const styles = css`
     margin-inline-start: auto;
     opacity: 0;
   }
-  .row:hover [part='copy-button'],
-  .row:focus-within [part='copy-button'] {
+  /* :where() zeroes the wrapped selectors' specificity contribution, leaving only :hover/
+     :focus-within themselves -- (0,1,0) total, so a consumer's own ::part(copy-button):hover
+     override ((0,1,1)) wins without needing !important -- same fix shape as
+     lr-attachment-trigger's/lr-copy-button's/lr-json-viewer's own :where()-wrapped hover rule. */
+  :where(.row):hover :where([part='copy-button']),
+  :where(.row):focus-within :where([part='copy-button']) {
     opacity: 1;
   }
   [part='error'] {

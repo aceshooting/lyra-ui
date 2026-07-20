@@ -3,11 +3,15 @@ import type { OptionalPeerApi } from '../../../internal/optional-peer-types.js';
 let sanitizer: Promise<OptionalPeerApi | null> | undefined;
 
 export async function loadHtmlSanitizerDeps(
-  importDompurify: () => Promise<{ default: OptionalPeerApi }> = () =>
+  importDompurify: () => Promise<OptionalPeerApi | { default: OptionalPeerApi }> = () =>
     import('dompurify') as Promise<{ default: OptionalPeerApi }>,
 ): Promise<OptionalPeerApi | null> {
   try {
-    return (await importDompurify()).default;
+    // Different bundler/interop configurations resolve a CJS-published optional peer as either
+    // `{ default: X }` or the bare module namespace -- fall back to the bare shape, matching
+    // docx-loader.ts/email-loader.ts's `value.default ?? value` in this same family.
+    const module = await importDompurify();
+    return (module as { default?: OptionalPeerApi }).default ?? (module as OptionalPeerApi);
   } catch (error) {
     console.warn(
       '<lr-html-viewer> needs the optional peer dependency `dompurify` to sanitize rendered HTML markup — install it with `pnpm add dompurify`:',

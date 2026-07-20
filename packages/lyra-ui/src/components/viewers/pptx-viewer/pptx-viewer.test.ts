@@ -1,4 +1,5 @@
 import { aTimeout, expect, fixture, html } from '@open-wc/testing';
+import { LitElement, type PropertyValues } from 'lit';
 import './pptx-viewer.js';
 import type { LyraPptxViewer } from './pptx-viewer.js';
 import { styles } from './pptx-viewer.styles.js';
@@ -107,6 +108,59 @@ describe('lr-pptx-viewer', () => {
       expect(getComputedStyle(previous).minBlockSize).to.equal('40px');
       expect(getComputedStyle(next).minInlineSize).to.equal('40px');
       expect(getComputedStyle(next).minBlockSize).to.equal('40px');
+    } finally {
+      restore();
+    }
+  });
+
+  it('chains updated() to super.updated() so a mixin layered under LyraElement would still run', async () => {
+    // No shared mixin actually overrides updated() today, so the only way to prove the chain is
+    // live (rather than grepping source text for the call) is to patch the base-class hook itself
+    // -- the exact hook a future mixin would extend -- and confirm it actually fires.
+    const hadOwn = Object.prototype.hasOwnProperty.call(LitElement.prototype, 'updated');
+    const original = (LitElement.prototype as unknown as { updated?: (changed: PropertyValues) => void })
+      .updated;
+    let called = false;
+    (LitElement.prototype as unknown as { updated: (changed: PropertyValues) => void }).updated = function (
+      this: LitElement,
+      changed: PropertyValues,
+    ) {
+      called = true;
+      original?.call(this, changed);
+    };
+    try {
+      const el = (await fixture(html`<lr-pptx-viewer></lr-pptx-viewer>`)) as LyraPptxViewer;
+      await el.updateComplete;
+      expect(called).to.be.true;
+    } finally {
+      if (hadOwn) {
+        (LitElement.prototype as unknown as { updated: unknown }).updated = original;
+      } else {
+        delete (LitElement.prototype as unknown as { updated?: unknown }).updated;
+      }
+    }
+  });
+
+  it('honors a strings override for the persistent fidelity notice', async () => {
+    const el = (await fixture(html`<lr-pptx-viewer></lr-pptx-viewer>`)) as LyraPptxViewer;
+    expect(el.shadowRoot!.querySelector('[part="notice"]')!.textContent).to.equal('Some slide content may not display.');
+    el.strings = { pptxViewerFidelityNotice: 'Certains contenus de diapositive peuvent ne pas s’afficher.' };
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('[part="notice"]')!.textContent).to.equal('Certains contenus de diapositive peuvent ne pas s’afficher.');
+  });
+
+  it('is accessible with a mounted presentation and its slide-nav controls visible', async () => {
+    const fake = fakeModule();
+    const restore = stubFetch();
+    try {
+      const el = (await fixture(html`<lr-pptx-viewer aria-label="Deck"></lr-pptx-viewer>`)) as LyraPptxViewer;
+      el.loadRenderer = async () => fake.module;
+      el.src = 'https://example.test/deck.pptx';
+      await aTimeout(30);
+      expect(el.shadowRoot!.querySelectorAll('[part="nav"]').length).to.equal(1);
+      expect(el.shadowRoot!.querySelectorAll('[part="previous-button"]').length).to.equal(1);
+      expect(el.shadowRoot!.querySelectorAll('[part="next-button"]').length).to.equal(1);
+      await expect(el).to.be.accessible();
     } finally {
       restore();
     }

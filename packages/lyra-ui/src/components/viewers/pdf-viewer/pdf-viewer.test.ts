@@ -1521,6 +1521,45 @@ describe('styling', () => {
   });
 });
 
+// Parity with <lr-notebook-viewer>/<lr-svg-viewer>/<lr-xml-viewer>, which all expose a `max-height`
+// attribute as a declarative alternative to setting their own sizing CSS custom property inline --
+// `<lr-pdf-viewer>` only ever offered `--lr-pdf-viewer-height` as an inline style/ancestor rule,
+// with no HTML-attribute equivalent.
+describe('maxHeight', () => {
+  it('defaults to unset, leaving --lr-pdf-viewer-height at its stylesheet default', async () => {
+    const el = (await fixture(html`<lr-pdf-viewer></lr-pdf-viewer>`)) as LyraPdfViewer;
+    expect(el.maxHeight).to.equal('');
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    expect(base.style.getPropertyValue('--lr-pdf-viewer-height')).to.equal('');
+  });
+
+  it('reflects the max-height attribute onto --lr-pdf-viewer-height, and it reaches the virtualized page list', async () => {
+    const el = (await fixture(html`<lr-pdf-viewer max-height="10rem"></lr-pdf-viewer>`)) as LyraPdfViewer;
+    expect(el.maxHeight).to.equal('10rem');
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    expect(base.style.getPropertyValue('--lr-pdf-viewer-height').trim()).to.equal('10rem');
+
+    installFakeLoader(el, fakeDocument(1));
+    const restore = stubFetch();
+    try {
+      el.src = 'https://example.test/report.pdf';
+      await waitFor(el, '[part="pages"]');
+      const pages = el.shadowRoot!.querySelector('[part="pages"]') as HTMLElement;
+      expect(getComputedStyle(pages).blockSize).to.equal('160px');
+    } finally {
+      restore();
+    }
+  });
+
+  it('updates --lr-pdf-viewer-height live when the maxHeight property changes after first render', async () => {
+    const el = (await fixture(html`<lr-pdf-viewer></lr-pdf-viewer>`)) as LyraPdfViewer;
+    el.maxHeight = '12rem';
+    await el.updateComplete;
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    expect(base.style.getPropertyValue('--lr-pdf-viewer-height').trim()).to.equal('12rem');
+  });
+});
+
 // Page content is committed inside `<lr-virtual-list>`'s own shadow root, one boundary below this
 // viewer's render root, so every rule for it has to travel through `::part()`. These assertions read
 // the *rendered* result of each such rule rather than the stylesheet text -- a selector that stops at

@@ -68,6 +68,13 @@ export const styles = css`
     border-radius: var(--lr-radius-xs);
     cursor: pointer;
   }
+  [part='region-highlight']:hover {
+    background: var(--lr-color-brand-quiet);
+  }
+  [part='region-highlight']:focus-visible {
+    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
+    outline-offset: var(--lr-focus-ring-offset);
+  }
   [part='region-highlight'][data-active] {
     border-color: var(--lr-svg-viewer-active-border, var(--lr-color-warning, var(--lr-color-brand)));
   }

@@ -126,6 +126,9 @@ export const styles = css`
     border-radius: calc(var(--lr-radius) * 0.5);
     cursor: pointer;
   }
+  [part='content'] mark[data-lr-highlight-tone]:hover {
+    filter: brightness(var(--lr-hover-brightness));
+  }
   [part='content'] mark[data-lr-highlight-tone='success'] {
     background: var(--lr-color-success-quiet);
   }

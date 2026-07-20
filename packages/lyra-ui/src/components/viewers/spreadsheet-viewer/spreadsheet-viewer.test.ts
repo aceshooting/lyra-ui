@@ -2,6 +2,7 @@ import { aTimeout, expect, fixture, html, oneEvent, waitUntil } from '@open-wc/t
 import * as XLSX from 'xlsx';
 import './spreadsheet-viewer.js';
 import type { LyraSpreadsheetViewer } from './spreadsheet-viewer.js';
+import { styles } from './spreadsheet-viewer.styles.js';
 
 function buffer(workbook: Record<string, unknown[][]>): ArrayBuffer {
   const book = XLSX.utils.book_new();
@@ -30,6 +31,19 @@ describe('lr-spreadsheet-viewer', () => {
   it('renders an empty localized state by default', async () => {
     const el = (await fixture(html`<lr-spreadsheet-viewer></lr-spreadsheet-viewer>`)) as LyraSpreadsheetViewer;
     expect(el.shadowRoot!.querySelector('.empty-note')!.textContent).to.equal('No document to display.');
+  });
+
+  it('never scrolls vertically on the sheet wrapper -- overflow-x:auto alone lets the y axis compute to auto too, which can show a phantom scrollbar', async () => {
+    // Same bug/fix as lr-tabs: pinning only overflow-x to a non-'visible' value forces the browser
+    // to resolve the unset y axis to 'auto' too (never leaves it 'visible'), risking a phantom empty
+    // vertical scrollbar on a workbook that fits horizontally.
+    const el = (await fixture(html`<lr-spreadsheet-viewer></lr-spreadsheet-viewer>`)) as LyraSpreadsheetViewer;
+    const restore = fetchBuffer(buffer({ Sheet1: [['Name', 'Qty'], ['Widget', 12]] }));
+    try {
+      el.src = 'https://example.test/book.xlsx';
+      await waitUntil(() => el.shadowRoot!.querySelector('[part="sheet"]') !== null);
+      expect(getComputedStyle(el.shadowRoot!.querySelector('[part="sheet"]') as HTMLElement).overflowY).to.equal('hidden');
+    } finally { restore(); }
   });
 
   it('renders a workbook header and virtualized body rows', async () => {
@@ -86,6 +100,24 @@ describe('lr-spreadsheet-viewer', () => {
     expect(named.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('quarterly.xlsx');
     const unnamed = (await fixture(html`<lr-spreadsheet-viewer></lr-spreadsheet-viewer>`)) as LyraSpreadsheetViewer;
     expect(unnamed.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('Spreadsheet');
+  });
+  it('lets an explicit host aria-label win over the name-derived fallback', async () => {
+    // Regression test: render() previously checked `this.name || this.getAttribute('aria-label')`,
+    // so a consumer-supplied host aria-label could never override an also-set `name` -- unlike every
+    // sibling viewer (notebook-viewer, xml-viewer, pdf-viewer), which check the host attribute first.
+    const overridden = (await fixture(
+      html`<lr-spreadsheet-viewer name="quarterly.xlsx" aria-label="Q3 Financial Report"></lr-spreadsheet-viewer>`,
+    )) as LyraSpreadsheetViewer;
+    expect(overridden.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('Q3 Financial Report');
+
+    const labeled = (await fixture(html`<lr-spreadsheet-viewer aria-label="Q3 Financial Report"></lr-spreadsheet-viewer>`)) as LyraSpreadsheetViewer;
+    expect(labeled.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('Q3 Financial Report');
+  });
+  it('supports a .strings override for the spreadsheetViewerLabel fallback', async () => {
+    const el = (await fixture(
+      html`<lr-spreadsheet-viewer .strings=${{ spreadsheetViewerLabel: 'Tableur' }}></lr-spreadsheet-viewer>`,
+    )) as LyraSpreadsheetViewer;
+    expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('Tableur');
   });
 
   describe('cell-range anchor-target', () => {
@@ -271,6 +303,16 @@ describe('lr-spreadsheet-viewer', () => {
         highlighted.focus();
         expect(getComputedStyle(highlighted).outlineColor).to.equal('rgb(1, 2, 3)');
       } finally { restore(); }
+    });
+
+    it('gives the cell-highlight part a :hover rule alongside its :focus-visible one', () => {
+      // Regression test: a mouse user hovering a highlighted cell previously got no visual change
+      // beyond the cursor shape, since only :focus-visible was styled -- getComputedStyle can't
+      // synthesize a real :hover state without dispatching pointer events the wtr harness can't
+      // simulate, so (matching commit-card.test.ts's identical convention) this asserts against the
+      // stylesheet source text.
+      const css = styles.cssText.replace(/\s+/g, ' ');
+      expect(css).to.match(/cell-highlight\)\s*:hover/);
     });
 
     it('exports data-row, cell, and cell-highlight to a consumer stylesheet', async () => {

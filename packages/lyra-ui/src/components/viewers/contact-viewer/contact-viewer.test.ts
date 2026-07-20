@@ -26,11 +26,36 @@ describe('lr-contact-viewer', () => {
       expect(el.shadowRoot!.querySelector('[part="contact-adr"]')!.textContent).to.contain('Main Street');
     } finally { window.fetch = original; }
   });
-  it('shows the no-contact error for invalid content', async () => {
+  it('shows a neutral empty-note, not the role="alert" error chrome, for a vCard with zero contacts', async () => {
+    // Regression test: a syntactically valid (or merely content-free) vCard document with zero
+    // VCARD records used to throw the same LyraUserFacingError funneled through the generic catch
+    // block into `case 'error'` -- role="alert" and error-styled chrome for a state that isn't
+    // actually a failure (matching <lr-calendar-viewer>'s identical zero-events handling).
     const original = window.fetch; window.fetch = (() => Promise.resolve(response('not vcard'))) as typeof window.fetch;
-    try { const el = (await fixture(html`<lr-contact-viewer src="https://example.test/a.vcf"></lr-contact-viewer>`)) as LyraContactViewer; await aTimeout(20); await waitUntil(() => el.shadowRoot!.querySelector('[part="error"]') !== null); await el.updateComplete; expect(el.shadowRoot!.querySelector('[part="error"]')!.textContent).to.equal('No contacts found in this file.'); } finally { window.fetch = original; }
+    try {
+      const el = (await fixture(html`<lr-contact-viewer src="https://example.test/a.vcf"></lr-contact-viewer>`)) as LyraContactViewer;
+      await aTimeout(20);
+      await waitUntil(() => el.shadowRoot!.querySelector('.empty-note') !== null);
+      await el.updateComplete;
+      expect(el.shadowRoot!.querySelector('.empty-note')!.textContent).to.equal('No contacts found in this file.');
+      expect(el.shadowRoot!.querySelectorAll('[part="error"]')).to.have.lengthOf(0);
+    } finally { window.fetch = original; }
   });
   it('is accessible', async () => { const el = await fixture(html`<lr-contact-viewer></lr-contact-viewer>`); await expect(el).to.be.accessible(); });
+  it('is accessible with contact cards populated, not only the bare empty default', async () => {
+    // The default-render axe check above only ever mounts the bare idle state -- a regression in
+    // the actually-rendered contact cards (name/org/tel/email/adr lists and their aria-labels)
+    // would be invisible to it.
+    const original = window.fetch;
+    window.fetch = (() => Promise.resolve(response(`${CARD}\r\nBEGIN:VCARD\r\nFN:Second\r\nEND:VCARD`))) as typeof window.fetch;
+    try {
+      const el = (await fixture(html`<lr-contact-viewer src="https://example.test/a.vcf"></lr-contact-viewer>`)) as LyraContactViewer;
+      await aTimeout(20);
+      await waitUntil(() => el.shadowRoot!.querySelectorAll('[part="contact"]').length === 2);
+      await el.updateComplete;
+      await expect(el).to.be.accessible();
+    } finally { window.fetch = original; }
+  });
   it('uses name as the accessible name, falling back to a host aria-label and then a localized default', async () => {
     const named = (await fixture(html`<lr-contact-viewer name="contacts.vcf"></lr-contact-viewer>`)) as LyraContactViewer;
     expect(named.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('contacts.vcf');

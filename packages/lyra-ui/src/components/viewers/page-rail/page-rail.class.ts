@@ -89,6 +89,7 @@ export class LyraPageRail extends LyraElement<LyraPageRailEventMap> {
   };
 
   protected willUpdate(changed: PropertyValues): void {
+    super.willUpdate(changed);
     if (!this.hasUpdated || changed.has('viewer') || changed.has('for')) this.resolveViewer();
   }
 

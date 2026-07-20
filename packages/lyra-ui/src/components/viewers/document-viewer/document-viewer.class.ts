@@ -82,6 +82,7 @@ export class LyraDocumentViewer extends LyraElement<LyraDocumentViewerEventMap> 
   private resolvedLazy?: { def: DocumentRendererDefinition; resolved: DocumentRendererDefinition };
 
   protected willUpdate(changed: PropertyValues): void {
+    super.willUpdate(changed);
     if (
       !this.hasUpdated ||
       changed.has('name') ||

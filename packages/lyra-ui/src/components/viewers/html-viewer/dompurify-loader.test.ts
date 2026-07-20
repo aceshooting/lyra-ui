@@ -11,6 +11,12 @@ it('loads dompurify and caches the resolved module', async () => {
   expect(second).to.equal(first);
 });
 
+it('falls back to the bare module namespace when the dynamic import has no .default', async () => {
+  const bareModule = { sanitize: (value: string) => value };
+  const resolved = await loadHtmlSanitizerDeps(() => Promise.resolve(bareModule));
+  expect(resolved).to.equal(bareModule);
+});
+
 it('returns null and logs the import error when dompurify is unavailable', async () => {
   const importError = new Error('dompurify boom');
   const originalWarn = console.warn;

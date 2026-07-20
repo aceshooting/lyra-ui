@@ -63,12 +63,28 @@ describe('lr-csv-viewer', () => {
     const restore = fetchText(CSV);
     try { el.src = 'https://example.test/people.csv'; await waitUntil(() => el.shadowRoot!.querySelector('lr-virtual-list') !== null); expect(el.shadowRoot!.querySelector('[part="header-row"]')).to.not.exist; expect((el.shadowRoot!.querySelector('lr-virtual-list') as HTMLElement & { items: unknown[][] }).items).to.have.lengthOf(3); } finally { restore(); }
   });
+  it('accepts has-header-row="false" as a plain-HTML attribute string, not only a property binding', async () => {
+    // Regression test: Lit's default presence-based Boolean converter treats ANY attribute value,
+    // including the literal string "false", as true -- a true-defaulting property needs a
+    // custom converter (mirrors lr-task-list's trueDefaultBooleanConverter) for plain markup to be
+    // able to turn it off at all.
+    const el = (await fixture(html`<lr-csv-viewer has-header-row="false"></lr-csv-viewer>`)) as LyraCsvViewer;
+    expect(el.hasHeaderRow).to.be.false;
+  });
   it('is accessible', async () => { const el = await fixture(html`<lr-csv-viewer></lr-csv-viewer>`); await expect(el).to.be.accessible(); });
   it('uses name as the accessible name, falling back to a localized default', async () => {
     const named = (await fixture(html`<lr-csv-viewer name="quarterly.csv"></lr-csv-viewer>`)) as LyraCsvViewer;
     expect(named.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('quarterly.csv');
     const unnamed = (await fixture(html`<lr-csv-viewer></lr-csv-viewer>`)) as LyraCsvViewer;
     expect(unnamed.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('CSV document');
+  });
+  it('supports a .strings override for the csvViewerLabel fallback', async () => {
+    const el = (await fixture(html`<lr-csv-viewer .strings=${{ csvViewerLabel: 'Document CSV' }}></lr-csv-viewer>`)) as LyraCsvViewer;
+    expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('Document CSV');
+  });
+  it('applies max-height as a custom property on the base part', async () => {
+    const el = (await fixture(html`<lr-csv-viewer max-height="20rem"></lr-csv-viewer>`)) as LyraCsvViewer;
+    expect((el.shadowRoot!.querySelector('[part="base"]') as HTMLElement).style.getPropertyValue('--lr-csv-viewer-max-height')).to.equal('20rem');
   });
 
   describe('cell-range anchor-target', () => {
@@ -302,6 +318,38 @@ describe('lr-csv-viewer', () => {
         expect(highlighted.getAttribute('role')).to.equal('button');
         await expect(el).to.be.accessible();
       } finally { restore(); }
+    });
+  });
+
+  describe('overflow', () => {
+    it('pins overflow-y on [part="sheet"] alongside its overflow-x, avoiding a phantom scrollbar', async () => {
+      // Per the CSS overflow spec, pinning only overflow-x to a non-'visible' value forces
+      // overflow-y's used value to 'auto' too (never stays 'visible') -- risking a phantom/empty
+      // vertical scrollbar from sub-pixel rounding on a grid that never actually overflows
+      // vertically (the same bug shape already fixed on lr-tabs). Pin both axes explicitly.
+      const el = (await fixture(html`<lr-csv-viewer></lr-csv-viewer>`)) as LyraCsvViewer;
+      const restore = fetchText(CSV);
+      try {
+        el.src = 'https://example.test/people.csv';
+        await waitUntil(() => el.shadowRoot!.querySelector('[part="sheet"]') !== null);
+        const sheet = el.shadowRoot!.querySelector('[part="sheet"]') as HTMLElement;
+        expect(getComputedStyle(sheet).overflowX).to.equal('auto');
+        expect(getComputedStyle(sheet).overflowY).to.equal('hidden');
+      } finally { restore(); }
+    });
+  });
+
+  describe('cell-highlight hover state', () => {
+    it('gives lr-virtual-list::part(cell-highlight) a :hover rule alongside its :focus-visible ring', async () => {
+      // jsdom/wtr don't synthesize a real :hover pseudo-class from a dispatched event, so this
+      // asserts the internal rule exists directly via the adopted stylesheet text (mirrors
+      // lr-task-list's identical hover-rule test).
+      const el = (await fixture(html`<lr-csv-viewer></lr-csv-viewer>`)) as LyraCsvViewer;
+      const rule = (el.shadowRoot!.adoptedStyleSheets ?? [])
+        .flatMap((sheet) => Array.from(sheet.cssRules))
+        .map((cssRule) => cssRule.cssText)
+        .find((text) => text.includes(':hover') && text.includes('cell-highlight'));
+      expect(rule).to.exist;
     });
   });
 

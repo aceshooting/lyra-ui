@@ -3,11 +3,17 @@ import type { OptionalPeerApi } from '../../../internal/optional-peer-types.js';
 let sanitizer: Promise<OptionalPeerApi | null> | undefined;
 
 export async function loadNotebookSanitizerDeps(
-  importDompurify: () => Promise<{ default: OptionalPeerApi }> = () =>
-    import('dompurify') as Promise<{ default: OptionalPeerApi }>,
+  importDompurify: () => Promise<OptionalPeerApi | { default: OptionalPeerApi }> = () =>
+    import('dompurify') as Promise<OptionalPeerApi | { default: OptionalPeerApi }>,
 ): Promise<OptionalPeerApi | null> {
   try {
-    return (await importDompurify()).default;
+    // Different bundler/interop configurations resolve a CJS-published optional peer as either
+    // `{ default: X }` or the bare module namespace -- trusting `.default` unconditionally would
+    // silently substitute `undefined` for the real sanitizer under the other resolution, same
+    // dual-shape tolerance spreadsheet-loader.ts/qr-code-loader.ts already apply.
+    const module = await importDompurify();
+    const candidate = (module as { default?: OptionalPeerApi }).default;
+    return candidate && typeof candidate.sanitize === 'function' ? candidate : (module as OptionalPeerApi);
   } catch (error) {
     console.warn(
       '<lr-notebook-viewer> needs the optional peer dependency `dompurify` to render raw HTML/SVG cell outputs — install it with `pnpm add dompurify`:',

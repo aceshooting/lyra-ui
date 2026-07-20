@@ -1,7 +1,9 @@
 import { aTimeout, expect, fixture, html, oneEvent, waitUntil } from '@open-wc/testing';
+import type { PropertyValues } from 'lit';
 import './svg-viewer.js';
 import type { LyraSvgViewer } from './svg-viewer.js';
 import { styles } from './svg-viewer.styles.js';
+import { LyraElement } from '../../../internal/lyra-element.js';
 
 function response(body: string, ok = true): Response {
   return { ok, status: ok ? 200 : 500, statusText: ok ? 'OK' : 'Error', text: () => Promise.resolve(body) } as Response;
@@ -39,6 +41,48 @@ describe('lr-svg-viewer', () => {
     }
   });
 
+  it('forwards a host aria-label to the role="img" content region, winning over the localized default', async () => {
+    const restore = fetchSvg('<svg xmlns="http://www.w3.org/2000/svg"><circle r="5"/></svg>');
+    try {
+      const el = (await fixture(
+        html`<lr-svg-viewer src="https://example.test/a.svg" aria-label="Revenue trend chart"></lr-svg-viewer>`,
+      )) as LyraSvgViewer;
+      await waitUntil(() => el.shadowRoot!.querySelector('[part="svg"]') !== null);
+      expect(el.shadowRoot!.querySelector('[part="svg"]')!.getAttribute('aria-label')).to.equal('Revenue trend chart');
+    } finally {
+      restore();
+    }
+  });
+
+  it('lets an explicit host aria-label win over the name-derived fallback', async () => {
+    // Matches pdf-viewer/notebook-viewer/xml-viewer's identical precedence: a consumer-supplied
+    // host aria-label overrides an also-set `name`, rather than `name` silently discarding it.
+    const restore = fetchSvg('<svg xmlns="http://www.w3.org/2000/svg"><circle r="5"/></svg>');
+    try {
+      const el = (await fixture(
+        html`<lr-svg-viewer src="https://example.test/a.svg" name="Chart" aria-label="Revenue trend chart"></lr-svg-viewer>`,
+      )) as LyraSvgViewer;
+      await waitUntil(() => el.shadowRoot!.querySelector('[part="svg"]') !== null);
+      expect(el.shadowRoot!.querySelector('[part="svg"]')!.getAttribute('aria-label')).to.equal('Revenue trend chart');
+    } finally {
+      restore();
+    }
+  });
+
+  it('supports a .strings override for the svgViewerLabel fallback', async () => {
+    const el = (await fixture(
+      html`<lr-svg-viewer .strings=${{ svgViewerLabel: 'Visionneuse SVG' }}></lr-svg-viewer>`,
+    )) as LyraSvgViewer;
+    const restore = fetchSvg('<svg xmlns="http://www.w3.org/2000/svg"><circle r="5"/></svg>');
+    try {
+      el.src = 'https://example.test/a.svg';
+      await waitUntil(() => el.shadowRoot!.querySelector('[part="svg"]') !== null);
+      expect(el.shadowRoot!.querySelector('[part="svg"]')!.getAttribute('aria-label')).to.equal('Visionneuse SVG');
+    } finally {
+      restore();
+    }
+  });
+
   it('rejects unsafe URLs and emits render errors for failed fetches', async () => {
     const el = (await fixture(html`<lr-svg-viewer src="javascript:alert(1)"></lr-svg-viewer>`)) as LyraSvgViewer;
     await el.updateComplete;
@@ -60,12 +104,67 @@ describe('lr-svg-viewer', () => {
     await expect(el).to.be.accessible();
   });
 
+  it('calls super.updated so a future LyraElement/mixin lifecycle hook stays wired in', async () => {
+    // Regression test: updated() previously scheduled the src-triggered load with no super.updated()
+    // call at all -- unlike every sibling viewer (csv-viewer, docx-viewer, pdf-viewer), which all
+    // chain to LyraElement's own updated(). Monkey-patches the shared prototype (the established
+    // pattern, e.g. token-input.test.ts) to prove LyraSvgViewer's own override actually reaches it.
+    const proto = LyraElement.prototype as unknown as { updated: (changed: PropertyValues) => void };
+    const original = proto.updated;
+    let called = false;
+    proto.updated = function (this: LyraElement, changed: PropertyValues): void {
+      called = true;
+      original.call(this, changed);
+    };
+    try {
+      const el = (await fixture(html`<lr-svg-viewer></lr-svg-viewer>`)) as LyraSvgViewer;
+      await el.updateComplete;
+      expect(called).to.be.true;
+    } finally {
+      proto.updated = original;
+    }
+  });
+
   it('lets the host shrink below its content in a narrow flex/grid track instead of overflowing it', () => {
     const css = styles.cssText.replace(/\s+/g, ' ');
     const hostBlock = /:host\s*{([^}]*)}/.exec(css);
     expect(hostBlock, 'expected a :host rule').to.not.equal(null);
     expect(hostBlock![1]).to.include('min-inline-size: 0;');
     expect(hostBlock![1]).to.include('max-inline-size: 100%;');
+  });
+
+  it('resolves min-inline-size/max-inline-size as live computed styles on a rendered host, not just stylesheet source text', async () => {
+    // Regression test for the same rule the cssText assertion above only proves exists in the
+    // stylesheet source -- a typo, or the declaration moving to a selector that no longer matches
+    // the host, would not be caught there. getComputedStyle() on an actually-rendered instance
+    // proves the rule is live and resolves as specified.
+    const el = (await fixture(html`<lr-svg-viewer></lr-svg-viewer>`)) as LyraSvgViewer;
+    const computed = getComputedStyle(el);
+    expect(computed.minInlineSize).to.equal('0px');
+    expect(computed.maxInlineSize).to.equal('100%');
+  });
+
+  it('actually shrinks to its allocation and never forces a real narrow grid track to overflow, rendered', async () => {
+    // Complements the assertions above (which prove the :host declaration is live but not that
+    // the resulting layout behaves) by mounting inside a real, fixed-width CSS grid track with
+    // wide fetched SVG content, then measuring actual computed/laid-out geometry -- matching the
+    // class doc's "flex/grid track" framing -- instead of only inspecting stylesheet text.
+    const wrap = (await fixture(html`
+      <div style="display:grid; inline-size:120px; grid-template-columns: 120px;">
+        <lr-svg-viewer></lr-svg-viewer>
+      </div>
+    `)) as HTMLElement;
+    const el = wrap.querySelector('lr-svg-viewer') as LyraSvgViewer;
+    const restore = fetchSvg('<svg xmlns="http://www.w3.org/2000/svg" width="600" height="200"><circle r="5"/></svg>');
+    try {
+      el.src = 'https://example.test/wide.svg';
+      await waitUntil(() => el.shadowRoot!.querySelector('[part="svg"]') !== null);
+      await el.updateComplete;
+      expect(el.getBoundingClientRect().width).to.be.closeTo(120, 1);
+      expect(wrap.scrollWidth).to.equal(wrap.clientWidth);
+    } finally {
+      restore();
+    }
   });
 });
 
@@ -98,6 +197,18 @@ describe('zoomable', () => {
 });
 
 describe('region highlights', () => {
+  it('gives the region-highlight part both a :hover and a :focus-visible rule', () => {
+    // Regression test: region-highlight is a real interactive control (role=button, tabindex=0,
+    // click + Enter/Space handlers) but previously had neither -- a mouse user saw only a static
+    // bordered box with a pointer cursor, and a keyboard user tabbing through several highlights got
+    // no visible indication of which was focused. getComputedStyle can't synthesize a real :hover
+    // state without dispatching pointer events the wtr harness can't simulate, so (matching
+    // commit-card.test.ts's identical convention) this asserts against the stylesheet source text.
+    const css = styles.cssText.replace(/\s+/g, ' ');
+    expect(css).to.match(/\[part='region-highlight'\]:hover/);
+    expect(css).to.match(/\[part='region-highlight'\]:focus-visible/);
+  });
+
   it('renders a focusable region-highlight positioned by percent-unit rect', async () => {
     const el = (await fixture(html`<lr-svg-viewer></lr-svg-viewer>`)) as LyraSvgViewer;
     const restore = fetchSvg('<svg xmlns="http://www.w3.org/2000/svg"><circle r="5"/></svg>');

@@ -521,6 +521,23 @@ describe('notebookLanguage', () => {
   });
 });
 
+describe('i18n', () => {
+  it('honors a strings override for the default accessible label and the invalid-notebook error', async () => {
+    const el = (await fixture(html`<lr-notebook-viewer></lr-notebook-viewer>`)) as LyraNotebookViewer;
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('Notebook viewer');
+    el.strings = { notebookViewerLabel: 'Visionneuse de bloc-notes', notebookViewerInvalid: 'Bloc-notes invalide.' };
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('Visionneuse de bloc-notes');
+
+    const eventPromise = oneEvent(el, 'lr-render-error');
+    el.notebook = { not: 'a notebook' };
+    await eventPromise;
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('[part="error"]')!.textContent).to.equal('Bloc-notes invalide.');
+  });
+});
+
 describe('accessibility', () => {
   it('is accessible with a rendered notebook', async () => {
     const el = await fixture(html`<lr-notebook-viewer name="demo.ipynb" .notebook=${NOTEBOOK}></lr-notebook-viewer>`);

@@ -11,6 +11,27 @@ const SAMPLE_EML = [
 const TEXT_EML = ['From: Ada <ada@example.test>', 'Subject: Plain note', 'Content-Type: text/plain; charset=utf-8', '', 'See you at noon.', ''].join('\r\n');
 const EVIL_EML = ['Subject: Evil', 'Content-Type: text/html; charset=utf-8', '', '<p onclick="bad()">Click</p><script>bad()</script>', ''].join('\r\n');
 
+const LONG_FILENAME = 'ThisIsAnIntentionallyVeryLongUnbrokenAttachmentFileNameWithoutAnySpacesOrHyphensForcingOverflow.txt';
+const LONG_FILENAME_ATTACHMENT_EML = [
+  'From: Ada <ada@example.test>',
+  'Subject: Report attached',
+  'Content-Type: multipart/mixed; boundary="BOUNDARY"',
+  '',
+  '--BOUNDARY',
+  'Content-Type: text/plain; charset=utf-8',
+  '',
+  'See attached.',
+  '',
+  '--BOUNDARY',
+  `Content-Type: text/plain; name="${LONG_FILENAME}"`,
+  `Content-Disposition: attachment; filename="${LONG_FILENAME}"`,
+  'Content-Transfer-Encoding: base64',
+  '',
+  typeof Buffer !== 'undefined' ? Buffer.from('hello attachment').toString('base64') : btoa('hello attachment'),
+  '--BOUNDARY--',
+  '',
+].join('\r\n');
+
 const ATTACHMENT_EML = [
   'From: Ada <ada@example.test>',
   'Subject: Report attached',
@@ -170,6 +191,31 @@ describe('lr-email-viewer', () => {
     await expect(el).to.be.accessible();
   });
 
+  it('is accessible once a message has loaded (headers grid, attachment list/buttons)', async () => {
+    const { el, restore } = await loaded(ATTACHMENT_EML);
+    try {
+      expect(el.shadowRoot!.querySelectorAll('[part="headers"]').length).to.equal(1);
+      expect(el.shadowRoot!.querySelectorAll('[part="attachment-button"]').length).to.be.greaterThan(0);
+      await expect(el).to.be.accessible();
+    } finally {
+      restore();
+    }
+  });
+
+  it('is accessible with the quote-fold toggle expanded', async () => {
+    const restore = stubFetch(QUOTED_TEXT_EML);
+    try {
+      const el = await fixture<LyraEmailViewer>(html`<lr-email-viewer fold-quotes src="https://example.test/message.eml"></lr-email-viewer>`);
+      await waitUntil(() => el.shadowRoot!.querySelector('[part="quote-toggle"]') !== null);
+      (el.shadowRoot!.querySelector('[part="quote-toggle"]') as HTMLButtonElement).click();
+      await el.updateComplete;
+      expect(el.shadowRoot!.querySelector('[part="quoted"]')!.hasAttribute('hidden')).to.be.false;
+      await expect(el).to.be.accessible();
+    } finally {
+      restore();
+    }
+  });
+
   it('uses name as the accessible name, falling back to a host aria-label and then a localized default', async () => {
     const named = await fixture<LyraEmailViewer>(html`<lr-email-viewer name="message.eml"></lr-email-viewer>`);
     expect(named.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('message.eml');
@@ -218,6 +264,52 @@ describe('lr-email-viewer', () => {
         button.focus();
         button.click(); // jsdom-free Chromium test environment: Enter on a focused <button> triggers click natively
         await listener;
+      } finally {
+        restore();
+      }
+    });
+
+    it('localizes the attachment file-size unit via this.localize(), not a hardcoded English abbreviation', async () => {
+      // 'hello attachment' is 16 bytes -- under the 1024 threshold, so this exercises the 'B' unit.
+      const restore = stubFetch(ATTACHMENT_EML);
+      try {
+        const el = await fixture<LyraEmailViewer>(
+          html`<lr-email-viewer src="https://example.test/message.eml" .strings=${{ fileSizeUnitB: 'o' }}></lr-email-viewer>`,
+        );
+        await waitUntil(() => el.shadowRoot!.querySelector('[part="body"]') !== null);
+        const button = el.shadowRoot!.querySelector('[part="attachment-button"]') as HTMLButtonElement;
+        const sizeText = button.querySelectorAll('span')[1]!.textContent;
+        expect(sizeText).to.equal('16 o');
+      } finally {
+        restore();
+      }
+    });
+
+    it('defaults to the English file-size unit abbreviation when no strings override is set', async () => {
+      const { el, restore } = await loaded(ATTACHMENT_EML);
+      try {
+        const button = el.shadowRoot!.querySelector('[part="attachment-button"]') as HTMLButtonElement;
+        const sizeText = button.querySelectorAll('span')[1]!.textContent;
+        expect(sizeText).to.equal('16 B');
+      } finally {
+        restore();
+      }
+    });
+
+    it('lets a no-space filename shrink/wrap inside a narrow host instead of overflowing the row', async () => {
+      const restore = stubFetch(LONG_FILENAME_ATTACHMENT_EML);
+      try {
+        const el = await fixture<LyraEmailViewer>(
+          html`<lr-email-viewer style="width: 220px" src="https://example.test/message.eml"></lr-email-viewer>`,
+        );
+        await waitUntil(() => el.shadowRoot!.querySelector('[part="body"]') !== null);
+        const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+        const button = el.shadowRoot!.querySelector('[part="attachment-button"]') as HTMLButtonElement;
+        expect(button.querySelector('span')!.textContent).to.equal(LONG_FILENAME);
+        // [part='base'] clips overflow (overflow: hidden) -- its scrollWidth reports the full
+        // unclipped layout size, so a mismatch against clientWidth confirms the long filename
+        // forced the row past the host's own allocation instead of shrinking/eliding.
+        expect(base.scrollWidth, 'the long filename must not force [part="base"] to overflow its own allocation').to.be.at.most(base.clientWidth);
       } finally {
         restore();
       }

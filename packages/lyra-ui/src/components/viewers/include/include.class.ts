@@ -101,6 +101,7 @@ export class LyraInclude extends LyraElement<LyraIncludeEventMap> {
   private generation = 0;
 
   protected updated(changed: PropertyValues): void {
+    super.updated(changed);
     if (changed.has('src') || changed.has('mode')) {
       this.scheduleAfterUpdate(() => { void this.load(); });
     }

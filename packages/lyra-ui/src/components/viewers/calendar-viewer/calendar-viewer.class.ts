@@ -49,6 +49,7 @@ export class LyraCalendarViewer extends LyraElement<LyraCalendarViewerEventMap> 
   private generation = 0;
 
   protected updated(changed: PropertyValues): void {
+    super.updated(changed);
     if (changed.has('src')) this.scheduleAfterUpdate(() => { void this.load(); });
   }
 
@@ -84,7 +85,6 @@ export class LyraCalendarViewer extends LyraElement<LyraCalendarViewerEventMap> 
         location: event.location ?? '', description: event.description ?? '',
       } as ParsedCalendarEvent;
     });
-    if (!events.length) throw new LyraUserFacingError(this.localize('calendarViewerEmpty'));
     return events;
   }
 
@@ -94,7 +94,7 @@ export class LyraCalendarViewer extends LyraElement<LyraCalendarViewerEventMap> 
 
   private renderBody(): TemplateResult {
     switch (this.fetchState.kind) {
-      case 'loaded': return html`<ul part="event-list">${this.fetchState.events.map((event) => this.renderEvent(event))}</ul>`;
+      case 'loaded': return this.fetchState.events.length ? html`<ul part="event-list">${this.fetchState.events.map((event) => this.renderEvent(event))}</ul>` : html`<p class="empty-note">${this.localize('calendarViewerEmpty')}</p>`;
       case 'loading': return html`<div part="spinner" role="status"><span class="sr-only">${this.localize('loadingDocument')}</span></div>`;
       case 'error': return html`<div part="error" role="alert">${this.fetchState.message}</div>`;
       case 'idle': default: return html`<p class="empty-note">${this.localize('documentPreviewEmpty', undefined, { type: this.localize('documentPreviewTypeCalendar') })}</p>`;

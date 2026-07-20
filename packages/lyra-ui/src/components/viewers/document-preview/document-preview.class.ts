@@ -234,7 +234,8 @@ export class LyraDocumentPreview extends LyraElement<LyraDocumentPreviewEventMap
   // same guard <lr-tool-result-view>'s resolve() uses.
   private generation = 0;
 
-  protected willUpdate(): void {
+  protected willUpdate(changed: PropertyValues): void {
+    super.willUpdate(changed);
     if (!this.hasUpdated) {
       this.hasUnsupportedSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'unsupported');
     }

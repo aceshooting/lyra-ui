@@ -45,6 +45,7 @@ export class LyraHtmlViewer extends LyraElement<LyraHtmlViewerEventMap> {
   private generation = 0;
 
   protected updated(changed: PropertyValues): void {
+    super.updated(changed);
     if (changed.has('src')) this.scheduleAfterUpdate(() => { void this.load(); });
   }
 
@@ -71,7 +72,7 @@ export class LyraHtmlViewer extends LyraElement<LyraHtmlViewerEventMap> {
 
   private renderBody(): TemplateResult {
     switch (this.fetchState.kind) {
-      case 'loaded': return html`<div part="html" role="document" aria-label=${this.name || this.localize('htmlViewerLabel')}>${unsafeHTML(this.fetchState.markup)}</div>`;
+      case 'loaded': return html`<div part="html" role="document" aria-label=${this.name || this.getAttribute('aria-label') || this.localize('htmlViewerLabel')}>${unsafeHTML(this.fetchState.markup)}</div>`;
       case 'loading': return html`<div part="spinner" role="status"><span class="sr-only">${this.localize('loadingDocument')}</span></div>`;
       case 'error': return html`<div part="error" role="alert">${this.fetchState.message}</div>`;
       case 'idle':

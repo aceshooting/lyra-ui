@@ -24,6 +24,28 @@ describe('lr-html-viewer', () => {
       expect(el.shadowRoot!.querySelector('[part="html"]')!.getAttribute('aria-label')).to.equal('Report');
     } finally { window.fetch = original; }
   });
+  it('forwards a host aria-label to the role="document" content region, winning over the localized default', async () => {
+    const original = window.fetch;
+    window.fetch = (() => Promise.resolve(response('<p>Safe</p>'))) as typeof window.fetch;
+    try {
+      const el = (await fixture(
+        html`<lr-html-viewer src="https://example.test/a.html" aria-label="Q3 report"></lr-html-viewer>`,
+      )) as LyraHtmlViewer;
+      await waitUntil(() => el.shadowRoot!.querySelector('[part="html"]') !== null);
+      expect(el.shadowRoot!.querySelector('[part="html"]')!.getAttribute('aria-label')).to.equal('Q3 report');
+    } finally { window.fetch = original; }
+  });
+  it('prefers the name property over a host aria-label, which in turn wins over the localized default', async () => {
+    const original = window.fetch;
+    window.fetch = (() => Promise.resolve(response('<p>Safe</p>'))) as typeof window.fetch;
+    try {
+      const el = (await fixture(
+        html`<lr-html-viewer src="https://example.test/a.html" name="Named report" aria-label="Q3 report"></lr-html-viewer>`,
+      )) as LyraHtmlViewer;
+      await waitUntil(() => el.shadowRoot!.querySelector('[part="html"]') !== null);
+      expect(el.shadowRoot!.querySelector('[part="html"]')!.getAttribute('aria-label')).to.equal('Named report');
+    } finally { window.fetch = original; }
+  });
   it('rejects unsafe URLs and emits lr-render-error with a rendered failure message for a failed fetch', async () => {
     const el = (await fixture(html`<lr-html-viewer src="javascript:alert(1)"></lr-html-viewer>`)) as LyraHtmlViewer;
     await el.updateComplete;
@@ -59,4 +81,16 @@ describe('lr-html-viewer', () => {
     expect(el.shadowRoot!.querySelector('.empty-note')!.textContent).to.equal('Aucun document à afficher.');
   });
   it('is accessible', async () => { const el = await fixture(html`<lr-html-viewer></lr-html-viewer>`); await expect(el).to.be.accessible(); });
+  it('is accessible once real sanitized HTML content is loaded', async () => {
+    const original = window.fetch;
+    window.fetch = (() =>
+      Promise.resolve(response('<h1>Report</h1><p>Some <a href="https://example.test">text</a>.</p>'))) as typeof window.fetch;
+    try {
+      const el = (await fixture(
+        html`<lr-html-viewer src="https://example.test/a.html" name="Report"></lr-html-viewer>`,
+      )) as LyraHtmlViewer;
+      await waitUntil(() => el.shadowRoot!.querySelector('[part="html"] h1') !== null);
+      await expect(el).to.be.accessible();
+    } finally { window.fetch = original; }
+  });
 });

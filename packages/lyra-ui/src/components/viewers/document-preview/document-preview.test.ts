@@ -874,6 +874,15 @@ describe('region highlights (image format)', () => {
     expect(ok).to.be.true;
     expect(scrolled).to.deep.equal(['h2']);
   });
+
+  it('gives the clickable region-highlight overlay a :hover rule matching its cursor:pointer/:focus-visible affordance', () => {
+    // Browser test runners don't synthesize a real :hover pseudo-class from a dispatched event
+    // (same constraint documented at tabs.test.ts's identical stylesheet-source check), so this
+    // asserts against the parsed stylesheet rather than a forced pseudo-state.
+    const css = styles.cssText.replace(/\s+/g, ' ');
+    expect(css).to.match(/\[part='region-highlight'\]:hover/);
+    expect(css).to.match(/\[part='region-highlight'\]:focus-visible/);
+  });
 });
 
 describe('back-compat (image format)', () => {

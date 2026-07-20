@@ -1,6 +1,7 @@
 import { fixture, expect, html, oneEvent } from '@open-wc/testing';
 import './highlight-layer.js';
 import type { LyraHighlightLayer, HighlightLayerItem } from './highlight-layer.js';
+import { styles } from './highlight-layer.styles.js';
 
 const ITEMS: HighlightLayerItem[] = [
   { id: 'a', rects: [{ x: 10, y: 10, width: 20, height: 5 }], label: 'Zone A', tone: 'accent' },
@@ -97,6 +98,16 @@ describe('lr-highlight-layer', () => {
     expect(rect.hasAttribute('tabindex')).to.be.false;
   });
 
+  it('interactive="false" (plain HTML attribute) also removes role/tabindex from rects', async () => {
+    const el = await fixture<LyraHighlightLayer>(
+      html`<lr-highlight-layer interactive="false" .items=${ITEMS}></lr-highlight-layer>`,
+    );
+    expect(el.interactive).to.be.false;
+    const rect = el.shadowRoot!.querySelector('[part="rect"]') as HTMLElement;
+    expect(rect.hasAttribute('role')).to.be.false;
+    expect(rect.hasAttribute('tabindex')).to.be.false;
+  });
+
   it('flash(id) sets data-flash on the matching rect then clears it', async () => {
     const el = await fixture<LyraHighlightLayer>(html`<lr-highlight-layer .items=${ITEMS}></lr-highlight-layer>`);
     el.flash('a');
@@ -109,5 +120,34 @@ describe('lr-highlight-layer', () => {
   it('is accessible with items present', async () => {
     const el = await fixture<LyraHighlightLayer>(html`<lr-highlight-layer .items=${ITEMS}></lr-highlight-layer>`);
     await expect(el).to.be.accessible();
+  });
+
+  it('resolves rect and group labels through a .strings override', async () => {
+    const el = await fixture<LyraHighlightLayer>(html`
+      <lr-highlight-layer
+        aria-label="ignored-for-this-test"
+        .items=${ITEMS}
+        .strings=${{
+          highlightWithLabel: 'Surlignage : {label}',
+          highlightOfTotal: 'Surlignage {index} sur {total}',
+          highlightLayerLabel: 'Calque de surlignage',
+        }}
+      ></lr-highlight-layer>
+    `);
+    const rects = el.shadowRoot!.querySelectorAll('[part="rect"]');
+    expect(rects[0].getAttribute('aria-label')).to.equal('Surlignage : Zone A');
+    expect(rects[1].getAttribute('aria-label')).to.equal('Surlignage 2 sur 2');
+  });
+
+  it('resolves the group aria-label through a .strings override when no host aria-label is set', async () => {
+    const el = await fixture<LyraHighlightLayer>(html`
+      <lr-highlight-layer .items=${ITEMS} .strings=${{ highlightLayerLabel: 'Calque de surlignage' }}></lr-highlight-layer>
+    `);
+    expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('Calque de surlignage');
+  });
+
+  it('gives an interactive rect a hover state matching its focus-visible affordance', () => {
+    const css = styles.cssText.replace(/\s+/g, ' ');
+    expect(css).to.match(/\[part='rect'\]:hover/);
   });
 });

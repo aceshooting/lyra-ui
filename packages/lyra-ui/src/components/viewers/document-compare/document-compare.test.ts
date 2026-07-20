@@ -149,6 +149,11 @@ describe('lr-document-compare', () => {
       expect(el.syncScroll).to.be.true;
     });
 
+    it('honors the plain HTML attribute form sync-scroll="false"', async () => {
+      const el = (await fixture(html`<lr-document-compare sync-scroll="false"></lr-document-compare>`)) as LyraDocumentCompare;
+      expect(el.syncScroll).to.be.false;
+    });
+
     it('proportionally mirrors scroll position from pane-old to pane-new by default', async () => {
       const el = await sideBySideFixture();
       const paneOld = el.shadowRoot!.querySelector('[part="pane-old"]') as HTMLElement;

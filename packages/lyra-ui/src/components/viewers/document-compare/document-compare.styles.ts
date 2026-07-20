@@ -35,6 +35,7 @@ export const styles = css`
     border-radius: var(--lr-radius);
     padding: var(--lr-space-m);
     max-block-size: var(--lr-document-compare-pane-max-height);
+    overflow-x: hidden;
     overflow-y: auto;
   }
   [part='pane-old']:focus-visible,

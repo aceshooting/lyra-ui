@@ -72,6 +72,7 @@ export class LyraSvgViewer extends LyraElement<LyraSvgViewerEventMap> {
   private generation = 0;
 
   protected updated(changed: PropertyValues): void {
+    super.updated(changed);
     if (changed.has('src')) this.scheduleAfterUpdate(() => { void this.load(); });
   }
 
@@ -109,7 +110,7 @@ export class LyraSvgViewer extends LyraElement<LyraSvgViewerEventMap> {
     switch (this.fetchState.kind) {
       case 'loaded':
         return this.renderZoomableWrapper(
-          html`<div part="svg" role="img" aria-label=${this.name || this.localize('svgViewerLabel')}>${unsafeSVG(this.fetchState.markup)}</div>`,
+          html`<div part="svg" role="img" aria-label=${this.getAttribute('aria-label') || this.name || this.localize('svgViewerLabel')}>${unsafeSVG(this.fetchState.markup)}</div>`,
         );
       case 'loading':
         return html`<div part="spinner" role="status"><span class="sr-only">${this.localize('loadingDocument')}</span></div>`;

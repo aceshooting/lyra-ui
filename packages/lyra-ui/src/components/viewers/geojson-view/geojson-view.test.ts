@@ -116,6 +116,22 @@ describe('missing maplibre-gl peer', () => {
   });
 });
 
+describe('aria-label forwarding', () => {
+  it('forwards a host aria-label to [part="base"], winning over the localized default', async () => {
+    const el = (await fixture(
+      html`<lr-geojson-view aria-label="Zones"></lr-geojson-view>`,
+    )) as LyraGeojsonView;
+    expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('Zones');
+  });
+
+  it('prefers the name property over a host aria-label', async () => {
+    const el = (await fixture(
+      html`<lr-geojson-view name="Named zones" aria-label="Zones"></lr-geojson-view>`,
+    )) as LyraGeojsonView;
+    expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('Named zones');
+  });
+});
+
 describe('accessibility', () => {
   it('is accessible once loaded', async () => {
     stubFetch(FEATURE_COLLECTION);
