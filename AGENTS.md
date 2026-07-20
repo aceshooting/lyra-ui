@@ -130,6 +130,19 @@ files with `--write-budgets`; and
   state, or a hit test — never the stylesheet text. When you add a rule whose selector is unusual,
   prove it matches before trusting it: `CSS.supports('selector(...)')` for exotic selectors, and a
   deliberately-perturbed value to confirm the assertion actually bites.
+  Two cases of this now have a real check — `scripts/check-part-reachability.mjs`, in `pnpm lint`'s
+  contract-policy chain. It catches (a) a bare `[part='x']` selector for a part the component renders
+  through `<lr-virtual-list>`'s `renderItem`, which lands in *that* element's shadow root where the
+  selector can never reach, and (b) an invalid `::part()` compound. `::part(x)` is a pseudo-element,
+  so per Selectors L4 only *pseudo-classes* may follow it: `::part(x):hover`, `::part(x)::selection`
+  and the part-list form `::part(a b)` are fine, while `::part(x)[attr]`, `::part(x).cls` and
+  `::part(x) .descendant` all parse and silently never match. Encode state in the part name instead
+  (`part="page page-current"`), and note the specificity flip that comes with it —
+  `[part='x'][aria-current]` out-specified `[part='x']:hover`, but `::part(x-current)` and
+  `::part(x):hover` are equal, so the state arm usually needs its own `:hover` companion. A component
+  that legitimately renders the same parts into both its own shadow root and the virtual list's needs
+  both selectors and is exempt automatically; anything else genuinely exceptional takes a
+  `policy-allow(cross-root-part): reason` comment, the same marker `check-source-policy.mjs` uses.
 - **Granular, tree-shakeable exports.** Each component's `.ts` file is a side-effect-free
   class export; a matching side-effectful entry point registers the tag. `src/lyra.ts` is the
   barrel — side-effect imports for every component (registers all tags) plus named

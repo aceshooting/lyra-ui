@@ -588,6 +588,8 @@
     "test:types": "tsc --noEmit -p tsconfig.type-tests.json",
     "style-policy": "node scripts/check-style-policy.mjs",
     "check:source-policy": "node scripts/check-source-policy.mjs",
+    "check:part-reachability": "node scripts/check-part-reachability.mjs",
+    "test:part-reachability": "node scripts/check-part-reachability.test.mjs",
     "check:bundle-size": "node scripts/check-bundle-size.mjs",
     "codecov:bundle": "node scripts/check-bundle-size.mjs --emit=.codecov-bundle && node scripts/codecov-bundle.mjs",
     "provenance-policy": "node scripts/check-provenance.mjs",
@@ -601,7 +603,7 @@
     "llms-freshness": "node scripts/check-llms-freshness.mjs",
     "migrate-wa": "node scripts/migrate-wa.mjs",
     "test:migrate-wa": "node scripts/migrate-wa.test.mjs",
-    "contract-policy": "pnpm run style-policy && pnpm run check:source-policy && pnpm run provenance-policy && pnpm run contract-checklist && node scripts/check-component-coverage.mjs && pnpm run manifest:check && pnpm run manifest:coverage && pnpm run llms-freshness && pnpm run llms:check && pnpm run test:architecture && pnpm run check-side-effects",
+    "contract-policy": "pnpm run style-policy && pnpm run check:source-policy && pnpm run check:part-reachability && pnpm run test:part-reachability && pnpm run provenance-policy && pnpm run contract-checklist && node scripts/check-component-coverage.mjs && pnpm run manifest:check && pnpm run manifest:coverage && pnpm run llms-freshness && pnpm run llms:check && pnpm run test:architecture && pnpm run check-side-effects",
     "lint": "pnpm run contract-policy && tsc --noEmit -p tsconfig.json && pnpm run test:types",
     "prepack": "pnpm run build && pnpm run manifest && pnpm run generate-editor-data && pnpm run llms"
   },
