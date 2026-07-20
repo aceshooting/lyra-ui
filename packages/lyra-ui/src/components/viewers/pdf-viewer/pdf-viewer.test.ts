@@ -1520,3 +1520,218 @@ describe('styling', () => {
     expect(css).to.match(/\[part='toolbar'\] button:hover/);
   });
 });
+
+// Page content is committed inside `<lr-virtual-list>`'s own shadow root, one boundary below this
+// viewer's render root, so every rule for it has to travel through `::part()`. These assertions read
+// the *rendered* result of each such rule rather than the stylesheet text -- a selector that stops at
+// the boundary produces an element that still exists and still carries its `part` attribute, so only
+// a computed-style check can tell a live rule apart from an inert one.
+describe('virtualized page part styling', () => {
+  /** Resolves a design token to the exact color string the browser computes for it, by measuring a
+   *  throwaway element in the viewer's own shadow tree -- token values differ per color scheme and
+   *  under forced colors, so a hardcoded literal here would be both wrong and unthemeable. */
+  function tokenColor(el: LyraPdfViewer, token: string): string {
+    const probe = document.createElement('div');
+    probe.style.background = `var(${token})`;
+    el.shadowRoot!.appendChild(probe);
+    const value = getComputedStyle(probe).backgroundColor;
+    probe.remove();
+    return value;
+  }
+
+  async function loadedPage(el: LyraPdfViewer): Promise<ShadowRoot> {
+    el.src = 'https://example.test/report.pdf';
+    await waitFor(el, '[part="toolbar"]');
+    await waitUntil(() => listShadowRoot(el).querySelector('[part="text-layer"] span') !== null);
+    await el.updateComplete;
+    return listShadowRoot(el);
+  }
+
+  it('styles the page wrapper, its canvas, and its text layer', async () => {
+    const el = (await fixture(html`<lr-pdf-viewer></lr-pdf-viewer>`)) as LyraPdfViewer;
+    installFakeLoader(el, fakeDocument(1));
+    const restore = stubFetch();
+    try {
+      const root = await loadedPage(el);
+      const page = root.querySelector('[part="page"]') as HTMLElement;
+      const canvas = root.querySelector('[part="page-canvas"]') as HTMLElement;
+      const textLayer = root.querySelector('[part="text-layer"]') as HTMLElement;
+      expect(page.tagName).to.equal('DIV');
+      expect(canvas.tagName).to.equal('CANVAS');
+      expect(getComputedStyle(page).position).to.equal('relative');
+      expect(getComputedStyle(page).display).to.equal('flex');
+      expect(getComputedStyle(page).justifyContent).to.equal('center');
+      expect(getComputedStyle(canvas).boxShadow).to.contain(tokenColor(el, '--lr-color-border'));
+      expect(getComputedStyle(textLayer).position).to.equal('absolute');
+      expect(getComputedStyle(textLayer).overflow).to.equal('hidden');
+    } finally {
+      restore();
+    }
+  });
+
+  it('makes each generated text run an invisible, selectable overlay run', async () => {
+    const el = (await fixture(html`<lr-pdf-viewer></lr-pdf-viewer>`)) as LyraPdfViewer;
+    installFakeLoader(el, fakeDocument(1));
+    const restore = stubFetch();
+    try {
+      const root = await loadedPage(el);
+      const span = root.querySelector('[part="text-layer"] span') as HTMLElement;
+      expect(span.getAttribute('part')).to.equal('text-span');
+      expect(getComputedStyle(span).position).to.equal('absolute');
+      expect(getComputedStyle(span).color).to.equal('rgba(0, 0, 0, 0)');
+      expect(getComputedStyle(span).whiteSpace).to.equal('pre');
+      expect(getComputedStyle(span).userSelect).to.equal('text');
+    } finally {
+      restore();
+    }
+  });
+
+  // A highlight pseudo is matched against the element the selected text originates in, and `::part()`
+  // cannot be followed by a descendant combinator -- so the selection tint has to hang off the text
+  // run's own part rather than its text-layer container's.
+  it('tints the selection over a text run with the brand-quiet token', async () => {
+    const el = (await fixture(html`<lr-pdf-viewer></lr-pdf-viewer>`)) as LyraPdfViewer;
+    installFakeLoader(el, fakeDocument(1));
+    const restore = stubFetch();
+    try {
+      const root = await loadedPage(el);
+      const span = root.querySelector('[part="text-layer"] span') as HTMLElement;
+      expect(getComputedStyle(span, '::selection').backgroundColor).to.equal(tokenColor(el, '--lr-color-brand-quiet'));
+    } finally {
+      restore();
+    }
+  });
+
+  it('paints search matches and the active match with the warning tokens', async () => {
+    const el = (await fixture(html`<lr-pdf-viewer></lr-pdf-viewer>`)) as LyraPdfViewer;
+    // Single span, no trailing whitespace nodes: keeps the DOM and getPageText() coordinate spaces
+    // aligned so both matches provably paint.
+    class SingleSpanTextLayer {
+      constructor(private options: { container: HTMLElement }) {}
+      render(): Promise<void> {
+        const span = document.createElement('span');
+        span.textContent = 'aabaab';
+        this.options.container.appendChild(span);
+        return Promise.resolve();
+      }
+      cancel(): void {}
+    }
+    const doc = {
+      numPages: 1,
+      getPage: (pageNumber: number) =>
+        Promise.resolve({
+          ...fakePage(pageNumber),
+          getTextContent: () => Promise.resolve({ items: [{ str: 'aabaab', hasEOL: false }] }),
+        }),
+    };
+    (el as unknown as { loadLibrary: () => Promise<unknown> }).loadLibrary = () => Promise.resolve({
+      getDocument: () => ({ promise: Promise.resolve(doc) }),
+      GlobalWorkerOptions: { workerSrc: '' },
+      TextLayer: SingleSpanTextLayer,
+    });
+    const restore = stubFetch();
+    try {
+      el.src = 'https://example.test/report.pdf';
+      await waitFor(el, '[part="toolbar"]');
+      expect(await el.search('aab')).to.equal(2);
+      await el.updateComplete;
+      const root = listShadowRoot(el);
+      const marks = Array.from(root.querySelectorAll<HTMLElement>('mark[part~="search-match"]'));
+      expect(marks.length).to.equal(2);
+      const active = root.querySelector('mark[part~="search-match-active"]') as HTMLElement;
+      const inactive = marks.find((mark) => !mark.getAttribute('part')!.includes('search-match-active'))!;
+      expect(getComputedStyle(inactive).backgroundColor).to.equal(tokenColor(el, '--lr-color-warning-quiet'));
+      expect(getComputedStyle(inactive).color).to.equal('rgba(0, 0, 0, 0)');
+      expect(getComputedStyle(active).backgroundColor).to.equal(tokenColor(el, '--lr-color-warning'));
+    } finally {
+      restore();
+    }
+  });
+
+  it('mirrors the text layer offset under RTL', async () => {
+    const ltr = (await fixture(html`<lr-pdf-viewer></lr-pdf-viewer>`)) as LyraPdfViewer;
+    installFakeLoader(ltr, fakeDocument(1));
+    const rtl = (await fixture(html`<lr-pdf-viewer dir="rtl"></lr-pdf-viewer>`)) as LyraPdfViewer;
+    installFakeLoader(rtl, fakeDocument(1));
+    const restore = stubFetch();
+    try {
+      const ltrLayer = (await loadedPage(ltr)).querySelector('[part="text-layer"]') as HTMLElement;
+      const rtlLayer = (await loadedPage(rtl)).querySelector('[part="text-layer"]') as HTMLElement;
+      await waitUntil(() => ltrLayer.style.width !== '' && rtlLayer.style.width !== '');
+      expect(new DOMMatrix(getComputedStyle(ltrLayer).transform).m41).to.be.lessThan(0);
+      expect(new DOMMatrix(getComputedStyle(rtlLayer).transform).m41).to.be.greaterThan(0);
+    } finally {
+      restore();
+    }
+  });
+
+  it('exposes the page parts to a consumer stylesheet', async () => {
+    const host = (await fixture(html`<div>
+      <style>
+        lr-pdf-viewer::part(page) { outline-color: rgb(1, 2, 3); }
+        lr-pdf-viewer::part(page-canvas) { outline-color: rgb(4, 5, 6); }
+        lr-pdf-viewer::part(text-layer) { outline-color: rgb(7, 8, 9); }
+        lr-pdf-viewer::part(text-span) { outline-color: rgb(10, 11, 12); }
+      </style>
+      <lr-pdf-viewer></lr-pdf-viewer>
+    </div>`)) as HTMLElement;
+    const el = host.querySelector('lr-pdf-viewer') as LyraPdfViewer;
+    installFakeLoader(el, fakeDocument(1));
+    const restore = stubFetch();
+    try {
+      const root = await loadedPage(el);
+      expect(getComputedStyle(root.querySelector('[part="page"]')!).outlineColor).to.equal('rgb(1, 2, 3)');
+      expect(getComputedStyle(root.querySelector('[part="page-canvas"]')!).outlineColor).to.equal('rgb(4, 5, 6)');
+      expect(getComputedStyle(root.querySelector('[part="text-layer"]')!).outlineColor).to.equal('rgb(7, 8, 9)');
+      expect(getComputedStyle(root.querySelector('[part="text-span"]')!).outlineColor).to.equal('rgb(10, 11, 12)');
+    } finally {
+      restore();
+    }
+  });
+
+  it('exposes the search-match parts to a consumer stylesheet', async () => {
+    const host = (await fixture(html`<div>
+      <style>
+        lr-pdf-viewer::part(search-match) { outline-color: rgb(13, 14, 15); }
+        lr-pdf-viewer::part(search-match-active) { outline-color: rgb(16, 17, 18); }
+      </style>
+      <lr-pdf-viewer></lr-pdf-viewer>
+    </div>`)) as HTMLElement;
+    const el = host.querySelector('lr-pdf-viewer') as LyraPdfViewer;
+    installFakeLoader(el, fakeDocument(1));
+    const restore = stubFetch();
+    try {
+      el.src = 'https://example.test/report.pdf';
+      await waitFor(el, '[part="toolbar"]');
+      (el as unknown as { getPageText: (page: number) => Promise<string> }).getPageText = () =>
+        Promise.resolve('the cat sat on the mat');
+      await el.search('at');
+      await el.updateComplete;
+      const root = listShadowRoot(el);
+      const marks = Array.from(root.querySelectorAll<HTMLElement>('mark[part~="search-match"]'));
+      expect(marks.length).to.be.greaterThan(0);
+      const active = root.querySelector('mark[part~="search-match-active"]') as HTMLElement | null;
+      expect(getComputedStyle(marks[0]!).outlineColor).to.equal(active === marks[0] ? 'rgb(16, 17, 18)' : 'rgb(13, 14, 15)');
+    } finally {
+      restore();
+    }
+  });
+
+  it('is accessible with pages, text runs, and search matches rendered', async () => {
+    const el = (await fixture(html`<lr-pdf-viewer></lr-pdf-viewer>`)) as LyraPdfViewer;
+    installFakeLoader(el, fakeDocument(2));
+    const restore = stubFetch();
+    try {
+      const root = await loadedPage(el);
+      (el as unknown as { getPageText: (page: number) => Promise<string> }).getPageText = () =>
+        Promise.resolve('the cat sat on the mat');
+      await el.search('at');
+      await el.updateComplete;
+      expect(root.querySelectorAll('[part="text-span"]').length).to.be.greaterThan(0);
+      expect(root.querySelectorAll('[part~="search-match"]').length).to.be.greaterThan(0);
+      await expect(el).to.be.accessible();
+    } finally {
+      restore();
+    }
+  });
+});

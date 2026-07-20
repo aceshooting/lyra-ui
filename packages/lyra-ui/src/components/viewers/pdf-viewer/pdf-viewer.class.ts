@@ -142,7 +142,9 @@ class LyraPdfViewerBase extends LyraElement<LyraPdfViewerEventMap> {}
  * @csspart zoom-indicator - The current zoom percentage.
  * @csspart pages - The virtualized page list.
  * @csspart page - One rendered page wrapper.
+ * @csspart page-canvas - The canvas a page's content is painted onto.
  * @csspart text-layer - Selectable text positioned over a page canvas.
+ * @csspart text-span - One generated text run inside a page's text layer.
  * @csspart search-match - A painted in-document search match.
  * @csspart search-match-active - The currently active search match (also carries `search-match`).
  * @csspart error - The error message region.
@@ -1029,12 +1031,23 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
     this.textLayerReadyPromises.set(pageNumber, renderPromise);
     await renderPromise;
     if (this.textLayers.get(pageNumber) === textLayer) {
+      this.markTextRunParts(container);
       void this.resolvePageHighlights(pageNumber);
       // A page that mounts (or remounts, e.g. after a zoom change re-renders every visible page) while
       // it already has search matches needs its marks painted here too -- focusSearchMatch() only
       // paints the page it just navigated to, not every page that might scroll into view afterward.
       if (this.searchMatches.some((match) => match.page === pageNumber)) this.paintSearchMatches(pageNumber);
     }
+  }
+
+  /** Names every text run PDF.js just generated as a `text-span` part. The runs are created
+   *  imperatively by `TextLayer.render()`, and they land inside `<lr-virtual-list>`'s shadow root
+   *  along with the rest of the page item -- so the stylesheet reaches them through
+   *  `lr-virtual-list::part(text-span)`, which cannot be written as a descendant of the
+   *  `text-layer` part. Naming them also makes each run reachable from a consumer's own
+   *  `lr-pdf-viewer::part(text-span)` rule. */
+  private markTextRunParts(container: HTMLElement): void {
+    container.querySelectorAll('span, br').forEach((run) => run.setAttribute('part', 'text-span'));
   }
 
   private pageCanvasRef(pageNumber: number): (element: Element | undefined) => void {
@@ -1077,7 +1090,7 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
     const number = pageNumber as number;
     const highlightTransform = this.effectiveDirection === 'rtl' ? '50%' : '-50%';
     return html`<div part="page" @click=${(e: MouseEvent) => this.onPageClick(number, e)}>
-      <canvas ${ref(this.pageCanvasRef(number))}></canvas>
+      <canvas part="page-canvas" ${ref(this.pageCanvasRef(number))}></canvas>
       <lr-highlight-layer
         ${ref(this.highlightLayerRef(number))}
         style="position:absolute; inset-block-start:var(--lr-space-m); inset-inline-start:50%; transform:translateX(${highlightTransform});"
@@ -1098,7 +1111,7 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
     switch (this.loadState.kind) {
       case 'ready': {
         const items = Array.from({ length: this.loadState.pageCount }, (_unused, index) => index + 1);
-        return html`${this.renderToolbar()}<lr-virtual-list part="pages" .items=${items} .renderItem=${this.renderPageItem} .keyFunction=${(item: unknown) => item as number} .activeId=${this.scrollDrivenPage ? '' : this.page} @lr-visible-range-changed=${this.onVisibleRangeChanged}></lr-virtual-list>`;
+        return html`${this.renderToolbar()}<lr-virtual-list part="pages" exportparts="page:page, page-canvas:page-canvas, text-layer:text-layer, text-span:text-span, search-match:search-match, search-match-active:search-match-active" .items=${items} .renderItem=${this.renderPageItem} .keyFunction=${(item: unknown) => item as number} .activeId=${this.scrollDrivenPage ? '' : this.page} @lr-visible-range-changed=${this.onVisibleRangeChanged}></lr-virtual-list>`;
       }
       case 'loading': return html`<div part="spinner"><lr-skeleton variant="rect" label=${this.localize('loadingDocument')}></lr-skeleton></div>`;
       case 'error': return html`<div part="error" role="alert">${this.loadState.message}</div>`;

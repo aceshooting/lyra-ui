@@ -10,9 +10,14 @@ export const styles = css`
   [part='toolbar'] button:focus-visible { outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color); outline-offset: var(--lr-focus-ring-offset); }
   [part='page-indicator'], [part='zoom-indicator'] { color: var(--lr-color-text); white-space: nowrap; }
   [part='pages'] { --lr-virtual-list-height: var(--lr-pdf-viewer-height); }
-  [part='page'] { position: relative; display: flex; justify-content: center; padding-block: var(--lr-space-m); min-inline-size: 0; }
-  [part='page'] canvas { box-shadow: 0 0 0 var(--lr-border-width-thin) var(--lr-color-border); }
-  [part='text-layer'] {
+  /* Everything below renders through <lr-virtual-list>'s renderItem, i.e. into that element's own
+     shadow root rather than this one -- a bare [part='x'] selector can never reach across that
+     boundary, so each page-level rule goes through ::part(). ::part() cannot be followed by a
+     descendant combinator either, which is why the canvas and the generated text runs carry their
+     own part names instead of being addressed as descendants of page/text-layer. */
+  lr-virtual-list::part(page) { position: relative; display: flex; justify-content: center; padding-block: var(--lr-space-m); min-inline-size: 0; }
+  lr-virtual-list::part(page-canvas) { box-shadow: 0 0 0 var(--lr-border-width-thin) var(--lr-color-border); }
+  lr-virtual-list::part(text-layer) {
     position: absolute;
     inset-block-start: var(--lr-space-m);
     inset-inline-start: 50%;
@@ -23,13 +28,13 @@ export const styles = css`
     line-height: var(--lr-line-height-none);
     opacity: 1;
   }
-  :host(:dir(rtl)) [part='text-layer'] { transform: translateX(50%); }
+  :host(:dir(rtl)) lr-virtual-list::part(text-layer) { transform: translateX(50%); }
   /* PDF.js's TextLayer only sets inline left/top percentages and CSS custom properties on each
      generated span -- everything else (making the run invisible-but-selectable over the already-
      painted canvas glyphs, and sizing/rotating/skewing each run to match the page) is expected to
      come from the surrounding stylesheet, normally web/pdf_viewer.css's .textLayer rules. Ported
      here since that stylesheet isn't shipped with the pdfjs-dist peer. */
-  [part='text-layer'] :is(span, br) {
+  lr-virtual-list::part(text-span) {
     position: absolute;
     color: transparent;
     white-space: pre;
@@ -39,11 +44,16 @@ export const styles = css`
     font-size: calc(var(--total-scale-factor, 1) * var(--font-height));
     transform: rotate(var(--rotate, 0deg)) scaleX(var(--scale-x, 1));
   }
-  [part='text-layer'] ::selection { background: var(--lr-color-brand-quiet); }
+  /* Attached to the text run itself rather than to its text-layer container: a highlight pseudo is
+     matched against the element the selected text actually originates in, so targeting the run needs
+     no reliance on highlight inheritance propagating down from an ancestor. */
+  lr-virtual-list::part(text-span)::selection { background: var(--lr-color-brand-quiet); }
   /* Kept text-transparent like every other text-layer run above -- only the highlighted background
-     should show, letting the canvas's own painted glyphs remain the visible text underneath. */
-  [part='text-layer'] mark[part~='search-match'] { background: var(--lr-color-warning-quiet); color: transparent; border-radius: var(--lr-radius-xs); }
-  [part='text-layer'] mark[part~='search-match-active'] { background: var(--lr-color-warning); }
+     should show, letting the canvas's own painted glyphs remain the visible text underneath.
+     ::part() already matches on part~= semantics, so the active match's two-name part list is
+     reached by naming each part separately. */
+  lr-virtual-list::part(search-match) { background: var(--lr-color-warning-quiet); color: transparent; border-radius: var(--lr-radius-xs); }
+  lr-virtual-list::part(search-match-active) { background: var(--lr-color-warning); }
   .empty-note, [part='error'] { margin: 0; padding: var(--lr-space-l); color: var(--lr-color-text-quiet); font-size: var(--lr-font-size-md-sm); text-align: center; }
   [part='error'] { color: var(--lr-color-danger); }
   [part='spinner'] { display: flex; justify-content: center; padding: var(--lr-space-l); }
