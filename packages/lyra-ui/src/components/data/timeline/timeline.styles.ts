@@ -39,9 +39,28 @@ export const styles = css`
   }
   :host([orientation='horizontal']) [part='base'] {
     flex-direction: row;
-    /* Mirrors <lr-stepper>'s identical horizontal-overflow handling -- a horizontal timeline
-       becomes a horizontally-scrollable strip rather than breaking layout. */
+    /* Mirrors <lr-tabs>'s identical horizontal-overflow handling -- a horizontal timeline
+       becomes a horizontally-scrollable strip rather than breaking layout. overflow-y is pinned
+       explicitly alongside overflow-x: per the CSS overflow spec, leaving one axis unset once the
+       other is non-'visible' forces its used value to 'auto' too, which can show a phantom/empty
+       scrollbar from sub-pixel rounding even when the content never actually overflows block-wise. */
     overflow-x: auto;
+    overflow-y: hidden;
+    /* Static edge affordance: scrolling remains native and no scroll listener is needed. */
+    -webkit-mask-image: linear-gradient(
+      to right,
+      transparent,
+      var(--lr-color-shadow) var(--lr-scroll-fade-size),
+      var(--lr-color-shadow) calc(100% - var(--lr-scroll-fade-size)),
+      transparent
+    );
+    mask-image: linear-gradient(
+      to right,
+      transparent,
+      var(--lr-color-shadow) var(--lr-scroll-fade-size),
+      var(--lr-color-shadow) calc(100% - var(--lr-scroll-fade-size)),
+      transparent
+    );
   }
 
   /* Matches by role rather than tag name (<lr-timeline-item> sets role="listitem" on itself in

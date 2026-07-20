@@ -164,6 +164,19 @@ it('transitions the fill stroke-dashoffset using the shared transition token, di
   );
 });
 
+it('actually applies the stroke-dashoffset transition to the rendered fill element', async () => {
+  // Unlike the reduced-motion branch above (a pure `@media` query this test runner has no way to
+  // force -- window.matchMedia stubbing does not drive real CSS media-feature evaluation, only
+  // JS-level `prefersReducedMotion()` gates, and gauge has none), the default (non-reduced-motion)
+  // transition IS synthesizable: it's just the resting computed style of a normally-rendered
+  // fixture, so it gets a real getComputedStyle assertion instead of only a cssText match.
+  const el = (await fixture(html`<lr-gauge value="10" min="0" max="100"></lr-gauge>`)) as LyraGauge;
+  const fill = el.shadowRoot!.querySelector('[part="fill"]') as SVGCircleElement;
+  const computed = getComputedStyle(fill);
+  expect(computed.transitionProperty).to.equal('stroke-dashoffset');
+  expect(computed.transitionDuration).to.not.equal('0s');
+});
+
 it('renders a linear track when type is linear', async () => {
   const el = (await fixture(
     html`<lr-gauge type="linear" value="10" max="100" label="Battery"></lr-gauge>`,
@@ -192,6 +205,29 @@ it('renders a full-circle ring with circumference-based progress when type is ri
 
 it('exposes a per-instance gauge fill token for radial, ring, and linear variants', () => {
   expect(styles.cssText).to.include('stroke: var(--lr-gauge-fill, var(--lr-color-brand))');
+});
+
+describe('--lr-gauge-fill reaches the rendered [part="fill"] stroke', () => {
+  for (const type of ['radial', 'ring', 'linear'] as const) {
+    it(`retints the ${type} fill stroke via the cssprop`, async () => {
+      const el = (await fixture(
+        html`<lr-gauge type=${type} value="30" min="0" max="100"></lr-gauge>`,
+      )) as LyraGauge;
+      el.style.setProperty('--lr-gauge-fill', 'rgb(10, 20, 30)');
+      await el.updateComplete;
+      const fill = el.shadowRoot!.querySelector('[part="fill"]') as SVGElement;
+      expect(getComputedStyle(fill).stroke).to.equal('rgb(10, 20, 30)');
+    });
+  }
+
+  it('renders byte-identically to the brand token default when unset', async () => {
+    const el = (await fixture(html`<lr-gauge value="30" min="0" max="100"></lr-gauge>`)) as LyraGauge;
+    const fill = el.shadowRoot!.querySelector('[part="fill"]') as SVGElement;
+    const unset = getComputedStyle(fill).stroke;
+    el.style.setProperty('--lr-gauge-fill', 'var(--lr-color-brand)');
+    await el.updateComplete;
+    expect(getComputedStyle(fill).stroke).to.equal(unset);
+  });
 });
 
 it('omits the label part in linear mode when label is empty', async () => {

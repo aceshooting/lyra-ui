@@ -49,6 +49,16 @@ export interface StatRow {
  * @csspart row-value - The value text of a breakdown row. Shows the row's `exactValue` (if any) as
  *   a hover/focus tooltip, same as the headline `value`, and is accessibly labelled by its
  *   `row-label` (via `aria-labelledby`) the same way the headline `value` is.
+ * @cssprop [--lr-stat-trend-good-color=var(--lr-color-success)] - Text color of the trend pill
+ *   when its polarity is "good". Independent of the headline value's `variant="success"` tint,
+ *   which reads the shared `--lr-color-success` token directly.
+ * @cssprop [--lr-stat-trend-good-bg=color-mix(in srgb, var(--lr-color-success) 8%, transparent)] -
+ *   Background of the trend pill when its polarity is "good".
+ * @cssprop [--lr-stat-trend-bad-color=var(--lr-color-danger)] - Text color of the trend pill when
+ *   its polarity is "bad". Independent of the headline value's `variant="danger"` tint, which
+ *   reads the shared `--lr-color-danger` token directly.
+ * @cssprop [--lr-stat-trend-bad-bg=color-mix(in srgb, var(--lr-color-danger) 8%, transparent)] -
+ *   Background of the trend pill when its polarity is "bad".
  */
 export class LyraStat extends LyraElement {
   static styles = [LyraElement.styles, styles, srOnly];
@@ -59,10 +69,12 @@ export class LyraStat extends LyraElement {
   @property({ reflect: true }) variant: StatVariant = 'neutral';
   /** When set to a safe URL, renders the whole stat as a real anchor instead of a static div. */
   @property() href?: string;
-  /** Native anchor target, used only while `href` resolves to a link. */
+  /** Native anchor target, used only while `href` resolves to a link. Setting this to `'_blank'`
+   *  (or any other target) automatically derives `rel="noopener noreferrer"` on the rendered
+   *  anchor -- there is no separately-settable `rel` property, so a consumer can't forget it and
+   *  leave the opened page holding a `window.opener` back-reference (reverse-tabnabbing). Matches
+   *  `app-rail-item.class.ts`'s pattern. */
   @property() target?: string;
-  /** Native anchor relationship tokens, used only while `href` resolves to a link. */
-  @property() rel?: string;
 
   private _trend = NaN;
   /** Percentage/delta value for the trend pill (e.g. `-12.5` renders a down arrow at "12.5%").
@@ -139,6 +151,7 @@ export class LyraStat extends LyraElement {
   @state() private rowLabelIds: string[] = [];
 
   protected willUpdate(changed: PropertyValues): void {
+    super.willUpdate(changed); // no-op today, but keeps any future LyraElement/mixin willUpdate logic wired in
     if (!this.hasUpdated) {
       this.hasIcon = Array.from(this.children).some((el) => !el.hasAttribute('slot'));
       this.hasCaptionSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'caption');
@@ -249,7 +262,7 @@ export class LyraStat extends LyraElement {
         </div>
     `;
     return href
-      ? html`<a part="base" href=${href} target=${this.target || nothing} rel=${this.rel || nothing}>${content}</a>`
+      ? html`<a part="base" href=${href} target=${this.target || nothing} rel=${this.target ? 'noopener noreferrer' : nothing}>${content}</a>`
       : html`<div part="base">${content}</div>`;
   }
 }

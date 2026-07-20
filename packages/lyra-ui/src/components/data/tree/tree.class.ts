@@ -5,7 +5,7 @@ import { tag } from '../../../internal/prefix.js';
 import { isRtl } from '../../../internal/rtl.js';
 import { styles } from './tree.styles.js';
 import { cascadeUpdateComplete } from './update-cascade.js';
-import '../../overlays/empty/empty.class.js';
+import '../../overlays/empty/empty.js';
 // The registering barrel, not the bare `*.class.js` module -- this side effect is what makes
 // `<lr-live-region>` an actually-defined tag by the time a reorderable tree renders one.
 import '../../utility/live-region/live-region.js';
@@ -170,6 +170,7 @@ export class LyraTree extends LyraElement {
   }
 
   protected willUpdate(changed: PropertyValues): void {
+    super.willUpdate(changed);
     if (changed.has('data')) {
       const focused = this.deepFocusedNode();
       const focusedId = focused?.item?.id ?? null;
@@ -197,6 +198,7 @@ export class LyraTree extends LyraElement {
   }
 
   protected updated(changed: PropertyValues): void {
+    super.updated(changed);
     if (changed.has('activeId') || changed.has('data')) {
       const count = this.data.length;
       this.nodeElements.forEach((node, i) => {

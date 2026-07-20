@@ -3,6 +3,7 @@ import '../flow-canvas/flow-canvas.js';
 import './flow-minimap.js';
 import type { LyraFlowMinimap } from './flow-minimap.js';
 import type { LyraFlowCanvas, FlowNode } from '../flow-canvas/flow-canvas.js';
+import { styles } from './flow-minimap.styles.js';
 
 const nodes: FlowNode[] = [
   { id: 'a', position: { x: 0, y: 0 } },
@@ -369,4 +370,13 @@ it('is accessible with a resolved canvas', async () => {
   const minimap = wrapper.querySelector('lr-flow-minimap') as LyraFlowMinimap;
   await minimap.updateComplete;
   await expect(minimap).to.be.accessible();
+});
+
+describe('mouse-hover feedback on the viewport rectangle', () => {
+  // :hover cannot be synthesized in this test runner (no real pointer), so per this repo's
+  // documented exception for genuinely-unsynthesizable pseudo-classes, this asserts against the
+  // stylesheet source instead of a rendered/computed effect.
+  it("declares a [part='viewport']:hover rule, matching its :focus-visible affordance", () => {
+    expect(styles.cssText).to.match(/\[part='viewport'\]:hover\s*\{/);
+  });
 });

@@ -45,6 +45,13 @@ export const styles = css`
     color: var(--lr-color-text-quiet);
     opacity: 1;
   }
+  /* Matches lr-input's own unconditional reset (input.styles.ts) -- without it Chrome/Safari paint
+     their raw gray cancel-x glyph once the field has text, visually inconsistent with the rest of
+     this fully themed field (border, background, placeholder color). */
+  [part='filter'][type='search']::-webkit-search-cancel-button,
+  [part='filter'][type='search']::-webkit-search-decoration {
+    appearance: none;
+  }
   /* The visible spinner block. Scoped away from the skeleton-appearance status node, which reuses
      [part='loading'] but is visually hidden (.sr-only) — the placeholder rows are its visible
      affordance, so it must not also lay out an 8rem centered block. */
@@ -124,7 +131,12 @@ export const styles = css`
   [part='header-cell'][data-sortable] {
     cursor: pointer;
   }
-  [part='header-cell'][data-sortable]:hover {
+  /* :where() zeroes the wrapped attribute selectors' specificity contribution, leaving only :hover
+     itself -- (0,1,0) total, functionally identical selection to
+     [part='header-cell'][data-sortable]:hover ((0,3,0)) but now losing (on the pseudo-element
+     tiebreak) to a consumer's own ::part(header-cell):hover override ((0,1,1)) without that
+     consumer needing !important. Matches attachment-trigger.styles.ts's remediation pattern. */
+  :where([part='header-cell'][data-sortable]):hover {
     background: var(--lr-color-brand-quiet);
   }
   /* Not scoped to [data-sortable] — the roving-tabindex header stop (see
@@ -203,6 +215,18 @@ export const styles = css`
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);
   }
+  /* editType: 'number' cells render a native type="number" editor; without this reset the
+     browser's default up/down spinner buttons show in raw, unstyled UA chrome inside an otherwise
+     fully re-themed field (custom border/background/focus ring) -- matches lr-input's/
+     lr-pagination's own identical reset. */
+  [part='cell-editor'][type='number'] {
+    appearance: textfield;
+  }
+  [part='cell-editor'][type='number']::-webkit-inner-spin-button,
+  [part='cell-editor'][type='number']::-webkit-outer-spin-button {
+    appearance: none;
+    margin: 0;
+  }
   [part='cell'][data-align='end'] {
     text-align: end;
   }
@@ -231,6 +255,9 @@ export const styles = css`
     color: inherit;
     min-inline-size: var(--lr-icon-button-size);
     min-block-size: var(--lr-icon-button-size);
+  }
+  [part='row-expand-toggle']:hover {
+    background: var(--lr-color-brand-quiet);
   }
   [part='row-expand-toggle']:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);

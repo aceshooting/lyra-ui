@@ -2014,6 +2014,24 @@ describe('heat-tint mode', () => {
     expect(css).to.match(/\[part='cell'\]\[data-heat\]\s*\{[^}]*color-mix\(/);
   });
 
+  it('actually paints the color-mix() background on a rendered heat-tinted cell (not just present in the stylesheet source)', async () => {
+    const el = (await fixture(html`<lr-table></lr-table>`)) as LyraTable<Row>;
+    el.columns = heatColumns;
+    el.rows = rows;
+    el.rowKey = (r) => r.id;
+    await el.updateComplete;
+    const tintedCell = el.shadowRoot!.querySelector('[part="cell"][data-col-key="score"]') as HTMLElement;
+    const untintedCell = el.shadowRoot!.querySelector('[part="cell"][data-col-key="name"]') as HTMLElement;
+    // A drifted [part='cell'][data-heat] selector or --lr-table-heat-t/-lo/-hi property name would
+    // leave this rendering exactly like the untinted column's own (transparent) background while
+    // the cssText-regex test above kept passing -- this proves the rule reaches a live cell.
+    expect(tintedCell.hasAttribute('data-heat')).to.be.true;
+    const tintedBackground = getComputedStyle(tintedCell).backgroundColor;
+    const untintedBackground = getComputedStyle(untintedCell).backgroundColor;
+    expect(tintedBackground).to.not.equal(untintedBackground);
+    expect(tintedBackground).to.not.equal('rgba(0, 0, 0, 0)');
+  });
+
   it('applies both cellStyle and the heat-tint custom property to the same cell when both are set', async () => {
     const bothColumns: TableColumn<Row>[] = [
       { key: 'name', label: 'Name', cell: (r) => r.name },
@@ -2034,6 +2052,32 @@ describe('heat-tint mode', () => {
     expect(cell.style.fontStyle).to.equal('italic');
     expect(cell.hasAttribute('data-heat')).to.be.true;
     expect(cell.style.getPropertyValue('--lr-table-heat-t')).to.not.equal('');
+  });
+
+  it('lets a cellStyle background silently win over the heat-tint background (documents the inline-style-vs-stylesheet-rule precedence)', async () => {
+    const conflictColumns: TableColumn<Row>[] = [
+      { key: 'name', label: 'Name', cell: (r) => r.name },
+      {
+        key: 'score',
+        label: 'Score',
+        heatValue: (r) => r.score,
+        cellStyle: () => ({ background: 'rgb(1, 2, 3)' }),
+        cell: (r) => r.score,
+      },
+    ];
+    const el = (await fixture(html`<lr-table></lr-table>`)) as LyraTable<Row>;
+    el.columns = conflictColumns;
+    el.rows = rows;
+    el.rowKey = (r) => r.id;
+    await el.updateComplete;
+    const cell = el.shadowRoot!.querySelector('[part="cell"][data-col-key="score"]') as HTMLElement;
+    // The cell is still marked/measured as heat-tinted...
+    expect(cell.hasAttribute('data-heat')).to.be.true;
+    expect(cell.style.getPropertyValue('--lr-table-heat-t')).to.not.equal('');
+    // ...but the actually-rendered background is cellStyle's inline color, not the heat-tint ramp:
+    // an inline style= attribute always wins the cascade over table.styles.ts's
+    // [part='cell'][data-heat] stylesheet rule regardless of specificity.
+    expect(getComputedStyle(cell).backgroundColor).to.equal('rgb(1, 2, 3)');
   });
 });
 
@@ -2762,6 +2806,33 @@ it("colors the filter's placeholder and undoes Firefox's reduced default opacity
   expect(css).to.match(/\[part='filter'\]::placeholder\s*\{[^}]*color:\s*var\(--lr-color-text-quiet\)[^}]*opacity:\s*1/);
 });
 
+it('resets the native search-cancel glyph on the filter field (matches lr-input\'s own unconditional reset)', () => {
+  const css = styles.cssText.replace(/\s+/g, ' ');
+  expect(css).to.match(/\[part='filter'\]\[type='search'\]::-webkit-search-cancel-button/);
+  expect(css).to.match(/\[part='filter'\]\[type='search'\]::-webkit-search-decoration/);
+});
+
+it('resets the native number-spinner chrome on the cell editor (editType: \'number\')', () => {
+  const css = styles.cssText.replace(/\s+/g, ' ');
+  expect(css).to.match(/\[part='cell-editor'\]\[type='number'\]\s*\{[^}]*appearance:\s*textfield/);
+  expect(css).to.match(/\[part='cell-editor'\]\[type='number'\]::-webkit-inner-spin-button/);
+  expect(css).to.match(/\[part='cell-editor'\]\[type='number'\]::-webkit-outer-spin-button/);
+});
+
+it('wraps the sortable-header hover selector in :where() so a consumer ::part(header-cell):hover can win without !important', () => {
+  const css = styles.cssText.replace(/\s+/g, ' ');
+  expect(css).to.match(
+    /:where\(\[part='header-cell'\]\[data-sortable\]\):hover\s*\{[^}]*background:\s*var\(--lr-color-brand-quiet\)/,
+  );
+  // The old over-specific, unwrapped shape must be gone, not merely joined by the new one.
+  expect(css).to.not.include("[part='header-cell'][data-sortable]:hover {");
+});
+
+it('gives the row-expand-toggle a :hover treatment, like its sibling icon controls (resize-handle/more-button/reveal-columns-button)', () => {
+  const css = styles.cssText.replace(/\s+/g, ' ');
+  expect(css).to.match(/\[part='row-expand-toggle'\]:hover\s*\{[^}]*background/);
+});
+
 describe("editable: 'always'", () => {
   const alwaysColumns: TableColumn<Row>[] = [
     { key: 'name', label: 'Name', sortable: true, cell: (r) => r.name },
@@ -3129,5 +3200,84 @@ describe("editable: 'always'", () => {
       input.getAttribute('aria-label'),
     );
     expect(labels).to.deep.equal(['Modifier Score', 'Modifier Score']);
+  });
+});
+
+describe('lifecycle super calls', () => {
+  it('calls super.willUpdate() and super.updated() (regression guard: a future mixin layered under LyraTable must still run)', async () => {
+    const el = (await fixture(html`<lr-table></lr-table>`)) as LyraTable<Row>;
+    // The immediate prototype of a LyraTable instance is LyraElement.prototype -- the exact object
+    // `super.willUpdate()`/`super.updated()` resolve against from inside LyraTable's own overrides.
+    // Patching it (and restoring via `delete` below) spies on the real call without needing sinon.
+    const proto = Object.getPrototypeOf(Object.getPrototypeOf(el)) as Record<string, unknown>;
+    const originalWillUpdate = proto.willUpdate as ((changed: unknown) => void) | undefined;
+    const originalUpdated = proto.updated as ((changed: unknown) => void) | undefined;
+    let willUpdateCalls = 0;
+    let updatedCalls = 0;
+    proto.willUpdate = function (this: unknown, changed: unknown) {
+      willUpdateCalls++;
+      return originalWillUpdate?.call(this, changed);
+    };
+    proto.updated = function (this: unknown, changed: unknown) {
+      updatedCalls++;
+      return originalUpdated?.call(this, changed);
+    };
+    try {
+      el.columns = columns;
+      el.rows = rows;
+      el.rowKey = (r) => r.id;
+      await el.updateComplete;
+      expect(willUpdateCalls).to.be.greaterThan(0);
+      expect(updatedCalls).to.be.greaterThan(0);
+    } finally {
+      delete proto.willUpdate;
+      delete proto.updated;
+    }
+  });
+});
+
+describe('ResizeObserver callback batching (perf)', () => {
+  it('coalesces several synchronous ResizeObserver callback ticks into a single rAF-scheduled layout pass', async () => {
+    const originalResizeObserver = window.ResizeObserver;
+    const originalRaf = window.requestAnimationFrame;
+    let capturedCallback: ResizeObserverCallback | undefined;
+    let rafCallCount = 0;
+    class FakeResizeObserver {
+      constructor(cb: ResizeObserverCallback) {
+        capturedCallback = cb;
+      }
+      observe(): void {}
+      unobserve(): void {}
+      disconnect(): void {}
+    }
+    (window as unknown as { ResizeObserver: unknown }).ResizeObserver = FakeResizeObserver;
+    window.requestAnimationFrame = ((cb: FrameRequestCallback) => {
+      rafCallCount++;
+      return originalRaf.call(window, cb);
+    }) as typeof window.requestAnimationFrame;
+    try {
+      const el = (await fixture(html`<lr-table></lr-table>`)) as LyraTable<Row>;
+      el.columns = columns;
+      el.rows = rows;
+      el.rowKey = (r) => r.id;
+      await el.updateComplete;
+      expect(typeof capturedCallback).to.equal('function');
+      rafCallCount = 0;
+      // Simulate three ResizeObserver ticks firing back-to-back in the same frame -- exactly what
+      // an animated/dragged ancestor resize does, once per animation frame.
+      capturedCallback!([] as unknown as ResizeObserverEntry[], {} as ResizeObserver);
+      capturedCallback!([] as unknown as ResizeObserverEntry[], {} as ResizeObserver);
+      capturedCallback!([] as unknown as ResizeObserverEntry[], {} as ResizeObserver);
+      expect(rafCallCount).to.equal(1);
+      // ...and the very next tick after that frame settles schedules a fresh one (the id resets,
+      // rather than getting stuck disabled after the first coalesced frame).
+      await new Promise<void>((resolve) => originalRaf.call(window, () => resolve()));
+      rafCallCount = 0;
+      capturedCallback!([] as unknown as ResizeObserverEntry[], {} as ResizeObserver);
+      expect(rafCallCount).to.equal(1);
+    } finally {
+      window.ResizeObserver = originalResizeObserver;
+      window.requestAnimationFrame = originalRaf;
+    }
   });
 });

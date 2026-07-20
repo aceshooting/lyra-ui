@@ -127,8 +127,8 @@ export const styles = css`
     animation: lr-flow-node-pulse var(--lr-transition-ambient) ease-in-out infinite;
   }
   :host([status='running']) .card {
-    border-color: var(--lr-color-brand);
-    box-shadow: 0 0 0 var(--lr-size-2px) var(--lr-color-brand-quiet);
+    border-color: var(--lr-flow-node-running-border, var(--lr-color-brand));
+    box-shadow: 0 0 0 var(--lr-size-2px) var(--lr-flow-node-running-glow, var(--lr-color-brand-quiet));
   }
   /* The JS gate only evaluates the preference at render time; this CSS branch also covers a
      preference change while an already-rendered card is still pulsing. */
@@ -139,7 +139,7 @@ export const styles = css`
   }
   @keyframes lr-flow-node-pulse {
     50% {
-      box-shadow: 0 0 0 var(--lr-size-4px) var(--lr-color-brand-quiet);
+      box-shadow: 0 0 0 var(--lr-size-4px) var(--lr-flow-node-running-glow, var(--lr-color-brand-quiet));
     }
   }
 `;

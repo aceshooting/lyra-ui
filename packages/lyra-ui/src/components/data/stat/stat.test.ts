@@ -1,7 +1,9 @@
 import { fixture, expect, html, oneEvent } from '@open-wc/testing';
+import type { PropertyValues } from 'lit';
 import './stat.js';
 import type { LyraStat } from './stat.js';
 import { styles } from './stat.styles.js';
+import { LyraElement } from '../../../internal/lyra-element.js';
 
 it('renders label, value, and unit', async () => {
   const el = (await fixture(
@@ -12,20 +14,20 @@ it('renders label, value, and unit', async () => {
   expect(el.shadowRoot!.querySelector('[part="unit"]')!.textContent).to.equal('k€');
 });
 
-it('renders a real semantic link only when href is safe and forwards target/rel', async () => {
+it('renders a real semantic link only when href is safe and forwards target, deriving rel', async () => {
   const plain = (await fixture(html`
     <lr-stat label="Memories" value="128"></lr-stat>
   `)) as LyraStat;
   expect(plain.shadowRoot!.querySelector('[part="base"]')!.localName).to.equal('div');
 
   const linked = (await fixture(html`
-    <lr-stat label="Memories" value="128" href="/memories" target="_blank" rel="noreferrer"></lr-stat>
+    <lr-stat label="Memories" value="128" href="/memories" target="_blank"></lr-stat>
   `)) as LyraStat;
   const anchor = linked.shadowRoot!.querySelector('[part="base"]') as HTMLAnchorElement;
   expect(anchor.localName).to.equal('a');
   expect(anchor.getAttribute('href')).to.equal('/memories');
   expect(anchor.target).to.equal('_blank');
-  expect(anchor.rel).to.equal('noreferrer');
+  expect(anchor.rel).to.equal('noopener noreferrer');
   anchor.focus();
   expect(linked.shadowRoot!.activeElement?.getAttribute('href')).to.equal('/memories');
 
@@ -33,6 +35,22 @@ it('renders a real semantic link only when href is safe and forwards target/rel'
     <lr-stat label="Unsafe" value="0" href="java\tscript:alert(1)"></lr-stat>
   `)) as LyraStat;
   expect(unsafe.shadowRoot!.querySelector('[part="base"]')!.localName).to.equal('div');
+});
+
+it('derives rel="noopener noreferrer" automatically from target alone (reverse-tabnabbing guard)', async () => {
+  const el = (await fixture(html`
+    <lr-stat label="Memories" value="128" href="/memories" target="_blank"></lr-stat>
+  `)) as LyraStat;
+  const anchor = el.shadowRoot!.querySelector('[part="base"]') as HTMLAnchorElement;
+  expect(anchor.rel).to.equal('noopener noreferrer');
+});
+
+it('omits rel entirely when target is unset', async () => {
+  const el = (await fixture(html`
+    <lr-stat label="Memories" value="128" href="/memories"></lr-stat>
+  `)) as LyraStat;
+  const anchor = el.shadowRoot!.querySelector('[part="base"]') as HTMLAnchorElement;
+  expect(anchor.hasAttribute('rel')).to.be.false;
 });
 
 it('avoids nested focus targets when an exact-value stat is linked', async () => {
@@ -218,6 +236,46 @@ it('omits data-polarity for a flat (zero) trend', async () => {
   )) as LyraStat;
   const trend = el.shadowRoot!.querySelector('[part="trend"]')!;
   expect(trend.hasAttribute('data-polarity')).to.be.false;
+});
+
+describe('trend pill tint decoupled from the headline value tint', () => {
+  it("defaults the 'good' trend pill's color to the same shared --lr-color-success token the headline value's variant=\"success\" tint reads, byte-identical to before", async () => {
+    const el = (await fixture(
+      html`<lr-stat label="x" value="1" trend="5" variant="success"></lr-stat>`,
+    )) as LyraStat;
+    const trend = el.shadowRoot!.querySelector('[part="trend"]') as HTMLElement;
+    const value = el.shadowRoot!.querySelector('[part="value"]') as HTMLElement;
+    expect(getComputedStyle(trend).color).to.equal(getComputedStyle(value).color);
+  });
+
+  it("lets --lr-stat-trend-good-color/-bg retint just the trend pill without touching the headline value's variant=\"success\" color", async () => {
+    const wrapper = (await fixture(html`
+      <div style="--lr-stat-trend-good-color: rgb(1, 2, 3); --lr-stat-trend-good-bg: rgb(4, 5, 6);">
+        <lr-stat label="x" value="1" trend="5" variant="success"></lr-stat>
+      </div>
+    `)) as HTMLElement;
+    const el = wrapper.querySelector('lr-stat') as LyraStat;
+    const trend = el.shadowRoot!.querySelector('[part="trend"]') as HTMLElement;
+    const value = el.shadowRoot!.querySelector('[part="value"]') as HTMLElement;
+    expect(getComputedStyle(trend).color).to.equal('rgb(1, 2, 3)');
+    expect(getComputedStyle(trend).backgroundColor).to.equal('rgb(4, 5, 6)');
+    // The headline value's status tint is untouched by the trend-pill-scoped override.
+    expect(getComputedStyle(value).color).to.not.equal('rgb(1, 2, 3)');
+  });
+
+  it("lets --lr-stat-trend-bad-color/-bg retint just the 'bad' trend pill without touching the headline value's variant=\"danger\" color", async () => {
+    const wrapper = (await fixture(html`
+      <div style="--lr-stat-trend-bad-color: rgb(7, 8, 9); --lr-stat-trend-bad-bg: rgb(11, 12, 13);">
+        <lr-stat label="x" value="1" trend="-5" variant="danger"></lr-stat>
+      </div>
+    `)) as HTMLElement;
+    const el = wrapper.querySelector('lr-stat') as LyraStat;
+    const trend = el.shadowRoot!.querySelector('[part="trend"]') as HTMLElement;
+    const value = el.shadowRoot!.querySelector('[part="value"]') as HTMLElement;
+    expect(getComputedStyle(trend).color).to.equal('rgb(7, 8, 9)');
+    expect(getComputedStyle(trend).backgroundColor).to.equal('rgb(11, 12, 13)');
+    expect(getComputedStyle(value).color).to.not.equal('rgb(7, 8, 9)');
+  });
 });
 
 it('reflects variant onto the host attribute and gives each variant a distinct value color', async () => {
@@ -506,6 +564,25 @@ it("gives [part='value']/[part='row-value'] a token-driven :focus-visible outlin
   );
 });
 
+it("gives the same focusable [part='value']/[part='row-value'] a mouse-user :hover affordance, wrapped in :where() so a consumer ::part(value):hover / ::part(row-value):hover override wins without !important", async () => {
+  const el = (await fixture(
+    html`<lr-stat value="$1.2K" exact-value="$1,204.37"></lr-stat>`,
+  )) as LyraStat;
+  const internalRule = (el.shadowRoot!.adoptedStyleSheets ?? [])
+    .flatMap((sheet) => Array.from(sheet.cssRules))
+    .map((rule) => rule.cssText.replace(/"/g, "'"))
+    .find((text) => text.includes(':hover') && text.includes("[part='value'][tabindex]"));
+  expect(internalRule).to.contain(':where(');
+  expect(internalRule).to.contain('cursor: help');
+});
+
+it('scopes the value/row-value hover affordance to the focusable ([tabindex]) state only', () => {
+  const css = styles.cssText.replace(/\s+/g, ' ');
+  expect(css).to.include(
+    ":where([part='value'][tabindex]):hover, :where([part='row-value'][tabindex]):hover",
+  );
+});
+
 it('associates the focusable value with its label via aria-labelledby', async () => {
   const el = (await fixture(
     html`<lr-stat label="Revenue" value="$1.2K" exact-value="$1,204.37"></lr-stat>`,
@@ -711,6 +788,17 @@ it("gives a linked plain stat a text-underline hover/focus affordance, since it 
   );
 });
 
+it("wraps the internal [part='base'][href]:hover rule in :where() so a consumer ::part(base):hover override wins without !important", async () => {
+  const el = (await fixture(html`
+    <lr-stat label="Memories" value="128" href="/memories"></lr-stat>
+  `)) as LyraStat;
+  const internalRule = (el.shadowRoot!.adoptedStyleSheets ?? [])
+    .flatMap((sheet) => Array.from(sheet.cssRules))
+    .map((rule) => rule.cssText.replace(/"/g, "'"))
+    .find((text) => text.includes(':hover') && text.includes("[part='base'][href]") && !text.includes(':host'));
+  expect(internalRule).to.contain(':where(');
+});
+
 it('keeps the focus ring on a linked plain stat (an outline needs no border)', async () => {
   const el = (await fixture(html`<lr-stat
     appearance="plain"
@@ -888,4 +976,24 @@ it('is accessible in the populated plain/horizontal state', async () => {
   expect(el.shadowRoot!.querySelector('[part="label"]')!.hasAttribute('hidden')).to.be.false;
 
   await expect(el).to.be.accessible();
+});
+
+it('calls super.willUpdate so a future LyraElement/mixin lifecycle hook stays wired in', async () => {
+  // Monkey-patch LyraElement.prototype.willUpdate (the established pattern, e.g.
+  // src/internal/motion.test.ts's window.matchMedia stub) to prove LyraStat's own
+  // willUpdate() override actually calls super.willUpdate(...) rather than shadowing it silently.
+  const proto = LyraElement.prototype as unknown as { willUpdate: (changed: PropertyValues) => void };
+  const original = proto.willUpdate;
+  let called = false;
+  proto.willUpdate = function (this: LyraElement, changed: PropertyValues): void {
+    called = true;
+    original.call(this, changed);
+  };
+  try {
+    const el = (await fixture(html`<lr-stat label="Revenue" value="12.4"></lr-stat>`)) as LyraStat;
+    await el.updateComplete;
+    expect(called).to.be.true;
+  } finally {
+    proto.willUpdate = original;
+  }
 });

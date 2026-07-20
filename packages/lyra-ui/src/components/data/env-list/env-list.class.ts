@@ -1,4 +1,4 @@
-import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
+import { html, nothing, type TemplateResult, type PropertyValues, type ComplexAttributeConverter } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { styles } from './env-list.styles.js';
@@ -7,6 +7,22 @@ import { styles } from './env-list.styles.js';
 import '../../overlays/empty/empty.js';
 
 const MASK = '•'.repeat(8);
+
+/**
+ * `true`-defaulting boolean attribute converter. Lit's built-in `type: Boolean` converter is
+ * presence-based -- the attribute's mere presence (regardless of its string value) maps to `true`,
+ * so a plain-markup consumer writing the literal `revealable="false"`/`copyable="false"` would
+ * actually get `true` (these properties' default), the opposite of what that string reads as --
+ * the same bug class `<lr-checkpoint>`'s `restorable`/`confirmRestore` converters document and fix.
+ */
+const trueDefaultBooleanConverter: ComplexAttributeConverter<boolean> = {
+  fromAttribute(value): boolean {
+    return value !== 'false';
+  },
+  toAttribute(value): string | null {
+    return value ? null : 'false';
+  },
+};
 
 export interface EnvEntry {
   name: string;
@@ -47,10 +63,10 @@ export class LyraEnvList extends LyraElement<LyraEnvListEventMap> {
   @property({ attribute: false }) entries: EnvEntry[] = [];
 
   /** Whether each secret entry gets a reveal/hide toggle. */
-  @property({ type: Boolean, reflect: true }) revealable = true;
+  @property({ reflect: true, converter: trueDefaultBooleanConverter }) revealable = true;
 
   /** Whether each entry gets a copy-to-clipboard button. */
-  @property({ type: Boolean, reflect: true }) copyable = true;
+  @property({ reflect: true, converter: trueDefaultBooleanConverter }) copyable = true;
 
   /** Accessible name for the list; falls back to a localized default. */
   @property() label = '';

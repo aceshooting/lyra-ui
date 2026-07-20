@@ -571,4 +571,72 @@ describe('lr-graph-query-builder', () => {
     expect(css).to.match(/\[part='run-button'\]:hover[^{]*\{[^}]*filter:\s*brightness/);
     expect(css).to.match(/\[part='save-button'\]:hover[^{]*\{[^}]*background:/);
   });
+
+  it('names the role="group" region with the localized default when unset', async () => {
+    const el = (await fixture(html`<lr-graph-query-builder></lr-graph-query-builder>`)) as LyraGraphQueryBuilder;
+    await el.updateComplete;
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    expect(base.getAttribute('role')).to.equal('group');
+    expect(base.getAttribute('aria-label')).to.equal('Graph query builder');
+  });
+
+  it('names the region from the label property when set and no host aria-label is present', async () => {
+    const el = (await fixture(
+      html`<lr-graph-query-builder label="Path filter"></lr-graph-query-builder>`,
+    )) as LyraGraphQueryBuilder;
+    await el.updateComplete;
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    expect(base.getAttribute('aria-label')).to.equal('Path filter');
+  });
+
+  it('a host-level aria-label attribute wins over both the label property and the localized default', async () => {
+    const el = (await fixture(
+      html`<lr-graph-query-builder aria-label="Custom region name" label="Path filter"></lr-graph-query-builder>`,
+    )) as LyraGraphQueryBuilder;
+    await el.updateComplete;
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    expect(base.getAttribute('aria-label')).to.equal('Custom region name');
+  });
+});
+
+describe('lifecycle: attachInternals guard', () => {
+  it('degrades gracefully instead of throwing when ElementInternals is unavailable', async () => {
+    const original = (globalThis as { ElementInternals?: unknown }).ElementInternals;
+    // @ts-expect-error -- deliberately simulating an environment (e.g. happy-dom) with no
+    // ElementInternals implementation at all.
+    delete (globalThis as { ElementInternals?: unknown }).ElementInternals;
+    try {
+      expect(() => document.createElement('lr-graph-query-builder')).to.not.throw();
+      const el = (await fixture(html`<lr-graph-query-builder></lr-graph-query-builder>`)) as LyraGraphQueryBuilder;
+      await el.updateComplete;
+      // Rendering and the non-form-associated surface still work in the degraded environment.
+      expect(el.shadowRoot!.querySelectorAll('[part="base"]').length).to.equal(1);
+      expect(() => el.checkValidity()).to.not.throw();
+    } finally {
+      (globalThis as { ElementInternals?: unknown }).ElementInternals = original;
+    }
+  });
+
+  it('degrades gracefully instead of throwing when the native attachInternals() call itself throws', async () => {
+    // Scoped to just this tag -- the shadow tree also renders `<lr-select>`/`<lr-input>`, which
+    // (out of this bucket's scope to fix) call attachInternals() unguarded in their own
+    // constructors too, so a blanket stub would break unrelated children instead of isolating
+    // this component's own guard.
+    const original = HTMLElement.prototype.attachInternals;
+    HTMLElement.prototype.attachInternals = function (this: HTMLElement) {
+      if (this.tagName.toLowerCase() === 'lr-graph-query-builder') {
+        throw new DOMException('attachInternals is not supported', 'NotSupportedError');
+      }
+      return original.call(this);
+    };
+    try {
+      expect(() => document.createElement('lr-graph-query-builder')).to.not.throw();
+      const el = (await fixture(html`<lr-graph-query-builder></lr-graph-query-builder>`)) as LyraGraphQueryBuilder;
+      await el.updateComplete;
+      expect(el.shadowRoot!.querySelectorAll('[part="base"]').length).to.equal(1);
+      expect(() => el.checkValidity()).to.not.throw();
+    } finally {
+      HTMLElement.prototype.attachInternals = original;
+    }
+  });
 });

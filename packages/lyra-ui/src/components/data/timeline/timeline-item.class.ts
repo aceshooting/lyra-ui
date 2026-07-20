@@ -1,4 +1,4 @@
-import { html, nothing, type TemplateResult } from 'lit';
+import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { styles } from './timeline-item.styles.js';
@@ -143,7 +143,8 @@ export class LyraTimelineItem extends LyraElement {
     this.setAttribute('role', 'listitem');
   }
 
-  protected willUpdate(): void {
+  protected willUpdate(changed: PropertyValues): void {
+    super.willUpdate(changed);
     // aria-current lives on the host (role="listitem" does too -- see connectedCallback), so it's a
     // plain imperative attribute write here rather than part of render()'s shadow-DOM template.
     // Removed entirely (not set to "false") while inactive -- omitting it loses no information since

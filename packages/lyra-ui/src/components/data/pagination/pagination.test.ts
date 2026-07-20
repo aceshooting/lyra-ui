@@ -302,3 +302,18 @@ it('resets the native number spin-button on the page-input', () => {
   expect(css).to.match(/\[part='page-input'\]\s*\{[^}]*appearance:\s*textfield/);
   expect(css).to.match(/\[part='page-input'\]::-webkit-inner-spin-button/);
 });
+
+describe('nav button hover specificity', () => {
+  it('wraps the internal hover:not(:disabled) rule in :where() so a consumer ::part(...):hover override wins without !important', async () => {
+    const el = await pagination();
+    const internalRule = (el.shadowRoot!.adoptedStyleSheets ?? [])
+      .flatMap((sheet) => Array.from(sheet.cssRules))
+      .map((rule) => rule.cssText.replace(/"/g, "'"))
+      .find(
+        (text) =>
+          text.includes(':hover') &&
+          (text.includes("[part='previous-button']") || text.includes("[part='next-button']")),
+      );
+    expect(internalRule).to.contain(':where(');
+  });
+});

@@ -57,7 +57,12 @@ export const styles = css`
     color: var(--lr-color-text);
     cursor: pointer;
   }
-  [part='base'] button:hover:not(:disabled) {
+  /* :where() zeroes the wrapped selectors' specificity contribution, leaving only :hover itself
+     -- (0,1,0) total, functionally identical selection to \`[part='base'] button:hover:not(:disabled)\`
+     ((0,3,1)) but now losing (on the pseudo-element tiebreak) to a consumer's own
+     \`::part(zoom-in):hover\` override ((0,1,1)) without that consumer needing !important. Mirrors
+     lr-attachment-trigger's identical fix for the same over-specific shape. */
+  :where([part='base'] button):hover:where(:not(:disabled)) {
     background: var(--lr-color-surface-hover, var(--lr-color-border));
   }
   [part='base'] button:disabled {

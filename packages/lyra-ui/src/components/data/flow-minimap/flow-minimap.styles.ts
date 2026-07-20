@@ -41,6 +41,10 @@ export const styles = css`
     stroke-width: 2;
     cursor: grab;
   }
+  [part='viewport']:hover {
+    fill: color-mix(in srgb, var(--lr-color-brand) 25%, transparent);
+    stroke-width: 3;
+  }
   [part='viewport']:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);

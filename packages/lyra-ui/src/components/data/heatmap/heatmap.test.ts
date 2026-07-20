@@ -7,6 +7,7 @@ import {
   normalizeBucketCount,
   resolveRgb,
 } from './heatmap.js';
+import { styles } from './heatmap.styles.js';
 
 /** Scans a CSS-px rectangle of `ctx` for any pixel whose [r,g,b] satisfies `match` — used by the
  *  focus-ring fast-path repaint tests below, where pinning an exact sub-pixel stroke coordinate
@@ -2982,5 +2983,35 @@ describe('CalendarCellPos.date', () => {
     `)) as LyraHeatmap;
     await el.updateComplete;
     await expect(el).to.be.accessible();
+  });
+});
+
+describe('mouse-hover feedback (states-hover-missing-with-focus-visible)', () => {
+  it('gives the default (non-accessible-cells) canvas surface a pointer cursor', async () => {
+    const el = (await fixture(html`
+      <lr-heatmap .rowLabels=${['A']} .colLabels=${['X']} .values=${[[1]]}></lr-heatmap>
+    `)) as LyraHeatmap;
+    await el.updateComplete;
+    const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
+    expect(getComputedStyle(canvas).cursor).to.equal('pointer');
+  });
+
+  it('turns off canvas pointer-events once accessible-cells takes over hit-testing, so its cursor never shows', async () => {
+    const el = (await fixture(html`
+      <lr-heatmap accessible-cells .rowLabels=${['A']} .colLabels=${['X']} .values=${[[1]]}></lr-heatmap>
+    `)) as LyraHeatmap;
+    await el.updateComplete;
+    const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
+    expect(getComputedStyle(canvas).pointerEvents).to.equal('none');
+  });
+
+  // :hover cannot be synthesized in this test runner (no real pointer), so per this repo's
+  // documented exception for genuinely-unsynthesizable pseudo-classes, this asserts against the
+  // stylesheet source instead of a rendered/computed effect -- mirroring the existing
+  // reduced-motion/RTL-mirror cssText assertions already used elsewhere in this suite.
+  it("declares [part='cell']:hover and [part='canvas']:hover rules using the same focus-ring color token", () => {
+    const css = styles.cssText.replace(/\s+/g, ' ');
+    expect(css).to.match(/\[part='cell'\]:hover\s*\{\s*outline:[^}]*--lr-heatmap-focus-ring-color/);
+    expect(css).to.match(/\[part='canvas'\]:hover\s*\{\s*outline:[^}]*--lr-heatmap-focus-ring-color/);
   });
 });

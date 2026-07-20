@@ -23,7 +23,10 @@ export const styles = css`
       border-color var(--lr-transition-fast),
       box-shadow var(--lr-transition-fast);
   }
-  [part='base'][href]:hover {
+  /* :where() zeroes the extra [href] attribute selector's specificity contribution, leaving only
+     :hover itself so a consumer's ::part(base):hover override ((0,1,1)) wins without needing
+     !important. */
+  :where([part='base'][href]):hover {
     border-color: var(--lr-color-brand);
     box-shadow: var(--lr-shadow-sm);
   }
@@ -68,6 +71,17 @@ export const styles = css`
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);
   }
+  /* Mouse-user counterpart to the :focus-visible rule above: only the [tabindex] state (i.e.
+     exactValue/row.exactValue is actually set, so there's a tooltip to reveal) gets a hover
+     affordance -- a value with nothing to reveal stays inert on hover, matching its own lack of a
+     focus ring. :where() zeroes the extra [tabindex] attribute selector's specificity
+     contribution, leaving only :hover itself so a consumer's ::part(value):hover /
+     ::part(row-value):hover override wins without needing !important. */
+  :where([part='value'][tabindex]):hover,
+  :where([part='row-value'][tabindex]):hover {
+    color: var(--lr-color-brand);
+    cursor: help;
+  }
   [part='unit'] {
     font-size: var(--lr-font-size-md-sm);
     color: var(--lr-color-text-quiet);
@@ -92,13 +106,17 @@ export const styles = css`
   [part='trend'][data-direction='down'] svg {
     transform: rotate(90deg);
   }
+  /* Scoped cssprops (falling back to today's exact shared-token values) so a consumer can retint
+     just the trend pill without also recoloring the headline value's variant="success"/"danger"
+     tint below, which deliberately keeps reading the shared --lr-color-success/-danger tokens
+     directly -- and vice versa. */
   [part='trend'][data-polarity='good'] {
-    color: var(--lr-color-success);
-    background: color-mix(in srgb, var(--lr-color-success) 8%, transparent);
+    color: var(--lr-stat-trend-good-color, var(--lr-color-success));
+    background: var(--lr-stat-trend-good-bg, color-mix(in srgb, var(--lr-color-success) 8%, transparent));
   }
   [part='trend'][data-polarity='bad'] {
-    color: var(--lr-color-danger);
-    background: color-mix(in srgb, var(--lr-color-danger) 8%, transparent);
+    color: var(--lr-stat-trend-bad-color, var(--lr-color-danger));
+    background: var(--lr-stat-trend-bad-bg, color-mix(in srgb, var(--lr-color-danger) 8%, transparent));
   }
   :host([variant='success']) [part='value'] {
     color: var(--lr-color-success);

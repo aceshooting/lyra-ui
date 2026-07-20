@@ -122,6 +122,11 @@ export interface LyraGraphQueryBuilderEventMap {
  * follows that same established convention: `value` round-trips through `JSON.stringify()` as the
  * submitted form value, and a consumer that never places this inside a `<form>` loses nothing.
  *
+ * **Accessible name:** the region (`role="group"`) is named by, in order, a host-level
+ * `aria-label` attribute, the `label` property, or the localized `graphQueryBuilderLabel` default
+ * -- mirroring `<lr-query-builder>`'s identical `role="group"` region, whose own `aria-label`
+ * attribute similarly wins over its internal default.
+ *
  * @customElement lr-graph-query-builder
  * @slot actions - Extra host controls rendered in the footer beside the Run button.
  * @event lr-input - `detail: { value }` — any field changed; the full current query.
@@ -178,7 +183,9 @@ export class LyraGraphQueryBuilder extends LyraElement<LyraGraphQueryBuilderEven
   /** Upper bound (inclusive) offered by the minimum/maximum hop selects. Sanitized to a finite
    *  integer in `[1, 20]`, falling back to `6`. */
   @property({ attribute: 'hop-limit', type: Number }) hopLimit = 6;
-  /** Accessible name for the whole component; falls back to the localized `graphQueryBuilderLabel`. */
+  /** Accessible name for the whole component; falls back to the localized `graphQueryBuilderLabel`.
+   *  A host-level `aria-label` attribute wins over both this property and the localized default --
+   *  see the class doc's "Accessible name" note. */
   @property() label = '';
 
   @state() private _errors: Record<string, string> = {};
@@ -198,9 +205,40 @@ export class LyraGraphQueryBuilder extends LyraElement<LyraGraphQueryBuilderEven
 
   constructor() {
     super();
-    this.internals = this.attachInternals();
+    this.internals = this.safeAttachInternals();
     this.validityController = new AnchoredValidityController(this, this.internals, () => this[VALIDITY_ANCHOR]());
     this.syncFormState();
+  }
+
+  /** `attachInternals()` throws in any environment without a real `ElementInternals`
+   *  implementation (e.g. a downstream consumer's happy-dom test suite) -- merely constructing
+   *  (or importing) this component must not hard-crash there. Falls back to an inert stand-in:
+   *  form participation and validity reporting are unavailable in that environment (there is no
+   *  polyfillable substitute), but rendering and every non-form-associated feature keep working. */
+  private safeAttachInternals(): ElementInternals {
+    if (typeof (globalThis as { ElementInternals?: unknown }).ElementInternals === 'undefined') {
+      return this.inertInternals();
+    }
+    try {
+      return this.attachInternals();
+    } catch {
+      return this.inertInternals();
+    }
+  }
+
+  private inertInternals(): ElementInternals {
+    return {
+      form: null,
+      labels: [] as unknown as NodeList,
+      validity: {} as ValidityState,
+      validationMessage: '',
+      willValidate: false,
+      setFormValue: () => {},
+      setValidity: () => {},
+      checkValidity: () => true,
+      reportValidity: () => true,
+      states: new Set<string>(),
+    } as unknown as ElementInternals;
   }
 
   get form(): HTMLFormElement | null {
@@ -467,7 +505,7 @@ export class LyraGraphQueryBuilder extends LyraElement<LyraGraphQueryBuilderEven
     const value = this._value;
     const hasStartError = this.touchedFields.has('start-input') && Boolean(this._errors['start-input']);
     const hasHopError = this.touchedFields.has('max-hops') && Boolean(this._errors['max-hops']);
-    const regionLabel = this.label || this.localize('graphQueryBuilderLabel');
+    const regionLabel = this.getAttribute('aria-label') || this.label || this.localize('graphQueryBuilderLabel');
 
     return html`
       <div part="base" role="group" aria-label=${regionLabel}>

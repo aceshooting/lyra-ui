@@ -184,6 +184,11 @@ it('wires the sort-header focus ring and hover state to the actual focusable but
   expect(css).to.match(/th button:hover[^{]*\{[^}]*background:/);
 });
 
+it("gives a mouse user hover feedback on a clickable gridcell, matching the keyboard focus-visible ring (rows are clickable via the row's own @click handler)", () => {
+  const css = styles.cssText.replace(/\s+/g, ' ');
+  expect(css).to.match(/\[role='gridcell'\]:hover[^{]*\{[^}]*background:/);
+});
+
 describe('--lr-data-grid-row-selected-bg', () => {
   const columns: DataGridColumn[] = [{ key: 'name', label: 'Name' }];
   const rows = [{ name: 'Alpha' }, { name: 'Beta' }];

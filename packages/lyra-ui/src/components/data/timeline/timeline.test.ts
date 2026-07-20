@@ -13,13 +13,38 @@ it('renders with default orientation="vertical" and role="list" on [part="base"]
   expect(base.getAttribute('role')).to.equal('list');
 });
 
-it('orientation="horizontal" reflects the attribute and the CSS rule driving --lr-timeline-item-direction exists', async () => {
+it('orientation="horizontal" reflects the attribute', async () => {
   const el = (await fixture(html`<lr-timeline orientation="horizontal"></lr-timeline>`)) as LyraTimeline;
   expect(el.getAttribute('orientation')).to.equal('horizontal');
+});
+
+it('orientation="horizontal" actually reorients a slotted item -- marker above content, not beside it', async () => {
+  const vertical = (await fixture(
+    html`<lr-timeline><lr-timeline-item>Only</lr-timeline-item></lr-timeline>`,
+  )) as LyraTimeline;
+  const verticalItem = vertical.querySelector('lr-timeline-item')!;
+  const verticalBase = verticalItem.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  expect(getComputedStyle(verticalBase).flexDirection).to.equal('row');
+
+  const horizontal = (await fixture(
+    html`<lr-timeline orientation="horizontal"><lr-timeline-item>Only</lr-timeline-item></lr-timeline>`,
+  )) as LyraTimeline;
+  const horizontalItem = horizontal.querySelector('lr-timeline-item')!;
+  const horizontalBase = horizontalItem.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  expect(getComputedStyle(horizontalBase).flexDirection).to.equal('column');
+});
+
+it('never scrolls vertically in horizontal orientation -- overflow-x:auto alone lets the y axis compute to auto too, which can show a phantom scrollbar', async () => {
+  const el = (await fixture(html`<lr-timeline orientation="horizontal"></lr-timeline>`)) as LyraTimeline;
+  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  expect(getComputedStyle(base).overflowY).to.equal('hidden');
+});
+
+it('adds a static, themeable edge fade to the horizontal scroll strip', () => {
   const css = timelineStyles.cssText.replace(/\s+/g, ' ');
-  expect(css).to.match(
-    /:host\(\[orientation='horizontal'\]\)\s*\{[^}]*--lr-timeline-item-direction:\s*column/,
-  );
+  expect(css).to.include('-webkit-mask-image: linear-gradient');
+  expect(css).to.include('mask-image: linear-gradient');
+  expect(css).to.include('var(--lr-scroll-fade-size)');
 });
 
 it('resolves the accessible name to the localized "Timeline" by default', async () => {

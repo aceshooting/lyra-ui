@@ -23,6 +23,12 @@ it('mirrors the collapsed disclosure chevron under RTL while keeping expanded ch
   expect(css).to.include(":host([expanded]:dir(rtl)) [part='toggle'] { transform: rotate(90deg);");
 });
 
+it('never scrolls vertically -- overflow-x:auto alone lets the y axis compute to auto too, which can show a phantom scrollbar', async () => {
+  const el = (await fixture(html`<lr-tree></lr-tree>`)) as LyraTree;
+  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  expect(getComputedStyle(base).overflowY).to.equal('hidden');
+});
+
 it('renders top-level treeitems with a tree role', async () => {
   const el = (await fixture(html`<lr-tree></lr-tree>`)) as LyraTree;
   el.data = data;
@@ -30,6 +36,20 @@ it('renders top-level treeitems with a tree role', async () => {
   expect(el.shadowRoot!.querySelector('[role="tree"]')).to.exist;
   const items = el.querySelectorAll('lr-tree-node');
   expect(items.length).to.equal(2);
+});
+
+it('renders the localized "No data" heading in the empty state', async () => {
+  const el = (await fixture(html`<lr-tree></lr-tree>`)) as LyraTree;
+  const empty = el.shadowRoot!.querySelector('[part="empty"]') as HTMLElement & { heading: string };
+  expect(empty.heading).to.equal('No data');
+});
+
+it('honors a .strings override for the empty-state noData heading', async () => {
+  const el = (await fixture(html`<lr-tree></lr-tree>`)) as LyraTree;
+  el.strings = { noData: 'Aucune donnée' };
+  await el.updateComplete;
+  const empty = el.shadowRoot!.querySelector('[part="empty"]') as HTMLElement & { heading: string };
+  expect(empty.heading).to.equal('Aucune donnée');
 });
 
 it('emits lr-node-toggle when a parent node is expanded', async () => {
@@ -1051,6 +1071,25 @@ describe('reorderable', () => {
     const text = region.shadowRoot!.querySelector('[part="region"]')!.textContent ?? '';
     expect(text).to.contain('Root');
     expect(text).to.contain('2');
+  });
+
+  it('honors a .strings override for the treeNodeMoved announcement', async () => {
+    const el = (await fixture(html`<lr-tree reorderable></lr-tree>`)) as LyraTree;
+    el.strings = { treeNodeMoved: 'Déplacé {label} en position {index} sur {total}' };
+    el.data = clone();
+    await el.updateComplete;
+    const region = el.shadowRoot!.querySelector('lr-live-region') as HTMLElement & {
+      updateComplete: Promise<boolean>;
+    };
+    await region.updateComplete;
+
+    const root = el.querySelector('lr-tree-node') as unknown as LyraTreeNode;
+    (root as unknown as HTMLElement).focus();
+    modArrow(root as unknown as Element, 'ArrowDown');
+    await el.updateComplete;
+
+    const text = region.shadowRoot!.querySelector('[part="region"]')!.textContent ?? '';
+    expect(text).to.contain('Déplacé Root en position 2 sur 2');
   });
 
   it('is accessible in the populated reorderable state', async () => {

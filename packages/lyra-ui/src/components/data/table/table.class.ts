@@ -113,7 +113,13 @@ export interface TableColumn<T> {
   footer?(rows: T[]): unknown;
   /** Applied directly to the generated `<td>` via `styleMap` -- e.g. a computed heat-tint
    *  background that a `cell()`-returned inner element can't paint into the cell's own padding.
-   *  Omit for no per-cell style override (the default; unchanged output). */
+   *  Omit for no per-cell style override (the default; unchanged output).
+   *
+   *  Precedence with `heatValue`: an inline `style=` attribute always wins the CSS cascade over an
+   *  external stylesheet rule regardless of specificity, so a `background`/`backgroundColor`
+   *  returned here silently and completely overrides this same column's `heatValue` tint (which is
+   *  painted by a shadow-stylesheet rule, not inline) -- combine the two only when that override is
+   *  the intended effect. */
   cellStyle?(row: T): Record<string, string> | undefined;
   /** Applied as the generated `<td>`'s native `title`, symmetrical with `cellStyle` -- e.g. the
    *  untruncated text behind an ellipsized cell, or a formatted timestamp behind a relative one.
@@ -130,7 +136,9 @@ export interface TableColumn<T> {
    *  tinting (e.g. a label column) — its presence on any column is the opt-in signal for heat-tint
    *  mode as a whole, mirroring how `expandedContent` alone signals expand-mode (no separate
    *  boolean). Returns `null`/`undefined` for a cell with no value: excluded from both the domain
-   *  computation and the tint (reads as "no data", not "zero"). */
+   *  computation and the tint (reads as "no data", not "zero"). A `cellStyle` on the same column
+   *  that returns `background`/`backgroundColor` silently wins over this tint -- see `cellStyle`'s
+   *  own doc for why. */
   heatValue?(row: T): number | null | undefined;
   /** Enables inline editing for this cell. `true` (legacy) opens an editor on
    *  double-click, one cell at a time. `'always'` instead renders a persistent
@@ -646,6 +654,13 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
    *  lite-chart.ts's connectedCallback()/disconnectedCallback() ResizeObserver
    *  lifecycle. */
   private resizeObserver?: ResizeObserver;
+  /** rAF id for the coalesced `resizeObserver` callback below — an animated ancestor resize (a
+   *  CSS transition/drag on a containing panel) can fire the observer once per animation frame,
+   *  and each tick's full synchronous read+write pass (offsetParent over every priority header,
+   *  a fresh `[data-col-key]` query per sticky column, an aria-valuenow write per resize handle)
+   *  would otherwise run unbatched on every single one of them. Mirrors lite-chart.ts's/
+   *  heatmap.class.ts's own `drawRafId` coalescing pattern. */
+  private layoutRafId?: number;
   /** The `[part='base']` element `resizeObserver` is currently observing —
    *  `render()`'s columns/rows-empty branches swap in the built-in
    *  (or `empty`-slotted) empty state instead,
@@ -807,13 +822,26 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
     window.removeEventListener('pointercancel', this.onResizePointerEnd);
   };
 
-  connectedCallback(): void {
-    super.connectedCallback();
-    this.resizeObserver = new ResizeObserver(() => {
+  /** Coalesces however many `resizeObserver` callback ticks land in one animation frame (an
+   *  animated/dragged ancestor resize can fire the observer once per frame) into a single
+   *  read+write pass, instead of re-running `recomputeColumnsHidden()` / `applyStickyOffsets()` /
+   *  `syncResizeHandleValues()` -- each its own DOM query plus per-element measurement -- on every
+   *  tick. A second tick that lands while a frame is already pending is a no-op; the id resets once
+   *  the scheduled frame runs, so the very next tick after that schedules a fresh one. */
+  private scheduleLayoutSync = (): void => {
+    if (this.layoutRafId !== undefined) return;
+    this.layoutRafId = requestAnimationFrame(() => {
+      this.layoutRafId = undefined;
+      if (!this.isConnected) return;
       this.recomputeColumnsHidden();
       this.applyStickyOffsets();
       this.syncResizeHandleValues();
     });
+  };
+
+  connectedCallback(): void {
+    super.connectedCallback();
+    this.resizeObserver = new ResizeObserver(this.scheduleLayoutSync);
     // A reconnect re-creates the observer above but the shadow root content
     // survives across disconnect/reconnect (Lit doesn't tear down the shadow
     // root) — re-observe [part='base'] here if it already exists from before
@@ -839,6 +867,10 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
     window.removeEventListener('pointercancel', this.onResizePointerEnd);
     this.resizeState = undefined;
     this.resizeObserver?.disconnect();
+    if (this.layoutRafId !== undefined) {
+      cancelAnimationFrame(this.layoutRafId);
+      this.layoutRafId = undefined;
+    }
     this.observedBase = undefined;
     this.observedHeaders.clear();
   }
@@ -1042,6 +1074,7 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
   }
 
   protected willUpdate(changed: PropertyValues): void {
+    super.willUpdate(changed);
     if (
       changed.has('rows') ||
       changed.has('rowKey') ||
@@ -1171,6 +1204,7 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
    *  update; column widths are measured per update so the current layout
    *  reflects the rendered columns. */
   protected updated(changed: PropertyValues): void {
+    super.updated(changed);
     if (changed.has('columns') || changed.has('rows') || changed.has('rowKey')) this.applyStickyOffsets();
     this.syncResizeHandleValues();
     // Re-observe [part='base'] whenever this update's render() produced a
@@ -1635,6 +1669,10 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
     const hasHeatTint = this.columns.some((col) => col.heatValue !== undefined);
     const heatDomain = this.computeHeatDomain(hasHeatTint);
     const hasRowTotal = Boolean(this.rowTotal);
+    // Computed once and reused at both full-width call sites below (the group-header row and the
+    // expanded-row panel) rather than hand-duplicated -- a future new leading/trailing structural
+    // column (the same way hasExpand/hasRowTotal were each added) only has to be added here once.
+    const spanningColspan = this.columns.length + (hasExpand ? 1 : 0) + (hasRowTotal ? 1 : 0);
     const renderedEntries = this.renderedEntries();
     const hasPagination = this.normalizedPageSize > 0;
     const filterLabel = this.localize('tableFilterLabel', this.filterLabel || undefined);
@@ -1730,7 +1768,7 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
                           <td
                             part="group-cell"
                             role="gridcell"
-                            colspan=${this.columns.length + (hasExpand ? 1 : 0) + (hasRowTotal ? 1 : 0)}
+                            colspan=${spanningColspan}
                           >
                             ${this.groupLabel
                               ? this.groupLabel(
@@ -1805,7 +1843,7 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
                           <td
                             part="expanded-cell"
                             role="gridcell"
-                            colspan=${this.columns.length + (hasExpand ? 1 : 0) + (hasRowTotal ? 1 : 0)}
+                            colspan=${spanningColspan}
                           >
                             ${this.expandedContent?.(row)}
                           </td>

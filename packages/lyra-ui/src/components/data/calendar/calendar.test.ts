@@ -83,6 +83,18 @@ it('gives nav buttons, day cells, and agenda-event buttons hover/focus-visible t
   expect(css).to.match(/\[part='agenda-event'\]:focus-visible[^{]*\{[^}]*outline:/);
 });
 
+it('gives a mouse user hover feedback on a clickable day cell, matching the keyboard focus-visible ring', () => {
+  const css = styles.cssText.replace(/\s+/g, ' ');
+  expect(css).to.match(/\[part='day'\]:hover/);
+});
+
+it("decouples the selected-day background from the shared --lr-color-brand-quiet token nav-hover/agenda-hover also consume, through its own scoped cssprop", () => {
+  const css = styles.cssText.replace(/\s+/g, ' ');
+  const selectedRule = /\[part='day'\]\[data-selected='true'\]\s*\{([^}]+)\}/.exec(css);
+  expect(selectedRule, "expected a [part='day'][data-selected='true'] rule").to.not.equal(null);
+  expect(selectedRule![1]).to.match(/background:\s*var\(--lr-calendar-day-selected-bg/);
+});
+
 it('is accessible', async () => {
   const el = await fixture(html`<lr-calendar aria-label="Schedule"></lr-calendar>`);
   await expect(el).to.be.accessible();
@@ -208,6 +220,19 @@ it('narrows the day-cell floor inside a narrow container, resolving it through t
   await el.updateComplete;
   const day = el.shadowRoot!.querySelector('[part="day"]') as HTMLElement;
   expect(getComputedStyle(day).minBlockSize).to.equal('80px');
+});
+
+it("establishes its own inline-size containment, so the narrow @container query fires without a consumer having to declare container-type on some ancestor themselves", async () => {
+  const wrapper = (await fixture(html`
+    <div style="inline-size: 300px">
+      <lr-calendar view-date="2026-07-01"></lr-calendar>
+    </div>
+  `)) as HTMLElement;
+  const el = wrapper.querySelector('lr-calendar') as LyraCalendar;
+  await el.updateComplete;
+  expect(getComputedStyle(el).containerType).to.equal('inline-size');
+  const day = el.shadowRoot!.querySelector('[part="day"]') as HTMLElement;
+  expect(getComputedStyle(day).minBlockSize).to.equal('64px'); // var(--lr-size-4rem) narrow floor
 });
 
 it('keeps the narrow day-cell floor overridable through its own cssprop', async () => {

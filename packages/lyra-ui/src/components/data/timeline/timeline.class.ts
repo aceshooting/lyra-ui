@@ -1,4 +1,4 @@
-import { html, type TemplateResult } from 'lit';
+import { html, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { styles } from './timeline.styles.js';
@@ -27,8 +27,8 @@ export type TimelineOrientation = 'vertical' | 'horizontal';
  * @slot - `<lr-timeline-item>` children, in display order.
  * @csspart base - The root wrapper. `role="list"` lives here directly (a timeline isn't a navigation
  *   landmark, so it doesn't need a two-layer `base`+`list` split). Flex container: `flex-direction:
- *   column` in `vertical` orientation (the default), `flex-direction: row` (with `overflow-x: auto`)
- *   in `horizontal` orientation.
+ *   column` in `vertical` orientation (the default), `flex-direction: row` (with `overflow-x: auto`,
+ *   `overflow-y: hidden`, and a static edge-fade `mask-image`) in `horizontal` orientation.
  * @cssprop [--lr-timeline-gap=var(--lr-space-l)] - Spacing between consecutive items along the
  *   timeline's main axis; also the length each item's own rail visually bridges to reach the next
  *   item's marker. Declared here but actually consumed inside each `<lr-timeline-item>`'s own
@@ -55,7 +55,8 @@ export class LyraTimeline extends LyraElement {
   // kept live afterward via slotchange) rather than re-deriving it.
   @state() private slottedCount = 0;
 
-  protected willUpdate(): void {
+  protected willUpdate(changed: PropertyValues): void {
+    super.willUpdate(changed);
     if (!this.hasUpdated) {
       // Must count only children assigned to the *default* slot -- an explicit slot="" attribute
       // still assigns to the default slot per the HTML slot algorithm, so check the attribute's

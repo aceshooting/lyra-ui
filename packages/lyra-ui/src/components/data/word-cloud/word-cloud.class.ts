@@ -155,6 +155,7 @@ export class LyraWordCloud extends LyraElement<LyraWordCloudEventMap> {
   }
 
   protected willUpdate(changed: PropertyValues): void {
+    super.willUpdate(changed);
     if (
       changed.has('words') ||
       changed.has('minFontSize') ||

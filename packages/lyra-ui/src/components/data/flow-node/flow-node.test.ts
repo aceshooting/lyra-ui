@@ -194,6 +194,38 @@ describe('--lr-flow-node-selected-border', () => {
   });
 });
 
+describe('--lr-flow-node-running-border / --lr-flow-node-running-glow', () => {
+  it('retints the running card border via --lr-flow-node-running-border, independent of --lr-flow-node-selected-border', async () => {
+    const el = (await fixture(html`<lr-flow-node heading="Fetch" status="running" selected></lr-flow-node>`)) as LyraFlowNode;
+    el.style.setProperty('--lr-flow-node-running-border', 'rgb(10, 20, 30)');
+    el.style.setProperty('--lr-flow-node-selected-border', 'rgb(40, 50, 60)');
+    await el.updateComplete;
+    const card = el.shadowRoot!.querySelector('.card') as HTMLElement;
+    // Both rules are `:host([x]) .card`, equal specificity -- the running rule sits later in the
+    // stylesheet than the selected rule, so it wins when a node is both selected and running.
+    expect(getComputedStyle(card).borderTopColor).to.equal('rgb(10, 20, 30)');
+  });
+
+  it('retints the running-state glow via --lr-flow-node-running-glow', async () => {
+    const el = (await fixture(html`<lr-flow-node heading="Fetch" status="running"></lr-flow-node>`)) as LyraFlowNode;
+    const card = el.shadowRoot!.querySelector('.card') as HTMLElement;
+    const defaultShadow = getComputedStyle(card).boxShadow;
+    el.style.setProperty('--lr-flow-node-running-glow', 'rgb(70, 80, 90)');
+    await el.updateComplete;
+    expect(getComputedStyle(card).boxShadow).to.not.equal(defaultShadow);
+    expect(getComputedStyle(card).boxShadow).to.contain('rgb(70, 80, 90)');
+  });
+
+  it('renders byte-identically to the brand-quiet token default when unset', async () => {
+    const el = (await fixture(html`<lr-flow-node heading="Fetch" status="running"></lr-flow-node>`)) as LyraFlowNode;
+    const card = el.shadowRoot!.querySelector('.card') as HTMLElement;
+    const unset = getComputedStyle(card).boxShadow;
+    el.style.setProperty('--lr-flow-node-running-glow', 'var(--lr-color-brand-quiet)');
+    await el.updateComplete;
+    expect(getComputedStyle(card).boxShadow).to.equal(unset);
+  });
+});
+
 describe('compact density and the card part', () => {
   const cardOf = (el: LyraFlowNode): HTMLElement => el.shadowRoot!.querySelector('[part="card"]') as HTMLElement;
 

@@ -1,6 +1,21 @@
 import { css } from 'lit';
 export const styles = css`
-  :host { display: block; min-inline-size: 0; --lr-calendar-day-min-block-size: var(--lr-size-6rem); }
+  :host {
+    display: block;
+    min-inline-size: 0;
+    /* Establishes the containment context the narrow-panel @container query below depends on --
+       without this, that query can only ever fire if a consumer's page happens to independently
+       declare container-type on some ancestor whose box crosses the same threshold, making it
+       effectively dead code out of the box. */
+    container-type: inline-size;
+    --lr-calendar-day-min-block-size: var(--lr-size-6rem);
+    /* Component-scoped indirection over the shared --lr-color-brand-quiet token, so a consumer
+       can retint the persistent selected-day highlight without also recoloring
+       button[part='nav']:hover/[part='agenda-event']:hover below, which consume that shared
+       token directly for a visually distinct purpose (transient hover feedback). Defaults to
+       exactly the value the selected-day background already used before this token existed. */
+    --lr-calendar-day-selected-bg: var(--lr-color-brand-quiet);
+  }
   [part='header'] { display: flex; align-items: center; justify-content: space-between; gap: var(--lr-space-s); margin-block-end: var(--lr-space-s); }
   [part='title'] { font-weight: var(--lr-font-weight-semibold); }
   /* [part='nav'] is carried both by the wrapping span around the 'next' button and by the
@@ -23,6 +38,9 @@ export const styles = css`
   /* Negative outline-offset (matching data-grid's own [role='gridcell']:focus-visible) so the ring
      doesn't visually collide with [data-today='true']'s own outline below -- source order makes the
      focus ring win for a focused today cell, which is the correct behavior while focused. */
+  [part='day']:hover {
+    background: var(--lr-color-brand-quiet);
+  }
   [part='day']:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: calc(var(--lr-focus-ring-offset) * -1);
@@ -34,7 +52,7 @@ export const styles = css`
   [part='day'] { display: flex; flex-direction: column; align-items: stretch; min-block-size: var(--lr-calendar-day-min-block-size); padding: var(--lr-space-xs); border-block-start: 0; border-inline-start: 0; text-align: start; }
   [part='day'][data-outside='true'] { color: var(--lr-color-text-quiet); background: var(--lr-color-surface); }
   [part='day'][data-today='true'] { outline: var(--lr-border-width-medium) solid var(--lr-color-brand); outline-offset: calc(var(--lr-border-width-medium) * -1); }
-  [part='day'][data-selected='true'] { background: var(--lr-color-brand-quiet); }
+  [part='day'][data-selected='true'] { background: var(--lr-calendar-day-selected-bg); }
   [part='date'] { font-weight: var(--lr-font-weight-semibold); }
   [part='event'] { overflow: hidden; margin-block-start: var(--lr-space-2xs); padding: var(--lr-space-2xs); border-radius: var(--lr-radius); background: var(--lr-color-brand); color: var(--lr-color-on-brand); font-size: var(--lr-font-size-sm); text-overflow: ellipsis; white-space: nowrap; }
   [part='agenda'] { display: grid; gap: var(--lr-space-s); }

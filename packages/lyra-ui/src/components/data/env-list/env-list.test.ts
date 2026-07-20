@@ -61,7 +61,19 @@ describe('lr-env-list', () => {
       html`<lr-env-list .entries=${[{ name: 'X', value: 'y' }]} .revealable=${false}></lr-env-list>`,
     )) as LyraEnvList;
     await el.updateComplete;
-    expect(el.shadowRoot!.querySelector('[part="reveal-button"]')).to.not.exist;
+    expect(el.shadowRoot!.querySelectorAll('[part="reveal-button"]').length).to.equal(0);
+  });
+
+  it('accepts revealable="false" and copyable="false" as plain-HTML attribute strings, not just property bindings', async () => {
+    const el = (await fixture(
+      html`<lr-env-list revealable="false" copyable="false"></lr-env-list>`,
+    )) as LyraEnvList;
+    expect(el.revealable).to.be.false;
+    expect(el.copyable).to.be.false;
+    el.entries = [{ name: 'X', value: 'y', secret: true }];
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelectorAll('[part="reveal-button"]').length).to.equal(0);
+    expect(el.shadowRoot!.querySelectorAll('[part="copy-button"]').length).to.equal(0);
   });
 
   it('copy button copies the real value regardless of mask state and emits lr-copy', async () => {

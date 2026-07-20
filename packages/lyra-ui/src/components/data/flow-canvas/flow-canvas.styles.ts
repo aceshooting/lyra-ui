@@ -68,6 +68,9 @@ export const styles = css`
     inset-inline-start: 0;
     will-change: transform;
   }
+  [part='node']:focus-within {
+    z-index: var(--lr-layer-content);
+  }
   [part='edge'] {
     fill: none;
     stroke: var(--lr-color-border);
@@ -132,6 +135,13 @@ export const styles = css`
   :host([orientation='horizontal']:dir(rtl)) [part='node'] ::slotted(*) {
     transform: scaleX(-1);
   }
+  [part='node']:hover {
+    outline: var(--lr-size-1px) solid var(--lr-color-border-strong);
+    outline-offset: var(--lr-size-2px);
+  }
+  [part='edge']:hover {
+    stroke-width: 2.5;
+  }
   [part='node']:focus-visible,
   [part='edge']:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
@@ -153,15 +163,15 @@ export const styles = css`
     pointer-events: none;
   }
   [part='node'][data-connect-invalid] {
-    outline: var(--lr-size-2px) solid var(--lr-color-danger);
+    outline: var(--lr-size-2px) solid var(--lr-flow-canvas-node-connect-invalid-outline-color, var(--lr-color-danger));
     outline-offset: var(--lr-size-2px);
   }
   [part='node'][data-connect-target] {
-    outline: var(--lr-size-2px) dashed var(--lr-color-brand);
+    outline: var(--lr-size-2px) dashed var(--lr-flow-canvas-node-connect-target-outline-color, var(--lr-color-brand));
     outline-offset: var(--lr-size-2px);
   }
   [part='viewport'][data-drop-active] {
-    outline: var(--lr-size-2px) dashed var(--lr-color-brand);
+    outline: var(--lr-size-2px) dashed var(--lr-flow-canvas-drop-active-outline-color, var(--lr-color-brand));
     outline-offset: calc(-1 * var(--lr-size-2px));
   }
   [part='edge'][data-running] {

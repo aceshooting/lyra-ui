@@ -62,9 +62,18 @@ export const styles = css`
        positioned physically regardless of direction (see the [part='cells'] direction:ltr pin
        and the arrow-key note in heatmap.class.ts), so the canvas is pinned LTR to match. */
     direction: ltr;
+    /* Only takes visual effect when the canvas itself is the clickable/focusable surface (the
+       default, accessible-cells unset) -- [part='canvas'][aria-hidden] below turns off
+       pointer-events entirely once the accessible-cells overlay takes over hit-testing, so this
+       never shows a pointer over a canvas the mouse can't actually interact with. */
+    cursor: pointer;
   }
   [part='canvas'][aria-hidden] {
     pointer-events: none;
+  }
+  [part='canvas']:hover {
+    outline: var(--lr-size-1px) solid var(--lr-heatmap-focus-ring-color);
+    outline-offset: var(--lr-focus-ring-offset);
   }
   [part='cells'] {
     position: absolute;
@@ -82,6 +91,10 @@ export const styles = css`
     color: transparent;
     cursor: pointer;
     pointer-events: auto;
+  }
+  [part='cell']:hover {
+    outline: var(--lr-size-1px) solid var(--lr-heatmap-focus-ring-color);
+    outline-offset: var(--lr-focus-ring-offset);
   }
   [part='cell']:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-heatmap-focus-ring-color);

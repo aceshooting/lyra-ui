@@ -87,3 +87,29 @@ it('gives the expand/collapse toggle the shared minimum tappable size', async ()
   expect(getComputedStyle(toggle).minInlineSize).to.equal('40px');
   expect(getComputedStyle(toggle).minBlockSize).to.equal('40px');
 });
+
+// A `role="treeitem"` host is only ARIA-valid nested inside a `role="tree"`/`role="group"`
+// ancestor (the WAI-ARIA required-parent rule) -- <lr-tree-node> is never used standalone in
+// practice (see the class doc), so this wraps it the same way <lr-tree> itself always does,
+// while still asserting accessibility on the node's own instance, expanded/badged/described so
+// every own-ARIA code path (role/aria-level/aria-setsize/aria-posinset, the badge/icon/
+// description markup) is exercised.
+it('is accessible with a realistic, expanded, badged item', async () => {
+  const populated = {
+    id: '1',
+    label: 'Root',
+    description: 'A helpful secondary line',
+    badge: 3,
+    badges: [{ text: 'New', tone: 'brand' as const }],
+    children: [{ id: '1.1', label: 'Child A' }],
+  };
+  const wrapper = await fixture(
+    html`<div role="tree">
+      <lr-tree-node .item=${populated} expanded .setSize=${1} .posInSet=${1}></lr-tree-node>
+    </div>`,
+  );
+  const node = wrapper.querySelector('lr-tree-node') as LyraTreeNode;
+  await node.updateComplete;
+  expect(node.getAttribute('role')).to.equal('treeitem');
+  await expect(node).to.be.accessible();
+});

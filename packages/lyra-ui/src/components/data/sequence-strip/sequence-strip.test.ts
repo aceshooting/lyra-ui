@@ -73,6 +73,26 @@ it('renders an empty strip (no cells, generic aria-label) when items is empty', 
   expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.be.a('string');
 });
 
+it('honors a .strings override for the empty-state summary in the rendered aria-label', async () => {
+  const el = (await fixture(
+    html`<lr-sequence-strip .strings=${{ sequenceStripEmpty: 'Aucun élément' }}></lr-sequence-strip>`,
+  )) as LyraSequenceStrip;
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('Aucun élément');
+});
+
+it('honors a .strings override for the per-category summary clause in the rendered aria-label', async () => {
+  const el = (await fixture(
+    html`<lr-sequence-strip .strings=${{ sequenceStripCategoryCount: '{label} ({count})' }}></lr-sequence-strip>`,
+  )) as LyraSequenceStrip;
+  el.items = items;
+  el.categories = categories;
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal(
+    'Text (2), Tool (1)',
+  );
+});
+
 describe('hover tooltip', () => {
   const labeledItems = [
     { id: '1', category: 'text', label: 'Turn 1: text' },

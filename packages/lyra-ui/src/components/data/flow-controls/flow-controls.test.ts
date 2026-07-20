@@ -266,3 +266,17 @@ describe('appearance', () => {
     await expect(controls).to.be.accessible();
   });
 });
+
+describe('toolbar button hover specificity', () => {
+  it('wraps the internal hover rule in :where() so a ::part(zoom-in):hover override does not need !important', async () => {
+    const el = (await fixture(html`<lr-flow-controls></lr-flow-controls>`)) as LyraFlowControls;
+    // jsdom/browser test runners don't synthesize a real :hover pseudo-class from a dispatched
+    // event, so assert via the stylesheet source directly, mirroring lr-attachment-trigger's
+    // identical hover-specificity regression test.
+    const internalRule = (el.shadowRoot!.adoptedStyleSheets ?? [])
+      .flatMap((sheet) => Array.from(sheet.cssRules))
+      .map((rule) => rule.cssText)
+      .find((text) => text.includes(':hover') && text.includes('button'));
+    expect(internalRule).to.contain(':where(');
+  });
+});

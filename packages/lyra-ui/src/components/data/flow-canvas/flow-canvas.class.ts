@@ -160,6 +160,13 @@ interface FlowNodeCardEl extends HTMLElement {
  * @cssprop [--lr-flow-canvas-node-current-outline-color=var(--lr-color-brand)] - Outline color of the
  *   current (`aria-current`) node. Shadow Parts forbids an attribute selector after `::part()`, so the
  *   current node could otherwise only be restyled by hijacking the library-wide `--lr-color-brand` token.
+ * @cssprop [--lr-flow-canvas-node-connect-invalid-outline-color=var(--lr-color-danger)] - Outline color
+ *   of a node that is an invalid connect-gesture drop target. Same `::part()` attribute-selector
+ *   restriction as `--lr-flow-canvas-node-current-outline-color` above.
+ * @cssprop [--lr-flow-canvas-node-connect-target-outline-color=var(--lr-color-brand)] - Outline color of
+ *   a node that is a valid connect-gesture drop target.
+ * @cssprop [--lr-flow-canvas-drop-active-outline-color=var(--lr-color-brand)] - Outline color of the
+ *   viewport while a palette item is dragged over it (`droppable`).
  */
 export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
   static styles = [LyraElement.styles, styles, srOnly];
@@ -891,10 +898,15 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
       this.resetZoom();
     } else if (e.key === 'ArrowRight') {
       e.preventDefault();
-      this.panBy(-KEYBOARD_PAN_STEP, 0);
+      // Physical Left/Right must agree with the mouse-drag pan direction, which already
+      // compensates for the `[part='viewport']` RTL mirror -- see onBackgroundPointerDown's
+      // `rtlFlip` and nudgeNode's identical pattern.
+      const rtlFlip = this.orientation === 'horizontal' && isRtl(this) ? -1 : 1;
+      this.panBy(-KEYBOARD_PAN_STEP * rtlFlip, 0);
     } else if (e.key === 'ArrowLeft') {
       e.preventDefault();
-      this.panBy(KEYBOARD_PAN_STEP, 0);
+      const rtlFlip = this.orientation === 'horizontal' && isRtl(this) ? -1 : 1;
+      this.panBy(KEYBOARD_PAN_STEP * rtlFlip, 0);
     } else if (e.key === 'ArrowDown') {
       e.preventDefault();
       this.panBy(0, -KEYBOARD_PAN_STEP);

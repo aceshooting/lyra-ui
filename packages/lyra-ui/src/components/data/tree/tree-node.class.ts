@@ -1,4 +1,4 @@
-import { html, nothing, type TemplateResult } from 'lit';
+import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { repeat } from 'lit/directives/repeat.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
@@ -102,7 +102,8 @@ export class LyraTreeNode extends LyraElement<LyraTreeNodeEventMap> {
     return Boolean(this.item?.children?.length);
   }
 
-  protected willUpdate(): void {
+  protected willUpdate(changed: PropertyValues): void {
+    super.willUpdate(changed);
     this.setAttribute('role', 'treeitem');
     this.setAttribute('aria-level', String(this.depth + 1));
     this.setAttribute('aria-setsize', String(this.setSize));

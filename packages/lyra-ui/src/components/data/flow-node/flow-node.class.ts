@@ -42,6 +42,11 @@ const DEFAULT_OUTPUTS: FlowHandle[] = [{ id: 'out' }];
  * @cssprop [--lr-flow-node-selected-border=var(--lr-color-brand)] - Border color of the card while
  *   `selected`. Overriding the selection color otherwise requires hijacking the library-wide
  *   `--lr-color-brand` token.
+ * @cssprop [--lr-flow-node-running-border=var(--lr-color-brand)] - Border color of the card while
+ *   `status="running"`. Independent from `--lr-flow-node-selected-border` so a consumer can retint
+ *   just one of the two states without the other following along.
+ * @cssprop [--lr-flow-node-running-glow=var(--lr-color-brand-quiet)] - Box-shadow color of the
+ *   running-state ring around the card, and the pulse keyframes' peak color.
  */
 export class LyraFlowNode extends LyraElement {
   static styles = [LyraElement.styles, styles];

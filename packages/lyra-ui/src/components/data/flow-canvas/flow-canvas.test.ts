@@ -3,6 +3,7 @@ import './flow-canvas.js';
 import '../../overlays/empty/empty.js';
 import type { LyraFlowCanvas, FlowNode, FlowEdge, FlowStructureSnapshot } from './flow-canvas.js';
 import { FLOW_PALETTE_MIME_TYPE } from './flow-canvas.js';
+import { styles } from './flow-canvas.styles.js';
 
 it('defaults to empty nodes/edges, horizontal orientation, and default zoom/grid bounds', async () => {
   const el = (await fixture(html`<lr-flow-canvas></lr-flow-canvas>`)) as LyraFlowCanvas;
@@ -436,6 +437,25 @@ describe('pan & zoom', () => {
     await canvas.updateComplete;
     const viewportEl = canvas.shadowRoot!.querySelector('[part="viewport"]') as HTMLElement;
     expect(getComputedStyle(viewportEl).transform).to.not.equal('none');
+  });
+
+  it('keyboard ArrowRight/ArrowLeft pan flips sign under orientation="horizontal" + dir="rtl", agreeing with drag direction', async () => {
+    const el = (await fixture(html`<div dir="rtl"><lr-flow-canvas style="width:400px;height:300px"></lr-flow-canvas></div>`)) as HTMLElement;
+    const canvas = el.querySelector('lr-flow-canvas') as LyraFlowCanvas;
+    canvas.nodes = nodes;
+    await canvas.updateComplete;
+    const viewportEl = canvas.shadowRoot!.querySelector('[part="viewport"]') as HTMLElement;
+    const fire = (key: string) => viewportEl.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true }));
+    const { x: x0 } = canvas.viewport;
+    // Under the RTL mirror, physical ArrowRight must produce the OPPOSITE panX delta from the
+    // plain-LTR case (x0 - 32, asserted above in 'keyboard +/-/0 and arrows...') so keyboard
+    // panning stays consistent with the mouse-drag path, which already compensates via rtlFlip.
+    fire('ArrowRight');
+    expect(canvas.viewport.x).to.equal(x0 + 32);
+    fire('ArrowLeft');
+    expect(canvas.viewport.x).to.equal(x0);
+    fire('ArrowLeft');
+    expect(canvas.viewport.x).to.equal(x0 - 32);
   });
 });
 
@@ -1386,5 +1406,65 @@ describe('--lr-flow-canvas-node-current-outline-color', () => {
     const unset = getComputedStyle(node).outlineColor;
     el.style.setProperty('--lr-flow-canvas-node-current-outline-color', 'var(--lr-color-brand)');
     expect(getComputedStyle(node).outlineColor).to.equal(unset);
+  });
+});
+
+describe('connect-gesture and drop-active outline cssprop indirection', () => {
+  it('retints the connect-invalid node outline via --lr-flow-canvas-node-connect-invalid-outline-color', async () => {
+    const el = (await fixture(html`<lr-flow-canvas></lr-flow-canvas>`)) as LyraFlowCanvas;
+    el.nodes = nodes;
+    await el.updateComplete;
+    el.style.setProperty('--lr-flow-canvas-node-connect-invalid-outline-color', 'rgb(11, 22, 33)');
+    const node = el.shadowRoot!.querySelector('[data-node-id="a"]') as HTMLElement;
+    node.setAttribute('data-connect-invalid', '');
+    expect(getComputedStyle(node).outlineColor).to.equal('rgb(11, 22, 33)');
+  });
+
+  it('retints the connect-target node outline via --lr-flow-canvas-node-connect-target-outline-color', async () => {
+    const el = (await fixture(html`<lr-flow-canvas></lr-flow-canvas>`)) as LyraFlowCanvas;
+    el.nodes = nodes;
+    await el.updateComplete;
+    el.style.setProperty('--lr-flow-canvas-node-connect-target-outline-color', 'rgb(44, 55, 66)');
+    const node = el.shadowRoot!.querySelector('[data-node-id="a"]') as HTMLElement;
+    node.setAttribute('data-connect-target', '');
+    expect(getComputedStyle(node).outlineColor).to.equal('rgb(44, 55, 66)');
+  });
+
+  it('retints the drop-active viewport outline via --lr-flow-canvas-drop-active-outline-color', async () => {
+    const el = (await fixture(html`<lr-flow-canvas></lr-flow-canvas>`)) as LyraFlowCanvas;
+    el.nodes = nodes;
+    await el.updateComplete;
+    el.style.setProperty('--lr-flow-canvas-drop-active-outline-color', 'rgb(77, 88, 99)');
+    const viewportEl = el.shadowRoot!.querySelector('[part="viewport"]') as HTMLElement;
+    viewportEl.setAttribute('data-drop-active', '');
+    expect(getComputedStyle(viewportEl).outlineColor).to.equal('rgb(77, 88, 99)');
+  });
+});
+
+describe('mouse-hover feedback on nodes and edges', () => {
+  // :hover cannot be synthesized in this test runner (no real pointer), so per this repo's
+  // documented exception for genuinely-unsynthesizable pseudo-classes, this asserts against the
+  // stylesheet source instead of a rendered/computed effect.
+  it('declares a :hover rule for both [part="node"] and [part="edge"], matching their :focus-visible affordance', () => {
+    const css = styles.cssText;
+    expect(css).to.match(/\[part='node'\]:hover\s*\{/);
+    expect(css).to.match(/\[part='edge'\]:hover\s*\{/);
+  });
+});
+
+describe('focused node z-index lift (perf-virtualized-row-focus-within-zindex)', () => {
+  it('raises z-index on a node once focus lands inside it, via :focus-within', async () => {
+    const el = (await fixture(
+      html`<lr-flow-canvas style="width:400px;height:300px" .nodes=${nodes}>
+        <button node-id="a">focus me</button>
+      </lr-flow-canvas>`,
+    )) as LyraFlowCanvas;
+    await el.updateComplete;
+    const wrapperA = el.shadowRoot!.querySelector('[data-node-id="a"]') as HTMLElement;
+    expect(getComputedStyle(wrapperA).zIndex).to.equal('auto');
+    const button = el.querySelector('button[node-id="a"]') as HTMLButtonElement;
+    button.focus();
+    await el.updateComplete;
+    expect(getComputedStyle(wrapperA).zIndex).to.not.equal('auto');
   });
 });

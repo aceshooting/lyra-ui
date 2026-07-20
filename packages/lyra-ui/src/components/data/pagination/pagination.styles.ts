@@ -66,8 +66,11 @@ export const styles = css`
     font: inherit;
     cursor: pointer;
   }
-  [part='previous-button']:hover:not(:disabled),
-  [part='next-button']:hover:not(:disabled) {
+  /* :where() zeroes the wrapped selectors' specificity contribution, leaving only :hover itself
+     so a consumer's ::part(previous-button):hover / ::part(next-button):hover override
+     ((0,1,1)) wins without needing !important. */
+  :where([part='previous-button']):hover:where(:not(:disabled)),
+  :where([part='next-button']):hover:where(:not(:disabled)) {
     background: var(--lr-color-brand-quiet);
   }
   [part='previous-button']:focus-visible,
