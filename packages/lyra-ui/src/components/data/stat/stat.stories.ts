@@ -101,6 +101,66 @@ export const LinkedKpi: Story = {
   `,
 };
 
+export const Appearance: Story = {
+  render: () => html`
+    <div class="flex flex-wrap gap-4">
+      <lr-stat label="Revenue" value="12.4" unit="k€" trend="3.2" caption="Last 30 days"></lr-stat>
+      <lr-stat
+        appearance="plain"
+        label="Revenue"
+        value="12.4"
+        unit="k€"
+        trend="3.2"
+        caption="Last 30 days"
+      ></lr-stat>
+      <lr-stat
+        appearance="plain"
+        label="Memories"
+        value="128"
+        caption="Hover or tab to me — a plain link underlines its value instead of shifting a border it no longer has"
+        href="?path=/story/stat--appearance"
+      ></lr-stat>
+    </div>
+  `,
+};
+
+export const Orientation: Story = {
+  render: () => html`
+    <div class="flex flex-col gap-4">
+      <lr-stat
+        orientation="horizontal"
+        label="Checks"
+        value="87"
+        unit="/100"
+        trend="4.2"
+        caption="42 of 48 clean"
+      ></lr-stat>
+      <!-- The acceptance shape: chrome-less, single baseline row, no label box. -->
+      <lr-stat
+        appearance="plain"
+        orientation="horizontal"
+        value="87"
+        unit="/100"
+        caption="42 of 48 clean"
+      ></lr-stat>
+      <!-- rows/spark have no place on a text baseline: they stay stacked below the row. -->
+      <lr-stat
+        orientation="horizontal"
+        label="Sessions"
+        value="9,204"
+        caption="By channel"
+        .rows=${[
+          { label: 'Direct', value: '64%' },
+          { label: 'Referral', value: '21%' },
+          { label: 'Other', value: '15%' },
+        ]}
+      >
+        <lr-sparkline slot="spark" type="bar" .values=${[3, 5, 4, 6, 8, 7, 9]}></lr-sparkline>
+      </lr-stat>
+    </div>
+  `,
+};
+
 export const ExactValueSubProseCompact: Story = {
   render: () => html`
     <div class="flex flex-wrap gap-4">

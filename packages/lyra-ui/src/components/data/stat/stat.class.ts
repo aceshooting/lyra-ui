@@ -9,6 +9,8 @@ import { styles } from './stat.styles.js';
 
 export type StatVariant = 'neutral' | 'success' | 'warning' | 'danger';
 export type StatGoodDirection = 'up' | 'down';
+export type StatAppearance = 'card' | 'plain';
+export type StatOrientation = 'vertical' | 'horizontal';
 export interface StatRow {
   label: string;
   value: string;
@@ -30,7 +32,8 @@ export interface StatRow {
  * @slot sub - Rich sub-line content (overrides the `sub` attribute).
  * @csspart base - The component's root wrapper (`<div>`, or a real `<a>` when `href` is safe).
  * @csspart icon - Container for the leading icon slot.
- * @csspart label - The label text.
+ * @csspart label - The label text. Hidden (and collapsed) whenever `label` is empty, so a
+ *   label-less stat doesn't leave a blank line above the value.
  * @csspart value-row - Wrapper around the value and unit.
  * @csspart value - The value text. Accessibly labelled by the `label` part (via
  *   `aria-labelledby`) whenever `label` is set, so tabbing directly to this
@@ -101,6 +104,20 @@ export class LyraStat extends LyraElement {
   @property({ type: Boolean, reflect: true }) prose = false;
   /** Tighter padding for constrained spaces — same convention as `lr-empty`'s `compact`. */
   @property({ type: Boolean, reflect: true }) compact = false;
+  /** Visual chrome, mirroring `lr-card`'s `appearance` vocabulary. `'card'` (the default) keeps the
+   *  bordered, filled, padded box that stretches to fill its parent; `'plain'` removes the border,
+   *  background, padding, corner radius and the `block-size: 100%` stretch so the stat can sit
+   *  inline in prose, a toolbar or a table cell. `plain` wins over `compact` when both are set
+   *  (nothing left to tighten), and it also drops `emphasis`'s accent edge — that edge is card
+   *  chrome — while `emphasis`'s brand value tint still applies. A `plain` stat with a safe `href`
+   *  swaps the card's border-color/lift hover affordance (invisible with no border) for an
+   *  underline on `[part='value']`; the `:focus-visible` ring is unchanged. */
+  @property({ reflect: true }) appearance: StatAppearance = 'card';
+  /** Layout axis. `'vertical'` (the default) stacks label, value, trend, sub and caption.
+   *  `'horizontal'` lays label, value+unit, trend, sub and caption out on a single wrapping
+   *  baseline row; `[part='spark']` and `[part='rows']` have no sensible place on a text baseline
+   *  and stay stacked on their own full-width line beneath that row. */
+  @property({ reflect: true }) orientation: StatOrientation = 'vertical';
 
   // Same fix `lr-empty` already established: `[part]:empty` never matches
   // because the part always contains a literal `<slot>` child. Track real
@@ -180,7 +197,7 @@ export class LyraStat extends LyraElement {
         <span part="icon" ?hidden=${!this.hasIcon}
           ><slot @slotchange=${this.onIconSlotChange}></slot
         ></span>
-        <span part="label" id=${this.labelId}>${this.label}</span>
+        <span part="label" id=${this.labelId} ?hidden=${!this.label}>${this.label}</span>
         <div part="value-row">
           <span
             part="value"

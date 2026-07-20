@@ -591,3 +591,301 @@ it('reflects the compact attribute', async () => {
   const el = (await fixture(html`<lr-stat compact value="42"></lr-stat>`)) as LyraStat;
   expect(el.hasAttribute('compact')).to.be.true;
 });
+
+const baseChrome = (el: LyraStat) => {
+  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  const s = getComputedStyle(base);
+  return {
+    flexDirection: s.flexDirection,
+    flexWrap: s.flexWrap,
+    alignItems: s.alignItems,
+    paddingTop: s.paddingTop,
+    paddingLeft: s.paddingLeft,
+    borderTopWidth: s.borderTopWidth,
+    borderTopStyle: s.borderTopStyle,
+    borderTopLeftRadius: s.borderTopLeftRadius,
+    backgroundColor: s.backgroundColor,
+    rowGap: s.rowGap,
+    columnGap: s.columnGap,
+  };
+};
+
+it('leaves the card rendering untouched when both new axes are left unset (they default to card/vertical)', async () => {
+  const markup = html`<lr-stat
+    label="Revenue"
+    value="12.4"
+    unit="k€"
+    caption="Last 30 days"
+  ></lr-stat>`;
+  const implicit = (await fixture(markup)) as LyraStat;
+  const explicit = (await fixture(html`<lr-stat
+    label="Revenue"
+    value="12.4"
+    unit="k€"
+    caption="Last 30 days"
+    appearance="card"
+    orientation="vertical"
+  ></lr-stat>`)) as LyraStat;
+
+  expect(implicit.appearance).to.equal('card');
+  expect(implicit.orientation).to.equal('vertical');
+  expect(implicit.getAttribute('appearance')).to.equal('card');
+  expect(implicit.getAttribute('orientation')).to.equal('vertical');
+
+  // Explicitly restating the defaults must not change a single chrome declaration…
+  expect(baseChrome(explicit)).to.deep.equal(baseChrome(implicit));
+  // …and the defaults are still exactly the card chrome that shipped before these axes existed.
+  const chrome = baseChrome(implicit);
+  expect(chrome.flexDirection).to.equal('column');
+  expect(chrome.paddingTop).to.equal('12px'); // --lr-space-m
+  expect(chrome.paddingLeft).to.equal('12px');
+  expect(chrome.borderTopWidth).to.equal('1px'); // --lr-border-width-thin
+  expect(chrome.borderTopStyle).to.equal('solid');
+  expect(chrome.rowGap).to.equal('4px'); // --lr-space-xs
+  expect(chrome.backgroundColor).to.not.equal('rgba(0, 0, 0, 0)');
+  expect(
+    getComputedStyle(implicit.shadowRoot!.querySelector('[part="base"]') as HTMLElement).blockSize,
+  ).to.equal(
+    getComputedStyle(explicit.shadowRoot!.querySelector('[part="base"]') as HTMLElement).blockSize,
+  );
+});
+
+it('drops border, background, padding and the block-size stretch under appearance="plain"', async () => {
+  const el = (await fixture(html`<lr-stat
+    appearance="plain"
+    label="Revenue"
+    value="12.4"
+    unit="k€"
+    caption="Last 30 days"
+  ></lr-stat>`)) as LyraStat;
+  expect(el.getAttribute('appearance')).to.equal('plain');
+
+  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  const s = getComputedStyle(base);
+  expect(s.borderTopWidth).to.equal('0px');
+  expect(s.borderInlineStartWidth).to.equal('0px');
+  expect(s.borderTopLeftRadius).to.equal('0px');
+  expect(s.backgroundColor).to.equal('rgba(0, 0, 0, 0)');
+  expect(s.paddingTop).to.equal('0px');
+  expect(s.paddingLeft).to.equal('0px');
+
+  // block-size: 100% is card-only: a chrome-less stat sits inline and must not stretch to fill an
+  // arbitrarily tall parent.
+  el.style.blockSize = '200px';
+  await el.updateComplete;
+  expect(getComputedStyle(base).blockSize).to.not.equal('200px');
+});
+
+it('orders :host([appearance="plain"]) after :host([compact]) so the equal-specificity padding reset wins', () => {
+  const css = styles.cssText;
+  const compactAt = css.indexOf(":host([compact])");
+  const plainAt = css.indexOf(":host([appearance='plain'])");
+  expect(compactAt).to.be.greaterThan(-1);
+  expect(plainAt).to.be.greaterThan(-1);
+  expect(plainAt).to.be.greaterThan(compactAt);
+});
+
+it('lets plain win over compact when both are set (equal specificity, source order decides)', async () => {
+  const el = (await fixture(html`<lr-stat
+    compact
+    appearance="plain"
+    label="Revenue"
+    value="12.4"
+  ></lr-stat>`)) as LyraStat;
+  const s = getComputedStyle(el.shadowRoot!.querySelector('[part="base"]') as HTMLElement);
+  expect(s.paddingTop).to.equal('0px');
+  expect(s.paddingLeft).to.equal('0px');
+  expect(s.borderTopWidth).to.equal('0px');
+});
+
+it("gives a linked plain stat a text-underline hover/focus affordance, since it has no border to shift", () => {
+  const css = styles.cssText.replace(/\s+/g, ' ');
+  // The card affordance is a border-color shift, which is invisible once `plain` removes the
+  // border — a linked plain stat must still look interactive.
+  expect(css).to.include(
+    ":host([appearance='plain']) [part='base'][href]:hover [part='value'], :host([appearance='plain']) [part='base'][href]:focus-visible [part='value'] { text-decoration: underline; }",
+  );
+  // …and the card's lift shadow is suppressed, since there is no card to lift.
+  expect(css).to.include(
+    ":host([appearance='plain']) [part='base'][href]:hover { box-shadow: none; }",
+  );
+});
+
+it('keeps the focus ring on a linked plain stat (an outline needs no border)', async () => {
+  const el = (await fixture(html`<lr-stat
+    appearance="plain"
+    label="Memories"
+    value="128"
+    href="/memories"
+  ></lr-stat>`)) as LyraStat;
+  expect(el.appearance).to.equal('plain');
+  const anchor = el.shadowRoot!.querySelector('[part="base"]') as HTMLAnchorElement;
+  expect(anchor.localName).to.equal('a');
+  const css = styles.cssText.replace(/\s+/g, ' ');
+  expect(css).to.include(
+    "[part='base'][href]:focus-visible { outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color); outline-offset: var(--lr-focus-ring-offset); }",
+  );
+  anchor.focus();
+  expect(el.shadowRoot!.activeElement?.getAttribute('href')).to.equal('/memories');
+});
+
+it('puts value, unit and caption on one baseline row under orientation="horizontal"', async () => {
+  const el = (await fixture(html`<lr-stat
+    orientation="horizontal"
+    value="87"
+    unit="/100"
+    caption="42 of 48 clean"
+  ></lr-stat>`)) as LyraStat;
+  expect(el.getAttribute('orientation')).to.equal('horizontal');
+
+  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  const s = getComputedStyle(base);
+  expect(s.flexDirection).to.equal('row');
+  expect(s.alignItems).to.equal('baseline');
+
+  const valueRow = el.shadowRoot!.querySelector('[part="value-row"]') as HTMLElement;
+  const unit = el.shadowRoot!.querySelector('[part="unit"]') as HTMLElement;
+  const caption = el.shadowRoot!.querySelector('[part="caption"]') as HTMLElement;
+  const valueRect = valueRow.getBoundingClientRect();
+  const unitRect = unit.getBoundingClientRect();
+  const captionRect = caption.getBoundingClientRect();
+
+  // Same row: they overlap vertically and the caption sits after the value inline-wise.
+  expect(unitRect.top).to.be.lessThan(valueRect.bottom);
+  expect(captionRect.top).to.be.lessThan(valueRect.bottom);
+  expect(valueRect.top).to.be.lessThan(captionRect.bottom);
+  expect(captionRect.left).to.be.greaterThanOrEqual(valueRect.right);
+});
+
+it('keeps rows and spark stacked on their own line beneath the horizontal row', async () => {
+  const el = (await fixture(html`<lr-stat
+    orientation="horizontal"
+    value="87"
+    unit="/100"
+    caption="42 of 48 clean"
+    ><span slot="spark">spark</span></lr-stat
+  >`)) as LyraStat;
+  el.rows = [
+    { label: 'Direct', value: '64%' },
+    { label: 'Referral', value: '21%' },
+  ];
+  await el.updateComplete;
+
+  const valueRect = (
+    el.shadowRoot!.querySelector('[part="value-row"]') as HTMLElement
+  ).getBoundingClientRect();
+  const spark = el.shadowRoot!.querySelector('[part="spark"]') as HTMLElement;
+  const rows = el.shadowRoot!.querySelector('[part="rows"]') as HTMLElement;
+  expect(spark.hasAttribute('hidden')).to.be.false;
+  expect(rows.hasAttribute('hidden')).to.be.false;
+  // They are forced onto their own full-width line rather than sharing the baseline row.
+  expect(getComputedStyle(spark).flexBasis).to.equal('100%');
+  expect(getComputedStyle(rows).flexBasis).to.equal('100%');
+  expect(spark.getBoundingClientRect().top).to.be.greaterThanOrEqual(valueRect.bottom);
+  expect(rows.getBoundingClientRect().top).to.be.greaterThanOrEqual(
+    spark.getBoundingClientRect().bottom,
+  );
+});
+
+it('keeps prose\'s hidden unit hidden under orientation="horizontal"', async () => {
+  const el = (await fixture(html`<lr-stat
+    orientation="horizontal"
+    prose
+    label="Status"
+    value="Waiting for the next sync…"
+    caption="Updated 2h ago"
+  ></lr-stat>`)) as LyraStat;
+  const unit = el.shadowRoot!.querySelector('[part="unit"]') as HTMLElement;
+  expect(getComputedStyle(unit).display).to.equal('none');
+
+  const valueRect = (
+    el.shadowRoot!.querySelector('[part="value"]') as HTMLElement
+  ).getBoundingClientRect();
+  const captionRect = (
+    el.shadowRoot!.querySelector('[part="caption"]') as HTMLElement
+  ).getBoundingClientRect();
+  expect(captionRect.top).to.be.lessThan(valueRect.bottom);
+  expect(captionRect.left).to.be.greaterThanOrEqual(valueRect.right);
+});
+
+it('hides the label part only when label is empty, and never when it is set', async () => {
+  const empty = (await fixture(html`<lr-stat value="87" unit="/100"></lr-stat>`)) as LyraStat;
+  const emptyLabel = empty.shadowRoot!.querySelector('[part="label"]') as HTMLElement;
+  expect(emptyLabel.hasAttribute('hidden')).to.be.true;
+  expect(getComputedStyle(emptyLabel).display).to.equal('none');
+
+  const labelled = (await fixture(
+    html`<lr-stat label="Revenue" value="12.4"></lr-stat>`,
+  )) as LyraStat;
+  const label = labelled.shadowRoot!.querySelector('[part="label"]') as HTMLElement;
+  expect(label.hasAttribute('hidden')).to.be.false;
+  expect(getComputedStyle(label).display).to.not.equal('none');
+});
+
+it('keeps aria-labelledby resolving to the visible label once a label is set after mount', async () => {
+  const el = (await fixture(
+    html`<lr-stat value="$1.2K" exact-value="$1,204.37"></lr-stat>`,
+  )) as LyraStat;
+  const valueEl = el.shadowRoot!.querySelector('[part="value"]') as HTMLElement;
+  expect(valueEl.hasAttribute('aria-labelledby')).to.be.false;
+  expect(el.shadowRoot!.querySelector('[part="label"]')!.hasAttribute('hidden')).to.be.true;
+
+  el.label = 'Revenue';
+  await el.updateComplete;
+  const label = el.shadowRoot!.querySelector('[part="label"]') as HTMLElement;
+  expect(label.hasAttribute('hidden')).to.be.false;
+  const labelledBy = valueEl.getAttribute('aria-labelledby')!;
+  expect(labelledBy).to.be.a('string').and.not.empty;
+  const combinedText = labelledBy
+    .split(' ')
+    .map((id) => el.shadowRoot!.getElementById(id)!.textContent!.trim())
+    .join(' ');
+  expect(combinedText).to.equal('Revenue $1.2K');
+});
+
+it("drops emphasis's accent edge under plain (it is card chrome) while keeping its brand value tint", async () => {
+  const el = (await fixture(html`<lr-stat
+    appearance="plain"
+    emphasis
+    label="Revenue"
+    value="12.4"
+  ></lr-stat>`)) as LyraStat;
+  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  expect(getComputedStyle(base).borderInlineStartWidth).to.equal('0px');
+
+  const cardNeutral = (await fixture(
+    html`<lr-stat label="Revenue" value="12.4"></lr-stat>`,
+  )) as LyraStat;
+  expect(getComputedStyle(el.shadowRoot!.querySelector('[part="value"]')!).color).to.not.equal(
+    getComputedStyle(cardNeutral.shadowRoot!.querySelector('[part="value"]')!).color,
+  );
+});
+
+it('is accessible in the populated plain/horizontal state', async () => {
+  const el = (await fixture(html`<lr-stat
+    appearance="plain"
+    orientation="horizontal"
+    label="Checks"
+    value="87"
+    unit="/100"
+    exact-value="87 of 100"
+    trend="4.2"
+    sub="vs. last run"
+    caption="42 of 48 clean"
+  ></lr-stat>`)) as LyraStat;
+  el.rows = [
+    { label: 'Direct', value: '64%' },
+    { label: 'Referral', value: '21%', exactValue: '21.4%' },
+  ];
+  await el.updateComplete;
+
+  // Prove the state actually rendered before asserting on it.
+  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  expect(getComputedStyle(base).flexDirection).to.equal('row');
+  expect(getComputedStyle(base).borderTopWidth).to.equal('0px');
+  expect(el.shadowRoot!.querySelectorAll('[part="row"]').length).to.equal(2);
+  expect(el.shadowRoot!.querySelector('[part="trend"]')).to.exist;
+  expect(el.shadowRoot!.querySelector('[part="label"]')!.hasAttribute('hidden')).to.be.false;
+
+  await expect(el).to.be.accessible();
+});
