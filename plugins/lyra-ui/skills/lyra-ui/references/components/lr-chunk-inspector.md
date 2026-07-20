@@ -37,20 +37,35 @@ activated).
 
 **Slots:** none.
 
-**CSS parts:** `base` (`role="group"`), `chunk` (`role="listitem"`), `score` (visible percent text),
-`score-bar` (`aria-hidden` track), `score-fill` (tone-mapped fill), `open-button`, `title` (the
-`<span>` inside `open-button` carrying the visible title text), `text` (line-clamped unless
-expanded, omitted when `compact`), `toggle` ("Show more"/"Show less", omitted when `compact`),
+**CSS parts:** `base` (`role="group"`), `chunk` (one chunk row; carries `role="listitem"` only
+below `virtualize-at` — while virtualized the surrounding `lr-virtual-list` row supplies that role
+instead), `chunk-current` (additional part on the row matching `activeId`), `score` (visible
+percent text), `score-current` (additional part on the current row's score line), `score-bar`
+(`aria-hidden` track), `score-fill` (tone-mapped fill), `score-fill-success` /
+`score-fill-warning` / `score-fill-danger` (additional part on the fill, one per scoring tier),
+`open-button`, `title` (the `<span>` inside `open-button` carrying the visible title text), `text`
+(omitted when `compact`), `text-clamped` (additional part on a `text` preview that is still
+collapsed; dropped once expanded), `toggle` ("Show more"/"Show less", omitted when `compact`),
 `empty` (shown when `chunks` is empty).
+
+Every row-level part is reachable through `::part()` in both rendering paths: above
+`virtualize-at` the row lives in the internal `lr-virtual-list`'s shadow root and its parts are
+re-exported from there under the same names. Row *state* is exposed as an additional part name
+rather than as an attribute on the part, because Shadow Parts forbids an attribute selector after
+`::part()` — `::part(chunk)[aria-current='true']` is invalid CSS. The equivalent attributes
+(`aria-current`, `data-tone`, `data-clamped`) are still present on the elements. A state part is a
+second token in the same `part` attribute, so a `[part~="…"]` (not `[part="…"]`) selector is the
+one that matches inside a tree.
 
 **Themeable custom properties:** `--lr-chunk-inspector-current-bg` (default
 `var(--lr-color-brand-quiet)`) — the background of the chunk matching `activeId`.
 `--lr-chunk-inspector-current-color` (default `var(--lr-color-text)`) — the text color of that
-chunk's `[part='score']` line. Both are inline `var()` fallbacks at the point of use rather than
-`:host` declarations, so either can be set on the element *or on any ancestor*:
+chunk's `score` line (`::part(score-current)`). Both are inline `var()` fallbacks at the point of
+use rather than `:host` declarations, so either can be set on the element *or on any ancestor*:
 `::part(chunk)[data-active]` is invalid CSS — Shadow Parts forbids an attribute selector after
-`::part()` — so tinting the current chunk previously meant overriding the library-wide
-`--lr-color-brand-quiet` token and repainting everything else that read it.
+`::part()` — which is why the current-chunk state is also published as its own part name
+(`chunk-current`, `score-current`); either the custom properties or `::part(chunk-current)` will
+retint it.
 
 **They are a contrast-sensitive pair — override them together, never one alone.** The `-current-color`
 hook exists precisely because the quiet token it replaces only reaches about 4.24:1 against the

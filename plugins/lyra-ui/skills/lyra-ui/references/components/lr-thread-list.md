@@ -43,10 +43,23 @@ set; `lr-group-toggle` requests the matching state change. `rowActions: ThreadRo
 data mode only: built-in icon buttons rendered into each row's `actions` slot. `showArchived: boolean
 = false` (attribute `show-archived`, reflected) — data mode: include `archived` threads (in their own
 trailing group). `editable: boolean = true` (reflected) — forwarded to each data-mode row's inline
-rename. `label: string = ''` — accessible name for the list region, defaults to the localized
-`threadListLabel`. `wrapRow?: (thread: ChatThread, row: TemplateResult) => TemplateResult` (attribute:
-false) — data mode only: wraps each row's built-in `lr-conversation-item` with host-supplied content
-that has no home in the item's own `title`/`excerpt`/`meta`/`actions` surface (e.g. a leading purpose
+rename. `compact: boolean = false` (reflected) — data mode only: forwarded to each row
+`lr-conversation-item`'s own `compact`, tightening every row's padding and gaps from one attribute
+(the density itself lives on the row item; retune it through
+`--lr-conversation-item-compact-padding`/`-gap` on this element or any ancestor). Slotted mode is a
+deliberate no-op — that mode renders host-supplied items as-is, so the host sets `compact` on its own
+items there, the same division of responsibility slotted mode already has for every other row
+property. `stickyGroups: boolean = false` (attribute `sticky-groups`, reflected) — data mode: pins
+the current date/custom group's header to the top of the scroll viewport while its rows are in view,
+pushing it off as the next group's header arrives. Group headers are ordinary virtualized rows, so
+this renders an `aria-hidden` copy of the header into the internal `lr-virtual-list`'s sticky layer:
+the real row keeps the `role="heading"`/`aria-level` semantics and the tab order (the copy's toggle
+is not a second tab stop), while the pinned copy stays clickable and requests the same
+`lr-group-toggle` collapse. Default `false` renders exactly as before; `grouping="none"` has no
+headers to pin, so it is a no-op there. `label: string = ''` — accessible name for the list region,
+defaults to the localized `threadListLabel`. `wrapRow?: (thread: ChatThread, row: TemplateResult) =>
+TemplateResult` (attribute: false) — data mode only: wraps each row's built-in
+`lr-conversation-item` with host-supplied content that has no home in the item's own `title`/`excerpt`/`meta`/`actions` surface (e.g. a leading purpose
 icon — the item has no default slot to receive one); unset renders the built-in row unwrapped.
 `renderActions?: (thread: ChatThread) => TemplateResult` (attribute: false) — data mode only:
 appends host-supplied content (re-invoked per row on every render, e.g. a `lr-menu` with custom
@@ -78,7 +91,11 @@ controlled intent; native group buttons provide Enter/Space activation and expli
 type="search">`), `list` (the list region), `empty`, `viewport` (the actual internal virtual-list
 scroll container, suitable for scrollbar styling), `row-action` (a built-in pin/archive/delete icon
 button), `pin-glyph` (the small pin indicator on a pinned row), `group-header`, `group-toggle`,
-`group-label`, `group-icon`, `row` (all exported across the internal `lr-virtual-list` shadow
+`group-label`, `group-icon`, `group-sticky` (`sticky-groups` only: the pinned copy of the current
+group's header, exported from the internal `lr-virtual-list`'s sticky layer — it wraps a full copy of
+the `group-header`/`group-toggle`/`group-label`/`group-icon` markup, so those parts style the real
+header row and the pinned copy alike, and the band itself is where a shadow or bottom border
+belongs), `row` (all exported across the internal `lr-virtual-list` shadow
 boundary), `row-wrapper` (the wrapper around `wrapRow` output, only present when `wrapRow` is set;
 row-only — group headers are never passed through `wrapRow`, so they never carry it), and
 `row-leading`/`row-content`/`row-meta`/`row-actions` (the library-owned wrappers around
@@ -94,7 +111,11 @@ prefix: `row-item-base`, `row-item-option`, `row-item-leading`, `row-item-conten
 component's own render-callback output (`wrapRow`, `renderLeading`, `renderRowContent`,
 `renderMeta`, `renderActions`); the `row-item-*` parts are the row item's *internals*. Row density
 in particular lives in `row-item-base`'s padding and `row-item-title`'s font size, so
-`::part(row-item-base)` is the supported way to build a dense sidebar:
+`::part(row-item-base)` is the supported way to build a dense sidebar.
+
+For plain row density, prefer the `compact` property above — it forwards straight to the row item's
+own density knob. The `row-item-*` parts remain the lever for tuning beyond it (a different font
+size, a different padding ratio):
 
 ```css
 lr-thread-list::part(row-item-base) { padding-block: 0.25rem; }
@@ -116,9 +137,13 @@ virtualization in both directions. Instead the list host is made a column flex c
 the shipped `24rem` into a *flex-basis*: it grows to fill a bounded pane, shrinks below `24rem` in a
 short one, and falls back to exactly `24rem` in an auto-height container.
 
+`sticky-groups` keeps the current date group's header visible while scrolling through a long sidebar;
+style the pinned band with `lr-thread-list::part(group-sticky)`.
+
 ```html
 <lr-thread-list
   searchable
+  sticky-groups
   .threads=${threads}
   active-id=${activeThreadId}
   .rowActions=${['pin', 'archive', 'delete']}

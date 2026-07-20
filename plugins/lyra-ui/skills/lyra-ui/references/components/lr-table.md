@@ -41,8 +41,11 @@ own "consumer computes/renders" contract rather than assuming addition.
   via the retheme-able `--lr-table-heat-tint-lo`/`-hi` custom properties, matching `lr-heatmap`'s
   own ramp-token convention; `cellStyle` is applied directly to the generated `<td>` via `styleMap` — e.g. a computed heat-tint
   background a `cell()`-returned inner element can't paint into the cell's own padding — omit it for
-  no per-cell style override (the default, unchanged output); `editable` enables double-click
-  editing, `editValue` supplies the editor value, and `editType` selects `text` or `number`
+  no per-cell style override (the default, unchanged output); `editable` enables inline editing —
+  `true` opens a native editor on that cell's double-click (one cell at a time), `'always'` instead
+  renders a persistent editor in every body cell of the column from first paint, for a
+  settings/rate-style column meant to be typed straight into — while `editValue` supplies the editor
+  value and `editType` selects `text` or `number`
   `cellTitle(row) => string | undefined` is the `title` analogue of `cellStyle`, applied directly to
   the generated `<td>` — e.g. the untruncated text behind an ellipsized cell, or a formatted
   timestamp behind a relative one;
@@ -51,6 +54,29 @@ own "consumer computes/renders" contract rather than assuming addition.
   under RTL), Shift+Arrow for 50px steps, Home for the minimum, and End for an explicit pixel
   `maxWidth`; explicit pixel `minWidth`/`maxWidth` values bound both input paths. The separator
   exposes its current/minimum/bounded-maximum pixel width through ARIA value attributes.
+- `columns[].editable: boolean | 'always'` — a widening of the original `boolean`, non-breaking.
+  `true` is unchanged: double-click a cell to open its editor, one at a time, Enter commits and
+  closes, Escape cancels and closes, blur-after-change commits. `'always'` renders an editor in
+  every body cell of that column, permanently:
+  - **Focus model.** Each editor is a plain tab stop — no `tabindex` of its own — exactly like the
+    existing row-expand toggle, and stays *outside* the header/row roving-tabindex model. Tab walks
+    down the column; arrow keys still navigate the grid from a row's own roving stop, and act as
+    ordinary caret movement once focus is inside a field. Non-editable columns are unaffected.
+  - **Value binding.** A persistent editor binds its `value` as a **content attribute**, not as the
+    `.value` property, so native dirty-value-flag semantics apply. Trade-off: once the user has
+    typed into a cell, an out-of-band `rows` update to that same cell will **not** visibly replace
+    their draft. An editor the user has not touched still picks up a new `rows` value normally.
+    `lr-cell-edit` remains the only mutation channel — the table never mutates `row`.
+  - **Keys.** Enter commits (emits `lr-cell-edit`) and *keeps focus* in the field, since there is no
+    closed state to fall back to. `change` (blur after a modification) commits, as with `true`.
+    Escape is **not** cancelled and does nothing to the editor — there is nothing to cancel back to
+    — so an ancestor dialog/popover still acts on it.
+  - **Focus across re-sorts and pagination.** Rows are keyed, so a re-sort *moves* the editor's
+    `<input>` (the typed value rides along) and the table restores focus to the same logical cell
+    afterwards. If the focused row leaves the rendered page entirely (pagination, filtering), focus
+    is simply lost rather than yanked to whichever unrelated row now sits in that position.
+  - Each editor keeps its own interpolated `tableEditCell` accessible name (`Edit {column}`), so a
+    column of otherwise-identical inputs is still individually named to a screen reader.
 - `columnsHidden: boolean = false` (attribute `columns-hidden`, reflected) — computed/read-only: true
   when a `priority` column is *actually* hidden right now by the `@container` breakpoints above, or
   `showAllColumns` force-visible mode is currently active. Measured via a `ResizeObserver` on
@@ -273,5 +299,14 @@ so multiple `sticky` columns stack instead of overlapping; it is a read-out, not
   as the cell's accessible *name*, replacing the cell's content rather than supplementing it (the
   same caveat `lr-stat`'s `exactValue` carries). Use it for a longer form of what the cell already
   shows, never for information that exists nowhere else.
+- `editable: 'always'` deliberately does not re-assert a cell's source value once the user has typed
+  into it. That is the native dirty-value-flag behavior the attribute binding buys, and it is the
+  point: a background `rows` refresh cannot silently overwrite an in-progress edit. If you need the
+  opposite — an authoritative external value that always wins — do not use `'always'`; re-key the
+  row (`rowKey`) so the editor is recreated rather than updated, or keep `editable: true` and let
+  the short-lived double-click editor's property binding re-assert. Also note the two things
+  `'always'` intentionally does *not* do: it never sets the roving `tabindex` (its editors are
+  ordinary tab stops, so Tab order in that column interleaves with the grid's two roving stops,
+  the same way the row-expand toggle's already does), and it never cancels Escape.
 
 ---

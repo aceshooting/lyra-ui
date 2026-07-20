@@ -46,17 +46,25 @@ activeIndex }`. `lr-render-error` — `detail: { error }`, fetching, parsing, or
 notebook failed.
 
 **CSS parts:** `base` (the root scroll container), `cell` (`data-cell-type="code|markdown|raw"`,
-`data-active`), `cell-gutter` (the `In [n]`/`Out [n]` label column), `cell-source`, `outputs`,
-`output` (`data-output-type`, `data-stream`), `output-toggle`, `error`, `spinner`.
+`data-active`), `cell-active` (added alongside `cell` on the cell an anchor currently targets),
+`cell-gutter` (the `In [n]`/`Out [n]` label column), `cell-source`, `outputs`, `output`
+(`data-output-type`, `data-stream`), `output-error` (added alongside `output` on a stderr stream or
+an error output), `error-output-label` (the label introducing an error output's traceback),
+`output-toggle`, `error`, `spinner`.
+
+Every cell-level part above is rendered into the embedded `<lr-virtual-list>`'s own shadow root and
+forwarded back out through `exportparts`, so `lr-notebook-viewer::part(cell)` and friends work from
+a consumer stylesheet. The three state variants are separate part *names* rather than attribute
+selectors, because Shadow Parts forbids an attribute selector after `::part()` —
+`::part(cell)[data-active]` is invalid CSS, so use `::part(cell-active)`. The `data-*` attributes
+remain on the elements for scripting.
 
 **Themeable custom properties:** `--lr-notebook-viewer-max-height` (default `none`).
 
-`--lr-notebook-viewer-active-bg` (intended default `var(--lr-color-brand-quiet)`) is declared for
-the background of the `[part='cell']` currently targeted by an anchor, but **its rule does not
-currently take effect.** Cells are rendered into the embedded `<lr-virtual-list>`'s own shadow root,
-one boundary deeper than this component's stylesheet (and than a consuming stylesheet) reaches, so
-the declaration targeting `[part='cell']` never matches a rendered cell. It is documented here for
-completeness — do not rely on it to tint the anchored cell today.
+`--lr-notebook-viewer-active-bg` (default `var(--lr-color-brand-quiet)`) is the background of the
+cell currently targeted by an anchor — the `cell-active` part. It is an inline `var()` fallback at
+the point of use rather than a `:host` declaration, so it can be set on the element or on any
+ancestor.
 
 **Optional peer deps:** `marked`+`dompurify` (markdown cells, falls back to plain text per cell),
 `shiki` (code cells, falls back to unhighlighted), `dompurify` (HTML/SVG outputs, falls back to

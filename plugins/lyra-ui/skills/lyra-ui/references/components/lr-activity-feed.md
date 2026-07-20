@@ -38,8 +38,17 @@ rather than augmenting it, and `virtualizeThreshold: number = 200` (attribute
 
 **CSS parts:** `base`, `header` (a `<button>`), `status-dot` (pulses while `mode="live"`),
 `summary`, `toggle`, `body` (the scrollable region, or the internal virtual-list), `entry` (carries
-`data-tone`), `entry-icon`, `entry-text`, and `entry-timestamp` (only while `showTimestamps` and a
-valid `timestamp` is set).
+`data-tone`), `entry-icon`, `tone-dot` (the dot rendered inside `entry-icon` when the entry sets no
+literal `icon`), `tone-dot-neutral`/`tone-dot-brand`/`tone-dot-success`/`tone-dot-warning`/
+`tone-dot-danger` (each also carries `tone-dot`), `entry-text`, and `entry-timestamp` (only while
+`showTimestamps` and a valid `timestamp` is set). Every entry-level part is reachable in both
+rendering paths, virtualized or not.
 
 **Themeable custom properties:** `--lr-activity-feed-max-height` (default `16rem`) — cap on how
 tall the expanded body grows before it scrolls internally.
+
+**Known gotchas:**
+- The tone dot's color is selected by its *part name*, not by `[data-tone]`: `::part()` cannot be
+  followed by an attribute selector, so `lr-activity-feed::part(tone-dot)[data-tone='success']`
+  never matches. Target `lr-activity-feed::part(tone-dot-success)` instead. `data-tone` remains on
+  both the entry and the dot for DOM queries.

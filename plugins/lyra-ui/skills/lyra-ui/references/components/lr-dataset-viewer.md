@@ -41,7 +41,10 @@ Enter/Space. `lr-anchor-result` (`detail: { found }`) — fired after an `anchor
 **CSS parts:** `base`, `body`, `table`, `header-row`, `header-cell`, `data-row`, `cell`,
 `cell-highlight` (a `role="cell"` covered by a `highlights` entry; wraps the action button),
 `cell-highlight-action` (the native button filling a highlighted cell — focusable, emits
-`lr-highlight-activate` on click or Enter/Space), `spinner`, and `error`.
+`lr-highlight-activate` on click or Enter/Space), `spinner`, and `error`. `data-row`, `cell`,
+`cell-highlight` and `cell-highlight-action` render inside the internal `<lr-virtual-list>` and are
+forwarded via `exportparts`, so `lr-dataset-viewer::part(cell)` reaches them from a consumer
+stylesheet.
 
 **Exports:** `DatasetTable` is `{ fields: string[]; rows: Record<string, string>[] }`.
 

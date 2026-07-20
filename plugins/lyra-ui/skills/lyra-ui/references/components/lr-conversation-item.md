@@ -32,6 +32,15 @@ First-party invention (no Web Awesome equivalent).
   rename button never renders and the row can never enter its editing state; flipping it to `false`
   while a rename is already in progress cancels that edit (discards the draft, like Escape) rather
   than leaving it stranded and still committable.
+- `compact: boolean = false` (reflected) — tighter row padding and gaps, for the dense history
+  sidebars these rows usually render in (same convention as `lr-empty`'s `compact`). Tightens
+  `[part='base']`'s padding to `var(--lr-space-xs) var(--lr-space-s)` and its gap to
+  `var(--lr-space-2xs)`, and collapses `[part='content']`'s inter-line gap to `0`. Deliberately
+  changes nothing else: it does **not** shrink `[part='rename-button']` below the shared
+  `--lr-icon-button-size` target floor, hide the excerpt, or reduce the excerpt/timestamp font
+  sizes — so a row carrying a rename button or slotted `actions` still floors at roughly that icon
+  size plus the compact padding, while a row with `editable=false` and no actions collapses much
+  further.
 - `spellcheck: boolean = true` — forwarded to the in-place rename `<input>`; `spellcheck="false"` is
   parsed as false (not Lit's default boolean-attribute behavior)
 - `autocapitalize: string = ''` — forwarded to the in-place rename `<input>`; empty omits the attribute
@@ -84,6 +93,15 @@ the default active background; keep any override at 4.5:1 or better against it. 
 custom active background needs its own title color set alongside them, or the title drops below
 contrast while the excerpt stays legible.
 
+`--lr-conversation-item-compact-padding` (default `var(--lr-space-xs) var(--lr-space-s)`) —
+`[part='base']`'s padding while `compact`. `--lr-conversation-item-compact-gap` (default
+`var(--lr-space-2xs)`) — `[part='base']`'s gap while `compact`. Like the active-state pair, both are
+inline `var()` fallbacks at the point of use and never declared on `:host`, so a surrounding list can
+retune every row at once from an ancestor. `[part='content']`'s gap collapses to a flat `0` under
+`compact` with no hatch of its own — there is no smaller step left to retune to. `:host([compact])
+[part='base']` is ordered *before* `:host([active]) [part='base']` (equal specificity), so a row that
+is both compact and active keeps the active background and the promoted excerpt/timestamp contrast.
+
 Plus shared tokens — `--lr-space-xs/-s/-m`, `--lr-radius`,
 `--lr-transition-fast`, `--lr-color-text/-text-quiet/-brand/-brand-quiet/-surface`,
 `--lr-focus-ring-width/-color/-offset`, `--lr-icon-button-size`.
@@ -131,5 +149,10 @@ duration of an edit rather than just visually swapping content (a row mid-edit *
 - Setting `editable = false` mid-rename silently discards the in-progress draft (no `lr-rename`
   fires) — a consumer toggling `editable` off (e.g. in response to some other row entering rename
   mode) should not expect the previous edit to be committed first.
+- `compact` is a spacing knob only — it never lowers the rename button's `--lr-icon-button-size`
+  floor. A compact row that still shows a rename button (or slotted `actions` at the same floor)
+  therefore bottoms out at roughly that icon size plus the compact padding, not at the text height.
+  Lowering `--lr-icon-button-size` at an ancestor is the explicit, informed opt-out of the
+  target-size floor; a density flag deliberately won't do it silently on your behalf.
 
 ---

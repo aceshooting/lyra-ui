@@ -51,6 +51,14 @@ per-item stage label), `item-progress`,
 `item-error` (only for `stage="failed"` with `error` set), `item-actions`, `retry-button`,
 `cancel-button`, `empty`.
 
+In virtualized mode (at or above `virtualizeThreshold`) the rows live in the internal
+`lr-virtual-list`'s shadow root, and `item`, `item-header`, `item-name`, `item-progress`,
+`item-meta`, `item-error`, `item-actions`, `retry-button` and `cancel-button` are forwarded out
+through `exportparts`, so `lr-ingestion-queue::part(item)` and the rest keep working from a consumer
+stylesheet. `item-stage`, `item-chunk-count`, `item-embedding-status` and `item-attempts` are not
+forwarded, so those four are only reachable through `::part()` while the queue is below the
+threshold.
+
 **Themeable custom properties:** `--lr-ingestion-queue-max-height` (default `none`) — non-virtualized
 mode only: caps how tall the list grows before it scrolls internally. No effect once virtualized —
 retheme the internal list via `lr-virtual-list { --lr-virtual-list-height: … }` instead.

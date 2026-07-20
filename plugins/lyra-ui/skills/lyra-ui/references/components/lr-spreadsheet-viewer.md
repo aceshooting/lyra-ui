@@ -37,7 +37,16 @@ Enter/Space. `lr-anchor-result` (`detail: { found }`) — fired after an `anchor
 `search()`/`searchNext()`/`searchPrevious()`/`clearSearch()`.
 
 **CSS parts:** `base`, `tabs`, `sheet`, `header-row`, `data-row`, `cell`, `cell-highlight` (a cell
-covered by a `highlights` entry), `rows`, `spinner`, and `error`.
+covered by a `highlights` entry), `rows`, `spinner`, and `error`. `data-row`, `cell` and
+`cell-highlight` are rendered inside the internal `<lr-virtual-list>` and forwarded via
+`exportparts`, so `lr-spreadsheet-viewer::part(cell)` reaches them from a consumer stylesheet.
+
+**Themeable custom properties:** `--lr-spreadsheet-viewer-highlight-color` (default
+`var(--lr-color-brand)`) — the outline color of a `cell-highlight` cell. The component writes it
+inline (as `var(--lr-color-warning, var(--lr-color-brand))`) on the cell matching
+`activeHighlightId`, since a `[data-active]` selector can't be chained onto the
+`::part(cell-highlight)` the cell reaches this component's stylesheet through; a custom property
+inherits across that boundary instead.
 
 **Optional peer dependency:** install `xlsx` with `pnpm add https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz`. The official CDN matches the
 `.xlsx` and `.xls` MIME types and filename extensions.

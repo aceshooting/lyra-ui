@@ -26,6 +26,8 @@ owns none of that.
 - `statusDetail: string = ''` (attribute `status-detail`) — appended to the status line
 - `durationMs: number | null = null` (attribute `duration-ms`) — formatted into the status line
 - `selected: boolean = false` (reflected)
+- `compact: boolean = false` (reflected) — tighter card padding for dense canvases and palette
+  previews; the border, background, shadow and the `selected`/`status="running"` treatments all stay
 - `inputs: FlowHandle[] = [{ id: 'in' }]`, `outputs: FlowHandle[] = [{ id: 'out' }]` (attribute:
   false) — `FlowHandle { id: string; label?: string }`
 - `orientation: 'horizontal' | 'vertical' = 'horizontal'` (reflected) — which physical edge handles
@@ -36,15 +38,19 @@ owns none of that.
 **Slots:** default (body content), `icon` (leading header glyph), `header` (replaces the built-in
 heading row entirely), `toolbar` (action row at the block-end edge).
 
-**CSS parts:** `base`, `header`, `icon`, `heading`, `status` (never color-only — always paired with
-text), `progress`, `body`, `toolbar`, `handle` (every handle dot), `handle-input`, `handle-output`.
+**CSS parts:** `base` (the row wrapping the input handles, the card and the output handles — it
+carries no card chrome of its own), `card` (the bordered, filled node card), `header`, `icon`,
+`heading`, `status` (never color-only — always paired with text), `progress`, `body`, `toolbar`,
+`handle` (every handle dot), `handle-input`, `handle-output`.
 
-**Themeable custom properties:** `--lr-flow-node-min-inline-size` (default `11rem`) and
+**Themeable custom properties:** `--lr-flow-node-min-inline-size` (default `11rem`),
+`--lr-flow-node-compact-padding` (default `var(--lr-space-xs)`) and `--lr-flow-node-compact-gap`
+(default `var(--lr-space-2xs)`) — `[part="card"]`'s padding and row gap while `compact` — and
 `--lr-flow-node-selected-border` (default `var(--lr-color-brand)`) — the card's border color while
-`selected`. Like the other state-scoped custom properties here it is an inline `var()` fallback at
-its point of use rather than a `:host` declaration, so it can be set on the element *or any
-ancestor*; overriding the selection color otherwise means hijacking the library-wide
-`--lr-color-brand` token and repainting everything else that reads it.
+`selected`. Like the other state-scoped custom properties here they are inline `var()` fallbacks at
+their point of use rather than `:host` declarations, so they can be set on the element *or any
+ancestor* (a canvas retunes every card at once); overriding the selection color otherwise means
+hijacking the library-wide `--lr-color-brand` token and repainting everything else that reads it.
 
 **Optional peer deps:** none.
 
@@ -57,5 +63,10 @@ ancestor*; overriding the selection color otherwise means hijacking the library-
   reduced-motion exception every animated surface in this library follows.
 - `status` drives a status chip with a localized label plus `statusDetail`/`durationMs`, never a
   color-only indicator.
+- All card chrome lives on `[part="card"]`, not `[part="base"]` — `base` is only the flex row that
+  holds the input handles, the card and the output handles. Style the box through `::part(card)`.
+- `--lr-flow-node-min-inline-size` was previously overridden by a duplicate declaration and had no
+  effect. It now sets the card's minimum inline size again, so a node that was relying on the card
+  collapsing below `11rem` will render wider than it used to.
 
 ---

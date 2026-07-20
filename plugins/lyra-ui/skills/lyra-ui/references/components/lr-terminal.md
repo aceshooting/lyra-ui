@@ -36,7 +36,9 @@ text, anchor, rects }`).
 
 **CSS parts:** `base`, `toolbar` (only rendered when copy/download are enabled), `copy-button`,
 `download-button`, `viewport` (the `role="log"` scrollable region), `line` (one rendered line; carries
-`data-line-number`/`data-match`/`data-highlight-tone`), `jump-to-latest` (shown while `follow` is
+`data-line-number`/`data-match`/`data-highlight-tone`, and is forwarded via `exportparts` so
+`lr-terminal::part(line)` reaches the rendered lines from a consumer stylesheet despite them living
+in the internal `<lr-virtual-list>`'s shadow root), `jump-to-latest` (shown while `follow` is
 disengaged and new output has arrived), and `announcer` (the visually-hidden `role="status"` region
 used when `announce-output` is set).
 

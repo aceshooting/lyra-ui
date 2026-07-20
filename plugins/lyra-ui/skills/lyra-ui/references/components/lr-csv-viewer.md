@@ -37,7 +37,15 @@ Enter/Space. `lr-anchor-result` (`detail: { found }`) — fired after an `anchor
 `search()`/`searchNext()`/`searchPrevious()`/`clearSearch()`.
 
 **CSS parts:** `base`, `sheet`, `header-row`, `data-row`, `cell`, `cell-highlight` (a cell covered by
-a `highlights` entry), `rows`, `spinner`, and `error`.
+a `highlights` entry), `rows`, `spinner`, and `error`. `data-row`, `cell` and `cell-highlight` are
+rendered inside the internal `<lr-virtual-list>` and forwarded via `exportparts`, so
+`lr-csv-viewer::part(cell)` reaches them from a consumer stylesheet.
+
+**Themeable custom properties:** `--lr-csv-viewer-highlight-color` (default `var(--lr-color-brand)`)
+— the outline color of a `cell-highlight` cell. The component writes it inline (as
+`var(--lr-color-warning, var(--lr-color-brand))`) on the cell matching `activeHighlightId`, since a
+`[data-active]` selector can't be chained onto the `::part(cell-highlight)` the cell reaches this
+component's stylesheet through; a custom property inherits across that boundary instead.
 
 **Optional peer dependency:** install `papaparse` with `pnpm add papaparse`. The registry matches
 `text/csv` and `.csv` filenames.

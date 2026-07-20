@@ -20,16 +20,23 @@ no editing commands live here.
 - `for: string = ''` — id of the target `lr-flow-canvas`; empty resolves to the nearest ancestor
 - `orientation: 'vertical' | 'horizontal' = 'vertical'` (reflected) — button-cluster layout axis
 - `hideLock: boolean = false` (attribute `hide-lock`) — omits the lock/unlock toggle button
+- `appearance: FlowControlsAppearance = 'card'` (reflected) — `'card' | 'plain'`; `'plain'` drops
+  `[part="base"]`'s border, background, padding, corner radius and its floating-surface `box-shadow`,
+  for a cluster placed in a host toolbar or panel that already draws its own surface. There is
+  deliberately no `compact`: the padding is already the smallest spacing step and the only remaining
+  room is the buttons' `--lr-icon-button-size` hit-area floor
 
 **Events:** none dispatched directly — each button calls the resolved canvas's own `zoomIn()`/
 `zoomOut()`/`fit()`, or toggles its `locked` property.
 
 **Slots:** default — extra host buttons appended to the cluster, styled by the same group.
 
-**CSS parts:** `base` (the `role="group"` wrapper), `zoom-in`, `zoom-out`, `fit`, `lock` (omitted
-when `hideLock`).
+**CSS parts:** `base` (the `role="group"` wrapper; drops its floating-surface chrome under
+`appearance="plain"`), `zoom-in`, `zoom-out`, `fit`, `lock` (omitted when `hideLock`).
 
-**Themeable custom properties:** shared tokens only.
+**Themeable custom properties:** shared tokens only — `--lr-icon-button-size` (each button's minimum
+hit area, unchanged by `appearance`), `--lr-shadow`, `--lr-color-surface`, `--lr-color-border`,
+`--lr-radius`, `--lr-space-2xs`, `--lr-focus-ring-width`/`-color`/`-offset`.
 
 **Optional peer deps:** none.
 
@@ -43,5 +50,9 @@ when `hideLock`).
 - `for` resolution is identical to `lr-flow-minimap`/`lr-flow-run-overlay`: an explicit id, else
   the nearest ancestor canvas — none of the three companions import `LyraFlowCanvas` as a value, only
   its types, so registration order between them and the canvas never matters.
+- `appearance="plain"` drops the `box-shadow` along with the border and background — unlike most
+  `plain` escapes in this library, which only reset the border/background/padding/radius. A lift
+  shadow with no surface under it reads as a stray smudge, so the whole floating-surface treatment
+  goes together (same as `lr-flow-run-overlay`'s `plain`).
 
 ---
