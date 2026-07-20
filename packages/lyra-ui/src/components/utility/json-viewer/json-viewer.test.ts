@@ -460,7 +460,10 @@ it('respects max-height by setting the scoped custom property on the base part',
   expect(base.style.getPropertyValue('--lr-json-viewer-max-height')).to.equal('10rem');
 });
 
-it('mirrors a collapsed directional chevron in RTL while expanded still points down', async () => {
+it('keeps the tree LTR in RTL: a collapsed chevron still points right, expanded points down', async () => {
+  // The tree is pinned direction:ltr (a JSON structure reads left-to-right in any locale, like
+  // devtools/VS Code), so the disclosure chevron behaves identically to an LTR document rather
+  // than mirroring -- collapsed points right (rotate 0), expanded points down (rotate 90).
   const wrapper = await fixture(html`
     <div dir="rtl">
       <lr-json-viewer
@@ -472,12 +475,15 @@ it('mirrors a collapsed directional chevron in RTL while expanded still points d
   `);
   const el = wrapper.querySelector('lr-json-viewer') as LyraJsonViewer;
   await el.updateComplete;
+  const tree = el.shadowRoot!.querySelector('[part="tree"]') as HTMLElement;
+  expect(getComputedStyle(tree).direction).to.equal('ltr');
+
   const toggle = el.shadowRoot!.querySelector('[part="toggle"]') as HTMLButtonElement;
   const chevron = toggle.querySelector('.chevron') as HTMLElement;
-
   const collapsed = new DOMMatrixReadOnly(getComputedStyle(chevron).transform);
-  expect(collapsed.a).to.be.closeTo(-1, 0.001);
-  expect(collapsed.d).to.be.closeTo(-1, 0.001);
+  expect(collapsed.a).to.be.closeTo(1, 0.001);
+  expect(collapsed.b).to.be.closeTo(0, 0.001);
+  expect(collapsed.d).to.be.closeTo(1, 0.001);
 
   toggle.click();
   await el.updateComplete;

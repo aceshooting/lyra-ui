@@ -749,6 +749,61 @@ it('resolves grid/tick/legend/tooltip colors from custom --lr-chart-* values set
   expect(config.options.plugins.tooltip.bodyColor).to.equal('rgb(13, 14, 15)');
 });
 
+it('defaults a color-less series to the themed categorical palette, keyed by index', async () => {
+  const el = (await fixture(html`<lr-chart></lr-chart>`)) as LyraChart;
+  el.type = 'bar';
+  el.labels = ['Q1', 'Q2'];
+  el.datasets = [
+    { label: 'a', data: [1, 2] },
+    { label: 'b', data: [3, 4] },
+  ];
+  el.style.setProperty('--lr-color-chart-1', 'rgb(1, 1, 1)');
+  el.style.setProperty('--lr-color-chart-2', 'rgb(2, 2, 2)');
+  await el.updateComplete;
+  await waitUntil(() => (el as any).chart != null);
+
+  const config = (el as any).buildConfig();
+  // Neither series set a color, so each takes its palette slot rather than Chart.js's
+  // own near-black default (invisible on the dark theme). This is the charts-bar/charts-line
+  // dark-mode regression the visual baselines caught.
+  expect(config.data.datasets[0].backgroundColor).to.equal('rgb(1, 1, 1)');
+  expect(config.data.datasets[0].borderColor).to.equal('rgb(1, 1, 1)');
+  expect(config.data.datasets[1].backgroundColor).to.equal('rgb(2, 2, 2)');
+  expect(config.data.datasets[1].borderColor).to.equal('rgb(2, 2, 2)');
+});
+
+it('lets an explicit series color override the default palette', async () => {
+  const el = (await fixture(html`<lr-chart></lr-chart>`)) as LyraChart;
+  el.type = 'bar';
+  el.labels = ['Q1', 'Q2'];
+  el.datasets = [{ label: 'a', data: [1, 2], color: 'rgb(9, 9, 9)' }];
+  el.style.setProperty('--lr-color-chart-1', 'rgb(1, 1, 1)');
+  await el.updateComplete;
+  await waitUntil(() => (el as any).chart != null);
+
+  const config = (el as any).buildConfig();
+  expect(config.data.datasets[0].borderColor).to.equal('rgb(9, 9, 9)');
+});
+
+it('defaults pie slices to distinct palette colors across the data', async () => {
+  const el = (await fixture(html`<lr-chart></lr-chart>`)) as LyraChart;
+  el.type = 'pie';
+  el.labels = ['A', 'B', 'C'];
+  el.datasets = [{ label: 'slices', data: [1, 2, 3] }];
+  el.style.setProperty('--lr-color-chart-1', 'rgb(1, 1, 1)');
+  el.style.setProperty('--lr-color-chart-2', 'rgb(2, 2, 2)');
+  el.style.setProperty('--lr-color-chart-3', 'rgb(3, 3, 3)');
+  await el.updateComplete;
+  await waitUntil(() => (el as any).chart != null);
+
+  const config = (el as any).buildConfig();
+  expect(config.data.datasets[0].backgroundColor).to.deep.equal([
+    'rgb(1, 1, 1)',
+    'rgb(2, 2, 2)',
+    'rgb(3, 3, 3)',
+  ]);
+});
+
 it('configures a fixed or auto-responsive legend position', async () => {
   const el = (await fixture(html`<lr-chart></lr-chart>`)) as LyraChart;
   el.legend = true;
@@ -1065,4 +1120,68 @@ it('localizes the "Reset zoom" button text via this.localize()', async () => {
   await el.updateComplete;
   const button = el.shadowRoot!.querySelector('[part="reset-zoom-button"]') as HTMLElement;
   expect(button.textContent!.trim()).to.equal('Réinitialiser le zoom');
+});
+
+// A series with no explicit `color` must not fall through to Chart.js's own default fill
+// (`rgba(0,0,0,0.1)`), which is a near-transparent black: faint on the light surface and
+// effectively invisible on the dark one. Because Chart.js paints to <canvas> it cannot consume a
+// CSS `var()`, so the default must also be resolved to a *concrete* color (unlike lite-chart,
+// which can hand the SVG a raw `var(--lr-chart-color-N)`).
+it('gives an uncolored cartesian series a concrete, themed default color for fill and border', async () => {
+  const el = (await fixture(html`<lr-chart></lr-chart>`)) as LyraChart;
+  el.type = 'bar';
+  el.labels = ['Q1', 'Q2', 'Q3'];
+  el.datasets = [{ label: 'Revenue', data: [1, 2, 3] }];
+  await el.updateComplete;
+
+  const ds = (el as any).buildConfig().data.datasets[0];
+  expect(ds.backgroundColor, 'backgroundColor must be set').to.be.a('string').and.not.equal('');
+  expect(ds.borderColor, 'borderColor must be set').to.be.a('string').and.not.equal('');
+  // Concrete, not an unresolved var() a canvas can't paint, and not Chart.js's transparent-black.
+  expect(ds.backgroundColor).to.not.match(/^var\(/);
+  expect(ds.backgroundColor).to.not.match(/rgba\(\s*0\s*,\s*0\s*,\s*0/);
+});
+
+it('rotates the default palette across uncolored series so they stay distinguishable', async () => {
+  const el = (await fixture(html`<lr-chart></lr-chart>`)) as LyraChart;
+  el.type = 'line';
+  el.labels = ['Jan', 'Feb'];
+  el.datasets = [
+    { label: 'A', data: [1, 2] },
+    { label: 'B', data: [3, 4] },
+    { label: 'C', data: [5, 6] },
+  ];
+  await el.updateComplete;
+
+  const [a, b, c] = (el as any).buildConfig().data.datasets;
+  expect(a.borderColor).to.not.equal(b.borderColor);
+  expect(b.borderColor).to.not.equal(c.borderColor);
+  expect(a.borderColor).to.not.equal(c.borderColor);
+});
+
+it('never overrides an explicitly supplied series color with the default palette', async () => {
+  const el = (await fixture(html`<lr-chart></lr-chart>`)) as LyraChart;
+  el.type = 'bar';
+  el.labels = ['Q1'];
+  el.datasets = [{ label: 'Revenue', data: [1], color: '#123456' }];
+  await el.updateComplete;
+
+  const ds = (el as any).buildConfig().data.datasets[0];
+  expect(ds.backgroundColor).to.deep.equal(['#123456']);
+  expect(ds.borderColor).to.equal('#123456');
+});
+
+// pie/doughnut/polarArea color per *slice*, not per dataset: one uncolored series with N points
+// must yield an N-length color array so the slices are told apart, not a single flat color.
+it('gives an uncolored pie a per-slice default palette so slices are distinguishable', async () => {
+  const el = (await fixture(html`<lr-chart></lr-chart>`)) as LyraChart;
+  el.type = 'pie';
+  el.labels = ['A', 'B', 'C'];
+  el.datasets = [{ label: 'Share', data: [30, 45, 25] }];
+  await el.updateComplete;
+
+  const ds = (el as any).buildConfig().data.datasets[0];
+  expect(ds.backgroundColor).to.be.an('array').with.lengthOf(3);
+  expect(ds.backgroundColor[0]).to.not.match(/^var\(/);
+  expect(ds.backgroundColor[0]).to.not.equal(ds.backgroundColor[1]);
 });

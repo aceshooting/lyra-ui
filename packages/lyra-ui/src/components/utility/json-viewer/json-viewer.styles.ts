@@ -37,6 +37,14 @@ export const styles = css`
   }
   [part='tree'] {
     padding: var(--lr-space-s);
+    /* A JSON tree's structure -- key, colon, value, brackets, indentation -- reads
+       left-to-right regardless of the surrounding document direction, exactly like
+       code and like every JSON view (devtools, VS Code). Without this, an ancestor
+       dir="rtl" reverses each row to value-colon-key order, right-aligns the tree, and
+       flips the disclosure chevrons, so the data reads backwards. A key/value that
+       itself contains RTL text still renders that run correctly via the bidi algorithm;
+       only the LTR scaffolding is pinned. Matches code-block's [part='pre'] lock. */
+    direction: ltr;
   }
   .row {
     display: flex;
@@ -88,9 +96,9 @@ export const styles = css`
   [part='toggle'][aria-expanded='true'] .chevron {
     transform: rotate(90deg);
   }
-  :host(:dir(rtl)) [part='toggle'][aria-expanded='false'] .chevron {
-    transform: rotate(180deg);
-  }
+  /* No RTL chevron override: [part='tree'] above is pinned direction:ltr, so a collapsed
+     row's disclosure chevron always points at the LTR-positioned children (to the right),
+     the same as it does in an LTR document. */
   [part='toggle']:not([hidden]):hover {
     background: var(--lr-color-brand-quiet);
     color: var(--lr-color-brand);

@@ -155,6 +155,17 @@ export const styles = css`
   [part='pre'] {
     margin: 0;
     padding: var(--lr-space-s) var(--lr-space-m);
+    /* Source code is read left-to-right regardless of the surrounding document
+       direction -- like every code surface (VS Code, GitHub, devtools). Without
+       this, an ancestor dir="rtl" bidi-reorders each line (a trailing ';' jumps
+       to the visual start, an opening brace wraps to its own bottom line) and
+       right-aligns the block, making valid code look syntactically broken. The
+       header (filename/language/copy/toggle) is a separate part and still mirrors.
+       isolate keeps any RTL run *inside* a string/comment from leaking out and
+       reordering the surrounding code. Matches phone-input's calling-code and
+       terminal/stack-trace's own dir="ltr" content locks. */
+    direction: ltr;
+    unicode-bidi: isolate;
     /* A default background so the plain-fallback path still reads as a
        proper code block -- shiki's own inline background-color (part of the
        generated-token-colors exception documented in code-block.ts's

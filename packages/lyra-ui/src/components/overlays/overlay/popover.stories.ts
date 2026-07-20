@@ -7,7 +7,15 @@ const meta: Meta = { title: 'Overlay/Popover', component: 'lr-popover', tags: ['
 export default meta;
 type Story = StoryObj;
 
-export const Default: Story = { render: () => html`<lr-popover><button slot="trigger">Open details</button><p>Floating content.</p></lr-popover>` };
+// Forced open in the story canvas (but not in autodocs, viewMode === 'docs') so the visual-
+// regression harness and anyone opening the story sees the actual popover surface rather than a
+// bare closed trigger -- the same `.open` pattern lr-dialog and lr-drawer use.
+export const Default: Story = {
+  render: (_args, context) =>
+    html`<lr-popover .open=${context.viewMode !== 'docs'}
+      ><button slot="trigger">Open details</button><p>Floating content.</p></lr-popover
+    >`,
+};
 
 function onSurfaceClick(e: MouseEvent): void {
   const surface = e.currentTarget as HTMLElement;

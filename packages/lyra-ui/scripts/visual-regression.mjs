@@ -48,6 +48,24 @@ const FILTER = filterArgIndex !== -1 ? args[filterArgIndex + 1] : undefined;
 const PIXELMATCH_THRESHOLD = 0.1;
 const MAX_DIFF_PIXEL_RATIO = 0.005;
 
+// Determinism controls. Before these existed the harness's only settling step was a
+// `networkidle` + fixed 250ms wait, which let three independent noise sources move pixels
+// between two runs of *identical* code -- the reason baseline refreshes kept re-blessing a
+// dozen-plus PNGs on sub-1% byte churn (e.g. commit 12d00029, 24 files):
+//   1. in-flight CSS animations/transitions -- handled per-screenshot by Playwright's
+//      `animations: 'disabled'` (fast-forwards finite ones to their final frame, cancels
+//      infinite ones) plus a context-level `reducedMotion: 'reduce'` for the JS-driven
+//      animations that consult the media query instead of running pure CSS;
+//   2. webfonts still swapping in -- handled by awaiting `document.fonts.ready`, which
+//      `networkidle` does *not* imply (the font file can be fetched but not yet applied);
+//   3. wall-clock reads -- any component rendering "2 minutes ago", a "today" highlight, or a
+//      formatted current date produces a different image every run. FIXED_CLOCK pins `Date.now`
+//      and `new Date()` without pausing timers (`setFixedTime`, not `pauseAt`), so streaming /
+//      polling / rAF-driven components still reach their steady state normally.
+// A fixed, arbitrary instant. Any component that renders a relative or absolute current date
+// resolves against this, so its capture is reproducible. Deliberately not "now".
+const FIXED_CLOCK = new Date('2026-01-01T12:00:00.000Z');
+
 const VIEWPORT = { width: 1280, height: 800 };
 // Per-story viewport overrides, matching scripts/check-storybook.mjs's own use of a narrow
 // viewport for the mobile bottom-sheet story.
@@ -61,10 +79,13 @@ const AXES = [
   { name: 'rtl', theme: 'light', direction: 'rtl' },
 ];
 
-// Representative sample across component families (~25% of the 150+ story-having components),
-// per the task's explicit "keep initial scope sane" guidance -- not the full catalog. Extend
-// this list incrementally as families gain coverage; every id here must exist in
-// storybook-static/index.json (verified below) or the run fails loudly.
+// Representative sample across component families -- not the full catalog (251 story titles).
+// Selection is risk-weighted, not proportional: beyond the original cross-section of families,
+// it deliberately over-samples the two areas where a screenshot catches what a unit test
+// structurally cannot -- canvas painters (pixels are the whole contract) and <lr-virtual-list>
+// `renderItem` consumers (styles must pierce a shadow boundary to reach data rows). Extend this
+// list incrementally; every id here must exist in storybook-static/index.json (verified below)
+// or the run fails loudly.
 const STORIES = [
   // Form controls
   'checkbox--default',
@@ -96,6 +117,24 @@ const STORIES = [
   'graph--default',
   'map--default',
   'wordcloud--default',
+  // Canvas-rendered -- these paint to a <canvas> 2D context, so their pixels ARE the entire
+  // contract: no DOM/part assertion in a unit test can see a wrong axis, a clipped slice, or a
+  // mis-mapped color the way a screenshot can. The Charts/Chart family was almost entirely
+  // uncovered (only the bar/line/litechart derivatives above had baselines) despite sharing one
+  // canvas base class (chart.class.ts); these add the remaining chart geometries plus the other
+  // standalone canvas painters (qr-code, audio-visualizer, animated-image).
+  'charts-chart--default',
+  'charts-pie--default',
+  'charts-doughnut--default',
+  'charts-radar--default',
+  'charts-scatter--default',
+  'charts-polararea--default',
+  'charts-bubble--default',
+  'charts-histogram--default',
+  'charts-boxplot--default',
+  'qr-code--default',
+  'audio-visualizer--idle',
+  'animatedimage--default',
   // Viewers
   'documentviewer-pdfviewer--default',
   'jsonviewer--default',
@@ -103,6 +142,23 @@ const STORIES = [
   'markdown--default',
   'documentviewer-csvviewer--quoted-fields',
   'docxviewer--default',
+  // Virtual-list consumers -- these feed a per-row `renderItem` callback into <lr-virtual-list>,
+  // so every data row renders inside THAT element's shadow root, not the component's own. A plain
+  // `[part='row']` rule in the component's stylesheet cannot cross that boundary and silently
+  // dies, collapsing styled rows to unstyled block stacking (the exact bug fixed in csv-viewer /
+  // spreadsheet-viewer, commit 26f28acd, found via this harness). Coverage was inverted: the two
+  // lowest-risk consumers (csv-viewer: 4 pierce rules, pdf-viewer: 8) had baselines while the
+  // heaviest did not. These are the highest `::part`-rule-count consumers, ordered by that count.
+  'chunk-inspector--default', // 19 pierce rules
+  'ingestion-queue--default', // 17
+  'documentviewer-pagerail--mediated', // 14
+  'threadlist--default', // 14
+  'documentviewer-notebookviewer--default', // 12
+  'neighbor-list--default', // 12
+  'retrieval-results--default', // 11
+  'activityfeed--live-expanded', // 11
+  'documentviewer-datasetviewer--default', // 7
+  'archiveviewer--default', // 5
   // Layout primitives
   'apprail--forced-icon-only',
   'responsivepanel--forced-overlay-bottom-sheet',
@@ -171,6 +227,11 @@ async function captureStory(page, baseUrl, id, theme, direction) {
   // papaparse) settle. networkidle is best-effort: components with a live/streaming poll timer
   // (e.g. generation-status, stream-status) never go idle, so this must not be fatal.
   await page.waitForLoadState('networkidle', { timeout: 8_000 }).catch(() => {});
+  // Webfonts being *fetched* (what networkidle observes) is not the same as them being *applied*;
+  // screenshotting between those two moments captures fallback-font metrics and shifts every
+  // glyph in the image. Best-effort like networkidle above: a story that never settles its font
+  // loading must not be fatal to the run.
+  await page.evaluate(() => document.fonts.ready).catch(() => {});
   await page.waitForTimeout(250);
   // Full-viewport screenshot rather than a `#storybook-root`-clipped one: several of the sampled
   // families (dialog, drawer, overlay-dropdown, overlay-popover, overlay-tooltip,
@@ -178,7 +239,13 @@ async function captureStory(page, baseUrl, id, theme, direction) {
   // document-level portal, which lands as a sibling of #storybook-root rather than inside it --
   // clipping to that element's bounding box would silently crop the very content the RTL/theme
   // axes exist to catch a regression in.
-  return page.screenshot({ type: 'png' });
+  // `animations: 'disabled'` fast-forwards finite CSS animations/transitions to their last frame
+  // and cancels infinite ones -- preferred over injecting `* { animation: none !important }`,
+  // which would strand an entrance animation at its *starting* keyframe rather than its
+  // resting state. `caret: 'hide'` is Playwright's default but is stated explicitly here because
+  // the sampled form controls (input, textarea, combobox, select) autofocus in some stories and a
+  // blinking caret is otherwise a coin-flip pixel.
+  return page.screenshot({ type: 'png', animations: 'disabled', caret: 'hide' });
 }
 
 // Escapes a value for safe placement inside a single markdown table cell. Order matters:
@@ -253,7 +320,11 @@ async function main() {
   const server = createServer(serve);
   const baseUrl = await listen(server);
   const browser = await chromium.launch({ headless: true });
-  const page = await browser.newPage({ deviceScaleFactor: 1 });
+  const page = await browser.newPage({ deviceScaleFactor: 1, reducedMotion: 'reduce' });
+  // Pins Date.now()/new Date() for every story in the run while leaving setTimeout/setInterval/
+  // rAF running at real speed, so date-rendering components are reproducible but streaming and
+  // polling components still settle. Installed once -- it survives the per-story navigations.
+  await page.clock.setFixedTime(FIXED_CLOCK);
   const browserErrors = [];
   page.on('pageerror', (error) => browserErrors.push(String(error)));
   page.on('console', (message) => {

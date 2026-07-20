@@ -55,6 +55,13 @@ export const styles = css`
   canvas {
     display: block;
     inline-size: 100%;
+    /* The 2D context defaults ctx.direction to 'inherit' (the canvas element's computed
+       direction), and the axis labels are drawn with the default textAlign:'start'. Under an
+       ancestor dir="rtl" that 'start' anchors to the right, so a left-drawn row label (x=2/x=4)
+       runs off the left edge and only its trailing glyph survives ("Mon" -> "n"). The grid is
+       positioned physically regardless of direction (see the [part='cells'] direction:ltr pin
+       and the arrow-key note in heatmap.class.ts), so the canvas is pinned LTR to match. */
+    direction: ltr;
   }
   [part='canvas'][aria-hidden] {
     pointer-events: none;

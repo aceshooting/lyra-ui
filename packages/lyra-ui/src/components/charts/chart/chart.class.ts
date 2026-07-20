@@ -100,6 +100,24 @@ const FALLBACK_LEGEND_COLOR = '#1a1a1a';
 const FALLBACK_TOOLTIP_BG = '#fff';
 const FALLBACK_TOOLTIP_TEXT = '#1a1a1a';
 
+// Light-mode defaults of --lr-color-chart-1..8 (see internal/tokens.styles.ts), the same
+// categorical ramp <lr-lite-chart>'s DEFAULT_PALETTE draws from. Used to give a series with
+// no explicit `color` a themed, theme-visible default instead of Chart.js's own hardcoded
+// near-black (rgba(0,0,0,.1)) fill, which is invisible on the dark theme — grid/tick/legend
+// were already themed via themeColors(), but the data series itself was not. Only the literal
+// fallbacks here are reached when getComputedStyle can't resolve the custom properties (host
+// detached); a live host resolves the real, dark-aware values in seriesPalette() below.
+const FALLBACK_SERIES_PALETTE = [
+  '#8250df',
+  '#bf3989',
+  '#0a7d91',
+  '#57606a',
+  '#b083f5',
+  '#f470b8',
+  '#52d6e8',
+  '#c9d1d9',
+];
+
 interface ThemeColors {
   grid: string;
   tick: string;
@@ -407,8 +425,17 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
     this.draw();
   }
 
-  private seriesToDataset(s: Series) {
+  private seriesToDataset(s: Series, index: number, palette: string[], effectiveType: string) {
     const colors = Array.isArray(s.color) ? s.color : s.color ? [s.color] : undefined;
+    // Default a color-less series to the categorical palette, keyed by dataset index (matching
+    // <lr-lite-chart>). pie/doughnut carry one series whose *slices* each need a distinct color,
+    // so those default to an array cycled across the palette; every other family is one color
+    // per series. Only applied when the caller gave no `color` — an explicit `color` still wins.
+    const fallback = palette.length ? palette[index % palette.length] : undefined;
+    const sliceColors =
+      (effectiveType === 'pie' || effectiveType === 'doughnut') && palette.length
+        ? (s.points ?? s.data ?? []).map((_, i) => palette[i % palette.length])
+        : undefined;
     return {
       label: s.label,
       data: s.points ?? s.data ?? [],
@@ -429,8 +456,8 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
       fill: s.fill ?? this.area,
       borderWidth: s.width ?? 2,
       borderDash: s.dash ? [4, 4] : undefined,
-      backgroundColor: colors,
-      borderColor: colors?.[0],
+      backgroundColor: colors ?? sliceColors ?? fallback,
+      borderColor: colors?.[0] ?? fallback,
       pointBackgroundColor: s.pointColors,
       pointRadius: s.pointRadius,
       yAxisID: s.axis === 'y2' ? 'y2' : 'y',
@@ -454,6 +481,24 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
       tooltipBg: cs.getPropertyValue('--lr-chart-tooltip-bg').trim() || FALLBACK_TOOLTIP_BG,
       tooltipText: cs.getPropertyValue('--lr-chart-tooltip-text').trim() || FALLBACK_TOOLTIP_TEXT,
     };
+  }
+
+  /**
+   * Resolves the categorical series palette (`--lr-color-chart-1..8`, declared in
+   * `internal/tokens.styles.ts` with their own dark-theme ramp) via `getComputedStyle` —
+   * same canvas-can't-read-`var()` constraint as `themeColors()`, and the same source
+   * `<lr-lite-chart>` draws its default palette from. Feeds `seriesToDataset()` a concrete,
+   * theme-aware default color for any series that sets no `color` of its own. Falls back to
+   * the light-mode literals only if the custom properties can't be resolved (host detached).
+   */
+  private seriesPalette(): string[] {
+    const cs = getComputedStyle(this);
+    const palette: string[] = [];
+    for (let i = 1; i <= FALLBACK_SERIES_PALETTE.length; i++) {
+      const value = cs.getPropertyValue(`--lr-color-chart-${i}`).trim();
+      if (value) palette.push(value);
+    }
+    return palette.length ? palette : FALLBACK_SERIES_PALETTE;
   }
 
   private tickOptions(theme: ThemeColors): OptionalPeerApi {
@@ -681,11 +726,14 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
     // (e.g. line -> radar) ships with the wrong axis shape (categorical x/y
     // instead of a radial r scale).
     const effectiveType = this.effectiveType();
+    const palette = this.seriesPalette();
     const generated: OptionalPeerApi = {
       type: effectiveType,
       data: {
         labels: this.labels,
-        datasets: this.datasets.map((s) => this.seriesToDataset(s)) as never,
+        datasets: this.datasets.map((s, i) =>
+          this.seriesToDataset(s, i, palette, effectiveType),
+        ) as never,
       },
       options: {
         locale: this.effectiveLocale,

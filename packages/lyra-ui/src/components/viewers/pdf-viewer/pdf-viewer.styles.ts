@@ -16,7 +16,13 @@ export const styles = css`
      descendant combinator either, which is why the canvas and the generated text runs carry their
      own part names instead of being addressed as descendants of page/text-layer. */
   lr-virtual-list::part(page) { position: relative; display: flex; justify-content: center; padding-block: var(--lr-space-m); min-inline-size: 0; }
-  lr-virtual-list::part(page-canvas) { box-shadow: 0 0 0 var(--lr-border-width-thin) var(--lr-color-border); }
+  /* direction:ltr so the canvas 2D context (which defaults ctx.direction to 'inherit' -> the
+     element's computed direction) lays PDF.js's explicitly-positioned glyphs out LTR. Under an
+     ancestor dir="rtl" the inherited RTL direction otherwise reorders/overlaps the painted text
+     ("Hello, world!" -> "H e lb world!"); a PDF's text position is absolute and encoded in the
+     file, never a function of the surrounding UI direction. Scoped to the canvas alone so the
+     text-layer's own RTL centering (below) is untouched. */
+  lr-virtual-list::part(page-canvas) { box-shadow: 0 0 0 var(--lr-border-width-thin) var(--lr-color-border); direction: ltr; }
   lr-virtual-list::part(text-layer) {
     position: absolute;
     inset-block-start: var(--lr-space-m);
