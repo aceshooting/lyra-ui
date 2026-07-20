@@ -305,10 +305,12 @@ describe('lr-rubric-form', () => {
     `)) as HTMLFormElement;
     const el = form.querySelector('lr-rubric-form') as LyraRubricForm;
     await el.updateComplete;
-    // Deliberately no `expect(el.labels...)` here -- reading it hangs headless Chromium indefinitely
-    // (see the `labels` getter's own doc comment in rubric-form.class.ts and
-    // docs/superpowers/feature_requests/2026-07-19-latent-bugs-found-during-coverage-push.md item 3).
-    // Do not add it back without first confirming the hang is resolved.
+    // Assert `labels.length` (a number), never the NodeList itself: a *failing* chai assertion whose
+    // `actual` is a DOM node/NodeList hangs the whole wtr session, because @web/test-runner-mocha
+    // ships `err.actual` verbatim in the `wtr-session-finished` message and @web/dev-server-core
+    // serializes that message via `structuredClone()`, which throws DataCloneError on DOM values.
+    // The run then reports `0 passed, 0 failed` at the 180s `testsFinishTimeout`.
+    expect(el.labels.length).to.equal(0);
     expect(el.form).to.equal(form);
     expect(el.validity.valid).to.be.false;
     expect(el.validationMessage).to.be.a('string');

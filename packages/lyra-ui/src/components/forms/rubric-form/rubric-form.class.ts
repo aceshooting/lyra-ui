@@ -134,13 +134,7 @@ export class LyraRubricForm extends LyraElement<LyraRubricFormEventMap> {
   get form(): HTMLFormElement | null {
     return this.internals.form;
   }
-  /** Delegates straight to `ElementInternals.labels` -- no logic of its own. Reading it from this
-   *  component's minimal (no wrapping `<form>`, no `keys`) fixture reliably hangs headless Chromium
-   *  indefinitely (very likely a Playwright/Chromium defect in the native accessor itself, not
-   *  anything this getter does); see
-   *  `docs/superpowers/feature_requests/2026-07-19-latent-bugs-found-during-coverage-push.md` item 3.
-   *  `rubric-form.test.ts`'s getters test deliberately omits a `.labels` assertion because of this --
-   *  do not add one back without first confirming the hang is actually resolved. */
+  /** Delegates straight to `ElementInternals.labels` -- no logic of its own. */
   get labels(): NodeList {
     return this.internals.labels;
   }

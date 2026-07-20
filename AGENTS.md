@@ -398,12 +398,19 @@ in an existing component and as a release blocker for a new component.
 - Native-wrapper tests cover relevant attribute forwarding, form/reset/validity behavior, public
   focus/editing methods, and the exact bubbling/composed event contract. Do not treat a rendered
   private native element as proof that the host API works.
-- **A failed `expect(x).to.equal(y)` where `x`/`y` are DOM elements can hang the whole test file**
-  under `wtr`'s Playwright-controlled browser (chai/loupe's diff-formatting for a DOM node appears
-  to deadlock the automated reporting pipeline specifically — the same assertion fails instantly
-  and prints normally in a plain, uncontrolled browser tab). The file reports `0 passed, 0 failed`
-  and times out at `testsFinishTimeout` with no per-test detail, which reads exactly like an
-  unrelated environment/resource-contention issue and is easy to misdiagnose as one. If a test file
+- **A *failing* assertion whose `actual`/`expected` is a DOM node, `NodeList`, or any other
+  non-structured-cloneable value hangs the whole test file** under `wtr`. Root cause (verified
+  empirically, 2026-07-20): `@web/test-runner-mocha`'s `collectTestResults` copies `err.actual` and
+  `err.expected` *verbatim* into the `wtr-session-finished` message, and `@web/dev-server-core`'s
+  browser `sendMessage` serializes that message with `stable()`, whose very first statement is
+  `structuredClone(obj)`. `structuredClone` throws `DataCloneError` on any DOM value, so the message
+  is never sent, the session never finishes, and the file reports `0 passed, 0 failed` at the 180s
+  `testsFinishTimeout` with no per-test detail — which reads exactly like an infinite loop or an
+  environment/resource-contention issue and is easy to misdiagnose as one. It is neither: chai's own
+  message formatting is fine (~2 ms), and deleting `actual`/`expected` off the caught
+  `AssertionError` before rethrowing makes the identical failure report instantly. **Never assert on
+  a DOM node/NodeList directly unless the assertion is guaranteed to pass** — compare an id, a tag
+  name, `querySelectorAll(...).length`, or `labels.length` instead. If a test file
   hangs with no informative output: bisect it (binary-split the `it()` blocks into scratch files
   until you isolate the one test), then either fix the underlying wrong expectation or restructure
   the assertion to compare something other than the DOM elements directly (e.g. an id/attribute).

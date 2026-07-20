@@ -329,21 +329,14 @@ describe('rendering non-text outputs', () => {
     expect(output.textContent).to.include('Safe');
   });
 
-  // FIXME: this test reliably hangs the whole browser session (no per-test timeout ever fires --
-  // not mocha's 6000ms test timeout, not waitUntil's own 1000ms internal timeout -- only the
-  // outer wtr session watchdog eventually kills it at 180s). Isolated to exactly this test via
-  // bisection (every other test in this file, including the sibling svg/html sanitize tests,
-  // passes fine alone and together). Ruled out: waitUntil's predicate throwing before
-  // <lr-virtual-list> exists (open-wc's waitUntil catches and rejects on a thrown predicate, it
-  // doesn't retry-loop -- confirmed by reading its source); a real dompurify import (this test
-  // uses __setNotebookSanitizerForTesting(null), which short-circuits loadNotebookSanitizer()
-  // without ever calling the real loader); an unstable renderSanitized() cache key (joinText() is
-  // pure, the raw html string here is a static literal). The remaining live hypothesis is a
-  // runaway synchronous microtask chain (e.g. requestUpdate() re-triggering itself every render)
-  // that starves setTimeout-based timers entirely without literally freezing the thread -- but
-  // that needs an interactive debugger/profiler attached to the test's own browser session to
-  // confirm, not further static reading. Skipped rather than guessed at further; needs follow-up.
-  it.skip('shows a localized missing-sanitizer notice for HTML/SVG outputs when the optional dompurify peer is unavailable', async () => {
+  // Note: the missing-sanitizer notice is itself a <p>, so never assert `querySelector('p')` here.
+  // A *failing* chai assertion whose `actual` is a live DOM node/NodeList hangs the whole wtr
+  // session: @web/test-runner-mocha copies `err.actual`/`err.expected` verbatim into the
+  // `wtr-session-finished` message, and @web/dev-server-core's browser `sendMessage` serializes it
+  // with `stable()`, whose first statement is `structuredClone(obj)` -- which throws DataCloneError
+  // on any DOM node. The message is never sent, so the run reports `0 passed, 0 failed` at the 180s
+  // `testsFinishTimeout`. Assert counts/strings (structured-cloneable values) instead.
+  it('shows a localized missing-sanitizer notice for HTML/SVG outputs when the optional dompurify peer is unavailable', async () => {
     __setNotebookSanitizerForTesting(null);
     const notebook = {
       nbformat: 4, nbformat_minor: 5,
@@ -355,7 +348,9 @@ describe('rendering non-text outputs', () => {
     const el = (await fixture(html`<lr-notebook-viewer .notebook=${notebook}></lr-notebook-viewer>`)) as LyraNotebookViewer;
     await waitUntil(() => rowRoot(el).querySelector('[part="output"]')?.textContent?.trim() !== '');
     const output = rowRoot(el).querySelector('[part="output"]')!;
-    expect(output.querySelector('p')).to.not.exist;
+    // Exactly one <p> -- the notice itself. The raw `<p>Safe</p>` payload is never rendered, which
+    // the textContent equality below also proves.
+    expect(output.querySelectorAll('p').length).to.equal(1);
     expect(output.textContent).to.equal('This viewer needs the optional "dompurify" package installed to render safely.');
   });
 

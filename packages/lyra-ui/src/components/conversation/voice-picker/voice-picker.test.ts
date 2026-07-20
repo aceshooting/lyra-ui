@@ -329,12 +329,10 @@ it('exposes form/labels/validity/validationMessage/willValidate by delegating to
   `)) as HTMLFormElement;
   const el = form.querySelector('lr-voice-picker') as LyraVoicePicker;
   expect(el.form).to.equal(form);
-  // Reads the native ElementInternals.labels accessor -- confirmed safe with this fixture (wrapped in
-  // a <form>, even with no associated <label for>). A *different* fixture shape (no wrapping <form>,
-  // no labels) hung headless Chromium indefinitely reading the very same accessor on
-  // <lr-rubric-form>; see
-  // docs/superpowers/feature_requests/2026-07-19-latent-bugs-found-during-coverage-push.md item 3
-  // before assuming a change here is automatically safe.
+  // Assert labels.length (a number), never the NodeList itself: a *failing* chai assertion whose
+  // `actual` is a DOM node/NodeList hangs the whole wtr session (wtr ships `err.actual` verbatim in
+  // its session-finished message, which is serialized with structuredClone() -- DataCloneError on
+  // any DOM value, so no result is ever reported and the run dies at testsFinishTimeout).
   expect(el.labels.length).to.equal(0); // no associated <label for> in this fixture
   expect(el.validity.valueMissing).to.be.true;
   expect(el.validationMessage.length).to.be.greaterThan(0);
