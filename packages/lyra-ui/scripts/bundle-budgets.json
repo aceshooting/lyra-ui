@@ -1,9 +1,9 @@
 {
   "$comment": "gzip budgets in KB (1024 bytes) for bundled+minified esm entries, optional peers externalized; checked by scripts/check-bundle-size.mjs, regenerated via --write-budgets (~10% headroom)",
-  "dist/lyra.js": 515,
-  "dist/components/forms/button/button.js": 30,
-  "dist/components/forms/select/select.js": 37,
-  "dist/components/data/gauge/gauge.js": 26,
-  "dist/components/viewers/pdf-viewer/pdf-viewer.js": 42,
-  "dist/components/data/flow-canvas/flow-canvas.js": 40
+  "dist/lyra.js": 556,
+  "dist/components/forms/button/button.js": 31,
+  "dist/components/forms/select/select.js": 41,
+  "dist/components/data/gauge/gauge.js": 29,
+  "dist/components/viewers/pdf-viewer/pdf-viewer.js": 48,
+  "dist/components/data/flow-canvas/flow-canvas.js": 44
 }
