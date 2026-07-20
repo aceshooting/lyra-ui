@@ -2,6 +2,7 @@ import { fixture, expect, html, waitUntil } from '@open-wc/testing';
 import './node-palette.js';
 import type { LyraNodePalette, PaletteItem } from './node-palette.js';
 import { FLOW_PALETTE_MIME_TYPE } from '../../data/flow-canvas/flow-canvas.js';
+import { styles } from './node-palette.styles.js';
 
 const items: PaletteItem[] = [
   { type: 'http-request', label: 'HTTP Request', category: 'Data', keywords: ['fetch', 'api'] },
@@ -152,4 +153,10 @@ it('is accessible with items, groups, and a disabled item', async () => {
   const el = (await fixture(html`<lr-node-palette .items=${items}></lr-node-palette>`)) as LyraNodePalette;
   await el.updateComplete;
   await expect(el).to.be.accessible();
+});
+
+it('gives the search field a focus-visible ring and resets the native search-cancel glyph', () => {
+  const css = styles.cssText.replace(/\s+/g, ' ');
+  expect(css).to.match(/\[part='search'\]:focus-visible\s*\{[^}]*outline:/);
+  expect(css).to.match(/\[part='search'\]::-webkit-search-cancel-button/);
 });

@@ -21,6 +21,14 @@ export const styles = css`
     color: var(--lr-color-text);
     font: inherit;
   }
+  [part='search']:focus-visible {
+    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
+    outline-offset: var(--lr-focus-ring-offset);
+  }
+  [part='search']::-webkit-search-cancel-button,
+  [part='search']::-webkit-search-decoration {
+    appearance: none;
+  }
   [part='list'] {
     display: flex;
     flex-direction: column;
