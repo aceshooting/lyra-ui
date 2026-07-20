@@ -48,22 +48,39 @@ type Tier = 'high' | 'medium' | 'low';
  * expandable chunk text, and the deep-link event that lands a chunk in `lr-document-viewer`.
  * Never fetches, ranks, or dedupes; never opens documents itself.
  *
+ * Every row-level part is reachable through `::part()` in both rendering paths: above
+ * `virtualize-at` a row lives in the internal `<lr-virtual-list>`'s shadow root, and its parts are
+ * re-exported from there under the same names. Row *state* is exposed as an additional part name
+ * (`chunk-current`, `score-current`, `score-fill-<tone>`, `text-clamped`) rather than as an
+ * attribute on the part, because Shadow Parts forbids an attribute selector after `::part()` --
+ * `::part(chunk)[aria-current='true']` is invalid CSS. The equivalent attributes are still present
+ * on the elements. A state part is a second token in the same `part` attribute, so a `[part~="..."]`
+ * (not `[part="..."]`) selector is the one that matches inside a tree.
+ *
  * @customElement lr-chunk-inspector
  * @event lr-chunk-open - A chunk's title/open button was activated -- the event a host routes
  * into `lr-document-viewer` (set `src` from `sourceId`, set `anchor`). `detail: { id, sourceId,
  * anchor? }`.
  * @event lr-expand - A chunk's text toggle was activated. `detail: { id, expanded }`.
  * @csspart base - The `role="group"` wrapper.
- * @csspart chunk - One chunk row (`role="listitem"`).
+ * @csspart chunk - One chunk row. Carries `role="listitem"` only in the non-virtualized path;
+ * while virtualized the surrounding `<lr-virtual-list>` row supplies that role instead.
+ * @csspart chunk-current - Additional part on the `chunk` row matching `activeId`.
  * @csspart score - The visible percent-score text.
+ * @csspart score-current - Additional part on the current row's `score` line.
  * @csspart score-bar - The `aria-hidden` score bar track.
  * @csspart score-fill - The score bar's tone-mapped fill.
+ * @csspart score-fill-success - Additional part on a `score-fill` in the high-score tier.
+ * @csspart score-fill-warning - Additional part on a `score-fill` in the medium-score tier.
+ * @csspart score-fill-danger - Additional part on a `score-fill` in the low-score tier.
  * @csspart open-button - The chunk's title/open `<button>`.
  * @csspart title - The `<span>` inside `open-button` carrying the visible title text. Split from
  * `open-button` (rather than a dual part name on one element) because an exact-match
  * `[part="..."]` CSS attribute selector -- as used by this component's own tests -- cannot match
  * a multi-token `part` attribute value.
- * @csspart text - The chunk's text preview, line-clamped unless expanded. Omitted when `compact`.
+ * @csspart text - The chunk's text preview. Omitted when `compact`.
+ * @csspart text-clamped - Additional part on a `text` preview that is still collapsed
+ * (line-clamped); dropped once that chunk is expanded.
  * @csspart toggle - The "Show more"/"Show less" button. Omitted when `compact`.
  * @csspart empty - The empty-state message, shown when `chunks` is empty.
  * @cssprop [--lr-chunk-inspector-current-bg=var(--lr-color-brand-quiet)] - Background of the chunk
@@ -124,8 +141,14 @@ export class LyraChunkInspector extends LyraElement<LyraChunkInspectorEventMap> 
     this.emit('lr-expand', { id, expanded });
   }
 
-  private renderChunk = (item: unknown): TemplateResult => {
-    const chunk = item as LyraChunk;
+  // Row state is mirrored into a second part-name token (`chunk-current`, `score-fill-<tone>`,
+  // `text-clamped`) alongside the attribute that already carries it. Whenever this row is rendered
+  // through `<lr-virtual-list>` it lives in *that* component's shadow root, reachable only via
+  // `::part()`, and Shadow Parts forbids an attribute selector after `::part()` -- so the state has
+  // to be expressible as a part name or it cannot be styled at all in that path. The attributes
+  // stay put: they carry the semantics (`aria-current`) and remain the selector a consumer uses
+  // inside its own tree.
+  private chunkTemplate(chunk: LyraChunk, virtualized: boolean): TemplateResult {
     const tier = this.tier(chunk.score);
     const tone = this.tierTone(tier);
     const percent = Math.round(chunk.score * 100);
@@ -133,12 +156,17 @@ export class LyraChunkInspector extends LyraElement<LyraChunkInspectorEventMap> 
     const titleWithPage =
       chunk.page == null || chunk.page === '' ? titleText : this.localize('sourcePageSuffix', undefined, { base: titleText, page: chunk.page });
     const expanded = this.expandedIds.has(chunk.id);
+    const current = this.activeId === chunk.id;
     return html`
-      <div part="chunk" role="listitem" aria-current=${this.activeId === chunk.id ? 'true' : nothing}>
-        <div part="score">
+      <div
+        part=${current ? 'chunk chunk-current' : 'chunk'}
+        role=${virtualized ? nothing : 'listitem'}
+        aria-current=${current ? 'true' : nothing}
+      >
+        <div part=${current ? 'score score-current' : 'score'}>
           <span>${this.localize('chunkScore', undefined, { percent })}</span>
           <span part="score-bar" aria-hidden="true"
-            ><span part="score-fill" data-tone=${tone} style=${styleMap({ inlineSize: `${percent}%` })}></span
+            ><span part="score-fill score-fill-${tone}" data-tone=${tone} style=${styleMap({ inlineSize: `${percent}%` })}></span
           ></span>
         </div>
         <button
@@ -150,14 +178,21 @@ export class LyraChunkInspector extends LyraElement<LyraChunkInspectorEventMap> 
           <span part="title">${titleWithPage}</span>
         </button>
         ${!this.compact
-          ? html`<p part="text" ?data-clamped=${!expanded}>${chunk.text}</p>
+          ? html`<p part=${expanded ? 'text' : 'text text-clamped'} ?data-clamped=${!expanded}>${chunk.text}</p>
               <button part="toggle" type="button" aria-expanded=${expanded ? 'true' : 'false'} @click=${() => this.toggleExpand(chunk.id)}>
                 ${this.localize(expanded ? 'showLess' : 'showMore')}
               </button>`
           : nothing}
       </div>
     `;
-  };
+  }
+
+  private renderChunk = (item: unknown): TemplateResult => this.chunkTemplate(item as LyraChunk, false);
+
+  // `<lr-virtual-list>` already wraps every row it renders in its own `role="listitem"`; a second
+  // one nested inside it would leave the inner listitem with a listitem (rather than list) parent,
+  // which is an invalid ARIA containment.
+  private renderVirtualChunk = (item: unknown): TemplateResult => this.chunkTemplate(item as LyraChunk, true);
 
   render(): TemplateResult {
     const sorted = this.sortedChunks();
@@ -175,8 +210,9 @@ export class LyraChunkInspector extends LyraElement<LyraChunkInspectorEventMap> 
       <div part="base" role="group" aria-label=${label}>
         ${sorted.length > this.effectiveVirtualizeAt
           ? html`<lr-virtual-list
+              exportparts="chunk:chunk, chunk-current:chunk-current, score:score, score-current:score-current, score-bar:score-bar, score-fill:score-fill, score-fill-success:score-fill-success, score-fill-warning:score-fill-warning, score-fill-danger:score-fill-danger, open-button:open-button, title:title, text:text, text-clamped:text-clamped, toggle:toggle"
               .items=${sorted}
-              .renderItem=${this.renderChunk}
+              .renderItem=${this.renderVirtualChunk}
               .keyFunction=${(item: unknown) => (item as LyraChunk).id}
               .activeId=${this.activeId || ''}
             ></lr-virtual-list>`
