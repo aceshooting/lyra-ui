@@ -45,6 +45,12 @@ mapping is readable without hovering each cell.
   filtering legend). Because it only repeats the category names `[part="base"]` already announces
   through its `role="img"` summary, the legend is `aria-hidden` — visible on screen, announced
   exactly once — and it wraps onto further rows in a narrow allocation rather than overflowing
+- `markerLabel?: string` (attribute `marker-label`) — names what an item's `marker` *means* (e.g.
+  `"Subagent"`). Setting it does two things: with `showLegend` on it adds one trailing
+  `[part="legend-item"]`, whose `[part="legend-marker-swatch"]` reproduces the cell's own marker
+  treatment, and it adds the marker to the auto-generated `aria-label` summary, which is otherwise
+  per-category only. The marker count is reported as its own clause rather than folded into any
+  category's count. Unset (the default) changes nothing: no extra legend row, no extra summary clause
 
 **Events:** none.
 
@@ -55,13 +61,19 @@ by its category), `marker` (the small bottom marker on a cell whose item sets `m
 `tooltip` (the hover tooltip showing the hovered item's label, hidden until a cell is hovered),
 `legend` (the static category key rendered below the strip when `showLegend` is set — `aria-hidden`,
 as it repeats the strip's own `aria-label`), `legend-item` (one swatch + label pair, one per
-`categories` entry), `legend-swatch` (the color chip, matching that category's cell color),
-`legend-label` (the category's `label`, or its `key` when unset).
+`categories` entry, plus one trailing marker row when `markerLabel` is set), `legend-swatch` (the
+color chip, matching that category's cell color), `legend-marker-swatch` (the marker row's chip
+instead: a neutral chip carrying the same bottom bar a `marker: true` cell paints, in the same
+`--lr-sequence-strip-marker-color`), `legend-label` (the category's `label`, or its `key` when
+unset).
 
 **Themeable custom properties:** `--lr-sequence-strip-height` (default `1.5rem` — the strip's
 block-size), `--lr-sequence-strip-marker-color` (default `var(--lr-color-text)` — the
-`[part="marker"]` fill), and `--lr-sequence-strip-legend-swatch-size` (default `0.625rem` — the
-`[part="legend-swatch"]` chip's inline- and block-size); the tooltip also consumes shared tokens
+`[part="marker"]` fill, and of the marker legend row's bar), `--lr-sequence-strip-legend-swatch-size`
+(default `0.625rem` — a legend swatch's inline- and block-size, category and marker rows alike), and
+`--lr-sequence-strip-legend-marker-bg` (default `var(--lr-color-surface-raised)` — the neutral chip
+background behind the marker legend row's bar; it stands in for "any cell", so it deliberately
+matches no category color); the tooltip also consumes shared tokens
 `--lr-color-surface`, `--lr-color-text`, `--lr-font-size-xs`, `--lr-radius`, and `--lr-shadow`, and
 the legend consumes `--lr-space-2xs`, `--lr-space-xs`, `--lr-space-s`, `--lr-font-size-xs`,
 `--lr-color-text-quiet`, and `--lr-radius-xs`.

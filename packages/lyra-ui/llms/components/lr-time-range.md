@@ -41,11 +41,27 @@ key-up-commit, or when a preset button is clicked, `detail: { start, end }`)
 
 **CSS parts:** `base`, `track`, `range`, `handle-start`, `handle-end`, `presets`, `preset-button`
 
-**Themeable custom properties:** shared tokens only — `--lr-color-border`, `--lr-color-brand`,
+**Themeable custom properties:** mostly shared tokens — `--lr-color-border`, `--lr-color-brand`,
 `--lr-color-surface`, `--lr-shadow` (track/handles), `--lr-opacity-disabled` (`:host([disabled])`
 dimming), plus (for `presets`) `--lr-color-text`, `--lr-color-on-brand` (the active preset
 button's text), `--lr-radius`, `--lr-space-xs/-s`, `--lr-transition-fast`,
-`--lr-focus-ring-*`. No component-local tokens.
+`--lr-focus-ring-*`.
+
+Three component-local properties recolor the **active** preset button independently of the shared
+palette: `--lr-time-range-preset-active-bg` (falls back to `--lr-color-brand`),
+`--lr-time-range-preset-active-border-color` (falls back to `--lr-color-brand`), and
+`--lr-time-range-preset-active-color` (falls back to `--lr-color-on-brand`). Unset, each resolves
+to exactly the token the rule used before they existed, so the default rendering is unchanged.
+
+They exist because the active preset is marked with an attribute on a part, and
+`::part(preset-button)[data-active]` is **invalid CSS** — an attribute selector cannot follow
+`::part()`. Without these, recoloring just the active preset meant hijacking the shared
+`--lr-color-brand`/`--lr-color-on-brand` tokens and repainting everything else that reads them.
+
+They are written as **inline `var()` fallbacks at the point of use, never declared on `:host`** —
+deliberately, because a `:host` declaration would shadow any value an ancestor set. Setting one on
+any ancestor of the `<lr-time-range>` therefore reaches it. (The same technique is used for
+`lr-emoji-picker`'s `--lr-emoji-picker-active-bg`.)
 
 **Optional peer deps:** none.
 

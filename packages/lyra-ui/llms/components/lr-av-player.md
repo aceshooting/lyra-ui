@@ -47,4 +47,21 @@ found }`), `lr-search-change` (`detail: { query, matchCount, activeIndex }`), an
 
 **Themeable custom properties:** `--lr-av-player-transcript-height` (default
 `var(--lr-size-16rem)` — block size of the transcript pane; forwarded to the embedded
-`<lr-virtual-list>`'s own `--lr-virtual-list-height`).
+`<lr-virtual-list>`'s own `--lr-virtual-list-height`). `--lr-av-player-marker-active-color` (default
+`var(--lr-color-brand)`) — the outline of the `[part='timeline-marker']` matching
+`activeHighlightId`, leaving the per-tone marker fills alone. It is an inline `var()` fallback at
+the point of use rather than a `:host` declaration, so it can be set on the element or on any
+ancestor — `::part(timeline-marker)[data-active]` is invalid CSS (Shadow Parts forbids an attribute
+selector after `::part()`), so re-pointing the shared `--lr-color-brand` token was the only previous
+lever.
+
+Two further cue-state properties are declared — `--lr-av-player-cue-current-bg` (intended default
+`var(--lr-color-brand-quiet)`, the background of the `[part='cue']` the playhead is inside) and
+`--lr-av-player-cue-active-match-color` (intended default `var(--lr-color-warning)`, the outline of
+the cue holding the current search match, leaving the other matches on the shared warning token) —
+but **their rules do not currently take effect.** The transcript rows are rendered into the embedded
+`<lr-virtual-list>`'s own shadow root, one boundary deeper than this component's stylesheet (and
+than a consuming stylesheet) reaches, so the declarations targeting `[part='cue']` never match the
+rendered rows. They are documented here for completeness; do not rely on them to restyle the
+current cue or the active search match today. `--lr-av-player-marker-active-color` is unaffected —
+`[part='timeline-marker']` lives in this component's own shadow root and is live.

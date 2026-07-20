@@ -141,5 +141,18 @@ history sidebar); it is not the right approach for a hundred-thousand-row list w
   340" correctly even though only a handful of rows exist in the DOM at a time.
 - `groups` is accepted today purely for forward API compatibility; setting it has no visible effect
   yet.
+- **A row that renders a popup needs the focused-row lift, and this is why `[part='row']` has one.**
+  Each row carries `will-change: transform` (a compositor hint for the per-frame translate), which
+  makes every row its own stacking context. Rows otherwise carry no `z-index`, so they paint in DOM
+  order and each one paints over the previous. Anything a row renders that overflows its own box —
+  an `<lr-menu>` popup in a row-action menu, a tooltip, an outward focus ring — is therefore painted
+  *underneath* every following row, no matter how high its own `z-index` is: that `z-index` only
+  orders siblings inside the row's own context. The last row always looks correct, which is exactly
+  why a short fixture never catches it. `[part='row']:focus-within` lifts the row to
+  `--lr-layer-content` for precisely as long as something inside it holds focus — the lifetime of an
+  open popup — and costs nothing otherwise. The value deliberately *matches* `[part='group']`'s
+  rather than exceeding it, so the two land on the same layer and DOM order decides: groups render
+  before the rows, so a focused row wins while (and only while) it holds focus, which is right — a
+  group header is a non-interactive `pointer-events: none` label.
 
 ---

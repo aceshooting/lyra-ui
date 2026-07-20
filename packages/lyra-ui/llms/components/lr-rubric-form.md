@@ -35,3 +35,8 @@ fired only on an actual change), `lr-submit` (`detail: { value, itemId }`), and 
 message), `footer`, `submit`, `skip` (only rendered when `skippable`), `empty` (shown when `keys` has
 no entries), and `unsupported` (the fallback note for a key whose `type` is outside the three
 supported ones).
+
+**Themeable custom properties:** shared tokens only. The footer's disabled `submit`/`skip` buttons
+dim through `--lr-opacity-disabled`, the same library-wide token every other disabled control
+reads — so retuning `--lr-theme-opacity-disabled` keeps this form's disabled state consistent with
+the rest of the UI instead of needing a `::part()` rule here.

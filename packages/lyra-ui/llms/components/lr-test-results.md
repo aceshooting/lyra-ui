@@ -36,3 +36,14 @@ expanded/collapsed).
 `filter-toggle` (carries `data-status`/`aria-pressed`), `suite`, `suite-header`, `test` (carries
 `data-status`), `test-status`, `test-name`, `test-duration`, `test-expand-toggle`, `failure`
 (hidden while collapsed), and `failure-message`.
+
+**Themeable custom properties:** `--lr-test-results-filter-active-bg` (default
+`var(--lr-color-brand-quiet)`), `--lr-test-results-filter-active-border` (default
+`var(--lr-color-brand)`) and `--lr-test-results-filter-active-color` (default
+`var(--lr-color-brand)`) — the background, border color and text color of a pressed (active) status
+filter toggle. All three follow the state-scoped-property convention described under
+`lr-span-waterfall`: inline `var()` fallbacks rather than `:host` declarations, so each can be set on
+the element or on any ancestor. They exist because
+`::part(filter-toggle)[aria-pressed='true']` is invalid CSS — Shadow Parts forbids an attribute
+selector after `::part()` — so restyling the pressed state otherwise meant overriding the
+library-wide brand tokens.

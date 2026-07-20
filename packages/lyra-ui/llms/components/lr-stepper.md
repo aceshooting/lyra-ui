@@ -77,7 +77,18 @@ single place to short-circuit its own listener's follow-up work. `lr-stepper-ori
 (the completed-checkmark glyph, shown for `completed` steps instead of `step-index`), `step-label`
 (the step's label text).
 
-**Themeable custom properties:** shared tokens only — `--lr-space-m`/`-xs`/`-2xs`,
+**Themeable custom properties:** `--lr-stepper-current-color` (default `var(--lr-color-text)`) —
+text color of the `current` step. `--lr-stepper-error-color` (default `var(--lr-color-danger)`) —
+text color of an `error` step. `--lr-stepper-current-index-bg` (default `var(--lr-color-brand)`) and
+`--lr-stepper-current-index-color` (default `var(--lr-color-surface)`) — background and text color
+of the `current` step's numbered `step-index` chip. Each is an inline `var()` fallback at the point
+of use, never declared on `:host`, so it can be set on the element or on any ancestor; and each is
+scoped to its own `data-state`, so recoloring the current step leaves `pending`/`completed`/`error`
+steps alone. The hooks exist because `::part(step)[data-state='current']` is invalid CSS — Shadow
+Parts forbids an attribute selector after `::part()` — so state-specific theming previously meant
+overriding a library-wide `--lr-color-*` token and repainting everything else that read it. Unset,
+each falls back to the token its rule used before. Otherwise shared tokens —
+`--lr-space-m`/`-xs`/`-2xs`,
 `--lr-color-text-quiet`/`-text`/`-danger`/`-brand`/`-surface`, `--lr-radius`/`-pill`,
 `--lr-font-size-xs`, `--lr-font-weight-semibold`, `--lr-opacity-disabled`,
 `--lr-focus-ring-*`.

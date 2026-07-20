@@ -49,8 +49,12 @@ initials text, rendered whenever neither `icon` nor `image` is).
 **Themeable custom properties:** `--lr-avatar-size` (default `2rem`, swapped to `1.5rem`/`2.5rem`
 per `size="sm"`/`"lg"`), `--lr-avatar-bg` (default `var(--lr-color-surface-alt,
 var(--lr-color-border))`, swapped per `tone`), `--lr-avatar-color` (default
-`var(--lr-color-text)`, swapped per `tone`), plus shared tokens `--lr-radius`/`-pill`,
-`--lr-font-size-sm`, `--lr-font-weight-semibold`.
+`var(--lr-color-text)`, swapped per `tone`), `--lr-avatar-font-size` (default
+`var(--lr-font-size-sm)`) — the font size of the initials fallback, and of any `em`-sized slotted
+glyph. `size` swaps it per tier too (`var(--lr-font-size-xs)` at `sm`, `var(--lr-font-size-md)` at
+`lg`), so the initials track the circle instead of staying one fixed size across every tier;
+override it on the element for a size the built-in scale doesn't cover. Plus shared tokens
+`--lr-radius`/`-pill`, `--lr-font-size-sm`, `--lr-font-weight-semibold`.
 
 **Optional peer deps:** none.
 

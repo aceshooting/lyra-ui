@@ -73,8 +73,16 @@ with a console warning), `top-start`, `top-end` (floating corner overlays), `bot
 `live-region`, `edge-list` (a visually hidden list of every edge).
 
 **Themeable custom properties:** `--lr-flow-canvas-grid-size` (default `8px`, dotted background
-spacing), `--lr-flow-canvas-march-duration` (default `var(--lr-transition-ambient)`, running-edge
-march animation duration).
+spacing — the canvas also writes it inline as `${grid}px` from the `grid` property, which wins over
+the stylesheet fallback whenever a grid is in effect), `--lr-flow-canvas-march-duration` (default
+`var(--lr-transition-ambient)`, running-edge march animation duration), and
+`--lr-flow-canvas-node-current-outline-color` (default `var(--lr-color-brand)`) — the outline color
+of the current (`aria-current`) node. Like every state-scoped custom property in this library it is
+an inline `var()` fallback at its point of use rather than a `:host` declaration, so it can be set on
+the element *or any ancestor*. It exists because Shadow Parts forbids an attribute selector after
+`::part()` — `::part(node)[aria-current='true']` is invalid CSS — so the current node could otherwise
+only be restyled by overriding the library-wide `--lr-color-brand` token, repainting everything else
+that reads it.
 
 **Optional peer deps:** none.
 

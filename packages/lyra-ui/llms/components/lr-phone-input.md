@@ -5,7 +5,7 @@
 - **Import** `import '@aceshooting/lyra-ui/components/forms/phone-input/phone-input.js';` (registers the tag; side-effect import)
 - **Class** `LyraPhoneInput`, also available unregistered from `@aceshooting/lyra-ui/components/forms/phone-input/phone-input.class.js`
 - **Family** `components/forms/` — see `llms/index.md` for its siblings
-- **Optional peers** `libphonenumber-js` — see `llms/peers.md`
+- **Optional peers** `@aceshooting/lyra-flags`, `libphonenumber-js` — see `llms/peers.md`
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -18,6 +18,12 @@ Numbering-plan metadata and national formatting stay outside Lyra's base bundle:
 synchronous `PhoneNumberAdapter`, or lazily create one from a `libphonenumber-js`-compatible module
 with `loadLibphonenumberAdapter()`. Without an adapter, already-international E.164 input still
 normalizes and validates; national input remains editable with `incomplete` validity.
+
+The country selector keeps the real native `<select>` (localized full country names in its popup,
+native mobile pickers, keyboard type-ahead) but stretches it invisibly over a compact decorative
+trigger showing the selected alpha-2 code plus a design-system chevron — long country names never
+clip the closed control and the adjacent calling code isn't repeated. With `flags`, the trigger
+also shows the selected country's `<lr-flag>`.
 
 **Types:**
 
@@ -56,6 +62,15 @@ interface PhoneNumberAdapter {
   precedence over `adapter.countries`.
 - `defaultCountry: string = ''` (attribute `default-country`) — selected when `country` has not been
   set explicitly.
+- `flags: boolean = false` (reflected) — show the selected country's flag in the country trigger as
+  `<lr-flag variant="compact" aria-label="">` (decorative; the native select already announces the
+  country name). The `<lr-flag>` element definition is registered lazily the first time any
+  `lr-phone-input` enables this, so nothing flag-related is bundled while it stays off. Flag
+  *artwork* still follows the standalone `<lr-flag>` contract: install the optional
+  `@aceshooting/lyra-flags` peer and import
+  `@aceshooting/lyra-ui/components/media/flag/flag-peer.js` once; without that registration the
+  trigger simply omits the image. The open popup list stays text-only — a native `<option>` cannot
+  contain elements.
 - `country: string` — current uppercase ISO alpha-2 selection; falls back to `defaultCountry`, then
   the first explicit/adapter country. Changing the country reparses the editable number.
 - `label: string = ''`, `hint: string = ''`, `errorText: string = ''` (attribute `error-text`) —
@@ -116,8 +131,11 @@ Programmatic property assignments and form reset/state restoration are silent.
 **Slots:** `label`, `hint`, `error`, `country-prefix` (optional visual before the country selector,
 such as a consumer-owned `<lr-flag>`; no flag package is imported automatically).
 
-**CSS parts:** `form-control`, `form-control-label`, `input-wrapper`, `country-prefix`,
-`country-select`, `calling-code`, `input`, `hint`, `error`.
+**CSS parts:** `form-control`, `form-control-label`, `input-wrapper`, `country-prefix`, `country`
+(the selector region: invisible native select layered over the visual trigger), `country-select`,
+`country-trigger` (visible, `aria-hidden` closed-state box), `flag` (the `<lr-flag>`, only with
+`flags`), `country-code` (selected alpha-2 code, `data-placeholder` when no country exists),
+`expand-icon`, `calling-code`, `input`, `hint`, `error`.
 
 **Themeable custom properties:** shared tokens only. The phone-number input and calling code are
 deliberately `dir="ltr"`/isolated because telephone numbers are algorithmic content; surrounding
@@ -147,6 +165,15 @@ phone.adapter = await loadLibphonenumberAdapter(() => import('libphonenumber-js/
 ></lr-phone-input>
 ```
 
+```ts
+// Country flags in the trigger (optional): same peer contract as a standalone <lr-flag>.
+import '@aceshooting/lyra-ui/components/media/flag/flag-peer.js';
+```
+
+```html
+<lr-phone-input label="Mobile number" flags default-country="LU"></lr-phone-input>
+```
+
 **Known gotchas:**
 
 - An adapter's `parse()` method is synchronous because it runs on every keystroke. Load any optional
@@ -156,7 +183,14 @@ phone.adapter = await loadLibphonenumberAdapter(() => import('libphonenumber-js/
   as invalid instead of entering form submission.
 - Country names use `Intl.DisplayNames` and fall back to the ISO code; set `PhoneCountry.label` for
   a product-specific name. Calling codes are data, not derived by the component.
-- The component does not import `@aceshooting/lyra-flags`. Compose an optional flag through
-  `country-prefix` and keep it decorative when the adjacent select already announces the country.
+- The component never imports `@aceshooting/lyra-flags` itself, with `flags` or without. `flags`
+  lazily registers only the `<lr-flag>` element; the artwork resolver comes from the consumer's own
+  `flag-peer.js` import (plus the installed peer package), so forgetting either shows a flagless
+  trigger rather than erroring. `country-prefix` remains available for a fully consumer-owned
+  adornment instead.
+- The visible trigger (`country-trigger` and everything inside it) is `aria-hidden` by design; the
+  layered native select is the accessible control. Don't move interactive content into those parts
+  via `::part` styling tricks, and don't expect the flag inside the open popup list — a native
+  `<option>` is text-only.
 
 ---

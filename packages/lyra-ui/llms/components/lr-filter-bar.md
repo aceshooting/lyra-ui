@@ -18,3 +18,26 @@ Dashboard filter row that composes Lyra inputs and removable chips, with reset a
 `invalidFilterIds`, `checkValidity`, `reportValidity`, `reset`. **Events:** `lr-input`, `lr-reset`,
 `lr-validity-change`. **CSS parts:** `base`, `controls`, `filter-control`, `active-filters`,
 `chips`, `chip`, `reset-button`, `status`.
+
+Each filter definition's `type` selects which existing Lyra input renders it — this component
+composes them and never invents a control of its own. `'select'`/`'combobox'` map to their
+same-named counterparts (with `combobox`'s `multiple` opting into a multi-value filter),
+`'date'`/`'date-range'` both map to `<lr-date-input>` (single vs. `mode="range"`), and `'text'` maps
+to `<lr-input>` for an open-ended free-text query rather than a closed choice set. A `'text'`
+filter's value is the raw query string, verbatim, and its chip shows exactly that string — the same
+text the user typed, not a truncated or normalized form.
+
+A `'text'` filter is the one control that is **not** a fully controlled `.value=` binding.
+Re-rendering a text field from `value` mid-typing would push a stale value back in and drop the
+caret to the end, so the field owns its own value while the user types, and an external `value`
+write is synced back into it only once no edit is in flight (a host write, a chip removal, and
+`reset()` all take that path).
+
+`'text'` filters also accept an optional per-filter `debounce` (ms) — how long to wait after the
+last keystroke before committing the typed value to `value` and emitting a single `lr-input`, so a
+server-side query runs once per pause instead of once per character. Omitted, `0`, or a non-finite
+value means no debounce at all: every keystroke commits immediately. A pending debounce is always
+**flushed** by the field's own `change`/blur, so a blur never loses the last keystroke, and
+**cancelled outright** by `reset()`, by removing that filter's chip, and on disconnect — a stale
+keystroke can never overwrite a reset or fire after teardown. `debounce` is ignored for every other
+`type`, whose commits are discrete choices with nothing to debounce.

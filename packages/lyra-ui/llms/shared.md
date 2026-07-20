@@ -152,7 +152,9 @@ confirm the assertion actually bites.
 The same trap has a second form inside a component's own styles: a *declared* value always wins
 over a `var()` fallback arm, and `auto` is a declared value. That is why the exact-height escape
 hatches (`--lr-input-control-height`, `--lr-select-trigger-height`, `--lr-chip-height`, …) are
-undeclared by default rather than set to `auto` — see `llms/forms.md`.
+undeclared by default rather than set to `auto`. Setting one *to* `auto` is therefore not the same
+as leaving it alone: it wins over the fallback arm and makes the per-size minimum-height floor dead
+code. See each control's own reference page for its exact pair.
 
 ### Tokens with a contract attached
 

@@ -58,12 +58,28 @@ block, repeated three times, `data-field="day"|"month"|"year"`), `field-input` (
 small per-field text label), `hint`, `error` (`role="alert"`).
 
 **Themeable custom properties:** `--lr-known-date-field-padding-block`,
-`--lr-known-date-field-padding-inline`, `--lr-known-date-field-font-size` (all three rewritten by
-each `:host([size])` rule; `m` defaults `--lr-space-s`/`--lr-space-s`/`--lr-font-size-md-sm`),
+`--lr-known-date-field-padding-inline`, `--lr-known-date-field-font-size`,
+`--lr-known-date-field-min-height` (all four rewritten by
+each `:host([size])` rule; `m` defaults `--lr-space-s`/`--lr-space-s`/`--lr-font-size-md-sm`/
+`--lr-size-2rem`), `--lr-known-date-field-height`,
 `--lr-known-date-field-gap` (default `--lr-space-s` — gap between the three field blocks),
 `--lr-known-date-day-field-width` / `--lr-known-date-month-field-width` (default `--lr-size-3-5em`)
 and `--lr-known-date-year-field-width` (default `--lr-size-5em`) — the per-field input widths, not
 size-scaled.
+
+The two height knobs work as a pair on `[part='field-input']`, the same way
+`lr-input`/`lr-select`/`lr-combobox`/`lr-date-input` expose theirs:
+
+- `--lr-known-date-field-min-height` is a **floor**, re-assigned per `size` tier. Every tier's
+  default sits below the field's own padding/font-driven height, so raising it is what makes it
+  visible; lowering it changes nothing.
+- `--lr-known-date-field-height` pins an **exact** height (both floors and caps), so the three
+  inputs can line up with a neighbouring control of a known height. It is **undeclared by
+  default** — the field grows to fit its content. Never set it to `auto`: `auto` is a valid
+  declared value that wins over the `var()` fallback arm, which would make the per-tier floor
+  dead code. To go back to the default behavior, remove the declaration rather than neutralizing
+  it. Because the component never declares it, it can be set inline, from an ancestor, or from an
+  outer-tree rule.
 
 **Known gotchas:**
 - Field *order* is derived from the locale by formatting a probe date (Jan 2 2026) with

@@ -76,12 +76,39 @@ auto-inserted between each adjacent pair.
   the panel's clamped width or `data-collapse-state`, see below).
 - `railWidth: string = '3.5rem'` (attribute `rail-width`) — the fixed CSS length the collapsing panel
   clamps to in `'rail'` state.
-- `railBreakpoint: number = 640` (attribute `rail-breakpoint`, px) — below this container width (a
-  `ResizeObserver` on `[part='base']`, active only while `collapse !== 'none'`), the collapsing panel
-  switches from its normal drag-resizable percent width to the fixed `railWidth`.
-- `floatBreakpoint: number = 400` (attribute `float-breakpoint`, px) — below this narrower container
+- `railBreakpoint: number | string = 640` (attribute `rail-breakpoint`) — below this width, the
+  collapsing panel switches from its normal drag-resizable percent width to the fixed `railWidth`.
+  Accepts a bare pixel number (`640`, `rail-breakpoint="640"` — the original form) or a CSS length
+  string: `'640px'`, `'68.75rem'`, `'3em'`. Under the default `collapseBreakpointBasis='container'`
+  it is compared against this component's own measured `[part='base']` inline size (a
+  `ResizeObserver`, active only while `collapse !== 'none'`), and `rem` resolves against the
+  document root's **computed** font size while `em` resolves against this element's own; the length
+  is re-resolved on every measurement, never cached. Anything the grammar rejects — `''`, `'auto'`,
+  garbage, a non-finite number, and deliberately `%`, `vw`/`vh`, `calc()` and `var()` — falls back
+  to the `640` default rather than switching the feature off (unlike `orientationBreakpoint`, this
+  breakpoint has a documented default to fall back to). A negative length is floored at `0`, i.e.
+  never crossed. Must stay above `floatBreakpoint` — an inverted pair is sanitized by raising this
+  one to match, collapsing the `'rail'` band away rather than reporting a wide container as
+  collapsed.
+- `floatBreakpoint: number | string = 400` (attribute `float-breakpoint`) — below this narrower
   width, the collapsing panel instead becomes an absolutely-positioned overlay ("floating card") on
   top of the other pane(s), removed from the normal flex flow; the sibling(s) take the full width.
+  Same accepted forms, basis, and sanitization as `railBreakpoint`; an unparseable value falls back
+  to the `400` default.
+- `collapseBreakpointBasis: 'container'|'viewport' = 'container'` (reflected, attribute
+  `collapse-breakpoint-basis`) — which box `railBreakpoint`/`floatBreakpoint` are measured against.
+  Unset, behavior is identical to before this property existed. `'container'` observes this
+  component's own `[part='base']` inline size via `ResizeObserver` and compares strictly `<`;
+  `'viewport'` evaluates `matchMedia('(max-width: <breakpoint>)')` for each of the two thresholds,
+  which is inclusive (`<=`) — native `max-width` semantics, deliberately, so the crossing point
+  matches a CSS `@media` rule authored with the same length exactly. Use `'viewport'` to collapse in
+  step with a page-level responsive layout (a shell whose own `@media` rules restack at the same
+  width) rather than with this split's own allocation; it is also what lets the browser resolve a
+  `rem` breakpoint with real `@media` semantics (against the *initial* font size, ignoring an
+  `html { font-size }` override). Both bands are classified from both queries together on every
+  change, so a fast resize crossing both thresholds at once still lands on one correct state and
+  fires `lr-split-collapse-change` once; under `'viewport'` the first paint is already correct — no
+  `ResizeObserver` round-trip — and that initial state is not announced as a transition.
 - `collapseState: 'wide'|'rail'|'floating'` (reflected, attribute `collapse-state`) — a public
   accessor with force/auto semantics mirroring `<lr-app-rail>`'s `mode`: normally derived
   automatically from the measured container width, but assigning it a concrete value pins it there
@@ -167,6 +194,21 @@ the visually-adjacent panel).
   `disconnectedCallback`) is solid and safe to rely on.
 - `orientationBreakpoint` shares its `[part='base']` `ResizeObserver` with `collapse` (one observer,
   not two) — arming logic covers either feature being opted into independently.
+- **Switching a basis moves the crossing point by exactly 1px.** Container basis compares strictly
+  `<` against a measured width; viewport basis asks `matchMedia('(max-width: …)')`, which is
+  inclusive (`<=`). So at a breakpoint of `640`, a container-basis split is still `'wide'` at 640px
+  while a viewport-basis one has already collapsed. This is deliberate on both sides: `<` is the
+  right comparison for "how much room do I actually have", and `<=` is what a CSS `@media` rule with
+  the same length does, which is the whole point of the viewport basis.
+- `collapseBreakpointBasis='viewport'` does **not** drop the `ResizeObserver` the way the
+  orientation feature's viewport basis does. The measured width it feeds is still read by a
+  container-basis `orientationBreakpoint` and by the `collapseState = 'auto'` release path, which
+  re-derives from the current measured width. Collapse's basis changes only *which values* the
+  classification consults, never whether the split measures itself.
+- `railBreakpoint`/`floatBreakpoint` are typed `number | string`. Authored as attributes they read
+  back as **strings** (`el.railBreakpoint === '640'`, not `640`) — the same value, a different type.
+  Compare with `Number(el.railBreakpoint)` rather than `===`, or assign the property directly when a
+  numeric identity matters.
 - **Picking a basis.** `orientationBreakpointBasis='container'` (the default) observes the
   component's own allocated inline size, so it fits a component that is the sole flex/grid item in
   the container being measured. It does **not** fit a component sitting beside a fixed-width sibling

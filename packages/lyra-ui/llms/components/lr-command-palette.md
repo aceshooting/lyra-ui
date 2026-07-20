@@ -46,5 +46,12 @@ heading), `command` (a `role="option"` button), `description`, `shortcut`, `empt
 **Themeable custom properties:** `--lr-command-palette-z-index` (default
 `var(--lr-overlay-stack-index, var(--lr-layer-modal))`), `--lr-command-palette-offset-block-start`
 (default `12vh` — how far down the viewport the dialog sits), `--lr-command-palette-max-inline-size`
-(default `var(--lr-size-48rem)`), `--lr-command-palette-max-block-size` (default `70vh`), and
-`--lr-command-palette-list-max-block-size` (default `50vh` — the scrolling result list).
+(default `var(--lr-size-48rem)`), `--lr-command-palette-max-block-size` (default `70vh`),
+`--lr-command-palette-list-max-block-size` (default `50vh` — the scrolling result list), and
+`--lr-command-palette-active-bg` (default `var(--lr-color-brand-quiet)` — the background of the
+active, keyboard-highlighted command row). That last one is an inline `var()` fallback at the point
+of use rather than a `:host` declaration, so it can be set on the element *or on any ancestor*:
+`::part(command)[data-active='true']` is invalid CSS (Shadow Parts forbids an attribute selector
+after `::part()`), so highlighting the active row previously required hijacking the library-wide
+`--lr-color-brand-quiet` token and repainting everything else that read it. Unset, it falls back to
+that token, so rendering is unchanged.

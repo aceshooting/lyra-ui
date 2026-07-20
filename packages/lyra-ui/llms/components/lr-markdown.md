@@ -114,7 +114,8 @@ carrying `data-display="inline"|"block"`)
 
 **Themeable custom properties:** `--lr-markdown-font-mono` (default `ui-monospace, SFMono-Regular,
 Menlo, Consolas, monospace` — the code/code-block font; component-specific since no shared
-`--lr-*` monospace token exists), plus shared tokens `--lr-space-xs/-s/-m/-l`,
+`--lr-*` monospace token exists), `--lr-code-block-tab-size` (default `2` — tab width inside a
+rendered fenced or indented `code-block`), plus shared tokens `--lr-space-xs/-s/-m/-l`,
 `--lr-color-brand-quiet`, `--lr-color-brand`, `--lr-color-border`, `--lr-color-text-quiet`,
 `--lr-radius`.
 
@@ -149,6 +150,17 @@ installed. While the optional peers are still resolving, the host carries `aria-
 cleared in `updated()` based on whether the deps have loaded) and shows the same plain-text fallback
 rendering — there's no separate loading skeleton, since the un-rendered Markdown source is already
 legible text in the meantime.
+
+**One tab width for every code surface.** `--lr-code-block-tab-size` is deliberately the same
+property name and default (`2`) that `<lr-code-block>` and `<lr-code-editor>` use, so a consumer sets
+tab width once for every code surface in the app. It is declared as a `var()` fallback **at the point
+of use, never on `:host`** — a `:host` declaration is re-stamped on every instance and shadows any
+inherited value, so a page- or container-level declaration could never reach it. This element carries
+its own copy of that fallback rather than inheriting `<lr-code-block>`'s because the two are
+**sibling** custom elements, not ancestor and descendant: no single declaration inside one of them
+can cover the other. The same value can still *look* different between the two — a markdown code
+block inherits `white-space: pre-wrap` while `<lr-code-block>` is `white-space: pre`, and tab stops
+restart at the beginning of each visual line, so a wrapped line's tabs land differently.
 
 **Known gotchas:**
 - a malformed percent-escape or lone UTF-16 surrogate in a link's raw `href` makes the internal

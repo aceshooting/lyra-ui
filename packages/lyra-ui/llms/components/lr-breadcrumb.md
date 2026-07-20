@@ -28,3 +28,12 @@ its label.
 
 **CSS parts:** breadcrumb `base` (the `<nav>`) and `list` (the `role="list"` flex row wrapping the
 slotted items); item `base` (the `<a>` or `<span>`).
+
+**Themeable custom properties:** `--lr-breadcrumb-current-color` (default
+`var(--lr-color-text-quiet)`) — text color of the current-page item (`current`/`aria-current="page"`).
+It is an inline `var()` fallback at the point of use rather than a `:host` declaration, so it can be
+set on the item, on `<lr-breadcrumb>`, or on any ancestor above the trail:
+`::part(base)[aria-current='page']` is invalid CSS (Shadow Parts forbids an attribute selector after
+`::part()`), so tinting the current item previously meant overriding the library-wide
+`--lr-color-text-quiet` token and repainting everything else that read it. Unset, it falls back to
+that token.

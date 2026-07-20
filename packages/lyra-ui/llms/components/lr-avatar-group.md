@@ -45,7 +45,12 @@ under `dir="rtl"` — setting `0` or a positive length turns the stack into norm
 `--lr-avatar-group-ring-color` (default `var(--lr-color-surface)`),
 `--lr-avatar-group-ring-width` (default `var(--lr-border-width-medium)`),
 `--lr-avatar-group-badge-bg` (default `var(--lr-color-border)`, swapped per `tone`),
-`--lr-avatar-group-badge-color` (default `var(--lr-color-text)`, swapped per `tone`).
+`--lr-avatar-group-badge-color` (default `var(--lr-color-text)`, swapped per `tone`),
+`--lr-avatar-group-badge-font-size` (default `var(--lr-font-size-sm)`) — the font size of the "+N"
+badge label. `size` swaps it per tier (`var(--lr-font-size-xs)` at `sm`, `var(--lr-font-size-md)` at
+`lg`), matching `<lr-avatar>`'s own `--lr-avatar-font-size` scale so the badge and the avatars it
+caps read at the same optical weight; override it alongside `--lr-avatar-font-size` on the avatars
+themselves when tuning a custom tier.
 
 **Optional peer deps:** none.
 

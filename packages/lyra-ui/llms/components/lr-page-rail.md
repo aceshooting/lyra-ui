@@ -35,3 +35,10 @@ marker).
 
 **Themeable custom properties:** `--lr-page-rail-height` (default `var(--lr-size-24rem)`) — block
 size of the virtualized rail.
+
+`--lr-page-rail-current-bg` (intended default `var(--lr-color-brand-quiet)`) is declared for the
+background of the `[part='page']` button matching the current `page`, but **its rule does not
+currently take effect.** Page rows are rendered into the embedded `<lr-virtual-list>`'s own shadow
+root, one boundary deeper than this component's stylesheet (and than a consuming stylesheet)
+reaches, so the declaration targeting `[part='page']` never matches a rendered row. It is documented
+here for completeness — do not rely on it to tint the current page today.

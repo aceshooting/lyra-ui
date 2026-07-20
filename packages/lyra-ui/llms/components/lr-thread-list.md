@@ -79,9 +79,42 @@ type="search">`), `list` (the list region), `empty`, `viewport` (the actual inte
 scroll container, suitable for scrollbar styling), `row-action` (a built-in pin/archive/delete icon
 button), `pin-glyph` (the small pin indicator on a pinned row), `group-header`, `group-toggle`,
 `group-label`, `group-icon`, `row` (all exported across the internal `lr-virtual-list` shadow
-boundary), and `row-leading`/`row-content`/`row-meta`/`row-actions` (the library-owned wrappers around
+boundary), `row-wrapper` (the wrapper around `wrapRow` output, only present when `wrapRow` is set;
+row-only — group headers are never passed through `wrapRow`, so they never carry it), and
+`row-leading`/`row-content`/`row-meta`/`row-actions` (the library-owned wrappers around
 their corresponding render-hook output; inherited fonts, layout values, and theme custom properties
 reach callback-rendered descendants through these parts).
+
+Data mode additionally forwards each row `<lr-conversation-item>`'s own parts under a `row-item-`
+prefix: `row-item-base`, `row-item-option`, `row-item-leading`, `row-item-content`,
+`row-item-title`, `row-item-title-input`, `row-item-rename-button`, `row-item-excerpt`,
+`row-item-meta`, `row-item-timestamp`, `row-item-actions`.
+
+**Keep the two prefixes straight — they are different surfaces.** The `row-*` parts wrap *this*
+component's own render-callback output (`wrapRow`, `renderLeading`, `renderRowContent`,
+`renderMeta`, `renderActions`); the `row-item-*` parts are the row item's *internals*. Row density
+in particular lives in `row-item-base`'s padding and `row-item-title`'s font size, so
+`::part(row-item-base)` is the supported way to build a dense sidebar:
+
+```css
+lr-thread-list::part(row-item-base) { padding-block: 0.25rem; }
+lr-thread-list::part(row-item-title) { font-size: 0.8125rem; }
+```
+
+Do **not** reach for `::part(row) { --lr-theme-space-s: … }` instead. That is a whole-subtree
+retheme: it shrinks everything nested inside the row, including the items of a `renderActions` menu,
+which pushes their touch targets below the accessible minimum. The `row-item-*` parts exist so row
+density can be tuned without that blast radius.
+
+**Sizing:** the internal list fills whatever height this component is given, with no consumer CSS —
+`[part='viewport']` is the real scroll container, and it falls back to `lr-virtual-list`'s own `24rem`
+default only when the container has no resolvable height. This is deliberately *not* implemented by
+setting `--lr-virtual-list-height: 100%`: that percentage resolves against this host, which is a flex
+item, so in an auto-height container it chains to `auto` and the viewport either collapses to zero
+(with no rows) or grows to the full un-virtualized content height (with rows) — defeating
+virtualization in both directions. Instead the list host is made a column flex container, which turns
+the shipped `24rem` into a *flex-basis*: it grows to fill a bounded pane, shrinks below `24rem` in a
+short one, and falls back to exactly `24rem` in an auto-height container.
 
 ```html
 <lr-thread-list

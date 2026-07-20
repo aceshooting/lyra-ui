@@ -38,6 +38,16 @@ focus; it continues to emit `lr-cell-click` and leaves selection state consumer-
   measured `clientWidth` on every draw/resize instead of the fixed `cell-size`, so the grid actually
   fills the available width; now applies to calendar mode as well as matrix mode — see gotchas for
   the default, non-`fit-to-width` behavior)
+- `maxCellSize?: number` (attribute `max-cell-size`) — ceiling, in CSS px, on the cell size
+  `fitToWidth` derives from the host width, in **both** modes. Exists because `fitToWidth` divides
+  the *whole* host width across the grid, so a 5-week calendar or a 3-column matrix in a wide pane
+  produces enormous blocks; capping them keeps a cell a cell
+- `minCellSize?: number` (attribute `min-cell-size`) — the mirror floor, in CSS px, so a year-long
+  calendar in a narrow pane keeps legible, hit-testable cells and overflows its host instead of
+  collapsing to hairlines. It can only *raise* the built-in `4`px floor, never lower it: a value
+  below `4` normalizes to `4`. When both clamps are set and `maxCellSize < minCellSize`, the ceiling
+  wins. For both: a non-finite value, or an empty attribute, means unset rather than `0`, and unset
+  (the default) reproduces the unclamped fit-to-width behavior exactly
 - `valueLabel: string = 'value'` (attribute `value-label`)
 - `scale: 'linear' | 'sqrt' = 'linear'` — governs both modes: in matrix mode, `'sqrt'` compresses the
   color ramp via `sqrtStep()` instead of mapping linearly; in calendar mode, the default `'linear'`
@@ -71,7 +81,12 @@ focus; it continues to emit `lr-cell-click` and leaves selection state consumer-
   its low DOM footprint.
 - `cellText?: (pos: MatrixCellPos | CalendarCellPos, value: number) => string` (attribute: false) —
   formats the per-cell hover tooltip and keyboard live-region announcement text; receives the cell
-  position (`{ row, col }` in matrix mode, `{ week, weekday }` in calendar mode) and its value.
+  position (`MatrixCellPos { row, col }` in matrix mode, `CalendarCellPos { week, weekday, date }` in
+  calendar mode) and its value. `CalendarCellPos.date` is a **required** ISO `yyyy-mm-dd` string,
+  present for every grid position — including a sparse gap position with no matching entry in `days`
+  at all, which still sits on a real calendar day (that case simply reports the `-1` "no data" value
+  alongside it). It lets a callback key off the date without re-deriving the grid's own
+  anchor-week arithmetic; `MatrixCellPos` is unchanged, and so is `lr-cell-click`'s detail.
   Unset (the default) falls back to the built-in English "Row X, Col Y: value" (matrix) / "Jan 15:
   value" — short month + day, **not** a weekday abbreviation (calendar) — template. Additive, not
   breaking.
@@ -118,10 +133,14 @@ focus; it continues to emit `lr-cell-click` and leaves selection state consumer-
   interpolate continuously into `colorSteps.length` buckets instead. Unset (the default, or fewer
   than 2 entries) keeps today's 2-endpoint interpolation exactly.
 - `legendStops?: HeatmapLegendStop[]` (attribute: false) — `HeatmapLegendStop { value: number;
-  color: string; label?: string }`: a discrete legend key rendered **instead of** the
+  color?: string; label?: string }`: a discrete legend key rendered **instead of** the
   `--lr-heatmap-scale-lo`/`-hi` gradient bar and its `[part="legend-lo"]`/`[part="legend-hi"]`
   endpoint labels — one `[part="legend-stop"]` per entry, in array order, each a
   `[part="legend-swatch"]` filled with that entry's `color` plus a `[part="legend-stop-label"]`.
+  `color` is optional: omit it (or pass an empty string) for a **caption-only** stop, which renders
+  its `[part="legend-stop-label"]` alone with no `[part="legend-swatch"]` element in the DOM at all —
+  so a leading "0" or trailing "more" caption around a run of colored stops doesn't leave an empty
+  swatch box in the row.
   A stop's label defaults to the component's own locale-aware numeric formatting of `value`, so an
   explicit `label` is only needed when the number isn't the right caption ("none", "≥ 90%"). Exists
   for the consumer who supplies `cellColor`: because that callback overrides a cell's color
@@ -147,7 +166,9 @@ button), `tooltip` (hover tooltip, positioned over the hovered cell),
 `live-region` (visually-hidden `role="status" aria-live="polite"` element announcing the
 keyboard-focused cell), `legend`, `legend-lo`, `legend-hi` (both omitted, along with the gradient
 bar between them, while `legendStops` is supplied), `legend-stop` (one per `legendStops` entry),
-`legend-swatch` (that stop's color chip), `legend-stop-label` (that stop's text),
+`legend-swatch` (that stop's color chip, not rendered at all for a caption-only stop),
+`legend-stop-label` (that stop's text), `legend-value-label` (the trailing `valueLabel` caption that
+closes the legend row, present in both the gradient and the `legendStops` branch),
 `legend-annotation` (one per labeled `annotations` entry)
 
 **Themeable custom properties:** `--lr-heatmap-scale-lo` (default `#cde2fb`),
@@ -212,6 +233,11 @@ same color as `--lr-heatmap-focus-ring-color`).
   width, so a container-resize redraw is a geometric no-op; the stylesheet's
   `canvas { inline-size: 100% }` is also dead code in that case, since `draw()` unconditionally sets
   an inline `canvas.style.width/height` that wins over it.
+- `maxCellSize`/`minCellSize` are no-ops without `fit-to-width` — an explicit `cellSize` is an exact
+  request and is never clamped. And the canvas is sized *from the clamped* cell size, so a capped
+  grid deliberately leaves the host's remaining width unfilled: the canvas simply ends early rather
+  than stretching to fill. Position it with ordinary CSS on the host if you want it centered or
+  end-aligned.
 - the host is `role="group"` (not `role="img"`) with a dimensions+range summary `aria-label`
   (calendar mode: a day-count + range summary instead) — `[part="canvas"]` inside it is a real
   focusable, keyboard-operable, per-cell-interactive control (roving arrow-key focus,

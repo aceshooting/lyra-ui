@@ -57,8 +57,11 @@ The internal page input's `focus` and `blur` are also bridged as bubbling, compo
 `page-input`, `page-count`, `next-button`, `next-icon`, `live-region`.
 
 **Themeable custom properties:** `--lr-pagination-control-size` and
-`--lr-pagination-font-size` (both default from `size`), plus shared color, spacing, border, radius,
-disabled-opacity, and focus-ring tokens.
+`--lr-pagination-font-size` (both default from `size`), `--lr-pagination-control-padding` (default
+`var(--lr-space-xs)`) — inner padding of the previous/next buttons and the page input, deliberately
+uniform across every `size` tier because the control's outer footprint is already fixed by
+`--lr-pagination-control-size`, so this only adjusts the icon/digit inset — plus shared color,
+spacing, border, radius, disabled-opacity, and focus-ring tokens.
 
 **Optional peer deps:** none.
 

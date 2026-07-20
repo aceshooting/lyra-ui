@@ -28,6 +28,11 @@ invention (no Web Awesome equivalent).
 - `maxHeight: string = ''` (attribute: `max-height`) — caps the rendered block size and enables an
   internal scrollbar once content exceeds it (any valid CSS length). Empty string (the default)
   grows with content.
+- `appearance: 'card' | 'plain' = 'card'` (reflected) — visual chrome, mirroring `lr-card`'s
+  `appearance` vocabulary. `'card'` keeps the bordered, filled, padded box. `'plain'` removes the
+  border, background, padding and corner radius, so a trace nested inside an
+  `lr-result-card`/`lr-agent-run` — which already draws a border — doesn't double the frame. The
+  `max-height` scroll cap and the copy/frame affordances are unaffected either way.
 
 **Events:**
 - `lr-frame-select` (`detail: { file?: string; line?: number; column?: number; raw: string }`) —
@@ -38,7 +43,8 @@ invention (no Web Awesome equivalent).
 
 **Slots:** none.
 
-**CSS parts:** `base` (the root wrapper; respects `max-height`), `message` (the leading error
+**CSS parts:** `base` (the root wrapper; respects `max-height`, and drops its card chrome under
+`appearance="plain"`), `message` (the leading error
 message text for a group), `group` (one chained-error group of frames), `frame` (a single frame
 button; carries `data-internal` for internal frames), `frame-function` (the frame's function
 name), `frame-location` (the frame's `file:line:col` text), `internal-toggle` (the collapse/expand

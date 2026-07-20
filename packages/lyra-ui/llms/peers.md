@@ -14,7 +14,7 @@ If the peer is genuinely absent, the component falls back to an empty/degraded r
 
 | Peer | Range | Needed by |
 |---|---|---|
-| `@aceshooting/lyra-flags` | `workspace:^2.0.0` | `lr-flag` |
+| `@aceshooting/lyra-flags` | `workspace:^2.0.0` | `lr-flag`, `lr-phone-input` |
 | `@aiden0z/pptx-renderer` | `^1.2.4` | `lr-pptx-viewer` |
 | `@sgratzl/chartjs-chart-boxplot` | `^4.4.0` | `lr-box-plot` |
 | `chart.js` | `^4.5.0` | `lr-bar-chart`, `lr-box-plot`, `lr-bubble-chart`, `lr-chart`, `lr-doughnut-chart`, `lr-histogram`, `lr-line-chart`, `lr-pie-chart`, `lr-polar-area-chart`, `lr-radar-chart`, `lr-scatter-chart` |

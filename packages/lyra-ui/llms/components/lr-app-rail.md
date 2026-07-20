@@ -213,6 +213,17 @@ when the item has an explicit `aria-label`).
 **CSS parts:** `base`, `icon`, `label`, `tooltip` (the hover/focus label flyout, only rendered while
 `tooltip` is set, the item is `icon-only`, and it is hovered or focused).
 
+**Themeable custom properties:** `--lr-app-rail-item-current-bg` (default
+`var(--lr-color-brand-quiet)`) and `--lr-app-rail-item-current-color` (default
+`var(--lr-color-brand)`) — background and text/icon color of the `active` (`aria-current="page"`)
+item. Both are scoped to `[aria-current='page']` only and declared as inline `var()` fallbacks at
+the point of use, never on `:host`, so either can be set on the item itself *or on any ancestor* —
+including on `<lr-app-rail>` or a wrapper above it, to tint every item's active state at once.
+`::part(base)[aria-current='page']` is invalid CSS (Shadow Parts forbids an attribute selector after
+`::part()`), so before these hooks the only lever was overriding the library-wide
+`--lr-color-brand-quiet`/`--lr-color-brand` tokens, which repainted every other element reading
+them. Unset, each falls back to the token its rule used before.
+
 **Optional peer deps:** none.
 
 ---

@@ -31,9 +31,23 @@ button whose purpose isn't generic.
 
 **Methods:** `focus(options?)`, `blur()` — forward to the native button.
 
-**Slots:** (default) — custom icon content, forwarded into the inner `lr-icon`'s slot; use it
-instead of `icon` for a glyph outside the built-in set.
+**Slots:** (default) — custom icon content. It is rendered **beside** the `icon` glyph, as a
+sibling of it, not piped through `<lr-icon>`: the internal `<lr-icon>` mounts only when `icon` is
+set, so with `icon` left empty your content is the button's only child. That is what lets a
+complete element — an `<svg>`, an `<img>`, an `<lr-flag>` — render at its own natural aspect ratio
+instead of being forced into a 1:1 box. Setting both `icon` and slotted content renders both, side
+by side; that is a valid composition, not a fallback.
+
+**Migration note:** bare SVG *geometry* (`<path>`, `<circle>`, `<rect>` …) slotted with no `icon`
+set has no SVG parent here and will not paint. Wrap it in an `<lr-icon>`, or in a complete `<svg>`
+of your own.
 
 **CSS parts:** `button`
 
-**Themeable custom properties:** `--lr-icon-button-size` sets both dimensions of the hit target.
+**Themeable custom properties:** `--lr-icon-button-size` (default `2.5rem`) is the **minimum**
+tappable inline and block size of the native button — a floor, not a fixed size. Content larger
+than it grows the button and keeps its own aspect ratio; a small glyph pads out to it. It is a
+library-wide token (declared on `:root` by the token layer, and the shared minimum tappable size
+that several other components size their icon-only controls against), so overriding
+`--lr-theme-icon-button-size` globally resizes all of them together. Keep the resolved value at or
+above 24px — see `llms/shared.md`.

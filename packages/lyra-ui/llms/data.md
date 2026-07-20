@@ -1372,6 +1372,10 @@ strip. Does not execute, poll, or time anything — pure pushed state; `duration
 - `hideSummary: boolean = false` (attribute `hide-summary`) — omits the "{done} of {total} steps
   complete" strip, keeping only the decoration push
 - `label: string = ''` — accessible name for the summary strip
+- `appearance: 'card'|'plain' = 'card'` (reflected) — `'plain'` removes the border, background,
+  shadow, padding and radius, so a summary strip dropped straight into a host toolbar that already
+  draws its own frame does not double it. `'card'` is the standalone floating-strip presentation and
+  is unchanged.
 
 **Events:** none dispatched directly.
 

@@ -72,6 +72,17 @@ the fullscreen backdrop scrim color), `--lr-widget-fullscreen-inset` (default pe
 tokens (`--lr-space-*`, `--lr-color-border/-surface/-text-quiet`,
 `--lr-radius`, `--lr-shadow`, `--lr-icon-button-size`, `--lr-focus-ring-*`).
 
+Two further properties style the pressed view toggle: `--lr-widget-view-toggle-active-bg` (default
+`var(--lr-color-brand-quiet)`) and `--lr-widget-view-toggle-active-color` (default
+`var(--lr-color-brand)`) — the background and text color of the `aria-pressed="true"` toggle. Both
+are **state hooks**: declared as inline `var()` fallbacks at the point of use and never on `:host`,
+so setting either on the element *or on any ancestor* reaches the toggle. That shape exists because
+`::part(view-toggle)[aria-pressed='true']` is not valid CSS — Shadow Parts forbids an attribute
+selector after `::part()` — so before these hooks the only way to recolor an active toggle was to
+override the library-wide `--lr-color-brand-quiet`/`--lr-color-brand` tokens, repainting every other
+element that reads them. Left unset, each falls back to exactly the token the rule used before, so
+rendering is unchanged.
+
 **Optional peer deps:** none.
 
 ```html

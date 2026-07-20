@@ -89,6 +89,22 @@ between 4.x and 5.0.0, which silently turned one consumer's inner-surface scrim 
 bubble (near-black text on `rgba(0,0,0,0.22)`, visible only by eye). These four are that stable
 contract.
 
+Two matching geometry properties cover the bubble's box:
+
+- `--lr-chat-message-bubble-padding` (default `var(--lr-space-m)`) — the bubble's padding.
+- `--lr-chat-message-bubble-radius` (default `var(--lr-radius)`) — the bubble's corner radius.
+  Bubble-only by design: `[part='collapse-button']` and `[part='retry-button']` keep reading the
+  shared `--lr-radius`, so a rounder bubble never desyncs those controls from the rest of the
+  library.
+
+**Use these instead of a `::part(bubble)` padding/radius override.** A `::part` declaration written
+in the consumer's tree outranks *every* rule inside this component's shadow tree, so a
+`::part(bubble) { padding: … }` rule silently suppresses the per-`status` treatments layered on the
+same element — `status="failed"`'s danger tint, `status="streaming"`'s border — along with the
+per-role fills above. The two properties are declared as `var()` fallbacks at the point of use and
+never on `:host`, both so they can't shadow an inherited value and so a container can set them once
+above a whole transcript rather than per message.
+
 Plus shared tokens `--lr-space-xs/-m`, `--lr-color-border`, `--lr-color-surface`,
 `--lr-color-brand-quiet`, `--lr-color-brand`, `--lr-color-text-quiet`, `--lr-color-danger`,
 `--lr-color-danger-quiet`, `--lr-radius`, `--lr-icon-button-size`, `--lr-focus-ring-*`,

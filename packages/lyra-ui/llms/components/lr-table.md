@@ -43,6 +43,9 @@ own "consumer computes/renders" contract rather than assuming addition.
   background a `cell()`-returned inner element can't paint into the cell's own padding — omit it for
   no per-cell style override (the default, unchanged output); `editable` enables double-click
   editing, `editValue` supplies the editor value, and `editType` selects `text` or `number`
+  `cellTitle(row) => string | undefined` is the `title` analogue of `cellStyle`, applied directly to
+  the generated `<td>` — e.g. the untruncated text behind an ellipsized cell, or a formatted
+  timestamp behind a relative one;
   `resizable` adds a focusable separator `[part='resize-handle']` and emits `lr-column-resize` with
   the live width in CSS pixels. Drag it, or use logical ArrowLeft/ArrowRight for 10px steps (mirrored
   under RTL), Shift+Arrow for 50px steps, Home for the minimum, and End for an explicit pixel
@@ -58,6 +61,13 @@ own "consumer computes/renders" contract rather than assuming addition.
   renders exactly when `columnsHidden` is true — no longer whenever any column merely *declares* a
   `priority` regardless of whether anything is actually hidden
 - `rows: T[] = []` (attribute: false)
+- `layout: 'auto'|'fixed' = 'auto'` (reflected) — a **floor** on the `<table>`'s `table-layout`, not
+  an override. `'fixed'` forces the fixed algorithm even when no column declares a `width`, so every
+  column shares the available width evenly and long cell content is clipped/wrapped instead of
+  stretching its column. The default `'auto'` still *resolves* to `fixed` whenever a column declares
+  a `width`, a column has been drag-resized, or a resize gesture is in flight — column resizing does
+  not work under `table-layout: auto`, so `'auto'` can never mean "never fixed". See the gotchas for
+  the two consequences of the fixed algorithm worth knowing before opting in
 - `sortKey: string = ''` (attribute `sort-key`)
 - `sortDir: 'asc'|'desc' = 'asc'` (attribute `sort-dir`)
 - `rowKey?: (row: T) => string | number` (attribute: false) — derives each row's stable identity for
@@ -83,7 +93,20 @@ own "consumer computes/renders" contract rather than assuming addition.
   converter would otherwise treat any attribute value, including the literal string `"false"`, as
   `true`).
 - `loading: boolean = false` (attribute `loading`, reflected) and `loadingLabel: string = ''`
-  (attribute `loading-label`) — renders a busy spinner and suppresses the grid while loading
+  (attribute `loading-label`) — renders busy chrome and suppresses the real rows while loading
+- `loadingAppearance: 'spinner'|'skeleton' = 'spinner'` (attribute `loading-appearance`, reflected) —
+  how `loading` renders. `'spinner'` replaces the whole grid with an indeterminate spinner.
+  `'skeleton'` instead renders the real table — the same `<colgroup>` (declared *and* drag-resized
+  widths included), the same `<thead>`, the filter field and the pagination footer — and fills
+  `<tbody>` with placeholder rows, so a cold load sketches the grid's shape rather than collapsing to
+  a spinner and reflowing when the rows land. Kept as a separate property rather than widening
+  `loading` to a string union, so `?loading=${…}` bindings and `el.loading === true` checks keep
+  working
+- `skeletonRows: number = 0` (attribute `skeleton-rows`) — placeholder row count under
+  `loadingAppearance="skeleton"`. `0` derives the count instead: the normalized `pageSize` when
+  pagination is on (capped at 20, so a large page size can't emit thousands of placeholder cells),
+  otherwise 3. Any positive value is used verbatim and is *not* capped. Ignored entirely under the
+  default spinner appearance
 - `pageSize: number = 0` (attribute `page-size`) — positive values enable controlled pagination;
   zero disables the pagination footer
 - `page: number = 1` (attribute `page`, reflected) — controlled current page
@@ -107,6 +130,13 @@ own "consumer computes/renders" contract rather than assuming addition.
 - `emptyDescription: string = ''` (attribute `empty-description`)
 - `noColumnsHeading: string = 'No columns configured'` (attribute `no-columns-heading`)
 - `noColumnsDescription: string = ''` (attribute `no-columns-description`)
+- `emptyCompact?: boolean` (attribute `empty-compact`) — overrides the built-in `[part='empty']`
+  state's `compact` rendering. Tri-state: leave it `undefined` (the default) to keep each empty
+  branch's own built-in default — the two shadow-root-level branches (no columns, no rows) render
+  spacious, while the filtered-to-zero branch, which sits inside `[part='base']` alongside the filter
+  field, renders compact. `empty-compact="false"` forces the spacious rendering everywhere, and is
+  parsed as `false` rather than as mere attribute presence. Has no effect once the `empty` slot is
+  filled
 - `revealColumnsLabel: string = 'Show all columns'` (attribute `reveal-columns-label` — the
   reveal-button's label while `priority`-hidden columns are hidden)
 - `hideColumnsLabel: string = 'Show fewer columns'` (attribute `hide-columns-label` — the same
@@ -139,7 +169,12 @@ columns, and `lr-column-resize` (`detail: { key, width }`) on every pointer or k
 The internal filter/cell-editor native inputs' `focus` and `blur` are also re-dispatched from the
 host as bubbling, composed events (the native ones are neither).
 
-**Slots:** none — content comes entirely from `columns`/`rows`.
+**Slots:** `empty` — replaces the built-in empty state on the two *data*-empty branches (no rows at
+all, and filtered/paginated down to zero). Left unfilled, the built-in `[part='empty']` `<lr-empty>`
+renders as this slot's fallback content. The no-columns branch is deliberately **not**
+slot-replaceable: it reports a configuration problem (`noColumnsHeading`), not "this query returned
+nothing", and one slot covering all three would collapse that distinction. Everything else comes
+from `columns`/`rows`.
 
 **CSS parts:** `base`, `table`, `head`, `header-cell`, `row`, `cell`, `more-button`, `sort-icon` (a
 chevron indicator shown on the active sortable header, rotated per `sortDir`), `reveal-columns-button`
@@ -148,9 +183,20 @@ column defines `footer`), `footer-row`, `footer-cell`, `row-total-cell` (each bo
 `<td>` holding `rowTotal(row)`, rendered only when `rowTotal` is set — the corresponding footer-row
 cell, holding `grandTotal`, is a `footer-cell` instead, matching every other footer cell),
 `expand-toggle-cell`, `row-expand-toggle`,
-`row-expand-icon`, `expanded-row`, `expanded-cell`, `filter-label`, `filter`, `loading`, and
+`row-expand-icon`, `expanded-row`, `expanded-cell`, `filter-label`, `filter`, `loading` (under
+`loadingAppearance="spinner"` the visible block holding the spinner; under `"skeleton"` the
+visually-hidden `role="status"` node, since the placeholder rows are the visible affordance),
+`skeleton` (each `<lr-skeleton>` placeholder inside a skeleton-mode body cell — the placeholder rows
+and cells reuse the ordinary `row`/`cell`/`row-total-cell` parts, which is exactly what keeps them
+geometrically identical to real rows, so `skeleton` is the part to target for the placeholder's own
+look: `::part(skeleton) { --lr-skeleton-h: 2em; }`), and
 `pagination`, `cell-editor`, `group-row`, `group-cell`, and `resize-handle` (the focusable column
-separator)
+separator). The built-in empty state is addressable rather than fixed: `empty` is the `<lr-empty>`
+host in all three empty states, and it re-exports that element's own inner parts as `empty-base`,
+`empty-icon`, `empty-heading`, `empty-description` and `empty-actions`. Note that the no-columns and
+no-rows states return the empty element as the shadow root's own root, with no `[part='base']`
+wrapper around it — `::part(base)` does not apply in those two states, only in the filtered-to-zero
+one — and that `empty` disappears entirely once the `empty` slot is filled.
 
 **Themeable custom properties:** `--lr-table-max-height` (default `none`; controls the scrollable
 body's `max-block-size`). `--lr-table-heat-tint-lo` (default `var(--lr-color-brand-quiet)`) and
@@ -158,6 +204,16 @@ body's `max-block-size`). `--lr-table-heat-tint-lo` (default `var(--lr-color-bra
 for heat-tint mode's per-cell background, consulted only on columns/rows that define `heatValue`;
 `--lr-table-resize-min-width` (default `var(--lr-size-3rem)`) and
 `--lr-table-resize-handle-opacity` (default `0.12`) control resizable-column behavior.
+`--lr-table-row-selected-bg` (default `var(--lr-color-brand-quiet)`) — the background of a row whose
+`aria-selected` is `true`. Like every state-scoped custom property in this library it is an inline
+`var()` fallback at its point of use and is **not** declared on `:host`, so it can be set on the
+element *or on any ancestor* and still reach the rule that reads it. It exists because Shadow Parts
+forbids an attribute selector after `::part()` — `::part(row)[aria-selected='true']` is invalid CSS —
+so the only prior lever for restyling the selected row was overriding the library-wide
+`--lr-color-brand-quiet` token, which repaints everything else reading it.
+`--lr-table-sticky-offset` (default `0`) is measured and written inline per column by the component
+so multiple `sticky` columns stack instead of overlapping; it is a read-out, not a knob you set.
+`--lr-table-heat-t` is likewise component-written (each `[data-heat]` cell's position on the ramp).
 
 **Optional peer deps:** none.
 
@@ -197,5 +253,25 @@ for heat-tint mode's per-cell background, consulted only on columns/rows that de
   [role="slider"]`, **or any custom element** (any tag name containing a hyphen — e.g. a
   `<lr-select>`/`<lr-combobox>` rendered inside a `cell()`), are left alone by the table's own
   delegated `click`/`keydown` handlers instead of triggering `lr-sort`/`lr-row-click`.
+- `layout="fixed"` (and any `'auto'` that resolves to fixed) carries two consequences of the CSS
+  fixed algorithm. With no declared widths the **first** row — the header row included — determines
+  every column's width, so revealing a `priority`-hidden column via
+  `[part='reveal-columns-button']` re-measures and changes *all* of them, not just the revealed one.
+  And `columns[].minWidth`/`maxWidth` are silently ignored by `table-layout: fixed`; declare `width`
+  instead when a specific column needs a specific size.
+- skeleton mode keeps geometry stable only when the browser isn't sizing columns from cell content.
+  Under the default `table-layout: auto`, placeholder cells have no intrinsic width, so the columns
+  re-measure when real content arrives — exactly as they do between any two different data sets. For
+  pixel-identical widths across the load, declare `columns[].width` or set `layout="fixed"`. Either
+  loading appearance keeps exactly one `role="status"` live region announcing the state: every
+  placeholder opts out of `<lr-skeleton>`'s own announcement, so a skeleton table never announces
+  once per placeholder row.
+- `columns[].cellTitle` returning an empty string **or** `undefined` omits the `title` attribute
+  entirely rather than rendering `title=""` — an empty `title` would suppress an ancestor element's
+  own tooltip. The attribute is also suppressed while that cell is in inline-edit mode, so the
+  tooltip can't shadow the editor. Accessibility caveat: some screen readers announce a `<td title>`
+  as the cell's accessible *name*, replacing the cell's content rather than supplementing it (the
+  same caveat `lr-stat`'s `exactValue` carries). Use it for a longer form of what the cell already
+  shows, never for information that exists nowhere else.
 
 ---

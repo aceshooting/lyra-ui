@@ -33,8 +33,9 @@ input), and `lr-clear` (inherited, never fired here).
 alias ever renders.
 
 **Themeable custom properties:** inherited from `lr-input`, identical in meaning —
-`--lr-input-control-min-height`, `--lr-input-padding-block`, `--lr-input-padding-inline` and
-`--lr-input-font-size` (the last three swap per `size`).
+`--lr-input-control-min-height`, `--lr-input-control-height`, `--lr-input-padding-block`,
+`--lr-input-padding-inline` and `--lr-input-font-size` (all but `--lr-input-control-height` swap
+per `size`; that one stays undeclared until you pin an exact row height).
 
 **Known gotchas:**
 - `clearable`/`clear-button`/`lr-clear` are inert: the clear action only renders for

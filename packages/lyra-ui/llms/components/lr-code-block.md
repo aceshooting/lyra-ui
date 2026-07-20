@@ -89,10 +89,29 @@ are both set)
 **Themeable custom properties:** `--lr-code-block-max-height` (default `none` — the consumer-tunable
 scroll cap; only takes effect once `max-height` is set), `--lr-code-block-font` (default
 `ui-monospace, SFMono-Regular, Menlo, Consolas, monospace` — no shared `--lr-*` monospace
-token exists to resolve through), plus shared tokens `--lr-color-border`, `--lr-radius`,
+token exists to resolve through), `--lr-code-block-tab-size` (default `2` — tab width for the
+rendered code, applied to `[part='pre']`), `--lr-code-block-active-line-outline-color` (default
+`var(--lr-color-brand)` — the outline around the line marked active by `active-highlight-id`), plus shared tokens `--lr-color-border`, `--lr-radius`,
 `--lr-color-surface`, `--lr-space-xs/-s/-m`, `--lr-font`, `--lr-color-text-quiet`,
 `--lr-color-text`, `--lr-color-brand`/`-brand-quiet`, `--lr-transition-fast`,
 `--lr-focus-ring-width/-color/-offset`.
+
+`--lr-code-block-tab-size` carries the same default as `--lr-code-editor-tab-size`, so the editable
+and read-only code surfaces agree on what a literal tab looks like. It is declared as a `var()`
+fallback **at the point of use, not on `:host`** — a `:host` rule is re-stamped on every instance and
+shadows any inherited value, so a page- or container-level declaration could never reach it. It is
+also never written as an inline `tab-size`: `shiki` puts its own `style` attribute on the highlighted
+`<pre>`, and an inline declaration is the one thing a host override cannot beat. `<lr-markdown>` and
+`<lr-markdown-core>` carry the same fallback for their own `code-block` part because they are
+**sibling** custom elements rather than descendants of this one — no single declaration covers both.
+The identical value can still look different across the two: this component is `white-space: pre`
+while a markdown code block inherits `pre-wrap`, and tab stops restart at each visual line, so a
+wrapped line's tabs diverge.
+
+`--lr-code-block-active-line-outline-color` retints just the active line's outline and leaves every
+other `--lr-color-brand` surface in the component — the header language pill, hover states, the focus
+ring — alone. It too is an inline `var()` fallback rather than a `:host` declaration, deliberately,
+so it inherits: set it on the element, on an ancestor, or at the theme level.
 
 **Optional peer deps:** `shiki` (lazy-loaded and cached once per page by `code-loader.ts`'s
 `loadShikiHighlighter()`, which builds a single `Highlighter` seeded with the bundled `github-light`/

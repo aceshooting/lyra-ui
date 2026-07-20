@@ -49,7 +49,18 @@ inside a tab button; only rendered when that tab has a matching `<id>-icon` sibl
 single `role="tabpanel"` wrapper, one per tab, hidden unless active)
 
 **Themeable custom properties:** `--lr-scroll-fade-size` (default `2rem`) — width of the static
-mask fade at each horizontal scroll edge of the tablist. Otherwise shared tokens —
+mask fade at each horizontal scroll edge of the tablist. `--lr-tabs-selected-color` (default
+`var(--lr-color-brand)`) — text color of the selected tab, scoped to `[aria-selected='true']` only,
+so it never repaints a hovered unselected tab. `--lr-tabs-indicator-color` (default
+`var(--lr-color-brand)`) — the selected tab's underline, themeable independently of its text color.
+`--lr-tabs-hover-color` (default `var(--lr-color-text)`) — text color of a hovered, non-disabled
+tab, independent of the two selected-state hooks. All three are declared as inline `var()` fallbacks
+at the point of use rather than on `:host`, so each can be set on the element *or on any ancestor* —
+the pattern exists because `::part(tab)[aria-selected='true']` is invalid CSS (Shadow Parts forbids
+an attribute selector after `::part()`), which previously left overriding the library-wide
+`--lr-color-brand`/`--lr-color-text` tokens as the only way to restyle a selected or hovered tab,
+repainting everything else that reads them. Unset, each falls back to the token its rule used
+before, so rendering is unchanged. Otherwise shared tokens —
 `--lr-space-xs/-s/-m`, `--lr-color-border/-text-quiet/-text/-brand`, `--lr-transition-fast`,
 `--lr-radius`, `--lr-focus-ring-width/-color/-offset`, `--lr-opacity-disabled`.
 

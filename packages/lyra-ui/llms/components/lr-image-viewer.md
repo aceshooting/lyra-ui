@@ -33,3 +33,17 @@ zoom }`), `lr-rotation-change` (`detail: { rotation }`), `lr-fit-change` (`detai
 **CSS parts:** `base`, `toolbar`, `fit-control`, `rotate-button`, `annotate-toggle`, `frame` (the
 embedded `lr-zoomable-frame`), `image-wrapper`, `image`, `highlight-layer`, `highlight` (carries
 `data-tone`/`data-active`), `highlight-label`, `annotation-box`, and `error`.
+
+**Themeable custom properties:** `--lr-image-viewer-annotate-active-bg` (default
+`var(--lr-color-brand-quiet)`) and `--lr-image-viewer-annotate-active-border` (default
+`var(--lr-color-brand)`) — the background and border of `[part='annotate-toggle']` while annotation
+mode is on. The toggle carries its own glyph in `--lr-color-text`, so keep a 4.5:1 ratio against it
+when overriding the background. `--lr-image-viewer-highlight-active-color` (default
+`var(--lr-color-brand)`) — the outline of the `[part='highlight']` matching `activeHighlightId`,
+independent of the per-tone border colors, so the active box stays distinguishable whatever tone it
+carries. All three are declared as inline `var()` fallbacks at the point of use rather than on
+`:host`, so each can be set on the element *or on any ancestor*: `::part(highlight)[data-active]` is
+invalid CSS — Shadow Parts forbids an attribute selector after `::part()` — which previously left
+overriding the library-wide `--lr-color-brand`/`--lr-color-brand-quiet` tokens as the only lever,
+repainting every other element that read them. Unset, each falls back to the token its rule used
+before.

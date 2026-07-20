@@ -16,7 +16,7 @@ For a ready-made light/dark base, import `@aceshooting/lyra-ui/theme.css` once a
 Per-component `--lr-<component>-*` custom properties (listed in each component's own section)
 override a single element without touching the shared layer.
 
-## Themeable inputs (228)
+## Themeable inputs (233)
 
 | Internal token | `--lr-theme-*` input | Fallback |
 |---|---|---|
@@ -41,7 +41,7 @@ override a single element without touching the shared layer.
 | `--lr-color-on-danger` | `--lr-theme-color-danger-on-loud` | `#fff` |
 | `--lr-color-on-neutral` | `--lr-theme-color-neutral-on-loud` | `#fff` |
 | `--lr-color-overlay` | `--lr-theme-color-overlay` | `rgb(0 0 0 / 0.5)` |
-| `--lr-color-overlay-strong` | `--lr-theme-color-overlay` | `rgb(0 0 0 / 0.92)` |
+| `--lr-color-overlay-strong` | `--lr-theme-color-overlay-strong` | `var(--lr-theme-color-overlay, rgb(0 0 0 / 0.92))` |
 | `--lr-color-no-data` | `--lr-theme-color-no-data` | `rgb(128 128 128 / 25%)` |
 | `--lr-font-mono` | `--lr-theme-font-family-mono` | `ui-monospace, SFMono-Regular, Menlo, Consolas, monospace` |
 | `--lr-space-xs` | `--lr-theme-space-xs` | `0.25rem` |
@@ -211,7 +211,12 @@ override a single element without touching the shared layer.
 | `--lr-transition-base` | `--lr-theme-transition-normal` | `180ms ease-out` |
 | `--lr-transition-ambient` | `--lr-theme-transition-slow` | `1.8s ease-in-out` |
 | `--lr-opacity-disabled` | `--lr-theme-opacity-disabled` | `0.5` |
+| `--lr-hover-brightness` | `--lr-theme-hover-brightness` | `1.08` |
+| `--lr-popover-viewport-clamp` | `--lr-theme-popover-viewport-clamp` | `92vw` |
+| `--lr-focus-ring-width` | `--lr-theme-focus-ring-width` | `2px` |
 | `--lr-focus-ring-color` | `--lr-theme-color-focus` | `var(--lr-color-brand)` |
+| `--lr-focus-ring-offset` | `--lr-theme-focus-ring-offset` | `2px` |
+| `--lr-icon-button-size` | `--lr-theme-icon-button-size` | `2.5rem` |
 | `--lr-color-surface` | `--lr-theme-color-surface-default` | `#1a1a1a` |
 | `--lr-color-surface-raised` | `--lr-theme-color-surface-raised` | `#22272e` |
 | `--lr-color-text` | `--lr-theme-color-text-normal` | `#f2f2f2` |
@@ -249,7 +254,7 @@ override a single element without touching the shared layer.
 | `--lr-graph-cat-7` | `--lr-theme-graph-cat-7` | `#79e2ef` |
 | `--lr-graph-cat-8` | `--lr-theme-graph-cat-8` | `#e4e7eb` |
 
-## Derived tokens (276)
+## Derived tokens (278)
 
 Computed from the layer above; not directly themeable.
 
@@ -276,7 +281,7 @@ Computed from the layer above; not directly themeable.
 | `--lr-color-on-danger` | `var(--lr-theme-color-danger-on-loud, #fff)` |
 | `--lr-color-on-neutral` | `var(--lr-theme-color-neutral-on-loud, #fff)` |
 | `--lr-color-overlay` | `var(--lr-theme-color-overlay, rgb(0 0 0 / 0.5))` |
-| `--lr-color-overlay-strong` | `var(--lr-theme-color-overlay, rgb(0 0 0 / 0.92))` |
+| `--lr-color-overlay-strong` | `var(--lr-theme-color-overlay-strong, var(--lr-theme-color-overlay, rgb(0 0 0 / 0.92)))` |
 | `--lr-color-no-data` | `var(--lr-theme-color-no-data, rgb(128 128 128 / 25%))` |
 | `--lr-font-mono` | `var(--lr-theme-font-family-mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace)` |
 | `--lr-space-xs` | `var(--lr-theme-space-xs, 0.25rem)` |
@@ -450,10 +455,12 @@ Computed from the layer above; not directly themeable.
 | `--lr-transition-base` | `var(--lr-theme-transition-normal, 180ms ease-out)` |
 | `--lr-transition-ambient` | `var(--lr-theme-transition-slow, 1.8s ease-in-out)` |
 | `--lr-opacity-disabled` | `var(--lr-theme-opacity-disabled, 0.5)` |
-| `--lr-focus-ring-width` | `2px` |
+| `--lr-hover-brightness` | `var(--lr-theme-hover-brightness, 1.08)` |
+| `--lr-popover-viewport-clamp` | `var(--lr-theme-popover-viewport-clamp, 92vw)` |
+| `--lr-focus-ring-width` | `var(--lr-theme-focus-ring-width, 2px)` |
 | `--lr-focus-ring-color` | `var(--lr-theme-color-focus, var(--lr-color-brand))` |
-| `--lr-focus-ring-offset` | `2px` |
-| `--lr-icon-button-size` | `2.5rem` |
+| `--lr-focus-ring-offset` | `var(--lr-theme-focus-ring-offset, 2px)` |
+| `--lr-icon-button-size` | `var(--lr-theme-icon-button-size, 2.5rem)` |
 | `--lr-safe-area-inline-start` | `env(safe-area-inset-right, 0px)` |
 | `--lr-safe-area-inline-end` | `env(safe-area-inset-left, 0px)` |
 | `--lr-color-surface` | `var(--lr-theme-color-surface-default, #1a1a1a)` |

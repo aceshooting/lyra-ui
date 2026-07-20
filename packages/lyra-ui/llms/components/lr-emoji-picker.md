@@ -58,6 +58,15 @@ and re-derived only when the resolved pixels can actually change (a token overri
 first render, a theme swap, a root or host font-size change feeding a `rem`/`em` value), never per
 frame.
 
+`--lr-emoji-picker-active-bg` recolors the highlight behind the active/hovered emoji, falling back
+to `--lr-color-brand-quiet` when unset — so the default rendering is unchanged. Hover and
+keyboard-active deliberately share one declaration, so this single hook retints both consistently.
+It exists because `::part(emoji)[data-active]` is **invalid CSS** (an attribute selector cannot
+follow `::part()`), which previously left hijacking the shared `--lr-color-brand-quiet` token — and
+repainting everything else that reads it — as the only way in. Like `lr-time-range`'s preset
+properties, it is written as an inline `var()` fallback at the point of use rather than declared on
+`:host`, so a value set on **any ancestor** reaches it instead of being shadowed.
+
 Two constraints remain. `--lr-emoji-picker-item-size` is clamped up to `--lr-icon-button-size`, the
 shared minimum tappable box: a smaller value does not shrink the button, and the windowed geometry
 follows the clamped, painted size. And windowed rows are absolutely positioned at the row-height

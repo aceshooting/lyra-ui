@@ -27,6 +27,10 @@ parsing (that's left entirely to the host).
 - `maxFileSize: number = 0` (attribute `max-file-size` — bytes; `0` disables the check)
 - `directory: boolean = false` (reflected) — enables native directory selection where supported
 - `paste: boolean = true` (reflected) — accepts files pasted into the dropzone
+- `compact: boolean = false` (reflected) — tighter dropzone padding, gap and label font for
+  constrained spaces (a toolbar, a table cell) — the same convention as `lr-empty`'s `compact`. The
+  dashed border stays; only the internal spacing shrinks. `false` (the default) keeps the full
+  `--lr-space-l` dropzone.
 - `label: string = 'Drop files here or click to browse'`
 - `accessibleLabel: string = ''` (attribute `aria-label`) — overrides `label` as the internal
   dropzone/button accessible name without changing visible copy
@@ -53,7 +57,13 @@ announces correctly.
 **CSS parts:** `base`, `input`, `status` (a visually-hidden `role="status" aria-live="polite"`
 element carrying the drag accept/reject announcement)
 
-**Themeable custom properties:** shared tokens only — `--lr-space-xs`, `--lr-space-l`,
+**Themeable custom properties:** `--lr-file-input-compact-padding` (default `var(--lr-space-s)`) —
+`[part='base']`'s padding while `compact`; `--lr-file-input-compact-gap` (default
+`var(--lr-space-2xs)`) — the gap between the dropzone's slotted children while `compact`; and
+`--lr-file-input-compact-font-size` (default `var(--lr-font-size-sm)`) — the label's font size while
+`compact`. All three apply only while `compact` is set, so they are the way to tune a dense dropzone
+without re-pointing shared spacing tokens for everything else on the page. Plus shared tokens —
+`--lr-space-xs`, `--lr-space-l`,
 `--lr-color-border`, `--lr-radius`, `--lr-color-surface`, `--lr-color-text-quiet`,
 `--lr-color-success` (drag-accept state), `--lr-color-danger` (drag-reject state),
 `--lr-focus-ring-width/-color/-offset` (`[part="base"]:focus-visible` outline),

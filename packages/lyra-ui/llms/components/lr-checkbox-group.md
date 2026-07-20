@@ -19,3 +19,20 @@ selected value is submitted under `name` and `required` requires at least one se
 `accessibleLabel` (`aria-label`). **Slots:** default checkboxes, `label`, `hint`, `error`.
 **Events:** `input`, `change`, and `lr-change` with `{ value: string[] }`.
 **CSS parts:** `form-control`, `form-control-label`, `options`, `hint`, `error`.
+
+**`value` is a read-out of child state, not an input.** The children are the single source of
+truth. An internal sync recomputes `value` from them and reassigns it on every child toggle,
+`slotchange`, `name`/`required` change, blur, and `form.reset()` — so a host assignment is
+silently overwritten by the next of those. `connectedCallback()` runs that sync **before the first
+render**, which means even a constructor-time or template-time `.value=${…}` binding is discarded
+before anything can observe it. Assigning `value` logs a `console.warn` naming the property (once
+per group instance).
+
+- **To preselect**, set `checked` on the children: `<lr-checkbox value="a" checked>`.
+- **To read the selection**, use this property or the `lr-change` event detail.
+- **Give every child a distinct `value`.** `<lr-checkbox>`'s `value` defaults to `'on'`, so a group
+  of undifferentiated children submits several identical `FormData` entries and the submitted data
+  cannot say which one was checked. The group warns once per duplicated value when it sees this.
+- Making `value` authoritative is deliberately not implemented, for the same reason: a host
+  assigning `['on']` would check every child that kept the default. A distinct `defaultValue` API
+  could be added later without reversing any of the above.

@@ -47,6 +47,16 @@ cancelable. Retry is available for `error` and `cancelled`.
   `show-retry`) — whether the built-in buttons may render at all, still gated by the run's own
   status. Both use a `true`-defaulting string converter, so plain-HTML `show-cancel="false"` works; a
   `?show-cancel=${false}` boolean-attribute binding starting from absent markup does not
+- `compact: boolean = false` (reflected) — tighter root padding and header/body gap for dense
+  contexts (a run rendered as a row in a list, or in a side panel); same convention as `lr-empty`'s
+  `compact`. Purely a density knob: the border and background stay, so reach for
+  `appearance="plain"` instead when the goal is to drop the chrome entirely
+- `appearance: 'card' | 'plain' = 'card'` (reflected) — visual chrome, mirroring `lr-card`'s
+  `appearance` vocabulary. `'card'` keeps the bordered, filled, padded box; `'plain'` removes the
+  border, background, padding and corner radius, so a run nested inside a host frame that already
+  draws a border doesn't double it. `plain` wins over `compact` when both are set — there is no
+  padding left to tighten. The built-in Cancel/Retry buttons draw their own border and background
+  and stay visibly interactive either way
 
 **Events:** `lr-cancel` (`detail: CancelEventDetail` = `{ reason?: string }`, from
 `@aceshooting/lyra-ui/ai`; `reason` is `undefined` from the built-in button), `lr-retry`
@@ -63,4 +73,9 @@ this component's own retry counter, reset when `run.id` changes).
 (carries `data-variant`), `empty`.
 
 **Themeable custom properties:** `--lr-agent-run-spin` (default `1s linear`) — the running-status
-spinner icon's rotation duration/timing.
+spinner icon's rotation duration/timing. `--lr-agent-run-compact-padding` (default
+`var(--lr-space-s)`) and `--lr-agent-run-compact-gap` (default `var(--lr-space-s)`) — `[part="base"]`'s
+padding, and the gap between its header and body, while `compact`; both are ignored while `compact`
+is unset. Like the other density/state properties in this family they are inline `var()` fallbacks at
+their point of use rather than `:host` declarations, so either can be set on the element *or on any
+ancestor* — one rule on a run list retunes every compact run inside it.

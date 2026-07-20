@@ -41,9 +41,29 @@ host so the control still has an accessible name.
 showing the checkmark/indeterminate dash), `checkmark` (the checkmark or indeterminate-dash glyph),
 `label` (wrapper around the default slot)
 
-**Themeable custom properties:** shared tokens only — `--lr-space-s`, `--lr-icon-button-size`,
+**Themeable custom properties:** `--lr-checkbox-label-indent` (below), plus shared tokens —
+`--lr-space-s`, `--lr-icon-button-size`,
 `--lr-color-border/-surface/-on-brand/-brand/-text/-danger`, `--lr-radius`,
 `--lr-transition-fast`, `--lr-focus-ring-width/-color/-offset`, `--lr-opacity-disabled`.
+
+**`--lr-checkbox-label-indent`** — the inline distance from the control's start edge to the start of
+the label text: the box's own floor plus the gap beside it. It defaults to
+`calc(min(var(--lr-icon-button-size), 1.75rem) + var(--lr-space-s))`, and the rendered gap is
+*derived* from it, so the advertised value and the real label offset cannot drift. Setting it on
+the element (or on `lr-checkbox` in your own stylesheet) moves the label.
+
+It is published so you can align your own per-option hint text under the label without re-deriving
+that formula by reading the shadow styles. **But custom properties inherit down, not sideways**, so
+a *sibling* node in your tree cannot read it off the checkbox. Align a sibling by computing the
+same formula from the `--lr-theme-*` inputs you control:
+
+```css
+.checkbox-hint {
+  padding-inline-start: calc(
+    min(var(--lr-theme-icon-button-size, 2.5rem), 1.75rem) + var(--lr-theme-space-s, 0.5rem)
+  );
+}
+```
 
 **Optional peer deps:** none.
 

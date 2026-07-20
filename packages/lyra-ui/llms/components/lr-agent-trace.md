@@ -40,3 +40,13 @@ graph node-type ids).
 `spans` is non-empty), `handoffs` (the quick-jump list wrapper, only rendered while at least one
 visible span has `kind: 'agent'`), `handoff` (one entry — a `<button>` wrapping an
 `lr-handoff-divider`, carrying `data-active`), `tree` (the composed `lr-trace-tree`).
+
+**Themeable custom properties:** `--lr-agent-trace-handoff-active-bg` (default
+`var(--lr-color-brand-quiet)`) — the background of the active (`activeSpanId`) handoff quick-jump
+entry. Same state-scoped-property convention described under `lr-span-waterfall`: an inline `var()`
+fallback rather than a `:host` declaration, settable on the element or any ancestor, and it exists
+because `::part(handoff)[data-active]` is invalid CSS. The composed tree's own
+`--lr-trace-tree-row-active-bg` is a separate knob and inherits straight through, so restyling both
+means setting both — and it carries the contrast caveat documented under `lr-trace-tree` above: the
+default active tint leaves the row's smaller secondary text below 4.5:1, so a replacement value
+should raise the contrast rather than merely re-tint.

@@ -52,6 +52,15 @@ unhighlighted permanently, `headingAnchors: boolean = false` (attribute `heading
 **CSS parts:** `content`, `heading`, `paragraph`, `list`, `code-block`, `inline-code`, `link`,
 `table`, `blockquote`, `img`, `math` — identical to `<lr-markdown>`'s own parts.
 
+**Themeable custom properties:** `--lr-code-block-tab-size` (default `2` — tab width inside a
+rendered fenced or indented `code-block`), with exactly the mechanics described under
+`<lr-markdown>` above: the same property name and default that `<lr-code-block>`/`<lr-code-editor>`
+read, declared as a `var()` fallback at the point of use rather than on `:host` so a page- or
+container-level value reaches it, and carried here in its own right because this element is a
+**sibling** of `<lr-code-block>` rather than an ancestor of it. Markdown code blocks wrap
+(`white-space: pre-wrap`) while `<lr-code-block>` does not, so the same tab width can render
+differently on a wrapped line.
+
 **Optional peer deps:** `marked`, `dompurify` (both lazy-loaded, same as `<lr-markdown>`), `katex`
 (for `math`). Does *not* depend on the full `shiki` package's default entry point — only
 `shiki/core`/`shiki/engine/oniguruma`/`shiki/langs/*`, the same fine-grained subset

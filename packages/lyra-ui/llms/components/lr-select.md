@@ -58,6 +58,15 @@ selection change — a native `<select>` doesn't meaningfully distinguish the tw
 **Slots:** default (`<lr-option>` children), `label`, `hint`, `error` (overrides the `errorText`
 attribute when provided)
 
+**`lr-select` deliberately has no `start`/`end` adornment slots**, unlike
+`lr-input`/`lr-combobox`/`lr-date-input`. Two reasons, both structural rather than incidental:
+its `[part='trigger']` is a native `<button>`, and HTML's content model forbids interactive
+descendants inside one — so the slot could only ever accept decorative content, a materially
+different contract from the other three that would read as the same feature; and the trigger lays
+out with `justify-content: space-between`, so injecting a leading element pushes the selected label
+into the middle of the control instead of leaving it at the start. **Instead:** put a glyph in the
+`label` slot, or compose the select into `<lr-control-group>` alongside the adornment.
+
 When hint/error content is present, the trigger's `aria-describedby` references stable shadow-local
 IDs for both messages (error first, then hint), so the visible supporting text is part of the
 control's accessible description.
@@ -70,10 +79,22 @@ presentational `<div>`, not a `role="group"`; options with an empty `group` get 
 
 **Themeable custom properties:** `--lr-select-trigger-padding`, `--lr-select-trigger-min-height`,
 `--lr-select-font-size`, `--lr-select-expand-size` — all four auto-swapped per `size` (`xs`…`xl`), the same pattern
-`lr-toast-item`'s `--lr-toast-padding`/`--lr-toast-font-size` use. `--lr-select-trigger-height`
-(default `auto`) — unset, it leaves `--lr-select-trigger-min-height` as a floor only, unchanged; set
-it to force an exact trigger height (e.g. to pixel-match a sibling text field in the same row), which
-both floors and caps the trigger at that height.
+`lr-toast-item`'s `--lr-toast-padding`/`--lr-toast-font-size` use.
+
+`--lr-select-trigger-min-height` is live at **every** tier, the default `m` included, where it is
+`2.5rem` — byte-identical to `lr-input`'s and `lr-combobox`'s own `m` floor, so the three controls
+agree at that tier. It used to be dead code: the component declared `--lr-select-trigger-height:
+auto` on `:host`, and a *declared* value (`auto` is one) wins over the `var()` fallback arm that
+the floor lives in, so the floor never applied and four extra specificity rules existed only to
+patch it back for four of the tiers. Those rules are gone.
+
+`--lr-select-trigger-height` pins an **exact** trigger height — both a floor and a cap — e.g. to
+pixel-match a sibling text field in the same toolbar row. It is **undeclared by default**, which is
+exactly what keeps the per-tier floor alive; see "exact-height hatches" under `lr-input`. Because
+the component never declares it, it can be set inline, from an ancestor, or from an outer-tree
+rule. One consequence worth knowing when testing:
+`getComputedStyle(el).getPropertyValue('--lr-select-trigger-height')` now reads `''` rather than
+`'auto'` — assert the rendered `min-block-size`/`block-size` instead of the property string.
 
 **Optional peer deps:** none.
 

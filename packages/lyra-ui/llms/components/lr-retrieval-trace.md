@@ -50,7 +50,14 @@ no stage has evidence), `evidence-row` (omitted for a stage with no evidence), `
 `evidence-metadata` (a `<dl>`), `evidence-metadata-row` (one key/value pair), `evidence-metadata-key`
 (`<dt>`), `evidence-metadata-value` (`<dd>`).
 
-**Themeable custom properties:** shared tokens only.
+**Themeable custom properties:** `--lr-retrieval-trace-active-border` (default
+`var(--lr-color-brand)`) — the border color of the `[part='evidence-row']` whose stage matches
+`activeStageId`, leaving every other row on the resting border token. It is an inline `var()`
+fallback at the point of use rather than a `:host` declaration, so it can be set on the element *or
+on any ancestor*: `::part(evidence-row)[data-active]` is invalid CSS — Shadow Parts forbids an
+attribute selector after `::part()` — so marking the active stage previously meant overriding the
+library-wide `--lr-color-brand` token and repainting every other brand surface with it. Unset, it
+falls back to that token, so rendering is unchanged. Plus shared tokens otherwise.
 
 **Optional peer deps:** none.
 

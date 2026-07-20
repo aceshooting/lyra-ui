@@ -39,6 +39,21 @@ menu, an avatar menu, or a history row's overflow menu. Uses the WAI-ARIA "menu 
   close the menu when focus is on slotted non-menu-item content inside the popup; item activation
   remains scoped to actual menu items
 
+**Methods:** `show(focus: 'first' | 'last' = 'first')` opens the menu and moves roving focus to the
+first (or, with `'last'`, the last) non-disabled item; a no-op when already open.
+`hide(options?: { focusTrigger?: boolean })` closes it; a no-op when already closed. They are the
+imperative pair for the cases the slotted trigger can't express — a "Done"/"Apply" button *inside*
+the menu, a keyboard shortcut, a parent restoring UI state — without hand-reproducing the
+pending-focus bookkeeping. Both are deliberately thin: positioning, the outside-click listener, the
+`lr-show`/`lr-hide` events, and the initial focus move all stay in one place, so **writing `open`
+directly is fully supported and equivalent apart from the focus moves**. In particular the
+roving-tabindex reset is centralized, so a bare `el.open = false` also clears `activeIndex` and
+never leaves a stale `tabindex="0"` tab stop on the last active item. `hide()` never refocuses
+unless you ask: pass `{ focusTrigger: true }` for a dismissal with nowhere else for focus to land,
+and leave it off when the interaction that closed the menu already put focus somewhere the user
+chose (an outside click, a Tab out). Focus restoration lives in `hide()` rather than in the
+close branch precisely so teardown — disconnecting an open menu — can't steal focus.
+
 **Events:** `lr-show` (no detail — fires only when `open` transitions to `true`, not for markup
 that renders `open` true from the start), `lr-hide` (same first-render guard, opposite
 transition), `lr-menu-select` (`detail: { value }` — a consolidated re-fire of the activated

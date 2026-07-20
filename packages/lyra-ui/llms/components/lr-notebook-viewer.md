@@ -51,6 +51,13 @@ notebook failed.
 
 **Themeable custom properties:** `--lr-notebook-viewer-max-height` (default `none`).
 
+`--lr-notebook-viewer-active-bg` (intended default `var(--lr-color-brand-quiet)`) is declared for
+the background of the `[part='cell']` currently targeted by an anchor, but **its rule does not
+currently take effect.** Cells are rendered into the embedded `<lr-virtual-list>`'s own shadow root,
+one boundary deeper than this component's stylesheet (and than a consuming stylesheet) reaches, so
+the declaration targeting `[part='cell']` never matches a rendered cell. It is documented here for
+completeness — do not rely on it to tint the anchored cell today.
+
 **Optional peer deps:** `marked`+`dompurify` (markdown cells, falls back to plain text per cell),
 `shiki` (code cells, falls back to unhighlighted), `dompurify` (HTML/SVG outputs, falls back to
 `text/plain`).

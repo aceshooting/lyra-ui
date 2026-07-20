@@ -48,6 +48,19 @@ KPI/stat card — value + unit + label + optional icon/trend/caption.
   hides `[part="unit"]`, for rendering a loading/status message in place of a numeric value
 - `compact: boolean = false` (reflected) — tighter card padding; same convention as `lr-empty`'s and
   `lr-widget`'s `compact`
+- `appearance: 'card'|'plain' = 'card'` (reflected) — visual chrome, mirroring `lr-card`'s
+  `appearance` vocabulary. `'card'` keeps the bordered, filled, padded box that stretches to fill its
+  parent; `'plain'` removes the border, background, padding, corner radius **and** the
+  `block-size: 100%` stretch, so the stat can sit inline in prose, a toolbar, or a table cell.
+  `plain` wins over `compact` when both are set (there is no padding left to tighten), and it drops
+  `emphasis`'s accent edge — that edge is card chrome — while `emphasis`'s brand value tint still
+  applies. A `plain` stat with a safe `href` swaps the card's border-color/lift hover affordance
+  (invisible with no border) for an underline on `[part="value"]`; the `:focus-visible` ring is
+  unchanged
+- `orientation: 'vertical'|'horizontal' = 'vertical'` (reflected) — layout axis. `'vertical'` stacks
+  label, value, trend, sub and caption. `'horizontal'` lays label, value+unit, trend, sub and caption
+  out on a single wrapping baseline row; `[part="spark"]` and `[part="rows"]` have no sensible place
+  on a text baseline and stay stacked on their own full-width line beneath that row
 
 **Events:** none.
 
@@ -57,7 +70,9 @@ slot="spark">`, or other compact trend visual — `lr-stat` only reserves the sl
 render one itself), `sub` (rich sub-line content — overrides the `sub` attribute when slotted content
 is provided)
 
-**CSS parts:** `base` (a `<div>`, or an `<a>` for a safe `href`), `icon`, `label`, `value-row`, `value`, `unit`, `trend`, `sub`, `spark`,
+**CSS parts:** `base` (a `<div>`, or an `<a>` for a safe `href`), `icon`, `label` (carries `hidden`,
+and is collapsed, whenever `label` is empty — a label-less stat leaves no blank line above the
+value), `value-row`, `value`, `unit`, `trend`, `sub`, `spark`,
 `caption`, `rows`, `row`, `row-label`, `row-value` — `[part="value"]` gets `aria-labelledby` pairing
 it with `[part="label"]`'s generated id whenever `label` is non-empty (so tabbing straight to the
 `exactValue`-focusable value still announces e.g. "Revenue $1.2K", not just the bare value); each

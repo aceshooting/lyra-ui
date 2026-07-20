@@ -22,14 +22,19 @@ to `<wa-card>`'s contract, staying slot-compatible with `lr-result-card` where t
   for a quiet brand-tinted background; `'filled-outlined'` keeps the border and adds that same tinted
   background; `'accent'` drops the border for a single colored accent stripe on the leading edge;
   `'plain'` has no border or background at all.
-- `interactive: boolean = false` (reflected) — opt-in hover/focus-visible treatment (border-color
-  shift, cursor: pointer) for a card used as a clickable tile — purely visual; this component takes
-  no position on what "activate" means unless `href` is also set. `false` (the default) reproduces a
-  plain static card.
+- `interactive: boolean = false` (reflected) — opt-in clickable-tile behavior: the hover/focus-visible
+  treatment (border-color shift, `cursor: pointer`) plus, when `href` is **not** also set, real
+  activation semantics — `[part='base']` becomes focusable (`tabindex="0"`), responds to
+  Enter/Space, and emits `lr-card-activate`. With `href` set, the root is already a real `<a>`, so
+  native navigation *is* the activation and `lr-card-activate` never fires. `false` (the default)
+  reproduces a plain static card: no `tabindex`, no listeners, no events.
 - `href?: string` — when set, the card's root renders as a real `<a href=...>` instead of a `<div>`,
   for a whole-card link (e.g. a wide CTA tile). Unset (the default) renders a plain `<div>`.
 
-**Events:** none.
+**Events:** `lr-card-activate` (no detail) — the whole card was activated, by click or by
+Enter/Space while `[part='base']` has focus. Only fired while `interactive` is set **without**
+`href`. Never fired for an interaction that originated in a slotted control, so a card can keep its
+own action buttons (see the gotchas below).
 
 **Slots:** default (the card body), `header` (header row content, rendered above the body), `media`
 (media content, e.g. an image, rendered above the header), `footer` (footer content, rendered below
@@ -63,5 +68,21 @@ the `footer` slot, hidden entirely when empty).
 - slot-presence (`header`/`media`/`footer`/`actions`) is tracked in JS, not via CSS `:empty` (a
   `[part]` wrapper always contains a literal `<slot>` child, so `:empty` never matches) — the same
   pattern `lr-empty`/`lr-widget` use.
+- **an `interactive` card without `href` deliberately carries no `role="button"`.** A card is a
+  *container* — it routinely holds slotted buttons and links — and `role="button"` around focusable
+  descendants is the `nested-interactive` accessibility violation this library's own a11y gate
+  enforces. (`lr-chip`'s `toggleable` mode *can* carry `role="button"` because it forbids focusable
+  children outright.) The consequence is that the card is announced as a plain focusable region, so
+  give it your own `aria-label` when the content doesn't already name it.
+- because there is no `role="button"` to disambiguate, "did the user aim at the card or at a control
+  inside it?" is answered at event time: the composed path from the original target up to
+  `[part='base']` is walked, and `lr-card-activate` is suppressed if anything along the way is
+  itself a control (a link, `button`, `input`, `select`, `textarea`, `label`, `summary`,
+  `contenteditable`, anything carrying a `tabindex` other than `-1`, or an ARIA widget role such as
+  `button`/`link`/`checkbox`/`switch`/`radio`/`menuitem`/`option`/`tab`/`textbox`/`slider`/
+  `spinbutton`). Using the *composed*
+  path is what makes this work through a slotted component's own shadow root — a click on
+  `<lr-button>` retargets to the host, but its composed path still contains the internal native
+  `<button>`.
 
 ---
