@@ -75,8 +75,9 @@ rendered before the built-in Deny/Edit/Approve buttons.
 
 **CSS parts:** `backdrop`, `panel`, `header`, `tool-name`, `body`, `args-view`, `args-editor`, `error`,
 `footer`, `deny-button`, `edit-button`, `approve-button`,
-`deny-button-base`/`-label`/`-start`/`-end`/`-spinner` and
-`approve-button-base`/`-label`/`-start`/`-end`/`-spinner` (`deny-button`/`approve-button` are each an
+`deny-button-base`, `deny-button-label`, `deny-button-start`, `deny-button-end`,
+`deny-button-spinner`, `approve-button-base`, `approve-button-label`, `approve-button-start`,
+`approve-button-end`, `approve-button-spinner` (`deny-button`/`approve-button` are each an
 `<lr-button>` host; these five per-button parts are re-exported from its own `lr-button` parts via
 `exportparts`; `edit-button` stays a plain `<button>`, unaffected by this).
 
