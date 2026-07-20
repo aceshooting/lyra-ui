@@ -18,7 +18,12 @@ documents) and `<lr-image-comparer>` (before/after slotted surfaces). Adopts `Do
 with `anchorKinds: ['region']` only — no text selection is bound.
 
 **Properties:** `src: string = ''`, `name: string = ''`, `alt?: string`, `fit: 'contain' | 'width' |
-'actual' = 'contain'` (reflected), `zoom: number = 1` (reflected), `rotation: 0 | 90 | 180 | 270 = 0`
+'actual' = 'contain'` (reflected), `zoom: number = 1` (reflected), `minZoom: number = 0.5` (attribute
+`min-zoom`), `maxZoom: number = 4` (attribute `max-zoom`), `zoomStep: number = 0.25` (attribute
+`zoom-step`) — `minZoom`/`maxZoom`/`zoomStep` are pure pass-throughs to the embedded
+`<lr-zoomable-frame>` as its own `.minZoom`/`.maxZoom`/`.zoomStep`, which does the actual
+clamping/normalizing; same names/defaults as `<lr-lightbox>`'s identical trio, both wrapping the
+same pan/zoom surface — `rotation: 0 | 90 | 180 | 270 = 0`
 (reflected), and `annotatable: boolean = false` (reflected).
 
 **Methods:** `rotate()` advances `rotation` by 90°. `zoomIn()`, `zoomOut()`, and `resetZoom()` adjust

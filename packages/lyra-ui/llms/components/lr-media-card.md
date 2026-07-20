@@ -34,6 +34,11 @@ final.
   overrides the `--lr-media-card-max-height` custom property for this instance only (applied
   inline on `[part="base"]`, so it reliably wins over a `:host{}`-declared default from outside the
   shadow root) — same contract as `<lr-document-preview>`'s identically-named prop.
+- `appearance: 'card' | 'plain' = 'card'` (reflected) — visual chrome, mirroring
+  `<lr-source-card>`'s `appearance` vocabulary. `'card'` (the default) keeps the bordered, filled
+  box. `'plain'` removes `[part="base"]`'s border, background, padding, and corner radius, so a
+  card inside a dense chat transcript (or any container already drawing its own separation between
+  attachments) doesn't double the frame.
 
 **Events:** `lr-open` (`detail: { src: string; filename: string }`, cancelable) — fired when the
 card (or, for `kind="video"`, its separate `open-button`) is activated. `detail.src` is whichever

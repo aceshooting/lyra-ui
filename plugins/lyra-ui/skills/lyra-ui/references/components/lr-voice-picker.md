@@ -43,6 +43,14 @@ identically-named properties.
 getter/setter (the current voice id, `''` when nothing is selected), `name` (reflected), `disabled`
 (reflected), `required` (reflected — enforced via `internals.setValidity()`).
 
+**Methods:** `click()` (override) — same forwarding contract as `lr-model-select`'s own `click()`
+override (see that section for the full rationale): closed-dropdown mode forwards a real `.click()`
+to the trigger `<button>`, whose own `@click` handler opens it; free-text mode instead calls
+`.focus()` on the combobox `<input>`, since a synthetic `.click()` on a text input never dispatches
+`focus` the way a real click's `mousedown` default action does, and this mode's open behavior is
+wired to the input's native `focus` event, not a `click` handler on the input itself. Mirrors
+`<lr-button>`'s identical host `click()` forwarding.
+
 **Events:** `lr-change` — `detail: { value, inCatalog }`. `lr-preview-request` — `detail: {
 voiceId, previewUrl? }`, cancelable. `lr-preview-change` — `detail: { voiceId }`, internal playback
 started (`voiceId`) or stopped (`null`). Plus mirrored native `input`/`change` and re-dispatched

@@ -38,7 +38,9 @@ index, label, value }`).
 
 **Slots:** `data-table`, `center`.
 
-**CSS parts:** `base`, `canvas`, `reset-zoom-button`, `description`, `data-table`, `center`.
+**CSS parts:** `base`, `canvas`, `reset-zoom-button`, `description`, `data-table`, `center`,
+`error` (`role="alert"` message rendered in place of `canvas` when the optional `chart.js` peer
+dependency fails to load — see `llms/components/lr-chart.md`).
 
 **Themeable custom properties:** `--lr-chart-height`, `--lr-chart-grid-color`,
 `--lr-chart-tick-color`, `--lr-chart-legend-color`, `--lr-chart-tooltip-bg`,

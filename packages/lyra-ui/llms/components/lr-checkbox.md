@@ -65,6 +65,13 @@ same formula from the `--lr-theme-*` inputs you control:
 }
 ```
 
+`--lr-checkbox-checked-bg` (default `var(--lr-color-brand)`) and `--lr-checkbox-checked-border`
+(default `var(--lr-color-brand)`) recolor `[part='box']`'s background/border while `checked` or
+`indeterminate` — a component-scoped indirection (the same pattern `lr-source-picker`'s own
+`--lr-source-picker-checked-bg`/`-border` pair uses) so a consumer can retint just this control's
+checked/indeterminate fill without hijacking the shared `--lr-color-brand` token everything else
+reads.
+
 **Optional peer deps:** none.
 
 ```html

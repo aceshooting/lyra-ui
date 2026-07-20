@@ -30,7 +30,9 @@ with a `droppable` canvas on the `FLOW_PALETTE_MIME_TYPE` drag payload shape.
 
 **Events:** `lr-palette-place` (`detail: { type }`, a pointer click or Enter/Space — the
 click/keyboard alternative to dragging), `lr-select` (`detail: { item }`, emitted alongside
-`lr-palette-place` on both gestures, carrying the full item).
+`lr-palette-place` on both gestures, carrying the full item), `focus`/`blur` (no detail —
+re-dispatched from the internal search field's own `focus`/`blur`, bubbling and composed unlike
+the native events, since neither bubbles nor crosses the shadow boundary on its own).
 
 **Slots:** `header` (content above the search field, e.g. a heading or tabs), `footer` (content
 below the list).

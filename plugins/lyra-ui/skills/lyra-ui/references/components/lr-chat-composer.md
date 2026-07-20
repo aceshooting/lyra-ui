@@ -79,11 +79,15 @@ entirely when it has assigned content)
 
 **CSS parts:** `base`, `chips`, `row`, `leading`, `textarea`, `trailing`, `action-button`
 
-**Themeable custom properties:** no component-specific custom properties; consumes shared tokens
-`--lr-space-xs`, `--lr-space-s`, `--lr-color-border`, `--lr-color-surface`,
-`--lr-color-brand`, `--lr-color-on-brand`, `--lr-color-text-quiet`, `--lr-radius`,
-`--lr-icon-button-size`, `--lr-transition-fast`, `--lr-opacity-disabled`,
-`--lr-focus-ring-width`, `--lr-focus-ring-color`, `--lr-focus-ring-offset`.
+**Themeable custom properties:** `--lr-chat-composer-busy-bg` (default `var(--lr-color-text-quiet)`)
+— `[part="action-button"]`'s background while `status` is `"sending"` or `"streaming"` (the busy/stop
+treatment). Scoped separately from the shared `--lr-color-text-quiet` token, which
+`[part="textarea"]`'s placeholder color also reads — overriding this cssprop recolors only the busy
+button, not the placeholder too (the same shared-token-collision fix `<lr-chat-message>`'s own
+user-bubble background pair documents). Plus shared tokens `--lr-space-xs`, `--lr-space-s`,
+`--lr-color-border`, `--lr-color-surface`, `--lr-color-brand`, `--lr-color-on-brand`,
+`--lr-color-text-quiet`, `--lr-radius`, `--lr-icon-button-size`, `--lr-transition-fast`,
+`--lr-opacity-disabled`, `--lr-focus-ring-width`, `--lr-focus-ring-color`, `--lr-focus-ring-offset`.
 
 **Optional peer deps:** none.
 

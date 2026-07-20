@@ -34,7 +34,9 @@ Filterable and taggable evaluation-example list with add, remove, import, and ex
 
 **Events:** `lr-example-select` (`detail: { id: string | null }`), `lr-example-add-request`
 (`detail: undefined`), `lr-example-remove-request` (`detail: { id: string }`), `lr-import-request`
-(`detail: { files: File[] }`), `lr-export-request` (`detail: { format: string }`).
+(`detail: { files: File[] }`), `lr-export-request` (`detail: { format: string }`). `focus`/`blur` —
+re-dispatched (no detail) when the internal search field (only rendered while `searchable`) gains or
+loses focus, since native focus neither bubbles nor crosses the shadow boundary.
 
 **CSS parts:** `base`, `toolbar`, `search`, `search-input`, `tag-filter`, `grid`,
 `add-button`, `remove-button`, `import`, `export`.

@@ -61,11 +61,14 @@ small per-field text label), `hint`, `error` (`role="alert"`).
 `--lr-known-date-field-padding-inline`, `--lr-known-date-field-font-size`,
 `--lr-known-date-field-min-height` (all four rewritten by
 each `:host([size])` rule; `m` defaults `--lr-space-s`/`--lr-space-s`/`--lr-font-size-md-sm`/
-`--lr-size-2rem`), `--lr-known-date-field-height`,
+`--lr-size-2-5rem`), `--lr-known-date-field-height`,
 `--lr-known-date-field-gap` (default `--lr-space-s` — gap between the three field blocks),
 `--lr-known-date-day-field-width` / `--lr-known-date-month-field-width` (default `--lr-size-3-5em`)
 and `--lr-known-date-year-field-width` (default `--lr-size-5em`) — the per-field input widths, not
-size-scaled.
+size-scaled. `--lr-known-date-invalid-border-color` (default `var(--lr-color-danger)`) — border
+color of each `field-input` while `:host([data-invalid])` is set. Component-scoped indirection over
+the shared `--lr-color-danger` token, so a consumer can retheme just this invalid-field border
+without repainting every other component that reads the same shared danger token.
 
 The two height knobs work as a pair on `[part='field-input']`, the same way
 `lr-input`/`lr-select`/`lr-combobox`/`lr-date-input` expose theirs:

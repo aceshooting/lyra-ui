@@ -23,7 +23,13 @@ status: TaskStatus; detail?: string; children?: TaskItem[] }` with `TaskStatus =
 'running' | 'success' | 'error'` (both exported here). `detail` is an optional secondary plain-text
 line; `children` is exactly **one** level of sub-steps — a child's own `children` is ignored with a
 `console.warn`. `label: string = 'Tasks'`, `expanded: boolean = true` (reflected), and
-`collapsible: boolean = true`.
+`collapsible: boolean = true`. `compact: boolean = false` (reflected) — tighter header/body padding
+and item gap for dense contexts (a plan tracker nested in an already-padded transcript row), same
+convention as `<lr-agent-run>`'s/`<lr-source-card>`'s `compact`; purely a density knob, the border
+and background stay. `appearance: 'card' | 'plain' = 'card'` (reflected) — mirrors `lr-card`'s
+`appearance` vocabulary; `'plain'` removes `[part="base"]`'s border, background, and corner radius so
+a list embedded in a frame that already draws a border (an agent-run panel, a message bubble) doesn't
+double it.
 
 **Slots:** `detail-<id>` — dynamic, one per item id (e.g. `slot="detail-step-3"`); rich detail under
 that item's label, typically a `<lr-tool-call-chip>` or file `<lr-chip>`.
@@ -39,4 +45,8 @@ indicator, only rendered when `collapsible`), `body` (the list of items, `hidden
 children).
 
 **Themeable custom properties:** `--lr-task-list-spin` (default `1s linear`) — running-status icon
-spin animation duration/timing.
+spin animation duration/timing; `--lr-task-list-compact-header-padding` (default
+`var(--lr-space-2xs) var(--lr-space-s)`) — `[part="header"]` padding while `compact`;
+`--lr-task-list-compact-gap` (default `var(--lr-space-2xs)`) — gap between `[part="body"]`'s item
+rows while `compact`; `--lr-task-list-compact-body-padding` (default `var(--lr-space-2xs)
+var(--lr-space-s) var(--lr-space-s)`) — `[part="body"]` padding while `compact`.

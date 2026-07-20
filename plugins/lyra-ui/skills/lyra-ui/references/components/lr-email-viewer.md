@@ -35,9 +35,10 @@ localized show/hide toggle. `false` (the default) preserves the full body render
 **CSS parts:** `base`, `headers`, `from-label`, `from`, `to-label`, `to`, `subject-label`, `subject`,
 `date-label`, `date`, `body`, `body-html`, `body-text`, `attachments`, `attachments-label`,
 `attachment-list`, `attachment-item`, `attachment-button` (an attachment's open button, inside its
-`attachment-item`), `quoted` (a folded quoted-text block, hidden until expanded, only
-while `foldQuotes`), `quote-toggle` (the show/hide-quoted-text toggle button, only while `foldQuotes`),
-`spinner`, and `error`.
+`attachment-item`), `attachment-name` (an attachment's filename, inside `attachment-button`),
+`attachment-size` (an attachment's formatted file size, inside `attachment-button`), `quoted` (a
+folded quoted-text block, hidden until expanded, only while `foldQuotes`), `quote-toggle` (the
+show/hide-quoted-text toggle button, only while `foldQuotes`), `spinner`, and `error`.
 
 **Themeable custom properties:** `--lr-email-viewer-max-height` (default `none`) — maximum block size
 of `[part="body"]`; also settable via the `max-height` property, which writes this token inline.

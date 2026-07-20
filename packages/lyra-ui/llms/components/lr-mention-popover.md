@@ -66,10 +66,15 @@ renders `open="false"` on first paint)
 **CSS parts:** `listbox`, `option`, `option-icon` (when `icon` is set), `option-label`,
 `option-description` (when `description` is set), `empty`
 
-**Themeable custom properties:** shared tokens only — `--lr-space-xs`/`-s`/`-m` (popup padding,
+**Themeable custom properties:** `--lr-mention-popover-option-active-bg` (default
+`var(--lr-color-brand-quiet)`) — background of the hovered or `[data-active]`
+(keyboard-highlighted) suggestion row. Component-scoped indirection over the shared
+`--lr-color-brand-quiet` token, so a consumer can retheme just this highlighted/active row without
+repainting every other component that reuses the same shared token. Plus shared tokens —
+`--lr-space-xs`/`-s`/`-m` (popup padding,
 row padding/gap), `--lr-color-surface`/`-border` (popup background/border), `--lr-radius`
 (popup and row corners), `--lr-shadow` (popup elevation), `--lr-transition-fast` (open/close
-transition), `--lr-color-brand-quiet` (active-row background), `--lr-color-brand` (selected-row
+transition), `--lr-color-brand` (selected-row
 text), `--lr-color-text-quiet`/`--lr-color-text` (description text, full-contrast on the active
 row), and `--lr-popover-viewport-clamp` (default `92vw`) — the shared narrow-viewport ceiling the
 popup's max-inline-size is `min()`ed against, alongside its own `24rem` cap and the positioner's

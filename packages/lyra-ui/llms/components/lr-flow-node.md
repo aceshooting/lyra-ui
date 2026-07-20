@@ -51,6 +51,11 @@ carries no card chrome of its own), `card` (the bordered, filled node card), `he
 their point of use rather than `:host` declarations, so they can be set on the element *or any
 ancestor* (a canvas retunes every card at once); overriding the selection color otherwise means
 hijacking the library-wide `--lr-color-brand` token and repainting everything else that reads it.
+`--lr-flow-node-running-border` (default `var(--lr-color-brand)`) — the card's border color while
+`status="running"`, independent of `--lr-flow-node-selected-border` so a consumer can retint just one
+of the two states without the other following along — and `--lr-flow-node-running-glow` (default
+`var(--lr-color-brand-quiet)`) — the box-shadow color of the running-state ring around the card, and
+the pulse keyframes' peak color.
 
 **Optional peer deps:** none.
 

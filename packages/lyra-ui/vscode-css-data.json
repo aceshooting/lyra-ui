@@ -180,7 +180,7 @@
       "name": "--lr-attachment-chip-compact-thumbnail-size",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-attachment-chip>`** (default: `var(--lr-size-1-75rem)`) — Thumbnail size while `compact`, rethemeable independently of `--lr-icon-button-size`."
+        "value": "**`<lr-attachment-chip>`** (default: `var(--lr-size-1-75rem)`) — Thumbnail and retry/preview/remove-button minimum size while `compact`, rethemeable independently of `--lr-icon-button-size`."
       }
     },
     {
@@ -230,6 +230,41 @@
       "description": {
         "kind": "markdown",
         "value": "**`<lr-av-player>`** (default: `var(--lr-color-brand)`) — Outline color of the `[part=\"timeline-marker\"]` matching `activeHighlightId`."
+      }
+    },
+    {
+      "name": "--lr-av-player-marker-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-av-player>`** (default: `color-mix(in srgb, var(--lr-color-brand) 35%, transparent)`) — Background of a `[part=\"timeline-marker\"]` with no (or an unrecognized) `data-tone`."
+      }
+    },
+    {
+      "name": "--lr-av-player-marker-danger-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-av-player>`** (default: `color-mix(in srgb, var(--lr-color-danger) 35%, transparent)`) — Background of a `[part=\"timeline-marker\"][data-tone=\"danger\"]`."
+      }
+    },
+    {
+      "name": "--lr-av-player-marker-neutral-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-av-player>`** (default: `color-mix(in srgb, var(--lr-color-text) 25%, transparent)`) — Background of a `[part=\"timeline-marker\"][data-tone=\"neutral\"]`."
+      }
+    },
+    {
+      "name": "--lr-av-player-marker-success-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-av-player>`** (default: `color-mix(in srgb, var(--lr-color-success) 35%, transparent)`) — Background of a `[part=\"timeline-marker\"][data-tone=\"success\"]`."
+      }
+    },
+    {
+      "name": "--lr-av-player-marker-warning-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-av-player>`** (default: `color-mix(in srgb, var(--lr-color-warning) 35%, transparent)`) — Background of a `[part=\"timeline-marker\"][data-tone=\"warning\"]`."
       }
     },
     {
@@ -335,6 +370,27 @@
       "description": {
         "kind": "markdown",
         "value": "**`<lr-badge>`, `<lr-tag>`** (default: `var(--lr-color-text)`) — The badge's text color. Each non-neutral `variant` sets it to that variant's loud color."
+      }
+    },
+    {
+      "name": "--lr-badge-font-size",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-badge>`, `<lr-tag>`** (default: `var(--lr-font-size-sm)`) — The badge's label font size. Each `size` sets it to that step's font size."
+      }
+    },
+    {
+      "name": "--lr-badge-min-height",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-badge>`, `<lr-tag>`** (default: `var(--lr-size-1-25rem)`) — The badge's minimum block size. Each `size` sets it to that step's minimum block size."
+      }
+    },
+    {
+      "name": "--lr-badge-padding-inline",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-badge>`, `<lr-tag>`** (default: `var(--lr-space-s)`) — The badge's inline padding. Each `size` sets it to that step's inline padding."
       }
     },
     {
@@ -488,28 +544,28 @@
       "name": "--lr-button-size-l",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-button>`** (default: `var(--lr-size-2-5rem)`) — `min-block-size` at `size=\"l\"`."
+        "value": "**`<lr-button>`** (default: `var(--lr-size-3rem)`) — `min-block-size` at `size=\"l\"`. Matches `lr-input`/`lr-select`/`lr-combobox`'s own `size=\"l\"` control height."
       }
     },
     {
       "name": "--lr-button-size-m",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-button>`** (default: `var(--lr-size-2rem)`) — `min-block-size` at `size=\"m\"`."
+        "value": "**`<lr-button>`** (default: `var(--lr-size-2-5rem)`) — `min-block-size` at `size=\"m\"`. Matches `lr-input`/`lr-select`/`lr-combobox`'s own default control height, so a default-size button sitting next to a default-size input/select/combobox in the same row lines up."
       }
     },
     {
       "name": "--lr-button-size-s",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-button>`** (default: `var(--lr-size-1-75rem)`) — `min-block-size` at `size=\"s\"`."
+        "value": "**`<lr-button>`** (default: `var(--lr-size-1-875rem)`) — `min-block-size` at `size=\"s\"`. Matches `lr-input`/`lr-select`/`lr-combobox`'s own `size=\"s\"` control height."
       }
     },
     {
       "name": "--lr-button-size-xl",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-button>`** (default: `var(--lr-size-3rem)`) — `min-block-size` at `size=\"xl\"`."
+        "value": "**`<lr-button>`** (default: `var(--lr-size-3-5rem)`) — `min-block-size` at `size=\"xl\"`. Matches `lr-input`/`lr-select`/`lr-combobox`'s own `size=\"xl\"` control height."
       }
     },
     {
@@ -548,6 +604,13 @@
       }
     },
     {
+      "name": "--lr-calendar-day-selected-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-calendar>`** (default: `var(--lr-color-brand-quiet)`) — Background of a selected day cell, decoupled from the shared token also driving the nav-button/agenda-event hover background."
+      }
+    },
+    {
       "name": "--lr-calendar-viewer-max-height",
       "description": {
         "kind": "markdown",
@@ -566,6 +629,13 @@
       "description": {
         "kind": "markdown",
         "value": "**`<lr-callout>`** (default: `var(--lr-color-border)`) — The callout surface's border color. Each non-neutral `variant` sets it to that variant's loud color."
+      }
+    },
+    {
+      "name": "--lr-callout-close-hover-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-callout>`** (default: `var(--lr-color-brand-quiet)`) — The close button's hover background, decoupled from `--lr-callout-background` so a consumer can retint one without affecting the other (e.g. keeping the hover fill visibly distinct from a `variant=\"brand\"` panel, which shares the same default token)."
       }
     },
     {
@@ -632,6 +702,13 @@
       }
     },
     {
+      "name": "--lr-chat-composer-busy-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-chat-composer>`** (default: `var(--lr-color-text-quiet)`) — `action-button` background while `status` is `\"sending\"` or `\"streaming\"`. Scoped separately from the shared `--lr-color-text-quiet` token, which the `textarea` part's placeholder also reads -- overriding this recolors only the busy button, not the placeholder text too."
+      }
+    },
+    {
       "name": "--lr-chat-message-bubble-bg",
       "description": {
         "kind": "markdown",
@@ -678,6 +755,20 @@
       "description": {
         "kind": "markdown",
         "value": "**`<lr-chat-message>`** (default: `var(--lr-color-text)`) — Bubble text color for `data-role=\"user\"`."
+      }
+    },
+    {
+      "name": "--lr-checkbox-checked-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-checkbox>`** (default: `var(--lr-color-brand)`) — Background of `[part='box']` while `checked` or `indeterminate`. Retint just this control's checked fill without touching the shared `--lr-color-brand` token every other component also reads."
+      }
+    },
+    {
+      "name": "--lr-checkbox-checked-border",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-checkbox>`** (default: `var(--lr-color-brand)`) — Border color of `[part='box']` while `checked` or `indeterminate`."
       }
     },
     {
@@ -877,6 +968,13 @@
       }
     },
     {
+      "name": "--lr-combobox-option-active-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-combobox>`** (default: `var(--lr-color-brand-quiet)`) — Background of a hovered or keyboard-active option row."
+      }
+    },
+    {
       "name": "--lr-combobox-tag-font-size",
       "description": {
         "kind": "markdown",
@@ -951,6 +1049,13 @@
       "description": {
         "kind": "markdown",
         "value": "**`<lr-command-palette>`** (default: `var(--lr-overlay-stack-index, var(--lr-layer-modal))`) — Stacking index of the backdrop."
+      }
+    },
+    {
+      "name": "--lr-commit-card-compact-padding",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-commit-card>`** (default: `var(--lr-space-s)`) — `[part=\"base\"]` padding while `compact`."
       }
     },
     {
@@ -1049,6 +1154,13 @@
       "description": {
         "kind": "markdown",
         "value": "**`<lr-csv-viewer>`** (default: `var(--lr-color-brand)`) — Outline color of a highlighted cell. The active highlight sets it inline to `var(--lr-color-warning, var(--lr-color-brand))`."
+      }
+    },
+    {
+      "name": "--lr-csv-viewer-max-height",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-csv-viewer>`** (default: `none`) — Maximum block size of `[part=\"body\"]` before it scrolls internally. The `maxHeight` property sets this token inline on `[part=\"base\"]`."
       }
     },
     {
@@ -1290,6 +1402,13 @@
       }
     },
     {
+      "name": "--lr-empty-compact-gap",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-empty>`** (default: `var(--lr-space-2xs)`) — Gap between the icon, title, and description in compact mode."
+      }
+    },
+    {
       "name": "--lr-empty-compact-padding",
       "description": {
         "kind": "markdown",
@@ -1353,6 +1472,20 @@
       }
     },
     {
+      "name": "--lr-file-input-accept-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-file-input>`** (default: `color-mix(in srgb, var(--lr-color-success) 8%, transparent)`) — Background of `[part=\"base\"][data-drag-state=\"accept\"]`."
+      }
+    },
+    {
+      "name": "--lr-file-input-accept-border-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-file-input>`** (default: `var(--lr-color-success)`) — Border color of `[part=\"base\"][data-drag-state=\"accept\"]`."
+      }
+    },
+    {
       "name": "--lr-file-input-compact-font-size",
       "description": {
         "kind": "markdown",
@@ -1371,6 +1504,20 @@
       "description": {
         "kind": "markdown",
         "value": "**`<lr-file-input>`** (default: `var(--lr-space-s)`) — `[part=\"base\"]` padding while `compact`."
+      }
+    },
+    {
+      "name": "--lr-file-input-reject-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-file-input>`** (default: `color-mix(in srgb, var(--lr-color-danger) 8%, transparent)`) — Background of `[part=\"base\"][data-drag-state=\"reject\"]`."
+      }
+    },
+    {
+      "name": "--lr-file-input-reject-border-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-file-input>`** (default: `var(--lr-color-danger)`) — Border color of `[part=\"base\"][data-drag-state=\"reject\"]`."
       }
     },
     {
@@ -1395,6 +1542,13 @@
       }
     },
     {
+      "name": "--lr-flow-canvas-drop-active-outline-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-flow-canvas>`** (default: `var(--lr-color-brand)`) — Outline color of the viewport while a palette item is dragged over it (`droppable`)."
+      }
+    },
+    {
       "name": "--lr-flow-canvas-grid-size",
       "description": {
         "kind": "markdown",
@@ -1406,6 +1560,20 @@
       "description": {
         "kind": "markdown",
         "value": "**`<lr-flow-canvas>`** (default: `var(--lr-transition-ambient)`) — Running-edge march animation duration."
+      }
+    },
+    {
+      "name": "--lr-flow-canvas-node-connect-invalid-outline-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-flow-canvas>`** (default: `var(--lr-color-danger)`) — Outline color of a node that is an invalid connect-gesture drop target. Same `::part()` attribute-selector restriction as `--lr-flow-canvas-node-current-outline-color` above."
+      }
+    },
+    {
+      "name": "--lr-flow-canvas-node-connect-target-outline-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-flow-canvas>`** (default: `var(--lr-color-brand)`) — Outline color of a node that is a valid connect-gesture drop target."
       }
     },
     {
@@ -1448,6 +1616,20 @@
       "description": {
         "kind": "markdown",
         "value": "**`<lr-flow-node>`** (default: `calc(var(--lr-size-10rem) + var(--lr-size-1rem))`) — Minimum card inline size."
+      }
+    },
+    {
+      "name": "--lr-flow-node-running-border",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-flow-node>`** (default: `var(--lr-color-brand)`) — Border color of the card while `status=\"running\"`. Independent from `--lr-flow-node-selected-border` so a consumer can retint just one of the two states without the other following along."
+      }
+    },
+    {
+      "name": "--lr-flow-node-running-glow",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-flow-node>`** (default: `var(--lr-color-brand-quiet)`) — Box-shadow color of the running-state ring around the card, and the pulse keyframes' peak color."
       }
     },
     {
@@ -1504,6 +1686,13 @@
       "description": {
         "kind": "markdown",
         "value": "**`<lr-graph>`** (default: `0.12`) — Hull element opacity (composites fill+stroke as one group, avoiding a double-opacity seam at the fill/stroke boundary)."
+      }
+    },
+    {
+      "name": "--lr-graph-legend-hidden-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-graph-legend>`** (default: `var(--lr-color-text-quiet)`) — Text color for a filtered-out (hidden) legend row's label/count, independent of the shared quiet-text token."
       }
     },
     {
@@ -1675,6 +1864,13 @@
       }
     },
     {
+      "name": "--lr-json-viewer-match-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-json-viewer>`** (default: `var(--lr-color-warning-quiet)`) — Background (and surrounding box-shadow) of a key/value that currently matches `search`."
+      }
+    },
+    {
       "name": "--lr-json-viewer-max-height",
       "description": {
         "kind": "markdown",
@@ -1713,7 +1909,7 @@
       "name": "--lr-known-date-field-min-height",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-known-date>`** (default: `var(--lr-size-2rem)`) — Minimum block size of each `field-input`, auto-swapped per `size` (`xs`→`1.25rem`, `s`→`1.5rem`, `l`→`2.5rem`, `xl`→`3rem`). Each default sits below the field's own content height, so it is dead until a consumer raises it -- the unset render is unchanged."
+        "value": "**`<lr-known-date>`** (default: `var(--lr-size-2-5rem)`) — Minimum block size of each `field-input`, auto-swapped per `size` (`xs`→`1.5rem`, `s`→`1.875rem`, `l`→`3rem`, `xl`→`3.5rem`) -- matches `lr-input`'s/`lr-date-input`'s own min-height scale, so a birthdate field sitting in a form row next to those controls renders at the same height. At `xs`/`s`/`m` the floor now exceeds the field's own content height and actively pins the rendered box; at `l`/`xl` the content height already exceeds the floor, so those two tiers are unaffected."
       }
     },
     {
@@ -1728,6 +1924,13 @@
       "description": {
         "kind": "markdown",
         "value": "**`<lr-known-date>`** (default: `var(--lr-space-s)`) — Inline padding of each `field-input`, auto-swapped per `size`."
+      }
+    },
+    {
+      "name": "--lr-known-date-invalid-border-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-known-date>`** (default: `var(--lr-color-danger)`) — Border color of each `field-input` while `:host([data-invalid])` is set."
       }
     },
     {
@@ -1790,7 +1993,35 @@
       "name": "--lr-media-card-max-height",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-media-card>`** (default: `var(--lr-size-20rem)`) — Cap on the block size of the `<img>`/`<video>` in `[part=\"media\"]`."
+        "value": "**`<lr-media-card>`** (default: `var(--lr-size-20rem)`) — Cap on the block size of the `<img>`/`<video>` in `[part=\"media\"]`. **Chrome escape hatch.** `appearance=\"plain\"` drops `[part=\"base\"]`'s border, background, padding, and corner radius — for a dense list/feed of cards (this component's own documented primary use case) where the surrounding container already provides its own separation, so cards don't double up on chrome. Mirrors `<lr-source-card>`'s identical `appearance` vocabulary."
+      }
+    },
+    {
+      "name": "--lr-memory-panel-confidence-danger-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-memory-panel>`** (default: `var(--lr-color-danger)`) — Text color for a low-confidence item's confidence indicator."
+      }
+    },
+    {
+      "name": "--lr-memory-panel-confidence-success-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-memory-panel>`** (default: `var(--lr-color-success)`) — Text color for a high-confidence item's confidence indicator."
+      }
+    },
+    {
+      "name": "--lr-memory-panel-confidence-warning-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-memory-panel>`** (default: `var(--lr-color-warning)`) — Text color for a medium-confidence item's confidence indicator."
+      }
+    },
+    {
+      "name": "--lr-mention-popover-option-active-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-mention-popover>`** (default: `var(--lr-color-brand-quiet)`) — Background of the hovered or `[data-active]` (keyboard-highlighted) suggestion row."
       }
     },
     {
@@ -1836,10 +2067,52 @@
       }
     },
     {
+      "name": "--lr-mind-map-node-hover-halo",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-mind-map>`** (default: `var(--lr-color-brand-quiet)`) — Stroke color of the hover halo drawn around a topic node's dot, giving mouse users the same \"this is clickable\" feedback keyboard users get from the drawn focus ring."
+      }
+    },
+    {
       "name": "--lr-mind-map-ring-gap",
       "description": {
         "kind": "markdown",
         "value": "**`<lr-mind-map>`** (default: `6rem`) — Radius step per depth ring."
+      }
+    },
+    {
+      "name": "--lr-model-select-expand-size",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-model-select>`** (default: `var(--lr-size-1-75rem)`) — Decorative expand-icon box size, scaled by `size`."
+      }
+    },
+    {
+      "name": "--lr-model-select-font-size",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-model-select>`** (default: `var(--lr-font-size-md)`) — Trigger/combobox font size, scaled by `size`."
+      }
+    },
+    {
+      "name": "--lr-model-select-option-active-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-model-select>`** (default: `var(--lr-color-brand-quiet)`) — Background of a hovered or keyboard-active option row."
+      }
+    },
+    {
+      "name": "--lr-model-select-trigger-min-height",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-model-select>`** (default: `var(--lr-size-2-5rem)`) — Trigger/combobox block-size floor, scaled by `size`."
+      }
+    },
+    {
+      "name": "--lr-model-select-trigger-padding",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-model-select>`** (default: `var(--lr-space-xs) var(--lr-space-s)`) — Trigger/combobox padding shorthand, scaled by `size`."
       }
     },
     {
@@ -1909,7 +2182,7 @@
       "name": "--lr-pdf-viewer-height",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-pdf-viewer>`** (default: `var(--lr-size-24rem)`) — Block size of the virtualized page list."
+        "value": "**`<lr-pdf-viewer>`** (default: `var(--lr-size-24rem)`) — Block size of the virtualized page list. Also settable via the `max-height` property."
       }
     },
     {
@@ -1938,6 +2211,13 @@
       "description": {
         "kind": "markdown",
         "value": "**`<lr-policy-summary>`** (default: `var(--lr-color-warning)`) — Text color of the `needs-review` count. Restyling a state count otherwise requires overriding the library-wide status tokens, since `::part(count)[data-state]` is invalid CSS."
+      }
+    },
+    {
+      "name": "--lr-poll-status-due-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-poll-status>`** (default: `var(--lr-color-success)`) — Background of `indicator` while `data-due` is set, without repainting every other component that reuses the shared success token."
       }
     },
     {
@@ -2039,6 +2319,20 @@
       }
     },
     {
+      "name": "--lr-result-card-compact-body-padding",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-result-card>`** (default: `var(--lr-space-xs)`) — `[part=\"body\"]` padding while `compact`."
+      }
+    },
+    {
+      "name": "--lr-result-card-compact-header-padding",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-result-card>`** (default: `var(--lr-space-xs)`) — `[part=\"header\"]` block/inline padding while `compact`."
+      }
+    },
+    {
       "name": "--lr-retrieval-results-selected-border",
       "description": {
         "kind": "markdown",
@@ -2133,7 +2427,7 @@
       "name": "--lr-segmented-track-min-height",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-segmented>`** (default: `auto`) — Minimum height of the `base` track. Re-set per `size` (`2xs` through `xl`); the `auto` default applies at the unset/`m` size. Because it is declared on `:host` per tier, override it on the element itself, not on an ancestor."
+        "value": "**`<lr-segmented>`** (default: `var(--lr-size-2-5rem)`) — Minimum height of the `base` track. Re-set per `size` (`2xs` through `xl`); the `2.5rem` (40px) default applies at the unset/`m` size, matching `<lr-input>`/`<lr-select>`/`<lr-combobox>`'s own shared default-tier floor. Because it is declared on `:host` per tier, override it on the element itself, not on an ancestor."
       }
     },
     {
@@ -2148,6 +2442,13 @@
       "description": {
         "kind": "markdown",
         "value": "**`<lr-select>`** — Trigger font size, scaled by `size`."
+      }
+    },
+    {
+      "name": "--lr-select-option-active-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-select>`** (default: `var(--lr-color-brand-quiet)`) — Background of the hovered/keyboard-active option row. Not declared on `:host`, so a value set on any ancestor is never shadowed -- retheme just this row state without hijacking the shared `--lr-color-brand-quiet` token used by every other component's own hover/active state."
       }
     },
     {
@@ -2333,10 +2634,45 @@
       }
     },
     {
+      "name": "--lr-stat-trend-bad-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-stat>`** (default: `color-mix(in srgb, var(--lr-color-danger) 8%, transparent)`) — Background of the trend pill when its polarity is \"bad\"."
+      }
+    },
+    {
+      "name": "--lr-stat-trend-bad-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-stat>`** (default: `var(--lr-color-danger)`) — Text color of the trend pill when its polarity is \"bad\". Independent of the headline value's `variant=\"danger\"` tint, which reads the shared `--lr-color-danger` token directly."
+      }
+    },
+    {
+      "name": "--lr-stat-trend-good-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-stat>`** (default: `color-mix(in srgb, var(--lr-color-success) 8%, transparent)`) — Background of the trend pill when its polarity is \"good\"."
+      }
+    },
+    {
+      "name": "--lr-stat-trend-good-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-stat>`** (default: `var(--lr-color-success)`) — Text color of the trend pill when its polarity is \"good\". Independent of the headline value's `variant=\"success\"` tint, which reads the shared `--lr-color-success` token directly."
+      }
+    },
+    {
       "name": "--lr-stepper-current-color",
       "description": {
         "kind": "markdown",
         "value": "**`<lr-stepper>`** (default: `var(--lr-color-text)`) — Text color of the `current` step. Declared as an inline `var()` fallback (never on `:host`), so setting it on the element or an ancestor recolors only the current step without hijacking the library-wide `--lr-color-text` token."
+      }
+    },
+    {
+      "name": "--lr-stepper-current-font-weight",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-stepper>`** (default: `var(--lr-font-weight-semibold)`) — Font weight of the `current` step's label. `::part(step)[data-state='current']` is invalid CSS (an attribute selector cannot follow `::part`), so this is the only way to change just the current step's boldness without hijacking the library-wide `--lr-font-weight-semibold` token."
       }
     },
     {
@@ -2386,6 +2722,20 @@
       "description": {
         "kind": "markdown",
         "value": "**`<lr-streaming-text>`** (default: `var(--lr-size-0-125rem)`) — Width of the `cursor` bar (also its border radius)."
+      }
+    },
+    {
+      "name": "--lr-suggestion-chips-hover-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-suggestion-chips>`** (default: `var(--lr-color-brand-quiet)`) — Background of a hovered chip."
+      }
+    },
+    {
+      "name": "--lr-suggestion-chips-hover-border",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-suggestion-chips>`** (default: `var(--lr-color-brand)`) — Border color of a hovered chip."
       }
     },
     {
@@ -2522,6 +2872,27 @@
       }
     },
     {
+      "name": "--lr-task-list-compact-body-padding",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-task-list>`** (default: `var(--lr-space-2xs) var(--lr-space-s) var(--lr-space-s)`) — `[part=\"body\"]` padding while `compact`."
+      }
+    },
+    {
+      "name": "--lr-task-list-compact-gap",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-task-list>`** (default: `var(--lr-space-2xs)`) — Gap between `[part=\"body\"]`'s item rows while `compact`."
+      }
+    },
+    {
+      "name": "--lr-task-list-compact-header-padding",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-task-list>`** (default: `var(--lr-space-2xs) var(--lr-space-s)`) — `[part=\"header\"]` padding while `compact`."
+      }
+    },
+    {
       "name": "--lr-task-list-spin",
       "description": {
         "kind": "markdown",
@@ -2533,6 +2904,41 @@
       "description": {
         "kind": "markdown",
         "value": "**`<lr-terminal>`** (default: `var(--lr-size-20rem)`) — Block size of `[part=\"viewport\"]`, the scrollable log region. Not declared on `:host`, so it is inherited — set it on the host or any ancestor."
+      }
+    },
+    {
+      "name": "--lr-terminal-highlight-accent-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-terminal>`** (default: `var(--lr-color-brand-quiet)`) — Background of an `accent`-tone highlighted line. Decoupled from the shared `--lr-color-brand-quiet` token also used by `[part=\"copy-button\"]`/`[part=\"download-button\"]`'s hover state, and from any `::part('line')` override (the background is applied inline, so a stylesheet rule can't beat it without `!important`)."
+      }
+    },
+    {
+      "name": "--lr-terminal-highlight-danger-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-terminal>`** (default: `var(--lr-color-danger-quiet)`) — Background of a `danger`-tone highlighted line."
+      }
+    },
+    {
+      "name": "--lr-terminal-highlight-neutral-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-terminal>`** (default: `var(--lr-color-surface)`) — Background of a `neutral`-tone highlighted line."
+      }
+    },
+    {
+      "name": "--lr-terminal-highlight-success-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-terminal>`** (default: `var(--lr-color-success-quiet)`) — Background of a `success`-tone highlighted line."
+      }
+    },
+    {
+      "name": "--lr-terminal-highlight-warning-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-terminal>`** (default: `var(--lr-color-warning-quiet)`) — Background of a `warning`-tone highlighted line."
       }
     },
     {
@@ -2816,6 +3222,13 @@
       }
     },
     {
+      "name": "--lr-tool-timeline-denied-marker-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-tool-timeline>`** (default: `var(--lr-color-warning)`) — Rail-dot color for a `status=\"denied\"` entry, decoupled from the pending-approval border below so a consumer can retint either independently."
+      }
+    },
+    {
       "name": "--lr-tool-timeline-gap",
       "description": {
         "kind": "markdown",
@@ -2827,6 +3240,13 @@
       "description": {
         "kind": "markdown",
         "value": "**`<lr-tool-timeline>`** (default: `var(--lr-size-0-625rem)`) — Diameter of an entry's rail dot; also the width of the marker gutter column."
+      }
+    },
+    {
+      "name": "--lr-tool-timeline-pending-approval-border-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-tool-timeline>`** (default: `var(--lr-color-warning)`) — Color of the entry body's leading border while `data-pending-approval=\"true\"`."
       }
     },
     {
@@ -2862,6 +3282,13 @@
       "description": {
         "kind": "markdown",
         "value": "**`<lr-tour>`** — Maximum popover inline size. Defaults to `--lr-size-22rem`."
+      }
+    },
+    {
+      "name": "--lr-tour-progress-dot-current-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-tour>`** (default: `var(--lr-color-brand)`) — Background of `progress-dot` for the current step, without repainting every other component that reuses the shared brand token."
       }
     },
     {
@@ -3030,6 +3457,20 @@
       "description": {
         "kind": "markdown",
         "value": "**`<lr-xml-viewer>`** (default: `var(--lr-color-warning)`) — Outline color of the `[part=\"node\"]` holding the current search match. Scoped to the active match, so the dashed outline on the other matches keeps the shared warning token."
+      }
+    },
+    {
+      "name": "--lr-xml-viewer-match-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-xml-viewer>`** (default: `var(--lr-color-warning-quiet)`) — Background of a matching `[part=\"tag\"]`/`[part=\"attribute-value\"]`."
+      }
+    },
+    {
+      "name": "--lr-xml-viewer-match-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-xml-viewer>`** (default: `var(--lr-color-warning)`) — Outline color of a (non-active) `[part=\"node\"]` search match, and the tint source for a matching `[part=\"text\"]`'s background. Distinct from `--lr-xml-viewer-active-match-color`, so the non-active matches can be recolored without touching the active one."
       }
     },
     {

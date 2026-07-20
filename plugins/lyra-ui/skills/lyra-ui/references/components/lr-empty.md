@@ -31,8 +31,11 @@ attribute), `description` (rich description content, overrides the `description`
 
 **Themeable custom properties:** `--lr-empty-compact-align` (compact mode only; defaults preserve
 the existing `flex-start` cross-axis and `start` text alignment, and `center` centers both),
-`--lr-empty-compact-padding` (default `--lr-space-xs` — padding used in compact mode), plus
-shared tokens (`--lr-space-xs/-s/-l`, `--lr-color-text-quiet/-border/-text`).
+`--lr-empty-compact-padding` (default `--lr-space-xs` — padding used in compact mode),
+`--lr-empty-compact-gap` (default `--lr-space-2xs` — gap between the icon, heading, and description
+in compact mode; the non-compact layout's gap stays the plain shared `--lr-space-s` token, not
+independently themeable), plus shared tokens (`--lr-space-xs/-s/-l`,
+`--lr-color-text-quiet/-border/-text`).
 
 **Optional peer deps:** none.
 

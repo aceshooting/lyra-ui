@@ -76,7 +76,11 @@ label switches to Done on the last step).
 `--lr-tour-spotlight-radius` (default `--lr-radius` — shared by the cutout and the ring),
 `--lr-tour-spotlight-ring-color` (default `--lr-color-brand`), `--lr-tour-spotlight-ring-width`
 (default `--lr-border-width-medium`), `--lr-tour-popover-max-width` (default `--lr-size-22rem`,
-further capped by `--lr-popover-viewport-clamp` and the positioner's available space).
+further capped by `--lr-popover-viewport-clamp` and the positioner's available space),
+`--lr-tour-progress-dot-current-bg` (default `var(--lr-color-brand)`) — background of
+`progress-dot` for the current step. Component-scoped indirection over the shared `--lr-color-brand`
+token, so a consumer can retheme just the current-step dot without repainting every other component
+that reuses the same shared brand token.
 
 `--lr-popover-viewport-clamp` (default `92vw`, from `--lr-theme-popover-viewport-clamp`) is the
 shared ceiling that keeps any floating surface inside a narrow viewport. `lr-tour`,

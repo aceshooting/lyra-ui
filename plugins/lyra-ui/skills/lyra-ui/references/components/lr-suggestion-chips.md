@@ -29,6 +29,15 @@ string = ''` — accessible name for the group, defaults to the localized `sugge
 **CSS parts:** `base` (the labeled group), `chip` (each suggestion button), `chip-label` (the primary
 text), `chip-detail` (the secondary line, only rendered when `detail` is set).
 
+**Themeable custom properties:** `--lr-suggestion-chips-hover-bg` (default
+`var(--lr-color-brand-quiet)`) — a `chip`'s background on hover. `--lr-suggestion-chips-hover-border`
+(default `var(--lr-color-brand)`) — a `chip`'s border color on hover. Both are declared as `var()`
+fallbacks at the point of use, not on `:host`. Plus shared tokens `--lr-space-xs/-m/-2xs`,
+`--lr-color-border/-surface/-text/-text-quiet`, `--lr-radius-pill`, `--lr-font-size-xs`,
+`--lr-focus-ring-width/-color/-offset`.
+
+**Optional peer deps:** none.
+
 Keyboard: roving tabindex across chips; ArrowLeft/ArrowRight (direction-aware) plus Home/End;
 Enter/Space activate. Renders inside an internal `lr-scroller` (`orientation="horizontal"`,
 `hide-scrollbar`) unless `wrap` is set.

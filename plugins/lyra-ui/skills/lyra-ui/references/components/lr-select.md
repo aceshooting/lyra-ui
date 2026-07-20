@@ -96,6 +96,12 @@ rule. One consequence worth knowing when testing:
 `getComputedStyle(el).getPropertyValue('--lr-select-trigger-height')` now reads `''` rather than
 `'auto'` — assert the rendered `min-block-size`/`block-size` instead of the property string.
 
+`--lr-select-option-active-bg` (default `var(--lr-color-brand-quiet)`) recolors the background of a
+hovered or keyboard-active `[part='option']` row. Not declared on `:host`, so a value set on any
+ancestor is never shadowed — retheme just this row state without hijacking the shared
+`--lr-color-brand-quiet` token every other component's own hover/active state also reads. Same
+knob `lr-combobox`'s own `--lr-combobox-option-active-bg` provides.
+
 **Optional peer deps:** none.
 
 ```html

@@ -43,4 +43,14 @@ disengaged and new output has arrived), and `announcer` (the visually-hidden `ro
 used when `announce-output` is set).
 
 **Themeable custom properties:** `--lr-terminal-height` (default `var(--lr-size-20rem)`) — the
-viewport's block size.
+viewport's block size; not declared on `:host`, so it is inherited from the host or any ancestor.
+`--lr-terminal-highlight-accent-bg` (default `var(--lr-color-brand-quiet)`),
+`--lr-terminal-highlight-success-bg` (default `var(--lr-color-success-quiet)`),
+`--lr-terminal-highlight-warning-bg` (default `var(--lr-color-warning-quiet)`),
+`--lr-terminal-highlight-danger-bg` (default `var(--lr-color-danger-quiet)`), and
+`--lr-terminal-highlight-neutral-bg` (default `var(--lr-color-surface)`) — the background of a
+`highlights[]` entry of the matching `tone`. Each is decoupled from the identical shared token it
+falls back to (e.g. `accent`'s `--lr-color-brand-quiet` is also the copy/download-button hover tint)
+so retinting one tone doesn't repaint the other surface reading that token, and from any
+`::part('line')` stylesheet override — the background is applied inline, so a stylesheet rule can't
+beat it without `!important`.

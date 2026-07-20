@@ -62,9 +62,23 @@ emitting `lr-change`.
 - `disabled: boolean = false` (reflected)
 - `required: boolean = false` (reflected — enforced via `internals.setValidity()`)
 - `open: boolean = false` (reflected)
+- `size: 'xs' | 's' | 'm' | 'l' | 'xl' = 'm'` (reflected) — visual size; same `xs`–`xl` scale as
+  `<lr-select>`'s own `size`, scaling `[part="trigger"]`/`[part="combobox"]`'s padding/min-height/
+  font-size and `[part="expand-icon"]`'s box size (see the themeable custom properties below).
 - `value: string` — getter/setter (hand-rolled, not the `FormAssociated` mixin); the current model id,
   `''` when nothing is selected. Writing it calls `internals.setFormValue()` synchronously. A named,
   untouched model-select contributes `''` to `FormData` instead of omitting its key.
+
+**Methods:** `click()` (override) — forwards to whichever internal control the active mode renders,
+since `HTMLElement.prototype.click()` is otherwise a no-op on a custom element with no native click
+semantics of its own (mirrors `<lr-button>`'s identical host `click()` forwarding, so a generic
+form-automation helper or another component calling `.click()` on the host actually opens the picker
+instead of silently doing nothing). Closed-dropdown mode forwards a real `.click()` to the trigger
+`<button>`, whose own `@click` handler opens it. Free-text mode instead calls `.focus()` on the
+combobox `<input>`: unlike a genuine pointer click, `HTMLElement.click()` never moves focus (that's a
+`mousedown` side effect the browser applies only to real pointer interaction), and this mode's open
+behavior is wired to the input's `focus` event (`onInputFocus`), not a `click` handler on the input
+itself.
 
 **Mode switching:** `closedMode` (private) is `true` whenever `normalizedCatalog.length > 0 &&
 !allowCustom` — a non-empty `catalog` with `allowCustom` left `false` renders the closed dropdown
@@ -102,10 +116,21 @@ both modes), `option`, `option-label`, `option-badge` (the "not in catalog" badg
 stale-value row), `expand-icon` (the dropdown chevron, present in both modes), `hint` (the hint
 message), `error` (the error message)
 
-**Themeable custom properties:** shared tokens only — `--lr-space-xs/-s`,
-`--lr-color-border/-surface/-brand/-brand-quiet/-text-quiet`, `--lr-radius`, `--lr-shadow`,
-`--lr-focus-ring-width/-color/-offset`, `--lr-icon-button-size`, `--lr-transition-fast`,
-`--lr-opacity-disabled`.
+**Themeable custom properties:** `--lr-model-select-trigger-padding` (default `var(--lr-space-xs)
+var(--lr-space-s)`) — `[part="trigger"]`/`[part="combobox"]`'s padding shorthand.
+`--lr-model-select-trigger-min-height` (default `var(--lr-size-2-5rem)`) — their block-size floor.
+`--lr-model-select-font-size` (default `var(--lr-font-size-md)`) — their font size.
+`--lr-model-select-expand-size` (default `var(--lr-size-1-75rem)`) — `[part="expand-icon"]`'s
+decorative box size (clamped against `--lr-icon-button-size` via `min()`). All four are declared on
+`:host` at these `size="m"` (the default) values and re-declared inside each
+`:host([size="xs"|"s"|"l"|"xl"])` block at that tier's own value — same xs–xl scale `<lr-select>`
+uses — so `size` is the primary lever; override the cssprop directly only to retune a single tier or
+step outside the scale entirely. `--lr-model-select-option-active-bg` (default
+`var(--lr-color-brand-quiet)`) — background of a hovered or keyboard-active `[part="option"]` row;
+declared as a `var()` fallback at the point of use, not on `:host`, so it isn't tied to `size`. Plus
+shared tokens — `--lr-space-xs/-s`, `--lr-color-border/-surface/-brand/-brand-quiet/-text-quiet`,
+`--lr-radius`, `--lr-shadow`, `--lr-focus-ring-width/-color/-offset`, `--lr-icon-button-size`,
+`--lr-transition-fast`, `--lr-opacity-disabled`.
 
 **Optional peer deps:** none.
 

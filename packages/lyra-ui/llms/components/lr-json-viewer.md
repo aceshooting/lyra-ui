@@ -62,9 +62,12 @@ clipboard") or a per-node one (aria-label `Copy ${key/type}`, e.g. "Copy age"); 
 `copyable`)
 
 **Themeable custom properties:** `--lr-json-viewer-max-height` (default `none` — grows with content
-until `max-height` is set), `--lr-json-viewer-font` (default `ui-monospace, SFMono-Regular, Menlo,
-Consolas, monospace` — component-specific since no shared monospace token exists), plus shared tokens
-`--lr-color-border/-surface/-text/-text-quiet/-brand/-brand-quiet/-success/-warning/-warning-quiet`,
+until `max-height` is set), `--lr-json-viewer-font` (default `var(--lr-font-mono)`),
+`--lr-json-viewer-match-bg` (default `var(--lr-color-warning-quiet)`) — background, and surrounding
+box-shadow, of a key/value that currently matches `search`. Component-scoped indirection over the
+shared `--lr-color-warning-quiet` token, so a consumer can retheme just this search-match highlight
+without repainting every other warning-toned surface that reads the same shared token. Plus shared
+tokens `--lr-color-border/-surface/-text/-text-quiet/-brand/-brand-quiet/-success/-warning/-warning-quiet`,
 `--lr-radius`, `--lr-space-xs/-s/-l`, `--lr-focus-ring-width/-color/-offset`,
 `--lr-transition-fast`.
 

@@ -37,7 +37,9 @@ keyboard descent).
 announcement region), `empty` (shown when `topics` is empty).
 
 **Themeable custom properties:** `--lr-mind-map-ring-gap` (default `6rem`, radius step per depth
-ring).
+ring). `--lr-mind-map-node-hover-halo` (default `var(--lr-color-brand-quiet)`) — stroke color of
+the halo drawn around a topic node's dot on `:hover`, giving mouse users the same "this is
+clickable" feedback keyboard users already get from the drawn `focus-ring` part.
 
 **Optional peer deps:** none.
 

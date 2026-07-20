@@ -44,7 +44,11 @@ the next button), `nav-glyph` (the chevron, `scaleX(-1)`-mirrored under RTL), `t
 
 **Themeable custom properties:** `--lr-calendar-day-min-block-size` (default `var(--lr-size-6rem)`)
 and `--lr-calendar-day-min-block-size-narrow` (default `4rem`, applied at container inline-size
-≤ 28rem).
+≤ 28rem), and `--lr-calendar-day-selected-bg` (default `var(--lr-color-brand-quiet)`) — background of
+a selected (`data-selected="true"`) day cell. Component-scoped indirection over the shared
+`--lr-color-brand-quiet` token, so a consumer can retint the persistent selected-day highlight
+without also recoloring `[part='nav']:hover`/`[part='agenda-event']:hover`, which read that shared
+token directly for a visually distinct purpose (transient hover feedback).
 
 **Gotcha:** month-view `[part='event']` markers are a mouse-only quick-select affordance — they sit
 inside the day `<button>`, which may not contain focusable descendants. Agenda view renders each

@@ -85,7 +85,9 @@ id }`), `lr-thread-pin` (`detail: { id, pinned }` — the requested new state), 
 `lr-thread-rename` (`detail: { id, title }`, re-emitted from the row's `lr-rename`),
 `lr-filter-change` (`detail: { text, matchCount }`), `lr-group-toggle` (`detail: { id, collapsed }` —
 controlled intent; native group buttons provide Enter/Space activation and explicit
-`aria-expanded="true"|"false"`).
+`aria-expanded="true"|"false"`). `searchable` only: `blur`/`focus` (no detail) — re-dispatched from
+the internal search `<input>`'s own `blur`/`focus`, bubbling and composed unlike the native events,
+which are neither.
 
 **CSS parts:** `base`, `search`/`search-input` (the search field wrapper and `<input
 type="search">`), `list` (the list region), `empty`, `viewport` (the actual internal virtual-list

@@ -13,7 +13,10 @@
 
 ## `lr-badge` and `lr-tag`
 
-Compact status labels. Both expose `variant: 'neutral' | 'brand' | 'success' | 'warning' | 'danger'`.
+Compact status labels. Both expose `variant: 'neutral' | 'brand' | 'success' | 'warning' | 'danger'`
+and `size: '2xs' | 'xs' | 's' | 'm' | 'l' | 'xl' = 'm'` (reflected) — the same visual-density scale
+`<lr-chip>` uses, for typography/padding/minimum block size; `m` preserves the original badge
+dimensions. `lr-tag` inherits `size` unchanged from `lr-badge` rather than redeclaring it.
 The two tags share the same visual contract; `lr-tag` is a semantic alias for migration-friendly
 markup.
 
@@ -23,3 +26,7 @@ markup.
 — the trio each `:host([variant])` rule rewrites (`neutral` defaults to
 `--lr-color-surface`/`-text`/`-border`; the other four to the matching `*-quiet` fill with the loud
 color for text and border). Set one directly on the element for a tint outside the five variants.
+`--lr-badge-font-size` (default `var(--lr-font-size-sm)`), `--lr-badge-padding-inline` (default
+`var(--lr-space-s)`), and `--lr-badge-min-height` (default `var(--lr-size-1-25rem)`) — the density
+trio each `:host([size])` rule rewrites to that step's font size, inline padding, and minimum block
+size; the `m` defaults above exactly reproduce the pre-`size` fixed badge treatment.

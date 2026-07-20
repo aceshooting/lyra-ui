@@ -36,7 +36,11 @@ button).
 **CSS parts:** `base`, `indicator` (the pulsing status dot), `countdown` (the `M:SS`, or
 "Refreshing…", text), `pause-button` (the built-in pause/resume toggle).
 
-**Themeable custom properties:** shared tokens only — `--lr-space-xs`, `--lr-font-size-sm`,
+**Themeable custom properties:** `--lr-poll-status-due-bg` (default `var(--lr-color-success)`) —
+background of `indicator` while `data-due` is set. Component-scoped indirection over the shared
+`--lr-color-success` token, so a consumer can retheme just this due-state indicator without
+repainting every other component that reuses the same shared success token. Plus shared tokens —
+`--lr-space-xs`, `--lr-font-size-sm`,
 `--lr-color-text-quiet`, `--lr-color-brand`, `--lr-color-success`, `--lr-radius`/`-pill`,
 `--lr-focus-ring-*`.
 

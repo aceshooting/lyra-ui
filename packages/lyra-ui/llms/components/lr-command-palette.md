@@ -19,10 +19,13 @@ dismissal, ref-counted document scroll lock).
 **Properties:**
 - `open: boolean = false` (reflected)
 - `commands: LyraCommand[] = []` (attribute: false) — `{ id, label, description?, group?, shortcut?,
-  keywords?, disabled?, onSelect? }`. Filtering is case-insensitive substring matching over
-  `label` + `description` + `group` + `keywords` joined together (not fuzzy/subsequence), memoized
-  per `commands` array identity — reassign the array, never mutate it in place. Consecutive commands
-  sharing a `group` render one `[part='group']` heading, so pre-sort by group yourself.
+  keywords?, disabled?, icon?, onSelect? }`. `icon` is an optional leading glyph (a `TemplateResult`,
+  an emoji string, etc. — not restricted to a square icon) rendered in the `icon` part before the
+  label; a command with no `icon` renders no `icon` part at all. Filtering is case-insensitive
+  substring matching over `label` + `description` + `group` + `keywords` joined together (not
+  fuzzy/subsequence), memoized per `commands` array identity — reassign the array, never mutate it
+  in place. Consecutive commands sharing a `group` render one `[part='group']` heading, so pre-sort
+  by group yourself.
 - `shortcut: string = 'mod+k'` — global toggle chord parsed as `+`-separated parts; `mod` resolves to
   Cmd on Mac and Ctrl elsewhere. The listener is on `window`, added in `connectedCallback`.
 - `accessibleLabel: string = ''` (attribute `aria-label`) — overrides the localized dialog name
@@ -41,7 +44,8 @@ fired before the command's own `onSelect` runs and before the palette closes).
 
 **CSS parts:** `backdrop`, `dialog` (the `role="dialog" aria-modal="true"` panel), `search` (the
 input row), `input` (the `type="search"` field), `list` (the `role="listbox"`), `group` (a group
-heading), `command` (a `role="option"` button), `description`, `shortcut`, `empty`.
+heading), `command` (a `role="option"` button), `icon` (a command's leading icon glyph; only
+rendered when the command has one), `description`, `shortcut`, `empty`.
 
 **Themeable custom properties:** `--lr-command-palette-z-index` (default
 `var(--lr-overlay-stack-index, var(--lr-layer-modal))`), `--lr-command-palette-offset-block-start`

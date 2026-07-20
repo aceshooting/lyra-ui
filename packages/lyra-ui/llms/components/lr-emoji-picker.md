@@ -20,13 +20,23 @@ supplied (an explicit empty array still counts as supplied and skips the auto-lo
 When the filtered set reaches 200 items, the grid automatically windows its visible rows while
 preserving the full option count through `aria-setsize`/`aria-posinset`.
 
+Ships the same opt-in `label`/`hint`/`errorText` form-control chrome as `lr-select`/
+`lr-color-picker` (props + matching named slots + `form-control`/`form-control-label`/`hint`/
+`error` CSS parts) — left unset, none of that chrome renders.
+
 **Properties:** the shared form properties `name`, `value`, `disabled`, and `required`, plus
 `groups: EmojiPickerGroup[] = []` (attribute: false) — `EmojiPickerGroup { key, label, emojis:
 EmojiPickerItem[] }`, `EmojiPickerItem { emoji, name, shortcodes? }`; the search field matches `name`
 and every `shortcodes` entry, case-insensitively. Empty (the default, before the auto-loader
 resolves) renders just the search input and the empty state. `accessibleLabel` (`aria-label`)
 forwards a host-supplied accessible name to the internal `role="listbox"` grid; empty falls back to
-the localized default grid label.
+the localized default grid label. `label: string = ''` — visible label rendered above the
+search/grid; unset renders no label chrome. When `label` (or the `label` slot) is set and
+`accessibleLabel`/a host `aria-label` is not, the grid's accessible name switches from the
+localized default to `aria-labelledby` pointing at the visible label. `hint: string = ''` —
+supporting text rendered below the search/grid; unset renders no hint chrome. `errorText: string =
+''` (attribute `error-text`) — validation-error text rendered below the hint (overridden by slotted
+`error` content when provided); unset renders no error chrome.
 
 **Events:** `lr-change` with `detail: { emoji }` (an emoji was picked — click, or Enter/Space on
 the active grid cell; also sets `value`), plus the shared form `input`, `change`, `focus`, and `blur`.
@@ -39,9 +49,14 @@ Home/End jump to the first/last item, and Enter/Space picks the active item. The
 the input, with `aria-activedescendant` tracking the active option. Hovering an emoji with the
 pointer also moves the active item to it.
 
-**CSS parts:** `base`, `search` (`role="combobox"`), `grid` (`role="listbox"`, the scroll
-viewport), `group-label`, `emoji` (each emoji's own `role="option"` button), `empty` (shown when
-the search matches nothing). While windowing is active the rows are wrapped in `virtual-spacer`
+**Slots:** `label` (custom label content), `hint` (custom hint content), `error` (custom error
+content, overrides the `errorText` attribute when provided).
+
+**CSS parts:** `form-control` (the outer wrapper around label, `base`, error and hint),
+`form-control-label` (the visible label), `base`, `search` (`role="combobox"`), `grid`
+(`role="listbox"`, the scroll viewport), `group-label`, `emoji` (each emoji's own `role="option"`
+button), `empty` (shown when the search matches nothing), `hint` (the hint message), `error` (the
+error message). While windowing is active the rows are wrapped in `virtual-spacer`
 (full-height scroll spacer), `virtual-row` (one absolutely-positioned row), `virtual-label` (an
 `aria-hidden` spacer standing in for a row's missing `group-label`), and `virtual-items` (the row's
 emoji flex line).

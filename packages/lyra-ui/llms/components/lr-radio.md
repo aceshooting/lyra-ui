@@ -16,8 +16,8 @@ A form-associated single-choice control. Use it alone or inside `lr-radio-group`
 
 **Properties:** `checked`, `disabled`, `required`, `name`, and `value` (all reflected where
 applicable). A selected radio submits its value through `ElementInternals`.
-`effectiveRequired` exposes the required state inherited from a containing radio group. `focus()`
-and `blur()` forward to the internal radio control.
+`effectiveRequired` exposes the required state inherited from a containing radio group. `focus()`,
+`blur()`, and `click()` forward to the internal radio control.
 
 **Events:** native-style composed `input` and `change`, plus `lr-change` with
 `{ checked, value }`.

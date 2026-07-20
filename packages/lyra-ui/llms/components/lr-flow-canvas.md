@@ -82,7 +82,12 @@ an inline `var()` fallback at its point of use rather than a `:host` declaration
 the element *or any ancestor*. It exists because Shadow Parts forbids an attribute selector after
 `::part()` — `::part(node)[aria-current='true']` is invalid CSS — so the current node could otherwise
 only be restyled by overriding the library-wide `--lr-color-brand` token, repainting everything else
-that reads it.
+that reads it. The same restriction motivates three more state-scoped outline colors:
+`--lr-flow-canvas-node-connect-invalid-outline-color` (default `var(--lr-color-danger)`) — outline of
+a node that is an invalid connect-gesture drop target; `--lr-flow-canvas-node-connect-target-outline-color`
+(default `var(--lr-color-brand)`) — outline of a node that is a valid connect-gesture drop target; and
+`--lr-flow-canvas-drop-active-outline-color` (default `var(--lr-color-brand)`) — outline of the
+viewport itself while a palette item is dragged over it (`droppable`).
 
 **Optional peer deps:** none.
 

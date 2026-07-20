@@ -29,7 +29,9 @@ With neither `accessibleLabel` nor `label` set, the name falls back to the local
 app-wide with `registerLyraLocale()` (see `llms/shared.md`); don't rely on the fallback for a
 button whose purpose isn't generic.
 
-**Methods:** `focus(options?)`, `blur()` — forward to the native button.
+**Methods:** `focus(options?)`, `blur()` — forward to the native button. `click()` also forwards to
+the native button, activating it — including this component's own `type="submit"`/`type="reset"`
+handling, since the click goes through the same `<button>` the pointer/keyboard path does.
 
 **Slots:** (default) — custom icon content. It is rendered **beside** the `icon` glyph, as a
 sibling of it, not piped through `<lr-icon>`: the internal `<lr-icon>` mounts only when `icon` is

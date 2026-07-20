@@ -134,6 +134,11 @@ indicator from `maxRender`), `error`, `hint`
 `--lr-combobox-tag-font-size`, and `--lr-combobox-expand-size` (the decorative icon box; each
 standard size supplies an aligned default), plus shared tokens.
 
+`--lr-combobox-option-active-bg` (default `var(--lr-color-brand-quiet)`) recolors the background of
+a hovered or keyboard-active `[part='option']` row — the same per-component indirection
+`lr-select`'s identical `--lr-select-option-active-bg` uses, so a consumer can retheme just this
+row state without hijacking the shared `--lr-color-brand-quiet` token library-wide.
+
 `--lr-combobox-trigger-height` pins an **exact** input-container height (both floors and caps it),
 for pixel-matching an `<lr-input>` or `<lr-select>` in the same toolbar row. It is **undeclared by
 default**, leaving `--lr-combobox-trigger-min-height` as a floor only and the row free to grow —

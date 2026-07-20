@@ -34,4 +34,9 @@ visible "×" glyph inside it — this is what shrinks under `inline`, so the hit
 **Themeable custom properties:** `--lr-callout-background`, `--lr-callout-color`,
 `--lr-callout-border` — the trio each `:host([variant])` rule rewrites (same
 surface/text/border → `*-quiet`/loud/loud scheme as `lr-badge`). `inline` drops the border,
-background, and panel padding regardless of what these are set to.
+background, and panel padding regardless of what these are set to. `--lr-callout-close-hover-bg`
+(default `var(--lr-color-brand-quiet)`) — the close button's `:hover` background, deliberately
+decoupled from `--lr-callout-background` (which every non-neutral `variant` also retargets for the
+panel itself) so a consumer can retint the hover fill — e.g. to keep it visibly distinct from a
+`variant="brand"` panel, which shares the same default token — without a collateral effect on the
+panel background, and vice versa.

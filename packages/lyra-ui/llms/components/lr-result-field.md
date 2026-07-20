@@ -26,6 +26,15 @@ A small bordered card shell. Purely visual, with no state of its own beyond slot
 **Properties:**
 - `title: string = ''` — small heading for the card. Leave unset for an untitled card (e.g. a bare
   block of `lr-result-field` rows with no natural heading).
+- `compact: boolean = false` (reflected) — tighter header/body padding for dense contexts (a card
+  rendered as a row in a transcript or result list), same convention as `<lr-agent-run>`'s own
+  `compact`. Purely a density knob: the border and background stay, so use `appearance="plain"`
+  instead to drop the chrome entirely.
+- `appearance: 'card' | 'plain' = 'card'` (reflected) — mirrors `lr-card`'s/`<lr-agent-run>`'s
+  `appearance` vocabulary. `'card'` (the default) keeps the bordered, filled box. `'plain'` removes
+  the border, background, and corner radius, so a card nested inside a host frame that already draws
+  a border (e.g. `<lr-tool-result-view>`'s own chrome) doesn't double it. `plain` wins over `compact`
+  when both are set (nothing left to tighten).
 
 **Events:** none.
 
@@ -40,8 +49,11 @@ later `slotchange` on `actions` is still observed, but `hidden` whenever there's
 default tooltip, scoped to just this element rather than the whole card), `actions` (`hidden`
 whenever the slot has no assigned content), `body`.
 
-**Themeable custom properties:** shared tokens only — `--lr-space-xs`/`-s`, `--lr-color-border`/
-`-surface`/`-text`, `--lr-radius`.
+**Themeable custom properties:** `--lr-result-card-compact-header-padding` (default
+`var(--lr-space-xs)`) — `[part="header"]` block/inline padding while `compact`;
+`--lr-result-card-compact-body-padding` (default `var(--lr-space-xs)`) — `[part="body"]` padding
+while `compact`; plus shared tokens — `--lr-space-xs`/`-s`, `--lr-color-border`/`-surface`/`-text`,
+`--lr-radius`.
 
 ### `lr-result-field`
 

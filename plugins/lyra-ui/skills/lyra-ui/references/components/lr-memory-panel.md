@@ -54,7 +54,12 @@ somewhere to land after a confirmation resolves), `item-row`, `item-text`, `conf
 `provenance` is unset; `item-body` is `hidden` while collapsed), `item-actions`, `add-button`,
 `remove-button`, `forget-all-button`.
 
-**Themeable custom properties:** shared tokens only.
+**Themeable custom properties:** `--lr-memory-panel-confidence-success-color` (default
+`var(--lr-color-success)`), `--lr-memory-panel-confidence-warning-color` (default
+`var(--lr-color-warning)`), `--lr-memory-panel-confidence-danger-color` (default
+`var(--lr-color-danger)`) — text color of an item's `confidence` indicator, one per confidence
+tier (`high`/`medium`/`low` against `thresholds`, the same tiering `lr-chunk-inspector` uses for
+its score bar). Plus shared tokens otherwise.
 
 **Optional peer deps:** none.
 

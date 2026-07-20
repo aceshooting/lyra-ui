@@ -78,9 +78,16 @@ it with `[part="label"]`'s generated id whenever `label` is non-empty (so tabbin
 `exactValue`-focusable value still announces e.g. "Revenue $1.2K", not just the bare value); each
 `[part="row-value"]` is paired the same way with its own row's `[part="row-label"]`.
 
-**Themeable custom properties:** shared tokens only (`--lr-color-success/-warning/-danger` drive
-the `variant`-colored value text and up/down trend pill; `--lr-color-brand` drives `emphasis`'s
-accent edge and value tint).
+**Themeable custom properties:** `--lr-stat-trend-good-color` (default `var(--lr-color-success)`)
+and `--lr-stat-trend-good-bg` (default `color-mix(in srgb, var(--lr-color-success) 8%,
+transparent)`) — text/background of `[part="trend"]` when its polarity (per `goodDirection`) is
+"good"; `--lr-stat-trend-bad-color` (default `var(--lr-color-danger)`) and `--lr-stat-trend-bad-bg`
+(default `color-mix(in srgb, var(--lr-color-danger) 8%, transparent)`) — the "bad"-polarity
+counterparts. All four are independent of the headline value's `variant="success"`/`"danger"` tint,
+which keeps reading the shared `--lr-color-success`/`--lr-color-danger` tokens directly — retinting
+the trend pill doesn't also recolor the value, and vice versa. Otherwise shared tokens only
+(`--lr-color-success/-warning/-danger` drive the `variant`-colored value text; `--lr-color-brand`
+drives `emphasis`'s accent edge and value tint).
 
 **Optional peer deps:** none.
 

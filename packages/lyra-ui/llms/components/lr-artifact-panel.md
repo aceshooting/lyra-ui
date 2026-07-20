@@ -45,7 +45,9 @@ src? }`, with the sanitized download URL).
 
 **CSS parts:** `base`, `header`, `label`, `kind`, `view-toggle` (rendered only once the `code` slot
 has content), `view-button` (carries `data-view="preview"` or `data-view="code"`), `version-nav`
-(rendered only once `versions` is non-empty), `version-previous`, `version-next`, `version-position`
+(rendered only once `versions` is non-empty), `version-previous`, `version-previous-glyph` (the `‹`
+chevron inside `version-previous`, mirrored via `scaleX(-1)` under `:dir(rtl)`), `version-next`,
+`version-next-glyph` (the `›` chevron inside `version-next`, mirrored the same way), `version-position`
 (the "Version N of M" text), `restore-button` (rendered only while the active version isn't the
 latest), `actions`, `copy-button` (rendered only while `copyText` is non-empty), `download-button`
 (rendered only while `downloadSrc` is non-empty), `body`, `streaming-indicator` (rendered only while

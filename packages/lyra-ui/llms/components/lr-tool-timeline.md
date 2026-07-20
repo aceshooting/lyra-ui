@@ -53,4 +53,9 @@ can ignore it; one actually executing the tool needs it.
 
 **Themeable custom properties:** `--lr-tool-timeline-gap` (default `var(--lr-space-l)`) — vertical
 gap between entries; `--lr-tool-timeline-marker-size` (default `var(--lr-size-0-625rem)`) — the
-per-entry timeline marker dot's size, which also sets the entry grid's leading column width.
+per-entry timeline marker dot's size, which also sets the entry grid's leading column width;
+`--lr-tool-timeline-denied-marker-color` (default `var(--lr-color-warning)`) — rail-dot color for a
+`status="denied"` entry, decoupled from the pending-approval border color below so either can be
+retinted independently; `--lr-tool-timeline-pending-approval-border-color` (default
+`var(--lr-color-warning)`) — color of the entry body's leading border while that entry's
+`data-pending-approval` is `"true"`.

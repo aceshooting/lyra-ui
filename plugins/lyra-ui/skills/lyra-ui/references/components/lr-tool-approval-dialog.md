@@ -31,6 +31,10 @@ renders at the start of the action row, before Deny/Edit/Approve.
 **Properties:**
 - `open: boolean = false` (reflected) — set this (or call `close()`) to dismiss; there is no separate
   `show()`/`hide()` pair
+- `accessibleLabel: string | null = null` (attribute `aria-label`) — directly names the internal
+  dialog panel; otherwise the tool-name heading supplies `aria-labelledby`. Mirrors
+  `<lr-tool-result-dialog>`'s/`<lr-tool-select-dialog>`'s own host-`aria-label` override pattern; fed
+  only by a host `aria-label`
 - `toolName: string = ''` (attribute `tool-name`) — the proposed call's name, e.g. `web_search`;
   drives the heading and the dialog's accessible name
 - `args: unknown = {}` (attribute: false) — the proposed call's arguments, rendered via
@@ -43,11 +47,7 @@ renders at the start of the action row, before Deny/Edit/Approve.
   `autoCorrect: string = 'off'` (attribute `autocorrect`), `autocomplete: string = 'off'`,
   `wrap: 'hard'|'soft'|'off' = 'soft'`, `inputMode: string = ''` (attribute `inputmode`),
   and `enterKeyHint: string = ''` (attribute `enterkeyhint`) — forwarded to the raw-JSON
-  textarea; the defaults keep browser editing assistance from changing JSON text
-- `spellcheck: boolean = false`, `autocapitalize: string = 'off'`, `autoCorrect: string = 'off'`
-  (`autocorrect`), `autocomplete: string = 'off'`, `wrap: 'hard'|'soft'|'off' = 'soft'`,
-  `inputMode: string = ''` (`inputmode`), and `enterKeyHint: string = ''` (`enterkeyhint`) —
-  forwarded to the raw-JSON `<textarea>` while editing.
+  `<textarea>` while editing; the defaults keep browser editing assistance from changing JSON text
 
 **Methods:** `close(reason: ToolApprovalDialogCloseReason = 'api'): void` — closes the dialog, emits
 `lr-close` with `reason`, and returns focus to whatever had it before the dialog opened; a no-op if

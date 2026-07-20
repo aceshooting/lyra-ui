@@ -617,6 +617,11 @@ indicator from `maxRender`), `error`, `hint`
 `--lr-combobox-tag-font-size`, and `--lr-combobox-expand-size` (the decorative icon box; each
 standard size supplies an aligned default), plus shared tokens.
 
+`--lr-combobox-option-active-bg` (default `var(--lr-color-brand-quiet)`) recolors the background of
+a hovered or keyboard-active `[part='option']` row — the same per-component indirection
+`lr-select`'s identical `--lr-select-option-active-bg` uses, so a consumer can retheme just this
+row state without hijacking the shared `--lr-color-brand-quiet` token library-wide.
+
 `--lr-combobox-trigger-height` pins an **exact** input-container height (both floors and caps it),
 for pixel-matching an `<lr-input>` or `<lr-select>` in the same toolbar row. It is **undeclared by
 default**, leaving `--lr-combobox-trigger-min-height` as a floor only and the row free to grow —
@@ -793,6 +798,12 @@ the component never declares it, it can be set inline, from an ancestor, or from
 rule. One consequence worth knowing when testing:
 `getComputedStyle(el).getPropertyValue('--lr-select-trigger-height')` now reads `''` rather than
 `'auto'` — assert the rendered `min-block-size`/`block-size` instead of the property string.
+
+`--lr-select-option-active-bg` (default `var(--lr-color-brand-quiet)`) recolors the background of a
+hovered or keyboard-active `[part='option']` row. Not declared on `:host`, so a value set on any
+ancestor is never shadowed — retheme just this row state without hijacking the shared
+`--lr-color-brand-quiet` token every other component's own hover/active state also reads. Same
+knob `lr-combobox`'s own `--lr-combobox-option-active-bg` provides.
 
 **Optional peer deps:** none.
 
@@ -1270,7 +1281,9 @@ With neither `accessibleLabel` nor `label` set, the name falls back to the local
 app-wide with `registerLyraLocale()` (see `llms/shared.md`); don't rely on the fallback for a
 button whose purpose isn't generic.
 
-**Methods:** `focus(options?)`, `blur()` — forward to the native button.
+**Methods:** `focus(options?)`, `blur()` — forward to the native button. `click()` also forwards to
+the native button, activating it — including this component's own `type="submit"`/`type="reset"`
+handling, since the click goes through the same `<button>` the pointer/keyboard path does.
 
 **Slots:** (default) — custom icon content. It is rendered **beside** the `icon` glyph, as a
 sibling of it, not piped through `<lr-icon>`: the internal `<lr-icon>` mounts only when `icon` is
@@ -1329,7 +1342,14 @@ form-associated via the same `FormAssociated` mixin as `lr-textarea`. Ships the 
 - `name`/`disabled`/`required` (from `FormAssociated`)
 
 **Getters/methods:** `input: HTMLInputElement | null` (the internal native `<input>`, for direct DOM
-access), `focus(options?: FocusOptions)`, `blur()`, `select()`.
+access), `focus(options?: FocusOptions)`, `blur()`, `select()`. Also forwards the full native
+selection/editing surface, mirroring `lr-textarea`'s identical passthrough: `selectionStart: number
+| null` and `selectionEnd: number | null` (readable/writable; `null` both before the internal input
+has rendered and whenever `type` doesn't support selection — only `text`/`search`/`password` do,
+matching the native `<input>`'s own contract), `setSelectionRange(start, end, direction?)`
+(no-op before render, otherwise throws the same native `InvalidStateError` a native `<input>` would
+for an unsupported `type`), and `setRangeText(replacement, start?, end?, selectMode?)` (no-op
+before render; syncs `value` afterward without emitting a user event).
 
 **Events:** native-style composed `input` and `change`, plus `lr-input` (`detail: { value }`,
 fired on every user-driven edit) and `lr-change` (`detail: { value }`, fired on the native
@@ -1885,6 +1905,13 @@ same formula from the `--lr-theme-*` inputs you control:
 }
 ```
 
+`--lr-checkbox-checked-bg` (default `var(--lr-color-brand)`) and `--lr-checkbox-checked-border`
+(default `var(--lr-color-brand)`) recolor `[part='box']`'s background/border while `checked` or
+`indeterminate` — a component-scoped indirection (the same pattern `lr-source-picker`'s own
+`--lr-source-picker-checked-bg`/`-border` pair uses) so a consumer can retint just this control's
+checked/indeterminate fill without hijacking the shared `--lr-color-brand` token everything else
+reads.
+
 **Optional peer deps:** none.
 
 ```html
@@ -2076,8 +2103,8 @@ A form-associated single-choice control. Use it alone or inside `lr-radio-group`
 
 **Properties:** `checked`, `disabled`, `required`, `name`, and `value` (all reflected where
 applicable). A selected radio submits its value through `ElementInternals`.
-`effectiveRequired` exposes the required state inherited from a containing radio group. `focus()`
-and `blur()` forward to the internal radio control.
+`effectiveRequired` exposes the required state inherited from a containing radio group. `focus()`,
+`blur()`, and `click()` forward to the internal radio control.
 
 **Events:** native-style composed `input` and `change`, plus `lr-change` with
 `{ checked, value }`.
@@ -2267,13 +2294,23 @@ supplied (an explicit empty array still counts as supplied and skips the auto-lo
 When the filtered set reaches 200 items, the grid automatically windows its visible rows while
 preserving the full option count through `aria-setsize`/`aria-posinset`.
 
+Ships the same opt-in `label`/`hint`/`errorText` form-control chrome as `lr-select`/
+`lr-color-picker` (props + matching named slots + `form-control`/`form-control-label`/`hint`/
+`error` CSS parts) — left unset, none of that chrome renders.
+
 **Properties:** the shared form properties `name`, `value`, `disabled`, and `required`, plus
 `groups: EmojiPickerGroup[] = []` (attribute: false) — `EmojiPickerGroup { key, label, emojis:
 EmojiPickerItem[] }`, `EmojiPickerItem { emoji, name, shortcodes? }`; the search field matches `name`
 and every `shortcodes` entry, case-insensitively. Empty (the default, before the auto-loader
 resolves) renders just the search input and the empty state. `accessibleLabel` (`aria-label`)
 forwards a host-supplied accessible name to the internal `role="listbox"` grid; empty falls back to
-the localized default grid label.
+the localized default grid label. `label: string = ''` — visible label rendered above the
+search/grid; unset renders no label chrome. When `label` (or the `label` slot) is set and
+`accessibleLabel`/a host `aria-label` is not, the grid's accessible name switches from the
+localized default to `aria-labelledby` pointing at the visible label. `hint: string = ''` —
+supporting text rendered below the search/grid; unset renders no hint chrome. `errorText: string =
+''` (attribute `error-text`) — validation-error text rendered below the hint (overridden by slotted
+`error` content when provided); unset renders no error chrome.
 
 **Events:** `lr-change` with `detail: { emoji }` (an emoji was picked — click, or Enter/Space on
 the active grid cell; also sets `value`), plus the shared form `input`, `change`, `focus`, and `blur`.
@@ -2286,9 +2323,14 @@ Home/End jump to the first/last item, and Enter/Space picks the active item. The
 the input, with `aria-activedescendant` tracking the active option. Hovering an emoji with the
 pointer also moves the active item to it.
 
-**CSS parts:** `base`, `search` (`role="combobox"`), `grid` (`role="listbox"`, the scroll
-viewport), `group-label`, `emoji` (each emoji's own `role="option"` button), `empty` (shown when
-the search matches nothing). While windowing is active the rows are wrapped in `virtual-spacer`
+**Slots:** `label` (custom label content), `hint` (custom hint content), `error` (custom error
+content, overrides the `errorText` attribute when provided).
+
+**CSS parts:** `form-control` (the outer wrapper around label, `base`, error and hint),
+`form-control-label` (the visible label), `base`, `search` (`role="combobox"`), `grid`
+(`role="listbox"`, the scroll viewport), `group-label`, `emoji` (each emoji's own `role="option"`
+button), `empty` (shown when the search matches nothing), `hint` (the hint message), `error` (the
+error message). While windowing is active the rows are wrapped in `virtual-spacer`
 (full-height scroll spacer), `virtual-row` (one absolutely-positioned row), `virtual-label` (an
 `aria-hidden` spacer standing in for a row's missing `group-label`), and `virtual-items` (the row's
 emoji flex line).
@@ -2476,9 +2518,16 @@ it with `[part="label"]`'s generated id whenever `label` is non-empty (so tabbin
 `exactValue`-focusable value still announces e.g. "Revenue $1.2K", not just the bare value); each
 `[part="row-value"]` is paired the same way with its own row's `[part="row-label"]`.
 
-**Themeable custom properties:** shared tokens only (`--lr-color-success/-warning/-danger` drive
-the `variant`-colored value text and up/down trend pill; `--lr-color-brand` drives `emphasis`'s
-accent edge and value tint).
+**Themeable custom properties:** `--lr-stat-trend-good-color` (default `var(--lr-color-success)`)
+and `--lr-stat-trend-good-bg` (default `color-mix(in srgb, var(--lr-color-success) 8%,
+transparent)`) — text/background of `[part="trend"]` when its polarity (per `goodDirection`) is
+"good"; `--lr-stat-trend-bad-color` (default `var(--lr-color-danger)`) and `--lr-stat-trend-bad-bg`
+(default `color-mix(in srgb, var(--lr-color-danger) 8%, transparent)`) — the "bad"-polarity
+counterparts. All four are independent of the headline value's `variant="success"`/`"danger"` tint,
+which keeps reading the shared `--lr-color-success`/`--lr-color-danger` tokens directly — retinting
+the trend pill doesn't also recolor the value, and vice versa. Otherwise shared tokens only
+(`--lr-color-success/-warning/-danger` drive the `variant`-colored value text; `--lr-color-brand`
+drives `emphasis`'s accent edge and value tint).
 
 **Optional peer deps:** none.
 
@@ -3591,7 +3640,12 @@ an inline `var()` fallback at its point of use rather than a `:host` declaration
 the element *or any ancestor*. It exists because Shadow Parts forbids an attribute selector after
 `::part()` — `::part(node)[aria-current='true']` is invalid CSS — so the current node could otherwise
 only be restyled by overriding the library-wide `--lr-color-brand` token, repainting everything else
-that reads it.
+that reads it. The same restriction motivates three more state-scoped outline colors:
+`--lr-flow-canvas-node-connect-invalid-outline-color` (default `var(--lr-color-danger)`) — outline of
+a node that is an invalid connect-gesture drop target; `--lr-flow-canvas-node-connect-target-outline-color`
+(default `var(--lr-color-brand)`) — outline of a node that is a valid connect-gesture drop target; and
+`--lr-flow-canvas-drop-active-outline-color` (default `var(--lr-color-brand)`) — outline of the
+viewport itself while a palette item is dragged over it (`droppable`).
 
 **Optional peer deps:** none.
 
@@ -3669,6 +3723,11 @@ carries no card chrome of its own), `card` (the bordered, filled node card), `he
 their point of use rather than `:host` declarations, so they can be set on the element *or any
 ancestor* (a canvas retunes every card at once); overriding the selection color otherwise means
 hijacking the library-wide `--lr-color-brand` token and repainting everything else that reads it.
+`--lr-flow-node-running-border` (default `var(--lr-color-brand)`) — the card's border color while
+`status="running"`, independent of `--lr-flow-node-selected-border` so a consumer can retint just one
+of the two states without the other following along — and `--lr-flow-node-running-glow` (default
+`var(--lr-color-brand-quiet)`) — the box-shadow color of the running-state ring around the card, and
+the pulse keyframes' peak color.
 
 **Optional peer deps:** none.
 
@@ -3985,7 +4044,11 @@ the next button), `nav-glyph` (the chevron, `scaleX(-1)`-mirrored under RTL), `t
 
 **Themeable custom properties:** `--lr-calendar-day-min-block-size` (default `var(--lr-size-6rem)`)
 and `--lr-calendar-day-min-block-size-narrow` (default `4rem`, applied at container inline-size
-≤ 28rem).
+≤ 28rem), and `--lr-calendar-day-selected-bg` (default `var(--lr-color-brand-quiet)`) — background of
+a selected (`data-selected="true"`) day cell. Component-scoped indirection over the shared
+`--lr-color-brand-quiet` token, so a consumer can retint the persistent selected-day highlight
+without also recoloring `[part='nav']:hover`/`[part='agenda-event']:hover`, which read that shared
+token directly for a visually distinct purpose (transient hover feedback).
 
 **Gotcha:** month-view `[part='event']` markers are a mouse-only quick-select affordance — they sit
 inside the day `<button>`, which may not contain focusable descendants. Agenda view renders each
@@ -4657,10 +4720,13 @@ convention).
 
 **Properties:**
 - `steps: StepItem[] = []` (attribute: false) — `StepItem { id: string; label: string; state:
-  'pending' | 'current' | 'completed' | 'disabled' | 'error'; title?: string }`; `title` is an
-  optional native tooltip for the step's button (e.g. explaining why a `disabled` step is locked) —
-  omit it for no `title` attribute at all, not an empty string. Never mutated by this component.
-  Empty (the default) renders nothing.
+  'pending' | 'current' | 'completed' | 'disabled' | 'error'; title?: string; icon?: unknown }`;
+  `title` is an optional native tooltip for the step's button (e.g. explaining why a `disabled` step
+  is locked) — omit it for no `title` attribute at all, not an empty string. `icon` is an optional
+  leading topic glyph (a `TemplateResult`, an emoji string, etc. — not restricted to a square icon)
+  rendered in the `step-icon` part additionally to, never instead of, the state-driven
+  `step-index`/`step-check` glyph. Never mutated by this component. Empty (the default) renders
+  nothing.
 - `orientation: 'horizontal' | 'vertical' = 'horizontal'` (reflected) — `'horizontal'` (the default)
   lays steps out in a row (Left/Right, RTL-aware, navigate); `'vertical'` stacks them (Up/Down
   navigate instead, no RTL swap needed). The axis used at/above `orientationBreakpoint` (or always,
@@ -4709,12 +4775,15 @@ single place to short-circuit its own listener's follow-up work. `lr-stepper-ori
 **Slots:** none.
 
 **CSS parts:** `base` (root wrapper, `role="tablist"`), `step` (a single step button, `role="tab"`),
-`step-index` (the numbered index chip, shown for `pending`/`current`/`error` steps), `step-check`
-(the completed-checkmark glyph, shown for `completed` steps instead of `step-index`), `step-label`
-(the step's label text).
+`step-icon` (optional leading topic glyph from the step's `icon` field; only rendered when the step
+has one, additionally to — never instead of — `step-index`/`step-check`), `step-index` (the numbered
+index chip, shown for `pending`/`current`/`error` steps), `step-check` (the completed-checkmark
+glyph, shown for `completed` steps instead of `step-index`), `step-label` (the step's label text).
 
 **Themeable custom properties:** `--lr-stepper-current-color` (default `var(--lr-color-text)`) —
-text color of the `current` step. `--lr-stepper-error-color` (default `var(--lr-color-danger)`) —
+text color of the `current` step. `--lr-stepper-current-font-weight` (default
+`var(--lr-font-weight-semibold)`) — font weight of the `current` step's label.
+`--lr-stepper-error-color` (default `var(--lr-color-danger)`) —
 text color of an `error` step. `--lr-stepper-current-index-bg` (default `var(--lr-color-brand)`) and
 `--lr-stepper-current-index-color` (default `var(--lr-color-surface)`) — background and text color
 of the `current` step's numbered `step-index` chip. Each is an inline `var()` fallback at the point
@@ -5825,10 +5894,13 @@ dismissal, ref-counted document scroll lock).
 **Properties:**
 - `open: boolean = false` (reflected)
 - `commands: LyraCommand[] = []` (attribute: false) — `{ id, label, description?, group?, shortcut?,
-  keywords?, disabled?, onSelect? }`. Filtering is case-insensitive substring matching over
-  `label` + `description` + `group` + `keywords` joined together (not fuzzy/subsequence), memoized
-  per `commands` array identity — reassign the array, never mutate it in place. Consecutive commands
-  sharing a `group` render one `[part='group']` heading, so pre-sort by group yourself.
+  keywords?, disabled?, icon?, onSelect? }`. `icon` is an optional leading glyph (a `TemplateResult`,
+  an emoji string, etc. — not restricted to a square icon) rendered in the `icon` part before the
+  label; a command with no `icon` renders no `icon` part at all. Filtering is case-insensitive
+  substring matching over `label` + `description` + `group` + `keywords` joined together (not
+  fuzzy/subsequence), memoized per `commands` array identity — reassign the array, never mutate it
+  in place. Consecutive commands sharing a `group` render one `[part='group']` heading, so pre-sort
+  by group yourself.
 - `shortcut: string = 'mod+k'` — global toggle chord parsed as `+`-separated parts; `mod` resolves to
   Cmd on Mac and Ctrl elsewhere. The listener is on `window`, added in `connectedCallback`.
 - `accessibleLabel: string = ''` (attribute `aria-label`) — overrides the localized dialog name
@@ -5847,7 +5919,8 @@ fired before the command's own `onSelect` runs and before the palette closes).
 
 **CSS parts:** `backdrop`, `dialog` (the `role="dialog" aria-modal="true"` panel), `search` (the
 input row), `input` (the `type="search"` field), `list` (the `role="listbox"`), `group` (a group
-heading), `command` (a `role="option"` button), `description`, `shortcut`, `empty`.
+heading), `command` (a `role="option"` button), `icon` (a command's leading icon glyph; only
+rendered when the command has one), `description`, `shortcut`, `empty`.
 
 **Themeable custom properties:** `--lr-command-palette-z-index` (default
 `var(--lr-overlay-stack-index, var(--lr-layer-modal))`), `--lr-command-palette-offset-block-start`
@@ -6103,8 +6176,11 @@ attribute), `description` (rich description content, overrides the `description`
 
 **Themeable custom properties:** `--lr-empty-compact-align` (compact mode only; defaults preserve
 the existing `flex-start` cross-axis and `start` text alignment, and `center` centers both),
-`--lr-empty-compact-padding` (default `--lr-space-xs` — padding used in compact mode), plus
-shared tokens (`--lr-space-xs/-s/-l`, `--lr-color-text-quiet/-border/-text`).
+`--lr-empty-compact-padding` (default `--lr-space-xs` — padding used in compact mode),
+`--lr-empty-compact-gap` (default `--lr-space-2xs` — gap between the icon, heading, and description
+in compact mode; the non-compact layout's gap stays the plain shared `--lr-space-s` token, not
+independently themeable), plus shared tokens (`--lr-space-xs/-s/-l`,
+`--lr-color-text-quiet/-border/-text`).
 
 **Optional peer deps:** none.
 
@@ -6719,7 +6795,10 @@ period, shared with `lr-progress-bar`'s sweep).
 
 ## `lr-badge` and `lr-tag`
 
-Compact status labels. Both expose `variant: 'neutral' | 'brand' | 'success' | 'warning' | 'danger'`.
+Compact status labels. Both expose `variant: 'neutral' | 'brand' | 'success' | 'warning' | 'danger'`
+and `size: '2xs' | 'xs' | 's' | 'm' | 'l' | 'xl' = 'm'` (reflected) — the same visual-density scale
+`<lr-chip>` uses, for typography/padding/minimum block size; `m` preserves the original badge
+dimensions. `lr-tag` inherits `size` unchanged from `lr-badge` rather than redeclaring it.
 The two tags share the same visual contract; `lr-tag` is a semantic alias for migration-friendly
 markup.
 
@@ -6729,6 +6808,10 @@ markup.
 — the trio each `:host([variant])` rule rewrites (`neutral` defaults to
 `--lr-color-surface`/`-text`/`-border`; the other four to the matching `*-quiet` fill with the loud
 color for text and border). Set one directly on the element for a tint outside the five variants.
+`--lr-badge-font-size` (default `var(--lr-font-size-sm)`), `--lr-badge-padding-inline` (default
+`var(--lr-space-s)`), and `--lr-badge-min-height` (default `var(--lr-size-1-25rem)`) — the density
+trio each `:host([size])` rule rewrites to that step's font size, inline padding, and minimum block
+size; the `m` defaults above exactly reproduce the pre-`size` fixed badge treatment.
 
 ## `lr-callout`
 
@@ -6754,7 +6837,12 @@ visible "×" glyph inside it — this is what shrinks under `inline`, so the hit
 **Themeable custom properties:** `--lr-callout-background`, `--lr-callout-color`,
 `--lr-callout-border` — the trio each `:host([variant])` rule rewrites (same
 surface/text/border → `*-quiet`/loud/loud scheme as `lr-badge`). `inline` drops the border,
-background, and panel padding regardless of what these are set to.
+background, and panel padding regardless of what these are set to. `--lr-callout-close-hover-bg`
+(default `var(--lr-color-brand-quiet)`) — the close button's `:hover` background, deliberately
+decoupled from `--lr-callout-background` (which every non-neutral `variant` also retargets for the
+panel itself) so a consumer can retint the hover fill — e.g. to keep it visibly distinct from a
+`variant="brand"` panel, which shares the same default token — without a collateral effect on the
+panel background, and vice versa.
 
 ## `lr-rating`
 
@@ -7001,9 +7089,12 @@ clipboard") or a per-node one (aria-label `Copy ${key/type}`, e.g. "Copy age"); 
 `copyable`)
 
 **Themeable custom properties:** `--lr-json-viewer-max-height` (default `none` — grows with content
-until `max-height` is set), `--lr-json-viewer-font` (default `ui-monospace, SFMono-Regular, Menlo,
-Consolas, monospace` — component-specific since no shared monospace token exists), plus shared tokens
-`--lr-color-border/-surface/-text/-text-quiet/-brand/-brand-quiet/-success/-warning/-warning-quiet`,
+until `max-height` is set), `--lr-json-viewer-font` (default `var(--lr-font-mono)`),
+`--lr-json-viewer-match-bg` (default `var(--lr-color-warning-quiet)`) — background, and surrounding
+box-shadow, of a key/value that currently matches `search`. Component-scoped indirection over the
+shared `--lr-color-warning-quiet` token, so a consumer can retheme just this search-match highlight
+without repainting every other warning-toned surface that reads the same shared token. Plus shared
+tokens `--lr-color-border/-surface/-text/-text-quiet/-brand/-brand-quiet/-success/-warning/-warning-quiet`,
 `--lr-radius`, `--lr-space-xs/-s/-l`, `--lr-focus-ring-width/-color/-offset`,
 `--lr-transition-fast`.
 
@@ -7156,7 +7247,11 @@ button).
 **CSS parts:** `base`, `indicator` (the pulsing status dot), `countdown` (the `M:SS`, or
 "Refreshing…", text), `pause-button` (the built-in pause/resume toggle).
 
-**Themeable custom properties:** shared tokens only — `--lr-space-xs`, `--lr-font-size-sm`,
+**Themeable custom properties:** `--lr-poll-status-due-bg` (default `var(--lr-color-success)`) —
+background of `indicator` while `data-due` is set. Component-scoped indirection over the shared
+`--lr-color-success` token, so a consumer can retheme just this due-state indicator without
+repainting every other component that reuses the same shared success token. Plus shared tokens —
+`--lr-space-xs`, `--lr-font-size-sm`,
 `--lr-color-text-quiet`, `--lr-color-brand`, `--lr-color-success`, `--lr-radius`/`-pill`,
 `--lr-focus-ring-*`.
 
@@ -7246,10 +7341,15 @@ renders `open="false"` on first paint)
 **CSS parts:** `listbox`, `option`, `option-icon` (when `icon` is set), `option-label`,
 `option-description` (when `description` is set), `empty`
 
-**Themeable custom properties:** shared tokens only — `--lr-space-xs`/`-s`/`-m` (popup padding,
+**Themeable custom properties:** `--lr-mention-popover-option-active-bg` (default
+`var(--lr-color-brand-quiet)`) — background of the hovered or `[data-active]`
+(keyboard-highlighted) suggestion row. Component-scoped indirection over the shared
+`--lr-color-brand-quiet` token, so a consumer can retheme just this highlighted/active row without
+repainting every other component that reuses the same shared token. Plus shared tokens —
+`--lr-space-xs`/`-s`/`-m` (popup padding,
 row padding/gap), `--lr-color-surface`/`-border` (popup background/border), `--lr-radius`
 (popup and row corners), `--lr-shadow` (popup elevation), `--lr-transition-fast` (open/close
-transition), `--lr-color-brand-quiet` (active-row background), `--lr-color-brand` (selected-row
+transition), `--lr-color-brand` (selected-row
 text), `--lr-color-text-quiet`/`--lr-color-text` (description text, full-contrast on the active
 row), and `--lr-popover-viewport-clamp` (default `92vw`) — the shared narrow-viewport ceiling the
 popup's max-inline-size is `min()`ed against, alongside its own `24rem` cap and the positioner's
@@ -7580,11 +7680,14 @@ small per-field text label), `hint`, `error` (`role="alert"`).
 `--lr-known-date-field-padding-inline`, `--lr-known-date-field-font-size`,
 `--lr-known-date-field-min-height` (all four rewritten by
 each `:host([size])` rule; `m` defaults `--lr-space-s`/`--lr-space-s`/`--lr-font-size-md-sm`/
-`--lr-size-2rem`), `--lr-known-date-field-height`,
+`--lr-size-2-5rem`), `--lr-known-date-field-height`,
 `--lr-known-date-field-gap` (default `--lr-space-s` — gap between the three field blocks),
 `--lr-known-date-day-field-width` / `--lr-known-date-month-field-width` (default `--lr-size-3-5em`)
 and `--lr-known-date-year-field-width` (default `--lr-size-5em`) — the per-field input widths, not
-size-scaled.
+size-scaled. `--lr-known-date-invalid-border-color` (default `var(--lr-color-danger)`) — border
+color of each `field-input` while `:host([data-invalid])` is set. Component-scoped indirection over
+the shared `--lr-color-danger` token, so a consumer can retheme just this invalid-field border
+without repainting every other component that reads the same shared danger token.
 
 The two height knobs work as a pair on `[part='field-input']`, the same way
 `lr-input`/`lr-select`/`lr-combobox`/`lr-date-input` expose theirs:
@@ -7735,7 +7838,11 @@ label switches to Done on the last step).
 `--lr-tour-spotlight-radius` (default `--lr-radius` — shared by the cutout and the ring),
 `--lr-tour-spotlight-ring-color` (default `--lr-color-brand`), `--lr-tour-spotlight-ring-width`
 (default `--lr-border-width-medium`), `--lr-tour-popover-max-width` (default `--lr-size-22rem`,
-further capped by `--lr-popover-viewport-clamp` and the positioner's available space).
+further capped by `--lr-popover-viewport-clamp` and the positioner's available space),
+`--lr-tour-progress-dot-current-bg` (default `var(--lr-color-brand)`) — background of
+`progress-dot` for the current step. Component-scoped indirection over the shared `--lr-color-brand`
+token, so a consumer can retheme just the current-step dot without repainting every other component
+that reuses the same shared brand token.
 
 `--lr-popover-viewport-clamp` (default `92vw`, from `--lr-theme-popover-viewport-clamp`) is the
 shared ceiling that keeps any floating surface inside a narrow viewport. `lr-tour`,
@@ -8034,7 +8141,9 @@ exists and was hit)
 
 **Slots:** none.
 
-**CSS parts:** `base`, `container`, `legend`, `legend-swatch`
+**CSS parts:** `base`, `container`, `legend`, `legend-swatch`, `error` (`role="alert"` message
+rendered in place of `container` if the optional `maplibre-gl` peer dependency fails to load, e.g.
+not installed)
 
 **Themeable custom properties:** shared tokens only — `--lr-space-xs/-s`, `--lr-color-surface`,
 `--lr-color-border`, `--lr-shadow`, `--lr-radius`.
@@ -8146,10 +8255,17 @@ element carrying the drag accept/reject announcement)
 `var(--lr-space-2xs)`) — the gap between the dropzone's slotted children while `compact`; and
 `--lr-file-input-compact-font-size` (default `var(--lr-font-size-sm)`) — the label's font size while
 `compact`. All three apply only while `compact` is set, so they are the way to tune a dense dropzone
-without re-pointing shared spacing tokens for everything else on the page. Plus shared tokens —
-`--lr-space-xs`, `--lr-space-l`,
+without re-pointing shared spacing tokens for everything else on the page. The drag accept/reject
+highlight on `[part='base'][data-drag-state='accept'|'reject']` is independently overridable too:
+`--lr-file-input-accept-border-color` (default `var(--lr-color-success)`) and
+`--lr-file-input-accept-bg` (default `color-mix(in srgb, var(--lr-color-success) 8%, transparent)`)
+for the drag-accept state; `--lr-file-input-reject-border-color` (default `var(--lr-color-danger)`)
+and `--lr-file-input-reject-bg` (default `color-mix(in srgb, var(--lr-color-danger) 8%,
+transparent)`) for drag-reject. All four are inline `var()` fallbacks at the point of use, settable
+on the element or any ancestor, so a consumer can retint just this dropzone's drag highlight without
+hijacking the shared `--lr-color-success`/`--lr-color-danger` tokens used elsewhere. Plus shared
+tokens — `--lr-space-xs`, `--lr-space-l`,
 `--lr-color-border`, `--lr-radius`, `--lr-color-surface`, `--lr-color-text-quiet`,
-`--lr-color-success` (drag-accept state), `--lr-color-danger` (drag-reject state),
 `--lr-focus-ring-width/-color/-offset` (`[part="base"]:focus-visible` outline),
 `--lr-opacity-disabled` (`:host([disabled])` dimming).
 
@@ -8437,6 +8553,11 @@ final.
   overrides the `--lr-media-card-max-height` custom property for this instance only (applied
   inline on `[part="base"]`, so it reliably wins over a `:host{}`-declared default from outside the
   shadow root) — same contract as `<lr-document-preview>`'s identically-named prop.
+- `appearance: 'card' | 'plain' = 'card'` (reflected) — visual chrome, mirroring
+  `<lr-source-card>`'s `appearance` vocabulary. `'card'` (the default) keeps the bordered, filled
+  box. `'plain'` removes `[part="base"]`'s border, background, padding, and corner radius, so a
+  card inside a dense chat transcript (or any container already drawing its own separation between
+  attachments) doesn't double the frame.
 
 **Events:** `lr-open` (`detail: { src: string; filename: string }`, cancelable) — fired when the
 card (or, for `kind="video"`, its separate `open-button`) is activated. `detail.src` is whichever
@@ -8914,7 +9035,12 @@ documents) and `<lr-image-comparer>` (before/after slotted surfaces). Adopts `Do
 with `anchorKinds: ['region']` only — no text selection is bound.
 
 **Properties:** `src: string = ''`, `name: string = ''`, `alt?: string`, `fit: 'contain' | 'width' |
-'actual' = 'contain'` (reflected), `zoom: number = 1` (reflected), `rotation: 0 | 90 | 180 | 270 = 0`
+'actual' = 'contain'` (reflected), `zoom: number = 1` (reflected), `minZoom: number = 0.5` (attribute
+`min-zoom`), `maxZoom: number = 4` (attribute `max-zoom`), `zoomStep: number = 0.25` (attribute
+`zoom-step`) — `minZoom`/`maxZoom`/`zoomStep` are pure pass-throughs to the embedded
+`<lr-zoomable-frame>` as its own `.minZoom`/`.maxZoom`/`.zoomStep`, which does the actual
+clamping/normalizing; same names/defaults as `<lr-lightbox>`'s identical trio, both wrapping the
+same pan/zoom surface — `rotation: 0 | 90 | 180 | 270 = 0`
 (reflected), and `annotatable: boolean = false` (reflected).
 
 **Methods:** `rotate()` advances `rotation` by 90°. `zoomIn()`, `zoomOut()`, and `resetZoom()` adjust
@@ -8999,6 +9125,19 @@ ancestor — `::part(timeline-marker)[data-active]` is invalid CSS (Shadow Parts
 selector after `::part()`), so re-pointing the shared `--lr-color-brand` token was the only previous
 lever.
 
+Each `[part='timeline-marker']`'s own background is independently overridable per tone, the same
+inline-`var()`-fallback pattern as `--lr-av-player-marker-active-color` above:
+`--lr-av-player-marker-bg` (default `color-mix(in srgb, var(--lr-color-brand) 35%, transparent)`) —
+no (or an unrecognized) `data-tone`; `--lr-av-player-marker-success-bg` (default `color-mix(in srgb,
+var(--lr-color-success) 35%, transparent)`) — `data-tone="success"`;
+`--lr-av-player-marker-warning-bg` (default `color-mix(in srgb, var(--lr-color-warning) 35%,
+transparent)`) — `data-tone="warning"`; `--lr-av-player-marker-danger-bg` (default `color-mix(in
+srgb, var(--lr-color-danger) 35%, transparent)`) — `data-tone="danger"`; and
+`--lr-av-player-marker-neutral-bg` (default `color-mix(in srgb, var(--lr-color-text) 25%,
+transparent)`) — `data-tone="neutral"`. Each can be set on the element or on any ancestor without
+hijacking the shared `--lr-color-success`/`-warning`/`-danger`/`-brand`/`-text` tokens used
+elsewhere in the theme.
+
 Two further cue-state properties tint the transcript: `--lr-av-player-cue-current-bg` (default
 `var(--lr-color-brand-quiet)`) is the background of the `cue-current` row the playhead is inside,
 and `--lr-av-player-cue-active-match-color` (default `var(--lr-color-warning)`) is the outline of
@@ -9071,7 +9210,8 @@ number, label: string | undefined, value: unknown }`)
 optional overlay content positioned at the chart area's center, useful for doughnut and pie totals.
 
 **CSS parts:** `base`, `canvas`, `reset-zoom-button`, `description`, `data-table`, `center` (the
-chart-area-centered wrapper for the `center` slot)
+chart-area-centered wrapper for the `center` slot), `error` (`role="alert"` message rendered in
+place of `canvas` when the optional `chart.js` peer dependency fails to load)
 
 **Themeable custom properties:** `--lr-chart-height` (set programmatically on the host from the
 `height` property — must be read from the host, not a shadow-tree descendant, since custom
@@ -9304,7 +9444,9 @@ index, label, value }`).
 
 **Slots:** `data-table`, `center`.
 
-**CSS parts:** `base`, `canvas`, `reset-zoom-button`, `description`, `data-table`, `center`.
+**CSS parts:** `base`, `canvas`, `reset-zoom-button`, `description`, `data-table`, `center`,
+`error` (`role="alert"` message rendered in place of `canvas` when the optional `chart.js` peer
+dependency fails to load — see `llms/components/lr-chart.md`).
 
 **Themeable custom properties:** `--lr-chart-height`, `--lr-chart-grid-color`,
 `--lr-chart-tick-color`, `--lr-chart-legend-color`, `--lr-chart-tooltip-bg`,
@@ -9365,7 +9507,9 @@ and `label` the generated bucket range string (`"lo–hi"`, both bounds at one d
 
 **Slots:** `data-table`, `center`.
 
-**CSS parts:** `base`, `canvas`, `reset-zoom-button`, `description`, `data-table`, `center`.
+**CSS parts:** `base`, `canvas`, `reset-zoom-button`, `description`, `data-table`, `center`,
+`error` (`role="alert"` message rendered in place of `canvas` when the optional `chart.js` peer
+dependency fails to load — inherited from `LyraChart`, unaffected by the binning logic).
 
 **Themeable custom properties:** `--lr-chart-height`, `--lr-chart-grid-color`,
 `--lr-chart-tick-color`, `--lr-chart-legend-color`, `--lr-chart-tooltip-bg`,
@@ -9777,9 +9921,10 @@ localized show/hide toggle. `false` (the default) preserves the full body render
 **CSS parts:** `base`, `headers`, `from-label`, `from`, `to-label`, `to`, `subject-label`, `subject`,
 `date-label`, `date`, `body`, `body-html`, `body-text`, `attachments`, `attachments-label`,
 `attachment-list`, `attachment-item`, `attachment-button` (an attachment's open button, inside its
-`attachment-item`), `quoted` (a folded quoted-text block, hidden until expanded, only
-while `foldQuotes`), `quote-toggle` (the show/hide-quoted-text toggle button, only while `foldQuotes`),
-`spinner`, and `error`.
+`attachment-item`), `attachment-name` (an attachment's filename, inside `attachment-button`),
+`attachment-size` (an attachment's formatted file size, inside `attachment-button`), `quoted` (a
+folded quoted-text block, hidden until expanded, only while `foldQuotes`), `quote-toggle` (the
+show/hide-quoted-text toggle button, only while `foldQuotes`), `spinner`, and `error`.
 
 **Themeable custom properties:** `--lr-email-viewer-max-height` (default `none`) — maximum block size
 of `[part="body"]`; also settable via the `max-height` property, which writes this token inline.
@@ -10070,8 +10215,11 @@ drag* over a highlighted passage never activates it — the selection-in-progres
 to tell that apart from a genuine activation click.
 
 **Properties:** `src` and `name` are strings. `page: number = 1` is the one-based current page and
-`zoom: number = 1` is clamped to `0.25`–`4`. `anchorKinds` is a readonly `['page', 'text-quote',
-'region']` (this viewer's supported `LyraAnchor.kind` values for the shared anchor-target contract).
+`zoom: number = 1` is clamped to `0.25`–`4`. `maxHeight: string = ''` (attribute `max-height`) is a
+CSS length that, once set, overrides `--lr-pdf-viewer-height` — the block size of the virtualized
+page list — declaratively, writing it inline on `[part="base"]`. `anchorKinds` is a readonly
+`['page', 'text-quote', 'region']` (this viewer's supported `LyraAnchor.kind` values for the shared
+anchor-target contract).
 
 **Events:**
 - `lr-render-error` — `detail: { error }` — fetching, parsing, or rendering (page canvas or text
@@ -10122,7 +10270,8 @@ matched against the element the selected text originates in:
 `lr-pdf-viewer::part(text-span)::selection { background: … }`.
 
 **Themeable custom properties:** `--lr-pdf-viewer-height` (default `var(--lr-size-24rem)`) — block
-size of the virtualized page list (`[part="pages"]`). Everything below the page list is retuned
+size of the virtualized page list (`[part="pages"]`); also settable via the `maxHeight` property,
+which writes this token inline on `[part="base"]`. Everything below the page list is retuned
 through the exported parts above rather than through dedicated custom properties.
 
 **Optional peer dependency:** install `pdfjs-dist` with `pnpm add pdfjs-dist`. The component registers
@@ -10190,8 +10339,10 @@ row/column into view via the virtualized list's `active-id`. `highlights` paint 
 
 **Properties:** `src` and `name` are strings. `hasHeaderRow: boolean = true` (attribute
 `has-header-row`) controls whether the first parsed row is rendered as a sticky header.
-`anchorKinds` is a readonly `['cell-range']` (this viewer's supported `LyraAnchor.kind` values for
-the shared anchor-target contract).
+`maxHeight: string = ''` (attribute `max-height`) is a CSS length that caps the scrollable body —
+setting it writes `--lr-csv-viewer-max-height` inline on `[part="base"]`. `anchorKinds` is a
+readonly `['cell-range']` (this viewer's supported `LyraAnchor.kind` values for the shared
+anchor-target contract).
 
 **Methods:** `search(query)` resolves the match count via a case-insensitive substring match over
 the same stringified cell values `cell()` renders, ordered row then column (empty/whitespace query
@@ -10210,11 +10361,14 @@ a `highlights` entry), `rows`, `spinner`, and `error`. `data-row`, `cell` and `c
 rendered inside the internal `<lr-virtual-list>` and forwarded via `exportparts`, so
 `lr-csv-viewer::part(cell)` reaches them from a consumer stylesheet.
 
-**Themeable custom properties:** `--lr-csv-viewer-highlight-color` (default `var(--lr-color-brand)`)
-— the outline color of a `cell-highlight` cell. The component writes it inline (as
-`var(--lr-color-warning, var(--lr-color-brand))`) on the cell matching `activeHighlightId`, since a
-`[data-active]` selector can't be chained onto the `::part(cell-highlight)` the cell reaches this
-component's stylesheet through; a custom property inherits across that boundary instead.
+**Themeable custom properties:** `--lr-csv-viewer-max-height` (default `none`) — maximum block size
+of `[part="body"]` before it scrolls internally; also settable via the `maxHeight` property, which
+writes this token inline on `[part="base"]`. `--lr-csv-viewer-highlight-color` (default
+`var(--lr-color-brand)`) — the outline color of a `cell-highlight` cell. The component writes it
+inline (as `var(--lr-color-warning, var(--lr-color-brand))`) on the cell matching
+`activeHighlightId`, since a `[data-active]` selector can't be chained onto the
+`::part(cell-highlight)` the cell reaches this component's stylesheet through; a custom property
+inherits across that boundary instead.
 
 **Optional peer dependency:** install `papaparse` with `pnpm add papaparse`. The registry matches
 `text/csv` and `.csv` filenames.
@@ -10429,15 +10583,24 @@ the resolved anchor target, `data-match`, `data-active-match`), `tag` (`data-mat
 `toggle` (an element's expand/collapse button, hidden but present for row alignment on leaf/empty
 elements), `error`, `spinner`.
 
-**Themeable custom properties:** `--lr-xml-viewer-max-height` (default `none`).
+**Themeable custom properties:** `--lr-xml-viewer-max-height` (default `none`) — maximum block size
+of the scrollable body; also settable via the `max-height` property.
 `--lr-xml-viewer-active-match-color` (default `var(--lr-color-warning)`) — the solid outline on the
 `[part='node']` holding the *current* search match, leaving every other match on its dashed
-`--lr-color-warning` outline. It is an inline `var()` fallback at the point of use rather than a
-`:host` declaration, so it can be set on the element *or on any ancestor*:
+`--lr-xml-viewer-match-color` outline. It is an inline `var()` fallback at the point of use rather
+than a `:host` declaration, so it can be set on the element *or on any ancestor*:
 `::part(node)[data-active-match]` is invalid CSS — Shadow Parts forbids an attribute selector after
 `::part()` — so distinguishing the active match previously meant re-pointing the shared
 `--lr-color-warning` token, which recolored every other match (and every other warning surface)
 along with it. Unset, it falls back to that token, so rendering is unchanged.
+
+`--lr-xml-viewer-match-color` (default `var(--lr-color-warning)`) — outline color of a non-active
+`[part='node']` search match, and (via `color-mix`) the tint source for a matching `[part='text']`'s
+background — kept distinct from `--lr-xml-viewer-active-match-color` so the non-active matches can
+be recolored without touching the active one. `--lr-xml-viewer-match-bg` (default
+`var(--lr-color-warning-quiet)`) — background of a matching `[part='tag']`/`[part='attribute-value']`.
+Both are inline `var()` fallbacks at the point of use, so either can be set on the element or any
+ancestor; unset, they fall back to the same shared tokens the rules used before.
 
 `[part='toggle']`'s glyph box stays compact (`1.25rem`) while its *interactive* box takes the shared
 minimum target size as a floor via `--lr-icon-button-size`. That token is a floor, not a fixed size,
@@ -11027,11 +11190,15 @@ entirely when it has assigned content)
 
 **CSS parts:** `base`, `chips`, `row`, `leading`, `textarea`, `trailing`, `action-button`
 
-**Themeable custom properties:** no component-specific custom properties; consumes shared tokens
-`--lr-space-xs`, `--lr-space-s`, `--lr-color-border`, `--lr-color-surface`,
-`--lr-color-brand`, `--lr-color-on-brand`, `--lr-color-text-quiet`, `--lr-radius`,
-`--lr-icon-button-size`, `--lr-transition-fast`, `--lr-opacity-disabled`,
-`--lr-focus-ring-width`, `--lr-focus-ring-color`, `--lr-focus-ring-offset`.
+**Themeable custom properties:** `--lr-chat-composer-busy-bg` (default `var(--lr-color-text-quiet)`)
+— `[part="action-button"]`'s background while `status` is `"sending"` or `"streaming"` (the busy/stop
+treatment). Scoped separately from the shared `--lr-color-text-quiet` token, which
+`[part="textarea"]`'s placeholder color also reads — overriding this cssprop recolors only the busy
+button, not the placeholder too (the same shared-token-collision fix `<lr-chat-message>`'s own
+user-bubble background pair documents). Plus shared tokens `--lr-space-xs`, `--lr-space-s`,
+`--lr-color-border`, `--lr-color-surface`, `--lr-color-brand`, `--lr-color-on-brand`,
+`--lr-color-text-quiet`, `--lr-radius`, `--lr-icon-button-size`, `--lr-transition-fast`,
+`--lr-opacity-disabled`, `--lr-focus-ring-width`, `--lr-focus-ring-color`, `--lr-focus-ring-offset`.
 
 **Optional peer deps:** none.
 
@@ -11411,9 +11578,23 @@ emitting `lr-change`.
 - `disabled: boolean = false` (reflected)
 - `required: boolean = false` (reflected — enforced via `internals.setValidity()`)
 - `open: boolean = false` (reflected)
+- `size: 'xs' | 's' | 'm' | 'l' | 'xl' = 'm'` (reflected) — visual size; same `xs`–`xl` scale as
+  `<lr-select>`'s own `size`, scaling `[part="trigger"]`/`[part="combobox"]`'s padding/min-height/
+  font-size and `[part="expand-icon"]`'s box size (see the themeable custom properties below).
 - `value: string` — getter/setter (hand-rolled, not the `FormAssociated` mixin); the current model id,
   `''` when nothing is selected. Writing it calls `internals.setFormValue()` synchronously. A named,
   untouched model-select contributes `''` to `FormData` instead of omitting its key.
+
+**Methods:** `click()` (override) — forwards to whichever internal control the active mode renders,
+since `HTMLElement.prototype.click()` is otherwise a no-op on a custom element with no native click
+semantics of its own (mirrors `<lr-button>`'s identical host `click()` forwarding, so a generic
+form-automation helper or another component calling `.click()` on the host actually opens the picker
+instead of silently doing nothing). Closed-dropdown mode forwards a real `.click()` to the trigger
+`<button>`, whose own `@click` handler opens it. Free-text mode instead calls `.focus()` on the
+combobox `<input>`: unlike a genuine pointer click, `HTMLElement.click()` never moves focus (that's a
+`mousedown` side effect the browser applies only to real pointer interaction), and this mode's open
+behavior is wired to the input's `focus` event (`onInputFocus`), not a `click` handler on the input
+itself.
 
 **Mode switching:** `closedMode` (private) is `true` whenever `normalizedCatalog.length > 0 &&
 !allowCustom` — a non-empty `catalog` with `allowCustom` left `false` renders the closed dropdown
@@ -11451,10 +11632,21 @@ both modes), `option`, `option-label`, `option-badge` (the "not in catalog" badg
 stale-value row), `expand-icon` (the dropdown chevron, present in both modes), `hint` (the hint
 message), `error` (the error message)
 
-**Themeable custom properties:** shared tokens only — `--lr-space-xs/-s`,
-`--lr-color-border/-surface/-brand/-brand-quiet/-text-quiet`, `--lr-radius`, `--lr-shadow`,
-`--lr-focus-ring-width/-color/-offset`, `--lr-icon-button-size`, `--lr-transition-fast`,
-`--lr-opacity-disabled`.
+**Themeable custom properties:** `--lr-model-select-trigger-padding` (default `var(--lr-space-xs)
+var(--lr-space-s)`) — `[part="trigger"]`/`[part="combobox"]`'s padding shorthand.
+`--lr-model-select-trigger-min-height` (default `var(--lr-size-2-5rem)`) — their block-size floor.
+`--lr-model-select-font-size` (default `var(--lr-font-size-md)`) — their font size.
+`--lr-model-select-expand-size` (default `var(--lr-size-1-75rem)`) — `[part="expand-icon"]`'s
+decorative box size (clamped against `--lr-icon-button-size` via `min()`). All four are declared on
+`:host` at these `size="m"` (the default) values and re-declared inside each
+`:host([size="xs"|"s"|"l"|"xl"])` block at that tier's own value — same xs–xl scale `<lr-select>`
+uses — so `size` is the primary lever; override the cssprop directly only to retune a single tier or
+step outside the scale entirely. `--lr-model-select-option-active-bg` (default
+`var(--lr-color-brand-quiet)`) — background of a hovered or keyboard-active `[part="option"]` row;
+declared as a `var()` fallback at the point of use, not on `:host`, so it isn't tied to `size`. Plus
+shared tokens — `--lr-space-xs/-s`, `--lr-color-border/-surface/-brand/-brand-quiet/-text-quiet`,
+`--lr-radius`, `--lr-shadow`, `--lr-focus-ring-width/-color/-offset`, `--lr-icon-button-size`,
+`--lr-transition-fast`, `--lr-opacity-disabled`.
 
 **Optional peer deps:** none.
 
@@ -12342,6 +12534,15 @@ string = ''` — accessible name for the group, defaults to the localized `sugge
 **CSS parts:** `base` (the labeled group), `chip` (each suggestion button), `chip-label` (the primary
 text), `chip-detail` (the secondary line, only rendered when `detail` is set).
 
+**Themeable custom properties:** `--lr-suggestion-chips-hover-bg` (default
+`var(--lr-color-brand-quiet)`) — a `chip`'s background on hover. `--lr-suggestion-chips-hover-border`
+(default `var(--lr-color-brand)`) — a `chip`'s border color on hover. Both are declared as `var()`
+fallbacks at the point of use, not on `:host`. Plus shared tokens `--lr-space-xs/-m/-2xs`,
+`--lr-color-border/-surface/-text/-text-quiet`, `--lr-radius-pill`, `--lr-font-size-xs`,
+`--lr-focus-ring-width/-color/-offset`.
+
+**Optional peer deps:** none.
+
 Keyboard: roving tabindex across chips; ArrowLeft/ArrowRight (direction-aware) plus Home/End;
 Enter/Space activate. Renders inside an internal `lr-scroller` (`orientation="horizontal"`,
 `hide-scrollbar`) unless `wrap` is set.
@@ -12427,7 +12628,9 @@ id }`), `lr-thread-pin` (`detail: { id, pinned }` — the requested new state), 
 `lr-thread-rename` (`detail: { id, title }`, re-emitted from the row's `lr-rename`),
 `lr-filter-change` (`detail: { text, matchCount }`), `lr-group-toggle` (`detail: { id, collapsed }` —
 controlled intent; native group buttons provide Enter/Space activation and explicit
-`aria-expanded="true"|"false"`).
+`aria-expanded="true"|"false"`). `searchable` only: `blur`/`focus` (no detail) — re-dispatched from
+the internal search `<input>`'s own `blur`/`focus`, bubbling and composed unlike the native events,
+which are neither.
 
 **CSS parts:** `base`, `search`/`search-input` (the search field wrapper and `<input
 type="search">`), `list` (the list region), `empty`, `viewport` (the actual internal virtual-list
@@ -12665,6 +12868,14 @@ identically-named properties.
 **Form association:** hand-rolled via `attachInternals()`, mirroring `lr-model-select`: `value`
 getter/setter (the current voice id, `''` when nothing is selected), `name` (reflected), `disabled`
 (reflected), `required` (reflected — enforced via `internals.setValidity()`).
+
+**Methods:** `click()` (override) — same forwarding contract as `lr-model-select`'s own `click()`
+override (see that section for the full rationale): closed-dropdown mode forwards a real `.click()`
+to the trigger `<button>`, whose own `@click` handler opens it; free-text mode instead calls
+`.focus()` on the combobox `<input>`, since a synthetic `.click()` on a text input never dispatches
+`focus` the way a real click's `mousedown` default action does, and this mode's open behavior is
+wired to the input's native `focus` event, not a `click` handler on the input itself. Mirrors
+`<lr-button>`'s identical host `click()` forwarding.
 
 **Events:** `lr-change` — `detail: { value, inCatalog }`. `lr-preview-request` — `detail: {
 voiceId, previewUrl? }`, cancelable. `lr-preview-change` — `detail: { voiceId }`, internal playback
@@ -13424,6 +13635,10 @@ renders at the start of the action row, before Deny/Edit/Approve.
 **Properties:**
 - `open: boolean = false` (reflected) — set this (or call `close()`) to dismiss; there is no separate
   `show()`/`hide()` pair
+- `accessibleLabel: string | null = null` (attribute `aria-label`) — directly names the internal
+  dialog panel; otherwise the tool-name heading supplies `aria-labelledby`. Mirrors
+  `<lr-tool-result-dialog>`'s/`<lr-tool-select-dialog>`'s own host-`aria-label` override pattern; fed
+  only by a host `aria-label`
 - `toolName: string = ''` (attribute `tool-name`) — the proposed call's name, e.g. `web_search`;
   drives the heading and the dialog's accessible name
 - `args: unknown = {}` (attribute: false) — the proposed call's arguments, rendered via
@@ -13436,11 +13651,7 @@ renders at the start of the action row, before Deny/Edit/Approve.
   `autoCorrect: string = 'off'` (attribute `autocorrect`), `autocomplete: string = 'off'`,
   `wrap: 'hard'|'soft'|'off' = 'soft'`, `inputMode: string = ''` (attribute `inputmode`),
   and `enterKeyHint: string = ''` (attribute `enterkeyhint`) — forwarded to the raw-JSON
-  textarea; the defaults keep browser editing assistance from changing JSON text
-- `spellcheck: boolean = false`, `autocapitalize: string = 'off'`, `autoCorrect: string = 'off'`
-  (`autocorrect`), `autocomplete: string = 'off'`, `wrap: 'hard'|'soft'|'off' = 'soft'`,
-  `inputMode: string = ''` (`inputmode`), and `enterKeyHint: string = ''` (`enterkeyhint`) —
-  forwarded to the raw-JSON `<textarea>` while editing.
+  `<textarea>` while editing; the defaults keep browser editing assistance from changing JSON text
 
 **Methods:** `close(reason: ToolApprovalDialogCloseReason = 'api'): void` — closes the dialog, emits
 `lr-close` with `reason`, and returns focus to whatever had it before the dialog opened; a no-op if
@@ -13675,6 +13886,15 @@ A small bordered card shell. Purely visual, with no state of its own beyond slot
 **Properties:**
 - `title: string = ''` — small heading for the card. Leave unset for an untitled card (e.g. a bare
   block of `lr-result-field` rows with no natural heading).
+- `compact: boolean = false` (reflected) — tighter header/body padding for dense contexts (a card
+  rendered as a row in a transcript or result list), same convention as `<lr-agent-run>`'s own
+  `compact`. Purely a density knob: the border and background stay, so use `appearance="plain"`
+  instead to drop the chrome entirely.
+- `appearance: 'card' | 'plain' = 'card'` (reflected) — mirrors `lr-card`'s/`<lr-agent-run>`'s
+  `appearance` vocabulary. `'card'` (the default) keeps the bordered, filled box. `'plain'` removes
+  the border, background, and corner radius, so a card nested inside a host frame that already draws
+  a border (e.g. `<lr-tool-result-view>`'s own chrome) doesn't double it. `plain` wins over `compact`
+  when both are set (nothing left to tighten).
 
 **Events:** none.
 
@@ -13689,8 +13909,11 @@ later `slotchange` on `actions` is still observed, but `hidden` whenever there's
 default tooltip, scoped to just this element rather than the whole card), `actions` (`hidden`
 whenever the slot has no assigned content), `body`.
 
-**Themeable custom properties:** shared tokens only — `--lr-space-xs`/`-s`, `--lr-color-border`/
-`-surface`/`-text`, `--lr-radius`.
+**Themeable custom properties:** `--lr-result-card-compact-header-padding` (default
+`var(--lr-space-xs)`) — `[part="header"]` block/inline padding while `compact`;
+`--lr-result-card-compact-body-padding` (default `var(--lr-space-xs)`) — `[part="body"]` padding
+while `compact`; plus shared tokens — `--lr-space-xs`/`-s`, `--lr-color-border`/`-surface`/`-text`,
+`--lr-radius`.
 
 ### `lr-result-field`
 
@@ -13817,7 +14040,13 @@ status: TaskStatus; detail?: string; children?: TaskItem[] }` with `TaskStatus =
 'running' | 'success' | 'error'` (both exported here). `detail` is an optional secondary plain-text
 line; `children` is exactly **one** level of sub-steps — a child's own `children` is ignored with a
 `console.warn`. `label: string = 'Tasks'`, `expanded: boolean = true` (reflected), and
-`collapsible: boolean = true`.
+`collapsible: boolean = true`. `compact: boolean = false` (reflected) — tighter header/body padding
+and item gap for dense contexts (a plan tracker nested in an already-padded transcript row), same
+convention as `<lr-agent-run>`'s/`<lr-source-card>`'s `compact`; purely a density knob, the border
+and background stay. `appearance: 'card' | 'plain' = 'card'` (reflected) — mirrors `lr-card`'s
+`appearance` vocabulary; `'plain'` removes `[part="base"]`'s border, background, and corner radius so
+a list embedded in a frame that already draws a border (an agent-run panel, a message bubble) doesn't
+double it.
 
 **Slots:** `detail-<id>` — dynamic, one per item id (e.g. `slot="detail-step-3"`); rich detail under
 that item's label, typically a `<lr-tool-call-chip>` or file `<lr-chip>`.
@@ -13833,7 +14062,11 @@ indicator, only rendered when `collapsible`), `body` (the list of items, `hidden
 children).
 
 **Themeable custom properties:** `--lr-task-list-spin` (default `1s linear`) — running-status icon
-spin animation duration/timing.
+spin animation duration/timing; `--lr-task-list-compact-header-padding` (default
+`var(--lr-space-2xs) var(--lr-space-s)`) — `[part="header"]` padding while `compact`;
+`--lr-task-list-compact-gap` (default `var(--lr-space-2xs)`) — gap between `[part="body"]`'s item
+rows while `compact`; `--lr-task-list-compact-body-padding` (default `var(--lr-space-2xs)
+var(--lr-space-s) var(--lr-space-s)`) — `[part="body"]` padding while `compact`.
 
 ## `lr-terminal`
 
@@ -13868,7 +14101,17 @@ disengaged and new output has arrived), and `announcer` (the visually-hidden `ro
 used when `announce-output` is set).
 
 **Themeable custom properties:** `--lr-terminal-height` (default `var(--lr-size-20rem)`) — the
-viewport's block size.
+viewport's block size; not declared on `:host`, so it is inherited from the host or any ancestor.
+`--lr-terminal-highlight-accent-bg` (default `var(--lr-color-brand-quiet)`),
+`--lr-terminal-highlight-success-bg` (default `var(--lr-color-success-quiet)`),
+`--lr-terminal-highlight-warning-bg` (default `var(--lr-color-warning-quiet)`),
+`--lr-terminal-highlight-danger-bg` (default `var(--lr-color-danger-quiet)`), and
+`--lr-terminal-highlight-neutral-bg` (default `var(--lr-color-surface)`) — the background of a
+`highlights[]` entry of the matching `tone`. Each is decoupled from the identical shared token it
+falls back to (e.g. `accent`'s `--lr-color-brand-quiet` is also the copy/download-button hover tint)
+so retinting one tone doesn't repaint the other surface reading that token, and from any
+`::part('line')` stylesheet override — the background is applied inline, so a stylesheet rule can't
+beat it without `!important`.
 
 ## `lr-trace-tree`
 
@@ -13972,6 +14215,13 @@ number` (attribute: false, epoch milliseconds), `files: CommitFileChange[] = []`
 'conflicted' | 'ignored'` (shared with `lr-file-tree`); the diffstat is summed from `additions`/
 `deletions` across `files`. `filesCollapsed:
 boolean = true` (attribute `files-collapsed`, reflected), and `copyable: boolean = true` (reflected).
+`compact: boolean = false` (reflected) — tighter `[part="base"]` padding for a commit rendered as a
+row in a list or PR timeline, same convention as `<lr-agent-run>`'s own `compact`; the border stays,
+so pair it with `appearance="plain"` to drop the chrome entirely. `appearance: 'card' | 'plain' =
+'card'` (reflected) — mirrors `lr-card`'s/`<lr-agent-run>`'s `appearance` vocabulary: `'card'` keeps
+the bordered, padded box, `'plain'` removes the border, padding, and corner radius so a commit nested
+in a host list that already draws its own row chrome doesn't double it; `plain` wins over `compact`
+when both are set.
 
 **Slots:** `actions` — trailing header controls (e.g. an "open PR" button).
 
@@ -13981,6 +14231,9 @@ boolean = true` (attribute `files-collapsed`, reflected), and `copyable: boolean
 **CSS parts:** `base`, `subject`, `body`, `hash`, `meta`, `author`, `time`, `diffstat`, `additions`,
 `deletions`, `files-toggle`, `file` (carries `data-status`), `file-path`, `file-additions`,
 `file-deletions`, `copy-button`, and `actions`.
+
+**Themeable custom properties:** `--lr-commit-card-compact-padding` (default `var(--lr-space-s)`) —
+`[part="base"]` padding while `compact`.
 
 ## `lr-test-results`
 
@@ -14157,7 +14410,9 @@ src? }`, with the sanitized download URL).
 
 **CSS parts:** `base`, `header`, `label`, `kind`, `view-toggle` (rendered only once the `code` slot
 has content), `view-button` (carries `data-view="preview"` or `data-view="code"`), `version-nav`
-(rendered only once `versions` is non-empty), `version-previous`, `version-next`, `version-position`
+(rendered only once `versions` is non-empty), `version-previous`, `version-previous-glyph` (the `‹`
+chevron inside `version-previous`, mirrored via `scaleX(-1)` under `:dir(rtl)`), `version-next`,
+`version-next-glyph` (the `›` chevron inside `version-next`, mirrored the same way), `version-position`
 (the "Version N of M" text), `restore-button` (rendered only while the active version isn't the
 latest), `actions`, `copy-button` (rendered only while `copyText` is non-empty), `download-button`
 (rendered only while `downloadSrc` is non-empty), `body`, `streaming-indicator` (rendered only while
@@ -14354,7 +14609,9 @@ Filterable and taggable evaluation-example list with add, remove, import, and ex
 
 **Events:** `lr-example-select` (`detail: { id: string | null }`), `lr-example-add-request`
 (`detail: undefined`), `lr-example-remove-request` (`detail: { id: string }`), `lr-import-request`
-(`detail: { files: File[] }`), `lr-export-request` (`detail: { format: string }`).
+(`detail: { files: File[] }`), `lr-export-request` (`detail: { format: string }`). `focus`/`blur` —
+re-dispatched (no detail) when the internal search field (only rendered while `searchable`) gains or
+loses focus, since native focus neither bubbles nor crosses the shadow boundary.
 
 **CSS parts:** `base`, `toolbar`, `search`, `search-input`, `tag-filter`, `grid`,
 `add-button`, `remove-button`, `import`, `export`.
@@ -14512,7 +14769,12 @@ can ignore it; one actually executing the tool needs it.
 
 **Themeable custom properties:** `--lr-tool-timeline-gap` (default `var(--lr-space-l)`) — vertical
 gap between entries; `--lr-tool-timeline-marker-size` (default `var(--lr-size-0-625rem)`) — the
-per-entry timeline marker dot's size, which also sets the entry grid's leading column width.
+per-entry timeline marker dot's size, which also sets the entry grid's leading column width;
+`--lr-tool-timeline-denied-marker-color` (default `var(--lr-color-warning)`) — rail-dot color for a
+`status="denied"` entry, decoupled from the pending-approval border color below so either can be
+retinted independently; `--lr-tool-timeline-pending-approval-border-color` (default
+`var(--lr-color-warning)`) — color of the entry body's leading border while that entry's
+`data-pending-approval` is `"true"`.
 
 # Retrieval, knowledge graph & grounding (`components/retrieval/`)
 
@@ -14608,7 +14870,10 @@ Enter/Space activations within 500ms — regardless of `GraphNode.expandable`), 
 `label`, `link-label` (a drawn edge label, only rendered when `showEdgeLabels` is set),
 `expand-indicator` (the "+" badge on a node with `expandable: true`), `focus-halo` (the persistent
 ring tracking `focusId`'s node), `hull` (a community hull), `community-label`,
-`live-region`, `data-list`, `empty`, `canvas`/`tooltip`/`cursor-items`/`cursor-item`
+`live-region`, `data-list`, `empty`, `error` (`role="alert"` message shown instead of the graph when
+the optional `d3-force`/`d3-drag`/`d3-zoom`/`d3-selection` peers fail to load —
+distinct from the empty state, which means the peers loaded fine but `nodes` is empty),
+`canvas`/`tooltip`/`cursor-items`/`cursor-item`
 (`renderer="canvas"` only — the drawing surface, its hover tooltip replacing the SVG `<title>`, and
 the offscreen keyboard-roving items)
 
@@ -14749,7 +15014,9 @@ with a `droppable` canvas on the `FLOW_PALETTE_MIME_TYPE` drag payload shape.
 
 **Events:** `lr-palette-place` (`detail: { type }`, a pointer click or Enter/Space — the
 click/keyboard alternative to dragging), `lr-select` (`detail: { item }`, emitted alongside
-`lr-palette-place` on both gestures, carrying the full item).
+`lr-palette-place` on both gestures, carrying the full item), `focus`/`blur` (no detail —
+re-dispatched from the internal search field's own `focus`/`blur`, bubbling and composed unlike
+the native events, since neither bubbles nor crosses the shadow boundary on its own).
 
 **Slots:** `header` (content above the search field, e.g. a heading or tabs), `footer` (content
 below the list).
@@ -14812,7 +15079,10 @@ after each toggle).
 **CSS parts:** `base`, `item` (a `<button>` when `interactive`, a plain `<div>` otherwise), `swatch`,
 `label`, `count`, `live-region` (the visually hidden filter-toggle announcement).
 
-**Themeable custom properties:** no component-local tokens; reads `--lr-graph-cat-1` through `-8`
+**Themeable custom properties:** `--lr-graph-legend-hidden-color` (default
+`var(--lr-color-text-quiet)`) — text color of a filtered-out (hidden) row's `label`/`count`,
+independent of the shared quiet-text token so a host can retint "hidden" rows without repainting
+every other quiet-text surface. Also reads `--lr-graph-cat-1` through `-8`
 (the same computed-style fallback palette `lr-graph`/`lr-word-cloud` use) plus shared tokens.
 
 **Optional peer deps:** none.
@@ -15052,6 +15322,11 @@ graph or membership fetching — `lr-drill` asks the host to load members/subgra
 - `maxMembers: number = 8` (attribute `max-members`) — remaining members collapse into a "+N"
   overflow chip
 - `compact: boolean = false` (reflected) — omits the summary excerpt and member chips
+- `appearance: 'card' | 'plain' = 'card'` (reflected) — visual chrome, mirroring `lr-card`'s
+  `appearance` vocabulary and this component's sibling `lr-entity-card`'s identical property.
+  `'card'` (the default) keeps the bordered, filled, padded box; `'plain'` removes the border,
+  background, and padding, so a card nested inside a container that already draws a border doesn't
+  double the frame.
 
 **Events:** `lr-drill` (`detail: { id }`, the drill button, header, or overflow chip — all three
 mean "show me this whole community"), `lr-entity-activate` (`detail: { id }`, a member chip was
@@ -15302,7 +15577,9 @@ keyboard descent).
 announcement region), `empty` (shown when `topics` is empty).
 
 **Themeable custom properties:** `--lr-mind-map-ring-gap` (default `6rem`, radius step per depth
-ring).
+ring). `--lr-mind-map-node-hover-halo` (default `var(--lr-color-brand-quiet)`) — stroke color of
+the halo drawn around a topic node's dot on `:hover`, giving mouse users the same "this is
+clickable" feedback keyboard users already get from the drawn `focus-ring` part.
 
 **Optional peer deps:** none.
 
@@ -15892,7 +16169,12 @@ somewhere to land after a confirmation resolves), `item-row`, `item-text`, `conf
 `provenance` is unset; `item-body` is `hidden` while collapsed), `item-actions`, `add-button`,
 `remove-button`, `forget-all-button`.
 
-**Themeable custom properties:** shared tokens only.
+**Themeable custom properties:** `--lr-memory-panel-confidence-success-color` (default
+`var(--lr-color-success)`), `--lr-memory-panel-confidence-warning-color` (default
+`var(--lr-color-warning)`), `--lr-memory-panel-confidence-danger-color` (default
+`var(--lr-color-danger)`) — text color of an item's `confidence` indicator, one per confidence
+tier (`high`/`medium`/`low` against `thresholds`, the same tiering `lr-chunk-inspector` uses for
+its score bar). Plus shared tokens otherwise.
 
 **Optional peer deps:** none.
 

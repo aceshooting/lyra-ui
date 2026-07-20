@@ -21,8 +21,10 @@ row/column into view via the virtualized list's `active-id`. `highlights` paint 
 
 **Properties:** `src` and `name` are strings. `hasHeaderRow: boolean = true` (attribute
 `has-header-row`) controls whether the first parsed row is rendered as a sticky header.
-`anchorKinds` is a readonly `['cell-range']` (this viewer's supported `LyraAnchor.kind` values for
-the shared anchor-target contract).
+`maxHeight: string = ''` (attribute `max-height`) is a CSS length that caps the scrollable body —
+setting it writes `--lr-csv-viewer-max-height` inline on `[part="base"]`. `anchorKinds` is a
+readonly `['cell-range']` (this viewer's supported `LyraAnchor.kind` values for the shared
+anchor-target contract).
 
 **Methods:** `search(query)` resolves the match count via a case-insensitive substring match over
 the same stringified cell values `cell()` renders, ordered row then column (empty/whitespace query
@@ -41,11 +43,14 @@ a `highlights` entry), `rows`, `spinner`, and `error`. `data-row`, `cell` and `c
 rendered inside the internal `<lr-virtual-list>` and forwarded via `exportparts`, so
 `lr-csv-viewer::part(cell)` reaches them from a consumer stylesheet.
 
-**Themeable custom properties:** `--lr-csv-viewer-highlight-color` (default `var(--lr-color-brand)`)
-— the outline color of a `cell-highlight` cell. The component writes it inline (as
-`var(--lr-color-warning, var(--lr-color-brand))`) on the cell matching `activeHighlightId`, since a
-`[data-active]` selector can't be chained onto the `::part(cell-highlight)` the cell reaches this
-component's stylesheet through; a custom property inherits across that boundary instead.
+**Themeable custom properties:** `--lr-csv-viewer-max-height` (default `none`) — maximum block size
+of `[part="body"]` before it scrolls internally; also settable via the `maxHeight` property, which
+writes this token inline on `[part="base"]`. `--lr-csv-viewer-highlight-color` (default
+`var(--lr-color-brand)`) — the outline color of a `cell-highlight` cell. The component writes it
+inline (as `var(--lr-color-warning, var(--lr-color-brand))`) on the cell matching
+`activeHighlightId`, since a `[data-active]` selector can't be chained onto the
+`::part(cell-highlight)` the cell reaches this component's stylesheet through; a custom property
+inherits across that boundary instead.
 
 **Optional peer dependency:** install `papaparse` with `pnpm add papaparse`. The registry matches
 `text/csv` and `.csv` filenames.

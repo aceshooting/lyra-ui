@@ -46,15 +46,24 @@ the resolved anchor target, `data-match`, `data-active-match`), `tag` (`data-mat
 `toggle` (an element's expand/collapse button, hidden but present for row alignment on leaf/empty
 elements), `error`, `spinner`.
 
-**Themeable custom properties:** `--lr-xml-viewer-max-height` (default `none`).
+**Themeable custom properties:** `--lr-xml-viewer-max-height` (default `none`) — maximum block size
+of the scrollable body; also settable via the `max-height` property.
 `--lr-xml-viewer-active-match-color` (default `var(--lr-color-warning)`) — the solid outline on the
 `[part='node']` holding the *current* search match, leaving every other match on its dashed
-`--lr-color-warning` outline. It is an inline `var()` fallback at the point of use rather than a
-`:host` declaration, so it can be set on the element *or on any ancestor*:
+`--lr-xml-viewer-match-color` outline. It is an inline `var()` fallback at the point of use rather
+than a `:host` declaration, so it can be set on the element *or on any ancestor*:
 `::part(node)[data-active-match]` is invalid CSS — Shadow Parts forbids an attribute selector after
 `::part()` — so distinguishing the active match previously meant re-pointing the shared
 `--lr-color-warning` token, which recolored every other match (and every other warning surface)
 along with it. Unset, it falls back to that token, so rendering is unchanged.
+
+`--lr-xml-viewer-match-color` (default `var(--lr-color-warning)`) — outline color of a non-active
+`[part='node']` search match, and (via `color-mix`) the tint source for a matching `[part='text']`'s
+background — kept distinct from `--lr-xml-viewer-active-match-color` so the non-active matches can
+be recolored without touching the active one. `--lr-xml-viewer-match-bg` (default
+`var(--lr-color-warning-quiet)`) — background of a matching `[part='tag']`/`[part='attribute-value']`.
+Both are inline `var()` fallbacks at the point of use, so either can be set on the element or any
+ancestor; unset, they fall back to the same shared tokens the rules used before.
 
 `[part='toggle']`'s glyph box stays compact (`1.25rem`) while its *interactive* box takes the shared
 minimum target size as a floor via `--lr-icon-button-size`. That token is a floor, not a fixed size,

@@ -46,7 +46,14 @@ form-associated via the same `FormAssociated` mixin as `lr-textarea`. Ships the 
 - `name`/`disabled`/`required` (from `FormAssociated`)
 
 **Getters/methods:** `input: HTMLInputElement | null` (the internal native `<input>`, for direct DOM
-access), `focus(options?: FocusOptions)`, `blur()`, `select()`.
+access), `focus(options?: FocusOptions)`, `blur()`, `select()`. Also forwards the full native
+selection/editing surface, mirroring `lr-textarea`'s identical passthrough: `selectionStart: number
+| null` and `selectionEnd: number | null` (readable/writable; `null` both before the internal input
+has rendered and whenever `type` doesn't support selection — only `text`/`search`/`password` do,
+matching the native `<input>`'s own contract), `setSelectionRange(start, end, direction?)`
+(no-op before render, otherwise throws the same native `InvalidStateError` a native `<input>` would
+for an unsupported `type`), and `setRangeText(replacement, start?, end?, selectMode?)` (no-op
+before render; syncs `value` afterward without emitting a user event).
 
 **Events:** native-style composed `input` and `change`, plus `lr-input` (`detail: { value }`,
 fired on every user-driven edit) and `lr-change` (`detail: { value }`, fired on the native

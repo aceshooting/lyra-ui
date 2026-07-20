@@ -37,7 +37,10 @@ after each toggle).
 **CSS parts:** `base`, `item` (a `<button>` when `interactive`, a plain `<div>` otherwise), `swatch`,
 `label`, `count`, `live-region` (the visually hidden filter-toggle announcement).
 
-**Themeable custom properties:** no component-local tokens; reads `--lr-graph-cat-1` through `-8`
+**Themeable custom properties:** `--lr-graph-legend-hidden-color` (default
+`var(--lr-color-text-quiet)`) — text color of a filtered-out (hidden) row's `label`/`count`,
+independent of the shared quiet-text token so a host can retint "hidden" rows without repainting
+every other quiet-text surface. Also reads `--lr-graph-cat-1` through `-8`
 (the same computed-style fallback palette `lr-graph`/`lr-word-cloud` use) plus shared tokens.
 
 **Optional peer deps:** none.

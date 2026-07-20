@@ -66,7 +66,9 @@ exists and was hit)
 
 **Slots:** none.
 
-**CSS parts:** `base`, `container`, `legend`, `legend-swatch`
+**CSS parts:** `base`, `container`, `legend`, `legend-swatch`, `error` (`role="alert"` message
+rendered in place of `container` if the optional `maplibre-gl` peer dependency fails to load, e.g.
+not installed)
 
 **Themeable custom properties:** shared tokens only — `--lr-space-xs/-s`, `--lr-color-surface`,
 `--lr-color-border`, `--lr-shadow`, `--lr-radius`.

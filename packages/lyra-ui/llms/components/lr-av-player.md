@@ -65,6 +65,19 @@ ancestor — `::part(timeline-marker)[data-active]` is invalid CSS (Shadow Parts
 selector after `::part()`), so re-pointing the shared `--lr-color-brand` token was the only previous
 lever.
 
+Each `[part='timeline-marker']`'s own background is independently overridable per tone, the same
+inline-`var()`-fallback pattern as `--lr-av-player-marker-active-color` above:
+`--lr-av-player-marker-bg` (default `color-mix(in srgb, var(--lr-color-brand) 35%, transparent)`) —
+no (or an unrecognized) `data-tone`; `--lr-av-player-marker-success-bg` (default `color-mix(in srgb,
+var(--lr-color-success) 35%, transparent)`) — `data-tone="success"`;
+`--lr-av-player-marker-warning-bg` (default `color-mix(in srgb, var(--lr-color-warning) 35%,
+transparent)`) — `data-tone="warning"`; `--lr-av-player-marker-danger-bg` (default `color-mix(in
+srgb, var(--lr-color-danger) 35%, transparent)`) — `data-tone="danger"`; and
+`--lr-av-player-marker-neutral-bg` (default `color-mix(in srgb, var(--lr-color-text) 25%,
+transparent)`) — `data-tone="neutral"`. Each can be set on the element or on any ancestor without
+hijacking the shared `--lr-color-success`/`-warning`/`-danger`/`-brand`/`-text` tokens used
+elsewhere in the theme.
+
 Two further cue-state properties tint the transcript: `--lr-av-player-cue-current-bg` (default
 `var(--lr-color-brand-quiet)`) is the background of the `cue-current` row the playhead is inside,
 and `--lr-av-player-cue-active-match-color` (default `var(--lr-color-warning)`) is the outline of

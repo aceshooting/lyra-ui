@@ -62,10 +62,17 @@ element carrying the drag accept/reject announcement)
 `var(--lr-space-2xs)`) — the gap between the dropzone's slotted children while `compact`; and
 `--lr-file-input-compact-font-size` (default `var(--lr-font-size-sm)`) — the label's font size while
 `compact`. All three apply only while `compact` is set, so they are the way to tune a dense dropzone
-without re-pointing shared spacing tokens for everything else on the page. Plus shared tokens —
-`--lr-space-xs`, `--lr-space-l`,
+without re-pointing shared spacing tokens for everything else on the page. The drag accept/reject
+highlight on `[part='base'][data-drag-state='accept'|'reject']` is independently overridable too:
+`--lr-file-input-accept-border-color` (default `var(--lr-color-success)`) and
+`--lr-file-input-accept-bg` (default `color-mix(in srgb, var(--lr-color-success) 8%, transparent)`)
+for the drag-accept state; `--lr-file-input-reject-border-color` (default `var(--lr-color-danger)`)
+and `--lr-file-input-reject-bg` (default `color-mix(in srgb, var(--lr-color-danger) 8%,
+transparent)`) for drag-reject. All four are inline `var()` fallbacks at the point of use, settable
+on the element or any ancestor, so a consumer can retint just this dropzone's drag highlight without
+hijacking the shared `--lr-color-success`/`--lr-color-danger` tokens used elsewhere. Plus shared
+tokens — `--lr-space-xs`, `--lr-space-l`,
 `--lr-color-border`, `--lr-radius`, `--lr-color-surface`, `--lr-color-text-quiet`,
-`--lr-color-success` (drag-accept state), `--lr-color-danger` (drag-reject state),
 `--lr-focus-ring-width/-color/-offset` (`[part="base"]:focus-visible` outline),
 `--lr-opacity-disabled` (`:host([disabled])` dimming).
 

@@ -25,8 +25,11 @@ drag* over a highlighted passage never activates it — the selection-in-progres
 to tell that apart from a genuine activation click.
 
 **Properties:** `src` and `name` are strings. `page: number = 1` is the one-based current page and
-`zoom: number = 1` is clamped to `0.25`–`4`. `anchorKinds` is a readonly `['page', 'text-quote',
-'region']` (this viewer's supported `LyraAnchor.kind` values for the shared anchor-target contract).
+`zoom: number = 1` is clamped to `0.25`–`4`. `maxHeight: string = ''` (attribute `max-height`) is a
+CSS length that, once set, overrides `--lr-pdf-viewer-height` — the block size of the virtualized
+page list — declaratively, writing it inline on `[part="base"]`. `anchorKinds` is a readonly
+`['page', 'text-quote', 'region']` (this viewer's supported `LyraAnchor.kind` values for the shared
+anchor-target contract).
 
 **Events:**
 - `lr-render-error` — `detail: { error }` — fetching, parsing, or rendering (page canvas or text
@@ -77,7 +80,8 @@ matched against the element the selected text originates in:
 `lr-pdf-viewer::part(text-span)::selection { background: … }`.
 
 **Themeable custom properties:** `--lr-pdf-viewer-height` (default `var(--lr-size-24rem)`) — block
-size of the virtualized page list (`[part="pages"]`). Everything below the page list is retuned
+size of the virtualized page list (`[part="pages"]`); also settable via the `maxHeight` property,
+which writes this token inline on `[part="base"]`. Everything below the page list is retuned
 through the exported parts above rather than through dedicated custom properties.
 
 **Optional peer dependency:** install `pdfjs-dist` with `pnpm add pdfjs-dist`. The component registers
