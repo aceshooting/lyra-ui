@@ -170,7 +170,7 @@ export class LyraLocalePicker extends LyraElement<LyraLocalePickerEventMap> {
   /** Each row's leading `<lr-flag>`. The composition recipe this component supersedes
    *  (`lr-popover` + `lr-flag`) already pairs a locale switcher with flags by convention --
    *  defaulting to `true` keeps that continuity; set `false` for text-only rows. */
-  @property({ type: Boolean, converter: trueDefaultBooleanConverter }) showFlags = true;
+  @property({ attribute: 'show-flags', type: Boolean, converter: trueDefaultBooleanConverter }) showFlags = true;
 
   @property() label = '';
   @property() hint = '';
