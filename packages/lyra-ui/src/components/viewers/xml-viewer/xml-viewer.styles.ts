@@ -80,8 +80,13 @@ export const styles = css`
     margin-inline: var(--lr-space-xs);
   }
   [part='toggle'] {
-    inline-size: var(--lr-icon-button-size);
-    block-size: var(--lr-icon-button-size);
+    /* Keep the glyph compact while giving the interactive box the shared minimum target size.
+       --lr-icon-button-size is a floor, not a fixed size, so lowering it never squashes the
+       chevron below its own box. */
+    inline-size: var(--lr-size-1-25rem);
+    block-size: var(--lr-size-1-25rem);
+    min-inline-size: var(--lr-icon-button-size);
+    min-block-size: var(--lr-icon-button-size);
     flex: 0 0 auto;
     display: inline-flex;
     align-items: center;

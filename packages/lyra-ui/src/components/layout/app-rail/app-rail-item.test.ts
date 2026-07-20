@@ -26,6 +26,22 @@ it('hardens links opened in a new browsing context', async () => {
   expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('rel')).to.equal('noopener noreferrer');
 });
 
+it('floors the row at the shared target size without inflating it from the icon box', async () => {
+  const el = (await fixture(html`
+    <lr-app-rail-item href="/inbox" aria-label="Inbox">
+      <span slot="icon" aria-hidden="true">📥</span>Inbox
+    </lr-app-rail-item>
+  `)) as LyraAppRailItem;
+  const icon = el.shadowRoot!.querySelector('[part="icon"]')!;
+  expect(getComputedStyle(icon).minInlineSize).to.equal('40px');
+  expect(icon.getBoundingClientRect().width).to.be.at.least(40);
+  // The row's tappable height comes from [part='base']'s own min-block-size, not from the icon.
+  // Flooring the icon's block axis too would add nothing for target size while forcing every row
+  // to --lr-icon-button-size + 2x --lr-space-s (56px at defaults) -- a density regression.
+  expect(getComputedStyle(icon).minBlockSize).to.equal('auto');
+  expect(el.shadowRoot!.querySelector('[part="base"]')!.getBoundingClientRect().height).to.equal(40);
+});
+
 it('is accessible', async () => {
   const el = (await fixture(html`<lr-app-rail-item href="/home" aria-label="Home">Home</lr-app-rail-item>`)) as LyraAppRailItem;
   await expect(el).to.be.accessible();

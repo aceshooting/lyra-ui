@@ -44,6 +44,9 @@ export const styles = css`
     flex: 0 0 auto;
     align-items: center;
     justify-content: center;
+    /* Deliberately floors only the inline axis. The row's tappable height is already guaranteed by
+       [part='base']'s own min-block-size above, so flooring the icon's block axis too would add
+       nothing for target size while forcing every row to --lr-icon-button-size + 2x --lr-space-s. */
     inline-size: var(--lr-icon-button-size);
     min-inline-size: var(--lr-icon-button-size);
   }

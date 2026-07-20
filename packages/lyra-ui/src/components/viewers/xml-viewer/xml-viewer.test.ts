@@ -153,6 +153,32 @@ describe('node cap', () => {
   });
 });
 
+describe('toggle geometry', () => {
+  it('floors the node toggle at the shared icon-button target size on both axes', async () => {
+    const el = (await fixture(html`<lr-xml-viewer .xml=${SIMPLE_XML}></lr-xml-viewer>`)) as LyraXmlViewer;
+    await el.updateComplete;
+    const toggle = el.shadowRoot!.querySelector('[part="toggle"]') as HTMLButtonElement;
+    const style = getComputedStyle(toggle);
+    expect(style.minInlineSize).to.equal('40px');
+    expect(style.minBlockSize).to.equal('40px');
+    const box = toggle.getBoundingClientRect();
+    expect(box.width).to.be.at.least(40);
+    expect(box.height).to.be.at.least(40);
+  });
+
+  it('keeps the chevron box at its own size when --lr-icon-button-size is themed below it', async () => {
+    const el = (await fixture(html`
+      <lr-xml-viewer .xml=${SIMPLE_XML} style="--lr-icon-button-size: 1rem"></lr-xml-viewer>
+    `)) as LyraXmlViewer;
+    await el.updateComplete;
+    const box = el.shadowRoot!.querySelector('[part="toggle"]')!.getBoundingClientRect();
+    // The target size is a floor, so lowering it never squashes the glyph box below its own
+    // 1.25rem size (the same shape lr-code-block's toggle already uses).
+    expect(box.width).to.equal(20);
+    expect(box.height).to.equal(20);
+  });
+});
+
 describe('accessibility', () => {
   it('is accessible with an expanded tree and copyable on', async () => {
     const el = await fixture(html`<lr-xml-viewer name="feed.rss" .xml=${RSS_XML} copyable></lr-xml-viewer>`);
