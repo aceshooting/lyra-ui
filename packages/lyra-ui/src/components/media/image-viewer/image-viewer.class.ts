@@ -128,6 +128,22 @@ export class LyraImageViewer extends DocumentAnchorTarget(LyraImageViewerBase) {
   /** Multiplier over the fit-derived base scale, delegated to the embedded zoomable-frame. */
   // numeric-guard-exempt: pure pass-through to <lr-zoomable-frame>, which already normalizes it via its own safeZoom
   @property({ type: Number, reflect: true }) zoom = 1;
+
+  /** Passed through to the embedded `<lr-zoomable-frame>` as `.minZoom`. Same default as
+   *  `<lr-zoomable-frame>` itself. Mirrors `<lr-lightbox>`'s own `minZoom` (name, default,
+   *  pass-through shape) -- both wrap the exact same `<lr-zoomable-frame>` pan/zoom surface. */
+  // numeric-guard-exempt: pure pass-through to <lr-zoomable-frame>, which already normalizes it via its own safeMinZoom
+  @property({ type: Number, attribute: 'min-zoom' }) minZoom = 0.5;
+
+  /** Passed through to the embedded `<lr-zoomable-frame>` as `.maxZoom`. Mirrors
+   *  `<lr-lightbox>`'s own `maxZoom`. */
+  // numeric-guard-exempt: pure pass-through to <lr-zoomable-frame>, which already normalizes it via its own safeMaxZoom
+  @property({ type: Number, attribute: 'max-zoom' }) maxZoom = 4;
+
+  /** Passed through to the embedded `<lr-zoomable-frame>` as `.zoomStep`. Mirrors
+   *  `<lr-lightbox>`'s own `zoomStep`. */
+  // numeric-guard-exempt: pure pass-through to <lr-zoomable-frame>, which already normalizes it via its own safeZoomStep
+  @property({ type: Number, attribute: 'zoom-step' }) zoomStep = 0.25;
   /** Clockwise rotation in 90-degree steps. */
   @property({ type: Number, reflect: true }) rotation: ImageRotation = 0;
   /** Enables region drawing via pointer or keyboard. */
@@ -368,7 +384,15 @@ export class LyraImageViewer extends DocumentAnchorTarget(LyraImageViewerBase) {
       return html`<p class="empty-note">${this.localize('documentPreviewEmpty', undefined, { type: this.localize('documentPreviewTypeImage') })}</p>`;
     }
     const safeSrc = safeMediaSrc(this.src);
-    return html`<lr-zoomable-frame part="frame" exportparts="viewport,content,controls" .zoom=${this.zoom} @lr-zoom-change=${this.onFrameZoomChange}>
+    return html`<lr-zoomable-frame
+      part="frame"
+      exportparts="viewport,content,controls"
+      .zoom=${this.zoom}
+      .minZoom=${this.minZoom}
+      .maxZoom=${this.maxZoom}
+      .zoomStep=${this.zoomStep}
+      @lr-zoom-change=${this.onFrameZoomChange}
+    >
       <div
         part="image-wrapper"
         tabindex=${this.annotatable ? '0' : '-1'}

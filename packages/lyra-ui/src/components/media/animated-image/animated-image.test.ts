@@ -213,6 +213,28 @@ describe('play / playing / reduced-motion arbitration', () => {
     }
   });
 
+  it('respect-reduced-motion="false" (plain HTML attribute) also lets play take effect under OS reduced motion', async () => {
+    const stub = stubReducedMotion(true);
+    try {
+      // Unlike `?respect-reduced-motion=${false}` (a boolean directive -- see the comment above),
+      // a plain literal attribute value must drive this true-defaulting boolean property back to
+      // false without requiring a JS property binding.
+      const el = (await fixture(
+        html`<lr-animated-image alt="Pixel" respect-reduced-motion="false"></lr-animated-image>`,
+      )) as LyraAnimatedImage;
+      expect(el.respectReducedMotion).to.be.false;
+      await loaded(el);
+      el.play = true;
+      await el.updateComplete;
+
+      expect(el.playing).to.be.true;
+      const button = el.shadowRoot!.querySelector('[part="play-button"]') as HTMLButtonElement;
+      expect(button.disabled).to.be.false;
+    } finally {
+      stub.restore();
+    }
+  });
+
   it('reacts live to an OS-level reduced-motion preference change while already connected', async () => {
     const stub = stubReducedMotion(false);
     try {
@@ -391,6 +413,27 @@ describe('focus / blur', () => {
     const blurEvent = await blurPromise;
     expect(blurEvent.bubbles).to.be.true;
     expect(blurEvent.composed).to.be.true;
+  });
+});
+
+describe('play-button hover specificity', () => {
+  it('a ::part(play-button):hover override wins without needing !important', async () => {
+    const style = document.createElement('style');
+    style.textContent = `lr-animated-image::part(play-button):hover { color: rgb(1, 2, 3); }`;
+    document.head.appendChild(style);
+    try {
+      const el = (await fixture(html`<lr-animated-image alt="Pixel"></lr-animated-image>`)) as LyraAnimatedImage;
+      // jsdom/browser test runners don't synthesize a real :hover pseudo-class from a dispatched
+      // event, so assert via the internal rule's specificity instead of the actual paint --
+      // mirrors lr-attachment-trigger's identical `trigger-button hover specificity` test.
+      const internalSheet = (el.shadowRoot!.adoptedStyleSheets ?? [])
+        .flatMap((sheet) => Array.from(sheet.cssRules))
+        .map((rule) => rule.cssText)
+        .find((text) => text.includes(':hover') && text.includes('play-button'));
+      expect(internalSheet).to.contain(':where(');
+    } finally {
+      style.remove();
+    }
   });
 });
 

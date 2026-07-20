@@ -107,6 +107,33 @@ describe('document preview integration', () => {
   });
 });
 
+describe('previewable', () => {
+  it('renders the preview button by default (previewable=true) when a preview src is available', async () => {
+    const el = (await fixture(html`
+      <lr-attachment-chip
+        name="report.pdf"
+        mime-type="application/pdf"
+        preview-src="https://example.test/report.pdf"
+      ></lr-attachment-chip>
+    `)) as LyraAttachmentChip;
+    expect(el.previewable).to.be.true;
+    expect(el.shadowRoot!.querySelectorAll('[part="preview-button"]').length).to.equal(1);
+  });
+
+  it('previewable="false" (plain HTML attribute) hides the preview button even with a preview src available', async () => {
+    const el = (await fixture(html`
+      <lr-attachment-chip
+        name="report.pdf"
+        mime-type="application/pdf"
+        preview-src="https://example.test/report.pdf"
+        previewable="false"
+      ></lr-attachment-chip>
+    `)) as LyraAttachmentChip;
+    expect(el.previewable).to.be.false;
+    expect(el.shadowRoot!.querySelectorAll('[part="preview-button"]').length).to.equal(0);
+  });
+});
+
 it('reflects status changes onto the host attribute', async () => {
   const el = (await fixture(html`<lr-attachment-chip></lr-attachment-chip>`)) as LyraAttachmentChip;
   el.status = 'error';
@@ -423,7 +450,15 @@ describe('remove affordance', () => {
     const el = (await fixture(
       html`<lr-attachment-chip name="a.txt" .removable=${false}></lr-attachment-chip>`,
     )) as LyraAttachmentChip;
-    expect(el.shadowRoot!.querySelector('[part="remove-button"]')).to.not.exist;
+    expect(el.shadowRoot!.querySelectorAll('[part="remove-button"]').length).to.equal(0);
+  });
+
+  it('removable="false" (plain HTML attribute) also hides the remove button', async () => {
+    const el = (await fixture(
+      html`<lr-attachment-chip name="a.txt" removable="false"></lr-attachment-chip>`,
+    )) as LyraAttachmentChip;
+    expect(el.removable).to.be.false;
+    expect(el.shadowRoot!.querySelectorAll('[part="remove-button"]').length).to.equal(0);
   });
 
   it('has an aria-label of "Remove {filename}"', async () => {
@@ -459,6 +494,24 @@ describe('hit area', () => {
       expect(btn, `[part="${part}"] should render`).to.exist;
       expect(getComputedStyle(btn).minInlineSize, `${part} minInlineSize`).to.equal('40px');
       expect(getComputedStyle(btn).minBlockSize, `${part} minBlockSize`).to.equal('40px');
+    }
+  });
+
+  it('shrinks retry-button/preview-button/remove-button to match the compact thumbnail size, not the full icon-button floor', async () => {
+    const el = (await fixture(html`
+      <lr-attachment-chip
+        compact
+        name="invoice.pdf"
+        status="error"
+        .file=${makeFile('invoice.pdf', 'text/plain')}
+      ></lr-attachment-chip>
+    `)) as LyraAttachmentChip;
+    for (const part of ['retry-button', 'preview-button', 'remove-button']) {
+      const btn = el.shadowRoot!.querySelector(`[part="${part}"]`) as HTMLElement;
+      // Same size the compact thumbnail renders at (--lr-attachment-chip-compact-thumbnail-size,
+      // 1.75rem/28px) -- not the unshrunk 40px --lr-icon-button-size floor a non-compact chip uses.
+      expect(getComputedStyle(btn).minInlineSize, `${part} minInlineSize`).to.equal('28px');
+      expect(getComputedStyle(btn).minBlockSize, `${part} minBlockSize`).to.equal('28px');
     }
   });
 });

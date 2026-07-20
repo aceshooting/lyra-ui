@@ -264,6 +264,40 @@ it('finishes immediately at creation time (still emitting lr-start then lr-finis
   }
 });
 
+it('respect-reduced-motion="false" (plain HTML attribute) plays through normally instead of instantly finishing when play is already true under reduced motion', async () => {
+  const stub = stubReducedMotion(true);
+  const el = document.createElement('lr-animation') as LyraAnimation;
+  // A plain literal attribute value -- not a JS property/boolean-directive binding -- must drive
+  // this true-defaulting boolean property back to false. Set before connecting, mirroring the
+  // sibling reduced-motion test above.
+  el.setAttribute('respect-reduced-motion', 'false');
+  expect(el.respectReducedMotion).to.be.false;
+  el.name = 'fade-in';
+  el.iterations = 5;
+  el.play = true;
+  const p = document.createElement('p');
+  p.textContent = 'content';
+  el.append(p);
+  try {
+    let finished = false;
+    el.addEventListener('lr-finish', () => (finished = true));
+
+    const startEvent = oneEvent(el, 'lr-start');
+    document.body.append(el);
+    await startEvent;
+    await el.updateComplete;
+
+    // Real (non-reduced) playback never resolves synchronously at creation time -- unlike the
+    // identical reduced-motion setup in the sibling test above, no lr-finish has fired
+    // immediately after lr-start.
+    expect(finished).to.be.false;
+    expect(el.play).to.be.true;
+  } finally {
+    stub.restore();
+    el.remove();
+  }
+});
+
 it('reacts live to an OS-level reduced-motion preference change while already connected, rebuilding the Animation (re-fires lr-start/lr-finish)', async () => {
   const stub = stubReducedMotion(false);
   try {

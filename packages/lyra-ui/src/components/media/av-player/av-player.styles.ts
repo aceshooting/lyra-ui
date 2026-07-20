@@ -70,23 +70,34 @@ export const styles = css`
     background: var(--lr-color-surface-raised);
     cursor: pointer;
   }
+  [part='timeline']:hover {
+    border-color: var(--lr-color-brand);
+  }
   [part='timeline'] canvas {
     display: block;
     inline-size: 100%;
     block-size: 100%;
   }
+  /* Inline var() fallbacks (rather than :host-declared properties, which every instance would
+     re-declare and so shadow any ancestor value) so a consumer can retint just this component's
+     highlight-marker tones without hijacking the shared --lr-color-success/warning/danger/brand
+     tokens used everywhere else in their theme. Unset, each falls back to the same color-mix()
+     this rendered before the hatch existed, so the default rendering is unchanged. */
   [part='timeline-marker'] {
     position: absolute;
     inset-block: 0;
     border: none;
     padding: 0;
     cursor: pointer;
-    background: color-mix(in srgb, var(--lr-color-brand) 35%, transparent);
+    background: var(--lr-av-player-marker-bg, color-mix(in srgb, var(--lr-color-brand) 35%, transparent));
   }
-  [part='timeline-marker'][data-tone='success'] { background: color-mix(in srgb, var(--lr-color-success) 35%, transparent); }
-  [part='timeline-marker'][data-tone='warning'] { background: color-mix(in srgb, var(--lr-color-warning) 35%, transparent); }
-  [part='timeline-marker'][data-tone='danger'] { background: color-mix(in srgb, var(--lr-color-danger) 35%, transparent); }
-  [part='timeline-marker'][data-tone='neutral'] { background: color-mix(in srgb, var(--lr-color-text) 25%, transparent); }
+  [part='timeline-marker']:hover {
+    filter: brightness(1.2);
+  }
+  [part='timeline-marker'][data-tone='success'] { background: var(--lr-av-player-marker-success-bg, color-mix(in srgb, var(--lr-color-success) 35%, transparent)); }
+  [part='timeline-marker'][data-tone='warning'] { background: var(--lr-av-player-marker-warning-bg, color-mix(in srgb, var(--lr-color-warning) 35%, transparent)); }
+  [part='timeline-marker'][data-tone='danger'] { background: var(--lr-av-player-marker-danger-bg, color-mix(in srgb, var(--lr-color-danger) 35%, transparent)); }
+  [part='timeline-marker'][data-tone='neutral'] { background: var(--lr-av-player-marker-neutral-bg, color-mix(in srgb, var(--lr-color-text) 25%, transparent)); }
   [part='timeline-marker'][data-active] {
     outline: var(--lr-border-width-medium) solid var(--lr-av-player-marker-active-color, var(--lr-color-brand));
     outline-offset: calc(-1 * var(--lr-border-width-medium));
@@ -118,6 +129,11 @@ export const styles = css`
     cursor: pointer;
     color: var(--lr-color-text);
     font: inherit;
+  }
+  /* Declared before ::part(cue-current) below so the current cue's own background always wins on
+     specificity-tie source order, even while it's also being hovered. */
+  lr-virtual-list::part(cue):hover {
+    background: var(--lr-color-brand-quiet);
   }
   lr-virtual-list::part(cue-current) {
     background: var(--lr-av-player-cue-current-bg, var(--lr-color-brand-quiet));

@@ -210,6 +210,9 @@ export class LyraFlag extends LyraElement {
   }
 
   protected override willUpdate(changed: PropertyValues<this>): void {
+    super.willUpdate(changed); // LyraElement itself is a no-op today, but a future mixin layered
+    // underneath (the same pattern DocumentAnchorTarget already uses for e.g. image-viewer's
+    // willUpdate) would otherwise silently stop running for <lr-flag>.
     // `this.hasUpdated` (not just `changed`) forces this body to run once on
     // the very first update even when none of `country`/`language`/`src` is
     // ever set: an unset optional property's first "assignment" is

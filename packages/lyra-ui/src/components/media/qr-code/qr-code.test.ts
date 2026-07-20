@@ -1,4 +1,5 @@
 import { aTimeout, fixture, expect, html, waitUntil } from '@open-wc/testing';
+import { LitElement, type PropertyValues } from 'lit';
 import './qr-code.js';
 import type { LyraQrCode, LyraQrCodeErrorCorrection } from './qr-code.js';
 
@@ -306,6 +307,57 @@ describe('lr-qr-code', () => {
     el.value = 'hello';
     await waitForPart(el, 'error');
     expect(el.shadowRoot!.querySelector('[part="error"]')!.textContent).to.equal('Bibliothèque manquante.');
+  });
+
+  it('chains updated() to super.updated() so a mixin layered under LyraElement would still run', async () => {
+    // No shared mixin actually overrides updated() today, so the only way to prove the chain is
+    // live (rather than grepping source text for the call) is to patch the base-class hook itself
+    // -- the exact hook a future mixin would extend -- and confirm it actually fires.
+    const hadOwn = Object.prototype.hasOwnProperty.call(LitElement.prototype, 'updated');
+    const original = (LitElement.prototype as unknown as { updated?: (changed: PropertyValues) => void })
+      .updated;
+    let called = false;
+    (LitElement.prototype as unknown as { updated: (changed: PropertyValues) => void }).updated = function (
+      this: LitElement,
+      changed: PropertyValues,
+    ) {
+      called = true;
+      original?.call(this, changed);
+    };
+    try {
+      const el = (await fixture(html`<lr-qr-code></lr-qr-code>`)) as LyraQrCode;
+      await el.updateComplete;
+      expect(called).to.be.true;
+    } finally {
+      if (hadOwn) {
+        (LitElement.prototype as unknown as { updated: unknown }).updated = original;
+      } else {
+        delete (LitElement.prototype as unknown as { updated?: unknown }).updated;
+      }
+    }
+  });
+
+  it('skips the canvas redraw while scrolled off-screen and catches up once visible again', async () => {
+    const el = (await fixture(html`<lr-qr-code size="90"></lr-qr-code>`)) as LyraQrCode;
+    installFakeLoader(
+      el,
+      fakeApi(() => ({ modules: fakeModules(true) })),
+    );
+    el.value = 'hello';
+    await waitForPart(el, 'canvas');
+    const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
+    expect(parseInt(canvas.style.width, 10)).to.equal(90);
+
+    (el as unknown as { visible: boolean }).visible = false;
+    el.size = 150;
+    await el.updateComplete;
+    // The canvas geometry-changing redraw was skipped entirely while off-screen.
+    expect(parseInt(canvas.style.width, 10)).to.equal(90);
+
+    (el as unknown as { visible: boolean }).visible = true;
+    (el as unknown as { draw(): void }).draw();
+    await el.updateComplete;
+    expect(parseInt(canvas.style.width, 10)).to.equal(150);
   });
 
   it('fits comfortably inside a 320px-narrow container at the default size', async () => {

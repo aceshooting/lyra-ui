@@ -2,6 +2,7 @@ import { fixture, expect, html, oneEvent } from '@open-wc/testing';
 import './image-viewer.js';
 import type { LyraImageViewer, ImageRotation } from './image-viewer.js';
 import type { LyraHighlight } from '../../viewers/document-viewer/anchors.js';
+import type { LyraZoomableFrame } from '../zoomable-frame/zoomable-frame.class.js';
 import { styles } from './image-viewer.styles.js';
 
 const PNG_SRC = 'https://example.test/photo.png';
@@ -97,6 +98,20 @@ describe('zoom, rotation, and fit', () => {
     el.zoomIn();
     const event = await eventPromise;
     expect(event.detail).to.deep.equal({ zoom: 1.25 });
+  });
+
+  it('passes min-zoom/max-zoom/zoom-step through to the embedded lr-zoomable-frame, mirroring lr-lightbox', async () => {
+    const el = (await fixture(html`
+      <lr-image-viewer src=${PNG_SRC} min-zoom="0.25" max-zoom="8" zoom-step="0.5"></lr-image-viewer>
+    `)) as LyraImageViewer;
+    await el.updateComplete;
+    expect(el.minZoom).to.equal(0.25);
+    expect(el.maxZoom).to.equal(8);
+    expect(el.zoomStep).to.equal(0.5);
+    const frame = el.shadowRoot!.querySelector('lr-zoomable-frame') as LyraZoomableFrame;
+    expect(frame.minZoom).to.equal(0.25);
+    expect(frame.maxZoom).to.equal(8);
+    expect(frame.zoomStep).to.equal(0.5);
   });
 
   it('rotate() advances 90deg clockwise and wraps at 360, emitting lr-rotation-change', async () => {
@@ -555,5 +570,10 @@ describe('native control theming', () => {
       expect(css, `${part} must get a hover rule`).to.match(new RegExp(`\\[part='${part}'\\]:hover`));
       expect(css, `${part} must get a focus-visible rule`).to.match(new RegExp(`\\[part='${part}'\\]:focus-visible[^{]*\\{[^}]*outline:`));
     }
+  });
+
+  it('gives the clickable highlight boxes a hover state matching their focus-visible affordance', () => {
+    const css = styles.cssText.replace(/\s+/g, ' ');
+    expect(css).to.match(/\[part='highlight'\]:hover/);
   });
 });

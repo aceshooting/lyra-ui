@@ -269,14 +269,14 @@ describe('accessible name (label / host aria-label precedence)', () => {
     expect(base.getAttribute('aria-label')).to.equal('Team members');
   });
 
-  it('prefers the label prop over a host aria-label when both are set', async () => {
+  it('prefers a host aria-label over the label prop when both are set (regression)', async () => {
     const el = (await fixture(html`
       <lr-avatar-group label="Team members" aria-label="Something else">
         <lr-avatar initials="AB"></lr-avatar>
       </lr-avatar-group>
     `)) as LyraAvatarGroup;
     const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
-    expect(base.getAttribute('aria-label')).to.equal('Team members');
+    expect(base.getAttribute('aria-label')).to.equal('Something else');
   });
 
   it('falls back to a host aria-label when label is unset', async () => {

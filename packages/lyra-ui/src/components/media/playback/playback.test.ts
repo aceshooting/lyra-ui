@@ -1,4 +1,5 @@
 import { fixture, expect, html, oneEvent, aTimeout } from '@open-wc/testing';
+import { LitElement, type PropertyValues } from 'lit';
 import './playback.js';
 import type { LyraPlayback } from './playback.js';
 import { styles } from './playback.styles.js';
@@ -50,6 +51,20 @@ it('stops at the last index when loop is false and not-looping is reached', asyn
     html`<lr-playback length="2" interval-ms="20" index="1"></lr-playback>`,
   )) as LyraPlayback;
   el.loop = false;
+  el.play();
+  await aTimeout(30);
+  expect(el.playing).to.be.false;
+  expect(el.index).to.equal(1);
+});
+
+it('stops at the last index when loop="false" is set as a plain HTML attribute', async () => {
+  // Regression test: `loop` defaults `true`, and Lit's default presence-based `type: Boolean`
+  // converter cannot distinguish an absent attribute from the literal string "false" -- only a
+  // `true`-aware converter parses the literal attribute form correctly.
+  const el = (await fixture(
+    html`<lr-playback length="2" interval-ms="20" index="1" loop="false"></lr-playback>`,
+  )) as LyraPlayback;
+  expect(el.loop).to.be.false;
   el.play();
   await aTimeout(30);
   expect(el.playing).to.be.false;
@@ -444,7 +459,51 @@ it('gives the play/pause button the shared minimum hit area', async () => {
 it('gives the enabled range slider a pointer cursor and a hover affordance matching the play button', () => {
   const css = styles.cssText.replace(/\s+/g, ' ');
   expect(css).to.match(/\[part='slider'\]\s*\{[^}]*cursor:\s*pointer/);
-  expect(css).to.match(/\[part='slider'\]:hover:not\(:disabled\)\s*\{[^}]*filter:\s*brightness\(var\(--lr-hover-brightness\)\)/);
+  expect(css).to.match(/:where\(\[part='slider'\]\):hover:where\(:not\(:disabled\)\)\s*\{[^}]*filter:\s*brightness\(var\(--lr-hover-brightness\)\)/);
+});
+
+it('chains willUpdate() to super.willUpdate() so a mixin layered under LyraElement would still run', async () => {
+  // No shared mixin actually overrides willUpdate() today, so the only way to prove the chain is
+  // live (rather than grepping source text for the call) is to patch the base-class hook itself --
+  // the exact hook a future mixin would extend -- and confirm it actually fires.
+  const hadOwn = Object.prototype.hasOwnProperty.call(LitElement.prototype, 'willUpdate');
+  const original = (LitElement.prototype as unknown as { willUpdate?: (changed: PropertyValues) => void })
+    .willUpdate;
+  let called = false;
+  (LitElement.prototype as unknown as { willUpdate: (changed: PropertyValues) => void }).willUpdate = function (
+    this: LitElement,
+    changed: PropertyValues,
+  ) {
+    called = true;
+    original?.call(this, changed);
+  };
+  try {
+    const el = (await fixture(html`<lr-playback length="3"></lr-playback>`)) as LyraPlayback;
+    await el.updateComplete;
+    expect(called).to.be.true;
+  } finally {
+    if (hadOwn) {
+      (LitElement.prototype as unknown as { willUpdate: unknown }).willUpdate = original;
+    } else {
+      delete (LitElement.prototype as unknown as { willUpdate?: unknown }).willUpdate;
+    }
+  }
+});
+
+describe('slider hover specificity', () => {
+  it('a ::part(slider):hover override wins without needing !important', async () => {
+    // The internal hover rule wraps its extra pseudo-classes in :where(...) so its specificity
+    // stays at (0,1,0) -- below a consumer's own ::part(slider):hover ((0,1,1)) -- rather than
+    // the (0,3,0) an unwrapped [part='slider']:hover:not(:disabled) would have, which would beat
+    // that consumer override and force !important. Same regression this library already fixed for
+    // <lr-attachment-trigger>.
+    const el = (await fixture(html`<lr-playback length="3"></lr-playback>`)) as LyraPlayback;
+    const internalSheet = (el.shadowRoot!.adoptedStyleSheets ?? [])
+      .flatMap((sheet) => Array.from(sheet.cssRules))
+      .map((rule) => rule.cssText)
+      .find((text) => text.includes(':hover') && /\[part=['"]?slider['"]?\]/.test(text));
+    expect(internalSheet).to.contain(':where(');
+  });
 });
 
 describe('string localization', () => {

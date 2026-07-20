@@ -187,7 +187,7 @@ export class LyraAvatarGroup extends LyraElement<LyraAvatarGroupEventMap> {
     // (max <= 0) — there's no selector that can express "first visible thing regardless of DOM
     // position", so the margin override is computed here instead of in CSS.
     const badgeIsFirstVisible = overflowing && hiddenCount === this.childCount;
-    const accessibleLabel = this.label || this.getAttribute('aria-label') || nothing;
+    const accessibleLabel = this.getAttribute('aria-label') || this.label || nothing;
 
     return html`
       <div part="base" role="group" aria-label=${accessibleLabel}>

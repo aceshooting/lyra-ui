@@ -25,6 +25,15 @@ export const styles = css`
     position: absolute;
     inset: 0;
   }
+  /* Mirrors docx-viewer.styles.ts's identical [part='error'] treatment for the same "optional
+     peer dependency missing" failure shape. */
+  [part='error'] {
+    margin: 0;
+    padding: var(--lr-space-l);
+    color: var(--lr-color-danger);
+    font-size: var(--lr-font-size-md-sm);
+    text-align: center;
+  }
   [part='legend'] {
     position: absolute;
     inset-block-end: var(--lr-space-s);

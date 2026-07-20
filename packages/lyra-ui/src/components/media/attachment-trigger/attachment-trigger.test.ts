@@ -197,6 +197,14 @@ it('forwards multiple to the hidden input, defaulting to true', async () => {
   expect(hiddenInput(el)!.multiple).to.be.false;
 });
 
+it('multiple="false" (plain HTML attribute) also forwards false to the hidden input', async () => {
+  const el = (await fixture(
+    html`<lr-attachment-trigger multiple="false"></lr-attachment-trigger>`,
+  )) as LyraAttachmentTrigger;
+  expect(el.multiple).to.be.false;
+  expect(hiddenInput(el)!.multiple).to.be.false;
+});
+
 it('disables the trigger button and the hidden input, and ignores click activation, while disabled', async () => {
   const el = (await fixture(
     html`<lr-attachment-trigger disabled></lr-attachment-trigger>`,

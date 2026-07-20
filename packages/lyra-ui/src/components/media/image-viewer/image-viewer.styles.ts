@@ -127,6 +127,9 @@ export const styles = css`
     outline: var(--lr-focus-ring-width) solid var(--lr-image-viewer-highlight-active-color, var(--lr-color-brand));
     outline-offset: var(--lr-focus-ring-offset);
   }
+  [part='highlight']:hover {
+    filter: brightness(var(--lr-hover-brightness));
+  }
   [part='highlight']:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);

@@ -263,6 +263,24 @@ it('accepts pasted files when paste support is enabled', async () => {
   expect(event.defaultPrevented).to.be.true;
 });
 
+it('defaults paste to true, reflecting the attribute', async () => {
+  const el = (await fixture(html`<lr-file-input></lr-file-input>`)) as LyraFileInput;
+  expect(el.paste).to.be.true;
+  expect(el.hasAttribute('paste')).to.be.true;
+});
+
+it('honors the plain-HTML attribute form paste="false" (regression -- a true-defaulting boolean property needs a custom converter)', async () => {
+  const el = (await fixture(html`<lr-file-input paste="false"></lr-file-input>`)) as LyraFileInput;
+  expect(el.paste).to.be.false;
+  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  const event = new Event('paste', { bubbles: true, cancelable: true });
+  Object.defineProperty(event, 'clipboardData', { value: { files: [makeFile('clip.txt', 'text/plain')] } });
+  let fired = false;
+  el.addEventListener('lr-files', () => (fired = true));
+  base.dispatchEvent(event);
+  expect(fired, 'paste="false" must actually disable clipboard paste, not just default to true').to.be.false;
+});
+
 it('enables native directory selection when requested', async () => {
   const el = (await fixture(html`<lr-file-input directory></lr-file-input>`)) as LyraFileInput;
   expect(el.shadowRoot!.querySelector('input[type="file"]')!.hasAttribute('webkitdirectory')).to.be.true;
@@ -367,6 +385,53 @@ it('adds a :focus-visible outline to the dropzone base using the shared focus-ri
   const css = styles.cssText.replace(/\s+/g, ' ');
   expect(css).to.include(
     "[part='base']:focus-visible { outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color); outline-offset: var(--lr-focus-ring-offset); }",
+  );
+});
+
+it('gives the dropzone base a :hover treatment, so a mouse user gets feedback before clicking (regression)', () => {
+  const css = styles.cssText.replace(/\s+/g, ' ');
+  expect(css).to.match(/\[part='base'\]:hover/);
+});
+
+it('lets a consumer retint the drag accept/reject highlight independently via --lr-file-input-accept-*/--lr-file-input-reject-*', async () => {
+  const el = (await fixture(html`
+    <lr-file-input
+      style="--lr-file-input-accept-border-color: rgb(10, 20, 30); --lr-file-input-accept-bg: rgb(11, 21, 31); --lr-file-input-reject-border-color: rgb(40, 50, 60); --lr-file-input-reject-bg: rgb(41, 51, 61)"
+    ></lr-file-input>
+  `)) as LyraFileInput;
+  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+
+  dragEnterWith(base, [makeFile('a.csv', 'text/csv')]);
+  await el.updateComplete;
+  expect(base.getAttribute('data-drag-state')).to.equal('accept');
+  expect(getComputedStyle(base).borderTopColor).to.equal('rgb(10, 20, 30)');
+  expect(getComputedStyle(base).backgroundColor).to.equal('rgb(11, 21, 31)');
+
+  el.allowedMimeTypes = ['application/pdf'];
+  await el.updateComplete;
+  dragEnterWith(base, [makeFile('a.csv', 'text/csv')]);
+  await el.updateComplete;
+  expect(base.getAttribute('data-drag-state')).to.equal('reject');
+  expect(getComputedStyle(base).borderTopColor).to.equal('rgb(40, 50, 60)');
+  expect(getComputedStyle(base).backgroundColor).to.equal('rgb(41, 51, 61)');
+});
+
+it('renders byte-identical drag accept/reject colors to the pre-hatch shared tokens when the component-scoped cssprops are unset', async () => {
+  function resolvedIn(root: ShadowRoot, declaration: string, property: string): string {
+    const probe = document.createElement('span');
+    probe.setAttribute('style', declaration);
+    root.appendChild(probe);
+    const value = getComputedStyle(probe).getPropertyValue(property);
+    probe.remove();
+    return value;
+  }
+  const el = (await fixture(html`<lr-file-input></lr-file-input>`)) as LyraFileInput;
+  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+
+  dragEnterWith(base, [makeFile('a.csv', 'text/csv')]);
+  await el.updateComplete;
+  expect(getComputedStyle(base).borderTopColor).to.equal(
+    resolvedIn(el.shadowRoot!, 'border-color: var(--lr-color-success)', 'border-top-color'),
   );
 });
 

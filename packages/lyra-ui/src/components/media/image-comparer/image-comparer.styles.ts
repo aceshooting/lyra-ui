@@ -91,9 +91,20 @@ export const styles = css`
     direction: ltr;
     cursor: ns-resize;
   }
+  [part='handle']:hover {
+    opacity: 0.01;
+  }
   [part='handle']:focus-visible {
     opacity: 0.01;
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);
+  }
+  /* [part='handle'] is a fully-transparent full-bleed native <input type="range"> --
+     the only visible drag affordance is [part='divider']'s thin line -- so 'this is
+     interactive' hover feedback has to land on the divider, not the invisible handle
+     itself (mirrors lr-split's [part='divider']:hover, adapted with :has() since here
+     the divider isn't itself the pointer target). */
+  [part='base']:has([part='handle']:hover) [part='divider'] {
+    background: var(--lr-color-brand);
   }
 `;

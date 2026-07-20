@@ -35,6 +35,15 @@ export const styles = css`
     inline-size: var(--lr-attachment-chip-compact-thumbnail-size);
     block-size: var(--lr-attachment-chip-compact-thumbnail-size);
   }
+  /* The action buttons must shrink alongside the thumbnail under compact -- otherwise their
+     unshrunk full --lr-icon-button-size footprint (below) ends up dictating the compact chip's
+     visible height instead of the smaller thumbnail. */
+  :host([compact]) [part='retry-button'],
+  :host([compact]) [part='preview-button'],
+  :host([compact]) [part='remove-button'] {
+    min-inline-size: var(--lr-attachment-chip-compact-thumbnail-size);
+    min-block-size: var(--lr-attachment-chip-compact-thumbnail-size);
+  }
   [part='meta'][hidden] {
     display: none;
   }

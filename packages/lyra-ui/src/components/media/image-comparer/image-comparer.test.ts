@@ -1,6 +1,7 @@
 import { expect, fixture, html, oneEvent } from '@open-wc/testing';
 import './image-comparer.js';
 import type { LyraImageComparer } from './image-comparer.js';
+import { styles } from './image-comparer.styles.js';
 
 it('renders before and after slots with a positioned divider', async () => {
   const el = (await fixture(html`
@@ -87,6 +88,11 @@ it('switches the native range handle to a vertical writing-mode so drag input ma
   // Pinned to ltr regardless of an ambient dir="rtl" so the handle's top-to-bottom value
   // progression always matches the divider's own always-top-anchored inset-block-start.
   expect(getComputedStyle(verticalHandle).direction).to.equal('ltr');
+});
+
+it('gives the drag handle a hover state matching its focus-visible affordance', () => {
+  const css = styles.cssText.replace(/\s+/g, ' ');
+  expect(css).to.match(/\[part='handle'\]:hover/);
 });
 
 it('is accessible', async () => {

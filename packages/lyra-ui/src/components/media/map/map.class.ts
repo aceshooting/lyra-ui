@@ -150,6 +150,8 @@ export interface LyraMapEventMap {
  * @csspart container - The maplibre container.
  * @csspart legend - The map legend.
  * @csspart legend-swatch - A legend color swatch.
+ * @csspart error - `role="alert"` message shown instead of `container` if the optional
+ *   `maplibre-gl` peer dependency fails to load (e.g. not installed).
  *
  * ⚠️ The default `mapStyle` (when unset) uses OpenStreetMap's demo tile
  * server, which is not suitable for production traffic — see the
@@ -176,6 +178,17 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
 
   /** True until the lazy-loaded `maplibre-gl` peer dependency has settled (success or failure). */
   @state() private loading = true;
+
+  /** True once the lazy-loaded `maplibre-gl` peer dependency has settled with a `null` result
+   *  (not installed) -- render() fails closed into `part="error" role="alert"` instead of
+   *  silently leaving `part="container"` empty, mirroring docx-viewer/pdf-viewer's identical
+   *  "optional peer missing" treatment for the same failure shape. */
+  @state() private loadFailed = false;
+
+  // Overridable instance field (not a direct `loadMaplibre()` call site) purely so tests can
+  // inject a stubbed loader before the element ever connects -- matches docx-viewer's own
+  // `loadLibrary` field/rationale exactly.
+  private loadLibrary: () => ReturnType<typeof loadMaplibre> = loadMaplibre;
 
   // Gates the actual `new mod.Map(...)` construction (see `tryConstructMap()`)
   // -- starts `false` so a `<lr-map>` mounted off-screen doesn't open a
@@ -253,21 +266,29 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     // so it needs its own fresh visibility read rather than trusting
     // whatever `visible` was left at from before the previous disconnect.
     this.visible = typeof IntersectionObserver === 'undefined';
+    // A reconnect after a previous failed load deserves its own fresh attempt rather than being
+    // stuck showing the error state forever -- loadLibrary()'s own cached promise (once it
+    // resolves null) would otherwise keep re-resolving null, but this at least clears the stale
+    // UI state for a genuinely new connection.
+    this.loadFailed = false;
     if (typeof IntersectionObserver !== 'undefined') {
       this.intersectionObserver = new IntersectionObserver((entries) => {
         if (entries[0]?.isIntersecting) this.visible = true;
       });
       this.intersectionObserver.observe(this);
     }
-    void loadMaplibre().then(async (mod) => {
+    void this.loadLibrary().then(async (mod) => {
       // A newer connectedCallback (disconnect + reconnect) already
-      // superseded this attempt while loadMaplibre()'s cached promise was
+      // superseded this attempt while loadLibrary()'s cached promise was
       // in flight — bail before touching any state, let the newer attempt's
       // own closure (already queued behind this one on the same promise)
       // take over instead.
       if (generation !== this._connectGeneration) return;
       this.loading = false;
-      if (!mod) return;
+      if (!mod) {
+        this.loadFailed = true;
+        return;
+      }
       this._maplibreModule = mod;
       // `[part="container"]` only exists once `loading` flips to `false` and
       // Lit re-renders — wait for that render to land before querying it.
@@ -346,6 +367,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
   }
 
   protected updated(changed: PropertyValues): void {
+    super.updated(changed);
     if (this.loading) this.setAttribute('aria-busy', 'true');
     else this.removeAttribute('aria-busy');
 
@@ -617,9 +639,11 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
         role="group"
         aria-label=${this.getAttribute('aria-label') || this.label || this.localize('map')}
       >
-        ${this.loading
-          ? html`<lr-skeleton variant="rect"></lr-skeleton>`
-          : html`<div part="container"></div>`}
+        ${this.loadFailed
+          ? html`<div part="error" role="alert">${this.localize('mapMissingLibrary')}</div>`
+          : this.loading
+            ? html`<lr-skeleton variant="rect"></lr-skeleton>`
+            : html`<div part="container"></div>`}
         ${this.legend.length
           ? html`<div part="legend">
               ${this.legend.map((entry) => {

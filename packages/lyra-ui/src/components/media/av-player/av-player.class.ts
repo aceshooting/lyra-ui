@@ -129,6 +129,16 @@ class LyraAvPlayerBase extends LyraElement<LyraAvPlayerEventMap> {}
  *   virtualized transcript list.
  * @cssprop [--lr-av-player-marker-active-color=var(--lr-color-brand)] - Outline color of the
  *   `[part="timeline-marker"]` matching `activeHighlightId`.
+ * @cssprop [--lr-av-player-marker-bg=color-mix(in srgb, var(--lr-color-brand) 35%, transparent)] -
+ *   Background of a `[part="timeline-marker"]` with no (or an unrecognized) `data-tone`.
+ * @cssprop [--lr-av-player-marker-success-bg=color-mix(in srgb, var(--lr-color-success) 35%, transparent)] -
+ *   Background of a `[part="timeline-marker"][data-tone="success"]`.
+ * @cssprop [--lr-av-player-marker-warning-bg=color-mix(in srgb, var(--lr-color-warning) 35%, transparent)] -
+ *   Background of a `[part="timeline-marker"][data-tone="warning"]`.
+ * @cssprop [--lr-av-player-marker-danger-bg=color-mix(in srgb, var(--lr-color-danger) 35%, transparent)] -
+ *   Background of a `[part="timeline-marker"][data-tone="danger"]`.
+ * @cssprop [--lr-av-player-marker-neutral-bg=color-mix(in srgb, var(--lr-color-text) 25%, transparent)] -
+ *   Background of a `[part="timeline-marker"][data-tone="neutral"]`.
  * @cssprop [--lr-av-player-cue-current-bg=var(--lr-color-brand-quiet)] - Background of the
  *   `[part="cue"]` the playhead is currently inside.
  * @cssprop [--lr-av-player-cue-active-match-color=var(--lr-color-warning)] - Outline color of the
@@ -255,6 +265,18 @@ export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
   }
 
   private onWindowResize = (): void => this.drawWaveform();
+
+  // A stable, class-field-bound callback (not a fresh arrow-function literal per `render()` call)
+  // so `ref()` sees the same identity across unrelated re-renders -- Lit treats a changed ref
+  // callback as an unmount (undefined) immediately followed by a remount even though the canvas
+  // element itself persists, which would otherwise fire `drawWaveform()` on every re-render (e.g.
+  // every `timeupdate`-driven `currentTimeState` tick during playback) instead of only real mounts,
+  // redundant with the `changed.has('peaks')` gate already in `updated()`. Mirrors
+  // `pdf-viewer.class.ts`'s per-page-memoized `pageCanvasRef()`/`textLayerContainerRef()` maps --
+  // this component only ever has one canvas, so a single bound method suffices in place of a Map.
+  private canvasRef = (el?: Element): void => {
+    if (el) this.drawWaveform();
+  };
 
   /** Proxies the native media element's `play()`. A no-op before the element mounts. */
   play(): void {
@@ -575,13 +597,7 @@ export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
         @click=${this.onTimelineClick}
         @keydown=${this.onTimelineKeyDown}
       >
-        ${this.peaks.length
-          ? html`<canvas
-              ${ref((el) => {
-                if (el) this.drawWaveform();
-              })}
-            ></canvas>`
-          : nothing}
+        ${this.peaks.length ? html`<canvas ${ref(this.canvasRef)}></canvas>` : nothing}
         ${this.renderMarkers()}
       </div>
       ${this.cues.length

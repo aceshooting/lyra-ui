@@ -29,13 +29,21 @@ export const styles = css`
     gap: var(--lr-file-input-compact-gap, var(--lr-space-2xs));
     font-size: var(--lr-file-input-compact-font-size, var(--lr-font-size-sm));
   }
+  /* Inline var() fallbacks (rather than :host-declared properties, which every instance would
+     re-declare and so shadow any ancestor value) so a consumer can retint just this dropzone's
+     drag accept/reject highlight without hijacking the shared --lr-color-success/--lr-color-danger
+     tokens used everywhere else in their theme. Unset, each falls back to the same value this
+     rendered before the hatch existed, so the default rendering is unchanged. */
   [part='base'][data-drag-state='accept'] {
-    border-color: var(--lr-color-success);
-    background: color-mix(in srgb, var(--lr-color-success) 8%, transparent);
+    border-color: var(--lr-file-input-accept-border-color, var(--lr-color-success));
+    background: var(--lr-file-input-accept-bg, color-mix(in srgb, var(--lr-color-success) 8%, transparent));
   }
   [part='base'][data-drag-state='reject'] {
-    border-color: var(--lr-color-danger);
-    background: color-mix(in srgb, var(--lr-color-danger) 8%, transparent);
+    border-color: var(--lr-file-input-reject-border-color, var(--lr-color-danger));
+    background: var(--lr-file-input-reject-bg, color-mix(in srgb, var(--lr-color-danger) 8%, transparent));
+  }
+  :host(:not([disabled])) [part='base']:hover {
+    border-color: var(--lr-color-brand);
   }
   [part='base']:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);

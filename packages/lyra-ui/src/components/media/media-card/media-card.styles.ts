@@ -44,6 +44,16 @@ export const styles = css`
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);
   }
+  /* Chrome escape hatch for a dense list/feed of cards -- mirrors lr-source-card's identical
+     :host([appearance='plain']) [part='base'] reset. Image/video kinds already render [part='base']
+     with zero padding (see the button[part='base'] rule above), so this only visibly changes
+     padding for the file-chip fallback's span/a[part='base']. */
+  :host([appearance='plain']) [part='base'] {
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+  }
 
   /* -- image / video media ------------------------------------------- */
   img[part='media'] {

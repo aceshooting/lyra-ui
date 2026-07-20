@@ -210,6 +210,14 @@ export class LyraQrCode extends LyraElement {
 
   @state() private loadState: QrCodeState = { kind: 'empty' };
 
+  // Gates draw() while scrolled off-screen, same shape as <lr-chart>'s own visibility gate --
+  // a page rendering many <lr-qr-code>s (e.g. a scrollable list of badge/ticket codes) never
+  // pays the per-module fillRect/roundRect redraw cost for ones currently out of view. Defaults
+  // `true` so a not-yet-observed element (or an environment with no IntersectionObserver) draws
+  // immediately, matching today's behavior exactly.
+  @state() private visible = true;
+  private intersectionObserver?: IntersectionObserver;
+
   /** Injectable loader seam -- overridden directly by tests with a synchronous fake instead of
    *  needing the real `qrcode` package to load in the test browser (mirrors `LyraPdfViewer`'s
    *  `loadLibrary` field). */
@@ -225,6 +233,14 @@ export class LyraQrCode extends LyraElement {
     super.connectedCallback();
     this.watchDpr();
     this.watchTheme();
+    if (typeof IntersectionObserver !== 'undefined') {
+      this.intersectionObserver = new IntersectionObserver((entries) => {
+        const wasVisible = this.visible;
+        this.visible = entries[0]?.isIntersecting ?? true;
+        if (this.visible && !wasVisible) this.draw();
+      });
+      this.intersectionObserver.observe(this);
+    }
   }
 
   disconnectedCallback(): void {
@@ -233,6 +249,8 @@ export class LyraQrCode extends LyraElement {
     this.colorSchemeQuery?.removeEventListener('change', this.onColorSchemeChange);
     this.themeObserver?.disconnect();
     this.themeObserver = undefined;
+    this.intersectionObserver?.disconnect();
+    this.intersectionObserver = undefined;
   }
 
   private watchDpr(): void {
@@ -285,6 +303,7 @@ export class LyraQrCode extends LyraElement {
   }
 
   protected updated(changed: PropertyValues): void {
+    super.updated(changed);
     if (changed.has('value') || changed.has('errorCorrection') || !this.hasUpdated) {
       this.scheduleAfterUpdate(() => {
         void this.generate();
@@ -344,6 +363,11 @@ export class LyraQrCode extends LyraElement {
 
   private draw(): void {
     if (this.loadState.kind !== 'ready') return;
+    // Off-screen: skip the per-module fillRect/roundRect loop entirely. Every caller (updated(),
+    // onDprChange, refreshTheme()) funnels through here, so gating centrally covers all of them --
+    // becoming visible again re-triggers a draw() from the IntersectionObserver callback in
+    // connectedCallback(), which catches up on whatever was skipped while off-screen.
+    if (!this.visible) return;
     const canvas = this.canvasEl;
     if (!canvas) return;
     const { modules } = this.loadState;

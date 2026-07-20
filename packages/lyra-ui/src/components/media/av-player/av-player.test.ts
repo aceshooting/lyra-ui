@@ -284,6 +284,23 @@ describe('timeline marker activation', () => {
   });
 });
 
+describe('hover feedback for click-to-seek/clickable parts', () => {
+  it('gives the timeline strip a :hover treatment, so a mouse user gets feedback before clicking', () => {
+    const css = styles.cssText.replace(/\s+/g, ' ');
+    expect(css).to.match(/\[part='timeline'\]:hover/);
+  });
+
+  it('gives timeline highlight markers a :hover treatment', () => {
+    const css = styles.cssText.replace(/\s+/g, ' ');
+    expect(css).to.match(/\[part='timeline-marker'\]:hover/);
+  });
+
+  it('gives transcript cue rows a :hover treatment', () => {
+    const css = styles.cssText.replace(/\s+/g, ' ');
+    expect(css).to.match(/lr-virtual-list::part\(cue\):hover/);
+  });
+});
+
 describe('timeline click-to-seek', () => {
   it('clicking the timeline seeks proportionally to the click position', async () => {
     const el = (await fixture(html`<lr-av-player src=${MP3_SRC}></lr-av-player>`)) as LyraAvPlayer;
@@ -487,6 +504,21 @@ describe('waveform', () => {
     expect(() => window.dispatchEvent(new Event('resize'))).to.not.throw();
   });
 
+  it('keeps a stable canvas ref callback identity, so an unrelated re-render does not redraw the waveform (regression)', async () => {
+    const el = (await fixture(html`<lr-av-player src=${MP3_SRC} .peaks=${[0.2, 0.8]}></lr-av-player>`)) as LyraAvPlayer;
+    let redraws = 0;
+    (el as unknown as { drawWaveform: () => void }).drawWaveform = () => {
+      redraws += 1;
+    };
+    // A re-render triggered by something other than `peaks` (playbackRate here) must not re-fire
+    // the canvas ref callback -- a fresh arrow-function literal per render() call would make Lit
+    // treat the persisting canvas element as an unmount+remount, redundantly redrawing every peak
+    // bar on every unrelated update (e.g. each `timeupdate` tick while playing).
+    el.playbackRate = 1.5;
+    await el.updateComplete;
+    expect(redraws, 'an unrelated re-render should not redraw the waveform').to.equal(0);
+  });
+
   it('uses the --lr-color-brand custom property for the waveform fill when the host defines it', async () => {
     const el = (await fixture(html`<lr-av-player src=${MP3_SRC} .peaks=${[1, 1]}></lr-av-player>`)) as LyraAvPlayer;
     el.style.setProperty('--lr-color-brand', 'rgb(0, 200, 0)');
@@ -533,6 +565,53 @@ describe('accessibility', () => {
     const unnamed = (await fixture(html`<lr-av-player></lr-av-player>`)) as LyraAvPlayer;
     const label = mediaEl(unnamed).getAttribute('aria-label');
     expect(label).to.be.a('string').and.to.not.equal('');
+  });
+});
+
+describe('i18n', () => {
+  it('routes every localized string through a .strings override, reaching the rendered DOM', async () => {
+    const el = (await fixture(html`
+      <lr-av-player
+        src=${MP3_SRC}
+        .cues=${CUES}
+        .highlights=${[{ id: 'h1', anchor: { kind: 'time-range', start: 5 } }]}
+        .strings=${{
+          avPlayerLabel: 'Lecteur audio/vidéo',
+          avPlayerFailedToLoad: 'Échec du chargement du média.',
+          avPlayerPlaybackRate: 'Vitesse de lecture',
+          avPlayerTimeline: 'Chercher',
+          avPlayerPosition: '{current} sur {duration}',
+          avPlayerTranscript: 'Transcription',
+          viewerHighlightLabel: 'Surligner',
+        }}
+      ></lr-av-player>
+    `)) as LyraAvPlayer;
+    await el.updateComplete;
+
+    const media = mediaEl(el);
+    expect(media.getAttribute('aria-label')).to.equal('Lecteur audio/vidéo');
+
+    const rateSelect = el.shadowRoot!.querySelector('[part="rate-select"]') as HTMLSelectElement;
+    expect(rateSelect.getAttribute('aria-label')).to.equal('Vitesse de lecture');
+
+    const timeline = el.shadowRoot!.querySelector('[part="timeline"]') as HTMLElement;
+    expect(timeline.getAttribute('aria-label')).to.equal('Chercher');
+    expect(timeline.getAttribute('aria-valuetext')).to.equal('0:00 sur 0:00');
+
+    const transcript = el.shadowRoot!.querySelector('[part="transcript"]') as HTMLElement;
+    expect(transcript.getAttribute('aria-label')).to.equal('Transcription');
+
+    Object.defineProperty(media, 'duration', { value: 100, configurable: true });
+    media.dispatchEvent(new Event('loadedmetadata'));
+    await el.updateComplete;
+    const marker = el.shadowRoot!.querySelector('[part="timeline-marker"]') as HTMLElement;
+    expect(marker.getAttribute('aria-label')).to.equal('Surligner');
+
+    const errorPromise = oneEvent(el, 'lr-render-error');
+    media.dispatchEvent(new Event('error'));
+    await errorPromise;
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('[part="error"]')!.textContent).to.equal('Échec du chargement du média.');
   });
 });
 
@@ -650,6 +729,27 @@ describe('active-state cssprop escape hatches', () => {
     expect(getComputedStyle(marker).outlineColor).to.equal('rgb(0, 51, 102)');
   });
 
+  it('--lr-av-player-marker-bg / --lr-av-player-marker-<tone>-bg retint each timeline-marker tone independently of the shared success/warning/danger tokens', async () => {
+    const wrapper = (await fixture(html`<div style="--lr-av-player-marker-bg: rgb(10, 20, 30); --lr-av-player-marker-success-bg: rgb(40, 50, 60)">
+      <lr-av-player
+        src=${MP3_SRC}
+        .highlights=${[
+          { id: 'h1', anchor: { kind: 'time-range', start: 5 } },
+          { id: 'h2', anchor: { kind: 'time-range', start: 20 }, tone: 'success' },
+        ]}
+      ></lr-av-player>
+    </div>`)) as HTMLElement;
+    const el = wrapper.querySelector('lr-av-player') as LyraAvPlayer;
+    const media = mediaEl(el);
+    Object.defineProperty(media, 'duration', { value: 100, configurable: true });
+    media.dispatchEvent(new Event('loadedmetadata'));
+    await el.updateComplete;
+    const markers = [...el.shadowRoot!.querySelectorAll('[part="timeline-marker"]')] as HTMLElement[];
+    expect(markers.length).to.equal(2);
+    expect(getComputedStyle(markers[0]).backgroundColor, 'the untoned marker reads --lr-av-player-marker-bg').to.equal('rgb(10, 20, 30)');
+    expect(getComputedStyle(markers[1]).backgroundColor, 'the success-toned marker reads --lr-av-player-marker-success-bg').to.equal('rgb(40, 50, 60)');
+  });
+
   it('--lr-av-player-cue-current-bg retints the current transcript cue', async () => {
     const el = await withCues('--lr-av-player-cue-current-bg: rgb(0, 51, 102)');
     expect(getComputedStyle(currentCue(el)).backgroundColor).to.equal('rgb(0, 51, 102)');
@@ -664,6 +764,9 @@ describe('active-state cssprop escape hatches', () => {
     const { el: elM, marker } = await withMarker();
     expect(getComputedStyle(marker).outlineColor).to.equal(
       resolvedIn(elM.shadowRoot!, 'outline: 1px solid var(--lr-color-brand)', 'outline-color'),
+    );
+    expect(getComputedStyle(marker).backgroundColor).to.equal(
+      resolvedIn(elM.shadowRoot!, 'background: color-mix(in srgb, var(--lr-color-brand) 35%, transparent)', 'background-color'),
     );
     const el = await withCues();
     expect(getComputedStyle(currentCue(el)).backgroundColor).to.equal(

@@ -86,9 +86,13 @@ export const styles = css`
   [part='close-button'] {
     margin-inline-start: var(--lr-space-xs);
   }
-  [part='close-button']:hover,
-  [part='previous-button']:hover:not(:disabled),
-  [part='next-button']:hover:not(:disabled) {
+  /* :where() zeroes the wrapped selectors' specificity contribution, leaving only :hover itself
+     -- mirrors lr-attachment-trigger's identical fix for the same [part='x']:hover:not(:disabled)
+     over-specificity shape, so a consumer's ::part(close-button):hover /
+     ::part(previous-button):hover / ::part(next-button):hover override wins without !important. */
+  :where([part='close-button']):hover,
+  :where([part='previous-button']):hover:where(:not(:disabled)),
+  :where([part='next-button']):hover:where(:not(:disabled)) {
     background: var(--lr-color-brand-quiet);
     color: var(--lr-color-brand);
   }

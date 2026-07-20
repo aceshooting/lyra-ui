@@ -1,8 +1,10 @@
 import { fixture, expect, html, waitUntil, aTimeout } from '@open-wc/testing';
+import type { PropertyValues } from 'lit';
 import './flag.js';
 import './flag-peer.js';
 import { loadFlagUrl, __setFlagUrlResolverForTesting } from './flag.js';
 import type { LyraFlag } from './flag.js';
+import { LyraElement } from '../../../internal/lyra-element.js';
 
 const TEST_FLAG_SRC = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg"%3E%3C/svg%3E';
 const TEST_FLAG_SRC_REPLACEMENT =
@@ -428,6 +430,26 @@ describe('a rejected resolver (the willUpdate() .catch() handling)', () => {
     expect(warnings.join('\n')).to.not.include('stale fr failure');
     expect(warnings.join('\n')).to.include('failed to resolve a flag URL for "de"');
     expect(el.loading).to.be.false;
-    expect(el.shadowRoot!.querySelector('img')).to.not.exist;
+    expect(el.shadowRoot!.querySelectorAll('img').length).to.equal(0);
   });
+});
+
+it('calls super.willUpdate so a future LyraElement/mixin lifecycle hook stays wired in (regression)', async () => {
+  // Monkey-patch LyraElement.prototype.willUpdate (the established pattern, e.g.
+  // checkbox.test.ts) to prove LyraFlag's own willUpdate() override actually calls
+  // super.willUpdate(...) rather than shadowing it silently.
+  const proto = LyraElement.prototype as unknown as { willUpdate: (changed: PropertyValues) => void };
+  const original = proto.willUpdate;
+  let called = false;
+  proto.willUpdate = function (this: LyraElement, changed: PropertyValues): void {
+    called = true;
+    original.call(this, changed);
+  };
+  try {
+    const el = (await fixture(html`<lr-flag></lr-flag>`)) as LyraFlag;
+    await el.updateComplete;
+    expect(called).to.be.true;
+  } finally {
+    proto.willUpdate = original;
+  }
 });

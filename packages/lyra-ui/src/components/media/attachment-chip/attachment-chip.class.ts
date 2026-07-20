@@ -1,10 +1,26 @@
-import { html, nothing, svg, type TemplateResult, type SVGTemplateResult } from 'lit';
+import { html, nothing, svg, type ComplexAttributeConverter, type TemplateResult, type SVGTemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { nextId } from '../../../internal/a11y.js';
 import { closeIcon, expandIcon, fileIcon } from '../../../internal/icons.js';
 import { finiteRange } from '../../../internal/numbers.js';
 import { styles } from './attachment-chip.styles.js';
+
+/** `true`-defaulting boolean attribute converter -- Lit's default presence-based `type: Boolean`
+ *  can never be set back to `false` from a plain-HTML attribute once a property's own default is
+ *  `true` (removing an attribute that was never present fires no `attributeChangedCallback`), so
+ *  `fromAttribute` checks the literal string instead. Shared by `previewable` and `removable`,
+ *  which have the identical `true`-default parsing need -- duplicated locally rather than
+ *  imported, matching this exact converter's repeated per-component convention elsewhere in this
+ *  library (see e.g. `<lr-agent-run>`'s own `trueDefaultBooleanConverter`). */
+const trueDefaultBooleanConverter: ComplexAttributeConverter<boolean> = {
+  fromAttribute(value): boolean {
+    return value !== 'false';
+  },
+  toAttribute(value): string | null {
+    return value ? null : 'false';
+  },
+};
 
 export type AttachmentChipStatus = 'pending' | 'uploading' | 'error' | 'done';
 
@@ -162,8 +178,9 @@ export interface LyraAttachmentChipEventMap {
  * `status` to that status's `-quiet` tint.
  * @cssprop [--lr-attachment-chip-border=var(--lr-color-border)] - Chip border color. Every
  * non-`pending` `status` sets it to `transparent`.
- * @cssprop [--lr-attachment-chip-compact-thumbnail-size=var(--lr-size-1-75rem)] - Thumbnail size
- * while `compact`, rethemeable independently of `--lr-icon-button-size`.
+ * @cssprop [--lr-attachment-chip-compact-thumbnail-size=var(--lr-size-1-75rem)] - Thumbnail
+ * and retry/preview/remove-button minimum size while `compact`, rethemeable independently of
+ * `--lr-icon-button-size`.
  * @cssprop [--lr-attachment-chip-compact-font-size=var(--lr-font-size-xs)] - Font size of
  * `[part="base"]` while `compact`.
  * @cssprop [--lr-attachment-chip-compact-gap=var(--lr-size-0-25rem)] - Gap between the chip's parts
@@ -199,7 +216,7 @@ export class LyraAttachmentChip extends LyraElement<LyraAttachmentChipEventMap> 
   @property({ attribute: 'preview-src' }) previewSrc = '';
 
   /** Shows the preview action when a `file` or `preview-src` is available. */
-  @property({ type: Boolean, reflect: true }) previewable = true;
+  @property({ type: Boolean, reflect: true, converter: trueDefaultBooleanConverter }) previewable = true;
 
   /** Lifecycle state — drives the accent tint and which of `progress`/`spinner`/`retry-button` renders. */
   @property({ reflect: true }) status: AttachmentChipStatus = 'pending';
@@ -210,7 +227,7 @@ export class LyraAttachmentChip extends LyraElement<LyraAttachmentChipEventMap> 
   @property({ type: Number }) progress = 0;
 
   /** Shows the remove (×) button. */
-  @property({ type: Boolean, reflect: true }) removable = true;
+  @property({ type: Boolean, reflect: true, converter: trueDefaultBooleanConverter }) removable = true;
 
   /** Renders a smaller, borderless pill presentation instead of the default bordered/chrome-heavy
    *  chip -- for a consumer that wants an icon-only-adjacent, compact attachment affordance (e.g.

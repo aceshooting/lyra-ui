@@ -1,4 +1,4 @@
-import { html, type TemplateResult } from 'lit';
+import { html, type TemplateResult, type ComplexAttributeConverter } from 'lit';
 import { property, state, query } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { srOnly } from '../../../internal/a11y.js';
@@ -7,6 +7,24 @@ import { styles } from './file-input.styles.js';
 import { matchesAccept } from './accept.js';
 
 type DragState = 'default' | 'accept' | 'reject';
+
+/** `true`-defaulting boolean attribute converter, identical shape to `<lr-activity-feed>`'s
+ *  `trueDefaultBooleanConverter` -- duplicated locally per this library's convention of not
+ *  sharing these tiny converters across independently-consumable component files. Lit's default
+ *  presence-based `type: Boolean` can never be set back to `false` from a plain-HTML attribute
+ *  once the property's own default is `true` (removing an attribute that was never present fires
+ *  no `attributeChangedCallback`), so `fromAttribute` checks the literal string instead.
+ *  `toAttribute` reflects the `true` state as a present (empty-string) attribute rather than
+ *  omitting it, so `paste`'s host attribute is present by default, matching every other
+ *  `reflect: true` boolean property in this library. */
+const trueDefaultBooleanConverter: ComplexAttributeConverter<boolean> = {
+  fromAttribute(value): boolean {
+    return value !== 'false';
+  },
+  toAttribute(value): string | null {
+    return value ? '' : null;
+  },
+};
 
 /** Fallback cap applied in place of an invalid `maxFileSize` (NaN or negative -- e.g. an
  *  unparsable `max-file-size` attribute, or a host computing the value from a config that hasn't
@@ -49,6 +67,14 @@ export interface LyraFileInputEventMap {
  * children while `compact`.
  * @cssprop [--lr-file-input-compact-font-size=var(--lr-font-size-sm)] - Label font size while
  * `compact`.
+ * @cssprop [--lr-file-input-accept-border-color=var(--lr-color-success)] - Border color of
+ * `[part="base"][data-drag-state="accept"]`.
+ * @cssprop [--lr-file-input-accept-bg=color-mix(in srgb, var(--lr-color-success) 8%, transparent)] -
+ * Background of `[part="base"][data-drag-state="accept"]`.
+ * @cssprop [--lr-file-input-reject-border-color=var(--lr-color-danger)] - Border color of
+ * `[part="base"][data-drag-state="reject"]`.
+ * @cssprop [--lr-file-input-reject-bg=color-mix(in srgb, var(--lr-color-danger) 8%, transparent)] -
+ * Background of `[part="base"][data-drag-state="reject"]`.
  */
 export class LyraFileInput extends LyraElement<LyraFileInputEventMap> {
   static styles = [LyraElement.styles, styles, srOnly];
@@ -67,8 +93,9 @@ export class LyraFileInput extends LyraElement<LyraFileInputEventMap> {
   @property({ type: Number, attribute: 'max-file-size' }) maxFileSize = 0;
   /** Enables directory selection through the browser's native picker. */
   @property({ type: Boolean, reflect: true }) directory = false;
-  /** Enables files pasted from the clipboard into the dropzone. */
-  @property({ type: Boolean, reflect: true }) paste = true;
+  /** Enables files pasted from the clipboard into the dropzone. `true`-defaulting, so a plain
+   *  `paste="false"` attribute (not just a `.paste=${false}` property binding) actually disables it. */
+  @property({ type: Boolean, reflect: true, converter: trueDefaultBooleanConverter }) paste = true;
   @property() label = 'Drop files here or click to browse';
   /** Accessible name forwarded to the semantic dropzone and native file input.
    * When unset, the effective `label` text is used. */

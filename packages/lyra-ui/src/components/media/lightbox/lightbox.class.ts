@@ -1,4 +1,4 @@
-import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
+import { html, nothing, type ComplexAttributeConverter, type TemplateResult, type PropertyValues } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { lockScroll } from '../../../internal/scroll-lock.js';
@@ -32,6 +32,24 @@ export interface LyraLightboxImage {
  * open by something other than its own `close()`; any other string is whatever a caller passes
  * to `close()` directly.
  */
+/** `true`-defaulting boolean attribute converter for `showCounter` -- Lit's default
+ *  presence-based `type: Boolean` can never be set back to `false` from a plain-HTML attribute
+ *  once the property's own default is `true` (removing an attribute that was never present fires
+ *  no `attributeChangedCallback`), so `fromAttribute` checks the literal string instead.
+ *  Duplicated locally rather than imported, matching this exact converter's repeated
+ *  per-component convention elsewhere in this library (see e.g.
+ *  `<lr-generation-status>`'s own `showStopConverter`). */
+const showCounterConverter: ComplexAttributeConverter<boolean> = {
+  fromAttribute(value): boolean {
+    return value !== 'false';
+  },
+  toAttribute(value): string | null {
+    // `true` is this property's default, so there's nothing worth reflecting for it; only the
+    // non-default `false` needs an attribute at all.
+    return value ? null : 'false';
+  },
+};
+
 export type LyraLightboxCloseReason =
   | 'escape'
   | 'backdrop'
@@ -152,8 +170,11 @@ export class LyraLightbox extends LyraElement<LyraLightboxEventMap> {
   @property({ type: Boolean, attribute: 'no-light-dismiss' }) noLightDismiss = false;
 
   /** Shows/hides `part="counter"` (and its `part="live-region"` announcement). Mirrors
-   *  `<lr-carousel>`'s `showIndicators` (name shape, no reflect). */
-  @property({ type: Boolean, attribute: 'show-counter' }) showCounter = true;
+   *  `<lr-carousel>`'s `showIndicators` (name shape, no reflect). Uses
+   *  {@link showCounterConverter} rather than Lit's default presence-based `type: Boolean`
+   *  handling, so a plain-HTML consumer with no way to write a `.showCounter` property binding
+   *  can still turn this off with `show-counter="false"`. */
+  @property({ attribute: 'show-counter', converter: showCounterConverter }) showCounter = true;
 
   /** Passed through to the embedded `<lr-zoomable-frame>` as `.minZoom`. Same default as
    *  `<lr-zoomable-frame>` itself. */
@@ -233,6 +254,7 @@ export class LyraLightbox extends LyraElement<LyraLightboxEventMap> {
   }
 
   protected willUpdate(changed: PropertyValues): void {
+    super.willUpdate(changed);
     if (!this.hasUpdated) {
       this.hasActionsSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'actions');
     }
@@ -260,6 +282,7 @@ export class LyraLightbox extends LyraElement<LyraLightboxEventMap> {
   // Runs after render so the manager can resolve the panel and its composed focus targets, and
   // so [part="panel"]/the embedded frame have already landed in the DOM.
   protected updated(changed: PropertyValues): void {
+    super.updated(changed);
     if (changed.has('open') && this.open) {
       this.overlay?.focusInitial();
     }

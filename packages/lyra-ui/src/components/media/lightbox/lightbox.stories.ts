@@ -45,3 +45,18 @@ export const Default: Story = {
 export const OpenInitially: Story = {
   render: (_args, context) => html`<lr-lightbox .images=${images} .open=${context.viewMode !== 'docs'}></lr-lightbox>`,
 };
+
+/** The 320px narrow-allocation baseline for the toolbar row (counter + actions slot +
+ *  close-button) -- exercises lightbox.styles.ts's own documented `@container (max-inline-size:
+ *  20rem)` rule, which shrinks `[part="counter"]`. `:host` is normally `position: fixed; inset:
+ *  0`, filling the viewport regardless of any wrapping container, so its `position`/`inset` are
+ *  overridden inline here (an inline `style=""` attribute always wins over the component's own
+ *  `:host` rule) to confine it to a narrow, in-flow box for this story only -- mirrors
+ *  pagination.stories.ts's `NarrowAllocation` story, adapted for a fixed-position host. */
+export const NarrowAllocation: Story = {
+  render: () => html`<lr-lightbox
+    .images=${images}
+    open
+    style="position: static; inset: auto; display: flex; inline-size: 20rem; block-size: 24rem;"
+  ></lr-lightbox>`,
+};

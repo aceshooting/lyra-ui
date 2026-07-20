@@ -51,7 +51,12 @@ export const styles = css`
     accent-color: var(--lr-color-brand);
     cursor: pointer;
   }
-  [part='slider']:hover:not(:disabled) {
+  /* :where() zeroes the wrapped selectors' specificity contribution, leaving only :hover itself
+     -- (0,1,0) total, functionally identical selection to \`[part='slider']:hover:not(:disabled)\`
+     ((0,3,0)) but now losing (on the pseudo-element tiebreak) to a consumer's own
+     \`::part(slider):hover\` override ((0,1,1)) without that consumer needing !important. Same
+     fix as \`<lr-attachment-trigger>\`'s \`.trigger-button\` hover rule. */
+  :where([part='slider']):hover:where(:not(:disabled)) {
     filter: brightness(var(--lr-hover-brightness));
   }
   [part='slider']:disabled {

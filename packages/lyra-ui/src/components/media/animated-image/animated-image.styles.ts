@@ -87,7 +87,12 @@ export const styles = css`
     -webkit-tap-highlight-color: transparent;
     transition: background-color var(--lr-transition-fast);
   }
-  [part='play-button']:hover:not(:disabled) {
+  /* :where() zeroes the wrapped selectors' specificity contribution, leaving only :hover itself
+     -- (0,1,0) total, functionally identical selection to \`[part='play-button']:hover:not(:disabled)\`
+     ((0,3,0)) but now losing (on the pseudo-element tiebreak) to a consumer's own
+     \`::part(play-button):hover\` override ((0,1,1)) without that consumer needing !important. Same
+     bug shape lr-attachment-trigger's \`.trigger-button\` hover rule was already fixed for. */
+  :where([part='play-button']):hover:where(:not(:disabled)) {
     background: color-mix(in srgb, var(--lr-color-surface) 100%, transparent);
   }
   [part='play-button']:disabled {

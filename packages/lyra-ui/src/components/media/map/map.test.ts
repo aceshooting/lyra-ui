@@ -1,6 +1,8 @@
 import { fixture, expect, html, waitUntil } from '@open-wc/testing';
+import type { PropertyValues } from 'lit';
 import './map.js';
 import type { LyraMap } from './map.js';
+import { LyraElement } from '../../../internal/lyra-element.js';
 
 const RASTER_STYLE = {
   version: 8,
@@ -18,12 +20,12 @@ it('shows a loading skeleton and aria-busy while maplibre-gl loads, then swaps t
   const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
   expect(el.getAttribute('aria-busy')).to.equal('true');
   expect(el.shadowRoot!.querySelector('lr-skeleton')).to.exist;
-  expect(el.shadowRoot!.querySelector('[part="container"]')).to.not.exist;
+  expect(el.shadowRoot!.querySelectorAll('[part="container"]').length).to.equal(0);
 
   await waitUntil(() => el.map != null, 'map never initialized', { timeout: 2000 });
 
   expect(el.hasAttribute('aria-busy')).to.be.false;
-  expect(el.shadowRoot!.querySelector('lr-skeleton')).to.not.exist;
+  expect(el.shadowRoot!.querySelectorAll('lr-skeleton').length).to.equal(0);
   expect(el.shadowRoot!.querySelector('[part="container"]')).to.exist;
 });
 
@@ -91,6 +93,61 @@ it('does not construct the underlying maplibregl.Map (and its WebGL context) unt
     expect(el.map).to.exist;
   } finally {
     (window as unknown as { IntersectionObserver: typeof IntersectionObserver }).IntersectionObserver = OriginalIO;
+  }
+});
+
+// Regression coverage for the lifecycle-optional-peer-missing-fails-silently defect class --
+// when the optional peer `maplibre-gl` fails to load, <lr-map> must fail closed into a visible,
+// accessible role="alert" error state instead of silently rendering an empty container with no
+// on-page indication anything is wrong. Mirrors docx-viewer/pdf-viewer's own `part="error"
+// role="alert"` treatment for the exact same "optional peer missing" shape.
+it('renders a visible, accessible error state instead of a blank container when the maplibre-gl peer fails to load', async () => {
+  // Deliberately not using `fixture()` (which connects the element and fires its own real
+  // connectedCallback() immediately): `loadLibrary` must be overridden *before* the element ever
+  // connects, since connectedCallback() calls it unconditionally and synchronously on connect --
+  // same technique box-plot.test.ts uses for the identical "construct detached, stub the loader,
+  // then connect" need.
+  const el = document.createElement('lr-map') as unknown as LyraMap;
+  (el as unknown as { loadLibrary: () => Promise<unknown> }).loadLibrary = () => Promise.resolve(null);
+  document.body.appendChild(el);
+  try {
+    await waitUntil(
+      () => el.shadowRoot!.querySelector('[part="error"]') != null,
+      'error state never rendered',
+      { timeout: 2000 },
+    );
+    const errorEl = el.shadowRoot!.querySelector('[part="error"]') as HTMLElement;
+    expect(errorEl.getAttribute('role')).to.equal('alert');
+    expect(errorEl.textContent!.trim().length).to.be.greaterThan(0);
+    expect(el.hasAttribute('aria-busy')).to.be.false;
+    expect(el.map).to.be.undefined;
+    expect(el.shadowRoot!.querySelectorAll('[part="container"]').length).to.equal(0);
+    expect(el.shadowRoot!.querySelectorAll('lr-skeleton').length).to.equal(0);
+  } finally {
+    el.remove();
+  }
+});
+
+// Regression coverage for the lifecycle-super-call-omitted defect class -- no user-visible
+// symptom today, but a future shared updated() behavior on LyraElement would silently never run
+// for <lr-map> if its own override shadows the base hook instead of calling it. Scoped by
+// tagName (not the fixture()-returned element reference): <lr-map> renders an <lr-skeleton>
+// child in its shadow DOM, which itself extends LyraElement directly and overrides updated() on
+// its own, so an unscoped check risks conflating a *different* element's own call.
+it('calls super.updated so a future LyraElement/mixin lifecycle hook stays wired in', async () => {
+  const proto = LyraElement.prototype as unknown as { updated: (changed: PropertyValues) => void };
+  const original = proto.updated;
+  let calledOnSelf = false;
+  proto.updated = function (this: LyraElement, changed: PropertyValues): void {
+    if (this.tagName === 'LR-MAP') calledOnSelf = true;
+    original.call(this, changed);
+  };
+  try {
+    const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
+    await el.updateComplete;
+    expect(calledOnSelf).to.be.true;
+  } finally {
+    proto.updated = original;
   }
 });
 
