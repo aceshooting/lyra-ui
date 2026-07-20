@@ -166,16 +166,14 @@ jobs:
       - run: pnpm docs:check
       - run: pnpm storybook:check
 
-  # Informational/non-blocking on purpose: the baseline PNGs under
-  # packages/lyra-ui/visual-baselines/ were agent-generated and have not yet been confirmed
-  # correct by a human (see that directory's README). continue-on-error (job- and step-level)
-  # keeps a mismatch -- real or just an unreviewed-baseline artifact -- from failing the build
-  # until someone promotes this to a blocking gate deliberately. Split into its own job because
-  # test:visual alone runs ~3.5min and gates nothing, so it shouldn't sit in the critical path of
-  # jobs that do.
+  # Blocking as of the 2026-07-20 font-substitution determinism fix (see
+  # packages/lyra-ui/visual-baselines/README.md): a full 62-story x 3-axis run now reproduces
+  # 186/186 clean, so a mismatch here is a real signal rather than run-to-run capture noise. Split
+  # into its own job (rather than folded into docs-and-storybook, which also needs docs:build)
+  # because test:visual alone runs ~3.5min and would otherwise sit in the critical path of the
+  # faster docs checks.
   visual-regression:
     runs-on: ubuntu-latest
-    continue-on-error: true
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
       - uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6.0.9
@@ -186,8 +184,7 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm --filter @aceshooting/lyra-ui exec playwright install --with-deps chromium
       - run: pnpm docs:build
-      - name: Visual regression (informational, non-blocking)
-        continue-on-error: true
+      - name: Visual regression
         run: pnpm --filter @aceshooting/lyra-ui test:visual
       - name: Upload visual regression diff artifacts
         if: always()

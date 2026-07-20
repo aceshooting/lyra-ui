@@ -54,12 +54,13 @@ the PR checks list tells you which of these to reproduce locally:
    `storybook-static/`, so this job still installs Playwright: `docs:build` (with
    `CODECOV_TOKEN` — see note below); `git diff --exit-code` on `.storybook/sitemap.xml`;
    `docs:check`; `storybook:check`.
-6. **`visual-regression`** — non-blocking (`continue-on-error: true` at job *and* step level), and
-   split into its own job specifically so its ~3.5min `test:visual` run doesn't sit in the
-   critical path of jobs that actually gate merges: Playwright Chromium install; `docs:build`
-   (**without** `CODECOV_TOKEN` — only `docs-and-storybook`'s copy carries the token, so the
-   Storybook bundle-analysis upload doesn't fire twice for the same commit); the informational
-   `test:visual` screenshot run against `visual-baselines/`; diff-artifact upload.
+6. **`visual-regression`** — blocking as of the 2026-07-20 font-substitution determinism fix (see
+   `packages/lyra-ui/visual-baselines/README.md`), and split into its own job so its ~3.5min
+   `test:visual` run doesn't sit in the critical path of the faster `docs-and-storybook` checks:
+   Playwright Chromium install; `docs:build` (**without** `CODECOV_TOKEN` — only
+   `docs-and-storybook`'s copy carries the token, so the Storybook bundle-analysis upload doesn't
+   fire twice for the same commit); the `test:visual` screenshot run against `visual-baselines/`;
+   diff-artifact upload.
 
 A separate `platform-contracts` matrix job runs the platform contract suite (`test:platform`)
 against Firefox/WebKit on Node 20/22, as before.
