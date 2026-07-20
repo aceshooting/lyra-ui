@@ -1,5 +1,1368 @@
 # Changelog
 
+## 5.2.0
+
+### Minor Changes
+
+- 602177a: `lr-button`: expose its per-size geometry and its outlined fill as custom properties, so a consumer
+  no longer needs a `::part(base)` rule to fit a button into a dense toolbar or to tint an outline.
+
+  - `--lr-button-padding-block`, `--lr-button-padding-inline` and `--lr-button-font-size` now carry
+    each `size` tier's padding/font-size (the `:host` defaults are the `m` tier). Every tier is now
+    pure custom-property re-assignment — matching `lr-input`, `lr-select`, `lr-combobox`,
+    `lr-segmented` and `lr-date-input` — so overriding one knob retunes the tier instead of fighting
+    the stylesheet.
+  - `--lr-button-min-height` carries the active tier's `min-block-size` floor (it resolves to that
+    tier's existing `--lr-button-size-*` token), and the new `--lr-button-height` pins an exact
+    height — flooring _and_ capping the button, e.g. to match a fixed toolbar row. It is deliberately
+    left undeclared by default so each tier's floor still applies when it is unset.
+  - `--lr-button-outlined-fill` (default `transparent`) tints `appearance="outlined"`. Like
+    `--lr-button-quiet-*` it is not swapped per `variant`. Note that the existing hover
+    `filter: brightness()` visibly brightens a tinted fill, where a transparent one showed no change.
+
+  `appearance="link"` continues to ignore all of these and render as zero-chrome inline text. With
+  every property unset, all six tiers render byte-identical to before.
+
+- fe06b7d: `lr-card`: `interactive` now grants real activation semantics when `href` is not also set.
+  `[part='base']` becomes focusable (`tabindex="0"`), responds to Enter and Space (Space calls
+  `preventDefault()` so the page does not scroll under the focused card), and emits a new
+  `lr-card-activate` event (no detail) — so a clickable tile no longer needs a consumer-supplied
+  wrapper or a `::part(base)` hack to be keyboard-operable.
+
+  - The card deliberately carries **no** `role="button"`. A card is a container that routinely holds
+    slotted buttons and links, and `role="button"` around focusable descendants is the axe-core
+    `nested-interactive` violation this library's own a11y gate enforces (unlike `lr-chip`'s
+    `toggleable` mode, which can forbid focusable children and therefore can carry the role).
+  - Because of that, "did the user aim at the card or at a control inside it?" is answered at event
+    time: the handler walks `composedPath()` from the original target up to `[part='base']` and bails
+    out if anything on the way is itself a control (a link, button, form control, `[tabindex]`, or an
+    interactive `role`). A click on a slotted `lr-button` or `<a>` therefore never activates the card.
+  - With `href` set, the root is still a real `<a>`: native navigation remains the activation, no
+    extra `tabindex` is added, and `lr-card-activate` is never fired.
+  - Without `interactive`, the rendered output is unchanged — no `tabindex`, no listeners, no events.
+
+- 76b4ef7: `lr-chat-composer` gains `appearance="plain"` (reflected, `'card' | 'plain'`, default `'card'`), so a
+  composer docked inside a chat panel, dialog footer or toolbar that already draws its own border
+  doesn't double the frame. `plain` drops `[part="base"]`'s border, background, padding and corner
+  radius; the row layout, disabled treatment and the send/stop button's own chrome are unaffected.
+
+  Focus stays visible either way. The card's only focus affordance is a border-color shift, and there
+  is no border left to recolor under `plain` (the internal textarea sets `outline: none`), so `plain`
+  swaps in an underline across the input row instead — drawn as an inset box-shadow from
+  `--lr-focus-ring-width`/`--lr-focus-ring-color`, so it costs no layout.
+
+  An unset composer renders byte-identically to before.
+
+- 89dc89a: Add density and chrome-less escape hatches to six card-chrome components so an embedded card no
+  longer forces its own frame on a host that already draws one:
+
+  - `lr-agent-run`, `lr-entity-card`, `lr-source-card` each gain both a reflected `compact` boolean
+    (tighter padding/gap, tunable via `--lr-<component>-compact-padding` / `-gap`) and
+    `appearance="plain"` (drops border, background, padding and radius). `plain` wins over `compact`
+    when both are set.
+  - `lr-stack-trace` and `lr-flow-run-overlay` gain `appearance="plain"` — for nesting inside an
+    `lr-result-card` / `lr-agent-run` or a host toolbar that already draws a border, without doubling
+    the frame. `lr-flow-run-overlay`'s `plain` also drops its floating-surface shadow.
+  - `lr-file-input` gains a reflected `compact` boolean (tighter dropzone padding, gap and label
+    font, tunable via `--lr-file-input-compact-padding` / `-gap` / `-font-size`) so the dropzone fits
+    a toolbar or table cell.
+
+  All escapes default off; an unset component renders byte-identically to before. Interactive
+  affordances that live on child controls (agent-run's Cancel/Retry, stack-trace's copy/frame
+  buttons, source-card's title/toggle) keep their own chrome under `plain`.
+
+- bca1353: `lr-flow-controls` gains `appearance="plain"` (reflected, `'card' | 'plain'`, default `'card'`), for
+  clusters placed in a host toolbar or panel that already draws its own surface. `plain` drops
+  `[part="base"]`'s border, background, padding, corner radius **and** its floating-surface
+  `box-shadow` — a lift shadow with no surface under it reads as a stray smudge — matching what
+  `lr-flow-run-overlay`'s `plain` already does.
+
+  The cluster keeps its layout, its `orientation` axis, every button's shared minimum hit area
+  (`--lr-icon-button-size`) and their hover/focus rings. No `compact` is offered: the padding is
+  already the smallest spacing step, and the only remaining room is that hit-area floor.
+
+  The existing `for`, `orientation` and `hideLock` properties are now documented too. An unset cluster
+  renders byte-identically to before.
+
+- ddf52ba: `lr-flow-node` now exposes its card as a CSS part and gains a density escape:
+
+  - The bordered, filled card is reachable as `::part(card)` (it keeps its `.card` class, so nothing
+    that already targeted it changes).
+  - New reflected `compact` boolean tightens the card padding for dense canvases and palette previews,
+    tunable via `--lr-flow-node-compact-padding` (default `var(--lr-space-xs)`) and
+    `--lr-flow-node-compact-gap` (default `var(--lr-space-2xs)`). The border, background, shadow and
+    the `selected`/`status="running"` treatments all stay.
+
+  Two documentation/CSS bugs are fixed in passing: the `base` part is documented as what it actually
+  is (the row wrapping the handles and the card, carrying no chrome of its own), and a duplicated
+  `min-inline-size: 0` that overrode the card's own minimum width is removed — the documented
+  `--lr-flow-node-min-inline-size` custom property was dead until now and once again sets the card's
+  minimum inline size (default `11rem`).
+
+  An unset node renders as before apart from that restored minimum width.
+
+- 81f615b: `lr-checkbox` / `lr-radio`: publish the label indent, and stop hard-sizing the radio's circle.
+
+  - **New `--lr-checkbox-label-indent` and `--lr-radio-label-indent`** carry the distance from the
+    control's start edge to the start of the label — the box/circle's own floor
+    (`min(--lr-icon-button-size, 1.75rem)`) plus the label gap (`--lr-space-s`), i.e. `2.25rem` at the
+    default tokens. Consumers composing per-option hint text under a checkbox previously had to
+    hardcode that `2.25rem` after reading it out of the shadow styles, where neither term was a public
+    contract, so the hint silently de-aligned on any retheme. `[part='base']`'s `gap` is now _derived
+    from_ the published property rather than repeating `--lr-space-s`, so the advertised value and the
+    rendered geometry cannot drift: setting the property moves the label. Rendering is byte-identical
+    when it is left unset.
+
+    **Read this before assuming it closes the filed case.** The property is declared on the
+    component's `:host`, so it is readable by the element itself and overridable from your own
+    stylesheet (`lr-checkbox { --lr-checkbox-label-indent: … }` beats a `:host` rule), but custom
+    properties inherit _down_, not sideways — a **sibling** `<p>` in your own tree can never read it
+    off the checkbox. What actually solves that case is the `--lr-theme-icon-button-size` bridge that
+    landed alongside this release: compute `calc(min(var(--lr-theme-icon-button-size, 2.5rem), 1.75rem)
+
+    - var(--lr-theme-space-s, 0.5rem))` on your own wrapper from tokens you control, and both the
+      control and your hint text stay aligned through a retheme. The new "Aligning per-option hint text"
+      stories show both halves. This is not an unfixed gap; please do not re-file it as one.
+
+  - **Bug fix — `lr-radio`'s `[part='circle']` was hard-sized**, with `inline-size`/`block-size` where
+    `lr-checkbox`'s `[part='box']` correctly uses `min-inline-size`/`min-block-size`. Since
+    `[part='base']` carries no box of its own, that circle _is_ the entire tap target for a label-less
+    radio, and a hard size can be smaller than its own content — an enlarged indicator overflowed it
+    instead of growing it. It is now a floor, matching `lr-checkbox` exactly. Default rendering is
+    unchanged (28×28 at the default tokens, above the WCAG 2.2 SC 2.5.8 24×24 minimum).
+
+    Note the residual, unchanged in this release: neither control guarantees the 24×24 minimum once
+    `--lr-icon-button-size` is themed below it — `min()` still tracks the token down 1:1. Both
+    controls behave identically here; a hard floor would need its own decision, since it would also
+    block a deliberately dense checkbox.
+
+  `lr-checkbox` deliberately still has no `hint`/`errorText` chrome of its own (see its class docs);
+  that omission is intentional and adding it would require a `form-control` wrapper that changes the
+  part structure for existing consumers.
+
+- 6bf969f: Themeable code tab width, chat bubble geometry, and the code-block active-line outline color.
+
+  - `--lr-code-block-tab-size` (default `2`) sets the tab width of rendered code. It is honoured by
+    `lr-code-block`, `lr-code-block-core`, `lr-markdown`, and `lr-markdown-core`, and shares the
+    default of the existing `--lr-code-editor-tab-size`, so the editable and read-only code surfaces
+    agree. The markdown viewers declare it themselves because they are sibling elements of
+    `lr-code-block`, not descendants — one declaration could not have reached them. `lr-code-block`
+    reads the token rather than writing `tab-size` inline, so the override survives shiki's own
+    inline `style` on the highlighted `<pre>`. Note that a markdown code block wraps
+    (`white-space: pre-wrap`) while `lr-code-block` does not, so the same value can render
+    differently on a wrapped line, where tab stops restart.
+  - `--lr-chat-message-bubble-padding` (default `var(--lr-space-m)`) and
+    `--lr-chat-message-bubble-radius` (default `var(--lr-radius)`) reshape `lr-chat-message`'s
+    bubble. Use these instead of a `::part(bubble)` padding/radius override: an outer-tree `::part`
+    declaration outranks every rule inside the component's shadow tree, which silently suppressed
+    the per-`status` (`failed`, `streaming`) and per-role bubble treatments. The radius prop is
+    bubble-only — `collapse-button` and `retry-button` keep reading the shared `--lr-radius`.
+  - `--lr-code-block-active-line-outline-color` (default `var(--lr-color-brand)`) retints only the
+    outline of the line marked active by `active-highlight-id`, leaving the language pill, hover,
+    and focus surfaces on `--lr-color-brand`.
+
+  All three default to exactly today's rendering, so a consumer who overrides none of them sees no
+  visual change.
+
+- fe06b7d: `lr-confirm-bar`: new reflected `compact` property that collapses the bar from a full card
+  (bordered, padded, `display: block` surface) into a chrome-less inline row, for a confirmation that
+  has to live inside an existing container — a table cell, a card's action row, a toolbar.
+
+  - The **host** flips to `inline-flex` under `[compact]`, not just `[part='base']`: restyling the
+    part alone still leaves a `display: block` host that breaks the row it was dropped into.
+  - The narrow-allocation container query is switched off with it (`container-type: normal`). A
+    compact bar is _expected_ to be narrow, so leaving the query live would fire it essentially
+    always and stretch the Deny/Approve buttons to fill — the opposite of the intent.
+  - Re-chrome it through `--lr-confirm-bar-compact-padding` (default `0`),
+    `--lr-confirm-bar-compact-gap` (default `var(--lr-space-s)`), `--lr-confirm-bar-compact-border`
+    (default `none`), `--lr-confirm-bar-compact-radius` (default `0`) and
+    `--lr-confirm-bar-compact-background` (default `transparent`).
+  - Everything else is unchanged: `lr-approve`/`lr-deny` shapes, `role="group"` and its heading
+    label, and the contract that focus moves synchronously to `[part='status']` _before_ the
+    Deny/Approve buttons unmount. Leaving `compact` unset renders exactly as before.
+
+- 49e0738: `lr-conversation-item` gains a `compact` density flag
+
+  A reflected boolean `compact` (default `false`, matching `lr-empty`'s convention) tightens
+  `[part='base']`'s padding from `var(--lr-space-s) var(--lr-space-m)` to
+  `var(--lr-space-xs) var(--lr-space-s)`, its gap from `var(--lr-space-xs)` to `var(--lr-space-2xs)`,
+  and collapses `[part='content']`'s inter-line gap to `0`. Both tuned values sit behind the new
+  `--lr-conversation-item-compact-padding` / `--lr-conversation-item-compact-gap` custom properties —
+  declared as inline `var()` fallbacks at the point of use, never on `:host`, so a surrounding list can
+  retune every row at once from an ancestor. Unset, a row renders exactly as before.
+
+  Nothing else changes. In particular `[part='rename-button']` keeps its
+  `min-inline-size`/`min-block-size: var(--lr-icon-button-size)` floor under `compact`, so a density
+  flag can never silently drop a row's icon target below the shared minimum; the excerpt stays visible
+  (it is already single-line ellipsised and `hidden`-bindable per row) and the excerpt/timestamp font
+  sizes stay at their existing steps. `:host([compact]) [part='base']` is ordered before
+  `:host([active]) [part='base']`, which is equal specificity, so an active row keeps its background
+  and its promoted excerpt/timestamp contrast when both are set.
+
+- 3737d4c: Add consumer-settable CSS custom properties for state-styled surfaces in the data and agent-tools
+  families that previously took their color straight from a library-wide `--lr-color-*` token with no
+  component-scoped indirection. Because CSS Shadow Parts forbids an attribute selector after `::part()`
+  (`::part(row)[aria-selected]` is invalid), these states could only be restyled by hijacking the
+  shared token, which repaints everything else that reads it. Each new property uses an inline
+  `var()` fallback to its old token value, so an unset consumer renders byte-identically to before:
+
+  - `lr-data-grid`: `--lr-data-grid-row-selected-bg` (selected row background).
+  - `lr-env-list`: `--lr-env-list-reveal-active-bg`, `--lr-env-list-reveal-active-border` (pressed
+    reveal toggle background/border).
+  - `lr-flow-node`: `--lr-flow-node-selected-border` (selected card border color).
+  - `lr-flow-canvas`: `--lr-flow-canvas-node-current-outline-color` (current node outline color).
+  - `lr-artifact-panel`: `--lr-artifact-panel-view-active-bg`, `--lr-artifact-panel-view-active-color`
+    (pressed preview/code toggle background/text).
+  - `lr-test-results`: `--lr-test-results-filter-active-bg`, `--lr-test-results-filter-active-border`,
+    `--lr-test-results-filter-active-color` (pressed status filter toggle).
+  - `lr-span-waterfall`: `--lr-span-waterfall-row-active-bg` (active row background).
+  - `lr-trace-tree`: `--lr-trace-tree-row-active-bg` (active row background).
+  - `lr-agent-trace`: `--lr-agent-trace-handoff-active-bg` (active handoff quick-jump entry background).
+  - `lr-policy-summary`: `--lr-policy-summary-count-allow-color`,
+    `--lr-policy-summary-count-deny-color`, `--lr-policy-summary-count-needs-review-color` (per-state
+    count text colors).
+
+- 8e4e5cc: `<lr-filter-bar>` gains a `'text'` filter type, composing `<lr-input>` for an open-ended query, plus
+  an optional per-filter `debounce` (ms). A dashboard whose toolbar is a search box next to a few
+  dropdowns can now be a single filter bar — the search box participates in the same `value` object,
+  the same removable active-filter chips (shown verbatim, so a query containing a slash is no longer
+  mangled), the same reset button and `loading` state — and can delete its own hand-rolled debounce
+  timer. A pending debounce is flushed by the field's own change/blur and cancelled by `reset()`, a
+  chip removal, and disconnection, and the text field stays uncontrolled-with-sync so a re-render
+  mid-typing never disturbs the caret.
+- f8bc916: Form controls: exact-height escape hatches and `start`/`end` adornment slots.
+
+  - `--lr-combobox-trigger-height` and `--lr-input-control-height` are new custom properties that pin
+    an exact control height — flooring _and_ capping the row — so `lr-select`, `lr-combobox` and
+    `lr-input` can be pixel-matched in one toolbar without a `::part()` rule. Both are deliberately
+    left undeclared by default, so each tier's existing `*-min-height` floor still applies when they
+    are unset. Because the component never declares them, they can also be set from an ancestor or an
+    outer-tree rule, not only inline on the element. On `lr-combobox` the hatch is a single-row
+    affordance: in `multiple` mode a tag row long enough to wrap overflows the pinned box visibly
+    (nothing is clipped), so leave it unset there.
+  - **Behaviour change:** `lr-select` declared `--lr-select-trigger-height: auto` on `:host`, which
+    made the `var()` fallback to `--lr-select-trigger-min-height` unreachable and left that property
+    dead at the default `m` tier (four extra specificity rules patched the floor back for
+    `xs`/`s`/`l`/`xl` only). The sentinel is now genuinely undeclared and the patch rules are gone, so
+    `--lr-select-trigger-min-height` is live at every tier. The visible consequence is that a
+    default-size `lr-select` trigger now honours the `2.5rem` floor it already declared — byte
+    identical to `lr-input`'s and `lr-combobox`'s own `m` floor, so the three controls line up.
+    `getComputedStyle(el).getPropertyValue('--lr-select-trigger-height')` now returns `''` rather than
+    `'auto'`; assert the rendered `min-block-size`/`block-size` instead.
+  - `lr-combobox` and `lr-date-input` gain `start`/`end` adornment slots with matching `start`/`end`
+    CSS parts, mirroring `lr-input`'s existing implementation: the wrappers are `hidden` while nothing
+    is slotted, and they inherit the control's own padding so no consumer spacing is needed. `end`
+    renders before the dropdown chevron (`lr-combobox`) and before the calendar toggle
+    (`lr-date-input`), so consumer content never sits outboard of the built-in trigger. Slotted
+    adornments are never collected as `lr-combobox` options.
+  - `lr-select` is deliberately excluded from `start`/`end`: its `[part='trigger']` is a native
+    `<button>`, whose content model forbids interactive descendants, and its `justify-content:
+space-between` would push the label to the middle. `lr-date-input` is deliberately excluded from
+    the exact-height hatch: its row has no `min-block-size`, and its height is pinned transitively by
+    `--lr-icon-button-size` on the calendar button — capping it would crush the 24x24 target.
+
+- 4a43cc0: `<lr-heatmap>`: `CalendarCellPos` now carries the resolved ISO `yyyy-mm-dd` `date` alongside
+  `week`/`weekday`. Every calendar-mode position handed to `cellText`, `cellColor` and
+  `cellInteractive` is populated — **including grid positions with no matching entry in `days`**
+  (a gap in a sparse calendar still sits on a real calendar day) — so a callback can key off the date
+  directly instead of re-deriving the grid's `firstWeekStart + week * 7 + weekday` anchor arithmetic,
+  which was the only way to answer "is this cell in the future?" before.
+
+  The date comes from a per-grid cache built once whenever the calendar grid is rebuilt, so it costs
+  an array read rather than a `Date` allocation per cell per repaint, and it is deliberately excluded
+  from the internal hover/focus position-equality check so repaint diffs are unchanged. Matrix mode's
+  `MatrixCellPos` is untouched, and `lr-cell-click`'s detail shape is unchanged.
+
+  `date` is a **required** field of `CalendarCellPos`. No API on this component accepts a
+  `CalendarCellPos` as input — it is purely a callback parameter type — so this is additive for every
+  supported use; the only way to notice it is hand-constructing a `CalendarCellPos` literal in
+  TypeScript, which now needs a `date`.
+
+- 4a43cc0: `<lr-heatmap>`: `HeatmapLegendStop.color` is now optional, so a `legendStops` entry can be a
+  **caption-only** stop. A stop with no `color` (or an empty-string `color`) renders its
+  `[part="legend-stop-label"]` with **no `[part="legend-swatch"]` element in the DOM at all**, rather
+  than an empty 0.6rem swatch box — the shape a GitHub-style "Less ▢▢▢▢ More" key needs for the bare
+  captions bracketing its colored ramp. Colored stops are unchanged, and an all-colored `legendStops`
+  array renders exactly as before.
+
+  The trailing `valueLabel` caption that closes the legend row also gained
+  `part="legend-value-label"` (it was the one unaddressable node in `[part='legend']`), in both the
+  gradient and the `legendStops` branch. Nothing else in the legend markup changed.
+
+- 4a43cc0: `<lr-heatmap>` gained `maxCellSize` (`max-cell-size`) and `minCellSize` (`min-cell-size`), bounding
+  the cell size `fit-to-width` derives from the host's measured width in **both** calendar and matrix
+  mode. Without a ceiling, a 5-week calendar or a 3-column matrix in a wide pane inflates into a few
+  giant blocks; without a raisable floor, a year-long calendar in a narrow pane collapses onto the
+  built-in 4px minimum.
+
+  Both are ignored while `fit-to-width` is unset — an explicit `cell-size` is an exact request and is
+  never clamped — and both default to unset, so an untouched consumer's geometry is byte-identical.
+  `min-cell-size` can only raise the built-in 4px floor, never lower it; when both are set and
+  `max-cell-size < min-cell-size` the ceiling wins. A non-finite or empty attribute means unset rather
+  than `0`.
+
+  Note that the canvas is sized from the _clamped_ cell size, so a capped grid leaves the host's
+  remaining width unfilled instead of stretching to it — align it with normal CSS on the host.
+
+- 068cb85: `lr-icon-button` hosts natural-aspect-ratio content
+
+  The default slot is now rendered as a **sibling** of the built-in glyph instead of being piped
+  through `<lr-icon>`, and `<lr-icon>` is mounted only when `icon` is set. The button box is also
+  floored with `min-inline-size`/`min-block-size: var(--lr-icon-button-size)` instead of being pinned
+  to it, matching that token's documented contract (a minimum tappable box, not a fixed size).
+
+  Slotted content previously went through `lr-icon`'s node-cloning path, which rebuilds every
+  assigned node with `document.createElementNS('http://www.w3.org/2000/svg', localName)` — a slotted
+  custom element such as `<lr-flag>` became an SVG-namespaced element that never upgraded and never
+  painted. It now renders normally, at its own aspect ratio.
+
+  **Migration.** Slotted **bare SVG geometry** (`<path>`, `<circle>`, …) with no `icon` attribute
+  relied on the removed `<lr-icon>` wrapper to supply an SVG parent, and must now be wrapped
+  explicitly:
+
+  ```html
+  <!-- before -->
+  <lr-icon-button aria-label="Star"><path d="…"></path></lr-icon-button>
+  <!-- after -->
+  <lr-icon-button aria-label="Star"
+    ><lr-icon path="…"></lr-icon
+  ></lr-icon-button>
+  ```
+
+  A complete element — an `<svg>`, an `<img>`, an `<lr-flag>` — keeps working, renders more reliably,
+  and is no longer constrained to a 1:1 box: content larger than `--lr-icon-button-size` now grows the
+  button and keeps its own aspect ratio, while a small glyph still pads out to the full tappable
+  target on both axes.
+
+- 9ed6aa8: Add component-scoped state-styling cssprops to eight layout/forms components, so a selected/active/current state can be restyled from outside without hijacking a library-wide `--lr-color-*` token (which repaints everything else reading it). `::part(x)[state]` is invalid CSS — an attribute selector cannot follow `::part()` — so hijacking the shared token used to be the only lever. Each new prop is an inline `var()` fallback (never declared on `:host`, which would re-stamp per instance and shadow any ancestor value), and every default is the exact token the rule used before, so an unset consumer renders byte-identically.
+
+  - `lr-app-rail-item`: `--lr-app-rail-item-current-bg`, `--lr-app-rail-item-current-color` for the `active`/`aria-current="page"` item.
+  - `lr-stepper`: `--lr-stepper-current-color`, `--lr-stepper-error-color`, `--lr-stepper-current-index-bg`, `--lr-stepper-current-index-color`.
+  - `lr-widget`: `--lr-widget-view-toggle-active-bg`, `--lr-widget-view-toggle-active-color` for the pressed view toggle.
+  - `lr-carousel`: `--lr-carousel-indicator-current-bg`, `--lr-carousel-indicator-current-border-color` for the current slide's indicator dot.
+  - `lr-breadcrumb-item`: `--lr-breadcrumb-current-color` for the current-page item.
+  - `lr-command-palette`: `--lr-command-palette-active-bg` for the active command row.
+  - `lr-time-range`: `--lr-time-range-preset-active-bg`, `--lr-time-range-preset-active-border-color`, `--lr-time-range-preset-active-color` for the active preset button.
+  - `lr-emoji-picker`: `--lr-emoji-picker-active-bg` for the keyboard-active and hovered emoji (both share one rule, so one hook retints both).
+
+- cea6d8e: New `localeNativeName(tag)` helper next to `languageToCountry()` / `LANGUAGE_TO_COUNTRY`: it returns
+  a locale's endonym — its name written in that locale itself (`'fr'` → `français`, `'pt-BR'` →
+  `português (Brasil)`) — which is what a language switcher should list. It reads through the shared
+  memoized `Intl.DisplayNames` cache, so no name table ships and repeat lookups are free, and it
+  degrades to the tag itself for an unknown or structurally invalid tag instead of throwing. Paired
+  with `languageToCountry()` and `lr-popover`, it composes the locale-picker recipe shown in the new
+  Flag story.
+- 184bfff: `lr-menu`: Escape from `header`/`footer` content closes the menu and refocuses the trigger
+  unconditionally, with no opt-in required.
+
+  That matches `<lr-popover>`, which already dismisses on Escape from arbitrary popup content, and it
+  is the only sensible contract for a region the component now positively invites you to fill: a
+  filter field you can Tab into but not Escape out of is a trap.
+
+  - `closeOnEscapeAnywhere` is **unchanged** — not deprecated, still `false` by default, and still
+    governing exactly one thing: Escape from non-item content slotted into the **default** slot.
+    Escape bubbling up from inside `[part='list']` is left entirely to the list's own handler.
+  - Arrow/ArrowUp/Home/End/Enter/Space from header/footer content keep their full native behavior;
+    the item-target gate that guarantees that is untouched, and nothing in the new region handler
+    calls `preventDefault()` for those keys.
+
+- 184bfff: `lr-menu`: new `header` and `footer` slots for composed, non-menu-item content, rendered inside
+  `[part='popup']` but **outside** the `role="menu"` list — with matching `header`/`footer` CSS parts.
+
+  A filter field, a section title, an "Apply"/"Done" button and friends have always been a real use
+  case for this component (`closeOnEscapeAnywhere` exists for exactly that), but the only place to put
+  them was the default slot — i.e. inside `role="menu"`, where ARIA permits only
+  `menuitem`/`menuitemradio`/`menuitemcheckbox`/`group`/`separator` children. Anything else there is an
+  `aria-required-children` violation. The new slots give that content a valid home.
+
+  - Nothing about the default slot changes: item discovery, roving tabindex, type-ahead,
+    `closeOnEscapeAnywhere` and its `false` default all behave exactly as before, and `items` still
+    only ever contains `<lr-menu-item>`s no matter what the new slots hold.
+  - With neither slot filled the rendered result is unchanged — both wrappers collapse to no box at
+    all, `[part='list']` keeps its exact position and size inside the popup, and the host gains no
+    attribute of any kind.
+  - Emptiness is tracked from each slot's own `slotchange` (reflected as `data-has-header` /
+    `data-has-footer` / `data-list-empty` on the host) rather than with `:empty`, which can never match
+    a part that contains a slot: Chromium counts the whitespace-only text nodes Lit leaves there.
+  - Non-item content in the **default** slot keeps working exactly as it did, with no runtime warning,
+    but the new slots are now the supported place for it.
+
+- 184bfff: `lr-menu`: Tab now moves focus into the `header`/`footer` regions instead of closing the menu, and
+  tabbing out of the popup's last focusable finally closes it.
+
+  Two halves of the same defect. `onListKeyDown` gated every key except Escape behind "is the event
+  target a real `<lr-menu-item>`?", so (a) Tab from an item always closed the menu — you could never
+  Tab _into_ composed content, in either direction, since Shift+Tab is `key === 'Tab'` too — and
+  (b) Tab from composed content did nothing at all: focus walked out of the popup while the menu
+  stayed open, an untested dismissal hole.
+
+  Tab handling therefore moves from `[part='list']` to `[part='popup']`, which also sees keydowns from
+  the new regions, and the menu now closes only when Tab would leave the popup entirely:
+
+  - Tab from an item with a focusable `footer` (or Shift+Tab with a focusable `header`) keeps the menu
+    open and lets the browser's own Tab advance carry focus into the region.
+  - Tab out of the last focusable in the popup — in either direction, from an item or from composed
+    content — closes the menu.
+  - **With no header/footer content, Tab closes exactly as before**, and non-item content in the
+    default slot stays deliberately Tab-unreachable from an item.
+  - `preventDefault()` is still never called for Tab, in any branch: native focus navigation proceeds
+    untouched, only the now-stale open state is cleared.
+
+- fe06b7d: `lr-menu`: `show(focus?)` and `hide(options?)` are now public.
+
+  - `hide({ focusTrigger: true })` closes the menu **and** returns DOM focus to the `trigger`-slotted
+    element — the case the trigger alone cannot express, e.g. a slotted "Apply"/"Done" button inside
+    the menu, or a consumer-owned keyboard shortcut. `hide()` on its own closes without moving focus,
+    for dismissals where the interaction has already put focus somewhere the user chose.
+  - `show()` is promoted alongside it (rather than shipping an asymmetric API) and still accepts the
+    `'first' | 'last'` initial focus target.
+  - The roving-tabindex reset moved from `hide()` into `updated()`, so a bare `el.open = false` from
+    outside now resets `activeIndex` too. Previously that path left a stale `tabindex="0"` tab stop on
+    whichever item was last active, so Tab could land inside a closed menu. `hide()` stays thin and
+    `updated()` remains the single owner of positioning, listeners and the `lr-show`/`lr-hide` events;
+    focus restoration deliberately stays in `hide()` so `disconnectedCallback()`'s own `open = false`
+    teardown reset can never steal focus.
+
+- 09bdfde: `lr-activity-feed`: make the virtualized entry rows actually styleable, by this component and by a
+  consumer.
+
+  At/above `virtualizeThreshold` the entries are produced by this component's `renderItem` but
+  committed into the embedded `<lr-virtual-list>`'s own shadow root, one boundary deeper than a
+  `[part='entry']` selector can reach — so every entry, icon, text and timestamp rule was silently
+  inert and a long feed rendered as unstyled rows. Each rule now pairs its plain selector (still
+  correct below the threshold, where the same template renders into this component's own shadow root)
+  with an `lr-virtual-list::part(…)` twin, and an `exportparts` forwarding declaration makes the same
+  parts reachable as `lr-activity-feed::part(entry)` etc. from a consuming stylesheet.
+
+  The tone dot is promoted from an internal class to a named `tone-dot` part, since a class selector
+  cannot cross a shadow boundary either. `::part()` cannot be followed by an attribute selector, so
+  the tone carries a second name in the dot's part list rather than being matched through
+  `[data-tone]` (`::part()` matches with `part~=` semantics, so both names select the same element).
+  New parts: `tone-dot`, plus `tone-dot-neutral`/`tone-dot-brand`/`tone-dot-success`/
+  `tone-dot-warning`/`tone-dot-danger`. The `data-tone` attributes are unchanged, and a consumer can
+  now retint a single tone instead of overriding a library-wide color token.
+
+- 9150bb1: `lr-archive-viewer`: make the virtualized entry rows actually styleable, by this component and by a
+  consumer.
+
+  Entry rows are produced by this component's `renderItem` but committed into the embedded
+  `<lr-virtual-list>`'s own shadow root, one boundary deeper than a `[part='entry']` selector can
+  reach — so all five row-level rules were silently inert and the listing rendered as unstyled stacked
+  text with no row layout, no icon sizing, no truncation and no size column treatment. They now reach
+  through `lr-virtual-list::part(…)`, and an `exportparts` forwarding declaration makes the same parts
+  reachable as `lr-archive-viewer::part(entry)` etc. from a consuming stylesheet.
+
+  New part `entry-name-dir`: `::part()` cannot be followed by a descendant combinator, so the
+  directory-row emphasis that used to be written as a descendant selector now targets a second part
+  name on the name element itself. A directory row's name is `part="entry-name entry-name-dir"`, and
+  `::part()` matches with `part~=` semantics, so both names select it.
+
+- 3e171e6: Fix `lr-av-player`'s transcript cue styling never applying, and make every cue-level part reachable
+  from a consumer stylesheet.
+
+  Cues are composed through `lr-virtual-list`, whose `renderItem` result is committed inside that
+  element's **own** shadow root — one boundary below the player's. A bare `[part='cue']` selector in
+  the player's stylesheet cannot cross that boundary, so every cue rule was silently inert and each
+  transcript row fell back to the raw browser button appearance: a grey background, a visible border,
+  `1px 6px` padding and centered text, with no timestamp or speaker treatment and no visual state for
+  the playing cue or the search matches. Every one of those rules now goes through
+  `lr-virtual-list::part(…)`.
+
+  `::part()` cannot be followed by an attribute selector, so the three cue states get their own part
+  names, added alongside `cue` as a part list (`::part()` carries `part~=` semantics, so both names
+  match the same element):
+
+  - **New:** `cue-current` — the row the playhead is inside.
+  - **New:** `cue-match` — a row matching the current search query.
+  - **New:** `cue-active-match` — the row holding the current search match.
+
+  The `aria-current`, `data-match` and `data-active-match` attributes are unchanged and still describe
+  each row's state.
+
+  This also makes two documented custom properties live for the first time:
+  `--lr-av-player-cue-current-bg` now retints the playing cue, and
+  `--lr-av-player-cue-active-match-color` now recolors the active search match's outline. Both
+  previously resolved against a rule that never matched anything.
+
+  The player forwards `cue`, `cue-current`, `cue-match`, `cue-active-match`, `cue-time`, `cue-speaker`
+  and `cue-text` through `exportparts`, so `lr-av-player::part(cue)` and friends work from a consumer
+  stylesheet for the first time.
+
+- c0f00ac: `lr-csv-viewer` and `lr-spreadsheet-viewer`: make the documented `cell-highlight` part actually
+  visible, and reachable from a consumer stylesheet.
+
+  Both viewers already emitted `part="cell cell-highlight"` for a cell covered by a `highlights`
+  entry, but neither had a single CSS rule for it anywhere — a highlighted cell rendered
+  indistinguishably from a plain one. Highlighted cells render inside the internal
+  `<lr-virtual-list>`'s own shadow root (they are `renderItem`'s output), so the styling is applied
+  through `lr-virtual-list::part(cell-highlight)`, using the same outline tokens `lr-dataset-viewer`
+  gives its own `cell-highlight` so a highlight reads identically across the table viewers.
+
+  - New `--lr-csv-viewer-highlight-color` / `--lr-spreadsheet-viewer-highlight-color` custom
+    properties (default `var(--lr-color-brand)`) set the outline color; the active highlight sets it
+    inline to `var(--lr-color-warning, var(--lr-color-brand))`, so the active match is now
+    distinguishable from the other highlighted cells.
+  - A paired `:focus-visible` rule restores the shared focus ring, which the unconditional highlight
+    outline would otherwise swallow on this focusable cell.
+  - Both viewers now forward `exportparts` for `data-row`, `cell` and `cell-highlight` from the
+    internal `<lr-virtual-list>`, so `lr-csv-viewer::part(cell)` and friends reach the real rendered
+    rows instead of matching nothing.
+
+- 99d5500: Fix `lr-chunk-inspector`'s entire chunk-row styling never applying above `virtualize-at`, and make
+  every row-level part reachable from a consumer stylesheet.
+
+  Past the threshold the row template becomes `lr-virtual-list`'s `renderItem`, whose result is
+  committed inside that element's **own** shadow root — one boundary below this component's. A bare
+  `[part='chunk']` selector cannot cross that boundary, so a long chunk list lost its row layout and
+  separators, the score line's size/color/tabular figures, the score bar and its tone-mapped fill, the
+  line clamp on the collapsed text preview, and the borderless brand styling on the open and
+  show-more buttons, which fell back to the raw browser button appearance. Both documented custom
+  properties (`--lr-chunk-inspector-current-bg`, `--lr-chunk-inspector-current-color`) were dead
+  there too. Every rule now pairs its original selector with an `lr-virtual-list::part(…)` arm, so
+  both rendering paths present identically — below the threshold the rows are still rendered into this
+  component's own shadow root, where the bare selector is the one that matches.
+
+  `::part()` cannot be followed by an attribute selector, and it cannot be followed into the matched
+  element's subtree either, so row state is now carried by an additional part name (added alongside
+  the base name as a part list — `::part()` carries `part~=` semantics, so both names match the same
+  element):
+
+  - **New:** `chunk-current` — the row matching `activeId`.
+  - **New:** `score-current` — that row's score line, previously reached through a descendant
+    selector no `::part()` can express.
+  - **New:** `score-fill-success`, `score-fill-warning`, `score-fill-danger` — the score bar fill in
+    each scoring tier.
+  - **New:** `text-clamped` — the text preview while still collapsed.
+
+  The `aria-current`, `data-tone` and `data-clamped` attributes are unchanged and still describe each
+  element's state.
+
+  While virtualized, the chunk row no longer carries its own `role="listitem"`: `lr-virtual-list`
+  already wraps every row it renders in one, and the nested duplicate left the inner list item with a
+  list-item rather than list parent — an invalid ARIA containment that axe flags.
+
+  The internal `lr-virtual-list` now forwards every row part through `exportparts`, so
+  `lr-chunk-inspector::part(chunk)` and friends work from a consumer stylesheet in both paths.
+
+- 5bdb6d7: Fix `lr-notebook-viewer`'s cell and output styling never applying, and make every cell-level part
+  reachable from a consumer stylesheet.
+
+  Cells are composed through `lr-virtual-list`, whose `renderItem` result is committed inside that
+  element's **own** shadow root — one boundary below the viewer's. A bare `[part='cell']` selector in
+  the viewer's stylesheet cannot cross that boundary, so the rules for `cell`, `cell-gutter`,
+  `outputs`, `output` and `output-toggle` were all silently inert: cells rendered without their
+  two-column grid, padding and separator, the execution-count gutter without its monospace/quiet
+  treatment, stderr and error outputs untinted, and the show-all-output control as a raw browser
+  button. Every one of those rules now goes through `lr-virtual-list::part(…)`, including the
+  narrow-allocation `@container` block — container queries resolve through the flat tree, so they
+  still evaluate against the viewer's own `:host` container across the shadow boundary.
+
+  `::part()` cannot be followed by an attribute selector or a descendant combinator, so three states
+  and one descendant get their own part names, added alongside the existing ones as a part list
+  (`::part()` carries `part~=` semantics, so both names match the same element):
+
+  - **New:** `cell-active` — the cell an anchor currently targets. This is what
+    `--lr-notebook-viewer-active-bg` retints; that custom property had no effect until now.
+  - **New:** `output-error` — a stderr stream or an error output, carrying the danger tint.
+  - **New:** `error-output-label` — the label introducing an error output's traceback.
+
+  The `data-active`, `data-stream` and `data-output-type` attributes are unchanged and still describe
+  each element for scripting.
+
+  The viewer forwards `cell`, `cell-active`, `cell-gutter`, `cell-source`, `outputs`, `output`,
+  `output-error`, `error-output-label` and `output-toggle` through `exportparts`, so
+  `lr-notebook-viewer::part(cell)` and friends work from a consumer stylesheet for the first time.
+
+- 2e3be2e: `lr-page-rail`: make the virtualized page rows actually styleable, by this component and by a
+  consumer.
+
+  Page rows are produced by this component's `renderItem` but committed into the embedded
+  `<lr-virtual-list>`'s own shadow root, one boundary deeper than a `[part='page']` selector can
+  reach — so all 13 row-level rules were silently inert and every page button rendered as a raw
+  browser `<button>` (UA background, UA border, UA padding) instead of the intended rail row. They now
+  reach through `lr-virtual-list::part(…)`, and an `exportparts` forwarding declaration makes the same
+  parts reachable as `lr-page-rail::part(page)` etc. from a consuming stylesheet.
+
+  `--lr-page-rail-current-bg` becomes live with this fix: it previously documented a background that
+  nothing applied. It now tints the current page row, and keeps it tinted while the row is hovered so
+  the current page stays identifiable under the pointer.
+
+  `::part()` cannot be followed by an attribute selector, so state variants carry a second part name
+  in the element's part list instead (`::part()` matches with `part~=` semantics, so both names select
+  the same element). New parts: `page-current` on the current page button (alongside `page`), and
+  `heat-dot-accent`/`heat-dot-success`/`heat-dot-warning`/`heat-dot-danger`/`heat-dot-neutral`/
+  `heat-dot-overflow` on the heat markers (alongside `heat-dot`). The `data-tone`/`data-overflow`
+  attributes are unchanged.
+
+- 3217988: Fix `lr-pdf-viewer`'s page styling never applying, and make every page-level part reachable from a
+  consumer stylesheet.
+
+  Pages are composed through `lr-virtual-list`, whose `renderItem` result is committed inside that
+  element's **own** shadow root — one boundary below the viewer's. A bare `[part='page']` selector in
+  the viewer's stylesheet cannot cross that boundary, so the rules for `page`, `text-layer`, the page
+  canvas, the generated text runs, the selection tint, and both search-match states were all silently
+  inert: pages rendered without their centering/padding wrapper, the canvas without its border,
+  the text layer unpositioned, and search matches unhighlighted. Every one of those rules now goes
+  through `lr-virtual-list::part(…)`, including the RTL text-layer mirror.
+
+  Because `::part()` cannot be followed by a descendant combinator, two elements that were previously
+  addressed as descendants get their own names:
+
+  - **New:** `page-canvas` — the canvas a page's content is painted onto.
+  - **New:** `text-span` — one generated text run inside a page's text layer. The selection tint hangs
+    off this part (`::part(text-span)::selection`), since a highlight pseudo is matched against the
+    element the selected text originates in.
+
+  `search-match` / `search-match-active` are now matched directly by name (`::part()` already carries
+  `part~=` semantics), and the viewer forwards `page`, `page-canvas`, `text-layer`, `text-span`,
+  `search-match` and `search-match-active` through `exportparts`, so `lr-pdf-viewer::part(page)` and
+  friends work from a consumer stylesheet for the first time.
+
+- 6f3db46: Fix `lr-retrieval-results`' row, selection and metadata styling never applying while virtualized,
+  and make every row-level part reachable from a consumer stylesheet.
+
+  Rows are composed through `lr-virtual-list`, whose `renderItem` result is committed inside that
+  element's **own** shadow root — one boundary below this component's. A bare `[part='row-body']`
+  selector in this component's stylesheet cannot cross that boundary, so the checkbox offset, the
+  row-body layout, the selected-row indicator and the whole metadata list were silently inert
+  whenever the list virtualized. `grouping="source"` always virtualizes, so every grouped consumer
+  saw an unstyled result set, and the documented `--lr-retrieval-results-selected-border` custom
+  property had nothing to recolor there. Each of those rules now pairs its original selector with an
+  `lr-virtual-list::part(…)` arm, so both rendering paths present identically — the flat path below
+  `virtualize-at` still renders these parts into this component's own shadow root, where the bare
+  selector is the one that matches.
+
+  `::part()` cannot be followed by an attribute selector, nor by a descendant combinator, so two
+  kinds of rule needed new part names:
+
+  - **New:** `row-body-selected` — added alongside `row-body` as a part list (`::part()` carries
+    `part~=` semantics, so both names match the same element) on the selected row. The `data-selected`
+    attribute is unchanged and still describes the row's state.
+  - **New:** `metadata-term` and `metadata-value` — the `<dt>`/`<dd>` inside a `metadata-entry`,
+    previously styled through a descendant selector that `::part()` cannot express. The trailing colon
+    after a metadata key is now `::part(metadata-term)::after`.
+
+  The group header in grouped mode also gains a separator matching the one this component's rows use;
+  `lr-virtual-list` supplies the rest of its appearance.
+
+  `exportparts` now forwards `select`, `row-body`, `row-body-selected`, `metadata`, `metadata-entry`,
+  `metadata-term` and `metadata-value` alongside the existing `row`/`group-header`, and forwards each
+  per-row `lr-chunk-inspector`'s own parts onward under a `chunk-` prefix (`chunk`, `chunk-current`,
+  `chunk-score`, `chunk-score-current`, `chunk-score-bar`, `chunk-score-fill`,
+  `chunk-score-fill-success`/`-warning`/`-danger`, `chunk-open-button`, `chunk-title`, `chunk-text`,
+  `chunk-text-clamped`, `chunk-toggle`) — those live two shadow hops deep and were unreachable from
+  outside the component entirely.
+
+- 583f359: `lr-phone-input`: rebuild the country selector's closed state and add an opt-in `flags` API.
+
+  The old closed control was the bare native `<select>` showing each option's full
+  `"Country name (+code)"` text: long localized names clipped under the UA chevron (the trigger was
+  capped at 45% of the field), the calling code appeared twice (inside the option text and again in
+  `calling-code`), and the popup fell back to UA colors (a white panel in dark themes). The native
+  `<select>` is kept — its popup, localized full country names, keyboard type-ahead, and native
+  mobile pickers are irreplaceable and fully accessible — but it is now stretched invisibly over a
+  compact decorative trigger:
+
+  - New closed state: selected alpha-2 code (localized "Select" placeholder when no countries exist)
+    plus the shared design-system chevron, with a pointer cursor, a hover tint, and an inner
+    focus-visible ring so keyboard focus on the selector is distinguishable from focus on the
+    telephone input. No more clipping and no duplicated calling code.
+  - Popup options now pin `--lr-color-surface`/`--lr-color-text` so the open list follows the theme
+    in dark mode.
+  - New `flags` boolean attribute renders the selected country's flag in the trigger as
+    `<lr-flag variant="compact" aria-label="">` (decorative — the select already announces the
+    country). The `<lr-flag>` definition is registered lazily on first use, so nothing flag-related
+    is bundled while `flags` stays off; flag artwork keeps the standalone `<lr-flag>` contract
+    (install optional `@aceshooting/lyra-flags` + import
+    `components/media/flag/flag-peer.js` once). Without it the trigger simply omits the image.
+  - New CSS parts: `country` (selector region), `country-trigger`, `flag`, `country-code`
+    (`data-placeholder` when empty), `expand-icon`. Existing parts are unchanged in name, but
+    `country-select` is now the invisible overlay — a consumer rule that painted its text/background
+    should target `country-trigger`/`country-code` instead.
+
+- e83deb1: Selected-state styling hooks for `lr-segmented` and `lr-tabs`, an exact-height hatch for the
+  `lr-segmented` track, and a marker legend row for `lr-sequence-strip`.
+
+  - `lr-segmented` gains `--lr-segmented-selected-bg`, `--lr-segmented-selected-color`,
+    `--lr-segmented-selected-font-weight`, `--lr-segmented-selected-shadow` and
+    `--lr-segmented-hover-color`. Recoloring the checked pill previously required hijacking
+    library-wide `--lr-color-surface`/`--lr-color-text`, which necessarily repainted hovered
+    _unselected_ segments too (they read the same tokens); `::part(segment)[aria-checked='true']` is
+    not valid CSS, so there was no other route. The hover color is now its own hook, so the two states
+    are independent.
+  - `lr-segmented` also gains `--lr-segmented-track-height`, pinning the track to an exact height at
+    every `size` tier for a row that must line up with a hard-sized toolbar control. It is genuinely
+    unset by default, so each tier keeps its `--lr-segmented-track-min-height` floor until you set it.
+  - `lr-tabs` gains `--lr-tabs-selected-color`, `--lr-tabs-indicator-color` and
+    `--lr-tabs-hover-color` for the same reason: the selected tab's text/underline and the hovered
+    tab's text no longer share `--lr-color-brand`/`--lr-color-text` with the rest of the library.
+  - `lr-sequence-strip` gains `markerLabel` (`marker-label`). When set alongside `show-legend` it adds
+    one trailing legend row — `[part="legend-marker-swatch"]`, a neutral chip (themeable via the new
+    `--lr-sequence-strip-legend-marker-bg`) carrying the cell's own bottom bar in
+    `--lr-sequence-strip-marker-color` — and the marker's count joins the strip's auto-generated
+    `aria-label` summary, so the visual legend keeps no entry without a spoken counterpart.
+
+  Every new custom property is an inline `var()` fallback resolving to the token the rule already
+  used, so an unset consumer renders exactly as before.
+
+- 36dce60: Fill the sized-control cssprop gaps for `lr-date-input`, `lr-pagination`, `lr-known-date`,
+  `lr-chip`, `lr-avatar`, and `lr-avatar-group`, matching the per-tier theming surface
+  `lr-input`/`lr-select`/`lr-combobox` already expose.
+
+  - **`lr-avatar` / `lr-avatar-group` (visible bug fix):** the initials fallback and the "+N"
+    overflow badge were painted at a fixed `--lr-font-size-sm` at every `size`, so initials did not
+    scale with the avatar circle. They now scale via new per-tier `--lr-avatar-font-size` and
+    `--lr-avatar-group-badge-font-size` knobs (`sm`/`md`/`lg`). The `md` default is unchanged, so
+    existing avatars render identically.
+  - **`lr-date-input`:** adds a per-tier `--lr-date-input-control-min-height` floor and an exact-height
+    `--lr-date-input-control-height` hatch on the input row (it previously had neither). The calendar
+    toggle keeps its own 24x24 touch target even when the height hatch pins a shorter row.
+  - **`lr-known-date`:** adds a per-tier `--lr-known-date-field-min-height` floor and an exact-height
+    `--lr-known-date-field-height` hatch on each field input.
+  - **`lr-chip`:** the interactive tap-target floor is now the per-tier `--lr-chip-min-height` (was a
+    single hardcoded `1.5rem` shared by every tier), and a new `--lr-chip-height` hatch pins an exact
+    height. Interactive chips keep the 24px WCAG 2.2 SC 2.5.8 minimum at every tier; a `--lr-chip-height`
+    below that is for non-interactive chips only.
+  - **`lr-pagination`:** the nav buttons' and page input's inner padding is now the
+    `--lr-pagination-control-padding` knob (was a hardcoded `var(--lr-space-xs)`), kept uniform across
+    tiers so current rendering is unchanged.
+
+  All new knobs default to today's exact values, so unset consumers render byte-identical at every
+  tier (the `lr-avatar` `sm`/`lg` font-size fix is the sole deliberate exception).
+
+- 6ab596d: `<lr-split>`: `rail-breakpoint` and `float-breakpoint` now accept a CSS length (`'640px'`,
+  `'68.75rem'`, `'3em'`) as well as the original bare pixel number, and a new
+  `collapse-breakpoint-basis="viewport"` measures both against the viewport via `matchMedia` instead
+  of the split's own `[part="base"]` allocation — for collapsing in step with a page-level `@media`
+  layout. Both thresholds are classified together on every change, so a fast resize crossing both at
+  once still lands on one correct state and fires `lr-split-collapse-change` once; under viewport
+  basis the first paint already carries the right `data-collapse-state` with no `ResizeObserver`
+  round-trip, and that initial state is not announced as a transition. Note `(max-width:)` is
+  inclusive while container basis compares strictly `<`, so switching basis shifts each crossing
+  point by 1px. An unparseable length (`'80vw'`, `'calc(…)'`, garbage) falls back to the documented
+  `640`/`400` defaults rather than switching collapse off, and the "rail must sit above float"
+  invariant is still enforced, in pixel space, under both bases.
+
+  Because both properties now accept a string, they use Lit's default string converter: reading
+  `el.railBreakpoint` after `rail-breakpoint="640"` returns `'640'` rather than `640` (matching how
+  `orientationBreakpoint` already behaves). Authored values and crossing behavior are unchanged.
+
+- e1d4af8: `lr-stat` gains two layout axes and stops reserving space for an absent label.
+
+  - `appearance="card" | "plain"` (default `card`, reflected). `plain` removes the border,
+    background, padding, corner radius and the `block-size: 100%` stretch, so a stat can sit inline
+    in prose, a toolbar or a table cell instead of only as a card. A `plain` stat with a safe `href`
+    underlines its `[part="value"]` on hover/focus, since the card's border-color-shift affordance is
+    invisible with no border; the focus ring is unchanged. `plain` also wins over `compact` when both
+    are set, and drops `emphasis`'s accent edge (card chrome) while keeping its brand value tint.
+  - `orientation="vertical" | "horizontal"` (default `vertical`, reflected). `horizontal` lays label,
+    value + unit, trend, sub and caption out on a single wrapping baseline row; `[part="spark"]` and
+    `[part="rows"]` stay stacked on their own full-width line beneath it.
+  - `[part="label"]` is now `hidden` whenever `label` is empty, so a label-less stat no longer leaves
+    a blank gap above its value. A non-empty label is never hidden and its `aria-labelledby` pairing
+    with `[part="value"]` is unchanged.
+
+- 3312708: Add component-scoped CSS custom properties for state styling across thirteen conversation, retrieval, viewer and media components. Each of these components previously painted a selected/active/current state straight from a library-wide `--lr-color-*` token, which left the state unrestylable from outside: `::part(x)[data-active]` is invalid CSS, so the only lever was hijacking the shared token — repainting every other surface on the page that read it.
+
+  Every new property uses the inline `var()` fallback form and is deliberately **not** declared on `:host`, so a value set on the element or any ancestor is honoured rather than shadowed. With none of them set, rendering is byte-identical to before.
+
+  - `lr-conversation-item` — `--lr-conversation-item-active-bg`, `--lr-conversation-item-active-color`
+  - `lr-push-to-talk` — `--lr-push-to-talk-recording-color`
+  - `lr-chunk-inspector` — `--lr-chunk-inspector-current-bg`, `--lr-chunk-inspector-current-color`
+  - `lr-retrieval-results` — `--lr-retrieval-results-selected-border`
+  - `lr-retrieval-trace` — `--lr-retrieval-trace-active-border`
+  - `lr-source-picker` — `--lr-source-picker-checked-bg`, `--lr-source-picker-checked-border`, `--lr-source-picker-mixed-bg`
+  - `lr-page-rail` — `--lr-page-rail-current-bg`
+  - `lr-notebook-viewer` — `--lr-notebook-viewer-active-bg`
+  - `lr-svg-viewer` — `--lr-svg-viewer-active-border`
+  - `lr-document-preview` — `--lr-document-preview-active-border`
+  - `lr-xml-viewer` — `--lr-xml-viewer-active-match-color`
+  - `lr-av-player` — `--lr-av-player-marker-active-color`, `--lr-av-player-cue-current-bg`, `--lr-av-player-cue-active-match-color`
+  - `lr-image-viewer` — `--lr-image-viewer-annotate-active-bg`, `--lr-image-viewer-annotate-active-border`, `--lr-image-viewer-highlight-active-color`
+
+  `--lr-conversation-item-active-*` and `--lr-chunk-inspector-current-*` are documented as contrast-sensitive pairs: each background is half of a WCAG-AA dependency with the text color rendered on it.
+
+  Also fixes a WCAG-AA contrast failure in `lr-chunk-inspector`: the current (`active-id`) chunk's score line rendered in `--lr-color-text-quiet`, which reaches only ~4.24:1 against the `--lr-color-brand-quiet` current-row background — under the 4.5:1 floor for normal-size text. It now uses full-strength text while current, matching the identical fix already carried by `lr-attachment-chip`, `lr-chat-message` and `lr-conversation-item`. Non-current rows keep the quiet treatment.
+
+- 5e9a18e: `lr-table`: keep focus inside a persistent (`editable: 'always'`) cell editor when the rows are
+  re-sorted underneath it. Row rendering is keyed by row key, so a re-sort _moves_ the editor's
+  `<input>` node — the typed value rides along, but a DOM move drops focus on its own — so the table
+  now records the focused editor's cell and restores focus to it after the move. A row that has left
+  the rendered set entirely (paginated away, filtered out) only clears the record: focus is not yanked
+  to whichever unrelated row now occupies that position.
+- 5e9a18e: `lr-table`: give a persistent (`editable: 'always'`) cell editor its own Enter/Escape semantics.
+  Enter commits and keeps focus in the field rather than closing an editor that has no closed state,
+  and Escape — which has nothing to cancel back to — is no longer cancelled, so an ancestor
+  dialog/popover still acts on it. A double-click editor's Enter-commits-and-closes and
+  Escape-cancels behavior is unchanged. Adds the accompanying `AlwaysOnEditors` story.
+- 5e9a18e: `lr-table`: widen `TableColumn.editable` to `boolean | 'always'`. `true` keeps today's
+  double-click-to-open editor unchanged; the new `'always'` renders a persistent editor in every body
+  cell of that column from first paint, for settings/rate-style grids where double-clicking each cell
+  to change a value is the wrong interaction. Persistent editors are plain tab stops (no `tabindex` of
+  their own), exactly like the existing row-expand toggle, so the roving header/row tabindex model is
+  untouched; each one keeps its individually interpolated `tableEditCell` accessible name, and
+  double-clicking an `'always'` cell no longer opens a second, competing editor inside it.
+- 5e9a18e: `lr-table`: a persistent (`editable: 'always'`) cell editor binds its `value` as a content attribute
+  rather than as the `.value` property, so native dirty-value-flag semantics apply — an out-of-band
+  `rows` update to a cell the user has already typed into no longer replaces the draft they are still
+  editing, while an untouched editor still picks up a new `rows` value normally. Double-click editors
+  (`editable: true`) keep the property binding and its deliberate re-assert, unchanged. `lr-cell-edit`
+  remains the only mutation channel; the table still never mutates `row`.
+- 43ee7d0: `lr-table`: the empty state is now addressable, cells can carry a native tooltip, `table-layout` is
+  settable, and the selected row has its own background custom property.
+
+  - Every built-in `<lr-empty>` the table renders carries `part="empty"` and re-exports its own inner
+    parts as `empty-base`/`empty-icon`/`empty-heading`/`empty-description`/`empty-actions`, so the
+    empty state can be restyled from outside without replacing it. Note that the no-columns and
+    no-rows states return the empty element as the shadow root's own root, so `::part(base)` does not
+    apply in those two states — only in the filtered-to-zero one.
+  - A new `empty` slot replaces the built-in empty state wholesale on the two _data_-empty branches
+    (no rows at all, and filtered/paginated down to zero). The no-columns branch keeps its own
+    `noColumnsHeading` copy and is deliberately not slot-replaceable — it reports a configuration
+    problem, not an empty result set.
+  - New `emptyCompact` property (`empty-compact` attribute) overrides the built-in empty state's
+    `compact` density. Left unset it preserves today's per-branch behaviour exactly: spacious for the
+    whole-table states, compact for the in-table filtered-to-zero one.
+  - New `columns[].cellTitle(row)` renders the generated `<td>`'s native `title`, symmetrical with
+    `cellStyle`. Returning `undefined` or an empty string omits the attribute entirely rather than
+    rendering `title=""`, which would suppress an ancestor's own tooltip, and the attribute is
+    suppressed while that cell is in inline-edit mode so the tooltip cannot shadow the editor. Some
+    screen readers announce a `<td title>` as the cell's accessible name, so use it only for a longer
+    form of what the cell already shows.
+  - New `layout: 'auto' | 'fixed' = 'auto'` property (reflected) sets a floor for the table's
+    `table-layout`. `fixed` applies the fixed algorithm even with no column widths declared; the
+    default `auto` still resolves to fixed whenever a column declares a `width` or a drag-resize is in
+    flight, since resizing does not work under `table-layout: auto`. Under `fixed` with no declared
+    widths the first row determines every column's width — so revealing a `priority`-hidden column
+    re-measures all of them — and `columns[].minWidth`/`maxWidth` are ignored by the fixed algorithm.
+  - New `--lr-table-row-selected-bg` custom property (default `var(--lr-color-brand-quiet)`) recolors
+    the `aria-selected` row. Shadow Parts forbids an attribute selector after `::part()`, so
+    `::part(row)[aria-selected]` is invalid CSS and the selected row could previously only be
+    restyled by overriding the library-wide brand-quiet token. Unset, rendering is unchanged.
+
+- 437bef5: `lr-table`: add a skeleton loading mode. A new `loadingAppearance: 'spinner' | 'skeleton'`
+  property (attribute `loading-appearance`, default `'spinner'` — unchanged output) controls how
+  `loading` renders. `'skeleton'` keeps the real `<colgroup>`, `<thead>`, filter field and
+  pagination footer in place and fills the table body with placeholder `<lr-skeleton>` rows, so a
+  cold load sketches the grid's shape and holds its column geometry instead of collapsing to a
+  spinner and reflowing when the rows arrive. The placeholder row count comes from the new
+  `skeletonRows` property (attribute `skeleton-rows`, default `0` = derive from the normalized
+  `pageSize`, capped at 20, else 3). Exactly one `role="status"` live region announces the load —
+  each placeholder opts out of its own announcement, so there is no per-cell live-region storm. A
+  `priority`-hidden column is given no visible placeholder cell. New `skeleton` CSS part targets the
+  placeholders.
+- bc8cb8b: Make the focus-ring and icon-button-size tokens themeable from an ancestor, and fill out
+  `theme.css` with the inputs it was missing.
+
+  `--lr-focus-ring-width`, `--lr-focus-ring-offset` and `--lr-icon-button-size` were the only
+  three tokens declared as bare literals instead of chaining through a `--lr-theme-*` input.
+  That made them the only tokens genuinely unreachable for subtree theming: a `--lr-*` token is
+  re-declared on **every** `LyraElement`'s `:host`, so a value set on an ancestor is shadowed at
+  the first intervening lyra host and never reaches anything nested inside it. `--lr-theme-*`
+  inputs are declared only at `:root` (in `theme.css`) and never in component shadow styles, so
+  they _do_ inherit through nested shadow roots — which is why the bridge is the supported route.
+  The three tokens now read `--lr-theme-focus-ring-width`, `--lr-theme-focus-ring-offset` and
+  `--lr-theme-icon-button-size`, with their existing values as fallbacks, so nothing renders
+  differently by default.
+
+  Keep a resolved `--lr-theme-icon-button-size` at or above 24px: it backs the hit area of
+  `lr-date-input`, `lr-combobox`, `lr-input` and `lr-select`, and anything smaller fails
+  WCAG 2.2 SC 2.5.8 (Target Size (Minimum)).
+
+  `src/theme.css` also gains the type scale, spacing scale, stacking layers, chart palette,
+  the 16 ANSI terminal slots, the raised surface and both overlay scrims as real inputs — every
+  one set to the exact value it already fell back to, so importing the sheet changes no computed
+  value. Two fixes came with that:
+
+  - `.lr-dark` never set `--lr-theme-color-surface-raised`, so a `.lr-dark` page rendered raised
+    surfaces at the light `#f6f8fa` while `prefers-color-scheme: dark` rendered them at `#22272e`.
+    The dark block now mirrors the raised surface and the eight chart colors.
+  - `--lr-color-overlay` and `--lr-color-overlay-strong` both read a single
+    `--lr-theme-color-overlay` input, so defining that input flattened the strong scrim's `0.92`
+    onto the plain scrim's value. `--lr-color-overlay-strong` now has its own
+    `--lr-theme-color-overlay-strong` input, chained through the old one so a theme that sets only
+    `--lr-theme-color-overlay` still tints both exactly as before.
+
+- e9c4f22: `lr-thread-list` forwards a `compact` row density
+
+  A reflected boolean `compact` (default `false`) that sets `compact` on every data-mode row
+  `<lr-conversation-item>`, mirroring how `editable` is already forwarded — the one-attribute way to
+  tighten a whole sidebar, where previously the only lever was styling `::part(row-item-base)` and
+  `::part(row-item-title)` by hand. The density itself lives on the row item; this property only
+  forwards it, so both components stay in sync from one implementation.
+
+  Slotted mode (empty `threads` _with_ real slotted content) is a documented no-op: that mode renders
+  host-supplied `<lr-conversation-item>`s as-is, so the host sets `compact` on its own items there —
+  the same division of responsibility slotted mode already has for every other row property.
+
+- b9d78b7: `lr-thread-list` now forwards the row `<lr-conversation-item>`'s own CSS parts out of data mode under
+  a `row-item-*` namespace: `row-item-base`, `row-item-option`, `row-item-leading`, `row-item-content`,
+  `row-item-title`, `row-item-title-input`, `row-item-rename-button`, `row-item-excerpt`,
+  `row-item-meta`, `row-item-timestamp` and `row-item-actions`.
+
+  Data mode builds each row itself, two shadow roots down, so until now none of those eleven parts were
+  reachable from outside — including the two declarations that set row height. Row density could only
+  be changed with `lr-thread-list::part(row) { --lr-theme-space-s: … }`, a whole-subtree retheme that
+  also shrank everything nested in the row (a `renderActions` menu's items dropped below the
+  touch-target floor and had to be un-retheme'd inline). `lr-thread-list::part(row-item-base)
+{ padding-block: … }` now sets row density with no token override and no collateral damage.
+
+  The existing `row-leading`/`row-content`/`row-meta`/`row-actions`/`row-wrapper` parts are unchanged;
+  they wrap this component's render-callback output, which is a different surface from the item's own
+  internals. Purely additive: an unstyled thread list renders identically.
+
+- 9010a89: `lr-thread-list` exposes a `row-wrapper` CSS part around `wrapRow` output.
+
+  `wrapRow` was the one row hook with no library-added part -- `renderLeading`, `renderRowContent`,
+  `renderMeta` and `renderActions` each get a `row-*` wrapper, so a host wrapping a whole row had to
+  thread its own class through the callback to lay it out. Its return value is now placed inside a
+  `part="row-wrapper"` block `<div>`, reachable from outside as `lr-thread-list::part(row-wrapper)`.
+
+  The wrapper is deliberately unstyled and block-level, and is added only when `wrapRow` is set: the
+  box the internal `lr-virtual-list` measures for windowing is its own `[part="row"]` one level up,
+  and an unstyled block box contributes exactly its child's height to it, so measured row heights are
+  unchanged. The part is row-only -- group headers never pass through `wrapRow` and never carry it.
+
+- 81af4b0: Add `sticky-groups` to `lr-thread-list`: the current date/custom group's header stays pinned to the
+  top of the scroll viewport while its rows are in view, and is pushed off as the next group's header
+  arrives. Group headers are ordinary virtualized rows, so this renders an `aria-hidden` copy into
+  `lr-virtual-list`'s sticky layer — the real row keeps the `role="heading"` semantics and the tab
+  order, while the pinned copy stays clickable and requests the same `lr-group-toggle` collapse. The
+  band is exported as `::part(group-sticky)`, and the copy renders the same
+  `group-header`/`group-toggle`/`group-label`/`group-icon` parts as the real header, so existing
+  header styling applies to both. Default `false` renders exactly as before.
+- 81af4b0: Remove `lr-thread-list`'s reach into the internal `lr-virtual-list`'s shadow root. Arrowing past the
+  rendered window now scrolls through the child's public `scrollContainer` and waits for its
+  `lr-scroll` notification before moving focus, instead of mutating the scroll position of an element
+  found by querying the child's render root and then dispatching a fabricated `scroll` event at it —
+  which also raced the child's re-render rather than following it. Row lookup goes through a new
+  `lr-virtual-list.renderedRows` accessor (the currently-windowed `[part="row"]` wrappers, in item
+  order), added because a windowed list gives a host no other way to reach a row that may not have
+  existed a frame earlier; `exportparts` forwards styling, not element references.
+- cea6d8e: `lr-token-input` can now edit a token in place. Set `editable` and each token becomes a roving tab
+  stop that opens an inline editor on click, Enter, or F2: Enter commits and emits
+  `lr-token-edit` with `{ value, previousValue, index }`, Escape reverts silently, and a blur commits
+  without stealing focus back. New `token-label` and `token-editor` CSS parts (rendered only while
+  `editable` is set) and a `--lr-token-input-editor-inline-size` custom property style the two states;
+  with `editable` unset the token row renders exactly as before and stays non-focusable.
+
+  `delimiter` now accepts `null` — as a property, or via `delimiter="none"` / `delimiter=""` — so a
+  token may contain commas verbatim (`Bash(git status:*)`): nothing is split and no keystroke is
+  treated as a commit key. Removing the attribute restores the `,` default, and an empty delimiter no
+  longer explodes a draft into one token per character.
+
+- 0a5666d: `<lr-tree>` gains a `reorderable` opt-in for keyboard reordering. With it set, Ctrl/Cmd+ArrowUp /
+  Ctrl/Cmd+ArrowDown on the focused row emits `lr-reorder` with
+  `detail: { id, parentId, fromIndex, toIndex }` — sibling-scoped indices within the node's own
+  parent's child list (`parentId` is `null` for a top-level item), so a reorder can never turn into
+  a reparent at a subtree boundary. The keybinding matches `<lr-dashboard-grid>`'s existing
+  `cells-draggable` keyboard move; Alt+Arrow was avoided because it is browser back/forward on
+  Windows and Linux. `data` stays host-owned — the event is a request, and the move is announced
+  through an internal `<lr-live-region>` (new `treeNodeMoved` message key).
+
+  Also fixes a pre-existing focus bug this surfaced: reassigning `data` in a way that merely
+  _re-indexes_ the focused node (rather than removing it) dropped real DOM focus to `<body>`.
+  Focus now follows the node, including for nested rows several shadow roots down.
+
+  `reorderable` is `false` by default — unset, markup and keyboard behaviour are unchanged and no
+  `lr-reorder` is ever emitted. `<lr-file-tree>` deliberately does not forward it: its tree items are
+  derived from `nodes` and keyed by filesystem path, an order it does not own.
+
+- 8774f0d: Add `lr-virtual-list` position queries: `offsetForIndex(index)` returns the pixel top row `index`
+  renders at (clamped to `0…items.length`, so `offsetForIndex(items.length)` is the total content
+  height), and `indexAtOffset(px)` returns the row whose box contains that offset (`-1` for an empty
+  list). Both work in the same coordinate space as the scroll container's `scrollTop`, so a host can
+  do scroll-linked layout without duplicating the windowing math; in `row-height="auto"` mode an
+  unmeasured row's offset stays estimate-based until its `ResizeObserver` measurement lands.
+- 8774f0d: Add `lr-virtual-list`'s sticky group header layer. Setting `renderStickyGroup` renders a
+  `[part="sticky-group"]` overlay pinned to the top of the scroll viewport showing whichever `groups`
+  entry the viewport is currently inside, pushed out by the overlap as the next group's header arrives
+  rather than swapped abruptly. Native `position: sticky` on the rows themselves is structurally inert
+  here, since every row is absolutely positioned and transform-offset by the windowing math.
+
+  The overlay is a visual copy of content that already exists in the list, so it is `aria-hidden`, its
+  ordinary focusable content is forced to `tabindex="-1"` (the real row keeps sole ownership of the
+  heading semantics and of the tab order), and it is `pointer-events: none` until a consumer opts in
+  with `lr-virtual-list::part(sticky-group) { pointer-events: auto; }`. It is measured by its own
+  `ResizeObserver` and never by the row observer, so a group header that is also a real row is not
+  double-counted in `row-height="auto"` mode. A `groups` entry whose `label` is the empty string now
+  renders no `[part="group"]` marker — it is a pure position anchor, for a host that renders its own
+  group headers as rows. With `renderStickyGroup` unset, nothing about the rendered output changes.
+
+- 8774f0d: Add `lr-virtual-list`'s public `scrollContainer` getter (the `[part="base"]` scroll box, `undefined`
+  before the first render) and an `lr-scroll` event (`detail: { scrollTop, viewportHeight }`). The
+  event is emitted from the animation frame that already coalesces native `scroll` events, so a burst
+  of them produces at most one `lr-scroll` per frame and none at all when the position did not change.
+  Together they let a host follow _sub-row_ scroll movement — which `lr-visible-range-changed`, firing
+  only on index-range changes, cannot report — without reaching into the component's shadow root or
+  dispatching synthetic `scroll` events at it.
+
+### Patch Changes
+
+- 2e16fad: Fix `lr-artifact-panel`'s restore/copy/download header buttons rendering fully raw browser chrome
+  (zero CSS at all) while the adjacent header buttons in the same row are fully themed, and give
+  view-button its own hover/focus-visible to match its version-previous/version-next siblings.
+- c2ddee5: Fix `lr-av-player`'s playback-rate `<select>` rendering raw browser chrome with an unthemed
+  (typically white) option popup regardless of theme -- it now resets native appearance, themes its
+  option list, and gains hover/focus-visible states and a decorative chevron in place of the removed
+  native one.
+- db4e0a5: Fix `lr-calendar`'s previous-month nav button never matching its own styling rule (it rendered with
+  raw browser button chrome next to a fully themed next button) and add missing `:hover`/`:focus-visible`
+  treatment to the nav buttons, day-grid cells, and agenda-event buttons.
+- bfaf7f9: `lr-checkbox-group`: document `value` as a read-out of child state, and warn on the two ways it is
+  misused.
+
+  `value` shipped with no documentation at all while the generated docs listed it among settable
+  properties, so it read as an input. It never was one: `sync()` recomputes it from the
+  `<lr-checkbox>` children and assigns it on every child toggle, `slotchange`, `name`/`required`
+  change, blur and `form.reset()` — and `connectedCallback()` syncs _before the first render_, so even
+  a constructor-time or template-time `.value=` binding is discarded before it is ever observed. It
+  now carries that contract in its JSDoc, and:
+
+  - assigning `value` from outside logs a `console.warn` naming the property and pointing at `checked`
+    on the children (once per element — a repeat assignment is the same mistake, not new information);
+  - a group with two or more children sharing a `value` logs a `console.warn` too. This is the _easy_
+    mistake, not an exotic one: `<lr-checkbox>`'s `value` defaults to `'on'`, so five undifferentiated
+    children yield `['on','on','on','on','on']` and a `FormData` that cannot say which was checked.
+
+  Both warnings follow the same plain-`console.warn` shape as the library's other authoring-mistake
+  warnings (`lr-task-list` over-nesting, `lr-dashboard-grid` unmatched `cell-id`, `lr-flow-canvas`
+  unrecognized child). No behavior changed for the normal children-drive-value flow, which warns not
+  at all.
+
+  `value` was deliberately **not** made authoritative. Push-down is unimplementable without surprise
+  while children default to `value = 'on'` (a host assigning `['on']` would check every
+  undifferentiated child), and it would additionally need a re-entrancy guard and a pending-value
+  retention path for children that have not upgraded yet. Recorded here so a later release can add a
+  distinct `defaultValue` API without reversing anything documented now.
+
+- 2a45da4: Fix four components (`lr-chunk-inspector`, `lr-community-card`, `lr-provenance-panel`,
+  `lr-notebook-viewer`) whose real `<button>`s get UA-chrome reset (`border:none; background:
+transparent; cursor:pointer;`) but no hover or focus-visible of their own -- `lr-provenance-panel`'s
+  disclosure header (`aria-expanded`/`aria-controls`) had zero visible keyboard focus indicator at all.
+- 1d121a9: Fix `lr-code-block`/`lr-code-block-core`'s shiki dark-theme override only activating on the OS-level
+  `prefers-color-scheme` media query -- a consumer who sets `--lr-theme-color-*` explicitly, without the
+  OS itself being in dark mode, now correctly gets the dark shiki syntax theme too, matching every other
+  `--lr-color-*` token's consumer-overrides-first resolution.
+- 1372546: Fix `lr-color-picker`'s native color swatch -- the directly visible, directly focusable control --
+  having no hover or focus-visible treatment, so tabbing to it fell through to the browser's raw
+  default color-input focus ring.
+- f8bc916: `lr-combobox`: the `clearable` button now covers the filter axis as well as the selection.
+
+  Typing a query that matches nothing left the user with no affordance to clear it — the button was
+  gated on a committed selection alone, and `clear()` early-returned on an empty selection. It now
+  renders whenever there is something to clear on either axis, and each axis announces only its own
+  change: clearing a selection still emits `input`/`change`/`lr-clear`, while clearing filter text
+  emits `lr-filter` with an empty `value` and no spurious selection events.
+
+  The query half of the gate is scoped to states where the query is actually visible — the open
+  listbox in single-select, or any time in `multiple` mode. A closed single-select shows the selected
+  label rather than the query, so a stale query alone never surfaces a button offering to clear text
+  the user cannot see.
+
+- 77bfb28: Fix `lr-data-grid`'s sort-header focus ring targeting `<th>`, which can never itself receive
+  keyboard focus (only its nested sort button can) -- tabbing to a sortable column header now shows
+  the library's focus ring instead of the browser's raw default, and the sort button gains a
+  matching hover state.
+- dfd6199: Fix `lr-date-picker`'s previous/next month-nav buttons having a hover state but no focus-visible ring
+  -- the file's only focus-visible coverage was on day cells, leaving keyboard users with no visible
+  indicator on the nav buttons.
+- 7c99e80: Route several stray hardcoded style values through design tokens so visually-identical states stay
+  in sync across components:
+
+  - **Disabled controls** in `lr-node-palette`, `lr-flow-controls`, `lr-compare-panel`,
+    `lr-graph-query-builder`, and `lr-rubric-form` now dim through the shared `--lr-opacity-disabled`
+    token instead of one-off `0.4`/`0.5`/`0.6` literals, so every disabled control fades by the same
+    amount (and rethemes with one property).
+  - **Anchored popovers/menus/tooltips** (`lr-menu`, `lr-select`, `lr-combobox`, `lr-date-input`,
+    `lr-model-select`, `lr-voice-picker`, `lr-mention-popover`, `lr-export-button`, `lr-tour`,
+    `lr-tool-call-chip`, `lr-usage-badge`, `lr-citation-badge`, `lr-entity-chip`,
+    `lr-knowledge-graph-explorer`) share a new `--lr-popover-viewport-clamp` token (default `92vw`,
+    themeable via `--lr-theme-popover-viewport-clamp`). Previously these split between `92vw` and
+    `90vw`, so two popovers side by side could clamp to different widths; they now clamp consistently.
+  - **Solid-fill hover lift** on `lr-chat-composer`, `lr-tool-approval-dialog`, `lr-message-feedback`,
+    `lr-tour`, and `lr-retrieval-search` now shares a new `--lr-hover-brightness` token (default
+    `1.08`, themeable via `--lr-theme-hover-brightness`), replacing per-component `filter: brightness()`
+    magic numbers. Note `lr-retrieval-search`'s submit button now _brightens_ on hover like every other
+    brand button, where it previously darkened (`0.92`).
+  - `lr-calendar`'s narrow-container day-cell floor now references the existing `--lr-size-4rem` token
+    instead of a raw `4rem`, matching its wide-container sibling.
+
+  Also adds a new consumer override hook: `--lr-responsive-panel-sheet-max-block-size` (default `85dvh`,
+  falling back to `85vh` where `dvh` is unsupported) lets you set the maximum height of an
+  `lr-responsive-panel` `variant="bottom-sheet"` overlay, which previously had no override at all.
+
+- ac5936a: Fix `lr-details`' summary -- the component's real, natively-focusable/clickable surface -- having no
+  hover or focus-visible treatment at all. `lr-accordion-item` (which extends `lr-details` with no
+  style override) is fixed by the same change.
+- 188335c: Sync the consumer-facing agent reference (`llms/`) with the part-reachability, density and composed
+  -content work that just landed across the viewers, media, retrieval, agent-tools, layout,
+  conversation and data families.
+
+  - Document the newly forwarded and newly named CSS parts on `lr-pdf-viewer`, `lr-archive-viewer`,
+    `lr-page-rail`, `lr-notebook-viewer`, `lr-csv-viewer`, `lr-spreadsheet-viewer`,
+    `lr-dataset-viewer`, `lr-av-player`, `lr-terminal`, `lr-ingestion-queue`, `lr-neighbor-list`,
+    `lr-chunk-inspector`, `lr-retrieval-results` and `lr-activity-feed`, including why row state is
+    published as an extra part name rather than an attribute on the part.
+  - Replace the paragraphs that described `--lr-page-rail-current-bg`,
+    `--lr-notebook-viewer-active-bg`, `--lr-av-player-cue-current-bg` and
+    `--lr-av-player-cue-active-match-color` as declared-but-inert; all four now take effect.
+  - Document `--lr-csv-viewer-highlight-color` and `--lr-spreadsheet-viewer-highlight-color`, and
+    `--lr-trace-tree-row-active-color` (plus the pairing rule it forms with
+    `--lr-trace-tree-row-active-bg`, and the knock-on note under `lr-agent-trace`).
+  - Document `lr-menu`'s `header`/`footer` slots and parts, the revised Escape/Tab keyboard contract,
+    and the narrowed scope of `closeOnEscapeAnywhere`.
+  - Document `lr-table`'s `columns[].editable: 'always'` persistent editors, `lr-flow-node`'s
+    `compact` and `card` part, `lr-flow-controls`' and `lr-chat-composer`'s `appearance`, and
+    `lr-conversation-item`/`lr-thread-list`'s `compact`.
+
+- 2be1ad5: Sync the consumer-facing agent reference (`llms/`) with the sticky group-header work on
+  `lr-virtual-list` and `lr-thread-list`.
+
+  - Document `lr-virtual-list`'s `renderStickyGroup`, the `sticky-group` CSS part, and the four
+    behaviors a consumer would otherwise get wrong: the band is `aria-hidden` with its focusable
+    descendants forced to `tabindex="-1"` (so it is never a second tab stop or a second heading, and a
+    focus-delegating custom element inside it must set its own), it is `pointer-events: none` until
+    opted back in through `lr-virtual-list::part(sticky-group)`, it is never measured as a row, and it
+    stays mounted but hidden above the first group so its scroll inset is measurable before the first
+    jump.
+  - Document that a `groups` entry with an **empty** `label` renders no marker and acts as a pure
+    position anchor, and drop the stale claim that `groups` had no visible effect and that its marker
+    carried `role="heading"`.
+  - Document `offsetForIndex()`/`indexAtOffset()`, the `scrollContainer`/`renderedRows` getters, the
+    `lr-scroll` event and its `VirtualListScroll` detail type, and add a sticky-group usage example.
+  - Document `lr-thread-list`'s `stickyGroups` property (attribute `sticky-groups`) and the
+    `group-sticky` exported part, including that the real header row keeps the
+    `role="heading"`/`aria-level` semantics and the tab order while the pinned copy stays clickable.
+
+- ed762ff: `lr-xml-viewer` treats `--lr-icon-button-size` as a floor
+
+  `lr-xml-viewer`'s node `[part='toggle']` is an interactive button that pinned the shared
+  minimum-target token as a fixed `inline-size`/`block-size` with `padding: 0` and no floor — the
+  opposite of what the token's own definition documents ("components pad out to this via
+  `min-inline-size`/`min-block-size`, not by growing the glyph itself"). It now sizes its glyph box at
+  `--lr-size-1-25rem` with `min-inline-size`/`min-block-size: var(--lr-icon-button-size)`, mirroring
+  `lr-code-block`'s equivalent toggle, so lowering the token shrinks the hit area but never squashes
+  the chevron.
+
+- 4c59cc2: Fix `lr-image-viewer`'s fit-mode `<select>` rendering raw browser chrome with an unthemed option
+  popup, and add missing hover/focus-visible to all three toolbar controls (fit-control, rotate-button,
+  annotate-toggle) -- previously none of the three had either state.
+- 10c8b91: Fix `lr-input` (and `lr-time-input`, which renders through the same template/stylesheet) keeping
+  native browser chrome in three cases: the search-cancel glyph only reset while `clearable` was set
+  (the common non-clearable case kept it), `type="number"` never resetting the spin-button, and
+  `type="time"` never touching its calendar-picker-indicator at all -- now restyled, not suppressed,
+  since it's the only mouse/touch affordance to open the native time picker.
+- 0410eb7: Fix two factual errors in the shipped agent-facing reference (`llms/shared.md`, and the
+  `llms.txt`/`llms-full.txt`/`llms/` artifacts generated from it): the internals section stated
+  `LYRA_PREFIX = 'lyra'` when the constant is `'lr'` — on the same line that correctly showed
+  `tag(name)` producing `` `lr-${name}` `` — and claimed a hardcoded count of 127 `Lyra*EventMap`
+  types when there are now 181. The count is no longer stated as a number, so it cannot drift again.
+- 184bfff: `lr-menu`: axe coverage for a composed popup, stories moved onto the new `header`/`footer` slots,
+  and the three shipped descriptions of what this component accepts finally agree.
+
+  - New axe assertion for a menu with a `header` `<input>` and a `footer` `<button>` — the exact shape
+    that was an `aria-required-children` violation while the only place for it was inside
+    `role="menu"`, and which no test covered.
+  - `show() / hide({ focusTrigger: true })`'s Apply button moves to `slot="footer"`, and the filter
+    field gets a new `header`-slot story. The old default-slot filter story stays, relabelled as the
+    legacy shape it now is, so its `closeOnEscapeAnywhere` behavior remains covered.
+  - The class doc's `@slot` tag said "menu items and `<hr>` only" while the interaction contract two
+    paragraphs above it promised slotted controls "keep their own full default keyboard behavior" and
+    `show()`/`hide()` named a slotted Apply button as a supported case. All three now describe the
+    same component.
+
+- 3c8a299: Add missing `:hover` to six agent-tools components (`lr-browser-frame`, `lr-commit-card`,
+  `lr-terminal`, `lr-test-results`, `lr-compare-panel`, `lr-confirm-bar`) whose interactive buttons
+  already had `cursor: pointer` and a correct focus-visible ring but no hover affordance for mouse
+  users.
+- 4ac6c31: Add missing `:hover` to six components (`lr-stack-trace`, `lr-span-waterfall`, `lr-chat-viewport`,
+  `lr-checkpoint`, `lr-push-to-talk`, `lr-transcript-feed`) whose interactive controls already had
+  `cursor: pointer` and a correct focus-visible ring but no hover affordance for mouse users.
+- 696cc7f: Add missing `:hover` to six components (`lr-env-list`, `lr-graph-query-builder`, `lr-rubric-form`,
+  `lr-chart`, `lr-scroller`, `lr-widget`) whose interactive controls already had `cursor: pointer` and a
+  correct focus-visible ring but no hover affordance for mouse users; `lr-chart`'s reset-zoom-button also
+  gains `font: inherit`, which it was missing entirely.
+- e1b9c22: Add missing `:hover` to six components (`lr-carousel`, `lr-dashboard-grid`, `lr-callout`,
+  `lr-memory-panel`, `lr-neighbor-list`, `lr-path-strip`) whose interactive controls already had
+  `cursor: pointer` and a correct focus-visible ring (where applicable) but no hover affordance for
+  mouse users.
+- e73a243: Add missing `:hover` to six components (`lr-retrieval-results`, `lr-pdf-viewer`, `lr-ebook-viewer`,
+  `lr-pptx-viewer`, `lr-email-viewer`, `lr-dataset-viewer`) whose interactive controls already had
+  `cursor: pointer` and a correct focus-visible ring but no hover affordance for mouse users.
+- ae8e04e: Fix nine components (`lr-combobox`, `lr-eval-dataset`, `lr-command-palette`, `lr-table`,
+  `lr-tool-select-dialog`, `lr-code-editor`, `lr-message-feedback`, `lr-model-select`, `lr-voice-picker`)
+  whose native `<input>`/`<textarea>` themed background/color/border correctly but left `::placeholder`
+  at the browser's fixed light-tuned default -- each field's placeholder text now uses
+  `--lr-color-text-quiet`, with Firefox's reduced default `::placeholder` opacity undone on the
+  `type="search"` fields.
+- e649e77: Fix `lr-node-palette`'s search field being the only `type="search"` field in its family with zero
+  focus-ring styling (its siblings `lr-thread-list`/`lr-emoji-picker` already wire this), and reset the
+  native search-cancel glyph to match.
+- e879ff6: Fix `<lr-split>` and `<lr-stepper>` reporting a stale `effectiveOrientation` (and
+  `data-effective-orientation`) when `orientation-breakpoint-basis="viewport"` and the viewport
+  crossed the breakpoint while the element was detached from the DOM. The media-query listener is
+  torn down on disconnect and a plain reconnect schedules no Lit update, so the missed crossing was
+  never noticed; reconnecting now re-reads the query and announces the crossing (including
+  `lr-split-orientation-change` / `lr-stepper-orientation-change`) only when the matched state
+  actually differs. A plain mount, and a reconnect that crossed nothing, stay silent as before.
+- c2ea153: Fix `lr-pagination`'s page-input and `lr-tool-param-form`'s numeric JSON-schema fields rendering the
+  native spin-button inside a fixed-size control box -- the adjacent prev/next buttons (pagination) and
+  form validation (tool-param-form) already provide stepping, so removing the spinner loses no
+  functionality.
+- 94fa823: `lr-terminal`, `lr-ingestion-queue` and `lr-dataset-viewer`: forward the CSS parts rendered through
+  their internal `<lr-virtual-list>` so a consumer can actually reach them.
+
+  All three already styled those parts correctly from their own stylesheets, but none forwarded
+  `exportparts` from the `<lr-virtual-list>` element. Because the rows are `renderItem`'s output and
+  therefore live inside that element's own shadow root, a consumer rule like
+  `lr-terminal::part(line)` matched nothing at all — the documented parts were unreachable from
+  outside the component.
+
+  - `lr-terminal` now exports `line`.
+  - `lr-ingestion-queue` now exports `item`, `item-header`, `item-name`, `item-progress`,
+    `item-meta`, `item-error`, `item-actions`, `retry-button` and `cancel-button`.
+  - `lr-dataset-viewer` now exports `data-row`, `cell`, `cell-highlight` and `cell-highlight-action`.
+
+  No styling changed and no new parts were added.
+
+- 56f7b65: Add a build-time guard against `::part()` CSS that parses but never matches.
+
+  Two classes of silently-inert rule are now caught by `pnpm lint` (a new
+  `scripts/check-part-reachability.mjs` in the contract-policy chain), neither of which any existing
+  check — TypeScript, the style policy, or a test that inspects stylesheet text — could see:
+
+  - **`cross-root-part`** — a component that mounts `<lr-virtual-list>` and hands it a
+    `renderItem`/`renderGroup` callback renders those rows into _that element's_ shadow root, so a
+    bare `[part='x']` selector in the composing component's own stylesheet can never match them. The
+    checker cross-references the literal part names emitted from the callback (following the class
+    members it reaches) against the bare `[part]` selectors in the sibling `*.styles.ts`, and reports
+    any name that has no `lr-virtual-list::part(x)` rule anywhere in that file. Components that
+    legitimately render the same part into both roots — below/above a virtualization threshold, or a
+    directly-rendered header row — carry both selectors and are not flagged; a
+    `policy-allow(cross-root-part):` comment covers anything else.
+  - **`part-compound`** — per Selectors L4 a pseudo-element may only be followed by pseudo-classes, so
+    `::part(a)[attr]`, `::part(a).cls`, `::part(a) .descendant` and `::part(a) > .child` parse and
+    then match nothing. Every `*.styles.ts` is scanned for those shapes; `::part(a):hover`,
+    `::part(a)::selection` and the part-list form `::part(a b)` remain valid and pass.
+
+  No component behavior changes; the library is clean under both rules today.
+
+- cce32a2: `lr-neighbor-list`: make the virtualized relationship rows and group headers actually styleable, by
+  this component and by a consumer.
+
+  Above `virtualizeAt` the rows are produced by this component's `renderItem` but committed into the
+  embedded `<lr-virtual-list>`'s own shadow root, one boundary deeper than a `[part='row']` selector
+  can reach — so every row, node-label, direction, relation, meta and expand-button rule was silently
+  inert and a large neighborhood rendered as raw browser `<button>`s with no dividers. Each rule now
+  pairs its plain selector (still correct at/below the threshold) with an `lr-virtual-list::part(…)`
+  twin, and an `exportparts` forwarding declaration makes the same parts reachable as
+  `lr-neighbor-list::part(node-label)` etc. from a consuming stylesheet.
+
+  Group headers were unstyled whenever the list virtualized: in that path the header is the internal
+  virtual-list's own `group` part, which this component neither styled nor exported. It is now styled
+  to match `group-header` and exported under that same name, so grouped rows present identically
+  either side of the threshold.
+
+  The virtualized rows no longer nest a second `role="listitem"`/`part="row"` element inside the
+  virtual-list's own row wrapper. `renderItem` returns just the row's content, exactly as the
+  non-virtualized path's own wrapper receives it: the duplicate nesting both reported a `listitem`
+  inside a `listitem` and made the row's padding and divider border apply twice, since `::part()`
+  matches at any depth of the target shadow tree.
+
+- 1e518e6: Fix `lr-playback`'s range slider only getting a pointer cursor in its disabled state, unlike the
+  adjacent play button, and add a matching hover affordance.
+- 5e9a18e: `lr-table`: focus the cell editor that was actually just opened by a double-click. The autofocus
+  looked up `[part="cell-editor"]` across the whole grid and focused whichever one came first in the
+  DOM — indistinguishable from correct while only one editor could ever exist at a time, but wrong as
+  soon as a column renders persistent (`editable: 'always'`) editors of its own. It is now scoped to
+  the opening cell's own row and column.
+- 326973c: Fix `lr-thread-list` and `lr-emoji-picker`'s otherwise fully-themed search fields showing a raw
+  gray browser "x" glyph (with its own hit target and hover behavior, ignoring every token applied to
+  the field) once non-empty.
+- 9010a89: `lr-thread-list` and `lr-chat-viewport` now size their virtual list to their own height.
+
+  Both composed an `lr-virtual-list` without ever setting `--lr-virtual-list-height`, so the list
+  scrolled inside that token's 24rem default no matter how tall the surrounding pane was -- a
+  `<lr-thread-list>` in a 700px sidebar showed a 384px scroller with dead space underneath, and every
+  consumer had to hand-set `--lr-virtual-list-height` to work around it. Both now fill the height they
+  are given with no consumer CSS. `lr-thread-list` degrades safely: in a container with no resolvable
+  height the internal viewport still renders at exactly the 24rem it does today (the shipped default
+  becomes the list's flex-basis rather than a percentage that would collapse to zero or grow to the
+  full un-virtualized content height). `lr-chat-viewport`'s virtual mode uses a percentage -- the
+  slotted list lives in the consumer's light DOM, out of reach of `::part()` -- so it, like slotted
+  mode's own scroll container, needs a height-bounded parent. A consumer rule or inline style setting
+  `--lr-virtual-list-height` on the list still wins in both components.
+
+  Also fixes `lr-chat-viewport`'s virtual-mode layout rules, which were written as
+  `:host(:has(> lr-virtual-list))`. `:has()` is invalid inside `:host()`, so those rules were silently
+  dropped: in virtual mode `[part="scroll"]` kept the padding and `overflow-y: auto` it is documented
+  to give up, and `[part="content"]` never got the height the slotted list sizes against.
+
+- 3e1d4f8: Fix `lr-token-input`'s draft-input and inline token-editor leaving `::placeholder` at the browser's
+  default color, and add missing `:hover`/`:focus-visible` to the per-token remove button.
+- 67a7881: Cover `lr-trace-tree`'s active row with an axe assertion. The active-row test group previously
+  carried a comment explaining why no accessibility assertion could be made there — the default tint
+  put the row's own secondary text below the WCAG AA contrast floor, so any axe run against a
+  populated active row would have failed. With that fixed, the assertion now runs for real: a
+  populated tree is asserted accessible with each status tone in turn made active, after first
+  proving the fixture actually reached the `[data-active]` state so the check cannot pass vacuously.
+  It was verified to bite by reverting the fix and confirming axe reports the exact contrast
+  violations it is meant to catch. The active-row Storybook story now sets
+  `--lr-trace-tree-row-active-bg` and `--lr-trace-tree-row-active-color` together and documents why
+  they are a pair.
+- 67a7881: Fix `lr-trace-tree`'s active-row secondary text falling below the WCAG AA 4.5:1 contrast floor. The
+  active (`activeSpanId`) row paints `--lr-color-brand-quiet`, against which `--lr-color-text-quiet`
+  lands at ~4.25:1 — so `detail`, `duration`, `tokens-in`, `tokens-out`, `cost` and the `pending`
+  status label were all failing while the row was active, even though every one of them passes
+  comfortably against the plain row background. Those parts now render at full-strength
+  `--lr-color-text` once the row is active (15.3:1 in light mode, 11.2:1 in dark), the same fix
+  `lr-conversation-item` already carries for the identical bug. Darkening the active tint instead
+  would have made it worse: every failing foreground is dark text.
+
+  This changes default rendering on the active row, which is intended — the previous default was a
+  real accessibility failure. The new `--lr-trace-tree-row-active-color` custom property retunes it;
+  it pairs with `--lr-trace-tree-row-active-bg`, and a consumer setting that to a dark tint in light
+  mode should set both, because the defaults assume the active background stays on the same side of
+  the lightness midpoint as the ambient surface.
+
+- 67a7881: Raise `lr-trace-tree`'s active-row status labels to clear WCAG AA without flattening their hue.
+  `[part='status-text']` on the active row now renders
+  `color-mix(in srgb, var(--lr-color-<tone>) 75%, var(--lr-color-text))` for each semantic tone —
+  success moves from 4.46:1 to 6.18:1 and `denied` from 4.28:1 to 5.96:1 against the default active
+  tint, while `error` and `running` (which only barely cleared the floor) gain headroom too. Keeping
+  the hue matters: an error row that stops being red once selected loses the fastest scan signal in a
+  trace list.
+
+  The mix is applied to every semantic tone rather than only the two that fail at the shipped
+  defaults, because a per-status carve-out is theme-fragile — a consumer retheming one `--lr-color-*`
+  moves that ratio and would silently re-break. It is also theme-symmetric by construction:
+  `--lr-color-text` flips with the color scheme, so the same declaration darkens the label in light
+  mode and lightens it in dark mode. `[part='bar']` is deliberately untouched — it is a non-text
+  graphic on a 3:1 floor it already passes, and scoping the mix to `[part='status-text']` avoids
+  re-pointing a consumer's own `--lr-color-*` override inside one row.
+
+- 4df6ca1: `lr-virtual-list` no longer traps a popup opened from inside a row underneath the rows that follow
+  it. `[part="row"]` sets `will-change: transform`, which makes every row its own stacking context, and
+  rows carried no `z-index` — so they painted in DOM order and each row painted over the previous one.
+  A `lr-menu` dropdown rendered in a row (for example through `lr-thread-list`'s `renderActions`) was
+  positioned, visible and hit-testable, yet painted _under_ the next rows: its own `z-index: 900` only
+  orders siblings inside its row's context. The last row always looked correct, so small fixtures never
+  caught it.
+
+  `[part="row"]:focus-within` now lifts the row to `var(--lr-layer-content)` — the same layer
+  `[part="group"]` already uses — for exactly as long as something inside it holds focus. This also
+  stops outward focus rings on a row being clipped by later rows. Nothing changes when no row holds
+  focus.
+
+- 8774f0d: Keep `lr-virtual-list`'s scroll-into-view clear of the sticky group band. With `renderStickyGroup`
+  set, the band's measured height is applied as `scroll-padding-block-start` on the scroll container —
+  so native keyboard and anchor scrolling get the same treatment — and subtracted from the
+  top-aligned targets `active-id` and `scrollToIndex({ align: 'start' })` compute, which otherwise
+  parked the target row underneath the band. `align: 'end'` is unaffected, since the band never
+  covers the viewport's bottom edge. With `renderStickyGroup` unset the inset is zero and both scroll
+  paths behave exactly as before, with no inline style on the container at all.
+
 ## 5.1.0
 
 ### Minor Changes
