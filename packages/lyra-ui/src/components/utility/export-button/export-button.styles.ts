@@ -17,7 +17,11 @@ export const styles = css`
     font: inherit;
     cursor: pointer;
   }
-  [part='trigger']:hover:not(:disabled) {
+  /* :where() zeroes the wrapped selectors' specificity contribution, leaving only :hover itself
+     -- (0,1,0) total, functionally identical selection to \`[part='trigger']:hover:not(:disabled)\`
+     ((0,3,0)) but now losing (on the pseudo-element tiebreak) to a consumer's own
+     \`::part(trigger):hover\` override ((0,1,1)) without that consumer needing !important. */
+  :where([part='trigger']):hover:where(:not(:disabled)) {
     border-color: var(--lr-color-brand);
   }
   [part='trigger']:disabled {
@@ -95,7 +99,9 @@ export const styles = css`
     cursor: pointer;
     border-radius: var(--lr-radius);
   }
-  [part='menu-item']:hover:not(:disabled) {
+  /* :where() zeroes the wrapped selectors' specificity contribution -- see the [part='trigger']
+     hover rule above for the full rationale. */
+  :where([part='menu-item']):hover:where(:not(:disabled)) {
     background: var(--lr-color-brand-quiet);
   }
   [part='menu-item']:focus-visible {

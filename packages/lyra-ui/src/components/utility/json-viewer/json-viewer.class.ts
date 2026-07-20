@@ -106,6 +106,8 @@ export interface LyraJsonViewerEventMap {
  * @cssprop [--lr-json-viewer-max-height=none] - Cap on `[part="base"]`'s block size, past which the
  *   viewer scrolls internally. The `maxHeight` property sets this token inline on `[part="base"]`.
  * @cssprop [--lr-json-viewer-font=var(--lr-font-mono)] - Font family used for the rendered tree.
+ * @cssprop [--lr-json-viewer-match-bg=var(--lr-color-warning-quiet)] - Background (and
+ *   surrounding box-shadow) of a key/value that currently matches `search`.
  */
 export class LyraJsonViewer extends LyraElement<LyraJsonViewerEventMap> {
   static styles = [LyraElement.styles, styles];
@@ -419,6 +421,7 @@ export class LyraJsonViewer extends LyraElement<LyraJsonViewerEventMap> {
   }
 
   protected willUpdate(changed: PropertyValues): void {
+    super.willUpdate(changed);
     if (!this.hasUpdated || changed.has('data') || changed.has('search')) {
       const next = this.computeSearch();
       if (!this.hasUpdated || changed.has('data')) {

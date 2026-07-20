@@ -24,7 +24,7 @@ export const styles = css`
     animation: lr-poll-status-pulse var(--lr-transition-ambient) infinite;
   }
   [part='indicator'][data-due] {
-    background: var(--lr-color-success);
+    background: var(--lr-poll-status-due-bg, var(--lr-color-success));
   }
   @keyframes lr-poll-status-pulse {
     0%, 100% {

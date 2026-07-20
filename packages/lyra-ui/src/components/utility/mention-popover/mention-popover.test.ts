@@ -379,6 +379,31 @@ it('gives an option a :hover treatment, matching lr-select/lr-combobox/lr-model-
   expect(css).to.match(/\[part='option'\]:hover,\s*\[part='option'\]\[data-active\]\s*\{[^}]+\}/);
 });
 
+describe('active-option row cssprop indirection', () => {
+  it('recolors the active suggestion row from --lr-mention-popover-option-active-bg on an ancestor, not a bare shared token', async () => {
+    const el = await openWithItems();
+    el.style.setProperty('--lr-mention-popover-option-active-bg', 'rgb(10, 20, 30)');
+    await el.updateComplete;
+    // Row 0 is pre-highlighted on open (see the class doc comment on activeIndex).
+    const active = el.shadowRoot!.querySelector('[part="option"][data-active]') as HTMLElement;
+    expect(el.shadowRoot!.querySelectorAll('[part="option"][data-active]').length).to.equal(1);
+    expect(getComputedStyle(active).backgroundColor).to.equal('rgb(10, 20, 30)');
+  });
+
+  it('renders byte-identically to the pre-cssprop-indirection output when the prop is unset', async () => {
+    const el = await openWithItems();
+    await el.updateComplete;
+    const active = el.shadowRoot!.querySelector('[part="option"][data-active]') as HTMLElement;
+    // Fallback arm resolves to the same --lr-color-brand-quiet token as before the indirection
+    // (light-theme default #eef2ff-shaped brand-quiet fill).
+    const probe = document.createElement('div');
+    el.shadowRoot!.appendChild(probe);
+    probe.style.background = 'var(--lr-color-brand-quiet)';
+    expect(getComputedStyle(active).backgroundColor).to.equal(getComputedStyle(probe).backgroundColor);
+    probe.remove();
+  });
+});
+
 // -- Available-space clamping (internal/positioner.js's place()) ------------
 
 it("declares [part='listbox']'s max-block-size/max-inline-size/min-inline-size against place()'s published --lr-positioner-available-* custom properties, mirroring lr-menu's/lr-combobox's identical clamp", () => {

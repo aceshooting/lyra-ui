@@ -75,6 +75,21 @@ it('is accessible', async () => {
   await expect(el).to.be.accessible();
 });
 
+it('lr-format-date is accessible', async () => {
+  const el = await fixture(html`<lr-format-date date="2024-01-01T00:00:00Z" locale="en-US"></lr-format-date>`);
+  await expect(el).to.be.accessible();
+});
+
+it('lr-format-bytes is accessible', async () => {
+  const el = await fixture(html`<lr-format-bytes value="1024"></lr-format-bytes>`);
+  await expect(el).to.be.accessible();
+});
+
+it('lr-relative-time is accessible', async () => {
+  const el = await fixture(html`<lr-relative-time date="2030-01-01T00:00:00Z" locale="en-US"></lr-relative-time>`);
+  await expect(el).to.be.accessible();
+});
+
 it('falls back to slotted content instead of throwing when value is non-finite', async () => {
   const el = await fixture(html`<lr-format-bytes value="abc">Unknown size</lr-format-bytes>`);
   expect(el.shadowRoot?.textContent?.trim()).to.equal('');

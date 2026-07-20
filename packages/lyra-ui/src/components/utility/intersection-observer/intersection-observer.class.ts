@@ -49,6 +49,7 @@ export class LyraIntersectionObserver extends LyraElement<LyraIntersectionObserv
   }
 
   protected updated(changed: PropertyValues): void {
+    super.updated(changed);
     // Routed through the base class's connection-aware scheduler rather than
     // a bare queueMicrotask: Lit still runs a scheduled update (and this
     // method) even for an element that disconnects before that update's own

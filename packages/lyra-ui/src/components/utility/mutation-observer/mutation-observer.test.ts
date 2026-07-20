@@ -86,6 +86,47 @@ describe('<lr-mutation-observer>', () => {
     expect(el.disabled).to.equal(true);
   });
 
+  describe('true-defaulting child-list/subtree attributes', () => {
+    it('clears childList/subtree from a plain HTML attribute (child-list="false" subtree="false"), not just a property binding', async () => {
+      // Lit's default presence-based Boolean converter can never clear a true-defaulting property
+      // from a literal attribute value -- only .prop=${false} would work without the converter
+      // fix. This proves the plain-markup form (the actual regression) is what's fixed.
+      const el = await fixture<LyraMutationObserver>(
+        html`<lr-mutation-observer child-list="false" subtree="false"><div></div></lr-mutation-observer>`,
+      );
+      expect(el.childList).to.equal(false);
+      expect(el.subtree).to.equal(false);
+    });
+
+    it('still defaults both to true with no attribute present', async () => {
+      const el = await fixture<LyraMutationObserver>(html`<lr-mutation-observer><div></div></lr-mutation-observer>`);
+      expect(el.childList).to.equal(true);
+      expect(el.subtree).to.equal(true);
+    });
+
+    it('an observer with child-list="false" ignores child mutations but still reports attribute mutations', async () => {
+      const el = await fixture<LyraMutationObserver>(
+        html`<lr-mutation-observer child-list="false" attributes><div></div></lr-mutation-observer>`,
+      );
+      await el.updateComplete;
+      const target = el.querySelector('div')!;
+
+      let fired = false;
+      el.addEventListener('lr-mutation', () => {
+        fired = true;
+      });
+
+      target.append(document.createElement('span'));
+      await aTimeout(20);
+      expect(fired, 'child-list mutation must NOT be reported').to.equal(false);
+
+      const event = oneEvent(el, 'lr-mutation');
+      target.setAttribute('data-x', '1');
+      const result = (await event) as CustomEvent<{ records: MutationRecord[] }>;
+      expect(result.detail.records.length).to.be.greaterThan(0);
+    });
+  });
+
   it('is accessible', async () => {
     const el = await fixture<LyraMutationObserver>(html`<lr-mutation-observer><button>Observed</button></lr-mutation-observer>`);
     await expect(el).to.be.accessible();

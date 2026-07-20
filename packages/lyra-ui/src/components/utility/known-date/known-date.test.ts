@@ -1,6 +1,10 @@
 import { fixture, expect, oneEvent, html } from '@open-wc/testing';
+import type { PropertyValues } from 'lit';
 import './known-date.js';
+import '../../forms/input/input.js';
 import type { LyraKnownDate } from './known-date.js';
+import { LyraElement } from '../../../internal/lyra-element.js';
+import { styles } from './known-date.styles.js';
 
 function fields(el: LyraKnownDate): HTMLInputElement[] {
   return Array.from(el.shadowRoot!.querySelectorAll('input[part="field-input"]'));
@@ -574,13 +578,16 @@ describe('per-tier field min-height and exact-height hatch', () => {
     expect(getComputedStyle(el).getPropertyValue('--lr-known-date-field-height').trim()).to.equal('');
   });
 
-  it('wires --lr-known-date-field-min-height per tier (rendered min-block-size)', async () => {
+  it('wires --lr-known-date-field-min-height per tier (rendered min-block-size), matching lr-input\'s own scale', async () => {
+    // xs=1.5rem/24px, s=1.875rem/30px, m=2.5rem/40px, l=3rem/48px, xl=3.5rem/56px -- lr-input's/
+    // lr-date-input's own --lr-*-control-min-height scale, not lr-button's (previously xs=20px,
+    // s=24px, m=32px, l=40px, xl=48px, an 8px/25% mismatch at the shared default tier).
     const expected: Record<string, string> = {
-      xs: '20px',
-      s: '24px',
-      m: '32px',
-      l: '40px',
-      xl: '48px',
+      xs: '24px',
+      s: '30px',
+      m: '40px',
+      l: '48px',
+      xl: '56px',
     };
     for (const [size, px] of Object.entries(expected)) {
       const el = (await fixture(html`<lr-known-date size=${size}></lr-known-date>`)) as LyraKnownDate;
@@ -589,19 +596,26 @@ describe('per-tier field min-height and exact-height hatch', () => {
     }
   });
 
-  it('leaves the rendered field height byte-identical when the height hatch is unset, per tier', async () => {
+  it('renders at the same height as a sibling lr-input at the shared default size, closing the visible seam', async () => {
+    const kd = (await fixture(html`<lr-known-date></lr-known-date>`)) as LyraKnownDate;
+    await kd.updateComplete;
+    const input = (await fixture(html`<lr-input></lr-input>`)) as HTMLElement & { updateComplete: Promise<unknown> };
+    await input.updateComplete;
+    const kdBlockSize = getComputedStyle(anyField(kd)).blockSize;
+    const inputWrapper = input.shadowRoot!.querySelector('[part="input-wrapper"]') as HTMLElement;
+    expect(kdBlockSize).to.equal(getComputedStyle(inputWrapper).blockSize);
+  });
+
+  it('leaves the rendered field height at or above the per-tier floor when the height hatch is unset', async () => {
     for (const size of ['xs', 's', 'm', 'l', 'xl'] as const) {
       const el = (await fixture(html`<lr-known-date size=${size}></lr-known-date>`)) as LyraKnownDate;
       await el.updateComplete;
       const field = anyField(el);
       const natural = getComputedStyle(field).blockSize;
-      // The per-tier floor never exceeds the natural (padding/font-driven) height, so it cannot
-      // change the rendered box until a consumer raises it. Deliberately `at.least` and not a
-      // strict `greaterThan`: at the xs tier the floor and the natural height are the *same* 20px,
-      // and whether they land exactly equal or a fraction apart depends on the platform's font
-      // metrics -- this machine renders xs a hair above 20px while CI's Chromium renders it at
-      // exactly 20px. Equal still satisfies the invariant under test (the floor is not raising the
-      // box); only a floor taller than the natural height would break it.
+      // At xs/s/m the per-tier floor now exceeds the field's own padding/font-driven content
+      // height and actively pins the rendered box to the floor (natural === minBlockSize); at
+      // l/xl the content height still exceeds the floor, so the floor stays dead there, same as
+      // before. Either way the rendered height never drops below the floor.
       expect(Number.parseFloat(natural), `size=${size}`).to.be.at.least(
         Number.parseFloat(getComputedStyle(field).minBlockSize),
       );
@@ -630,5 +644,69 @@ describe('per-tier field min-height and exact-height hatch', () => {
     )) as LyraKnownDate;
     await el.updateComplete;
     await expect(el).to.be.accessible();
+  });
+});
+
+describe('field-input hover (mouse-user parity with :focus-visible)', () => {
+  it('changes the border color on hover, matching the keyboard focus-visible affordance', async () => {
+    const el = (await fixture(html`<lr-known-date></lr-known-date>`)) as LyraKnownDate;
+    await el.updateComplete;
+    const field = el.shadowRoot!.querySelector('[part="field-input"]') as HTMLElement;
+    const restBorder = getComputedStyle(field).borderColor;
+
+    // jsdom/browser test runners don't synthesize a real :hover pseudo-class from a dispatched
+    // event, so the rule is asserted directly from the stylesheet instead, matching how other
+    // components in this library prove a :hover rule exists for a given selector.
+    const css = styles.cssText.replace(/\s+/g, ' ');
+    expect(css).to.match(/\[part='field-input'\]:hover\s*\{[^}]*border-color/);
+    // Sanity: the rest-state border is a real resolved color, not a bare custom property string.
+    expect(restBorder).to.match(/^rgb/);
+  });
+});
+
+describe('invalid-border cssprop indirection', () => {
+  it('recolors the invalid-field border from --lr-known-date-invalid-border-color on an ancestor, not a bare shared token', async () => {
+    const el = (await fixture(html`<lr-known-date required></lr-known-date>`)) as LyraKnownDate;
+    el.style.setProperty('--lr-known-date-invalid-border-color', 'rgb(10, 20, 30)');
+    const day = el.shadowRoot!.querySelector('input[data-field="day"]') as HTMLInputElement;
+    day.focus();
+    day.dispatchEvent(new FocusEvent('blur', { relatedTarget: null }));
+    await el.updateComplete;
+    expect(el.hasAttribute('data-invalid')).to.be.true;
+    const field = el.shadowRoot!.querySelector('[part="field-input"]') as HTMLElement;
+    expect(getComputedStyle(field).borderColor).to.equal('rgb(10, 20, 30)');
+  });
+
+  it('renders byte-identically to the pre-cssprop-indirection output when the prop is unset', async () => {
+    const el = (await fixture(html`<lr-known-date required></lr-known-date>`)) as LyraKnownDate;
+    const day = el.shadowRoot!.querySelector('input[data-field="day"]') as HTMLInputElement;
+    day.focus();
+    day.dispatchEvent(new FocusEvent('blur', { relatedTarget: null }));
+    await el.updateComplete;
+    const field = el.shadowRoot!.querySelector('[part="field-input"]') as HTMLElement;
+    // Fallback arm resolves to the same --lr-color-danger token as before the indirection
+    // (light-theme default #cf222e).
+    expect(getComputedStyle(field).borderColor).to.equal('rgb(207, 34, 46)');
+  });
+});
+
+describe('lifecycle: willUpdate calls super', () => {
+  it('calls super.willUpdate() so a future base-class/mixin hook is not silently skipped', async () => {
+    let sawCall = false;
+    const original = LyraElement.prototype.willUpdate;
+    (LyraElement.prototype as unknown as { willUpdate: (changed: PropertyValues) => void }).willUpdate = function (
+      this: LyraElement,
+      changed: PropertyValues,
+    ) {
+      sawCall = true;
+      return (original as (changed: PropertyValues) => void).call(this, changed);
+    };
+    try {
+      const el = (await fixture(html`<lr-known-date locale="en-GB"></lr-known-date>`)) as LyraKnownDate;
+      await el.updateComplete;
+      expect(sawCall).to.be.true;
+    } finally {
+      LyraElement.prototype.willUpdate = original;
+    }
   });
 });

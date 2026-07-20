@@ -96,7 +96,7 @@ export const styles = css`
     background: var(--lr-color-border);
   }
   [part='progress-dot'][data-current] {
-    background: var(--lr-color-brand);
+    background: var(--lr-tour-progress-dot-current-bg, var(--lr-color-brand));
   }
   [part='footer'] {
     display: flex;
@@ -129,8 +129,11 @@ export const styles = css`
     color: var(--lr-color-on-brand);
     border-color: var(--lr-color-brand);
   }
-  [part='previous-button']:hover:not(:disabled),
-  [part='skip-button']:hover {
+  /* :where() zeroes the wrapped selectors' specificity contribution, leaving only :hover itself
+     so a consumer's ::part(previous-button):hover / ::part(skip-button):hover override
+     ((0,1,1)) wins without needing !important. */
+  :where([part='previous-button']):hover:where(:not(:disabled)),
+  :where([part='skip-button']):hover {
     background: var(--lr-color-brand-quiet);
   }
   [part='next-button']:hover {

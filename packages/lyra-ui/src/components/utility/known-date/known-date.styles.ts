@@ -11,11 +11,15 @@ export const styles = css`
     --lr-known-date-day-field-width: var(--lr-size-3-5em);
     --lr-known-date-month-field-width: var(--lr-size-3-5em);
     /* Per-tier minimum block size of each field input, reassigned by the same size tiers as
-       padding/font-size above. Every default sits below the field's own padding/font-driven
-       height, so it is dead until a consumer raises it -- the unset render is byte-identical to
-       today at every tier. Parity with lr-input/lr-select/lr-combobox, which all expose a
-       min-height knob. */
-    --lr-known-date-field-min-height: var(--lr-size-2rem);
+       padding/font-size above -- reusing lr-input's own min-height scale values (xs=1.5rem,
+       s=1.875rem, m=2.5rem, l=3rem, xl=3.5rem) so a birthdate <lr-known-date> sitting in a form
+       row next to a regular <lr-input>/<lr-date-input> at the same declared size renders at the
+       same height instead of a visibly shorter box (previously matched lr-button's scale
+       instead, an 8px/25% mismatch at the default tier). At the xs/s/m tiers the floor is now
+       taller than the field's own padding/font-driven content height, so it actively pins the
+       rendered box (byte-identical is no longer the invariant there); at l/xl the natural content
+       height already exceeds the floor, so those two tiers render unchanged. */
+    --lr-known-date-field-min-height: var(--lr-size-2-5rem);
     /* --lr-known-date-field-height is intentionally NOT declared here. It is a consumer-facing
        exact-height escape hatch consumed only through the var() fallbacks on [part='field-input']
        below; declaring any value for it (even 'auto') would make those fallback arms unreachable
@@ -27,25 +31,25 @@ export const styles = css`
     --lr-known-date-field-padding-block: var(--lr-size-0-125rem);
     --lr-known-date-field-padding-inline: var(--lr-space-xs);
     --lr-known-date-field-font-size: var(--lr-font-size-xs);
-    --lr-known-date-field-min-height: var(--lr-size-1-25rem);
+    --lr-known-date-field-min-height: var(--lr-size-1-5rem);
   }
   :host([size='s']) {
     --lr-known-date-field-padding-block: var(--lr-space-xs);
     --lr-known-date-field-padding-inline: var(--lr-space-xs);
     --lr-known-date-field-font-size: var(--lr-font-size-sm);
-    --lr-known-date-field-min-height: var(--lr-size-1-5rem);
+    --lr-known-date-field-min-height: var(--lr-size-1-875rem);
   }
   :host([size='l']) {
     --lr-known-date-field-padding-block: var(--lr-space-m);
     --lr-known-date-field-padding-inline: var(--lr-space-m);
     --lr-known-date-field-font-size: var(--lr-font-size-lg);
-    --lr-known-date-field-min-height: var(--lr-size-2-5rem);
+    --lr-known-date-field-min-height: var(--lr-size-3rem);
   }
   :host([size='xl']) {
     --lr-known-date-field-padding-block: var(--lr-space-l);
     --lr-known-date-field-padding-inline: var(--lr-space-l);
     --lr-known-date-field-font-size: var(--lr-font-size-xl);
-    --lr-known-date-field-min-height: var(--lr-size-3rem);
+    --lr-known-date-field-min-height: var(--lr-size-3-5rem);
   }
 
   [part='form-control'] {
@@ -123,12 +127,20 @@ export const styles = css`
   [part='field'][data-field='year'] [part='field-input'] {
     inline-size: var(--lr-known-date-year-field-width);
   }
+  /* Mouse-hover parity with the keyboard :focus-visible ring below -- same border-retint
+     treatment as lr-color-picker's own bordered [part='input']:hover. */
+  [part='field-input']:hover {
+    border-color: var(--lr-color-brand);
+  }
   [part='field-input']:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);
   }
+  /* --lr-known-date-invalid-border-color indirection (rather than the bare --lr-color-danger
+     token) lets a consumer retheme just this component's invalid-field border without
+     repainting every other component in the app that reads the same shared danger token. */
   :host([data-invalid]) [part='field-input'] {
-    border-color: var(--lr-color-danger);
+    border-color: var(--lr-known-date-invalid-border-color, var(--lr-color-danger));
   }
   [part='field-input']:disabled {
     opacity: var(--lr-opacity-disabled);

@@ -87,6 +87,7 @@ export class LyraDiffView extends LyraElement<LyraDiffViewEventMap> {
   private diffOps: DiffOp[] = [];
 
   protected willUpdate(changed: PropertyValues): void {
+    super.willUpdate(changed);
     if (changed.has('oldText') || changed.has('newText')) {
       this.diffOps = computeLineDiff(this.oldText.split('\n'), this.newText.split('\n'));
     }

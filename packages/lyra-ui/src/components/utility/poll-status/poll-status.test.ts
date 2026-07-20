@@ -37,6 +37,16 @@ describe('lr-poll-status', () => {
     expect(fired).to.be.false;
   });
 
+  it('never announces "Resumed." on a bare mount, even though paused defaults to false', async () => {
+    // Regression test: Lit's ReactiveElement records every declared reactive property as changed
+    // during construction, so a bare updated()'s changed.has('paused') is true on the very first
+    // update too -- without an isMounting guard, this fires the "resumed" announcement for a
+    // component that was never actually paused/resumed by anything a user did.
+    const el = (await fixture(html`<lr-poll-status next-in-ms="10000"></lr-poll-status>`)) as LyraPollStatus;
+    await el.updateComplete;
+    expect(liveRegionText(el)).to.equal('');
+  });
+
   it('never arms the ticker (and never fires a spurious lr-poll-due) when mounted with no next-in-ms scheduled', async () => {
     // Regression test: connectedCallback() used to unconditionally arm the
     // ticker whenever active && !paused -- true by default -- even though
@@ -96,6 +106,21 @@ describe('lr-poll-status', () => {
     el.addEventListener('lr-poll-due', () => (fired = true));
     await aTimeout(150); // outlives the original 40ms deadline
     expect(fired, 'no tick should run while inactive, so due can never be reached').to.be.false;
+  });
+
+  it('accepts active="false" as a plain-HTML attribute string, not just a JS property binding', async () => {
+    // Regression test: `active`'s default Boolean converter can never distinguish a plain
+    // active="false" attribute from the attribute being absent altogether, so the countdown kept
+    // ticking and lr-poll-due kept firing for any consumer using markup instead of `el.active = false`.
+    const el = (await fixture(html`<lr-poll-status next-in-ms="40" active="false"></lr-poll-status>`)) as LyraPollStatus;
+    expect(el.active).to.be.false;
+    await el.updateComplete;
+
+    let fired = false;
+    el.addEventListener('lr-poll-due', () => (fired = true));
+    await aTimeout(150); // outlives the 40ms deadline
+    expect(fired, 'active="false" as a plain attribute should suppress the ticker just like the JS property').to.be
+      .false;
   });
 
   it('resumes ticking toward the existing deadline once active is toggled back to true', async () => {
@@ -214,5 +239,18 @@ describe('lr-poll-status', () => {
   it('gives the pause button a :hover treatment, matching lr-widget\'s collapse/fullscreen buttons', () => {
     const css = styles.cssText.replace(/\s+/g, ' ');
     expect(css).to.match(/\[part='pause-button'\]:hover\s*\{[^}]+\}/);
+  });
+
+  it('recolors the due indicator dot from an ancestor --lr-poll-status-due-bg, not the bare shared --lr-color-success token', async () => {
+    const wrapper = (await fixture(
+      html`<div style="--lr-poll-status-due-bg: rgb(0, 51, 102);">
+        <lr-poll-status next-in-ms="10"></lr-poll-status>
+      </div>`,
+    )) as HTMLDivElement;
+    const el = wrapper.querySelector('lr-poll-status') as LyraPollStatus;
+    await oneEvent(el, 'lr-poll-due');
+    await el.updateComplete;
+    const indicator = el.shadowRoot!.querySelector('[part="indicator"]') as HTMLElement;
+    expect(getComputedStyle(indicator).backgroundColor).to.equal('rgb(0, 51, 102)');
   });
 });

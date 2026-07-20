@@ -25,6 +25,7 @@ export const styles = css`
   }
   [part='side'] {
     overflow-x: auto;
+    overflow-y: hidden;
     min-inline-size: 0;
   }
   [part='line'] {

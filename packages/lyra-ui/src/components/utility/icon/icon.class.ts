@@ -1,4 +1,4 @@
-import { html, svg, type TemplateResult } from 'lit';
+import { html, svg, type PropertyValues, type TemplateResult } from 'lit';
 import { property, query } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { styles } from './icon.styles.js';
@@ -31,7 +31,8 @@ export class LyraIcon extends LyraElement {
   @query('svg') private svgEl?: SVGSVGElement;
   @query('slot') private customSlot?: HTMLSlotElement;
 
-  protected updated(): void {
+  protected updated(changed: PropertyValues): void {
+    super.updated(changed);
     this.syncCustomNodes();
   }
 

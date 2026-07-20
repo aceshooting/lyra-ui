@@ -21,6 +21,7 @@ export class LyraRelativeTime extends LyraElement {
   connectedCallback(): void { super.connectedCallback(); this.schedule(); }
   disconnectedCallback(): void { clearInterval(this.timer); super.disconnectedCallback(); }
   protected updated(changed: PropertyValues): void {
+    super.updated(changed);
     if (changed.has('sync') || changed.has('date') || changed.has('locale') || changed.has('unit') || changed.has('numeric')) this.schedule();
   }
   private schedule(): void {

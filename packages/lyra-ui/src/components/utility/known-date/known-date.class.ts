@@ -139,10 +139,12 @@ class LyraKnownDateBase extends LyraElement<LyraKnownDateEventMap> {}
  *   `field-input`, auto-swapped per `size`.
  * @cssprop [--lr-known-date-field-font-size=var(--lr-font-size-md-sm)] - Font size of each
  *   `field-input`, auto-swapped per `size`.
- * @cssprop [--lr-known-date-field-min-height=var(--lr-size-2rem)] - Minimum block size of each
- *   `field-input`, auto-swapped per `size` (`xs`→`1.25rem`, `s`→`1.5rem`, `l`→`2.5rem`,
- *   `xl`→`3rem`). Each default sits below the field's own content height, so it is dead until a
- *   consumer raises it -- the unset render is unchanged.
+ * @cssprop [--lr-known-date-field-min-height=var(--lr-size-2-5rem)] - Minimum block size of each
+ *   `field-input`, auto-swapped per `size` (`xs`→`1.5rem`, `s`→`1.875rem`, `l`→`3rem`,
+ *   `xl`→`3.5rem`) -- matches `lr-input`'s/`lr-date-input`'s own min-height scale, so a birthdate
+ *   field sitting in a form row next to those controls renders at the same height. At `xs`/`s`/`m`
+ *   the floor now exceeds the field's own content height and actively pins the rendered box; at
+ *   `l`/`xl` the content height already exceeds the floor, so those two tiers are unaffected.
  * @cssprop --lr-known-date-field-height - Exact block size of each `field-input`. Undeclared by
  *   default, so the field grows to fit its content, floored by `--lr-known-date-field-min-height`.
  *   Set it to pin a fixed height.
@@ -151,6 +153,8 @@ class LyraKnownDateBase extends LyraElement<LyraKnownDateEventMap> {}
  * @cssprop [--lr-known-date-month-field-width=var(--lr-size-3-5em)] - Inline size of the month
  *   field.
  * @cssprop [--lr-known-date-year-field-width=var(--lr-size-5em)] - Inline size of the year field.
+ * @cssprop [--lr-known-date-invalid-border-color=var(--lr-color-danger)] - Border color of each
+ *   `field-input` while `:host([data-invalid])` is set.
  */
 export class LyraKnownDate extends FormAssociated(LyraKnownDateBase) {
   static styles = [LyraElement.styles, styles];
@@ -423,7 +427,8 @@ export class LyraKnownDate extends FormAssociated(LyraKnownDateBase) {
     this[SET_ANCHORED_VALIDITY](flags, message);
   }
 
-  protected willUpdate(): void {
+  protected willUpdate(changed: PropertyValues): void {
+    super.willUpdate(changed);
     if (!this.hasUpdated) {
       this.hasLabelSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'label');
       this.hasHintSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'hint');

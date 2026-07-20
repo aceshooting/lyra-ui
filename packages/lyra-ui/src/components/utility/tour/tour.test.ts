@@ -33,6 +33,15 @@ function focusedDescriptor(): string {
   return `${active.tagName}#${active.id}[part=${active.getAttribute('part') ?? ''}]`;
 }
 
+/** Describes an `elementFromPoint()` hit by tag name + id instead of returning the raw node --
+ *  same reasoning as `focusedDescriptor()` above (a failed element-vs-element
+ *  `expect().to.equal()` can hang the wtr/Playwright reporter via a structuredClone
+ *  DataCloneError -- compare a descriptive string instead). */
+function hitDescriptor(el: Element | null): string {
+  if (!el) return '(none)';
+  return `${el.tagName}#${el.id}`;
+}
+
 function press(target: EventTarget, key: string, extra: KeyboardEventInit = {}): void {
   target.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true, composed: true, cancelable: true, ...extra }));
 }
@@ -436,9 +445,12 @@ describe('lr-tour', () => {
     const hit = document.elementFromPoint(cx, cy);
     // document.elementFromPoint() retargets a hit inside an open shadow root to its host --
     // hitting the tour host itself (rather than the light-DOM target button) proves the
-    // backdrop, not the button, is what's actually receiving the pointer event.
-    expect(hit, 'the backdrop should absorb the hit, retargeted to the <lr-tour> host').to.equal(tour);
-    expect(hit).to.not.equal(targetButton);
+    // backdrop, not the button, is what's actually receiving the pointer event. Compared as
+    // descriptor strings, not raw nodes, via hitDescriptor() -- see its own doc comment.
+    expect(hitDescriptor(hit), 'the backdrop should absorb the hit, retargeted to the <lr-tour> host').to.equal(
+      hitDescriptor(tour),
+    );
+    expect(hitDescriptor(hit)).to.not.equal(hitDescriptor(targetButton));
 
     targetButton.dispatchEvent(new MouseEvent('click', { bubbles: true }));
     expect(clicked, "a direct dispatch bypasses hit-testing, so this only proves the fixture button's own listener works").to.be.true;
@@ -472,7 +484,7 @@ describe('lr-tour', () => {
     const cx = rect.left + rect.width / 2;
     const cy = rect.top + rect.height / 2;
     const hit = document.elementFromPoint(cx, cy);
-    expect(hit).to.equal(targetButton);
+    expect(hitDescriptor(hit)).to.equal(hitDescriptor(targetButton));
 
     targetButton.click();
     expect(clicked).to.be.true;
@@ -543,6 +555,23 @@ describe('lr-tour', () => {
     tour.showProgress = false;
     await tour.updateComplete;
     expect(tour.shadowRoot!.querySelector('[part="progress"]')).to.not.exist;
+  });
+
+  it('accepts show-progress="false" as a plain-HTML attribute string, not just a JS property binding', async () => {
+    // Regression test: show-progress's default Boolean converter can never distinguish a plain
+    // show-progress="false" attribute from the attribute being absent altogether, so the built-in
+    // "Step X of Y" progress indicator kept rendering for any consumer using markup instead of
+    // `.showProgress = false`.
+    const el = (await fixture(
+      html`<div>
+        <lr-tour .steps=${makeSteps(3)} open show-progress="false"></lr-tour>
+        ${targetButtons(3)}
+      </div>`,
+    )) as HTMLDivElement;
+    const tour = el.querySelector('lr-tour') as LyraTour;
+    expect(tour.showProgress).to.be.false;
+    await tour.updateComplete;
+    expect(!!tour.shadowRoot!.querySelector('[part="progress"]')).to.be.false;
   });
 
   it('the Previous button is disabled (present) on the first step; hidePrevious removes it entirely', async () => {
@@ -800,6 +829,42 @@ describe('lr-tour', () => {
     const computed = getComputedStyle(probe).filter;
     probe.remove();
     expect(computed).to.equal('brightness(1.08)');
+  });
+
+  it('wraps the internal previous-button/skip-button hover rule in :where() so a consumer ::part(...):hover override wins without !important', async () => {
+    // Regression test: an unwrapped [part='previous-button']:hover:not(:disabled) selector has
+    // specificity (0,3,0), which beats a consumer's ::part(previous-button):hover at (0,1,1) --
+    // matches the established remediation lr-pagination/lr-attachment-trigger already use.
+    const el = (await fixture(
+      html`<div>
+        <lr-tour .steps=${makeSteps(2)} open></lr-tour>
+        ${targetButtons(2)}
+      </div>`,
+    )) as HTMLDivElement;
+    const tour = el.querySelector('lr-tour') as LyraTour;
+    await tour.updateComplete;
+    const internalRule = (tour.shadowRoot!.adoptedStyleSheets ?? [])
+      .flatMap((sheet) => Array.from(sheet.cssRules))
+      .map((rule) => rule.cssText.replace(/"/g, "'"))
+      .find(
+        (text) =>
+          text.includes(':hover') &&
+          (text.includes("[part='previous-button']") || text.includes("[part='skip-button']")),
+      );
+    expect(internalRule).to.contain(':where(');
+  });
+
+  it('recolors the current progress dot from an ancestor --lr-tour-progress-dot-current-bg, not the bare shared --lr-color-brand token', async () => {
+    const el = (await fixture(
+      html`<div style="--lr-tour-progress-dot-current-bg: rgb(0, 51, 102);">
+        <lr-tour .steps=${makeSteps(3)} open></lr-tour>
+        ${targetButtons(3)}
+      </div>`,
+    )) as HTMLDivElement;
+    const tour = el.querySelector('lr-tour') as LyraTour;
+    await tour.updateComplete;
+    const currentDot = tour.shadowRoot!.querySelector('[part="progress-dot"][data-current]') as HTMLElement;
+    expect(getComputedStyle(currentDot).backgroundColor).to.equal('rgb(0, 51, 102)');
   });
 
   it('is accessible with an open, multi-step tour and a resolvable target', async () => {

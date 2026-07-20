@@ -175,12 +175,14 @@ export class LyraExportButton extends LyraElement<LyraExportButtonEventMap> {
     this.renderRoot.addEventListener('keydown', this.onKeyDown as EventListener);
   }
 
-  protected willUpdate(): void {
+  protected willUpdate(changed: PropertyValues): void {
+    super.willUpdate(changed);
     this._isFirstUpdate = !this.hasUpdated;
     this.toggleAttribute('aria-busy', this.loading);
   }
 
   protected updated(changed: PropertyValues): void {
+    super.updated(changed);
     if (changed.has('open')) {
       this.cleanup?.();
       this.cleanup = undefined;

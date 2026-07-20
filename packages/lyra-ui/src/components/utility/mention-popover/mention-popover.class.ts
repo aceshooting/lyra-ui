@@ -241,6 +241,8 @@ export interface LyraMentionPopoverEventMap {
  * @csspart option-label - Wrapper around a row's label/description.
  * @csspart option-description - A row's optional secondary line, when `description` is set.
  * @csspart empty - The "no matches" message, shown when `items`/`query` produce zero rows.
+ * @cssprop [--lr-mention-popover-option-active-bg=var(--lr-color-brand-quiet)] - Background of the
+ *   hovered or `[data-active]` (keyboard-highlighted) suggestion row.
  */
 export class LyraMentionPopover extends LyraElement<LyraMentionPopoverEventMap> {
   static styles = [LyraElement.styles, styles];

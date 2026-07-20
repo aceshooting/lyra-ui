@@ -56,8 +56,12 @@ export const styles = css`
   .row:hover {
     background: var(--lr-color-brand-quiet);
   }
-  .row:hover [part='copy-button'],
-  .row:focus-within [part='copy-button'] {
+  /* :where() zeroes the wrapped selectors' specificity contribution, leaving only :hover/
+     :focus-within themselves -- (0,1,0) total, so a consumer's own ::part(copy-button):hover
+     override ((0,1,1)) wins without needing !important -- same fix shape as
+     lr-attachment-trigger's/lr-copy-button's own :where()-wrapped hover rule. */
+  :where(.row):hover :where([part='copy-button']),
+  :where(.row):focus-within :where([part='copy-button']) {
     opacity: 1;
   }
   [part='toggle'] {
@@ -99,7 +103,11 @@ export const styles = css`
   /* No RTL chevron override: [part='tree'] above is pinned direction:ltr, so a collapsed
      row's disclosure chevron always points at the LTR-positioned children (to the right),
      the same as it does in an LTR document. */
-  [part='toggle']:not([hidden]):hover {
+  /* :where() zeroes the wrapped selectors' specificity contribution, leaving only :hover itself
+     -- (0,1,0) total, so a consumer's own ::part(toggle):hover override ((0,1,1)) wins without
+     needing !important -- same fix shape as lr-attachment-trigger's/lr-copy-button's own
+     :where()-wrapped hover rule. */
+  :where([part='toggle']):hover:where(:not([hidden])) {
     background: var(--lr-color-brand-quiet);
     color: var(--lr-color-brand);
   }
@@ -129,11 +137,14 @@ export const styles = css`
     flex: 0 0 auto;
     color: var(--lr-color-text-quiet);
   }
+  /* --lr-json-viewer-match-bg indirection (rather than the bare --lr-color-warning-quiet token)
+     lets a consumer retheme just this component's search-match highlight without repainting
+     every other warning-toned surface on the page that reads the same shared token. */
   [part='key'][data-match],
   [part='value'][data-match] {
-    background: var(--lr-color-warning-quiet);
+    background: var(--lr-json-viewer-match-bg, var(--lr-color-warning-quiet));
     border-radius: var(--lr-size-0-1875rem);
-    box-shadow: 0 0 0 var(--lr-size-0-125rem) var(--lr-color-warning-quiet);
+    box-shadow: 0 0 0 var(--lr-size-0-125rem) var(--lr-json-viewer-match-bg, var(--lr-color-warning-quiet));
   }
   [part='value'] {
     min-inline-size: 0;

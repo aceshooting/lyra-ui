@@ -54,9 +54,14 @@ export const styles = css`
     border-radius: var(--lr-radius);
     cursor: pointer;
   }
+  /* --lr-mention-popover-option-active-bg indirection (rather than the bare --lr-color-brand-quiet
+     token) lets a consumer retheme just this component's highlighted/active suggestion row
+     without repainting every other component that reuses the same shared brand-quiet token --
+     same indirection lr-select's/lr-combobox's identical-looking [part='option'][data-active]
+     background is missing (checklist's own named example for this check). */
   [part='option']:hover,
   [part='option'][data-active] {
-    background: var(--lr-color-brand-quiet);
+    background: var(--lr-mention-popover-option-active-bg, var(--lr-color-brand-quiet));
   }
   [part='option'][aria-selected='true'] {
     color: var(--lr-color-brand);

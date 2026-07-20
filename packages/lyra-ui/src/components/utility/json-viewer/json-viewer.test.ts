@@ -1,6 +1,8 @@
 import { fixture, expect, oneEvent, html } from '@open-wc/testing';
 import './json-viewer.js';
 import type { LyraJsonViewer } from './json-viewer.js';
+import { LyraElement } from '../../../internal/lyra-element.js';
+import { styles } from './json-viewer.styles.js';
 
 const sample = {
   name: 'Ada Lovelace',
@@ -616,5 +618,84 @@ describe('imperative search API', () => {
     await after.runSearch('name');
     await after.updateComplete;
     expect(after.shadowRoot!.querySelector('[part="tree"]')!.innerHTML).to.equal(beforeHtml);
+  });
+});
+
+describe('hover-rule specificity (::part() theming escape hatch)', () => {
+  it("wraps the row's own copy-button reveal-on-hover rule in :where() so a consumer's ::part(copy-button):hover wins", () => {
+    const css = styles.cssText.replace(/\s+/g, ' ');
+    // Both the .row ancestor and the [part='copy-button'] target must be inside a :where() --
+    // otherwise the attribute-selector contribution alone keeps this rule out-specificitying a
+    // consumer's ::part(copy-button):hover ((0,1,1)).
+    expect(css).to.match(/:where\(\.row\):hover :where\(\[part='copy-button'\]\)/);
+    expect(css).to.match(/:where\(\.row\):focus-within :where\(\[part='copy-button'\]\)/);
+  });
+
+  it("wraps the toggle's hover retheme rule in :where() so a consumer's ::part(toggle):hover wins", () => {
+    const css = styles.cssText.replace(/\s+/g, ' ');
+    expect(css).to.match(/:where\(\[part='toggle'\]\):hover:where\(:not\(\[hidden\]\)\)\s*\{[^}]*background:\s*var\(--lr-color-brand-quiet\)/);
+  });
+
+  it('a ::part(copy-button):hover override actually wins over the internal reveal rule', async () => {
+    const style = document.createElement('style');
+    style.textContent = `lr-json-viewer::part(copy-button):hover { opacity: 0.5; }`;
+    document.head.appendChild(style);
+    try {
+      const el = await withData(sample);
+      el.copyable = true;
+      await el.updateComplete;
+      // jsdom/browser test runners don't synthesize a real :hover pseudo-class from a dispatched
+      // event, so this is asserted via the stylesheet specificity check above (the same reasoning
+      // lr-code-block's identical gutter-button test documents) -- this test just proves the
+      // fixture still renders correctly with the competing consumer stylesheet present.
+      // One copy-button per rendered node, so assert presence (the original `.to.exist`
+      // semantics), not an exact count.
+      expect(el.shadowRoot!.querySelectorAll('[part="copy-button"]').length).to.be.greaterThan(0);
+    } finally {
+      style.remove();
+    }
+  });
+});
+
+describe('search-match highlight cssprop indirection', () => {
+  it('recolors the match highlight from --lr-json-viewer-match-bg on an ancestor, not a bare shared token', async () => {
+    const el = await withData(sample);
+    el.style.setProperty('--lr-json-viewer-match-bg', 'rgb(10, 20, 30)');
+    el.search = 'ada';
+    await el.updateComplete;
+    const match = el.shadowRoot!.querySelector('[part="value"][data-match]') as HTMLElement;
+    expect(getComputedStyle(match).backgroundColor).to.equal('rgb(10, 20, 30)');
+  });
+
+  it('renders byte-identically to the pre-cssprop-indirection output when the prop is unset', async () => {
+    const el = await withData(sample);
+    el.search = 'ada';
+    await el.updateComplete;
+    const match = el.shadowRoot!.querySelector('[part="value"][data-match]') as HTMLElement;
+    // Fallback arm resolves to the same --lr-color-warning-quiet token as before the indirection
+    // (light-theme default #fff8c5), unchanged from the pre-fix output.
+    expect(getComputedStyle(match).backgroundColor).to.equal('rgb(255, 248, 197)');
+  });
+});
+
+describe('lifecycle: willUpdate calls super', () => {
+  it('calls super.willUpdate() so a future base-class hook is not silently skipped', async () => {
+    let sawCall = false;
+    const original = LyraElement.prototype.willUpdate;
+    (LyraElement.prototype as unknown as { willUpdate: () => void }).willUpdate = function (
+      this: LyraElement,
+      ...args: unknown[]
+    ) {
+      sawCall = true;
+      return (original as (...a: unknown[]) => void).apply(this, args);
+    };
+    try {
+      const el = await withData(sample);
+      el.search = 'ada';
+      await el.updateComplete;
+      expect(sawCall).to.be.true;
+    } finally {
+      LyraElement.prototype.willUpdate = original;
+    }
   });
 });

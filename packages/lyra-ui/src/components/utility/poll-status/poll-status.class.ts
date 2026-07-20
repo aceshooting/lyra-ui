@@ -1,4 +1,4 @@
-import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
+import { html, nothing, type ComplexAttributeConverter, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state, query } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { pauseIcon, playIcon } from '../../../internal/icons.js';
@@ -13,6 +13,21 @@ export interface LyraPollStatusEventMap {
 }
 
 const TICK_MS = 1000;
+
+/** `true`-defaulting boolean attribute converter -- Lit's default presence-based `type: Boolean`
+ *  can never be set back to `false` from a plain-HTML attribute once a property's own default is
+ *  `true` (removing an attribute that was never present fires no `attributeChangedCallback`), so
+ *  `fromAttribute` checks the literal string instead. Duplicated locally rather than imported,
+ *  matching this exact converter's repeated per-component convention elsewhere in this library
+ *  (see e.g. `<lr-agent-run>`'s own `trueDefaultBooleanConverter`). */
+const trueDefaultBooleanConverter: ComplexAttributeConverter<boolean> = {
+  fromAttribute(value): boolean {
+    return value !== 'false';
+  },
+  toAttribute(value): string | null {
+    return value ? null : 'false';
+  },
+};
 
 /**
  * `<lr-poll-status>` — a "next scheduled refresh" countdown with a built-in pause control: a
@@ -30,6 +45,9 @@ const TICK_MS = 1000;
  * @csspart indicator - The pulsing status dot.
  * @csspart countdown - The `M:SS` text (or "Refreshing…" once due, or "Paused" while `paused`).
  * @csspart pause-button - The built-in pause/resume toggle.
+ * @cssprop [--lr-poll-status-due-bg=var(--lr-color-success)] - Background of `indicator` while
+ *   `data-due` is set, without repainting every other component that reuses the shared success
+ *   token.
  */
 export class LyraPollStatus extends LyraElement<LyraPollStatusEventMap> {
   static styles = [LyraElement.styles, styles];
@@ -39,7 +57,7 @@ export class LyraPollStatus extends LyraElement<LyraPollStatusEventMap> {
   @property({ type: Number, attribute: 'next-in-ms' }) nextInMs?: number;
 
   /** Whether the poll cycle is running at all. `true` (the default). */
-  @property({ type: Boolean, reflect: true }) active = true;
+  @property({ type: Boolean, reflect: true, converter: trueDefaultBooleanConverter }) active = true;
 
   /** User-toggled pause -- while `true`, the countdown display freezes and `lr-poll-due` never
    *  fires. `false` (the default). */
@@ -49,6 +67,14 @@ export class LyraPollStatus extends LyraElement<LyraPollStatusEventMap> {
   @state() private due = false;
   private tickTimer?: ReturnType<typeof setInterval>;
   private targetAt = 0;
+
+  /** True only until the component's first completed update -- gates the pause/resume
+   *  announcement below so mounting with `paused`'s default `false` value never announces
+   *  "Resumed." as though a user actually toggled it (mirrors `<lr-chat-message>`'s and
+   *  `<lr-branch-picker>`'s identical `isMounting` gate for their own first-update announcements:
+   *  Lit's ReactiveElement records every declared reactive property as changed during
+   *  construction, so `changed.has('paused')` is true on the very first `updated()` call too). */
+  private isMounting = true;
 
   @query('lr-live-region') private liveRegion?: LyraLiveRegion;
 
@@ -90,6 +116,8 @@ export class LyraPollStatus extends LyraElement<LyraPollStatusEventMap> {
   }
 
   protected updated(changed: PropertyValues): void {
+    const wasMounting = this.isMounting;
+    this.isMounting = false;
     if (changed.has('nextInMs')) {
       if (this.nextInMs != null && this.active && !this.paused) {
         this.armTicker();
@@ -105,10 +133,13 @@ export class LyraPollStatus extends LyraElement<LyraPollStatusEventMap> {
     if (changed.has('paused')) {
       if (this.paused) {
         this.disarmTicker();
-        this.announce(this.localize('pollPausedAnnounce'));
+        // Never announce a "pause" that was only ever the component's own initial/mount-time
+        // state -- only a real post-mount transition into paused counts as something to tell a
+        // screen-reader user about.
+        if (!wasMounting) this.announce(this.localize('pollPausedAnnounce'));
       } else {
         if (this.active && this.nextInMs != null) this.armTicker();
-        this.announce(this.localize('pollResumedAnnounce'));
+        if (!wasMounting) this.announce(this.localize('pollResumedAnnounce'));
       }
     }
     if (changed.has('active')) {

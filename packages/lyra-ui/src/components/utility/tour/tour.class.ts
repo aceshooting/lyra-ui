@@ -1,4 +1,4 @@
-import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
+import { html, nothing, type ComplexAttributeConverter, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { keyed } from 'lit/directives/keyed.js';
 import type { Placement } from '@floating-ui/dom';
@@ -17,6 +17,21 @@ const DEFAULT_DISTANCE = 12;
 /** Default extra px between a target's own box and the spotlight cutout/ring -- see
  *  `LyraTour.spotlightPadding`. */
 const DEFAULT_SPOTLIGHT_PADDING = 4;
+
+/** `true`-defaulting boolean attribute converter -- Lit's default presence-based `type: Boolean`
+ *  can never be set back to `false` from a plain-HTML attribute once a property's own default is
+ *  `true` (removing an attribute that was never present fires no `attributeChangedCallback`), so
+ *  `fromAttribute` checks the literal string instead. Duplicated locally rather than imported,
+ *  matching this exact converter's repeated per-component convention elsewhere in this library
+ *  (see e.g. `<lr-agent-run>`'s own `trueDefaultBooleanConverter`). */
+const trueDefaultBooleanConverter: ComplexAttributeConverter<boolean> = {
+  fromAttribute(value): boolean {
+    return value !== 'false';
+  },
+  toAttribute(value): string | null {
+    return value ? null : 'false';
+  },
+};
 
 /**
  * Resolves the element a step spotlights/anchors to. A `string` is resolved via
@@ -204,6 +219,9 @@ function keyholeClipPath(x: number, y: number, width: number, height: number): s
  * @cssprop --lr-tour-spotlight-ring-width - Spotlight ring thickness. Defaults to
  *   `--lr-border-width-medium`.
  * @cssprop --lr-tour-popover-max-width - Maximum popover inline size. Defaults to `--lr-size-22rem`.
+ * @cssprop [--lr-tour-progress-dot-current-bg=var(--lr-color-brand)] - Background of
+ *   `progress-dot` for the current step, without repainting every other component that reuses the
+ *   shared brand token.
  */
 export class LyraTour extends LyraElement<LyraTourEventMap> {
   static styles = [LyraElement.styles, styles];
@@ -241,7 +259,7 @@ export class LyraTour extends LyraElement<LyraTourEventMap> {
   @property({ type: Boolean, attribute: 'light-dismiss' }) lightDismiss = false;
 
   /** Whether the built-in "Step X of Y" progress indicator (dots + text) renders in the footer. */
-  @property({ type: Boolean, attribute: 'show-progress' }) showProgress = true;
+  @property({ type: Boolean, attribute: 'show-progress', converter: trueDefaultBooleanConverter }) showProgress = true;
 
   /** Host-level `aria-label` override for every step popover's accessible name -- wins over each
    *  step's own `heading`, matching `lr-dialog`'s `accessibleLabel` pattern. Most consumers
