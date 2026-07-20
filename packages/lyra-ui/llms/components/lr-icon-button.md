@@ -40,11 +40,16 @@ complete element — an `<svg>`, an `<img>`, an `<lr-flag>` — render at its ow
 instead of being forced into a 1:1 box. Setting both `icon` and slotted content renders both, side
 by side; that is a valid composition, not a fallback.
 
-**Migration note:** bare SVG *geometry* (`<path>`, `<circle>`, `<rect>` …) slotted with no `icon`
-set has no SVG parent here and will not paint. Wrap it in an `<lr-icon>`, or in a complete `<svg>`
-of your own.
+**Bare SVG geometry fallback:** slotted bare SVG *geometry* (`path`, `circle`, `rect`, `line`,
+`polygon`, `polyline`, `ellipse`, `g`, `use`) with no `icon` set and no enclosing `<svg>` of its
+own has no real SVG parent as parsed, and is detected and cloned into an internal
+`[part="fallback"]` SVG-namespaced element so it still paints — the same fallback `<lr-icon>`'s own
+custom-content slot uses. This is narrowly scoped to that whitelist: a complete `<svg>`, `<img>`,
+or custom element (e.g. `<lr-flag>`) is never touched by it and keeps rendering as an untouched
+sibling at its own natural aspect ratio.
 
-**CSS parts:** `button`
+**CSS parts:** `button`, `fallback` (only present in the DOM while at least one top-level slotted
+element needs the bare-geometry fallback above)
 
 **Themeable custom properties:** `--lr-icon-button-size` (default `2.5rem`) is the **minimum**
 tappable inline and block size of the native button — a floor, not a fixed size. Content larger
