@@ -604,6 +604,7 @@ export type LyraMessageKey =
   | 'audioVisualizerListening'
   | 'audioVisualizerThinking'
   | 'audioVisualizerSpeaking'
+  | 'treeNodeMoved'
   | 'fileTreeLabel'
   | 'fileTreeDiffSummary'
   | 'gitStatusAdded'
@@ -1605,6 +1606,7 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, string> = {
   audioVisualizerListening: 'Listening',
   audioVisualizerThinking: 'Thinking',
   audioVisualizerSpeaking: 'Speaking',
+  treeNodeMoved: 'Moved {label} to position {index} of {total}',
   fileTreeLabel: 'Files',
   fileTreeDiffSummary: '+{additions} -{deletions}',
   gitStatusAdded: 'Added',

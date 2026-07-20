@@ -1,11 +1,15 @@
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
-import { property, state } from 'lit/decorators.js';
+import { property, query, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { tag } from '../../../internal/prefix.js';
 import { isRtl } from '../../../internal/rtl.js';
 import { styles } from './tree.styles.js';
 import { cascadeUpdateComplete } from './update-cascade.js';
 import '../../overlays/empty/empty.class.js';
+// The registering barrel, not the bare `*.class.js` module -- this side effect is what makes
+// `<lr-live-region>` an actually-defined tag by the time a reorderable tree renders one.
+import '../../utility/live-region/live-region.js';
+import type { LyraLiveRegion } from '../../utility/live-region/live-region.class.js';
 import './tree-node.class.js';
 import type { LyraTreeNode } from './tree-node.class.js';
 
@@ -43,9 +47,18 @@ export interface TreeItem {
  * bubble across shadow-DOM boundaries, so a press inside a deeply-nested
  * `<lr-tree-node>`'s own shadow root still reaches this listener.
  *
+ * Set `reorderable` to opt into keyboard reordering: Ctrl/Cmd+ArrowUp/ArrowDown on the focused
+ * node emits `lr-reorder` — a *request*, exactly like every other event here. `data` is
+ * host-owned and never mutated by this component, so nothing moves until the host reassigns a
+ * reordered `data`; focus then follows the moved node. The keybinding matches
+ * `<lr-dashboard-grid>`'s `cells-draggable` precedent (Alt+Arrow is browser back/forward on
+ * Windows/Linux). `<lr-file-tree>` deliberately **opts out**: its `TreeItem[]` is derived from
+ * `nodes` on every render and keyed by filesystem path, an order it does not own.
+ *
  * @customElement lr-tree
  * @event lr-node-toggle - `detail: { id, expanded }`, dispatched by a descendant `<lr-tree-node>` and observed here (bubbling, composed) to keep the roving-tabindex `activeId` in sync.
  * @event lr-node-select - `detail: { id }`, dispatched by a descendant `<lr-tree-node>` and observed here (bubbling, composed) to keep the roving-tabindex `activeId` in sync.
+ * @event lr-reorder - `detail: { id, parentId, fromIndex, toIndex }` — Ctrl/Cmd+ArrowUp/ArrowDown moved the focused node within its **own parent's** child list (`parentId` is `null` for a top-level item; the indices are sibling-scoped, not flattened-visible-list positions). Only fired while `reorderable`. Never fires at a subtree boundary, so a reorder can never become a reparent.
  * @csspart base - The tree's root wrapper (role="tree").
  * @csspart empty - The empty-state message shown when `data` is empty.
  * @slot - `<lr-tree-node>` elements (top-level tree items).
@@ -60,10 +73,18 @@ export class LyraTree extends LyraElement {
    * External `aria-labelledby` idrefs are not forwarded across the shadow boundary.
    */
   @property() label = '';
+  /**
+   * Opts into Ctrl/Cmd+ArrowUp/ArrowDown keyboard reordering (see the class doc). Defaults to
+   * `false`: unset, no `lr-reorder` is ever emitted, Ctrl/Cmd+Arrow keeps behaving exactly like
+   * a plain Arrow press, and the internal live region is not rendered at all.
+   */
+  @property({ type: Boolean, reflect: true }) reorderable = false;
 
   @state() private activeId: string | null = null;
-  /** Set by `willUpdate()` when a `data` reassignment removes the node that currently holds real DOM focus; consumed by `updated()` to refocus the newly-designated `activeId` node once it's actually focusable. */
+  /** Set by `willUpdate()` when a `data` reassignment displaces the node that currently holds real DOM focus -- either by removing it (refocus the newly-designated `activeId`) or by merely re-indexing it (refocus that same node); consumed by `getUpdateComplete()` once the target is actually focusable again. */
   private pendingFocusId: string | null = null;
+
+  @query('lr-live-region') private liveRegion?: LyraLiveRegion;
 
   private get nodeElements(): LyraTreeNode[] {
     return [...this.querySelectorAll(tag('tree-node'))] as LyraTreeNode[];
@@ -107,21 +128,71 @@ export class LyraTree extends LyraElement {
     return undefined;
   }
 
+  /**
+   * The sibling list `id` belongs to, plus its position in it and its parent's
+   * id (`null` at the top level). This is the *sibling* index space, which is
+   * what a reorder operates in -- deliberately not the flattened visible-list
+   * index space the arrow keys navigate, since that one crosses parents and
+   * skips collapsed subtrees.
+   */
+  private findSiblings(
+    id: string,
+    items: TreeItem[] = this.data,
+    parentId: string | null = null,
+  ): { parentId: string | null; siblings: TreeItem[]; index: number } | undefined {
+    const index = items.findIndex((item) => item.id === id);
+    if (index >= 0) return { parentId, siblings: items, index };
+    for (const item of items) {
+      const nested = item.children && this.findSiblings(id, item.children, item.id);
+      if (nested) return nested;
+    }
+    return undefined;
+  }
+
+  /**
+   * The `<lr-tree-node>` that genuinely holds real DOM focus, or `null`.
+   *
+   * `document.activeElement` collapses to the outermost light-DOM node even
+   * when the real focus target is a nested descendant several shadow roots
+   * down, so it can't distinguish "the top-level node is focused" from "one of
+   * its nested descendants is". Walking the `shadowRoot.activeElement` chain
+   * resolves the actual node, which is what lets a `data` reassignment restore
+   * focus to a *nested* node rather than yanking it up to that node's
+   * top-level ancestor.
+   */
+  private deepFocusedNode(): LyraTreeNode | null {
+    let active: Element | null = document.activeElement;
+    while (active?.shadowRoot?.activeElement) active = active.shadowRoot.activeElement;
+    if (!active || active.localName !== tag('tree-node')) return null;
+    const node = active as LyraTreeNode;
+    const id = node.item?.id;
+    return id != null && this.visibleNodeElements().some((n) => n.item?.id === id) ? node : null;
+  }
+
   protected willUpdate(changed: PropertyValues): void {
     if (changed.has('data')) {
-      // `document.activeElement` collapses to the outermost light-DOM node
-      // even when the real focus target is a nested descendant several
-      // shadow roots down, so this also catches a focused nested node whose
-      // top-level ancestor is about to be removed.
-      const focused = this.nodeElements.find((n) => n === document.activeElement);
+      const focused = this.deepFocusedNode();
+      const focusedId = focused?.item?.id ?? null;
       this.syncNodes();
       if (!this.activeId || !this.findItem(this.data, this.activeId)) {
         this.activeId = this.data[0]?.id ?? null;
       }
-      // `node.remove()` inside `syncNodes()` (per the DOM spec) already moved
-      // real focus off `focused` and onto <body> by this point; record the
-      // newly-resolved `activeId` so `updated()` can restore focus to it.
-      this.pendingFocusId = focused && !focused.isConnected ? this.activeId : null;
+      // Two distinct ways a `data` reassignment drops real DOM focus, both of
+      // which land it on <body> synchronously (per the DOM spec) before this
+      // method returns:
+      //   * the focused node was *removed* -- `node.remove()` in `syncNodes()`,
+      //     or, for a nested node, its parent's `repeat()` dropping the key;
+      //   * the focused node was merely *re-indexed* -- `insertBefore()` here,
+      //     or `repeat()` reordering a nested list, both of which are a
+      //     remove+insert of an already-connected element.
+      // Only the first case has to fall back to the newly-resolved `activeId`;
+      // a re-indexed node is still in `data`, so focus goes right back to it.
+      this.pendingFocusId =
+        focused == null
+          ? null
+          : focusedId != null && this.findItem(this.data, focusedId)
+            ? focusedId
+            : this.activeId;
     }
   }
 
@@ -217,9 +288,52 @@ export class LyraTree extends LyraElement {
     if (this.pendingFocusId != null) {
       const id = this.pendingFocusId;
       this.pendingFocusId = null;
-      this.nodeElements.find((n) => n.item.id === id)?.focus();
+      // Searched across the *visible* walk, not just `nodeElements`, so a
+      // nested node that was only re-indexed gets focus back where it was
+      // rather than having it pulled up to its top-level ancestor. A node
+      // whose ancestor collapsed in the same update is no longer visible (and
+      // has no committed `tabindex`), so fall back to the roving target.
+      const visible = this.visibleNodeElements();
+      (
+        visible.find((n) => n.item?.id === id) ??
+        visible.find((n) => n.item?.id === this.activeId)
+      )?.focus();
     }
     return result;
+  }
+
+  /**
+   * Emit a sibling-scoped reorder *request* for `node`, `delta` slots later
+   * (`+1`) or earlier (`-1`) among its own parent's children.
+   *
+   * Deliberately constrained to one sibling list. Ctrl+ArrowDown on the last
+   * child of a subtree is otherwise ambiguous -- the visually next row is a
+   * top-level uncle, so "move down" could mean either "swap with the next
+   * sibling" (there is none) or "reparent up a level". Reparenting is a
+   * structural edit, not a reorder, and there is no keyboard affordance that
+   * distinguishes the two, so a request that would leave the sibling list is
+   * simply not made: no event, no announcement, focus stays put -- exactly
+   * like a plain ArrowDown on the last visible row.
+   */
+  private requestReorder(node: LyraTreeNode, delta: 1 | -1): void {
+    const id = node.item?.id;
+    if (id == null) return;
+    const found = this.findSiblings(id);
+    if (!found) return;
+    const { parentId, siblings, index } = found;
+    const toIndex = index + delta;
+    if (toIndex < 0 || toIndex >= siblings.length) return;
+    this.emit('lr-reorder', { id, parentId, fromIndex: index, toIndex });
+    this.liveRegion?.announce(
+      this.localize('treeNodeMoved', undefined, {
+        label: node.item.accessibleLabel || node.item.label,
+        index: toIndex + 1,
+        total: siblings.length,
+      }),
+      // A discrete, user-initiated action: never coalesce it behind the
+      // announcer's throttle window the way streaming status text is.
+      { force: true },
+    );
   }
 
   private onTreeKeyDown = (e: KeyboardEvent): void => {
@@ -227,6 +341,15 @@ export class LyraTree extends LyraElement {
     if (visible.length === 0) return;
     const currentIndex = visible.findIndex((n) => n.item.id === this.activeId);
     const current = currentIndex >= 0 ? visible[currentIndex] : visible[0];
+    // Ctrl/Cmd+ArrowUp/ArrowDown reorders instead of navigating, matching
+    // <lr-dashboard-grid>'s `cells-draggable` keyboard move. ArrowUp/ArrowDown
+    // are not direction-sensitive, so this branch is deliberately *not*
+    // RTL-swapped: "down" always means later in the sibling list.
+    if (this.reorderable && (e.ctrlKey || e.metaKey) && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) {
+      e.preventDefault();
+      this.requestReorder(current, e.key === 'ArrowDown' ? 1 : -1);
+      return;
+    }
     // Expand/step-in and collapse/step-out are physical-direction actions --
     // swap which arrow key does which in RTL, matching split.ts/time-range.ts.
     const rtl = isRtl(this);
@@ -342,6 +465,7 @@ export class LyraTree extends LyraElement {
           : nothing}
         <slot></slot>
       </div>
+      ${this.reorderable ? html`<lr-live-region></lr-live-region>` : nothing}
     `;
   }
 }

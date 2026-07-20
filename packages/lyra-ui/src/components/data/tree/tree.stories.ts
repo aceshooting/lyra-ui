@@ -76,6 +76,73 @@ export const ExpandCollapseAll: Story = {
   },
 };
 
+/**
+ * `reorderable` opts into keyboard reordering. Focus a row and press
+ * **Ctrl/Cmd+ArrowUp / Ctrl/Cmd+ArrowDown** to move it within its own parent's child list.
+ * `lr-reorder` is only a *request* — `data` is host-owned, so this story applies the move itself
+ * and reassigns `data`; focus follows the moved row. The move is sibling-scoped: Ctrl+ArrowDown on
+ * the last child of a subtree does nothing rather than reparenting it.
+ */
+export const Reorderable: Story = {
+  render: () => {
+    const seed: TreeItem[] = [
+      {
+        id: 'inputs',
+        label: 'Inputs',
+        children: [
+          { id: 'in-1', label: 'Customer id' },
+          { id: 'in-2', label: 'Date range' },
+          { id: 'in-3', label: 'Currency' },
+        ],
+      },
+      {
+        id: 'outputs',
+        label: 'Outputs',
+        children: [
+          { id: 'out-1', label: 'Report url' },
+          { id: 'out-2', label: 'Row count' },
+        ],
+      },
+    ];
+    const onReorder = (event: Event): void => {
+      const tree = event.currentTarget as HTMLElement & { data: TreeItem[] };
+      const { parentId, fromIndex, toIndex } = (
+        event as CustomEvent<{ parentId: string | null; fromIndex: number; toIndex: number }>
+      ).detail;
+      const move = (list: TreeItem[]): TreeItem[] => {
+        const next = [...list];
+        const [moved] = next.splice(fromIndex, 1);
+        next.splice(toIndex, 0, moved);
+        return next;
+      };
+      const apply = (list: TreeItem[]): TreeItem[] =>
+        list.map((item) =>
+          item.id === parentId && item.children
+            ? { ...item, children: move(item.children) }
+            : item.children
+              ? { ...item, children: apply(item.children) }
+              : item,
+        );
+      tree.data = parentId === null ? move(tree.data) : apply(tree.data);
+    };
+    return html`
+      <lr-tree
+        style="max-width: 20rem"
+        label="Workflow slots"
+        reorderable
+        .data=${seed}
+        @lr-reorder=${onReorder}
+      ></lr-tree>
+    `;
+  },
+  play: async ({ canvasElement }) => {
+    const tree = canvasElement.querySelector('lr-tree') as HTMLElement & {
+      expandAll: () => Promise<void> | void;
+    };
+    await tree.expandAll();
+  },
+};
+
 const buildDeepData = (depth: number): TreeItem[] => {
   let node: TreeItem = { id: `d${depth}`, label: `A very long deeply-nested label all the way at depth ${depth}` };
   for (let d = depth - 1; d >= 0; d--) {
