@@ -51,4 +51,68 @@ export const styles = css`
     border-radius: var(--lr-size-2px);
     flex: 0 0 auto;
   }
+
+  /* maplibre-gl injects its attribution/logo controls INTO [part='container'], i.e. into this
+     shadow root -- which the consumer's document-level \`maplibre-gl.css\` (the import map-loader.ts
+     tells them to add) can never reach across the shadow boundary. Without it the attribution
+     control is an unstyled <details>/<summary>: the corner anchors have no positioning so the
+     attribution flows in-line BELOW the canvas, and the <summary> shows the browser's default
+     disclosure triangle (a stray "▼"). Porting the essential positioning + summary reset here --
+     the same approach pdf-viewer.styles.ts uses for pdf.js's textLayer CSS -- anchors the
+     attribution to the map corner as an overlay and removes the marker. Only the attribution/
+     container rules are ported (this wrapper exposes no zoom/geolocate/etc. controls). */
+  .maplibregl-ctrl-top-left,
+  .maplibregl-ctrl-top-right,
+  .maplibregl-ctrl-bottom-left,
+  .maplibregl-ctrl-bottom-right {
+    position: absolute;
+    z-index: var(--lr-layer-content);
+    pointer-events: none;
+  }
+  .maplibregl-ctrl-top-left {
+    inset-block-start: 0;
+    inset-inline-start: 0;
+  }
+  .maplibregl-ctrl-top-right {
+    inset-block-start: 0;
+    inset-inline-end: 0;
+  }
+  .maplibregl-ctrl-bottom-left {
+    inset-block-end: 0;
+    inset-inline-start: 0;
+  }
+  .maplibregl-ctrl-bottom-right {
+    inset-block-end: 0;
+    inset-inline-end: 0;
+  }
+  .maplibregl-ctrl {
+    margin: var(--lr-space-xs);
+    pointer-events: auto;
+  }
+  .maplibregl-ctrl-attrib {
+    padding: 0 var(--lr-space-xs);
+    border-radius: var(--lr-radius);
+    background: var(--lr-color-surface);
+    color: var(--lr-color-text-quiet);
+    font-size: var(--lr-font-size-xs);
+  }
+  .maplibregl-ctrl-attrib a {
+    color: var(--lr-color-text-quiet);
+    text-decoration: none;
+  }
+  .maplibregl-ctrl-attrib a:hover {
+    text-decoration: underline;
+  }
+  /* Remove the native <summary> disclosure marker (the stray "▼") on the compact-toggle button. */
+  .maplibregl-ctrl-attrib summary {
+    list-style: none;
+    appearance: none;
+    -webkit-appearance: none;
+  }
+  .maplibregl-ctrl-attrib summary::-webkit-details-marker {
+    display: none;
+  }
+  .maplibregl-ctrl-attrib summary::marker {
+    content: '';
+  }
 `;
