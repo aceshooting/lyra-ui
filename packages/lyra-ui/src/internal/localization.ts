@@ -1006,7 +1006,9 @@ export type LyraMessageKey =
   | 'agentRunStatusWaitingInput'
   | 'agentRunStatusWaitingApproval'
   | 'agentRunStatusDone'
-  | 'agentRunStatusCancelled';
+  | 'agentRunStatusCancelled'
+  | 'localePickerLabel'
+  | 'localePickerRequired';
 
 export type LyraLocaleStrings = Partial<Record<LyraMessageKey, string>> & Record<string, string | undefined>;
 
@@ -2015,6 +2017,8 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, string> = {
   agentRunStatusWaitingApproval: 'Waiting for approval',
   agentRunStatusDone: 'Done',
   agentRunStatusCancelled: 'Cancelled',
+  localePickerLabel: 'Language',
+  localePickerRequired: 'Please choose a language.',
 };
 
 const locales = new Map<string, LyraLocaleStrings>();
