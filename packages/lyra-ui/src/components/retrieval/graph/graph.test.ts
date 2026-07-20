@@ -2832,7 +2832,7 @@ describe('dimming (adjacency highlight)', () => {
 });
 
 // ---------------------------------------------------------------------------------------------
-// Coverage gap-fill (see docs/superpowers task): targeted tests for previously-uncovered lines/
+// Coverage gap-fill: targeted tests for previously-uncovered lines/
 // branches in graph.class.ts and graph-canvas.ts, added without touching production code. Grouped
 // by area; each test exercises real, reachable behavior (a genuine event/gesture, or -- matching
 // this file's own established convention for private internals, see e.g. the J1 nodeEls-cache

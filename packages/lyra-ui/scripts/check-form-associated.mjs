@@ -1,8 +1,8 @@
 // Guards against a bug class that has already recurred once in this package: a form-associated
 // custom element (`static formAssociated = true`, or the shared `FormAssociated` mixin from
-// `internal/form-associated.ts`) that doesn't follow the hardened pattern the docs/superpowers
-// ledger's P1-1..P1-4 findings established (see checkbox.class.ts/switch.class.ts/
-// model-select.class.ts/tool-param-form.class.ts for the reference shape):
+// `internal/form-associated.ts`) that doesn't follow the hardened pattern established for this
+// package (see checkbox.class.ts/switch.class.ts/model-select.class.ts/tool-param-form.class.ts
+// for the reference shape):
 //
 //   (a) a component that builds its OWN fieldset-inheritance state (a private
 //       `_fieldsetDisabled` field and/or a public `effectiveDisabled` getter, declared outside the
@@ -208,8 +208,7 @@ if (violations.length > 0) {
     console.error(`    ${violation.message}\n`);
   }
   console.error(
-    'See docs/superpowers/done/lyra_improvement_done.md (findings P1-1..P1-4) and ' +
-      'checkbox.class.ts/switch.class.ts/model-select.class.ts/tool-param-form.class.ts for the reference shape.',
+    'See checkbox.class.ts/switch.class.ts/model-select.class.ts/tool-param-form.class.ts for the reference shape.',
   );
   process.exitCode = 1;
 } else {
