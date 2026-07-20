@@ -16,45 +16,54 @@ export const styles = css`
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
     border-radius: var(--lr-radius);
   }
-  [part='cell'] {
+  /* Every cell part below is emitted by renderCell()/renderOutput() but committed into
+     <lr-virtual-list>'s OWN shadow root, so a bare [part='...'] selector here can never reach it --
+     it would resolve against this component's shadow tree, which holds none of those nodes. The
+     one-shadow-hop ::part() form is what actually matches, and the paired exportparts on the
+     <lr-virtual-list> element re-exposes the same names to a consumer.
+
+     State variants ride a part *list* (e.g. part="cell cell-active") rather than an attribute:
+     ::part() has part~= semantics, but Shadow Parts forbids an attribute selector after ::part(),
+     so ::part(cell)[data-active] is invalid CSS. The data-* attributes stay on the elements for
+     scripting and semantics; the extra part token is what the stylesheet keys off. */
+  lr-virtual-list::part(cell) {
     display: grid;
     grid-template-columns: auto 1fr;
     gap: var(--lr-space-s);
     padding: var(--lr-space-s);
     border-block-end: var(--lr-border-width-thin) solid var(--lr-color-border);
   }
-  [part='cell'][data-active] {
+  lr-virtual-list::part(cell-active) {
     background: var(--lr-notebook-viewer-active-bg, var(--lr-color-brand-quiet));
   }
-  [part='cell-gutter'] {
+  lr-virtual-list::part(cell-gutter) {
     min-inline-size: var(--lr-size-4rem);
     color: var(--lr-color-text-quiet);
     font-family: var(--lr-font-mono);
     font-size: var(--lr-font-size-xs);
     text-align: end;
   }
-  [part='outputs'] {
+  lr-virtual-list::part(outputs) {
     display: flex;
     flex-direction: column;
     gap: var(--lr-space-xs);
     margin-block-start: var(--lr-space-xs);
   }
-  [part='output'] {
+  lr-virtual-list::part(output) {
     font-family: var(--lr-font-mono);
     font-size: var(--lr-font-size-sm);
     white-space: pre-wrap;
   }
-  [part='output'][data-stream='stderr'],
-  [part='output'][data-output-type='error'] {
+  lr-virtual-list::part(output-error) {
     color: var(--lr-color-danger);
   }
   /* block display gives the label its own line ahead of the traceback text
      without baking a joiner character into the translated string */
-  [part='output'] .error-output-label {
+  lr-virtual-list::part(error-output-label) {
     display: block;
     font-weight: var(--lr-font-weight-semibold);
   }
-  [part='output-toggle'] {
+  lr-virtual-list::part(output-toggle) {
     align-self: flex-start;
     border: none;
     background: none;
@@ -63,10 +72,10 @@ export const styles = css`
     padding: 0;
     font: inherit;
   }
-  [part='output-toggle']:hover {
+  lr-virtual-list::part(output-toggle):hover {
     text-decoration: underline;
   }
-  [part='output-toggle']:focus-visible {
+  lr-virtual-list::part(output-toggle):focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);
   }
@@ -75,11 +84,14 @@ export const styles = css`
     padding: var(--lr-space-l);
     text-align: center;
   }
+  /* Container-query evaluation walks the flat tree, so it crosses the <lr-virtual-list> shadow
+     boundary and still resolves against the :host container declared above -- the narrow-allocation
+     rules keep working on the ::part() selectors. */
   @container (max-inline-size: 30rem) {
-    [part='cell'] {
+    lr-virtual-list::part(cell) {
       grid-template-columns: 1fr;
     }
-    [part='cell-gutter'] {
+    lr-virtual-list::part(cell-gutter) {
       text-align: start;
     }
   }

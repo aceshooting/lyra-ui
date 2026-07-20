@@ -101,10 +101,15 @@ export interface LyraNotebookViewerEventMap {
  *   `detail: { error }`.
  * @csspart base - The root scroll container.
  * @csspart cell - One cell row (`data-cell-type`, `data-active`).
+ * @csspart cell-active - Added alongside `cell` on the cell an anchor currently targets. A second
+ *   part name rather than an attribute selector, because Shadow Parts forbids an attribute selector
+ *   after `::part()`.
  * @csspart cell-gutter - The `In [n]`/`Out [n]` label column.
  * @csspart cell-source - A cell's source content.
  * @csspart outputs - The wrapper around a code cell's outputs.
  * @csspart output - One output (`data-output-type`, `data-stream`).
+ * @csspart output-error - Added alongside `output` on a stderr stream or an error output.
+ * @csspart error-output-label - The label introducing an error output's traceback.
  * @csspart output-toggle - Expands/collapses a long text output.
  * @csspart error - The error region.
  * @csspart spinner - The loading status region.
@@ -337,7 +342,8 @@ export class LyraNotebookViewer extends DocumentAnchorTarget(LyraElement) {
     const collapsible = outputCollapseLines > 0 && lines.length > outputCollapseLines;
     const expanded = this.expandedOutputs.has(index) || !collapsible;
     const shown = expanded ? text : lines.slice(0, outputCollapseLines).join('\n');
-    return html`<div part="output" data-output-type="stream" data-stream=${tone === 'danger' ? 'stderr' : 'stdout'}
+    const part = tone === 'danger' ? 'output output-error' : 'output';
+    return html`<div part=${part} data-output-type="stream" data-stream=${tone === 'danger' ? 'stderr' : 'stdout'}
       >${this.renderAnsiText(shown)}${collapsible
         ? html`<button
             part="output-toggle"
@@ -359,8 +365,8 @@ export class LyraNotebookViewer extends DocumentAnchorTarget(LyraElement) {
       // The localized label sits in its own block element rather than being
       // string-joined onto the traceback, so the label's position relative to
       // the data never depends on the sentence order of any one language.
-      return html`<div part="output" data-output-type="error"
-        ><span class="error-output-label">${this.localize('notebookViewerErrorOutput')}</span>${this.renderAnsiText(text)}</div
+      return html`<div part="output output-error" data-output-type="error"
+        ><span part="error-output-label">${this.localize('notebookViewerErrorOutput')}</span>${this.renderAnsiText(text)}</div
       >`;
     }
     const data = output.data ?? {};
@@ -426,7 +432,9 @@ export class LyraNotebookViewer extends DocumentAnchorTarget(LyraElement) {
       : c.cell_type === 'markdown'
         ? this.localize('notebookViewerMarkdownCell', undefined, { index: index + 1 })
         : this.localize('notebookViewerRawCell', undefined, { index: index + 1 });
-    return html`<div part="cell" role="group" aria-label=${rowLabel} data-cell-type=${c.cell_type} ?data-active=${this.activeCellIndex === index}>
+    const active = this.activeCellIndex === index;
+    const part = active ? 'cell cell-active' : 'cell';
+    return html`<div part=${part} role="group" aria-label=${rowLabel} data-cell-type=${c.cell_type} ?data-active=${active}>
       <div part="cell-gutter">${c.cell_type === 'code' ? inCount : ''}</div>
       <div part="cell-source">
         ${c.cell_type === 'markdown'
@@ -457,6 +465,7 @@ export class LyraNotebookViewer extends DocumentAnchorTarget(LyraElement) {
     >
       ${this.loadState.kind === 'loaded'
         ? html`<lr-virtual-list
+            exportparts="cell:cell, cell-active:cell-active, cell-gutter:cell-gutter, cell-source:cell-source, outputs:outputs, output:output, output-error:output-error, error-output-label:error-output-label, output-toggle:output-toggle"
             .items=${this.loadState.doc.cells}
             .renderItem=${this.renderCell}
             .keyFunction=${(item: unknown, i: number) => (item as NotebookCell).id ?? i}

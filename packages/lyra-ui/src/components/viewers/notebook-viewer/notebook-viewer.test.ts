@@ -24,7 +24,7 @@ const NOTEBOOK = {
 };
 
 /** Rendered cell content lives inside `<lr-virtual-list>`'s own nested shadow root -- it composes
- *  `renderItem()`'s TemplateResult into its own render output, so a `[part="cell"]` search has to
+ *  `renderItem()`'s TemplateResult into its own render output, so a `[part~="cell"]` search has to
  *  pierce that boundary rather than stopping at this component's own shadow root. */
 function rowRoot(el: LyraNotebookViewer): ShadowRoot {
   return el.shadowRoot!.querySelector('lr-virtual-list')!.shadowRoot!;
@@ -48,8 +48,8 @@ describe('parsing and rendering', () => {
     expect(event.detail).to.deep.equal({ cellCount: 3, language: 'python' });
     // lr-virtual-list measures its own viewport asynchronously (ResizeObserver), so its first
     // paint after this element's own updateComplete can still be an empty window.
-    await waitUntil(() => rowRoot(el).querySelectorAll('[part="cell"]').length > 0);
-    const cells = [...rowRoot(el).querySelectorAll('[part="cell"]')];
+    await waitUntil(() => rowRoot(el).querySelectorAll('[part~="cell"]').length > 0);
+    const cells = [...rowRoot(el).querySelectorAll('[part~="cell"]')];
     expect(cells.length).to.equal(3);
     expect(cells[0].getAttribute('data-cell-type')).to.equal('markdown');
     expect(cells[1].getAttribute('data-cell-type')).to.equal('code');
@@ -58,8 +58,8 @@ describe('parsing and rendering', () => {
 
   it('renders a markdown cell through lr-markdown and a code cell through lr-code-block', async () => {
     const el = (await fixture(html`<lr-notebook-viewer .notebook=${NOTEBOOK}></lr-notebook-viewer>`)) as LyraNotebookViewer;
-    await waitUntil(() => rowRoot(el).querySelectorAll('[part="cell"]').length > 0);
-    const cells = [...rowRoot(el).querySelectorAll('[part="cell"]')];
+    await waitUntil(() => rowRoot(el).querySelectorAll('[part~="cell"]').length > 0);
+    const cells = [...rowRoot(el).querySelectorAll('[part~="cell"]')];
     expect(cells[0].querySelector('lr-markdown')).to.exist;
     expect(cells[1].querySelector('lr-code-block')).to.exist;
     expect((cells[1].querySelector('lr-code-block') as HTMLElement).getAttribute('language')).to.equal('python');
@@ -67,8 +67,8 @@ describe('parsing and rendering', () => {
 
   it('renders a stream output tinted by stream name and a stdout/stderr data attribute', async () => {
     const el = (await fixture(html`<lr-notebook-viewer .notebook=${NOTEBOOK}></lr-notebook-viewer>`)) as LyraNotebookViewer;
-    await waitUntil(() => rowRoot(el).querySelector('[part="output"]') !== null);
-    const output = rowRoot(el).querySelector('[part="output"]')!;
+    await waitUntil(() => rowRoot(el).querySelector('[part~="output"]') !== null);
+    const output = rowRoot(el).querySelector('[part~="output"]')!;
     expect(output.getAttribute('data-output-type')).to.equal('stream');
     expect(output.getAttribute('data-stream')).to.equal('stdout');
     expect(output.textContent).to.include('hi');
@@ -83,9 +83,9 @@ describe('parsing and rendering', () => {
       }],
     };
     const el = (await fixture(html`<lr-notebook-viewer .notebook=${notebook}></lr-notebook-viewer>`)) as LyraNotebookViewer;
-    await waitUntil(() => rowRoot(el).querySelector('[part="output"][data-output-type="error"]') !== null);
-    const output = rowRoot(el).querySelector('[part="output"][data-output-type="error"]')!;
-    const label = output.querySelector('.error-output-label')!;
+    await waitUntil(() => rowRoot(el).querySelector('[part~="output"][data-output-type="error"]') !== null);
+    const output = rowRoot(el).querySelector('[part~="output"][data-output-type="error"]')!;
+    const label = output.querySelector('[part="error-output-label"]')!;
     expect(label).to.exist;
     expect(label.textContent).to.equal('Error');
     expect(output.textContent).to.include("NameError: name 'x' is not defined");
@@ -103,8 +103,8 @@ describe('parsing and rendering', () => {
       }],
     };
     const el = (await fixture(html`<lr-notebook-viewer .notebook=${notebook}></lr-notebook-viewer>`)) as LyraNotebookViewer;
-    await waitUntil(() => rowRoot(el).querySelector('[part="output"]') !== null);
-    const output = rowRoot(el).querySelector('[part="output"]')!;
+    await waitUntil(() => rowRoot(el).querySelector('[part~="output"]') !== null);
+    const output = rowRoot(el).querySelector('[part~="output"]')!;
     expect(output.textContent).to.equal('red text plain');
     const styledSpan = output.querySelector('span')!;
     expect(styledSpan).to.exist;
@@ -124,8 +124,8 @@ describe('parsing and rendering', () => {
       }],
     };
     const el = (await fixture(html`<lr-notebook-viewer .notebook=${notebook}></lr-notebook-viewer>`)) as LyraNotebookViewer;
-    await waitUntil(() => rowRoot(el).querySelector('[part="output"][data-output-type="error"]') !== null);
-    const output = rowRoot(el).querySelector('[part="output"][data-output-type="error"]')!;
+    await waitUntil(() => rowRoot(el).querySelector('[part~="output"][data-output-type="error"]') !== null);
+    const output = rowRoot(el).querySelector('[part~="output"][data-output-type="error"]')!;
     expect(output.textContent).to.include('bold frame plain frame');
     const styledSpan = [...output.querySelectorAll('span')].find((s) => s.textContent === 'bold frame');
     expect(styledSpan).to.exist;
@@ -152,8 +152,8 @@ describe('parsing and rendering', () => {
   it('parses a JSON string passed to notebook, winning over src', async () => {
     const el = (await fixture(html`<lr-notebook-viewer src="https://example.test/should-not-fetch.ipynb"></lr-notebook-viewer>`)) as LyraNotebookViewer;
     el.notebook = JSON.stringify(NOTEBOOK);
-    await waitUntil(() => (el.shadowRoot!.querySelector('lr-virtual-list')?.shadowRoot?.querySelectorAll('[part="cell"]').length ?? 0) > 0);
-    expect(rowRoot(el).querySelectorAll('[part="cell"]').length).to.equal(3);
+    await waitUntil(() => (el.shadowRoot!.querySelector('lr-virtual-list')?.shadowRoot?.querySelectorAll('[part~="cell"]').length ?? 0) > 0);
+    expect(rowRoot(el).querySelectorAll('[part~="cell"]').length).to.equal(3);
   });
 
   it('rejects a malformed JSON string passed to notebook, surfacing the invalid-notebook error', async () => {
@@ -200,8 +200,8 @@ describe('loading a notebook from src', () => {
       const el = (await fixture(html`<lr-notebook-viewer src="https://example.test/nb.ipynb"></lr-notebook-viewer>`)) as LyraNotebookViewer;
       // rowRoot() throws until <lr-virtual-list> exists -- see the "drops a stale response" test
       // below for why that can't be called directly inside a waitUntil predicate.
-      await waitUntil(() => (el.shadowRoot?.querySelector('lr-virtual-list')?.shadowRoot?.querySelectorAll('[part="cell"]').length ?? 0) > 0);
-      expect(rowRoot(el).querySelectorAll('[part="cell"]').length).to.equal(3);
+      await waitUntil(() => (el.shadowRoot?.querySelector('lr-virtual-list')?.shadowRoot?.querySelectorAll('[part~="cell"]').length ?? 0) > 0);
+      expect(rowRoot(el).querySelectorAll('[part~="cell"]').length).to.equal(3);
     } finally { window.fetch = original; }
   });
 
@@ -244,7 +244,7 @@ describe('loading a notebook from src', () => {
       el.remove();
       resolveFetch({ ok: true, status: 200, statusText: 'OK', text: () => Promise.resolve(JSON.stringify(NOTEBOOK)) } as Response);
       await aTimeout(20);
-      expect(el.shadowRoot!.querySelector('[part="cell"]')).to.not.exist;
+      expect(el.shadowRoot!.querySelector('[part~="cell"]')).to.not.exist;
       expect(el.shadowRoot!.querySelector('[part="error"]')).to.not.exist;
     } finally { window.fetch = original; }
   });
@@ -277,7 +277,7 @@ describe('loading a notebook from src', () => {
       resolveSecond({ ok: true, status: 200, statusText: 'OK', text: () => Promise.resolve(JSON.stringify(NOTEBOOK)) } as Response);
       // rowRoot() throws until <lr-virtual-list> exists, which waitUntil's predicate can't be
       // allowed to do -- a throw aborts the retry loop instead of being treated as "not yet".
-      await waitUntil(() => (el.shadowRoot?.querySelector('lr-virtual-list')?.shadowRoot?.querySelectorAll('[part="cell"]').length ?? 0) > 0);
+      await waitUntil(() => (el.shadowRoot?.querySelector('lr-virtual-list')?.shadowRoot?.querySelectorAll('[part~="cell"]').length ?? 0) > 0);
       // the aborted first request must not have surfaced any error state
       expect(el.shadowRoot!.querySelector('[part="error"]')).to.not.exist;
     } finally { window.fetch = original; }
@@ -294,8 +294,8 @@ describe('rendering non-text outputs', () => {
       ],
     };
     const el = (await fixture(html`<lr-notebook-viewer .notebook=${notebook}></lr-notebook-viewer>`)) as LyraNotebookViewer;
-    await waitUntil(() => rowRoot(el).querySelectorAll('[part="output"] img').length >= 2);
-    const imgs = [...rowRoot(el).querySelectorAll('[part="output"] img')];
+    await waitUntil(() => rowRoot(el).querySelectorAll('[part~="output"] img').length >= 2);
+    const imgs = [...rowRoot(el).querySelectorAll('[part~="output"] img')];
     expect(imgs[0].getAttribute('src')).to.equal('data:image/png;base64,AAAA');
     expect(imgs[1].getAttribute('src')).to.equal('data:image/jpeg;base64,BBBB');
   });
@@ -309,8 +309,8 @@ describe('rendering non-text outputs', () => {
       }],
     };
     const el = (await fixture(html`<lr-notebook-viewer .notebook=${notebook}></lr-notebook-viewer>`)) as LyraNotebookViewer;
-    await waitUntil(() => rowRoot(el).querySelector('[part="output"] circle') !== null);
-    const output = rowRoot(el).querySelector('[part="output"]')!;
+    await waitUntil(() => rowRoot(el).querySelector('[part~="output"] circle') !== null);
+    const output = rowRoot(el).querySelector('[part~="output"]')!;
     expect(output.querySelector('script')).to.not.exist;
     expect(output.querySelector('circle')).to.exist;
   });
@@ -324,8 +324,8 @@ describe('rendering non-text outputs', () => {
       }],
     };
     const el = (await fixture(html`<lr-notebook-viewer .notebook=${notebook}></lr-notebook-viewer>`)) as LyraNotebookViewer;
-    await waitUntil(() => rowRoot(el).querySelector('[part="output"] h1') !== null);
-    const output = rowRoot(el).querySelector('[part="output"]')!;
+    await waitUntil(() => rowRoot(el).querySelector('[part~="output"] h1') !== null);
+    const output = rowRoot(el).querySelector('[part~="output"]')!;
     expect(output.querySelector('script')).to.not.exist;
     expect(output.textContent).to.include('Safe');
   });
@@ -347,8 +347,8 @@ describe('rendering non-text outputs', () => {
       }],
     };
     const el = (await fixture(html`<lr-notebook-viewer .notebook=${notebook}></lr-notebook-viewer>`)) as LyraNotebookViewer;
-    await waitUntil(() => rowRoot(el).querySelector('[part="output"]')?.textContent?.trim() !== '');
-    const output = rowRoot(el).querySelector('[part="output"]')!;
+    await waitUntil(() => rowRoot(el).querySelector('[part~="output"]')?.textContent?.trim() !== '');
+    const output = rowRoot(el).querySelector('[part~="output"]')!;
     // Exactly one <p> -- the notice itself. The raw `<p>Safe</p>` payload is never rendered, which
     // the textContent equality below also proves.
     expect(output.querySelectorAll('p').length).to.equal(1);
@@ -379,8 +379,8 @@ describe('rendering non-text outputs', () => {
       }],
     };
     const el = (await fixture(html`<lr-notebook-viewer .notebook=${notebook}></lr-notebook-viewer>`)) as LyraNotebookViewer;
-    await waitUntil(() => rowRoot(el).querySelector('[part="output"]') !== null);
-    const output = rowRoot(el).querySelector('[part="output"]')!;
+    await waitUntil(() => rowRoot(el).querySelector('[part~="output"]') !== null);
+    const output = rowRoot(el).querySelector('[part~="output"]')!;
     expect(output.getAttribute('data-output-type')).to.equal('execute_result');
     expect(output.textContent).to.equal('This output type cannot be displayed.');
   });
@@ -399,7 +399,7 @@ describe('output collapsing', () => {
     expect(toggle).to.exist;
     toggle.click();
     await el.updateComplete;
-    expect(rowRoot(el).querySelector('[part="output"]')!.textContent).to.include('line 59');
+    expect(rowRoot(el).querySelector('[part~="output"]')!.textContent).to.include('line 59');
   });
 
   it('normalizes a NaN outputCollapseLines to the default (40) instead of silently disabling collapsing', async () => {
@@ -429,11 +429,11 @@ describe('output collapsing', () => {
     toggle.click();
     await el.updateComplete;
     expect(toggle.getAttribute('aria-expanded')).to.equal('true');
-    expect(rowRoot(el).querySelector('[part="output"]')!.textContent).to.include('line 59');
+    expect(rowRoot(el).querySelector('[part~="output"]')!.textContent).to.include('line 59');
     toggle.click();
     await el.updateComplete;
     expect(toggle.getAttribute('aria-expanded')).to.equal('false');
-    expect(rowRoot(el).querySelector('[part="output"]')!.textContent).to.not.include('line 59');
+    expect(rowRoot(el).querySelector('[part~="output"]')!.textContent).to.not.include('line 59');
   });
 });
 
@@ -528,57 +528,152 @@ describe('accessibility', () => {
   });
 });
 
-describe('active-cell cssprop escape hatch', () => {
-  // `[part='cell']` is produced by this component's `renderCell` but rendered by `<lr-virtual-list>`
-  // INTO ITS OWN shadow root, so notebook-viewer's stylesheet never reaches it and
-  // `[part='cell'][data-active]` is inert today (a separate, pre-existing data-mode gap -- neither
-  // introduced nor fixed here). The hatch is therefore asserted on a real probe element rendered in
-  // exactly the shadow root and custom-property context the cell occupies, carrying the declaration
-  // the rule ships: an ancestor override must win, and an unset consumer must still get the token.
-  function resolveDeclaration(vlistRoot: ShadowRoot, declaration: string, property: string): string {
+// `renderCell`/`renderOutput` emit their parts into `<lr-virtual-list>`'s own shadow root, so this
+// component's stylesheet reaches them through `lr-virtual-list::part(...)` rather than a bare
+// `[part='...']` selector. Everything below asserts the RENDERED result on the real element in the
+// real state -- a stylesheet-text assertion cannot tell a matching selector apart from an inert one.
+describe('virtualized cell part styling', () => {
+  const LONG_OUTPUT = { output_type: 'stream', name: 'stdout', text: Array.from({ length: 60 }, (_, i) => `line ${i}`).join('\n') };
+  const ERROR_NOTEBOOK = {
+    nbformat: 4, nbformat_minor: 5,
+    cells: [{
+      cell_type: 'code', id: 'c1', source: 'x', execution_count: 1, metadata: {},
+      outputs: [
+        { output_type: 'error', ename: 'NameError', evalue: "name 'x' is not defined", traceback: ['Traceback line 1'] },
+        { output_type: 'stream', name: 'stderr', text: 'warning\n' },
+        LONG_OUTPUT,
+      ],
+    }],
+  };
+
+  /** A design token's own rendered value, resolved by a throwaway probe in the same shadow root and
+   *  custom-property context -- `getComputedStyle().getPropertyValue()` hands back the token's raw
+   *  declared text (`#cf222e`), never the `rgb()` form a computed color assertion compares against. */
+  function tokenValue(root: ShadowRoot, declaration: string, property: string): string {
     const probe = document.createElement('span');
     probe.setAttribute('style', declaration);
-    vlistRoot.appendChild(probe);
+    root.appendChild(probe);
     const value = getComputedStyle(probe).getPropertyValue(property);
     probe.remove();
     return value;
   }
-  const HATCH = 'background: var(--lr-notebook-viewer-active-bg, var(--lr-color-brand-quiet))';
 
-  async function activeCell(style = ''): Promise<{ el: LyraNotebookViewer; vlistRoot: ShadowRoot }> {
+  async function mount(notebook: unknown, wrapperStyle = ''): Promise<{ el: LyraNotebookViewer; vlistRoot: ShadowRoot }> {
     const wrapper = (await fixture(
-      html`<div style=${style}><lr-notebook-viewer .notebook=${NOTEBOOK}></lr-notebook-viewer></div>`,
+      html`<div style=${wrapperStyle}><lr-notebook-viewer .notebook=${notebook}></lr-notebook-viewer></div>`,
     )) as HTMLElement;
     const el = wrapper.querySelector('lr-notebook-viewer') as LyraNotebookViewer;
-    await waitUntil(() => (el.shadowRoot!.querySelector('lr-virtual-list')?.shadowRoot?.querySelectorAll('[part="cell"]').length ?? 0) > 0);
-    // Public anchor API is the supported way to mark a cell active (drives `data-active`).
-    await el.scrollToAnchor({ kind: 'node-path', path: [0] });
-    await el.updateComplete;
-    const vlistRoot = rowRoot(el);
-    expect(vlistRoot.querySelector('[part="cell"][data-active]'), 'a cell is marked active').to.exist;
-    return { el, vlistRoot };
+    await waitUntil(() => (el.shadowRoot!.querySelector('lr-virtual-list')?.shadowRoot?.querySelectorAll('[part~="cell"]').length ?? 0) > 0);
+    return { el, vlistRoot: rowRoot(el) };
   }
 
-  it('resolves the active-cell background to an ancestor --lr-notebook-viewer-active-bg', async () => {
-    const { vlistRoot } = await activeCell('--lr-notebook-viewer-active-bg: rgb(0, 51, 102)');
-    expect(resolveDeclaration(vlistRoot, HATCH, 'background-color')).to.equal('rgb(0, 51, 102)');
+  async function activeCell(wrapperStyle = ''): Promise<{ el: LyraNotebookViewer; vlistRoot: ShadowRoot; cell: HTMLElement }> {
+    const { el, vlistRoot } = await mount(NOTEBOOK, wrapperStyle);
+    // Public anchor API is the supported way to mark a cell active.
+    await el.scrollToAnchor({ kind: 'node-path', path: [0] });
+    await el.updateComplete;
+    const cell = vlistRoot.querySelector('[part~="cell-active"]') as HTMLElement;
+    expect(cell, 'a cell is marked active').to.exist;
+    expect(cell.hasAttribute('data-active'), 'the active cell still carries data-active').to.equal(true);
+    return { el, vlistRoot, cell };
+  }
+
+  it('lays out a cell as a two-column grid with the gutter treatment', async () => {
+    const { vlistRoot } = await mount(NOTEBOOK, 'inline-size: 900px');
+    const cell = vlistRoot.querySelector('[part~="cell"]') as HTMLElement;
+    expect(getComputedStyle(cell).display).to.equal('grid');
+    expect(getComputedStyle(cell).gridTemplateColumns.split(' ').length, 'two grid columns at a wide allocation').to.equal(2);
+    const gutter = vlistRoot.querySelector('[part="cell-gutter"]') as HTMLElement;
+    expect(getComputedStyle(gutter).textAlign).to.equal('end');
+    expect(getComputedStyle(gutter).fontFamily).to.equal(getComputedStyle(cell).getPropertyValue('--lr-font-mono').trim());
   });
 
-  it('resolves byte-identical to the brand-quiet token when unset', async () => {
-    const { vlistRoot } = await activeCell();
-    expect(resolveDeclaration(vlistRoot, HATCH, 'background-color')).to.equal(
-      resolveDeclaration(vlistRoot, 'background: var(--lr-color-brand-quiet)', 'background-color'),
+  it('collapses the cell grid to one column in a narrow container', async () => {
+    const { vlistRoot } = await mount(NOTEBOOK, 'inline-size: 320px');
+    const cell = vlistRoot.querySelector('[part~="cell"]') as HTMLElement;
+    const columns = getComputedStyle(cell).gridTemplateColumns;
+    // `none` would mean the cell never became a grid at all -- i.e. an inert base rule, not a
+    // narrow-container collapse.
+    expect(columns, 'the cell is still a grid').to.not.equal('none');
+    expect(columns.split(' ').length, 'one grid column at a narrow allocation').to.equal(1);
+    const gutter = vlistRoot.querySelector('[part="cell-gutter"]') as HTMLElement;
+    expect(getComputedStyle(gutter).textAlign).to.equal('start');
+  });
+
+  it('paints the active cell with --lr-notebook-viewer-active-bg', async () => {
+    const { cell } = await activeCell('--lr-notebook-viewer-active-bg: rgb(0, 51, 102)');
+    expect(getComputedStyle(cell).backgroundColor).to.equal('rgb(0, 51, 102)');
+  });
+
+  it('falls back to the brand-quiet token when the active-cell prop is unset', async () => {
+    const { vlistRoot, cell } = await activeCell();
+    expect(getComputedStyle(cell).backgroundColor).to.equal(
+      tokenValue(vlistRoot, 'background: var(--lr-color-brand-quiet)', 'background-color'),
     );
   });
 
+  it('tints stderr streams and error outputs danger, and blocks out the error label', async () => {
+    const { vlistRoot } = await mount(ERROR_NOTEBOOK);
+    const errorOutput = vlistRoot.querySelector('[part~="output"][data-output-type="error"]') as HTMLElement;
+    const danger = tokenValue(vlistRoot, 'color: var(--lr-color-danger)', 'color');
+    expect(getComputedStyle(errorOutput).color).to.equal(danger);
+    const stderr = vlistRoot.querySelector('[part~="output"][data-stream="stderr"]') as HTMLElement;
+    expect(getComputedStyle(stderr).color).to.equal(danger);
+    const stdout = vlistRoot.querySelector('[part~="output"][data-stream="stdout"]') as HTMLElement;
+    expect(getComputedStyle(stdout).color, 'a stdout stream keeps the default text color').to.not.equal(danger);
+    const label = vlistRoot.querySelector('[part="error-output-label"]') as HTMLElement;
+    expect(getComputedStyle(label).display).to.equal('block');
+    expect(getComputedStyle(label).fontWeight).to.equal(getComputedStyle(label).getPropertyValue('--lr-font-weight-semibold').trim());
+  });
+
+  it('styles the outputs wrapper and the output-toggle button', async () => {
+    const { vlistRoot } = await mount(ERROR_NOTEBOOK);
+    const outputs = vlistRoot.querySelector('[part="outputs"]') as HTMLElement;
+    expect(getComputedStyle(outputs).display).to.equal('flex');
+    expect(getComputedStyle(outputs).flexDirection).to.equal('column');
+    const toggle = vlistRoot.querySelector('[part="output-toggle"]') as HTMLElement;
+    // A raw UA button would report a border, a grey background and 1px 6px padding here.
+    expect(getComputedStyle(toggle).borderStyle).to.equal('none');
+    expect(getComputedStyle(toggle).padding).to.equal('0px');
+    expect(getComputedStyle(toggle).cursor).to.equal('pointer');
+    expect(getComputedStyle(toggle).color).to.equal(tokenValue(vlistRoot, 'color: var(--lr-color-brand)', 'color'));
+  });
+
+  it('exposes the cell parts to a consumer through exportparts', async () => {
+    const style = document.createElement('style');
+    style.textContent = `
+      lr-notebook-viewer::part(cell) { outline-color: rgb(1, 2, 3); }
+      lr-notebook-viewer::part(cell-gutter) { color: rgb(4, 5, 6); }
+      lr-notebook-viewer::part(output-toggle) { color: rgb(7, 8, 9); }
+      lr-notebook-viewer::part(error-output-label) { color: rgb(10, 11, 12); }
+    `;
+    document.head.append(style);
+    try {
+      const { vlistRoot } = await mount(ERROR_NOTEBOOK);
+      expect(getComputedStyle(vlistRoot.querySelector('[part~="cell"]') as HTMLElement).outlineColor).to.equal('rgb(1, 2, 3)');
+      expect(getComputedStyle(vlistRoot.querySelector('[part="cell-gutter"]') as HTMLElement).color).to.equal('rgb(4, 5, 6)');
+      expect(getComputedStyle(vlistRoot.querySelector('[part="output-toggle"]') as HTMLElement).color).to.equal('rgb(7, 8, 9)');
+      expect(getComputedStyle(vlistRoot.querySelector('[part="error-output-label"]') as HTMLElement).color).to.equal('rgb(10, 11, 12)');
+    } finally {
+      style.remove();
+    }
+  });
+
+  // A light themed value: the override now genuinely paints the cell, so a dark one would put the
+  // cell's own quiet-toned gutter text below the contrast threshold.
   it('is accessible in the active-cell state with the prop themed', async () => {
-    const { el } = await activeCell('--lr-notebook-viewer-active-bg: rgb(0, 51, 102)');
+    const { el, cell } = await activeCell('--lr-notebook-viewer-active-bg: rgb(255, 255, 240)');
+    expect(getComputedStyle(cell).backgroundColor).to.equal('rgb(255, 255, 240)');
     await expect(el).to.be.accessible();
   });
 });
 
+// `:hover` has no scriptable state in this runner (no pointer-control plugin is installed), so the
+// hover/focus-visible variants are asserted on the shipped selector text. Their reachability is
+// already proven by the rendered `output-toggle` assertions above, which share the same selector
+// prefix -- an inert prefix would fail those first.
 it('gives the output-toggle hover/focus-visible', () => {
   const css = styles.cssText.replace(/\s+/g, ' ');
-  expect(css).to.match(/\[part='output-toggle'\]:hover/);
-  expect(css).to.match(/\[part='output-toggle'\]:focus-visible[^{]*\{[^}]*outline:/);
+  expect(css).to.match(/lr-virtual-list::part\(output-toggle\):hover/);
+  expect(css).to.match(/lr-virtual-list::part\(output-toggle\):focus-visible[^{]*\{[^}]*outline:/);
 });
