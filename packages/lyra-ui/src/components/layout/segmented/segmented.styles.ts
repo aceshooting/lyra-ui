@@ -43,7 +43,12 @@ export const styles = css`
     overflow-x: auto;
     overflow-y: hidden;
     min-inline-size: 0;
-    min-block-size: var(--lr-segmented-track-min-height);
+    /* --lr-segmented-track-height is deliberately NEVER declared anywhere: an exact-height hatch
+       only works as an undeclared sentinel, so the fallback arm below can fall through to the
+       per-size --lr-segmented-track-min-height floor. Declaring it as "auto" on :host would be a
+       valid value that always wins, silently making the per-size floor dead code. */
+    min-block-size: var(--lr-segmented-track-height, var(--lr-segmented-track-min-height));
+    block-size: var(--lr-segmented-track-height, auto);
     box-sizing: border-box;
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
     border-radius: var(--lr-radius);
@@ -88,17 +93,23 @@ export const styles = css`
     opacity: var(--lr-opacity-disabled);
     cursor: not-allowed;
   }
+  /* Reads its own prop, not the shared --lr-color-text token the selected state used to share:
+     recoloring the selected pill must never repaint hovered-unselected segments with it. */
   [part='segment']:hover:not([aria-disabled='true']):not([aria-checked='true']) {
-    color: var(--lr-color-text);
+    color: var(--lr-segmented-hover-color, var(--lr-color-text));
   }
   [part='segment']:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);
   }
+  /* Every value here is an inline var() fallback rather than a :host-declared property on purpose:
+     :host is re-declared per size tier, which would shadow any value a consumer sets on an
+     ancestor -- exactly what these hooks exist to allow. Unset, each falls back to the token the
+     rule used before the hooks existed, so the rendering is unchanged. */
   [part='segment'][aria-checked='true'] {
-    background: var(--lr-color-surface);
-    color: var(--lr-color-text);
-    font-weight: var(--lr-font-weight-semibold);
-    box-shadow: var(--lr-shadow);
+    background: var(--lr-segmented-selected-bg, var(--lr-color-surface));
+    color: var(--lr-segmented-selected-color, var(--lr-color-text));
+    font-weight: var(--lr-segmented-selected-font-weight, var(--lr-font-weight-semibold));
+    box-shadow: var(--lr-segmented-selected-shadow, var(--lr-shadow));
   }
 `;

@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
 import './tabs.js';
+import { storyColor } from '../../../../../../.storybook/story-theme.js';
 
 const meta: Meta = {
   title: 'Tabs',
@@ -98,6 +99,34 @@ export const ScrollableOverflow: Story = {
         ].map(
           ([id, label]) => html`<div slot=${id} label=${label} style="padding: 0.75rem 0;">${label} panel</div>`,
         )}
+      </lr-tabs>
+    </div>
+  `,
+};
+
+/** The selected tab's text color, its underline color, and the hover color of an *unselected* tab
+ *  are three independent hooks. Before them, recoloring the selection meant hijacking library-wide
+ *  `--lr-color-brand`/`--lr-color-text`, which repainted hovered-unselected tabs with it too. */
+export const ThemedSelection: Story = {
+  name: 'Themed selection (cssprops)',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'Set `--lr-tabs-selected-color`, `--lr-tabs-indicator-color` and `--lr-tabs-hover-color` on the element or any ancestor — none are declared on `:host`, so an ancestor value is never shadowed. Hover the unselected tabs to see the hover color stay independent of the selected one.',
+      },
+    },
+  },
+  render: () => html`
+    <div
+      style="--lr-tabs-selected-color: ${storyColor('success')}; --lr-tabs-indicator-color: ${storyColor(
+        'success',
+      )}; --lr-tabs-hover-color: ${storyColor('brand')};"
+    >
+      <lr-tabs>
+        <div slot="input" label="Input" style="padding: 0.75rem 0;">Raw input goes here.</div>
+        <div slot="preview" label="Preview" style="padding: 0.75rem 0;">Rendered preview goes here.</div>
+        <div slot="settings" label="Settings" style="padding: 0.75rem 0;">Settings form goes here.</div>
       </lr-tabs>
     </div>
   `,

@@ -255,3 +255,127 @@ describe('category legend', () => {
     await expect(el).to.be.accessible();
   });
 });
+
+describe('marker legend entry', () => {
+  const threeCategories = [...categories, { key: 'mixed', color: '#b45309', label: 'Mixed' }];
+
+  async function strip(template: ReturnType<typeof html>): Promise<LyraSequenceStrip> {
+    const el = (await fixture(template)) as LyraSequenceStrip;
+    el.items = items;
+    el.categories = threeCategories;
+    await el.updateComplete;
+    return el;
+  }
+
+  it('appends one extra legend item, last, whose swatch is the marker swatch', async () => {
+    const el = await strip(html`<lr-sequence-strip show-legend marker-label="Subagent"></lr-sequence-strip>`);
+    expect(el.markerLabel).to.equal('Subagent');
+    const entries = [...el.shadowRoot!.querySelectorAll('[part="legend-item"]')];
+    expect(entries.length).to.equal(4); // 3 categories + the marker row
+    const last = entries[3]!;
+    expect(last.querySelector('[part="legend-marker-swatch"]')).to.exist;
+    expect(last.querySelector('[part="legend-swatch"]')).to.not.exist;
+    expect(last.querySelector('[part="legend-label"]')!.textContent!.trim()).to.equal('Subagent');
+    // ...and only the marker row carries it.
+    expect(el.shadowRoot!.querySelectorAll('[part="legend-marker-swatch"]').length).to.equal(1);
+  });
+
+  it('renders today\'s legend markup byte-for-byte when markerLabel is unset', async () => {
+    const el = (await fixture(html`<lr-sequence-strip show-legend></lr-sequence-strip>`)) as LyraSequenceStrip;
+    el.items = items;
+    el.categories = categories;
+    await el.updateComplete;
+    expect(el.markerLabel).to.equal(undefined);
+    expect(el.shadowRoot!.querySelector('[part="legend-marker-swatch"]')).to.not.exist;
+    expect(el).shadowDom.to.equal(`
+      <div part="base" role="img" aria-label="Text: 2, Tool: 1">
+        <span part="cell" style="background-color:#4f46e5"></span>
+        <span part="cell" style="background-color:#16a34a"><span part="marker"></span></span>
+        <span part="cell" style="background-color:#4f46e5"></span>
+        <div part="tooltip" hidden></div>
+      </div>
+      <div part="legend" aria-hidden="true">
+        <span part="legend-item">
+          <span part="legend-swatch" style="background-color:#4f46e5"></span>
+          <span part="legend-label">Text</span>
+        </span>
+        <span part="legend-item">
+          <span part="legend-swatch" style="background-color:#16a34a"></span>
+          <span part="legend-label">Tool</span>
+        </span>
+      </div>
+    `);
+  });
+
+  it('reproduces the cell marker treatment: a neutral chip with a bottom bar in the marker color', async () => {
+    const el = await strip(html`<lr-sequence-strip show-legend marker-label="Subagent"></lr-sequence-strip>`);
+    const swatch = el.shadowRoot!.querySelector('[part="legend-marker-swatch"]') as HTMLElement;
+    const cellMarker = el.shadowRoot!.querySelector('[part="marker"]') as HTMLElement;
+    const swatchStyle = getComputedStyle(swatch);
+    const categorySwatch = getComputedStyle(el.shadowRoot!.querySelector('[part="legend-swatch"]') as HTMLElement);
+
+    // Same footprint as a category swatch (both size off --lr-sequence-strip-legend-swatch-size).
+    expect(swatchStyle.inlineSize).to.equal(categorySwatch.inlineSize);
+    expect(swatchStyle.blockSize).to.equal(categorySwatch.blockSize);
+    // The bar is an inset box-shadow in exactly the color the cell's own marker paints with.
+    expect(swatchStyle.boxShadow).to.contain('inset');
+    expect(swatchStyle.boxShadow).to.contain(getComputedStyle(cellMarker).backgroundColor);
+    // ...over a neutral chip that is neither transparent nor a category color.
+    expect(swatchStyle.backgroundColor).to.not.equal('rgba(0, 0, 0, 0)');
+    expect(swatchStyle.backgroundColor).to.not.equal(categorySwatch.backgroundColor);
+  });
+
+  it('follows --lr-sequence-strip-marker-color and its own neutral-chip cssprop', async () => {
+    const wrapper = (await fixture(html`
+      <div style="--lr-sequence-strip-marker-color: rgb(0, 51, 102); --lr-sequence-strip-legend-marker-bg: rgb(200, 201, 202);">
+        <lr-sequence-strip show-legend marker-label="Subagent"></lr-sequence-strip>
+      </div>
+    `)) as HTMLElement;
+    const el = wrapper.querySelector('lr-sequence-strip') as LyraSequenceStrip;
+    el.items = items;
+    el.categories = threeCategories;
+    await el.updateComplete;
+    const swatchStyle = getComputedStyle(el.shadowRoot!.querySelector('[part="legend-marker-swatch"]') as HTMLElement);
+    expect(swatchStyle.boxShadow).to.contain('rgb(0, 51, 102)');
+    expect(swatchStyle.backgroundColor).to.equal('rgb(200, 201, 202)');
+  });
+
+  it('announces the marker count in the summary, so the legend row has a spoken counterpart', async () => {
+    const el = await strip(html`<lr-sequence-strip show-legend marker-label="Subagent"></lr-sequence-strip>`);
+    const label = el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')!;
+    expect(label).to.equal('Text: 2, Tool: 1, Subagent: 1');
+  });
+
+  it('leaves the summary untouched when markerLabel is unset, and defers to accessibleLabel when set', async () => {
+    const bare = await strip(html`<lr-sequence-strip show-legend></lr-sequence-strip>`);
+    expect(bare.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('Text: 2, Tool: 1');
+
+    const custom = await strip(
+      html`<lr-sequence-strip show-legend marker-label="Subagent" accessible-label="Custom"></lr-sequence-strip>`,
+    );
+    expect(custom.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('Custom');
+  });
+
+  it('omits the marker count when no item carries a marker, exactly like a zero-count category', async () => {
+    const el = (await fixture(
+      html`<lr-sequence-strip show-legend marker-label="Subagent"></lr-sequence-strip>`,
+    )) as LyraSequenceStrip;
+    el.items = [{ id: '1', category: 'text' }];
+    el.categories = categories;
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('Text: 1');
+    // The row still keys the scheme, like a category with no matching item.
+    expect(el.shadowRoot!.querySelector('[part="legend-marker-swatch"]')).to.exist;
+  });
+
+  it('renders no legend at all when markerLabel is set but showLegend is off', async () => {
+    const el = await strip(html`<lr-sequence-strip marker-label="Subagent"></lr-sequence-strip>`);
+    expect(el.shadowRoot!.querySelector('[part="legend"]')).to.not.exist;
+    expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.contain('Subagent: 1');
+  });
+
+  it('is accessible with the marker legend row shown', async () => {
+    const el = await strip(html`<lr-sequence-strip show-legend marker-label="Subagent"></lr-sequence-strip>`);
+    await expect(el).to.be.accessible();
+  });
+});

@@ -59,6 +59,13 @@ export interface LyraTabsEventMap {
  * @csspart tab-icon - The optional leading-icon wrapper inside a tab button; only rendered when that tab has a matching `<id>-icon` sibling.
  * @csspart panel - A single `role="tabpanel"` wrapper (one per tab, hidden unless active).
  * @cssprop [--lr-scroll-fade-size=2rem] - Width of the static fade at each horizontal scroll edge.
+ * @cssprop [--lr-tabs-selected-color=var(--lr-color-brand)] - Text color of the selected tab.
+ *   Scoped to `[aria-selected='true']` only, so it never repaints a hovered unselected tab (which
+ *   is what hijacking `--lr-color-brand` library-wide used to do).
+ * @cssprop [--lr-tabs-indicator-color=var(--lr-color-brand)] - Color of the selected tab's
+ *   underline, themeable independently of its text color.
+ * @cssprop [--lr-tabs-hover-color=var(--lr-color-text)] - Text color of a hovered, non-disabled tab.
+ *   Independent of the selected-state props above.
  */
 export class LyraTabs extends LyraElement<LyraTabsEventMap> {
   static styles = [LyraElement.styles, styles];

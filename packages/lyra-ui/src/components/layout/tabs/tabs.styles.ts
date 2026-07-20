@@ -61,12 +61,17 @@ export const styles = css`
     flex: 0 0 auto;
     align-items: center;
   }
+  /* Reads its own prop, not the shared --lr-color-text token: recoloring the selected tab must
+     never repaint hovered-unselected tabs with the selected color. */
   [part='tab']:hover:not([aria-disabled='true']) {
-    color: var(--lr-color-text);
+    color: var(--lr-tabs-hover-color, var(--lr-color-text));
   }
+  /* Inline var() fallbacks rather than :host-declared properties, so a consumer can set them on any
+     ancestor and a :host declaration can never shadow that. Unset, each falls back to the token the
+     rule used before the hooks existed, so the rendering is unchanged. */
   [part='tab'][aria-selected='true'] {
-    color: var(--lr-color-brand);
-    border-block-end-color: var(--lr-color-brand);
+    color: var(--lr-tabs-selected-color, var(--lr-color-brand));
+    border-block-end-color: var(--lr-tabs-indicator-color, var(--lr-color-brand));
   }
   [part='tab'][aria-disabled='true'] {
     cursor: not-allowed;

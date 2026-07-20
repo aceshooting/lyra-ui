@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
 import './segmented.js';
+import { storyColor } from '../../../../../../.storybook/story-theme.js';
 
 const meta: Meta = {
   title: 'Segmented',
@@ -170,6 +171,71 @@ export const Events: Story = {
         }}
       ></lr-segmented>
       <p id="segmented-log" style="font-family: monospace; margin-top: 0.5rem;">No event fired yet.</p>
+    </div>
+  `,
+};
+
+/** The checked pill's background, text color, weight and shadow are individually themeable, and so
+ *  is the hover treatment of an *unchecked* segment — separately. Before these hooks the only way
+ *  to recolor the selection was to hijack library-wide `--lr-color-surface`/`--lr-color-text`, which
+ *  repainted hovered-unselected segments with the very same values. */
+export const ThemedSelection: Story = {
+  name: 'Themed selection (cssprops)',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'Set `--lr-segmented-selected-bg`, `--lr-segmented-selected-color`, `--lr-segmented-selected-font-weight` and `--lr-segmented-selected-shadow` on the element or any ancestor — none of them are declared on `:host`, so an ancestor value is never shadowed. `--lr-segmented-hover-color` themes the hovered, unchecked segment independently (hover the two unselected pills to compare).',
+      },
+    },
+  },
+  render: () => html`
+    <div
+      style="--lr-segmented-selected-bg: ${storyColor('brand')}; --lr-segmented-selected-color: ${storyColor(
+        'onBrand',
+      )}; --lr-segmented-selected-shadow: none; --lr-segmented-selected-font-weight: 700; --lr-segmented-hover-color: ${storyColor(
+        'brand',
+      )};"
+    >
+      <lr-segmented
+        label="View"
+        .items=${[
+          { value: 'day', label: 'Day' },
+          { value: 'week', label: 'Week' },
+          { value: 'month', label: 'Month' },
+        ]}
+        value="week"
+      ></lr-segmented>
+    </div>
+  `,
+};
+
+/** `--lr-segmented-track-height` pins the track to an exact height at any `size`, for a row that has
+ *  to line up with a hard-sized toolbar control. Left unset (the default) each tier keeps its own
+ *  `--lr-segmented-track-min-height` floor and grows with its content. */
+export const ExactTrackHeight: Story = {
+  name: 'Exact track height',
+  render: () => html`
+    <div style="display: flex; gap: 8px; align-items: center; --lr-segmented-track-height: 32px;">
+      <lr-segmented
+        size="s"
+        label="View"
+        .items=${[
+          { value: 'day', label: 'Day' },
+          { value: 'week', label: 'Week' },
+          { value: 'month', label: 'Month' },
+        ]}
+        value="week"
+      ></lr-segmented>
+      <lr-segmented
+        size="l"
+        label="Density"
+        .items=${[
+          { value: 'cozy', label: 'Cozy' },
+          { value: 'compact', label: 'Compact' },
+        ]}
+        value="cozy"
+      ></lr-segmented>
     </div>
   `,
 };

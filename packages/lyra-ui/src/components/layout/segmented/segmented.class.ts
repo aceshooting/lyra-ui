@@ -41,7 +41,23 @@ export interface LyraSegmentedEventMap {
  * @csspart segment-label - The segment's label text.
  * @cssprop [--lr-scroll-fade-size=2rem] - Width of the static fade at each horizontal scroll edge.
  * @cssprop [--lr-segmented-track-min-height=auto] - Minimum height of the `base` track. Re-set per
- *   `size` (`2xs` through `xl`); the `auto` default applies at the unset/`m` size.
+ *   `size` (`2xs` through `xl`); the `auto` default applies at the unset/`m` size. Because it is
+ *   declared on `:host` per tier, override it on the element itself, not on an ancestor.
+ * @cssprop [--lr-segmented-track-height] - Exact height of the `base` track, pinning it at every
+ *   `size` tier (sets both `block-size` and `min-block-size`) so the row can sit flush beside a
+ *   hard-sized toolbar control. **Genuinely unset by default** — while unset each tier keeps its
+ *   own `--lr-segmented-track-min-height` floor and the track grows with its content.
+ * @cssprop [--lr-segmented-selected-bg=var(--lr-color-surface)] - Background of the checked
+ *   segment. Scoped to `[aria-checked='true']` only, so it never repaints a hovered unselected
+ *   segment (which is what hijacking `--lr-color-surface` library-wide used to do).
+ * @cssprop [--lr-segmented-selected-color=var(--lr-color-text)] - Text color of the checked segment.
+ * @cssprop [--lr-segmented-selected-font-weight=var(--lr-font-weight-semibold)] - Font weight of the
+ *   checked segment.
+ * @cssprop [--lr-segmented-selected-shadow=var(--lr-shadow)] - Box shadow lifting the checked
+ *   segment off the track.
+ * @cssprop [--lr-segmented-hover-color=var(--lr-color-text)] - Text color of a hovered segment that
+ *   is neither checked nor disabled. Independent of the selected-state props above — recoloring the
+ *   checked pill leaves this untouched.
  * @cssprop [--lr-segmented-segment-padding=var(--lr-size-0-125rem) var(--lr-space-s)] - Each
  *   segment's padding. Re-set per `size`; this default applies at the unset/`m` size.
  * @cssprop [--lr-segmented-font-size=var(--lr-font-size-sm)] - Each segment's font size. Re-set per

@@ -402,3 +402,92 @@ it('does not steal focus by reassigning it when the invalid-active correction ha
   expect(document.activeElement).to.equal(outside);
   outside.remove();
 });
+
+describe('selected/hover cssprops', () => {
+  /** Resolves what a `declaration` would compute to *inside this component's shadow root*, where the
+   *  `--lr-*` design tokens actually live (they are declared on `:host`, so a light-DOM probe would
+   *  see none of them). */
+  function resolvedInShadow(el: LyraTabs, declaration: string, property: string): string {
+    const probe = document.createElement('span');
+    probe.setAttribute('style', declaration);
+    el.shadowRoot!.appendChild(probe);
+    const value = getComputedStyle(probe).getPropertyValue(property);
+    probe.remove();
+    return value;
+  }
+
+  /** The declaration block of the first rule matching `selector`, read off the component's own
+   *  constructed stylesheet rather than its serialized text. */
+  function ruleFor(selector: string): CSSStyleDeclaration {
+    const sheet = new CSSStyleSheet();
+    sheet.replaceSync(styles.cssText);
+    // CSSOM re-serializes attribute selectors with double quotes; compare quote-insensitively.
+    const normalize = (text: string) => text.replace(/"/g, "'");
+    const rule = [...sheet.cssRules].find(
+      (candidate) => candidate instanceof CSSStyleRule && normalize(candidate.selectorText) === normalize(selector),
+    ) as CSSStyleRule | undefined;
+    expect(rule, `no rule for ${selector}`).to.exist;
+    return rule!.style;
+  }
+
+  async function themed(style: string): Promise<LyraTabs> {
+    const wrapper = (await fixture(html`<div style=${style}>${basic()}</div>`)) as HTMLElement;
+    const el = wrapper.querySelector('lr-tabs') as LyraTabs;
+    await el.updateComplete;
+    return el;
+  }
+
+  const overrides = '--lr-tabs-selected-color: rgb(0, 51, 102); --lr-tabs-indicator-color: rgb(0, 102, 51);';
+
+  it('recolors the selected tab and its indicator independently, from an ancestor', async () => {
+    const el = await themed(overrides);
+    const [selected, unselected] = tabButtons(el);
+    expect(selected!.getAttribute('aria-selected')).to.equal('true');
+    expect(getComputedStyle(selected!).color).to.equal('rgb(0, 51, 102)');
+    expect(getComputedStyle(selected!).borderBlockEndColor).to.equal('rgb(0, 102, 51)');
+
+    // Unselected tabs keep the quiet resting treatment and a transparent underline.
+    expect(getComputedStyle(unselected!).color).to.equal(
+      resolvedInShadow(el, 'color: var(--lr-color-text-quiet)', 'color'),
+    );
+    expect(getComputedStyle(unselected!).borderBlockEndColor).to.equal('rgba(0, 0, 0, 0)');
+  });
+
+  it('leaves the hover treatment of an UNSELECTED tab untouched -- the coupling the props exist to break', async () => {
+    const el = await themed(overrides);
+    // The hover rule resolves through its own prop, never through the selected-state props: before
+    // this hook existed the only way to recolor the selected tab was to hijack library-wide
+    // --lr-color-brand/--lr-color-text, which repainted hovered-unselected tabs with it too.
+    const hover = ruleFor("[part='tab']:hover:not([aria-disabled='true'])");
+    expect(hover.getPropertyValue('color')).to.equal('var(--lr-tabs-hover-color, var(--lr-color-text))');
+    expect(hover.cssText).to.not.include('selected');
+    expect(hover.cssText).to.not.include('indicator');
+    expect(resolvedInShadow(el, 'color: var(--lr-color-text)', 'color')).to.equal(
+      resolvedInShadow(el, 'color: var(--lr-tabs-hover-color, var(--lr-color-text))', 'color'),
+    );
+  });
+
+  it('recolors the hover treatment on its own, without touching the selected tab', async () => {
+    const el = await themed('--lr-tabs-hover-color: rgb(7, 8, 9);');
+    const selected = tabButtons(el)[0]!;
+    const brand = resolvedInShadow(el, 'color: var(--lr-color-brand)', 'color');
+    expect(getComputedStyle(selected).color).to.equal(brand);
+    expect(getComputedStyle(selected).borderBlockEndColor).to.equal(brand);
+    expect(resolvedInShadow(el, 'color: var(--lr-tabs-hover-color, var(--lr-color-text))', 'color')).to.equal(
+      'rgb(7, 8, 9)',
+    );
+  });
+
+  it('renders identically to the pre-cssprop output when every prop is unset', async () => {
+    const el = (await fixture(basic())) as LyraTabs;
+    const selected = getComputedStyle(tabButtons(el)[0]!);
+    const brand = resolvedInShadow(el, 'color: var(--lr-color-brand)', 'color');
+    expect(selected.color).to.equal(brand);
+    expect(selected.borderBlockEndColor).to.equal(brand);
+  });
+
+  it('is accessible with the selected-state props themed', async () => {
+    const el = await themed(overrides);
+    await expect(el).to.be.accessible();
+  });
+});

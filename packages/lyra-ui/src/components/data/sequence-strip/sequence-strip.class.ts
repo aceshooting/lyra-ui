@@ -39,12 +39,16 @@ export interface SequenceStripCategory {
  * @csspart tooltip - The hover tooltip showing the hovered item's label.
  * @csspart legend - The static category key rendered below the strip when `showLegend` is set
  * (`aria-hidden` — it repeats the strip's own `aria-label` visually).
- * @csspart legend-item - One swatch + label pair in the legend, one per `categories` entry.
+ * @csspart legend-item - One swatch + label pair in the legend, one per `categories` entry (plus one
+ * trailing marker row when `markerLabel` is set).
  * @csspart legend-swatch - The color chip of a legend item, matching that category's cell color.
+ * @csspart legend-marker-swatch - The chip of the `markerLabel` legend row: a neutral chip carrying
+ * the same bottom bar a `marker: true` cell paints, in the same `--lr-sequence-strip-marker-color`.
  * @csspart legend-label - The text of a legend item (the category's `label`, or its `key`).
  * @cssprop [--lr-sequence-strip-height=var(--lr-size-1-5rem)] - Block size of the strip.
- * @cssprop [--lr-sequence-strip-marker-color=var(--lr-color-text)] - Color of the bottom marker on a `marker: true` cell.
- * @cssprop [--lr-sequence-strip-legend-swatch-size=var(--lr-size-0-625rem)] - Inline and block size of a legend swatch.
+ * @cssprop [--lr-sequence-strip-marker-color=var(--lr-color-text)] - Color of the bottom marker on a `marker: true` cell, and of the marker legend row's bar.
+ * @cssprop [--lr-sequence-strip-legend-swatch-size=var(--lr-size-0-625rem)] - Inline and block size of a legend swatch (category and marker rows alike).
+ * @cssprop [--lr-sequence-strip-legend-marker-bg=var(--lr-color-surface-raised)] - Neutral chip background behind the marker legend row's bar; it stands in for "any cell", so it deliberately matches no category color.
  */
 export class LyraSequenceStrip extends LyraElement {
   static styles = [LyraElement.styles, styles];
@@ -64,6 +68,13 @@ export class LyraSequenceStrip extends LyraElement {
    *  (a category with no matching item still gets a row). */
   @property({ type: Boolean, reflect: true, attribute: 'show-legend' }) showLegend = false;
 
+  /** Names what a cell's `marker` means (e.g. `"Subagent"`). Set it to key the marker in the legend
+   *  — with `showLegend` on it adds one trailing `[part="legend-item"]` whose swatch reproduces the
+   *  cell's own marker treatment — and to have the marker counted in the auto-generated summary,
+   *  which is otherwise per-category only. Unset (the default) nothing changes: no extra legend row
+   *  and no extra summary clause. */
+  @property({ attribute: 'marker-label' }) markerLabel?: string;
+
   /** The item index currently under the pointer (`null` when not hovering any cell) — drives
    *  `[part="tooltip"]`, mirroring `<lr-heatmap>`'s own `hoverCell` pattern. No keyboard/focus
    *  equivalent — see the class doc for why this component has no per-cell focus target at all. */
@@ -77,12 +88,20 @@ export class LyraSequenceStrip extends LyraElement {
     const counts = new Map<string, number>();
     for (const item of this.items) counts.set(item.category, (counts.get(item.category) ?? 0) + 1);
     if (counts.size === 0) return this.localize('sequenceStripEmpty');
-    return [...counts.entries()]
-      .map(([key, count]) => {
-        const label = this.categories.find((c) => c.key === key)?.label ?? key;
-        return this.localize('sequenceStripCategoryCount', undefined, { label, count });
-      })
-      .join(', ');
+    const clauses = [...counts.entries()].map(([key, count]) => {
+      const label = this.categories.find((c) => c.key === key)?.label ?? key;
+      return this.localize('sequenceStripCategoryCount', undefined, { label, count });
+    });
+    // The marker is a second, independent axis, so it gets its own trailing clause rather than
+    // folding into any category's count -- and only once `markerLabel` names it, since the summary
+    // has no other word for it. Counted like a category: only a non-zero count is announced (a
+    // zero-count category is likewise absent from the summary while still keying the legend), and
+    // the same '{label}: {count}' string is reused so it translates through one key.
+    const markerCount = this.items.filter((item) => item.marker).length;
+    if (this.markerLabel && markerCount > 0) {
+      clauses.push(this.localize('sequenceStripCategoryCount', undefined, { label: this.markerLabel, count: markerCount }));
+    }
+    return clauses.join(', ');
   }
 
   private itemLabel(item: SequenceStripItem): string {
@@ -114,6 +133,14 @@ export class LyraSequenceStrip extends LyraElement {
             </span>
           `,
         )}
+        ${this.markerLabel
+          ? html`
+              <span part="legend-item">
+                <span part="legend-marker-swatch"></span>
+                <span part="legend-label">${this.markerLabel}</span>
+              </span>
+            `
+          : nothing}
       </div>
     `;
   }

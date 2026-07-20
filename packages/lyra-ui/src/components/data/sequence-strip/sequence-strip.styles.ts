@@ -78,11 +78,21 @@ export const styles = css`
     gap: var(--lr-space-2xs);
     min-inline-size: 0;
   }
-  [part='legend-swatch'] {
+  [part='legend-swatch'],
+  [part='legend-marker-swatch'] {
     flex: none;
     inline-size: var(--lr-sequence-strip-legend-swatch-size, var(--lr-size-0-625rem));
     block-size: var(--lr-sequence-strip-legend-swatch-size, var(--lr-size-0-625rem));
     border-radius: var(--lr-radius-xs);
+  }
+  /* The marker legend row stands for the marker on *any* cell, so its chip is deliberately a
+     neutral background rather than a category color, with the cell's own bottom bar reproduced as
+     an inset shadow (same thickness, same --lr-sequence-strip-marker-color) instead of a child
+     element -- the chip has no children to give the bar its own box. */
+  [part='legend-marker-swatch'] {
+    background: var(--lr-sequence-strip-legend-marker-bg, var(--lr-color-surface-raised));
+    box-shadow: inset 0 calc(-1 * var(--lr-size-2px)) 0 0
+      var(--lr-sequence-strip-marker-color, var(--lr-color-text));
   }
   [part='legend-label'] {
     min-inline-size: 0;

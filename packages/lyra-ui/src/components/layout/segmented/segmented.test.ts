@@ -195,6 +195,166 @@ describe('narrow allocation', () => {
   });
 });
 
+/** Resolves what a `declaration` would compute to *inside this component's shadow root*, where the
+ *  `--lr-*` design tokens actually live (they are declared on `:host`, so a light-DOM probe would
+ *  see none of them). Used to assert the unset defaults byte-for-byte against the tokens they are
+ *  documented to fall back to. */
+function resolvedInShadow(el: LyraSegmented, declaration: string, property: string): string {
+  const probe = document.createElement('span');
+  probe.setAttribute('style', declaration);
+  el.shadowRoot!.appendChild(probe);
+  const value = getComputedStyle(probe).getPropertyValue(property);
+  probe.remove();
+  return value;
+}
+
+/** The single declaration block of the first rule whose selector matches `selector`, read off the
+ *  component's own constructed stylesheet rather than its serialized text. */
+function ruleFor(selector: string): CSSStyleDeclaration {
+  const sheet = new CSSStyleSheet();
+  sheet.replaceSync(styles.cssText);
+  // CSSOM re-serializes attribute selectors with double quotes; compare quote-insensitively.
+  const normalize = (text: string) => text.replace(/"/g, "'");
+  const rule = [...sheet.cssRules].find(
+    (candidate) => candidate instanceof CSSStyleRule && normalize(candidate.selectorText) === normalize(selector),
+  ) as CSSStyleRule | undefined;
+  expect(rule, `no rule for ${selector}`).to.exist;
+  return rule!.style;
+}
+
+describe('selected-state cssprops', () => {
+  const overrides =
+    '--lr-segmented-selected-bg: rgb(0, 51, 102);' +
+    '--lr-segmented-selected-color: rgb(255, 255, 255);' +
+    '--lr-segmented-selected-font-weight: 900;' +
+    '--lr-segmented-selected-shadow: none;';
+
+  async function themed(style: string): Promise<LyraSegmented> {
+    const wrapper = (await fixture(
+      html`<div style=${style}><lr-segmented .items=${items()} value="week"></lr-segmented></div>`,
+    )) as HTMLElement;
+    const el = wrapper.querySelector('lr-segmented') as LyraSegmented;
+    await el.updateComplete;
+    return el;
+  }
+
+  it('recolors only the checked segment, from an ancestor (not a :host-declared prop)', async () => {
+    const el = await themed(overrides);
+    const [unchecked, checked] = segmentButtons(el);
+    const checkedStyle = getComputedStyle(checked!);
+    expect(checked!.getAttribute('aria-checked')).to.equal('true');
+    expect(checkedStyle.backgroundColor).to.equal('rgb(0, 51, 102)');
+    expect(checkedStyle.color).to.equal('rgb(255, 255, 255)');
+    expect(checkedStyle.fontWeight).to.equal('900');
+    expect(checkedStyle.boxShadow).to.equal('none');
+
+    // Every unchecked segment keeps the quiet resting treatment: transparent, quiet text, no
+    // bolding, no shadow -- the props are scoped to [aria-checked='true'] only.
+    const uncheckedStyle = getComputedStyle(unchecked!);
+    expect(uncheckedStyle.backgroundColor).to.equal('rgba(0, 0, 0, 0)');
+    expect(uncheckedStyle.color).to.equal(resolvedInShadow(el, 'color: var(--lr-color-text-quiet)', 'color'));
+    expect(uncheckedStyle.fontWeight).to.not.equal('900');
+    expect(uncheckedStyle.boxShadow).to.equal('none');
+  });
+
+  it('leaves the hover treatment of an UNCHECKED segment untouched -- the coupling the props exist to break', async () => {
+    const el = await themed(overrides);
+    const unchecked = segmentButtons(el)[0]!;
+    // The hover rule resolves through its own prop, never through any selected-state prop: before
+    // this hook existed the only way to recolor the checked pill was to hijack library-wide
+    // --lr-color-surface/--lr-color-text, which necessarily repainted hovered-unselected segments
+    // too (they read the very same token).
+    const hover = ruleFor("[part='segment']:hover:not([aria-disabled='true']):not([aria-checked='true'])");
+    expect(hover.getPropertyValue('color')).to.equal('var(--lr-segmented-hover-color, var(--lr-color-text))');
+    expect(hover.cssText).to.not.include('selected');
+    // ...and with the selected props set, that hover color still resolves to the untouched
+    // --lr-color-text token on the segment that would receive it.
+    expect(getComputedStyle(unchecked).getPropertyValue('--lr-segmented-hover-color')).to.equal('');
+    expect(resolvedInShadow(el, 'color: var(--lr-color-text)', 'color')).to.equal(
+      resolvedInShadow(el, 'color: var(--lr-segmented-hover-color, var(--lr-color-text))', 'color'),
+    );
+  });
+
+  it('recolors the hover treatment on its own, without touching the checked segment', async () => {
+    const el = await themed('--lr-segmented-hover-color: rgb(7, 8, 9);');
+    const checked = segmentButtons(el)[1]!;
+    expect(getComputedStyle(checked).color).to.equal(resolvedInShadow(el, 'color: var(--lr-color-text)', 'color'));
+    expect(getComputedStyle(checked).backgroundColor).to.equal(
+      resolvedInShadow(el, 'background: var(--lr-color-surface)', 'background-color'),
+    );
+    // The value the hover rule (asserted above) resolves for an unchecked segment.
+    expect(resolvedInShadow(el, 'color: var(--lr-segmented-hover-color, var(--lr-color-text))', 'color')).to.equal(
+      'rgb(7, 8, 9)',
+    );
+  });
+
+  it('renders identically to the pre-cssprop output when every prop is unset', async () => {
+    const el = (await fixture(html`<lr-segmented .items=${items()} value="week"></lr-segmented>`)) as LyraSegmented;
+    const checked = getComputedStyle(segmentButtons(el)[1]!);
+    expect(checked.backgroundColor).to.equal(resolvedInShadow(el, 'background: var(--lr-color-surface)', 'background-color'));
+    expect(checked.color).to.equal(resolvedInShadow(el, 'color: var(--lr-color-text)', 'color'));
+    expect(checked.fontWeight).to.equal(
+      resolvedInShadow(el, 'font-weight: var(--lr-font-weight-semibold)', 'font-weight'),
+    );
+    expect(checked.boxShadow).to.equal(resolvedInShadow(el, 'box-shadow: var(--lr-shadow)', 'box-shadow'));
+  });
+
+  it('is accessible with the selected-state props themed', async () => {
+    const el = await themed(overrides);
+    await expect(el).to.be.accessible();
+  });
+});
+
+describe('track height', () => {
+  const sizes = ['2xs', 'xs', 's', 'm', 'l', 'xl'] as const;
+
+  async function track(size: string, style = ''): Promise<HTMLElement> {
+    const wrapper = (await fixture(
+      html`<div style=${style}><lr-segmented size=${size} .items=${items()} value="week"></lr-segmented></div>`,
+    )) as HTMLElement;
+    const el = wrapper.querySelector('lr-segmented') as LyraSegmented;
+    await el.updateComplete;
+    return el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  }
+
+  it('pins the track to an exact height at every size tier', async () => {
+    for (const size of sizes) {
+      const base = await track(size, '--lr-segmented-track-height: 40px;');
+      expect(getComputedStyle(base).minBlockSize, size).to.equal('40px');
+      expect(base.getBoundingClientRect().height, size).to.be.closeTo(40, 0.5);
+    }
+  });
+
+  it('keeps each tier\'s own min-height floor when the exact-height hatch is unset', async () => {
+    // The hatch must stay *genuinely undeclared* -- a `:host { --lr-segmented-track-height: auto }`
+    // declaration would be a valid value that always wins, making the per-tier
+    // --lr-segmented-track-min-height fallback dead code (the trap lr-select fell into).
+    const floors = new Map([
+      ['2xs', '20px'],
+      ['xs', '24px'],
+      ['s', '30px'],
+      ['m', 'auto'],
+      ['l', '48px'],
+      ['xl', '56px'],
+    ]);
+    for (const size of sizes) {
+      const base = await track(size);
+      expect(getComputedStyle(base).minBlockSize, size).to.equal(floors.get(size));
+    }
+  });
+
+  it('still honours a min-height override while the exact height is unset', async () => {
+    // --lr-segmented-track-min-height is re-declared on :host per tier, so it is overridden on the
+    // host element itself (inline styles win over the component's own :host rule), unlike the
+    // exact-height hatch which is never declared and therefore inherits from any ancestor.
+    const el = (await fixture(
+      html`<lr-segmented size="s" style="--lr-segmented-track-min-height: 44px" .items=${items()}></lr-segmented>`,
+    )) as LyraSegmented;
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    expect(getComputedStyle(base).minBlockSize).to.equal('44px');
+  });
+});
+
 describe('size', () => {
   it('defaults to size="m" and leaves the default rendering unchanged', async () => {
     const el = (await fixture(html`<lr-segmented .items=${items()} value="day"></lr-segmented>`)) as LyraSegmented;

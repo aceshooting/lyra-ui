@@ -41,6 +41,20 @@ export const WithLegend: Story = {
   render: () => html`<lr-sequence-strip show-legend .items=${items} .categories=${categories}></lr-sequence-strip>`,
 };
 
+/** `marker-label` names what a cell's `marker` means. With the legend shown it adds one trailing
+ *  row whose chip reproduces the cell's own marker treatment (a neutral chip with the bottom bar in
+ *  `--lr-sequence-strip-marker-color`), and the marker's count joins the strip's spoken summary —
+ *  so the legend keeps no entry that assistive technology never hears. */
+export const WithMarkerLegend: Story = {
+  render: () =>
+    html`<lr-sequence-strip
+      show-legend
+      marker-label="Dispatched to a subagent"
+      .items=${items}
+      .categories=${categories}
+    ></lr-sequence-strip>`,
+};
+
 /** The same legend in a 320px allocation with long, translation-length labels — it wraps onto
  *  further rows instead of overflowing the strip's own width. */
 export const LegendNarrowAllocation: Story = {
