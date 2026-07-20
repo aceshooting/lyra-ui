@@ -181,8 +181,10 @@ export const CustomFilter: Story = {
  * drive search-as-you-type side effects outside the listbox, such as this "No matches for “…”"
  * empty state, instead of reading the shadow input.
  *
- * It fires for user input only: picking a row, the clear button, `form.reset()`, dismissing the
- * listbox and programmatic `value` writes all blank the filter silently.
+ * It fires for user input only — typing, and the clear button when it blanks a non-empty query.
+ * Picking a row, `form.reset()`, dismissing the listbox and programmatic `value` writes all blank
+ * the filter silently. With `clearable`, the button appears for filter text alone (no selection
+ * needed), and a query-only clear emits `lr-filter` without a spurious `change`/`lr-clear`.
  */
 export const LiveFilterText: Story = {
   render: () => {
@@ -226,5 +228,59 @@ export const States: Story = {
         <lr-option value="a">Apple</lr-option>
       </lr-combobox>
     </div>
+  `,
+};
+
+export const ExactToolbarHeight: Story = {
+  name: 'Exact toolbar height',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'Each sized control exposes an exact-height custom property (`--lr-combobox-trigger-height`, ' +
+          '`--lr-select-trigger-height`, `--lr-input-control-height`). Left unset they only floor the ' +
+          'control; set to the same length they pixel-match in one toolbar row without a `::part()` rule. ' +
+          'Leave the combobox one unset in `multiple` mode, where a wrapping tag row needs to grow.',
+      },
+    },
+  },
+  render: () => html`
+    <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap">
+      <lr-input
+        aria-label="Search"
+        placeholder="Search…"
+        style="--lr-input-control-height: 2.25rem"
+      ></lr-input>
+      <lr-select aria-label="Status" placeholder="Status" style="--lr-select-trigger-height: 2.25rem">
+        <lr-option value="open">Open</lr-option>
+        <lr-option value="closed">Closed</lr-option>
+      </lr-select>
+      <lr-combobox aria-label="Owner" placeholder="Owner" style="--lr-combobox-trigger-height: 2.25rem">
+        <lr-option value="ada">Ada</lr-option>
+        <lr-option value="grace">Grace</lr-option>
+      </lr-combobox>
+    </div>
+  `,
+};
+
+export const Adornments: Story = {
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'The `start` and `end` slots place decorative chrome inside the trigger row. `end` renders ' +
+          'before the expand chevron, so consumer content is never outboard of it. Slotted adornments ' +
+          'are never collected as options.',
+      },
+    },
+  },
+  render: () => html`
+    <lr-combobox label="Owner" placeholder="Search people…" clearable style="max-width: 22rem">
+      <span slot="start" aria-hidden="true">⌕</span>
+      <kbd slot="end">⌘K</kbd>
+      <lr-option value="ada">Ada Lovelace</lr-option>
+      <lr-option value="grace">Grace Hopper</lr-option>
+      <lr-option value="alan">Alan Turing</lr-option>
+    </lr-combobox>
   `,
 };

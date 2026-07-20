@@ -68,6 +68,11 @@ class LyraInputBase extends LyraElement<LyraInputEventMap> {}
  * @csspart hint - The hint message.
  * @csspart error - The error message.
  * @cssprop --lr-input-control-min-height - Outer control height floor, scaled by `size`.
+ * @cssprop --lr-input-control-height - Exact outer control height. Unset by default, which leaves
+ *   `--lr-input-control-min-height` as a floor only; set it to a length to both floor and cap the
+ *   control row (e.g. to pixel-match `<lr-select>`/`<lr-combobox>` in the same toolbar). Because it
+ *   is never declared by the component itself, it can be set from an ancestor or an outer-tree rule
+ *   as well as inline on the element.
  * @cssprop --lr-input-padding-block - Block padding of the native input, scaled by `size`.
  * @cssprop --lr-input-padding-inline - Inline padding of the control row, scaled by `size`.
  * @cssprop --lr-input-font-size - Font size of the native input, scaled by `size`.

@@ -121,6 +121,8 @@ class LyraDateInputBase extends LyraElement<LyraDateInputEventMap> {}
  * @csspart form-control-label - The label wrapper.
  * @csspart input-wrapper - The input and button wrapper.
  * @csspart input - The text input.
+ * @csspart start - Wrapper around the `start` adornment slot; `hidden` while nothing is slotted.
+ * @csspart end - Wrapper around the `end` adornment slot; `hidden` while nothing is slotted.
  * @csspart clear-button - The clear control.
  * @csspart expand-button - The calendar popup toggle.
  * @csspart expand-icon - The calendar icon.
@@ -134,6 +136,9 @@ class LyraDateInputBase extends LyraElement<LyraDateInputEventMap> {}
  * @slot label - Custom label content.
  * @slot error - Custom error content.
  * @slot hint - Custom hint content.
+ * @slot start - Adornment at the inline-start of the input row, before the text field.
+ * @slot end - Adornment after the text field and the built-in clear action, and before the
+ *   calendar toggle — so consumer content never sits outboard of the calendar button.
  */
 export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
   static styles = [LyraElement.styles, styles];
@@ -225,6 +230,8 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
   @state() private hasHintSlot = false;
   @state() private hasErrorSlot = false;
   @state() private hasLabelSlot = false;
+  @state() private hasStartSlot = false;
+  @state() private hasEndSlot = false;
   @state() private validityRevision = 0;
 
   private _mode: 'single' | 'range' = 'single';
@@ -460,6 +467,8 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
       this.hasHintSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'hint');
       this.hasErrorSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'error');
       this.hasLabelSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'label');
+      this.hasStartSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'start');
+      this.hasEndSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'end');
     }
     if (changed.has('open')) {
       if (this.open) {
@@ -760,6 +769,14 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
     this.hasLabelSlot = (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length > 0;
   };
 
+  private onStartSlotChange = (e: Event): void => {
+    this.hasStartSlot = (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length > 0;
+  };
+
+  private onEndSlotChange = (e: Event): void => {
+    this.hasEndSlot = (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length > 0;
+  };
+
   // The nested picker's `input` event isn't wired anywhere else, so without
   // this listener it bubbles+composes straight through this shadow boundary
   // (LyraElement.emit always dispatches bubbles:true, composed:true) and
@@ -797,6 +814,9 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
           ${this.label}<slot name="label" @slotchange=${this.onLabelSlotChange}></slot>
         </label>
         <div part="input-wrapper">
+          <span part="start" ?hidden=${!this.hasStartSlot}>
+            <slot name="start" @slotchange=${this.onStartSlotChange}></slot>
+          </span>
           <input
             id=${this.inputId}
             part="input"
@@ -832,6 +852,9 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
                 ${closeIcon()}
               </button>`
             : ''}
+          <span part="end" ?hidden=${!this.hasEndSlot}>
+            <slot name="end" @slotchange=${this.onEndSlotChange}></slot>
+          </span>
           <button
             part="expand-button"
             type="button"

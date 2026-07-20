@@ -1252,3 +1252,85 @@ it('exposes accessibleLabel as a public property, not just the aria-label attrib
   const input = el.shadowRoot!.querySelector('[part="input"]') as HTMLInputElement;
   expect(input.getAttribute('aria-label')).to.equal('Departure date');
 });
+
+describe('start/end adornment slots', () => {
+  const part = (el: LyraDateInput, name: string) =>
+    el.shadowRoot!.querySelector(`[part="${name}"]`) as HTMLElement;
+
+  it('renders a slotted glyph inside the input row, before the text field, with no consumer padding', async () => {
+    const el = (await fixture(html`
+      <lr-date-input size="s" label="Departure">
+        <svg slot="start" width="12" height="12" aria-hidden="true"><circle cx="6" cy="6" r="5"></circle></svg>
+      </lr-date-input>
+    `)) as LyraDateInput;
+    await el.updateComplete;
+    const start = part(el, 'start');
+    expect(start.hasAttribute('hidden')).to.be.false;
+    const startRect = start.getBoundingClientRect();
+    const rowRect = part(el, 'input-wrapper').getBoundingClientRect();
+    const inputRect = part(el, 'input').getBoundingClientRect();
+    expect(startRect.width).to.be.greaterThan(0);
+    expect(startRect.left).to.be.at.least(rowRect.left);
+    expect(startRect.right).to.be.at.most(inputRect.left + 1);
+  });
+
+  it('places the end adornment before the calendar toggle', async () => {
+    const el = (await fixture(html`
+      <lr-date-input label="Departure"><kbd slot="end">D</kbd></lr-date-input>
+    `)) as LyraDateInput;
+    await el.updateComplete;
+    const end = part(el, 'end');
+    expect(end.hasAttribute('hidden')).to.be.false;
+    expect(
+      end.compareDocumentPosition(part(el, 'expand-button')) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).to.be.greaterThan(0);
+    expect(end.getBoundingClientRect().right).to.be.at.most(
+      part(el, 'expand-button').getBoundingClientRect().left + 1,
+    );
+  });
+
+  it('hides both wrappers when nothing is slotted', async () => {
+    const el = (await fixture(html`<lr-date-input label="Departure"></lr-date-input>`)) as LyraDateInput;
+    await el.updateComplete;
+    expect(part(el, 'start').hasAttribute('hidden')).to.be.true;
+    expect(part(el, 'end').hasAttribute('hidden')).to.be.true;
+    expect(getComputedStyle(part(el, 'start')).display).to.equal('none');
+    expect(getComputedStyle(part(el, 'end')).display).to.equal('none');
+  });
+
+  it('reveals the wrapper when an adornment is slotted in after first render', async () => {
+    const el = (await fixture(html`<lr-date-input label="Departure"></lr-date-input>`)) as LyraDateInput;
+    const glyph = document.createElement('span');
+    glyph.slot = 'end';
+    glyph.textContent = 'UTC';
+    el.append(glyph);
+    await el.updateComplete;
+    await el.updateComplete;
+    expect(part(el, 'end').hasAttribute('hidden')).to.be.false;
+  });
+
+  it('places the start adornment on the inline-start under dir="rtl"', async () => {
+    const root = await fixture(html`
+      <div dir="rtl">
+        <lr-date-input label="Departure"><span slot="start">⌕</span></lr-date-input>
+      </div>
+    `);
+    const el = root.querySelector('lr-date-input') as LyraDateInput;
+    await el.updateComplete;
+    expect(part(el, 'start').getBoundingClientRect().left).to.be.greaterThan(
+      part(el, 'input').getBoundingClientRect().left,
+    );
+  });
+
+  it('is accessible with adornments slotted', async () => {
+    const el = (await fixture(html`
+      <lr-date-input label="Departure" with-clear value="2026-07-15">
+        <span slot="start" aria-hidden="true">⌕</span>
+        <kbd slot="end">D</kbd>
+      </lr-date-input>
+    `)) as LyraDateInput;
+    await el.updateComplete;
+    expect(part(el, 'clear-button')).to.exist;
+    await expect(el).to.be.accessible();
+  });
+});

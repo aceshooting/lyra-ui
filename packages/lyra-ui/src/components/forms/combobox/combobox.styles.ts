@@ -9,6 +9,13 @@ export const styles = css`
     --lr-combobox-tag-padding: var(--lr-size-0-1rem) var(--lr-size-0-4rem);
     --lr-combobox-tag-font-size: var(--lr-font-size-sm);
     --lr-combobox-expand-size: var(--lr-size-1-75rem);
+    /* --lr-combobox-trigger-height is intentionally NOT declared here. It is a consumer-facing
+       escape hatch consumed only through the two var() fallbacks on [part='combobox'] below;
+       declaring any value for it (even 'auto') would make those fallback arms unreachable and
+       silently turn --lr-combobox-trigger-min-height into dead code. Left undeclared, both arms
+       stay live: the per-tier floor falls out of the fallback with no extra specificity rules, and
+       setting the property from anywhere (inline style, an ancestor, an outer-tree rule) pins an
+       exact height. */
   }
   :host([size='xs']) {
     --lr-combobox-trigger-padding: var(--lr-size-0-125rem) var(--lr-space-xs);
@@ -66,8 +73,11 @@ export const styles = css`
     align-items: center;
     gap: var(--lr-space-xs);
     inline-size: 100%;
-    min-block-size: var(--lr-combobox-trigger-min-height);
+    min-block-size: var(--lr-combobox-trigger-height, var(--lr-combobox-trigger-min-height));
     box-sizing: border-box;
+    /* Pinned only when --lr-combobox-trigger-height is set; 'auto' otherwise, so the row keeps
+       growing to fit its own content (and, in multiple mode, a wrapping tag row). */
+    block-size: var(--lr-combobox-trigger-height, auto);
     padding: var(--lr-combobox-trigger-padding);
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
     border-radius: var(--lr-radius);
@@ -84,6 +94,18 @@ export const styles = css`
        (still 0.5 by default fallback, so no visual change here). */
     opacity: var(--lr-opacity-disabled);
     cursor: not-allowed;
+  }
+
+  [part='start'],
+  [part='end'] {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    color: var(--lr-color-text-quiet);
+  }
+  [part='start'][hidden],
+  [part='end'][hidden] {
+    display: none;
   }
 
   [part='tags'] {

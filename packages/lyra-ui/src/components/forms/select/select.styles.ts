@@ -7,10 +7,13 @@ export const styles = css`
     --lr-select-trigger-min-height: var(--lr-size-2-5rem);
     --lr-select-font-size: var(--lr-font-size-md);
     --lr-select-expand-size: var(--lr-size-1-75rem);
-    /* Unset (the default) leaves min-block-size as a floor only, exactly as before this property
-       existed. Set it to force an exact trigger height (e.g. to pixel-match a sibling text field in
-       the same row) -- this both floors and caps the trigger at that height. */
-    --lr-select-trigger-height: auto;
+    /* --lr-select-trigger-height is intentionally NOT declared here. It is a consumer-facing
+       escape hatch consumed only through the two var() fallbacks on [part='trigger'] below;
+       declaring any value for it (even 'auto') makes those fallback arms unreachable, which is
+       what previously left --lr-select-trigger-min-height as dead code. Leaving it genuinely
+       undeclared keeps both arms live, so the per-tier floor falls out of the fallback with no
+       extra specificity rules, and setting the property from anywhere (inline style, an ancestor,
+       an outer-tree rule) pins an exact height. */
   }
   :host([size='xs']) {
     --lr-select-trigger-padding: var(--lr-size-0-125rem) var(--lr-space-xs);
@@ -33,19 +36,6 @@ export const styles = css`
     --lr-select-trigger-padding: var(--lr-space-m) var(--lr-space-l);
     --lr-select-trigger-min-height: var(--lr-size-3-5rem);
     --lr-select-font-size: var(--lr-font-size-xl);
-  }
-  /* [part='trigger']'s own min-block-size resolves through --lr-select-trigger-height, which
-     :host always declares as 'auto' -- so its var() fallback to --lr-select-trigger-min-height
-     never triggers (a defined 'auto' value isn't "unset" for var() fallback purposes). That's
-     intentional for the default/unsized trigger (preserves this component's original,
-     pre-size floor-free height), but it silently made --lr-select-trigger-min-height dead
-     code for every non-default size too. These four rules restore the floor for xs/s/l/xl
-     specifically, via selector specificity, without touching the default tier. */
-  :host([size='xs']) [part='trigger'],
-  :host([size='s']) [part='trigger'],
-  :host([size='l']) [part='trigger'],
-  :host([size='xl']) [part='trigger'] {
-    min-block-size: var(--lr-select-trigger-min-height);
   }
   [part='form-control-label'] {
     display: block;

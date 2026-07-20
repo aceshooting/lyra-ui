@@ -1987,7 +1987,7 @@ describe('lr-filter (live filter text)', () => {
     expect(values).to.deep.equal([]);
   });
 
-  it('does not emit lr-filter for the clear button, a value write, form.reset(), or closing the listbox', async () => {
+  it('does not emit lr-filter for a value write, form.reset(), or closing the listbox', async () => {
     const form = (await fixture(html`
       <form>
         <lr-combobox name="fruit" clearable>
@@ -2000,11 +2000,8 @@ describe('lr-filter (live filter text)', () => {
     await el.updateComplete;
     await typeQuery(el, 'app');
     const { values } = trackFilter(el);
-
-    // Clear button: resets both the selection and the query programmatically.
-    (el.shadowRoot!.querySelector('[part="clear-button"]') as HTMLButtonElement).click();
-    await el.updateComplete;
-    expect(values, 'clear button must not emit lr-filter').to.deep.equal([]);
+    // The clear button IS a user-driven filter writer -- see the 'clear affordance on the filter
+    // axis' suite below for its own lr-filter coverage.
 
     // Programmatic `value` assignment.
     el.value = 'a';
@@ -2068,5 +2065,303 @@ describe('lr-filter (live filter text)', () => {
 
     expect(values).to.deep.equal(['che']);
     expect(el.value).to.deep.equal(['a']);
+  });
+});
+
+describe('exact-height escape hatch', () => {
+  const combo = (el: LyraCombobox) => el.shadowRoot!.querySelector('[part="combobox"]') as HTMLElement;
+
+  it('keeps the per-size min-height floor when --lr-combobox-trigger-height is unset', async () => {
+    const mEl = (await fixture(basic())) as LyraCombobox;
+    const sEl = (await fixture(html`
+      <lr-combobox size="s"><lr-option value="a">Apple</lr-option></lr-combobox>
+    `)) as LyraCombobox;
+    expect(getComputedStyle(combo(mEl)).minBlockSize).to.equal('40px');
+    expect(getComputedStyle(combo(sEl)).minBlockSize).to.equal('30px');
+  });
+
+  it('pins an exact trigger height with no ::part() rule, at the default and non-default sizes', async () => {
+    const mEl = (await fixture(basic())) as LyraCombobox;
+    mEl.style.setProperty('--lr-combobox-trigger-height', '44px');
+    await mEl.updateComplete;
+    expect(getComputedStyle(combo(mEl)).blockSize).to.equal('44px');
+    expect(getComputedStyle(combo(mEl)).minBlockSize).to.equal('44px');
+
+    const sEl = (await fixture(html`
+      <lr-combobox size="s"><lr-option value="a">Apple</lr-option></lr-combobox>
+    `)) as LyraCombobox;
+    sEl.style.setProperty('--lr-combobox-trigger-height', '44px');
+    await sEl.updateComplete;
+    expect(getComputedStyle(combo(sEl)).blockSize).to.equal('44px');
+  });
+
+  it('does not clip a wrapping multi-select tag row when a height is pinned', async () => {
+    const el = (await fixture(html`
+      <lr-combobox multiple max-options-visible="6" style="inline-size:9rem">
+        <lr-option value="a" selected>Alphabet</lr-option>
+        <lr-option value="b" selected>Buttercup</lr-option>
+        <lr-option value="c" selected>Chrysanthemum</lr-option>
+      </lr-combobox>
+    `)) as LyraCombobox;
+    await el.updateComplete;
+    el.style.setProperty('--lr-combobox-trigger-height', '40px');
+    await el.updateComplete;
+    const box = combo(el);
+    expect(getComputedStyle(box).blockSize).to.equal('40px');
+    // Documented behaviour: the hatch is a single-row affordance. A tag row that wraps past the
+    // pinned height overflows visibly rather than being clipped, so nothing becomes unreachable.
+    expect(getComputedStyle(box).overflow).to.equal('visible');
+    expect(box.scrollHeight).to.be.greaterThan(box.clientHeight);
+  });
+
+  it('renders lr-select, lr-combobox and lr-input at one exact toolbar height with no ::part() rule', async () => {
+    const root = await fixture(html`
+      <div style="display:flex;align-items:center;">
+        <lr-input aria-label="Input" style="--lr-input-control-height:44px"></lr-input>
+        <lr-select aria-label="Select" style="--lr-select-trigger-height:44px"></lr-select>
+        <lr-combobox aria-label="Combobox" style="--lr-combobox-trigger-height:44px">
+          <lr-option value="a">Apple</lr-option>
+        </lr-combobox>
+      </div>
+    `);
+    const parts = [
+      root.querySelector('lr-input')!.shadowRoot!.querySelector('[part="input-wrapper"]') as HTMLElement,
+      root.querySelector('lr-select')!.shadowRoot!.querySelector('[part="trigger"]') as HTMLElement,
+      root.querySelector('lr-combobox')!.shadowRoot!.querySelector('[part="combobox"]') as HTMLElement,
+    ];
+    const heights = parts.map((element) => element.getBoundingClientRect().height);
+    expect(heights, `control heights: ${heights.join(', ')}`).to.deep.equal([44, 44, 44]);
+  });
+});
+
+describe('start/end adornment slots', () => {
+  const part = (el: LyraCombobox, name: string) =>
+    el.shadowRoot!.querySelector(`[part="${name}"]`) as HTMLElement;
+
+  it('renders a slotted glyph inside the trigger, before the field text, with no consumer padding', async () => {
+    const el = (await fixture(html`
+      <lr-combobox size="s" label="Fruit">
+        <svg slot="start" width="12" height="12" aria-hidden="true"><circle cx="6" cy="6" r="5"></circle></svg>
+        <lr-option value="a">Apple</lr-option>
+      </lr-combobox>
+    `)) as LyraCombobox;
+    await el.updateComplete;
+    const start = part(el, 'start');
+    expect(start.hasAttribute('hidden')).to.be.false;
+    const startRect = start.getBoundingClientRect();
+    const boxRect = part(el, 'combobox').getBoundingClientRect();
+    const inputRect = part(el, 'combobox-input').getBoundingClientRect();
+    expect(startRect.width).to.be.greaterThan(0);
+    expect(startRect.left).to.be.at.least(boxRect.left);
+    expect(startRect.right).to.be.at.most(inputRect.left + 1);
+  });
+
+  it('places the end adornment before the expand icon', async () => {
+    const el = (await fixture(html`
+      <lr-combobox label="Fruit">
+        <kbd slot="end">K</kbd>
+        <lr-option value="a">Apple</lr-option>
+      </lr-combobox>
+    `)) as LyraCombobox;
+    await el.updateComplete;
+    const end = part(el, 'end');
+    expect(end.hasAttribute('hidden')).to.be.false;
+    expect(end.compareDocumentPosition(part(el, 'expand-icon')) & Node.DOCUMENT_POSITION_FOLLOWING).to.be.greaterThan(0);
+    expect(end.getBoundingClientRect().right).to.be.at.most(
+      part(el, 'expand-icon').getBoundingClientRect().left + 1,
+    );
+  });
+
+  it('hides both wrappers when nothing is slotted', async () => {
+    const el = (await fixture(basic())) as LyraCombobox;
+    await el.updateComplete;
+    expect(part(el, 'start').hasAttribute('hidden')).to.be.true;
+    expect(part(el, 'end').hasAttribute('hidden')).to.be.true;
+    expect(getComputedStyle(part(el, 'start')).display).to.equal('none');
+    expect(getComputedStyle(part(el, 'end')).display).to.equal('none');
+  });
+
+  it('reveals the wrapper when an adornment is slotted in after first render', async () => {
+    const el = (await fixture(basic())) as LyraCombobox;
+    const glyph = document.createElement('span');
+    glyph.slot = 'start';
+    glyph.textContent = '⌕';
+    el.append(glyph);
+    await el.updateComplete;
+    await el.updateComplete;
+    expect(part(el, 'start').hasAttribute('hidden')).to.be.false;
+  });
+
+  it('places the start adornment on the inline-start under dir="rtl"', async () => {
+    const root = await fixture(html`
+      <div dir="rtl">
+        <lr-combobox label="Fruit">
+          <span slot="start">⌕</span>
+          <lr-option value="a">Apple</lr-option>
+        </lr-combobox>
+      </div>
+    `);
+    const el = root.querySelector('lr-combobox') as LyraCombobox;
+    await el.updateComplete;
+    const startRect = part(el, 'start').getBoundingClientRect();
+    const inputRect = part(el, 'combobox-input').getBoundingClientRect();
+    expect(startRect.left).to.be.greaterThan(inputRect.left);
+  });
+
+  it('does not collect adornment content as an option', async () => {
+    const el = (await fixture(html`
+      <lr-combobox label="Fruit" open>
+        <span slot="start">⌕</span>
+        <kbd slot="end">K</kbd>
+        <lr-option value="a">Apple</lr-option>
+        <lr-option value="b">Banana</lr-option>
+      </lr-combobox>
+    `)) as LyraCombobox;
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelectorAll('[part="option"]').length).to.equal(2);
+  });
+
+  it('is accessible with adornments slotted and the listbox open', async () => {
+    const el = (await fixture(html`
+      <lr-combobox label="Fruit" open>
+        <span slot="start" aria-hidden="true">⌕</span>
+        <kbd slot="end">K</kbd>
+        <lr-option value="a">Apple</lr-option>
+      </lr-combobox>
+    `)) as LyraCombobox;
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelectorAll('[part="option"]').length).to.equal(1);
+    await expect(el).to.be.accessible();
+  });
+});
+
+describe('clear affordance on the filter axis', () => {
+  const clearButton = (el: LyraCombobox) =>
+    el.shadowRoot!.querySelector('[part="clear-button"]') as HTMLButtonElement | null;
+  const inputEl = (el: LyraCombobox) =>
+    el.shadowRoot!.querySelector('[part="combobox-input"]') as HTMLInputElement;
+
+  it('renders the clear button for a query-only state and clearing it emits lr-filter with an empty value', async () => {
+    const el = (await fixture(html`
+      <lr-combobox clearable label="Fruit">
+        <lr-option value="a">Apple</lr-option>
+        <lr-option value="b">Banana</lr-option>
+      </lr-combobox>
+    `)) as LyraCombobox;
+    await typeQuery(el, 'foo');
+    expect(el.value).to.equal('');
+    const button = clearButton(el);
+    expect(button, 'clear button should render for a query with no selection').to.exist;
+
+    const filtered = oneEvent(el, 'lr-filter');
+    button!.click();
+    const event = (await filtered) as CustomEvent<ComboboxFilterDetail>;
+    expect(event.detail.value).to.equal('');
+    await el.updateComplete;
+    expect(inputEl(el).value).to.equal('');
+    expect(clearButton(el)).to.not.exist;
+  });
+
+  it('does not emit change/input/lr-clear for a query-only clear', async () => {
+    const el = (await fixture(html`
+      <lr-combobox clearable label="Fruit"><lr-option value="a">Apple</lr-option></lr-combobox>
+    `)) as LyraCombobox;
+    await typeQuery(el, 'foo');
+    let changes = 0;
+    let clears = 0;
+    let inputs = 0;
+    el.addEventListener('change', () => changes++);
+    el.addEventListener('lr-clear', () => clears++);
+    el.addEventListener('input', () => inputs++);
+
+    clearButton(el)!.click();
+    await el.updateComplete;
+    expect(changes).to.equal(0);
+    expect(clears).to.equal(0);
+    expect(inputs).to.equal(0);
+  });
+
+  it('still emits change and lr-clear when a real selection is cleared', async () => {
+    const el = (await fixture(html`
+      <lr-combobox clearable label="Fruit"><lr-option value="a" selected>Apple</lr-option></lr-combobox>
+    `)) as LyraCombobox;
+    await el.updateComplete;
+    let changes = 0;
+    el.addEventListener('change', () => changes++);
+    const cleared = oneEvent(el, 'lr-clear');
+    clearButton(el)!.click();
+    await cleared;
+    await el.updateComplete;
+    expect(changes).to.equal(1);
+    expect(el.value).to.equal('');
+  });
+
+  it('announces both axes when a selection and a query are cleared together', async () => {
+    const el = (await fixture(html`
+      <lr-combobox clearable label="Fruit">
+        <lr-option value="a">Apple</lr-option>
+        <lr-option value="b" selected>Banana</lr-option>
+      </lr-combobox>
+    `)) as LyraCombobox;
+    await el.updateComplete;
+    await typeQuery(el, 'app');
+    const filters: string[] = [];
+    let changes = 0;
+    let clears = 0;
+    el.addEventListener('lr-filter', (event) => filters.push((event as CustomEvent<ComboboxFilterDetail>).detail.value));
+    el.addEventListener('change', () => changes++);
+    el.addEventListener('lr-clear', () => clears++);
+
+    clearButton(el)!.click();
+    await el.updateComplete;
+    expect(filters).to.deep.equal(['']);
+    expect(changes).to.equal(1);
+    expect(clears).to.equal(1);
+    expect(el.value).to.equal('');
+  });
+
+  it('emits no lr-filter when a selection is cleared with an already-empty query', async () => {
+    const el = (await fixture(html`
+      <lr-combobox clearable label="Fruit"><lr-option value="a" selected>Apple</lr-option></lr-combobox>
+    `)) as LyraCombobox;
+    await el.updateComplete;
+    let filters = 0;
+    el.addEventListener('lr-filter', () => filters++);
+    clearButton(el)!.click();
+    await el.updateComplete;
+    expect(filters).to.equal(0);
+  });
+
+  it('hides the clear button for a single-select query the user cannot see (listbox closed)', async () => {
+    const el = (await fixture(html`
+      <lr-combobox clearable label="Fruit"><lr-option value="a">Apple</lr-option></lr-combobox>
+    `)) as LyraCombobox;
+    await typeQuery(el, 'foo');
+    expect(clearButton(el)).to.exist;
+    // A direct `open = false` write bypasses hide()'s own query reset, which is exactly the state
+    // where `displayValue` shows the selected label (here: nothing) rather than `query`.
+    el.open = false;
+    await el.updateComplete;
+    expect(inputEl(el).value).to.equal('');
+    expect(clearButton(el)).to.not.exist;
+  });
+
+  it('keeps the clear button for a multi-select query while closed, where the query is still visible', async () => {
+    const el = (await fixture(html`
+      <lr-combobox clearable multiple label="Fruit"><lr-option value="a">Apple</lr-option></lr-combobox>
+    `)) as LyraCombobox;
+    await typeQuery(el, 'foo');
+    el.open = false;
+    await el.updateComplete;
+    expect(inputEl(el).value).to.equal('foo');
+    expect(clearButton(el)).to.exist;
+  });
+
+  it('leaves the clear button absent when neither a selection nor a query exists', async () => {
+    const el = (await fixture(html`
+      <lr-combobox clearable label="Fruit" open><lr-option value="a">Apple</lr-option></lr-combobox>
+    `)) as LyraCombobox;
+    await el.updateComplete;
+    expect(clearButton(el)).to.not.exist;
   });
 });

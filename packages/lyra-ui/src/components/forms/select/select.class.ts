@@ -85,13 +85,15 @@ export interface LyraSelectEventMap {
  * @csspart hint - The hint message.
  * @cssprop --lr-select-expand-size - Decorative expand-icon box size, scaled by `size`.
  * @cssprop --lr-select-trigger-padding - Trigger padding shorthand, scaled by `size`.
- * @cssprop --lr-select-trigger-min-height - Trigger block-size floor, scaled by `size`. Applied
- *   only for the `xs`/`s`/`l`/`xl` tiers — see the stylesheet note; the default tier stays
- *   floor-free.
+ * @cssprop --lr-select-trigger-min-height - Trigger block-size floor, scaled by `size`, and live
+ *   at every tier including the default `m` (`2.5rem`, matching `<lr-input>`/`<lr-combobox>` at
+ *   that tier).
  * @cssprop --lr-select-font-size - Trigger font size, scaled by `size`.
- * @cssprop [--lr-select-trigger-height=auto] - Exact trigger height. Left at `auto` the trigger is
- *   floored only; set it to a length to both floor and cap the trigger (e.g. to pixel-match a
- *   sibling field in the same row).
+ * @cssprop --lr-select-trigger-height - Exact trigger height. Unset by default, which leaves
+ *   `--lr-select-trigger-min-height` as a floor only; set it to a length to both floor and cap the
+ *   trigger (e.g. to pixel-match a sibling field in the same toolbar row). Because it is never
+ *   declared by the component itself, it can be set from an ancestor or an outer-tree rule as well
+ *   as inline on the element.
  */
 export class LyraSelect extends LyraElement<LyraSelectEventMap> {
   static formAssociated = true;

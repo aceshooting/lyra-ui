@@ -82,6 +82,17 @@ export const styles = css`
     font: inherit;
     font-size: var(--lr-date-input-font-size);
   }
+  [part='start'],
+  [part='end'] {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    color: var(--lr-color-text-quiet);
+  }
+  [part='start'][hidden],
+  [part='end'][hidden] {
+    display: none;
+  }
   [part='clear-button'],
   [part='expand-button'] {
     flex: 0 0 auto;

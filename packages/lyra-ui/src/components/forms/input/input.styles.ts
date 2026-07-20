@@ -7,6 +7,12 @@ export const styles = css`
     --lr-input-padding-inline: var(--lr-space-s);
     --lr-input-font-size: var(--lr-font-size-md-sm);
     --lr-input-control-min-height: var(--lr-size-2-5rem);
+    /* --lr-input-control-height is intentionally NOT declared here. It is a consumer-facing escape
+       hatch consumed only through the two var() fallbacks on [part='input-wrapper'] below;
+       declaring any value for it (even 'auto') would make those fallback arms unreachable and
+       silently turn --lr-input-control-min-height into dead code. Left undeclared, both arms stay
+       live: the per-tier floor falls out of the fallback, and setting the property from anywhere
+       (inline style, an ancestor, an outer-tree rule) pins an exact height. */
   }
   :host([size='2xs']) {
     --lr-input-padding-block: var(--lr-size-0-0625rem);
@@ -57,7 +63,10 @@ export const styles = css`
     gap: var(--lr-space-xs);
     inline-size: 100%;
     box-sizing: border-box;
-    min-block-size: var(--lr-input-control-min-height);
+    min-block-size: var(--lr-input-control-height, var(--lr-input-control-min-height));
+    /* Pinned only when --lr-input-control-height is set; 'auto' otherwise, so the row keeps
+       growing to fit its own content. */
+    block-size: var(--lr-input-control-height, auto);
     padding-inline: var(--lr-input-padding-inline);
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
     border-radius: var(--lr-radius);

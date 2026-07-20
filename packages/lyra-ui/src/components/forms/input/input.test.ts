@@ -331,4 +331,29 @@ describe('lr-input', () => {
     expect(el.size).to.equal('2xs');
     expect(el.getAttribute('size')).to.equal('2xs');
   });
+
+  describe('exact-height escape hatch', () => {
+    const wrapper = (el: LyraInput) =>
+      el.shadowRoot!.querySelector('[part="input-wrapper"]') as HTMLElement;
+
+    it('keeps the per-size min-height floor when --lr-input-control-height is unset', async () => {
+      const mEl = (await fixture(html`<lr-input aria-label="Name"></lr-input>`)) as LyraInput;
+      const sEl = (await fixture(html`<lr-input size="s" aria-label="Name"></lr-input>`)) as LyraInput;
+      expect(getComputedStyle(wrapper(mEl)).minBlockSize).to.equal('40px');
+      expect(getComputedStyle(wrapper(sEl)).minBlockSize).to.equal('30px');
+    });
+
+    it('pins an exact control height with no ::part() rule, at the default and non-default sizes', async () => {
+      const mEl = (await fixture(html`<lr-input aria-label="Name"></lr-input>`)) as LyraInput;
+      mEl.style.setProperty('--lr-input-control-height', '44px');
+      await mEl.updateComplete;
+      expect(getComputedStyle(wrapper(mEl)).blockSize).to.equal('44px');
+      expect(getComputedStyle(wrapper(mEl)).minBlockSize).to.equal('44px');
+
+      const sEl = (await fixture(html`<lr-input size="s" aria-label="Name"></lr-input>`)) as LyraInput;
+      sEl.style.setProperty('--lr-input-control-height', '44px');
+      await sEl.updateComplete;
+      expect(getComputedStyle(wrapper(sEl)).blockSize).to.equal('44px');
+    });
+  });
 });

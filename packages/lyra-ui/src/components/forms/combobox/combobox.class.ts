@@ -65,6 +65,11 @@ export interface LyraComboboxEventMap {
  * @slot label - Custom label content.
  * @slot hint - Custom hint content.
  * @slot error - Custom error content.
+ * @slot start - Adornment at the inline-start of the trigger row, before the selected-value tags
+ *   and the filter input. Slotted content is decorative chrome, not an option: `collectOptions()`
+ *   only ever collects `<lr-option>` elements from the default slot.
+ * @slot end - Adornment after the filter input and the built-in clear action, and before the
+ *   expand icon — so consumer content never sits outboard of the dropdown chevron.
  * @event {Event} change - The selection changed through user interaction. A bubbling,
  * composed, non-cancelable Event.
  * @event {InputEvent | Event} input - The user typed in the filter or changed the selection. Text
@@ -75,15 +80,18 @@ export interface LyraComboboxEventMap {
  * @event lr-clear - The value was cleared.
  * @event {CustomEvent<ComboboxFilterDetail>} lr-filter - The in-progress filter text changed
  * through user input. `detail.value` is the live filter string, which is not the same thing as the
- * host's `value` (the committed selection). User-input only: the programmatic paths that blank the
- * filter — picking a row, the clear button, `form.reset()`, dismissing the listbox, a `value`
- * write, `setRangeText()` — are all silent, mirroring `<lr-input>`'s `lr-input`.
+ * host's `value` (the committed selection). User-input only: typing and the clear button announce
+ * it, while the programmatic paths that blank the filter — picking a row, `form.reset()`,
+ * dismissing the listbox, a `value` write, `setRangeText()` — are all silent, mirroring
+ * `<lr-input>`'s `lr-input`.
  * @event blur - Re-dispatched from the internal native input as a bubbling, composed event.
  * @event focus - Re-dispatched from the internal native input as a bubbling, composed event.
  * @csspart form-control - The outer wrapper around label, combobox, listbox, error and hint.
  * @csspart form-control-label - The `<label>` element.
  * @csspart combobox - The input container (positioning anchor).
  * @csspart combobox-input - The text input.
+ * @csspart start - Wrapper around the `start` adornment slot; `hidden` while nothing is slotted.
+ * @csspart end - Wrapper around the `end` adornment slot; `hidden` while nothing is slotted.
  * @csspart listbox - The options popover.
  * @csspart option - An option row.
  * @csspart option-dot - An option row's leading status dot (when `dot-color` is set).
@@ -100,7 +108,14 @@ export interface LyraComboboxEventMap {
  * @csspart error - The error message.
  * @csspart hint - The hint message.
  * @cssprop --lr-combobox-trigger-padding - Padding inside the input container.
- * @cssprop --lr-combobox-trigger-min-height - Minimum input-container block size.
+ * @cssprop --lr-combobox-trigger-min-height - Minimum input-container block size, scaled by `size`.
+ * @cssprop --lr-combobox-trigger-height - Exact input-container height. Unset by default, which
+ *   leaves `--lr-combobox-trigger-min-height` as a floor only; set it to a length to both floor and
+ *   cap the row (e.g. to pixel-match `<lr-input>`/`<lr-select>` in the same toolbar). Because it is
+ *   never declared by the component itself, it can be set from an ancestor or an outer-tree rule as
+ *   well as inline on the element. Intended for a single-row combobox: in `multiple` mode a tag row
+ *   long enough to wrap overflows the pinned box visibly (nothing is clipped or made unreachable),
+ *   so leave it unset there.
  * @cssprop --lr-combobox-font-size - Input text size.
  * @cssprop --lr-combobox-tag-padding - Selected-tag padding.
  * @cssprop --lr-combobox-tag-font-size - Selected-tag text size.
@@ -127,7 +142,12 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
   @property({ type: Boolean, reflect: true }) open = false;
   /** Visual size — same `xs`–`xl` scale as `lr-select`'s `size`. */
   @property({ reflect: true }) size: LyraComboboxSize = 'm';
-  /** Show a clear button while the combobox has a value. Mirrors `wa-combobox`'s public name. */
+  /** Show a clear button while the combobox has something to clear on either axis: a committed
+   *  selection, or visible filter text (the open listbox in single-select, any time in `multiple`
+   *  mode — a closed single-select shows the selected label, not the query, so a stale query alone
+   *  never surfaces the button). Clearing a selection emits `input`/`change`/`lr-clear`; clearing
+   *  filter text emits `lr-filter` with an empty `value`; each fires only for the axis that
+   *  actually changed. Mirrors `wa-combobox`'s public name. */
   @property({ type: Boolean, reflect: true }) clearable = false;
   /** @deprecated Use `clearable`. Retained as a compatibility alias. */
   @property({ type: Boolean, attribute: 'with-clear' }) withClear = false;
@@ -149,12 +169,14 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
 
   // The in-progress filter text. Public read access is the `lr-filter` event
   // rather than a property, so consumers never have to reach into the shadow
-  // input for it. Exactly one writer is user-driven and therefore emits:
-  // `onInput()`. Every other assignment below -- `setRangeText()` (a
-  // programmatic editing API; native `<input>.setRangeText()` likewise fires
-  // no `input` event), `formResetCallback()`, `hide()`, `pickRow()`'s two
-  // commit resets, and `clear()` -- is the component blanking its own filter,
-  // never the user typing, so none of them emit.
+  // input for it. Exactly two writers are user-driven and therefore emit:
+  // `onInput()` (typing) and `clear()` (the clear button, but only when the
+  // query it blanks was actually non-empty). Every other assignment below --
+  // `setRangeText()` (a programmatic editing API; native
+  // `<input>.setRangeText()` likewise fires no `input` event),
+  // `formResetCallback()`, `hide()`, and `pickRow()`'s two commit resets -- is
+  // the component blanking its own filter, never the user driving it, so none
+  // of them emit.
   @state() private query = '';
   @state() private activeIndex = -1;
   @state() private options: LyraOption[] = [];
@@ -171,6 +193,8 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
   @state() private hasHintSlot = false;
   @state() private hasErrorSlot = false;
   @state() private hasLabelSlot = false;
+  @state() private hasStartSlot = false;
+  @state() private hasEndSlot = false;
   @state() private loading = false;
   @state() private asyncRows: ComboboxSourceRow[] = [];
   @query('[part="combobox-input"]') private inputEl?: HTMLInputElement;
@@ -340,6 +364,8 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
       this.hasHintSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'hint');
       this.hasErrorSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'error');
       this.hasLabelSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'label');
+      this.hasStartSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'start');
+      this.hasEndSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'end');
     }
     // In source (async) mode, `labelFor()` can only resolve a programmatically
     // -set value's label from `asyncRows` -- and nothing normally populates
@@ -795,13 +821,25 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
     this.emitValueEvents();
   }
 
+  /**
+   * The clear button clears both axes the control owns — the committed selection and the
+   * in-progress filter text — but each announces only its own change. A query-only clear must stay
+   * silent on `input`/`change`/`lr-clear` (there is no selection transition to report; that early
+   * return is why the button used to be gated on the selection alone), while a selection-only clear
+   * must stay silent on `lr-filter` (the filter text never moved).
+   */
   private clear(): void {
-    if (this._selected.length === 0) return;
-    this.value = [];
+    const hadSelection = this._selected.length > 0;
+    const queryChanged = this.query !== '';
+    if (!hadSelection && !queryChanged) return;
+    if (hadSelection) this.value = [];
     this.query = '';
     if (this.source) this.runSource(this.query);
-    this.emitValueEvents();
-    this.emit('lr-clear');
+    if (hadSelection) {
+      this.emitValueEvents();
+      this.emit('lr-clear');
+    }
+    if (queryChanged) this.emit('lr-filter', { value: this.query });
   }
 
   private onInput = (e: Event): void => {
@@ -809,8 +847,8 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
     this.activeIndex = -1;
     this.show();
     if (this.source) this.runSource(this.query);
-    // The only user-driven `query` writer, so the only one that announces the
-    // new filter text (see the `query` declaration above).
+    // One of the two user-driven `query` writers that announce the new filter text (the other is
+    // the clear button, via `clear()`) -- see the `query` declaration above.
     this.emit('lr-filter', { value: this.query });
   };
 
@@ -871,6 +909,14 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
 
   private onLabelSlotChange = (e: Event): void => {
     this.hasLabelSlot = (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length > 0;
+  };
+
+  private onStartSlotChange = (e: Event): void => {
+    this.hasStartSlot = (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length > 0;
+  };
+
+  private onEndSlotChange = (e: Event): void => {
+    this.hasEndSlot = (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length > 0;
   };
 
   private onKeyDown = (e: KeyboardEvent): void => {
@@ -994,6 +1040,11 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
     const shownTags = this.multiple ? this._selected.slice(0, this.maxOptionsVisible) : [];
     const extra = this.multiple ? this._selected.length - shownTags.length : 0;
     const hasValue = this._selected.length > 0;
+    // The clear button covers both axes, so it also has to render for a filter-only state.
+    // `displayValue` only surfaces `query` while the listbox is open (single-select) or in
+    // `multiple` mode -- outside those, a closed single-select shows the *selected label*, so a
+    // button gated on the bare `query !== ''` would offer to clear text the user cannot see.
+    const hasVisibleQuery = this.query !== '' && (this.open || this.multiple);
     const hasHint = this.hasHintSlot || this.hint.length > 0;
     const hasError = this.hasErrorSlot || this.errorText.length > 0;
     const hasLabel = this.hasLabelSlot || this.label.length > 0;
@@ -1005,6 +1056,9 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
           ${this.label}<slot name="label" @slotchange=${this.onLabelSlotChange}></slot>
         </label>
         <div part="combobox" @mousedown=${this.onComboMouseDown}>
+          <span part="start" ?hidden=${!this.hasStartSlot}>
+            <slot name="start" @slotchange=${this.onStartSlotChange}></slot>
+          </span>
           <div part="tags">
             ${shownTags.map(
               (v) => html`<span part="tag"
@@ -1051,7 +1105,7 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
             @focus=${this.onInputFocus}
             @blur=${this.onInputBlur}
           />
-          ${(this.clearable || this.withClear) && hasValue
+          ${(this.clearable || this.withClear) && (hasValue || hasVisibleQuery)
             ? html`<button
                 part="clear-button"
                 type="button"
@@ -1065,6 +1119,9 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
                 ${closeIcon()}
               </button>`
             : ''}
+          <span part="end" ?hidden=${!this.hasEndSlot}>
+            <slot name="end" @slotchange=${this.onEndSlotChange}></slot>
+          </span>
           <span part="expand-icon" aria-hidden="true">${chevronIcon()}</span>
         </div>
         <div

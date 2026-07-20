@@ -909,10 +909,29 @@ describe('per-size min-height floor', () => {
     }
   });
 
-  it('leaves the default (m) tier unaffected by the fix -- no enforced floor, matching pre-fix behavior', async () => {
+  it('enforces the same floor on the default (m) tier, matching lr-input/lr-combobox at that tier', async () => {
     const el = (await fixture(html`<lr-select label="Role"><lr-option value="a">A</lr-option></lr-select>`)) as LyraSelect;
     const t = el.shadowRoot!.querySelector('[part="trigger"]') as HTMLElement;
-    expect(getComputedStyle(t).minBlockSize).to.equal('0px');
+    expect(getComputedStyle(t).minBlockSize).to.equal('40px');
+  });
+
+  it('lets a consumer raise --lr-select-trigger-min-height at the default tier', async () => {
+    const el = (await fixture(html`<lr-select label="Role"><lr-option value="a">A</lr-option></lr-select>`)) as LyraSelect;
+    el.style.setProperty('--lr-select-trigger-min-height', '52px');
+    await el.updateComplete;
+    const t = el.shadowRoot!.querySelector('[part="trigger"]') as HTMLElement;
+    expect(getComputedStyle(t).minBlockSize).to.equal('52px');
+  });
+
+  it('keeps --lr-select-trigger-min-height live at size="s" with no specificity patch rule', async () => {
+    const el = (await fixture(
+      html`<lr-select size="s" label="Role"><lr-option value="a">A</lr-option></lr-select>`,
+    )) as LyraSelect;
+    const t = el.shadowRoot!.querySelector('[part="trigger"]') as HTMLElement;
+    expect(getComputedStyle(t).minBlockSize).to.equal('30px');
+    el.style.setProperty('--lr-select-trigger-min-height', '33px');
+    await el.updateComplete;
+    expect(getComputedStyle(t).minBlockSize).to.equal('33px');
   });
 
   it('a consumer-pinned --lr-select-trigger-height still overrides the per-size floor', async () => {
@@ -923,5 +942,6 @@ describe('per-size min-height floor', () => {
     await el.updateComplete;
     const t = el.shadowRoot!.querySelector('[part="trigger"]') as HTMLElement;
     expect(getComputedStyle(t).blockSize).to.equal('43px');
+    expect(getComputedStyle(t).minBlockSize).to.equal('43px');
   });
 });

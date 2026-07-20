@@ -84,3 +84,21 @@ export const Localized: Story = {
     ></lr-date-input>
   `,
 };
+
+export const Adornments: Story = {
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'The `start` and `end` slots place decorative chrome inside the input row. `end` renders ' +
+          'before the calendar toggle, so consumer content is never outboard of it.',
+      },
+    },
+  },
+  render: () => html`
+    <lr-date-input label="Departure" with-clear value="2026-07-15" style="max-width: 22rem">
+      <span slot="start" aria-hidden="true">✈</span>
+      <small slot="end">UTC</small>
+    </lr-date-input>
+  `,
+};
