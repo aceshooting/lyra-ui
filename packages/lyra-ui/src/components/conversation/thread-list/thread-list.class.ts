@@ -3,7 +3,7 @@ import { property, query, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import type { LyraConversationItem } from '../conversation-item/conversation-item.class.js';
 import '../conversation-item/conversation-item.js';
-import type { LyraVirtualList } from '../../layout/virtual-list/virtual-list.class.js';
+import type { LyraVirtualList, VirtualListGroup } from '../../layout/virtual-list/virtual-list.class.js';
 import '../../layout/virtual-list/virtual-list.js';
 import type { LyraLiveRegion } from '../../utility/live-region/live-region.class.js';
 import '../../utility/live-region/live-region.js';
@@ -50,6 +50,9 @@ type ThreadListItem =
     }
   | { kind: 'thread'; thread: ChatThread };
 
+/** Only used when a keyboard nudge past the rendered window happens with no rendered row to measure
+ *  -- roughly one default-density conversation row. */
+const FALLBACK_ROW_HEIGHT_PX = 48;
 const ICON_VIEW_BOX = '0 0 24 24';
 const ICON_STROKE_WIDTH = '1.75';
 
@@ -140,6 +143,11 @@ function defaultFilter(thread: ChatThread, query: string): boolean {
  * @csspart row-action - A built-in pin/archive/delete icon button (data mode, when `rowActions` includes it).
  * @csspart pin-glyph - The small pin indicator shown in a pinned row's `meta` slot (data mode).
  * @csspart group-header - A date/custom group header in data mode.
+ * @csspart group-sticky - `sticky-groups` only: the pinned copy of the current group's header,
+ *   exported from the internal `lr-virtual-list`'s sticky layer. It wraps a full copy of the
+ *   `group-header`/`group-toggle`/`group-label`/`group-icon` markup (which therefore styles both the
+ *   real header row and the pinned copy), and carries `aria-hidden` — style it for the pinned band
+ *   itself, e.g. a shadow or a border under the band.
  * @csspart group-toggle - The controlled group expand/collapse button.
  * @csspart group-label - The group label inside `group-toggle`.
  * @csspart group-icon - The decorative expand/collapse glyph.
@@ -253,6 +261,15 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
    *  division of responsibility slotted mode already has for every other row property. */
   @property({ type: Boolean, reflect: true }) compact = false;
 
+  /** Data mode only: pins the current date/custom group's header to the top of the scroll viewport
+   *  while its rows are in view, pushing it off as the next group's header arrives. Group headers
+   *  are ordinary virtualized rows, so this renders a `aria-hidden` copy of the header into
+   *  `lr-virtual-list`'s sticky layer (`[part="group-sticky"]`) — the real row keeps the
+   *  `role="heading"` semantics and the tab order, and the copy stays clickable so the pinned
+   *  toggle still requests a collapse. Default `false` leaves rendering exactly as it is without
+   *  this feature; `grouping="none"` has no headers to pin, so it is a no-op there. */
+  @property({ type: Boolean, attribute: 'sticky-groups', reflect: true }) stickyGroups = false;
+
   /** Accessible name for the list region. Defaults to the localized `threadListLabel`. */
   @property() label = '';
 
@@ -270,6 +287,10 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
    *  to it, so adding it leaves every measured row height unchanged. Applies to rows only -- group
    *  headers never pass through `wrapRow` and never carry `row-wrapper`. */
   @property({ attribute: false }) wrapRow?: (thread: ChatThread, row: TemplateResult) => TemplateResult;
+
+  /** Group header items by id, refreshed whenever the item list is rebuilt, so the sticky callback
+   *  can render the same header the anchor points at. */
+  private readonly stickyGroupItems = new Map<string, Extract<ThreadListItem, { kind: 'group' }>>();
 
   @state() private searchText = '';
   @state() private hasEmptySlot = false;
@@ -475,9 +496,15 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
     this.optionEl(rows[0])?.focus();
   };
 
+  // Data mode's rows are rendered into `lr-virtual-list`'s own shadow root (this component only
+  // supplies the `renderItem` callback), so they are reached through that component's public
+  // `renderedRows` accessor -- the currently-windowed row wrappers -- rather than by querying its
+  // render root directly. Slotted mode's rows are this element's own light-DOM children.
   private rowElements(): LyraConversationItem[] {
-    const scope: ParentNode = this.dataMode ? (this.virtualListEl?.renderRoot ?? this) : this;
-    return [...scope.querySelectorAll<LyraConversationItem>('lr-conversation-item')];
+    if (!this.dataMode) return [...this.querySelectorAll<LyraConversationItem>('lr-conversation-item')];
+    return (this.virtualListEl?.renderedRows ?? []).flatMap((row) => [
+      ...row.querySelectorAll<LyraConversationItem>('lr-conversation-item'),
+    ]);
   }
 
   private optionEl(row: LyraConversationItem): HTMLElement | null {
@@ -504,18 +531,32 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
       this.optionEl(rows[targetIndex])?.focus();
       return;
     }
-    // Past the currently-rendered edge -- nudge the internal virtual-list's scroll position by
-    // roughly one row so the next row mounts, then focus whichever row ends up at that edge.
-    const base = this.virtualListEl?.renderRoot.querySelector('[part="base"]') as HTMLElement | null;
-    if (!base) return;
-    const rowHeight = rows[0]?.getBoundingClientRect().height || 48;
-    base.scrollTop += e.key === 'ArrowDown' ? rowHeight : -rowHeight;
-    base.dispatchEvent(new Event('scroll'));
-    requestAnimationFrame(() => {
-      const refreshed = this.rowElements();
-      const edgeRow = e.key === 'ArrowDown' ? refreshed[refreshed.length - 1] : refreshed[0];
-      if (edgeRow) this.optionEl(edgeRow)?.focus();
-    });
+    // Past the currently-rendered edge -- nudge the internal virtual list's scroll position by
+    // roughly one row so the next row mounts, then focus whichever row ends up at that edge. Both
+    // halves go through that component's public surface: its `scrollContainer`, and its `lr-scroll`
+    // notification, which fires once the scroll has been folded into a re-render. Waiting for a
+    // plain animation frame instead would race that re-render, and forcing it with a synthetic
+    // `scroll` event dispatched into the child's shadow root would be a fabricated user gesture.
+    const list = this.virtualListEl;
+    const container = list?.scrollContainer;
+    if (!list || !container) return;
+    const rowHeight = rows[0]?.getBoundingClientRect().height || FALLBACK_ROW_HEIGHT_PX;
+    const before = container.scrollTop;
+    container.scrollTop = before + (e.key === 'ArrowDown' ? rowHeight : -rowHeight);
+    // Already at that end of the list: nothing more will mount, and the focused row stays put.
+    if (container.scrollTop === before) return;
+    const key = e.key;
+    list.addEventListener(
+      'lr-scroll',
+      () => {
+        void list.updateComplete.then(() => {
+          const refreshed = this.rowElements();
+          const edgeRow = key === 'ArrowDown' ? refreshed[refreshed.length - 1] : refreshed[0];
+          if (edgeRow) this.optionEl(edgeRow)?.focus();
+        });
+      },
+      { once: true },
+    );
   };
 
   private renderRowActions(thread: ChatThread): TemplateResult {
@@ -556,10 +597,22 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
     `;
   }
 
-  private renderGroup(item: Extract<ThreadListItem, { kind: 'group' }>): TemplateResult {
+  /** The header markup for one group. The `sticky` copy is identical except that it carries no
+   *  heading semantics: `lr-virtual-list` renders it `aria-hidden` into its sticky layer, so the
+   *  real row below stays the single exposed heading for the group -- a `role="heading"` here would
+   *  be a second one the moment both are in the DOM at once. */
+  private renderGroupHeader(
+    item: Extract<ThreadListItem, { kind: 'group' }>,
+    options: { sticky?: boolean } = {},
+  ): TemplateResult {
     const nextCollapsed = !item.collapsed;
     return html`
-      <div part="group-header" data-group-id=${item.id} role="heading" aria-level="2">
+      <div
+        part="group-header"
+        data-group-id=${item.id}
+        role=${options.sticky ? nothing : 'heading'}
+        aria-level=${options.sticky ? nothing : '2'}
+      >
         <button
           type="button"
           part="group-toggle"
@@ -618,7 +671,27 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
 
   private renderItem = (item: unknown): unknown => {
     const listItem = item as ThreadListItem;
-    return listItem.kind === 'group' ? this.renderGroup(listItem) : this.renderRow(listItem.thread);
+    return listItem.kind === 'group' ? this.renderGroupHeader(listItem) : this.renderRow(listItem.thread);
+  };
+
+  /** Position anchors for `lr-virtual-list`'s sticky layer: one entry per group header row, keyed by
+   *  group id. Every label is empty on purpose -- the header is already rendered as a real row, so a
+   *  `[part="group"]` marker would be a second, duplicate header stacked on top of it. */
+  private stickyAnchors(items: ThreadListItem[]): VirtualListGroup[] {
+    const anchors: VirtualListGroup[] = [];
+    this.stickyGroupItems.clear();
+    items.forEach((item, index) => {
+      if (item.kind !== 'group') return;
+      this.stickyGroupItems.set(item.id, item);
+      anchors.push({ key: item.id, label: '', startIndex: index });
+    });
+    return anchors;
+  }
+
+  // Stable identity: a fresh arrow per render would invalidate the child's property on every update.
+  private renderStickyGroup = (group: VirtualListGroup): unknown => {
+    const item = this.stickyGroupItems.get(String(group.key));
+    return item ? this.renderGroupHeader(item, { sticky: true }) : nothing;
   };
 
   private itemKey = (item: unknown): string => {
@@ -676,9 +749,11 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
                 this.searchText.trim() ? this.localize('noMatches') : this.localize('threadListEmpty')
               }</div>`
             : html`<lr-virtual-list
-                exportparts="base:viewport, row:row, row-wrapper:row-wrapper, group-header:group-header, group-toggle:group-toggle, group-label:group-label, group-icon:group-icon, row-leading:row-leading, row-content:row-content, row-meta:row-meta, row-actions:row-actions, row-action:row-action, pin-glyph:pin-glyph, row-item-base:row-item-base, row-item-option:row-item-option, row-item-leading:row-item-leading, row-item-content:row-item-content, row-item-title:row-item-title, row-item-title-input:row-item-title-input, row-item-rename-button:row-item-rename-button, row-item-excerpt:row-item-excerpt, row-item-meta:row-item-meta, row-item-timestamp:row-item-timestamp, row-item-actions:row-item-actions"
+                exportparts="base:viewport, sticky-group:group-sticky, row:row, row-wrapper:row-wrapper, group-header:group-header, group-toggle:group-toggle, group-label:group-label, group-icon:group-icon, row-leading:row-leading, row-content:row-content, row-meta:row-meta, row-actions:row-actions, row-action:row-action, pin-glyph:pin-glyph, row-item-base:row-item-base, row-item-option:row-item-option, row-item-leading:row-item-leading, row-item-content:row-item-content, row-item-title:row-item-title, row-item-title-input:row-item-title-input, row-item-rename-button:row-item-rename-button, row-item-excerpt:row-item-excerpt, row-item-meta:row-item-meta, row-item-timestamp:row-item-timestamp, row-item-actions:row-item-actions"
                 row-height="auto"
                 .items=${items}
+                .groups=${this.stickyGroups ? this.stickyAnchors(items) : undefined}
+                .renderStickyGroup=${this.stickyGroups ? this.renderStickyGroup : undefined}
                 .renderItem=${this.renderItem}
                 .keyFunction=${this.itemKey}
                 .activeId=${this.activeId}

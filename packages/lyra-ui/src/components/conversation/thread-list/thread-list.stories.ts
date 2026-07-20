@@ -315,3 +315,41 @@ export const FillsItsContainer: Story = {
     </div>
   `,
 };
+
+/** `sticky-groups` pins the current date group's header to the top of the scroll viewport while its
+ *  rows are in view, and pushes it off as the next group's header arrives. The pinned copy stays
+ *  clickable -- its toggle requests the same `lr-group-toggle` collapse as the real header row --
+ *  while the real row keeps the heading semantics and the tab order. Style the pinned band itself
+ *  through `::part(group-sticky)`. */
+export const StickyGroups: Story = {
+  render: () => {
+    const many: ChatThread[] = [
+      ...Array.from({ length: 12 }, (_, i) => ({
+        id: `today-${i}`,
+        title: `Today conversation ${i + 1}`,
+        excerpt: 'Scroll down to watch the group header pin and hand over.',
+        timestamp: hoursAgo(i + 1),
+      })),
+      ...Array.from({ length: 12 }, (_, i) => ({
+        id: `yesterday-${i}`,
+        title: `Yesterday conversation ${i + 1}`,
+        timestamp: daysAgo(1),
+      })),
+      ...Array.from({ length: 12 }, (_, i) => ({
+        id: `older-${i}`,
+        title: `Earlier conversation ${i + 1}`,
+        timestamp: daysAgo(12 + i),
+      })),
+    ];
+    return html`
+      <style>
+        .sticky-demo::part(group-sticky) {
+          box-shadow: var(--lr-shadow);
+        }
+      </style>
+      <div style="block-size:400px;inline-size:320px;border:1px solid var(--lr-color-border);">
+        <lr-thread-list class="sticky-demo" sticky-groups .threads=${many}></lr-thread-list>
+      </div>
+    `;
+  },
+};

@@ -3,6 +3,7 @@ import './thread-list.js';
 import '../../overlays/chip/chip.js';
 import type { LyraThreadList } from './thread-list.js';
 import type { LyraConversationItem } from '../conversation-item/conversation-item.class.js';
+import type { LyraVirtualList } from '../../layout/virtual-list/virtual-list.class.js';
 import { styles } from './thread-list.styles.js';
 
 type ChatThreadLike = { id: string };
@@ -955,6 +956,225 @@ describe('data-mode row part forwarding', () => {
 it('resets the native search-cancel glyph on the search field', () => {
   const css = styles.cssText.replace(/\s+/g, ' ');
   expect(css).to.match(/\[part='search-input'\]::-webkit-search-cancel-button/);
+});
+
+describe('keyboard navigation past the rendered window', () => {
+  it('mounts and focuses the next row without dispatching a synthetic scroll event', async () => {
+    // Pinning each row box to exactly the internal list's own unmeasured-row estimate keeps this
+    // fixture's offsets stable as new rows mount: measurement then never moves an earlier row, so
+    // the list's scroll-anchoring correction never runs and Chromium's ResizeObserver loop guard
+    // stays out of it. What this test is about -- which rows exist, where focus lands, and what
+    // events reach the scroll container -- is unaffected.
+    const wrapper = await fixture(html`
+      <div>
+        <style>
+          lr-thread-list::part(row) {
+            block-size: 48px;
+            overflow: hidden;
+          }
+        </style>
+        <lr-thread-list
+          style="block-size:200px"
+          grouping="none"
+          .threads=${manyThreads.slice(0, 20)}
+        ></lr-thread-list>
+      </div>
+    `);
+    const el = wrapper.querySelector('lr-thread-list') as LyraThreadList;
+    await el.updateComplete;
+    await nextFrame();
+    await nextFrame();
+    await el.updateComplete;
+
+    const viewport = viewportEl(el);
+    const scrollEvents: boolean[] = [];
+    viewport.addEventListener('scroll', (e) => scrollEvents.push(e.isTrusted));
+
+    const rowsBefore = dataRows(el);
+    expect(rowsBefore.length).to.be.greaterThan(1);
+    expect(rowsBefore.length, 'the window is smaller than the full list').to.be.lessThan(20);
+    const lastId = rowsBefore[rowsBefore.length - 1].id;
+    (rowsBefore[rowsBefore.length - 1].shadowRoot!.querySelector('[part="option"]') as HTMLElement).focus();
+
+    el.shadowRoot!
+      .querySelector('[part="list"]')!
+      .dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, composed: true }));
+    await nextFrame();
+    await nextFrame();
+    await el.updateComplete;
+
+    const rowsAfter = dataRows(el);
+    const newLast = rowsAfter[rowsAfter.length - 1];
+    expect(newLast.id, 'a further row mounted past the previous window edge').to.not.equal(lastId);
+    expect(viewport.scrollTop, 'the list actually scrolled').to.be.greaterThan(0);
+    expect(newLast.shadowRoot!.activeElement === newLast.shadowRoot!.querySelector('[part="option"]')).to.be.true;
+
+    expect(scrollEvents.length, 'the scroll really happened').to.be.greaterThan(0);
+    expect(
+      scrollEvents.every((trusted) => trusted),
+      'no synthetic scroll event is dispatched at the child',
+    ).to.be.true;
+  });
+
+  it('does nothing at the very end of the list', async () => {
+    const el = (await fixture(
+      html`<lr-thread-list style="block-size:400px" grouping="none" .threads=${manyThreads.slice(0, 3)}></lr-thread-list>`,
+    )) as LyraThreadList;
+    await el.updateComplete;
+    await nextFrame();
+    const rows = dataRows(el);
+    (rows[rows.length - 1].shadowRoot!.querySelector('[part="option"]') as HTMLElement).focus();
+
+    el.shadowRoot!
+      .querySelector('[part="list"]')!
+      .dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, composed: true }));
+    await nextFrame();
+    await nextFrame();
+    expect(viewportEl(el).scrollTop).to.equal(0);
+    const last = rows[rows.length - 1];
+    expect(last.shadowRoot!.activeElement === last.shadowRoot!.querySelector('[part="option"]')).to.be.true;
+  });
+});
+
+describe('sticky group headers', () => {
+  // Two well-populated date groups, so there is something to scroll through *inside* a group and a
+  // real boundary to cross -- a single group can never show the swap.
+  const groupedThreads = [
+    ...Array.from({ length: 25 }, (_, i) => ({ id: `today-${i}`, title: `Today thread ${i}`, timestamp: now })),
+    ...Array.from({ length: 25 }, (_, i) => ({
+      id: `yday-${i}`,
+      title: `Yesterday thread ${i}`,
+      timestamp: new Date(now.getTime() - DAY_MS),
+    })),
+  ];
+
+  function virtualList(el: LyraThreadList): LyraVirtualList {
+    return el.shadowRoot!.querySelector('lr-virtual-list') as LyraVirtualList;
+  }
+
+  function band(el: LyraThreadList): HTMLElement | null {
+    return virtualList(el).shadowRoot!.querySelector<HTMLElement>('[part~="sticky-group"]');
+  }
+
+  async function mount(sticky: boolean): Promise<LyraThreadList> {
+    const el = (await fixture(
+      html`<lr-thread-list style="block-size:300px" ?sticky-groups=${sticky} .threads=${groupedThreads}></lr-thread-list>`,
+    )) as LyraThreadList;
+    await el.updateComplete;
+    await nextFrame();
+    await nextFrame();
+    await el.updateComplete;
+    return el;
+  }
+
+  async function scrollTo(el: LyraThreadList, top: number): Promise<void> {
+    const viewport = viewportEl(el);
+    viewport.scrollTop = top;
+    viewport.dispatchEvent(new Event('scroll'));
+    await nextFrame();
+    await el.updateComplete;
+    await nextFrame();
+    await virtualList(el).updateComplete;
+  }
+
+  /** The index of a group header item inside the virtual list's own item array. */
+  function groupIndex(el: LyraThreadList, id: string): number {
+    return renderedItems(el).findIndex((item) => item.kind === 'group' && item.id === id);
+  }
+
+  it('pins the current group header and swaps it at the next group', async () => {
+    const el = await mount(true);
+    const list = virtualList(el);
+    const viewport = viewportEl(el);
+
+    const pinned = band(el);
+    expect(pinned === null, 'a band is rendered for the first group').to.be.false;
+    expect(pinned!.textContent).to.contain('Today');
+    expect(pinned!.getBoundingClientRect().top).to.be.closeTo(viewport.getBoundingClientRect().top, 1);
+
+    // Deep inside the Today group -- still pinned to the top of the viewport.
+    await scrollTo(el, list.offsetForIndex(10));
+    expect(band(el)!.textContent).to.contain('Today');
+    expect(band(el)!.getBoundingClientRect().top).to.be.closeTo(viewport.getBoundingClientRect().top, 1);
+
+    // Past the Yesterday header row.
+    const yesterdayIndex = groupIndex(el, 'yesterday');
+    expect(yesterdayIndex).to.be.greaterThan(0);
+    await scrollTo(el, list.offsetForIndex(yesterdayIndex + 4));
+    expect(band(el)!.textContent).to.contain('Yesterday');
+  });
+
+  it('keeps the pinned toggle clickable, emitting lr-group-toggle for the pinned group', async () => {
+    const el = await mount(true);
+    const pinnedToggle = band(el)!.querySelector<HTMLButtonElement>('[part~="group-toggle"]')!;
+    expect(getComputedStyle(pinnedToggle).pointerEvents, 'the copy opts back into pointer events').to.equal('auto');
+
+    const event = oneEvent(el, 'lr-group-toggle');
+    pinnedToggle.click();
+    const detail = (await event).detail;
+    expect(detail.id).to.equal('today');
+    expect(detail.collapsed).to.be.true;
+  });
+
+  it('keeps the real row as the only exposed heading, and adds no tab stop', async () => {
+    const el = await mount(true);
+    const root = virtualList(el).shadowRoot!;
+
+    const realHeaders = [...root.querySelectorAll('[part~="group-header"][role="heading"]')];
+    expect(realHeaders.length, 'the real group header row owns the heading').to.equal(1);
+    expect(realHeaders[0].getAttribute('aria-level')).to.equal('2');
+
+    const copy = band(el)!;
+    expect(copy.getAttribute('aria-hidden')).to.equal('true');
+    expect(copy.querySelector('[role="heading"]') === null, 'the copy is not a second heading').to.be.true;
+    expect(copy.querySelector<HTMLElement>('[part~="group-toggle"]')!.tabIndex).to.equal(-1);
+
+    // Every remaining Tab stop is a real row's, not the copy's.
+    const tabbable = [...root.querySelectorAll<HTMLElement>('button, [tabindex]')].filter((node) => node.tabIndex >= 0);
+    expect(tabbable.every((node) => node.closest('[part~="sticky-group"]') === null)).to.be.true;
+  });
+
+  it('renders exactly as before when sticky-groups is unset', async () => {
+    const plain = await mount(false);
+    const list = virtualList(plain);
+    expect(band(plain) === null, 'no band element at all').to.be.true;
+    expect(list.renderStickyGroup === undefined, 'no sticky callback is handed to the list').to.be.true;
+    expect(list.groups === undefined, 'no position anchors are handed to the list').to.be.true;
+    expect(plain.stickyGroups).to.be.false;
+    expect(plain.hasAttribute('sticky-groups')).to.be.false;
+    // The anchor-only entries must never render a second, empty group marker either.
+    expect(list.shadowRoot!.querySelectorAll('[part="group"]').length).to.equal(0);
+
+    const sticky = await mount(true);
+    expect(sticky.hasAttribute('sticky-groups'), 'the attribute reflects').to.be.true;
+    expect(virtualList(sticky).shadowRoot!.querySelectorAll('[part="group"]').length, 'still no markers').to.equal(0);
+  });
+
+  it('exports the band as the group-sticky part', async () => {
+    const wrapper = await fixture(html`
+      <div>
+        <style>
+          lr-thread-list::part(group-sticky) {
+            outline: 3px solid rgb(1, 2, 3);
+          }
+        </style>
+        <lr-thread-list style="block-size:300px" sticky-groups .threads=${groupedThreads}></lr-thread-list>
+      </div>
+    `);
+    const el = wrapper.querySelector('lr-thread-list') as LyraThreadList;
+    await el.updateComplete;
+    await nextFrame();
+    await nextFrame();
+    await el.updateComplete;
+    expect(virtualList(el).getAttribute('exportparts')).to.contain('sticky-group:group-sticky');
+    expect(getComputedStyle(band(el)!).outlineColor).to.equal('rgb(1, 2, 3)');
+  });
+
+  it('is accessible with a pinned group header', async () => {
+    const el = await mount(true);
+    expect(band(el) === null, 'the band is present for the axe run').to.be.false;
+    await expect(el).to.be.accessible();
+  });
 });
 
 describe('compact forwarding', () => {
