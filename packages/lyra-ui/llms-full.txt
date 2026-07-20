@@ -71,7 +71,7 @@ module-resolution failure, not a silent no-op — `exports` maps `./components/*
   `lr-bar-chart`, `lr-pie-chart`, `lr-doughnut-chart`, `lr-radar-chart`, `lr-polar-area-chart`,
   `lr-bubble-chart`, `lr-scatter-chart`), `lr-box-plot`, `lr-histogram`, `lr-map`, `lr-graph`,
   `lr-knowledge-graph-explorer`, and `lr-geojson-view`. Those always need their own subpath import.
-  The barrel also re-exports every class and type (127 `Lyra*EventMap` types included), so it is the
+  The barrel also re-exports every class and type (every `Lyra*EventMap` type included), so it is the
   one import that defeats tree-shaking — prefer per-component entries in application code.
 - **`lr-flag`** registers from the barrel, but resolving a flag by `country`/`language` (rather than
   a pre-resolved `src`) additionally needs
@@ -397,7 +397,7 @@ Not custom elements — infrastructure the components compose. Importable via
   Returns a cleanup function that stops the `autoUpdate` loop — call it in `disconnectedCallback()`.
   Used by `lr-combobox`, `lr-select`, `lr-date-input`, `lr-export-button`, `lr-model-select`,
   `lr-mention-popover`, `lr-tool-call-chip`, `lr-citation-badge`, and `lr-menu`.
-- **`prefix.ts`** — `LYRA_PREFIX = 'lyra'`; `tag(name)` → `` `lr-${name}` ``; `defineElement(name, ctor)`,
+- **`prefix.ts`** — `LYRA_PREFIX = 'lr'`; `tag(name)` → `` `lr-${name}` ``; `defineElement(name, ctor)`,
   an idempotent `customElements.define` that is safe if a module is evaluated twice.
 - **`a11y.ts`** — `nextId(scope)`, a monotonic id generator (`nextId('combobox-list')` →
   `"lr-combobox-list-3"`); `srOnly`, a visually-hidden-but-AT-visible class.
@@ -4893,10 +4893,39 @@ invention (no Web Awesome equivalent).
   which is only a safe identity while `items` never reorders/inserts/removes — provide this whenever
   possible, or scroll position and per-row DOM state (e.g. an `<audio>` element's playback position)
   can attach to the wrong row across a mutation.
-- `groups?: VirtualListGroup[]` (attribute: false) — renders a labeled `role="heading"` marker at each
-  group's `startIndex`, positioned independently of the row window (so it stays in place as its rows
-  scroll past). Groups are sorted by `startIndex`; a `startIndex` that's non-integer, out of range, or
-  a duplicate of an earlier group's is silently dropped rather than rendered wrong.
+- `groups?: VirtualListGroup[]` (attribute: false) — renders a labeled marker at each group's
+  `startIndex`, positioned independently of the row window (so it stays in place as its rows scroll
+  past). Groups are sorted by `startIndex`; a `startIndex` that's non-integer, out of range, or a
+  duplicate of an earlier group's is silently dropped rather than rendered wrong. An entry whose
+  `label` is the **empty string** renders no marker at all — it is a pure position anchor, for a host
+  that renders its own group header as an ordinary row (and would otherwise end up with two stacked
+  headers) but still needs this component to know where each group starts, e.g. to drive
+  `renderStickyGroup` below. Omitting `label` entirely still falls back to rendering `key`.
+- `renderStickyGroup?: (group: VirtualListGroup) => unknown` (attribute: false) — renders a pinned
+  copy of whichever `groups` entry the viewport is currently inside, into a `[part="sticky-group"]`
+  overlay that stays at the top of the scroll viewport and is pushed out by the overlap as the next
+  group's header arrives (rather than swapped abruptly at the boundary). Native `position: sticky` on
+  the rows or markers themselves cannot do this: every row is absolutely positioned and
+  transform-offset by the windowing math, which makes sticky structurally inert. Unset (the default)
+  renders no overlay element whatsoever and changes nothing about the list's output. The overlay is a
+  *visual copy* of content that already exists in the list, which fixes its contract:
+  - it is `aria-hidden`, and ordinary focusable HTML inside it is forced to `tabindex="-1"`, so the
+    real row keeps sole ownership of the heading semantics and of the tab order (a focus-delegating
+    custom element rendered into the copy needs its own `tabindex="-1"`; `inert` is deliberately not
+    used, because it would also block the pointer opt-in below);
+  - it is `pointer-events: none` by default — opt back in with
+    `lr-virtual-list::part(sticky-group) { pointer-events: auto; }` when the copied header content is
+    interactive;
+  - it is never measured as a row, so a group header that is also a real row is not double-counted in
+    `row-height="auto"` mode;
+  - its measured height is applied as `scroll-padding-block-start` on the scroll container and
+    subtracted from top-aligned scroll targets, so `active-id`, `scrollToIndex({ align: 'start' })`
+    and native keyboard scrolling all stop *below* the band instead of parking the row behind it.
+
+  The callback runs on every scroll-driven update, so keep it cheap and side-effect free. While the
+  viewport is above the first group there is nothing to pin: the band shows nothing, but it stays
+  mounted (called with the first group, rendered hidden) so its height is known before the first
+  programmatic jump rather than only after it.
 - `rowHeight: string = 'auto'` (attribute `row-height`) — `'auto'` measures each row's real height via
   `ResizeObserver`; a numeric string (e.g. `"56"`) fixes every row to that many pixels. Anything else
   (non-numeric, zero, negative, non-finite) silently falls back to `'auto'` rather than throwing.
@@ -4923,7 +4952,8 @@ invention (no Web Awesome equivalent).
 
 **Exported types:** `VirtualListRange { start: number; end: number }` (the `lr-visible-range-changed`
 detail shape); `VirtualListGroup { key: string | number; label?: string; startIndex: number }` — the
-shape consumed by `groups` above.
+shape consumed by `groups` above; `VirtualListScroll { scrollTop: number; viewportHeight: number }` —
+the `lr-scroll` detail shape.
 The package root also exports `groupByRecency(items, options?)`, a DOM-free helper that returns
 non-empty Today/Yesterday/Previous 7 Days/Older buckets, preserves input order within each bucket,
 and accepts a timestamp extractor, reference date, and label overrides.
@@ -4933,12 +4963,35 @@ automatic scroll-into-view, for a host that needs to scroll to a specific row wi
 row is "active." `options.align` is `'start'`, `'end'`, or `'auto'` (default — no scroll at all when
 already fully visible); `options.behavior` (default `'smooth'`) is forced to `'auto'` under
 `prefers-reduced-motion: reduce`. `index` is clamped to `0…items.length-1`.
+`offsetForIndex(index)` returns the pixel top row `index` renders at, in the same coordinate space as
+the scroll container's `scrollTop`; it is clamped to `0…items.length`, so `offsetForIndex(items.length)`
+is the total content height and an empty list is always `0`. `indexAtOffset(px)` is its inverse — the
+row whose box contains that offset, clamped at both ends, `-1` for an empty list — so
+`indexAtOffset(offsetForIndex(i)) === i` and `indexAtOffset(scrollContainer.scrollTop)` is the row at
+the top of the viewport. In `row-height="auto"` mode both are estimate-based for any row that (or
+above which) has not been measured yet, and converge as those `ResizeObserver` measurements land;
+fixed numeric `row-height` offsets are exact from the first render. Both read the most recent render,
+so `await el.updateComplete` after assigning `items` before querying.
+
+**Getters:** `scrollContainer: HTMLElement | undefined` — the real scroll container (`[part="base"]`),
+`undefined` before the first render; for a host that needs the live scroll position or wants to scroll
+the list itself without reaching into the shadow root. `renderedRows: HTMLElement[]` — the row
+wrappers (`[part="row"]`) that currently exist as real DOM, in item order (the current window, not the
+whole collection; empty before the first render). It exists for hosts that must *reach* a rendered row
+rather than style it — keyboard focus management across a windowed list, where the row to focus may
+not have existed a frame earlier, and which `exportparts` cannot serve since it forwards styling, not
+element references. Treat both as read-only: positioning, keys, and lifetime belong to the windowing
+math, and any row element can be recycled or removed on the next update.
 
 **Events:** `lr-load-more` (no detail — fired once per approach to the bottom of the list while
 `has-more` is true and `loading` is false; does not refire on every scroll tick while still near the
 bottom — scrolling back away from the bottom and returning, or `items` growing enough to move the
 window away from the end, re-arms it), `lr-visible-range-changed` (`detail: VirtualListRange`, the
-current visible, non-overscanned item index range — fired only when it actually changes)
+current visible, non-overscanned item index range — fired only when it actually changes), `lr-scroll`
+(`detail: VirtualListScroll` — the scroll container moved; emitted from the same animation frame that
+already coalesces native `scroll` events, so a fling produces at most one per frame and none at all
+when the position did not change. Unlike `lr-visible-range-changed`, which only fires on index-range
+changes, this reports *sub-row* movement, which is what scroll-linked layout needs)
 
 **Slots:** none — all content comes from `renderItem`.
 
@@ -4946,8 +4999,11 @@ current visible, non-overscanned item index range — fired only when it actuall
 `item-role="row"` mode — `tabindex="0"`), `spacer` (the full-content-height inner element
 establishing true scroll extent; `role="presentation"` in `item-role="row"` mode), `row` (one
 rendered row's absolutely-positioned wrapper, `role="listitem"` — or `role="row"` with
-`aria-rowindex` in `item-role="row"` mode), `group` (a `groups` entry's positioned `role="heading"`
-marker)
+`aria-rowindex` in `item-role="row"` mode), `group` (a `groups` entry's positioned marker; not
+rendered for an entry whose `label` is the empty string), `sticky-group` (the pinned copy of the
+current group, present only while `renderStickyGroup` is set — `aria-hidden` and
+`pointer-events: none` by default; style it with `pointer-events: auto` to make copied interactive
+content clickable, and it shows nothing while the viewport is above the first group)
 
 **Themeable custom properties:** `--lr-virtual-list-height` (default `24rem` — the host's bounded
 scroll extent; component-specific since a virtualized list is meaningless without a sized viewport),
@@ -4974,6 +5030,20 @@ so it isn't clipped by the container's own `overflow: auto`).
   @lr-load-more=${() => loadNextPage()}
   @lr-visible-range-changed=${(e) => console.log('visible', e.detail.start, e.detail.end)}
 ></lr-virtual-list>
+```
+
+```html
+<!-- Sticky group headers: the header is a real row, so the `groups` entries are position anchors
+     only (`label: ''`), and the pinned copy opts back into pointer events for its own toggle. -->
+<lr-virtual-list
+  .items=${rows}
+  .groups=${groupStarts /* [{ key: 'Today', label: '', startIndex: 0 }, …] */}
+  .renderItem=${(item, index) => (item.isHeader ? headerTemplate(item) : rowTemplate(item))}
+  .renderStickyGroup=${(group) => headerTemplate(group)}
+></lr-virtual-list>
+<style>
+  lr-virtual-list::part(sticky-group) { pointer-events: auto; }
+</style>
 ```
 
 Every row — in both `row-height` modes — is positioned by a `transform: translateY(offset)` computed
@@ -5003,8 +5073,14 @@ history sidebar); it is not the right approach for a hundred-thousand-row list w
 - `aria-setsize`/`aria-posinset` are computed from a row's real index in the full `items` array, not its
   position among the currently-rendered DOM window, so assistive tech still announces e.g. "item 12 of
   340" correctly even though only a handful of rows exist in the DOM at a time.
-- `groups` is accepted today purely for forward API compatibility; setting it has no visible effect
-  yet.
+- `groups`, `renderStickyGroup`, `offsetForIndex()`/`indexAtOffset()` and the `lr-scroll` event are
+  all expressed against the *same* windowing math, so they agree with each other — but that math is
+  estimate-based in `row-height="auto"` mode until the rows involved have been measured. Read a
+  position after `await el.updateComplete`, and expect the value to converge rather than be final on
+  the first frame.
+- A sticky band only appears when `renderStickyGroup` *and* at least one valid `groups` entry are
+  both present; `groups` alone renders positioned markers with nothing pinned, and
+  `renderStickyGroup` alone renders no overlay element at all.
 - **A row that renders a popup needs the focused-row lift, and this is why `[part='row']` has one.**
   Each row carries `will-change: transform` (a compositor hint for the per-frame translate), which
   makes every row its own stacking context. Rows otherwise carry no `z-index`, so they paint in DOM
@@ -12305,10 +12381,17 @@ rename. `compact: boolean = false` (reflected) — data mode only: forwarded to 
 `--lr-conversation-item-compact-padding`/`-gap` on this element or any ancestor). Slotted mode is a
 deliberate no-op — that mode renders host-supplied items as-is, so the host sets `compact` on its own
 items there, the same division of responsibility slotted mode already has for every other row
-property. `label: string = ''` — accessible name for the list region, defaults to the localized
-`threadListLabel`. `wrapRow?: (thread: ChatThread, row: TemplateResult) => TemplateResult` (attribute:
-false) — data mode only: wraps each row's built-in `lr-conversation-item` with host-supplied content
-that has no home in the item's own `title`/`excerpt`/`meta`/`actions` surface (e.g. a leading purpose
+property. `stickyGroups: boolean = false` (attribute `sticky-groups`, reflected) — data mode: pins
+the current date/custom group's header to the top of the scroll viewport while its rows are in view,
+pushing it off as the next group's header arrives. Group headers are ordinary virtualized rows, so
+this renders an `aria-hidden` copy of the header into the internal `lr-virtual-list`'s sticky layer:
+the real row keeps the `role="heading"`/`aria-level` semantics and the tab order (the copy's toggle
+is not a second tab stop), while the pinned copy stays clickable and requests the same
+`lr-group-toggle` collapse. Default `false` renders exactly as before; `grouping="none"` has no
+headers to pin, so it is a no-op there. `label: string = ''` — accessible name for the list region,
+defaults to the localized `threadListLabel`. `wrapRow?: (thread: ChatThread, row: TemplateResult) =>
+TemplateResult` (attribute: false) — data mode only: wraps each row's built-in
+`lr-conversation-item` with host-supplied content that has no home in the item's own `title`/`excerpt`/`meta`/`actions` surface (e.g. a leading purpose
 icon — the item has no default slot to receive one); unset renders the built-in row unwrapped.
 `renderActions?: (thread: ChatThread) => TemplateResult` (attribute: false) — data mode only:
 appends host-supplied content (re-invoked per row on every render, e.g. a `lr-menu` with custom
@@ -12340,7 +12423,11 @@ controlled intent; native group buttons provide Enter/Space activation and expli
 type="search">`), `list` (the list region), `empty`, `viewport` (the actual internal virtual-list
 scroll container, suitable for scrollbar styling), `row-action` (a built-in pin/archive/delete icon
 button), `pin-glyph` (the small pin indicator on a pinned row), `group-header`, `group-toggle`,
-`group-label`, `group-icon`, `row` (all exported across the internal `lr-virtual-list` shadow
+`group-label`, `group-icon`, `group-sticky` (`sticky-groups` only: the pinned copy of the current
+group's header, exported from the internal `lr-virtual-list`'s sticky layer — it wraps a full copy of
+the `group-header`/`group-toggle`/`group-label`/`group-icon` markup, so those parts style the real
+header row and the pinned copy alike, and the band itself is where a shadow or bottom border
+belongs), `row` (all exported across the internal `lr-virtual-list` shadow
 boundary), `row-wrapper` (the wrapper around `wrapRow` output, only present when `wrapRow` is set;
 row-only — group headers are never passed through `wrapRow`, so they never carry it), and
 `row-leading`/`row-content`/`row-meta`/`row-actions` (the library-owned wrappers around
@@ -12382,9 +12469,13 @@ virtualization in both directions. Instead the list host is made a column flex c
 the shipped `24rem` into a *flex-basis*: it grows to fill a bounded pane, shrinks below `24rem` in a
 short one, and falls back to exactly `24rem` in an auto-height container.
 
+`sticky-groups` keeps the current date group's header visible while scrolling through a long sidebar;
+style the pinned band with `lr-thread-list::part(group-sticky)`.
+
 ```html
 <lr-thread-list
   searchable
+  sticky-groups
   .threads=${threads}
   active-id=${activeThreadId}
   .rowActions=${['pin', 'archive', 'delete']}

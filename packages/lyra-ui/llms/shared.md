@@ -21,7 +21,7 @@ module-resolution failure, not a silent no-op — `exports` maps `./components/*
   `lr-bar-chart`, `lr-pie-chart`, `lr-doughnut-chart`, `lr-radar-chart`, `lr-polar-area-chart`,
   `lr-bubble-chart`, `lr-scatter-chart`), `lr-box-plot`, `lr-histogram`, `lr-map`, `lr-graph`,
   `lr-knowledge-graph-explorer`, and `lr-geojson-view`. Those always need their own subpath import.
-  The barrel also re-exports every class and type (127 `Lyra*EventMap` types included), so it is the
+  The barrel also re-exports every class and type (every `Lyra*EventMap` type included), so it is the
   one import that defeats tree-shaking — prefer per-component entries in application code.
 - **`lr-flag`** registers from the barrel, but resolving a flag by `country`/`language` (rather than
   a pre-resolved `src`) additionally needs
@@ -347,7 +347,7 @@ Not custom elements — infrastructure the components compose. Importable via
   Returns a cleanup function that stops the `autoUpdate` loop — call it in `disconnectedCallback()`.
   Used by `lr-combobox`, `lr-select`, `lr-date-input`, `lr-export-button`, `lr-model-select`,
   `lr-mention-popover`, `lr-tool-call-chip`, `lr-citation-badge`, and `lr-menu`.
-- **`prefix.ts`** — `LYRA_PREFIX = 'lyra'`; `tag(name)` → `` `lr-${name}` ``; `defineElement(name, ctor)`,
+- **`prefix.ts`** — `LYRA_PREFIX = 'lr'`; `tag(name)` → `` `lr-${name}` ``; `defineElement(name, ctor)`,
   an idempotent `customElements.define` that is safe if a module is evaluated twice.
 - **`a11y.ts`** — `nextId(scope)`, a monotonic id generator (`nextId('combobox-list')` →
   `"lr-combobox-list-3"`); `srOnly`, a visually-hidden-but-AT-visible class.
