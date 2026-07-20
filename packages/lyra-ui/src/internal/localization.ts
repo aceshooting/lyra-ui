@@ -2019,6 +2019,7 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, string> = {
 
 const locales = new Map<string, LyraLocaleStrings>();
 const listeners = new Set<() => void>();
+const registryListeners = new Set<() => void>();
 let activeLocale = '';
 
 function normalizeLocale(locale: string): string {
@@ -2039,12 +2040,31 @@ function notify(): void {
   for (const listener of [...listeners]) listener();
 }
 
+/** Every locale with registered strings, plus 'en' (always available via DEFAULT_STRINGS even
+ *  with no explicit registerLyraLocale('en', ...) call), sorted, deduped. */
+export function getRegisteredLyraLocales(): string[] {
+  const keys = new Set(['en', ...locales.keys()]);
+  return [...keys].sort();
+}
+
+/** Subscribe to locale *registry membership* changes (a new locale registered) — distinct from
+ *  subscribeLyraLocale(), which only fires for the currently *active* locale's string changes.
+ *  Only a consumer that enumerates the registry (lr-locale-picker) needs this; every other
+ *  component's rendered strings are unaffected by a registration for a locale it isn't using, so
+ *  registerLyraLocale() must not force a global requestUpdate() on every mounted component just
+ *  to reach the one picker that cares. */
+export function subscribeLyraLocaleRegistry(listener: () => void): () => void {
+  registryListeners.add(listener);
+  return () => registryListeners.delete(listener);
+}
+
 /** Register or extend messages for a locale. */
 export function registerLyraLocale(locale: string, strings: LyraLocaleStrings): void {
   const key = normalizeLocale(locale);
   if (!key) throw new TypeError('A locale is required.');
   locales.set(key, { ...(locales.get(key) ?? {}), ...strings });
   if (normalizeLocale(activeLocale) === key || normalizeLocale(activeLocale).startsWith(`${key}-`)) notify();
+  for (const listener of [...registryListeners]) listener();
 }
 
 /** Set the page-level locale used by Lyra components without an explicit locale. */

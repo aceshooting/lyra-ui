@@ -1,5 +1,12 @@
 import { fixture, expect, html } from '@open-wc/testing';
-import { registerLyraLocale, setLyraLocale, LYRA_DEFAULT_STRINGS } from './localization.js';
+import {
+  registerLyraLocale,
+  setLyraLocale,
+  getRegisteredLyraLocales,
+  subscribeLyraLocaleRegistry,
+  subscribeLyraLocale,
+  LYRA_DEFAULT_STRINGS,
+} from './localization.js';
 import '../components/data/sparkline/sparkline.js';
 import type { LyraSparkline } from '../components/data/sparkline/sparkline.js';
 
@@ -86,4 +93,57 @@ it('defines singular and plural file-input result messages', () => {
   expect(LYRA_DEFAULT_STRINGS.fileInputAcceptedMany).to.equal('{count} files added.');
   expect(LYRA_DEFAULT_STRINGS.fileInputRejectedOne).to.equal('{count} file rejected.');
   expect(LYRA_DEFAULT_STRINGS.fileInputRejectedMany).to.equal('{count} files rejected.');
+});
+
+it('getRegisteredLyraLocales always includes "en" and every registered key, deduped and sorted regardless of casing', () => {
+  registerLyraLocale('x-registry-zz', { noData: 'zz' });
+  registerLyraLocale('X-REGISTRY-AA', { noData: 'aa upper' });
+  registerLyraLocale('x-registry-aa', { noData: 'aa lower' }); // same normalized key as X-REGISTRY-AA -- must not duplicate
+  const result = getRegisteredLyraLocales();
+  expect(result).to.include('en');
+  expect(result).to.include('x-registry-aa');
+  expect(result).to.include('x-registry-zz');
+  expect(result.filter((l) => l === 'x-registry-aa')).to.have.lengthOf(1);
+  expect(result).to.deep.equal([...result].sort());
+});
+
+it('subscribeLyraLocaleRegistry fires for a registerLyraLocale call on a locale that is not currently active', () => {
+  setLyraLocale('en');
+  let calls = 0;
+  const unsubscribe = subscribeLyraLocaleRegistry(() => {
+    calls += 1;
+  });
+  try {
+    registerLyraLocale('x-registry-not-active', { noData: 'inactive' });
+    expect(calls).to.equal(1);
+  } finally {
+    unsubscribe();
+  }
+});
+
+it('subscribeLyraLocaleRegistry stops notifying after unsubscribe', () => {
+  let calls = 0;
+  const unsubscribe = subscribeLyraLocaleRegistry(() => {
+    calls += 1;
+  });
+  unsubscribe();
+  registerLyraLocale('x-registry-after-unsub', { noData: 'gone' });
+  expect(calls).to.equal(0);
+});
+
+it('registerLyraLocale still only notifies subscribeLyraLocale listeners for the active locale (regression guard)', () => {
+  setLyraLocale('x-registry-active-guard');
+  let activeListenerCalls = 0;
+  const unsubscribeActive = subscribeLyraLocale(() => {
+    activeListenerCalls += 1;
+  });
+  try {
+    registerLyraLocale('x-registry-inactive-guard', { noData: 'unrelated' });
+    expect(activeListenerCalls).to.equal(0);
+    registerLyraLocale('x-registry-active-guard', { noData: 'matches' });
+    expect(activeListenerCalls).to.equal(1);
+  } finally {
+    unsubscribeActive();
+    setLyraLocale('en');
+  }
 });
