@@ -5,6 +5,7 @@ import type { LyraAvPlayer, LyraAvCue } from './av-player.js';
 import { styles } from './av-player.styles.js';
 
 const MP3_SRC = 'https://example.test/podcast.mp3';
+const MP4_SRC = 'https://example.test/clip.mp4';
 
 const CUES: LyraAvCue[] = [
   { id: 'c1', start: 0, end: 10, text: 'Welcome to the show', speaker: 'Host' },
@@ -45,7 +46,7 @@ describe('kind detection', () => {
   });
 
   it('defaults to video when mime-type is unset or non-audio', async () => {
-    const el = (await fixture(html`<lr-av-player src="https://example.test/clip.mp4" mime-type="video/mp4"></lr-av-player>`)) as LyraAvPlayer;
+    const el = (await fixture(html`<lr-av-player src=${MP4_SRC} mime-type="video/mp4"></lr-av-player>`)) as LyraAvPlayer;
     expect(el.shadowRoot!.querySelector('video')).to.exist;
   });
 
@@ -110,7 +111,7 @@ describe('playback controls', () => {
   });
 
   it('resets native appearance on the rate-select, themes its option list, and adds hover/focus/a chevron', async () => {
-    const el = (await fixture(html`<lr-av-player src="video.mp4"></lr-av-player>`)) as LyraAvPlayer;
+    const el = (await fixture(html`<lr-av-player src=${MP4_SRC}></lr-av-player>`)) as LyraAvPlayer;
     await el.updateComplete;
     const select = el.shadowRoot!.querySelector('[part="rate-select"]') as HTMLSelectElement;
     expect(getComputedStyle(select).appearance).to.equal('none');

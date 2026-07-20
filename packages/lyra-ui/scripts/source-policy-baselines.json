@@ -1,12 +1,8 @@
 {
   "keyboard-test-coverage": [
-    "src/components/media/av-player/av-player.class.ts",
     "src/components/viewers/document-preview/document-preview.class.ts",
-    "src/components/forms/rubric-form/rubric-form.class.ts",
     "src/components/viewers/spreadsheet-viewer/spreadsheet-viewer.class.ts",
-    "src/components/viewers/svg-viewer/svg-viewer.class.ts",
-    "src/components/agent-tools/terminal/terminal.class.ts",
-    "src/components/conversation/voice-picker/voice-picker.class.ts"
+    "src/components/viewers/svg-viewer/svg-viewer.class.ts"
   ],
   "strings-test-coverage": [
     "src/components/agent-tools/artifact-panel/artifact-panel.class.ts",

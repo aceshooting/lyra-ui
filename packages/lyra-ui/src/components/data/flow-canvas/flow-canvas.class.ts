@@ -412,9 +412,15 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
         child.setAttribute('slot', `node-${nodeId}`);
       } else {
         child.removeAttribute('slot');
-        console.warn(
-          `<lr-flow-canvas> a child with node-id="${nodeId}" matches no entry in \`nodes\`; it will not render.`,
-        );
+        // Only user-authored children are worth warning about. A default card this component
+        // created for a node id that has since disappeared is not a consumer mistake -- it is
+        // retired by the removal loop directly below, so warning about it would report our own
+        // reconciliation as if it were the consumer's stale markup.
+        if (!child.hasAttribute('data-flow-canvas-default-card')) {
+          console.warn(
+            `<lr-flow-canvas> a child with node-id="${nodeId}" matches no entry in \`nodes\`; it will not render.`,
+          );
+        }
       }
     }
     for (const [nodeId, child] of byNodeId) {

@@ -102,6 +102,25 @@ describe('static rendering', () => {
     expect(el.querySelector('[node-id="ghost"]')!.getAttribute('slot')).to.be.null;
   });
 
+  it('stays silent when one of its own default cards is retired -- the warning is for user-authored children only', async () => {
+    const originalWarn = console.warn;
+    const warnings: unknown[][] = [];
+    console.warn = (...args: unknown[]) => {
+      warnings.push(args);
+    };
+    try {
+      const el = (await fixture(html`<lr-flow-canvas></lr-flow-canvas>`)) as LyraFlowCanvas;
+      el.nodes = [{ id: 'a' }, { id: 'b' }];
+      await el.updateComplete;
+      el.nodes = [{ id: 'a' }];
+      await el.updateComplete;
+      expect(el.querySelector('[node-id="b"]')).to.not.exist;
+    } finally {
+      console.warn = originalWarn;
+    }
+    expect(warnings.map((w) => w.join(' ')).join('\n')).to.equal('');
+  });
+
   it('renders one SVG path per edge with an arrowhead and a drawn label', async () => {
     const el = (await fixture(html`<lr-flow-canvas></lr-flow-canvas>`)) as LyraFlowCanvas;
     el.nodes = nodes;

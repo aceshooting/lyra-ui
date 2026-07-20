@@ -542,7 +542,7 @@ describe('active-state cssprop escape hatches', () => {
 
 describe('native control theming', () => {
   it('resets native appearance on the fit-control, themes its option list, adds a chevron, and gives all three toolbar controls hover/focus', async () => {
-    const el = (await fixture(html`<lr-image-viewer src="photo.jpg"></lr-image-viewer>`)) as LyraImageViewer;
+    const el = (await fixture(html`<lr-image-viewer src=${PNG_SRC}></lr-image-viewer>`)) as LyraImageViewer;
     await el.updateComplete;
     const select = el.shadowRoot!.querySelector('[part="fit-control"]') as HTMLSelectElement;
     expect(getComputedStyle(select).appearance).to.equal('none');

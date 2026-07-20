@@ -678,13 +678,28 @@ describe('highlight cache LRU (setCachedHighlight)', () => {
 describe('fine-grained highlighter build failure (languages, no default fallback)', () => {
   it('records a language as permanently failed when its supplied grammar cannot build a highlighter', async () => {
     const el = (await fixture(html`<lr-markdown-core></lr-markdown-core>`)) as LyraMarkdownCore;
-    // A garbage "grammar" object under a key matching the fenced block's language -- passes the
-    // languages[lang] presence check, but createHighlighterCore() has nothing valid to register,
-    // so loadShikiHighlighterCore() resolves null via its own real (unmocked) catch().
-    el.languages = { bogus: { not: 'a real shiki grammar' } as never };
-    el.content = '```bogus\nhello\n```';
-    await el.updateComplete;
-    await aTimeout(1500);
+    // loadShikiHighlighterCore()'s catch() reports the failure through console.warn by design, so
+    // capture it here rather than letting the expected diagnostic print as noise on every run --
+    // and assert it, since that warning is the contract for how this failure surfaces.
+    const originalWarn = console.warn;
+    const warnings: unknown[][] = [];
+    console.warn = (...args: unknown[]) => {
+      warnings.push(args);
+    };
+    try {
+      // A garbage "grammar" object under a key matching the fenced block's language -- passes the
+      // languages[lang] presence check, but createHighlighterCore() has nothing valid to register,
+      // so loadShikiHighlighterCore() resolves null via its own real (unmocked) catch().
+      el.languages = { bogus: { not: 'a real shiki grammar' } as never };
+      el.content = '```bogus\nhello\n```';
+      await el.updateComplete;
+      await aTimeout(1500);
+    } finally {
+      console.warn = originalWarn;
+    }
+    expect(warnings.map((w) => String(w[0])).join('\n')).to.include(
+      'failed to build a fine-grained shiki highlighter',
+    );
     expect(el.shadowRoot!.querySelector('[part="code-block"] span')).to.not.exist;
     expect(el.shadowRoot!.querySelector('[part="code-block"] code')!.textContent).to.equal('hello\n');
   });
