@@ -49,6 +49,10 @@ export const styles = css`
   }
   [part='slider'] {
     accent-color: var(--lr-color-brand);
+    cursor: pointer;
+  }
+  [part='slider']:hover:not(:disabled) {
+    filter: brightness(var(--lr-hover-brightness));
   }
   [part='slider']:disabled {
     opacity: var(--lr-opacity-disabled);

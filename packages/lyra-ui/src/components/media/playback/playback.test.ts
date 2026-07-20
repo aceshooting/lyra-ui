@@ -1,6 +1,7 @@
 import { fixture, expect, html, oneEvent, aTimeout } from '@open-wc/testing';
 import './playback.js';
 import type { LyraPlayback } from './playback.js';
+import { styles } from './playback.styles.js';
 
 it('does not leak an untracked duplicate timer chain when play() is called synchronously from a lr-step listener during tick()', async () => {
   const el = (await fixture(
@@ -438,6 +439,12 @@ it('gives the play/pause button the shared minimum hit area', async () => {
 
   expect(getComputedStyle(button).minInlineSize).to.equal('40px');
   expect(getComputedStyle(button).minBlockSize).to.equal('40px');
+});
+
+it('gives the enabled range slider a pointer cursor and a hover affordance matching the play button', () => {
+  const css = styles.cssText.replace(/\s+/g, ' ');
+  expect(css).to.match(/\[part='slider'\]\s*\{[^}]*cursor:\s*pointer/);
+  expect(css).to.match(/\[part='slider'\]:hover:not\(:disabled\)\s*\{[^}]*filter:\s*brightness\(var\(--lr-hover-brightness\)\)/);
 });
 
 describe('string localization', () => {
