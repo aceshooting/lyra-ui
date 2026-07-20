@@ -172,6 +172,7 @@ export const styles = css`
   }
   :host([compact]) [part='header'] {
     padding: var(--lr-space-xs) var(--lr-space-s);
+    gap: var(--lr-space-xs);
   }
   :host([compact]) [part='body'] {
     padding: var(--lr-space-s);

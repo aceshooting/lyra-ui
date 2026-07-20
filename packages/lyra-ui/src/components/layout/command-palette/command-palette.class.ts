@@ -6,7 +6,19 @@ import { activateOverlay, type OverlayHandle } from '../../../internal/overlay-m
 import { lockScroll } from '../../../internal/scroll-lock.js';
 import { styles } from './command-palette.styles.js';
 
-export interface LyraCommand { id: string; label: string; description?: string; group?: string; shortcut?: string; keywords?: string[]; disabled?: boolean; onSelect?: () => void; }
+export interface LyraCommand {
+  id: string;
+  label: string;
+  description?: string;
+  group?: string;
+  shortcut?: string;
+  keywords?: string[];
+  disabled?: boolean;
+  /** Optional leading TemplateResult glyph, rendered before `label` (`PaletteItem.icon`/
+   *  `SegmentedItem.icon` precedent -- not restricted to a square icon-only shape). */
+  icon?: unknown;
+  onSelect?: () => void;
+}
 export interface LyraCommandPaletteEventMap { 'lr-select': CustomEvent<{ command: LyraCommand }>; 'lr-open': CustomEvent<undefined>; 'lr-close': CustomEvent<undefined>; }
 
 /** `<lr-command-palette>` — searchable application command menu with keyboard navigation.
@@ -23,6 +35,7 @@ export interface LyraCommandPaletteEventMap { 'lr-select': CustomEvent<{ command
  * @csspart list - Command list.
  * @csspart group - A group heading, rendered before the first command of each `group`.
  * @csspart command - A command button.
+ * @csspart icon - A command's leading icon glyph. Only rendered when the command has an `icon`.
  * @csspart description - A command's secondary description text. Rendered for every command; empty
  *   when the command has no `description`.
  * @csspart shortcut - A command's trailing shortcut hint. Only rendered when the command has a
@@ -159,7 +172,7 @@ export class LyraCommandPalette extends LyraElement<LyraCommandPaletteEventMap> 
       <section part="dialog" role="dialog" aria-modal="true" aria-label=${this.accessibleLabel || this.localize('commandPaletteLabel')} tabindex="-1" @keydown=${this.onKeyDown}>
         <div part="search"><lr-icon name="search" aria-hidden="true"></lr-icon><input part="input" type="search" .value=${this.queryText} placeholder=${this.localize('commandPalettePlaceholder')} aria-controls=${this.listId} aria-activedescendant=${activeId} @input=${this.onInput} /></div>
         <div part="list" id=${this.listId} role="listbox" aria-label=${this.localize('commandPaletteResults')}>
-          ${rows.length ? rows.map((command, index) => { const group = command.group ?? ''; const heading = group && group !== previousGroup ? (previousGroup = group, html`<div part="group">${group}</div>`) : nothing; return html`${heading}<button id=${`${this.listId}-opt-${index}`} part="command" role="option" data-active=${index === this.activeIndex ? 'true' : 'false'} aria-selected=${index === this.activeIndex ? 'true' : 'false'} aria-disabled=${command.disabled ? 'true' : 'false'} ?disabled=${command.disabled} @mouseenter=${() => { if (!command.disabled) this.activeIndex = index; }} @click=${() => this.select(command)}><span>${command.label}</span><span part="description">${command.description ?? ''}</span>${command.shortcut ? html`<span part="shortcut">${command.shortcut}</span>` : nothing}</button>`; }) : html`<div part="empty">${this.localize('commandPaletteEmpty')}</div>`}
+          ${rows.length ? rows.map((command, index) => { const group = command.group ?? ''; const heading = group && group !== previousGroup ? (previousGroup = group, html`<div part="group">${group}</div>`) : nothing; return html`${heading}<button id=${`${this.listId}-opt-${index}`} part="command" role="option" data-active=${index === this.activeIndex ? 'true' : 'false'} aria-selected=${index === this.activeIndex ? 'true' : 'false'} aria-disabled=${command.disabled ? 'true' : 'false'} ?disabled=${command.disabled} @mouseenter=${() => { if (!command.disabled) this.activeIndex = index; }} @click=${() => this.select(command)}>${command.icon ? html`<span part="icon" aria-hidden="true">${command.icon as TemplateResult}</span>` : nothing}<span>${command.label}</span><span part="description">${command.description ?? ''}</span>${command.shortcut ? html`<span part="shortcut">${command.shortcut}</span>` : nothing}</button>`; }) : html`<div part="empty">${this.localize('commandPaletteEmpty')}</div>`}
         </div>
       </section>
     </div>`;

@@ -190,6 +190,21 @@ it('skips a disabled item during ArrowDown navigation', async () => {
   expect(document.activeElement).to.equal(c);
 });
 
+/**
+ * The `expect(document.activeElement).to.equal(item)` idiom used elsewhere in this file is
+ * unusable for a test that could plausibly assert against a *focus-loss* regression: on failure
+ * the actual value would be `<body>`, and chai stringifies that actual value to build its
+ * message, serializing the entire test page (mocha's own reporter DOM included) into one string.
+ * That wedges the test runner into a 180s timeout instead of producing a failure. Comparing a
+ * short stable identity keeps the failure readable ("expected 'body' to equal 'item:a'") and is
+ * strictly more informative than an element-identity diff.
+ */
+function activeItemValue(): string {
+  const active = document.activeElement as (HTMLElement & { value?: string }) | null;
+  if (!active) return 'none';
+  return active.tagName === 'LR-MENU-ITEM' ? `item:${active.value}` : active.tagName.toLowerCase();
+}
+
 it('moves roving focus when the active item becomes disabled or hidden', async () => {
   const el = (await fixture(html`
     <lr-menu>
@@ -202,18 +217,18 @@ it('moves roving focus when the active item becomes disabled or hidden', async (
   trigger(el).click();
   await el.updateComplete;
   const [a, b, c] = items(el);
-  expect(document.activeElement).to.equal(a);
+  expect(activeItemValue()).to.equal('item:a');
 
   a.disabled = true;
   await a.updateComplete;
   await el.updateComplete;
-  expect(document.activeElement).to.equal(b);
+  expect(activeItemValue()).to.equal('item:b');
   expect(b.tabIndex).to.equal(0);
 
   b.hidden = true;
   await new Promise<void>((resolve) => queueMicrotask(resolve));
   await el.updateComplete;
-  expect(document.activeElement).to.equal(c);
+  expect(activeItemValue()).to.equal('item:c');
   expect(c.tabIndex).to.equal(0);
 });
 
@@ -237,22 +252,6 @@ const abc = () => html`
 async function afterSlotChange(el: LyraMenu): Promise<void> {
   await new Promise<void>((resolve) => queueMicrotask(resolve));
   await el.updateComplete;
-}
-
-/**
- * The `expect(document.activeElement).to.equal(item)` idiom used everywhere
- * above is unusable for the tests below. Every one of them asserts against a
- * *focus-loss* bug, so the failing actual value is `<body>` -- and chai
- * stringifies the actual value to build its message, serializing the entire
- * test page (mocha's own reporter DOM included) into one string. That wedges
- * the test runner into a timeout instead of producing a failure. Comparing a
- * short stable identity keeps the failure readable ("expected 'body' to equal
- * 'item:a'") and is strictly more informative than an element-identity diff.
- */
-function activeItemValue(): string {
-  const active = document.activeElement as (HTMLElement & { value?: string }) | null;
-  if (!active) return 'none';
-  return active.tagName === 'LR-MENU-ITEM' ? `item:${active.value}` : active.tagName.toLowerCase();
 }
 
 it('keeps the roving focus on the active item when it is reordered while the menu is open', async () => {

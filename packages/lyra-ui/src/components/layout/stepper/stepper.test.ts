@@ -117,13 +117,16 @@ describe('lr-stepper', () => {
     expect(buttons.map((b) => b.getAttribute('tabindex'))).to.deep.equal(['-1', '0']);
   });
 
-  it('fires a cancelable lr-step-select on click, without mutating steps itself', async () => {
+  it('fires a non-cancelable lr-step-select on click, without mutating steps itself', async () => {
     const el = (await fixture(html`<lr-stepper .steps=${steps()}></lr-stepper>`)) as LyraStepper;
     const buttons = stepButtons(el);
     setTimeout(() => buttons[2]!.click());
     const ev = await oneEvent(el, 'lr-step-select');
     expect(ev.detail).to.deep.equal({ index: 2, id: 'review' });
-    expect(ev.cancelable).to.be.true;
+    // Not cancelable: this component is fully controlled (mirrors lr-table's columns/rows
+    // contract) and never takes a default action of its own on selection, so there is no real
+    // veto point for `preventDefault()` to gate -- see AGENTS.md's event convention.
+    expect(ev.cancelable).to.be.false;
     expect(el.steps[1]!.state).to.equal('current'); // unchanged -- this component never self-mutates
   });
 
@@ -149,6 +152,34 @@ describe('lr-stepper', () => {
     const el = (await fixture(html`<lr-stepper .steps=${steps()}></lr-stepper>`)) as LyraStepper;
     const buttons = stepButtons(el);
     expect(buttons[0]!.hasAttribute('title')).to.be.false;
+  });
+
+  it('renders a step-icon part, additionally to the state chip/checkmark, for a step that provides an icon', async () => {
+    const el = (await fixture(
+      html`<lr-stepper
+        .steps=${[
+          { id: 'payment', label: 'Payment', state: 'current' as const, icon: '\u{1F4B3}' },
+          { id: 'shipping', label: 'Shipping', state: 'completed' as const, icon: '\u{1F4E6}' },
+          { id: 'review', label: 'Review', state: 'pending' as const },
+        ]}
+      ></lr-stepper>`,
+    )) as LyraStepper;
+    const buttons = stepButtons(el);
+
+    const paymentIcon = buttons[0]!.querySelector('[part="step-icon"]');
+    expect(paymentIcon, 'expected a step-icon part for the icon-bearing current step').to.not.equal(null);
+    expect(paymentIcon!.textContent).to.equal('\u{1F4B3}');
+    expect(paymentIcon!.getAttribute('aria-hidden')).to.equal('true');
+    // The state chip still renders alongside the icon -- the icon identifies the topic, the chip
+    // identifies the state.
+    expect(buttons[0]!.querySelector('[part="step-index"]')).to.not.equal(null);
+
+    const shippingIcon = buttons[1]!.querySelector('[part="step-icon"]');
+    expect(shippingIcon, 'expected a step-icon part for the icon-bearing completed step').to.not.equal(null);
+    expect(buttons[1]!.querySelector('[part="step-check"]')).to.not.equal(null);
+
+    // No icon field at all -- no step-icon part rendered, byte-for-byte unaffected.
+    expect(buttons[2]!.querySelector('[part="step-icon"]')).to.equal(null);
   });
 
   it('does not fire lr-step-select for a disabled step', async () => {
@@ -208,7 +239,9 @@ describe('lr-stepper', () => {
 
   it('gives a non-disabled step a :hover treatment, matching the click-to-jump affordance', () => {
     const css = styles.cssText.replace(/\s+/g, ' ');
-    expect(css).to.match(/\[part='step'\]:hover:not\(\[aria-disabled='true'\]\)\s*\{[^}]+\}/);
+    // :where()-wrapped (see the "step hover specificity" describe block below) -- still targets
+    // [part="step"]:hover, excluding aria-disabled="true" steps, just at zeroed specificity.
+    expect(css).to.match(/:where\(\[part='step'\]\):hover:where\(:not\(\[aria-disabled='true'\]\)\)\s*\{[^}]+\}/);
   });
 
   it('switches the navigation axis from its own inline-size breakpoint and reports the effective orientation', async () => {
@@ -242,6 +275,24 @@ describe('lr-stepper', () => {
     } finally {
       spy.restore();
     }
+  });
+
+  it('classifies effectiveOrientation correctly on the very first render under the default container basis, with no ResizeObserver round-trip needed', async () => {
+    // Real (unmocked) width: [part="base"] is a block-level flex container with no width of its
+    // own, so it fills this narrow inline style -- applied before the element ever connects, no
+    // fireResize needed to prove the FIRST render already lands on 'vertical', not the
+    // sentinel-derived 'horizontal'.
+    const el = (await fixture(
+      html`<lr-stepper
+        orientation-breakpoint="500"
+        narrow-orientation="vertical"
+        style="display: block; inline-size: 300px"
+        .steps=${steps()}
+      ></lr-stepper>`,
+    )) as LyraStepper;
+    await elementUpdated(el);
+    expect(el.effectiveOrientation).to.equal('vertical');
+    expect(el.getAttribute('data-effective-orientation')).to.equal('vertical');
   });
 
   it('keeps the authored orientation and no effective marker when no breakpoint is configured', async () => {
@@ -508,6 +559,54 @@ describe('lr-stepper', () => {
   });
 });
 
+describe('horizontal step row overflow', () => {
+  it('pairs overflow-y with overflow-x on the horizontal (default) axis to avoid a phantom vertical scrollbar', async () => {
+    const el = (await fixture(html`<lr-stepper .steps=${steps()}></lr-stepper>`)) as LyraStepper;
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    const computed = getComputedStyle(base);
+    expect(computed.overflowX).to.equal('auto');
+    expect(computed.overflowY).to.equal('hidden');
+  });
+
+  it('leaves overflow-x/-y both visible under orientation="vertical", with no leftover horizontal mask', async () => {
+    const el = (await fixture(
+      html`<lr-stepper orientation="vertical" .steps=${steps()}></lr-stepper>`,
+    )) as LyraStepper;
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    const computed = getComputedStyle(base);
+    expect(computed.overflowX).to.equal('visible');
+    expect(computed.overflowY).to.equal('visible');
+    const maskImage =
+      computed.getPropertyValue('mask-image') || computed.getPropertyValue('-webkit-mask-image');
+    expect(maskImage).to.equal('none');
+  });
+
+  it('shows a mask-image edge fade on the horizontally-scrolling step row, matching lr-tabs/lr-segmented', async () => {
+    const el = (await fixture(html`<lr-stepper .steps=${steps()}></lr-stepper>`)) as LyraStepper;
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    const computed = getComputedStyle(base);
+    const maskImage =
+      computed.getPropertyValue('mask-image') || computed.getPropertyValue('-webkit-mask-image');
+    expect(maskImage).to.not.equal('none');
+    expect(maskImage).to.contain('gradient');
+  });
+});
+
+describe('step hover specificity', () => {
+  it('the internal [part="step"]:hover rule is :where()-wrapped, so a consumer ::part(step):hover override wins without needing !important', async () => {
+    const el = (await fixture(html`<lr-stepper .steps=${steps()}></lr-stepper>`)) as LyraStepper;
+    // Same technique as attachment-trigger.test.ts's identically-shaped specificity test: real
+    // browser test runners don't synthesize a :hover pseudo-class from a dispatched event, so
+    // assert via the rendered stylesheet's own selector text instead of a paint result.
+    const internalRule = (el.shadowRoot!.adoptedStyleSheets ?? [])
+      .flatMap((sheet) => Array.from(sheet.cssRules))
+      .map((rule) => rule.cssText)
+      .find((text) => text.includes(':hover') && text.includes('aria-disabled'));
+    expect(internalRule, 'expected a [part="step"]:hover rule').to.not.equal(undefined);
+    expect(internalRule).to.contain(':where(');
+  });
+});
+
 describe('state-styling cssprops', () => {
   /** Resolves what a `declaration` would compute to *inside this component's shadow root*, where the
    *  `--lr-*` design tokens actually live. Used to assert the unset defaults byte-for-byte against
@@ -530,6 +629,7 @@ describe('state-styling cssprops', () => {
 
   const overrides =
     '--lr-stepper-current-color: rgb(0, 51, 102);' +
+    '--lr-stepper-current-font-weight: 900;' +
     '--lr-stepper-error-color: rgb(102, 0, 0);' +
     '--lr-stepper-current-index-bg: rgb(10, 20, 30);' +
     '--lr-stepper-current-index-color: rgb(200, 210, 220);';
@@ -553,6 +653,10 @@ describe('state-styling cssprops', () => {
     const error = stepEl(el, 'error');
     const currentIndex = current.querySelector('[part="step-index"]')!;
     expect(getComputedStyle(current).color).to.equal('rgb(0, 51, 102)');
+    // The current step's font-weight has its own dedicated cssprop, decoupled from the shared
+    // --lr-font-weight-semibold token every other semibold-weighted element in the page also
+    // reads -- retheming it must not repaint any of those.
+    expect(getComputedStyle(current).fontWeight).to.equal('900');
     expect(getComputedStyle(error).color).to.equal('rgb(102, 0, 0)');
     expect(getComputedStyle(currentIndex).backgroundColor).to.equal('rgb(10, 20, 30)');
     expect(getComputedStyle(currentIndex).color).to.equal('rgb(200, 210, 220)');
@@ -564,6 +668,9 @@ describe('state-styling cssprops', () => {
     const error = stepEl(el, 'error');
     const currentIndex = current.querySelector('[part="step-index"]')!;
     expect(getComputedStyle(current).color).to.equal(resolvedInShadow(el, 'color: var(--lr-color-text)', 'color'));
+    expect(getComputedStyle(current).fontWeight).to.equal(
+      resolvedInShadow(el, 'font-weight: var(--lr-font-weight-semibold)', 'font-weight'),
+    );
     expect(getComputedStyle(error).color).to.equal(resolvedInShadow(el, 'color: var(--lr-color-danger)', 'color'));
     expect(getComputedStyle(currentIndex).backgroundColor).to.equal(
       resolvedInShadow(el, 'background: var(--lr-color-brand)', 'background-color'),

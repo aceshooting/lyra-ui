@@ -30,6 +30,17 @@ export const styles = css`
     border-radius: var(--lr-radius);
   }
 
+  /* A cell's slotted content (default lr-widget, or a consumer's own opaque markup) commonly
+     fills the whole cell -- a background-color hover would paint underneath it and never be
+     seen. An outline draws outside the box like [part='cell'][data-collision]'s own outline
+     below, so it stays visible above any occluding content, matching the :focus-visible ring's
+     own reliably-visible treatment for the exact same real, keyboard-navigable/draggable
+     target. */
+  [part='cell']:hover {
+    outline: var(--lr-border-width-thin) solid var(--lr-color-border-strong);
+    outline-offset: calc(-1 * var(--lr-border-width-thin));
+  }
+
   [part='cell']:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);

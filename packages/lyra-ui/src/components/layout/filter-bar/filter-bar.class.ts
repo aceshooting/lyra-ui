@@ -414,6 +414,7 @@ export class LyraFilterBar extends LyraElement<LyraFilterBarEventMap> {
   }
 
   protected updated(changed: PropertyValues): void {
+    super.updated(changed);
     this.syncTextControls();
     if (changed.has('value') || changed.has('filters')) {
       const invalidFilterIds = this.invalidFilterIds;
@@ -550,7 +551,7 @@ export class LyraFilterBar extends LyraElement<LyraFilterBarEventMap> {
                 ${active.map(
                   ({ def, display }) => html`<lr-chip
                     part="chip"
-                    removable
+                    ?removable=${!this.disabled}
                     value=${def.id}
                     @lr-remove=${() => this.clearFilter(def.id)}
                     >${def.label}: ${display}</lr-chip

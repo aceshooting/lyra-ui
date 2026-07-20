@@ -295,6 +295,21 @@ describe('disabled', () => {
     const resetButton = el.shadowRoot!.querySelector('[part="reset-button"]') as HTMLElement & { disabled: boolean };
     expect(resetButton.disabled).to.be.true;
   });
+
+  it('renders active-filter chips with no remove affordance, instead of a clickable-but-inert one', async () => {
+    const el = (await fixture(
+      html`<lr-filter-bar disabled .filters=${basicFilters} .value=${{ status: 'open' }}></lr-filter-bar>`,
+    )) as LyraFilterBar;
+    const chip = el.shadowRoot!.querySelector('[part="chip"]') as HTMLElement & {
+      removable: boolean;
+      updateComplete: Promise<unknown>;
+    };
+    expect(chip).to.not.equal(null);
+    expect(chip.removable).to.be.false;
+    expect(chip.hasAttribute('removable')).to.be.false;
+    await chip.updateComplete;
+    expect(chip.shadowRoot!.querySelector('[part="remove-button"]')).to.equal(null);
+  });
 });
 
 describe('validation contract', () => {

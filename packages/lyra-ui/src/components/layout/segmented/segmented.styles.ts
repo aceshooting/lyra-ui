@@ -8,7 +8,11 @@ export const styles = css`
        items would otherwise force the scroll container wide. */
     min-inline-size: 0;
     max-inline-size: 100%;
-    --lr-segmented-track-min-height: auto;
+    /* Matches lr-input/lr-select/lr-combobox's own shared default-tier floor
+       (--lr-size-2-5rem = 40px) so a toolbar built with default-size controls shows this control
+       at a matching height beside them, per the class doc's own "flush beside those controls"
+       promise -- every other explicit tier below already matches those controls exactly. */
+    --lr-segmented-track-min-height: var(--lr-size-2-5rem);
     --lr-segmented-segment-padding: var(--lr-size-0-125rem) var(--lr-space-s);
     --lr-segmented-font-size: var(--lr-font-size-sm);
   }
@@ -94,8 +98,12 @@ export const styles = css`
     cursor: not-allowed;
   }
   /* Reads its own prop, not the shared --lr-color-text token the selected state used to share:
-     recoloring the selected pill must never repaint hovered-unselected segments with it. */
-  [part='segment']:hover:not([aria-disabled='true']):not([aria-checked='true']) {
+     recoloring the selected pill must never repaint hovered-unselected segments with it.
+     :where() zeroes the wrapped selectors' specificity contribution, leaving only :hover itself
+     -- (0,1,0) total, functionally identical selection to the unwrapped shape but now losing (on
+     the pseudo-element tiebreak) to a consumer's own ::part(segment):hover override ((0,1,1))
+     without that consumer needing !important -- mirrors lr-attachment-trigger's identical fix. */
+  :where([part='segment']):hover:where(:not([aria-disabled='true']):not([aria-checked='true'])) {
     color: var(--lr-segmented-hover-color, var(--lr-color-text));
   }
   [part='segment']:focus-visible {

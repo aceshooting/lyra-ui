@@ -1,4 +1,5 @@
 import { fixture, expect, html } from '@open-wc/testing';
+import { LitElement, type PropertyValues } from 'lit';
 import './dashboard-grid.js';
 import type { LyraDashboardGrid } from './dashboard-grid.js';
 import type { DashboardCell } from './layout.js';
@@ -514,4 +515,37 @@ describe('localized strings', () => {
 it('gives resize-handle a hover state', () => {
   const css = styles.cssText.replace(/\s+/g, ' ');
   expect(css).to.match(/\[part='resize-handle'\]:hover/);
+});
+
+it('gives cell (a real focusable, draggable/resizable target) a hover state matching its own focus-visible ring', () => {
+  const css = styles.cssText.replace(/\s+/g, ' ');
+  expect(css).to.match(/\[part='cell'\]:hover\s*\{[^}]*outline:/);
+});
+
+it("chains willUpdate() to super.willUpdate() so a mixin layered under LyraElement would still run", async () => {
+  // No shared mixin actually overrides willUpdate() today, so the only way to prove the chain is
+  // live (rather than grepping source text for the call) is to patch the base-class hook itself
+  // -- the exact hook a future mixin would extend -- and confirm it actually fires.
+  const hadOwn = Object.prototype.hasOwnProperty.call(LitElement.prototype, 'willUpdate');
+  const original = (LitElement.prototype as unknown as { willUpdate?: (changed: PropertyValues) => void })
+    .willUpdate;
+  let called = false;
+  (LitElement.prototype as unknown as { willUpdate: (changed: PropertyValues) => void }).willUpdate = function (
+    this: LitElement,
+    changed: PropertyValues,
+  ) {
+    called = true;
+    original?.call(this, changed);
+  };
+  try {
+    const el = (await fixture(html`<lr-dashboard-grid .layout=${twoCells()}></lr-dashboard-grid>`)) as LyraDashboardGrid;
+    await el.updateComplete;
+    expect(called).to.be.true;
+  } finally {
+    if (hadOwn) {
+      (LitElement.prototype as unknown as { willUpdate: unknown }).willUpdate = original;
+    } else {
+      delete (LitElement.prototype as unknown as { willUpdate?: unknown }).willUpdate;
+    }
+  }
 });

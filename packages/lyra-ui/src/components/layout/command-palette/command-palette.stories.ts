@@ -21,3 +21,20 @@ export const ThemedActiveCommand: Story = {
     <lr-command-palette .commands=${[{ id: 'new', label: 'New document', group: 'File', shortcut: '⌘N' }, { id: 'search', label: 'Search workspace', group: 'Navigation' }]}></lr-command-palette>
   </div>`,
 };
+
+/** A narrow (320px) dialog allocation, set through the documented
+ *  `--lr-command-palette-max-inline-size` cssprop (the backdrop itself is a fixed-position
+ *  overlay spanning the whole viewport, so an ancestor's own inline-size can't constrain the
+ *  dialog the way it would a static-flow component). A long, unbreakable description column
+ *  shrinks to fit the row instead of overflowing the dialog. */
+export const NarrowAllocation: Story = {
+  name: 'Narrow allocation (320px)',
+  render: (_args, context) => html`<lr-command-palette
+    style="--lr-command-palette-max-inline-size: 320px;"
+    .open=${context.viewMode !== 'docs'}
+    .commands=${[
+      { id: 'open', label: 'Open File', description: '/Users/alexandra-morrison/Projects/lyra-ui-workspace/very-long-nested-directory-path/index.ts', shortcut: '⌘O' },
+      { id: 'save', label: 'Save', group: 'File' },
+    ]}
+  ></lr-command-palette>`,
+};

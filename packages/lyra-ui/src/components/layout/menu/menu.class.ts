@@ -197,7 +197,8 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
   private typeAheadBuffer = '';
   private typeAheadTimer?: ReturnType<typeof setTimeout>;
 
-  protected willUpdate(): void {
+  protected willUpdate(changed: PropertyValues): void {
+    super.willUpdate(changed);
     this._isFirstUpdate = !this.hasUpdated;
   }
 
@@ -232,6 +233,7 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
   }
 
   protected updated(changed: PropertyValues): void {
+    super.updated(changed);
     if (changed.has('open')) {
       this.cleanup?.();
       this.cleanup = undefined;

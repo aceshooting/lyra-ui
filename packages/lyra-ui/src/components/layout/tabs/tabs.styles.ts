@@ -62,8 +62,11 @@ export const styles = css`
     align-items: center;
   }
   /* Reads its own prop, not the shared --lr-color-text token: recoloring the selected tab must
-     never repaint hovered-unselected tabs with the selected color. */
-  [part='tab']:hover:not([aria-disabled='true']) {
+     never repaint hovered-unselected tabs with the selected color. :where() zeroes the wrapped
+     selectors' specificity contribution, leaving only :hover itself -- (0,1,0) total, so a
+     consumer's own ::part(tab):hover override ((0,1,1)) always wins without needing !important
+     (mirrors lr-attachment-trigger's identical fix). */
+  :where([part='tab']):hover:where(:not([aria-disabled='true'])) {
     color: var(--lr-tabs-hover-color, var(--lr-color-text));
   }
   /* Inline var() fallbacks rather than :host-declared properties, so a consumer can set them on any

@@ -171,6 +171,7 @@ export class LyraResponsivePanel extends LyraElement<LyraResponsivePanelEventMap
   private isFirstUpdate = true;
 
   protected willUpdate(changed: PropertyValues): void {
+    super.willUpdate(changed);
     this.isFirstUpdate = !this.hasUpdated;
     if (this.isFirstUpdate) {
       this.hasHeaderSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'header');
@@ -233,6 +234,7 @@ export class LyraResponsivePanel extends LyraElement<LyraResponsivePanelEventMap
   // in the DOM before the fallback .focus() call below can rely on it --
   // mirrors lr-dialog's identical ordering rationale.
   protected updated(changed: PropertyValues): void {
+    super.updated(changed);
     if (!this.isFirstUpdate && changed.has('effectiveMode')) {
       this.emit<ResponsivePanelModeChangeDetail>('lr-mode-change', { mode: this.effectiveMode });
     }

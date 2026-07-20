@@ -198,6 +198,7 @@ export class LyraDashboardGrid extends LyraElement<LyraDashboardGridEventMap> {
   }
 
   protected willUpdate(changed: PropertyValues): void {
+    super.willUpdate(changed); // no-op today, but keeps any future LyraElement/mixin willUpdate logic wired in
     if (changed.has('layout')) this.syncDefaultCells();
   }
 

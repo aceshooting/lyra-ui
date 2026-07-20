@@ -32,10 +32,10 @@ export class LyraDetails extends LyraElement<LyraDetailsEventMap> {
   @state() private hasSummarySlot = false;
 
   protected willUpdate(changed: PropertyValues<this>): void {
+    super.willUpdate(changed); // no-op today, but keeps any future LyraElement/mixin willUpdate logic wired in
     if (!this.hasUpdated) {
       this.hasSummarySlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'summary');
     }
-    void changed;
   }
 
   private onToggle = (event: Event): void => {

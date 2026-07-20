@@ -21,6 +21,12 @@ export interface StepItem {
   /** Optional native `title` tooltip for this step's button -- e.g. explaining why a
    *  `disabled` step is locked. Omit for no `title` attribute at all (not an empty string). */
   title?: string;
+  /** Optional leading topic glyph for this step (e.g. a payment icon on a "Payment" step) --
+   *  same `PaletteItem`/`MentionItem`/`SegmentedItem` precedent: intentionally general content
+   *  (a `TemplateResult`, an emoji string, etc.), not a square-icon-only field. Rendered
+   *  additionally to, never instead of, the state-driven index chip/checkmark -- the icon
+   *  identifies the step's topic, the chip/checkmark identifies its state. */
+  icon?: unknown;
 }
 
 export interface LyraStepperEventMap {
@@ -70,19 +76,26 @@ function checkmarkGlyph() {
  *
  * @customElement lr-stepper
  * @event lr-step-select - Fired on click, or Enter/Space while focused, on a non-`disabled`
- *   step. `detail: { index, id }`. Cancelable, though this component takes no default action of
- *   its own to prevent (it never mutates `steps`) -- `preventDefault()` is available for a host
- *   that wants a single place to short-circuit its own listener's follow-up work.
+ *   step. `detail: { index, id }`. Not cancelable: this component is fully controlled (mirrors
+ *   `lr-table`'s `columns`/`rows` contract) and takes no default action of its own on selection
+ *   (it never mutates `steps`), so there is no real veto point for `preventDefault()` to gate.
  * @event lr-stepper-orientation-change - `detail: { orientation }`, fired when an enabled
  *   `orientationBreakpoint` changes the effective layout/navigation axis.
  * @csspart base - The root wrapper.
  * @csspart step - A single step button.
+ * @csspart step-icon - Optional leading topic glyph supplied by the item's `icon` field; content
+ *   may have a natural aspect ratio and is not restricted to a square icon. Rendered additionally
+ *   to, never instead of, `step-index`/`step-check`.
  * @csspart step-index - The numbered index chip, shown for `pending`/`current`/`error` steps.
  * @csspart step-check - The completed-checkmark glyph, shown for `completed` steps instead of `step-index`.
  * @csspart step-label - The step's label text.
  * @cssprop [--lr-stepper-current-color=var(--lr-color-text)] - Text color of the `current` step.
  *   Declared as an inline `var()` fallback (never on `:host`), so setting it on the element or an
  *   ancestor recolors only the current step without hijacking the library-wide `--lr-color-text` token.
+ * @cssprop [--lr-stepper-current-font-weight=var(--lr-font-weight-semibold)] - Font weight of the
+ *   `current` step's label. `::part(step)[data-state='current']` is invalid CSS (an attribute
+ *   selector cannot follow `::part`), so this is the only way to change just the current step's
+ *   boldness without hijacking the library-wide `--lr-font-weight-semibold` token.
  * @cssprop [--lr-stepper-error-color=var(--lr-color-danger)] - Text color of an `error` step.
  * @cssprop [--lr-stepper-current-index-bg=var(--lr-color-brand)] - Background of the `current` step's
  *   numbered index chip (`step-index`).
@@ -148,10 +161,16 @@ export class LyraStepper extends LyraElement<LyraStepperEventMap> {
   private _effectiveOrientation: StepperOrientation = 'horizontal';
   private resizeObserver?: ResizeObserver;
   @query('[part="base"]') private baseEl?: HTMLElement;
+  /** Best-known inline size before `baseEl` exists (or as a fallback while it's momentarily
+   *  unmeasured) -- seeded from a real reading of the host's own box in `connectedCallback()`
+   *  (see its comment) so the very first render already classifies correctly under the default
+   *  `'container'` basis, instead of falling back to the always-'wide' `Number.POSITIVE_INFINITY`
+   *  sentinel until the `ResizeObserver`'s own necessarily async first callback lands. */
+  private measuredInlineSize = Number.POSITIVE_INFINITY;
   /** Owns breakpoint resolution, basis selection, and the viewport `MediaQueryList` lifecycle
    *  (including teardown on disconnect) -- see `OrientationBreakpointController`. */
   private orientationBreakpoints = new OrientationBreakpointController(this, () =>
-    this.updateEffectiveOrientation(this.baseEl?.clientWidth ?? Number.POSITIVE_INFINITY, true),
+    this.updateEffectiveOrientation(this.baseEl?.clientWidth ?? this.measuredInlineSize, true),
   );
 
   /** The live layout/navigation axis after applying `orientationBreakpoint` -- identical to
@@ -172,6 +191,13 @@ export class LyraStepper extends LyraElement<LyraStepperEventMap> {
 
   connectedCallback(): void {
     super.connectedCallback();
+    // Seeds `measuredInlineSize` with a real reading of the host's own box, taken before the
+    // very first render (and again on every reconnect) -- [part="base"] is a block-level flex
+    // container with no width of its own (see stepper.styles.ts), so it fills the host's
+    // content-box width, making the host's own box a safe stand-in for it before that part even
+    // exists. See the field's own comment for why this matters.
+    const hostWidth = this.getBoundingClientRect().width;
+    if (hostWidth > 0) this.measuredInlineSize = hostWidth;
     if (this.orientationBreakpoints.containerObservationEnabled) this.armResizeObserver();
   }
 
@@ -202,10 +228,12 @@ export class LyraStepper extends LyraElement<LyraStepperEventMap> {
       // after this update completes), and `_effectiveOrientation` has no committed prior value to
       // transition away from yet, so the very first read must never emit -- matching this event's
       // documented "changes the effective axis" contract. Under 'container' basis there's no fresh
-      // read here at all, only a stale `baseEl` snapshot, so that case keeps deferring the emit to
-      // the `ResizeObserver` callback's own fresh measurement, as before.
+      // read here at all -- only `measuredInlineSize`, which `connectedCallback()` already seeded
+      // with a real reading of the host's own box before this first render (see its comment), so
+      // the first paint is already correct here too; the `ResizeObserver` callback's own fresh
+      // measurement still owns every subsequent transition.
       this.updateEffectiveOrientation(
-        this.baseEl?.clientWidth ?? Number.POSITIVE_INFINITY,
+        this.baseEl?.clientWidth ?? this.measuredInlineSize,
         this.hasUpdated && this.orientationBreakpointBasis === 'viewport',
       );
     }
@@ -251,6 +279,7 @@ export class LyraStepper extends LyraElement<LyraStepperEventMap> {
       this.resizeObserver = new ResizeObserver((entries) => {
         const box = entries[0]?.contentBoxSize?.[0];
         const width = box ? box.inlineSize : (this.baseEl?.getBoundingClientRect().width ?? 0);
+        this.measuredInlineSize = width;
         this.updateEffectiveOrientation(width, true);
       });
     }
@@ -259,7 +288,10 @@ export class LyraStepper extends LyraElement<LyraStepperEventMap> {
 
   private selectStep(step: StepItem, index: number): void {
     if (step.state === 'disabled') return;
-    this.emit<{ index: number; id: string }>('lr-step-select', { index, id: step.id }, { cancelable: true });
+    // Not cancelable -- see the class doc's `lr-step-select` entry for why this component (a
+    // fully controlled, data-driven component like `lr-table`) has no default action of its own
+    // to gate behind `.defaultPrevented`.
+    this.emit<{ index: number; id: string }>('lr-step-select', { index, id: step.id });
   }
 
   private focusStep(id: string): void {
@@ -334,6 +366,7 @@ export class LyraStepper extends LyraElement<LyraStepperEventMap> {
             title=${step.title ?? nothing}
             @click=${() => this.selectStep(step, index)}
           >
+            ${step.icon ? html`<span part="step-icon" aria-hidden="true">${step.icon}</span>` : nothing}
             ${step.state === 'completed'
               ? checkmarkGlyph()
               : html`<span part="step-index">${index + 1}</span>`}

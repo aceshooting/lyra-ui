@@ -36,6 +36,19 @@ it('adds a static, themeable edge fade to the scroll container', () => {
   expect(css).to.include('var(--lr-scroll-fade-size)');
 });
 
+it('the internal [part="tab"]:hover rule is :where()-wrapped, so a consumer ::part(tab):hover override wins without needing !important', async () => {
+  const el = (await fixture(basic())) as LyraTabs;
+  // Same technique as attachment-trigger.test.ts's identically-shaped specificity test: real
+  // browser test runners don't synthesize a :hover pseudo-class from a dispatched event, so
+  // assert via the rendered stylesheet's own selector text instead of a paint result.
+  const internalRule = (el.shadowRoot!.adoptedStyleSheets ?? [])
+    .flatMap((sheet) => Array.from(sheet.cssRules))
+    .map((rule) => rule.cssText)
+    .find((text) => text.includes(':hover') && text.includes('aria-disabled'));
+  expect(internalRule, 'expected a [part="tab"]:hover rule').to.not.equal(undefined);
+  expect(internalRule).to.contain(':where(');
+});
+
 it('is accessible with no panel children (empty state)', async () => {
   const el = (await fixture(html`<lr-tabs></lr-tabs>`)) as LyraTabs;
   expect(tabButtons(el).length).to.equal(0);
@@ -458,7 +471,7 @@ describe('selected/hover cssprops', () => {
     // The hover rule resolves through its own prop, never through the selected-state props: before
     // this hook existed the only way to recolor the selected tab was to hijack library-wide
     // --lr-color-brand/--lr-color-text, which repainted hovered-unselected tabs with it too.
-    const hover = ruleFor("[part='tab']:hover:not([aria-disabled='true'])");
+    const hover = ruleFor(":where([part='tab']):hover:where(:not([aria-disabled='true']))");
     expect(hover.getPropertyValue('color')).to.equal('var(--lr-tabs-hover-color, var(--lr-color-text))');
     expect(hover.cssText).to.not.include('selected');
     expect(hover.cssText).to.not.include('indicator');

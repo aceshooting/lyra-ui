@@ -52,6 +52,31 @@ it('omits the indicator group entirely when showIndicators is false', async () =
   expect(el.shadowRoot!.querySelector('[part="indicators"]')).to.be.null;
 });
 
+it('honors a plain show-indicators="false" markup attribute, not just a JS property binding', async () => {
+  const el = await carousel(html`
+    <lr-carousel show-indicators="false">
+      <div>One</div>
+      <div>Two</div>
+    </lr-carousel>
+  `);
+  expect(el.showIndicators, 'the true-default converter must parse the literal string').to.be.false;
+  expect(el.shadowRoot!.querySelector('[part="indicators"]')).to.be.null;
+});
+
+it('removing the show-indicators attribute restores the true default', async () => {
+  const el = await carousel(html`
+    <lr-carousel show-indicators="false">
+      <div>One</div>
+      <div>Two</div>
+    </lr-carousel>
+  `);
+  expect(el.showIndicators).to.be.false;
+  el.removeAttribute('show-indicators');
+  await el.updateComplete;
+  expect(el.showIndicators).to.be.true;
+  expect(el.shadowRoot!.querySelector('[part="indicators"]')).to.not.be.null;
+});
+
 it('emits slide changes and supports keyboard navigation', async () => {
   const el = await carousel();
   const next = el.shadowRoot!.querySelector('[part="next-button"]') as HTMLButtonElement;
@@ -181,6 +206,40 @@ it('disables autoplay under prefers-reduced-motion', async () => {
   } finally {
     window.matchMedia = originalMatchMedia;
   }
+});
+
+it('localizes every default string via .strings, proving the call sites are actually wired up', async () => {
+  const el = await carousel(html`
+    <lr-carousel
+      .strings=${{
+        carousel: 'carrousel',
+        carouselLabel: 'Carrousel',
+        carouselSlide: 'diapositive',
+        carouselSlidePosition: 'Diapositive {index} sur {total}',
+        carouselIndicators: 'Diapositives du carrousel',
+        carouselGoTo: 'Aller à la diapositive {index}',
+        previous: 'Précédent',
+        next: 'Suivant',
+      }}
+    >
+      <div>One</div>
+      <div>Two</div>
+    </lr-carousel>
+  `);
+  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  expect(base.getAttribute('aria-roledescription')).to.equal('carrousel');
+  expect(base.getAttribute('aria-label')).to.equal('Carrousel');
+  expect(el.shadowRoot!.querySelector('[part="previous-button"]')!.getAttribute('aria-label')).to.equal('Précédent');
+  expect(el.shadowRoot!.querySelector('[part="next-button"]')!.getAttribute('aria-label')).to.equal('Suivant');
+  expect(el.shadowRoot!.querySelector('[part="indicators"]')!.getAttribute('aria-label')).to.equal(
+    'Diapositives du carrousel',
+  );
+  expect(el.shadowRoot!.querySelector('[part="indicator"]')!.getAttribute('aria-label')).to.equal(
+    'Aller à la diapositive 1',
+  );
+  const slide = el.children[0] as HTMLElement;
+  expect(slide.getAttribute('aria-roledescription')).to.equal('diapositive');
+  expect(slide.getAttribute('aria-label')).to.equal('Diapositive 1 sur 2');
 });
 
 it('is accessible and supports a consumer supplied accessible label', async () => {

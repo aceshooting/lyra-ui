@@ -738,6 +738,11 @@ it('positions rows via a transform instead of a padding-based spacer, so a new m
   expect(styles.cssText).to.not.match(/padding-block-start|padding-top/);
 });
 
+it('gives the always-focusable [part="base"] scroll region a :hover state, matching its own :focus-visible affordance', () => {
+  const css = styles.cssText.replace(/\s+/g, ' ');
+  expect(css).to.match(/\[part='base'\]:hover\s*\{[^}]+\}/);
+});
+
 it('does not rebuild the offsets array on a pure scroll-position update in row-height="auto" mode', async () => {
   const items = Array.from({ length: 300 }, (_, i) => i);
   const el = (await fixture(

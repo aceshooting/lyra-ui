@@ -25,6 +25,16 @@ export const styles = css`
        would otherwise be cut off along the scrolling edges. */
     outline-offset: calc(-1 * var(--lr-focus-ring-offset));
   }
+  /* [part="base"] unconditionally carries tabindex="0" (a real, always-focusable target, not a
+     decorative element) -- this pairs a subtler preview of the same outline treatment for mouse
+     users, who otherwise get no indication the scroll region is interactive/keyboard-navigable at
+     all. Deliberately a plain border color rather than the focus-ring's own brand color, so hover
+     still reads as a preview and the eventual :focus-visible ring stays visually distinct.
+     Negative (inward) offset for the same reason as :focus-visible above. */
+  [part='base']:hover {
+    outline: var(--lr-border-width-thin) solid var(--lr-color-border-strong);
+    outline-offset: calc(-1 * var(--lr-border-width-thin));
+  }
   [part='spacer'] {
     position: relative;
     inline-size: 100%;

@@ -741,6 +741,26 @@ it('exposes the fullscreen scrim color as a retheme-able custom property', () =>
   expect(css).to.include('background: var(--lr-widget-overlay-color)');
 });
 
+it('actually paints the rendered fullscreen backdrop with the resolved --lr-widget-overlay-color', async () => {
+  const el = (await fixture(
+    html`<lr-widget expandable fullscreen label="x"><p>Body</p></lr-widget>`,
+  )) as LyraWidget;
+  const backdrop = el.shadowRoot!.querySelector('[part="backdrop"]') as HTMLElement;
+
+  // Resolve --lr-color-overlay the same way the browser would, inside the
+  // same shadow root the token cascades through -- avoids hardcoding a
+  // specific color so this stays valid across themes.
+  const probe = document.createElement('span');
+  probe.style.color = 'var(--lr-color-overlay)';
+  el.shadowRoot!.appendChild(probe);
+  const expected = getComputedStyle(probe).color;
+  probe.remove();
+
+  const actual = getComputedStyle(backdrop).backgroundColor;
+  expect(actual).to.not.equal('rgba(0, 0, 0, 0)');
+  expect(actual).to.equal(expected);
+});
+
 it('disables the collapse/fullscreen icon rotate transition under reduced motion', () => {
   const css = styles.cssText.replace(/\s+/g, ' ');
   expect(css).to.include('transition: transform var(--lr-transition-fast);');
@@ -813,6 +833,13 @@ it('applies tighter header/body padding when compact', async () => {
     parseFloat(compactBodyStyle.paddingInlineStart),
     'compact body padding should render smaller than the default',
   ).to.be.lessThan(parseFloat(normalBodyStyle.paddingInlineStart));
+  // The header's icon-to-title gap must shrink alongside its padding -- a
+  // compact header that keeps the non-compact gap looks disproportionately
+  // loose despite its tighter outer padding.
+  expect(
+    parseFloat(compactHeaderStyle.columnGap),
+    'compact header gap should render smaller than the default',
+  ).to.be.lessThan(parseFloat(normalHeaderStyle.columnGap));
 });
 
 describe('backdrop-inset', () => {

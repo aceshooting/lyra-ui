@@ -43,7 +43,7 @@ const meta: Meta = {
     docs: {
       description: {
         component:
-          'An ordered multi-step wizard/form navigation strip: label + index per step, current/completed/disabled/error state, click-to-jump. Fully data-driven and controlled -- like `lr-table`, it never mutates its own `steps`; a click or Enter/Space on a non-disabled step fires a cancelable `lr-step-select` event and the host decides whether/how `steps` changes in response.',
+          'An ordered multi-step wizard/form navigation strip: label + index per step, current/completed/disabled/error state, click-to-jump. Fully data-driven and controlled -- like `lr-table`, it never mutates its own `steps`; a click or Enter/Space on a non-disabled step fires a (non-cancelable) `lr-step-select` event and the host decides whether/how `steps` changes in response.',
       },
     },
   },

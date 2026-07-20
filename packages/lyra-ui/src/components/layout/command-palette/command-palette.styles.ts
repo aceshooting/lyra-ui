@@ -6,6 +6,8 @@ export const styles = css`
   [part='search'] { display: flex; align-items: center; gap: var(--lr-space-s); padding: var(--lr-space-m); border-block-end: var(--lr-border-width-thin) solid var(--lr-color-border); }
   [part='input'] { flex: 1; min-inline-size: 0; border: 0; outline: 0; background: transparent; color: inherit; font: inherit; }
   [part='input']::placeholder { color: var(--lr-color-text-quiet); opacity: 1; }
+  [part='input']::-webkit-search-cancel-button,
+  [part='input']::-webkit-search-decoration { appearance: none; }
   [part='list'] { max-block-size: var(--lr-command-palette-list-max-block-size); overflow: auto; padding: var(--lr-space-xs); }
   [part='group'] { padding: var(--lr-space-xs) var(--lr-space-s); color: var(--lr-color-text-quiet); font-size: var(--lr-font-size-sm); font-weight: var(--lr-font-weight-semibold); }
   [part='command'] { display: flex; align-items: center; gap: var(--lr-space-s); inline-size: 100%; padding: var(--lr-space-s); border: 0; border-radius: var(--lr-radius); background: transparent; color: inherit; text-align: start; cursor: pointer; }
@@ -16,7 +18,8 @@ export const styles = css`
      it. Unset, it falls back to that token, so the rendering is unchanged. */
   [part='command'][data-active='true'] { background: var(--lr-command-palette-active-bg, var(--lr-color-brand-quiet)); }
   [part='command']:disabled { opacity: var(--lr-opacity-disabled); cursor: not-allowed; }
-  [part='description'] { flex: 1; color: var(--lr-color-text-quiet); font-size: var(--lr-font-size-sm); }
+  [part='icon'] { display: inline-flex; align-items: center; flex: none; block-size: var(--lr-size-1em); max-inline-size: var(--lr-size-1-25rem); }
+  [part='description'] { flex: 1; min-inline-size: 0; overflow-wrap: anywhere; color: var(--lr-color-text-quiet); font-size: var(--lr-font-size-sm); }
   [part='shortcut'] { color: var(--lr-color-text-quiet); font-family: var(--lr-font-mono); font-size: var(--lr-font-size-sm); }
   [part='empty'] { padding: var(--lr-space-l); color: var(--lr-color-text-quiet); text-align: center; }
 `;

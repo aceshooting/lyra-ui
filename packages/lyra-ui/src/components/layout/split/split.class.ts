@@ -340,6 +340,17 @@ export class LyraSplit extends LyraElement<LyraSplitEventMap> {
 
   connectedCallback(): void {
     super.connectedCallback();
+    // Seeds `measuredInlineSize` with a real reading of the host's own box, taken before the
+    // very first render (and again on every reconnect) -- [part="base"] always spans the full
+    // host inline-size (see split.styles.ts's `inline-size: 100%`), so the host's own box is a
+    // safe stand-in for it before that part even exists. Without this, `willUpdate()`'s
+    // first-render classification would fall back to the `Number.POSITIVE_INFINITY` sentinel
+    // ("wide"/"horizontal") and only correct itself once the ResizeObserver's own necessarily
+    // async first callback lands -- a visible flash of the wrong layout under the default
+    // 'container' basis (mirrors 'viewport' basis's already-synchronous correctness). The real
+    // observer's own first callback still supersedes this approximation as soon as it fires.
+    const hostWidth = this.getBoundingClientRect().width;
+    if (hostWidth > 0) this.measuredInlineSize = hostWidth;
     this.panelCount = this.children.length;
     if (!this.initializedSizes) {
       this.initializeSizes();
@@ -442,10 +453,11 @@ export class LyraSplit extends LyraElement<LyraSplitEventMap> {
       // Classifying here, rather than waiting for the shared `ResizeObserver`'s first callback, is
       // what makes `data-collapse-state` correct on the *first paint* under viewport basis --
       // `configure()` just armed both queries synchronously, so `classify()` is already a live,
-      // authoritative read (mirrors the orientation branch above). Under container basis this only
-      // re-maps the last known `measuredInlineSize` (`+Infinity`, i.e. `'wide'`, before the first
-      // measurement lands), which is exactly the pre-existing behavior; the observer's own fresh
-      // callback still owns that basis' real transitions.
+      // authoritative read (mirrors the orientation branch above). Under container basis this
+      // re-maps `measuredInlineSize`, which `connectedCallback()` already seeded with a real
+      // reading of the host's own box before this first render (see its own comment) -- so the
+      // first paint is already correct here too, with no `ResizeObserver` round-trip needed; the
+      // observer's own fresh callback still owns every subsequent transition.
       //
       // `hasUpdated` excludes the first render from the emit for the same reason the orientation
       // branch does: Lit's initial `changed` map lists every set property, so a viewport

@@ -56,6 +56,13 @@ it('renders no drag handle at all when resizable is false', async () => {
   expect(el.shadowRoot!.querySelector('[part="handle"]')).to.equal(null);
 });
 
+it('honors the plain resizable="false" attribute form, not just a property binding', async () => {
+  const el = await dockedFixture('resizable="false"');
+  await elementUpdated(el);
+  expect(el.resizable).to.equal(false);
+  expect(el.shadowRoot!.querySelector('[part="handle"]')).to.equal(null);
+});
+
 it('sets aria-orientation to horizontal for a top/bottom-docked handle', async () => {
   const el = await dockedFixture('', 'bottom');
   await elementUpdated(el);

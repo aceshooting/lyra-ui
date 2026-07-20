@@ -139,6 +139,17 @@ it('renders lr-entity-card per entity with entity/types/communityLabel/showFocus
   expect(card.showFocusButton).to.be.false;
 });
 
+it('honors the plain show-focus-button="false" attribute form, not just a property binding', async () => {
+  const el = (await fixture(
+    html`<lr-drilldown-panel show-focus-button="false"></lr-drilldown-panel>`,
+  )) as LyraDrilldownPanel;
+  expect(el.showFocusButton).to.be.false;
+  el.path = [nodeWithAllCategories];
+  await el.updateComplete;
+  const card = el.shadowRoot!.querySelector('lr-entity-card') as LyraEntityCard;
+  expect(card.showFocusButton).to.be.false;
+});
+
 it('shows the Agent runs tab only once content is projected into the runs slot, keyed off the light DOM directly', async () => {
   const el = (await fixture(html`<lr-drilldown-panel></lr-drilldown-panel>`)) as LyraDrilldownPanel;
   el.path = [nodeWithEvidenceOnly];

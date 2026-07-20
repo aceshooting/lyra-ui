@@ -151,8 +151,10 @@ describe('item icon', () => {
 
   it('gives a non-disabled, non-checked segment a :hover treatment', () => {
     const css = styles.cssText.replace(/\s+/g, ' ');
+    // :where()-wrapped (see the shadow-part-selector-specificity fix below) so a consumer's own
+    // ::part(segment):hover override can win without !important -- mirrors lr-attachment-trigger.
     expect(css).to.match(
-      /\[part='segment'\]:hover:not\(\[aria-disabled='true'\]\):not\(\[aria-checked='true'\]\)\s*\{[^}]+\}/,
+      /:where\(\[part='segment'\]\):hover:where\(:not\(\[aria-disabled='true'\]\):not\(\[aria-checked='true'\]\)\)\s*\{[^}]+\}/,
     );
   });
 
@@ -192,6 +194,23 @@ describe('narrow allocation', () => {
     // The host's own box must not overflow the 320px allocation; the row itself
     // owns horizontal scrolling for long translated labels.
     expect((el as HTMLElement).getBoundingClientRect().width).to.be.at.most(320);
+  });
+});
+
+describe('segment hover specificity', () => {
+  it('keeps the internal hover rule :where()-wrapped so a ::part(segment):hover override wins without !important', async () => {
+    // Mirrors lr-attachment-trigger's identical "trigger-button hover specificity" test: jsdom/
+    // browser test runners don't synthesize a real :hover pseudo-class from a dispatched event, so
+    // this asserts the internal rule's own specificity-lowering shape (read off the real adopted
+    // stylesheet, not the exported .cssText string) rather than a simulated hover paint.
+    const el = (await fixture(html`<lr-segmented .items=${items()} value="week"></lr-segmented>`)) as LyraSegmented;
+    const internalHoverRule = (el.shadowRoot!.adoptedStyleSheets ?? [])
+      .flatMap((sheet) => Array.from(sheet.cssRules))
+      .map((rule) => rule.cssText)
+      // CSSOM re-serializes attribute selectors with double quotes regardless of the source's own
+      // quoting, so match quote-insensitively (mirrors the ruleFor() helper above).
+      .find((text) => text.includes(':hover') && /part=['"]segment['"]/.test(text));
+    expect(internalHoverRule).to.contain(':where(');
   });
 });
 
@@ -264,7 +283,9 @@ describe('selected-state cssprops', () => {
     // this hook existed the only way to recolor the checked pill was to hijack library-wide
     // --lr-color-surface/--lr-color-text, which necessarily repainted hovered-unselected segments
     // too (they read the very same token).
-    const hover = ruleFor("[part='segment']:hover:not([aria-disabled='true']):not([aria-checked='true'])");
+    const hover = ruleFor(
+      ":where([part='segment']):hover:where(:not([aria-disabled='true']):not([aria-checked='true']))",
+    );
     expect(hover.getPropertyValue('color')).to.equal('var(--lr-segmented-hover-color, var(--lr-color-text))');
     expect(hover.cssText).to.not.include('selected');
     // ...and with the selected props set, that hover color still resolves to the untouched
@@ -333,7 +354,7 @@ describe('track height', () => {
       ['2xs', '20px'],
       ['xs', '24px'],
       ['s', '30px'],
-      ['m', 'auto'],
+      ['m', '40px'],
       ['l', '48px'],
       ['xl', '56px'],
     ]);
@@ -356,12 +377,12 @@ describe('track height', () => {
 });
 
 describe('size', () => {
-  it('defaults to size="m" and leaves the default rendering unchanged', async () => {
+  it('defaults to size="m", matching lr-input/lr-select/lr-combobox\'s shared 40px default-tier floor', async () => {
     const el = (await fixture(html`<lr-segmented .items=${items()} value="day"></lr-segmented>`)) as LyraSegmented;
     expect(el.size).to.equal('m');
     expect(el.getAttribute('size')).to.equal('m');
     const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
-    expect(getComputedStyle(base).minBlockSize).to.equal('auto');
+    expect(getComputedStyle(base).minBlockSize).to.equal('40px');
   });
 
   it('matches <lr-select size="s">\'s control height at size="s"', async () => {

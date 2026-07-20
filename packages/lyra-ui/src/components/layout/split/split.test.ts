@@ -862,6 +862,16 @@ it('gives each divider a distinguishing accessible name', async () => {
   expect(new Set(labels).size).to.equal(labels.length);
 });
 
+it('honors a .strings override of the resizeDivider key on the divider aria-label', async () => {
+  const el = (await fixture(
+    html`<lr-split><div>A</div><div>B</div></lr-split>`,
+  )) as LyraSplit;
+  el.strings = { resizeDivider: 'Diviseur entre le panneau {a} et le panneau {b}' };
+  await elementUpdated(el);
+  const divider = el.shadowRoot!.querySelector('[part="divider"]') as HTMLElement;
+  expect(divider.getAttribute('aria-label')).to.equal('Diviseur entre le panneau 1 et le panneau 2');
+});
+
 it('renders a clamp()-based flex-basis for a panel with panelConstraints, leaving unconstrained panels bare-percent', async () => {
   const el = (await fixture(
     html`<lr-split><div>A</div><div>B</div></lr-split>`,
@@ -1131,6 +1141,31 @@ it('defaults collapse to "none", leaving dividers/panels byte-for-byte unaffecte
   const divider = el.shadowRoot!.querySelector('[part="divider"]') as HTMLElement;
   expect(divider.hasAttribute('aria-disabled')).to.be.false;
   expect(divider.getAttribute('tabindex')).to.equal('0');
+});
+
+it('classifies collapseState correctly on the very first render under the default container basis, with no ResizeObserver round-trip needed', async () => {
+  // Real (unmocked) width: [part="base"] spans the full host inline-size, and this narrow
+  // inline style is applied before the element ever connects -- no fireCollapseResize needed to
+  // prove the FIRST render already lands on 'floating', not the sentinel-derived 'wide'.
+  const el = (await fixture(
+    html`<lr-split collapse="start" style="inline-size: 300px; block-size: 200px"><div>A</div><div>B</div></lr-split>`,
+  )) as LyraSplit;
+  await elementUpdated(el);
+  expect(el.collapseState).to.equal('floating');
+  expect(el.getAttribute('data-collapse-state')).to.equal('floating');
+});
+
+it('classifies effectiveOrientation correctly on the very first render under the default container basis, with no ResizeObserver round-trip needed', async () => {
+  const el = (await fixture(
+    html`<lr-split
+      orientation-breakpoint="500"
+      narrow-orientation="vertical"
+      style="inline-size: 300px; block-size: 200px"
+    ><div>A</div><div>B</div></lr-split>`,
+  )) as LyraSplit;
+  await elementUpdated(el);
+  expect(el.effectiveOrientation).to.equal('vertical');
+  expect(el.getAttribute('data-effective-orientation')).to.equal('vertical');
 });
 
 it('does not schedule a Lit update from the initial collapse observer setup', async () => {

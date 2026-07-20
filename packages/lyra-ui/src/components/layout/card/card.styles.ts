@@ -10,6 +10,14 @@ export const styles = css`
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
     border-radius: var(--lr-radius);
     background: var(--lr-color-surface);
+    /* Stretches to fill the host's own allocated block-size -- e.g. a CSS Grid row with the
+       default align-items: stretch -- so a shorter card's visible border/background reaches the
+       row's full height instead of shrink-wrapping to its own content (mirrors lyra-stat's/
+       word-cloud's/context-meter's identical fix; card.class.ts's own doc advertises "clickable
+       grid tiles" as an intended use case). box-sizing keeps the border inside that measured
+       height rather than growing past it. */
+    block-size: 100%;
+    box-sizing: border-box;
     color: inherit;
     text-decoration: none;
     overflow: hidden;

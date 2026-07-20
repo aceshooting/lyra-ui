@@ -40,9 +40,11 @@ export interface LyraSegmentedEventMap {
  *   may have a natural aspect ratio and is not restricted to a square icon.
  * @csspart segment-label - The segment's label text.
  * @cssprop [--lr-scroll-fade-size=2rem] - Width of the static fade at each horizontal scroll edge.
- * @cssprop [--lr-segmented-track-min-height=auto] - Minimum height of the `base` track. Re-set per
- *   `size` (`2xs` through `xl`); the `auto` default applies at the unset/`m` size. Because it is
- *   declared on `:host` per tier, override it on the element itself, not on an ancestor.
+ * @cssprop [--lr-segmented-track-min-height=var(--lr-size-2-5rem)] - Minimum height of the `base`
+ *   track. Re-set per `size` (`2xs` through `xl`); the `2.5rem` (40px) default applies at the
+ *   unset/`m` size, matching `<lr-input>`/`<lr-select>`/`<lr-combobox>`'s own shared default-tier
+ *   floor. Because it is declared on `:host` per tier, override it on the element itself, not on
+ *   an ancestor.
  * @cssprop [--lr-segmented-track-height] - Exact height of the `base` track, pinning it at every
  *   `size` tier (sets both `block-size` and `min-block-size`) so the row can sit flush beside a
  *   hard-sized toolbar control. **Genuinely unset by default** — while unset each tier keeps its

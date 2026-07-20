@@ -87,6 +87,28 @@ describe('lr-card', () => {
     expect(header.scrollWidth).to.be.at.most(header.clientWidth);
   });
 
+  it('stretches [part="base"] to fill a CSS Grid row, matching a taller sibling instead of leaving blank space', async () => {
+    const wrapper = (await fixture(html`
+      <div style="display: grid; grid-template-columns: 1fr 1fr; inline-size: 400px;">
+        <lr-card>short</lr-card>
+        <lr-card>much<br />taller<br />content<br />here<br />than<br />the<br />sibling</lr-card>
+      </div>
+    `)) as HTMLElement;
+    const [shortCard, tallCard] = Array.from(wrapper.querySelectorAll('lr-card')) as LyraCard[];
+    await shortCard.updateComplete;
+    await tallCard.updateComplete;
+
+    const shortHostRect = shortCard.getBoundingClientRect();
+    const tallHostRect = tallCard.getBoundingClientRect();
+    // The grid row stretched both hosts to the same height (default align-items: stretch).
+    expect(shortHostRect.height).to.equal(tallHostRect.height);
+
+    const shortBase = base(shortCard).getBoundingClientRect();
+    // [part="base"] must fill its own host's full measured height, not shrink-wrap to its own
+    // (shorter) content and leave visible blank grid-track space below its border.
+    expect(shortBase.height).to.be.closeTo(shortHostRect.height, 1);
+  });
+
   it('is accessible', async () => {
     const el = (await fixture(html`<lr-card href="/x"><span slot="header">Title</span>body</lr-card>`)) as LyraCard;
     await expect(el).to.be.accessible();

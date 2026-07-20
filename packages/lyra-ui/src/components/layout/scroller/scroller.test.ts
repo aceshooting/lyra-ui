@@ -76,6 +76,27 @@ describe('<lr-scroller>', () => {
     expect(nextGlyph.textContent).to.equal('↓');
   });
 
+  it('honors a strings override for scrollerLabel/scrollPrevious/scrollNext', async () => {
+    const el = await fixture<LyraScroller>(html`
+      <lr-scroller
+        controls
+        .strings=${{
+          scrollerLabel: 'Contenu défilable',
+          scrollPrevious: 'Défiler vers l’arrière',
+          scrollNext: 'Défiler vers l’avant',
+        }}
+      >
+        <span>Content</span>
+      </lr-scroller>
+    `);
+    const viewport = el.shadowRoot!.querySelector('[part="viewport"]')!;
+    const previous = el.shadowRoot!.querySelector('[part~="previous"]')!;
+    const next = el.shadowRoot!.querySelector('[part~="next"]')!;
+    expect(viewport.getAttribute('aria-label')).to.equal('Contenu défilable');
+    expect(previous.getAttribute('aria-label')).to.equal('Défiler vers l’arrière');
+    expect(next.getAttribute('aria-label')).to.equal('Défiler vers l’avant');
+  });
+
   it('gives the previous/next controls the shared minimum hit area', async () => {
     const el = await fixture<LyraScroller>(html`<lr-scroller controls><span>Content</span></lr-scroller>`);
     const previous = el.shadowRoot!.querySelector('[part~="previous"]') as HTMLElement;

@@ -178,3 +178,78 @@ it("colors the search-input's placeholder and undoes Firefox's reduced default o
   const css = styles.cssText.replace(/\s+/g, ' ');
   expect(css).to.match(/\[part='input'\]::placeholder\s*\{[^}]*color:\s*var\(--lr-color-text-quiet\)[^}]*opacity:\s*1/);
 });
+
+it("renders the search-input's ::placeholder in the shared quiet-text token's color, opacity undone (getComputedStyle, not just source text)", async () => {
+  // The test above only proves the token string appears in the stylesheet source -- it can't
+  // catch a rule that stops matching the real DOM (wrong selector, broken specificity, a shadow-
+  // DOM part boundary issue). This reads the actual rendered pseudo-element instead.
+  const el = (await fixture(
+    html`<lr-command-palette style="--lr-color-text-quiet: rgb(12, 34, 56)"></lr-command-palette>`,
+  )) as LyraCommandPalette;
+  el.openPalette();
+  await el.updateComplete;
+  const input = el.shadowRoot!.querySelector('input') as HTMLInputElement;
+  expect(getComputedStyle(input, '::placeholder').color).to.equal('rgb(12, 34, 56)');
+  expect(getComputedStyle(input, '::placeholder').opacity).to.equal('1');
+});
+
+it('resets the native search-input cancel glyph instead of leaving the browser default', () => {
+  const css = styles.cssText.replace(/\s+/g, ' ');
+  expect(css).to.match(/\[part='input'\]::-webkit-search-cancel-button/);
+  expect(css).to.match(/\[part='input'\]::-webkit-search-decoration/);
+});
+
+it('shrinks a long, unbreakable command description instead of overflowing the dialog', async () => {
+  // Deliberately has no space/hyphen/slash break opportunities anywhere -- with the UA default
+  // `min-width: auto` a flex:1 child still refuses to shrink below its own (here: full-string)
+  // min-content width, forcing this row -- and the whole list -- wider than the dialog.
+  const longDescription = 'x'.repeat(120);
+  const el = (await fixture(html`<lr-command-palette
+    style="--lr-command-palette-max-inline-size: 320px;"
+    .commands=${[{ id: 'open', label: 'Open File', description: longDescription }]}
+  ></lr-command-palette>`)) as LyraCommandPalette;
+  el.openPalette();
+  await el.updateComplete;
+  const list = el.shadowRoot!.querySelector('[part="list"]') as HTMLElement;
+  expect(list.scrollWidth).to.be.at.most(list.clientWidth + 1);
+});
+
+it('renders a leading icon on a command that has one, and omits the part for commands that do not', async () => {
+  const icon = html`<svg class="save-icon"></svg>`;
+  const el = (await fixture(html`<lr-command-palette
+    .commands=${[
+      { id: 'save', label: 'Save', icon },
+      { id: 'close', label: 'Close' },
+    ]}
+  ></lr-command-palette>`)) as LyraCommandPalette;
+  el.openPalette();
+  await el.updateComplete;
+  const rows = el.shadowRoot!.querySelectorAll('[part="command"]');
+  expect(rows[0].querySelector('[part="icon"] svg.save-icon')).to.not.equal(null);
+  expect(rows[1].querySelector('[part="icon"]')).to.equal(null);
+});
+
+it('renders localized strings from a .strings override for the dialog label, placeholder, results label, and empty message', async () => {
+  const el = (await fixture(html`<lr-command-palette
+    .commands=${[{ id: 'save', label: 'Save' }]}
+    .strings=${{
+      commandPaletteLabel: 'Palette de commandes',
+      commandPalettePlaceholder: 'Rechercher des commandes…',
+      commandPaletteResults: 'Commandes',
+      commandPaletteEmpty: 'Aucune commande correspondante.',
+    }}
+  ></lr-command-palette>`)) as LyraCommandPalette;
+  el.openPalette();
+  await el.updateComplete;
+  const dialog = el.shadowRoot!.querySelector('[part="dialog"]') as HTMLElement;
+  expect(dialog.getAttribute('aria-label')).to.equal('Palette de commandes');
+  const input = el.shadowRoot!.querySelector('input') as HTMLInputElement;
+  expect(input.placeholder).to.equal('Rechercher des commandes…');
+  const list = el.shadowRoot!.querySelector('[part="list"]') as HTMLElement;
+  expect(list.getAttribute('aria-label')).to.equal('Commandes');
+  input.value = 'no such command';
+  input.dispatchEvent(new Event('input', { bubbles: true }));
+  await el.updateComplete;
+  const empty = el.shadowRoot!.querySelector('[part="empty"]') as HTMLElement;
+  expect(empty.textContent).to.equal('Aucune commande correspondante.');
+});

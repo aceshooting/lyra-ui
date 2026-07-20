@@ -1,7 +1,6 @@
 import { fixture, expect, html, oneEvent } from '@open-wc/testing';
 import './app-rail.js';
 import { computeAppRailMode, type LyraAppRail, type AppRailModeChangeDetail, type AppRailToggleDetail } from './app-rail.js';
-import { styles } from './app-rail.styles.js';
 
 // Deterministic matchMedia stand-in -- avoids depending on the real test
 // browser's viewport width (which @web/test-runner gives no control over)
@@ -227,10 +226,21 @@ it('the toggle button opens and closes the overlay, updating aria-expanded/aria-
   expect(el.open).to.be.false;
 });
 
-it('keeps the close toggle above the open mobile panel', () => {
-  const css = styles.cssText.replace(/\s+/g, ' ');
-  expect(css).to.include(":host([mode='mobile'][open]) [part='toggle']");
-  expect(css).to.match(/:host\(\[mode='mobile'\]\[open\]\) \[part='toggle'\][^}]*z-index:/);
+it('keeps the close toggle above the open mobile panel', async () => {
+  // Renders both parts and reads their real, resolved z-index rather than regexing the
+  // stylesheet's source text -- a regression that broke the actual stacking (e.g. the panel
+  // ending up above the toggle) would go undetected by a source-text-only check.
+  const el = (await fixture(
+    html`<lr-app-rail mode="mobile" open><a href="/a">A</a></lr-app-rail>`,
+  )) as LyraAppRail;
+  await el.updateComplete;
+  const toggle = el.shadowRoot!.querySelector('[part="toggle"]') as HTMLElement;
+  const panel = el.shadowRoot!.querySelector('[part="panel"]') as HTMLElement;
+  const toggleZ = Number(getComputedStyle(toggle).zIndex);
+  const panelZ = Number(getComputedStyle(panel).zIndex);
+  expect(Number.isNaN(toggleZ), 'toggle must resolve to a real numeric z-index').to.be.false;
+  expect(Number.isNaN(panelZ), 'panel must resolve to a real numeric z-index').to.be.false;
+  expect(toggleZ).to.be.greaterThan(panelZ);
 });
 
 it('toggling emits lr-toggle with the new open state', async () => {
@@ -369,7 +379,14 @@ it('focuses the panel itself as a fallback when there is nothing focusable', asy
   const el = (await fixture(html`<lr-app-rail mode="mobile"><p>no controls</p></lr-app-rail>`)) as LyraAppRail;
   el.open = true;
   await el.updateComplete;
-  expect(el.shadowRoot!.activeElement).to.equal(el.shadowRoot!.querySelector('[part="panel"]'));
+  const panel = el.shadowRoot!.querySelector('[part="panel"]') as HTMLElement;
+  const active = el.shadowRoot!.activeElement as HTMLElement | null;
+  // Compared by id, not `.to.equal(panel)` -- a live-DOM-node equality failure would carry two
+  // Elements into @web/test-runner-mocha's session-finished message, which structuredClone can't
+  // serialize, silently hanging the whole file until the 180s watchdog kills it.
+  expect(active, 'the panel must be the focused element').to.not.equal(null);
+  expect(active!.id).to.equal(panel.id);
+  expect(active!.getAttribute('part')).to.equal('panel');
 });
 
 it('traps Tab focus across header, nav, and footer slots, wrapping last->first and first->last', async () => {

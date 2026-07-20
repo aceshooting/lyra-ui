@@ -1,4 +1,5 @@
 import { fixture, expect, html } from '@open-wc/testing';
+import { LitElement, type PropertyValues } from 'lit';
 import './details.js';
 import './accordion.js';
 import './accordion-item.js';
@@ -68,6 +69,67 @@ it('mirrors the disclosure marker rotation under RTL so it still points down/up 
   const css = detailsStyles.cssText.replace(/\s+/g, ' ');
   expect(css).to.include(":host(:dir(rtl)) [part='summary']::after { transform: rotate(-45deg); }");
   expect(css).to.include(":host([open]:dir(rtl)) [part='summary']::after { transform: rotate(-225deg); }");
+});
+
+it('actually rotates the rendered chevron under a real dir="rtl" fixture instead of pointing sideways (getComputedStyle, not just source text)', async () => {
+  // The test above only proves the declarations exist as raw stylesheet source text -- it can't
+  // catch a regression that breaks the real cascade (specificity conflict, a :dir(rtl) selector
+  // typo, the `[open]` compound no longer matching under rtl). This reads the actual rendered
+  // ::after transform on freshly-rendered closed and open fixtures (rather than toggling `open`
+  // on one already-connected instance, which doesn't reliably re-invalidate this particular
+  // dynamic-attribute + :dir() compound selector).
+  function chevronAngleDeg(el: HTMLElement): number {
+    const matrix = new DOMMatrixReadOnly(getComputedStyle(el, '::after').transform);
+    return Math.atan2(matrix.b, matrix.a) * (180 / Math.PI);
+  }
+  const closedWrapper = await fixture(html`<div dir="rtl"><lr-details summary="More">Content</lr-details></div>`);
+  const closedSummary = (closedWrapper.querySelector('lr-details') as LyraDetails).shadowRoot!.querySelector(
+    '[part="summary"]',
+  ) as HTMLElement;
+  expect(chevronAngleDeg(closedSummary)).to.be.closeTo(-45, 0.01);
+
+  const openWrapper = await fixture(html`<div dir="rtl"><lr-details summary="More" open>Content</lr-details></div>`);
+  const openSummary = (openWrapper.querySelector('lr-details') as LyraDetails).shadowRoot!.querySelector(
+    '[part="summary"]',
+  ) as HTMLElement;
+  // rotate(-225deg) normalizes to the same matrix as rotate(135deg) -- atan2's range is (-180, 180].
+  expect(chevronAngleDeg(openSummary)).to.be.closeTo(135, 0.01);
+});
+
+it('renders a localized "Details" fallback from a .strings override when no summary/slot is supplied', async () => {
+  const el = (await fixture(
+    html`<lr-details .strings=${{ details: 'Détails' }}>Content</lr-details>`,
+  )) as LyraDetails;
+  const summary = el.shadowRoot!.querySelector('[part="summary"]') as HTMLElement;
+  expect(summary.textContent?.trim()).to.equal('Détails');
+});
+
+it("chains willUpdate() to super.willUpdate() so a mixin layered under LyraElement would still run", async () => {
+  // No shared mixin actually overrides willUpdate() today, so the only way to prove the chain is
+  // live (rather than grepping source text for the call) is to patch the base-class hook itself
+  // -- the exact hook a future mixin would extend -- and confirm it actually fires.
+  const hadOwn = Object.prototype.hasOwnProperty.call(LitElement.prototype, 'willUpdate');
+  const original = (LitElement.prototype as unknown as { willUpdate?: (changed: PropertyValues) => void })
+    .willUpdate;
+  let called = false;
+  (LitElement.prototype as unknown as { willUpdate: (changed: PropertyValues) => void }).willUpdate = function (
+    this: LitElement,
+    changed: PropertyValues,
+  ) {
+    called = true;
+    original?.call(this, changed);
+  };
+  try {
+    const el = (await fixture(html`<lr-details summary="More">Content</lr-details>`)) as LyraDetails;
+    await el.updateComplete;
+    expect(called).to.be.true;
+  } finally {
+    if (hadOwn) {
+      (LitElement.prototype as unknown as { willUpdate: unknown }).willUpdate = original;
+    } else {
+      delete (LitElement.prototype as unknown as { willUpdate?: unknown }).willUpdate;
+    }
+  }
 });
 
 it('gives the summary (the real focusable/clickable surface) hover and focus-visible treatment', () => {
