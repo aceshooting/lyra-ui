@@ -17,12 +17,12 @@ function mediaEl(el: LyraAvPlayer): HTMLMediaElement {
   return el.shadowRoot!.querySelector('audio, video') as HTMLMediaElement;
 }
 
-// `renderItem`'s output (the `[part="cue"]` rows) renders inside `<lr-virtual-list>`'s own nested
+// `renderItem`'s output (the `[part~="cue"]` rows) renders inside `<lr-virtual-list>`'s own nested
 // shadow root, not directly in `el.shadowRoot` -- same pattern documented/used by pdf-viewer.test.ts
 // for its `[part="page"]` rows.
 function cueRows(el: LyraAvPlayer): HTMLButtonElement[] {
   const list = el.shadowRoot!.querySelector('lr-virtual-list');
-  return [...(list?.shadowRoot?.querySelectorAll('[part="cue"]') ?? [])] as HTMLButtonElement[];
+  return [...(list?.shadowRoot?.querySelectorAll('[part~="cue"]') ?? [])] as HTMLButtonElement[];
 }
 
 describe('defaults', () => {
@@ -589,16 +589,12 @@ describe('active-state cssprop escape hatches', () => {
     return { el, marker };
   }
 
-  // The transcript `[part='cue']` rows are produced by this component's `renderCue` but rendered by
-  // `<lr-virtual-list>` INTO ITS OWN shadow root, so av-player's stylesheet never reaches them --
-  // `[part='cue'][aria-current='true']`/`[data-active-match]` are inert today and the rows fall back
-  // to the UA button appearance (a separate, pre-existing data-mode gap, neither introduced nor
-  // fixed here). Both cue hatches are therefore asserted on a real probe element rendered in exactly
-  // the shadow root and custom-property context a cue row occupies. `[part='timeline-marker']`
-  // renders directly in av-player's own shadow root, so it is asserted on the real element.
-  const CUE_BG_HATCH = 'background: var(--lr-av-player-cue-current-bg, var(--lr-color-brand-quiet))';
-  const CUE_MATCH_HATCH = 'outline: 1px solid var(--lr-av-player-cue-active-match-color, var(--lr-color-warning))';
-
+  // `renderCue`'s rows are committed into `<lr-virtual-list>`'s own shadow root, so this component's
+  // stylesheet reaches them through `lr-virtual-list::part(...)` rather than a bare `[part='cue']`
+  // selector, and the state variants ride a part list (`cue cue-current`) since Shadow Parts forbids
+  // an attribute selector after `::part()`. Every assertion below is on the real cue button in the
+  // real state -- a stylesheet-text or probe-element assertion cannot tell a matching selector apart
+  // from an inert one. `[part='timeline-marker']` renders directly in av-player's own shadow root.
   async function withCues(style = ''): Promise<LyraAvPlayer> {
     const wrapper = (await fixture(html`<div style=${style}><lr-av-player src=${MP3_SRC} .cues=${CUES}></lr-av-player></div>`)) as HTMLElement;
     const el = wrapper.querySelector('lr-av-player') as LyraAvPlayer;
@@ -607,24 +603,61 @@ describe('active-state cssprop escape hatches', () => {
     media.dispatchEvent(new Event('timeupdate')); // 12s lands inside cue c2 -> aria-current
     await el.search('host'); // matches c1/c2, activeIndex 0 -> c1 carries data-active-match
     await el.updateComplete;
-    expect(cueRoot(el).querySelector('[part="cue"][aria-current="true"]'), 'a cue is current').to.exist;
-    expect(cueRoot(el).querySelector('[part="cue"][data-active-match]'), 'a cue is the active match').to.exist;
+    expect(cueRoot(el).querySelector('[part~="cue"][aria-current="true"]'), 'a cue is current').to.exist;
+    expect(cueRoot(el).querySelector('[part~="cue"][data-active-match]'), 'a cue is the active match').to.exist;
     return el;
   }
+
+  const currentCue = (el: LyraAvPlayer): HTMLElement => cueRoot(el).querySelector('[part~="cue-current"]') as HTMLElement;
+  const activeMatchCue = (el: LyraAvPlayer): HTMLElement => cueRoot(el).querySelector('[part~="cue-active-match"]') as HTMLElement;
+
+  it('renders a cue with the component chrome rather than the raw UA button appearance', async () => {
+    const el = await withCues();
+    const cue = cueRows(el)[2]; // neither current nor a search match: the plain `cue` treatment
+    const style = getComputedStyle(cue);
+    // A raw UA button computes to padding 1px 6px, a grey background and a visible border here.
+    expect(style.padding).to.not.equal('1px 6px');
+    expect(style.backgroundColor).to.equal('rgba(0, 0, 0, 0)');
+    expect(style.borderStyle).to.equal('none');
+    expect(style.display).to.equal('block');
+    expect(style.textAlign).to.equal('start');
+    expect(style.cursor).to.equal('pointer');
+    expect(style.color).to.equal(resolvedIn(cueRoot(el), 'color: var(--lr-color-text)', 'color'));
+  });
+
+  it('styles a cue time and speaker label', async () => {
+    const el = await withCues();
+    const time = cueRoot(el).querySelector('[part="cue-time"]') as HTMLElement;
+    expect(getComputedStyle(time).color).to.equal(resolvedIn(cueRoot(el), 'color: var(--lr-color-text-quiet)', 'color'));
+    const speaker = cueRoot(el).querySelector('[part="cue-speaker"]') as HTMLElement;
+    expect(getComputedStyle(speaker).fontWeight).to.equal(
+      getComputedStyle(speaker).getPropertyValue('--lr-font-weight-semibold').trim(),
+    );
+  });
+
+  it('outlines every search match, and the active match with the heavier solid treatment', async () => {
+    const el = await withCues();
+    const match = activeMatchCue(el);
+    expect(getComputedStyle(match).outlineStyle).to.equal('solid');
+    const plainMatch = cueRows(el).find((row) => row.hasAttribute('data-match') && !row.hasAttribute('data-active-match'))!;
+    expect(getComputedStyle(plainMatch).outlineStyle).to.equal('dashed');
+    const warning = resolvedIn(cueRoot(el), 'outline: 1px solid var(--lr-color-warning)', 'outline-color');
+    expect(getComputedStyle(plainMatch).outlineColor).to.equal(warning);
+  });
 
   it('--lr-av-player-marker-active-color recolors the active timeline-marker outline', async () => {
     const { marker } = await withMarker('--lr-av-player-marker-active-color: rgb(0, 51, 102)');
     expect(getComputedStyle(marker).outlineColor).to.equal('rgb(0, 51, 102)');
   });
 
-  it('--lr-av-player-cue-current-bg resolves the current transcript cue background', async () => {
+  it('--lr-av-player-cue-current-bg retints the current transcript cue', async () => {
     const el = await withCues('--lr-av-player-cue-current-bg: rgb(0, 51, 102)');
-    expect(resolvedIn(cueRoot(el), CUE_BG_HATCH, 'background-color')).to.equal('rgb(0, 51, 102)');
+    expect(getComputedStyle(currentCue(el)).backgroundColor).to.equal('rgb(0, 51, 102)');
   });
 
-  it('--lr-av-player-cue-active-match-color resolves the active search-match cue outline', async () => {
+  it('--lr-av-player-cue-active-match-color recolors the active search-match cue outline', async () => {
     const el = await withCues('--lr-av-player-cue-active-match-color: rgb(0, 51, 102)');
-    expect(resolvedIn(cueRoot(el), CUE_MATCH_HATCH, 'outline-color')).to.equal('rgb(0, 51, 102)');
+    expect(getComputedStyle(activeMatchCue(el)).outlineColor).to.equal('rgb(0, 51, 102)');
   });
 
   it('renders byte-identical to the pre-hatch tokens when unset', async () => {
@@ -633,18 +666,43 @@ describe('active-state cssprop escape hatches', () => {
       resolvedIn(elM.shadowRoot!, 'outline: 1px solid var(--lr-color-brand)', 'outline-color'),
     );
     const el = await withCues();
-    expect(resolvedIn(cueRoot(el), CUE_BG_HATCH, 'background-color')).to.equal(
+    expect(getComputedStyle(currentCue(el)).backgroundColor).to.equal(
       resolvedIn(cueRoot(el), 'background: var(--lr-color-brand-quiet)', 'background-color'),
     );
-    expect(resolvedIn(cueRoot(el), CUE_MATCH_HATCH, 'outline-color')).to.equal(
+    expect(getComputedStyle(activeMatchCue(el)).outlineColor).to.equal(
       resolvedIn(cueRoot(el), 'outline: 1px solid var(--lr-color-warning)', 'outline-color'),
     );
   });
 
+  it('exposes the cue parts to a consumer through exportparts', async () => {
+    const style = document.createElement('style');
+    style.textContent = `
+      lr-av-player::part(cue) { letter-spacing: 3px; }
+      lr-av-player::part(cue-current) { background: rgb(1, 2, 3); }
+      lr-av-player::part(cue-active-match) { outline-color: rgb(4, 5, 6); }
+      lr-av-player::part(cue-time) { color: rgb(7, 8, 9); }
+      lr-av-player::part(cue-text) { color: rgb(10, 11, 12); }
+    `;
+    document.head.append(style);
+    try {
+      const el = await withCues();
+      expect(getComputedStyle(cueRows(el)[0]).letterSpacing).to.equal('3px');
+      expect(getComputedStyle(currentCue(el)).backgroundColor).to.equal('rgb(1, 2, 3)');
+      expect(getComputedStyle(activeMatchCue(el)).outlineColor).to.equal('rgb(4, 5, 6)');
+      expect(getComputedStyle(cueRoot(el).querySelector('[part="cue-time"]') as HTMLElement).color).to.equal('rgb(7, 8, 9)');
+      expect(getComputedStyle(cueRoot(el).querySelector('[part="cue-text"]') as HTMLElement).color).to.equal('rgb(10, 11, 12)');
+    } finally {
+      style.remove();
+    }
+  });
+
+  // Light themed values: the cue rules now genuinely paint, so a dark background would put the
+  // cue's own quiet-toned timestamp below the contrast threshold.
   it('is accessible with every active-state prop themed', async () => {
     const el = await withCues(
-      '--lr-av-player-marker-active-color: rgb(0, 51, 102); --lr-av-player-cue-current-bg: rgb(0, 51, 102); --lr-av-player-cue-active-match-color: rgb(0, 34, 68)',
+      '--lr-av-player-marker-active-color: rgb(0, 51, 102); --lr-av-player-cue-current-bg: rgb(255, 255, 240); --lr-av-player-cue-active-match-color: rgb(0, 34, 68)',
     );
+    expect(getComputedStyle(currentCue(el)).backgroundColor).to.equal('rgb(255, 255, 240)');
     await expect(el).to.be.accessible();
   });
 });

@@ -115,6 +115,12 @@ class LyraAvPlayerBase extends LyraElement<LyraAvPlayerEventMap> {}
  *   `data-active`).
  * @csspart transcript - The virtualized cue list (`<lr-virtual-list>` itself).
  * @csspart cue - One transcript row (`aria-current`, `data-match`, `data-active-match`).
+ * @csspart cue-current - Added alongside `cue` on the row the playhead is inside. A second part
+ *   name rather than an attribute selector, because Shadow Parts forbids an attribute selector
+ *   after `::part()`.
+ * @csspart cue-match - Added alongside `cue` on every row matching the current search query.
+ * @csspart cue-active-match - Added alongside `cue`/`cue-match` on the row holding the current
+ *   search match.
  * @csspart cue-time - A cue's timestamp label.
  * @csspart cue-speaker - A cue's speaker label.
  * @csspart cue-text - A cue's text.
@@ -471,12 +477,17 @@ export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
     const c = cue as LyraAvCue;
     const isActive = this.activeCueId === c.id;
     const matchPosition = this.searchMatches.indexOf(index);
+    const isMatch = matchPosition !== -1;
+    const isActiveMatch = isMatch && matchPosition === this.activeSearchIndex;
+    const part = ['cue', isActive ? 'cue-current' : '', isMatch ? 'cue-match' : '', isActiveMatch ? 'cue-active-match' : '']
+      .filter(Boolean)
+      .join(' ');
     return html`<button
-      part="cue"
+      part=${part}
       type="button"
       aria-current=${isActive ? 'true' : 'false'}
-      ?data-match=${matchPosition !== -1}
-      ?data-active-match=${matchPosition !== -1 && matchPosition === this.activeSearchIndex}
+      ?data-match=${isMatch}
+      ?data-active-match=${isActiveMatch}
       @click=${() => this.seek(c.start)}
     >
       <span part="cue-time">${formatTime(c.start)}</span>
@@ -576,6 +587,7 @@ export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
       ${this.cues.length
         ? html`<lr-virtual-list
             part="transcript"
+            exportparts="cue:cue, cue-current:cue-current, cue-match:cue-match, cue-active-match:cue-active-match, cue-time:cue-time, cue-speaker:cue-speaker, cue-text:cue-text"
             aria-label=${this.localize('avPlayerTranscript')}
             .items=${this.cues}
             .renderItem=${this.renderCue}

@@ -98,7 +98,17 @@ export const styles = css`
   [part='transcript'] {
     --lr-virtual-list-height: var(--lr-av-player-transcript-height);
   }
-  [part='cue'] {
+  /* The cue parts below are emitted by renderCue() but committed into <lr-virtual-list>'s OWN shadow
+     root, so a bare [part='cue'] selector here can never reach them -- it would resolve against this
+     component's shadow tree, which holds none of those nodes, leaving each cue on the raw UA button
+     appearance. The one-shadow-hop ::part() form is what actually matches, and the paired exportparts
+     on the <lr-virtual-list> element re-exposes the same names to a consumer.
+
+     State variants ride a part *list* (e.g. part="cue cue-current") rather than an attribute:
+     ::part() has part~= semantics, but Shadow Parts forbids an attribute selector after ::part(), so
+     ::part(cue)[aria-current='true'] is invalid CSS. The aria-current/data-* attributes stay on the
+     button for semantics and scripting; the extra part token is what the stylesheet keys off. */
+  lr-virtual-list::part(cue) {
     display: block;
     inline-size: 100%;
     text-align: start;
@@ -109,25 +119,25 @@ export const styles = css`
     color: var(--lr-color-text);
     font: inherit;
   }
-  [part='cue'][aria-current='true'] {
+  lr-virtual-list::part(cue-current) {
     background: var(--lr-av-player-cue-current-bg, var(--lr-color-brand-quiet));
   }
-  [part='cue'][data-match] {
+  lr-virtual-list::part(cue-match) {
     outline: var(--lr-border-width-thin) dashed var(--lr-color-warning);
   }
-  [part='cue'][data-active-match] {
+  lr-virtual-list::part(cue-active-match) {
     outline: var(--lr-border-width-medium) solid var(--lr-av-player-cue-active-match-color, var(--lr-color-warning));
   }
-  [part='cue']:focus-visible {
+  lr-virtual-list::part(cue):focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: calc(-1 * var(--lr-focus-ring-offset));
   }
-  [part='cue-time'] {
+  lr-virtual-list::part(cue-time) {
     color: var(--lr-color-text-quiet);
     font-size: var(--lr-font-size-xs);
     margin-inline-end: var(--lr-space-2xs);
   }
-  [part='cue-speaker'] {
+  lr-virtual-list::part(cue-speaker) {
     font-weight: var(--lr-font-weight-semibold);
     margin-inline-end: var(--lr-space-2xs);
   }
