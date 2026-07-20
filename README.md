@@ -245,7 +245,7 @@ without Claude Code.
 
 ## Status
 
-`@aceshooting/lyra-ui` is published at `5.0.0`; `@aceshooting/lyra-flags` at `2.0.0` — see each
+`@aceshooting/lyra-ui` is published at `5.1.0`; `@aceshooting/lyra-flags` at `2.0.0` — see each
 package's own `CHANGELOG.md` for release history. The two are versioned independently (not always
 lockstep) with [Changesets](https://github.com/changesets/changesets) and follow semver: a major
 bump signals a breaking change, everything else is additive or a fix. Every release passes the same
