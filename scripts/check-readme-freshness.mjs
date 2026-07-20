@@ -22,7 +22,32 @@ const manifestTags = new Set(
 );
 const tagCount = manifestTags.size;
 
-const NUMBER_WORDS = ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten'];
+// Indexed by value, so the position in this array IS the number it means. Extended past ten when
+// the component families grew from six to eleven; keep going rather than switching the README to
+// digits, since the cross-check against the family table's row count is what makes this gate useful.
+const NUMBER_WORDS = [
+  'zero',
+  'one',
+  'two',
+  'three',
+  'four',
+  'five',
+  'six',
+  'seven',
+  'eight',
+  'nine',
+  'ten',
+  'eleven',
+  'twelve',
+  'thirteen',
+  'fourteen',
+  'fifteen',
+  'sixteen',
+  'seventeen',
+  'eighteen',
+  'nineteen',
+  'twenty',
+];
 
 const errors = [];
 

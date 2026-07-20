@@ -130,19 +130,26 @@ Contributors and AI coding agents working on this repo: see [AGENTS.md](./AGENTS
 
 ## Components
 
-249 custom elements across six component families. Every tag has a live, interactive example on the
+249 custom elements across eleven component families. Every tag has a live, interactive example on the
 [docs site](https://aceshooting.github.io/lyra-ui/); for the full per-tag reference (Web Awesome
 mirror, props, events, slots, parts) see
 [`packages/lyra-ui/README.md#components`](./packages/lyra-ui/README.md#components).
 
+The family name is also the import path — `@aceshooting/lyra-ui/components/<family>/<name>`.
+
 | Family | Highlights |
 |---|---|
-| Form controls and input workflows | combobox, select, date picker/input, calendar, textarea, input, button, phone input, file input, token input, color/radio/checkbox/switch/slider controls and checkbox group, toast, and sparkline |
-| Dashboard and data visualization | stat card, sortable table, data grid, pagination, gauge, export/copy actions, split panes, widgets, word cloud, time range, playback, heatmap, tree, graph, and Chart.js or dependency-free charts |
-| Layout, navigation, and overlays | tabs, menus, command palette, breadcrumbs, details/accordion, dialog, drawer, carousel, popover, tooltip, dropdown, scroller, resize/observer utilities, and responsive panels |
-| Conversation and Agent UI | chat messages and composer, streaming text, citations, sources, tool-call/result/approval flows, model selection, document/media previews, and more |
-| Display and utility primitives | badges, tags, icons and icon buttons, callouts, cards, avatars, skeletons, progress, spinners, rating, formatting, markdown, code blocks and a code editor, JSON, and live-region helpers |
-| Agentic AI infrastructure | retrieval search/results/trace, grounding summary, context inspector, knowledge base and ingestion queue, document library and compare, agent run/trace, tool timeline, memory panel, policy summary, knowledge-graph explorer, graph query builder, entity dossier, dashboard grid, filter bar, query builder, drilldown panel, and eval dataset/run/result |
+| `forms` | button, input, textarea, select, combobox, date picker, calendar, phone/token/file input, color and swatch pickers, emoji picker, code editor, checkbox/radio/switch/slider, time range, rubric form |
+| `layout` | tabs, menu, command palette, breadcrumb, details, card, widget, split, stepper, carousel, scroller, app rail, dock panel, dashboard grid, drilldown panel, filter bar, segmented, virtual list, responsive panel |
+| `overlays` | dialog, drawer, overlay, toast, callout, badge, chip, kbd, rating, progress, spinner, skeleton, empty |
+| `data` | table, data grid, tree, timeline, calendar, gauge, heatmap, sparkline, word cloud, stat, pagination, query builder, flow canvas and nodes, sequence strip, file tree, env list, context meter |
+| `charts` | Chart.js-backed `lr-chart` (optional peer) |
+| `conversation` | chat message, composer and viewport, streaming text, markdown, code block, model select, thinking panel, branch picker, checkpoint, message actions and feedback, push-to-talk, audio visualizer, thread list |
+| `agent-tools` | agent run and trace, tool call chip, tool approval dialog, task list, terminal, span waterfall, stack trace, test results, activity feed, context inspector, artifact panel, commit card, eval dataset/run/result, policy summary |
+| `retrieval` | retrieval search and results, grounding summary, citation badge, chunk inspector, knowledge base, ingestion queue, knowledge-graph explorer, graph, mind map, entity card/chip/dossier, provenance panel, memory panel, neighbor list, path strip |
+| `viewers` | document, PDF, DOCX, PPTX, spreadsheet, CSV, notebook, ebook, email, calendar, contact, archive, XML, SVG, HTML and GeoJSON viewers, document compare and preview, dataset viewer, highlight layer, page rail |
+| `media` | image viewer and comparer, lightbox, zoomable frame, AV player, playback, animated image, avatar and avatar group, file icon, file input, attachment chip, map, QR code, flag |
+| `utility` | icon, format, copy and export buttons, diff view, JSON viewer, divider, live region, mention popover, tour, poll status, known date, resize/intersection/mutation observers |
 
 ## Theming, internationalization & RTL
 
