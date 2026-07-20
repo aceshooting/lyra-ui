@@ -193,3 +193,124 @@ describe('--lr-flow-node-selected-border', () => {
     await expect(el).to.be.accessible();
   });
 });
+
+describe('compact density and the card part', () => {
+  const cardOf = (el: LyraFlowNode): HTMLElement => el.shadowRoot!.querySelector('[part="card"]') as HTMLElement;
+
+  const cardChrome = (el: LyraFlowNode) => {
+    const s = getComputedStyle(cardOf(el));
+    return {
+      paddingTop: s.paddingTop,
+      paddingLeft: s.paddingLeft,
+      rowGap: s.rowGap,
+      borderTopWidth: s.borderTopWidth,
+      borderTopStyle: s.borderTopStyle,
+      borderTopLeftRadius: s.borderTopLeftRadius,
+      backgroundColor: s.backgroundColor,
+      boxShadow: s.boxShadow,
+    };
+  };
+
+  it('defaults to compact=false, rendering identically to that value restated', async () => {
+    const implicit = (await fixture(html`<lr-flow-node heading="Fetch"></lr-flow-node>`)) as LyraFlowNode;
+    const explicit = (await fixture(
+      html`<lr-flow-node heading="Fetch" .compact=${false}></lr-flow-node>`,
+    )) as LyraFlowNode;
+
+    expect(implicit.compact).to.be.false;
+    expect(implicit.hasAttribute('compact')).to.be.false;
+    expect(cardChrome(explicit)).to.deep.equal(cardChrome(implicit));
+
+    const chrome = cardChrome(implicit);
+    expect(chrome.paddingTop).to.equal('8px'); // --lr-space-s
+    expect(chrome.rowGap).to.equal('2px'); // --lr-space-2xs
+    expect(chrome.borderTopWidth).to.equal('1px');
+    expect(chrome.borderTopStyle).to.equal('solid');
+    expect(chrome.backgroundColor).to.not.equal('rgba(0, 0, 0, 0)');
+    expect(chrome.boxShadow).to.not.equal('none');
+  });
+
+  it('reflects compact and tightens the card padding, keeping the card border/background/shadow', async () => {
+    const el = (await fixture(html`<lr-flow-node compact heading="Fetch"></lr-flow-node>`)) as LyraFlowNode;
+    expect(el.hasAttribute('compact')).to.be.true;
+    const chrome = cardChrome(el);
+    expect(chrome.paddingTop).to.equal('4px'); // --lr-space-xs
+    expect(chrome.rowGap).to.equal('2px'); // --lr-space-2xs, already the smallest step
+    expect(chrome.borderTopWidth).to.equal('1px');
+    expect(chrome.backgroundColor).to.not.equal('rgba(0, 0, 0, 0)');
+    expect(chrome.boxShadow).to.not.equal('none');
+  });
+
+  it('lets a consumer retune the compact values through --lr-flow-node-compact-*', async () => {
+    const el = (await fixture(html`<lr-flow-node compact heading="Fetch"></lr-flow-node>`)) as LyraFlowNode;
+    el.style.setProperty('--lr-flow-node-compact-padding', '3px');
+    el.style.setProperty('--lr-flow-node-compact-gap', '5px');
+    await el.updateComplete;
+    const chrome = cardChrome(el);
+    expect(chrome.paddingTop).to.equal('3px');
+    expect(chrome.rowGap).to.equal('5px');
+  });
+
+  it('still applies the selected and running treatments under compact', async () => {
+    const selected = (await fixture(
+      html`<lr-flow-node compact heading="Fetch" selected></lr-flow-node>`,
+    )) as LyraFlowNode;
+    selected.style.setProperty('--lr-flow-node-selected-border', 'rgb(10, 20, 30)');
+    await selected.updateComplete;
+    expect(getComputedStyle(cardOf(selected)).borderTopColor).to.equal('rgb(10, 20, 30)');
+    expect(getComputedStyle(cardOf(selected)).paddingTop).to.equal('4px');
+
+    const running = (await fixture(
+      html`<lr-flow-node compact heading="Fetch" status="running"></lr-flow-node>`,
+    )) as LyraFlowNode;
+    const runningShadow = getComputedStyle(cardOf(running)).boxShadow;
+    const resting = (await fixture(html`<lr-flow-node compact heading="Fetch"></lr-flow-node>`)) as LyraFlowNode;
+    expect(runningShadow).to.not.equal(getComputedStyle(cardOf(resting)).boxShadow);
+    expect(getComputedStyle(cardOf(running)).paddingTop).to.equal('4px');
+  });
+
+  it('exposes the card as a part a consumer stylesheet can reach', async () => {
+    const sheet = document.createElement('style');
+    sheet.textContent = `lr-flow-node.consumer-probe::part(card) { background: rgb(1, 2, 3); }`;
+    document.head.append(sheet);
+    try {
+      const el = (await fixture(
+        html`<lr-flow-node class="consumer-probe" heading="Fetch"></lr-flow-node>`,
+      )) as LyraFlowNode;
+      expect(getComputedStyle(cardOf(el)).backgroundColor).to.equal('rgb(1, 2, 3)');
+      // The class hook the component's own rules key off is still there for existing consumers.
+      expect(el.shadowRoot!.querySelectorAll('.card[part~="card"]')).to.have.lengthOf(1);
+    } finally {
+      sheet.remove();
+    }
+  });
+
+  it('carries no card chrome on [part="base"] -- that is the handles+card row', async () => {
+    const el = (await fixture(html`<lr-flow-node heading="Fetch"></lr-flow-node>`)) as LyraFlowNode;
+    const base = getComputedStyle(el.shadowRoot!.querySelector('[part="base"]') as HTMLElement);
+    expect(base.borderTopWidth).to.equal('0px');
+    expect(base.backgroundColor).to.equal('rgba(0, 0, 0, 0)');
+    expect(base.paddingTop).to.equal('0px');
+  });
+
+  it('lets --lr-flow-node-min-inline-size actually move the card width', async () => {
+    const el = (await fixture(html`<lr-flow-node heading="Fetch"></lr-flow-node>`)) as LyraFlowNode;
+    const card = cardOf(el);
+    expect(getComputedStyle(card).minInlineSize).to.equal('176px'); // 10rem + 1rem
+    const defaultWidth = card.getBoundingClientRect().width;
+    expect(defaultWidth).to.be.at.least(176);
+
+    el.style.setProperty('--lr-flow-node-min-inline-size', '300px');
+    await el.updateComplete;
+    expect(getComputedStyle(card).minInlineSize).to.equal('300px');
+    expect(card.getBoundingClientRect().width).to.be.at.least(300);
+  });
+
+  it('is accessible in the compact, selected, running state', async () => {
+    const el = (await fixture(
+      html`<lr-flow-node compact heading="Fetch" status="running" progress="40" selected></lr-flow-node>`,
+    )) as LyraFlowNode;
+    expect(el.shadowRoot!.querySelectorAll('[part="card"]')).to.have.lengthOf(1);
+    await expect(el).to.be.accessible();
+  });
+});

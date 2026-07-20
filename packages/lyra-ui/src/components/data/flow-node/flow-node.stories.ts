@@ -60,6 +60,31 @@ export const NarrowAllocation: Story = {
   `,
 };
 
+export const Compact: Story = {
+  name: 'compact (dense canvas)',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          '`compact` tightens the card padding for dense canvases and palette previews; the border, background, shadow and every state treatment stay. Retune it per canvas with `--lr-flow-node-compact-padding` / `--lr-flow-node-compact-gap`.',
+      },
+    },
+  },
+  render: () => html`
+    <div style="display:flex; gap:1rem; align-items:flex-start">
+      <lr-flow-node heading="Fetch data" status="running" progress="40"></lr-flow-node>
+      <lr-flow-node compact heading="Fetch data" status="running" progress="40"></lr-flow-node>
+      <lr-flow-node
+        compact
+        style="--lr-flow-node-compact-padding: 0.125rem"
+        heading="Fetch data"
+        status="running"
+        progress="40"
+      ></lr-flow-node>
+    </div>
+  `,
+};
+
 export const RetintedSelection: Story = {
   name: 'Retinted selection border',
   parameters: {

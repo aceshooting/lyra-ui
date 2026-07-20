@@ -21,7 +21,9 @@ const DEFAULT_OUTPUTS: FlowHandle[] = [{ id: 'out' }];
  * @slot icon - Leading header glyph.
  * @slot header - Replaces the built-in heading row entirely.
  * @slot toolbar - Action row at the block-end edge.
- * @csspart base - The card root.
+ * @csspart base - The row wrapping the input handles, the card, and the output handles. Carries no
+ *   card chrome of its own — style the card itself through the `card` part.
+ * @csspart card - The bordered, filled node card.
  * @csspart header - The built-in header row (omitted when the `header` slot has content).
  * @csspart icon - The wrapper around the `icon` slot.
  * @csspart heading - The heading text.
@@ -33,6 +35,10 @@ const DEFAULT_OUTPUTS: FlowHandle[] = [{ id: 'out' }];
  * @csspart handle-input - An input handle dot (also carries the shared `handle` part).
  * @csspart handle-output - An output handle dot (also carries the shared `handle` part).
  * @cssprop [--lr-flow-node-min-inline-size=calc(var(--lr-size-10rem) + var(--lr-size-1rem))] - Minimum card inline size.
+ * @cssprop [--lr-flow-node-compact-padding=var(--lr-space-xs)] - `[part="card"]` padding while
+ *   `compact`.
+ * @cssprop [--lr-flow-node-compact-gap=var(--lr-space-2xs)] - Gap between `[part="card"]`'s rows
+ *   while `compact`.
  * @cssprop [--lr-flow-node-selected-border=var(--lr-color-brand)] - Border color of the card while
  *   `selected`. Overriding the selection color otherwise requires hijacking the library-wide
  *   `--lr-color-brand` token.
@@ -47,6 +53,11 @@ export class LyraFlowNode extends LyraElement {
   @property({ attribute: 'status-detail' }) statusDetail = '';
   @property({ type: Number, attribute: 'duration-ms' }) durationMs: number | null = null;
   @property({ type: Boolean, reflect: true }) selected = false;
+  /** Tighter card padding and row gap, for the dense canvases and palette previews these cards
+   *  usually render in -- same convention as `lr-source-card`'s `compact`. Defaults to `false`,
+   *  i.e. the full card padding. Purely a density knob: the border, background and shadow stay, as
+   *  do the `selected` and `status="running"` treatments. */
+  @property({ type: Boolean, reflect: true }) compact = false;
   @property({ attribute: false }) inputs: FlowHandle[] = DEFAULT_INPUTS;
   @property({ attribute: false }) outputs: FlowHandle[] = DEFAULT_OUTPUTS;
   /** Additive: which physical edge handles render on, mirroring the canvas's own `orientation` when
@@ -117,7 +128,7 @@ export class LyraFlowNode extends LyraElement {
     const clampedProgress = this.safeProgress;
     return html`<div part="base">
       <div class="handles handles-input">${this.inputs.map((h) => this.handleTemplate('input', h))}</div>
-      <div class="card" ?data-pulse=${this.pulsesRing}>
+      <div part="card" class="card" ?data-pulse=${this.pulsesRing}>
         <slot name="header" @slotchange=${this.onHeaderSlotChange}></slot>
         ${this.hasHeaderSlot
           ? nothing

@@ -36,6 +36,10 @@ export const styles = css`
   }
   .card {
     flex: 1 1 auto;
+    /* The single source of the card's minimum width -- a second min-inline-size declaration later
+       in this same rule would win outright and make --lr-flow-node-min-inline-size dead, which is
+       exactly what a stray "min-inline-size: 0" here used to do. The host caps itself at
+       max-inline-size: 100%, so a narrow allocation still wraps rather than overflowing. */
     min-inline-size: var(--lr-flow-node-min-inline-size, calc(var(--lr-size-10rem) + var(--lr-size-1rem)));
     display: flex;
     flex-direction: column;
@@ -45,7 +49,21 @@ export const styles = css`
     border-radius: var(--lr-radius);
     background: var(--lr-color-surface);
     box-shadow: var(--lr-shadow);
-    min-inline-size: 0;
+  }
+  /* Density escape -- same convention as lr-source-card's compact. The tuned values sit behind
+     inline var() fallbacks (rather than a :host declaration, which every instance re-declares and
+     so shadows any ancestor value) so a canvas or palette can retune every card at once from the
+     outside; the fallbacks are the pre-existing values scaled down one step, so an unset card
+     renders unchanged.
+
+     Deliberately placed BEFORE the :host([selected]) and :host([status='running']) rules below:
+     all three are :host([x]) .card, i.e. equal specificity, so source order alone decides. They
+     carry the state treatments (border-color, the run-state ring) while this one carries only
+     density (padding/gap), so nothing collides today -- keeping the state rules last means a
+     future border/shadow tweak here still can't silently win over selection or run state. */
+  :host([compact]) .card {
+    padding: var(--lr-flow-node-compact-padding, var(--lr-space-xs));
+    gap: var(--lr-flow-node-compact-gap, var(--lr-space-2xs));
   }
   :host([selected]) .card {
     border-color: var(--lr-flow-node-selected-border, var(--lr-color-brand));
