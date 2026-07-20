@@ -375,3 +375,92 @@ describe('aria-pressed', () => {
     expect(base.getAttribute('aria-pressed')).to.equal('true');
   });
 });
+
+describe('per-tier min-height and exact-height hatch', () => {
+  const base = (el: LyraChip): HTMLElement =>
+    el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+
+  it('does NOT declare the --lr-chip-height sentinel (guards the lr-select trap)', async () => {
+    const el = (await fixture(html`<lr-chip toggleable>Tag</lr-chip>`)) as LyraChip;
+    await el.updateComplete;
+    expect(getComputedStyle(el).getPropertyValue('--lr-chip-height').trim()).to.equal('');
+  });
+
+  it('wires --lr-chip-min-height per tier onto interactive chips (rendered min-block-size)', async () => {
+    // Compact tiers share the WCAG 24px floor; the larger tiers get a taller (but still
+    // content-dead) floor so xl and 2xs no longer share a single 1.5rem value.
+    const expected: Record<string, string> = {
+      '2xs': '24px',
+      xs: '24px',
+      s: '24px',
+      m: '24px',
+      l: '28px',
+      xl: '32px',
+    };
+    for (const [size, px] of Object.entries(expected)) {
+      const el = (await fixture(html`<lr-chip size=${size} toggleable>Tag</lr-chip>`)) as LyraChip;
+      await el.updateComplete;
+      expect(getComputedStyle(base(el)).minBlockSize, `size=${size}`).to.equal(px);
+    }
+  });
+
+  it('keeps every interactive tier at or above the 24px WCAG target', async () => {
+    for (const size of ['2xs', 'xs', 's', 'm', 'l', 'xl'] as const) {
+      const el = (await fixture(html`<lr-chip size=${size} toggleable>Tag</lr-chip>`)) as LyraChip;
+      await el.updateComplete;
+      expect(
+        Number.parseFloat(getComputedStyle(base(el)).minBlockSize),
+        `size=${size}`,
+      ).to.be.at.least(24);
+    }
+  });
+
+  it('leaves the interactive height content-driven when --lr-chip-height is unset, and pins it when set', async () => {
+    const el = (await fixture(html`<lr-chip size="l" toggleable>Tag</lr-chip>`)) as LyraChip;
+    await el.updateComplete;
+    const b = base(el);
+    const natural = getComputedStyle(b).blockSize;
+    // Unset: rendered height is content-driven (above the 28px l floor), byte-identical to today.
+    expect(Number.parseFloat(natural)).to.be.greaterThan(28);
+    el.style.setProperty('--lr-chip-height', '52px');
+    await el.updateComplete;
+    expect(getComputedStyle(b).blockSize).to.equal('52px');
+    expect(getComputedStyle(b).minBlockSize).to.equal('52px');
+    el.style.removeProperty('--lr-chip-height');
+    await el.updateComplete;
+    expect(getComputedStyle(b).blockSize, 'restores byte-identical').to.equal(natural);
+  });
+
+  it('pins a non-interactive chip height via --lr-chip-height without adding a floor', async () => {
+    const el = (await fixture(html`<lr-chip>Tag</lr-chip>`)) as LyraChip;
+    await el.updateComplete;
+    const b = base(el);
+    const natural = getComputedStyle(b).blockSize;
+    el.style.setProperty('--lr-chip-height', '18px');
+    await el.updateComplete;
+    expect(getComputedStyle(b).blockSize).to.equal('18px');
+    el.style.removeProperty('--lr-chip-height');
+    await el.updateComplete;
+    expect(getComputedStyle(b).blockSize).to.equal(natural);
+  });
+
+  it('lets a consumer raise --lr-chip-min-height so an interactive chip grows past its content', async () => {
+    const el = (await fixture(html`<lr-chip toggleable>Tag</lr-chip>`)) as LyraChip;
+    await el.updateComplete;
+    const b = base(el);
+    const natural = Number.parseFloat(getComputedStyle(b).blockSize);
+    // 60px is comfortably above the ~27px content height, so the raised floor drives the box.
+    el.style.setProperty('--lr-chip-min-height', '60px');
+    await el.updateComplete;
+    expect(natural).to.be.lessThan(60);
+    expect(getComputedStyle(b).blockSize).to.equal('60px');
+  });
+
+  it('stays accessible with a pinned exact height', async () => {
+    const el = (await fixture(
+      html`<lr-chip toggleable style="--lr-chip-height: 30px;">Tag</lr-chip>`,
+    )) as LyraChip;
+    await el.updateComplete;
+    await expect(el).to.be.accessible();
+  });
+});

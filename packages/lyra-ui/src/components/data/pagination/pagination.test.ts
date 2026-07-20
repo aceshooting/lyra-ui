@@ -267,3 +267,31 @@ it('clamps an oversized or negative page to the last/first valid page instead of
   await el.updateComplete;
   expect(input.value).to.equal('1'); // non-finite falls back to the first valid page
 });
+
+describe('control padding knob (--lr-pagination-control-padding)', () => {
+  const nextButton = (el: LyraPagination): HTMLElement =>
+    el.shadowRoot!.querySelector('[part="next-button"]') as HTMLElement;
+  const pageInput = (el: LyraPagination): HTMLElement | null =>
+    el.shadowRoot!.querySelector('[part="page-input"]');
+
+  it('defaults the control padding to var(--lr-space-xs) (4px) identically at every tier', async () => {
+    // Byte-identical to today, which hardcoded var(--lr-space-xs) at every tier on both sites.
+    for (const size of ['xs', 's', 'm', 'l', 'xl'] as const) {
+      const el = await pagination(
+        html`<lr-pagination size=${size} total-items="95" page-size="10"></lr-pagination>`,
+      );
+      expect(getComputedStyle(nextButton(el)).paddingTop, `${size} button`).to.equal('4px');
+      const input = pageInput(el);
+      if (input) expect(getComputedStyle(input).paddingTop, `${size} input`).to.equal('4px');
+    }
+  });
+
+  it('applies --lr-pagination-control-padding to both the nav buttons and the page input', async () => {
+    const el = await pagination();
+    el.style.setProperty('--lr-pagination-control-padding', '9px');
+    await el.updateComplete;
+    expect(getComputedStyle(nextButton(el)).paddingTop).to.equal('9px');
+    const input = pageInput(el);
+    if (input) expect(getComputedStyle(input).paddingTop).to.equal('9px');
+  });
+});

@@ -131,3 +131,23 @@ export const ImageFallback: Story = {
     ></lr-avatar>
   `,
 };
+
+export const InitialsFontSize: Story = {
+  name: 'Initials font size (--lr-avatar-font-size)',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'The initials fallback scales with `size` through `--lr-avatar-font-size` (`sm` → `--lr-font-size-xs`, `md` → `--lr-font-size-sm`, `lg` → `--lr-font-size-md`). Set the property directly to override any tier — useful for single-character initials, which can carry a larger glyph than a two-character pair in the same circle.',
+      },
+    },
+  },
+  render: () => html`
+    <div style="display:flex; align-items:center; gap:0.75rem;">
+      <lr-avatar initials="AB" size="sm"></lr-avatar>
+      <lr-avatar initials="AB" size="md"></lr-avatar>
+      <lr-avatar initials="AB" size="lg"></lr-avatar>
+      <lr-avatar initials="A" tone="brand" style="--lr-avatar-font-size: 1.25rem;"></lr-avatar>
+    </div>
+  `,
+};

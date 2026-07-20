@@ -21,6 +21,20 @@ export const styles = css`
     --lr-chip-padding-inline: var(--lr-space-s);
     --lr-chip-gap: var(--lr-space-xs);
     --lr-chip-icon-size: var(--lr-font-size-sm);
+    /* Interactive (removable/toggleable) chips floor their tap target here. The compact tiers
+       share the 24px WCAG 2.2 SC 2.5.8 minimum -- an interactive chip must never shrink below it,
+       so 2xs/xs/s/m keep 1.5rem. The larger tiers reassign a taller floor (below their own
+       content-driven height, so it stays byte-identical until raised) so xl and 2xs no longer
+       share a single 1.5rem value. Non-interactive display chips get no floor from this at all
+       -- see [part='base'] below. */
+    --lr-chip-min-height: var(--lr-size-1-5rem);
+    /* --lr-chip-height is intentionally NOT declared here. It is a consumer-facing exact-height
+       escape hatch consumed only through the var() fallbacks on [part='base'] below; declaring
+       any value for it (even 'auto') would make those fallback arms unreachable and turn
+       --lr-chip-min-height into dead code (the lr-select trap). Left undeclared, both arms stay
+       live: the per-tier floor falls out of the fallback, and setting the property pins an exact
+       height. A value small enough to break the interactive 24x24 target is for
+       non-interactive chips only. */
   }
 
   :host([size='2xs']) {
@@ -50,6 +64,7 @@ export const styles = css`
     --lr-chip-padding-inline: var(--lr-space-m);
     --lr-chip-gap: var(--lr-size-0-375rem);
     --lr-chip-icon-size: var(--lr-font-size-m);
+    --lr-chip-min-height: var(--lr-size-1-75rem);
   }
   :host([size='xl']) {
     --lr-chip-font-size: var(--lr-font-size-lg);
@@ -57,6 +72,7 @@ export const styles = css`
     --lr-chip-padding-inline: var(--lr-space-l);
     --lr-chip-gap: var(--lr-space-s);
     --lr-chip-icon-size: var(--lr-font-size-lg);
+    --lr-chip-min-height: var(--lr-size-2rem);
   }
 
   :host([tone='brand']) {
@@ -95,11 +111,15 @@ export const styles = css`
     font-size: var(--lr-chip-font-size);
     font-weight: var(--lr-font-weight-medium);
     line-height: var(--lr-line-height-snug);
+    /* Pinned only when --lr-chip-height is set; 'auto' otherwise, so a display chip keeps growing
+       to fit its own content exactly as before. Applies to interactive and non-interactive chips
+       alike -- the interactive floor lives on the [role='button'] rule below. */
+    block-size: var(--lr-chip-height, auto);
   }
 
   [part='base'][role='button'] {
     cursor: pointer;
-    min-block-size: var(--lr-size-1-5rem);
+    min-block-size: var(--lr-chip-height, var(--lr-chip-min-height));
     -webkit-tap-highlight-color: transparent;
     transition: background-color var(--lr-transition-fast);
   }

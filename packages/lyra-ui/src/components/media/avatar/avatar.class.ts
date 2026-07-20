@@ -32,6 +32,10 @@ export type AvatarTone = 'neutral' | 'brand' | 'success' | 'warning' | 'danger';
  *   sets it to that tone's `-quiet` tint.
  * @cssprop [--lr-avatar-color=var(--lr-color-text)] - Initials/glyph color. Each non-neutral `tone`
  *   sets it to that tone's loud color.
+ * @cssprop [--lr-avatar-font-size=var(--lr-font-size-sm)] - Font size of the initials fallback (and
+ *   of any `em`-sized slotted glyph). `size` swaps it to `var(--lr-font-size-xs)` (`sm`) or
+ *   `var(--lr-font-size-md)` (`lg`), so the initials track the circle instead of staying at one
+ *   fixed size across every tier.
  */
 export class LyraAvatar extends LyraElement {
   static styles = [LyraElement.styles, styles];

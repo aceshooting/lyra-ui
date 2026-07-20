@@ -78,6 +78,10 @@ export interface LyraAvatarGroupEventMap {
  * Tone-driven; see `tone`.
  * @cssprop [--lr-avatar-group-badge-color=var(--lr-color-text)] - Overflow badge text color.
  * Tone-driven; see `tone`.
+ * @cssprop [--lr-avatar-group-badge-font-size=var(--lr-font-size-sm)] - Font size of the "+N"
+ * badge label. `size` swaps it to `var(--lr-font-size-xs)` (`sm`) or `var(--lr-font-size-md)`
+ * (`lg`), matching `<lr-avatar>`'s own `--lr-avatar-font-size` scale so the badge and the avatars
+ * it caps read at the same optical weight.
  */
 export class LyraAvatarGroup extends LyraElement<LyraAvatarGroupEventMap> {
   static styles = [LyraElement.styles, styles];

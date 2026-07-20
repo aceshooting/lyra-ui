@@ -75,6 +75,13 @@ export interface LyraChipEventMap {
  * `size` sets it to that step's block padding.
  * @cssprop [--lr-chip-padding-inline=var(--lr-space-s)] - Inline padding of the pill. Each `size`
  * sets it to that step's inline padding.
+ * @cssprop [--lr-chip-min-height=var(--lr-size-1-5rem)] - Minimum block size of an interactive
+ * (`removable`/`toggleable`) chip's tap target. `size` keeps `2xs`/`xs`/`s`/`m` at the `1.5rem`
+ * (24px) WCAG 2.2 SC 2.5.8 minimum and raises `l` to `var(--lr-size-1-75rem)` and `xl` to
+ * `var(--lr-size-2rem)`. Non-interactive display chips are unaffected by this floor.
+ * @cssprop --lr-chip-height - Exact block size of the chip. Undeclared by default, so the chip
+ * grows to fit its content (floored by `--lr-chip-min-height` when interactive). Set it to pin a
+ * fixed height. A value below the 24px interactive target is for non-interactive chips only.
  * @cssprop [--lr-chip-pressed-bg=var(--lr-chip-bg)] - Background while a toggleable chip is
  * selected, independently themeable from its resting background.
  * @cssprop [--lr-chip-pressed-border=var(--lr-chip-accent)] - Border color while a toggleable chip

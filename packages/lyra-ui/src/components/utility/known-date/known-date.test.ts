@@ -563,3 +563,67 @@ it('rejects non-digit keystrokes before they reach a field state', async () => {
   await el.updateComplete;
   expect(day.value).to.equal('');
 });
+
+describe('per-tier field min-height and exact-height hatch', () => {
+  const anyField = (el: LyraKnownDate): HTMLElement =>
+    el.shadowRoot!.querySelector('[part="field-input"]') as HTMLElement;
+
+  it('does NOT declare the --lr-known-date-field-height sentinel (guards the lr-select trap)', async () => {
+    const el = (await fixture(html`<lr-known-date></lr-known-date>`)) as LyraKnownDate;
+    await el.updateComplete;
+    expect(getComputedStyle(el).getPropertyValue('--lr-known-date-field-height').trim()).to.equal('');
+  });
+
+  it('wires --lr-known-date-field-min-height per tier (rendered min-block-size)', async () => {
+    const expected: Record<string, string> = {
+      xs: '20px',
+      s: '24px',
+      m: '32px',
+      l: '40px',
+      xl: '48px',
+    };
+    for (const [size, px] of Object.entries(expected)) {
+      const el = (await fixture(html`<lr-known-date size=${size}></lr-known-date>`)) as LyraKnownDate;
+      await el.updateComplete;
+      expect(getComputedStyle(anyField(el)).minBlockSize, `size=${size}`).to.equal(px);
+    }
+  });
+
+  it('leaves the rendered field height byte-identical when the height hatch is unset, per tier', async () => {
+    for (const size of ['xs', 's', 'm', 'l', 'xl'] as const) {
+      const el = (await fixture(html`<lr-known-date size=${size}></lr-known-date>`)) as LyraKnownDate;
+      await el.updateComplete;
+      const field = anyField(el);
+      const natural = getComputedStyle(field).blockSize;
+      // The per-tier floor sits below the natural (padding/font-driven) height, so it is dead
+      // until a consumer raises it -- the rendered box is unchanged from today.
+      expect(Number.parseFloat(natural), `size=${size}`).to.be.greaterThan(
+        Number.parseFloat(getComputedStyle(field).minBlockSize),
+      );
+      el.style.setProperty('--lr-known-date-field-height', '90px');
+      await el.updateComplete;
+      expect(getComputedStyle(field).blockSize, `size=${size} pinned`).to.equal('90px');
+      el.style.removeProperty('--lr-known-date-field-height');
+      await el.updateComplete;
+      expect(getComputedStyle(field).blockSize, `size=${size} restored`).to.equal(natural);
+    }
+  });
+
+  it('lets a consumer raise --lr-known-date-field-min-height past the field content', async () => {
+    const el = (await fixture(html`<lr-known-date></lr-known-date>`)) as LyraKnownDate;
+    await el.updateComplete;
+    const field = anyField(el);
+    const natural = Number.parseFloat(getComputedStyle(field).blockSize);
+    el.style.setProperty('--lr-known-date-field-min-height', `${natural + 24}px`);
+    await el.updateComplete;
+    expect(Number.parseFloat(getComputedStyle(field).blockSize)).to.equal(natural + 24);
+  });
+
+  it('stays accessible with a pinned exact field height', async () => {
+    const el = (await fixture(
+      html`<lr-known-date label="Birth date" style="--lr-known-date-field-height: 44px;"></lr-known-date>`,
+    )) as LyraKnownDate;
+    await el.updateComplete;
+    await expect(el).to.be.accessible();
+  });
+});

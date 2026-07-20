@@ -232,3 +232,22 @@ export const GroupEvents: Story = {
     </div>
   `,
 };
+
+export const ExactHeight: Story = {
+  name: 'Per-tier min-height and exact-height hatch',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'Interactive chips floor their tap target with `--lr-chip-min-height` (per tier: `2xs`–`m` share the 24px WCAG minimum, `l`/`xl` raise it). `--lr-chip-height` pins an exact height — below the 24px target it is for non-interactive display chips only.',
+      },
+    },
+  },
+  render: () => html`
+    <div style="display:flex; align-items:center; gap:0.75rem; flex-wrap:wrap;">
+      <lr-chip toggleable style="--lr-chip-min-height: 40px;">Tall target</lr-chip>
+      <lr-chip toggleable style="--lr-chip-height: 32px;">Pinned 32px</lr-chip>
+      <lr-chip style="--lr-chip-height: 18px;">Compact display</lr-chip>
+    </div>
+  `,
+};

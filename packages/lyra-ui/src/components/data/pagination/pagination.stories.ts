@@ -68,3 +68,23 @@ export const Loading: Story = {
     <lr-pagination total-items="237" page-size="20" page="4" loading></lr-pagination>
   `,
 };
+
+export const ControlPadding: Story = {
+  name: 'Control padding (--lr-pagination-control-padding)',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'The nav buttons and page input share `--lr-pagination-control-padding` for their inner inset. The control footprint stays fixed by `--lr-pagination-control-size`, so raising the padding tightens the icon/digit rather than growing the button.',
+      },
+    },
+  },
+  render: () => html`
+    <lr-pagination
+      total-items="237"
+      page-size="20"
+      page="4"
+      style="--lr-pagination-control-padding: 0.5rem"
+    ></lr-pagination>
+  `,
+};

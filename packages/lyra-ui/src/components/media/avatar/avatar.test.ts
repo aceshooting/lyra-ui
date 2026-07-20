@@ -168,3 +168,47 @@ describe('lr-avatar', () => {
     expect(base.getAttribute('aria-label')).to.equal('A. Bee');
   });
 });
+
+describe('per-size initials font-size', () => {
+  const renderedFontSize = async (size?: string): Promise<number> => {
+    const el = (await fixture(
+      size == null
+        ? html`<lr-avatar initials="AB"></lr-avatar>`
+        : html`<lr-avatar size=${size} initials="AB"></lr-avatar>`,
+    )) as LyraAvatar;
+    await el.updateComplete;
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    return Number.parseFloat(getComputedStyle(base).fontSize);
+  };
+
+  it('scales the rendered initials font-size with size', async () => {
+    // The visible defect this covers: the initials were painted at a fixed
+    // --lr-font-size-sm at every tier, so a `sm` avatar's 2 characters could not
+    // fit its 1.5rem circle and an `lg` avatar's looked undersized in its 2.5rem one.
+    const [sm, md, lg] = [await renderedFontSize('sm'), await renderedFontSize('md'), await renderedFontSize('lg')];
+    expect(sm, 'sm < md').to.be.lessThan(md);
+    expect(lg, 'lg > md').to.be.greaterThan(md);
+  });
+
+  it('leaves the default (md) tier byte-identical to today', async () => {
+    // --lr-font-size-sm = 0.8125rem = 13px, the single hardcoded value every tier used to share.
+    expect(await renderedFontSize()).to.equal(13);
+    expect(await renderedFontSize('md')).to.equal(13);
+  });
+
+  it('lets a consumer override --lr-avatar-font-size at any tier', async () => {
+    const el = (await fixture(html`<lr-avatar size="sm" initials="AB" alt="A. Bee"></lr-avatar>`)) as LyraAvatar;
+    el.style.setProperty('--lr-avatar-font-size', '19px');
+    await el.updateComplete;
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    expect(getComputedStyle(base).fontSize).to.equal('19px');
+    await expect(el).to.be.accessible();
+  });
+
+  it('is accessible at every tier with initials rendered', async () => {
+    for (const size of ['sm', 'md', 'lg'] as const) {
+      const el = (await fixture(html`<lr-avatar size=${size} initials="AB" alt="A. Bee"></lr-avatar>`)) as LyraAvatar;
+      await expect(el).to.be.accessible();
+    }
+  });
+});

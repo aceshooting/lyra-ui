@@ -10,14 +10,20 @@ export const styles = css`
     --lr-avatar-group-ring-width: var(--lr-border-width-medium);
     --lr-avatar-group-badge-bg: var(--lr-color-border);
     --lr-avatar-group-badge-color: var(--lr-color-text);
+    /* Mirrors lr-avatar's own --lr-avatar-font-size scale exactly, so a "+N" badge and the
+       avatars it caps read at the same optical weight at every tier. The 'md' default is the
+       single font-size the badge used to use at every tier, so an unset group is byte-identical. */
+    --lr-avatar-group-badge-font-size: var(--lr-font-size-sm);
   }
   :host([size='sm']) {
     --lr-avatar-group-avatar-size: var(--lr-size-1-5rem);
     --lr-avatar-group-overlap: var(--lr-size-neg-4px);
+    --lr-avatar-group-badge-font-size: var(--lr-font-size-xs);
   }
   :host([size='lg']) {
     --lr-avatar-group-avatar-size: var(--lr-size-2-5rem);
     --lr-avatar-group-overlap: var(--lr-size-neg-8px);
+    --lr-avatar-group-badge-font-size: var(--lr-font-size-md);
   }
   :host([tone='brand']) {
     --lr-avatar-group-badge-bg: var(--lr-color-brand-quiet);
@@ -84,7 +90,7 @@ export const styles = css`
     background: var(--lr-avatar-group-badge-bg);
     color: var(--lr-avatar-group-badge-color);
     font: inherit;
-    font-size: var(--lr-font-size-sm);
+    font-size: var(--lr-avatar-group-badge-font-size);
     font-weight: var(--lr-font-weight-semibold);
     line-height: var(--lr-line-height-snug);
     cursor: pointer;

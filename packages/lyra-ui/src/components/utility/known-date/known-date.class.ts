@@ -139,6 +139,13 @@ class LyraKnownDateBase extends LyraElement<LyraKnownDateEventMap> {}
  *   `field-input`, auto-swapped per `size`.
  * @cssprop [--lr-known-date-field-font-size=var(--lr-font-size-md-sm)] - Font size of each
  *   `field-input`, auto-swapped per `size`.
+ * @cssprop [--lr-known-date-field-min-height=var(--lr-size-2rem)] - Minimum block size of each
+ *   `field-input`, auto-swapped per `size` (`xs`→`1.25rem`, `s`→`1.5rem`, `l`→`2.5rem`,
+ *   `xl`→`3rem`). Each default sits below the field's own content height, so it is dead until a
+ *   consumer raises it -- the unset render is unchanged.
+ * @cssprop --lr-known-date-field-height - Exact block size of each `field-input`. Undeclared by
+ *   default, so the field grows to fit its content, floored by `--lr-known-date-field-min-height`.
+ *   Set it to pin a fixed height.
  * @cssprop [--lr-known-date-field-gap=var(--lr-space-s)] - Gap between the three field blocks.
  * @cssprop [--lr-known-date-day-field-width=var(--lr-size-3-5em)] - Inline size of the day field.
  * @cssprop [--lr-known-date-month-field-width=var(--lr-size-3-5em)] - Inline size of the month

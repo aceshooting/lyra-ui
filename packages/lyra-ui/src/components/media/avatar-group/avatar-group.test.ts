@@ -436,3 +436,49 @@ it('is accessible in an overflowing state', async () => {
   `)) as LyraAvatarGroup;
   await expect(el).to.be.accessible();
 });
+
+describe('per-size overflow-badge font-size', () => {
+  const renderedBadgeFontSize = async (size?: string): Promise<number> => {
+    const el = (await fixture(
+      size == null
+        ? html`<lr-avatar-group max="1"
+            ><lr-avatar initials="AB"></lr-avatar><lr-avatar initials="CD"></lr-avatar
+          ></lr-avatar-group>`
+        : html`<lr-avatar-group size=${size} max="1"
+            ><lr-avatar initials="AB"></lr-avatar><lr-avatar initials="CD"></lr-avatar
+          ></lr-avatar-group>`,
+    )) as LyraAvatarGroup;
+    await el.updateComplete;
+    const badge = el.shadowRoot!.querySelector('[part="overflow-badge"]') as HTMLElement;
+    return Number.parseFloat(getComputedStyle(badge).fontSize);
+  };
+
+  it('scales the rendered "+N" badge font-size with size', async () => {
+    const [sm, md, lg] = [
+      await renderedBadgeFontSize('sm'),
+      await renderedBadgeFontSize('md'),
+      await renderedBadgeFontSize('lg'),
+    ];
+    expect(sm, 'sm < md').to.be.lessThan(md);
+    expect(lg, 'lg > md').to.be.greaterThan(md);
+  });
+
+  it('leaves the default (md) tier byte-identical to today', async () => {
+    expect(await renderedBadgeFontSize()).to.equal(13);
+    expect(await renderedBadgeFontSize('md')).to.equal(13);
+  });
+
+  it('lets a consumer override --lr-avatar-group-badge-font-size at any tier', async () => {
+    const el = (await fixture(html`
+      <lr-avatar-group size="sm" max="1" label="Team">
+        <lr-avatar initials="AB"></lr-avatar>
+        <lr-avatar initials="CD"></lr-avatar>
+      </lr-avatar-group>
+    `)) as LyraAvatarGroup;
+    el.style.setProperty('--lr-avatar-group-badge-font-size', '19px');
+    await el.updateComplete;
+    const badge = el.shadowRoot!.querySelector('[part="overflow-badge"]') as HTMLElement;
+    expect(getComputedStyle(badge).fontSize).to.equal('19px');
+    await expect(el).to.be.accessible();
+  });
+});

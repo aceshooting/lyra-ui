@@ -73,3 +73,18 @@ export const RightToLeft: Story = {
     </div>
   `,
 };
+
+export const PinnedFieldHeight: Story = {
+  name: 'Pinned field height (--lr-known-date-field-height)',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'Each field input grows to fit its content by default, floored by the per-tier `--lr-known-date-field-min-height`. Set `--lr-known-date-field-height` to pin an exact height so the three inputs line up with a neighbouring control of a known height.',
+      },
+    },
+  },
+  render: () => html`
+    <lr-known-date label="Birth date" value="2007-03-27" style="--lr-known-date-field-height: 44px;"></lr-known-date>
+  `,
+};

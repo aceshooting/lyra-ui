@@ -7,6 +7,13 @@ export const styles = css`
     container-type: inline-size;
     --lr-pagination-control-size: var(--lr-size-2-5rem);
     --lr-pagination-font-size: var(--lr-font-size-md-sm);
+    /* Inner padding of the nav buttons and the page input. Exposed as a single knob (previously
+       a hardcoded var(--lr-space-xs) repeated at both sites) so a consumer can adjust the icon /
+       digit inset. Kept uniform across every tier -- today's padding is identical at every tier,
+       and per-tier divergence would visibly change the current rendering, which must stay
+       byte-identical. The control's outer footprint is fixed by --lr-pagination-control-size
+       (border-box), so this only affects the inner inset, not the button size. */
+    --lr-pagination-control-padding: var(--lr-space-xs);
   }
   :host([size='xs']) {
     --lr-pagination-control-size: var(--lr-size-1-75rem);
@@ -51,7 +58,7 @@ export const styles = css`
     inline-size: var(--lr-pagination-control-size);
     min-inline-size: var(--lr-pagination-control-size);
     block-size: var(--lr-pagination-control-size);
-    padding: var(--lr-space-xs);
+    padding: var(--lr-pagination-control-padding);
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
     border-radius: var(--lr-radius);
     background: var(--lr-color-surface);
@@ -105,7 +112,7 @@ export const styles = css`
     inline-size: var(--lr-pagination-control-size);
     min-inline-size: var(--lr-pagination-control-size);
     block-size: var(--lr-pagination-control-size);
-    padding: var(--lr-space-xs);
+    padding: var(--lr-pagination-control-padding);
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
     border-radius: var(--lr-radius);
     background: var(--lr-color-surface);

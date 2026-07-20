@@ -123,3 +123,35 @@ export const NarrowAllocation: Story = {
     </div>
   `,
 };
+
+export const BadgeFontSize: Story = {
+  name: 'Overflow badge font size (--lr-avatar-group-badge-font-size)',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'The "+N" badge label scales with `size` through `--lr-avatar-group-badge-font-size`, matching `<lr-avatar>`\'s own `--lr-avatar-font-size` scale. Set the property directly to override any tier — e.g. to keep a three-digit "+128" legible inside the same circle.',
+      },
+    },
+  },
+  render: () => html`
+    <div style="display:flex; align-items:center; gap:1.5rem;">
+      <lr-avatar-group size="sm" max="1">
+        <lr-avatar initials="AB" size="sm"></lr-avatar>
+        <lr-avatar initials="CD" size="sm"></lr-avatar>
+      </lr-avatar-group>
+      <lr-avatar-group size="md" max="1">
+        <lr-avatar initials="AB"></lr-avatar>
+        <lr-avatar initials="CD"></lr-avatar>
+      </lr-avatar-group>
+      <lr-avatar-group size="lg" max="1">
+        <lr-avatar initials="AB" size="lg"></lr-avatar>
+        <lr-avatar initials="CD" size="lg"></lr-avatar>
+      </lr-avatar-group>
+      <lr-avatar-group size="lg" max="1" style="--lr-avatar-group-badge-font-size: 0.6875rem;">
+        <lr-avatar initials="AB" size="lg"></lr-avatar>
+        ${Array.from({ length: 128 }, () => html`<lr-avatar initials="CD" size="lg"></lr-avatar>`)}
+      </lr-avatar-group>
+    </div>
+  `,
+};
