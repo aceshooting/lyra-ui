@@ -1,6 +1,7 @@
 import { fixture, expect, html, oneEvent } from '@open-wc/testing';
 import './token-input.js';
 import type { LyraTokenInput } from './token-input.js';
+import { styles } from './token-input.styles.js';
 
 const RULE = 'Bash(git status:*)';
 
@@ -498,4 +499,12 @@ describe('delimiter', () => {
     el.removeAttribute('delimiter');
     expect(el.delimiter, 'removing the attribute restores the default').to.equal(',');
   });
+});
+
+it('colors placeholder text on both editable fields and gives the remove button hover/focus', () => {
+  const css = styles.cssText.replace(/\s+/g, ' ');
+  expect(css).to.match(/\[part='input'\]::placeholder\s*\{[^}]*color:\s*var\(--lr-color-text-quiet\)/);
+  expect(css).to.match(/\[part='token-editor'\]::placeholder\s*\{[^}]*color:\s*var\(--lr-color-text-quiet\)/);
+  expect(css).to.match(/\[part='remove'\]:hover\s*\{[^}]*background:/);
+  expect(css).to.match(/\[part='remove'\]:focus-visible\s*\{[^}]*outline:/);
 });
