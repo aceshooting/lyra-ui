@@ -17,36 +17,52 @@ AGENTS.md's own `contract-checklist.json` data), `check-component-coverage.mjs`,
 
 ## CI: `.github/workflows/ci.yml` is authoritative
 
-**The `build-test` job is the authoritative gate list and reproduction sequence.** Read it
-directly rather than trusting a restated list, and reproduce a CI failure locally with the same
-commands in the same order. Currently:
+**`ci.yml` is the authoritative gate list and reproduction sequence.** Read it directly rather
+than trusting a restated list, and reproduce a CI failure locally with the same commands in the
+same order. The old single `build-test` job was one linear sequence; it's now six jobs split
+along real data dependencies (verified against the actual scripts, not assumed) so independent
+gates run in parallel instead of queueing behind each other. If a check goes red, the job name in
+the PR checks list tells you which of these to reproduce locally:
 
-1. `install --frozen-lockfile`; Playwright Chromium install; `lint`.
-2. `build`, **then** `check:bundle-size` (gzip-size regression gate against
-   `scripts/bundle-budgets.json`) plus a non-fatal bundle-analysis upload to Codecov
-   (`codecov:bundle`, no-ops without `CODECOV_TOKEN`).
-3. `pnpm --filter '!@aceshooting/lyra-ui' -r test` — every *other* workspace package (e.g.
-   lyra-flags's own test script).
-4. `test:coverage` — the one time lyra-ui's own Chromium suite actually runs (a separate
-   `pnpm test` step would just re-run the identical file set with coverage instrumentation off).
-   Build must precede it: `src/package-entrypoints.test.ts` dynamically imports the published
-   `./dist/lyra.js` entry points, which only exist after a build. Then coverage/test-result
-   uploads to Codecov.
-5. `manifest`, then `git diff --exit-code` on `custom-elements.json` (the freshness check — a
-   standalone `manifest:check` step would be redundant with this).
-6. `readme:check`; `./package.sh` (regenerates the plugin's
+1. **`lint`** — `install --frozen-lockfile`; `lint`. No Playwright, no build: `contract-policy` +
+   `tsc --noEmit` + `test:types` are pure static analysis.
+2. **`static-checks`** — everything that only reads already-committed files, needing neither a
+   library build nor a docs build: `pnpm --filter '!@aceshooting/lyra-ui' -r test` (every *other*
+   workspace package, e.g. lyra-flags's own test script); `manifest` then `git diff --exit-code`
+   on `custom-elements.json` (the freshness check — a standalone `manifest:check` step would be
+   redundant with this); `readme:check`; `./package.sh` (regenerates the plugin's
    `plugins/lyra-ui/skills/lyra-ui/references/`, immediately diffed for staleness) +
-   `skill:check`.
-7. `docs:build`; `git diff --exit-code` on `.storybook/sitemap.xml` + `docs:check`;
-   `storybook:check`; `storybook:check-theme`.
-8. A non-blocking, informational visual-regression screenshot run (`test:visual`) against
-   `visual-baselines/`.
-9. `pnpm --filter @aceshooting/lyra-ui pack --dry-run` — checks the published tarball still
+   `skill:check`; `storybook:check-theme` (reads `.storybook/preview.js` directly, no Storybook
+   build needed despite the name).
+3. **`build-and-coverage`** — the longest job (`test:coverage` alone runs ~4.5min), kept as one
+   job because everything in it is sequentially dist-dependent: Playwright Chromium install;
+   `build`, **then** `check:bundle-size` (gzip-size regression gate against
+   `scripts/bundle-budgets.json`) plus a non-fatal bundle-analysis upload to Codecov
+   (`codecov:bundle`, no-ops without `CODECOV_TOKEN`); `test:coverage` — the one time lyra-ui's
+   own Chromium suite actually runs (a separate `pnpm test` step would just re-run the identical
+   file set with coverage instrumentation off) — build must precede it, since
+   `src/package-entrypoints.test.ts` dynamically imports the published `./dist/lyra.js` entry
+   points, which only exist after a build; then coverage/test-result uploads to Codecov.
+4. **`packed-consumer`** — needs `dist/` (the tarball's `files` list includes it) but nothing
+   else `build-and-coverage` needs, so it gets its own `build` rather than waiting on that job:
+   `pnpm --filter @aceshooting/lyra-ui pack --dry-run` — checks the published tarball still
    contains `custom-elements.json`/`llms.txt`/`llms-full.txt`/`llms/` — then
    `check:packed-consumer`.
+5. **`docs-and-storybook`** — `docs:build` only needs the already-committed
+   `custom-elements.json` (via its internal `manifest:check`), not `dist/`, so this is independent
+   of the two build jobs above; `storybook:check` drives Chromium against the built
+   `storybook-static/`, so this job still installs Playwright: `docs:build` (with
+   `CODECOV_TOKEN` — see note below); `git diff --exit-code` on `.storybook/sitemap.xml`;
+   `docs:check`; `storybook:check`.
+6. **`visual-regression`** — non-blocking (`continue-on-error: true` at job *and* step level), and
+   split into its own job specifically so its ~3.5min `test:visual` run doesn't sit in the
+   critical path of jobs that actually gate merges: Playwright Chromium install; `docs:build`
+   (**without** `CODECOV_TOKEN` — only `docs-and-storybook`'s copy carries the token, so the
+   Storybook bundle-analysis upload doesn't fire twice for the same commit); the informational
+   `test:visual` screenshot run against `visual-baselines/`; diff-artifact upload.
 
 A separate `platform-contracts` matrix job runs the platform contract suite (`test:platform`)
-against Firefox/WebKit on Node 20/22.
+against Firefox/WebKit on Node 20/22, as before.
 
 ## `prepack` and editor data
 

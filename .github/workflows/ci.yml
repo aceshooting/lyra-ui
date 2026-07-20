@@ -5,13 +5,57 @@ on:
     branches: [main]
   pull_request:
 
-# Neither job pushes, comments, or otherwise writes to the repo -- checkout and
+# No job pushes, comments, or otherwise writes to the repo -- checkout and
 # artifact upload/download both work fine under read-only contents access.
 permissions:
   contents: read
 
+# Shared bootstrap steps, repeated per job (rather than built + uploaded once as an artifact)
+# because `pnpm install`/`pnpm build` are only a few seconds each here -- far cheaper than the
+# artifact upload/download round trip would cost, and it keeps every job independently
+# reproducible from a clean checkout.
 jobs:
-  build-test:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6.0.9
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm lint
+
+  # Static/config consistency checks: none of these need a library build, a docs build, or a
+  # browser -- they read already-committed files (custom-elements.json, llms/, plugin manifests,
+  # README) and either validate or regenerate-and-diff them.
+  static-checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6.0.9
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      # lyra-ui's own Chromium suite runs in the build-and-coverage job via test:coverage --
+      # this only needs to cover the other workspace package(s), e.g. lyra-flags's own test script.
+      - run: pnpm --filter '!@aceshooting/lyra-ui' -r test
+      - run: pnpm manifest
+      - run: git diff --exit-code -- packages/lyra-ui/custom-elements.json
+      - run: pnpm readme:check
+      - run: ./package.sh
+      - run: git diff --exit-code -- plugins/lyra-ui/skills/lyra-ui/references/
+      - run: pnpm skill:check
+      - run: pnpm storybook:check-theme
+
+  # The one time lyra-ui's own Chromium suite actually runs (a separate `pnpm test` step would
+  # just re-run the identical file set with coverage instrumentation off). This is the longest
+  # single job (test:coverage alone runs ~4.5min) -- everything it needs (build, bundle-size,
+  # coverage) is sequential and dist-dependent, so it stays one job rather than splitting further.
+  build-and-coverage:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
@@ -22,16 +66,14 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm --filter @aceshooting/lyra-ui exec playwright install --with-deps chromium
-      - run: pnpm lint
-      # Build before test: src/package-entrypoints.test.ts dynamically imports
-      # the package's published entry points (./dist/lyra.js etc., per
-      # package.json's "exports"), which only exist after a build.
+      # src/package-entrypoints.test.ts dynamically imports the package's published entry points
+      # (./dist/lyra.js etc., per package.json's "exports"), which only exist after a build.
       - run: pnpm build
-      # Needs dist/ from the build step above: measures the library's own
-      # esbuild-bundled gzip weight (optional peers externalized) against the
-      # budgets in packages/lyra-ui/scripts/bundle-budgets.json, and re-measures every
-      # per-component entry so the sizes the README badges publish from
-      # packages/lyra-ui/scripts/bundle-stats.json cannot silently go stale.
+      # Needs dist/ from the build step above: measures the library's own esbuild-bundled gzip
+      # weight (optional peers externalized) against the budgets in
+      # packages/lyra-ui/scripts/bundle-budgets.json, and re-measures every per-component entry so
+      # the sizes the README badges publish from packages/lyra-ui/scripts/bundle-stats.json cannot
+      # silently go stale.
       - run: pnpm --filter @aceshooting/lyra-ui check:bundle-size
       # Reports the same six esbuild-bundled entry points to Codecov as the `lyra-ui-dist`
       # bundle, for per-PR size deltas. The blocking weight gate is check:bundle-size above;
@@ -40,11 +82,6 @@ jobs:
         run: pnpm --filter @aceshooting/lyra-ui codecov:bundle
         env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
-      # lyra-ui's own Chromium suite runs once, below, via test:coverage
-      # (identical file set, same browser, just with coverage instrumentation
-      # on) -- this step only needs to cover the other workspace package(s),
-      # e.g. lyra-flags's own test script.
-      - run: pnpm --filter '!@aceshooting/lyra-ui' -r test
       - run: pnpm --filter @aceshooting/lyra-ui test:coverage
       - name: Upload coverage to Codecov
         if: ${{ !cancelled() }}
@@ -68,37 +105,20 @@ jobs:
           fail_ci_if_error: false
         env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
-      - run: pnpm manifest
-      - run: git diff --exit-code -- packages/lyra-ui/custom-elements.json
-      - run: pnpm readme:check
-      - run: ./package.sh
-      - run: git diff --exit-code -- plugins/lyra-ui/skills/lyra-ui/references/
-      - run: pnpm skill:check
-      # CODECOV_TOKEN is what arms the Codecov bundle-analysis plugin in .storybook/main.js;
-      # without it the storybook build runs exactly as before and uploads nothing.
-      - run: pnpm docs:build
-        env:
-          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
-      - run: git diff --exit-code -- .storybook/sitemap.xml
-      - run: pnpm docs:check
-      - run: pnpm storybook:check
-      - run: pnpm storybook:check-theme
-      # Informational/non-blocking on purpose: the baseline PNGs under
-      # packages/lyra-ui/visual-baselines/ were agent-generated and have not yet been confirmed
-      # correct by a human (see that directory's README). continue-on-error keeps a mismatch --
-      # real or just an unreviewed-baseline artifact -- from failing the build until someone
-      # promotes this to a blocking gate deliberately.
-      - name: Visual regression (informational, non-blocking)
-        continue-on-error: true
-        run: pnpm --filter @aceshooting/lyra-ui test:visual
-      - name: Upload visual regression diff artifacts
-        if: always()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+
+  # Needs dist/ (the tarball's `files` list includes it) but not the Chromium test suite or the
+  # docs build -- independent of build-and-coverage other than both running `pnpm build`.
+  packed-consumer:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6.0.9
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
-          name: visual-regression-diff
-          path: packages/lyra-ui/.visual-diff-output
-          if-no-files-found: ignore
-          retention-days: 14
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
       - name: Verify published tarball contents
         run: |
           set -euo pipefail
@@ -119,6 +139,64 @@ jobs:
       # core-bundle budget, to catch a PR that silently drags something heavy into the eager
       # import graph -- see bundleEntries.button in scripts/check-packed-consumer.mjs.
       - run: pnpm check:packed-consumer
+
+  # docs:build only needs the already-committed custom-elements.json (via manifest:check), not
+  # dist/ -- independent of build-and-coverage/packed-consumer. storybook:check drives Chromium
+  # against the built storybook-static/, so this job still needs Playwright.
+  docs-and-storybook:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6.0.9
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @aceshooting/lyra-ui exec playwright install --with-deps chromium
+      # CODECOV_TOKEN is what arms the Codecov bundle-analysis plugin in .storybook/main.js;
+      # without it the storybook build runs exactly as before and uploads nothing. Only this job's
+      # docs:build carries the token -- the visual-regression job also runs docs:build (it needs
+      # storybook-static/ too) and deliberately omits it, so the bundle-analysis upload doesn't fire
+      # twice for the same commit.
+      - run: pnpm docs:build
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+      - run: git diff --exit-code -- .storybook/sitemap.xml
+      - run: pnpm docs:check
+      - run: pnpm storybook:check
+
+  # Informational/non-blocking on purpose: the baseline PNGs under
+  # packages/lyra-ui/visual-baselines/ were agent-generated and have not yet been confirmed
+  # correct by a human (see that directory's README). continue-on-error (job- and step-level)
+  # keeps a mismatch -- real or just an unreviewed-baseline artifact -- from failing the build
+  # until someone promotes this to a blocking gate deliberately. Split into its own job because
+  # test:visual alone runs ~3.5min and gates nothing, so it shouldn't sit in the critical path of
+  # jobs that do.
+  visual-regression:
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6.0.9
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @aceshooting/lyra-ui exec playwright install --with-deps chromium
+      - run: pnpm docs:build
+      - name: Visual regression (informational, non-blocking)
+        continue-on-error: true
+        run: pnpm --filter @aceshooting/lyra-ui test:visual
+      - name: Upload visual regression diff artifacts
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: visual-regression-diff
+          path: packages/lyra-ui/.visual-diff-output
+          if-no-files-found: ignore
+          retention-days: 14
 
   platform-contracts:
     name: ${{ matrix.browser }} / Node ${{ matrix.node-version }}

@@ -80,8 +80,9 @@ local static server itself, fails on navigation/click/unexpanded-control regress
 intentional fixture diagnostics visible for review (for example, stories that deliberately load a
 missing media URL to demonstrate an error state).
 
-The commands through `pnpm docs:build` mirror the relevant steps in `.github/workflows/ci.yml`'s
-`build-test` job; `pnpm docs:check-show-code` is the additional release-time browser sweep. If you
+The commands through `pnpm docs:build` mirror the relevant steps across `.github/workflows/ci.yml`'s
+`lint`/`static-checks`/`build-and-coverage`/`packed-consumer`/`docs-and-storybook` jobs;
+`pnpm docs:check-show-code` is the additional release-time browser sweep. If you
 want extra confidence, also run the `platform-contracts` job's suite locally:
 `pnpm --filter @aceshooting/lyra-ui test:platform` (needs Firefox/WebKit via Playwright).
 
@@ -157,8 +158,9 @@ need to match what you actually intend to do.
   release commit only stages `pnpm-lock.yaml packages/*/package.json packages/*/CHANGELOG.md
   .changeset` (+ `custom-elements.json`) — the root `README.md` is **not** in that list, and step
   2's `readme:check` ran before the bump. So every release commit lands with a README that still
-  advertises the *previous* version, and `build-test` goes red on `pnpm readme:check` (this is what
-  happened to 2.4.0, and to 2.3.0 before it — see `b4862ec`). Edit the line to the versions just
+  advertises the *previous* version, and CI's `static-checks` job goes red on `pnpm readme:check`
+  (this is what happened to 2.4.0, and to 2.3.0 before it — see `b4862ec`, back when it was still
+  part of the single `build-test` job). Edit the line to the versions just
   published, verify, and push a follow-up commit:
 
   ```bash

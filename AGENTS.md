@@ -83,9 +83,12 @@ pnpm docs        # Storybook (.storybook/), demos every component live at localh
 
 - `pnpm lint`'s `contract-policy` chains ~15 checks; the authoritative list is
   `packages/lyra-ui/package.json`'s `contract-policy` script entry — restatements drift.
-- The `build-test` job in `.github/workflows/ci.yml` is the authoritative CI gate list and
-  reproduction sequence — read it directly; reproduce failures locally in the same order.
-  A separate `platform-contracts` matrix job runs `test:platform` on Firefox/WebKit × Node 20/22.
+- `.github/workflows/ci.yml` is the authoritative CI gate list and reproduction sequence — read
+  it directly; reproduce failures locally in the same order. The gates run as six parallel jobs
+  split along real data dependencies (`lint`, `static-checks`, `build-and-coverage`,
+  `packed-consumer`, `docs-and-storybook`, `visual-regression`) rather than one linear job, so a
+  red check names the specific job to reproduce instead of "build-test". A separate
+  `platform-contracts` matrix job runs `test:platform` on Firefox/WebKit × Node 20/22.
 - `prepack` (run by npm, not CI) determines tarball contents and regenerates the editor data
   (`vscode-html-data.json`/`vscode-css-data.json`/`web-types.json`), which have NO CI freshness
   gate — regenerate and commit them by hand whenever you touch the public surface.
