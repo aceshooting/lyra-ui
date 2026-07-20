@@ -11,6 +11,15 @@ it('renders status content and a localized close action', async () => {
   await expect(el).to.be.accessible();
 });
 
+it('renders closed when open="false" is set as a plain HTML attribute', async () => {
+  // Regression test: `open` defaults `true`, and Lit's default presence-based `type: Boolean`
+  // converter cannot distinguish an absent attribute from the literal string "false" -- only a
+  // `true`-aware converter parses the literal attribute form correctly.
+  const el = (await fixture(html`<lr-callout open="false">Message</lr-callout>`)) as LyraCallout;
+  expect(el.open).to.be.false;
+  expect(el.shadowRoot!.querySelectorAll('[part="base"]').length).to.equal(0);
+});
+
 it('allows close to be vetoed and otherwise hides', async () => {
   const el = (await fixture(html`<lr-callout closable>Message</lr-callout>`)) as LyraCallout;
   const button = el.shadowRoot!.querySelector('[part="close-button"]') as HTMLButtonElement;
@@ -64,7 +73,40 @@ it('supports a lightweight inline status/error treatment', async () => {
   await expect(el).to.be.accessible();
 });
 
+it('actually renders the inline variant with a transparent panel background', async () => {
+  // Companion to the cssText-source check above -- proves the rule reaches a real rendered
+  // element rather than only existing as unapplied stylesheet text (e.g. a future higher-
+  // specificity rule elsewhere, or the selector losing to [part='base']'s own background
+  // declaration, would break this while the cssText check above kept passing).
+  const nonInline = (await fixture(html`<lr-callout variant="danger">Try again</lr-callout>`)) as LyraCallout;
+  const nonInlineBase = nonInline.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  expect(getComputedStyle(nonInlineBase).backgroundColor).to.not.equal('rgba(0, 0, 0, 0)');
+
+  const inlineEl = (await fixture(html`<lr-callout inline variant="danger">Try again</lr-callout>`)) as LyraCallout;
+  const inlineBase = inlineEl.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  expect(getComputedStyle(inlineBase).backgroundColor).to.equal('rgba(0, 0, 0, 0)');
+});
+
 it('gives close-button a hover state', () => {
   const css = styles.cssText.replace(/\s+/g, ' ');
   expect(css).to.match(/\[part='close-button'\]:hover/);
+});
+
+it('decouples the close-button hover fill from --lr-callout-background so a brand-variant panel is not the sole override hook', async () => {
+  const el = (await fixture(
+    html`<lr-callout variant="brand" closable>Message</lr-callout>`,
+  )) as LyraCallout;
+  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  const button = el.shadowRoot!.querySelector('[part="close-button"]') as HTMLElement;
+
+  // Overriding the hover-fill token alone must not move the panel background.
+  const panelBefore = getComputedStyle(base).backgroundColor;
+  el.style.setProperty('--lr-callout-close-hover-bg', 'rgb(1, 2, 3)');
+  await el.updateComplete;
+  expect(getComputedStyle(base).backgroundColor).to.equal(panelBefore);
+
+  // The dedicated token is reachable at all -- proof it is not just a bare literal.
+  expect(getComputedStyle(button).getPropertyValue('--lr-callout-close-hover-bg').trim()).to.equal(
+    'rgb(1, 2, 3)',
+  );
 });

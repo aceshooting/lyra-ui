@@ -6,6 +6,7 @@ import { nextId } from '../../../internal/a11y.js';
 import { place, virtualAnchorFromRect, type VirtualAnchor } from '../../../internal/positioner.js';
 import { rtlAwarePlacement } from '../../../internal/rtl.js';
 import { finiteNumber } from '../../../internal/numbers.js';
+import { activateOverlay, type OverlayHandle } from '../../../internal/overlay-manager.js';
 import { styles } from './overlay.styles.js';
 
 /** Default anchor-offset distance (px), passed to Floating UI's `offset()` middleware. */
@@ -45,9 +46,13 @@ export class LyraPopover extends LyraElement<LyraPopoverEventMap> {
    *  call reverts to plain trigger-based behavior. */
   private virtualAnchor?: VirtualAnchor;
   /** `options.returnFocusTo` from the `showAt()` call that opened the popover, if any -- see
-   *  `showAt()`'s doc comment and `onVirtualAnchorKeyDown`. */
+   *  `showAt()`'s doc comment and `activateVirtualAnchorOverlay()`'s `onEscape` callback. */
   private returnFocusTo?: HTMLElement;
   private cleanup?: () => void;
+  /** Registered with the shared overlay manager only while a `showAt()`-opened (virtual-anchor)
+   *  popover is open -- see `activateVirtualAnchorOverlay()`. A trigger-based popover keeps using
+   *  its own trigger-/popup-scoped keydown handlers below, unaffected by this. */
+  private overlayHandle?: OverlayHandle;
   private readonly popupId = nextId('popover');
   private firstUpdate = true;
 
@@ -65,12 +70,16 @@ export class LyraPopover extends LyraElement<LyraPopoverEventMap> {
           document.addEventListener('pointerdown', this.onDocumentPointer);
           // A virtual anchor has no slotted trigger and (typically) no focused popup content for
           // the existing trigger-/popup-scoped keydown handlers below to catch Escape through --
-          // bind a document-level Escape listener for that path specifically.
-          if (this.virtualAnchor) document.addEventListener('keydown', this.onVirtualAnchorKeyDown);
+          // register with the shared, topmost-stack-aware overlay manager for that path
+          // specifically, so nested virtual-anchor popovers/tooltips only close the topmost one on
+          // a single Escape press (matching lr-dialog et al., instead of every instance reacting to
+          // an unscoped document-level listener).
+          if (this.virtualAnchor) this.activateVirtualAnchorOverlay();
           if (!this.firstUpdate) this.emit('lr-show');
         } else {
           document.removeEventListener('pointerdown', this.onDocumentPointer);
-          document.removeEventListener('keydown', this.onVirtualAnchorKeyDown);
+          this.overlayHandle?.deactivate({ restoreFocus: false });
+          this.overlayHandle = undefined;
           this.virtualAnchor = undefined;
           this.returnFocusTo = undefined;
           if (!this.firstUpdate) this.emit('lr-hide');
@@ -89,7 +98,10 @@ export class LyraPopover extends LyraElement<LyraPopoverEventMap> {
     // the Floating UI positioner subscription it dropped.
     if (this.hasUpdated && this.open) {
       document.addEventListener('pointerdown', this.onDocumentPointer);
-      if (this.virtualAnchor) document.addEventListener('keydown', this.onVirtualAnchorKeyDown);
+      if (this.virtualAnchor) {
+        if (this.overlayHandle?.isActive()) this.overlayHandle.resume();
+        else this.activateVirtualAnchorOverlay();
+      }
       this.position();
     }
   }
@@ -97,8 +109,27 @@ export class LyraPopover extends LyraElement<LyraPopoverEventMap> {
     this.cleanup?.();
     this.cleanup = undefined;
     document.removeEventListener('pointerdown', this.onDocumentPointer);
-    document.removeEventListener('keydown', this.onVirtualAnchorKeyDown);
+    this.overlayHandle?.suspend();
     super.disconnectedCallback();
+  }
+  /** Registers this virtual-anchor-opened popover with the shared overlay manager
+   *  (`internal/overlay-manager.ts`) so Escape is routed only to the topmost overlay in the stack,
+   *  instead of every open virtual-anchor popover/tooltip reacting to its own unscoped
+   *  `document`-level keydown listener. Non-modal and non-focus-trapping: a virtual anchor has no
+   *  DOM node to own focus, so background inerting and Tab trapping (both opt-in via `modal`/
+   *  `trapFocus`) would be meaningless here -- only Escape ownership is needed. */
+  private activateVirtualAnchorOverlay(): void {
+    this.overlayHandle = activateOverlay({
+      host: this,
+      panel: () => this.renderRoot.querySelector('[part="popup"]') as HTMLElement | null,
+      onEscape: () => {
+        const returnFocusTarget = this.returnFocusTo;
+        this.open = false;
+        returnFocusTarget?.focus();
+      },
+      modal: false,
+      trapFocus: false,
+    });
   }
   /**
    * Opens the popover anchored to an arbitrary rectangle instead of the slotted `trigger` -- for
@@ -153,17 +184,6 @@ export class LyraPopover extends LyraElement<LyraPopoverEventMap> {
   };
   private onPopupKeyDown = (event: KeyboardEvent): void => {
     if (event.key === 'Escape') { event.preventDefault(); this.open = false; this.trigger?.focus(); }
-  };
-  /** Escape handling for a popover opened via `showAt()` -- bound at the document level (not
-   *  scoped to the trigger/popup elements) while such a popover is open, since a virtual anchor
-   *  has no slotted trigger or (typically) focused popup content for `onTriggerKeyDown`/
-   *  `onPopupKeyDown` above to catch Escape through. */
-  private onVirtualAnchorKeyDown = (event: KeyboardEvent): void => {
-    if (event.key !== 'Escape') return;
-    event.preventDefault();
-    const returnFocusTarget = this.returnFocusTo;
-    this.open = false;
-    returnFocusTarget?.focus();
   };
   private onDocumentPointer = (event: PointerEvent): void => {
     if (!event.composedPath().includes(this)) this.open = false;

@@ -394,6 +394,29 @@ it('applies compact styling to [part="base"] and [part="heading"] when compact',
   ).to.be.lessThan(parseFloat(getComputedStyle(normalBase).paddingBlockStart));
 });
 
+it('shrinks the icon/heading/description gap in compact mode, not just the padding', async () => {
+  const normal = (await fixture(
+    html`<lr-empty heading="Nothing here" description="Try again."></lr-empty>`,
+  )) as LyraEmpty;
+  const compact = (await fixture(
+    html`<lr-empty heading="Nothing here" description="Try again." compact></lr-empty>`,
+  )) as LyraEmpty;
+  const normalGap = parseFloat(getComputedStyle(normal.shadowRoot!.querySelector('[part="base"]')!).gap);
+  const compactGap = parseFloat(getComputedStyle(compact.shadowRoot!.querySelector('[part="base"]')!).gap);
+  expect(compactGap, 'compact gap should render smaller than the default').to.be.lessThan(normalGap);
+});
+
+it('--lr-empty-compact-gap overrides the default compact gap', async () => {
+  const defaultEl = (await fixture(html`<lr-empty compact heading="Nothing here"></lr-empty>`)) as LyraEmpty;
+  const overriddenEl = (await fixture(
+    html`<lr-empty compact heading="Nothing here" style="--lr-empty-compact-gap: 6px;"></lr-empty>`,
+  )) as LyraEmpty;
+  const defaultGap = getComputedStyle(defaultEl.shadowRoot!.querySelector('[part="base"]')!).gap;
+  const overriddenGap = getComputedStyle(overriddenEl.shadowRoot!.querySelector('[part="base"]')!).gap;
+  expect(overriddenGap).to.equal('6px');
+  expect(overriddenGap).to.not.equal(defaultGap);
+});
+
 it('--lr-empty-compact-padding overrides the default compact padding', async () => {
   const defaultEl = (await fixture(html`<lr-empty compact heading="Nothing here"></lr-empty>`)) as LyraEmpty;
   const overriddenEl = (await fixture(

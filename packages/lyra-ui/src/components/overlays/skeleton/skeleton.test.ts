@@ -138,6 +138,14 @@ it('can render as an unannounced decorative placeholder', async () => {
   expect(el.shadowRoot!.querySelector('.sr-only')).to.equal(null);
 });
 
+it('announce="false" (plain HTML attribute) also renders as an unannounced decorative placeholder', async () => {
+  const el = (await fixture(html`<lr-skeleton announce="false"></lr-skeleton>`)) as LyraSkeleton;
+
+  expect(el.announce).to.be.false;
+  expect(el.hasAttribute('role')).to.equal(false);
+  expect(el.shadowRoot!.querySelector('.sr-only')).to.equal(null);
+});
+
 it('removes status semantics when announce is disabled after rendering', async () => {
   const el = (await fixture(html`<lr-skeleton></lr-skeleton>`)) as LyraSkeleton;
   expect(el.getAttribute('role')).to.equal('status');

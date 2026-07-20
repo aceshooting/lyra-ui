@@ -29,6 +29,21 @@ it('uses menu semantics for dropdowns', async () => {
   expect(el.shadowRoot!.querySelector('[part="popup"]')?.getAttribute('role')).to.equal('menu');
 });
 
+// lr-dropdown is its own registered custom element (extending LyraPopover with popupRole='menu'
+// set in its constructor) -- it needs its own axe assertion run against an <lr-dropdown> instance
+// specifically. Every other `to.be.accessible()` call in this file targets <lr-popover> or
+// <lr-tooltip>; none of those would catch a menu-semantics regression (e.g. a bad
+// aria-haspopup/role combination) introduced by lr-dropdown's constructor override.
+it('is accessible, both closed and with its menu open', async () => {
+  const el = await fixture(html`<lr-dropdown><button slot="trigger">Actions</button><div>Item</div></lr-dropdown>`);
+  await expect(el).to.be.accessible();
+
+  const trigger = el.querySelector('button') as HTMLButtonElement;
+  trigger.click();
+  await (el as HTMLElement & { updateComplete: Promise<unknown> }).updateComplete;
+  await expect(el).to.be.accessible();
+});
+
 it('does not let a closed popup/dropdown occupy a layout box in its host', async () => {
   const el = await fixture(
     html`<lr-dropdown><button slot="trigger">Actions</button><div style="width:400px;height:400px;">Item</div></lr-dropdown>`,
@@ -372,6 +387,47 @@ it('does not throw on Escape after tooltip showAt() without returnFocusTo', asyn
   await el.updateComplete;
 
   expect(el.open).to.be.false;
+});
+
+it('routes a single Escape press to only the topmost of two nested showAt()-opened popovers', async () => {
+  const outer = (await fixture(html`<lr-popover><p>Outer</p></lr-popover>`)) as LyraPopover;
+  const inner = (await fixture(html`<lr-popover><p>Inner</p></lr-popover>`)) as LyraPopover;
+  outer.showAt({ x: 10, y: 10 });
+  await outer.updateComplete;
+  inner.showAt({ x: 50, y: 50 });
+  await inner.updateComplete;
+  expect(outer.open).to.be.true;
+  expect(inner.open).to.be.true;
+
+  document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+  await outer.updateComplete;
+  await inner.updateComplete;
+
+  expect(inner.open, 'Escape must close the topmost (most recently activated) popover').to.be.false;
+  expect(outer.open, 'a single Escape press must not also close the popover underneath').to.be.true;
+
+  // A second Escape press then closes the next one down the stack.
+  document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+  await outer.updateComplete;
+  expect(outer.open, 'a second Escape press closes the next overlay down the stack').to.be.false;
+});
+
+it('routes a single Escape press to only the topmost of a showAt()-opened popover nested under a showAt()-opened tooltip', async () => {
+  const tooltip = (await fixture(html`<lr-tooltip>Outer</lr-tooltip>`)) as LyraTooltip;
+  const popover = (await fixture(html`<lr-popover><p>Inner</p></lr-popover>`)) as LyraPopover;
+  tooltip.showAt({ x: 10, y: 10 });
+  await tooltip.updateComplete;
+  popover.showAt({ x: 50, y: 50 });
+  await popover.updateComplete;
+  expect(tooltip.open).to.be.true;
+  expect(popover.open).to.be.true;
+
+  document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+  await tooltip.updateComplete;
+  await popover.updateComplete;
+
+  expect(popover.open, 'Escape must close the topmost overlay (the popover opened second)').to.be.false;
+  expect(tooltip.open, 'a single Escape press must not also close the tooltip underneath').to.be.true;
 });
 
 it('leaves normal slotted-trigger tooltip behavior unchanged when showAt() is never used', async () => {

@@ -21,6 +21,11 @@ export const styles = css`
     align-items: var(--lr-empty-compact-align, flex-start);
     text-align: var(--lr-empty-compact-align, start);
     padding: var(--lr-empty-compact-padding, var(--lr-space-xs));
+    /* Same density-reduction convention as lr-file-input's :host([compact]) rule (which explicitly
+       models itself on this one): compact must shrink every dimension the base rule sets for this
+       part, not just padding -- otherwise the icon/heading/description gap stays pinned at the
+       spacious default and compact reads as internally inconsistent. */
+    gap: var(--lr-empty-compact-gap, var(--lr-space-2xs));
   }
   [part='icon'] {
     font-size: var(--lr-font-size-3xl);

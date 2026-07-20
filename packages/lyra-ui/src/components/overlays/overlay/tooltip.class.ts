@@ -6,6 +6,7 @@ import { nextId } from '../../../internal/a11y.js';
 import { place, virtualAnchorFromRect, type VirtualAnchor } from '../../../internal/positioner.js';
 import { rtlAwarePlacement } from '../../../internal/rtl.js';
 import { finiteDuration, finiteNumber } from '../../../internal/numbers.js';
+import { activateOverlay, type OverlayHandle } from '../../../internal/overlay-manager.js';
 import { tooltipStyles } from './overlay.styles.js';
 
 /** Default show/hide timer delay (ms). */
@@ -45,10 +46,14 @@ export class LyraTooltip extends LyraElement {
    *  call reverts to plain trigger-based behavior. */
   private virtualAnchor?: VirtualAnchor;
   /** `options.returnFocusTo` from the `showAt()` call that opened the tooltip, if any -- see
-   *  `showAt()`'s doc comment and `onVirtualAnchorKeyDown`. */
+   *  `showAt()`'s doc comment and `activateVirtualAnchorOverlay()`'s `onEscape` callback. */
   private returnFocusTo?: HTMLElement;
   private cleanup?: () => void;
   private timer?: ReturnType<typeof setTimeout>;
+  /** Registered with the shared overlay manager only while a `showAt()`-opened (virtual-anchor)
+   *  tooltip is open -- see `activateVirtualAnchorOverlay()`. A trigger-based tooltip keeps using
+   *  its own trigger-scoped keydown handler below, unaffected by this. */
+  private overlayHandle?: OverlayHandle;
   private readonly tooltipId = nextId('tooltip');
 
   protected updated(changed: PropertyValues): void {
@@ -58,13 +63,17 @@ export class LyraTooltip extends LyraElement {
       if (this.open) this.position();
       if (changed.has('open')) {
         // A virtual anchor has no slotted trigger to bind hover/focus/keydown listeners to (see
-        // bindTrigger()) -- bind a document-level Escape listener for that path specifically
-        // while such a tooltip is open, and clear the virtual-anchor state on close so a later
-        // `open = true` with no fresh `showAt()` call reverts to plain trigger-based behavior.
+        // bindTrigger()) -- register with the shared, topmost-stack-aware overlay manager for that
+        // path specifically while such a tooltip is open, so nested virtual-anchor popovers/
+        // tooltips only close the topmost one on a single Escape press (instead of every instance
+        // reacting to its own unscoped document-level listener), and clear the virtual-anchor
+        // state on close so a later `open = true` with no fresh `showAt()` call reverts to plain
+        // trigger-based behavior.
         if (this.open) {
-          if (this.virtualAnchor) document.addEventListener('keydown', this.onVirtualAnchorKeyDown);
+          if (this.virtualAnchor) this.activateVirtualAnchorOverlay();
         } else {
-          document.removeEventListener('keydown', this.onVirtualAnchorKeyDown);
+          this.overlayHandle?.deactivate({ restoreFocus: false });
+          this.overlayHandle = undefined;
           this.virtualAnchor = undefined;
           this.returnFocusTo = undefined;
         }
@@ -83,15 +92,37 @@ export class LyraTooltip extends LyraElement {
     // doesn't move independently of this host.
     if (this.hasUpdated && this.open) {
       this.position();
-      if (this.virtualAnchor) document.addEventListener('keydown', this.onVirtualAnchorKeyDown);
+      if (this.virtualAnchor) {
+        if (this.overlayHandle?.isActive()) this.overlayHandle.resume();
+        else this.activateVirtualAnchorOverlay();
+      }
     }
   }
   disconnectedCallback(): void {
     clearTimeout(this.timer);
     this.cleanup?.();
     this.cleanup = undefined;
-    document.removeEventListener('keydown', this.onVirtualAnchorKeyDown);
+    this.overlayHandle?.suspend();
     super.disconnectedCallback();
+  }
+  /** Registers this virtual-anchor-opened tooltip with the shared overlay manager
+   *  (`internal/overlay-manager.ts`) so Escape is routed only to the topmost overlay in the stack,
+   *  instead of every open virtual-anchor popover/tooltip reacting to its own unscoped
+   *  `document`-level keydown listener. Non-modal and non-focus-trapping: a virtual anchor has no
+   *  DOM node to own focus, so background inerting and Tab trapping (both opt-in via `modal`/
+   *  `trapFocus`) would be meaningless here -- only Escape ownership is needed. */
+  private activateVirtualAnchorOverlay(): void {
+    this.overlayHandle = activateOverlay({
+      host: this,
+      panel: () => this.renderRoot.querySelector('[part="popup"]') as HTMLElement | null,
+      onEscape: () => {
+        const returnFocusTarget = this.returnFocusTo;
+        this.open = false;
+        returnFocusTarget?.focus();
+      },
+      modal: false,
+      trapFocus: false,
+    });
   }
   /**
    * Opens the tooltip anchored to an arbitrary rectangle instead of the slotted `trigger` -- for
@@ -183,18 +214,6 @@ export class LyraTooltip extends LyraElement {
     event.preventDefault();
     clearTimeout(this.timer);
     this.open = false;
-  };
-  /** Escape handling for a tooltip opened via `showAt()` -- bound at the document level while
-   *  such a tooltip is open, since a virtual anchor has no slotted trigger for `onTriggerKeyDown`
-   *  above to catch Escape through (that listener is only ever bound to a real trigger element via
-   *  `bindTrigger()`). Only ever attached while `virtualAnchor` is set, so this never runs for a
-   *  normal trigger-driven tooltip. */
-  private onVirtualAnchorKeyDown = (event: KeyboardEvent): void => {
-    if (event.key !== 'Escape') return;
-    event.preventDefault();
-    const returnFocusTarget = this.returnFocusTo;
-    this.open = false;
-    returnFocusTarget?.focus();
   };
   render(): TemplateResult {
     const label = this.getAttribute('aria-label') || this.accessibleLabel || nothing;

@@ -131,7 +131,13 @@ it('focuses the panel itself as a fallback when there is nothing focusable', asy
   el.open = true;
   await el.updateComplete;
 
-  expect(el.shadowRoot!.activeElement).to.equal(el.shadowRoot!.querySelector('[part="panel"]'));
+  // Compares a part name/tag, not the live DOM nodes directly -- a direct `.to.equal()` between
+  // two DOM nodes serializes both sides via structuredClone if the assertion ever fails, which
+  // throws on a DOM node and silently drops the failure message, hanging the whole test session
+  // until the 180s watchdog kills it (see AGENTS.md's testing-conventions digest).
+  const active = el.shadowRoot!.activeElement;
+  expect(active?.tagName).to.equal('DIV');
+  expect(active?.getAttribute('part')).to.equal('panel');
 });
 
 it('returns focus to the element that was focused before the dialog opened', async () => {

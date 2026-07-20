@@ -21,6 +21,8 @@ import { styles } from './empty.styles.js';
  * set to `center` for dense but centered empty states.
  * @cssprop [--lr-empty-compact-padding=var(--lr-space-xs)] - Padding used in compact mode;
  * accepts any padding shorthand (e.g. `8px 2px`).
+ * @cssprop [--lr-empty-compact-gap=var(--lr-space-2xs)] - Gap between the icon, title, and
+ * description in compact mode.
  */
 export class LyraEmpty extends LyraElement {
   static styles = [LyraElement.styles, styles];

@@ -1,6 +1,12 @@
 import { fixture, expect, html } from '@open-wc/testing';
 import './rating.js';
 import type { LyraRating } from './rating.js';
+import { styles } from './rating.styles.js';
+
+it('gives the star row hover feedback matching the keyboard focus-visible cue', () => {
+  const css = styles.cssText.replace(/\s+/g, ' ');
+  expect(css).to.match(/\[part='base'\]:hover \[part='star'\]\s*\{[^}]*color:/);
+});
 
 it('exposes a keyboard-accessible rating slider', async () => {
   const el = (await fixture(html`<lr-rating value="2"></lr-rating>`)) as LyraRating;

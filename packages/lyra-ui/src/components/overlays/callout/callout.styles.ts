@@ -1,7 +1,17 @@
 import { css } from 'lit';
 
 export const styles = css`
-  :host { display: block; }
+  :host {
+    display: block;
+    /* Decoupled from --lr-callout-background below (which every non-neutral \`variant\` retargets
+       for the panel itself, including brand's var(--lr-color-brand-quiet)) so a consumer can
+       retint the close-button hover fill -- e.g. to keep it visibly distinct from a brand-tinted
+       panel -- without a collateral effect on the panel background, and vice versa. Defaults to
+       today's exact value, so a consumer overriding neither token sees byte-identical rendering.
+       Same shape as lr-chip's --lr-chip-pressed-bg fix (see AGENTS.md's
+       theming-state-rule-longhand-and-shared-token-completeness entry). */
+    --lr-callout-close-hover-bg: var(--lr-color-brand-quiet);
+  }
   [part='base'] { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: start; gap: var(--lr-space-s); padding: var(--lr-space-m); border: var(--lr-border-width-thin) solid var(--lr-callout-border, var(--lr-color-border)); border-radius: var(--lr-radius-xs); background: var(--lr-callout-background, var(--lr-color-surface)); color: var(--lr-callout-color, var(--lr-color-text)); }
   :host([variant='brand']) { --lr-callout-background: var(--lr-color-brand-quiet); --lr-callout-color: var(--lr-color-brand); --lr-callout-border: var(--lr-color-brand); }
   :host([variant='success']) { --lr-callout-background: var(--lr-color-success-quiet); --lr-callout-color: var(--lr-color-success); --lr-callout-border: var(--lr-color-success); }
@@ -17,7 +27,7 @@ export const styles = css`
      centered via this button's own flex layout, not by resizing the button itself. Mirrors
      lr-swatch-picker's [part='swatch']/[part='swatch-fill'] split. */
   [part='close-button'] { display: inline-flex; align-items: center; justify-content: center; min-inline-size: var(--lr-icon-button-size); min-block-size: var(--lr-icon-button-size); border: 0; border-radius: var(--lr-radius-pill); background: transparent; color: inherit; cursor: pointer; }
-  [part='close-button']:hover { background: var(--lr-color-brand-quiet); }
+  [part='close-button']:hover { background: var(--lr-callout-close-hover-bg); }
   [part='close-button']:focus-visible { outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color); outline-offset: var(--lr-focus-ring-offset); }
   :host([inline]) [part='base'] {
     gap: var(--lr-space-xs);
