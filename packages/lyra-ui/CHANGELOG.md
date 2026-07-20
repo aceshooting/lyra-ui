@@ -1,5 +1,238 @@
 # Changelog
 
+## 5.1.0
+
+### Minor Changes
+
+- 5f82bf7: Add role-scoped bubble cssprops to `lr-chat-message` — `--lr-chat-message-bubble-bg`,
+  `--lr-chat-message-bubble-color`, `--lr-chat-message-user-bubble-bg`, and
+  `--lr-chat-message-user-bubble-color` — so a consumer can retint one role's bubble fill/text
+  without overriding the shared `--lr-color-brand-quiet`/`--lr-color-surface`/`--lr-color-text`
+  tokens, which also drive unrelated parts of the component (e.g. `[part="collapse-button"]:hover`).
+  All four default to exactly the values the bubble already used, so nothing changes for existing
+  consumers who set none of them.
+- abd60dd: `lr-stepper`'s `orientation-breakpoint` now accepts a CSS length, not only a bare pixel number:
+  `500`, `'500'`, `'500px'`, `'31.25rem'` and `'3em'` are all valid, and equal computed values behave
+  identically.
+
+  `rem` resolves against the **document root**'s computed font size — exactly as a `rem` in a CSS
+  `@media` query does, and deliberately _not_ against the stepper itself — so a breakpoint authored in
+  `rem` stays numerically in step with the sibling `@media (max-width: …rem)` rule it has to agree
+  with, instead of silently drifting from it when the root font size changes (browser zoom, a user
+  font-size preference, an app base-size token). `em` resolves against the stepper's own computed font
+  size. The length is re-resolved on every measurement and never cached, so those changes are picked
+  up without any invalidation step on the consumer's side.
+
+  A value that isn't a usable length — `%`, `vw`, `calc()`, `'auto'`, an unparseable string — now
+  behaves exactly as unset: no `ResizeObserver` is armed and no `data-effective-orientation` attribute
+  appears, rather than arming a breakpoint that can never be crossed. For a viewport-relative
+  breakpoint, leave `orientationBreakpoint` unset and drive `orientation` from your own `matchMedia()`
+  controller; `orientationBreakpoint` measures the stepper's own allocated inline size, not the
+  viewport.
+
+  The property's TypeScript type widens from `number | undefined` to `number | string | undefined`,
+  and the `orientation-breakpoint` attribute is no longer coerced through Lit's `Number` converter.
+  Every existing numeric usage — attribute or property — is unaffected. This mirrors the identical
+  change to `lr-split`, whose `orientationBreakpoint`/`narrowOrientation` contract `lr-stepper`
+  deliberately shares.
+
+- 22cb935: `lr-heatmap` gains a `legendStops` property so the built-in legend can describe a custom
+  `cellColor` domain. Because `cellColor` overrides a cell's color entirely, the legend's
+  `--lr-heatmap-scale-lo`/`-hi` gradient bar could describe a ramp the grid no longer used, leaving a
+  consumer to hide `::part(legend)` and hand-roll swatches.
+
+  `legendStops: HeatmapLegendStop[]` (`{ value, color, label? }`, `attribute: false`) renders a
+  discrete key **instead of** that gradient bar — one `[part="legend-stop"]` per entry in array order,
+  each a `[part="legend-swatch"]` in the entry's color plus a `[part="legend-stop-label"]`. Labels
+  default to the component's own locale-aware numeric formatting of `value`, so an explicit `label` is
+  only needed when the number isn't the right caption. `[part="legend-lo"]`/`[part="legend-hi"]` and
+  the bar are omitted while stops are supplied; labeled `annotations` still render their
+  `[part="legend-annotation"]` entries alongside them.
+
+  The stops are presentation only — they never feed back into the color ramp, the bucket math, the
+  tooltip or the accessible name. Left unset (or empty), the legend renders exactly as before.
+
+- ce2a423: `lr-combobox` now emits `lr-filter` (`detail: { value: string }`) on every user-driven change to its
+  in-progress filter text, so consumers that need the live as-you-typed string — a "no matches for
+  “x”" empty state, a debounced side effect — no longer have to reach into the component's shadow DOM
+  for `[part="combobox-input"]`.
+
+  The name is deliberately not `lr-input`: on `lr-combobox` the host's `value` is the _committed
+  selection_, so reusing `lr-input`'s event name would make one event name carry a different string on
+  different components. `lr-filter` fires for user input only — picking a row, the clear button,
+  `form.reset()`, dismissing the listbox, a programmatic `value` write and `setRangeText()` all blank
+  the filter silently, mirroring how `<lr-input>`'s `lr-input` only reports user edits.
+
+  The `ComboboxFilterDetail` detail type is exported and `LyraComboboxEventMap` carries the new entry,
+  so `addEventListener('lr-filter', …)` is typed.
+
+- 7c46ced: `<lr-split>`'s `orientationBreakpoint` now accepts a CSS length string as well as a bare pixel
+  number, so it can be authored in the same unit as the sibling CSS `@media` rule it has to agree
+  with.
+
+  Accepted forms: `900` / `orientation-breakpoint="900"` (unchanged), `'900px'`, `'56.25rem'`, and
+  `'3em'`. `rem` resolves against the **document root**'s font size — exactly as a `rem` in a CSS
+  `@media` query does, not against the element — so a breakpoint written to match
+  `@media (max-width: 56.25rem)` stays in sync with it across browser zoom, a user font-size
+  preference, or an app-level base-size change. `em` resolves against the split's own computed font
+  size. The length is re-resolved on **every** measurement rather than cached at first render, so a
+  root font-size change moves the crossing width with no invalidation step.
+
+  Anything that isn't a resolvable length now behaves exactly as unset — no `ResizeObserver`, no
+  `data-effective-orientation` marker — where before, a non-numeric attribute became `NaN` and armed
+  observation for a threshold that could never be crossed. That deliberately includes `%`, `vw`/`vh`
+  and `calc()`, which would mix a viewport-relative threshold into a measurement of the element's own
+  allocation; drive `orientation` from your own `matchMedia()` controller for a viewport-relative
+  breakpoint instead.
+
+  One visible consequence of dropping the `Number` attribute converter: reading `.orientationBreakpoint`
+  back after setting the attribute now returns the authored string (`'900'`), not the number `900`.
+  The resulting layout behavior is identical, and the property type is now `number | string`.
+
+- 2be0a50: `<lr-split>` gains `orientationBreakpointBasis` (`"container"` by default, `"viewport"`
+  opt-in), selecting whether `orientationBreakpoint` is compared against the component's own
+  measured inline size or a `matchMedia('(max-width: …)')` query. Viewport basis lets sibling
+  components in one row flip orientation together at a single shared breakpoint — impossible
+  to express with a self-measured threshold when the row stacks via a CSS `@media` rule — and
+  lets the browser resolve a `rem` breakpoint with real media-query semantics. Left unset,
+  behavior is unchanged.
+- 96ea325: `<lr-stepper>` gains `orientationBreakpointBasis` (`"container"` by default, `"viewport"`
+  opt-in), selecting whether `orientationBreakpoint` is compared against the stepper's own
+  measured inline size or a `matchMedia('(max-width: …)')` query. Viewport basis is the only
+  way a stepper with a fixed width in a row layout can react to that row stacking at a shared
+  breakpoint. Left unset, behavior is unchanged.
+- b1ce3f6: `lr-sequence-strip`: add `showLegend` for a persistent category key.
+
+  The strip colors each cell by category, but the only way to read that mapping was to hover every
+  cell one at a time — consumers were hand-rolling a swatch key underneath instead. `showLegend`
+  (attribute `show-legend`, reflected, default `false`) now renders that key from the `categories`
+  array the component already receives, as `legend` / `legend-item` / `legend-swatch` /
+  `legend-label` CSS parts, with `--lr-sequence-strip-legend-swatch-size` to resize the chips.
+
+  The legend is deliberately static — it lists every `categories` entry whether or not any item uses
+  it, and toggles nothing (`lr-graph-legend` remains the interactive, filtering legend). Because it
+  only repeats the category names the strip already announces through `[part="base"]`'s `role="img"`
+  summary, the whole legend is `aria-hidden`: visible on screen, announced exactly once. Left unset,
+  rendering is unchanged.
+
+- 3127d5e: Restructure the AI-agent-facing reference so a component lookup costs a few hundred tokens instead
+  of the whole catalog, and close the gaps that made it unreliable.
+
+  **New published layout.** `llms/index.md` maps every tag to its import path and one-line purpose;
+  `llms/components/<tag>.md` is a self-contained per-component reference addressed directly from the
+  tag name; `llms/shared.md`, `llms/tokens.md`, `llms/peers.md` and `llms/migration.md` carry the
+  library-wide contracts. `llms.txt` is now the entry index over all of it, and `llms-full.txt` keeps
+  its role as the single-file concatenation. Everything is generated from per-family authored sources
+  by `pnpm run llms` and diffed in CI, so the docs cannot drift from `custom-elements.json`.
+
+  **Corrected documentation that was wrong, not merely missing:**
+
+  - Import paths in the docs had not been updated for the family directory layout —
+    `components/combobox/combobox.js` does not resolve; it is
+    `components/forms/combobox/combobox.js`. CI now fails on any documented path that has no source
+    module.
+  - 26 components were documented twice with divergent content; the freshness check validated the
+    weaker copy.
+  - `lr-include` was documented with the wrong purpose, property semantics, event name and CSS parts.
+  - Wrong or non-existent CSS parts on `lr-timeline`/`lr-timeline-item`, `lr-tour`, `lr-known-date`,
+    `lr-random-content`, `lr-avatar-group`, `lr-breadcrumb`, `lr-swatch-picker`.
+  - `lr-button` was missing the `quiet` appearance and the `2xs` size; `lr-attachment-trigger` was
+    missing the `audio` capability; `lr-avatar` was documented as having no slots.
+  - `lr-widget` event details are objects, not scalars; three overlay-color tokens do resolve to
+    `var(--lr-color-overlay)`; `lr-histogram`'s `label` default is localized, not `'Frequency'`.
+  - The root barrel skips 15 peer-gated tags, not 13 — `lr-knowledge-graph-explorer` and
+    `lr-geojson-view` were undocumented omissions.
+
+  **Newly documented:** the `@aceshooting/lyra-ui/ai` provider-neutral data types, the `locale` and
+  `strings` properties present on every element, the localization API surface
+  (`setLyraLocale`/`getLyraLocale`/`resolveLyraString`/`LYRA_DEFAULT_STRINGS` and its 996 message
+  keys), the full design-token catalog, framework integration (React/Vue/Angular/Svelte property and
+  event binding), TypeScript usage (the 127 `Lyra*EventMap` types, the typed `addEventListener`,
+  `HTMLElementTagNameMap`), SSR/declarative-shadow-DOM status, the component-to-peer-dependency table,
+  editor tooling metadata, and `<lr-map>`'s OpenStreetMap demo-tile-server production hazard.
+
+  The freshness check now covers events, slots, CSS parts and themeable custom properties in addition
+  to properties — it previously only checked properties, which is how 87 public names came to be
+  documented nowhere.
+
+### Patch Changes
+
+- 7bdefd2: `lr-time-input` now accepts `min`/`max` as attributes. It inherits both from `lr-input`, where they
+  are declared `type: Number` for the `type="number"` contract, so a `min="09:00"` attribute parsed to
+  `NaN` and reached the native `<input type="time">` as the literal string `"NaN"` — which the browser
+  discards, silently dropping the bound. Only a direct property assignment worked, and it needed a
+  TypeScript widening cast to do so.
+
+  `LyraTimeInput` now redeclares `min`/`max` with a converter that forwards the attribute verbatim, so
+  `<lr-time-input min="09:00" max="17:00">` reaches the native input intact and its own constraint
+  validation reports `rangeUnderflow`/`rangeOverflow` as it should. Seconds-precision bounds
+  (`min="09:00:30"` alongside `step="1"`) work the same way, removing the attribute clears the bound,
+  and both are typed `string | number | undefined` so an assignment no longer needs a cast.
+
+  `<lr-input type="number">` is unchanged: its `min`/`max` attributes still parse to numbers.
+
+- 2724dec: Add an internal `resolveCssLength()` helper that resolves a CSS length (a bare/`px` number, `rem`,
+  or `em`) to pixels, reading the document root font size at call time so a `rem`-authored threshold
+  tracks browser zoom, a user font-size preference, or an app changing its base size. Units that only
+  make sense against a different reference box (`%`, `vw`/`vh`, `ch`), absolute units, and
+  `calc()`/`var()` expressions resolve to `undefined`, which callers treat as "unset".
+
+  No public API change yet — this is the shared groundwork for letting `lr-split` and `lr-stepper`
+  accept `orientation-breakpoint` as a CSS length.
+
+- 356f5fb: `lr-emoji-picker` now resolves its three geometry custom properties to real pixels before using
+  them for the windowed layout. `--lr-emoji-picker-item-size`, `--lr-emoji-picker-gap`, and
+  `--lr-emoji-picker-row-height` were read with `parseFloat(getComputedStyle(host).getPropertyValue(
+token))`, which hands back the property's computed _token stream_ rather than a length: the shipped
+  `2.5rem` item size was used as `2.5px`, the `0.125rem` gap as `0.125px`, and the `calc()`-based
+  default row height was unparseable and always fell back to a hardcoded `64`. The windowed grid
+  therefore packed its column cap of 20 emoji into a row that could only paint five, and scrolled at a
+  row pitch that did not match the painted rows.
+
+  Each token is now assigned to an off-flow probe box in the shadow root and read back as that box's
+  used inline size, so the browser performs the unit math — `rem`, `em`, `ch`, `%`, `calc()`, any CSS
+  length resolves correctly, and the item-size probe carries the same `--lr-icon-button-size` minimum
+  the emoji buttons do, so the measured item size is the painted one. The result is cached and
+  re-derived only when it can actually change: the probe boxes are themselves observed, so a token
+  override applied after the first render, a theme swap, or a root/host font-size change updates the
+  geometry without any per-frame measurement. Numeric fallbacks still cover the case where no box has
+  been laid out yet.
+
+  Consumers no longer have to express these tokens in `px` for the windowed geometry to line up with
+  what is painted.
+
+- 4ddf1fb: Document `orientationBreakpointBasis` on `<lr-split>` and `<lr-stepper>`, and the four
+  role-scoped bubble custom properties on `<lr-chat-message>`. Also corrects a claim that
+  a `rem` inside a CSS `@media` query resolves against the document root's computed font
+  size — it resolves against the browser's _initial_ font size, which is exactly why the
+  `'viewport'` basis, and not `'container'`, is the one that matches a CSS `@media` rule.
+- 2a0cb74: Add an internal `OrientationBreakpointController` that owns orientation-breakpoint
+  resolution, basis selection, and media-query lifecycle for the layout components. No
+  consumer-visible change on its own.
+- 8057596: Fix `<lr-pdf-viewer>`'s `search()` throwing an uncaught `IndexSizeError` when a search term occurs
+  more than once inside a single PDF.js text-layer node (e.g. a repeated substring within one text
+  item's `<span>`). `paintSearchMatches()` computed every match's DOM range against a pristine,
+  pre-painting snapshot of each text node, but wrapping the first match with `Range.surroundContents()`
+  splits/shrinks that node out from under the second match's precomputed offset, so `setStart()`/
+  `setEnd()` threw before the existing `surroundContents()` try/catch ever ran. Offsets for a node are
+  now tracked against the node as it actually stands after each prior match is painted, so every
+  repeated occurrence within one text-layer node is now correctly highlighted instead of crashing
+  `search()`.
+- 415e61f: `<lr-code-editor>`: make `--lr-code-editor-tab-size` actually themeable.
+
+  The stylesheet read the token on the `textarea` part, but `render()` also wrote an inline
+  `tab-size:${tabSize}` on that same element on every update, and an inline declaration always beats a
+  rule — so the documented token was inert and a host-level override was silently ignored.
+
+  `render()` now writes the token itself, and only when `tabSize` was explicitly assigned. The
+  resulting precedence, highest first: an explicitly set `tabSize` (property or `tab-size` attribute)
+
+  > a host-level `--lr-code-editor-tab-size` > the `:host` default of `2`. `tabSize` therefore remains
+  > the primary knob and still wins wherever it is used; it just stops shadowing the token while it sits
+  > at its default. The Tab key follows the same order, so the indent unit and the rendered tab stops
+  > cannot disagree — except for a length-valued token (`40px`, `2ch`, …), which stays a purely visual
+  > tab-stop metric and leaves the inserted-space count at `tabSize`.
+
 ## 5.0.0
 
 ### Major Changes
