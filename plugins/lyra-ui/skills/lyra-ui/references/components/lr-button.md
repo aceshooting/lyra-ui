@@ -73,7 +73,10 @@ and the per-`size`
 `min-block-size` floors `--lr-button-size-2xs` (`1.25rem`), `--lr-button-size-xs` (`1.5rem`),
 `--lr-button-size-s` (`1.75rem`), `--lr-button-size-m` (`2rem`), `--lr-button-size-l` (`2.5rem`),
 `--lr-button-size-xl` (`3rem`) — each read only by its own `size` tier, and all ignored by
-`appearance="link"`.
+`appearance="link"`. `--lr-button-gap` (default `--lr-space-2xs`, the gap between the icon/label
+and any slotted content) and `--lr-button-radius` (default `--lr-radius`, the corner radius) are
+both retunable without a `::part(base)` rule but — unlike the four size knobs below — do not vary
+by `size` tier; `appearance="link"` ignores `--lr-button-radius` (it renders with zero radius).
 
 **Retuning one `size` tier's geometry, without a `::part(base)` rule.** Four more properties carry
 the active tier's geometry, and every `:host([size='…'])` rule does nothing but re-assign them — no
