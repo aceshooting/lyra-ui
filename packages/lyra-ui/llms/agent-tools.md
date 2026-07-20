@@ -638,17 +638,26 @@ renders at the start of the action row, before Deny/Edit/Approve.
   `autoCorrect: string = 'off'` (attribute `autocorrect`), `autocomplete: string = 'off'`,
   `wrap: 'hard'|'soft'|'off' = 'soft'`, `inputMode: string = ''` (attribute `inputmode`),
   and `enterKeyHint: string = ''` (attribute `enterkeyhint`) — forwarded to the raw-JSON
-  `<textarea>` while editing; the defaults keep browser editing assistance from changing JSON text
+  `<textarea>` while editing; the defaults keep browser editing assistance from changing JSON text.
+  `pending: 'approve' | 'deny' | null = null` (reflected) — which decision is awaiting host
+  resolution while an `lr-approve`/`lr-deny` listener has called `preventDefault()` on the
+  now-cancelable event; the pending button shows `loading`, the other is `disabled` (Approve is
+  also still `disabled` while an in-progress edit is invalid JSON, independent of `pending`).
+  Escape/backdrop dismissal is suppressed while `pending` is set. Finalize by calling
+  `close('approve'|'deny')`, or clear `.pending` back to `null` to bounce back to the undecided
+  state; `pending` also resets to `null` every time the dialog re-opens.
 
 **Methods:** `close(reason: ToolApprovalDialogCloseReason = 'api'): void` — closes the dialog, emits
 `lr-close` with `reason`, and returns focus to whatever had it before the dialog opened; a no-op if
 already closed.
 
 **Events:** `lr-approve` (`detail: { args: unknown }` — the current, already-parsed arguments: the
-original `args` prop, or the user's edited-and-validated version if an edit was in progress; always
-followed by `lr-close` with reason `'approve'`), `lr-deny` (no detail — `this.emit('lr-deny')` is
-called with no second argument, so per the DOM spec's `CustomEventInit` default, `event.detail` is
-`null`, not `undefined`; always followed by `lr-close` with reason `'deny'`), `lr-close`
+original `args` prop, or the user's edited-and-validated version if an edit was in progress.
+Cancelable: a listener calling `preventDefault()` sets `pending` to `'approve'` instead of
+closing; otherwise always followed by `lr-close` with reason `'approve'`), `lr-deny` (no detail —
+`this.emit('lr-deny')` is called with no second argument, so per the DOM spec's `CustomEventInit`
+default, `event.detail` is `null`, not `undefined`. Cancelable, same `pending` mechanism, setting
+`pending` to `'deny'`; otherwise always followed by `lr-close` with reason `'deny'`), `lr-close`
 (`detail: ToolApprovalDialogCloseReason` — fired exactly once per dismissal, via Escape, a backdrop
 click, the Approve/Deny buttons, or a `close()` call)
 
@@ -656,7 +665,11 @@ click, the Approve/Deny buttons, or a `close()` call)
 rendered before the built-in Deny/Edit/Approve buttons.
 
 **CSS parts:** `backdrop`, `panel`, `header`, `tool-name`, `body`, `args-view`, `args-editor`, `error`,
-`footer`, `deny-button`, `edit-button`, `approve-button`
+`footer`, `deny-button`, `edit-button`, `approve-button`,
+`deny-button-base`/`-label`/`-start`/`-end`/`-spinner` and
+`approve-button-base`/`-label`/`-start`/`-end`/`-spinner` (`deny-button`/`approve-button` are each an
+`<lr-button>` host; these five per-button parts are re-exported from its own `lr-button` parts via
+`exportparts`; `edit-button` stays a plain `<button>`, unaffected by this).
 
 **Themeable custom properties:** `--lr-tool-approval-dialog-overlay-color` (default
 `rgb(0 0 0 / 0.5)` — the backdrop scrim color; component-specific since no shared overlay token
@@ -718,6 +731,16 @@ shared composed-tree focus traversal used by the other modal families.
   this a mobile browser (notably iOS Safari, which defaults textarea `autocapitalize` to
   `'sentences'`) could auto-capitalize or auto-correct key/value text as the user edits, silently
   corrupting the JSON.
+- `deny-button`/`approve-button` are `<lr-button>` hosts (`variant="neutral"`/`"brand"` — this
+  component has no `tone` property) — `--lr-button-*` theming reaches them directly. A consumer
+  previously styling `::part(deny-button)`/`::part(approve-button)` for
+  padding/border/font/`:hover`/`:focus-visible` must move that CSS onto the re-exported
+  `deny-button-base`/`approve-button-base` sub-parts instead. `edit-button` is unaffected and stays
+  a raw `<button>`.
+- An `lr-approve`/`lr-deny` listener can call `preventDefault()` to keep the decision open while
+  its own async work is in flight — see `pending` above. While `pending` is set, Escape/backdrop
+  dismissal is suppressed, so a consumer that never resolves the pending decision leaves the
+  dialog open until it clears `.pending` or calls `close()` directly itself.
 
 ---
 
@@ -1285,6 +1308,10 @@ narrow-allocation `@container` treatment is switched off — a compact bar is *e
 so stretching the buttons to fill would be exactly wrong. Re-chrome it through the
 `--lr-confirm-bar-compact-*` properties below. Everything else is unchanged: the event shapes, the
 focus-to-`[part="status"]`-before-unmount contract, and `role="group"` with its heading label.
+`pending: 'approved' | 'denied' | null = null` (reflected) — which decision is awaiting host
+resolution while an `lr-approve`/`lr-deny` listener has called `preventDefault()` on the
+now-cancelable event; the pending button shows `loading`, the other is `disabled`. Set `.decision`
+to finalize, or clear `.pending` back to `null` to bounce back to the undecided state.
 
 **Slots:** default — supplementary body content between the heading and the actions (e.g. a
 `lr-diff-view`). `footer` — extra content at the start of the action row.
@@ -1294,8 +1321,11 @@ focus-to-`[part="status"]`-before-unmount contract, and `role="group"` with its 
 
 **CSS parts:** `base` (`role="group"`), `heading`/`tool-name`, `body`, `args` (the
 details/json-viewer wrapper, only rendered when `args` is defined), `footer`, `deny-button`,
-`approve-button` (named identically to the dialog's parts), `status` (the decided-state text, always
-present in the DOM as a focus landing spot).
+`approve-button` (each an `<lr-button>` host, named identically to the dialog's parts),
+`deny-button-base`/`-label`/`-start`/`-end`/`-spinner` and
+`approve-button-base`/`-label`/`-start`/`-end`/`-spinner` (re-exported from each button's own
+`lr-button` parts via `exportparts`), `status` (the decided-state text, always present in the DOM
+as a focus landing spot).
 
 **Themeable custom properties:** the `compact` presentation is deliberately chrome-less by default
 and re-chromed entirely through five properties, all scoped to `[part="base"]` while `compact`:
@@ -1312,14 +1342,33 @@ bar in this panel a hairline border" a one-rule change on the panel.
 - `[part="status"]` is always rendered and must never be given `display: none`. Deciding moves focus
   to it synchronously, before the Deny/Approve buttons unmount, so hiding it would drop focus to
   `<body>`. The shipped `:empty` rule on it has never matched, and that is load-bearing.
-- `[part="deny-button"]` and `[part="approve-button"]` are raw `<button>` elements, not composed
-  `lr-button`s, so `--lr-button-*` theming does not reach them. Style them through their parts.
+- `[part="deny-button"]`/`[part="approve-button"]` are `<lr-button>` hosts (`variant="neutral"`/
+  `"brand"`, `"danger"` under `tone="danger"`) — `--lr-button-*` theming reaches them directly. A
+  consumer previously styling `::part(deny-button)`/`::part(approve-button)` for
+  padding/border/font/`:hover`/`:focus-visible` must move that CSS onto the re-exported
+  `deny-button-base`/`approve-button-base` sub-parts instead — the outer part now resolves to the
+  `<lr-button>` host, where those declarations either do nothing or must be re-expressed through
+  `lr-button`'s own parts/custom properties.
+- An `lr-approve`/`lr-deny` listener can call `preventDefault()` to keep the decision open while
+  its own async work is in flight — see `pending` above.
 
 ```html
 <lr-tool-call-chip status="pending"></lr-tool-call-chip>
 <lr-confirm-bar tool-name="run_shell" .args=${args}
   @lr-approve=${(e) => run(e.detail.args)} @lr-deny=${() => cancel()}
 ></lr-confirm-bar>
+```
+
+An `lr-approve`/`lr-deny` listener that needs to await its own async work before finalizing calls
+`preventDefault()` and sets `.decision` (or clears `.pending`) once it resolves:
+
+```ts
+bar.addEventListener('lr-approve', (e) => {
+  e.preventDefault();
+  runApproval(e.detail.args)
+    .then(() => { bar.decision = 'approved'; })
+    .catch(() => { bar.pending = null; }); // bounce back, retry
+});
 ```
 
 ## `lr-browser-frame`
