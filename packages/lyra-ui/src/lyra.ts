@@ -584,6 +584,7 @@ export { LyraToolApprovalDialog } from './components/agent-tools/tool-approval-d
 export type {
   ToolApprovalDialogWrap,
   ToolApprovalDialogCloseReason,
+  ToolApprovalDialogPending,
 } from './components/agent-tools/tool-approval-dialog/tool-approval-dialog.js';
 export { LyraToolParamForm } from './components/agent-tools/tool-param-form/tool-param-form.js';
 export type {

@@ -149,3 +149,21 @@ export const Events: Story = {
     </div>
   `,
 };
+
+export const AsyncPendingApproval: Story = {
+  name: 'Async pending decision',
+  render: () => html`
+    <div>
+      <button @click=${openDialog}>Propose send_email call</button>
+      <lr-tool-approval-dialog
+        tool-name="send_email"
+        .args=${{ to: 'ops@example.com', subject: 'Nightly build failed' }}
+        @lr-approve=${(e: CustomEvent) => {
+          e.preventDefault();
+          const dialog = (e.currentTarget as HTMLElement) as LyraToolApprovalDialog;
+          setTimeout(() => dialog.close('approve'), 1500);
+        }}
+      ></lr-tool-approval-dialog>
+    </div>
+  `,
+};

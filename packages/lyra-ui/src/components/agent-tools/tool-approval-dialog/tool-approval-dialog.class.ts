@@ -6,6 +6,7 @@ import { lockScroll } from '../../../internal/scroll-lock.js';
 import { nextId } from '../../../internal/a11y.js';
 import { styles } from './tool-approval-dialog.styles.js';
 import '../../utility/json-viewer/json-viewer.class.js';
+import '../../forms/button/button.class.js';
 
 const spellcheckConverter = {
   fromAttribute(value: string | null): boolean {
@@ -50,6 +51,13 @@ export type ToolApprovalDialogCloseReason =
   | 'deny'
   | 'api'
   | (string & Record<never, never>);
+
+/**
+ * Which decision is awaiting host resolution, mirrors `ToolApprovalDialogCloseReason`'s own
+ * present-tense `'approve'`/`'deny'` vocabulary (not `<lr-confirm-bar>`'s unrelated past-tense
+ * `ConfirmBarDecision`).
+ */
+export type ToolApprovalDialogPending = 'approve' | 'deny' | null;
 
 export interface LyraToolApprovalDialogEventMap {
   'lr-approve': CustomEvent<{ args: unknown }>;
@@ -107,15 +115,30 @@ export interface LyraToolApprovalDialogEventMap {
  * Cancel button — rather than the inert dialog panel, which would need an
  * extra Tab press before *any* action is reachable at all.
  *
+ * Deny/Approve are `<lr-button>`s (`variant="neutral"`/`"brand"`; this component has no `tone`
+ * property, unlike `<lr-confirm-bar>`), re-exporting `lr-button`'s own `base`/`label`/`start`/
+ * `end`/`spinner` parts under `{deny,approve}-button-{base,label,start,end,spinner}`. An
+ * `lr-approve`/`lr-deny` listener can call `preventDefault()` to keep the decision open while its
+ * own async work (e.g. a network call) is in flight: `pending` is set to `'approve'`/`'deny'`,
+ * showing `loading` on that button and `disabled` on the other (and, for Approve, alongside the
+ * existing invalid-JSON `disabled` gate), until the host finalizes by calling
+ * `close('approve'|'deny')` or bounces back by clearing `.pending` to `null`. While `pending` is
+ * set, Escape and backdrop dismissal are suppressed -- a decision in flight should not be
+ * abandonable out from under the host mid-request -- and `pending` itself resets to `null` every
+ * time the dialog transitions from closed to open, mirroring `editing`'s own reset-on-reopen
+ * contract.
+ *
  * @customElement lr-tool-approval-dialog
  * @slot footer - Optional supplementary content (e.g. a "remember this
  * choice" checkbox), rendered before the built-in Deny/Edit/Approve buttons.
  * @event lr-approve - The call was approved. `detail: { args }` — the
  * current, already-parsed arguments object: the original `args` prop, or (if
- * an edit was in progress) the user's edited-and-validated version. Always
+ * an edit was in progress) the user's edited-and-validated version. Cancelable: a listener
+ * calling `preventDefault()` sets `pending` to `'approve'` instead of closing. Otherwise always
  * followed by `lr-close` with reason `'approve'`.
- * @event lr-deny - The call was denied (no detail). Always followed by
- * `lr-close` with reason `'deny'`.
+ * @event lr-deny - The call was denied (no detail). Cancelable, same `pending` mechanism as
+ * `lr-approve` (`pending` is set to `'deny'`). Otherwise always followed by `lr-close` with
+ * reason `'deny'`.
  * @event lr-close - `detail: ToolApprovalDialogCloseReason`. Fired exactly
  * once per dismissal — via Escape, a backdrop click, the Approve/Deny
  * buttons, or a `close()` call — so there is one consistent "this dialog is
@@ -129,9 +152,21 @@ export interface LyraToolApprovalDialogEventMap {
  * @csspart args-editor - The raw-JSON `<textarea>` shown while editing.
  * @csspart error - The inline "invalid JSON" message, shown only while editing with unparseable content.
  * @csspart footer - The action row wrapping the `footer` slot and the built-in buttons.
- * @csspart deny-button - The built-in Deny button.
+ * @csspart deny-button - The built-in Deny `<lr-button>`.
+ * @csspart deny-button-base - Forwarded from the internal Deny `<lr-button>`'s own `base` part.
+ * @csspart deny-button-label - Forwarded from the internal Deny `<lr-button>`'s own `label` part.
+ * @csspart deny-button-start - Forwarded from the internal Deny `<lr-button>`'s own `start` part.
+ * @csspart deny-button-end - Forwarded from the internal Deny `<lr-button>`'s own `end` part.
+ * @csspart deny-button-spinner - Forwarded from the internal Deny `<lr-button>`'s own `spinner`
+ * part, present only while `pending` is `'deny'`.
  * @csspart edit-button - The built-in Edit/Cancel toggle button (only rendered while `editable`).
- * @csspart approve-button - The built-in Approve button — `disabled` while an in-progress edit is invalid JSON.
+ * @csspart approve-button - The built-in Approve `<lr-button>` — `disabled` while an in-progress edit is invalid JSON (or while Deny is pending).
+ * @csspart approve-button-base - Forwarded from the internal Approve `<lr-button>`'s own `base` part.
+ * @csspart approve-button-label - Forwarded from the internal Approve `<lr-button>`'s own `label` part.
+ * @csspart approve-button-start - Forwarded from the internal Approve `<lr-button>`'s own `start` part.
+ * @csspart approve-button-end - Forwarded from the internal Approve `<lr-button>`'s own `end` part.
+ * @csspart approve-button-spinner - Forwarded from the internal Approve `<lr-button>`'s own
+ * `spinner` part, present only while `pending` is `'approve'`.
  * @cssprop [--lr-tool-approval-dialog-overlay-color=var(--lr-color-overlay)] - Backdrop scrim color.
  * @cssprop [--lr-tool-approval-dialog-mono-font=var(--lr-font-mono)] - Font family for the tool name and the raw-JSON args editor.
  */
@@ -154,6 +189,15 @@ export class LyraToolApprovalDialog extends LyraElement<LyraToolApprovalDialogEv
 
   /** Whether an "Edit" affordance is offered at all. When `false`, `args` is always shown read-only and can never be changed before approval. */
   @property({ reflect: true, converter: trueDefaultBooleanConverter }) editable = true;
+
+  /** Which decision is awaiting host resolution, while an lr-approve/lr-deny listener has called
+   *  preventDefault(). Host-writable: set back to null to bounce back to the undecided state (e.g.
+   *  on failure, so the user can retry), or call `close('approve'|'deny')` to finalize. Also reset
+   *  to `null` every time the dialog transitions from closed to open, mirroring
+   *  `editing`/`draftText`/`draftError`'s own reset-on-reopen contract below, so a reused instance
+   *  never leaks one proposal's stuck pending state into the next. While non-null, Escape/backdrop
+   *  dismissal is suppressed (see `activateOverlay()`). */
+  @property({ reflect: true }) pending: ToolApprovalDialogPending = null;
 
   /** Native editing-assistance attributes forwarded to the raw-JSON textarea. */
   @property({ converter: spellcheckConverter }) spellcheck = false;
@@ -181,11 +225,13 @@ export class LyraToolApprovalDialog extends LyraElement<LyraToolApprovalDialogEv
         this.releaseScrollLock ??= lockScroll(this.ownerDocument);
         this.activateOverlay();
         // Every open starts fresh in the read-only view -- a reused instance
-        // must never carry a half-finished edit (or its error state) over
-        // from whatever the previous proposal was.
+        // must never carry a half-finished edit (or its error state), or a
+        // previous proposal's stuck pending decision, over from whatever the
+        // previous proposal was.
         this.editing = false;
         this.draftText = '';
         this.draftError = '';
+        this.pending = null;
       } else {
         this.releaseScrollLock?.();
         this.releaseScrollLock = undefined;
@@ -254,8 +300,14 @@ export class LyraToolApprovalDialog extends LyraElement<LyraToolApprovalDialogEv
     this.overlay = activateOverlay({
       host: this,
       panel: () => this.shadowRoot?.querySelector<HTMLElement>('[part="panel"]') ?? null,
-      onEscape: () => this.close('escape'),
-      onBackdrop: () => this.close('backdrop'),
+      onEscape: () => {
+        if (this.pending != null) return;
+        this.close('escape');
+      },
+      onBackdrop: () => {
+        if (this.pending != null) return;
+        this.close('backdrop');
+      },
       preferredInitialFocus: () =>
         this.shadowRoot?.querySelector<HTMLElement>('[part="deny-button"]') ?? null,
     });
@@ -320,6 +372,7 @@ export class LyraToolApprovalDialog extends LyraElement<LyraToolApprovalDialogEv
   private onEditorBlur = (): void => { this.emit('blur'); };
 
   private onApprove = (): void => {
+    if (this.pending != null) return;
     let currentArgs: unknown = this.args;
     if (this.editing) {
       // The Approve button is disabled whenever draftError is non-empty, so
@@ -331,12 +384,21 @@ export class LyraToolApprovalDialog extends LyraElement<LyraToolApprovalDialogEv
         return;
       }
     }
-    this.emit<{ args: unknown }>('lr-approve', { args: currentArgs });
+    const event = this.emit<{ args: unknown }>('lr-approve', { args: currentArgs }, { cancelable: true });
+    if (event.defaultPrevented) {
+      this.pending = 'approve';
+      return;
+    }
     this.close('approve');
   };
 
   private onDeny = (): void => {
-    this.emit('lr-deny');
+    if (this.pending != null) return;
+    const event = this.emit('lr-deny', undefined, { cancelable: true });
+    if (event.defaultPrevented) {
+      this.pending = 'deny';
+      return;
+    }
     this.close('deny');
   };
 
@@ -386,15 +448,29 @@ export class LyraToolApprovalDialog extends LyraElement<LyraToolApprovalDialogEv
         </div>
         <div part="footer">
           <slot name="footer"></slot>
-          <button part="deny-button" type="button" @click=${this.onDeny}>${this.localize('deny')}</button>
+          <lr-button
+            part="deny-button"
+            variant="neutral"
+            type="button"
+            ?loading=${this.pending === 'deny'}
+            ?disabled=${this.pending === 'approve'}
+            exportparts="base:deny-button-base, label:deny-button-label, start:deny-button-start, end:deny-button-end, spinner:deny-button-spinner"
+            @click=${this.onDeny}
+          >${this.localize('deny')}</lr-button>
           ${this.editable
             ? html`<button part="edit-button" type="button" @click=${this.toggleEdit}>
                 ${this.editing ? this.localize('cancel') : this.localize('edit')}
               </button>`
             : nothing}
-          <button part="approve-button" type="button" ?disabled=${hasError} @click=${this.onApprove}>
-            ${this.localize('approve')}
-          </button>
+          <lr-button
+            part="approve-button"
+            variant="brand"
+            type="button"
+            ?loading=${this.pending === 'approve'}
+            ?disabled=${hasError || this.pending === 'deny'}
+            exportparts="base:approve-button-base, label:approve-button-label, start:approve-button-start, end:approve-button-end, spinner:approve-button-spinner"
+            @click=${this.onApprove}
+          >${this.localize('approve')}</lr-button>
         </div>
       </div>
     `;

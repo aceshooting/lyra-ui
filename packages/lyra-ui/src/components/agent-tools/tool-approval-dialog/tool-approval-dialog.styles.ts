@@ -124,44 +124,24 @@ export const styles = css`
     margin-inline-end: auto;
   }
 
-  [part='deny-button'],
-  [part='edit-button'],
-  [part='approve-button'] {
+  /* deny-button/approve-button are <lr-button> hosts (see tool-approval-dialog.class.ts's
+     render()); their own padding/border/background/color/hover/focus-visible/disabled chrome now
+     lives entirely inside lr-button's own styles.ts. edit-button alone stays a raw <button> and
+     keeps its own rules below. */
+  [part='edit-button'] {
     font: inherit;
     font-size: var(--lr-font-size-md-sm);
     padding: var(--lr-space-xs) var(--lr-space-m);
     border-radius: var(--lr-radius);
     cursor: pointer;
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
-  }
-  [part='deny-button'],
-  [part='edit-button'] {
     background: var(--lr-color-surface);
     color: var(--lr-color-text);
   }
-  [part='deny-button']:hover,
   [part='edit-button']:hover {
     background: var(--lr-color-brand-quiet);
   }
-  [part='approve-button'] {
-    background: var(--lr-color-brand);
-    color: var(--lr-color-on-brand);
-    border-color: var(--lr-color-brand);
-  }
-  /* :where() zeroes the wrapped selectors' specificity contribution, leaving only :hover itself
-     -- (0,1,0) total, functionally identical selection to \`[part='approve-button']:hover:not(:disabled)\`
-     ((0,3,0)) but now losing (on the pseudo-element tiebreak) to a consumer's own
-     \`::part(approve-button):hover\` override ((0,1,1)) without that consumer needing !important. */
-  :where([part='approve-button']):hover:where(:not(:disabled)) {
-    filter: brightness(var(--lr-hover-brightness));
-  }
-  [part='approve-button']:disabled {
-    cursor: not-allowed;
-    opacity: var(--lr-opacity-disabled);
-  }
-  [part='deny-button']:focus-visible,
-  [part='edit-button']:focus-visible,
-  [part='approve-button']:focus-visible {
+  [part='edit-button']:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);
   }

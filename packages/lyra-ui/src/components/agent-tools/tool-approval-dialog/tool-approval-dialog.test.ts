@@ -2,17 +2,18 @@ import { fixture, expect, oneEvent, html } from '@open-wc/testing';
 import './tool-approval-dialog.js';
 import type { LyraToolApprovalDialog } from './tool-approval-dialog.js';
 import type { LyraJsonViewer } from '../../utility/json-viewer/json-viewer.js';
+import type { LyraButton } from '../../forms/button/button.class.js';
 
 const ARGS = { query: 'solar inverters', max_results: 5 };
 
-function denyButton(el: LyraToolApprovalDialog): HTMLButtonElement {
-  return el.shadowRoot!.querySelector('[part="deny-button"]') as HTMLButtonElement;
+function denyButton(el: LyraToolApprovalDialog): LyraButton {
+  return el.shadowRoot!.querySelector('[part="deny-button"]') as LyraButton;
 }
 function editButton(el: LyraToolApprovalDialog): HTMLButtonElement {
   return el.shadowRoot!.querySelector('[part="edit-button"]') as HTMLButtonElement;
 }
-function approveButton(el: LyraToolApprovalDialog): HTMLButtonElement {
-  return el.shadowRoot!.querySelector('[part="approve-button"]') as HTMLButtonElement;
+function approveButton(el: LyraToolApprovalDialog): LyraButton {
+  return el.shadowRoot!.querySelector('[part="approve-button"]') as LyraButton;
 }
 function textarea(el: LyraToolApprovalDialog): HTMLTextAreaElement {
   return el.shadowRoot!.querySelector('[part="args-editor"]') as HTMLTextAreaElement;
@@ -664,44 +665,210 @@ describe('localization', () => {
   });
 });
 
-function renderedHoverFilter(el: HTMLElement, selector: string): string {
-  const normalize = (text: string) => text.replace(/"/g, "'");
-  let declared = '';
-  for (const sheet of el.shadowRoot!.adoptedStyleSheets) {
-    for (const rule of sheet.cssRules) {
-      if (rule instanceof CSSStyleRule && normalize(rule.selectorText) === normalize(selector) && rule.style.filter) {
-        declared = rule.style.filter;
-      }
-    }
-  }
-  const probe = document.createElement('span');
-  probe.style.filter = declared;
-  el.shadowRoot!.appendChild(probe);
-  const value = getComputedStyle(probe).filter;
-  probe.remove();
-  return value;
-}
-
-it('lifts the approve button on hover through the shared hover-brightness token', async () => {
-  const el = (await fixture(
-    html`<lr-tool-approval-dialog tool-name="web_search" .args=${ARGS} open></lr-tool-approval-dialog>`,
-  )) as LyraToolApprovalDialog;
-  await el.updateComplete;
-  expect(
-    renderedHoverFilter(el, ":where([part='approve-button']):hover:where(:not(:disabled))"),
-  ).to.equal('brightness(1.08)');
-});
-
-describe('approve-button hover specificity', () => {
-  it('wraps the internal hover rule in :where() so a consumer ::part(approve-button):hover override wins without !important', async () => {
+describe('deny/approve as lr-button', () => {
+  it('renders Deny/Approve as lr-button with variant="neutral"/"brand" (no tone property on this component)', async () => {
     const el = (await fixture(
       html`<lr-tool-approval-dialog tool-name="web_search" .args=${ARGS} open></lr-tool-approval-dialog>`,
     )) as LyraToolApprovalDialog;
-    const internalRule = (el.shadowRoot!.adoptedStyleSheets ?? [])
-      .flatMap((sheet) => Array.from(sheet.cssRules))
-      .map((rule) => rule.cssText)
-      .find((text) => text.includes(':hover') && text.includes('approve-button'));
-    expect(internalRule).to.contain(':where(');
+    const deny = denyButton(el);
+    const approve = approveButton(el);
+    expect(deny.tagName.toLowerCase()).to.equal('lr-button');
+    expect(approve.tagName.toLowerCase()).to.equal('lr-button');
+    expect(deny.variant).to.equal('neutral');
+    expect(approve.variant).to.equal('brand');
+  });
+
+  it('matches the pre-swap Deny/Approve colors via lr-button computed styles (visual-parity regression guard)', async () => {
+    const toRgb = (color: string) => {
+      const probe = document.createElement('span');
+      probe.style.color = color;
+      document.body.appendChild(probe);
+      const rgb = getComputedStyle(probe).color;
+      probe.remove();
+      return rgb;
+    };
+    const el = (await fixture(
+      html`<lr-tool-approval-dialog tool-name="web_search" .args=${ARGS} open></lr-tool-approval-dialog>`,
+    )) as LyraToolApprovalDialog;
+    const resolve = (token: string) => getComputedStyle(el).getPropertyValue(token).trim();
+    const denyBase = denyButton(el).shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    const approveBase = approveButton(el).shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    expect(getComputedStyle(denyBase).backgroundColor).to.equal(toRgb(resolve('--lr-color-surface')));
+    expect(getComputedStyle(denyBase).color).to.equal(toRgb(resolve('--lr-color-text')));
+    expect(getComputedStyle(approveBase).backgroundColor).to.equal(toRgb(resolve('--lr-color-brand')));
+    expect(getComputedStyle(approveBase).color).to.equal(toRgb(resolve('--lr-color-on-brand')));
+  });
+
+  it('exposes the internal lr-button parts to a consumer through exportparts', async () => {
+    const sheet = document.createElement('style');
+    sheet.textContent = `
+      lr-tool-approval-dialog.consumer-probe::part(deny-button-base) { letter-spacing: 3px; }
+      lr-tool-approval-dialog.consumer-probe::part(approve-button-base) { letter-spacing: 5px; }
+    `;
+    document.head.append(sheet);
+    try {
+      const el = (await fixture(
+        html`<lr-tool-approval-dialog class="consumer-probe" tool-name="web_search" .args=${ARGS} open></lr-tool-approval-dialog>`,
+      )) as LyraToolApprovalDialog;
+      const denyBase = denyButton(el).shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+      const approveBase = approveButton(el).shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+      expect(getComputedStyle(denyBase).letterSpacing).to.equal('3px');
+      expect(getComputedStyle(approveBase).letterSpacing).to.equal('5px');
+    } finally {
+      sheet.remove();
+    }
+  });
+});
+
+describe('async pending decisions', () => {
+  it('lr-approve/lr-deny are cancelable; preventDefault() sets pending instead of closing', async () => {
+    const approveEl = (await fixture(
+      html`<lr-tool-approval-dialog tool-name="web_search" .args=${ARGS} open></lr-tool-approval-dialog>`,
+    )) as LyraToolApprovalDialog;
+    approveEl.addEventListener('lr-approve', (e) => e.preventDefault());
+    let approveClosed = false;
+    approveEl.addEventListener('lr-close', () => (approveClosed = true));
+    approveButton(approveEl).click();
+    await approveEl.updateComplete;
+    expect(approveEl.pending).to.equal('approve');
+    expect(approveEl.hasAttribute('pending')).to.be.true;
+    expect(approveEl.open).to.be.true;
+    expect(approveClosed).to.be.false;
+
+    const denyEl = (await fixture(
+      html`<lr-tool-approval-dialog tool-name="web_search" open></lr-tool-approval-dialog>`,
+    )) as LyraToolApprovalDialog;
+    denyEl.addEventListener('lr-deny', (e) => e.preventDefault());
+    let denyClosed = false;
+    denyEl.addEventListener('lr-close', () => (denyClosed = true));
+    denyButton(denyEl).click();
+    await denyEl.updateComplete;
+    expect(denyEl.pending).to.equal('deny');
+    expect(denyEl.open).to.be.true;
+    expect(denyClosed).to.be.false;
+  });
+
+  it('shows loading on the pending button and disables the other one', async () => {
+    const el = (await fixture(
+      html`<lr-tool-approval-dialog tool-name="web_search" .args=${ARGS} open></lr-tool-approval-dialog>`,
+    )) as LyraToolApprovalDialog;
+    el.addEventListener('lr-approve', (e) => e.preventDefault());
+    approveButton(el).click();
+    await el.updateComplete;
+    expect(approveButton(el).loading).to.be.true;
+    expect(approveButton(el).disabled).to.be.false;
+    expect(denyButton(el).loading).to.be.false;
+    expect(denyButton(el).disabled).to.be.true;
+  });
+
+  it('finalizes normally when the host calls close("approve") after preventDefault()', async () => {
+    const el = (await fixture(
+      html`<lr-tool-approval-dialog tool-name="web_search" .args=${ARGS} open></lr-tool-approval-dialog>`,
+    )) as LyraToolApprovalDialog;
+    el.addEventListener('lr-approve', (e) => e.preventDefault());
+    approveButton(el).click();
+    await el.updateComplete;
+    expect(el.pending).to.equal('approve');
+
+    const closeListener = oneEvent(el, 'lr-close');
+    el.close('approve');
+    const { detail } = await closeListener;
+    expect(detail).to.equal('approve');
+    expect(el.open).to.be.false;
+  });
+
+  it('bounces back to the undecided, both-buttons-enabled state when pending is reset to null', async () => {
+    const el = (await fixture(
+      html`<lr-tool-approval-dialog tool-name="web_search" open></lr-tool-approval-dialog>`,
+    )) as LyraToolApprovalDialog;
+    el.addEventListener('lr-deny', (e) => e.preventDefault());
+    denyButton(el).click();
+    await el.updateComplete;
+    expect(el.pending).to.equal('deny');
+
+    el.pending = null;
+    await el.updateComplete;
+    expect(denyButton(el).loading).to.be.false;
+    expect(denyButton(el).disabled).to.be.false;
+    expect(approveButton(el).loading).to.be.false;
+    expect(approveButton(el).disabled).to.be.false;
+    expect(el.open).to.be.true;
+  });
+
+  it('suppresses Escape/backdrop dismissal while pending, and restores it once pending clears', async () => {
+    const el = (await fixture(
+      html`<lr-tool-approval-dialog tool-name="web_search" open></lr-tool-approval-dialog>`,
+    )) as LyraToolApprovalDialog;
+    el.addEventListener('lr-deny', (e) => e.preventDefault());
+    denyButton(el).click();
+    await el.updateComplete;
+    expect(el.pending).to.equal('deny');
+
+    let closed = false;
+    el.addEventListener('lr-close', () => (closed = true));
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+    await el.updateComplete;
+    expect(closed).to.be.false;
+    expect(el.open).to.be.true;
+
+    (el.shadowRoot!.querySelector('[part="backdrop"]') as HTMLElement).click();
+    await el.updateComplete;
+    expect(closed).to.be.false;
+    expect(el.open).to.be.true;
+
+    el.pending = null;
+    await el.updateComplete;
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+    await el.updateComplete;
+    expect(closed).to.be.true;
+    expect(el.open).to.be.false;
+  });
+
+  it('resets a stuck pending state back to null every time the dialog re-opens', async () => {
+    const el = (await fixture(
+      html`<lr-tool-approval-dialog tool-name="web_search" open></lr-tool-approval-dialog>`,
+    )) as LyraToolApprovalDialog;
+    el.addEventListener('lr-deny', (e) => e.preventDefault());
+    denyButton(el).click();
+    await el.updateComplete;
+    expect(el.pending).to.equal('deny');
+
+    el.close('api'); // host abandons without ever resolving the pending decision
+    await el.updateComplete;
+    el.open = true;
+    await el.updateComplete;
+
+    expect(el.pending).to.equal(null);
+    expect(denyButton(el).loading).to.be.false;
+  });
+
+  it('defaults pending to null and leaves the synchronous approve/deny path unchanged when never touched', async () => {
+    const el = (await fixture(
+      html`<lr-tool-approval-dialog tool-name="web_search" .args=${ARGS} open></lr-tool-approval-dialog>`,
+    )) as LyraToolApprovalDialog;
+    expect(el.pending).to.equal(null);
+    expect(el.hasAttribute('pending')).to.be.false;
+    const approveListener = oneEvent(el, 'lr-approve');
+    const closeListener = oneEvent(el, 'lr-close');
+    approveButton(el).click();
+    await approveListener;
+    const { detail } = await closeListener;
+    expect(detail).to.equal('approve');
+    expect(el.pending).to.equal(null);
+  });
+
+  it('is accessible while a decision is pending (loading + disabled lr-button still expose a valid name/state)', async () => {
+    const el = (await fixture(
+      html`<lr-tool-approval-dialog tool-name="web_search" .args=${ARGS} open></lr-tool-approval-dialog>`,
+    )) as LyraToolApprovalDialog;
+    el.addEventListener('lr-approve', (e) => e.preventDefault());
+    approveButton(el).click();
+    await el.updateComplete;
+    // Prove the pending state actually landed before checking accessibility -- otherwise this
+    // would pass vacuously against the ordinary undecided render.
+    expect(el.pending).to.equal('approve');
+    expect(approveButton(el).loading).to.be.true;
+    await expect(el).to.be.accessible();
   });
 });
 
