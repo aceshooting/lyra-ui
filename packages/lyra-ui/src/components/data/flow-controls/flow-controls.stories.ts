@@ -33,6 +33,27 @@ export const HorizontalHideLock: Story = {
   `,
 };
 
+export const PlainInToolbar: Story = {
+  name: 'appearance="plain" (inside a host toolbar)',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'With `appearance="plain"` the cluster drops its border, background **and** its floating-surface shadow, so it sits flush in a host toolbar that already draws a surface instead of doubling the frame. The buttons keep their shared minimum hit area and their hover/focus rings.',
+      },
+    },
+  },
+  render: () => html`
+    <div
+      style="display:flex; align-items:center; gap:0.5rem; padding:0.25rem 0.5rem; border:1px solid var(--lr-color-border); border-radius:var(--lr-radius); background:var(--lr-color-surface);"
+    >
+      <span style="font-size:0.8125rem; color:var(--lr-color-text-quiet);">Workflow</span>
+      <lr-flow-controls for="plain-canvas" orientation="horizontal" appearance="plain"></lr-flow-controls>
+    </div>
+    <lr-flow-canvas id="plain-canvas" style="width:100%;height:16rem" .nodes=${nodes}></lr-flow-canvas>
+  `,
+};
+
 export const NarrowAllocation: Story = {
   name: 'Narrow allocation (320px)',
   render: () => html`

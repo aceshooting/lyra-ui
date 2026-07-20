@@ -57,6 +57,9 @@ const lockClosedGlyph = () =>
 const lockOpenGlyph = () =>
   glyphSvg(svg`<rect x="4" y="11" width="16" height="9" rx="2"></rect><path d="M8 11V7a4 4 0 0 1 7.4-2"></path>`);
 
+/** Visual chrome for `<lr-flow-controls>`'s root, mirroring `lr-card`'s `appearance` vocabulary. */
+export type FlowControlsAppearance = 'card' | 'plain';
+
 /**
  * `<lr-flow-controls>` — the canvas's button cluster: zoom in/out, fit, and interaction lock, so
  * every flow surface ships the same affordances without hosts rebuilding them. Manipulates only
@@ -64,7 +67,8 @@ const lockOpenGlyph = () =>
  *
  * @customElement lr-flow-controls
  * @slot - Extra host buttons appended to the cluster, styled by the same group.
- * @csspart base - The `role="group"` wrapper.
+ * @csspart base - The `role="group"` wrapper. Drops its floating-surface chrome (border,
+ *   background, shadow, padding, radius) under `appearance="plain"`.
  * @csspart zoom-in - Zoom-in button.
  * @csspart zoom-out - Zoom-out button.
  * @csspart fit - Zoom-to-fit button.
@@ -73,9 +77,21 @@ const lockOpenGlyph = () =>
 export class LyraFlowControls extends LyraElement {
   static styles = [LyraElement.styles, styles];
 
+  /** Id of the `lr-flow-canvas` this cluster drives. Empty (the default) resolves to the nearest
+   *  ancestor canvas -- the slotted-into-a-corner-slot case. Changing it at runtime re-resolves and
+   *  re-subscribes; a target that mounts later is picked up too. */
   @property() for = '';
+  /** Layout axis of the button cluster. */
   @property({ reflect: true }) orientation: 'vertical' | 'horizontal' = 'vertical';
+  /** Omits the lock/unlock toggle button entirely, for canvases that never expose an interaction
+   *  lock. */
   @property({ type: Boolean, attribute: 'hide-lock' }) hideLock = false;
+  /** Visual chrome, mirroring `lr-card`'s `appearance` vocabulary. `'card'` (the default) keeps the
+   *  bordered, filled, shadowed floating cluster. `'plain'` removes the border, background, shadow,
+   *  padding and corner radius, so a cluster placed in a host toolbar or panel that already draws
+   *  its own surface doesn't double the frame. The buttons keep their shared minimum hit area and
+   *  their own hover/focus affordances either way. */
+  @property({ reflect: true }) appearance: FlowControlsAppearance = 'card';
 
   @state() private snapshot: FlowStructureSnapshot | null = null;
   @state() private locked = false;

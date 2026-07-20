@@ -162,3 +162,107 @@ it('renders per-element .strings overrides in the control button labels', async 
   expect(el.shadowRoot!.querySelector('[part="fit"]')!.getAttribute('aria-label')).to.equal('Ajuster');
   expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('Commandes du canevas');
 });
+
+describe('appearance', () => {
+  const baseOf = (el: LyraFlowControls): HTMLElement => el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+
+  const baseChrome = (el: LyraFlowControls) => {
+    const s = getComputedStyle(baseOf(el));
+    return {
+      paddingTop: s.paddingTop,
+      paddingLeft: s.paddingLeft,
+      borderTopWidth: s.borderTopWidth,
+      borderTopStyle: s.borderTopStyle,
+      borderTopLeftRadius: s.borderTopLeftRadius,
+      backgroundColor: s.backgroundColor,
+      boxShadow: s.boxShadow,
+      flexDirection: s.flexDirection,
+      rowGap: s.rowGap,
+    };
+  };
+
+  it('defaults to appearance="card", rendering identically to that value restated', async () => {
+    const implicit = (await fixture(html`<lr-flow-controls></lr-flow-controls>`)) as LyraFlowControls;
+    const explicit = (await fixture(html`<lr-flow-controls appearance="card"></lr-flow-controls>`)) as LyraFlowControls;
+
+    expect(implicit.appearance).to.equal('card');
+    expect(implicit.getAttribute('appearance')).to.equal('card');
+    expect(baseChrome(explicit)).to.deep.equal(baseChrome(implicit));
+
+    const chrome = baseChrome(implicit);
+    expect(chrome.paddingTop).to.equal('2px'); // --lr-space-2xs
+    expect(chrome.borderTopWidth).to.equal('1px');
+    expect(chrome.borderTopStyle).to.equal('solid');
+    expect(chrome.backgroundColor).to.not.equal('rgba(0, 0, 0, 0)');
+    expect(chrome.boxShadow).to.not.equal('none');
+  });
+
+  it('drops border, background, shadow, padding and radius under appearance="plain"', async () => {
+    const el = (await fixture(html`<lr-flow-controls appearance="plain"></lr-flow-controls>`)) as LyraFlowControls;
+    expect(el.getAttribute('appearance')).to.equal('plain');
+    const chrome = baseChrome(el);
+    expect(chrome.borderTopWidth).to.equal('0px');
+    expect(chrome.borderTopLeftRadius).to.equal('0px');
+    expect(chrome.backgroundColor).to.equal('rgba(0, 0, 0, 0)');
+    expect(chrome.boxShadow).to.equal('none');
+    expect(chrome.paddingTop).to.equal('0px');
+    expect(chrome.paddingLeft).to.equal('0px');
+    // The cluster layout survives the chrome reset -- only the box decoration goes.
+    expect(chrome.rowGap).to.equal('2px'); // --lr-space-2xs
+  });
+
+  it('keeps every button at the shared minimum hit area under plain', async () => {
+    const el = (await fixture(html`<lr-flow-controls appearance="plain"></lr-flow-controls>`)) as LyraFlowControls;
+    for (const part of ['zoom-in', 'zoom-out', 'fit', 'lock']) {
+      const button = el.shadowRoot!.querySelector(`[part="${part}"]`) as HTMLElement;
+      expect(getComputedStyle(button).minInlineSize).to.equal('40px');
+      expect(getComputedStyle(button).minBlockSize).to.equal('40px');
+    }
+  });
+
+  it('still lays the cluster out per orientation under plain', async () => {
+    const vertical = (await fixture(html`<lr-flow-controls appearance="plain"></lr-flow-controls>`)) as LyraFlowControls;
+    expect(getComputedStyle(baseOf(vertical)).flexDirection).to.equal('column');
+
+    const horizontal = (await fixture(
+      html`<lr-flow-controls appearance="plain" orientation="horizontal"></lr-flow-controls>`,
+    )) as LyraFlowControls;
+    expect(getComputedStyle(baseOf(horizontal)).flexDirection).to.equal('row');
+  });
+
+  it('keeps each button focus ring visible under plain, with no card surface behind it', async () => {
+    const wrapper = (await fixture(html`
+      <lr-flow-canvas>
+        <lr-flow-controls slot="bottom-start" appearance="plain"></lr-flow-controls>
+      </lr-flow-canvas>
+    `)) as LyraFlowCanvas;
+    wrapper.nodes = nodes;
+    await wrapper.updateComplete;
+    const controls = wrapper.querySelector('lr-flow-controls') as LyraFlowControls;
+    await controls.updateComplete;
+
+    const button = controls.shadowRoot!.querySelector('[part="fit"]') as HTMLButtonElement;
+    expect(button.disabled).to.be.false;
+    expect(getComputedStyle(button).outlineStyle).to.equal('none');
+    button.focus();
+    expect(controls.shadowRoot!.activeElement === button).to.be.true;
+    const focused = getComputedStyle(button);
+    expect(focused.outlineStyle).to.equal('solid');
+    expect(focused.outlineWidth).to.equal('2px'); // --lr-focus-ring-width
+    expect(focused.outlineOffset).to.equal('2px'); // --lr-focus-ring-offset
+  });
+
+  it('is accessible under appearance="plain" with a resolved canvas', async () => {
+    const wrapper = (await fixture(html`
+      <lr-flow-canvas>
+        <lr-flow-controls slot="bottom-start" appearance="plain"></lr-flow-controls>
+      </lr-flow-canvas>
+    `)) as LyraFlowCanvas;
+    wrapper.nodes = nodes;
+    await wrapper.updateComplete;
+    const controls = wrapper.querySelector('lr-flow-controls') as LyraFlowControls;
+    await controls.updateComplete;
+    expect((controls.shadowRoot!.querySelector('[part="lock"]') as HTMLButtonElement).disabled).to.be.false;
+    await expect(controls).to.be.accessible();
+  });
+});
