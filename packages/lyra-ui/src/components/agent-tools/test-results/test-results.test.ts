@@ -1,6 +1,7 @@
 import { fixture, expect, html, oneEvent } from '@open-wc/testing';
 import './test-results.js';
 import type { LyraTestResults, TestSuiteResult } from './test-results.js';
+import { styles } from './test-results.styles.js';
 
 const suites: TestSuiteResult[] = [
   {
@@ -135,5 +136,12 @@ describe('lr-test-results', () => {
       const el = await pressedFixture();
       await expect(el).to.be.accessible();
     });
+  });
+
+  it('gives filter-toggle, test-name, and test-expand-toggle a hover state', () => {
+    const css = styles.cssText.replace(/\s+/g, ' ');
+    expect(css).to.match(/\[part='filter-toggle'\]:hover/);
+    expect(css).to.match(/\[part='test-name'\]:hover/);
+    expect(css).to.match(/\[part='test-expand-toggle'\]:hover/);
   });
 });

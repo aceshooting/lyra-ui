@@ -50,6 +50,10 @@ export const styles = css`
     font: inherit;
     cursor: pointer;
   }
+  [part='deny-button']:hover,
+  [part='approve-button']:hover {
+    filter: brightness(var(--lr-hover-brightness));
+  }
   [part='approve-button'] {
     border-color: var(--lr-color-brand);
     background: var(--lr-color-brand);

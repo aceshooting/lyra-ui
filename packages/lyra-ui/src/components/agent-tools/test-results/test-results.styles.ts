@@ -34,6 +34,9 @@ export const styles = css`
     padding: var(--lr-space-2xs) var(--lr-space-s);
     cursor: pointer;
   }
+  [part='filter-toggle']:hover {
+    background: var(--lr-color-brand-quiet);
+  }
   [part='filter-toggle'][aria-pressed='true'] {
     background: var(--lr-test-results-filter-active-bg, var(--lr-color-brand-quiet));
     border-color: var(--lr-test-results-filter-active-border, var(--lr-color-brand));
@@ -44,6 +47,10 @@ export const styles = css`
   [part='test-expand-toggle']:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);
+  }
+  [part='test-name']:hover,
+  [part='test-expand-toggle']:hover {
+    background: var(--lr-color-brand-quiet);
   }
   [part='suite'] + [part='suite'] {
     margin-block-start: var(--lr-space-s);

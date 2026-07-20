@@ -1,6 +1,7 @@
 import { fixture, expect, html, oneEvent } from '@open-wc/testing';
 import './compare-panel.js';
 import type { LyraComparePanel } from './compare-panel.js';
+import { styles } from './compare-panel.styles.js';
 
 describe('lr-compare-panel', () => {
   it('renders labelA/labelB, falling back to the localized defaults when unset', async () => {
@@ -108,5 +109,10 @@ describe('lr-compare-panel', () => {
     `)) as LyraComparePanel;
     await el.updateComplete;
     await expect(el).to.be.accessible();
+  });
+
+  it('gives vote-button a hover state', () => {
+    const css = styles.cssText.replace(/\s+/g, ' ');
+    expect(css).to.match(/\[part='vote-button'\]:hover/);
   });
 });

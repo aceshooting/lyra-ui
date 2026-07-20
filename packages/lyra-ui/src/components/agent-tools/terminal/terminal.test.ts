@@ -1,6 +1,7 @@
 import { fixture, expect, html, oneEvent } from '@open-wc/testing';
 import './terminal.js';
 import type { LyraTerminal } from './terminal.js';
+import { styles } from './terminal.styles.js';
 
 describe('lr-terminal', () => {
   it('defaults to follow=true, wrap=true, copyable=true, maxScrollback=5000', async () => {
@@ -526,5 +527,12 @@ describe('lr-terminal', () => {
     await el.updateComplete;
     const list = el.shadowRoot!.querySelector('lr-virtual-list')!;
     expect(list.getAttribute('row-height')).to.equal('24');
+  });
+
+  it('gives copy-button, download-button, and jump-to-latest a hover state', () => {
+    const css = styles.cssText.replace(/\s+/g, ' ');
+    expect(css).to.match(/\[part='copy-button'\]:hover/);
+    expect(css).to.match(/\[part='download-button'\]:hover/);
+    expect(css).to.match(/\[part='jump-to-latest'\]:hover/);
   });
 });

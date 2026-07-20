@@ -47,6 +47,10 @@ export const styles = css`
     padding: var(--lr-space-2xs) var(--lr-space-s);
     cursor: pointer;
   }
+  [part='take-over-button']:hover,
+  [part='stop-button']:hover {
+    background: var(--lr-color-brand-quiet);
+  }
   [part='viewport'] {
     position: relative;
     aspect-ratio: var(--lr-browser-frame-aspect-ratio, 16 / 9);

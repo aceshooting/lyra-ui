@@ -74,6 +74,9 @@ export const styles = css`
     cursor: pointer;
     transition: background-color var(--lr-transition-fast), border-color var(--lr-transition-fast);
   }
+  [part='vote-button']:hover {
+    background: var(--lr-color-brand-quiet);
+  }
   [part='vote-button'][data-selected] {
     background: var(--lr-color-brand-quiet);
     border-color: var(--lr-color-brand);

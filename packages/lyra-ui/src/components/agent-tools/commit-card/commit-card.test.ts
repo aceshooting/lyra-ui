@@ -1,6 +1,7 @@
 import { fixture, expect, html, oneEvent } from '@open-wc/testing';
 import './commit-card.js';
 import type { LyraCommitCard } from './commit-card.js';
+import { styles } from './commit-card.styles.js';
 
 describe('lr-commit-card', () => {
   it('defaults to filesCollapsed=true and copyable=true', async () => {
@@ -112,5 +113,12 @@ describe('lr-commit-card', () => {
     `)) as LyraCommitCard;
     await el.updateComplete;
     await expect(el).to.be.accessible();
+  });
+
+  it('gives files-toggle, file, and copy-button a hover state', () => {
+    const css = styles.cssText.replace(/\s+/g, ' ');
+    expect(css).to.match(/\[part='files-toggle'\]:hover/);
+    expect(css).to.match(/\[part='file'\]:hover/);
+    expect(css).to.match(/\[part='copy-button'\]:hover/);
   });
 });

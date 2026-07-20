@@ -1,6 +1,7 @@
 import { fixture, expect, html, oneEvent } from '@open-wc/testing';
 import './confirm-bar.js';
 import type { LyraConfirmBar } from './confirm-bar.js';
+import { styles } from './confirm-bar.styles.js';
 
 it('defaults to decision null, tone neutral, and shows Deny before Approve', async () => {
   const el = (await fixture(html`<lr-confirm-bar></lr-confirm-bar>`)) as LyraConfirmBar;
@@ -311,4 +312,10 @@ describe('localization', () => {
     expect(el.shadowRoot!.querySelector('[part="status"]')!.textContent!.trim()).to.equal('Approuvé');
     expect(regionText()).to.equal('Action approuvée.');
   });
+});
+
+it('gives deny-button and approve-button a hover state', () => {
+  const css = styles.cssText.replace(/\s+/g, ' ');
+  expect(css).to.match(/\[part='deny-button'\]:hover[^{]*\{[^}]*filter:\s*brightness/);
+  expect(css).to.match(/\[part='approve-button'\]:hover[^{]*\{[^}]*filter:\s*brightness/);
 });

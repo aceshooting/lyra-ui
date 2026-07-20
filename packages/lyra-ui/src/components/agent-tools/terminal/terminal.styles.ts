@@ -30,6 +30,10 @@ export const styles = css`
     padding: var(--lr-space-2xs) var(--lr-space-xs);
     cursor: pointer;
   }
+  [part='copy-button']:hover,
+  [part='download-button']:hover {
+    background: var(--lr-color-brand-quiet);
+  }
   [part='viewport'] {
     position: relative;
     block-size: var(--lr-terminal-height, var(--lr-size-20rem));
@@ -73,5 +77,8 @@ export const styles = css`
     cursor: pointer;
     z-index: var(--lr-layer-content);
     transition: opacity var(--lr-transition-fast);
+  }
+  [part='jump-to-latest']:hover {
+    filter: brightness(var(--lr-hover-brightness));
   }
 `;

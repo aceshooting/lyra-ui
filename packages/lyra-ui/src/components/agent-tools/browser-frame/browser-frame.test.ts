@@ -1,6 +1,7 @@
 import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import './browser-frame.js';
 import type { LyraBrowserFrame } from './browser-frame.js';
+import { styles } from './browser-frame.styles.js';
 
 describe('lr-browser-frame', () => {
   it('defaults to status=idle, controller=agent, controls=true', async () => {
@@ -159,5 +160,12 @@ describe('lr-browser-frame', () => {
     `)) as LyraBrowserFrame;
     await el.updateComplete;
     await expect(el).to.be.accessible();
+  });
+
+  it('gives take-over-button and stop-button a hover state', () => {
+    const css = styles.cssText.replace(/\s+/g, ' ');
+    expect(css).to.match(/\[part='take-over-button'\],\s*\n?\s*\[part='stop-button'\]\s*\{[^}]*font/);
+    expect(css).to.match(/\[part='take-over-button'\]:hover/);
+    expect(css).to.match(/\[part='stop-button'\]:hover/);
   });
 });

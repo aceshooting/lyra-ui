@@ -45,6 +45,9 @@ export const styles = css`
     cursor: pointer;
     padding: var(--lr-space-xs) 0;
   }
+  [part='files-toggle']:hover {
+    background: var(--lr-color-brand-quiet);
+  }
   [part='file'] {
     display: flex;
     justify-content: space-between;
@@ -57,6 +60,9 @@ export const styles = css`
     cursor: pointer;
     padding: var(--lr-space-2xs) 0;
   }
+  [part='file']:hover {
+    background: var(--lr-color-brand-quiet);
+  }
   [part='copy-button'] {
     font: inherit;
     font-size: var(--lr-font-size-xs);
@@ -65,5 +71,8 @@ export const styles = css`
     border-radius: var(--lr-radius-xs);
     padding: var(--lr-space-2xs) var(--lr-space-xs);
     cursor: pointer;
+  }
+  [part='copy-button']:hover {
+    background: var(--lr-color-brand-quiet);
   }
 `;
