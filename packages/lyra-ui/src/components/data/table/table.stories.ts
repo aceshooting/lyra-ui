@@ -60,6 +60,99 @@ export const NoColumnsConfigured: Story = {
   render: () => html`<lr-table .columns=${[]} .rows=${rows}></lr-table>`,
 };
 
+export const EmptyStateAddressability: Story = {
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'The built-in empty state carries `part="empty"` and re-exports its inner parts as `empty-heading`/`empty-description`/`empty-icon`/`empty-actions`/`empty-base`, so it can be restyled without replacing it. `empty-compact` overrides each branch’s built-in density. The `empty` slot replaces it wholesale on the two data-empty branches; the no-columns branch keeps its own configuration-problem copy.',
+      },
+    },
+  },
+  render: () => html`
+    <style>
+      .styled-empty::part(empty-heading) {
+        color: var(--lr-color-danger);
+      }
+    </style>
+    <lr-table class="styled-empty" .columns=${columns} .rows=${[]} empty-heading="Nothing to show"></lr-table>
+    <lr-table .columns=${columns} .rows=${[]} empty-compact></lr-table>
+    <lr-table .columns=${columns} .rows=${[]}>
+      <div slot="empty" style="padding: 1rem; text-align: center">
+        <p>No scores recorded yet.</p>
+        <button type="button">Import a spreadsheet</button>
+      </div>
+    </lr-table>
+  `,
+};
+
+const titledColumns: TableColumn<DemoRow>[] = [
+  {
+    key: 'name',
+    label: 'Name',
+    cellTitle: (r) => `Row id ${r.id} — ${r.name}`,
+    cell: (r) => r.name,
+  },
+  { key: 'score', label: 'Score', align: 'end', cell: (r) => r.score },
+];
+
+export const CellTitles: Story = {
+  parameters: {
+    docs: {
+      description: {
+        story:
+          '`columns[].cellTitle(row)` sets the generated `<td>`’s native `title`, symmetrical with `cellStyle`. Returning `undefined` or an empty string omits the attribute entirely (an empty `title=""` would suppress an ancestor’s tooltip), and the attribute is suppressed while that cell is being edited. Use it only for a longer form of what the cell already shows — some screen readers announce a `<td title>` as the cell’s accessible name.',
+      },
+    },
+  },
+  render: () =>
+    html`<lr-table .columns=${titledColumns} .rows=${rows} .rowKey=${(r: DemoRow) => r.id}></lr-table>`,
+};
+
+export const FixedLayout: Story = {
+  parameters: {
+    docs: {
+      description: {
+        story:
+          '`layout="fixed"` forces `table-layout: fixed` with no column widths declared, so columns share the width evenly instead of sizing to their content. It is a floor, not an override: the default `layout="auto"` still resolves to fixed as soon as a column declares a `width` or a drag-resize starts. Under `fixed` with no widths the first row decides every column’s width, and `minWidth`/`maxWidth` are ignored.',
+      },
+    },
+  },
+  render: () => html`
+    <lr-table
+      layout="fixed"
+      .columns=${[
+        { key: 'name', label: 'Name', cell: (r: DemoRow) => r.name },
+        { key: 'score', label: 'Score', align: 'end', cell: (r: DemoRow) => r.score },
+        { key: 'note', label: 'Note', cell: () => 'A deliberately long note that would otherwise widen its column.' },
+      ]}
+      .rows=${rows}
+      .rowKey=${(r: DemoRow) => r.id}
+    ></lr-table>
+  `,
+};
+
+export const SelectedRowColor: Story = {
+  parameters: {
+    docs: {
+      description: {
+        story:
+          '`--lr-table-row-selected-bg` recolors the `aria-selected` row on its own. Shadow Parts forbids an attribute selector after `::part()`, so `::part(row)[aria-selected]` is invalid CSS — without this property the only way to restyle the selected row was to override the library-wide `--lr-color-brand-quiet` token. Unset, it renders exactly as before.',
+      },
+    },
+  },
+  render: () => html`
+    <lr-table
+      style="--lr-table-row-selected-bg: var(--lr-color-success-quiet)"
+      selection-mode="single"
+      .columns=${columns}
+      .rows=${rows}
+      .rowKey=${(r: DemoRow) => r.id}
+      .selectedKey=${'b'}
+    ></lr-table>
+  `,
+};
+
 export const ActiveSort: Story = {
   render: () =>
     html`<lr-table .columns=${columns} .rows=${rows} sort-key="score" sort-dir="desc"></lr-table>`,

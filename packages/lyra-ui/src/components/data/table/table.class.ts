@@ -37,6 +37,23 @@ const spellcheckConverter: ComplexAttributeConverter<boolean> = {
   },
 };
 
+/**
+ * Tri-state boolean converter for `empty-compact`. An absent attribute stays `undefined` -- "keep
+ * each empty branch's own built-in default" -- rather than collapsing to `false`, which Lit's
+ * presence-based `type: Boolean` converter cannot express. Same shape as `spellcheckConverter`
+ * above, one state wider; `empty-compact="false"` is parsed as `false`, not `true`.
+ */
+const optionalBooleanConverter: ComplexAttributeConverter<boolean | undefined> = {
+  fromAttribute(value): boolean | undefined {
+    if (value === null) return undefined;
+    return value !== 'false';
+  },
+  toAttribute(value): string | null {
+    if (value === undefined) return null;
+    return value ? '' : 'false';
+  },
+};
+
 export interface TableColumn<T> {
   key: string;
   label: string;
@@ -79,6 +96,17 @@ export interface TableColumn<T> {
    *  background that a `cell()`-returned inner element can't paint into the cell's own padding.
    *  Omit for no per-cell style override (the default; unchanged output). */
   cellStyle?(row: T): Record<string, string> | undefined;
+  /** Applied as the generated `<td>`'s native `title`, symmetrical with `cellStyle` -- e.g. the
+   *  untruncated text behind an ellipsized cell, or a formatted timestamp behind a relative one.
+   *  Returning `undefined` (or an empty string) omits the attribute entirely rather than rendering
+   *  `title=""`, which would suppress an ancestor's own tooltip. The attribute is also suppressed
+   *  while that cell is in inline-edit mode, so the tooltip can't shadow the editor.
+   *
+   *  Accessibility: some screen readers announce a `<td title>` as the cell's accessible name,
+   *  replacing the cell's own content rather than supplementing it (the same caveat `lr-stat`'s
+   *  `exactValue` carries). Use it for a longer form of what the cell already shows, never for
+   *  information that exists nowhere else. */
+  cellTitle?(row: T): string | undefined;
   /** Numeric accessor backing the heat-tint background. A column that omits this is excluded from
    *  tinting (e.g. a label column) — its presence on any column is the opt-in signal for heat-tint
    *  mode as a whole, mirroring how `expandedContent` alone signals expand-mode (no separate
@@ -258,6 +286,19 @@ export interface LyraTableEventMap<T = unknown> {
  * the footer row (only when a column also defines `footer`) — both share `footer`'s own
  * "consumer computes/renders" contract rather than assuming addition.
  *
+ * The built-in empty state is addressable rather than fixed: every `<lr-empty>` the table renders
+ * carries `part="empty"` and re-exports its own inner parts as `empty-heading`/`empty-description`/
+ * `empty-icon`/`empty-actions`/`empty-base`, the two *data*-empty branches (no rows at all, and
+ * filtered/paginated down to zero) render it as the fallback content of a named `empty` slot so a
+ * consumer can replace it wholesale, and `emptyCompact` overrides each branch's built-in `compact`
+ * default. The no-columns branch is deliberately **not** slot-replaceable — it reports a
+ * configuration problem (`noColumnsHeading`), not "this query returned nothing", and a single slot
+ * covering all three would collapse that distinction.
+ *
+ * `layout` sets a floor on the `<table>`'s `table-layout`: `'fixed'` forces it even with no column
+ * widths, while the default `'auto'` still resolves to `fixed` whenever a column declares a `width`
+ * or a drag-resize is in flight (column resizing does not work under `table-layout: auto`).
+ *
  * @customElement lr-table
  * @event lr-sort - A sortable header was activated. `detail: { key }`.
  * @event lr-row-click - A row was activated. `detail: { row }`.
@@ -314,6 +355,21 @@ export interface LyraTableEventMap<T = unknown> {
  * @csspart filter-label - The `<label>` wrapping the filter input.
  * @csspart loading - The loading-state wrapper.
  * @csspart pagination - The optional pagination component.
+ * @csspart empty - The built-in `<lr-empty>` host, in all three empty states (no columns
+ *   configured, no rows at all, and filtered/paginated down to zero rows). The two data-empty
+ *   states render it as the `empty` slot's fallback, so it disappears once that slot is filled.
+ *   Note that the no-columns and no-rows states return the empty element as the shadow root's own
+ *   root, with no `[part='base']` wrapper around it — `::part(base)` does not apply in those two
+ *   states, only in the filtered-to-zero one.
+ * @csspart empty-base - Exported from the built-in `<lr-empty>`'s own `base` part.
+ * @csspart empty-icon - Exported from the built-in `<lr-empty>`'s `icon` part.
+ * @csspart empty-heading - Exported from the built-in `<lr-empty>`'s `heading` part.
+ * @csspart empty-description - Exported from the built-in `<lr-empty>`'s `description` part.
+ * @csspart empty-actions - Exported from the built-in `<lr-empty>`'s `actions` part.
+ * @slot empty - Replaces the built-in empty state on the two *data*-empty branches (no rows at
+ *   all, and filtered/paginated down to zero). Left unfilled, the built-in `[part='empty']`
+ *   `<lr-empty>` renders as this slot's fallback content. The no-columns branch renders its own
+ *   `noColumnsHeading` state and is not slot-replaceable.
  * @cssprop [--lr-table-resize-min-width=var(--lr-size-3rem)] - Default minimum width for a
  *   resizable column without an explicit pixel `minWidth`.
  * @cssprop [--lr-table-resize-handle-opacity=0.12] - Hover/focus opacity of the resize handle.
@@ -325,6 +381,10 @@ export interface LyraTableEventMap<T = unknown> {
  *   used by `heatValue` columns.
  * @cssprop [--lr-table-heat-t] - This cell's position on the heat-tint ramp, as a percentage
  *   string. Set inline by the component on each `[data-heat]` cell; not consumer-settable.
+ * @cssprop [--lr-table-row-selected-bg=var(--lr-color-brand-quiet)] - Background of a row whose
+ *   `aria-selected` is `true`. Shadow Parts forbids an attribute selector after `::part()`, so
+ *   `::part(row)[aria-selected]` is invalid CSS and the selected row could otherwise only be
+ *   restyled by hijacking the library-wide `--lr-color-brand-quiet` token.
  * @cssprop [--lr-table-sticky-offset=0] - Distance a `sticky` column pins from the inline edge.
  *   Measured and set inline per column by the component so multiple sticky columns stack instead
  *   of overlapping; falls back to `0` for the first one, or before the first measurement pass.
@@ -334,6 +394,19 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
 
   @property({ attribute: false }) columns: TableColumn<T>[] = [];
   @property({ attribute: false }) rows: T[] = [];
+  /** Floor for the `<table>`'s `table-layout`. `'fixed'` forces the fixed algorithm even when no
+   *  column declares a `width`, so every column shares the available width evenly and long cell
+   *  content is clipped/wrapped instead of stretching its column. The default `'auto'` is only a
+   *  floor: it still resolves to `fixed` whenever a column declares a `width`, a column has been
+   *  drag-resized, or a resize gesture is in flight — resizing does not work under
+   *  `table-layout: auto`.
+   *
+   *  Two consequences of the fixed algorithm are worth knowing before opting in: with no declared
+   *  widths the *first* row (header row included) determines every column's width, so revealing a
+   *  `priority`-hidden column via `[part='reveal-columns-button']` re-measures and changes all of
+   *  them; and `columns[].minWidth`/`maxWidth` are silently ignored by `table-layout: fixed`
+   *  (declare `width` instead when you need a specific column sized). */
+  @property({ reflect: true }) layout: 'auto' | 'fixed' = 'auto';
   @property({ attribute: 'sort-key' }) sortKey = '';
   @property({ attribute: 'sort-dir' }) sortDir: 'asc' | 'desc' = 'asc';
   /** Derives each row's stable identity for `repeat()`'s DOM-reconciliation
@@ -411,6 +484,12 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
   @property({ attribute: 'more-label' }) moreLabel = '';
   @property({ attribute: 'empty-heading' }) emptyHeading = '';
   @property({ attribute: 'empty-description' }) emptyDescription = '';
+  /** Overrides the built-in `[part='empty']` state's `compact` rendering. Leave `undefined` (the
+   *  default) to keep each branch's own built-in behavior: the whole-table states (no columns, no
+   *  rows) render spacious, while the in-table filtered/paginated-to-zero state — which sits below
+   *  the filter field inside `[part='base']` — renders compact. `empty-compact="false"` forces the
+   *  spacious rendering everywhere. Has no effect once the `empty` slot is filled. */
+  @property({ attribute: 'empty-compact', converter: optionalBooleanConverter }) emptyCompact?: boolean;
   @property({ attribute: 'no-columns-heading' }) noColumnsHeading = '';
   @property({ attribute: 'no-columns-description' }) noColumnsDescription = '';
   @property({ attribute: 'reveal-columns-label' }) revealColumnsLabel = '';
@@ -470,7 +549,8 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
    *  lifecycle. */
   private resizeObserver?: ResizeObserver;
   /** The `[part='base']` element `resizeObserver` is currently observing —
-   *  `render()`'s columns/rows-empty branches swap in `<lr-empty>` instead,
+   *  `render()`'s columns/rows-empty branches swap in the built-in
+   *  (or `empty`-slotted) empty state instead,
    *  a different template shape that gives `[part='base']` a fresh DOM
    *  identity on the next non-empty render, so `updated()` re-observes
    *  whenever this no longer matches the live element. */
@@ -1215,7 +1295,13 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
 
   render(): TemplateResult {
     if (this.columns.length === 0) {
+      // Deliberately not wrapped in the `empty` slot: this branch reports a *configuration*
+      // problem, with its own `noColumnsHeading` copy, rather than "this data set is empty" --
+      // one slot covering both would silently replace it with a no-results message.
       return html`<lr-empty
+        part="empty"
+        exportparts="base:empty-base, icon:empty-icon, heading:empty-heading, description:empty-description, actions:empty-actions"
+        ?compact=${this.emptyCompact ?? false}
         heading=${this.localize('noColumns', this.noColumnsHeading || undefined)}
         description=${this.noColumnsDescription}
       ></lr-empty>`;
@@ -1232,15 +1318,29 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
 
     const matchingEntries = this.matchingEntries();
     if (this.rows.length === 0 && !this.filterable && this.normalizedPageSize === 0) {
-      return html`<lr-empty
-        heading=${this.localize('noData', this.emptyHeading || undefined)}
-        description=${this.emptyDescription}
-      ></lr-empty>`;
+      return html`<slot name="empty"
+        ><lr-empty
+          part="empty"
+          exportparts="base:empty-base, icon:empty-icon, heading:empty-heading, description:empty-description, actions:empty-actions"
+          ?compact=${this.emptyCompact ?? false}
+          heading=${this.localize('noData', this.emptyHeading || undefined)}
+          description=${this.emptyDescription}
+        ></lr-empty
+      ></slot>`;
     }
 
     const focusedCol = this.focusedColKey();
     const focusedRow = this.focusedRowKey();
     const hasColumnWidths = this.columns.some((col) => col.width || this.resizedColumnWidths.has(col.key));
+    // `layout` is a floor, never an override: a declared/resized column width still forces the
+    // fixed algorithm, and so does an in-flight drag (`resizeState` is deliberately non-reactive,
+    // but a *consumer*-triggered re-render mid-gesture -- before the first effective pointermove
+    // has populated `resizedColumnWidths` -- would otherwise flip the table back to `auto` and
+    // break the gesture, since resizing does not work under `table-layout: auto`).
+    // Kept separate from `data-has-column-widths`, which additionally signals that `<colgroup>`
+    // carries real widths.
+    const effectiveLayout =
+      this.layout === 'fixed' || hasColumnWidths || this.resizeState !== undefined ? 'fixed' : 'auto';
     const hasExpand = Boolean(this.expandedContent);
     const hasHeatTint = this.columns.some((col) => col.heatValue !== undefined);
     const heatDomain = this.computeHeatDomain(hasHeatTint);
@@ -1251,17 +1351,22 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
     const filterPlaceholder = this.localize('tableFilterPlaceholder', this.filterPlaceholder || undefined);
     const tableContent =
       renderedEntries.length === 0
-        ? html`<lr-empty
-            compact
-            heading=${this.localize('noData', this.emptyHeading || undefined)}
-            description=${this.emptyDescription}
-          ></lr-empty>`
+        ? html`<slot name="empty"
+            ><lr-empty
+              part="empty"
+              exportparts="base:empty-base, icon:empty-icon, heading:empty-heading, description:empty-description, actions:empty-actions"
+              ?compact=${this.emptyCompact ?? true}
+              heading=${this.localize('noData', this.emptyHeading || undefined)}
+              description=${this.emptyDescription}
+            ></lr-empty
+          ></slot>`
         : html`<table
             part="table"
             role="grid"
             aria-label=${this.getAttribute('aria-label') || nothing}
             aria-multiselectable=${this.selectionMode === 'multiple' ? 'true' : nothing}
             ?data-has-column-widths=${hasColumnWidths}
+            data-layout=${effectiveLayout}
             @click=${this.onTableClick}
             @keydown=${this.onTableKeyDown}
             @dblclick=${this.onTableDoubleClick}
@@ -1373,6 +1478,14 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
                           ...(col.cellStyle ? col.cellStyle(row) ?? {} : {}),
                           ...(heatShare !== null ? { '--lr-table-heat-t': heatShare } : {}),
                         };
+                        const editing =
+                          this.editingCell?.rowKey === encodeKey(key) && this.editingCell.columnKey === col.key;
+                        // `|| nothing`, not `?? nothing`: an empty `title=""` is not "no tooltip",
+                        // it actively suppresses an ancestor's tooltip, so an empty return omits
+                        // the attribute the same way `undefined` does (mirroring `lr-stat`'s
+                        // `exactValue`). Suppressed while editing so the tooltip can't shadow the
+                        // open `[part='cell-editor']`.
+                        const cellTitle = editing ? undefined : col.cellTitle?.(row);
                         return html`<td
                             part="cell"
                             role="gridcell"
@@ -1381,9 +1494,10 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
                             data-priority=${col.priority ?? nothing}
                             data-sticky=${stickyDirection(col.sticky) ?? nothing}
                             ?data-heat=${heatShare !== null}
+                            title=${cellTitle || nothing}
                             style=${Object.keys(cellStyle).length ? styleMap(cellStyle) : nothing}
                           >
-                            ${this.editingCell?.rowKey === encodeKey(key) && this.editingCell.columnKey === col.key
+                            ${editing
                               ? html`<input
                                   part="cell-editor"
                                   type=${col.editType ?? 'text'}

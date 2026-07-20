@@ -2224,3 +2224,297 @@ describe('sticky-offset observation across reconnect', () => {
     );
   });
 });
+
+describe('empty-state addressability', () => {
+  it('exposes part="empty" on the built-in empty in all three empty states', async () => {
+    const noColumns = (await fixture(html`<lr-table></lr-table>`)) as LyraTable<Row>;
+    noColumns.columns = [];
+    noColumns.rows = rows;
+    await noColumns.updateComplete;
+    expect(noColumns.shadowRoot!.querySelector('[part~="empty"]')!.tagName.toLowerCase()).to.equal('lr-empty');
+
+    const noRows = (await fixture(html`<lr-table></lr-table>`)) as LyraTable<Row>;
+    noRows.columns = columns;
+    noRows.rows = [];
+    await noRows.updateComplete;
+    expect(noRows.shadowRoot!.querySelector('[part~="empty"]')!.tagName.toLowerCase()).to.equal('lr-empty');
+
+    const filtered = (await fixture(html`<lr-table filterable></lr-table>`)) as LyraTable<Row>;
+    filtered.columns = columns;
+    filtered.rows = rows;
+    filtered.rowKey = (r) => r.id;
+    filtered.filterText = 'nonexistent-xyz';
+    await filtered.updateComplete;
+    expect(filtered.shadowRoot!.querySelector('[part~="empty"]')!.tagName.toLowerCase()).to.equal('lr-empty');
+  });
+
+  it('lets an outer-tree ::part(empty) rule actually style the built-in empty', async () => {
+    const styleEl = document.createElement('style');
+    styleEl.textContent = 'lr-table::part(empty) { outline: 3px dotted rgb(1, 2, 3); }';
+    document.head.append(styleEl);
+    try {
+      const el = (await fixture(html`<lr-table></lr-table>`)) as LyraTable<Row>;
+      el.columns = columns;
+      el.rows = [];
+      await el.updateComplete;
+      const empty = el.shadowRoot!.querySelector('[part~="empty"]') as HTMLElement;
+      expect(getComputedStyle(empty).outlineColor).to.equal('rgb(1, 2, 3)');
+    } finally {
+      styleEl.remove();
+    }
+  });
+
+  it('re-exports the empty state’s inner parts under empty-* aliases', async () => {
+    const el = (await fixture(html`<lr-table></lr-table>`)) as LyraTable<Row>;
+    el.columns = columns;
+    el.rows = [];
+    await el.updateComplete;
+    const exported = el.shadowRoot!.querySelector('[part~="empty"]')!.getAttribute('exportparts') ?? '';
+    expect(exported).to.contain('heading:empty-heading');
+    expect(exported).to.contain('description:empty-description');
+    expect(exported).to.contain('icon:empty-icon');
+  });
+
+  it('replaces the built-in empty with an `empty`-slotted node on the data-empty branches', async () => {
+    const el = (await fixture(
+      html`<lr-table><div slot="empty" style="block-size: 40px">Nothing here</div></lr-table>`,
+    )) as LyraTable<Row>;
+    el.columns = columns;
+    el.rows = [];
+    await el.updateComplete;
+    const slot = el.shadowRoot!.querySelector('slot[name="empty"]') as HTMLSlotElement;
+    expect(slot, 'expected an `empty` slot on the zero-rows branch').to.exist;
+    expect(slot.assignedElements().map((node) => node.textContent)).to.deep.equal(['Nothing here']);
+    // Slotted content replaces the fallback: the built-in <lr-empty> generates no boxes.
+    const builtIn = el.shadowRoot!.querySelector('[part~="empty"]') as HTMLElement;
+    expect(builtIn.getClientRects().length).to.equal(0);
+  });
+
+  it('replaces the built-in empty on the filtered-to-zero branch too', async () => {
+    const el = (await fixture(
+      html`<lr-table filterable><div slot="empty">Nothing here</div></lr-table>`,
+    )) as LyraTable<Row>;
+    el.columns = columns;
+    el.rows = rows;
+    el.rowKey = (r) => r.id;
+    el.filterText = 'nonexistent-xyz';
+    await el.updateComplete;
+    const slot = el.shadowRoot!.querySelector('slot[name="empty"]') as HTMLSlotElement;
+    expect(slot, 'expected an `empty` slot on the filtered-to-zero branch').to.exist;
+    expect(slot.assignedElements().length).to.equal(1);
+    expect((el.shadowRoot!.querySelector('[part~="empty"]') as HTMLElement).getClientRects().length).to.equal(0);
+  });
+
+  it('keeps the distinct no-columns heading even when an `empty` node is slotted', async () => {
+    const el = (await fixture(
+      html`<lr-table><div slot="empty">Nothing here</div></lr-table>`,
+    )) as LyraTable<Row>;
+    el.columns = [];
+    el.rows = rows;
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('slot[name="empty"]'), 'the no-columns branch is not slot-replaceable').to
+      .not.exist;
+    const builtIn = el.shadowRoot!.querySelector('[part~="empty"]')!;
+    expect(builtIn.getAttribute('heading')).to.equal('No columns configured');
+    expect((builtIn as HTMLElement).getClientRects().length).to.be.greaterThan(0);
+  });
+
+  it('keeps each branch’s built-in compact default and lets emptyCompact override it', async () => {
+    const wholeTable = (await fixture(html`<lr-table></lr-table>`)) as LyraTable<Row>;
+    wholeTable.columns = columns;
+    wholeTable.rows = [];
+    await wholeTable.updateComplete;
+    expect(wholeTable.shadowRoot!.querySelector('[part~="empty"]')!.hasAttribute('compact')).to.be.false;
+
+    wholeTable.emptyCompact = true;
+    await wholeTable.updateComplete;
+    expect(wholeTable.shadowRoot!.querySelector('[part~="empty"]')!.hasAttribute('compact')).to.be.true;
+
+    const filtered = (await fixture(html`<lr-table filterable></lr-table>`)) as LyraTable<Row>;
+    filtered.columns = columns;
+    filtered.rows = rows;
+    filtered.rowKey = (r) => r.id;
+    filtered.filterText = 'nonexistent-xyz';
+    await filtered.updateComplete;
+    expect(filtered.shadowRoot!.querySelector('[part~="empty"]')!.hasAttribute('compact')).to.be.true;
+
+    filtered.emptyCompact = false;
+    await filtered.updateComplete;
+    expect(filtered.shadowRoot!.querySelector('[part~="empty"]')!.hasAttribute('compact')).to.be.false;
+  });
+
+  it('parses the literal empty-compact="false" attribute as false, not as mere presence', async () => {
+    const el = (await fixture(
+      html`<lr-table filterable empty-compact="false"></lr-table>`,
+    )) as LyraTable<Row>;
+    el.columns = columns;
+    el.rows = rows;
+    el.rowKey = (r) => r.id;
+    el.filterText = 'nonexistent-xyz';
+    await el.updateComplete;
+    expect(el.emptyCompact).to.be.false;
+    // This branch's own default is compact -- an attribute reading "false" must beat it.
+    expect(el.shadowRoot!.querySelector('[part~="empty"]')!.hasAttribute('compact')).to.be.false;
+  });
+
+  it('is accessible with a slotted empty state', async () => {
+    const el = (await fixture(
+      html`<lr-table aria-label="Scores"><p slot="empty">No scores recorded yet.</p></lr-table>`,
+    )) as LyraTable<Row>;
+    el.columns = columns;
+    el.rows = [];
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('slot[name="empty"]')).to.exist;
+    await expect(el).to.be.accessible();
+  });
+});
+
+describe('TableColumn.cellTitle', () => {
+  const titledColumns: TableColumn<Row>[] = [
+    { key: 'name', label: 'Name', cellTitle: (r) => `Full name: ${r.name}`, cell: (r) => r.name },
+    { key: 'score', label: 'Score', cell: (r) => r.score },
+  ];
+
+  it('renders the native title on the cells of a column that defines cellTitle', async () => {
+    const el = (await fixture(html`<lr-table></lr-table>`)) as LyraTable<Row>;
+    el.columns = titledColumns;
+    el.rows = rows;
+    el.rowKey = (r) => r.id;
+    await el.updateComplete;
+    const titled = el.shadowRoot!.querySelector('td[data-col-key="name"]')!;
+    expect(titled.getAttribute('title')).to.equal('Full name: Alpha');
+  });
+
+  it('renders no title attribute at all for a column without cellTitle, or an empty return', async () => {
+    const el = (await fixture(html`<lr-table></lr-table>`)) as LyraTable<Row>;
+    el.columns = [
+      ...titledColumns,
+      { key: 'blank', label: 'Blank', cellTitle: () => '', cell: () => 'x' },
+      { key: 'undef', label: 'Undef', cellTitle: () => undefined, cell: () => 'x' },
+    ];
+    el.rows = rows;
+    el.rowKey = (r) => r.id;
+    await el.updateComplete;
+    // An empty `title=""` would suppress an ancestor's tooltip, so it must be absent entirely.
+    expect(el.shadowRoot!.querySelector('td[data-col-key="score"]')!.hasAttribute('title')).to.be.false;
+    expect(el.shadowRoot!.querySelector('td[data-col-key="blank"]')!.hasAttribute('title')).to.be.false;
+    expect(el.shadowRoot!.querySelector('td[data-col-key="undef"]')!.hasAttribute('title')).to.be.false;
+  });
+
+  it('suppresses the cell title while that cell is in edit mode', async () => {
+    const el = (await fixture(html`<lr-table></lr-table>`)) as LyraTable<Row>;
+    el.columns = [{ ...titledColumns[0]!, editable: true, editValue: (r) => r.name }, titledColumns[1]!];
+    el.rows = rows;
+    el.rowKey = (r) => r.id;
+    await el.updateComplete;
+    const cell = el.shadowRoot!.querySelector('td[data-col-key="name"]') as HTMLElement;
+    expect(cell.getAttribute('title')).to.equal('Full name: Alpha');
+    cell.dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
+    await el.updateComplete;
+    const editing = el.shadowRoot!.querySelector('td[data-col-key="name"]') as HTMLElement;
+    expect(editing.querySelector('[part="cell-editor"]'), 'expected the editor to have opened').to.exist;
+    expect(editing.hasAttribute('title')).to.be.false;
+    // Every other cell in that column keeps its title.
+    const others = [...el.shadowRoot!.querySelectorAll('td[data-col-key="name"]')].slice(1);
+    expect(others.map((td) => td.getAttribute('title'))).to.deep.equal(['Full name: Beta']);
+  });
+
+  it('is accessible with cell titles rendered', async () => {
+    const el = (await fixture(html`<lr-table aria-label="Scores"></lr-table>`)) as LyraTable<Row>;
+    el.columns = titledColumns;
+    el.rows = rows;
+    el.rowKey = (r) => r.id;
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('td[data-col-key="name"]')!.hasAttribute('title')).to.be.true;
+    await expect(el).to.be.accessible();
+  });
+});
+
+describe('layout', () => {
+  const plainColumns: TableColumn<Row>[] = [
+    { key: 'name', label: 'Name', cell: (r) => r.name },
+    { key: 'score', label: 'Score', cell: (r) => r.score },
+  ];
+
+  it('defaults to auto and reflects the attribute', async () => {
+    const el = (await fixture(html`<lr-table></lr-table>`)) as LyraTable<Row>;
+    el.columns = plainColumns;
+    el.rows = rows;
+    await el.updateComplete;
+    expect(el.layout).to.equal('auto');
+    expect(el.getAttribute('layout')).to.equal('auto');
+    const table = el.shadowRoot!.querySelector('[part="table"]') as HTMLElement;
+    expect(table.getAttribute('data-layout')).to.equal('auto');
+    expect(getComputedStyle(table).tableLayout).to.equal('auto');
+  });
+
+  it('computes table-layout: fixed with layout="fixed" and no column widths', async () => {
+    const el = (await fixture(html`<lr-table layout="fixed"></lr-table>`)) as LyraTable<Row>;
+    el.columns = plainColumns;
+    el.rows = rows;
+    await el.updateComplete;
+    const table = el.shadowRoot!.querySelector('[part="table"]') as HTMLElement;
+    expect(table.getAttribute('data-layout')).to.equal('fixed');
+    expect(getComputedStyle(table).tableLayout).to.equal('fixed');
+    // `layout` is a floor, not the <colgroup>-carries-real-widths signal.
+    expect(table.hasAttribute('data-has-column-widths')).to.be.false;
+  });
+
+  it('stays fixed under layout="auto" when a column declares a width', async () => {
+    const el = (await fixture(html`<lr-table layout="auto"></lr-table>`)) as LyraTable<Row>;
+    el.columns = [{ ...plainColumns[0]!, width: '120px' }, plainColumns[1]!];
+    el.rows = rows;
+    await el.updateComplete;
+    const table = el.shadowRoot!.querySelector('[part="table"]') as HTMLElement;
+    expect(table.getAttribute('data-layout')).to.equal('fixed');
+    expect(getComputedStyle(table).tableLayout).to.equal('fixed');
+  });
+
+  it('stays fixed under layout="auto" through an active drag-resize', async () => {
+    const el = (await fixture(html`<lr-table layout="auto"></lr-table>`)) as LyraTable<Row>;
+    el.columns = [{ ...plainColumns[0]!, resizable: true }, plainColumns[1]!];
+    el.rows = rows;
+    el.rowKey = (r) => r.id;
+    await el.updateComplete;
+    const handle = el.shadowRoot!.querySelector('[part="resize-handle"]') as HTMLElement;
+    handle.setPointerCapture = () => {};
+    handle.releasePointerCapture = () => {};
+    handle.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, pointerId: 7, clientX: 100 }));
+    window.dispatchEvent(new PointerEvent('pointermove', { bubbles: true, pointerId: 7, clientX: 180 }));
+    await el.updateComplete;
+    const table = el.shadowRoot!.querySelector('[part="table"]') as HTMLElement;
+    expect(getComputedStyle(table).tableLayout, 'resizing does not work without table-layout: fixed').to.equal(
+      'fixed',
+    );
+    window.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, pointerId: 7, clientX: 180 }));
+  });
+});
+
+describe('--lr-table-row-selected-bg', () => {
+  const selectionFixture = async (): Promise<LyraTable<Row>> => {
+    const el = (await fixture(html`<lr-table selection-mode="single"></lr-table>`)) as LyraTable<Row>;
+    el.columns = columns;
+    el.rows = rows;
+    el.rowKey = (r) => r.id;
+    el.selectedKey = 'a';
+    await el.updateComplete;
+    return el;
+  };
+
+  it('recolors only the selected row', async () => {
+    const el = await selectionFixture();
+    el.style.setProperty('--lr-table-row-selected-bg', 'rgb(10, 20, 30)');
+    const rowEls = [...el.shadowRoot!.querySelectorAll('[part="row"]')] as HTMLElement[];
+    expect(rowEls[0]!.getAttribute('aria-selected')).to.equal('true');
+    expect(getComputedStyle(rowEls[0]!).backgroundColor).to.equal('rgb(10, 20, 30)');
+    expect(getComputedStyle(rowEls[1]!).backgroundColor).to.not.equal('rgb(10, 20, 30)');
+  });
+
+  it('renders identically to the brand-quiet token when unset', async () => {
+    const el = await selectionFixture();
+    const selected = el.shadowRoot!.querySelector('[part="row"][aria-selected="true"]') as HTMLElement;
+    const unset = getComputedStyle(selected).backgroundColor;
+    el.style.setProperty('--lr-table-row-selected-bg', 'var(--lr-color-brand-quiet)');
+    expect(getComputedStyle(selected).backgroundColor).to.equal(unset);
+  });
+});

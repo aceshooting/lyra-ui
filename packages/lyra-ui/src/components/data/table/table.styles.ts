@@ -76,7 +76,10 @@ export const styles = css`
     border-collapse: collapse;
     font-size: var(--lr-font-size-md-sm);
   }
-  [part='table'][data-has-column-widths] {
+  /* Resolved in table.class.ts as a floor: 'fixed' whenever the layout property asks for it, or
+     any column carries a declared/resized width, or a resize gesture is in flight. Kept off
+     [data-has-column-widths], which additionally means "<colgroup> carries real widths". */
+  [part='table'][data-layout='fixed'] {
     table-layout: fixed;
   }
   [part='header-cell'] {
@@ -154,8 +157,13 @@ export const styles = css`
   [part='row']:hover {
     background: var(--lr-color-brand-quiet);
   }
+  /* Inline var() fallback rather than a :host declaration -- a :host-declared custom property is
+     re-declared on every instance and shadows any ancestor value, which would defeat the whole
+     point of the override hook. Needed because Shadow Parts forbids an attribute selector after
+     ::part(), so ::part(row)[aria-selected] is invalid CSS and a consumer would otherwise have to
+     hijack the library-wide --lr-color-brand-quiet token to recolor the selected row. */
   [part='row'][aria-selected='true'] {
-    background: var(--lr-color-brand-quiet);
+    background: var(--lr-table-row-selected-bg, var(--lr-color-brand-quiet));
   }
   [part='group-cell'] {
     padding: var(--lr-space-xs) var(--lr-space-s);
