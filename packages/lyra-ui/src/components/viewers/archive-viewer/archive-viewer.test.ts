@@ -87,3 +87,114 @@ describe('lr-archive-viewer', () => {
     expect(hostLabeledBase.getAttribute('aria-label')).to.equal('Backup contents');
   });
 });
+
+describe('lr-archive-viewer part reachability through the embedded virtual list', () => {
+  // Entry rows are produced by this component's `renderItem` but committed into
+  // `<lr-virtual-list>`'s OWN shadow root, one boundary deeper than this component's stylesheet.
+  // Every assertion reads back the *rendered* result on the real row element -- a declaration that
+  // never matches is indistinguishable from a working one when read off the stylesheet source.
+  function resolveDeclaration(root: ShadowRoot, declaration: string, property: string): string {
+    const probe = document.createElement('span');
+    probe.setAttribute('style', declaration);
+    root.appendChild(probe);
+    const value = getComputedStyle(probe).getPropertyValue(property);
+    probe.remove();
+    return value;
+  }
+
+  const listingLibrary = {
+    loadAsync: () => Promise.resolve({
+      forEach(cb: (path: string, file: { name: string; dir: boolean; async: (type: string) => Promise<Uint8Array>; _data?: { uncompressedSize?: number } }) => void) {
+        cb('src/', { name: 'src/', dir: true, _data: { uncompressedSize: 0 }, async: () => Promise.resolve(new Uint8Array(0)) });
+        cb('README.txt', { name: 'README.txt', dir: false, _data: { uncompressedSize: 11 }, async: () => Promise.resolve(new Uint8Array(11)) });
+      },
+    }),
+  };
+
+  async function listing(className = ''): Promise<{ el: LyraArchiveViewer; vlistRoot: ShadowRoot; restore: () => void }> {
+    const el = await fixture<LyraArchiveViewer>(html`<lr-archive-viewer class=${className} name="backup.zip"></lr-archive-viewer>`);
+    useLibrary(el, listingLibrary as unknown as ArchiveLibraryApi);
+    const restore = stubFetch(new ArrayBuffer(0));
+    el.src = 'https://example.test/archive.zip';
+    await waitUntil(
+      () => el.shadowRoot!.querySelector('lr-virtual-list')?.shadowRoot?.querySelector('[part~="entry"]') != null,
+      undefined,
+      { timeout: 5000 },
+    );
+    return { el, vlistRoot: el.shadowRoot!.querySelector('lr-virtual-list')!.shadowRoot!, restore };
+  }
+
+  it('applies the entry-row layout to rows rendered inside the virtual list', async () => {
+    const { vlistRoot, restore } = await listing();
+    try {
+      const row = vlistRoot.querySelector('[part~="entry"]') as HTMLElement;
+      const style = getComputedStyle(row);
+      expect(style.display).to.equal('flex');
+      expect(style.alignItems).to.equal('center');
+      expect(style.fontSize).to.equal(resolveDeclaration(vlistRoot, 'font-size: var(--lr-font-size-sm)', 'font-size'));
+      const quiet = resolveDeclaration(vlistRoot, 'color: var(--lr-color-text-quiet)', 'color');
+      const size = vlistRoot.querySelector('[part~="entry-size"]') as HTMLElement;
+      expect(getComputedStyle(size).color).to.equal(quiet);
+      expect(getComputedStyle(size).fontSize).to.equal(
+        resolveDeclaration(vlistRoot, 'font-size: var(--lr-font-size-md-sm)', 'font-size'),
+      );
+      const icon = vlistRoot.querySelector('[part~="entry-icon"]') as HTMLElement;
+      // `inline-flex` blockifies to `flex` here because the icon is a flex item of the row; a
+      // <span> with no rule applied would compute to `block` instead.
+      expect(getComputedStyle(icon).display).to.equal('flex');
+      expect(getComputedStyle(icon).color).to.equal(quiet);
+      const name = vlistRoot.querySelector('[part~="entry-name"]') as HTMLElement;
+      expect(getComputedStyle(name).textOverflow).to.equal('ellipsis');
+      expect(getComputedStyle(name).whiteSpace).to.equal('nowrap');
+    } finally {
+      restore();
+    }
+  });
+
+  it('gives a directory entry name the directory treatment and a file entry name the plain one', async () => {
+    const { vlistRoot, restore } = await listing();
+    try {
+      const dirName = vlistRoot.querySelector('[part~="entry-name-dir"]') as HTMLElement;
+      expect(dirName.textContent).to.equal('src/');
+      const semibold = resolveDeclaration(vlistRoot, 'font-weight: var(--lr-font-weight-semibold)', 'font-weight');
+      expect(getComputedStyle(dirName).fontWeight).to.equal(semibold);
+
+      const names = vlistRoot.querySelectorAll('[part~="entry-name"]');
+      expect(names).to.have.lengthOf(2);
+      const fileName = Array.from(names).find((node) => node.textContent === 'README.txt') as HTMLElement;
+      expect(fileName.getAttribute('part')).to.equal('entry-name');
+      expect(getComputedStyle(fileName).fontWeight).to.not.equal(semibold);
+    } finally {
+      restore();
+    }
+  });
+
+  it('lets a consumer stylesheet reach the virtualized rows through exportparts', async () => {
+    const sheet = document.createElement('style');
+    sheet.textContent = `
+      lr-archive-viewer.consumer-probe::part(entry) { background: rgb(1, 2, 3); }
+      lr-archive-viewer.consumer-probe::part(entry-name-dir) { color: rgb(4, 5, 6); }
+    `;
+    document.head.append(sheet);
+    const { vlistRoot, restore } = await listing('consumer-probe');
+    try {
+      const row = vlistRoot.querySelector('[part~="entry"]') as HTMLElement;
+      expect(getComputedStyle(row).backgroundColor).to.equal('rgb(1, 2, 3)');
+      const dirName = vlistRoot.querySelector('[part~="entry-name-dir"]') as HTMLElement;
+      expect(getComputedStyle(dirName).color).to.equal('rgb(4, 5, 6)');
+    } finally {
+      restore();
+      sheet.remove();
+    }
+  });
+
+  it('is accessible with entries listed', async () => {
+    const { el, vlistRoot, restore } = await listing();
+    try {
+      expect(vlistRoot.querySelectorAll('[part~="entry"]')).to.have.lengthOf(2);
+      await expect(el).to.be.accessible();
+    } finally {
+      restore();
+    }
+  });
+});

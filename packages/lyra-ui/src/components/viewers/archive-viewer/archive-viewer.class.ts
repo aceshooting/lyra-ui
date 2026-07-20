@@ -26,6 +26,7 @@ const MAX_ARCHIVE_UNCOMPRESSED_BYTES = 100 * 1024 * 1024;
  * @csspart entry - An archive entry row.
  * @csspart entry-icon - The decorative folder or file icon.
  * @csspart entry-name - The entry path.
+ * @csspart entry-name-dir - The entry path of a directory row (also carries `entry-name`).
  * @csspart entry-size - The human-readable file size.
  * @csspart spinner - The loading region.
  * @csspart error - The error region.
@@ -87,12 +88,12 @@ export class LyraArchiveViewer extends LyraElement<LyraArchiveViewerEventMap> {
   private renderEntry = (item: unknown): TemplateResult => {
     const entry = item as ArchiveEntry;
     const kind = this.localize(entry.dir ? 'archiveViewerFolder' : 'archiveViewerFile');
-    return html`<div part="entry" data-dir=${entry.dir ? 'true' : 'false'}><span part="entry-icon">${entry.dir ? folderIcon() : fileIcon()}</span><span class="sr-only">${kind}</span><span part="entry-name" title=${entry.name}>${entry.name}</span>${entry.dir ? nothing : html`<span part="entry-size">${formatFileSize(entry.size, (unit) => this.localize(FILE_SIZE_UNIT_KEYS[unit]))}</span>`}</div>`;
+    return html`<div part="entry" data-dir=${entry.dir ? 'true' : 'false'}><span part="entry-icon">${entry.dir ? folderIcon() : fileIcon()}</span><span class="sr-only">${kind}</span><span part=${entry.dir ? 'entry-name entry-name-dir' : 'entry-name'} title=${entry.name}>${entry.name}</span>${entry.dir ? nothing : html`<span part="entry-size">${formatFileSize(entry.size, (unit) => this.localize(FILE_SIZE_UNIT_KEYS[unit]))}</span>`}</div>`;
   };
 
   private renderBody(): TemplateResult {
     switch (this.fetchState.kind) {
-      case 'loaded': return this.fetchState.entries.length ? html`<lr-virtual-list .items=${this.fetchState.entries} .renderItem=${this.renderEntry} .keyFunction=${(item: unknown) => (item as ArchiveEntry).name}></lr-virtual-list>` : html`<p class="empty-note">${this.localize('archiveViewerEmpty')}</p>`;
+      case 'loaded': return this.fetchState.entries.length ? html`<lr-virtual-list exportparts="entry:entry, entry-icon:entry-icon, entry-name:entry-name, entry-name-dir:entry-name-dir, entry-size:entry-size" .items=${this.fetchState.entries} .renderItem=${this.renderEntry} .keyFunction=${(item: unknown) => (item as ArchiveEntry).name}></lr-virtual-list>` : html`<p class="empty-note">${this.localize('archiveViewerEmpty')}</p>`;
       case 'loading': return html`<div part="spinner" role="status"><span class="sr-only">${this.localize('loadingDocument')}</span></div>`;
       case 'error': return html`<div part="error" role="alert">${this.fetchState.message}</div>`;
       case 'idle': default: return html`<p class="empty-note">${this.localize('documentPreviewEmpty', undefined, { type: this.localize('documentPreviewTypeDocument') })}</p>`;
