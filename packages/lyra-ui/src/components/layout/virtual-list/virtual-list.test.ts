@@ -985,3 +985,105 @@ describe('itemRole / rowIndexOffset', () => {
     expect(firstRow.getAttribute('aria-rowindex')).to.equal('1');
   });
 });
+
+describe('row stacking context', () => {
+  // Every [part="row"] is its own stacking context (`will-change: transform`), so a popup opened
+  // from inside a row -- an lr-menu dropdown at z-index 900, say -- can never paint above a *later*
+  // row: 900 only orders siblings inside the row's own context, and rows themselves paint in DOM
+  // order at z-index auto. The failure is invisible in a small fixture because the last row has
+  // nothing painting after it, so these fixtures deliberately probe an *earlier* row.
+  const ROW_HEIGHT = 40;
+  const POPUP_TOP = 30;
+  const POPUP_HEIGHT = 30;
+  // 10px below row N's own bottom edge, i.e. inside row N+1's box and inside row N's popup.
+  const PROBE_OFFSET = ROW_HEIGHT + 10;
+
+  /** A row that owns a focusable control plus an absolutely-positioned overlay (a stand-in for a
+   *  menu/tooltip popup) that deliberately overflows down into the following row's box. */
+  const renderPopupRow = (item: unknown) => html`
+    <button
+      id="btn-${item}"
+      type="button"
+      style="display:block;box-sizing:border-box;margin:0;padding:0;inline-size:100%;block-size:${ROW_HEIGHT}px"
+    >
+      row ${item}
+    </button>
+    <div
+      id="popup-${item}"
+      style="position:absolute;inset-inline-start:0;inset-block-start:${POPUP_TOP}px;inline-size:100%;block-size:${POPUP_HEIGHT}px;background:#123456"
+    ></div>
+  `;
+
+  async function popupListFixture(): Promise<LyraVirtualList> {
+    const el = (await fixture(
+      html`<lr-virtual-list
+        style="--lr-virtual-list-height:200px"
+        row-height=${ROW_HEIGHT}
+        .items=${['1', '2', '3', '4']}
+        .renderItem=${renderPopupRow}
+        .keyFunction=${stringKey}
+      ></lr-virtual-list>`,
+    )) as LyraVirtualList;
+    await el.updateComplete;
+    await nextFrame();
+    return el;
+  }
+
+  /** The id of the top-most element at a point, resolved inside the list's own shadow tree.
+   *  Deliberately returns a string, never the node: a failed `expect(node).to.equal(node)` hangs
+   *  the whole file under wtr. */
+  function topmostIdAt(el: LyraVirtualList, offsetFromListTop: number): string {
+    const base = el.shadowRoot!.querySelector('[part="base"]')!;
+    const rect = base.getBoundingClientRect();
+    const hit = el.shadowRoot!.elementFromPoint(rect.left + rect.width / 2, rect.top + offsetFromListTop);
+    return hit?.id || (hit as HTMLElement | null)?.getAttribute?.('part') || 'none';
+  }
+
+  it("paints a focused row's overflowing popup above the following rows", async () => {
+    const el = await popupListFixture();
+    // Baseline: nothing focused, so row 2 legitimately paints over row 1's overlay.
+    expect(topmostIdAt(el, PROBE_OFFSET)).to.equal('btn-2');
+
+    const firstButton = el.shadowRoot!.querySelector<HTMLButtonElement>('#btn-1')!;
+    firstButton.focus();
+    expect(el.shadowRoot!.activeElement?.id).to.equal('btn-1');
+    await el.updateComplete;
+
+    expect(topmostIdAt(el, PROBE_OFFSET)).to.equal('popup-1');
+  });
+
+  it('lifts only the focused row, leaving every other row at the default layer', async () => {
+    const el = await popupListFixture();
+    const rows = [...el.shadowRoot!.querySelectorAll<HTMLElement>('[part="row"]')];
+    expect(rows.length).to.be.greaterThan(2);
+    for (const row of rows) expect(getComputedStyle(row).zIndex).to.equal('auto');
+
+    el.shadowRoot!.querySelector<HTMLButtonElement>('#btn-1')!.focus();
+    await el.updateComplete;
+
+    expect(getComputedStyle(rows[0]).zIndex).to.equal('1');
+    for (const row of rows.slice(1)) expect(getComputedStyle(row).zIndex).to.equal('auto');
+  });
+
+  it('puts a focused row on the same layer as a group header, not above or below it', async () => {
+    const el = (await fixture(
+      html`<lr-virtual-list
+        style="--lr-virtual-list-height:200px"
+        row-height=${ROW_HEIGHT}
+        .items=${['1', '2', '3', '4']}
+        .renderItem=${renderPopupRow}
+        .keyFunction=${stringKey}
+        .groups=${[{ key: 'g', label: 'Group', startIndex: 0 }]}
+      ></lr-virtual-list>`,
+    )) as LyraVirtualList;
+    await el.updateComplete;
+    await nextFrame();
+
+    el.shadowRoot!.querySelector<HTMLButtonElement>('#btn-1')!.focus();
+    await el.updateComplete;
+
+    const group = el.shadowRoot!.querySelector<HTMLElement>('[part="group"]')!;
+    const focusedRow = el.shadowRoot!.querySelector<HTMLElement>('[part="row"]')!;
+    expect(getComputedStyle(focusedRow).zIndex).to.equal(getComputedStyle(group).zIndex);
+  });
+});

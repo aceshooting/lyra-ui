@@ -39,6 +39,22 @@ export const styles = css`
        re-render -- hinting the compositor avoids a full repaint per frame. */
     will-change: transform;
   }
+  /* The will-change: transform above makes every row its own stacking context, and rows otherwise
+     carry no z-index -- so they paint in DOM order and each row paints over the previous one.
+     Anything a row renders that overflows its own box (a popup from an lr-menu in a row action, a
+     tooltip, an outward focus ring) is therefore painted *underneath* the following rows, no matter
+     how high its own z-index is: that z-index only orders siblings inside the row's own context.
+     The last row always looks correct, which is why a small fixture never catches it.
+
+     :focus-within lifts the row for exactly as long as something inside it holds focus -- the
+     lifetime of an open popup -- and costs nothing the rest of the time. The value deliberately
+     matches [part='group'] below rather than exceeding it, so the two land on the same layer and
+     DOM order decides: groups render before the rows, so a row wins while (and only while) it holds
+     focus -- which is the right outcome, since a group header is a non-interactive
+     (pointer-events: none) label and the focused row is where the user is working. */
+  [part='row']:focus-within {
+    z-index: var(--lr-layer-content);
+  }
   [part='group'] {
     position: absolute;
     inset-inline: 0;
