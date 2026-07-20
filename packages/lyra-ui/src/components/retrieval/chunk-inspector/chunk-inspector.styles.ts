@@ -66,6 +66,14 @@ export const styles = css`
     text-align: start;
     cursor: pointer;
   }
+  [part='open-button']:hover {
+    color: var(--lr-color-brand);
+    text-decoration: underline;
+  }
+  [part='open-button']:focus-visible {
+    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
+    outline-offset: var(--lr-focus-ring-offset);
+  }
   [part='title'] {
     font: inherit;
   }
@@ -90,5 +98,12 @@ export const styles = css`
     font: inherit;
     font-size: var(--lr-font-size-xs);
     cursor: pointer;
+  }
+  [part='toggle']:hover {
+    text-decoration: underline;
+  }
+  [part='toggle']:focus-visible {
+    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
+    outline-offset: var(--lr-focus-ring-offset);
   }
 `;

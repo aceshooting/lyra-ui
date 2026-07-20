@@ -1,6 +1,7 @@
 import { fixture, expect, html, oneEvent } from '@open-wc/testing';
 import './provenance-panel.js';
 import type { LyraProvenancePanel, LyraProvenance } from './provenance-panel.js';
+import { styles } from './provenance-panel.styles.js';
 
 const provenance: LyraProvenance = {
   entities: [{ id: 'e1', label: 'Marie Curie', type: 'person' }],
@@ -86,4 +87,10 @@ it('is accessible with full provenance', async () => {
   el.provenance = provenance;
   await el.updateComplete;
   await expect(el).to.be.accessible();
+});
+
+it('gives the disclosure header hover/focus-visible', () => {
+  const css = styles.cssText.replace(/\s+/g, ' ');
+  expect(css).to.match(/\[part='header'\]:hover/);
+  expect(css).to.match(/\[part='header'\]:focus-visible[^{]*\{[^}]*outline:/);
 });

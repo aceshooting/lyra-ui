@@ -2,6 +2,7 @@ import { fixture, expect, html, oneEvent } from '@open-wc/testing';
 import './community-card.js';
 import type { LyraCommunityCard, LyraCommunity } from './community-card.js';
 import type { LyraEntity } from '../entity-card/entity-card.js';
+import { styles } from './community-card.styles.js';
 
 const community: LyraCommunity = { id: 'c1', label: 'Nobel laureates', summary: 'A cluster of prize winners.', memberCount: 3 };
 const members: LyraEntity[] = [
@@ -113,4 +114,14 @@ it('is accessible with members and an overflow chip', async () => {
   el.members = members;
   await el.updateComplete;
   await expect(el).to.be.accessible();
+});
+
+it('gives the title button, member, and overflow parts hover/focus-visible', () => {
+  const css = styles.cssText.replace(/\s+/g, ' ');
+  expect(css).to.match(/\[part='title'\] button:hover/);
+  expect(css).to.match(/\[part='title'\] button:focus-visible[^{]*\{[^}]*outline:/);
+  expect(css).to.match(/\[part='member'\]:hover/);
+  expect(css).to.match(/\[part='overflow'\]:hover/);
+  expect(css).to.match(/\[part='member'\]:focus-visible[^{]*\{[^}]*outline:/);
+  expect(css).to.match(/\[part='overflow'\]:focus-visible[^{]*\{[^}]*outline:/);
 });

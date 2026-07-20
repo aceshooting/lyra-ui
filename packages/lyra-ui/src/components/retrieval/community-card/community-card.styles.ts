@@ -37,6 +37,13 @@ export const styles = css`
     text-align: start;
     cursor: pointer;
   }
+  [part='title'] button:hover {
+    text-decoration: underline;
+  }
+  [part='title'] button:focus-visible {
+    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
+    outline-offset: var(--lr-focus-ring-offset);
+  }
   :host([compact]) [part='title'] button {
     overflow: hidden;
     text-overflow: ellipsis;
@@ -70,5 +77,14 @@ export const styles = css`
     background: transparent;
     padding: 0;
     cursor: pointer;
+  }
+  [part='member']:hover,
+  [part='overflow']:hover {
+    background: var(--lr-color-brand-quiet);
+  }
+  [part='member']:focus-visible,
+  [part='overflow']:focus-visible {
+    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
+    outline-offset: var(--lr-focus-ring-offset);
   }
 `;

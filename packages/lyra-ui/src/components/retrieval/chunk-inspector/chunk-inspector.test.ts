@@ -1,6 +1,7 @@
 import { fixture, expect, html, oneEvent } from '@open-wc/testing';
 import './chunk-inspector.js';
 import type { LyraChunkInspector, LyraChunk } from './chunk-inspector.js';
+import { styles } from './chunk-inspector.styles.js';
 
 const chunks: LyraChunk[] = [
   { id: 'c1', text: 'Radium and polonium were both discovered by Marie and Pierre Curie in 1898.', score: 0.92, sourceId: 's1', title: 'curie-bio.pdf', page: 3 },
@@ -180,4 +181,12 @@ describe('current-chunk cssprop escape hatch', () => {
     const { el } = await current();
     await expect(el).to.be.accessible();
   });
+});
+
+it('gives open-button and toggle hover/focus-visible', () => {
+  const css = styles.cssText.replace(/\s+/g, ' ');
+  for (const part of ['open-button', 'toggle']) {
+    expect(css, `${part} hover`).to.match(new RegExp(`\\[part='${part}'\\]:hover`));
+    expect(css, `${part} focus-visible`).to.match(new RegExp(`\\[part='${part}'\\]:focus-visible[^{]*\\{[^}]*outline:`));
+  }
 });

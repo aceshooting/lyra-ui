@@ -24,6 +24,13 @@ export const styles = css`
     text-align: start;
     cursor: pointer;
   }
+  [part='header']:hover {
+    background: var(--lr-color-brand-quiet);
+  }
+  [part='header']:focus-visible {
+    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
+    outline-offset: calc(-1 * var(--lr-focus-ring-width));
+  }
   [part='count'] {
     color: var(--lr-color-text-quiet);
     font-weight: var(--lr-font-weight-medium);

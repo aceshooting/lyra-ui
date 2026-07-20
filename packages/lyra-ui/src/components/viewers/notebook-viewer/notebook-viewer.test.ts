@@ -3,6 +3,7 @@ import './notebook-viewer.js';
 import type { LyraNotebookViewer } from './notebook-viewer.js';
 import { __setNotebookSanitizerForTesting } from './dompurify-loader.js';
 import { DEFAULT_MAX_RESOURCE_BYTES } from '../../../internal/resource-loader.js';
+import { styles } from './notebook-viewer.styles.js';
 
 afterEach(() => {
   __setNotebookSanitizerForTesting(undefined);
@@ -574,4 +575,10 @@ describe('active-cell cssprop escape hatch', () => {
     const { el } = await activeCell('--lr-notebook-viewer-active-bg: rgb(0, 51, 102)');
     await expect(el).to.be.accessible();
   });
+});
+
+it('gives the output-toggle hover/focus-visible', () => {
+  const css = styles.cssText.replace(/\s+/g, ' ');
+  expect(css).to.match(/\[part='output-toggle'\]:hover/);
+  expect(css).to.match(/\[part='output-toggle'\]:focus-visible[^{]*\{[^}]*outline:/);
 });
