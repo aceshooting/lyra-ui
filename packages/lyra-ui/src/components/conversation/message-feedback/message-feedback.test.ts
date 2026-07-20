@@ -244,6 +244,33 @@ it('gives the up/down thumb buttons the shared minimum hit area', async () => {
   expect(getComputedStyle(down).minBlockSize).to.equal('40px');
 });
 
+function renderedHoverFilter(el: HTMLElement, selector: string): string {
+  const normalize = (text: string) => text.replace(/"/g, "'");
+  let declared = '';
+  for (const sheet of el.shadowRoot!.adoptedStyleSheets) {
+    for (const rule of sheet.cssRules) {
+      if (rule instanceof CSSStyleRule && normalize(rule.selectorText) === normalize(selector) && rule.style.filter) {
+        declared = rule.style.filter;
+      }
+    }
+  }
+  const probe = document.createElement('span');
+  probe.style.filter = declared;
+  el.shadowRoot!.appendChild(probe);
+  const value = getComputedStyle(probe).filter;
+  probe.remove();
+  return value;
+}
+
+it('lifts the submit button on hover through the shared hover-brightness token', async () => {
+  const el = (await fixture(
+    html`<lr-message-feedback value="down" .reasons=${reasons} commentable></lr-message-feedback>`,
+  )) as LyraMessageFeedback;
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelectorAll('[part="submit-button"]').length).to.equal(1);
+  expect(renderedHoverFilter(el, "[part='submit-button']:hover")).to.equal('brightness(1.08)');
+});
+
 it('is accessible in every configuration', async () => {
   const plain = (await fixture(html`<lr-message-feedback></lr-message-feedback>`)) as LyraMessageFeedback;
   await expect(plain).to.be.accessible();
@@ -252,4 +279,57 @@ it('is accessible in every configuration', async () => {
     html`<lr-message-feedback value="down" .reasons=${reasons} commentable></lr-message-feedback>`,
   )) as LyraMessageFeedback;
   await expect(withPanel).to.be.accessible();
+});
+
+// `::part(up-button)[aria-pressed='true']` is invalid CSS -- Shadow Parts forbids an attribute
+// selector after `::part()` -- so before these hatches the only way to retint a pressed thumb was
+// to override the shared `--lr-color-success`/`--lr-color-danger`, which repainted every other
+// surface reading them. The hatches are deliberately not declared on `:host`, so a value set on an
+// ancestor reaches them; the override tests below set the property on a wrapper, not the element.
+describe('pressed-state cssprops', () => {
+  it('lets an ancestor retint the pressed thumbs-up without touching --lr-color-success', async () => {
+    const host = (await fixture(html`
+      <div
+        style="--lr-message-feedback-up-active-color: rgb(1, 2, 3);
+               --lr-message-feedback-up-active-bg: rgb(4, 5, 6);
+               --lr-message-feedback-up-active-border: rgb(7, 8, 9);"
+      >
+        <lr-message-feedback value="up"></lr-message-feedback>
+      </div>
+    `)) as HTMLElement;
+    const el = host.querySelector('lr-message-feedback') as LyraMessageFeedback;
+    await el.updateComplete;
+    const up = el.shadowRoot!.querySelector('[part="up-button"]') as HTMLElement;
+    expect(up.getAttribute('aria-pressed')).to.equal('true');
+    expect(getComputedStyle(up).color).to.equal('rgb(1, 2, 3)');
+    expect(getComputedStyle(up).backgroundColor).to.equal('rgb(4, 5, 6)');
+    expect(getComputedStyle(up).borderTopColor).to.equal('rgb(7, 8, 9)');
+  });
+
+  it('lets an ancestor retint the pressed thumbs-down independently', async () => {
+    const host = (await fixture(html`
+      <div style="--lr-message-feedback-down-active-bg: rgb(10, 11, 12);">
+        <lr-message-feedback value="down"></lr-message-feedback>
+      </div>
+    `)) as HTMLElement;
+    const el = host.querySelector('lr-message-feedback') as LyraMessageFeedback;
+    await el.updateComplete;
+    const down = el.shadowRoot!.querySelector('[part="down-button"]') as HTMLElement;
+    expect(getComputedStyle(down).backgroundColor).to.equal('rgb(10, 11, 12)');
+  });
+
+  it('renders byte-identically to the shared tokens when the hatches are unset', async () => {
+    const el = (await fixture(html`<lr-message-feedback value="up"></lr-message-feedback>`)) as LyraMessageFeedback;
+    await el.updateComplete;
+    const up = el.shadowRoot!.querySelector('[part="up-button"]') as HTMLElement;
+    // Resolve the tokens inside the shadow root -- they are declared on :host, so a light-DOM
+    // probe would see none of them.
+    const probe = document.createElement('span');
+    probe.style.cssText = 'color: var(--lr-color-success); background: var(--lr-color-success-quiet);';
+    el.shadowRoot!.appendChild(probe);
+    const expected = getComputedStyle(probe);
+    expect(getComputedStyle(up).color).to.equal(expected.color);
+    expect(getComputedStyle(up).backgroundColor).to.equal(expected.backgroundColor);
+    probe.remove();
+  });
 });

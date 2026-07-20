@@ -46,15 +46,21 @@ export const styles = css`
   /* The pressed state is never color-alone -- the icon itself swaps to a filled glyph in
      lockstep with aria-pressed. These color/background/border rules are additive emphasis
      layered on top of that shape change, not the sole signal. */
+  /* Inline var() fallbacks rather than :host-declared properties, so a consumer can set them on the
+     element or any ancestor and a :host declaration can never shadow that.
+     ::part(up-button)[aria-pressed='true'] is invalid CSS -- Shadow Parts forbids an attribute
+     selector after ::part() -- so retinting the pressed state used to mean hijacking the shared
+     --lr-color-success/-danger tokens, which repainted every other surface reading them. Unset,
+     each falls back to the token the rule already used, so the rendering is unchanged. */
   [part='up-button'][aria-pressed='true'] {
-    color: var(--lr-color-success);
-    background: var(--lr-color-success-quiet);
-    border-color: var(--lr-color-success);
+    color: var(--lr-message-feedback-up-active-color, var(--lr-color-success));
+    background: var(--lr-message-feedback-up-active-bg, var(--lr-color-success-quiet));
+    border-color: var(--lr-message-feedback-up-active-border, var(--lr-color-success));
   }
   [part='down-button'][aria-pressed='true'] {
-    color: var(--lr-color-danger);
-    background: var(--lr-color-danger-quiet);
-    border-color: var(--lr-color-danger);
+    color: var(--lr-message-feedback-down-active-color, var(--lr-color-danger));
+    background: var(--lr-message-feedback-down-active-bg, var(--lr-color-danger-quiet));
+    border-color: var(--lr-message-feedback-down-active-border, var(--lr-color-danger));
   }
   [part='up-button']:disabled,
   [part='down-button']:disabled {
@@ -122,7 +128,7 @@ export const styles = css`
     cursor: pointer;
   }
   [part='submit-button']:hover {
-    filter: brightness(1.08);
+    filter: brightness(var(--lr-hover-brightness));
   }
   [part='submit-button']:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);

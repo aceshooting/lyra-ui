@@ -74,6 +74,20 @@ function thumbIcon(direction: 'up' | 'down', filled: boolean): SVGTemplateResult
  * @csspart reasons - The reason-chip group. Only rendered when `reasons` is non-empty.
  * @csspart comment - The comment `<textarea>`. Only rendered when `commentable`.
  * @csspart submit-button - The panel's submit button.
+ *
+ * @cssprop [--lr-message-feedback-up-active-color=var(--lr-color-success)] - Glyph color of the
+ *   pressed thumbs-up button. Not declared on `:host`, so it can be set on the element or any
+ *   ancestor; scoped to the pressed state, unlike overriding the shared `--lr-color-success`.
+ * @cssprop [--lr-message-feedback-up-active-bg=var(--lr-color-success-quiet)] - Background of the
+ *   pressed thumbs-up button.
+ * @cssprop [--lr-message-feedback-up-active-border=var(--lr-color-success)] - Border color of the
+ *   pressed thumbs-up button.
+ * @cssprop [--lr-message-feedback-down-active-color=var(--lr-color-danger)] - Glyph color of the
+ *   pressed thumbs-down button.
+ * @cssprop [--lr-message-feedback-down-active-bg=var(--lr-color-danger-quiet)] - Background of the
+ *   pressed thumbs-down button.
+ * @cssprop [--lr-message-feedback-down-active-border=var(--lr-color-danger)] - Border color of the
+ *   pressed thumbs-down button.
  */
 export class LyraMessageFeedback extends LyraElement<LyraMessageFeedbackEventMap> {
   static styles = [LyraElement.styles, styles];
