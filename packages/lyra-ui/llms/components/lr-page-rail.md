@@ -29,16 +29,20 @@ truth.
 `detail: { page }`. In wired mode the rail also sets `viewer.page` itself.
 
 **CSS parts:** `base` (the rail), `pages` (the embedded `<lr-virtual-list>`), `page` (one page
-button), `thumbnail` (the thumbnail canvas wrapper), `page-number` (the visible page number), `heat`
-(the heat-marker cluster), and `heat-dot` (one tone-colored heat marker, or the `+n` overflow
+button), `page-current` (the button for the current `page`), `thumbnail` (the thumbnail canvas
+wrapper), `page-number` (the visible page number), `heat` (the heat-marker cluster), `heat-dot` (one
+heat marker), `heat-dot-accent`, `heat-dot-success`, `heat-dot-warning`, `heat-dot-danger` and
+`heat-dot-neutral` (the tone-specific name on each marker), and `heat-dot-overflow` (the `+n`
 marker).
 
-**Themeable custom properties:** `--lr-page-rail-height` (default `var(--lr-size-24rem)`) — block
-size of the virtualized rail.
+Page rows are rendered into the embedded `<lr-virtual-list>`'s own shadow root and forwarded with
+`exportparts`, so `lr-page-rail::part(page)` and the rest reach them from a consuming stylesheet.
+State variants each carry a second name in the element's part list rather than a state attribute,
+because `::part()` cannot be followed by an attribute selector: the current row is
+`part="page page-current"` and a danger marker is `part="heat-dot heat-dot-danger"`, and `::part()`
+matches with `part~=` semantics, so both names select the same element.
 
-`--lr-page-rail-current-bg` (intended default `var(--lr-color-brand-quiet)`) is declared for the
-background of the `[part='page']` button matching the current `page`, but **its rule does not
-currently take effect.** Page rows are rendered into the embedded `<lr-virtual-list>`'s own shadow
-root, one boundary deeper than this component's stylesheet (and than a consuming stylesheet)
-reaches, so the declaration targeting `[part='page']` never matches a rendered row. It is documented
-here for completeness — do not rely on it to tint the current page today.
+**Themeable custom properties:** `--lr-page-rail-height` (default `var(--lr-size-24rem)`) — block
+size of the virtualized rail. `--lr-page-rail-current-bg` (default `var(--lr-color-brand-quiet)`) —
+background of the `page-current` button, kept while the row is hovered so the current page stays
+identifiable under the pointer.

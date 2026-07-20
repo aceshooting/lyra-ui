@@ -1059,7 +1059,9 @@ text, anchor, rects }`).
 
 **CSS parts:** `base`, `toolbar` (only rendered when copy/download are enabled), `copy-button`,
 `download-button`, `viewport` (the `role="log"` scrollable region), `line` (one rendered line; carries
-`data-line-number`/`data-match`/`data-highlight-tone`), `jump-to-latest` (shown while `follow` is
+`data-line-number`/`data-match`/`data-highlight-tone`, and is forwarded via `exportparts` so
+`lr-terminal::part(line)` reaches the rendered lines from a consumer stylesheet despite them living
+in the internal `<lr-virtual-list>`'s shadow root), `jump-to-latest` (shown while `follow` is
 disengaged and new output has arrived), and `announcer` (the visually-hidden `role="status"` region
 used when `announce-output` is set).
 
@@ -1091,17 +1093,27 @@ as a root rather than being dropped. `activeSpanId: string | null = null`
 `bar`, `empty` (shown when `spans` is empty), and `live-region`.
 
 **Themeable custom properties:** `--lr-trace-tree-row-active-bg` (default
-`var(--lr-color-brand-quiet)`) — the background of the active (`activeSpanId`) row. Same
-state-scoped-property convention described under `lr-span-waterfall` above: an inline `var()`
-fallback rather than a `:host` declaration, so it can be set on the element or any ancestor, and it
-exists because `::part(row)[data-active]` is invalid CSS.
+`var(--lr-color-brand-quiet)`) — the background of the active (`activeSpanId`) row — and
+`--lr-trace-tree-row-active-color` (default `var(--lr-color-text)`) — the color of that row's
+secondary text (`detail`, `duration`, `tokens-in`, `tokens-out`, `cost`, and the `pending`
+`status-text` label). Same state-scoped-property convention described under `lr-span-waterfall`
+above: an inline `var()` fallback rather than a `:host` declaration, so either can be set on the
+element or any ancestor, and they exist because `::part(row)[data-active]` is invalid CSS.
 
-**Contrast note:** this one is contrast-sensitive. An active row carries the row's own smaller
-secondary text (`detail`, `status-text`, `duration`, and the token/cost columns), and against the
-default active tint that text already sits below a 4.5:1 ratio. A consumer restyling
-`--lr-trace-tree-row-active-bg` should pick a value that *raises* the contrast against the row's text
-colors rather than assuming any brand-quiet-like tint is safe; verify against the smallest text in
-the row, not the row name.
+**Contrast note:** the active row is more than a tint. Its secondary text would sit at ~4.25:1
+against the default tint if it stayed at `--lr-color-text-quiet`, so it rises to full-strength
+`--lr-color-text` while the row is active, and the semantic `status-text` labels are rendered as
+`color-mix(in srgb, var(--lr-color-<tone>) 75%, var(--lr-color-text))` — keeping the status hue
+(an error row stays red) while clearing the 4.5:1 floor (success 4.46 → 6.18, `denied` 4.28 →
+5.96). Both adjustments are theme-symmetric, because `--lr-color-text` flips with the color
+scheme. `[part='bar']` is deliberately untouched: it is a non-text graphic on a 3:1 floor, and its
+saturation is the row's primary status signal.
+
+The two properties are a **pair**. The defaults assume the active background stays on the same
+side of the lightness midpoint as the ambient surface, so a consumer who sets
+`--lr-trace-tree-row-active-bg` to a dark tint in light mode (or a light one in dark mode) must
+set `--lr-trace-tree-row-active-color` to match, and should re-check the status-label tones
+against the new tint as well.
 
 ## `lr-activity-feed`
 
@@ -1131,11 +1143,20 @@ rather than augmenting it, and `virtualizeThreshold: number = 200` (attribute
 
 **CSS parts:** `base`, `header` (a `<button>`), `status-dot` (pulses while `mode="live"`),
 `summary`, `toggle`, `body` (the scrollable region, or the internal virtual-list), `entry` (carries
-`data-tone`), `entry-icon`, `entry-text`, and `entry-timestamp` (only while `showTimestamps` and a
-valid `timestamp` is set).
+`data-tone`), `entry-icon`, `tone-dot` (the dot rendered inside `entry-icon` when the entry sets no
+literal `icon`), `tone-dot-neutral`/`tone-dot-brand`/`tone-dot-success`/`tone-dot-warning`/
+`tone-dot-danger` (each also carries `tone-dot`), `entry-text`, and `entry-timestamp` (only while
+`showTimestamps` and a valid `timestamp` is set). Every entry-level part is reachable in both
+rendering paths, virtualized or not.
 
 **Themeable custom properties:** `--lr-activity-feed-max-height` (default `16rem`) — cap on how
 tall the expanded body grows before it scrolls internally.
+
+**Known gotchas:**
+- The tone dot's color is selected by its *part name*, not by `[data-tone]`: `::part()` cannot be
+  followed by an attribute selector, so `lr-activity-feed::part(tone-dot)[data-tone='success']`
+  never matches. Target `lr-activity-feed::part(tone-dot-success)` instead. `data-tone` remains on
+  both the entry and the dot for DOM queries.
 
 ## `lr-commit-card`
 
@@ -1462,10 +1483,11 @@ visible span has `kind: 'agent'`), `handoff` (one entry — a `<button>` wrappin
 entry. Same state-scoped-property convention described under `lr-span-waterfall`: an inline `var()`
 fallback rather than a `:host` declaration, settable on the element or any ancestor, and it exists
 because `::part(handoff)[data-active]` is invalid CSS. The composed tree's own
-`--lr-trace-tree-row-active-bg` is a separate knob and inherits straight through, so restyling both
-means setting both — and it carries the contrast caveat documented under `lr-trace-tree` above: the
-default active tint leaves the row's smaller secondary text below 4.5:1, so a replacement value
-should raise the contrast rather than merely re-tint.
+`--lr-trace-tree-row-active-bg` and `--lr-trace-tree-row-active-color` are separate knobs and
+inherit straight through, so restyling both surfaces means setting both — and they carry the
+pairing caveat documented under `lr-trace-tree` above: the tree's active-row defaults assume the
+active background stays on the same side of the lightness midpoint as the ambient surface, so a
+tint that crosses it needs the matching text color set too.
 
 ## `lr-context-inspector`
 

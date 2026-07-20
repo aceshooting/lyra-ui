@@ -479,6 +479,10 @@ reveals the invalid state, and `form.reset()` clears the touched presentation.
 - `maxRows: number = 8` (attribute `max-rows`) — floored to at least `minRows`
 - `status: ChatComposerStatus = 'idle'` (reflected) — `'idle' | 'sending' | 'streaming'`; drives the
   built-in button's icon/label (send vs. stop) and whether Enter still submits
+- `appearance: ChatComposerAppearance = 'card'` (reflected) — `'card' | 'plain'`; `'plain'` drops
+  `[part="base"]`'s border, background, padding and corner radius so a composer docked inside a chat
+  panel, dialog footer or toolbar that already draws its own border doesn't double the frame. The
+  focus affordance is swapped, not dropped — see **Known gotchas**
 - `submitOnEnter: boolean = true` (reflected, attribute `submit-on-enter`) — when `false`, Enter
   always inserts a newline instead of submitting
 - `submitDisabled: boolean = false` (reflected, attribute `submit-disabled`) — consumer-controlled
@@ -582,6 +586,11 @@ and disables only the built-in Send button; editing and busy-state Stop behavior
 - `[part="chips"]`/`[part="leading"]` are hidden via a JS-tracked `[hidden]` attribute rather than a
   CSS `:empty` selector, because each always contains a literal `<slot>` child regardless of
   assigned content.
+- Under `appearance="card"` the only focus affordance is a border-color shift on `[part="base"]`
+  (the internal `<textarea>` sets `outline: none`). `appearance="plain"` removes that border, so it
+  swaps in a different affordance rather than losing focus visibility: an underline across the whole
+  input row, drawn as an inset `box-shadow` from `--lr-focus-ring-width`/`--lr-focus-ring-color` so
+  it costs no layout. If you restyle `[part="base"]` under `plain`, keep a focus indicator.
 
 ---
 
@@ -724,6 +733,15 @@ First-party invention (no Web Awesome equivalent).
   rename button never renders and the row can never enter its editing state; flipping it to `false`
   while a rename is already in progress cancels that edit (discards the draft, like Escape) rather
   than leaving it stranded and still committable.
+- `compact: boolean = false` (reflected) — tighter row padding and gaps, for the dense history
+  sidebars these rows usually render in (same convention as `lr-empty`'s `compact`). Tightens
+  `[part='base']`'s padding to `var(--lr-space-xs) var(--lr-space-s)` and its gap to
+  `var(--lr-space-2xs)`, and collapses `[part='content']`'s inter-line gap to `0`. Deliberately
+  changes nothing else: it does **not** shrink `[part='rename-button']` below the shared
+  `--lr-icon-button-size` target floor, hide the excerpt, or reduce the excerpt/timestamp font
+  sizes — so a row carrying a rename button or slotted `actions` still floors at roughly that icon
+  size plus the compact padding, while a row with `editable=false` and no actions collapses much
+  further.
 - `spellcheck: boolean = true` — forwarded to the in-place rename `<input>`; `spellcheck="false"` is
   parsed as false (not Lit's default boolean-attribute behavior)
 - `autocapitalize: string = ''` — forwarded to the in-place rename `<input>`; empty omits the attribute
@@ -776,6 +794,15 @@ the default active background; keep any override at 4.5:1 or better against it. 
 custom active background needs its own title color set alongside them, or the title drops below
 contrast while the excerpt stays legible.
 
+`--lr-conversation-item-compact-padding` (default `var(--lr-space-xs) var(--lr-space-s)`) —
+`[part='base']`'s padding while `compact`. `--lr-conversation-item-compact-gap` (default
+`var(--lr-space-2xs)`) — `[part='base']`'s gap while `compact`. Like the active-state pair, both are
+inline `var()` fallbacks at the point of use and never declared on `:host`, so a surrounding list can
+retune every row at once from an ancestor. `[part='content']`'s gap collapses to a flat `0` under
+`compact` with no hatch of its own — there is no smaller step left to retune to. `:host([compact])
+[part='base']` is ordered *before* `:host([active]) [part='base']` (equal specificity), so a row that
+is both compact and active keeps the active background and the promoted excerpt/timestamp contrast.
+
 Plus shared tokens — `--lr-space-xs/-s/-m`, `--lr-radius`,
 `--lr-transition-fast`, `--lr-color-text/-text-quiet/-brand/-brand-quiet/-surface`,
 `--lr-focus-ring-width/-color/-offset`, `--lr-icon-button-size`.
@@ -823,6 +850,11 @@ duration of an edit rather than just visually swapping content (a row mid-edit *
 - Setting `editable = false` mid-rename silently discards the in-progress draft (no `lr-rename`
   fires) — a consumer toggling `editable` off (e.g. in response to some other row entering rename
   mode) should not expect the previous edit to be committed first.
+- `compact` is a spacing knob only — it never lowers the rename button's `--lr-icon-button-size`
+  floor. A compact row that still shows a rename button (or slotted `actions` at the same floor)
+  therefore bottoms out at roughly that icon size plus the compact padding, not at the text height.
+  Lowering `--lr-icon-button-size` at an ancestor is the explicit, informed opt-out of the
+  target-size floor; a density flag deliberately won't do it silently on your behalf.
 
 ---
 
@@ -1852,7 +1884,13 @@ set; `lr-group-toggle` requests the matching state change. `rowActions: ThreadRo
 data mode only: built-in icon buttons rendered into each row's `actions` slot. `showArchived: boolean
 = false` (attribute `show-archived`, reflected) — data mode: include `archived` threads (in their own
 trailing group). `editable: boolean = true` (reflected) — forwarded to each data-mode row's inline
-rename. `label: string = ''` — accessible name for the list region, defaults to the localized
+rename. `compact: boolean = false` (reflected) — data mode only: forwarded to each row
+`lr-conversation-item`'s own `compact`, tightening every row's padding and gaps from one attribute
+(the density itself lives on the row item; retune it through
+`--lr-conversation-item-compact-padding`/`-gap` on this element or any ancestor). Slotted mode is a
+deliberate no-op — that mode renders host-supplied items as-is, so the host sets `compact` on its own
+items there, the same division of responsibility slotted mode already has for every other row
+property. `label: string = ''` — accessible name for the list region, defaults to the localized
 `threadListLabel`. `wrapRow?: (thread: ChatThread, row: TemplateResult) => TemplateResult` (attribute:
 false) — data mode only: wraps each row's built-in `lr-conversation-item` with host-supplied content
 that has no home in the item's own `title`/`excerpt`/`meta`/`actions` surface (e.g. a leading purpose
@@ -1903,7 +1941,11 @@ prefix: `row-item-base`, `row-item-option`, `row-item-leading`, `row-item-conten
 component's own render-callback output (`wrapRow`, `renderLeading`, `renderRowContent`,
 `renderMeta`, `renderActions`); the `row-item-*` parts are the row item's *internals*. Row density
 in particular lives in `row-item-base`'s padding and `row-item-title`'s font size, so
-`::part(row-item-base)` is the supported way to build a dense sidebar:
+`::part(row-item-base)` is the supported way to build a dense sidebar.
+
+For plain row density, prefer the `compact` property above — it forwards straight to the row item's
+own density knob. The `row-item-*` parts remain the lever for tuning beyond it (a different font
+size, a different padding ratio):
 
 ```css
 lr-thread-list::part(row-item-base) { padding-block: 0.25rem; }

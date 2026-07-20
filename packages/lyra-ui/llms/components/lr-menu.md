@@ -36,8 +36,10 @@ menu, an avatar menu, or a history row's overflow menu. Uses the WAI-ARIA "menu 
   `this.getAttribute('aria-label') || <computed default>` precedence
 
 - `closeOnEscapeAnywhere: boolean = false` (attribute `close-on-escape-anywhere`) — lets Escape
-  close the menu when focus is on slotted non-menu-item content inside the popup; item activation
-  remains scoped to actual menu items
+  close the menu when focus is on non-menu-item content slotted into the **default** slot, i.e.
+  rendered inside `[part="list"]`; item activation remains scoped to actual menu items. It has no
+  bearing on the `header`/`footer` slots, which sit outside the `role="menu"` list and always close
+  on Escape — so a menu that keeps its composed controls there never needs this property
 
 **Methods:** `show(focus: 'first' | 'last' = 'first')` opens the menu and moves roving focus to the
 first (or, with `'last'`, the last) non-disabled item; a no-op when already open.
@@ -64,10 +66,25 @@ returning to the trigger)
 are assigned; enhanced imperatively with `aria-haspopup="menu"`/`aria-expanded`/`aria-controls`
 since those attributes belong on the actual interactive trigger, which lives outside this
 component's shadow root), default (`<lr-menu-item>` elements, plus optionally plain `<hr>`
-dividers between groups — native `<hr>` already carries an implicit `separator` role)
+dividers between groups — native `<hr>` already carries an implicit `separator` role),
+`header` and `footer` (composed, deliberately non-menu-item content — a filter/search field, a
+section title, an "Apply"/"Done" button, a count — rendered above/below the items inside
+`[part="popup"]` but **outside** the `role="menu"` list. Both collapse to no box at all while
+unfilled, so a menu that uses neither renders exactly as it did before they existed)
+
+Put composed controls in `header`/`footer` rather than the default slot. Non-item content in the
+default slot still works and is not deprecated at runtime (no warning is emitted), but it sits
+inside `role="menu"`, where ARIA permits only
+`menuitem`/`menuitemradio`/`menuitemcheckbox`/`group`/`separator` children — anything else is an
+`aria-required-children` violation. It is also not Tab-reachable from an item, and needs
+`closeOnEscapeAnywhere` before Escape will close the menu. The named regions have none of those
+problems.
 
 **CSS parts:** `trigger` (wrapper around the `trigger` slot — the positioning anchor), `popup` (the
-positioned floating panel), `list` (the `role="menu"` container wrapping the default slot)
+positioned floating panel), `header` (wrapper around the `header` slot, above the list and outside
+`role="menu"`; `display: none` while that slot is unfilled), `list` (the `role="menu"` container
+wrapping the default slot), `footer` (wrapper around the `footer` slot, below the list and outside
+`role="menu"`; `display: none` while that slot is unfilled)
 
 **Themeable custom properties:** shared tokens only (`--lr-color-surface`, `--lr-color-border`,
 `--lr-radius`, `--lr-shadow`, `--lr-space-xs`, `--lr-transition-fast`).
@@ -157,11 +174,19 @@ navigation with no separate JS bookkeeping. ArrowDown/ArrowUp *on the trigger wh
 opens the menu, focusing the first/last non-disabled item respectively (mirrors native `<select>`).
 Once open, ArrowDown/ArrowUp move the roving focus among non-disabled items and wrap past either end
 (unlike `<lr-select>`'s clamped listbox nav); Home/End jump to the first/last non-disabled item;
-Enter/Space activate the focused item; Escape closes and refocuses the trigger; Tab closes without
-`preventDefault()`, letting the browser's own Tab navigation proceed untouched. All of this list-level
-keydown handling — Escape, Tab, the arrow keys, Home/End, and type-ahead alike — only responds when
-the triggering keydown event's own target is an actual `<lr-menu-item>` element; a keydown bubbling
-up from any other node inside the popup is ignored rather than misread as list navigation. A printable
+Enter/Space activate the focused item; Escape closes and refocuses the trigger. The arrow keys,
+Home/End, Enter/Space and type-ahead only respond when the triggering keydown event's own target is
+an actual `<lr-menu-item>` element; a keydown bubbling up from any other node inside the popup is
+ignored rather than misread as list navigation. Escape and Tab are the two deliberate exceptions.
+Escape from `header`/`footer` content always closes the menu and refocuses the trigger (mirroring
+`lr-popover`'s handling of arbitrary popup content), while Escape from non-item content in the
+*default* slot closes it only with `closeOnEscapeAnywhere` set. Tab never traps focus and never
+calls `preventDefault()` — the browser's own Tab navigation always proceeds untouched — and closes
+the menu only when focus is on its way *out* of `[part="popup"]`: with a focusable in the
+`header`/`footer` region on the far side of the keypress the menu stays open so native Tab can carry
+focus there, and with neither region filled Tab closes exactly as it always has. Tabbing past the
+popup's last focusable in either direction closes the menu, including from slotted non-item content
+— which previously left the menu open while focus walked out of the popup entirely. A printable
 keypress runs type-ahead: roving focus jumps to the next non-disabled item whose text starts with the
 accumulated buffer (cycling from just after the active item, buffer resets ~500ms after the last
 keystroke) — mirrors `<lr-select>`'s identical listbox type-ahead. A click outside both the trigger
@@ -179,8 +204,20 @@ click itself already moved focus somewhere the user chose.
 - `lr-menu-item-select` carries no detail payload (`event.detail === null`); read
   `event.target.value` instead. `<lr-menu>`'s own re-fired `lr-menu-select` is the one that
   carries `detail: { value }`.
-- Tab closes the menu without `preventDefault()` or focus trapping — the browser's own default Tab
-  navigation proceeds untouched, only the (now-stale) open state is cleared.
+- Tab never calls `preventDefault()` and never traps focus — the browser's own default Tab
+  navigation always proceeds untouched. It closes the menu only when Tab would leave
+  `[part="popup"]` entirely; when the `header`/`footer` region holds a focusable on the far side of
+  the keypress, the menu stays open instead and native Tab moves focus into it. With neither region
+  filled, Tab closes exactly as before.
+- Non-item content in the *default* slot is not Tab-reachable from an item — Tab from an
+  `<lr-menu-item>` still closes the menu when there is no `header`/`footer` focusable to move to,
+  even if a `<button>` is slotted alongside the items. Move such controls to `header`/`footer`.
+- `header`/`footer` emptiness is tracked from each slot's own `slotchange` and reflected on the host
+  as `data-has-header` / `data-has-footer` (plus `data-list-empty`, which suppresses the region
+  divider next to an empty list). They are internal styling hooks, not public API — don't set them
+  by hand — but they are why `[part="header"]`/`[part="footer"]` collapse cleanly: a
+  `[part]:empty` rule can never match a part that contains a slot, since Chromium counts the
+  whitespace-only text nodes Lit leaves there.
 - Only Escape and a committed selection refocus the trigger on close; a click outside does not.
 
 ---

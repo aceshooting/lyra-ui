@@ -32,6 +32,10 @@ reveals the invalid state, and `form.reset()` clears the touched presentation.
 - `maxRows: number = 8` (attribute `max-rows`) — floored to at least `minRows`
 - `status: ChatComposerStatus = 'idle'` (reflected) — `'idle' | 'sending' | 'streaming'`; drives the
   built-in button's icon/label (send vs. stop) and whether Enter still submits
+- `appearance: ChatComposerAppearance = 'card'` (reflected) — `'card' | 'plain'`; `'plain'` drops
+  `[part="base"]`'s border, background, padding and corner radius so a composer docked inside a chat
+  panel, dialog footer or toolbar that already draws its own border doesn't double the frame. The
+  focus affordance is swapped, not dropped — see **Known gotchas**
 - `submitOnEnter: boolean = true` (reflected, attribute `submit-on-enter`) — when `false`, Enter
   always inserts a newline instead of submitting
 - `submitDisabled: boolean = false` (reflected, attribute `submit-disabled`) — consumer-controlled
@@ -135,5 +139,10 @@ and disables only the built-in Send button; editing and busy-state Stop behavior
 - `[part="chips"]`/`[part="leading"]` are hidden via a JS-tracked `[hidden]` attribute rather than a
   CSS `:empty` selector, because each always contains a literal `<slot>` child regardless of
   assigned content.
+- Under `appearance="card"` the only focus affordance is a border-color shift on `[part="base"]`
+  (the internal `<textarea>` sets `outline: none`). `appearance="plain"` removes that border, so it
+  swaps in a different affordance rather than losing focus visibility: an underline across the whole
+  input row, drawn as an inset `box-shadow` from `--lr-focus-ring-width`/`--lr-focus-ring-color` so
+  it costs no layout. If you restyle `[part="base"]` under `plain`, keep a focus indicator.
 
 ---

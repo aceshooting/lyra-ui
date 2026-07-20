@@ -171,8 +171,11 @@ own "consumer computes/renders" contract rather than assuming addition.
   via the retheme-able `--lr-table-heat-tint-lo`/`-hi` custom properties, matching `lr-heatmap`'s
   own ramp-token convention; `cellStyle` is applied directly to the generated `<td>` via `styleMap` — e.g. a computed heat-tint
   background a `cell()`-returned inner element can't paint into the cell's own padding — omit it for
-  no per-cell style override (the default, unchanged output); `editable` enables double-click
-  editing, `editValue` supplies the editor value, and `editType` selects `text` or `number`
+  no per-cell style override (the default, unchanged output); `editable` enables inline editing —
+  `true` opens a native editor on that cell's double-click (one cell at a time), `'always'` instead
+  renders a persistent editor in every body cell of the column from first paint, for a
+  settings/rate-style column meant to be typed straight into — while `editValue` supplies the editor
+  value and `editType` selects `text` or `number`
   `cellTitle(row) => string | undefined` is the `title` analogue of `cellStyle`, applied directly to
   the generated `<td>` — e.g. the untruncated text behind an ellipsized cell, or a formatted
   timestamp behind a relative one;
@@ -181,6 +184,29 @@ own "consumer computes/renders" contract rather than assuming addition.
   under RTL), Shift+Arrow for 50px steps, Home for the minimum, and End for an explicit pixel
   `maxWidth`; explicit pixel `minWidth`/`maxWidth` values bound both input paths. The separator
   exposes its current/minimum/bounded-maximum pixel width through ARIA value attributes.
+- `columns[].editable: boolean | 'always'` — a widening of the original `boolean`, non-breaking.
+  `true` is unchanged: double-click a cell to open its editor, one at a time, Enter commits and
+  closes, Escape cancels and closes, blur-after-change commits. `'always'` renders an editor in
+  every body cell of that column, permanently:
+  - **Focus model.** Each editor is a plain tab stop — no `tabindex` of its own — exactly like the
+    existing row-expand toggle, and stays *outside* the header/row roving-tabindex model. Tab walks
+    down the column; arrow keys still navigate the grid from a row's own roving stop, and act as
+    ordinary caret movement once focus is inside a field. Non-editable columns are unaffected.
+  - **Value binding.** A persistent editor binds its `value` as a **content attribute**, not as the
+    `.value` property, so native dirty-value-flag semantics apply. Trade-off: once the user has
+    typed into a cell, an out-of-band `rows` update to that same cell will **not** visibly replace
+    their draft. An editor the user has not touched still picks up a new `rows` value normally.
+    `lr-cell-edit` remains the only mutation channel — the table never mutates `row`.
+  - **Keys.** Enter commits (emits `lr-cell-edit`) and *keeps focus* in the field, since there is no
+    closed state to fall back to. `change` (blur after a modification) commits, as with `true`.
+    Escape is **not** cancelled and does nothing to the editor — there is nothing to cancel back to
+    — so an ancestor dialog/popover still acts on it.
+  - **Focus across re-sorts and pagination.** Rows are keyed, so a re-sort *moves* the editor's
+    `<input>` (the typed value rides along) and the table restores focus to the same logical cell
+    afterwards. If the focused row leaves the rendered page entirely (pagination, filtering), focus
+    is simply lost rather than yanked to whichever unrelated row now sits in that position.
+  - Each editor keeps its own interpolated `tableEditCell` accessible name (`Edit {column}`), so a
+    column of otherwise-identical inputs is still individually named to a screen reader.
 - `columnsHidden: boolean = false` (attribute `columns-hidden`, reflected) — computed/read-only: true
   when a `priority` column is *actually* hidden right now by the `@container` breakpoints above, or
   `showAllColumns` force-visible mode is currently active. Measured via a `ResizeObserver` on
@@ -403,6 +429,15 @@ so multiple `sticky` columns stack instead of overlapping; it is a read-out, not
   as the cell's accessible *name*, replacing the cell's content rather than supplementing it (the
   same caveat `lr-stat`'s `exactValue` carries). Use it for a longer form of what the cell already
   shows, never for information that exists nowhere else.
+- `editable: 'always'` deliberately does not re-assert a cell's source value once the user has typed
+  into it. That is the native dirty-value-flag behavior the attribute binding buys, and it is the
+  point: a background `rows` refresh cannot silently overwrite an in-progress edit. If you need the
+  opposite — an authoritative external value that always wins — do not use `'always'`; re-key the
+  row (`rowKey`) so the editor is recreated rather than updated, or keep `editable: true` and let
+  the short-lived double-click editor's property binding re-assert. Also note the two things
+  `'always'` intentionally does *not* do: it never sets the roving `tabindex` (its editors are
+  ordinary tab stops, so Tab order in that column interleaves with the grid's two roving stops,
+  the same way the row-expand toggle's already does), and it never cancels Escape.
 
 ---
 
@@ -1248,6 +1283,8 @@ owns none of that.
 - `statusDetail: string = ''` (attribute `status-detail`) — appended to the status line
 - `durationMs: number | null = null` (attribute `duration-ms`) — formatted into the status line
 - `selected: boolean = false` (reflected)
+- `compact: boolean = false` (reflected) — tighter card padding for dense canvases and palette
+  previews; the border, background, shadow and the `selected`/`status="running"` treatments all stay
 - `inputs: FlowHandle[] = [{ id: 'in' }]`, `outputs: FlowHandle[] = [{ id: 'out' }]` (attribute:
   false) — `FlowHandle { id: string; label?: string }`
 - `orientation: 'horizontal' | 'vertical' = 'horizontal'` (reflected) — which physical edge handles
@@ -1258,15 +1295,19 @@ owns none of that.
 **Slots:** default (body content), `icon` (leading header glyph), `header` (replaces the built-in
 heading row entirely), `toolbar` (action row at the block-end edge).
 
-**CSS parts:** `base`, `header`, `icon`, `heading`, `status` (never color-only — always paired with
-text), `progress`, `body`, `toolbar`, `handle` (every handle dot), `handle-input`, `handle-output`.
+**CSS parts:** `base` (the row wrapping the input handles, the card and the output handles — it
+carries no card chrome of its own), `card` (the bordered, filled node card), `header`, `icon`,
+`heading`, `status` (never color-only — always paired with text), `progress`, `body`, `toolbar`,
+`handle` (every handle dot), `handle-input`, `handle-output`.
 
-**Themeable custom properties:** `--lr-flow-node-min-inline-size` (default `11rem`) and
+**Themeable custom properties:** `--lr-flow-node-min-inline-size` (default `11rem`),
+`--lr-flow-node-compact-padding` (default `var(--lr-space-xs)`) and `--lr-flow-node-compact-gap`
+(default `var(--lr-space-2xs)`) — `[part="card"]`'s padding and row gap while `compact` — and
 `--lr-flow-node-selected-border` (default `var(--lr-color-brand)`) — the card's border color while
-`selected`. Like the other state-scoped custom properties here it is an inline `var()` fallback at
-its point of use rather than a `:host` declaration, so it can be set on the element *or any
-ancestor*; overriding the selection color otherwise means hijacking the library-wide
-`--lr-color-brand` token and repainting everything else that reads it.
+`selected`. Like the other state-scoped custom properties here they are inline `var()` fallbacks at
+their point of use rather than `:host` declarations, so they can be set on the element *or any
+ancestor* (a canvas retunes every card at once); overriding the selection color otherwise means
+hijacking the library-wide `--lr-color-brand` token and repainting everything else that reads it.
 
 **Optional peer deps:** none.
 
@@ -1279,6 +1320,11 @@ ancestor*; overriding the selection color otherwise means hijacking the library-
   reduced-motion exception every animated surface in this library follows.
 - `status` drives a status chip with a localized label plus `statusDetail`/`durationMs`, never a
   color-only indicator.
+- All card chrome lives on `[part="card"]`, not `[part="base"]` — `base` is only the flex row that
+  holds the input handles, the card and the output handles. Style the box through `::part(card)`.
+- `--lr-flow-node-min-inline-size` was previously overridden by a duplicate declaration and had no
+  effect. It now sets the card's minimum inline size again, so a node that was relying on the card
+  collapsing below `11rem` will render wider than it used to.
 
 ---
 
@@ -1333,16 +1379,23 @@ no editing commands live here.
 - `for: string = ''` — id of the target `lr-flow-canvas`; empty resolves to the nearest ancestor
 - `orientation: 'vertical' | 'horizontal' = 'vertical'` (reflected) — button-cluster layout axis
 - `hideLock: boolean = false` (attribute `hide-lock`) — omits the lock/unlock toggle button
+- `appearance: FlowControlsAppearance = 'card'` (reflected) — `'card' | 'plain'`; `'plain'` drops
+  `[part="base"]`'s border, background, padding, corner radius and its floating-surface `box-shadow`,
+  for a cluster placed in a host toolbar or panel that already draws its own surface. There is
+  deliberately no `compact`: the padding is already the smallest spacing step and the only remaining
+  room is the buttons' `--lr-icon-button-size` hit-area floor
 
 **Events:** none dispatched directly — each button calls the resolved canvas's own `zoomIn()`/
 `zoomOut()`/`fit()`, or toggles its `locked` property.
 
 **Slots:** default — extra host buttons appended to the cluster, styled by the same group.
 
-**CSS parts:** `base` (the `role="group"` wrapper), `zoom-in`, `zoom-out`, `fit`, `lock` (omitted
-when `hideLock`).
+**CSS parts:** `base` (the `role="group"` wrapper; drops its floating-surface chrome under
+`appearance="plain"`), `zoom-in`, `zoom-out`, `fit`, `lock` (omitted when `hideLock`).
 
-**Themeable custom properties:** shared tokens only.
+**Themeable custom properties:** shared tokens only — `--lr-icon-button-size` (each button's minimum
+hit area, unchanged by `appearance`), `--lr-shadow`, `--lr-color-surface`, `--lr-color-border`,
+`--lr-radius`, `--lr-space-2xs`, `--lr-focus-ring-width`/`-color`/`-offset`.
 
 **Optional peer deps:** none.
 
@@ -1356,6 +1409,10 @@ when `hideLock`).
 - `for` resolution is identical to `lr-flow-minimap`/`lr-flow-run-overlay`: an explicit id, else
   the nearest ancestor canvas — none of the three companions import `LyraFlowCanvas` as a value, only
   its types, so registration order between them and the canvas never matters.
+- `appearance="plain"` drops the `box-shadow` along with the border and background — unlike most
+  `plain` escapes in this library, which only reset the border/background/padding/radius. A lift
+  shadow with no surface under it reads as a stray smudge, so the whole floating-surface treatment
+  goes together (same as `lr-flow-run-overlay`'s `plain`).
 
 ---
 

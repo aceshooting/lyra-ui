@@ -446,10 +446,13 @@ name and detail shape as `lr-graph`'s own event, so one host handler serves both
 
 **Slots:** none.
 
-**CSS parts:** `base` (`role="list"`), `group-header` (only when `groupByRelation`), `row`
-(`role="listitem"`), `direction` (`aria-hidden` glyph), `relation`, `node-label`, `node-meta`
-(secondary type/degree text, when present), `expand-button` (only when `expandable`), `empty`
-(shown when `rows` is empty).
+**CSS parts:** `base` (`role="list"`), `group-header` (only when `groupByRelation`; above
+`virtualizeAt` this is the internal virtual-list's own group label, re-exported under the same
+name), `row` (`role="listitem"`; above `virtualizeAt` this is the internal virtual-list's own row
+wrapper, re-exported under the same name), `direction` (`aria-hidden` glyph), `relation`,
+`node-label`, `node-meta` (secondary type/degree text, when present), `expand-button` (only when
+`expandable`), `empty` (shown when `rows` is empty). Every part presents identically either side of
+`virtualizeAt`.
 
 **Themeable custom properties:** shared tokens only.
 
@@ -467,6 +470,9 @@ name and detail shape as `lr-graph`'s own event, so one host handler serves both
 **Known gotchas:**
 - `lr-node-expand`'s detail shape is intentionally identical to `lr-graph`'s own event of the
   same name, so a single listener wired to both handles "expand this node's neighborhood" uniformly.
+- A row is exactly one `[part="row"]` element in both rendering paths. Above `virtualizeAt` that
+  element is the internal virtual-list's own row wrapper (the component renders only the row's
+  content into it), so a `::part(row)` rule applies once, not twice.
 
 ---
 
@@ -584,20 +590,35 @@ activated).
 
 **Slots:** none.
 
-**CSS parts:** `base` (`role="group"`), `chunk` (`role="listitem"`), `score` (visible percent text),
-`score-bar` (`aria-hidden` track), `score-fill` (tone-mapped fill), `open-button`, `title` (the
-`<span>` inside `open-button` carrying the visible title text), `text` (line-clamped unless
-expanded, omitted when `compact`), `toggle` ("Show more"/"Show less", omitted when `compact`),
+**CSS parts:** `base` (`role="group"`), `chunk` (one chunk row; carries `role="listitem"` only
+below `virtualize-at` — while virtualized the surrounding `lr-virtual-list` row supplies that role
+instead), `chunk-current` (additional part on the row matching `activeId`), `score` (visible
+percent text), `score-current` (additional part on the current row's score line), `score-bar`
+(`aria-hidden` track), `score-fill` (tone-mapped fill), `score-fill-success` /
+`score-fill-warning` / `score-fill-danger` (additional part on the fill, one per scoring tier),
+`open-button`, `title` (the `<span>` inside `open-button` carrying the visible title text), `text`
+(omitted when `compact`), `text-clamped` (additional part on a `text` preview that is still
+collapsed; dropped once expanded), `toggle` ("Show more"/"Show less", omitted when `compact`),
 `empty` (shown when `chunks` is empty).
+
+Every row-level part is reachable through `::part()` in both rendering paths: above
+`virtualize-at` the row lives in the internal `lr-virtual-list`'s shadow root and its parts are
+re-exported from there under the same names. Row *state* is exposed as an additional part name
+rather than as an attribute on the part, because Shadow Parts forbids an attribute selector after
+`::part()` — `::part(chunk)[aria-current='true']` is invalid CSS. The equivalent attributes
+(`aria-current`, `data-tone`, `data-clamped`) are still present on the elements. A state part is a
+second token in the same `part` attribute, so a `[part~="…"]` (not `[part="…"]`) selector is the
+one that matches inside a tree.
 
 **Themeable custom properties:** `--lr-chunk-inspector-current-bg` (default
 `var(--lr-color-brand-quiet)`) — the background of the chunk matching `activeId`.
 `--lr-chunk-inspector-current-color` (default `var(--lr-color-text)`) — the text color of that
-chunk's `[part='score']` line. Both are inline `var()` fallbacks at the point of use rather than
-`:host` declarations, so either can be set on the element *or on any ancestor*:
+chunk's `score` line (`::part(score-current)`). Both are inline `var()` fallbacks at the point of
+use rather than `:host` declarations, so either can be set on the element *or on any ancestor*:
 `::part(chunk)[data-active]` is invalid CSS — Shadow Parts forbids an attribute selector after
-`::part()` — so tinting the current chunk previously meant overriding the library-wide
-`--lr-color-brand-quiet` token and repainting everything else that read it.
+`::part()` — which is why the current-chunk state is also published as its own part name
+(`chunk-current`, `score-current`); either the custom properties or `::part(chunk-current)` will
+retint it.
 
 **They are a contrast-sensitive pair — override them together, never one alone.** The `-current-color`
 hook exists precisely because the quiet token it replaces only reaches about 4.24:1 against the
@@ -1159,6 +1180,14 @@ per-item stage label), `item-progress`,
 `item-error` (only for `stage="failed"` with `error` set), `item-actions`, `retry-button`,
 `cancel-button`, `empty`.
 
+In virtualized mode (at or above `virtualizeThreshold`) the rows live in the internal
+`lr-virtual-list`'s shadow root, and `item`, `item-header`, `item-name`, `item-progress`,
+`item-meta`, `item-error`, `item-actions`, `retry-button` and `cancel-button` are forwarded out
+through `exportparts`, so `lr-ingestion-queue::part(item)` and the rest keep working from a consumer
+stylesheet. `item-stage`, `item-chunk-count`, `item-embedding-status` and `item-attempts` are not
+forwarded, so those four are only reachable through `::part()` while the queue is below the
+threshold.
+
 **Themeable custom properties:** `--lr-ingestion-queue-max-height` (default `none`) — non-virtualized
 mode only: caps how tall the list grows before it scrolls internally. No effect once virtualized —
 retheme the internal list via `lr-virtual-list { --lr-virtual-list-height: … }` instead.
@@ -1415,11 +1444,29 @@ neither `error` nor `loading` is set), `row` (a plain element in this shadow roo
 virtualization threshold; exported from the internal `lr-virtual-list`'s own `row` part while
 virtualized — `::part(row)` reaches it either way), `group-header` (exported from the virtual list's
 `group` part; grouped/virtualized mode only), `select` (per-row `lr-checkbox`, omitted when
-`selectable` is false), `row-body` (carries `data-selected`), `metadata` (a `<dl>`; omitted when the
-chunk has none or while `presentation="compact"`), `metadata-entry`, `load-more-row`, `load-more`.
+`selectable` is false), `row-body` (carries `data-selected`), `row-body-selected` (additional part
+on a selected `row-body`), `metadata` (a `<dl>`; omitted when the chunk has none or while
+`presentation="compact"`), `metadata-entry`, `metadata-term` (the `<dt>` carrying a metadata key),
+`metadata-value` (the `<dd>` carrying its value), `load-more-row`, `load-more`.
+
+The per-row `lr-chunk-inspector`'s own parts are forwarded onward under a `chunk-` prefix —
+`chunk`, `chunk-current`, `chunk-score`, `chunk-score-current`, `chunk-score-bar`,
+`chunk-score-fill`, `chunk-score-fill-success`, `chunk-score-fill-warning`,
+`chunk-score-fill-danger`, `chunk-open-button`,
+`chunk-title`, `chunk-text`, `chunk-text-clamped`, `chunk-toggle`. Those elements sit two shadow
+hops deep while virtualized, so this forwarding is the only way to reach them.
+
+Selection state is exposed as the additional `row-body-selected` part name rather than through the
+`data-selected` attribute, because Shadow Parts forbids an attribute selector after `::part()`:
+`::part(row-body)[data-selected]` is invalid CSS, and while virtualized `::part()` is the only way
+in. `data-selected` is unchanged. A state part is a second token in the same `part` attribute, so
+a `[part~="…"]` (not `[part="…"]`) selector is the one that matches inside a tree. The `<dt>`/`<dd>`
+carry their own part names for the same class of reason — `::part()` matches a single element and
+cannot be followed by a descendant combinator, so `::part(metadata-entry) dt` reaches nothing.
 
 **Themeable custom properties:** `--lr-retrieval-results-selected-border` (default
-`var(--lr-color-brand)`) — the inline-start border color marking a selected `[part='row-body']`. A
+`var(--lr-color-brand)`) — the inline-start border color marking a selected row body
+(`::part(row-body-selected)`). A
 border rather than a fill by design: the row's own text (the nested chunk inspector's quiet-toned
 score line in particular) is sized and colored for the page's default surface, and a tinted
 background can drop it below the required contrast ratio, while a border-only indicator carries no

@@ -373,7 +373,13 @@ listing region as `role="region"`; with neither set, the region is unnamed.
 
 **Events:** `lr-render-error` with `detail.error` when fetching or parsing fails.
 
-**CSS parts:** `base`, `entry`, `entry-icon`, `entry-name`, `entry-size`, `spinner`, and `error`.
+**CSS parts:** `base`, `entry`, `entry-icon`, `entry-name`, `entry-name-dir`, `entry-size`,
+`spinner`, and `error`. A directory row's name element carries both `entry-name` and
+`entry-name-dir` (a part list), so `::part(entry-name-dir)` selects only directory names while
+`::part(entry-name)` still selects every name. Entry rows are rendered into the embedded
+`<lr-virtual-list>`'s own shadow root and forwarded with `exportparts`, so
+`lr-archive-viewer::part(entry)` (and every other row part above) reaches them from a consuming
+stylesheet.
 
 **Exports:** `ArchiveEntry` — `{ name: string; dir: boolean; size: number }`.
 
@@ -552,7 +558,10 @@ Enter/Space. `lr-anchor-result` (`detail: { found }`) — fired after an `anchor
 **CSS parts:** `base`, `body`, `table`, `header-row`, `header-cell`, `data-row`, `cell`,
 `cell-highlight` (a `role="cell"` covered by a `highlights` entry; wraps the action button),
 `cell-highlight-action` (the native button filling a highlighted cell — focusable, emits
-`lr-highlight-activate` on click or Enter/Space), `spinner`, and `error`.
+`lr-highlight-activate` on click or Enter/Space), `spinner`, and `error`. `data-row`, `cell`,
+`cell-highlight` and `cell-highlight-action` render inside the internal `<lr-virtual-list>` and are
+forwarded via `exportparts`, so `lr-dataset-viewer::part(cell)` reaches them from a consumer
+stylesheet.
 
 **Exports:** `DatasetTable` is `{ fields: string[]; rows: Record<string, string>[] }`.
 
@@ -641,15 +650,27 @@ table of contents as `PdfOutlineItem[]` (`{ title, page?, children? }`), `[]` wh
 `clearSearch()`); `searchNext()` and `searchPrevious()` advance/step back through matches (wrapping,
 resolving `false` when there are none); `clearSearch()` clears the query, matches, and painted marks.
 
-**CSS parts:** `base`, `toolbar`, `page-indicator`, `zoom-indicator`, `pages`, `page`, `text-layer`,
-`search-match` (a `<mark>` painted into a mounted page's text layer around one search match),
-`search-match-active` (the currently active match, also carries `search-match`), `spinner`, and
-`error`. Search painting is best-effort: a page outside the virtualized render window is skipped and
-repainted once its text layer mounts, and a match spanning a text-layer span boundary that
-`Range.surroundContents()` can't wrap stays unpainted (still reachable via `searchNext()`).
+**CSS parts:** `base`, `toolbar`, `page-indicator`, `zoom-indicator`, `pages`, `page`, `page-canvas`
+(the canvas one page's content is painted onto), `text-layer`, `text-span` (one generated text run
+inside a page's text layer — PDF.js creates these imperatively, and they carry the part so a rule can
+reach them without a descendant combinator), `search-match` (a `<mark>` painted into a mounted page's
+text layer around one search match), `search-match-active` (the currently active match, also carries
+`search-match`), `spinner`, and `error`. Search painting is best-effort: a page outside the
+virtualized render window is skipped and repainted once its text layer mounts, and a match spanning a
+text-layer span boundary that `Range.surroundContents()` can't wrap stays unpainted (still reachable
+via `searchNext()`).
+
+`page`, `page-canvas`, `text-layer`, `text-span`, `search-match` and `search-match-active` are
+rendered inside the virtualizing `lr-virtual-list`'s own shadow root and forwarded out through
+`exportparts`, so `lr-pdf-viewer::part(page)` (and each of the others) works from a consumer
+stylesheet exactly like the parts in this viewer's own shadow root. The selection tint over a page's
+text is styled on `text-span` rather than on `text-layer`, because a highlight pseudo-element is
+matched against the element the selected text originates in:
+`lr-pdf-viewer::part(text-span)::selection { background: … }`.
 
 **Themeable custom properties:** `--lr-pdf-viewer-height` (default `var(--lr-size-24rem)`) — block
-size of the virtualized page list (`[part="pages"]`).
+size of the virtualized page list (`[part="pages"]`). Everything below the page list is retuned
+through the exported parts above rather than through dedicated custom properties.
 
 **Optional peer dependency:** install `pdfjs-dist` with `pnpm add pdfjs-dist`. The component registers
 a lazy `application/pdf` renderer with `<lr-document-viewer>` so the PDF library is loaded only when
@@ -687,7 +708,16 @@ Enter/Space. `lr-anchor-result` (`detail: { found }`) — fired after an `anchor
 `search()`/`searchNext()`/`searchPrevious()`/`clearSearch()`.
 
 **CSS parts:** `base`, `tabs`, `sheet`, `header-row`, `data-row`, `cell`, `cell-highlight` (a cell
-covered by a `highlights` entry), `rows`, `spinner`, and `error`.
+covered by a `highlights` entry), `rows`, `spinner`, and `error`. `data-row`, `cell` and
+`cell-highlight` are rendered inside the internal `<lr-virtual-list>` and forwarded via
+`exportparts`, so `lr-spreadsheet-viewer::part(cell)` reaches them from a consumer stylesheet.
+
+**Themeable custom properties:** `--lr-spreadsheet-viewer-highlight-color` (default
+`var(--lr-color-brand)`) — the outline color of a `cell-highlight` cell. The component writes it
+inline (as `var(--lr-color-warning, var(--lr-color-brand))`) on the cell matching
+`activeHighlightId`, since a `[data-active]` selector can't be chained onto the
+`::part(cell-highlight)` the cell reaches this component's stylesheet through; a custom property
+inherits across that boundary instead.
 
 **Optional peer dependency:** install `xlsx` with `pnpm add https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz`. The official CDN matches the
 `.xlsx` and `.xls` MIME types and filename extensions.
@@ -723,7 +753,15 @@ Enter/Space. `lr-anchor-result` (`detail: { found }`) — fired after an `anchor
 `search()`/`searchNext()`/`searchPrevious()`/`clearSearch()`.
 
 **CSS parts:** `base`, `sheet`, `header-row`, `data-row`, `cell`, `cell-highlight` (a cell covered by
-a `highlights` entry), `rows`, `spinner`, and `error`.
+a `highlights` entry), `rows`, `spinner`, and `error`. `data-row`, `cell` and `cell-highlight` are
+rendered inside the internal `<lr-virtual-list>` and forwarded via `exportparts`, so
+`lr-csv-viewer::part(cell)` reaches them from a consumer stylesheet.
+
+**Themeable custom properties:** `--lr-csv-viewer-highlight-color` (default `var(--lr-color-brand)`)
+— the outline color of a `cell-highlight` cell. The component writes it inline (as
+`var(--lr-color-warning, var(--lr-color-brand))`) on the cell matching `activeHighlightId`, since a
+`[data-active]` selector can't be chained onto the `::part(cell-highlight)` the cell reaches this
+component's stylesheet through; a custom property inherits across that boundary instead.
 
 **Optional peer dependency:** install `papaparse` with `pnpm add papaparse`. The registry matches
 `text/csv` and `.csv` filenames.
@@ -815,19 +853,23 @@ truth.
 `detail: { page }`. In wired mode the rail also sets `viewer.page` itself.
 
 **CSS parts:** `base` (the rail), `pages` (the embedded `<lr-virtual-list>`), `page` (one page
-button), `thumbnail` (the thumbnail canvas wrapper), `page-number` (the visible page number), `heat`
-(the heat-marker cluster), and `heat-dot` (one tone-colored heat marker, or the `+n` overflow
+button), `page-current` (the button for the current `page`), `thumbnail` (the thumbnail canvas
+wrapper), `page-number` (the visible page number), `heat` (the heat-marker cluster), `heat-dot` (one
+heat marker), `heat-dot-accent`, `heat-dot-success`, `heat-dot-warning`, `heat-dot-danger` and
+`heat-dot-neutral` (the tone-specific name on each marker), and `heat-dot-overflow` (the `+n`
 marker).
 
-**Themeable custom properties:** `--lr-page-rail-height` (default `var(--lr-size-24rem)`) — block
-size of the virtualized rail.
+Page rows are rendered into the embedded `<lr-virtual-list>`'s own shadow root and forwarded with
+`exportparts`, so `lr-page-rail::part(page)` and the rest reach them from a consuming stylesheet.
+State variants each carry a second name in the element's part list rather than a state attribute,
+because `::part()` cannot be followed by an attribute selector: the current row is
+`part="page page-current"` and a danger marker is `part="heat-dot heat-dot-danger"`, and `::part()`
+matches with `part~=` semantics, so both names select the same element.
 
-`--lr-page-rail-current-bg` (intended default `var(--lr-color-brand-quiet)`) is declared for the
-background of the `[part='page']` button matching the current `page`, but **its rule does not
-currently take effect.** Page rows are rendered into the embedded `<lr-virtual-list>`'s own shadow
-root, one boundary deeper than this component's stylesheet (and than a consuming stylesheet)
-reaches, so the declaration targeting `[part='page']` never matches a rendered row. It is documented
-here for completeness — do not rely on it to tint the current page today.
+**Themeable custom properties:** `--lr-page-rail-height` (default `var(--lr-size-24rem)`) — block
+size of the virtualized rail. `--lr-page-rail-current-bg` (default `var(--lr-color-brand-quiet)`) —
+background of the `page-current` button, kept while the row is hovered so the current page stays
+identifiable under the pointer.
 
 ## `lr-notebook-viewer`
 
@@ -865,17 +907,25 @@ activeIndex }`. `lr-render-error` — `detail: { error }`, fetching, parsing, or
 notebook failed.
 
 **CSS parts:** `base` (the root scroll container), `cell` (`data-cell-type="code|markdown|raw"`,
-`data-active`), `cell-gutter` (the `In [n]`/`Out [n]` label column), `cell-source`, `outputs`,
-`output` (`data-output-type`, `data-stream`), `output-toggle`, `error`, `spinner`.
+`data-active`), `cell-active` (added alongside `cell` on the cell an anchor currently targets),
+`cell-gutter` (the `In [n]`/`Out [n]` label column), `cell-source`, `outputs`, `output`
+(`data-output-type`, `data-stream`), `output-error` (added alongside `output` on a stderr stream or
+an error output), `error-output-label` (the label introducing an error output's traceback),
+`output-toggle`, `error`, `spinner`.
+
+Every cell-level part above is rendered into the embedded `<lr-virtual-list>`'s own shadow root and
+forwarded back out through `exportparts`, so `lr-notebook-viewer::part(cell)` and friends work from
+a consumer stylesheet. The three state variants are separate part *names* rather than attribute
+selectors, because Shadow Parts forbids an attribute selector after `::part()` —
+`::part(cell)[data-active]` is invalid CSS, so use `::part(cell-active)`. The `data-*` attributes
+remain on the elements for scripting.
 
 **Themeable custom properties:** `--lr-notebook-viewer-max-height` (default `none`).
 
-`--lr-notebook-viewer-active-bg` (intended default `var(--lr-color-brand-quiet)`) is declared for
-the background of the `[part='cell']` currently targeted by an anchor, but **its rule does not
-currently take effect.** Cells are rendered into the embedded `<lr-virtual-list>`'s own shadow root,
-one boundary deeper than this component's stylesheet (and than a consuming stylesheet) reaches, so
-the declaration targeting `[part='cell']` never matches a rendered cell. It is documented here for
-completeness — do not rely on it to tint the anchored cell today.
+`--lr-notebook-viewer-active-bg` (default `var(--lr-color-brand-quiet)`) is the background of the
+cell currently targeted by an anchor — the `cell-active` part. It is an inline `var()` fallback at
+the point of use rather than a `:host` declaration, so it can be set on the element or on any
+ancestor.
 
 **Optional peer deps:** `marked`+`dompurify` (markdown cells, falls back to plain text per cell),
 `shiki` (code cells, falls back to unhighlighted), `dompurify` (HTML/SVG outputs, falls back to

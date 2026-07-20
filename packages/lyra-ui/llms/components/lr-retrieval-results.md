@@ -68,11 +68,29 @@ neither `error` nor `loading` is set), `row` (a plain element in this shadow roo
 virtualization threshold; exported from the internal `lr-virtual-list`'s own `row` part while
 virtualized — `::part(row)` reaches it either way), `group-header` (exported from the virtual list's
 `group` part; grouped/virtualized mode only), `select` (per-row `lr-checkbox`, omitted when
-`selectable` is false), `row-body` (carries `data-selected`), `metadata` (a `<dl>`; omitted when the
-chunk has none or while `presentation="compact"`), `metadata-entry`, `load-more-row`, `load-more`.
+`selectable` is false), `row-body` (carries `data-selected`), `row-body-selected` (additional part
+on a selected `row-body`), `metadata` (a `<dl>`; omitted when the chunk has none or while
+`presentation="compact"`), `metadata-entry`, `metadata-term` (the `<dt>` carrying a metadata key),
+`metadata-value` (the `<dd>` carrying its value), `load-more-row`, `load-more`.
+
+The per-row `lr-chunk-inspector`'s own parts are forwarded onward under a `chunk-` prefix —
+`chunk`, `chunk-current`, `chunk-score`, `chunk-score-current`, `chunk-score-bar`,
+`chunk-score-fill`, `chunk-score-fill-success`, `chunk-score-fill-warning`,
+`chunk-score-fill-danger`, `chunk-open-button`,
+`chunk-title`, `chunk-text`, `chunk-text-clamped`, `chunk-toggle`. Those elements sit two shadow
+hops deep while virtualized, so this forwarding is the only way to reach them.
+
+Selection state is exposed as the additional `row-body-selected` part name rather than through the
+`data-selected` attribute, because Shadow Parts forbids an attribute selector after `::part()`:
+`::part(row-body)[data-selected]` is invalid CSS, and while virtualized `::part()` is the only way
+in. `data-selected` is unchanged. A state part is a second token in the same `part` attribute, so
+a `[part~="…"]` (not `[part="…"]`) selector is the one that matches inside a tree. The `<dt>`/`<dd>`
+carry their own part names for the same class of reason — `::part()` matches a single element and
+cannot be followed by a descendant combinator, so `::part(metadata-entry) dt` reaches nothing.
 
 **Themeable custom properties:** `--lr-retrieval-results-selected-border` (default
-`var(--lr-color-brand)`) — the inline-start border color marking a selected `[part='row-body']`. A
+`var(--lr-color-brand)`) — the inline-start border color marking a selected row body
+(`::part(row-body-selected)`). A
 border rather than a fill by design: the row's own text (the nested chunk inspector's quiet-toned
 score line in particular) is sized and colored for the page's default surface, and a tinted
 background can drop it below the required contrast ratio, while a border-only indicator carries no

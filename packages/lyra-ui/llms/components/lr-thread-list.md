@@ -43,7 +43,13 @@ set; `lr-group-toggle` requests the matching state change. `rowActions: ThreadRo
 data mode only: built-in icon buttons rendered into each row's `actions` slot. `showArchived: boolean
 = false` (attribute `show-archived`, reflected) — data mode: include `archived` threads (in their own
 trailing group). `editable: boolean = true` (reflected) — forwarded to each data-mode row's inline
-rename. `label: string = ''` — accessible name for the list region, defaults to the localized
+rename. `compact: boolean = false` (reflected) — data mode only: forwarded to each row
+`lr-conversation-item`'s own `compact`, tightening every row's padding and gaps from one attribute
+(the density itself lives on the row item; retune it through
+`--lr-conversation-item-compact-padding`/`-gap` on this element or any ancestor). Slotted mode is a
+deliberate no-op — that mode renders host-supplied items as-is, so the host sets `compact` on its own
+items there, the same division of responsibility slotted mode already has for every other row
+property. `label: string = ''` — accessible name for the list region, defaults to the localized
 `threadListLabel`. `wrapRow?: (thread: ChatThread, row: TemplateResult) => TemplateResult` (attribute:
 false) — data mode only: wraps each row's built-in `lr-conversation-item` with host-supplied content
 that has no home in the item's own `title`/`excerpt`/`meta`/`actions` surface (e.g. a leading purpose
@@ -94,7 +100,11 @@ prefix: `row-item-base`, `row-item-option`, `row-item-leading`, `row-item-conten
 component's own render-callback output (`wrapRow`, `renderLeading`, `renderRowContent`,
 `renderMeta`, `renderActions`); the `row-item-*` parts are the row item's *internals*. Row density
 in particular lives in `row-item-base`'s padding and `row-item-title`'s font size, so
-`::part(row-item-base)` is the supported way to build a dense sidebar:
+`::part(row-item-base)` is the supported way to build a dense sidebar.
+
+For plain row density, prefer the `compact` property above — it forwards straight to the row item's
+own density knob. The `row-item-*` parts remain the lever for tuning beyond it (a different font
+size, a different padding ratio):
 
 ```css
 lr-thread-list::part(row-item-base) { padding-block: 0.25rem; }

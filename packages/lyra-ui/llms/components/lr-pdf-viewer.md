@@ -58,15 +58,27 @@ table of contents as `PdfOutlineItem[]` (`{ title, page?, children? }`), `[]` wh
 `clearSearch()`); `searchNext()` and `searchPrevious()` advance/step back through matches (wrapping,
 resolving `false` when there are none); `clearSearch()` clears the query, matches, and painted marks.
 
-**CSS parts:** `base`, `toolbar`, `page-indicator`, `zoom-indicator`, `pages`, `page`, `text-layer`,
-`search-match` (a `<mark>` painted into a mounted page's text layer around one search match),
-`search-match-active` (the currently active match, also carries `search-match`), `spinner`, and
-`error`. Search painting is best-effort: a page outside the virtualized render window is skipped and
-repainted once its text layer mounts, and a match spanning a text-layer span boundary that
-`Range.surroundContents()` can't wrap stays unpainted (still reachable via `searchNext()`).
+**CSS parts:** `base`, `toolbar`, `page-indicator`, `zoom-indicator`, `pages`, `page`, `page-canvas`
+(the canvas one page's content is painted onto), `text-layer`, `text-span` (one generated text run
+inside a page's text layer — PDF.js creates these imperatively, and they carry the part so a rule can
+reach them without a descendant combinator), `search-match` (a `<mark>` painted into a mounted page's
+text layer around one search match), `search-match-active` (the currently active match, also carries
+`search-match`), `spinner`, and `error`. Search painting is best-effort: a page outside the
+virtualized render window is skipped and repainted once its text layer mounts, and a match spanning a
+text-layer span boundary that `Range.surroundContents()` can't wrap stays unpainted (still reachable
+via `searchNext()`).
+
+`page`, `page-canvas`, `text-layer`, `text-span`, `search-match` and `search-match-active` are
+rendered inside the virtualizing `lr-virtual-list`'s own shadow root and forwarded out through
+`exportparts`, so `lr-pdf-viewer::part(page)` (and each of the others) works from a consumer
+stylesheet exactly like the parts in this viewer's own shadow root. The selection tint over a page's
+text is styled on `text-span` rather than on `text-layer`, because a highlight pseudo-element is
+matched against the element the selected text originates in:
+`lr-pdf-viewer::part(text-span)::selection { background: … }`.
 
 **Themeable custom properties:** `--lr-pdf-viewer-height` (default `var(--lr-size-24rem)`) — block
-size of the virtualized page list (`[part="pages"]`).
+size of the virtualized page list (`[part="pages"]`). Everything below the page list is retuned
+through the exported parts above rather than through dedicated custom properties.
 
 **Optional peer dependency:** install `pdfjs-dist` with `pnpm add pdfjs-dist`. The component registers
 a lazy `application/pdf` renderer with `<lr-document-viewer>` so the PDF library is loaded only when

@@ -23,7 +23,13 @@ listing region as `role="region"`; with neither set, the region is unnamed.
 
 **Events:** `lr-render-error` with `detail.error` when fetching or parsing fails.
 
-**CSS parts:** `base`, `entry`, `entry-icon`, `entry-name`, `entry-size`, `spinner`, and `error`.
+**CSS parts:** `base`, `entry`, `entry-icon`, `entry-name`, `entry-name-dir`, `entry-size`,
+`spinner`, and `error`. A directory row's name element carries both `entry-name` and
+`entry-name-dir` (a part list), so `::part(entry-name-dir)` selects only directory names while
+`::part(entry-name)` still selects every name. Entry rows are rendered into the embedded
+`<lr-virtual-list>`'s own shadow root and forwarded with `exportparts`, so
+`lr-archive-viewer::part(entry)` (and every other row part above) reaches them from a consuming
+stylesheet.
 
 **Exports:** `ArchiveEntry` — `{ name: string; dir: boolean; size: number }`.
 

@@ -31,10 +31,13 @@ name and detail shape as `lr-graph`'s own event, so one host handler serves both
 
 **Slots:** none.
 
-**CSS parts:** `base` (`role="list"`), `group-header` (only when `groupByRelation`), `row`
-(`role="listitem"`), `direction` (`aria-hidden` glyph), `relation`, `node-label`, `node-meta`
-(secondary type/degree text, when present), `expand-button` (only when `expandable`), `empty`
-(shown when `rows` is empty).
+**CSS parts:** `base` (`role="list"`), `group-header` (only when `groupByRelation`; above
+`virtualizeAt` this is the internal virtual-list's own group label, re-exported under the same
+name), `row` (`role="listitem"`; above `virtualizeAt` this is the internal virtual-list's own row
+wrapper, re-exported under the same name), `direction` (`aria-hidden` glyph), `relation`,
+`node-label`, `node-meta` (secondary type/degree text, when present), `expand-button` (only when
+`expandable`), `empty` (shown when `rows` is empty). Every part presents identically either side of
+`virtualizeAt`.
 
 **Themeable custom properties:** shared tokens only.
 
@@ -52,5 +55,8 @@ name and detail shape as `lr-graph`'s own event, so one host handler serves both
 **Known gotchas:**
 - `lr-node-expand`'s detail shape is intentionally identical to `lr-graph`'s own event of the
   same name, so a single listener wired to both handles "expand this node's neighborhood" uniformly.
+- A row is exactly one `[part="row"]` element in both rendering paths. Above `virtualizeAt` that
+  element is the internal virtual-list's own row wrapper (the component renders only the row's
+  content into it), so a `::part(row)` rule applies once, not twice.
 
 ---
