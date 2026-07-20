@@ -63,20 +63,93 @@ export const styles = css`
     padding-inline-start: var(--lr-space-s);
   }
 
-  [part='country-select'] {
-    flex: 0 1 auto;
-    min-inline-size: var(--lr-size-6rem);
-    max-inline-size: 45%;
+  /* The country selector keeps the real native <select> (its popup, keyboard type-ahead, and
+     mobile pickers are irreplaceable) but stretches it invisibly over a compact decorative
+     trigger, so the closed control never clips a long localized country name and never repeats
+     the calling code shown right next to it. */
+  [part='country'] {
+    position: relative;
+    display: inline-flex;
+    align-items: stretch;
+    flex: 0 0 auto;
     align-self: stretch;
-    padding-inline: var(--lr-space-s);
-    border: none;
     border-inline-end: var(--lr-border-width-thin) solid var(--lr-color-border);
-    background: transparent;
-    color: inherit;
-    font: inherit;
   }
 
-  [part='country-select']:focus,
+  [part='country-select'] {
+    position: absolute;
+    inset: 0;
+    inline-size: 100%;
+    block-size: 100%;
+    margin: 0;
+    padding: 0;
+    border: none;
+    appearance: none;
+    opacity: 0;
+    color: inherit;
+    font: inherit;
+    cursor: pointer;
+  }
+
+  [part='country-select']:disabled {
+    cursor: not-allowed;
+  }
+
+  /* The invisible select's popup list is still painted by the browser from these options; without
+     an explicit surface/text pairing it falls back to UA colors (a white panel in dark themes). */
+  [part='country-select'] option {
+    background: var(--lr-color-surface);
+    color: var(--lr-color-text);
+  }
+
+  [part='country-trigger'] {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--lr-space-xs);
+    padding-inline: var(--lr-space-s);
+    border-start-start-radius: var(--lr-radius);
+    border-end-start-radius: var(--lr-radius);
+    transition: background-color var(--lr-transition-fast);
+  }
+
+  [part='country-select']:not(:disabled):hover + [part='country-trigger'] {
+    background: var(--lr-color-brand-quiet);
+  }
+
+  /* The wrapper's focus-within ring marks the whole field; this inner ring additionally marks
+     that keyboard focus sits on the (invisible) country select rather than the telephone input. */
+  [part='country-select']:focus-visible + [part='country-trigger'] {
+    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
+    outline-offset: calc(-1 * var(--lr-focus-ring-width));
+  }
+
+  [part='flag'] {
+    font-size: var(--lr-font-size-lg);
+  }
+
+  [part='country-code'] {
+    font-size: var(--lr-font-size-md-sm);
+    font-weight: var(--lr-font-weight-semibold);
+  }
+
+  [part='country-code'][data-placeholder] {
+    color: var(--lr-color-text-quiet);
+    font-weight: var(--lr-font-weight-normal);
+  }
+
+  [part='expand-icon'] {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--lr-color-text-quiet);
+    font-size: var(--lr-font-size-md-sm);
+    line-height: var(--lr-line-height-none);
+  }
+
+  [part='expand-icon'] svg {
+    transform: rotate(90deg);
+  }
+
   [part='input']:focus {
     outline: none;
   }

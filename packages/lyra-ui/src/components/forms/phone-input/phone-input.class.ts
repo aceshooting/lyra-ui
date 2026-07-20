@@ -1,6 +1,7 @@
 import { html, nothing, type ComplexAttributeConverter, type PropertyValues, type TemplateResult } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
 import { nextId } from '../../../internal/a11y.js';
+import { chevronIcon } from '../../../internal/icons.js';
 import { SET_ANCHORED_VALIDITY, VALIDITY_ANCHOR } from '../../../internal/anchored-validity.js';
 import { FormAssociated } from '../../../internal/form-associated.js';
 import { getDisplayNames } from '../../../internal/intl-cache.js';
@@ -210,6 +211,18 @@ function fallbackParse(input: string): PhoneNumberParseResult {
  * `aria-label` names the internal telephone input and wins over every derived
  * or component-specific fallback.
  *
+ * The country selector keeps the real, fully accessible native `<select>`
+ * (full country names in its popup, native mobile pickers, type-ahead) but
+ * renders it invisibly over a compact visual trigger — selected alpha-2 code
+ * plus a design-system chevron — so long localized country names never clip
+ * the closed control and the calling code isn't shown twice. With `flags`
+ * set, the trigger also shows the selected country's `<lr-flag>`; actual flag
+ * artwork still comes from the optional `@aceshooting/lyra-flags` peer,
+ * registered by the consumer via `components/media/flag/flag-peer.js`
+ * exactly as for a standalone `<lr-flag>` (without that registration the
+ * trigger simply omits the image). Native `<option>`s cannot contain
+ * elements, so the open popup remains text-only by platform design.
+ *
  * @customElement lr-phone-input
  * @slot label - Custom label content.
  * @slot hint - Custom hint content.
@@ -223,7 +236,12 @@ function fallbackParse(input: string): PhoneNumberParseResult {
  * @csspart form-control-label - The visible label.
  * @csspart input-wrapper - The country selector and telephone input wrapper.
  * @csspart country-prefix - Optional country adornment slot wrapper.
- * @csspart country-select - The native country selector.
+ * @csspart country - The country selector region (invisible native select over the visual trigger).
+ * @csspart country-select - The native country selector, stretched invisibly over the trigger.
+ * @csspart country-trigger - The visible, decorative closed-state trigger.
+ * @csspart flag - The selected country's `<lr-flag>` inside the trigger (only with `flags`).
+ * @csspart country-code - The selected alpha-2 code (or placeholder text) inside the trigger.
+ * @csspart expand-icon - The dropdown indicator inside the trigger.
  * @csspart calling-code - The selected country's calling code.
  * @csspart input - The native telephone input.
  * @csspart hint - The hint message.
@@ -234,6 +252,24 @@ export class LyraPhoneInput extends FormAssociated(LyraPhoneInputBase) {
   static properties = {
     country: { noAccessor: true },
   };
+
+  /**
+   * Lazily registers `<lr-flag>` (and its skeleton dependency) the first time any
+   * `<lr-phone-input>` enables `flags`, so consumers that never turn flags on ship none of that
+   * code. Kept static: registration is a page-global concern, not per-instance.
+   */
+  private static flagRegistration?: Promise<unknown>;
+
+  /**
+   * Show the selected country's flag in the country trigger. Rendering uses `<lr-flag
+   * variant="compact">` (the icon-scale tier); the flag artwork itself still comes from the
+   * optional `@aceshooting/lyra-flags` peer package, which the consumer registers by importing
+   * `@aceshooting/lyra-ui/components/media/flag/flag-peer.js` — the same contract as a standalone
+   * `<lr-flag>`. Without that registration (or the peer package) the trigger simply renders no
+   * image; nothing flag-related is bundled while this stays `false`. The native popup list stays
+   * text-only — an `<option>` cannot contain elements.
+   */
+  @property({ type: Boolean, reflect: true }) flags = false;
 
   /** Formatting and validation implementation. No metadata is bundled by default. */
   @property({ attribute: false }) adapter?: PhoneNumberAdapter;
@@ -467,6 +503,13 @@ export class LyraPhoneInput extends FormAssociated(LyraPhoneInputBase) {
   }
 
   protected willUpdate(changed: PropertyValues): void {
+    if (this.flags && !LyraPhoneInput.flagRegistration) {
+      // Dynamic (not static) so the flag/skeleton modules stay out of every bundle that never
+      // enables flags; the rendered <lr-flag> upgrades in place once the registration lands.
+      LyraPhoneInput.flagRegistration = import('../../media/flag/flag.js').catch((error) => {
+        console.warn('<lr-phone-input> failed to register <lr-flag> for its flags option:', error);
+      });
+    }
     if (!this.hasUpdated) {
       this.hasLabelSlot = Array.from(this.children).some((child) => child.getAttribute('slot') === 'label');
       this.hasHintSlot = Array.from(this.children).some((child) => child.getAttribute('slot') === 'hint');
@@ -615,20 +658,31 @@ export class LyraPhoneInput extends FormAssociated(LyraPhoneInputBase) {
           <span part="country-prefix" ?hidden=${!this.hasCountryPrefixSlot}>
             <slot name="country-prefix" @slotchange=${this.onCountryPrefixSlotChange}></slot>
           </span>
-          <select
-            part="country-select"
-            aria-label=${this.effectiveCountryLabel}
-            .value=${this.country}
-            ?disabled=${this.effectiveDisabled || rows.length === 0}
-            @change=${this.onCountryChange}
-          >
-            ${rows.length === 0
-              ? html`<option value="">${this.effectiveCountryLabel}</option>`
-              : rows.map((row) => html`<option
-                    value=${row.code}
-                    ?selected=${row.code === this.country}
-                  >${this.countryName(row)}${row.callingCode ? ` (+${row.callingCode})` : ''}</option>`)}
-          </select>
+          <span part="country">
+            <select
+              part="country-select"
+              aria-label=${this.effectiveCountryLabel}
+              .value=${this.country}
+              ?disabled=${this.effectiveDisabled || rows.length === 0}
+              @change=${this.onCountryChange}
+            >
+              ${rows.length === 0
+                ? html`<option value="">${this.effectiveCountryLabel}</option>`
+                : rows.map((row) => html`<option
+                      value=${row.code}
+                      ?selected=${row.code === this.country}
+                    >${this.countryName(row)}${row.callingCode ? ` (+${row.callingCode})` : ''}</option>`)}
+            </select>
+            <span part="country-trigger" aria-hidden="true">
+              ${this.flags && this.country
+                ? html`<lr-flag part="flag" country=${this.country} variant="compact" aria-label=""></lr-flag>`
+                : nothing}
+              <span part="country-code" ?data-placeholder=${!this.country}>${
+                this.country || this.effectiveCountryLabel
+              }</span>
+              <span part="expand-icon">${chevronIcon()}</span>
+            </span>
+          </span>
           ${current?.callingCode
             ? html`<span part="calling-code" aria-hidden="true">+${current.callingCode}</span>`
             : nothing}

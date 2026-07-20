@@ -926,3 +926,105 @@ it('resets to an empty country when neither default-country nor any country list
   await el.updateComplete;
   expect(el.country).to.equal('');
 });
+
+it('renders a compact decorative country trigger that mirrors the selection without repeating the calling code', async () => {
+  const el = (await fixture(html`
+    <lr-phone-input label="Mobile" default-country="LU" .adapter=${adapter}></lr-phone-input>
+  `)) as LyraPhoneInput;
+  await el.updateComplete;
+  const trigger = el.shadowRoot!.querySelector('[part="country-trigger"]')!;
+  expect(trigger.getAttribute('aria-hidden')).to.equal('true');
+  expect(trigger.querySelector('[part="country-code"]')!.textContent!.trim()).to.equal('LU');
+  expect(Boolean(trigger.querySelector('[part="expand-icon"] svg'))).to.equal(true);
+  // The calling code renders exactly once, in its own part beside the trigger.
+  expect(trigger.textContent).to.not.include('+352');
+  expect(el.shadowRoot!.querySelector('[part="calling-code"]')!.textContent!.trim()).to.equal('+352');
+  // The invisible native select stays the real, accessibly named control over the trigger.
+  const select = el.shadowRoot!.querySelector('[part="country-select"]') as HTMLSelectElement;
+  expect(Boolean(select.getAttribute('aria-label'))).to.equal(true);
+
+  select.value = 'FR';
+  select.dispatchEvent(new Event('change', { bubbles: true }));
+  await el.updateComplete;
+  expect(trigger.querySelector('[part="country-code"]')!.textContent!.trim()).to.equal('FR');
+});
+
+it('layers the invisible native select exactly over the visible trigger', async () => {
+  const el = (await fixture(html`
+    <lr-phone-input label="Mobile" default-country="LU" .adapter=${adapter}></lr-phone-input>
+  `)) as LyraPhoneInput;
+  await el.updateComplete;
+  const select = el.shadowRoot!.querySelector('[part="country-select"]') as HTMLSelectElement;
+  const trigger = el.shadowRoot!.querySelector('[part="country-trigger"]') as HTMLElement;
+  const selectStyle = getComputedStyle(select);
+  expect(selectStyle.opacity).to.equal('0');
+  expect(selectStyle.position).to.equal('absolute');
+  expect(selectStyle.cursor).to.equal('pointer');
+  // The trigger sizes the region; the select must cover it edge to edge so every visible pixel
+  // of the trigger is really a click on the native control.
+  const selectBox = select.getBoundingClientRect();
+  const triggerBox = trigger.getBoundingClientRect();
+  expect(selectBox.left).to.be.closeTo(triggerBox.left, 1);
+  expect(selectBox.right).to.be.closeTo(triggerBox.right, 1);
+  expect(selectBox.top).to.be.closeTo(triggerBox.top, 1);
+  expect(selectBox.bottom).to.be.closeTo(triggerBox.bottom, 1);
+  expect(triggerBox.width).to.be.greaterThan(0);
+});
+
+it('shows the localized selector label as a quiet placeholder in the trigger when no countries exist', async () => {
+  const el = (await fixture(html`<lr-phone-input label="Mobile"></lr-phone-input>`)) as LyraPhoneInput;
+  await el.updateComplete;
+  const code = el.shadowRoot!.querySelector('[part="country-code"]')!;
+  expect(code.hasAttribute('data-placeholder')).to.equal(true);
+  expect(code.textContent!.trim()).to.equal('Select');
+  expect((el.shadowRoot!.querySelector('[part="country-select"]') as HTMLSelectElement).disabled).to.equal(true);
+});
+
+it('renders no flag markup while flags stays off', async () => {
+  const el = (await fixture(html`
+    <lr-phone-input label="Mobile" default-country="LU" .adapter=${adapter}></lr-phone-input>
+  `)) as LyraPhoneInput;
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelector('[part="flag"]')).to.equal(null);
+});
+
+it('flags renders a decorative compact lr-flag for the selection and keeps it in sync with country changes', async () => {
+  const el = (await fixture(html`
+    <lr-phone-input label="Mobile" flags default-country="LU" .adapter=${adapter}></lr-phone-input>
+  `)) as LyraPhoneInput;
+  await el.updateComplete;
+  const flag = el.shadowRoot!.querySelector('[part="flag"]')!;
+  expect(flag.tagName.toLowerCase()).to.equal('lr-flag');
+  expect(flag.getAttribute('country')).to.equal('LU');
+  expect(flag.getAttribute('variant')).to.equal('compact');
+  // Decorative: the country name is already announced by the native select.
+  expect(flag.getAttribute('aria-label')).to.equal('');
+  // Enabling flags lazily registers the element definition itself.
+  await customElements.whenDefined('lr-flag');
+
+  el.country = 'FR';
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelector('[part="flag"]')!.getAttribute('country')).to.equal('FR');
+});
+
+it('flags without any selectable country renders no flag element', async () => {
+  const el = (await fixture(html`<lr-phone-input label="Mobile" flags></lr-phone-input>`)) as LyraPhoneInput;
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelector('[part="flag"]')).to.equal(null);
+});
+
+it('is accessible with flags enabled', async () => {
+  const el = (await fixture(html`
+    <lr-phone-input
+      label="Phone number"
+      hint="Include the country code"
+      flags
+      default-country="LU"
+      .adapter=${adapter}
+    ></lr-phone-input>
+  `)) as LyraPhoneInput;
+  await el.updateComplete;
+  await customElements.whenDefined('lr-flag');
+  await el.updateComplete;
+  await expect(el).to.be.accessible();
+});

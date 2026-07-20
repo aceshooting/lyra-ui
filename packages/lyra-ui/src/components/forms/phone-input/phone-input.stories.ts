@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
+import '../../media/flag/flag-peer.js';
 import type { LyraPhoneInput, PhoneNumberAdapter } from './phone-input.class.js';
 
 const demoAdapter: PhoneNumberAdapter = {
@@ -70,6 +71,24 @@ export const AccessibleEditingSurface: Story = {
         }}
       >Focus and select the number</button>
     </div>
+  `,
+};
+
+/**
+ * `flags` renders the selected country's `<lr-flag>` inside the compact country trigger. Flag
+ * artwork comes from the optional `@aceshooting/lyra-flags` peer, registered here exactly as for
+ * a standalone `<lr-flag>` (the `flag-peer.js` import); without it the trigger just omits the
+ * image. The native dropdown list itself stays text-only — an `<option>` cannot contain elements.
+ */
+export const WithFlags: Story = {
+  render: () => html`
+    <lr-phone-input
+      label="Mobile number"
+      flags
+      default-country="LU"
+      .adapter=${demoAdapter}
+      style="max-width: 24rem"
+    ></lr-phone-input>
   `,
 };
 
