@@ -1,6 +1,7 @@
 import { fixture, expect, html, oneEvent } from '@open-wc/testing';
 import './data-grid.js';
 import type { LyraDataGrid, DataGridColumn } from './data-grid.js';
+import { styles } from './data-grid.styles.js';
 
 it('renders rows and exposes grid semantics', async () => {
   const columns: DataGridColumn[] = [{ key: 'name', label: 'Name', sortable: true }, { key: 'count', label: 'Count' }];
@@ -172,6 +173,15 @@ it('scrolls [part="viewport"] horizontally rather than overflowing a 320px conta
   const viewport = el.shadowRoot!.querySelector('[part="viewport"]') as HTMLElement;
   expect(getComputedStyle(viewport).overflow).to.equal('auto');
   expect(viewport.scrollWidth).to.be.greaterThan(viewport.clientWidth);
+});
+
+it('wires the sort-header focus ring and hover state to the actual focusable button, not the inert th', () => {
+  const css = styles.cssText.replace(/\s+/g, ' ');
+  // A <th role="columnheader"> with no tabindex can never itself receive focus -- only the
+  // nested sort <button> can, so the ring must target that, not the <th>.
+  expect(css).to.match(/th button:focus-visible[^{]*\{[^}]*outline:/);
+  expect(css).to.not.match(/(?<!button )th:focus-visible/);
+  expect(css).to.match(/th button:hover[^{]*\{[^}]*background:/);
 });
 
 describe('--lr-data-grid-row-selected-bg', () => {
