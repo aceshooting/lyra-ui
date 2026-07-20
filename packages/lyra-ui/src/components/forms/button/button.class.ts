@@ -62,10 +62,15 @@ export type ButtonType = 'button' | 'submit' | 'reset';
  * `appearance="quiet"`.
  * @cssprop [--lr-button-size-2xs=var(--lr-size-1-25rem)] - `min-block-size` at `size="2xs"`.
  * @cssprop [--lr-button-size-xs=var(--lr-size-1-5rem)] - `min-block-size` at `size="xs"`.
- * @cssprop [--lr-button-size-s=var(--lr-size-1-75rem)] - `min-block-size` at `size="s"`.
- * @cssprop [--lr-button-size-m=var(--lr-size-2rem)] - `min-block-size` at `size="m"`.
- * @cssprop [--lr-button-size-l=var(--lr-size-2-5rem)] - `min-block-size` at `size="l"`.
- * @cssprop [--lr-button-size-xl=var(--lr-size-3rem)] - `min-block-size` at `size="xl"`.
+ * @cssprop [--lr-button-size-s=var(--lr-size-1-875rem)] - `min-block-size` at `size="s"`. Matches
+ * `lr-input`/`lr-select`/`lr-combobox`'s own `size="s"` control height.
+ * @cssprop [--lr-button-size-m=var(--lr-size-2-5rem)] - `min-block-size` at `size="m"`. Matches
+ * `lr-input`/`lr-select`/`lr-combobox`'s own default control height, so a default-size button sitting
+ * next to a default-size input/select/combobox in the same row lines up.
+ * @cssprop [--lr-button-size-l=var(--lr-size-3rem)] - `min-block-size` at `size="l"`. Matches
+ * `lr-input`/`lr-select`/`lr-combobox`'s own `size="l"` control height.
+ * @cssprop [--lr-button-size-xl=var(--lr-size-3-5rem)] - `min-block-size` at `size="xl"`. Matches
+ * `lr-input`/`lr-select`/`lr-combobox`'s own `size="xl"` control height.
  * @cssprop [--lr-button-padding-block=var(--lr-space-xs)] - Block padding of the internal button,
  * re-assigned per `size` tier (the default is the `m` tier's value). Override it to retune a tier
  * without a `::part(base)` rule; `appearance="link"` ignores it (it renders with zero padding).
@@ -117,7 +122,21 @@ export class LyraButton extends LyraElement {
 
   constructor() {
     super();
-    this.attachInternals();
+    // `attachInternals()` is browser-only; a downstream consumer's Vitest + happy-dom (or similar)
+    // test suite has no implementation of it at all, so calling it unconditionally would throw
+    // merely from constructing/importing this component, before any assertion runs. The return
+    // value is unused here (this component only needs form-associated *discoverability*, not
+    // `ElementInternals`' validity/value APIs), so unlike `<lr-checkbox>`'s/`<lr-checkbox-group>`'s
+    // `createInternalsSafely()`/`createNoopInternals()` pair, degrading is just "skip the call" --
+    // there is no `this.internals` field whose later use needs a no-op stand-in.
+    if (typeof this.attachInternals === 'function') {
+      try {
+        this.attachInternals();
+      } catch {
+        // Environment claims support but throws anyway (e.g. a partial polyfill) -- same
+        // fail-open degradation as the `typeof` guard above.
+      }
+    }
   }
 
   /** Tone vocabulary shared with `<lr-chip>`/`<lr-avatar>`'s own `tone` property, named

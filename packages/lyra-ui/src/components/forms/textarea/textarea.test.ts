@@ -1,6 +1,34 @@
 import { fixture, expect, html, oneEvent } from '@open-wc/testing';
+import type { PropertyValues } from 'lit';
 import './textarea.js';
 import type { LyraTextarea } from './textarea.js';
+import { styles } from './textarea.styles.js';
+import { LyraElement } from '../../../internal/lyra-element.js';
+
+it('gives the textarea field hover feedback matching the keyboard focus-visible cue', () => {
+  const css = styles.cssText.replace(/\s+/g, ' ');
+  expect(css).to.match(/\[part='textarea'\]:hover\s*\{[^}]*border-color:/);
+});
+
+it('calls super.willUpdate so a future LyraElement/mixin lifecycle hook stays wired in', async () => {
+  // Monkey-patch LyraElement.prototype.willUpdate (the established pattern, e.g. checkbox.test.ts)
+  // to prove LyraTextarea's own willUpdate() override actually calls super.willUpdate(...) rather
+  // than shadowing it silently.
+  const proto = LyraElement.prototype as unknown as { willUpdate: (changed: PropertyValues) => void };
+  const original = proto.willUpdate;
+  let called = false;
+  proto.willUpdate = function (this: LyraElement, changed: PropertyValues): void {
+    called = true;
+    original.call(this, changed);
+  };
+  try {
+    const el = (await fixture(html`<lr-textarea></lr-textarea>`)) as LyraTextarea;
+    await el.updateComplete;
+    expect(called).to.be.true;
+  } finally {
+    proto.willUpdate = original;
+  }
+});
 
 it('defaults to rows=3, resize="vertical", empty value', async () => {
   const el = (await fixture(html`<lr-textarea></lr-textarea>`)) as LyraTextarea;

@@ -26,7 +26,59 @@ it('is accessible', async () => {
 
 it('uses the semibold font-weight design token for the label instead of a hardcoded value', () => {
   expect(styles.cssText).to.include('var(--lr-font-weight-semibold)');
-  expect(styles.cssText).to.not.match(/\[part='label'\]\s*\{[^}]*font-weight:\s*600/);
+  expect(styles.cssText).to.not.match(/\[part='form-control-label'\]\s*\{[^}]*font-weight:\s*600/);
+});
+
+it('actually renders the legend with the semibold font-weight token, not just declares it in the stylesheet source', async () => {
+  const el = (await fixture(html`<lr-checkbox-group label="Topics"><lr-checkbox>A</lr-checkbox></lr-checkbox-group>`)) as LyraCheckboxGroup;
+  const legend = el.shadowRoot!.querySelector('[part="form-control-label"]') as HTMLElement;
+  // Compares against the token's own resolved value rather than a hardcoded '600', same idiom as
+  // notebook-viewer.test.ts's identical semibold-token assertion.
+  expect(getComputedStyle(legend).fontWeight).to.equal(
+    getComputedStyle(legend).getPropertyValue('--lr-font-weight-semibold').trim(),
+  );
+});
+
+describe('ElementInternals availability', () => {
+  it('does not throw when constructed in an environment without a real ElementInternals implementation (e.g. a downstream Vitest + happy-dom suite)', () => {
+    const original = HTMLElement.prototype.attachInternals;
+    // @ts-expect-error -- simulating an environment that lacks ElementInternals entirely
+    delete HTMLElement.prototype.attachInternals;
+    try {
+      let el: LyraCheckboxGroup | undefined;
+      expect(() => {
+        el = document.createElement('lr-checkbox-group') as LyraCheckboxGroup;
+      }).to.not.throw();
+      // Confirm the fallback keeps the rest of the public surface usable rather than merely
+      // swallowing the constructor error.
+      expect(el!.checkValidity()).to.be.true;
+      expect(el!.form).to.equal(null);
+    } finally {
+      HTMLElement.prototype.attachInternals = original;
+    }
+  });
+});
+
+describe('validationMessage localization', () => {
+  it('defaults to the built-in English validationMessage when required with nothing checked', async () => {
+    const el = (await fixture(
+      html`<lr-checkbox-group required><lr-checkbox>A</lr-checkbox></lr-checkbox-group>`,
+    )) as LyraCheckboxGroup;
+    expect(el.validationMessage).to.equal('Select at least one option.');
+  });
+
+  it('localizes the validationMessage via this.localize() when .strings overrides checkboxGroupRequired', async () => {
+    const el = (await fixture(html`
+      <lr-checkbox-group required .strings=${{ checkboxGroupRequired: 'Sélectionnez au moins une option.' }}>
+        <lr-checkbox>A</lr-checkbox>
+      </lr-checkbox-group>
+    `)) as LyraCheckboxGroup;
+    expect(el.validationMessage).to.equal('Sélectionnez au moins une option.');
+
+    (el.querySelectorAll('lr-checkbox')[0] as HTMLElement).shadowRoot!.querySelector('[part="base"]')!
+      .dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    expect(el.validationMessage).to.equal('');
+  });
 });
 
 it('cascades fieldset-disabled state to children through an internal channel, never their own disabled property', async () => {

@@ -71,6 +71,14 @@ it('re-dispatches bubbling, composed focus/blur events from the internal color i
   expect(blurEvent.composed).to.be.true;
 });
 
+it('uses a .strings override for the default accessible-name fallback', async () => {
+  const el = (await fixture(html`<lr-color-picker></lr-color-picker>`)) as LyraColorPicker;
+  el.strings = { colorPicker: 'Sélecteur de couleur' };
+  await el.updateComplete;
+  const input = el.shadowRoot!.querySelector('input') as HTMLInputElement;
+  expect(input.getAttribute('aria-label')).to.equal('Sélecteur de couleur');
+});
+
 it('gives the native color swatch its own hover and focus-visible treatment', () => {
   const css = styles.cssText.replace(/\s+/g, ' ');
   expect(css).to.match(/\[part='input'\]:hover\s*\{[^}]*border-color:/);

@@ -1,4 +1,5 @@
 import { fixture, expect, oneEvent, html, aTimeout } from '@open-wc/testing';
+import { LitElement, type PropertyValues } from 'lit';
 import './combobox.js';
 import './option.js';
 import '../input/input.js';
@@ -2403,4 +2404,164 @@ it('clamps its floating surface width through the shared popover-viewport-clamp 
 it("colors the combobox-input's placeholder text instead of leaving the UA default", () => {
   const css = styles.cssText.replace(/\s+/g, ' ');
   expect(css).to.match(/\[part='combobox-input'\]::placeholder\s*\{[^}]*color:\s*var\(--lr-color-text-quiet\)/);
+});
+
+it("renders the combobox-input's ::placeholder in the shared quiet-text token's color (getComputedStyle, not just source text)", async () => {
+  // The test above only proves the token string appears in the stylesheet source -- it can't
+  // catch a rule that stops matching the real DOM (wrong selector, broken specificity, a
+  // shadow-DOM part boundary issue). This reads the actual rendered pseudo-element instead.
+  const el = (await fixture(
+    html`<lr-combobox style="--lr-color-text-quiet: rgb(12, 34, 56)"></lr-combobox>`,
+  )) as LyraCombobox;
+  await el.updateComplete;
+  const input = el.shadowRoot!.querySelector('[part="combobox-input"]') as HTMLInputElement;
+  expect(getComputedStyle(input, '::placeholder').color).to.equal('rgb(12, 34, 56)');
+});
+
+// -- Hover states (mouse-modality parity with the focus ring) --------------
+
+it('gives the clear button a :hover rule, matching its own :focus-visible affordance', () => {
+  const css = styles.cssText.replace(/\s+/g, ' ');
+  expect(css).to.match(/\[part='clear-button'\]:hover/);
+});
+
+it("gives a selected tag's remove button a :hover rule, matching its own :focus-visible affordance", () => {
+  const css = styles.cssText.replace(/\s+/g, ' ');
+  expect(css).to.match(/\[part='tag__remove-button'\]:hover/);
+});
+
+// -- Per-component theming indirection --------------------------------------
+
+describe('--lr-combobox-option-active-bg', () => {
+  it('retints a hovered/active option row via the cssprop, not just the bare shared token', async () => {
+    const el = (await fixture(basic())) as LyraCombobox;
+    el.open = true;
+    await el.updateComplete;
+    el.style.setProperty('--lr-combobox-option-active-bg', 'rgb(10, 20, 30)');
+    const row = el.shadowRoot!.querySelector('[part="option"]') as HTMLElement;
+    // [data-active] shares the same declaration as :hover in the stylesheet (comma-separated) --
+    // real :hover can't be forced from test JS without an actual pointer move, so this exercises
+    // the identical rule via its keyboard-active twin.
+    row.setAttribute('data-active', '');
+    expect(getComputedStyle(row).backgroundColor).to.equal('rgb(10, 20, 30)');
+  });
+
+  it('still falls back to the shared --lr-color-brand-quiet token when unset', async () => {
+    const el = (await fixture(basic())) as LyraCombobox;
+    el.open = true;
+    await el.updateComplete;
+    el.style.setProperty('--lr-color-brand-quiet', 'rgb(40, 50, 60)');
+    const row = el.shadowRoot!.querySelector('[part="option"]') as HTMLElement;
+    row.setAttribute('data-active', '');
+    expect(getComputedStyle(row).backgroundColor).to.equal('rgb(40, 50, 60)');
+  });
+});
+
+// -- Host click() forwarding -------------------------------------------------
+
+it('forwards host click() to opening the listbox and focusing the filter input', async () => {
+  const el = (await fixture(basic())) as LyraCombobox;
+  expect(el.open).to.be.false;
+
+  el.click();
+  await el.updateComplete;
+
+  expect(el.open).to.be.true;
+  const input = el.shadowRoot!.querySelector('[part="combobox-input"]');
+  expect(el.shadowRoot!.activeElement === input).to.be.true;
+});
+
+it('does not open or steal focus when host click() is called while disabled', async () => {
+  const el = (await fixture(html`
+    <lr-combobox disabled>
+      <lr-option value="a">Apple</lr-option>
+    </lr-combobox>
+  `)) as LyraCombobox;
+  await el.updateComplete;
+
+  el.click();
+  await el.updateComplete;
+
+  expect(el.open).to.be.false;
+});
+
+// -- ElementInternals availability -------------------------------------------
+
+describe('ElementInternals availability', () => {
+  it('does not throw when constructed in an environment without a real ElementInternals implementation (e.g. a downstream Vitest + happy-dom suite)', () => {
+    const original = HTMLElement.prototype.attachInternals;
+    // @ts-expect-error -- simulating an environment that lacks ElementInternals entirely
+    delete HTMLElement.prototype.attachInternals;
+    try {
+      let el: LyraCombobox | undefined;
+      expect(() => {
+        el = document.createElement('lr-combobox') as LyraCombobox;
+      }).to.not.throw();
+      // Confirm the fallback keeps the rest of the public surface usable rather than merely
+      // swallowing the constructor error.
+      expect(el!.checkValidity()).to.be.true;
+      expect(el!.form).to.equal(null);
+    } finally {
+      HTMLElement.prototype.attachInternals = original;
+    }
+  });
+});
+
+// -- Lifecycle super calls ---------------------------------------------------
+
+it('chains willUpdate() to super.willUpdate() so a mixin layered under LyraElement would still run', async () => {
+  // No shared mixin actually overrides willUpdate() today, so the only way to prove the chain is
+  // live (rather than grepping source text for the call) is to patch the base-class hook itself
+  // -- the exact hook a future mixin would extend -- and confirm it actually fires.
+  const hadOwn = Object.prototype.hasOwnProperty.call(LitElement.prototype, 'willUpdate');
+  const original = (LitElement.prototype as unknown as { willUpdate?: (changed: PropertyValues) => void })
+    .willUpdate;
+  let called = false;
+  (LitElement.prototype as unknown as { willUpdate: (changed: PropertyValues) => void }).willUpdate = function (
+    this: LitElement,
+    changed: PropertyValues,
+  ) {
+    called = true;
+    original?.call(this, changed);
+  };
+  try {
+    // Deliberately no slotted `<lr-option>` children: they're LyraElement subclasses too, and if
+    // this used `basic()` a passing result couldn't distinguish "the combobox itself chained the
+    // call" from "some sibling LyraElement in the fixture happened to trigger the patched hook".
+    const el = (await fixture(html`<lr-combobox></lr-combobox>`)) as LyraCombobox;
+    await el.updateComplete;
+    expect(called).to.be.true;
+  } finally {
+    if (hadOwn) {
+      (LitElement.prototype as unknown as { willUpdate: unknown }).willUpdate = original;
+    } else {
+      delete (LitElement.prototype as unknown as { willUpdate?: unknown }).willUpdate;
+    }
+  }
+});
+
+it('chains updated() to super.updated() so a mixin layered under LyraElement would still run', async () => {
+  const hadOwn = Object.prototype.hasOwnProperty.call(LitElement.prototype, 'updated');
+  const original = (LitElement.prototype as unknown as { updated?: (changed: PropertyValues) => void }).updated;
+  let called = false;
+  (LitElement.prototype as unknown as { updated: (changed: PropertyValues) => void }).updated = function (
+    this: LitElement,
+    changed: PropertyValues,
+  ) {
+    called = true;
+    original?.call(this, changed);
+  };
+  try {
+    // Deliberately no slotted `<lr-option>` children -- see the identical note in the
+    // willUpdate() version of this test above.
+    const el = (await fixture(html`<lr-combobox></lr-combobox>`)) as LyraCombobox;
+    await el.updateComplete;
+    expect(called).to.be.true;
+  } finally {
+    if (hadOwn) {
+      (LitElement.prototype as unknown as { updated: unknown }).updated = original;
+    } else {
+      delete (LitElement.prototype as unknown as { updated?: unknown }).updated;
+    }
+  }
 });

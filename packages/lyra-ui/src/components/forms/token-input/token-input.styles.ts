@@ -20,12 +20,17 @@ export const styles = css`
   /* Only rendered while [editable] is set, so the non-editable token row keeps its plain,
      non-focusable text span and its exact current metrics. */
   [part='token-label'] { border-radius: var(--lr-radius); cursor: pointer; }
+  [part='token-label']:hover { background: var(--lr-color-brand-quiet); }
   [part='token-label']:focus-visible { outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color); outline-offset: var(--lr-focus-ring-offset); }
-  :host([disabled]) [part='token-label'] { cursor: default; }
+  :host(:disabled) [part='token-label'] { cursor: default; }
   [part='token-editor'] { inline-size: var(--lr-token-input-editor-inline-size, var(--lr-size-6rem)); max-inline-size: 100%; border: 0; outline: 0; padding: 0; background: transparent; color: inherit; font: inherit; }
   [part='token-editor']::placeholder { color: var(--lr-color-text-quiet); }
   [part='hint'], [part='error'] { color: var(--lr-color-text-quiet); font-size: var(--lr-font-size-sm); }
   [part='error'] { color: var(--lr-color-danger); }
   :host([data-invalid]) [part='input-wrapper'] { border-color: var(--lr-color-danger); }
-  :host([disabled]) { opacity: var(--lr-opacity-disabled); }
+  /* :host(:disabled), not :host([disabled]) -- the native FACE pseudo-class also matches an
+     ancestor <fieldset disabled> cascade (see effectiveDisabled in token-input.class.ts), which
+     the bracket-attribute selector would miss entirely (mirrors lr-select's/lr-combobox's
+     identical fix). */
+  :host(:disabled) { opacity: var(--lr-opacity-disabled); }
 `;

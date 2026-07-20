@@ -193,6 +193,18 @@ export const styles = css`
   [part='expand-icon'] svg {
     transform: rotate(90deg);
   }
+  /* Mirrors <lr-input>'s own [part='clear-button']:hover -- darkens the same quiet-to-full text
+     token step so mouse users get the same "this is interactive" feedback keyboard users already
+     get from the focus ring below. */
+  [part='clear-button']:hover {
+    color: var(--lr-color-text);
+  }
+  /* Mirrors <lr-chip>'s own [part='remove-button']:hover -- a currentColor-derived tint rather
+     than a fixed token, since this part's rest-state color is 'inherit' (the tag's own text
+     color), not a dedicated quiet token to darken. */
+  [part='tag__remove-button']:hover {
+    background: color-mix(in srgb, currentColor 16%, transparent);
+  }
   [part='clear-button']:focus-visible,
   [part='tag__remove-button']:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
@@ -251,7 +263,7 @@ export const styles = css`
   }
   [part='option']:hover,
   [part='option'][data-active] {
-    background: var(--lr-color-brand-quiet);
+    background: var(--lr-combobox-option-active-bg, var(--lr-color-brand-quiet));
   }
   [part='option'][aria-selected='true'] {
     border-color: var(--lr-color-brand);

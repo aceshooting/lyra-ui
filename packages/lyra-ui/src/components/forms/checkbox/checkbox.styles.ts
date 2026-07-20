@@ -63,8 +63,12 @@ export const styles = css`
   }
   :host([checked]) [part='box'],
   :host([indeterminate]) [part='box'] {
-    background: var(--lr-color-brand);
-    border-color: var(--lr-color-brand);
+    /* Component-scoped indirection (mirrors lr-source-picker's identical
+       --lr-source-picker-checked-bg/-border pair) so a consumer can retint just this control's
+       checked/indeterminate fill without hijacking the shared --lr-color-brand token used across
+       the rest of the library. */
+    background: var(--lr-checkbox-checked-bg, var(--lr-color-brand));
+    border-color: var(--lr-checkbox-checked-border, var(--lr-color-brand));
   }
   /* Gives a required-but-unmet checkbox a persistent visible affordance --
      matching lr-combobox/lr-select's data-invalid styling hook --

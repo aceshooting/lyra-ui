@@ -17,6 +17,13 @@ export interface LyraRadioEventMap {
  * `<lr-radio>` — a form-associated single-choice control. Radios can be used
  * alone or inside `<lr-radio-group>`.
  *
+ * Deliberately no hint/error chrome of its own -- the default slot already carries real, visible
+ * label text (see `@slot` below), so a labeled-field frame built around `label`/`hint`/`errorText`
+ * props has nothing to add here. A consumer needing shared hint/error messaging for a set of
+ * options composes it once on the owning `<lr-radio-group>` (which does carry `hint`/`errorText`),
+ * the same way a native radio `<fieldset>`/`<legend>` pairs with one externally-owned error node
+ * shared across all its `<input type="radio">` children rather than one per option.
+ *
  * @customElement lr-radio
  * @slot - Label text.
  * @event input - The user selected this radio.
@@ -113,9 +120,41 @@ export class LyraRadio extends LyraElement<LyraRadioEventMap> {
 
   constructor() {
     super();
-    this.internals = this.attachInternals();
+    this.internals = this.safeAttachInternals();
     this.validityController = new AnchoredValidityController(this, this.internals, () => this[VALIDITY_ANCHOR]());
     this.syncFormState();
+  }
+
+  /** `attachInternals()` throws in any environment without a real `ElementInternals`
+   *  implementation (e.g. a downstream consumer's happy-dom test suite) -- merely constructing
+   *  (or importing) this component must not hard-crash there. Falls back to an inert stand-in:
+   *  form participation and validity reporting are unavailable in that environment (there is no
+   *  polyfillable substitute), but rendering and every non-form-associated feature keep working.
+   *  Mirrors lr-graph-query-builder's identical guard. */
+  private safeAttachInternals(): ElementInternals {
+    if (typeof (globalThis as { ElementInternals?: unknown }).ElementInternals === 'undefined') {
+      return this.inertInternals();
+    }
+    try {
+      return this.attachInternals();
+    } catch {
+      return this.inertInternals();
+    }
+  }
+
+  private inertInternals(): ElementInternals {
+    return {
+      form: null,
+      labels: [] as unknown as NodeList,
+      validity: {} as ValidityState,
+      validationMessage: '',
+      willValidate: false,
+      setFormValue: () => {},
+      setValidity: () => {},
+      checkValidity: () => true,
+      reportValidity: () => true,
+      states: new Set<string>(),
+    } as unknown as ElementInternals;
   }
 
   /** @internal */
@@ -174,6 +213,9 @@ export class LyraRadio extends LyraElement<LyraRadioEventMap> {
     if (this._tabbable === value) return;
     this._tabbable = value;
     this.requestUpdate();
+  }
+  override click(): void {
+    this[VALIDITY_ANCHOR]()?.click();
   }
   override focus(options?: FocusOptions): void {
     this[VALIDITY_ANCHOR]()?.focus(options);

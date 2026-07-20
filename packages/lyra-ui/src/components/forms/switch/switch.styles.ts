@@ -22,6 +22,14 @@ export const styles = css`
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);
   }
+  /* Gives mouse users the same 'this is interactive' cue the :focus-visible ring above already
+     gives keyboard users -- mirrors the generic --lr-hover-brightness lift used by
+     lr-confirm-bar/lr-chat-composer's own button hovers, gated on :host(:not(:disabled)) the same
+     way lr-checkbox's/lr-radio's [part='base']:hover rules are (this control isn't a native
+     button, so a bare [part='base']:hover would otherwise also fire while disabled). */
+  :host(:not(:disabled)) [part='base']:hover {
+    filter: brightness(var(--lr-hover-brightness));
+  }
   :host(:disabled) [part='base'] {
     cursor: not-allowed;
     opacity: var(--lr-opacity-disabled);

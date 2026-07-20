@@ -80,6 +80,14 @@ export const styles = css`
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);
   }
+  /* Mouse-hover feedback to match the focus-visible outline a keyboard user already sees --
+     a soft ring rather than a background/border change, since the thumb's background is already
+     the same brand color as the fill (a hover recolor would read as no change at all). Guarded by
+     :host(:not(:disabled)), the same disabled-state gating convention as lr-radio's identical
+     [part='circle'] hover rule, so a disabled thumb never shows interactive feedback. */
+  :host(:not(:disabled)) [part='thumb']:hover {
+    box-shadow: var(--lr-shadow), 0 0 0 var(--lr-size-4px) var(--lr-color-brand-quiet);
+  }
   [part='thumb']:active {
     cursor: grabbing;
   }

@@ -640,4 +640,45 @@ describe('lr-rubric-form', () => {
     expect(css).to.match(/\[part='submit'\]:hover[^{]*\{[^}]*filter:\s*brightness/);
     expect(css).to.match(/\[part='skip'\]:hover[^{]*\{[^}]*background:/);
   });
+
+  describe('lifecycle: attachInternals guard', () => {
+    it('degrades gracefully instead of throwing when ElementInternals is unavailable', async () => {
+      const original = (globalThis as { ElementInternals?: unknown }).ElementInternals;
+      // @ts-expect-error -- deliberately simulating an environment (e.g. happy-dom) with no
+      // ElementInternals implementation at all.
+      delete (globalThis as { ElementInternals?: unknown }).ElementInternals;
+      try {
+        expect(() => document.createElement('lr-rubric-form')).to.not.throw();
+        const el = (await fixture(html`<lr-rubric-form .keys=${KEYS}></lr-rubric-form>`)) as LyraRubricForm;
+        await el.updateComplete;
+        expect(el.shadowRoot!.querySelectorAll('[part="field"]').length).to.equal(KEYS.length);
+        expect(() => el.checkValidity()).to.not.throw();
+      } finally {
+        (globalThis as { ElementInternals?: unknown }).ElementInternals = original;
+      }
+    });
+
+    it('degrades gracefully instead of throwing when the native attachInternals() call itself throws', async () => {
+      // Scoped to just this tag -- the shadow tree can render other form-associated
+      // sibling controls (lr-select, lr-checkbox, ...) whose own constructors are out of this
+      // bucket's scope to fix, so a blanket stub would break unrelated children instead of
+      // isolating this component's own guard.
+      const original = HTMLElement.prototype.attachInternals;
+      HTMLElement.prototype.attachInternals = function (this: HTMLElement) {
+        if (this.tagName.toLowerCase() === 'lr-rubric-form') {
+          throw new DOMException('attachInternals is not supported', 'NotSupportedError');
+        }
+        return original.call(this);
+      };
+      try {
+        expect(() => document.createElement('lr-rubric-form')).to.not.throw();
+        const el = (await fixture(html`<lr-rubric-form .keys=${KEYS}></lr-rubric-form>`)) as LyraRubricForm;
+        await el.updateComplete;
+        expect(el.shadowRoot!.querySelectorAll('[part="field"]').length).to.equal(KEYS.length);
+        expect(() => el.checkValidity()).to.not.throw();
+      } finally {
+        HTMLElement.prototype.attachInternals = original;
+      }
+    });
+  });
 });

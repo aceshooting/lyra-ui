@@ -43,6 +43,10 @@ class LyraInputBase extends LyraElement<LyraInputEventMap> {}
  * A host `aria-label` is forwarded to the internal textbox via the typed `accessibleLabel` property;
  * external `aria-labelledby`/`aria-describedby` idrefs are not copied across the shadow boundary.
  *
+ * Forwards the full native selection/editing surface (`selectionStart`/`selectionEnd`,
+ * `setSelectionRange()`, `setRangeText()`), the same as `<lr-textarea>`, in addition to
+ * `focus()`/`blur()`/`select()`.
+ *
  * @customElement lr-input
  * @event input - Native-style composed event fired on every user-driven edit.
  * @event change - Native-style composed event fired at the native `change` timing.
@@ -154,6 +158,48 @@ export class LyraInput extends FormAssociated(LyraInputBase) {
 
   select(): void {
     this.inputEl?.select();
+  }
+
+  /** Cursor/selection extent, mirroring `<lr-textarea>`'s identical passthrough. `null` both when
+   *  the internal input hasn't rendered yet and whenever the current `type` doesn't support
+   *  selection at all (matching the native `<input>`'s own contract — only `text`/`search` among
+   *  this component's types do; `password` also supports it natively but isn't exercised here). */
+  get selectionStart(): number | null {
+    return this.inputEl?.selectionStart ?? null;
+  }
+
+  set selectionStart(value: number | null) {
+    if (this.inputEl) this.inputEl.selectionStart = value ?? 0;
+  }
+
+  get selectionEnd(): number | null {
+    return this.inputEl?.selectionEnd ?? null;
+  }
+
+  set selectionEnd(value: number | null) {
+    if (this.inputEl) this.inputEl.selectionEnd = value ?? 0;
+  }
+
+  /** Passthrough to the native `<input>`'s own `setSelectionRange()`. No-op if the element hasn't
+   *  rendered yet, or throws the same native `InvalidStateError` the native `<input>` itself would
+   *  for a `type` that doesn't support selection (mirrors `<lr-textarea>`'s `setSelectionRange()`). */
+  setSelectionRange(start: number | null, end: number | null, direction?: 'forward' | 'backward' | 'none'): void {
+    this.inputEl?.setSelectionRange(start, end, direction);
+  }
+
+  /** Passthrough to the native `<input>`'s own `setRangeText()`, mirroring `<lr-textarea>`'s
+   *  method of the same name/signature. No-op if the element hasn't rendered yet. */
+  setRangeText(replacement: string): void;
+  setRangeText(replacement: string, start: number, end: number, selectMode?: SelectionMode): void;
+  setRangeText(replacement: string, start?: number, end?: number, selectMode?: SelectionMode): void {
+    const input = this.inputEl;
+    if (!input) return;
+    if (start === undefined || end === undefined) {
+      input.setRangeText(replacement);
+    } else {
+      input.setRangeText(replacement, start, end, selectMode);
+    }
+    this.value = input.value;
   }
 
   /**

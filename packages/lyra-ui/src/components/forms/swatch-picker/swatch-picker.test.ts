@@ -154,6 +154,15 @@ describe('lr-swatch-picker', () => {
     expect(css).to.match(/\[part='swatch-fill'\]\s*\{[^}]*background-color:\s*var\(--lr-swatch-color\)/);
   });
 
+  it('actually paints the rendered fill circle background-color from the option color (not just declared in the stylesheet source)', async () => {
+    const el = (await fixture(
+      html`<lr-swatch-picker .options=${options()} value="blue"></lr-swatch-picker>`,
+    )) as LyraSwatchPicker;
+    const fill = swatches(el)[0]!.querySelector('[part="swatch-fill"]') as HTMLElement;
+    // options()[0].color === '#0969da' === rgb(9, 105, 218)
+    expect(getComputedStyle(fill).backgroundColor).to.equal('rgb(9, 105, 218)');
+  });
+
   it('gives the swatch hit target the shared minimum touch-target size without inflating the visible fill', async () => {
     const el = (await fixture(
       html`<lr-swatch-picker .options=${options()} value="blue"></lr-swatch-picker>`,
@@ -178,6 +187,21 @@ describe('lr-swatch-picker', () => {
     );
   });
 
+  it('actually draws the selected ring on the checked swatch\'s rendered fill via --lr-swatch-picker-selected-color, and not on an unchecked one', async () => {
+    const el = (await fixture(html`
+      <lr-swatch-picker
+        .options=${options()}
+        value="green"
+        style="--lr-swatch-picker-selected-color: rgb(10, 20, 30);"
+      ></lr-swatch-picker>
+    `)) as LyraSwatchPicker;
+    const buttons = swatches(el);
+    const checkedFill = buttons[1]!.querySelector('[part="swatch-fill"]') as HTMLElement;
+    const uncheckedFill = buttons[0]!.querySelector('[part="swatch-fill"]') as HTMLElement;
+    expect(getComputedStyle(checkedFill).boxShadow).to.contain('rgb(10, 20, 30)');
+    expect(getComputedStyle(uncheckedFill).boxShadow).to.equal('none');
+  });
+
   it('defaults --lr-swatch-picker-shine-duration to 0s (no-op) and pulses brightness via a dedicated keyframe when set', () => {
     const css = styles.cssText.replace(/\s+/g, ' ');
     expect(css).to.include('--lr-swatch-picker-shine-duration: 0s;');
@@ -185,6 +209,22 @@ describe('lr-swatch-picker', () => {
       /\[part='swatch'\]\[aria-checked='true'\]\s*\[part='swatch-fill'\]\s*\{[^}]*animation:\s*lr-swatch-picker-shine var\(--lr-swatch-picker-shine-duration\)/,
     );
     expect(css).to.match(/@keyframes lr-swatch-picker-shine\s*\{[\s\S]*?50%\s*\{[^}]*filter:\s*brightness\(1\.4\)/);
+  });
+
+  it('actually applies the lr-swatch-picker-shine animation, timed from --lr-swatch-picker-shine-duration, to the checked swatch\'s rendered fill only', async () => {
+    const el = (await fixture(html`
+      <lr-swatch-picker
+        .options=${options()}
+        value="green"
+        style="--lr-swatch-picker-shine-duration: 1.6s;"
+      ></lr-swatch-picker>
+    `)) as LyraSwatchPicker;
+    const buttons = swatches(el);
+    const checkedFill = buttons[1]!.querySelector('[part="swatch-fill"]') as HTMLElement;
+    const uncheckedFill = buttons[0]!.querySelector('[part="swatch-fill"]') as HTMLElement;
+    expect(getComputedStyle(checkedFill).animationName).to.equal('lr-swatch-picker-shine');
+    expect(getComputedStyle(checkedFill).animationDuration).to.equal('1.6s');
+    expect(getComputedStyle(uncheckedFill).animationName).to.equal('none');
   });
 
   it('disables the shine animation outright under prefers-reduced-motion, independent of the transform-easing rule', () => {

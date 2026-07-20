@@ -304,6 +304,88 @@ describe('lr-input', () => {
     });
   });
 
+  describe('.strings override', () => {
+    it('localizes the required-field validation message (the pre-first-render fallback path, before the native input mounts)', () => {
+      // updateValidity()'s `!native` branch -- the base mixin's plain required-and-empty check,
+      // used only before the internal native <input> has rendered -- is the one call site that
+      // actually reaches this.localize('fieldRequired'); once rendered, validity delegates to the
+      // native input's own (unlocalized) validationMessage instead, so this must observe the
+      // pre-render window specifically rather than going through fixture() (which already awaits
+      // the first render).
+      const el = document.createElement('lr-input') as LyraInput;
+      el.strings = { fieldRequired: 'Ce champ est obligatoire.' };
+      el.required = true;
+      expect(el.validationMessage).to.equal('Ce champ est obligatoire.');
+    });
+
+    it('localizes the default accessible-name fallback', async () => {
+      const el = (await fixture(html`<lr-input></lr-input>`)) as LyraInput;
+      el.strings = { inputLabel: 'Texte' };
+      await el.updateComplete;
+      const input = el.shadowRoot!.querySelector('input') as HTMLInputElement;
+      expect(input.getAttribute('aria-label')).to.equal('Texte');
+    });
+
+    it('localizes the password-toggle button labels', async () => {
+      const el = (await fixture(html`<lr-input type="password"></lr-input>`)) as LyraInput;
+      el.strings = { showPassword: 'Afficher', hidePassword: 'Masquer' };
+      await el.updateComplete;
+      const toggle = el.shadowRoot!.querySelector('[part="password-toggle"]') as HTMLButtonElement;
+      expect(toggle.getAttribute('aria-label')).to.equal('Afficher');
+      toggle.click();
+      await el.updateComplete;
+      expect(toggle.getAttribute('aria-label')).to.equal('Masquer');
+    });
+
+    it('localizes the sanitized-away (badInput) validation message', async () => {
+      const el = (await fixture(html`<lr-input type="number"></lr-input>`)) as LyraInput;
+      el.strings = { valueInvalid: 'Valeur invalide.' };
+      el.value = 'not-a-number';
+      await el.updateComplete;
+      expect(el.validationMessage).to.equal('Valeur invalide.');
+    });
+
+    it('localizes the clear-button accessible name', async () => {
+      const el = (await fixture(
+        html`<lr-input clearable value="query" aria-label="Search"></lr-input>`,
+      )) as LyraInput;
+      el.strings = { clear: 'Effacer' };
+      await el.updateComplete;
+      const button = el.shadowRoot!.querySelector('[part="clear-button"]') as HTMLButtonElement;
+      expect(button.getAttribute('aria-label')).to.equal('Effacer');
+    });
+  });
+
+  describe('selection API passthrough', () => {
+    it('forwards selectionStart/selectionEnd getters and setters to the native input', async () => {
+      const el = (await fixture(html`<lr-input value="hello world"></lr-input>`)) as LyraInput;
+      el.selectionStart = 2;
+      el.selectionEnd = 5;
+      const input = el.shadowRoot!.querySelector('input') as HTMLInputElement;
+      expect(input.selectionStart).to.equal(2);
+      expect(input.selectionEnd).to.equal(5);
+      expect(el.selectionStart).to.equal(2);
+      expect(el.selectionEnd).to.equal(5);
+    });
+
+    it('forwards setSelectionRange() to the native input', async () => {
+      const el = (await fixture(html`<lr-input value="hello world"></lr-input>`)) as LyraInput;
+      el.setSelectionRange(1, 4, 'backward');
+      const input = el.shadowRoot!.querySelector('input') as HTMLInputElement;
+      expect(input.selectionStart).to.equal(1);
+      expect(input.selectionEnd).to.equal(4);
+      expect(input.selectionDirection).to.equal('backward');
+    });
+
+    it('forwards setRangeText() to the native input and syncs the reactive value', async () => {
+      const el = (await fixture(html`<lr-input value="hello world"></lr-input>`)) as LyraInput;
+      el.setRangeText('there', 6, 11);
+      expect(el.value).to.equal('hello there');
+      const input = el.shadowRoot!.querySelector('input') as HTMLInputElement;
+      expect(input.value).to.equal('hello there');
+    });
+  });
+
   it('is accessible', async () => {
     const el = await fixture(html`<lr-input label="Name"></lr-input>`);
     await expect(el).to.be.accessible();

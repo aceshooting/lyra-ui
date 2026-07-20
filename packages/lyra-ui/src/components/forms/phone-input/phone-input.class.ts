@@ -503,6 +503,7 @@ export class LyraPhoneInput extends FormAssociated(LyraPhoneInputBase) {
   }
 
   protected willUpdate(changed: PropertyValues): void {
+    super.willUpdate(changed);
     if (this.flags && !LyraPhoneInput.flagRegistration) {
       // Dynamic (not static) so the flag/skeleton modules stay out of every bundle that never
       // enables flags; the rendered <lr-flag> upgrades in place once the registration lands.

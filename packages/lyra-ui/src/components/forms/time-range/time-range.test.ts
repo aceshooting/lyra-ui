@@ -1,7 +1,9 @@
 import { fixture, expect, html } from '@open-wc/testing';
+import type { PropertyValues } from 'lit';
 import './time-range.js';
 import type { LyraTimeRange } from './time-range.js';
 import { styles } from './time-range.styles.js';
+import { LyraElement } from '../../../internal/lyra-element.js';
 
 it('reflects start/end as the range fill width', async () => {
   const el = (await fixture(
@@ -372,6 +374,86 @@ it('uses cursor:not-allowed (not pointer-events:none) when disabled, matching ev
   // to actually change there too, not just on the track.
   const startHandle = el.shadowRoot!.querySelector('[part="handle-start"]') as HTMLElement;
   expect(getComputedStyle(startHandle).cursor).to.equal('not-allowed');
+});
+
+it('dims with opacity/not-allowed cursor when disabled purely via an ancestor fieldset, not just its own disabled attribute', async () => {
+  const form = (await fixture(html`
+    <form>
+      <fieldset disabled>
+        <lr-time-range min="0" max="100" start="20" end="80"></lr-time-range>
+      </fieldset>
+    </form>
+  `)) as HTMLFormElement;
+  const el = form.querySelector('lr-time-range') as LyraTimeRange;
+  await el.updateComplete;
+  expect((el as unknown as { effectiveDisabled: boolean }).effectiveDisabled).to.be.true;
+  expect(el.hasAttribute('disabled'), 'the own disabled attribute must stay unset').to.be.false;
+
+  const hostStyle = getComputedStyle(el);
+  expect(hostStyle.opacity, 'fieldset-only disablement must still dim the host').to.equal('0.5');
+  expect(hostStyle.cursor).to.equal('not-allowed');
+  const startHandle = el.shadowRoot!.querySelector('[part="handle-start"]') as HTMLElement;
+  expect(getComputedStyle(startHandle).cursor).to.equal('not-allowed');
+});
+
+it('gives the drag handles hover feedback matching the keyboard focus-visible cue', () => {
+  const css = styles.cssText.replace(/\s+/g, ' ');
+  expect(css).to.match(/\[part\^='handle'\]:hover\s*\{[^}]*filter:/);
+});
+
+describe('preset-button hover specificity', () => {
+  it('wraps the internal :hover:not(:disabled) rule in :where() so a consumer ::part(preset-button):hover override does not need !important', async () => {
+    const el = (await fixture(html`
+      <lr-time-range
+        .presets=${[{ label: 'Last 7 days', start: 0, end: 7 }]}
+      ></lr-time-range>
+    `)) as LyraTimeRange;
+    // Real :hover can't be synthesized from a dispatched event in this test harness (jsdom/real
+    // browser alike) -- assert the internal rule's specificity-zeroing shape directly, the same
+    // way lr-attachment-trigger's own hover-specificity test does.
+    const internalRule = (el.shadowRoot!.adoptedStyleSheets ?? [])
+      .flatMap((sheet) => Array.from(sheet.cssRules))
+      .map((rule) => rule.cssText)
+      .find((text) => text.includes(':hover') && text.includes('preset-button'));
+    expect(internalRule).to.contain(':where(');
+  });
+});
+
+describe('ElementInternals availability', () => {
+  it('does not throw when constructed in an environment without a real ElementInternals implementation (e.g. a downstream Vitest + happy-dom suite)', () => {
+    const original = HTMLElement.prototype.attachInternals;
+    // @ts-expect-error -- simulating an environment that lacks ElementInternals entirely
+    delete HTMLElement.prototype.attachInternals;
+    try {
+      let el: LyraTimeRange | undefined;
+      expect(() => {
+        el = document.createElement('lr-time-range') as LyraTimeRange;
+      }).to.not.throw();
+      expect(el!.disabled).to.be.false;
+    } finally {
+      HTMLElement.prototype.attachInternals = original;
+    }
+  });
+});
+
+it('calls super.willUpdate so a future LyraElement/mixin lifecycle hook stays wired in', async () => {
+  // Monkey-patch LyraElement.prototype.willUpdate (the established pattern, e.g. checkbox.test.ts)
+  // to prove LyraTimeRange's own willUpdate() override actually calls super.willUpdate(...)
+  // rather than shadowing it silently.
+  const proto = LyraElement.prototype as unknown as { willUpdate: (changed: PropertyValues) => void };
+  const original = proto.willUpdate;
+  let called = false;
+  proto.willUpdate = function (this: LyraElement, changed: PropertyValues): void {
+    called = true;
+    original.call(this, changed);
+  };
+  try {
+    const el = (await fixture(html`<lr-time-range></lr-time-range>`)) as LyraTimeRange;
+    await el.updateComplete;
+    expect(called).to.be.true;
+  } finally {
+    proto.willUpdate = original;
+  }
 });
 
 it('references the shared focus-ring tokens on the handle focus-visible outline instead of hardcoded literals', () => {

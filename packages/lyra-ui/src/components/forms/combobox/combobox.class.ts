@@ -10,6 +10,41 @@ import { styles } from './combobox.styles.js';
 import { LyraOption } from './option.class.js';
 import './option.class.js';
 
+/** A no-op stand-in for `ElementInternals`, used only when the host environment has no real
+ *  implementation of it (e.g. a downstream consumer's Vitest + happy-dom test suite) --
+ *  `attachInternals()` is browser-only, and calling it unconditionally in the constructor would
+ *  otherwise throw before any test assertion runs, merely from constructing or importing this
+ *  component. Every member here is either an inert value or a no-op: native `<form>`
+ *  participation is unavailable in that environment, but that's an acceptable degradation rather
+ *  than a hard failure -- same fix as `<lr-model-select>`'s/`<lr-tool-param-form>`'s identical
+ *  `createInternalsSafely`/`createNoopInternals` pair. */
+function createInternalsSafely(host: HTMLElement): ElementInternals {
+  if (typeof host.attachInternals !== 'function') return createNoopInternals();
+  try {
+    return host.attachInternals();
+  } catch {
+    return createNoopInternals();
+  }
+}
+
+function createNoopInternals(): ElementInternals {
+  return {
+    form: null,
+    labels: [] as unknown as NodeList,
+    validity: {} as ValidityState,
+    validationMessage: '',
+    willValidate: false,
+    setFormValue(): void {},
+    setValidity(): void {},
+    checkValidity(): boolean {
+      return true;
+    },
+    reportValidity(): boolean {
+      return true;
+    },
+  } as unknown as ElementInternals;
+}
+
 export type OptionFilter = (option: LyraOption, query: string) => boolean;
 export type LyraComboboxSize = 'xs' | 's' | 'm' | 'l' | 'xl';
 
@@ -120,6 +155,8 @@ export interface LyraComboboxEventMap {
  * @cssprop --lr-combobox-tag-padding - Selected-tag padding.
  * @cssprop --lr-combobox-tag-font-size - Selected-tag text size.
  * @cssprop --lr-combobox-expand-size - Decorative expand-icon box size, scaled by `size`.
+ * @cssprop [--lr-combobox-option-active-bg=var(--lr-color-brand-quiet)] - Background of a hovered
+ *   or keyboard-active option row.
  */
 export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
   static formAssociated = true;
@@ -260,7 +297,7 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
 
   constructor() {
     super();
-    this.internals = this.attachInternals();
+    this.internals = createInternalsSafely(this);
     this.validityController = new AnchoredValidityController(this, this.internals, () => this[VALIDITY_ANCHOR]());
   }
 
@@ -317,6 +354,18 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
     this.inputEl?.blur();
   }
 
+  /** Activates the trigger the same way a real mouse click on `[part='combobox']` would --
+   *  focuses the filter input and opens the listbox (mirrors `onComboMouseDown` below). Without
+   *  this override, `HTMLElement.prototype.click()` on the host is a no-op: a custom element has
+   *  no native click activation behavior of its own, so a generic form-submit helper, test
+   *  utility, or automation script calling `.click()` on `<lr-combobox>` directly (rather than on
+   *  its shadow-internal parts) would otherwise silently do nothing. */
+  override click(): void {
+    if (this.effectiveDisabled) return;
+    this.inputEl?.focus();
+    this.show();
+  }
+
   select(): void {
     this.inputEl?.select();
   }
@@ -354,7 +403,9 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
     this.updateValidity();
   }
 
-  protected willUpdate(): void {
+  protected willUpdate(changed: PropertyValues): void {
+    super.willUpdate(changed); // no-op in LyraElement/ReactiveElement today, but a future mixin's
+    // willUpdate() layered under this class must still run.
     // `hasUpdated` flips to `true` before `updated()` even sees its first
     // call, so it can't distinguish "just mounted" from "just changed" there
     // -- capture that distinction here, while it's still reliable, for
@@ -734,6 +785,8 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
   };
 
   protected updated(changed: PropertyValues): void {
+    super.updated(changed); // no-op in LyraElement/ReactiveElement today, but a future mixin's
+    // updated() layered under this class must still run.
     if (changed.has('open')) {
       this.cleanup?.();
       this.cleanup = undefined;

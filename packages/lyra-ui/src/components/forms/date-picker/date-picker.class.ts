@@ -145,6 +145,8 @@ export class LyraDatePicker extends LyraElement<LyraDatePickerEventMap> {
   }
 
   protected willUpdate(changed: PropertyValues): void {
+    super.willUpdate(changed); // no-op in LyraElement/ReactiveElement today, but a future mixin's
+    // willUpdate() layered under this class must still run.
     if (changed.has('value')) {
       const external = !this.suppressViewSync;
       this.suppressViewSync = false;
@@ -410,7 +412,9 @@ export class LyraDatePicker extends LyraElement<LyraDatePickerEventMap> {
     return firstMonth;
   }
 
-  protected updated(): void {
+  protected updated(changed: PropertyValues): void {
+    super.updated(changed); // no-op in LyraElement/ReactiveElement today, but a future mixin's
+    // updated() layered under this class must still run.
     if (this.focusPending && this.focusedDate) {
       this.focusPending = false;
       const iso = formatISO(this.focusedDate);

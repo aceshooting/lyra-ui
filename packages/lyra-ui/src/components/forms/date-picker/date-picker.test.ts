@@ -1,4 +1,5 @@
 import { fixture, expect, oneEvent, html } from '@open-wc/testing';
+import { LitElement, type PropertyValues } from 'lit';
 import './date-picker.js';
 import type { LyraDatePicker } from './date-picker.js';
 import { styles } from './date-picker.styles.js';
@@ -155,15 +156,15 @@ it('does not steal DOM focus off the next/previous button when navigating months
 
   const next = el.shadowRoot!.querySelector('[part="next"]') as HTMLButtonElement;
   next.focus();
-  expect(el.shadowRoot!.activeElement).to.equal(next);
+  expect(el.shadowRoot!.activeElement === next).to.be.true;
 
   next.click();
   await el.updateComplete;
 
   expect(
-    el.shadowRoot!.activeElement,
+    el.shadowRoot!.activeElement === next,
     'DOM focus should stay on the next button, not jump to a day cell',
-  ).to.equal(next);
+  ).to.be.true;
   // The roving tabindex should still have re-anchored into the new month.
   const focusable = el.shadowRoot!.querySelectorAll('[part~="day"][tabindex="0"]');
   expect(focusable.length).to.equal(1);
@@ -247,7 +248,7 @@ it('leaves the two-month view alone when ArrowRight moves into a date already vi
   const focused = el.shadowRoot!.querySelector('[data-date="2026-08-01"]') as HTMLButtonElement;
   expect(focused, 'August 1 was already showing in the second grid').to.exist;
   expect(focused.getAttribute('tabindex')).to.equal('0');
-  expect(el.shadowRoot!.activeElement).to.equal(focused);
+  expect(el.shadowRoot!.activeElement === focused).to.be.true;
 });
 
 it('slides the two-month view by exactly one month once a keypress moves past the last visible month', async () => {
@@ -272,7 +273,7 @@ it('slides the two-month view by exactly one month once a keypress moves past th
 
   const focused = el.shadowRoot!.querySelector('[data-date="2026-09-01"]') as HTMLButtonElement;
   expect(focused).to.exist;
-  expect(el.shadowRoot!.activeElement).to.equal(focused);
+  expect(el.shadowRoot!.activeElement === focused).to.be.true;
 });
 
 it('disables every day button and dims the host when the picker itself is disabled', async () => {
@@ -325,13 +326,13 @@ it('moves roving focus one day left/right with ArrowLeft/ArrowRight', async () =
   await el.updateComplete;
   let focused = el.shadowRoot!.querySelector('[data-date="2026-07-16"]') as HTMLButtonElement;
   expect(focused.getAttribute('tabindex')).to.equal('0');
-  expect(el.shadowRoot!.activeElement).to.equal(focused);
+  expect(el.shadowRoot!.activeElement === focused).to.be.true;
 
   dispatchGridKey(el, 'ArrowLeft');
   await el.updateComplete;
   focused = el.shadowRoot!.querySelector('[data-date="2026-07-15"]') as HTMLButtonElement;
   expect(focused.getAttribute('tabindex')).to.equal('0');
-  expect(el.shadowRoot!.activeElement).to.equal(focused);
+  expect(el.shadowRoot!.activeElement === focused).to.be.true;
 });
 
 it('swaps ArrowLeft/ArrowRight under dir="rtl", since the day grid mirrors visually (no explicit direction override on [part="grid"])', async () => {
@@ -344,13 +345,13 @@ it('swaps ArrowLeft/ArrowRight under dir="rtl", since the day grid mirrors visua
   await el.updateComplete;
   let focused = el.shadowRoot!.querySelector('[data-date="2026-07-16"]') as HTMLButtonElement;
   expect(focused.getAttribute('tabindex')).to.equal('0');
-  expect(el.shadowRoot!.activeElement).to.equal(focused);
+  expect(el.shadowRoot!.activeElement === focused).to.be.true;
 
   dispatchGridKey(el, 'ArrowRight');
   await el.updateComplete;
   focused = el.shadowRoot!.querySelector('[data-date="2026-07-15"]') as HTMLButtonElement;
   expect(focused.getAttribute('tabindex')).to.equal('0');
-  expect(el.shadowRoot!.activeElement).to.equal(focused);
+  expect(el.shadowRoot!.activeElement === focused).to.be.true;
 });
 
 it('does not swap ArrowUp/ArrowDown under dir="rtl" (direction only affects the horizontal inline axis)', async () => {
@@ -422,7 +423,7 @@ it('clamps the day-of-month on PageDown instead of rolling over into the wrong m
   const focused = el.shadowRoot!.querySelector('[data-date="2026-02-28"]') as HTMLButtonElement;
   expect(focused, 'expected Jan 31 + 1 month to clamp to Feb 28').to.exist;
   expect(focused.getAttribute('tabindex')).to.equal('0');
-  expect(el.shadowRoot!.activeElement).to.equal(focused);
+  expect(el.shadowRoot!.activeElement === focused).to.be.true;
 });
 
 it('moves focus to the first/last day of the month with Home/End', async () => {
@@ -485,7 +486,7 @@ it('crosses a month boundary when ArrowRight moves past the last day of the mont
   const focused = el.shadowRoot!.querySelector('[data-date="2026-08-01"]') as HTMLButtonElement;
   expect(focused, 'expected the next day, in August, to be rendered').to.exist;
   expect(focused.getAttribute('tabindex')).to.equal('0');
-  expect(el.shadowRoot!.activeElement).to.equal(focused);
+  expect(el.shadowRoot!.activeElement === focused).to.be.true;
 });
 
 it('crosses a month boundary backwards when ArrowLeft moves before the first day of the month', async () => {
@@ -701,7 +702,10 @@ it('focuses the real (non-outside) copy of a date duplicated between two with-ou
 
   const realCopy = focusable[0] as HTMLButtonElement;
   expect(realCopy.getAttribute('part'), 'the focusable copy must be the real, non-outside day').to.not.contain('day-outside');
-  expect(el.shadowRoot!.activeElement, 'DOM focus should land on the real copy, not the greyed outside one').to.equal(realCopy);
+  expect(
+    el.shadowRoot!.activeElement === realCopy,
+    'DOM focus should land on the real copy, not the greyed outside one',
+  ).to.be.true;
 });
 
 it('clear() resets the value and emits input + change', async () => {
@@ -722,7 +726,7 @@ it('goToToday() navigates the view to the current month and focuses today', asyn
   const cell = el.shadowRoot!.querySelector(`[data-date="${iso(today)}"]`) as HTMLButtonElement;
   expect(cell, 'expected today to be rendered after goToToday()').to.exist;
   expect(cell.getAttribute('tabindex')).to.equal('0');
-  expect(el.shadowRoot!.activeElement).to.equal(cell);
+  expect(el.shadowRoot!.activeElement === cell).to.be.true;
 });
 
 it('goToToday() focuses today itself, not yesterday, when disable-future is set', async () => {
@@ -742,7 +746,7 @@ it('goToToday() focuses today itself, not yesterday, when disable-future is set'
   expect(cell, 'expected today to be rendered after goToToday()').to.exist;
   expect(cell.disabled, 'today itself must remain selectable under disable-future').to.be.false;
   expect(cell.getAttribute('tabindex')).to.equal('0');
-  expect(el.shadowRoot!.activeElement).to.equal(cell);
+  expect(el.shadowRoot!.activeElement === cell).to.be.true;
 });
 
 it('goToDate() normalizes a Date argument carrying a time-of-day to local midnight', async () => {
@@ -755,7 +759,7 @@ it('goToDate() normalizes a Date argument carrying a time-of-day to local midnig
 
   const cell = el.shadowRoot!.querySelector(`[data-date="${iso(now)}"]`) as HTMLButtonElement;
   expect(cell.disabled).to.be.false;
-  expect(el.shadowRoot!.activeElement).to.equal(cell);
+  expect(el.shadowRoot!.activeElement === cell).to.be.true;
 });
 
 it('wraps the two-month layout instead of overflowing a narrow allocation', () => {
@@ -771,6 +775,19 @@ it('uses the shared --lr-opacity-disabled token instead of a literal 0.35 for th
   expect(dayDisabledBlock, 'expected a [part~="day"]:disabled rule').to.not.equal(null);
   expect(dayDisabledBlock![1]).to.include('opacity: var(--lr-opacity-disabled);');
   expect(dayDisabledBlock![1]).to.not.include('0.35');
+});
+
+it("renders a disabled day cell's opacity from the shared --lr-opacity-disabled token (getComputedStyle, not just source text)", async () => {
+  // The test above only proves the token string appears in the stylesheet source -- it can't
+  // catch a rule that stops matching the real DOM (wrong selector, broken specificity, a
+  // competing higher-specificity rule). This reads the actual rendered disabled cell instead.
+  const el = (await fixture(html`
+    <lr-date-picker value="2026-07-15" disabled style="--lr-opacity-disabled: 0.42"></lr-date-picker>
+  `)) as LyraDatePicker;
+  await el.updateComplete;
+  const day = el.shadowRoot!.querySelector('[part~="day"]') as HTMLButtonElement;
+  expect(day.disabled, 'expected the picker-level disabled state to disable its day cells').to.be.true;
+  expect(getComputedStyle(day).opacity).to.equal('0.42');
 });
 
 it('gives the previous/next month-nav buttons a focus-visible ring, matching their existing hover', () => {
@@ -813,7 +830,7 @@ it('clamps goToDate() to min/max instead of navigating to an out-of-range date',
   expect(title, 'expected the view to clamp into July instead of jumping to August').to.contain('july');
   const focused = el.shadowRoot!.querySelector('[data-date="2026-07-20"]') as HTMLButtonElement;
   expect(focused, 'expected the view to clamp to max').to.exist;
-  expect(el.shadowRoot!.activeElement).to.equal(focused);
+  expect(el.shadowRoot!.activeElement === focused).to.be.true;
 });
 
 it('has at least one focusable day cell when nothing is selected yet', async () => {
@@ -930,5 +947,59 @@ it('hides outside-month placeholders from the accessibility tree only in rows th
       cell.hasAttribute('aria-hidden'),
       'row role requires at least one visible gridcell; this row has none but placeholders',
     ).to.be.false;
+  }
+});
+
+// -- Lifecycle super calls ---------------------------------------------------
+
+it('chains willUpdate() to super.willUpdate() so a mixin layered under LyraElement would still run', async () => {
+  // No shared mixin actually overrides willUpdate() today, so the only way to prove the chain is
+  // live (rather than grepping source text for the call) is to patch the base-class hook itself
+  // -- the exact hook a future mixin would extend -- and confirm it actually fires.
+  const hadOwn = Object.prototype.hasOwnProperty.call(LitElement.prototype, 'willUpdate');
+  const original = (LitElement.prototype as unknown as { willUpdate?: (changed: PropertyValues) => void })
+    .willUpdate;
+  let called = false;
+  (LitElement.prototype as unknown as { willUpdate: (changed: PropertyValues) => void }).willUpdate = function (
+    this: LitElement,
+    changed: PropertyValues,
+  ) {
+    called = true;
+    original?.call(this, changed);
+  };
+  try {
+    const el = (await fixture(html`<lr-date-picker></lr-date-picker>`)) as LyraDatePicker;
+    await el.updateComplete;
+    expect(called).to.be.true;
+  } finally {
+    if (hadOwn) {
+      (LitElement.prototype as unknown as { willUpdate: unknown }).willUpdate = original;
+    } else {
+      delete (LitElement.prototype as unknown as { willUpdate?: unknown }).willUpdate;
+    }
+  }
+});
+
+it('chains updated() to super.updated() so a mixin layered under LyraElement would still run', async () => {
+  const hadOwn = Object.prototype.hasOwnProperty.call(LitElement.prototype, 'updated');
+  const original = (LitElement.prototype as unknown as { updated?: (changed: PropertyValues) => void }).updated;
+  let called = false;
+  (LitElement.prototype as unknown as { updated: (changed: PropertyValues) => void }).updated = function (
+    this: LitElement,
+    changed: PropertyValues,
+  ) {
+    called = true;
+    original?.call(this, changed);
+  };
+  try {
+    const el = (await fixture(html`<lr-date-picker></lr-date-picker>`)) as LyraDatePicker;
+    await el.updateComplete;
+    expect(called).to.be.true;
+  } finally {
+    if (hadOwn) {
+      (LitElement.prototype as unknown as { updated: unknown }).updated = original;
+    } else {
+      delete (LitElement.prototype as unknown as { updated?: unknown }).updated;
+    }
   }
 });

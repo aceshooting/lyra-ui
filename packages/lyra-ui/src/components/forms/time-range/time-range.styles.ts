@@ -29,7 +29,11 @@ export const styles = css`
     cursor: pointer;
     transition: var(--lr-transition-fast);
   }
-  [part='preset-button']:hover:not(:disabled) {
+  /* :where() zeroes the wrapped selectors' specificity contribution, leaving only :hover itself --
+     functionally identical selection to [part='preset-button']:hover:not(:disabled), but no longer
+     beating a consumer's own ::part(preset-button):hover override on specificity -- mirrors
+     lr-attachment-trigger's identical :where() fix for this exact selector shape. */
+  :where([part='preset-button']):hover:where(:not(:disabled)) {
     border-color: var(--lr-color-brand);
   }
   [part='preset-button']:focus-visible {
@@ -48,7 +52,7 @@ export const styles = css`
     color: var(--lr-time-range-preset-active-color, var(--lr-color-on-brand));
   }
   [part='preset-button']:disabled {
-    /* Dimming already comes from :host([disabled])'s opacity below (applies
+    /* Dimming already comes from :host(:disabled)'s opacity below (applies
        to the whole host, presets row included) — stacking a second opacity
        here would compound multiplicatively and over-dim relative to the
        handles, which only restate the cursor for the same reason. */
@@ -128,11 +132,26 @@ export const styles = css`
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);
   }
-  :host([disabled]) {
+  /* Gives mouse users the same 'this is interactive' cue the :focus-visible ring above already
+     gives keyboard users, matching the sibling [part='preset-button']:hover treatment above --
+     gated via :host(:not(:disabled)) the same way lr-checkbox's/lr-radio's [part='base']:hover
+     rules are, since a disabled handle must not still brighten on hover. */
+  :host(:not(:disabled)) [part^='handle']:hover {
+    filter: brightness(var(--lr-hover-brightness));
+  }
+  /* :host(:disabled), not :host([disabled]) -- this is a form-associated custom element
+     (static formAssociated = true), so the UA computes its disabled state (and therefore
+     :disabled/:enabled matching) the same way it does for a native <input>: from its own
+     disabled content attribute *or* an ancestor <fieldset disabled>'s cascade. Keying this off
+     the attribute selector only ever matched the first case -- a time-range disabled purely via
+     an ancestor fieldset had effectiveDisabled correctly gating pointer/keyboard interaction and
+     tabindex/aria-disabled on the handles and preset buttons, but the host still rendered at full
+     opacity with a normal cursor. Mirrors lr-radio's/lr-checkbox's identical fix. */
+  :host(:disabled) {
     opacity: var(--lr-opacity-disabled);
     cursor: not-allowed;
   }
-  :host([disabled]) [part^='handle'] {
+  :host(:disabled) [part^='handle'] {
     /* [part^='handle'] above sets \`cursor: grab\` unconditionally, which
        would otherwise keep winning over the inherited :host cursor (it
        isn't conditioned on [disabled]) — restate not-allowed here so the

@@ -91,6 +91,81 @@ it('names the button from aria-label, then label, then the localized fallback', 
   expect(slottedOnly.shadowRoot!.querySelector('button')!.getAttribute('aria-label')).to.equal('Français');
 });
 
+it('localizes the fallback accessible name via .strings', async () => {
+  const el = await fixture(html`<lr-icon-button icon="close"></lr-icon-button>`);
+  expect(el.shadowRoot!.querySelector('button')!.getAttribute('aria-label')).to.equal('Button');
+  (el as unknown as { strings: Record<string, string> }).strings = { iconButtonLabel: 'Bouton' };
+  await (el as unknown as { updateComplete: Promise<unknown> }).updateComplete;
+  expect(el.shadowRoot!.querySelector('button')!.getAttribute('aria-label')).to.equal('Bouton');
+});
+
+it('forwards host click() to the internal native button, not just a bare host-level click event', async () => {
+  // HTMLElement.click() already dispatches a bubbling click event on the host with no override at
+  // all -- that alone doesn't prove the internal <button part="button"> was actually activated, so
+  // this asserts the internal button's own click handler ran instead of the host's generic default.
+  const el = await fixture(html`<lr-icon-button icon="close" aria-label="Dismiss"></lr-icon-button>`);
+  let internalClicks = 0;
+  el.shadowRoot!.querySelector('button')!.addEventListener('click', () => internalClicks++);
+  el.click();
+  expect(internalClicks).to.equal(1);
+});
+
+it('reflects disabled synchronously on assignment, with no await', async () => {
+  const el = await fixture(html`<lr-icon-button icon="close" aria-label="Dismiss"></lr-icon-button>`);
+  expect(el.hasAttribute('disabled')).to.be.false;
+  // No `await`: the `disabled` setter must synchronously reflect the host attribute before any
+  // same-tick native form API (e.g. a `<fieldset>` toggle) runs -- mirrors `<lr-button>`'s
+  // identical test.
+  (el as unknown as { disabled: boolean }).disabled = true;
+  expect(el.hasAttribute('disabled'), 'the host attribute must be set synchronously').to.be.true;
+  (el as unknown as { disabled: boolean }).disabled = false;
+  expect(el.hasAttribute('disabled')).to.be.false;
+});
+
+it('never forwards host click() while disabled (native disabled button semantics)', async () => {
+  const el = await fixture(html`<lr-icon-button icon="close" aria-label="Dismiss" disabled></lr-icon-button>`);
+  let calls = 0;
+  el.addEventListener('click', () => calls++);
+  el.click();
+  expect(calls).to.equal(0);
+});
+
+it('is form-associated, participating in an ancestor form.elements', async () => {
+  const form = await fixture(html`
+    <form><lr-icon-button icon="close" aria-label="Dismiss"></lr-icon-button></form>
+  `) as HTMLFormElement;
+  const el = form.querySelector('lr-icon-button')!;
+  expect(Array.from(form.elements)).to.include(el);
+});
+
+it('type="submit" requests submit on the closest ancestor form via host click()', async () => {
+  const form = await fixture(html`
+    <form><lr-icon-button icon="close" aria-label="Save" type="submit"></lr-icon-button></form>
+  `) as HTMLFormElement;
+  const el = form.querySelector('lr-icon-button')!;
+  let submitted = false;
+  form.addEventListener('submit', (event) => {
+    event.preventDefault();
+    submitted = true;
+  });
+  el.click();
+  expect(submitted).to.be.true;
+});
+
+it('type="reset" resets the closest ancestor form via host click()', async () => {
+  const form = await fixture(html`
+    <form>
+      <input name="field" />
+      <lr-icon-button icon="close" aria-label="Reset" type="reset"></lr-icon-button>
+    </form>
+  `) as HTMLFormElement;
+  const input = form.querySelector('input') as HTMLInputElement;
+  input.value = 'changed';
+  const el = form.querySelector('lr-icon-button')!;
+  el.click();
+  expect(input.value).to.equal('');
+});
+
 it('is accessible', async () => {
   const el = await fixture(html`<lr-icon-button icon="close" aria-label="Dismiss"></lr-icon-button>`);
   await expect(el).to.be.accessible();

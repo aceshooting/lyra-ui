@@ -24,6 +24,18 @@ it('selects and emits native-style events', async () => {
   expect(events).to.deep.equal(['input', 'change', 'lr-change']);
 });
 
+it('forwards a host-level click() to the internal base control, like lr-button', async () => {
+  // A generic form-submit helper, test utility, or automation script that calls
+  // `.click()` on the host element (rather than clicking rendered pixels inside
+  // its shadow DOM) must still toggle selection.
+  const el = (await fixture(html`<lr-radio value="a">A</lr-radio>`)) as LyraRadio;
+  await el.updateComplete;
+
+  el.click();
+
+  expect(el.checked).to.be.true;
+});
+
 it('moves selection and DOM focus when arrow navigation is used', async () => {
   const group = (await fixture(html`
     <lr-radio-group label="Choice">
@@ -130,6 +142,30 @@ it('temporarily disables a bare radio through an ancestor fieldset without overw
   const aBase = a.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
   expect(aBase.getAttribute('aria-disabled')).to.equal('false');
   expect(aBase.getAttribute('tabindex')).to.equal('0');
+});
+
+it('dims the base part via the :disabled pseudo-class when disabled only through an ancestor fieldset', async () => {
+  // effectiveDisabled correctly gates the internal control's functional
+  // disabling even when disabled purely by fieldset cascading (see the test
+  // above), but that alone doesn't prove the *visual* treatment follows --
+  // the base part's opacity/cursor styling is keyed off a CSS selector
+  // (:host(:disabled)), not effectiveDisabled, so it needs its own
+  // assertion. Mirrors lr-checkbox's identical fieldset/computed-style
+  // coverage.
+  const form = (await fixture(html`
+    <form>
+      <fieldset disabled>
+        <lr-radio value="a">A</lr-radio>
+      </fieldset>
+    </form>
+  `)) as HTMLFormElement;
+  const el = form.querySelector('lr-radio') as LyraRadio;
+  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+
+  expect(el.disabled).to.be.false;
+  expect(el.effectiveDisabled).to.be.true;
+  expect(getComputedStyle(base).opacity).to.equal('0.5');
+  expect(getComputedStyle(base).cursor).to.equal('not-allowed');
 });
 
 it('cascades fieldset-disabled state down to radios nested inside a lr-radio-group', async () => {
@@ -257,4 +293,62 @@ it('publishes --lr-radio-label-indent and drives the real label offset from it',
 it('is accessible as a label-less radio named only by aria-label', async () => {
   const el = (await fixture(html`<lr-radio checked aria-label="Only option"></lr-radio>`)) as LyraRadio;
   await expect(el).to.be.accessible();
+});
+
+describe('lifecycle: attachInternals guard', () => {
+  it('degrades gracefully instead of throwing when ElementInternals is unavailable', async () => {
+    const original = (globalThis as { ElementInternals?: unknown }).ElementInternals;
+    // @ts-expect-error -- deliberately simulating an environment (e.g. happy-dom) with no
+    // ElementInternals implementation at all.
+    delete (globalThis as { ElementInternals?: unknown }).ElementInternals;
+    try {
+      expect(() => document.createElement('lr-radio')).to.not.throw();
+      const el = (await fixture(html`<lr-radio value="a">A</lr-radio>`)) as LyraRadio;
+      await el.updateComplete;
+      expect(el.shadowRoot!.querySelectorAll('[part="base"]').length).to.equal(1);
+      expect(() => el.click()).to.not.throw();
+    } finally {
+      (globalThis as { ElementInternals?: unknown }).ElementInternals = original;
+    }
+  });
+
+  it('degrades gracefully instead of throwing when the native attachInternals() call itself throws', async () => {
+    // Scoped to just this tag -- default lyra-radio fixtures render no other
+    // form-associated shadow children, but scope defensively anyway.
+    const original = HTMLElement.prototype.attachInternals;
+    HTMLElement.prototype.attachInternals = function (this: HTMLElement) {
+      if (this.tagName.toLowerCase() === 'lr-radio') {
+        throw new DOMException('attachInternals is not supported', 'NotSupportedError');
+      }
+      return original.call(this);
+    };
+    try {
+      expect(() => document.createElement('lr-radio')).to.not.throw();
+      const el = (await fixture(html`<lr-radio value="a">A</lr-radio>`)) as LyraRadio;
+      await el.updateComplete;
+      expect(el.shadowRoot!.querySelectorAll('[part="base"]').length).to.equal(1);
+      expect(() => el.click()).to.not.throw();
+    } finally {
+      HTMLElement.prototype.attachInternals = original;
+    }
+  });
+});
+
+describe('validationMessage localization', () => {
+  it('defaults to the built-in English validationMessage for a required, unselected radio', async () => {
+    const el = (await fixture(html`<lr-radio required value="a">A</lr-radio>`)) as LyraRadio;
+    expect(el.validationMessage).to.equal('Please select an option.');
+  });
+
+  it('localizes the validationMessage via this.localize() when .strings overrides radioRequired', async () => {
+    const el = (await fixture(html`
+      <lr-radio required value="a" .strings=${{ radioRequired: 'Veuillez sélectionner une option.' }}
+        >A</lr-radio
+      >
+    `)) as LyraRadio;
+    expect(el.validationMessage).to.equal('Veuillez sélectionner une option.');
+
+    el.checked = true;
+    expect(el.validationMessage).to.equal('');
+  });
 });

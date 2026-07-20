@@ -32,7 +32,16 @@ export const styles = css`
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);
   }
-  :host([disabled]) [part='base'] {
+  /* :host(:disabled), not :host([disabled]) -- this is a form-associated
+     custom element (static formAssociated = true), so the UA computes its
+     disabled state (and therefore :disabled/:enabled matching) the same way
+     it does for a native form control: from its own disabled content
+     attribute *or* an ancestor <fieldset disabled>'s cascade. Keying this
+     off the attribute selector only ever matched the first case -- a radio
+     disabled purely via an ancestor fieldset had effectiveDisabled correctly
+     gating tabindex/aria-disabled, but the base still rendered at full
+     opacity with a normal cursor. */
+  :host(:disabled) [part='base'] {
     cursor: not-allowed;
     opacity: var(--lr-opacity-disabled);
   }
@@ -54,7 +63,7 @@ export const styles = css`
     background: var(--lr-color-surface);
     transition: border-color var(--lr-transition-fast), background-color var(--lr-transition-fast);
   }
-  :host(:not([disabled])) [part='base']:hover [part='circle'] {
+  :host(:not(:disabled)) [part='base']:hover [part='circle'] {
     border-color: var(--lr-color-brand);
   }
   :host([checked]) [part='circle'] {

@@ -81,6 +81,12 @@ export const styles = css`
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);
   }
+  /* :where() zeroes the wrapped selectors' specificity contribution, keeping this at (0,1,0) --
+     matches lr-model-select's/lr-attachment-trigger's fixed convention, so a consumer's own
+     ::part(trigger):hover override ((0,1,1)) still wins without needing !important. */
+  :where([part='trigger']):hover:where(:not(:disabled)) {
+    background: var(--lr-color-brand-quiet);
+  }
   :host([open]) [part='trigger'] {
     border-color: var(--lr-color-brand);
   }
@@ -88,6 +94,20 @@ export const styles = css`
     /* Shared library-wide disabled-state token -- see lr-combobox. */
     opacity: var(--lr-opacity-disabled);
     cursor: not-allowed;
+  }
+
+  /* Same start/end adornment wrapper convention as lr-combobox/lr-date-input --
+     hidden (both the attribute and display:none) while nothing is slotted. */
+  [part='start'],
+  [part='end'] {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    color: var(--lr-color-text-quiet);
+  }
+  [part='start'][hidden],
+  [part='end'][hidden] {
+    display: none;
   }
 
   .trigger-label {
@@ -123,7 +143,13 @@ export const styles = css`
     z-index: var(--lr-layer-dropdown);
     box-sizing: border-box;
     max-block-size: var(--lr-size-18rem);
+    /* Per the CSS overflow spec, pinning one axis to a non-'visible' value forces the other
+       axis's used value to 'auto' too (never staying 'visible') -- an implicit overflow-x: auto
+       here risks a phantom horizontal scrollbar from sub-pixel rounding even though this listbox
+       only ever scrolls vertically. Pin overflow-x explicitly instead. Same fix as lr-tabs'
+       tablist (overflow-x: auto; overflow-y: hidden;), just on the opposite axis. */
     overflow-y: auto;
+    overflow-x: hidden;
     inline-size: max-content;
     min-inline-size: var(--lr-size-12rem);
     max-inline-size: min(var(--lr-popover-viewport-clamp), var(--lr-size-28rem));
@@ -170,7 +196,11 @@ export const styles = css`
   }
   [part='option']:hover,
   [part='option'][data-active] {
-    background: var(--lr-color-brand-quiet);
+    /* Per-component indirection (with an inline var() fallback to the shared brand-quiet token)
+       -- same fix as lr-command-palette's/lr-notebook-viewer's identical active-row pattern -- so
+       a consumer can retheme just this row state without hijacking --lr-color-brand-quiet
+       library-wide. */
+    background: var(--lr-select-option-active-bg, var(--lr-color-brand-quiet));
   }
   [part='option'][aria-selected='true'] {
     border-color: var(--lr-color-brand);

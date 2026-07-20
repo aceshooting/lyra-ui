@@ -15,8 +15,20 @@ export const styles = css`
   [part='textarea'] { display: block; box-sizing: border-box; inline-size: max-content; min-inline-size: 100%; min-block-size: var(--lr-code-editor-min-block-size); overflow: visible; padding: var(--lr-space-s); resize: both; border: 0; outline: 0; background: transparent; color: var(--lr-color-text); font: var(--lr-font-mono); line-height: var(--lr-code-editor-line-height); tab-size: var(--lr-code-editor-tab-size); }
   [part='textarea']:focus-visible { outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color); outline-offset: calc(var(--lr-focus-ring-offset) * -1); }
   [part='textarea']::placeholder { color: var(--lr-color-text-quiet); }
+  /* Mirrors lr-checkbox's [part='base']:hover [part='box'] -- the focus-visible outline above gives
+     keyboard users a cue that this is the interactive surface; :hover gives mouse users the same
+     cue via the editor frame's border, guarded off while disabled so it never implies the frame is
+     still interactive. */
+  :host(:not(:disabled)) [part='editor']:hover { border-color: var(--lr-color-brand); }
   [part='hint'], [part='error'] { color: var(--lr-color-text-quiet); font-size: var(--lr-font-size-sm); }
   [part='error'] { color: var(--lr-color-danger); }
   :host([data-invalid]) [part='editor'] { border-color: var(--lr-color-danger); }
-  :host([disabled]) { opacity: var(--lr-opacity-disabled); }
+  /* :host(:disabled), not :host([disabled]) -- this is a form-associated custom element
+     (FormAssociated mixin -> static formAssociated = true), so the UA computes its disabled state
+     (and therefore :disabled matching) the same way it does for a native form control: from its own
+     disabled content attribute *or* an ancestor <fieldset disabled>'s cascade. Keying this off the
+     attribute selector only ever matched the first case -- a textarea disabled purely via an
+     ancestor fieldset had effectiveDisabled correctly gating the internal <textarea>, but the host
+     still rendered at full opacity with a normal cursor (same fix as lr-chat-composer). */
+  :host(:disabled) { opacity: var(--lr-opacity-disabled); cursor: not-allowed; }
 `;

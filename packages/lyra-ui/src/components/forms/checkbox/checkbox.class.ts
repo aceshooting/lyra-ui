@@ -1,8 +1,43 @@
-import { html, svg, nothing, type TemplateResult, type SVGTemplateResult } from 'lit';
+import { html, svg, nothing, type TemplateResult, type SVGTemplateResult, type PropertyValues } from 'lit';
 import { state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { AnchoredValidityController, VALIDITY_ANCHOR } from '../../../internal/anchored-validity.js';
 import { styles } from './checkbox.styles.js';
+
+/** A no-op stand-in for `ElementInternals`, used only when the host environment has no real
+ *  implementation of it (e.g. a downstream consumer's Vitest + happy-dom test suite) --
+ *  `attachInternals()` is browser-only, and calling it unconditionally in the constructor would
+ *  otherwise throw before any test assertion runs, merely from constructing or importing this
+ *  component. Every member here is either an inert value or a no-op: native `<form>`
+ *  participation is unavailable in that environment, but that's an acceptable degradation rather
+ *  than a hard failure -- same fix as `<lr-tool-param-form>`'s/`<lr-model-select>`'s identical
+ *  `createInternalsSafely`/`createNoopInternals` pair. */
+function createInternalsSafely(host: HTMLElement): ElementInternals {
+  if (typeof host.attachInternals !== 'function') return createNoopInternals();
+  try {
+    return host.attachInternals();
+  } catch {
+    return createNoopInternals();
+  }
+}
+
+function createNoopInternals(): ElementInternals {
+  return {
+    form: null,
+    labels: [] as unknown as NodeList,
+    validity: {} as ValidityState,
+    validationMessage: '',
+    willValidate: false,
+    setFormValue(): void {},
+    setValidity(): void {},
+    checkValidity(): boolean {
+      return true;
+    },
+    reportValidity(): boolean {
+      return true;
+    },
+  } as unknown as ElementInternals;
+}
 
 // Mirrors the shared icon set's viewBox/stroke conventions
 // (internal/icons.ts's chevronIcon()/closeIcon()/etc.) without importing
@@ -99,6 +134,11 @@ export interface LyraCheckboxEventMap {
  * your own stylesheet) moves the label; because custom properties inherit down and not sideways, it
  * is *not* readable from a sibling node in your tree — align a sibling by computing the same formula
  * from `--lr-theme-icon-button-size` and `--lr-theme-space-s`, which you control.
+ * @cssprop [--lr-checkbox-checked-bg=var(--lr-color-brand)] - Background of `[part='box']` while
+ * `checked` or `indeterminate`. Retint just this control's checked fill without touching the shared
+ * `--lr-color-brand` token every other component also reads.
+ * @cssprop [--lr-checkbox-checked-border=var(--lr-color-brand)] - Border color of `[part='box']`
+ * while `checked` or `indeterminate`.
  */
 export class LyraCheckbox extends LyraElement<LyraCheckboxEventMap> {
   static styles = [LyraElement.styles, styles];
@@ -239,7 +279,7 @@ export class LyraCheckbox extends LyraElement<LyraCheckboxEventMap> {
 
   constructor() {
     super();
-    this.internals = this.attachInternals();
+    this.internals = createInternalsSafely(this);
     this.validityController = new AnchoredValidityController(this, this.internals, () => this[VALIDITY_ANCHOR]());
     this.syncFormState();
   }
@@ -282,7 +322,8 @@ export class LyraCheckbox extends LyraElement<LyraCheckboxEventMap> {
     this.labelObserver = undefined;
   }
 
-  protected willUpdate(): void {
+  protected willUpdate(changed: PropertyValues): void {
+    super.willUpdate(changed); // keeps a future LyraElement/mixin lifecycle hook wired in
     // Seed `hasLabelSlot` from the light-DOM children synchronously before
     // the very first render (same `!hasUpdated` guard as combobox/date-input's
     // `hasHintSlot` etc.) so declaratively-provided label text doesn't flash
@@ -351,6 +392,13 @@ export class LyraCheckbox extends LyraElement<LyraCheckboxEventMap> {
   }
   reportValidity(): boolean {
     return this.internals.reportValidity();
+  }
+
+  /** Activates the internal checkbox control (toggling it), mirroring `<lr-button>`'s host
+   *  `click()` forwarding -- `HTMLElement.prototype.click()` is otherwise a no-op on a custom
+   *  element with no native click semantics of its own. */
+  override click(): void {
+    this[VALIDITY_ANCHOR]()?.click();
   }
 
   /** Moves focus to the internal checkbox control. */

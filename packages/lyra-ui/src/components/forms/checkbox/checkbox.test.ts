@@ -1,6 +1,8 @@
 import { fixture, expect, html, oneEvent } from '@open-wc/testing';
+import type { PropertyValues } from 'lit';
 import './checkbox.js';
 import type { LyraCheckbox } from './checkbox.js';
+import { LyraElement } from '../../../internal/lyra-element.js';
 
 it('defaults to unchecked with role="checkbox" and aria-checked="false"', async () => {
   const el = (await fixture(html`<lr-checkbox>Label</lr-checkbox>`)) as LyraCheckbox;
@@ -595,6 +597,97 @@ it('forwards focus and blur methods and re-dispatches bubbling, composed events'
   expect(blurEvent.bubbles).to.be.true;
   expect(blurEvent.composed).to.be.true;
   expect(el.shadowRoot!.activeElement).to.equal(null);
+});
+
+it('forwards host click() to the internal control, toggling checked', async () => {
+  const el = (await fixture(html`<lr-checkbox>Label</lr-checkbox>`)) as LyraCheckbox;
+  expect(el.checked).to.be.false;
+
+  const event = oneEvent(el, 'lr-change');
+  el.click();
+  const result = await event;
+  expect(result.detail.checked).to.be.true;
+  expect(el.checked).to.be.true;
+});
+
+it('does not toggle on host click() while disabled', async () => {
+  const el = (await fixture(html`<lr-checkbox disabled>Label</lr-checkbox>`)) as LyraCheckbox;
+  el.click();
+  expect(el.checked).to.be.false;
+});
+
+describe('ElementInternals availability', () => {
+  it('does not throw when constructed in an environment without a real ElementInternals implementation (e.g. a downstream Vitest + happy-dom suite)', () => {
+    const original = HTMLElement.prototype.attachInternals;
+    // @ts-expect-error -- simulating an environment that lacks ElementInternals entirely
+    delete HTMLElement.prototype.attachInternals;
+    try {
+      let el: LyraCheckbox | undefined;
+      expect(() => {
+        el = document.createElement('lr-checkbox') as LyraCheckbox;
+      }).to.not.throw();
+      // Confirm the fallback keeps the rest of the public surface usable rather than merely
+      // swallowing the constructor error.
+      expect(el!.checkValidity()).to.be.true;
+      expect(el!.form).to.equal(null);
+    } finally {
+      HTMLElement.prototype.attachInternals = original;
+    }
+  });
+});
+
+it('calls super.willUpdate so a future LyraElement/mixin lifecycle hook stays wired in', async () => {
+  // Monkey-patch LyraElement.prototype.willUpdate (the established pattern, e.g. stat.test.ts) to
+  // prove LyraCheckbox's own willUpdate() override actually calls super.willUpdate(...) rather
+  // than shadowing it silently.
+  const proto = LyraElement.prototype as unknown as { willUpdate: (changed: PropertyValues) => void };
+  const original = proto.willUpdate;
+  let called = false;
+  proto.willUpdate = function (this: LyraElement, changed: PropertyValues): void {
+    called = true;
+    original.call(this, changed);
+  };
+  try {
+    const el = (await fixture(html`<lr-checkbox>Label</lr-checkbox>`)) as LyraCheckbox;
+    await el.updateComplete;
+    expect(called).to.be.true;
+  } finally {
+    proto.willUpdate = original;
+  }
+});
+
+describe('checked-state cssprop escape hatch', () => {
+  // Same probe idiom as lr-source-picker's identical checked-state cssprop test: resolve a raw
+  // declaration inside the same shadow root so the comparison format (rgb(...)) always matches
+  // getComputedStyle's, rather than comparing a raw custom-property string against it.
+  function resolvedInShadow(el: LyraCheckbox, declaration: string, property: string): string {
+    const probe = document.createElement('span');
+    probe.setAttribute('style', declaration);
+    el.shadowRoot!.appendChild(probe);
+    const value = getComputedStyle(probe).getPropertyValue(property);
+    probe.remove();
+    return value;
+  }
+
+  it('renders byte-identical to --lr-color-brand when --lr-checkbox-checked-bg/-border are unset', async () => {
+    const el = (await fixture(html`<lr-checkbox checked>Label</lr-checkbox>`)) as LyraCheckbox;
+    const box = el.shadowRoot!.querySelector('[part="box"]') as HTMLElement;
+    expect(getComputedStyle(box).backgroundColor).to.equal(
+      resolvedInShadow(el, 'background: var(--lr-color-brand)', 'background-color'),
+    );
+    expect(getComputedStyle(box).borderTopColor).to.equal(
+      resolvedInShadow(el, 'border-color: var(--lr-color-brand)', 'border-top-color'),
+    );
+  });
+
+  it('retints just the checked/indeterminate fill through --lr-checkbox-checked-bg/-border instead of the shared --lr-color-brand token', async () => {
+    const el = (await fixture(
+      html`<lr-checkbox checked style="--lr-checkbox-checked-bg: rgb(1, 2, 3); --lr-checkbox-checked-border: rgb(4, 5, 6);"></lr-checkbox>`,
+    )) as LyraCheckbox;
+    const box = el.shadowRoot!.querySelector('[part="box"]') as HTMLElement;
+    expect(getComputedStyle(box).backgroundColor).to.equal('rgb(1, 2, 3)');
+    expect(getComputedStyle(box).borderTopColor).to.equal('rgb(4, 5, 6)');
+  });
 });
 
 it('is accessible in the default (unchecked, unlabeled) state', async () => {

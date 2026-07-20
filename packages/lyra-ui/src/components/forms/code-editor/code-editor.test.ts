@@ -255,7 +255,79 @@ it('toggles data-invalid once touched and invalid', async () => {
   expect(el.hasAttribute('data-invalid')).to.be.true;
 });
 
-it("colors the textarea's placeholder text instead of leaving the UA default", () => {
+it("colors the textarea's placeholder text instead of leaving the UA default", async () => {
+  // Rendered-fixture proof, not a stylesheet-source regex: read the pseudo-element's real computed
+  // color and confirm it matches --lr-color-text-quiet (via the hint part, which uses that same
+  // token) while differing from the textarea's own regular text color -- a selector typo or
+  // specificity loss would leave the UA default and fail both comparisons.
+  const el = (await fixture(
+    html`<lr-code-editor placeholder="Type code" hint="Quiet reference"></lr-code-editor>`,
+  )) as LyraCodeEditor;
+  const textarea = el.shadowRoot!.querySelector('textarea') as HTMLTextAreaElement;
+  const hint = el.shadowRoot!.querySelector('[part="hint"]') as HTMLElement;
+  const placeholderColor = getComputedStyle(textarea, '::placeholder').color;
+  const quietColor = getComputedStyle(hint).color;
+  const textareaColor = getComputedStyle(textarea).color;
+  expect(placeholderColor).to.not.equal('');
+  expect(placeholderColor).to.equal(quietColor);
+  expect(placeholderColor).to.not.equal(textareaColor);
+});
+
+it('uses a .strings override for the default accessible-name fallback', async () => {
+  const el = (await fixture(html`<lr-code-editor></lr-code-editor>`)) as LyraCodeEditor;
+  el.strings = { codeEditorLabel: 'Éditeur de code' };
+  await el.updateComplete;
+  const textarea = el.shadowRoot!.querySelector('textarea') as HTMLTextAreaElement;
+  expect(textarea.getAttribute('aria-label')).to.equal('Éditeur de code');
+});
+
+describe('lineNumbers', () => {
+  it('renders the gutter by default', async () => {
+    const el = (await fixture(html`<lr-code-editor value="one"></lr-code-editor>`)) as LyraCodeEditor;
+    expect(el.shadowRoot!.querySelectorAll('[part="gutter"]')).to.have.length(1);
+  });
+
+  it('omits the gutter for a plain line-numbers="false" attribute, not just a property binding', async () => {
+    const el = (await fixture(html`<lr-code-editor value="one" line-numbers="false"></lr-code-editor>`)) as LyraCodeEditor;
+    expect(el.lineNumbers).to.be.false;
+    expect(el.shadowRoot!.querySelectorAll('[part="gutter"]')).to.have.length(0);
+  });
+
+  it('still omits the gutter via a property binding', async () => {
+    const el = (await fixture(html`<lr-code-editor value="one" .lineNumbers=${false}></lr-code-editor>`)) as LyraCodeEditor;
+    expect(el.shadowRoot!.querySelectorAll('[part="gutter"]')).to.have.length(0);
+  });
+});
+
+it('gives the editor frame hover feedback matching the keyboard focus-visible cue', () => {
   const css = styles.cssText.replace(/\s+/g, ' ');
-  expect(css).to.match(/\[part='textarea'\]::placeholder\s*\{[^}]*color:\s*var\(--lr-color-text-quiet\)/);
+  expect(css).to.match(/\[part='editor'\]:hover\s*\{[^}]*border-color:/);
+});
+
+it('dims and blocks the cursor via its own disabled property/attribute', async () => {
+  const el = (await fixture(html`<lr-code-editor value="one" disabled></lr-code-editor>`)) as LyraCodeEditor;
+  expect(getComputedStyle(el).opacity).to.equal('0.5');
+  expect(getComputedStyle(el).cursor).to.equal('not-allowed');
+});
+
+// :host(:disabled), not :host([disabled]) -- see the styles.ts comment. effectiveDisabled already
+// correctly gates the internal <textarea> when disabled purely by an ancestor fieldset (mirrors
+// lr-chat-composer/lr-checkbox's identical _fieldsetDisabled/effectiveDisabled pattern), but that
+// alone doesn't prove the *visual* dimming follows -- it needs its own computed-style assertion.
+it('dims via the :disabled pseudo-class when disabled only through an ancestor fieldset', async () => {
+  const form = (await fixture(html`
+    <form>
+      <fieldset disabled>
+        <lr-code-editor value="one"></lr-code-editor>
+      </fieldset>
+    </form>
+  `)) as HTMLFormElement;
+  const el = form.querySelector('lr-code-editor') as LyraCodeEditor;
+  const textarea = el.shadowRoot!.querySelector('textarea') as HTMLTextAreaElement;
+
+  expect(el.disabled).to.be.false;
+  expect(el.effectiveDisabled).to.be.true;
+  expect(textarea.disabled).to.be.true;
+  expect(getComputedStyle(el).opacity).to.equal('0.5');
+  expect(getComputedStyle(el).cursor).to.equal('not-allowed');
 });

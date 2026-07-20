@@ -175,7 +175,11 @@ export class LyraTextarea extends FormAssociated(LyraTextareaBase) {
     this.fitToContent();
   }
 
-  protected willUpdate(): void {
+  protected willUpdate(changed: PropertyValues): void {
+    // A future mixin layered under LyraTextarea (beyond FormAssociated, which defines no
+    // willUpdate of its own today) would otherwise silently never run -- mirrors this same file's
+    // updated() override, which already calls super.updated(changed) for the identical reason.
+    super.willUpdate(changed);
     if (!this.hasUpdated) {
       this.hasHintSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'hint');
       this.hasErrorSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'error');

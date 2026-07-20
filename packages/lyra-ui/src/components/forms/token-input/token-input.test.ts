@@ -1,7 +1,9 @@
 import { fixture, expect, html, oneEvent } from '@open-wc/testing';
+import type { PropertyValues } from 'lit';
 import './token-input.js';
 import type { LyraTokenInput } from './token-input.js';
 import { styles } from './token-input.styles.js';
+import { LyraElement } from '../../../internal/lyra-element.js';
 
 const RULE = 'Bash(git status:*)';
 
@@ -108,6 +110,7 @@ it('cascades disabled state from an ancestor fieldset without mutating the disab
   const fieldset = form.querySelector('fieldset') as HTMLFieldSetElement;
   await el.updateComplete;
   expect(el.effectiveDisabled).to.be.false;
+  expect(getComputedStyle(el).opacity, 'not yet fieldset-disabled').to.equal('1');
 
   fieldset.disabled = true;
   await el.updateComplete;
@@ -115,11 +118,90 @@ it('cascades disabled state from an ancestor fieldset without mutating the disab
   expect(el.effectiveDisabled).to.be.true;
   const input = el.shadowRoot!.querySelector('input') as HTMLInputElement;
   expect(input.disabled).to.be.true;
+  // `:host(:disabled)` (the native FACE pseudo-class), not `:host([disabled])`, must dim the host
+  // purely from the fieldset cascade even though the component's own `disabled` attribute/property
+  // was never touched -- otherwise the control looks fully active while every internal control is
+  // functionally inert.
+  expect(getComputedStyle(el).opacity, 'fieldset-only disabled must still dim the host').to.equal('0.5');
 
   fieldset.disabled = false;
   await el.updateComplete;
   expect(el.effectiveDisabled).to.be.false;
   expect(input.disabled).to.be.false;
+  expect(getComputedStyle(el).opacity).to.equal('1');
+});
+
+it('gives the editable token-label a hover state matching its focus-visible ring and pointer cursor', async () => {
+  const css = styles.cssText.replace(/\s+/g, ' ');
+  expect(css).to.match(/\[part='token-label'\]:hover\s*\{[^}]*background:/);
+});
+
+it('focuses the draft input on host click(), mirroring lr-combobox\'s click forwarding', async () => {
+  const el = (await fixture(html`<lr-token-input></lr-token-input>`)) as LyraTokenInput;
+  const input = el.shadowRoot!.querySelector('#input') as HTMLInputElement;
+  expect(el.shadowRoot!.activeElement, 'nothing focused yet').to.equal(null);
+  el.click();
+  expect(el.shadowRoot!.activeElement!.id, 'host click() must forward focus to the draft input').to.equal(
+    input.id,
+  );
+});
+
+it('does not focus the draft input on host click() while disabled', async () => {
+  const el = (await fixture(html`<lr-token-input disabled></lr-token-input>`)) as LyraTokenInput;
+  el.click();
+  expect(el.shadowRoot!.activeElement).to.equal(null);
+});
+
+describe('ElementInternals availability', () => {
+  it('does not throw when constructed in an environment without a real ElementInternals implementation (e.g. a downstream Vitest + happy-dom suite)', () => {
+    const original = HTMLElement.prototype.attachInternals;
+    // @ts-expect-error -- simulating an environment that lacks ElementInternals entirely
+    delete HTMLElement.prototype.attachInternals;
+    try {
+      let el: LyraTokenInput | undefined;
+      expect(() => {
+        el = document.createElement('lr-token-input') as LyraTokenInput;
+      }).to.not.throw();
+      expect(el!.checkValidity()).to.be.true;
+      expect(el!.form).to.equal(null);
+    } finally {
+      HTMLElement.prototype.attachInternals = original;
+    }
+  });
+});
+
+it('calls super.willUpdate so a future LyraElement/mixin lifecycle hook stays wired in', async () => {
+  const proto = LyraElement.prototype as unknown as { willUpdate: (changed: PropertyValues) => void };
+  const original = proto.willUpdate;
+  let called = false;
+  proto.willUpdate = function (this: LyraElement, changed: PropertyValues): void {
+    called = true;
+    original.call(this, changed);
+  };
+  try {
+    const el = (await fixture(html`<lr-token-input></lr-token-input>`)) as LyraTokenInput;
+    await el.updateComplete;
+    expect(called).to.be.true;
+  } finally {
+    proto.willUpdate = original;
+  }
+});
+
+it('calls super.updated so a future LyraElement/mixin lifecycle hook stays wired in', async () => {
+  const proto = LyraElement.prototype as unknown as { updated: (changed: PropertyValues) => void };
+  const original = proto.updated;
+  let called = false;
+  proto.updated = function (this: LyraElement, changed: PropertyValues): void {
+    called = true;
+    original.call(this, changed);
+  };
+  try {
+    const el = (await fixture(html`<lr-token-input></lr-token-input>`)) as LyraTokenInput;
+    await el.updateComplete;
+    expect(called).to.be.true;
+  } finally {
+    proto.updated = original;
+  }
 });
 
 it('submits under a programmatically assigned name in the same tick', async () => {

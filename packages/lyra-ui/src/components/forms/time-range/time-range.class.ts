@@ -34,6 +34,40 @@ export interface TimeRangePreset {
   end: number;
 }
 
+/** A no-op stand-in for `ElementInternals`, used only when the host environment has no real
+ *  implementation of it (e.g. a downstream consumer's Vitest + happy-dom test suite) --
+ *  `attachInternals()` is browser-only, and calling it unconditionally in the constructor would
+ *  otherwise throw before any test assertion runs, merely from constructing or importing this
+ *  component. Every member here is either an inert value or a no-op -- same fix as
+ *  `<lr-checkbox>`'s/`<lr-combobox>`'s identical `createInternalsSafely`/`createNoopInternals`
+ *  pair. */
+function createInternalsSafely(host: HTMLElement): ElementInternals {
+  if (typeof host.attachInternals !== 'function') return createNoopInternals();
+  try {
+    return host.attachInternals();
+  } catch {
+    return createNoopInternals();
+  }
+}
+
+function createNoopInternals(): ElementInternals {
+  return {
+    form: null,
+    labels: [] as unknown as NodeList,
+    validity: {} as ValidityState,
+    validationMessage: '',
+    willValidate: false,
+    setFormValue(): void {},
+    setValidity(): void {},
+    checkValidity(): boolean {
+      return true;
+    },
+    reportValidity(): boolean {
+      return true;
+    },
+  } as unknown as ElementInternals;
+}
+
 export interface LyraTimeRangeEventMap {
   'lr-input': CustomEvent<{ start: number; end: number }>;
   'lr-change': CustomEvent<{ start: number; end: number }>;
@@ -142,7 +176,7 @@ export class LyraTimeRange extends LyraElement<LyraTimeRangeEventMap> {
 
   constructor() {
     super();
-    this.internals = this.attachInternals();
+    this.internals = createInternalsSafely(this);
   }
 
   get disabled(): boolean {
@@ -400,6 +434,10 @@ export class LyraTimeRange extends LyraElement<LyraTimeRangeEventMap> {
   }
 
   protected willUpdate(changed: PropertyValues): void {
+    // A future mixin layered under LyraTimeRange would otherwise silently never run its own
+    // willUpdate() -- mirrors this same file's disconnectedCallback(), which already calls
+    // super.disconnectedCallback() for the identical reason.
+    super.willUpdate(changed);
     if (
       changed.has('start') ||
       changed.has('end') ||

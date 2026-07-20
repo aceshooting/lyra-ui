@@ -333,6 +333,30 @@ it('participates in required validation, disabled fieldsets, and form reset', as
   expect(el.input!.disabled).to.be.true;
 });
 
+it('dims the input-wrapper part via the :disabled pseudo-class when disabled only through an ancestor fieldset', async () => {
+  // effectiveDisabled correctly gates the country select/telephone input
+  // underneath even when disabled purely by fieldset cascading, but that
+  // alone doesn't prove the *visual* treatment follows -- the wrapper's
+  // opacity/cursor styling is keyed off a CSS selector (:host(:disabled)),
+  // not effectiveDisabled, so it needs its own assertion. Mirrors
+  // lr-chat-composer's identical fieldset/computed-style coverage.
+  const form = (await fixture(html`
+    <form>
+      <fieldset disabled>
+        <lr-phone-input name="phone" label="Phone number" default-country="LU" .adapter=${adapter}></lr-phone-input>
+      </fieldset>
+    </form>
+  `)) as HTMLFormElement;
+  const el = form.querySelector('lr-phone-input') as LyraPhoneInput;
+  await el.updateComplete;
+  const wrapper = el.shadowRoot!.querySelector('[part="input-wrapper"]') as HTMLElement;
+
+  expect(el.disabled).to.be.false;
+  expect(el.input!.disabled).to.be.true;
+  expect(getComputedStyle(wrapper).opacity).to.equal('0.5');
+  expect(getComputedStyle(wrapper).cursor).to.equal('not-allowed');
+});
+
 it('anchors native validation feedback on the telephone input rather than the country selector', async () => {
   const form = (await fixture(html`
     <form>

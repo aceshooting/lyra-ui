@@ -1,10 +1,45 @@
-import { html, nothing, type TemplateResult } from 'lit';
+import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { AnchoredValidityController, VALIDITY_ANCHOR } from '../../../internal/anchored-validity.js';
 import { nextId } from '../../../internal/a11y.js';
 import { closeIcon } from '../../../internal/icons.js';
 import { styles } from './token-input.styles.js';
+
+/** A no-op stand-in for `ElementInternals`, used only when the host environment has no real
+ *  implementation of it (e.g. a downstream consumer's Vitest + happy-dom test suite) --
+ *  `attachInternals()` is browser-only, and calling it unconditionally in the constructor would
+ *  otherwise throw before any test assertion runs, merely from constructing or importing this
+ *  component. Every member here is either an inert value or a no-op: native `<form>`
+ *  participation is unavailable in that environment, but that's an acceptable degradation rather
+ *  than a hard failure -- same fix as `<lr-checkbox>`'s/`<lr-combobox>`'s identical
+ *  `createInternalsSafely`/`createNoopInternals` pair. */
+function createInternalsSafely(host: HTMLElement): ElementInternals {
+  if (typeof host.attachInternals !== 'function') return createNoopInternals();
+  try {
+    return host.attachInternals();
+  } catch {
+    return createNoopInternals();
+  }
+}
+
+function createNoopInternals(): ElementInternals {
+  return {
+    form: null,
+    labels: [] as unknown as NodeList,
+    validity: {} as ValidityState,
+    validationMessage: '',
+    willValidate: false,
+    setFormValue(): void {},
+    setValidity(): void {},
+    checkValidity(): boolean {
+      return true;
+    },
+    reportValidity(): boolean {
+      return true;
+    },
+  } as unknown as ElementInternals;
+}
 
 export interface LyraTokenInputEventMap {
   input: CustomEvent<{ value: string[] }>;
@@ -149,7 +184,7 @@ export class LyraTokenInput extends LyraElement<LyraTokenInputEventMap> {
     this.requestUpdate('disabled', old);
   }
 
-  constructor() { super(); this.internals = this.attachInternals(); this.validityController = new AnchoredValidityController(this, this.internals, () => this[VALIDITY_ANCHOR]()); }
+  constructor() { super(); this.internals = createInternalsSafely(this); this.validityController = new AnchoredValidityController(this, this.internals, () => this[VALIDITY_ANCHOR]()); }
   connectedCallback(): void { super.connectedCallback(); this.syncValidity(); }
   get form(): HTMLFormElement | null { return this.internals.form; }
   get validity(): ValidityState { return this.internals.validity; }
@@ -177,7 +212,15 @@ export class LyraTokenInput extends LyraElement<LyraTokenInputEventMap> {
   reportValidity(): boolean { return this.internals.reportValidity(); }
   override focus(options?: FocusOptions): void { this.inputEl?.focus(options); }
   override blur(): void { this.inputEl?.blur(); }
-  protected willUpdate(): void {
+  /** Focuses the draft text input, mirroring what a real click on the token row would land on --
+   *  `HTMLElement.prototype.click()` is otherwise a no-op on a custom element with no native click
+   *  semantics of its own (matches `<lr-combobox>`'s identical override). */
+  override click(): void {
+    if (this.effectiveDisabled) return;
+    this.inputEl?.focus();
+  }
+  protected willUpdate(changed: PropertyValues): void {
+    super.willUpdate(changed); // no-op today, but keeps a future mixin's willUpdate reachable
     if (!this.hasUpdated) {
       this.hasLabelSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'label');
       this.hasHintSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'hint');
@@ -322,7 +365,8 @@ export class LyraTokenInput extends LyraElement<LyraTokenInputEventMap> {
    * Focus moves are deferred to here rather than run from the handlers themselves: the editor and
    * the token it replaces only exist after the render that this update produced.
    */
-  protected updated(): void {
+  protected updated(changed: PropertyValues): void {
+    super.updated(changed); // no-op today, but keeps a future mixin's updated reachable
     if (this.focusEditorPending) {
       this.focusEditorPending = false;
       const editor = this.renderRoot?.querySelector('[part="token-editor"]') as HTMLInputElement | null;

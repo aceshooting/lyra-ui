@@ -1,4 +1,4 @@
-import { html, nothing, type TemplateResult } from 'lit';
+import { html, nothing, type TemplateResult, type ComplexAttributeConverter } from 'lit';
 import { property } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { FormAssociated } from '../../../internal/form-associated.js';
@@ -11,6 +11,21 @@ import { styles } from './slider.styles.js';
  *  (and native `<input type=range>`). Mirrors lr-time-range's identical
  *  constant. */
 const PAGE_STEP_MULTIPLIER = 10;
+
+/** `true`-defaulting boolean attribute converter -- Lit's default presence-based `type: Boolean`
+ *  can never be set back to `false` from a plain-HTML attribute once a property's own default is
+ *  `true` (removing an attribute that was never present fires no `attributeChangedCallback`), so
+ *  `fromAttribute` checks the literal string instead. Duplicated locally rather than imported,
+ *  matching this exact converter's repeated per-component convention elsewhere in this library
+ *  (see e.g. `<lr-agent-run>`'s/`<lr-task-list>`'s own `trueDefaultBooleanConverter`). */
+const trueDefaultBooleanConverter: ComplexAttributeConverter<boolean> = {
+  fromAttribute(value): boolean {
+    return value !== 'false';
+  },
+  toAttribute(value): string | null {
+    return value ? null : 'false';
+  },
+};
 
 export interface LyraSliderEventMap {
   'lr-input': CustomEvent<{ value: number }>;
@@ -119,13 +134,12 @@ export class LyraSlider extends FormAssociated(LyraSliderBase) {
    *  focusable thumb is never nameless (the same pattern as
    *  `<lr-input>`/`<lr-textarea>`'s built-in generic labels). */
   @property() label = '';
-  /** Whether to render the current numeric value as visible text next to
-   *  the track. Like `<lr-markdown>`'s `sanitize`/`gfm`, this is a plain
-   *  `type: Boolean` property defaulting `true` — turn it off via the
-   *  `.showValue=${false}` property binding (a bare `show-value="false"`
-   *  content attribute is still truthy, since presence is all Lit's default
-   *  boolean converter checks). */
-  @property({ type: Boolean, attribute: 'show-value' }) showValue = true;
+  /** Whether to render the current numeric value as visible text next to the track. Defaults to
+   *  `true`; uses `trueDefaultBooleanConverter` (like `<lr-agent-run>`'s `show-cancel`/
+   *  `show-retry`) rather than Lit's default presence-based `type: Boolean` converter, so a plain
+   *  HTML `show-value="false"` content attribute actually turns it off, not just a
+   *  `.showValue=${false}` property binding. */
+  @property({ type: Boolean, attribute: 'show-value', converter: trueDefaultBooleanConverter }) showValue = true;
 
   // Keyed by pointerId (a Set, not a single scalar) purely for
   // multi-touch/robustness parity with lr-split and lr-time-range, even

@@ -75,7 +75,14 @@ const GROUP_LABELS: Record<number, string> = {
  * `GROUP_LABELS` lookup above (the raw entries carry no label of their own).
  */
 function adaptEmojiPickerElementData(raw: OptionalPeerApi): EmojiPickerGroup[] {
-  const entries = Array.isArray(raw) ? raw : [];
+  // A JSON module import resolves to either the bare array directly or a namespace object
+  // wrapping it as `.default`, depending on the bundler/interop configuration doing the
+  // resolving -- confirmed against the real published package: Node's native JSON import
+  // attributes resolve it as `{ default: [...] }`, not a bare array. Falling back to `.default`
+  // when `raw` itself isn't an array (rather than assuming the bare-array shape and silently
+  // substituting `[]` for the real data) mirrors spreadsheet-loader.ts's identical fallback.
+  const candidate = (raw as { default?: unknown } | null)?.default;
+  const entries = Array.isArray(raw) ? raw : Array.isArray(candidate) ? candidate : [];
   const byGroup = new Map<number, EmojiPickerGroup>();
   for (const entry of entries as Array<{
     emoji?: string;

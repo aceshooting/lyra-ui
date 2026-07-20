@@ -8,6 +8,35 @@ export const styles = css`
     --lr-emoji-picker-gap: var(--lr-space-2xs);
     --lr-emoji-picker-row-height: calc(var(--lr-emoji-picker-item-size) + var(--lr-space-l));
   }
+  [part='form-control'] {
+    display: flex;
+    flex-direction: column;
+    gap: var(--lr-space-xs);
+  }
+  [part='form-control-label'] {
+    color: var(--lr-color-text);
+    font-size: var(--lr-font-size-md-sm);
+  }
+  /* [part]:empty never matches -- the part always contains a literal <slot> child element
+     regardless of assigned content -- so real emptiness is tracked in JS (hasLabelSlot/
+     hasHintSlot/hasErrorSlot) and reflected via the hidden attribute instead. */
+  [part='form-control-label'][hidden],
+  [part='hint'][hidden],
+  [part='error'][hidden] {
+    display: none;
+  }
+  :host([required]) [part='form-control-label']::after {
+    content: ' *';
+    color: var(--lr-color-danger);
+  }
+  [part='hint'] {
+    color: var(--lr-color-text-quiet);
+    font-size: var(--lr-font-size-sm);
+  }
+  [part='error'] {
+    color: var(--lr-color-danger);
+    font-size: var(--lr-font-size-sm);
+  }
   [part='base'] {
     display: flex;
     flex-direction: column;
@@ -16,6 +45,19 @@ export const styles = css`
     border-radius: var(--lr-radius);
     padding: var(--lr-space-s);
     background: var(--lr-color-surface);
+  }
+  /* :host(:disabled), not :host([disabled]) -- this is a form-associated custom element
+     (FormAssociated mixin -> static formAssociated = true), so the UA computes its disabled
+     state (and therefore :disabled/:enabled matching) the same way it does for a native form
+     control: from its own disabled content attribute *or* an ancestor <fieldset disabled>'s
+     cascade. */
+  :host(:disabled) [part='base'] {
+    opacity: var(--lr-opacity-disabled);
+    cursor: not-allowed;
+  }
+  [part='search']:disabled,
+  [part='emoji']:disabled {
+    cursor: not-allowed;
   }
   [part='search'] {
     padding: var(--lr-space-xs) var(--lr-space-s);

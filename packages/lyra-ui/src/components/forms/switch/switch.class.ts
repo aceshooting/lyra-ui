@@ -1,8 +1,43 @@
-import { html, nothing, type TemplateResult } from 'lit';
+import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { AnchoredValidityController, VALIDITY_ANCHOR } from '../../../internal/anchored-validity.js';
 import { styles } from './switch.styles.js';
+
+/** A no-op stand-in for `ElementInternals`, used only when the host environment has no real
+ *  implementation of it (e.g. a downstream consumer's Vitest + happy-dom test suite) --
+ *  `attachInternals()` is browser-only, and calling it unconditionally in the constructor would
+ *  otherwise throw before any test assertion runs, merely from constructing or importing this
+ *  component. Every member here is either an inert value or a no-op: native `<form>`
+ *  participation is unavailable in that environment, but that's an acceptable degradation rather
+ *  than a hard failure -- same fix as `<lr-checkbox>`'s/`<lr-tool-param-form>`'s identical
+ *  `createInternalsSafely`/`createNoopInternals` pair. */
+function createInternalsSafely(host: HTMLElement): ElementInternals {
+  if (typeof host.attachInternals !== 'function') return createNoopInternals();
+  try {
+    return host.attachInternals();
+  } catch {
+    return createNoopInternals();
+  }
+}
+
+function createNoopInternals(): ElementInternals {
+  return {
+    form: null,
+    labels: [] as unknown as NodeList,
+    validity: {} as ValidityState,
+    validationMessage: '',
+    willValidate: false,
+    setFormValue(): void {},
+    setValidity(): void {},
+    checkValidity(): boolean {
+      return true;
+    },
+    reportValidity(): boolean {
+      return true;
+    },
+  } as unknown as ElementInternals;
+}
 
 export interface LyraSwitchEventMap {
   'lr-change': CustomEvent<{ checked: boolean }>;
@@ -175,7 +210,7 @@ export class LyraSwitch extends LyraElement<LyraSwitchEventMap> {
 
   constructor() {
     super();
-    this.internals = this.attachInternals();
+    this.internals = createInternalsSafely(this);
     this.validityController = new AnchoredValidityController(this, this.internals, () => this[VALIDITY_ANCHOR]());
     this.syncFormState();
   }
@@ -201,6 +236,14 @@ export class LyraSwitch extends LyraElement<LyraSwitchEventMap> {
     return this.renderRoot?.querySelector('[part="base"]') ?? null;
   }
 
+  /** Activates the internal switch control, toggling it the same as a real click -- mirrors
+   *  `<lr-checkbox>`'s identical `override click()`. Without this, `HTMLElement.prototype.click()`
+   *  on the host is a no-op: the real click handler is bound only to the internal
+   *  `[part="base"]` control, not the host itself. */
+  override click(): void {
+    this[VALIDITY_ANCHOR]()?.click();
+  }
+
   /** Moves focus to the internal switch control. */
   override focus(options?: FocusOptions): void {
     this[VALIDITY_ANCHOR]()?.focus(options);
@@ -220,7 +263,11 @@ export class LyraSwitch extends LyraElement<LyraSwitchEventMap> {
     this.updateValidity();
   }
 
-  protected willUpdate(): void {
+  protected willUpdate(changed: PropertyValues): void {
+    // A future mixin layered under LyraSwitch (e.g. a shared behavior applied the same way
+    // FormAssociated is layered under lr-textarea) would otherwise silently never run its own
+    // willUpdate() -- mirrors csv-viewer.ts's/docx-viewer.ts's identical super call.
+    super.willUpdate(changed);
     // Seed `hasLabelSlot`/`hasHintSlot`/`hasErrorSlot` from the light-DOM children synchronously
     // before the very first render (same `!hasUpdated` guard as combobox/date-input's
     // `hasHintSlot` etc.) so declaratively-provided label/hint/error content doesn't flash hidden

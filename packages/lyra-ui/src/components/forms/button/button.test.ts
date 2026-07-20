@@ -109,6 +109,25 @@ describe('lr-button', () => {
     expect(submitted).to.be.true;
   });
 
+  describe('ElementInternals availability', () => {
+    it('does not throw when constructed in an environment without a real ElementInternals implementation (e.g. a downstream Vitest + happy-dom suite)', () => {
+      const original = HTMLElement.prototype.attachInternals;
+      // @ts-expect-error -- simulating an environment that lacks ElementInternals entirely
+      delete HTMLElement.prototype.attachInternals;
+      try {
+        let el: LyraButton | undefined;
+        expect(() => {
+          el = document.createElement('lr-button') as LyraButton;
+        }).to.not.throw();
+        // Confirm the fallback keeps the rest of the public surface usable rather than merely
+        // swallowing the constructor error.
+        expect(el!.disabled).to.be.false;
+      } finally {
+        HTMLElement.prototype.attachInternals = original;
+      }
+    });
+  });
+
   it('is accessible', async () => {
     const el = await fixture(html`<lr-button>Save</lr-button>`);
     await expect(el).to.be.accessible();
@@ -252,11 +271,24 @@ describe('lr-button', () => {
   it('uses the standard medium size token and exposes a rethemeable size scale', () => {
     const css = styles.cssText.replace(/\s+/g, ' ');
     expect(css).to.include("font-size: var(--lr-font-size-m);");
-    expect(css).to.include('--lr-button-size-s: var(--lr-size-1-75rem);');
+    // Matches lr-input/lr-select/lr-combobox's own size="s" control-min-height token, so a
+    // default-row button lines up with its neighbors (size-tier-height-inconsistent-across-controls).
+    expect(css).to.include('--lr-button-size-s: var(--lr-size-1-875rem);');
     // The per-tier floor now reaches min-block-size through --lr-button-min-height (re-assigned per
     // size tier) so a consumer-set --lr-button-height can cap it; the size scale itself is unchanged.
     expect(css).to.include('--lr-button-min-height: var(--lr-button-size-s);');
     expect(css).to.include('min-block-size: var(--lr-button-height, var(--lr-button-min-height));');
+  });
+
+  it("matches lr-input/lr-select/lr-combobox's shared min-height scale at every size tier so a button never sits shorter than its row neighbors", () => {
+    const css = styles.cssText.replace(/\s+/g, ' ');
+    // Same token values as input.styles.ts's :host([size='…']) --lr-input-control-min-height scale.
+    expect(css).to.include('--lr-button-size-2xs: var(--lr-size-1-25rem);');
+    expect(css).to.include('--lr-button-size-xs: var(--lr-size-1-5rem);');
+    expect(css).to.include('--lr-button-size-s: var(--lr-size-1-875rem);');
+    expect(css).to.include('--lr-button-size-m: var(--lr-size-2-5rem);');
+    expect(css).to.include('--lr-button-size-l: var(--lr-size-3rem);');
+    expect(css).to.include('--lr-button-size-xl: var(--lr-size-3-5rem);');
   });
 
   it('propagates a consumer width from the host to the internal button', () => {
@@ -345,13 +377,15 @@ describe('lr-button', () => {
     // The computed geometry each tier rendered *before* --lr-button-padding-block/-padding-inline/
     // -font-size existed. An unset consumer must stay byte-identical, so these are hardcoded px
     // (root font-size is 16px) rather than re-derived from the same tokens the stylesheet uses.
+    // minHeight now matches lr-input/lr-select/lr-combobox's shared control-min-height scale tier
+    // for tier (size-tier-height-inconsistent-across-controls) -- padding/font-size are unchanged.
     const tiers = [
       { size: '2xs', padInline: '2px', padBlock: '2px', fontSize: '10px', minHeight: '20px' },
       { size: 'xs', padInline: '4px', padBlock: '2px', fontSize: '12px', minHeight: '24px' },
-      { size: 's', padInline: '8px', padBlock: '2px', fontSize: '13px', minHeight: '28px' },
-      { size: 'm', padInline: '12px', padBlock: '4px', fontSize: '16px', minHeight: '32px' },
-      { size: 'l', padInline: '16px', padBlock: '8px', fontSize: '16px', minHeight: '40px' },
-      { size: 'xl', padInline: '32px', padBlock: '12px', fontSize: '18px', minHeight: '48px' },
+      { size: 's', padInline: '8px', padBlock: '2px', fontSize: '13px', minHeight: '30px' },
+      { size: 'm', padInline: '12px', padBlock: '4px', fontSize: '16px', minHeight: '40px' },
+      { size: 'l', padInline: '16px', padBlock: '8px', fontSize: '16px', minHeight: '48px' },
+      { size: 'xl', padInline: '32px', padBlock: '12px', fontSize: '18px', minHeight: '56px' },
     ];
 
     const base = (el: LyraButton) => el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;

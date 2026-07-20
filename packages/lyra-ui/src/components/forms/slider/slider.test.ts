@@ -75,6 +75,21 @@ it('renders the visible value readout by default, and omits it when show-value i
   expect(hidden.shadowRoot!.querySelector('[part="value"]')).to.equal(null);
 });
 
+it('omits the value readout from a plain HTML show-value="false" content attribute too, not just the .showValue property binding', async () => {
+  // Regression guard for trueDefaultBooleanConverter: Lit's default presence-based `type:
+  // Boolean` converter can never be turned back off from a plain-HTML attribute once the
+  // property's own default is `true` -- a bare show-value="false" string would otherwise still
+  // parse as truthy (only presence matters to the default converter).
+  const el = (await fixture(html`<lr-slider value="42" show-value="false"></lr-slider>`)) as LyraSlider;
+  expect(el.showValue).to.be.false;
+  expect(el.shadowRoot!.querySelector('[part="value"]')).to.equal(null);
+
+  // Removing the attribute (never setting it at all) still defaults to true, the other half of
+  // the same converter's contract.
+  const defaulted = (await fixture(html`<lr-slider value="42"></lr-slider>`)) as LyraSlider;
+  expect(defaulted.showValue).to.be.true;
+});
+
 it('sets aria-label on the thumb from the label prop, falling back to a forwarded host aria-label', async () => {
   const labeled = (await fixture(
     html`<lr-slider label="Temperature"></lr-slider>`,
@@ -613,6 +628,13 @@ it('references the shared focus-ring tokens on the thumb focus-visible outline',
     'outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color)',
   );
   expect(styles.cssText).to.include('outline-offset: var(--lr-focus-ring-offset)');
+});
+
+it('gives the thumb a :hover rule alongside its :focus-visible ring, gated on :host(:not(:disabled))', () => {
+  const css = styles.cssText.replace(/\s+/g, ' ');
+  expect(css).to.match(
+    /:host\(:not\(:disabled\)\)\s*\[part='thumb'\]:hover\s*\{[^}]*box-shadow:/,
+  );
 });
 
 it('is accessible in the default (unset value, no label) state', async () => {

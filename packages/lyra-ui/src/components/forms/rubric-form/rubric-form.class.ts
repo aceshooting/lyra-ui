@@ -125,10 +125,42 @@ export class LyraRubricForm extends LyraElement<LyraRubricFormEventMap> {
 
   constructor() {
     super();
-    this.internals = this.attachInternals();
+    this.internals = this.safeAttachInternals();
     this.validityController = new AnchoredValidityController(this, this.internals, () => this[VALIDITY_ANCHOR]());
     this.addEventListener('keydown', this.onFormKeyDown as EventListener);
     this.syncFormState();
+  }
+
+  /** `attachInternals()` throws in any environment without a real `ElementInternals`
+   *  implementation (e.g. a downstream consumer's happy-dom test suite) -- merely constructing
+   *  (or importing) this component must not hard-crash there. Falls back to an inert stand-in:
+   *  form participation and validity reporting are unavailable in that environment (there is no
+   *  polyfillable substitute), but rendering and every non-form-associated feature keep working.
+   *  Mirrors lr-graph-query-builder's identical guard. */
+  private safeAttachInternals(): ElementInternals {
+    if (typeof (globalThis as { ElementInternals?: unknown }).ElementInternals === 'undefined') {
+      return this.inertInternals();
+    }
+    try {
+      return this.attachInternals();
+    } catch {
+      return this.inertInternals();
+    }
+  }
+
+  private inertInternals(): ElementInternals {
+    return {
+      form: null,
+      labels: [] as unknown as NodeList,
+      validity: {} as ValidityState,
+      validationMessage: '',
+      willValidate: false,
+      setFormValue: () => {},
+      setValidity: () => {},
+      checkValidity: () => true,
+      reportValidity: () => true,
+      states: new Set<string>(),
+    } as unknown as ElementInternals;
   }
 
   get form(): HTMLFormElement | null {
@@ -387,6 +419,7 @@ export class LyraRubricForm extends LyraElement<LyraRubricFormEventMap> {
   }
 
   protected updated(changed: PropertyValues): void {
+    super.updated(changed);
     if (changed.has('value') || changed.has('keys') || changed.has('_errors')) {
       const valid = Object.keys(this._errors).length === 0;
       const key = JSON.stringify({ valid, errors: this._errors });

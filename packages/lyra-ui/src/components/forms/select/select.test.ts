@@ -1,7 +1,10 @@
 import { fixture, expect, oneEvent, html, aTimeout } from '@open-wc/testing';
+import type { PropertyValues } from 'lit';
 import './select.js';
 import '../combobox/option.js';
 import type { LyraSelect } from './select.js';
+import { LyraElement } from '../../../internal/lyra-element.js';
+import { styles } from './select.styles.js';
 
 const basic = () => html`
   <lr-select>
@@ -978,4 +981,186 @@ it('clamps its floating surface width through the shared popover-viewport-clamp 
   const el = (await fixture(html`<lr-select></lr-select>`)) as HTMLElement;
   await (el as HTMLElement & { updateComplete?: Promise<unknown> }).updateComplete;
   expect(renderedClamp(el, "[part='listbox']")).to.equal('10px');
+});
+
+it('pins overflow-x explicitly alongside the listbox\'s overflow-y, so the unset axis never falls back to browser-implicit auto', () => {
+  // Per the CSS overflow spec, pinning one axis to a non-'visible' value forces the other axis's
+  // used value to 'auto' too -- an implicit overflow-x: auto here risks a phantom horizontal
+  // scrollbar even though this listbox only ever scrolls vertically. Same class of bug already
+  // fixed on lr-tabs' tablist (overflow-x: auto; overflow-y: hidden;), just the opposite axis.
+  const css = styles.cssText.replace(/\s+/g, ' ');
+  expect(css).to.match(/\[part='listbox'\]\s*\{[^}]*overflow-y:\s*auto;\s*overflow-x:\s*hidden;/);
+});
+
+it('gives the trigger a :hover rule alongside its :focus-visible ring', () => {
+  const css = styles.cssText.replace(/\s+/g, ' ');
+  expect(css).to.match(
+    /:where\(\[part='trigger'\]\):hover:where\(:not\(:disabled\)\)\s*\{[^}]*background:\s*var\(--lr-color-brand-quiet\)/,
+  );
+});
+
+describe('active-option row cssprop indirection', () => {
+  it('recolors the active option row from --lr-select-option-active-bg on an ancestor, not a :host-declared prop', async () => {
+    const el = (await fixture(basic())) as LyraSelect;
+    el.style.setProperty('--lr-select-option-active-bg', 'rgb(10, 20, 30)');
+    el.open = true;
+    await el.updateComplete;
+    trigger(el).dispatchEvent(new KeyboardEvent('keydown', { key: 'b', bubbles: true, cancelable: true }));
+    await el.updateComplete;
+    const active = el.shadowRoot!.querySelector('[part="option"][data-active]') as HTMLElement;
+    expect(getComputedStyle(active).backgroundColor).to.equal('rgb(10, 20, 30)');
+  });
+
+  it('renders byte-identically to the pre-cssprop-indirection output when the prop is unset', async () => {
+    const el = (await fixture(basic())) as LyraSelect;
+    el.open = true;
+    await el.updateComplete;
+    trigger(el).dispatchEvent(new KeyboardEvent('keydown', { key: 'b', bubbles: true, cancelable: true }));
+    await el.updateComplete;
+    const active = el.shadowRoot!.querySelector('[part="option"][data-active]') as HTMLElement;
+    // Resolve the brand-quiet token in the same shadow root for a like-for-like comparison,
+    // rather than comparing a raw custom-property string against getComputedStyle's rgb(...) form.
+    const probe = document.createElement('span');
+    probe.setAttribute('style', 'background: var(--lr-color-brand-quiet)');
+    el.shadowRoot!.appendChild(probe);
+    const expected = getComputedStyle(probe).backgroundColor;
+    probe.remove();
+    expect(getComputedStyle(active).backgroundColor).to.equal(expected);
+  });
+});
+
+describe('host click() forwarding', () => {
+  it('forwards host click() to the internal trigger button, opening the listbox', async () => {
+    const el = (await fixture(basic())) as LyraSelect;
+    expect(el.open).to.be.false;
+    el.click();
+    await el.updateComplete;
+    expect(el.open).to.be.true;
+  });
+
+  it('does not forward click() when the trigger is disabled, matching a native disabled <button>', async () => {
+    const el = (await fixture(basic())) as LyraSelect;
+    el.disabled = true;
+    await el.updateComplete;
+    el.click();
+    await el.updateComplete;
+    expect(el.open).to.be.false;
+  });
+});
+
+describe('ElementInternals availability', () => {
+  it('does not throw when constructed in an environment without a real ElementInternals implementation (e.g. a downstream Vitest + happy-dom suite)', () => {
+    const original = HTMLElement.prototype.attachInternals;
+    // @ts-expect-error -- simulating an environment that lacks ElementInternals entirely
+    delete HTMLElement.prototype.attachInternals;
+    try {
+      let el: LyraSelect | undefined;
+      expect(() => {
+        el = document.createElement('lr-select') as LyraSelect;
+      }).to.not.throw();
+      // Confirm the fallback keeps the rest of the public surface usable rather than merely
+      // swallowing the constructor error.
+      expect(el!.checkValidity()).to.be.true;
+      expect(el!.form).to.equal(null);
+    } finally {
+      HTMLElement.prototype.attachInternals = original;
+    }
+  });
+});
+
+describe('lifecycle super calls', () => {
+  const LyraSelectCtor = customElements.get('lr-select')!;
+
+  it('calls super.willUpdate so a future LyraElement/mixin lifecycle hook stays wired in', async () => {
+    // Keyed on `this === el` (not a bare shared boolean) -- `basic()`'s slotted <lr-option>
+    // children are themselves LyraElement subclasses that update through this exact same patched
+    // prototype method, so a plain "was it called at all" flag would pass even if LyraSelect's
+    // own willUpdate() never called super, as long as some sibling element happened to.
+    const proto = LyraElement.prototype as unknown as { willUpdate: (changed: PropertyValues) => void };
+    const original = proto.willUpdate;
+    let calledOnSelect = false;
+    proto.willUpdate = function (this: LyraElement, changed: PropertyValues): void {
+      if (this instanceof LyraSelectCtor) calledOnSelect = true;
+      original.call(this, changed);
+    };
+    try {
+      const el = (await fixture(basic())) as LyraSelect;
+      await el.updateComplete;
+      expect(calledOnSelect).to.be.true;
+    } finally {
+      proto.willUpdate = original;
+    }
+  });
+
+  it('calls super.updated so a future LyraElement/mixin lifecycle hook stays wired in', async () => {
+    const proto = LyraElement.prototype as unknown as { updated: (changed: PropertyValues) => void };
+    const original = proto.updated;
+    let calledOnSelect = false;
+    proto.updated = function (this: LyraElement, changed: PropertyValues): void {
+      if (this instanceof LyraSelectCtor) calledOnSelect = true;
+      original.call(this, changed);
+    };
+    try {
+      const el = (await fixture(basic())) as LyraSelect;
+      await el.updateComplete;
+      expect(calledOnSelect).to.be.true;
+    } finally {
+      proto.updated = original;
+    }
+  });
+});
+
+describe('start/end adornment slots', () => {
+  const part = (el: LyraSelect, name: string) => el.shadowRoot!.querySelector(`[part="${name}"]`) as HTMLElement;
+
+  it('renders a slotted glyph inside the trigger, before the value label', async () => {
+    const el = (await fixture(html`
+      <lr-select>
+        <svg slot="start" width="12" height="12" aria-hidden="true"><circle cx="6" cy="6" r="5"></circle></svg>
+        <lr-option value="a">Apple</lr-option>
+      </lr-select>
+    `)) as LyraSelect;
+    await el.updateComplete;
+    const start = part(el, 'start');
+    expect(start.hasAttribute('hidden')).to.be.false;
+    const startRect = start.getBoundingClientRect();
+    const triggerRect = trigger(el).getBoundingClientRect();
+    expect(startRect.width).to.be.greaterThan(0);
+    expect(startRect.left).to.be.at.least(triggerRect.left);
+  });
+
+  it('places the end adornment before the expand icon', async () => {
+    const el = (await fixture(html`
+      <lr-select>
+        <kbd slot="end">K</kbd>
+        <lr-option value="a">Apple</lr-option>
+      </lr-select>
+    `)) as LyraSelect;
+    await el.updateComplete;
+    const end = part(el, 'end');
+    expect(end.hasAttribute('hidden')).to.be.false;
+    expect(end.compareDocumentPosition(part(el, 'expand-icon')) & Node.DOCUMENT_POSITION_FOLLOWING).to.be.greaterThan(
+      0,
+    );
+  });
+
+  it('hides both wrappers when nothing is slotted', async () => {
+    const el = (await fixture(basic())) as LyraSelect;
+    await el.updateComplete;
+    expect(part(el, 'start').hasAttribute('hidden')).to.be.true;
+    expect(part(el, 'end').hasAttribute('hidden')).to.be.true;
+    expect(getComputedStyle(part(el, 'start')).display).to.equal('none');
+    expect(getComputedStyle(part(el, 'end')).display).to.equal('none');
+  });
+
+  it('reveals the wrapper when an adornment is slotted in after first render', async () => {
+    const el = (await fixture(basic())) as LyraSelect;
+    const glyph = document.createElement('span');
+    glyph.slot = 'start';
+    glyph.textContent = '⌕';
+    el.append(glyph);
+    await el.updateComplete;
+    await el.updateComplete;
+    expect(part(el, 'start').hasAttribute('hidden')).to.be.false;
+  });
 });

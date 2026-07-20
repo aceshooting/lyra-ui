@@ -41,6 +41,14 @@ export const styles = css`
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);
   }
+  /* Gives mouse users the same 'this is interactive' cue the :focus-visible ring above already
+     gives keyboard users -- mirrors lr-checkbox's/lr-radio's [part='base']:hover pattern, gated
+     via :host(:not(:disabled)) rather than a same-selector [part='textarea']:hover:not(:disabled)
+     (which would exceed a consumer's ::part(textarea):hover specificity -- see
+     lr-attachment-trigger's :where() fix for that class of bug). */
+  :host(:not(:disabled)) [part='textarea']:hover {
+    border-color: var(--lr-color-brand);
+  }
   [part='textarea']:disabled {
     opacity: var(--lr-opacity-disabled);
     cursor: not-allowed;

@@ -1,4 +1,4 @@
-import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
+import { html, nothing, type TemplateResult, type PropertyValues, type ComplexAttributeConverter } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { FormAssociated } from '../../../internal/form-associated.js';
@@ -7,6 +7,21 @@ import { styles } from './code-editor.styles.js';
 
 export interface LyraCodeEditorEventMap { input: CustomEvent<{ value: string }>; change: CustomEvent<{ value: string }>; blur: CustomEvent<undefined>; focus: CustomEvent<undefined>; }
 class LyraCodeEditorBase extends LyraElement<LyraCodeEditorEventMap> {}
+
+/** `true`-defaulting boolean attribute converter -- Lit's default presence-based `type: Boolean`
+ *  can never be set back to `false` from a plain-HTML attribute once the property's own default is
+ *  `true` (removing an attribute that was never present fires no `attributeChangedCallback`), so
+ *  `fromAttribute` checks the literal string instead (mirrors `lr-task-list`'s `expanded`
+ *  converter). `toAttribute` reflects the `true` state as a present attribute rather than omitting
+ *  it, matching this property's own `reflect: true`. */
+const trueDefaultBooleanConverter: ComplexAttributeConverter<boolean> = {
+  fromAttribute(value): boolean {
+    return value !== 'false';
+  },
+  toAttribute(value): string | null {
+    return value ? '' : null;
+  },
+};
 
 /** `<lr-code-editor>` — dependency-free multiline code editing surface with optional line numbers.
  *
@@ -40,7 +55,7 @@ class LyraCodeEditorBase extends LyraElement<LyraCodeEditorEventMap> {}
 export class LyraCodeEditor extends FormAssociated(LyraCodeEditorBase) {
   static styles = [LyraElement.styles, styles];
   @property() language = '';
-  @property({ type: Boolean, reflect: true, attribute: 'line-numbers' }) lineNumbers = true;
+  @property({ converter: trueDefaultBooleanConverter, reflect: true, attribute: 'line-numbers' }) lineNumbers = true;
 
   private _tabSize = 2;
   private tabSizeAssigned = false;
@@ -128,7 +143,8 @@ export class LyraCodeEditor extends FormAssociated(LyraCodeEditorBase) {
   private onLabelSlotChange = (e: Event): void => { this.hasLabelSlot = (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length > 0; };
   private onHintSlotChange = (e: Event): void => { this.hasHintSlot = (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length > 0; };
   private onErrorSlotChange = (e: Event): void => { this.hasErrorSlot = (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length > 0; };
-  protected willUpdate(): void {
+  protected willUpdate(changed: PropertyValues): void {
+    super.willUpdate(changed);
     if (!this.hasUpdated) {
       this.hasLabelSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'label');
       this.hasHintSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'hint');
@@ -136,6 +152,7 @@ export class LyraCodeEditor extends FormAssociated(LyraCodeEditorBase) {
     }
   }
   protected updated(changed: PropertyValues): void {
+    super.updated(changed);
     if (this.textarea && this.textarea.value !== this.value) this.textarea.value = this.value;
     if (changed.has('touched') || changed.has('required') || changed.has('value')) {
       this.toggleAttribute('data-invalid', this.touched && !this.internals.validity.valid);

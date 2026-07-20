@@ -33,6 +33,20 @@ it('adapts a well-formed raw payload into EmojiPickerGroup[]', async () => {
   expect(allEmojis.some((e) => e.emoji === '😀' && e.name === 'grinning face')).to.be.true;
 });
 
+it('unwraps a { default: [...] } module namespace, matching the real installed peer\'s JSON-import shape', async () => {
+  // Verified against the real published `emoji-picker-element-data`: a dynamic import with JSON
+  // import attributes resolves to a namespace object `{ default: [...] }`, not a bare array --
+  // node -e "import('emoji-picker-element-data/en/emojibase/data.json',{with:{type:'json'}}).then(m=>console.log(Array.isArray(m), Array.isArray(m.default)))" -> "false true".
+  const fakeModuleNamespace = {
+    default: [{ emoji: '😀', group: 0, annotation: 'grinning face', shortcodes: ['grinning'] }],
+  };
+  const result = await loadEmojiData(() => Promise.resolve(fakeModuleNamespace));
+  expect(result).to.not.equal(null);
+  expect(result!.length).to.be.greaterThan(0);
+  const allEmojis = result!.flatMap((g) => g.emojis);
+  expect(allEmojis.some((e) => e.emoji === '😀' && e.name === 'grinning face')).to.be.true;
+});
+
 it('caches the result across repeated loadEmojiDataCached() calls', async () => {
   let callCount = 0;
   clearEmojiDataCache();

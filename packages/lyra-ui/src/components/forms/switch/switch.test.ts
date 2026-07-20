@@ -1,7 +1,9 @@
 import { fixture, expect, html, oneEvent } from '@open-wc/testing';
+import type { PropertyValues } from 'lit';
 import './switch.js';
 import type { LyraSwitch } from './switch.js';
 import { styles } from './switch.styles.js';
+import { LyraElement } from '../../../internal/lyra-element.js';
 
 it('exposes namespaced geometry custom properties', () => {
   expect(styles.cssText).to.include('--lr-switch-track-inline-size');
@@ -10,6 +12,68 @@ it('exposes namespaced geometry custom properties', () => {
   expect(styles.cssText).to.not.include('--track-inline-size');
   expect(styles.cssText).to.not.include('--track-block-size');
   expect(styles.cssText).to.not.include('--thumb-offset');
+});
+
+it('gives the switch control hover feedback matching the keyboard focus-visible cue', () => {
+  const css = styles.cssText.replace(/\s+/g, ' ');
+  expect(css).to.match(/\[part='base'\]:hover\s*\{[^}]*filter:/);
+});
+
+it('forwards host click() to the internal control, toggling checked', async () => {
+  const el = (await fixture(html`<lr-switch>Label</lr-switch>`)) as LyraSwitch;
+  expect(el.checked).to.be.false;
+
+  const event = oneEvent(el, 'lr-change');
+  el.click();
+  const result = await event;
+  expect(result.detail.checked).to.be.true;
+  expect(el.checked).to.be.true;
+});
+
+it('does not toggle on host click() while disabled', async () => {
+  const el = (await fixture(html`<lr-switch disabled>Label</lr-switch>`)) as LyraSwitch;
+  el.click();
+  expect(el.checked).to.be.false;
+});
+
+describe('ElementInternals availability', () => {
+  it('does not throw when constructed in an environment without a real ElementInternals implementation (e.g. a downstream Vitest + happy-dom suite)', () => {
+    const original = HTMLElement.prototype.attachInternals;
+    // @ts-expect-error -- simulating an environment that lacks ElementInternals entirely
+    delete HTMLElement.prototype.attachInternals;
+    try {
+      let el: LyraSwitch | undefined;
+      expect(() => {
+        el = document.createElement('lr-switch') as LyraSwitch;
+      }).to.not.throw();
+      // Confirm the fallback keeps the rest of the public surface usable rather than merely
+      // swallowing the constructor error.
+      expect(el!.checkValidity()).to.be.true;
+      expect(el!.form).to.equal(null);
+    } finally {
+      HTMLElement.prototype.attachInternals = original;
+    }
+  });
+});
+
+it('calls super.willUpdate so a future LyraElement/mixin lifecycle hook stays wired in', async () => {
+  // Monkey-patch LyraElement.prototype.willUpdate (the established pattern, e.g. checkbox.test.ts)
+  // to prove LyraSwitch's own willUpdate() override actually calls super.willUpdate(...) rather
+  // than shadowing it silently.
+  const proto = LyraElement.prototype as unknown as { willUpdate: (changed: PropertyValues) => void };
+  const original = proto.willUpdate;
+  let called = false;
+  proto.willUpdate = function (this: LyraElement, changed: PropertyValues): void {
+    called = true;
+    original.call(this, changed);
+  };
+  try {
+    const el = (await fixture(html`<lr-switch>Label</lr-switch>`)) as LyraSwitch;
+    await el.updateComplete;
+    expect(called).to.be.true;
+  } finally {
+    proto.willUpdate = original;
+  }
 });
 
 it('defaults to unchecked with role="switch" and aria-checked="false"', async () => {

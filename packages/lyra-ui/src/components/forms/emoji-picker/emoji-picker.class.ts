@@ -1,4 +1,4 @@
-import { html, type TemplateResult, type PropertyValues } from 'lit';
+import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state, query } from 'lit/decorators.js';
 import { live } from 'lit/directives/live.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
@@ -82,9 +82,28 @@ class EmojiPickerBase extends LyraElement<LyraEmojiPickerEventMap> {}
  * with `aria-activedescendant` tracking the active option. Large data sets automatically window
  * their visible rows so scrolling does not create one button per supplied emoji in the DOM.
  *
+ * Ships the same opt-in `label`/`hint`/`errorText` form-control chrome as `<lr-select>`/
+ * `<lr-color-picker>` (props + matching named slots + `form-control`/`form-control-label`/`hint`/
+ * `error` parts) — left unset, the chrome stays hidden. When `label` (or the `label` slot) is set
+ * and `aria-label`/`accessibleLabel` is not, the grid's accessible name switches from the
+ * localized default to `aria-labelledby` pointing at the visible label, mirroring
+ * `<lr-checkbox-group>`'s identical `accessibleLabel`-wins-over-`aria-labelledby` precedence.
+ *
+ * `disabled` (from the `FormAssociated` mixin) gates every self-rendered interactive
+ * sub-control — the search input and every emoji button — not just one of them.
+ *
  * @customElement lr-emoji-picker
  * @event lr-change - An emoji was picked. `detail: { emoji: string }`.
- * @csspart base - The root wrapper.
+ * @event blur - Re-dispatched from the internal search `<input>`'s own `blur` — bubbling and
+ *   composed (unlike the native event, which is neither).
+ * @event focus - Re-dispatched from the internal search `<input>`'s own `focus`, for the same
+ *   reason as `blur`.
+ * @slot label - Custom label content.
+ * @slot hint - Custom hint content.
+ * @slot error - Custom error content.
+ * @csspart form-control - The outer wrapper around label, base, error and hint.
+ * @csspart form-control-label - The visible label.
+ * @csspart base - The wrapper around the search input and grid.
  * @csspart search - The search/filter `<input>` (`role="combobox"` over the grid).
  * @csspart grid - The keyboard-navigable emoji grid.
  * @csspart group-label - Each group's heading, rendered above its emojis.
@@ -98,6 +117,8 @@ class EmojiPickerBase extends LyraElement<LyraEmojiPickerEventMap> {}
  * @csspart virtual-label - The `aria-hidden` placeholder that reserves a row's group-label band when
  *   that row has no label, keeping every row the same height. Rendered on the windowed path only.
  * @csspart virtual-items - The flex row holding one windowed row's emoji buttons.
+ * @csspart hint - The hint message.
+ * @csspart error - The error message.
  * @cssprop [--lr-emoji-picker-item-size=var(--lr-icon-button-size)] - Each emoji button's box.
  *   Clamped up to `--lr-icon-button-size`: a smaller value does not shrink the button.
  * @cssprop [--lr-emoji-picker-gap=var(--lr-space-2xs)] - Gap between emoji within a windowed row.
@@ -121,6 +142,25 @@ export class LyraEmojiPicker extends FormAssociated(EmojiPickerBase) {
   /** Accessible name forwarded from the host to the internal emoji listbox. Empty falls back to
    *  the localized default grid label. */
   @property({ attribute: 'aria-label' }) accessibleLabel = '';
+
+  /** Visible label content, rendered above the search/grid. Empty (the default) renders no label
+   *  chrome at all -- see the class doc above for the full label/hint/error contract. */
+  @property() label = '';
+  /** Supporting text rendered below the search/grid. */
+  @property() hint = '';
+  /** Validation-error text rendered below the hint. */
+  @property({ attribute: 'error-text' }) errorText = '';
+
+  @state() private hasLabelSlot = false;
+  @state() private hasHintSlot = false;
+  @state() private hasErrorSlot = false;
+  // Set on the search input's first native `blur`; gates the `aria-invalid` reflection below so
+  // validity styling never flashes on first render -- mirrors `<lr-select>`'s identical `touched`.
+  @state() private touched = false;
+
+  private readonly labelId = nextId('emoji-picker-label');
+  private readonly hintId = nextId('emoji-picker-hint');
+  private readonly errorId = nextId('emoji-picker-error');
 
   /** Injectable loader seam -- overridden directly by tests with a synchronous fake instead of
    *  needing the real `emoji-picker-element-data` package to load in the test browser (mirrors
@@ -353,7 +393,32 @@ export class LyraEmojiPicker extends FormAssociated(EmojiPickerBase) {
     this.activeIndex = 0;
   };
 
+  // Native focus/blur neither bubble nor cross the shadow boundary, so a host-level @focus/@blur
+  // listener on <lr-emoji-picker> would never fire without this bridge -- mirrors
+  // <lr-input>'s/<lr-select>'s identical onFocus/onBlur pair.
+  private onSearchFocus = (): void => {
+    this.emit('focus');
+  };
+
+  private onSearchBlur = (): void => {
+    this.touched = true;
+    this.emit('blur');
+  };
+
+  private onLabelSlotChange = (event: Event): void => {
+    this.hasLabelSlot = (event.target as HTMLSlotElement).assignedElements({ flatten: true }).length > 0;
+  };
+
+  private onHintSlotChange = (event: Event): void => {
+    this.hasHintSlot = (event.target as HTMLSlotElement).assignedElements({ flatten: true }).length > 0;
+  };
+
+  private onErrorSlotChange = (event: Event): void => {
+    this.hasErrorSlot = (event.target as HTMLSlotElement).assignedElements({ flatten: true }).length > 0;
+  };
+
   private pick(item: EmojiPickerItem): void {
+    if (this.effectiveDisabled) return;
     this.value = item.emoji;
     this.emit('lr-change', { emoji: item.emoji });
   }
@@ -362,6 +427,7 @@ export class LyraEmojiPicker extends FormAssociated(EmojiPickerBase) {
   // `aria-activedescendant` tracks the active option) and the grid itself (roving tabindex: focus
   // follows the active option).
   private onNavigationKeyDown = (event: KeyboardEvent): void => {
+    if (this.effectiveDisabled) return;
     const items = this.flatItems;
     if (items.length === 0) return;
     const inSearch = event.currentTarget === this.searchEl;
@@ -429,6 +495,11 @@ export class LyraEmojiPicker extends FormAssociated(EmojiPickerBase) {
   protected willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
     this.syncGeometryProbe();
+    if (!this.hasUpdated) {
+      this.hasLabelSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'label');
+      this.hasHintSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'hint');
+      this.hasErrorSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'error');
+    }
   }
 
   protected updated(changed: PropertyValues): void {
@@ -476,6 +547,7 @@ export class LyraEmojiPicker extends FormAssociated(EmojiPickerBase) {
       aria-posinset=${itemIndex + 1}
       aria-label=${item.name}
       ?data-active=${live(itemIndex === this.activeIndex)}
+      ?disabled=${this.effectiveDisabled}
       @click=${() => this.pick(item)}
       @focusin=${this.onGridFocusIn}
       @mouseenter=${() => this.setActiveIndex(itemIndex, false)}
@@ -509,41 +581,64 @@ export class LyraEmojiPicker extends FormAssociated(EmojiPickerBase) {
   render(): TemplateResult {
     const items = this.flatItems;
     let index = -1;
+    const hasLabel = this.hasLabelSlot || this.label.length > 0;
+    const hasHint = this.hasHintSlot || this.hint.length > 0;
+    const hasError = this.hasErrorSlot || this.errorText.length > 0;
+    const describedBy = [hasError ? this.errorId : '', hasHint ? this.hintId : ''].filter(Boolean).join(' ');
+    const invalid = this.touched && !this.internals.validity.valid;
     return html`
-      <div part="base">
-        <input
-          part="search"
-          type="search"
-          role="combobox"
-          aria-expanded="true"
-          aria-autocomplete="list"
-          .value=${this.queryText}
-          aria-label=${this.localize('emojiPickerSearchLabel')}
-          aria-controls=${this.gridId}
-          @input=${this.onSearchInput}
-          @keydown=${this.onNavigationKeyDown}
-        />
-        <div
-          part="grid"
-          id=${this.gridId}
-          role="listbox"
-          aria-label=${this.accessibleLabel || this.localize('emojiPickerGridLabel')}
-          @keydown=${this.onNavigationKeyDown}
-          @focusin=${this.onGridFocusIn}
-        >
-          ${items.length === 0
-            ? html`<div part="empty">${this.localize('emojiPickerEmpty')}</div>`
-            : this.isVirtualized
-              ? this.renderVirtualRows()
-              : this.filteredGroups.map(
-                (group) => html`
-                  <div part="group-label">${group.label}</div>
-                  ${group.emojis.map((item) => {
-                    index++;
-                    return this.renderEmojiButton(item, index, items.length);
-                  })}
-                `,
-              )}
+      <div part="form-control">
+        <div part="form-control-label" id=${this.labelId} ?hidden=${!hasLabel}>
+          ${this.label}<slot name="label" @slotchange=${this.onLabelSlotChange}></slot>
+        </div>
+        <div part="base">
+          <input
+            part="search"
+            type="search"
+            role="combobox"
+            aria-expanded="true"
+            aria-autocomplete="list"
+            .value=${this.queryText}
+            aria-label=${this.localize('emojiPickerSearchLabel')}
+            aria-controls=${this.gridId}
+            ?disabled=${this.effectiveDisabled}
+            @input=${this.onSearchInput}
+            @keydown=${this.onNavigationKeyDown}
+            @focus=${this.onSearchFocus}
+            @blur=${this.onSearchBlur}
+          />
+          <div
+            part="grid"
+            id=${this.gridId}
+            role="listbox"
+            aria-label=${this.accessibleLabel || (hasLabel ? nothing : this.localize('emojiPickerGridLabel'))}
+            aria-labelledby=${!this.accessibleLabel && hasLabel ? this.labelId : nothing}
+            aria-describedby=${describedBy || nothing}
+            aria-required=${this.required ? 'true' : 'false'}
+            aria-invalid=${invalid ? 'true' : 'false'}
+            @keydown=${this.onNavigationKeyDown}
+            @focusin=${this.onGridFocusIn}
+          >
+            ${items.length === 0
+              ? html`<div part="empty">${this.localize('emojiPickerEmpty')}</div>`
+              : this.isVirtualized
+                ? this.renderVirtualRows()
+                : this.filteredGroups.map(
+                  (group) => html`
+                    <div part="group-label">${group.label}</div>
+                    ${group.emojis.map((item) => {
+                      index++;
+                      return this.renderEmojiButton(item, index, items.length);
+                    })}
+                  `,
+                )}
+          </div>
+        </div>
+        <div part="hint" id=${this.hintId} ?hidden=${!hasHint}>
+          ${this.hint}<slot name="hint" @slotchange=${this.onHintSlotChange}></slot>
+        </div>
+        <div part="error" id=${this.errorId} ?hidden=${!hasError}>
+          ${this.errorText}<slot name="error" @slotchange=${this.onErrorSlotChange}></slot>
         </div>
       </div>
     `;

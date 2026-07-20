@@ -51,7 +51,17 @@ export const styles = css`
     border-color: var(--lr-color-danger);
   }
 
-  :host([disabled]) [part='input-wrapper'] {
+  /* :host(:disabled), not :host([disabled]) -- this is a form-associated
+     custom element (FormAssociated mixin -> static formAssociated = true),
+     so the UA computes its disabled state (and therefore :disabled/:enabled
+     matching) the same way it does for a native form control: from its own
+     disabled content attribute *or* an ancestor <fieldset disabled>'s
+     cascade. Keying this off the attribute selector only ever matched the
+     first case -- a field disabled purely via an ancestor fieldset had
+     effectiveDisabled correctly gating the country select/telephone input
+     underneath, but the wrapper around them still rendered at full opacity
+     with a normal cursor. */
+  :host(:disabled) [part='input-wrapper'] {
     cursor: not-allowed;
     opacity: var(--lr-opacity-disabled);
   }

@@ -9,6 +9,41 @@ import { styles } from './select.styles.js';
 import { LyraOption } from '../combobox/option.class.js';
 import '../combobox/option.class.js';
 
+/** A no-op stand-in for `ElementInternals`, used only when the host environment has no real
+ *  implementation of it (e.g. a downstream consumer's Vitest + happy-dom test suite) --
+ *  `attachInternals()` is browser-only, and calling it unconditionally in the constructor would
+ *  otherwise throw before any test assertion runs, merely from constructing or importing this
+ *  component. Every member here is either an inert value or a no-op: native `<form>`
+ *  participation is unavailable in that environment, but that's an acceptable degradation rather
+ *  than a hard failure -- same fix as `<lr-combobox>`'s/`<lr-model-select>`'s identical
+ *  `createInternalsSafely`/`createNoopInternals` pair. */
+function createInternalsSafely(host: HTMLElement): ElementInternals {
+  if (typeof host.attachInternals !== 'function') return createNoopInternals();
+  try {
+    return host.attachInternals();
+  } catch {
+    return createNoopInternals();
+  }
+}
+
+function createNoopInternals(): ElementInternals {
+  return {
+    form: null,
+    labels: [] as unknown as NodeList,
+    validity: {} as ValidityState,
+    validationMessage: '',
+    willValidate: false,
+    setFormValue(): void {},
+    setValidity(): void {},
+    checkValidity(): boolean {
+      return true;
+    },
+    reportValidity(): boolean {
+      return true;
+    },
+  } as unknown as ElementInternals;
+}
+
 export type LyraSelectSize = 'xs' | 's' | 'm' | 'l' | 'xl';
 
 export interface LyraSelectEventMap {
@@ -59,6 +94,8 @@ export interface LyraSelectEventMap {
  * @slot label - Custom label content.
  * @slot hint - Custom hint content.
  * @slot error - Custom error content.
+ * @slot start - Adornment at the inline-start of the trigger row, before the selected-value label.
+ * @slot end - Adornment after the selected-value label and before the expand icon.
  * @event change - The selection changed. Deliberately unprefixed, mirroring native `<select>`'s
  *   own event name -- contrast `<lr-slider>`, which uses `lr-input`/`lr-change` for its
  *   analogous value-change pair. Which form controls mirror native unprefixed DOM event names
@@ -74,6 +111,8 @@ export interface LyraSelectEventMap {
  * @csspart form-control - The outer wrapper around label, trigger, listbox, error and hint.
  * @csspart form-control-label - The `<label>` element.
  * @csspart trigger - The trigger button (positioning anchor).
+ * @csspart start - Wrapper around the `start` adornment slot; `hidden` while nothing is slotted.
+ * @csspart end - Wrapper around the `end` adornment slot; `hidden` while nothing is slotted.
  * @csspart listbox - The options popover.
  * @csspart group-label - An option group's heading row (shown when any option declares a `group`).
  * @csspart option - An option row.
@@ -89,6 +128,10 @@ export interface LyraSelectEventMap {
  *   at every tier including the default `m` (`2.5rem`, matching `<lr-input>`/`<lr-combobox>` at
  *   that tier).
  * @cssprop --lr-select-font-size - Trigger font size, scaled by `size`.
+ * @cssprop [--lr-select-option-active-bg=var(--lr-color-brand-quiet)] - Background of the
+ *   hovered/keyboard-active option row. Not declared on `:host`, so a value set on any ancestor
+ *   is never shadowed -- retheme just this row state without hijacking the shared
+ *   `--lr-color-brand-quiet` token used by every other component's own hover/active state.
  * @cssprop --lr-select-trigger-height - Exact trigger height. Unset by default, which leaves
  *   `--lr-select-trigger-min-height` as a floor only; set it to a length to both floor and cap the
  *   trigger (e.g. to pixel-match a sibling field in the same toolbar row). Because it is never
@@ -136,6 +179,8 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
   @state() private hasHintSlot = false;
   @state() private hasErrorSlot = false;
   @state() private hasLabelSlot = false;
+  @state() private hasStartSlot = false;
+  @state() private hasEndSlot = false;
   @query('[part="trigger"]') private triggerElement?: HTMLButtonElement;
 
   private internals: ElementInternals;
@@ -179,6 +224,14 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
     this.triggerElement?.blur();
   }
 
+  /** Activates the internal trigger button -- `HTMLElement.prototype.click()` on a custom
+   *  element with no native click semantics of its own is otherwise a no-op, so a generic
+   *  form-submit helper or automation script calling `.click()` on the host would silently do
+   *  nothing without this forwarding override. Mirrors `<lr-button>`'s identical `click()`. */
+  override click(): void {
+    this.triggerElement?.click();
+  }
+
   // Hand-written accessor (mirrors the `value` accessor below, and the
   // `FormAssociated.name` in `../../internal/form-associated.ts`): a
   // form-associated custom element's submitted entry name is resolved by the
@@ -191,7 +244,7 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
 
   constructor() {
     super();
-    this.internals = this.attachInternals();
+    this.internals = createInternalsSafely(this);
     this.validityController = new AnchoredValidityController(this, this.internals, () => this[VALIDITY_ANCHOR]());
     this.syncFormValue();
   }
@@ -222,7 +275,9 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
     this.updateValidity();
   }
 
-  protected willUpdate(): void {
+  protected willUpdate(changed: PropertyValues): void {
+    super.willUpdate(changed); // no-op in LyraElement/ReactiveElement today, but a future mixin's
+    // willUpdate() layered under this class must still run.
     // `hasUpdated` flips to `true` before `updated()` even sees its first
     // call, so it can't distinguish "just mounted" from "just changed" there
     // -- capture that distinction here, while it's still reliable, for
@@ -232,6 +287,8 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
       this.hasHintSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'hint');
       this.hasErrorSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'error');
       this.hasLabelSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'label');
+      this.hasStartSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'start');
+      this.hasEndSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'end');
     }
   }
 
@@ -430,6 +487,8 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
   };
 
   protected updated(changed: PropertyValues): void {
+    super.updated(changed); // no-op in LyraElement/ReactiveElement today, but a future mixin's
+    // updated() layered under this class must still run.
     if (changed.has('open')) {
       this.cleanup?.();
       this.cleanup = undefined;
@@ -510,6 +569,14 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
 
   private onLabelSlotChange = (e: Event): void => {
     this.hasLabelSlot = (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length > 0;
+  };
+
+  private onStartSlotChange = (e: Event): void => {
+    this.hasStartSlot = (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length > 0;
+  };
+
+  private onEndSlotChange = (e: Event): void => {
+    this.hasEndSlot = (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length > 0;
   };
 
   /**
@@ -695,9 +762,15 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
           @focus=${this.onTriggerFocus}
           @blur=${this.onTriggerBlur}
         >
+          <span part="start" ?hidden=${!this.hasStartSlot}>
+            <slot name="start" @slotchange=${this.onStartSlotChange}></slot>
+          </span>
           <span class="trigger-label" ?data-placeholder=${!hasValue}
             >${hasValue ? selectedLabel : this.placeholder}</span
           >
+          <span part="end" ?hidden=${!this.hasEndSlot}>
+            <slot name="end" @slotchange=${this.onEndSlotChange}></slot>
+          </span>
           ${isSingleOption ? nothing : html`<span part="expand-icon" aria-hidden="true">${chevronIcon()}</span>`}
         </button>
         <div

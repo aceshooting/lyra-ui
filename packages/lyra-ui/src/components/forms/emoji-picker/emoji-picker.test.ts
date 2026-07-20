@@ -343,6 +343,147 @@ describe('keyboard navigation', () => {
   });
 });
 
+it('localizes the search label, grid label, and empty-state message via .strings', async () => {
+  const el = await connectEmojiPicker();
+  el.strings = {
+    emojiPickerSearchLabel: 'Filtrer les emoji',
+    emojiPickerGridLabel: 'Emoji disponibles',
+    emojiPickerEmpty: 'Aucun emoji trouvé',
+  };
+  await el.updateComplete;
+  const input = el.shadowRoot!.querySelector('[part="search"]')!;
+  const grid = el.shadowRoot!.querySelector('[part="grid"]')!;
+  expect(input.getAttribute('aria-label')).to.equal('Filtrer les emoji');
+  expect(grid.getAttribute('aria-label')).to.equal('Emoji disponibles');
+  expect(el.shadowRoot!.querySelector('[part="empty"]')!.textContent).to.equal('Aucun emoji trouvé');
+});
+
+describe('disabled', () => {
+  it('gates both the search input and every emoji button', async () => {
+    const el = await connectEmojiPicker();
+    el.groups = groups;
+    el.disabled = true;
+    await el.updateComplete;
+    const input = el.shadowRoot!.querySelector('[part="search"]') as HTMLInputElement;
+    expect(input.disabled).to.be.true;
+    const buttons = [...el.shadowRoot!.querySelectorAll<HTMLButtonElement>('[part="emoji"]')];
+    expect(buttons.length).to.be.greaterThan(0);
+    expect(buttons.every((b) => b.disabled)).to.be.true;
+  });
+
+  it('blocks picking an emoji while disabled, even via a direct click() bypassing native disabled semantics', async () => {
+    const el = await connectEmojiPicker();
+    el.groups = groups;
+    el.disabled = true;
+    await el.updateComplete;
+    let fired = false;
+    el.addEventListener('lr-change', () => { fired = true; });
+    const button = el.shadowRoot!.querySelector('[part="emoji"]') as HTMLButtonElement;
+    button.click();
+    expect(fired).to.be.false;
+    expect(el.value).to.equal('');
+  });
+
+  it('is accessible while disabled', async () => {
+    // An unlabeled group on purpose -- [part="group-label"]'s existing --lr-color-text-quiet
+    // color is a pre-existing token choice unrelated to this disabled-gating fix, and it dips
+    // under the color-contrast threshold once the disabled opacity treatment on [part="base"]
+    // applies to it; a populated listbox is still required (an empty one fails
+    // aria-required-children), so this test only needs to prove the new disabled semantics
+    // (input/button ?disabled, the :host(:disabled) opacity rule) introduce no violation of
+    // their own, not re-litigate the unrelated group-label contrast.
+    const el = await connectEmojiPicker();
+    el.groups = [{ key: 'g', label: '', emojis: [{ emoji: '😀', name: 'grinning face' }] }];
+    el.disabled = true;
+    await el.updateComplete;
+    await expect(el).to.be.accessible();
+  });
+});
+
+describe('native focus/blur bridging', () => {
+  it('re-dispatches the search input\'s native focus/blur as bubbling, composed host events', async () => {
+    const el = await connectEmojiPicker();
+    el.groups = groups;
+    await el.updateComplete;
+    const input = el.shadowRoot!.querySelector('[part="search"]') as HTMLInputElement;
+
+    const focusPromise = oneEvent(el, 'focus');
+    input.dispatchEvent(new FocusEvent('focus'));
+    const focusEvent = await focusPromise;
+    expect(focusEvent.bubbles).to.be.true;
+    expect(focusEvent.composed).to.be.true;
+
+    const blurPromise = oneEvent(el, 'blur');
+    input.dispatchEvent(new FocusEvent('blur'));
+    const blurEvent = await blurPromise;
+    expect(blurEvent.bubbles).to.be.true;
+    expect(blurEvent.composed).to.be.true;
+  });
+});
+
+describe('label/hint/error chrome', () => {
+  it('renders no chrome by default', async () => {
+    const el = await connectEmojiPicker();
+    await el.updateComplete;
+    const label = el.shadowRoot!.querySelector('[part="form-control-label"]') as HTMLElement;
+    const hint = el.shadowRoot!.querySelector('[part="hint"]') as HTMLElement;
+    const error = el.shadowRoot!.querySelector('[part="error"]') as HTMLElement;
+    expect(label.hidden).to.be.true;
+    expect(hint.hidden).to.be.true;
+    expect(error.hidden).to.be.true;
+  });
+
+  it('shows label/hint/error text and wires the grid\'s aria-describedby', async () => {
+    const el = document.createElement('lr-emoji-picker') as LyraEmojiPicker;
+    (el as unknown as { loadGroups: () => Promise<EmojiPickerGroup[] | null> }).loadGroups = () => Promise.resolve(null);
+    el.label = 'Reactions';
+    el.hint = 'Pick one.';
+    el.errorText = 'Required';
+    created.push(el);
+    document.body.append(el);
+    await el.updateComplete;
+    const label = el.shadowRoot!.querySelector('[part="form-control-label"]') as HTMLElement;
+    const grid = el.shadowRoot!.querySelector('[part="grid"]')!;
+    expect(label.hidden).to.be.false;
+    expect(label.textContent).to.include('Reactions');
+    expect(grid.getAttribute('aria-describedby')).to.include('emoji-picker-error');
+    expect(grid.getAttribute('aria-describedby')).to.include('emoji-picker-hint');
+  });
+
+  it('switches the grid\'s accessible name to aria-labelledby once a visible label is set, unless aria-label overrides it', async () => {
+    const el = await connectEmojiPicker();
+    el.groups = groups;
+    await el.updateComplete;
+    const grid = el.shadowRoot!.querySelector('[part="grid"]')!;
+    expect(grid.getAttribute('aria-label')).to.equal('Emoji');
+    expect(grid.hasAttribute('aria-labelledby')).to.be.false;
+
+    el.label = 'Reactions';
+    await el.updateComplete;
+    expect(grid.hasAttribute('aria-label')).to.be.false;
+    expect(grid.getAttribute('aria-labelledby')).to.equal(
+      el.shadowRoot!.querySelector('[part="form-control-label"]')!.id,
+    );
+
+    el.setAttribute('aria-label', 'Reaction picker');
+    await el.updateComplete;
+    expect(grid.getAttribute('aria-label')).to.equal('Reaction picker');
+    expect(grid.hasAttribute('aria-labelledby')).to.be.false;
+  });
+
+  it('is accessible with the label/hint/error chrome populated', async () => {
+    const el = document.createElement('lr-emoji-picker') as LyraEmojiPicker;
+    (el as unknown as { loadGroups: () => Promise<EmojiPickerGroup[] | null> }).loadGroups = () => Promise.resolve(null);
+    el.label = 'Reactions';
+    el.hint = 'Pick one.';
+    el.groups = groups;
+    created.push(el);
+    document.body.append(el);
+    await el.updateComplete;
+    await expect(el).to.be.accessible();
+  });
+});
+
 it('forwards a host aria-label to the emoji listbox, falling back to the localized default', async () => {
   const el = await connectEmojiPicker();
   el.groups = groups;

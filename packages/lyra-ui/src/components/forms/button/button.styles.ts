@@ -7,12 +7,16 @@ export const styles = css`
        button follows it. The variable keeps the contract opt-out-able for
        compact inline compositions. */
     --lr-button-width: 100%;
+    /* Matches lr-input/lr-select/lr-combobox's shared min-height scale tier-for-tier (2xs=1.25rem,
+       xs=1.5rem, s=1.875rem, default m=2.5rem, l=3rem, xl=3.5rem) so a default-size lr-button sitting
+       next to a default-size lr-input/lr-select/lr-combobox in the same toolbar row is the same
+       height at every tier -- see input.styles.ts's identical :host([size='…']) scale. */
     --lr-button-size-2xs: var(--lr-size-1-25rem);
     --lr-button-size-xs: var(--lr-size-1-5rem);
-    --lr-button-size-s: var(--lr-size-1-75rem);
-    --lr-button-size-m: var(--lr-size-2rem);
-    --lr-button-size-l: var(--lr-size-2-5rem);
-    --lr-button-size-xl: var(--lr-size-3rem);
+    --lr-button-size-s: var(--lr-size-1-875rem);
+    --lr-button-size-m: var(--lr-size-2-5rem);
+    --lr-button-size-l: var(--lr-size-3rem);
+    --lr-button-size-xl: var(--lr-size-3-5rem);
     /* Geometry knobs for the default ("m") tier. Every :host([size='…']) block below only
        re-assigns these four -- no per-tier rule declares a CSS property on [part='base'] -- so a
        consumer can retune a tier (e.g. pin a size="s" button into a compact toolbar row) without a
