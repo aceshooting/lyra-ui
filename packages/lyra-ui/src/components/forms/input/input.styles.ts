@@ -90,8 +90,24 @@ export const styles = css`
   [part='input']::placeholder {
     color: var(--lr-color-text-quiet);
   }
-  :host([clearable]) [part='input'][type='search']::-webkit-search-cancel-button {
+  [part='input'][type='search']::-webkit-search-cancel-button,
+  [part='input'][type='search']::-webkit-search-decoration {
     appearance: none;
+  }
+  [part='input'][type='number'] {
+    appearance: textfield;
+  }
+  [part='input'][type='number']::-webkit-outer-spin-button,
+  [part='input'][type='number']::-webkit-inner-spin-button {
+    appearance: none;
+    margin: 0;
+  }
+  /* Restyled, not suppressed -- this is the only mouse/touch affordance to open the native time
+     picker, unlike the search-cancel/number-spinner glyphs above which this component/lr-pagination
+     both already provide their own alternative for. */
+  [part='input'][type='time']::-webkit-calendar-picker-indicator {
+    cursor: pointer;
+    border-radius: var(--lr-radius-xs);
   }
   [part='input']:disabled {
     opacity: var(--lr-opacity-disabled);

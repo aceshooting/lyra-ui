@@ -319,6 +319,20 @@ describe('lr-input', () => {
     expect(css).to.match(/\[part='password-toggle'\]:hover\s*\{[^}]+\}/);
   });
 
+  it('resets native appearance unconditionally for search/number, and restyles (not suppresses) the time picker indicator', () => {
+    const css = styles.cssText.replace(/\s+/g, ' ');
+    // Previously gated behind :host([clearable]) -- the common non-clearable case kept the glyph.
+    expect(css).to.match(/\[part='input'\]\[type='search'\]::-webkit-search-cancel-button/);
+    expect(css).to.not.match(
+      /:host\(\[clearable\]\) \[part='input'\]\[type='search'\]::-webkit-search-cancel-button/,
+    );
+    expect(css).to.match(/\[part='input'\]\[type='number'\]\s*\{[^}]*appearance:\s*textfield/);
+    expect(css).to.match(/\[part='input'\]\[type='number'\]::-webkit-outer-spin-button/);
+    expect(css).to.match(
+      /\[part='input'\]\[type='time'\]::-webkit-calendar-picker-indicator\s*\{[^}]*cursor:\s*pointer/,
+    );
+  });
+
   it('supports size="2xs": tighter padding/font-size than xs, no min-block-size floor (matches xs\'s own contract)', () => {
     const css = styles.cssText.replace(/\s+/g, ' ');
     expect(css).to.match(
