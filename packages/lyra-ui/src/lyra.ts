@@ -502,6 +502,7 @@ export type {
 } from './components/agent-tools/tool-result-dialog/tool-result-dialog.js';
 export { LyraChatComposer } from './components/conversation/chat-composer/chat-composer.js';
 export type {
+  ChatComposerAppearance,
   ChatComposerStatus,
   ChatComposerWrap,
   ChatComposerSelectionDirection,

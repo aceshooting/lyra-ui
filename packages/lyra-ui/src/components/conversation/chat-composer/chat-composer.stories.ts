@@ -163,6 +163,26 @@ export const CustomTrailingSlot: Story = {
   `,
 };
 
+export const PlainInsidePanel: Story = {
+  name: 'appearance="plain" (docked in a bordered panel)',
+  render: () => html`
+    <div
+      style="max-width:32rem; border:1px solid var(--lr-color-border); border-radius:var(--lr-radius); background:var(--lr-color-surface); padding:0.75rem; display:flex; flex-direction:column; gap:0.75rem;"
+    >
+      <div style="font-size:0.8125rem; color:var(--lr-color-text-quiet);">Assistant conversation</div>
+      <lr-chat-composer appearance="plain" placeholder="Message the assistant…"></lr-chat-composer>
+    </div>
+  `,
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'With `appearance="plain"` the composer drops its own border/background so it doesn\'t double the frame of the chat panel, dialog footer or toolbar it is docked in. Focus stays visible: with no border left to recolor, the input row underlines itself instead (click into the textarea to see it).',
+      },
+    },
+  },
+};
+
 export const InAForm: Story = {
   render: () => html`
     <form

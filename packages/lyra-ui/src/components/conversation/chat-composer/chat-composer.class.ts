@@ -36,6 +36,8 @@ const spellcheckConverter: ComplexAttributeConverter<boolean> = {
   },
 };
 
+/** Visual chrome for `<lr-chat-composer>`'s root, mirroring `lr-card`'s `appearance` vocabulary. */
+export type ChatComposerAppearance = 'card' | 'plain';
 export type ChatComposerStatus = 'idle' | 'sending' | 'streaming';
 export type ChatComposerWrap = 'hard' | 'soft' | 'off';
 export type ChatComposerSelectionDirection = 'forward' | 'backward' | 'none';
@@ -143,7 +145,9 @@ class LyraChatComposerBase extends LyraElement<LyraChatComposerEventMap> {}
  * @event lr-stop - Fired by the built-in button while `status` is `"sending"` or `"streaming"` and `stoppable` is `true` (the default). No detail.
  * @event blur - Re-dispatched from the internal native textarea as a bubbling, composed event.
  * @event focus - Re-dispatched from the internal native textarea as a bubbling, composed event.
- * @csspart base - The bordered root container.
+ * @csspart base - The bordered root container. Drops its card chrome (border, background, padding,
+ * radius) under `appearance="plain"`, where the focus affordance becomes an underline on this same
+ * part instead of the border-color shift.
  * @csspart chips - The wrapper around the `chips` slot. Hidden entirely when the slot is empty.
  * @csspart row - The row holding the leading slot, textarea, and trailing slot/button.
  * @csspart leading - The wrapper around the `leading` slot. Hidden entirely when the slot is empty.
@@ -158,6 +162,13 @@ export class LyraChatComposer extends FormAssociated(LyraChatComposerBase) {
   @property({ type: Number, attribute: 'min-rows' }) minRows = 1;
   @property({ type: Number, attribute: 'max-rows' }) maxRows = 8;
   @property({ reflect: true }) status: ChatComposerStatus = 'idle';
+  /** Visual chrome, mirroring `lr-card`'s `appearance` vocabulary. `'card'` (the default) keeps the
+   *  bordered, filled, padded box. `'plain'` removes the border, background, padding and corner
+   *  radius, so a composer docked inside a chat panel, dialog footer or toolbar that already draws
+   *  its own border doesn't double the frame. Focus stays visible either way: `plain` swaps the
+   *  border-color shift for an underline across the input row, since there is no border left to
+   *  recolor. */
+  @property({ reflect: true }) appearance: ChatComposerAppearance = 'card';
   @property({ type: Boolean, reflect: true, attribute: 'submit-on-enter' }) submitOnEnter = true;
   /** Consumer-controlled validation gate for submission. While idle, disables the built-in Send
    * button and suppresses Enter/click submission without disabling the textarea. Busy Stop behavior

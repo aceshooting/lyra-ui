@@ -805,3 +805,107 @@ describe('blur/focus bubbling', () => {
     expect(ev.composed).to.be.true;
   });
 });
+
+describe('appearance', () => {
+  const baseOf = (el: LyraChatComposer): HTMLElement =>
+    el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+
+  const baseChrome = (el: LyraChatComposer) => {
+    const s = getComputedStyle(baseOf(el));
+    return {
+      paddingTop: s.paddingTop,
+      paddingLeft: s.paddingLeft,
+      borderTopWidth: s.borderTopWidth,
+      borderTopStyle: s.borderTopStyle,
+      borderTopLeftRadius: s.borderTopLeftRadius,
+      backgroundColor: s.backgroundColor,
+      rowGap: s.rowGap,
+      transitionProperty: s.transitionProperty,
+    };
+  };
+
+  it('defaults to appearance="card", rendering identically to that value restated', async () => {
+    const implicit = (await fixture(html`<lr-chat-composer></lr-chat-composer>`)) as LyraChatComposer;
+    const explicit = (await fixture(html`<lr-chat-composer appearance="card"></lr-chat-composer>`)) as LyraChatComposer;
+
+    expect(implicit.appearance).to.equal('card');
+    expect(implicit.getAttribute('appearance')).to.equal('card');
+    expect(baseChrome(explicit)).to.deep.equal(baseChrome(implicit));
+
+    const chrome = baseChrome(implicit);
+    expect(chrome.paddingTop).to.equal('8px'); // --lr-space-s
+    expect(chrome.borderTopWidth).to.equal('1px');
+    expect(chrome.borderTopStyle).to.equal('solid');
+    expect(chrome.backgroundColor).to.not.equal('rgba(0, 0, 0, 0)');
+  });
+
+  it('drops border, background, padding and radius under appearance="plain"', async () => {
+    const el = (await fixture(html`<lr-chat-composer appearance="plain"></lr-chat-composer>`)) as LyraChatComposer;
+    expect(el.getAttribute('appearance')).to.equal('plain');
+    const chrome = baseChrome(el);
+    expect(chrome.borderTopWidth).to.equal('0px');
+    expect(chrome.borderTopLeftRadius).to.equal('0px');
+    expect(chrome.backgroundColor).to.equal('rgba(0, 0, 0, 0)');
+    expect(chrome.paddingTop).to.equal('0px');
+    expect(chrome.paddingLeft).to.equal('0px');
+    // The row layout survives the chrome reset -- only the box decoration goes.
+    expect(chrome.rowGap).to.equal('4px'); // --lr-space-xs
+  });
+
+  it('keeps a visible focus affordance under plain, where there is no border left to recolor', async () => {
+    // The card affordance is a transitioned border-color, so getComputedStyle reports the
+    // mid-transition value right after focus -- zero out the duration to read the settled one.
+    const card = (await fixture(
+      html`<lr-chat-composer style="--lr-theme-transition-fast: 0s"></lr-chat-composer>`,
+    )) as LyraChatComposer;
+    const cardResting = getComputedStyle(baseOf(card)).borderTopColor;
+    textareaOf(card).focus();
+    expect(getComputedStyle(baseOf(card)).borderTopColor).to.not.equal(cardResting);
+
+    const plain = (await fixture(html`<lr-chat-composer appearance="plain"></lr-chat-composer>`)) as LyraChatComposer;
+    const resting = getComputedStyle(baseOf(plain)).boxShadow;
+    expect(resting).to.equal('none');
+    textareaOf(plain).focus();
+    const focused = getComputedStyle(baseOf(plain)).boxShadow;
+    expect(focused).to.not.equal(resting);
+    expect(focused).to.include('inset');
+  });
+
+  it('retunes the plain focus underline through the shared focus-ring tokens', async () => {
+    const wrapper = (await fixture(html`
+      <div style="--lr-theme-focus-ring-width: 5px; --lr-theme-color-focus: rgb(10, 20, 30)">
+        <lr-chat-composer appearance="plain"></lr-chat-composer>
+      </div>
+    `)) as HTMLElement;
+    const el = wrapper.querySelector('lr-chat-composer') as LyraChatComposer;
+    await el.updateComplete;
+    textareaOf(el).focus();
+    const shadow = getComputedStyle(baseOf(el)).boxShadow;
+    expect(shadow).to.include('rgb(10, 20, 30)');
+    expect(shadow).to.include('-5px');
+  });
+
+  it('leaves the disabled treatment and the transition the reduced-motion block overrides untouched under plain', async () => {
+    const el = (await fixture(
+      html`<lr-chat-composer appearance="plain" disabled></lr-chat-composer>`,
+    )) as LyraChatComposer;
+    const s = getComputedStyle(baseOf(el));
+    expect(s.opacity).to.equal('0.5'); // --lr-opacity-disabled
+    expect(s.cursor).to.equal('not-allowed');
+    // The @media (prefers-reduced-motion: reduce) block targets [part='base'] unqualified by
+    // appearance, so what it overrides has to still be there for plain too.
+    const card = (await fixture(html`<lr-chat-composer></lr-chat-composer>`)) as LyraChatComposer;
+    expect(s.transitionProperty).to.equal(getComputedStyle(baseOf(card)).transitionProperty);
+    expect(s.transitionProperty).to.equal('border-color');
+  });
+
+  it('is accessible under appearance="plain" with the textarea focused', async () => {
+    const el = (await fixture(html`
+      <lr-chat-composer appearance="plain" placeholder="Message the assistant…" value="Draft"></lr-chat-composer>
+    `)) as LyraChatComposer;
+    textareaOf(el).focus();
+    await el.updateComplete;
+    expect(el.shadowRoot!.activeElement === textareaOf(el)).to.be.true;
+    await expect(el).to.be.accessible();
+  });
+});
