@@ -3,6 +3,20 @@ import './memory-panel.js';
 import type { LyraMemoryPanel, LyraMemoryItem } from './memory-panel.js';
 import { styles } from './memory-panel.styles.js';
 
+/**
+ * A dynamically-inserted `<lr-confirm-bar>` is created as part of `lr-memory-panel`'s own render
+ * commit -- awaiting only the parent's `updateComplete` does not guarantee the freshly-connected
+ * child (and in turn its own `<lr-button>` children) has completed *its* first Lit update cycle.
+ * With the old hand-rolled native `<button>`s this never mattered (a native button needs no
+ * upgrade/render cycle to be clickable); `<lr-button>` does. Every test that reaches into a
+ * confirm-bar's shadow root right after it appears awaits this first.
+ */
+async function readyConfirmBar(el: Element): Promise<HTMLElement> {
+  const confirmBar = el.querySelector('lr-confirm-bar') as HTMLElement & { updateComplete: Promise<unknown> };
+  await confirmBar.updateComplete;
+  return confirmBar;
+}
+
 const shortTermItems: LyraMemoryItem[] = [
   { id: 's1', text: 'User is debugging a TypeScript build error.', confidence: 0.9 },
   { id: 's2', text: 'User prefers concise answers.' },
@@ -156,7 +170,7 @@ describe('lr-memory-panel', () => {
     (row.querySelector('[part="add-button"]') as HTMLButtonElement).click();
     await el.updateComplete;
 
-    const confirmBar = row.querySelector('lr-confirm-bar') as HTMLElement & { tone: string; heading: string };
+    const confirmBar = (await readyConfirmBar(row)) as HTMLElement & { tone: string; heading: string };
     expect(confirmBar).to.exist;
     expect(confirmBar.tone).to.equal('neutral');
     expect(confirmBar.heading).to.equal('Add this to long-term memory?');
@@ -180,7 +194,7 @@ describe('lr-memory-panel', () => {
     (row.querySelector('[part="remove-button"]') as HTMLButtonElement).click();
     await el.updateComplete;
 
-    const confirmBar = row.querySelector('lr-confirm-bar') as HTMLElement & { tone: string };
+    const confirmBar = (await readyConfirmBar(row)) as HTMLElement & { tone: string };
     expect(confirmBar.tone).to.equal('danger');
 
     const listener = oneEvent(el, 'lr-remove');
@@ -198,7 +212,7 @@ describe('lr-memory-panel', () => {
     const row = el.shadowRoot!.querySelector('[part="item"][data-id="s1"]')!;
     (row.querySelector('[part="remove-button"]') as HTMLButtonElement).click();
     await el.updateComplete;
-    const confirmBar = row.querySelector('lr-confirm-bar')!;
+    const confirmBar = await readyConfirmBar(row);
     (confirmBar.shadowRoot!.querySelector('[part="deny-button"]') as HTMLButtonElement).click();
     await el.updateComplete;
     expect(added).to.be.false;
@@ -236,7 +250,7 @@ describe('lr-memory-panel', () => {
     const el = await populated();
     (el.shadowRoot!.querySelector('[part="forget-all-button"]') as HTMLButtonElement).click();
     await el.updateComplete;
-    const confirmBar = el.shadowRoot!.querySelector('[part="section"][data-scope="long-term"] lr-confirm-bar') as HTMLElement & {
+    const confirmBar = (await readyConfirmBar(el.shadowRoot!.querySelector('[part="section"][data-scope="long-term"]')!)) as HTMLElement & {
       tone: string;
       heading: string;
     };
@@ -267,7 +281,8 @@ describe('lr-memory-panel', () => {
     const row = el.shadowRoot!.querySelector('[part="item"][data-id="s1"]')!;
     (row.querySelector('[part="remove-button"]') as HTMLButtonElement).click();
     await el.updateComplete;
-    (row.querySelector('lr-confirm-bar')!.shadowRoot!.querySelector('[part="deny-button"]') as HTMLButtonElement).click();
+    const confirmBar = await readyConfirmBar(row);
+    (confirmBar.shadowRoot!.querySelector('[part="deny-button"]') as HTMLButtonElement).click();
     await el.updateComplete;
     await new Promise((r) => requestAnimationFrame(r));
     expect(el.shadowRoot!.activeElement).to.exist;
@@ -310,6 +325,7 @@ describe('lr-memory-panel', () => {
     const el = await populated();
     (el.shadowRoot!.querySelector('[part="item"][data-id="l1"] [part="remove-button"]') as HTMLButtonElement).click();
     await el.updateComplete;
+    await readyConfirmBar(el.shadowRoot!.querySelector('[part="item"][data-id="l1"]')!);
     await expect(el).to.be.accessible();
   });
 
