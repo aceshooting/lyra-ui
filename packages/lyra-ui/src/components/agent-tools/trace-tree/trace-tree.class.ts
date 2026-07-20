@@ -107,6 +107,17 @@ export interface LyraTraceTreeEventMap {
  * @cssprop [--lr-trace-tree-row-active-bg=var(--lr-color-brand-quiet)] - Background of the active
  *   (`activeSpanId`) row. Shadow Parts forbids an attribute selector after `::part()`, so the active
  *   row could otherwise only be restyled by hijacking the library-wide `--lr-color-brand-quiet` token.
+ *   Pairs with `--lr-trace-tree-row-active-color`: set both together, since the defaults assume the
+ *   active background stays on the same side of the lightness midpoint as the ambient surface — a
+ *   dark tint in light mode needs the matching text color set too, or the row's secondary text drops
+ *   below the WCAG AA contrast floor.
+ * @cssprop [--lr-trace-tree-row-active-color=var(--lr-color-text)] - Foreground reference for the
+ *   active (`activeSpanId`) row. It sets the color of that row's secondary text (`detail`,
+ *   `duration`, `tokens-in`, `tokens-out`, `cost`, and the `pending` status label), which is raised
+ *   from the quiet token to full-strength text so it clears WCAG AA against the active row's tint.
+ *   The semantic status labels keep their own hue but are mixed 25% toward this same value, so
+ *   overriding it re-aims every foreground on the row at once rather than leaving the status colors
+ *   stranded. See the pairing caveat on `--lr-trace-tree-row-active-bg`.
  */
 export class LyraTraceTree extends LyraElement<LyraTraceTreeEventMap> {
   static styles = [LyraElement.styles, styles];

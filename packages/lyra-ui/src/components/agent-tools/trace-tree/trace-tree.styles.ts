@@ -44,6 +44,43 @@ export const styles = css`
     background: var(--lr-trace-tree-row-active-bg, var(--lr-color-brand-quiet));
   }
 
+  /* text-quiet's contrast ratio against brand-quiet lands at ~4.25:1 -- just under the WCAG AA
+     4.5:1 floor for normal-size text -- even though it comfortably passes against the plain
+     (non-active) row background used the rest of the time. Darkening the active tint instead would
+     make it worse, since every failing foreground here is dark text; the fix is to raise the
+     foreground to full strength once the row is active, as lr-conversation-item does for the same
+     bug. --lr-color-text flips with the color scheme, so this raises contrast in both.
+     [data-status='pending'] is included because its color *is* --lr-color-text-quiet: same failure,
+     same fix. The other statuses keep their semantic hue -- see the mix below. */
+  [part='row'][data-active]
+    :is([part='detail'], [part='duration'], [part='tokens-in'], [part='tokens-out'], [part='cost']),
+  [part='row'][data-active] [part='status-text'][data-status='pending'] {
+    color: var(--lr-trace-tree-row-active-color, var(--lr-color-text));
+  }
+
+  /* The semantic status labels keep their hue on the active row -- an error row that stops being
+     red once selected is an information-design regression, and the hue is the fastest scan signal
+     in a trace list -- but get pulled 25% toward the text color so they clear the same AA floor
+     (success 4.46 -> 6.18, denied/warning 4.28 -> 5.96 against the default tint). Applied to every
+     tone rather than only the two that fail at the shipped defaults: a per-status carve-out is
+     theme-fragile, since a consumer retheming one --lr-color-* moves that ratio and would silently
+     re-break. The mix is theme-symmetric by construction -- --lr-color-text flips with the scheme,
+     so the same declaration darkens in light mode and lightens in dark mode.
+     Scoped to [part='status-text'] rather than redefining the tokens inside the active row, which
+     would silently re-point a consumer's own token override and drag [part='bar'] along with it. */
+  [part='row'][data-active] [part='status-text'][data-status='success'] {
+    color: color-mix(in srgb, var(--lr-color-success) 75%, var(--lr-trace-tree-row-active-color, var(--lr-color-text)));
+  }
+  [part='row'][data-active] [part='status-text'][data-status='error'] {
+    color: color-mix(in srgb, var(--lr-color-danger) 75%, var(--lr-trace-tree-row-active-color, var(--lr-color-text)));
+  }
+  [part='row'][data-active] [part='status-text'][data-status='denied'] {
+    color: color-mix(in srgb, var(--lr-color-warning) 75%, var(--lr-trace-tree-row-active-color, var(--lr-color-text)));
+  }
+  [part='row'][data-active] [part='status-text'][data-status='running'] {
+    color: color-mix(in srgb, var(--lr-color-brand) 75%, var(--lr-trace-tree-row-active-color, var(--lr-color-text)));
+  }
+
   [part='toggle'] {
     /* Keep the chevron glyph compact while giving the interactive box the shared minimum
        tappable size -- same "small glyph, padded hit box" pattern as lr-code-block's/

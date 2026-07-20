@@ -21,6 +21,50 @@ const SPANS: LyraSpan[] = [
   { id: 'llm', parentId: 'root', name: 'gpt-turbo', kind: 'llm', startMs: 130, endMs: 390, status: 'running' },
 ];
 
+// One root-level row per status tone, so every active-row color rule has something to apply to.
+const STATUS_SPANS: LyraSpan[] = [
+  {
+    id: 'ok',
+    name: 'ok_span',
+    kind: 'tool',
+    startMs: 0,
+    endMs: 100,
+    status: 'success',
+    detail: 'finished cleanly',
+    tokensIn: 12,
+    tokensOut: 340,
+    costText: '$0.0021',
+  },
+  { id: 'ok2', name: 'ok_span_2', kind: 'tool', startMs: 100, endMs: 200, status: 'success', detail: 'also fine' },
+  { id: 'bad', name: 'bad_span', kind: 'tool', startMs: 200, endMs: 300, status: 'error', detail: 'threw' },
+  { id: 'nope', name: 'denied_span', kind: 'tool', startMs: 300, endMs: 400, status: 'denied', detail: 'blocked' },
+  { id: 'run', name: 'running_span', kind: 'llm', startMs: 400, status: 'running', detail: 'streaming' },
+  { id: 'wait', name: 'pending_span', kind: 'other', startMs: 500, status: 'pending', detail: 'queued' },
+];
+
+/** Resolve a color expression against the component's own token scope, as rendered. */
+const probeColor = (el: LyraTraceTree, value: string): string => {
+  const probe = document.createElement('span');
+  probe.style.color = value;
+  el.shadowRoot!.appendChild(probe);
+  const resolved = getComputedStyle(probe).color;
+  probe.remove();
+  return resolved;
+};
+
+const partColor = (el: LyraTraceTree, id: string, part: string): string =>
+  getComputedStyle(el.shadowRoot!.querySelector(`[data-id="${id}"] [part="${part}"]`) as HTMLElement).color;
+
+/**
+ * 8-bit RGB channels of a computed color. Chromium serializes a `color-mix(in srgb, ...)` result as
+ * `color(srgb r g b)` with 0..1 floats and a plain token as `rgb(r, g, b)` with 0..255 integers, so
+ * the two have to be normalized before they can be compared numerically.
+ */
+const channels = (color: string): number[] => {
+  const nums = (color.match(/[\d.]+/g) ?? []).map(Number).slice(0, 3);
+  return color.startsWith('color(') ? nums.map((n) => Math.round(n * 255)) : nums;
+};
+
 describe('lr-trace-tree', () => {
   it('renders spans as a flattened tree with computed aria-level/posinset/setsize', async () => {
     const el = (await fixture(html`<lr-trace-tree .spans=${SPANS}></lr-trace-tree>`)) as LyraTraceTree;
@@ -427,11 +471,173 @@ describe('lr-trace-tree', () => {
       expect(getComputedStyle(active).backgroundColor).to.equal(unset);
     });
 
-    // No axe assertion on the active row here: the active-row default background
-    // (`--lr-color-brand-quiet`) fails WCAG-AA contrast against the row's own smaller
-    // `status-text`/`duration` secondary text -- a pre-existing gap in the active-row styling that
-    // predates this cssprop (the default is byte-identical to before) and cannot be fixed here
-    // without changing that default. `--lr-trace-tree-row-active-bg` is in fact the escape hatch a
-    // consumer needs to raise that contrast; it is reported for separate remediation.
+  });
+
+  describe('active-row contrast', () => {
+    const statusFixture = async (activeId: string): Promise<LyraTraceTree> => {
+      const el = (await fixture(
+        html`<lr-trace-tree .spans=${STATUS_SPANS} .activeSpanId=${activeId} show-tokens show-cost></lr-trace-tree>`,
+      )) as LyraTraceTree;
+      await el.updateComplete;
+      return el;
+    };
+
+    it('raises the active row quiet neutrals to the full-strength text color', async () => {
+      const el = await statusFixture('ok');
+      // [part='name'] declares no color of its own, so it renders whatever --lr-color-text
+      // currently resolves to -- an in-DOM reference for "full-strength text" that stays correct
+      // in either color scheme.
+      const full = partColor(el, 'ok', 'name');
+      const quiet = probeColor(el, 'var(--lr-color-text-quiet)');
+      expect(full).to.not.equal(quiet);
+      for (const part of ['detail', 'duration', 'tokens-in', 'tokens-out', 'cost']) {
+        expect(partColor(el, 'ok', part), part).to.equal(full);
+      }
+      // regression: the identical parts on an inactive row stay quiet
+      for (const part of ['detail', 'duration']) {
+        expect(partColor(el, 'ok2', part), part).to.equal(quiet);
+      }
+    });
+
+    it('raises the active row pending status label to the full-strength text color', async () => {
+      const el = await statusFixture('wait');
+      const full = partColor(el, 'wait', 'name');
+      expect(partColor(el, 'wait', 'status-text')).to.equal(full);
+
+      // regression: the same row, inactive, keeps the quiet token
+      el.activeSpanId = 'ok';
+      await el.updateComplete;
+      expect(partColor(el, 'wait', 'status-text')).to.equal(probeColor(el, 'var(--lr-color-text-quiet)'));
+    });
+
+    it('retunes only the active row neutrals via --lr-trace-tree-row-active-color', async () => {
+      const el = await statusFixture('ok');
+      el.style.setProperty('--lr-trace-tree-row-active-color', 'rgb(7, 8, 9)');
+      for (const part of ['detail', 'duration', 'tokens-in', 'tokens-out', 'cost']) {
+        expect(partColor(el, 'ok', part), part).to.equal('rgb(7, 8, 9)');
+      }
+      expect(partColor(el, 'ok2', 'duration')).to.not.equal('rgb(7, 8, 9)');
+    });
+
+    // The semantic status labels are mixed toward the same override, not toward --lr-color-text
+    // directly. Without this, a consumer who moves the active tint across the lightness midpoint
+    // could correct the neutrals but would leave every status label stranded at a contrast the
+    // override cannot reach.
+    it('re-aims the active row status mix at --lr-trace-tree-row-active-color too', async () => {
+      const el = await statusFixture('ok');
+      const before = partColor(el, 'ok', 'status-text');
+      el.style.setProperty('--lr-trace-tree-row-active-color', 'rgb(255, 255, 255)');
+      const after = partColor(el, 'ok', 'status-text');
+      expect(after).to.not.equal(before);
+      // mixed toward white => every channel moves up, and the hue is still not flattened to it
+      const [br, bg, bb] = channels(before);
+      const [ar, ag, ab] = channels(after);
+      expect(ar).to.be.greaterThan(br);
+      expect(ag).to.be.greaterThan(bg);
+      expect(ab).to.be.greaterThan(bb);
+      expect(after).to.not.equal('rgb(255, 255, 255)');
+      // regression: an inactive row's status label is untouched by the override
+      expect(partColor(el, 'ok2', 'status-text')).to.equal(probeColor(el, 'var(--lr-color-success)'));
+    });
+
+    it('mixes the active row status label toward the text color instead of flattening its hue', async () => {
+      const el = await statusFixture('ok');
+      const raw = probeColor(el, 'var(--lr-color-success)');
+      const full = partColor(el, 'ok', 'name');
+      const mixed = partColor(el, 'ok', 'status-text');
+      // neither the raw semantic token nor the plain text color
+      expect(mixed).to.not.equal(raw);
+      expect(mixed).to.not.equal(full);
+      // ...but strictly between them per channel, i.e. the hue is preserved and pulled toward the
+      // text color. --lr-color-text flips with the color scheme, so this darkens in light mode and
+      // lightens in dark mode -- the correct direction in both.
+      const [mr, mg, mb] = channels(mixed);
+      const [rr, rg, rb] = channels(raw);
+      const [fr, fg, fb] = channels(full);
+      const between = (m: number, a: number, b: number): boolean => m >= Math.min(a, b) && m <= Math.max(a, b);
+      expect(between(mr, rr, fr), `r ${mr} between ${rr} and ${fr}`).to.be.true;
+      expect(between(mg, rg, fg), `g ${mg} between ${rg} and ${fg}`).to.be.true;
+      expect(between(mb, rb, fb), `b ${mb} between ${rb} and ${fb}`).to.be.true;
+    });
+
+    it('flips the mix direction with the color scheme: darkens in light mode, lightens in dark', async () => {
+      const el = await statusFixture('ok');
+      const brightness = (color: string): number => {
+        const [r, g, b] = channels(color);
+        return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+      };
+      // Light mode (the shipped defaults): the mix pulls the label toward a dark text color.
+      expect(brightness(partColor(el, 'ok', 'status-text'))).to.be.lessThan(
+        brightness(probeColor(el, 'var(--lr-color-success)')),
+      );
+      // The `prefers-color-scheme: dark` media query is not forceable from this harness, so drive
+      // the same two token inputs that block sets -- which is also exactly how a consumer rethemes.
+      el.style.setProperty('--lr-theme-color-text-normal', '#f2f2f2');
+      el.style.setProperty('--lr-theme-color-success-fill-loud', '#3fb950');
+      expect(brightness(partColor(el, 'ok', 'status-text'))).to.be.greaterThan(
+        brightness(probeColor(el, 'var(--lr-color-success)')),
+      );
+    });
+
+    it('leaves every inactive row status label at its raw semantic token (regression)', async () => {
+      const el = await statusFixture('ok');
+      const expected: Array<[string, string]> = [
+        ['ok2', 'var(--lr-color-success)'],
+        ['bad', 'var(--lr-color-danger)'],
+        ['nope', 'var(--lr-color-warning)'],
+        ['run', 'var(--lr-color-brand)'],
+        ['wait', 'var(--lr-color-text-quiet)'],
+      ];
+      for (const [id, token] of expected) {
+        expect(partColor(el, id, 'status-text'), id).to.equal(probeColor(el, token));
+      }
+    });
+
+    it('mixes every semantic status tone, not only the two that fail today', async () => {
+      const el = await statusFixture('ok');
+      const tones: Array<[string, string]> = [
+        ['ok', 'var(--lr-color-success)'],
+        ['bad', 'var(--lr-color-danger)'],
+        ['nope', 'var(--lr-color-warning)'],
+        ['run', 'var(--lr-color-brand)'],
+      ];
+      for (const [id, token] of tones) {
+        el.activeSpanId = id;
+        await el.updateComplete;
+        expect(partColor(el, id, 'status-text'), id).to.not.equal(probeColor(el, token));
+      }
+    });
+
+    it('leaves [part=bar] identical on active and inactive rows', async () => {
+      const el = await statusFixture('ok');
+      const barBg = (id: string): string =>
+        getComputedStyle(el.shadowRoot!.querySelector(`[data-id="${id}"] [part="bar"]`) as HTMLElement).backgroundColor;
+      // 'ok' is active, 'ok2' is not, and both are success spans -- the duration bar is a non-text
+      // graphic on a 3:1 floor that it already passes, so the mix is scoped to [part='status-text']
+      // and must not reach it.
+      expect(barBg('ok')).to.equal(barBg('ok2'));
+      expect(barBg('ok')).to.equal(probeColor(el, 'var(--lr-color-success)'));
+      expect(barBg('bad')).to.equal(probeColor(el, 'var(--lr-color-danger)'));
+      expect(barBg('nope')).to.equal(probeColor(el, 'var(--lr-color-warning)'));
+      expect(barBg('wait')).to.equal(probeColor(el, 'var(--lr-color-text-quiet)'));
+    });
+
+    it('is accessible with an active row, for every status tone', async () => {
+      const el = (await fixture(
+        html`<lr-trace-tree .spans=${STATUS_SPANS} show-tokens show-cost></lr-trace-tree>`,
+      )) as LyraTraceTree;
+      await el.updateComplete;
+      for (const span of STATUS_SPANS) {
+        el.activeSpanId = span.id;
+        await el.updateComplete;
+        // Prove the fixture actually reached the active state before asserting on it -- an axe run
+        // against a row that never rendered [data-active] would pass vacuously and say nothing
+        // about the tinted-row contrast this test exists for.
+        const active = el.shadowRoot!.querySelector('[part="row"][data-active]') as HTMLElement;
+        expect(active.getAttribute('data-id'), span.id).to.equal(span.id);
+        expect(active.querySelector('[part="status-text"]')!.getAttribute('data-status')).to.equal(span.status);
+        await expect(el).to.be.accessible();
+      }
+    });
   });
 });

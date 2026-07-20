@@ -83,13 +83,13 @@ export const RetintedActiveRow: Story = {
     docs: {
       description: {
         story:
-          '`--lr-trace-tree-row-active-bg` recolors the active (`activeSpanId`) row on its own. `::part(row)[data-active]` is invalid CSS, so without this property the active row could only be restyled by overriding the library-wide `--lr-color-brand-quiet` token. Unset, it renders exactly as before.',
+          '`--lr-trace-tree-row-active-bg` recolors the active (`activeSpanId`) row on its own. `::part(row)[data-active]` is invalid CSS, so without this property the active row could only be restyled by overriding the library-wide `--lr-color-brand-quiet` token. The active row is more than a tint: its secondary text (`detail`, `duration`, `tokens-in`, `tokens-out`, `cost`, and the `pending` status label) rises to full-strength `--lr-color-text`, and its semantic status labels are mixed 25% toward that text color, so everything on the row clears the WCAG AA 4.5:1 floor against the tint. That makes `--lr-trace-tree-row-active-bg` and `--lr-trace-tree-row-active-color` a pair, set together here: the defaults assume the active background stays on the same side of the lightness midpoint as the ambient surface, so a tint that crosses it — a loud fill in light mode — needs the matching text color set too, and its status-label tones re-checked against the new tint.',
       },
     },
   },
   render: () =>
     html`<lr-trace-tree
-      style="max-width: 40rem; --lr-trace-tree-row-active-bg: var(--lr-color-success-quiet)"
+      style="max-width: 40rem; --lr-trace-tree-row-active-bg: var(--lr-color-success-quiet); --lr-trace-tree-row-active-color: var(--lr-color-text)"
       .spans=${spans}
       active-span-id="llm"
     ></lr-trace-tree>`,
