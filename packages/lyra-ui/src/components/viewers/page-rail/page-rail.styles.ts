@@ -11,7 +11,13 @@ export const styles = css`
   [part='pages'] {
     --lr-virtual-list-height: var(--lr-page-rail-height);
   }
-  [part='page'] {
+  /* Page rows are produced by this component's renderItem but are committed into the embedded
+     lr-virtual-list's OWN shadow root, one boundary deeper than this stylesheet: a bare
+     [part='page'] selector can never match one, so every row-level rule reaches through
+     ::part(). ::part() cannot be followed by an attribute selector either, so the state variants
+     (current page, heat tone, overflow marker) each carry their own name in the element's part
+     list -- ::part() matches with part~= semantics, so a row is both page and page-current. */
+  lr-virtual-list::part(page) {
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -25,17 +31,21 @@ export const styles = css`
     cursor: pointer;
     box-sizing: border-box;
   }
-  [part='page']:hover {
+  lr-virtual-list::part(page):hover {
     background: var(--lr-color-surface-raised);
   }
-  [part='page']:focus-visible {
+  lr-virtual-list::part(page):focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);
   }
-  [part='page'][aria-current='true'] {
+  /* The :hover arm keeps the current row tinted while it is hovered: it matches the specificity of
+     the ::part(page):hover rule above and comes later, so the current page stays identifiable
+     under the pointer instead of reverting to the generic hover surface. */
+  lr-virtual-list::part(page-current),
+  lr-virtual-list::part(page-current):hover {
     background: var(--lr-page-rail-current-bg, var(--lr-color-brand-quiet));
   }
-  [part='thumbnail'] {
+  lr-virtual-list::part(thumbnail) {
     position: relative;
     display: flex;
     align-items: center;
@@ -46,36 +56,36 @@ export const styles = css`
     background: var(--lr-color-surface);
     overflow: hidden;
   }
-  [part='page-number'] {
+  lr-virtual-list::part(page-number) {
     font-size: var(--lr-font-size-xs);
     color: var(--lr-color-text-quiet);
   }
-  [part='heat'] {
+  lr-virtual-list::part(heat) {
     display: flex;
     align-items: center;
     gap: var(--lr-space-2xs);
     inset-inline-end: var(--lr-space-xs);
   }
-  [part='heat-dot'] {
+  lr-virtual-list::part(heat-dot) {
     inline-size: var(--lr-size-6px);
     block-size: var(--lr-size-6px);
     border-radius: 50%;
     background: var(--lr-color-brand);
     font-size: var(--lr-font-size-2xs);
   }
-  [part='heat-dot'][data-tone='success'] {
+  lr-virtual-list::part(heat-dot-success) {
     background: var(--lr-color-success);
   }
-  [part='heat-dot'][data-tone='warning'] {
+  lr-virtual-list::part(heat-dot-warning) {
     background: var(--lr-color-warning);
   }
-  [part='heat-dot'][data-tone='danger'] {
+  lr-virtual-list::part(heat-dot-danger) {
     background: var(--lr-color-danger);
   }
-  [part='heat-dot'][data-tone='neutral'] {
+  lr-virtual-list::part(heat-dot-neutral) {
     background: var(--lr-color-text-quiet);
   }
-  [part='heat-dot'][data-overflow='true'] {
+  lr-virtual-list::part(heat-dot-overflow) {
     inline-size: auto;
     block-size: auto;
     border-radius: var(--lr-radius-xs);

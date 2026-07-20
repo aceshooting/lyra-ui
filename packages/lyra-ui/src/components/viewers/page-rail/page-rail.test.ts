@@ -98,11 +98,12 @@ describe('lr-page-rail', () => {
     const el = await fixture<LyraPageRail>(html`<lr-page-rail .viewer=${viewer}></lr-page-rail>`);
     viewer.emitLoad(3);
     await el.updateComplete;
-    // [part="page"] renders inside <lr-virtual-list>'s own nested shadow root, one level deeper
+    // The page button renders inside <lr-virtual-list>'s own nested shadow root, one level deeper
     // than el.shadowRoot -- a plain descendant selector from el.shadowRoot can't pierce that second
     // shadow boundary, so the wait (and the lookup below) must walk both shadow roots explicitly.
-    await waitUntil(() => el.shadowRoot!.querySelector('lr-virtual-list')?.shadowRoot?.querySelector('[part="page"]') != null);
-    const button = el.shadowRoot!.querySelector('lr-virtual-list')!.shadowRoot!.querySelector('[part="page"]') as HTMLElement;
+    // The current row's `part` is a list (`page page-current`), so match with `~=`, not `=`.
+    await waitUntil(() => el.shadowRoot!.querySelector('lr-virtual-list')?.shadowRoot?.querySelector('[part~="page"]') != null);
+    const button = el.shadowRoot!.querySelector('lr-virtual-list')!.shadowRoot!.querySelector('[part~="page"]') as HTMLElement;
     const eventPromise = oneEvent(el, 'lr-page-select');
     button.click();
     expect((await eventPromise).detail).to.deep.equal({ page: 1 });
@@ -115,9 +116,9 @@ describe('lr-page-rail', () => {
       { id: 'h2', anchor: { kind: 'text-quote', quote: 'x', page: 2 }, tone: 'accent' },
     ];
     const el = await fixture<LyraPageRail>(html`<lr-page-rail page-count="3" .highlights=${highlights}></lr-page-rail>`);
-    await waitUntil(() => el.shadowRoot!.querySelector('lr-virtual-list')?.shadowRoot?.querySelector('[part="page"]') != null);
+    await waitUntil(() => el.shadowRoot!.querySelector('lr-virtual-list')?.shadowRoot?.querySelector('[part~="page"]') != null);
     const list = el.shadowRoot!.querySelector('lr-virtual-list')!;
-    const buttons = list.shadowRoot!.querySelectorAll('[part="page"]');
+    const buttons = list.shadowRoot!.querySelectorAll('[part~="page"]');
     expect(buttons[1].getAttribute('aria-label')).to.equal('Page 2, 2 highlighted passages');
     expect(buttons[0].getAttribute('aria-label')).to.equal('Page 1');
   });
@@ -236,50 +237,142 @@ describe('lr-page-rail', () => {
   });
 });
 
-describe('current-page cssprop escape hatch', () => {
-  // The `[part='page']` buttons are produced by this component's `renderItem` but are rendered by
-  // `<lr-virtual-list>` INTO ITS OWN shadow root, so page-rail's stylesheet cannot reach them at all
-  // -- `[part='page'][aria-current='true']` is inert today, and the button falls back to the UA
-  // button appearance (a separate, pre-existing data-mode gap, the same class as the one tracked for
-  // thread-list/conversation-item; NOT introduced or fixed here).
-  //
-  // The hatch itself is therefore verified where it is observable: a real probe element rendered in
-  // the very shadow root and custom-property context the page button lives in, carrying the exact
-  // declaration the rule ships. That proves both arms of the `var()` chain -- an ancestor override
-  // wins, and an unset consumer still resolves the original token.
-  function resolveDeclaration(vlistRoot: ShadowRoot, declaration: string, property: string): string {
+describe('lr-page-rail part reachability through the embedded virtual list', () => {
+  // Page rows are produced by this component's `renderItem` but committed into
+  // `<lr-virtual-list>`'s OWN shadow root, one boundary deeper than this component's stylesheet.
+  // Every assertion below therefore reads back the *rendered* result on the real button/dot rather
+  // than inspecting stylesheet text -- a declaration that never matches looks identical to one that
+  // works from the source side.
+  function resolveDeclaration(root: ShadowRoot, declaration: string, property: string): string {
     const probe = document.createElement('span');
     probe.setAttribute('style', declaration);
-    vlistRoot.appendChild(probe);
+    root.appendChild(probe);
     const value = getComputedStyle(probe).getPropertyValue(property);
     probe.remove();
     return value;
   }
-  const HATCH = 'background: var(--lr-page-rail-current-bg, var(--lr-color-brand-quiet))';
 
-  async function currentPage(style = ''): Promise<{ el: LyraPageRail; vlistRoot: ShadowRoot }> {
-    const wrapper = (await fixture(html`<div style=${style}><lr-page-rail page-count="3"></lr-page-rail></div>`)) as HTMLElement;
+  async function rail(
+    options: { style?: string; highlights?: LyraHighlight[]; className?: string } = {},
+  ): Promise<{ el: LyraPageRail; vlistRoot: ShadowRoot }> {
+    const wrapper = (await fixture(html`<div style=${options.style ?? ''}>
+      <lr-page-rail
+        class=${options.className ?? ''}
+        page-count="3"
+        .highlights=${options.highlights ?? []}
+      ></lr-page-rail>
+    </div>`)) as HTMLElement;
     const el = wrapper.querySelector('lr-page-rail') as LyraPageRail;
     await waitUntil(
-      () => el.shadowRoot!.querySelector('lr-virtual-list')?.shadowRoot?.querySelector('[part="page"][aria-current="true"]') != null,
+      () => el.shadowRoot!.querySelector('lr-virtual-list')?.shadowRoot?.querySelector('[part~="page-current"]') != null,
     );
     return { el, vlistRoot: el.shadowRoot!.querySelector('lr-virtual-list')!.shadowRoot! };
   }
 
-  it('resolves the current-page background to an ancestor --lr-page-rail-current-bg', async () => {
-    const { vlistRoot } = await currentPage('--lr-page-rail-current-bg: rgb(0, 51, 102)');
-    expect(resolveDeclaration(vlistRoot, HATCH, 'background-color')).to.equal('rgb(0, 51, 102)');
-  });
+  it('applies the page-row layout instead of leaving raw UA button chrome', async () => {
+    const { vlistRoot } = await rail();
+    const button = vlistRoot.querySelector('[part~="page"]') as HTMLElement;
+    const style = getComputedStyle(button);
+    expect(style.display).to.equal('flex');
+    expect(style.flexDirection).to.equal('column');
+    expect(style.cursor).to.equal('pointer');
+    expect(style.borderTopStyle).to.equal('none');
 
-  it('resolves byte-identical to the brand-quiet token when unset', async () => {
-    const { vlistRoot } = await currentPage();
-    expect(resolveDeclaration(vlistRoot, HATCH, 'background-color')).to.equal(
-      resolveDeclaration(vlistRoot, 'background: var(--lr-color-brand-quiet)', 'background-color'),
+    const thumbnail = vlistRoot.querySelector('[part~="thumbnail"]') as HTMLElement;
+    expect(getComputedStyle(thumbnail).display).to.equal('flex');
+    expect(getComputedStyle(thumbnail).overflow).to.equal('hidden');
+
+    const number = vlistRoot.querySelector('[part~="page-number"]') as HTMLElement;
+    expect(getComputedStyle(number).color).to.equal(
+      resolveDeclaration(vlistRoot, 'color: var(--lr-color-text-quiet)', 'color'),
+    );
+    expect(getComputedStyle(number).fontSize).to.equal(
+      resolveDeclaration(vlistRoot, 'font-size: var(--lr-font-size-xs)', 'font-size'),
     );
   });
 
+  it('tints the current page from --lr-page-rail-current-bg, defaulting to the brand-quiet token', async () => {
+    const unset = await rail();
+    const current = unset.vlistRoot.querySelector('[part~="page-current"]') as HTMLElement;
+    expect(current.getAttribute('aria-current')).to.equal('true');
+    expect(getComputedStyle(current).backgroundColor).to.equal(
+      resolveDeclaration(unset.vlistRoot, 'background: var(--lr-color-brand-quiet)', 'background-color'),
+    );
+
+    const themed = await rail({ style: '--lr-page-rail-current-bg: rgb(0, 51, 102)' });
+    const themedCurrent = themed.vlistRoot.querySelector('[part~="page-current"]') as HTMLElement;
+    expect(getComputedStyle(themedCurrent).backgroundColor).to.equal('rgb(0, 51, 102)');
+  });
+
+  function heatHighlights(...tones: LyraHighlight['tone'][]): LyraHighlight[] {
+    return tones.map((tone, i) => ({ id: `h${i}`, anchor: { kind: 'page', page: 1 } as const, tone }));
+  }
+
+  it('colors each heat dot from its tone token', async () => {
+    const { vlistRoot } = await rail({ highlights: heatHighlights('danger', 'success', 'warning') });
+
+    const cluster = vlistRoot.querySelector('[part~="heat"]') as HTMLElement;
+    expect(getComputedStyle(cluster).display).to.equal('flex');
+
+    const dot = vlistRoot.querySelector('[part~="heat-dot-danger"]') as HTMLElement;
+    expect(dot.getAttribute('data-tone')).to.equal('danger');
+    expect(getComputedStyle(dot).backgroundColor).to.equal(
+      resolveDeclaration(vlistRoot, 'background: var(--lr-color-danger)', 'background-color'),
+    );
+    // The shared `heat-dot` rule still applies to the same element, since `part` is a list.
+    expect(getComputedStyle(dot).borderTopLeftRadius).to.not.equal('0px');
+
+    for (const [tone, token] of [
+      ['success', '--lr-color-success'],
+      ['warning', '--lr-color-warning'],
+    ] as const) {
+      const toned = vlistRoot.querySelector(`[part~="heat-dot-${tone}"]`) as HTMLElement;
+      expect(getComputedStyle(toned).backgroundColor, tone).to.equal(
+        resolveDeclaration(vlistRoot, `background: var(${token})`, 'background-color'),
+      );
+    }
+  });
+
+  it('neutralizes the +n overflow marker while keeping the neutral tone token', async () => {
+    // Only three tones are shown, so the fourth collapses into the `+n` overflow marker.
+    const { vlistRoot } = await rail({ highlights: heatHighlights('neutral', 'accent', 'accent', 'accent') });
+
+    const neutral = vlistRoot.querySelector('[part~="heat-dot-neutral"]') as HTMLElement;
+    expect(getComputedStyle(neutral).backgroundColor).to.equal(
+      resolveDeclaration(vlistRoot, 'background: var(--lr-color-text-quiet)', 'background-color'),
+    );
+
+    const overflow = vlistRoot.querySelector('[part~="heat-dot-overflow"]') as HTMLElement;
+    expect(overflow.textContent).to.equal('+1');
+    expect(getComputedStyle(overflow).backgroundColor).to.equal('rgba(0, 0, 0, 0)');
+    expect(getComputedStyle(overflow).color).to.equal(
+      resolveDeclaration(vlistRoot, 'color: var(--lr-color-text-quiet)', 'color'),
+    );
+  });
+
+  it('lets a consumer stylesheet reach the virtualized rows through exportparts', async () => {
+    const sheet = document.createElement('style');
+    sheet.textContent = `
+      lr-page-rail.consumer-probe::part(page) { background: rgb(1, 2, 3); }
+      lr-page-rail.consumer-probe::part(page-number) { color: rgb(4, 5, 6); }
+    `;
+    document.head.append(sheet);
+    try {
+      const { vlistRoot } = await rail({ className: 'consumer-probe' });
+      const rows = vlistRoot.querySelectorAll('[part~="page"]');
+      // Page 2: not the current row, so only the consumer rule and the base part rule compete.
+      expect(getComputedStyle(rows[1] as HTMLElement).backgroundColor).to.equal('rgb(1, 2, 3)');
+      expect(getComputedStyle(vlistRoot.querySelector('[part~="page-number"]') as HTMLElement).color).to.equal(
+        'rgb(4, 5, 6)',
+      );
+    } finally {
+      sheet.remove();
+    }
+  });
+
   it('is accessible in the current-page state with the prop themed', async () => {
-    const { el } = await currentPage('--lr-page-rail-current-bg: rgb(0, 51, 102)');
+    const { el, vlistRoot } = await rail({ style: '--lr-page-rail-current-bg: rgb(0, 51, 102)' });
+    expect(vlistRoot.querySelectorAll('[part~="page"]')).to.have.lengthOf(3);
     await expect(el).to.be.accessible();
   });
 });

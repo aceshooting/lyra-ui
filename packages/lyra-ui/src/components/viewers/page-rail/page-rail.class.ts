@@ -39,13 +39,20 @@ type ThumbnailState = 'pending' | 'ready' | 'unavailable';
  * @csspart base - The rail.
  * @csspart pages - The embedded `lr-virtual-list`.
  * @csspart page - One page button.
+ * @csspart page-current - The page button for the current `page` (also carries `page`).
  * @csspart thumbnail - The thumbnail canvas wrapper.
  * @csspart page-number - The visible page number.
  * @csspart heat - The heat-marker cluster.
  * @csspart heat-dot - One tone-colored heat marker (or the `+n` overflow marker).
+ * @csspart heat-dot-accent - An accent-tone heat marker (also carries `heat-dot`).
+ * @csspart heat-dot-success - A success-tone heat marker (also carries `heat-dot`).
+ * @csspart heat-dot-warning - A warning-tone heat marker (also carries `heat-dot`).
+ * @csspart heat-dot-danger - A danger-tone heat marker (also carries `heat-dot`).
+ * @csspart heat-dot-neutral - A neutral-tone heat marker (also carries `heat-dot`).
+ * @csspart heat-dot-overflow - The `+n` overflow marker (also carries `heat-dot`).
  * @cssprop [--lr-page-rail-height=var(--lr-size-24rem)] - Block size of the virtualized rail.
  * @cssprop [--lr-page-rail-current-bg=var(--lr-color-brand-quiet)] - Background of the
- *   `[part="page"]` button for the current `page`.
+ *   `[part="page-current"]` button for the current `page`.
  */
 export class LyraPageRail extends LyraElement<LyraPageRailEventMap> {
   static styles = [LyraElement.styles, styles];
@@ -228,12 +235,13 @@ export class LyraPageRail extends LyraElement<LyraPageRailEventMap> {
           });
     const shownTones = tones.slice(0, 3);
     const overflow = tones.length - shownTones.length;
+    const isCurrent = this.safePage === number;
     return html`
       <button
-        part="page"
+        part=${isCurrent ? 'page page-current' : 'page'}
         type="button"
         aria-label=${name}
-        aria-current=${this.safePage === number ? 'true' : nothing}
+        aria-current=${isCurrent ? 'true' : nothing}
         @click=${() => this.onPageActivate(number)}
       >
         <span part="thumbnail">
@@ -248,8 +256,8 @@ export class LyraPageRail extends LyraElement<LyraPageRailEventMap> {
         <span part="page-number" aria-hidden="true">${number}</span>
         ${count > 0
           ? html`<span part="heat" aria-hidden="true">
-              ${shownTones.map((tone) => html`<span part="heat-dot" data-tone=${tone}></span>`)}
-              ${overflow > 0 ? html`<span part="heat-dot" data-overflow="true">+${overflow}</span>` : nothing}
+              ${shownTones.map((tone) => html`<span part="heat-dot heat-dot-${tone}" data-tone=${tone}></span>`)}
+              ${overflow > 0 ? html`<span part="heat-dot heat-dot-overflow" data-overflow="true">+${overflow}</span>` : nothing}
             </span>`
           : nothing}
       </button>
@@ -263,6 +271,7 @@ export class LyraPageRail extends LyraElement<LyraPageRailEventMap> {
       <div part="base" @keydown=${this.onKeyDown} aria-label=${this.label || this.localize('pageRailLabel')}>
         <lr-virtual-list
           part="pages"
+          exportparts="page:page, page-current:page-current, thumbnail:thumbnail, page-number:page-number, heat:heat, heat-dot:heat-dot, heat-dot-accent:heat-dot-accent, heat-dot-success:heat-dot-success, heat-dot-warning:heat-dot-warning, heat-dot-danger:heat-dot-danger, heat-dot-neutral:heat-dot-neutral, heat-dot-overflow:heat-dot-overflow"
           .items=${items}
           .renderItem=${this.renderPageItem}
           .keyFunction=${(item: unknown) => item as number}
