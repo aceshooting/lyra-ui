@@ -31,10 +31,17 @@ const bundleEntries = {
     fixture: 'core',
     // The root barrel registers the full non-optional component set, so its raw bundle grows as
     // those implementations gain functionality even when the tag count is stable. The current
-    // 208-tag entry measures ~1766.8 KiB with optional peers externalized; this leaves about 10%
+    // 249-tag entry measures ~2214.0 KiB with optional peers externalized; this leaves about 10%
     // headroom while the tighter single-component gzip canary below still catches an accidental
     // eager dependency in the shared base layer.
-    maxRawBytes: 2_250_000,
+    //
+    // Raised from 2_250_000 after the 2026-07-20 review-sweep fixes: 422 component fixes across
+    // 171 directories each added real code (boolean-attribute converters, fail-closed peer-error
+    // branches, :hover rules, forwarded native properties), pushing the barrel ~17 KiB past the
+    // old ceiling. Deliberately re-baselined rather than waived -- the `button` gzip canary below
+    // stayed green through the same change, which is the signal that no foreign dependency leaked
+    // into the shared eager graph; only the barrel's own aggregate implementation weight moved.
+    maxRawBytes: 2_500_000,
   },
   // Single-component regression canary: catches a PR silently dragging something heavy into the
   // eager import graph (e.g. a `*-loader.ts`'s dynamic `import()` accidentally hoisted to a
