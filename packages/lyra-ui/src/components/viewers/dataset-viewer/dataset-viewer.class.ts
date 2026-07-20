@@ -271,6 +271,7 @@ export class LyraDatasetViewer extends DocumentAnchorTarget(LyraDatasetViewerBas
               ${fields.map((field) => html`<div part="header-cell" role="columnheader">${field}</div>`)}
             </div>
             <lr-virtual-list
+              exportparts="data-row:data-row, cell:cell, cell-highlight:cell-highlight, cell-highlight-action:cell-highlight-action"
               .items=${rows}
               .renderItem=${(row: unknown, index: number) => this.renderRow(row as Record<string, string>, index, fields)}
               .keyFunction=${(_item: unknown, index: number) => index}

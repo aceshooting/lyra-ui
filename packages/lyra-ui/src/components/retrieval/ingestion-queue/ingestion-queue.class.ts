@@ -328,6 +328,7 @@ export class LyraIngestionQueue extends LyraElement<LyraIngestionQueueEventMap> 
       <div part="base" role="region" aria-label=${ariaLabel}>
         ${virtualized
           ? html`<lr-virtual-list
+              exportparts="item:item, item-header:item-header, item-name:item-name, item-progress:item-progress, item-meta:item-meta, item-error:item-error, item-actions:item-actions, retry-button:retry-button, cancel-button:cancel-button"
               .items=${this.items}
               .renderItem=${(item: unknown) => this.itemTemplate(item as IngestionQueueItem, false)}
               .keyFunction=${(item: unknown) => (item as IngestionQueueItem).id}

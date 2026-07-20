@@ -119,6 +119,40 @@ describe('lr-dataset-viewer', () => {
       }
     });
 
+    it('exports the virtualized row parts so a consumer stylesheet reaches them', async () => {
+      // Row markup is rendered inside <lr-virtual-list>'s own shadow root, two hops from a
+      // consumer: without exportparts on that element, lr-dataset-viewer::part(cell) and friends
+      // match nothing at all.
+      const style = document.createElement('style');
+      style.textContent = `
+        lr-dataset-viewer::part(data-row) { opacity: 0.75; }
+        lr-dataset-viewer::part(cell) { padding-block-start: 3px; }
+        lr-dataset-viewer::part(cell-highlight) { padding-block-start: 5px; }
+        lr-dataset-viewer::part(cell-highlight-action) { padding-block-start: 7px; }
+      `;
+      document.head.append(style);
+      const el = (await fixture(html`<lr-dataset-viewer></lr-dataset-viewer>`)) as LyraDatasetViewer;
+      const restore = fetchText(GRID_DATASET);
+      try {
+        el.highlights = [{ id: 'h1', anchor: { kind: 'cell-range', range: 'A2' }, label: 'First data row' }];
+        el.src = 'https://example.test/data.tsv';
+        await waitUntil(() => el.shadowRoot!.querySelector('[part="table"]') !== null);
+        const list = el.shadowRoot!.querySelector('lr-virtual-list')!;
+        await waitUntil(() => list.shadowRoot!.querySelector('[part~="cell-highlight"]') !== null);
+        const dataRow = list.shadowRoot!.querySelector('[part="data-row"]') as HTMLElement;
+        const plain = list.shadowRoot!.querySelector('[part="cell"]') as HTMLElement;
+        const highlighted = list.shadowRoot!.querySelector('[part~="cell-highlight"]') as HTMLElement;
+        const action = list.shadowRoot!.querySelector('[part="cell-highlight-action"]') as HTMLElement;
+        expect(getComputedStyle(dataRow).opacity).to.equal('0.75');
+        expect(getComputedStyle(plain).paddingBlockStart).to.equal('3px');
+        expect(getComputedStyle(highlighted).paddingBlockStart).to.equal('5px');
+        expect(getComputedStyle(action).paddingBlockStart).to.equal('7px');
+      } finally {
+        restore();
+        style.remove();
+      }
+    });
+
     it('renders files above the old 1,000-row cap up to the shared 10k default', async () => {
       const bigRows = Array.from({ length: 5000 }, (_unused, i) => `row${i},value${i}`).join('\n');
       const el = (await fixture(html`<lr-dataset-viewer></lr-dataset-viewer>`)) as LyraDatasetViewer;

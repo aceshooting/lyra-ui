@@ -568,6 +568,7 @@ export class LyraTerminal extends LyraElement<LyraTerminalEventMap> {
           @pointerup=${this.onViewportPointerUp}
         >
           <lr-virtual-list
+            exportparts="line:line"
             .items=${this.lines}
             .renderItem=${(item: unknown) => this.renderLine(item as TerminalLine)}
             .keyFunction=${(item: unknown) => (item as TerminalLine).number}

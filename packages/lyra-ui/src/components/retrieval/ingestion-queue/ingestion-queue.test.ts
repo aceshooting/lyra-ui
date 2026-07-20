@@ -337,6 +337,50 @@ describe('virtualization', () => {
     await nextFrame();
   });
 
+  it('exports every styled virtualized row part so a consumer stylesheet reaches them', async () => {
+    // Row markup is rendered inside <lr-virtual-list>'s own shadow root, two hops from a consumer:
+    // without exportparts on that element, lr-ingestion-queue::part(item) matches nothing at all.
+    const names = [
+      'item',
+      'item-header',
+      'item-name',
+      'item-progress',
+      'item-meta',
+      'item-error',
+      'item-actions',
+      'retry-button',
+      'cancel-button',
+    ];
+    const style = document.createElement('style');
+    style.textContent = names
+      .map((name, i) => `lr-ingestion-queue::part(${name}) { padding-block-start: ${i + 1}px; }`)
+      .join('\n');
+    document.head.append(style);
+    try {
+      const el = (await fixture(
+        html`<lr-ingestion-queue
+          virtualize-threshold="1"
+          .items=${[
+            item({ id: '1', stage: 'failed', error: 'Boom', attempts: 1, chunkCount: 4 }),
+            item({ id: '2', stage: 'uploading', progress: 30 }),
+          ]}
+        ></lr-ingestion-queue>`,
+      )) as LyraIngestionQueue;
+      const list = el.shadowRoot!.querySelector('lr-virtual-list')!;
+      await nextFrame();
+      const rows = [...list.shadowRoot!.querySelectorAll('[part="item"]')] as HTMLElement[];
+      expect(rows.length).to.be.greaterThan(1);
+      // `retry-button`/`item-error` only exist on the failed row, `item-progress`/`cancel-button`
+      // on the in-flight one -- resolve each name across every rendered row.
+      for (const [i, name] of names.entries()) {
+        const target = list.shadowRoot!.querySelector<HTMLElement>(`[part~="${name}"]`)!;
+        expect(getComputedStyle(target).paddingBlockStart, name).to.equal(`${i + 1}px`);
+      }
+    } finally {
+      style.remove();
+    }
+  });
+
   it('renders row content identically through the internal lr-virtual-list renderItem callback', async () => {
     // Real virtualized row layout isn't reliably assertable without real browser viewport
     // sizing, so -- matching <lr-activity-feed>'s own equivalent test -- this invokes the

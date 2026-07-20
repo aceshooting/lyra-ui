@@ -529,6 +529,25 @@ describe('lr-terminal', () => {
     expect(list.getAttribute('row-height')).to.equal('24');
   });
 
+  it('exports the virtualized line part so a consumer stylesheet reaches it', async () => {
+    // `line` is rendered inside <lr-virtual-list>'s own shadow root, two hops from a consumer:
+    // without exportparts on that element, lr-terminal::part(line) matches nothing at all.
+    const style = document.createElement('style');
+    style.textContent = 'lr-terminal::part(line) { padding-block-start: 3px; }';
+    document.head.append(style);
+    try {
+      const el = (await fixture(html`<lr-terminal></lr-terminal>`)) as LyraTerminal;
+      el.content = 'alpha\nbravo';
+      await el.updateComplete;
+      const list = el.shadowRoot!.querySelector('lr-virtual-list')!;
+      const line = list.shadowRoot!.querySelector('[part="line"]') as HTMLElement;
+      expect(line.getAttribute('data-line-number')).to.equal('1');
+      expect(getComputedStyle(line).paddingBlockStart).to.equal('3px');
+    } finally {
+      style.remove();
+    }
+  });
+
   it('gives copy-button, download-button, and jump-to-latest a hover state', () => {
     const css = styles.cssText.replace(/\s+/g, ' ');
     expect(css).to.match(/\[part='copy-button'\]:hover/);
