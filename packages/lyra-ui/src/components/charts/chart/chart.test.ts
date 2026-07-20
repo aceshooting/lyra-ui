@@ -407,10 +407,26 @@ it('updates in place when neither `type` nor the effective `config.type` changes
   expect((el as any).chart).to.equal(instance);
 });
 
-it('gives reset-zoom-button a hover state and inherits the surrounding font', () => {
+it('gives reset-zoom-button a hover state', () => {
+  // Only the pseudo-class assertion belongs here as cssText -- :hover can't be synthesized on a
+  // real fixture. The font-inheritance half of this rule is proven against a rendered button below.
   const css = styles.cssText.replace(/\s+/g, ' ');
-  expect(css).to.match(/\[part='reset-zoom-button'\][^{]*\{[^}]*font:\s*inherit/);
   expect(css).to.match(/\[part='reset-zoom-button'\]:hover/);
+});
+
+it('actually inherits the surrounding font on a rendered reset-zoom-button, not just in the stylesheet source', async () => {
+  const el = (await fixture(
+    html`<lr-chart zoom style="--lr-theme-font-family-body: 'Custom Zoom Font', monospace;"></lr-chart>`,
+  )) as LyraChart;
+  el.type = 'line';
+  el.labels = ['A', 'B'];
+  el.datasets = [{ label: 'x', data: [1, 2] }];
+  await el.updateComplete;
+  await waitUntil(() => (el as any).chart != null);
+  (el as any).zoomed = true;
+  await el.updateComplete;
+  const button = el.shadowRoot!.querySelector('[part="reset-zoom-button"]') as HTMLElement;
+  expect(getComputedStyle(button).fontFamily).to.contain('Custom Zoom Font');
 });
 
 it('lets `config.data` override generated data while the Chart instance picks up the override', async () => {
@@ -444,6 +460,22 @@ it('deep-merges a nested `config.options` key without clobbering the rest of the
   expect(config.options.scales.y.title.display).to.equal(true);
   expect(config.options.scales.y.title.text).to.equal('Revenue');
   expect(config.options.scales.x.type).to.equal('category');
+});
+
+it('clears beginAtZero from a plain HTML `begin-at-zero="false"` attribute, not just a .beginAtZero property binding', async () => {
+  const el = (await fixture(
+    html`<lr-chart begin-at-zero="false" type="bar" .labels=${['A', 'B']} .datasets=${[{ label: 'x', data: [1, 2] }]}></lr-chart>`,
+  )) as LyraChart;
+  await el.updateComplete;
+  await waitUntil(() => (el as any).chart != null);
+  expect(el.beginAtZero).to.be.false;
+  const config = (el as any).buildConfig();
+  expect(config.options.scales.y.beginAtZero).to.equal(false);
+});
+
+it('still defaults beginAtZero to true with no attribute set', async () => {
+  const el = (await fixture(html`<lr-chart type="bar"></lr-chart>`)) as LyraChart;
+  expect(el.beginAtZero).to.be.true;
 });
 
 it('gives a scatter chart a linear (not categorical) x scale', async () => {
@@ -1184,4 +1216,48 @@ it('gives an uncolored pie a per-slice default palette so slices are distinguish
   expect(ds.backgroundColor).to.be.an('array').with.lengthOf(3);
   expect(ds.backgroundColor[0]).to.not.match(/^var\(/);
   expect(ds.backgroundColor[0]).to.not.equal(ds.backgroundColor[1]);
+});
+
+// Regression coverage for the lifecycle-optional-peer-missing-fails-silently defect class --
+// when the optional `chart.js` peer fails to load, <lr-chart> must fail closed into a visible,
+// accessible role="alert" error state instead of leaving a permanently blank canvas with no
+// on-page indication anything is wrong. Mirrors lr-map's identical treatment.
+it('renders a visible, accessible error state instead of a blank canvas when the chart.js peer fails to load', async () => {
+  // Deliberately not using fixture(): loadLibrary must be overridden *before* the element ever
+  // connects, since connectedCallback() calls it unconditionally on connect.
+  const el = document.createElement('lr-chart') as unknown as LyraChart;
+  (el as unknown as { loadLibrary: () => Promise<unknown> }).loadLibrary = () => Promise.resolve(null);
+  document.body.appendChild(el);
+  try {
+    await waitUntil(() => el.shadowRoot!.querySelector('[part="error"]') != null, 'error state never rendered', {
+      timeout: 2000,
+    });
+    const errorEl = el.shadowRoot!.querySelector('[part="error"]') as HTMLElement;
+    expect(errorEl.getAttribute('role')).to.equal('alert');
+    expect(errorEl.textContent!.trim().length).to.be.greaterThan(0);
+    expect(el.hasAttribute('aria-busy')).to.be.false;
+    expect(el.shadowRoot!.querySelectorAll('canvas').length).to.equal(0);
+    expect(el.shadowRoot!.querySelectorAll('lr-skeleton').length).to.equal(0);
+  } finally {
+    el.remove();
+  }
+});
+
+it('routes the chart.js peer-missing error through a .strings override', async () => {
+  const el = document.createElement('lr-chart') as unknown as LyraChart;
+  (el as unknown as { loadLibrary: () => Promise<unknown> }).loadLibrary = () => Promise.resolve(null);
+  (el as unknown as { strings: Record<string, string> }).strings = {
+    chartMissingLibrary: 'Bibliothèque de graphiques absente',
+  };
+  document.body.appendChild(el);
+  try {
+    await waitUntil(() => el.shadowRoot!.querySelector('[part="error"]') != null, 'error state never rendered', {
+      timeout: 2000,
+    });
+    expect(el.shadowRoot!.querySelector('[part="error"]')!.textContent!.trim()).to.equal(
+      'Bibliothèque de graphiques absente',
+    );
+  } finally {
+    el.remove();
+  }
 });

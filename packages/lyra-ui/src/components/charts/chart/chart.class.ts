@@ -1,4 +1,4 @@
-import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
+import { html, nothing, type TemplateResult, type PropertyValues, type ComplexAttributeConverter } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
 import { styleMap } from 'lit/directives/style-map.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
@@ -79,6 +79,22 @@ function normalizeChartType(value: unknown): LyraChartType {
     ? (value as LyraChartType)
     : 'line';
 }
+
+/** `true`-defaulting boolean attribute converter for `beginAtZero` -- identical shape/rationale to
+ *  `<lr-checkpoint>`'s own `trueDefaultBooleanConverter`, duplicated locally per this library's
+ *  convention of not sharing these tiny converters across independently-consumable component
+ *  files. Lit's default presence-based `type: Boolean` can never be set back to `false` from a
+ *  plain-HTML attribute once the property's own default is `true` (removing an attribute that was
+ *  never present fires no `attributeChangedCallback`), so `fromAttribute` checks the literal
+ *  string instead. */
+const trueDefaultBooleanConverter: ComplexAttributeConverter<boolean> = {
+  fromAttribute(value): boolean {
+    return value !== 'false';
+  },
+  toAttribute(value): string | null {
+    return value ? null : 'false';
+  },
+};
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -203,6 +219,8 @@ export interface LyraChartEventMap {
  * @csspart description - The accessible chart summary.
  * @csspart data-table - The optional generated or slotted data table.
  * @csspart center - The chart-area-centered overlay wrapper for the `center` slot.
+ * @csspart error - `role="alert"` message shown instead of `canvas` when the optional `chart.js`
+ *   peer dependency is not installed.
  * @cssprop [--lr-chart-height=var(--lr-size-280px)] - The host's `block-size`. Set on the host
  *   element from the `height` property on every change (custom properties only cascade downward,
  *   so it cannot be set from inside the shadow root); a host-level override is overwritten the
@@ -240,7 +258,8 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
   @property({ attribute: 'x-label' }) xLabel = '';
   @property({ attribute: 'y-label' }) yLabel = '';
   @property({ attribute: 'y2-label' }) y2Label = '';
-  @property({ type: Boolean, attribute: 'begin-at-zero' }) beginAtZero = true;
+  @property({ type: Boolean, attribute: 'begin-at-zero', converter: trueDefaultBooleanConverter })
+  beginAtZero = true;
   /** Accessible name applied to the canvas. A host `aria-label` wins, then this falls back to the dataset labels. */
   @property({ attribute: 'accessible-label' }) accessibleLabel = '';
   /** Accessible description for the canvas. When unset, a concise data/trend summary is generated. */
@@ -264,6 +283,18 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
 
   /** True until the lazy-loaded `chart.js` peer dependency has settled (success or failure). */
   @state() private loading = true;
+
+  /**
+   * True once the optional `chart.js` peer failed to load (not installed) -- `render()` fails
+   * closed into `part="error" role="alert"` rather than leaving a permanently blank canvas.
+   */
+  @state() private loadFailed = false;
+
+  // Overridable instance field (not a direct `loadChartJs()` call site) purely so tests can
+  // inject a stubbed loader before the element ever connects -- matches map/docx-viewer's own
+  // `loadLibrary` field/rationale exactly.
+  private loadLibrary: (withZoom: boolean) => ReturnType<typeof loadChartJs> = (withZoom) =>
+    withZoom ? loadChartJsWithZoom() : loadChartJs();
 
   @state() private zoomed = false;
 
@@ -303,11 +334,15 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
       this.resizeObserver.observe(this);
     }
     this.updateAutoLegendPosition();
-    const load = this.zoom ? loadChartJsWithZoom() : loadChartJs();
+    const load = this.loadLibrary(this.zoom);
     void load.then((mod) => {
       if (!this.isConnected) return;
       this.loading = false;
-      if (!mod) return;
+      if (!mod) {
+        this.loadFailed = true;
+        return;
+      }
+      this.loadFailed = false;
       this.chartJsModule = mod;
       this.draw();
     });
@@ -961,6 +996,13 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
       return html`
         <div part="base">
           <lr-skeleton variant="rect"></lr-skeleton>
+        </div>
+      `;
+    }
+    if (this.loadFailed) {
+      return html`
+        <div part="base">
+          <div part="error" role="alert">${this.localize('chartMissingLibrary')}</div>
         </div>
       `;
     }
