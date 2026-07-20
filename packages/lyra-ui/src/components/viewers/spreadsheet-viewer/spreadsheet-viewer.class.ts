@@ -69,6 +69,9 @@ class LyraSpreadsheetViewerBase extends LyraElement<LyraSpreadsheetViewerEventMa
  *   `lr-highlight-activate` on click or Enter/Space.
  * @csspart spinner - The loading status region.
  * @csspart error - The error message region.
+ * @cssprop [--lr-spreadsheet-viewer-highlight-color=var(--lr-color-brand)] - Outline color of a
+ *   highlighted cell. The active highlight sets it inline to
+ *   `var(--lr-color-warning, var(--lr-color-brand))`.
  */
 export class LyraSpreadsheetViewer extends DocumentAnchorTarget(LyraSpreadsheetViewerBase) {
   static styles = [LyraElement.styles, styles, srOnly];
@@ -166,6 +169,7 @@ export class LyraSpreadsheetViewer extends DocumentAnchorTarget(LyraSpreadsheetV
       part="cell cell-highlight"
       role="button"
       ?data-active=${!!active}
+      style=${active ? '--lr-spreadsheet-viewer-highlight-color: var(--lr-color-warning, var(--lr-color-brand))' : ''}
       tabindex="0"
       aria-label=${primary.highlight.label || this.localize('viewerHighlightLabel')}
       @click=${activate}
@@ -191,6 +195,7 @@ export class LyraSpreadsheetViewer extends DocumentAnchorTarget(LyraSpreadsheetV
     const count = columns(sheet.rows);
     return html`<div part="sheet">${this.renderRow(header, count, 'header-row', 1, sheet.name)}<lr-virtual-list
       part="rows"
+      exportparts="data-row:data-row, cell:cell, cell-highlight:cell-highlight"
       data-sheet-index=${index}
       .items=${body}
       .renderItem=${(row: unknown, bodyIndex: number) => this.renderRow(row as unknown[], count, 'data-row', bodyIndex + 2, sheet.name)}

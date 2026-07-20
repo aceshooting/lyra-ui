@@ -206,6 +206,100 @@ describe('lr-spreadsheet-viewer', () => {
     });
   });
 
+  describe('cell-highlight styling', () => {
+    const injected: HTMLStyleElement[] = [];
+    function injectStyle(cssText: string): void {
+      const style = document.createElement('style');
+      style.textContent = cssText;
+      document.head.append(style);
+      injected.push(style);
+    }
+    afterEach(() => { for (const style of injected.splice(0)) style.remove(); });
+
+    /** Loads GRID_WORKBOOK, highlights A2, and resolves the highlighted cell alongside a plain one
+     *  -- both live inside <lr-virtual-list>'s own shadow root, one hop in from this component's. */
+    async function mountHighlighted(el: LyraSpreadsheetViewer, activeId: string | null = null): Promise<{ highlighted: HTMLElement; plain: HTMLElement; dataRow: HTMLElement }> {
+      el.src = 'https://example.test/book.xlsx';
+      await waitUntil(() => el.shadowRoot!.querySelector('lr-virtual-list') !== null);
+      el.highlights = [{ id: 'h1', anchor: { kind: 'cell-range', range: 'A2' }, label: 'First result' }];
+      el.activeHighlightId = activeId;
+      await el.updateComplete;
+      const list = el.shadowRoot!.querySelector('lr-virtual-list')!;
+      await waitUntil(() => list.shadowRoot!.querySelector('[part~="cell-highlight"]') !== null);
+      return {
+        highlighted: list.shadowRoot!.querySelector('[part~="cell-highlight"]') as HTMLElement,
+        plain: list.shadowRoot!.querySelector('[part="cell"]') as HTMLElement,
+        dataRow: list.shadowRoot!.querySelector('[part="data-row"]') as HTMLElement,
+      };
+    }
+
+    it('paints a highlighted cell with an outline no plain cell has', async () => {
+      injectStyle('lr-spreadsheet-viewer { --lr-theme-color-brand-fill-loud: rgb(1, 2, 3); }');
+      const el = (await fixture(html`<lr-spreadsheet-viewer></lr-spreadsheet-viewer>`)) as LyraSpreadsheetViewer;
+      const restore = fetchBuffer(buffer(GRID_WORKBOOK));
+      try {
+        const { highlighted, plain } = await mountHighlighted(el);
+        const style = getComputedStyle(highlighted);
+        expect(style.outlineStyle).to.equal('solid');
+        expect(style.outlineWidth).to.not.equal('0px');
+        expect(style.outlineColor).to.equal('rgb(1, 2, 3)');
+        expect(style.cursor).to.equal('pointer');
+        expect(getComputedStyle(plain).outlineStyle).to.equal('none');
+      } finally { restore(); }
+    });
+
+    it('tints the active highlight apart from an inactive one', async () => {
+      injectStyle('lr-spreadsheet-viewer { --lr-theme-color-brand-fill-loud: rgb(1, 2, 3); --lr-theme-color-warning-fill-loud: rgb(4, 5, 6); }');
+      const el = (await fixture(html`<lr-spreadsheet-viewer></lr-spreadsheet-viewer>`)) as LyraSpreadsheetViewer;
+      const restore = fetchBuffer(buffer(GRID_WORKBOOK));
+      try {
+        const { highlighted } = await mountHighlighted(el, 'h1');
+        expect(getComputedStyle(highlighted).outlineColor).to.equal('rgb(4, 5, 6)');
+      } finally { restore(); }
+    });
+
+    it('swaps the highlight outline for the shared focus ring while the cell is focused', async () => {
+      // The highlight outline is unconditional, so without an explicit :focus-visible rule it would
+      // simply swallow the focus ring on this focusable cell -- indistinguishable from an unfocused
+      // highlight. Probing the active (warning-tinted) highlight makes the swap unambiguous.
+      injectStyle('lr-spreadsheet-viewer { --lr-theme-color-brand-fill-loud: rgb(1, 2, 3); --lr-theme-color-warning-fill-loud: rgb(4, 5, 6); }');
+      const el = (await fixture(html`<lr-spreadsheet-viewer></lr-spreadsheet-viewer>`)) as LyraSpreadsheetViewer;
+      const restore = fetchBuffer(buffer(GRID_WORKBOOK));
+      try {
+        const { highlighted } = await mountHighlighted(el, 'h1');
+        expect(getComputedStyle(highlighted).outlineColor).to.equal('rgb(4, 5, 6)');
+        highlighted.focus();
+        expect(getComputedStyle(highlighted).outlineColor).to.equal('rgb(1, 2, 3)');
+      } finally { restore(); }
+    });
+
+    it('exports data-row, cell, and cell-highlight to a consumer stylesheet', async () => {
+      injectStyle(`
+        lr-spreadsheet-viewer::part(data-row) { opacity: 0.75; }
+        lr-spreadsheet-viewer::part(cell) { padding-block-start: 3px; }
+        lr-spreadsheet-viewer::part(cell-highlight) { padding-block-start: 5px; }
+      `);
+      const el = (await fixture(html`<lr-spreadsheet-viewer></lr-spreadsheet-viewer>`)) as LyraSpreadsheetViewer;
+      const restore = fetchBuffer(buffer(GRID_WORKBOOK));
+      try {
+        const { highlighted, plain, dataRow } = await mountHighlighted(el);
+        expect(getComputedStyle(dataRow).opacity).to.equal('0.75');
+        expect(getComputedStyle(plain).paddingBlockStart).to.equal('3px');
+        expect(getComputedStyle(highlighted).paddingBlockStart).to.equal('5px');
+      } finally { restore(); }
+    });
+
+    it('is accessible with a highlighted cell rendered', async () => {
+      const el = (await fixture(html`<lr-spreadsheet-viewer></lr-spreadsheet-viewer>`)) as LyraSpreadsheetViewer;
+      const restore = fetchBuffer(buffer(GRID_WORKBOOK));
+      try {
+        const { highlighted } = await mountHighlighted(el);
+        expect(highlighted.getAttribute('role')).to.equal('button');
+        await expect(el).to.be.accessible();
+      } finally { restore(); }
+    });
+  });
+
   describe('back-compat', () => {
     it('rendering is unchanged with highlights empty and no search active', async () => {
       const el = (await fixture(html`<lr-spreadsheet-viewer></lr-spreadsheet-viewer>`)) as LyraSpreadsheetViewer;

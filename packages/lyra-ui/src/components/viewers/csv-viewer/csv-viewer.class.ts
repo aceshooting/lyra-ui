@@ -69,6 +69,8 @@ class LyraCsvViewerBase extends LyraElement<LyraCsvViewerEventMap> {}
  *   `lr-highlight-activate` on click or Enter/Space.
  * @csspart spinner - The loading status region.
  * @csspart error - The error message region.
+ * @cssprop [--lr-csv-viewer-highlight-color=var(--lr-color-brand)] - Outline color of a highlighted
+ *   cell. The active highlight sets it inline to `var(--lr-color-warning, var(--lr-color-brand))`.
  */
 export class LyraCsvViewer extends DocumentAnchorTarget(LyraCsvViewerBase) {
   static styles = [LyraElement.styles, styles, srOnly];
@@ -158,6 +160,7 @@ export class LyraCsvViewer extends DocumentAnchorTarget(LyraCsvViewerBase) {
       part="cell cell-highlight"
       role="button"
       ?data-active=${!!active}
+      style=${active ? '--lr-csv-viewer-highlight-color: var(--lr-color-warning, var(--lr-color-brand))' : ''}
       tabindex="0"
       aria-label=${primary.highlight.label || this.localize('viewerHighlightLabel')}
       @click=${activate}
@@ -277,7 +280,7 @@ export class LyraCsvViewer extends DocumentAnchorTarget(LyraCsvViewerBase) {
         const header = this.hasHeaderRow ? rows[0] : undefined;
         const body = this.hasHeaderRow ? rows.slice(1) : rows;
         const count = columns(rows);
-        content = html`<div part="sheet">${header ? this.renderRow(header, count, 'header-row', 1) : nothing}<lr-virtual-list part="rows" .items=${body} .renderItem=${(row: unknown, index: number) => this.renderRow(row as unknown[], count, 'data-row', index + 1 + headerOffset(this.hasHeaderRow))} .keyFunction=${(_item: unknown, index: number) => index} .activeId=${this.activeRowKey}></lr-virtual-list></div>`;
+        content = html`<div part="sheet">${header ? this.renderRow(header, count, 'header-row', 1) : nothing}<lr-virtual-list part="rows" exportparts="data-row:data-row, cell:cell, cell-highlight:cell-highlight" .items=${body} .renderItem=${(row: unknown, index: number) => this.renderRow(row as unknown[], count, 'data-row', index + 1 + headerOffset(this.hasHeaderRow))} .keyFunction=${(_item: unknown, index: number) => index} .activeId=${this.activeRowKey}></lr-virtual-list></div>`;
       }
     } else if (this.fetchState.kind === 'loading') content = html`<div part="spinner" role="status"><span class="sr-only">${this.localize('loadingDocument')}</span></div>`;
     else if (this.fetchState.kind === 'error') content = html`<div part="error" role="alert">${this.fetchState.message}</div>`;
