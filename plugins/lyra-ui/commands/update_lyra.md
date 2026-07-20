@@ -46,20 +46,24 @@ with the user's explicit approval, files feature requests for them. Filing is ne
    dependency, and update the project's own migration-notes doc if it keeps one (e.g.
    `docs/lyra-ui-migration.md`).
 
-6. **List genuine gaps, then ask before filing.** For anything that's still a real gap after step
-   4's verification, list it — even a missing variant or a missing CSS part is worth listing.
-   Under-listing is what quietly keeps a project on Web Awesome or hand-rolled code forever.
+6. **List genuine gaps (and any bugs or optimization ideas noticed along the way), then ask
+   before filing.** For anything that's still a real gap after step 4's verification, list it —
+   even a missing variant or a missing CSS part is worth listing. Also list any actual bug or
+   inconsistency you noticed in an existing lyra-ui component while migrating to it (not a
+   Web-Awesome-side issue), and any concrete optimization idea (bundle size, API friction). Under-
+   listing is what quietly keeps a project on Web Awesome or hand-rolled code forever.
 
-   **Filing is not automatic: list the gaps you found, and ask the user before submitting any of
-   them.** Only POST the ones the user explicitly agrees to; anything they decline stays a
-   listed-but-unfiled gap in your report, not a submission.
+   **Filing is not automatic: list everything you found, and ask the user before submitting any of
+   it.** Only POST the items the user explicitly agrees to; anything they decline stays
+   listed-but-unfiled in your report, not a submission.
 
-   Once the user has agreed, file each approved gap by POSTing it to
+   Once the user has agreed, file each approved item by POSTing it to
    `https://www.lyra-ui.com/api/v1/feature-requests` with `title`, `description`, `searched_for`
-   (the terms you tried) and `settled_for` (what you used instead) — see the `lyra-ui` skill's
-   "When no component fits, file it" section for the exact payload, the optional `name`/`email`
-   fields, and the privacy rules. Read the `matches` in each response before reporting a gap to the
-   user: it frequently names an existing component that already covers the need.
+   (the terms you tried, for a missing component) and `settled_for` (what you used instead, or the
+   workaround for a bug) — see the `lyra-ui` skill's "Report gaps, bugs, and improvement ideas"
+   section for the exact payload per report type, the optional `name`/`email` fields, and the
+   privacy rules. Read the `matches` in each response before reporting a gap to the user: it
+   frequently names an existing component that already covers the need.
 
 7. **Report back.** Summarize: what migrated in this project (grouped by component), what's still
    blocked on a Web Awesome or hand-rolled fallback and why, and — for each gap — whether it was
