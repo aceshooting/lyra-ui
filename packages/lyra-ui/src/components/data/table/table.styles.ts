@@ -41,6 +41,10 @@ export const styles = css`
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);
   }
+  [part='filter']::placeholder {
+    color: var(--lr-color-text-quiet);
+    opacity: 1;
+  }
   /* The visible spinner block. Scoped away from the skeleton-appearance status node, which reuses
      [part='loading'] but is visually hidden (.sr-only) — the placeholder rows are its visible
      affordance, so it must not also lay out an 8rem centered block. */

@@ -1,6 +1,7 @@
 import { fixture, expect, html, oneEvent } from '@open-wc/testing';
 import './command-palette.js';
 import type { LyraCommandPalette } from './command-palette.js';
+import { styles } from './command-palette.styles.js';
 
 it('opens, filters, and selects a command', async () => {
   const el = (await fixture(html`<lr-command-palette .commands=${[{ id: 'save', label: 'Save', group: 'File' }, { id: 'close', label: 'Close' }]}></lr-command-palette>`)) as LyraCommandPalette;
@@ -171,4 +172,9 @@ describe('active-command cssprop', () => {
     const el = await themed('--lr-command-palette-active-bg: rgb(0, 51, 102);');
     await expect(el).to.be.accessible();
   });
+});
+
+it("colors the search-input's placeholder and undoes Firefox's reduced default opacity", () => {
+  const css = styles.cssText.replace(/\s+/g, ' ');
+  expect(css).to.match(/\[part='input'\]::placeholder\s*\{[^}]*color:\s*var\(--lr-color-text-quiet\)[^}]*opacity:\s*1/);
 });

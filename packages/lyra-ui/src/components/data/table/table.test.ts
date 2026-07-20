@@ -2756,3 +2756,8 @@ describe('loadingAppearance="skeleton"', () => {
     await expect(el).to.be.accessible();
   });
 });
+
+it("colors the filter's placeholder and undoes Firefox's reduced default opacity", () => {
+  const css = styles.cssText.replace(/\s+/g, ' ');
+  expect(css).to.match(/\[part='filter'\]::placeholder\s*\{[^}]*color:\s*var\(--lr-color-text-quiet\)[^}]*opacity:\s*1/);
+});

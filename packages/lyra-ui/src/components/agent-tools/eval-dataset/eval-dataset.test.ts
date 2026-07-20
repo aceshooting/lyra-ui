@@ -2,6 +2,7 @@ import { fixture, expect, html, oneEvent } from '@open-wc/testing';
 import './eval-dataset.js';
 import type { LyraEvalDataset, EvalExample } from './eval-dataset.js';
 import type { LyraChip } from '../../overlays/chip/chip.class.js';
+import { styles } from './eval-dataset.styles.js';
 
 function examples(): EvalExample[] {
   return [
@@ -267,4 +268,9 @@ it('honors a `.strings` override for the search field label', async () => {
   const search = el.shadowRoot!.querySelector('[part="search-input"]')!;
   expect(search.getAttribute('aria-label')).to.equal('Rechercher');
   expect(search.getAttribute('placeholder')).to.equal('Rechercher');
+});
+
+it("colors the search-input's placeholder and undoes Firefox's reduced default opacity", () => {
+  const css = styles.cssText.replace(/\s+/g, ' ');
+  expect(css).to.match(/\[part='search-input'\]::placeholder\s*\{[^}]*color:\s*var\(--lr-color-text-quiet\)[^}]*opacity:\s*1/);
 });

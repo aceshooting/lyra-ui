@@ -62,6 +62,10 @@ export const styles = css`
     color: var(--lr-color-text);
     font: inherit;
   }
+  [part='search-input']::placeholder {
+    color: var(--lr-color-text-quiet);
+    opacity: 1;
+  }
   [part='search-input']:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);

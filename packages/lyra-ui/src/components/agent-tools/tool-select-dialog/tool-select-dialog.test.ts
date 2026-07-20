@@ -2,6 +2,7 @@ import { fixture, expect, oneEvent, html } from '@open-wc/testing';
 import './tool-select-dialog.js';
 import type { LyraToolSelectDialog, ToolSelectDialogTool } from './tool-select-dialog.js';
 import type { LyraCheckbox } from '../../forms/checkbox/checkbox.js';
+import { styles } from './tool-select-dialog.styles.js';
 
 // A stand-in for a slotted component whose real focusable target lives
 // inside its own shadow root rather than the host tag's light-DOM subtree.
@@ -622,4 +623,9 @@ it('is accessible while open with grouped, disabled, and use-defaults-locked too
   el.useDefaults = true;
   await el.updateComplete;
   await expect(el).to.be.accessible();
+});
+
+it("colors the search-input's placeholder and undoes Firefox's reduced default opacity", () => {
+  const css = styles.cssText.replace(/\s+/g, ' ');
+  expect(css).to.match(/\[part='search-input'\]::placeholder\s*\{[^}]*color:\s*var\(--lr-color-text-quiet\)[^}]*opacity:\s*1/);
 });

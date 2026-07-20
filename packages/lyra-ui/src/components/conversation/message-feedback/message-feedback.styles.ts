@@ -116,6 +116,9 @@ export const styles = css`
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);
   }
+  [part='comment']::placeholder {
+    color: var(--lr-color-text-quiet);
+  }
   [part='submit-button'] {
     align-self: flex-end;
     padding-inline: var(--lr-space-m);

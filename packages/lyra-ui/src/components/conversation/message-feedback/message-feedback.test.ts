@@ -1,6 +1,7 @@
 import { fixture, expect, html, oneEvent } from '@open-wc/testing';
 import './message-feedback.js';
 import type { LyraMessageFeedback } from './message-feedback.js';
+import { styles } from './message-feedback.styles.js';
 
 const reasons = [
   { id: 'wrong', label: 'Factually wrong' },
@@ -332,4 +333,9 @@ describe('pressed-state cssprops', () => {
     expect(getComputedStyle(up).backgroundColor).to.equal(expected.backgroundColor);
     probe.remove();
   });
+});
+
+it("colors the comment field's placeholder text instead of leaving the UA default", () => {
+  const css = styles.cssText.replace(/\s+/g, ' ');
+  expect(css).to.match(/\[part='comment'\]::placeholder\s*\{[^}]*color:\s*var\(--lr-color-text-quiet\)/);
 });

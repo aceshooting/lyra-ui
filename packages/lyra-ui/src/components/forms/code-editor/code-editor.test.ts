@@ -254,3 +254,8 @@ it('toggles data-invalid once touched and invalid', async () => {
   await el.updateComplete;
   expect(el.hasAttribute('data-invalid')).to.be.true;
 });
+
+it("colors the textarea's placeholder text instead of leaving the UA default", () => {
+  const css = styles.cssText.replace(/\s+/g, ' ');
+  expect(css).to.match(/\[part='textarea'\]::placeholder\s*\{[^}]*color:\s*var\(--lr-color-text-quiet\)/);
+});

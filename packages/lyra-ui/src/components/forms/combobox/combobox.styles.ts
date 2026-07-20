@@ -155,6 +155,10 @@ export const styles = css`
     font: inherit;
   }
 
+  [part='combobox-input']::placeholder {
+    color: var(--lr-color-text-quiet);
+  }
+
   [part='clear-button'],
   [part='expand-icon'] {
     flex: 0 0 auto;

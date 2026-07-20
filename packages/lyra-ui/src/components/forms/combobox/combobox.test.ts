@@ -2399,3 +2399,8 @@ it('clamps its floating surface width through the shared popover-viewport-clamp 
   await (el as HTMLElement & { updateComplete?: Promise<unknown> }).updateComplete;
   expect(renderedClamp(el, "[part='listbox']")).to.equal('10px');
 });
+
+it("colors the combobox-input's placeholder text instead of leaving the UA default", () => {
+  const css = styles.cssText.replace(/\s+/g, ' ');
+  expect(css).to.match(/\[part='combobox-input'\]::placeholder\s*\{[^}]*color:\s*var\(--lr-color-text-quiet\)/);
+});
