@@ -83,7 +83,10 @@ Three more package-local gates exist alongside those (again, defer to `ci.yml` a
 `package.json#scripts` for when each actually runs): `node scripts/check-source-policy.mjs` fails
 on banned source patterns (including the `localize()` literal-fallback mistake described under
 i18n below); `node scripts/check-bundle-size.mjs` bundles the published entry points after a
-build and fails on gzip-size regressions against `scripts/bundle-budgets.json`; and
+build and fails on gzip-size regressions against `scripts/bundle-budgets.json`, and also
+re-measures every per-component entry so the sizes published in `scripts/bundle-stats.json`
+(the README size badges and the lyra-ui.com hero read it) cannot go stale — regenerate both
+files with `--write-budgets`; and
 `pnpm test:visual` runs the visual-regression screenshot suite against `visual-baselines/`.
 
 ## Coding conventions (every component follows these — deviating needs a strong reason)

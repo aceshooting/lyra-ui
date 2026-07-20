@@ -29,7 +29,9 @@ jobs:
       - run: pnpm build
       # Needs dist/ from the build step above: measures the library's own
       # esbuild-bundled gzip weight (optional peers externalized) against the
-      # budgets in packages/lyra-ui/scripts/bundle-budgets.json.
+      # budgets in packages/lyra-ui/scripts/bundle-budgets.json, and re-measures every
+      # per-component entry so the sizes the README badges publish from
+      # packages/lyra-ui/scripts/bundle-stats.json cannot silently go stale.
       - run: pnpm --filter @aceshooting/lyra-ui check:bundle-size
       # Reports the same six esbuild-bundled entry points to Codecov as the `lyra-ui-dist`
       # bundle, for per-PR size deltas. The blocking weight gate is check:bundle-size above;
