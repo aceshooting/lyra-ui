@@ -1946,6 +1946,9 @@ explicit pick; if not `defaultPrevented`, the component applies the pick itself 
 active locale untouched, so a host can persist the choice first and apply it later. `blur`/`focus`
 re-dispatched from the internal trigger as bubbling, composed events.
 
+**Methods:** `focus(options?)`, `blur()`, and `click()` — all forward to the internal trigger
+button, same convention as `lr-select`'s identical trio.
+
 **Slots:** `label`, `hint`, `error`.
 
 **CSS parts:** `form-control`, `form-control-label`, `trigger`, `listbox`, `option`,
