@@ -749,6 +749,11 @@ it('disables the collapse/fullscreen icon rotate transition under reduced motion
   );
 });
 
+it("gives view-toggle's resting state a hover, without changing the pressed state's own styling", () => {
+  const css = styles.cssText.replace(/\s+/g, ' ');
+  expect(css).to.match(/\[part='view-toggle'\]:hover(?!\[)/);
+});
+
 it('applies a custom fullscreen-inset while fullscreen', async () => {
   const el = (await fixture(
     html`<lr-widget expandable fullscreen fullscreen-inset="0 0 0 240px"><p>Body</p></lr-widget>`,

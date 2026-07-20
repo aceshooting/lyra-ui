@@ -74,6 +74,10 @@ export const styles = css`
     cursor: pointer;
   }
 
+  [part='control']:hover {
+    background: var(--lr-color-brand-quiet);
+  }
+
   /* previous/next are the same rendered button as [part='control'] above (each
      button's part attribute carries both tokens, e.g. part="control previous", so
      this needs the token-matching ~= form, not =, to actually hit it) -- this

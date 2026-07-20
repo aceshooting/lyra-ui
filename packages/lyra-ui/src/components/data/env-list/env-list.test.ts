@@ -1,6 +1,7 @@
 import { fixture, expect, html, oneEvent } from '@open-wc/testing';
 import './env-list.js';
 import type { LyraEnvList } from './env-list.js';
+import { styles } from './env-list.styles.js';
 
 describe('lr-env-list', () => {
   it('defaults to revealable=true and copyable=true', async () => {
@@ -132,5 +133,11 @@ describe('lr-env-list', () => {
       expect(getComputedStyle(btn).backgroundColor).to.equal(bg);
       expect(getComputedStyle(btn).borderTopColor).to.equal(border);
     });
+  });
+
+  it('gives reveal-button and copy-button a hover state', () => {
+    const css = styles.cssText.replace(/\s+/g, ' ');
+    expect(css).to.match(/\[part='reveal-button'\]:hover/);
+    expect(css).to.match(/\[part='copy-button'\]:hover/);
   });
 });

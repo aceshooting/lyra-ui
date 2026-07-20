@@ -66,6 +66,12 @@ export const styles = css`
     border-color: var(--lr-color-brand);
     color: var(--lr-color-on-brand);
   }
+  [part='run-button']:hover {
+    filter: brightness(var(--lr-hover-brightness));
+  }
+  [part='save-button']:hover {
+    background: var(--lr-color-brand-quiet);
+  }
   [part='run-button']:disabled,
   [part='save-button']:disabled,
   [part='saved-load-button']:disabled,

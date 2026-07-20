@@ -6,6 +6,7 @@ import type {
   GraphQueryTypeOption,
   GraphQuerySavedItem,
 } from './graph-query-builder.js';
+import { styles } from './graph-query-builder.styles.js';
 
 const RELATIONSHIP_OPTIONS: GraphQueryTypeOption[] = [
   { value: 'works_for', label: 'Works for' },
@@ -563,5 +564,11 @@ describe('lr-graph-query-builder', () => {
     const maxHopsSelect = el.shadowRoot!.querySelector('[part="max-hops"]') as HTMLElement & { errorText: string };
     expect(maxHopsSelect.errorText).to.equal(el.errors['max-hops']);
     expect(maxHopsSelect.errorText).to.not.equal('');
+  });
+
+  it('gives run-button and save-button a hover state', () => {
+    const css = styles.cssText.replace(/\s+/g, ' ');
+    expect(css).to.match(/\[part='run-button'\]:hover[^{]*\{[^}]*filter:\s*brightness/);
+    expect(css).to.match(/\[part='save-button'\]:hover[^{]*\{[^}]*background:/);
   });
 });

@@ -1,6 +1,7 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import './scroller.js';
 import type { LyraScroller } from './scroller.class.js';
+import { styles } from './scroller.styles.js';
 
 describe('<lr-scroller>', () => {
   it('reports scroll edges correctly at rest under RTL (CSSOM negative-scrollLeft convention)', async () => {
@@ -136,5 +137,10 @@ describe('<lr-scroller>', () => {
     next.click();
 
     expect(capturedLeft).to.equal(42);
+  });
+
+  it('gives control a hover state', () => {
+    const css = styles.cssText.replace(/\s+/g, ' ');
+    expect(css).to.match(/\[part='control'\]:hover/);
   });
 });

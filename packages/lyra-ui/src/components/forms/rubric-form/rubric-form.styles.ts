@@ -67,6 +67,12 @@ export const styles = css`
     border-color: var(--lr-color-brand);
     color: var(--lr-color-surface);
   }
+  [part='submit']:hover {
+    filter: brightness(var(--lr-hover-brightness));
+  }
+  [part='skip']:hover {
+    background: var(--lr-color-brand-quiet);
+  }
   [part='submit']:disabled,
   [part='skip']:disabled {
     opacity: var(--lr-opacity-disabled);

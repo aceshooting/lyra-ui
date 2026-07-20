@@ -2,6 +2,7 @@ import { fixture, expect, html, oneEvent } from '@open-wc/testing';
 import { render } from 'lit';
 import './rubric-form.js';
 import type { LyraRubricForm, RubricKey } from './rubric-form.js';
+import { styles } from './rubric-form.styles.js';
 
 const KEYS: RubricKey[] = [
   { key: 'accuracy', type: 'score', label: 'Accuracy', min: 0, max: 5, step: 1, required: true },
@@ -632,5 +633,11 @@ describe('lr-rubric-form', () => {
     setTimeout(() => el.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', ctrlKey: true, bubbles: true })));
     const ev = await oneEvent(el, 'lr-submit');
     expect(ev.detail).to.deep.equal({ value: { accuracy: 5 }, itemId: 'item-1' });
+  });
+
+  it('gives submit and skip a hover state', () => {
+    const css = styles.cssText.replace(/\s+/g, ' ');
+    expect(css).to.match(/\[part='submit'\]:hover[^{]*\{[^}]*filter:\s*brightness/);
+    expect(css).to.match(/\[part='skip'\]:hover[^{]*\{[^}]*background:/);
   });
 });

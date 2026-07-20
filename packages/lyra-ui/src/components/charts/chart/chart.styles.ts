@@ -43,6 +43,7 @@ export const styles = css`
     position: absolute;
     inset-block-start: var(--lr-space-xs);
     inset-inline-end: var(--lr-space-xs);
+    font: inherit;
     font-size: var(--lr-font-size-xs);
     padding: var(--lr-size-0-15rem) var(--lr-size-0-5rem);
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
@@ -50,6 +51,9 @@ export const styles = css`
     background: var(--lr-color-surface);
     color: var(--lr-color-text);
     cursor: pointer;
+  }
+  [part='reset-zoom-button']:hover {
+    background: var(--lr-color-brand-quiet);
   }
   [part='reset-zoom-button']:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);

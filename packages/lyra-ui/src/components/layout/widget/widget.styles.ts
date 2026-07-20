@@ -91,6 +91,10 @@ export const styles = css`
     font-size: var(--lr-font-size-sm);
     cursor: pointer;
   }
+  [part='view-toggle']:hover {
+    background: var(--lr-color-brand-quiet);
+    color: var(--lr-color-text);
+  }
   /* Inline var() fallbacks rather than :host-declared properties, so a consumer can set them on any
      ancestor without a :host declaration shadowing that. ::part(view-toggle)[aria-pressed='true'] is
      invalid CSS (an attribute selector cannot follow ::part), so recoloring the pressed toggle used

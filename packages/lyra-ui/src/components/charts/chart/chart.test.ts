@@ -407,6 +407,12 @@ it('updates in place when neither `type` nor the effective `config.type` changes
   expect((el as any).chart).to.equal(instance);
 });
 
+it('gives reset-zoom-button a hover state and inherits the surrounding font', () => {
+  const css = styles.cssText.replace(/\s+/g, ' ');
+  expect(css).to.match(/\[part='reset-zoom-button'\][^{]*\{[^}]*font:\s*inherit/);
+  expect(css).to.match(/\[part='reset-zoom-button'\]:hover/);
+});
+
 it('lets `config.data` override generated data while the Chart instance picks up the override', async () => {
   const el = (await fixture(html`<lr-chart></lr-chart>`)) as LyraChart;
   el.type = 'line';

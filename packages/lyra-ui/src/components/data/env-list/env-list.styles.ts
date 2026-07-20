@@ -37,6 +37,10 @@ export const styles = css`
     padding: var(--lr-space-2xs) var(--lr-space-xs);
     cursor: pointer;
   }
+  [part='reveal-button']:hover,
+  [part='copy-button']:hover {
+    background: var(--lr-color-brand-quiet);
+  }
   [part='reveal-button'][aria-pressed='true'] {
     background: var(--lr-env-list-reveal-active-bg, var(--lr-color-brand-quiet));
     border-color: var(--lr-env-list-reveal-active-border, var(--lr-color-brand));
