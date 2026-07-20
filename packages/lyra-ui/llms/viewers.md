@@ -100,7 +100,15 @@ SFMono-Regular, Menlo, Consolas, monospace`) and `--lr-document-preview-spin-dur
 `0.8s`, stopped under reduced motion). `--lr-document-preview-progress` (default `0`) — a unitless
 0–100 number the determinate spinner's `conic-gradient` fill reads; written inline on the ring by
 the component itself from the clamped `progress` property, so overriding it only makes sense to
-repaint the fraction. Plus shared tokens
+repaint the fraction. `--lr-document-preview-active-border` (default
+`var(--lr-color-warning, var(--lr-color-brand))`) — the border color of the `[part='region-highlight']`
+matching `activeHighlightId` (image format only), deliberately distinct from the resting highlight
+border so the active region can be recolored without touching the rest. Like the library's other
+state hooks it is an inline `var()` fallback at the point of use rather than a `:host` declaration,
+so it can be set on the element or on any ancestor — `::part(region-highlight)[data-active]` is
+invalid CSS (Shadow Parts forbids an attribute selector after `::part()`), which previously left
+re-pointing the shared `--lr-color-warning`/`--lr-color-brand` tokens as the only lever, repainting
+every other element that read them. Plus shared tokens
 `--lr-color-border`, `--lr-radius`, `--lr-color-surface`, `--lr-space-s/-m/-l/-xs`,
 `--lr-color-text`, `--lr-color-text-quiet`, `--lr-color-danger`, `--lr-color-brand`,
 `--lr-color-on-brand`, `--lr-focus-ring-width/-color/-offset`, `--lr-transition-fast`.
@@ -480,6 +488,14 @@ rendered region highlight), `region-highlight` (one region highlight, `data-tone
 
 **Themeable custom properties:** `--lr-svg-viewer-max-height` (default `none`) — maximum block size
 of `[part="body"]`; also settable via the `max-height` property, which writes this token inline.
+`--lr-svg-viewer-active-border` (default `var(--lr-color-warning, var(--lr-color-brand))`) — the
+border color of the `[part='region-highlight']` matching `activeHighlightId`, distinct from the
+resting highlight border so the active region can be recolored without touching the rest. It is an
+inline `var()` fallback at the point of use rather than a `:host` declaration, so it can be set on
+the element *or on any ancestor*: `::part(region-highlight)[data-active]` is invalid CSS — Shadow
+Parts forbids an attribute selector after `::part()` — so re-pointing a shared `--lr-color-*` token,
+and repainting everything else reading it, was previously the only way. Unset, it falls back to
+exactly the tokens the rule used before.
 
 **Optional peer dependency:** `dompurify`.
 
@@ -806,6 +822,13 @@ marker).
 **Themeable custom properties:** `--lr-page-rail-height` (default `var(--lr-size-24rem)`) — block
 size of the virtualized rail.
 
+`--lr-page-rail-current-bg` (intended default `var(--lr-color-brand-quiet)`) is declared for the
+background of the `[part='page']` button matching the current `page`, but **its rule does not
+currently take effect.** Page rows are rendered into the embedded `<lr-virtual-list>`'s own shadow
+root, one boundary deeper than this component's stylesheet (and than a consuming stylesheet)
+reaches, so the declaration targeting `[part='page']` never matches a rendered row. It is documented
+here for completeness — do not rely on it to tint the current page today.
+
 ## `lr-notebook-viewer`
 
 Read-only Jupyter notebook (nbformat 4.x) renderer, composing existing components per cell.
@@ -846,6 +869,13 @@ notebook failed.
 `output` (`data-output-type`, `data-stream`), `output-toggle`, `error`, `spinner`.
 
 **Themeable custom properties:** `--lr-notebook-viewer-max-height` (default `none`).
+
+`--lr-notebook-viewer-active-bg` (intended default `var(--lr-color-brand-quiet)`) is declared for
+the background of the `[part='cell']` currently targeted by an anchor, but **its rule does not
+currently take effect.** Cells are rendered into the embedded `<lr-virtual-list>`'s own shadow root,
+one boundary deeper than this component's stylesheet (and than a consuming stylesheet) reaches, so
+the declaration targeting `[part='cell']` never matches a rendered cell. It is documented here for
+completeness — do not rely on it to tint the anchored cell today.
 
 **Optional peer deps:** `marked`+`dompurify` (markdown cells, falls back to plain text per cell),
 `shiki` (code cells, falls back to unhighlighted), `dompurify` (HTML/SVG outputs, falls back to
@@ -897,6 +927,20 @@ the resolved anchor target, `data-match`, `data-active-match`), `tag` (`data-mat
 elements), `error`, `spinner`.
 
 **Themeable custom properties:** `--lr-xml-viewer-max-height` (default `none`).
+`--lr-xml-viewer-active-match-color` (default `var(--lr-color-warning)`) — the solid outline on the
+`[part='node']` holding the *current* search match, leaving every other match on its dashed
+`--lr-color-warning` outline. It is an inline `var()` fallback at the point of use rather than a
+`:host` declaration, so it can be set on the element *or on any ancestor*:
+`::part(node)[data-active-match]` is invalid CSS — Shadow Parts forbids an attribute selector after
+`::part()` — so distinguishing the active match previously meant re-pointing the shared
+`--lr-color-warning` token, which recolored every other match (and every other warning surface)
+along with it. Unset, it falls back to that token, so rendering is unchanged.
+
+`[part='toggle']`'s glyph box stays compact (`1.25rem`) while its *interactive* box takes the shared
+minimum target size as a floor via `--lr-icon-button-size`. That token is a floor, not a fixed size,
+so lowering it never squashes the chevron below its own box — the visible glyph keeps its size while
+the hit target follows the token, and it can never fall under the accessible minimum from this
+component's own rules.
 
 ```html
 <lr-xml-viewer .xml=${payload} collapsed-depth="2" copyable

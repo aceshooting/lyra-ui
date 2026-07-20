@@ -102,7 +102,8 @@ carrying `data-display="inline"|"block"`)
 
 **Themeable custom properties:** `--lr-markdown-font-mono` (default `ui-monospace, SFMono-Regular,
 Menlo, Consolas, monospace` — the code/code-block font; component-specific since no shared
-`--lr-*` monospace token exists), plus shared tokens `--lr-space-xs/-s/-m/-l`,
+`--lr-*` monospace token exists), `--lr-code-block-tab-size` (default `2` — tab width inside a
+rendered fenced or indented `code-block`), plus shared tokens `--lr-space-xs/-s/-m/-l`,
 `--lr-color-brand-quiet`, `--lr-color-brand`, `--lr-color-border`, `--lr-color-text-quiet`,
 `--lr-radius`.
 
@@ -137,6 +138,17 @@ installed. While the optional peers are still resolving, the host carries `aria-
 cleared in `updated()` based on whether the deps have loaded) and shows the same plain-text fallback
 rendering — there's no separate loading skeleton, since the un-rendered Markdown source is already
 legible text in the meantime.
+
+**One tab width for every code surface.** `--lr-code-block-tab-size` is deliberately the same
+property name and default (`2`) that `<lr-code-block>` and `<lr-code-editor>` use, so a consumer sets
+tab width once for every code surface in the app. It is declared as a `var()` fallback **at the point
+of use, never on `:host`** — a `:host` declaration is re-stamped on every instance and shadows any
+inherited value, so a page- or container-level declaration could never reach it. This element carries
+its own copy of that fallback rather than inheriting `<lr-code-block>`'s because the two are
+**sibling** custom elements, not ancestor and descendant: no single declaration inside one of them
+can cover the other. The same value can still *look* different between the two — a markdown code
+block inherits `white-space: pre-wrap` while `<lr-code-block>` is `white-space: pre`, and tab stops
+restart at the beginning of each visual line, so a wrapped line's tabs land differently.
 
 **Known gotchas:**
 - a malformed percent-escape or lone UTF-16 surrogate in a link's raw `href` makes the internal
@@ -199,6 +211,15 @@ unhighlighted permanently, `headingAnchors: boolean = false` (attribute `heading
 
 **CSS parts:** `content`, `heading`, `paragraph`, `list`, `code-block`, `inline-code`, `link`,
 `table`, `blockquote`, `img`, `math` — identical to `<lr-markdown>`'s own parts.
+
+**Themeable custom properties:** `--lr-code-block-tab-size` (default `2` — tab width inside a
+rendered fenced or indented `code-block`), with exactly the mechanics described under
+`<lr-markdown>` above: the same property name and default that `<lr-code-block>`/`<lr-code-editor>`
+read, declared as a `var()` fallback at the point of use rather than on `:host` so a page- or
+container-level value reaches it, and carried here in its own right because this element is a
+**sibling** of `<lr-code-block>` rather than an ancestor of it. Markdown code blocks wrap
+(`white-space: pre-wrap`) while `<lr-code-block>` does not, so the same tab width can render
+differently on a wrapped line.
 
 **Optional peer deps:** `marked`, `dompurify` (both lazy-loaded, same as `<lr-markdown>`), `katex`
 (for `math`). Does *not* depend on the full `shiki` package's default entry point — only
@@ -295,6 +316,22 @@ component, and which shared token backs each role's fill is not a stable contrac
 between 4.x and 5.0.0, which silently turned one consumer's inner-surface scrim into the whole
 bubble (near-black text on `rgba(0,0,0,0.22)`, visible only by eye). These four are that stable
 contract.
+
+Two matching geometry properties cover the bubble's box:
+
+- `--lr-chat-message-bubble-padding` (default `var(--lr-space-m)`) — the bubble's padding.
+- `--lr-chat-message-bubble-radius` (default `var(--lr-radius)`) — the bubble's corner radius.
+  Bubble-only by design: `[part='collapse-button']` and `[part='retry-button']` keep reading the
+  shared `--lr-radius`, so a rounder bubble never desyncs those controls from the rest of the
+  library.
+
+**Use these instead of a `::part(bubble)` padding/radius override.** A `::part` declaration written
+in the consumer's tree outranks *every* rule inside this component's shadow tree, so a
+`::part(bubble) { padding: … }` rule silently suppresses the per-`status` treatments layered on the
+same element — `status="failed"`'s danger tint, `status="streaming"`'s border — along with the
+per-role fills above. The two properties are declared as `var()` fallbacks at the point of use and
+never on `:host`, both so they can't shadow an inherited value and so a container can set them once
+above a whole transcript rather than per message.
 
 Plus shared tokens `--lr-space-xs/-m`, `--lr-color-border`, `--lr-color-surface`,
 `--lr-color-brand-quiet`, `--lr-color-brand`, `--lr-color-text-quiet`, `--lr-color-danger`,
@@ -722,7 +759,24 @@ in-place rename `<input>`'s own `focus`, for the same reason as `blur`)
 **CSS parts:** `base`, `option`, `content`, `title`, `title-input`, `rename-button`, `excerpt`,
 `timestamp`, `actions`
 
-**Themeable custom properties:** shared tokens only — `--lr-space-xs/-s/-m`, `--lr-radius`,
+**Themeable custom properties:** `--lr-conversation-item-active-bg` (default
+`var(--lr-color-brand-quiet)`) — the row's background while `active`. `--lr-conversation-item-active-color`
+(default `var(--lr-color-text)`) — the text color of `[part='excerpt']` and `[part='timestamp']`
+while `active`. Both are declared as inline `var()` fallbacks at the point of use and never on
+`:host`, so either can be set on the element *or on any ancestor* (a thread-list wrapper, a page
+theme layer); `::part(base)[active]` is not valid CSS — Shadow Parts forbids an attribute selector
+after `::part()` — so the only previous lever was overriding the library-wide `--lr-color-brand-quiet`
+token and repainting everything else reading it. Unset, each falls back to exactly the token its rule
+used before.
+
+**These two are a contrast-sensitive pair — override them together, never one alone.** The
+`-active-color` hook exists precisely because the quiet text tone only reaches about 4.25:1 against
+the default active background; keep any override at 4.5:1 or better against it. And note that
+`[part='title']` is *not* restyled by the pair — it keeps `--lr-color-text` regardless — so a dark
+custom active background needs its own title color set alongside them, or the title drops below
+contrast while the excerpt stays legible.
+
+Plus shared tokens — `--lr-space-xs/-s/-m`, `--lr-radius`,
 `--lr-transition-fast`, `--lr-color-text/-text-quiet/-brand/-brand-quiet/-surface`,
 `--lr-focus-ring-width/-color/-offset`, `--lr-icon-button-size`.
 
@@ -1168,10 +1222,29 @@ are both set)
 **Themeable custom properties:** `--lr-code-block-max-height` (default `none` — the consumer-tunable
 scroll cap; only takes effect once `max-height` is set), `--lr-code-block-font` (default
 `ui-monospace, SFMono-Regular, Menlo, Consolas, monospace` — no shared `--lr-*` monospace
-token exists to resolve through), plus shared tokens `--lr-color-border`, `--lr-radius`,
+token exists to resolve through), `--lr-code-block-tab-size` (default `2` — tab width for the
+rendered code, applied to `[part='pre']`), `--lr-code-block-active-line-outline-color` (default
+`var(--lr-color-brand)` — the outline around the line marked active by `active-highlight-id`), plus shared tokens `--lr-color-border`, `--lr-radius`,
 `--lr-color-surface`, `--lr-space-xs/-s/-m`, `--lr-font`, `--lr-color-text-quiet`,
 `--lr-color-text`, `--lr-color-brand`/`-brand-quiet`, `--lr-transition-fast`,
 `--lr-focus-ring-width/-color/-offset`.
+
+`--lr-code-block-tab-size` carries the same default as `--lr-code-editor-tab-size`, so the editable
+and read-only code surfaces agree on what a literal tab looks like. It is declared as a `var()`
+fallback **at the point of use, not on `:host`** — a `:host` rule is re-stamped on every instance and
+shadows any inherited value, so a page- or container-level declaration could never reach it. It is
+also never written as an inline `tab-size`: `shiki` puts its own `style` attribute on the highlighted
+`<pre>`, and an inline declaration is the one thing a host override cannot beat. `<lr-markdown>` and
+`<lr-markdown-core>` carry the same fallback for their own `code-block` part because they are
+**sibling** custom elements rather than descendants of this one — no single declaration covers both.
+The identical value can still look different across the two: this component is `white-space: pre`
+while a markdown code block inherits `pre-wrap`, and tab stops restart at each visual line, so a
+wrapped line's tabs diverge.
+
+`--lr-code-block-active-line-outline-color` retints just the active line's outline and leaves every
+other `--lr-color-brand` surface in the component — the header language pill, hover states, the focus
+ring — alone. It too is an inline `var()` fallback rather than a `:host` declaration, deliberately,
+so it inherits: set it on the element, on an ancestor, or at the theme level.
 
 **Optional peer deps:** `shiki` (lazy-loaded and cached once per page by `code-loader.ts`'s
 `loadShikiHighlighter()`, which builds a single `Highlighter` seeded with the bundled `github-light`/
@@ -1297,7 +1370,12 @@ body ended; `anchor` is a `line-range` anchor covering the selected lines).
 `code`, `line-highlight`, `line-button` — identical set to `<lr-code-block>`.
 
 **Themeable custom properties:** identical to `<lr-code-block>` — `--lr-code-block-max-height`,
-`--lr-code-block-font`, plus the same shared tokens.
+`--lr-code-block-font`, `--lr-code-block-tab-size` (default `2`, applied to `[part='pre']`),
+`--lr-code-block-active-line-outline-color` (default `var(--lr-color-brand)`), plus the same shared
+tokens. Both of the last two are inline `var()` fallbacks at the point of use rather than `:host`
+declarations, so a page-, container-, or theme-level value reaches them; see `<lr-code-block>` above
+for the full rationale, including why `<lr-markdown>`/`<lr-markdown-core>` must declare the tab-size
+fallback separately.
 
 **Optional peer deps:** `shiki` (specifically its `shiki/core`, `shiki/engine/oniguruma`,
 `shiki/wasm`, and `shiki/themes/github-{light,dark}.mjs` subpaths — never `shiki`'s main entry point,
@@ -1530,6 +1608,21 @@ for a set rating).
 `commentable` is set), `reasons` (the reason-chip group), `comment` (the comment `<textarea>`), and
 `submit-button`.
 
+**Themeable custom properties:** six pressed-state hooks, three per thumb —
+`--lr-message-feedback-up-active-color` (default `var(--lr-color-success)`),
+`--lr-message-feedback-up-active-bg` (default `var(--lr-color-success-quiet)`),
+`--lr-message-feedback-up-active-border` (default `var(--lr-color-success)`), and the thumbs-down
+trio `--lr-message-feedback-down-active-color`, `--lr-message-feedback-down-active-bg`,
+`--lr-message-feedback-down-active-border` (defaulting to `var(--lr-color-danger)`,
+`var(--lr-color-danger-quiet)`, `var(--lr-color-danger)`). Each styles the glyph, background, and
+border of its thumb only while that thumb is pressed. All six are declared as inline `var()`
+fallbacks at the point of use and never on `:host`, so each can be set on the element *or on any
+ancestor* — a whole transcript's feedback controls retint from one declaration. That shape is
+required because `::part(up-button)[aria-pressed='true']` is invalid CSS (Shadow Parts forbids an
+attribute selector after `::part()`), which previously left overriding the library-wide
+`--lr-color-success`/`--lr-color-danger` tokens as the only lever, repainting every other element
+reading them. Unset, each falls back to exactly the token its rule used before.
+
 ## `lr-push-to-talk`
 
 A mic capture button owning the full `getUserMedia` + `MediaRecorder` lifecycle: permission request,
@@ -1567,7 +1660,14 @@ Blob }`, only when `timeslice-ms > 0`), `lr-record-stop` (`detail: { blob: Blob;
 (visible status text for the `requesting`/`denied`/`error`/unsupported states).
 
 **Themeable custom properties:** `--lr-push-to-talk-size` (default `var(--lr-size-3rem)`) — the
-trigger button's inline and block size.
+trigger button's inline and block size. `--lr-push-to-talk-recording-color` (default
+`var(--lr-color-danger)`) — the border and text color of `[part='trigger']` while `state` is
+`recording`; it recolors only the recording treatment and leaves every other danger-toned surface on
+the page untouched. Like the library's other state hooks it is an inline `var()` fallback at the
+point of use rather than a `:host` declaration, so it can be set on the element or on any ancestor —
+`::part(trigger)[data-state='recording']` is invalid CSS (Shadow Parts forbids an attribute selector
+after `::part()`), so re-pointing the shared `--lr-color-danger` token was previously the only way,
+and it repainted every other danger surface with it.
 
 ## `lr-transcript-feed`
 
@@ -1667,6 +1767,18 @@ only).
 Renders no messages and computes no unread state itself — the host supplies `unreadStartIndex`; no
 virtualization of its own (`lr-virtual-list`); not a generic overflow surface (`lr-scroller`); no
 message semantics (`lr-chat-message`).
+
+**Sizing in virtual mode.** `[part='scroll']` steps aside and the slotted `lr-virtual-list`'s own
+viewport becomes the real scroller, so it is given this component's full height — otherwise it would
+scroll inside `lr-virtual-list`'s `24rem` default no matter how tall the viewport is. An explicit
+`block-size` on the slotted list is what makes that resolvable: without it the list host is
+auto-height, its own base percentage chains to `auto`, and the two size each other circularly.
+`<lr-thread-list>` solves the same problem by turning the internal list's shipped `24rem` into a
+flex-basis through `::part(base)`, which is not available here — that list lives in the *consumer's*
+light DOM, and `::slotted()` cannot be followed by `::part()`. Virtual mode therefore inherits this
+component's existing requirement of a height-bounded parent, exactly as slotted mode's own
+`[part='scroll']` already does. A document-tree declaration on the list (a consumer's own rule or an
+inline style) still wins over the built-in one.
 
 ```html
 <lr-chat-viewport unread-start-index="12" @lr-follow-change=${(e) => console.log(e.detail.following)}>
@@ -1776,9 +1888,42 @@ type="search">`), `list` (the list region), `empty`, `viewport` (the actual inte
 scroll container, suitable for scrollbar styling), `row-action` (a built-in pin/archive/delete icon
 button), `pin-glyph` (the small pin indicator on a pinned row), `group-header`, `group-toggle`,
 `group-label`, `group-icon`, `row` (all exported across the internal `lr-virtual-list` shadow
-boundary), and `row-leading`/`row-content`/`row-meta`/`row-actions` (the library-owned wrappers around
+boundary), `row-wrapper` (the wrapper around `wrapRow` output, only present when `wrapRow` is set;
+row-only — group headers are never passed through `wrapRow`, so they never carry it), and
+`row-leading`/`row-content`/`row-meta`/`row-actions` (the library-owned wrappers around
 their corresponding render-hook output; inherited fonts, layout values, and theme custom properties
 reach callback-rendered descendants through these parts).
+
+Data mode additionally forwards each row `<lr-conversation-item>`'s own parts under a `row-item-`
+prefix: `row-item-base`, `row-item-option`, `row-item-leading`, `row-item-content`,
+`row-item-title`, `row-item-title-input`, `row-item-rename-button`, `row-item-excerpt`,
+`row-item-meta`, `row-item-timestamp`, `row-item-actions`.
+
+**Keep the two prefixes straight — they are different surfaces.** The `row-*` parts wrap *this*
+component's own render-callback output (`wrapRow`, `renderLeading`, `renderRowContent`,
+`renderMeta`, `renderActions`); the `row-item-*` parts are the row item's *internals*. Row density
+in particular lives in `row-item-base`'s padding and `row-item-title`'s font size, so
+`::part(row-item-base)` is the supported way to build a dense sidebar:
+
+```css
+lr-thread-list::part(row-item-base) { padding-block: 0.25rem; }
+lr-thread-list::part(row-item-title) { font-size: 0.8125rem; }
+```
+
+Do **not** reach for `::part(row) { --lr-theme-space-s: … }` instead. That is a whole-subtree
+retheme: it shrinks everything nested inside the row, including the items of a `renderActions` menu,
+which pushes their touch targets below the accessible minimum. The `row-item-*` parts exist so row
+density can be tuned without that blast radius.
+
+**Sizing:** the internal list fills whatever height this component is given, with no consumer CSS —
+`[part='viewport']` is the real scroll container, and it falls back to `lr-virtual-list`'s own `24rem`
+default only when the container has no resolvable height. This is deliberately *not* implemented by
+setting `--lr-virtual-list-height: 100%`: that percentage resolves against this host, which is a flex
+item, so in an auto-height container it chains to `auto` and the viewport either collapses to zero
+(with no rows) or grows to the full un-virtualized content height (with rows) — defeating
+virtualization in both directions. Instead the list host is made a column flex container, which turns
+the shipped `24rem` into a *flex-basis*: it grows to fill a bounded pane, shrinks below `24rem` in a
+short one, and falls back to exactly `24rem` in an auto-height container.
 
 ```html
 <lr-thread-list

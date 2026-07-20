@@ -46,7 +46,45 @@ installed, renders an empty template (see gotchas).
 Also exported from the package root:
 `languageToCountry(language: string): string | undefined` and the `LANGUAGE_TO_COUNTRY` lookup
 table (region subtag wins, e.g. `en-US` → `us`; plain `en` → `gb`; override the table per-app if you
-need different defaults).
+need different defaults), plus `localeNativeName(tag: string): string`.
+
+`localeNativeName()` returns a BCP-47 tag's **endonym** — the locale's name written in that locale
+itself (`'fr'` → `français`, `'pt-BR'` → `português (Brasil)`). That is what a language switcher
+should list, so a reader who understands none of the current UI language can still find their own.
+It derives from `Intl.DisplayNames`, so no name table ships with the library and results follow the
+browser's own ICU data; the underlying instance comes from a shared memoized cache, since a picker
+does one lookup per offered locale on every render pass. A tag with no display name resolves to the
+tag itself, and so does a structurally invalid one — `Intl.DisplayNames` throws a `RangeError` on
+those rather than falling back, and a language picker should degrade to showing the raw tag rather
+than tearing down the render. Pair it with `languageToCountry()` for the flag half of the same row.
+
+**Locale picker recipe.** A locale picker is a composition, not a component: `<lr-popover>` supplies
+the light-dismiss surface, `<lr-flag>` the country mark, `localeNativeName()` the endonym, and
+`aria-current="true"` marks the active choice. Which locales exist is the app's decision, so the app
+owns the list. Set `lang` on each row so assistive tech pronounces the endonym in its own language,
+and use `variant="compact"` at icon scale.
+
+```html
+<lr-popover placement="bottom-start">
+  <button slot="trigger">
+    <lr-flag language="fr" label="" style="height: 1rem"></lr-flag>
+    <span>français</span>
+  </button>
+  <ul role="list">
+    <!-- one <li><button lang="pt-BR" aria-current="false"> … </button></li> per offered locale -->
+  </ul>
+</lr-popover>
+```
+
+```js
+import { localeNativeName, languageToCountry } from '@aceshooting/lyra-ui';
+
+const rows = ['en', 'fr', 'de', 'pt-BR', 'ja', 'ar'].map((tag) => ({
+  tag,
+  name: localeNativeName(tag),   // endonym, e.g. "português (Brasil)"
+  country: languageToCountry(tag), // flag code for the same row
+}));
+```
 
 ```html
 <lr-flag country="fr" label="France"></lr-flag>
@@ -305,6 +343,10 @@ parsing (that's left entirely to the host).
 - `maxFileSize: number = 0` (attribute `max-file-size` — bytes; `0` disables the check)
 - `directory: boolean = false` (reflected) — enables native directory selection where supported
 - `paste: boolean = true` (reflected) — accepts files pasted into the dropzone
+- `compact: boolean = false` (reflected) — tighter dropzone padding, gap and label font for
+  constrained spaces (a toolbar, a table cell) — the same convention as `lr-empty`'s `compact`. The
+  dashed border stays; only the internal spacing shrinks. `false` (the default) keeps the full
+  `--lr-space-l` dropzone.
 - `label: string = 'Drop files here or click to browse'`
 - `accessibleLabel: string = ''` (attribute `aria-label`) — overrides `label` as the internal
   dropzone/button accessible name without changing visible copy
@@ -331,7 +373,13 @@ announces correctly.
 **CSS parts:** `base`, `input`, `status` (a visually-hidden `role="status" aria-live="polite"`
 element carrying the drag accept/reject announcement)
 
-**Themeable custom properties:** shared tokens only — `--lr-space-xs`, `--lr-space-l`,
+**Themeable custom properties:** `--lr-file-input-compact-padding` (default `var(--lr-space-s)`) —
+`[part='base']`'s padding while `compact`; `--lr-file-input-compact-gap` (default
+`var(--lr-space-2xs)`) — the gap between the dropzone's slotted children while `compact`; and
+`--lr-file-input-compact-font-size` (default `var(--lr-font-size-sm)`) — the label's font size while
+`compact`. All three apply only while `compact` is set, so they are the way to tune a dense dropzone
+without re-pointing shared spacing tokens for everything else on the page. Plus shared tokens —
+`--lr-space-xs`, `--lr-space-l`,
 `--lr-color-border`, `--lr-radius`, `--lr-color-surface`, `--lr-color-text-quiet`,
 `--lr-color-success` (drag-accept state), `--lr-color-danger` (drag-reject state),
 `--lr-focus-ring-width/-color/-offset` (`[part="base"]:focus-visible` outline),
@@ -810,8 +858,12 @@ initials text, rendered whenever neither `icon` nor `image` is).
 **Themeable custom properties:** `--lr-avatar-size` (default `2rem`, swapped to `1.5rem`/`2.5rem`
 per `size="sm"`/`"lg"`), `--lr-avatar-bg` (default `var(--lr-color-surface-alt,
 var(--lr-color-border))`, swapped per `tone`), `--lr-avatar-color` (default
-`var(--lr-color-text)`, swapped per `tone`), plus shared tokens `--lr-radius`/`-pill`,
-`--lr-font-size-sm`, `--lr-font-weight-semibold`.
+`var(--lr-color-text)`, swapped per `tone`), `--lr-avatar-font-size` (default
+`var(--lr-font-size-sm)`) — the font size of the initials fallback, and of any `em`-sized slotted
+glyph. `size` swaps it per tier too (`var(--lr-font-size-xs)` at `sm`, `var(--lr-font-size-md)` at
+`lg`), so the initials track the circle instead of staying one fixed size across every tier;
+override it on the element for a size the built-in scale doesn't cover. Plus shared tokens
+`--lr-radius`/`-pill`, `--lr-font-size-sm`, `--lr-font-weight-semibold`.
 
 **Optional peer deps:** none.
 
@@ -981,7 +1033,12 @@ under `dir="rtl"` — setting `0` or a positive length turns the stack into norm
 `--lr-avatar-group-ring-color` (default `var(--lr-color-surface)`),
 `--lr-avatar-group-ring-width` (default `var(--lr-border-width-medium)`),
 `--lr-avatar-group-badge-bg` (default `var(--lr-color-border)`, swapped per `tone`),
-`--lr-avatar-group-badge-color` (default `var(--lr-color-text)`, swapped per `tone`).
+`--lr-avatar-group-badge-color` (default `var(--lr-color-text)`, swapped per `tone`),
+`--lr-avatar-group-badge-font-size` (default `var(--lr-font-size-sm)`) — the font size of the "+N"
+badge label. `size` swaps it per tier (`var(--lr-font-size-xs)` at `sm`, `var(--lr-font-size-md)` at
+`lg`), matching `<lr-avatar>`'s own `--lr-avatar-font-size` scale so the badge and the avatars it
+caps read at the same optical weight; override it alongside `--lr-avatar-font-size` on the avatars
+themselves when tuning a custom tier.
 
 **Optional peer deps:** none.
 
@@ -1105,6 +1162,20 @@ zoom }`), `lr-rotation-change` (`detail: { rotation }`), `lr-fit-change` (`detai
 embedded `lr-zoomable-frame`), `image-wrapper`, `image`, `highlight-layer`, `highlight` (carries
 `data-tone`/`data-active`), `highlight-label`, `annotation-box`, and `error`.
 
+**Themeable custom properties:** `--lr-image-viewer-annotate-active-bg` (default
+`var(--lr-color-brand-quiet)`) and `--lr-image-viewer-annotate-active-border` (default
+`var(--lr-color-brand)`) — the background and border of `[part='annotate-toggle']` while annotation
+mode is on. The toggle carries its own glyph in `--lr-color-text`, so keep a 4.5:1 ratio against it
+when overriding the background. `--lr-image-viewer-highlight-active-color` (default
+`var(--lr-color-brand)`) — the outline of the `[part='highlight']` matching `activeHighlightId`,
+independent of the per-tone border colors, so the active box stays distinguishable whatever tone it
+carries. All three are declared as inline `var()` fallbacks at the point of use rather than on
+`:host`, so each can be set on the element *or on any ancestor*: `::part(highlight)[data-active]` is
+invalid CSS — Shadow Parts forbids an attribute selector after `::part()` — which previously left
+overriding the library-wide `--lr-color-brand`/`--lr-color-brand-quiet` tokens as the only lever,
+repainting every other element that read them. Unset, each falls back to the token its rule used
+before.
+
 ## `lr-av-player`
 
 An audio/video player built on a native `<audio>`/`<video>` element, plus a cue transcript synced to
@@ -1142,4 +1213,21 @@ found }`), `lr-search-change` (`detail: { query, matchCount, activeIndex }`), an
 
 **Themeable custom properties:** `--lr-av-player-transcript-height` (default
 `var(--lr-size-16rem)` — block size of the transcript pane; forwarded to the embedded
-`<lr-virtual-list>`'s own `--lr-virtual-list-height`).
+`<lr-virtual-list>`'s own `--lr-virtual-list-height`). `--lr-av-player-marker-active-color` (default
+`var(--lr-color-brand)`) — the outline of the `[part='timeline-marker']` matching
+`activeHighlightId`, leaving the per-tone marker fills alone. It is an inline `var()` fallback at
+the point of use rather than a `:host` declaration, so it can be set on the element or on any
+ancestor — `::part(timeline-marker)[data-active]` is invalid CSS (Shadow Parts forbids an attribute
+selector after `::part()`), so re-pointing the shared `--lr-color-brand` token was the only previous
+lever.
+
+Two further cue-state properties are declared — `--lr-av-player-cue-current-bg` (intended default
+`var(--lr-color-brand-quiet)`, the background of the `[part='cue']` the playhead is inside) and
+`--lr-av-player-cue-active-match-color` (intended default `var(--lr-color-warning)`, the outline of
+the cue holding the current search match, leaving the other matches on the shared warning token) —
+but **their rules do not currently take effect.** The transcript rows are rendered into the embedded
+`<lr-virtual-list>`'s own shadow root, one boundary deeper than this component's stylesheet (and
+than a consuming stylesheet) reaches, so the declarations targeting `[part='cue']` never match the
+rendered rows. They are documented here for completeness; do not rely on them to restyle the
+current cue or the active search match today. `--lr-av-player-marker-active-color` is unaffected —
+`[part='timeline-marker']` lives in this component's own shadow root and is live.

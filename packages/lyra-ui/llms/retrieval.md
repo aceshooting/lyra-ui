@@ -337,6 +337,15 @@ itself — `lr-entity-activate` is a request a host routes into `lr-graph`'s own
   `lr-graph-legend.types` entry shape, resolving `entity.type` to a label/color/shape for the badge
 - `communityLabel: string = ''` (attribute `community-label`) — override text for the community chip
 - `showFocusButton: boolean = true` (attribute `show-focus-button`)
+- `compact: boolean = false` (reflected) — tighter root padding and row gap for dense contexts (a
+  dossier rendered in a sidebar, a result list) — the same convention as `lr-empty`'s `compact` and
+  as this component's sibling `lr-community-card`. Purely a density knob: the border and background
+  stay. `false` (the default) keeps the full card padding.
+- `appearance: 'card' | 'plain' = 'card'` (reflected) — visual chrome, mirroring `lr-card`'s
+  `appearance` vocabulary. `'card'` (the default) keeps the bordered, filled, padded box; `'plain'`
+  removes the border, background, padding and corner radius, so a card nested inside a container
+  that already draws a border doesn't double the frame. `plain` wins over `compact` when both are
+  set — there is nothing left to tighten.
 
 **Events:** `lr-entity-activate` (`detail: { id }`, the built-in focus button was activated).
 
@@ -347,7 +356,11 @@ itself — `lr-entity-activate` is a request a host routes into `lr-graph`'s own
 `description`, `properties`, `property` (one key/value row), `degree`, `community`, `actions`,
 `focus-button`, `empty` (shown when `entity` is `null`).
 
-**Themeable custom properties:** shared tokens only; a data-driven `entity.type` color is applied as
+**Themeable custom properties:** `--lr-entity-card-compact-padding` (default `var(--lr-space-s)`) —
+`[part='base']`'s padding while `compact`; `--lr-entity-card-compact-gap` (default
+`var(--lr-space-xs)`) — the gap between `[part='base']`'s rows while `compact`. Both apply only in
+the `compact` state, so a dense card can be tuned without re-pointing shared spacing tokens for
+everything else. Otherwise shared tokens; a data-driven `entity.type` color is applied as
 sanitized inline `--lr-badge-*` overrides on the type badge only (the one "type color is
 data-driven by design" exception this library already grants graph nodes) — every other color comes
 from tokens.
@@ -577,7 +590,20 @@ activated).
 expanded, omitted when `compact`), `toggle` ("Show more"/"Show less", omitted when `compact`),
 `empty` (shown when `chunks` is empty).
 
-**Themeable custom properties:** shared tokens only.
+**Themeable custom properties:** `--lr-chunk-inspector-current-bg` (default
+`var(--lr-color-brand-quiet)`) — the background of the chunk matching `activeId`.
+`--lr-chunk-inspector-current-color` (default `var(--lr-color-text)`) — the text color of that
+chunk's `[part='score']` line. Both are inline `var()` fallbacks at the point of use rather than
+`:host` declarations, so either can be set on the element *or on any ancestor*:
+`::part(chunk)[data-active]` is invalid CSS — Shadow Parts forbids an attribute selector after
+`::part()` — so tinting the current chunk previously meant overriding the library-wide
+`--lr-color-brand-quiet` token and repainting everything else that read it.
+
+**They are a contrast-sensitive pair — override them together, never one alone.** The `-current-color`
+hook exists precisely because the quiet token it replaces only reaches about 4.24:1 against the
+current background; keep any override at 4.5:1 or better against `--lr-chunk-inspector-current-bg`.
+
+Plus shared tokens otherwise.
 
 **Optional peer deps:** none.
 
@@ -630,7 +656,19 @@ fired after every toggle including select-all).
 `lr-file-icon` type badge), `label`, `empty` (`noData` when `sources` is empty, `noMatches` when a
 filter empties the tree).
 
-**Themeable custom properties:** shared tokens only.
+**Themeable custom properties:** `--lr-source-picker-checked-bg` — the background of a fully-checked
+selection control: the `select-all` pill (whose resting default is `var(--lr-color-brand-quiet)`) and
+a fully-selected entry's `[part='checkbox']` (whose resting default is `var(--lr-color-brand)`). The
+two keep their distinct defaults while it is unset; setting it unifies both.
+`--lr-source-picker-checked-border` (default `var(--lr-color-brand)`) — the border color of every
+checked *or* mixed selection control. `--lr-source-picker-mixed-bg` (default
+`color-mix(in srgb, var(--lr-color-brand) 50%, var(--lr-color-surface))`) — the background of a
+partially-selected entry's `[part='checkbox']`, so a tri-state folder reads as distinct from a fully
+selected one. All three are inline `var()` fallbacks at the point of use rather than `:host`
+declarations, so each can be set on the element *or on any ancestor*:
+`::part(checkbox)[aria-checked='true']` is invalid CSS — Shadow Parts forbids an attribute selector
+after `::part()` — which previously left re-pointing the library-wide `--lr-color-brand` token as
+the only lever, repainting every other brand surface with it. Plus shared tokens otherwise.
 
 **Optional peer deps:** none.
 
@@ -889,6 +927,15 @@ while collapsed).
 - `page?: string | number` — optional page reference, e.g. `12` or `"iv"`, rendered as-is (never
   parsed/validated as a number), appended to the title as `" — p. {page}"`.
 - `href?: string` — optional URL, echoed back (unopened) in `lr-open`'s detail.
+- `compact: boolean = false` (reflected) — tighter root padding and row gap, for the dense citation
+  lists these cards usually render in — the same convention as `lr-empty`'s `compact`. Purely a
+  density knob: the border and background stay. `false` (the default) keeps the full card padding.
+- `appearance: 'card' | 'plain' = 'card'` (reflected) — visual chrome, mirroring `lr-card`'s
+  `appearance` vocabulary. `'card'` (the default) keeps the bordered, filled, padded box; `'plain'`
+  removes the border, background, padding and corner radius, so a card inside a `<lr-source-list>`
+  (or any container already drawing its own border/dividers) doesn't double the frame. `plain` wins
+  over `compact` when both are set — nothing left to tighten. The title and toggle keep their brand
+  color and hover underline under `plain`, since neither ever depended on the card chrome.
 
 **Events:**
 - `lr-expand` (`detail: { sourceId: string; expanded: boolean }`) — the per-card "Show
@@ -909,7 +956,11 @@ behind the "Show more"/"Show less" toggle — when left empty, no toggle renders
 (wrapper around the `full` slot, `hidden` while collapsed), `toggle` (the "Show more"/"Show less"
 button — only rendered when the `full` slot has content).
 
-**Themeable custom properties:** shared tokens only — `--lr-color-border`, `--lr-color-surface`,
+**Themeable custom properties:** `--lr-source-card-compact-padding` (default `var(--lr-space-xs)`) —
+`[part='base']`'s padding while `compact`; `--lr-source-card-compact-gap` (default
+`var(--lr-space-2xs)`) — the gap between `[part='base']`'s rows while `compact`. Both apply only in
+the `compact` state, so a dense citation list can be tuned without re-pointing shared spacing tokens
+elsewhere. Plus shared tokens — `--lr-color-border`, `--lr-color-surface`,
 `--lr-color-text` / `-text-quiet`, `--lr-color-brand`, `--lr-radius`, `--lr-space-xs`/`-s`,
 `--lr-focus-ring-*`.
 
@@ -1367,7 +1418,16 @@ virtualized — `::part(row)` reaches it either way), `group-header` (exported f
 `selectable` is false), `row-body` (carries `data-selected`), `metadata` (a `<dl>`; omitted when the
 chunk has none or while `presentation="compact"`), `metadata-entry`, `load-more-row`, `load-more`.
 
-**Themeable custom properties:** shared tokens only.
+**Themeable custom properties:** `--lr-retrieval-results-selected-border` (default
+`var(--lr-color-brand)`) — the inline-start border color marking a selected `[part='row-body']`. A
+border rather than a fill by design: the row's own text (the nested chunk inspector's quiet-toned
+score line in particular) is sized and colored for the page's default surface, and a tinted
+background can drop it below the required contrast ratio, while a border-only indicator carries no
+such risk — so recoloring this hook is contrast-safe. It is an inline `var()` fallback at the point
+of use rather than a `:host` declaration, so it can be set on the element *or on any ancestor*:
+`::part(row-body)[data-selected]` is invalid CSS — Shadow Parts forbids an attribute selector after
+`::part()` — which previously left re-pointing the library-wide `--lr-color-brand` token as the only
+lever, repainting every other brand surface with it. Plus shared tokens otherwise.
 
 **Optional peer deps:** none.
 
@@ -1478,7 +1538,14 @@ no stage has evidence), `evidence-row` (omitted for a stage with no evidence), `
 `evidence-metadata` (a `<dl>`), `evidence-metadata-row` (one key/value pair), `evidence-metadata-key`
 (`<dt>`), `evidence-metadata-value` (`<dd>`).
 
-**Themeable custom properties:** shared tokens only.
+**Themeable custom properties:** `--lr-retrieval-trace-active-border` (default
+`var(--lr-color-brand)`) — the border color of the `[part='evidence-row']` whose stage matches
+`activeStageId`, leaving every other row on the resting border token. It is an inline `var()`
+fallback at the point of use rather than a `:host` declaration, so it can be set on the element *or
+on any ancestor*: `::part(evidence-row)[data-active]` is invalid CSS — Shadow Parts forbids an
+attribute selector after `::part()` — so marking the active stage previously meant overriding the
+library-wide `--lr-color-brand` token and repainting every other brand surface with it. Unset, it
+falls back to that token, so rendering is unchanged. Plus shared tokens otherwise.
 
 **Optional peer deps:** none.
 
