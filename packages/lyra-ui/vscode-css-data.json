@@ -9,10 +9,31 @@
       }
     },
     {
+      "name": "--lr-agent-run-compact-gap",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-agent-run>`** (default: `var(--lr-space-s)`) — Gap between `[part=\"base\"]`'s header and body while `compact`."
+      }
+    },
+    {
+      "name": "--lr-agent-run-compact-padding",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-agent-run>`** (default: `var(--lr-space-s)`) — `[part=\"base\"]` padding while `compact`."
+      }
+    },
+    {
       "name": "--lr-agent-run-spin",
       "description": {
         "kind": "markdown",
         "value": "**`<lr-agent-run>`** (default: `1s linear`) — Current-step icon spin animation duration and timing."
+      }
+    },
+    {
+      "name": "--lr-agent-trace-handoff-active-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-agent-trace>`** (default: `var(--lr-color-brand-quiet)`) — Background of the active (`activeSpanId`) handoff quick-jump entry. Shadow Parts forbids an attribute selector after `::part()`, so the active entry could otherwise only be restyled by hijacking the library-wide `--lr-color-brand-quiet` token."
       }
     },
     {
@@ -72,6 +93,20 @@
       }
     },
     {
+      "name": "--lr-app-rail-item-current-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-app-rail-item>`** (default: `var(--lr-color-brand-quiet)`) — Background of the `active`/`aria-current=\"page\"` item. Scoped to `[aria-current='page']` only and declared as an inline `var()` fallback (never on `:host`), so setting it on the element or an ancestor recolors only the current item without hijacking the library-wide `--lr-color-brand-quiet` token."
+      }
+    },
+    {
+      "name": "--lr-app-rail-item-current-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-app-rail-item>`** (default: `var(--lr-color-brand)`) — Text/icon color of the `active`/`aria-current=\"page\"` item."
+      }
+    },
+    {
       "name": "--lr-app-rail-mobile-width",
       "description": {
         "kind": "markdown",
@@ -90,6 +125,20 @@
       "description": {
         "kind": "markdown",
         "value": "**`<lr-app-rail>`** (default: `var(--lr-size-15rem)`) — The inline rail's width in `'full'` mode. Overridden by an inline width while a `resizable` rail has an explicit `railWidthPx`."
+      }
+    },
+    {
+      "name": "--lr-artifact-panel-view-active-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-artifact-panel>`** (default: `var(--lr-color-brand-quiet)`) — Background of the pressed (active) preview/code toggle button."
+      }
+    },
+    {
+      "name": "--lr-artifact-panel-view-active-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-artifact-panel>`** (default: `var(--lr-color-brand)`) — Text color of the pressed (active) preview/code toggle button. Restyling the pressed state otherwise requires overriding the library-wide brand tokens, since `::part(view-button)[aria-pressed]` is invalid CSS."
       }
     },
     {
@@ -163,6 +212,27 @@
       }
     },
     {
+      "name": "--lr-av-player-cue-active-match-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-av-player>`** (default: `var(--lr-color-warning)`) — Outline color of the `[part=\"cue\"]` holding the current search match, leaving the other matches' dashed outline on the shared warning token."
+      }
+    },
+    {
+      "name": "--lr-av-player-cue-current-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-av-player>`** (default: `var(--lr-color-brand-quiet)`) — Background of the `[part=\"cue\"]` the playhead is currently inside."
+      }
+    },
+    {
+      "name": "--lr-av-player-marker-active-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-av-player>`** (default: `var(--lr-color-brand)`) — Outline color of the `[part=\"timeline-marker\"]` matching `activeHighlightId`."
+      }
+    },
+    {
       "name": "--lr-av-player-transcript-height",
       "description": {
         "kind": "markdown",
@@ -184,6 +254,13 @@
       }
     },
     {
+      "name": "--lr-avatar-font-size",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-avatar>`** (default: `var(--lr-font-size-sm)`) — Font size of the initials fallback (and of any `em`-sized slotted glyph). `size` swaps it to `var(--lr-font-size-xs)` (`sm`) or `var(--lr-font-size-md)` (`lg`), so the initials track the circle instead of staying at one fixed size across every tier."
+      }
+    },
+    {
       "name": "--lr-avatar-group-avatar-size",
       "description": {
         "kind": "markdown",
@@ -202,6 +279,13 @@
       "description": {
         "kind": "markdown",
         "value": "**`<lr-avatar-group>`** (default: `var(--lr-color-text)`) — Overflow badge text color. Tone-driven; see `tone`."
+      }
+    },
+    {
+      "name": "--lr-avatar-group-badge-font-size",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-avatar-group>`** (default: `var(--lr-font-size-sm)`) — Font size of the \"+N\" badge label. `size` swaps it to `var(--lr-font-size-xs)` (`sm`) or `var(--lr-font-size-md)` (`lg`), matching `<lr-avatar>`'s own `--lr-avatar-font-size` scale so the badge and the avatars it caps read at the same optical weight."
       }
     },
     {
@@ -254,6 +338,13 @@
       }
     },
     {
+      "name": "--lr-breadcrumb-current-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-breadcrumb-item>`** (default: `var(--lr-color-text-quiet)`) — Text color of the current-page item (`current`/`aria-current=\"page\"`). Declared as an inline `var()` fallback (never on `:host`), so setting it on the element or an ancestor recolors only the current item without hijacking the library-wide `--lr-color-text-quiet` token."
+      }
+    },
+    {
       "name": "--lr-browser-frame-aspect-ratio",
       "description": {
         "kind": "markdown",
@@ -303,6 +394,13 @@
       }
     },
     {
+      "name": "--lr-button-font-size",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-button>`** (default: `var(--lr-font-size-m)`) — Font size of the internal button, re-assigned per `size` tier (the default is the `m` tier's value). `appearance=\"link\"` ignores it and inherits the ambient font instead."
+      }
+    },
+    {
       "name": "--lr-button-group-gap",
       "description": {
         "kind": "markdown",
@@ -310,10 +408,24 @@
       }
     },
     {
+      "name": "--lr-button-height",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-button>`** — Exact height of the internal button. **Undeclared by default** — so the button keeps the active tier's `min-block-size` floor and an `auto` height, exactly as before. Set it (e.g. to pin the button to a fixed toolbar row) to both floor *and* cap the height. Never declare it as `auto`: a declared value wins over the `var()` fallback arm and would make every tier's floor dead code. `appearance=\"link\"` ignores it."
+      }
+    },
+    {
       "name": "--lr-button-hover-brightness",
       "description": {
         "kind": "markdown",
         "value": "**`<lr-button>`** (default: `1.08`) — `filter: brightness()` multiplier applied while hovering a non-disabled button."
+      }
+    },
+    {
+      "name": "--lr-button-min-height",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-button>`** (default: `var(--lr-button-size-m)`) — The active tier's `min-block-size` floor. Re-assigned per `size` tier to that tier's own `--lr-button-size-*` token, and used as the fallback when `--lr-button-height` is unset."
       }
     },
     {
@@ -328,6 +440,27 @@
       "description": {
         "kind": "markdown",
         "value": "**`<lr-button>`** (default: `var(--lr-color-border-strong)`) — Border color of `appearance=\"outlined\"`, which overrides `--lr-button-border`."
+      }
+    },
+    {
+      "name": "--lr-button-outlined-fill",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-button>`** (default: `transparent`) — Background of `appearance=\"outlined\"`. Transparent by default; set it to tint the button (e.g. a faint surface wash behind the outline) without a `::part(base)` rule. Like `--lr-button-quiet-*`, it is deliberately *not* swapped per `variant`. Note that the `:hover` `filter: brightness()` applies to whatever fill is set, so a tinted outlined button now visibly brightens on hover where a transparent one did not."
+      }
+    },
+    {
+      "name": "--lr-button-padding-block",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-button>`** (default: `var(--lr-space-xs)`) — Block padding of the internal button, re-assigned per `size` tier (the default is the `m` tier's value). Override it to retune a tier without a `::part(base)` rule; `appearance=\"link\"` ignores it (it renders with zero padding)."
+      }
+    },
+    {
+      "name": "--lr-button-padding-inline",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-button>`** (default: `var(--lr-space-m)`) — Inline padding of the internal button, re-assigned per `size` tier (the default is the `m` tier's value). `appearance=\"link\"` ignores it."
       }
     },
     {
@@ -411,7 +544,7 @@
       "name": "--lr-calendar-day-min-block-size-narrow",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-calendar>`** (default: `4rem`) — Minimum block size of a day cell once the host is narrower than 28rem."
+        "value": "**`<lr-calendar>`** (default: `var(--lr-size-4rem)`) — Minimum block size of a day cell once the host is narrower than 28rem."
       }
     },
     {
@@ -440,6 +573,20 @@
       "description": {
         "kind": "markdown",
         "value": "**`<lr-callout>`** (default: `var(--lr-color-text)`) — The callout's text color. Each non-neutral `variant` sets it to that variant's loud color."
+      }
+    },
+    {
+      "name": "--lr-carousel-indicator-current-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-carousel>`** (default: `var(--lr-color-brand-quiet)`) — Background of the current slide's indicator dot (`[aria-current=\"true\"]`). Declared as an inline `var()` fallback (never on `:host`), so setting it on the element or an ancestor recolors only the current indicator without hijacking the library-wide `--lr-color-brand-quiet` token."
+      }
+    },
+    {
+      "name": "--lr-carousel-indicator-current-border-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-carousel>`** (default: `var(--lr-color-brand)`) — Border color of the current slide's indicator dot."
       }
     },
     {
@@ -499,6 +646,20 @@
       }
     },
     {
+      "name": "--lr-chat-message-bubble-padding",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-chat-message>`** (default: `var(--lr-space-m)`) — Bubble padding. Prefer this over a `::part(bubble)` padding override: an outer-tree `::part` declaration outranks every rule in this shadow tree, which silently suppresses the per-`status` and per-role bubble styling below it."
+      }
+    },
+    {
+      "name": "--lr-chat-message-bubble-radius",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-chat-message>`** (default: `var(--lr-radius)`) — Bubble corner radius. Bubble-only by design — `collapse-button` and `retry-button` keep reading the shared `--lr-radius`, so a rounder bubble never desyncs the controls from the rest of the library."
+      }
+    },
+    {
       "name": "--lr-chat-message-max-width",
       "description": {
         "kind": "markdown",
@@ -517,6 +678,13 @@
       "description": {
         "kind": "markdown",
         "value": "**`<lr-chat-message>`** (default: `var(--lr-color-text)`) — Bubble text color for `data-role=\"user\"`."
+      }
+    },
+    {
+      "name": "--lr-checkbox-label-indent",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-checkbox>`** (default: `calc(min(var(--lr-icon-button-size), 1.75rem) + var(--lr-space-s))`) — The inline distance from the control's start edge to the start of the label text, i.e. the box's own floor plus the gap next to it. Published so a consumer composing per-option hint text under the label can align it without re-deriving that formula from the shadow styles, and used as the source of the real gap so the two cannot drift. Setting it on the element (or on `lr-checkbox` in your own stylesheet) moves the label; because custom properties inherit down and not sideways, it is *not* readable from a sibling node in your tree — align a sibling by computing the same formula from `--lr-theme-icon-button-size` and `--lr-theme-space-s`, which you control."
       }
     },
     {
@@ -562,10 +730,24 @@
       }
     },
     {
+      "name": "--lr-chip-height",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-chip>`** — Exact block size of the chip. Undeclared by default, so the chip grows to fit its content (floored by `--lr-chip-min-height` when interactive). Set it to pin a fixed height. A value below the 24px interactive target is for non-interactive chips only."
+      }
+    },
+    {
       "name": "--lr-chip-icon-size",
       "description": {
         "kind": "markdown",
         "value": "**`<lr-chip>`** (default: `var(--lr-font-size-sm)`) — Font size of the `icon` slot wrapper. Each `size` sets it to that step's icon size."
+      }
+    },
+    {
+      "name": "--lr-chip-min-height",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-chip>`** (default: `var(--lr-size-1-5rem)`) — Minimum block size of an interactive (`removable`/`toggleable`) chip's tap target. `size` keeps `2xs`/`xs`/`s`/`m` at the `1.5rem` (24px) WCAG 2.2 SC 2.5.8 minimum and raises `l` to `var(--lr-size-1-75rem)` and `xl` to `var(--lr-size-2rem)`. Non-interactive display chips are unaffected by this floor."
       }
     },
     {
@@ -597,6 +779,20 @@
       }
     },
     {
+      "name": "--lr-chunk-inspector-current-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-chunk-inspector>`** (default: `var(--lr-color-brand-quiet)`) — Background of the chunk matching `activeId`. **Contrast-sensitive:** paired with `--lr-chunk-inspector-current-color`, which has to keep a 4.5:1 ratio against it."
+      }
+    },
+    {
+      "name": "--lr-chunk-inspector-current-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-chunk-inspector>`** (default: `var(--lr-color-text)`) — Text color of the current chunk's `[part=\"score\"]` line. **Contrast-sensitive:** the quiet token it replaces only reaches ~4.24:1 against the current background, so override this together with `--lr-chunk-inspector-current-bg`, never alone."
+      }
+    },
+    {
       "name": "--lr-citation-badge-accent",
       "description": {
         "kind": "markdown",
@@ -618,6 +814,13 @@
       }
     },
     {
+      "name": "--lr-code-block-active-line-outline-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-code-block>`** (default: `var(--lr-color-brand)`) — Outline color of the line marked active by `active-highlight-id`. Retints just that outline, leaving every other `--lr-color-brand` surface in the component (header pill, hover states, focus ring) alone. Inherits, so it can also be set on an ancestor or at the theme level.\n\n**`<lr-code-block-core>`** (default: `var(--lr-color-brand)`) — Outline color of the line marked active by `active-highlight-id`, leaving every other `--lr-color-brand` surface in the component alone."
+      }
+    },
+    {
       "name": "--lr-code-block-font",
       "description": {
         "kind": "markdown",
@@ -629,6 +832,13 @@
       "description": {
         "kind": "markdown",
         "value": "**`<lr-code-block>`** (default: `none`) — Scroll cap applied to `body`. The `max-height` attribute, when set, writes this same property inline on `body` and therefore wins."
+      }
+    },
+    {
+      "name": "--lr-code-block-tab-size",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-code-block>`** (default: `2`) — Tab width for the rendered code, applied to `pre`. Same default as `--lr-code-editor-tab-size`, so the editable and read-only code surfaces agree; `lr-markdown`/`lr-markdown-core` declare the same token for their own `code-block` part (they are sibling elements, so they cannot inherit this one). Read as a token and never written inline, so a host override survives shiki's own inline `style` on the highlighted `pre`. The default is a `var()` fallback at the point of use rather than a `:host` declaration, so it inherits: set it on the element, a container, or `:root` and it reaches every code surface below. The markdown surface wraps (`white-space: pre-wrap`) while this one does not, so the same value can look different on a wrapped line, where tab stops restart.\n\n**`<lr-code-block-core>`** (default: `2`) — Tab width for the rendered code, applied to `pre`. Shared with `lr-code-block` (this component reuses its stylesheet), `lr-code-editor`, and the markdown viewers' own `code-block` part, so every code surface agrees on a tab's width.\n\n**`<lr-markdown>`, `<lr-markdown-core>`** (default: `2`) — Tab width for a rendered fenced/indented `code-block`. Deliberately the same token (and default) `lr-code-block` and `lr-code-editor` use, so a consumer sets one tab width for every code surface — it is declared here rather than inherited because `lr-code-block` is a sibling element, not an ancestor. A markdown code block wraps (`white-space: pre-wrap`) while `lr-code-block` does not, so the same value can render differently on a wrapped line, where tab stops restart."
       }
     },
     {
@@ -681,10 +891,17 @@
       }
     },
     {
+      "name": "--lr-combobox-trigger-height",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-combobox>`** — Exact input-container height. Unset by default, which leaves `--lr-combobox-trigger-min-height` as a floor only; set it to a length to both floor and cap the row (e.g. to pixel-match `<lr-input>`/`<lr-select>` in the same toolbar). Because it is never declared by the component itself, it can be set from an ancestor or an outer-tree rule as well as inline on the element. Intended for a single-row combobox: in `multiple` mode a tag row long enough to wrap overflows the pinned box visibly (nothing is clipped or made unreachable), so leave it unset there."
+      }
+    },
+    {
       "name": "--lr-combobox-trigger-min-height",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-combobox>`** — Minimum input-container block size."
+        "value": "**`<lr-combobox>`** — Minimum input-container block size, scaled by `size`."
       }
     },
     {
@@ -692,6 +909,13 @@
       "description": {
         "kind": "markdown",
         "value": "**`<lr-combobox>`** — Padding inside the input container."
+      }
+    },
+    {
+      "name": "--lr-command-palette-active-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-command-palette>`** (default: `var(--lr-color-brand-quiet)`) — Background of the active (keyboard-highlighted, `data-active=\"true\"`) command row. Declared as an inline `var()` fallback (never on `:host`), so setting it on the element or an ancestor recolors only the active row without hijacking the library-wide `--lr-color-brand-quiet` token."
       }
     },
     {
@@ -737,6 +961,41 @@
       }
     },
     {
+      "name": "--lr-confirm-bar-compact-background",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-confirm-bar>`** (default: `transparent`) — Background of `[part='base']` while `compact`."
+      }
+    },
+    {
+      "name": "--lr-confirm-bar-compact-border",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-confirm-bar>`** (default: `none`) — Border of `[part='base']` while `compact`. Accepts any `border` shorthand."
+      }
+    },
+    {
+      "name": "--lr-confirm-bar-compact-gap",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-confirm-bar>`** (default: `var(--lr-space-s)`) — Gap between the row's items while `compact`."
+      }
+    },
+    {
+      "name": "--lr-confirm-bar-compact-padding",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-confirm-bar>`** (default: `0`) — Padding of `[part='base']` while `compact`. Accepts any padding shorthand."
+      }
+    },
+    {
+      "name": "--lr-confirm-bar-compact-radius",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-confirm-bar>`** (default: `0`) — Border radius of `[part='base']` while `compact` (only visible once `--lr-confirm-bar-compact-border`/`-background` are set)."
+      }
+    },
+    {
       "name": "--lr-contact-viewer-max-height",
       "description": {
         "kind": "markdown",
@@ -755,6 +1014,20 @@
       "description": {
         "kind": "markdown",
         "value": "**`<lr-control-group>`** (default: `var(--lr-space-xs)`) — Gap between grouped controls."
+      }
+    },
+    {
+      "name": "--lr-conversation-item-active-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-conversation-item>`** (default: `var(--lr-color-brand-quiet)`) — Background of the row while `active`. **Contrast-sensitive:** it is one half of a documented WCAG-AA pair — the active row's text is sized/toned for this background, so an override has to keep at least a 4.5:1 ratio against `--lr-conversation-item-active-color` (excerpt/timestamp) and against `--lr-color-text` (the title, which is not restyled by the pair)."
+      }
+    },
+    {
+      "name": "--lr-conversation-item-active-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-conversation-item>`** (default: `var(--lr-color-text)`) — Text color of `[part=\"excerpt\"]` and `[part=\"timestamp\"]` while `active`. **Contrast-sensitive:** it exists precisely because `--lr-color-text-quiet` only reaches ~4.25:1 against the active background; override it together with `--lr-conversation-item-active-bg`, never alone."
       }
     },
     {
@@ -779,6 +1052,13 @@
       }
     },
     {
+      "name": "--lr-data-grid-row-selected-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-data-grid>`** (default: `var(--lr-color-brand-quiet)`) — Background of the selected row's cells. Shadow Parts forbids an attribute selector after `::part()`, so `::part(row)[aria-selected]` is invalid CSS and the selected row could otherwise only be restyled by hijacking the library-wide `--lr-color-brand-quiet` token."
+      }
+    },
+    {
       "name": "--lr-dataset-viewer-highlight-color",
       "description": {
         "kind": "markdown",
@@ -790,6 +1070,20 @@
       "description": {
         "kind": "markdown",
         "value": "**`<lr-dataset-viewer>`** (default: `none`) — Maximum block size of `[part=\"body\"]` before it scrolls internally. The `maxHeight` property sets this token inline on `[part=\"base\"]`."
+      }
+    },
+    {
+      "name": "--lr-date-input-control-height",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-date-input>`** — Exact block size of the input row. Undeclared by default, so the row grows to fit its content (floored by `--lr-date-input-control-min-height`). Set it to pin a fixed height; the calendar toggle keeps its own 24x24 touch target even when this pins a shorter row."
+      }
+    },
+    {
+      "name": "--lr-date-input-control-min-height",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-date-input>`** (default: `var(--lr-size-2-5rem)`) — Minimum block size of the input row, scaled by `size` to mirror `lr-input`'s own min-height scale. Each default sits below the row's transitively-pinned height, so it is dead until a consumer raises it -- the unset render is unchanged."
       }
     },
     {
@@ -853,6 +1147,13 @@
       "description": {
         "kind": "markdown",
         "value": "**`<lr-document-compare>`** (default: `var(--lr-size-24rem)`) — Maximum block size of a side-by-side pane before it scrolls internally."
+      }
+    },
+    {
+      "name": "--lr-document-preview-active-border",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-document-preview>`** (default: `var(--lr-color-warning, var(--lr-color-brand))`) — Border color of the `[part=\"region-highlight\"]` matching `activeHighlightId` (image format only). Distinct from the resting highlight border."
       }
     },
     {
@@ -933,6 +1234,13 @@
       }
     },
     {
+      "name": "--lr-emoji-picker-active-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-emoji-picker>`** (default: `var(--lr-color-brand-quiet)`) — Background of the keyboard-active (`data-active`) **and** hovered emoji button — the two share a single rule, so this one hook retints both consistently. Declared as an inline `var()` fallback (never on `:host`), so setting it on the element or an ancestor recolors only the emoji highlight without hijacking the library-wide `--lr-color-brand-quiet` token."
+      }
+    },
+    {
       "name": "--lr-emoji-picker-gap",
       "description": {
         "kind": "markdown",
@@ -968,6 +1276,20 @@
       }
     },
     {
+      "name": "--lr-entity-card-compact-gap",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-entity-card>`** (default: `var(--lr-space-xs)`) — Gap between `[part=\"base\"]`'s rows while `compact`."
+      }
+    },
+    {
+      "name": "--lr-entity-card-compact-padding",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-entity-card>`** (default: `var(--lr-space-s)`) — `[part=\"base\"]` padding while `compact`."
+      }
+    },
+    {
       "name": "--lr-entity-chip-bg",
       "description": {
         "kind": "markdown",
@@ -989,10 +1311,45 @@
       }
     },
     {
+      "name": "--lr-env-list-reveal-active-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-env-list>`** (default: `var(--lr-color-brand-quiet)`) — Background of a pressed (revealed) reveal toggle."
+      }
+    },
+    {
+      "name": "--lr-env-list-reveal-active-border",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-env-list>`** (default: `var(--lr-color-brand)`) — Border color of a pressed (revealed) reveal toggle. Restyling the pressed state otherwise requires overriding the library-wide brand tokens, since `::part(reveal-button)[aria-pressed]` is invalid CSS."
+      }
+    },
+    {
       "name": "--lr-file-icon-size",
       "description": {
         "kind": "markdown",
         "value": "**`<lr-file-icon>`** (default: `var(--lr-size-2rem)`) — Inline/block size of the format badge."
+      }
+    },
+    {
+      "name": "--lr-file-input-compact-font-size",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-file-input>`** (default: `var(--lr-font-size-sm)`) — Label font size while `compact`."
+      }
+    },
+    {
+      "name": "--lr-file-input-compact-gap",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-file-input>`** (default: `var(--lr-space-2xs)`) — Gap between the dropzone's slotted children while `compact`."
+      }
+    },
+    {
+      "name": "--lr-file-input-compact-padding",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-file-input>`** (default: `var(--lr-space-s)`) — `[part=\"base\"]` padding while `compact`."
       }
     },
     {
@@ -1031,6 +1388,13 @@
       }
     },
     {
+      "name": "--lr-flow-canvas-node-current-outline-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-flow-canvas>`** (default: `var(--lr-color-brand)`) — Outline color of the current (`aria-current`) node. Shadow Parts forbids an attribute selector after `::part()`, so the current node could otherwise only be restyled by hijacking the library-wide `--lr-color-brand` token."
+      }
+    },
+    {
       "name": "--lr-flow-minimap-block-size",
       "description": {
         "kind": "markdown",
@@ -1049,6 +1413,13 @@
       "description": {
         "kind": "markdown",
         "value": "**`<lr-flow-node>`** (default: `calc(var(--lr-size-10rem) + var(--lr-size-1rem))`) — Minimum card inline size."
+      }
+    },
+    {
+      "name": "--lr-flow-node-selected-border",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-flow-node>`** (default: `var(--lr-color-brand)`) — Border color of the card while `selected`. Overriding the selection color otherwise requires hijacking the library-wide `--lr-color-brand` token."
       }
     },
     {
@@ -1188,7 +1559,7 @@
       "name": "--lr-icon-button-size",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-icon-button>`** (default: `2.5rem`) — Inline and block size of the native button. A library-wide token (declared on `:root` by `tokens.styles.ts`, and the shared minimum tappable size several other components size their icon controls against), so overriding it globally resizes all of them together."
+        "value": "**`<lr-icon-button>`** (default: `2.5rem`) — Minimum tappable inline and block size of the native button — a **floor**, not a fixed size: content larger than it grows the button and keeps its own aspect ratio, while a small glyph pads out to it. A library-wide token (declared on `:root` by `tokens.styles.ts`, and the shared minimum tappable size several other components size their icon controls against), so overriding it globally resizes all of them together."
       }
     },
     {
@@ -1199,10 +1570,38 @@
       }
     },
     {
+      "name": "--lr-image-viewer-annotate-active-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-image-viewer>`** (default: `var(--lr-color-brand-quiet)`) — Background of `[part=\"annotate-toggle\"]` while annotation mode is on. The toggle carries its own glyph in `--lr-color-text`, so keep a 4.5:1 ratio against it."
+      }
+    },
+    {
+      "name": "--lr-image-viewer-annotate-active-border",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-image-viewer>`** (default: `var(--lr-color-brand)`) — Border color of `[part=\"annotate-toggle\"]` while annotation mode is on."
+      }
+    },
+    {
+      "name": "--lr-image-viewer-highlight-active-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-image-viewer>`** (default: `var(--lr-color-brand)`) — Outline color of the `[part=\"highlight\"]` matching `activeHighlightId`, independent of the per-tone border colors."
+      }
+    },
+    {
       "name": "--lr-ingestion-queue-max-height",
       "description": {
         "kind": "markdown",
         "value": "**`<lr-ingestion-queue>`** (default: `none`) — Non-virtualized mode only: caps how tall the list grows before it scrolls internally. Has no effect once virtualized -- the internal `<lr-virtual-list>`'s own viewport keeps its independent, fixed default height (retheme it directly via `<lr-ingestion-queue>`'s own `lr-virtual-list { --lr-virtual-list-height: ... }` if needed)."
+      }
+    },
+    {
+      "name": "--lr-input-control-height",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-input>`, `<lr-number-input>`, `<lr-time-input>`** — Exact outer control height. Unset by default, which leaves `--lr-input-control-min-height` as a floor only; set it to a length to both floor and cap the control row (e.g. to pixel-match `<lr-select>`/`<lr-combobox>` in the same toolbar). Because it is never declared by the component itself, it can be set from an ancestor or an outer-tree rule as well as inline on the element."
       }
     },
     {
@@ -1266,6 +1665,20 @@
       "description": {
         "kind": "markdown",
         "value": "**`<lr-known-date>`** (default: `var(--lr-space-s)`) — Gap between the three field blocks."
+      }
+    },
+    {
+      "name": "--lr-known-date-field-height",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-known-date>`** — Exact block size of each `field-input`. Undeclared by default, so the field grows to fit its content, floored by `--lr-known-date-field-min-height`. Set it to pin a fixed height."
+      }
+    },
+    {
+      "name": "--lr-known-date-field-min-height",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-known-date>`** (default: `var(--lr-size-2rem)`) — Minimum block size of each `field-input`, auto-swapped per `size` (`xs`→`1.25rem`, `s`→`1.5rem`, `l`→`2.5rem`, `xl`→`3rem`). Each default sits below the field's own content height, so it is dead until a consumer raises it -- the unset render is unchanged."
       }
     },
     {
@@ -1346,6 +1759,48 @@
       }
     },
     {
+      "name": "--lr-message-feedback-down-active-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-message-feedback>`** (default: `var(--lr-color-danger-quiet)`) — Background of the pressed thumbs-down button."
+      }
+    },
+    {
+      "name": "--lr-message-feedback-down-active-border",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-message-feedback>`** (default: `var(--lr-color-danger)`) — Border color of the pressed thumbs-down button."
+      }
+    },
+    {
+      "name": "--lr-message-feedback-down-active-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-message-feedback>`** (default: `var(--lr-color-danger)`) — Glyph color of the pressed thumbs-down button."
+      }
+    },
+    {
+      "name": "--lr-message-feedback-up-active-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-message-feedback>`** (default: `var(--lr-color-success-quiet)`) — Background of the pressed thumbs-up button."
+      }
+    },
+    {
+      "name": "--lr-message-feedback-up-active-border",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-message-feedback>`** (default: `var(--lr-color-success)`) — Border color of the pressed thumbs-up button."
+      }
+    },
+    {
+      "name": "--lr-message-feedback-up-active-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-message-feedback>`** (default: `var(--lr-color-success)`) — Glyph color of the pressed thumbs-up button. Not declared on `:host`, so it can be set on the element or any ancestor; scoped to the pressed state, unlike overriding the shared `--lr-color-success`."
+      }
+    },
+    {
       "name": "--lr-mind-map-ring-gap",
       "description": {
         "kind": "markdown",
@@ -1357,6 +1812,13 @@
       "description": {
         "kind": "markdown",
         "value": "**`<lr-graph>`** (default: `var(--lr-color-brand)`) — Default node fill, overridden per-node by `GraphNode.color`."
+      }
+    },
+    {
+      "name": "--lr-notebook-viewer-active-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-notebook-viewer>`** (default: `var(--lr-color-brand-quiet)`) — Background of the `[part=\"cell\"]` currently targeted by an anchor."
       }
     },
     {
@@ -1374,10 +1836,24 @@
       }
     },
     {
+      "name": "--lr-page-rail-current-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-page-rail>`** (default: `var(--lr-color-brand-quiet)`) — Background of the `[part=\"page\"]` button for the current `page`."
+      }
+    },
+    {
       "name": "--lr-page-rail-height",
       "description": {
         "kind": "markdown",
         "value": "**`<lr-page-rail>`** (default: `var(--lr-size-24rem)`) — Block size of the virtualized rail."
+      }
+    },
+    {
+      "name": "--lr-pagination-control-padding",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-pagination>`** (default: `var(--lr-space-xs)`) — Inner padding of the nav buttons and the page input. Uniform across every `size` (the control footprint is fixed by `--lr-pagination-control-size`, so this only adjusts the icon/digit inset)."
       }
     },
     {
@@ -1409,10 +1885,38 @@
       }
     },
     {
+      "name": "--lr-policy-summary-count-allow-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-policy-summary>`** (default: `var(--lr-color-success)`) — Text color of the `allow` count."
+      }
+    },
+    {
+      "name": "--lr-policy-summary-count-deny-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-policy-summary>`** (default: `var(--lr-color-danger)`) — Text color of the `deny` count."
+      }
+    },
+    {
+      "name": "--lr-policy-summary-count-needs-review-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-policy-summary>`** (default: `var(--lr-color-warning)`) — Text color of the `needs-review` count. Restyling a state count otherwise requires overriding the library-wide status tokens, since `::part(count)[data-state]` is invalid CSS."
+      }
+    },
+    {
       "name": "--lr-progress-ring-size",
       "description": {
         "kind": "markdown",
         "value": "**`<lr-progress-ring>`** (default: `var(--lr-size-2-5rem)`) — Outer diameter of the ring."
+      }
+    },
+    {
+      "name": "--lr-push-to-talk-recording-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-push-to-talk>`** (default: `var(--lr-color-danger)`) — Border and text color of `[part=\"trigger\"]` while `state` is `recording`. Recolors only the recording treatment, leaving every other danger-toned surface on the page untouched."
       }
     },
     {
@@ -1434,6 +1938,13 @@
       "description": {
         "kind": "markdown",
         "value": "**`<lr-qr-code>`** (default: `var(--lr-color-text)`) — Dark/foreground module color."
+      }
+    },
+    {
+      "name": "--lr-radio-label-indent",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-radio>`** (default: `calc(min(var(--lr-icon-button-size), 1.75rem) + var(--lr-space-s))`) — The inline distance from the control's start edge to the start of the label text, i.e. the circle's own floor plus the gap next to it. Published so a consumer composing per-option hint text under the label can align it without re-deriving that formula from the shadow styles, and used as the source of the real gap so the two cannot drift. Setting it on the element (or on `lr-radio` in your own stylesheet) moves the label; because custom properties inherit down and not sideways, it is *not* readable from a sibling node in your tree — align a sibling by computing the same formula from `--lr-theme-icon-button-size` and `--lr-theme-space-s`, which you control."
       }
     },
     {
@@ -1486,6 +1997,27 @@
       }
     },
     {
+      "name": "--lr-responsive-panel-sheet-max-block-size",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-responsive-panel>`** (default: `85dvh`) — Maximum height of the `variant=\"bottom-sheet\"` overlay panel (falls back to `85vh` where `dvh` is unsupported)."
+      }
+    },
+    {
+      "name": "--lr-retrieval-results-selected-border",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-retrieval-results>`** (default: `var(--lr-color-brand)`) — Inline-start border color marking a selected `[part=\"row-body\"]`. A border rather than a fill by design (see the styles file), so recoloring it carries no contrast risk for the row's own text."
+      }
+    },
+    {
+      "name": "--lr-retrieval-trace-active-border",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-retrieval-trace>`** (default: `var(--lr-color-brand)`) — Border color of the `[part=\"evidence-row\"]` whose stage matches `activeStageId`."
+      }
+    },
+    {
       "name": "--lr-scroll-fade-size",
       "description": {
         "kind": "markdown",
@@ -1514,6 +2046,13 @@
       }
     },
     {
+      "name": "--lr-segmented-hover-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-segmented>`** (default: `var(--lr-color-text)`) — Text color of a hovered segment that is neither checked nor disabled. Independent of the selected-state props above — recoloring the checked pill leaves this untouched."
+      }
+    },
+    {
       "name": "--lr-segmented-segment-padding",
       "description": {
         "kind": "markdown",
@@ -1521,10 +2060,45 @@
       }
     },
     {
+      "name": "--lr-segmented-selected-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-segmented>`** (default: `var(--lr-color-surface)`) — Background of the checked segment. Scoped to `[aria-checked='true']` only, so it never repaints a hovered unselected segment (which is what hijacking `--lr-color-surface` library-wide used to do)."
+      }
+    },
+    {
+      "name": "--lr-segmented-selected-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-segmented>`** (default: `var(--lr-color-text)`) — Text color of the checked segment."
+      }
+    },
+    {
+      "name": "--lr-segmented-selected-font-weight",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-segmented>`** (default: `var(--lr-font-weight-semibold)`) — Font weight of the checked segment."
+      }
+    },
+    {
+      "name": "--lr-segmented-selected-shadow",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-segmented>`** (default: `var(--lr-shadow)`) — Box shadow lifting the checked segment off the track."
+      }
+    },
+    {
+      "name": "--lr-segmented-track-height",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-segmented>`** — Exact height of the `base` track, pinning it at every `size` tier (sets both `block-size` and `min-block-size`) so the row can sit flush beside a hard-sized toolbar control. **Genuinely unset by default** — while unset each tier keeps its own `--lr-segmented-track-min-height` floor and the track grows with its content."
+      }
+    },
+    {
       "name": "--lr-segmented-track-min-height",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-segmented>`** (default: `auto`) — Minimum height of the `base` track. Re-set per `size` (`2xs` through `xl`); the `auto` default applies at the unset/`m` size."
+        "value": "**`<lr-segmented>`** (default: `auto`) — Minimum height of the `base` track. Re-set per `size` (`2xs` through `xl`); the `auto` default applies at the unset/`m` size. Because it is declared on `:host` per tier, override it on the element itself, not on an ancestor."
       }
     },
     {
@@ -1545,14 +2119,14 @@
       "name": "--lr-select-trigger-height",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-select>`** (default: `auto`) — Exact trigger height. Left at `auto` the trigger is floored only; set it to a length to both floor and cap the trigger (e.g. to pixel-match a sibling field in the same row)."
+        "value": "**`<lr-select>`** — Exact trigger height. Unset by default, which leaves `--lr-select-trigger-min-height` as a floor only; set it to a length to both floor and cap the trigger (e.g. to pixel-match a sibling field in the same toolbar row). Because it is never declared by the component itself, it can be set from an ancestor or an outer-tree rule as well as inline on the element."
       }
     },
     {
       "name": "--lr-select-trigger-min-height",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-select>`** — Trigger block-size floor, scaled by `size`. Applied only for the `xs`/`s`/`l`/`xl` tiers — see the stylesheet note; the default tier stays floor-free."
+        "value": "**`<lr-select>`** — Trigger block-size floor, scaled by `size`, and live at every tier including the default `m` (`2.5rem`, matching `<lr-input>`/`<lr-combobox>` at that tier)."
       }
     },
     {
@@ -1570,17 +2144,24 @@
       }
     },
     {
+      "name": "--lr-sequence-strip-legend-marker-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-sequence-strip>`** (default: `var(--lr-color-surface-raised)`) — Neutral chip background behind the marker legend row's bar; it stands in for \"any cell\", so it deliberately matches no category color."
+      }
+    },
+    {
       "name": "--lr-sequence-strip-legend-swatch-size",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-sequence-strip>`** (default: `var(--lr-size-0-625rem)`) — Inline and block size of a legend swatch."
+        "value": "**`<lr-sequence-strip>`** (default: `var(--lr-size-0-625rem)`) — Inline and block size of a legend swatch (category and marker rows alike)."
       }
     },
     {
       "name": "--lr-sequence-strip-marker-color",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-sequence-strip>`** (default: `var(--lr-color-text)`) — Color of the bottom marker on a `marker: true` cell."
+        "value": "**`<lr-sequence-strip>`** (default: `var(--lr-color-text)`) — Color of the bottom marker on a `marker: true` cell, and of the marker legend row's bar."
       }
     },
     {
@@ -1598,10 +2179,52 @@
       }
     },
     {
+      "name": "--lr-source-card-compact-gap",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-source-card>`** (default: `var(--lr-space-2xs)`) — Gap between `[part=\"base\"]`'s rows while `compact`."
+      }
+    },
+    {
+      "name": "--lr-source-card-compact-padding",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-source-card>`** (default: `var(--lr-space-xs)`) — `[part=\"base\"]` padding while `compact`."
+      }
+    },
+    {
+      "name": "--lr-source-picker-checked-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-source-picker>`** — Background of a fully-checked selection control: the `select-all` pill (defaults to `var(--lr-color-brand-quiet)`) and a fully-selected entry's `[part=\"checkbox\"]` (defaults to `var(--lr-color-brand)`). The two keep their distinct resting defaults; setting this prop unifies both."
+      }
+    },
+    {
+      "name": "--lr-source-picker-checked-border",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-source-picker>`** (default: `var(--lr-color-brand)`) — Border color of every checked or mixed selection control."
+      }
+    },
+    {
+      "name": "--lr-source-picker-mixed-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-source-picker>`** (default: `color-mix(in srgb, var(--lr-color-brand) 50%, var(--lr-color-surface))`) — Background of a partially-selected entry's `[part=\"checkbox\"]`."
+      }
+    },
+    {
       "name": "--lr-span-waterfall-name-width",
       "description": {
         "kind": "markdown",
         "value": "**`<lr-span-waterfall>`** (default: `8rem`) — Width of the name gutter column."
+      }
+    },
+    {
+      "name": "--lr-span-waterfall-row-active-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-span-waterfall>`** (default: `var(--lr-color-brand-quiet)`) — Background of the active (`activeSpanId`) row. Shadow Parts forbids an attribute selector after `::part()`, so the active row could otherwise only be restyled by hijacking the library-wide `--lr-color-brand-quiet` token."
       }
     },
     {
@@ -1668,6 +2291,34 @@
       }
     },
     {
+      "name": "--lr-stepper-current-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-stepper>`** (default: `var(--lr-color-text)`) — Text color of the `current` step. Declared as an inline `var()` fallback (never on `:host`), so setting it on the element or an ancestor recolors only the current step without hijacking the library-wide `--lr-color-text` token."
+      }
+    },
+    {
+      "name": "--lr-stepper-current-index-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-stepper>`** (default: `var(--lr-color-brand)`) — Background of the `current` step's numbered index chip (`step-index`)."
+      }
+    },
+    {
+      "name": "--lr-stepper-current-index-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-stepper>`** (default: `var(--lr-color-surface)`) — Text color of the `current` step's numbered index chip."
+      }
+    },
+    {
+      "name": "--lr-stepper-error-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-stepper>`** (default: `var(--lr-color-danger)`) — Text color of an `error` step."
+      }
+    },
+    {
       "name": "--lr-stream-status-dot-color",
       "description": {
         "kind": "markdown",
@@ -1693,6 +2344,13 @@
       "description": {
         "kind": "markdown",
         "value": "**`<lr-streaming-text>`** (default: `var(--lr-size-0-125rem)`) — Width of the `cursor` bar (also its border radius)."
+      }
+    },
+    {
+      "name": "--lr-svg-viewer-active-border",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-svg-viewer>`** (default: `var(--lr-color-warning, var(--lr-color-brand))`) — Border color of the `[part=\"region-highlight\"]` matching `activeHighlightId`. Distinct from the resting highlight border, so the active region can be recolored without touching the rest."
       }
     },
     {
@@ -1787,10 +2445,38 @@
       }
     },
     {
+      "name": "--lr-table-row-selected-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-table>`** (default: `var(--lr-color-brand-quiet)`) — Background of a row whose `aria-selected` is `true`. Shadow Parts forbids an attribute selector after `::part()`, so `::part(row)[aria-selected]` is invalid CSS and the selected row could otherwise only be restyled by hijacking the library-wide `--lr-color-brand-quiet` token."
+      }
+    },
+    {
       "name": "--lr-table-sticky-offset",
       "description": {
         "kind": "markdown",
         "value": "**`<lr-table>`** (default: `0`) — Distance a `sticky` column pins from the inline edge. Measured and set inline per column by the component so multiple sticky columns stack instead of overlapping; falls back to `0` for the first one, or before the first measurement pass."
+      }
+    },
+    {
+      "name": "--lr-tabs-hover-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-tabs>`** (default: `var(--lr-color-text)`) — Text color of a hovered, non-disabled tab. Independent of the selected-state props above."
+      }
+    },
+    {
+      "name": "--lr-tabs-indicator-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-tabs>`** (default: `var(--lr-color-brand)`) — Color of the selected tab's underline, themeable independently of its text color."
+      }
+    },
+    {
+      "name": "--lr-tabs-selected-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-tabs>`** (default: `var(--lr-color-brand)`) — Text color of the selected tab. Scoped to `[aria-selected='true']` only, so it never repaints a hovered unselected tab (which is what hijacking `--lr-color-brand` library-wide used to do)."
       }
     },
     {
@@ -1808,6 +2494,27 @@
       }
     },
     {
+      "name": "--lr-test-results-filter-active-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-test-results>`** (default: `var(--lr-color-brand-quiet)`) — Background of a pressed (active) status filter toggle."
+      }
+    },
+    {
+      "name": "--lr-test-results-filter-active-border",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-test-results>`** (default: `var(--lr-color-brand)`) — Border color of a pressed (active) status filter toggle."
+      }
+    },
+    {
+      "name": "--lr-test-results-filter-active-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-test-results>`** (default: `var(--lr-color-brand)`) — Text color of a pressed (active) status filter toggle. Restyling the pressed state otherwise requires overriding the library-wide brand tokens, since `::part(filter-toggle)[aria-pressed]` is invalid CSS."
+      }
+    },
+    {
       "name": "--lr-textarea-max-block-size",
       "description": {
         "kind": "markdown",
@@ -1819,6 +2526,27 @@
       "description": {
         "kind": "markdown",
         "value": "**`<lr-thinking-panel>`** (default: `var(--lr-size-16rem)`) — Cap on how tall the expanded reasoning transcript grows before `[part=\"body\"]` scrolls internally."
+      }
+    },
+    {
+      "name": "--lr-time-range-preset-active-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-time-range>`** (default: `var(--lr-color-brand)`) — Background of the active preset button (`[data-active]`, i.e. the preset whose range matches the current value). Declared as an inline `var()` fallback (never on `:host`), so setting it on the element or an ancestor recolors only the active preset without hijacking the library-wide `--lr-color-brand` token."
+      }
+    },
+    {
+      "name": "--lr-time-range-preset-active-border-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-time-range>`** (default: `var(--lr-color-brand)`) — Border color of the active preset button."
+      }
+    },
+    {
+      "name": "--lr-time-range-preset-active-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-time-range>`** (default: `var(--lr-color-on-brand)`) — Text color of the active preset button."
       }
     },
     {
@@ -1945,6 +2673,13 @@
       "description": {
         "kind": "markdown",
         "value": "**`<lr-toast>`** (default: `var(--lr-size-28rem)`) — Inline size of the stack, capped by the viewport minus the placement insets."
+      }
+    },
+    {
+      "name": "--lr-token-input-editor-inline-size",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-token-input>`** (default: `var(--lr-size-6rem)`) — Inline size of the inline token editor opened by `editable`."
       }
     },
     {
@@ -2109,6 +2844,13 @@
       }
     },
     {
+      "name": "--lr-trace-tree-row-active-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-trace-tree>`** (default: `var(--lr-color-brand-quiet)`) — Background of the active (`activeSpanId`) row. Shadow Parts forbids an attribute selector after `::part()`, so the active row could otherwise only be restyled by hijacking the library-wide `--lr-color-brand-quiet` token."
+      }
+    },
+    {
       "name": "--lr-transition-ambient",
       "description": {
         "kind": "markdown",
@@ -2165,6 +2907,20 @@
       }
     },
     {
+      "name": "--lr-widget-view-toggle-active-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-widget>`** (default: `var(--lr-color-brand-quiet)`) — Background of the pressed (`aria-pressed=\"true\"`) view toggle. Declared as an inline `var()` fallback (never on `:host`), so setting it on the element or an ancestor recolors only the active toggle without hijacking the library-wide `--lr-color-brand-quiet` token."
+      }
+    },
+    {
+      "name": "--lr-widget-view-toggle-active-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-widget>`** (default: `var(--lr-color-brand)`) — Text color of the pressed view toggle."
+      }
+    },
+    {
       "name": "--lr-word-cloud-color-1",
       "description": {
         "kind": "markdown",
@@ -2218,6 +2974,13 @@
       "description": {
         "kind": "markdown",
         "value": "**`<lr-word-cloud>`** (default: `var(--lr-color-chart-4)`) — Eighth entry of the default categorical palette."
+      }
+    },
+    {
+      "name": "--lr-xml-viewer-active-match-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-xml-viewer>`** (default: `var(--lr-color-warning)`) — Outline color of the `[part=\"node\"]` holding the current search match. Scoped to the active match, so the dashed outline on the other matches keeps the shared warning token."
       }
     },
     {
