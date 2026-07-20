@@ -340,14 +340,20 @@ export { LyraTour } from './components/utility/tour/tour.js';
 export type { TourTarget, TourStep, TourEndReason, LyraTourEventMap } from './components/utility/tour/tour.js';
 export { LyraFlag } from './components/media/flag/flag.js';
 export type { FlagUrlResolver, FlagVariant } from './components/media/flag/flag.js';
-export { LANGUAGE_TO_COUNTRY, languageToCountry } from './components/media/flag/language-map.js';
+export { LANGUAGE_TO_COUNTRY, languageToCountry, localeNativeName } from './components/media/flag/language-map.js';
 export { LyraEmpty } from './components/overlays/empty/empty.js';
 export { LyraSkeleton } from './components/overlays/skeleton/skeleton.js';
 export type { SkeletonVariant, SkeletonEffect } from './components/overlays/skeleton/skeleton.js';
 export { LyraStat } from './components/data/stat/stat.js';
-export type { StatVariant, StatGoodDirection, StatRow } from './components/data/stat/stat.js';
+export type {
+  StatVariant,
+  StatGoodDirection,
+  StatRow,
+  StatAppearance,
+  StatOrientation,
+} from './components/data/stat/stat.js';
 export { LyraTable } from './components/data/table/table.js';
-export type { TableColumn } from './components/data/table/table.js';
+export type { TableColumn, TableLoadingAppearance } from './components/data/table/table.js';
 export { LyraGauge } from './components/data/gauge/gauge.js';
 export type { GaugeType } from './components/data/gauge/gauge.js';
 export { LyraExportButton } from './components/utility/export-button/export-button.js';
@@ -392,7 +398,10 @@ export type { FileTreeNode, GitStatus, LyraFileTreeEventMap } from './components
 export { LyraCommitCard } from './components/agent-tools/commit-card/commit-card.js';
 export type { CommitFileChange, LyraCommitCardEventMap } from './components/agent-tools/commit-card/commit-card.js';
 export { LyraStackTrace } from './components/agent-tools/stack-trace/stack-trace.js';
-export type { LyraStackTraceEventMap } from './components/agent-tools/stack-trace/stack-trace.js';
+export type {
+  LyraStackTraceEventMap,
+  StackTraceAppearance,
+} from './components/agent-tools/stack-trace/stack-trace.js';
 export { parseStackTrace, DEFAULT_INTERNAL_PATTERNS } from './components/agent-tools/stack-trace/stack-trace-parse.js';
 export type { StackFrame, StackGroup } from './components/agent-tools/stack-trace/stack-trace-parse.js';
 export { LyraTestResults } from './components/agent-tools/test-results/test-results.js';
@@ -534,6 +543,7 @@ export { LyraSourceCard } from './components/retrieval/source-card/source-card.j
 export type {
   SourceCardExpandDetail,
   SourceCardOpenDetail,
+  SourceCardAppearance,
 } from './components/retrieval/source-card/source-card.js';
 export { LyraAppRail, computeAppRailMode } from './components/layout/app-rail/app-rail.js';
 export { LyraAppRailItem } from './components/layout/app-rail/app-rail-item.js';
@@ -689,7 +699,7 @@ export { LyraIntersectionObserver } from './components/utility/intersection-obse
 export type { LyraIntersectionObserverEventMap } from './components/utility/intersection-observer/intersection-observer.js';
 export { LyraMutationObserver } from './components/utility/mutation-observer/mutation-observer.js';
 export type { LyraMutationObserverEventMap } from './components/utility/mutation-observer/mutation-observer.js';
-export type { CardAppearance } from './components/layout/card/card.js';
+export type { CardAppearance, LyraCardEventMap } from './components/layout/card/card.js';
 export { LyraStepper } from './components/layout/stepper/stepper.js';
 export type { StepItem, StepState } from './components/layout/stepper/stepper.js';
 export { LyraSegmented } from './components/layout/segmented/segmented.js';
