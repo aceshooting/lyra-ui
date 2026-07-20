@@ -10,13 +10,20 @@ touching component internals.
 pnpm install
 ```
 
-Node ≥ 20, `pnpm@11.10.0` (pinned via `packageManager` in `package.json`).
+Node ≥ 20, `pnpm@11.13.0` (pinned via `packageManager` in `package.json` — check that file if this
+drifts again).
 
 ## Running things locally
 
 ```bash
-pnpm test         # -r: @web/test-runner per package
-pnpm lint         # -r: tsc --noEmit per package
+pnpm test         # -r: @web/test-runner per package for @aceshooting/lyra-ui;
+                  #     @aceshooting/lyra-flags has no test runner, just a plain Node script
+pnpm lint         # -r: for @aceshooting/lyra-ui this is NOT just tsc --noEmit — it's
+                  #     contract-policy (~15 sub-checks: source/style policy, part reachability,
+                  #     manifest + llms freshness, side-effects, form-associated, event-barrel...)
+                  #     then tsc --noEmit, then a type-level test suite. A green `pnpm lint` failing
+                  #     for a reason that has nothing to do with TypeScript types is expected, not a
+                  #     tooling bug — see AGENTS.md's Dev commands section for the full chain.
 pnpm build        # -r: tsc -p tsconfig.json per package -> dist/
 pnpm docs         # Storybook docs site at localhost:6006, demos every component live
 ```

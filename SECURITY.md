@@ -44,6 +44,8 @@ runtime, database, or authentication layer of its own. In-scope concerns include
 
 - Cross-site scripting (XSS) via component rendering, slots, or property/attribute binding
   (e.g. unsafe `innerHTML`/`unsafeHTML` usage, insufficient sanitization of user-supplied content)
+- Server-side request forgery (SSRF) via a consumer-supplied `src`/URL fetched by a document
+  viewer or `<lr-map>` — e.g. a scheme/host that bypasses the library's `safeFetchUrl()` gate
 - Prototype pollution or supply-chain issues in published npm artifacts
 - ReDoS or other resource-exhaustion bugs in bundled utilities (e.g. localization, validation)
 - Build/publish pipeline compromise (npm package tampering, dependency confusion)

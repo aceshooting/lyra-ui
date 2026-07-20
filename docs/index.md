@@ -25,12 +25,14 @@ This file is a short index. The primary documentation lives on the sites linked 
 ## Contributing & policies
 
 - **[CONTRIBUTING.md](../CONTRIBUTING.md)** — local setup, running tests/lint/build.
-- **[AGENTS.md](../AGENTS.md)** — full coding conventions and architecture guide; read this before
-  touching component internals.
+- **[AGENTS.md](../AGENTS.md)** — compact coding-conventions and architecture contract; read this
+  before touching component internals. Its full normative detail (per-topic rules, incidents,
+  exact patterns) lives in [`docs/agents/`](agents/).
 - **[SECURITY.md](../SECURITY.md)** — supported versions and how to report a vulnerability
   privately.
 
 ## This directory
 
-`docs/` holds only this index; it does not duplicate the Storybook site or the package README.
+`docs/` holds this index plus `docs/agents/` — the detailed contributor reference behind
+[AGENTS.md](../AGENTS.md); it does not duplicate the Storybook site or the package README.
 `docs/superpowers/` (gitignored) is internal planning scratch space, not published documentation.
