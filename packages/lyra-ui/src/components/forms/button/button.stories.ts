@@ -141,6 +141,29 @@ export const OutlinedFill: Story = {
   `,
 };
 
+export const GapAndRadiusTokens: Story = {
+  name: 'Gap / radius tokens (--lr-button-gap, --lr-button-radius)',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          '`--lr-button-gap` (icon/label gap) and `--lr-button-radius` (corner radius) are retunable ' +
+          'without a `::part(base)` rule, matching `--lr-button-padding-block/-inline`/' +
+          '`--lr-button-font-size`. Neither varies by `size` tier — each is declared once on `:host`.',
+      },
+    },
+  },
+  render: () => html`
+    <div style="display: flex; align-items: center; gap: 0.5rem;">
+      <lr-button variant="brand">Default</lr-button>
+      <lr-button variant="brand" style="--lr-button-gap: 0.75rem; --lr-button-radius: 999px;">
+        Pill, wide gap
+      </lr-button>
+      <lr-button variant="brand" style="--lr-button-radius: 0;">Square corners</lr-button>
+    </div>
+  `,
+};
+
 export const Loading: Story = {
   render: () => html`<lr-button variant="brand" .loading=${true}>Saving…</lr-button>`,
 };

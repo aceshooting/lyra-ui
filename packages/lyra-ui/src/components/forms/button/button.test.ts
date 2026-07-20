@@ -471,6 +471,38 @@ describe('lr-button', () => {
       }
     });
 
+    it('exposes --lr-button-gap and --lr-button-radius, defaulting to the pre-existing literals', async () => {
+      const el = (await fixture(html`<lr-button>Go</lr-button>`)) as LyraButton;
+      const cs = getComputedStyle(base(el));
+      expect(cs.gap).to.equal('2px');
+      expect(cs.borderRadius).to.equal('6px');
+    });
+
+    it('retunes the icon/label gap and corner radius with no ::part(base) rule', async () => {
+      const el = (await fixture(html`<lr-button>Go</lr-button>`)) as LyraButton;
+      el.style.setProperty('--lr-button-gap', '12px');
+      el.style.setProperty('--lr-button-radius', '3px');
+      await el.updateComplete;
+      const cs = getComputedStyle(base(el));
+      expect(cs.gap).to.equal('12px');
+      expect(cs.borderRadius).to.equal('3px');
+    });
+
+    it('keeps appearance="link" winning over --lr-button-radius (zero radius)', async () => {
+      const el = (await fixture(html`<lr-button appearance="link">Retry</lr-button>`)) as LyraButton;
+      el.style.setProperty('--lr-button-radius', '20px');
+      await el.updateComplete;
+      expect(getComputedStyle(base(el)).borderRadius).to.equal('0px');
+    });
+
+    it('declares --lr-button-gap/--lr-button-radius on :host and consumes them once on [part="base"]', () => {
+      const css = styles.cssText.replace(/\s+/g, ' ');
+      expect(css).to.match(/:host \{[^}]*--lr-button-gap: var\(--lr-space-2xs\);/);
+      expect(css).to.match(/:host \{[^}]*--lr-button-radius: var\(--lr-radius\);/);
+      expect(css).to.include('gap: var(--lr-button-gap);');
+      expect(css).to.include('border-radius: var(--lr-button-radius);');
+    });
+
     it('leaves --lr-button-height genuinely undeclared so its var() fallback arm can fire', () => {
       const css = styles.cssText.replace(/\s+/g, ' ');
       // A declared value -- even `auto` -- is a *defined* value that wins, so the fallback arm

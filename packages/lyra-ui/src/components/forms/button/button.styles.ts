@@ -27,6 +27,10 @@ export const styles = css`
     --lr-button-padding-inline: var(--lr-space-m);
     --lr-button-font-size: var(--lr-font-size-m);
     --lr-button-min-height: var(--lr-button-size-m);
+    /* Gap and radius don't vary by size tier (unlike the four knobs above), so each is declared
+       once here rather than re-assigned per :host([size='…']) block. */
+    --lr-button-gap: var(--lr-space-2xs);
+    --lr-button-radius: var(--lr-radius);
     --lr-button-accent: var(--lr-color-text);
     --lr-button-fill: var(--lr-color-surface);
     --lr-button-on-fill: var(--lr-color-text);
@@ -92,10 +96,10 @@ export const styles = css`
     block-size: var(--lr-button-height, auto);
     align-items: center;
     justify-content: center;
-    gap: var(--lr-space-2xs);
+    gap: var(--lr-button-gap);
     padding-inline: var(--lr-button-padding-inline);
     padding-block: var(--lr-button-padding-block);
-    border-radius: var(--lr-radius);
+    border-radius: var(--lr-button-radius);
     border: var(--lr-border-width-thin) solid var(--lr-button-border);
     font: inherit;
     font-weight: var(--lr-font-weight-semibold);

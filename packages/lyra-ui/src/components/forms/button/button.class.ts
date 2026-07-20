@@ -87,6 +87,11 @@ export type ButtonType = 'button' | 'submit' | 'reset';
  * before. Set it (e.g. to pin the button to a fixed toolbar row) to both floor *and* cap the
  * height. Never declare it as `auto`: a declared value wins over the `var()` fallback arm and would
  * make every tier's floor dead code. `appearance="link"` ignores it.
+ * @cssprop [--lr-button-gap=var(--lr-space-2xs)] - Gap between the icon/label and any slotted
+ * content in the internal button. Unlike the size knobs above it does not vary by `size` tier.
+ * Override it to retune without a `::part(base)` rule.
+ * @cssprop [--lr-button-radius=var(--lr-radius)] - Corner radius of the internal button. Does not
+ * vary by `size` tier. `appearance="link"` ignores it (it renders with zero radius).
  */
 export class LyraButton extends LyraElement {
   static styles = [LyraElement.styles, styles];
