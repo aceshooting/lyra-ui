@@ -1,11 +1,32 @@
-import { fixture, expect, html, oneEvent } from '@open-wc/testing';
+import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import './xml-viewer.js';
 import type { LyraXmlViewer } from './xml-viewer.js';
 import { registerLyraLocale } from '../../../internal/localization.js';
+import { DEFAULT_MAX_RESOURCE_BYTES } from '../../../internal/resource-loader.js';
 import { styles } from './xml-viewer.styles.js';
 
 const SIMPLE_XML = '<root><item id="1">First</item><item id="2">Second</item></root>';
 const RSS_XML = '<rss><channel><title>Feed</title><item><link href="https://a.test">A</link></item></channel></rss>';
+
+/** Stubs `window.fetch` for the duration of one test, restoring the original afterward --
+ *  mirrors `document-preview.test.ts`'s helper of the same name. */
+function stubFetch(impl: (url: string, init?: RequestInit) => Promise<Response>): () => void {
+  const original = window.fetch;
+  window.fetch = ((url: string, init?: RequestInit) => impl(url, init)) as typeof window.fetch;
+  return () => {
+    window.fetch = original;
+  };
+}
+
+function textResponse(body: string, ok = true, status = 200): Response {
+  return {
+    ok,
+    status,
+    statusText: ok ? 'OK' : 'Not Found',
+    headers: { get: () => null },
+    text: () => Promise.resolve(body),
+  } as unknown as Response;
+}
 
 describe('defaults', () => {
   it('defaults to empty src/xml/name, copyable false', async () => {
@@ -60,6 +81,111 @@ describe('parsing and tree rendering', () => {
     await el.updateComplete;
     expect(el.shadowRoot!.querySelectorAll('[part="tag"]').length).to.be.greaterThan(0);
   });
+
+  it('the deferred src-load no-ops once an xml assignment already won, without ever fetching', async () => {
+    const el = (await fixture(html`<lr-xml-viewer src="https://example.test/should-not-fetch.xml"></lr-xml-viewer>`)) as LyraXmlViewer;
+    let fetchCalled = false;
+    const restore = stubFetch(() => {
+      fetchCalled = true;
+      return Promise.reject(new Error('unexpected fetch'));
+    });
+    try {
+      el.xml = SIMPLE_XML;
+      // Directly re-invokes the same private method scheduleAfterUpdate()'s queued microtask
+      // would call, deterministically exercising the "a synchronous xml assignment already won"
+      // guard instead of racing that microtask's actual timing (see loadFromSrc()'s doc comment).
+      await (el as unknown as { loadFromSrc(): Promise<void> }).loadFromSrc();
+      expect(fetchCalled).to.be.false;
+      expect(el.shadowRoot!.querySelectorAll('[part="tag"]').length).to.be.greaterThan(0);
+    } finally {
+      restore();
+    }
+  });
+
+  it('handles a synchronous DOMParser throw with the same error state as a parser-reported error', async () => {
+    const original = DOMParser.prototype.parseFromString;
+    DOMParser.prototype.parseFromString = function (): never {
+      throw new Error('boom');
+    };
+    try {
+      const el = (await fixture(html`<lr-xml-viewer></lr-xml-viewer>`)) as LyraXmlViewer;
+      const eventPromise = oneEvent(el, 'lr-render-error');
+      el.xml = SIMPLE_XML;
+      const event = await eventPromise;
+      await el.updateComplete;
+      expect(el.shadowRoot!.querySelector('[part="error"]')!.textContent).to.equal('This document could not be parsed as XML.');
+      expect(event.detail.error).to.exist;
+    } finally {
+      DOMParser.prototype.parseFromString = original;
+    }
+  });
+});
+
+describe('loading xml via src', () => {
+  it('fetches, parses, and renders a document reached via src', async () => {
+    const restore = stubFetch(async () => textResponse(SIMPLE_XML));
+    try {
+      const el = (await fixture(html`<lr-xml-viewer src="https://example.test/doc.xml"></lr-xml-viewer>`)) as LyraXmlViewer;
+      await waitUntil(() => el.shadowRoot!.querySelector('[part="tree"]') !== null);
+      const tags = [...el.shadowRoot!.querySelectorAll('[part="tag"]')].map((t) => t.textContent);
+      expect(tags).to.include('root');
+    } finally {
+      restore();
+    }
+  });
+
+  it('reports a generic failure message for a non-OK HTTP response', async () => {
+    const restore = stubFetch(async () => textResponse('', false, 404));
+    try {
+      // Mounted without src first so the lr-render-error listener attaches before the load that
+      // src= triggers -- setting src straight in the fixture markup risks the whole (stubbed,
+      // fast-resolving) fetch settling during fixture()'s own await, before oneEvent() ever runs.
+      const el = (await fixture(html`<lr-xml-viewer></lr-xml-viewer>`)) as LyraXmlViewer;
+      const eventPromise = oneEvent(el, 'lr-render-error');
+      el.src = 'https://example.test/missing.xml';
+      await waitUntil(() => el.shadowRoot!.querySelector('[part="error"]') !== null);
+      expect(el.shadowRoot!.querySelector('[part="error"]')!.textContent).to.equal('Failed to load document.');
+      expect((await eventPromise).detail.error).to.exist;
+    } finally {
+      restore();
+    }
+  });
+
+  it('reports a distinct message when the response exceeds the resource size limit', async () => {
+    const restore = stubFetch(
+      async () =>
+        ({
+          ok: true,
+          status: 200,
+          statusText: 'OK',
+          headers: { get: (name: string) => (name.toLowerCase() === 'content-length' ? String(DEFAULT_MAX_RESOURCE_BYTES + 1) : null) },
+          text: () => Promise.resolve(''),
+        }) as unknown as Response,
+    );
+    try {
+      const el = (await fixture(html`<lr-xml-viewer src="https://example.test/huge.xml"></lr-xml-viewer>`)) as LyraXmlViewer;
+      await waitUntil(() => el.shadowRoot!.querySelector('[part="error"]') !== null);
+      expect(el.shadowRoot!.querySelector('[part="error"]')!.textContent).to.equal('This document is too large to preview.');
+    } finally {
+      restore();
+    }
+  });
+
+  it('rejects a disallowed src URL without ever fetching', async () => {
+    let called = false;
+    const restore = stubFetch(async () => {
+      called = true;
+      return textResponse('');
+    });
+    try {
+      const el = (await fixture(html`<lr-xml-viewer src="javascript:alert(1)"></lr-xml-viewer>`)) as LyraXmlViewer;
+      await waitUntil(() => el.shadowRoot!.querySelector('[part="error"]') !== null);
+      expect(called).to.be.false;
+      expect(el.shadowRoot!.querySelector('[part="error"]')!.textContent).to.equal('Document URL is not allowed.');
+    } finally {
+      restore();
+    }
+  });
 });
 
 describe('collapsedDepth and toggling', () => {
@@ -89,6 +215,19 @@ describe('collapsedDepth and toggling', () => {
     el.xml = SIMPLE_XML.replace('First', 'Updated First');
     await el.updateComplete;
     expect((el.shadowRoot!.querySelector('[part="toggle"]') as HTMLButtonElement).getAttribute('aria-expanded')).to.equal('false');
+  });
+
+  it('prunes a stale expandedOverrides entry once its path no longer exists after a reshape', async () => {
+    const el = (await fixture(html`<lr-xml-viewer .xml=${SIMPLE_XML}></lr-xml-viewer>`)) as LyraXmlViewer;
+    await el.updateComplete;
+    const toggles = [...el.shadowRoot!.querySelectorAll('[part="toggle"]')] as HTMLButtonElement[];
+    toggles[1].click(); // collapses the first <item>, creating an override keyed to path "[0]"
+    await el.updateComplete;
+    const overrides = () => (el as unknown as { expandedOverrides: Map<string, boolean> }).expandedOverrides;
+    expect(overrides().has('[0]')).to.be.true;
+    el.xml = '<root></root>'; // reshapes away path "[0]" entirely
+    await el.updateComplete;
+    expect(overrides().has('[0]')).to.be.false;
   });
 });
 
@@ -137,6 +276,35 @@ describe('search', () => {
     await el.updateComplete;
     expect(el.shadowRoot!.querySelector('[data-active-match]')).to.not.exist;
   });
+
+  it('searchPrevious wraps backward, mirroring searchNext', async () => {
+    const el = (await fixture(html`<lr-xml-viewer .xml=${SIMPLE_XML}></lr-xml-viewer>`)) as LyraXmlViewer;
+    await el.search('item');
+    const eventPromise = oneEvent(el, 'lr-search-change');
+    el.searchPrevious();
+    await eventPromise;
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('[data-active-match]')).to.exist;
+  });
+
+  it('searchNext/searchPrevious no-op when there are no matches', async () => {
+    const el = (await fixture(html`<lr-xml-viewer .xml=${SIMPLE_XML}></lr-xml-viewer>`)) as LyraXmlViewer;
+    const count = await el.search('nonexistent-zzz');
+    expect(count).to.equal(0);
+    el.searchNext();
+    el.searchPrevious();
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('[data-active-match]')).to.not.exist;
+  });
+
+  it('search()/clearSearch() fall back to an empty search state before any document is loaded', async () => {
+    const el = (await fixture(html`<lr-xml-viewer></lr-xml-viewer>`)) as LyraXmlViewer;
+    const count = await el.search('anything');
+    expect(count).to.equal(0);
+    el.clearSearch();
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('[data-match]')).to.not.exist;
+  });
 });
 
 describe('node-path anchors', () => {
@@ -152,6 +320,15 @@ describe('node-path anchors', () => {
     expect(await el.scrollToAnchor({ kind: 'node-path', path: [0, 1, 0, '@href'] })).to.be.true;
     expect(await el.scrollToAnchor({ kind: 'node-path', path: [99] })).to.be.false;
     expect(await el.scrollToAnchor({ kind: 'page', page: 1 })).to.be.false;
+  });
+
+  it('resolves false for a malformed node-path: a non-@ string segment, or an @-segment mid-path', async () => {
+    const el = (await fixture(html`<lr-xml-viewer .xml=${RSS_XML}></lr-xml-viewer>`)) as LyraXmlViewer;
+    await el.updateComplete;
+    (el as unknown as { anchorTimeoutMs: number }).anchorTimeoutMs = 30;
+    (el as unknown as { anchorRetryIntervalMs: number }).anchorRetryIntervalMs = 5;
+    expect(await el.scrollToAnchor({ kind: 'node-path', path: ['bogus'] })).to.be.false;
+    expect(await el.scrollToAnchor({ kind: 'node-path', path: ['@href', 0] })).to.be.false;
   });
 });
 
@@ -361,5 +538,109 @@ describe('localization coverage', () => {
     const el = (await fixture(html`<lr-xml-viewer locale="fr-test-xml-viewer"></lr-xml-viewer>`)) as LyraXmlViewer;
     await el.updateComplete;
     expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('Visionneuse XML');
+  });
+});
+
+describe('stale generation guards', () => {
+  it('setDoc() ignores a call carrying a generation older than the current one', async () => {
+    const el = (await fixture(html`<lr-xml-viewer .xml=${SIMPLE_XML}></lr-xml-viewer>`)) as LyraXmlViewer;
+    await el.updateComplete;
+    const before = el.shadowRoot!.querySelectorAll('[part="tag"]').length;
+    const staleDoc = new DOMParser().parseFromString('<other/>', 'application/xml');
+    (el as unknown as { setDoc(doc: Document, generation: number): void }).setDoc(staleDoc, -1);
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelectorAll('[part="tag"]').length).to.equal(before);
+  });
+});
+
+describe('leaf elements (no children of any kind)', () => {
+  it('hides the toggle and omits its aria attributes for a truly childless element', async () => {
+    const el = (await fixture(
+      html`<lr-xml-viewer .xml=${'<root><empty/><item>x</item></root>'}></lr-xml-viewer>`,
+    )) as LyraXmlViewer;
+    await el.updateComplete;
+    const toggles = [...el.shadowRoot!.querySelectorAll('[part="toggle"]')] as HTMLButtonElement[];
+    const leafToggle = toggles[1]; // toggles[0] is root's own (it has children)
+    expect(leafToggle.hasAttribute('hidden')).to.be.true;
+    expect(leafToggle.getAttribute('tabindex')).to.equal('-1');
+    expect(leafToggle.getAttribute('aria-hidden')).to.equal('true');
+    expect(leafToggle.hasAttribute('aria-expanded')).to.be.false;
+    expect(leafToggle.hasAttribute('aria-label')).to.be.false;
+  });
+});
+
+describe('comment, CDATA, and processing-instruction leaves', () => {
+  const RICH_XML = '<root><!-- a comment --><![CDATA[raw <data>]]><?myapp key="value"?></root>';
+
+  it('renders one row each for a comment, a CDATA section, and a processing instruction', async () => {
+    const el = (await fixture(html`<lr-xml-viewer .xml=${RICH_XML}></lr-xml-viewer>`)) as LyraXmlViewer;
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('[part="comment"]')!.textContent).to.equal('<!-- a comment -->');
+    expect(el.shadowRoot!.querySelector('[part="cdata"]')!.textContent).to.include('raw <data>');
+    expect(el.shadowRoot!.querySelector('[part="pi"]')!.textContent).to.include('myapp');
+  });
+});
+
+describe('collapsed child-count preview pluralization', () => {
+  it('uses the singular key for exactly one child, plural for more than one', async () => {
+    const one = (await fixture(
+      html`<lr-xml-viewer .xml=${'<root><only/></root>'} collapsed-depth="0"></lr-xml-viewer>`,
+    )) as LyraXmlViewer;
+    await one.updateComplete;
+    expect(one.shadowRoot!.querySelector('.preview')!.textContent).to.equal('1 child');
+
+    const two = (await fixture(html`<lr-xml-viewer .xml=${SIMPLE_XML} collapsed-depth="0"></lr-xml-viewer>`)) as LyraXmlViewer;
+    await two.updateComplete;
+    expect(two.shadowRoot!.querySelector('.preview')!.textContent).to.equal('2 children');
+  });
+});
+
+describe('per-node copy button', () => {
+  it("copies a single node's serialized XML and stops the click from also toggling its row", async () => {
+    const el = (await fixture(html`<lr-xml-viewer .xml=${SIMPLE_XML} copyable></lr-xml-viewer>`)) as LyraXmlViewer;
+    await el.updateComplete;
+    const nodeButtons = [...el.shadowRoot!.querySelectorAll('[part="node"] [part="copy-button"]')] as HTMLButtonElement[];
+    const itemButton = nodeButtons[0]; // the first element row's own per-node button
+    const eventPromise = oneEvent(el, 'lr-copy');
+    itemButton.click();
+    const event = await eventPromise;
+    expect(event.detail.text).to.include('<item');
+    // A row-toggle click would have flipped an aria-expanded value; none did.
+    expect(el.shadowRoot!.querySelectorAll('[part="toggle"][aria-expanded="false"]').length).to.equal(0);
+  });
+});
+
+describe('writeClipboard defensive catch', () => {
+  it('still emits lr-copy when navigator.clipboard.writeText throws synchronously', async () => {
+    const original = Object.getOwnPropertyDescriptor(navigator, 'clipboard');
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: {
+        writeText: () => {
+          throw new Error('denied');
+        },
+      },
+    });
+    try {
+      const el = (await fixture(html`<lr-xml-viewer .xml=${SIMPLE_XML} copyable></lr-xml-viewer>`)) as LyraXmlViewer;
+      await el.updateComplete;
+      const button = el.shadowRoot!.querySelector('[part="toolbar"] [part="copy-button"]') as HTMLButtonElement;
+      const eventPromise = oneEvent(el, 'lr-copy');
+      button.click();
+      const event = await eventPromise;
+      expect(event.detail.text).to.include('<root>');
+    } finally {
+      if (original) Object.defineProperty(navigator, 'clipboard', original);
+      else delete (navigator as unknown as { clipboard?: unknown }).clipboard;
+    }
+  });
+});
+
+describe('max-height', () => {
+  it('exposes max-height as the --lr-xml-viewer-max-height cssprop on the base part', async () => {
+    const el = (await fixture(html`<lr-xml-viewer .xml=${SIMPLE_XML} max-height="20rem"></lr-xml-viewer>`)) as LyraXmlViewer;
+    await el.updateComplete;
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    expect(base.style.getPropertyValue('--lr-xml-viewer-max-height').trim()).to.equal('20rem');
   });
 });
