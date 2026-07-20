@@ -385,7 +385,7 @@ describe('selected-row cssprop escape hatch', () => {
     el.chunks = chunks;
     el.selectedIds = ['c1'];
     await el.updateComplete;
-    const rowBody = el.shadowRoot!.querySelector('[part="row-body"][data-selected]') as HTMLElement;
+    const rowBody = el.shadowRoot!.querySelector('[part~="row-body"][data-selected]') as HTMLElement;
     return { el, rowBody };
   }
 
@@ -404,6 +404,156 @@ describe('selected-row cssprop escape hatch', () => {
   it('is accessible with the selected-row prop themed', async () => {
     const { el } = await selected('--lr-retrieval-results-selected-border: rgb(0, 51, 102)');
     await expect(el).to.be.accessible();
+  });
+});
+
+// Grouped mode always renders through the internal `<lr-virtual-list>`, so every row-level part
+// below lives one shadow boundary deeper than this component's own shadow root. The flat path
+// renders the identical template directly into this component's shadow root; both are asserted.
+describe('row styling across both rendering paths', () => {
+  function resolvedInShadow(el: LyraRetrievalResults, declaration: string, property: string): string {
+    const probe = document.createElement('span');
+    probe.setAttribute('style', declaration);
+    el.shadowRoot!.appendChild(probe);
+    const value = getComputedStyle(probe).getPropertyValue(property);
+    probe.remove();
+    return value;
+  }
+
+  async function render(path: 'flat' | 'virtualized'): Promise<{ el: LyraRetrievalResults; root: ParentNode }> {
+    const el = (await fixture(
+      html`<lr-retrieval-results grouping=${path === 'virtualized' ? 'source' : 'none'}></lr-retrieval-results>`,
+    )) as LyraRetrievalResults;
+    el.chunks = chunks;
+    el.selectedIds = ['c2']; // c2 is the top-scoring chunk and the only one carrying metadata
+    await el.updateComplete;
+    await nextFrame();
+    const list = el.shadowRoot!.querySelector('lr-virtual-list');
+    expect(!!list, `${path}: virtual-list presence`).to.equal(path === 'virtualized');
+    return { el, root: list ? list.shadowRoot! : el.shadowRoot! };
+  }
+
+  for (const path of ['flat', 'virtualized'] as const) {
+    describe(path, () => {
+      it('offsets the per-row checkbox from the row body', async () => {
+        const { root } = await render(path);
+        const select = root.querySelector('[part~="select"]') as HTMLElement;
+        expect(getComputedStyle(select).flexGrow).to.equal('0');
+        expect(parseFloat(getComputedStyle(select).marginTop)).to.be.greaterThan(0);
+      });
+
+      it('gives the row body a transparent indicator border that turns brand-colored once selected', async () => {
+        const { el, root } = await render(path);
+        const bodies = [...root.querySelectorAll('[part~="row-body"]')] as HTMLElement[];
+        expect(bodies.length).to.equal(3);
+        const selected = root.querySelector('[part~="row-body-selected"]') as HTMLElement;
+        expect(parseFloat(getComputedStyle(selected).borderLeftWidth)).to.be.greaterThan(0);
+        expect(getComputedStyle(selected).borderLeftColor).to.equal(
+          resolvedInShadow(el, 'color: var(--lr-color-brand)', 'color'),
+        );
+        const unselected = root.querySelector('[part~="row-body"]:not([data-selected])') as HTMLElement;
+        expect(getComputedStyle(unselected).borderLeftColor).to.equal('rgba(0, 0, 0, 0)');
+        expect(parseFloat(getComputedStyle(unselected).paddingLeft)).to.be.greaterThan(0);
+      });
+
+      it('lays the metadata list out as a wrapping, quiet-toned dl', async () => {
+        const { el, root } = await render(path);
+        const dl = root.querySelector('[part~="metadata"]') as HTMLElement;
+        expect(getComputedStyle(dl).display).to.equal('flex');
+        expect(getComputedStyle(dl).flexWrap).to.equal('wrap');
+        expect(getComputedStyle(dl).color).to.equal(resolvedInShadow(el, 'color: var(--lr-color-text-quiet)', 'color'));
+        const entry = root.querySelector('[part~="metadata-entry"]') as HTMLElement;
+        expect(getComputedStyle(entry).display).to.equal('flex');
+      });
+
+      it('emphasizes the metadata term, appends its colon, and resets the value margin', async () => {
+        const { el, root } = await render(path);
+        const term = root.querySelector('[part~="metadata-term"]') as HTMLElement;
+        expect(getComputedStyle(term).fontWeight).to.equal(
+          resolvedInShadow(el, 'font-weight: var(--lr-font-weight-medium)', 'font-weight'),
+        );
+        expect(getComputedStyle(term, '::after').content).to.include(':');
+        const value = root.querySelector('[part~="metadata-value"]') as HTMLElement;
+        expect(getComputedStyle(value).marginTop).to.equal('0px');
+        expect(getComputedStyle(value).overflowWrap).to.equal('anywhere');
+      });
+
+      it('is accessible', async () => {
+        const { el } = await render(path);
+        await expect(el).to.be.accessible();
+      });
+    });
+  }
+
+  it('lays the row wrapper out identically in both paths', async () => {
+    const flat = await render('flat');
+    const flatRow = flat.root.querySelector('[part~="row"]') as HTMLElement;
+    const virtual = await render('virtualized');
+    const virtualRow = virtual.root.querySelector('[part~="row"]') as HTMLElement;
+    for (const row of [flatRow, virtualRow]) {
+      const style = getComputedStyle(row);
+      expect(style.display).to.equal('flex');
+      expect(style.alignItems).to.equal('flex-start');
+      expect(parseFloat(style.paddingLeft)).to.be.greaterThan(0);
+    }
+  });
+
+  it('styles the group header rendered by the internal virtual-list', async () => {
+    const { el, root } = await render('virtualized');
+    const header = root.querySelector('[part~="group"]') as HTMLElement;
+    expect(header.textContent).to.include('curie-bio.pdf');
+    // The list's own `group` styling supplies the surface/quiet/semibold treatment; this component
+    // adds the separator between the header and the first row under it.
+    expect(getComputedStyle(header).borderBottomStyle).to.equal('solid');
+    expect(parseFloat(getComputedStyle(header).borderBottomWidth)).to.be.greaterThan(0);
+    expect(getComputedStyle(header).borderBottomColor).to.equal(
+      resolvedInShadow(el, 'color: var(--lr-color-border)', 'color'),
+    );
+    expect(getComputedStyle(header).backgroundColor).to.equal(
+      resolvedInShadow(el, 'background: var(--lr-color-surface)', 'background-color'),
+    );
+  });
+
+  it('exposes its own row parts and the nested chunk-inspector parts to a consumer stylesheet', async () => {
+    const sheet = document.createElement('style');
+    sheet.textContent = `
+      lr-retrieval-results::part(group-header) { letter-spacing: 1px; }
+      lr-retrieval-results::part(select) { letter-spacing: 2px; }
+      lr-retrieval-results::part(row-body) { letter-spacing: 3px; }
+      lr-retrieval-results::part(row-body-selected) { letter-spacing: 4px; }
+      lr-retrieval-results::part(metadata) { letter-spacing: 5px; }
+      lr-retrieval-results::part(metadata-entry) { letter-spacing: 6px; }
+      lr-retrieval-results::part(metadata-term) { letter-spacing: 7px; }
+      lr-retrieval-results::part(metadata-value) { letter-spacing: 8px; }
+      lr-retrieval-results::part(chunk-score-fill-success) { background: rgb(10, 11, 12); }
+      lr-retrieval-results::part(chunk-open-button) { letter-spacing: 9px; }
+    `;
+    document.head.appendChild(sheet);
+    try {
+      const { root } = await render('virtualized');
+      const spacing = (selector: string): string =>
+        getComputedStyle(root.querySelector(selector) as HTMLElement).letterSpacing;
+      expect(spacing('[part~="group"]')).to.equal('1px');
+      expect(spacing('[part~="select"]')).to.equal('2px');
+      expect(spacing('[part~="row-body"]:not([data-selected])')).to.equal('3px');
+      expect(spacing('[part~="row-body-selected"]')).to.equal('4px');
+      expect(spacing('[part~="metadata"]')).to.equal('5px');
+      expect(spacing('[part~="metadata-entry"]')).to.equal('6px');
+      expect(spacing('[part~="metadata-term"]')).to.equal('7px');
+      expect(spacing('[part~="metadata-value"]')).to.equal('8px');
+
+      // Two shadow hops deep: the per-row <lr-chunk-inspector> forwards its own parts into the
+      // virtual-list's tree, which forwards them onward from here.
+      const inspectors = [...root.querySelectorAll('lr-chunk-inspector')] as LyraChunkInspector[];
+      const fill = inspectors
+        .map((i) => i.shadowRoot!.querySelector('[part~="score-fill-success"]'))
+        .find(Boolean) as HTMLElement;
+      expect(getComputedStyle(fill).backgroundColor).to.equal('rgb(10, 11, 12)');
+      const openButton = inspectors[0]!.shadowRoot!.querySelector('[part~="open-button"]') as HTMLElement;
+      expect(getComputedStyle(openButton).letterSpacing).to.equal('9px');
+    } finally {
+      sheet.remove();
+    }
   });
 });
 

@@ -112,9 +112,31 @@ function formatMetadataValue(value: unknown): string {
  * @csspart select - The per-row `<lr-checkbox>`, omitted entirely when `selectable` is false.
  * @csspart row-body - The wrapper around a row's `<lr-chunk-inspector>` plus its optional
  * metadata list; carries `data-selected` while that row is selected.
+ * @csspart row-body-selected - Additional part on a selected `row-body`. State is exposed as a
+ * second part name because Shadow Parts forbids an attribute selector after `::part()` —
+ * `::part(row-body)[data-selected]` is invalid CSS, and while virtualized `::part()` is the only
+ * way in. A state part is a second token in the same `part` attribute, so a `[part~="…"]` (not
+ * `[part="…"]`) selector is the one that matches inside a tree.
  * @csspart metadata - The `<dl>` of a chunk's `metadata` entries — omitted entirely when a chunk
  * has no `metadata`, or while `presentation="compact"`.
  * @csspart metadata-entry - One metadata key/value pair's wrapper.
+ * @csspart metadata-term - The `<dt>` carrying a metadata key. Named separately because
+ * `::part()` matches one element and cannot be followed into its subtree.
+ * @csspart metadata-value - The `<dd>` carrying a metadata value.
+ * @csspart chunk - The per-row `<lr-chunk-inspector>`'s own `chunk` row.
+ * @csspart chunk-current - The row `<lr-chunk-inspector>`'s current-chunk state part.
+ * @csspart chunk-score - The row chunk's percent-score line.
+ * @csspart chunk-score-current - The current row chunk's score line.
+ * @csspart chunk-score-bar - The row chunk's score bar track.
+ * @csspart chunk-score-fill - The row chunk's score bar fill.
+ * @csspart chunk-score-fill-success - The row chunk's score fill in the high-score tier.
+ * @csspart chunk-score-fill-warning - The row chunk's score fill in the medium-score tier.
+ * @csspart chunk-score-fill-danger - The row chunk's score fill in the low-score tier.
+ * @csspart chunk-open-button - The row chunk's title/open `<button>`.
+ * @csspart chunk-title - The row chunk's visible title text.
+ * @csspart chunk-text - The row chunk's text preview (`presentation="expanded"` only).
+ * @csspart chunk-text-clamped - The row chunk's text preview while still collapsed.
+ * @csspart chunk-toggle - The row chunk's "Show more"/"Show less" button.
  * @csspart load-more-row - The wrapper around the non-virtualized-mode pagination footer.
  * @csspart load-more - The "Load more" button itself (non-virtualized mode, `loading` false).
  * @cssprop [--lr-retrieval-results-selected-border=var(--lr-color-brand)] - Inline-start border
@@ -233,7 +255,11 @@ export class LyraRetrievalResults extends LyraElement<LyraRetrievalResultsEventM
     return html`
       <dl part="metadata">
         ${entries.map(
-          ([key, value]) => html`<div part="metadata-entry"><dt>${key}</dt><dd>${formatMetadataValue(value)}</dd></div>`,
+          ([key, value]) =>
+            html`<div part="metadata-entry">
+              <dt part="metadata-term">${key}</dt>
+              <dd part="metadata-value">${formatMetadataValue(value)}</dd>
+            </div>`,
         )}
       </dl>
     `;
@@ -258,8 +284,9 @@ export class LyraRetrievalResults extends LyraElement<LyraRetrievalResultsEventM
             @lr-change=${() => this.toggleSelect(chunk)}
           ></lr-checkbox>`
         : nothing}
-      <div part="row-body" ?data-selected=${selected}>
+      <div part=${selected ? 'row-body row-body-selected' : 'row-body'} ?data-selected=${selected}>
         <lr-chunk-inspector
+          exportparts="chunk:chunk, chunk-current:chunk-current, score:chunk-score, score-current:chunk-score-current, score-bar:chunk-score-bar, score-fill:chunk-score-fill, score-fill-success:chunk-score-fill-success, score-fill-warning:chunk-score-fill-warning, score-fill-danger:chunk-score-fill-danger, open-button:chunk-open-button, title:chunk-title, text:chunk-text, text-clamped:chunk-text-clamped, toggle:chunk-toggle"
           .chunks=${[toLyraChunk(chunk)]}
           .thresholds=${this.thresholds}
           ?compact=${this.presentation === 'compact'}
@@ -309,7 +336,7 @@ export class LyraRetrievalResults extends LyraElement<LyraRetrievalResultsEventM
       <div part="base" role="group" aria-label=${label}>
         ${useVirtualList
           ? html`<lr-virtual-list
-              exportparts="row:row, group:group-header"
+              exportparts="row:row, group:group-header, select:select, row-body:row-body, row-body-selected:row-body-selected, metadata:metadata, metadata-entry:metadata-entry, metadata-term:metadata-term, metadata-value:metadata-value, chunk:chunk, chunk-current:chunk-current, chunk-score:chunk-score, chunk-score-current:chunk-score-current, chunk-score-bar:chunk-score-bar, chunk-score-fill:chunk-score-fill, chunk-score-fill-success:chunk-score-fill-success, chunk-score-fill-warning:chunk-score-fill-warning, chunk-score-fill-danger:chunk-score-fill-danger, chunk-open-button:chunk-open-button, chunk-title:chunk-title, chunk-text:chunk-text, chunk-text-clamped:chunk-text-clamped, chunk-toggle:chunk-toggle"
               .items=${processed.chunks}
               .renderItem=${this.renderRow}
               .keyFunction=${(item: unknown) => (item as RetrievalChunk).id}
