@@ -94,6 +94,16 @@ sweep for remaining `wa-*`/hand-rolled UI, migrate what's adoptable, file genuin
 First rule out a naming mismatch: check `references/index.md` for a component covering the same
 job under a different name. Most apparent gaps are discovery failures, not missing components.
 
+Then check the live catalog — one read-only request, no side effects, nothing filed:
+
+```bash
+curl -sS 'https://www.lyra-ui.com/api/v1/components/search?q=kanban+board+swimlane'
+```
+
+It returns the closest components with doc links. Search as many phrasings as you like; this
+endpoint is meant to be used freely, and it is the cheapest way to discover that a "missing"
+component already exists under a name you did not guess.
+
 If nothing fits, report the gap so it can be built:
 
 **Ask before you file.** Filing sends the user's description to an external service. Show the
