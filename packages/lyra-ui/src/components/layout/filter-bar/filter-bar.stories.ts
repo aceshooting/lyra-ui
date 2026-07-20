@@ -134,6 +134,54 @@ export const LiveEvents: Story = {
   },
 };
 
+/** A `'text'` filter composes `<lr-input>` for an open-ended query, so a search box and its
+ *  sibling dropdowns live in one filter bar instead of being split across a separate toolbar.
+ *  Its optional `debounce` (ms) commits once the user pauses rather than once per keystroke --
+ *  the log below fires once per pause, which is the debounce a server-backed consumer would
+ *  otherwise hand-roll. The query's own chip shows it verbatim (slashes included) and removing
+ *  the chip clears the field. */
+export const FreeTextSearch: Story = {
+  render: () => {
+    const filters: FilterBarFilterDefinition[] = [
+      { id: 'q', label: 'Search', type: 'text', placeholder: 'Search logs (e.g. GET /api/v1)', debounce: 250 },
+      {
+        id: 'severity',
+        label: 'Severity',
+        type: 'select',
+        placeholder: 'Any severity',
+        options: [
+          { value: 'error', label: 'Error' },
+          { value: 'warn', label: 'Warning' },
+          { value: 'info', label: 'Info' },
+        ],
+      },
+      {
+        id: 'kind',
+        label: 'Type',
+        type: 'select',
+        placeholder: 'Any type',
+        options: [
+          { value: 'request', label: 'Request' },
+          { value: 'job', label: 'Job' },
+        ],
+      },
+      { id: 'period', label: 'Active period', type: 'date-range' },
+    ];
+    let commits = 0;
+    const onInput = (e: Event) => {
+      commits += 1;
+      const log = (e.target as HTMLElement).closest('.demo')!.querySelector('.log') as HTMLElement;
+      log.textContent = `commit #${commits}: ${JSON.stringify((e as CustomEvent).detail.value)}`;
+    };
+    return html`
+      <div class="demo" style="max-width: 50rem; display: flex; flex-direction: column; gap: 1rem">
+        <lr-filter-bar .filters=${filters} .value=${{ q: 'GET /api/v1' }} @lr-input=${onInput}></lr-filter-bar>
+        <pre class="log" style="font-size: 0.75rem; white-space: pre-wrap; word-break: break-all"></pre>
+      </div>
+    `;
+  },
+};
+
 /** A narrow (320px) allocation wraps the filter controls onto multiple lines instead of
  *  overflowing, matching this library's own narrow-panel/dialog responsive contract. */
 export const NarrowAllocation: Story = {

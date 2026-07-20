@@ -6,6 +6,7 @@ import '../../forms/select/select.class.js';
 import '../../forms/combobox/combobox.class.js';
 import '../../forms/combobox/option.class.js';
 import '../../forms/date-picker/date-input.class.js';
+import '../../forms/input/input.class.js';
 import '../../overlays/chip/chip.class.js';
 import '../../overlays/chip/chip-group.class.js';
 import '../../forms/button/button.class.js';
@@ -14,8 +15,12 @@ import '../../overlays/spinner/spinner.class.js';
 /** Which existing Lyra input family renders a given filter -- this component composes these,
  *  it never invents a new filter-input type of its own. `'date'` and `'date-range'` both map
  *  to `<lr-date-input>` (single vs. `mode="range"`); `'select'`/`'combobox'` map to their
- *  same-named counterparts, with `combobox`'s own `multiple` opting into a multi-value filter. */
-export type FilterBarControlType = 'select' | 'combobox' | 'date' | 'date-range';
+ *  same-named counterparts, with `combobox`'s own `multiple` opting into a multi-value filter;
+ *  `'text'` -- an open-ended free-text query rather than a closed choice set -- maps to
+ *  `<lr-input>`, composed exactly like the rest (its own label/hint/error chrome, its own
+ *  `required`), with this component adding only the optional `debounce` every free-text filter
+ *  otherwise hand-rolls at the call site. */
+export type FilterBarControlType = 'select' | 'combobox' | 'date' | 'date-range' | 'text';
 
 /** One closed-set choice for a `'select'`/`'combobox'` filter. */
 export interface FilterBarOption {
@@ -37,9 +42,17 @@ export interface FilterBarFilterDefinition {
   label: string;
   type: FilterBarControlType;
   /** Closed choice set. Required (and meaningful) only for `'select'`/`'combobox'`; ignored for
-   *  `'date'`/`'date-range'`. */
+   *  `'date'`/`'date-range'`/`'text'`. */
   options?: FilterBarOption[];
   placeholder?: string;
+  /** `'text'` only -- how long (ms) to wait after the last keystroke before committing the typed
+   *  value to `value` and emitting a single `lr-input`, so a server-side query runs once per pause
+   *  instead of once per character. Omitted, `0`, or a non-finite value means no debounce at all:
+   *  every keystroke commits immediately. A pending debounce is always flushed by the field's own
+   *  `change`/blur (so a blur never loses the last keystroke) and cancelled outright by
+   *  `reset()`, a chip removal, and disconnection. Ignored for every other `type`, whose commits
+   *  are discrete choices with nothing to debounce. */
+  debounce?: number;
   /** Opts a `'combobox'` filter into multi-value selection, mirroring `<lr-combobox>`'s own
    *  `multiple`. Ignored for every other `type`. */
   multiple?: boolean;
@@ -53,10 +66,11 @@ export interface FilterBarFilterDefinition {
   max?: string;
 }
 
-/** One filter's current value: a single string (`'select'`, `'date'`, a non-multiple
+/** One filter's current value: a single string (`'select'`, `'date'`, `'text'`, a non-multiple
  *  `'combobox'`), a string array (a `multiple` `'combobox'`), or `undefined`/`''`/`[]` for
  *  "unset". `'date-range'` uses `<lr-date-input>`'s own single-string range shape
- *  (`"YYYY-MM-DD/YYYY-MM-DD"`), not a two-element array. */
+ *  (`"YYYY-MM-DD/YYYY-MM-DD"`), not a two-element array. A `'text'` filter's value is the raw
+ *  query string, verbatim. */
 export type FilterBarFieldValue = string | string[] | undefined;
 
 /**
@@ -105,9 +119,18 @@ function isSet(value: FilterBarFieldValue): boolean {
  * `<lr-filter-bar>` — a row of dashboard filters, each declared by the host (`filters`) rather
  * than invented by this component: every filter composes an existing Lyra input --
  * `<lr-select>`/`<lr-combobox>` for closed choice sets, `<lr-date-input>` (single or `mode="range"`)
- * for dates -- plus a `<lr-chip-group>` of removable `<lr-chip>`s summarizing the currently-active
- * filters, an `<lr-button>` that resets every filter, and (while `loading`) an `<lr-spinner>`
- * status indicator.
+ * for dates, `<lr-input>` for a free-text query -- plus a `<lr-chip-group>` of removable
+ * `<lr-chip>`s summarizing the currently-active filters, an `<lr-button>` that resets every
+ * filter, and (while `loading`) an `<lr-spinner>` status indicator.
+ *
+ * A `'text'` filter is the one control that is *not* a fully controlled `.value=` binding: a text
+ * field re-rendered from `value` mid-typing would push a stale value back into the field and drop
+ * the caret to the end, so the field owns its own value while the user types and an external
+ * `value` write is synced back in only once no edit is in flight (see `syncTextControls()`). Its
+ * optional per-filter `debounce` (ms) is the only behaviour this component adds on top of the
+ * composed control itself -- flushed by that field's own `change`/blur, cancelled by `reset()`, a
+ * chip removal, and `disconnectedCallback`, so a stale keystroke can never overwrite a reset or
+ * fire after teardown.
  *
  * Controlled, like every other Lyra data component: `value` is a plain, JSON-serializable object
  * (`FilterBarValue`) the host reads/writes directly -- this component never touches
@@ -138,7 +161,7 @@ function isSet(value: FilterBarFieldValue): boolean {
  * @event lr-reset - `reset()` ran (via the reset button or a direct call). `detail: { value }`.
  * @csspart base - The root `role="group"` wrapper.
  * @csspart controls - The row holding every filter control, the reset button, and the loading status.
- * @csspart filter-control - One filter's composed `<lr-select>`/`<lr-combobox>`/`<lr-date-input>`.
+ * @csspart filter-control - One filter's composed `<lr-select>`/`<lr-combobox>`/`<lr-date-input>`/`<lr-input>`.
  * @csspart reset-button - The reset `<lr-button>`.
  * @csspart status - The loading `<lr-spinner>`, only rendered while `loading`.
  * @csspart active-filters - The `role="group"` wrapper around the active-filter chip row, only rendered while any filter is set.
@@ -175,6 +198,11 @@ export class LyraFilterBar extends LyraElement<LyraFilterBarEventMap> {
 
   private _filters: FilterBarFilterDefinition[] = EMPTY_FILTERS;
   private _value: FilterBarValue = EMPTY_VALUE;
+  // One in-flight `debounce` timer per `'text'` filter id, plus the keystroke it will commit.
+  // Presence in `debounceTimers` is also what marks that field as "the user is mid-edit", which
+  // suppresses the external-value sync in `syncTextControls()`.
+  private debounceTimers = new Map<string, ReturnType<typeof setTimeout>>();
+  private pendingText = new Map<string, string>();
   // Guards lr-validity-change so it only fires on an actual change, not on every render --
   // `undefined` guarantees the first computed state always "changes" from it, mirroring
   // lr-tool-param-form's identical lastValidityKey.
@@ -236,6 +264,9 @@ export class LyraFilterBar extends LyraElement<LyraFilterBarEventMap> {
    *  dedicated `lr-clear`. */
   reset(): void {
     if (this.disabled) return;
+    // Drop every in-flight keystroke first: a debounce that fired *after* the reset would
+    // immediately overwrite the freshly-restored value with the discarded draft.
+    this.cancelDebounce();
     this.touchedFilters = new Set();
     this.value = this.resetValue;
     this.emit<FilterBarInputDetail>('lr-input', { value: this.value, filterId: undefined });
@@ -267,8 +298,62 @@ export class LyraFilterBar extends LyraElement<LyraFilterBarEventMap> {
     this.setFilterValue(id, (e.target as HTMLElement & { value: FilterBarFieldValue }).value);
   };
 
+  /** A `'text'` filter's keystroke: commits immediately, or (with a positive `debounce`) parks the
+   *  value until the user pauses. Non-finite/zero/negative delays mean "no debounce" rather than
+   *  scheduling a timer that would never behave sensibly. */
+  private onTextInput(def: FilterBarFilterDefinition, e: Event): void {
+    if (this.disabled) return;
+    const next = (e.target as HTMLElement & { value: string }).value ?? '';
+    const delay = def.debounce;
+    if (typeof delay !== 'number' || !Number.isFinite(delay) || delay <= 0) {
+      this.cancelDebounce(def.id);
+      this.setFilterValue(def.id, next);
+      return;
+    }
+    this.pendingText.set(def.id, next);
+    const existing = this.debounceTimers.get(def.id);
+    if (existing !== undefined) clearTimeout(existing);
+    this.debounceTimers.set(
+      def.id,
+      setTimeout(() => this.flushDebounce(def.id), delay),
+    );
+  }
+
+  /** Commits an in-flight keystroke right now (the field's own `change`/blur, or the timer
+   *  itself). A no-op when nothing is pending, so it is safe to call on every blur. */
+  private flushDebounce(id: string): void {
+    const timer = this.debounceTimers.get(id);
+    if (timer === undefined) return;
+    clearTimeout(timer);
+    this.debounceTimers.delete(id);
+    const pending = this.pendingText.get(id);
+    this.pendingText.delete(id);
+    if (pending !== undefined) this.setFilterValue(id, pending);
+  }
+
+  /** Discards an in-flight keystroke without committing it -- one filter's, or (with no argument)
+   *  every filter's. `syncTextControls()` then pushes the authoritative value back into the field
+   *  on the next render, so the discarded draft does not linger on screen either. */
+  private cancelDebounce(id?: string): void {
+    for (const [key, timer] of this.debounceTimers) {
+      if (id !== undefined && key !== id) continue;
+      clearTimeout(timer);
+      this.debounceTimers.delete(key);
+      this.pendingText.delete(key);
+    }
+  }
+
+  private onTextFocusout(id: string): void {
+    // Flush before marking touched: `errorText` is recomputed from `_value` on the very next
+    // render, so an unflushed debounce would flash "required" at a field the user *has* filled in.
+    this.flushDebounce(id);
+    this.markTouched(id);
+  }
+
   private clearFilter(id: string): void {
     if (this.disabled) return;
+    // Same race as reset(): a pending keystroke would land after the chip removal and undo it.
+    this.cancelDebounce(id);
     const def = this._filters.find((f) => f.id === id);
     const empty: FilterBarFieldValue = def?.type === 'combobox' && def.multiple ? [] : '';
     this.setFilterValue(id, empty);
@@ -280,6 +365,12 @@ export class LyraFilterBar extends LyraElement<LyraFilterBarEventMap> {
       // Show each option's own label, not its raw value, when it's a known choice -- falls back
       // to the raw value verbatim for a value that no longer matches any declared option.
       return values.map((v) => def.options?.find((o) => o.value === v)?.label ?? v).join(', ');
+    }
+    if (def.type === 'text') {
+      // Verbatim, deliberately *before* the date branch below: a free-text query is arbitrary user
+      // input with no range separator to prettify, so running it through that branch's
+      // `replace('/', ' – ')` would silently mangle any query containing a slash ("GET /api/v1").
+      return typeof value === 'string' ? value : '';
     }
     // 'date' / 'date-range': the raw ISO value(s) are caller-supplied data, not UI copy -- not
     // an i18n concern. The '/' range separator is swapped for an en dash purely as display
@@ -293,7 +384,37 @@ export class LyraFilterBar extends LyraElement<LyraFilterBarEventMap> {
       .map((def) => ({ def, display: this.displayValueFor(def, this._value[def.id]) }));
   }
 
+  /** Every `'text'` filter's debounce dies with the element. Without this a detached filter bar
+   *  would still fire its timer and emit `lr-input` after teardown; a re-parent (which also runs
+   *  this) simply drops the uncommitted keystroke, which the next keystroke or blur re-commits. */
+  disconnectedCallback(): void {
+    super.disconnectedCallback();
+    this.cancelDebounce();
+  }
+
+  /** Pushes an *external* `value` change back into each uncontrolled `'text'` field -- a host
+   *  write, a chip removal, a `reset()`. Skipped entirely while that field has a debounce in
+   *  flight: the user is mid-edit and owns the field (and its caret) until they pause. */
+  private syncTextControls(): void {
+    if (!this._filters.some((def) => def.type === 'text')) return;
+    const fields = new Map<string, HTMLElement & { value: string }>();
+    for (const node of this.renderRoot.querySelectorAll('lr-input[data-filter-id]')) {
+      const element = node as HTMLElement & { value: string };
+      const id = element.dataset.filterId;
+      if (id !== undefined) fields.set(id, element);
+    }
+    for (const def of this._filters) {
+      if (def.type !== 'text' || this.debounceTimers.has(def.id)) continue;
+      const field = fields.get(def.id);
+      if (!field) continue;
+      const raw = this._value[def.id];
+      const next = typeof raw === 'string' ? raw : '';
+      if (field.value !== next) field.value = next;
+    }
+  }
+
   protected updated(changed: PropertyValues): void {
+    this.syncTextControls();
     if (changed.has('value') || changed.has('filters')) {
       const invalidFilterIds = this.invalidFilterIds;
       const valid = invalidFilterIds.length === 0;
@@ -329,6 +450,41 @@ export class LyraFilterBar extends LyraElement<LyraFilterBarEventMap> {
         @focusout=${onFocusout}
         >${(def.options ?? []).map((o) => html`<lr-option value=${o.value}>${o.label}</lr-option>`)}</lr-combobox
       >`;
+    }
+
+    if (def.type === 'text') {
+      // Deliberately no `.value=` binding, unlike every other branch here: re-rendering a
+      // controlled text field mid-typing fights the caret (and, with a debounce pending, would
+      // push the not-yet-committed old value back over what the user just typed). The field is
+      // uncontrolled-with-sync instead -- see `syncTextControls()`.
+      //
+      // Driven off `lr-input`/`lr-change` rather than the native-style `input`/`change`: `lr-input`
+      // re-emits its own composed `input` alongside the native one bubbling out of its shadow
+      // root, so an `@input` listener here would fire (and commit) twice per keystroke. Its
+      // `lr-*` aliases fire exactly once -- and must be stopped at the source, because they are
+      // bubbling+composed and would otherwise escape this shadow root and reach the host as
+      // *this* component's own `lr-input`, carrying `{ value: string }` instead of the documented
+      // `{ value: FilterBarValue, filterId }`. The native-style `input`/`change` keep
+      // propagating, exactly as they already do from `lr-select`/`lr-date-input`.
+      return html`<lr-input
+        part="filter-control"
+        data-filter-id=${def.id}
+        type="text"
+        .label=${def.label}
+        placeholder=${def.placeholder || ''}
+        ?required=${Boolean(def.required)}
+        .errorText=${errorText}
+        ?disabled=${this.disabled}
+        @lr-input=${(e: Event) => {
+          e.stopPropagation();
+          this.onTextInput(def, e);
+        }}
+        @lr-change=${(e: Event) => {
+          e.stopPropagation();
+          this.flushDebounce(def.id);
+        }}
+        @focusout=${() => this.onTextFocusout(def.id)}
+      ></lr-input>`;
     }
 
     if (def.type === 'date' || def.type === 'date-range') {

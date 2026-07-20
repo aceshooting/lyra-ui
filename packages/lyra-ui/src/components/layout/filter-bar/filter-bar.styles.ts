@@ -12,9 +12,10 @@ export const styles = css`
   [part='controls'] {
     display: flex;
     flex-wrap: wrap;
-    /* end (not center/stretch): every composed control (lr-select/lr-combobox/lr-date-input)
-       renders its own label above its own field, so aligning to the field row's own baseline
-       keeps the reset button (no label above it) sitting flush with the fields beside it. */
+    /* end (not center/stretch): every composed control (lr-select/lr-combobox/lr-date-input/
+       lr-input) renders its own label above its own field, so aligning to the field row's own
+       baseline keeps the reset button (no label above it) sitting flush with the fields beside
+       it. */
     align-items: flex-end;
     gap: var(--lr-space-s);
   }

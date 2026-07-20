@@ -1,4 +1,4 @@
-import { fixture, expect, html, oneEvent } from '@open-wc/testing';
+import { fixture, expect, html, oneEvent, aTimeout } from '@open-wc/testing';
 import './filter-bar.js';
 import type { LyraFilterBar, FilterBarFilterDefinition, FilterBarInputDetail } from './filter-bar.js';
 
@@ -29,6 +29,21 @@ const basicFilters: FilterBarFilterDefinition[] = [
 
 function control(el: LyraFilterBar, id: string): HTMLElement {
   return el.shadowRoot!.querySelector(`[data-filter-id="${id}"]`) as HTMLElement;
+}
+
+/** The native `<input>` inside a `'text'` filter's composed `<lr-input>`. */
+async function nativeInput(el: LyraFilterBar, id: string): Promise<HTMLInputElement> {
+  const composed = control(el, id) as HTMLElement & { updateComplete: Promise<unknown> };
+  await composed.updateComplete;
+  return composed.shadowRoot!.querySelector('input') as HTMLInputElement;
+}
+
+/** Simulates a user keystroke in a `'text'` filter, driving the real `<lr-input>` input path. */
+async function typeInto(el: LyraFilterBar, id: string, text: string): Promise<HTMLInputElement> {
+  const native = await nativeInput(el, id);
+  native.value = text;
+  native.dispatchEvent(new Event('input', { bubbles: true, composed: true }));
+  return native;
 }
 
 it('renders one composed control per filter, matched to its declared type', async () => {
@@ -417,6 +432,228 @@ describe('RTL and narrow-allocation layout', () => {
     )) as LyraFilterBar;
     const controlsRow = el.shadowRoot!.querySelector('[part="controls"]') as HTMLElement;
     expect(getComputedStyle(controlsRow).flexWrap).to.equal('wrap');
+  });
+});
+
+describe("'text' free-text filters", () => {
+  const textFilters: FilterBarFilterDefinition[] = [
+    { id: 'q', label: 'Search', type: 'text', placeholder: 'Search logs' },
+    {
+      id: 'severity',
+      label: 'Severity',
+      type: 'select',
+      options: [
+        { value: 'error', label: 'Error' },
+        { value: 'warn', label: 'Warning' },
+      ],
+    },
+  ];
+  const debouncedFilters: FilterBarFilterDefinition[] = [
+    { id: 'q', label: 'Search', type: 'text', placeholder: 'Search logs', debounce: 60 },
+    textFilters[1],
+  ];
+
+  it('composes an lr-input for a text filter, forwarding label/placeholder to its own chrome', async () => {
+    const el = (await fixture(html`<lr-filter-bar .filters=${textFilters}></lr-filter-bar>`)) as LyraFilterBar;
+    const composed = control(el, 'q') as HTMLElement & { label: string; placeholder: string };
+    expect(composed.localName).to.equal('lr-input');
+    expect(composed.label).to.equal('Search');
+    expect(composed.placeholder).to.equal('Search logs');
+    // No duplicate chrome: the label/hint/error belong to <lr-input>, never re-rendered here.
+    expect(el.shadowRoot!.querySelector('label')).to.not.exist;
+    const native = await nativeInput(el, 'q');
+    expect(native.type).to.equal('text');
+  });
+
+  it('emits lr-input with the typed value and the changed filterId, with no debounce declared', async () => {
+    const el = (await fixture(html`<lr-filter-bar .filters=${textFilters}></lr-filter-bar>`)) as LyraFilterBar;
+    const promise = oneEvent(el, 'lr-input');
+    await typeInto(el, 'q', 'timeout');
+    const ev = (await promise) as CustomEvent<FilterBarInputDetail>;
+    expect(ev.detail.filterId).to.equal('q');
+    expect(ev.detail.value).to.deep.equal({ q: 'timeout' });
+    expect(el.value).to.deep.equal({ q: 'timeout' });
+  });
+
+  it("never leaks the composed lr-input's own lr-input/lr-change events as this component's", async () => {
+    const el = (await fixture(html`<lr-filter-bar .filters=${textFilters}></lr-filter-bar>`)) as LyraFilterBar;
+    const details: unknown[] = [];
+    el.addEventListener('lr-input', (e) => details.push((e as CustomEvent).detail));
+    let changes = 0;
+    el.addEventListener('lr-change', () => (changes += 1));
+
+    const native = await typeInto(el, 'q', 'abc');
+    native.dispatchEvent(new Event('change', { bubbles: true, composed: true }));
+    await el.updateComplete;
+
+    expect(details.length, 'exactly one lr-input, carrying this component\'s own detail shape').to.equal(1);
+    expect((details[0] as FilterBarInputDetail).value).to.deep.equal({ q: 'abc' });
+    expect(changes, "the inner control's lr-change must not escape this shadow root").to.equal(0);
+  });
+
+  it('debounces rapid keystrokes into a single lr-input carrying the final value', async () => {
+    const el = (await fixture(html`<lr-filter-bar .filters=${debouncedFilters}></lr-filter-bar>`)) as LyraFilterBar;
+    const values: string[] = [];
+    el.addEventListener('lr-input', (e) => values.push(String((e as CustomEvent<FilterBarInputDetail>).detail.value.q)));
+
+    await typeInto(el, 'q', 't');
+    await typeInto(el, 'q', 'ti');
+    await typeInto(el, 'q', 'tim');
+    expect(values, 'nothing is emitted while the debounce is still in flight').to.deep.equal([]);
+    expect(el.value).to.deep.equal({});
+
+    await aTimeout(300);
+    expect(values).to.deep.equal(['tim']);
+    expect(el.value).to.deep.equal({ q: 'tim' });
+  });
+
+  it('flushes a pending debounce on the control\'s own change (Enter/blur commit)', async () => {
+    const el = (await fixture(html`<lr-filter-bar .filters=${debouncedFilters}></lr-filter-bar>`)) as LyraFilterBar;
+    const native = await typeInto(el, 'q', 'flush');
+    const promise = oneEvent(el, 'lr-input');
+    native.dispatchEvent(new Event('change', { bubbles: true, composed: true }));
+    const ev = (await promise) as CustomEvent<FilterBarInputDetail>;
+    expect(ev.detail.value).to.deep.equal({ q: 'flush' });
+  });
+
+  it('shows the query verbatim in its chip, never mangling a slash into an en dash', async () => {
+    const el = (await fixture(html`<lr-filter-bar .filters=${textFilters}></lr-filter-bar>`)) as LyraFilterBar;
+    el.value = { q: 'GET /api/v1' };
+    await el.updateComplete;
+    const chip = el.shadowRoot!.querySelector('[part="chip"]') as HTMLElement;
+    expect(chip.textContent!.trim()).to.equal('Search: GET /api/v1');
+  });
+
+  it('mirrors an external value write into the composed input', async () => {
+    const el = (await fixture(html`<lr-filter-bar .filters=${textFilters}></lr-filter-bar>`)) as LyraFilterBar;
+    el.value = { q: 'from-the-url' };
+    await el.updateComplete;
+    expect((control(el, 'q') as HTMLElement & { value: string }).value).to.equal('from-the-url');
+    const native = await nativeInput(el, 'q');
+    expect(native.value).to.equal('from-the-url');
+  });
+
+  it('cancels a pending debounce on reset(), so the stale keystroke never overwrites the reset', async () => {
+    const el = (await fixture(html`<lr-filter-bar .filters=${debouncedFilters}></lr-filter-bar>`)) as LyraFilterBar;
+    el.value = { q: 'seed' };
+    await el.updateComplete;
+
+    let inputs = 0;
+    el.addEventListener('lr-input', () => (inputs += 1));
+    await typeInto(el, 'q', 'draft');
+    el.reset();
+    await aTimeout(300);
+
+    expect(el.value).to.deep.equal({});
+    expect(inputs, 'only the reset itself emitted').to.equal(1);
+    const native = await nativeInput(el, 'q');
+    expect(native.value, 'the cancelled draft is synced back out of the field').to.equal('');
+  });
+
+  it('cancels a pending debounce when its chip is removed', async () => {
+    const el = (await fixture(html`<lr-filter-bar .filters=${debouncedFilters}></lr-filter-bar>`)) as LyraFilterBar;
+    el.value = { q: 'seed' };
+    await el.updateComplete;
+
+    let inputs = 0;
+    el.addEventListener('lr-input', () => (inputs += 1));
+    await typeInto(el, 'q', 'draft');
+    const chip = el.shadowRoot!.querySelector('[part="chip"]') as HTMLElement;
+    chip.dispatchEvent(new CustomEvent('lr-remove', { bubbles: true, composed: true, detail: {} }));
+    await aTimeout(300);
+
+    expect(el.value).to.deep.equal({ q: '' });
+    expect(inputs, 'only the chip removal itself emitted').to.equal(1);
+    const native = await nativeInput(el, 'q');
+    expect(native.value).to.equal('');
+  });
+
+  it('cancels a pending debounce on disconnect, so a detached bar never emits after teardown', async () => {
+    const el = (await fixture(html`<lr-filter-bar .filters=${debouncedFilters}></lr-filter-bar>`)) as LyraFilterBar;
+    let fired = false;
+    el.addEventListener('lr-input', () => (fired = true));
+    await typeInto(el, 'q', 'detached');
+    el.remove();
+    await aTimeout(300);
+    expect(fired).to.be.false;
+    expect(el.value).to.deep.equal({});
+  });
+
+  it('keeps the caret and the typed text across a re-render triggered mid-typing', async () => {
+    const el = (await fixture(html`<lr-filter-bar .filters=${debouncedFilters}></lr-filter-bar>`)) as LyraFilterBar;
+    const native = await typeInto(el, 'q', 'abcdef');
+    native.setSelectionRange(3, 3);
+
+    // Any unrelated state change re-renders the whole bar while the debounce is still pending;
+    // a controlled `.value=` binding would push the stale (empty) model value back into the field.
+    el.loading = true;
+    await el.updateComplete;
+    await (control(el, 'q') as HTMLElement & { updateComplete: Promise<unknown> }).updateComplete;
+    expect(native.value).to.equal('abcdef');
+    expect(native.selectionStart).to.equal(3);
+
+    // …and the commit itself, which re-renders again, must not disturb it either.
+    await aTimeout(300);
+    await el.updateComplete;
+    await (control(el, 'q') as HTMLElement & { updateComplete: Promise<unknown> }).updateComplete;
+    expect(el.value).to.deep.equal({ q: 'abcdef' });
+    expect(native.value).to.equal('abcdef');
+    expect(native.selectionStart).to.equal(3);
+  });
+
+  it('reveals a required text filter\'s error on blur, not per keystroke, and flushes first', async () => {
+    const requiredText: FilterBarFilterDefinition[] = [
+      { id: 'q', label: 'Search', type: 'text', required: true, debounce: 400 },
+    ];
+    const el = (await fixture(html`<lr-filter-bar .filters=${requiredText}></lr-filter-bar>`)) as LyraFilterBar;
+    const composed = control(el, 'q') as HTMLElement & { errorText: string };
+    expect(composed.errorText).to.equal('');
+
+    await typeInto(el, 'q', 'hello');
+    await el.updateComplete;
+    expect(composed.errorText, 'an in-flight debounce must not flash a required error').to.equal('');
+
+    control(el, 'q').dispatchEvent(new FocusEvent('focusout', { bubbles: true, composed: true }));
+    await el.updateComplete;
+    expect(el.value, 'blur flushes the pending debounce').to.deep.equal({ q: 'hello' });
+    expect(composed.errorText, 'the flushed value satisfies required, so no error is revealed').to.equal('');
+  });
+
+  it('still reveals the required error on blur when the text filter is genuinely empty', async () => {
+    const requiredText: FilterBarFilterDefinition[] = [
+      { id: 'q', label: 'Search', type: 'text', required: true, debounce: 60 },
+    ];
+    const el = (await fixture(html`<lr-filter-bar .filters=${requiredText}></lr-filter-bar>`)) as LyraFilterBar;
+    control(el, 'q').dispatchEvent(new FocusEvent('focusout', { bubbles: true, composed: true }));
+    await el.updateComplete;
+    expect((control(el, 'q') as HTMLElement & { errorText: string }).errorText).to.equal('This field is required.');
+    expect(el.invalidFilterIds).to.deep.equal(['q']);
+  });
+
+  it('disables the composed text input along with every other control', async () => {
+    const el = (await fixture(
+      html`<lr-filter-bar disabled .filters=${textFilters}></lr-filter-bar>`,
+    )) as LyraFilterBar;
+    expect((control(el, 'q') as HTMLElement & { disabled: boolean }).disabled).to.be.true;
+    let fired = false;
+    el.addEventListener('lr-input', () => (fired = true));
+    await typeInto(el, 'q', 'nope');
+    await aTimeout(120);
+    expect(fired).to.be.false;
+    expect(el.value).to.deep.equal({});
+  });
+
+  it('is accessible with a text filter populated, its chip shown, and a revealed required error', async () => {
+    const filters: FilterBarFilterDefinition[] = [
+      { id: 'q', label: 'Search', type: 'text', placeholder: 'Search logs', debounce: 60 },
+      { ...textFilters[1], required: true },
+    ];
+    const el = (await fixture(html`<lr-filter-bar .filters=${filters}></lr-filter-bar>`)) as LyraFilterBar;
+    el.value = { q: 'GET /api/v1' };
+    el.reportValidity();
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelectorAll('[part="chip"]').length).to.equal(1);
+    await expect(el).to.be.accessible();
   });
 });
 
