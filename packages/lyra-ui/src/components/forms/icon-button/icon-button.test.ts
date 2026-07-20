@@ -62,6 +62,46 @@ it('hosts slotted natural-aspect-ratio content without cloning it into an SVG', 
   expect(box.height).to.equal(48);
 });
 
+it('restores SVG context for slotted bare geometry with no icon and no enclosing svg', async () => {
+  const el = await fixture(html`
+    <lr-icon-button aria-label="Star">
+      <path d="M12 2l3 7h7l-5.5 4.5L18 21l-6-4-6 4 1.5-7.5L2 9h7z"></path>
+    </lr-icon-button>
+  `);
+  const fallback = el.shadowRoot!.querySelector('[part="fallback"]') as SVGSVGElement | null;
+  expect(fallback, 'a fallback SVG must be mounted').to.exist;
+  const clonedPath = fallback!.querySelector('path');
+  expect(clonedPath, 'the bare <path> must be cloned into real SVG namespace').to.exist;
+  expect(clonedPath!.namespaceURI).to.equal('http://www.w3.org/2000/svg');
+  expect(clonedPath!.getAttribute('d')).to.equal('M12 2l3 7h7l-5.5 4.5L18 21l-6-4-6 4 1.5-7.5L2 9h7z');
+  // The original slotted node stays in the light DOM untouched (still there, still HTML-namespaced) --
+  // only a clone is added to the internal fallback SVG.
+  const original = el.querySelector('path')!;
+  expect(original.namespaceURI).to.not.equal('http://www.w3.org/2000/svg');
+});
+
+it('never runs a slotted custom element through the bare-geometry clone path', async () => {
+  const el = await fixture(html`
+    <lr-icon-button aria-label="Français">
+      <lr-flag src=${TEST_FLAG_SRC} label="Français"></lr-flag>
+    </lr-icon-button>
+  `);
+  // No fallback SVG at all -- lr-flag is a complete element, not bare geometry.
+  expect(el.shadowRoot!.querySelector('[part="fallback"]')).to.not.exist;
+  const flag = el.querySelector('lr-flag')!;
+  expect(flag.shadowRoot!.querySelectorAll('img').length).to.equal(1);
+});
+
+it('leaves a complete slotted svg/img untouched by the fallback path', async () => {
+  const el = await fixture(html`
+    <lr-icon-button aria-label="Custom">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"></circle></svg>
+    </lr-icon-button>
+  `);
+  expect(el.shadowRoot!.querySelector('[part="fallback"]')).to.not.exist;
+  expect(el.querySelectorAll('svg').length).to.equal(1);
+});
+
 it('still floors slotted content at the tappable target size on both axes', async () => {
   const el = await fixture(html`
     <lr-icon-button aria-label="Tiny">

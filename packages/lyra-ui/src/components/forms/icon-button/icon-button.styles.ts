@@ -8,4 +8,8 @@ export const styles = css`
   button:hover { background: var(--lr-color-surface); }
   button:focus-visible { outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color); outline-offset: var(--lr-focus-ring-offset); }
   button:disabled { opacity: var(--lr-opacity-disabled); cursor: not-allowed; }
+  /* Mirrors lr-icon's own default box so the bare-geometry SVG fallback sizes the same as a
+     named icon glyph would. Only ever mounted (see icon-button.class.ts's hasBareGeometry) when
+     there is fallback content to show. */
+  [part='fallback'] { display: block; inline-size: var(--lr-icon-size, var(--lr-size-1-25rem)); block-size: var(--lr-icon-size, var(--lr-size-1-25rem)); color: inherit; }
 `;
