@@ -164,3 +164,57 @@ it('reacts to hint/error slot content added after the initial render, not just a
   expect(hintPart.hasAttribute('hidden')).to.be.false;
   expect(errorPart.hasAttribute('hidden')).to.be.false;
 });
+
+it('warns when `value` is assigned from outside, because the children are the only source of truth', async () => {
+  const el = (await fixture(html`<lr-checkbox-group name="topics"><lr-checkbox value="a">A</lr-checkbox><lr-checkbox value="b">B</lr-checkbox></lr-checkbox-group>`)) as LyraCheckboxGroup;
+  await el.updateComplete;
+  const calls: unknown[][] = [];
+  const originalWarn = console.warn;
+  console.warn = (...args: unknown[]) => calls.push(args);
+  try {
+    el.value = ['a'];
+  } finally {
+    console.warn = originalWarn;
+  }
+  expect(calls.some((args) => String(args[0]).includes('`value`'))).to.be.true;
+  // The assignment is discarded by the next sync(), exactly as the warning says.
+  (el.querySelectorAll('lr-checkbox')[1] as HTMLElement).shadowRoot!.querySelector('[part="base"]')!
+    .dispatchEvent(new MouseEvent('click', { bubbles: true }));
+  expect(el.value).to.deep.equal(['b']);
+});
+
+it('warns when two children share a value, because their FormData entries are indistinguishable', async () => {
+  const calls: unknown[][] = [];
+  const originalWarn = console.warn;
+  console.warn = (...args: unknown[]) => calls.push(args);
+  let el: LyraCheckboxGroup;
+  try {
+    el = (await fixture(html`<lr-checkbox-group name="topics"><lr-checkbox>A</lr-checkbox><lr-checkbox>B</lr-checkbox><lr-checkbox>C</lr-checkbox></lr-checkbox-group>`)) as LyraCheckboxGroup;
+    await el.updateComplete;
+    await new Promise((resolve) => setTimeout(resolve, 0));
+  } finally {
+    console.warn = originalWarn;
+  }
+  expect(calls.some((args) => String(args[0]).includes('"on"'))).to.be.true;
+  // Warned once per duplicated value, not once per sync().
+  expect(calls.filter((args) => String(args[0]).includes('"on"')).length).to.equal(1);
+});
+
+it('does not warn for the normal children-drive-value flow', async () => {
+  const calls: unknown[][] = [];
+  const originalWarn = console.warn;
+  console.warn = (...args: unknown[]) => calls.push(args);
+  let el: LyraCheckboxGroup;
+  try {
+    el = (await fixture(html`<lr-checkbox-group name="topics"><lr-checkbox value="a">A</lr-checkbox><lr-checkbox value="b">B</lr-checkbox></lr-checkbox-group>`)) as LyraCheckboxGroup;
+    await el.updateComplete;
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    (el.querySelectorAll('lr-checkbox')[0] as HTMLElement).shadowRoot!.querySelector('[part="base"]')!
+      .dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    await el.updateComplete;
+  } finally {
+    console.warn = originalWarn;
+  }
+  expect(el!.value).to.deep.equal(['a']);
+  expect(calls).to.deep.equal([]);
+});

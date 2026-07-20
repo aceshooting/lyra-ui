@@ -6,6 +6,31 @@ import { nextId } from '../../../internal/a11y.js';
 import { styles } from './checkbox-group.styles.js';
 import type { LyraCheckbox } from '../checkbox/checkbox.class.js';
 
+/** Fired once per group instance -- a repeat assignment is the same mistake, not new information.
+ *  Plain `console.warn`, matching every other authoring-mistake warning in the library
+ *  (`<lr-task-list>`'s over-nesting warning, `<lr-dashboard-grid>`'s unmatched-`cell-id` warning,
+ *  `<lr-flow-canvas>`'s unrecognized-child warning): the package ships as plain `tsc` ESM with no
+ *  build-time `define`, so there is no existing dev-only gate to reuse and inventing one here would
+ *  diverge from the rest of the tree. */
+function warnValueAssigned(group: LyraCheckboxGroup): void {
+  console.warn(
+    '<lr-checkbox-group> `value` is derived from its <lr-checkbox> children and is overwritten by ' +
+      'the next sync (any child toggle, a slot change, a `name`/`required` change, blur, or ' +
+      `form reset), so assigning it has no lasting effect${group.name ? ` (name="${group.name}")` : ''}. ` +
+      'Set `checked` on the children instead.',
+  );
+}
+
+/** Fired once per duplicated value per group instance, so a group re-syncing on every child toggle
+ *  does not spam the console. */
+function warnDuplicateValue(group: LyraCheckboxGroup, value: string): void {
+  console.warn(
+    `<lr-checkbox-group> has more than one <lr-checkbox> child with value="${value}"` +
+      `${group.name ? ` (name="${group.name}")` : ''}; every checked one contributes an identical ` +
+      'FormData entry, so the submitted data cannot say which was checked. Give each child a distinct `value`.',
+  );
+}
+
 export interface LyraCheckboxGroupEventMap {
   input: CustomEvent<{ value: string[] }>;
   change: CustomEvent<{ value: string[] }>;
@@ -37,12 +62,12 @@ export class LyraCheckboxGroup extends LyraElement<LyraCheckboxGroupEventMap> {
     name: { reflect: true, noAccessor: true },
     required: { type: Boolean, reflect: true, noAccessor: true },
     disabled: { type: Boolean, reflect: true, noAccessor: true },
+    value: { attribute: false, noAccessor: true },
   };
 
   @property() label = '';
   @property() hint = '';
   @property({ attribute: 'error-text' }) errorText = '';
-  @property({ attribute: false }) value: string[] = [];
   @property({ attribute: 'aria-label' }) accessibleLabel = '';
   @state() private touched = false;
   @state() private hasLabelSlot = false;
@@ -63,6 +88,13 @@ export class LyraCheckboxGroup extends LyraElement<LyraCheckboxGroupEventMap> {
   private _name = '';
   private _required = false;
   private _disabled = false;
+  private _value: string[] = [];
+  // Distinguishes `sync()`'s own write-back from a host assignment, so the read-out-only warning
+  // below fires for the latter only. `sync()` writes `value` on *every* child toggle, slot change,
+  // blur and form reset, so without this the warning would fire constantly during normal use.
+  private _writingValue = false;
+  private _warnedValueAssigned = false;
+  private _warnedDuplicateValues = new Set<string>();
 
   /** The form submission key each checked child checkbox's value is grouped under in the group's
    *  own `FormData` entry (see `sync()`). Reflected synchronously for native form APIs; renaming
@@ -75,6 +107,32 @@ export class LyraCheckboxGroup extends LyraElement<LyraCheckboxGroupEventMap> {
     else this.removeAttribute('name');
     this.sync();
     this.requestUpdate('name', old);
+  }
+
+  /**
+   * The `value` of every currently-checked `<lr-checkbox>` child, in DOM order — a **read-out of
+   * child state, not an input**. The children are the single source of truth: `sync()` recomputes
+   * this from them and assigns it on every child toggle, `slotchange`, `name`/`required` change,
+   * blur, and `form.reset()`, so a host assignment is silently overwritten by the next one of those.
+   * `connectedCallback()` calls `onSlotChange()` → `sync()` **before the first render**, so even a
+   * constructor-time or template-time `.value=` binding is discarded before it is ever observed.
+   * Assigning it logs a console warning naming the property.
+   *
+   * To preselect options, set `checked` on the children (`<lr-checkbox value="a" checked>`); to read
+   * the selection, use this property or the `lr-change` event detail. Making `value` authoritative is
+   * deliberately not implemented: `<lr-checkbox>`'s `value` defaults to `'on'`, so a host assigning
+   * `['on']` would check every undifferentiated child. A future change can add a distinct
+   * `defaultValue` API without reversing anything documented here.
+   */
+  get value(): string[] { return this._value; }
+  set value(next: string[]) {
+    if (!this._writingValue && !this._warnedValueAssigned) {
+      this._warnedValueAssigned = true;
+      warnValueAssigned(this);
+    }
+    const old = this._value;
+    this._value = Array.isArray(next) ? next : [];
+    this.requestUpdate('value', old);
   }
 
   get required(): boolean { return this._required; }
@@ -125,9 +183,34 @@ export class LyraCheckboxGroup extends LyraElement<LyraCheckboxGroupEventMap> {
     return this.boxes.filter((box) => box.checked).map((box) => box.value ?? 'on');
   }
 
+  // A group whose children share a `value` produces indistinguishable FormData entries -- the
+  // default `value = 'on'` on every `<lr-checkbox>` makes that the *easy* mistake, not an exotic
+  // one. Reads the content attribute as well as the property so this is still accurate while a
+  // child is queried before its own upgrade (`connectedCallback()` syncs in document order, so the
+  // group runs first); a child with neither has the same effective `'on'` the form value would use.
+  private warnOnDuplicateValues(): void {
+    const seen = new Set<string>();
+    for (const box of this.boxes) {
+      const value = box.value ?? (box as unknown as Element).getAttribute('value') ?? 'on';
+      if (!seen.has(value)) {
+        seen.add(value);
+        continue;
+      }
+      if (this._warnedDuplicateValues.has(value)) continue;
+      this._warnedDuplicateValues.add(value);
+      warnDuplicateValue(this, value);
+    }
+  }
+
   private sync(): void {
     const next = this.readValue();
-    this.value = next;
+    this.warnOnDuplicateValues();
+    this._writingValue = true;
+    try {
+      this.value = next;
+    } finally {
+      this._writingValue = false;
+    }
     const data = new FormData();
     if (this.name) next.forEach((value) => data.append(this.name, value));
     this.internals.setFormValue(this.name ? data : null);
