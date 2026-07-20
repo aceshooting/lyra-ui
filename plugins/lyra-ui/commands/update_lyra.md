@@ -18,6 +18,11 @@ with the user's explicit approval, files feature requests for them. Filing is ne
    (`npm view @aceshooting/lyra-ui version`). If behind, bump the dependency and reinstall
    (`npm install`/`pnpm install`/`yarn install` — match whichever the project already uses).
 
+   Before migrating, fetch `https://www.lyra-ui.com/changelog.json` and read every release between
+   the project's installed version and `latest`. Treat `kind: "major"` entries as required reading —
+   they are the breaking changes — and use the `minor` entries to spot newly added components that
+   may replace hand-rolled UI in the project.
+
 2. **Read what changed.** After bumping, read `node_modules/@aceshooting/lyra-ui/CHANGELOG.md`
    between the old and new version. Note anything that: resolves a gap this project has previously
    worked around, or ships a component/prop that could replace a hand-rolled widget already in this
