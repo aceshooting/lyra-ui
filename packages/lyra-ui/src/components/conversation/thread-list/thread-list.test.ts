@@ -621,6 +621,43 @@ it('renders first-class leading, meta, and row-content hooks inside virtualized 
   expect(row.shadowRoot!.querySelector('[part="title"]')).to.not.exist;
 });
 
+it('renders a renderExcerpt hook into the row item\'s excerpt slot, winning over the excerpt property', async () => {
+  const el = (await fixture(
+    html`<lr-thread-list
+      grouping="none"
+      .threads=${[{ id: 't1', title: 'Thread 1', excerpt: 'plain excerpt' }]}
+      .renderExcerpt=${() => html`<mark data-testid="excerpt">rich <b>match</b></mark>`}
+    ></lr-thread-list>`,
+  )) as LyraThreadList;
+  await el.updateComplete;
+  await nextFrame();
+  const row = dataRows(el)[0];
+  const slotted = row.querySelector('[slot="excerpt"] [data-testid="excerpt"]');
+  expect(slotted).to.exist;
+  expect(slotted!.textContent).to.contain('rich');
+
+  await row.updateComplete;
+  const excerptPart = row.shadowRoot!.querySelector('[part="excerpt"]') as HTMLElement;
+  // Slotted content wins over the plain-string `excerpt` property per lr-conversation-item's own
+  // slot doc -- the plain "plain excerpt" text must not be what's rendered.
+  expect(excerptPart.textContent).to.not.contain('plain excerpt');
+});
+
+it('leaves rendering unchanged when renderExcerpt is unset', async () => {
+  const el = (await fixture(
+    html`<lr-thread-list
+      grouping="none"
+      .threads=${[{ id: 't1', title: 'Thread 1', excerpt: 'plain excerpt' }]}
+    ></lr-thread-list>`,
+  )) as LyraThreadList;
+  await el.updateComplete;
+  await nextFrame();
+  const row = dataRows(el)[0];
+  expect(row.querySelector('[slot="excerpt"]')).to.not.exist;
+  await row.updateComplete;
+  expect(row.shadowRoot!.querySelector('[part="excerpt"]')!.textContent).to.contain('plain excerpt');
+});
+
 it('exports the real viewport and hook wrappers as externally styleable parts', async () => {
   const wrapper = await fixture(html`
     <div>
@@ -656,6 +693,7 @@ it('exports the real viewport and hook wrappers as externally styleable parts', 
   expect(list.getAttribute('exportparts')).to.contain('row-meta:row-meta');
   expect(list.getAttribute('exportparts')).to.contain('row-content:row-content');
   expect(list.getAttribute('exportparts')).to.contain('row-actions:row-actions');
+  expect(list.getAttribute('exportparts')).to.contain('row-excerpt:row-excerpt');
 });
 
 it('allows group labels and month dates to be formatted by the host', async () => {

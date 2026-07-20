@@ -136,8 +136,10 @@ function defaultFilter(thread: ChatThread, query: string): boolean {
  *
  * Data mode: a host needing content with no home in `lr-conversation-item`'s own
  * `title`/`excerpt`/`meta`/`actions` surface sets `wrapRow` to wrap the already-built row. For
- * common row composition, `renderLeading`, `renderMeta`, and `renderRowContent` provide focused
- * virtualized render hooks. A host needing a fully custom
+ * common row composition, `renderLeading`, `renderExcerpt`, `renderMeta`, and `renderRowContent`
+ * provide focused virtualized render hooks -- `renderExcerpt` renders into the row item's own
+ * `excerpt` slot (winning over the plain-string `excerpt` property) for rich per-row content such
+ * as a highlighted search snippet. A host needing a fully custom
  * `actions` surface itself — beyond `rowActions`'s closed `pin | archive | delete` set, e.g. a
  * `<lr-menu>` with Rename/Delete — sets `renderActions` instead; its content is appended after any
  * built-in `rowActions` output in the same slot, and `wrapRow` continues to compose around the result.
@@ -185,6 +187,8 @@ function defaultFilter(thread: ChatThread, query: string): boolean {
  * @csspart row-wrapper - The wrapper around `wrapRow` output (data mode, only when `wrapRow` is
  *   set). Row-only: group headers are never passed through `wrapRow`, so they never carry it.
  * @csspart row-leading - The wrapper around `renderLeading` output.
+ * @csspart row-excerpt - The wrapper around `renderExcerpt` output, slotted into the row item's own
+ *   `excerpt` slot.
  * @csspart row-content - The wrapper around `renderRowContent` output.
  * @csspart row-meta - A wrapper around built-in or `renderMeta` metadata.
  * @csspart row-actions - The wrapper around built-in and `renderActions` output.
@@ -266,6 +270,15 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
   /** Data mode only: renders the row's meta content. Built-in pin metadata remains available when
    *  present, and this result is appended in the same meta region. */
   @property({ attribute: false }) renderMeta?: (thread: ChatThread) => TemplateResult;
+
+  /** Data mode only: renders the row's excerpt content into the row item's own `excerpt` slot,
+   *  which wins over its plain-string `excerpt` property whenever it has assigned content -- see
+   *  `<lr-conversation-item>`'s own `excerpt` slot doc. Use this for rich content the plain
+   *  `ChatThread.excerpt` string can't carry, e.g. a server-highlighted search-match snippet.
+   *  Unlike `renderRowContent`, this leaves the built-in title layout and inline-rename affordance
+   *  untouched -- only the excerpt line is replaced. Unset (the default) leaves the plain-string
+   *  `excerpt` property rendering exactly as it does today. */
+  @property({ attribute: false }) renderExcerpt?: (thread: ChatThread) => TemplateResult;
 
   /** Data mode only: replaces the conversation item's title/excerpt/meta content area with a
    *  host-rendered row body. Use this for structured, non-interactive row content while keeping
@@ -690,6 +703,9 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
         ${this.renderLeading
           ? html`<span slot="leading" part="row-leading">${this.renderLeading(thread)}</span>`
           : nothing}
+        ${this.renderExcerpt
+          ? html`<span slot="excerpt" part="row-excerpt">${this.renderExcerpt(thread)}</span>`
+          : nothing}
         ${this.renderRowContent
           ? html`<span slot="content" part="row-content">${this.renderRowContent(thread)}</span>`
           : nothing}
@@ -793,7 +809,7 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
                 this.searchText.trim() ? this.localize('noMatches') : this.localize('threadListEmpty')
               }</div>`
             : html`<lr-virtual-list
-                exportparts="base:viewport, sticky-group:group-sticky, row:row, row-wrapper:row-wrapper, group-header:group-header, group-toggle:group-toggle, group-label:group-label, group-icon:group-icon, row-leading:row-leading, row-content:row-content, row-meta:row-meta, row-actions:row-actions, row-action:row-action, pin-glyph:pin-glyph, row-item-base:row-item-base, row-item-option:row-item-option, row-item-leading:row-item-leading, row-item-content:row-item-content, row-item-title:row-item-title, row-item-title-input:row-item-title-input, row-item-rename-button:row-item-rename-button, row-item-excerpt:row-item-excerpt, row-item-meta:row-item-meta, row-item-timestamp:row-item-timestamp, row-item-actions:row-item-actions"
+                exportparts="base:viewport, sticky-group:group-sticky, row:row, row-wrapper:row-wrapper, group-header:group-header, group-toggle:group-toggle, group-label:group-label, group-icon:group-icon, row-leading:row-leading, row-excerpt:row-excerpt, row-content:row-content, row-meta:row-meta, row-actions:row-actions, row-action:row-action, pin-glyph:pin-glyph, row-item-base:row-item-base, row-item-option:row-item-option, row-item-leading:row-item-leading, row-item-content:row-item-content, row-item-title:row-item-title, row-item-title-input:row-item-title-input, row-item-rename-button:row-item-rename-button, row-item-excerpt:row-item-excerpt, row-item-meta:row-item-meta, row-item-timestamp:row-item-timestamp, row-item-actions:row-item-actions"
                 row-height="auto"
                 .items=${items}
                 .groups=${this.stickyGroups ? this.stickyAnchors(items) : undefined}

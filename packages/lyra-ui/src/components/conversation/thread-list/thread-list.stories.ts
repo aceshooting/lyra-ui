@@ -162,6 +162,37 @@ export const RenderHooks: Story = {
   `,
 };
 
+/** `renderExcerpt` renders into the row item's own `excerpt` slot -- which wins over the
+ *  plain-string `excerpt` property -- so rich content like a search-match highlight can be shown
+ *  without giving up the built-in title layout and inline-rename affordance the way
+ *  `renderRowContent` would require. */
+export const HighlightedExcerpt: Story = {
+  render: () => html`
+    <style>
+      mark {
+        background: var(--lr-color-warning);
+        color: var(--lr-color-on-warning);
+        border-radius: var(--lr-radius-xs);
+      }
+    </style>
+    <div style="block-size:400px;inline-size:360px;border:1px solid var(--lr-color-border);">
+      <lr-thread-list
+        .threads=${threads}
+        .renderExcerpt=${(thread: ChatThread) => {
+          const excerpt = thread.excerpt ?? '';
+          const query = 'token';
+          const index = excerpt.toLowerCase().indexOf(query);
+          if (index === -1) return html`${excerpt}`;
+          return html`${excerpt.slice(0, index)}<mark>${excerpt.slice(
+            index,
+            index + query.length,
+          )}</mark>${excerpt.slice(index + query.length)}`;
+        }}
+      ></lr-thread-list>
+    </div>
+  `,
+};
+
 /** Row density from the outside, with no token override. In data mode this component builds each
  *  `<lr-conversation-item>` itself two shadow roots down, and forwards the item's own parts out
  *  under the `row-item-*` namespace (`row-*` is the separate wrapper surface around this

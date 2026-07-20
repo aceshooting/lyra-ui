@@ -1945,8 +1945,11 @@ appends host-supplied content (re-invoked per row on every render, e.g. a `lr-me
 actions) after the built-in `rowActions` output in each row's `actions` slot; events it fires reach
 the host normally and never trigger `lr-select`. Unset renders only the built-in `rowActions`.
 `renderLeading?: (thread: ChatThread) => TemplateResult` (attribute: false) — renders non-interactive
-leading content in each virtualized row. `renderMeta?: (thread: ChatThread) => TemplateResult`
-(attribute: false) — appends structured metadata in the row's meta region.
+leading content in each virtualized row. `renderExcerpt?: (thread: ChatThread) => TemplateResult`
+(attribute: false) — renders rich content into the row item's own `excerpt` slot, winning over the
+plain-string `excerpt` property (e.g. a server-highlighted search-match snippet), while leaving the
+built-in title layout and inline-rename affordance untouched. `renderMeta?: (thread: ChatThread) =>
+TemplateResult` (attribute: false) — appends structured metadata in the row's meta region.
 `renderRowContent?: (thread: ChatThread) => TemplateResult` (attribute: false) — replaces the
 conversation item's title/excerpt/meta content area with custom non-interactive row content.
 `formatGroupLabel?: (key: ThreadBucketKey, date?: Date) => string` (attribute: false) — overrides
@@ -1979,9 +1982,10 @@ header row and the pinned copy alike, and the band itself is where a shadow or b
 belongs), `row` (all exported across the internal `lr-virtual-list` shadow
 boundary), `row-wrapper` (the wrapper around `wrapRow` output, only present when `wrapRow` is set;
 row-only — group headers are never passed through `wrapRow`, so they never carry it), and
-`row-leading`/`row-content`/`row-meta`/`row-actions` (the library-owned wrappers around
+`row-leading`/`row-excerpt`/`row-content`/`row-meta`/`row-actions` (the library-owned wrappers around
 their corresponding render-hook output; inherited fonts, layout values, and theme custom properties
-reach callback-rendered descendants through these parts).
+reach callback-rendered descendants through these parts). `row-excerpt` wraps `renderExcerpt`
+output, which is slotted into the row item's own `excerpt` slot.
 
 Data mode additionally forwards each row `<lr-conversation-item>`'s own parts under a `row-item-`
 prefix: `row-item-base`, `row-item-option`, `row-item-leading`, `row-item-content`,
@@ -1989,8 +1993,9 @@ prefix: `row-item-base`, `row-item-option`, `row-item-leading`, `row-item-conten
 `row-item-meta`, `row-item-timestamp`, `row-item-actions`.
 
 **Keep the two prefixes straight — they are different surfaces.** The `row-*` parts wrap *this*
-component's own render-callback output (`wrapRow`, `renderLeading`, `renderRowContent`,
-`renderMeta`, `renderActions`); the `row-item-*` parts are the row item's *internals*. Row density
+component's own render-callback output (`wrapRow`, `renderLeading`, `renderExcerpt`,
+`renderRowContent`, `renderMeta`, `renderActions`); the `row-item-*` parts are the row item's
+*internals*. Row density
 in particular lives in `row-item-base`'s padding and `row-item-title`'s font size, so
 `::part(row-item-base)` is the supported way to build a dense sidebar.
 
