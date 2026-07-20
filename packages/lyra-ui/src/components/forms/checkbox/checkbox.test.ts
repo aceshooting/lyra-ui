@@ -613,3 +613,21 @@ it('is accessible in an indeterminate, labeled state', async () => {
   const el = (await fixture(html`<lr-checkbox indeterminate>Select all</lr-checkbox>`)) as LyraCheckbox;
   await expect(el).to.be.accessible();
 });
+
+it('publishes --lr-checkbox-label-indent and drives the real label offset from it', async () => {
+  const el = (await fixture(html`<lr-checkbox value="a">A</lr-checkbox>`)) as LyraCheckbox;
+  await el.updateComplete;
+  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  const label = el.shadowRoot!.querySelector('[part="label"]') as HTMLElement;
+
+  // Published, so a consumer aligning their own per-option hint text under the label no longer has
+  // to re-derive `min(--lr-icon-button-size, 1.75rem) + --lr-space-s` by reading the shadow styles.
+  expect(getComputedStyle(el).getPropertyValue('--lr-checkbox-label-indent').trim()).to.not.equal('');
+
+  // 1.75rem box + 0.5rem gap === 2.25rem === 36px.
+  expect(label.getBoundingClientRect().left - base.getBoundingClientRect().left).to.be.closeTo(36, 0.5);
+
+  // The published value and the rendered geometry cannot drift: retuning it moves the label.
+  el.style.setProperty('--lr-checkbox-label-indent', '4rem');
+  expect(label.getBoundingClientRect().left - base.getBoundingClientRect().left).to.be.closeTo(64, 0.5);
+});

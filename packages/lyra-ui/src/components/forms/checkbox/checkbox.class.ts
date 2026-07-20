@@ -91,6 +91,14 @@ export interface LyraCheckboxEventMap {
  * @csspart box - The small square that shows the checkmark/indeterminate dash.
  * @csspart checkmark - The checkmark (or indeterminate dash) glyph inside the box.
  * @csspart label - The wrapper around the default slot.
+ * @cssprop [--lr-checkbox-label-indent=calc(min(var(--lr-icon-button-size), 1.75rem) + var(--lr-space-s))] -
+ * The inline distance from the control's start edge to the start of the label text, i.e. the box's
+ * own floor plus the gap next to it. Published so a consumer composing per-option hint text under
+ * the label can align it without re-deriving that formula from the shadow styles, and used as the
+ * source of the real gap so the two cannot drift. Setting it on the element (or on `lr-checkbox` in
+ * your own stylesheet) moves the label; because custom properties inherit down and not sideways, it
+ * is *not* readable from a sibling node in your tree — align a sibling by computing the same formula
+ * from `--lr-theme-icon-button-size` and `--lr-theme-space-s`, which you control.
  */
 export class LyraCheckbox extends LyraElement<LyraCheckboxEventMap> {
   static styles = [LyraElement.styles, styles];

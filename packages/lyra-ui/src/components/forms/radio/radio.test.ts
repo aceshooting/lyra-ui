@@ -214,3 +214,47 @@ it('clears group-imposed disabled/required on every radio when turned back off',
   expect(radios[0].effectiveRequired).to.be.false;
   expect(radios[1].effectiveRequired).to.be.false;
 });
+
+it('floors the circle with min-* sizing instead of hard-sizing it, so the indicator can never overflow the tap target', async () => {
+  const el = (await fixture(html`<lr-radio checked aria-label="One"></lr-radio>`)) as LyraRadio;
+  await el.updateComplete;
+  const circle = el.shadowRoot!.querySelector('[part="circle"]') as HTMLElement;
+
+  // Default tokens: min(--lr-icon-button-size 2.5rem, --lr-size-1-75rem) === 1.75rem === 28px,
+  // comfortably above the WCAG 2.2 SC 2.5.8 24x24 minimum. For a label-less radio the circle *is*
+  // the whole tap target -- [part='base'] contributes no box of its own.
+  const floored = circle.getBoundingClientRect();
+  expect(floored.width).to.be.closeTo(28, 0.5);
+  expect(floored.height).to.be.closeTo(28, 0.5);
+
+  // A hard `inline-size`/`block-size` cannot grow for its own content: enlarging the dot would clip
+  // it and leave the circle at 28px. `min-inline-size`/`min-block-size` (the form <lr-checkbox>'s
+  // [part='box'] already uses) is a floor, so the circle grows to contain the indicator instead.
+  el.style.setProperty('--lr-size-0-75rem', '3rem');
+  const grown = circle.getBoundingClientRect();
+  expect(grown.width).to.be.at.least(48);
+  expect(grown.height).to.be.at.least(48);
+});
+
+it('publishes --lr-radio-label-indent and drives the real label offset from it', async () => {
+  const el = (await fixture(html`<lr-radio value="a">A</lr-radio>`)) as LyraRadio;
+  await el.updateComplete;
+  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  const label = el.shadowRoot!.querySelector('[part="label"]') as HTMLElement;
+
+  // Published, so a consumer aligning their own per-option hint text no longer has to re-derive
+  // `min(--lr-icon-button-size, 1.75rem) + --lr-space-s` by reading the shadow styles.
+  expect(getComputedStyle(el).getPropertyValue('--lr-radio-label-indent').trim()).to.not.equal('');
+
+  // 1.75rem circle + 0.5rem gap === 2.25rem === 36px.
+  expect(label.getBoundingClientRect().left - base.getBoundingClientRect().left).to.be.closeTo(36, 0.5);
+
+  // The published value and the rendered geometry cannot drift: retuning it moves the label.
+  el.style.setProperty('--lr-radio-label-indent', '4rem');
+  expect(label.getBoundingClientRect().left - base.getBoundingClientRect().left).to.be.closeTo(64, 0.5);
+});
+
+it('is accessible as a label-less radio named only by aria-label', async () => {
+  const el = (await fixture(html`<lr-radio checked aria-label="Only option"></lr-radio>`)) as LyraRadio;
+  await expect(el).to.be.accessible();
+});

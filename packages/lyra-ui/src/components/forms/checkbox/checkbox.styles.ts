@@ -3,11 +3,28 @@ import { css } from 'lit';
 export const styles = css`
   :host {
     display: inline-block;
+    /* Published (not an override hook, so it is declared rather than read with an inline
+       var() fallback) so a consumer composing their own per-option hint text under the label
+       can align it without re-deriving the geometry by reading these shadow styles. Same two
+       terms the layout below actually uses: the box's floor plus the label gap.
+       A :host declaration is still overridable from the consumer's own tree -- a document-tree
+       rule on the host (lr-checkbox { --lr-checkbox-label-indent: ... }) beats any :host rule --
+       but it does NOT reach a *sibling* node in the consumer's tree, because custom properties
+       inherit down, not sideways. A consumer aligning a sibling <p> computes the same formula
+       themselves from --lr-theme-icon-button-size and --lr-theme-space-s. */
+    --lr-checkbox-label-indent: calc(
+      min(var(--lr-icon-button-size), var(--lr-size-1-75rem)) + var(--lr-space-s)
+    );
   }
   [part='base'] {
     display: inline-flex;
     align-items: center;
-    gap: var(--lr-space-s);
+    /* Derived from the published indent rather than repeating --lr-space-s, so the advertised
+       value and the rendered label offset cannot drift: the label always starts exactly
+       --lr-checkbox-label-indent from the base's inline start. Resolves to --lr-space-s by default. */
+    gap: calc(
+      var(--lr-checkbox-label-indent) - min(var(--lr-icon-button-size), var(--lr-size-1-75rem))
+    );
     cursor: pointer;
     -webkit-tap-highlight-color: transparent;
   }
