@@ -170,6 +170,11 @@ function redactField(value: unknown, root: string, paths: readonly string[], pla
  * @cssprop [--lr-tool-timeline-gap=var(--lr-space-l)] - Vertical gap between entries.
  * @cssprop [--lr-tool-timeline-marker-size=var(--lr-size-0-625rem)] - Diameter of an entry's rail
  *   dot; also the width of the marker gutter column.
+ * @cssprop [--lr-tool-timeline-denied-marker-color=var(--lr-color-warning)] - Rail-dot color for a
+ *   `status="denied"` entry, decoupled from the pending-approval border below so a consumer can
+ *   retint either independently.
+ * @cssprop [--lr-tool-timeline-pending-approval-border-color=var(--lr-color-warning)] - Color of
+ *   the entry body's leading border while `data-pending-approval="true"`.
  */
 export class LyraToolTimeline extends LyraElement<LyraToolTimelineEventMap> {
   static styles = [LyraElement.styles, styles];

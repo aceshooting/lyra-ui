@@ -12,6 +12,18 @@ describe('lr-terminal', () => {
     expect(el.maxScrollback).to.equal(5000);
   });
 
+  it('accepts follow="false", wrap="false", and copyable="false" as plain-HTML attribute strings', async () => {
+    const el = (await fixture(
+      html`<lr-terminal follow="false" wrap="false" copyable="false"></lr-terminal>`,
+    )) as LyraTerminal;
+    expect(el.follow).to.be.false;
+    expect(el.wrap).to.be.false;
+    expect(el.copyable).to.be.false;
+    expect(el.hasAttribute('follow')).to.be.false;
+    expect(el.hasAttribute('wrap')).to.be.false;
+    expect(el.hasAttribute('copyable')).to.be.false;
+  });
+
   it('renders content as plain lines and getPlainText() returns the SGR-stripped text', async () => {
     const el = (await fixture(html`<lr-terminal></lr-terminal>`)) as LyraTerminal;
     el.content = 'line one\n\x1b[31mline two\x1b[0m';
@@ -117,6 +129,32 @@ describe('lr-terminal', () => {
     expect(event.detail.filename).to.equal('out.log');
   });
 
+  it('lr-download is cancelable; preventDefault() suppresses the built-in Blob download', async () => {
+    const el = (await fixture(
+      html`<lr-terminal downloadable filename="out.log"></lr-terminal>`,
+    )) as LyraTerminal;
+    el.write('hi');
+    await el.updateComplete;
+    const original = URL.createObjectURL;
+    let createObjectURLCalled = false;
+    URL.createObjectURL = ((blob: Blob) => {
+      createObjectURLCalled = true;
+      return original.call(URL, blob);
+    }) as typeof URL.createObjectURL;
+    try {
+      el.addEventListener('lr-download', (e) => e.preventDefault(), { once: true });
+      const button = el.shadowRoot!.querySelector('[part="download-button"]') as HTMLButtonElement;
+      const listener = oneEvent(el, 'lr-download');
+      button.click();
+      const event = (await listener) as CustomEvent<{ filename: string }>;
+      expect(event.detail.filename).to.equal('out.log');
+      expect(event.defaultPrevented).to.be.true;
+      expect(createObjectURLCalled).to.be.false;
+    } finally {
+      URL.createObjectURL = original;
+    }
+  });
+
   it('search() resolves match count and lr-search-change reports query/matchCount/activeIndex', async () => {
     const el = (await fixture(html`<lr-terminal></lr-terminal>`)) as LyraTerminal;
     el.write('error: bad\ninfo: ok\nerror: worse');
@@ -206,6 +244,30 @@ describe('lr-terminal', () => {
     line.click();
     const event = (await listener) as CustomEvent<{ id: string }>;
     expect(event.detail.id).to.equal('h1');
+  });
+
+  it('retints an accent-tone highlighted line via --lr-terminal-highlight-accent-bg, decoupled from the shared --lr-color-brand-quiet token used by the toolbar-button hover state', async () => {
+    const el = (await fixture(html`<lr-terminal></lr-terminal>`)) as LyraTerminal;
+    el.write('a\nb\nc');
+    el.highlights = [{ id: 'h1', anchor: { kind: 'line-range', start: 2, end: 2 }, tone: 'accent' }];
+    await el.updateComplete;
+    const list = el.shadowRoot!.querySelector('lr-virtual-list')!;
+    const line = list.shadowRoot!.querySelector('[data-line-number="2"]') as HTMLElement;
+    const defaultBg = getComputedStyle(line).backgroundColor;
+
+    el.style.setProperty('--lr-terminal-highlight-accent-bg', 'rgb(9, 8, 7)');
+    await el.updateComplete;
+    expect(getComputedStyle(line).backgroundColor).to.equal('rgb(9, 8, 7)');
+
+    // Retinting the highlight doesn't retint the toolbar-button hover token they used to share.
+    el.style.setProperty('--lr-color-brand-quiet', 'rgb(1, 2, 3)');
+    await el.updateComplete;
+    expect(getComputedStyle(line).backgroundColor).to.equal('rgb(9, 8, 7)');
+
+    el.style.removeProperty('--lr-terminal-highlight-accent-bg');
+    el.style.removeProperty('--lr-color-brand-quiet');
+    await el.updateComplete;
+    expect(getComputedStyle(line).backgroundColor).to.equal(defaultBg);
   });
 
   it('scrollToAnchor resolves a highlight id and a line-range anchor', async () => {

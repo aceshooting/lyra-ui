@@ -1,4 +1,4 @@
-import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
+import { html, nothing, type TemplateResult, type PropertyValues, type ComplexAttributeConverter } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { activateOverlay, type OverlayHandle } from '../../../internal/overlay-manager.js';
@@ -12,6 +12,22 @@ const spellcheckConverter = {
     return value !== 'false';
   },
   toAttribute(value: boolean): string | null {
+    return value ? null : 'false';
+  },
+};
+
+/** `true`-defaulting boolean attribute converter for `editable` -- identical shape/rationale to
+ *  `<lr-checkpoint>`'s own `trueDefaultBooleanConverter`, duplicated locally per this library's
+ *  convention of not sharing these tiny converters across independently-consumable component
+ *  files. Lit's default presence-based `type: Boolean` can never be set back to `false` from a
+ *  plain-HTML attribute once the property's own default is `true` (removing an attribute that was
+ *  never present fires no `attributeChangedCallback`), so `fromAttribute` checks the literal
+ *  string instead. */
+const trueDefaultBooleanConverter: ComplexAttributeConverter<boolean> = {
+  fromAttribute(value): boolean {
+    return value !== 'false';
+  },
+  toAttribute(value): string | null {
     return value ? null : 'false';
   },
 };
@@ -128,11 +144,16 @@ export class LyraToolApprovalDialog extends LyraElement<LyraToolApprovalDialogEv
   /** The proposed tool/function's name, e.g. `web_search`. Drives the heading and the dialog's accessible name. */
   @property({ attribute: 'tool-name' }) toolName = '';
 
+  /** Overrides the dialog panel's accessible name, taking precedence over the visible heading --
+   *  mirrors `<lr-dialog>`'s/`<lr-tool-result-dialog>`'s/`<lr-tool-select-dialog>`'s own host-
+   *  `aria-label` override pattern. Fed only by a host `aria-label`. */
+  @property({ attribute: 'aria-label' }) accessibleLabel: string | null = null;
+
   /** The proposed call's arguments — any JSON-serializable value, rendered via `<lr-json-viewer>` (or, while editing, stringified into the textarea). */
   @property({ attribute: false }) args: unknown = {};
 
   /** Whether an "Edit" affordance is offered at all. When `false`, `args` is always shown read-only and can never be changed before approval. */
-  @property({ type: Boolean, reflect: true }) editable = true;
+  @property({ reflect: true, converter: trueDefaultBooleanConverter }) editable = true;
 
   /** Native editing-assistance attributes forwarded to the raw-JSON textarea. */
   @property({ converter: spellcheckConverter }) spellcheck = false;
@@ -288,8 +309,11 @@ export class LyraToolApprovalDialog extends LyraElement<LyraToolApprovalDialogEv
     try {
       JSON.parse(value);
       this.draftError = '';
-    } catch (err) {
-      this.draftError = err instanceof Error ? err.message : this.localize('invalidJson');
+    } catch {
+      // Never surface the engine's raw SyntaxError.message here -- it's
+      // untranslated and wording differs across browsers (V8 vs.
+      // SpiderMonkey vs. JavaScriptCore). Always show the localized message.
+      this.draftError = this.localize('invalidJson');
     }
   };
   private onEditorFocus = (): void => { this.emit('focus'); };
@@ -329,7 +353,8 @@ export class LyraToolApprovalDialog extends LyraElement<LyraToolApprovalDialogEv
         part="panel"
         role=${this.open ? 'dialog' : nothing}
         aria-modal=${this.open ? 'true' : nothing}
-        aria-labelledby=${this.titleId}
+        aria-label=${this.accessibleLabel || nothing}
+        aria-labelledby=${this.accessibleLabel ? nothing : this.titleId}
         tabindex="-1"
       >
         <div part="header">

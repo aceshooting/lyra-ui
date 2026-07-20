@@ -1,4 +1,4 @@
-import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
+import { html, nothing, type TemplateResult, type PropertyValues, type ComplexAttributeConverter } from 'lit';
 import { property, state, query } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { srOnly } from '../../../internal/a11y.js';
@@ -28,6 +28,24 @@ export interface TestSuiteResult {
 }
 
 const STATUSES: TestStatus[] = ['passed', 'failed', 'skipped', 'running'];
+
+/** `true`-defaulting boolean attribute converter, identical shape to `<lr-task-list>`'s
+ *  `trueDefaultBooleanConverter` -- duplicated locally per this library's convention of not
+ *  sharing these tiny converters across independently-consumable component files. Lit's default
+ *  presence-based `type: Boolean` can never be set back to `false` from a plain-HTML attribute
+ *  once the property's own default is `true` (removing an attribute that was never present fires
+ *  no `attributeChangedCallback`), so `fromAttribute` checks the literal string instead.
+ *  `autoExpandFailures` isn't reflected, so `toAttribute` is never invoked by Lit -- included only
+ *  to satisfy `ComplexAttributeConverter`'s shape, mirroring `<lr-agent-run>`'s `show-cancel`/
+ *  `show-retry` (the closest analog: also non-reflected, custom-named attribute). */
+const trueDefaultBooleanConverter: ComplexAttributeConverter<boolean> = {
+  fromAttribute(value): boolean {
+    return value !== 'false';
+  },
+  toAttribute(value): string | null {
+    return value ? null : 'false';
+  },
+};
 
 /** localize() key for each status's count-bearing summary/filter text, e.g. "3 passed". */
 const STATUS_COUNT_KEY: Record<TestStatus, string> = {
@@ -65,7 +83,9 @@ export interface LyraTestResultsEventMap {
  * @event lr-toggle - `detail: { id, expanded }` — a row's failure detail was expanded/collapsed.
  * @slot detail-{testId} - Rich failure detail for that test, rendered after its plain message
  *   text once the row is expanded.
- * @csspart base - The root wrapper.
+ * @csspart base - The root wrapper; carries `role="group"`. Its `aria-label` defaults to the
+ *   localized "Test results", but a host `aria-label` on `<lr-test-results>` itself wins over
+ *   that default.
  * @csspart summary - The status-count strip.
  * @csspart count - One status count; carries `data-status`.
  * @csspart filter - The filter-toggle row.
@@ -100,7 +120,8 @@ export class LyraTestResults extends LyraElement<LyraTestResultsEventMap> {
 
   /** Whether a failed test's detail auto-expands. A row the user has manually toggled always
    *  keeps its own explicit state regardless of this flag. */
-  @property({ type: Boolean, attribute: 'auto-expand-failures' }) autoExpandFailures = true;
+  @property({ type: Boolean, attribute: 'auto-expand-failures', converter: trueDefaultBooleanConverter })
+  autoExpandFailures = true;
 
   /** Explicit per-row expand/collapse overrides, keyed by test id. Absence defers to
    *  `autoExpandFailures`. */
@@ -284,11 +305,12 @@ export class LyraTestResults extends LyraElement<LyraTestResultsEventMap> {
   }
 
   render(): TemplateResult {
+    const ariaLabel = this.getAttribute('aria-label') || this.localize('testResultsLabel');
     return html`
       ${this.suites.length === 0
         ? html`<lr-empty heading=${this.localize('noData')}></lr-empty>`
         : html`
-            <div part="base" role="group" aria-label=${this.localize('testResultsLabel')}>
+            <div part="base" role="group" aria-label=${ariaLabel}>
               ${this.renderSummary()} ${this.suites.map((suite) => this.renderSuite(suite))}
             </div>
           `}

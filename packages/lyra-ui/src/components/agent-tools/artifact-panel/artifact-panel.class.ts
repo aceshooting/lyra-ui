@@ -49,7 +49,9 @@ export interface LyraArtifactPanelEventMap {
  * @csspart view-button - One toggle button; carries `data-view="preview"` or `data-view="code"`.
  * @csspart version-nav - The version navigation group (rendered only once `versions` is non-empty).
  * @csspart version-previous - The previous-version button.
+ * @csspart version-previous-glyph - The chevron glyph inside `version-previous`, mirrored under RTL.
  * @csspart version-next - The next-version button.
+ * @csspart version-next-glyph - The chevron glyph inside `version-next`, mirrored under RTL.
  * @csspart version-position - The "Version N of M" text.
  * @csspart restore-button - The restore-this-version button, rendered only while the active
  *   version isn't the latest one.
@@ -194,7 +196,7 @@ export class LyraArtifactPanel extends LyraElement<LyraArtifactPanelEventMap> {
                     ?disabled=${index <= 0}
                     @click=${() => this.goToVersion(index - 1)}
                   >
-                    ‹
+                    <span part="version-previous-glyph" aria-hidden="true">‹</span>
                   </button>
                   <span part="version-position"
                     >${this.localize('artifactPanelVersionPosition', undefined, {
@@ -209,7 +211,7 @@ export class LyraArtifactPanel extends LyraElement<LyraArtifactPanelEventMap> {
                     ?disabled=${index >= this.versions.length - 1}
                     @click=${() => this.goToVersion(index + 1)}
                   >
-                    ›
+                    <span part="version-next-glyph" aria-hidden="true">›</span>
                   </button>
                   ${!isLatest
                     ? html`<button

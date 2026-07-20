@@ -48,9 +48,46 @@ export interface ToolParamFormSchema {
 
 const EMPTY_SCHEMA: ToolParamFormSchema = { type: 'object', properties: {} };
 
+/** A no-op stand-in for `ElementInternals`, used only when the host environment has no real
+ *  implementation of it (e.g. a downstream consumer's Vitest + happy-dom test suite) --
+ *  `attachInternals()` is browser-only, and calling it unconditionally in the constructor would
+ *  otherwise throw before any test assertion runs, merely from constructing or importing this
+ *  component. Every member here is either an inert value or a no-op: native `<form>`
+ *  participation is unavailable in that environment, but that's a documented nice-to-have layered
+ *  on top of the primary `value`/`lr-input` integration contract (see the class doc), so losing it
+ *  is an acceptable degradation rather than a hard failure. */
+function createInternalsSafely(host: HTMLElement): ElementInternals {
+  if (typeof host.attachInternals !== 'function') return createNoopInternals();
+  try {
+    return host.attachInternals();
+  } catch {
+    return createNoopInternals();
+  }
+}
+
+function createNoopInternals(): ElementInternals {
+  return {
+    form: null,
+    labels: [] as unknown as NodeList,
+    validity: {} as ValidityState,
+    validationMessage: '',
+    willValidate: false,
+    setFormValue(): void {},
+    setValidity(): void {},
+    checkValidity(): boolean {
+      return true;
+    },
+    reportValidity(): boolean {
+      return true;
+    },
+  } as unknown as ElementInternals;
+}
+
 export interface LyraToolParamFormEventMap {
   'lr-validity-change': CustomEvent<{ valid: boolean; errors: Record<string, string> }>;
   'lr-input': CustomEvent<{ value: Record<string, unknown> }>;
+  blur: CustomEvent<undefined>;
+  focus: CustomEvent<undefined>;
 }
 /**
  * `<lr-tool-param-form>` — renders one form control per top-level property
@@ -75,6 +112,16 @@ export interface LyraToolParamFormEventMap {
  * the control; a key listed in `required` gets a visible `*`. The outer
  * component owns validation because JSON Schema `required` means property
  * presence, unlike HTML controls' nonempty/must-check semantics.
+ *
+ * Deliberately no top-level `label`/`hint`/`errorText` chrome (unlike
+ * `<lr-checkbox-group>`'s own trio, despite both being compound, multi-item
+ * form controls): every field already carries its own per-field
+ * `label`/`description`/`error` parts above, and this whole control is
+ * meant to be composed inside a consumer's own dialog/section (e.g. "Approve
+ * `create_event` call?") that already supplies the surrounding heading and
+ * context — a second, redundant outer label here would just repeat it. A
+ * form-wide validation summary is still available via the `error` part
+ * (`class="form-error"`), driven by `reportValidity()`.
  *
  * This component owns no Submit/Cancel/Approve chrome — a consumer composes
  * it inside their own dialog (e.g. a tool-approval dialog) and reads
@@ -159,7 +206,7 @@ export class LyraToolParamForm extends LyraElement<LyraToolParamFormEventMap> {
 
   constructor() {
     super();
-    this.internals = this.attachInternals();
+    this.internals = createInternalsSafely(this);
     this.validityController = new AnchoredValidityController(this, this.internals, () => this[VALIDITY_ANCHOR]());
     this.syncFormState();
   }
@@ -565,6 +612,17 @@ export class LyraToolParamForm extends LyraElement<LyraToolParamFormEventMap> {
     this.setFieldValue(key, e.detail.checked);
   }
 
+  // Native blur/focus neither bubble nor cross the shadow boundary, so a host
+  // listener on <lr-tool-param-form> itself never hears them without this --
+  // mirrors <lr-tool-approval-dialog>'s/<lr-tool-select-dialog>'s identical
+  // native-input focus/blur bridge.
+  private onFieldFocus = (): void => {
+    this.emit('focus');
+  };
+  private onFieldBlur = (): void => {
+    this.emit('blur');
+  };
+
   private renderControl(
     key: string,
     prop: ToolParamFormProperty,
@@ -607,6 +665,8 @@ export class LyraToolParamForm extends LyraElement<LyraToolParamFormEventMap> {
         .value=${typeof effective === 'string' ? effective : ''}
         ?disabled=${this.effectiveDisabled}
         @input=${(e: Event) => this.onTextInput(key, e)}
+        @focus=${this.onFieldFocus}
+        @blur=${this.onFieldBlur}
       />`;
     }
     if (prop.type === 'number' || prop.type === 'integer') {
@@ -622,6 +682,8 @@ export class LyraToolParamForm extends LyraElement<LyraToolParamFormEventMap> {
         .value=${numValue}
         ?disabled=${this.effectiveDisabled}
         @input=${(e: Event) => this.onNumberInput(key, e)}
+        @focus=${this.onFieldFocus}
+        @blur=${this.onFieldBlur}
       />`;
     }
     if (prop.type === 'boolean') {

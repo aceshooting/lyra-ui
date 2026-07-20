@@ -18,6 +18,26 @@ function field(el: LyraToolParamForm, key: string): HTMLElement {
   return el.shadowRoot!.querySelector(`[part="field"][data-key="${key}"]`) as HTMLElement;
 }
 
+describe('ElementInternals availability', () => {
+  it('does not throw when constructed in an environment without a real ElementInternals implementation (e.g. a downstream Vitest + happy-dom suite)', async () => {
+    const original = HTMLElement.prototype.attachInternals;
+    // @ts-expect-error -- simulating an environment that lacks ElementInternals entirely
+    delete HTMLElement.prototype.attachInternals;
+    try {
+      let el: LyraToolParamForm | undefined;
+      expect(() => {
+        el = document.createElement('lr-tool-param-form') as LyraToolParamForm;
+      }).to.not.throw();
+      // Confirm the fallback keeps the rest of the public surface usable
+      // rather than merely swallowing the constructor error.
+      expect(el!.checkValidity()).to.be.true;
+      expect(el!.form).to.equal(null);
+    } finally {
+      HTMLElement.prototype.attachInternals = original;
+    }
+  });
+});
+
 it('renders one control per property, in schema key order, matched to its type', async () => {
   const el = (await fixture(html`<lr-tool-param-form .schema=${basicSchema}></lr-tool-param-form>`)) as LyraToolParamForm;
   const fields = el.shadowRoot!.querySelectorAll('[part="field"]');
@@ -131,6 +151,32 @@ it('emits lr-input on a boolean field toggle', async () => {
   setTimeout(() => (checkbox.shadowRoot!.querySelector('[part="base"]') as HTMLElement).click());
   const ev = await oneEvent(el, 'lr-input');
   expect(ev.detail.value.notify).to.be.true;
+});
+
+it('bridges a string field\'s native focus/blur out through the shadow boundary as host focus/blur events', async () => {
+  const el = (await fixture(html`<lr-tool-param-form .schema=${basicSchema}></lr-tool-param-form>`)) as LyraToolParamForm;
+  const input = field(el, 'city').querySelector('input') as HTMLInputElement;
+
+  const focusPromise = oneEvent(el, 'focus');
+  input.dispatchEvent(new Event('focus'));
+  await focusPromise;
+
+  const blurPromise = oneEvent(el, 'blur');
+  input.dispatchEvent(new Event('blur'));
+  await blurPromise;
+});
+
+it('bridges a number field\'s native focus/blur out through the shadow boundary as host focus/blur events', async () => {
+  const el = (await fixture(html`<lr-tool-param-form .schema=${basicSchema}></lr-tool-param-form>`)) as LyraToolParamForm;
+  const input = field(el, 'days').querySelector('input') as HTMLInputElement;
+
+  const focusPromise = oneEvent(el, 'focus');
+  input.dispatchEvent(new Event('focus'));
+  await focusPromise;
+
+  const blurPromise = oneEvent(el, 'blur');
+  input.dispatchEvent(new Event('blur'));
+  await blurPromise;
 });
 
 it('emits lr-validity-change on mount with the initial validity', async () => {

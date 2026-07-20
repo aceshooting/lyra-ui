@@ -219,6 +219,66 @@ it('localizes the default "Tasks" label via .strings while a customized label re
   expect(custom.shadowRoot!.querySelector('[part="label"]')!.textContent!.trim()).to.equal('Plan');
 });
 
+describe('compact / appearance escape hatches', () => {
+  it('defaults to compact=false, appearance="card"', async () => {
+    const el = (await fixture(html`<lr-task-list></lr-task-list>`)) as LyraTaskList;
+    expect(el.compact).to.be.false;
+    expect(el.appearance).to.equal('card');
+    expect(el.hasAttribute('compact')).to.be.false;
+  });
+
+  it('compact tightens header/body padding and body gap via dedicated cssprops, falling back to tuned defaults', async () => {
+    const nonCompact = (await fixture(html`<lr-task-list .items=${items}></lr-task-list>`)) as LyraTaskList;
+    const defaultHeaderPadding = getComputedStyle(nonCompact.shadowRoot!.querySelector('[part="header"]')!).padding;
+    const defaultBodyPadding = getComputedStyle(nonCompact.shadowRoot!.querySelector('[part="body"]')!).padding;
+    const defaultGap = getComputedStyle(nonCompact.shadowRoot!.querySelector('[part="body"]')!).gap;
+
+    const el = (await fixture(html`<lr-task-list .items=${items} compact></lr-task-list>`)) as LyraTaskList;
+    expect(el.hasAttribute('compact')).to.be.true;
+    const header = el.shadowRoot!.querySelector('[part="header"]') as HTMLElement;
+    const body = el.shadowRoot!.querySelector('[part="body"]') as HTMLElement;
+    // Falls back to the tuned compact defaults, which are tighter than the non-compact padding/gap
+    // read above.
+    expect(getComputedStyle(header).padding).to.not.equal(defaultHeaderPadding);
+    expect(getComputedStyle(body).padding).to.not.equal(defaultBodyPadding);
+    expect(getComputedStyle(body).gap).to.not.equal(defaultGap);
+
+    el.style.setProperty('--lr-task-list-compact-header-padding', '1px 2px');
+    el.style.setProperty('--lr-task-list-compact-body-padding', '3px 4px 5px');
+    el.style.setProperty('--lr-task-list-compact-gap', '6px');
+    expect(getComputedStyle(header).padding).to.equal('1px 2px');
+    expect(getComputedStyle(body).padding).to.equal('3px 4px 5px');
+    expect(getComputedStyle(body).gap).to.equal('6px');
+  });
+
+  it('appearance="plain" removes [part="base"]\'s border and background', async () => {
+    const cardEl = (await fixture(html`<lr-task-list .items=${items}></lr-task-list>`)) as LyraTaskList;
+    const cardBase = cardEl.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    expect(getComputedStyle(cardBase).borderTopStyle).to.equal('solid');
+
+    const plainEl = (await fixture(
+      html`<lr-task-list .items=${items} appearance="plain"></lr-task-list>`,
+    )) as LyraTaskList;
+    const plainBase = plainEl.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    expect(getComputedStyle(plainBase).borderTopStyle).to.equal('none');
+    expect(getComputedStyle(plainBase).backgroundColor).to.equal('rgba(0, 0, 0, 0)');
+  });
+});
+
+describe('header hover specificity', () => {
+  it('wraps the internal button[part="header"]:hover rule in :where() so a consumer ::part(header):hover override can win', async () => {
+    // Mirrors lr-attachment-trigger/lr-copy-button's own test for the identical fix -- jsdom/wtr
+    // don't synthesize a real :hover pseudo-class from a dispatched event, so this asserts the
+    // internal rule's own specificity-lowering wrapper directly via the adopted stylesheet text.
+    const el = (await fixture(html`<lr-task-list></lr-task-list>`)) as LyraTaskList;
+    const internalRule = (el.shadowRoot!.adoptedStyleSheets ?? [])
+      .flatMap((sheet) => Array.from(sheet.cssRules))
+      .map((rule) => rule.cssText)
+      .find((text) => text.includes(':hover') && text.toLowerCase().includes('part="header"'));
+    expect(internalRule).to.contain(':where(');
+  });
+});
+
 it('is accessible collapsed, with no items', async () => {
   const el = (await fixture(html`<lr-task-list></lr-task-list>`)) as LyraTaskList;
   await expect(el).to.be.accessible();

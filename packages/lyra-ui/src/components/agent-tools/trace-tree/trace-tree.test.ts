@@ -66,6 +66,12 @@ const channels = (color: string): number[] => {
 };
 
 describe('lr-trace-tree', () => {
+  it('never scrolls vertically -- overflow-x:auto alone lets the y axis compute to auto too, which can show a phantom scrollbar', async () => {
+    const el = (await fixture(html`<lr-trace-tree .spans=${SPANS}></lr-trace-tree>`)) as LyraTraceTree;
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    expect(getComputedStyle(base).overflowY).to.equal('hidden');
+  });
+
   it('renders spans as a flattened tree with computed aria-level/posinset/setsize', async () => {
     const el = (await fixture(html`<lr-trace-tree .spans=${SPANS}></lr-trace-tree>`)) as LyraTraceTree;
     await el.updateComplete;

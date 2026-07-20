@@ -629,3 +629,9 @@ it("colors the search-input's placeholder and undoes Firefox's reduced default o
   const css = styles.cssText.replace(/\s+/g, ' ');
   expect(css).to.match(/\[part='search-input'\]::placeholder\s*\{[^}]*color:\s*var\(--lr-color-text-quiet\)[^}]*opacity:\s*1/);
 });
+
+it('resets the native search-cancel glyph on the search field', () => {
+  const css = styles.cssText.replace(/\s+/g, ' ');
+  expect(css).to.match(/\[part='search-input'\]::-webkit-search-cancel-button/);
+  expect(css).to.match(/\[part='search-input'\]::-webkit-search-decoration/);
+});

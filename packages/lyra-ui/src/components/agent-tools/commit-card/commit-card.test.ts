@@ -10,6 +10,34 @@ describe('lr-commit-card', () => {
     expect(el.copyable).to.be.true;
   });
 
+  it('parses the literal files-collapsed="false" and copyable="false" attributes (not just property bindings)', async () => {
+    const el = (await fixture(html`
+      <lr-commit-card files-collapsed="false" copyable="false" hash="abcdef1"
+        .files=${[{ path: 'a.ts', additions: 1, deletions: 0 }]}
+      ></lr-commit-card>
+    `)) as LyraCommitCard;
+    await el.updateComplete;
+    expect(el.filesCollapsed).to.be.false;
+    expect(el.copyable).to.be.false;
+    expect(el.shadowRoot!.querySelectorAll('[part="file"]').length).to.equal(1);
+    expect(el.shadowRoot!.querySelectorAll('[part="copy-button"]').length).to.equal(0);
+  });
+
+  it('lets a host aria-label override the default computed commitCardLabel', async () => {
+    const withoutOverride = (await fixture(html`<lr-commit-card></lr-commit-card>`)) as LyraCommitCard;
+    await withoutOverride.updateComplete;
+    const defaultLabel = withoutOverride.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label');
+    expect(defaultLabel).to.be.a('string').and.not.equal('');
+
+    const withOverride = (await fixture(
+      html`<lr-commit-card aria-label="Commit abc123"></lr-commit-card>`,
+    )) as LyraCommitCard;
+    await withOverride.updateComplete;
+    expect(withOverride.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal(
+      'Commit abc123',
+    );
+  });
+
   it('abbreviates hash to 7 chars for display but copies the full hash', async () => {
     const el = (await fixture(
       html`<lr-commit-card hash="abcdef1234567890" copyable></lr-commit-card>`,
@@ -113,6 +141,90 @@ describe('lr-commit-card', () => {
     `)) as LyraCommitCard;
     await el.updateComplete;
     await expect(el).to.be.accessible();
+  });
+
+  it('routes localized strings through a .strings override, reaching the rendered DOM', async () => {
+    const el = (await fixture(html`
+      <lr-commit-card
+        hash="abcdef1"
+        .files=${[{ path: 'a.ts', additions: 1, deletions: 0 }]}
+        .strings=${{
+          commitCardLabel: 'Fiche de commit',
+          commitCardCopyHash: 'Copier le hash',
+          commitCardShowFiles: 'Afficher {count} fichiers',
+        }}
+      ></lr-commit-card>
+    `)) as LyraCommitCard;
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('Fiche de commit');
+    expect(el.shadowRoot!.querySelector('[part="copy-button"]')!.getAttribute('aria-label')).to.equal(
+      'Copier le hash',
+    );
+    expect(el.shadowRoot!.querySelector('[part="files-toggle"]')!.textContent!.trim()).to.equal(
+      'Afficher 1 fichiers',
+    );
+  });
+
+  it('defaults to compact=false and appearance="card", keeping the pre-existing border/padding', async () => {
+    const el = (await fixture(html`<lr-commit-card></lr-commit-card>`)) as LyraCommitCard;
+    await el.updateComplete;
+    expect(el.compact).to.be.false;
+    expect(el.appearance).to.equal('card');
+    expect(el.hasAttribute('compact')).to.be.false;
+    expect(el.getAttribute('appearance')).to.equal('card');
+    const base = getComputedStyle(el.shadowRoot!.querySelector('[part="base"]') as HTMLElement);
+    expect(base.paddingTop).to.equal('12px'); // --lr-space-m
+    expect(base.borderTopWidth).to.equal('1px');
+  });
+
+  it('reflects compact and tightens the base padding, keeping the border', async () => {
+    const el = (await fixture(html`<lr-commit-card compact></lr-commit-card>`)) as LyraCommitCard;
+    await el.updateComplete;
+    expect(el.hasAttribute('compact')).to.be.true;
+    const base = getComputedStyle(el.shadowRoot!.querySelector('[part="base"]') as HTMLElement);
+    expect(base.paddingTop).to.equal('8px'); // --lr-space-s
+    expect(base.borderTopWidth).to.equal('1px');
+  });
+
+  it('lets a consumer retune --lr-commit-card-compact-padding without re-declaring the rule', async () => {
+    const el = (await fixture(html`<lr-commit-card compact></lr-commit-card>`)) as LyraCommitCard;
+    el.style.setProperty('--lr-commit-card-compact-padding', '3px');
+    await el.updateComplete;
+    const base = getComputedStyle(el.shadowRoot!.querySelector('[part="base"]') as HTMLElement);
+    expect(base.paddingTop).to.equal('3px');
+  });
+
+  it('drops border, padding and radius under appearance="plain", winning over compact when both are set', async () => {
+    const el = (await fixture(
+      html`<lr-commit-card compact appearance="plain"></lr-commit-card>`,
+    )) as LyraCommitCard;
+    await el.updateComplete;
+    expect(el.getAttribute('appearance')).to.equal('plain');
+    const base = getComputedStyle(el.shadowRoot!.querySelector('[part="base"]') as HTMLElement);
+    expect(base.borderTopWidth).to.equal('0px');
+    expect(base.borderTopLeftRadius).to.equal('0px');
+    expect(base.paddingTop).to.equal('0px');
+  });
+
+  it('orders :host([appearance="plain"]) after :host([compact]) so the equal-specificity reset wins', () => {
+    const css = styles.cssText;
+    const compactAt = css.indexOf(':host([compact])');
+    const plainAt = css.indexOf(":host([appearance='plain'])");
+    expect(compactAt).to.be.greaterThan(-1);
+    expect(plainAt).to.be.greaterThan(-1);
+    expect(plainAt).to.be.greaterThan(compactAt);
+  });
+
+  it('is accessible in the populated compact + plain states', async () => {
+    const compactEl = (await fixture(
+      html`<lr-commit-card compact hash="abcdef1" message="Fix bug" author="Ada"></lr-commit-card>`,
+    )) as LyraCommitCard;
+    await expect(compactEl).to.be.accessible();
+
+    const plainEl = (await fixture(
+      html`<lr-commit-card appearance="plain" hash="abcdef1" message="Fix bug" author="Ada"></lr-commit-card>`,
+    )) as LyraCommitCard;
+    await expect(plainEl).to.be.accessible();
   });
 
   it('gives files-toggle, file, and copy-button a hover state', () => {

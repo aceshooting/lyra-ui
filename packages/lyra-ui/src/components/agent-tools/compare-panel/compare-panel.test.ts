@@ -60,10 +60,21 @@ describe('lr-compare-panel', () => {
   });
 
   it('stacks panes below 640px container width', async () => {
-    const el = (await fixture(html`<lr-compare-panel></lr-compare-panel>`)) as LyraComparePanel;
-    await el.updateComplete;
-    const css = (await import('./compare-panel.styles.js')).styles.cssText.replace(/\s+/g, ' ');
-    expect(css).to.include('@container (max-inline-size: 639.98px)');
+    const wrap = await fixture(html`
+      <div style="inline-size:320px;">
+        <lr-compare-panel></lr-compare-panel>
+      </div>
+    `);
+    const narrow = wrap.querySelector('lr-compare-panel') as LyraComparePanel;
+    await narrow.updateComplete;
+    const panes = narrow.shadowRoot!.querySelector('[part="panes"]') as HTMLElement;
+    expect(getComputedStyle(panes).flexDirection).to.equal('column');
+
+    // Control: the same part at the default (wide) allocation stays a row.
+    const wide = (await fixture(html`<lr-compare-panel></lr-compare-panel>`)) as LyraComparePanel;
+    await wide.updateComplete;
+    const widePanes = wide.shadowRoot!.querySelector('[part="panes"]') as HTMLElement;
+    expect(getComputedStyle(widePanes).flexDirection).to.equal('row');
   });
 
   it('falls back to the built-in English vote label and honors a strings override', async () => {

@@ -93,7 +93,7 @@ it('moves focus to [part="status"] synchronously on activation, before the butto
   const approveButton = el.shadowRoot!.querySelector('[part="approve-button"]') as HTMLButtonElement;
   approveButton.click();
   // Synchronous: no await needed before this assertion.
-  expect(el.shadowRoot!.activeElement).to.equal(el.shadowRoot!.querySelector('[part="status"]'));
+  expect(el.shadowRoot!.activeElement!.getAttribute('part')).to.equal('status');
 });
 
 it('announces the decision via an internal polite live region', async () => {

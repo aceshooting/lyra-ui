@@ -1,4 +1,4 @@
-import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
+import { html, nothing, type TemplateResult, type PropertyValues, type ComplexAttributeConverter } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { styles } from './stack-trace.styles.js';
@@ -7,6 +7,22 @@ import { parseStackTrace, DEFAULT_INTERNAL_PATTERNS, type StackFrame, type Stack
 /** How long the "Copied!" confirmation state lasts before reverting -- matches
  *  `lr-copy-button`'s own confirmation duration. */
 const COPY_CONFIRM_MS = 1500;
+
+/** `true`-defaulting boolean attribute converter -- Lit's default presence-based `type: Boolean`
+ *  can never be set back to `false` from a plain-HTML attribute once a property's own default is
+ *  `true` (removing an attribute that was never present fires no `attributeChangedCallback`), so
+ *  `fromAttribute` checks the literal string instead. Shared by `collapse-internal` and
+ *  `copyable`, which have the identical `true`-default parsing need -- duplicated locally rather
+ *  than imported, matching this exact converter's repeated per-component convention elsewhere in
+ *  this library (see e.g. `<lr-agent-run>`'s own `trueDefaultBooleanConverter`). */
+const trueDefaultBooleanConverter: ComplexAttributeConverter<boolean> = {
+  fromAttribute(value): boolean {
+    return value !== 'false';
+  },
+  toAttribute(value): string | null {
+    return value ? null : 'false';
+  },
+};
 
 /** Visual chrome for `<lr-stack-trace>`'s root, mirroring `lr-card`'s `appearance` vocabulary. */
 export type StackTraceAppearance = 'card' | 'plain';
@@ -51,14 +67,15 @@ export class LyraStackTrace extends LyraElement<LyraStackTraceEventMap> {
   @property() trace = '';
 
   /** Folds runs of internal frames (matching `internalPatterns`) behind a toggle. */
-  @property({ type: Boolean, attribute: 'collapse-internal', reflect: true }) collapseInternal = true;
+  @property({ type: Boolean, attribute: 'collapse-internal', reflect: true, converter: trueDefaultBooleanConverter })
+  collapseInternal = true;
 
   /** File-path substrings/`RegExp`s that mark a frame as internal. Defaults to
    *  `DEFAULT_INTERNAL_PATTERNS` (common Node/browser/Python framework locations). */
   @property({ attribute: false }) internalPatterns: (string | RegExp)[] = DEFAULT_INTERNAL_PATTERNS;
 
   /** Shows a copy-to-clipboard button for the raw trace text. */
-  @property({ type: Boolean, reflect: true }) copyable = true;
+  @property({ type: Boolean, reflect: true, converter: trueDefaultBooleanConverter }) copyable = true;
 
   /** Visual chrome, mirroring `lr-card`'s `appearance` vocabulary. `'card'` (the default) keeps the
    *  bordered, filled, padded box. `'plain'` removes the border, background, padding and corner

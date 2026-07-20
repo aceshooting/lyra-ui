@@ -5,6 +5,8 @@ export const styles = css`
     display: block;
     --lr-tool-timeline-gap: var(--lr-space-l);
     --lr-tool-timeline-marker-size: var(--lr-size-0-625rem);
+    --lr-tool-timeline-denied-marker-color: var(--lr-color-warning);
+    --lr-tool-timeline-pending-approval-border-color: var(--lr-color-warning);
   }
 
   [part='base'] {
@@ -56,7 +58,7 @@ export const styles = css`
     background: var(--lr-color-danger);
   }
   [part='entry'][data-status='denied'] [part='entry-marker']::before {
-    background: var(--lr-color-warning);
+    background: var(--lr-tool-timeline-denied-marker-color);
   }
 
   [part='entry-body'] {
@@ -76,7 +78,8 @@ export const styles = css`
 
   [part='entry'][data-pending-approval='true'] [part='entry-body'] {
     padding-inline-start: var(--lr-space-s);
-    border-inline-start: var(--lr-border-width-medium) solid var(--lr-color-warning);
+    border-inline-start: var(--lr-border-width-medium) solid
+      var(--lr-tool-timeline-pending-approval-border-color);
   }
 
   [part='entry-timestamp'] {

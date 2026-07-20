@@ -148,7 +148,11 @@ export const styles = css`
     color: var(--lr-color-on-brand);
     border-color: var(--lr-color-brand);
   }
-  [part='approve-button']:hover:not(:disabled) {
+  /* :where() zeroes the wrapped selectors' specificity contribution, leaving only :hover itself
+     -- (0,1,0) total, functionally identical selection to \`[part='approve-button']:hover:not(:disabled)\`
+     ((0,3,0)) but now losing (on the pseudo-element tiebreak) to a consumer's own
+     \`::part(approve-button):hover\` override ((0,1,1)) without that consumer needing !important. */
+  :where([part='approve-button']):hover:where(:not(:disabled)) {
     filter: brightness(var(--lr-hover-brightness));
   }
   [part='approve-button']:disabled {

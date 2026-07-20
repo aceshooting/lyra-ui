@@ -167,8 +167,17 @@ it('uses themeable motion values for running and pending statuses', async () => 
       style="--lr-tool-call-chip-spin: 2.5s linear"
     ></lr-tool-call-chip>
   `)) as LyraToolCallChip;
-  const glyph = running.shadowRoot!.querySelector('[part="icon"] svg')!;
-  expect(getComputedStyle(glyph).animationDuration).to.equal('2.5s');
+  const runningGlyph = running.shadowRoot!.querySelector('[part="icon"] svg')!;
+  expect(getComputedStyle(runningGlyph).animationDuration).to.equal('2.5s');
+
+  // The pulse rule matched via the cssText check above must actually reach a
+  // rendered status="pending" chip's icon too, not just exist as a string in
+  // the stylesheet -- proven live against the token's real default resolved
+  // value (--lr-transition-ambient defaults to 1.8s), mirroring
+  // lr-thinking-panel's own pending pulse-dot check.
+  const pending = (await fixture(html`<lr-tool-call-chip status="pending"></lr-tool-call-chip>`)) as LyraToolCallChip;
+  const pendingGlyph = pending.shadowRoot!.querySelector('[part="icon"] svg')!;
+  expect(getComputedStyle(pendingGlyph).animationDuration).to.equal('1.8s');
 });
 
 it('disables the infinite running/pending glyph animations under prefers-reduced-motion: reduce', () => {
@@ -394,6 +403,30 @@ describe('detail tooltip', () => {
     await new Promise((resolve) => requestAnimationFrame(resolve));
     await el.updateComplete;
     expect(tooltip.hidden).to.be.true;
+  });
+
+  it('closes the tooltip (rather than leaving it frozen open with no positioner) after a disconnect+reconnect while open', async () => {
+    const el = (await fixture(
+      html`<lr-tool-call-chip name="web_search"><p>Query: solar panel efficiency</p></lr-tool-call-chip>`,
+    )) as LyraToolCallChip;
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    const tooltip = el.shadowRoot!.querySelector('[part="tooltip"]') as HTMLElement;
+
+    base.dispatchEvent(new MouseEvent('mouseenter'));
+    await el.updateComplete;
+    expect(tooltip.hidden).to.be.false;
+
+    const parent = el.parentElement!;
+    el.remove();
+    parent.appendChild(el);
+    await el.updateComplete;
+
+    // `disconnectedCallback()` resets `tooltipOpen` to `false` -- asserting
+    // that directly is what distinguishes the fix from the pre-fix bug
+    // (tearing down `cleanupPositioner` alone leaves the tooltip rendered
+    // open at a stale position with no live positioner attached).
+    const tooltipAfterReconnect = el.shadowRoot!.querySelector('[part="tooltip"]') as HTMLElement;
+    expect(tooltipAfterReconnect.hidden).to.be.true;
   });
 
   it('associates the trigger with the open tooltip via aria-describedby, using a stable id', async () => {

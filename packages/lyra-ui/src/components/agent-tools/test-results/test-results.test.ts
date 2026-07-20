@@ -22,6 +22,80 @@ describe('lr-test-results', () => {
     expect(el.statusFilter).to.deep.equal([]);
   });
 
+  it('accepts auto-expand-failures="false" as a plain-HTML attribute string', async () => {
+    const el = (await fixture(html`<lr-test-results auto-expand-failures="false"></lr-test-results>`)) as LyraTestResults;
+    expect(el.autoExpandFailures).to.be.false;
+  });
+
+  it('[part="base"]\'s aria-label defaults to the localized "Test results" label but a host aria-label wins', async () => {
+    const el = (await fixture(html`<lr-test-results .suites=${suites}></lr-test-results>`)) as LyraTestResults;
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('Test results');
+
+    const labeled = (await fixture(
+      html`<lr-test-results .suites=${suites} aria-label="Build test results"></lr-test-results>`,
+    )) as LyraTestResults;
+    await labeled.updateComplete;
+    expect(labeled.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal(
+      'Build test results',
+    );
+  });
+
+  it('wires this.localize() calls for status counts, filter label, status words, toggle labels, and durations to .strings overrides', async () => {
+    const el = (await fixture(html`
+      <lr-test-results
+        .suites=${suites}
+        .strings=${{
+          testResultsPassed: '{count} réussi(s)',
+          testResultsFilterLabel: 'Filtrer par statut',
+          statusError: 'Échec',
+          collapse: 'Réduire',
+          durationMilliseconds: '{value} ms!',
+        }}
+      ></lr-test-results>
+    `)) as LyraTestResults;
+    await el.updateComplete;
+
+    expect(el.shadowRoot!.querySelector('[part="count"][data-status="passed"]')!.textContent).to.include(
+      '1 réussi(s)',
+    );
+    expect(el.shadowRoot!.querySelector('[part="filter"]')!.getAttribute('aria-label')).to.equal(
+      'Filtrer par statut',
+    );
+    expect(
+      el.shadowRoot!.querySelector('[part="test"][data-status="failed"] [part="test-status"]')!.textContent,
+    ).to.include('Échec');
+    // The failed test auto-expands by default, so its toggle shows the localized "collapse" text.
+    expect(
+      el.shadowRoot!
+        .querySelector('[part="test"][data-status="failed"] [part="test-expand-toggle"]')!
+        .textContent!.trim(),
+    ).to.equal('Réduire');
+    expect(
+      el.shadowRoot!
+        .querySelector('[part="test"][data-status="passed"] [part="test-duration"]')!
+        .textContent!.trim(),
+    ).to.equal('5 ms!');
+  });
+
+  it('wires the run-completion live-region announcement to a .strings override', async () => {
+    const runningSuites: TestSuiteResult[] = [
+      { id: 's1', name: 'math.test.ts', tests: [{ id: 't1', name: 'a', status: 'running' }] },
+    ];
+    const el = (await fixture(html`
+      <lr-test-results
+        .suites=${runningSuites}
+        .strings=${{ testResultsCompleteAnnounce: '{passed} ok, {failed} ko, {skipped} skip' }}
+      ></lr-test-results>
+    `)) as LyraTestResults;
+    await el.updateComplete;
+    el.suites = [{ id: 's1', name: 'math.test.ts', tests: [{ id: 't1', name: 'a', status: 'passed' }] }];
+    await el.updateComplete;
+    await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+    const region = el.shadowRoot!.querySelector('lr-live-region')!.shadowRoot!.querySelector('[part="region"]')!;
+    expect(region.textContent).to.equal('1 ok, 0 ko, 0 skip');
+  });
+
   it('renders visible localized counts per status, never color-only', async () => {
     const el = (await fixture(html`<lr-test-results .suites=${suites}></lr-test-results>`)) as LyraTestResults;
     await el.updateComplete;

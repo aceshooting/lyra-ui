@@ -10,6 +10,7 @@ export const styles = css`
     display: flex;
     flex-direction: column;
     overflow-x: auto;
+    overflow-y: hidden;
     font-size: var(--lr-font-size-sm);
     color: var(--lr-color-text);
   }

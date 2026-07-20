@@ -1,10 +1,30 @@
-import { html, nothing, type TemplateResult } from 'lit';
+import { html, nothing, type TemplateResult, type ComplexAttributeConverter } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { finiteRange } from '../../../internal/numbers.js';
 import { styles } from './commit-card.styles.js';
 import type { GitStatus } from '../../data/file-tree/file-tree.class.js';
 import { getDateTimeFormat } from '../../../internal/intl-cache.js';
+
+/** `true`-defaulting boolean attribute converter -- Lit's default presence-based `type: Boolean`
+ *  can never be set back to `false` from a plain-HTML attribute once a property's own default is
+ *  `true` (removing an attribute that was never present fires no `attributeChangedCallback`), so
+ *  `fromAttribute` checks the literal string instead. Mirrors `<lr-agent-run>`'s own
+ *  `showCancel`/`showRetry` converter. Shared by `files-collapsed` and `copyable`, which have the
+ *  identical `true`-default parsing need -- duplicated locally rather than imported, matching this
+ *  exact converter's repeated per-component convention elsewhere in this library. */
+const trueDefaultBooleanConverter: ComplexAttributeConverter<boolean> = {
+  fromAttribute(value): boolean {
+    return value !== 'false';
+  },
+  toAttribute(value): string | null {
+    return value ? null : 'false';
+  },
+};
+
+/** Visual chrome for `<lr-commit-card>`'s root, mirroring `lr-card`'s (and `<lr-agent-run>`'s own)
+ *  `appearance` vocabulary. */
+export type CommitCardAppearance = 'card' | 'plain';
 
 export interface CommitFileChange {
   path: string;
@@ -31,7 +51,10 @@ export interface LyraCommitCardEventMap {
 
 /**
  * `<lr-commit-card>` — compact commit summary (subject, author/time, diffstat, per-file changes)
- * that links file rows out to a diff view.
+ * that links file rows out to a diff view. Set `compact` (tighter padding) and/or
+ * `appearance="plain"` (no border/padding at all) when embedding one as a row in a commit list or
+ * PR timeline, so the built-in card chrome doesn't double up against the list's own — same
+ * convention as `<lr-agent-run>`'s own `compact`/`appearance`.
  *
  * @customElement lr-commit-card
  * @event lr-file-select - `detail: { path }` — a file row was activated.
@@ -55,6 +78,8 @@ export interface LyraCommitCardEventMap {
  * @csspart file-deletions - A file row's deletions count.
  * @csspart copy-button - The hash copy button.
  * @csspart actions - The `actions` slot wrapper.
+ * @cssprop [--lr-commit-card-compact-padding=var(--lr-space-s)] - `[part="base"]` padding while
+ *   `compact`.
  */
 export class LyraCommitCard extends LyraElement<LyraCommitCardEventMap> {
   static styles = [LyraElement.styles, styles];
@@ -64,8 +89,22 @@ export class LyraCommitCard extends LyraElement<LyraCommitCardEventMap> {
   @property() author = '';
   @property({ type: Number, attribute: false }) timestamp?: number;
   @property({ attribute: false }) files: CommitFileChange[] = [];
-  @property({ type: Boolean, attribute: 'files-collapsed', reflect: true }) filesCollapsed = true;
-  @property({ type: Boolean, reflect: true }) copyable = true;
+  @property({ type: Boolean, attribute: 'files-collapsed', reflect: true, converter: trueDefaultBooleanConverter })
+  filesCollapsed = true;
+  @property({ type: Boolean, reflect: true, converter: trueDefaultBooleanConverter }) copyable = true;
+
+  /** Tighter root padding for dense contexts (a commit rendered as a row in a list or PR
+   *  timeline) -- same convention as `<lr-agent-run>`'s own `compact`. Defaults to `false`, i.e.
+   *  the full card padding. Purely a density knob: the border stays, so use `appearance="plain"`
+   *  instead to drop the chrome entirely. */
+  @property({ type: Boolean, reflect: true }) compact = false;
+
+  /** Visual chrome, mirroring `lr-card`'s (and `<lr-agent-run>`'s own) `appearance` vocabulary.
+   *  `'card'` (the default) keeps the bordered, padded box. `'plain'` removes the border, padding
+   *  and corner radius, so a commit nested inside a host list that already draws its own row
+   *  chrome doesn't double it. `plain` wins over `compact` when both are set (nothing left to
+   *  tighten). */
+  @property({ reflect: true }) appearance: CommitCardAppearance = 'card';
 
   @state() private justCopied = false;
   private copyTimeoutId?: ReturnType<typeof setTimeout>;
@@ -126,7 +165,7 @@ export class LyraCommitCard extends LyraElement<LyraCommitCardEventMap> {
     const { additions, deletions } = this.totals;
     const timestamp = this.validTimestamp;
     return html`
-      <div part="base" role="group" aria-label=${this.localize('commitCardLabel')}>
+      <div part="base" role="group" aria-label=${this.getAttribute('aria-label') || this.localize('commitCardLabel')}>
         <div part="subject">${this.subject}</div>
         ${this.body ? html`<div part="body">${this.body}</div>` : nothing}
         <div part="meta">

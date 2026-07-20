@@ -270,7 +270,72 @@ it('honors a `.strings` override for the search field label', async () => {
   expect(search.getAttribute('placeholder')).to.equal('Rechercher');
 });
 
-it("colors the search-input's placeholder and undoes Firefox's reduced default opacity", () => {
+it("colors the search-input's placeholder and undoes Firefox's reduced default opacity", async () => {
+  const el = (await fixture(
+    html`<lr-eval-dataset searchable></lr-eval-dataset>`,
+  )) as LyraEvalDataset;
+  await el.updateComplete;
+  const input = el.shadowRoot!.querySelector('[part="search-input"]') as HTMLInputElement;
+  const placeholderStyle = getComputedStyle(input, '::placeholder');
+
+  // Resolve the --lr-color-text-quiet token the same way the stylesheet does, via a probe element
+  // in the same shadow tree, rather than hardcoding an expected color string.
+  const probe = document.createElement('span');
+  probe.setAttribute('style', 'color: var(--lr-color-text-quiet)');
+  el.shadowRoot!.appendChild(probe);
+  const expectedColor = getComputedStyle(probe).color;
+  probe.remove();
+
+  expect(placeholderStyle.color).to.equal(expectedColor);
+  expect(placeholderStyle.opacity).to.equal('1');
+});
+
+it('resets the native webkit search-cancel glyph on the search input', () => {
   const css = styles.cssText.replace(/\s+/g, ' ');
-  expect(css).to.match(/\[part='search-input'\]::placeholder\s*\{[^}]*color:\s*var\(--lr-color-text-quiet\)[^}]*opacity:\s*1/);
+  expect(css).to.match(/\[part='search-input'\]::-webkit-search-cancel-button/);
+  expect(css).to.match(/\[part='search-input'\]::-webkit-search-decoration/);
+});
+
+it('bridges native focus/blur on the search field to the host element', async () => {
+  const el = (await fixture(html`<lr-eval-dataset searchable></lr-eval-dataset>`)) as LyraEvalDataset;
+  await el.updateComplete;
+  const input = el.shadowRoot!.querySelector('[part="search-input"]') as HTMLInputElement;
+
+  const focusListener = oneEvent(el, 'focus');
+  input.dispatchEvent(new FocusEvent('focus'));
+  await focusListener;
+
+  const blurListener = oneEvent(el, 'blur');
+  input.dispatchEvent(new FocusEvent('blur'));
+  await blurListener;
+});
+
+it('lets a host aria-label win over `label` and the localized default on the internal grid', async () => {
+  const defaultEl = (await fixture(html`<lr-eval-dataset></lr-eval-dataset>`)) as LyraEvalDataset;
+  await defaultEl.updateComplete;
+  expect(defaultEl.shadowRoot!.querySelector('lr-data-grid')!.getAttribute('aria-label')).to.equal(
+    'Evaluation examples',
+  );
+
+  const labeled = (await fixture(html`<lr-eval-dataset label="My dataset"></lr-eval-dataset>`)) as LyraEvalDataset;
+  await labeled.updateComplete;
+  expect(labeled.shadowRoot!.querySelector('lr-data-grid')!.getAttribute('aria-label')).to.equal('My dataset');
+
+  const hostLabeled = (await fixture(
+    html`<lr-eval-dataset label="My dataset" aria-label="Pairwise eval run 3"></lr-eval-dataset>`,
+  )) as LyraEvalDataset;
+  await hostLabeled.updateComplete;
+  expect(hostLabeled.shadowRoot!.querySelector('lr-data-grid')!.getAttribute('aria-label')).to.equal(
+    'Pairwise eval run 3',
+  );
+});
+
+it('lets a ::part(add-button):hover / ::part(remove-button):hover override win without needing !important', async () => {
+  const el = (await fixture(html`<lr-eval-dataset></lr-eval-dataset>`)) as LyraEvalDataset;
+  await el.updateComplete;
+  const internalSheet = (el.shadowRoot!.adoptedStyleSheets ?? [])
+    .flatMap((sheet) => Array.from(sheet.cssRules))
+    .map((rule) => rule.cssText)
+    .find((text) => text.includes(':hover') && text.includes("add-button"));
+  expect(internalSheet).to.contain(':where(');
 });

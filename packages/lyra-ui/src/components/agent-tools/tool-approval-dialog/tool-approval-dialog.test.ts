@@ -48,6 +48,26 @@ it('reflects open as an attribute and sets dialog semantics once open', async ()
   expect(panel.getAttribute('aria-labelledby')).to.equal(el.shadowRoot!.querySelector('h2')!.id);
 });
 
+it('forwards a host aria-label to the panel and lets it win over the generated heading, mirroring tool-select-dialog/tool-result-dialog', async () => {
+  const el = (await fixture(
+    html`<lr-tool-approval-dialog open tool-name="web_search" aria-label="Custom approval name"></lr-tool-approval-dialog>`,
+  )) as LyraToolApprovalDialog;
+  const panel = el.shadowRoot!.querySelector('[part="panel"]')!;
+
+  expect(panel.getAttribute('aria-label')).to.equal('Custom approval name');
+  expect(panel.hasAttribute('aria-labelledby')).to.equal(false);
+});
+
+it('falls back to aria-labelledby when no host aria-label is set', async () => {
+  const el = (await fixture(
+    html`<lr-tool-approval-dialog open tool-name="web_search"></lr-tool-approval-dialog>`,
+  )) as LyraToolApprovalDialog;
+  const panel = el.shadowRoot!.querySelector('[part="panel"]')!;
+
+  expect(panel.hasAttribute('aria-label')).to.equal(false);
+  expect(panel.getAttribute('aria-labelledby')).to.equal(el.shadowRoot!.querySelector('h2')!.id);
+});
+
 it('renders the tool name in the heading, defaulting to a generic "tool" when unset', async () => {
   const withName = (await fixture(
     html`<lr-tool-approval-dialog tool-name="web_search"></lr-tool-approval-dialog>`,
@@ -84,7 +104,23 @@ describe('editing', () => {
     const el = (await fixture(
       html`<lr-tool-approval-dialog tool-name="delete_file" .editable=${false}></lr-tool-approval-dialog>`,
     )) as LyraToolApprovalDialog;
-    expect(editButton(el)).to.not.exist;
+    expect(el.shadowRoot!.querySelectorAll('[part="edit-button"]').length).to.equal(0);
+  });
+
+  it('honors the plain HTML attribute form editable="false" (not just a JS property binding)', async () => {
+    const el = (await fixture(
+      html`<lr-tool-approval-dialog tool-name="delete_file" editable="false"></lr-tool-approval-dialog>`,
+    )) as LyraToolApprovalDialog;
+    expect(el.editable).to.be.false;
+    expect(el.shadowRoot!.querySelectorAll('[part="edit-button"]').length).to.equal(0);
+  });
+
+  it('defaults editable to true when the attribute is entirely absent', async () => {
+    const el = (await fixture(
+      html`<lr-tool-approval-dialog tool-name="delete_file"></lr-tool-approval-dialog>`,
+    )) as LyraToolApprovalDialog;
+    expect(el.editable).to.be.true;
+    expect(editButton(el).tagName).to.equal('BUTTON');
   });
 
   it('swaps to a textarea pre-filled with pretty-printed JSON when Edit is clicked', async () => {
@@ -591,7 +627,7 @@ describe('localization', () => {
     expect(editButton(el).textContent!.trim()).to.equal('Annuler');
   });
 
-  it('localizes the invalid-JSON fallback error message via this.localize() when the caught error has no message', async () => {
+  it('localizes the invalid-JSON error message via this.localize() instead of rendering the raw engine SyntaxError', async () => {
     const el = (await fixture(
       html`<lr-tool-approval-dialog
         .args=${ARGS}
@@ -602,24 +638,29 @@ describe('localization', () => {
     editButton(el).click();
     await el.updateComplete;
 
-    // JSON.parse always throws a real Error with a non-empty message, so the
-    // this.localize('invalidJson') fallback branch is otherwise unreachable
-    // through normal input -- stub JSON.parse for this one assertion to
-    // exercise the `err instanceof Error` false branch directly.
-    const originalParse = JSON.parse;
-    JSON.parse = () => {
-      // eslint-disable-next-line no-throw-literal
-      throw 'not an Error instance';
-    };
-    try {
-      setTextareaValue(el, '{ anything }');
-      await el.updateComplete;
-    } finally {
-      JSON.parse = originalParse;
-    }
+    // A real, ordinary invalid-JSON edit -- JSON.parse always throws a real
+    // SyntaxError for this, and the browser-engine-specific raw message
+    // (e.g. V8's "Unexpected token } in JSON at position 42") must never
+    // reach the DOM; only the localized string should.
+    setTextareaValue(el, '{ anything }');
+    await el.updateComplete;
 
     const error = el.shadowRoot!.querySelector('[part="error"]') as HTMLElement;
     expect(error.textContent).to.equal('JSON invalide.');
+  });
+
+  it('shows the default English localized invalid-JSON message (not a raw engine SyntaxError) when no locale is registered', async () => {
+    const el = (await fixture(
+      html`<lr-tool-approval-dialog .args=${ARGS} open></lr-tool-approval-dialog>`,
+    )) as LyraToolApprovalDialog;
+    editButton(el).click();
+    await el.updateComplete;
+
+    setTextareaValue(el, '{ not valid json');
+    await el.updateComplete;
+
+    const error = el.shadowRoot!.querySelector('[part="error"]') as HTMLElement;
+    expect(error.textContent).to.equal('Invalid JSON.');
   });
 });
 
@@ -646,7 +687,22 @@ it('lifts the approve button on hover through the shared hover-brightness token'
     html`<lr-tool-approval-dialog tool-name="web_search" .args=${ARGS} open></lr-tool-approval-dialog>`,
   )) as LyraToolApprovalDialog;
   await el.updateComplete;
-  expect(renderedHoverFilter(el, "[part='approve-button']:hover:not(:disabled)")).to.equal('brightness(1.08)');
+  expect(
+    renderedHoverFilter(el, ":where([part='approve-button']):hover:where(:not(:disabled))"),
+  ).to.equal('brightness(1.08)');
+});
+
+describe('approve-button hover specificity', () => {
+  it('wraps the internal hover rule in :where() so a consumer ::part(approve-button):hover override wins without !important', async () => {
+    const el = (await fixture(
+      html`<lr-tool-approval-dialog tool-name="web_search" .args=${ARGS} open></lr-tool-approval-dialog>`,
+    )) as LyraToolApprovalDialog;
+    const internalRule = (el.shadowRoot!.adoptedStyleSheets ?? [])
+      .flatMap((sheet) => Array.from(sheet.cssRules))
+      .map((rule) => rule.cssText)
+      .find((text) => text.includes(':hover') && text.includes('approve-button'));
+    expect(internalRule).to.contain(':where(');
+  });
 });
 
 it('is accessible while closed', async () => {

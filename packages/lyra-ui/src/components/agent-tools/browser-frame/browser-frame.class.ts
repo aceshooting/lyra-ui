@@ -1,4 +1,4 @@
-import { html, nothing, type TemplateResult } from 'lit';
+import { html, nothing, type TemplateResult, type ComplexAttributeConverter } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { safeMediaSrc } from '../../../internal/safe-url.js';
@@ -26,6 +26,21 @@ function containRect(
   const width = containerH * naturalRatio;
   return { left: (containerW - width) / 2, top: 0, width, height: containerH };
 }
+
+/** `true`-defaulting boolean attribute converter -- Lit's default presence-based `type: Boolean`
+ *  can never be set back to `false` from a plain-HTML attribute once a property's own default is
+ *  `true` (removing an attribute that was never present fires no `attributeChangedCallback`), so
+ *  `fromAttribute` checks the literal string instead. Mirrors `<lr-agent-run>`'s own
+ *  `showCancel`/`showRetry` converter (`toAttribute` omits the attribute for `true` since nothing
+ *  in this component's stylesheet keys off `[controls]`'s presence). */
+const trueDefaultBooleanConverter: ComplexAttributeConverter<boolean> = {
+  fromAttribute(value): boolean {
+    return value !== 'false';
+  },
+  toAttribute(value): string | null {
+    return value ? null : 'false';
+  },
+};
 
 export interface BrowserPing {
   id: string;
@@ -79,7 +94,7 @@ export class LyraBrowserFrame extends LyraElement<LyraBrowserFrameEventMap> {
   @property({ reflect: true }) status: 'idle' | 'connecting' | 'streaming' | 'stalled' = 'idle';
   @property({ reflect: true }) controller: 'agent' | 'user' = 'agent';
   @property({ attribute: false }) pings: BrowserPing[] = [];
-  @property({ type: Boolean, reflect: true }) controls = true;
+  @property({ type: Boolean, reflect: true, converter: trueDefaultBooleanConverter }) controls = true;
 
   private hasDefaultSlotContent = false;
   /** The measured `object-fit: contain` content box of the `frame-src` `<img>`, in pixels relative
@@ -158,7 +173,11 @@ export class LyraBrowserFrame extends LyraElement<LyraBrowserFrameEventMap> {
           <span class="sr-only">${this.localize('browserFrameUrlLabel')}</span>
           <span part="url" dir="ltr" title=${this.url}>${this.url}</span>
           <span part="status" role="status">${this.localize(STATUS_KEY[this.status])}</span>
-          <span part="controller-badge">${this.controller}</span>
+          <span part="controller-badge">
+            ${this.localize(
+              this.controller === 'agent' ? 'browserFrameControllerAgent' : 'browserFrameControllerUser',
+            )}
+          </span>
           <slot name="actions" part="actions"></slot>
           ${this.controls
             ? html`

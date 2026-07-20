@@ -276,6 +276,16 @@ export class LyraToolCallChip extends LyraElement<LyraToolCallChipEventMap> {
   disconnectedCallback(): void {
     super.disconnectedCallback();
     this.cleanupPositioner?.();
+    this.cleanupPositioner = undefined;
+    // Reset so a reconnect (e.g. a drag-drop reparent or a list re-render
+    // that detaches and reattaches this node) re-triggers `updated()`'s
+    // `tooltipOpen`-driven branch -- without this, `tooltipOpen` stays
+    // `true` across the disconnect/reconnect and `changed.has('tooltipOpen')`
+    // never fires again, leaving the tooltip rendered open at a stale,
+    // frozen position with no live positioner attached.
+    this.tooltipOpen = false;
+    this.hovering = false;
+    this.focused = false;
   }
 
   private onDetailSlotChange = (e: Event): void => {

@@ -84,7 +84,9 @@ const STATES: PolicyDecisionState[] = ['allow', 'deny', 'needs-review'];
  * @csspart base - The root wrapper, only rendered while `decisions` is non-empty.
  * @csspart summary - The always-visible allow/deny/needs-review count row.
  * @csspart count - One state's localized count text; carries `data-state`.
- * @csspart list - The `role="list"` wrapper around every decision row.
+ * @csspart list - The `role="list"` wrapper around every decision row. Its accessible name
+ *   defaults to the localized `policySummaryLabel`, but a host-level `aria-label` on
+ *   `<lr-policy-summary>` wins over that default.
  * @csspart decision - One decision row (`role="listitem"`); carries `data-state` and `data-category`.
  * @csspart decision-header - The row's category/label/state-badge line.
  * @csspart category - The decision's localized category text.
@@ -146,7 +148,11 @@ export class LyraPolicySummary extends LyraElement {
             >`;
           })}
         </div>
-        <div part="list" role="list" aria-label=${this.localize('policySummaryLabel')}>
+        <div
+          part="list"
+          role="list"
+          aria-label=${this.getAttribute('aria-label') || this.localize('policySummaryLabel')}
+        >
           ${this.decisions.map((decision) => this.renderDecision(decision))}
         </div>
       </div>

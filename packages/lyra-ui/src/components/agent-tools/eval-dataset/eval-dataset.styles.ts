@@ -29,8 +29,11 @@ export const styles = css`
     font: inherit;
     cursor: pointer;
   }
-  [part='add-button']:hover:not(:disabled),
-  [part='remove-button']:hover:not(:disabled) {
+  /* :where() zeroes the wrapped selectors' specificity contribution, leaving only :hover itself
+     so a consumer's ::part(add-button):hover / ::part(remove-button):hover override ((0,1,1))
+     wins without needing !important. */
+  :where([part='add-button']):hover:where(:not(:disabled)),
+  :where([part='remove-button']):hover:where(:not(:disabled)) {
     border-color: var(--lr-color-brand);
   }
   [part='add-button']:disabled,
@@ -65,6 +68,10 @@ export const styles = css`
   [part='search-input']::placeholder {
     color: var(--lr-color-text-quiet);
     opacity: 1;
+  }
+  [part='search-input']::-webkit-search-cancel-button,
+  [part='search-input']::-webkit-search-decoration {
+    appearance: none;
   }
   [part='search-input']:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);

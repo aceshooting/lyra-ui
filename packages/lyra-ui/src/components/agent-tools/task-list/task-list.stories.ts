@@ -80,6 +80,27 @@ export const NonCollapsible: Story = {
     html`<lr-task-list style="max-width: 32rem;" .items=${items} collapsible="false"></lr-task-list>`,
 };
 
+export const DensityAndChrome: Story = {
+  name: 'compact + appearance="plain"',
+  render: () => html`
+    <div style="display:grid; gap:1rem; max-width:32rem;">
+      <lr-task-list .items=${items}></lr-task-list>
+      <lr-task-list compact .items=${items}></lr-task-list>
+      <div style="border:1px solid var(--lr-color-border); border-radius:var(--lr-radius); padding:0.75rem;">
+        <lr-task-list appearance="plain" .items=${items}></lr-task-list>
+      </div>
+    </div>
+  `,
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'Top to bottom: the default card, `compact` (tighter header/body padding and item gap, chrome intact), and `appearance="plain"` nested inside a container that already draws its own border — without `plain` the two frames would double up.',
+      },
+    },
+  },
+};
+
 export const Narrow320: Story = {
   name: 'Narrow (320px)',
   render: () => html`

@@ -19,6 +19,9 @@ import { styles } from './task-list.styles.js';
  *  (unlike `<lr-tool-call-chip>`'s status vocabulary, which does need one). */
 export type TaskStatus = 'pending' | 'running' | 'success' | 'error';
 
+/** Visual chrome for `<lr-task-list>`'s root, mirroring `lr-card`'s `appearance` vocabulary. */
+export type TaskListAppearance = 'card' | 'plain';
+
 export interface TaskItem {
   id: string;
   label: string;
@@ -142,6 +145,12 @@ const trueDefaultBooleanConverter: ComplexAttributeConverter<boolean> = {
  * @csspart item-detail - The item's optional `detail` text.
  * @csspart item-children - The nested `role="list"` wrapper around a top-level item's children.
  * @cssprop [--lr-task-list-spin=1s linear] - Running-status icon spin animation duration/timing.
+ * @cssprop [--lr-task-list-compact-header-padding=var(--lr-space-2xs) var(--lr-space-s)] -
+ *   `[part="header"]` padding while `compact`.
+ * @cssprop [--lr-task-list-compact-gap=var(--lr-space-2xs)] - Gap between `[part="body"]`'s item
+ *   rows while `compact`.
+ * @cssprop [--lr-task-list-compact-body-padding=var(--lr-space-2xs) var(--lr-space-s) var(--lr-space-s)] -
+ *   `[part="body"]` padding while `compact`.
  */
 export class LyraTaskList extends LyraElement<LyraTaskListEventMap> {
   static styles = [LyraElement.styles, styles];
@@ -160,6 +169,18 @@ export class LyraTaskList extends LyraElement<LyraTaskListEventMap> {
   /** When `false`, the header renders as a static heading (no button, no toggle affordance) and
    *  `expanded` can still be set programmatically by the host, just not toggled via the UI. */
   @property({ converter: trueDefaultBooleanConverter }) collapsible = true;
+
+  /** Tighter header/body padding and item gap for dense contexts (a plan tracker nested in an
+   *  already-padded transcript row) -- same convention as `lr-agent-run`/`lr-source-card`'s
+   *  `compact`. Defaults to `false`, i.e. the full padding. Purely a density knob: the border and
+   *  background stay, so use `appearance="plain"` instead to drop the chrome entirely. */
+  @property({ type: Boolean, reflect: true }) compact = false;
+
+  /** Visual chrome, mirroring `lr-card`'s `appearance` vocabulary. `'card'` (the default) keeps the
+   *  bordered, filled box. `'plain'` removes `[part="base"]`'s border, background, and corner
+   *  radius, so a list embedded in the transcript inside a frame that already draws a border (an
+   *  agent-run panel, a message bubble) doesn't double it. */
+  @property({ reflect: true }) appearance: TaskListAppearance = 'card';
 
   @query('lr-live-region') private liveRegion?: LyraLiveRegion;
 

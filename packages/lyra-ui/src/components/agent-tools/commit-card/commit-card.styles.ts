@@ -9,6 +9,21 @@ export const styles = css`
     border-radius: var(--lr-radius);
     padding: var(--lr-space-m);
   }
+  /* Density escape -- same convention as lr-agent-run's compact. The tuned value sits behind an
+     inline var() fallback (rather than a :host declaration, which every instance would re-declare
+     and so shadow any ancestor value) so a consumer can retune it from outside without restating
+     the whole rule; the fallback is the pre-existing value, so an unset card renders unchanged. */
+  :host([compact]) [part='base'] {
+    padding: var(--lr-commit-card-compact-padding, var(--lr-space-s));
+  }
+  /* MUST stay after :host([compact]): both selectors are :host([x]) [part='base'], i.e. equal
+     specificity, so source order alone decides which padding wins when a card is both compact and
+     plain. plain is the stronger statement ("no chrome at all"), so it goes last. */
+  :host([appearance='plain']) [part='base'] {
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+  }
   [part='subject'] {
     font-weight: var(--lr-font-weight-semibold);
   }

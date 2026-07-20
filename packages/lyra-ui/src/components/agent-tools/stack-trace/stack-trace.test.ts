@@ -17,10 +17,19 @@ describe('lr-stack-trace', () => {
     expect(el.copyable).to.be.true;
   });
 
+  it('clears collapseInternal/copyable from a plain HTML attribute="false" (not just a property binding)', async () => {
+    const el = (await fixture(
+      html`<lr-stack-trace collapse-internal="false" copyable="false"></lr-stack-trace>`,
+    )) as LyraStackTrace;
+    expect(el.collapseInternal).to.be.false;
+    expect(el.copyable).to.be.false;
+  });
+
   it('renders the message and one frame button per parsed frame when internal collapsing is off', async () => {
     // NOTE: `.collapseInternal=${false}` uses a *property* binding, not `?collapse-internal=${false}`
-    // -- a boolean attribute binding can never remove an already-present-by-default `true` back to
-    // `false`.
+    // -- Lit's `?attr=` boolean directive only ever toggles attribute *presence*, so it can never
+    // remove an already-present-by-default `true` back to `false` even with the trueDefaultBooleanConverter
+    // in place (the literal `collapse-internal="false"` attribute form above is the other way to do it).
     const el = (await fixture(
       html`<lr-stack-trace .trace=${trace} .collapseInternal=${false}></lr-stack-trace>`,
     )) as LyraStackTrace;

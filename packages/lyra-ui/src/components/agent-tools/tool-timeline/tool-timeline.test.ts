@@ -291,6 +291,47 @@ it('stays within a 320px allocation without the host overflowing it', async () =
   expect((el as unknown as HTMLElement).getBoundingClientRect().width).to.be.at.most(320);
 });
 
+it('retints a denied entry\'s rail-dot and a pending-approval entry\'s leading border independently via their own cssprops, both falling back to --lr-color-warning', async () => {
+  const denied: ToolTimelineEntry[] = [
+    makeEntry({ id: 'c-denied', status: 'denied', approved: false }),
+    makeEntry({ id: 'c-pending', status: 'pending', needsApproval: true }),
+  ];
+  const el = (await fixture(
+    html`<lr-tool-timeline
+      .entries=${denied}
+      style="
+        --lr-tool-timeline-denied-marker-color: rgb(1, 2, 3);
+        --lr-tool-timeline-pending-approval-border-color: rgb(7, 8, 9);
+      "
+    ></lr-tool-timeline>`,
+  )) as LyraToolTimeline;
+  const rows = entriesEl(el);
+  const deniedMarker = rows[0].querySelector('[part="entry-marker"]') as HTMLElement;
+  const pendingBody = rows[1].querySelector('[part="entry-body"]') as HTMLElement;
+
+  expect(getComputedStyle(deniedMarker, '::before').backgroundColor).to.equal('rgb(1, 2, 3)');
+  expect(getComputedStyle(pendingBody).borderInlineStartColor).to.equal('rgb(7, 8, 9)');
+});
+
+it('falls back both denied-marker and pending-approval-border colors to the shared --lr-color-warning token when unset', async () => {
+  const entries: ToolTimelineEntry[] = [
+    makeEntry({ id: 'c-denied', status: 'denied', approved: false }),
+    makeEntry({ id: 'c-pending', status: 'pending', needsApproval: true }),
+  ];
+  const el = (await fixture(html`<lr-tool-timeline .entries=${entries}></lr-tool-timeline>`)) as LyraToolTimeline;
+  const rows = entriesEl(el);
+  const deniedMarker = rows[0].querySelector('[part="entry-marker"]') as HTMLElement;
+  const pendingBody = rows[1].querySelector('[part="entry-body"]') as HTMLElement;
+  const probe = document.createElement('div');
+  probe.style.color = 'var(--lr-color-warning)';
+  el.shadowRoot!.appendChild(probe);
+  const warningColor = getComputedStyle(probe).color;
+  probe.remove();
+
+  expect(getComputedStyle(deniedMarker, '::before').backgroundColor).to.equal(warningColor);
+  expect(getComputedStyle(pendingBody).borderInlineStartColor).to.equal(warningColor);
+});
+
 it('is accessible with a populated timeline and the approval dialog open', async () => {
   const entries: ToolTimelineEntry[] = [
     makeEntry({ id: 'c-a', status: 'success', startedAt: 1000, endedAt: 1500, retryCount: 1 }),

@@ -14,6 +14,29 @@ export const styles = [
       background: var(--lr-color-surface);
       overflow: hidden;
     }
+    /* Density escape -- same convention as lr-agent-run/lr-source-card's compact. Task lists render
+       embedded in the transcript (see the class doc), so the tuned values sit behind inline var()
+       fallbacks (rather than :host declarations, which every instance would re-declare and so
+       shadow any ancestor value) letting a transcript retune every list at once from the outside;
+       header and body carry their own padding (unlike agent-run/source-card's single [part='base']
+       padding) since that's where this component already puts it. */
+    :host([compact]) [part='header'] {
+      padding: var(--lr-task-list-compact-header-padding, var(--lr-space-2xs) var(--lr-space-s));
+    }
+    :host([compact]) [part='body'] {
+      gap: var(--lr-task-list-compact-gap, var(--lr-space-2xs));
+      padding: var(--lr-task-list-compact-body-padding, var(--lr-space-2xs) var(--lr-space-s) var(--lr-space-s));
+    }
+    /* Chrome escape -- same convention as lr-agent-run/lr-source-card's appearance="plain": drops
+       the outer border/background/radius so a list nested inside a host frame that already draws a
+       border (an agent-run panel, a message bubble) doesn't double it. The header/body's own
+       internal divider and padding are layout, not outer chrome, so they're untouched -- matching
+       how agent-run's plain rule leaves its own Cancel/Retry button chrome alone. */
+    :host([appearance='plain']) [part='base'] {
+      border: 0;
+      border-radius: 0;
+      background: transparent;
+    }
     [part='header'] {
       display: flex;
       align-items: center;
@@ -32,7 +55,10 @@ export const styles = [
     button[part='header'] {
       cursor: pointer;
     }
-    button[part='header']:hover {
+    /* :where() keeps this rule's specificity low ((0,1,0)) so a consumer's own
+       ::part(header):hover override ((0,1,1)) wins without needing !important --
+       see lr-attachment-trigger/lr-copy-button's identical fix for the same reasoning. */
+    :where(button[part='header']):hover {
       background: var(--lr-color-brand-quiet);
       color: var(--lr-color-brand);
     }

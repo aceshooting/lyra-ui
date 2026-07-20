@@ -91,6 +91,39 @@ export const WithFooterContent: Story = {
   `,
 };
 
+export const Narrow320px: Story = {
+  name: 'Narrow (320px)',
+  render: (_args, context) => html`
+    <div style="max-width:320px;border:1px dashed var(--lr-color-border);padding:8px;">
+      <lr-tool-approval-dialog
+        .open=${context.viewMode !== 'docs'}
+        tool-name="web_search"
+        .args=${SEARCH_ARGS}
+        style="position:relative;inset:auto;display:flex;"
+      ></lr-tool-approval-dialog>
+    </div>
+  `,
+};
+
+export const NarrowWithLongLabels: Story = {
+  name: 'Narrow (320px) with long translated action labels',
+  render: (_args, context) => html`
+    <div style="max-width:320px;border:1px dashed var(--lr-color-border);padding:8px;">
+      <lr-tool-approval-dialog
+        .open=${context.viewMode !== 'docs'}
+        tool-name="web_search"
+        .args=${SEARCH_ARGS}
+        .strings=${{
+          deny: 'Refuser cette action',
+          edit: "Modifier les arguments",
+          approve: 'Approuver cette action',
+        }}
+        style="position:relative;inset:auto;display:flex;"
+      ></lr-tool-approval-dialog>
+    </div>
+  `,
+};
+
 export const Events: Story = {
   render: () => html`
     <div>

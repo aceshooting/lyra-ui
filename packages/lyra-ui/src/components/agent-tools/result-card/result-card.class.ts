@@ -6,6 +6,10 @@ import { styles } from './result-card.styles.js';
 
 class LyraResultCardBase extends LyraElement {}
 
+/** Visual chrome for `<lr-result-card>`'s root, mirroring `lr-card`'s/`lr-agent-run`'s
+ *  `appearance` vocabulary. */
+export type ResultCardAppearance = 'card' | 'plain';
+
 /**
  * `<lr-result-card>` — a small bordered card shell for a custom tool-result
  * renderer's body (see `<lr-tool-result-view>`'s `registerToolRenderer()`
@@ -38,6 +42,10 @@ class LyraResultCardBase extends LyraElement {}
  * @csspart actions - The wrapper around the `actions` slot. `hidden`
  * whenever the slot has no assigned content.
  * @csspart body - The wrapper around the default slot.
+ * @cssprop [--lr-result-card-compact-header-padding=var(--lr-space-xs)] - `[part="header"]`
+ *   block/inline padding while `compact`.
+ * @cssprop [--lr-result-card-compact-body-padding=var(--lr-space-xs)] - `[part="body"]` padding
+ *   while `compact`.
  */
 export class LyraResultCard extends StripHostTitleAttribute(LyraResultCardBase) {
   static styles = [LyraElement.styles, styles];
@@ -52,6 +60,19 @@ export class LyraResultCard extends StripHostTitleAttribute(LyraResultCardBase) 
    *  grows an unsolicited native tooltip repeating the same text. See
    *  `StripHostTitleAttribute` (`internal/strip-host-title.ts`). */
   @property() title = '';
+
+  /** Tighter header/body padding for dense contexts (a card rendered as a row in a transcript or
+   *  result list) -- same convention as `lr-agent-run`'s `compact`. Defaults to `false`, i.e. the
+   *  full card padding. Purely a density knob: the border and background stay, so use
+   *  `appearance="plain"` instead to drop the chrome entirely. */
+  @property({ type: Boolean, reflect: true }) compact = false;
+
+  /** Visual chrome, mirroring `lr-card`'s/`lr-agent-run`'s `appearance` vocabulary. `'card'` (the
+   *  default) keeps the bordered, filled box. `'plain'` removes the border, background, and corner
+   *  radius, so a card nested inside a host frame that already draws a border (e.g.
+   *  `<lr-tool-result-view>`'s own chrome) doesn't double it. `plain` wins over `compact` when
+   *  both are set (nothing left to tighten). */
+  @property({ reflect: true }) appearance: ResultCardAppearance = 'card';
 
   // See `<lr-widget>`'s identical `hasActionsSlot` -- a `[part]` wrapper
   // always contains a literal `<slot>` child regardless of assigned

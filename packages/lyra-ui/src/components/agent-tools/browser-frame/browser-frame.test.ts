@@ -81,8 +81,18 @@ describe('lr-browser-frame', () => {
       html`<lr-browser-frame .controls=${false}></lr-browser-frame>`,
     )) as LyraBrowserFrame;
     await el.updateComplete;
-    expect(el.shadowRoot!.querySelector('[part="take-over-button"]')).to.not.exist;
-    expect(el.shadowRoot!.querySelector('[part="stop-button"]')).to.not.exist;
+    expect(el.shadowRoot!.querySelectorAll('[part="take-over-button"]').length).to.equal(0);
+    expect(el.shadowRoot!.querySelectorAll('[part="stop-button"]').length).to.equal(0);
+  });
+
+  it('parses the literal controls="false" attribute (not just the .controls property binding)', async () => {
+    const el = (await fixture(
+      html`<lr-browser-frame controls="false"></lr-browser-frame>`,
+    )) as LyraBrowserFrame;
+    await el.updateComplete;
+    expect(el.controls).to.be.false;
+    expect(el.shadowRoot!.querySelectorAll('[part="take-over-button"]').length).to.equal(0);
+    expect(el.shadowRoot!.querySelectorAll('[part="stop-button"]').length).to.equal(0);
   });
 
   it('renders one aria-hidden ping marker per pings entry, kind-distinct', async () => {
@@ -148,6 +158,47 @@ describe('lr-browser-frame', () => {
     // forwarding code path at all -- covered by this suite never registering such a listener, and
     // by the take-over/stop tests above being the component's *only* interactive affordances.
     expect(el.shadowRoot!.querySelectorAll('button').length).to.be.at.most(2);
+  });
+
+  it('routes localized strings through a .strings override, reaching the rendered DOM', async () => {
+    const el = (await fixture(html`
+      <lr-browser-frame
+        url="https://example.com"
+        status="stalled"
+        .strings=${{
+          browserFrameStatusStalled: 'Connexion interrompue',
+          browserFrameTakeOver: 'Prendre le contrôle',
+        }}
+      ></lr-browser-frame>
+    `)) as LyraBrowserFrame;
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('[part="status"]')!.textContent).to.equal('Connexion interrompue');
+    expect(el.shadowRoot!.querySelector('[part="take-over-button"]')!.textContent!.trim()).to.equal(
+      'Prendre le contrôle',
+    );
+  });
+
+  // The controller badge used to render the raw `controller` property value ('agent'/'user'),
+  // an untranslatable user-facing string that no `.strings` override or registerLyraLocale()
+  // could ever reach.
+  it('localizes the controller badge rather than rendering the raw controller value', async () => {
+    const el = (await fixture(html`
+      <lr-browser-frame url="https://example.com" controller="agent"></lr-browser-frame>
+    `)) as LyraBrowserFrame;
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('[part="controller-badge"]')!.textContent!.trim()).to.equal('Agent');
+
+    const localized = (await fixture(html`
+      <lr-browser-frame
+        url="https://example.com"
+        controller="user"
+        .strings=${{ browserFrameControllerUser: 'Utilisateur' }}
+      ></lr-browser-frame>
+    `)) as LyraBrowserFrame;
+    await localized.updateComplete;
+    expect(localized.shadowRoot!.querySelector('[part="controller-badge"]')!.textContent!.trim()).to.equal(
+      'Utilisateur',
+    );
   });
 
   it('is accessible with a live status, pings, and take-over controls', async () => {

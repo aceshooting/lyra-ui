@@ -77,6 +77,10 @@ export const styles = css`
     color: var(--lr-color-text-quiet);
     opacity: 1;
   }
+  [part='search-input']::-webkit-search-cancel-button,
+  [part='search-input']::-webkit-search-decoration {
+    appearance: none;
+  }
 
   [part='defaults-row'] {
     display: flex;

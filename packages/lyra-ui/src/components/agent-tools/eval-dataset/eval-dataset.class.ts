@@ -81,6 +81,9 @@ export interface LyraEvalDatasetEventMap {
  *   (CSV/JSON/etc. into `EvalExample` rows) is left to the host, mirroring `<lr-file-input>`'s own
  *   "parsing is a host concern" scope.
  * @event lr-export-request - An export format was chosen. `detail: { format }`.
+ * @event focus - Re-dispatched when the internal search field (only rendered while `searchable`)
+ *   receives focus, since native focus neither bubbles nor crosses the shadow boundary.
+ * @event blur - Re-dispatched when the internal search field loses focus.
  * @csspart base - The root.
  * @csspart toolbar - The row of add/remove/import/export controls.
  * @csspart add-button - The "Add example" button.
@@ -120,7 +123,8 @@ export class LyraEvalDataset extends LyraElement<LyraEvalDatasetEventMap> {
    *  previous request is still in flight. */
   @property({ type: Boolean, reflect: true }) disabled = false;
 
-  /** Accessible name for the example grid region. Defaults to the localized `evalDatasetLabel`. */
+  /** Accessible name for the example grid region. A host-level `aria-label` attribute wins over
+   *  this, which in turn wins over the localized `evalDatasetLabel` default. */
   @property() label = '';
 
   @state() private searchText = '';
@@ -219,6 +223,17 @@ export class LyraEvalDataset extends LyraElement<LyraEvalDatasetEventMap> {
     this.searchText = (e.target as HTMLInputElement).value;
   };
 
+  // Native focus/blur neither bubble nor cross the shadow boundary, so a host listening for
+  // focus/blur directly on <lr-eval-dataset> (e.g. to commit a pending search on blur) would
+  // never hear about the internal search field without this bridge.
+  private onSearchFocus = (): void => {
+    this.emit('focus');
+  };
+
+  private onSearchBlur = (): void => {
+    this.emit('blur');
+  };
+
   private renderToolbar(): TemplateResult {
     return html`
       <div part="toolbar">
@@ -261,6 +276,8 @@ export class LyraEvalDataset extends LyraElement<LyraEvalDatasetEventMap> {
           aria-label=${label}
           placeholder=${label}
           @input=${this.onSearchInput}
+          @focus=${this.onSearchFocus}
+          @blur=${this.onSearchBlur}
         />
       </div>
     `;
@@ -285,7 +302,7 @@ export class LyraEvalDataset extends LyraElement<LyraEvalDatasetEventMap> {
   }
 
   render(): TemplateResult {
-    const label = this.label || this.localize('evalDatasetLabel');
+    const label = this.getAttribute('aria-label') || this.label || this.localize('evalDatasetLabel');
     const tags = this.allTags();
     const visible = this.visibleExamples;
     const filtered = visible.length !== this.examples.length;

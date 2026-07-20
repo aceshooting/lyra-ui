@@ -74,6 +74,25 @@ describe('lr-artifact-panel', () => {
     expect(getComputedStyle(next).minBlockSize).to.equal('40px');
   });
 
+  it('mirrors the version-previous/version-next chevron glyphs under RTL', async () => {
+    const ltr = (await fixture(html`
+      <lr-artifact-panel .versions=${[{ id: 'v1' }, { id: 'v2' }, { id: 'v3' }]}></lr-artifact-panel>
+    `)) as LyraArtifactPanel;
+    const rtl = (await fixture(html`
+      <lr-artifact-panel dir="rtl" .versions=${[{ id: 'v1' }, { id: 'v2' }, { id: 'v3' }]}></lr-artifact-panel>
+    `)) as LyraArtifactPanel;
+    await ltr.updateComplete;
+    await rtl.updateComplete;
+    const ltrPrevious = ltr.shadowRoot!.querySelector('[part="version-previous-glyph"]') as HTMLElement;
+    const rtlPrevious = rtl.shadowRoot!.querySelector('[part="version-previous-glyph"]') as HTMLElement;
+    const ltrNext = ltr.shadowRoot!.querySelector('[part="version-next-glyph"]') as HTMLElement;
+    const rtlNext = rtl.shadowRoot!.querySelector('[part="version-next-glyph"]') as HTMLElement;
+    expect(getComputedStyle(ltrPrevious).transform).to.equal('none');
+    expect(getComputedStyle(rtlPrevious).transform).to.not.equal('none');
+    expect(getComputedStyle(ltrNext).transform).to.equal('none');
+    expect(getComputedStyle(rtlNext).transform).to.not.equal('none');
+  });
+
   it('renders a restore button only while the active version is not latest, emitting lr-restore', async () => {
     const el = (await fixture(html`
       <lr-artifact-panel
@@ -175,6 +194,26 @@ describe('lr-artifact-panel', () => {
       expect(getComputedStyle(pressed).backgroundColor).to.equal(bg);
       expect(getComputedStyle(pressed).color).to.equal(color);
     });
+  });
+
+  it('routes localized strings through a .strings override, reaching the rendered DOM', async () => {
+    const el = (await fixture(html`
+      <lr-artifact-panel
+        streaming
+        .versions=${[{ id: 'v1' }, { id: 'v2' }]}
+        .strings=${{
+          artifactPanelPreviousVersion: 'Version précédente',
+          artifactPanelVersionPosition: 'Version {index} sur {count}',
+          artifactPanelGenerating: 'Génération…',
+        }}
+      ></lr-artifact-panel>
+    `)) as LyraArtifactPanel;
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('[part="version-previous"]')!.getAttribute('aria-label')).to.equal(
+      'Version précédente',
+    );
+    expect(el.shadowRoot!.querySelector('[part="version-position"]')!.textContent).to.equal('Version 2 sur 2');
+    expect(el.shadowRoot!.querySelector('[part="streaming-indicator"]')!.textContent).to.equal('Génération…');
   });
 
   it('themes the restore/copy/download header buttons and gives view-button its own hover/focus', () => {

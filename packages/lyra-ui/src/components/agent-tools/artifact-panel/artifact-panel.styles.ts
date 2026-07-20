@@ -93,6 +93,10 @@ export const styles = css`
     cursor: not-allowed;
     opacity: var(--lr-opacity-disabled);
   }
+  :host(:dir(rtl)) [part='version-previous-glyph'],
+  :host(:dir(rtl)) [part='version-next-glyph'] {
+    transform: scaleX(-1);
+  }
   [part='body'] {
     flex: 1 1 auto;
     padding: var(--lr-space-m);

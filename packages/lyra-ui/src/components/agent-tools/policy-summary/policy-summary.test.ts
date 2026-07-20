@@ -204,6 +204,15 @@ describe('lr-policy-summary', () => {
     });
   });
 
+  it('lets a host-level aria-label win over the localized policySummaryLabel default', async () => {
+    const el = (await fixture(
+      html`<lr-policy-summary aria-label="Eval run 12 decisions" .decisions=${decisions}></lr-policy-summary>`,
+    )) as LyraPolicySummary;
+    await el.updateComplete;
+    const list = el.shadowRoot!.querySelector('[part="list"]')!;
+    expect(list.getAttribute('aria-label')).to.equal('Eval run 12 decisions');
+  });
+
   describe('per-state count color cssprops', () => {
     const summaryFixture = async (): Promise<LyraPolicySummary> => {
       const el = (await fixture(
