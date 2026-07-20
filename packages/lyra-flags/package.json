@@ -43,7 +43,8 @@
     "flags",
     "index.js",
     "index.d.ts",
-    "THIRD_PARTY_NOTICES.md"
+    "THIRD_PARTY_NOTICES.md",
+    "CHANGELOG.md"
   ],
   "main": "./index.js",
   "types": "./index.d.ts",
