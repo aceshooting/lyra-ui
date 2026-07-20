@@ -21,7 +21,12 @@ export interface LyraChatViewportEventMap {
  * **Two supported content shapes, auto-detected:** ordinary element children (typically
  * `<lr-chat-message>`s -- *slotted mode*), or exactly one `<lr-virtual-list>` (*virtual mode*,
  * detected via `instanceof` against the imported class so custom prefixes keep working). In virtual
- * mode this component defers all scrolling to the slotted list's own `scrollToIndex()`.
+ * mode this component defers all scrolling to the slotted list's own `scrollToIndex()`, and sizes
+ * that list to its own height -- without which the list would scroll inside `lr-virtual-list`'s
+ * 24rem `--lr-virtual-list-height` default no matter how tall this viewport is. That sizing is a
+ * percentage, so virtual mode needs a height-bounded parent, the same requirement slotted mode's
+ * own scroll container already has; a consumer's own rule or inline style setting
+ * `--lr-virtual-list-height` on the list still wins.
  *
  * **Follow/release state machine.** While `follow` is engaged, content growth re-scrolls to the end.
  * Release happens only on a *user-intent* gesture (wheel, touchmove, scrollbar-drag, or
@@ -376,7 +381,12 @@ export class LyraChatViewport extends LyraElement<LyraChatViewportEventMap> {
   };
 
   private onSlotChange = (): void => {
+    const wasVirtual = this.armedMode === 'virtual';
     this.armObservers();
+    // `[part="base"]`'s `data-virtual` marker is computed in render() from the light-DOM children,
+    // and a slot assignment change alone schedules no Lit update -- re-render only when the mode
+    // actually flipped, so an ordinary slotchange stays as cheap as before.
+    if ((this.armedMode === 'virtual') !== wasVirtual) this.requestUpdate();
   };
 
   private scheduleGrowthTick(): void {
@@ -491,8 +501,14 @@ export class LyraChatViewport extends LyraElement<LyraChatViewportEventMap> {
 
   render(): TemplateResult {
     const label = this.accessibleLabel || this.label || this.localize('chatViewportLabel');
+    // Virtual mode's own layout rules key off this marker rather than `:host(:has(> lr-virtual-list))`:
+    // `:has()` is not supported inside `:host()` (Chromium reports
+    // `CSS.supports('selector(:host(:has(> em)))')` as false and drops the whole rule), so every
+    // such rule was silently dead -- virtual mode kept `[part="scroll"]`'s own padding/overflow and
+    // never gave `[part="content"]` a resolvable height.
+    const virtual = this.virtualListEl !== null;
     return html`
-      <div part="base">
+      <div part="base" ?data-virtual=${virtual}>
         <div
           part="scroll"
           role="log"

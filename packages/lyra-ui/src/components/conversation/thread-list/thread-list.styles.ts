@@ -38,10 +38,23 @@ export const styles = css`
     display: flex;
     flex-direction: column;
   }
+  /* The internal list has to fill whatever height this component was given, instead of scrolling
+     inside lr-virtual-list's own 24rem --lr-virtual-list-height default. Deliberately *not*
+     --lr-virtual-list-height: 100%: that percentage resolves against this host, which is a flex
+     item, so in an auto-height container it chains to auto and the viewport either collapses to
+     zero (no rows) or grows to the full un-virtualized content height (rows). Making the list host
+     a column flex container instead turns the shipped block-size: 24rem on [part='base'] into its
+     *flex-basis*: it grows to fill a bounded pane, shrinks below 24rem in a short one, and in an
+     auto-height container falls back to exactly the 24rem it renders at today. */
   lr-virtual-list {
     flex: 1 1 auto;
     min-block-size: 0;
-    display: block;
+    display: flex;
+    flex-direction: column;
+  }
+  lr-virtual-list::part(base) {
+    flex: 1 1 auto;
+    min-block-size: 0;
   }
   [part='empty'] {
     padding: var(--lr-space-l);

@@ -145,12 +145,14 @@ export const StreamingFollow: Story = {
   },
 };
 
+/** No `--lr-virtual-list-height` override on the slotted list: in virtual mode the viewport sizes
+ *  it to its own bounded height, so the list scrolls over the full 320px pane. A consumer's own
+ *  rule or inline style on the list still wins over that. */
 export const VirtualMode: Story = {
   render: () => html`
     <div style="block-size:320px;border:1px solid var(--lr-color-border);">
       <lr-chat-viewport>
         <lr-virtual-list
-          style="--lr-virtual-list-height:320px"
           row-height="48"
           .items=${Array.from({ length: 200 }, (_, i) => i)}
           .renderItem=${(item: unknown) => bubble(`Message ${item}`)}

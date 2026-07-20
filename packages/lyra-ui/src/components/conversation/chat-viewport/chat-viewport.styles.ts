@@ -23,7 +23,10 @@ export const styles = css`
     overflow-anchor: none;
     padding: var(--lr-space-m);
   }
-  :host(:has(> lr-virtual-list)) [part='scroll'] {
+  /* Virtual mode. Keyed off [part='base']'s data-virtual marker, not :host(:has(> lr-virtual-list)):
+     :has() is invalid inside :host() (Chromium reports CSS.supports('selector(:host(:has(> em)))')
+     as false), which silently dropped every one of these rules. */
+  [part='base'][data-virtual] [part='scroll'] {
     overflow: visible;
     block-size: auto;
     padding: 0;
@@ -39,9 +42,24 @@ export const styles = css`
     position: relative;
     min-block-size: 100%;
   }
-  :host(:has(> lr-virtual-list)) [part='content'] {
+  [part='base'][data-virtual] [part='content'] {
     block-size: 100%;
     min-block-size: 0;
+  }
+  /* Virtual mode: [part='scroll'] has stepped aside above, so the slotted list's own viewport is
+     the real scroller and has to be this component's full height -- otherwise it scrolls inside
+     lr-virtual-list's 24rem --lr-virtual-list-height default no matter how tall this viewport is.
+     The explicit block-size is what makes the inherited 100% resolvable: without it the list host
+     is auto-height, its own [part='base'] percentage chains to auto, and the two size each other
+     circularly. lr-thread-list solves the same problem by turning the internal list's shipped
+     24rem into a flex-basis via ::part(base) -- unavailable here, because that list lives in the
+     consumer's light DOM and ::slotted() cannot be followed by ::part(). Virtual mode therefore
+     inherits this component's existing requirement of a height-bounded parent, exactly as slotted
+     mode's own [part='scroll'] already does. A document-tree declaration on the list (a consumer's
+     own rule or inline style) still wins over this. */
+  [part='base'][data-virtual] ::slotted(lr-virtual-list) {
+    block-size: 100%;
+    --lr-virtual-list-height: 100%;
   }
   [part='unread-divider'] {
     position: absolute;

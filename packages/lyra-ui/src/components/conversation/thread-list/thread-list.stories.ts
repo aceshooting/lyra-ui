@@ -187,3 +187,57 @@ export const ControlledProjectGroups: Story = {
     </div>
   `,
 };
+
+/** `wrapRow` composes host-owned content around the whole built-in row -- here a trailing tag strip
+ *  that has no home in `lr-conversation-item`'s own title/excerpt/meta/actions surface. Its return
+ *  value is placed inside a library-owned `part="row-wrapper"`, so the wrapped row can be laid out
+ *  from outside (`::part(row-wrapper)`) without threading a class through the callback. The wrapper
+ *  is an unstyled block box, so adding it leaves the virtual list's measured row heights unchanged;
+ *  the part is row-only -- group headers never pass through `wrapRow`. */
+export const WrappedRows: Story = {
+  render: () => html`
+    <style>
+      .wrapped-rows::part(row-wrapper) {
+        display: flex;
+        flex-direction: column;
+        gap: var(--lr-space-2xs);
+        padding-block-end: var(--lr-space-xs);
+        border-block-end: var(--lr-border-width-thin) solid var(--lr-color-border);
+      }
+      .wrapped-rows .row-tags {
+        display: flex;
+        gap: var(--lr-space-2xs);
+        padding-inline: var(--lr-space-m);
+      }
+    </style>
+    <div style="block-size:400px;inline-size:360px;border:1px solid var(--lr-color-border);">
+      <lr-thread-list
+        class="wrapped-rows"
+        .threads=${threads}
+        .wrapRow=${(thread: ChatThread, row: unknown) => html`
+          ${row}
+          <span class="row-tags">
+            <lr-badge variant=${thread.pinned ? 'brand' : 'neutral'}>${thread.pinned ? 'Pinned' : 'Chat'}</lr-badge>
+            ${thread.archived ? html`<lr-badge variant="neutral">Archived</lr-badge>` : null}
+          </span>
+        `}
+      ></lr-thread-list>
+    </div>
+  `,
+};
+
+/** No consumer CSS: the internal `lr-virtual-list` fills whatever height this component was given,
+ *  rather than scrolling inside `--lr-virtual-list-height`'s 24rem default. In an auto-height
+ *  container (no `block-size` on the pane) the list still falls back to that 24rem default. */
+export const FillsItsContainer: Story = {
+  render: () => html`
+    <div style="display:flex;gap:var(--lr-space-l);align-items:flex-start;">
+      <div style="block-size:600px;inline-size:320px;border:1px solid var(--lr-color-border);">
+        <lr-thread-list searchable .threads=${threads}></lr-thread-list>
+      </div>
+      <div style="inline-size:320px;border:1px solid var(--lr-color-border);">
+        <lr-thread-list searchable .threads=${threads}></lr-thread-list>
+      </div>
+    </div>
+  `,
+};

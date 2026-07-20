@@ -446,6 +446,80 @@ describe('virtual mode', () => {
     `;
   }
 
+  // No `--lr-virtual-list-height` override anywhere: this is the consumer-CSS-free shape the
+  // sizing fix is about. Every other fixture in this describe block deliberately keeps its own
+  // inline override, which must keep winning (a document-tree inline style beats a ::slotted()
+  // declaration from this component's shadow tree).
+  function unsizedVirtualFixtureMarkup(itemCount: number, hostStyle: string) {
+    return html`
+      <div style=${hostStyle}>
+        <lr-chat-viewport>
+          <lr-virtual-list
+            row-height="40"
+            .items=${Array.from({ length: itemCount }, (_, i) => i)}
+            .renderItem=${(item: unknown) => html`row ${item}`}
+            .keyFunction=${(item: unknown) => item as number}
+          ></lr-virtual-list>
+        </lr-chat-viewport>
+      </div>
+    `;
+  }
+
+  // Regression guard for a latent styling bug found while fixing the sizing: virtual mode's layout
+  // rules were written as `:host(:has(> lr-virtual-list))`, and `:has()` is invalid inside
+  // `:host()` (Chromium reports `CSS.supports('selector(:host(:has(> em)))')` as false), so the
+  // whole rule was dropped -- [part="scroll"] kept its own padding and overflow in virtual mode
+  // and [part="content"] never got a resolvable height for the list to size against.
+  it('hands scrolling to the slotted list: [part="scroll"] stops scrolling and drops its padding', async () => {
+    const el = (await fixture(virtualFixtureMarkup(20))) as LyraChatViewport;
+    await el.updateComplete;
+    await nextFrame();
+    const scroll = getComputedStyle(el.shadowRoot!.querySelector('[part="scroll"]') as HTMLElement);
+    expect(scroll.overflowY).to.equal('visible');
+    expect(scroll.paddingTop).to.equal('0px');
+
+    const slotted = (await fixture(
+      html`<lr-chat-viewport style="block-size:120px">${row('only')}</lr-chat-viewport>`,
+    )) as LyraChatViewport;
+    await slotted.updateComplete;
+    await nextFrame();
+    const slottedScroll = getComputedStyle(slotted.shadowRoot!.querySelector('[part="scroll"]') as HTMLElement);
+    expect(slottedScroll.overflowY).to.equal('auto');
+    expect(parseFloat(slottedScroll.paddingTop)).to.be.greaterThan(0);
+  });
+
+  it('sizes the slotted list to the full bounded viewport with no consumer CSS', async () => {
+    const wrapper = await fixture(
+      unsizedVirtualFixtureMarkup(60, 'block-size:700px; display:flex; flex-direction:column;'),
+    );
+    const el = wrapper.querySelector('lr-chat-viewport') as LyraChatViewport;
+    await el.updateComplete;
+    await nextFrame();
+    const list = el.querySelector('lr-virtual-list') as LyraVirtualList;
+    const base = list.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    expect(base.getBoundingClientRect().height).to.be.closeTo(700, 1);
+    expect(base.scrollHeight).to.be.greaterThan(base.clientHeight);
+  });
+
+  it('does not collapse the slotted list to zero height in an auto-height container', async () => {
+    const wrapper = await fixture(unsizedVirtualFixtureMarkup(60, 'display:flex; flex-direction:column;'));
+    const el = wrapper.querySelector('lr-chat-viewport') as LyraChatViewport;
+    await el.updateComplete;
+    await nextFrame();
+    const list = el.querySelector('lr-virtual-list') as LyraVirtualList;
+    const base = list.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    expect(base.getBoundingClientRect().height).to.be.greaterThan(0);
+  });
+
+  it('lets a consumer-set --lr-virtual-list-height keep winning', async () => {
+    const el = (await fixture(virtualFixtureMarkup(20))) as LyraChatViewport;
+    await el.updateComplete;
+    await nextFrame();
+    const list = el.querySelector('lr-virtual-list') as LyraVirtualList;
+    const base = list.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    expect(base.getBoundingClientRect().height).to.be.closeTo(120, 1);
+  });
+
   it('detects a single slotted lr-virtual-list and defers scrolling to it', async () => {
     const el = (await fixture(virtualFixtureMarkup(20))) as LyraChatViewport;
     await el.updateComplete;

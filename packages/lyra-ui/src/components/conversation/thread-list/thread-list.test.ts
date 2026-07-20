@@ -613,3 +613,216 @@ it('allows group labels and month dates to be formatted by the host', async () =
   const groups = el.shadowRoot!.querySelector('lr-virtual-list')!.shadowRoot!.querySelectorAll('[part~="group-label"]');
   expect([...groups].some((group) => group.textContent?.includes('custom:today'))).to.be.true;
 });
+
+// 60 rows: comfortably more than any viewport under test can show at once, so the internal
+// virtual list always has something to scroll regardless of which container height is applied.
+const manyThreads = Array.from({ length: 60 }, (_, i) => ({
+  id: `m${i}`,
+  title: `Thread ${i}`,
+  timestamp: now,
+}));
+
+/** The internal `lr-virtual-list`'s real scroll container -- the box whose height decides how much
+ *  of the list is visible at once. */
+function viewportEl(el: LyraThreadList): HTMLElement {
+  const list = el.shadowRoot!.querySelector('lr-virtual-list')!;
+  return list.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+}
+
+/** `--lr-virtual-list-height`'s shipped default (`var(--lr-size-24rem)`) in px, resolved against
+ *  the document's real root font size rather than hardcoding 384. */
+function defaultViewportPx(): number {
+  return 24 * parseFloat(getComputedStyle(document.documentElement).fontSize);
+}
+
+describe('internal virtual-list sizing', () => {
+  // Regression guard, written before the sizing fix: an auto-height container gives the host no
+  // resolvable height, so anything percentage-based (`--lr-virtual-list-height: 100%`) either
+  // collapses the viewport to 0 or lets it grow to the full un-virtualized content height. The
+  // shipped 24rem default has to survive there byte-for-byte.
+  it('keeps the shipped 24rem viewport default in an auto-height container', async () => {
+    const wrapper = await fixture(html`
+      <div style="display:flex; flex-direction:column;">
+        <lr-thread-list grouping="none" .threads=${manyThreads}></lr-thread-list>
+      </div>
+    `);
+    const el = wrapper.querySelector('lr-thread-list') as LyraThreadList;
+    await el.updateComplete;
+    await nextFrame();
+    expect(viewportEl(el).getBoundingClientRect().height).to.be.closeTo(defaultViewportPx(), 1);
+  });
+
+  it('keeps a non-zero viewport in an auto-height container with zero rows', async () => {
+    const wrapper = await fixture(html`
+      <div style="display:flex; flex-direction:column;">
+        <lr-thread-list grouping="none" .threads=${[{ id: 'only', title: 'Only', timestamp: now }]}></lr-thread-list>
+      </div>
+    `);
+    const el = wrapper.querySelector('lr-thread-list') as LyraThreadList;
+    await el.updateComplete;
+    await nextFrame();
+    expect(viewportEl(el).getBoundingClientRect().height).to.be.closeTo(defaultViewportPx(), 1);
+  });
+
+  it('scrolls over the full height of a bounded flex pane with no consumer CSS', async () => {
+    const wrapper = await fixture(html`
+      <div style="block-size:700px; display:flex; flex-direction:column;">
+        <lr-thread-list grouping="none" .threads=${manyThreads}></lr-thread-list>
+      </div>
+    `);
+    const el = wrapper.querySelector('lr-thread-list') as LyraThreadList;
+    await el.updateComplete;
+    await nextFrame();
+    const viewport = viewportEl(el);
+    expect(viewport.getBoundingClientRect().height).to.be.closeTo(700, 1);
+    expect(viewport.scrollHeight).to.be.greaterThan(viewport.clientHeight);
+  });
+
+  it('shrinks below the 24rem default when the bounded pane is shorter than it', async () => {
+    const wrapper = await fixture(html`
+      <div style="block-size:200px; display:flex; flex-direction:column;">
+        <lr-thread-list grouping="none" .threads=${manyThreads}></lr-thread-list>
+      </div>
+    `);
+    const el = wrapper.querySelector('lr-thread-list') as LyraThreadList;
+    await el.updateComplete;
+    await nextFrame();
+    expect(viewportEl(el).getBoundingClientRect().height).to.be.closeTo(200, 1);
+  });
+
+  it('leaves room for the search field when searchable', async () => {
+    const wrapper = await fixture(html`
+      <div style="block-size:700px; display:flex; flex-direction:column;">
+        <lr-thread-list searchable grouping="none" .threads=${manyThreads}></lr-thread-list>
+      </div>
+    `);
+    const el = wrapper.querySelector('lr-thread-list') as LyraThreadList;
+    await el.updateComplete;
+    await nextFrame();
+    const searchHeight = (el.shadowRoot!.querySelector('[part="search"]') as HTMLElement).getBoundingClientRect()
+      .height;
+    expect(searchHeight).to.be.greaterThan(0);
+    expect(viewportEl(el).getBoundingClientRect().height).to.be.closeTo(700 - searchHeight, 1);
+  });
+});
+
+describe('wrapRow row-wrapper part', () => {
+  /** Every rendered `[part="row"]` box height in document order -- the boxes `lr-virtual-list`
+   *  itself measures with its `ResizeObserver` to build the windowing offsets. */
+  function rowBoxHeights(el: LyraThreadList): number[] {
+    const list = el.shadowRoot!.querySelector('lr-virtual-list')!;
+    return [...list.shadowRoot!.querySelectorAll('[part="row"]')].map((row) =>
+      Number(row.getBoundingClientRect().height.toFixed(2)),
+    );
+  }
+
+  async function mount(wrapRow?: LyraThreadList['wrapRow']): Promise<LyraThreadList> {
+    const el = (await fixture(
+      html`<lr-thread-list
+        style="block-size:400px"
+        grouping="none"
+        .threads=${manyThreads.slice(0, 12)}
+      ></lr-thread-list>`,
+    )) as LyraThreadList;
+    if (wrapRow) el.wrapRow = wrapRow;
+    await el.updateComplete;
+    await nextFrame();
+    return el;
+  }
+
+  // Written first: the library-added wrapper was originally omitted precisely because a new
+  // element inside `[part="row"]` risks becoming a competing layout box and changing what the
+  // virtual list measures. A plain, unstyled block wrapper contributes exactly its child's height,
+  // so every measured row box must stay identical to the no-`wrapRow` baseline.
+  it('does not change measured row heights versus a no-wrapRow baseline', async () => {
+    const baseline = rowBoxHeights(await mount());
+    const wrapped = rowBoxHeights(await mount((_thread, row) => row));
+    expect(baseline.length).to.be.greaterThan(0);
+    expect(wrapped).to.deep.equal(baseline);
+  });
+
+  it('wraps wrapRow output in part="row-wrapper", reachable through the exportparts alias', async () => {
+    const wrapper = await fixture(html`
+      <div>
+        <style>
+          lr-thread-list::part(row-wrapper) {
+            background-color: rgb(9, 8, 7);
+          }
+        </style>
+        <lr-thread-list style="block-size:400px" grouping="none" .threads=${manyThreads.slice(0, 3)}></lr-thread-list>
+      </div>
+    `);
+    const el = wrapper.querySelector('lr-thread-list') as LyraThreadList;
+    el.wrapRow = (thread, row) => html`<span data-thread-id=${thread.id}>${row}</span>`;
+    await el.updateComplete;
+    await nextFrame();
+    const list = el.shadowRoot!.querySelector('lr-virtual-list')!;
+    const wrappers = [...list.shadowRoot!.querySelectorAll<HTMLElement>('[part~="row-wrapper"]')];
+    expect(wrappers.length).to.equal(3);
+    expect(wrappers[0].querySelector('span[data-thread-id]') === null).to.be.false;
+    expect(getComputedStyle(wrappers[0]).backgroundColor).to.equal('rgb(9, 8, 7)');
+    expect(list.getAttribute('exportparts')).to.contain('row-wrapper:row-wrapper');
+  });
+
+  it('adds no wrapper at all when wrapRow is unset', async () => {
+    const el = await mount();
+    const list = el.shadowRoot!.querySelector('lr-virtual-list')!;
+    expect(list.shadowRoot!.querySelector('[part~="row-wrapper"]') === null).to.be.true;
+  });
+
+  it('never wraps group headers -- the part is row-only', async () => {
+    const el = (await fixture(
+      html`<lr-thread-list style="block-size:400px" .threads=${threads}></lr-thread-list>`,
+    )) as LyraThreadList;
+    el.wrapRow = (_thread, row) => row;
+    await el.updateComplete;
+    await nextFrame();
+    const list = el.shadowRoot!.querySelector('lr-virtual-list')!;
+    const headers = [...list.shadowRoot!.querySelectorAll('[part~="group-header"]')];
+    expect(headers.length).to.be.greaterThan(0);
+    expect(headers.every((header) => header.closest('[part~="row-wrapper"]') === null)).to.be.true;
+  });
+
+  it('still resolves rows and their [part="option"] through the extra wrapper level', async () => {
+    const el = (await fixture(
+      html`<lr-thread-list
+        style="block-size:400px"
+        searchable
+        grouping="none"
+        .threads=${manyThreads.slice(0, 6)}
+      ></lr-thread-list>`,
+    )) as LyraThreadList;
+    el.wrapRow = (_thread, row) => html`<span>${row}</span>`;
+    await el.updateComplete;
+    await nextFrame();
+    const rows = dataRows(el);
+    expect(rows.length).to.be.greaterThan(1);
+
+    const input = el.shadowRoot!.querySelector('[part="search-input"]') as HTMLInputElement;
+    input.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, composed: true }));
+    await el.updateComplete;
+    expect(rows[0].shadowRoot!.activeElement).to.equal(rows[0].shadowRoot!.querySelector('[part="option"]'));
+
+    el.shadowRoot!
+      .querySelector('[part="list"]')!
+      .dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, composed: true }));
+    await nextFrame();
+    expect(rows[1].shadowRoot!.activeElement).to.equal(rows[1].shadowRoot!.querySelector('[part="option"]'));
+  });
+
+  it('is accessible with wrapped rows', async () => {
+    const el = (await fixture(
+      html`<lr-thread-list
+        style="block-size:400px"
+        searchable
+        grouping="none"
+        .threads=${manyThreads.slice(0, 6)}
+        .rowActions=${['pin', 'archive', 'delete']}
+      ></lr-thread-list>`,
+    )) as LyraThreadList;
+    el.wrapRow = (thread, row) => html`<span data-thread-id=${thread.id}>${row}</span>`;
+    await el.updateComplete;
+    await nextFrame();
+    await expect(el).to.be.accessible();
+  });
+});

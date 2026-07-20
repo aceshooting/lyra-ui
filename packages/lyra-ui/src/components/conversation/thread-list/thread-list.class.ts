@@ -134,7 +134,9 @@ function defaultFilter(thread: ChatThread, query: string): boolean {
  * @csspart search-input - The `<input type="search">`.
  * @csspart list - The list region.
  * @csspart empty - The empty/no-matches state.
- * @csspart viewport - The real scroll container, exported from the internal `lr-virtual-list`.
+ * @csspart viewport - The real scroll container, exported from the internal `lr-virtual-list`. It
+ *   fills this component's height with no consumer CSS (and falls back to `lr-virtual-list`'s own
+ *   24rem `--lr-virtual-list-height` default when the container has no resolvable height).
  * @csspart row-action - A built-in pin/archive/delete icon button (data mode, when `rowActions` includes it).
  * @csspart pin-glyph - The small pin indicator shown in a pinned row's `meta` slot (data mode).
  * @csspart group-header - A date/custom group header in data mode.
@@ -142,6 +144,8 @@ function defaultFilter(thread: ChatThread, query: string): boolean {
  * @csspart group-label - The group label inside `group-toggle`.
  * @csspart group-icon - The decorative expand/collapse glyph.
  * @csspart row - Exported from the internal `lr-virtual-list`'s `row` part (data mode).
+ * @csspart row-wrapper - The wrapper around `wrapRow` output (data mode, only when `wrapRow` is
+ *   set). Row-only: group headers are never passed through `wrapRow`, so they never carry it.
  * @csspart row-leading - The wrapper around `renderLeading` output.
  * @csspart row-content - The wrapper around `renderRowContent` output.
  * @csspart row-meta - A wrapper around built-in or `renderMeta` metadata.
@@ -235,9 +239,15 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
    *  content that has no home in the item's own `title`/`excerpt`/`meta`/`actions` surface — e.g. a
    *  leading purpose icon (`lr-conversation-item` has no default slot to receive one) or trailing
    *  tag chips. Receives the thread and the already-built row `TemplateResult`; returns the final
-   *  row content. Unset renders the built-in row unwrapped. Because the returned wrapper is wholly
-   *  host-owned, Lyra does not add a CSS part to it; use the focused `row-*` hook parts for
-   *  library-owned wrappers or add the host's own class/part in this callback. */
+   *  row content. Unset renders the built-in row unwrapped -- no extra element is added at all.
+   *  When set, the returned content is placed inside a library-owned `part="row-wrapper"` block
+   *  `<div>`, so the whole wrapped row is styleable from outside as
+   *  `lr-thread-list::part(row-wrapper)` (padding, border, background, `display: flex`, …) without
+   *  the host having to thread its own class through this callback. That wrapper is deliberately
+   *  unstyled and block-level: the box `lr-virtual-list` measures for windowing is its own
+   *  `[part="row"]` one level up, and an unstyled block box contributes exactly its child's height
+   *  to it, so adding it leaves every measured row height unchanged. Applies to rows only -- group
+   *  headers never pass through `wrapRow` and never carry `row-wrapper`. */
   @property({ attribute: false }) wrapRow?: (thread: ChatThread, row: TemplateResult) => TemplateResult;
 
   @state() private searchText = '';
@@ -574,7 +584,13 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
         ${this.rowActions.length > 0 || this.renderActions ? this.renderRowActions(thread) : nothing}
       </lr-conversation-item>
     `;
-    return this.wrapRow ? this.wrapRow(thread, row) : row;
+    // A plain, unstyled block `<div>`, and only when `wrapRow` is set. The measured row box is
+    // `lr-virtual-list`'s own `[part="row"]`, one level up; a zero-margin/zero-padding block box
+    // contributes exactly its child's height to it, so every measured row height is identical to
+    // the unwrapped baseline (asserted in the tests). `display: contents` would also be
+    // measurement-neutral but generates no box at all, making `::part(row-wrapper)` unusable for
+    // the padding/border/background/flex rules the part exists for.
+    return this.wrapRow ? html`<div part="row-wrapper">${this.wrapRow(thread, row)}</div>` : row;
   };
 
   private renderItem = (item: unknown): unknown => {
@@ -637,7 +653,7 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
                 this.searchText.trim() ? this.localize('noMatches') : this.localize('threadListEmpty')
               }</div>`
             : html`<lr-virtual-list
-                exportparts="base:viewport, row:row, group-header:group-header, group-toggle:group-toggle, group-label:group-label, group-icon:group-icon, row-leading:row-leading, row-content:row-content, row-meta:row-meta, row-actions:row-actions, row-action:row-action, pin-glyph:pin-glyph"
+                exportparts="base:viewport, row:row, row-wrapper:row-wrapper, group-header:group-header, group-toggle:group-toggle, group-label:group-label, group-icon:group-icon, row-leading:row-leading, row-content:row-content, row-meta:row-meta, row-actions:row-actions, row-action:row-action, pin-glyph:pin-glyph"
                 row-height="auto"
                 .items=${items}
                 .renderItem=${this.renderItem}
