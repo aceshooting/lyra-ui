@@ -133,9 +133,11 @@ export interface LyraCodeBlockEventMap {
  *   agree; `lr-markdown`/`lr-markdown-core` declare the same token for their own
  *   `code-block` part (they are sibling elements, so they cannot inherit this one). Read as a
  *   token and never written inline, so a host override survives shiki's own inline `style` on
- *   the highlighted `pre`. Set it on the element itself (or any rule outranking this component's
- *   `:host`). The markdown surface wraps (`white-space: pre-wrap`) while this one does not, so
- *   the same value can look different on a wrapped line, where tab stops restart.
+ *   the highlighted `pre`. The default is a `var()` fallback at the point of use rather than a
+ *   `:host` declaration, so it inherits: set it on the element, a container, or `:root` and it
+ *   reaches every code surface below. The markdown surface wraps (`white-space: pre-wrap`) while
+ *   this one does not, so the same value can look different on a wrapped line, where tab stops
+ *   restart.
  * @cssprop [--lr-code-block-active-line-outline-color=var(--lr-color-brand)] - Outline color of
  *   the line marked active by `active-highlight-id`. Retints just that outline, leaving every
  *   other `--lr-color-brand` surface in the component (header pill, hover states, focus ring)
