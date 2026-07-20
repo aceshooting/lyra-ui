@@ -51,6 +51,11 @@ export type ButtonType = 'button' | 'submit' | 'reset';
  * Swapped per `variant` to that variant's semantic color.
  * @cssprop [--lr-button-outlined-border=var(--lr-color-border-strong)] - Border color of
  * `appearance="outlined"`, which overrides `--lr-button-border`.
+ * @cssprop [--lr-button-outlined-fill=transparent] - Background of `appearance="outlined"`.
+ * Transparent by default; set it to tint the button (e.g. a faint surface wash behind the outline)
+ * without a `::part(base)` rule. Like `--lr-button-quiet-*`, it is deliberately *not* swapped per
+ * `variant`. Note that the `:hover` `filter: brightness()` applies to whatever fill is set, so a
+ * tinted outlined button now visibly brightens on hover where a transparent one did not.
  * @cssprop [--lr-button-quiet-border=var(--lr-color-border)] - Border color of
  * `appearance="quiet"`.
  * @cssprop [--lr-button-quiet-text=var(--lr-color-text-quiet)] - Text color of
@@ -61,6 +66,22 @@ export type ButtonType = 'button' | 'submit' | 'reset';
  * @cssprop [--lr-button-size-m=var(--lr-size-2rem)] - `min-block-size` at `size="m"`.
  * @cssprop [--lr-button-size-l=var(--lr-size-2-5rem)] - `min-block-size` at `size="l"`.
  * @cssprop [--lr-button-size-xl=var(--lr-size-3rem)] - `min-block-size` at `size="xl"`.
+ * @cssprop [--lr-button-padding-block=var(--lr-space-xs)] - Block padding of the internal button,
+ * re-assigned per `size` tier (the default is the `m` tier's value). Override it to retune a tier
+ * without a `::part(base)` rule; `appearance="link"` ignores it (it renders with zero padding).
+ * @cssprop [--lr-button-padding-inline=var(--lr-space-m)] - Inline padding of the internal button,
+ * re-assigned per `size` tier (the default is the `m` tier's value). `appearance="link"` ignores it.
+ * @cssprop [--lr-button-font-size=var(--lr-font-size-m)] - Font size of the internal button,
+ * re-assigned per `size` tier (the default is the `m` tier's value). `appearance="link"` ignores it
+ * and inherits the ambient font instead.
+ * @cssprop [--lr-button-min-height=var(--lr-button-size-m)] - The active tier's `min-block-size`
+ * floor. Re-assigned per `size` tier to that tier's own `--lr-button-size-*` token, and used as the
+ * fallback when `--lr-button-height` is unset.
+ * @cssprop --lr-button-height - Exact height of the internal button. **Undeclared by default** — so
+ * the button keeps the active tier's `min-block-size` floor and an `auto` height, exactly as
+ * before. Set it (e.g. to pin the button to a fixed toolbar row) to both floor *and* cap the
+ * height. Never declare it as `auto`: a declared value wins over the `var()` fallback arm and would
+ * make every tier's floor dead code. `appearance="link"` ignores it.
  */
 export class LyraButton extends LyraElement {
   static styles = [LyraElement.styles, styles];

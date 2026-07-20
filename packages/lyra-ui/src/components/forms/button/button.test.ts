@@ -253,7 +253,10 @@ describe('lr-button', () => {
     const css = styles.cssText.replace(/\s+/g, ' ');
     expect(css).to.include("font-size: var(--lr-font-size-m);");
     expect(css).to.include('--lr-button-size-s: var(--lr-size-1-75rem);');
-    expect(css).to.include('min-block-size: var(--lr-button-size-s);');
+    // The per-tier floor now reaches min-block-size through --lr-button-min-height (re-assigned per
+    // size tier) so a consumer-set --lr-button-height can cap it; the size scale itself is unchanged.
+    expect(css).to.include('--lr-button-min-height: var(--lr-button-size-s);');
+    expect(css).to.include('min-block-size: var(--lr-button-height, var(--lr-button-min-height));');
   });
 
   it('propagates a consumer width from the host to the internal button', () => {
@@ -325,8 +328,10 @@ describe('lr-button', () => {
   it('supports size="2xs": tighter than xs, with its own min-block-size token', () => {
     const css = styles.cssText.replace(/\s+/g, ' ');
     expect(css).to.include('--lr-button-size-2xs: var(--lr-size-1-25rem);');
+    // The tier's geometry now lives in cssprop re-assignment on :host([size='2xs']) rather than in
+    // property declarations on [part='base'] -- the values themselves are unchanged.
     expect(css).to.match(
-      /:host\(\[size='2xs'\]\) \[part='base'\]\s*\{[^}]*padding-inline:\s*var\(--lr-space-2xs\);[^}]*padding-block:\s*var\(--lr-space-2xs\);[^}]*font-size:\s*var\(--lr-font-size-2xs\);[^}]*min-block-size:\s*var\(--lr-button-size-2xs\);/,
+      /:host\(\[size='2xs'\]\)\s*\{[^}]*--lr-button-padding-block:\s*var\(--lr-space-2xs\);[^}]*--lr-button-padding-inline:\s*var\(--lr-space-2xs\);[^}]*--lr-button-font-size:\s*var\(--lr-font-size-2xs\);[^}]*--lr-button-min-height:\s*var\(--lr-button-size-2xs\);/,
     );
   });
 
@@ -334,5 +339,160 @@ describe('lr-button', () => {
     const el = (await fixture(html`<lr-button size="2xs">Go</lr-button>`)) as LyraButton;
     expect(el.size).to.equal('2xs');
     expect(el.getAttribute('size')).to.equal('2xs');
+  });
+
+  describe('sizing custom properties', () => {
+    // The computed geometry each tier rendered *before* --lr-button-padding-block/-padding-inline/
+    // -font-size existed. An unset consumer must stay byte-identical, so these are hardcoded px
+    // (root font-size is 16px) rather than re-derived from the same tokens the stylesheet uses.
+    const tiers = [
+      { size: '2xs', padInline: '2px', padBlock: '2px', fontSize: '10px', minHeight: '20px' },
+      { size: 'xs', padInline: '4px', padBlock: '2px', fontSize: '12px', minHeight: '24px' },
+      { size: 's', padInline: '8px', padBlock: '2px', fontSize: '13px', minHeight: '28px' },
+      { size: 'm', padInline: '12px', padBlock: '4px', fontSize: '16px', minHeight: '32px' },
+      { size: 'l', padInline: '16px', padBlock: '8px', fontSize: '16px', minHeight: '40px' },
+      { size: 'xl', padInline: '32px', padBlock: '12px', fontSize: '18px', minHeight: '48px' },
+    ];
+
+    const base = (el: LyraButton) => el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+
+    it('renders byte-identical padding/font-size/min-height at all six tiers when the properties are untouched', async () => {
+      for (const tier of tiers) {
+        const el = (await fixture(html`<lr-button size=${tier.size}>Go</lr-button>`)) as LyraButton;
+        const cs = getComputedStyle(base(el));
+        expect(cs.paddingLeft, `size=${tier.size} padding-inline`).to.equal(tier.padInline);
+        expect(cs.paddingRight, `size=${tier.size} padding-inline`).to.equal(tier.padInline);
+        expect(cs.paddingTop, `size=${tier.size} padding-block`).to.equal(tier.padBlock);
+        expect(cs.paddingBottom, `size=${tier.size} padding-block`).to.equal(tier.padBlock);
+        expect(cs.fontSize, `size=${tier.size} font-size`).to.equal(tier.fontSize);
+        expect(cs.minHeight, `size=${tier.size} min-block-size`).to.equal(tier.minHeight);
+      }
+    });
+
+    it('lets a consumer pin a size="s" button to a compact toolbar tier with no ::part(base) rule', async () => {
+      const el = (await fixture(html`<lr-button size="s">Go</lr-button>`)) as LyraButton;
+      el.style.setProperty('--lr-button-padding-block', '1px');
+      el.style.setProperty('--lr-button-padding-inline', '6px');
+      el.style.setProperty('--lr-button-font-size', '11px');
+      await el.updateComplete;
+      const cs = getComputedStyle(base(el));
+      expect(cs.paddingTop).to.equal('1px');
+      expect(cs.paddingBottom).to.equal('1px');
+      expect(cs.paddingLeft).to.equal('6px');
+      expect(cs.paddingRight).to.equal('6px');
+      expect(cs.fontSize).to.equal('11px');
+    });
+
+    it('declares the geometry knobs on :host (the "m" tier) and consumes them once on [part="base"]', () => {
+      const css = styles.cssText.replace(/\s+/g, ' ');
+      expect(css).to.match(
+        /:host \{[^}]*--lr-button-padding-block: var\(--lr-space-xs\);[^}]*--lr-button-padding-inline: var\(--lr-space-m\);[^}]*--lr-button-font-size: var\(--lr-font-size-m\);/,
+      );
+      // `size` reflects and defaults to 'm', so the ':host' declarations above *are* the m tier --
+      // a separate :host([size='m']) block would be dead weight.
+      expect(css, "a :host([size='m']) rule would only restate the :host defaults").to.not.match(
+        /:host\(\[size='m'\]\)[^;{]*\{/,
+      );
+      expect(css).to.match(
+        /\[part='base'\] \{[^}]*padding-inline: var\(--lr-button-padding-inline\);[^}]*padding-block: var\(--lr-button-padding-block\);/,
+      );
+      // Per-tier blocks only re-assign the same knobs -- no property declarations of their own.
+      for (const size of ['2xs', 'xs', 's', 'l', 'xl']) {
+        expect(css, `size=${size}`).to.match(
+          new RegExp(`:host\\(\\[size='${size}'\\]\\) \\{[^}]*--lr-button-padding-block:`),
+        );
+        expect(css, `size=${size} must not restyle [part='base'] directly`).to.not.include(
+          `:host([size='${size}']) [part='base']`,
+        );
+      }
+    });
+
+    it('keeps appearance="link" winning over the geometry knobs (zero padding, inherited font)', async () => {
+      const wrapper = (await fixture(html`
+        <div style="font-size: 21px;">
+          <lr-button appearance="link" size="xl">Retry</lr-button>
+        </div>
+      `)) as HTMLElement;
+      const el = wrapper.querySelector('lr-button') as LyraButton;
+      el.style.setProperty('--lr-button-padding-block', '20px');
+      el.style.setProperty('--lr-button-padding-inline', '20px');
+      el.style.setProperty('--lr-button-font-size', '40px');
+      await el.updateComplete;
+      const cs = getComputedStyle(base(el));
+      expect(cs.paddingTop).to.equal('0px');
+      expect(cs.paddingBottom).to.equal('0px');
+      expect(cs.paddingLeft).to.equal('0px');
+      expect(cs.paddingRight).to.equal('0px');
+      expect(cs.fontSize).to.equal('21px');
+    });
+
+    it('pins every tier to an exact height via --lr-button-height', async () => {
+      for (const tier of tiers) {
+        const el = (await fixture(html`<lr-button size=${tier.size}>Go</lr-button>`)) as LyraButton;
+        el.style.setProperty('--lr-button-height', '44px');
+        await el.updateComplete;
+        const cs = getComputedStyle(base(el));
+        expect(cs.blockSize, `size=${tier.size} block-size`).to.equal('44px');
+        expect(cs.minHeight, `size=${tier.size} min-block-size`).to.equal('44px');
+      }
+    });
+
+    it('leaves --lr-button-height genuinely undeclared so its var() fallback arm can fire', () => {
+      const css = styles.cssText.replace(/\s+/g, ' ');
+      // A declared value -- even `auto` -- is a *defined* value that wins, so the fallback arm
+      // would never run and every tier's floor would be dead code (see select.styles.ts:37-49).
+      expect(css, '--lr-button-height must never be declared, only read').to.not.match(
+        /--lr-button-height:/,
+      );
+      expect(css).to.match(
+        /\[part='base'\] \{[^}]*min-block-size: var\(--lr-button-height, var\(--lr-button-min-height\)\);[^}]*block-size: var\(--lr-button-height, auto\);/,
+      );
+    });
+
+    it('leaves appearance="link" unaffected by a pinned --lr-button-height', async () => {
+      const el = (await fixture(html`<lr-button appearance="link">Retry</lr-button>`)) as LyraButton;
+      el.style.setProperty('--lr-button-height', '44px');
+      await el.updateComplete;
+      const cs = getComputedStyle(base(el));
+      expect(cs.minHeight).to.equal('0px');
+      expect(cs.blockSize).to.not.equal('44px');
+    });
+  });
+
+  describe('appearance="outlined" fill', () => {
+    it('stays transparent when --lr-button-outlined-fill is unset', async () => {
+      const el = (await fixture(html`<lr-button appearance="outlined">Save</lr-button>`)) as LyraButton;
+      const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+      expect(getComputedStyle(base).backgroundColor).to.equal('rgba(0, 0, 0, 0)');
+    });
+
+    it('tints an outlined button through --lr-button-outlined-fill with no ::part() rule', async () => {
+      const el = (await fixture(html`<lr-button appearance="outlined">Save</lr-button>`)) as LyraButton;
+      el.style.setProperty('--lr-button-outlined-fill', 'rgb(12, 34, 56)');
+      await el.updateComplete;
+      const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+      expect(getComputedStyle(base).backgroundColor).to.equal('rgb(12, 34, 56)');
+    });
+
+    it('declares --lr-button-outlined-fill beside --lr-button-outlined-border and consumes it', () => {
+      const css = styles.cssText.replace(/\s+/g, ' ');
+      expect(css).to.include('--lr-button-outlined-fill: transparent;');
+      expect(css).to.match(
+        /:host\(\[appearance='outlined'\]\) \[part='base'\] \{[^}]*background: var\(--lr-button-outlined-fill\);/,
+      );
+    });
+
+    it('is accessible with a tinted outlined fill and a pinned height', async () => {
+      const el = (await fixture(html`
+        <lr-button
+          appearance="outlined"
+          size="s"
+          style="--lr-button-outlined-fill: #f1f5f9; --lr-button-height: 28px; --lr-button-padding-inline: 6px;"
+          >Save</lr-button
+        >
+      `)) as LyraButton;
+      await el.updateComplete;
+      await expect(el).to.be.accessible();
+    });
   });
 });

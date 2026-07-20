@@ -90,6 +90,57 @@ export const Sizes: Story = {
   `,
 };
 
+export const CompactToolbarTier: Story = {
+  name: 'Retuned tier (padding / font-size / height)',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'Each `size` tier is expressed as `--lr-button-padding-block`, `--lr-button-padding-inline`, ' +
+          '`--lr-button-font-size` and `--lr-button-min-height`, so a toolbar can retune a tier — or pin ' +
+          'an exact row height with `--lr-button-height` — without a `::part(base)` rule. ' +
+          '`--lr-button-height` is undeclared by default, which is what keeps each tier’s min-height ' +
+          'floor working when it is unset.',
+      },
+    },
+  },
+  render: () => html`
+    <div
+      style="display: flex; align-items: center; gap: 0.25rem; padding: 0.25rem; border: 1px solid var(--lr-color-border); border-radius: var(--lr-radius); --lr-button-height: 28px; --lr-button-padding-inline: 0.5rem; --lr-button-padding-block: 0; --lr-button-font-size: 0.75rem;"
+    >
+      <lr-button size="s" appearance="quiet">Bold</lr-button>
+      <lr-button size="s" appearance="quiet">Italic</lr-button>
+      <lr-button size="s" appearance="outlined">Preview</lr-button>
+      <lr-button size="s" appearance="accent" variant="brand">Publish</lr-button>
+    </div>
+  `,
+};
+
+export const OutlinedFill: Story = {
+  name: 'Outlined fill (--lr-button-outlined-fill)',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          '`appearance="outlined"` is transparent by default; `--lr-button-outlined-fill` tints it ' +
+          'without a `::part(base)` rule. It is not swapped per `variant` (same stance as ' +
+          '`--lr-button-quiet-*`), and the hover `filter: brightness()` visibly affects a tinted fill.',
+      },
+    },
+  },
+  render: () => html`
+    <div style="display: flex; align-items: center; gap: 0.5rem;">
+      <lr-button appearance="outlined" variant="brand">Default (transparent)</lr-button>
+      <lr-button
+        appearance="outlined"
+        variant="brand"
+        style="--lr-button-outlined-fill: var(--lr-color-surface);"
+        >Tinted fill</lr-button
+      >
+    </div>
+  `,
+};
+
 export const Loading: Story = {
   render: () => html`<lr-button variant="brand" .loading=${true}>Saving…</lr-button>`,
 };

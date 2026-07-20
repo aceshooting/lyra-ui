@@ -13,11 +13,26 @@ export const styles = css`
     --lr-button-size-m: var(--lr-size-2rem);
     --lr-button-size-l: var(--lr-size-2-5rem);
     --lr-button-size-xl: var(--lr-size-3rem);
+    /* Geometry knobs for the default ("m") tier. Every :host([size='…']) block below only
+       re-assigns these four -- no per-tier rule declares a CSS property on [part='base'] -- so a
+       consumer can retune a tier (e.g. pin a size="s" button into a compact toolbar row) without a
+       ::part(base) rule, exactly as lr-input/lr-select/lr-combobox/lr-segmented/lr-date-input do.
+       "size" reflects and defaults to 'm', so these :host declarations *are* the m tier; a
+       :host([size='m']) block would only restate them. */
+    --lr-button-padding-block: var(--lr-space-xs);
+    --lr-button-padding-inline: var(--lr-space-m);
+    --lr-button-font-size: var(--lr-font-size-m);
+    --lr-button-min-height: var(--lr-button-size-m);
     --lr-button-accent: var(--lr-color-text);
     --lr-button-fill: var(--lr-color-surface);
     --lr-button-on-fill: var(--lr-color-text);
     --lr-button-border: var(--lr-color-border);
     --lr-button-outlined-border: var(--lr-color-border-strong);
+    /* Transparent by default (byte-identical to the previous hardcoded "background: transparent").
+       Set it to tint an outlined button -- e.g. a faint surface wash behind the outline -- without
+       reaching for a ::part(base) rule. Like --lr-button-quiet-*, it is deliberately NOT swapped
+       per "variant": an outlined button's fill is a surface decision, not a semantic tone. */
+    --lr-button-outlined-fill: transparent;
     --lr-button-quiet-border: var(--lr-color-border);
     --lr-button-quiet-text: var(--lr-color-text-quiet);
     /* appearance="accent"'s loud fill for the neutral variant -- every other variant's own
@@ -62,13 +77,26 @@ export const styles = css`
     display: inline-flex;
     position: relative;
     inline-size: var(--lr-button-width);
+    /* --lr-button-height is deliberately left UNDECLARED on :host, so both var()s below take their
+       fallback arm: a floor at the active tier's --lr-button-min-height and an auto height --
+       byte-identical to the behaviour before this property existed. Setting it (e.g. to pin the
+       button to a fixed toolbar row height) both floors and caps the button. Declaring it as
+       "auto" on :host would break exactly this: a declared "auto" is a *defined* value, so the
+       fallback arm would never fire and every tier's floor would become dead code (lr-select
+       documents its own instance of that trap in select.styles.ts). */
+    min-block-size: var(--lr-button-height, var(--lr-button-min-height));
+    block-size: var(--lr-button-height, auto);
     align-items: center;
     justify-content: center;
     gap: var(--lr-space-2xs);
+    padding-inline: var(--lr-button-padding-inline);
+    padding-block: var(--lr-button-padding-block);
     border-radius: var(--lr-radius);
     border: var(--lr-border-width-thin) solid var(--lr-button-border);
     font: inherit;
     font-weight: var(--lr-font-weight-semibold);
+    /* After the "font" shorthand, which would otherwise reset font-size back to the inherited one. */
+    font-size: var(--lr-button-font-size);
     cursor: pointer;
   }
   :host([appearance='filled']) [part='base'] {
@@ -81,7 +109,7 @@ export const styles = css`
     border-color: var(--lr-button-accent-fill);
   }
   :host([appearance='outlined']) [part='base'] {
-    background: transparent;
+    background: var(--lr-button-outlined-fill);
     color: var(--lr-button-accent);
     border-color: var(--lr-button-outlined-border);
   }
@@ -129,51 +157,51 @@ export const styles = css`
     display: inline-flex;
     align-items: center;
   }
-  :host([size='2xs']) [part='base'] {
-    padding-inline: var(--lr-space-2xs);
-    padding-block: var(--lr-space-2xs);
-    font-size: var(--lr-font-size-2xs);
-    min-block-size: var(--lr-button-size-2xs);
+  /* Per-tier geometry: cssprop re-assignment only. The "m" tier lives on :host above ("size"
+     reflects and defaults to 'm', so :host always matches it). */
+  :host([size='2xs']) {
+    --lr-button-padding-block: var(--lr-space-2xs);
+    --lr-button-padding-inline: var(--lr-space-2xs);
+    --lr-button-font-size: var(--lr-font-size-2xs);
+    --lr-button-min-height: var(--lr-button-size-2xs);
   }
-  :host([size='xs']) [part='base'] {
-    padding-inline: var(--lr-space-xs);
-    padding-block: var(--lr-space-2xs);
-    font-size: var(--lr-font-size-xs);
-    min-block-size: var(--lr-button-size-xs);
+  :host([size='xs']) {
+    --lr-button-padding-block: var(--lr-space-2xs);
+    --lr-button-padding-inline: var(--lr-space-xs);
+    --lr-button-font-size: var(--lr-font-size-xs);
+    --lr-button-min-height: var(--lr-button-size-xs);
   }
-  :host([size='s']) [part='base'] {
-    padding-inline: var(--lr-space-s);
-    padding-block: var(--lr-space-2xs);
-    font-size: var(--lr-font-size-sm);
-    min-block-size: var(--lr-button-size-s);
+  :host([size='s']) {
+    --lr-button-padding-block: var(--lr-space-2xs);
+    --lr-button-padding-inline: var(--lr-space-s);
+    --lr-button-font-size: var(--lr-font-size-sm);
+    --lr-button-min-height: var(--lr-button-size-s);
   }
-  :host([size='m']) [part='base'] {
-    padding-inline: var(--lr-space-m);
-    padding-block: var(--lr-space-xs);
-    font-size: var(--lr-font-size-m);
-    min-block-size: var(--lr-button-size-m);
+  :host([size='l']) {
+    --lr-button-padding-block: var(--lr-space-s);
+    --lr-button-padding-inline: var(--lr-space-l);
+    --lr-button-font-size: var(--lr-font-size-md);
+    --lr-button-min-height: var(--lr-button-size-l);
   }
-  :host([size='l']) [part='base'] {
-    padding-inline: var(--lr-space-l);
-    padding-block: var(--lr-space-s);
-    font-size: var(--lr-font-size-md);
-    min-block-size: var(--lr-button-size-l);
-  }
-  :host([size='xl']) [part='base'] {
-    padding-inline: var(--lr-space-2xl);
-    padding-block: var(--lr-space-m);
-    font-size: var(--lr-font-size-lg);
-    min-block-size: var(--lr-button-size-xl);
+  :host([size='xl']) {
+    --lr-button-padding-block: var(--lr-space-m);
+    --lr-button-padding-inline: var(--lr-space-2xl);
+    --lr-button-font-size: var(--lr-font-size-lg);
+    --lr-button-min-height: var(--lr-button-size-xl);
   }
   /* A true inline-link appearance: zero chrome (no padding, border, radius, or min-height floor),
      underlined, colored from the same accent token "plain" uses, and inheriting the ambient font
-     so it flows within surrounding text. Declared after the size rules so it overrides the
-     per-size font-size/padding/min-block-size regardless of the active "size". */
+     so it flows within surrounding text. Kept after the size rules -- and it must stay there: it
+     resets padding/font with literals rather than the --lr-button-padding-* and
+     --lr-button-font-size knobs, so it wins over any tier's (and any consumer's) geometry, and it
+     zeroes both min-block-size and block-size so a pinned --lr-button-height cannot give an inline
+     link a button-shaped box either. */
   :host([appearance='link']) [part='base'] {
     inline-size: auto;
     padding: 0;
     border: 0;
     min-block-size: 0;
+    block-size: auto;
     border-radius: 0;
     background: transparent;
     color: var(--lr-button-accent);
