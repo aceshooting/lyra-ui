@@ -595,9 +595,14 @@ describe('per-tier field min-height and exact-height hatch', () => {
       await el.updateComplete;
       const field = anyField(el);
       const natural = getComputedStyle(field).blockSize;
-      // The per-tier floor sits below the natural (padding/font-driven) height, so it is dead
-      // until a consumer raises it -- the rendered box is unchanged from today.
-      expect(Number.parseFloat(natural), `size=${size}`).to.be.greaterThan(
+      // The per-tier floor never exceeds the natural (padding/font-driven) height, so it cannot
+      // change the rendered box until a consumer raises it. Deliberately `at.least` and not a
+      // strict `greaterThan`: at the xs tier the floor and the natural height are the *same* 20px,
+      // and whether they land exactly equal or a fraction apart depends on the platform's font
+      // metrics -- this machine renders xs a hair above 20px while CI's Chromium renders it at
+      // exactly 20px. Equal still satisfies the invariant under test (the floor is not raising the
+      // box); only a floor taller than the natural height would break it.
+      expect(Number.parseFloat(natural), `size=${size}`).to.be.at.least(
         Number.parseFloat(getComputedStyle(field).minBlockSize),
       );
       el.style.setProperty('--lr-known-date-field-height', '90px');
