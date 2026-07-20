@@ -46,7 +46,7 @@ it('renders a literal icon hint when set, a tone dot otherwise', async () => {
   )) as LyraActivityFeed;
   const rows = [...el.shadowRoot!.querySelectorAll('[part="entry"]')] as HTMLElement[];
   expect(rows[0]!.querySelector('[part="entry-icon"]')!.textContent!.trim()).to.equal('🔍');
-  expect(rows[1]!.querySelector('[part="entry-icon"] .tone-dot')).to.exist;
+  expect(rows[1]!.querySelectorAll('[part="entry-icon"] [part~="tone-dot"]').length).to.equal(1);
 });
 
 it('shows the latest entry as a one-line ticker in the header while mode="live"', async () => {
@@ -374,6 +374,121 @@ describe('mode transition announcement', () => {
       html`<lr-activity-feed mode="post-hoc" .entries=${makeEntries(14)}></lr-activity-feed>`,
     )) as LyraActivityFeed;
     expect(await getLiveRegionText(el)).to.equal('');
+  });
+});
+
+describe('entry part styling reaches both rendering paths', () => {
+  const toneEntries: ActivityEntry[] = [
+    { id: 'a', text: 'Neutral step' },
+    { id: 'b', text: 'Finished step', tone: 'success' },
+    { id: 'c', text: 'Timestamped step', tone: 'danger', timestamp: new Date('2024-01-01T10:30:00Z') },
+  ];
+
+  /** The shadow tree the entry rows actually live in: this component's own below
+   *  `virtualize-threshold`, the internal `<lr-virtual-list>`'s above it. */
+  function entryRoot(el: LyraActivityFeed): ShadowRoot {
+    const list = el.shadowRoot!.querySelector('lr-virtual-list');
+    return list ? list.shadowRoot! : el.shadowRoot!;
+  }
+
+  async function feed(threshold: number, extraHostStyle = ''): Promise<LyraActivityFeed> {
+    const el = (await fixture(html`<lr-activity-feed
+      expanded
+      show-timestamps
+      virtualize-threshold=${threshold}
+      style=${`--lr-theme-color-success-fill-loud: rgb(1, 2, 3); --lr-theme-color-text-quiet: rgb(4, 5, 6); ${extraHostStyle}`}
+      .entries=${toneEntries}
+    ></lr-activity-feed>`)) as LyraActivityFeed;
+    await el.updateComplete;
+    const list = el.shadowRoot!.querySelector('lr-virtual-list');
+    if (list) await (list as unknown as { updateComplete: Promise<unknown> }).updateComplete;
+    await twoFrames();
+    return el;
+  }
+
+  // 1 => every fixture above virtualizes; 99 => every fixture stays on the plain repeat() path.
+  for (const [label, threshold] of [
+    ['virtualized', 1],
+    ['plain', 99],
+  ] as const) {
+    it(`lays out [part="entry"] and its icon in the ${label} path`, async () => {
+      const el = await feed(threshold);
+      expect(el.shadowRoot!.querySelector('lr-virtual-list') !== null).to.equal(label === 'virtualized');
+      const entries = [...entryRoot(el).querySelectorAll('[part="entry"]')] as HTMLElement[];
+      expect(entries.length).to.be.greaterThan(0);
+      expect(getComputedStyle(entries[0]!).display).to.equal('flex');
+      expect(getComputedStyle(entries[0]!).flexWrap).to.equal('wrap');
+      const icon = entries[0]!.querySelector('[part="entry-icon"]') as HTMLElement;
+      // `inline-flex` blockifies to `flex` as a flex item, so assert the icon's own alignment
+      // (the entry itself is `baseline`, the default `normal`) rather than its display value.
+      expect(getComputedStyle(icon).alignItems).to.equal('center');
+      expect(getComputedStyle(icon).flexGrow).to.equal('0');
+    });
+
+    it(`tints the tone dot from its entry's tone in the ${label} path`, async () => {
+      const el = await feed(threshold);
+      const dots = [...entryRoot(el).querySelectorAll('[part~="tone-dot"]')] as HTMLElement[];
+      expect(dots.length).to.equal(toneEntries.length);
+      // The tone travels in the part list, not a [data-tone] qualifier -- `::part()` cannot be
+      // followed by an attribute selector, so a tone-qualified rule would never match.
+      expect(dots[0]!.getAttribute('part')).to.equal('tone-dot tone-dot-neutral');
+      expect(dots[1]!.getAttribute('part')).to.equal('tone-dot tone-dot-success');
+      expect(getComputedStyle(dots[0]!).backgroundColor).to.equal('rgb(4, 5, 6)');
+      expect(getComputedStyle(dots[1]!).backgroundColor).to.equal('rgb(1, 2, 3)');
+      // The dot is a real circle, not an unstyled inline span.
+      expect(getComputedStyle(dots[0]!).display).to.equal('block');
+      expect(getComputedStyle(dots[0]!).inlineSize).to.equal('8px');
+    });
+
+    it(`styles [part="entry-text"] and [part="entry-timestamp"] in the ${label} path`, async () => {
+      const el = await feed(threshold);
+      const root = entryRoot(el);
+      const text = root.querySelector('[part="entry-text"]') as HTMLElement;
+      expect(getComputedStyle(text).flexGrow).to.equal('1');
+      const stamp = root.querySelector('[part="entry-timestamp"]') as HTMLElement;
+      expect(getComputedStyle(stamp).fontSize).to.equal('12px');
+      expect(getComputedStyle(stamp).color).to.equal('rgb(4, 5, 6)');
+    });
+
+    it(`is accessible in the ${label} path`, async () => {
+      const el = await feed(threshold);
+      expect(entryRoot(el).querySelectorAll('[part="entry"]').length).to.be.greaterThan(0);
+      await expect(el).to.be.accessible();
+    });
+  }
+
+  it('exports the virtualized entry parts so a consumer stylesheet can reach them', async () => {
+    const wrapper = await fixture(html`
+      <div>
+        <style>
+          lr-activity-feed::part(entry-text) {
+            color: rgb(12, 34, 56);
+          }
+          lr-activity-feed::part(tone-dot) {
+            outline-color: rgb(21, 43, 65);
+          }
+          lr-activity-feed::part(tone-dot-success) {
+            background: rgb(33, 55, 77);
+          }
+        </style>
+        <lr-activity-feed expanded virtualize-threshold="1" .entries=${toneEntries}></lr-activity-feed>
+      </div>
+    `);
+    const el = wrapper.querySelector('lr-activity-feed') as LyraActivityFeed;
+    await el.updateComplete;
+    const list = el.shadowRoot!.querySelector('lr-virtual-list')!;
+    await (list as unknown as { updateComplete: Promise<unknown> }).updateComplete;
+    await twoFrames();
+    expect(list.getAttribute('exportparts')).to.contain('entry:entry');
+    expect(list.getAttribute('exportparts')).to.contain('tone-dot:tone-dot');
+    expect(list.getAttribute('exportparts')).to.contain('tone-dot-success:tone-dot-success');
+    const text = list.shadowRoot!.querySelector('[part="entry-text"]') as HTMLElement;
+    const dot = list.shadowRoot!.querySelector('[part~="tone-dot"]') as HTMLElement;
+    const successDot = list.shadowRoot!.querySelector('[part~="tone-dot-success"]') as HTMLElement;
+    expect(getComputedStyle(text).color).to.equal('rgb(12, 34, 56)');
+    expect(getComputedStyle(dot).outlineColor).to.equal('rgb(21, 43, 65)');
+    // A consumer can retint exactly one tone -- the whole reason the tone is a part name.
+    expect(getComputedStyle(successDot).backgroundColor).to.equal('rgb(33, 55, 77)');
   });
 });
 

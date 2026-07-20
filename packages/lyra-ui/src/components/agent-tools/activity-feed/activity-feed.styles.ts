@@ -85,44 +85,69 @@ export const styles = css`
     inline-size: 100%;
     block-size: var(--lr-activity-feed-max-height);
   }
-  [part='entry'] {
+  /* Every entry rule below is paired with an lr-virtual-list::part(x) twin because this component
+     renders entries through two paths. Below virtualize-threshold, entryTemplate()'s result is
+     committed into this component's own shadow root and the plain [part=] selector matches. At or
+     above it, the exact same template becomes <lr-virtual-list>'s .renderItem, and Lit commits it
+     wherever virtual-list's own render() is updating -- i.e. inside *its* shadow root, a different
+     shadow tree that a [part=] selector scoped to this one can never reach. ::part() crosses that
+     single boundary. Both selectors are load-bearing; dropping either silently unstyles one path. */
+  [part='entry'],
+  lr-virtual-list::part(entry) {
     display: flex;
     flex-wrap: wrap;
     align-items: baseline;
     gap: var(--lr-space-xs);
     padding: var(--lr-space-2xs) var(--lr-space-m);
   }
-  [part='entry-icon'] {
+  [part='entry-icon'],
+  lr-virtual-list::part(entry-icon) {
     flex: 0 0 auto;
     display: inline-flex;
     align-items: center;
     inline-size: var(--lr-size-1em);
   }
-  .tone-dot {
+  [part~='tone-dot'],
+  lr-virtual-list::part(tone-dot) {
     display: block;
     inline-size: var(--lr-size-0-5rem);
     block-size: var(--lr-size-0-5rem);
     border-radius: var(--lr-radius-pill);
+  }
+  /* Shadow Parts forbids an attribute selector after ::part(), so the tone cannot be matched as
+     ::part(tone-dot)[data-tone='success'] -- that selector is invalid and would drop the rule
+     entirely. Each tone carries a second name in the dot's part list instead; ::part() matches
+     with part~= semantics, so both names select the same element, and a consumer gains a
+     per-tone hook the [data-tone] form never offered. The [part~=] form is the plain-path twin:
+     [part='tone-dot-success'] would not match a multi-name part attribute. */
+  [part~='tone-dot-neutral'],
+  lr-virtual-list::part(tone-dot-neutral) {
     background: var(--lr-color-text-quiet);
   }
-  [part='entry'][data-tone='brand'] .tone-dot {
+  [part~='tone-dot-brand'],
+  lr-virtual-list::part(tone-dot-brand) {
     background: var(--lr-color-brand);
   }
-  [part='entry'][data-tone='success'] .tone-dot {
+  [part~='tone-dot-success'],
+  lr-virtual-list::part(tone-dot-success) {
     background: var(--lr-color-success);
   }
-  [part='entry'][data-tone='warning'] .tone-dot {
+  [part~='tone-dot-warning'],
+  lr-virtual-list::part(tone-dot-warning) {
     background: var(--lr-color-warning);
   }
-  [part='entry'][data-tone='danger'] .tone-dot {
+  [part~='tone-dot-danger'],
+  lr-virtual-list::part(tone-dot-danger) {
     background: var(--lr-color-danger);
   }
-  [part='entry-text'] {
+  [part='entry-text'],
+  lr-virtual-list::part(entry-text) {
     flex: 1 1 auto;
     min-inline-size: var(--lr-size-3ch);
     font-size: var(--lr-font-size-sm);
   }
-  [part='entry-timestamp'] {
+  [part='entry-timestamp'],
+  lr-virtual-list::part(entry-timestamp) {
     flex: 0 0 auto;
     font-size: var(--lr-font-size-xs);
     color: var(--lr-color-text-quiet);

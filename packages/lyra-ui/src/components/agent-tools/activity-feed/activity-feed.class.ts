@@ -63,6 +63,27 @@ const trueDefaultBooleanConverter: ComplexAttributeConverter<boolean> = {
   },
 };
 
+/** The tone dot's `part` list: the shared `tone-dot` name plus a tone-specific one. Shadow Parts
+ *  forbids an attribute selector after `::part()`, so `::part(tone-dot)[data-tone='success']` is
+ *  invalid CSS and the tone would be unstylable once the entry renders inside
+ *  `<lr-virtual-list>`'s shadow root. A part *list* carries the state in the part name instead
+ *  (`::part()` matches with `part~=` semantics, so both names select the same element).
+ *  Spelled as a ternary over literals rather than a lookup table so every rendered part name stays
+ *  statically resolvable from this file, the same shape `<lr-code-block-core>`'s line parts use. */
+function toneDotPart(tone: ActivityEntryTone): string {
+  const part =
+    tone === 'brand'
+      ? 'tone-dot tone-dot-brand'
+      : tone === 'success'
+        ? 'tone-dot tone-dot-success'
+        : tone === 'warning'
+          ? 'tone-dot tone-dot-warning'
+          : tone === 'danger'
+            ? 'tone-dot tone-dot-danger'
+            : 'tone-dot tone-dot-neutral';
+  return part;
+}
+
 /** `hour:minute` in the component's effective locale -- identical algorithm to
  *  `<lr-chat-message>`'s own `defaultFormatTimestamp`, duplicated locally. Uses the shared
  *  per-locale formatter cache: this runs once per entry on every render of a live feed, and
@@ -104,6 +125,15 @@ function defaultFormatTimestamp(date: Date, locale: string): string {
  * @csspart body - The scrollable region containing the entries (or the internal virtual-list).
  * @csspart entry - One entry row; carries `data-tone`.
  * @csspart entry-icon - The literal `icon` hint, or a tone dot when unset.
+ * @csspart tone-dot - The tone dot rendered inside `entry-icon` when the entry sets no literal
+ *   `icon`. Its own named part rather than an internal class, so it stays styleable in both the
+ *   plain and virtualized rendering paths and reachable from a consumer's `::part()`. Also carries
+ *   a tone-specific name, since `::part()` cannot be qualified by `[data-tone]`.
+ * @csspart tone-dot-neutral - An untoned entry's dot (also carries `tone-dot`).
+ * @csspart tone-dot-brand - A `brand`-tone entry's dot (also carries `tone-dot`).
+ * @csspart tone-dot-success - A `success`-tone entry's dot (also carries `tone-dot`).
+ * @csspart tone-dot-warning - A `warning`-tone entry's dot (also carries `tone-dot`).
+ * @csspart tone-dot-danger - A `danger`-tone entry's dot (also carries `tone-dot`).
  * @csspart entry-text - The entry's `text`. Not rendered while `renderText` is set — its returned
  *   content replaces this part entirely.
  * @csspart entry-timestamp - The formatted timestamp, only rendered while `showTimestamps` and a
@@ -272,9 +302,11 @@ export class LyraActivityFeed extends LyraElement<LyraActivityFeedEventMap> {
   private entryTemplate(entry: ActivityEntry, ownRole: boolean): TemplateResult {
     const ts = this.normalizedTimestamp(entry.timestamp);
     const formatter = this.formatTimestamp ?? ((date: Date) => defaultFormatTimestamp(date, this.effectiveLocale));
+    const tone = entry.tone ?? 'neutral';
+    const dotPart = toneDotPart(tone);
     return html`
-      <div part="entry" role=${ownRole ? 'listitem' : nothing} data-tone=${entry.tone ?? 'neutral'}>
-        <span part="entry-icon" aria-hidden="true">${entry.icon ? entry.icon : html`<span class="tone-dot"></span>`}</span>
+      <div part="entry" role=${ownRole ? 'listitem' : nothing} data-tone=${tone}>
+        <span part="entry-icon" aria-hidden="true">${entry.icon ? entry.icon : html`<span part=${dotPart} data-tone=${tone}></span>`}</span>
         ${this.renderText ? this.renderText(entry) : html`<span part="entry-text">${entry.text}</span>`}
         ${this.showTimestamps && ts
           ? html`<time part="entry-timestamp" datetime=${ts.toISOString()}>${formatter(ts)}</time>`
@@ -315,6 +347,7 @@ export class LyraActivityFeed extends LyraElement<LyraActivityFeedEventMap> {
         >
           ${virtualized
             ? html`<lr-virtual-list
+                exportparts="entry:entry, entry-icon:entry-icon, tone-dot:tone-dot, tone-dot-neutral:tone-dot-neutral, tone-dot-brand:tone-dot-brand, tone-dot-success:tone-dot-success, tone-dot-warning:tone-dot-warning, tone-dot-danger:tone-dot-danger, entry-text:entry-text, entry-timestamp:entry-timestamp"
                 .items=${this.entries}
                 .renderItem=${(item: unknown) => this.entryTemplate(item as ActivityEntry, false)}
                 .keyFunction=${(item: unknown) => (item as ActivityEntry).id}
