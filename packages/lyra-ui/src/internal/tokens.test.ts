@@ -111,6 +111,18 @@ it('defines a single disabled-opacity token', async () => {
   expect(await probeVar('--lr-opacity-disabled')).to.equal('0.5');
 });
 
+it('defines a single hover-brightness token, themeable via --lr-theme-hover-brightness', async () => {
+  expect(await probeVar('--lr-hover-brightness')).to.equal('1.08');
+  expect(await probeNestedVar('--lr-hover-brightness', '--lr-theme-hover-brightness: 1.2')).to.equal('1.2');
+});
+
+it('defines a single popover viewport-clamp token, themeable via --lr-theme-popover-viewport-clamp', async () => {
+  expect(await probeVar('--lr-popover-viewport-clamp')).to.equal('92vw');
+  expect(await probeNestedVar('--lr-popover-viewport-clamp', '--lr-theme-popover-viewport-clamp: 88vw')).to.equal(
+    '88vw',
+  );
+});
+
 it('defines the focus-ring tokens, with color aliasing the existing brand token', async () => {
   expect(await probeVar('--lr-focus-ring-width')).to.equal('2px');
   expect(await probeVar('--lr-focus-ring-offset')).to.equal('2px');
