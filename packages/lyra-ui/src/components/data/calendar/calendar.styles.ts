@@ -9,8 +9,24 @@ export const styles = css`
      'previous' button directly and, for the wrapping span, at least as large as its own button
      content already makes it. */
   [part='nav'] { display: flex; gap: var(--lr-space-xs); min-inline-size: var(--lr-icon-button-size); min-block-size: var(--lr-icon-button-size); }
-  [part='nav'] button, [part='day'] { min-inline-size: var(--lr-icon-button-size); min-block-size: var(--lr-icon-button-size); border: var(--lr-border-width-thin) solid var(--lr-color-border); background: var(--lr-color-surface); color: var(--lr-color-text); cursor: pointer; }
-  [part='nav'] button { padding-inline: var(--lr-space-s); border-radius: var(--lr-radius); }
+  /* button[part='nav'] (a direct-attribute match, not a descendant match) reaches both the
+     'previous' button (carries part="nav" itself) and the 'next' button (now also carries part="nav"
+     directly, in addition to sitting inside a span that also carries it for shared hit-area sizing) --
+     without ever matching that wrapping span itself, which isn't a <button>. */
+  button[part='nav'], [part='day'] { min-inline-size: var(--lr-icon-button-size); min-block-size: var(--lr-icon-button-size); border: var(--lr-border-width-thin) solid var(--lr-color-border); background: var(--lr-color-surface); color: var(--lr-color-text); cursor: pointer; }
+  button[part='nav'] { padding-inline: var(--lr-space-s); border-radius: var(--lr-radius); }
+  button[part='nav']:hover, [part='agenda-event']:hover { background: var(--lr-color-brand-quiet); }
+  button[part='nav']:focus-visible, [part='agenda-event']:focus-visible {
+    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
+    outline-offset: calc(var(--lr-focus-ring-offset) * -1);
+  }
+  /* Negative outline-offset (matching data-grid's own [role='gridcell']:focus-visible) so the ring
+     doesn't visually collide with [data-today='true']'s own outline below -- source order makes the
+     focus ring win for a focused today cell, which is the correct behavior while focused. */
+  [part='day']:focus-visible {
+    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
+    outline-offset: calc(var(--lr-focus-ring-offset) * -1);
+  }
   [part='weekdays'] { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); }
   [part='weekday'] { padding: var(--lr-space-xs); color: var(--lr-color-text-quiet); font-size: var(--lr-font-size-sm); text-align: center; }
   [part='grid'] { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); border-block-start: var(--lr-border-width-thin) solid var(--lr-color-border); border-inline-start: var(--lr-border-width-thin) solid var(--lr-color-border); }

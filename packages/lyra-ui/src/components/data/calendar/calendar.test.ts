@@ -2,6 +2,7 @@ import { fixture, expect, html, oneEvent } from '@open-wc/testing';
 import './calendar.js';
 import type { LyraCalendar } from './calendar.js';
 import { formatISO } from '../../forms/date-picker/calendar-core.js';
+import { styles } from './calendar.styles.js';
 
 it('renders a month and emits date selections', async () => {
   const el = (await fixture(html`<lr-calendar view-date="2026-07-01"></lr-calendar>`)) as LyraCalendar;
@@ -53,7 +54,7 @@ it('rolls the view to the next month when ArrowDown moves focus past the bottom 
   expect(el.shadowRoot!.activeElement).to.equal(focused);
 });
 
-it('gives the previous/next month nav buttons the shared minimum hit area', async () => {
+it('gives the previous/next month nav buttons the shared minimum hit area and matching chrome', async () => {
   const el = (await fixture(html`<lr-calendar view-date="2026-07-01"></lr-calendar>`)) as LyraCalendar;
   // The 'previous' button itself carries part="nav"; the 'next' button is nested inside a
   // wrapping <span part="nav"> instead (see calendar.class.ts's render()) -- both selector shapes
@@ -64,6 +65,22 @@ it('gives the previous/next month nav buttons the shared minimum hit area', asyn
     expect(getComputedStyle(button).minInlineSize).to.equal('40px');
     expect(getComputedStyle(button).minBlockSize).to.equal('40px');
   }
+  const previousStyle = getComputedStyle(previous);
+  const nextStyle = getComputedStyle(next);
+  expect(previousStyle.cursor, 'previous button must get the same pointer cursor as next').to.equal('pointer');
+  expect(nextStyle.borderTopWidth).to.equal(previousStyle.borderTopWidth);
+  expect(nextStyle.backgroundColor).to.equal(previousStyle.backgroundColor);
+  expect(nextStyle.color).to.equal(previousStyle.color);
+  expect(nextStyle.borderRadius).to.equal(previousStyle.borderRadius);
+});
+
+it('gives nav buttons, day cells, and agenda-event buttons hover/focus-visible treatment', () => {
+  const css = styles.cssText.replace(/\s+/g, ' ');
+  expect(css).to.match(/button\[part='nav'\]:hover[^{]*\{[^}]*background:/);
+  expect(css).to.match(/button\[part='nav'\]:focus-visible[^{]*\{[^}]*outline:/);
+  expect(css).to.match(/\[part='day'\]:focus-visible[^{]*\{[^}]*outline:/);
+  expect(css).to.match(/\[part='agenda-event'\]:hover[^{]*\{[^}]*background:/);
+  expect(css).to.match(/\[part='agenda-event'\]:focus-visible[^{]*\{[^}]*outline:/);
 });
 
 it('is accessible', async () => {
