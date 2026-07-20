@@ -1,6 +1,7 @@
 import { expect, fixture, html, oneEvent } from '@open-wc/testing';
 import './pagination.js';
 import type { LyraPagination } from './pagination.js';
+import { styles } from './pagination.styles.js';
 
 async function pagination(
   template = html`<lr-pagination total-items="95" page-size="10"></lr-pagination>`,
@@ -294,4 +295,10 @@ describe('control padding knob (--lr-pagination-control-padding)', () => {
     const input = pageInput(el);
     if (input) expect(getComputedStyle(input).paddingTop).to.equal('9px');
   });
+});
+
+it('resets the native number spin-button on the page-input', () => {
+  const css = styles.cssText.replace(/\s+/g, ' ');
+  expect(css).to.match(/\[part='page-input'\]\s*\{[^}]*appearance:\s*textfield/);
+  expect(css).to.match(/\[part='page-input'\]::-webkit-inner-spin-button/);
 });

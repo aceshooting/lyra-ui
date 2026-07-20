@@ -45,6 +45,14 @@ export const styles = css`
     font: inherit;
     font-size: var(--lr-font-size-md);
   }
+  input.control {
+    appearance: textfield;
+  }
+  input.control::-webkit-inner-spin-button,
+  input.control::-webkit-outer-spin-button {
+    appearance: none;
+    margin: 0;
+  }
   input.control:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);

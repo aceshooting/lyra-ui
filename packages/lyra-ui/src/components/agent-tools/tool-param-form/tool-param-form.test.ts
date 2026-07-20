@@ -1,6 +1,7 @@
 import { fixture, expect, html, oneEvent } from '@open-wc/testing';
 import './tool-param-form.js';
 import type { LyraToolParamForm, ToolParamFormSchema } from './tool-param-form.js';
+import { styles } from './tool-param-form.styles.js';
 
 const basicSchema: ToolParamFormSchema = {
   type: 'object',
@@ -784,4 +785,10 @@ it('is accessible in a populated state with a required, unfilled field revealed'
   el.reportValidity();
   await el.updateComplete;
   await expect(el).to.be.accessible();
+});
+
+it('resets the native number spin-button on numeric control fields', () => {
+  const css = styles.cssText.replace(/\s+/g, ' ');
+  expect(css).to.match(/input\.control\s*\{[^}]*appearance:\s*textfield/);
+  expect(css).to.match(/input\.control::-webkit-inner-spin-button/);
 });

@@ -120,6 +120,14 @@ export const styles = css`
     font: inherit;
     text-align: center;
   }
+  [part='page-input'] {
+    appearance: textfield;
+  }
+  [part='page-input']::-webkit-inner-spin-button,
+  [part='page-input']::-webkit-outer-spin-button {
+    appearance: none;
+    margin: 0;
+  }
   [part='page-input'][aria-invalid='true'] {
     border-color: var(--lr-color-danger);
   }
