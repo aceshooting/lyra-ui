@@ -107,6 +107,9 @@ export const styles = css`
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);
   }
+  [part='confirm-button']:hover, [part='cancel-button']:hover {
+    background: var(--lr-color-brand-quiet);
+  }
   @keyframes lr-checkpoint-spin {
     to {
       transform: rotate(360deg);

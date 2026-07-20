@@ -32,6 +32,9 @@ export const styles = css`
     opacity: var(--lr-opacity-disabled);
     cursor: not-allowed;
   }
+  [part='trigger']:hover:not(:disabled) {
+    background: var(--lr-color-brand-quiet);
+  }
   :host([data-state='recording']) [part='trigger'] {
     border-color: var(--lr-push-to-talk-recording-color, var(--lr-color-danger));
     color: var(--lr-push-to-talk-recording-color, var(--lr-color-danger));

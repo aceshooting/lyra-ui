@@ -81,6 +81,9 @@ export const styles = css`
     cursor: pointer;
     padding: var(--lr-space-2xs) 0;
   }
+  [part='internal-toggle']:hover {
+    background: var(--lr-color-brand-quiet);
+  }
   [part='internal-toggle']:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);

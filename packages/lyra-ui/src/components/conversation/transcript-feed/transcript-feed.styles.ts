@@ -89,6 +89,9 @@ export const styles = [
       outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
       outline-offset: var(--lr-focus-ring-offset);
     }
+    [part='jump-button']:hover {
+      background: var(--lr-color-brand-quiet);
+    }
   `,
   srOnly,
 ];

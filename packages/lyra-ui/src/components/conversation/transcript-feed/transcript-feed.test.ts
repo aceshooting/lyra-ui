@@ -1,6 +1,7 @@
 import { fixture, expect, html } from '@open-wc/testing';
 import './transcript-feed.js';
 import type { LyraTranscriptFeed, LyraTranscriptEntry } from './transcript-feed.js';
+import { styles } from './transcript-feed.styles.js';
 
 function entryEls(el: LyraTranscriptFeed): HTMLElement[] {
   return [...el.shadowRoot!.querySelectorAll('[part~="entry"]')] as HTMLElement[];
@@ -175,6 +176,11 @@ describe('follow / stick-to-bottom contract', () => {
     expect(el.follow).to.be.true;
     expect(followChanges).to.deep.equal([false, true]);
     expect(el.shadowRoot!.querySelector('[part="jump-button"]')).to.be.null;
+  });
+
+  it('gives jump-button a hover state', () => {
+    const css = styles[0].cssText.replace(/\s+/g, ' ');
+    expect(css).to.match(/\[part='jump-button'\]:hover/);
   });
 
   it('auto-scrolls to the bottom on new entries while follow is true', async () => {

@@ -115,6 +115,9 @@ export const styles = css`
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);
   }
+  [part='jump-pill']:hover {
+    background: var(--lr-color-brand-quiet);
+  }
   @container (max-inline-size: 20rem) {
     [part='jump-pill'] {
       max-inline-size: calc(100% - 2 * var(--lr-space-s));

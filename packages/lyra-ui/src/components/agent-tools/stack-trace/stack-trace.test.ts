@@ -161,6 +161,11 @@ describe('lr-stack-trace chrome', () => {
     expect(css).to.include("[part='frame']:hover, [part='frame']:focus-visible { color: var(--lr-color-brand); }");
   });
 
+  it('gives internal-toggle a hover state', () => {
+    const css = styles.cssText.replace(/\s+/g, ' ');
+    expect(css).to.match(/\[part='internal-toggle'\]:hover/);
+  });
+
   it('is accessible with a parsed trace under appearance="plain"', async () => {
     const el = (await fixture(
       html`<lr-stack-trace appearance="plain" .trace=${trace}></lr-stack-trace>`,

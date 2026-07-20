@@ -1,6 +1,7 @@
 import { fixture, expect, html, oneEvent } from '@open-wc/testing';
 import './checkpoint.js';
 import type { LyraCheckpoint } from './checkpoint.js';
+import { styles } from './checkpoint.styles.js';
 
 it('defaults to checkpointId="", label="", restorable=true, confirmRestore=true, restoring=false', async () => {
   const el = (await fixture(html`<lr-checkpoint></lr-checkpoint>`)) as LyraCheckpoint;
@@ -187,6 +188,12 @@ describe('confirm flow (confirmRestore=true, the default)', () => {
     expect(checkpoint.shadowRoot!.querySelector('[part="confirm-group"]')).to.not.exist;
     // No forced refocus -- the browser's natural focus target (outside) is left alone.
     expect(checkpoint.shadowRoot!.activeElement).to.not.equal(checkpoint.shadowRoot!.querySelector('[part="restore-button"]'));
+  });
+
+  it('gives confirm-button and cancel-button a hover state', () => {
+    const css = styles.cssText.replace(/\s+/g, ' ');
+    expect(css).to.match(/\[part='confirm-button'\]:hover/);
+    expect(css).to.match(/\[part='cancel-button'\]:hover/);
   });
 });
 

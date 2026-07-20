@@ -2,6 +2,7 @@ import { fixture, expect, html, oneEvent } from '@open-wc/testing';
 import './span-waterfall.js';
 import type { LyraSpanWaterfall } from './span-waterfall.js';
 import type { LyraSpan } from '../trace-tree/span.js';
+import { styles } from './span-waterfall.styles.js';
 
 const SPANS: LyraSpan[] = [
   { id: 'root', name: 'Plan trip', kind: 'agent', startMs: 0, endMs: 400, status: 'success' },
@@ -84,6 +85,11 @@ describe('lr-span-waterfall', () => {
     setTimeout(() => bar.click());
     const ev = await oneEvent(el, 'lr-span-select');
     expect(ev.detail).to.deep.equal({ id: 'llm' });
+  });
+
+  it('gives bar a hover state', () => {
+    const css = styles.cssText.replace(/\s+/g, ' ');
+    expect(css).to.match(/\[part='bar'\]:hover[^{]*\{[^}]*filter:\s*brightness/);
   });
 
   it('moves roving tabindex among bars with ArrowDown/ArrowUp', async () => {

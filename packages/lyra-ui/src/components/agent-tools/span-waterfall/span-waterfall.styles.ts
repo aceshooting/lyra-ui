@@ -65,6 +65,9 @@ export const styles = css`
     padding: 0;
     cursor: pointer;
   }
+  [part='bar']:hover {
+    filter: brightness(var(--lr-hover-brightness));
+  }
   [part='bar']:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);

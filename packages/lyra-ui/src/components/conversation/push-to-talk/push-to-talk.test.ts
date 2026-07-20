@@ -3,6 +3,7 @@ import './push-to-talk.js';
 import '../../utility/live-region/live-region.js';
 import type { LyraPushToTalk } from './push-to-talk.js';
 import { MAX_TIMEOUT_MS } from '../../../internal/numbers.js';
+import { styles } from './push-to-talk.styles.js';
 
 // -- Fakes for getUserMedia / MediaRecorder / AudioContext -----------------
 // No `sinon` in this repo -- plain manual monkey-patching (save the real
@@ -139,6 +140,11 @@ it('defaults to mode=hold, state=idle, and every capture prop at its documented 
   expect(el.showTimer).to.be.true;
   expect(el.disabled).to.be.false;
   expect(el.stream).to.be.null;
+});
+
+it('gives the trigger a hover state while enabled', () => {
+  const css = styles.cssText.replace(/\s+/g, ' ');
+  expect(css).to.match(/\[part='trigger'\]:hover:not\(:disabled\)[^{]*\{[^}]*background:/);
 });
 
 // -- Unsupported environment ---------------------------------------------

@@ -4,6 +4,7 @@ import '../chat-message/chat-message.js';
 import '../../layout/virtual-list/virtual-list.js';
 import type { LyraChatViewport } from './chat-viewport.js';
 import type { LyraVirtualList } from '../../layout/virtual-list/virtual-list.class.js';
+import { styles } from './chat-viewport.styles.js';
 
 /** Waits two animation frames -- enough for this component's own rAF-coalesced growth tick (and,
  *  when a slotted lr-virtual-list is involved, its own rAF-coalesced scroll handler) to settle. */
@@ -351,6 +352,11 @@ describe('jump pill', () => {
     (el.shadowRoot!.querySelector('[part="jump-pill"]') as HTMLButtonElement).click();
     await el.updateComplete;
     expect(el.follow).to.be.true;
+  });
+
+  it('gives jump-pill a hover state', () => {
+    const css = styles.cssText.replace(/\s+/g, ' ');
+    expect(css).to.match(/\[part='jump-pill'\]:hover/);
   });
 });
 
