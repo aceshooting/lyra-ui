@@ -1,6 +1,7 @@
 import { fixture, expect, html, oneEvent } from '@open-wc/testing';
 import './artifact-panel.js';
 import type { LyraArtifactPanel } from './artifact-panel.js';
+import { styles } from './artifact-panel.styles.js';
 
 describe('lr-artifact-panel', () => {
   it('defaults to view=preview and activeVersionId=null (latest)', async () => {
@@ -174,5 +175,16 @@ describe('lr-artifact-panel', () => {
       expect(getComputedStyle(pressed).backgroundColor).to.equal(bg);
       expect(getComputedStyle(pressed).color).to.equal(color);
     });
+  });
+
+  it('themes the restore/copy/download header buttons and gives view-button its own hover/focus', () => {
+    const css = styles.cssText.replace(/\s+/g, ' ');
+    for (const part of ['restore-button', 'copy-button', 'download-button']) {
+      expect(css, `${part} must get chrome-reset styling`).to.match(new RegExp(`\\[part='${part}'\\][^{]*\\{[^}]*cursor:\\s*pointer`));
+      expect(css, `${part} must get hover`).to.match(new RegExp(`\\[part='${part}'\\]:hover`));
+      expect(css, `${part} must get focus-visible`).to.match(new RegExp(`\\[part='${part}'\\]:focus-visible[^{]*\\{[^}]*outline:`));
+    }
+    expect(css).to.match(/\[part='view-button'\]:hover/);
+    expect(css).to.match(/\[part='view-button'\]:focus-visible[^{]*\{[^}]*outline:/);
   });
 });

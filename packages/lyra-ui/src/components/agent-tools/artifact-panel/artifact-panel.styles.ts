@@ -46,6 +46,17 @@ export const styles = css`
     background: var(--lr-artifact-panel-view-active-bg, var(--lr-color-brand-quiet));
     color: var(--lr-artifact-panel-view-active-color, var(--lr-color-brand));
   }
+  [part='restore-button'], [part='copy-button'], [part='download-button'] {
+    font: inherit; font-size: var(--lr-font-size-xs); background: var(--lr-color-surface);
+    border: var(--lr-size-1px) solid var(--lr-color-border); border-radius: var(--lr-radius);
+    padding: var(--lr-space-2xs) var(--lr-space-s); cursor: pointer;
+  }
+  [part='restore-button']:hover, [part='copy-button']:hover, [part='download-button']:hover,
+  [part='view-button']:hover { background: var(--lr-color-brand-quiet); color: var(--lr-color-brand); }
+  [part='restore-button']:focus-visible, [part='copy-button']:focus-visible,
+  [part='download-button']:focus-visible, [part='view-button']:focus-visible {
+    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color); outline-offset: var(--lr-focus-ring-offset);
+  }
   [part='version-nav'] {
     display: flex;
     align-items: center;
