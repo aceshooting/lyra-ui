@@ -51,6 +51,29 @@ export const AlreadyDecided: Story = {
   render: () => html`<lr-confirm-bar tool-name="run_shell" decision="approved"></lr-confirm-bar>`,
 };
 
+/** `lr-approve`/`lr-deny` are cancelable: a listener that calls `preventDefault()` and keeps its
+ *  own async work in flight sets `pending` to show a `loading` button and a `disabled` sibling,
+ *  instead of the bar resolving synchronously. */
+export const AsyncPending: Story = {
+  name: 'Async pending decision',
+  render: () => html`
+    <lr-confirm-bar
+      tool-name="send_email"
+      .args=${{ to: 'ops@example.com' }}
+      @lr-approve=${(e: CustomEvent) => {
+        e.preventDefault();
+        const bar = (e.currentTarget as HTMLElement).closest('lr-confirm-bar') as HTMLElement & {
+          pending: string | null;
+          decision: string | null;
+        };
+        setTimeout(() => {
+          bar.decision = 'approved';
+        }, 1500);
+      }}
+    ></lr-confirm-bar>
+  `,
+};
+
 /** `compact` collapses the bar from a full card to a chrome-less inline row, for a confirmation
  *  that has to live inside an existing container. The narrow-allocation container query is switched
  *  off with it — a compact bar is *expected* to be narrow, so stretching the buttons to fill would

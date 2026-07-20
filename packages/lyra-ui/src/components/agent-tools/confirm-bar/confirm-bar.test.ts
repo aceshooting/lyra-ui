@@ -1,13 +1,15 @@
 import { fixture, expect, html, oneEvent } from '@open-wc/testing';
 import './confirm-bar.js';
 import type { LyraConfirmBar } from './confirm-bar.js';
-import { styles } from './confirm-bar.styles.js';
+import type { LyraButton } from '../../forms/button/button.class.js';
 
-it('defaults to decision null, tone neutral, and shows Deny before Approve', async () => {
+it('defaults to decision null, pending null, tone neutral, and shows Deny before Approve', async () => {
   const el = (await fixture(html`<lr-confirm-bar></lr-confirm-bar>`)) as LyraConfirmBar;
   expect(el.decision).to.equal(null);
+  expect(el.pending).to.equal(null);
+  expect(el.hasAttribute('pending')).to.be.false;
   expect(el.tone).to.equal('neutral');
-  const buttons = [...el.shadowRoot!.querySelectorAll('button')];
+  const buttons = [...el.shadowRoot!.querySelectorAll('lr-button')];
   const denyIndex = buttons.findIndex((b) => b.getAttribute('part') === 'deny-button');
   const approveIndex = buttons.findIndex((b) => b.getAttribute('part') === 'approve-button');
   expect(denyIndex).to.be.greaterThan(-1);
@@ -62,7 +64,7 @@ it('lr-approve carries args as-is; lr-deny has no detail; both set decision and 
     html`<lr-confirm-bar .args=${{ x: 1 }}></lr-confirm-bar>`,
   )) as LyraConfirmBar;
   const approvePromise = oneEvent(approveEl, 'lr-approve');
-  (approveEl.shadowRoot!.querySelector('[part="approve-button"]') as HTMLButtonElement).click();
+  (approveEl.shadowRoot!.querySelector('[part="approve-button"]') as LyraButton).click();
   expect((await approvePromise).detail).to.deep.equal({ args: { x: 1 } });
   await approveEl.updateComplete;
   expect(approveEl.decision).to.equal('approved');
@@ -71,7 +73,7 @@ it('lr-approve carries args as-is; lr-deny has no detail; both set decision and 
 
   const denyEl = (await fixture(html`<lr-confirm-bar></lr-confirm-bar>`)) as LyraConfirmBar;
   const denyPromise = oneEvent(denyEl, 'lr-deny');
-  (denyEl.shadowRoot!.querySelector('[part="deny-button"]') as HTMLButtonElement).click();
+  (denyEl.shadowRoot!.querySelector('[part="deny-button"]') as LyraButton).click();
   // CustomEventInit's `detail` member defaults to `null`, not `undefined`, per the DOM spec --
   // this.emit('lr-deny') passes no second argument, which is equivalent to an absent `detail`
   // option -- same as lr-tool-approval-dialog's own identical lr-deny event.
@@ -82,7 +84,7 @@ it('lr-approve carries args as-is; lr-deny has no detail; both set decision and 
 
 it('shows visible decided-state text, never color alone, and reflects decision as a host attribute', async () => {
   const el = (await fixture(html`<lr-confirm-bar></lr-confirm-bar>`)) as LyraConfirmBar;
-  (el.shadowRoot!.querySelector('[part="approve-button"]') as HTMLButtonElement).click();
+  (el.shadowRoot!.querySelector('[part="approve-button"]') as LyraButton).click();
   await el.updateComplete;
   expect(el.shadowRoot!.querySelector('[part="status"]')!.textContent!.trim()).to.equal('Approved');
   expect(el.getAttribute('decision')).to.equal('approved');
@@ -90,7 +92,7 @@ it('shows visible decided-state text, never color alone, and reflects decision a
 
 it('moves focus to [part="status"] synchronously on activation, before the buttons unmount', async () => {
   const el = (await fixture(html`<lr-confirm-bar></lr-confirm-bar>`)) as LyraConfirmBar;
-  const approveButton = el.shadowRoot!.querySelector('[part="approve-button"]') as HTMLButtonElement;
+  const approveButton = el.shadowRoot!.querySelector('[part="approve-button"]') as LyraButton;
   approveButton.click();
   // Synchronous: no await needed before this assertion.
   expect(el.shadowRoot!.activeElement!.getAttribute('part')).to.equal('status');
@@ -100,7 +102,7 @@ it('announces the decision via an internal polite live region', async () => {
   const el = (await fixture(html`<lr-confirm-bar></lr-confirm-bar>`)) as LyraConfirmBar;
   const liveRegion = el.shadowRoot!.querySelector('lr-live-region')!;
   const regionText = () => liveRegion.shadowRoot!.querySelector('[part="region"]')!.textContent ?? '';
-  (el.shadowRoot!.querySelector('[part="deny-button"]') as HTMLButtonElement).click();
+  (el.shadowRoot!.querySelector('[part="deny-button"]') as LyraButton).click();
   await el.updateComplete;
   await new Promise((r) => requestAnimationFrame(r));
   expect(regionText()).to.equal('Action denied.');
@@ -197,7 +199,7 @@ describe('compact', () => {
 
   it('keeps the focus-management contract: focus lands on [part="status"] before the buttons unmount', async () => {
     const el = (await fixture(html`<lr-confirm-bar compact></lr-confirm-bar>`)) as LyraConfirmBar;
-    (part(el, 'approve-button') as HTMLButtonElement).click();
+    (part(el, 'approve-button') as LyraButton).click();
     // Synchronous, exactly as in the default presentation.
     expect(el.shadowRoot!.activeElement!.getAttribute('part')).to.equal('status');
     await el.updateComplete;
@@ -217,7 +219,7 @@ describe('compact', () => {
     expect(box.width).to.equal(0);
     expect(box.height).to.equal(0);
 
-    (part(el, 'deny-button') as HTMLButtonElement).click();
+    (part(el, 'deny-button') as LyraButton).click();
     await el.updateComplete;
     expect(part(el, 'status').getBoundingClientRect().width).to.be.greaterThan(0);
   });
@@ -227,14 +229,14 @@ describe('compact', () => {
       html`<lr-confirm-bar compact .args=${{ x: 1 }}></lr-confirm-bar>`,
     )) as LyraConfirmBar;
     const approvePromise = oneEvent(approveEl, 'lr-approve');
-    (part(approveEl, 'approve-button') as HTMLButtonElement).click();
+    (part(approveEl, 'approve-button') as LyraButton).click();
     expect((await approvePromise).detail).to.deep.equal({ args: { x: 1 } });
     await approveEl.updateComplete;
     expect(approveEl.decision).to.equal('approved');
 
     const denyEl = (await fixture(html`<lr-confirm-bar compact></lr-confirm-bar>`)) as LyraConfirmBar;
     const denyPromise = oneEvent(denyEl, 'lr-deny');
-    (part(denyEl, 'deny-button') as HTMLButtonElement).click();
+    (part(denyEl, 'deny-button') as LyraButton).click();
     expect((await denyPromise).detail).to.be.null;
     await denyEl.updateComplete;
     expect(denyEl.decision).to.equal('denied');
@@ -258,7 +260,7 @@ describe('compact', () => {
     )) as LyraConfirmBar;
     await expect(el).to.be.accessible();
 
-    (el.shadowRoot!.querySelector('[part="approve-button"]') as HTMLButtonElement).click();
+    (el.shadowRoot!.querySelector('[part="approve-button"]') as LyraButton).click();
     await el.updateComplete;
     await expect(el).to.be.accessible();
   });
@@ -305,7 +307,7 @@ describe('localization', () => {
     const liveRegion = el.shadowRoot!.querySelector('lr-live-region')!;
     const regionText = () => liveRegion.shadowRoot!.querySelector('[part="region"]')!.textContent ?? '';
 
-    (el.shadowRoot!.querySelector('[part="approve-button"]') as HTMLButtonElement).click();
+    (el.shadowRoot!.querySelector('[part="approve-button"]') as LyraButton).click();
     await el.updateComplete;
     await new Promise((r) => requestAnimationFrame(r));
 
@@ -314,8 +316,173 @@ describe('localization', () => {
   });
 });
 
-it('gives deny-button and approve-button a hover state', () => {
-  const css = styles.cssText.replace(/\s+/g, ' ');
-  expect(css).to.match(/\[part='deny-button'\]:hover[^{]*\{[^}]*filter:\s*brightness/);
-  expect(css).to.match(/\[part='approve-button'\]:hover[^{]*\{[^}]*filter:\s*brightness/);
+describe('deny/approve as lr-button', () => {
+  it('renders Deny/Approve as lr-button with variant="neutral"/"brand" ("danger" under tone="danger")', async () => {
+    const neutral = (await fixture(html`<lr-confirm-bar></lr-confirm-bar>`)) as LyraConfirmBar;
+    const deny = neutral.shadowRoot!.querySelector('[part="deny-button"]') as LyraButton;
+    const approve = neutral.shadowRoot!.querySelector('[part="approve-button"]') as LyraButton;
+    expect(deny.tagName.toLowerCase()).to.equal('lr-button');
+    expect(approve.tagName.toLowerCase()).to.equal('lr-button');
+    expect(deny.variant).to.equal('neutral');
+    expect(approve.variant).to.equal('brand');
+    expect(deny.type).to.equal('button');
+    expect(approve.type).to.equal('button');
+
+    const danger = (await fixture(html`<lr-confirm-bar tone="danger"></lr-confirm-bar>`)) as LyraConfirmBar;
+    const dangerApprove = danger.shadowRoot!.querySelector('[part="approve-button"]') as LyraButton;
+    expect(dangerApprove.variant).to.equal('danger');
+    // Deny is not tone-sensitive -- stays neutral even under tone="danger".
+    const dangerDeny = danger.shadowRoot!.querySelector('[part="deny-button"]') as LyraButton;
+    expect(dangerDeny.variant).to.equal('neutral');
+  });
+
+  it('matches the pre-swap Deny/Approve colors via lr-button computed styles (visual-parity regression guard)', async () => {
+    const toRgb = (color: string) => {
+      const probe = document.createElement('span');
+      probe.style.color = color;
+      document.body.appendChild(probe);
+      const rgb = getComputedStyle(probe).color;
+      probe.remove();
+      return rgb;
+    };
+
+    const el = (await fixture(html`<lr-confirm-bar></lr-confirm-bar>`)) as LyraConfirmBar;
+    await el.updateComplete;
+    const resolve = (token: string) => getComputedStyle(el).getPropertyValue(token).trim();
+    const denyBase = (el.shadowRoot!.querySelector('[part="deny-button"]') as LyraButton).shadowRoot!.querySelector(
+      '[part="base"]',
+    ) as HTMLElement;
+    const approveBase = (
+      el.shadowRoot!.querySelector('[part="approve-button"]') as LyraButton
+    ).shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    // Deny (variant="neutral", lr-button's own default appearance="filled"): --lr-color-surface /
+    // --lr-color-text, the same pairing todays hand-rolled CSS hardcoded before the swap.
+    expect(getComputedStyle(denyBase).backgroundColor).to.equal(toRgb(resolve('--lr-color-surface')));
+    expect(getComputedStyle(denyBase).color).to.equal(toRgb(resolve('--lr-color-text')));
+    // Approve (variant="brand"): --lr-color-brand / --lr-color-on-brand.
+    expect(getComputedStyle(approveBase).backgroundColor).to.equal(toRgb(resolve('--lr-color-brand')));
+    expect(getComputedStyle(approveBase).color).to.equal(toRgb(resolve('--lr-color-on-brand')));
+
+    const danger = (await fixture(html`<lr-confirm-bar tone="danger"></lr-confirm-bar>`)) as LyraConfirmBar;
+    await danger.updateComplete;
+    const dangerResolve = (token: string) => getComputedStyle(danger).getPropertyValue(token).trim();
+    const dangerApproveBase = (
+      danger.shadowRoot!.querySelector('[part="approve-button"]') as LyraButton
+    ).shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    expect(getComputedStyle(dangerApproveBase).backgroundColor).to.equal(toRgb(dangerResolve('--lr-color-danger')));
+    expect(getComputedStyle(dangerApproveBase).color).to.equal(toRgb(dangerResolve('--lr-color-on-danger')));
+  });
+
+  it('exposes the internal lr-button parts to a consumer through exportparts', async () => {
+    const sheet = document.createElement('style');
+    sheet.textContent = `
+      lr-confirm-bar.consumer-probe::part(deny-button-base) { letter-spacing: 3px; }
+      lr-confirm-bar.consumer-probe::part(approve-button-base) { letter-spacing: 5px; }
+    `;
+    document.head.append(sheet);
+    try {
+      const el = (await fixture(
+        html`<lr-confirm-bar class="consumer-probe"></lr-confirm-bar>`,
+      )) as LyraConfirmBar;
+      const denyBase = (el.shadowRoot!.querySelector('[part="deny-button"]') as LyraButton).shadowRoot!.querySelector(
+        '[part="base"]',
+      ) as HTMLElement;
+      const approveBase = (
+        el.shadowRoot!.querySelector('[part="approve-button"]') as LyraButton
+      ).shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+      expect(getComputedStyle(denyBase).letterSpacing).to.equal('3px');
+      expect(getComputedStyle(approveBase).letterSpacing).to.equal('5px');
+    } finally {
+      sheet.remove();
+    }
+  });
+});
+
+describe('async pending decisions', () => {
+  it('lr-approve/lr-deny are cancelable; preventDefault() sets pending instead of finalizing decision', async () => {
+    const approveEl = (await fixture(html`<lr-confirm-bar .args=${{ x: 1 }}></lr-confirm-bar>`)) as LyraConfirmBar;
+    approveEl.addEventListener('lr-approve', (e) => e.preventDefault());
+    (approveEl.shadowRoot!.querySelector('[part="approve-button"]') as LyraButton).click();
+    await approveEl.updateComplete;
+    expect(approveEl.decision).to.equal(null);
+    expect(approveEl.pending).to.equal('approved');
+    expect(approveEl.hasAttribute('pending')).to.be.true;
+    expect(approveEl.shadowRoot!.querySelector('[part="approve-button"]')).to.exist;
+    expect(approveEl.shadowRoot!.querySelector('[part="deny-button"]')).to.exist;
+
+    const denyEl = (await fixture(html`<lr-confirm-bar></lr-confirm-bar>`)) as LyraConfirmBar;
+    denyEl.addEventListener('lr-deny', (e) => e.preventDefault());
+    (denyEl.shadowRoot!.querySelector('[part="deny-button"]') as LyraButton).click();
+    await denyEl.updateComplete;
+    expect(denyEl.decision).to.equal(null);
+    expect(denyEl.pending).to.equal('denied');
+  });
+
+  it('shows loading on the pending button and disables the other one', async () => {
+    const el = (await fixture(html`<lr-confirm-bar></lr-confirm-bar>`)) as LyraConfirmBar;
+    el.addEventListener('lr-approve', (e) => e.preventDefault());
+    (el.shadowRoot!.querySelector('[part="approve-button"]') as LyraButton).click();
+    await el.updateComplete;
+    const deny = el.shadowRoot!.querySelector('[part="deny-button"]') as LyraButton;
+    const approve = el.shadowRoot!.querySelector('[part="approve-button"]') as LyraButton;
+    expect(approve.loading).to.be.true;
+    expect(approve.disabled).to.be.false;
+    expect(deny.loading).to.be.false;
+    expect(deny.disabled).to.be.true;
+  });
+
+  it('finalizes normally when the host sets .decision after preventDefault()', async () => {
+    const el = (await fixture(html`<lr-confirm-bar></lr-confirm-bar>`)) as LyraConfirmBar;
+    el.addEventListener('lr-approve', (e) => e.preventDefault());
+    (el.shadowRoot!.querySelector('[part="approve-button"]') as LyraButton).click();
+    await el.updateComplete;
+    expect(el.pending).to.equal('approved');
+
+    el.decision = 'approved';
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('[part="approve-button"]')).to.not.exist;
+    expect(el.shadowRoot!.querySelector('[part="deny-button"]')).to.not.exist;
+    expect(el.shadowRoot!.querySelector('[part="status"]')!.textContent!.trim()).to.equal('Approved');
+  });
+
+  it('bounces back to the undecided, both-buttons-enabled state when pending is reset to null', async () => {
+    const el = (await fixture(html`<lr-confirm-bar></lr-confirm-bar>`)) as LyraConfirmBar;
+    el.addEventListener('lr-deny', (e) => e.preventDefault());
+    (el.shadowRoot!.querySelector('[part="deny-button"]') as LyraButton).click();
+    await el.updateComplete;
+    expect(el.pending).to.equal('denied');
+
+    el.pending = null;
+    await el.updateComplete;
+    const deny = el.shadowRoot!.querySelector('[part="deny-button"]') as LyraButton;
+    const approve = el.shadowRoot!.querySelector('[part="approve-button"]') as LyraButton;
+    expect(deny.loading).to.be.false;
+    expect(deny.disabled).to.be.false;
+    expect(approve.loading).to.be.false;
+    expect(approve.disabled).to.be.false;
+    expect(el.decision).to.equal(null);
+  });
+
+  it('defaults pending to null and leaves the synchronous decide() path unchanged when never touched', async () => {
+    const el = (await fixture(html`<lr-confirm-bar></lr-confirm-bar>`)) as LyraConfirmBar;
+    expect(el.pending).to.equal(null);
+    const approvePromise = oneEvent(el, 'lr-approve');
+    (el.shadowRoot!.querySelector('[part="approve-button"]') as LyraButton).click();
+    await approvePromise;
+    await el.updateComplete;
+    expect(el.decision).to.equal('approved');
+    expect(el.pending).to.equal(null);
+  });
+
+  it('is accessible while a decision is pending (loading + disabled lr-button still expose a valid name/state)', async () => {
+    const el = (await fixture(html`<lr-confirm-bar tool-name="run_shell"></lr-confirm-bar>`)) as LyraConfirmBar;
+    el.addEventListener('lr-approve', (e) => e.preventDefault());
+    (el.shadowRoot!.querySelector('[part="approve-button"]') as LyraButton).click();
+    await el.updateComplete;
+    // Prove the pending state actually landed before checking accessibility -- otherwise this
+    // would pass vacuously against the ordinary undecided render.
+    expect(el.pending).to.equal('approved');
+    expect((el.shadowRoot!.querySelector('[part="approve-button"]') as LyraButton).loading).to.be.true;
+    await expect(el).to.be.accessible();
+  });
 });

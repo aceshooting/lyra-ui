@@ -39,35 +39,16 @@ export const styles = css`
     justify-content: flex-end;
     gap: var(--lr-space-s);
   }
-  [part='deny-button'],
-  [part='approve-button'] {
-    padding-inline: var(--lr-space-m);
-    padding-block: var(--lr-space-xs);
-    border: var(--lr-border-width-thin) solid var(--lr-color-border);
-    border-radius: var(--lr-radius);
-    background: var(--lr-color-surface);
-    color: var(--lr-color-text);
-    font: inherit;
-    cursor: pointer;
-  }
-  [part='deny-button']:hover,
-  [part='approve-button']:hover {
-    filter: brightness(var(--lr-hover-brightness));
-  }
-  [part='approve-button'] {
-    border-color: var(--lr-color-brand);
-    background: var(--lr-color-brand);
-    color: var(--lr-color-surface);
-  }
-  :host([tone='danger']) [part='approve-button'] {
-    border-color: var(--lr-color-danger);
-    background: var(--lr-color-danger);
-  }
-  [part='deny-button']:focus-visible,
-  [part='approve-button']:focus-visible {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
-    outline-offset: var(--lr-focus-ring-offset);
-  }
+  /* deny-button/approve-button are <lr-button> hosts (see confirm-bar.class.ts's render()) --
+     their own padding/border/background/color/hover/focus-visible/disabled chrome lives entirely
+     inside lr-button's own styles.ts, driven by its "variant" property. A rule declared here
+     against [part='deny-button']/[part='approve-button'] directly would either double up a visual
+     effect lr-button already applies internally (hover brightness, disabled opacity both compound
+     when applied on both the outer host and the inner native button) or be silently dead
+     (:focus-visible never matches this outer host -- real DOM focus lands on the native <button>
+     nested one shadow level down, inside lr-button's own shadow root, never on the host itself).
+     Only cross-cutting FLEX-ITEM sizing concerns belong here -- the @container rule below is
+     exactly that, and is unaffected by what part="deny-button"/"approve-button" resolves to. */
   [part='status'] {
     display: flex;
     align-items: center;

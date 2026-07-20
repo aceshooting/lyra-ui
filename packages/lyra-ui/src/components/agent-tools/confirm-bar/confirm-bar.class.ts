@@ -5,6 +5,7 @@ import { nextId } from '../../../internal/a11y.js';
 import '../../layout/details/details.class.js';
 import '../../utility/json-viewer/json-viewer.class.js';
 import '../../utility/live-region/live-region.class.js';
+import '../../forms/button/button.class.js';
 import type { LyraLiveRegion } from '../../utility/live-region/live-region.class.js';
 import { styles } from './confirm-bar.styles.js';
 
@@ -58,14 +59,26 @@ function deniedIcon(): SVGTemplateResult {
  * matters); no blocking/modality guarantee (a user can scroll past); no decision persistence or
  * "remember choice" logic (the `footer` slot + host own that).
  *
+ * Deny/Approve are `<lr-button>`s (`variant="neutral"`/`"brand"`, `"danger"` under `tone="danger"`),
+ * re-exporting `lr-button`'s own `base`/`label`/`start`/`end`/`spinner` parts under
+ * `{deny,approve}-button-{base,label,start,end,spinner}` so `--lr-button-*` theming and a consumer's
+ * existing `lr-button` style fragments reach them like every other button in an app. An
+ * `lr-approve`/`lr-deny` listener can call `preventDefault()` to keep the decision open while its own
+ * async work (e.g. a network call) is in flight: `pending` is set to the decision being made, showing
+ * `loading` on that button and `disabled` on the other, until the host finalizes by setting `.decision`
+ * or bounces back by clearing `.pending` to `null`.
+ *
  * @customElement lr-confirm-bar
  * @slot - Supplementary body content between the heading and the actions (e.g. a `lr-diff-view` of
  *   the proposed change).
  * @slot footer - Extra content at the start of the action row (e.g. a "remember this choice"
  *   checkbox), mirroring `lr-tool-approval-dialog`'s own `footer` slot.
  * @event lr-approve - `detail: { args }` (the `args` prop as-is; no editing in the bar) — identical
- *   shape to `lr-tool-approval-dialog`.
- * @event lr-deny - No detail, identical to the dialog.
+ *   shape to `lr-tool-approval-dialog`. Cancelable: a listener calling `preventDefault()` sets
+ *   `pending` to `'approved'` instead of finalizing synchronously; set `.decision` (or clear
+ *   `.pending` back to `null`) once your async work settles.
+ * @event lr-deny - No detail, identical to the dialog. Cancelable, same `pending` mechanism as
+ *   `lr-approve`.
  * @csspart base - The root (`role="group"`).
  * @csspart heading - The heading.
  * @csspart tool-name - The tool-name span within the heading. Only rendered when `heading` is unset.
@@ -73,8 +86,23 @@ function deniedIcon(): SVGTemplateResult {
  * @csspart args - The `lr-details` + `lr-json-viewer` wrapper. Only rendered when `args` is
  *   defined.
  * @csspart footer - The action row.
- * @csspart deny-button - Named identically to the dialog's part.
- * @csspart approve-button - Named identically to the dialog's part.
+ * @csspart deny-button - The built-in Deny `<lr-button>`. Named identically to the dialog's part.
+ * @csspart deny-button-base - Forwarded from the internal Deny `<lr-button>`'s own `base` part.
+ * @csspart deny-button-label - Forwarded from the internal Deny `<lr-button>`'s own `label` part.
+ * @csspart deny-button-start - Forwarded from the internal Deny `<lr-button>`'s own `start` part.
+ * @csspart deny-button-end - Forwarded from the internal Deny `<lr-button>`'s own `end` part.
+ * @csspart deny-button-spinner - Forwarded from the internal Deny `<lr-button>`'s own `spinner`
+ *   part, present only while `pending` is `'denied'`.
+ * @csspart approve-button - The built-in Approve `<lr-button>`. Named identically to the dialog's
+ *   part.
+ * @csspart approve-button-base - Forwarded from the internal Approve `<lr-button>`'s own `base` part.
+ * @csspart approve-button-label - Forwarded from the internal Approve `<lr-button>`'s own `label`
+ *   part.
+ * @csspart approve-button-start - Forwarded from the internal Approve `<lr-button>`'s own `start`
+ *   part.
+ * @csspart approve-button-end - Forwarded from the internal Approve `<lr-button>`'s own `end` part.
+ * @csspart approve-button-spinner - Forwarded from the internal Approve `<lr-button>`'s own
+ *   `spinner` part, present only while `pending` is `'approved'`.
  * @csspart status - The decided-state text. Always present in the DOM (`tabindex="-1"`) so focus has
  *   a stable, synchronous landing spot on activation.
  * @cssprop [--lr-confirm-bar-compact-padding=0] - Padding of `[part='base']` while `compact`.
@@ -103,6 +131,11 @@ export class LyraConfirmBar extends LyraElement<LyraConfirmBarEventMap> {
   /** Decided state. Set by the component on activation *and* host-writable (an externally-resolved
    *  decision -- timeout, another reviewer -- renders identically but emits nothing). */
   @property({ reflect: true }) decision: ConfirmBarDecision = null;
+
+  /** Which decision is awaiting host resolution, while an lr-approve/lr-deny listener has called
+   *  preventDefault(). Host-writable: set back to null to bounce back to the undecided state (e.g.
+   *  on failure, so the user can retry), or set `decision` to finalize. */
+  @property({ reflect: true }) pending: ConfirmBarDecision = null;
 
   /** Token-mapped emphasis for destructive proposals. */
   @property({ reflect: true }) tone: ConfirmBarTone = 'neutral';
@@ -139,16 +172,19 @@ export class LyraConfirmBar extends LyraElement<LyraConfirmBarEventMap> {
   };
 
   private decide(next: 'approved' | 'denied'): void {
-    if (this.decision != null) return;
-    // Synchronous, before the emit/property-set below trigger the re-render that removes the
-    // Deny/Approve buttons -- [part="status"] is always present in the DOM, so this never leaves a
-    // gap where focus would otherwise fall back to <body>.
-    this.statusEl?.focus();
-    if (next === 'approved') {
-      this.emit<{ args: unknown }>('lr-approve', { args: this.args });
-    } else {
-      this.emit('lr-deny');
+    if (this.decision != null || this.pending != null) return;
+    const eventName = next === 'approved' ? 'lr-approve' : 'lr-deny';
+    const detail = next === 'approved' ? { args: this.args } : undefined;
+    const event = this.emit(eventName, detail, { cancelable: true });
+    if (event.defaultPrevented) {
+      this.pending = next;
+      return;
     }
+    // Synchronous, before the property set below triggers the re-render that removes the
+    // Deny/Approve buttons -- [part="status"] is always present in the DOM, so this never leaves a
+    // gap where focus would otherwise fall back to <body>. Only reached on the synchronous
+    // (non-pending) path -- an externally-set `decision` already skips this too, unchanged.
+    this.statusEl?.focus();
     this.decision = next;
   }
 
@@ -186,12 +222,24 @@ export class LyraConfirmBar extends LyraElement<LyraConfirmBarEventMap> {
           ${decided
             ? nothing
             : html`
-                <button part="deny-button" type="button" @click=${() => this.decide('denied')}>
-                  ${this.localize('deny')}
-                </button>
-                <button part="approve-button" type="button" @click=${() => this.decide('approved')}>
-                  ${this.localize('approve')}
-                </button>
+                <lr-button
+                  part="deny-button"
+                  variant="neutral"
+                  type="button"
+                  ?loading=${this.pending === 'denied'}
+                  ?disabled=${this.pending === 'approved'}
+                  exportparts="base:deny-button-base, label:deny-button-label, start:deny-button-start, end:deny-button-end, spinner:deny-button-spinner"
+                  @click=${() => this.decide('denied')}
+                >${this.localize('deny')}</lr-button>
+                <lr-button
+                  part="approve-button"
+                  variant=${this.tone === 'danger' ? 'danger' : 'brand'}
+                  type="button"
+                  ?loading=${this.pending === 'approved'}
+                  ?disabled=${this.pending === 'denied'}
+                  exportparts="base:approve-button-base, label:approve-button-label, start:approve-button-start, end:approve-button-end, spinner:approve-button-spinner"
+                  @click=${() => this.decide('approved')}
+                >${this.localize('approve')}</lr-button>
               `}
         </div>
         <div part="status" tabindex="-1">
