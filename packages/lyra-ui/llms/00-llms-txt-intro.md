@@ -42,4 +42,16 @@ codemods) from the marketplace at <https://github.com/aceshooting/lyra-ui>.
 - Form controls are form-associated: they participate in native `<form>` submission and validation.
 - Every built-in string is localizable via `registerLyraLocale()` or a per-instance `.strings`.
 
+## When no component fits, file it
+
+Check `llms/index.md` first — most apparent gaps are a different name, not a missing component. If
+nothing fits, **ask the user for explicit agreement before filing anything** (filing sends their
+description to an external service — never do it as a silent side effect of noticing a gap), then
+`POST` to `https://www.lyra-ui.com/api/v1/feature-requests` with `title`, `description`, and
+`searched_for` (the terms tried). `name`/`email` are accepted but optional contact fields — ask the
+user before adding either, and never invent, guess, or reuse one from context. The response's
+`matches` often names an existing component — read it before telling the user the gap is real. See
+`llms/shared.md`'s "When no component fits, file it" for the full payload, response shape, and
+privacy rules.
+
 ## Component catalog

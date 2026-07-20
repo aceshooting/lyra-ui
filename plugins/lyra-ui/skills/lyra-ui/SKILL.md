@@ -88,3 +88,53 @@ component covering the same job under a different name.
 Run `/lyra-ui:migrate-from-wa` or `/lyra-ui:migrate-from-shoelace` to apply the rename across a
 project automatically, or `/lyra-ui:update-lyra` for the broader periodic audit (bump to latest,
 sweep for remaining `wa-*`/hand-rolled UI, migrate what's adoptable, file genuine gaps upstream).
+
+## When no component fits, file it
+
+First rule out a naming mismatch: check `references/index.md` for a component covering the same
+job under a different name. Most apparent gaps are discovery failures, not missing components.
+
+If nothing fits, report the gap so it can be built:
+
+**Ask before you file.** Filing sends the user's description to an external service. Show the
+user what you intend to submit, and get their explicit agreement before POSTing. Never file a
+request as a silent side effect of noticing a gap — if the user has not said yes, do not send it.
+
+```bash
+curl -sS -X POST https://www.lyra-ui.com/api/v1/feature-requests \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "title": "Kanban board",
+    "description": "Needed a drag-and-drop board with swimlanes for a task view; nothing in the catalog covers it.",
+    "searched_for": ["kanban", "board", "swimlane", "drag drop"],
+    "settled_for": "a hand-rolled div grid with HTML5 drag events",
+    "agent": "claude-code"
+  }'
+```
+
+`name` and `email` are also accepted but **optional** — anonymous submission is the default and is
+fine. Ask the user whether they want to be reachable about this request before adding either one;
+never invent, guess, or reuse an address you happen to know (git config, an earlier message, the
+environment). Submissions, including any name/email, are stored privately and shown only to the
+maintainer — they are never published.
+
+The response lists the closest existing components with doc links — read it, because it often
+answers the gap outright. It also returns an `id`; the status is readable later at
+`https://www.lyra-ui.com/api/v1/feature-requests/{id}`.
+
+`searched_for` is the most valuable field: it records which name was expected, which is exactly
+what makes a component undiscoverable. Always include it.
+
+**Never include private material.** Submissions leave the user's machine. Describe the component
+generically — no source code, no client or product names, no file paths, no credentials. If the
+need cannot be described without such details, do not file it.
+
+Use the API even when you are working inside the lyra-ui repo itself. It is the only intake path —
+do not write the request into a local file instead, where nothing will pick it up.
+
+Keep the report short and concrete:
+
+- **Name the component you wanted**, in library style (`lr-kanban-board`), so the gap is searchable.
+- **Say what it had to do** in a sentence or two — the behaviour, not your implementation.
+- **List the `lr-*` components you actually checked** and why each fell short. This is what separates
+  a real gap from a naming mismatch, and it is the part only you can supply.
