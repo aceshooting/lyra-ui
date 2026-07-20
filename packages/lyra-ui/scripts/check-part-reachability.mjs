@@ -51,11 +51,11 @@ const internalRoot = path.join(packageDir, 'src', 'internal');
 /** The virtualizing element whose shadow root swallows `renderItem` output. */
 const HOST_TAG = 'lr-virtual-list';
 /**
- * Bindings whose callback output is committed inside HOST_TAG's shadow root. `renderItem` is the
- * only such property today; `renderGroup` is listed so a future row-callback of that name is
- * covered from the moment it exists.
+ * Bindings whose callback output is committed inside HOST_TAG's shadow root. `renderItem` and
+ * `renderStickyGroup` are real properties today; `renderGroup` is listed so a future row-callback
+ * of that name is covered from the moment it exists.
  */
-const CALLBACK_PROPERTIES = ['renderItem', 'renderGroup'];
+const CALLBACK_PROPERTIES = ['renderItem', 'renderGroup', 'renderStickyGroup'];
 
 // ---------------------------------------------------------------------------
 // Shared scanning helpers
@@ -268,7 +268,9 @@ function bindingExpression(source, open) {
 // Rule 1: cross-root-part
 // ---------------------------------------------------------------------------
 
-const HOLE = ' ';
+// Written as an escape, not a literal NUL byte: a raw NUL makes grep and other tooling
+// treat this whole source file as binary.
+const HOLE = '\u0000';
 
 /** Adds each whitespace-separated word of `value`, skipping any that a `${}` hole bled into. */
 function addWords(value, names) {
