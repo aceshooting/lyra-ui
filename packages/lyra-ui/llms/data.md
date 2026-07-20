@@ -85,6 +85,19 @@ KPI/stat card — value + unit + label + optional icon/trend/caption.
   hides `[part="unit"]`, for rendering a loading/status message in place of a numeric value
 - `compact: boolean = false` (reflected) — tighter card padding; same convention as `lr-empty`'s and
   `lr-widget`'s `compact`
+- `appearance: 'card'|'plain' = 'card'` (reflected) — visual chrome, mirroring `lr-card`'s
+  `appearance` vocabulary. `'card'` keeps the bordered, filled, padded box that stretches to fill its
+  parent; `'plain'` removes the border, background, padding, corner radius **and** the
+  `block-size: 100%` stretch, so the stat can sit inline in prose, a toolbar, or a table cell.
+  `plain` wins over `compact` when both are set (there is no padding left to tighten), and it drops
+  `emphasis`'s accent edge — that edge is card chrome — while `emphasis`'s brand value tint still
+  applies. A `plain` stat with a safe `href` swaps the card's border-color/lift hover affordance
+  (invisible with no border) for an underline on `[part="value"]`; the `:focus-visible` ring is
+  unchanged
+- `orientation: 'vertical'|'horizontal' = 'vertical'` (reflected) — layout axis. `'vertical'` stacks
+  label, value, trend, sub and caption. `'horizontal'` lays label, value+unit, trend, sub and caption
+  out on a single wrapping baseline row; `[part="spark"]` and `[part="rows"]` have no sensible place
+  on a text baseline and stay stacked on their own full-width line beneath that row
 
 **Events:** none.
 
@@ -94,7 +107,9 @@ slot="spark">`, or other compact trend visual — `lr-stat` only reserves the sl
 render one itself), `sub` (rich sub-line content — overrides the `sub` attribute when slotted content
 is provided)
 
-**CSS parts:** `base` (a `<div>`, or an `<a>` for a safe `href`), `icon`, `label`, `value-row`, `value`, `unit`, `trend`, `sub`, `spark`,
+**CSS parts:** `base` (a `<div>`, or an `<a>` for a safe `href`), `icon`, `label` (carries `hidden`,
+and is collapsed, whenever `label` is empty — a label-less stat leaves no blank line above the
+value), `value-row`, `value`, `unit`, `trend`, `sub`, `spark`,
 `caption`, `rows`, `row`, `row-label`, `row-value` — `[part="value"]` gets `aria-labelledby` pairing
 it with `[part="label"]`'s generated id whenever `label` is non-empty (so tabbing straight to the
 `exactValue`-focusable value still announces e.g. "Revenue $1.2K", not just the bare value); each
@@ -158,6 +173,9 @@ own "consumer computes/renders" contract rather than assuming addition.
   background a `cell()`-returned inner element can't paint into the cell's own padding — omit it for
   no per-cell style override (the default, unchanged output); `editable` enables double-click
   editing, `editValue` supplies the editor value, and `editType` selects `text` or `number`
+  `cellTitle(row) => string | undefined` is the `title` analogue of `cellStyle`, applied directly to
+  the generated `<td>` — e.g. the untruncated text behind an ellipsized cell, or a formatted
+  timestamp behind a relative one;
   `resizable` adds a focusable separator `[part='resize-handle']` and emits `lr-column-resize` with
   the live width in CSS pixels. Drag it, or use logical ArrowLeft/ArrowRight for 10px steps (mirrored
   under RTL), Shift+Arrow for 50px steps, Home for the minimum, and End for an explicit pixel
@@ -173,6 +191,13 @@ own "consumer computes/renders" contract rather than assuming addition.
   renders exactly when `columnsHidden` is true — no longer whenever any column merely *declares* a
   `priority` regardless of whether anything is actually hidden
 - `rows: T[] = []` (attribute: false)
+- `layout: 'auto'|'fixed' = 'auto'` (reflected) — a **floor** on the `<table>`'s `table-layout`, not
+  an override. `'fixed'` forces the fixed algorithm even when no column declares a `width`, so every
+  column shares the available width evenly and long cell content is clipped/wrapped instead of
+  stretching its column. The default `'auto'` still *resolves* to `fixed` whenever a column declares
+  a `width`, a column has been drag-resized, or a resize gesture is in flight — column resizing does
+  not work under `table-layout: auto`, so `'auto'` can never mean "never fixed". See the gotchas for
+  the two consequences of the fixed algorithm worth knowing before opting in
 - `sortKey: string = ''` (attribute `sort-key`)
 - `sortDir: 'asc'|'desc' = 'asc'` (attribute `sort-dir`)
 - `rowKey?: (row: T) => string | number` (attribute: false) — derives each row's stable identity for
@@ -198,7 +223,20 @@ own "consumer computes/renders" contract rather than assuming addition.
   converter would otherwise treat any attribute value, including the literal string `"false"`, as
   `true`).
 - `loading: boolean = false` (attribute `loading`, reflected) and `loadingLabel: string = ''`
-  (attribute `loading-label`) — renders a busy spinner and suppresses the grid while loading
+  (attribute `loading-label`) — renders busy chrome and suppresses the real rows while loading
+- `loadingAppearance: 'spinner'|'skeleton' = 'spinner'` (attribute `loading-appearance`, reflected) —
+  how `loading` renders. `'spinner'` replaces the whole grid with an indeterminate spinner.
+  `'skeleton'` instead renders the real table — the same `<colgroup>` (declared *and* drag-resized
+  widths included), the same `<thead>`, the filter field and the pagination footer — and fills
+  `<tbody>` with placeholder rows, so a cold load sketches the grid's shape rather than collapsing to
+  a spinner and reflowing when the rows land. Kept as a separate property rather than widening
+  `loading` to a string union, so `?loading=${…}` bindings and `el.loading === true` checks keep
+  working
+- `skeletonRows: number = 0` (attribute `skeleton-rows`) — placeholder row count under
+  `loadingAppearance="skeleton"`. `0` derives the count instead: the normalized `pageSize` when
+  pagination is on (capped at 20, so a large page size can't emit thousands of placeholder cells),
+  otherwise 3. Any positive value is used verbatim and is *not* capped. Ignored entirely under the
+  default spinner appearance
 - `pageSize: number = 0` (attribute `page-size`) — positive values enable controlled pagination;
   zero disables the pagination footer
 - `page: number = 1` (attribute `page`, reflected) — controlled current page
@@ -222,6 +260,13 @@ own "consumer computes/renders" contract rather than assuming addition.
 - `emptyDescription: string = ''` (attribute `empty-description`)
 - `noColumnsHeading: string = 'No columns configured'` (attribute `no-columns-heading`)
 - `noColumnsDescription: string = ''` (attribute `no-columns-description`)
+- `emptyCompact?: boolean` (attribute `empty-compact`) — overrides the built-in `[part='empty']`
+  state's `compact` rendering. Tri-state: leave it `undefined` (the default) to keep each empty
+  branch's own built-in default — the two shadow-root-level branches (no columns, no rows) render
+  spacious, while the filtered-to-zero branch, which sits inside `[part='base']` alongside the filter
+  field, renders compact. `empty-compact="false"` forces the spacious rendering everywhere, and is
+  parsed as `false` rather than as mere attribute presence. Has no effect once the `empty` slot is
+  filled
 - `revealColumnsLabel: string = 'Show all columns'` (attribute `reveal-columns-label` — the
   reveal-button's label while `priority`-hidden columns are hidden)
 - `hideColumnsLabel: string = 'Show fewer columns'` (attribute `hide-columns-label` — the same
@@ -254,7 +299,12 @@ columns, and `lr-column-resize` (`detail: { key, width }`) on every pointer or k
 The internal filter/cell-editor native inputs' `focus` and `blur` are also re-dispatched from the
 host as bubbling, composed events (the native ones are neither).
 
-**Slots:** none — content comes entirely from `columns`/`rows`.
+**Slots:** `empty` — replaces the built-in empty state on the two *data*-empty branches (no rows at
+all, and filtered/paginated down to zero). Left unfilled, the built-in `[part='empty']` `<lr-empty>`
+renders as this slot's fallback content. The no-columns branch is deliberately **not**
+slot-replaceable: it reports a configuration problem (`noColumnsHeading`), not "this query returned
+nothing", and one slot covering all three would collapse that distinction. Everything else comes
+from `columns`/`rows`.
 
 **CSS parts:** `base`, `table`, `head`, `header-cell`, `row`, `cell`, `more-button`, `sort-icon` (a
 chevron indicator shown on the active sortable header, rotated per `sortDir`), `reveal-columns-button`
@@ -263,9 +313,20 @@ column defines `footer`), `footer-row`, `footer-cell`, `row-total-cell` (each bo
 `<td>` holding `rowTotal(row)`, rendered only when `rowTotal` is set — the corresponding footer-row
 cell, holding `grandTotal`, is a `footer-cell` instead, matching every other footer cell),
 `expand-toggle-cell`, `row-expand-toggle`,
-`row-expand-icon`, `expanded-row`, `expanded-cell`, `filter-label`, `filter`, `loading`, and
+`row-expand-icon`, `expanded-row`, `expanded-cell`, `filter-label`, `filter`, `loading` (under
+`loadingAppearance="spinner"` the visible block holding the spinner; under `"skeleton"` the
+visually-hidden `role="status"` node, since the placeholder rows are the visible affordance),
+`skeleton` (each `<lr-skeleton>` placeholder inside a skeleton-mode body cell — the placeholder rows
+and cells reuse the ordinary `row`/`cell`/`row-total-cell` parts, which is exactly what keeps them
+geometrically identical to real rows, so `skeleton` is the part to target for the placeholder's own
+look: `::part(skeleton) { --lr-skeleton-h: 2em; }`), and
 `pagination`, `cell-editor`, `group-row`, `group-cell`, and `resize-handle` (the focusable column
-separator)
+separator). The built-in empty state is addressable rather than fixed: `empty` is the `<lr-empty>`
+host in all three empty states, and it re-exports that element's own inner parts as `empty-base`,
+`empty-icon`, `empty-heading`, `empty-description` and `empty-actions`. Note that the no-columns and
+no-rows states return the empty element as the shadow root's own root, with no `[part='base']`
+wrapper around it — `::part(base)` does not apply in those two states, only in the filtered-to-zero
+one — and that `empty` disappears entirely once the `empty` slot is filled.
 
 **Themeable custom properties:** `--lr-table-max-height` (default `none`; controls the scrollable
 body's `max-block-size`). `--lr-table-heat-tint-lo` (default `var(--lr-color-brand-quiet)`) and
@@ -273,6 +334,16 @@ body's `max-block-size`). `--lr-table-heat-tint-lo` (default `var(--lr-color-bra
 for heat-tint mode's per-cell background, consulted only on columns/rows that define `heatValue`;
 `--lr-table-resize-min-width` (default `var(--lr-size-3rem)`) and
 `--lr-table-resize-handle-opacity` (default `0.12`) control resizable-column behavior.
+`--lr-table-row-selected-bg` (default `var(--lr-color-brand-quiet)`) — the background of a row whose
+`aria-selected` is `true`. Like every state-scoped custom property in this library it is an inline
+`var()` fallback at its point of use and is **not** declared on `:host`, so it can be set on the
+element *or on any ancestor* and still reach the rule that reads it. It exists because Shadow Parts
+forbids an attribute selector after `::part()` — `::part(row)[aria-selected='true']` is invalid CSS —
+so the only prior lever for restyling the selected row was overriding the library-wide
+`--lr-color-brand-quiet` token, which repaints everything else reading it.
+`--lr-table-sticky-offset` (default `0`) is measured and written inline per column by the component
+so multiple `sticky` columns stack instead of overlapping; it is a read-out, not a knob you set.
+`--lr-table-heat-t` is likewise component-written (each `[data-heat]` cell's position on the ramp).
 
 **Optional peer deps:** none.
 
@@ -312,6 +383,26 @@ for heat-tint mode's per-cell background, consulted only on columns/rows that de
   [role="slider"]`, **or any custom element** (any tag name containing a hyphen — e.g. a
   `<lr-select>`/`<lr-combobox>` rendered inside a `cell()`), are left alone by the table's own
   delegated `click`/`keydown` handlers instead of triggering `lr-sort`/`lr-row-click`.
+- `layout="fixed"` (and any `'auto'` that resolves to fixed) carries two consequences of the CSS
+  fixed algorithm. With no declared widths the **first** row — the header row included — determines
+  every column's width, so revealing a `priority`-hidden column via
+  `[part='reveal-columns-button']` re-measures and changes *all* of them, not just the revealed one.
+  And `columns[].minWidth`/`maxWidth` are silently ignored by `table-layout: fixed`; declare `width`
+  instead when a specific column needs a specific size.
+- skeleton mode keeps geometry stable only when the browser isn't sizing columns from cell content.
+  Under the default `table-layout: auto`, placeholder cells have no intrinsic width, so the columns
+  re-measure when real content arrives — exactly as they do between any two different data sets. For
+  pixel-identical widths across the load, declare `columns[].width` or set `layout="fixed"`. Either
+  loading appearance keeps exactly one `role="status"` live region announcing the state: every
+  placeholder opts out of `<lr-skeleton>`'s own announcement, so a skeleton table never announces
+  once per placeholder row.
+- `columns[].cellTitle` returning an empty string **or** `undefined` omits the `title` attribute
+  entirely rather than rendering `title=""` — an empty `title` would suppress an ancestor element's
+  own tooltip. The attribute is also suppressed while that cell is in inline-edit mode, so the
+  tooltip can't shadow the editor. Accessibility caveat: some screen readers announce a `<td title>`
+  as the cell's accessible *name*, replacing the cell's content rather than supplementing it (the
+  same caveat `lr-stat`'s `exactValue` carries). Use it for a longer form of what the cell already
+  shows, never for information that exists nowhere else.
 
 ---
 
@@ -362,8 +453,11 @@ The internal page input's `focus` and `blur` are also bridged as bubbling, compo
 `page-input`, `page-count`, `next-button`, `next-icon`, `live-region`.
 
 **Themeable custom properties:** `--lr-pagination-control-size` and
-`--lr-pagination-font-size` (both default from `size`), plus shared color, spacing, border, radius,
-disabled-opacity, and focus-ring tokens.
+`--lr-pagination-font-size` (both default from `size`), `--lr-pagination-control-padding` (default
+`var(--lr-space-xs)`) — inner padding of the previous/next buttons and the page input, deliberately
+uniform across every `size` tier because the control's outer footprint is already fixed by
+`--lr-pagination-control-size`, so this only adjusts the icon/digit inset — plus shared color,
+spacing, border, radius, disabled-opacity, and focus-ring tokens.
 
 **Optional peer deps:** none.
 
@@ -575,6 +669,16 @@ focus; it continues to emit `lr-cell-click` and leaves selection state consumer-
   measured `clientWidth` on every draw/resize instead of the fixed `cell-size`, so the grid actually
   fills the available width; now applies to calendar mode as well as matrix mode — see gotchas for
   the default, non-`fit-to-width` behavior)
+- `maxCellSize?: number` (attribute `max-cell-size`) — ceiling, in CSS px, on the cell size
+  `fitToWidth` derives from the host width, in **both** modes. Exists because `fitToWidth` divides
+  the *whole* host width across the grid, so a 5-week calendar or a 3-column matrix in a wide pane
+  produces enormous blocks; capping them keeps a cell a cell
+- `minCellSize?: number` (attribute `min-cell-size`) — the mirror floor, in CSS px, so a year-long
+  calendar in a narrow pane keeps legible, hit-testable cells and overflows its host instead of
+  collapsing to hairlines. It can only *raise* the built-in `4`px floor, never lower it: a value
+  below `4` normalizes to `4`. When both clamps are set and `maxCellSize < minCellSize`, the ceiling
+  wins. For both: a non-finite value, or an empty attribute, means unset rather than `0`, and unset
+  (the default) reproduces the unclamped fit-to-width behavior exactly
 - `valueLabel: string = 'value'` (attribute `value-label`)
 - `scale: 'linear' | 'sqrt' = 'linear'` — governs both modes: in matrix mode, `'sqrt'` compresses the
   color ramp via `sqrtStep()` instead of mapping linearly; in calendar mode, the default `'linear'`
@@ -608,7 +712,12 @@ focus; it continues to emit `lr-cell-click` and leaves selection state consumer-
   its low DOM footprint.
 - `cellText?: (pos: MatrixCellPos | CalendarCellPos, value: number) => string` (attribute: false) —
   formats the per-cell hover tooltip and keyboard live-region announcement text; receives the cell
-  position (`{ row, col }` in matrix mode, `{ week, weekday }` in calendar mode) and its value.
+  position (`MatrixCellPos { row, col }` in matrix mode, `CalendarCellPos { week, weekday, date }` in
+  calendar mode) and its value. `CalendarCellPos.date` is a **required** ISO `yyyy-mm-dd` string,
+  present for every grid position — including a sparse gap position with no matching entry in `days`
+  at all, which still sits on a real calendar day (that case simply reports the `-1` "no data" value
+  alongside it). It lets a callback key off the date without re-deriving the grid's own
+  anchor-week arithmetic; `MatrixCellPos` is unchanged, and so is `lr-cell-click`'s detail.
   Unset (the default) falls back to the built-in English "Row X, Col Y: value" (matrix) / "Jan 15:
   value" — short month + day, **not** a weekday abbreviation (calendar) — template. Additive, not
   breaking.
@@ -655,10 +764,14 @@ focus; it continues to emit `lr-cell-click` and leaves selection state consumer-
   interpolate continuously into `colorSteps.length` buckets instead. Unset (the default, or fewer
   than 2 entries) keeps today's 2-endpoint interpolation exactly.
 - `legendStops?: HeatmapLegendStop[]` (attribute: false) — `HeatmapLegendStop { value: number;
-  color: string; label?: string }`: a discrete legend key rendered **instead of** the
+  color?: string; label?: string }`: a discrete legend key rendered **instead of** the
   `--lr-heatmap-scale-lo`/`-hi` gradient bar and its `[part="legend-lo"]`/`[part="legend-hi"]`
   endpoint labels — one `[part="legend-stop"]` per entry, in array order, each a
   `[part="legend-swatch"]` filled with that entry's `color` plus a `[part="legend-stop-label"]`.
+  `color` is optional: omit it (or pass an empty string) for a **caption-only** stop, which renders
+  its `[part="legend-stop-label"]` alone with no `[part="legend-swatch"]` element in the DOM at all —
+  so a leading "0" or trailing "more" caption around a run of colored stops doesn't leave an empty
+  swatch box in the row.
   A stop's label defaults to the component's own locale-aware numeric formatting of `value`, so an
   explicit `label` is only needed when the number isn't the right caption ("none", "≥ 90%"). Exists
   for the consumer who supplies `cellColor`: because that callback overrides a cell's color
@@ -684,7 +797,9 @@ button), `tooltip` (hover tooltip, positioned over the hovered cell),
 `live-region` (visually-hidden `role="status" aria-live="polite"` element announcing the
 keyboard-focused cell), `legend`, `legend-lo`, `legend-hi` (both omitted, along with the gradient
 bar between them, while `legendStops` is supplied), `legend-stop` (one per `legendStops` entry),
-`legend-swatch` (that stop's color chip), `legend-stop-label` (that stop's text),
+`legend-swatch` (that stop's color chip, not rendered at all for a caption-only stop),
+`legend-stop-label` (that stop's text), `legend-value-label` (the trailing `valueLabel` caption that
+closes the legend row, present in both the gradient and the `legendStops` branch),
 `legend-annotation` (one per labeled `annotations` entry)
 
 **Themeable custom properties:** `--lr-heatmap-scale-lo` (default `#cde2fb`),
@@ -749,6 +864,11 @@ same color as `--lr-heatmap-focus-ring-color`).
   width, so a container-resize redraw is a geometric no-op; the stylesheet's
   `canvas { inline-size: 100% }` is also dead code in that case, since `draw()` unconditionally sets
   an inline `canvas.style.width/height` that wins over it.
+- `maxCellSize`/`minCellSize` are no-ops without `fit-to-width` — an explicit `cellSize` is an exact
+  request and is never clamped. And the canvas is sized *from the clamped* cell size, so a capped
+  grid deliberately leaves the host's remaining width unfilled: the canvas simply ends early rather
+  than stretching to fill. Position it with ordinary CSS on the host if you want it centered or
+  end-aligned.
 - the host is `role="group"` (not `role="img"`) with a dimensions+range summary `aria-label`
   (calendar mode: a day-count + range summary instead) — `[part="canvas"]` inside it is a real
   focusable, keyboard-operable, per-cell-interactive control (roving arrow-key focus,
@@ -803,6 +923,12 @@ mapping is readable without hovering each cell.
   filtering legend). Because it only repeats the category names `[part="base"]` already announces
   through its `role="img"` summary, the legend is `aria-hidden` — visible on screen, announced
   exactly once — and it wraps onto further rows in a narrow allocation rather than overflowing
+- `markerLabel?: string` (attribute `marker-label`) — names what an item's `marker` *means* (e.g.
+  `"Subagent"`). Setting it does two things: with `showLegend` on it adds one trailing
+  `[part="legend-item"]`, whose `[part="legend-marker-swatch"]` reproduces the cell's own marker
+  treatment, and it adds the marker to the auto-generated `aria-label` summary, which is otherwise
+  per-category only. The marker count is reported as its own clause rather than folded into any
+  category's count. Unset (the default) changes nothing: no extra legend row, no extra summary clause
 
 **Events:** none.
 
@@ -813,13 +939,19 @@ by its category), `marker` (the small bottom marker on a cell whose item sets `m
 `tooltip` (the hover tooltip showing the hovered item's label, hidden until a cell is hovered),
 `legend` (the static category key rendered below the strip when `showLegend` is set — `aria-hidden`,
 as it repeats the strip's own `aria-label`), `legend-item` (one swatch + label pair, one per
-`categories` entry), `legend-swatch` (the color chip, matching that category's cell color),
-`legend-label` (the category's `label`, or its `key` when unset).
+`categories` entry, plus one trailing marker row when `markerLabel` is set), `legend-swatch` (the
+color chip, matching that category's cell color), `legend-marker-swatch` (the marker row's chip
+instead: a neutral chip carrying the same bottom bar a `marker: true` cell paints, in the same
+`--lr-sequence-strip-marker-color`), `legend-label` (the category's `label`, or its `key` when
+unset).
 
 **Themeable custom properties:** `--lr-sequence-strip-height` (default `1.5rem` — the strip's
 block-size), `--lr-sequence-strip-marker-color` (default `var(--lr-color-text)` — the
-`[part="marker"]` fill), and `--lr-sequence-strip-legend-swatch-size` (default `0.625rem` — the
-`[part="legend-swatch"]` chip's inline- and block-size); the tooltip also consumes shared tokens
+`[part="marker"]` fill, and of the marker legend row's bar), `--lr-sequence-strip-legend-swatch-size`
+(default `0.625rem` — a legend swatch's inline- and block-size, category and marker rows alike), and
+`--lr-sequence-strip-legend-marker-bg` (default `var(--lr-color-surface-raised)` — the neutral chip
+background behind the marker legend row's bar; it stands in for "any cell", so it deliberately
+matches no category color); the tooltip also consumes shared tokens
 `--lr-color-surface`, `--lr-color-text`, `--lr-font-size-xs`, `--lr-radius`, and `--lr-shadow`, and
 the legend consumes `--lr-space-2xs`, `--lr-space-xs`, `--lr-space-s`, `--lr-font-size-xs`,
 `--lr-color-text-quiet`, and `--lr-radius-xs`.
@@ -875,18 +1007,34 @@ deeply-nested node's own shadow root still reaches it).
   `[part="base"]` element. The component forwards a host `aria-label` to that semantic element when
   `label` is empty; `label` takes precedence when both are set. External `aria-labelledby` idrefs
   are not forwarded across the shadow boundary.
+- `reorderable: boolean = false` (reflected) — opts into keyboard reordering. Unset, no `lr-reorder`
+  is ever emitted, Ctrl/Cmd+Arrow behaves exactly like a plain Arrow press, and the internal live
+  region is not rendered at all.
 
 **Keyboard:** ArrowDown/ArrowUp move the roving focus to the next/previous *visible* node.
 ArrowRight expands a collapsed node (focus stays put; a second ArrowRight then steps into the first
 child) or moves into an already-expanded node's first child. ArrowLeft collapses an expanded node, or
 moves focus to its parent. Home/End jump to the first/last visible node. Enter/Space activate
-`select()` on the focused node.
+`select()` on the focused node. While `reorderable`, **Ctrl/Cmd**+ArrowUp/ArrowDown moves the focused
+node within its own parent's child list instead of navigating. Ctrl/Cmd rather than Alt: Alt+Arrow is
+browser back/forward on Windows and Linux. ArrowUp/ArrowDown are not direction-sensitive, so this
+binding is deliberately **not** RTL-swapped — "down" always means later in the sibling list.
 
 **Methods:** `expandAll()`, `collapseAll()` (both recursive, properly sequenced around Lit's render
 cycle).
 
-**Events:** none dispatched directly (see `lr-tree-node` below — they bubble up and are also
-observed internally to keep the roving `activeId` in sync with clicks).
+**Events:** `lr-reorder` (`detail: { id, parentId, fromIndex, toIndex }`, only while `reorderable`).
+Like every other event here it is a **request**: `data` is host-owned and is never mutated by this
+component, so nothing moves until the host reassigns a reordered `data` — focus then follows the
+moved node. `parentId` is `null` for a top-level item, and `fromIndex`/`toIndex` are **sibling-scoped
+indices**, not positions in the flattened visible list. The move is constrained to one sibling list
+and never fires at a subtree boundary, so a reorder can never become a reparent: Ctrl+ArrowDown on
+the last child of a subtree is ambiguous (the visually next row is a top-level uncle, so "move down"
+could mean either "swap with the next sibling" — there is none — or "reparent up a level"), and
+reparenting is a structural edit with no keyboard affordance distinguishing the two. Such a request
+is simply not made: no event, no announcement, focus stays put. Otherwise this element dispatches
+nothing directly (see `lr-tree-node` below — those bubble up and are also observed internally to keep
+the roving `activeId` in sync with clicks).
 
 **Slots:** default (holds the `<lr-tree-node>` elements it manages).
 
@@ -970,6 +1118,8 @@ indentation), plus the shared tokens listed above.
 - row enrichment is intentionally structured rather than an unrestricted renderer: use `icon`,
   `label`, `description`, `badge`, and `accessibleLabel`. This keeps the host as the single
   `role="treeitem"` interaction target and preserves the APG keyboard model.
+- `lr-file-tree` does **not** forward `reorderable`, and deliberately so: its `TreeItem[]` is derived
+  from `nodes` on every render and keyed by filesystem path, an order it does not own.
 
 ---
 
@@ -1036,8 +1186,16 @@ with a console warning), `top-start`, `top-end` (floating corner overlays), `bot
 `live-region`, `edge-list` (a visually hidden list of every edge).
 
 **Themeable custom properties:** `--lr-flow-canvas-grid-size` (default `8px`, dotted background
-spacing), `--lr-flow-canvas-march-duration` (default `var(--lr-transition-ambient)`, running-edge
-march animation duration).
+spacing — the canvas also writes it inline as `${grid}px` from the `grid` property, which wins over
+the stylesheet fallback whenever a grid is in effect), `--lr-flow-canvas-march-duration` (default
+`var(--lr-transition-ambient)`, running-edge march animation duration), and
+`--lr-flow-canvas-node-current-outline-color` (default `var(--lr-color-brand)`) — the outline color
+of the current (`aria-current`) node. Like every state-scoped custom property in this library it is
+an inline `var()` fallback at its point of use rather than a `:host` declaration, so it can be set on
+the element *or any ancestor*. It exists because Shadow Parts forbids an attribute selector after
+`::part()` — `::part(node)[aria-current='true']` is invalid CSS — so the current node could otherwise
+only be restyled by overriding the library-wide `--lr-color-brand` token, repainting everything else
+that reads it.
 
 **Optional peer deps:** none.
 
@@ -1103,7 +1261,12 @@ heading row entirely), `toolbar` (action row at the block-end edge).
 **CSS parts:** `base`, `header`, `icon`, `heading`, `status` (never color-only — always paired with
 text), `progress`, `body`, `toolbar`, `handle` (every handle dot), `handle-input`, `handle-output`.
 
-**Themeable custom properties:** `--lr-flow-node-min-inline-size` (default `11rem`).
+**Themeable custom properties:** `--lr-flow-node-min-inline-size` (default `11rem`) and
+`--lr-flow-node-selected-border` (default `var(--lr-color-brand)`) — the card's border color while
+`selected`. Like the other state-scoped custom properties here it is an inline `var()` fallback at
+its point of use rather than a `:host` declaration, so it can be set on the element *or any
+ancestor*; overriding the selection color otherwise means hijacking the library-wide
+`--lr-color-brand` token and repainting everything else that reads it.
 
 **Optional peer deps:** none.
 
@@ -1358,6 +1521,14 @@ The focus position is re-clamped whenever `rows`/`columns` shrink, so the grid c
 **CSS parts:** `viewport` (the scrolling bordered wrapper), `grid` (the `<table role="grid">`),
 `header` (each sticky `<th>`), `row`, `cell`, `empty` (the loading / no-data cell).
 
+**Themeable custom properties:** `--lr-data-grid-row-selected-bg` (default
+`var(--lr-color-brand-quiet)`) — the background of the selected row's cells. It is an inline `var()`
+fallback at its point of use rather than a `:host` declaration, so it can be set on the element *or
+any ancestor*. It exists because Shadow Parts forbids an attribute selector after `::part()` —
+`::part(row)[aria-selected='true']` is invalid CSS — leaving the library-wide
+`--lr-color-brand-quiet` token as the only prior lever, which repaints every other surface reading
+it. `lr-table` exposes the equivalent knob as `--lr-table-row-selected-bg`.
+
 ## `lr-calendar`
 
 Responsive month calendar with event markers and an agenda view.
@@ -1485,6 +1656,15 @@ the real unmasked value).
 **CSS parts:** `base` (the `<dl>` root), `name` (the `<dt>` text), `value-cell` (the `<dd>` wrapping
 an entry's value text and buttons), `value` (carries `data-masked`), `reveal-button`, and
 `copy-button`.
+
+**Themeable custom properties:** `--lr-env-list-reveal-active-bg` (default
+`var(--lr-color-brand-quiet)`) and `--lr-env-list-reveal-active-border` (default
+`var(--lr-color-brand)`) — the background and border color of a pressed (revealed) reveal toggle.
+Both are inline `var()` fallbacks at their point of use rather than `:host` declarations, so either
+can be set on the element *or any ancestor*. They exist because
+`::part(reveal-button)[aria-pressed='true']` is invalid CSS — Shadow Parts forbids an attribute
+selector after `::part()` — so restyling the pressed state otherwise required overriding the
+library-wide brand tokens.
 
 ## `lr-document-library`
 
