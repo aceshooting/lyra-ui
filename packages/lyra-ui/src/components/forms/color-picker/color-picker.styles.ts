@@ -17,6 +17,8 @@ export const styles = css`
     color: var(--lr-color-danger);
   }
   [part='input'] { inline-size: var(--lr-size-2-5rem); block-size: var(--lr-size-2-5rem); padding: var(--lr-size-2px); border: var(--lr-border-width-thin) solid var(--lr-color-border); border-radius: var(--lr-radius); background: var(--lr-color-surface); cursor: pointer; }
+  [part='input']:hover { border-color: var(--lr-color-brand); }
+  [part='input']:focus-visible { outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color); outline-offset: var(--lr-focus-ring-offset); }
   [part='hint'] { color: var(--lr-color-text-quiet); font-size: var(--lr-font-size-sm); }
   [part='hint'][hidden] {
     display: none;

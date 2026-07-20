@@ -1,6 +1,7 @@
 import { fixture, expect, html, oneEvent } from '@open-wc/testing';
 import './color-picker.js';
 import type { LyraColorPicker } from './color-picker.js';
+import { styles } from './color-picker.styles.js';
 
 it('renders a labeled native color input and forwards the form value', async () => {
   const el = (await fixture(html`<lr-color-picker label="Accent" value="#ff0000"></lr-color-picker>`)) as LyraColorPicker;
@@ -68,4 +69,10 @@ it('re-dispatches bubbling, composed focus/blur events from the internal color i
   const blurEvent = await blurPromise;
   expect(blurEvent.bubbles).to.be.true;
   expect(blurEvent.composed).to.be.true;
+});
+
+it('gives the native color swatch its own hover and focus-visible treatment', () => {
+  const css = styles.cssText.replace(/\s+/g, ' ');
+  expect(css).to.match(/\[part='input'\]:hover\s*\{[^}]*border-color:/);
+  expect(css).to.match(/\[part='input'\]:focus-visible\s*\{[^}]*outline:/);
 });
