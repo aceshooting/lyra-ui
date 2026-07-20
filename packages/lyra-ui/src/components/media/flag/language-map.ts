@@ -1,3 +1,5 @@
+import { getDisplayNames } from '../../../internal/intl-cache.js';
+
 /**
  * ISO 3166-1 alpha-2 shape: exactly two ASCII letters, case-insensitive.
  * Shared by `flag.ts` (validating `country`) and `languageToCountry` below
@@ -74,4 +76,26 @@ export function languageToCountry(language: string): string | undefined {
   const region = parts.slice(1).find((part) => ALPHA2_RE.test(part));
   if (region) return region;
   return LANGUAGE_TO_COUNTRY[base];
+}
+
+/**
+ * The endonym of a BCP-47 language tag — the locale's name written in that locale itself
+ * (`'fr'` → `français`, `'pt-BR'` → `português (Brasil)`), which is what a language switcher should
+ * list so a reader who understands none of the current UI language can still find their own.
+ *
+ * Derived from `Intl.DisplayNames`, so no name table ships with the library and the result follows
+ * the browser's own ICU data; the instance comes from the shared memoized cache, since a picker
+ * renders one lookup per offered locale on every render pass. A tag with no display name resolves
+ * to the tag itself, and so does a structurally invalid one — `Intl.DisplayNames` throws a
+ * `RangeError` on those rather than falling back, and a language picker should degrade to showing
+ * the raw tag rather than tearing down the render.
+ *
+ * Pair it with {@link languageToCountry} for the flag half of the same row.
+ */
+export function localeNativeName(tag: string): string {
+  try {
+    return getDisplayNames(tag, { type: 'language' }).of(tag) ?? tag;
+  } catch {
+    return tag;
+  }
 }

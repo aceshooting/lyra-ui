@@ -14,6 +14,12 @@ export const styles = css`
      growing itself, so the dense token row keeps its own compact glyph even though the button's own
      hit-target box grows. */
   [part='remove'] { display: inline-flex; align-items: center; justify-content: center; min-inline-size: var(--lr-icon-button-size); min-block-size: var(--lr-icon-button-size); border: 0; padding: 0; background: transparent; color: inherit; cursor: pointer; }
+  /* Only rendered while [editable] is set, so the non-editable token row keeps its plain,
+     non-focusable text span and its exact current metrics. */
+  [part='token-label'] { border-radius: var(--lr-radius); cursor: pointer; }
+  [part='token-label']:focus-visible { outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color); outline-offset: var(--lr-focus-ring-offset); }
+  :host([disabled]) [part='token-label'] { cursor: default; }
+  [part='token-editor'] { inline-size: var(--lr-token-input-editor-inline-size, var(--lr-size-6rem)); max-inline-size: 100%; border: 0; outline: 0; padding: 0; background: transparent; color: inherit; font: inherit; }
   [part='hint'], [part='error'] { color: var(--lr-color-text-quiet); font-size: var(--lr-font-size-sm); }
   [part='error'] { color: var(--lr-color-danger); }
   :host([data-invalid]) [part='input-wrapper'] { border-color: var(--lr-color-danger); }

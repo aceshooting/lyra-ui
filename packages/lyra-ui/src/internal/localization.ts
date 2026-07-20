@@ -165,6 +165,7 @@ export type LyraMessageKey =
   | 'checkboxRequired'
   | 'checkboxGroupRequired'
   | 'tokenInputRequired'
+  | 'tokenInputEditWithContext'
   | 'commandPaletteLabel'
   | 'commandPalettePlaceholder'
   | 'commandPaletteEmpty'
@@ -1165,6 +1166,7 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, string> = {
   checkboxRequired: 'Please check this box if you want to continue.',
   checkboxGroupRequired: 'Select at least one option.',
   tokenInputRequired: 'Enter at least one value.',
+  tokenInputEditWithContext: 'Edit {label}',
   commandPaletteLabel: 'Command palette',
   commandPalettePlaceholder: 'Search commands…',
   commandPaletteEmpty: 'No matching commands.',

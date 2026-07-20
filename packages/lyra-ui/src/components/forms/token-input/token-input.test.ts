@@ -1,6 +1,26 @@
-import { fixture, expect, html } from '@open-wc/testing';
+import { fixture, expect, html, oneEvent } from '@open-wc/testing';
 import './token-input.js';
 import type { LyraTokenInput } from './token-input.js';
+
+const RULE = 'Bash(git status:*)';
+
+function tokenLabels(el: LyraTokenInput): HTMLElement[] {
+  return Array.from(el.shadowRoot!.querySelectorAll('[part="token-label"]')) as HTMLElement[];
+}
+function editor(el: LyraTokenInput): HTMLInputElement | null {
+  return el.shadowRoot!.querySelector('[part="token-editor"]') as HTMLInputElement | null;
+}
+function typeInto(field: HTMLInputElement, next: string): void {
+  field.value = next;
+  field.dispatchEvent(new Event('input', { bubbles: true }));
+}
+function press(target: HTMLElement, key: string): KeyboardEvent {
+  // `composed: true` matches a real key event: without it nothing dispatched inside the shadow root
+  // could ever reach a document listener, which would make the Escape-containment test vacuous.
+  const event = new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true, composed: true });
+  target.dispatchEvent(event);
+  return event;
+}
 
 it('adds and removes tokens with the keyboard', async () => {
   const el = (await fixture(html`<lr-token-input></lr-token-input>`)) as LyraTokenInput;
@@ -173,4 +193,309 @@ it('commits the draft on Tab without trapping focus for an extra keystroke', asy
   await el.updateComplete;
   expect(el.value).to.deep.equal(['alpha']);
   expect(event.defaultPrevented, 'Tab must not be prevented so native focus-advance still happens').to.be.false;
+});
+
+describe('editable tokens', () => {
+  it('renders byte-identical token markup while editable is unset', async () => {
+    const el = (await fixture(html`<lr-token-input .value=${['alpha']}></lr-token-input>`)) as LyraTokenInput;
+    expect(el.editable, 'editable must default to false').to.be.false;
+    const token = el.shadowRoot!.querySelector('[part="token"]') as HTMLElement;
+    // Today's markup: <span part="token"><span>alpha</span><button part="remove" …></button></span>
+    expect(token.getAttributeNames()).to.deep.equal(['part']);
+    const label = token.querySelector('span') as HTMLElement;
+    expect(label.getAttributeNames(), 'the plain label span must gain no attributes').to.deep.equal([]);
+    expect(label.textContent).to.equal('alpha');
+    expect(tokenLabels(el).length, 'token-label is an editable-only part').to.equal(0);
+    expect(editor(el), 'token-editor is an editable-only part').to.equal(null);
+    expect(
+      el.shadowRoot!.querySelector('[part="input-wrapper"]')!.getAttribute('role'),
+      'the row role is unchanged',
+    ).to.equal('group');
+  });
+
+  it('opens a focused editor holding the full token when a token is clicked', async () => {
+    const el = (await fixture(
+      html`<lr-token-input editable .value=${[RULE]}></lr-token-input>`,
+    )) as LyraTokenInput;
+    const [label] = tokenLabels(el);
+    expect(label.textContent).to.equal(RULE);
+    label.click();
+    await el.updateComplete;
+    const field = editor(el)!;
+    expect(field, 'clicking a token opens its editor').to.exist;
+    expect(field.value, 'the editor holds the whole token, not a delimiter-split fragment').to.equal(RULE);
+    expect(el.shadowRoot!.activeElement!.getAttribute('part')).to.equal('token-editor');
+  });
+
+  it('opens the editor from the keyboard with Enter, Space, and F2', async () => {
+    const el = (await fixture(
+      html`<lr-token-input editable .value=${['alpha']}></lr-token-input>`,
+    )) as LyraTokenInput;
+    for (const key of ['Enter', ' ', 'F2']) {
+      const event = press(tokenLabels(el)[0], key);
+      await el.updateComplete;
+      expect(editor(el), `${key} must open the editor`).to.exist;
+      expect(event.defaultPrevented, `${key} must not also scroll or submit`).to.be.true;
+      press(editor(el)!, 'Escape');
+      await el.updateComplete;
+    }
+  });
+
+  it('commits an edit on Enter and reports the previous value', async () => {
+    const el = (await fixture(
+      html`<lr-token-input editable .value=${[RULE, 'other']}></lr-token-input>`,
+    )) as LyraTokenInput;
+    tokenLabels(el)[0].click();
+    await el.updateComplete;
+    const field = editor(el)!;
+    typeInto(field, 'Bash(git diff:*)');
+    const edited = oneEvent(el, 'lr-token-edit');
+    press(field, 'Enter');
+    const event = await edited;
+    expect(event.detail).to.deep.equal({ value: 'Bash(git diff:*)', previousValue: RULE, index: 0 });
+    await el.updateComplete;
+    expect(el.value).to.deep.equal(['Bash(git diff:*)', 'other']);
+    expect(editor(el), 'the editor closes on commit').to.equal(null);
+    expect(el.shadowRoot!.activeElement!.getAttribute('part'), 'focus returns to the token').to.equal(
+      'token-label',
+    );
+  });
+
+  it('emits exactly one change for a committed edit, even though the editor blurs in the same tick', async () => {
+    const el = (await fixture(
+      html`<lr-token-input editable .value=${['alpha']}></lr-token-input>`,
+    )) as LyraTokenInput;
+    tokenLabels(el)[0].click();
+    await el.updateComplete;
+    const field = editor(el)!;
+    let changes = 0;
+    let inputs = 0;
+    el.addEventListener('change', () => changes++);
+    el.addEventListener('input', () => inputs++);
+    typeInto(field, 'beta');
+    press(field, 'Enter');
+    // The editor is torn down while focused; a late blur must not commit a second time.
+    field.dispatchEvent(new Event('blur'));
+    await el.updateComplete;
+    expect(el.value).to.deep.equal(['beta']);
+    expect(changes, 'one commit is one change').to.equal(1);
+    expect(inputs).to.equal(1);
+  });
+
+  it('commits the main draft and opens the editor without doubling change events', async () => {
+    const el = (await fixture(
+      html`<lr-token-input editable .value=${['alpha']}></lr-token-input>`,
+    )) as LyraTokenInput;
+    const main = el.shadowRoot!.querySelector('#input') as HTMLInputElement;
+    let changes = 0;
+    el.addEventListener('change', () => changes++);
+    typeInto(main, 'gamma');
+    main.dispatchEvent(new Event('blur'));
+    tokenLabels(el)[0].click();
+    await el.updateComplete;
+    expect(el.value).to.deep.equal(['alpha', 'gamma']);
+    expect(changes, 'only the draft commit emitted change; opening an editor emits nothing').to.equal(1);
+    expect(editor(el)).to.exist;
+  });
+
+  it('reverts on Escape without emitting', async () => {
+    const el = (await fixture(
+      html`<lr-token-input editable .value=${['alpha']}></lr-token-input>`,
+    )) as LyraTokenInput;
+    tokenLabels(el)[0].click();
+    await el.updateComplete;
+    const field = editor(el)!;
+    let emitted = 0;
+    for (const name of ['input', 'change', 'lr-token-edit']) el.addEventListener(name, () => emitted++);
+    typeInto(field, 'beta');
+    const event = press(field, 'Escape');
+    await el.updateComplete;
+    expect(el.value).to.deep.equal(['alpha']);
+    expect(emitted, 'a reverted edit emits nothing').to.equal(0);
+    expect(editor(el)).to.equal(null);
+    expect(event.defaultPrevented).to.be.true;
+    expect(el.shadowRoot!.activeElement!.getAttribute('part')).to.equal('token-label');
+  });
+
+  it('keeps Escape inside an open editor from reaching an enclosing dismissible layer', async () => {
+    const el = (await fixture(
+      html`<lr-token-input editable .value=${['alpha']}></lr-token-input>`,
+    )) as LyraTokenInput;
+    tokenLabels(el)[0].click();
+    await el.updateComplete;
+    let outer = 0;
+    const onKeyDown = (): void => void outer++;
+    document.addEventListener('keydown', onKeyDown);
+    try {
+      press(editor(el)!, 'Escape');
+    } finally {
+      document.removeEventListener('keydown', onKeyDown);
+    }
+    expect(outer, 'the editor consumes its own Escape').to.equal(0);
+  });
+
+  it('discards an edit that would duplicate an existing token unless allowDuplicates is set', async () => {
+    const el = (await fixture(
+      html`<lr-token-input editable .value=${['alpha', 'beta']}></lr-token-input>`,
+    )) as LyraTokenInput;
+    tokenLabels(el)[1].click();
+    await el.updateComplete;
+    let emitted = 0;
+    for (const name of ['input', 'change', 'lr-token-edit']) el.addEventListener(name, () => emitted++);
+    typeInto(editor(el)!, 'alpha');
+    press(editor(el)!, 'Enter');
+    await el.updateComplete;
+    expect(el.value, 'the colliding edit is discarded, like a duplicate draft').to.deep.equal(['alpha', 'beta']);
+    expect(emitted).to.equal(0);
+    expect(editor(el), 'the editor still closes').to.equal(null);
+
+    el.allowDuplicates = true;
+    await el.updateComplete;
+    tokenLabels(el)[1].click();
+    await el.updateComplete;
+    typeInto(editor(el)!, 'alpha');
+    press(editor(el)!, 'Enter');
+    await el.updateComplete;
+    expect(el.value).to.deep.equal(['alpha', 'alpha']);
+  });
+
+  it('treats an emptied editor as a cancel rather than a removal', async () => {
+    const el = (await fixture(
+      html`<lr-token-input editable .value=${['alpha']}></lr-token-input>`,
+    )) as LyraTokenInput;
+    tokenLabels(el)[0].click();
+    await el.updateComplete;
+    typeInto(editor(el)!, '   ');
+    press(editor(el)!, 'Enter');
+    await el.updateComplete;
+    expect(el.value).to.deep.equal(['alpha']);
+    expect(editor(el)).to.equal(null);
+  });
+
+  it('gives the token row a roving tabindex that clamps when the token list shrinks', async () => {
+    const el = (await fixture(
+      html`<lr-token-input editable .value=${['a', 'b', 'c']}></lr-token-input>`,
+    )) as LyraTokenInput;
+    expect(tokenLabels(el).map((label) => label.tabIndex)).to.deep.equal([0, -1, -1]);
+
+    press(tokenLabels(el)[0], 'ArrowRight');
+    await el.updateComplete;
+    press(tokenLabels(el)[1], 'ArrowRight');
+    await el.updateComplete;
+    expect(tokenLabels(el).map((label) => label.tabIndex)).to.deep.equal([-1, -1, 0]);
+    expect(el.shadowRoot!.activeElement!.textContent).to.equal('c');
+
+    el.value = ['a'];
+    await el.updateComplete;
+    expect(
+      tokenLabels(el).map((label) => label.tabIndex),
+      'the roving index must clamp instead of leaving no tab stop',
+    ).to.deep.equal([0]);
+  });
+
+  it('swaps the roving arrow keys under dir="rtl"', async () => {
+    const wrapper = await fixture(html`
+      <div dir="rtl"><lr-token-input editable .value=${['a', 'b']}></lr-token-input></div>
+    `);
+    const el = wrapper.querySelector('lr-token-input') as LyraTokenInput;
+    await el.updateComplete;
+    press(tokenLabels(el)[0], 'ArrowLeft');
+    await el.updateComplete;
+    expect(tokenLabels(el).map((label) => label.tabIndex)).to.deep.equal([-1, 0]);
+    press(tokenLabels(el)[1], 'ArrowRight');
+    await el.updateComplete;
+    expect(tokenLabels(el).map((label) => label.tabIndex)).to.deep.equal([0, -1]);
+  });
+
+  it('does not remove the last token when Backspace is pressed inside an open editor', async () => {
+    const el = (await fixture(
+      html`<lr-token-input editable .value=${['alpha', 'beta']}></lr-token-input>`,
+    )) as LyraTokenInput;
+    tokenLabels(el)[0].click();
+    await el.updateComplete;
+    typeInto(editor(el)!, '');
+    press(editor(el)!, 'Backspace');
+    await el.updateComplete;
+    expect(el.value).to.deep.equal(['alpha', 'beta']);
+  });
+
+  it('keeps focus() and the validity anchor on the main input while an editor is open', async () => {
+    const el = (await fixture(
+      html`<lr-token-input editable required .value=${['alpha']}></lr-token-input>`,
+    )) as LyraTokenInput;
+    tokenLabels(el)[0].click();
+    await el.updateComplete;
+    expect(editor(el)).to.exist;
+    typeInto(editor(el)!, 'beta');
+    el.focus();
+    expect(el.shadowRoot!.activeElement!.id, 'focus() must reach the main input, not the editor').to.equal(
+      'input',
+    );
+    await el.updateComplete;
+    // A blur commit applies the edit but must not pull focus back onto the token.
+    expect(el.value).to.deep.equal(['beta']);
+    expect(el.shadowRoot!.activeElement!.id).to.equal('input');
+  });
+
+  it('does not open an editor while disabled', async () => {
+    const el = (await fixture(
+      html`<lr-token-input editable disabled .value=${['alpha']}></lr-token-input>`,
+    )) as LyraTokenInput;
+    tokenLabels(el)[0].click();
+    await el.updateComplete;
+    expect(editor(el)).to.equal(null);
+  });
+
+  it('localizes the token edit accessible name via .strings', async () => {
+    const el = (await fixture(
+      html`<lr-token-input editable .value=${['alpha']}></lr-token-input>`,
+    )) as LyraTokenInput;
+    expect(tokenLabels(el)[0].getAttribute('aria-label')).to.equal('Edit alpha');
+    el.strings = { tokenInputEditWithContext: 'Modifier {label}' };
+    await el.updateComplete;
+    expect(tokenLabels(el)[0].getAttribute('aria-label')).to.equal('Modifier alpha');
+  });
+
+  it('is accessible with an open token editor', async () => {
+    const el = (await fixture(
+      html`<lr-token-input editable label="Permissions" .value=${[RULE, 'other']}></lr-token-input>`,
+    )) as LyraTokenInput;
+    tokenLabels(el)[0].click();
+    await el.updateComplete;
+    expect(editor(el), 'the axe run must cover the open-editor state').to.exist;
+    await expect(el).to.be.accessible();
+  });
+});
+
+describe('delimiter', () => {
+  it('inserts a literal comma instead of committing when delimiter is null', async () => {
+    const el = (await fixture(
+      html`<lr-token-input .delimiter=${null}></lr-token-input>`,
+    )) as LyraTokenInput;
+    const main = el.shadowRoot!.querySelector('#input') as HTMLInputElement;
+    typeInto(main, 'a,b');
+    const comma = press(main, ',');
+    expect(comma.defaultPrevented, 'a comma is just a character when delimiter is null').to.be.false;
+    expect(el.value).to.deep.equal([]);
+    press(main, 'Enter');
+    await el.updateComplete;
+    expect(el.value, 'a null delimiter must not split the draft').to.deep.equal(['a,b']);
+  });
+
+  it('maps delimiter="none" and delimiter="" to a null delimiter from an attribute', async () => {
+    const el = (await fixture(html`<lr-token-input delimiter="none"></lr-token-input>`)) as LyraTokenInput;
+    expect(el.delimiter).to.equal(null);
+    const main = el.shadowRoot!.querySelector('#input') as HTMLInputElement;
+    typeInto(main, 'a,b');
+    press(main, 'Enter');
+    await el.updateComplete;
+    expect(el.value).to.deep.equal(['a,b']);
+
+    el.setAttribute('delimiter', '');
+    expect(el.delimiter, 'an empty delimiter must not explode the draft into characters').to.equal(null);
+    el.setAttribute('delimiter', ';');
+    expect(el.delimiter).to.equal(';');
+    el.removeAttribute('delimiter');
+    expect(el.delimiter, 'removing the attribute restores the default').to.equal(',');
+  });
 });
