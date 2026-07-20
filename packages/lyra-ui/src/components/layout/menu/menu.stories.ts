@@ -119,6 +119,49 @@ export const SlottedControlWithEscapeAnywhere: Story = {
   `,
 };
 
+/** A slotted control the menu deliberately keeps its hands off — a checkbox filter set plus an
+ *  Apply button — closed through the public `hide({ focusTrigger: true })`. That is the case the
+ *  trigger alone can't express: the user is done, but nothing has moved focus anywhere, so the
+ *  menu has to hand it back to the trigger itself. `show()` is the symmetric opener. */
+export const ImperativeShowHide: Story = {
+  name: 'show() / hide({ focusTrigger: true })',
+  render: () => html`
+    <div>
+      <lr-menu label="Filters" id="imperative-menu" close-on-escape-anywhere>
+        <button
+          slot="trigger"
+          aria-label="Filters"
+          style="border:1px solid var(--lr-color-border);border-radius:var(--lr-radius);background:var(--lr-color-surface);cursor:pointer;padding:0.4rem 0.75rem;"
+        >
+          Filters ▾
+        </button>
+        <lr-menu-item value="unread">Unread only</lr-menu-item>
+        <lr-menu-item value="starred">Starred only</lr-menu-item>
+        <hr />
+        <div style="padding:0.4rem 0.6rem;text-align:end;">
+          <button
+            type="button"
+            style="border:1px solid var(--lr-color-border);border-radius:var(--lr-radius);background:var(--lr-color-surface);cursor:pointer;padding:0.25rem 0.6rem;"
+            @click=${(e: Event) => {
+              (e.target as HTMLElement).closest('lr-menu')?.hide({ focusTrigger: true });
+            }}
+          >
+            Apply
+          </button>
+        </div>
+      </lr-menu>
+      <p>
+        <button
+          type="button"
+          @click=${() => (document.getElementById('imperative-menu') as HTMLElement & { show(): void })?.show()}
+        >
+          Open the menu from out here (show())
+        </button>
+      </p>
+    </div>
+  `,
+};
+
 /** `lr-menu-select` is the recommended single event to listen to on
  *  `<lr-menu>` itself, rather than every individual `<lr-menu-item>`. */
 export const SelectEvent: Story = {

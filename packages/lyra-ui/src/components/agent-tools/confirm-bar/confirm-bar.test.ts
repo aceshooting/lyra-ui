@@ -145,6 +145,124 @@ it('is accessible before and after a decision, with and without args', async () 
   await expect(decided).to.be.accessible();
 });
 
+describe('compact', () => {
+  const part = (el: LyraConfirmBar, name: string) => el.shadowRoot!.querySelector(`[part="${name}"]`) as HTMLElement;
+
+  it('defaults compact to false and reflects it as an attribute when set', async () => {
+    const plain = (await fixture(html`<lr-confirm-bar></lr-confirm-bar>`)) as LyraConfirmBar;
+    expect(plain.compact).to.be.false;
+    expect(plain.hasAttribute('compact')).to.be.false;
+
+    const el = (await fixture(html`<lr-confirm-bar compact></lr-confirm-bar>`)) as LyraConfirmBar;
+    expect(el.compact).to.be.true;
+    expect(el.hasAttribute('compact')).to.be.true;
+  });
+
+  it('renders as an inline row with no border, padding or background, even with tone="danger"', async () => {
+    const el = (await fixture(
+      html`<lr-confirm-bar compact tone="danger" tool-name="delete_row"></lr-confirm-bar>`,
+    )) as LyraConfirmBar;
+
+    // The host itself must flip too -- restyling only [part='base'] still leaves a
+    // `display: block` host that breaks the row it was dropped into.
+    expect(getComputedStyle(el).display).to.equal('inline-flex');
+
+    const baseStyle = getComputedStyle(part(el, 'base'));
+    expect(baseStyle.flexDirection).to.equal('row');
+    expect(baseStyle.borderTopWidth).to.equal('0px');
+    expect(baseStyle.borderInlineStartWidth).to.equal('0px');
+    expect(baseStyle.paddingTop).to.equal('0px');
+    expect(baseStyle.paddingInlineStart).to.equal('0px');
+    expect(baseStyle.backgroundColor).to.equal('rgba(0, 0, 0, 0)');
+  });
+
+  it('neutralizes the narrow-container query so the buttons are not stretched inside a table cell', async () => {
+    const wrap = await fixture(html`
+      <div style="inline-size:240px;">
+        <lr-confirm-bar compact tool-name="run_shell"></lr-confirm-bar>
+        <lr-confirm-bar tool-name="run_shell"></lr-confirm-bar>
+      </div>
+    `);
+    const [compact, regular] = [...wrap.querySelectorAll('lr-confirm-bar')] as LyraConfirmBar[];
+
+    expect(getComputedStyle(compact).containerType).to.equal('normal');
+    expect(getComputedStyle(part(compact, 'deny-button')).flexGrow).to.equal('0');
+
+    // Control: the same 240px allocation *does* trip the query in the default presentation, which
+    // is exactly what makes it wrong for a compact bar dropped into a narrow cell.
+    expect(getComputedStyle(regular).containerType).to.equal('inline-size');
+    expect(getComputedStyle(part(regular, 'deny-button')).flexGrow).to.equal('1');
+  });
+
+  it('keeps the focus-management contract: focus lands on [part="status"] before the buttons unmount', async () => {
+    const el = (await fixture(html`<lr-confirm-bar compact></lr-confirm-bar>`)) as LyraConfirmBar;
+    (part(el, 'approve-button') as HTMLButtonElement).click();
+    // Synchronous, exactly as in the default presentation.
+    expect(el.shadowRoot!.activeElement!.getAttribute('part')).to.equal('status');
+    await el.updateComplete;
+    expect(part(el, 'status').textContent!.trim()).to.equal('Approved');
+  });
+
+  // Regression guard for the trap that `[part='status']:empty { display: none }` sets: that rule
+  // never matches (Chromium's `:empty` does not ignore the whitespace-only text nodes lit leaves in
+  // the part), and it must stay that way -- `decide()` focuses `[part='status']` synchronously
+  // *before* `decision` is set, so an undecided status that were `display: none` would make
+  // `.focus()` a no-op and drop focus to `<body>` the instant the buttons unmount.
+  it('keeps the undecided [part="status"] rendered-but-zero-sized rather than display:none', async () => {
+    const el = (await fixture(html`<lr-confirm-bar compact></lr-confirm-bar>`)) as LyraConfirmBar;
+    const status = part(el, 'status');
+    expect(getComputedStyle(status).display).to.not.equal('none');
+    const box = status.getBoundingClientRect();
+    expect(box.width).to.equal(0);
+    expect(box.height).to.equal(0);
+
+    (part(el, 'deny-button') as HTMLButtonElement).click();
+    await el.updateComplete;
+    expect(part(el, 'status').getBoundingClientRect().width).to.be.greaterThan(0);
+  });
+
+  it('fires lr-approve/lr-deny identically', async () => {
+    const approveEl = (await fixture(
+      html`<lr-confirm-bar compact .args=${{ x: 1 }}></lr-confirm-bar>`,
+    )) as LyraConfirmBar;
+    const approvePromise = oneEvent(approveEl, 'lr-approve');
+    (part(approveEl, 'approve-button') as HTMLButtonElement).click();
+    expect((await approvePromise).detail).to.deep.equal({ args: { x: 1 } });
+    await approveEl.updateComplete;
+    expect(approveEl.decision).to.equal('approved');
+
+    const denyEl = (await fixture(html`<lr-confirm-bar compact></lr-confirm-bar>`)) as LyraConfirmBar;
+    const denyPromise = oneEvent(denyEl, 'lr-deny');
+    (part(denyEl, 'deny-button') as HTMLButtonElement).click();
+    expect((await denyPromise).detail).to.be.null;
+    await denyEl.updateComplete;
+    expect(denyEl.decision).to.equal('denied');
+  });
+
+  it('leaves the default presentation byte-identical when compact is unset', async () => {
+    const el = (await fixture(html`<lr-confirm-bar tone="danger"></lr-confirm-bar>`)) as LyraConfirmBar;
+    expect(getComputedStyle(el).display).to.equal('block');
+    expect(getComputedStyle(el).containerType).to.equal('inline-size');
+
+    const baseStyle = getComputedStyle(part(el, 'base'));
+    expect(baseStyle.flexDirection).to.equal('column');
+    expect(baseStyle.borderTopWidth).to.not.equal('0px');
+    expect(baseStyle.paddingTop).to.not.equal('0px');
+    expect(baseStyle.backgroundColor).to.not.equal('rgba(0, 0, 0, 0)');
+  });
+
+  it('is accessible in the compact presentation, before and after a decision', async () => {
+    const el = (await fixture(
+      html`<lr-confirm-bar compact tone="danger" tool-name="delete_row" .args=${{ id: 7 }}></lr-confirm-bar>`,
+    )) as LyraConfirmBar;
+    await expect(el).to.be.accessible();
+
+    (el.shadowRoot!.querySelector('[part="approve-button"]') as HTMLButtonElement).click();
+    await el.updateComplete;
+    await expect(el).to.be.accessible();
+  });
+});
+
 describe('localization', () => {
   it('localizes the heading, generic tool-name fallback, args label, and Deny/Approve labels via this.localize(), reusing lr-tool-approval-dialog\'s own keys', async () => {
     const el = (await fixture(

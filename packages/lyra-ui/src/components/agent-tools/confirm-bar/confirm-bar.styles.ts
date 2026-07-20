@@ -93,4 +93,50 @@ export const styles = css`
       flex: 1 1 0;
     }
   }
+
+  /* Compact presentation -- everything below is gated on [compact] and every value routes through a
+     --lr-confirm-bar-compact-* custom property with today's-equivalent fallback, so an unset
+     consumer renders byte-identically to the default card presentation. Declared last so it wins
+     the equal-specificity race against the :host([tone='danger']) [part='base'] border rule above. */
+  :host([compact]) {
+    display: inline-flex;
+    /* The container query above measures *this* host. A compact bar exists precisely to be dropped
+       into a narrow slot (a table cell, a card action row), so that query would fire essentially
+       always and stretch the buttons to fill -- the exact opposite of the intent. Dropping the
+       query container is what neutralizes it: with no containment here and (normally) no ancestor
+       container either, the max-inline-size: 20rem query simply never matches. */
+    container-type: normal;
+  }
+  :host([compact]) [part='base'] {
+    flex-direction: row;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: var(--lr-confirm-bar-compact-gap, var(--lr-space-s));
+    padding: var(--lr-confirm-bar-compact-padding, 0);
+    border: var(--lr-confirm-bar-compact-border, none);
+    border-radius: var(--lr-confirm-bar-compact-radius, 0);
+    background: var(--lr-confirm-bar-compact-background, transparent);
+  }
+  :host([compact]) [part='heading'] {
+    flex: 1 1 auto;
+    min-inline-size: 0;
+  }
+  :host([compact]) [part='footer'] {
+    flex: 0 0 auto;
+  }
+  /* Once decided the buttons unmount and [part='footer'] is left holding only the (usually
+     unassigned) footer slot -- a zero-size flex item that would still consume one gap mid-row.
+     display: contents drops that box so the row closes up, while any real footer-slotted
+     content simply becomes a direct flex item of the row instead. */
+  :host([compact][decision]) [part='footer'] {
+    display: contents;
+  }
+  /* NOTE: the undecided [part='status'] is deliberately NOT collapsed here, in either presentation.
+     [part='status']:empty above never actually matches (the part's lit template leaves
+     whitespace-only text nodes behind, and Chromium's :empty ignores only comments), and that dead
+     rule is load-bearing by accident: decide() focuses [part='status'] synchronously *before*
+     setting this.decision, so anything that made the undecided status display: none would leave
+     .focus() a no-op and drop focus to <body> the moment the buttons unmount. An empty flex item
+     is zero-sized in both presentations; the only cost is one trailing gap at the end of a compact
+     row. See llms/agent-tools.md. */
 `;

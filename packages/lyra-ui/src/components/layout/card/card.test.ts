@@ -1,6 +1,17 @@
-import { fixture, expect, html } from '@open-wc/testing';
+import { fixture, expect, html, oneEvent } from '@open-wc/testing';
 import './card.js';
+import '../../forms/button/button.js';
 import type { LyraCard } from './card.js';
+
+function base(el: LyraCard): HTMLElement {
+  return el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+}
+
+function key(el: HTMLElement, k: string): KeyboardEvent {
+  const ev = new KeyboardEvent('keydown', { key: k, bubbles: true, composed: true, cancelable: true });
+  el.dispatchEvent(ev);
+  return ev;
+}
 
 describe('lr-card', () => {
   it('renders as a div by default, an <a> when href is set', async () => {
@@ -79,5 +90,102 @@ describe('lr-card', () => {
   it('is accessible', async () => {
     const el = (await fixture(html`<lr-card href="/x"><span slot="header">Title</span>body</lr-card>`)) as LyraCard;
     await expect(el).to.be.accessible();
+  });
+
+  describe('activation without href', () => {
+    // The constraint that rules out `role="button"` on `[part='base']`: a card routinely contains
+    // slotted buttons/links, and axe-core's `nested-interactive` rule forbids a focusable
+    // descendant of a `role="button"` ancestor. Written first, deliberately.
+    it('an interactive card containing a slotted lr-button is still accessible', async () => {
+      const el = (await fixture(html`
+        <lr-card interactive>
+          <span slot="header">Rooftop install No. 4021</span>
+          <lr-button slot="actions">Edit</lr-button>
+          Body content
+          <span slot="footer"><a href="/details">Details</a></span>
+        </lr-card>
+      `)) as LyraCard;
+      await expect(el).to.be.accessible();
+    });
+
+    it('makes [part="base"] focusable and emits lr-card-activate on click', async () => {
+      const el = (await fixture(html`<lr-card interactive>body</lr-card>`)) as LyraCard;
+      expect(base(el).getAttribute('tabindex')).to.equal('0');
+      // No role="button" -- see the axe test above.
+      expect(base(el).hasAttribute('role')).to.be.false;
+
+      const fired = oneEvent(el, 'lr-card-activate');
+      base(el).click();
+      await fired;
+    });
+
+    it('emits lr-card-activate on Enter and on Space, and Space suppresses page scroll', async () => {
+      const el = (await fixture(html`<lr-card interactive>body</lr-card>`)) as LyraCard;
+
+      const onEnter = oneEvent(el, 'lr-card-activate');
+      const enterEv = key(base(el), 'Enter');
+      await onEnter;
+      expect(enterEv.defaultPrevented).to.be.true;
+
+      const onSpace = oneEvent(el, 'lr-card-activate');
+      const spaceEv = key(base(el), ' ');
+      await onSpace;
+      // Space must preventDefault() or the page scrolls under the focused card.
+      expect(spaceEv.defaultPrevented).to.be.true;
+    });
+
+    it('does not emit when the click originates in a slotted interactive control', async () => {
+      const el = (await fixture(html`
+        <lr-card interactive>
+          <lr-button slot="actions">Edit</lr-button>
+          <a href="#x" id="deep-link">Deep link</a>
+          <span id="plain">Plain text</span>
+        </lr-card>
+      `)) as LyraCard;
+      let count = 0;
+      el.addEventListener('lr-card-activate', () => (count += 1));
+
+      (el.querySelector('lr-button') as HTMLElement).click();
+      (el.querySelector('#deep-link') as HTMLElement).click();
+      await el.updateComplete;
+      expect(count).to.equal(0);
+
+      // A click on non-interactive slotted content still activates the card.
+      (el.querySelector('#plain') as HTMLElement).dispatchEvent(
+        new MouseEvent('click', { bubbles: true, composed: true }),
+      );
+      await el.updateComplete;
+      expect(count).to.equal(1);
+    });
+
+    it('leaves the href path untouched: no tabindex of its own and no lr-card-activate', async () => {
+      const el = (await fixture(html`<lr-card interactive href="/x">body</lr-card>`)) as LyraCard;
+      const anchor = base(el);
+      expect(anchor.tagName.toLowerCase()).to.equal('a');
+      // The <a href> is already natively focusable and natively activated by Enter -- adding a
+      // tabindex or a synthetic activation event would double-fire the navigation.
+      expect(anchor.hasAttribute('tabindex')).to.be.false;
+
+      let fired = false;
+      el.addEventListener('lr-card-activate', () => (fired = true));
+      key(anchor, 'Enter');
+      key(anchor, ' ');
+      await el.updateComplete;
+      expect(fired).to.be.false;
+    });
+
+    it('without interactive, renders exactly today’s passive output and never emits', async () => {
+      const el = (await fixture(html`<lr-card>body</lr-card>`)) as LyraCard;
+      expect(base(el).hasAttribute('tabindex')).to.be.false;
+      expect(base(el).hasAttribute('role')).to.be.false;
+
+      let fired = false;
+      el.addEventListener('lr-card-activate', () => (fired = true));
+      base(el).click();
+      key(base(el), 'Enter');
+      key(base(el), ' ');
+      await el.updateComplete;
+      expect(fired).to.be.false;
+    });
   });
 });

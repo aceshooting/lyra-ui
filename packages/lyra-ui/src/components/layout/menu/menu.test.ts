@@ -769,6 +769,114 @@ it('honors a host-level aria-label attribute over both the default and an explic
   expect(list(withExplicitLabel).getAttribute('aria-label')).to.equal('Context menu');
 });
 
+describe('public show()/hide()', () => {
+  const withApply = () => html`
+    <lr-menu label="Filters">
+      <button slot="trigger" id="trig" aria-label="Filters">⋮</button>
+      <lr-menu-item value="a">A</lr-menu-item>
+      <lr-menu-item value="b">B</lr-menu-item>
+      <button id="apply" type="button">Apply</button>
+    </lr-menu>
+  `;
+
+  // Never compare two DOM nodes with expect().to.equal() here -- a failure serializes the whole
+  // test page and wedges the runner. Compare a short stable id instead.
+  const activeId = (): string => {
+    const active = document.activeElement as HTMLElement | null;
+    if (!active) return 'none';
+    return active.id || `${active.tagName.toLowerCase()}:${(active as HTMLElement & { value?: string }).value ?? ''}`;
+  };
+  const tabIndexes = (el: LyraMenu): number[] => items(el).map((i) => i.tabIndex);
+  const activeIndexOf = (el: LyraMenu): number => (el as unknown as { activeIndex: number }).activeIndex;
+
+  it('hide({ focusTrigger: true }) from a slotted control closes, returns focus to the trigger, and leaves no stale tab stop', async () => {
+    const el = (await fixture(withApply())) as LyraMenu;
+    trigger(el).click();
+    await el.updateComplete;
+    const apply = el.querySelector('#apply') as HTMLButtonElement;
+    apply.focus();
+    expect(activeId()).to.equal('apply');
+
+    el.hide({ focusTrigger: true });
+    await el.updateComplete;
+
+    expect(el.open).to.be.false;
+    expect(activeId()).to.equal('trig');
+    // No item may be left as a tab stop while the menu is closed.
+    expect(activeIndexOf(el)).to.equal(-1);
+    expect(tabIndexes(el)).to.deep.equal([-1, -1]);
+  });
+
+  it('hide() without options closes without moving focus', async () => {
+    const el = (await fixture(withApply())) as LyraMenu;
+    trigger(el).click();
+    await el.updateComplete;
+    const apply = el.querySelector('#apply') as HTMLButtonElement;
+    apply.focus();
+
+    el.hide();
+    await el.updateComplete;
+    expect(el.open).to.be.false;
+    expect(activeId()).to.equal('apply');
+  });
+
+  it('a bare `open = false` resets activeIndex and the roving tabindex too', async () => {
+    const el = (await fixture(basic())) as LyraMenu;
+    trigger(el).click();
+    await el.updateComplete;
+    expect(tabIndexes(el)).to.deep.equal([0, -1, -1]);
+
+    // The consumer-facing path that bypasses hide() entirely. Before this was centralized in
+    // updated(), it left activeIndex pointing at the last active item and that item's tabIndex at
+    // 0 -- a stale tab stop on a closed menu.
+    el.open = false;
+    await el.updateComplete;
+    expect(activeIndexOf(el)).to.equal(-1);
+    expect(tabIndexes(el)).to.deep.equal([-1, -1, -1]);
+
+    // ...and reopening still lands the roving tab stop on a valid item.
+    el.open = true;
+    await el.updateComplete;
+    expect(tabIndexes(el)).to.deep.equal([0, -1, -1]);
+    expect(activeItemValue()).to.equal('item:rename');
+  });
+
+  it('show() is public and honors an explicit first/last focus target', async () => {
+    const el = (await fixture(basic())) as LyraMenu;
+    el.show('last');
+    await el.updateComplete;
+    expect(el.open).to.be.true;
+    expect(activeItemValue()).to.equal('item:delete');
+
+    el.hide();
+    await el.updateComplete;
+    el.show();
+    await el.updateComplete;
+    expect(activeItemValue()).to.equal('item:rename');
+  });
+
+  it('teardown does not steal focus: disconnecting an open menu leaves focus where it is', async () => {
+    const el = (await fixture(basic())) as LyraMenu;
+    trigger(el).click();
+    await el.updateComplete;
+    expect(el.open).to.be.true;
+
+    const outside = document.createElement('button');
+    outside.id = 'outside';
+    document.body.appendChild(outside);
+    outside.focus();
+    expect(activeId()).to.equal('outside');
+
+    // disconnectedCallback() sets `open = false` deliberately; that must never route through the
+    // trigger-refocus path, or a teardown (route change, list re-render) yanks focus back.
+    el.remove();
+    await el.updateComplete;
+    expect(el.open).to.be.false;
+    expect(activeId()).to.equal('outside');
+    outside.remove();
+  });
+});
+
 it('is accessible while closed', async () => {
   const el = (await fixture(basic())) as LyraMenu;
   await expect(el).to.be.accessible();

@@ -70,6 +70,14 @@ export interface LyraMenuEventMap {
  *   the user chose; Escape and a committed selection *do* refocus the
  *   trigger, since those are dismissals with nowhere else for focus to go.
  *
+ * `show(focus?)` and `hide(options?)` are the public imperative pair, for the cases the trigger
+ * can't express: a slotted "Apply"/"Done" button inside the menu, a keyboard shortcut, a parent
+ * restoring UI state. `hide({ focusTrigger: true })` is the one that also returns DOM focus to the
+ * trigger — use it whenever the interaction that closed the menu hasn't already put focus
+ * somewhere the user chose. Writing `open` directly still works and is fully equivalent apart from
+ * the focus moves: the roving-tabindex reset is centralized in `updated()`, so `el.open = false`
+ * never leaves a stale `tabindex="0"` tab stop on the last active item.
+ *
  * The trigger element itself is read from the `trigger` slot's assigned
  * element (first one, if several are assigned) and enhanced imperatively
  * with `aria-haspopup="menu"`/`aria-expanded`/`aria-controls` — the same
@@ -188,6 +196,15 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
         this.focusRoving(this.pendingFocus);
       } else {
         document.removeEventListener('pointerdown', this.onDocPointer);
+        // The roving state is reset here, not in hide(), for the same reason every other
+        // open-driven side effect lives here: `open` can become false through hide(), through a
+        // consumer writing `el.open = false` directly, or through disconnectedCallback()'s
+        // teardown reset -- and a closed menu must never leave a stale `tabindex="0"` tab stop on
+        // whichever item happened to be active. Focus restoration deliberately stays in hide()
+        // (see its doc): it is a user-intent-driven dismissal, and routing it through here would
+        // also fire it on the disconnectedCallback() path, stealing focus during teardown.
+        this.activeIndex = -1;
+        this.applyRovingTabIndex();
         if (!this._isFirstUpdate) this.emit('lr-hide');
       }
       this.syncTriggerA11y();
@@ -227,21 +244,37 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
     this.open = false;
   }
 
-  private show(focus: 'first' | 'last' = 'first'): void {
+  /**
+   * Opens the menu, moving roving focus to the first (or, with `'last'`, the last) non-disabled
+   * item. A no-op when already open. Public so a consumer can open the menu from something other
+   * than the `trigger`-slotted element -- a keyboard shortcut, a context-menu gesture, a parent
+   * component restoring UI state -- without reproducing `pendingFocus`'s bookkeeping by hand.
+   * Deliberately thin: `updated()` remains the single owner of positioning, the outside-click
+   * listener, the `lr-show`/`lr-hide` events, and the initial focus move, so `el.open = true`
+   * behaves identically apart from the focus target.
+   */
+  show(focus: 'first' | 'last' = 'first'): void {
     if (this.open) return;
     this.pendingFocus = focus;
     this.open = true;
   }
 
-  /** `refocusTrigger` is only ever `true` for a dismissal with nowhere else
-   *  for focus to land (Escape, a committed selection) -- see the class
-   *  doc's interaction contract for why an outside click deliberately omits it. */
-  private hide(refocusTrigger = false): void {
+  /**
+   * Closes the menu. A no-op when already closed.
+   *
+   * `options.focusTrigger` returns DOM focus to the `trigger`-slotted element, synchronously. Pass
+   * it for a dismissal with nowhere else for focus to land -- a slotted "Apply"/"Done" button
+   * inside the menu, a keyboard shortcut, Escape-like handling of your own. Leave it unset when
+   * the interaction that closed the menu has already put focus somewhere the user chose (an
+   * outside click, a Tab out) -- see the class doc's interaction contract.
+   *
+   * Deliberately thin, and deliberately *not* the owner of the roving-tabindex reset: that lives
+   * in `updated()` so a bare `el.open = false` gets it too.
+   */
+  hide(options?: { focusTrigger?: boolean }): void {
     if (!this.open) return;
     this.open = false;
-    this.activeIndex = -1;
-    this.applyRovingTabIndex();
-    if (refocusTrigger) this.triggerEl?.focus();
+    if (options?.focusTrigger) this.triggerEl?.focus();
   }
 
   private onDocPointer = (e: PointerEvent): void => {
@@ -258,7 +291,7 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
     // own Escape handling would otherwise never run.
     if (e.key === 'Escape' && this.open) {
       e.preventDefault();
-      this.hide(true);
+      this.hide({ focusTrigger: true });
       return;
     }
     if (this.open) return;
@@ -366,7 +399,7 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
     const item = e.target;
     if (!(item instanceof LyraMenuItem)) return;
     this.emit<MenuSelectDetail>('lr-menu-select', { value: item.value });
-    this.hide(true);
+    this.hide({ focusTrigger: true });
   };
 
   /** Flips exactly one non-disabled item's `tabIndex` to `0` (the roving
@@ -421,7 +454,7 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
     // instanceof guard below exists to prevent).
     if (e.key === 'Escape' && (isItemTarget || this.closeOnEscapeAnywhere)) {
       e.preventDefault();
-      this.hide(true);
+      this.hide({ focusTrigger: true });
       return;
     }
     if (!isItemTarget) return;

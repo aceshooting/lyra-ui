@@ -1,10 +1,46 @@
-import { html, type TemplateResult, type PropertyValues } from 'lit';
+import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { safeLinkHref } from '../../../internal/safe-url.js';
 import { styles } from './card.styles.js';
 
 export type CardAppearance = 'accent' | 'filled' | 'outlined' | 'filled-outlined' | 'plain';
+
+export interface LyraCardEventMap {
+  'lr-card-activate': CustomEvent<undefined>;
+}
+
+/**
+ * Anything in the composed path between the original event target and `[part='base']` that a user
+ * would reasonably consider "the thing I clicked". A whole-card activation must not fire when the
+ * user aimed at a slotted control inside the card -- the card is a *container*, so unlike
+ * `<lr-chip>`'s `toggleable` (which forbids focusable children outright and can therefore carry
+ * `role="button"`), it can only distinguish the two cases at event time.
+ */
+const NESTED_CONTROL_SELECTOR = [
+  'a[href]',
+  'button',
+  'input',
+  'select',
+  'textarea',
+  'summary',
+  'audio[controls]',
+  'video[controls]',
+  'label',
+  '[contenteditable]:not([contenteditable="false"])',
+  '[tabindex]:not([tabindex="-1"])',
+  '[role="button"]',
+  '[role="link"]',
+  '[role="checkbox"]',
+  '[role="switch"]',
+  '[role="radio"]',
+  '[role="menuitem"]',
+  '[role="option"]',
+  '[role="tab"]',
+  '[role="textbox"]',
+  '[role="slider"]',
+  '[role="spinbutton"]',
+].join(',');
 
 /**
  * `<lr-card>` — a generic, styled bordered content container: the "small bordered surface with
@@ -27,18 +63,25 @@ export type CardAppearance = 'accent' | 'filled' | 'outlined' | 'filled-outlined
  * @csspart actions - Wrapper around the `actions` slot. Hidden entirely when empty.
  * @csspart body - Wrapper around the default slot.
  * @csspart footer - Wrapper around the `footer` slot. Hidden entirely when empty.
+ * @event lr-card-activate - The whole card was activated (click, or Enter/Space while
+ * `[part='base']` has focus). No detail. Only fired while `interactive` is set **without** `href`
+ * -- with `href` the root is a real `<a>` and native navigation is the activation. Never fired for
+ * an interaction that originated in a slotted control (a button, link, input, or anything else
+ * focusable), so a card can keep its own action buttons.
  */
-export class LyraCard extends LyraElement {
+export class LyraCard extends LyraElement<LyraCardEventMap> {
   static styles = [LyraElement.styles, styles];
 
   /** Visual treatment, mirroring `wa-card`'s `appearance` vocabulary. `'outlined'` (the default)
    *  is a bordered surface -- the common "small bordered surface with padding" idiom. */
   @property({ reflect: true }) appearance: CardAppearance = 'outlined';
 
-  /** Opt-in hover/focus-visible treatment (border-color shift, cursor: pointer) for a card used
-   *  as a clickable tile -- purely visual; this component takes no position on what "activate"
-   *  means unless `href` is also set. `false` (the default) reproduces today's exact static
-   *  output. */
+  /** Opt-in clickable-tile behavior: the hover/focus-visible treatment (border-color shift,
+   *  `cursor: pointer`) plus, when `href` is **not** also set, real activation semantics --
+   *  `[part='base']` becomes focusable (`tabindex="0"`), responds to Enter/Space, and emits
+   *  `lr-card-activate`. With `href` set the root is already a real `<a>`, so native navigation
+   *  stays the activation and `lr-card-activate` is never fired. `false` (the default) reproduces
+   *  today's exact static output: no `tabindex`, no listeners, no events. */
   @property({ type: Boolean, reflect: true }) interactive = false;
 
   /** When set, the card's root renders as a real `<a href=...>` instead of a `<div>` -- for a
@@ -73,6 +116,38 @@ export class LyraCard extends LyraElement {
     this.hasActionsSlot = (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length > 0;
   };
 
+  /**
+   * A card is a *container*, so it cannot forbid focusable children the way `<lr-chip>`'s
+   * `toggleable` mode does -- which is exactly why `[part='base']` deliberately carries no
+   * `role="button"` (axe-core's `nested-interactive` rule, which this library's own a11y gate
+   * enforces, forbids a focusable descendant of a `role="button"` ancestor). The trade-off is that
+   * "did the user aim at the card, or at a control inside it?" has to be answered at event time
+   * instead: walk `composedPath()` from the original target up to `[part='base']` and bail out if
+   * anything along the way is itself a control. `composedPath()` (rather than `e.target`) is what
+   * makes this work through a slotted component's own shadow root -- a click on `<lr-button>`
+   * retargets to the host, but its composed path still contains the internal native `<button>`.
+   */
+  private originatesInNestedControl(e: Event, root: EventTarget | null): boolean {
+    for (const node of e.composedPath()) {
+      if (node === root) return false;
+      if (node instanceof Element && node.matches(NESTED_CONTROL_SELECTOR)) return true;
+    }
+    return false;
+  }
+
+  private onBaseClick = (e: Event): void => {
+    if (this.originatesInNestedControl(e, e.currentTarget)) return;
+    this.emit('lr-card-activate');
+  };
+
+  private onBaseKeyDown = (e: KeyboardEvent): void => {
+    if (e.key !== 'Enter' && e.key !== ' ' && e.key !== 'Spacebar') return;
+    if (this.originatesInNestedControl(e, e.currentTarget)) return;
+    // Space in particular must be swallowed, or the page scrolls under the focused card.
+    e.preventDefault();
+    this.emit('lr-card-activate');
+  };
+
   render(): TemplateResult {
     const hasHeader = this.hasHeaderSlot || this.hasActionsSlot;
     const body = html`
@@ -91,9 +166,21 @@ export class LyraCard extends LyraElement {
       </div>
     `;
     const href = safeLinkHref(this.href);
+    // With `href`, the `<a>` is already focusable and Enter-activated natively -- layering the
+    // synthetic activation on top would double-fire. Everything below binds to `nothing` when the
+    // card has not opted in, so the passive default renders byte-identically to before (mirrors
+    // `<lr-chip>`'s `toggleable` gating).
+    const activatable = this.interactive && !href;
     return href
       ? html`<a part="base" href=${href}>${body}</a>`
-      : html`<div part="base">${body}</div>`;
+      : html`<div
+          part="base"
+          tabindex=${activatable ? '0' : nothing}
+          @click=${activatable ? this.onBaseClick : nothing}
+          @keydown=${activatable ? this.onBaseKeyDown : nothing}
+        >
+          ${body}
+        </div>`;
   }
 }
 

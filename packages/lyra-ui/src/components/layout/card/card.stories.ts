@@ -63,6 +63,43 @@ export const Interactive: Story = {
   `,
 };
 
+/** `interactive` **without** `href` makes the whole card activatable: `[part="base"]` becomes
+ *  focusable, Enter/Space activate it, and `lr-card-activate` fires. A click that originates in a
+ *  slotted control (the Edit button, the Details link) is left to that control — the card
+ *  deliberately carries no `role="button"`, so its own buttons and links stay real, focusable
+ *  controls rather than an axe `nested-interactive` violation. */
+export const ActivateWithoutHref: Story = {
+  name: 'interactive (no href) — lr-card-activate',
+  render: () => html`
+    <div>
+      <lr-card
+        interactive
+        style="max-inline-size:20rem;"
+        @lr-card-activate=${() => {
+          const out = document.getElementById('card-activate-log');
+          if (out) out.textContent = `Card activated at ${new Date().toLocaleTimeString()}`;
+        }}
+      >
+        <span slot="header" style="font-weight:600;">Rooftop install No. 4021</span>
+        <button
+          slot="actions"
+          type="button"
+          style="border:none;background:none;color:var(--lr-color-brand);font:inherit;font-size:0.75rem;font-weight:600;cursor:pointer;padding:0;"
+          @click=${() => {
+            const out = document.getElementById('card-activate-log');
+            if (out) out.textContent = 'Edit button clicked — the card did NOT activate.';
+          }}
+        >
+          Edit
+        </button>
+        Click anywhere on the body, or focus the card and press Enter or Space.
+        <span slot="footer" style="font-size:0.75rem;"><a href="#details">Details</a></span>
+      </lr-card>
+      <p id="card-activate-log">Nothing activated yet.</p>
+    </div>
+  `,
+};
+
 export const AsLink: Story = {
   name: 'href (renders as <a>)',
   render: () => html`

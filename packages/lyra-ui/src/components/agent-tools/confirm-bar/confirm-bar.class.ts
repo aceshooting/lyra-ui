@@ -77,6 +77,16 @@ function deniedIcon(): SVGTemplateResult {
  * @csspart approve-button - Named identically to the dialog's part.
  * @csspart status - The decided-state text. Always present in the DOM (`tabindex="-1"`) so focus has
  *   a stable, synchronous landing spot on activation.
+ * @cssprop [--lr-confirm-bar-compact-padding=0] - Padding of `[part='base']` while `compact`.
+ * Accepts any padding shorthand.
+ * @cssprop [--lr-confirm-bar-compact-gap=var(--lr-space-s)] - Gap between the row's items while
+ * `compact`.
+ * @cssprop [--lr-confirm-bar-compact-border=none] - Border of `[part='base']` while `compact`.
+ * Accepts any `border` shorthand.
+ * @cssprop [--lr-confirm-bar-compact-radius=0] - Border radius of `[part='base']` while `compact`
+ * (only visible once `--lr-confirm-bar-compact-border`/`-background` are set).
+ * @cssprop [--lr-confirm-bar-compact-background=transparent] - Background of `[part='base']` while
+ * `compact`.
  */
 export class LyraConfirmBar extends LyraElement<LyraConfirmBarEventMap> {
   static styles = [LyraElement.styles, styles];
@@ -96,6 +106,16 @@ export class LyraConfirmBar extends LyraElement<LyraConfirmBarEventMap> {
 
   /** Token-mapped emphasis for destructive proposals. */
   @property({ reflect: true }) tone: ConfirmBarTone = 'neutral';
+
+  /** Collapses the bar from a full card (bordered, padded, `display: block` surface) to a single
+   *  inline row with no chrome of its own, for a confirmation that has to live inside an existing
+   *  container -- a table cell, a card's action row, a toolbar. The host becomes `inline-flex`, and
+   *  the narrow-allocation `@container` treatment is switched off (a compact bar is *expected* to
+   *  be narrow, so stretching the buttons to fill would be exactly wrong). Re-chrome it through the
+   *  `--lr-confirm-bar-compact-*` properties. Everything else -- the event shapes, the
+   *  focus-to-`[part='status']`-before-unmount contract, `role="group"` and its heading label --
+   *  is unchanged. `false` (the default) renders today's exact card presentation. */
+  @property({ type: Boolean, reflect: true }) compact = false;
 
   @query('[part="status"]') private statusEl?: HTMLElement;
   @query('lr-live-region') private liveRegion?: LyraLiveRegion;
