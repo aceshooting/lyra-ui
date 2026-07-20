@@ -162,6 +162,61 @@ export const RenderHooks: Story = {
   `,
 };
 
+/** Row density from the outside, with no token override. In data mode this component builds each
+ *  `<lr-conversation-item>` itself two shadow roots down, and forwards the item's own parts out
+ *  under the `row-item-*` namespace (`row-*` is the separate wrapper surface around this
+ *  component's render-callback output). Setting `::part(row-item-base)`/`::part(row-item-title)`
+ *  reaches exactly the two declarations that set row height -- and, unlike the
+ *  `::part(row) { --lr-theme-space-s: … }` retheme it replaces, it does *not* leak into the
+ *  `renderActions` menu, whose items stay at full size and above the touch-target floor. Opening
+ *  the first row's menu also shows the row-stacking fix: a focused row paints over the rows below
+ *  it, so the popup is readable rather than covered by rows 2 and 3. */
+export const DenseRows: Story = {
+  render: () => html`
+    <style>
+      .dense-rows::part(row-item-base) {
+        padding-block: var(--lr-space-2xs);
+        padding-inline: var(--lr-space-s);
+      }
+      .dense-rows::part(row-item-title) {
+        font-size: var(--lr-font-size-sm);
+      }
+      .dense-rows::part(row-item-timestamp) {
+        font-size: var(--lr-font-size-2xs);
+      }
+    </style>
+    <div style="block-size:400px;inline-size:320px;border:1px solid var(--lr-color-border);">
+      <lr-thread-list
+        class="dense-rows"
+        active-id="2"
+        .threads=${threads}
+        .renderActions=${(thread: ChatThread) => html`
+          <lr-menu label="Conversation actions" placement="bottom-end">
+            <button
+              slot="trigger"
+              aria-label="Conversation actions"
+              style="border:none;background:none;cursor:pointer;font-size:1.25rem;line-height:1;padding:0.25rem;"
+            >
+              ⋮
+            </button>
+            <lr-menu-item
+              value="rename"
+              @lr-menu-select=${(e: CustomEvent<MenuSelectDetail>) => console.log('rename', thread.id, e.detail.value)}
+              >Rename</lr-menu-item
+            >
+            <lr-menu-item
+              value="delete"
+              destructive
+              @lr-menu-select=${(e: CustomEvent<MenuSelectDetail>) => console.log('delete', thread.id, e.detail.value)}
+              >Delete</lr-menu-item
+            >
+          </lr-menu>
+        `}
+      ></lr-thread-list>
+    </div>
+  `,
+};
+
 interface ProjectThread extends ChatThread {
   project: string;
 }

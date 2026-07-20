@@ -826,3 +826,127 @@ describe('wrapRow row-wrapper part', () => {
     await expect(el).to.be.accessible();
   });
 });
+
+// In data mode this component builds the `<lr-conversation-item>` rows itself, two shadow roots
+// deep (thread-list -> lr-virtual-list -> lr-conversation-item), so none of the item's own eleven
+// parts were reachable from outside -- unlike slotted mode, where the consumer owns the element and
+// can style all of them. Row density in particular lives entirely in unreachable declarations
+// (`:host { font-size }` and `[part="base"] { padding }`), which forced consumers onto
+// `::part(row) { --lr-theme-*: … }`: a whole-subtree retheme that also shrinks everything nested in
+// the row, `renderActions` popups included.
+describe('data-mode row part forwarding', () => {
+  const injected: HTMLStyleElement[] = [];
+
+  function injectStyle(cssText: string): void {
+    const style = document.createElement('style');
+    style.textContent = cssText;
+    document.head.append(style);
+    injected.push(style);
+  }
+
+  afterEach(() => {
+    for (const style of injected.splice(0)) style.remove();
+  });
+
+  const probeThreads = [{ id: 't1', title: 'Today thread', excerpt: 'hello there', timestamp: now }];
+
+  async function mountRow(): Promise<{ el: LyraThreadList; row: LyraConversationItem }> {
+    const el = (await fixture(
+      html`<lr-thread-list
+        grouping="none"
+        .threads=${probeThreads}
+        .renderLeading=${() => html`<span>L</span>`}
+        .renderMeta=${() => html`<span>M</span>`}
+        .renderActions=${() =>
+          html`<span
+            class="probe"
+            style="padding-block: var(--lr-space-s); font-size: var(--lr-font-size-md-sm)"
+            >⋯</span
+          >`}
+      ></lr-thread-list>`,
+    )) as LyraThreadList;
+    await el.updateComplete;
+    await nextFrame();
+    const row = dataRow(el, 't1');
+    await row.updateComplete;
+    return { el, row };
+  }
+
+  function partEl(row: LyraConversationItem, name: string): HTMLElement {
+    return row.shadowRoot!.querySelector<HTMLElement>(`[part="${name}"]`)!;
+  }
+
+  it('forwards every lr-conversation-item part out under the row-item-* namespace', async () => {
+    // `row-item-*`, not `row-*`: the existing `row-leading`/`row-content`/`row-meta`/`row-actions`/
+    // `row-wrapper` parts wrap *callback output* this component renders, which is a different thing
+    // from the item's own internals -- four of the eleven names would otherwise collide outright.
+    const names = [
+      'base',
+      'option',
+      'leading',
+      'content',
+      'title',
+      'excerpt',
+      'meta',
+      'timestamp',
+      'rename-button',
+      'actions',
+    ];
+    injectStyle(
+      names.map((name, i) => `lr-thread-list::part(row-item-${name}) { padding-block-start: ${i + 1}px; }`).join('\n'),
+    );
+    const { row } = await mountRow();
+    for (const [i, name] of names.entries()) {
+      expect(getComputedStyle(partEl(row, name)).paddingBlockStart, `row-item-${name}`).to.equal(`${i + 1}px`);
+    }
+  });
+
+  it('forwards the rename input part, which only exists while a row is being renamed', async () => {
+    injectStyle('lr-thread-list::part(row-item-title-input) { padding-block-start: 7px; }');
+    const { row } = await mountRow();
+    partEl(row, 'rename-button').click();
+    await row.updateComplete;
+    expect(getComputedStyle(partEl(row, 'title-input')).paddingBlockStart).to.equal('7px');
+  });
+
+  it('lets a consumer set row density through ::part() without touching --lr-theme-*', async () => {
+    const before = await mountRow();
+    const baselineProbe = getComputedStyle(before.row.querySelector<HTMLElement>('.probe')!);
+    const baselineProbePadding = baselineProbe.paddingBlockStart;
+    const baselineProbeFontSize = baselineProbe.fontSize;
+    expect(baselineProbePadding).to.not.equal('2px');
+
+    injectStyle(`
+      lr-thread-list::part(row-item-base) { padding-block: 2px; }
+      lr-thread-list::part(row-item-title) { font-size: 12px; }
+    `);
+    const { row } = await mountRow();
+
+    expect(getComputedStyle(partEl(row, 'base')).paddingBlockStart).to.equal('2px');
+    expect(getComputedStyle(partEl(row, 'title')).fontSize).to.equal('12px');
+    // The exact collateral damage the --lr-theme-* workaround caused: a control rendered by
+    // `renderActions` must keep its own spacing and type scale.
+    const probe = getComputedStyle(row.querySelector<HTMLElement>('.probe')!);
+    expect(probe.paddingBlockStart).to.equal(baselineProbePadding);
+    expect(probe.fontSize).to.equal(baselineProbeFontSize);
+  });
+
+  it('still leaks into renderActions content when density is set the old --lr-theme-* way', async () => {
+    const before = await mountRow();
+    expect(getComputedStyle(before.row.querySelector<HTMLElement>('.probe')!).paddingBlockStart).to.not.equal('2px');
+
+    injectStyle('lr-thread-list::part(row) { --lr-theme-space-s: 2px; }');
+    const { row } = await mountRow();
+
+    expect(getComputedStyle(row.querySelector<HTMLElement>('.probe')!).paddingBlockStart).to.equal('2px');
+  });
+
+  it('is accessible with a part-styled dense row and a renderActions control', async () => {
+    injectStyle(`
+      lr-thread-list::part(row-item-base) { padding-block: 2px; }
+      lr-thread-list::part(row-item-title) { font-size: 12px; }
+    `);
+    const { el } = await mountRow();
+    await expect(el).to.be.accessible();
+  });
+});

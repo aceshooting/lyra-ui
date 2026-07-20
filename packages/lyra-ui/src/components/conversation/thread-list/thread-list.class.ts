@@ -150,6 +150,21 @@ function defaultFilter(thread: ChatThread, query: string): boolean {
  * @csspart row-content - The wrapper around `renderRowContent` output.
  * @csspart row-meta - A wrapper around built-in or `renderMeta` metadata.
  * @csspart row-actions - The wrapper around built-in and `renderActions` output.
+ * @csspart row-item-base - Data mode: the row `<lr-conversation-item>`'s own `base` part — the box
+ *   whose padding sets row height. `row-item-*` parts are the item's *internals*; the `row-*` parts
+ *   above wrap this component's own callback output and are a different surface. Styling row
+ *   density here replaces the older `::part(row) { --lr-theme-*: … }` workaround, which retheme'd
+ *   the whole row subtree (`renderActions` popups included).
+ * @csspart row-item-option - Data mode: the row item's selectable `option` region.
+ * @csspart row-item-leading - Data mode: the row item's `leading` wrapper.
+ * @csspart row-item-content - Data mode: the row item's title/excerpt content column.
+ * @csspart row-item-title - Data mode: the row item's title text.
+ * @csspart row-item-title-input - Data mode: the row item's in-place rename `<input>`.
+ * @csspart row-item-rename-button - Data mode: the row item's pencil/rename affordance.
+ * @csspart row-item-excerpt - Data mode: the row item's excerpt line.
+ * @csspart row-item-meta - Data mode: the row item's `meta` wrapper.
+ * @csspart row-item-timestamp - Data mode: the row item's `<time>` element.
+ * @csspart row-item-actions - Data mode: the row item's `actions` wrapper.
  */
 export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
   static styles = [LyraElement.styles, styles];
@@ -559,6 +574,7 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
     const thread = item as ChatThread;
     const row = html`
       <lr-conversation-item
+        exportparts="base:row-item-base, option:row-item-option, leading:row-item-leading, content:row-item-content, title:row-item-title, title-input:row-item-title-input, rename-button:row-item-rename-button, excerpt:row-item-excerpt, meta:row-item-meta, timestamp:row-item-timestamp, actions:row-item-actions"
         id=${thread.id}
         title=${thread.title}
         excerpt=${thread.excerpt ?? ''}
@@ -653,7 +669,7 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
                 this.searchText.trim() ? this.localize('noMatches') : this.localize('threadListEmpty')
               }</div>`
             : html`<lr-virtual-list
-                exportparts="base:viewport, row:row, row-wrapper:row-wrapper, group-header:group-header, group-toggle:group-toggle, group-label:group-label, group-icon:group-icon, row-leading:row-leading, row-content:row-content, row-meta:row-meta, row-actions:row-actions, row-action:row-action, pin-glyph:pin-glyph"
+                exportparts="base:viewport, row:row, row-wrapper:row-wrapper, group-header:group-header, group-toggle:group-toggle, group-label:group-label, group-icon:group-icon, row-leading:row-leading, row-content:row-content, row-meta:row-meta, row-actions:row-actions, row-action:row-action, pin-glyph:pin-glyph, row-item-base:row-item-base, row-item-option:row-item-option, row-item-leading:row-item-leading, row-item-content:row-item-content, row-item-title:row-item-title, row-item-title-input:row-item-title-input, row-item-rename-button:row-item-rename-button, row-item-excerpt:row-item-excerpt, row-item-meta:row-item-meta, row-item-timestamp:row-item-timestamp, row-item-actions:row-item-actions"
                 row-height="auto"
                 .items=${items}
                 .renderItem=${this.renderItem}
