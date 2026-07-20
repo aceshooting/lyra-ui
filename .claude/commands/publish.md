@@ -50,6 +50,9 @@ pnpm --filter @aceshooting/lyra-ui test:coverage   # the one time lyra-ui's own 
 pnpm manifest
 git diff --exit-code -- packages/lyra-ui/custom-elements.json   # manifest must already be committed/fresh -- this is the freshness check; a standalone `manifest:check` step would be redundant with it
 pnpm readme:check
+./package.sh   # regenerates the plugin's plugins/lyra-ui/skills/lyra-ui/references/ from packages/lyra-ui/llms/
+git diff --exit-code -- plugins/lyra-ui/skills/lyra-ui/references/   # freshness check for the line above
+pnpm skill:check   # plugin.json's version must match its mirrored entry in marketplace.json
 pnpm docs:build
 pnpm docs:check-show-code
 pnpm storybook:check
@@ -173,6 +176,24 @@ need to match what you actually intend to do.
   leaves the tagged release commit itself red in CI; the durable fix is to teach `scripts/publish.sh`
   to rewrite that line right after `pnpm changeset version` and stage `README.md` into the release
   commit. Until that exists, this step is the guard.
+- **Sync the plugin/skill version to match `@aceshooting/lyra-ui`'s new version, then repackage.**
+  `plugins/lyra-ui/.claude-plugin/plugin.json`'s `version` (mirrored into the `lyra-ui` entry in
+  `.claude-plugin/marketplace.json`) intentionally tracks `@aceshooting/lyra-ui`'s own semver
+  1:1 — do this every release that includes `@aceshooting/lyra-ui` (skip it if only
+  `@aceshooting/lyra-flags` was released this run; the skill has no flags-specific content). This
+  had never been done before 2026-07-20 — the plugin sat at `1.0.0` from its initial scaffold
+  through 100+ lyra-ui releases, since nothing checked that it moved:
+
+  ```bash
+  # Set "version" in BOTH plugins/lyra-ui/.claude-plugin/plugin.json and its mirrored
+  # .claude-plugin/marketplace.json "lyra-ui" entry to the new @aceshooting/lyra-ui version.
+  ./package.sh        # repackages skills/lyra-ui.skill against the now-released reference content
+  pnpm skill:check    # confirms plugin.json and marketplace.json still agree
+  git commit -am "chore(lyra-ui-skill): bump plugin to <new> to match lyra-ui <new>" && git push origin main
+  ```
+
+  Step 2's `./package.sh` + reference-diff check already guarantees the *content* being packaged
+  is fresh — this step only has to move the version number and repackage against it.
 - The actual `npm publish` now runs asynchronously in CI (`.github/workflows/publish.yml`), not
   synchronously inside `scripts/publish.sh` — it typically takes 1-2 minutes after the script
   finishes. Watch it with `gh run list --workflow=publish.yml --limit 5` (find the run for this
@@ -185,7 +206,8 @@ need to match what you actually intend to do.
   settings, not a file in this repo) and has gone stale before (it said "35 elements" while the
   manifest had 85 tags). If the tag count or headline feature set changed this release, update it:
   `gh repo edit aceshooting/lyra-ui --description "..."`.
-- Report to the user: old → new version per package, a summary of what shipped (the changeset
+- Report to the user: old → new version per package, the plugin/skill version bump (or that it
+  was skipped because only lyra-flags released), a summary of what shipped (the changeset
   descriptions that were just consumed), the npm and GitHub Release links, and anything you had to
   fix along the way that wasn't already captured by a changeset.
 
