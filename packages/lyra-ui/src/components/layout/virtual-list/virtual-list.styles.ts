@@ -67,6 +67,37 @@ export const styles = css`
     font-weight: var(--lr-font-weight-semibold);
     pointer-events: none;
   }
+  /* The pinned copy of the group the viewport is currently inside. Native position: sticky cannot
+     be used on the group markers or rows themselves -- they are absolutely positioned and
+     transform-offset by the windowing math, which makes sticky structurally inert -- so this is a
+     separate in-flow layer.
+
+     It lives inside [part='spacer'] rather than beside it: the spacer's own height is set explicitly
+     from the offsets array and every row inside it is absolutely positioned, so an in-flow child
+     here contributes nothing to any other element's position. An in-flow sibling of the spacer would
+     instead consume real flow height at the top of the scroll container and push every row down by
+     its own height. Sticking still works because the scrollport is [part='base'] and the spacer's
+     box spans the entire scrollable extent.
+
+     z-index matches [part='group'] and a focused [part='row'] rather than exceeding it: this layer
+     is rendered after both, so DOM order already paints it on top. */
+  [part='sticky-group'] {
+    position: sticky;
+    inset-block-start: 0;
+    z-index: var(--lr-layer-content);
+    /* The group content a consumer copies in here is frequently interactive (a collapse toggle, a
+       menu), but this is a *copy* of a row that already exists in the list, so interactivity is
+       opt-in: a consumer that wants the pinned copy clickable sets
+       lr-virtual-list::part(sticky-group) { pointer-events: auto; }. Left as-is, clicks and hover
+       fall through to the rows underneath. */
+    pointer-events: none;
+  }
+  /* Scrolled above the first group there is nothing to pin. The band stays in the DOM anyway so its
+     height remains measurable (the scroll inset is sized from it), but it must show nothing:
+     visibility, not display, because a display: none box has no height to measure. */
+  [part='sticky-group'][data-inactive] {
+    visibility: hidden;
+  }
   :host([loading]) [part='base'] {
     cursor: progress;
   }

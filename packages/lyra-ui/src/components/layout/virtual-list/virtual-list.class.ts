@@ -12,6 +12,9 @@ import { styles } from './virtual-list.styles.js';
  *  chat-list row that the initial scrollbar/spacer size doesn't jump wildly
  *  once real measurements arrive. Irrelevant in fixed-`row-height` mode. */
 const DEFAULT_ROW_ESTIMATE_PX = 48;
+/** Ordinary focusable HTML inside the sticky overlay -- see `syncStickyOverlay()`. */
+const STICKY_FOCUSABLE_SELECTOR =
+  'a[href], area[href], button, input, select, textarea, iframe, details, summary, [tabindex], [contenteditable]:not([contenteditable="false"])';
 const DEFAULT_OVERSCAN_ROWS = 6;
 /** Largest accepted overscan on either side of the visible range. This keeps
  *  an accidental huge value from defeating virtualization. */
@@ -55,9 +58,16 @@ function domKeyToken(key: VirtualListKey): string {
   return `${typeof key}:${String(key)}`;
 }
 
+/** `lr-scroll` detail -- the scroll container's position and height after a coalesced scroll tick. */
+export interface VirtualListScroll {
+  scrollTop: number;
+  viewportHeight: number;
+}
+
 export interface LyraVirtualListEventMap {
   'lr-visible-range-changed': CustomEvent<VirtualListRange>;
   'lr-load-more': CustomEvent<undefined>;
+  'lr-scroll': CustomEvent<VirtualListScroll>;
 }
 /**
  * `<lr-virtual-list>` — a generic windowed/virtualized list host. Renders
@@ -129,6 +139,33 @@ export interface LyraVirtualListEventMap {
  * the row window, so they remain available when the first row in a group is
  * outside the current overscanned range.
  *
+ * **Sticky group headers.** `renderStickyGroup` adds a `[part="sticky-group"]` overlay pinned to the
+ * top of the scroll viewport, showing the `groups` entry the viewport is currently inside; as the
+ * next group's header arrives it is pushed out by the overlap rather than swapped abruptly. Unset
+ * (the default) renders no overlay element at all, and the list renders exactly as it does without
+ * this feature. Four properties of the overlay matter to a consumer:
+ * - It is a **visual copy** of content that already exists in the list, so it is `aria-hidden` and
+ *   any ordinary focusable element inside it is forced to `tabindex="-1"`: the real row keeps sole
+ *   ownership of the heading semantics and of the tab order. (`inert` would express this more
+ *   directly but would also block the pointer opt-in below, so it is deliberately not used; a
+ *   focus-delegating custom element rendered into the overlay needs its own `tabindex="-1"`.)
+ * - It is **`pointer-events: none` by default**; a consumer whose header content is interactive
+ *   opts in with `lr-virtual-list::part(sticky-group) { pointer-events: auto; }`.
+ * - It is **never measured as a row.** It contributes nothing to `offsets`, so a group header that
+ *   is also a real row is not counted twice in `row-height="auto"` mode.
+ * - Its measured height becomes a `scroll-padding-block-start` on the scroll container, so both
+ *   `active-id`/`scrollToIndex` and native keyboard scrolling stop *below* the band instead of
+ *   parking the target row behind it. Scrolled above the first group the band shows nothing but
+ *   stays mounted, so that height is known before the first jump rather than after it.
+ * A host that renders its own group headers as ordinary rows supplies `groups` purely as position
+ * anchors, with `label: ''` so no duplicate `[part="group"]` marker renders.
+ *
+ * **Position queries.** `offsetForIndex(index)` and `indexAtOffset(px)` expose the windowing math
+ * itself: they translate between an item index and the pixel offset that row renders at, in the same
+ * coordinate space as the scroll container's `scrollTop`. A host doing its own scroll-linked layout
+ * (a pinned group header, a scrollbar minimap, a "jump to here" affordance) needs those numbers and
+ * would otherwise have to duplicate the offsets array.
+ *
  * **Programmatic scrolling.** `scrollToIndex()` is the public counterpart to `active-id`'s automatic
  * scroll-into-view -- used by `<lr-chat-viewport>`'s virtual mode and any other host that needs to
  * scroll to a specific row without also changing which row is "active."
@@ -152,6 +189,14 @@ export interface LyraVirtualListEventMap {
  * @event lr-visible-range-changed - `detail: { start, end }` (see
  *   `VirtualListRange`) — the current visible (non-overscanned) item index
  *   range, fired only when it actually changes.
+ * @event lr-scroll - `detail: { scrollTop, viewportHeight }` (see
+ *   `VirtualListScroll`) — the scroll container moved. Emitted from the same
+ *   `requestAnimationFrame` tick that already coalesces native `scroll`
+ *   events, so a fling that fires dozens of native events produces at most one
+ *   of these per frame, and none at all when the position did not actually
+ *   change. Unlike `lr-visible-range-changed` this reports *sub-row*
+ *   movement, which is what a scroll-linked layout (a pinned header, a
+ *   minimap) needs.
  *
  * A host `aria-label` attribute on this element is forwarded onto the internal `role="list"`
  * container, since `aria-label` set on a custom-element host does not by itself name a role living
@@ -159,7 +204,13 @@ export interface LyraVirtualListEventMap {
  * @csspart base - The scrollable container (`role="list"`).
  * @csspart spacer - The full-content-height inner element that gives the
  *   container its true scrollable extent.
- * @csspart group - A positioned group label.
+ * @csspart group - A positioned group label. Not rendered for a `groups` entry whose `label` is the
+ *   empty string (a position-anchor-only entry).
+ * @csspart sticky-group - The pinned copy of the current group, rendered only while
+ *   `renderStickyGroup` is set (and showing nothing while the viewport is above the first group,
+ *   where there is no group to pin). `aria-hidden` and
+ *   `pointer-events: none` by default — style this part with `pointer-events: auto` to make copied
+ *   interactive content clickable again.
  * @csspart row - One rendered row's absolutely-positioned wrapper
  *   (`role="listitem"`); `renderItem`'s return value renders inside it.
  * @cssprop [--lr-virtual-list-height=var(--lr-size-24rem)] - The scroll viewport's height. A
@@ -183,8 +234,25 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
   @property({ attribute: false }) keyFunction?: (item: unknown, index: number) => string | number;
 
   /** Group labels positioned at their first row's `startIndex`. Invalid or
-   * duplicate indexes are ignored during rendering. */
+   * duplicate indexes are ignored during rendering. An entry whose `label` is
+   * the empty string renders no `[part="group"]` marker at all — it is a pure
+   * position anchor, for a host that renders its own group header as an
+   * ordinary row (and would otherwise get two stacked headers) but still needs
+   * this component to know where each group starts, e.g. to drive
+   * `renderStickyGroup`. Omitting `label` entirely still falls back to `key`. */
   @property({ attribute: false }) groups?: VirtualListGroup[];
+
+  /** Renders the pinned copy of whichever `groups` entry the viewport is
+   *  currently inside, into a `[part="sticky-group"]` overlay layer that stays
+   *  at the top of the scroll viewport. Unset (the default) renders no overlay
+   *  element whatsoever. See the class doc's "Sticky group headers" section for
+   *  the accessibility and interactivity contract.
+   *
+   *  Called on every scroll-driven update, so keep it cheap and side-effect
+   *  free — including while the viewport is above the first group, where it is
+   *  called with the *first* group and the result rendered hidden, purely to
+   *  keep the band's height measurable for the scroll inset. */
+  @property({ attribute: false }) renderStickyGroup?: (group: VirtualListGroup) => unknown;
 
   /** `'auto'` (default) measures each row's real height via `ResizeObserver`;
    *  a numeric string fixes every row to that many pixels. */
@@ -216,6 +284,39 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
 
   /** When true, scrolling near the bottom fires `lr-load-more`. */
   @property({ type: Boolean, attribute: 'has-more', reflect: true }) hasMore = false;
+
+  /**
+   * The real scroll container — the `[part="base"]` element, the box whose `scrollTop`/
+   * `clientHeight` this component's windowing math is expressed against. `undefined` until the
+   * first render (and for a never-connected element), since the element does not exist before then.
+   *
+   * Exposed so a host that needs the live scroll position, or needs to scroll the list itself, can
+   * do it without reaching into this component's shadow root. Pair it with `lr-scroll` (change
+   * notifications), `offsetForIndex()`/`indexAtOffset()` (coordinate conversion), and
+   * `scrollToIndex()` (which expresses "show row N" without any manual arithmetic at all, and is
+   * the better choice whenever that is the actual intent).
+   */
+  get scrollContainer(): HTMLElement | undefined {
+    const root = this.renderRoot as ParentNode | undefined;
+    return (root?.querySelector('[part="base"]') as HTMLElement | null) ?? undefined;
+  }
+
+  /**
+   * The row wrappers (`[part="row"]`) that currently exist as real DOM, in item order — the current
+   * window, not the whole `items` collection, and empty before the first render. Each one carries
+   * its own `data-row-index`, and `renderItem`'s output for that item is inside it.
+   *
+   * For a host that has to *reach* a rendered row rather than style it: focus management across a
+   * windowed list is the motivating case, since the row that a keyboard command needs to focus may
+   * not have existed a frame earlier. `exportparts` cannot serve that — it forwards styling, not
+   * element references. Treat the returned elements as read-only: their positioning, keys, and
+   * lifetime belong to the windowing math, and any of them can be recycled or removed on the next
+   * update.
+   */
+  get renderedRows(): HTMLElement[] {
+    const root = this.renderRoot as ParentNode | undefined;
+    return root ? [...root.querySelectorAll<HTMLElement>('[part="row"]')] : [];
+  }
 
   /** `rowIndexOffset` normalized to a finite integer before it's added into `renderRow()`'s
    *  `aria-rowindex` -- mirrors `normalizeOverscan()`'s own defensive normalization for `overscan`
@@ -278,8 +379,16 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
   };
   private isFirstUpdate = true;
 
+  /** The sticky overlay's measured block size, used both for the push-off overlap math and for the
+   *  scroll inset that keeps a scrolled-to row from landing underneath the band. Measured by its own
+   *  `ResizeObserver` -- deliberately never by `rowResizeObserver`, which would fold this *copy* of a
+   *  row into `offsets` and double-count the group header's height. */
+  @state() private stickyHeight = 0;
+
   private rowResizeObserver?: ResizeObserver;
   private containerResizeObserver?: ResizeObserver;
+  private stickyResizeObserver?: ResizeObserver;
+  private observedSticky?: HTMLElement;
   private readonly observedRows = new Map<VirtualListKey, HTMLElement>();
   private readonly observedRowKeys = new WeakMap<HTMLElement, VirtualListKey>();
   private readonly observedRowIndices = new WeakMap<HTMLElement, number>();
@@ -289,6 +398,7 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
   connectedCallback(): void {
     super.connectedCallback();
     this.rowResizeObserver = new ResizeObserver(this.onRowsResized);
+    this.stickyResizeObserver = new ResizeObserver(this.onStickyResized);
     // firstUpdated() only ever fires once per element instance -- a
     // disconnect/reconnect (e.g. a reparenting drag) needs its own
     // re-attach here, since the container observer/scroll listener were
@@ -300,6 +410,7 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
     if (this.hasUpdated) {
       this.attachContainerListeners();
       this.syncRowObservers();
+      this.syncStickyOverlay();
     }
   }
 
@@ -310,12 +421,15 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
     this.observedRows.clear();
     this.containerResizeObserver?.disconnect();
     this.containerResizeObserver = undefined;
+    this.stickyResizeObserver?.disconnect();
+    this.stickyResizeObserver = undefined;
+    this.observedSticky = undefined;
     if (this.scrollRafId !== undefined) {
       cancelAnimationFrame(this.scrollRafId);
       this.scrollRafId = undefined;
     }
     this.pendingScrollCorrection = undefined;
-    this.renderRoot.querySelector('[part="base"]')?.removeEventListener('scroll', this.onScroll);
+    this.scrollContainer?.removeEventListener('scroll', this.onScroll);
   }
 
   firstUpdated(): void {
@@ -345,6 +459,7 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
   protected updated(changed: PropertyValues): void {
     super.updated(changed);
     this.syncRowObservers();
+    this.syncStickyOverlay();
     if (changed.has('activeId') && !this.isFirstUpdate) this.scrollActiveIntoView();
     this.emitRangeChangeIfNeeded();
     this.maybeFireLoadMore();
@@ -422,6 +537,39 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
     return lo;
   }
 
+  /**
+   * Row `index`'s pixel top in this list's own scroll-coordinate space — the exact value the row is
+   * positioned at (`transform: translateY(...)`), and therefore directly comparable with
+   * `scrollContainer.scrollTop`. `index` is clamped to `0…items.length`, so
+   * `offsetForIndex(items.length)` is the total content height (`[part="spacer"]`'s height) and an
+   * empty list always answers `0`.
+   *
+   * In `row-height="auto"` mode an unmeasured row contributes a fixed per-row estimate to this
+   * value, so an offset far below the rendered window stays estimate-based until every row above it
+   * has been measured by the row `ResizeObserver`; it converges as those measurements land. Fixed
+   * numeric `row-height` offsets are exact from the first render. Either way this reflects the most
+   * recent render, so `await el.updateComplete` after assigning `items` before querying.
+   */
+  offsetForIndex(index: number): number {
+    const clamped = Math.min(this.items.length, Math.max(0, Math.trunc(index) || 0));
+    return this.offsets[clamped] ?? 0;
+  }
+
+  /**
+   * The index of the row whose box contains `px`, expressed in the same scroll-coordinate space
+   * `offsetForIndex()` returns — so `indexAtOffset(offsetForIndex(i))` round-trips to `i`, and
+   * `indexAtOffset(scrollContainer.scrollTop)` is the row at the top of the viewport. Clamped: a
+   * negative offset resolves to `0` and an offset past the end of the content to the last row.
+   * Returns `-1` when `items` is empty. Same `row-height="auto"` estimate caveat as
+   * `offsetForIndex()`.
+   */
+  indexAtOffset(px: number): number {
+    const n = this.items.length;
+    if (n === 0) return -1;
+    if (!Number.isFinite(px)) return px > 0 ? n - 1 : 0;
+    return Math.min(n - 1, Math.max(0, this.findIndexAtOrAfter(px)));
+  }
+
   private computeRange(): void {
     const n = this.items.length;
     if (n === 0 || this.viewportHeight <= 0) {
@@ -444,7 +592,7 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
   }
 
   private attachContainerListeners(): void {
-    const base = this.renderRoot.querySelector('[part="base"]') as HTMLElement | null;
+    const base = this.scrollContainer;
     if (!base) return;
     this.containerResizeObserver = new ResizeObserver((entries) => {
       const entry = entries[0];
@@ -458,7 +606,7 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
     // reactive writes do not schedule an update from inside Lit's lifecycle
     // callback; the observer remains responsible for later measurements.
     queueMicrotask(() => {
-      if (!this.isConnected || this.renderRoot.querySelector('[part="base"]') !== base) return;
+      if (!this.isConnected || this.scrollContainer !== base) return;
       const viewportHeight = base.clientHeight;
       const scrollTop = base.scrollTop;
       if (this.viewportHeight !== viewportHeight) this.viewportHeight = viewportHeight;
@@ -471,19 +619,27 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
     if (this.scrollRafId !== undefined) return;
     // Coalesce to one recompute per animation frame -- native `scroll`
     // events can fire far faster than that under a fast trackpad/touch
-    // fling, and each recompute is a full Lit update.
+    // fling, and each recompute is a full Lit update. `lr-scroll` is emitted
+    // from this same tick rather than a second rAF of its own, so a consumer
+    // driving scroll-linked layout gets exactly one notification per frame,
+    // already in sync with the range recompute.
     this.scrollRafId = requestAnimationFrame(() => {
       this.scrollRafId = undefined;
       if (this.pendingScrollTop !== null) {
-        this.containerScrollTop = this.pendingScrollTop;
+        const scrollTop = this.pendingScrollTop;
         this.pendingScrollTop = null;
+        const moved = this.containerScrollTop !== scrollTop;
+        this.containerScrollTop = scrollTop;
+        if (moved) {
+          this.emit<VirtualListScroll>('lr-scroll', { scrollTop, viewportHeight: this.viewportHeight });
+        }
       }
     });
   };
 
   private onRowsResized = (entries: ResizeObserverEntry[]): void => {
     if (this.fixedRowHeight != null) return;
-    const base = this.renderRoot.querySelector('[part="base"]') as HTMLElement | null;
+    const base = this.scrollContainer;
     const oldScrollTop = base?.scrollTop ?? this.containerScrollTop;
     let scrollAdjustment = 0;
     let changed = false;
@@ -553,18 +709,29 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
     }
   }
 
+  /** How much of the viewport's top edge the sticky overlay covers. `0` whenever there is no sticky
+   *  layer at all, which is what keeps every scroll path byte-identical to its pre-sticky behavior.
+   *  Deliberately *not* conditioned on a group being pinned right now: a scroll target must not
+   *  depend on whether the band happens to be showing at the moment the scroll is requested. */
+  private get stickyInset(): number {
+    return this.renderStickyGroup ? this.stickyHeight : 0;
+  }
+
   private scrollActiveIntoView(): void {
     if (this.activeId === '') return;
     const index = this.items.findIndex((item, i) => Object.is(this.keyOf(item, i), this.activeId));
     if (index < 0) return;
-    const base = this.renderRoot.querySelector('[part="base"]') as HTMLElement | null;
+    const base = this.scrollContainer;
     if (!base) return;
+    const inset = this.stickyInset;
     const top = this.offsets[index] ?? 0;
     const bottom = this.offsets[index + 1] ?? top;
     const viewTop = base.scrollTop;
     const viewBottom = viewTop + base.clientHeight;
     let target: number | null = null;
-    if (top < viewTop) target = top;
+    // A row hidden *behind* the sticky band counts as out of view, and the scroll that reveals it
+    // has to clear the band too -- otherwise `active-id` parks the row underneath it.
+    if (top - inset < viewTop) target = top - inset;
     else if (bottom > viewBottom) target = bottom - base.clientHeight;
     if (target === null) return;
     base.scrollTo({ top: Math.max(0, target), behavior: prefersReducedMotion() ? 'auto' : 'smooth' });
@@ -609,16 +776,19 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
   }
 
   private performScrollTo(index: number, align: 'start' | 'end' | 'auto', behavior: 'auto' | 'smooth'): void {
-    const base = this.renderRoot.querySelector('[part="base"]') as HTMLElement | null;
+    const base = this.scrollContainer;
     if (!base) return;
+    const inset = this.stickyInset;
     const top = this.offsets[index] ?? 0;
     const bottom = this.offsets[index + 1] ?? top;
     const viewTop = base.scrollTop;
     const viewBottom = viewTop + base.clientHeight;
     let target: number | null = null;
-    if (align === 'start') target = top;
+    // Only the top-edge alignments need the sticky inset -- `'end'` puts the row's *bottom* edge at
+    // the viewport bottom, which the band never covers.
+    if (align === 'start') target = top - inset;
     else if (align === 'end') target = bottom - base.clientHeight;
-    else if (top < viewTop) target = top;
+    else if (top - inset < viewTop) target = top - inset;
     else if (bottom > viewBottom) target = bottom - base.clientHeight;
     if (target === null) return;
     base.scrollTo({ top: Math.max(0, target), behavior });
@@ -678,7 +848,10 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
     `;
   }
 
-  private renderGroups(): TemplateResult[] {
+  /** `groups`, minus entries whose `startIndex` is non-integer, out of range, or a duplicate of an
+   *  earlier entry's, in ascending `startIndex` order. Shared by the positioned markers and the
+   *  sticky overlay so both agree on exactly which groups exist and where. */
+  private validGroups(): VirtualListGroup[] {
     const seen = new Set<number>();
     return (this.groups ?? [])
       .filter((group) => {
@@ -687,7 +860,14 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
         seen.add(index);
         return true;
       })
-      .sort((a, b) => a.startIndex - b.startIndex)
+      .sort((a, b) => a.startIndex - b.startIndex);
+  }
+
+  private renderGroups(): TemplateResult[] {
+    return this.validGroups()
+      // An explicitly empty label means "anchor only" -- the host renders its own header for this
+      // group (typically as a real row), so a marker here would duplicate it.
+      .filter((group) => group.label !== '')
       .map(
         (group) => html`
           <div
@@ -700,6 +880,82 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
       );
   }
 
+  /** The group the viewport is currently inside -- the last one whose first row's offset is at or
+   *  above the current scroll position -- plus how far the incoming group's header has already
+   *  pushed it out of the band. `null` when there are no groups to pin at all.
+   *
+   * Scrolled *above* the first group there is nothing to pin, but the band is still rendered
+   * (`active: false`, visually hidden) rather than dropped: its measured height is what the scroll
+   * inset is sized from, and a band that only exists once it has first been shown would let the
+   * very first `active-id`/`scrollToIndex` jump park its target underneath it. */
+  private currentStickyGroup(): { group: VirtualListGroup; shift: number; active: boolean } | null {
+    const groups = this.validGroups();
+    if (groups.length === 0) return null;
+    const scrollTop = this.containerScrollTop;
+    let current = -1;
+    for (let i = 0; i < groups.length; i++) {
+      if (this.offsetForIndex(groups[i].startIndex) > scrollTop) break;
+      current = i;
+    }
+    if (current < 0) return { group: groups[0], shift: 0, active: false };
+    const next = groups[current + 1];
+    let shift = 0;
+    if (next && this.stickyHeight > 0) {
+      // Distance from the top of the band to the next group's header row. Once that is less than
+      // the band's own height, the incoming header pushes the pinned one out by the overlap
+      // instead of the two swapping abruptly at the boundary.
+      const distance = this.offsetForIndex(next.startIndex) - scrollTop;
+      if (distance < this.stickyHeight) shift = Math.min(0, distance - this.stickyHeight);
+    }
+    return { group: groups[current], shift, active: true };
+  }
+
+  private renderStickyLayer(): TemplateResult | typeof nothing {
+    const render = this.renderStickyGroup;
+    if (!render) return nothing;
+    const state = this.currentStickyGroup();
+    if (!state) return nothing;
+    return html`
+      <div
+        part="sticky-group"
+        aria-hidden="true"
+        ?data-inactive=${!state.active}
+        style=${state.shift !== 0 ? `transform:translateY(${state.shift}px)` : nothing}
+      >
+        ${render(state.group)}
+      </div>
+    `;
+  }
+
+  /** Keeps the overlay's measured height current, and keeps it out of the tab order. Both are
+   *  deliberately done here rather than in the template: the height is only knowable after layout,
+   *  and the overlay's contents come from the consumer's own callback. */
+  private syncStickyOverlay(): void {
+    const overlay = this.renderRoot.querySelector<HTMLElement>('[part="sticky-group"]');
+    if (overlay !== this.observedSticky) {
+      if (this.observedSticky) this.stickyResizeObserver?.unobserve(this.observedSticky);
+      this.observedSticky = overlay ?? undefined;
+      if (overlay) this.stickyResizeObserver?.observe(overlay);
+    }
+    if (!overlay) return;
+    // The overlay duplicates a row that already exists in the list, so it is `aria-hidden` -- which
+    // makes any focusable element inside it a tab stop with no accessible name. `inert` would solve
+    // that too, but it would also block the documented `pointer-events: auto` opt-in, so the tab
+    // stop is removed directly instead. A focusable *custom element* (one with `delegatesFocus`,
+    // whose focusable node lives in its own shadow root) is beyond reach here -- a consumer
+    // rendering one into the overlay gives it `tabindex="-1"` itself.
+    overlay.querySelectorAll<HTMLElement>(STICKY_FOCUSABLE_SELECTOR).forEach((node) => {
+      if (node.getAttribute('tabindex') !== '-1') node.setAttribute('tabindex', '-1');
+    });
+  }
+
+  private onStickyResized = (entries: ResizeObserverEntry[]): void => {
+    const entry = entries[0];
+    if (!entry) return;
+    const height = entry.borderBoxSize?.[0]?.blockSize ?? entry.contentRect.height;
+    if (Math.abs(this.stickyHeight - height) > 0.5) this.stickyHeight = height;
+  };
+
   render(): TemplateResult {
     const n = this.items.length;
     const totalHeight = this.offsets[n] ?? 0;
@@ -708,12 +964,16 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
       windowed.push({ item: this.items[i], index: i });
     }
     const isRowMode = this.itemRole === 'row';
+    // Native keyboard/anchor scrolling gets the same treatment as the programmatic paths, from one
+    // declaration -- and the attribute is absent entirely while there is no sticky layer.
+    const stickyInset = this.stickyInset;
 
     return html`
       <div
         part="base"
         role=${isRowMode ? 'rowgroup' : 'list'}
         tabindex="0"
+        style=${stickyInset > 0 ? `scroll-padding-block-start:${stickyInset}px` : nothing}
         aria-label=${this.getAttribute('aria-label') || nothing}
         aria-busy=${this.loading ? 'true' : nothing}
       >
@@ -724,6 +984,7 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
             (w) => this.keyOf(w.item, w.index),
             (w) => this.renderRow(w.item, w.index, n),
           )}
+          ${this.renderStickyLayer()}
         </div>
       </div>
     `;

@@ -122,6 +122,51 @@ export const ScrollToActive: Story = {
   },
 };
 
+/**
+ * `renderStickyGroup` pins a copy of the current group's header to the top of the viewport, and
+ * pushes it off as the next group arrives. The real header here is an ordinary row (that is why the
+ * `groups` entries carry `label: ''` -- they are position anchors only, so no second marker
+ * renders), and the pinned copy is `aria-hidden` and `pointer-events: none` unless a consumer opts
+ * back in with `lr-virtual-list::part(sticky-group) { pointer-events: auto; }`.
+ */
+export const StickyGroups: Story = {
+  render: () => {
+    const groupSize = 25;
+    const rows = messages.slice(0, 200).map((m, i) => ({ ...m, group: `Batch ${Math.floor(i / groupSize) + 1}` }));
+    type Row = (typeof rows)[number];
+    const groupStarts = rows
+      .map((row, index) => ({ row, index }))
+      .filter(({ index }) => index % groupSize === 0)
+      .map(({ row, index }) => ({ key: row.group, label: '', startIndex: index }));
+
+    const header = (label: string) => html`
+      <div
+        style="padding:0.375rem 0.75rem; background:var(--lr-color-surface-raised); color:var(--lr-color-text-quiet); font-weight:600;"
+      >
+        ${label}
+      </div>
+    `;
+
+    return html`
+      <style>
+        #sticky-demo-list::part(sticky-group) {
+          box-shadow: var(--lr-shadow);
+        }
+      </style>
+      <lr-virtual-list
+        id="sticky-demo-list"
+        style="max-width: 32rem; --lr-virtual-list-height: 20rem;"
+        .items=${rows}
+        .groups=${groupStarts}
+        .renderItem=${(item: unknown, index: number) =>
+          index % groupSize === 0 ? header((item as Row).group) : renderMessage(item, index)}
+        .keyFunction=${keyFunction}
+        .renderStickyGroup=${(group: { key: string | number }) => header(String(group.key))}
+      ></lr-virtual-list>
+    `;
+  },
+};
+
 /** Demonstrates `has-more`/`loading` gating `lr-load-more` -- scroll near the bottom to trigger a simulated fetch. */
 export const LoadMore: Story = {
   render: () => {

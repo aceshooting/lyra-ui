@@ -986,6 +986,645 @@ describe('itemRole / rowIndexOffset', () => {
   });
 });
 
+describe('public offset/index queries', () => {
+  /** The pixel top a row is actually rendered at, read back from its own box rather than from the
+   *  component's internal state -- `[part="row"]` is absolutely positioned inside `[part="spacer"]`
+   *  and shifted by `translateY(offset)`, so this difference *is* the rendered offset. */
+  function renderedTop(el: LyraVirtualList, index: number): number {
+    const spacer = el.shadowRoot!.querySelector('[part="spacer"]') as HTMLElement;
+    const row = el.shadowRoot!.querySelector<HTMLElement>(`[part="row"][data-row-index="${index}"]`)!;
+    return row.getBoundingClientRect().top - spacer.getBoundingClientRect().top;
+  }
+
+  it('offsetForIndex matches the pixel top a row renders at in fixed row-height mode', async () => {
+    const items = Array.from({ length: 50 }, (_, i) => i);
+    const el = (await fixture(
+      html`<lr-virtual-list
+        style="--lr-virtual-list-height:200px"
+        row-height="40"
+        overscan="2"
+        .items=${items}
+        .renderItem=${renderText}
+        .keyFunction=${numberKey}
+      ></lr-virtual-list>`,
+    )) as LyraVirtualList;
+    await el.updateComplete;
+    await nextFrame();
+
+    for (const index of [0, 1, 3]) {
+      expect(el.offsetForIndex(index), `row ${index}`).to.equal(index * 40);
+      expect(renderedTop(el, index), `rendered row ${index}`).to.be.closeTo(el.offsetForIndex(index), 0.5);
+    }
+    // offsetForIndex(items.length) is the total content height -- the spacer's own height.
+    const spacer = el.shadowRoot!.querySelector('[part="spacer"]') as HTMLElement;
+    expect(el.offsetForIndex(items.length)).to.equal(parseFloat(spacer.style.height));
+  });
+
+  it('offsetForIndex matches the pixel top a row renders at in row-height="auto" mode', async () => {
+    const heights = [30, 90, 55, 120, 45, 70];
+    const items = heights.map((h, i) => ({ id: i, h }));
+    const el = (await fixture(
+      html`<lr-virtual-list
+        style="--lr-virtual-list-height:600px"
+        .items=${items}
+        .renderItem=${(item: unknown) =>
+          html`<div style="block-size:${(item as { h: number }).h}px;box-sizing:border-box">row</div>`}
+        .keyFunction=${(item: unknown) => (item as { id: number }).id}
+      ></lr-virtual-list>`,
+    )) as LyraVirtualList;
+    await el.updateComplete;
+    await nextFrame();
+    await nextFrame();
+    await el.updateComplete;
+
+    for (let i = 0; i < heights.length; i++) {
+      expect(renderedTop(el, i), `rendered row ${i}`).to.be.closeTo(el.offsetForIndex(i), 0.5);
+    }
+    expect(el.offsetForIndex(heights.length)).to.be.closeTo(
+      heights.reduce((a, b) => a + b, 0),
+      1,
+    );
+  });
+
+  it('clamps offsetForIndex to 0…items.length and returns 0 for an empty list', async () => {
+    const el = (await fixture(
+      html`<lr-virtual-list
+        style="--lr-virtual-list-height:200px"
+        row-height="40"
+        .items=${[1, 2, 3]}
+        .renderItem=${renderText}
+        .keyFunction=${numberKey}
+      ></lr-virtual-list>`,
+    )) as LyraVirtualList;
+    await el.updateComplete;
+    await nextFrame();
+    expect(el.offsetForIndex(-10)).to.equal(0);
+    expect(el.offsetForIndex(999)).to.equal(120); // clamped to items.length -> total height
+    expect(el.offsetForIndex(NaN)).to.equal(0);
+
+    el.items = [];
+    await el.updateComplete;
+    expect(el.offsetForIndex(0)).to.equal(0);
+  });
+
+  it('indexAtOffset round-trips offsetForIndex for every index in a mixed-height list', async () => {
+    const heights = [30, 90, 55, 120, 45, 70];
+    const items = heights.map((h, i) => ({ id: i, h }));
+    const el = (await fixture(
+      html`<lr-virtual-list
+        style="--lr-virtual-list-height:600px"
+        .items=${items}
+        .renderItem=${(item: unknown) =>
+          html`<div style="block-size:${(item as { h: number }).h}px;box-sizing:border-box">row</div>`}
+        .keyFunction=${(item: unknown) => (item as { id: number }).id}
+      ></lr-virtual-list>`,
+    )) as LyraVirtualList;
+    await el.updateComplete;
+    await nextFrame();
+    await nextFrame();
+    await el.updateComplete;
+
+    for (let i = 0; i < heights.length; i++) {
+      expect(el.indexAtOffset(el.offsetForIndex(i)), `round trip ${i}`).to.equal(i);
+      // A point strictly inside the row's box resolves to the same row.
+      expect(el.indexAtOffset(el.offsetForIndex(i) + 1), `inside ${i}`).to.equal(i);
+    }
+  });
+
+  it('clamps indexAtOffset and reports -1 for an empty list', async () => {
+    const el = (await fixture(
+      html`<lr-virtual-list
+        style="--lr-virtual-list-height:200px"
+        row-height="40"
+        .items=${[1, 2, 3]}
+        .renderItem=${renderText}
+        .keyFunction=${numberKey}
+      ></lr-virtual-list>`,
+    )) as LyraVirtualList;
+    await el.updateComplete;
+    await nextFrame();
+    expect(el.indexAtOffset(-500)).to.equal(0);
+    expect(el.indexAtOffset(99999)).to.equal(2);
+    expect(el.indexAtOffset(Infinity)).to.equal(2);
+    expect(el.indexAtOffset(NaN)).to.equal(0);
+
+    el.items = [];
+    await el.updateComplete;
+    expect(el.indexAtOffset(0)).to.equal(-1);
+  });
+});
+
+describe('public scroll container and lr-scroll', () => {
+  async function scrollFixture(): Promise<LyraVirtualList> {
+    const el = (await fixture(
+      html`<lr-virtual-list
+        style="--lr-virtual-list-height:200px"
+        row-height="40"
+        overscan="0"
+        .items=${Array.from({ length: 100 }, (_, i) => i)}
+        .renderItem=${renderText}
+        .keyFunction=${numberKey}
+      ></lr-virtual-list>`,
+    )) as LyraVirtualList;
+    await el.updateComplete;
+    await nextFrame();
+    return el;
+  }
+
+  it('exposes [part="base"] as the public scrollContainer', async () => {
+    const el = await scrollFixture();
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    // Compared as a boolean: a failing DOM-node assertion hangs the whole file under wtr.
+    expect(el.scrollContainer === base, 'scrollContainer should be the [part="base"] element').to.be.true;
+    expect(el.scrollContainer!.getAttribute('part')).to.equal('base');
+  });
+
+  it('reports scrollContainer as undefined before the first render', () => {
+    const el = document.createElement('lr-virtual-list') as LyraVirtualList;
+    expect(el.scrollContainer === undefined, 'no scroll container exists before first render').to.be.true;
+  });
+
+  it('coalesces a burst of scroll events within one frame into exactly one lr-scroll', async () => {
+    const el = await scrollFixture();
+    const base = el.scrollContainer!;
+    const details: { scrollTop: number; viewportHeight: number }[] = [];
+    el.addEventListener('lr-scroll', (e) => details.push((e as CustomEvent).detail));
+
+    base.scrollTop = 100;
+    base.dispatchEvent(new Event('scroll'));
+    base.scrollTop = 260;
+    base.dispatchEvent(new Event('scroll'));
+    base.scrollTop = 375;
+    base.dispatchEvent(new Event('scroll'));
+    await nextFrame();
+    await el.updateComplete;
+
+    expect(details.length, 'three scroll events in one frame produce one lr-scroll').to.equal(1);
+    expect(details[0].scrollTop).to.equal(base.scrollTop);
+    expect(details[0].scrollTop).to.equal(375);
+    expect(details[0].viewportHeight).to.be.closeTo(base.clientHeight, 1);
+  });
+
+  it('reports sub-row scroll deltas that never change the visible index range', async () => {
+    // 210px viewport over 40px rows: both the top and the bottom edge sit strictly inside a row's
+    // box, so a few pixels of movement cannot pull a new row into the visible range.
+    const el = (await fixture(
+      html`<lr-virtual-list
+        style="--lr-virtual-list-height:210px"
+        row-height="40"
+        overscan="0"
+        .items=${Array.from({ length: 100 }, (_, i) => i)}
+        .renderItem=${renderText}
+        .keyFunction=${numberKey}
+      ></lr-virtual-list>`,
+    )) as LyraVirtualList;
+    await el.updateComplete;
+    await nextFrame();
+    const base = el.scrollContainer!;
+    let scrollEvents = 0;
+    let rangeEvents = 0;
+    el.addEventListener('lr-scroll', () => scrollEvents++);
+    el.addEventListener('lr-visible-range-changed', () => rangeEvents++);
+
+    // 3px: far less than the 40px row height, so the rendered index range cannot change.
+    base.scrollTop = 3;
+    base.dispatchEvent(new Event('scroll'));
+    await nextFrame();
+    await el.updateComplete;
+
+    expect(scrollEvents, 'lr-scroll tracks sub-row movement').to.equal(1);
+    expect(rangeEvents, 'lr-visible-range-changed is not a substitute').to.equal(0);
+  });
+
+  it('does not fire lr-scroll when nothing actually scrolled', async () => {
+    const el = await scrollFixture();
+    const base = el.scrollContainer!;
+    let count = 0;
+    el.addEventListener('lr-scroll', () => count++);
+
+    base.dispatchEvent(new Event('scroll')); // scrollTop still 0
+    await nextFrame();
+    await el.updateComplete;
+    expect(count).to.equal(0);
+
+    base.scrollTop = 120;
+    base.dispatchEvent(new Event('scroll'));
+    await nextFrame();
+    await el.updateComplete;
+    expect(count).to.equal(1);
+
+    base.dispatchEvent(new Event('scroll')); // same position again
+    await nextFrame();
+    await el.updateComplete;
+    expect(count, 'a repeat scroll event at an unchanged position is not a scroll').to.equal(1);
+  });
+});
+
+describe('renderedRows', () => {
+  it('returns the currently-rendered row wrappers in item order, and never the sticky overlay', async () => {
+    const items = Array.from({ length: 100 }, (_, i) => i);
+    const el = (await fixture(
+      html`<lr-virtual-list
+        style="--lr-virtual-list-height:200px"
+        row-height="40"
+        overscan="0"
+        .items=${items}
+        .groups=${[{ key: 'g', label: '', startIndex: 0 }]}
+        .renderItem=${renderText}
+        .keyFunction=${numberKey}
+        .renderStickyGroup=${() => html`<div>pinned</div>`}
+      ></lr-virtual-list>`,
+    )) as LyraVirtualList;
+    await el.updateComplete;
+    await nextFrame();
+
+    const rows = el.renderedRows;
+    expect(rows.length).to.equal(el.shadowRoot!.querySelectorAll('[part="row"]').length);
+    expect(rows.length).to.be.greaterThan(1);
+    expect(rows.every((row) => row.getAttribute('part') === 'row')).to.be.true;
+    expect(rows.map((row) => Number(row.dataset.rowIndex))).to.deep.equal(
+      rows.map((_, i) => i + Number(rows[0].dataset.rowIndex)),
+    );
+
+    // Windowed, not the whole collection -- and it tracks the window as it moves.
+    expect(rows.length).to.be.lessThan(items.length);
+    el.scrollContainer!.scrollTop = 1600;
+    el.scrollContainer!.dispatchEvent(new Event('scroll'));
+    await nextFrame();
+    await el.updateComplete;
+    expect(Number(el.renderedRows[0].dataset.rowIndex)).to.equal(40);
+  });
+
+  it('is empty before the first render', () => {
+    const el = document.createElement('lr-virtual-list') as LyraVirtualList;
+    expect(el.renderedRows.length).to.equal(0);
+  });
+});
+
+describe('sticky group overlay', () => {
+  const STICKY_HEIGHT = 32;
+  const ROW = 40;
+  const groups = [
+    { key: 'a', label: 'Group A', startIndex: 5 },
+    { key: 'b', label: 'Group B', startIndex: 20 },
+    { key: 'c', label: 'Group C', startIndex: 40 },
+  ];
+  const items = Array.from({ length: 60 }, (_, i) => i);
+
+  // Mirrors what a real consumer does: the group header is an ordinary row that owns the heading
+  // semantics, and the sticky copy repeats the same markup.
+  const renderGroupAwareRow = (item: unknown, index: number) =>
+    groups.some((group) => group.startIndex === index)
+      ? html`<div role="heading" aria-level="2" style="block-size:${ROW}px;box-sizing:border-box">
+          ${groups.find((group) => group.startIndex === index)!.label}
+        </div>`
+      : html`item ${item}#${index}`;
+
+  /** A row whose height is explicit, so `row-height="auto"` measurement settles in one pass. */
+  const measuredRow = (item: unknown, index: number) =>
+    html`<div style="block-size:${ROW}px;box-sizing:border-box">item ${item}#${index}</div>`;
+
+  const renderSticky = (group: { key: string | number; label?: string }) => html`
+    <div
+      class="sticky-copy"
+      role="heading"
+      aria-level="2"
+      style="block-size:${STICKY_HEIGHT}px;box-sizing:border-box;background:var(--lr-color-surface)"
+    >
+      <button type="button" class="sticky-button">${group.label}</button>
+    </div>
+  `;
+
+  async function mount(
+    sticky: boolean,
+    extra: {
+      rowHeight?: string;
+      groups?: typeof groups;
+      items?: unknown[];
+      renderItem?: (item: unknown, index: number) => unknown;
+    } = {},
+  ): Promise<LyraVirtualList> {
+    const el = (await fixture(
+      html`<lr-virtual-list
+        style="--lr-virtual-list-height:200px"
+        row-height=${extra.rowHeight ?? String(ROW)}
+        overscan="0"
+        .items=${extra.items ?? items}
+        .groups=${extra.groups ?? groups}
+        .renderItem=${extra.renderItem ?? renderGroupAwareRow}
+        .keyFunction=${numberKey}
+        .renderStickyGroup=${sticky ? renderSticky : undefined}
+      ></lr-virtual-list>`,
+    )) as LyraVirtualList;
+    await el.updateComplete;
+    await nextFrame();
+    await nextFrame();
+    await el.updateComplete;
+    return el;
+  }
+
+  async function scrollTo(el: LyraVirtualList, top: number): Promise<void> {
+    const base = el.scrollContainer!;
+    base.scrollTop = top;
+    base.dispatchEvent(new Event('scroll'));
+    await nextFrame();
+    await el.updateComplete;
+    await nextFrame();
+    await el.updateComplete;
+  }
+
+  function overlay(el: LyraVirtualList): HTMLElement | null {
+    return el.shadowRoot!.querySelector<HTMLElement>('[part~="sticky-group"]');
+  }
+
+  /** Every element in the shadow tree, as `tag[sorted attributes]` -- a byte-level record of the
+   *  rendered output that a shifted row transform or a stray attribute would change. */
+  function elementOutline(el: LyraVirtualList): string[] {
+    return [...el.shadowRoot!.querySelectorAll('*')].map(
+      (node) =>
+        `${node.localName}[${[...node.attributes]
+          .map((attr) => `${attr.name}="${attr.value}"`)
+          .sort()
+          .join(' ')}]`,
+    );
+  }
+
+  /** The scroll inset on `[part="base"]` is the one documented, deliberate difference the sticky
+   *  layer makes outside its own subtree; it is asserted on its own, so it is normalized away here. */
+  function withoutScrollInset(outline: string[]): string[] {
+    return outline.map((entry) => entry.replace(/ ?style="scroll-padding-block-start:[^"]*"/, ''));
+  }
+
+  /** Elements the browser would stop at during a forward Tab walk, in DOM order: `tabIndex` is the
+   *  browser's own computed value (0 for a bare `<button>`), not a stylesheet or markup guess. */
+  function tabStops(el: LyraVirtualList): string[] {
+    return [...el.shadowRoot!.querySelectorAll<HTMLElement>('a[href], button, input, select, textarea, [tabindex]')]
+      .filter((node) => node.tabIndex >= 0)
+      .map((node) => `${node.localName}.${node.className || node.getAttribute('part') || ''}`);
+  }
+
+  it('renders no overlay at all, and output identical to the no-callback render, while renderStickyGroup is unset', async () => {
+    const plain = await mount(false);
+    const withSticky = await mount(true);
+    // Same scroll position for both, deep inside Group A, so the overlay is definitely rendered in
+    // the second one and the two are otherwise in exactly the same state.
+    await scrollTo(plain, 10 * ROW);
+    await scrollTo(withSticky, 10 * ROW);
+
+    expect(overlay(plain) === null, 'no overlay element without renderStickyGroup').to.be.true;
+    expect(plain.shadowRoot!.querySelectorAll('[part~="sticky-group"]').length).to.equal(0);
+
+    const plainOutline = elementOutline(plain);
+    const stickyOutline = elementOutline(withSticky);
+    // The *only* difference the overlay makes is the overlay subtree itself: every other element,
+    // attribute, and row transform is byte-identical.
+    const stickyIds = new Set<number>();
+    stickyOutline.forEach((entry, i) => {
+      if (entry.includes('sticky-group') || entry.includes('sticky-copy') || entry.includes('sticky-button')) {
+        stickyIds.add(i);
+      }
+    });
+    expect(stickyIds.size, 'overlay renders exactly its own subtree').to.equal(3);
+    expect(withoutScrollInset(stickyOutline.filter((_, i) => !stickyIds.has(i)))).to.deep.equal(
+      withoutScrollInset(plainOutline),
+    );
+    expect(plain.scrollContainer!.hasAttribute('style'), 'no inline style without the sticky layer').to.be.false;
+    expect(withSticky.scrollContainer!.getAttribute('style')).to.equal(
+      `scroll-padding-block-start:${STICKY_HEIGHT}px`,
+    );
+  });
+
+  it('keeps total content height identical with and without the overlay in row-height="auto" mode', async () => {
+    // Group A starts at row 0 so the overlay is pinned from the very first frame -- no scrolling,
+    // and therefore no interleaving of measurement with window changes.
+    const autoGroups = [{ key: 'a', label: 'Group A', startIndex: 0 }];
+    const autoItems = Array.from({ length: 20 }, (_, i) => i);
+    // Explicit-height row content so measurement converges in a single pass instead of cascading.
+    const autoRow = { rowHeight: 'auto', groups: autoGroups, items: autoItems, renderItem: measuredRow };
+    const plain = await mount(false, autoRow);
+    const withSticky = await mount(true, autoRow);
+    expect(overlay(withSticky) === null, 'overlay is rendered for this assertion to mean anything').to.be.false;
+
+    // The overlay is a *copy* of a header that also exists as a real row. If it were measured, or
+    // counted in offsets, the content height would grow by its own height.
+    expect(withSticky.offsetForIndex(autoItems.length)).to.equal(plain.offsetForIndex(autoItems.length));
+    const spacer = withSticky.shadowRoot!.querySelector('[part="spacer"]') as HTMLElement;
+    expect(parseFloat(spacer.style.height)).to.equal(plain.offsetForIndex(autoItems.length));
+  });
+
+  it('never hands the overlay to the row ResizeObserver', async () => {
+    const el = await mount(true, {
+      rowHeight: 'auto',
+      groups: [{ key: 'a', label: 'Group A', startIndex: 0 }],
+      items: Array.from({ length: 20 }, (_, i) => i),
+      renderItem: measuredRow,
+    });
+    expect(overlay(el) === null, 'overlay is present').to.be.false;
+    const observed = (el as unknown as { observedRows: Map<unknown, HTMLElement> }).observedRows;
+    const rows = el.shadowRoot!.querySelectorAll('[part="row"]').length;
+    expect(rows).to.be.greaterThan(0);
+    expect(observed.size).to.equal(rows);
+    expect([...observed.values()].some((node) => node.getAttribute('part')?.includes('sticky'))).to.be.false;
+  });
+
+  it('pins the group whose header has scrolled past the top, and swaps it at the next group', async () => {
+    const el = await mount(true);
+    const base = el.scrollContainer!;
+
+    // Above the first group's start index -- nothing is pinned yet, so nothing is shown. The band
+    // element itself stays mounted (hidden) purely so its height remains measurable.
+    await scrollTo(el, 0);
+    expect(getComputedStyle(overlay(el)!).visibility, 'no sticky header above the first group').to.equal('hidden');
+
+    // Inside Group A (rows 5..19).
+    await scrollTo(el, 10 * ROW);
+    expect(getComputedStyle(overlay(el)!).visibility).to.equal('visible');
+    expect(overlay(el)!.textContent).to.contain('Group A');
+    expect(overlay(el)!.getBoundingClientRect().top).to.be.closeTo(base.getBoundingClientRect().top, 1);
+
+    // Still inside Group A, much further down: still pinned to the viewport top.
+    await scrollTo(el, 18 * ROW);
+    expect(overlay(el)!.textContent).to.contain('Group A');
+    expect(overlay(el)!.getBoundingClientRect().top).to.be.closeTo(base.getBoundingClientRect().top, 1);
+
+    // Into Group B (rows 20..39).
+    await scrollTo(el, 25 * ROW);
+    expect(overlay(el)!.textContent).to.contain('Group B');
+
+    await scrollTo(el, 45 * ROW);
+    expect(overlay(el)!.textContent).to.contain('Group C');
+  });
+
+  it('pushes the pinned header off as the next group header arrives, instead of swapping abruptly', async () => {
+    const el = await mount(true);
+    const base = el.scrollContainer!;
+    const viewportTop = () => base.getBoundingClientRect().top;
+
+    // Group B starts at row 20 (offset 800). Scroll so its header row is 8px below the viewport
+    // top -- less than the 32px sticky band, so Group A's pinned header must be riding up.
+    await scrollTo(el, 20 * ROW - 8);
+    const pushed = overlay(el)!;
+    expect(pushed.textContent).to.contain('Group A');
+    const pushedTop = pushed.getBoundingClientRect().top - viewportTop();
+    expect(pushedTop, 'pushed up by the overlap').to.be.closeTo(8 - STICKY_HEIGHT, 1.5);
+
+    // Halfway through the push-off it is less displaced.
+    await scrollTo(el, 20 * ROW - 24);
+    const partly = overlay(el)!.getBoundingClientRect().top - viewportTop();
+    expect(partly).to.be.greaterThan(pushedTop);
+    expect(partly).to.be.closeTo(24 - STICKY_HEIGHT, 1.5);
+
+    // Far enough above the next group and there is no push at all.
+    await scrollTo(el, 15 * ROW);
+    expect(overlay(el)!.getBoundingClientRect().top - viewportTop()).to.be.closeTo(0, 1);
+  });
+
+  it('is aria-hidden, adds no tab stop, and leaves exactly one exposed heading per group', async () => {
+    const plain = await mount(false);
+    const el = await mount(true);
+    // Group A's real header row sits exactly at the viewport top here, so the real header and the
+    // pinned copy are both in the DOM at once -- the only state in which a duplicate heading or a
+    // duplicate tab stop can exist at all.
+    await scrollTo(el, 5 * ROW);
+
+    const copy = overlay(el)!;
+    expect(copy.getAttribute('aria-hidden')).to.equal('true');
+
+    // The copy's own button is focusable by script at most -- never a Tab stop, so the Tab order is
+    // exactly the one the list has without any overlay.
+    const stickyButton = copy.querySelector<HTMLElement>('.sticky-button')!;
+    expect(stickyButton.tabIndex).to.equal(-1);
+    expect(tabStops(el)).to.deep.equal(tabStops(plain));
+
+    const headings = [...el.shadowRoot!.querySelectorAll('[role="heading"]')];
+    expect(headings.length, 'both the real header row and the copy carry heading markup').to.equal(2);
+    // ...but only the real row's is exposed: the copy is out of the accessibility tree entirely.
+    expect(headings.filter((node) => node.closest('[aria-hidden="true"]') === null).length).to.equal(1);
+    expect(copy.closest('[aria-hidden="true"]') === copy, 'the copy itself carries the aria-hidden').to.be.true;
+  });
+
+  it('is pointer-transparent by default and interactive only when the consumer opts in', async () => {
+    const el = await mount(true);
+    await scrollTo(el, 10 * ROW);
+    const copy = overlay(el)!;
+    expect(getComputedStyle(copy).pointerEvents).to.equal('none');
+
+    const rect = copy.getBoundingClientRect();
+    const hitDefault = el.shadowRoot!.elementFromPoint(rect.left + rect.width / 2, rect.top + rect.height / 2);
+    expect(hitDefault?.closest('[part~="sticky-group"]') === null, 'clicks pass through by default').to.be.true;
+
+    const style = document.createElement('style');
+    style.textContent = 'lr-virtual-list::part(sticky-group) { pointer-events: auto; }';
+    document.head.append(style);
+    try {
+      expect(getComputedStyle(copy).pointerEvents).to.equal('auto');
+      const hitOptedIn = el.shadowRoot!.elementFromPoint(rect.left + rect.width / 2, rect.top + rect.height / 2);
+      expect(hitOptedIn?.closest('[part~="sticky-group"]') !== null, 'the opted-in band receives the hit').to.be.true;
+    } finally {
+      style.remove();
+    }
+  });
+
+  it('treats an empty group label as a position anchor: no marker, but it still drives the overlay', async () => {
+    const anchorGroups = [
+      { key: 'a', label: '', startIndex: 5 },
+      { key: 'b', label: '', startIndex: 20 },
+    ];
+    const el = await mount(true, { groups: anchorGroups });
+    expect(el.shadowRoot!.querySelectorAll('[part="group"]').length, 'no duplicate marker').to.equal(0);
+
+    await scrollTo(el, 10 * ROW);
+    const copy = overlay(el);
+    expect(copy === null, 'the anchor still pins a sticky header').to.be.false;
+    expect(copy!.getBoundingClientRect().top).to.be.closeTo(el.scrollContainer!.getBoundingClientRect().top, 1);
+
+    // An omitted label still falls back to the key, exactly as before.
+    el.groups = [{ key: 'Ungrouped', startIndex: 5 }];
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('[part="group"]')!.textContent?.trim()).to.equal('Ungrouped');
+  });
+
+  describe('scroll inset for the sticky band', () => {
+    let originalMatchMedia: typeof window.matchMedia;
+
+    beforeEach(() => {
+      originalMatchMedia = window.matchMedia;
+      // Reduced motion forces every scroll to land synchronously instead of animating.
+      window.matchMedia = ((query: string) => ({
+        matches: query === '(prefers-reduced-motion: reduce)',
+        media: query,
+        addEventListener: () => {},
+        removeEventListener: () => {},
+      })) as typeof window.matchMedia;
+    });
+
+    afterEach(() => {
+      window.matchMedia = originalMatchMedia;
+    });
+
+    it('lands an active-id row below the sticky band instead of behind it', async () => {
+      const el = await mount(true);
+      const base = el.scrollContainer!;
+      expect(getComputedStyle(base).scrollPaddingBlockStart).to.equal(`${STICKY_HEIGHT}px`);
+
+      // Start below the target so the scroll-into-view runs *upward*: that is the direction that
+      // aligns the row's top edge, and therefore the one the band can hide it behind.
+      await scrollTo(el, 900);
+      el.activeId = 20; // Group B's first row, offset 800
+      await el.updateComplete;
+      await nextFrame();
+      await el.updateComplete;
+      await nextFrame();
+
+      const band = overlay(el)!;
+      const row = el.shadowRoot!.querySelector<HTMLElement>('[part="row"][data-row-index="20"]')!;
+      expect(base.scrollTop, 'the inset is subtracted from the top-aligned target').to.equal(
+        20 * ROW - STICKY_HEIGHT,
+      );
+      expect(row.getBoundingClientRect().top).to.be.gte(band.getBoundingClientRect().bottom - 0.5);
+    });
+
+    it('applies the same inset to scrollToIndex', async () => {
+      const el = await mount(true);
+      const base = el.scrollContainer!;
+      el.scrollToIndex(20, { align: 'start', behavior: 'auto' });
+      await nextFrame();
+      expect(base.scrollTop).to.equal(20 * ROW - STICKY_HEIGHT);
+
+      // `align: 'end'` targets the bottom edge, which the top band does not obscure.
+      el.scrollToIndex(0, { align: 'start', behavior: 'auto' });
+      await nextFrame();
+      el.scrollToIndex(20, { align: 'end', behavior: 'auto' });
+      await nextFrame();
+      expect(base.scrollTop).to.equal(21 * ROW - 200);
+    });
+
+    it('leaves both scroll paths exactly as they are when renderStickyGroup is unset', async () => {
+      const el = await mount(false);
+      const base = el.scrollContainer!;
+      expect(getComputedStyle(base).scrollPaddingBlockStart, 'the initial value, untouched').to.equal('auto');
+      expect(base.hasAttribute('style'), 'no inline style at all without the sticky layer').to.be.false;
+
+      el.scrollToIndex(20, { align: 'start', behavior: 'auto' });
+      await nextFrame();
+      expect(base.scrollTop).to.equal(20 * ROW);
+
+      await scrollTo(el, 900);
+      el.activeId = 20;
+      await el.updateComplete;
+      await nextFrame();
+      expect(base.scrollTop, 'the row lands flush with the viewport top, exactly as before').to.equal(20 * ROW);
+    });
+  });
+
+  it('is accessible with the overlay present', async () => {
+    const el = await mount(true);
+    await scrollTo(el, 10 * ROW);
+    expect(overlay(el) === null, 'overlay is present for the axe run').to.be.false;
+    await expect(el).to.be.accessible();
+  });
+});
+
 describe('row stacking context', () => {
   // Every [part="row"] is its own stacking context (`will-change: transform`), so a popup opened
   // from inside a row -- an lr-menu dropdown at z-index 900, say -- can never paint above a *later*
