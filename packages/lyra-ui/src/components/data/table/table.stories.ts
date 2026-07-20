@@ -195,6 +195,24 @@ export const Loading: Story = {
   render: () => html`<lr-table loading .columns=${columns} .rows=${rows}></lr-table>`,
 };
 
+export const LoadingSkeleton: Story = {
+  parameters: {
+    docs: {
+      description: {
+        story:
+          '`loading-appearance="skeleton"` keeps the real `<colgroup>`/`<thead>` (plus any filter and pagination chrome) and fills the body with placeholder rows, so the grid holds its shape on a cold load instead of flashing a spinner. Declare `columns[].width` or `layout="fixed"` to keep column widths pixel-identical once real rows land. Placeholder count comes from `skeleton-rows`, else the page size, else 3; exactly one `role="status"` region announces the load.',
+      },
+    },
+  },
+  render: () => html`<lr-table
+    loading
+    loading-appearance="skeleton"
+    layout="fixed"
+    .columns=${columns}
+    .rows=${[]}
+  ></lr-table>`,
+};
+
 const editableStoryColumns: TableColumn<DemoRow>[] = [
   { key: 'name', label: 'Name', editable: true, editValue: (r) => r.name, cell: (r) => r.name },
   { key: 'score', label: 'Score', editable: true, editType: 'number', editValue: (r) => r.score, cell: (r) => r.score },

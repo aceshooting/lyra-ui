@@ -2518,3 +2518,241 @@ describe('--lr-table-row-selected-bg', () => {
     expect(getComputedStyle(selected).backgroundColor).to.equal(unset);
   });
 });
+
+describe('loadingAppearance="skeleton"', () => {
+  const widthColumns: TableColumn<Row>[] = [
+    { key: 'name', label: 'Name', width: '160px', cell: (r) => r.name },
+    { key: 'score', label: 'Score', width: '80px', align: 'end', cell: (r) => r.score },
+  ];
+
+  const skeletonRowsOf = (el: LyraTable<Row>): HTMLElement[] => [
+    ...el.shadowRoot!.querySelectorAll<HTMLElement>('tbody tr[data-skeleton-row]'),
+  ];
+
+  it('keeps the header row and renders skeleton body rows instead of the spinner or the empty state', async () => {
+    const el = (await fixture(
+      html`<lr-table loading loading-appearance="skeleton"></lr-table>`,
+    )) as LyraTable<Row>;
+    el.columns = columns;
+    el.rows = []; // a cold load: no rows have arrived yet
+    await el.updateComplete;
+
+    expect(el.shadowRoot!.querySelectorAll('[part="table"]').length).to.equal(1);
+    expect(
+      [...el.shadowRoot!.querySelectorAll('[part="header-cell"]')].map((h) => h.textContent!.trim()),
+    ).to.deep.equal(['Name', 'Score']);
+    expect(el.shadowRoot!.querySelectorAll('[part="loading"] lr-spinner').length).to.equal(0);
+    expect(el.shadowRoot!.querySelectorAll('lr-empty').length).to.equal(0);
+    expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-busy')).to.equal('true');
+
+    const skeletonRows = skeletonRowsOf(el);
+    expect(skeletonRows.length).to.equal(3);
+    for (const row of skeletonRows) {
+      expect(row.querySelectorAll('[part="cell"]').length).to.equal(2);
+      expect(row.querySelectorAll('lr-skeleton[part="skeleton"]').length).to.equal(2);
+    }
+    // Placeholder rows are not data rows: no row identity, no roving tab stop.
+    expect(el.shadowRoot!.querySelectorAll('tbody [data-row-key]').length).to.equal(0);
+    expect(skeletonRows.filter((row) => row.hasAttribute('tabindex')).length).to.equal(0);
+  });
+
+  it('renders real rows once loading clears, and renders none of this while loading is false', async () => {
+    const el = (await fixture(html`<lr-table loading-appearance="skeleton"></lr-table>`)) as LyraTable<Row>;
+    el.columns = columns;
+    el.rows = rows;
+    el.rowKey = (r) => r.id;
+    await el.updateComplete;
+    expect(skeletonRowsOf(el).length).to.equal(0);
+    expect(el.shadowRoot!.querySelectorAll('[part="row"]').length).to.equal(2);
+
+    el.loading = true;
+    el.rows = [];
+    await el.updateComplete;
+    expect(skeletonRowsOf(el).length).to.equal(3);
+
+    el.loading = false;
+    el.rows = rows;
+    await el.updateComplete;
+    expect(skeletonRowsOf(el).length).to.equal(0);
+    expect(el.shadowRoot!.querySelectorAll('[part="row"]').length).to.equal(2);
+    expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-busy')).to.equal('false');
+  });
+
+  it('derives the placeholder row count from pageSize and lets skeletonRows override it', async () => {
+    const el = (await fixture(
+      html`<lr-table loading loading-appearance="skeleton"></lr-table>`,
+    )) as LyraTable<Row>;
+    el.columns = columns;
+    el.rows = [];
+    await el.updateComplete;
+    expect(el.skeletonRows).to.equal(0);
+    expect(skeletonRowsOf(el).length, 'pagination off -> the built-in default').to.equal(3);
+
+    el.pageSize = 8;
+    await el.updateComplete;
+    expect(skeletonRowsOf(el).length).to.equal(8);
+
+    el.pageSize = 500;
+    await el.updateComplete;
+    expect(skeletonRowsOf(el).length, 'a huge page size is capped').to.equal(20);
+
+    el.skeletonRows = 2;
+    await el.updateComplete;
+    expect(skeletonRowsOf(el).length, 'an explicit count wins verbatim').to.equal(2);
+
+    el.skeletonRows = -5;
+    await el.updateComplete;
+    expect(skeletonRowsOf(el).length, 'a nonsense count falls back to the derived one').to.equal(20);
+  });
+
+  it('keeps column geometry stable across the load', async () => {
+    const el = (await fixture(
+      html`<lr-table style="display: block; width: 400px;" loading-appearance="skeleton"></lr-table>`,
+    )) as LyraTable<Row>;
+    el.columns = widthColumns;
+    el.rows = rows;
+    el.rowKey = (r) => r.id;
+    await el.updateComplete;
+    const loaded = [...el.shadowRoot!.querySelectorAll('th[data-col-key]')].map(
+      (th) => th.getBoundingClientRect().width,
+    );
+    expect(loaded.length).to.equal(2);
+
+    el.loading = true;
+    el.rows = [];
+    await el.updateComplete;
+    expect(skeletonRowsOf(el).length).to.equal(3);
+    const loadingWidths = [...el.shadowRoot!.querySelectorAll('th[data-col-key]')].map(
+      (th) => th.getBoundingClientRect().width,
+    );
+    expect(loadingWidths).to.deep.equal(loaded);
+  });
+
+  it('keeps a resized column at its resized width in skeleton mode', async () => {
+    const el = (await fixture(
+      html`<lr-table style="display: block; width: 400px;" loading-appearance="skeleton"></lr-table>`,
+    )) as LyraTable<Row>;
+    el.columns = [
+      { key: 'name', label: 'Name', width: '160px', minWidth: '80px', resizable: true, cell: (r) => r.name },
+      widthColumns[1]!,
+    ];
+    el.rows = rows;
+    el.rowKey = (r) => r.id;
+    await el.updateComplete;
+
+    const handle = el.shadowRoot!.querySelector('[part="resize-handle"]') as HTMLElement;
+    handle.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true, cancelable: true }));
+    await el.updateComplete;
+    const resized = (el.shadowRoot!.querySelector('th[data-col-key="name"]') as HTMLElement)
+      .getBoundingClientRect().width;
+
+    el.loading = true;
+    el.rows = [];
+    await el.updateComplete;
+    const cols = [...el.shadowRoot!.querySelectorAll<HTMLElement>('colgroup col')];
+    expect(cols.length).to.equal(2);
+    expect(cols[0]!.style.inlineSize, 'the resized width survives into the placeholder render').to.equal(
+      '170px',
+    );
+    expect(
+      (el.shadowRoot!.querySelector('th[data-col-key="name"]') as HTMLElement).getBoundingClientRect().width,
+    ).to.equal(resized);
+  });
+
+  it('exposes exactly one polite status region, not one per placeholder cell', async () => {
+    const el = (await fixture(
+      html`<lr-table loading loading-appearance="skeleton"></lr-table>`,
+    )) as LyraTable<Row>;
+    el.columns = columns;
+    el.rows = [];
+    await el.updateComplete;
+
+    expect(el.shadowRoot!.querySelectorAll('lr-skeleton').length).to.equal(6);
+    expect(el.shadowRoot!.querySelectorAll('[role="status"]').length).to.equal(1);
+    const status = el.shadowRoot!.querySelector('[role="status"]') as HTMLElement;
+    expect(status.getAttribute('aria-live')).to.equal('polite');
+    expect(status.textContent!.trim()).to.equal('Loading rows');
+    expect(
+      [...el.shadowRoot!.querySelectorAll('lr-skeleton')].filter((s) => s.hasAttribute('role')).length,
+      'every placeholder opts out of its own announcement',
+    ).to.equal(0);
+  });
+
+  it('leaves the default spinner appearance unchanged', async () => {
+    const el = (await fixture(html`<lr-table loading></lr-table>`)) as LyraTable<Row>;
+    el.columns = columns;
+    el.rows = rows;
+    await el.updateComplete;
+
+    expect(el.loadingAppearance).to.equal('spinner');
+    expect(el.shadowRoot!.querySelectorAll('[part="loading"] lr-spinner').length).to.equal(1);
+    expect(el.shadowRoot!.querySelectorAll('[part="table"]').length).to.equal(0);
+    expect(el.shadowRoot!.querySelectorAll('lr-skeleton').length).to.equal(0);
+    expect(el.shadowRoot!.querySelectorAll('[role="status"]').length).to.equal(1);
+    expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-busy')).to.equal('true');
+  });
+
+  it('gives a priority-hidden column no visible placeholder cell', async () => {
+    const el = (await fixture(
+      html`<lr-table style="display: block; width: 300px;" loading loading-appearance="skeleton"></lr-table>`,
+    )) as LyraTable<Row>;
+    el.columns = priorityColumns;
+    el.rows = [];
+    await el.updateComplete;
+    await waitUntil(() => el.columnsHidden === true);
+
+    const row = skeletonRowsOf(el)[0]!;
+    const lowCell = row.querySelector('[part="cell"][data-priority="low"]') as HTMLElement;
+    expect(getComputedStyle(lowCell).display).to.equal('none');
+    const visibleCells = [...row.querySelectorAll<HTMLElement>('[part="cell"]')].filter(
+      (cell) => cell.offsetParent !== null,
+    );
+    const visibleHeaders = [...el.shadowRoot!.querySelectorAll<HTMLElement>('th[data-col-key]')].filter(
+      (th) => th.offsetParent !== null,
+    );
+    expect(visibleCells.length).to.equal(1);
+    expect(visibleCells.length).to.equal(visibleHeaders.length);
+  });
+
+  it('keeps the filter field and the pagination footer in place while loading', async () => {
+    const el = (await fixture(
+      html`<lr-table filterable page-size="4" loading loading-appearance="skeleton"></lr-table>`,
+    )) as LyraTable<Row>;
+    el.columns = columns;
+    el.rows = [];
+    await el.updateComplete;
+
+    expect(el.shadowRoot!.querySelectorAll('[part="filter"]').length).to.equal(1);
+    expect(el.shadowRoot!.querySelectorAll('lr-pagination').length).to.equal(1);
+    expect(skeletonRowsOf(el).length).to.equal(4);
+  });
+
+  it('localizes the placeholder status label', async () => {
+    const el = (await fixture(
+      html`<lr-table
+        loading
+        loading-appearance="skeleton"
+        .strings=${{ tableLoading: 'Chargement des lignes' }}
+      ></lr-table>`,
+    )) as LyraTable<Row>;
+    el.columns = columns;
+    el.rows = [];
+    await el.updateComplete;
+    // Guards against passing against the spinner branch's own status node instead.
+    expect(skeletonRowsOf(el).length).to.equal(3);
+    expect(el.shadowRoot!.querySelector('[role="status"]')!.textContent!.trim()).to.equal(
+      'Chargement des lignes',
+    );
+  });
+
+  it('is accessible in skeleton mode', async () => {
+    const el = (await fixture(
+      html`<lr-table aria-label="Scores" loading loading-appearance="skeleton"></lr-table>`,
+    )) as LyraTable<Row>;
+    el.columns = columns;
+    el.rows = [];
+    await el.updateComplete;
+    expect(skeletonRowsOf(el).length).to.equal(3);
+    await expect(el).to.be.accessible();
+  });
+});

@@ -41,7 +41,10 @@ export const styles = css`
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);
   }
-  [part='loading'] {
+  /* The visible spinner block. Scoped away from the skeleton-appearance status node, which reuses
+     [part='loading'] but is visually hidden (.sr-only) — the placeholder rows are its visible
+     affordance, so it must not also lay out an 8rem centered block. */
+  [part='loading']:not(.sr-only) {
     display: grid;
     place-items: center;
     min-block-size: var(--lr-size-8rem);

@@ -10,6 +10,7 @@ import { repeat } from 'lit/directives/repeat.js';
 import { styleMap } from 'lit/directives/style-map.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { isRtl } from '../../../internal/rtl.js';
+import { srOnly } from '../../../internal/a11y.js';
 import { finiteCount, finiteInteger } from '../../../internal/numbers.js';
 import { styles } from './table.styles.js';
 import { chevronIcon } from '../../../internal/icons.js';
@@ -17,6 +18,24 @@ import { minMax } from '../heatmap/heatmap-scale.js';
 import '../../overlays/empty/empty.class.js';
 import '../pagination/pagination.js';
 import '../../overlays/spinner/spinner.js';
+import '../../overlays/skeleton/skeleton.js';
+
+/** How `loading` renders. `'spinner'` (the default) replaces the grid with an indeterminate
+ *  spinner; `'skeleton'` keeps the real grid — `<colgroup>`, `<thead>`, filter field, pagination
+ *  footer — and fills the body with placeholder rows so the table sketches its shape instead of
+ *  collapsing to a spinner and back on a cold load. */
+export type TableLoadingAppearance = 'spinner' | 'skeleton';
+
+/** Placeholder body rows rendered by `loadingAppearance="skeleton"` when neither `skeletonRows`
+ *  nor `pageSize` supplies a count -- enough to read as "rows are coming" without pretending to
+ *  know how many. */
+const DEFAULT_SKELETON_ROWS = 3;
+
+/** Ceiling on the `pageSize`-derived placeholder row count. A page size is a *data* bound (it can
+ *  legitimately be 500), and one placeholder element per cell means a large one would emit
+ *  thousands of nodes for a state that exists for a few hundred milliseconds. An explicit
+ *  `skeletonRows` is honored verbatim and is not capped. */
+const MAX_DERIVED_SKELETON_ROWS = 20;
 
 /**
  * String-aware boolean attribute converter for `spellcheck`. Lit's built-in `type: Boolean`
@@ -268,8 +287,13 @@ export interface LyraTableEventMap<T = unknown> {
  * `pageSize` enables controlled pagination through the existing
  * `<lr-pagination>` primitive. Client mode slices `rows`; server mode
  * renders the supplied page unchanged while using `totalItems` for the
- * navigation summary. `loading` keeps the table shell busy and renders an
- * indeterminate spinner.
+ * navigation summary. `loading` keeps the table shell busy; `loadingAppearance`
+ * chooses how — the default `'spinner'` replaces the grid with an indeterminate
+ * spinner, while `'skeleton'` keeps the real `<colgroup>`/`<thead>` (and the
+ * filter/pagination chrome) and fills the body with `skeletonRows` placeholder
+ * rows, so column geometry survives the load instead of collapsing and
+ * reflowing. Either way exactly one `role="status"` live region announces the
+ * state — every placeholder opts out of `<lr-skeleton>`'s own announcement.
  * Columns with `editable: true` open a native text/number editor on
  * double-click and emit `lr-cell-edit`; row mutation remains consumer-owned.
  * `spellcheck`/`autocapitalize`/`autoCorrect` forward to the filter input and, for a `'text'`
@@ -353,7 +377,13 @@ export interface LyraTableEventMap<T = unknown> {
  * @csspart group-cell - The full-width group header cell.
  * @csspart filter - The optional row-filter input.
  * @csspart filter-label - The `<label>` wrapping the filter input.
- * @csspart loading - The loading-state wrapper.
+ * @csspart loading - The loading-state wrapper. Under `loadingAppearance="spinner"` (the default)
+ *   it is the visible block holding the spinner; under `"skeleton"` it is the visually-hidden
+ *   `role="status"` node, since the placeholder rows are the visible affordance.
+ * @csspart skeleton - Each `<lr-skeleton>` placeholder inside a `loadingAppearance="skeleton"`
+ *   body cell. Its rows and cells reuse the ordinary `row`/`cell`/`row-total-cell` parts (that
+ *   is what keeps them geometrically identical to real rows), so this is the part to target for
+ *   the placeholder's own look — e.g. `::part(skeleton) { --lr-skeleton-h: 2em; }`.
  * @csspart pagination - The optional pagination component.
  * @csspart empty - The built-in `<lr-empty>` host, in all three empty states (no columns
  *   configured, no rows at all, and filtered/paginated down to zero rows). The two data-empty
@@ -390,7 +420,7 @@ export interface LyraTableEventMap<T = unknown> {
  *   of overlapping; falls back to `0` for the first one, or before the first measurement pass.
  */
 export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
-  static styles = [LyraElement.styles, styles];
+  static styles = [LyraElement.styles, styles, srOnly];
 
   @property({ attribute: false }) columns: TableColumn<T>[] = [];
   @property({ attribute: false }) rows: T[] = [];
@@ -439,6 +469,25 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
   @property({ attribute: 'autocorrect' }) autoCorrect = '';
   @property({ type: Boolean, reflect: true }) loading = false;
   @property({ attribute: 'loading-label' }) loadingLabel = '';
+  /** How `loading` renders. `'spinner'` (the default, unchanged output) replaces the whole grid
+   *  with an indeterminate spinner. `'skeleton'` instead renders the real table — the same
+   *  `<colgroup>` (declared *and* drag-resized widths included), the same `<thead>`, the filter
+   *  field and the pagination footer — and fills `<tbody>` with placeholder rows, so a cold load
+   *  sketches the grid's shape rather than collapsing to a spinner and reflowing when the rows
+   *  land. Kept separate from `loading` rather than widening it to a string union, so
+   *  `?loading=${…}` bindings and `el.loading === true` checks keep working.
+   *
+   *  Column *widths* only stay pixel-identical across the load if the browser isn't sizing them
+   *  from cell content: declare `columns[].width`, or set `layout="fixed"`. Under the default
+   *  `table-layout: auto`, placeholder cells have no intrinsic width, so the columns re-measure
+   *  when real content arrives — exactly as they do between any two different data sets. */
+  @property({ reflect: true, attribute: 'loading-appearance' }) loadingAppearance: TableLoadingAppearance =
+    'spinner';
+  /** Number of placeholder rows rendered by `loadingAppearance="skeleton"`. `0` (the default)
+   *  derives the count instead: the normalized `pageSize` when pagination is on (capped at 20, so
+   *  a large page size can't emit thousands of placeholder cells), otherwise 3. Any positive value
+   *  is used verbatim and is not capped. Ignored entirely under the default spinner appearance. */
+  @property({ type: Number, attribute: 'skeleton-rows' }) skeletonRows = 0;
   @property({ attribute: false }) groupBy?: (row: T) => string | number;
   @property({ attribute: false }) groupLabel?: (key: string | number, rows: T[]) => unknown;
   /** Set to a positive value to enable the controlled pagination footer. */
@@ -863,6 +912,18 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
    *  pagination, so it needs the same safe count independently). */
   private get normalizedPageSize(): number {
     return finiteCount(this.pageSize);
+  }
+
+  /** Placeholder row count actually rendered by `loadingAppearance="skeleton"`. An explicit,
+   *  positive `skeletonRows` wins verbatim; otherwise the count is derived from the normalized
+   *  `pageSize` (bounded by MAX_DERIVED_SKELETON_ROWS), and falls back to DEFAULT_SKELETON_ROWS
+   *  when pagination is off -- `pageSize` defaults to 0, so "one placeholder per page row" has no
+   *  count of its own for the (common) unpaginated table. */
+  private get effectiveSkeletonRows(): number {
+    const explicit = finiteCount(this.skeletonRows);
+    if (explicit > 0) return explicit;
+    const pageSize = this.normalizedPageSize;
+    return pageSize > 0 ? Math.min(pageSize, MAX_DERIVED_SKELETON_ROWS) : DEFAULT_SKELETON_ROWS;
   }
 
   /** `totalItems: -1` (the default) is a sentinel meaning "derive from filtered rows" -- normalize
@@ -1293,6 +1354,45 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
     }
   }
 
+  /** One placeholder. `announce` is switched off on every one of them: `<lr-skeleton>` defaults it
+   *  to `true`, which would make each of the N x M cells its own `role="status"` live region and
+   *  turn a single "Loading rows" announcement into a storm of them. The one status node
+   *  `render()` puts inside `[part='base']` carries the announcement for the whole grid instead.
+   *  A property binding (not `?announce=`) is required to assign `false` to a `true`-defaulting
+   *  boolean property. */
+  private renderSkeletonPlaceholder(): TemplateResult {
+    return html`<lr-skeleton part="skeleton" variant="rect" effect="sheen" .announce=${false}></lr-skeleton>`;
+  }
+
+  /** `loadingAppearance="skeleton"`'s body rows. Deliberately built from the same per-column
+   *  attributes (`data-col-key`/`data-align`/`data-priority`/`data-sticky`) and the same
+   *  `cell`/`row` parts as a real row, so the `@container` priority-hide rules, the sticky-offset
+   *  measurement pass and every cell style apply to them unchanged -- that, plus rendering inside
+   *  the real `<colgroup>`/`<thead>`, is what keeps the grid's geometry stable across the load.
+   *  They carry no `data-row-key` and no `tabindex`: they are not data rows, so the delegated
+   *  click/keydown handlers and the roving tab stop ignore them. */
+  private renderSkeletonRows(hasExpand: boolean, hasRowTotal: boolean): TemplateResult[] {
+    return Array.from(
+      { length: this.effectiveSkeletonRows },
+      () => html`<tr part="row" role="row" data-skeleton-row>
+        ${hasExpand ? html`<td part="expand-toggle-cell"></td>` : nothing}
+        ${this.columns.map(
+          (col) => html`<td
+            part="cell"
+            role="gridcell"
+            data-col-key=${col.key}
+            data-align=${col.align ?? 'start'}
+            data-priority=${col.priority ?? nothing}
+            data-sticky=${stickyDirection(col.sticky) ?? nothing}
+          >
+            ${this.renderSkeletonPlaceholder()}
+          </td>`,
+        )}
+        ${hasRowTotal ? html`<td part="row-total-cell">${this.renderSkeletonPlaceholder()}</td>` : nothing}
+      </tr>`,
+    );
+  }
+
   render(): TemplateResult {
     if (this.columns.length === 0) {
       // Deliberately not wrapped in the `empty` slot: this branch reports a *configuration*
@@ -1306,7 +1406,11 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
         description=${this.noColumnsDescription}
       ></lr-empty>`;
     }
-    if (this.loading) {
+    // Skeleton mode deliberately falls through to the full grid render below instead of returning
+    // its own shell here: its whole point is that the <colgroup>/<thead>/filter/pagination chrome
+    // stays put, which is only achievable by rendering the real table.
+    const skeletonLoading = this.loading && this.loadingAppearance === 'skeleton';
+    if (this.loading && !skeletonLoading) {
       return html`<div part="base" aria-busy="true">
         <div part="loading" role="status" aria-live="polite">
           <lr-spinner label-placement="after" accessible-label=${this.localize('tableLoading', this.loadingLabel || undefined)}>
@@ -1317,7 +1421,9 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
     }
 
     const matchingEntries = this.matchingEntries();
-    if (this.rows.length === 0 && !this.filterable && this.normalizedPageSize === 0) {
+    // A cold load is exactly the case where `rows` is still empty, so skeleton mode must not take
+    // either empty-state branch -- "no data" is a *result*, and the load has not produced one yet.
+    if (!skeletonLoading && this.rows.length === 0 && !this.filterable && this.normalizedPageSize === 0) {
       return html`<slot name="empty"
         ><lr-empty
           part="empty"
@@ -1350,7 +1456,7 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
     const filterLabel = this.localize('tableFilterLabel', this.filterLabel || undefined);
     const filterPlaceholder = this.localize('tableFilterPlaceholder', this.filterPlaceholder || undefined);
     const tableContent =
-      renderedEntries.length === 0
+      renderedEntries.length === 0 && !skeletonLoading
         ? html`<slot name="empty"
             ><lr-empty
               part="empty"
@@ -1417,7 +1523,9 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
               </tr>
             </thead>
             <tbody>
-              ${repeat(
+              ${skeletonLoading
+                ? this.renderSkeletonRows(hasExpand, hasRowTotal)
+                : repeat(
                 renderedEntries,
                 (entry) => this.keyOf(entry.row, entry.index),
                 (entry, entryIndex) => {
@@ -1556,7 +1664,12 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
           </table>`;
 
     return html`
-      <div part="base" ?data-force-visible=${this.showAllColumns} aria-busy="false">
+      <div part="base" ?data-force-visible=${this.showAllColumns} aria-busy=${skeletonLoading ? 'true' : 'false'}>
+        ${skeletonLoading
+          ? html`<div part="loading" class="sr-only" role="status" aria-live="polite">
+              ${this.localize('tableLoading', this.loadingLabel || undefined)}
+            </div>`
+          : nothing}
         ${this.filterable
           ? html`<label part="filter-label">
               ${filterLabel}
