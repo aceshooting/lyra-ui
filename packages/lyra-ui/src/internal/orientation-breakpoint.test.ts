@@ -15,6 +15,48 @@ async function makeHost(style = ''): Promise<ReactiveControllerHost & Element> {
   }) as unknown as ReactiveControllerHost & Element;
 }
 
+/** A `window.matchMedia` stand-in whose `(max-width: <n>px)` queries are evaluated against a
+ *  mutable pretend viewport width, so a test can cross a breakpoint on demand. The real viewport
+ *  can't be resized from inside the test page, and the detach/reattach case specifically needs the
+ *  crossing to happen while the controller has no `change` listener attached — nothing a real
+ *  `MediaQueryList` can be made to do here. Only bare `px` queries are understood, which is what
+ *  `arm()` serializes for these tests. Restore in a `finally`. */
+function installMatchMediaStub(initialWidth: number): { setWidth(width: number): void; restore(): void } {
+  const original = window.matchMedia;
+  let width = initialWidth;
+  const lists: Array<{ media: string; max: number; listeners: Set<(e: MediaQueryListEvent) => void> }> = [];
+
+  window.matchMedia = ((query: string) => {
+    const match = /\(max-width:\s*([\d.]+)px\)/.exec(query);
+    const max = match ? Number.parseFloat(match[1]) : Number.NaN;
+    const entry = { media: query, max, listeners: new Set<(e: MediaQueryListEvent) => void>() };
+    lists.push(entry);
+    return {
+      media: query,
+      get matches() {
+        return width <= max;
+      },
+      addEventListener: (_type: string, fn: (e: MediaQueryListEvent) => void) => entry.listeners.add(fn),
+      removeEventListener: (_type: string, fn: (e: MediaQueryListEvent) => void) => entry.listeners.delete(fn),
+    } as unknown as MediaQueryList;
+  }) as typeof window.matchMedia;
+
+  return {
+    setWidth(next: number): void {
+      const before = lists.map((entry) => width <= entry.max);
+      width = next;
+      lists.forEach((entry, i) => {
+        const matches = width <= entry.max;
+        if (matches === before[i]) return;
+        for (const fn of [...entry.listeners]) fn({ matches, media: entry.media } as MediaQueryListEvent);
+      });
+    },
+    restore(): void {
+      window.matchMedia = original;
+    },
+  };
+}
+
 describe('OrientationBreakpointController', () => {
   it('is inert until configured', async () => {
     const c = new OrientationBreakpointController(await makeHost(), () => {});
@@ -134,11 +176,71 @@ describe('OrientationBreakpointController', () => {
     expect(c.isBelow(10)).to.be.true;
   });
 
-  it('re-arms after a disconnect/reconnect cycle', async () => {
-    const c = new OrientationBreakpointController(await makeHost(), () => {});
+  it('re-arms after a disconnect/reconnect cycle without announcing an unchanged state', async () => {
+    let fired = 0;
+    const c = new OrientationBreakpointController(await makeHost(), () => {
+      fired += 1;
+    });
     c.configure('99999px', 'viewport');
     c.hostDisconnected();
     c.hostConnected();
     expect(c.isBelow(0)).to.be.true;
+    expect(fired, 'the query still matches, so nothing transitioned').to.equal(0);
+  });
+
+  it('announces a crossing that happened while detached', async () => {
+    const media = installMatchMediaStub(1000);
+    try {
+      let fired = 0;
+      const c = new OrientationBreakpointController(await makeHost(), () => {
+        fired += 1;
+      });
+      c.configure('600px', 'viewport');
+      expect(c.isBelow(0), '1000px viewport is above a 600px breakpoint').to.be.false;
+
+      c.hostDisconnected();
+      media.setWidth(500);
+      expect(fired, 'the listener is torn down while detached, so nothing can be observed').to.equal(0);
+
+      c.hostConnected();
+      expect(c.isBelow(0), 'the reconnected state must be current, not stale').to.be.true;
+      expect(fired, 'the reconnect must announce the crossing it slept through').to.equal(1);
+    } finally {
+      media.restore();
+    }
+  });
+
+  it('announces a crossing back the other way while detached', async () => {
+    const media = installMatchMediaStub(500);
+    try {
+      let fired = 0;
+      const c = new OrientationBreakpointController(await makeHost(), () => {
+        fired += 1;
+      });
+      c.configure('600px', 'viewport');
+      expect(c.isBelow(0)).to.be.true;
+
+      c.hostDisconnected();
+      media.setWidth(1000);
+      c.hostConnected();
+      expect(c.isBelow(0)).to.be.false;
+      expect(fired).to.equal(1);
+    } finally {
+      media.restore();
+    }
+  });
+
+  it('fires nothing on the first hostConnected(), before any configure()', async () => {
+    // Lit connects controllers before the host's first update, so this runs while the basis is
+    // still the `'container'` default and no breakpoint has been authored. An unconditional
+    // announcement here would reach the host before its first render and let it emit a mount-time
+    // transition event that never happened.
+    let fired = 0;
+    const c = new OrientationBreakpointController(await makeHost(), () => {
+      fired += 1;
+    });
+    c.hostConnected();
+    expect(fired).to.equal(0);
+    expect(c.isBelow(0)).to.be.false;
   });
 });
