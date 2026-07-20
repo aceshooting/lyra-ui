@@ -2761,3 +2761,373 @@ it("colors the filter's placeholder and undoes Firefox's reduced default opacity
   const css = styles.cssText.replace(/\s+/g, ' ');
   expect(css).to.match(/\[part='filter'\]::placeholder\s*\{[^}]*color:\s*var\(--lr-color-text-quiet\)[^}]*opacity:\s*1/);
 });
+
+describe("editable: 'always'", () => {
+  const alwaysColumns: TableColumn<Row>[] = [
+    { key: 'name', label: 'Name', sortable: true, cell: (r) => r.name },
+    {
+      key: 'score',
+      label: 'Score',
+      editable: 'always',
+      editType: 'number',
+      editValue: (r) => r.score,
+      cell: (r) => r.score,
+    },
+  ];
+
+  const alwaysTable = async (columnsForTest = alwaysColumns, rowsForTest = rows): Promise<LyraTable<Row>> => {
+    const el = (await fixture(html`<lr-table aria-label="Scores"></lr-table>`)) as LyraTable<Row>;
+    el.columns = columnsForTest;
+    el.rows = rowsForTest;
+    el.rowKey = (r) => r.id;
+    await el.updateComplete;
+    return el;
+  };
+
+  it('renders one persistent editor per body row of that column, from first paint', async () => {
+    const el = await alwaysTable();
+    expect(el.shadowRoot!.querySelectorAll('[part="cell-editor"]')).to.have.lengthOf(2);
+    expect(el.shadowRoot!.querySelectorAll('td[data-col-key="score"] [part="cell-editor"]')).to.have.lengthOf(2);
+    expect(el.shadowRoot!.querySelectorAll('td[data-col-key="name"] [part="cell-editor"]')).to.have.lengthOf(0);
+    const values = [...el.shadowRoot!.querySelectorAll<HTMLInputElement>('[part="cell-editor"]')].map(
+      (input) => input.value,
+    );
+    expect(values).to.deep.equal(['3', '1']);
+  });
+
+  it('names every persistent editor individually through the tableEditCell key', async () => {
+    const el = await alwaysTable();
+    const labels = [...el.shadowRoot!.querySelectorAll('[part="cell-editor"]')].map((input) =>
+      input.getAttribute('aria-label'),
+    );
+    expect(labels).to.deep.equal(['Edit Score', 'Edit Score']);
+  });
+
+  it('honors editType on a persistent editor', async () => {
+    const el = await alwaysTable();
+    const input = el.shadowRoot!.querySelector('[part="cell-editor"]') as HTMLInputElement;
+    expect(input.type).to.equal('number');
+  });
+
+  it('leaves an editable: true column closed until double-click (regression)', async () => {
+    const el = await alwaysTable([
+      { key: 'name', label: 'Name', editable: true, editValue: (r) => r.name, cell: (r) => r.name },
+    ]);
+    expect(el.shadowRoot!.querySelectorAll('[part="cell-editor"]')).to.have.lengthOf(0);
+    const cell = el.shadowRoot!.querySelector('[part="row"] [part="cell"]') as HTMLElement;
+    cell.dispatchEvent(new MouseEvent('dblclick', { bubbles: true, composed: true }));
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelectorAll('[part="cell-editor"]')).to.have.lengthOf(1);
+  });
+
+  it('does not open a second, double-click editor on an always-on cell', async () => {
+    const el = await alwaysTable();
+    const cell = el.shadowRoot!.querySelector('td[data-col-key="score"]') as HTMLElement;
+    cell.dispatchEvent(new MouseEvent('dblclick', { bubbles: true, composed: true }));
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelectorAll('[part="cell-editor"]')).to.have.lengthOf(2);
+    expect(cell.querySelectorAll('[part="cell-editor"]')).to.have.lengthOf(1);
+  });
+
+  it('gives persistent editors no tabindex attribute, exactly like the row-expand toggle', async () => {
+    const el = await alwaysTable();
+    const editors = [...el.shadowRoot!.querySelectorAll('[part="cell-editor"]')];
+    expect(editors.filter((input) => input.hasAttribute('tabindex'))).to.have.lengthOf(0);
+    // The roving model itself is untouched: the row keeps the tab stop, the cell stays unfocusable.
+    const firstRow = el.shadowRoot!.querySelector('[part="row"]') as HTMLElement;
+    expect(firstRow.getAttribute('tabindex')).to.equal('0');
+    expect((el.shadowRoot!.querySelector('td[data-col-key="score"]') as HTMLElement).hasAttribute('tabindex')).to.be
+      .false;
+  });
+
+  it('keeps a draft in a persistent editor when an unrelated row is updated in rows', async () => {
+    const el = await alwaysTable();
+    const input = el.shadowRoot!.querySelector('td[data-col-key="score"] [part="cell-editor"]') as HTMLInputElement;
+    input.value = '99';
+    el.rows = [rows[0]!, { ...rows[1]!, score: 7 }];
+    await el.updateComplete;
+    const after = el.shadowRoot!.querySelector('td[data-col-key="score"] [part="cell-editor"]') as HTMLInputElement;
+    expect(after.value).to.equal('99');
+  });
+
+  it("keeps a draft in a persistent editor when that same cell's own value is updated out of band", async () => {
+    const el = await alwaysTable();
+    const input = el.shadowRoot!.querySelector('td[data-col-key="score"] [part="cell-editor"]') as HTMLInputElement;
+    input.value = '99';
+    el.rows = [{ ...rows[0]!, score: 7 }, rows[1]!];
+    await el.updateComplete;
+    const after = el.shadowRoot!.querySelector('td[data-col-key="score"] [part="cell-editor"]') as HTMLInputElement;
+    expect(after.value).to.equal('99');
+  });
+
+  it('still picks up a new rows value in a persistent editor the user has not touched', async () => {
+    const el = await alwaysTable();
+    el.rows = [{ ...rows[0]!, score: 7 }, rows[1]!];
+    await el.updateComplete;
+    const after = el.shadowRoot!.querySelector('td[data-col-key="score"] [part="cell-editor"]') as HTMLInputElement;
+    expect(after.value).to.equal('7');
+  });
+
+  it('keeps re-asserting the source value in a double-click editor (unchanged property binding)', async () => {
+    const el = await alwaysTable([
+      { key: 'name', label: 'Name', editable: true, editValue: (r) => r.name, cell: (r) => r.name },
+    ]);
+    const cell = el.shadowRoot!.querySelector('[part="row"] [part="cell"]') as HTMLElement;
+    cell.dispatchEvent(new MouseEvent('dblclick', { bubbles: true, composed: true }));
+    await el.updateComplete;
+    const input = cell.querySelector('[part="cell-editor"]') as HTMLInputElement;
+    expect(input.value).to.equal('Alpha');
+    // A property binding, not an attribute one -- so no `value` content attribute is written.
+    expect(input.hasAttribute('value')).to.be.false;
+  });
+
+  /** `"<encoded row key>/<column key>"` of the persistent editor that currently has focus, or
+   *  `null` when focus is anywhere else. Deliberately a string, not the element itself: a failing
+   *  assertion whose `actual` is a DOM node hangs the whole test file. */
+  const focusedEditorCell = (el: LyraTable<Row>): string | null => {
+    const active = el.shadowRoot!.activeElement as HTMLElement | null;
+    if (!active || active.getAttribute('part') !== 'cell-editor') return null;
+    const row = active.closest('[data-row-key]') as HTMLElement | null;
+    const cell = active.closest('td[data-col-key]') as HTMLElement | null;
+    return `${row?.dataset.rowKey}/${cell?.dataset.colKey}`;
+  };
+
+  it('keeps focus in the same logical cell when the rows are re-sorted underneath it', async () => {
+    // Three rows, fully reversed: `repeat()` is keyed by row key, so this *moves* the focused
+    // <input> node rather than recreating it -- and a DOM move drops focus on its own.
+    const sortRows: Row[] = [...rows, { id: 'c', name: 'Gamma', score: 2 }];
+    const el = await alwaysTable(alwaysColumns, sortRows);
+    const editors = [...el.shadowRoot!.querySelectorAll<HTMLInputElement>('[part="cell-editor"]')];
+    editors[1]!.focus();
+    expect(focusedEditorCell(el)).to.equal('string:b/score');
+
+    el.rows = [sortRows[2]!, sortRows[1]!, sortRows[0]!];
+    await el.updateComplete;
+    expect(focusedEditorCell(el)).to.equal('string:b/score');
+    // The typed value rides along with the moved node, unaffected by the restore.
+    expect((el.shadowRoot!.activeElement as HTMLInputElement).value).to.equal('1');
+  });
+
+  it('does not yank focus to an unrelated row when the focused row paginates away', async () => {
+    const el = (await fixture(html`<lr-table page-size="1"></lr-table>`)) as LyraTable<Row>;
+    el.columns = alwaysColumns;
+    el.rows = rows;
+    el.rowKey = (r) => r.id;
+    await el.updateComplete;
+
+    const editor = el.shadowRoot!.querySelector('[part="cell-editor"]') as HTMLInputElement;
+    editor.focus();
+    expect(focusedEditorCell(el)).to.equal('string:a/score');
+
+    el.page = 2;
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelectorAll('[part="row"]')).to.have.lengthOf(1);
+    expect(focusedEditorCell(el)).to.equal(null);
+  });
+
+  it('does not pull focus back into an editor the user has already left for another cell', async () => {
+    const sortRows: Row[] = [...rows, { id: 'c', name: 'Gamma', score: 2 }];
+    const el = await alwaysTable(alwaysColumns, sortRows);
+    (el.shadowRoot!.querySelector('[part="cell-editor"]') as HTMLInputElement).focus();
+    const header = el.shadowRoot!.querySelector('[part="header-cell"]') as HTMLElement;
+    header.focus();
+
+    el.rows = [sortRows[2]!, sortRows[1]!, sortRows[0]!];
+    await el.updateComplete;
+    expect(focusedEditorCell(el)).to.equal(null);
+    expect((el.shadowRoot!.activeElement as HTMLElement | null)?.getAttribute('part')).to.equal('header-cell');
+  });
+
+  it('does not pull focus back into an editor the user has already left the table from', async () => {
+    const sortRows: Row[] = [...rows, { id: 'c', name: 'Gamma', score: 2 }];
+    const el = await alwaysTable(alwaysColumns, sortRows);
+    const editor = el.shadowRoot!.querySelector('[part="cell-editor"]') as HTMLInputElement;
+    editor.focus();
+    editor.blur();
+    expect(focusedEditorCell(el)).to.equal(null);
+
+    el.rows = [sortRows[2]!, sortRows[1]!, sortRows[0]!];
+    await el.updateComplete;
+    expect(focusedEditorCell(el)).to.equal(null);
+  });
+
+  /** The double-click autofocus is deferred to a microtask inside `updated()`; a macrotask turn
+   *  guarantees it has run. */
+  const afterAutofocus = async (el: LyraTable<Row>): Promise<void> => {
+    await el.updateComplete;
+    await new Promise((resolve) => setTimeout(resolve, 0));
+  };
+
+  it('autofocuses the double-clicked cell, not the first always-on editor in the DOM', async () => {
+    // The always-on column comes *first*, so an unqualified `[part="cell-editor"]` lookup would
+    // land on row a's score editor instead of the cell that was actually double-clicked.
+    const el = await alwaysTable([
+      alwaysColumns[1]!,
+      { key: 'name', label: 'Name', editable: true, editValue: (r) => r.name, cell: (r) => r.name },
+    ]);
+    const rowEls = [...el.shadowRoot!.querySelectorAll('[part="row"]')] as HTMLElement[];
+    const target = rowEls[1]!.querySelector('td[data-col-key="name"]') as HTMLElement;
+    target.dispatchEvent(new MouseEvent('dblclick', { bubbles: true, composed: true }));
+    await afterAutofocus(el);
+    expect(focusedEditorCell(el)).to.equal('string:b/name');
+  });
+
+  it('autofocuses the double-clicked cell when no always-on column exists (unchanged)', async () => {
+    const el = await alwaysTable([
+      { key: 'name', label: 'Name', editable: true, editValue: (r) => r.name, cell: (r) => r.name },
+      { key: 'score', label: 'Score', cell: (r) => r.score },
+    ]);
+    const rowEls = [...el.shadowRoot!.querySelectorAll('[part="row"]')] as HTMLElement[];
+    const target = rowEls[1]!.querySelector('td[data-col-key="name"]') as HTMLElement;
+    target.dispatchEvent(new MouseEvent('dblclick', { bubbles: true, composed: true }));
+    await afterAutofocus(el);
+    expect(focusedEditorCell(el)).to.equal('string:b/name');
+  });
+
+  it('commits a persistent editor through change, emitting the typed value', async () => {
+    const el = await alwaysTable();
+    const input = el.shadowRoot!.querySelector('[part="cell-editor"]') as HTMLInputElement;
+    input.value = '42';
+    const eventPromise = oneEvent(el, 'lr-cell-edit');
+    input.dispatchEvent(new Event('change', { bubbles: true, composed: true }));
+    const event = await eventPromise;
+    expect(event.detail.key).to.equal('score');
+    expect(event.detail.value).to.equal(42);
+    expect(event.detail.row).to.deep.equal(rows[0]);
+    await el.updateComplete;
+    // Nothing to close: the editor is still there afterwards.
+    expect(el.shadowRoot!.querySelectorAll('[part="cell-editor"]')).to.have.lengthOf(2);
+  });
+
+  it('commits a persistent editor with Enter and keeps focus in the field', async () => {
+    const el = await alwaysTable();
+    const input = el.shadowRoot!.querySelector('[part="cell-editor"]') as HTMLInputElement;
+    input.focus();
+    input.value = '42';
+    const eventPromise = oneEvent(el, 'lr-cell-edit');
+    input.dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, composed: true, cancelable: true }),
+    );
+    const event = await eventPromise;
+    expect(event.detail.value).to.equal(42);
+    await el.updateComplete;
+    // There is no closed state to fall back to, so the editor stays open and keeps focus.
+    expect(el.shadowRoot!.querySelectorAll('[part="cell-editor"]')).to.have.lengthOf(2);
+    expect(focusedEditorCell(el)).to.equal('string:a/score');
+  });
+
+  it('leaves Escape uncancelled on a persistent editor, so an ancestor still sees it', async () => {
+    const el = await alwaysTable();
+    const input = el.shadowRoot!.querySelector('[part="cell-editor"]') as HTMLInputElement;
+    input.focus();
+    const notPrevented = input.dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, composed: true, cancelable: true }),
+    );
+    await el.updateComplete;
+    expect(notPrevented).to.be.true;
+    // Nothing to cancel back to: the editor is unchanged and still focused.
+    expect(el.shadowRoot!.querySelectorAll('[part="cell-editor"]')).to.have.lengthOf(2);
+    expect(focusedEditorCell(el)).to.equal('string:a/score');
+  });
+
+  it('still cancels Escape on a double-click editor and closes it (regression)', async () => {
+    const el = await alwaysTable([
+      { key: 'name', label: 'Name', editable: true, editValue: (r) => r.name, cell: (r) => r.name },
+    ]);
+    const cell = el.shadowRoot!.querySelector('[part="row"] [part="cell"]') as HTMLElement;
+    cell.dispatchEvent(new MouseEvent('dblclick', { bubbles: true, composed: true }));
+    await el.updateComplete;
+    const input = cell.querySelector('[part="cell-editor"]') as HTMLInputElement;
+    const notPrevented = input.dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, composed: true, cancelable: true }),
+    );
+    await el.updateComplete;
+    expect(notPrevented).to.be.false;
+    expect(el.shadowRoot!.querySelectorAll('[part="cell-editor"]')).to.have.lengthOf(0);
+  });
+
+  it('leaves arrow keys inside a persistent editor to the caret, not the grid', async () => {
+    const el = await alwaysTable();
+    const input = el.shadowRoot!.querySelector('[part="cell-editor"]') as HTMLInputElement;
+    input.focus();
+    input.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, composed: true }));
+    await el.updateComplete;
+    expect(focusedEditorCell(el)).to.equal('string:a/score');
+  });
+
+  it('does not activate the row when Enter is pressed inside a persistent editor', async () => {
+    const el = await alwaysTable();
+    let rowClicked = false;
+    el.addEventListener('lr-row-click', () => (rowClicked = true));
+    const input = el.shadowRoot!.querySelector('[part="cell-editor"]') as HTMLInputElement;
+    input.focus();
+    input.dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, composed: true, cancelable: true }),
+    );
+    await el.updateComplete;
+    expect(rowClicked).to.be.false;
+  });
+
+  it('leaves roving header and row navigation untouched with an always-on column present', async () => {
+    const el = await alwaysTable();
+    const [nameHeader, scoreHeader] = [
+      ...el.shadowRoot!.querySelectorAll('[part="header-cell"]'),
+    ] as HTMLElement[];
+    const [firstRow, secondRow] = [...el.shadowRoot!.querySelectorAll('[part="row"]')] as HTMLElement[];
+
+    nameHeader.focus();
+    nameHeader.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+    await el.updateComplete;
+    expect(el.shadowRoot!.activeElement?.getAttribute('data-col-key')).to.equal('score');
+    expect(scoreHeader.getAttribute('tabindex')).to.equal('0');
+
+    scoreHeader.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }));
+    await el.updateComplete;
+    expect(el.shadowRoot!.activeElement?.getAttribute('data-row-key')).to.equal('string:a');
+
+    firstRow.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }));
+    await el.updateComplete;
+    expect(el.shadowRoot!.activeElement?.getAttribute('data-row-key')).to.equal('string:b');
+    expect(secondRow.getAttribute('tabindex')).to.equal('0');
+    expect(firstRow.getAttribute('tabindex')).to.equal('-1');
+
+    secondRow.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowUp', bubbles: true }));
+    await el.updateComplete;
+    expect(el.shadowRoot!.activeElement?.getAttribute('data-row-key')).to.equal('string:a');
+
+    firstRow.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowUp', bubbles: true }));
+    await el.updateComplete;
+    expect(el.shadowRoot!.activeElement?.getAttribute('data-col-key')).to.equal('score');
+  });
+
+  it('still activates a row clicked in a non-editable column', async () => {
+    const el = await alwaysTable();
+    let clickedName: string | undefined;
+    el.addEventListener('lr-row-click', (event) => {
+      clickedName = (event as CustomEvent<{ row: Row }>).detail.row.name;
+    });
+    const nameCell = el.shadowRoot!.querySelector('td[data-col-key="name"]') as HTMLElement;
+    nameCell.dispatchEvent(new MouseEvent('click', { bubbles: true, composed: true }));
+    expect(clickedName).to.equal('Alpha');
+  });
+
+  it('is accessible with a column of persistent editors rendered', async () => {
+    const el = await alwaysTable();
+    expect(el.shadowRoot!.querySelectorAll('[part="cell-editor"]')).to.have.lengthOf(2);
+    await expect(el).to.be.accessible();
+  });
+
+  it('localizes every persistent editor through a strings override', async () => {
+    const el = (await fixture(
+      html`<lr-table aria-label="Scores" .strings=${{ tableEditCell: 'Modifier {column}' }}></lr-table>`,
+    )) as LyraTable<Row>;
+    el.columns = alwaysColumns;
+    el.rows = rows;
+    el.rowKey = (r) => r.id;
+    await el.updateComplete;
+    const labels = [...el.shadowRoot!.querySelectorAll('[part="cell-editor"]')].map((input) =>
+      input.getAttribute('aria-label'),
+    );
+    expect(labels).to.deep.equal(['Modifier Score', 'Modifier Score']);
+  });
+});

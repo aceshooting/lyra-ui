@@ -228,6 +228,67 @@ export const EditableCells: Story = {
     ></lr-table>`,
 };
 
+interface RateRow {
+  id: string;
+  tier: string;
+  rate: number;
+  note: string;
+}
+
+// Consumer-owned rows, mutated only in response to `lr-cell-edit` -- the table
+// itself never writes back into `rows`. A settings/rate grid is exactly the
+// case `editable: 'always'` exists for: every row in the column is meant to be
+// typed into, so requiring a double-click per cell first is pure friction.
+let rateRows: RateRow[] = [
+  { id: 'a', tier: 'Standard', rate: 0.12, note: 'per request' },
+  { id: 'b', tier: 'Priority', rate: 0.34, note: 'per request' },
+  { id: 'c', tier: 'Batch', rate: 0.05, note: 'per 1k requests' },
+];
+
+const rateColumns: TableColumn<RateRow>[] = [
+  { key: 'tier', label: 'Tier', cell: (r) => r.tier },
+  {
+    key: 'rate',
+    label: 'Rate (USD)',
+    align: 'end',
+    editable: 'always',
+    editType: 'number',
+    editValue: (r) => r.rate,
+    cell: (r) => r.rate,
+  },
+  { key: 'note', label: 'Billed', cell: (r) => r.note },
+];
+
+function renderRateTable(): unknown {
+  return html`<lr-table
+    aria-label="Pricing tiers"
+    .columns=${rateColumns}
+    .rows=${rateRows}
+    .rowKey=${(r: RateRow) => r.id}
+    @lr-cell-edit=${(e: CustomEvent<{ row: RateRow; value: string | number }>) => {
+      rateRows = rateRows.map((row) =>
+        row.id === e.detail.row.id ? { ...row, rate: Number(e.detail.value) } : row,
+      );
+      // Storybook's `render()` return value isn't reactive on its own -- force a
+      // re-render the same way ExpandableRows below does.
+      const root = (e.currentTarget as HTMLElement).parentElement;
+      if (root) render(renderRateTable(), root);
+    }}
+  ></lr-table>`;
+}
+
+export const AlwaysOnEditors: Story = {
+  parameters: {
+    docs: {
+      description: {
+        story:
+          "`editable: 'always'` renders a persistent editor in every body cell of that column, from first paint. Each editor is a plain tab stop outside the header/row roving-tabindex model, so Tab walks the column while arrow keys still navigate the grid from a row's own tab stop (and move the caret once you are inside a field). Enter commits and keeps focus; blurring after a change commits too; Escape has nothing to cancel back to, so it is left for an ancestor dialog/popover. The value binds as a content attribute, so an out-of-band `rows` update never overwrites a draft the user is still typing.",
+      },
+    },
+  },
+  render: () => html`<div>${renderRateTable()}</div>`,
+};
+
 export const GroupedRows: Story = {
   render: () =>
     html`<lr-table

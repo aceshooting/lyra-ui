@@ -132,10 +132,21 @@ export interface TableColumn<T> {
    *  boolean). Returns `null`/`undefined` for a cell with no value: excluded from both the domain
    *  computation and the tint (reads as "no data", not "zero"). */
   heatValue?(row: T): number | null | undefined;
-  /** Enables double-click inline editing for this cell. The table emits the
-   *  proposed value and never mutates `row`; apply the change in the consumer
-   *  and pass the updated `rows` back in. */
-  editable?: boolean;
+  /** Enables inline editing for this cell. `true` (legacy) opens an editor on
+   *  double-click, one cell at a time. `'always'` instead renders a persistent
+   *  editor in every body cell of this column from first paint -- a
+   *  settings/rate-style column the user is expected to type straight into.
+   *  Either way the table emits the proposed value through `lr-cell-edit` and
+   *  never mutates `row`; apply the change in the consumer and pass the updated
+   *  `rows` back in.
+   *
+   *  Persistent (`'always'`) editors are plain tab stops outside the roving
+   *  header/row tabindex model, and bind their `value` as a content attribute,
+   *  so native dirty-value-flag semantics apply: once the user has typed into
+   *  one, an out-of-band `rows` update to that same cell no longer replaces
+   *  what they are still editing. An untouched editor picks up a new `rows`
+   *  value normally. */
+  editable?: boolean | 'always';
   /** Reads the value shown in the inline editor. When omitted, `row[key]` is
    *  used for record-like rows. */
   editValue?: (row: T) => string | number;
@@ -157,6 +168,18 @@ const INTERACTIVE_SELECTOR =
 function stickyDirection(sticky: boolean | 'start' | 'end' | undefined): 'start' | 'end' | undefined {
   if (sticky === true) return 'start';
   if (sticky === 'start' || sticky === 'end') return sticky;
+  return undefined;
+}
+
+/** Normalizes TableColumn.editable's legacy boolean form (`true` == open an
+ *  editor on double-click) alongside the `'always'` union member (a persistent
+ *  editor in every body cell of that column) -- `false`/`undefined` both
+ *  resolve to "not editable". Sibling of `stickyDirection()` above, and the
+ *  single place the widened union is interpreted, so no call site has to
+ *  re-derive which of the two triggers a column is asking for. */
+function editTrigger(editable: boolean | 'always' | undefined): 'double-click' | 'always' | undefined {
+  if (editable === 'always') return 'always';
+  if (editable === true) return 'double-click';
   return undefined;
 }
 
@@ -296,6 +319,18 @@ export interface LyraTableEventMap<T = unknown> {
  * state — every placeholder opts out of `<lr-skeleton>`'s own announcement.
  * Columns with `editable: true` open a native text/number editor on
  * double-click and emit `lr-cell-edit`; row mutation remains consumer-owned.
+ * `editable: 'always'` instead renders that editor in every body cell of the
+ * column from first paint — a settings/rate-style column meant to be typed
+ * straight into. Persistent editors are plain tab stops (no `tabindex` of their
+ * own, exactly like the row-expand toggle) outside the header/row roving model,
+ * so arrow keys still navigate the grid from a row's own tab stop and act as
+ * caret movement once focus is inside a field. Enter commits and keeps focus;
+ * Escape has nothing to cancel back to, so it is left uncancelled for an
+ * ancestor dialog/popover. Their value binds as a content attribute, so once
+ * the user has typed into one an out-of-band `rows` update to that same cell no
+ * longer replaces the draft; an untouched editor still picks up a new value.
+ * Focus is restored across a re-sort that moves the editor's node, and dropped
+ * (never re-aimed at an unrelated row) when its row leaves the rendered page.
  * `spellcheck`/`autocapitalize`/`autoCorrect` forward to the filter input and, for a `'text'`
  * (the default) `editType`, the inline cell editor -- no effect on a `'number'` cell editor.
  * `groupBy` inserts non-focusable group header rows before each group; use
@@ -360,7 +395,9 @@ export interface LyraTableEventMap<T = unknown> {
  * @csspart foot - The `<tfoot>`, only rendered when at least one column defines `footer`.
  * @csspart footer-row - The single footer row.
  * @csspart footer-cell - A single footer cell.
- * @csspart cell-editor - The native inline cell editor, shown after a double-click on an editable cell.
+ * @csspart cell-editor - The native inline cell editor: shown after a double-click on an
+ *   `editable: true` cell, and rendered persistently in every body cell of an `editable: 'always'`
+ *   column.
  * @csspart more-button - The "load more" control, shown when `hasMore` is true.
  * @csspart sort-icon - The chevron shown in the active sortable column's header cell.
  * @csspart reveal-columns-button - The button that toggles `priority`-hidden columns back into view.
@@ -574,6 +611,18 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
    *  `selectedKey` (if it matches a row) or the first row. */
   @state() private activeRowKey: string | null = null;
   @state() private editingCell: { rowKey: string; columnKey: string } | null = null;
+  /** The persistent (`editable: 'always'`) editor cell that most recently took focus, recorded by
+   *  the delegated `focusin` handler. `repeat()` is keyed by row key, so a re-sort *moves* the
+   *  `<input>` node (its typed value rides along) rather than recreating it -- but a DOM move drops
+   *  focus, so `updated()` puts it back. Deliberately non-reactive: it tracks focus, and writing it
+   *  must never schedule a render. */
+  private focusedEditorCell: { rowKey: string; columnKey: string } | null = null;
+  /** Whether `focusedEditorCell` still actually held focus when the in-flight update started.
+   *  Captured in `willUpdate()`, i.e. before `render()` has had the chance to move the node out
+   *  from under it. Without this, a record left behind by a user who has since clicked away
+   *  entirely (no `focusin` reaches this component to clear it) would let any later, unrelated
+   *  update yank focus back into the table. */
+  private editorHadFocusBeforeUpdate = false;
   @state() private resizedColumnWidths = new Map<string, number>();
 
   private resizeState?: {
@@ -1013,6 +1062,13 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
     if (changed.has('columns')) {
       this.columnsByKey = new Map(this.columns.map((c) => [c.key, c]));
     }
+    // Read *before* render() gets to move the node out from under the focus it currently holds --
+    // by the time updated() runs, "the editor was focused a moment ago" and "the user clicked away
+    // a while ago" are indistinguishable from the DOM alone.
+    this.editorHadFocusBeforeUpdate =
+      this.focusedEditorCell !== null &&
+      this.shadowRoot?.activeElement ===
+        this.editorElementFor(this.focusedEditorCell.rowKey, this.focusedEditorCell.columnKey);
   }
 
   /** Each sticky column's cumulative inline-start offset — the sum of the *rendered
@@ -1124,10 +1180,13 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
     const base = this.renderRoot.querySelector('[part="base"]');
     if (base) this.observeBase(base);
     this.observeHeaders();
+    if (this.hasAlwaysOnEditors) this.restoreAlwaysOnEditorFocus();
+    // Scoped to the cell that actually opened: an unqualified `[part="cell-editor"]` lookup would
+    // steal focus to whichever editor happens to be first in the tree, which stopped being "the
+    // one that just opened" as soon as a column could render persistent editors of its own.
     if (changed.has('editingCell') && this.editingCell) {
-      queueMicrotask(() => {
-        (this.renderRoot.querySelector('[part="cell-editor"]') as HTMLInputElement | null)?.focus();
-      });
+      const { rowKey, columnKey } = this.editingCell;
+      queueMicrotask(() => this.editorElementFor(rowKey, columnKey)?.focus());
     }
     // Deferred to a microtask rather than called synchronously here: a real
     // priority-hidden transition mutates the reactive `columnsHidden`
@@ -1164,14 +1223,25 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
     }
   }
 
+  /** Whether any column opts into persistent (`editable: 'always'`) editors --
+   *  the table-level flag inferred from the columns themselves, mirroring how
+   *  `heatValue`/`width` opt their own modes in with no separate boolean. */
+  private get hasAlwaysOnEditors(): boolean {
+    return this.columns.some((col) => editTrigger(col.editable) === 'always');
+  }
+
   private editorValue(row: T, column: TableColumn<T>): string {
     const value = column.editValue?.(row) ?? (row as Record<string, unknown>)[column.key] ?? '';
     return String(value);
   }
 
+  /** Double-click only ever *opens* an editor, so an `'always'` column is
+   *  deliberately excluded: its editor is already open, and setting
+   *  `editingCell` for it would render a second, competing editor in the same
+   *  cell. */
   private startEditing(rowKey: string, columnKey: string): void {
     const column = this.columnsByKey.get(columnKey);
-    if (!column?.editable || !this.rowsByKey.has(rowKey)) return;
+    if (editTrigger(column?.editable) !== 'double-click' || !this.rowsByKey.has(rowKey)) return;
     this.editingCell = { rowKey, columnKey };
   }
 
@@ -1179,18 +1249,78 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
     const input = event.currentTarget as HTMLInputElement;
     const entry = this.rowsByKey.get(rowKey);
     const column = this.columnsByKey.get(columnKey);
-    if (!entry || !column?.editable) return;
+    if (!entry || !column || editTrigger(column.editable) === undefined) return;
     const value = column.editType === 'number' && input.value !== '' ? Number(input.value) : input.value;
     this.emit('lr-cell-edit', { row: entry.row, key: columnKey, value });
     this.editingCell = null;
   }
 
+  /** The `[part='cell-editor']` rendered in one specific body cell, or `null` when that row/column
+   *  is not currently rendered (paginated away, filtered out, column removed) or holds no editor.
+   *  Matched by walking `data-row-key`/`data-col-key` rather than by interpolating them into a
+   *  selector: both are consumer-supplied strings, and the row key additionally carries an encoding
+   *  prefix (`string:a`), so neither is safe to splat into CSS unescaped. */
+  private editorElementFor(rowKey: string, columnKey: string): HTMLInputElement | null {
+    const row = [...this.renderRoot.querySelectorAll<HTMLElement>('[data-row-key]')].find(
+      (el) => el.dataset.rowKey === rowKey,
+    );
+    const cell = row
+      ? [...row.querySelectorAll<HTMLElement>('td[data-col-key]')].find((el) => el.dataset.colKey === columnKey)
+      : undefined;
+    return (cell?.querySelector('[part="cell-editor"]') as HTMLInputElement | null) ?? null;
+  }
+
+  /** Records which persistent editor holds focus, and drops the record as soon as focus lands on
+   *  anything else inside the grid. Only `'always'` columns are tracked: a double-click editor is
+   *  closed (and its node removed) by the very updates this would restore focus across. */
+  private onTableFocusIn = (event: FocusEvent): void => {
+    const target = event.target as HTMLElement | null;
+    const cell = target?.closest?.('td[data-col-key]') as HTMLElement | null;
+    const row = target?.closest?.('[data-row-key]') as HTMLElement | null;
+    const columnKey = cell?.dataset.colKey;
+    const rowKey = row?.dataset.rowKey;
+    this.focusedEditorCell =
+      target?.getAttribute('part') === 'cell-editor' &&
+      columnKey !== undefined &&
+      rowKey !== undefined &&
+      editTrigger(this.columnsByKey.get(columnKey)?.editable) === 'always'
+        ? { rowKey, columnKey }
+        : null;
+  };
+
+  /** Puts focus back into the persistent editor this update moved it out of. Runs from `updated()`,
+   *  after `render()`'s DOM moves have landed. A row that left the rendered set entirely
+   *  (pagination, filtering) only clears the record: yanking focus to whichever unrelated row now
+   *  occupies that position would be worse than losing it. */
+  private restoreAlwaysOnEditorFocus(): void {
+    const cell = this.focusedEditorCell;
+    if (cell === null) return;
+    const editor = this.editorElementFor(cell.rowKey, cell.columnKey);
+    if (editor === null) {
+      this.focusedEditorCell = null;
+    } else if (this.editorHadFocusBeforeUpdate && this.shadowRoot?.activeElement !== editor) {
+      editor.focus();
+    }
+    this.editorHadFocusBeforeUpdate = false;
+  }
+
+  /** The editor owns its own keys. `stopPropagation()` is unconditional and stays that way: inside
+   *  a text field arrow keys are caret movement, not grid navigation.
+   *
+   *  Enter commits either flavor. For a double-click editor that also closes it (`commitEdit`
+   *  clears `editingCell`); a persistent editor has no closed state to fall back to, so it stays
+   *  open and keeps focus.
+   *
+   *  Escape cancels a double-click edit, which is a real action, so it is consumed. A persistent
+   *  editor has nothing to cancel back to -- `editingCell` was never set for it -- so Escape is
+   *  left uncancelled and an ancestor dialog/popover still closes on it. */
   private onEditorKeyDown = (event: KeyboardEvent, rowKey: string, columnKey: string): void => {
     event.stopPropagation();
+    const alwaysOn = editTrigger(this.columnsByKey.get(columnKey)?.editable) === 'always';
     if (event.key === 'Enter') {
       event.preventDefault();
       this.commitEdit(event, rowKey, columnKey);
-    } else if (event.key === 'Escape') {
+    } else if (event.key === 'Escape' && !alwaysOn) {
       event.preventDefault();
       this.editingCell = null;
     }
@@ -1354,6 +1484,60 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
     }
   }
 
+  /** One body cell's inline editor.
+   *
+   *  The persistent (`editable: 'always'`) and double-click flavors differ in exactly one binding:
+   *  the persistent editor binds `value` as a **content attribute**, the double-click one keeps the
+   *  `.value` **property**. Native HTML sets an input's dirty-value flag on the user's first edit,
+   *  after which content-attribute updates no longer overwrite what is displayed -- so an
+   *  out-of-band `rows` update to a cell the user is already typing into leaves their draft alone,
+   *  with no is-focused bookkeeping of the library's own. An untouched persistent editor has no
+   *  dirty flag set, so it still picks up a new `rows` value normally. A double-click editor is
+   *  short-lived and opens against the value it is editing, so the property binding's deliberate
+   *  re-assert is right for it. Two templates rather than one because a lit template literal fixes
+   *  each binding's kind at authoring time.
+   *
+   *  No `tabindex` on either: a persistent editor is a plain tab stop, exactly like the row-expand
+   *  toggle rendered a few lines above, and stays outside the header/row roving model. */
+  private renderCellEditor(row: T, col: TableColumn<T>, rowKey: string, alwaysOn: boolean): TemplateResult {
+    const type = col.editType ?? 'text';
+    const isText = type === 'text';
+    const value = this.editorValue(row, col);
+    const label = this.localize('tableEditCell', undefined, { column: col.label });
+    const spellcheck = isText ? this.spellcheck : nothing;
+    const autocapitalize = isText ? this.autocapitalize || nothing : nothing;
+    const autocorrect = isText ? this.autoCorrect || nothing : nothing;
+    const onChange = (event: Event): void => this.commitEdit(event, rowKey, col.key);
+    const onKeyDown = (event: KeyboardEvent): void => this.onEditorKeyDown(event, rowKey, col.key);
+    return alwaysOn
+      ? html`<input
+          part="cell-editor"
+          type=${type}
+          value=${value}
+          aria-label=${label}
+          spellcheck=${spellcheck}
+          autocapitalize=${autocapitalize}
+          autocorrect=${autocorrect}
+          @change=${onChange}
+          @focus=${this.onNativeFocus}
+          @blur=${this.onNativeBlur}
+          @keydown=${onKeyDown}
+        />`
+      : html`<input
+          part="cell-editor"
+          type=${type}
+          .value=${value}
+          aria-label=${label}
+          spellcheck=${spellcheck}
+          autocapitalize=${autocapitalize}
+          autocorrect=${autocorrect}
+          @change=${onChange}
+          @focus=${this.onNativeFocus}
+          @blur=${this.onNativeBlur}
+          @keydown=${onKeyDown}
+        />`;
+  }
+
   /** One placeholder. `announce` is switched off on every one of them: `<lr-skeleton>` defaults it
    *  to `true`, which would make each of the N x M cells its own `role="status"` live region and
    *  turn a single "Loading rows" announcement into a storm of them. The one status node
@@ -1476,6 +1660,7 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
             @click=${this.onTableClick}
             @keydown=${this.onTableKeyDown}
             @dblclick=${this.onTableDoubleClick}
+            @focusin=${this.onTableFocusIn}
           >
             <colgroup>
               ${hasExpand ? html`<col style=${styleMap({ 'inline-size': 'var(--lr-icon-button-size)' })} />` : nothing}
@@ -1586,8 +1771,13 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
                           ...(col.cellStyle ? col.cellStyle(row) ?? {} : {}),
                           ...(heatShare !== null ? { '--lr-table-heat-t': heatShare } : {}),
                         };
+                        // An `'always'` column renders its editor unconditionally, from first
+                        // paint and with no interaction; `editingCell` (a single nullable object,
+                        // one open editor at a time) only ever drives the double-click flavor.
+                        const alwaysOn = editTrigger(col.editable) === 'always';
                         const editing =
-                          this.editingCell?.rowKey === encodeKey(key) && this.editingCell.columnKey === col.key;
+                          alwaysOn ||
+                          (this.editingCell?.rowKey === encodeKey(key) && this.editingCell.columnKey === col.key);
                         // `|| nothing`, not `?? nothing`: an empty `title=""` is not "no tooltip",
                         // it actively suppresses an ancestor's tooltip, so an empty return omits
                         // the attribute the same way `undefined` does (mirroring `lr-stat`'s
@@ -1605,26 +1795,7 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
                             title=${cellTitle || nothing}
                             style=${Object.keys(cellStyle).length ? styleMap(cellStyle) : nothing}
                           >
-                            ${editing
-                              ? html`<input
-                                  part="cell-editor"
-                                  type=${col.editType ?? 'text'}
-                                  .value=${this.editorValue(row, col)}
-                                  aria-label=${this.localize('tableEditCell', undefined, { column: col.label })}
-                                  spellcheck=${(col.editType ?? 'text') === 'text' ? this.spellcheck : nothing}
-                                  autocapitalize=${(col.editType ?? 'text') === 'text'
-                                    ? this.autocapitalize || nothing
-                                    : nothing}
-                                  autocorrect=${(col.editType ?? 'text') === 'text'
-                                    ? this.autoCorrect || nothing
-                                    : nothing}
-                                  @change=${(event: Event) => this.commitEdit(event, encodeKey(key), col.key)}
-                                  @focus=${this.onNativeFocus}
-                                  @blur=${this.onNativeBlur}
-                                  @keydown=${(event: KeyboardEvent) =>
-                                    this.onEditorKeyDown(event, encodeKey(key), col.key)}
-                                />`
-                              : col.cell(row)}
+                            ${editing ? this.renderCellEditor(row, col, encodeKey(key), alwaysOn) : col.cell(row)}
                           </td>`;
                       })}
                       ${hasRowTotal ? html`<td part="row-total-cell">${this.rowTotal?.(row)}</td>` : nothing}
