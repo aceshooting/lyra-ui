@@ -56,7 +56,7 @@ privacy rules.
 
 ## Component catalog
 
-- **Form controls & inputs** (`components/forms/`, 25) — `lr-combobox`, `lr-option`, `lr-select`, `lr-date-picker`, `lr-date-input`, `lr-textarea`, `lr-button`, `lr-icon-button`, `lr-input`, `lr-number-input`, `lr-time-input`, `lr-phone-input`, `lr-time-range`, `lr-swatch-picker`, `lr-checkbox`, `lr-switch`, `lr-slider`, `lr-radio`, `lr-radio-group`, `lr-checkbox-group`, `lr-token-input`, `lr-code-editor`, `lr-color-picker`, `lr-emoji-picker`, `lr-rubric-form`
+- **Form controls & inputs** (`components/forms/`, 26) — `lr-combobox`, `lr-option`, `lr-select`, `lr-date-picker`, `lr-date-input`, `lr-textarea`, `lr-button`, `lr-icon-button`, `lr-input`, `lr-number-input`, `lr-time-input`, `lr-phone-input`, `lr-time-range`, `lr-swatch-picker`, `lr-checkbox`, `lr-switch`, `lr-slider`, `lr-radio`, `lr-radio-group`, `lr-checkbox-group`, `lr-token-input`, `lr-code-editor`, `lr-color-picker`, `lr-emoji-picker`, `lr-rubric-form`, `lr-locale-picker`
 
 - **Data display, dashboards & flow canvas** (`components/data/`, 25) — `lr-sparkline`, `lr-stat`, `lr-table`, `lr-pagination`, `lr-gauge`, `lr-word-cloud`, `lr-heatmap`, `lr-sequence-strip`, `lr-tree`, `lr-tree-node`, `lr-flow-canvas`, `lr-flow-node`, `lr-flow-minimap`, `lr-flow-controls`, `lr-flow-run-overlay`, `lr-context-meter`, `lr-data-grid`, `lr-calendar`, `lr-timeline`, `lr-timeline-item`, `lr-file-tree`, `lr-env-list`, `lr-document-library`, `lr-graph-query-builder`, `lr-query-builder`
 

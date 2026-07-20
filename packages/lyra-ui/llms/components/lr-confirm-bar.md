@@ -35,6 +35,10 @@ narrow-allocation `@container` treatment is switched off — a compact bar is *e
 so stretching the buttons to fill would be exactly wrong. Re-chrome it through the
 `--lr-confirm-bar-compact-*` properties below. Everything else is unchanged: the event shapes, the
 focus-to-`[part="status"]`-before-unmount contract, and `role="group"` with its heading label.
+`pending: 'approved' | 'denied' | null = null` (reflected) — which decision is awaiting host
+resolution while an `lr-approve`/`lr-deny` listener has called `preventDefault()` on the
+now-cancelable event; the pending button shows `loading`, the other is `disabled`. Set `.decision`
+to finalize, or clear `.pending` back to `null` to bounce back to the undecided state.
 
 **Slots:** default — supplementary body content between the heading and the actions (e.g. a
 `lr-diff-view`). `footer` — extra content at the start of the action row.
@@ -44,8 +48,11 @@ focus-to-`[part="status"]`-before-unmount contract, and `role="group"` with its 
 
 **CSS parts:** `base` (`role="group"`), `heading`/`tool-name`, `body`, `args` (the
 details/json-viewer wrapper, only rendered when `args` is defined), `footer`, `deny-button`,
-`approve-button` (named identically to the dialog's parts), `status` (the decided-state text, always
-present in the DOM as a focus landing spot).
+`approve-button` (each an `<lr-button>` host, named identically to the dialog's parts),
+`deny-button-base`/`-label`/`-start`/`-end`/`-spinner` and
+`approve-button-base`/`-label`/`-start`/`-end`/`-spinner` (re-exported from each button's own
+`lr-button` parts via `exportparts`), `status` (the decided-state text, always present in the DOM
+as a focus landing spot).
 
 **Themeable custom properties:** the `compact` presentation is deliberately chrome-less by default
 and re-chromed entirely through five properties, all scoped to `[part="base"]` while `compact`:
@@ -62,12 +69,31 @@ bar in this panel a hairline border" a one-rule change on the panel.
 - `[part="status"]` is always rendered and must never be given `display: none`. Deciding moves focus
   to it synchronously, before the Deny/Approve buttons unmount, so hiding it would drop focus to
   `<body>`. The shipped `:empty` rule on it has never matched, and that is load-bearing.
-- `[part="deny-button"]` and `[part="approve-button"]` are raw `<button>` elements, not composed
-  `lr-button`s, so `--lr-button-*` theming does not reach them. Style them through their parts.
+- `[part="deny-button"]`/`[part="approve-button"]` are `<lr-button>` hosts (`variant="neutral"`/
+  `"brand"`, `"danger"` under `tone="danger"`) — `--lr-button-*` theming reaches them directly. A
+  consumer previously styling `::part(deny-button)`/`::part(approve-button)` for
+  padding/border/font/`:hover`/`:focus-visible` must move that CSS onto the re-exported
+  `deny-button-base`/`approve-button-base` sub-parts instead — the outer part now resolves to the
+  `<lr-button>` host, where those declarations either do nothing or must be re-expressed through
+  `lr-button`'s own parts/custom properties.
+- An `lr-approve`/`lr-deny` listener can call `preventDefault()` to keep the decision open while
+  its own async work is in flight — see `pending` above.
 
 ```html
 <lr-tool-call-chip status="pending"></lr-tool-call-chip>
 <lr-confirm-bar tool-name="run_shell" .args=${args}
   @lr-approve=${(e) => run(e.detail.args)} @lr-deny=${() => cancel()}
 ></lr-confirm-bar>
+```
+
+An `lr-approve`/`lr-deny` listener that needs to await its own async work before finalizing calls
+`preventDefault()` and sets `.decision` (or clears `.pending`) once it resolves:
+
+```ts
+bar.addEventListener('lr-approve', (e) => {
+  e.preventDefault();
+  runApproval(e.detail.args)
+    .then(() => { bar.decision = 'approved'; })
+    .catch(() => { bar.pending = null; }); // bounce back, retry
+});
 ```

@@ -47,17 +47,26 @@ renders at the start of the action row, before Deny/Edit/Approve.
   `autoCorrect: string = 'off'` (attribute `autocorrect`), `autocomplete: string = 'off'`,
   `wrap: 'hard'|'soft'|'off' = 'soft'`, `inputMode: string = ''` (attribute `inputmode`),
   and `enterKeyHint: string = ''` (attribute `enterkeyhint`) — forwarded to the raw-JSON
-  `<textarea>` while editing; the defaults keep browser editing assistance from changing JSON text
+  `<textarea>` while editing; the defaults keep browser editing assistance from changing JSON text.
+  `pending: 'approve' | 'deny' | null = null` (reflected) — which decision is awaiting host
+  resolution while an `lr-approve`/`lr-deny` listener has called `preventDefault()` on the
+  now-cancelable event; the pending button shows `loading`, the other is `disabled` (Approve is
+  also still `disabled` while an in-progress edit is invalid JSON, independent of `pending`).
+  Escape/backdrop dismissal is suppressed while `pending` is set. Finalize by calling
+  `close('approve'|'deny')`, or clear `.pending` back to `null` to bounce back to the undecided
+  state; `pending` also resets to `null` every time the dialog re-opens.
 
 **Methods:** `close(reason: ToolApprovalDialogCloseReason = 'api'): void` — closes the dialog, emits
 `lr-close` with `reason`, and returns focus to whatever had it before the dialog opened; a no-op if
 already closed.
 
 **Events:** `lr-approve` (`detail: { args: unknown }` — the current, already-parsed arguments: the
-original `args` prop, or the user's edited-and-validated version if an edit was in progress; always
-followed by `lr-close` with reason `'approve'`), `lr-deny` (no detail — `this.emit('lr-deny')` is
-called with no second argument, so per the DOM spec's `CustomEventInit` default, `event.detail` is
-`null`, not `undefined`; always followed by `lr-close` with reason `'deny'`), `lr-close`
+original `args` prop, or the user's edited-and-validated version if an edit was in progress.
+Cancelable: a listener calling `preventDefault()` sets `pending` to `'approve'` instead of
+closing; otherwise always followed by `lr-close` with reason `'approve'`), `lr-deny` (no detail —
+`this.emit('lr-deny')` is called with no second argument, so per the DOM spec's `CustomEventInit`
+default, `event.detail` is `null`, not `undefined`. Cancelable, same `pending` mechanism, setting
+`pending` to `'deny'`; otherwise always followed by `lr-close` with reason `'deny'`), `lr-close`
 (`detail: ToolApprovalDialogCloseReason` — fired exactly once per dismissal, via Escape, a backdrop
 click, the Approve/Deny buttons, or a `close()` call)
 
@@ -65,7 +74,11 @@ click, the Approve/Deny buttons, or a `close()` call)
 rendered before the built-in Deny/Edit/Approve buttons.
 
 **CSS parts:** `backdrop`, `panel`, `header`, `tool-name`, `body`, `args-view`, `args-editor`, `error`,
-`footer`, `deny-button`, `edit-button`, `approve-button`
+`footer`, `deny-button`, `edit-button`, `approve-button`,
+`deny-button-base`/`-label`/`-start`/`-end`/`-spinner` and
+`approve-button-base`/`-label`/`-start`/`-end`/`-spinner` (`deny-button`/`approve-button` are each an
+`<lr-button>` host; these five per-button parts are re-exported from its own `lr-button` parts via
+`exportparts`; `edit-button` stays a plain `<button>`, unaffected by this).
 
 **Themeable custom properties:** `--lr-tool-approval-dialog-overlay-color` (default
 `rgb(0 0 0 / 0.5)` — the backdrop scrim color; component-specific since no shared overlay token
@@ -127,5 +140,15 @@ shared composed-tree focus traversal used by the other modal families.
   this a mobile browser (notably iOS Safari, which defaults textarea `autocapitalize` to
   `'sentences'`) could auto-capitalize or auto-correct key/value text as the user edits, silently
   corrupting the JSON.
+- `deny-button`/`approve-button` are `<lr-button>` hosts (`variant="neutral"`/`"brand"` — this
+  component has no `tone` property) — `--lr-button-*` theming reaches them directly. A consumer
+  previously styling `::part(deny-button)`/`::part(approve-button)` for
+  padding/border/font/`:hover`/`:focus-visible` must move that CSS onto the re-exported
+  `deny-button-base`/`approve-button-base` sub-parts instead. `edit-button` is unaffected and stays
+  a raw `<button>`.
+- An `lr-approve`/`lr-deny` listener can call `preventDefault()` to keep the decision open while
+  its own async work is in flight — see `pending` above. While `pending` is set, Escape/backdrop
+  dismissal is suppressed, so a consumer that never resolves the pending decision leaves the
+  dialog open until it clears `.pending` or calls `close()` directly itself.
 
 ---
