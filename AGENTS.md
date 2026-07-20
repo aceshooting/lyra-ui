@@ -113,6 +113,20 @@ build and fails on gzip-size regressions against `scripts/bundle-budgets.json`; 
   reference aligned with the exact names and details.
 - **Sibling `*.styles.ts` file** per component (e.g. `empty.styles.ts` exports `styles`), not
   inline `css` in the component file. Component sets `static styles = [LyraElement.styles, styles]`.
+- **Watch for silently-inert CSS.** A declaration that never applies looks identical to one that
+  works, and nothing in the toolchain flags it — not `tsc`, not the style policy, not a test that
+  greps the stylesheet text. Four distinct live instances were found in a single pass: a
+  `:host(:has(> lr-x))` rule (`:has()` is invalid inside `:host()`, so the whole rule is dropped); a
+  `[part='x']:empty` rule (Chromium's `:empty` does not ignore the whitespace-only text nodes lit
+  leaves in a part, so it never matches — and that one is load-bearing, since the element it would
+  have hidden is a focus target); a `--lr-x-height: auto` sentinel declared on `:host` (a *declared*
+  value, `auto` included, wins over the `var()` fallback arm, making the fallback and everything
+  chained behind it dead); and a consumer regression test asserting `source.toContain('--lr-token:
+  …')`, which passed the whole time the token was being shadowed at a nested host. The only reliable
+  check is to **assert the rendered result** — `getComputedStyle` on the real element in the real
+  state, or a hit test — never the stylesheet text. When you add a rule whose selector is unusual,
+  prove it matches before trusting it: `CSS.supports('selector(...)')` for exotic selectors, and a
+  deliberately-perturbed value to confirm the assertion actually bites.
 - **Granular, tree-shakeable exports.** Each component's `.ts` file is a side-effect-free
   class export; a matching side-effectful entry point registers the tag. `src/lyra.ts` is the
   barrel — side-effect imports for every component (registers all tags) plus named
