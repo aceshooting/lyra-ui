@@ -53,6 +53,10 @@ export const styles = css`
   [part='next']:hover {
     background: var(--lr-color-brand-quiet);
   }
+  [part='previous']:focus-visible, [part='next']:focus-visible {
+    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
+    outline-offset: var(--lr-focus-ring-offset);
+  }
   /* Rotate the wrapping part element, not the svg -- internal/icons.ts's
      documented contract ("callers ... rotate the wrapping part element via
      CSS transform: rotate(...), not the svg"). This previously rotated the

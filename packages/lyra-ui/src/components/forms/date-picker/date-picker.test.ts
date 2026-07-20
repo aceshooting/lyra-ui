@@ -773,6 +773,11 @@ it('uses the shared --lr-opacity-disabled token instead of a literal 0.35 for th
   expect(dayDisabledBlock![1]).to.not.include('0.35');
 });
 
+it('gives the previous/next month-nav buttons a focus-visible ring, matching their existing hover', () => {
+  const css = styles.cssText.replace(/\s+/g, ' ');
+  expect(css).to.match(/\[part='previous'\]:focus-visible,\s*\[part='next'\]:focus-visible\s*\{[^}]*outline:/);
+});
+
 it('wires locale, weekday-format and first-day-of-week through to the rendered weekday headers, month title and grid alignment', async () => {
   const el = (await fixture(
     html`<lr-date-picker
