@@ -66,6 +66,25 @@ const MAX_DIFF_PIXEL_RATIO = 0.005;
 // resolves against this, so its capture is reproducible. Deliberately not "now".
 const FIXED_CLOCK = new Date('2026-01-01T12:00:00.000Z');
 
+// Fourth determinism source, found the hard way: `--lr-font`/`--lr-font-mono` (tokens.styles.ts)
+// default to the generic `system-ui`/`ui-monospace` stacks, which resolve to whatever font
+// substitution the HOST happens to have -- not the same set on a dev sandbox (which tends to
+// carry a full multi-script font superset) as on a fresh CI runner image. That mismatch doesn't
+// just anti-alias glyph edges differently (a few tenths of a percent, harmless); word-cloud's
+// spiral-search layout feeds each word's *measured* box straight into where the next word's
+// collision search starts, so a sub-pixel measureText() difference cascades into a completely
+// different final layout (3.6% diff, by far the worst of the family) even though its sampled
+// story never calls Math.random() at all (orientations="horizontal", the class default -- see
+// word-cloud-layout.ts's `rotated = orientations === 'mixed' && random() < ...`). Forcing both
+// tokens to a concrete, non-generic family name removes the substitution entirely. Liberation
+// Sans/Mono specifically because they're an ubiquitous small Debian/Ubuntu package
+// (`fonts-liberation`) that `playwright install --with-deps chromium` (this repo's own CI step)
+// already pulls in as a Chromium dependency -- no bundled font asset to license/subset/maintain.
+const FONT_OVERRIDE_CSS = `:root {
+  --lr-theme-font-family-body: 'Liberation Sans', sans-serif;
+  --lr-theme-font-family-mono: 'Liberation Mono', monospace;
+}`;
+
 const VIEWPORT = { width: 1280, height: 800 };
 // Per-story viewport overrides, matching scripts/check-storybook.mjs's own use of a narrow
 // viewport for the mobile bottom-sheet story.
@@ -218,6 +237,10 @@ async function captureStory(page, baseUrl, id, theme, direction) {
   await page.setViewportSize(viewport);
   const url = `${baseUrl}/iframe.html?id=${id}&viewMode=story&globals=theme:${theme};direction:${direction}`;
   await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 20_000 });
+  // Applied before the story's first component upgrade so canvas painters that measure text
+  // during their initial render (e.g. word-cloud's spiral-search layout) see the forced font on
+  // their very first pass rather than re-measuring after a live custom-property change.
+  await page.addStyleTag({ content: FONT_OVERRIDE_CSS });
   await page.waitForFunction(
     () => Boolean(document.querySelector('#storybook-root')?.firstElementChild),
     undefined,
