@@ -22,12 +22,42 @@ export const styles = css`
     align-items: center;
     gap: var(--lr-space-xs);
   }
+  .rate-select-wrapper {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+  }
   [part='rate-select'] {
+    appearance: none;
+    padding-inline: var(--lr-space-s) var(--lr-space-l);
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
     border-radius: var(--lr-radius);
     background: var(--lr-color-surface);
     color: var(--lr-color-text);
     font: inherit;
+    cursor: pointer;
+  }
+  [part='rate-select'] option {
+    background: var(--lr-color-surface);
+    color: var(--lr-color-text);
+  }
+  [part='rate-select']:hover {
+    background: var(--lr-color-brand-quiet);
+  }
+  [part='rate-select']:focus-visible {
+    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
+    outline-offset: var(--lr-focus-ring-offset);
+  }
+  .rate-select-chevron {
+    position: absolute;
+    inset-inline-end: var(--lr-space-xs);
+    display: inline-flex;
+    color: var(--lr-color-text-quiet);
+    line-height: var(--lr-line-height-none);
+    pointer-events: none;
+  }
+  .rate-select-chevron svg {
+    transform: rotate(90deg);
   }
   [part='timeline'] {
     position: relative;

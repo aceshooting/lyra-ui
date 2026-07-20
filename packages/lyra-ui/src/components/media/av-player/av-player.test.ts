@@ -2,6 +2,7 @@ import { fixture, expect, html, oneEvent } from '@open-wc/testing';
 import './av-player.js';
 import '../../layout/virtual-list/virtual-list.js';
 import type { LyraAvPlayer, LyraAvCue } from './av-player.js';
+import { styles } from './av-player.styles.js';
 
 const MP3_SRC = 'https://example.test/podcast.mp3';
 
@@ -106,6 +107,21 @@ describe('playback controls', () => {
     await el.updateComplete;
     const select = el.shadowRoot!.querySelector('[part="rate-select"]') as HTMLSelectElement;
     expect(select.value).to.equal('1.75');
+  });
+
+  it('resets native appearance on the rate-select, themes its option list, and adds hover/focus/a chevron', async () => {
+    const el = (await fixture(html`<lr-av-player src="video.mp4"></lr-av-player>`)) as LyraAvPlayer;
+    await el.updateComplete;
+    const select = el.shadowRoot!.querySelector('[part="rate-select"]') as HTMLSelectElement;
+    expect(getComputedStyle(select).appearance).to.equal('none');
+    expect(getComputedStyle(select).cursor).to.equal('pointer');
+    const wrapper = select.closest('.rate-select-wrapper');
+    expect(wrapper, 'the select must be wrapped so a decorative chevron can be positioned over it').to.exist;
+    expect(wrapper!.querySelector('.rate-select-chevron svg'), 'a decorative chevron must render since appearance:none removes the native one').to.exist;
+    const css = styles.cssText.replace(/\s+/g, ' ');
+    expect(css).to.match(/\[part='rate-select'\] option[^{]*\{[^}]*background:/);
+    expect(css).to.match(/\[part='rate-select'\]:hover[^{]*\{[^}]*background:/);
+    expect(css).to.match(/\[part='rate-select'\]:focus-visible[^{]*\{[^}]*outline:/);
   });
 });
 

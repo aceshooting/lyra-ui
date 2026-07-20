@@ -13,6 +13,7 @@ import type {
 import { safeMediaSrc } from '../../../internal/safe-url.js';
 import { srOnly } from '../../../internal/a11y.js';
 import { finiteRange } from '../../../internal/numbers.js';
+import { chevronIcon } from '../../../internal/icons.js';
 import '../../layout/virtual-list/virtual-list.js';
 import { styles } from './av-player.styles.js';
 
@@ -540,13 +541,16 @@ export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
           >`}
       ${this.renderError ? html`<div part="error" role="alert">${this.localize('avPlayerFailedToLoad')}</div>` : nothing}
       <div part="toolbar">
-        <select
-          part="rate-select"
-          aria-label=${this.localize('avPlayerPlaybackRate')}
-          @change=${(e: Event) => (this.playbackRate = Number((e.target as HTMLSelectElement).value))}
-        >
-          ${this.rateOptions().map((rate) => html`<option value=${String(rate)} ?selected=${rate === this.playbackRate}>${rate}x</option>`)}
-        </select>
+        <span class="rate-select-wrapper">
+          <select
+            part="rate-select"
+            aria-label=${this.localize('avPlayerPlaybackRate')}
+            @change=${(e: Event) => (this.playbackRate = Number((e.target as HTMLSelectElement).value))}
+          >
+            ${this.rateOptions().map((rate) => html`<option value=${String(rate)} ?selected=${rate === this.playbackRate}>${rate}x</option>`)}
+          </select>
+          <span class="rate-select-chevron" aria-hidden="true">${chevronIcon()}</span>
+        </span>
       </div>
       <div
         part="timeline"
