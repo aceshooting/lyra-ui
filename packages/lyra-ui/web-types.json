@@ -4053,7 +4053,7 @@
         },
         {
           "name": "lr-confirm-bar",
-          "description": "`<lr-confirm-bar>` — an inline, non-modal approve/deny block for one proposed action: the\nin-flow sibling of `<lr-tool-approval-dialog>` for confirmations that should sit in the\ntranscript instead of hijacking focus. Same `lr-approve`/`lr-deny` event shapes as the dialog,\nand the same `toolApprovalHeading`/`toolApprovalArgsLabel`/`deny`/`approve` localization keys, so\nthe two always translate in lockstep.\n\nNon-modal by contract: no focus trap, no scroll lock, no Escape/backdrop semantics, and it never\nsteals focus when it appears in the transcript. DOM and tab order put Deny before Approve (the\ndialog's safe-action-first rationale). On activation, focus moves synchronously to `[part=\"status\"]`\n(an always-rendered, `tabindex=\"-1\"` element) *before* the Deny/Approve buttons unmount, so focus\nnever has a gap where it would otherwise fall back to `<body>`.\n\nNo argument editing (escalate to `<lr-tool-approval-dialog>`'s `editable` when edit-before-approve\nmatters); no blocking/modality guarantee (a user can scroll past); no decision persistence or\n\"remember choice\" logic (the `footer` slot + host own that).\n\n---\n\n**Slots**\n\n| Name | Description |\n| --- | --- |\n| (default) | Supplementary body content between the heading and the actions (e.g. a `lr-diff-view` of the proposed change). |\n| `footer` | Extra content at the start of the action row (e.g. a \"remember this choice\" checkbox), mirroring `lr-tool-approval-dialog`'s own `footer` slot. |\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `approve-button` | Named identically to the dialog's part. |\n| `args` | The `lr-details` + `lr-json-viewer` wrapper. Only rendered when `args` is defined. |\n| `base` | The root (`role=\"group\"`). |\n| `body` | The default-slot wrapper. |\n| `deny-button` | Named identically to the dialog's part. |\n| `footer` | The action row. |\n| `heading` | The heading. |\n| `status` | The decided-state text. Always present in the DOM (`tabindex=\"-1\"`) so focus has a stable, synchronous landing spot on activation. |\n| `tool-name` | The tool-name span within the heading. Only rendered when `heading` is unset. |\n\n---\n\n**CSS Custom Properties**\n\n- `--lr-confirm-bar-compact-padding` (default: `0`) — Padding of `[part='base']` while `compact`. Accepts any padding shorthand.\n- `--lr-confirm-bar-compact-gap` (default: `var(--lr-space-s)`) — Gap between the row's items while `compact`.\n- `--lr-confirm-bar-compact-border` (default: `none`) — Border of `[part='base']` while `compact`. Accepts any `border` shorthand.\n- `--lr-confirm-bar-compact-radius` (default: `0`) — Border radius of `[part='base']` while `compact` (only visible once `--lr-confirm-bar-compact-border`/`-background` are set).\n- `--lr-confirm-bar-compact-background` (default: `transparent`) — Background of `[part='base']` while `compact`.",
+          "description": "`<lr-confirm-bar>` — an inline, non-modal approve/deny block for one proposed action: the\nin-flow sibling of `<lr-tool-approval-dialog>` for confirmations that should sit in the\ntranscript instead of hijacking focus. Same `lr-approve`/`lr-deny` event shapes as the dialog,\nand the same `toolApprovalHeading`/`toolApprovalArgsLabel`/`deny`/`approve` localization keys, so\nthe two always translate in lockstep.\n\nNon-modal by contract: no focus trap, no scroll lock, no Escape/backdrop semantics, and it never\nsteals focus when it appears in the transcript. DOM and tab order put Deny before Approve (the\ndialog's safe-action-first rationale). On activation, focus moves synchronously to `[part=\"status\"]`\n(an always-rendered, `tabindex=\"-1\"` element) *before* the Deny/Approve buttons unmount, so focus\nnever has a gap where it would otherwise fall back to `<body>`.\n\nNo argument editing (escalate to `<lr-tool-approval-dialog>`'s `editable` when edit-before-approve\nmatters); no blocking/modality guarantee (a user can scroll past); no decision persistence or\n\"remember choice\" logic (the `footer` slot + host own that).\n\nDeny/Approve are `<lr-button>`s (`variant=\"neutral\"`/`\"brand\"`, `\"danger\"` under `tone=\"danger\"`),\nre-exporting `lr-button`'s own `base`/`label`/`start`/`end`/`spinner` parts under\n`{deny,approve}-button-{base,label,start,end,spinner}` so `--lr-button-*` theming and a consumer's\nexisting `lr-button` style fragments reach them like every other button in an app. An\n`lr-approve`/`lr-deny` listener can call `preventDefault()` to keep the decision open while its own\nasync work (e.g. a network call) is in flight: `pending` is set to the decision being made, showing\n`loading` on that button and `disabled` on the other, until the host finalizes by setting `.decision`\nor bounces back by clearing `.pending` to `null`.\n\n---\n\n**Slots**\n\n| Name | Description |\n| --- | --- |\n| (default) | Supplementary body content between the heading and the actions (e.g. a `lr-diff-view` of the proposed change). |\n| `footer` | Extra content at the start of the action row (e.g. a \"remember this choice\" checkbox), mirroring `lr-tool-approval-dialog`'s own `footer` slot. |\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `approve-button` | The built-in Approve `<lr-button>`. Named identically to the dialog's part. |\n| `approve-button-base` | Forwarded from the internal Approve `<lr-button>`'s own `base` part. |\n| `approve-button-end` | Forwarded from the internal Approve `<lr-button>`'s own `end` part. |\n| `approve-button-label` | Forwarded from the internal Approve `<lr-button>`'s own `label` part. |\n| `approve-button-spinner` | Forwarded from the internal Approve `<lr-button>`'s own `spinner` part, present only while `pending` is `'approved'`. |\n| `approve-button-start` | Forwarded from the internal Approve `<lr-button>`'s own `start` part. |\n| `args` | The `lr-details` + `lr-json-viewer` wrapper. Only rendered when `args` is defined. |\n| `base` | The root (`role=\"group\"`). |\n| `body` | The default-slot wrapper. |\n| `deny-button` | The built-in Deny `<lr-button>`. Named identically to the dialog's part. |\n| `deny-button-base` | Forwarded from the internal Deny `<lr-button>`'s own `base` part. |\n| `deny-button-end` | Forwarded from the internal Deny `<lr-button>`'s own `end` part. |\n| `deny-button-label` | Forwarded from the internal Deny `<lr-button>`'s own `label` part. |\n| `deny-button-spinner` | Forwarded from the internal Deny `<lr-button>`'s own `spinner` part, present only while `pending` is `'denied'`. |\n| `deny-button-start` | Forwarded from the internal Deny `<lr-button>`'s own `start` part. |\n| `footer` | The action row. |\n| `heading` | The heading. |\n| `status` | The decided-state text. Always present in the DOM (`tabindex=\"-1\"`) so focus has a stable, synchronous landing spot on activation. |\n| `tool-name` | The tool-name span within the heading. Only rendered when `heading` is unset. |\n\n---\n\n**CSS Custom Properties**\n\n- `--lr-confirm-bar-compact-padding` (default: `0`) — Padding of `[part='base']` while `compact`. Accepts any padding shorthand.\n- `--lr-confirm-bar-compact-gap` (default: `var(--lr-space-s)`) — Gap between the row's items while `compact`.\n- `--lr-confirm-bar-compact-border` (default: `none`) — Border of `[part='base']` while `compact`. Accepts any `border` shorthand.\n- `--lr-confirm-bar-compact-radius` (default: `0`) — Border radius of `[part='base']` while `compact` (only visible once `--lr-confirm-bar-compact-border`/`-background` are set).\n- `--lr-confirm-bar-compact-background` (default: `transparent`) — Background of `[part='base']` while `compact`.",
           "attributes": [
             {
               "name": "compact",
@@ -4088,6 +4088,15 @@
               "value": {
                 "type": [
                   "string"
+                ]
+              }
+            },
+            {
+              "name": "pending",
+              "description": "Which decision is awaiting host resolution, while an lr-approve/lr-deny listener has called\npreventDefault(). Host-writable: set back to null to bounce back to the undecided state (e.g.\non failure, so the user can retry), or set `decision` to finalize.\n\nType: `ConfirmBarDecision`  \nDefault: `null`",
+              "value": {
+                "type": [
+                  "ConfirmBarDecision"
                 ]
               }
             },
@@ -9144,6 +9153,111 @@
               "value": {
                 "type": [
                   "number"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "lr-locale-picker",
+          "description": "`<lr-locale-picker>` — a closed-list locale switcher over the library's own locale registry.\n\nWith `locales` left unset (the default), the offered rows are exactly\n`getRegisteredLyraLocales()` — every locale with strings registered via `registerLyraLocale()`,\nplus `'en'` (always available through the library's built-in English fallback) — kept live via\n`subscribeLyraLocaleRegistry()` so a locale registered after mount (e.g. a lazily-loaded\ntranslation pack) appears without a manual refresh. Passing an explicit `locales` array\noverrides the auto-discovered list entirely: a curated subset, a custom order, custom labels,\nor a locale the host wants to offer before its strings are registered.\n\n`value` is the *committed* selection (form-submitted, drives `lr-change`) and starts `''`.\nWhile unset, the trigger displays `effectiveLocale` (the same ancestor-`lang`/registry\nresolution every other component already uses) as a live preview — but that preview is never a\ncommitment: `checkValidity()`/`required` are governed by the real `value`, which stays `''`\nuntil the host sets it or the user actually picks a row. This mirrors a native `<select>`\nrendering its first option's text without that being a committed selection.\n\nBuilt directly on the shared trigger-button/`aria-activedescendant` listbox technique\n`<lr-select>` uses (not composed from it) — a plain closed list, no filter/free-text mode; a\nlocale catalog is realistically dozens of rows, not thousands, so `<lr-combobox>`'s filterable\nmodel would be more surface than the job needs.\n\nSelecting a row sets `value` and emits a cancelable `lr-change` — if a listener doesn't call\n`event.preventDefault()`, the component applies the pick itself via `setLyraLocale()`. A host\nthat wants to intercept the pick (e.g. persist it to a profile first) calls\n`event.preventDefault()`; `value` still updates so the trigger reflects the pick, but the\npage-level locale is untouched until the host calls `setLyraLocale()` itself.\n\nDoes not touch `document.documentElement.lang`/`dir` — applying a picked locale's writing\ndirection to the page is left to the host, which already has everything it needs from\n`lr-change`'s `value` to do that itself.\n\n---\n\n**Slots**\n\n| Name | Description |\n| --- | --- |\n| `error` | Custom error content. |\n| `hint` | Custom hint content. |\n| `label` | Custom label content. |\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `error` | The error message. |\n| `expand-icon` | The dropdown indicator. |\n| `form-control` | The outer wrapper around label, trigger, listbox, error and hint. |\n| `form-control-label` | The `<label>` element (only rendered — and only contributes to the accessible name — once `label` is non-empty). |\n| `hint` | The hint message. |\n| `listbox` | The options popover. |\n| `option` | An option row. |\n| `option-flag` | The row's leading `<lr-flag>` (present only while `showFlags` is on). |\n| `option-label` | An option row's label wrapper (native name + tag). |\n| `option-tag` | An option row's secondary line — the raw BCP-47 tag. |\n| `trigger` | The trigger button (positioning anchor). |\n\n---\n\n**CSS Custom Properties**\n\n- `--lr-locale-picker-trigger-padding` — Trigger padding shorthand, scaled by `size`.\n- `--lr-locale-picker-trigger-min-height` — Trigger block-size floor, scaled by `size`.\n- `--lr-locale-picker-trigger-height` — Exact trigger height. Unset by default (a floor only via `-trigger-min-height`); set a length to both floor and cap the trigger, e.g. to pixel-match a sibling field in the same toolbar row.\n- `--lr-locale-picker-font-size` — Trigger font size, scaled by `size`.\n- `--lr-locale-picker-expand-size` — Decorative expand-icon box size, scaled by `size`.\n- `--lr-locale-picker-option-active-bg` (default: `var(--lr-color-brand-quiet)`) — Background of a hovered or keyboard-active option row.",
+          "attributes": [
+            {
+              "name": "disabled",
+              "description": "Type: `boolean`",
+              "value": {
+                "type": [
+                  "boolean"
+                ]
+              }
+            },
+            {
+              "name": "error-text",
+              "description": "Type: `string`  \nDefault: `''`",
+              "value": {
+                "type": [
+                  "string"
+                ]
+              }
+            },
+            {
+              "name": "hint",
+              "description": "Type: `string`  \nDefault: `''`",
+              "value": {
+                "type": [
+                  "string"
+                ]
+              }
+            },
+            {
+              "name": "label",
+              "description": "Type: `string`  \nDefault: `''`",
+              "value": {
+                "type": [
+                  "string"
+                ]
+              }
+            },
+            {
+              "name": "locale",
+              "description": "Optional locale override. Otherwise the nearest `locale`/`lang` ancestor is used.\n\nType: `string`  \nDefault: `''`",
+              "value": {
+                "type": [
+                  "string"
+                ]
+              }
+            },
+            {
+              "name": "name",
+              "description": "Type: `string`",
+              "value": {
+                "type": [
+                  "string"
+                ]
+              }
+            },
+            {
+              "name": "open",
+              "description": "Type: `boolean`  \nDefault: `false`",
+              "value": {
+                "type": [
+                  "boolean"
+                ]
+              }
+            },
+            {
+              "name": "required",
+              "description": "Type: `boolean`",
+              "value": {
+                "type": [
+                  "boolean"
+                ]
+              }
+            },
+            {
+              "name": "showFlags",
+              "description": "Each row's leading `<lr-flag>`. The composition recipe this component supersedes\n(`lr-popover` + `lr-flag`) already pairs a locale switcher with flags by convention --\ndefaulting to `true` keeps that continuity; set `false` for text-only rows.\n\nType: `boolean`  \nDefault: `true`",
+              "value": {
+                "type": [
+                  "boolean"
+                ]
+              }
+            },
+            {
+              "name": "size",
+              "description": "Visual size — same `xs`–`xl` scale as `lr-select`'s `size`.\n\nType: `LyraLocalePickerSize`  \nDefault: `'m'`",
+              "value": {
+                "type": [
+                  "LyraLocalePickerSize"
+                ]
+              }
+            },
+            {
+              "name": "value",
+              "description": "The current locale tag (empty string when nothing is committed).\n\nType: `string`",
+              "value": {
+                "type": [
+                  "string"
                 ]
               }
             }
@@ -15392,7 +15506,7 @@
         },
         {
           "name": "lr-tool-approval-dialog",
-          "description": "`<lr-tool-approval-dialog>` — a human-in-the-loop gate: presents one\nproposed tool/function call (`toolName` + `args`) and blocks an agent from\nexecuting it until a person explicitly approves or denies it, with an\noptional inline \"edit the arguments before approving\" step.\n\nThis renders its own dialog panel rather than nesting a `<lr-dialog>` in\nits shadow template. Shared overlay infrastructure coordinates stacking,\nfocus trapping, Escape/backdrop dismissal, and focus return with every\nother overlay in the same document.\n\nApprove/Deny/Edit are built-in chrome (not a `footer` slot a consumer must\nassemble) — this component's interaction shape is fixed enough (there is\nexactly one correct set of actions for \"approve this call\") that requiring\nevery consumer to re-build it would just be boilerplate. A `footer` slot is\nstill offered for *supplementary* content a consumer wants alongside those\nbuttons (e.g. a \"remember this choice for this tool\" checkbox) — its\ncontent renders to the start of the action row, before Deny/Edit/Approve.\n\nEditing: while `editable`, an Edit button swaps the read-only\n`<lr-json-viewer>` for a plain `<textarea>` pre-filled with\n`JSON.stringify(args, null, 2)`. Every keystroke is re-validated with\n`JSON.parse` — the Approve button is `disabled` for as long as the current\ntextarea content fails to parse, so a malformed edit can never be silently\napproved as either the broken text or a stale copy of the original args.\nThe editor defaults to `spellcheck=\"false\"`, `autocapitalize=\"off\"`,\n`autocorrect=\"off\"`, and `autocomplete=\"off\"` because its content is raw\nJSON, never prose. The corresponding native editing properties remain\nconfigurable for integrations that need different browser behavior.\nThe same button relabels to \"Cancel\" while editing; clicking it discards\nthe draft entirely and returns to the read-only view of the *original*\n`args` — there is no separate \"save\" step independent of Approve itself.\nBoth `editing` and any in-progress draft reset back to the read-only view\nevery time the dialog transitions from closed to open, so a reused\ninstance never leaks one proposal's half-finished edit into the next.\n`editable` flipping to `false` mid-edit does the same (see `willUpdate()`)\nand, if the textarea it unmounts still held focus, `updated()` refocuses\nDeny so the focus trap keeps engaging instead of silently letting focus\nfall through to the document.\n\nInitial focus deliberately does *not* land on Approve:\napproving a tool call is a consequential, potentially irreversible action,\nso a user who opens this dialog and reflexively presses Enter/Space before\nreading anything should deny, not approve. Deny gets the initial focus\ninstead — the same \"focus the safe action\" convention a native destructive-\nconfirmation dialog (delete, discard, etc.) typically follows for its own\nCancel button — rather than the inert dialog panel, which would need an\nextra Tab press before *any* action is reachable at all.\n\n---\n\n**Slots**\n\n| Name | Description |\n| --- | --- |\n| `footer` | Optional supplementary content (e.g. a \"remember this choice\" checkbox), rendered before the built-in Deny/Edit/Approve buttons. |\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `approve-button` | The built-in Approve button — `disabled` while an in-progress edit is invalid JSON. |\n| `args-editor` | The raw-JSON `<textarea>` shown while editing. |\n| `args-view` | The read-only `<lr-json-viewer>` shown while not editing. |\n| `backdrop` | The full-viewport scrim behind the panel. |\n| `body` | The wrapper around the args view/editor. |\n| `deny-button` | The built-in Deny button. |\n| `edit-button` | The built-in Edit/Cancel toggle button (only rendered while `editable`). |\n| `error` | The inline \"invalid JSON\" message, shown only while editing with unparseable content. |\n| `footer` | The action row wrapping the `footer` slot and the built-in buttons. |\n| `header` | The wrapper around the heading. |\n| `panel` | The dialog panel itself (`role=\"dialog\"` while open). |\n| `tool-name` | The `toolName` text within the heading. |\n\n---\n\n**CSS Custom Properties**\n\n- `--lr-tool-approval-dialog-overlay-color` (default: `var(--lr-color-overlay)`) — Backdrop scrim color.\n- `--lr-tool-approval-dialog-mono-font` (default: `var(--lr-font-mono)`) — Font family for the tool name and the raw-JSON args editor.",
+          "description": "`<lr-tool-approval-dialog>` — a human-in-the-loop gate: presents one\nproposed tool/function call (`toolName` + `args`) and blocks an agent from\nexecuting it until a person explicitly approves or denies it, with an\noptional inline \"edit the arguments before approving\" step.\n\nThis renders its own dialog panel rather than nesting a `<lr-dialog>` in\nits shadow template. Shared overlay infrastructure coordinates stacking,\nfocus trapping, Escape/backdrop dismissal, and focus return with every\nother overlay in the same document.\n\nApprove/Deny/Edit are built-in chrome (not a `footer` slot a consumer must\nassemble) — this component's interaction shape is fixed enough (there is\nexactly one correct set of actions for \"approve this call\") that requiring\nevery consumer to re-build it would just be boilerplate. A `footer` slot is\nstill offered for *supplementary* content a consumer wants alongside those\nbuttons (e.g. a \"remember this choice for this tool\" checkbox) — its\ncontent renders to the start of the action row, before Deny/Edit/Approve.\n\nEditing: while `editable`, an Edit button swaps the read-only\n`<lr-json-viewer>` for a plain `<textarea>` pre-filled with\n`JSON.stringify(args, null, 2)`. Every keystroke is re-validated with\n`JSON.parse` — the Approve button is `disabled` for as long as the current\ntextarea content fails to parse, so a malformed edit can never be silently\napproved as either the broken text or a stale copy of the original args.\nThe editor defaults to `spellcheck=\"false\"`, `autocapitalize=\"off\"`,\n`autocorrect=\"off\"`, and `autocomplete=\"off\"` because its content is raw\nJSON, never prose. The corresponding native editing properties remain\nconfigurable for integrations that need different browser behavior.\nThe same button relabels to \"Cancel\" while editing; clicking it discards\nthe draft entirely and returns to the read-only view of the *original*\n`args` — there is no separate \"save\" step independent of Approve itself.\nBoth `editing` and any in-progress draft reset back to the read-only view\nevery time the dialog transitions from closed to open, so a reused\ninstance never leaks one proposal's half-finished edit into the next.\n`editable` flipping to `false` mid-edit does the same (see `willUpdate()`)\nand, if the textarea it unmounts still held focus, `updated()` refocuses\nDeny so the focus trap keeps engaging instead of silently letting focus\nfall through to the document.\n\nInitial focus deliberately does *not* land on Approve:\napproving a tool call is a consequential, potentially irreversible action,\nso a user who opens this dialog and reflexively presses Enter/Space before\nreading anything should deny, not approve. Deny gets the initial focus\ninstead — the same \"focus the safe action\" convention a native destructive-\nconfirmation dialog (delete, discard, etc.) typically follows for its own\nCancel button — rather than the inert dialog panel, which would need an\nextra Tab press before *any* action is reachable at all.\n\nDeny/Approve are `<lr-button>`s (`variant=\"neutral\"`/`\"brand\"`; this component has no `tone`\nproperty, unlike `<lr-confirm-bar>`), re-exporting `lr-button`'s own `base`/`label`/`start`/\n`end`/`spinner` parts under `{deny,approve}-button-{base,label,start,end,spinner}`. An\n`lr-approve`/`lr-deny` listener can call `preventDefault()` to keep the decision open while its\nown async work (e.g. a network call) is in flight: `pending` is set to `'approve'`/`'deny'`,\nshowing `loading` on that button and `disabled` on the other (and, for Approve, alongside the\nexisting invalid-JSON `disabled` gate), until the host finalizes by calling\n`close('approve'|'deny')` or bounces back by clearing `.pending` to `null`. While `pending` is\nset, Escape and backdrop dismissal are suppressed -- a decision in flight should not be\nabandonable out from under the host mid-request -- and `pending` itself resets to `null` every\ntime the dialog transitions from closed to open, mirroring `editing`'s own reset-on-reopen\ncontract.\n\n---\n\n**Slots**\n\n| Name | Description |\n| --- | --- |\n| `footer` | Optional supplementary content (e.g. a \"remember this choice\" checkbox), rendered before the built-in Deny/Edit/Approve buttons. |\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `approve-button` | The built-in Approve `<lr-button>` — `disabled` while an in-progress edit is invalid JSON (or while Deny is pending). |\n| `approve-button-base` | Forwarded from the internal Approve `<lr-button>`'s own `base` part. |\n| `approve-button-end` | Forwarded from the internal Approve `<lr-button>`'s own `end` part. |\n| `approve-button-label` | Forwarded from the internal Approve `<lr-button>`'s own `label` part. |\n| `approve-button-spinner` | Forwarded from the internal Approve `<lr-button>`'s own `spinner` part, present only while `pending` is `'approve'`. |\n| `approve-button-start` | Forwarded from the internal Approve `<lr-button>`'s own `start` part. |\n| `args-editor` | The raw-JSON `<textarea>` shown while editing. |\n| `args-view` | The read-only `<lr-json-viewer>` shown while not editing. |\n| `backdrop` | The full-viewport scrim behind the panel. |\n| `body` | The wrapper around the args view/editor. |\n| `deny-button` | The built-in Deny `<lr-button>`. |\n| `deny-button-base` | Forwarded from the internal Deny `<lr-button>`'s own `base` part. |\n| `deny-button-end` | Forwarded from the internal Deny `<lr-button>`'s own `end` part. |\n| `deny-button-label` | Forwarded from the internal Deny `<lr-button>`'s own `label` part. |\n| `deny-button-spinner` | Forwarded from the internal Deny `<lr-button>`'s own `spinner` part, present only while `pending` is `'deny'`. |\n| `deny-button-start` | Forwarded from the internal Deny `<lr-button>`'s own `start` part. |\n| `edit-button` | The built-in Edit/Cancel toggle button (only rendered while `editable`). |\n| `error` | The inline \"invalid JSON\" message, shown only while editing with unparseable content. |\n| `footer` | The action row wrapping the `footer` slot and the built-in buttons. |\n| `header` | The wrapper around the heading. |\n| `panel` | The dialog panel itself (`role=\"dialog\"` while open). |\n| `tool-name` | The `toolName` text within the heading. |\n\n---\n\n**CSS Custom Properties**\n\n- `--lr-tool-approval-dialog-overlay-color` (default: `var(--lr-color-overlay)`) — Backdrop scrim color.\n- `--lr-tool-approval-dialog-mono-font` (default: `var(--lr-font-mono)`) — Font family for the tool name and the raw-JSON args editor.",
           "attributes": [
             {
               "name": "aria-label",
@@ -15467,6 +15581,15 @@
               "value": {
                 "type": [
                   "boolean"
+                ]
+              }
+            },
+            {
+              "name": "pending",
+              "description": "Which decision is awaiting host resolution, while an lr-approve/lr-deny listener has called\npreventDefault(). Host-writable: set back to null to bounce back to the undecided state (e.g.\non failure, so the user can retry), or call `close('approve'|'deny')` to finalize. Also reset\nto `null` every time the dialog transitions from closed to open, mirroring\n`editing`/`draftText`/`draftError`'s own reset-on-reopen contract below, so a reused instance\nnever leaks one proposal's stuck pending state into the next. While non-null, Escape/backdrop\ndismissal is suppressed (see `activateOverlay()`).\n\nType: `ToolApprovalDialogPending`  \nDefault: `null`",
+              "value": {
+                "type": [
+                  "ToolApprovalDialogPending"
                 ]
               }
             },
@@ -17899,6 +18022,30 @@
         {
           "name": "--lr-lite-chart-selected-outline-color",
           "description": "**`<lr-lite-chart>`** (default: `var(--lr-color-brand)`) — Stroke for a bar/point whose category index is in `selectedIndex`."
+        },
+        {
+          "name": "--lr-locale-picker-expand-size",
+          "description": "**`<lr-locale-picker>`** — Decorative expand-icon box size, scaled by `size`."
+        },
+        {
+          "name": "--lr-locale-picker-font-size",
+          "description": "**`<lr-locale-picker>`** — Trigger font size, scaled by `size`."
+        },
+        {
+          "name": "--lr-locale-picker-option-active-bg",
+          "description": "**`<lr-locale-picker>`** (default: `var(--lr-color-brand-quiet)`) — Background of a hovered or keyboard-active option row."
+        },
+        {
+          "name": "--lr-locale-picker-trigger-height",
+          "description": "**`<lr-locale-picker>`** — Exact trigger height. Unset by default (a floor only via `-trigger-min-height`); set a length to both floor and cap the trigger, e.g. to pixel-match a sibling field in the same toolbar row."
+        },
+        {
+          "name": "--lr-locale-picker-trigger-min-height",
+          "description": "**`<lr-locale-picker>`** — Trigger block-size floor, scaled by `size`."
+        },
+        {
+          "name": "--lr-locale-picker-trigger-padding",
+          "description": "**`<lr-locale-picker>`** — Trigger padding shorthand, scaled by `size`."
         },
         {
           "name": "--lr-markdown-font-mono",

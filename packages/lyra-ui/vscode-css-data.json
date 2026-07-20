@@ -1997,6 +1997,48 @@
       }
     },
     {
+      "name": "--lr-locale-picker-expand-size",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-locale-picker>`** — Decorative expand-icon box size, scaled by `size`."
+      }
+    },
+    {
+      "name": "--lr-locale-picker-font-size",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-locale-picker>`** — Trigger font size, scaled by `size`."
+      }
+    },
+    {
+      "name": "--lr-locale-picker-option-active-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-locale-picker>`** (default: `var(--lr-color-brand-quiet)`) — Background of a hovered or keyboard-active option row."
+      }
+    },
+    {
+      "name": "--lr-locale-picker-trigger-height",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-locale-picker>`** — Exact trigger height. Unset by default (a floor only via `-trigger-min-height`); set a length to both floor and cap the trigger, e.g. to pixel-match a sibling field in the same toolbar row."
+      }
+    },
+    {
+      "name": "--lr-locale-picker-trigger-min-height",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-locale-picker>`** — Trigger block-size floor, scaled by `size`."
+      }
+    },
+    {
+      "name": "--lr-locale-picker-trigger-padding",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-locale-picker>`** — Trigger padding shorthand, scaled by `size`."
+      }
+    },
+    {
       "name": "--lr-markdown-font-mono",
       "description": {
         "kind": "markdown",
