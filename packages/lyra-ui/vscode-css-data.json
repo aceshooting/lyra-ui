@@ -1031,6 +1031,27 @@
       }
     },
     {
+      "name": "--lr-conversation-item-compact-gap",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-conversation-item>`** (default: `var(--lr-space-2xs)`) — Gap between `[part=\"base\"]`'s columns while `compact`."
+      }
+    },
+    {
+      "name": "--lr-conversation-item-compact-padding",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-conversation-item>`** (default: `var(--lr-space-xs) var(--lr-space-s)`) — `[part=\"base\"]` padding while `compact`."
+      }
+    },
+    {
+      "name": "--lr-csv-viewer-highlight-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-csv-viewer>`** (default: `var(--lr-color-brand)`) — Outline color of a highlighted cell. The active highlight sets it inline to `var(--lr-color-warning, var(--lr-color-brand))`."
+      }
+    },
+    {
       "name": "--lr-dashboard-grid-columns",
       "description": {
         "kind": "markdown",
@@ -1406,6 +1427,20 @@
       "description": {
         "kind": "markdown",
         "value": "**`<lr-flow-minimap>`** (default: `var(--lr-size-12rem)`) — Map inline size."
+      }
+    },
+    {
+      "name": "--lr-flow-node-compact-gap",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-flow-node>`** (default: `var(--lr-space-2xs)`) — Gap between `[part=\"card\"]`'s rows while `compact`."
+      }
+    },
+    {
+      "name": "--lr-flow-node-compact-padding",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-flow-node>`** (default: `var(--lr-space-xs)`) — `[part=\"card\"]` padding while `compact`."
       }
     },
     {
@@ -1839,7 +1874,7 @@
       "name": "--lr-page-rail-current-bg",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-page-rail>`** (default: `var(--lr-color-brand-quiet)`) — Background of the `[part=\"page\"]` button for the current `page`."
+        "value": "**`<lr-page-rail>`** (default: `var(--lr-color-brand-quiet)`) — Background of the `[part=\"page-current\"]` button for the current `page`."
       }
     },
     {
@@ -2274,6 +2309,13 @@
       "description": {
         "kind": "markdown",
         "value": "**`<lr-split>`** (default: `var(--lr-color-overlay)`) — The `'floating'` drawer scrim's color, applied to `[part=\"backdrop\"]`."
+      }
+    },
+    {
+      "name": "--lr-spreadsheet-viewer-highlight-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-spreadsheet-viewer>`** (default: `var(--lr-color-brand)`) — Outline color of a highlighted cell. The active highlight sets it inline to `var(--lr-color-warning, var(--lr-color-brand))`."
       }
     },
     {
@@ -2847,7 +2889,14 @@
       "name": "--lr-trace-tree-row-active-bg",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-trace-tree>`** (default: `var(--lr-color-brand-quiet)`) — Background of the active (`activeSpanId`) row. Shadow Parts forbids an attribute selector after `::part()`, so the active row could otherwise only be restyled by hijacking the library-wide `--lr-color-brand-quiet` token."
+        "value": "**`<lr-trace-tree>`** (default: `var(--lr-color-brand-quiet)`) — Background of the active (`activeSpanId`) row. Shadow Parts forbids an attribute selector after `::part()`, so the active row could otherwise only be restyled by hijacking the library-wide `--lr-color-brand-quiet` token. Pairs with `--lr-trace-tree-row-active-color`: set both together, since the defaults assume the active background stays on the same side of the lightness midpoint as the ambient surface — a dark tint in light mode needs the matching text color set too, or the row's secondary text drops below the WCAG AA contrast floor."
+      }
+    },
+    {
+      "name": "--lr-trace-tree-row-active-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-trace-tree>`** (default: `var(--lr-color-text)`) — Foreground reference for the active (`activeSpanId`) row. It sets the color of that row's secondary text (`detail`, `duration`, `tokens-in`, `tokens-out`, `cost`, and the `pending` status label), which is raised from the quiet token to full-strength text so it clears WCAG AA against the active row's tint. The semantic status labels keep their own hue but are mixed 25% toward this same value, so overriding it re-aims every foreground on the row at once rather than leaving the status colors stranded. See the pairing caveat on `--lr-trace-tree-row-active-bg`."
       }
     },
     {
