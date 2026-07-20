@@ -3,6 +3,7 @@ import jsonGrammar from 'shiki/langs/json.mjs';
 import './code-block.js';
 import type { LyraCodeBlock } from './code-block.js';
 import type { ShikiHighlighter } from './code-loader.js';
+import { styles } from './code-block.styles.js';
 
 type Internals = {
   highlighter?: ShikiHighlighter | null;
@@ -936,5 +937,32 @@ describe('active-line outline color (--lr-code-block-active-line-outline-color)'
   it('retints the active-line outline without touching --lr-color-brand', async () => {
     const line = await activeLine('--lr-code-block-active-line-outline-color: rgb(1, 2, 3)');
     expect(getComputedStyle(line).outlineColor).to.equal('rgb(1, 2, 3)');
+  });
+});
+
+describe('shiki dark-theme signal', () => {
+  it('marks part="body" as dark-theme once the resolved --lr-color-text is lighter than --lr-color-surface', async () => {
+    const wrapper = (await fixture(html`
+      <div style="--lr-theme-color-text-normal:#f2f2f2; --lr-theme-color-surface-default:#1a1a1a;">
+        <lr-code-block></lr-code-block>
+      </div>
+    `)) as HTMLElement;
+    const el = wrapper.querySelector('lr-code-block') as LyraCodeBlock;
+    await el2Ready(el);
+    const body = el.shadowRoot!.querySelector('[part="body"]')!;
+    expect(body.getAttribute('data-dark-theme')).to.equal('true');
+  });
+
+  it('does not mark part="body" as dark-theme with the default light --lr-color-* fallbacks', async () => {
+    const el = (await fixture(html`<lr-code-block></lr-code-block>`)) as LyraCodeBlock;
+    await el2Ready(el);
+    const body = el.shadowRoot!.querySelector('[part="body"]')!;
+    expect(body.hasAttribute('data-dark-theme')).to.be.false;
+  });
+
+  it('gates the shiki dark-theme override on [data-dark-theme="true"], not @media (prefers-color-scheme: dark) alone', () => {
+    const css = styles.cssText.replace(/\s+/g, ' ');
+    expect(css).to.match(/\[part='body'\]\[data-dark-theme='true'\] \[part='pre'\][^{,]*\{[^}]*--shiki-dark/);
+    expect(css).to.not.match(/@media \(prefers-color-scheme: dark\)[^{]*\{[^}]*--shiki-dark/);
   });
 });

@@ -16,6 +16,7 @@ import {
   type ShikiLanguageInput,
 } from './code-loader.js';
 import { styles } from './code-block.styles.js';
+import { resolveIsDarkTheme, watchDarkTheme } from './shiki-dark-theme.js';
 import {
   codeBlockToggleLabel,
   codeBlockCopyLabel,
@@ -236,6 +237,10 @@ export class LyraCodeBlock extends LyraElement<LyraCodeBlockEventMap> {
 
   @state() private justCopied = false;
 
+  @state() private isDarkTheme = false;
+
+  private stopWatchingTheme?: () => void;
+
   private highlighter?: ShikiHighlighter | null;
 
   // Guards the async per-language load in syncHighlight() against a
@@ -249,6 +254,10 @@ export class LyraCodeBlock extends LyraElement<LyraCodeBlockEventMap> {
 
   connectedCallback(): void {
     super.connectedCallback();
+    this.isDarkTheme = resolveIsDarkTheme(this);
+    this.stopWatchingTheme = watchDarkTheme(this, () => {
+      this.isDarkTheme = resolveIsDarkTheme(this);
+    });
     if (this.languagesOnly) return;
     void loadShikiHighlighter().then((hl) => {
       // loadShikiHighlighter() is a page-lifetime singleton promise -- it can
@@ -267,6 +276,7 @@ export class LyraCodeBlock extends LyraElement<LyraCodeBlockEventMap> {
   disconnectedCallback(): void {
     super.disconnectedCallback();
     clearTimeout(this.copyTimeoutId);
+    this.stopWatchingTheme?.();
   }
 
   // The `languages` entry for the *current* `language`, if any -- shared by
@@ -637,6 +647,7 @@ export class LyraCodeBlock extends LyraElement<LyraCodeBlockEventMap> {
           aria-label=${bodyLabel}
           tabindex="0"
           ?hidden=${bodyHidden}
+          data-dark-theme=${this.isDarkTheme ? 'true' : nothing}
           style=${this.maxHeight ? `--lr-code-block-max-height:${this.maxHeight}` : nothing}
           @mouseup=${this.onBodyMouseUp}
         >

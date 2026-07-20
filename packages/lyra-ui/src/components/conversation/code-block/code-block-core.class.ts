@@ -13,6 +13,7 @@ import {
   type ShikiLanguageInput,
 } from './code-loader.js';
 import { styles } from './code-block.styles.js';
+import { resolveIsDarkTheme, watchDarkTheme } from './shiki-dark-theme.js';
 import {
   codeBlockToggleLabel,
   codeBlockCopyLabel,
@@ -188,6 +189,10 @@ export class LyraCodeBlockCore extends LyraElement<LyraCodeBlockCoreEventMap> {
 
   @state() private justCopied = false;
 
+  @state() private isDarkTheme = false;
+
+  private stopWatchingTheme?: () => void;
+
   private highlighter?: ShikiHighlighterCore | null;
 
   // Guards the async per-language load in syncHighlight() against a
@@ -201,6 +206,10 @@ export class LyraCodeBlockCore extends LyraElement<LyraCodeBlockCoreEventMap> {
 
   connectedCallback(): void {
     super.connectedCallback();
+    this.isDarkTheme = resolveIsDarkTheme(this);
+    this.stopWatchingTheme = watchDarkTheme(this, () => {
+      this.isDarkTheme = resolveIsDarkTheme(this);
+    });
     if (Object.keys(this.languages).length === 0) return; // no languages supplied -- stays in the plain-text-fallback state permanently, same as languagesOnly + no matching grammar already behaves in lr-code-block today
     void loadShikiHighlighterCore(this.languages).then((hl) => {
       // loadShikiHighlighterCore() is a shared, cached-by-languages promise --
@@ -219,6 +228,7 @@ export class LyraCodeBlockCore extends LyraElement<LyraCodeBlockCoreEventMap> {
   disconnectedCallback(): void {
     super.disconnectedCallback();
     clearTimeout(this.copyTimeoutId);
+    this.stopWatchingTheme?.();
   }
 
   // The `languages` entry for the *current* `language`, if any -- shared by
@@ -583,6 +593,7 @@ export class LyraCodeBlockCore extends LyraElement<LyraCodeBlockCoreEventMap> {
           aria-label=${bodyLabel}
           tabindex="0"
           ?hidden=${bodyHidden}
+          data-dark-theme=${this.isDarkTheme ? 'true' : nothing}
           style=${this.maxHeight ? `--lr-code-block-max-height:${this.maxHeight}` : nothing}
           @mouseup=${this.onBodyMouseUp}
         >

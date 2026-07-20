@@ -250,19 +250,18 @@ export const styles = css`
    * a --lr-* token" in this file: these values come from shiki's theme
    * data, not this library's design tokens.
    */
-  @media (prefers-color-scheme: dark) {
-    [part='pre'],
-    [part='pre'] span {
-      color: var(--shiki-dark, inherit) !important;
-      background-color: var(--shiki-dark-bg, transparent) !important;
-    }
-    /* The line-highlight background above is a --lr-* token, not shiki theme data, but a
-       highlighted line in the shiki path is still a span, matched (and !important-overridden) by
-       the dark-mode rule right above -- re-assert it here at matching specificity+importance so a
-       highlighted line stays visible in dark mode instead of silently losing its background. */
-    [part='pre'] [data-highlighted] {
-      background: var(--lr-color-warning-quiet) !important;
-    }
+  /* Gated on [part='body'][data-dark-theme='true'] (kept live by shiki-dark-theme.ts's
+     watchDarkTheme(), off the component's own resolved --lr-color-text/--lr-color-surface) rather
+     than the OS-level prefers-color-scheme media query directly -- a consumer who sets
+     --lr-theme-color-* explicitly, independent of the OS's own setting, must still get the dark
+     shiki theme, matching every other --lr-color-* token's consumer-overrides-first resolution. */
+  [part='body'][data-dark-theme='true'] [part='pre'],
+  [part='body'][data-dark-theme='true'] [part='pre'] span {
+    color: var(--shiki-dark, inherit) !important;
+    background-color: var(--shiki-dark-bg, transparent) !important;
+  }
+  [part='body'][data-dark-theme='true'] [part='pre'] [data-highlighted] {
+    background: var(--lr-color-warning-quiet) !important;
   }
   @media (prefers-reduced-motion: reduce) {
     [part='toggle'] .chevron {
