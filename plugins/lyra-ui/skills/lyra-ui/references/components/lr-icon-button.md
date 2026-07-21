@@ -44,9 +44,14 @@ by side; that is a valid composition, not a fallback.
 `polygon`, `polyline`, `ellipse`, `g`, `use`) with no `icon` set and no enclosing `<svg>` of its
 own has no real SVG parent as parsed, and is detected and cloned into an internal
 `[part="fallback"]` SVG-namespaced element so it still paints — the same fallback `<lr-icon>`'s own
-custom-content slot uses. This is narrowly scoped to that whitelist: a complete `<svg>`, `<img>`,
-or custom element (e.g. `<lr-flag>`) is never touched by it and keeps rendering as an untouched
-sibling at its own natural aspect ratio.
+custom-content slot uses. The `[part="fallback"]` svg carries the same `fill="none"
+stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"` defaults
+`<lr-icon>`'s own wrapper svg does, so bare stroke-style geometry (the common lucide/feather/tabler
+path-data shape, which carries no fill/stroke of its own) renders outlined instead of as a solid
+shape; an explicit `fill`/`stroke`/etc. already present on the slotted node still wins for that
+node. This is narrowly scoped to that whitelist: a complete `<svg>`, `<img>`, or custom element
+(e.g. `<lr-flag>`) is never touched by it and keeps rendering as an untouched sibling at its own
+natural aspect ratio.
 
 **CSS parts:** `button`, `fallback` (only present in the DOM while at least one top-level slotted
 element needs the bare-geometry fallback above)
