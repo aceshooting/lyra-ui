@@ -15,7 +15,12 @@
 Fetches an HTML document, sanitizes it with the optional `dompurify` peer, and renders the safe markup
 inside a bounded, scrollable body.
 
-**Properties:** `src`, `name`, and `maxHeight` (attribute `max-height`) are strings.
+**Properties:** `src`, `name`, and `maxHeight` (attribute `max-height`) are strings. A host
+`aria-label` takes precedence over `name`. `highlights`, `activeHighlightId`, `anchor`, and
+`anchorKinds` (`['text-quote', 'fragment']`) provide the shared text-viewer contract.
+
+**Methods:** `search(query)`, `searchNext()`, `searchPrevious()`, `clearSearch()`, and
+`scrollToAnchor()` operate on sanitized HTML text and emit the shared search/anchor events.
 
 **Events:** `lr-render-error` with `detail.error` when fetching or sanitizing fails.
 

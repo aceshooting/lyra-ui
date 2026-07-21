@@ -26,7 +26,12 @@ Remote resources are capped at 25 MB; exceeding it surfaces the localized
 
 **Properties:** `src`, `name`, and `maxHeight` (attribute `max-height`) are strings. `foldQuotes:
 boolean = false` (attribute `fold-quotes`) — collapses trailing quoted-reply text/HTML behind a
-localized show/hide toggle. `false` (the default) preserves the full body rendering.
+localized show/hide toggle. `false` (the default) preserves the full body rendering. A host
+`aria-label` takes precedence over `name`. `highlights`, `activeHighlightId`, `anchor`, and
+`anchorKinds` (`['text-quote', 'fragment']`) provide the shared text-viewer contract.
+
+**Methods:** `search(query)`, `searchNext()`, `searchPrevious()`, `clearSearch()`, and
+`scrollToAnchor()` operate on rendered message text and emit the shared search/anchor events.
 
 **Events:** `lr-render-error` with `detail.error` when fetching or parsing fails.
 `lr-attachment-open` — `detail: { attachment: { filename, mimeType, content? } }`, `content` a
