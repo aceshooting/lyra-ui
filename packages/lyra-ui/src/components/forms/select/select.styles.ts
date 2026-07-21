@@ -7,6 +7,11 @@ export const styles = css`
     --lr-select-trigger-min-height: var(--lr-size-2-5rem);
     --lr-select-font-size: var(--lr-font-size-md);
     --lr-select-expand-size: var(--lr-size-1-75rem);
+    /* Gap and radius don't vary by size tier (unlike the four knobs above), so each is declared
+       once here rather than re-assigned per :host([size='…']) block -- same fix as lr-button's
+       identical --lr-button-gap/--lr-button-radius (button.styles.ts). */
+    --lr-select-gap: var(--lr-space-xs);
+    --lr-select-radius: var(--lr-radius);
     /* --lr-select-trigger-height is intentionally NOT declared here. It is a consumer-facing
        escape hatch consumed only through the two var() fallbacks on [part='trigger'] below;
        declaring any value for it (even 'auto') makes those fallback arms unreachable, which is
@@ -68,14 +73,14 @@ export const styles = css`
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: var(--lr-space-xs);
+    gap: var(--lr-select-gap);
     inline-size: 100%;
     min-block-size: var(--lr-select-trigger-height, var(--lr-select-trigger-min-height));
     box-sizing: border-box;
     block-size: var(--lr-select-trigger-height, auto);
     padding: var(--lr-select-trigger-padding);
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
-    border-radius: var(--lr-radius);
+    border-radius: var(--lr-select-radius);
     background: var(--lr-color-surface);
     color: inherit;
     font: inherit;

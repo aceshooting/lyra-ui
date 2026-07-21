@@ -9,8 +9,11 @@ export const styles = css`
     --lr-badge-font-size: var(--lr-font-size-sm);
     --lr-badge-padding-inline: var(--lr-space-s);
     --lr-badge-min-height: var(--lr-size-1-25rem);
+    /* Doesn't vary by size tier, so it's declared once here rather than re-assigned per
+       :host([size='…']) block -- mirrors lr-button's identical --lr-button-radius. */
+    --lr-badge-radius: var(--lr-radius-pill);
   }
-  [part='base'] { display: inline-flex; align-items: center; min-block-size: var(--lr-badge-min-height); padding-inline: var(--lr-badge-padding-inline); border: var(--lr-border-width-thin) solid var(--lr-badge-border, var(--lr-color-border)); border-radius: var(--lr-radius-pill); background: var(--lr-badge-background, var(--lr-color-surface)); color: var(--lr-badge-color, var(--lr-color-text)); font-size: var(--lr-badge-font-size); font-weight: var(--lr-font-weight-medium); line-height: var(--lr-line-height-compact); white-space: nowrap; }
+  [part='base'] { display: inline-flex; align-items: center; min-block-size: var(--lr-badge-min-height); padding-inline: var(--lr-badge-padding-inline); border: var(--lr-border-width-thin) solid var(--lr-badge-border, var(--lr-color-border)); border-radius: var(--lr-badge-radius); background: var(--lr-badge-background, var(--lr-color-surface)); color: var(--lr-badge-color, var(--lr-color-text)); font-size: var(--lr-badge-font-size); font-weight: var(--lr-font-weight-medium); line-height: var(--lr-line-height-compact); white-space: nowrap; }
   :host([variant='brand']) { --lr-badge-background: var(--lr-color-brand-quiet); --lr-badge-color: var(--lr-color-brand); --lr-badge-border: var(--lr-color-brand); }
   :host([variant='success']) { --lr-badge-background: var(--lr-color-success-quiet); --lr-badge-color: var(--lr-color-success); --lr-badge-border: var(--lr-color-success); }
   :host([variant='warning']) { --lr-badge-background: var(--lr-color-warning-quiet); --lr-badge-color: var(--lr-color-warning); --lr-badge-border: var(--lr-color-warning); }

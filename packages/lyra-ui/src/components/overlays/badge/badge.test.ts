@@ -2,6 +2,7 @@ import { fixture, expect, html } from '@open-wc/testing';
 import './badge.js';
 import './tag.js';
 import type { LyraBadge } from './badge.js';
+import { styles } from './badge.styles.js';
 
 it('renders a themed badge and tag alias', async () => {
   const el = await fixture(html`<div><lr-badge variant="success">Ready</lr-badge><lr-tag>Tag</lr-tag></div>`);
@@ -29,4 +30,24 @@ it('resizes the badge surface when size is set to a smaller or larger tier', asy
   expect(parseFloat(getComputedStyle(smallBase).minBlockSize)).to.be.lessThan(
     parseFloat(getComputedStyle(largeBase).minBlockSize),
   );
+});
+
+it('exposes --lr-badge-radius, defaulting to the pre-existing pill radius', async () => {
+  const el = (await fixture(html`<lr-badge>Go</lr-badge>`)) as LyraBadge;
+  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  expect(getComputedStyle(base).borderRadius).to.equal('999px');
+});
+
+it('retunes the corner radius via --lr-badge-radius with no ::part(base) rule', async () => {
+  const el = (await fixture(html`<lr-badge>Go</lr-badge>`)) as LyraBadge;
+  el.style.setProperty('--lr-badge-radius', '3px');
+  await el.updateComplete;
+  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  expect(getComputedStyle(base).borderRadius).to.equal('3px');
+});
+
+it('declares --lr-badge-radius on :host and consumes it once on [part="base"]', () => {
+  const css = styles.cssText.replace(/\s+/g, ' ');
+  expect(css).to.match(/:host \{[^}]*--lr-badge-radius: var\(--lr-radius-pill\);/);
+  expect(css).to.include("border-radius: var(--lr-badge-radius);");
 });

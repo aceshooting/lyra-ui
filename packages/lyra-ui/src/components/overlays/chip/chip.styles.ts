@@ -21,6 +21,11 @@ export const styles = css`
     --lr-chip-padding-inline: var(--lr-space-s);
     --lr-chip-gap: var(--lr-space-xs);
     --lr-chip-icon-size: var(--lr-font-size-sm);
+    /* Doesn't vary by size tier, so it's declared once here rather than re-assigned per
+       :host([size='…']) block -- same precedent as lr-button's --lr-button-radius. Consumed on
+       both [part='base'] and [part='remove-button'] below so a consumer retuning the chip's
+       corner shape gets a consistent remove-button corner too, not a mismatched one. */
+    --lr-chip-radius: var(--lr-radius-pill);
     /* Interactive (removable/toggleable) chips floor their tap target here. The compact tiers
        share the 24px WCAG 2.2 SC 2.5.8 minimum -- an interactive chip must never shrink below it,
        so 2xs/xs/s/m keep 1.5rem. The larger tiers reassign a taller floor (below their own
@@ -114,7 +119,7 @@ export const styles = css`
     box-sizing: border-box;
     padding: var(--lr-chip-padding-block) var(--lr-chip-padding-inline);
     border: var(--lr-border-width-thin) solid var(--lr-chip-border);
-    border-radius: var(--lr-radius-pill);
+    border-radius: var(--lr-chip-radius);
     background: var(--lr-chip-bg);
     color: var(--lr-chip-accent);
     font: inherit;
@@ -197,7 +202,7 @@ export const styles = css`
     margin-inline-end: calc((var(--lr-icon-button-size) - var(--lr-size-1-25rem)) / -2 + var(--lr-size-neg-0-15rem));
     padding: 0;
     border: none;
-    border-radius: var(--lr-radius-pill);
+    border-radius: var(--lr-chip-radius);
     background: transparent;
     color: inherit;
     font-size: var(--lr-size-0-75em);

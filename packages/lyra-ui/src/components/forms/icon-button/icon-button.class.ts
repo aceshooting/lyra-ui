@@ -70,6 +70,7 @@ function cloneToSvgNamespace(node: Element): SVGElement | null {
  *   own aspect ratio, while a small glyph pads out to it. A library-wide token (declared on
  *   `:root` by `tokens.styles.ts`, and the shared minimum tappable size several other components
  *   size their icon controls against), so overriding it globally resizes all of them together.
+ * @cssprop [--lr-icon-button-radius=var(--lr-radius)] - Corner radius of the native button.
  */
 export class LyraIconButton extends LyraElement {
   static styles = [LyraElement.styles, styles];

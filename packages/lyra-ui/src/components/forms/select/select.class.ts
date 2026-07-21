@@ -123,6 +123,9 @@ export interface LyraSelectEventMap {
  * @csspart error - The error message.
  * @csspart hint - The hint message.
  * @cssprop --lr-select-expand-size - Decorative expand-icon box size, scaled by `size`.
+ * @cssprop --lr-select-gap - Gap between the trigger's start adornment, label, end adornment, and
+ *   expand icon. Doesn't vary by `size`.
+ * @cssprop --lr-select-radius - Trigger corner radius. Doesn't vary by `size`.
  * @cssprop --lr-select-trigger-padding - Trigger padding shorthand, scaled by `size`.
  * @cssprop --lr-select-trigger-min-height - Trigger block-size floor, scaled by `size`, and live
  *   at every tier including the default `m` (`2.5rem`, matching `<lr-input>`/`<lr-combobox>` at

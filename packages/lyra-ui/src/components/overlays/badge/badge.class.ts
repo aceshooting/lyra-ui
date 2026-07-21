@@ -24,6 +24,8 @@ export type BadgeSize = '2xs' | 'xs' | 's' | 'm' | 'l' | 'xl';
  * sets it to that step's inline padding.
  * @cssprop [--lr-badge-min-height=var(--lr-size-1-25rem)] - The badge's minimum block size. Each
  * `size` sets it to that step's minimum block size.
+ * @cssprop [--lr-badge-radius=var(--lr-radius-pill)] - Corner radius of the badge surface. Does
+ * not vary by `size` tier.
  */
 export class LyraBadge extends LyraElement {
   static styles = [LyraElement.styles, styles];

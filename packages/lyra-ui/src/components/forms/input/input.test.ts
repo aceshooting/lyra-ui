@@ -452,4 +452,34 @@ describe('lr-input', () => {
       expect(getComputedStyle(wrapper(sEl)).blockSize).to.equal('44px');
     });
   });
+
+  describe('gap/radius custom properties', () => {
+    const wrapper = (el: LyraInput) =>
+      el.shadowRoot!.querySelector('[part="input-wrapper"]') as HTMLElement;
+
+    it('exposes --lr-input-gap and --lr-input-radius, defaulting to the pre-existing literals', async () => {
+      const el = (await fixture(html`<lr-input aria-label="Name"></lr-input>`)) as LyraInput;
+      const cs = getComputedStyle(wrapper(el));
+      expect(cs.gap).to.equal('4px');
+      expect(cs.borderRadius).to.equal('6px');
+    });
+
+    it('retunes the input-wrapper gap and corner radius with no ::part() rule', async () => {
+      const el = (await fixture(html`<lr-input aria-label="Name"></lr-input>`)) as LyraInput;
+      el.style.setProperty('--lr-input-gap', '12px');
+      el.style.setProperty('--lr-input-radius', '3px');
+      await el.updateComplete;
+      const cs = getComputedStyle(wrapper(el));
+      expect(cs.gap).to.equal('12px');
+      expect(cs.borderRadius).to.equal('3px');
+    });
+
+    it('declares --lr-input-gap/--lr-input-radius on :host and consumes them once on [part="input-wrapper"]', () => {
+      const css = styles.cssText.replace(/\s+/g, ' ');
+      expect(css).to.match(/:host \{[^}]*--lr-input-gap: var\(--lr-space-xs\);/);
+      expect(css).to.match(/:host \{[^}]*--lr-input-radius: var\(--lr-radius\);/);
+      expect(css).to.match(/\[part='input-wrapper'\] \{[^}]*gap: var\(--lr-input-gap\);/);
+      expect(css).to.match(/\[part='input-wrapper'\] \{[^}]*border-radius: var\(--lr-input-radius\);/);
+    });
+  });
 });

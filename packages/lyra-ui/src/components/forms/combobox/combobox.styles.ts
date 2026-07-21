@@ -9,6 +9,11 @@ export const styles = css`
     --lr-combobox-tag-padding: var(--lr-size-0-1rem) var(--lr-size-0-4rem);
     --lr-combobox-tag-font-size: var(--lr-font-size-sm);
     --lr-combobox-expand-size: var(--lr-size-1-75rem);
+    /* Gap and radius don't vary by size tier (unlike the knobs above), so each is declared once
+       here rather than re-assigned per :host([size='…']) block -- mirrors lr-button's identical
+       --lr-button-gap/--lr-button-radius. */
+    --lr-combobox-gap: var(--lr-space-xs);
+    --lr-combobox-radius: var(--lr-radius);
     /* --lr-combobox-trigger-height is intentionally NOT declared here. It is a consumer-facing
        escape hatch consumed only through the two var() fallbacks on [part='combobox'] below;
        declaring any value for it (even 'auto') would make those fallback arms unreachable and
@@ -79,7 +84,7 @@ export const styles = css`
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    gap: var(--lr-space-xs);
+    gap: var(--lr-combobox-gap);
     inline-size: 100%;
     min-block-size: var(--lr-combobox-trigger-height, var(--lr-combobox-trigger-min-height));
     box-sizing: border-box;
@@ -88,7 +93,7 @@ export const styles = css`
     block-size: var(--lr-combobox-trigger-height, auto);
     padding: var(--lr-combobox-trigger-padding);
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
-    border-radius: var(--lr-radius);
+    border-radius: var(--lr-combobox-radius);
     background: var(--lr-color-surface);
     font-size: var(--lr-combobox-font-size);
     cursor: text;

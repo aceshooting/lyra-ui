@@ -567,6 +567,33 @@ it('uses the shared disabled-opacity token for the disabled host and disabled op
   expect(getComputedStyle(disabledOption).opacity).to.equal('0.5');
 });
 
+it('exposes --lr-combobox-gap and --lr-combobox-radius, defaulting to the pre-existing literals', async () => {
+  const el = (await fixture(basic())) as LyraCombobox;
+  const combobox = el.shadowRoot!.querySelector('[part="combobox"]') as HTMLElement;
+  const cs = getComputedStyle(combobox);
+  expect(cs.gap).to.equal('4px');
+  expect(cs.borderRadius).to.equal('6px');
+});
+
+it('retunes the trigger gap and corner radius with no ::part(combobox) rule', async () => {
+  const el = (await fixture(basic())) as LyraCombobox;
+  el.style.setProperty('--lr-combobox-gap', '12px');
+  el.style.setProperty('--lr-combobox-radius', '3px');
+  await el.updateComplete;
+  const combobox = el.shadowRoot!.querySelector('[part="combobox"]') as HTMLElement;
+  const cs = getComputedStyle(combobox);
+  expect(cs.gap).to.equal('12px');
+  expect(cs.borderRadius).to.equal('3px');
+});
+
+it('declares --lr-combobox-gap/--lr-combobox-radius on :host and consumes them once on [part="combobox"]', () => {
+  const css = styles.cssText.replace(/\s+/g, ' ');
+  expect(css).to.match(/:host \{[^}]*--lr-combobox-gap: var\(--lr-space-xs\);/);
+  expect(css).to.match(/:host \{[^}]*--lr-combobox-radius: var\(--lr-radius\);/);
+  expect(css).to.include('gap: var(--lr-combobox-gap);');
+  expect(css).to.include('border-radius: var(--lr-combobox-radius);');
+});
+
 it('gives the clear button and expand icon a real touch target instead of collapsing to bare glyph height', async () => {
   const css = styles.cssText;
   // [part='clear-button'] and [part='expand-icon'] used to share one rule for their sizing; they

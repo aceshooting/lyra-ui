@@ -155,6 +155,11 @@ export interface LyraComboboxEventMap {
  * @cssprop --lr-combobox-tag-padding - Selected-tag padding.
  * @cssprop --lr-combobox-tag-font-size - Selected-tag text size.
  * @cssprop --lr-combobox-expand-size - Decorative expand-icon box size, scaled by `size`.
+ * @cssprop [--lr-combobox-gap=var(--lr-space-xs)] - Gap between the start/end adornments, tags,
+ *   and filter input inside the trigger row. Unlike the size knobs above it does not vary by
+ *   `size` tier. Override it to retune without a `::part(combobox)` rule.
+ * @cssprop [--lr-combobox-radius=var(--lr-radius)] - Corner radius of the trigger row
+ *   (`[part='combobox']`). Does not vary by `size` tier.
  * @cssprop [--lr-combobox-option-active-bg=var(--lr-color-brand-quiet)] - Background of a hovered
  *   or keyboard-active option row.
  */

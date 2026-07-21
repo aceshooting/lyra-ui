@@ -1,6 +1,7 @@
 import { fixture, expect, html, oneEvent } from '@open-wc/testing';
 import './chip.js';
 import type { LyraChip } from './chip.js';
+import { styles } from './chip.styles.js';
 
 it('defaults to size="m", tone="neutral", removable=false, and value=undefined', async () => {
   const el = (await fixture(html`<lr-chip>Tag</lr-chip>`)) as LyraChip;
@@ -482,6 +483,35 @@ describe('per-tier min-height and exact-height hatch', () => {
     el.style.removeProperty('--lr-chip-height');
     await el.updateComplete;
     expect(getComputedStyle(b).blockSize).to.equal(natural);
+  });
+
+  it('exposes --lr-chip-radius, defaulting to the pre-existing pill literal on both base and remove-button', async () => {
+    const el = (await fixture(html`<lr-chip removable>Tag</lr-chip>`)) as LyraChip;
+    const baseCs = getComputedStyle(base(el));
+    const removeCs = getComputedStyle(
+      el.shadowRoot!.querySelector('[part="remove-button"]') as HTMLElement,
+    );
+    expect(baseCs.borderRadius).to.equal('999px');
+    expect(removeCs.borderRadius).to.equal('999px');
+  });
+
+  it('retunes the base and remove-button corner radius together with no ::part() rule', async () => {
+    const el = (await fixture(html`<lr-chip removable>Tag</lr-chip>`)) as LyraChip;
+    el.style.setProperty('--lr-chip-radius', '3px');
+    await el.updateComplete;
+    const baseCs = getComputedStyle(base(el));
+    const removeCs = getComputedStyle(
+      el.shadowRoot!.querySelector('[part="remove-button"]') as HTMLElement,
+    );
+    expect(baseCs.borderRadius).to.equal('3px');
+    expect(removeCs.borderRadius).to.equal('3px');
+  });
+
+  it('declares --lr-chip-radius on :host and consumes it once on [part="base"] and [part="remove-button"]', () => {
+    const css = styles.cssText.replace(/\s+/g, ' ');
+    expect(css).to.match(/:host \{[^}]*--lr-chip-radius: var\(--lr-radius-pill\);/);
+    expect(css).to.match(/\[part='base'\] \{[^}]*border-radius: var\(--lr-chip-radius\);/);
+    expect(css).to.match(/\[part='remove-button'\] \{[^}]*border-radius: var\(--lr-chip-radius\);/);
   });
 
   it('lets a consumer raise --lr-chip-min-height so an interactive chip grows past its content', async () => {

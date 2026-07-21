@@ -13,6 +13,11 @@ export const styles = css`
        silently turn --lr-input-control-min-height into dead code. Left undeclared, both arms stay
        live: the per-tier floor falls out of the fallback, and setting the property from anywhere
        (inline style, an ancestor, an outer-tree rule) pins an exact height. */
+    /* Gap and radius don't vary by size tier (unlike the four knobs above), so each is declared
+       once here rather than re-assigned per :host([size='…']) block -- mirrors lr-button's
+       --lr-button-gap/--lr-button-radius. */
+    --lr-input-gap: var(--lr-space-xs);
+    --lr-input-radius: var(--lr-radius);
   }
   :host([size='2xs']) {
     --lr-input-padding-block: var(--lr-size-0-0625rem);
@@ -60,7 +65,7 @@ export const styles = css`
   [part='input-wrapper'] {
     display: flex;
     align-items: center;
-    gap: var(--lr-space-xs);
+    gap: var(--lr-input-gap);
     inline-size: 100%;
     box-sizing: border-box;
     min-block-size: var(--lr-input-control-height, var(--lr-input-control-min-height));
@@ -69,7 +74,7 @@ export const styles = css`
     block-size: var(--lr-input-control-height, auto);
     padding-inline: var(--lr-input-padding-inline);
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
-    border-radius: var(--lr-radius);
+    border-radius: var(--lr-input-radius);
     background: var(--lr-color-surface);
   }
   [part='input-wrapper']:focus-within {

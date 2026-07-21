@@ -1,6 +1,7 @@
 import { fixture, expect, html, oneEvent } from '@open-wc/testing';
 import './icon-button.js';
 import '../../media/flag/flag.js';
+import { styles } from './icon-button.styles.js';
 
 /** A 1x1 inline SVG, so `<lr-flag>` renders synchronously with no peer-package round trip. */
 const TEST_FLAG_SRC = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg"%3E%3C/svg%3E';
@@ -141,6 +142,26 @@ it('still floors slotted content at the tappable target size on both axes', asyn
   const box = el.shadowRoot!.querySelector('button')!.getBoundingClientRect();
   expect(box.width).to.equal(40);
   expect(box.height).to.equal(40);
+});
+
+it('exposes --lr-icon-button-radius, defaulting to the pre-existing literal', async () => {
+  const el = await fixture(html`<lr-icon-button icon="close" aria-label="Dismiss"></lr-icon-button>`);
+  const cs = getComputedStyle(el.shadowRoot!.querySelector('button')!);
+  expect(cs.borderRadius).to.equal('6px');
+});
+
+it('retunes the corner radius via --lr-icon-button-radius with no element-selector override', async () => {
+  const el = await fixture(html`<lr-icon-button icon="close" aria-label="Dismiss"></lr-icon-button>`);
+  (el as HTMLElement).style.setProperty('--lr-icon-button-radius', '3px');
+  await (el as HTMLElement & { updateComplete: Promise<unknown> }).updateComplete;
+  const cs = getComputedStyle(el.shadowRoot!.querySelector('button')!);
+  expect(cs.borderRadius).to.equal('3px');
+});
+
+it('declares --lr-icon-button-radius on :host and consumes it on the button element', () => {
+  const css = styles.cssText.replace(/\s+/g, ' ');
+  expect(css).to.match(/:host \{[^}]*--lr-icon-button-radius: var\(--lr-radius\);/);
+  expect(css).to.include('border-radius: var(--lr-icon-button-radius);');
 });
 
 it('names the button from aria-label, then label, then the localized fallback', async () => {

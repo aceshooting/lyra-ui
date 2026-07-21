@@ -80,6 +80,11 @@ class LyraInputBase extends LyraElement<LyraInputEventMap> {}
  * @cssprop --lr-input-padding-block - Block padding of the native input, scaled by `size`.
  * @cssprop --lr-input-padding-inline - Inline padding of the control row, scaled by `size`.
  * @cssprop --lr-input-font-size - Font size of the native input, scaled by `size`.
+ * @cssprop [--lr-input-gap=var(--lr-space-xs)] - Gap between the start/end adornments and the
+ * native input in the control row. Unlike the size knobs above it does not vary by `size` tier.
+ * Override it to retune without a `::part(input-wrapper)` rule.
+ * @cssprop [--lr-input-radius=var(--lr-radius)] - Corner radius of the control row. Does not vary
+ * by `size` tier.
  */
 export class LyraInput extends FormAssociated(LyraInputBase) {
   static styles = [LyraElement.styles, styles];

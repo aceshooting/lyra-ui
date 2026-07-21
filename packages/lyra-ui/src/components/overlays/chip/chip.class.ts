@@ -69,6 +69,8 @@ export interface LyraChipEventMap {
  * that step's font size.
  * @cssprop [--lr-chip-gap=var(--lr-space-xs)] - Gap between the icon, label, and remove button.
  * Each `size` sets it to that step's gap.
+ * @cssprop [--lr-chip-radius=var(--lr-radius-pill)] - Corner radius of the pill and of the remove
+ * button, kept in sync so retuning one retunes both. Does not vary by `size` tier.
  * @cssprop [--lr-chip-icon-size=var(--lr-font-size-sm)] - Font size of the `icon` slot wrapper.
  * Each `size` sets it to that step's icon size.
  * @cssprop [--lr-chip-padding-block=var(--lr-size-0-25rem)] - Block padding of the pill. Each
