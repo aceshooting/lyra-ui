@@ -32,7 +32,8 @@ export const styles = css`
      still reads as a preview and the eventual :focus-visible ring stays visually distinct.
      Negative (inward) offset for the same reason as :focus-visible above. */
   [part='base']:hover {
-    outline: var(--lr-border-width-thin) solid var(--lr-color-border-strong);
+    outline: var(--lr-border-width-thin) solid
+      var(--lr-virtual-list-hover-outline-color, var(--lr-color-border-strong));
     outline-offset: calc(-1 * var(--lr-border-width-thin));
   }
   [part='spacer'] {

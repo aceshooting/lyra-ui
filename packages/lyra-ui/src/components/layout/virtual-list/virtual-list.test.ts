@@ -743,6 +743,27 @@ it('gives the always-focusable [part="base"] scroll region a :hover state, match
   expect(css).to.match(/\[part='base'\]:hover\s*\{[^}]+\}/);
 });
 
+it('themes the hover outline color via --lr-virtual-list-hover-outline-color, falling back to --lr-color-border-strong', () => {
+  const css = styles.cssText.replace(/\s+/g, ' ');
+  const rule = css.match(/\[part='base'\]:hover\s*\{([^}]+)\}/)?.[1] ?? '';
+  expect(rule).to.match(/outline:[^;]*var\(--lr-virtual-list-hover-outline-color,\s*var\(--lr-color-border-strong\)\)/);
+});
+
+it('cascades --lr-virtual-list-hover-outline-color onto [part="base"]', async () => {
+  const el = (await fixture(
+    html`<lr-virtual-list
+      style="--lr-virtual-list-height:200px"
+      .items=${[1, 2, 3]}
+      .renderItem=${renderText}
+      .keyFunction=${numberKey}
+    ></lr-virtual-list>`,
+  )) as LyraVirtualList;
+  await el.updateComplete;
+  el.style.setProperty('--lr-virtual-list-hover-outline-color', 'rgb(12, 34, 56)');
+  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  expect(getComputedStyle(base).getPropertyValue('--lr-virtual-list-hover-outline-color').trim()).to.equal('rgb(12, 34, 56)');
+});
+
 it('does not rebuild the offsets array on a pure scroll-position update in row-height="auto" mode', async () => {
   const items = Array.from({ length: 300 }, (_, i) => i);
   const el = (await fixture(
