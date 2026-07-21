@@ -1,5 +1,112 @@
 # Changelog
 
+## 6.0.0
+
+### Major Changes
+
+- 5c93d1b: Remove `<lr-data-grid>`. It was a strict functional subset of `<lr-table>` (same `role="grid"` +
+  roving-tabindex + sort/select/loading pattern, with none of `<lr-table>`'s filtering, pagination,
+  inline editing, resize, grouping, expansion, heat-tint, sticky columns, or footers), implemented
+  independently with no shared code. Use `<lr-table>` instead:
+
+  - `DataGridColumn<T>`'s optional `value(row)` becomes `TableColumn<T>`'s required `cell(row)`.
+  - `<lr-data-grid>`'s `emptyText` string becomes `<lr-table>`'s `emptyHeading`/`emptyDescription`
+    pair (rendered via an internal `<lr-empty>`, not a plain text cell).
+  - `<lr-data-grid>` always mutated `selectedKey` and emitted `lr-selection-change` on row
+    click/activation; `<lr-table>` only does that when `selection-mode` is `"single"` or
+    `"multiple"` (default `"none"`, presentational) — listen on `lr-row-click` (`detail: { row }`)
+    instead if you don't need `<lr-table>`'s own selection bookkeeping.
+  - `accessibleLabel`/`aria-label` — unchanged; `<lr-table>` reads a plain `aria-label` attribute the
+    same way.
+
+  `<lr-eval-dataset>` and `<lr-eval-result>` composed `<lr-data-grid>` internally and now compose
+  `<lr-table>` instead. `<lr-eval-result>`'s public `columns` property changes type accordingly from
+  `DataGridColumn<EvalRunResult>[]` to `TableColumn<EvalRunResult>[]` — update any `value(row)`
+  column definitions you pass in to `cell(row)`.
+
+### Minor Changes
+
+- 5c93d1b: Add a `3xs` size tier to `<lr-chip>`, one step below `2xs`, for dense inline count pills.
+- 8e6e045: `lr-confirm-bar`: swap the hand-rolled `deny-button`/`approve-button` native `<button>`s for
+  `<lr-button>`, so `--lr-button-*` theming and a consumer's existing `lr-button` style fragments
+  reach them like every other button in an app. Adds a host-writable
+  `pending: 'approved' | 'denied' | null` property and makes `lr-approve`/`lr-deny` cancelable: a
+  listener calling `preventDefault()` sets `pending` to the decision being made (showing `loading`
+  on that button, `disabled` on the other) instead of resolving synchronously, so a host whose
+  approval hits a network call can keep the UI honest about being in flight. Finalize by setting
+  `.decision`, or bounce back by clearing `.pending` to `null`.
+
+  **Breaking (CSS only):** `::part(deny-button)`/`::part(approve-button)` now select an `<lr-button>`
+  host, not a native `<button>`.
+
+  Before:
+  lr-confirm-bar::part(deny-button) { padding: 4px 8px; border: ...; }
+  After (use the re-exported sub-parts):
+  lr-confirm-bar::part(deny-button-base) { padding: 4px 8px; border: ...; }
+
+  Runtime API (events, `tone`, `compact`, slots, the new `pending` property) is unchanged.
+
+- 050c43c: Fix `<lr-control-group>` collapsing to 0 inline size when placed as an ordinary flex-basis:auto
+  child of a shrink-to-fit flex row (its own stated primary use case). The `@container`
+  narrow-allocation breakpoint is now opt-in via a new `responsive` property instead of always-on.
+- 18e7b10: Add `--lr-dashboard-grid-cell-hover-outline-color` to `<lr-dashboard-grid>`, theming the mouse-hover preview outline on `[part="cell"]` independently of the shared `--lr-color-border-strong` token. Set it to `transparent` to opt out of the hover treatment entirely.
+- bd2e594: Add `--lr-flow-canvas-node-hover-outline-color` to `<lr-flow-canvas>`, theming the mouse-hover preview outline on `[part="node"]` independently of the shared `--lr-color-border-strong` token. Set it to `transparent` to opt out of the hover treatment entirely.
+- 76690c7: Add `--lr-button-gap` and `--lr-button-radius` custom properties to `<lr-button>`, so the
+  icon/label gap and corner radius are retunable without a `::part(base)` rule — matching the
+  retunable-without-`::part()` treatment `--lr-button-padding-block/-inline` and
+  `--lr-button-font-size` already have.
+- f8810d7: Add `<lr-locale-picker>`: a closed-list locale switcher over the locale registry
+  (`getRegisteredLyraLocales()`) or an explicit `locales` catalog, form-associated and mirroring
+  `<lr-select>`'s hand-rolled listbox. Selecting a row emits a cancelable `lr-change` and, unless
+  vetoed, applies the pick via `setLyraLocale()`.
+- 77377ed: Add `getRegisteredLyraLocales()` and `subscribeLyraLocaleRegistry()` so a consumer can enumerate
+  and live-track every locale registered via `registerLyraLocale()` (plus `'en'`) — the piece that
+  unblocks a locale-picker component built on top of the existing locale runtime.
+- 0771a83: Add a `renderExcerpt` hook to `<lr-thread-list>`, rendering rich per-row excerpt content into the
+  row `<lr-conversation-item>`'s own `excerpt` slot — where it wins over the plain-string `excerpt`
+  property — for cases like a server-highlighted search-match snippet, without giving up the built-in
+  title layout and inline-rename affordance the way `renderRowContent` requires.
+- 02cd69d: Add `<lr-reorder-item>`, one row of the new `<lr-reorder-list>` flat-list reorder primitive.
+- 2cf4206: Add `<lr-reorder-list>`, a generic flat-list reorder primitive with move-up/move-down buttons and
+  a Ctrl/Cmd+ArrowUp/ArrowDown keyboard shortcut, emitting the full new order on every move.
+- c6af1b7: `lr-tool-approval-dialog`: swap the hand-rolled `deny-button`/`approve-button` native `<button>`s
+  for `<lr-button>` (`variant="neutral"`/`"brand"`), so `--lr-button-*` theming and a consumer's
+  existing `lr-button` style fragments reach them like every other button in an app. Adds a
+  host-writable `pending: 'approve' | 'deny' | null` property and makes `lr-approve`/`lr-deny`
+  cancelable: a listener calling `preventDefault()` sets `pending` to the decision being made
+  (showing `loading` on that button, `disabled` on the other) instead of closing immediately, so a
+  host whose approval hits a network call can keep the dialog honest about being in flight.
+  Finalize by calling `close('approve'|'deny')`, or bounce back by clearing `.pending` to `null`.
+  While `pending` is set, Escape and backdrop dismissal are suppressed; `pending` itself resets to
+  `null` every time the dialog re-opens. The `edit-button` is unaffected.
+
+  **Breaking (CSS only):** `::part(deny-button)`/`::part(approve-button)` now select an `<lr-button>`
+  host, not a native `<button>`.
+
+  Before:
+  lr-tool-approval-dialog::part(deny-button) { padding: 4px 8px; border: ...; }
+  After (use the re-exported sub-parts):
+  lr-tool-approval-dialog::part(deny-button-base) { padding: 4px 8px; border: ...; }
+
+  Runtime API (events, `editable` and its editing behavior, slots, the new `pending` property) is
+  unchanged.
+
+- 65d6a2b: Add `--lr-virtual-list-hover-outline-color` to `<lr-virtual-list>`, theming the mouse-hover preview outline on `[part="base"]` independently of the shared `--lr-color-border-strong` token. Set it to `transparent` to opt out of the hover treatment entirely.
+
+### Patch Changes
+
+- 3fd9bbd: Regenerate the agent-tools reference docs and custom-elements manifest for the `lr-confirm-bar`/
+  `lr-tool-approval-dialog` `lr-button` swap and their new `pending` properties (see the sibling
+  changesets for the runtime changes themselves).
+- 9ebb38c: `lr-icon-button`: restore rendering for slotted bare SVG geometry (`<path>`, `<circle>`, etc. with
+  no enclosing `<svg>`) when `icon` is unset. 5.2.0's natural-aspect-ratio change made the default
+  slot a sibling of the internal glyph instead of nesting it inside an SVG, which silently stopped
+  this narrow case from painting (no console error, no type error). A small whitelist of raw SVG
+  geometry tag names is now cloned into a real SVG-namespaced element the same way `<lr-icon>`'s own
+  custom-content slot already does — every other case (complete `<svg>`, `<img>`, custom elements) is
+  untouched, so the `createElementNS`-on-custom-elements bug 5.2.0 fixed for `<lr-flag>` cannot
+  regress.
+
 ## 5.2.0
 
 ### Minor Changes
