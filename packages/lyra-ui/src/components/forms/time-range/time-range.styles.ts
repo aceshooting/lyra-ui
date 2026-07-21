@@ -9,6 +9,22 @@ export const styles = css`
        natural stack height of its children. With presets empty this still
        computes to exactly 1.5rem (the one [part="base"] child), so the
        brush-only case renders byte-for-byte the same as before. */
+    --lr-time-range-size-scale: 1;
+  }
+  :host([size='2xs']) {
+    --lr-time-range-size-scale: 0.5;
+  }
+  :host([size='xs']) {
+    --lr-time-range-size-scale: 0.6;
+  }
+  :host([size='s']) {
+    --lr-time-range-size-scale: 0.75;
+  }
+  :host([size='l']) {
+    --lr-time-range-size-scale: 1.2;
+  }
+  :host([size='xl']) {
+    --lr-time-range-size-scale: 1.4;
   }
   [part='presets'] {
     display: flex;
@@ -19,13 +35,13 @@ export const styles = css`
   [part='preset-button'] {
     display: inline-flex;
     align-items: center;
-    padding: var(--lr-space-xs) var(--lr-space-s);
+    padding: calc(var(--lr-space-xs) * var(--lr-time-range-size-scale)) calc(var(--lr-space-s) * var(--lr-time-range-size-scale));
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
     border-radius: var(--lr-radius);
     background: var(--lr-color-surface);
     color: var(--lr-color-text);
     font: inherit;
-    font-size: var(--lr-font-size-sm);
+    font-size: calc(var(--lr-font-size-sm) * var(--lr-time-range-size-scale));
     cursor: pointer;
     transition: var(--lr-transition-fast);
   }
@@ -61,27 +77,27 @@ export const styles = css`
   [part='base'] {
     position: relative;
     inline-size: 100%;
-    block-size: var(--lr-size-1-5rem);
+    block-size: calc(var(--lr-size-1-5rem) * var(--lr-time-range-size-scale));
     display: flex;
     align-items: center;
   }
   [part='track'] {
     position: absolute;
     inset-inline: 0;
-    block-size: var(--lr-size-4px);
+    block-size: calc(var(--lr-size-4px) * var(--lr-time-range-size-scale));
     border-radius: var(--lr-size-2px);
     background: var(--lr-color-border);
   }
   [part='range'] {
     position: absolute;
-    block-size: var(--lr-size-4px);
+    block-size: calc(var(--lr-size-4px) * var(--lr-time-range-size-scale));
     border-radius: var(--lr-size-2px);
     background: var(--lr-color-brand);
   }
   [part^='handle'] {
     position: absolute;
-    inline-size: var(--lr-size-14px);
-    block-size: var(--lr-size-14px);
+    inline-size: calc(var(--lr-size-14px) * var(--lr-time-range-size-scale));
+    block-size: calc(var(--lr-size-14px) * var(--lr-time-range-size-scale));
     border-radius: 50%;
     background: var(--lr-color-brand);
     border: var(--lr-border-width-medium) solid var(--lr-color-surface);
@@ -116,8 +132,8 @@ export const styles = css`
     position: absolute;
     inset-block-start: 50%;
     inset-inline-start: 50%;
-    inline-size: var(--lr-size-28px);
-    block-size: var(--lr-size-28px);
+    inline-size: max(var(--lr-size-24px), calc(var(--lr-size-28px) * var(--lr-time-range-size-scale)));
+    block-size: max(var(--lr-size-24px), calc(var(--lr-size-28px) * var(--lr-time-range-size-scale)));
     transform: translate(-50%, -50%);
     border-radius: 50%;
   }

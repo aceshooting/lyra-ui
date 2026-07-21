@@ -1716,6 +1716,10 @@ consumer-facing `disabled` property/attribute itself.
 - `start: number = 0`
 - `end: number = 100`
 - `step: number = 1`
+- `size: '2xs' | 'xs' | 's' | 'm' | 'l' | 'xl' = 'm'` (reflected) — visual size; proportionally
+  scales the handle, track, and preset buttons via a single `--lr-time-range-size-scale` multiplier
+  (not pixel-matched to `lr-input`'s row-height scale — this component's own dimensions aren't on
+  that ladder); the drag hit-area never shrinks below 24px (WCAG 2.5.8)
 - `disabled: boolean = false` (reflected)
 - `startLabel: string = 'Range start'` (attribute `start-label`) — `aria-label` for the start handle
 - `endLabel: string = 'Range end'` (attribute `end-label`) — `aria-label` for the end handle
@@ -1744,6 +1748,10 @@ palette: `--lr-time-range-preset-active-bg` (falls back to `--lr-color-brand`),
 `--lr-time-range-preset-active-border-color` (falls back to `--lr-color-brand`), and
 `--lr-time-range-preset-active-color` (falls back to `--lr-color-on-brand`). Unset, each resolves
 to exactly the token the rule used before they existed, so the default rendering is unchanged.
+
+One additional component-local property, `--lr-time-range-size-scale` (unitless multiplier,
+default 1, automatically set based on the `size` property), scales the handle, track, and preset
+button dimensions proportionally — unset, it defaults to 1 (size='m', no scaling).
 
 They exist because the active preset is marked with an attribute on a part, and
 `::part(preset-button)[data-active]` is **invalid CSS** — an attribute selector cannot follow

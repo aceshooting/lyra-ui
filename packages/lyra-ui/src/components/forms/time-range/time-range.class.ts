@@ -27,6 +27,8 @@ interface DragState {
  *  interactions (and native `<input type=range>`). */
 const PAGE_STEP_MULTIPLIER = 10;
 
+export type LyraTimeRangeSize = '2xs' | 'xs' | 's' | 'm' | 'l' | 'xl';
+
 /** A single discrete-preset option for the `presets` property. */
 export interface TimeRangePreset {
   label: string;
@@ -116,6 +118,9 @@ export interface LyraTimeRangeEventMap {
  *   active preset button.
  * @cssprop [--lr-time-range-preset-active-color=var(--lr-color-on-brand)] - Text color of the active
  *   preset button.
+ * @cssprop [--lr-time-range-size-scale=1] - Unitless multiplier applied proportionally to the handle,
+ *   track, and preset-button dimensions based on the current `size` tier; the drag hit-area is floored
+ *   at 24px (WCAG 2.5.8).
  */
 export class LyraTimeRange extends LyraElement<LyraTimeRangeEventMap> {
   static formAssociated = true;
@@ -145,6 +150,10 @@ export class LyraTimeRange extends LyraElement<LyraTimeRangeEventMap> {
   @property({ type: Number }) start = 0;
   @property({ type: Number }) end = 100;
   @property({ type: Number }) step = 1;
+  /** Visual size — proportionally scales the handle, track, and preset buttons via a single
+   *  multiplier; the drag hit-area never shrinks below 24px (WCAG 2.5.8). Not pixel-matched to
+   *  `lr-input`'s row-height scale -- this component's own dimensions aren't on that ladder. */
+  @property({ reflect: true }) size: LyraTimeRangeSize = 'm';
   /** Accessible name for the start handle, used as its `aria-label`.
    *  Overridable for i18n/custom copy; defaults to the same literal text
    *  this component always rendered before the property existed. */

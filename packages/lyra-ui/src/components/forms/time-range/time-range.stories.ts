@@ -66,3 +66,34 @@ export const ThemedActivePreset: Story = {
     ></lr-time-range>
   `,
 };
+
+export const Sizes: Story = {
+  render: () => html`
+    <div style="display: flex; flex-direction: column; gap: 2rem;">
+      <div>
+        <label style="display: block; margin-block-end: 0.5rem;">2xs</label>
+        <lr-time-range min="0" max="100" start="20" end="80" size="2xs"></lr-time-range>
+      </div>
+      <div>
+        <label style="display: block; margin-block-end: 0.5rem;">xs</label>
+        <lr-time-range min="0" max="100" start="20" end="80" size="xs"></lr-time-range>
+      </div>
+      <div>
+        <label style="display: block; margin-block-end: 0.5rem;">s</label>
+        <lr-time-range min="0" max="100" start="20" end="80" size="s"></lr-time-range>
+      </div>
+      <div>
+        <label style="display: block; margin-block-end: 0.5rem;">m (default)</label>
+        <lr-time-range min="0" max="100" start="20" end="80" size="m"></lr-time-range>
+      </div>
+      <div>
+        <label style="display: block; margin-block-end: 0.5rem;">l</label>
+        <lr-time-range min="0" max="100" start="20" end="80" size="l"></lr-time-range>
+      </div>
+      <div>
+        <label style="display: block; margin-block-end: 0.5rem;">xl</label>
+        <lr-time-range min="0" max="100" start="20" end="80" size="xl"></lr-time-range>
+      </div>
+    </div>
+  `,
+};

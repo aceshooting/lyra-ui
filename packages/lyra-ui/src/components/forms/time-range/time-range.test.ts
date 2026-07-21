@@ -1215,3 +1215,28 @@ describe('active-preset cssprops', () => {
     await expect(el).to.be.accessible();
   });
 });
+
+it('scales the drag-handle hit-area proportionally, floored at 24px', async () => {
+  const expected: Record<string, string> = {
+    '2xs': '24px',
+    xs: '24px',
+    s: '24px',
+    m: '28px',
+    l: '33.6px',
+    xl: '39.2px',
+  };
+  for (const [size, px] of Object.entries(expected)) {
+    const el = await fixture(html`<lr-time-range size=${size}></lr-time-range>`);
+    const handle = el.shadowRoot!.querySelector('[part="handle-start"]') as HTMLElement;
+    const before = getComputedStyle(handle, '::before');
+    expect(before.inlineSize, `size=${size}`).to.equal(px);
+  }
+});
+
+it('defaults to size "m" and reflects a size attribute', async () => {
+  const defaultEl = (await fixture(html`<lr-time-range></lr-time-range>`)) as LyraTimeRange;
+  expect(defaultEl.size).to.equal('m');
+  const el = (await fixture(html`<lr-time-range size="s"></lr-time-range>`)) as LyraTimeRange;
+  expect(el.getAttribute('size')).to.equal('s');
+  expect(el.size).to.equal('s');
+});
