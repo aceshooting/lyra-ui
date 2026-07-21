@@ -177,7 +177,7 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
   @property() hint = '';
   @property({ attribute: 'error-text' }) errorText = '';
   @property({ type: Boolean, reflect: true }) open = false;
-  /** Visual size — same `xs`–`xl` scale as `lr-select`'s `size`. */
+  /** Visual size — same `2xs`–`xl` scale as `lr-select`'s `size`. */
   @property({ reflect: true }) size: LyraComboboxSize = 'm';
   /** Show a clear button while the combobox has something to clear on either axis: a committed
    *  selection, or visible filter text (the open listbox in single-select, any time in `multiple`
