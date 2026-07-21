@@ -125,11 +125,14 @@ export interface LyraAppRailEventMap {
  *   breakpoint crossing or an explicit `mode` assignment. Not fired for a
  *   redundant reassignment to the mode already in effect.
  *   `detail: AppRailModeChangeDetail`.
- * @event lr-toggle - The mobile overlay opened or closed — via the
+ * @event lr-toggle - The mobile overlay is opening or closing — via the
  *   built-in toggle button, Escape, a backdrop click, a nav-item click while
  *   open, or a breakpoint/forced mode change leaving `'mobile'` while open.
  *   Not fired when a consumer sets `open` directly (mirrors `<lr-dialog>`'s
- *   `open`/`close()` split). `detail: AppRailToggleDetail`.
+ *   `open`/`close()` split). `detail: AppRailToggleDetail`. Cancelable for
+ *   every trigger except the forced mode-change close, which always applies
+ *   (vetoing it would leave `open` stuck `true` in a mode where it's
+ *   meaningless) -- call `preventDefault()` to keep the overlay as it is.
  * @event lr-rail-resize - The `resizable` rail's width changed via drag or keyboard stepping.
  *   Not fired when a consumer sets `railWidthPx` directly. `detail: AppRailResizeDetail`.
  * @csspart base - The rail root while inline (`'full'`/`'icon-only'` modes).
@@ -490,14 +493,24 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
     // closes the overlay as a side effect (through setOpen, so it still
     // emits lr-toggle and releases the scroll lock/focus trap normally)
     // rather than leaving a now-invisible overlay primed to reappear the
-    // next time mode returns to 'mobile'.
-    if (next !== 'mobile' && this.open) this.setOpen(false);
+    // next time mode returns to 'mobile'. Forced: this is a consistency
+    // fix-up, not a user dismissal, so a host can't veto it via lr-toggle.
+    if (next !== 'mobile' && this.open) this.setOpen(false, { force: true });
   }
 
-  private setOpen(next: boolean): void {
+  private setOpen(next: boolean, options?: { force?: boolean }): void {
     if (this.open === next) return;
+    // A breakpoint/forced mode change leaving 'mobile' while open is a consistency fix-up, not a
+    // user dismissal -- it must apply unconditionally, or `open` could get stuck `true` while
+    // `mode` is no longer `'mobile'` (where `open` is documented as meaningless).
+    if (options?.force) {
+      this.open = next;
+      this.emit<AppRailToggleDetail>('lr-toggle', { open: next });
+      return;
+    }
+    const event = this.emit<AppRailToggleDetail>('lr-toggle', { open: next }, { cancelable: true });
+    if (event.defaultPrevented) return;
     this.open = next;
-    this.emit<AppRailToggleDetail>('lr-toggle', { open: next });
   }
 
   private onToggleClick = (e: MouseEvent): void => {

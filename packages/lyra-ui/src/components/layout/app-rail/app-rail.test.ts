@@ -194,10 +194,15 @@ it('ignores an invalid mode assignment', async () => {
   expect(el.mode).to.equal('full');
 });
 
-it('force-closes an open overlay and emits lr-toggle when mode leaves mobile', async () => {
+it('force-closes an open overlay and emits lr-toggle when mode leaves mobile, ignoring preventDefault', async () => {
   const el = (await fixture(html`<lr-app-rail mode="mobile"><a href="/a">A</a></lr-app-rail>`)) as LyraAppRail;
   el.open = true;
   await el.updateComplete;
+  // Unlike a user-initiated close, leaving 'mobile' while open is a forced consistency fix-up
+  // (documented: "closes the overlay as a side effect... rather than leaving a now-invisible
+  // overlay primed to reappear") -- it must not be vetoable, or `open` could get stuck `true`
+  // while `mode` is no longer `'mobile'`, where `open` is documented as meaningless.
+  el.addEventListener('lr-toggle', (e) => e.preventDefault());
 
   const promise = oneEvent(el, 'lr-toggle');
   el.mode = 'full';
@@ -252,6 +257,19 @@ it('toggling emits lr-toggle with the new open state', async () => {
   const ev = await promise;
 
   expect((ev.detail as AppRailToggleDetail).open).to.be.true;
+});
+
+it('fires lr-toggle as cancelable and keeps the overlay open when a host calls preventDefault()', async () => {
+  const el = (await fixture(html`<lr-app-rail mode="mobile"><a href="/a">A</a></lr-app-rail>`)) as LyraAppRail;
+  const toggle = el.shadowRoot!.querySelector('[part="toggle"]') as HTMLButtonElement;
+  el.addEventListener('lr-toggle', (e) => e.preventDefault());
+
+  const listener = oneEvent(el, 'lr-toggle');
+  toggle.click();
+  const ev = await listener;
+
+  expect(ev.cancelable).to.be.true;
+  expect(el.open).to.be.false;
 });
 
 it('setting open directly does not emit lr-toggle (mirrors lr-dialog open/close split)', async () => {
