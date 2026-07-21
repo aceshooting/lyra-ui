@@ -3,13 +3,13 @@ import { property } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { styles } from './eval-result.styles.js';
 import type { RubricKey, RubricValue } from '../../forms/rubric-form/rubric-form.class.js';
-import type { DataGridColumn } from '../../data/data-grid/data-grid.class.js';
+import type { TableColumn } from '../../data/table/table.class.js';
 import '../../forms/rubric-form/rubric-form.class.js';
-import '../../data/data-grid/data-grid.class.js';
+import '../../data/table/table.class.js';
 import '../../utility/diff-view/diff-view.class.js';
 
 const EMPTY_RUNS: EvalRunResult[] = [];
-const EMPTY_COLUMNS: DataGridColumn<EvalRunResult>[] = [];
+const EMPTY_COLUMNS: TableColumn<EvalRunResult>[] = [];
 const EMPTY_KEYS: RubricKey[] = [];
 const EMPTY_VALUE: RubricValue = {};
 
@@ -17,8 +17,8 @@ const EMPTY_VALUE: RubricValue = {};
  * One model/prompt-version's output for a single evaluation example, plus whatever automated
  * `scores` it already carries and whatever `review` a human has entered for it so far. `scores`
  * and `review` are both keyed the same way as the `rubricKeys` passed to this component -- the
- * same `RubricValue` shape `<lr-rubric-form>` itself reads and writes -- so a `DataGridColumn`'s
- * `value()` accessor and the rubric form's own `value` binding can both read a run's fields with
+ * same `RubricValue` shape `<lr-rubric-form>` itself reads and writes -- so a `TableColumn`'s
+ * `cell()` accessor and the rubric form's own `value` binding can both read a run's fields with
  * no conversion.
  */
 export interface EvalRunResult {
@@ -44,8 +44,8 @@ export interface LyraEvalResultEventMap {
  * example's runs (one per model or prompt version), LangSmith/Arize-eval-result style.
  *
  * Composes three existing primitives directly rather than re-deriving any of their behavior:
- * `<lr-data-grid>` renders the `runs` comparison table (`columns` is a plain pass-through to its
- * own `DataGridColumn[]` shape, the same way `rubricKeys` is a pass-through to
+ * `<lr-table>` renders the `runs` comparison table (`columns` is a plain pass-through to its
+ * own `TableColumn[]` shape, the same way `rubricKeys` is a pass-through to
  * `<lr-rubric-form>`'s own `keys` -- neither is re-derived here); `<lr-rubric-form>` is the
  * human-review scoring surface for whichever run is currently selected, reading/writing that
  * run's own `review` value and re-emitting its `lr-input`/`lr-validity-change`/`lr-submit`/
@@ -71,7 +71,7 @@ export interface LyraEvalResultEventMap {
  * @event lr-review-skip - The selected run's rubric form was skipped (`reviewSkippable` only). `detail: { runId }`.
  * @csspart base - The outer wrapper.
  * @csspart empty - The message shown when `runs` has no entries.
- * @csspart grid - The `<lr-data-grid>` comparison table.
+ * @csspart grid - The `<lr-table>` comparison table.
  * @csspart review - The `<lr-rubric-form>` scoring the selected run.
  * @csspart diff - The wrapper around the diff caption and `<lr-diff-view>`.
  * @csspart diff-labels - The caption row naming the two compared runs (only rendered while comparing two distinct runs).
@@ -85,8 +85,10 @@ export class LyraEvalResult extends LyraElement<LyraEvalResultEventMap> {
   /** The runs (one per model or prompt version) being compared for this evaluation example. */
   @property({ attribute: false }) runs: EvalRunResult[] = EMPTY_RUNS;
 
-  /** Column definitions for the comparison grid -- forwarded verbatim to `<lr-data-grid>`'s own `columns`. */
-  @property({ attribute: false }) columns: DataGridColumn<EvalRunResult>[] = EMPTY_COLUMNS;
+  /** Column definitions for the comparison grid -- forwarded verbatim to `<lr-table>`'s own `columns`.
+   *  Each column now needs a `cell(row)` accessor (`<lr-table>`'s `TableColumn` shape), not the old
+   *  `<lr-data-grid>` `DataGridColumn`'s optional `value(row)`. */
+  @property({ attribute: false }) columns: TableColumn<EvalRunResult>[] = EMPTY_COLUMNS;
 
   /** Rubric field definitions for the review form -- forwarded verbatim to `<lr-rubric-form>`'s own `keys`. */
   @property({ attribute: false }) rubricKeys: RubricKey[] = EMPTY_KEYS;
@@ -164,7 +166,7 @@ export class LyraEvalResult extends LyraElement<LyraEvalResultEventMap> {
     const selected = this.selectedRun;
     return html`
       <div part="base">
-        <lr-data-grid
+        <lr-table
           part="grid"
           .columns=${this.columns}
           .rows=${this.runs}
@@ -172,7 +174,7 @@ export class LyraEvalResult extends LyraElement<LyraEvalResultEventMap> {
           .selectedKey=${this.effectiveSelectedRunId}
           aria-label=${this.getAttribute('aria-label') || nothing}
           @lr-row-click=${(e: CustomEvent<{ row: EvalRunResult }>) => this.emit('lr-run-select', { runId: e.detail.row.id })}
-        ></lr-data-grid>
+        ></lr-table>
         ${selected ? this.renderReview(selected) : nothing}
         ${selected ? this.renderDiff(selected, this.baselineRun) : nothing}
       </div>

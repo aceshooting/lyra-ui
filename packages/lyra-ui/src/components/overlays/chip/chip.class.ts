@@ -5,7 +5,7 @@ import { closeIcon } from '../../../internal/icons.js';
 import { styles } from './chip.styles.js';
 
 export type ChipTone = 'neutral' | 'brand' | 'success' | 'warning' | 'danger';
-export type ChipSize = '2xs' | 'xs' | 's' | 'm' | 'l' | 'xl';
+export type ChipSize = '3xs' | '2xs' | 'xs' | 's' | 'm' | 'l' | 'xl';
 
 export interface ChipRemoveDetail {
   value?: string;
@@ -76,7 +76,7 @@ export interface LyraChipEventMap {
  * @cssprop [--lr-chip-padding-inline=var(--lr-space-s)] - Inline padding of the pill. Each `size`
  * sets it to that step's inline padding.
  * @cssprop [--lr-chip-min-height=var(--lr-size-1-5rem)] - Minimum block size of an interactive
- * (`removable`/`toggleable`) chip's tap target. `size` keeps `2xs`/`xs`/`s`/`m` at the `1.5rem`
+ * (`removable`/`toggleable`) chip's tap target. `size` keeps `3xs`/`2xs`/`xs`/`s`/`m` at the `1.5rem`
  * (24px) WCAG 2.2 SC 2.5.8 minimum and raises `l` to `var(--lr-size-1-75rem)` and `xl` to
  * `var(--lr-size-2rem)`. Non-interactive display chips are unaffected by this floor.
  * @cssprop --lr-chip-height - Exact block size of the chip. Undeclared by default, so the chip

@@ -27,7 +27,7 @@
 **Lyra UI — the free, independent web-component alternative.** A MIT-licensed [Lit](https://lit.dev)
 library for accessible forms, dashboards, charts, data visualization, and Conversation & Agent UI.
 It is a practical open-source alternative to [Shoelace](https://shoelace.style/) and
-[Web Awesome](https://webawesome.com/), with 250 custom elements, native custom-element APIs,
+[Web Awesome](https://webawesome.com/), with 249 custom elements, native custom-element APIs,
 tree-shakeable imports, its own `--lr-*` design tokens, built-in localization and RTL support,
 and no runtime dependency on either project.
 
@@ -410,7 +410,6 @@ API details.
 | `<lr-mutation-observer>` | `wa-mutation-observer` | Lifecycle-managed MutationObserver for slotted elements |
 | `<lr-stat>` | — (extra) | KPI/stat card with trend pill and an optional breakdown row list; either can carry an `exactValue` shown as a hover/focus tooltip alongside the rounded/formatted display value |
 | `<lr-table>` | — (extra) | Sort/select-aware data table with optional controlled filtering, client/server-friendly pagination, loading state, consumer-owned inline editing, expandable rows, sticky columns, and responsive `priority` columns |
-| `<lr-data-grid>` | — (extra) | Keyboard-navigable sortable grid with roving cell focus and responsive overflow |
 | `<lr-pagination>` | — (extra) | Controlled previous/next and validated page-jump navigation with a localized range summary, loading/empty states, RTL icons, and container-responsive stacking |
 | `<lr-gauge>` | — (extra) | Radial, full-circle ring, or linear meter with a per-instance fill token |
 | `<lr-export-button>` | — (extra) | Injection-safe CSV/JSON downloads plus event-handled custom format descriptors and controlled busy state |
@@ -506,9 +505,9 @@ API details.
 
 | Component | Mirrors | Notes |
 |-----------|---------|-------|
-| `<lr-eval-dataset>` | — (extra) | Dataset management for an evaluation suite — a filterable/taggable list of `EvalExample` rows via `lr-data-grid`, an `lr-chip`/`lr-chip-group` tag-based browse filter, and add/remove/import/export affordances; fully controlled, never mutates `examples` or performs I/O itself |
+| `<lr-eval-dataset>` | — (extra) | Dataset management for an evaluation suite — a filterable/taggable list of `EvalExample` rows via `lr-table`, an `lr-chip`/`lr-chip-group` tag-based browse filter, and add/remove/import/export affordances; fully controlled, never mutates `examples` or performs I/O itself |
 | `<lr-evaluation-run>` | — (extra) | Evaluation batch's live progress — an overall `lr-progress-bar` counting terminal (done/error/cancelled) examples against the batch total, plus one `lr-details` disclosure per example showing input/output, an optional `lr-grounding-summary`, and an optional `lr-tool-timeline` |
-| `<lr-eval-result>` | — (extra) | Rubric scoring, human review, and comparison across a single evaluation example's runs — composes `lr-data-grid` for the runs comparison table, `lr-rubric-form` for the selected run's human-review scoring, and `lr-diff-view` to compare a run's output against a baseline run |
+| `<lr-eval-result>` | — (extra) | Rubric scoring, human review, and comparison across a single evaluation example's runs — composes `lr-table` for the runs comparison table, `lr-rubric-form` for the selected run's human-review scoring, and `lr-diff-view` to compare a run's output against a baseline run |
 
 **Overlays**
 

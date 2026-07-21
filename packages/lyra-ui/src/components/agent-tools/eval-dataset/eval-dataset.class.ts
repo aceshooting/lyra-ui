@@ -1,8 +1,8 @@
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
-import type { DataGridColumn } from '../../data/data-grid/data-grid.class.js';
-import '../../data/data-grid/data-grid.js';
+import type { TableColumn } from '../../data/table/table.class.js';
+import '../../data/table/table.js';
 import type { ChipSelectDetail } from '../../overlays/chip/chip.class.js';
 import '../../overlays/chip/chip.js';
 import '../../overlays/chip/chip-group.js';
@@ -18,8 +18,8 @@ import { styles } from './eval-dataset.styles.js';
  * `src/ai/types.ts`: none of that module's existing interfaces (`RetrievalQuery`, `ChatMessage`,
  * etc.) model "one row of a labeled eval dataset", so a divergent-looking type squeezed in there
  * would be worse than a self-contained one defined next to the component that actually consumes
- * it. `input`/`expectedOutput` are plain strings (not `unknown`/structured payloads) to match
- * `<lr-data-grid>`'s own cell rendering, which stringifies every value.
+ * it. `input`/`expectedOutput` are plain strings (not `unknown`/structured payloads) since every
+ * column's `cell()` here renders them as plain text.
  */
 export interface EvalExample {
   id: string;
@@ -50,7 +50,7 @@ export interface LyraEvalDatasetEventMap {
  * round-trip, opening its own creation dialog, parsing an imported file's actual contents, writing
  * an exported file to disk or a server) and passes an updated `examples` array back in.
  *
- * Composes `<lr-data-grid>` for the row list (columns for `input`/`expectedOutput`/joined
+ * Composes `<lr-table>` for the row list (columns for `input`/`expectedOutput`/joined
  * `tags`), `<lr-chip>`/`<lr-chip-group>` as a tag-based browse filter (one toggleable chip per
  * distinct tag currently present across `examples`; multiple active tags OR together, matching
  * the common "browse by any of these tags" idiom rather than requiring every tag to match),
@@ -63,7 +63,7 @@ export interface LyraEvalDatasetEventMap {
  * configured format rather than one format silently downloading locally while every other format
  * does nothing.
  *
- * Row sorting is *not* re-implemented here: `<lr-data-grid>`'s own `lr-sort` bubbles through
+ * Row sorting is *not* re-implemented here: `<lr-table>`'s own `lr-sort` bubbles through
  * (composed events cross a shadow boundary automatically) for a host that wants to reorder
  * `examples` and hand back a resorted array -- the same "the host owns the actual data" contract
  * as every other mutation this component surfaces.
@@ -94,7 +94,7 @@ export interface LyraEvalDatasetEventMap {
  * @csspart search-input - The `<input type="search">`. Only rendered while `searchable`.
  * @csspart tag-filter - The tag-filter chip group's wrapper. Only rendered while `examples`
  *   carries at least one tag.
- * @csspart grid - The internal `<lr-data-grid>`.
+ * @csspart grid - The internal `<lr-table>`.
  */
 export class LyraEvalDataset extends LyraElement<LyraEvalDatasetEventMap> {
   static styles = [LyraElement.styles, styles];
@@ -170,15 +170,15 @@ export class LyraEvalDataset extends LyraElement<LyraEvalDatasetEventMap> {
     });
   }
 
-  private buildColumns(): DataGridColumn<EvalExample>[] {
+  private buildColumns(): TableColumn<EvalExample>[] {
     return [
-      { key: 'input', label: this.localize('evalDatasetColumnInput') },
+      { key: 'input', label: this.localize('evalDatasetColumnInput'), cell: (row) => row.input },
       {
         key: 'expectedOutput',
         label: this.localize('evalDatasetColumnExpectedOutput'),
-        value: (row) => row.expectedOutput ?? '',
+        cell: (row) => row.expectedOutput ?? '',
       },
-      { key: 'tags', label: this.localize('evalDatasetColumnTags'), value: (row) => (row.tags ?? []).join(', ') },
+      { key: 'tags', label: this.localize('evalDatasetColumnTags'), cell: (row) => (row.tags ?? []).join(', ') },
     ];
   }
 
@@ -192,8 +192,8 @@ export class LyraEvalDataset extends LyraElement<LyraEvalDatasetEventMap> {
     this.emit('lr-example-remove-request', { id: this.selectedId });
   };
 
-  private onGridSelectionChange = (e: CustomEvent<{ row: EvalExample | null }>): void => {
-    const id = e.detail.row?.id ?? null;
+  private onGridRowClick = (e: CustomEvent<{ row: EvalExample }>): void => {
+    const id = e.detail.row.id;
     this.selectedId = id;
     this.emit('lr-example-select', { id });
   };
@@ -318,16 +318,17 @@ export class LyraEvalDataset extends LyraElement<LyraEvalDatasetEventMap> {
         ${this.renderToolbar()}
         ${this.searchable ? this.renderSearch() : nothing}
         ${tags.length > 0 ? this.renderTagFilter(tags) : nothing}
-        <lr-data-grid
+        <lr-table
           part="grid"
           aria-label=${label}
+          selection-mode="single"
           .columns=${this.buildColumns()}
           .rows=${visible}
           .rowKey=${(row: EvalExample) => row.id}
           .selectedKey=${this.selectedId}
-          .emptyText=${emptyText}
-          @lr-selection-change=${this.onGridSelectionChange}
-        ></lr-data-grid>
+          .emptyHeading=${emptyText}
+          @lr-row-click=${this.onGridRowClick}
+        ></lr-table>
       </div>
     `;
   }

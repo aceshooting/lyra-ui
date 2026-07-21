@@ -13,10 +13,10 @@ function examples(): EvalExample[] {
 }
 
 function gridRowCount(el: LyraEvalDataset): number {
-  return el.shadowRoot!.querySelector('lr-data-grid')!.shadowRoot!.querySelectorAll('tbody tr[part="row"]').length;
+  return el.shadowRoot!.querySelector('lr-table')!.shadowRoot!.querySelectorAll('tbody tr[part="row"]').length;
 }
 
-it('renders every example as a data-grid row', async () => {
+it('renders every example as a table row', async () => {
   const el = (await fixture(html`<lr-eval-dataset .examples=${examples()}></lr-eval-dataset>`)) as LyraEvalDataset;
   await el.updateComplete;
   expect(gridRowCount(el)).to.equal(3);
@@ -25,9 +25,11 @@ it('renders every example as a data-grid row', async () => {
 it('renders the built-in empty state when there are no examples', async () => {
   const el = (await fixture(html`<lr-eval-dataset></lr-eval-dataset>`)) as LyraEvalDataset;
   await el.updateComplete;
-  const empty = el.shadowRoot!.querySelector('lr-data-grid')!.shadowRoot!.querySelector('[part="empty"]');
+  const empty = el.shadowRoot!.querySelector('lr-table')!.shadowRoot!.querySelector('[part="empty"]') as
+    | (HTMLElement & { heading: string })
+    | null;
   expect(empty).to.exist;
-  expect(empty!.textContent).to.equal('No examples yet.');
+  expect(empty!.heading).to.equal('No examples yet.');
 });
 
 it('emits lr-example-add-request with no detail when Add is clicked', async () => {
@@ -57,7 +59,7 @@ it('keeps the remove button disabled until a row is selected, then emits lr-exam
   const removeButton = el.shadowRoot!.querySelector<HTMLButtonElement>('[part="remove-button"]')!;
   expect(removeButton.disabled).to.be.true;
 
-  const grid = el.shadowRoot!.querySelector('lr-data-grid')!;
+  const grid = el.shadowRoot!.querySelector('lr-table')!;
   const secondRow = grid.shadowRoot!.querySelectorAll('tbody tr[part="row"]')[1] as HTMLElement;
   const selectListener = oneEvent(el, 'lr-example-select');
   secondRow.click();
@@ -75,7 +77,7 @@ it('keeps the remove button disabled until a row is selected, then emits lr-exam
 it('clamps a stale selection back to null once the selected example is removed from `examples`', async () => {
   const el = (await fixture(html`<lr-eval-dataset .examples=${examples()}></lr-eval-dataset>`)) as LyraEvalDataset;
   await el.updateComplete;
-  const grid = el.shadowRoot!.querySelector('lr-data-grid')!;
+  const grid = el.shadowRoot!.querySelector('lr-table')!;
   (grid.shadowRoot!.querySelectorAll('tbody tr[part="row"]')[0] as HTMLElement).click();
   await el.updateComplete;
   const removeButton = el.shadowRoot!.querySelector<HTMLButtonElement>('[part="remove-button"]')!;
@@ -195,8 +197,10 @@ it('shows the no-matches message (not the empty-dataset message) once a filter m
   search.value = 'no such example exists anywhere';
   search.dispatchEvent(new Event('input'));
   await el.updateComplete;
-  const empty = el.shadowRoot!.querySelector('lr-data-grid')!.shadowRoot!.querySelector('[part="empty"]');
-  expect(empty!.textContent).to.equal('No examples match the current filters.');
+  const empty = el.shadowRoot!.querySelector('lr-table')!.shadowRoot!.querySelector('[part="empty"]') as
+    | (HTMLElement & { heading: string })
+    | null;
+  expect(empty!.heading).to.equal('No examples match the current filters.');
 });
 
 it('does not render a search field unless `searchable` is set', async () => {
@@ -215,7 +219,7 @@ it('is accessible fully populated: searchable, tag filters, a selection, and ren
     html`<lr-eval-dataset searchable .examples=${examples()}></lr-eval-dataset>`,
   )) as LyraEvalDataset;
   await el.updateComplete;
-  const grid = el.shadowRoot!.querySelector('lr-data-grid')!;
+  const grid = el.shadowRoot!.querySelector('lr-table')!;
   (grid.shadowRoot!.querySelectorAll('tbody tr[part="row"]')[0] as HTMLElement).click();
   await el.updateComplete;
   expect(el.shadowRoot!.querySelectorAll('lr-chip').length).to.be.greaterThan(0);
@@ -313,19 +317,19 @@ it('bridges native focus/blur on the search field to the host element', async ()
 it('lets a host aria-label win over `label` and the localized default on the internal grid', async () => {
   const defaultEl = (await fixture(html`<lr-eval-dataset></lr-eval-dataset>`)) as LyraEvalDataset;
   await defaultEl.updateComplete;
-  expect(defaultEl.shadowRoot!.querySelector('lr-data-grid')!.getAttribute('aria-label')).to.equal(
+  expect(defaultEl.shadowRoot!.querySelector('lr-table')!.getAttribute('aria-label')).to.equal(
     'Evaluation examples',
   );
 
   const labeled = (await fixture(html`<lr-eval-dataset label="My dataset"></lr-eval-dataset>`)) as LyraEvalDataset;
   await labeled.updateComplete;
-  expect(labeled.shadowRoot!.querySelector('lr-data-grid')!.getAttribute('aria-label')).to.equal('My dataset');
+  expect(labeled.shadowRoot!.querySelector('lr-table')!.getAttribute('aria-label')).to.equal('My dataset');
 
   const hostLabeled = (await fixture(
     html`<lr-eval-dataset label="My dataset" aria-label="Pairwise eval run 3"></lr-eval-dataset>`,
   )) as LyraEvalDataset;
   await hostLabeled.updateComplete;
-  expect(hostLabeled.shadowRoot!.querySelector('lr-data-grid')!.getAttribute('aria-label')).to.equal(
+  expect(hostLabeled.shadowRoot!.querySelector('lr-table')!.getAttribute('aria-label')).to.equal(
     'Pairwise eval run 3',
   );
 });

@@ -49,6 +49,7 @@ export const tokens = css`
        typography and geometry without editing every component. */
     --lr-space-2xs: var(--lr-theme-space-2xs, 0.125rem);
     --lr-space-2xl: var(--lr-theme-space-2xl, 2rem);
+    --lr-font-size-3xs: var(--lr-theme-font-size-3xs, 0.5rem);
     --lr-font-size-2xs: var(--lr-theme-font-size-2xs, 0.625rem);
     --lr-font-size-xs: var(--lr-theme-font-size-xs, 0.75rem);
     --lr-font-size-sm: var(--lr-theme-font-size-sm, 0.8125rem);

@@ -340,7 +340,7 @@ function contentLooksLikeText(content, wholeSource, depth = 0) {
   // wraps a sibling/nested region beyond a single glyph -- a composite row
   // (e.g. <lr-activity-feed>'s `[part="header"]`, which also carries its
   // own `[part="label"]`/`[part="summary"]` text spans) or a genuinely
-  // nested real control (<lr-data-grid>'s sortable `<th>` wrapping its own
+  // nested real control (<lr-table>'s sortable `<th>` wrapping its own
   // `<button>`). Both are "regular-sized", not a bare icon toggle, no matter
   // what text each nested part actually renders.
   for (const _tag of openTags(working)) {

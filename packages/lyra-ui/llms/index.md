@@ -2,7 +2,7 @@
 
 # Component index
 
-250 custom elements, grouped by the source family they live in.
+249 custom elements, grouped by the source family they live in.
 
 **Reading one component.** Its reference file path is derived from the tag — no search needed:
 `llms/components/<tag>.md` (e.g. `llms/components/lr-table.md`). Each is self-contained: import
@@ -47,7 +47,7 @@ Optional peers: `llms/peers.md`. `wa-*`/`sl-*` renames: `llms/migration.md`.
 - `lr-rubric-form` · forms/rubric-form/rubric-form.js — a configurable annotation rubric (LangSmith annotation-queue style): score, category, and freeform-comment keys with a submit-and-next fl...
 - `lr-locale-picker` · forms/locale-picker/locale-picker.js — a closed-list locale switcher over the library's own locale registry.
 
-## Data display, dashboards & flow canvas — `components/data/` (25)
+## Data display, dashboards & flow canvas — `components/data/` (24)
 
 - `lr-sparkline` · data/sparkline/sparkline.js — a zero-dependency inline SVG trend chart.
 - `lr-stat` · data/stat/stat.js — a KPI/stat card.
@@ -65,7 +65,6 @@ Optional peers: `llms/peers.md`. `wa-*`/`sl-*` renames: `llms/migration.md`.
 - `lr-flow-controls` · data/flow-controls/flow-controls.js — the canvas's button cluster: zoom in/out, fit, and interaction lock, so every flow surface ships the same affordances without hosts rebui...
 - `lr-flow-run-overlay` · data/flow-run-overlay/flow-run-overlay.js — execution-state presentation for a `lr-flow-canvas`: pushes a `FlowRunDecorations` map into the resolved canvas (the canvas itself render...
 - `lr-context-meter` · data/context-meter/context-meter.js — a segmented occupancy meter (bar or ring) for showing how a fixed capacity (a model's context window, a token budget, any consumable quot...
-- `lr-data-grid` · data/data-grid/data-grid.js — keyboard-navigable, responsive data grid with sortable columns.
 - `lr-calendar` · data/calendar/calendar.js — responsive month calendar with event markers and agenda mode.
 - `lr-timeline` · data/timeline/timeline.js — an ordered, connected sequence of past-event rows (an audit trail, an agent action history, a changelog) composed from `<lr-timeline-item...
 - `lr-timeline-item` · data/timeline/timeline-item.js — one marker + title + optional timestamp + optional description row inside `<lr-timeline>`'s default slot.

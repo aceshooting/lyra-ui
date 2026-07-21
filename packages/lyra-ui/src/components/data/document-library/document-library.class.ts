@@ -76,9 +76,8 @@ const FRESHNESS_TONE: Record<LibraryDocumentFreshness, 'success' | 'warning' | '
  * this package's other orchestration-level list surfaces (`<lr-thread-list>`'s
  * `lr-thread-pin`/`-archive`/`-delete` convention).
  *
- * Composes `<lr-table>` (not `<lr-data-grid>`) for the inventory grid itself: `<lr-data-grid>`
- * only supports a single `selectedKey` and stringifies every cell value (`String(value)`), so it
- * cannot host the checkbox/chip/icon content bulk selection, tags, and per-row type icons need.
+ * Composes `<lr-table>` for the inventory grid itself, since bulk selection, tags, and per-row
+ * type icons all need arbitrary cell content rather than a stringified value.
  * `<lr-table>` supports arbitrary `cell()`/`headerCell()` content and `priority`-driven responsive
  * column hiding, which this component relies on for its 320px-allocation behavior. Search
  * (`<lr-input type="search">`) and the tag facet (`<lr-combobox multiple>`) are both self-managed

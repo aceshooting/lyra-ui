@@ -39,7 +39,6 @@ export const ROOT_BARREL_TAGS = [
   'lr-control-group',
   'lr-conversation-item',
   'lr-copy-button',
-  'lr-data-grid',
   'lr-date-input',
   'lr-date-picker',
   'lr-dialog',

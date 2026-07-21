@@ -33,6 +33,19 @@
   regardless of the declared TypeScript type, and this bug class has shipped twice.
   `pnpm run check:numeric-guards` finds them; a genuine exception takes a
   `// numeric-guard-exempt: <reason>` comment.
+- **Closed string sets are literal union types, never a real TypeScript `enum`.** A prop backed by
+  a fixed set of strings (`variant`, `placement`, `size`, `tone`, `status`, ...) is typed as a
+  colocated exported union — e.g. `export type ButtonVariant = 'neutral' | 'brand' | 'success' |
+  'warning' | 'danger'` (`button.class.ts`), assigned directly to the `@property`. Two concrete
+  reasons, not style preference: a string `enum` is nominal, so `el.variant = 'brand'` — the
+  normal way to set a property in TS, as opposed to writing the HTML attribute — fails to
+  typecheck without `ButtonVariant.Brand`, defeating the point of an attribute-reflected API; and
+  an `enum` compiles to a runtime object even when nothing imports it by name, fighting the
+  tree-shaking/bundle-budget discipline below. Grep `@property\([^)]*\)\s+[a-zA-Z]+\??\s*:\s*'` for
+  an inline union that isn't a named-type reference — extract to a named type once the same
+  literal set reappears elsewhere in the component (a switch/lookup object, `includes()` guard, a
+  test) rather than leaving two hand-kept copies to drift. Use `as const` arrays/objects (56
+  already do) when the set needs runtime iteration; never `Object.values(SomeEnum)`.
 - **Icon-sized hit targets.** Any `<button>`/`role="button"`/`tabindex="0"` element carrying a
   `part=` resolves its clickable box to at least `--lr-icon-button-size` via
   `min-inline-size`/`min-block-size` — a floor, not a fixed size, so larger slotted content still

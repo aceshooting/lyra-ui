@@ -11,7 +11,7 @@ fallbacks, so it works standalone with no theme or runtime dependency.
 
 ## Which file to read
 
-Prefer the narrow file. `llms-full.txt` is the whole catalog concatenated (~250 components) and
+Prefer the narrow file. `llms-full.txt` is the whole catalog concatenated (~249 components) and
 costs several hundred thousand tokens; you almost never want all of it.
 
 - [llms/index.md](./llms/index.md): every tag, its exact import path, and a one-line purpose —
@@ -58,7 +58,7 @@ privacy rules.
 
 - **Form controls & inputs** (`components/forms/`, 26) — `lr-combobox`, `lr-option`, `lr-select`, `lr-date-picker`, `lr-date-input`, `lr-textarea`, `lr-button`, `lr-icon-button`, `lr-input`, `lr-number-input`, `lr-time-input`, `lr-phone-input`, `lr-time-range`, `lr-swatch-picker`, `lr-checkbox`, `lr-switch`, `lr-slider`, `lr-radio`, `lr-radio-group`, `lr-checkbox-group`, `lr-token-input`, `lr-code-editor`, `lr-color-picker`, `lr-emoji-picker`, `lr-rubric-form`, `lr-locale-picker`
 
-- **Data display, dashboards & flow canvas** (`components/data/`, 25) — `lr-sparkline`, `lr-stat`, `lr-table`, `lr-pagination`, `lr-gauge`, `lr-word-cloud`, `lr-heatmap`, `lr-sequence-strip`, `lr-tree`, `lr-tree-node`, `lr-flow-canvas`, `lr-flow-node`, `lr-flow-minimap`, `lr-flow-controls`, `lr-flow-run-overlay`, `lr-context-meter`, `lr-data-grid`, `lr-calendar`, `lr-timeline`, `lr-timeline-item`, `lr-file-tree`, `lr-env-list`, `lr-document-library`, `lr-graph-query-builder`, `lr-query-builder`
+- **Data display, dashboards & flow canvas** (`components/data/`, 24) — `lr-sparkline`, `lr-stat`, `lr-table`, `lr-pagination`, `lr-gauge`, `lr-word-cloud`, `lr-heatmap`, `lr-sequence-strip`, `lr-tree`, `lr-tree-node`, `lr-flow-canvas`, `lr-flow-node`, `lr-flow-minimap`, `lr-flow-controls`, `lr-flow-run-overlay`, `lr-context-meter`, `lr-calendar`, `lr-timeline`, `lr-timeline-item`, `lr-file-tree`, `lr-env-list`, `lr-document-library`, `lr-graph-query-builder`, `lr-query-builder`
 
 - **Layout, navigation & structure** (`components/layout/`, 28) — `lr-split`, `lr-widget`, `lr-carousel`, `lr-carousel-item`, `lr-button-group`, `lr-scroller`, `lr-tabs`, `lr-stepper`, `lr-control-group`, `lr-segmented`, `lr-virtual-list`, `lr-app-rail`, `lr-app-rail-item`, `lr-responsive-panel`, `lr-menu`, `lr-menu-item`, `lr-dropdown-item`, `lr-dock-panel`, `lr-card`, `lr-command-palette`, `lr-details`, `lr-accordion`, `lr-accordion-item`, `lr-breadcrumb`, `lr-breadcrumb-item`, `lr-dashboard-grid`, `lr-drilldown-panel`, `lr-filter-bar`
 

@@ -14,7 +14,6 @@
     "src/components/conversation/checkpoint/checkpoint.class.ts",
     "src/components/overlays/chip/chip.class.ts",
     "src/components/conversation/code-block/code-block-core.class.ts",
-    "src/components/data/data-grid/data-grid.class.ts",
     "src/components/forms/date-picker/date-input.class.ts",
     "src/components/overlays/dialog/dialog.class.ts",
     "src/components/data/env-list/env-list.class.ts",

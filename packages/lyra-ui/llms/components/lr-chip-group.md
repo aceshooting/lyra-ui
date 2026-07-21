@@ -23,7 +23,7 @@ already follow.
 ### `lr-chip`
 
 **Properties:**
-- `size: '2xs' | 'xs' | 's' | 'm' | 'l' | 'xl' = 'm'` (reflected) — standard visual-density
+- `size: '3xs' | '2xs' | 'xs' | 's' | 'm' | 'l' | 'xl' = 'm'` (reflected) — standard visual-density
   scale for typography, padding, gap, and icon size; `m` preserves the original chip dimensions
 - `tone: 'neutral' | 'brand' | 'success' | 'warning' | 'danger' = 'neutral'` (reflected — tints the
   whole pill using a loud-color-on-quiet-tint convention; `neutral` has no dedicated token pair, so

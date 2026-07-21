@@ -11,7 +11,7 @@ fallbacks, so it works standalone with no theme or runtime dependency.
 
 ## Which file to read
 
-Prefer the narrow file. `llms-full.txt` is the whole catalog concatenated (~250 components) and
+Prefer the narrow file. `llms-full.txt` is the whole catalog concatenated (~249 components) and
 costs several hundred thousand tokens; you almost never want all of it.
 
 - [llms/index.md](./llms/index.md): every tag, its exact import path, and a one-line purpose —

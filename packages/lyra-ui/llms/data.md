@@ -1563,50 +1563,6 @@ numbers, so the two circular-meter components in the library share one visual sc
 
 ---
 
-## `lr-data-grid`
-
-Keyboard-navigable data grid with typed `columns` and `rows`, sortable headers, roving cell focus,
-loading/empty states, and responsive horizontal overflow.
-
-**Properties:**
-- `columns: DataGridColumn<T>[] = []` (attribute: false) — `{ key, label, width?, sortable?,
-  value? }`; `width` becomes the header cell's `inline-size`, `value(row)` overrides the default
-  `row[key]` lookup
-- `rows: T[] = []` (attribute: false)
-- `rowKey: (row: T, index: number) => string | number = (_row, index) => index` (attribute: false)
-- `selectedKey: string | number | null = null` (attribute: false) — compared against `rowKey(row, i)`
-  to set `[part='row'][data-selected]` and `aria-selected`
-- `sortKey: string = ''`, `sortDirection: 'ascending' | 'descending' = 'ascending'`
-  (attribute: false) — the grid updates both on header activation and emits `lr-sort`, but never
-  reorders `rows`; sorting stays the consumer's job
-- `loading: boolean = false` (reflected) — replaces the body with a localized "loading" row
-- `emptyText: string = ''` (attribute `empty-text`) — empty-state text; falls back to the localized
-  `noData`
-- `accessibleLabel: string = ''` (attribute `aria-label`) — names the `role="grid"` table; falls back
-  to the localized `dataGridLabel`
-
-**Keyboard:** exactly one cell is tabbable. Arrows move the roving focus (Left/Right are swapped
-under RTL), Home/End jump to the first/last column of the current row, Enter/Space activate the row.
-The focus position is re-clamped whenever `rows`/`columns` shrink, so the grid can't lose its tab stop.
-
-**Events:** `lr-row-click` (`detail: { row }`, click or Enter/Space), `lr-selection-change`
-(`detail: { row }`, emitted alongside it after `selectedKey` updates), `lr-cell-focus`
-(`detail: { row, column }`, `column` is the column `key`), `lr-sort` (`detail: { key, direction }`,
-`sortable` columns only; re-activating the active column flips `direction`).
-
-**Slots:** none.
-
-**CSS parts:** `viewport` (the scrolling bordered wrapper), `grid` (the `<table role="grid">`),
-`header` (each sticky `<th>`), `row`, `cell`, `empty` (the loading / no-data cell).
-
-**Themeable custom properties:** `--lr-data-grid-row-selected-bg` (default
-`var(--lr-color-brand-quiet)`) — the background of the selected row's cells. It is an inline `var()`
-fallback at its point of use rather than a `:host` declaration, so it can be set on the element *or
-any ancestor*. It exists because Shadow Parts forbids an attribute selector after `::part()` —
-`::part(row)[aria-selected='true']` is invalid CSS — leaving the library-wide
-`--lr-color-brand-quiet` token as the only prior lever, which repaints every other surface reading
-it. `lr-table` exposes the equivalent knob as `--lr-table-row-selected-bg`.
-
 ## `lr-calendar`
 
 Responsive month calendar with event markers and an agenda view.

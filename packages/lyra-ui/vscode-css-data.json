@@ -852,7 +852,7 @@
       "name": "--lr-chip-min-height",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-chip>`** (default: `var(--lr-size-1-5rem)`) — Minimum block size of an interactive (`removable`/`toggleable`) chip's tap target. `size` keeps `2xs`/`xs`/`s`/`m` at the `1.5rem` (24px) WCAG 2.2 SC 2.5.8 minimum and raises `l` to `var(--lr-size-1-75rem)` and `xl` to `var(--lr-size-2rem)`. Non-interactive display chips are unaffected by this floor."
+        "value": "**`<lr-chip>`** (default: `var(--lr-size-1-5rem)`) — Minimum block size of an interactive (`removable`/`toggleable`) chip's tap target. `size` keeps `3xs`/`2xs`/`xs`/`s`/`m` at the `1.5rem` (24px) WCAG 2.2 SC 2.5.8 minimum and raises `l` to `var(--lr-size-1-75rem)` and `xl` to `var(--lr-size-2rem)`. Non-interactive display chips are unaffected by this floor."
       }
     },
     {
@@ -1196,13 +1196,6 @@
       "description": {
         "kind": "markdown",
         "value": "**`<lr-dashboard-grid>`** (default: `var(--lr-size-5rem)`) — Row track height. Written inline on `[part=\"base\"]` from the `rowHeight` property (in px) on every render."
-      }
-    },
-    {
-      "name": "--lr-data-grid-row-selected-bg",
-      "description": {
-        "kind": "markdown",
-        "value": "**`<lr-data-grid>`** (default: `var(--lr-color-brand-quiet)`) — Background of the selected row's cells. Shadow Parts forbids an attribute selector after `::part()`, so `::part(row)[aria-selected]` is invalid CSS and the selected row could otherwise only be restyled by hijacking the library-wide `--lr-color-brand-quiet` token."
       }
     },
     {

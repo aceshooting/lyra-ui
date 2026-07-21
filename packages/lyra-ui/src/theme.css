@@ -35,6 +35,7 @@
 
   /* Type scale. `-m` is the body step; `-md` is a separate, independently tunable step
      that happens to share its default. */
+  --lr-theme-font-size-3xs: 0.5rem;
   --lr-theme-font-size-2xs: 0.625rem;
   --lr-theme-font-size-xs: 0.75rem;
   --lr-theme-font-size-sm: 0.8125rem;

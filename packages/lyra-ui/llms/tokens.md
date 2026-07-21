@@ -16,7 +16,7 @@ For a ready-made light/dark base, import `@aceshooting/lyra-ui/theme.css` once a
 Per-component `--lr-<component>-*` custom properties (listed in each component's own section)
 override a single element without touching the shared layer.
 
-## Themeable inputs (233)
+## Themeable inputs (234)
 
 | Internal token | `--lr-theme-*` input | Fallback |
 |---|---|---|
@@ -50,6 +50,7 @@ override a single element without touching the shared layer.
 | `--lr-space-l` | `--lr-theme-space-l` | `1rem` |
 | `--lr-space-2xs` | `--lr-theme-space-2xs` | `0.125rem` |
 | `--lr-space-2xl` | `--lr-theme-space-2xl` | `2rem` |
+| `--lr-font-size-3xs` | `--lr-theme-font-size-3xs` | `0.5rem` |
 | `--lr-font-size-2xs` | `--lr-theme-font-size-2xs` | `0.625rem` |
 | `--lr-font-size-xs` | `--lr-theme-font-size-xs` | `0.75rem` |
 | `--lr-font-size-sm` | `--lr-theme-font-size-sm` | `0.8125rem` |
@@ -254,7 +255,7 @@ override a single element without touching the shared layer.
 | `--lr-graph-cat-7` | `--lr-theme-graph-cat-7` | `#79e2ef` |
 | `--lr-graph-cat-8` | `--lr-theme-graph-cat-8` | `#e4e7eb` |
 
-## Derived tokens (278)
+## Derived tokens (279)
 
 Computed from the layer above; not directly themeable.
 
@@ -290,6 +291,7 @@ Computed from the layer above; not directly themeable.
 | `--lr-space-l` | `var(--lr-theme-space-l, 1rem)` |
 | `--lr-space-2xs` | `var(--lr-theme-space-2xs, 0.125rem)` |
 | `--lr-space-2xl` | `var(--lr-theme-space-2xl, 2rem)` |
+| `--lr-font-size-3xs` | `var(--lr-theme-font-size-3xs, 0.5rem)` |
 | `--lr-font-size-2xs` | `var(--lr-theme-font-size-2xs, 0.625rem)` |
 | `--lr-font-size-xs` | `var(--lr-theme-font-size-xs, 0.75rem)` |
 | `--lr-font-size-sm` | `var(--lr-theme-font-size-sm, 0.8125rem)` |

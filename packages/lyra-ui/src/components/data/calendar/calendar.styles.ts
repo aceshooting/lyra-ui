@@ -35,9 +35,9 @@ export const styles = css`
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: calc(var(--lr-focus-ring-offset) * -1);
   }
-  /* Negative outline-offset (matching data-grid's own [role='gridcell']:focus-visible) so the ring
-     doesn't visually collide with [data-today='true']'s own outline below -- source order makes the
-     focus ring win for a focused today cell, which is the correct behavior while focused. */
+  /* Negative outline-offset so the ring doesn't visually collide with [data-today='true']'s own
+     outline below -- source order makes the focus ring win for a focused today cell, which is the
+     correct behavior while focused. */
   [part='day']:hover {
     background: var(--lr-color-brand-quiet);
   }

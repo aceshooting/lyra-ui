@@ -35,7 +35,7 @@ export const Tones: Story = {
 export const Sizes: Story = {
   render: () => html`
     <div style="display:flex; gap:0.5rem; flex-wrap:wrap; align-items:center;">
-      ${(['2xs', 'xs', 's', 'm', 'l', 'xl'] as const).map(
+      ${(['3xs', '2xs', 'xs', 's', 'm', 'l', 'xl'] as const).map(
         (size) => html`<lr-chip size=${size} toggleable><span slot="icon">●</span>${size}</lr-chip>`,
       )}
     </div>

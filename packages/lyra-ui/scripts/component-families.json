@@ -49,7 +49,7 @@
     "rubric-form": "forms", "select": "forms", "slider": "forms", "swatch-picker": "forms",
     "switch": "forms", "textarea": "forms", "time-range": "forms", "token-input": "forms",
 
-    "calendar": "data", "context-meter": "data", "data-grid": "data", "document-library": "data",
+    "calendar": "data", "context-meter": "data", "document-library": "data",
     "env-list": "data", "file-tree": "data", "flow-canvas": "data", "flow-controls": "data",
     "flow-minimap": "data", "flow-node": "data", "flow-run-overlay": "data", "gauge": "data",
     "graph-query-builder": "data", "heatmap": "data", "pagination": "data", "query-builder": "data",

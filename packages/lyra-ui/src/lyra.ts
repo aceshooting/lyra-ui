@@ -146,7 +146,6 @@ import './components/utility/icon/icon.js';
 import './components/forms/icon-button/icon-button.js';
 import './components/layout/command-palette/command-palette.js';
 import './components/forms/code-editor/code-editor.js';
-import './components/data/data-grid/data-grid.js';
 import './components/data/calendar/calendar.js';
 import './components/media/animated-image/animated-image.js';
 import './components/media/animation/animation.js';
@@ -776,8 +775,6 @@ export { LyraCommandPalette } from './components/layout/command-palette/command-
 export type { LyraCommand, LyraCommandPaletteEventMap } from './components/layout/command-palette/command-palette.js';
 export { LyraCodeEditor } from './components/forms/code-editor/code-editor.js';
 export type { LyraCodeEditorEventMap } from './components/forms/code-editor/code-editor.js';
-export { LyraDataGrid } from './components/data/data-grid/data-grid.js';
-export type { DataGridColumn, LyraDataGridEventMap } from './components/data/data-grid/data-grid.js';
 export { LyraCalendar } from './components/data/calendar/calendar.js';
 export type { CalendarEvent, LyraCalendarEventMap } from './components/data/calendar/calendar.js';
 

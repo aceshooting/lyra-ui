@@ -47,6 +47,46 @@ it('keeps size="m" pixel-equivalent to the original chip and scales compact tier
   }
 });
 
+it('3xs is smaller than 2xs on every density metric except the shared gap floor', async () => {
+  const render = async (size: '2xs' | '3xs'): Promise<LyraChip> =>
+    (await fixture(html`
+      <lr-chip size=${size}><svg slot="icon" viewBox="0 0 10 10"></svg>Tag</lr-chip>
+    `)) as LyraChip;
+  const metrics = (el: LyraChip) => {
+    const base = getComputedStyle(el.shadowRoot!.querySelector('[part="base"]') as HTMLElement);
+    const icon = getComputedStyle(el.shadowRoot!.querySelector('[part="icon"]') as HTMLElement);
+    return {
+      font: Number.parseFloat(base.fontSize),
+      paddingBlock: Number.parseFloat(base.paddingBlockStart),
+      paddingInline: Number.parseFloat(base.paddingInlineStart),
+      icon: Number.parseFloat(icon.fontSize),
+    };
+  };
+  const tiny = metrics(await render('3xs'));
+  const floor = metrics(await render('2xs'));
+  expect(tiny.font, '3xs font').to.be.lessThan(floor.font);
+  expect(tiny.paddingBlock, '3xs block padding').to.equal(0);
+  expect(tiny.paddingInline, '3xs inline padding').to.be.lessThan(floor.paddingInline);
+  expect(tiny.icon, '3xs icon').to.be.lessThan(floor.icon);
+});
+
+it('keeps a removable/toggleable 3xs chip at the WCAG 2.5.8 minimum tap target', async () => {
+  const removable = (await fixture(html`
+    <lr-chip size="3xs" removable><span slot="icon">●</span>Tag</lr-chip>
+  `)) as LyraChip;
+  const removeButton = removable.shadowRoot!.querySelector('[part="remove-button"]') as HTMLElement;
+  expect(Number.parseFloat(getComputedStyle(removeButton).minBlockSize)).to.be.at.least(40);
+  await expect(removable).to.be.accessible();
+
+  const toggleable = (await fixture(html`
+    <lr-chip size="3xs" toggleable><span slot="icon">●</span>Tag</lr-chip>
+  `)) as LyraChip;
+  const base = toggleable.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  expect(Number.parseFloat(getComputedStyle(base).minBlockSize)).to.be.at.least(24);
+  expect(base.getAttribute('tabindex')).to.equal('0');
+  await expect(toggleable).to.be.accessible();
+});
+
 it('keeps compact removable and toggleable chips keyboard-accessible with adequate targets', async () => {
   for (const size of ['2xs', 'xs', 's', 'm'] as const) {
     const removable = (await fixture(html`

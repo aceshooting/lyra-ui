@@ -925,7 +925,7 @@ the review budget on what no script can see.
 
 **Why.** lr-virtual-list positions every row `position:absolute` with a translateY transform, and CSS sticky positioning never activates inside a transform-offset ancestor, so a consumer CSS rule requesting `position: sticky` on a group-header row silently never pins; lr-thread-list's group headers correctly work around this via a manually-positioned `[part='group']` overlay instead of sticky.
 
-**How to verify.** grep `packages/lyra-ui/src/components/**/*.styles.ts` for `position: sticky` and confirm none of the matches sit inside a row rendered by an internal `lr-virtual-list` (today's only matches — dataset/spreadsheet/csv-viewer, data-grid, table, json-viewer — are non-virtualized scrolling tables, not virtual-list rows). Confirm `virtual-list.styles.ts:58-69`'s `[part='group']` (position:absolute + z-index) is the pattern any new pinned-row feature reuses, not a bare `position: sticky` rule on a virtualized row.
+**How to verify.** grep `packages/lyra-ui/src/components/**/*.styles.ts` for `position: sticky` and confirm none of the matches sit inside a row rendered by an internal `lr-virtual-list` (today's only matches — dataset/spreadsheet/csv-viewer, table, json-viewer — are non-virtualized scrolling tables, not virtual-list rows). Confirm `virtual-list.styles.ts:58-69`'s `[part='group']` (position:absolute + z-index) is the pattern any new pinned-row feature reuses, not a bare `position: sticky` rule on a virtualized row.
 
 ### `perf-decimation-anchor-and-uniform-cap` — medium
 

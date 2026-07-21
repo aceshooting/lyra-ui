@@ -1,7 +1,7 @@
 import { fixture, expect, html, oneEvent } from '@open-wc/testing';
 import './eval-result.js';
 import type { LyraEvalResult, EvalRunResult } from './eval-result.js';
-import type { DataGridColumn } from '../../data/data-grid/data-grid.class.js';
+import type { TableColumn } from '../../data/table/table.class.js';
 import type { RubricKey } from '../../forms/rubric-form/rubric-form.class.js';
 
 const RUBRIC_KEYS: RubricKey[] = [
@@ -9,9 +9,9 @@ const RUBRIC_KEYS: RubricKey[] = [
   { key: 'notes', type: 'comment', label: 'Notes' },
 ];
 
-const COLUMNS: DataGridColumn<EvalRunResult>[] = [
-  { key: 'label', label: 'Run', value: (r) => r.label },
-  { key: 'accuracy', label: 'Accuracy', value: (r) => r.review?.accuracy ?? r.scores?.accuracy },
+const COLUMNS: TableColumn<EvalRunResult>[] = [
+  { key: 'label', label: 'Run', cell: (r) => r.label },
+  { key: 'accuracy', label: 'Accuracy', cell: (r) => r.review?.accuracy ?? r.scores?.accuracy },
 ];
 
 const RUNS: EvalRunResult[] = [

@@ -172,7 +172,6 @@ export type LyraMessageKey =
   | 'commandPaletteResults'
   | 'iconButtonLabel'
   | 'codeEditorLabel'
-  | 'dataGridLabel'
   | 'calendarLabel'
   | 'calendarEmpty'
   | 'switchRequired'
@@ -1181,7 +1180,6 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, string> = {
   commandPaletteResults: 'Commands',
   iconButtonLabel: 'Button',
   codeEditorLabel: 'Code editor',
-  dataGridLabel: 'Data grid',
   calendarLabel: 'Calendar',
   calendarEmpty: 'No events this month.',
   switchRequired: 'Please turn this on.',

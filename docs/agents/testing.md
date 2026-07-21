@@ -29,7 +29,7 @@
   never actually reached the intended state passes vacuously. So: build the populated state,
   assert the state-specific part/element actually rendered, then
   `await expect(el).to.be.accessible()` — see the populated axe test in
-  `src/components/data-grid/data-grid.test.ts` for the pattern.
+  `src/components/data/table/table.test.ts` for the pattern.
 - **Adversarial fixtures.** Happy-path fixtures hide recurring bug classes; each interaction
   shape gets its matching hostile fixture:
   - Keyboard activation (Enter/Space) is asserted to act on the element that actually has focus,

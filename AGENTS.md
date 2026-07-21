@@ -111,6 +111,9 @@ Full rules, incidents, and patterns:
   (`trueDefaultBooleanConverter`) — Lit's presence-based converter can't parse `prop="false"`.
 - Numeric properties reaching layout/`Intl`/canvas/timer math go through the `finiteNumber`
   family (`src/internal/numbers.ts`), never bare `isNaN()`.
+- Closed string sets (`variant`, `placement`, `tone`, ...) are colocated exported literal union
+  types, never a real TS `enum` — `enum` is nominal (breaks `el.prop = 'value'`) and ships a
+  runtime object against the tree-shaking budget; extract a repeated inline union to a named type.
 - Interactive elements carrying `part=` get a `--lr-icon-button-size` min hit-area floor.
 - Never a settable `rel` independent of `target` — derive `rel="noopener noreferrer"` from
   `target` (reverse-tabnabbing vector otherwise).

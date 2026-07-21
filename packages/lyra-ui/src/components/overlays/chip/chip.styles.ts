@@ -37,6 +37,16 @@ export const styles = css`
        non-interactive chips only. */
   }
 
+  :host([size='3xs']) {
+    --lr-chip-font-size: var(--lr-font-size-3xs);
+    --lr-chip-padding-block: 0;
+    /* Below --lr-space-2xs (the space scale's own floor, still used by the 2xs tier) --
+       same precedent as 2xs's own padding-block above, which already bottoms out below
+       the space scale via a raw --lr-size-* token rather than reusing --lr-space-2xs. */
+    --lr-chip-padding-inline: var(--lr-size-0-0625rem);
+    --lr-chip-gap: var(--lr-space-2xs);
+    --lr-chip-icon-size: var(--lr-font-size-3xs);
+  }
   :host([size='2xs']) {
     --lr-chip-font-size: var(--lr-font-size-2xs);
     --lr-chip-padding-block: var(--lr-size-0-0625rem);

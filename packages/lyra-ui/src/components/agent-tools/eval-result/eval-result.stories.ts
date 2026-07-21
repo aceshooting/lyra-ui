@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
 import type { EvalRunResult } from './eval-result.js';
-import type { DataGridColumn } from '../../data/data-grid/data-grid.class.js';
+import type { TableColumn } from '../../data/table/table.class.js';
 import type { RubricKey } from '../../forms/rubric-form/rubric-form.class.js';
 
 const rubricKeys: RubricKey[] = [
@@ -29,11 +29,11 @@ const runs: EvalRunResult[] = [
   },
 ];
 
-const columns: DataGridColumn<EvalRunResult>[] = [
-  { key: 'label', label: 'Run', sortable: true, value: (r) => r.label },
-  { key: 'model', label: 'Model', value: (r) => r.model },
-  { key: 'promptVersion', label: 'Prompt version', value: (r) => r.promptVersion },
-  { key: 'accuracy', label: 'Accuracy', sortable: true, value: (r) => r.review?.accuracy ?? r.scores?.accuracy },
+const columns: TableColumn<EvalRunResult>[] = [
+  { key: 'label', label: 'Run', sortable: true, cell: (r) => r.label },
+  { key: 'model', label: 'Model', cell: (r) => r.model },
+  { key: 'promptVersion', label: 'Prompt version', cell: (r) => r.promptVersion },
+  { key: 'accuracy', label: 'Accuracy', sortable: true, cell: (r) => r.review?.accuracy ?? r.scores?.accuracy },
 ];
 
 const meta: Meta = {

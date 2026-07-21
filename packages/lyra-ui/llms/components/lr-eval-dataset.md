@@ -19,7 +19,7 @@ Filterable and taggable evaluation-example list with add, remove, import, and ex
   expectedOutput?: string; tags?: string[]; metadata?: Record<string, unknown> }` (exported here).
   Deliberately its own small shape rather than reusing anything from `src/ai/types.ts` — none of that
   module's interfaces models "one row of a labeled eval dataset". `input`/`expectedOutput` are plain
-  strings (not structured payloads) to match `lr-data-grid`'s stringifying cell rendering. Fully
+  strings (not structured payloads), rendered as plain text by every column's `cell()`. Fully
   controlled: add/remove/import/export are all *requests*; the host mutates and passes the array back
 - `searchable: boolean = false` (reflected) — built-in free-text search over `input`,
   `expectedOutput`, and `tags` (case-insensitive substring)
