@@ -55,7 +55,7 @@ const languageSamples = {
   java: `public final class Hello {\n  public static void main(String[] args) {\n    System.out.println("Hello");\n  }\n}`,
   javascript: 'const greet = (name) => console.log(`Hello, ${name}!`);',
   typescript: `type User = { name: string };\nconst user: User = { name: "Lyra" };`,
-  greycat: `model User { name: String }\nfn greet(user: User) { return user.name }`,
+  greycat: `type User { name: String }\nfn greet(user: User) { return user.name }`,
   html: `<main><h1>Hello, Lyra</h1></main>`,
 } as const;
 
