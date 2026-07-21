@@ -1,0 +1,21 @@
+#!/usr/bin/env bash
+# Fast local guard: block a commit that would introduce a credential secretlint can detect.
+# Scans only the STAGED (added/copied/modified) files so it stays quick -- the full-repo scan
+# runs in CI (`pnpm run check:secrets`). Bypass in a genuine emergency with `git commit --no-verify`.
+#
+# Activated by the root `prepare` script (`git config core.hooksPath .githooks`) on `pnpm install`.
+set -euo pipefail
+
+root="$(git rev-parse --show-toplevel)"
+bin="$root/node_modules/.bin/secretlint"
+if [ ! -x "$bin" ]; then
+  echo "pre-commit: secretlint not installed (run 'pnpm install'); skipping secret scan." >&2
+  exit 0
+fi
+
+count="$(git diff --cached --name-only --diff-filter=ACM | wc -l | tr -d ' ')"
+if [ "$count" -eq 0 ]; then
+  exit 0
+fi
+
+git diff --cached --name-only -z --diff-filter=ACM | xargs -0 "$bin"

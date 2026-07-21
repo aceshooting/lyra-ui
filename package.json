@@ -8,6 +8,7 @@
     "node": ">=20"
   },
   "scripts": {
+    "prepare": "git config core.hooksPath .githooks || true",
     "build": "pnpm -r --if-present run build",
     "test": "pnpm -r --if-present run test",
     "lint": "pnpm -r --if-present run lint",
