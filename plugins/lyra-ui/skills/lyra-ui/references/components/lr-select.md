@@ -45,8 +45,8 @@ exactly like the multi-option case, until the trigger is actually activated.
 - `errorText: string = ''` (attribute `error-text` — static error copy shown below the hint;
   overridden by slotted `error` content when provided)
 - `open: boolean = false` (reflected)
-- `size: 'xs'|'s'|'m'|'l'|'xl' = 'm'` (reflected — same scale as `lr-toast-item`'s `size`, for
-  compact toolbar placements that don't fit the default trigger height)
+- `size: '2xs'|'xs'|'s'|'m'|'l'|'xl' = 'm'` (reflected — same scale as `lr-input`/`lr-combobox`'s
+  `size`, for compact toolbar placements that don't fit the default trigger height)
 - `autoCommitSingleOption: boolean = false` (attribute `auto-commit-single-option`) — opts in to the
   single-option auto-commit behavior described above
 - `value: string` — a getter/setter; always a single string (no `multiple` mode)

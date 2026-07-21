@@ -21,7 +21,7 @@ shared `FormAssociated` mixin — see gotchas).
 
 **Properties:**
 - `multiple: boolean = false` (reflected)
-- `size: 'xs' | 's' | 'm' | 'l' | 'xl' = 'm'` (reflected — same scale as `lr-select`'s `size`;
+- `size: '2xs' | 'xs' | 's' | 'm' | 'l' | 'xl' = 'm'` (reflected — same scale as `lr-select`'s `size`;
   also scales the "+N" overflow tag and decorative expand icon; `size="s"` shares its outer
   control height with `lr-input`, `lr-select`, and `lr-segmented` without part overrides)
 - `placeholder: string = ''`
