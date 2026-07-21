@@ -58,9 +58,13 @@ function cloneToSvgNamespace(node: Element): SVGElement | null {
  * @customElement lr-icon-button
  * @slot - Optional custom icon content, rendered beside (not inside) the `icon` glyph.
  * @csspart button - Native button.
- * @csspart fallback - The internal SVG-namespaced clone target for slotted bare geometry. Only
- *   present in the DOM while at least one top-level slotted element needs it; a complete `<svg>`,
- *   `<img>`, or custom element never mounts it.
+ * @csspart fallback - The internal SVG-namespaced clone target for slotted bare geometry. Carries
+ *   the same `fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"
+ *   stroke-linejoin="round"` defaults `<lr-icon>`'s own wrapper svg does, so bare stroke-style
+ *   geometry (no fill/stroke of its own) renders outlined instead of as a solid shape; an explicit
+ *   `fill`/`stroke`/etc. already present on the slotted node still wins for that node. Only present
+ *   in the DOM while at least one top-level slotted element needs it; a complete `<svg>`, `<img>`,
+ *   or custom element never mounts it.
  * @cssprop [--lr-icon-button-size=2.5rem] - Minimum tappable inline and block size of the native
  *   button — a **floor**, not a fixed size: content larger than it grows the button and keeps its
  *   own aspect ratio, while a small glyph pads out to it. A library-wide token (declared on
@@ -156,7 +160,7 @@ export class LyraIconButton extends LyraElement {
 
   render(): TemplateResult {
     const label = this.accessibleLabel || this.label || this.localize('iconButtonLabel');
-    return html`<button part="button" type="button" ?disabled=${this.disabled} aria-label=${label} @click=${this.onClick}>${this.icon ? html`<lr-icon name=${this.icon}></lr-icon>` : nothing}${this.hasBareGeometry ? html`<svg part="fallback" viewBox="0 0 24 24" aria-hidden="true" focusable="false"></svg>` : nothing}<slot @slotchange=${this.onSlotChange}></slot></button>`;
+    return html`<button part="button" type="button" ?disabled=${this.disabled} aria-label=${label} @click=${this.onClick}>${this.icon ? html`<lr-icon name=${this.icon}></lr-icon>` : nothing}${this.hasBareGeometry ? html`<svg part="fallback" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"></svg>` : nothing}<slot @slotchange=${this.onSlotChange}></slot></button>`;
   }
 }
 declare global { interface HTMLElementTagNameMap { 'lr-icon-button': LyraIconButton; } }

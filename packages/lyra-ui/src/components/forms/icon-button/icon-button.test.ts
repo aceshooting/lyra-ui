@@ -80,6 +80,36 @@ it('restores SVG context for slotted bare geometry with no icon and no enclosing
   expect(original.namespaceURI).to.not.equal('http://www.w3.org/2000/svg');
 });
 
+it('gives the fallback svg the same fill/stroke defaults lr-icon own wrapper uses, so bare stroke-style geometry renders outlined', async () => {
+  const el = await fixture(html`
+    <lr-icon-button aria-label="Star">
+      <path d="M12 2l3 7h7l-5.5 4.5L18 21l-6-4-6 4 1.5-7.5L2 9h7z"></path>
+    </lr-icon-button>
+  `);
+  const fallback = el.shadowRoot!.querySelector('[part="fallback"]') as SVGSVGElement;
+  expect(fallback.getAttribute('fill')).to.equal('none');
+  expect(fallback.getAttribute('stroke')).to.equal('currentColor');
+  expect(fallback.getAttribute('stroke-width')).to.equal('1.75');
+  expect(fallback.getAttribute('stroke-linecap')).to.equal('round');
+  expect(fallback.getAttribute('stroke-linejoin')).to.equal('round');
+});
+
+it('lets a slotted node with its own fill/stroke override the fallback svg defaults', async () => {
+  const el = await fixture(html`
+    <lr-icon-button aria-label="Dot">
+      <circle cx="12" cy="12" r="8" fill="red" stroke="blue"></circle>
+    </lr-icon-button>
+  `);
+  const fallback = el.shadowRoot!.querySelector('[part="fallback"]') as SVGSVGElement;
+  // Parent svg still carries the base defaults...
+  expect(fallback.getAttribute('fill')).to.equal('none');
+  // ...but the cloned child's own explicit attributes win for that child, matching today's
+  // verbatim-attribute-copy behavior.
+  const clonedCircle = fallback.querySelector('circle')!;
+  expect(clonedCircle.getAttribute('fill')).to.equal('red');
+  expect(clonedCircle.getAttribute('stroke')).to.equal('blue');
+});
+
 it('never runs a slotted custom element through the bare-geometry clone path', async () => {
   const el = await fixture(html`
     <lr-icon-button aria-label="Français">
