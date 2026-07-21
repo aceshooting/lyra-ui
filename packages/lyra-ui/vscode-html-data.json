@@ -602,16 +602,8 @@
           "name": "preferred-mode",
           "description": {
             "kind": "markdown",
-            "value": "Manually prefers `'full'` or `'icon-only'` for the non-mobile breakpoint axis, while the\n`mobile-breakpoint` continues to be tracked automatically regardless — e.g. a user's manual\ncollapse toggle that should still yield to a genuinely too-narrow-for-any-inline-rail\nviewport. Only consulted while `mode` isn't force-pinned via its own accessor (see the class\ndoc) — that continues to take full priority, unchanged. Unset (the default, `null`)\nreproduces today's exact breakpoint-only behavior.\n\nType: `'full' | 'icon-only' | null | undefined`"
-          },
-          "values": [
-            {
-              "name": "full"
-            },
-            {
-              "name": "icon-only"
-            }
-          ]
+            "value": "Manually prefers `'full'` or `'icon-only'` for the non-mobile breakpoint axis, while the\n`mobile-breakpoint` continues to be tracked automatically regardless — e.g. a user's manual\ncollapse toggle that should still yield to a genuinely too-narrow-for-any-inline-rail\nviewport. Only consulted while `mode` isn't force-pinned via its own accessor (see the class\ndoc) — that continues to take full priority, unchanged. Unset (the default, `null`)\nreproduces today's exact breakpoint-only behavior.\n\nType: `AppRailPreferredMode | null | undefined`"
+          }
         },
         {
           "name": "rail-width-px",
@@ -777,16 +769,8 @@
           "name": "view",
           "description": {
             "kind": "markdown",
-            "value": "Which slot is currently visible.\n\nType: `'preview' | 'code'`  \nDefault: `'preview'`"
-          },
-          "values": [
-            {
-              "name": "preview"
-            },
-            {
-              "name": "code"
-            }
-          ]
+            "value": "Which slot is currently visible.\n\nType: `ArtifactPanelView`  \nDefault: `'preview'`"
+          }
         }
       ]
     },
@@ -1543,16 +1527,8 @@
           "name": "controller",
           "description": {
             "kind": "markdown",
-            "value": "Type: `'agent' | 'user'`  \nDefault: `'agent'`"
-          },
-          "values": [
-            {
-              "name": "agent"
-            },
-            {
-              "name": "user"
-            }
-          ]
+            "value": "Type: `BrowserFrameController`  \nDefault: `'agent'`"
+          }
         },
         {
           "name": "controls",
@@ -1579,22 +1555,8 @@
           "name": "status",
           "description": {
             "kind": "markdown",
-            "value": "Type: `'idle' | 'connecting' | 'streaming' | 'stalled'`  \nDefault: `'idle'`"
-          },
-          "values": [
-            {
-              "name": "idle"
-            },
-            {
-              "name": "connecting"
-            },
-            {
-              "name": "streaming"
-            },
-            {
-              "name": "stalled"
-            }
-          ]
+            "value": "Type: `BrowserFrameStatus`  \nDefault: `'idle'`"
+          }
         },
         {
           "name": "url",
@@ -1853,16 +1815,8 @@
           "name": "view",
           "description": {
             "kind": "markdown",
-            "value": "Type: `'month' | 'agenda'`  \nDefault: `'month'`"
-          },
-          "values": [
-            {
-              "name": "month"
-            },
-            {
-              "name": "agenda"
-            }
-          ]
+            "value": "Type: `CalendarView`  \nDefault: `'month'`"
+          }
         },
         {
           "name": "view-date"
@@ -2246,6 +2200,13 @@
           }
         },
         {
+          "name": "disabled",
+          "description": {
+            "kind": "markdown",
+            "value": "Type: `boolean`"
+          }
+        },
+        {
           "name": "enterkeyhint",
           "description": {
             "kind": "markdown",
@@ -2281,10 +2242,24 @@
           }
         },
         {
+          "name": "name",
+          "description": {
+            "kind": "markdown",
+            "value": "Type: `string`"
+          }
+        },
+        {
           "name": "placeholder",
           "description": {
             "kind": "markdown",
             "value": "Type: `string`  \nDefault: `''`"
+          }
+        },
+        {
+          "name": "required",
+          "description": {
+            "kind": "markdown",
+            "value": "Type: `boolean`"
           }
         },
         {
@@ -3063,6 +3038,13 @@
           }
         },
         {
+          "name": "disabled",
+          "description": {
+            "kind": "markdown",
+            "value": "Type: `boolean`"
+          }
+        },
+        {
           "name": "error-text",
           "description": {
             "kind": "markdown",
@@ -3105,6 +3087,13 @@
           }
         },
         {
+          "name": "name",
+          "description": {
+            "kind": "markdown",
+            "value": "Type: `string`"
+          }
+        },
+        {
           "name": "placeholder",
           "description": {
             "kind": "markdown",
@@ -3116,6 +3105,13 @@
           "description": {
             "kind": "markdown",
             "value": "Type: `boolean`  \nDefault: `false`"
+          }
+        },
+        {
+          "name": "required",
+          "description": {
+            "kind": "markdown",
+            "value": "Type: `boolean`"
           }
         },
         {
@@ -3188,6 +3184,13 @@
           }
         },
         {
+          "name": "disabled",
+          "description": {
+            "kind": "markdown",
+            "value": "Type: `boolean`"
+          }
+        },
+        {
           "name": "error-text",
           "description": {
             "kind": "markdown",
@@ -3213,6 +3216,20 @@
           "description": {
             "kind": "markdown",
             "value": "Optional locale override. Otherwise the nearest `locale`/`lang` ancestor is used.\n\nType: `string`  \nDefault: `''`"
+          }
+        },
+        {
+          "name": "name",
+          "description": {
+            "kind": "markdown",
+            "value": "Type: `string`"
+          }
+        },
+        {
+          "name": "required",
+          "description": {
+            "kind": "markdown",
+            "value": "Type: `boolean`"
           }
         }
       ]
@@ -3785,7 +3802,7 @@
       "name": "lr-control-group",
       "description": {
         "kind": "markdown",
-        "value": "`<lr-control-group>` — a responsive layout primitive for a row of mixed form\ncontrols and action buttons (e.g. a segmented metric switcher beside a compact\nselect and an export button in a dashboard toolbar). Unlike `<lr-button-group>`\n(a uniform-height row of `<lr-button>`s that stretches every child to the row's\nfull height), this centers children of differing intrinsic heights and does not\nassume any particular child type.\n\n---\n\n**Slots**\n\n| Name | Description |\n| --- | --- |\n| (default) | Form controls, buttons, or any other action content. |\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `base` | The group wrapper (`role=\"group\"`). |\n\n---\n\n**CSS Custom Properties**\n\n- `--lr-control-group-gap` (default: `var(--lr-space-xs)`) — Gap between grouped controls."
+        "value": "`<lr-control-group>` — a responsive layout primitive for a row of mixed form\ncontrols and action buttons (e.g. a segmented metric switcher beside a compact\nselect and an export button in a dashboard toolbar). Unlike `<lr-button-group>`\n(a uniform-height row of `<lr-button>`s that stretches every child to the row's\nfull height), this centers children of differing intrinsic heights and does not\nassume any particular child type.\n\n`container-type: inline-size` (needed for the `@container` breakpoint below) is opt-in via\n`responsive`, not automatic: unconditionally applying it made the group collapse to 0 inline\nsize whenever it sat as an ordinary flex-basis:auto child of a shrink-to-fit flex row -- exactly\nthis component's own toolbar-row use case. Set `responsive` when this group's own size instead\ncomes from a percentage width, grid track, or block-level parent.\n\n---\n\n**Slots**\n\n| Name | Description |\n| --- | --- |\n| (default) | Form controls, buttons, or any other action content. |\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `base` | The group wrapper (`role=\"group\"`). |\n\n---\n\n**CSS Custom Properties**\n\n- `--lr-control-group-gap` (default: `var(--lr-space-xs)`) — Gap between grouped controls."
       },
       "attributes": [
         {
@@ -3800,6 +3817,13 @@
           "description": {
             "kind": "markdown",
             "value": "Optional locale override. Otherwise the nearest `locale`/`lang` ancestor is used.\n\nType: `string`  \nDefault: `''`"
+          }
+        },
+        {
+          "name": "responsive",
+          "description": {
+            "kind": "markdown",
+            "value": "Opts into the group's own `@container` narrow-allocation breakpoint (see the class doc) by\nmaking the host a CSS size-query container. Left unset (the default), the host uses\n`container-type: normal` instead: `container-type: inline-size` forces this element's own\nauto/content-based inline size to be computed as if it had no content, which silently\ncollapses it to 0 width whenever it sits as an ordinary (`flex-basis: auto`) child of a\nshrink-to-fit flex row — exactly this component's own stated primary use case (a toolbar\nrow of mixed controls). Set `responsive` only when the group's own size instead comes from\nsomewhere else (a percentage width, a grid track, a block-level parent), where that failure\nmode does not apply and the narrow-allocation breakpoint is wanted.\n\nType: `boolean`  \nDefault: `false`"
           }
         }
       ]
@@ -4137,6 +4161,13 @@
           }
         },
         {
+          "name": "disabled",
+          "description": {
+            "kind": "markdown",
+            "value": "Type: `boolean`"
+          }
+        },
+        {
           "name": "enterkeyhint",
           "description": {
             "kind": "markdown",
@@ -4230,6 +4261,13 @@
           ]
         },
         {
+          "name": "name",
+          "description": {
+            "kind": "markdown",
+            "value": "Type: `string`"
+          }
+        },
+        {
           "name": "open",
           "description": {
             "kind": "markdown",
@@ -4252,6 +4290,13 @@
         },
         {
           "name": "readonly",
+          "description": {
+            "kind": "markdown",
+            "value": "Type: `boolean`"
+          }
+        },
+        {
+          "name": "required",
           "description": {
             "kind": "markdown",
             "value": "Type: `boolean`"
@@ -4543,16 +4588,8 @@
           "name": "layout",
           "description": {
             "kind": "markdown",
-            "value": "`'unified'` (the default) renders today's single interleaved `<pre>`; `'split'` renders two\nside-by-side columns derived from the same `DiffOp[]` (see `pairOpsForSplit()`).\n\nType: `'unified' | 'split'`  \nDefault: `'unified'`"
-          },
-          "values": [
-            {
-              "name": "unified"
-            },
-            {
-              "name": "split"
-            }
-          ]
+            "value": "`'unified'` (the default) renders today's single interleaved `<pre>`; `'split'` renders two\nside-by-side columns derived from the same `DiffOp[]` (see `pairOpsForSplit()`).\n\nType: `LyraDiffViewLayout`  \nDefault: `'unified'`"
+          }
         },
         {
           "name": "locale",
@@ -4669,16 +4706,8 @@
           "name": "diff-layout",
           "description": {
             "kind": "markdown",
-            "value": "Forwarded to the internal `<lr-diff-view>`'s own `layout` property while `view=\"diff\"`.\n\nType: `'unified' | 'split'`  \nDefault: `'unified'`"
-          },
-          "values": [
-            {
-              "name": "unified"
-            },
-            {
-              "name": "split"
-            }
-          ]
+            "value": "Forwarded to the internal `<lr-diff-view>`'s own `layout` property while `view=\"diff\"`.\n\nType: `LyraDiffViewLayout`  \nDefault: `'unified'`"
+          }
         },
         {
           "name": "language",
@@ -4705,16 +4734,8 @@
           "name": "view",
           "description": {
             "kind": "markdown",
-            "value": "`'diff'` (the default) renders one inline `<lr-diff-view>`; `'side-by-side'` renders two\nindependently-scrollable `<lr-document-preview>` panes -- see the class doc's \"Synchronized\nanchors\" section for how the two panes are kept in sync.\n\nType: `'diff' | 'side-by-side'`  \nDefault: `'diff'`"
-          },
-          "values": [
-            {
-              "name": "diff"
-            },
-            {
-              "name": "side-by-side"
-            }
-          ]
+            "value": "`'diff'` (the default) renders one inline `<lr-diff-view>`; `'side-by-side'` renders two\nindependently-scrollable `<lr-document-preview>` panes -- see the class doc's \"Synchronized\nanchors\" section for how the two panes are kept in sync.\n\nType: `LyraDocumentCompareView`  \nDefault: `'diff'`"
+          }
         }
       ]
     },
@@ -4750,16 +4771,8 @@
           "name": "sort-direction",
           "description": {
             "kind": "markdown",
-            "value": "Type: `'ascending' | 'descending'`  \nDefault: `'ascending'`"
-          },
-          "values": [
-            {
-              "name": "ascending"
-            },
-            {
-              "name": "descending"
-            }
-          ]
+            "value": "Type: `DocumentLibrarySortDirection`  \nDefault: `'ascending'`"
+          }
         },
         {
           "name": "sort-key",
@@ -5213,16 +5226,8 @@
           "name": "popup-role",
           "description": {
             "kind": "markdown",
-            "value": "Semantic role used by the popup. Dropdown subclasses set this to `menu`.\n\nType: `'dialog' | 'menu'`  \nDefault: `'dialog'`"
-          },
-          "values": [
-            {
-              "name": "dialog"
-            },
-            {
-              "name": "menu"
-            }
-          ]
+            "value": "Semantic role used by the popup. Dropdown subclasses set this to `menu`.\n\nType: `LyraPopupRole`  \nDefault: `'dialog'`"
+          }
         }
       ]
     },
@@ -5380,6 +5385,13 @@
           }
         },
         {
+          "name": "disabled",
+          "description": {
+            "kind": "markdown",
+            "value": "Type: `boolean`"
+          }
+        },
+        {
           "name": "error-text",
           "description": {
             "kind": "markdown",
@@ -5405,6 +5417,20 @@
           "description": {
             "kind": "markdown",
             "value": "Optional locale override. Otherwise the nearest `locale`/`lang` ancestor is used.\n\nType: `string`  \nDefault: `''`"
+          }
+        },
+        {
+          "name": "name",
+          "description": {
+            "kind": "markdown",
+            "value": "Type: `string`"
+          }
+        },
+        {
+          "name": "required",
+          "description": {
+            "kind": "markdown",
+            "value": "Type: `boolean`"
           }
         }
       ]
@@ -6747,16 +6773,8 @@
           "name": "layout",
           "description": {
             "kind": "markdown",
-            "value": "`'force'` (default) runs the existing d3-force simulation, untouched. `'layered'` computes a\ndeterministic Sugiyama-lite layout (`src/internal/layered-layout.ts`, a shared,\ndependency-free util suitable for any future layered-diagram consumer) instead -- no settle\nanimation, node drag disabled (dragging would fight a computed layout), `chargeStrength` a\ndocumented no-op, `linkDistance` retunes the layer gap. Switching at runtime repositions\nwithout a tween.\n\nType: `'force' | 'layered'`  \nDefault: `'force'`"
-          },
-          "values": [
-            {
-              "name": "force"
-            },
-            {
-              "name": "layered"
-            }
-          ]
+            "value": "`'force'` (default) runs the existing d3-force simulation, untouched. `'layered'` computes a\ndeterministic Sugiyama-lite layout (`src/internal/layered-layout.ts`, a shared,\ndependency-free util suitable for any future layered-diagram consumer) instead -- no settle\nanimation, node drag disabled (dragging would fight a computed layout), `chargeStrength` a\ndocumented no-op, `linkDistance` retunes the layer gap. Switching at runtime repositions\nwithout a tween.\n\nType: `GraphLayout`  \nDefault: `'force'`"
+          }
         },
         {
           "name": "link-distance",
@@ -6790,16 +6808,8 @@
           "name": "renderer",
           "description": {
             "kind": "markdown",
-            "value": "`'svg'` (default, unchanged) renders the existing per-node/per-link DOM. `'canvas'` swaps to\na single `<canvas part=\"canvas\">` -- the scale path (an honest ceiling for `'svg'`: dozens to\nlow hundreds of nodes; `'canvas'` targets roughly 5,000 nodes / 10,000 links). Feature-reduced\nby design: no `::part(node)`/`::part(link)` styling (pixels, not elements -- theme via\ncssprops), no SVG `<title>`, a drawn focus ring instead of a CSS one. All events/methods/\nprops otherwise behave identically across renderers. Runtime changes tear down and rebuild\nthe surface; positions survive via `prevById`/`lastPositionById`.\n\nType: `'svg' | 'canvas'`  \nDefault: `'svg'`"
-          },
-          "values": [
-            {
-              "name": "svg"
-            },
-            {
-              "name": "canvas"
-            }
-          ]
+            "value": "`'svg'` (default, unchanged) renders the existing per-node/per-link DOM. `'canvas'` swaps to\na single `<canvas part=\"canvas\">` -- the scale path (an honest ceiling for `'svg'`: dozens to\nlow hundreds of nodes; `'canvas'` targets roughly 5,000 nodes / 10,000 links). Feature-reduced\nby design: no `::part(node)`/`::part(link)` styling (pixels, not elements -- theme via\ncssprops), no SVG `<title>`, a drawn focus ring instead of a CSS one. All events/methods/\nprops otherwise behave identically across renderers. Runtime changes tear down and rebuild\nthe surface; positions survive via `prevById`/`lastPositionById`.\n\nType: `GraphRenderer`  \nDefault: `'svg'`"
+          }
         },
         {
           "name": "seed",
@@ -6812,19 +6822,8 @@
           "name": "selection-mode",
           "description": {
             "kind": "markdown",
-            "value": "`'none'` (default) preserves today's behavior exactly -- no `aria-pressed`/`data-selected`,\nno `lr-selection-change`. Controlled, mirroring `lr-heatmap.selectedCell`: the component\nnever mutates `selectedNodeIds`/`selectedLinkIds` itself, only emits intent; the host assigns\nthem back.\n\nType: `'none' | 'single' | 'multiple'`  \nDefault: `'none'`"
-          },
-          "values": [
-            {
-              "name": "none"
-            },
-            {
-              "name": "single"
-            },
-            {
-              "name": "multiple"
-            }
-          ]
+            "value": "`'none'` (default) preserves today's behavior exactly -- no `aria-pressed`/`data-selected`,\nno `lr-selection-change`. Controlled, mirroring `lr-heatmap.selectedCell`: the component\nnever mutates `selectedNodeIds`/`selectedLinkIds` itself, only emits intent; the host assigns\nthem back.\n\nType: `GraphSelectionMode`  \nDefault: `'none'`"
+          }
         },
         {
           "name": "show-edge-labels",
@@ -7043,31 +7042,15 @@
           "name": "mode",
           "description": {
             "kind": "markdown",
-            "value": "Type: `'matrix' | 'calendar'`  \nDefault: `'matrix'`"
-          },
-          "values": [
-            {
-              "name": "matrix"
-            },
-            {
-              "name": "calendar"
-            }
-          ]
+            "value": "Type: `HeatmapMode`  \nDefault: `'matrix'`"
+          }
         },
         {
           "name": "scale",
           "description": {
             "kind": "markdown",
-            "value": "`\"linear\"` (default) maps values linearly to the color ramp in matrix\nmode, and buckets calendar-mode values via `quartileBucket()` — both\nunchanged from before this property governed calendar mode too.\n`\"sqrt\"` compresses via `sqrtStep()`'s square-root magnitude compression\ninstead, in *both* modes, so one heavy cell/day doesn't wash out the\nrest of a skewed dataset.\n\nType: `'linear' | 'sqrt'`  \nDefault: `'linear'`"
-          },
-          "values": [
-            {
-              "name": "linear"
-            },
-            {
-              "name": "sqrt"
-            }
-          ]
+            "value": "`\"linear\"` (default) maps values linearly to the color ramp in matrix\nmode, and buckets calendar-mode values via `quartileBucket()` — both\nunchanged from before this property governed calendar mode too.\n`\"sqrt\"` compresses via `sqrtStep()`'s square-root magnitude compression\ninstead, in *both* modes, so one heavy cell/day doesn't wash out the\nrest of a skewed dataset.\n\nType: `HeatmapScale`  \nDefault: `'linear'`"
+          }
         },
         {
           "name": "value-label",
@@ -7619,6 +7602,13 @@
           }
         },
         {
+          "name": "disabled",
+          "description": {
+            "kind": "markdown",
+            "value": "Type: `boolean`"
+          }
+        },
+        {
           "name": "enterkeyhint",
           "description": {
             "kind": "markdown",
@@ -7675,6 +7665,13 @@
           }
         },
         {
+          "name": "name",
+          "description": {
+            "kind": "markdown",
+            "value": "Type: `string`"
+          }
+        },
+        {
           "name": "password-visible",
           "description": {
             "kind": "markdown",
@@ -7693,6 +7690,13 @@
           "description": {
             "kind": "markdown",
             "value": "Forwards native read-only behavior to the internal input and disables the clear action.\n\nType: `boolean`  \nDefault: `false`"
+          }
+        },
+        {
+          "name": "required",
+          "description": {
+            "kind": "markdown",
+            "value": "Type: `boolean`"
           }
         },
         {
@@ -7877,19 +7881,8 @@
           "name": "highlight",
           "description": {
             "kind": "markdown",
-            "value": "What drives this component's own `dimmedNodeIds`/`dimmedLinkIds` forwarding, on top of the\nalways-active search-match dimming -- see the class doc's dedicated paragraph.\n\nType: `'selection' | 'hover' | 'none'`  \nDefault: `'selection'`"
-          },
-          "values": [
-            {
-              "name": "selection"
-            },
-            {
-              "name": "hover"
-            },
-            {
-              "name": "none"
-            }
-          ]
+            "value": "What drives this component's own `dimmedNodeIds`/`dimmedLinkIds` forwarding, on top of the\nalways-active search-match dimming -- see the class doc's dedicated paragraph.\n\nType: `KnowledgeGraphHighlight`  \nDefault: `'selection'`"
+          }
         },
         {
           "name": "label",
@@ -7909,16 +7902,8 @@
           "name": "renderer",
           "description": {
             "kind": "markdown",
-            "value": "Forwarded to `lr-graph.renderer`. `renderer=\"canvas\"` has no per-node DOM element, which\nnarrows how the node-detail popover anchors and disables its pan/zoom tracking -- see the\nclass doc's anchoring note.\n\nType: `'svg' | 'canvas'`  \nDefault: `'svg'`"
-          },
-          "values": [
-            {
-              "name": "svg"
-            },
-            {
-              "name": "canvas"
-            }
-          ]
+            "value": "Forwarded to `lr-graph.renderer`. `renderer=\"canvas\"` has no per-node DOM element, which\nnarrows how the node-detail popover anchors and disables its pan/zoom tracking -- see the\nclass doc's anchoring note.\n\nType: `GraphRenderer`  \nDefault: `'svg'`"
+          }
         },
         {
           "name": "selected-node-id",
@@ -7962,6 +7947,13 @@
           "description": {
             "kind": "markdown",
             "value": "Visible + accessible per-field label for the day field. Routes through\n`this.localize('knownDateDay', ...)`.\n\nType: `string`  \nDefault: `'Day'`"
+          }
+        },
+        {
+          "name": "disabled",
+          "description": {
+            "kind": "markdown",
+            "value": "Type: `boolean`"
           }
         },
         {
@@ -8014,7 +8006,21 @@
           }
         },
         {
+          "name": "name",
+          "description": {
+            "kind": "markdown",
+            "value": "Type: `string`"
+          }
+        },
+        {
           "name": "readonly",
+          "description": {
+            "kind": "markdown",
+            "value": "Type: `boolean`"
+          }
+        },
+        {
+          "name": "required",
           "description": {
             "kind": "markdown",
             "value": "Type: `boolean`"
@@ -8338,16 +8344,8 @@
           "name": "scale",
           "description": {
             "kind": "markdown",
-            "value": "`type=\"bar\"` only (no effect on `type=\"line\"`): `'linear'` (default) maps a bar's value to\nheight via the standard `niceDomain`-based fraction, unchanged from before this property\nexisted. `'sqrt'` instead maps via `Math.sqrt(value / domainMax)` (mirroring `lr-heatmap`'s\nmatrix-mode `sqrt` scale), boosting smaller values relative to one dominant value so a skewed\ndataset's smaller bars don't get washed out. Gridlines/tick labels stay on the linear domain\neither way — only the bar marks' own height mapping changes.\n\nType: `'linear' | 'sqrt'`  \nDefault: `'linear'`"
-          },
-          "values": [
-            {
-              "name": "linear"
-            },
-            {
-              "name": "sqrt"
-            }
-          ]
+            "value": "`type=\"bar\"` only (no effect on `type=\"line\"`): `'linear'` (default) maps a bar's value to\nheight via the standard `niceDomain`-based fraction, unchanged from before this property\nexisted. `'sqrt'` instead maps via `Math.sqrt(value / domainMax)` (mirroring `lr-heatmap`'s\nmatrix-mode `sqrt` scale), boosting smaller values relative to one dominant value so a skewed\ndataset's smaller bars don't get washed out. Gridlines/tick labels stay on the linear domain\neither way — only the bar marks' own height mapping changes.\n\nType: `LyraLiteChartScale`  \nDefault: `'linear'`"
+          }
         },
         {
           "name": "skip-zero",
@@ -9086,16 +9084,8 @@
           "name": "value",
           "description": {
             "kind": "markdown",
-            "value": "Current rating. Host-writable (e.g. to reflect a previously-recorded rating back).\n\nType: `'up' | 'down' | null`  \nDefault: `null`"
-          },
-          "values": [
-            {
-              "name": "up"
-            },
-            {
-              "name": "down"
-            }
-          ]
+            "value": "Current rating. Host-writable (e.g. to reflect a previously-recorded rating back).\n\nType: `MessageFeedbackValue`  \nDefault: `null`"
+          }
         }
       ]
     },
@@ -10022,6 +10012,13 @@
           }
         },
         {
+          "name": "disabled",
+          "description": {
+            "kind": "markdown",
+            "value": "Type: `boolean`"
+          }
+        },
+        {
           "name": "enterkeyhint",
           "description": {
             "kind": "markdown",
@@ -10096,6 +10093,13 @@
           }
         },
         {
+          "name": "name",
+          "description": {
+            "kind": "markdown",
+            "value": "Type: `string`"
+          }
+        },
+        {
           "name": "phone-label",
           "description": {
             "kind": "markdown",
@@ -10107,6 +10111,13 @@
           "description": {
             "kind": "markdown",
             "value": "Type: `string`  \nDefault: `''`"
+          }
+        },
+        {
+          "name": "required",
+          "description": {
+            "kind": "markdown",
+            "value": "Type: `boolean`"
           }
         },
         {
@@ -10517,16 +10528,8 @@
           "name": "popup-role",
           "description": {
             "kind": "markdown",
-            "value": "Semantic role used by the popup. Dropdown subclasses set this to `menu`.\n\nType: `'dialog' | 'menu'`  \nDefault: `'dialog'`"
-          },
-          "values": [
-            {
-              "name": "dialog"
-            },
-            {
-              "name": "menu"
-            }
-          ]
+            "value": "Semantic role used by the popup. Dropdown subclasses set this to `menu`.\n\nType: `LyraPopupRole`  \nDefault: `'dialog'`"
+          }
         }
       ]
     },
@@ -11237,6 +11240,66 @@
       ]
     },
     {
+      "name": "lr-reorder-item",
+      "description": {
+        "kind": "markdown",
+        "value": "`<lr-reorder-item>` — one row inside `<lr-reorder-list>`. Renders arbitrary slotted content plus\nmove-up/move-down buttons. This item alone doesn't know whether it's first or last in the list,\nso its boundary-disabled state (`atStart`/`atEnd`) and list-level cascade (`listDisabled`) are\nboth pushed down by the parent `<lr-reorder-list>` after every slot change or move — normally\nset internally, not by consumers.\n\n---\n\n**Slots**\n\n| Name | Description |\n| --- | --- |\n| (default) | Arbitrary row content (a label, a mini-form, anything). |\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `base` | The row's root wrapper. |\n| `content` | Wrapper around the default slot. |\n| `move-down-button` | The move-down button. |\n| `move-up-button` | The move-up button. |\n\n---\n\n**CSS Custom Properties**\n\n- `--lr-reorder-item-gap` (default: `var(--lr-space-xs)`) — Gap between the move buttons and content."
+      },
+      "attributes": [
+        {
+          "name": "disabled",
+          "description": {
+            "kind": "markdown",
+            "value": "Disables this row's own move-up/move-down buttons without removing it or its slotted content\nfrom the DOM. Does not gate the default slot's own content.\n\nType: `boolean`  \nDefault: `false`"
+          }
+        },
+        {
+          "name": "locale",
+          "description": {
+            "kind": "markdown",
+            "value": "Optional locale override. Otherwise the nearest `locale`/`lang` ancestor is used.\n\nType: `string`  \nDefault: `''`"
+          }
+        },
+        {
+          "name": "value",
+          "description": {
+            "kind": "markdown",
+            "value": "Stable identifier included in the parent list's emitted `lr-reorder` order array. Falls back\nto this item's live DOM-position index (stringified) when unset — a consumer that cares about\nstable identity across moves should set this explicitly, since the fallback string changes as\nthe item's position changes.\n\nType: `string | undefined`"
+          }
+        }
+      ]
+    },
+    {
+      "name": "lr-reorder-list",
+      "description": {
+        "kind": "markdown",
+        "value": "`<lr-reorder-list>` — a generic vertical list of `<lr-reorder-item>` rows, reorderable via\nper-row move-up/move-down buttons (always available) or Ctrl/Cmd+ArrowUp/ArrowDown from focus\nanywhere inside a row — the same modifier convention `<lr-tree>`'s `reorderable` and\n`<lr-dashboard-grid>`'s `cells-draggable` already establish.\n\nUnlike `<lr-tree>`'s `reorderable` mode (a *controlled* request — `data` is host-owned and\nnothing moves until the host reassigns it), this list physically moves its own slotted\n`<lr-reorder-item>` light-DOM nodes itself. That is a deliberate difference, not an\ninconsistency: `<lr-tree>` re-derives its child elements from a `data` array prop on every\nrender, so a direct DOM move there would just be overwritten on the next render — it must stay\ncontrolled. This list has no such data-array prop; its children are plain author-authored\nslotted content with nothing to reconcile against, so DOM order genuinely is the source of\ntruth (the same principle `<lr-tree>` relies on for its own children). The `lr-reorder` event\nstill tells the host the resulting order, so it can persist it without hand-rolling its own\nsplice/resort logic.\n\n---\n\n**Slots**\n\n| Name | Description |\n| --- | --- |\n| (default) | `<lr-reorder-item>` elements. |\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `base` | The list's root wrapper (`role=\"list\"`). |\n\n---\n\n**CSS Custom Properties**\n\n- `--lr-reorder-list-gap` (default: `var(--lr-space-2xs)`) — Gap between rows."
+      },
+      "attributes": [
+        {
+          "name": "disabled",
+          "description": {
+            "kind": "markdown",
+            "value": "Disables every item's move-up/move-down buttons and the Ctrl/Cmd+Arrow shortcut, without\nremoving any item from the DOM or mutating any item's own `disabled` attribute.\n\nType: `boolean`  \nDefault: `false`"
+          }
+        },
+        {
+          "name": "label",
+          "description": {
+            "kind": "markdown",
+            "value": "Accessible name for the list, set as `aria-label` on the internal `role=\"list\"` element. A\nplain `aria-label` attribute on the host itself is honored as a fallback when this is left\nunset, matching `<lr-control-group>`. Native lists don't require an accessible name, so this\nhas no forced fallback string when both are left unset.\n\nType: `string`  \nDefault: `''`"
+          }
+        },
+        {
+          "name": "locale",
+          "description": {
+            "kind": "markdown",
+            "value": "Optional locale override. Otherwise the nearest `locale`/`lang` ancestor is used.\n\nType: `string`  \nDefault: `''`"
+          }
+        }
+      ]
+    },
+    {
       "name": "lr-resize-observer",
       "description": {
         "kind": "markdown",
@@ -11423,16 +11486,8 @@
           "name": "grouping",
           "description": {
             "kind": "markdown",
-            "value": "`'source'` buckets rows under a header per `source.id` (always rendered through the internal\n`<lr-virtual-list>`, regardless of `virtualize-at`); `'none'` (default) is a flat ranked list.\n\nType: `'source' | 'none'`  \nDefault: `'none'`"
-          },
-          "values": [
-            {
-              "name": "source"
-            },
-            {
-              "name": "none"
-            }
-          ]
+            "value": "`'source'` buckets rows under a header per `source.id` (always rendered through the internal\n`<lr-virtual-list>`, regardless of `virtualize-at`); `'none'` (default) is a flat ranked list.\n\nType: `RetrievalResultsGrouping`  \nDefault: `'none'`"
+          }
         },
         {
           "name": "has-more",
@@ -11466,16 +11521,8 @@
           "name": "presentation",
           "description": {
             "kind": "markdown",
-            "value": "`'expanded'` (default) shows each chunk's full `<lr-chunk-inspector>` row (score bar, text\npreview with its own expand toggle) plus any `metadata`; `'compact'` shows title + score bar\nonly, on both.\n\nType: `'compact' | 'expanded'`  \nDefault: `'expanded'`"
-          },
-          "values": [
-            {
-              "name": "compact"
-            },
-            {
-              "name": "expanded"
-            }
-          ]
+            "value": "`'expanded'` (default) shows each chunk's full `<lr-chunk-inspector>` row (score bar, text\npreview with its own expand toggle) plus any `metadata`; `'compact'` shows title + score bar\nonly, on both.\n\nType: `RetrievalResultsPresentation`  \nDefault: `'expanded'`"
+          }
         },
         {
           "name": "selectable",
@@ -11951,7 +11998,7 @@
           "name": "size",
           "description": {
             "kind": "markdown",
-            "value": "Visual size — same `xs`–`xl` scale as `lr-toast-item`'s `size`.\n\nType: `LyraSelectSize`  \nDefault: `'m'`"
+            "value": "Visual size — same `2xs`–`xl` scale as `lr-input`/`lr-combobox`/`lr-locale-picker`'s own `size`.\n\nType: `LyraSelectSize`  \nDefault: `'m'`"
           }
         },
         {
@@ -12078,6 +12125,13 @@
       },
       "attributes": [
         {
+          "name": "disabled",
+          "description": {
+            "kind": "markdown",
+            "value": "Type: `boolean`"
+          }
+        },
+        {
           "name": "label",
           "description": {
             "kind": "markdown",
@@ -12103,6 +12157,20 @@
           "description": {
             "kind": "markdown",
             "value": "Type: `number`"
+          }
+        },
+        {
+          "name": "name",
+          "description": {
+            "kind": "markdown",
+            "value": "Type: `string`"
+          }
+        },
+        {
+          "name": "required",
+          "description": {
+            "kind": "markdown",
+            "value": "Type: `boolean`"
           }
         },
         {
@@ -13215,19 +13283,8 @@
           "name": "selection-mode",
           "description": {
             "kind": "markdown",
-            "value": "Type: `'none' | 'single' | 'multiple'`  \nDefault: `'none'`"
-          },
-          "values": [
-            {
-              "name": "none"
-            },
-            {
-              "name": "single"
-            },
-            {
-              "name": "multiple"
-            }
-          ]
+            "value": "Type: `TableSelectionMode`  \nDefault: `'none'`"
+          }
         },
         {
           "name": "show-all-columns",
@@ -13530,6 +13587,13 @@
           }
         },
         {
+          "name": "disabled",
+          "description": {
+            "kind": "markdown",
+            "value": "Type: `boolean`"
+          }
+        },
+        {
           "name": "enterkeyhint",
           "description": {
             "kind": "markdown",
@@ -13572,10 +13636,24 @@
           }
         },
         {
+          "name": "name",
+          "description": {
+            "kind": "markdown",
+            "value": "Type: `string`"
+          }
+        },
+        {
           "name": "placeholder",
           "description": {
             "kind": "markdown",
             "value": "Type: `string`  \nDefault: `''`"
+          }
+        },
+        {
+          "name": "required",
+          "description": {
+            "kind": "markdown",
+            "value": "Type: `boolean`"
           }
         },
         {
@@ -13684,19 +13762,8 @@
           "name": "grouping",
           "description": {
             "kind": "markdown",
-            "value": "Data mode: bucket rows under localized date headers, use `groupBy` with `'custom'`, or use\n`'none'` for a flat list in host order.\n\nType: `'date' | 'custom' | 'none'`  \nDefault: `'date'`"
-          },
-          "values": [
-            {
-              "name": "date"
-            },
-            {
-              "name": "custom"
-            },
-            {
-              "name": "none"
-            }
-          ]
+            "value": "Data mode: bucket rows under localized date headers, use `groupBy` with `'custom'`, or use\n`'none'` for a flat list in host order.\n\nType: `ThreadListGrouping`  \nDefault: `'date'`"
+          }
         },
         {
           "name": "label",
@@ -15001,16 +15068,8 @@
           "name": "item-role",
           "description": {
             "kind": "markdown",
-            "value": "`'listitem'` (default) preserves today's `role=\"list\"`/`role=\"listitem\"` mapping with\n`aria-setsize`/`aria-posinset`. `'row'` maps to `role=\"rowgroup\"`/`role=\"row\"` with\n`aria-rowindex` instead -- for a consumer composing a virtualized `role=\"table\"` (see\n`<lr-dataset-viewer>`).\n\nType: `'listitem' | 'row'`  \nDefault: `'listitem'`"
-          },
-          "values": [
-            {
-              "name": "listitem"
-            },
-            {
-              "name": "row"
-            }
-          ]
+            "value": "`'listitem'` (default) preserves today's `role=\"list\"`/`role=\"listitem\"` mapping with\n`aria-setsize`/`aria-posinset`. `'row'` maps to `role=\"rowgroup\"`/`role=\"row\"` with\n`aria-rowindex` instead -- for a consumer composing a virtualized `role=\"table\"` (see\n`<lr-dataset-viewer>`).\n\nType: `VirtualListItemRole`  \nDefault: `'listitem'`"
+          }
         },
         {
           "name": "loading",
@@ -15325,31 +15384,15 @@
           "name": "orientations",
           "description": {
             "kind": "markdown",
-            "value": "`mixed` lets some words render rotated 90° for denser packing.\n\nType: `'horizontal' | 'mixed'`  \nDefault: `'horizontal'`"
-          },
-          "values": [
-            {
-              "name": "horizontal"
-            },
-            {
-              "name": "mixed"
-            }
-          ]
+            "value": "`mixed` lets some words render rotated 90° for denser packing.\n\nType: `WordCloudOrientations`  \nDefault: `'horizontal'`"
+          }
         },
         {
           "name": "scale",
           "description": {
             "kind": "markdown",
-            "value": "`sqrt` compresses the weight->font-size mapping so one heavy word doesn't dwarf the rest.\n\nType: `'linear' | 'sqrt'`  \nDefault: `'linear'`"
-          },
-          "values": [
-            {
-              "name": "linear"
-            },
-            {
-              "name": "sqrt"
-            }
-          ]
+            "value": "`sqrt` compresses the weight->font-size mapping so one heavy word doesn't dwarf the rest.\n\nType: `WordCloudScale`  \nDefault: `'linear'`"
+          }
         }
       ]
     },

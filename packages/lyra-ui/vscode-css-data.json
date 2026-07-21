@@ -2354,6 +2354,20 @@
       }
     },
     {
+      "name": "--lr-reorder-item-gap",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-reorder-item>`** (default: `var(--lr-space-xs)`) — Gap between the move buttons and content."
+      }
+    },
+    {
+      "name": "--lr-reorder-list-gap",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-reorder-list>`** (default: `var(--lr-space-2xs)`) — Gap between rows."
+      }
+    },
+    {
       "name": "--lr-responsive-panel-overlay-color",
       "description": {
         "kind": "markdown",

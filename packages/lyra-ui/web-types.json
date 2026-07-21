@@ -701,7 +701,7 @@
             },
             {
               "name": "preferred-mode",
-              "description": "Manually prefers `'full'` or `'icon-only'` for the non-mobile breakpoint axis, while the\n`mobile-breakpoint` continues to be tracked automatically regardless — e.g. a user's manual\ncollapse toggle that should still yield to a genuinely too-narrow-for-any-inline-rail\nviewport. Only consulted while `mode` isn't force-pinned via its own accessor (see the class\ndoc) — that continues to take full priority, unchanged. Unset (the default, `null`)\nreproduces today's exact breakpoint-only behavior.\n\nType: `'full' | 'icon-only' | null | undefined`"
+              "description": "Manually prefers `'full'` or `'icon-only'` for the non-mobile breakpoint axis, while the\n`mobile-breakpoint` continues to be tracked automatically regardless — e.g. a user's manual\ncollapse toggle that should still yield to a genuinely too-narrow-for-any-inline-rail\nviewport. Only consulted while `mode` isn't force-pinned via its own accessor (see the class\ndoc) — that continues to take full priority, unchanged. Unset (the default, `null`)\nreproduces today's exact breakpoint-only behavior.\n\nType: `AppRailPreferredMode | null | undefined`"
             },
             {
               "name": "rail-width-px",
@@ -884,7 +884,12 @@
             },
             {
               "name": "view",
-              "description": "Which slot is currently visible.\n\nType: `'preview' | 'code'`  \nDefault: `'preview'`"
+              "description": "Which slot is currently visible.\n\nType: `ArtifactPanelView`  \nDefault: `'preview'`",
+              "value": {
+                "type": [
+                  "ArtifactPanelView"
+                ]
+              }
             }
           ]
         },
@@ -1732,7 +1737,12 @@
           "attributes": [
             {
               "name": "controller",
-              "description": "Type: `'agent' | 'user'`  \nDefault: `'agent'`"
+              "description": "Type: `BrowserFrameController`  \nDefault: `'agent'`",
+              "value": {
+                "type": [
+                  "BrowserFrameController"
+                ]
+              }
             },
             {
               "name": "controls",
@@ -1763,7 +1773,12 @@
             },
             {
               "name": "status",
-              "description": "Type: `'idle' | 'connecting' | 'streaming' | 'stalled'`  \nDefault: `'idle'`"
+              "description": "Type: `BrowserFrameStatus`  \nDefault: `'idle'`",
+              "value": {
+                "type": [
+                  "BrowserFrameStatus"
+                ]
+              }
             },
             {
               "name": "url",
@@ -2070,7 +2085,12 @@
             },
             {
               "name": "view",
-              "description": "Type: `'month' | 'agenda'`  \nDefault: `'month'`"
+              "description": "Type: `CalendarView`  \nDefault: `'month'`",
+              "value": {
+                "type": [
+                  "CalendarView"
+                ]
+              }
             },
             {
               "name": "view-date"
@@ -2508,6 +2528,15 @@
               }
             },
             {
+              "name": "disabled",
+              "description": "Type: `boolean`",
+              "value": {
+                "type": [
+                  "boolean"
+                ]
+              }
+            },
+            {
               "name": "enterkeyhint",
               "description": "Type: `string`  \nDefault: `''`",
               "value": {
@@ -2553,11 +2582,29 @@
               }
             },
             {
+              "name": "name",
+              "description": "Type: `string`",
+              "value": {
+                "type": [
+                  "string"
+                ]
+              }
+            },
+            {
               "name": "placeholder",
               "description": "Type: `string`  \nDefault: `''`",
               "value": {
                 "type": [
                   "string"
+                ]
+              }
+            },
+            {
+              "name": "required",
+              "description": "Type: `boolean`",
+              "value": {
+                "type": [
+                  "boolean"
                 ]
               }
             },
@@ -3431,6 +3478,15 @@
               }
             },
             {
+              "name": "disabled",
+              "description": "Type: `boolean`",
+              "value": {
+                "type": [
+                  "boolean"
+                ]
+              }
+            },
+            {
               "name": "error-text",
               "description": "Type: `string`  \nDefault: `''`",
               "value": {
@@ -3485,6 +3541,15 @@
               }
             },
             {
+              "name": "name",
+              "description": "Type: `string`",
+              "value": {
+                "type": [
+                  "string"
+                ]
+              }
+            },
+            {
               "name": "placeholder",
               "description": "Type: `string`  \nDefault: `''`",
               "value": {
@@ -3496,6 +3561,15 @@
             {
               "name": "readonly",
               "description": "Type: `boolean`  \nDefault: `false`",
+              "value": {
+                "type": [
+                  "boolean"
+                ]
+              }
+            },
+            {
+              "name": "required",
+              "description": "Type: `boolean`",
               "value": {
                 "type": [
                   "boolean"
@@ -3544,6 +3618,15 @@
               }
             },
             {
+              "name": "disabled",
+              "description": "Type: `boolean`",
+              "value": {
+                "type": [
+                  "boolean"
+                ]
+              }
+            },
+            {
               "name": "error-text",
               "description": "Type: `string`  \nDefault: `''`",
               "value": {
@@ -3576,6 +3659,24 @@
               "value": {
                 "type": [
                   "string"
+                ]
+              }
+            },
+            {
+              "name": "name",
+              "description": "Type: `string`",
+              "value": {
+                "type": [
+                  "string"
+                ]
+              }
+            },
+            {
+              "name": "required",
+              "description": "Type: `boolean`",
+              "value": {
+                "type": [
+                  "boolean"
                 ]
               }
             }
@@ -4248,7 +4349,7 @@
         },
         {
           "name": "lr-control-group",
-          "description": "`<lr-control-group>` — a responsive layout primitive for a row of mixed form\ncontrols and action buttons (e.g. a segmented metric switcher beside a compact\nselect and an export button in a dashboard toolbar). Unlike `<lr-button-group>`\n(a uniform-height row of `<lr-button>`s that stretches every child to the row's\nfull height), this centers children of differing intrinsic heights and does not\nassume any particular child type.\n\n---\n\n**Slots**\n\n| Name | Description |\n| --- | --- |\n| (default) | Form controls, buttons, or any other action content. |\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `base` | The group wrapper (`role=\"group\"`). |\n\n---\n\n**CSS Custom Properties**\n\n- `--lr-control-group-gap` (default: `var(--lr-space-xs)`) — Gap between grouped controls.",
+          "description": "`<lr-control-group>` — a responsive layout primitive for a row of mixed form\ncontrols and action buttons (e.g. a segmented metric switcher beside a compact\nselect and an export button in a dashboard toolbar). Unlike `<lr-button-group>`\n(a uniform-height row of `<lr-button>`s that stretches every child to the row's\nfull height), this centers children of differing intrinsic heights and does not\nassume any particular child type.\n\n`container-type: inline-size` (needed for the `@container` breakpoint below) is opt-in via\n`responsive`, not automatic: unconditionally applying it made the group collapse to 0 inline\nsize whenever it sat as an ordinary flex-basis:auto child of a shrink-to-fit flex row -- exactly\nthis component's own toolbar-row use case. Set `responsive` when this group's own size instead\ncomes from a percentage width, grid track, or block-level parent.\n\n---\n\n**Slots**\n\n| Name | Description |\n| --- | --- |\n| (default) | Form controls, buttons, or any other action content. |\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `base` | The group wrapper (`role=\"group\"`). |\n\n---\n\n**CSS Custom Properties**\n\n- `--lr-control-group-gap` (default: `var(--lr-space-xs)`) — Gap between grouped controls.",
           "attributes": [
             {
               "name": "label",
@@ -4265,6 +4366,15 @@
               "value": {
                 "type": [
                   "string"
+                ]
+              }
+            },
+            {
+              "name": "responsive",
+              "description": "Opts into the group's own `@container` narrow-allocation breakpoint (see the class doc) by\nmaking the host a CSS size-query container. Left unset (the default), the host uses\n`container-type: normal` instead: `container-type: inline-size` forces this element's own\nauto/content-based inline size to be computed as if it had no content, which silently\ncollapses it to 0 width whenever it sits as an ordinary (`flex-basis: auto`) child of a\nshrink-to-fit flex row — exactly this component's own stated primary use case (a toolbar\nrow of mixed controls). Set `responsive` only when the group's own size instead comes from\nsomewhere else (a percentage width, a grid track, a block-level parent), where that failure\nmode does not apply and the narrow-allocation breakpoint is wanted.\n\nType: `boolean`  \nDefault: `false`",
+              "value": {
+                "type": [
+                  "boolean"
                 ]
               }
             }
@@ -4645,6 +4755,15 @@
               }
             },
             {
+              "name": "disabled",
+              "description": "Type: `boolean`",
+              "value": {
+                "type": [
+                  "boolean"
+                ]
+              }
+            },
+            {
               "name": "enterkeyhint",
               "description": "Type: `string`  \nDefault: `''`",
               "value": {
@@ -4734,6 +4853,15 @@
               "description": "Type: `1 | 2`  \nDefault: `1`"
             },
             {
+              "name": "name",
+              "description": "Type: `string`",
+              "value": {
+                "type": [
+                  "string"
+                ]
+              }
+            },
+            {
               "name": "open",
               "description": "Type: `boolean`  \nDefault: `false`",
               "value": {
@@ -4762,6 +4890,15 @@
             },
             {
               "name": "readonly",
+              "description": "Type: `boolean`",
+              "value": {
+                "type": [
+                  "boolean"
+                ]
+              }
+            },
+            {
+              "name": "required",
               "description": "Type: `boolean`",
               "value": {
                 "type": [
@@ -5081,7 +5218,12 @@
             },
             {
               "name": "layout",
-              "description": "`'unified'` (the default) renders today's single interleaved `<pre>`; `'split'` renders two\nside-by-side columns derived from the same `DiffOp[]` (see `pairOpsForSplit()`).\n\nType: `'unified' | 'split'`  \nDefault: `'unified'`"
+              "description": "`'unified'` (the default) renders today's single interleaved `<pre>`; `'split'` renders two\nside-by-side columns derived from the same `DiffOp[]` (see `pairOpsForSplit()`).\n\nType: `LyraDiffViewLayout`  \nDefault: `'unified'`",
+              "value": {
+                "type": [
+                  "LyraDiffViewLayout"
+                ]
+              }
             },
             {
               "name": "locale",
@@ -5211,7 +5353,12 @@
             },
             {
               "name": "diff-layout",
-              "description": "Forwarded to the internal `<lr-diff-view>`'s own `layout` property while `view=\"diff\"`.\n\nType: `'unified' | 'split'`  \nDefault: `'unified'`"
+              "description": "Forwarded to the internal `<lr-diff-view>`'s own `layout` property while `view=\"diff\"`.\n\nType: `LyraDiffViewLayout`  \nDefault: `'unified'`",
+              "value": {
+                "type": [
+                  "LyraDiffViewLayout"
+                ]
+              }
             },
             {
               "name": "language",
@@ -5242,7 +5389,12 @@
             },
             {
               "name": "view",
-              "description": "`'diff'` (the default) renders one inline `<lr-diff-view>`; `'side-by-side'` renders two\nindependently-scrollable `<lr-document-preview>` panes -- see the class doc's \"Synchronized\nanchors\" section for how the two panes are kept in sync.\n\nType: `'diff' | 'side-by-side'`  \nDefault: `'diff'`"
+              "description": "`'diff'` (the default) renders one inline `<lr-diff-view>`; `'side-by-side'` renders two\nindependently-scrollable `<lr-document-preview>` panes -- see the class doc's \"Synchronized\nanchors\" section for how the two panes are kept in sync.\n\nType: `LyraDocumentCompareView`  \nDefault: `'diff'`",
+              "value": {
+                "type": [
+                  "LyraDocumentCompareView"
+                ]
+              }
             }
           ]
         },
@@ -5279,7 +5431,12 @@
             },
             {
               "name": "sort-direction",
-              "description": "Type: `'ascending' | 'descending'`  \nDefault: `'ascending'`"
+              "description": "Type: `DocumentLibrarySortDirection`  \nDefault: `'ascending'`",
+              "value": {
+                "type": [
+                  "DocumentLibrarySortDirection"
+                ]
+              }
             },
             {
               "name": "sort-key",
@@ -5785,7 +5942,12 @@
             },
             {
               "name": "popup-role",
-              "description": "Semantic role used by the popup. Dropdown subclasses set this to `menu`.\n\nType: `'dialog' | 'menu'`  \nDefault: `'dialog'`"
+              "description": "Semantic role used by the popup. Dropdown subclasses set this to `menu`.\n\nType: `LyraPopupRole`  \nDefault: `'dialog'`",
+              "value": {
+                "type": [
+                  "LyraPopupRole"
+                ]
+              }
             }
           ]
         },
@@ -5965,6 +6127,15 @@
               }
             },
             {
+              "name": "disabled",
+              "description": "Type: `boolean`",
+              "value": {
+                "type": [
+                  "boolean"
+                ]
+              }
+            },
+            {
               "name": "error-text",
               "description": "Validation-error text rendered below the hint.\n\nType: `string`  \nDefault: `''`",
               "value": {
@@ -5997,6 +6168,24 @@
               "value": {
                 "type": [
                   "string"
+                ]
+              }
+            },
+            {
+              "name": "name",
+              "description": "Type: `string`",
+              "value": {
+                "type": [
+                  "string"
+                ]
+              }
+            },
+            {
+              "name": "required",
+              "description": "Type: `boolean`",
+              "value": {
+                "type": [
+                  "boolean"
                 ]
               }
             }
@@ -7356,7 +7545,12 @@
             },
             {
               "name": "layout",
-              "description": "`'force'` (default) runs the existing d3-force simulation, untouched. `'layered'` computes a\ndeterministic Sugiyama-lite layout (`src/internal/layered-layout.ts`, a shared,\ndependency-free util suitable for any future layered-diagram consumer) instead -- no settle\nanimation, node drag disabled (dragging would fight a computed layout), `chargeStrength` a\ndocumented no-op, `linkDistance` retunes the layer gap. Switching at runtime repositions\nwithout a tween.\n\nType: `'force' | 'layered'`  \nDefault: `'force'`"
+              "description": "`'force'` (default) runs the existing d3-force simulation, untouched. `'layered'` computes a\ndeterministic Sugiyama-lite layout (`src/internal/layered-layout.ts`, a shared,\ndependency-free util suitable for any future layered-diagram consumer) instead -- no settle\nanimation, node drag disabled (dragging would fight a computed layout), `chargeStrength` a\ndocumented no-op, `linkDistance` retunes the layer gap. Switching at runtime repositions\nwithout a tween.\n\nType: `GraphLayout`  \nDefault: `'force'`",
+              "value": {
+                "type": [
+                  "GraphLayout"
+                ]
+              }
             },
             {
               "name": "link-distance",
@@ -7396,7 +7590,12 @@
             },
             {
               "name": "renderer",
-              "description": "`'svg'` (default, unchanged) renders the existing per-node/per-link DOM. `'canvas'` swaps to\na single `<canvas part=\"canvas\">` -- the scale path (an honest ceiling for `'svg'`: dozens to\nlow hundreds of nodes; `'canvas'` targets roughly 5,000 nodes / 10,000 links). Feature-reduced\nby design: no `::part(node)`/`::part(link)` styling (pixels, not elements -- theme via\ncssprops), no SVG `<title>`, a drawn focus ring instead of a CSS one. All events/methods/\nprops otherwise behave identically across renderers. Runtime changes tear down and rebuild\nthe surface; positions survive via `prevById`/`lastPositionById`.\n\nType: `'svg' | 'canvas'`  \nDefault: `'svg'`"
+              "description": "`'svg'` (default, unchanged) renders the existing per-node/per-link DOM. `'canvas'` swaps to\na single `<canvas part=\"canvas\">` -- the scale path (an honest ceiling for `'svg'`: dozens to\nlow hundreds of nodes; `'canvas'` targets roughly 5,000 nodes / 10,000 links). Feature-reduced\nby design: no `::part(node)`/`::part(link)` styling (pixels, not elements -- theme via\ncssprops), no SVG `<title>`, a drawn focus ring instead of a CSS one. All events/methods/\nprops otherwise behave identically across renderers. Runtime changes tear down and rebuild\nthe surface; positions survive via `prevById`/`lastPositionById`.\n\nType: `GraphRenderer`  \nDefault: `'svg'`",
+              "value": {
+                "type": [
+                  "GraphRenderer"
+                ]
+              }
             },
             {
               "name": "seed",
@@ -7404,7 +7603,12 @@
             },
             {
               "name": "selection-mode",
-              "description": "`'none'` (default) preserves today's behavior exactly -- no `aria-pressed`/`data-selected`,\nno `lr-selection-change`. Controlled, mirroring `lr-heatmap.selectedCell`: the component\nnever mutates `selectedNodeIds`/`selectedLinkIds` itself, only emits intent; the host assigns\nthem back.\n\nType: `'none' | 'single' | 'multiple'`  \nDefault: `'none'`"
+              "description": "`'none'` (default) preserves today's behavior exactly -- no `aria-pressed`/`data-selected`,\nno `lr-selection-change`. Controlled, mirroring `lr-heatmap.selectedCell`: the component\nnever mutates `selectedNodeIds`/`selectedLinkIds` itself, only emits intent; the host assigns\nthem back.\n\nType: `GraphSelectionMode`  \nDefault: `'none'`",
+              "value": {
+                "type": [
+                  "GraphSelectionMode"
+                ]
+              }
             },
             {
               "name": "show-edge-labels",
@@ -7644,11 +7848,21 @@
             },
             {
               "name": "mode",
-              "description": "Type: `'matrix' | 'calendar'`  \nDefault: `'matrix'`"
+              "description": "Type: `HeatmapMode`  \nDefault: `'matrix'`",
+              "value": {
+                "type": [
+                  "HeatmapMode"
+                ]
+              }
             },
             {
               "name": "scale",
-              "description": "`\"linear\"` (default) maps values linearly to the color ramp in matrix\nmode, and buckets calendar-mode values via `quartileBucket()` — both\nunchanged from before this property governed calendar mode too.\n`\"sqrt\"` compresses via `sqrtStep()`'s square-root magnitude compression\ninstead, in *both* modes, so one heavy cell/day doesn't wash out the\nrest of a skewed dataset.\n\nType: `'linear' | 'sqrt'`  \nDefault: `'linear'`"
+              "description": "`\"linear\"` (default) maps values linearly to the color ramp in matrix\nmode, and buckets calendar-mode values via `quartileBucket()` — both\nunchanged from before this property governed calendar mode too.\n`\"sqrt\"` compresses via `sqrtStep()`'s square-root magnitude compression\ninstead, in *both* modes, so one heavy cell/day doesn't wash out the\nrest of a skewed dataset.\n\nType: `HeatmapScale`  \nDefault: `'linear'`",
+              "value": {
+                "type": [
+                  "HeatmapScale"
+                ]
+              }
             },
             {
               "name": "value-label",
@@ -8257,6 +8471,15 @@
               }
             },
             {
+              "name": "disabled",
+              "description": "Type: `boolean`",
+              "value": {
+                "type": [
+                  "boolean"
+                ]
+              }
+            },
+            {
               "name": "enterkeyhint",
               "description": "Type: `string`  \nDefault: `''`",
               "value": {
@@ -8319,6 +8542,15 @@
               "description": "`type=\"number\"` only — forwarded to the internal native `<input>`'s own `min`/`max`/`step`\nand consulted by that same native input's constraint validation (see `updateValidity()`).\nDefaults to `undefined` (no lower bound). The `min` attribute is parsed as a number here; the\ndeclared type also admits a string so a subclass bound to a non-numeric native input type can\nnarrow the attribute parsing to that type's own literal form (`<lr-time-input>`'s `09:00`)\nwithout redeclaring the whole property surface.\n\nType: `number | string | undefined`"
             },
             {
+              "name": "name",
+              "description": "Type: `string`",
+              "value": {
+                "type": [
+                  "string"
+                ]
+              }
+            },
+            {
               "name": "password-visible",
               "description": "`type=\"password\"` only — whether the field currently reveals its raw text. Toggled by the\nbuilt-in `password-toggle` button; also settable by a consumer up front.\n\nType: `boolean`  \nDefault: `false`",
               "value": {
@@ -8339,6 +8571,15 @@
             {
               "name": "readonly",
               "description": "Forwards native read-only behavior to the internal input and disables the clear action.\n\nType: `boolean`  \nDefault: `false`",
+              "value": {
+                "type": [
+                  "boolean"
+                ]
+              }
+            },
+            {
+              "name": "required",
+              "description": "Type: `boolean`",
               "value": {
                 "type": [
                   "boolean"
@@ -8538,7 +8779,12 @@
             },
             {
               "name": "highlight",
-              "description": "What drives this component's own `dimmedNodeIds`/`dimmedLinkIds` forwarding, on top of the\nalways-active search-match dimming -- see the class doc's dedicated paragraph.\n\nType: `'selection' | 'hover' | 'none'`  \nDefault: `'selection'`"
+              "description": "What drives this component's own `dimmedNodeIds`/`dimmedLinkIds` forwarding, on top of the\nalways-active search-match dimming -- see the class doc's dedicated paragraph.\n\nType: `KnowledgeGraphHighlight`  \nDefault: `'selection'`",
+              "value": {
+                "type": [
+                  "KnowledgeGraphHighlight"
+                ]
+              }
             },
             {
               "name": "label",
@@ -8560,7 +8806,12 @@
             },
             {
               "name": "renderer",
-              "description": "Forwarded to `lr-graph.renderer`. `renderer=\"canvas\"` has no per-node DOM element, which\nnarrows how the node-detail popover anchors and disables its pan/zoom tracking -- see the\nclass doc's anchoring note.\n\nType: `'svg' | 'canvas'`  \nDefault: `'svg'`"
+              "description": "Forwarded to `lr-graph.renderer`. `renderer=\"canvas\"` has no per-node DOM element, which\nnarrows how the node-detail popover anchors and disables its pan/zoom tracking -- see the\nclass doc's anchoring note.\n\nType: `GraphRenderer`  \nDefault: `'svg'`",
+              "value": {
+                "type": [
+                  "GraphRenderer"
+                ]
+              }
             },
             {
               "name": "selected-node-id",
@@ -8600,6 +8851,15 @@
               "value": {
                 "type": [
                   "string"
+                ]
+              }
+            },
+            {
+              "name": "disabled",
+              "description": "Type: `boolean`",
+              "value": {
+                "type": [
+                  "boolean"
                 ]
               }
             },
@@ -8667,7 +8927,25 @@
               }
             },
             {
+              "name": "name",
+              "description": "Type: `string`",
+              "value": {
+                "type": [
+                  "string"
+                ]
+              }
+            },
+            {
               "name": "readonly",
+              "description": "Type: `boolean`",
+              "value": {
+                "type": [
+                  "boolean"
+                ]
+              }
+            },
+            {
+              "name": "required",
               "description": "Type: `boolean`",
               "value": {
                 "type": [
@@ -9034,7 +9312,12 @@
             },
             {
               "name": "scale",
-              "description": "`type=\"bar\"` only (no effect on `type=\"line\"`): `'linear'` (default) maps a bar's value to\nheight via the standard `niceDomain`-based fraction, unchanged from before this property\nexisted. `'sqrt'` instead maps via `Math.sqrt(value / domainMax)` (mirroring `lr-heatmap`'s\nmatrix-mode `sqrt` scale), boosting smaller values relative to one dominant value so a skewed\ndataset's smaller bars don't get washed out. Gridlines/tick labels stay on the linear domain\neither way — only the bar marks' own height mapping changes.\n\nType: `'linear' | 'sqrt'`  \nDefault: `'linear'`"
+              "description": "`type=\"bar\"` only (no effect on `type=\"line\"`): `'linear'` (default) maps a bar's value to\nheight via the standard `niceDomain`-based fraction, unchanged from before this property\nexisted. `'sqrt'` instead maps via `Math.sqrt(value / domainMax)` (mirroring `lr-heatmap`'s\nmatrix-mode `sqrt` scale), boosting smaller values relative to one dominant value so a skewed\ndataset's smaller bars don't get washed out. Gridlines/tick labels stay on the linear domain\neither way — only the bar marks' own height mapping changes.\n\nType: `LyraLiteChartScale`  \nDefault: `'linear'`",
+              "value": {
+                "type": [
+                  "LyraLiteChartScale"
+                ]
+              }
             },
             {
               "name": "skip-zero",
@@ -9853,7 +10136,12 @@
             },
             {
               "name": "value",
-              "description": "Current rating. Host-writable (e.g. to reflect a previously-recorded rating back).\n\nType: `'up' | 'down' | null`  \nDefault: `null`"
+              "description": "Current rating. Host-writable (e.g. to reflect a previously-recorded rating back).\n\nType: `MessageFeedbackValue`  \nDefault: `null`",
+              "value": {
+                "type": [
+                  "MessageFeedbackValue"
+                ]
+              }
             }
           ]
         },
@@ -10911,6 +11199,15 @@
               }
             },
             {
+              "name": "disabled",
+              "description": "Type: `boolean`",
+              "value": {
+                "type": [
+                  "boolean"
+                ]
+              }
+            },
+            {
               "name": "enterkeyhint",
               "description": "Type: `string`  \nDefault: `''`",
               "value": {
@@ -10987,6 +11284,15 @@
               }
             },
             {
+              "name": "name",
+              "description": "Type: `string`",
+              "value": {
+                "type": [
+                  "string"
+                ]
+              }
+            },
+            {
               "name": "phone-label",
               "description": "Accessible-name override for the telephone input.\n\nType: `string`  \nDefault: `''`",
               "value": {
@@ -11001,6 +11307,15 @@
               "value": {
                 "type": [
                   "string"
+                ]
+              }
+            },
+            {
+              "name": "required",
+              "description": "Type: `boolean`",
+              "value": {
+                "type": [
+                  "boolean"
                 ]
               }
             },
@@ -11482,7 +11797,12 @@
             },
             {
               "name": "popup-role",
-              "description": "Semantic role used by the popup. Dropdown subclasses set this to `menu`.\n\nType: `'dialog' | 'menu'`  \nDefault: `'dialog'`"
+              "description": "Semantic role used by the popup. Dropdown subclasses set this to `menu`.\n\nType: `LyraPopupRole`  \nDefault: `'dialog'`",
+              "value": {
+                "type": [
+                  "LyraPopupRole"
+                ]
+              }
             }
           ]
         },
@@ -12297,6 +12617,67 @@
           ]
         },
         {
+          "name": "lr-reorder-item",
+          "description": "`<lr-reorder-item>` — one row inside `<lr-reorder-list>`. Renders arbitrary slotted content plus\nmove-up/move-down buttons. This item alone doesn't know whether it's first or last in the list,\nso its boundary-disabled state (`atStart`/`atEnd`) and list-level cascade (`listDisabled`) are\nboth pushed down by the parent `<lr-reorder-list>` after every slot change or move — normally\nset internally, not by consumers.\n\n---\n\n**Slots**\n\n| Name | Description |\n| --- | --- |\n| (default) | Arbitrary row content (a label, a mini-form, anything). |\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `base` | The row's root wrapper. |\n| `content` | Wrapper around the default slot. |\n| `move-down-button` | The move-down button. |\n| `move-up-button` | The move-up button. |\n\n---\n\n**CSS Custom Properties**\n\n- `--lr-reorder-item-gap` (default: `var(--lr-space-xs)`) — Gap between the move buttons and content.",
+          "attributes": [
+            {
+              "name": "disabled",
+              "description": "Disables this row's own move-up/move-down buttons without removing it or its slotted content\nfrom the DOM. Does not gate the default slot's own content.\n\nType: `boolean`  \nDefault: `false`",
+              "value": {
+                "type": [
+                  "boolean"
+                ]
+              }
+            },
+            {
+              "name": "locale",
+              "description": "Optional locale override. Otherwise the nearest `locale`/`lang` ancestor is used.\n\nType: `string`  \nDefault: `''`",
+              "value": {
+                "type": [
+                  "string"
+                ]
+              }
+            },
+            {
+              "name": "value",
+              "description": "Stable identifier included in the parent list's emitted `lr-reorder` order array. Falls back\nto this item's live DOM-position index (stringified) when unset — a consumer that cares about\nstable identity across moves should set this explicitly, since the fallback string changes as\nthe item's position changes.\n\nType: `string | undefined`"
+            }
+          ]
+        },
+        {
+          "name": "lr-reorder-list",
+          "description": "`<lr-reorder-list>` — a generic vertical list of `<lr-reorder-item>` rows, reorderable via\nper-row move-up/move-down buttons (always available) or Ctrl/Cmd+ArrowUp/ArrowDown from focus\nanywhere inside a row — the same modifier convention `<lr-tree>`'s `reorderable` and\n`<lr-dashboard-grid>`'s `cells-draggable` already establish.\n\nUnlike `<lr-tree>`'s `reorderable` mode (a *controlled* request — `data` is host-owned and\nnothing moves until the host reassigns it), this list physically moves its own slotted\n`<lr-reorder-item>` light-DOM nodes itself. That is a deliberate difference, not an\ninconsistency: `<lr-tree>` re-derives its child elements from a `data` array prop on every\nrender, so a direct DOM move there would just be overwritten on the next render — it must stay\ncontrolled. This list has no such data-array prop; its children are plain author-authored\nslotted content with nothing to reconcile against, so DOM order genuinely is the source of\ntruth (the same principle `<lr-tree>` relies on for its own children). The `lr-reorder` event\nstill tells the host the resulting order, so it can persist it without hand-rolling its own\nsplice/resort logic.\n\n---\n\n**Slots**\n\n| Name | Description |\n| --- | --- |\n| (default) | `<lr-reorder-item>` elements. |\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `base` | The list's root wrapper (`role=\"list\"`). |\n\n---\n\n**CSS Custom Properties**\n\n- `--lr-reorder-list-gap` (default: `var(--lr-space-2xs)`) — Gap between rows.",
+          "attributes": [
+            {
+              "name": "disabled",
+              "description": "Disables every item's move-up/move-down buttons and the Ctrl/Cmd+Arrow shortcut, without\nremoving any item from the DOM or mutating any item's own `disabled` attribute.\n\nType: `boolean`  \nDefault: `false`",
+              "value": {
+                "type": [
+                  "boolean"
+                ]
+              }
+            },
+            {
+              "name": "label",
+              "description": "Accessible name for the list, set as `aria-label` on the internal `role=\"list\"` element. A\nplain `aria-label` attribute on the host itself is honored as a fallback when this is left\nunset, matching `<lr-control-group>`. Native lists don't require an accessible name, so this\nhas no forced fallback string when both are left unset.\n\nType: `string`  \nDefault: `''`",
+              "value": {
+                "type": [
+                  "string"
+                ]
+              }
+            },
+            {
+              "name": "locale",
+              "description": "Optional locale override. Otherwise the nearest `locale`/`lang` ancestor is used.\n\nType: `string`  \nDefault: `''`",
+              "value": {
+                "type": [
+                  "string"
+                ]
+              }
+            }
+          ]
+        },
+        {
           "name": "lr-resize-observer",
           "description": "`<lr-resize-observer>` — observes the first-party or consumer-owned\nelements in its default slot and emits typed resize entries. The wrapper has\nno visual layout of its own (`display: contents`).\n\n---\n\n**Slots**\n\n| Name | Description |\n| --- | --- |\n| (default) | Elements to observe. |\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `base` | The non-layout wrapper around the observed slot. |",
           "attributes": [
@@ -12501,7 +12882,12 @@
             },
             {
               "name": "grouping",
-              "description": "`'source'` buckets rows under a header per `source.id` (always rendered through the internal\n`<lr-virtual-list>`, regardless of `virtualize-at`); `'none'` (default) is a flat ranked list.\n\nType: `'source' | 'none'`  \nDefault: `'none'`"
+              "description": "`'source'` buckets rows under a header per `source.id` (always rendered through the internal\n`<lr-virtual-list>`, regardless of `virtualize-at`); `'none'` (default) is a flat ranked list.\n\nType: `RetrievalResultsGrouping`  \nDefault: `'none'`",
+              "value": {
+                "type": [
+                  "RetrievalResultsGrouping"
+                ]
+              }
             },
             {
               "name": "has-more",
@@ -12541,7 +12927,12 @@
             },
             {
               "name": "presentation",
-              "description": "`'expanded'` (default) shows each chunk's full `<lr-chunk-inspector>` row (score bar, text\npreview with its own expand toggle) plus any `metadata`; `'compact'` shows title + score bar\nonly, on both.\n\nType: `'compact' | 'expanded'`  \nDefault: `'expanded'`"
+              "description": "`'expanded'` (default) shows each chunk's full `<lr-chunk-inspector>` row (score bar, text\npreview with its own expand toggle) plus any `metadata`; `'compact'` shows title + score bar\nonly, on both.\n\nType: `RetrievalResultsPresentation`  \nDefault: `'expanded'`",
+              "value": {
+                "type": [
+                  "RetrievalResultsPresentation"
+                ]
+              }
             },
             {
               "name": "selectable",
@@ -13085,7 +13476,7 @@
             },
             {
               "name": "size",
-              "description": "Visual size — same `xs`–`xl` scale as `lr-toast-item`'s `size`.\n\nType: `LyraSelectSize`  \nDefault: `'m'`",
+              "description": "Visual size — same `2xs`–`xl` scale as `lr-input`/`lr-combobox`/`lr-locale-picker`'s own `size`.\n\nType: `LyraSelectSize`  \nDefault: `'m'`",
               "value": {
                 "type": [
                   "LyraSelectSize"
@@ -13203,6 +13594,15 @@
           "description": "`<lr-slider>` — a numeric range control (e.g. an LLM \"temperature\"\nsetting), form-associated. Mirrors native `<input type=\"range\">`\nsemantics: `value` is the string form-submitted via `FormAssociated`,\n`valueAsNumber` is the ergonomic numeric accessor (mirroring the native\n`<input type=range>` IDL attribute of the same name) kept in sync with it\nin both directions — reads parse `value`, writes stringify back to it.\n\nUnlike the mixin's other consumers, an unset `value` is eagerly defaulted\n— on connect, and again after `form.reset()` — to the midpoint of\n`[min, max]` snapped to `step`, the same \"range sanitization algorithm\"\ndefault a native range input applies. A slider always represents *some*\nnumber, so `required` (inherited from `FormAssociated`) only has a window\nto block submission before that default lands, matching how `required`\nisn't a meaningful constraint on a native range input either.\n\nClicking anywhere on the track (not just the 16px thumb) jumps the thumb\nto that point and continues the same gesture as a drag, matching native\n`<input type=range>` click-to-seek.\n\nDeliberately no label/hint/error chrome -- `label` here is an accessible-name override, not\nvisible label text; a labeled-field consumer wraps this element in their own layout.\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `base` | The row wrapping the track and the optional value readout. |\n| `fill` | The filled portion of the track from `min` up to the current value. |\n| `thumb` | The draggable handle (`role=\"slider\"`). |\n| `track` | The full-width background line. |\n| `value` | The visible numeric readout, rendered when `show-value` is true. |",
           "attributes": [
             {
+              "name": "disabled",
+              "description": "Type: `boolean`",
+              "value": {
+                "type": [
+                  "boolean"
+                ]
+              }
+            },
+            {
               "name": "label",
               "description": "Accessible name for the slider, used when no visible label context\nexists around it (e.g. no wrapping `<label>` or adjacent heading). Set\nas `aria-label` on the interactive `role=\"slider\"` element. A plain\n`aria-label` attribute on the host itself is honored as a fallback when\nthis is left unset, matching `<lr-checkbox>`/`<lr-switch>`; with\nneither, the localized generic `sliderLabel` message applies so the\nfocusable thumb is never nameless (the same pattern as\n`<lr-input>`/`<lr-textarea>`'s built-in generic labels).\n\nType: `string`  \nDefault: `''`",
               "value": {
@@ -13235,6 +13635,24 @@
               "value": {
                 "type": [
                   "number"
+                ]
+              }
+            },
+            {
+              "name": "name",
+              "description": "Type: `string`",
+              "value": {
+                "type": [
+                  "string"
+                ]
+              }
+            },
+            {
+              "name": "required",
+              "description": "Type: `boolean`",
+              "value": {
+                "type": [
+                  "boolean"
                 ]
               }
             },
@@ -14392,7 +14810,12 @@
             },
             {
               "name": "selection-mode",
-              "description": "Type: `'none' | 'single' | 'multiple'`  \nDefault: `'none'`"
+              "description": "Type: `TableSelectionMode`  \nDefault: `'none'`",
+              "value": {
+                "type": [
+                  "TableSelectionMode"
+                ]
+              }
             },
             {
               "name": "show-all-columns",
@@ -14722,6 +15145,15 @@
               }
             },
             {
+              "name": "disabled",
+              "description": "Type: `boolean`",
+              "value": {
+                "type": [
+                  "boolean"
+                ]
+              }
+            },
+            {
               "name": "enterkeyhint",
               "description": "Type: `string`  \nDefault: `''`",
               "value": {
@@ -14776,11 +15208,29 @@
               }
             },
             {
+              "name": "name",
+              "description": "Type: `string`",
+              "value": {
+                "type": [
+                  "string"
+                ]
+              }
+            },
+            {
               "name": "placeholder",
               "description": "Type: `string`  \nDefault: `''`",
               "value": {
                 "type": [
                   "string"
+                ]
+              }
+            },
+            {
+              "name": "required",
+              "description": "Type: `boolean`",
+              "value": {
+                "type": [
+                  "boolean"
                 ]
               }
             },
@@ -14901,7 +15351,12 @@
             },
             {
               "name": "grouping",
-              "description": "Data mode: bucket rows under localized date headers, use `groupBy` with `'custom'`, or use\n`'none'` for a flat list in host order.\n\nType: `'date' | 'custom' | 'none'`  \nDefault: `'date'`"
+              "description": "Data mode: bucket rows under localized date headers, use `groupBy` with `'custom'`, or use\n`'none'` for a flat list in host order.\n\nType: `ThreadListGrouping`  \nDefault: `'date'`",
+              "value": {
+                "type": [
+                  "ThreadListGrouping"
+                ]
+              }
             },
             {
               "name": "label",
@@ -16342,7 +16797,12 @@
             },
             {
               "name": "item-role",
-              "description": "`'listitem'` (default) preserves today's `role=\"list\"`/`role=\"listitem\"` mapping with\n`aria-setsize`/`aria-posinset`. `'row'` maps to `role=\"rowgroup\"`/`role=\"row\"` with\n`aria-rowindex` instead -- for a consumer composing a virtualized `role=\"table\"` (see\n`<lr-dataset-viewer>`).\n\nType: `'listitem' | 'row'`  \nDefault: `'listitem'`"
+              "description": "`'listitem'` (default) preserves today's `role=\"list\"`/`role=\"listitem\"` mapping with\n`aria-setsize`/`aria-posinset`. `'row'` maps to `role=\"rowgroup\"`/`role=\"row\"` with\n`aria-rowindex` instead -- for a consumer composing a virtualized `role=\"table\"` (see\n`<lr-dataset-viewer>`).\n\nType: `VirtualListItemRole`  \nDefault: `'listitem'`",
+              "value": {
+                "type": [
+                  "VirtualListItemRole"
+                ]
+              }
             },
             {
               "name": "loading",
@@ -16701,11 +17161,21 @@
             },
             {
               "name": "orientations",
-              "description": "`mixed` lets some words render rotated 90° for denser packing.\n\nType: `'horizontal' | 'mixed'`  \nDefault: `'horizontal'`"
+              "description": "`mixed` lets some words render rotated 90° for denser packing.\n\nType: `WordCloudOrientations`  \nDefault: `'horizontal'`",
+              "value": {
+                "type": [
+                  "WordCloudOrientations"
+                ]
+              }
             },
             {
               "name": "scale",
-              "description": "`sqrt` compresses the weight->font-size mapping so one heavy word doesn't dwarf the rest.\n\nType: `'linear' | 'sqrt'`  \nDefault: `'linear'`"
+              "description": "`sqrt` compresses the weight->font-size mapping so one heavy word doesn't dwarf the rest.\n\nType: `WordCloudScale`  \nDefault: `'linear'`",
+              "value": {
+                "type": [
+                  "WordCloudScale"
+                ]
+              }
             }
           ]
         },
@@ -18184,6 +18654,14 @@
         {
           "name": "--lr-rating-size",
           "description": "**`<lr-rating>`** (default: `var(--lr-font-size-xl)`) — Star size."
+        },
+        {
+          "name": "--lr-reorder-item-gap",
+          "description": "**`<lr-reorder-item>`** (default: `var(--lr-space-xs)`) — Gap between the move buttons and content."
+        },
+        {
+          "name": "--lr-reorder-list-gap",
+          "description": "**`<lr-reorder-list>`** (default: `var(--lr-space-2xs)`) — Gap between rows."
         },
         {
           "name": "--lr-responsive-panel-overlay-color",
