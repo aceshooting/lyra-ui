@@ -3679,6 +3679,15 @@
                   "boolean"
                 ]
               }
+            },
+            {
+              "name": "size",
+              "description": "Visual size — same `2xs`–`xl` scale as `lr-input`/`lr-select`'s own `size`.\n\nType: `LyraColorPickerSize`  \nDefault: `'m'`",
+              "value": {
+                "type": [
+                  "LyraColorPickerSize"
+                ]
+              }
             }
           ]
         },

@@ -3231,6 +3231,13 @@
             "kind": "markdown",
             "value": "Type: `boolean`"
           }
+        },
+        {
+          "name": "size",
+          "description": {
+            "kind": "markdown",
+            "value": "Visual size — same `2xs`–`xl` scale as `lr-input`/`lr-select`'s own `size`.\n\nType: `LyraColorPickerSize`  \nDefault: `'m'`"
+          }
         }
       ]
     },
