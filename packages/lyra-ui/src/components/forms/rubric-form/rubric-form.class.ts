@@ -115,7 +115,6 @@ export class LyraRubricForm extends LyraElement<LyraRubricFormEventMap> {
   private _hasNext = false;
   private _skippable = false;
   private _disabled = false;
-  private _validityFlags: ValidityStateFlags = {};
   // Guards lr-validity-change so it only fires on an actual change, not on
   // every render -- `undefined` guarantees the first computed state always
   // "changes" from it, so mounting with an unmet required field still
@@ -316,7 +315,6 @@ export class LyraRubricForm extends LyraElement<LyraRubricFormEventMap> {
   private syncFormState(): void {
     const { errors, flags } = this.computeValidation();
     this._errors = errors;
-    this._validityFlags = flags;
     let formValue: string | null = null;
     try {
       formValue = JSON.stringify(this._value);

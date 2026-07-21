@@ -14,7 +14,6 @@ import {
   loadShikiHighlighterCore,
   normalizeShikiLanguage,
   SHIKI_THEMES,
-  type ShikiHighlighterCore,
   type ShikiLanguageInput,
 } from '../code-block/code-loader.js';
 import { getKatex, type KatexApi } from './katex-loader.js';

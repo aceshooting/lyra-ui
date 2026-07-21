@@ -160,7 +160,7 @@ export class LyraReorderList extends LyraElement<LyraReorderListEventMap> {
   /** Physically moves `item` (already known to belong at `toIndex`) and runs the same
    *  boundary-recompute / focus-restore / announce steps for both the immediate (uncanceled) path
    *  and a later `finalizePendingMove()` call. */
-  private applyMove(item: LyraReorderItem, direction: 'up' | 'down', fromIndex: number, toIndex: number): void {
+  private applyMove(item: LyraReorderItem, direction: 'up' | 'down', _fromIndex: number, toIndex: number): void {
     const items = this.itemElements;
     const target = items[toIndex];
     if (direction === 'up') this.insertBefore(item, target);

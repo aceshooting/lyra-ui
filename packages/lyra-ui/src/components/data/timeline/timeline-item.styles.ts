@@ -57,6 +57,12 @@ export const styles = css`
     justify-content: center;
     overflow: hidden;
   }
+  /* The icon slot overrides the fallback dot outright (see the class doc's icon slot
+     description) -- only the fill is suppressed, not color, so a slotted <lr-icon> still
+     inherits the variant tint. */
+  [part='marker'][data-has-icon] {
+    background: transparent;
+  }
 
   /* The pulsing "in-progress" treatment -- same token/guard shape as lr-stream-status's
      streaming-phase dot pulse. */

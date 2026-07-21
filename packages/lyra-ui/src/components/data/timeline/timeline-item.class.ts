@@ -133,7 +133,10 @@ export class LyraTimelineItem extends LyraElement {
   // markup to be entirely absent from the render() output -- not merely visually superseded -- once
   // the corresponding slot has assigned content. Same [part][hidden]-not-:empty reasoning as
   // <lr-menu-item>'s hasIconSlot (a [part] containing a literal <slot> child never matches a bare
-  // :empty selector), copied verbatim for all three slots here.
+  // :empty selector) drives hasTimestampSlot/hasDescriptionSlot below; hasIconSlot itself can't
+  // use [hidden] the same way -- [part='marker'] must stay visible either way to host the slotted
+  // icon -- so it instead drives [part='marker'][data-has-icon] suppressing just the dot's
+  // background fill (see timeline-item.styles.ts).
   @state() private hasIconSlot = false;
   @state() private hasTimestampSlot = false;
   @state() private hasDescriptionSlot = false;
@@ -186,7 +189,7 @@ export class LyraTimelineItem extends LyraElement {
     return html`
       <div part="base">
         <div part="track">
-          <span part="marker" aria-hidden="true">
+          <span part="marker" aria-hidden="true" ?data-has-icon=${this.hasIconSlot}>
             <slot name="icon" @slotchange=${this.onIconSlotChange}></slot>
           </span>
           <span part="rail"></span>

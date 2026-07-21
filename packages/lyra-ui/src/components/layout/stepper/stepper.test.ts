@@ -302,6 +302,22 @@ describe('lr-stepper', () => {
     expect(el.hasAttribute('data-effective-orientation')).to.be.false;
   });
 
+  it('exposes the resolved container-basis orientation breakpoint in pixels via the private accessor', async () => {
+    const el = (await fixture(
+      html`<lr-stepper orientation-breakpoint="500" .steps=${steps()}></lr-stepper>`,
+    )) as LyraStepper;
+    await elementUpdated(el);
+    expect(
+      (el as unknown as { resolvedOrientationBreakpoint: number | undefined }).resolvedOrientationBreakpoint,
+    ).to.equal(500);
+
+    el.orientationBreakpoint = 'abc'; // unresolvable
+    await elementUpdated(el);
+    expect(
+      (el as unknown as { resolvedOrientationBreakpoint: number | undefined }).resolvedOrientationBreakpoint,
+    ).to.equal(undefined);
+  });
+
   describe('orientationBreakpoint as a CSS length', () => {
     afterEach(() => {
       document.documentElement.style.fontSize = '';

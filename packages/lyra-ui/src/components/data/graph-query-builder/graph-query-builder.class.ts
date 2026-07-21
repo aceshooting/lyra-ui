@@ -198,7 +198,6 @@ export class LyraGraphQueryBuilder extends LyraElement<LyraGraphQueryBuilderEven
   private _name = '';
   private _value: GraphQuery = EMPTY_VALUE;
   private _disabled = false;
-  private _validityFlags: ValidityStateFlags = {};
   // Guards lr-validity-change so it only fires on an actual change -- `undefined` guarantees the
   // first computed state always "changes" from it, mirroring lr-rubric-form's identical guard.
   private lastValidityKey: string | undefined;
@@ -327,7 +326,6 @@ export class LyraGraphQueryBuilder extends LyraElement<LyraGraphQueryBuilderEven
   private syncFormState(): void {
     const { errors, flags } = this.computeValidation();
     this._errors = errors;
-    this._validityFlags = flags;
     let formValue: string | null = null;
     try {
       formValue = JSON.stringify(this._value);

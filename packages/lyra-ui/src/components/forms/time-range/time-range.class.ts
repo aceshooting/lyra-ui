@@ -169,7 +169,6 @@ export class LyraTimeRange extends LyraElement<LyraTimeRangeEventMap> {
    */
   @property({ attribute: false }) presets: TimeRangePreset[] = [];
 
-  private internals: ElementInternals;
   private _disabled = false;
   // Tracked separately from the consumer's own `disabled` -- a fieldset
   // cascade must never mutate that IDL property/attribute itself (mirrors
@@ -185,7 +184,7 @@ export class LyraTimeRange extends LyraElement<LyraTimeRangeEventMap> {
 
   constructor() {
     super();
-    this.internals = createInternalsSafely(this);
+    createInternalsSafely(this);
   }
 
   get disabled(): boolean {

@@ -120,6 +120,7 @@ const chatMessage: ChatMessage = {
   text: 'Revenue grew 12% year over year.',
   attachments: [documentRef],
 };
+void chatMessage;
 
 const toolInvocation: ToolInvocation = {
   id: 'call-1',

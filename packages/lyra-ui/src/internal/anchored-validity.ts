@@ -34,7 +34,7 @@ export class AnchoredValidityController implements ReactiveController {
   private refreshToken = 0;
 
   constructor(
-    private readonly host: ReactiveControllerHost,
+    host: ReactiveControllerHost,
     private readonly internals: ElementInternals,
     private readonly getAnchor: () => HTMLElement | null | undefined,
   ) {
