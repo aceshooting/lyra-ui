@@ -24,6 +24,7 @@
     "readme:check": "node scripts/check-readme-freshness.mjs",
     "skill:check": "node scripts/check-skill-manifest.mjs",
     "check:packed-consumer": "node scripts/check-packed-consumer.mjs",
+    "check:dead-code": "knip",
     "provenance:check": "pnpm --filter @aceshooting/lyra-ui provenance-policy",
     "storybook": "storybook dev -p 6006",
     "build-storybook": "storybook build"
@@ -47,6 +48,7 @@
     "d3-force": "^3.0.0",
     "d3-selection": "^3.0.0",
     "d3-zoom": "^3.0.0",
+    "knip": "^6.27.0",
     "lit": "^3.3.3",
     "maplibre-gl": "^5.24.0",
     "playwright": "^1.61.1",

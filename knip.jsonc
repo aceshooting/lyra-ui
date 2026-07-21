@@ -1,0 +1,57 @@
+{
+  "$schema": "https://unpkg.com/knip@6/schema.json",
+  // lyra-ui ships `./components/*` and `./internal/*` as wildcard subpath exports
+  // (packages/lyra-ui/package.json#exports), so nearly every file under src/components/**
+  // and src/internal/** is public API even when nothing *inside* this repo imports it.
+  // Those directories are listed as `entry` below so knip doesn't flag the whole library
+  // as dead code — it still catches genuinely orphaned files (scripts/, type-tests/,
+  // stale fixtures) and unused/unlisted dependencies, which is where the real signal is.
+  "workspaces": {
+    ".": {
+      "entry": ["scripts/*.mjs", ".storybook/{main,preview,manager,story-theme}.js"],
+      "project": ["scripts/**/*.mjs", ".storybook/**/*.js"],
+      "ignoreDependencies": [
+        // scripts/check-packed-consumer.mjs spawns these by bin name (`pnpm exec publint`,
+        // `pnpm exec attw`) and lists the chart/d3 peers as string-literal data for a packed-
+        // tarball smoke test — none of that is a static import knip can trace.
+        "publint",
+        "@arethetypeswrong/cli",
+        "@sgratzl/chartjs-chart-boxplot",
+        "chart.js",
+        "chartjs-plugin-zoom",
+        "d3-drag",
+        "d3-force",
+        "d3-selection",
+        "d3-zoom",
+        // workspace self-deps, consumed via dynamic subpath imports in the same script
+        "@aceshooting/lyra-ui",
+        "@aceshooting/lyra-flags",
+        // consumed via CSS `@import 'tailwindcss'` (.storybook/tailwind.css) — knip doesn't
+        // trace CSS imports
+        "tailwindcss"
+      ]
+    },
+    "packages/lyra-ui": {
+      "entry": [
+        "src/components/**/*.ts",
+        "src/internal/**/*.ts",
+        "src/**/*.test.ts",
+        "src/**/*.stories.ts",
+        "type-tests/**/*.ts",
+        "scripts/*.mjs",
+        "*.config.js"
+      ],
+      "project": ["src/**/*.ts", "scripts/**/*.mjs", "type-tests/**/*.ts", "*.config.js"],
+      "ignoreDependencies": [
+        // devDependency, deliberately unused at runtime — @sinonjs/fake-timers does not
+        // work under @web/test-runner; kept only as a documented non-solution.
+        "@sinonjs/fake-timers",
+        "@types/sinonjs__fake-timers"
+      ]
+    },
+    "packages/lyra-flags": {
+      "entry": ["scripts/*.mjs"],
+      "project": ["scripts/**/*.mjs", "*.js"]
+    }
+  },
+}

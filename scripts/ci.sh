@@ -127,6 +127,9 @@ pnpm --filter @aceshooting/lyra-ui check:bundle-size
 step "workspace tests (non-lyra-ui)"
 pnpm --filter '!@aceshooting/lyra-ui' -r test
 
+step "check:dead-code"
+pnpm run check:dead-code
+
 step "lyra-ui test:coverage"
 pnpm --filter @aceshooting/lyra-ui test:coverage
 

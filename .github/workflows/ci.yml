@@ -43,6 +43,10 @@ jobs:
       # lyra-ui's own Chromium suite runs in the build-and-coverage job via test:coverage --
       # this only needs to cover the other workspace package(s), e.g. lyra-flags's own test script.
       - run: pnpm --filter '!@aceshooting/lyra-ui' -r test
+      # knip.jsonc's `entry` patterns model the wildcard `./components/*`/`./internal/*` package
+      # exports, so a failure here is a genuinely orphaned file/script or an unused/unlisted
+      # dependency -- not the whole library being flagged dead. See knip.jsonc's own header comment.
+      - run: pnpm run check:dead-code
       - run: pnpm manifest
       - run: git diff --exit-code -- packages/lyra-ui/custom-elements.json
       - run: pnpm readme:check
