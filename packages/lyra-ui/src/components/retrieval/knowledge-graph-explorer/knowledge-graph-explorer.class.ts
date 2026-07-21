@@ -484,7 +484,15 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
                     .types=${this.nodeTypes}
                     community-label=${this.communityLabelFor(selectedEntity.communityId)}
                   >
-                    <lr-neighbor-list .rows=${this.selectedNodeId ? this.neighborRowsFor(this.selectedNodeId) : []} expandable></lr-neighbor-list>
+                    <lr-neighbor-list
+                      .rows=${this.neighborRowsFor(
+                        // selectedEntity (this block's guard, computed above) is only ever
+                        // non-null when this.selectedNodeId was truthy at that same point in
+                        // this render() call, so this can never actually be null here.
+                        this.selectedNodeId!,
+                      )}
+                      expandable
+                    ></lr-neighbor-list>
                     <lr-button slot="actions" size="s" @click=${() => this.selectedNodeId && this.togglePin(this.selectedNodeId)}>
                       ${this.localize(isPinned ? 'graphExplorerUnpin' : 'graphExplorerPin')}
                     </lr-button>
