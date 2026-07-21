@@ -14,8 +14,10 @@ premise here is inverted from a normal code review — you are not judging code 
 practice, you are asking of every component: *we already know this breaks; is it still here,
 somewhere else?*
 
-The catalogue is `.claude/review-checklist.md` — 103 checks mined from 145 completed audit and bug
-documents and re-verified against the tree. **Read it in full before dispatching anything.** Each
+The catalogue is `.claude/review-checklist.md` — 106 checks mined from 145 completed audit and bug
+documents and re-verified against the tree (grows over time as sweeps and ad hoc audits find new
+defect classes — count via `grep -c '^### \`' .claude/review-checklist.md`, don't hardcode it again).
+**Read it in full before dispatching anything.** Each
 entry carries the failure story that produced it; reviewing from the one-line rule without the story
 is how lookalikes get filed as findings.
 
@@ -52,7 +54,7 @@ easiest way to waste this command's budget, and it produces findings the user al
 
 ## 3. Shard the sweep across two axes
 
-Do not give one agent a whole family against all 103 checks — recall collapses. Shard by **family ×
+Do not give one agent a whole family against the full checklist — recall collapses. Shard by **family ×
 lens**, so every component is looked at four times by agents that cannot see each other's blind spots:
 
 | Lens | Checklist categories |
