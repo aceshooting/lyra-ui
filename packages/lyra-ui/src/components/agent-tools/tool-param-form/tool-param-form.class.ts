@@ -530,7 +530,9 @@ export class LyraToolParamForm extends LyraElement<LyraToolParamFormEventMap> {
     if (Object.keys(this._validityFlags).length === 0) {
       this.validityController.setValidity({});
     } else {
-      const firstMessage = Object.values(this._errors)[0] ?? this._formError ?? this.localize('valueInvalid');
+      // Every branch that sets a _validityFlags flag (this else-branch's precondition) also sets
+      // a matching entry in _errors or a truthy _formError, so one of these two is always present.
+      const firstMessage = Object.values(this._errors)[0] ?? this._formError;
       this.validityController.setValidity(this._validityFlags, firstMessage);
     }
   }

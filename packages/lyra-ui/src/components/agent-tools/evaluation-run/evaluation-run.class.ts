@@ -306,13 +306,13 @@ export class LyraEvaluationRun extends LyraElement<LyraEvaluationRunEventMap> {
     return html`<lr-markdown part=${part} content=${text}></lr-markdown>`;
   }
 
-  private renderGrounding(example: EvaluationExampleResult): TemplateResult {
+  private renderGrounding(example: EvaluationExampleResult, grounding: GroundingAssessment): TemplateResult {
     return html`
       <section part="grounding-section">
         <h4 part="section-heading">${this.localize('evaluationRunGroundingHeading')}</h4>
         <lr-grounding-summary
           part="grounding-summary"
-          .assessment=${example.grounding ?? null}
+          .assessment=${grounding}
           .citations=${example.citations ?? []}
           @lr-citation-select=${(e: CustomEvent<LyraGroundingSummaryEventMap['lr-citation-select']['detail']>) =>
             this.onCitationSelect(example.id, e)}
@@ -321,13 +321,13 @@ export class LyraEvaluationRun extends LyraElement<LyraEvaluationRunEventMap> {
     `;
   }
 
-  private renderToolTrace(example: EvaluationExampleResult): TemplateResult {
+  private renderToolTrace(example: EvaluationExampleResult, toolTrace: ToolTimelineEntry[]): TemplateResult {
     return html`
       <section part="tool-trace-section">
         <h4 part="section-heading">${this.localize('evaluationRunToolTraceHeading')}</h4>
         <lr-tool-timeline
           part="tool-trace"
-          .entries=${example.toolTrace ?? []}
+          .entries=${toolTrace}
           @lr-tool-approval-decide=${(e: CustomEvent<LyraToolTimelineEventMap['lr-tool-approval-decide']['detail']>) =>
             this.onToolApprovalDecide(example.id, e)}
         ></lr-tool-timeline>
@@ -356,8 +356,8 @@ export class LyraEvaluationRun extends LyraElement<LyraEvaluationRunEventMap> {
           <h4 part="section-heading">${this.localize('evaluationRunOutputHeading')}</h4>
           ${this.renderContent(example.output, example.outputFormat, example.outputLanguage, 'output')}
         </section>
-        ${example.grounding ? this.renderGrounding(example) : nothing}
-        ${example.toolTrace && example.toolTrace.length > 0 ? this.renderToolTrace(example) : nothing}
+        ${example.grounding ? this.renderGrounding(example, example.grounding) : nothing}
+        ${example.toolTrace && example.toolTrace.length > 0 ? this.renderToolTrace(example, example.toolTrace) : nothing}
       </lr-details>
     `;
   }
