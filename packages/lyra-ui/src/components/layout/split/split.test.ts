@@ -352,14 +352,14 @@ it('exposes the resolved container-basis orientation breakpoint in pixels via th
   )) as LyraSplit;
   await elementUpdated(el);
   expect(
-    (el as unknown as { resolvedOrientationBreakpoint: number | undefined }).resolvedOrientationBreakpoint,
+    (el as unknown as { orientationBreakpoints: { resolved: number | undefined } }).orientationBreakpoints.resolved,
   ).to.equal(500);
 
   el.orientationBreakpoint = 'abc'; // unresolvable
   await elementUpdated(el);
-  expect((el as unknown as { resolvedOrientationBreakpoint: number | undefined }).resolvedOrientationBreakpoint).to.equal(
-    undefined,
-  );
+  expect(
+    (el as unknown as { orientationBreakpoints: { resolved: number | undefined } }).orientationBreakpoints.resolved,
+  ).to.equal(undefined);
 });
 
 it('accepts a rem orientation breakpoint, crossing at the same width as the equivalent px number', async () => {

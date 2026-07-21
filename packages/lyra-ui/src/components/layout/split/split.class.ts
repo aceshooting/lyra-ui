@@ -508,20 +508,6 @@ export class LyraSplit extends LyraElement<LyraSplitEventMap> {
     return this._effectiveOrientation;
   }
 
-  /** `orientationBreakpoint` resolved to pixels, or `undefined` when it's unset or unresolvable
-   *  (see the property's own doc). Deliberately a getter, not a cached field: every read
-   *  re-resolves, so a `rem` breakpoint tracks the live root font size — caching it at first render
-   *  would silently freeze the crossing width and defeat the whole point of accepting `rem`. `this`
-   *  is passed as the `em` reference element.
-   *
-   *  Every consumer of the breakpoint gates on *this* rather than on `orientationBreakpoint != null`
-   *  — an unresolvable value (`"abc"`, `"80vw"`) must behave as fully unset, otherwise it would arm
-   *  the `ResizeObserver` and publish a `data-effective-orientation` marker for a threshold that can
-   *  never be crossed. */
-  private get resolvedOrientationBreakpoint(): number | undefined {
-    return this.orientationBreakpoints.resolved;
-  }
-
   /** Whether the shared collapse/orientation `ResizeObserver` needs to be armed at all — true when
    *  either responsive feature (`collapse` or a *container-basis* `orientationBreakpoint`) is opted
    *  into, since both are driven off the same measured `[part="base"]` width (see

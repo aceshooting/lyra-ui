@@ -179,16 +179,6 @@ export class LyraStepper extends LyraElement<LyraStepperEventMap> {
     return this._effectiveOrientation;
   }
 
-  /** `orientationBreakpoint` in pixels, or `undefined` when unset *or* unparseable -- meaningful
-   *  only under `orientationBreakpointBasis="container"`, where this controller owns the crossing
-   *  comparison. Deliberately re-resolved per call (never cached): a `rem` breakpoint has to track
-   *  the live root font size. Never use this to decide whether the feature is on -- under
-   *  `"viewport"` basis it's not the number actually in effect; use `orientationBreakpoints.active`
-   *  for that (see `OrientationBreakpointController`'s class doc). */
-  private get resolvedOrientationBreakpoint(): number | undefined {
-    return this.orientationBreakpoints.resolved;
-  }
-
   connectedCallback(): void {
     super.connectedCallback();
     // Seeds `measuredInlineSize` with a real reading of the host's own box, taken before the

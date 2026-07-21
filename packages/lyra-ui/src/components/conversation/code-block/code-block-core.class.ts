@@ -194,8 +194,6 @@ export class LyraCodeBlockCore extends LyraElement<LyraCodeBlockCoreEventMap> {
 
   private stopWatchingTheme?: () => void;
 
-  private highlighter?: ShikiHighlighterCore | null;
-
   // Guards the async per-language load in syncHighlight() against a
   // `code`/`language` change that arrives before a previous load resolves --
   // only the result matching the *current* token is ever applied.
@@ -212,7 +210,7 @@ export class LyraCodeBlockCore extends LyraElement<LyraCodeBlockCoreEventMap> {
       this.isDarkTheme = resolveIsDarkTheme(this);
     });
     if (Object.keys(this.languages).length === 0) return; // no languages supplied -- stays in the plain-text-fallback state permanently, same as languagesOnly + no matching grammar already behaves in lr-code-block today
-    void loadShikiHighlighterCore(this.languages).then((hl) => {
+    void loadShikiHighlighterCore(this.languages).then(() => {
       // loadShikiHighlighterCore() is a shared, cached-by-languages promise --
       // it can resolve well after this element has disconnected (or been torn
       // down for good). Bail out rather than mutate @state on a dead instance
@@ -220,7 +218,6 @@ export class LyraCodeBlockCore extends LyraElement<LyraCodeBlockCoreEventMap> {
       // nothing. Mirrors chart.ts's/markdown.ts's/lr-code-block's identical
       // connectedCallback() guard for the same race.
       if (!this.isConnected) return;
-      this.highlighter = hl;
       this.shikiReady = true;
       this.syncHighlight();
     });
@@ -396,11 +393,11 @@ export class LyraCodeBlockCore extends LyraElement<LyraCodeBlockCoreEventMap> {
     }
 
     // Mirrors <lr-code-block>'s own fine-grained branch: calls
-    // loadShikiHighlighterCore() directly rather than only reading a
-    // cached `this.highlighter` -- `languages` may be supplied any time
-    // after `connectedCallback()` already ran (e.g. set as a property right
-    // after creation), so this can't rely solely on that one-time eager
-    // load. loadShikiHighlighterCore() itself caches by `languages` object
+    // loadShikiHighlighterCore() directly rather than caching a highlighter
+    // on the instance -- `languages` may be supplied any time after
+    // `connectedCallback()` already ran (e.g. set as a property right after
+    // creation), so this can't rely solely on that one-time eager load.
+    // loadShikiHighlighterCore() itself caches by `languages` object
     // identity, so a call here that lands on the same map
     // connectedCallback() already kicked off just resolves the shared
     // cached promise instead of loading twice.
@@ -415,7 +412,6 @@ export class LyraCodeBlockCore extends LyraElement<LyraCodeBlockCoreEventMap> {
       // guard alongside connectedCallback()'s, not just the staleness check
       // above, to avoid mutating @state on a dead instance.
       if (!this.isConnected) return;
-      this.highlighter = hl;
       this.shikiReady = true;
       this.highlightedHtml = hl ? this.tokenize(hl, lang) : null;
     });

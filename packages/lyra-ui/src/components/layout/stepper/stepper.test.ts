@@ -308,13 +308,13 @@ describe('lr-stepper', () => {
     )) as LyraStepper;
     await elementUpdated(el);
     expect(
-      (el as unknown as { resolvedOrientationBreakpoint: number | undefined }).resolvedOrientationBreakpoint,
+      (el as unknown as { orientationBreakpoints: { resolved: number | undefined } }).orientationBreakpoints.resolved,
     ).to.equal(500);
 
     el.orientationBreakpoint = 'abc'; // unresolvable
     await elementUpdated(el);
     expect(
-      (el as unknown as { resolvedOrientationBreakpoint: number | undefined }).resolvedOrientationBreakpoint,
+      (el as unknown as { orientationBreakpoints: { resolved: number | undefined } }).orientationBreakpoints.resolved,
     ).to.equal(undefined);
   });
 

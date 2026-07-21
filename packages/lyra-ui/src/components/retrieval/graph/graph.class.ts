@@ -1230,7 +1230,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
   private bindCanvasZoom(): void {
     if (!this.d3 || !this.canvasEl) return;
     this.zoomBehavior = this.d3
-      .zoom<HTMLCanvasElement, unknown>()
+      .zoom()
       .scaleExtent([this.safeMinZoom, this.safeMaxZoom])
       .on('start', () => {
         // Same self-triggered-echo guard as the svg zoom bind's own 'start' handler above (see its
@@ -1581,7 +1581,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
       this.gEl = this.renderRoot.querySelector('g') as SVGGElement;
       this.focusHaloEl = this.renderRoot.querySelector('[part="focus-halo"]') as SVGCircleElement;
       this.zoomBehavior = this.d3
-        .zoom<SVGSVGElement, unknown>()
+        .zoom()
         .scaleExtent([this.safeMinZoom, this.safeMaxZoom])
         .on('start', () => {
           // A camera tween writes a transform on every frame via applyZoomTransform(), which
@@ -1650,8 +1650,8 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
         const n = this.simNodes[i];
         if (!n) return;
         this.boundNodeEls.add(el);
-        this.d3!.select<Element, SimNode>(el).call(
-          this.d3!.drag<Element, SimNode>()
+        this.d3!.select<Element>(el).call(
+          this.d3!.drag()
             .on('start', (event: OptionalPeerApi) => {
               this.isDragging = true;
               // Keep a node drag from also triggering the svg's own pan gesture.
@@ -1887,8 +1887,8 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
       }
     }
 
-    this.linkForce = this.d3.forceLink<SimNode, SimLink>(links).distance(this.safeLinkDistance);
-    this.chargeForce = this.d3.forceManyBody<SimNode>().strength(this.safeChargeStrength);
+    this.linkForce = this.d3.forceLink<SimLink>(links).distance(this.safeLinkDistance);
+    this.chargeForce = this.d3.forceManyBody().strength(this.safeChargeStrength);
 
     const simulation = this.d3
       .forceSimulation(nodes)

@@ -4,21 +4,19 @@ type D3Module = OptionalPeerApi;
 
 export interface D3Modules {
   forceSimulation: <Node extends D3Module = D3Module>(nodes?: Iterable<Node>) => D3Module;
-  forceLink: <Node extends D3Module = D3Module, Link extends D3Module = D3Module>(
-    links?: Iterable<Link>,
-  ) => D3Module;
-  forceManyBody: <Node extends D3Module = D3Module>() => D3Module;
+  forceLink: <Link extends D3Module = D3Module>(links?: Iterable<Link>) => D3Module;
+  forceManyBody: () => D3Module;
   forceCenter: (x?: number, y?: number) => D3Module;
   forceCollide: <Node extends D3Module = D3Module>(radius?: number | ((node: Node) => number)) => D3Module;
-  drag: <Element extends D3Module = D3Module, Datum extends D3Module = D3Module>() => D3Module;
-  zoom: <Element extends D3Module = D3Module, Datum extends D3Module = D3Module>() => D3Module;
+  drag: () => D3Module;
+  zoom: () => D3Module;
   /** The identity transform (`k=1, x=0, y=0`) — the starting point for constructing an absolute
    *  camera transform via `.translate(x, y).scale(k)`, used by `focusNode()`/`fit()`. */
   zoomIdentity: D3Module;
   /** Reads the transform currently bound to a DOM node via d3-zoom (its internal `__zoom`
    *  datum) — used to read the current scale/position before tweening to a new one. */
   zoomTransform: (node: Element) => D3Module;
-  select: <Element extends D3Module = D3Module, Datum extends D3Module = D3Module>(node?: Element) => D3Module;
+  select: <Element extends D3Module = D3Module>(node?: Element) => D3Module;
 }
 
 /**
