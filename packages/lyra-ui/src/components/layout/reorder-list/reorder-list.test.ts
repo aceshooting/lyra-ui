@@ -215,6 +215,32 @@ describe('<lr-reorder-list>', () => {
     expect(text).to.contain('Déplacé en position 1 sur 3');
   });
 
+  it('focuses the most recently moved item after two rapid consecutive moves fired with no await in between (round 2 regression: orphaned focus-restore chain)', async () => {
+    // Reproduces a fast double-click / Ctrl+Arrow key-repeat outrunning a render tick: two moves
+    // fired back-to-back, with NO `await` between them, so the second move's own focus-restore
+    // bookkeeping is set up before the first move's has had any chance to resolve.
+    const el = await fixture<LyraReorderList>(threeItems);
+    const itemA = itemsOf(el)[0];
+    const itemB = itemsOf(el)[1];
+
+    // Move 1: "a" moves down, [a, b, c] -> [b, a, c]. Targets "a" for focus restoration.
+    const aDownButton = itemA.shadowRoot!.querySelector('[part="move-down-button"]') as HTMLButtonElement;
+    aDownButton.click();
+
+    // Move 2, fired immediately (no await): "b" moves down, [b, a, c] -> [a, b, c]. This is the
+    // most recent move and should be the one that ends up owning focus.
+    const bDownButton = itemB.shadowRoot!.querySelector('[part="move-down-button"]') as HTMLButtonElement;
+    bDownButton.click();
+
+    await el.updateComplete;
+
+    const activeInB = itemB.shadowRoot!.activeElement;
+    expect(activeInB?.getAttribute('part'), 'focus lands on a button inside "b", the second (most recent) move\'s target').to.equal(
+      'move-down-button',
+    );
+    expect(itemA.shadowRoot!.activeElement, 'the stale first move\'s target, "a", must not hold or steal focus').to.be.null;
+  });
+
   it('is accessible in a populated state', async () => {
     const el = await fixture<LyraReorderList>(threeItems);
     await expect(el).to.be.accessible();
