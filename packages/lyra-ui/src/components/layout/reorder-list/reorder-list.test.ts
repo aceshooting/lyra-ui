@@ -76,6 +76,62 @@ describe('<lr-reorder-list>', () => {
     expect(activeInShadow?.getAttribute('part')).to.equal('move-up-button');
   });
 
+  it('restores focus to a real button inside the moved item after a boundary-crossing move on a 2-item list', async () => {
+    // Regression test for a focus-loss bug: on a 2-item list, clicking the FIRST item's
+    // move-down button makes that item (now at index 1) the new atEnd boundary -- the exact
+    // "fallback to the opposite-direction button" case where the chosen refocus target
+    // (move-up-button) was disabled BEFORE this move and only becomes enabled once Lit's
+    // deferred render actually clears the `disabled` attribute in the live DOM.
+    const el = await fixture<LyraReorderList>(html`
+      <lr-reorder-list>
+        <lr-reorder-item value="a">Row A</lr-reorder-item>
+        <lr-reorder-item value="b">Row B</lr-reorder-item>
+      </lr-reorder-list>
+    `);
+    const firstDownButton = itemsOf(el)[0].shadowRoot!.querySelector('[part="move-down-button"]') as HTMLButtonElement;
+
+    const listener = oneEvent(el, 'lr-reorder');
+    firstDownButton.click();
+    await listener;
+    await el.updateComplete;
+
+    const movedItem = itemsOf(el)[1]; // "a" moved from index 0 to index 1
+    expect(movedItem.value).to.equal('a');
+    const active = movedItem.shadowRoot!.activeElement;
+    expect(active, 'focus lands on a real element inside the moved item, not lost to document.body').to.exist;
+    expect(active?.tagName).to.equal('BUTTON');
+    expect((active as HTMLButtonElement).disabled, 'the focused button is not disabled').to.be.false;
+    expect(active?.getAttribute('part')).to.equal('move-up-button');
+    expect(document.activeElement === el || el.contains(document.activeElement), 'active element resolves into the list, not document.body').to.be
+      .true;
+  });
+
+  it('restores focus to a real button inside the moved item after a boundary-crossing move via Ctrl/Cmd+ArrowDown on a 2-item list', async () => {
+    const el = await fixture<LyraReorderList>(html`
+      <lr-reorder-list>
+        <lr-reorder-item value="a">Row A</lr-reorder-item>
+        <lr-reorder-item value="b">Row B</lr-reorder-item>
+      </lr-reorder-list>
+    `);
+    const firstDownButton = itemsOf(el)[0].shadowRoot!.querySelector('[part="move-down-button"]') as HTMLButtonElement;
+    firstDownButton.focus();
+
+    const listener = oneEvent(el, 'lr-reorder');
+    firstDownButton.dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'ArrowDown', ctrlKey: true, bubbles: true, composed: true }),
+    );
+    await listener;
+    await el.updateComplete;
+
+    const movedItem = itemsOf(el)[1]; // "a" moved from index 0 to index 1
+    expect(movedItem.value).to.equal('a');
+    const active = movedItem.shadowRoot!.activeElement;
+    expect(active, 'focus lands on a real element inside the moved item, not lost to document.body').to.exist;
+    expect(active?.tagName).to.equal('BUTTON');
+    expect((active as HTMLButtonElement).disabled, 'the focused button is not disabled').to.be.false;
+    expect(active?.getAttribute('part')).to.equal('move-up-button');
+  });
+
   it('is a no-op at a boundary: no event, item stays put', async () => {
     const el = await fixture<LyraReorderList>(threeItems);
     const first = itemsOf(el)[0];

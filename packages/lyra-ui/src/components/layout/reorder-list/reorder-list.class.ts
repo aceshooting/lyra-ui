@@ -62,6 +62,11 @@ export class LyraReorderList extends LyraElement<LyraReorderListEventMap> {
 
   @query('lr-live-region') private liveRegion?: LyraLiveRegion;
 
+  /** Set by `moveItem()` to the in-flight focus-restoration promise (see
+   *  `restoreFocusAfterMove()`) whenever a move needs to refocus a button inside the moved item;
+   *  consumed by `getUpdateComplete()` below. */
+  private pendingFocusRestore: Promise<void> | null = null;
+
   private get itemElements(): LyraReorderItem[] {
     return [...this.querySelectorAll(tag('reorder-item'))] as LyraReorderItem[];
   }
@@ -86,6 +91,41 @@ export class LyraReorderList extends LyraElement<LyraReorderListEventMap> {
 
   private orderValues(items: LyraReorderItem[]): string[] {
     return items.map((item, i) => item.value ?? String(i));
+  }
+
+  // `syncBoundaryState()` sets `atStart`/`atEnd`/`listDisabled` as plain Lit `@property`
+  // assignments -- the JS field updates synchronously, but the shadow-DOM re-render (and with
+  // it, the button's `disabled` HTML attribute) is deferred to a microtask. Focusing a button
+  // that Lit hasn't re-rendered yet risks focusing one still marked `disabled` in the live DOM
+  // (a silent no-op), immediately followed by Lit disabling the *actually* newly-boundary button
+  // out from under the real focus -- which the HTML spec force-blurs to `document.body`. Await
+  // the moved item's own `updateComplete` first, same fix shape as `<lr-tree>`'s
+  // `pendingFocusId`, scaled down to the single item this component ever needs to wait on.
+  //
+  // Called from `moveItem()` and its *result* (not just fired-and-forgotten) is stashed in
+  // `pendingFocusRestore` so `getUpdateComplete()` below can await that exact same promise.
+  // Starting the work here unconditionally is what makes real usage correct even though nothing
+  // external is in the loop to await anything (unlike `<lr-tree>`'s host-driven `data`
+  // reassignment, a move here is entirely user-triggered from inside this component); stashing it
+  // for `getUpdateComplete()` is what makes a caller's own `await this.updateComplete` (this
+  // component's tests included) observe focus only once it has actually landed, instead of racing
+  // a second, independent invocation the way `<lr-tree>`'s own doc comment warns against.
+  private async restoreFocusAfterMove(
+    item: LyraReorderItem,
+    buttonPart: 'move-up-button' | 'move-down-button',
+  ): Promise<void> {
+    await item.updateComplete;
+    (item.shadowRoot?.querySelector(`[part='${buttonPart}']`) as HTMLElement | null)?.focus();
+  }
+
+  protected async getUpdateComplete(): Promise<boolean> {
+    const result = await super.getUpdateComplete();
+    if (this.pendingFocusRestore) {
+      const pending = this.pendingFocusRestore;
+      this.pendingFocusRestore = null;
+      await pending;
+    }
+    return result;
   }
 
   private moveItem(item: LyraReorderItem, direction: 'up' | 'down'): void {
@@ -113,7 +153,7 @@ export class LyraReorderList extends LyraElement<LyraReorderListEventMap> {
       : direction === 'up'
         ? 'move-up-button'
         : 'move-down-button';
-    (item.shadowRoot?.querySelector(`[part='${buttonPart}']`) as HTMLElement | null)?.focus();
+    this.pendingFocusRestore = this.restoreFocusAfterMove(item, buttonPart);
 
     const newItems = this.itemElements;
     this.liveRegion?.announce(
