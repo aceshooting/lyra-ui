@@ -15,6 +15,12 @@ export const styles = css`
        extra specificity rules, and setting the property from anywhere (inline style, an ancestor,
        an outer-tree rule) pins an exact height. */
   }
+  :host([size='2xs']) {
+    --lr-select-trigger-padding: var(--lr-size-0-0625rem) var(--lr-space-2xs);
+    --lr-select-trigger-min-height: var(--lr-size-1-25rem);
+    --lr-select-font-size: var(--lr-font-size-2xs);
+    --lr-select-expand-size: var(--lr-size-1rem);
+  }
   :host([size='xs']) {
     --lr-select-trigger-padding: var(--lr-size-0-125rem) var(--lr-space-xs);
     --lr-select-trigger-min-height: var(--lr-size-1-5rem);

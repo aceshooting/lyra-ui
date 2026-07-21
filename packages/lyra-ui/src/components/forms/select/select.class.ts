@@ -44,7 +44,7 @@ function createNoopInternals(): ElementInternals {
   } as unknown as ElementInternals;
 }
 
-export type LyraSelectSize = 'xs' | 's' | 'm' | 'l' | 'xl';
+export type LyraSelectSize = '2xs' | 'xs' | 's' | 'm' | 'l' | 'xl';
 
 export interface LyraSelectEventMap {
   'lr-show': CustomEvent<undefined>;
@@ -154,7 +154,7 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
   @property() hint = '';
   @property({ attribute: 'error-text' }) errorText = '';
   @property({ type: Boolean, reflect: true }) open = false;
-  /** Visual size — same `xs`–`xl` scale as `lr-toast-item`'s `size`. */
+  /** Visual size — same `2xs`–`xl` scale as `lr-input`/`lr-combobox`/`lr-locale-picker`'s own `size`. */
   @property({ reflect: true }) size: LyraSelectSize = 'm';
   /**
    * Opt-in: when `true` and exactly one `<lr-option>` is enabled, the

@@ -79,7 +79,7 @@ export const RichRows: Story = {
 /** `size` spans the same `xs`–`xl` scale as `lr-toast-item`, default `m`. */
 export const Sizes: Story = {
   render: () => {
-    const sizes: LyraSelectSize[] = ['xs', 's', 'm', 'l', 'xl'];
+    const sizes: LyraSelectSize[] = ['2xs', 'xs', 's', 'm', 'l', 'xl'];
     return html`
       <div style="display: flex; flex-direction: column; gap: 1rem; max-width: 20rem">
         ${sizes.map(

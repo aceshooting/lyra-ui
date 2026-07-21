@@ -1164,3 +1164,17 @@ describe('start/end adornment slots', () => {
     expect(part(el, 'start').hasAttribute('hidden')).to.be.false;
   });
 });
+
+it('applies size="2xs" with a 20px trigger min-height', async () => {
+  const el = await fixture(
+    html`<lr-select size="2xs" label="Role"><lr-option value="a">A</lr-option></lr-select>`,
+  );
+  const trigger = el.shadowRoot!.querySelector('[part="trigger"]') as HTMLElement;
+  expect(getComputedStyle(trigger).minBlockSize).to.equal('20px');
+});
+
+it('reflects size="2xs" as a host attribute', async () => {
+  const el = (await fixture(html`<lr-select size="2xs"></lr-select>`)) as LyraSelect;
+  expect(el.size).to.equal('2xs');
+  expect(el.getAttribute('size')).to.equal('2xs');
+});
