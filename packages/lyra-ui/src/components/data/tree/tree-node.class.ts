@@ -7,7 +7,7 @@ import { chevronIcon } from '../../../internal/icons.js';
 import { finiteInteger } from '../../../internal/numbers.js';
 import { cascadeUpdateComplete } from './update-cascade.js';
 import { styles } from './tree-node.styles.js';
-import type { TreeItem } from './tree.class.js';
+import type { TreeItem } from './tree-item.js';
 
 export interface LyraTreeNodeEventMap {
   'lr-node-toggle': CustomEvent<{ id: string; expanded: boolean }>;

@@ -13,31 +13,10 @@ import type { LyraLiveRegion } from '../../utility/live-region/live-region.class
 import './tree-node.class.js';
 import type { LyraTreeNode } from './tree-node.class.js';
 
-/** Tone for a `TreeBadge` chip; the same closed set as `ButtonVariant`. */
-export type TreeBadgeTone = 'neutral' | 'brand' | 'success' | 'warning' | 'danger';
-
-export interface TreeBadge {
-  text: string;
-  tone?: TreeBadgeTone;
-  /** Accessible name override; falls back to `text` when omitted. */
-  label?: string;
-}
-
-export interface TreeItem {
-  id: string;
-  label: string;
-  children?: TreeItem[];
-  badge?: string | number;
-  /** Additive, token-colored chips rendered after the legacy `badge`. Omit for byte-identical
-   *  output to today. */
-  badges?: TreeBadge[];
-  /** Optional decorative leading content, such as an icon TemplateResult. */
-  icon?: unknown;
-  /** Secondary visible row text. */
-  description?: string;
-  /** Spoken treeitem name when it needs more context than the visible row. */
-  accessibleLabel?: string;
-}
+// Data types live in ./tree-item.js (extracted to break a type-only import cycle with
+// tree-node.class.ts); re-exported here so `export *` from tree.js keeps the public paths.
+import type { TreeBadgeTone, TreeBadge, TreeItem } from './tree-item.js';
+export type { TreeBadgeTone, TreeBadge, TreeItem };
 
 /**
  * `<lr-tree>` — an expand/collapse hierarchy for graph/document navigation.

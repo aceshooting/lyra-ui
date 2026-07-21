@@ -1,5 +1,5 @@
 import type { OptionalPeerApi } from '../../../internal/optional-peer-types.js';
-import type { EmojiPickerGroup } from './emoji-picker.class.js';
+import type { EmojiPickerGroup } from './emoji-types.js';
 
 export type EmojiDataApi = OptionalPeerApi;
 

@@ -6,6 +6,10 @@ import { FormAssociated } from '../../../internal/form-associated.js';
 import { nextId } from '../../../internal/a11y.js';
 import { styles } from './emoji-picker.styles.js';
 import { loadEmojiDataCached } from './emoji-data-loader.js';
+// Data types live in ./emoji-types.js (extracted to break a type-only import cycle with
+// emoji-data-loader.ts); re-exported so `export *` from emoji-picker.js keeps the public paths.
+import type { EmojiPickerItem, EmojiPickerGroup } from './emoji-types.js';
+export type { EmojiPickerItem, EmojiPickerGroup };
 
 const VIRTUALIZE_AT = 200;
 // Only used while the probe boxes have no used size to read (the element is not laid out at all --
@@ -38,21 +42,6 @@ function probePixels(probe: HTMLElement, fallback: number, allowZero = false): n
   const px = Number.parseFloat(getComputedStyle(probe).inlineSize);
   if (!Number.isFinite(px) || px < 0) return fallback;
   return px > 0 || allowZero ? px : fallback;
-}
-
-export interface EmojiPickerItem {
-  emoji: string;
-  /** Accessible/searchable name (e.g. 'grinning face'). Used for the picked button's `aria-label`
-   *  and as one of the two fields `queryText` matches against. */
-  name: string;
-  /** Additional searchable aliases (e.g. `['grinning']`). Matched the same way `name` is. */
-  shortcodes?: string[];
-}
-
-export interface EmojiPickerGroup {
-  key: string;
-  label: string;
-  emojis: EmojiPickerItem[];
 }
 
 export type LyraEmojiPickerSize = '2xs' | 'xs' | 's' | 'm' | 'l' | 'xl';
