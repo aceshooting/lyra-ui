@@ -1007,7 +1007,9 @@ export type LyraMessageKey =
   | 'agentRunStatusDone'
   | 'agentRunStatusCancelled'
   | 'localePickerLabel'
-  | 'localePickerRequired';
+  | 'localePickerRequired'
+  | 'moveUp'
+  | 'moveDown';
 
 export type LyraLocaleStrings = Partial<Record<LyraMessageKey, string>> & Record<string, string | undefined>;
 
@@ -2017,6 +2019,8 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, string> = {
   agentRunStatusCancelled: 'Cancelled',
   localePickerLabel: 'Language',
   localePickerRequired: 'Please choose a language.',
+  moveUp: 'Move up',
+  moveDown: 'Move down',
 };
 
 const locales = new Map<string, LyraLocaleStrings>();

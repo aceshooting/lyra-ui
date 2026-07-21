@@ -76,6 +76,59 @@ export default {
         sortManifest(customElementsManifest);
       },
     },
+    {
+      name: 'lr-form-associated-mixin-members',
+      // `FormAssociated<T>` (`src/internal/form-associated.ts`) is a mixin *function* whose
+      // `name`/`value`/`disabled`/`required` accessors are hand-written (`noAccessor: true`),
+      // not declarative `@property() accessor` fields. The analyzer only flattens members from a
+      // statically-resolvable superclass declaration, so `class X extends FormAssociated(Base)`
+      // never inherits these four -- they appear only when a subclass happens to redeclare one
+      // itself (e.g. `lr-date-input`'s strict-ISO `value` override). The built-in mixin detector
+      // still records `{ name: 'FormAssociated' }` on `declaration.mixins`, so that's the signal
+      // used here to inject the missing members onto every other consumer.
+      packageLinkPhase({ customElementsManifest }) {
+        const MIXIN_MEMBERS = {
+          name: { type: 'string', reflects: true },
+          value: { type: 'string', reflects: false },
+          disabled: { type: 'boolean', reflects: true },
+          required: { type: 'boolean', reflects: true },
+        };
+
+        for (const module of customElementsManifest.modules ?? []) {
+          for (const declaration of module.declarations ?? []) {
+            const isFormAssociated = (declaration.mixins ?? []).some(
+              (mixin) => mixin.name === 'FormAssociated',
+            );
+            if (!isFormAssociated) continue;
+
+            declaration.members ??= [];
+            declaration.attributes ??= [];
+
+            for (const [name, { type, reflects }] of Object.entries(MIXIN_MEMBERS)) {
+              if (declaration.members.some((member) => member.name === name)) continue;
+
+              const member = {
+                kind: 'field',
+                name,
+                privacy: 'public',
+                type: { text: type },
+              };
+              if (reflects) {
+                member.attribute = name;
+                member.reflects = true;
+              }
+              declaration.members.push(member);
+
+              if (reflects && !declaration.attributes.some((attribute) => attribute.name === name)) {
+                declaration.attributes.push({ name, type: { text: type }, fieldName: name });
+              }
+            }
+          }
+        }
+
+        sortManifest(customElementsManifest);
+      },
+    },
   ],
 };
 

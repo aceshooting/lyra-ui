@@ -12,14 +12,18 @@
 
 ## `lr-control-group`
 
-Responsive semantic grouping for mixed controls and actions. It keeps slotted children in a
-wrapping inline-flex row, centers children with different intrinsic heights, and switches to a
-full-width allocation in narrow containers. Use it for dashboard toolbars that combine segmented
-controls, selects, buttons, and other interactive elements.
+Semantic grouping for mixed controls and actions. It keeps slotted children in a wrapping
+inline-flex row and centers children with different intrinsic heights. Use it for dashboard
+toolbars that combine segmented controls, selects, buttons, and other interactive elements.
 
 **Properties:**
 - `label: string = ''` — accessible name for the internal `role="group"`; when empty, a host
   `aria-label` is forwarded as a fallback.
+- `responsive: boolean = false` (reflected) — opts into a `@container` narrow-allocation breakpoint
+  (switches to a full-width allocation below `20rem`) by making the host a CSS size-query
+  container. Left unset, the host is `container-type: normal`, since `container-type: inline-size`
+  unconditionally would collapse the group to 0 inline size whenever it sits as an ordinary
+  (`flex-basis: auto`) child of a shrink-to-fit flex row — this component's own primary use case.
 
 **Events:** none.
 
@@ -42,5 +46,9 @@ between grouped controls; shared spacing and layout tokens apply as well.
 - This is a layout and semantics primitive; it does not coordinate child values or emit a group
   change event.
 - Children wrap according to the group's own allocated inline size, not the viewport width.
+- The `@container` narrow-allocation breakpoint only applies when `responsive` is set. Setting
+  `responsive` while this group also sits as a shrink-to-fit flex child re-introduces the 0-width
+  collapse this default is designed to avoid — only opt in when the group's own size comes from
+  somewhere else (a percentage width, a grid track, a block-level parent).
 
 ---
