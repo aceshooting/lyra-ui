@@ -1217,19 +1217,39 @@ describe('active-preset cssprops', () => {
 });
 
 it('scales the drag-handle hit-area proportionally, floored at 24px', async () => {
-  const expected: Record<string, string> = {
+  // The 2xs/xs/s/m tiers land on exact integer pixels (the 24px floor, and
+  // the unscaled 28px base), so they compare against an exact string.
+  const exact: Record<string, string> = {
     '2xs': '24px',
     xs: '24px',
     s: '24px',
     m: '28px',
-    l: '33.6px',
-    xl: '39.2px',
   };
-  for (const [size, px] of Object.entries(expected)) {
+  for (const [size, px] of Object.entries(exact)) {
     const el = await fixture(html`<lr-time-range size=${size}></lr-time-range>`);
     const handle = el.shadowRoot!.querySelector('[part="handle-start"]') as HTMLElement;
     const before = getComputedStyle(handle, '::before');
     expect(before.inlineSize, `size=${size}`).to.equal(px);
+  }
+
+  // The l/xl tiers multiply 28px by a non-integer scale (1.2/1.4), so the
+  // exact result (33.6px/39.2px) isn't representable in IEEE754 binary
+  // floating point; combined with each engine's own subpixel layout
+  // rounding, the rendered value can come out a few thousandths of a pixel
+  // off the mathematical target (e.g. Chromium renders `l` as 33.5938px, not
+  // 33.6px). This suite runs across Chromium/Firefox/WebKit
+  // (`test:platform` in ci.yml), so a hardcoded exact px string here would
+  // be fragile per-engine -- compare numerically with a tolerance instead,
+  // which still proves the proportional-scaling math is correct.
+  const approximate: Record<string, number> = {
+    l: 33.6,
+    xl: 39.2,
+  };
+  for (const [size, px] of Object.entries(approximate)) {
+    const el = await fixture(html`<lr-time-range size=${size}></lr-time-range>`);
+    const handle = el.shadowRoot!.querySelector('[part="handle-start"]') as HTMLElement;
+    const before = getComputedStyle(handle, '::before');
+    expect(parseFloat(before.inlineSize), `size=${size}`).to.be.closeTo(px, 0.1);
   }
 });
 
